@@ -4,13 +4,14 @@
  */
 
 import Component from '@glimmer/component';
-import { SVG_DIMENSIONS, formatNumbers } from 'vault/utils/chart-helpers';
+import { SVG_DIMENSIONS, numericalAxisLabel } from 'vault/utils/chart-helpers';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { format, isValid } from 'date-fns';
 import { debug } from '@ember/debug';
 
-import type { Count, MonthlyChartData, Timestamp } from 'vault/vault/charts/client-counts';
 import type ClientsVersionHistoryModel from 'vault/models/clients/version-history';
+import type { MonthlyChartData, Timestamp } from 'vault/vault/charts/client-counts';
+import type { TotalClients } from 'core/utils/client-count-utils';
 
 interface Args {
   dataset: MonthlyChartData[];
@@ -67,7 +68,7 @@ export default class LineChart extends Component<Args> {
         const upgradeMessage = this.getUpgradeMessage(datum);
         return {
           x: timestamp,
-          y: (datum[this.yKey as keyof Count] as number) ?? null,
+          y: (datum[this.yKey as keyof TotalClients] as number) ?? null,
           new: this.getNewClients(datum),
           tooltipUpgrade: upgradeMessage,
           month: datum.month,
@@ -79,7 +80,8 @@ export default class LineChart extends Component<Args> {
     }
   }
   get upgradedMonths() {
-    return this.data.filter((datum) => datum.tooltipUpgrade);
+    // only render upgrade month circle if datum has client count data (the y value)
+    return this.data.filter((datum) => datum.tooltipUpgrade && datum.y);
   }
   // Domains
   get yDomain() {
@@ -90,11 +92,11 @@ export default class LineChart extends Component<Args> {
     // if max is <=4, hardcode 4 which is the y-axis tickCount so y-axes are not decimals
     return [0, max <= 4 ? 4 : max];
   }
-  get timeDomain() {
-    // assume data is sorted by time
-    const firstTime = this.data[0]?.x;
-    const lastTime = this.data[this.data.length - 1]?.x;
-    return [firstTime, lastTime];
+
+  get xDomain() {
+    // these values are date objects but are already in chronological order so we use scale-point (instead of scale-time)
+    // which calculates the x-scale based on the number of data points
+    return this.data.map((d) => d.x);
   }
 
   get upgradeByMonthYear(): UpgradeByMonth {
@@ -122,15 +124,15 @@ export default class LineChart extends Component<Args> {
   }
   getNewClients(datum: MonthlyChartData) {
     if (!datum?.new_clients) return 0;
-    return (datum?.new_clients[this.yKey as keyof Count] as number) || 0;
+    return (datum?.new_clients[this.yKey as keyof TotalClients] as number) || 0;
   }
 
+  // TEMPLATE HELPERS
   hasValue = (count: number | null) => {
     return typeof count === 'number' ? true : false;
   };
-  // These functions are used by the tooltip
-  formatCount = (count: number) => {
-    return formatNumbers([count]);
+  formatCount = (num: number): string => {
+    return numericalAxisLabel(num) || num.toString();
   };
   formatMonth = (date: Date) => {
     return format(date, 'M/yy');

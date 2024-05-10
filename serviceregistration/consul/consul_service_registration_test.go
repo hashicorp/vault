@@ -10,8 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/go-test/deep"
 	"github.com/hashicorp/consul/api"
 	log "github.com/hashicorp/go-hclog"
@@ -21,6 +19,7 @@ import (
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	sr "github.com/hashicorp/vault/serviceregistration"
 	"github.com/hashicorp/vault/vault"
+	"github.com/stretchr/testify/require"
 )
 
 type consulConf map[string]string
@@ -64,6 +63,17 @@ func TestConsul_ServiceRegistration(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// update the agent's ACL token so that we can successfully deregister the
+	// service later in the test
+	_, err = client.Agent().UpdateAgentACLToken(config.Token, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = client.Agent().UpdateDefaultACLToken(config.Token, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// waitForServices waits for the services in the Consul catalog to
 	// reach an expected value, returning the delta if that doesn't happen in time.
 	waitForServices := func(t *testing.T, expected map[string][]string) map[string][]string {
@@ -93,10 +103,13 @@ func TestConsul_ServiceRegistration(t *testing.T) {
 
 	// Create a ServiceRegistration that points to our consul instance
 	logger := logging.NewVaultLogger(log.Trace)
-	sd, err := NewServiceRegistration(map[string]string{
+	srConfig := map[string]string{
 		"address": config.Address(),
 		"token":   config.Token,
-	}, logger, sr.State{})
+		// decrease reconcile timeout to make test run faster
+		"reconcile_timeout": "1s",
+	}
+	sd, err := NewServiceRegistration(srConfig, logger, sr.State{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -143,6 +156,58 @@ func TestConsul_ServiceRegistration(t *testing.T) {
 
 	// Wait for the core to become active
 	vault.TestWaitActive(t, core)
+
+	waitForServices(t, map[string][]string{
+		"consul": {},
+		"vault":  {"active", "initialized"},
+	})
+
+	// change the token and trigger reload
+	if sd.(*serviceRegistration).config.Token == "" {
+		t.Fatal("expected service registration token to not be '' before configuration reload")
+	}
+
+	srConfigWithoutToken := make(map[string]string)
+	for k, v := range srConfig {
+		srConfigWithoutToken[k] = v
+	}
+	srConfigWithoutToken["token"] = ""
+	err = sd.NotifyConfigurationReload(&srConfigWithoutToken)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if sd.(*serviceRegistration).config.Token != "" {
+		t.Fatal("expected service registration token to be '' after configuration reload")
+	}
+
+	// reconfigure the configuration back to its original state and verify vault is registered
+	err = sd.NotifyConfigurationReload(&srConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	waitForServices(t, map[string][]string{
+		"consul": {},
+		"vault":  {"active", "initialized"},
+	})
+
+	// send 'nil' configuration to verify that the service is deregistered
+	err = sd.NotifyConfigurationReload(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	waitForServices(t, map[string][]string{
+		"consul": {},
+	})
+
+	// reconfigure the configuration back to its original state and verify vault
+	// is re-registered
+	err = sd.NotifyConfigurationReload(&srConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	waitForServices(t, map[string][]string{
 		"consul": {},

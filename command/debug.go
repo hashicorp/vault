@@ -687,17 +687,18 @@ func (c *DebugCommand) collectHostInfo(ctx context.Context) {
 			return
 		}
 		if resp != nil {
-			defer resp.Body.Close()
-
 			secret, err := api.ParseSecret(resp.Body)
 			if err != nil {
 				c.captureError("host", err)
+				resp.Body.Close()
 				return
 			}
 			if secret != nil && secret.Data != nil {
 				hostEntry := secret.Data
 				c.hostInfoCollection = append(c.hostInfoCollection, hostEntry)
 			}
+
+			resp.Body.Close()
 		}
 	}
 }

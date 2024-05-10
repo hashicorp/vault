@@ -44,6 +44,11 @@ const (
 	credentialTableType = "auth"
 )
 
+func init() {
+	// Register the keys we use for auth "mount" tables
+	registerMountOrNamespaceTablePaths(coreAuthConfigPath, coreLocalAuthConfigPath)
+}
+
 var (
 	// errLoadAuthFailed if loadCredentials encounters an error
 	errLoadAuthFailed = errors.New("failed to setup auth table")
@@ -206,7 +211,7 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 			if err == logical.ErrReadOnly && c.perfStandby {
 				return err
 			}
-			return errors.New("failed to update auth table")
+			return fmt.Errorf("failed to update auth table: %w", err)
 		}
 	}
 
@@ -401,7 +406,7 @@ func (c *Core) removeCredEntry(ctx context.Context, path string, updateStorage b
 				return err
 			}
 
-			return errors.New("failed to update auth table")
+			return fmt.Errorf("failed to update auth table: %w", err)
 		}
 	}
 
@@ -558,7 +563,7 @@ func (c *Core) taintCredEntry(ctx context.Context, nsID, path string, updateStor
 			if err == logical.ErrReadOnly && c.perfStandby {
 				return err
 			}
-			return errors.New("failed to update auth table")
+			return fmt.Errorf("failed to update auth table: %w", err)
 		}
 	}
 
@@ -658,6 +663,12 @@ func (c *Core) loadCredentials(ctx context.Context) error {
 			return namespace.ErrNoNamespace
 		}
 		entry.namespace = ns
+
+		// Subtle: in `loadMounts` there is a call to namespaceManager.Register in
+		// the equivalent place to here. It's non-obvious why that is needed (see
+		// the large comment there) but it's equally subtle why it better NOT to do
+		// the same here. For more rationale see
+		// https://github.com/hashicorp/vault-enterprise/pull/5437#issuecomment-1954434213.
 
 		// Sync values to the cache
 		entry.SyncCache()

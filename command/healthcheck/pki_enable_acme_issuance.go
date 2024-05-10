@@ -13,7 +13,6 @@ import (
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/sdk/logical"
-
 	"golang.org/x/crypto/acme"
 )
 

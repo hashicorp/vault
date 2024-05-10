@@ -16,17 +16,14 @@ module('Unit | Adapter | clients activity', function (hooks) {
   setupMirage(hooks);
 
   hooks.before(function () {
-    sinon.stub(timestamp, 'now').callsFake(() => new Date('2023-01-13T09:30:15'));
+    this.timestampStub = sinon.replace(timestamp, 'now', sinon.fake.returns(new Date('2023-01-13T09:30:15')));
   });
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
     this.modelName = 'clients/activity';
-    this.startDate = subMonths(timestamp.now(), 6);
-    this.endDate = timestamp.now();
+    this.startDate = subMonths(this.timestampStub(), 6);
+    this.endDate = this.timestampStub();
     this.readableUnix = (unix) => parseAPITimestamp(fromUnixTime(unix).toISOString(), 'MMMM dd yyyy');
-  });
-  hooks.after(function () {
-    timestamp.now.restore();
   });
 
   test('it does not format if both params are timestamp strings', async function (assert) {
@@ -138,5 +135,19 @@ module('Unit | Adapter | clients activity', function (hooks) {
     });
 
     this.store.queryRecord(this.modelName, queryParams);
+  });
+
+  test('it sends current billing period boolean if provided', async function (assert) {
+    assert.expect(1);
+
+    this.server.get('sys/internal/counters/activity', (schema, req) => {
+      assert.propEqual(
+        req.queryParams,
+        { current_billing_period: 'true' },
+        'it passes current_billing_period to query record'
+      );
+    });
+
+    this.store.queryRecord(this.modelName, { current_billing_period: true });
   });
 });

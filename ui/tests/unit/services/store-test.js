@@ -134,7 +134,11 @@ module('Unit | Service | store', function (hooks) {
     let result;
     result = await this.store.fetchPage('transit-key', query);
     assert.strictEqual(result.get('length'), pageSize, 'returns the correct number of items');
-    assert.deepEqual(result.mapBy('id'), keys.slice(0, pageSize), 'returns the first page of items');
+    assert.deepEqual(
+      result.map((r) => r.id),
+      keys.slice(0, pageSize),
+      'returns the first page of items'
+    );
     assert.deepEqual(
       result.get('meta'),
       {
@@ -157,7 +161,7 @@ module('Unit | Service | store', function (hooks) {
     const pageThreeEnd = 3 * pageSize;
     const pageThreeStart = pageThreeEnd - pageSize;
     assert.deepEqual(
-      result.mapBy('id'),
+      result.map((r) => r.id),
       keys.slice(pageThreeStart, pageThreeEnd),
       'returns the third page of items'
     );
@@ -169,7 +173,7 @@ module('Unit | Service | store', function (hooks) {
     });
 
     assert.deepEqual(
-      result.mapBy('id'),
+      result.map((r) => r.id),
       keys.slice(keys.length - 1),
       'returns the last page when the page value is beyond the of bounds'
     );
@@ -180,7 +184,7 @@ module('Unit | Service | store', function (hooks) {
       responsePath: 'data.keys',
     });
     assert.deepEqual(
-      result.mapBy('id'),
+      result.map((r) => r.id),
       keys.slice(0, pageSize),
       'returns the first page when page value is under the bounds'
     );

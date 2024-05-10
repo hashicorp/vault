@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/vault/helper/constants"
 	dbMysql "github.com/hashicorp/vault/plugins/database/mysql"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-
 	"golang.org/x/exp/slices"
 )
 

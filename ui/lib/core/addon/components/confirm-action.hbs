@@ -25,44 +25,13 @@
 {{/if}}
 
 {{#if this.showConfirmModal}}
-  <Hds::Modal
-    id="confirm-action-modal"
-    class="has-text-left"
+  <ConfirmModal
     @color={{this.modalColor}}
-    @size="small"
     @onClose={{fn (mut this.showConfirmModal) false}}
-    as |M|
-  >
-    {{#if @disabledMessage}}
-      <M.Header data-test-confirm-action-title @icon="x-circle">
-        Not allowed
-      </M.Header>
-      <M.Body data-test-confirm-action-message>
-        {{@disabledMessage}}
-      </M.Body>
-      <M.Footer as |F|>
-        <Hds::Button data-test-confirm-cancel-button @text="Close" {{on "click" F.close}} />
-      </M.Footer>
-    {{else}}
-      <M.Header data-test-confirm-action-title @icon="alert-circle">
-        {{or @confirmTitle "Are you sure?"}}
-      </M.Header>
-      <M.Body data-test-confirm-action-message>
-        {{this.confirmMessage}}
-      </M.Body>
-      <M.Footer as |F|>
-        <Hds::ButtonSet>
-          <Hds::Button
-            data-test-confirm-button
-            disabled={{@isRunning}}
-            @icon={{if @isRunning "loading"}}
-            @color={{if (eq this.modalColor "critical") "critical" "primary"}}
-            @text="Confirm"
-            {{on "click" this.onConfirm}}
-          />
-          <Hds::Button data-test-confirm-cancel-button @color="secondary" @text="Cancel" {{on "click" F.close}} />
-        </Hds::ButtonSet>
-      </M.Footer>
-    {{/if}}
-  </Hds::Modal>
+    @onConfirm={{this.onConfirm}}
+    @confirmTitle={{@confirmTitle}}
+    @confirmMessage={{this.confirmMessage}}
+    @disabledMessage={{@disabledMessage}}
+    @isRunning={{@isRunning}}
+  />
 {{/if}}

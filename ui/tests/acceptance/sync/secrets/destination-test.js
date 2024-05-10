@@ -3,16 +3,18 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+/* eslint-disable ember/no-settled-after-test-helper */
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import syncScenario from 'vault/mirage/scenarios/sync';
 import syncHandlers from 'vault/mirage/handlers/sync';
 import authPage from 'vault/tests/pages/auth';
-import { click, visit, currentURL, fillIn } from '@ember/test-helpers';
+import { settled, click, visit, currentURL, fillIn, currentRouteName } from '@ember/test-helpers';
 import { PAGE as ts } from 'vault/tests/helpers/sync/sync-selectors';
 
-module('Acceptance | enterprise | sync | destination', function (hooks) {
+// sync is an enterprise feature but since mirage is used the enterprise label has been intentionally omitted from the module name
+module('Acceptance | sync | destination', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
@@ -55,7 +57,7 @@ module('Acceptance | enterprise | sync | destination', function (hooks) {
     await click(ts.toolbar('Delete destination'));
     await fillIn(ts.confirmModalInput, 'DELETE');
     await click(ts.confirmButton);
-    assert.dom(ts.destinations.deleteBanner).exists('Delete banner renders');
+    assert.strictEqual(currentURL(), '/vault/sync/secrets/overview', 'navigates back to overview on delete');
   });
 
   test('it should not save placeholder values for credentials and only save when there are changes', async function (assert) {
@@ -93,5 +95,45 @@ module('Acceptance | enterprise | sync | destination', function (hooks) {
       1,
       'Model is not dirty after server returns masked value for credentials and save request is not made when there are no changes'
     );
+  });
+
+  test('it should redirect to secrets view if purge is in progress', async function (assert) {
+    const route = 'vault.cluster.sync.secrets.destinations.destination.secrets';
+    this.server.db.syncDestinations.update({ purge_initiated_at: '2024-02-08T11:49:04.123251-07:00' });
+
+    await visit('vault/sync/secrets/overview');
+    await settled();
+    await click(ts.overview.table.actionToggle(0));
+    await click(ts.overview.table.action('sync'));
+    assert.strictEqual(
+      currentRouteName(),
+      route,
+      'Redirects to destination secrets view from overview sync action when purge is in progress'
+    );
+
+    await click(ts.breadcrumbLink('Destinations'));
+    await click(ts.menuTrigger);
+    await click(ts.destinations.list.menu.edit);
+    assert.strictEqual(
+      currentRouteName(),
+      route,
+      'Redirects to destination secrets view from list edit action when purge is in progress'
+    );
+
+    await click(ts.breadcrumbLink('Destinations'));
+    await click(ts.menuTrigger);
+    await click(ts.destinations.list.menu.details);
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.sync.secrets.destinations.destination.details',
+      'Does no redirect when navigating to destination route other than edit or sync'
+    );
+  });
+
+  test('it should render correct number of associations in list for sub keys', async function (assert) {
+    this.server.db.syncDestinations.update({ granularity: 'secret-key' });
+
+    await visit('vault/sync/secrets/destinations/vercel-project/destination-vercel/secrets');
+    assert.dom('[data-test-list-item]').exists({ count: 3 }, 'Sub key associations render in list');
   });
 });

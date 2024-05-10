@@ -8,15 +8,22 @@ import { attr } from '@ember-data/model';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 
 const displayFields = [
+  // connection details
   'name',
   'region',
   'accessKeyId',
   'secretAccessKey',
+  'roleArn',
+  'externalId',
+  // sync config options
+  'granularity',
   'secretNameTemplate',
   'customTags',
 ];
 const formFieldGroups = [
-  { default: ['name', 'region', 'secretNameTemplate', 'customTags'] },
+  {
+    default: ['name', 'region', 'roleArn', 'externalId', 'granularity', 'secretNameTemplate', 'customTags'],
+  },
   { Credentials: ['accessKeyId', 'secretAccessKey'] },
 ];
 @withFormFields(displayFields, formFieldGroups)
@@ -48,4 +55,18 @@ export default class SyncDestinationsAwsSecretsManagerModel extends SyncDestinat
     editType: 'kv',
   })
   customTags;
+
+  @attr('string', {
+    label: 'Role ARN',
+    subText:
+      'Specifies a role to assume when connecting to AWS. When assuming a role, Vault uses temporary STS credentials to authenticate.',
+  })
+  roleArn;
+
+  @attr('string', {
+    label: 'External ID',
+    subText:
+      'Optional extra protection that must match the trust policy granting access to the AWS IAM role ARN. We recommend using a different random UUID per destination.',
+  })
+  externalId;
 }

@@ -214,6 +214,13 @@ Or specify the contents of a file as a value:
 $ vault kv put secret/password value=@data.txt
 ```
 
+To use values that begin with an `@` character, escape the character with a
+backslash (`\`) to keep Vault from parsing the value as a file location:
+
+```shell-session
+$ vault login -method userpass username="mitchellh" password="\@foo"
+```
+
 Note that if an argument is supplied in a @key=value format, Vault will treat that as a
 kv pair with the key being `@key`, not a file called `key=value`. This also means that Vault
 does not support filenames with `=` in them.
@@ -272,8 +279,8 @@ this file at any time to "logout" of Vault.
 
 The CLI reads the following environment variables to set behavioral defaults.
 This can alleviate the need to repetitively type a flag. Flags always take
-precedence over the environment variables. Each of the following environment 
-variables must be set on the Vault process.  In Vault 1.13+, all environment 
+precedence over the environment variables. Each of the following environment
+variables must be set on the Vault process.  In Vault 1.13+, all environment
 variables available to the Vault process will be logged during startup.
 
 ### `VAULT_TOKEN`

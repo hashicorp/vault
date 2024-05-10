@@ -16,7 +16,7 @@
         />
         <div class="toolbar-separator"></div>
       {{/if}}
-      <ToolbarLink @route="configuration.edit">
+      <ToolbarLink @route="configuration.edit" @model={{@backend}}>
         Edit configuration
       </ToolbarLink>
     </ToolbarActions>
@@ -42,6 +42,7 @@
       <InfoTableRow
         @label={{or attr.options.label (humanize (dasherize attr.name))}}
         @value={{or (get @acme attr.name) "None"}}
+        @formatTtl={{eq attr.options.editType "ttl"}}
       />
     {{/each}}
   {{/if}}

@@ -8,7 +8,7 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import errorMessage from 'vault/utils/error-message';
 
 import type SyncDestinationModel from 'vault/models/sync/destination';

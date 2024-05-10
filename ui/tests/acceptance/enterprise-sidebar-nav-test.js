@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { click, currentURL } from '@ember/test-helpers';
+import { click, currentURL, visit } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import authPage from 'vault/tests/pages/auth';
 
@@ -41,15 +41,21 @@ module('Acceptance | Enterprise | sidebar navigation', function (hooks) {
       'Replication performance route renders'
     );
 
-    await click(link('Disaster Recovery'));
-    assert.strictEqual(currentURL(), '/vault/replication/dr', 'Replication dr route renders');
+    // for some reason clicking this link would cause the testing browser locally
+    // to navigate to 'vault/replication/dr' and halt the test runner
+    assert
+      .dom(link('Disaster Recovery'))
+      .hasAttribute('href', '/ui/vault/replication/dr', 'Replication dr route renders');
+    await visit('/vault');
 
     await click(link('Client Count'));
+    assert.dom(panel('Client Count')).exists('Client Count nav panel renders');
+    assert.dom(link('Vault Usage Metrics')).hasClass('active', 'Vault Usage Metrics link is active');
     assert.strictEqual(currentURL(), '/vault/clients/counts/overview', 'Client counts route renders');
+    await click(link('Back to main navigation'));
 
     await click(link('License'));
     assert.strictEqual(currentURL(), '/vault/license', 'License route renders');
-
     await click(link('Access'));
     await click(link('Control Groups'));
     assert.strictEqual(currentURL(), '/vault/access/control-groups', 'Control groups route renders');

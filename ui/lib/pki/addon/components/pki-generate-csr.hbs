@@ -29,7 +29,7 @@
               {{#if (and attr.options.isCertificate value)}}
                 <CertificateCard @data={{value}} />
               {{else if (eq attr.name "keyId")}}
-                <LinkTo @route="keys.key.details" @model={{@model.keyId}}>
+                <LinkTo @route="keys.key.details" @models={{array @model.backend @model.keyId}}>
                   {{@model.keyId}}
                 </LinkTo>
               {{else}}

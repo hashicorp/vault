@@ -14,18 +14,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/helper/strutil"
-
-	"github.com/hashicorp/vault/sdk/helper/certutil"
-
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"golang.org/x/net/idna"
-
-	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 )
-
-var maxAcmeCertTTL = 90 * (24 * time.Hour)
 
 func pathAcmeListOrders(b *backend, baseUrl string, opts acmeWrapperOpts) *framework.Path {
 	return patternAcmeListOrders(b, baseUrl+"/orders", opts)
@@ -179,7 +174,7 @@ func (b *backend) acmeFetchCertOrderHandler(ac *acmeContext, _ *logical.Request,
 		return nil, fmt.Errorf("order is missing required fields to load certificate")
 	}
 
-	certEntry, err := fetchCertBySerial(ac.sc, "certs/", order.CertificateSerialNumber)
+	certEntry, err := fetchCertBySerial(ac.sc, issuing.PathCerts, order.CertificateSerialNumber)
 	if err != nil {
 		return nil, fmt.Errorf("failed reading certificate %s from storage: %w", order.CertificateSerialNumber, err)
 	}
@@ -549,9 +544,16 @@ func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.
 		return nil, "", fmt.Errorf("failed computing certificate TTL from role/mount: %v: %w", err, ErrMalformed)
 	}
 
-	// Force a maximum 90 day TTL or lower for ACME
-	if time.Now().Add(maxAcmeCertTTL).Before(normalNotAfter) {
-		input.apiData.Raw["ttl"] = maxAcmeCertTTL
+	// We only allow ServerAuth key usage from ACME issued certs
+	// when configuration does not allow usage of ExtKeyusage field.
+	config, err := ac.sc.Backend.GetAcmeState().getConfigWithUpdate(ac.sc)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to fetch ACME configuration: %w", err)
+	}
+
+	// Force our configured max acme TTL
+	if time.Now().Add(config.MaxTTL).Before(normalNotAfter) {
+		input.apiData.Raw["ttl"] = config.MaxTTL.Seconds()
 	}
 
 	if csr.PublicKeyAlgorithm == x509.UnknownPublicKeyAlgorithm || csr.PublicKey == nil {
@@ -578,13 +580,6 @@ func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.
 
 	if err = parsedBundle.Verify(); err != nil {
 		return nil, "", fmt.Errorf("verification of parsed bundle failed: %w", err)
-	}
-
-	// We only allow ServerAuth key usage from ACME issued certs
-	// when configuration does not allow usage of ExtKeyusage field.
-	config, err := ac.sc.Backend.GetAcmeState().getConfigWithUpdate(ac.sc)
-	if err != nil {
-		return nil, "", fmt.Errorf("failed to fetch ACME configuration: %w", err)
 	}
 
 	if !config.AllowRoleExtKeyUsage {

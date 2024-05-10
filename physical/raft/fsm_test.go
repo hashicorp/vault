@@ -6,9 +6,7 @@ package raft
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
-	"os"
 	"sort"
 	"testing"
 
@@ -17,13 +15,11 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/stretchr/testify/require"
 )
 
-func getFSM(t testing.TB) (*FSM, string) {
-	raftDir, err := ioutil.TempDir("", "vault-raft-")
-	if err != nil {
-		t.Fatal(err)
-	}
+func getFSM(t testing.TB) *FSM {
+	raftDir := t.TempDir()
 	t.Logf("raft dir: %s", raftDir)
 
 	logger := hclog.New(&hclog.LoggerOptions{
@@ -36,12 +32,11 @@ func getFSM(t testing.TB) (*FSM, string) {
 		t.Fatal(err)
 	}
 
-	return fsm, raftDir
+	return fsm
 }
 
 func TestFSM_Batching(t *testing.T) {
-	fsm, dir := getFSM(t)
-	defer func() { _ = os.RemoveAll(dir) }()
+	fsm := getFSM(t)
 
 	var index uint64
 	var term uint64 = 1
@@ -133,8 +128,7 @@ func TestFSM_Batching(t *testing.T) {
 }
 
 func TestFSM_List(t *testing.T) {
-	fsm, dir := getFSM(t)
-	defer func() { _ = os.RemoveAll(dir) }()
+	fsm := getFSM(t)
 
 	ctx := context.Background()
 	count := 100
@@ -161,4 +155,42 @@ func TestFSM_List(t *testing.T) {
 	if diff := deep.Equal(sorted, got); len(diff) > 0 {
 		t.Fatal(diff)
 	}
+}
+
+// TestFSM_UnknownOperation calls ApplyBatch with a batch that has an unknown
+// command operation type. The test verifies that the call panics
+func TestFSM_UnknownOperation(t *testing.T) {
+	fsm := getFSM(t)
+	command := &LogData{
+		Operations: make([]*LogOperation, 5),
+	}
+
+	for i := range command.Operations {
+		op := putOp
+		if i == 4 {
+			// the last operation has an invalid op type
+			op = 0
+		}
+		command.Operations[i] = &LogOperation{
+			OpType: op,
+			Key:    fmt.Sprintf("key-%d", i),
+			Value:  []byte(fmt.Sprintf("value-%d", i)),
+		}
+	}
+	commandBytes, err := proto.Marshal(command)
+	require.NoError(t, err)
+
+	defer func() {
+		r := recover()
+		require.NotNil(t, r)
+		require.Contains(t, r, "failed to store data")
+	}()
+	fsm.ApplyBatch([]*raft.Log{{
+		Index: 0,
+		Term:  1,
+		Type:  raft.LogCommand,
+		Data:  commandBytes,
+	}})
+
+	require.Fail(t, "failed to panic")
 }

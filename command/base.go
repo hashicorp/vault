@@ -16,14 +16,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/vault/command/config"
-
 	"github.com/hashicorp/cli"
 	hcpvlib "github.com/hashicorp/vault-hcp-lib"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/command/token"
+	"github.com/hashicorp/vault/api/cliconfig"
+	"github.com/hashicorp/vault/api/tokenhelper"
+	"github.com/hashicorp/vault/command/config"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/mattn/go-isatty"
+	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	"github.com/posener/complete"
 )
@@ -73,7 +74,7 @@ type BaseCommand struct {
 
 	flagHeader map[string]string
 
-	tokenHelper    token.TokenHelper
+	tokenHelper    tokenhelper.TokenHelper
 	hcpTokenHelper hcpvlib.HCPTokenHelper
 
 	client *api.Client
@@ -84,8 +85,13 @@ type BaseCommand struct {
 func (c *BaseCommand) Client() (*api.Client, error) {
 	// Read the test client if present
 	if c.client != nil {
-		if err := c.applyHCPConfig(); err != nil {
-			return nil, err
+		// Ignoring homedir errors here and moving on to avoid
+		// spamming user with warnings/errors that homedir isn't set.
+		path, err := homedir.Dir()
+		if err == nil {
+			if err := c.applyHCPConfig(path); err != nil {
+				return nil, err
+			}
 		}
 
 		return c.client, nil
@@ -196,8 +202,13 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 
 	c.client = client
 
-	if err := c.applyHCPConfig(); err != nil {
-		return nil, err
+	// Ignoring homedir errors here and moving on to avoid
+	// spamming user with warnings/errors that homedir isn't set.
+	path, err := homedir.Dir()
+	if err == nil {
+		if err := c.applyHCPConfig(path); err != nil {
+			return nil, err
+		}
 	}
 
 	if c.addrWarning != "" && c.UI != nil {
@@ -211,12 +222,12 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 	return client, nil
 }
 
-func (c *BaseCommand) applyHCPConfig() error {
+func (c *BaseCommand) applyHCPConfig(path string) error {
 	if c.hcpTokenHelper == nil {
 		c.hcpTokenHelper = c.HCPTokenHelper()
 	}
 
-	hcpToken, err := c.hcpTokenHelper.GetHCPToken()
+	hcpToken, err := c.hcpTokenHelper.GetHCPToken(path)
 	if err != nil {
 		return err
 	}
@@ -249,17 +260,17 @@ func (c *BaseCommand) SetAddress(addr string) {
 }
 
 // SetTokenHelper sets the token helper on the command.
-func (c *BaseCommand) SetTokenHelper(th token.TokenHelper) {
+func (c *BaseCommand) SetTokenHelper(th tokenhelper.TokenHelper) {
 	c.tokenHelper = th
 }
 
 // TokenHelper returns the token helper attached to the command.
-func (c *BaseCommand) TokenHelper() (token.TokenHelper, error) {
+func (c *BaseCommand) TokenHelper() (tokenhelper.TokenHelper, error) {
 	if c.tokenHelper != nil {
 		return c.tokenHelper, nil
 	}
 
-	helper, err := DefaultTokenHelper()
+	helper, err := cliconfig.DefaultTokenHelper()
 	if err != nil {
 		return nil, err
 	}

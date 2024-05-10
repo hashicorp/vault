@@ -3,7 +3,10 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<form onsubmit={{action @doSubmit (hash ciphertext=@ciphertext context=@context nonce=@nonce key_version=@key_version)}}>
+<form
+  {{on "submit" (fn @doSubmit (hash ciphertext=@ciphertext context=@context nonce=@nonce key_version=@key_version))}}
+  ...attributes
+>
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="perform" @noun="rewrap" />
     <div class="content has-bottom-margin-l">
@@ -13,10 +16,10 @@
         as the encryption key.
       </p>
     </div>
-    <KeyVersionSelect @key={{@key}} @onVersionChange={{action (mut @key_version)}} @key_version={{@key_version}} />
+    <KeyVersionSelect @key={{@key}} @onVersionChange={{fn (mut @key_version)}} @key_version={{@key_version}} />
     <div class="field">
       <div class="control is-expanded">
-        <JsonEditor @title="Ciphertext" @valueUpdated={{action (mut @ciphertext)}} @mode="ruby" />
+        <JsonEditor @title="Ciphertext" @valueUpdated={{fn (mut @ciphertext)}} @mode="ruby" />
       </div>
     </div>
     {{#if @key.derived}}
@@ -68,7 +71,16 @@
     </M.Header>
     <M.Body>
       <h2 class="title is-6">Ciphertext</h2>
-      <Hds::Copy::Snippet @textToCopy={{@ciphertext}} @color="secondary" @container="#transit-rewrap-modal" />
+      <Hds::Copy::Snippet
+        @textToCopy={{@ciphertext}}
+        @color="secondary"
+        @container="#transit-rewrap-modal"
+        @isFullWidth={{true}}
+        @isTruncated={{true}}
+        @onError={{(fn
+          (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
+        )}}
+      />
     </M.Body>
     <M.Footer as |F|>
       <Hds::Button @text="Close" {{on "click" F.close}} />

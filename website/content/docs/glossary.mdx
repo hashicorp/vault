@@ -16,6 +16,7 @@ documentation for Vault.
 - [Barrier](#barrier)
 - [Client Token](#client-token)
 - [Plugin](#plugin)
+- [Request](#request)
 - [Secret](#secret)
 - [Secrets Engine](#secrets-engine)
 - [Server](#server)
@@ -75,6 +76,33 @@ spawned.
 An external plugin may make use of [plugin multiplexing](/vault/docs/plugins/plugin-architecture#plugin-multiplexing).
 A multiplexed plugin allows a single plugin process to be used for multiple
 mounts of the same type.
+
+### Request
+
+A request being made to Vault contains all relevant parameters and context in order
+for Vault to be able to act accordingly. Vault represents this request internally
+in a way that understands:
+
+* Mount Point - Used to generate relative paths.
+* Mount Type - The type of mount the request is interacting with.
+* Namespace - The [namespace](/vault/docs/enterprise/namespaces) the request is taking place within.
+* Operation - See [the operation description](#operation) below for the supported operations.
+* Path - The full path of the request.
+
+<Note title="Request's Namespace">
+  The Namespace a request is targeting may be specified either as part of the path
+  or the Vault Namespace header.
+</Note>
+
+Please see our Enterprise documentation for further information on how
+[Namespaces can be specified](/vault/docs/enterprise/namespaces#vault-api-and-namespaces)
+as part of a request.
+
+#### Operation
+
+The request's operation can be one of the following: `alias-lookahead`, `create`, `delete`,
+`header`, `help`, `list`, `patch`, `read`, `renew`, `resolve-role`, `revoke`, `rollback`
+`update`.
 
 ### Secret
 

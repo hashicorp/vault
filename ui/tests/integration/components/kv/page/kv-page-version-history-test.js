@@ -87,10 +87,10 @@ module('Integration | Component | kv | Page::Secret::Metadata::Version-History',
       { owner: this.engine }
     );
     // because the popup menu is nested in a linked block we must combine the two selectors
-    const popupSelector = `${PAGE.versions.linkedBlock(2)} ${PAGE.popup}`;
+    const popupSelector = `${PAGE.versions.linkedBlock(1)} ${PAGE.popup}`;
     await click(popupSelector);
     assert
-      .dom('[data-test-create-new-version-from="2"]')
+      .dom('[data-test-create-new-version-from="1"]')
       .exists('Shows the option to create a new version from that secret.');
   });
 });
