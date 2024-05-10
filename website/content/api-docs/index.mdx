@@ -132,8 +132,7 @@ $ curl \
 The API documentation uses `LIST` as the HTTP verb, but you can still use `GET`
 with the `?list=true` query string.
 
-When a list request is issued and the result is an empty set, the response will
-have the status code 404 and the following content:
+If the list result is an empty set, Vault responds with status code 404 and the following JSON:
 
 ```json
 {"errors":[]}
