@@ -203,6 +203,20 @@ func (e *ErrInvalidKey) Error() string {
 	return fmt.Sprintf("invalid key: %v", e.Reason)
 }
 
+// possiblyWrapOverloadedError wraps ErrInternalError with the provided err
+// argument and a description if the err argument is ErrOverloaded. This is a
+// conservative approach to wrapping in some call paths which previously
+// discarded lower-level errors and returned ErrInternalError. The intent is to
+// prevent potential behavior changes by reducing the scope of errors which are
+// bubbled up.
+func possiblyWrapOverloadedError(desc string, err error) error {
+	if errors.Is(err, consts.ErrOverloaded) {
+		return fmt.Errorf("%s: %w: %w", desc, err, ErrInternalError)
+	}
+
+	return ErrInternalError
+}
+
 type RegisterAuthFunc func(context.Context, time.Duration, string, *logical.Auth, string) error
 
 type activeAdvertisement struct {
