@@ -50,6 +50,18 @@ to control truncation the behavior. Setting the issuer `leaf_not_after_behavior`
 field to `permit` and `enforce_leaf_not_after_behavior` to true restores the
 legacy behavior.
 
+### Request limiter deprecation
+
+Vault 1.16.0 included an experimental request limiter. The limiter was disabled
+by default. Further testing indicated that an alternative approach improves
+performance and reduces risk for many workloads. Vault 1.17.0 includes a
+new [adaptive overload
+protection](/vault/docs/concepts/adaptive-overload-protection) feature that
+prevents outages when Vault is overwhelmed by write requests. Adaptive overload
+protection is a beta feature in 1.17.0 and is disabled by default.
+
+The beta request limiter will be removed from Vault entirely in a later release.
+
 ## Known issues and workarounds
 
 @include 'known-issues/ocsp-redirect.mdx'
