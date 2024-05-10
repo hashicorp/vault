@@ -82,7 +82,7 @@ module('Integration | Component | pki tidy form', function (hooks) {
   });
 
   test('it renders all attribute fields, including enterprise', async function (assert) {
-    assert.expect(25);
+    assert.expect(27);
     this.autoTidy.enabled = true;
     const skipFields = ['enabled', 'tidyAcme', 'intervalDuration']; // combined with duration ttl or asserted separately
     await render(
@@ -121,8 +121,8 @@ module('Integration | Component | pki tidy form', function (hooks) {
     });
   });
 
-  test('it hides enterprise fields for OSS', async function (assert) {
-    assert.expect(7);
+  test('it hides enterprise fields for CE', async function (assert) {
+    assert.expect(8);
     this.version.type = 'community';
     this.autoTidy.enabled = true;
 

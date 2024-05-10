@@ -87,6 +87,9 @@ export default class PkiTidyModel extends Model {
   @attr('boolean', { label: 'Tidy the certificate store' })
   tidyCertStore;
 
+  @attr('boolean')
+  tidyCertMetadata;
+
   @attr('boolean', {
     label: 'Tidy cross-cluster revoked certificates',
     subText: 'Remove expired, cross-cluster revocation entries.',
