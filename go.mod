@@ -128,7 +128,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-centrify v0.15.1
 	github.com/hashicorp/vault-plugin-auth-cf v0.15.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.16.0
-	github.com/hashicorp/vault-plugin-auth-jwt v0.16.0
+	github.com/hashicorp/vault-plugin-auth-jwt v0.20.3
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.10.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.16.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.14.0
@@ -138,6 +138,17 @@ require (
 	github.com/hashicorp/vault-plugin-database-redis v0.2.1
 	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.2.1
 	github.com/hashicorp/vault-plugin-database-snowflake v0.9.2
+	github.com/hashicorp/vault-plugin-auth-cf v0.16.0
+	github.com/hashicorp/vault-plugin-auth-gcp v0.16.2
+	github.com/hashicorp/vault-plugin-auth-kerberos v0.11.0
+	github.com/hashicorp/vault-plugin-auth-kubernetes v0.18.0
+	github.com/hashicorp/vault-plugin-auth-oci v0.15.1
+	github.com/hashicorp/vault-plugin-database-couchbase v0.10.1
+	github.com/hashicorp/vault-plugin-database-elasticsearch v0.14.0
+	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.11.0
+	github.com/hashicorp/vault-plugin-database-redis v0.2.3
+	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.3.0
+	github.com/hashicorp/vault-plugin-database-snowflake v0.10.0
 	github.com/hashicorp/vault-plugin-mock v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-ad v0.16.0
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.15.0
@@ -486,9 +497,15 @@ require (
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
+<<<<<<< HEAD
 	google.golang.org/genproto v0.0.0-20231002182017-d307bd883b97 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20231002182017-d307bd883b97 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20231002182017-d307bd883b97 // indirect
+=======
+	google.golang.org/genproto v0.0.0-20240125205218-1f4bbc51befe // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20240125205218-1f4bbc51befe // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240125205218-1f4bbc51befe // indirect
+>>>>>>> 51c851b416 (Update vault-plugin-auth-jwt to v0.20.3 (#26890))
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.66.2 // indirect
 	gopkg.in/jcmturner/goidentity.v3 v3.0.0 // indirect
