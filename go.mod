@@ -67,13 +67,13 @@ require (
 	github.com/go-zookeeper/zk v1.0.3
 	github.com/gocql/gocql v1.0.0
 	github.com/golang-jwt/jwt/v4 v4.5.0
-	github.com/golang/protobuf v1.5.3
+	github.com/golang/protobuf v1.5.4
 	github.com/google/go-cmp v0.6.0
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
 	github.com/google/tink/go v1.7.0
 	github.com/hashicorp-forge/bbolt v1.3.8-hc3
-	github.com/hashicorp/cap v0.5.0
+	github.com/hashicorp/cap v0.6.0
 	github.com/hashicorp/consul-template v0.36.1-0.20240213145952-6c83e89b48af
 	github.com/hashicorp/consul/api v1.27.0
 	github.com/hashicorp/errwrap v1.1.0
@@ -82,7 +82,7 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-discover v0.0.0-20210818145131-c573d69da192
 	github.com/hashicorp/go-gcp-common v0.8.0
-	github.com/hashicorp/go-hclog v1.5.0
+	github.com/hashicorp/go-hclog v1.6.2
 	github.com/hashicorp/go-kms-wrapping/entropy/v2 v2.0.0
 	github.com/hashicorp/go-kms-wrapping/v2 v2.0.14
 	github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2 v2.0.7-1
@@ -95,7 +95,7 @@ require (
 	github.com/hashicorp/go-memdb v1.3.4
 	github.com/hashicorp/go-msgpack v1.1.5
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/hashicorp/go-plugin v1.5.2
+	github.com/hashicorp/go-plugin v1.6.0
 	github.com/hashicorp/go-raftchunking v0.6.3-0.20191002164813-7e9e8525653a
 	github.com/hashicorp/go-retryablehttp v0.7.4
 	github.com/hashicorp/go-rootcerts v1.0.2
@@ -110,7 +110,7 @@ require (
 	github.com/hashicorp/go-secure-stdlib/reloadutil v0.1.1
 	github.com/hashicorp/go-secure-stdlib/strutil v0.1.2
 	github.com/hashicorp/go-secure-stdlib/tlsutil v0.1.2
-	github.com/hashicorp/go-sockaddr v1.0.4
+	github.com/hashicorp/go-sockaddr v1.0.6
 	github.com/hashicorp/go-syslog v1.0.0
 	github.com/hashicorp/go-uuid v1.0.3
 	github.com/hashicorp/go-version v1.6.0
@@ -153,10 +153,10 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.12.1
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.7.3
 	github.com/hashicorp/vault-testing-stepwise v0.1.3
-	github.com/hashicorp/vault/api v1.10.0
+	github.com/hashicorp/vault/api v1.12.0
 	github.com/hashicorp/vault/api/auth/approle v0.1.0
 	github.com/hashicorp/vault/api/auth/userpass v0.1.0
-	github.com/hashicorp/vault/sdk v0.10.2
+	github.com/hashicorp/vault/sdk v0.11.0
 	github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20230201201504-b741fa893d77
 	github.com/influxdata/influxdb1-client v0.0.0-20200827194710-b269163b24ab
 	github.com/jackc/pgx/v4 v4.18.3
@@ -200,30 +200,30 @@ require (
 	github.com/sasha-s/go-deadlock v0.2.0
 	github.com/sethvargo/go-limiter v0.7.1
 	github.com/shirou/gopsutil/v3 v3.22.6
-	github.com/stretchr/testify v1.8.4
+	github.com/stretchr/testify v1.9.0
 	go.etcd.io/bbolt v1.3.7
 	go.etcd.io/etcd/client/pkg/v3 v3.5.7
 	go.etcd.io/etcd/client/v2 v2.305.5
 	go.etcd.io/etcd/client/v3 v3.5.7
 	go.mongodb.org/atlas v0.33.0
 	go.mongodb.org/mongo-driver v1.12.1
-	go.opentelemetry.io/otel v1.22.0
+	go.opentelemetry.io/otel v1.24.0
 	go.opentelemetry.io/otel/sdk v1.22.0
-	go.opentelemetry.io/otel/trace v1.22.0
+	go.opentelemetry.io/otel/trace v1.24.0
 	go.uber.org/atomic v1.11.0
 	go.uber.org/goleak v1.2.1
 	golang.org/x/crypto v0.22.0
 	golang.org/x/exp v0.0.0-20240213143201-ec583247a57a
-	golang.org/x/net v0.21.0
-	golang.org/x/oauth2 v0.17.0
+	golang.org/x/net v0.24.0
+	golang.org/x/oauth2 v0.18.0
 	golang.org/x/sync v0.7.0
 	golang.org/x/sys v0.19.0
 	golang.org/x/term v0.19.0
 	golang.org/x/text v0.14.0
 	golang.org/x/tools v0.18.0
 	google.golang.org/api v0.163.0
-	google.golang.org/grpc v1.61.0
-	google.golang.org/protobuf v1.32.0
+	google.golang.org/grpc v1.61.1
+	google.golang.org/protobuf v1.33.0
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
 	k8s.io/utils v0.0.0-20230406110748-d93618cff8a2
 	layeh.com/radius v0.0.0-20231213012653-1006025d24f8
@@ -311,7 +311,7 @@ require (
 	github.com/containerd/continuity v0.4.2 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/coreos/go-oidc v2.2.1+incompatible // indirect
-	github.com/coreos/go-oidc/v3 v3.5.0 // indirect
+	github.com/coreos/go-oidc/v3 v3.10.0 // indirect
 	github.com/coreos/go-semver v0.3.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/couchbase/gocb/v2 v2.6.5 // indirect
@@ -342,6 +342,7 @@ require (
 	github.com/go-asn1-ber/asn1-ber v1.5.4 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.5.0 // indirect
+	github.com/go-jose/go-jose/v4 v4.0.1 // indirect
 	github.com/go-ldap/ldif v0.0.0-20200320164324-fd88d9b715b3 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
@@ -383,7 +384,7 @@ require (
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
 	github.com/hashicorp/go-msgpack/v2 v2.1.1 // indirect
 	github.com/hashicorp/go-secure-stdlib/fileutil v0.1.0 // indirect
-	github.com/hashicorp/go-secure-stdlib/plugincontainer v0.2.2 // indirect
+	github.com/hashicorp/go-secure-stdlib/plugincontainer v0.3.0 // indirect
 	github.com/hashicorp/go-slug v0.12.1 // indirect
 	github.com/hashicorp/go-tfe v1.33.0 // indirect
 	github.com/hashicorp/jsonapi v0.0.0-20210826224640-ee7dae0fb22d // indirect
@@ -412,6 +413,7 @@ require (
 	github.com/jeffchao/backoff v0.0.0-20140404060208-9d7fd7aa17f2 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
+	github.com/joshlf/go-acl v0.0.0-20200411065538-eae00ae38531 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0 // indirect
 	github.com/kevinburke/ssh_config v1.2.0 // indirect
@@ -478,7 +480,7 @@ require (
 	github.com/sony/gobreaker v0.5.0 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/stretchr/objx v0.5.0 // indirect
+	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/tencentcloud/tencentcloud-sdk-go v1.0.162 // indirect
 	github.com/tilinna/clock v1.1.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.10 // indirect
@@ -504,7 +506,7 @@ require (
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.47.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.47.0 // indirect
-	go.opentelemetry.io/otel/metric v1.22.0 // indirect
+	go.opentelemetry.io/otel/metric v1.24.0 // indirect
 	go.uber.org/multierr v1.7.0 // indirect
 	go.uber.org/zap v1.19.1 // indirect
 	golang.org/x/mod v0.15.0 // indirect
