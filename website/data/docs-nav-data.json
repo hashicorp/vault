@@ -2679,6 +2679,10 @@
             "path": "enterprise/license"
           },
           {
+            "title": "Design your Vault Enterprise cluster",
+            "path": "enterprise/cluster-design"
+          },
+          {
             "title": "Autoloading",
             "path": "enterprise/license/autoloading"
           },
