@@ -32,7 +32,7 @@ module('Integration | Component | pki tidy form', function (hooks) {
   });
 
   test('it hides or shows fields depending on auto-tidy toggle', async function (assert) {
-    assert.expect(37);
+    assert.expect(39);
     const sectionHeaders = [
       'Universal operations',
       'ACME operations',
@@ -188,6 +188,7 @@ module('Integration | Component | pki tidy form', function (hooks) {
           revocation_queue_safety_buffer: '40s',
           safety_buffer: '50s',
           tidy_acme: true,
+          tidy_cert_metadata: true,
           tidy_cert_store: true,
           tidy_cross_cluster_revoked_certs: true,
           tidy_expired_issuers: true,
