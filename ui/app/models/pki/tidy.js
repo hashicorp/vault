@@ -140,6 +140,7 @@ export default class PkiTidyModel extends Model {
       {
         'Universal operations': [
           'tidyCertStore',
+          'tidyCertMetadata',
           'tidyRevokedCerts',
           'tidyRevokedCertIssuerAssociations',
           'safetyBuffer',
