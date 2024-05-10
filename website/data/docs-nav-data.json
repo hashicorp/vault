@@ -2679,10 +2679,6 @@
             "path": "enterprise/license"
           },
           {
-            "title": "Design your Vault Enterprise cluster",
-            "path": "enterprise/cluster-design"
-          },
-          {
             "title": "Autoloading",
             "path": "enterprise/license/autoloading"
           },
@@ -2703,6 +2699,10 @@
       {
         "title": "Long-term support (LTS)",
         "path": "enterprise/lts"
+      },
+      {
+        "title": "Design your Vault Enterprise cluster",
+        "path": "enterprise/cluster-design"
       },
       {
         "title": "Replication",
