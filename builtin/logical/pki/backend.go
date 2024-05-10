@@ -126,6 +126,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 				clusterConfigPath,
 				issuing.PathCrls,
 				issuing.PathCerts,
+				issuing.PathCertMetadata,
 				acmePathPrefix,
 			},
 
