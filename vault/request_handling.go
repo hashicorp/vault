@@ -70,6 +70,11 @@ type HandlerProperties struct {
 	DisablePrintableCheck bool
 	RecoveryMode          bool
 	RecoveryToken         *uberAtomic.String
+
+	// RequestIDGenerator is primary used for testing purposes to allow tests to
+	// control the request IDs deterministically. In production code (i.e. if this
+	// is nil) the handler will generate UUIDs.
+	RequestIDGenerator func() (string, error)
 }
 
 // fetchEntityAndDerivedPolicies returns the entity object for the given entity
