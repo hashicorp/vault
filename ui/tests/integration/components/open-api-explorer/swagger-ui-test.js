@@ -5,15 +5,14 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { waitUntil, find } from '@ember/test-helpers';
+import { fillIn, render, typeIn, waitFor } from '@ember/test-helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { render, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 
 const SELECTORS = {
   container: '[data-test-swagger-ui]',
-  searchInput: '.operation-filter-input',
+  searchInput: 'input.operation-filter-input',
   apiPathBlock: '.opblock-post',
 };
 
@@ -38,21 +37,21 @@ module('Integration | Component | open-api-explorer | swagger-ui', function (hoo
     };
   });
 
-  test('it renders', async function (assert) {
+  test(`it renders`, async function (assert) {
     await this.renderComponent();
 
-    await waitUntil(() => find(SELECTORS.container));
+    await waitFor(SELECTORS.container);
 
     assert.dom(SELECTORS.container).exists('renders component');
     assert.dom(SELECTORS.apiPathBlock).exists({ count: this.totalApiPaths }, 'renders all api paths');
   });
 
-  test('it can search', async function (assert) {
+  test(`it can search`, async function (assert) {
     await this.renderComponent();
 
-    await waitUntil(() => find(SELECTORS.searchInput));
-    await fillIn(SELECTORS.searchInput, 'token');
-
+    // in testing only the input is not filling correctly except after the second time
+    await fillIn(SELECTORS.searchInput, 'moot');
+    await typeIn(SELECTORS.searchInput, 'token');
     // for some reason search results are not rendered immediately in tests,
     // so asserting that the search input has the value we expect is the best we can do here
     // if the search fn breaks, this test will fail

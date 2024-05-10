@@ -41,6 +41,7 @@ export const CLIENT_COUNT = {
     customEndMonth: '[data-test-show-calendar]',
     previousYear: '[data-test-previous-year]',
     nextYear: '[data-test-next-year]',
+    displayYear: '[data-test-display-year]',
     calendarMonth: (month: string) => `[data-test-calendar-month="${month}"]`,
   },
   selectedAuthMount: 'div#mounts-search-select [data-test-selected-option] div',

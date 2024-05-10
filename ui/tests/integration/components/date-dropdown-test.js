@@ -23,11 +23,8 @@ const SELECTORS = {
 module('Integration | Component | date-dropdown', function (hooks) {
   setupRenderingTest(hooks);
 
-  hooks.before(function () {
-    sinon.stub(timestamp, 'now').callsFake(() => new Date('2018-04-03T14:15:30'));
-  });
-  hooks.after(function () {
-    timestamp.now.restore();
+  hooks.beforeEach(function () {
+    sinon.replace(timestamp, 'now', sinon.fake.returns(new Date('2018-04-03T14:15:30')));
   });
 
   test('it renders dropdown', async function (assert) {

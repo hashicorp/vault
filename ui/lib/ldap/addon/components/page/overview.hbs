@@ -51,21 +51,25 @@
         <div class="has-top-margin-m is-flex">
           <SearchSelect
             class="is-flex-1"
+            @ariaLabel="Role"
             @placeholder="Select a role"
             @disallowNewItems={{true}}
             @options={{@roles}}
             @selectLimit="1"
             @fallbackComponent="input-search"
             @onChange={{this.selectRole}}
+            @renderInPlace={{true}}
           />
-          <Hds::Button
-            @text="Get credentials"
-            @color="secondary"
-            class="has-left-margin-s"
-            disabled={{not this.selectedRole}}
-            {{on "click" this.generateCredentials}}
-            data-test-generate-credential-button
-          />
+          <div>
+            <Hds::Button
+              @text="Get credentials"
+              @color="secondary"
+              class="has-left-margin-s"
+              disabled={{not this.selectedRole}}
+              {{on "click" this.generateCredentials}}
+              data-test-generate-credential-button
+            />
+          </div>
         </div>
       </OverviewCard>
     </div>

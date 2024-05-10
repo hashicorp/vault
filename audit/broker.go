@@ -299,7 +299,7 @@ func (b *Broker) LogRequest(ctx context.Context, in *logical.LogInput) (ret erro
 			return retErr.ErrorOrNil()
 		}
 
-		tempContext, auditCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		tempContext, auditCancel := context.WithTimeout(context.Background(), timeout)
 		defer auditCancel()
 		auditContext = namespace.ContextWithNamespace(tempContext, ns)
 	}

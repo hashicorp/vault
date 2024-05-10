@@ -2539,6 +2539,59 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	}
 }
 
+// TestBackend_SignIntermediate_EnforceLeafFlag verifies if the flag is true
+// that we will leverage the issuer's configured behavior
+func TestBackend_SignIntermediate_EnforceLeafFlag(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"ttl":         "40h",
+		"common_name": "myvault.com",
+	})
+	require.NoError(t, err, "failed generating root cert")
+	rootCert := parseCert(t, resp.Data["certificate"].(string))
+
+	_, err = CBWrite(b, s, "issuer/default", map[string]interface{}{
+		"leaf_not_after_behavior": "err",
+	})
+	require.NoError(t, err, "failed updating root issuer cert behavior")
+
+	resp, err = CBWrite(b, s, "intermediate/generate/internal", map[string]interface{}{
+		"common_name": "myint.com",
+	})
+	require.NoError(t, err, "failed generating intermediary CSR")
+	csr := resp.Data["csr"]
+
+	_, err = CBWrite(b, s, "root/sign-intermediate", map[string]interface{}{
+		"common_name":                     "myint.com",
+		"other_sans":                      "1.3.6.1.4.1.311.20.2.3;utf8:caadmin@example.com",
+		"csr":                             csr,
+		"ttl":                             "60h",
+		"enforce_leaf_not_after_behavior": true,
+	})
+	require.Error(t, err, "sign-intermediate should have failed as root issuer leaf behavior is set to err")
+
+	// Now test with permit, the old default behavior
+	_, err = CBWrite(b, s, "issuer/default", map[string]interface{}{
+		"leaf_not_after_behavior": "permit",
+	})
+	require.NoError(t, err, "failed updating root issuer cert behavior to permit")
+
+	resp, err = CBWrite(b, s, "root/sign-intermediate", map[string]interface{}{
+		"common_name":                     "myint.com",
+		"other_sans":                      "1.3.6.1.4.1.311.20.2.3;utf8:caadmin@example.com",
+		"csr":                             csr,
+		"ttl":                             "60h",
+		"enforce_leaf_not_after_behavior": true,
+	})
+	require.NoError(t, err, "failed to sign intermediary CA with permit as issuer")
+	intCert := parseCert(t, resp.Data["certificate"].(string))
+
+	require.Truef(t, rootCert.NotAfter.Before(intCert.NotAfter),
+		"root cert notAfter %v was not before ca cert's notAfter %v", rootCert.NotAfter, intCert.NotAfter)
+}
+
 func TestBackend_SignIntermediate_AllowedPastCAValidity(t *testing.T) {
 	t.Parallel()
 	b_root, s_root := CreateBackendWithStorage(t)
@@ -2546,13 +2599,15 @@ func TestBackend_SignIntermediate_AllowedPastCAValidity(t *testing.T) {
 	var err error
 
 	// Direct issuing from root
-	_, err = CBWrite(b_root, s_root, "root/generate/internal", map[string]interface{}{
+	resp, err := CBWrite(b_root, s_root, "root/generate/internal", map[string]interface{}{
 		"ttl":         "40h",
 		"common_name": "myvault.com",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	rootCert := parseCert(t, resp.Data["certificate"].(string))
 
 	_, err = CBWrite(b_root, s_root, "roles/test", map[string]interface{}{
 		"allow_bare_domains": true,
@@ -2563,7 +2618,7 @@ func TestBackend_SignIntermediate_AllowedPastCAValidity(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp, err := CBWrite(b_int, s_int, "intermediate/generate/internal", map[string]interface{}{
+	resp, err = CBWrite(b_int, s_int, "intermediate/generate/internal", map[string]interface{}{
 		"common_name": "myint.com",
 	})
 	schema.ValidateResponse(t, schema.GetResponseSchema(t, b_root.Route("intermediate/generate/internal"), logical.UpdateOperation), resp, true)
@@ -2614,6 +2669,9 @@ func TestBackend_SignIntermediate_AllowedPastCAValidity(t *testing.T) {
 	cert := parseCert(t, resp.Data["certificate"].(string))
 	certSkid := certutil.GetHexFormatted(cert.SubjectKeyId, ":")
 	require.Equal(t, intSkid, certSkid)
+
+	require.Equal(t, rootCert.NotAfter, cert.NotAfter, "intermediary cert's NotAfter did not match root cert's NotAfter")
+	require.Contains(t, resp.Warnings, intCaTruncatationWarning, "missing warning about intermediary CA notAfter truncation")
 }
 
 func TestBackend_ConsulSignLeafWithLegacyRole(t *testing.T) {
@@ -4050,6 +4108,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 			"tidy_move_legacy_ca_bundle":            false,
 			"tidy_revocation_queue":                 false,
 			"tidy_cross_cluster_revoked_certs":      false,
+			"tidy_cert_metadata":                    false,
 			"pause_duration":                        "0s",
 			"state":                                 "Finished",
 			"error":                                 nil,
@@ -4071,6 +4130,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 			"acme_account_revoked_count":            json.Number("0"),
 			"acme_account_deleted_count":            json.Number("0"),
 			"total_acme_account_count":              json.Number("0"),
+			"cert_metadata_deleted_count":           json.Number("0"),
 		}
 		// Let's copy the times from the response so that we can use deep.Equal()
 		timeStarted, ok := tidyStatus.Data["time_started"]
