@@ -111,7 +111,7 @@ jobs:
       - name: Fetch Secrets
         id: secrets
         if: github.repository == 'hashicorp/vault-enterprise'
-        uses: hashicorp/vault-action@9f522b85981b491eab9a52c144d15aedbd0bf371 # v2.8.0
+        uses: hashicorp/vault-action@d1720f055e0635fd932a1d2a48f87a666a57906c # v3.0.0
         with:
           url: ${{ steps.vault-auth.outputs.addr }}
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
@@ -285,7 +285,7 @@ jobs:
       - name: Fetch Secrets
         id: secrets
         if: github.repository == 'hashicorp/vault-enterprise'
-        uses: hashicorp/vault-action@9f522b85981b491eab9a52c144d15aedbd0bf371 # v2.8.0
+        uses: hashicorp/vault-action@d1720f055e0635fd932a1d2a48f87a666a57906c # v3.0.0
         with:
           url: ${{ steps.vault-auth.outputs.addr }}
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
@@ -306,6 +306,15 @@ jobs:
         run: |
           git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
       - uses: ./.github/actions/install-external-tools
+      - name: Build Vault HSM binary for tests
+        if: inputs.binary-tests && matrix.id == inputs.total-runners && github.repository == 'hashicorp/vault-enterprise'
+        env:
+          GOPRIVATE: github.com/hashicorp/*
+        run: |
+          set -exo pipefail
+          time make prep enthsmdev
+          # The subsequent build of vault will blow away the bin folder
+          mv bin/vault vault-hsm-binary
       - if: inputs.binary-tests && matrix.id == inputs.total-runners
         name: Build dev binary for binary tests
         # The dev mode binary has to exist for binary tests that are dispatched on the last runner.
@@ -399,6 +408,11 @@ jobs:
           # The docker/binary tests are more expensive, and we've had problems with timeouts when running at full
           # parallelism.  The default if -p isn't specified is to use NumCPUs, which seems fine for regular tests.
           package_parallelism=""
+
+          if [ -f vault-hsm-binary ]; then
+            VAULT_HSM_BINARY="$(pwd)/vault-hsm-binary"
+            export VAULT_HSM_BINARY
+          fi
 
           if [ -f bin/vault ]; then
             VAULT_BINARY="$(pwd)/bin/vault"

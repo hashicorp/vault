@@ -1669,6 +1669,8 @@ func (c *ServerCommand) Run(args []string) int {
 
 			core.ReloadRequestLimiter()
 
+			core.ReloadOverloadController()
+
 			// reloading HCP link
 			hcpLink, err = c.reloadHCPLink(hcpLink, config, core, hcpLogger)
 			if err != nil {
@@ -1683,6 +1685,15 @@ func (c *ServerCommand) Run(args []string) int {
 				} else {
 					core.SetLogLevel(level)
 				}
+			}
+
+			// notify ServiceRegistration that a configuration reload has occurred
+			if sr := coreConfig.GetServiceRegistration(); sr != nil {
+				var srConfig *map[string]string
+				if config.ServiceRegistration != nil {
+					srConfig = &config.ServiceRegistration.Config
+				}
+				sr.NotifyConfigurationReload(srConfig)
 			}
 
 			if err := core.ReloadCensus(); err != nil {
