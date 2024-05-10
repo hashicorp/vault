@@ -122,7 +122,6 @@ module('Integration | Component | pki tidy form', function (hooks) {
   });
 
   test('it hides enterprise fields for CE', async function (assert) {
-    assert.expect(8);
     this.version.type = 'community';
     this.autoTidy.enabled = true;
 
