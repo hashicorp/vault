@@ -14895,7 +14895,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"pretender@npm:^3.4.3, pretender@npm:^3.4.7":
+"pretender@npm:^3.4.7":
   version: 3.4.7
   resolution: "pretender@npm:3.4.7"
   dependencies:
@@ -18238,7 +18238,6 @@ __metadata:
     node-notifier: ^8.0.1
     normalize.css: 4.1.1
     pkijs: ^2.2.2
-    pretender: ^3.4.3
     prettier: 3.0.3
     prettier-eslint-cli: ^7.1.0
     pvutils: ^1.0.17
