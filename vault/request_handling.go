@@ -2404,7 +2404,7 @@ func (c *Core) RegisterAuth(ctx context.Context, tokenTTL time.Duration, path st
 
 	if err := c.tokenStore.create(ctx, &te); err != nil {
 		c.logger.Error("failed to create token", "error", err)
-		return ErrInternalError
+		return possiblyWrapOverloadedError("failed to create token", err)
 	}
 
 	// Populate the client token, accessor, and TTL
@@ -2424,7 +2424,7 @@ func (c *Core) RegisterAuth(ctx context.Context, tokenTTL time.Duration, path st
 				c.logger.Warn("failed to clean up token lease during login request", "request_path", path, "error", err)
 			}
 			c.logger.Error("failed to register token lease during login request", "request_path", path, "error", err)
-			return ErrInternalError
+			return possiblyWrapOverloadedError("failed to register token lease during login request", err)
 		}
 		if te.ExternalID != "" {
 			auth.ClientToken = te.ExternalID
