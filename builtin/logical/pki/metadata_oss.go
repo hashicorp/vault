@@ -29,3 +29,7 @@ func GetCertificateMetadata(ctx context.Context, storage logical.Storage, serial
 func (b *backend) doTidyCertMetadata(ctx context.Context, req *logical.Request, logger hclog.Logger, config *tidyConfig) error {
 	return ErrMetadataIsEntOnly
 }
+
+func validateMetadataConfiguration(role *issuing.RoleEntry) error {
+	return ErrMetadataIsEntOnly
+}
