@@ -42,7 +42,28 @@ namespace.
   file. Short-lived credentials reduce the risk of exposure in the event of a
   compromised state file.
 
-## Terraform Vault provider recommendations
+## Vault and Vault provider recommendations
+
+- **Use Vault-backed dynamic credentials for different cloud providers**.
+  [Vault-backed dynamic credentials](/terraform/cloud-docs/workspaces/dynamic-provider-credentials/vault-backed)
+  limits the need for unique dynamic provider credentials across different cloud
+  providers so you can centralize sensitive data management with Vault while
+  generating short-lived credentials with multiple cloud providers.
+
+- **Use the namespace attribute in resources and data sources**. Using the
+  namespace attribute of a resource, instead of a provider alias, simplifies
+  your configuration and avoids the need for multiple provider blocks.
+
+- **Use distinct token capabilities**. Use the minimal required Vault token
+  capabilities to manage your Vault resources. For example, reading data from a
+  KV data source and drift detection functionality only require the `read`
+  capability. But managing the KV resource requires the `create` or `update`
+  capability depending on whether the resource already exists. And removing the
+  KV resource from the Terraform configuration requires the `delete` capability.
+
+- **Migrate existing resources to Terraform**. If you created Vault resources
+  outside of your Terraform provisioning workflow,
+  [migrate the un-managed resources](/vault/docs/configuration/programmatic-management#migrate).
 
 - **Use dynamic provider credentials for Vault when possible**.
   [Dynamic provider credentials](/terraform/cloud-docs/workspaces/dynamic-provider-credentials/vault-configuration)
@@ -66,26 +87,3 @@ namespace.
   Vault child token (e.g., `token_name` argument).
 
 </Note>
-
-## Vault recommendations
-
-- **Use Vault-backed dynamic credentials for different cloud providers**.
-  [Vault-backed dynamic credentials](/terraform/cloud-docs/workspaces/dynamic-provider-credentials/vault-backed)
-  limits the need for unique dynamic provider credentials across different cloud
-  providers so you can centralize sensitive data management with Vault while
-  generating short-lived credentials with multiple cloud providers.
-
-- **Use the namespace attribute in resources and data sources**. Using the
-  namespace attribute of a resource, instead of a provider alias, simplifies
-  your configuration and avoids the need for multiple provider blocks.
-
-- **Use distinct token capabilities**. Use the minimal required Vault token
-  capabilities to manage your Vault resources. For example, reading data from a
-  KV data source and drift detection functionality only require the `read`
-  capability. But managing the KV resource requires the `create` or `update`
-  capability depending on whether the resource already exists. And removing the
-  KV resource from the Terraform configuration requires the `delete` capability.
-
-- **Migrate existing resources to Terraform**. If you created Vault resources
-  outside of your Terraform provisioning workflow,
-  [migrate the un-managed resources](/vault/docs/configuration/programmatic-management#migrate).
