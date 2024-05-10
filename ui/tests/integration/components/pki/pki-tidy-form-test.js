@@ -32,7 +32,7 @@ module('Integration | Component | pki tidy form', function (hooks) {
   });
 
   test('it hides or shows fields depending on auto-tidy toggle', async function (assert) {
-    assert.expect(37);
+    assert.expect(39);
     const sectionHeaders = [
       'Universal operations',
       'ACME operations',
@@ -82,7 +82,7 @@ module('Integration | Component | pki tidy form', function (hooks) {
   });
 
   test('it renders all attribute fields, including enterprise', async function (assert) {
-    assert.expect(25);
+    assert.expect(27);
     this.autoTidy.enabled = true;
     const skipFields = ['enabled', 'tidyAcme', 'intervalDuration']; // combined with duration ttl or asserted separately
     await render(
@@ -121,8 +121,7 @@ module('Integration | Component | pki tidy form', function (hooks) {
     });
   });
 
-  test('it hides enterprise fields for OSS', async function (assert) {
-    assert.expect(7);
+  test('it hides enterprise fields for CE', async function (assert) {
     this.version.type = 'community';
     this.autoTidy.enabled = true;
 
@@ -189,6 +188,7 @@ module('Integration | Component | pki tidy form', function (hooks) {
           revocation_queue_safety_buffer: '40s',
           safety_buffer: '50s',
           tidy_acme: true,
+          tidy_cert_metadata: true,
           tidy_cert_store: true,
           tidy_cross_cluster_revoked_certs: true,
           tidy_expired_issuers: true,

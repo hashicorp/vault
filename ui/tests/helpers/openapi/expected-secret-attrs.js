@@ -1432,6 +1432,12 @@ const pki = {
       fieldGroup: 'default',
       type: 'boolean',
     },
+    tidyCertMetadata: {
+      editType: 'boolean',
+      fieldGroup: 'default',
+      helpText: 'Set to true to enable tidying up certificate metadata',
+      type: 'boolean',
+    },
     tidyCertStore: {
       editType: 'boolean',
       helpText: 'Set to true to enable tidying up the certificate store',
