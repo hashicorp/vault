@@ -79,9 +79,8 @@ namespace.
   your configuration and avoids the need for multiple provider blocks.
 
 - **Use distinct token capabilities**. Use the minimal required Vault token
-  capabilities to manage your Vault resources. For example, pulling data from a
-  KV plugin only requires the `read` capability while drift detection requires
-  `read`, `create`, and `update`.
+  capabilities to manage your Vault resources. For example, reading data from a
+  KV datasource and drift detection functionality only require the `read` capability. The `create` or `update` capability is required to manage the KV resource and depends on whether the resource already exists. The `delete` capability is required if you remove the KV resource from the Terraform configuration.
 
 - **Migrate existing resources to Terraform**. If you created Vault resources
   outside of your Terraform provisioning workflow,
