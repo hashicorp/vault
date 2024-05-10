@@ -10,7 +10,14 @@ description: |-
 
 @include 'alerts/enterprise-only.mdx'
 
-@include 'alerts/beta.mdx'
+<Warning title="Deprecated beta feature">
+
+Vault 1.16 included the request limiter as a Beta feature. During the beta, we
+found an alternative approach that better meets user needs.  The request limiter
+has been deprecated in favor of [adaptive overload
+protection](/vault/docs/concepts/adaptive-overload-protection).
+
+</Warning>
 
 The `request_limiter` stanza allows operators to turn on the adaptive
 concurrency limiter, which is off by default. This is a reloadable config.

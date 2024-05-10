@@ -308,7 +308,7 @@
       {
         "title": "Request Limiter",
         "badge": {
-          "text": "ENTERPRISE",
+          "text": "ENTERPRISE | DEPRECATED",
           "type": "outlined",
           "color": "neutral"
         },
@@ -321,10 +321,29 @@
               "type": "outlined",
               "color": "highlight"
             }
+          }
+        ]
+      },
+      {
+        "title": "Adaptive overload protection",
+        "badge": {
+          "text": "ENTERPRISE | BETA",
+          "type": "outlined",
+          "color": "neutral"
+        },
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "concepts/adaptive-overload-protection",
+            "badge": {
+              "text": "BETA",
+              "type": "outlined",
+              "color": "highlight"
+            }
           },
           {
             "title": "Vault server temporarily overloaded",
-            "path": "concepts/request-limiter/vault-server-temporarily-overloaded"
+            "path": "concepts/adaptive-overload-protection/vault-server-temporarily-overloaded"
           }
         ]
       }
@@ -543,6 +562,10 @@
       {
         "title": "<code>Request Limiter</code>",
         "path": "configuration/request-limiter"
+      },
+      {
+        "title": "Adaptive overload protection",
+        "path": "configuration/adaptive-overload-protection"
       },
       {
         "title": "<code>ui</code>",
