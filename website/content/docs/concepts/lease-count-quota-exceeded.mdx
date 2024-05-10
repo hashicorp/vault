@@ -1,0 +1,41 @@
+---
+layout: docs
+page_title: Lease count quota exceeded
+description: |-
+  Vault Enterprise error when quota limit is reached.
+---
+
+# Lease count quota exceeded
+
+Vault returns a `429 - Too Many Requests` response if a new lease request
+violates the quota limit, to guard against [lease
+explosions](/vault/docs/concepts/lease-explosions):
+
+
+```
+Error making API request.
+
+URL: PUT https://127.0.0.1:61555/v1/auth/userpass/login/foo
+Code: 429. Errors:
+
+* 1 error occurred:
+	* request path "auth/userpass/login/foo": lease count quota exceeded
+```
+
+To resolve the error:
+
+1. Check for client-side errors that result in excessive lease creation and
+   correct them.
+1. Tune your lease count quota to accommodate any expected increases in lease
+   creation. For example, due to new feature releases or an increase in users.
+
+## Tutorial
+
+Refer to [Protecting Vault with Resource
+Quotas](/vault/tutorials/operations/resource-quotas) for a
+step-by-step tutorial.
+
+## API
+
+Lease count quotas can be managed over the HTTP API. Please see
+[Lease Count Quotas API](/vault/api-docs/system/lease-count-quotas) for more details.

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { alias, or } from '@ember/object/computed';
 import Component from '@ember/component';
 import { getOwner } from '@ember/application';
@@ -105,7 +105,7 @@ export default Component.extend({
 
   refreshRoute: task(function* () {
     const owner = getOwner(this);
-    const currentRoute = owner.lookup(`router:main`).get('currentRouteName');
+    const currentRoute = owner.lookup(`router:main`).currentRouteName;
 
     try {
       this.store.clearAllDatasets();

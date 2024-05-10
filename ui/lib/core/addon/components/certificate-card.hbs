@@ -14,7 +14,7 @@
   </span>
   <div class="has-left-margin-m is-min-width-0 is-flex-grow-1">
     <p class="has-text-weight-bold" data-test-certificate-label>
-      {{this.format}}
+      {{this.certLabel}}
     </p>
     <code class="is-size-8 truncate-second-line has-text-grey" data-test-certificate-value>
       {{@data}}
@@ -24,9 +24,12 @@
     <Hds::Copy::Button
       @text="Copy"
       @isIconOnly={{true}}
-      @textToCopy={{@data}}
+      @textToCopy={{this.copyValue}}
+      @onError={{(fn
+        (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
+      )}}
       class="transparent"
-      data-test-copy-button={{or @data true}}
+      data-test-copy-button={{or this.copyValue true}}
     />
   </div>
 </Hds::Card::Container>

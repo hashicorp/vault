@@ -11,10 +11,9 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
-
-	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/vault/quotas"
 )
 

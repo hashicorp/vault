@@ -4,7 +4,7 @@
  */
 
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { hash } from 'rsvp';
 import { parseCertificate } from 'vault/utils/parse-pki-cert';
 import camelizeKeys from 'vault/utils/camelize-object-keys';
@@ -32,6 +32,7 @@ export default class PkiIssuerRotateRootRoute extends Route {
       oldRoot,
       newRootModel,
       parsingErrors,
+      backend: this.secretMountPath.currentPath,
     });
   }
 
@@ -39,9 +40,13 @@ export default class PkiIssuerRotateRootRoute extends Route {
     super.setupController(controller, resolvedModel);
     controller.breadcrumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: this.secretMountPath.currentPath, route: 'overview' },
-      { label: 'issuers', route: 'issuers.index' },
-      { label: resolvedModel.oldRoot.id, route: 'issuers.issuer.details' },
+      { label: this.secretMountPath.currentPath, route: 'overview', model: resolvedModel.oldRoot.backend },
+      { label: 'issuers', route: 'issuers.index', model: resolvedModel.oldRoot.backend },
+      {
+        label: resolvedModel.oldRoot.id,
+        route: 'issuers.issuer.details',
+        models: [resolvedModel.oldRoot.backend, resolvedModel.oldRoot.id],
+      },
       { label: 'rotate root' },
     ];
   }

@@ -9,8 +9,9 @@ import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { SELECTORS } from 'vault/tests/helpers/pki/page/pki-keys';
-import { STANDARD_META } from 'vault/tests/helpers/pki';
+import { STANDARD_META } from 'vault/tests/helpers/pagination';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { PKI_KEYS } from 'vault/tests/helpers/pki/pki-selectors';
 
 module('Integration | Component | pki key list page', function (hooks) {
   setupRenderingTest(hooks);
@@ -61,8 +62,8 @@ module('Integration | Component | pki key list page', function (hooks) {
     assert
       .dom('[data-test-empty-state-title]')
       .hasText('No keys yet', 'renders empty state that no keys exist');
-    assert.dom(SELECTORS.importKey).exists('renders toolbar with import action');
-    assert.dom(SELECTORS.generateKey).exists('renders toolbar with generate action');
+    assert.dom(PKI_KEYS.importKey).exists('renders toolbar with import action');
+    assert.dom(PKI_KEYS.generateKey).exists('renders toolbar with generate action');
   });
 
   test('it renders list of keys and actions when permission allowed', async function (assert) {
@@ -80,19 +81,19 @@ module('Integration | Component | pki key list page', function (hooks) {
       `,
       { owner: this.engine }
     );
-    assert.dom(SELECTORS.keyName).hasText('test-key', 'linked block renders key id');
+    assert.dom(PKI_KEYS.keyName).hasText('test-key', 'linked block renders key id');
     assert
-      .dom(SELECTORS.keyId)
+      .dom(PKI_KEYS.keyId)
       .hasText('724862ff-6438-bad0-b598-77a6c7f4e934', 'linked block renders key name');
-    assert.dom(SELECTORS.importKey).exists('renders import action');
-    assert.dom(SELECTORS.generateKey).exists('renders generate action');
-    await click(SELECTORS.popupMenuTrigger);
-    assert.dom(SELECTORS.popupMenuDetails).exists('details link exists');
-    assert.dom(SELECTORS.popupMenuEdit).exists('edit link exists');
+    assert.dom(PKI_KEYS.importKey).exists('renders import action');
+    assert.dom(PKI_KEYS.generateKey).exists('renders generate action');
+    await click(GENERAL.menuTrigger);
+    assert.dom(PKI_KEYS.popupMenuDetails).exists('details link exists');
+    assert.dom(PKI_KEYS.popupMenuEdit).exists('edit link exists');
   });
 
-  test('it hides or disables actions when permission denied', async function (assert) {
-    assert.expect(4);
+  test('it hides actions when permission denied', async function (assert) {
+    assert.expect(3);
     await render(
       hbs`
         <Page::PkiKeyList
@@ -106,10 +107,8 @@ module('Integration | Component | pki key list page', function (hooks) {
       `,
       { owner: this.engine }
     );
-    assert.dom(SELECTORS.importKey).doesNotExist('renders import action');
-    assert.dom(SELECTORS.generateKey).doesNotExist('renders generate action');
-    await click(SELECTORS.popupMenuTrigger);
-    assert.dom(SELECTORS.popupMenuDetails).hasClass('disabled', 'details link enabled');
-    assert.dom(SELECTORS.popupMenuEdit).hasClass('disabled', 'edit link enabled');
+    assert.dom(PKI_KEYS.importKey).doesNotExist('renders import action');
+    assert.dom(PKI_KEYS.generateKey).doesNotExist('renders generate action');
+    assert.dom(GENERAL.menuTrigger).doesNotExist('does not render popup menu when no permission');
   });
 });

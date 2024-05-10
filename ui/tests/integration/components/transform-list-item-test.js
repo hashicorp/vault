@@ -53,8 +53,8 @@ module('Integration | Component | transform-list-item', function (hooks) {
     />`);
 
     assert.dom('[data-test-secret-link="template/foo"]').exists('shows clickable list item');
-    await click('button.popup-menu-trigger');
-    assert.dom('.popup-menu-content li').exists({ count: 1 }, 'has one option');
+    await click('[data-test-popup-menu-trigger]');
+    assert.dom('.hds-dropdown li').exists({ count: 1 }, 'has one option');
   });
 
   test('it has details and edit menu item if read & edit capabilities', async function (assert) {
@@ -76,8 +76,8 @@ module('Integration | Component | transform-list-item', function (hooks) {
     />`);
 
     assert.dom('[data-test-secret-link="alphabet/foo"]').exists('shows clickable list item');
-    await click('button.popup-menu-trigger');
-    assert.dom('.popup-menu-content li').exists({ count: 2 }, 'has both options');
+    await click('[data-test-popup-menu-trigger]');
+    assert.dom('.hds-dropdown li').exists({ count: 2 }, 'has both options');
   });
 
   test('it is not clickable if built-in template with all capabilities', async function (assert) {

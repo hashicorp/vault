@@ -15,14 +15,13 @@ import (
 )
 
 type wellKnownRedirect struct {
-	c             *Core
-	mountUUID     string
-	prefix        string
-	isPrefixMatch bool
+	c         *Core
+	mountUUID string
+	prefix    string
 }
 
 type wellKnownRedirectRegistry struct {
-	lock  sync.Mutex
+	lock  sync.RWMutex
 	paths *radix.Tree
 }
 
@@ -54,6 +53,9 @@ func (reg *wellKnownRedirectRegistry) TryRegister(ctx context.Context, core *Cor
 
 // Find any relevant redirects for a given source path
 func (reg *wellKnownRedirectRegistry) Find(path string) (*wellKnownRedirect, string) {
+	reg.lock.RLock()
+	defer reg.lock.RUnlock()
+
 	s, a, found := reg.paths.LongestPrefix(path)
 	if found {
 		remaining := strings.TrimPrefix(path, s)
@@ -105,6 +107,32 @@ func (reg *wellKnownRedirectRegistry) DeregisterSource(mountUuid, src string) bo
 		return false
 	})
 	return found
+}
+
+// List returns a map keyed by the registered label and associated well known redirect
+func (reg *wellKnownRedirectRegistry) List() map[string]*wellKnownRedirect {
+	reg.lock.RLock()
+	defer reg.lock.RUnlock()
+
+	labels := map[string]*wellKnownRedirect{}
+	reg.paths.Walk(func(s string, v interface{}) bool {
+		labels[s] = v.(*wellKnownRedirect)
+		return false
+	})
+
+	return labels
+}
+
+// Get returns a well known redirect for a specific registered label
+func (reg *wellKnownRedirectRegistry) Get(label string) (*wellKnownRedirect, bool) {
+	reg.lock.RLock()
+	defer reg.lock.RUnlock()
+
+	if v, ok := reg.paths.Get(label); ok {
+		return v.(*wellKnownRedirect), true
+	}
+
+	return nil, false
 }
 
 // Construct the full destination of the redirect, including any remaining path past the src

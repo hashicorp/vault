@@ -10,11 +10,13 @@ MAX_TESTS=10
 [ "${RUN_ID:?}" ]
 [ "${REPO:?}" ]
 [ "${PR_NUMBER:?}" ]
+[ "${RESULT:?}" ]
 
-if [ -z "$TABLE_DATA" ]; then
-  BODY="CI Results:
-All Go tests succeeded! :white_check_mark:"
-else
+table_data() {
+  if [ -z "$TABLE_DATA" ]; then
+    return 0
+  fi
+
   # Remove any rows that don't have a test name
   # Only keep the test type, test package, test name, and logs column
   # Remove the scroll emoji
@@ -33,12 +35,30 @@ and ${NUM_OTHER[*]} other tests"
   fi
 
   # Add the header for the table
-  BODY="CI Results:
-Failures:
+  printf "%s" "Failures:
 | Test Type | Package | Test | Logs |
 | --------- | ------- | ---- | ---- |
 ${TABLE_DATA}"
-fi
+}
+
+td="$(table_data)"
+
+case "$RESULT" in
+  success)
+    if [ -z "$td" ]; then
+      BODY="CI Results:
+All Go tests succeeded! :white_check_mark:"
+    else
+      BODY="CI Results:
+All required Go tests succeeded but failures were detected :warning:
+${td}"
+    fi
+  ;;
+  *)
+    BODY="CI Results: ${RESULT} :x:
+${td}"
+  ;;
+esac
 
 source ./.github/scripts/gh-comment.sh
 

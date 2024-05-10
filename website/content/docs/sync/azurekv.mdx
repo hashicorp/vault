@@ -167,6 +167,22 @@ using the following JSON role definition. Be sure to replace the subscription id
 }
 ```
 
+## Access management
+
+You can allow or restrict access to secrets by using a separate Azure Key Vault instance for Vault sync destinations.
+This corresponds with Microsoft's currently-recommended 
+[best practices](https://learn.microsoft.com/en-us/azure/key-vault/general/best-practices)
+for managing secrets in Key Vault. Maintaining a boundary between Vault-managed secrets and other secrets through
+separate Key Vaults provides increased security and access control.
+
+Azure roles can be created to grant the necessary permissions for the service principal to access the Key Vault
+with [role-based access control](https://learn.microsoft.com/en-us/azure/role-based-access-control/overview).
+A role assignment can be set for the Vault user principal to provide it the role's permissions within the Key Vault
+instance, its resource group, or subscription. Additionally,
+[Azure policies](https://learn.microsoft.com/en-us/azure/key-vault/general/azure-policy) may further refine access control
+limitations, such as denying the Vault user principal access to non-Vault related Key Vaults. The inverse, denying other
+users any write-access to the Vault-related Key Vault, may be another choice.
+
 ## API
 
 Please see the [secrets sync API](/vault/api-docs/system/secrets-sync) for more details.

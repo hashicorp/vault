@@ -77,6 +77,10 @@
   white-space: pre-wrap;
 }
 
+.overflow-wrap {
+  overflow-wrap: break-word;
+}
+
 .truncate-second-line {
   display: -webkit-box;
   -webkit-line-clamp: 2;

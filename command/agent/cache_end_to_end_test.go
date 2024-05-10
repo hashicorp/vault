@@ -12,13 +12,13 @@ import (
 	"testing"
 	"time"
 
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	"github.com/hashicorp/vault/command/agentproxyshared/auth"
 	agentapprole "github.com/hashicorp/vault/command/agentproxyshared/auth/approle"
-	cache "github.com/hashicorp/vault/command/agentproxyshared/cache"
+	"github.com/hashicorp/vault/command/agentproxyshared/cache"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink/file"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink/inmem"
@@ -241,7 +241,7 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 	inmemSinkConfig.Sink = inmemSink
 
 	go func() {
-		errCh <- ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config, inmemSinkConfig})
+		errCh <- ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config, inmemSinkConfig}, ah.AuthInProgress)
 	}()
 	defer func() {
 		select {
@@ -318,8 +318,8 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
 
-	// Passing a non-nil inmemsink tells the agent to use the auto-auth token
-	mux.Handle("/", cache.ProxyHandler(ctx, cacheLogger, leaseCache, inmemSink, true))
+	// Setting useAutoAuthToken to true to ensure that the auto-auth token is used
+	mux.Handle("/", cache.ProxyHandler(ctx, cacheLogger, leaseCache, inmemSink, false, true, nil, nil))
 	server := &http.Server{
 		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,

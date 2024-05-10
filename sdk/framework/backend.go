@@ -18,11 +18,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/go-kms-wrapping/entropy/v2"
-
 	jsonpatch "github.com/evanphx/json-patch/v5"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-kms-wrapping/entropy/v2"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -221,7 +220,7 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 
 	// If the path is empty and it is a help operation, handle that.
 	if req.Path == "" && req.Operation == logical.HelpOperation {
-		return b.handleRootHelp(req)
+		return b.handleRootHelp(ctx, req)
 	}
 
 	// Find the matching route
@@ -549,7 +548,7 @@ func (b *Backend) route(path string) (*Path, map[string]string) {
 	return nil, nil
 }
 
-func (b *Backend) handleRootHelp(req *logical.Request) (*logical.Response, error) {
+func (b *Backend) handleRootHelp(ctx context.Context, req *logical.Request) (*logical.Response, error) {
 	// Build a mapping of the paths and get the paths alphabetized to
 	// make the output prettier.
 	pathsMap := make(map[string]*Path)
@@ -597,6 +596,10 @@ func (b *Backend) handleRootHelp(req *logical.Request) (*logical.Response, error
 		vaultVersion = env.VaultVersion
 	}
 
+	redactVersion, _, _, _ := logical.CtxRedactionSettingsValue(ctx)
+	if redactVersion {
+		vaultVersion = ""
+	}
 	doc := NewOASDocument(vaultVersion)
 	if err := documentPaths(b, requestResponsePrefix, doc); err != nil {
 		b.Logger().Warn("error generating OpenAPI", "error", err)

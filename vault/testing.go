@@ -34,14 +34,8 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
-	"github.com/mitchellh/copystructure"
-	"github.com/mitchellh/go-testing-interface"
-	"golang.org/x/crypto/ed25519"
-	"golang.org/x/net/http2"
-
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
-	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -49,7 +43,6 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/pluginhelpers"
 	"github.com/hashicorp/vault/internalshared/configutil"
-	"github.com/hashicorp/vault/limits"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -60,6 +53,10 @@ import (
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/plugincatalog"
 	"github.com/hashicorp/vault/vault/seal"
+	"github.com/mitchellh/copystructure"
+	"github.com/mitchellh/go-testing-interface"
+	"golang.org/x/crypto/ed25519"
+	"golang.org/x/net/http2"
 )
 
 // This file contains a number of methods that are useful for unit
@@ -133,7 +130,7 @@ func TestCoreWithSeal(t testing.T, testSeal Seal, enableRaw bool) *Core {
 		EnableRaw:       enableRaw,
 		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		AuditBackends: map[string]audit.Factory{
-			"file": auditFile.Factory,
+			"file": audit.NewFileBackend,
 		},
 	}
 	return TestCoreWithSealAndUI(t, conf)
@@ -146,9 +143,9 @@ func TestCoreWithDeadlockDetection(t testing.T, testSeal Seal, enableRaw bool) *
 		EnableRaw:       enableRaw,
 		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		AuditBackends: map[string]audit.Factory{
-			"file": auditFile.Factory,
+			"file": audit.NewFileBackend,
 		},
-		DetectDeadlocks: "expiration,quotas,statelock",
+		DetectDeadlocks: "expiration,quotas,statelock,barrier",
 	}
 	return TestCoreWithSealAndUI(t, conf)
 }
@@ -275,7 +272,7 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 func testCoreConfig(t testing.T, physicalBackend physical.Backend, logger log.Logger) *CoreConfig {
 	t.Helper()
 	noopAudits := map[string]audit.Factory{
-		"noop": corehelpers.NoopAuditFactory(nil),
+		"noop": audit.NoopAuditFactory(nil),
 	}
 
 	noopBackends := make(map[string]logical.Factory)
@@ -717,6 +714,9 @@ type TestCluster struct {
 
 func (c *TestCluster) SetRootToken(token string) {
 	c.RootToken = token
+	for _, c := range c.Cores {
+		c.Client.SetToken(token)
+	}
 }
 
 func (c *TestCluster) Start() {
@@ -1131,8 +1131,6 @@ type TestClusterOptions struct {
 
 	// ABCDLoggerNames names the loggers according to our ABCD convention when generating 4 clusters
 	ABCDLoggerNames bool
-
-	LimiterRegistry *limits.LimiterRegistry
 }
 
 type TestPluginConfig struct {
@@ -1423,7 +1421,6 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		EnableUI:           true,
 		EnableRaw:          true,
 		BuiltinRegistry:    corehelpers.NewMockBuiltinRegistry(),
-		LimiterRegistry:    limits.NewLimiterRegistry(testCluster.Logger),
 	}
 
 	if base != nil {
@@ -1513,10 +1510,6 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.PeriodicLeaderRefreshInterval = base.PeriodicLeaderRefreshInterval
 		coreConfig.ClusterAddrBridge = base.ClusterAddrBridge
 
-		if base.LimiterRegistry != nil {
-			coreConfig.LimiterRegistry = base.LimiterRegistry
-		}
-
 		testApplyEntBaseConfig(coreConfig, base)
 	}
 	if coreConfig.ClusterName == "" {
@@ -1543,9 +1536,11 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.RawConfig = c
 	}
 
+	// If the caller didn't supply any configuration for types of audit device,
+	// default to adding `file` (and enabling it later).
 	addAuditBackend := len(coreConfig.AuditBackends) == 0
 	if addAuditBackend {
-		coreConfig.AuditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
+		coreConfig.AuditBackends[audit.TypeFile] = audit.NewFileBackend
 	}
 
 	if coreConfig.Physical == nil && (opts == nil || opts.PhysicalFactory == nil) {
@@ -1910,10 +1905,6 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 
 	localConfig.NumExpirationWorkers = numExpirationWorkersTest
 
-	if opts != nil && opts.LimiterRegistry != nil {
-		localConfig.LimiterRegistry = opts.LimiterRegistry
-	}
-
 	c, err := NewCore(&localConfig)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1982,6 +1973,9 @@ func (tc *TestCluster) InitCores(t testing.T, opts *TestClusterOptions, addAudit
 	tc.initCores(t, opts, addAuditBackend)
 }
 
+// initCores attempts to initialize a core for a test cluster using the supplied
+// options. If the addAuditBackend flag is true, the core will have a file audit
+// device enabled with the 'discard' file path (See: /vault/docs/audit/file#discard).
 func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAuditBackend bool) {
 	leader := tc.Cores[0]
 
@@ -2094,8 +2088,13 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 		auditReq := &logical.Request{
 			Operation:   logical.UpdateOperation,
 			ClientToken: tc.RootToken,
-			Path:        "sys/audit/noop",
-			Data:        map[string]interface{}{"type": "noop"},
+			Path:        "sys/audit/file",
+			Data: map[string]interface{}{
+				"type": audit.TypeFile,
+				"options": map[string]string{
+					"file_path": "discard",
+				},
+			},
 		}
 		resp, err := leader.Core.HandleRequest(namespace.RootContext(ctx), auditReq)
 		if err != nil {

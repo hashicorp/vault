@@ -9,10 +9,10 @@ import editForm from 'vault/tests/pages/components/identity/edit-form';
 export default create({
   visit: visitable('/vault/access/identity/:item_type/create'),
   editForm,
-  createItem(item_type, type) {
+  async createItem(item_type, type) {
     if (type) {
-      return this.visit({ item_type }).editForm.type(type).submit();
+      return await this.visit({ item_type }).editForm.type(type).submit();
     }
-    return this.visit({ item_type }).editForm.submit();
+    return await this.visit({ item_type }).editForm.submit();
   },
 });

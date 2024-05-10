@@ -5,7 +5,7 @@
 
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { action } from '@ember/object';
 
 /**
@@ -80,7 +80,7 @@ export default class InfoTableItemArray extends Component {
         }
       });
 
-      this.allOptions = modelRecords ? modelRecords.mapBy('id') : null;
+      this.allOptions = modelRecords ? modelRecords.map((record) => record.id) : null;
       if (this.args.renderItemName && modelRecords) {
         modelRecords.forEach(({ id, name }) => {
           // create key/value pair { item-id: item-name } for each record

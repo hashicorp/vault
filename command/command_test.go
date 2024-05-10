@@ -17,19 +17,17 @@ import (
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
+	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/builtin/logical/pki"
 	"github.com/hashicorp/vault/builtin/logical/ssh"
 	"github.com/hashicorp/vault/builtin/logical/transit"
 	"github.com/hashicorp/vault/helper/benchhelpers"
 	"github.com/hashicorp/vault/helper/builtinplugins"
+	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/seal"
-
-	auditFile "github.com/hashicorp/vault/builtin/audit/file"
-	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
-	vaulthttp "github.com/hashicorp/vault/http"
 )
 
 var (
@@ -40,7 +38,7 @@ var (
 	}
 
 	defaultVaultAuditBackends = map[string]audit.Factory{
-		"file": auditFile.Factory,
+		"file": audit.NewFileBackend,
 	}
 
 	defaultVaultLogicalBackends = map[string]logical.Factory{

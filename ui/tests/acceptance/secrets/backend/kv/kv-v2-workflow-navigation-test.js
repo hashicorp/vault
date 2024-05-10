@@ -16,7 +16,7 @@ import {
   createTokenCmd,
   tokenWithPolicyCmd,
 } from 'vault/tests/helpers/commands';
-import { personas } from 'vault/tests/helpers/policy-generator/kv';
+import { personas } from 'vault/tests/helpers/kv/policy-generator';
 import {
   addSecretMetadataCmd,
   clearRecords,

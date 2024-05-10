@@ -98,10 +98,5 @@ func (c *SharedConfig) Merge(c2 *SharedConfig) *SharedConfig {
 		result.ClusterName = c2.ClusterName
 	}
 
-	result.RequestLimiter = c.RequestLimiter
-	if c2.RequestLimiter != nil {
-		result.RequestLimiter = c2.RequestLimiter
-	}
-
 	return result
 }

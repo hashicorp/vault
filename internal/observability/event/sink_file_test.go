@@ -9,10 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/helper/namespace"
-
 	"github.com/hashicorp/eventlogger"
-
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/stretchr/testify/require"
 )
 
@@ -42,14 +40,14 @@ func TestNewFileSink(t *testing.T) {
 		"default-values": {
 			ShouldUseAbsolutePath: true,
 			IsErrorExpected:       true,
-			ExpectedErrorMessage:  "event.NewFileSink: path is required",
+			ExpectedErrorMessage:  "path is required: invalid parameter",
 		},
 		"spacey-path": {
 			ShouldUseAbsolutePath: true,
 			Path:                  "     ",
 			Format:                "json",
 			IsErrorExpected:       true,
-			ExpectedErrorMessage:  "event.NewFileSink: path is required",
+			ExpectedErrorMessage:  "path is required: invalid parameter",
 		},
 		"valid-path-and-format": {
 			Path:             "vault.log",
@@ -228,7 +226,7 @@ func TestFileSink_Process(t *testing.T) {
 			Data:                 "foo",
 			ShouldIgnoreFormat:   true,
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event.(FileSink).Process: unable to retrieve event formatted as \"json\"",
+			ExpectedErrorMessage: "unable to retrieve event formatted as \"json\": invalid parameter",
 		},
 		"nil": {
 			Path:                 "foo.log",
@@ -236,7 +234,7 @@ func TestFileSink_Process(t *testing.T) {
 			Data:                 "foo",
 			ShouldUseNilEvent:    true,
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event.(FileSink).Process: event is nil: invalid parameter",
+			ExpectedErrorMessage: "event is nil: invalid parameter",
 		},
 	}
 

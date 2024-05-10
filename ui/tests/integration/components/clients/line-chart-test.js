@@ -10,11 +10,12 @@ import { find, render, findAll } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { format, formatRFC3339, subMonths } from 'date-fns';
 import timestamp from 'core/utils/timestamp';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | clients/line-chart', function (hooks) {
   setupRenderingTest(hooks);
   hooks.before(function () {
-    sinon.stub(timestamp, 'now').callsFake(() => new Date('2018-04-03T14:15:30'));
+    this.timestampStub = sinon.replace(timestamp, 'now', sinon.fake.returns(new Date('2018-04-03T14:15:30')));
   });
   hooks.beforeEach(function () {
     this.set('xKey', 'foo');
@@ -42,9 +43,6 @@ module('Integration | Component | clients/line-chart', function (hooks) {
       },
     ]);
   });
-  hooks.after(function () {
-    timestamp.now.restore();
-  });
 
   test('it renders', async function (assert) {
     await render(hbs`
@@ -53,9 +51,9 @@ module('Integration | Component | clients/line-chart', function (hooks) {
       </div>
     `);
 
-    assert.dom('[data-test-line-chart]').exists('Chart is rendered');
+    assert.dom('[data-test-chart="line chart"]').exists('Chart is rendered');
     assert
-      .dom('[data-test-line-chart="plot-point"]')
+      .dom('[data-test-plot-point]')
       .exists({ count: this.dataset.length }, `renders ${this.dataset.length} plot points`);
     findAll('[data-test-x-axis] text').forEach((e, i) => {
       // For some reason the first axis label is not rendered
@@ -70,7 +68,7 @@ module('Integration | Component | clients/line-chart', function (hooks) {
   });
 
   test('it renders upgrade data', async function (assert) {
-    const now = timestamp.now();
+    const now = this.timestampStub();
     this.set('dataset', [
       {
         foo: formatRFC3339(subMonths(now, 4)),
@@ -110,9 +108,9 @@ module('Integration | Component | clients/line-chart', function (hooks) {
       />
     </div>
     `);
-    assert.dom('[data-test-line-chart]').exists('Chart is rendered');
+    assert.dom('[data-test-chart="line chart"]').exists('Chart is rendered');
     assert
-      .dom('[data-test-line-chart="plot-point"]')
+      .dom('[data-test-plot-point]')
       .exists({ count: this.dataset.length }, `renders ${this.dataset.length} plot points`);
     assert
       .dom(find(`[data-test-line-chart="upgrade-${this.dataset[2].month}"]`))
@@ -124,7 +122,7 @@ module('Integration | Component | clients/line-chart', function (hooks) {
 
   test('it renders tooltip', async function (assert) {
     assert.expect(1);
-    const now = timestamp.now();
+    const now = this.timestampStub();
     const tooltipData = [
       {
         month: format(subMonths(now, 4), 'M/yy'),
@@ -242,7 +240,7 @@ module('Integration | Component | clients/line-chart', function (hooks) {
     `);
 
     assert
-      .dom('[data-test-line-chart="plot-point"]')
+      .dom('[data-test-plot-point]')
       .exists({ count: this.dataset.length }, 'chart still renders when upgradeData is not an array');
   });
 
@@ -260,7 +258,7 @@ module('Integration | Component | clients/line-chart', function (hooks) {
     `);
 
     assert
-      .dom('[data-test-line-chart="plot-point"]')
+      .dom('[data-test-plot-point]')
       .exists({ count: this.dataset.length }, 'chart still renders when upgradeData has incorrect keys');
   });
 
@@ -273,7 +271,7 @@ module('Integration | Component | clients/line-chart', function (hooks) {
 
     assert.dom('[data-test-component="empty-state"]').exists('renders empty state when no data');
     assert
-      .dom('[data-test-empty-state-subtext]')
+      .dom(GENERAL.emptyStateSubtitle)
       .hasText(
         `this is a custom message to explain why you're not seeing a line chart`,
         'custom message renders'

@@ -59,7 +59,7 @@ module('Acceptance | secrets/ssh', function (hooks) {
     assert.strictEqual(listPage.secrets.length, 1, 'shows role in the list');
     const secret = listPage.secrets.objectAt(0);
     await secret.menuToggle();
-    assert.ok(listPage.menuItems.length > 0, 'shows links in the menu');
+    assert.dom('.hds-dropdown li').exists({ count: 5 }, 'Renders 5 popup menu items');
   });
 
   test('it deletes a role', async function (assert) {

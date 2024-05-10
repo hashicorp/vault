@@ -14,6 +14,7 @@ globals {
     "ent.hsm"          = ["ui", "enterprise", "cgo", "hsm", "venthsm"]
     "ent.hsm.fips1402" = ["ui", "enterprise", "cgo", "hsm", "fips", "fips_140_2", "ent.hsm.fips1402"]
   }
+  config_modes    = ["env", "file"]
   consul_versions = ["1.14.11", "1.15.7", "1.16.3", "1.17.0"]
   distros         = ["ubuntu", "rhel"]
   distro_version = {

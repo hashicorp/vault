@@ -7,22 +7,19 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math"
 	"math/rand"
 	"net/http"
+	"sync/atomic"
 	"time"
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/sdk/helper/backoff"
-
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/sdk/helper/backoff"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-)
-
-const (
-	defaultMinBackoff = 1 * time.Second
-	defaultMaxBackoff = 5 * time.Minute
 )
 
 // AuthMethod is the interface that auto-auth methods implement for the agent/proxy
@@ -56,6 +53,8 @@ type AuthHandler struct {
 	OutputCh                     chan string
 	TemplateTokenCh              chan string
 	ExecTokenCh                  chan string
+	AuthInProgress               *atomic.Bool
+	InvalidToken                 chan error
 	token                        string
 	userAgent                    string
 	metricsSignifier             string
@@ -97,6 +96,8 @@ func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
 		OutputCh:                     make(chan string, 1),
 		TemplateTokenCh:              make(chan string, 1),
 		ExecTokenCh:                  make(chan string, 1),
+		InvalidToken:                 make(chan error, 1),
+		AuthInProgress:               &atomic.Bool{},
 		token:                        conf.Token,
 		logger:                       conf.Logger,
 		client:                       conf.Client,
@@ -133,10 +134,10 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 	}
 
 	if ah.minBackoff <= 0 {
-		ah.minBackoff = defaultMinBackoff
+		ah.minBackoff = consts.DefaultMinBackoff
 	}
 	if ah.maxBackoff <= 0 {
-		ah.maxBackoff = defaultMaxBackoff
+		ah.maxBackoff = consts.DefaultMaxBackoff
 	}
 	if ah.minBackoff > ah.maxBackoff {
 		return errors.New("auth handler: min_backoff cannot be greater than max_backoff")
@@ -185,6 +186,17 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 	first := true
 
 	for {
+		// We will unset this bool in sink.go once the token has been written to
+		// any sinks, or the sink server stops
+		ah.AuthInProgress.Store(true)
+		// Drain any Invalid Token errors from the channel that could have been sent before AuthInProgress
+		// was set to true
+		select {
+		case <-ah.InvalidToken:
+			ah.logger.Info("renewal already in progress, draining extra auth renewal triggers")
+		default:
+			// Do nothing, keep going
+		}
 		select {
 		case <-ctx.Done():
 			return nil
@@ -467,10 +479,9 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 		}
 
 		metrics.IncrCounter([]string{ah.metricsSignifier, "auth", "success"}, 1)
-		// We don't want to trigger the renewal process for tokens with
-		// unlimited TTL, such as the root token.
-		if leaseDuration == 0 && isTokenFileMethod {
-			ah.logger.Info("not starting token renewal process, as token has unlimited TTL")
+		// We don't want to trigger the renewal process for the root token
+		if isRootToken(leaseDuration, isTokenFileMethod, secret) {
+			ah.logger.Info("not starting token renewal process, as token is root token")
 		} else {
 			ah.logger.Info("starting renewal process")
 			go watcher.Renew()
@@ -485,11 +496,31 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 				break LifetimeWatcherLoop
 
 			case err := <-watcher.DoneCh():
-				ah.logger.Info("lifetime watcher done channel triggered")
+				ah.logger.Info("lifetime watcher done channel triggered, re-authenticating")
 				if err != nil {
+					ah.logger.Error("error renewing token", "error", err, "backoff", backoffCfg)
 					metrics.IncrCounter([]string{ah.metricsSignifier, "auth", "failure"}, 1)
-					ah.logger.Error("error renewing token", "error", err)
+
+					// Add some exponential backoff so that if auth is successful
+					// but the watcher errors, we won't go into an immediate
+					// aggressive retry loop.
+					// This might be quite a small sleep, since if we have a successful
+					// auth, we reset the backoff. Still, some backoff is important, and
+					// ensuring we follow the normal flow is important:
+					// auth -> try to renew
+					if !backoffSleep(ctx, backoffCfg) {
+						// We're at max retries. Return an error.
+						return fmt.Errorf("exceeded max retries failing to renew auth token")
+					}
 				}
+
+				// If the lease duration is 0, wait a second before re-authenticating
+				// so that we don't go into a loop, as the LifetimeWatcher will immediately
+				// return for tokens like this.
+				if leaseDuration == 0 {
+					time.Sleep(1 * time.Second)
+				}
+
 				break LifetimeWatcherLoop
 
 			case <-watcher.RenewCh():
@@ -499,9 +530,35 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			case <-credCh:
 				ah.logger.Info("auth method found new credentials, re-authenticating")
 				break LifetimeWatcherLoop
+			default:
+				select {
+				case <-ah.InvalidToken:
+					ah.logger.Info("invalid token found, re-authenticating")
+					break LifetimeWatcherLoop
+				default:
+					continue
+				}
 			}
 		}
 	}
+}
+
+// isRootToken checks if the secret in the argument is the root token
+// This is determinable without leaseDuration and isTokenFileMethod,
+// but those make it easier to rule out other tokens cheaply.
+func isRootToken(leaseDuration int, isTokenFileMethod bool, secret *api.Secret) bool {
+	// This check is cheaper than the others, so we do this first.
+	if leaseDuration == 0 && isTokenFileMethod && !secret.Renewable {
+		if secret != nil {
+			policies, err := secret.TokenPolicies()
+			if err == nil {
+				if len(policies) == 1 && policies[0] == "root" {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 // autoAuthBackoff tracks exponential backoff state.
@@ -511,11 +568,11 @@ type autoAuthBackoff struct {
 
 func newAutoAuthBackoff(min, max time.Duration, exitErr bool) *autoAuthBackoff {
 	if max <= 0 {
-		max = defaultMaxBackoff
+		max = consts.DefaultMaxBackoff
 	}
 
 	if min <= 0 {
-		min = defaultMinBackoff
+		min = consts.DefaultMinBackoff
 	}
 
 	retries := math.MaxInt

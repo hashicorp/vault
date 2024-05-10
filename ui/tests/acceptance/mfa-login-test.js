@@ -5,9 +5,10 @@
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { click, currentRouteName, fillIn, visit, waitUntil, find } from '@ember/test-helpers';
+import { click, currentRouteName, fillIn, visit, waitUntil, find, waitFor } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import mfaLoginHandler, { validationHandler } from '../../mirage/handlers/mfa-login';
+import { GENERAL } from '../helpers/general-selectors';
 
 module('Acceptance | mfa-login', function (hooks) {
   setupApplicationTest(hooks);
@@ -35,7 +36,11 @@ module('Acceptance | mfa-login', function (hooks) {
     await fillIn('[data-test-password]', 'test');
     await click('[data-test-auth-submit]');
   };
-  const didLogin = (assert) => {
+  const didLogin = async (assert) => {
+    await waitFor('[data-test-dashboard-card-header]', {
+      timeout: 5000,
+      timeoutMessage: 'timed out waiting for dashboard title to render',
+    });
     assert.strictEqual(currentRouteName(), 'vault.cluster.dashboard', 'Route transitions after login');
   };
   const validate = async (multi) => {
@@ -58,7 +63,7 @@ module('Acceptance | mfa-login', function (hooks) {
     assert.dom('[data-test-mfa-select]').doesNotExist('Select is hidden for single method');
     assert.dom('[data-test-mfa-passcode]').exists({ count: 1 }, 'Single passcode input renders');
     await validate();
-    didLogin(assert);
+    await didLogin(assert);
   });
 
   test('it should handle single mfa constraint with push method', async function (assert) {
@@ -84,7 +89,7 @@ module('Acceptance | mfa-login', function (hooks) {
     });
 
     await login('mfa-b');
-    didLogin(assert);
+    await didLogin(assert);
   });
 
   test('it should handle single mfa constraint with 2 passcode methods', async function (assert) {
@@ -99,7 +104,7 @@ module('Acceptance | mfa-login', function (hooks) {
     assert.dom('[data-test-mfa-passcode]').doesNotExist('Passcode input hidden until selection is made');
     await this.select();
     await validate();
-    didLogin(assert);
+    await didLogin(assert);
   });
 
   test('it should handle single mfa constraint with 2 push methods', async function (assert) {
@@ -107,7 +112,7 @@ module('Acceptance | mfa-login', function (hooks) {
     await login('mfa-d');
     await this.select();
     await click('[data-test-mfa-validate]');
-    didLogin(assert);
+    await didLogin(assert);
   });
 
   test('it should handle single mfa constraint with 1 passcode and 1 push method', async function (assert) {
@@ -118,7 +123,7 @@ module('Acceptance | mfa-login', function (hooks) {
     await this.select();
     assert.dom('[data-test-mfa-passcode]').doesNotExist('Passcode input is hidden for push method');
     await click('[data-test-mfa-validate]');
-    didLogin(assert);
+    await didLogin(assert);
   });
 
   test('it should handle multiple mfa constraints with 1 passcode method each', async function (assert) {
@@ -132,13 +137,13 @@ module('Acceptance | mfa-login', function (hooks) {
       );
     assert.dom('[data-test-mfa-select]').doesNotExist('Selects do not render for single methods');
     await validate(true);
-    didLogin(assert);
+    await didLogin(assert);
   });
 
   test('it should handle multi mfa constraint with 1 push method each', async function (assert) {
     assert.expect(1);
     await login('mfa-g');
-    didLogin(assert);
+    await didLogin(assert);
   });
 
   test('it should handle multiple mfa constraints with 1 passcode and 1 push method', async function (assert) {
@@ -153,7 +158,7 @@ module('Acceptance | mfa-login', function (hooks) {
     assert.dom('[data-test-mfa-select]').doesNotExist('Select is hidden for single method');
     assert.dom('[data-test-mfa-passcode]').exists({ count: 1 }, 'Passcode input renders');
     await validate();
-    didLogin(assert);
+    await didLogin(assert);
   });
 
   test('it should handle multiple mfa constraints with multiple mixed methods', async function (assert) {
@@ -168,15 +173,16 @@ module('Acceptance | mfa-login', function (hooks) {
     await this.select();
     await fillIn('[data-test-mfa-passcode="1"]', 'test');
     await click('[data-test-mfa-validate]');
-    didLogin(assert);
+    await didLogin(assert);
   });
 
   test('it should render unauthorized message for push failure', async function (assert) {
     await login('mfa-j');
+    await waitFor('[data-test-empty-state-title]');
     assert.dom('[data-test-auth-form]').doesNotExist('Auth form hidden when mfa fails');
     assert.dom('[data-test-empty-state-title]').hasText('Unauthorized', 'Error title renders');
     assert
-      .dom('[data-test-empty-state-subText]')
+      .dom(GENERAL.emptyStateSubtitle)
       .hasText('PingId MFA validation failed', 'Error message from server renders');
     assert
       .dom('[data-test-empty-state-message]')

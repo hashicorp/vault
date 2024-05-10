@@ -39,6 +39,9 @@
             @text="Copy"
             @isIconOnly={{true}}
             @textToCopy={{@value}}
+            @onError={{(fn
+              (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
+            )}}
             class="transparent"
             data-test-copy-button={{@value}}
           />
@@ -48,6 +51,7 @@
   {{/if}}
   <div
     {{code-mirror
+      screenReaderLabel="JSON editor"
       content=(if this.showObfuscatedData this.obfuscatedData (or @value @example))
       extraKeys=@extraKeys
       gutters=@gutters

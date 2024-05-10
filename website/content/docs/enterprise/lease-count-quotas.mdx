@@ -16,6 +16,9 @@ additional lease creations will be forbidden for all clients until the
 an operator modifies the configured limit, or a lease has been revoked or
 expired.
 
+Lease count quotas guard against [lease
+explosions](/vault/docs/concepts/lease-explosions).
+
 ## Root tokens
 
 It is important to note that lease count quotas do not apply to the root tokens.
@@ -67,7 +70,7 @@ done using the precedence model too.
 ## Default lease count quota
 
 As of Vault 1.16.0, new installations of Vault Enterprise will include a default
-global quota with a `max_leases` value of `100000`. This value is an
+global quota with a `max_leases` value of `300000`. This value is an
 intentionally low limit, intended to prevent runaway leases in the event that no
 other lease count quota is specified.
 
@@ -85,6 +88,12 @@ Vault also allows the inspection of the state of lease count quotas in a Vault
 cluster through various
 [metrics](/vault/docs/internals/telemetry/metrics/core-system#quota-metrics)
 and through enabling optional audit logging.
+
+## Lease count quota exceeded
+
+Vault returns a `429 - Too Many Requests` response if a new lease request
+violates the quota limit. For more information on this error, refer to [the
+error document](/vault/docs/concepts/lease-count-quota-exceeded).
 
 ## Tutorial
 

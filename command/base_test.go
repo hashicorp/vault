@@ -8,11 +8,10 @@ import (
 	"reflect"
 	"testing"
 
+	hcpvlib "github.com/hashicorp/vault-hcp-lib"
 	"github.com/hashicorp/vault/api"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	hcpvlib "github.com/hashicorp/vault-hcp-lib"
 )
 
 func getDefaultCliHeaders(t *testing.T) http.Header {

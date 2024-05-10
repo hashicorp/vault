@@ -9,6 +9,9 @@
     @text="Copy"
     @isIconOnly={{true}}
     @textToCopy={{this.columns}}
+    @onError={{(fn
+      (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
+    )}}
     class="transparent icon-grey-500 top-right-absolute"
   />
 </div>

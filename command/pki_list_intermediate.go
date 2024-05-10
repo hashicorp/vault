@@ -9,9 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hashicorp/vault/api"
-
 	"github.com/ghodss/yaml"
+	"github.com/hashicorp/vault/api"
 	"github.com/ryanuber/columnize"
 )
 

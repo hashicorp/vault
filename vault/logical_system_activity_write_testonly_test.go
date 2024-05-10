@@ -76,6 +76,7 @@ func TestSystemBackend_handleActivityWriteData(t *testing.T) {
 			name:      "correctly formatted data succeeds",
 			operation: logical.UpdateOperation,
 			input:     map[string]interface{}{"input": `{"write":["WRITE_PRECOMPUTED_QUERIES"],"data":[{"current_month":true,"all":{"clients":[{"count":5}]}}]}`},
+			wantPaths: 1,
 		},
 		{
 			name:      "entities with multiple segments",
@@ -526,7 +527,7 @@ func Test_handleActivityWriteData(t *testing.T) {
 		paths := resp.Data["paths"].([]string)
 		require.Len(t, paths, 9)
 
-		times, err := core.activityLog.availableLogs(context.Background())
+		times, err := core.activityLog.availableLogs(context.Background(), time.Now())
 		require.NoError(t, err)
 		require.Len(t, times, 4)
 
@@ -643,9 +644,9 @@ func Test_handleActivityWriteData(t *testing.T) {
 		next := time.Unix(intent.NextMonth, 0)
 
 		require.Equal(t, timeutil.StartOfMonth(now), next.UTC())
-		require.Equal(t, timeutil.StartOfMonth(timeutil.MonthsPreviousTo(3, now)), prev.UTC())
+		require.Equal(t, timeutil.StartOfMonth(timeutil.MonthsPreviousTo(1, now)), prev.UTC())
 
-		times, err := core.activityLog.availableLogs(context.Background())
+		times, err := core.activityLog.availableLogs(context.Background(), time.Now())
 		require.NoError(t, err)
 		require.Len(t, times, 4)
 	})
