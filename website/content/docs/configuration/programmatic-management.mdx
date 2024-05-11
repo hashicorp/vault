@@ -1,0 +1,201 @@
+---
+layout: docs
+page_title: Manage Vault resources programmatically
+description: >-
+  Step-by-step instructions for managing Vault resources programmatically with
+  Terraform
+---
+
+# Manage Vault resources programmatically with Terraform
+
+Use Terraform to manage authentication methods, plugins, namespaces, and
+policies in Vault.
+
+## Before you start
+
+- **You must have [Terraform installed](/terraform/install)**.
+- **You must have a [Vault server running](/vault/tutorials/getting-started/getting-started-dev-server)**.
+- **You must have the [Terraform Vault provider](https://registry.terraform.io/providers/hashicorp/vault/latest) running**.
+
+<a id="migrate" />
+
+## Step 1: Add resource blocks to Terraform
+
+<Tabs>
+
+<Tab heading="Plugin">
+
+1. Use the `vault plugin list` command to identify any currently un-managed
+   resources that you need to migrate. For example:
+
+  ```shell-session
+  # vault plugin list -format json | jq -r '.name'
+
+Name                                 Type        Version
+----                                 ----        -------
+alicloud                             auth        v0.16.0+builtin      
+approle                              auth        v1.15.1+builtin.vault
+aws                                  auth        v1.15.1+builtin.vault
+azure                                auth        v0.16.2+builtin      
+centrify                             auth        v0.15.1+builtin      
+cert                                 auth        v1.15.1+builtin.vault
+cf                                   auth        v0.15.1+builtin      
+gcp                                  auth        v0.16.1+builtin      
+github                               auth        v1.15.1+builtin.vault
+jwt                                  auth        v0.17.0+builtin      
+kerberos                             auth        v0.10.1+builtin
+kubernetes                           auth        v0.17.1+builtin
+ldap                                 auth        v1.15.1+builtin.vault
+oci                                  auth        v0.14.2+builtin
+oidc                                 auth        v1.15.1+builtin.vault
+okta                                 auth        v1.15.1+builtin.vault
+pcf                                  auth        v1.15.1+builtin.vault
+radius                               auth        v1.15.1+builtin.vault
+userpass                             auth        v1.15.1+builtin.vault
+cassandra-database-plugin            database    v1.15.1+builtin.vault
+couchbase-database-plugin            database    v0.9.4+builtin
+elasticsearch-database-plugin        database    v0.13.3+builtin
+hana-database-plugin                 database    v1.15.1+builtin.vault
+influxdb-database-plugin             database    v1.15.1+builtin.vault
+mongodb-database-plugin              database    v1.15.1+builtin.vault
+mongodbatlas-database-plugin         database    v0.10.1+builtin
+mssql-database-plugin                database    v1.15.1+builtin.vault
+mysql-aurora-database-plugin         database    v1.15.1+builtin.vault
+mysql-database-plugin                database    v1.15.1+builtin.vault
+mysql-legacy-database-plugin         database    v1.15.1+builtin.vault
+mysql-rds-database-plugin            database    v1.15.1+builtin.vault
+postgresql-database-plugin           database    v1.15.1+builtin.vault
+redis-database-plugin                database    v0.2.2+builtin
+redis-elasticache-database-plugin    database    v0.2.3+builtin
+redshift-database-plugin             database    v1.15.1+builtin.vault
+snowflake-database-plugin            database    v0.9.0+builtin
+ad                                   secret      v0.16.1+builtin
+alicloud                             secret      v0.15.1+builtin
+aws                                  secret      v1.15.1+builtin.vault
+azure                                secret      v0.16.3+builtin
+consul                               secret      v1.15.1+builtin.vault
+gcp                                  secret      v0.17.0+builtin
+gcpkms                               secret      v0.15.1+builtin
+kubernetes                           secret      v0.6.0+builtin
+kv                                   secret      v0.16.1+builtin
+ldap                                 secret      v1.15.1+builtin.vault
+mongodbatlas                         secret      v0.10.1+builtin
+nomad                                secret      v1.15.1+builtin.vault
+openldap                             secret      v0.11.2+builtin
+pki                                  secret      v1.15.1+builtin.vault
+rabbitmq                             secret      v1.15.1+builtin.vault
+ssh                                  secret      v1.15.1+builtin.vault
+terraform                            secret      v0.7.3+builtin
+totp                                 secret      v1.15.1+builtin.vault
+transit                              secret      v1.15.1+builtin.vault
+  ```
+
+1. Create a new Terraform Vault Provider resource for each of the new or
+   existing auth method resources you want to manage. For example:
+
+```hcl
+resource "vault_token" "example" {
+  role_name = "app"
+
+  policies = ["policy1", "policy2"]
+
+  renewable = true
+  ttl = "24h"
+
+  renew_min_lease = 43200
+  renew_increment = 86400
+
+  metadata = {
+    "purpose" = "service-account"
+  }
+}
+```
+
+</Tab>
+
+<Tab heading="Namespace">
+
+1. Use the `vault auth list` command to identify any currently un-managed
+   resources that you need to migrate. For example:
+
+  ```shell-session
+  # vault auth list
+
+  Path      Type     Accessor               Description                Version
+  ----      ----     --------               -----------                -------
+  token/    token    auth_token_3dcdf722    token based credentials    n/a    
+  ```
+
+1. Create a new Terraform Vault Provider resource for each of the new or
+   existing auth method resources you want to manage. For example:
+
+```hcl
+resource "vault_token" "example" {
+  role_name = "app"
+
+  policies = ["policy1", "policy2"]
+
+  renewable = true
+  ttl = "24h"
+
+  renew_min_lease = 43200
+  renew_increment = 86400
+
+  metadata = {
+    "purpose" = "service-account"
+  }
+}
+```
+
+</Tab>
+
+<Tab heading="Policy">
+
+1. Use the `vault auth list` command to identify any currently un-managed
+   resources that you need to migrate. For example:
+
+  ```shell-session
+  # vault auth list
+
+  Path      Type     Accessor               Description                Version
+  ----      ----     --------               -----------                -------
+  token/    token    auth_token_3dcdf722    token based credentials    n/a    
+  ```
+
+1. Create a new Terraform Vault Provider resource for each of the new or
+   existing auth method resources you want to manage. For example:
+
+```hcl
+resource "vault_token" "example" {
+  role_name = "app"
+
+  policies = ["policy1", "policy2"]
+
+  renewable = true
+  ttl = "24h"
+
+  renew_min_lease = 43200
+  renew_increment = 86400
+
+  metadata = {
+    "purpose" = "service-account"
+  }
+}
+```
+
+</Tab>
+
+</Tabs>
+
+
+## Step 3: Import your resources into Terraform
+
+TBD
+
+## Step 4: Verify the import
+
+TBD
+
+## Next steps
+
+TBD
