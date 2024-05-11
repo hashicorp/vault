@@ -569,6 +569,12 @@ const pki = {
       fieldGroup: 'default',
       type: 'boolean',
     },
+    maxTtl: {
+      editType: 'ttl',
+      fieldGroup: 'default',
+      helpText:
+        'Specify the maximum TTL for ACME certificates. Role TTL values will be limited to this value',
+    },
   },
   'pki/certificate/generate': {
     role: {
@@ -1200,6 +1206,12 @@ const pki = {
       fieldGroup: 'default',
       type: 'string',
     },
+    enforceLeafNotAfterBehavior: {
+      editType: 'boolean',
+      fieldGroup: 'default',
+      helpText: "Do not truncate the NotAfter field, use the issuer's configured leaf_not_after_behavior",
+      type: 'boolean',
+    },
     excludeCnFromSans: {
       editType: 'boolean',
       helpText:
@@ -1418,6 +1430,12 @@ const pki = {
       helpText:
         'Set to true to enable tidying ACME accounts, orders and authorizations. ACME orders are tidied (deleted) safety_buffer after the certificate associated with them expires, or after the order and relevant authorizations have expired if no certificate was produced. Authorizations are tidied with the corresponding order. When a valid ACME Account is at least acme_account_safety_buffer old, and has no remaining orders associated with it, the account is marked as revoked. After another acme_account_safety_buffer has passed from the revocation or deactivation date, a revoked or deactivated ACME account is deleted.',
       fieldGroup: 'default',
+      type: 'boolean',
+    },
+    tidyCertMetadata: {
+      editType: 'boolean',
+      fieldGroup: 'default',
+      helpText: 'Set to true to enable tidying up certificate metadata',
       type: 'boolean',
     },
     tidyCertStore: {

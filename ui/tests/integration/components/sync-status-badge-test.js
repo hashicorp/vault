@@ -35,8 +35,8 @@ module('Integration | Component | SyncStatusBadge', function (hooks) {
   test('it should render when status does not exist', async function (assert) {
     assert.expect(2);
     await this.renderComponent();
-    assert.dom(PAGE.syncBadge.icon('help')).exists('renders help icon');
-    assert.dom(PAGE.syncBadge.text).hasText(this.status);
+    assert.dom(PAGE.badgeText.icon('help')).exists('renders help icon');
+    assert.dom(PAGE.badgeText.text).hasText(this.status);
   });
 
   test('it renders badge and icon for each status type', async function (assert) {
@@ -46,8 +46,8 @@ module('Integration | Component | SyncStatusBadge', function (hooks) {
       const label = toLabel([status]);
       const { icon, color } = SYNC_STATUSES[status];
       await this.renderComponent();
-      assert.dom(PAGE.syncBadge.icon(icon)).exists(`status: ${status} renders icon: ${icon}`);
-      assert.dom(PAGE.syncBadge.text).hasText(label, `status: ${status} renders label: ${label}`);
+      assert.dom(PAGE.badgeText.icon(icon)).exists(`status: ${status} renders icon: ${icon}`);
+      assert.dom(PAGE.badgeText.text).hasText(label, `status: ${status} renders label: ${label}`);
       assert
         .dom('[data-test-badge]')
         .hasClass(`hds-badge--color-${color}`, `status: ${status} renders color: ${color}`);
