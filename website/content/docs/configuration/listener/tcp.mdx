@@ -148,7 +148,8 @@ default value in the `"/sys/config/ui"` [API endpoint](/vault/api-docs/system/co
 
 - `tls_disable` `(string: "false")` – Specifies if TLS will be disabled. Vault
   assumes TLS by default, so you must explicitly disable TLS to opt-in to
-  insecure communication.
+  insecure communication. Disabling TLS can **disable** some UI functionality. See
+  the [Browser Support](/vault/docs/browser-support) page for more details.
 
 - `tls_cert_file` `(string: <required-if-enabled>, reloads-on-SIGHUP)` –
   Specifies the path to the certificate for TLS. It requires a PEM-encoded file.
@@ -176,7 +177,7 @@ default value in the `"/sys/config/ui"` [API endpoint](/vault/api-docs/system/co
 - `tls_max_version` `(string: "tls13")` – Specifies the maximum supported
   version of TLS. Accepted values are "tls10", "tls11", "tls12" or "tls13".
 
-~> **Warning**: TLS 1.1 and lower (`tls10` and `tls11` values for the
+  ~> **Warning**: TLS 1.1 and lower (`tls10` and `tls11` values for the
   `tls_min_version` and `tls_max_version` parameters) are widely considered
   insecure.
 
