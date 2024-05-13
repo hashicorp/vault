@@ -19,19 +19,22 @@
           )
         }}
       </p>
-      <h4 class="has-text-weight-bold is-size-7 has-bottom-padding-m is-fullwidth">
-        {{concat "PGP Key " this.pgpKeyFile.filename}}
-      </h4>
-      <Hds::Copy::Snippet
+      <Hds::CodeBlock
         class="has-bottom-margin-s"
-        @textToCopy={{this.pgpKey}}
-        @color="secondary"
-        @onError={{(fn
-          (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
-        )}}
+        @isStandalone={{true}}
+        @hasLineNumbers={{false}}
+        @hasCopyButton={{true}}
+        @value={{this.pgpKey}}
         data-test-pgp-key-copy
-        @container="#shamir-flow-modal"
-      />
+        as |CB|
+      >
+        <CB.Title>
+          Base64 encoded PGP Key
+        </CB.Title>
+        <CB.Description>
+          Contents of PGP Key "{{this.pgpKeyFile.filename}}"
+        </CB.Description>
+      </Hds::CodeBlock>
     </div>
     <Hds::ButtonSet>
       <Hds::Button
