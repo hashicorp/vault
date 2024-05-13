@@ -2369,6 +2369,10 @@
         ]
       },
       {
+        "title": "Design your Vault Enterprise cluster",
+        "path": "enterprise/cluster-design"
+      },
+      {
         "title": "Replication",
         "routes": [
             {
