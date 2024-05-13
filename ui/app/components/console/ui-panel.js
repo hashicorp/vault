@@ -159,7 +159,6 @@ export default Component.extend({
   actions: {
     closeConsole() {
       this.set('console.isOpen', false);
-      // element.querySelector('[data-test-console-toggle').focus();
     },
     toggleFullscreen() {
       this.toggleProperty('isFullscreen');
