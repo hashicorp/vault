@@ -1068,6 +1068,13 @@ const pki = {
       fieldGroup: 'default',
       type: 'boolean',
     },
+    noStoreMetadata: {
+      editType: 'boolean',
+      helpText:
+        'If set, if a client attempts to issue or sign a certificate with attached metadata to store, the issuance / signing instead fails.',
+      fieldGroup: 'default',
+      type: 'boolean',
+    },
     notAfter: {
       editType: 'string',
       helpText:
