@@ -36,45 +36,58 @@ const GROUP_TOKEN_TEMPLATE = `{
   "groups": {{identity.entity.groups.names}}
 }`;
 const oidcEntity = async function (name, policy) {
-  return await runCmd([
-    `write sys/policies/acl/${name} policy=${window.btoa(policy)}`,
-    `write identity/entity name="${OIDC_USER}" policies="${name}" metadata="email=vault@hashicorp.com" metadata="phone_number=123-456-7890"`,
-    `read -field=id identity/entity/name/${OIDC_USER}`,
-  ]);
+  return await runCmd(
+    [
+      `write sys/policies/acl/${name} policy=${window.btoa(policy)}`,
+      `write identity/entity name="${OIDC_USER}" policies="${name}" metadata="email=vault@hashicorp.com" metadata="phone_number=123-456-7890"`,
+      `read -field=id identity/entity/name/${OIDC_USER}`,
+    ],
+    false
+  );
 };
 
 const oidcGroup = async function (entityId) {
-  return await runCmd([
-    `write identity/group name="engineering" member_entity_ids="${entityId}"`,
-    `read -field=id identity/group/name/engineering`,
-  ]);
+  return await runCmd(
+    [
+      `write identity/group name="engineering" member_entity_ids="${entityId}"`,
+      `read -field=id identity/group/name/engineering`,
+    ],
+    false
+  );
 };
 
 const authAccessor = async function (path = 'userpass') {
   await enablePage.enable('userpass', path);
-  return await runCmd([
-    `write auth/${path}/users/end-user password="${USER_PASSWORD}"`,
-    `read -field=accessor sys/internal/ui/mounts/auth/${path}`,
-  ]);
+  return await runCmd(
+    [
+      `write auth/${path}/users/end-user password="${USER_PASSWORD}"`,
+      `read -field=accessor sys/internal/ui/mounts/auth/${path}`,
+    ],
+    false
+  );
 };
 
 const entityAlias = async function (entityId, accessor, groupId) {
   const userTokenTemplate = btoa(USER_TOKEN_TEMPLATE);
   const groupTokenTemplate = btoa(GROUP_TOKEN_TEMPLATE);
 
-  const res = await runCmd([
-    `write identity/entity-alias name="end-user" canonical_id="${entityId}" mount_accessor="${accessor}"`,
-    `write identity/oidc/key/sigkey allowed_client_ids="*"`,
-    `write identity/oidc/assignment/my-assignment group_ids="${groupId}" entity_ids="${entityId}"`,
-    `write identity/oidc/scope/user description="scope for user metadata" template="${userTokenTemplate}"`,
-    `write identity/oidc/scope/groups description="scope for groups" template="${groupTokenTemplate}"`,
-  ]);
+  const res = await runCmd(
+    [
+      `write identity/entity-alias name="end-user" canonical_id="${entityId}" mount_accessor="${accessor}"`,
+      `write identity/oidc/key/sigkey allowed_client_ids="*"`,
+      `write identity/oidc/assignment/my-assignment group_ids="${groupId}" entity_ids="${entityId}"`,
+      `write identity/oidc/scope/user description="scope for user metadata" template="${userTokenTemplate}"`,
+      `write identity/oidc/scope/groups description="scope for groups" template="${groupTokenTemplate}"`,
+    ],
+    false
+  );
   return res.includes('Success');
 };
 
 const setupProvider = async function (clientId) {
   await runCmd(
-    `write identity/oidc/provider/${PROVIDER_NAME} allowed_client_ids="${clientId}" scopes="user,groups"`
+    `write identity/oidc/provider/${PROVIDER_NAME} allowed_client_ids="${clientId}" scopes="user,groups"`,
+    false
   );
 };
 
@@ -104,15 +117,18 @@ const setupOidc = async function (uid) {
   const authMethodPath = `oidc-userpass-${uid}`;
   const accessor = await authAccessor(authMethodPath);
   await entityAlias(entityId, accessor, groupId);
-  await runCmd([
-    `delete identity/oidc/client/${WEB_APP_NAME}`,
-    `write identity/oidc/client/${WEB_APP_NAME} redirect_uris="${callback}" assignments="my-assignment" key="sigkey" id_token_ttl="30m" access_token_ttl="1h"`,
-    `clear`,
-    `read -field=client_id identity/oidc/client/${WEB_APP_NAME}`,
-  ]);
+  await runCmd(
+    [
+      `delete identity/oidc/client/${WEB_APP_NAME}`,
+      `write identity/oidc/client/${WEB_APP_NAME} redirect_uris="${callback}" assignments="my-assignment" key="sigkey" id_token_ttl="30m" access_token_ttl="1h"`,
+      `clear`,
+      `read -field=client_id identity/oidc/client/${WEB_APP_NAME}`,
+    ],
+    false
+  );
   await settled();
 
-  const clientId = await runCmd([`read -field=client_id identity/oidc/client/${WEB_APP_NAME}`]);
+  const clientId = await runCmd([`read -field=client_id identity/oidc/client/${WEB_APP_NAME}`], false);
   await setupProvider(clientId);
   return {
     providerName: PROVIDER_NAME,
