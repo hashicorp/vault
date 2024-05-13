@@ -294,6 +294,10 @@
         "path": "configuration"
       },
       {
+        "title": "Programmatic best practices",
+        "path": "configuration/programmatic-best-practices"
+      },
+      {
         "title": "<code>listener</code>",
         "routes": [
           {
@@ -2363,6 +2367,10 @@
             "path": "enterprise/license/faq"
           }
         ]
+      },
+      {
+        "title": "Design your Vault Enterprise cluster",
+        "path": "enterprise/cluster-design"
       },
       {
         "title": "Replication",
