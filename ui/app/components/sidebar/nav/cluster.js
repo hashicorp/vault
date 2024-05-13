@@ -22,14 +22,15 @@ export default class SidebarNavClusterComponent extends Component {
     return this.namespace.inRootNamespace && !this.cluster?.hasChrootNamespace;
   }
 
-  get showSync() {
-    // Only show sync if cluster is not managed
-    return this.flags.managedNamespaceRoot === null;
-  }
+  get badgeText() {
+    const isHvdManaged = this.flags.isHvdManaged;
+    const onLicense = this.version.hasSecretsSync;
+    const isEnterprise = this.version.isEnterprise;
 
-  get syncBadge() {
-    if (this.version.isCommunity) return 'Enterprise';
-    if (!this.version.hasSecretsSync) return 'Premium';
-    return undefined;
+    if (isHvdManaged) return 'Plus';
+    if (isEnterprise && !onLicense) return 'Premium';
+    if (!isEnterprise) return 'Enterprise';
+    // no badge for Enterprise clusters with Secrets Sync on their license--the only remaining option.
+    return '';
   }
 }

@@ -4,6 +4,7 @@
  */
 
 import {
+  add,
   addMonths,
   differenceInCalendarMonths,
   endOfMonth,
@@ -21,7 +22,7 @@ import { CLIENT_TYPES } from 'core/utils/client-count-utils';
 
 /*
 HOW TO ADD NEW TYPES:
-1. add key to CLIENT_TYPES 
+1. add key to CLIENT_TYPES
 2. Find "ADD NEW CLIENT TYPES HERE" comment below and add type to destructuring array
 3. Add generateMounts() for that client type to the mounts array
 */
@@ -30,6 +31,20 @@ export const STATIC_NOW = new Date('2024-01-25T23:59:59Z');
 const COUNTS_START = subMonths(STATIC_NOW, 12); // user started Vault cluster on 2023-01-25
 // upgrade happened 2 month after license start
 export const UPGRADE_DATE = addMonths(LICENSE_START, 2); // monthly attribution added
+
+// exported so that tests not using this scenario can use the same response
+export const CONFIG_RESPONSE = {
+  request_id: 'some-config-id',
+  data: {
+    billing_start_timestamp: formatRFC3339(LICENSE_START),
+    default_report_months: 12,
+    enabled: 'default-enabled',
+    minimum_retention_months: 48,
+    queries_available: false,
+    reporting_enabled: true,
+    retention_months: 48,
+  },
+};
 
 function getSum(array, key) {
   return array.reduce((sum, { counts }) => sum + counts[key], 0);
@@ -197,20 +212,17 @@ export default function (server) {
   });
 
   server.get('sys/internal/counters/config', function () {
-    return {
-      request_id: 'some-config-id',
-      data: {
-        default_report_months: 12,
-        enabled: 'default-enable',
-        queries_available: true,
-        retention_months: 24,
-        billing_start_timestamp: formatRFC3339(LICENSE_START),
-      },
-    };
+    return CONFIG_RESPONSE;
   });
 
   server.get('/sys/internal/counters/activity', (schema, req) => {
     let { start_time, end_time } = req.queryParams;
+    if (req.queryParams.current_billing_period) {
+      // { current_billing_period: true } automatically queries the activity log
+      // from the builtin license start timestamp to the current month
+      start_time = LICENSE_START.toISOString();
+      end_time = STATIC_NOW.toISOString();
+    }
     // backend returns a timestamp if given unix time, so first convert to timestamp string here
     if (!start_time.includes('T')) start_time = fromUnixTime(start_time).toISOString();
     if (!end_time.includes('T')) end_time = fromUnixTime(end_time).toISOString();
@@ -232,11 +244,11 @@ export default function (server) {
     return {
       request_id: 'version-history-request-id',
       data: {
-        keys: ['1.9.0', '1.9.1', '1.10.1', '1.14.4', '1.16.0'],
+        keys: ['1.9.0', '1.9.1', '1.10.1', '1.10.3', '1.14.4', '1.16.0', '1.17.0'],
         key_info: {
           // entity/non-entity breakdown added
           '1.9.0': {
-            // we don't currently use build_date, including for accuracy. it's only tracked in versions >= 1.110
+            // we don't currently use build_date, including for accuracy. it's only tracked in versions >= 1.11.0
             build_date: null,
             previous_version: null,
             timestamp_installed: LICENSE_START.toISOString(),
@@ -250,12 +262,17 @@ export default function (server) {
           '1.10.1': {
             build_date: null,
             previous_version: '1.9.1',
-            timestamp_installed: UPGRADE_DATE.toISOString(),
+            timestamp_installed: addMonths(LICENSE_START, 2).toISOString(), // same as UPGRADE_DATE
+          },
+          '1.10.3': {
+            build_date: null,
+            previous_version: '1.10.1',
+            timestamp_installed: add(LICENSE_START, { months: 2, weeks: 3 }).toISOString(),
           },
           // no notable UI changes
           '1.14.4': {
             build_date: addMonths(LICENSE_START, 3).toISOString(),
-            previous_version: '1.10.1',
+            previous_version: '1.10.3',
             timestamp_installed: addMonths(LICENSE_START, 3).toISOString(),
           },
           // sync clients added
@@ -263,6 +280,12 @@ export default function (server) {
             build_date: addMonths(LICENSE_START, 4).toISOString(),
             previous_version: '1.14.4',
             timestamp_installed: addMonths(LICENSE_START, 4).toISOString(),
+          },
+          // acme_clients separated from non-entity clients
+          '1.17.0': {
+            build_date: addMonths(LICENSE_START, 5).toISOString(),
+            previous_version: '1.16.0',
+            timestamp_installed: addMonths(LICENSE_START, 5).toISOString(),
           },
         },
       },
