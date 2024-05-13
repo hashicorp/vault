@@ -3767,6 +3767,10 @@ func TestReadWriteDeleteRoles(t *testing.T) {
 		"allowed_user_ids":                   []interface{}{},
 	}
 
+	if issuing.MetadataPermitted {
+		expectedData["no_store_metadata"] = false
+	}
+
 	if diff := deep.Equal(expectedData, resp.Data); len(diff) > 0 {
 		t.Fatalf("pki role default values have changed, diff: %v", diff)
 	}

@@ -357,6 +357,10 @@
         "path": "configuration"
       },
       {
+        "title": "Programmatic best practices",
+        "path": "configuration/programmatic-best-practices"
+      },
+      {
         "title": "<code>listener</code>",
         "routes": [
           {
@@ -2699,6 +2703,10 @@
       {
         "title": "Long-term support (LTS)",
         "path": "enterprise/lts"
+      },
+      {
+        "title": "Design your Vault Enterprise cluster",
+        "path": "enterprise/cluster-design"
       },
       {
         "title": "Replication",
