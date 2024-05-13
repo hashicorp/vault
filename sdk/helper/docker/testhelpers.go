@@ -335,8 +335,6 @@ func (d *Runner) StartNewService(ctx context.Context, addSuffix, forceLocalAddr 
 	}, result.Container.ID, nil
 }
 
-<<<<<<< HEAD
-=======
 // createLogConsumer returns a function to consume the logs of the container with the given ID.
 // If a wait group is given, `WaitGroup.Done()` will be called as soon as the call to the
 // ContainerLogs Docker API call is done.
@@ -377,7 +375,6 @@ func (d *Runner) consumeLogs(containerId string, wg *sync.WaitGroup, logStdout, 
 	}
 }
 
->>>>>>> b5d3c213bb (Update docker to v25.0.5+incompatible (#26953))
 type Service struct {
 	Config      ServiceConfig
 	Cleanup     func()
