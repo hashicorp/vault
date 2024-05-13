@@ -54,12 +54,18 @@ export default {
     eventProperties: { keyCode: keys.ENTER },
   }),
   hasInput: isPresent('[data-test-component="console/command-input"] input'),
-  runCommands: async function (commands) {
+  runCommands: async function (commands, shouldToggle = true) {
     const toExecute = Array.isArray(commands) ? commands : [commands];
+    if (shouldToggle) {
+      await this.toggle(); // toggle the console open
+    }
     for (const command of toExecute) {
       await this.consoleInput(command);
       await this.enter();
       await settled();
+    }
+    if (shouldToggle) {
+      await this.toggle(); // toggle it closed
     }
   },
 };
