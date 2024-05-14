@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { currentRouteName, visit } from '@ember/test-helpers';
+import { click, currentRouteName, settled, visit } from '@ember/test-helpers';
+import { selectChoose } from 'ember-power-select/test-support';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
@@ -63,7 +64,15 @@ module('Acceptance | secrets/generic/create', function (hooks) {
       // upgrade to version 2 generic mount
       `write sys/mounts/${path}/tune options=version=2`,
     ]);
-    await visit(`/vault/secrets/${path}/kv/list`);
+    await visit('/vault/secrets');
+    await selectChoose('[data-test-component="search-select"]#filter-by-engine-name', path);
+    await settled();
+    await click(`[data-test-secrets-backend-link="${path}"]`);
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.kv.list',
+      'navigates to the KV engine list page'
+    );
 
     assert
       .dom(PAGE.list.item('foo'))
@@ -76,6 +85,13 @@ module('Acceptance | secrets/generic/create', function (hooks) {
       assert.dom(PAGE.list.item(secret.path)).exists('lists both records');
     });
     assert.dom(PAGE.list.item()).exists({ count: 2 }, 'lists only the two secrets');
+
+    await visit(`/vault/secrets/${path}/list`);
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.kv.list',
+      'redirects to the KV engine list page from generic list'
+    );
 
     // Clean up
     await runCmd(deleteEngineCmd(path));
