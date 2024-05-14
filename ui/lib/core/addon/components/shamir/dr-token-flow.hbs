@@ -94,6 +94,7 @@
     </p>
   </Shamir::Form>
 {{else if this.generateWithPGP}}
+  <MessageError @errors={{this.errors}} />
   <ChoosePgpKeyForm
     @onCancel={{fn (mut this.generateWithPGP) false}}
     @onSubmit={{this.usePgpKey}}

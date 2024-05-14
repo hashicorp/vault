@@ -3,12 +3,15 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+/* eslint-disable qunit/require-expect */
 import sinon from 'sinon';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { click, fillIn, render } from '@ember/test-helpers';
+import { click, fillIn, render, waitFor } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import { overrideResponse } from 'vault/tests/helpers/stubs';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | shamir/dr-token-flow', function (hooks) {
   setupRenderingTest(hooks);
@@ -149,6 +152,25 @@ module('Integration | Component | shamir/dr-token-flow', function (hooks) {
     await click('[data-test-use-pgp-key-button]');
     await click('[data-test-confirm-pgp-key-submit]');
     assert.dom('[data-test-dr-token-flow-step="shamir"]').exists('Renders shamir step after PGP key chosen');
+  });
+
+  test('it shows error with pgp key', async function (assert) {
+    assert.expect(2);
+    this.server.get('/sys/replication/dr/secondary/generate-operation-token/attempt', function () {
+      return {};
+    });
+    this.server.post('/sys/replication/dr/secondary/generate-operation-token/attempt', () =>
+      overrideResponse(400, { errors: ['error parsing PGP key'] })
+    );
+    await render(hbs`<Shamir::DrTokenFlow @action="generate-dr-operation-token" />`);
+    await click('[data-test-use-pgp-key-cta]');
+    assert.dom('[data-test-choose-pgp-key-form="begin"]').exists('PGP form shows');
+    await click('[data-test-text-toggle]');
+    await fillIn('[data-test-pgp-file-textarea]', 'some-key-here');
+    await click('[data-test-use-pgp-key-button]');
+    await click('[data-test-confirm-pgp-key-submit]');
+    await waitFor(GENERAL.messageError);
+    assert.dom(GENERAL.messageError).hasText('Error error parsing PGP key');
   });
 
   test('it cancels correctly when generation not started', async function (assert) {
