@@ -46,8 +46,10 @@ export async function runCmd(commands, throwErrors = true) {
   if (!Array.isArray(commands)) {
     commands = [commands];
   }
-  await cc.runCommands(commands);
+  await cc.toggle();
+  await cc.runCommands(commands, false);
   const lastOutput = cc.lastLogOutput;
+  await cc.toggle();
   if (throwErrors && lastOutput.includes('Error')) {
     throw new Error(`Error occurred while running commands: "${commands.join('; ')}" - ${lastOutput}`);
   }
