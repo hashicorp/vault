@@ -13,7 +13,7 @@ jobs:
   backport-targeted-release-branch:
     if: github.event.pull_request.merged
     runs-on: ubuntu-latest
-    container: hashicorpdev/backport-assistant:0.4.0
+    container: hashicorpdev/backport-assistant:0.4.1
     steps:
       - name: Backport changes to targeted release branch
         run: |
@@ -24,10 +24,11 @@ jobs:
           BACKPORT_MERGE_COMMIT: true
           GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
           ENABLE_VERSION_MANIFESTS: true
+          BACKPORT_LABEL_TEMPLATE: "backport/{{.ent}}{{.target}}+ent"
   backport-ent:
     if: github.event.pull_request.merged && contains(join(github.event.pull_request.labels.*.name), 'backport/ent')
     runs-on: ubuntu-latest
-    container: hashicorpdev/backport-assistant:0.4.0
+    container: hashicorpdev/backport-assistant:0.4.1
     steps:
       - name: Trigger backport for Enterprise
         uses: peter-evans/repository-dispatch@ff45666b9427631e3450c54a1bcbee4d9ff4d7c0 # v3.0.0
