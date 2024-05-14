@@ -214,7 +214,7 @@ require (
 	go.uber.org/goleak v1.2.1
 	golang.org/x/crypto v0.22.0
 	golang.org/x/exp v0.0.0-20240213143201-ec583247a57a
-	golang.org/x/net v0.21.0
+	golang.org/x/net v0.22.0
 	golang.org/x/oauth2 v0.17.0
 	golang.org/x/sync v0.7.0
 	golang.org/x/sys v0.19.0
@@ -223,7 +223,7 @@ require (
 	golang.org/x/tools v0.18.0
 	google.golang.org/api v0.163.0
 	google.golang.org/grpc v1.61.0
-	google.golang.org/protobuf v1.32.0
+	google.golang.org/protobuf v1.33.0
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
 	k8s.io/utils v0.0.0-20230406110748-d93618cff8a2
 	layeh.com/radius v0.0.0-20231213012653-1006025d24f8
