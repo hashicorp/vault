@@ -34,11 +34,13 @@ module('Acceptance | Enterprise | replication modes', function (hooks) {
   });
 
   test('replication page when unsupported', async function (assert) {
-    await this.setupMocks({
+    this.server.get('sys/replication/status', () => ({
       data: {
         mode: 'unsupported',
       },
-    });
+    }));
+
+    await authPage.login();
     await visit('/vault/replication');
     assert.dom(s.title).hasText('Replication unsupported', 'it shows the unsupported view');
 
