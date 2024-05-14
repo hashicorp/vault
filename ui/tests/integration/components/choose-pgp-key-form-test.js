@@ -16,7 +16,7 @@ const CHOOSE_PGP = {
   useKeyButton: '[data-test-use-pgp-key-button]',
   pgpTextArea: '[data-test-pgp-file-textarea]',
   confirm: '[data-test-pgp-key-confirm]',
-  base64Output: '[data-test-pgp-key-copy] pre',
+  base64Output: '[data-test-pgp-key-copy]',
   submit: '[data-test-confirm-pgp-key-submit]',
   cancel: '[data-test-use-pgp-key-cancel]',
 };
