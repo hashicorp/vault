@@ -34,11 +34,13 @@ module('Acceptance | Enterprise | replication modes', function (hooks) {
   });
 
   test('replication page when unsupported', async function (assert) {
-    await this.setupMocks({
+    this.server.get('sys/replication/status', () => ({
       data: {
         mode: 'unsupported',
       },
-    });
+    }));
+
+    await authPage.login();
     await visit('/vault/replication');
     assert.dom(s.title).hasText('Replication unsupported', 'it shows the unsupported view');
 
@@ -47,9 +49,10 @@ module('Acceptance | Enterprise | replication modes', function (hooks) {
     assert.dom(s.navLink('Disaster Recovery')).doesNotExist('hides dr link');
   });
 
-  test('replication page when disabled', async function (assert) {
+  test('replication page when disabled meep', async function (assert) {
     await this.setupMocks(STATUS_DISABLED_RESPONSE);
     await visit('/vault/replication');
+
     assert.dom(s.title).hasText('Enable Replication', 'it shows the enable view');
 
     // Nav links
