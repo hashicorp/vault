@@ -29,6 +29,7 @@
         @onError={{(fn
           (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
         )}}
+        @isTruncated={{true}}
         data-test-pgp-key-copy
         @container="#shamir-flow-modal"
       />
