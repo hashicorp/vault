@@ -6,7 +6,7 @@
 import sinon from 'sinon';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { click, fillIn, find, render, waitUntil } from '@ember/test-helpers';
+import { click, fillIn, find, render, waitFor, waitUntil } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
@@ -170,7 +170,7 @@ module('Integration | Component | shamir/dr-token-flow', function (hooks) {
   });
 
   test('it shows error with pgp key', async function (assert) {
-    assert.expect(3);
+    assert.expect(2);
     this.server.get('/sys/replication/dr/secondary/generate-operation-token/attempt', function () {
       return {};
     });
@@ -184,7 +184,8 @@ module('Integration | Component | shamir/dr-token-flow', function (hooks) {
     await fillIn('[data-test-pgp-file-textarea]', 'some-key-here');
     await click('[data-test-use-pgp-key-button]');
     await click('[data-test-confirm-pgp-key-submit]');
-    assert.dom(GENERAL.messageError).hasText('error parsing PGP key');
+    await waitFor(GENERAL.messageError);
+    assert.dom(GENERAL.messageError).hasText('Error error parsing PGP key');
   });
 
   test('it cancels correctly when generation not started', async function (assert) {
