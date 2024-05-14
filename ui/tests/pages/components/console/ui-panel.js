@@ -11,6 +11,7 @@ import keys from 'core/utils/key-codes';
 
 export default {
   toggle: clickable('[data-test-console-toggle]'),
+  dismissConsole: clickable(['data-test-dismiss-console-button']),
   consoleInput: fillable('[data-test-component="console/command-input"] input'),
   consoleInputValue: value('[data-test-component="console/command-input"] input'),
   logOutput: text('[data-test-component="console/output-log"]'),
