@@ -1,0 +1,3 @@
+```release-note:bug
+core: Address a data race updating a seal's last seen healthy time attribute
+```
