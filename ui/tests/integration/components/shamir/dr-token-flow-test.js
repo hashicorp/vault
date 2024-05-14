@@ -175,7 +175,7 @@ module('Integration | Component | shamir/dr-token-flow', function (hooks) {
       return {};
     });
     this.server.post('/sys/replication/dr/secondary/generate-operation-token/attempt', () =>
-      overrideResponse(400, ['error parsing PGP key'])
+      overrideResponse(400, { errors: ['error parsing PGP key'] })
     );
     await render(hbs`<Shamir::DrTokenFlow @action="generate-dr-operation-token" />`);
     await click('[data-test-use-pgp-key-cta]');
