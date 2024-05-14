@@ -1,3 +1,3 @@
 ```release-note:bug
-ui: Resolved accessibility issues with Web REPL
+ui: Resolved accessibility issues with Web REPL. Associated label and help text with input, added a conditional to show the console/ui-panel only when toggled open, added keyboard focus trap. Note: this required an additional arg added for testing, to toggle the console open when it is necessary to use the console in tests.
 ```
