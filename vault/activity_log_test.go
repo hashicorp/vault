@@ -690,7 +690,7 @@ func TestActivityLog_createRegenerationIntentLog(t *testing.T) {
 				time.Date(2024, 1, 4, 10, 54, 12, 0, time.UTC),
 				time.Date(2024, 1, 3, 10, 54, 12, 0, time.UTC),
 			},
-			&ActivityIntentLog{NextMonth: 1704365652, PreviousMonth: 1704279252},
+			&ActivityIntentLog{NextMonth: 0, PreviousMonth: 1704365652},
 			false,
 		},
 		{
@@ -1565,7 +1565,7 @@ func TestActivityLog_StopAndRestart(t *testing.T) {
 	// Simulate seal/unseal cycle
 	core.stopActivityLog()
 	var wg sync.WaitGroup
-	core.setupActivityLog(ctx, &wg)
+	core.setupActivityLog(ctx, &wg, false)
 	wg.Wait()
 
 	a = core.activityLog

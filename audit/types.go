@@ -22,10 +22,10 @@ type ResponseEntry struct {
 	Auth      *Auth     `json:"auth,omitempty"`
 	Error     string    `json:"error,omitempty"`
 	Forwarded bool      `json:"forwarded,omitempty"`
-	Time      string    `json:"time,omitempty"`
-	Type      string    `json:"type,omitempty"`
 	Request   *Request  `json:"request,omitempty"`
 	Response  *Response `json:"response,omitempty"`
+	Time      string    `json:"time,omitempty"`
+	Type      string    `json:"type,omitempty"`
 }
 
 type Request struct {
@@ -34,15 +34,15 @@ type Request struct {
 	ClientToken                   string                 `json:"client_token,omitempty"`
 	ClientTokenAccessor           string                 `json:"client_token_accessor,omitempty"`
 	Data                          map[string]interface{} `json:"data,omitempty"`
-	ID                            string                 `json:"id,omitempty"`
 	Headers                       map[string][]string    `json:"headers,omitempty"`
+	ID                            string                 `json:"id,omitempty"`
 	MountAccessor                 string                 `json:"mount_accessor,omitempty"`
 	MountClass                    string                 `json:"mount_class,omitempty"`
-	MountPoint                    string                 `json:"mount_point,omitempty"`
-	MountType                     string                 `json:"mount_type,omitempty"`
-	MountRunningVersion           string                 `json:"mount_running_version,omitempty"`
-	MountRunningSha256            string                 `json:"mount_running_sha256,omitempty"`
 	MountIsExternalPlugin         bool                   `json:"mount_is_external_plugin,omitempty"`
+	MountPoint                    string                 `json:"mount_point,omitempty"`
+	MountRunningSha256            string                 `json:"mount_running_sha256,omitempty"`
+	MountRunningVersion           string                 `json:"mount_running_version,omitempty"`
+	MountType                     string                 `json:"mount_type,omitempty"`
 	Namespace                     *Namespace             `json:"namespace,omitempty"`
 	Operation                     logical.Operation      `json:"operation,omitempty"`
 	Path                          string                 `json:"path,omitempty"`
