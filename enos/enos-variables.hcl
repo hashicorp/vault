@@ -93,12 +93,6 @@ variable "terraform_plugin_cache_dir" {
   default     = null
 }
 
-variable "tfc_api_token" {
-  description = "The Terraform Cloud QTI Organization API token. This is used to download the enos Terraform provider."
-  type        = string
-  sensitive   = true
-}
-
 variable "ubuntu_distro_version" {
   description = "The version of ubuntu to use"
   type        = string
