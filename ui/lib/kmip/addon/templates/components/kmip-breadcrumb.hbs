@@ -4,7 +4,7 @@
 ~}}
 
 <Hds::Breadcrumb>
-  <Hds::Breadcrumb::Item @text="secrets" @route="secrets" @isRouteExternal={{true}} />
+  <Hds::Breadcrumb::Item @text="secrets" @route="Secrets" @isRouteExternal={{true}} />
   {{#if this.shouldShowPath}}
     <Hds::Breadcrumb::Item @text={{this.secretMountPath.currentPath}} @route="scopes.index" />
   {{/if}}

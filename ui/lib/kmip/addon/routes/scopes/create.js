@@ -25,7 +25,7 @@ export default class KmipScopesCreate extends Route {
     super.setupController(controller, resolvedModel);
 
     const crumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: resolvedModel.backend, route: 'scopes', model: resolvedModel.backend },
       { label: 'create' },
     ];
