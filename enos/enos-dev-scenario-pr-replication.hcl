@@ -3,11 +3,6 @@
 
 scenario "dev_pr_replication" {
   description = <<-EOF
-    This scenario spins up a single Vault cluster with either an external Consul cluster or
-    integrated Raft for storage. None of our test verification is included in this scenario in order
-    to improve end-to-end speed. If you wish to perform such verification you'll need to use a
-    non-dev scenario instead.
-
     This scenario spins up a two Vault clusters with either an external Consul cluster or
     integrated Raft for storage. The secondary cluster is configured with performance replication
     from the primary cluster. None of our test verification is included in this scenario in order

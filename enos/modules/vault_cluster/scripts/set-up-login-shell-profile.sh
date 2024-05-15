@@ -41,6 +41,12 @@ main() {
     fail "failed to determine login shell profile file location"
   fi
 
+  # If vault_cluster is used more than once, eg: autopilot or replication, this module can
+  # be called more than once. Short ciruit here if our profile is already set up.
+  if grep VAULT_ADDR < "$profile_file"; then
+    exit 0
+  fi
+
   if ! appendVaultProfileInformation "$profile_file"; then
     fail "failed to write vault configuration to login shell profile"
   fi
