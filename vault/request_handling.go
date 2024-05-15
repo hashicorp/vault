@@ -30,6 +30,7 @@ import (
 	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/http/priority"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -69,6 +70,11 @@ type HandlerProperties struct {
 	DisablePrintableCheck bool
 	RecoveryMode          bool
 	RecoveryToken         *uberAtomic.String
+
+	// RequestIDGenerator is primary used for testing purposes to allow tests to
+	// control the request IDs deterministically. In production code (i.e. if this
+	// is nil) the handler will generate UUIDs.
+	RequestIDGenerator func() (string, error)
 }
 
 // fetchEntityAndDerivedPolicies returns the entity object for the given entity
@@ -483,6 +489,12 @@ func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool
 		RootPrivsRequired: rootPath,
 	})
 
+	// Assign the sudo path priority if the request is issued against a sudo path.
+	if rootPath {
+		pri := uint8(priority.NeverDrop)
+		auth.HTTPRequestPriority = &pri
+	}
+
 	auth.PolicyResults = &logical.PolicyResults{
 		Allowed: authResults.Allowed,
 	}
@@ -588,6 +600,11 @@ func (c *Core) switchedLockHandleRequest(httpCtx context.Context, req *logical.R
 	if ok {
 		ctx = logical.CreateContextRedactionSettings(ctx, redactVersion, redactAddresses, redactClusterName)
 	}
+	inFlightRequestPriority, ok := httpCtx.Value(logical.CtxKeyInFlightRequestPriority{}).(priority.AOPWritePriority)
+	if ok {
+		ctx = context.WithValue(ctx, logical.CtxKeyInFlightRequestPriority{}, inFlightRequestPriority)
+	}
+
 	resp, err = c.handleCancelableRequest(ctx, req)
 	req.SetTokenEntry(nil)
 	cancel()
@@ -1006,6 +1023,13 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	}
 	if ctErr == logical.ErrPerfStandbyPleaseForward {
 		return nil, nil, ctErr
+	}
+
+	// See if the call to CheckToken set any request priority. We push the
+	// processing down into CheckToken so we only have to do a router lookup
+	// once.
+	if auth != nil && auth.HTTPRequestPriority != nil {
+		ctx = context.WithValue(ctx, logical.CtxKeyInFlightRequestPriority{}, *auth.HTTPRequestPriority)
 	}
 
 	// Updating in-flight request data with client/entity ID
@@ -2385,7 +2409,7 @@ func (c *Core) RegisterAuth(ctx context.Context, tokenTTL time.Duration, path st
 
 	if err := c.tokenStore.create(ctx, &te); err != nil {
 		c.logger.Error("failed to create token", "error", err)
-		return ErrInternalError
+		return possiblyWrapOverloadedError("failed to create token", err)
 	}
 
 	// Populate the client token, accessor, and TTL
@@ -2405,7 +2429,7 @@ func (c *Core) RegisterAuth(ctx context.Context, tokenTTL time.Duration, path st
 				c.logger.Warn("failed to clean up token lease during login request", "request_path", path, "error", err)
 			}
 			c.logger.Error("failed to register token lease during login request", "request_path", path, "error", err)
-			return ErrInternalError
+			return possiblyWrapOverloadedError("failed to register token lease during login request", err)
 		}
 		if te.ExternalID != "" {
 			auth.ClientToken = te.ExternalID

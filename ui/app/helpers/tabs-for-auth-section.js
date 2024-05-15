@@ -99,7 +99,7 @@ export function tabsForAuthSection([authMethodModel, sectionType = 'authSettings
     tabs.push({
       label: 'Method Options',
       route: 'vault.cluster.settings.auth.configure.section',
-      routeParams: ['options'],
+      routeParams: [authMethodModel.id, 'options'],
     });
     return tabs;
   }

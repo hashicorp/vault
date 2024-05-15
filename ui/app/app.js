@@ -15,7 +15,7 @@ export default class App extends Application {
   engines = {
     'config-ui': {
       dependencies: {
-        services: ['auth', 'flash-messages', 'namespace', 'router', 'store', 'version', 'customMessages'],
+        services: ['auth', 'flash-messages', 'namespace', 'router', 'store', 'version', 'custom-messages'],
       },
     },
     'open-api-explorer': {
@@ -125,3 +125,7 @@ export default class App extends Application {
 }
 
 loadInitializers(App, config.modulePrefix);
+
+/**
+ * @typedef {import('ember-source/types')} EmberTypes
+ */

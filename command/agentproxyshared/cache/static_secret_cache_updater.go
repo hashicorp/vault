@@ -180,7 +180,7 @@ func (updater *StaticSecretCacheUpdater) streamStaticSecretEvents(ctx context.Co
 	return nil
 }
 
-// preEventStreamUpdate is called after successful connection to the event system but before
+// preEventStreamUpdate is called after successful connection to the event system, but before
 // we process any events, to ensure we don't miss any updates.
 // In some cases, this will result in multiple processing of the same updates, but
 // this ensures that we don't lose any updates to secrets that might have been sent

@@ -41,6 +41,7 @@ const (
 	activityConfigKey      = "config"
 	activityIntentLogKey   = "endofmonth"
 
+	activityACMERegenerationKey = "acme-regeneration"
 	// sketch for each month that stores hash of client ids
 	distinctClientsBasePath = "log/distinctclients/"
 
@@ -1108,15 +1109,15 @@ func (a *ActivityLog) queriesAvailable(ctx context.Context) (bool, error) {
 }
 
 // setupActivityLog hooks up the singleton ActivityLog into Core.
-func (c *Core) setupActivityLog(ctx context.Context, wg *sync.WaitGroup) error {
+func (c *Core) setupActivityLog(ctx context.Context, wg *sync.WaitGroup, reload bool) error {
 	c.activityLogLock.Lock()
 	defer c.activityLogLock.Unlock()
-	return c.setupActivityLogLocked(ctx, wg)
+	return c.setupActivityLogLocked(ctx, wg, reload)
 }
 
 // setupActivityLogLocked hooks up the singleton ActivityLog into Core.
 // this function should be called with activityLogLock.
-func (c *Core) setupActivityLogLocked(ctx context.Context, wg *sync.WaitGroup) error {
+func (c *Core) setupActivityLogLocked(ctx context.Context, wg *sync.WaitGroup, reload bool) error {
 	logger := c.baseLogger.Named("activity")
 	c.AddLogger(logger)
 
@@ -1156,11 +1157,22 @@ func (c *Core) setupActivityLogLocked(ctx context.Context, wg *sync.WaitGroup) e
 			go manager.activeFragmentWorker(ctx)
 		}
 
-		// Check for any intent log, in the background
+		doRegeneration := !reload && !manager.hasRegeneratedACME(ctx)
 		manager.computationWorkerDone = make(chan struct{})
+		// handle leftover intent logs and regenerating precomputed queries
+		// for ACME
 		go func() {
-			manager.precomputedQueryWorker(ctx, nil)
-			close(manager.computationWorkerDone)
+			defer close(manager.computationWorkerDone)
+			if doRegeneration {
+				err := manager.regeneratePrecomputedQueries(ctx)
+				if err != nil {
+					manager.logger.Error("unable to regenerate ACME data", "error", err)
+				}
+			} else {
+				// run the precomputed query worker normally
+				// errors are logged within the function
+				manager.precomputedQueryWorker(ctx, nil)
+			}
 		}()
 
 		// Catch up on garbage collection
@@ -1173,6 +1185,64 @@ func (c *Core) setupActivityLogLocked(ctx context.Context, wg *sync.WaitGroup) e
 	}
 
 	return nil
+}
+
+func (a *ActivityLog) hasRegeneratedACME(ctx context.Context) bool {
+	regenerated, err := a.view.Get(ctx, activityACMERegenerationKey)
+	if err != nil {
+		a.logger.Error("unable to access ACME regeneration key")
+		return false
+	}
+	return regenerated != nil
+}
+
+func (a *ActivityLog) writeRegeneratedACME(ctx context.Context) error {
+	regeneratedEntry, err := logical.StorageEntryJSON(activityACMERegenerationKey, true)
+	if err != nil {
+		return err
+	}
+	return a.view.Put(ctx, regeneratedEntry)
+}
+
+func (a *ActivityLog) regeneratePrecomputedQueries(ctx context.Context) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	a.l.RLock()
+	doneCh := a.doneCh
+	a.l.RUnlock()
+	go func() {
+		select {
+		case <-doneCh:
+			cancel()
+		case <-ctx.Done():
+			break
+		}
+	}()
+
+	intentLogEntry, err := a.view.Get(ctx, activityIntentLogKey)
+	if err != nil {
+		a.logger.Error("could not load existing intent log", "error", err)
+	}
+	var intentLog *ActivityIntentLog
+	if intentLogEntry == nil {
+		regenerationIntentLog, err := a.createRegenerationIntentLog(ctx, a.clock.Now().UTC())
+		if errors.Is(err, previousMonthNotFoundErr) {
+			// if there are no segments earlier than the current month, consider
+			// this a success
+			return a.writeRegeneratedACME(ctx)
+		}
+		if err != nil {
+			return err
+		}
+		intentLog = regenerationIntentLog
+		a.logger.Debug("regenerating precomputed queries", "previous month", time.Unix(intentLog.PreviousMonth, 0).UTC(), "next month", time.Unix(intentLog.NextMonth, 0).UTC())
+	}
+	err = a.precomputedQueryWorker(ctx, intentLog)
+	if err != nil && !errors.Is(err, previousMonthNotFoundErr) {
+		return err
+	}
+	return a.writeRegeneratedACME(ctx)
 }
 
 func (a *ActivityLog) createRegenerationIntentLog(ctx context.Context, now time.Time) (*ActivityIntentLog, error) {
@@ -1190,12 +1260,12 @@ func (a *ActivityLog) createRegenerationIntentLog(ctx context.Context, now time.
 		intentLog.PreviousMonth = segment.Unix()
 		if i > 0 {
 			intentLog.NextMonth = segments[i-1].Unix()
-			break
 		}
+		break
 	}
 
-	if intentLog.NextMonth == 0 || intentLog.PreviousMonth == 0 {
-		return nil, fmt.Errorf("insufficient data to create a regeneration intent log")
+	if intentLog.PreviousMonth == 0 {
+		return nil, previousMonthNotFoundErr
 	}
 
 	return intentLog, nil
@@ -2431,6 +2501,8 @@ func (a *ActivityLog) reportPrecomputedQueryMetrics(ctx context.Context, segment
 	}
 }
 
+var previousMonthNotFoundErr = errors.New("previous month not found")
+
 // goroutine to process the request in the intent log, creating precomputed queries.
 // We expect the return value won't be checked, so log errors as they occur
 // (but for unit testing having the error return should help.)
@@ -2509,8 +2581,8 @@ func (a *ActivityLog) precomputedQueryWorker(ctx context.Context, intent *Activi
 	}
 
 	lastMonth := intent.PreviousMonth
-	lastMonthTime := time.Unix(lastMonth, 0)
-	a.logger.Info("computing queries", "month", lastMonthTime.UTC())
+	lastMonthTime := time.Unix(lastMonth, 0).UTC()
+	a.logger.Info("computing queries", "month", lastMonthTime)
 
 	times, err := a.availableLogs(ctx, lastMonthTime)
 	if err != nil {
@@ -2520,12 +2592,12 @@ func (a *ActivityLog) precomputedQueryWorker(ctx context.Context, intent *Activi
 	if len(times) == 0 {
 		a.logger.Warn("no months in storage")
 		cleanupIntentLog()
-		return errors.New("previous month not found")
+		return previousMonthNotFoundErr
 	}
 	if times[0].Unix() != lastMonth {
 		a.logger.Warn("last month not in storage", "latest", times[0].Unix())
 		cleanupIntentLog()
-		return errors.New("previous month not found")
+		return previousMonthNotFoundErr
 	}
 
 	byNamespace := make(map[string]*processByNamespace)
@@ -2549,7 +2621,7 @@ func (a *ActivityLog) precomputedQueryWorker(ctx context.Context, intent *Activi
 	for _, startTime := range times {
 		// Do not work back further than the current retention window,
 		// which will just get deleted anyway.
-		if startTime.Before(retentionWindow) {
+		if startTime.Before(retentionWindow) && strictEnforcement {
 			break
 		}
 		reader, err := a.NewSegmentFileReader(ctx, startTime)

@@ -728,7 +728,7 @@ func RetryUntilAtCadence(t testing.T, timeout, sleepTime time.Duration, f func()
 	RetryUntilAtCadenceWithHandler(t, timeout, sleepTime, fail, f)
 }
 
-// RetryUntilAtCadence runs f until it returns a nil result or the timeout is reached.
+// RetryUntilAtCadenceWithHandler runs f until it returns a nil result or the timeout is reached.
 // If a nil result hasn't been obtained by timeout, onFailure is called.
 func RetryUntilAtCadenceWithHandler(t testing.T, timeout, sleepTime time.Duration, onFailure func(error), f func() error) {
 	t.Helper()
@@ -743,8 +743,11 @@ func RetryUntilAtCadenceWithHandler(t testing.T, timeout, sleepTime time.Duratio
 	onFailure(err)
 }
 
-// RetryUntil runs f until it returns a nil result or the timeout is reached.
+// RetryUntil runs f with a 100ms pause between calls, until f returns a nil result
+// or the timeout is reached.
 // If a nil result hasn't been obtained by timeout, calls t.Fatal.
+// NOTE: See RetryUntilAtCadence if you want to specify a different wait/sleep
+// duration between calls.
 func RetryUntil(t testing.T, timeout time.Duration, f func() error) {
 	t.Helper()
 	RetryUntilAtCadence(t, timeout, 100*time.Millisecond, f)

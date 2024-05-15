@@ -132,6 +132,12 @@ $ curl \
 The API documentation uses `LIST` as the HTTP verb, but you can still use `GET`
 with the `?list=true` query string.
 
+If the list result is an empty set, Vault responds with status code 404 and the following JSON:
+
+```json
+{"errors":[]}
+```
+
 To make an API with specific data in request body, issue a `POST`:
 
 ```text
