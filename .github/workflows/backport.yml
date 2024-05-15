@@ -27,7 +27,6 @@ jobs:
   backport-ent:
     if: github.event.pull_request.merged && contains(join(github.event.pull_request.labels.*.name), 'backport/ent')
     runs-on: ubuntu-latest
-    container: hashicorpdev/backport-assistant:0.4.1
     steps:
       - name: Trigger backport for Enterprise
         uses: peter-evans/repository-dispatch@ff45666b9427631e3450c54a1bcbee4d9ff4d7c0 # v3.0.0
