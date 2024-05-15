@@ -16,6 +16,10 @@ module "backend_raft" {
   source = "./modules/backend_raft"
 }
 
+module "build_artifactory_package" {
+  source = "./modules/build_artifactory_package"
+}
+
 module "build_crt" {
   source = "./modules/build_crt"
 }
