@@ -92,6 +92,9 @@ flags](/vault/docs/commands) included on all commands.
   `VAULT_EXPERIMENTS` environment variable as a comma-separated list, or via the
   [`experiments`](/vault/docs/configuration#experiments) config key.
 
+- `-heap-profile` `(string: "")` - Directory where generated profiles are created. If left unset, files are not generated.
+ _Note:_ This is intended for temporary use during debugging sessions and not for repeated or regular use.
+
 - `VAULT_ALLOW_PENDING_REMOVAL_MOUNTS` `(bool: false)` - (environment variable)
   Allow Vault to be started with builtin engines which have the `Pending Removal`
   deprecation state. This is a temporary stopgap in place in order to perform an
