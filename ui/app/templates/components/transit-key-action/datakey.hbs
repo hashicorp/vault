@@ -87,7 +87,7 @@
           @color="secondary"
           @container="#transit-datakey-modal"
           @onError={{(fn
-            (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
+            (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")
           )}}
         />
       {{/if}}
@@ -96,9 +96,7 @@
         @textToCopy={{@ciphertext}}
         @color="secondary"
         @container="#transit-datakey-modal"
-        @onError={{(fn
-          (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
-        )}}
+        @onError={{(fn (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger"))}}
       />
     </M.Body>
     <M.Footer as |F|>
