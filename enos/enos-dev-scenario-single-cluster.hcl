@@ -54,6 +54,16 @@ scenario "dev_single_cluster" {
       enos scenario launch --help
       enos scenario list dev_single_cluster
       enos scenario launch dev_single_cluster arch:arm64 artifact:local backend:raft distro:ubuntu edition:ce seal:awskms
+
+    When the scenario is finished launching you refer to the scenario outputs to see information
+    related to your cluster. You can use this information to SSH into nodes and/or to interact
+    with vault.
+      enos scenario output dev_single_cluster arch:arm64 artifact:local backend:raft distro:ubuntu edition:ce seal:awskms
+      ssh -i /path/to/your/private/key.pem <PUBLIC_IP>
+      vault status
+
+    After you've finished you can tear down the cluster
+      enos scenario destroy dev_single_cluster arch:arm64 artifact:local backend:raft distro:ubuntu edition:ce seal:awskms
   EOF
 
   // The matrix is where we define all the baseline combinations that enos can utilize to customize

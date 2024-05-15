@@ -60,6 +60,16 @@ scenario "dev_pr_replication" {
       enos scenario launch --help
       enos scenario list dev_pr_replication
       enos scenario launch dev_pr_replication arch:amd64 artifact:deb distro:ubuntu edition:ent.hsm primary_backend:raft primary_seal:awskms secondary_backend:raft secondary_seal:pkcs11
+
+    When the scenario is finished launching you refer to the scenario outputs to see information
+    related to your cluster. You can use this information to SSH into nodes and/or to interact
+    with vault.
+      enos scenario output dev_pr_replication arch:amd64 artifact:deb distro:ubuntu edition:ent.hsm primary_backend:raft primary_seal:awskms secondary_backend:raft secondary_seal:pkcs11
+      ssh -i /path/to/your/private/key.pem <PUBLIC_IP>
+      vault status
+
+    After you've finished you can tear down the cluster
+      enos scenario destroy dev_pr_replication arch:amd64 artifact:deb distro:ubuntu edition:ent.hsm primary_backend:raft primary_seal:awskms secondary_backend:raft secondary_seal:pkcs11
   EOF
 
   // The matrix is where we define all the baseline combinations that enos can utilize to customize
