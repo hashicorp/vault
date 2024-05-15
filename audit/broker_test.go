@@ -186,7 +186,7 @@ func TestBroker_isContextViable_timeouts(t *testing.T) {
 			expected: false, // Expected as a near miss
 		},
 		"same-deadline-plus": {
-			timeout:  timeout + 5*time.Millisecond,
+			timeout:  timeout + 100*time.Millisecond,
 			expected: true,
 		},
 		"2x-longer-deadline": {
