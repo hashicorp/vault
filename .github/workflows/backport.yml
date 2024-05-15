@@ -24,7 +24,6 @@ jobs:
           BACKPORT_MERGE_COMMIT: true
           GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
           ENABLE_VERSION_MANIFESTS: true
-          BACKPORT_LABEL_TEMPLATE: "backport/{{.ent}}{{.target}}+ent"
   backport-ent:
     if: github.event.pull_request.merged && contains(join(github.event.pull_request.labels.*.name), 'backport/ent')
     runs-on: ubuntu-latest
