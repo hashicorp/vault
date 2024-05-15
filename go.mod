@@ -10,7 +10,7 @@ module github.com/hashicorp/vault
 // semantic related to Go module handling), this comment should be updated to explain that.
 //
 // Whenever this value gets updated, sdk/go.mod should be updated to the same value.
-go 1.21
+go 1.22.0
 
 toolchain go1.22.2
 
@@ -232,7 +232,7 @@ require (
 	google.golang.org/grpc v1.61.1
 	google.golang.org/protobuf v1.33.0
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
-	k8s.io/apimachinery v0.29.1
+	k8s.io/apimachinery v0.30.1
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
 	layeh.com/radius v0.0.0-20231213012653-1006025d24f8
 	nhooyr.io/websocket v1.8.7
@@ -541,8 +541,8 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/api v0.29.1 // indirect
 	k8s.io/client-go v0.29.1 // indirect
-	k8s.io/klog/v2 v2.110.1 // indirect
-	k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00 // indirect
+	k8s.io/klog/v2 v2.120.1 // indirect
+	k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
