@@ -1,0 +1,54 @@
+### Performance Standbys revert to Standby mode on unseal
+
+#### Affected versions
+
+- 1.14.12
+- 1.15.8
+- 1.16.2
+
+#### Issue
+
+Upgrading to Vault versions 1.14.12, 1.15.8, and 1.16.2 will cause Performance
+Standby nodes to attempt a storage write during unseal, resulting in a read-only
+storage error:
+
+```
+[ERROR] core: performance standby post-unseal setup failed: error="cannot write to readonly storage"
+```
+
+Performance Standby nodes will revert to Standby after upgrading. You can verify
+the status of your cluster nodes by checking the
+[/sys/health](/vault/api-docs/system/health) endpoint.
+
+Deployments that rely on scaling across Performance Standbys will now forward
+all requests to the active node, increasing the utilization of the active node.
+
+A fix for the read-only storage error has been prioritized and escalated. The
+fix will be in releases 1.14.13, 1.15.9 and 1.16.3.
+
+<Warning title="Important">
+If you have already upgraded to versions 1.14.12, 1.15.8, or 1.16.2, please
+refer to the workaround section for options.
+</Warning>
+
+#### Workaround
+
+There is currently no known workaround for this issue.
+
+If you have already upgraded to the affected versions, you have two options:
+
+1. Carefully monitor the active nodes of your upgraded clusters to ensure that
+system resources are not oversaturated and request latencies are not untenably
+high.
+
+2. Consider downgrading to an earlier version of Vault and restoring from backup.
+
+<Note title="Important">
+Always back up your data before upgrading! Vault does not make
+backward-compatibility guarantees for its data store. Simply replacing the
+newly-installed Vault binary with the previous version will not cleanly
+downgrade Vault, as upgrades may perform changes to the underlying data
+structure that make the data incompatible with a downgrade. If you need to roll
+back to a previous version of Vault, you should roll back your data store as
+well by restoring from backup.
+</Note>
