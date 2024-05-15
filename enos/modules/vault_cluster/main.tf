@@ -239,6 +239,30 @@ resource "enos_vault_unseal" "maybe_force_unseal" {
   }
 }
 
+# Add the vault install location to the PATH and set up VAULT_ADDR and VAULT_TOKEN environement
+# variables in the login shell so we don't have to do it if/when we login in to a cluster node.
+resource "enos_remote_exec" "configure_login_shell_profile" {
+  depends_on = [
+    enos_vault_init.leader,
+    enos_vault_unseal.leader,
+  ]
+  for_each = var.target_hosts
+
+  environment = {
+    VAULT_ADDR        = "http://127.0.0.1:8200"
+    VAULT_TOKEN       = var.root_token != null ? var.root_token : try(enos_vault_init.leader[0].root_token, "_")
+    VAULT_INSTALL_DIR = var.install_dir
+  }
+
+  scripts = [abspath("${path.module}/scripts/set-up-login-shell-profile.sh")]
+
+  transport = {
+    ssh = {
+      host = each.value.public_ip
+    }
+  }
+}
+
 # We need to ensure that the directory used for audit logs is present and accessible to the vault
 # user on all nodes, since logging will only happen on the leader.
 resource "enos_remote_exec" "create_audit_log_dir" {
