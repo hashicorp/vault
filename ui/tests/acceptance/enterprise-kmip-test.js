@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { currentURL, currentRouteName, settled, fillIn, waitUntil, find } from '@ember/test-helpers';
+import { currentURL, currentRouteName, settled, fillIn, waitUntil, find, click } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 
@@ -12,6 +12,7 @@ import scopesPage from 'vault/tests/pages/secrets/backend/kmip/scopes';
 import rolesPage from 'vault/tests/pages/secrets/backend/kmip/roles';
 import credentialsPage from 'vault/tests/pages/secrets/backend/kmip/credentials';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { allEngines } from 'vault/helpers/mountable-secret-engines';
 import { runCmd } from 'vault/tests/helpers/commands';
 import { v4 as uuidv4 } from 'uuid';
@@ -181,6 +182,19 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
       'navigates to the kmip scopes page after create'
     );
     assert.strictEqual(scopesPage.listItemLinks.length, 1, 'renders a single scope');
+  });
+
+  test('it navigates to kmip scopes view using breadcrumbs', async function (assert) {
+    const backend = await mountWithConfig(this.backend);
+    await scopesPage.visitCreate({ backend });
+    await settled();
+    await click(GENERAL.breadcrumbLink(backend));
+
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.kmip.scopes.index',
+      'Breadcrumb transitions to scopes list'
+    );
   });
 
   test('it can delete a scope from the list', async function (assert) {
