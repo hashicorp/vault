@@ -49,7 +49,7 @@ require (
 	golang.org/x/net v0.25.0
 	golang.org/x/text v0.15.0
 	google.golang.org/grpc v1.60.1
-	google.golang.org/protobuf v1.31.0
+	google.golang.org/protobuf v1.34.1
 )
 
 require (
