@@ -15,20 +15,8 @@ export default class KmipScopesCreate extends Route {
   }
 
   model() {
-    const backend = this.secretMountPath.currentPath;
     return this.store.createRecord('kmip/scope', {
-      backend: backend,
+      backend: this.secretMountPath.currentPath,
     });
-  }
-
-  setupController(controller, resolvedModel) {
-    super.setupController(controller, resolvedModel);
-
-    const crumbs = [
-      { label: 'Secrets', route: 'secrets', linkExternal: true },
-      { label: resolvedModel.backend, route: 'scopes', model: resolvedModel.backend },
-      { label: 'create' },
-    ];
-    controller.breadcrumbs = crumbs;
   }
 }
