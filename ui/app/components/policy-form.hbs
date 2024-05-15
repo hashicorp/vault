@@ -60,7 +60,7 @@
               @isIconOnly={{true}}
               @textToCopy={{@model.policy}}
               @onError={{(fn
-                (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
+                (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")
               )}}
               class="transparent"
               data-test-copy-button

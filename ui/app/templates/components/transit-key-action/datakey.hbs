@@ -89,7 +89,7 @@
           @isFullWidth={{true}}
           @isTruncated={{true}}
           @onError={{(fn
-            (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
+            (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")
           )}}
         />
       {{/if}}
@@ -100,9 +100,7 @@
         @container="#transit-datakey-modal"
         @isFullWidth={{true}}
         @isTruncated={{true}}
-        @onError={{(fn
-          (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
-        )}}
+        @onError={{(fn (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger"))}}
       />
     </M.Body>
     <M.Footer as |F|>

@@ -40,9 +40,7 @@
       @text="Copy"
       @isIconOnly={{true}}
       @textToCopy={{this.copyValue}}
-      @onError={{(fn
-        (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
-      )}}
+      @onError={{(fn (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger"))}}
       class="transparent has-padding-xxs"
       data-test-copy-button={{or this.copyValue true}}
     />
