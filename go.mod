@@ -212,14 +212,14 @@ require (
 	go.opentelemetry.io/otel/trace v1.22.0
 	go.uber.org/atomic v1.11.0
 	go.uber.org/goleak v1.2.1
-	golang.org/x/crypto v0.22.0
-	golang.org/x/exp v0.0.0-20240213143201-ec583247a57a
-	golang.org/x/net v0.22.0
-	golang.org/x/oauth2 v0.17.0
+	golang.org/x/crypto v0.23.0
+	golang.org/x/exp v0.0.0-20240222234643-814bf88cf225
+	golang.org/x/net v0.25.0
+	golang.org/x/oauth2 v0.18.0
 	golang.org/x/sync v0.7.0
-	golang.org/x/sys v0.19.0
-	golang.org/x/term v0.19.0
-	golang.org/x/text v0.14.0
+	golang.org/x/sys v0.20.0
+	golang.org/x/term v0.20.0
+	golang.org/x/text v0.15.0
 	golang.org/x/tools v0.18.0
 	google.golang.org/api v0.163.0
 	google.golang.org/grpc v1.61.0
