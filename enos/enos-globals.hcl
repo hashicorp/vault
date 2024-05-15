@@ -2,11 +2,12 @@
 # SPDX-License-Identifier: BUSL-1.1
 
 globals {
-  archs            = ["amd64", "arm64"]
-  artifact_sources = ["local", "crt", "artifactory"]
-  artifact_types   = ["bundle", "package"]
-  backends         = ["consul", "raft"]
-  backend_tag_key  = "VaultStorage"
+  archs                = ["amd64", "arm64"]
+  artifact_sources     = ["local", "crt", "artifactory"]
+  artifact_types       = ["bundle", "package"]
+  backends             = ["consul", "raft"]
+  backend_license_path = abspath(var.backend_license_path != null ? var.backend_license_path : joinpath(path.root, "./support/consul.hclic"))
+  backend_tag_key      = "VaultStorage"
   build_tags = {
     "ce"               = ["ui"]
     "ent"              = ["ui", "enterprise", "ent"]

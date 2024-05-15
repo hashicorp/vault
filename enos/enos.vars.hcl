@@ -51,10 +51,6 @@
 # It must exist.
 # terraform_plugin_cache_dir = "/Users/<user>/.terraform/plugin-cache-dir
 
-# tfc_api_token is the Terraform Cloud QTI Organization API token. We need this
-# to download the enos Terraform provider and the enos Terraform modules.
-# tfc_api_token = "XXXXX.atlasv1.XXXXX..."
-
 # ui_test_filter is the test filter to limit the ui tests to execute for the ui scenario. It will
 # be appended to the ember test command as '-f=\"<filter>\"'.
 # ui_test_filter = "sometest"
