@@ -40,7 +40,7 @@ jobs:
       runs-on: ${{ steps.get-metadata.outputs.runs-on }}
       vault_edition: ${{ steps.get-metadata.outputs.vault_edition }}
     steps:
-      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+      - uses: actions/checkout@44c2b7a8a4ea60a981eaca3cf939b5f4305c123b # v4.1.5
       - id: get-metadata
         env:
           IS_ENT: ${{ startsWith(github.event.repository.name, 'vault-enterprise' ) }}
@@ -72,7 +72,7 @@ jobs:
       GOPRIVATE: github.com/hashicorp
     steps:
       - name: Checkout
-        uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+        uses: actions/checkout@44c2b7a8a4ea60a981eaca3cf939b5f4305c123b # v4.1.5
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
@@ -109,7 +109,7 @@ jobs:
           sudo apt install -y libnss3-dev libgdk-pixbuf2.0-dev libgtk-3-dev libxss-dev libasound2
       - name: Install Chrome
         if: steps.chrome-check.outputs.chrome-version == 'not-installed'
-        uses: browser-actions/setup-chrome@82b9ce628cc5595478a9ebadc480958a36457dc2 # v1.6.0
+        uses: browser-actions/setup-chrome@361a23fcf94a523a91c9cfae6f11c2a5c2d87f64 # v1.6.1
       - name: Installed Chrome Version
         run: |
           echo "Installed Chrome Version = [$(chrome --version 2> /dev/null || google-chrome --version 2> /dev/null || google-chrome-stable --version 2> /dev/null)]"

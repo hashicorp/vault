@@ -143,14 +143,13 @@ runs:
         BUNDLE_PATH: out/${{ steps.metadata.outputs.artifact-basename }}.zip
       shell: bash
       run: make ci-bundle
-    # Use actions/upload-artifact @3.x until https://hashicorp.atlassian.net/browse/HREL-99 is resolved
-    - uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
+    - uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
       with:
         name: ${{ steps.metadata.outputs.artifact-basename }}.zip
         path: out/${{ steps.metadata.outputs.artifact-basename }}.zip
         if-no-files-found: error
     - if: inputs.create-packages == 'true'
-      uses: hashicorp/actions-packaging-linux@v1
+      uses: hashicorp/actions-packaging-linux@33f7d23b14f24e6a7b7d9948cb7f5caca2045ee3
       with:
         name: ${{ inputs.package-name }}
         description: Vault is a tool for secrets management, encryption as a service, and privileged access management.
@@ -176,15 +175,13 @@ runs:
           echo "deb-files=$(basename out/*.deb)"
         } | tee -a "$GITHUB_OUTPUT"
     - if: inputs.create-packages == 'true'
-      # Use actions/upload-artifact @3.x until https://hashicorp.atlassian.net/browse/HREL-99 is resolved
-      uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
+      uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
       with:
         name: ${{ steps.package-files.outputs.rpm-files }}
         path: out/${{ steps.package-files.outputs.rpm-files }}
         if-no-files-found: error
     - if: inputs.create-packages == 'true'
-      # Use actions/upload-artifact @3.x until https://hashicorp.atlassian.net/browse/HREL-99 is resolved
-      uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
+      uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
       with:
         name: ${{ steps.package-files.outputs.deb-files }}
         path: out/${{ steps.package-files.outputs.deb-files }}

@@ -78,5 +78,5 @@ export function overrideResponse(httpStatus = 200, payload = {}) {
   if (httpStatus === 204) {
     return new Response(204, { 'Content-Type': 'application/json' });
   }
-  return new Response(200, { 'Content-Type': 'application/json' }, payload);
+  return new Response(httpStatus, { 'Content-Type': 'application/json' }, payload);
 }
