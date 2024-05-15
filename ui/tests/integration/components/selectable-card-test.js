@@ -27,7 +27,7 @@ module('Integration | Component selectable-card', function (hooks) {
     assert.dom('.selectable-card').hasText('hello');
   });
 
-  test('it does not allow click or key actions on disabled card', async function (assert) {
+  test('it does process click event on disabled card', async function (assert) {
     await render(hbs`<SelectableCard @onClick={{this.onClick}} @disabled={{true}}>disabled</SelectableCard>`);
     await click('.selectable-card');
     assert.notOk(this.onClick.calledOnce, 'does not call the click event');
