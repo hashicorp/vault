@@ -1,6 +1,6 @@
 module github.com/hashicorp/vault/sdk
 
-go 1.21
+go 1.22
 
 require (
 	cloud.google.com/go/cloudsqlconn v1.4.3
