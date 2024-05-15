@@ -15,12 +15,11 @@
   @title="Upgrade to use {{this.featureName}}"
   @message="You will need {{this.minimumEdition}} with {{this.featureName}} included to use this feature."
 >
-  <ExternalLink
+  <Hds::Link::Standalone
+    @icon="chevron-right"
+    @iconPosition="trailing"
+    @text="Vault Enterprise"
     @href="https://www.hashicorp.com/products/vault/enterprise?source=vaultui_{{this.featureName}}"
-    class="link has-icon-right"
     data-test-upgrade-link
-  >
-    Vault Enterprise
-    <Chevron />
-  </ExternalLink>
+  />
 </EmptyState>

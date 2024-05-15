@@ -1,10 +1,10 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { hash } from 'rsvp';
 
 export default class KvConfigurationRoute extends Route {
@@ -25,7 +25,7 @@ export default class KvConfigurationRoute extends Route {
     super.setupController(controller, resolvedModel);
     controller.breadcrumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: resolvedModel.mountConfig.id, route: 'list' },
+      { label: resolvedModel.mountConfig.id, route: 'list', model: resolvedModel.engineConfig.backend },
       { label: 'configuration' },
     ];
   }

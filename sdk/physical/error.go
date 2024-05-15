@@ -111,3 +111,14 @@ func (e *TransactionalErrorInjector) Transaction(ctx context.Context, txns []*Tx
 	}
 	return e.Transactional.Transaction(ctx, txns)
 }
+
+// TransactionLimits implements physical.TransactionalLimits
+func (e *TransactionalErrorInjector) TransactionLimits() (int, int) {
+	if tl, ok := e.Transactional.(TransactionalLimits); ok {
+		return tl.TransactionLimits()
+	}
+	// We don't have any specific limits of our own so return zeros to signal that
+	// the caller should use whatever reasonable defaults it would if it used a
+	// non-TransactionalLimits backend.
+	return 0, 0
+}

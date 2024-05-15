@@ -69,6 +69,7 @@ type Config struct {
 	ClusterCipherSuites string `hcl:"cluster_cipher_suites"`
 
 	PluginDirectory string `hcl:"plugin_directory"`
+	PluginTmpdir    string `hcl:"plugin_tmpdir"`
 
 	PluginFileUid int `hcl:"plugin_file_uid"`
 
@@ -361,6 +362,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.PluginDirectory = c.PluginDirectory
 	if c2.PluginDirectory != "" {
 		result.PluginDirectory = c2.PluginDirectory
+	}
+
+	result.PluginTmpdir = c.PluginTmpdir
+	if c2.PluginTmpdir != "" {
+		result.PluginTmpdir = c2.PluginTmpdir
 	}
 
 	result.PluginFileUid = c.PluginFileUid
@@ -742,7 +748,7 @@ func ParseConfig(d, source string) (*Config, error) {
 		return nil, fmt.Errorf("error validating experiment(s) from config: %w", err)
 	}
 
-	if err := result.parseConfig(list); err != nil {
+	if err := result.parseConfig(list, source); err != nil {
 		return nil, fmt.Errorf("error parsing enterprise config: %w", err)
 	}
 
@@ -1114,6 +1120,7 @@ func (c *Config) Sanitized() map[string]interface{} {
 		"cluster_cipher_suites": c.ClusterCipherSuites,
 
 		"plugin_directory": c.PluginDirectory,
+		"plugin_tmpdir":    c.PluginTmpdir,
 
 		"plugin_file_uid": c.PluginFileUid,
 

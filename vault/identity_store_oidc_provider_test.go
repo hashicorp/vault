@@ -1176,7 +1176,8 @@ func setupOIDCCommon(t *testing.T, c *Core, s logical.Storage) (string, string, 
 	ctx := namespace.RootContext(nil)
 
 	// Create a key
-	resp, err := c.identityStore.HandleRequest(ctx, testKeyReq(s, []string{"*"}, "RS256"))
+	resp, err := c.identityStore.HandleRequest(ctx, testKeyReq(s, "test-key",
+		[]string{"*"}, "RS256"))
 	expectSuccess(t, resp, err)
 
 	// Create an entity
@@ -1359,10 +1360,10 @@ func testEntityReq(s logical.Storage) *logical.Request {
 	}
 }
 
-func testKeyReq(s logical.Storage, allowedClientIDs []string, alg string) *logical.Request {
+func testKeyReq(s logical.Storage, name string, allowedClientIDs []string, alg string) *logical.Request {
 	return &logical.Request{
 		Storage:   s,
-		Path:      "oidc/key/test-key",
+		Path:      fmt.Sprintf("oidc/key/%s", name),
 		Operation: logical.CreateOperation,
 		Data: map[string]interface{}{
 			"allowed_client_ids": allowedClientIDs,
@@ -3637,6 +3638,7 @@ func TestOIDC_Path_OpenIDProviderConfig(t *testing.T) {
 		AuthMethods:           []string{"none", "client_secret_basic", "client_secret_post"},
 		RequestParameter:      false,
 		RequestURIParameter:   false,
+		CodeChallengeMethods:  []string{codeChallengeMethodPlain, codeChallengeMethodS256},
 	}
 	discoveryResp := &providerDiscovery{}
 	json.Unmarshal(resp.Data["http_raw_body"].([]byte), discoveryResp)
@@ -3693,6 +3695,7 @@ func TestOIDC_Path_OpenIDProviderConfig(t *testing.T) {
 		AuthMethods:           []string{"none", "client_secret_basic", "client_secret_post"},
 		RequestParameter:      false,
 		RequestURIParameter:   false,
+		CodeChallengeMethods:  []string{codeChallengeMethodPlain, codeChallengeMethodS256},
 	}
 	discoveryResp = &providerDiscovery{}
 	json.Unmarshal(resp.Data["http_raw_body"].([]byte), discoveryResp)

@@ -7,24 +7,14 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { render, click } from '@ember/test-helpers';
+import { render, click, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import sinon from 'sinon';
 
 import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
 
-const {
-  breadcrumb,
-  title,
-  tab,
-  filter,
-  searchSelect,
-  emptyStateTitle,
-  destinations,
-  menuTrigger,
-  confirmButton,
-} = PAGE;
+const { title, tab, filter, searchSelect, emptyStateTitle, destinations, menuTrigger, confirmButton } = PAGE;
 
 module('Integration | Component | sync | Page::Destinations', function (hooks) {
   setupRenderingTest(hooks);
@@ -32,8 +22,9 @@ module('Integration | Component | sync | Page::Destinations', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.owner.lookup('service:version').type = 'enterprise';
-
+    this.version = this.owner.lookup('service:version');
+    this.version.type = 'enterprise';
+    this.version.features = ['Secrets Sync'];
     this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
 
     const store = this.owner.lookup('service:store');
@@ -45,7 +36,8 @@ module('Integration | Component | sync | Page::Destinations', function (hooks) {
       id: destination.name,
     });
 
-    this.destinations = store.peekAll(modelName).toArray();
+    // mimic what happens in lazyPaginatedQuery
+    this.destinations = store.peekAll(modelName);
     this.destinations.meta = {
       filteredTotal: this.destinations.length,
       currentPage: 1,
@@ -69,7 +61,6 @@ module('Integration | Component | sync | Page::Destinations', function (hooks) {
 
   test('it should render header and tabs', async function (assert) {
     await this.renderComponent();
-    assert.dom(breadcrumb).includesText('Secrets Sync', 'Breadcrumb renders');
     assert.dom(title).hasText('Secrets Sync', 'Page title renders');
     assert.dom(tab('Overview')).exists('Overview tab renders');
     assert.dom(tab('Destinations')).exists('Destinations tab renders');
@@ -87,17 +78,22 @@ module('Integration | Component | sync | Page::Destinations', function (hooks) {
       .includesText('AWS Secrets Manager', 'Filter is populated for correct initial value');
     await click(searchSelect.removeSelected);
 
-    for (const filterType of ['type', 'name']) {
-      await click(`${filter(filterType)} .ember-basic-dropdown-trigger`);
-      await click(searchSelect.option(0));
+    // TYPE FILTER
+    await click(`${filter('type')} .ember-basic-dropdown-trigger`);
+    await click(searchSelect.option(searchSelect.optionIndex('AWS Secrets Manager')));
+    assert.deepEqual(
+      this.transitionStub.lastCall.args,
+      ['vault.cluster.sync.secrets.destinations', { queryParams: { type: 'aws-sm' } }],
+      'type filter triggered transition with correct query params'
+    );
 
-      const value = filterType === 'type' ? 'aws-sm' : 'destination-aws';
-      assert.deepEqual(
-        this.transitionStub.lastCall.args,
-        ['vault.cluster.sync.secrets.destinations', { queryParams: { [filterType]: value } }],
-        `${filterType} filter triggered transition with correct query params`
-      );
-    }
+    // NAME FILTER
+    await fillIn(filter('name'), 'destination-aws');
+    assert.deepEqual(
+      this.transitionStub.lastCall.args,
+      ['vault.cluster.sync.secrets.destinations', { queryParams: { name: 'destination-aws' } }],
+      'name filter triggered transition with correct query params'
+    );
   });
 
   test('it should render empty state when there are no filtered results', async function (assert) {
@@ -149,7 +145,7 @@ module('Integration | Component | sync | Page::Destinations', function (hooks) {
 
     assert.propEqual(
       this.transitionStub.lastCall.args,
-      ['vault.cluster.sync.secrets.destinations'],
+      ['vault.cluster.sync.secrets.overview'],
       'Transition is triggered on delete success'
     );
     assert.propEqual(

@@ -126,10 +126,10 @@ COPY vault /bin/vault
 			vaultConfig := fmt.Sprintf(containerConfig, sealList)
 
 			svc, runner, err := createContainerWithConfig(vaultConfig, "hashicorp/vault", "test-image", func(s string) { t.Log(s) })
-			defer svc.Cleanup()
 			if err != nil {
 				t.Fatalf("error creating container: %s", err)
 			}
+			defer svc.Cleanup()
 
 			time.Sleep(5 * time.Second)
 

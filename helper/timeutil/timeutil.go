@@ -17,6 +17,20 @@ func StartOfPreviousMonth(t time.Time) time.Time {
 	return time.Date(year, month, 1, 0, 0, 0, 0, t.Location()).AddDate(0, -1, 0)
 }
 
+func StartOfDay(t time.Time) time.Time {
+	year, month, day := t.Date()
+	return time.Date(year, month, day, 0, 0, 0, 0, t.Location())
+}
+
+// IsCurrentDay checks if :t: is in the current day, as defined by :compare:
+// generally, pass in time.Now().UTC() as :compare:
+func IsCurrentDay(t, compare time.Time) bool {
+	thisDayStart := StartOfDay(compare)
+	queryDayStart := StartOfDay(t)
+
+	return queryDayStart.Equal(thisDayStart)
+}
+
 func StartOfMonth(t time.Time) time.Time {
 	year, month, _ := t.Date()
 	return time.Date(year, month, 1, 0, 0, 0, 0, t.Location())
@@ -62,8 +76,8 @@ func IsCurrentMonth(t, compare time.Time) bool {
 	return queryMonthStart.Equal(thisMonthStart)
 }
 
-// GetMostRecentContinuousMonths finds the start time of the most
-// recent set of continguous months.
+// GetMostRecentContiguousMonths finds the start time of the most
+// recent set of continuous months.
 //
 // For example, if the most recent start time is Aug 15, then that range is just 1 month
 // If the recent start times are Aug 1 and July 1 and June 15, then that range is

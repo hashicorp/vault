@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -102,7 +103,12 @@ type IdentityStore struct {
 	groupUpdater  GroupUpdater
 	tokenStorer   TokenStorer
 	entityCreator EntityCreator
+	mountLister   MountLister
 	mfaBackend    *LoginMFABackend
+
+	// aliasLocks is used to protect modifications to alias entries based on the uniqueness factor
+	// which is name + accessor
+	aliasLocks []*locksutil.LockEntry
 }
 
 type groupDiff struct {
@@ -153,3 +159,10 @@ type EntityCreator interface {
 }
 
 var _ EntityCreator = &Core{}
+
+type MountLister interface {
+	ListMounts() ([]*MountEntry, error)
+	ListAuths() ([]*MountEntry, error)
+}
+
+var _ MountLister = &Core{}

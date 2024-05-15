@@ -8,10 +8,12 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"reflect"
 	"runtime"
@@ -23,6 +25,7 @@ import (
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
+	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/pluginhelpers"
 	"github.com/hashicorp/vault/helper/versions"
@@ -34,8 +37,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	backendplugin "github.com/hashicorp/vault/sdk/plugin"
-
-	"github.com/hashicorp/vault/helper/builtinplugins"
 )
 
 func testPluginCatalog(t *testing.T) *PluginCatalog {
@@ -53,12 +54,14 @@ func testPluginCatalog(t *testing.T) *PluginCatalog {
 	pluginRuntimeCatalog := testPluginRuntimeCatalog(t)
 	pluginCatalog, err := SetupPluginCatalog(
 		context.Background(),
-		logger,
-		corehelpers.NewMockBuiltinRegistry(),
-		logical.NewLogicalStorage(storage),
-		testDir,
-		false,
-		pluginRuntimeCatalog,
+		&PluginCatalogInput{
+			Logger:               logger,
+			BuiltinRegistry:      corehelpers.NewMockBuiltinRegistry(),
+			CatalogView:          logical.NewLogicalStorage(storage),
+			PluginDirectory:      testDir,
+			EnableMlock:          false,
+			PluginRuntimeCatalog: pluginRuntimeCatalog,
+		},
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -66,10 +69,150 @@ func testPluginCatalog(t *testing.T) *PluginCatalog {
 	return pluginCatalog
 }
 
+type warningCountLogger struct {
+	log.Logger
+	warnings int
+}
+
+func (l *warningCountLogger) Warn(msg string, args ...interface{}) {
+	l.warnings++
+	l.Logger.Warn(msg, args...)
+}
+
+func (l *warningCountLogger) reset() {
+	l.warnings = 0
+}
+
+// TestPluginCatalog_SetupPluginCatalog_WarningsWithLegacyEnvSetting ensures we
+// log the correct number of warnings during plugin catalog setup (which is run
+// during unseal) if users have set the flag to keep old behavior. This is to
+// help users migrate safely to the new default behavior.
+func TestPluginCatalog_SetupPluginCatalog_WarningsWithLegacyEnvSetting(t *testing.T) {
+	logger := &warningCountLogger{
+		Logger: log.New(&hclog.LoggerOptions{
+			Level: hclog.Trace,
+		}),
+	}
+	storage, err := inmem.NewInmem(nil, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	logicalStorage := logical.NewLogicalStorage(storage)
+
+	// prefix to avoid collisions with other tests.
+	const prefix = "TEST_PLUGIN_CATALOG_ENV_"
+	plugin := &pluginutil.PluginRunner{
+		Name:    "mysql-database-plugin",
+		Type:    consts.PluginTypeDatabase,
+		Version: "1.0.0",
+		Env: []string{
+			prefix + "A=1",
+			prefix + "VALUE_WITH_EQUALS=1=2",
+			prefix + "EMPTY_VALUE=",
+		},
+	}
+
+	// Insert a plugin into storage before the catalog is setup.
+	buf, err := json.Marshal(plugin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	logicalEntry := logical.StorageEntry{
+		Key:   path.Join(plugin.Type.String(), plugin.Name, plugin.Version),
+		Value: buf,
+	}
+	if err := logicalStorage.Put(context.Background(), &logicalEntry); err != nil {
+		t.Fatal(err)
+	}
+
+	for name, tc := range map[string]struct {
+		sysEnv           map[string]string
+		expectedWarnings int
+	}{
+		"no env": {},
+		"colliding env, no flag": {
+			sysEnv: map[string]string{
+				prefix + "A": "10",
+			},
+			expectedWarnings: 0,
+		},
+		"colliding env, with flag": {
+			sysEnv: map[string]string{
+				pluginutil.PluginUseLegacyEnvLayering: "true",
+				prefix + "A":                          "10",
+			},
+			expectedWarnings: 2,
+		},
+		"all colliding env, with flag": {
+			sysEnv: map[string]string{
+				pluginutil.PluginUseLegacyEnvLayering: "true",
+				prefix + "A":                          "10",
+				prefix + "VALUE_WITH_EQUALS":          "1=2",
+				prefix + "EMPTY_VALUE":                "",
+			},
+			expectedWarnings: 4,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			logger.reset()
+			for k, v := range tc.sysEnv {
+				t.Setenv(k, v)
+			}
+
+			_, err := SetupPluginCatalog(
+				context.Background(),
+				&PluginCatalogInput{
+					Logger:               logger,
+					BuiltinRegistry:      corehelpers.NewMockBuiltinRegistry(),
+					CatalogView:          logicalStorage,
+					PluginDirectory:      "",
+					Tmpdir:               "",
+					EnableMlock:          false,
+					PluginRuntimeCatalog: nil,
+				},
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if tc.expectedWarnings != logger.warnings {
+				t.Fatalf("expected %d warnings, got %d", tc.expectedWarnings, logger.warnings)
+			}
+		})
+	}
+}
+
 func TestPluginCatalog_CRUD(t *testing.T) {
 	const pluginName = "mysql-database-plugin"
 
 	pluginCatalog := testPluginCatalog(t)
+
+	// Register a fake plugin in the catalog.
+	file, err := os.CreateTemp(pluginCatalog.directory, "temp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+
+	err = pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
+		Name:    pluginName,
+		Type:    consts.PluginTypeDatabase,
+		Version: "1.0.0",
+		Command: filepath.Base(file.Name()),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Register a pinned version, should not affect anything below.
+	err = pluginCatalog.SetPinnedVersion(context.Background(), &pluginutil.PinnedVersion{
+		Name:    pluginName,
+		Type:    consts.PluginTypeDatabase,
+		Version: "1.0.0",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Get builtin plugin
 	p, err := pluginCatalog.Get(context.Background(), pluginName, consts.PluginTypeDatabase, "")
@@ -106,12 +249,6 @@ func TestPluginCatalog_CRUD(t *testing.T) {
 	}
 
 	// Set a plugin, test overwriting a builtin plugin
-	file, err := os.CreateTemp(pluginCatalog.directory, "temp")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer file.Close()
-
 	command := filepath.Base(file.Name())
 	err = pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
 		Name:    pluginName,
@@ -666,6 +803,17 @@ func TestPluginCatalog_ErrDirectoryNotConfigured(t *testing.T) {
 	tempDir := catalog.directory
 	catalog.directory = ""
 
+	const pluginRuntime = "custom-runtime"
+	const ociRuntime = "runc"
+	err := catalog.runtimeCatalog.Set(context.Background(), &pluginruntimeutil.PluginRuntimeConfig{
+		Name:       pluginRuntime,
+		Type:       consts.PluginRuntimeTypeContainer,
+		OCIRuntime: ociRuntime,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	tests := map[string]func(t *testing.T){
 		"set binary plugin": func(t *testing.T) {
 			file, err := os.CreateTemp(tempDir, "temp")
@@ -705,12 +853,19 @@ func TestPluginCatalog_ErrDirectoryNotConfigured(t *testing.T) {
 			}
 		},
 		"set container plugin": func(t *testing.T) {
+			if runtime.GOOS != "linux" {
+				t.Skip("Containerized plugins only supported on Linux")
+			}
+
 			// Should never error.
-			const image = "does-not-exist"
+			plugin := pluginhelpers.CompilePlugin(t, consts.PluginTypeDatabase, "", tempDir)
+			plugin.Image, plugin.ImageSha256 = pluginhelpers.BuildPluginContainerImage(t, plugin, tempDir)
+
 			err := catalog.Set(context.Background(), pluginutil.SetPluginInput{
 				Name:     "container",
 				Type:     consts.PluginTypeDatabase,
-				OCIImage: image,
+				OCIImage: plugin.Image,
+				Runtime:  pluginRuntime,
 			})
 			if err != nil {
 				t.Fatal(err)
@@ -720,8 +875,8 @@ func TestPluginCatalog_ErrDirectoryNotConfigured(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if p.OCIImage != image {
-				t.Fatalf("Expected %s, got %s", image, p.OCIImage)
+			if p.OCIImage != plugin.Image {
+				t.Fatalf("Expected %s, got %s", plugin.Image, p.OCIImage)
 			}
 			// Make sure we can still get builtins too
 			_, err = catalog.Get(context.Background(), "mysql-database-plugin", consts.PluginTypeDatabase, "")
@@ -750,20 +905,27 @@ func TestPluginCatalog_ErrDirectoryNotConfigured(t *testing.T) {
 // are returned with their container runtime config populated if it was
 // specified.
 func TestRuntimeConfigPopulatedIfSpecified(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Containerized plugins only supported on Linux")
+	}
+
 	pluginCatalog := testPluginCatalog(t)
-	const image = "does-not-exist"
+
+	plugin := pluginhelpers.CompilePlugin(t, consts.PluginTypeDatabase, "", pluginCatalog.directory)
+	plugin.Image, plugin.ImageSha256 = pluginhelpers.BuildPluginContainerImage(t, plugin, pluginCatalog.directory)
+
 	const runtime = "custom-runtime"
 	err := pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
 		Name:     "container",
 		Type:     consts.PluginTypeDatabase,
-		OCIImage: image,
+		OCIImage: plugin.Image,
 		Runtime:  runtime,
 	})
 	if err == nil {
 		t.Fatal("specified runtime doesn't exist yet, should have failed")
 	}
 
-	const ociRuntime = "some-other-oci-runtime"
+	const ociRuntime = "runc"
 	err = pluginCatalog.runtimeCatalog.Set(context.Background(), &pluginruntimeutil.PluginRuntimeConfig{
 		Name:       runtime,
 		Type:       consts.PluginRuntimeTypeContainer,
@@ -777,7 +939,7 @@ func TestRuntimeConfigPopulatedIfSpecified(t *testing.T) {
 	err = pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
 		Name:     "container",
 		Type:     consts.PluginTypeDatabase,
-		OCIImage: image,
+		OCIImage: plugin.Image,
 		Runtime:  runtime,
 	})
 	if err != nil {
@@ -1004,12 +1166,17 @@ func TestExternalPlugin_getBackendTypeVersion(t *testing.T) {
 
 func TestExternalPluginInContainer_GetBackendTypeVersion(t *testing.T) {
 	if runtime.GOOS != "linux" {
-		t.Skip("Running plugins in containers is only supported on linux")
+		t.Skip("Containerized plugins only supported on Linux")
 	}
 
 	pluginCatalog := testPluginCatalog(t)
 
-	var plugins []pluginhelpers.TestPlugin
+	type testCase struct {
+		plugin      pluginhelpers.TestPlugin
+		expectedErr error
+	}
+	var testCases []testCase
+
 	for _, pluginType := range []consts.PluginType{
 		consts.PluginTypeCredential,
 		consts.PluginTypeSecrets,
@@ -1017,46 +1184,121 @@ func TestExternalPluginInContainer_GetBackendTypeVersion(t *testing.T) {
 	} {
 		plugin := pluginhelpers.CompilePlugin(t, pluginType, "v1.2.3", pluginCatalog.directory)
 		plugin.Image, plugin.ImageSha256 = pluginhelpers.BuildPluginContainerImage(t, plugin, pluginCatalog.directory)
-		plugins = append(plugins, plugin)
+
+		testCases = append(testCases, testCase{
+			plugin:      plugin,
+			expectedErr: nil,
+		})
+
+		plugin.Image += "-will-not-be-found"
+		testCases = append(testCases, testCase{
+			plugin:      plugin,
+			expectedErr: ErrPluginUnableToRun,
+		})
 	}
 
-	for _, plugin := range plugins {
-		t.Run(plugin.Typ.String(), func(t *testing.T) {
-			for _, ociRuntime := range []string{"runc", "runsc"} {
-				t.Run(ociRuntime, func(t *testing.T) {
-					if _, err := exec.LookPath(ociRuntime); err != nil {
-						t.Skipf("Skipping test as %s not found on path", ociRuntime)
-					}
-
-					shaBytes, _ := hex.DecodeString(plugin.ImageSha256)
-					entry := &pluginutil.PluginRunner{
-						Name:     plugin.Name,
-						OCIImage: plugin.Image,
-						Args:     nil,
-						Sha256:   shaBytes,
-						Builtin:  false,
-						Runtime:  ociRuntime,
-						RuntimeConfig: &pluginruntimeutil.PluginRuntimeConfig{
-							OCIRuntime: ociRuntime,
-						},
-					}
-
-					var version logical.PluginVersion
-					var err error
-					if plugin.Typ == consts.PluginTypeDatabase {
-						version, err = pluginCatalog.getDatabaseRunningVersion(context.Background(), entry)
-					} else {
-						version, err = pluginCatalog.getBackendRunningVersion(context.Background(), entry)
-					}
-					if err != nil {
-						t.Fatal(err)
-					}
-					if version.Version != plugin.Version {
-						t.Errorf("Expected to get version %v but got %v", plugin.Version, version.Version)
-					}
-				})
+	for _, tc := range testCases {
+		t.Run(tc.plugin.Typ.String(), func(t *testing.T) {
+			expectedErrTestName := "nil err"
+			if tc.expectedErr != nil {
+				expectedErrTestName = tc.expectedErr.Error()
 			}
+
+			t.Run(expectedErrTestName, func(t *testing.T) {
+				for _, ociRuntime := range []string{"runc", "runsc"} {
+					t.Run(ociRuntime, func(t *testing.T) {
+						if _, err := exec.LookPath(ociRuntime); err != nil {
+							t.Skipf("Skipping test as %s not found on path", ociRuntime)
+						}
+
+						shaBytes, _ := hex.DecodeString(tc.plugin.ImageSha256)
+						entry := &pluginutil.PluginRunner{
+							Name:     tc.plugin.Name,
+							OCIImage: tc.plugin.Image,
+							Args:     nil,
+							Sha256:   shaBytes,
+							Builtin:  false,
+							Runtime:  ociRuntime,
+							RuntimeConfig: &pluginruntimeutil.PluginRuntimeConfig{
+								OCIRuntime: ociRuntime,
+							},
+						}
+
+						var version logical.PluginVersion
+						var err error
+						if tc.plugin.Typ == consts.PluginTypeDatabase {
+							version, err = pluginCatalog.getDatabaseRunningVersion(context.Background(), entry)
+						} else {
+							version, err = pluginCatalog.getBackendRunningVersion(context.Background(), entry)
+						}
+
+						if tc.expectedErr == nil {
+							if err != nil {
+								t.Fatalf("Expected successful get backend type version but got: %v", err)
+							}
+							if version.Version != tc.plugin.Version {
+								t.Errorf("Expected to get version %v but got %v", tc.plugin.Version, version.Version)
+							}
+
+						} else if !errors.Is(err, tc.expectedErr) {
+							t.Errorf("Expected to get err %s but got %s", tc.expectedErr, err)
+						}
+					})
+				}
+			})
 		})
+	}
+}
+
+// TestPluginCatalog_CannotDeletePinnedVersion ensures we cannot delete a
+// plugin which is referred to in an active pinned version.
+func TestPluginCatalog_CannotDeletePinnedVersion(t *testing.T) {
+	pluginCatalog := testPluginCatalog(t)
+
+	// Register a fake plugin in the catalog.
+	file, err := os.CreateTemp(pluginCatalog.directory, "temp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+
+	err = pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
+		Name:    "my-plugin",
+		Type:    consts.PluginTypeSecrets,
+		Version: "1.0.0",
+		Command: filepath.Base(file.Name()),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Pin a version and check we can't delete it.
+	err = pluginCatalog.SetPinnedVersion(context.Background(), &pluginutil.PinnedVersion{
+		Name:    "my-plugin",
+		Type:    consts.PluginTypeSecrets,
+		Version: "1.0.0",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = pluginCatalog.Delete(context.Background(), "my-plugin", consts.PluginTypeSecrets, "1.0.0")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !errors.Is(err, ErrPinnedVersion) {
+		t.Fatal(err)
+	}
+
+	// Now delete the pinned version and we should be able to delete the plugin.
+	err = pluginCatalog.DeletePinnedVersion(context.Background(), consts.PluginTypeSecrets, "my-plugin")
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+
+	err = pluginCatalog.Delete(context.Background(), "my-plugin", consts.PluginTypeSecrets, "1.0.0")
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 

@@ -181,14 +181,16 @@ func TestListener_parseRequestSettings(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		rawMaxRequestSize            any
-		expectedMaxRequestSize       int64
-		rawMaxRequestDuration        any
-		expectedDuration             time.Duration
-		rawRequireRequestHeader      any
-		expectedRequireRequestHeader bool
-		isErrorExpected              bool
-		errorMessage                 string
+		rawMaxRequestSize             any
+		expectedMaxRequestSize        int64
+		rawMaxRequestDuration         any
+		expectedDuration              time.Duration
+		rawRequireRequestHeader       any
+		expectedRequireRequestHeader  bool
+		rawDisableRequestLimiter      any
+		expectedDisableRequestLimiter bool
+		isErrorExpected               bool
+		errorMessage                  string
 	}{
 		"nil": {
 			isErrorExpected: false,
@@ -224,6 +226,17 @@ func TestListener_parseRequestSettings(t *testing.T) {
 			expectedRequireRequestHeader: true,
 			isErrorExpected:              false,
 		},
+		"disable-request-limiter-bad": {
+			rawDisableRequestLimiter:      "badvalue",
+			expectedDisableRequestLimiter: false,
+			isErrorExpected:               true,
+			errorMessage:                  "invalid value for disable_request_limiter",
+		},
+		"disable-request-limiter-good": {
+			rawDisableRequestLimiter:      "true",
+			expectedDisableRequestLimiter: true,
+			isErrorExpected:               false,
+		},
 	}
 
 	for name, tc := range tests {
@@ -234,9 +247,10 @@ func TestListener_parseRequestSettings(t *testing.T) {
 
 			// Configure listener with raw values
 			l := &Listener{
-				MaxRequestSizeRaw:       tc.rawMaxRequestSize,
-				MaxRequestDurationRaw:   tc.rawMaxRequestDuration,
-				RequireRequestHeaderRaw: tc.rawRequireRequestHeader,
+				MaxRequestSizeRaw:        tc.rawMaxRequestSize,
+				MaxRequestDurationRaw:    tc.rawMaxRequestDuration,
+				RequireRequestHeaderRaw:  tc.rawRequireRequestHeader,
+				DisableRequestLimiterRaw: tc.rawDisableRequestLimiter,
 			}
 
 			err := l.parseRequestSettings()
@@ -251,11 +265,13 @@ func TestListener_parseRequestSettings(t *testing.T) {
 				require.Equal(t, tc.expectedMaxRequestSize, l.MaxRequestSize)
 				require.Equal(t, tc.expectedDuration, l.MaxRequestDuration)
 				require.Equal(t, tc.expectedRequireRequestHeader, l.RequireRequestHeader)
+				require.Equal(t, tc.expectedDisableRequestLimiter, l.DisableRequestLimiter)
 
 				// Ensure the state was modified for the raw values.
 				require.Nil(t, l.MaxRequestSizeRaw)
 				require.Nil(t, l.MaxRequestDurationRaw)
 				require.Nil(t, l.RequireRequestHeaderRaw)
+				require.Nil(t, l.DisableRequestLimiterRaw)
 			}
 		})
 	}

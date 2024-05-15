@@ -5,8 +5,7 @@
 
 import AdapterError from '@ember-data/adapter/error';
 import RESTAdapter from '@ember-data/adapter/rest';
-import { inject as service } from '@ember/service';
-import { assign } from '@ember/polyfills';
+import { service } from '@ember/service';
 import { set } from '@ember/object';
 import RSVP from 'rsvp';
 import config from '../config/environment';
@@ -53,7 +52,7 @@ export default RESTAdapter.extend({
     if (namespace && !NAMESPACE_ROOT_URLS.some((str) => url.includes(str))) {
       headers['X-Vault-Namespace'] = namespace;
     }
-    options.headers = assign(options.headers || {}, headers);
+    options.headers = Object.assign(options.headers || {}, headers);
   },
 
   _preRequest(url, options, method) {

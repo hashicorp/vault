@@ -2,7 +2,7 @@
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
  */
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { alias } from '@ember/object/computed';
 import Controller, { inject as controller } from '@ember/controller';
 import { task, timeout } from 'ember-concurrency';
@@ -13,21 +13,22 @@ export default Controller.extend({
   clusterController: controller('vault.cluster'),
   flashMessages: service(),
   namespaceService: service('namespace'),
-  featureFlagService: service('featureFlag'),
+  flagsService: service('flags'),
   version: service(),
   auth: service(),
   router: service(),
+  customMessages: service(),
   queryParams: [{ authMethod: 'with', oidcProvider: 'o' }],
   namespaceQueryParam: alias('clusterController.namespaceQueryParam'),
   wrappedToken: alias('vaultController.wrappedToken'),
   redirectTo: alias('vaultController.redirectTo'),
-  managedNamespaceRoot: alias('featureFlagService.managedNamespaceRoot'),
+  hvdManagedNamespaceRoot: alias('flagsService.hvdManagedNamespaceRoot'),
   authMethod: '',
   oidcProvider: '',
 
   get namespaceInput() {
     const namespaceQP = this.clusterController.namespaceQueryParam;
-    if (this.managedNamespaceRoot) {
+    if (this.hvdManagedNamespaceRoot) {
       // When managed, the user isn't allowed to edit the prefix `admin/` for their nested namespace
       const split = namespaceQP.split('/');
       if (split.length > 1) {
@@ -41,8 +42,8 @@ export default Controller.extend({
 
   fullNamespaceFromInput(value) {
     const strippedNs = sanitizePath(value);
-    if (this.managedNamespaceRoot) {
-      return `${this.managedNamespaceRoot}/${strippedNs}`;
+    if (this.hvdManagedNamespaceRoot) {
+      return `${this.hvdManagedNamespaceRoot}/${strippedNs}`;
     }
     return strippedNs;
   },
@@ -52,6 +53,7 @@ export default Controller.extend({
     yield timeout(500);
     const ns = this.fullNamespaceFromInput(value);
     this.namespaceService.setNamespace(ns, true);
+    this.customMessages.fetchMessages(ns);
     this.set('namespaceQueryParam', ns);
   }).restartable(),
 
@@ -67,6 +69,10 @@ export default Controller.extend({
       transition = this.router.transitionTo('vault.cluster', { queryParams: { namespace } });
     }
     transition.followRedirects().then(() => {
+      if (this.version.isEnterprise) {
+        this.customMessages.fetchMessages(namespace);
+      }
+
       if (isRoot) {
         this.auth.set('isRootToken', true);
         this.flashMessages.warning(

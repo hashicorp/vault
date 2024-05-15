@@ -5,8 +5,9 @@
 
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
-import Pretender from 'pretender';
 import Service from '@ember/service';
+import { setupMirage } from 'ember-cli-mirage/test-support';
+import { overrideResponse } from 'vault/tests/helpers/stubs';
 
 const PERMISSIONS_RESPONSE = {
   data: {
@@ -34,17 +35,13 @@ const PERMISSIONS_RESPONSE = {
 
 module('Unit | Service | permissions', function (hooks) {
   setupTest(hooks);
+  setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.server = new Pretender();
-    this.server.get('/v1/sys/internal/ui/resultant-acl', () => {
-      return [200, { 'Content-Type': 'application/json' }, JSON.stringify(PERMISSIONS_RESPONSE)];
+    this.server.get('/sys/internal/ui/resultant-acl', () => {
+      return PERMISSIONS_RESPONSE;
     });
     this.service = this.owner.lookup('service:permissions');
-  });
-
-  hooks.afterEach(function () {
-    this.server.shutdown();
   });
 
   test('sets paths properly', async function (assert) {
@@ -59,9 +56,7 @@ module('Unit | Service | permissions', function (hooks) {
   });
 
   test('defaults to show all items when policy cannot be found', async function (assert) {
-    this.server.get('/v1/sys/internal/ui/resultant-acl', () => {
-      return [403, { 'Content-Type': 'application/json' }];
-    });
+    this.server.get('/sys/internal/ui/resultant-acl', () => overrideResponse(403));
     await this.service.getPaths.perform();
     assert.true(this.service.canViewAll);
   });
@@ -248,6 +243,140 @@ module('Unit | Service | permissions', function (hooks) {
         this.service.pathNameWithNamespace('/sys/policies/'),
         'admin/marketing/sys/policies/'
       );
+    });
+  });
+
+  module('wildcardPath calculates correctly', function () {
+    [
+      {
+        scenario: 'no user root or chroot',
+        userRoot: '',
+        chroot: null,
+        expectedPath: '',
+      },
+      {
+        scenario: 'user root = child ns and no chroot',
+        userRoot: 'bar',
+        chroot: null,
+        expectedPath: 'bar/',
+      },
+      {
+        scenario: 'user root = child ns and chroot set',
+        userRoot: 'bar',
+        chroot: 'admin/',
+        expectedPath: 'admin/bar/',
+      },
+      {
+        scenario: 'no user root and chroot set',
+        userRoot: '',
+        chroot: 'admin/',
+        expectedPath: 'admin/',
+      },
+    ].forEach((testCase) => {
+      test(`when ${testCase.scenario}`, function (assert) {
+        const namespaceService = Service.extend({
+          userRootNamespace: testCase.userRoot,
+          path: 'current/path/does/not/matter',
+        });
+        this.owner.register('service:namespace', namespaceService);
+        this.service.set('chrootNamespace', testCase.chroot);
+        assert.strictEqual(this.service.wildcardPath, testCase.expectedPath);
+      });
+    });
+    test('when user root =child ns and chroot set', function (assert) {
+      const namespaceService = Service.extend({
+        path: 'bar/baz',
+        userRootNamespace: 'bar',
+      });
+      this.owner.register('service:namespace', namespaceService);
+      this.service.set('chrootNamespace', 'admin/');
+      assert.strictEqual(this.service.wildcardPath, 'admin/bar/');
+    });
+  });
+
+  module('hasWildcardAccess calculates correctly', function () {
+    // The resultant-acl endpoint returns paths with chroot and
+    // relative root prefixed on all paths.
+    [
+      {
+        scenario: 'when root wildcard in root namespace',
+        chroot: null,
+        userRoot: '',
+        currentNs: 'foo/bar',
+        globs: {
+          '': { capabilities: ['read'] },
+        },
+        expectedAccess: true,
+      },
+      {
+        scenario: 'when root wildcard in chroot ns',
+        chroot: 'admin/',
+        userRoot: '',
+        currentNs: 'admin/child',
+        globs: {
+          'admin/': { capabilities: ['read'] },
+        },
+        expectedAccess: true,
+      },
+      {
+        scenario: 'when namespace wildcard in child ns',
+        chroot: null,
+        userRoot: 'bar',
+        currentNs: 'bar/baz',
+        globs: {
+          'bar/': { capabilities: ['read'] },
+        },
+        expectedAccess: true,
+      },
+      {
+        scenario: 'when namespace wildcard in child ns & chroot',
+        chroot: 'foo/',
+        userRoot: 'bar',
+        currentNs: 'foo/bar/baz',
+        globs: {
+          'foo/bar/': { capabilities: ['read'] },
+        },
+        expectedAccess: true,
+      },
+      {
+        scenario: 'when namespace wildcard in different ns with chroot & user root',
+        chroot: 'foo/',
+        userRoot: 'bar',
+        currentNs: 'foo/bing',
+        globs: {
+          'foo/bar/': { capabilities: ['read'] },
+        },
+        expectedAccess: false,
+      },
+      {
+        scenario: 'when namespace wildcard in different ns without chroot',
+        chroot: null,
+        userRoot: 'bar',
+        currentNs: 'foo/bing',
+        globs: {
+          'bar/': { capabilities: ['read'] },
+        },
+        expectedAccess: false,
+      },
+      {
+        scenario: 'when globs is empty',
+        chroot: 'foo/',
+        userRoot: 'bar',
+        currentNs: 'foo/bing',
+        globs: {},
+        expectedAccess: false,
+      },
+    ].forEach((testCase) => {
+      test(`when ${testCase.scenario}`, function (assert) {
+        const namespaceService = Service.extend({
+          path: testCase.currentNs,
+          userRootNamespace: testCase.userRoot,
+        });
+        this.owner.register('service:namespace', namespaceService);
+        this.service.set('chrootNamespace', testCase.chroot);
+        const result = this.service.hasWildcardAccess(testCase.globs);
+        assert.strictEqual(result, testCase.expectedAccess);
+      });
     });
   });
 });

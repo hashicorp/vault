@@ -31,7 +31,7 @@
           </span>
         </div>
         <div class="column has-text-right">
-          <Identity::PopupAlias @params={{array item}} @onSuccess={{action "onDelete"}} />
+          <Identity::PopupAlias @item={{item}} @onSuccess={{action "onDelete"}} />
         </div>
       </div>
     </LinkedBlock>
@@ -51,14 +51,13 @@
     @title="No {{this.identityType}} aliases yet"
     @message="A list of {{this.identityType}} aliases in this namespace will be listed here. Choose one of the {{pluralize
       this.identityType
-    }} and click &quot;Create Alias&quot; to get started."
+    }} and click &quot;Add alias&quot; to get started."
   >
-    <LinkTo @route="vault.cluster.access.identity.create" @model={{pluralize this.identityType}} class="link">
-      Create
-      {{this.identityType}}
-    </LinkTo>
-    <DocLink @path="/vault/tutorials/auth-methods/identity">
-      Learn more
-    </DocLink>
+    <Hds::Link::Standalone
+      @text="Identity: entities and groups tutorial"
+      @href={{doc-link "/vault/tutorials/auth-methods/identity"}}
+      @icon="learn-link"
+      @iconPosition="trailing"
+    />
   </EmptyState>
 {{/if}}

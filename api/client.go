@@ -82,6 +82,8 @@ const (
 const (
 	EnvVaultAgentAddress = "VAULT_AGENT_ADDR"
 	EnvVaultInsecure     = "VAULT_SKIP_VERIFY"
+
+	DefaultAddress = "https://127.0.0.1:8200"
 )
 
 // WrappingLookupFunc is a function that, given an HTTP verb and a path,
@@ -248,7 +250,7 @@ type TLSConfig struct {
 // If an error is encountered, the Error field on the returned *Config will be populated with the specific error.
 func DefaultConfig() *Config {
 	config := &Config{
-		Address:      "https://127.0.0.1:8200",
+		Address:      DefaultAddress,
 		HttpClient:   cleanhttp.DefaultPooledClient(),
 		Timeout:      time.Second * 60,
 		MinRetryWait: time.Millisecond * 1000,
@@ -528,6 +530,7 @@ func (c *Config) ParseAddress(address string) (*url.URL, error) {
 		return nil, err
 	}
 
+	previousAddress := c.Address
 	c.Address = address
 
 	if strings.HasPrefix(address, "unix://") {
@@ -550,7 +553,7 @@ func (c *Config) ParseAddress(address string) (*url.URL, error) {
 		} else {
 			return nil, fmt.Errorf("attempting to specify unix:// address with non-transport transport")
 		}
-	} else if strings.HasPrefix(c.Address, "unix://") {
+	} else if strings.HasPrefix(previousAddress, "unix://") {
 		// When the address being set does not begin with unix:// but the previous
 		// address in the Config did, change the transport's DialContext back to
 		// use the default configuration that cleanhttp uses.
@@ -589,6 +592,7 @@ type Client struct {
 	requestCallbacks      []RequestCallback
 	responseCallbacks     []ResponseCallback
 	replicationStateStore *replicationStateStore
+	hcpCookie             *http.Cookie
 }
 
 // NewClient returns a new client for the given configuration.
@@ -1025,6 +1029,33 @@ func (c *Client) SetToken(v string) {
 	c.token = v
 }
 
+// HCPCookie returns the HCP cookie being used by this client. It will
+// return an empty cookie when no cookie is set.
+func (c *Client) HCPCookie() string {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+
+	if c.hcpCookie == nil {
+		return ""
+	}
+	return c.hcpCookie.String()
+}
+
+// SetHCPCookie sets the hcp cookie directly. This won't perform any auth
+// verification, it simply sets the token properly for future requests.
+func (c *Client) SetHCPCookie(v *http.Cookie) error {
+	c.modifyLock.Lock()
+	defer c.modifyLock.Unlock()
+
+	if err := v.Valid(); err != nil {
+		return err
+	}
+
+	c.hcpCookie = v
+
+	return nil
+}
+
 // ClearToken deletes the token if it is set or does nothing otherwise.
 func (c *Client) ClearToken() {
 	c.modifyLock.Lock()
@@ -1298,6 +1329,8 @@ func (c *Client) NewRequest(method, requestPath string) *Request {
 		ClientToken: token,
 		Params:      make(map[string][]string),
 	}
+
+	req.HCPCookie = c.hcpCookie
 
 	var lookupPath string
 	switch {

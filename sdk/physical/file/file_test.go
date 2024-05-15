@@ -240,3 +240,54 @@ func TestFileBackend(t *testing.T) {
 
 	physical.ExerciseBackend_ListPrefix(t, b)
 }
+
+func TestFileBackendCreateTempKey(t *testing.T) {
+	dir := t.TempDir()
+
+	logger := logging.NewVaultLogger(log.Debug)
+
+	b, err := NewFileBackend(map[string]string{
+		"path": dir,
+	}, logger)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	temp := &physical.Entry{Key: "example.temp", Value: []byte("tempfoo")}
+	err = b.Put(context.Background(), temp)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	nonTemp := &physical.Entry{Key: "example", Value: []byte("foobar")}
+	err = b.Put(context.Background(), nonTemp)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	vals, err := b.List(context.Background(), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(vals) != 2 || vals[0] == vals[1] {
+		t.Fatalf("bad: %v", vals)
+	}
+	for _, val := range vals {
+		if val != "example.temp" && val != "example" {
+			t.Fatalf("bad val: %v", val)
+		}
+	}
+	out, err := b.Get(context.Background(), "example")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !reflect.DeepEqual(out, nonTemp) {
+		t.Fatalf("bad: %v expected: %v", out, nonTemp)
+	}
+	out, err = b.Get(context.Background(), "example.temp")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !reflect.DeepEqual(out, temp) {
+		t.Fatalf("bad: %v expected: %v", out, temp)
+	}
+}

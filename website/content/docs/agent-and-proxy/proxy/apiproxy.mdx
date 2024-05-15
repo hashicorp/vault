@@ -13,7 +13,7 @@ for Vault's API.
 
 ## Functionality
 
-The [`listener` stanza](/vault/docs/agent#listener-stanza) for Vault Proxy configures a listener for Vault Proxy. If
+The [`listener` stanza](/vault/docs/agent-and-proxy/proxy#listener-stanza) for Vault Proxy configures a listener for Vault Proxy. If
 its `role` is not set to `metrics_only`, it will act as a proxy for the Vault server that
 has been configured in the [`vault` stanza](/vault/docs/agent-and-proxy/proxy#vault-stanza) of Proxy. This enables access to the Vault
 API from the Proxy API, and can be configured to optionally allow or force the automatic use of
@@ -55,6 +55,22 @@ configuration will be overridden and the token in the request will be used to
 forward the request to the Vault server. If set to `"force"` Proxy will use the
 auto-auth token, overwriting the attached Vault token if set.
 
+~> **Note**: When using the proxy's auto-auth token with the `use_auto_auth_token` 
+   configuration, one proxy per application is very strongly recommended, as Vault will
+   unable to distinguish requests coming from multiple applications through a single proxy. 
+   In situations where a single proxy is shared by multiple applications, setting `use_auto_auth_token` 
+   to `false` (the default) is recommended.
+
+- `prepend_configured_namespace` `(bool: false)` - If set, when Proxy has a
+  namespace configured, such as through the
+  [Vault stanza](/vault/docs/agent-and-proxy/proxy#vault-stanza), all requests
+  proxied to Vault will have the configured namespace prepended to the namespace
+  header. If Proxy's namespace is set to `ns1` and Proxy is sent a request with the
+  namespace `ns2`, the request will go to the `ns1/ns2` namespace. Likewise, if Proxy
+  is sent a request without a namespace, the request will go to the `ns1` namespace.
+  In essence, what this means is that all proxied requests must go to the configured
+  namespace or to its child namespaces.
+
 The following two `api_proxy` options are only useful when making requests to a Vault
 Enterprise cluster, and are documented as part of its
 [Eventual Consistency](/vault/docs/enterprise/consistency#vault-agent-and-consistency-headers)
@@ -69,7 +85,7 @@ or `"forward"`.
 ### Example configuration
 
 Here is an example of a `listener` configuration alongside `api_proxy` configuration to force the use of the auto_auth token
-and enforce consistency.
+and enforce consistency for a proxy dedicated to a single application.
 
 ```hcl
 # Other Vault Proxy configuration blocks
@@ -80,8 +96,7 @@ api_proxy {
   enforce_consistency = "always"
 }
 
-listener "tcp" {
-    address = "127.0.0.1:8100"
-    tls_disable = true
+listener "unix" {
+    address = "/var/run/vault-proxy.sock
 }
 ```

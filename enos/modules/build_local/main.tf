@@ -4,7 +4,7 @@
 terraform {
   required_providers {
     enos = {
-      source = "app.terraform.io/hashicorp-qti/enos"
+      source = "registry.terraform.io/hashicorp-forge/enos"
     }
   }
 }
@@ -37,6 +37,7 @@ variable "artifact_path" {
 }
 variable "artifact_type" { default = null }
 variable "distro" { default = null }
+variable "distro_version" { default = null }
 variable "edition" { default = null }
 variable "revision" { default = null }
 variable "product_version" { default = null }

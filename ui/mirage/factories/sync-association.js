@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { Factory } from 'ember-cli-mirage';
+import { Factory } from 'miragejs';
 
 export default Factory.extend({
   accessor: 'kv_eb4acbae', // mount will be added to API response for use in the ui but leaving since it is a documented property

@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { assign } from '@ember/polyfills';
 import ApplicationSerializer from './application';
 import { EmbeddedRecordsMixin } from '@ember-data/serializer/rest';
 
@@ -34,7 +33,7 @@ export default ApplicationSerializer.extend(EmbeddedRecordsMixin, {
     }
 
     if (struct.data) {
-      struct = assign({}, struct, struct.data);
+      struct = { ...struct, ...struct.data };
       delete struct.data;
     }
     // strip the trailing slash off of the path so we
@@ -79,7 +78,7 @@ export default ApplicationSerializer.extend(EmbeddedRecordsMixin, {
   },
 
   serialize(snapshot) {
-    const type = snapshot.record.get('engineType');
+    const type = snapshot.record.engineType;
     const data = this._super(...arguments);
     // move version back to options
     data.options = data.version ? { version: data.version } : {};

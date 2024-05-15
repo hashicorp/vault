@@ -49,9 +49,7 @@ export default Model.extend({
     label: 'Connection will be verified',
     defaultValue: true,
   }),
-  allowed_roles: attr('array', {
-    readOnly: true,
-  }),
+  allowed_roles: attr('array'),
   password_policy: attr('string', {
     label: 'Use custom password policy',
     editType: 'optionalText',

@@ -9,10 +9,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/go-multierror"
-
 	"github.com/golang/protobuf/ptypes"
 	memdb "github.com/hashicorp/go-memdb"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/identity/mfa"
@@ -21,6 +20,7 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
+	"google.golang.org/protobuf/types/known/anypb"
 )
 
 func entityPathFields() map[string]*framework.FieldSchema {
@@ -1141,7 +1141,7 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 
 	if persist && !isPerfSecondaryOrStandby {
 		// Persist the entity which we are merging to
-		toEntityAsAny, err := ptypes.MarshalAny(toEntity)
+		toEntityAsAny, err := anypb.New(toEntity)
 		if err != nil {
 			return nil, err, nil
 		}

@@ -30,6 +30,7 @@ an auth plugin, just replace all usages of `secrets` or `secret` with `auth`.
         -sha256=<SHA256 Hex value of the plugin binary> \
         secret \
         my-secret-plugin
+    Success! Registered plugin: my-secret-plugin
     ```
 
 1. [Mount][plugin_management] the plugin. Skip this step if your initial plugin
@@ -37,6 +38,7 @@ an auth plugin, just replace all usages of `secrets` or `secret` with `auth`.
 
     ```shell-session
     $ vault secrets enable my-secret-plugin
+    Success! Enabled the my-secret-plugin secrets engine at: my-secret-plugin/
     ```
 
 1. Register a second version of your plugin. You **must** use the same plugin
@@ -50,39 +52,33 @@ an auth plugin, just replace all usages of `secrets` or `secret` with `auth`.
         -version=v1.0.1 \
         secret \
         my-secret-plugin
+    Success! Registered plugin: my-secret-plugin
     ```
 
-1. Tune the existing mount to configure it to use the newly registered version.
+1. Set the new version as the cluster's pinned version.
 
    ```shell-session
-   $ vault secrets tune -plugin-version=v1.0.1 my-secret-plugin
+   $ vault write sys/plugins/pins/secret/my-secret-plugin version=v1.0.1
    ```
 
-1. If you wish, you can check the updated configuration. Notice the "Version" is
-   now different from the "Running Version".
-
-   ```shell-session
-   $ vault secrets list -detailed
-   ```
-
-1. Finally, trigger a [plugin reload](/vault/docs/commands/plugin/reload) to reload all
-   mounted backends using that plugin or a subset of the mounts using that plugin
-   with either the `plugin` or `mounts` flag respectively.
+1. Trigger a global [plugin reload](/vault/docs/commands/plugin/reload) to
+   reload all instances of the plugin.
 
     ```shell-session
-    $ vault plugin reload -plugin my-secret-plugin
+    $ vault plugin reload -type=secret -plugin=my-secret-plugin -scope=global
+    Success! Reloading plugin: my-secret-plugin, reload_id: 98b1e875-4217-745d-07f2-93d14219fb3c
     ```
 
-Until the last step, the mount will still run the first version of `my-secret-plugin`. When
-the reload is triggered, Vault will kill `my-secret-plugin`’s process and start the
-new plugin process for `my-secret-plugin` version 1.0.1. The "Running Version" should also
-now match the "Version" when you run `vault secrets list -detailed`.
+1. **Optional:** Check the "Running Version" field to verify the new version is
+    running:
 
--> **Important:** Plugin reload of a new plugin binary must be
-performed on each Vault instance. Performing a plugin upgrade on a single
-instance or through a load balancer can result in mismatched
-plugin binaries within a cluster. On a replicated cluster this may be accomplished
-by setting the 'scope' parameter of the reload to 'global'.
+    ```shell-session
+    $ vault secrets list -detailed
+    ```
+
+Until the reload step, the mount will still run the first version of `my-secret-plugin`. When
+the reload is triggered, Vault will kill `my-secret-plugin`’s process and start the
+new plugin process for `my-secret-plugin` version 1.0.1.
 
 ### Upgrading database plugins
 
@@ -94,6 +90,7 @@ by setting the 'scope' parameter of the reload to 'global'.
         -sha256=<SHA256 Hex value of the plugin binary> \
         database \
         my-db-plugin
+    Success! Registered plugin: my-db-plugin
     ```
 
 1. [Mount][plugin_management] the plugin. Skip this step if your initial plugin
@@ -104,6 +101,7 @@ by setting the 'scope' parameter of the reload to 'global'.
     $ vault write database/config/my-db \
         plugin_name=my-db-plugin \
         # ...
+    Success! Data written to: database/config/my-db
     ```
 
 1. Register a second version of your plugin. You **must** use the same plugin
@@ -117,18 +115,30 @@ by setting the 'scope' parameter of the reload to 'global'.
         -version=v1.0.1 \
         database \
         my-db-plugin
+    Success! Registered plugin: my-db-plugin
     ```
 
-1. Update the database config with the new version. The database secrets
-   engine will immediately reload the plugin, using the new version. Any omitted
-   config parameters will not be updated.
+1. Set the new version as the cluster's pinned version.
 
     ```shell-session
-    $ vault write database/config/my-db \
-        plugin_version=v1.0.1
+    $ vault write sys/plugins/pins/database/my-db-plugin version=v1.0.1
     ```
 
-Until the last step, the mount will still run the first version of `my-db-plugin`. When
+1. Trigger a global [plugin reload](/vault/docs/commands/plugin/reload) to
+   reload all instances of the plugin.
+
+    ```shell-session
+    $ vault plugin reload -type=database -plugin=my-db-plugin -scope=global
+    Success! Reloading plugin: my-db-plugin, reload_id: 98b1e875-4217-745d-07f2-93d14219fb3c
+    ```
+
+1. **Optional:** Verify the current version of the running plugin:
+
+    ```shell-session
+    $ vault read database/config/my-db
+    ```
+
+Until the reload step, the mount will still run the first version of `my-db-plugin`. When
 the reload is triggered, Vault will kill `my-db-plugin`’s process and start the
 new plugin process for `my-db-plugin` version 1.0.1.
 
@@ -184,6 +194,6 @@ transit             v1.12.0+builtin.vault
   of leases and tokens is handled by core systems within Vault. The plugin itself only
   handles renewal and revocation of them when it’s requested by those core systems.
 
-[plugin_reload_api]: /vault/api-docs/system/plugins-reload-backend
+[plugin_reload_api]: /vault/api-docs/system/plugins-reload
 [plugin_registration]: /vault/docs/plugins/plugin-architecture#plugin-registration
 [plugin_management]: /vault/docs/plugins/plugin-management#enabling-disabling-external-plugins

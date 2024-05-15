@@ -15,15 +15,13 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/hashicorp/go-hclog"
-	uuid "github.com/hashicorp/go-uuid"
-
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/subspace"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
-
 	metrics "github.com/armon/go-metrics"
+	log "github.com/hashicorp/go-hclog"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/physical"
 )
 
@@ -451,7 +449,6 @@ func (f *FDBBackend) Put(ctx context.Context, entry *physical.Entry) error {
 
 		return nil, nil
 	})
-
 	if err != nil {
 		return fmt.Errorf("put failed for item %s: %w", entry.Key, err)
 	}
@@ -509,7 +506,6 @@ func (f *FDBBackend) Delete(ctx context.Context, key string) error {
 
 		return nil, nil
 	})
-
 	if err != nil {
 		return fmt.Errorf("delete failed for item %s: %w", key, err)
 	}

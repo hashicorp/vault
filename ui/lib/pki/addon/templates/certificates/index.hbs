@@ -5,12 +5,17 @@
 
 <PkiPageHeader @backend={{this.model.parentModel}} />
 
-<PkiPaginatedList @listRoute="certificates.index" @list={{this.model.certificates}} @hasConfig={{this.model.hasConfig}}>
+<PkiPaginatedList
+  @backend={{this.model.parentModel.id}}
+  @listRoute="certificates.index"
+  @list={{this.model.certificates}}
+  @hasConfig={{this.model.hasConfig}}
+>
   <:list as |certs|>
     {{#each certs as |pkiCertificate|}}
       <LinkedBlock
         class="list-item-row"
-        @params={{array "certificates.certificate.details" pkiCertificate.id}}
+        @params={{array "certificates.certificate.details" this.model.parentModel.id pkiCertificate.id}}
         @linkPrefix={{this.mountPoint}}
       >
         <div class="level is-mobile">
@@ -26,17 +31,15 @@
           </div>
           <div class="level-right is-flex is-paddingless is-marginless">
             <div class="level-item">
-              <PopupMenu>
-                <nav class="menu">
-                  <ul class="menu-list">
-                    <li>
-                      <LinkTo @route="certificates.certificate.details" @model={{pkiCertificate.id}}>
-                        Details
-                      </LinkTo>
-                    </li>
-                  </ul>
-                </nav>
-              </PopupMenu>
+              <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+                <dd.ToggleIcon
+                  @icon="more-horizontal"
+                  @text="Manage certificate"
+                  @hasChevron={{false}}
+                  data-test-popup-menu-trigger
+                />
+                <dd.Interactive @text="Details" @route="certificates.certificate.details" @model={{pkiCertificate.id}} />
+              </Hds::Dropdown>
             </div>
           </div>
         </div>
@@ -44,22 +47,20 @@
     {{/each}}
   </:list>
   <:empty>
-    <EmptyState @title="No certificates yet">
-      <div>
-        <p>When created, certificates will be listed here. Select a role to start generating certificates.</p>
-        <div class="has-top-margin-m">
-          <LinkTo @route="roles.index">
-            View roles
-          </LinkTo>
-        </div>
-      </div>
-    </EmptyState>
+    <EmptyState
+      @title="No certificates yet"
+      @message="When created, certificates will be listed here. Select a role to start generating certificates"
+    />
   </:empty>
   <:configure>
     <EmptyState @title="PKI not configured" @message={{this.notConfiguredMessage}}>
-      <LinkTo @route="configuration.create">
-        Configure PKI
-      </LinkTo>
+      <Hds::Link::Standalone
+        @icon="chevron-right"
+        @iconPosition="trailing"
+        @text="Configure PKI"
+        @route="configuration.create"
+        @model={{this.model.parentModel.id}}
+      />
     </EmptyState>
   </:configure>
 </PkiPaginatedList>

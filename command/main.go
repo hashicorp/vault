@@ -16,9 +16,10 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/hashicorp/cli"
+	hcpvlib "github.com/hashicorp/vault-hcp-lib"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/command/token"
-	colorable "github.com/mattn/go-colorable"
+	"github.com/hashicorp/vault/api/tokenhelper"
+	"github.com/mattn/go-colorable"
 )
 
 type VaultUI struct {
@@ -134,11 +135,12 @@ func getGlobalFlagValue(arg string) string {
 }
 
 type RunOptions struct {
-	TokenHelper token.TokenHelper
-	Stdout      io.Writer
-	Stderr      io.Writer
-	Address     string
-	Client      *api.Client
+	TokenHelper    tokenhelper.TokenHelper
+	HCPTokenHelper hcpvlib.HCPTokenHelper
+	Stdout         io.Writer
+	Stderr         io.Writer
+	Address        string
+	Client         *api.Client
 }
 
 func Run(args []string) int {

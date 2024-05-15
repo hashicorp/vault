@@ -18,21 +18,19 @@ import (
 	"sync/atomic"
 	"time"
 
-	log "github.com/hashicorp/go-hclog"
-
 	metrics "github.com/armon/go-metrics"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
+	"github.com/cenkalti/backoff/v3"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/physical"
-
-	"github.com/cenkalti/backoff/v3"
 )
 
 const (
@@ -529,7 +527,6 @@ func (d *DynamoDBBackend) batchWriteRequests(requests []*dynamodb.WriteRequest) 
 			output, err = d.client.BatchWriteItem(&dynamodb.BatchWriteItemInput{
 				RequestItems: batch,
 			})
-
 			if err != nil {
 				break
 			}
@@ -859,7 +856,7 @@ func ensureTableExists(client *dynamodb.DynamoDB, table string, readCapacity, wr
 
 // recordPathForVaultKey transforms a vault key into
 // a value suitable for the `DynamoDBRecord`'s `Path`
-// property. This path equals the the vault key without
+// property. This path equals the vault key without
 // its last component.
 func recordPathForVaultKey(key string) string {
 	if strings.Contains(key, "/") {
@@ -870,7 +867,7 @@ func recordPathForVaultKey(key string) string {
 
 // recordKeyForVaultKey transforms a vault key into
 // a value suitable for the `DynamoDBRecord`'s `Key`
-// property. This path equals the the vault key's
+// property. This path equals the vault key's
 // last component.
 func recordKeyForVaultKey(key string) string {
 	return pkgPath.Base(key)

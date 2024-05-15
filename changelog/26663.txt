@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Show computed values from `sys/internal/ui/mounts` endpoint for auth mount configuration view
+```

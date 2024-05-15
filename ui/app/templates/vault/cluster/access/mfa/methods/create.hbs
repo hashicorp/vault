@@ -51,22 +51,21 @@
       <DocLink @path="/vault/api-docs/secret/identity/mfa">Learn more.</DocLink>
     </p>
     <div class="is-flex-row has-top-margin-xl">
-      {{#each this.methodNames as |methodName|}}
+      {{#each this.methods as |method|}}
         <RadioCard
-          @value={{lowercase methodName}}
+          @value={{lowercase method.name}}
           @groupValue={{this.type}}
           @onChange={{this.onTypeSelect}}
-          data-test-radio-card={{lowercase methodName}}
+          data-test-radio-card={{lowercase method.name}}
         >
           <div class="radio-card-row is-flex-v-centered">
             <div>
-              <Icon
-                @name={{if (eq methodName "Okta") "okta-color" (lowercase methodName)}}
-                @size="24"
-                class={{if (eq methodName "TOTP") "has-text-grey"}}
-              />
-              <p class="has-text-weight-semibold has-text-center {{if (eq methodName 'Okta') 'has-top-margin-xs'}}">
-                {{methodName}}
+              <Icon @name={{method.icon}} @size="24" class={{if (eq method.name "TOTP") "has-text-grey"}} />
+              <p
+                class="has-text-weight-semibold has-text-center
+                  {{if (or (eq method.name 'Okta') (eq method.name 'TOTP')) 'has-top-margin-xs'}}"
+              >
+                {{method.name}}
               </p>
             </div>
           </div>

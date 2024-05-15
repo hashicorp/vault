@@ -33,7 +33,9 @@ module('Integration | Component | pki page header test', function (hooks) {
     await render(hbs`<PkiPageHeader @backend={{this.model}} />`, {
       owner: this.engine,
     });
-    assert.dom('[data-test-header-title] span').hasClass('hs-icon', 'Correct icon renders in title');
+    assert
+      .dom('[data-test-header-title] [data-test-icon="certificate"]')
+      .exists('Correct icon renders in title');
     assert.dom('[data-test-header-title]').hasText(this.mount, 'Mount path renders in title');
   });
 

@@ -297,7 +297,6 @@ func createRole(t *testing.T, roleName, awsAccountID string, policyARNs []string
 			RoleName:  aws.String(roleName), // Required
 		}
 		_, err = svc.AttachRolePolicy(attachment)
-
 		if err != nil {
 			t.Fatalf("AWS AttachRolePolicy failed: %v", err)
 		}
@@ -465,7 +464,6 @@ func deleteTestRole(roleName string) error {
 
 	log.Printf("[INFO] AWS DeleteRole: %s", roleName)
 	_, err = svc.DeleteRole(params)
-
 	if err != nil {
 		log.Printf("[WARN] AWS DeleteRole failed: %v", err)
 		return err

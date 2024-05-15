@@ -94,14 +94,16 @@ type Listener struct {
 	ProxyProtocolAuthorizedAddrs    []*sockaddr.SockAddrMarshaler `hcl:"-"`
 	ProxyProtocolAuthorizedAddrsRaw interface{}                   `hcl:"proxy_protocol_authorized_addrs,alias:ProxyProtocolAuthorizedAddrs"`
 
-	XForwardedForAuthorizedAddrs        []*sockaddr.SockAddrMarshaler `hcl:"-"`
-	XForwardedForAuthorizedAddrsRaw     interface{}                   `hcl:"x_forwarded_for_authorized_addrs,alias:XForwardedForAuthorizedAddrs"`
-	XForwardedForHopSkips               int64                         `hcl:"-"`
-	XForwardedForHopSkipsRaw            interface{}                   `hcl:"x_forwarded_for_hop_skips,alias:XForwardedForHopSkips"`
-	XForwardedForRejectNotPresent       bool                          `hcl:"-"`
-	XForwardedForRejectNotPresentRaw    interface{}                   `hcl:"x_forwarded_for_reject_not_present,alias:XForwardedForRejectNotPresent"`
-	XForwardedForRejectNotAuthorized    bool                          `hcl:"-"`
-	XForwardedForRejectNotAuthorizedRaw interface{}                   `hcl:"x_forwarded_for_reject_not_authorized,alias:XForwardedForRejectNotAuthorized"`
+	XForwardedForAuthorizedAddrs          []*sockaddr.SockAddrMarshaler `hcl:"-"`
+	XForwardedForAuthorizedAddrsRaw       interface{}                   `hcl:"x_forwarded_for_authorized_addrs,alias:XForwardedForAuthorizedAddrs"`
+	XForwardedForHopSkips                 int64                         `hcl:"-"`
+	XForwardedForHopSkipsRaw              interface{}                   `hcl:"x_forwarded_for_hop_skips,alias:XForwardedForHopSkips"`
+	XForwardedForRejectNotPresent         bool                          `hcl:"-"`
+	XForwardedForRejectNotPresentRaw      interface{}                   `hcl:"x_forwarded_for_reject_not_present,alias:XForwardedForRejectNotPresent"`
+	XForwardedForRejectNotAuthorized      bool                          `hcl:"-"`
+	XForwardedForRejectNotAuthorizedRaw   interface{}                   `hcl:"x_forwarded_for_reject_not_authorized,alias:XForwardedForRejectNotAuthorized"`
+	XForwardedForClientCertHeader         string                        `hcl:"x_forwarded_for_client_cert_header,alias:XForwardedForClientCertHeader"`
+	XForwardedForClientCertHeaderDecoders string                        `hcl:"x_forwarded_for_client_cert_header_decoders,alias:XForwardedForClientCertHeaderDecoders"`
 
 	SocketMode  string `hcl:"socket_mode"`
 	SocketUser  string `hcl:"socket_user"`
@@ -143,6 +145,10 @@ type Listener struct {
 	// DisableReplicationStatusEndpoint disables the unauthenticated replication status endpoints
 	DisableReplicationStatusEndpointsRaw interface{} `hcl:"disable_replication_status_endpoints"`
 	DisableReplicationStatusEndpoints    bool        `hcl:"-"`
+
+	// DisableRequestLimiter allows per-listener disabling of the Request Limiter.
+	DisableRequestLimiterRaw any  `hcl:"disable_request_limiter"`
+	DisableRequestLimiter    bool `hcl:"-"`
 }
 
 // AgentAPI allows users to select which parts of the Agent API they want enabled.
@@ -257,6 +263,7 @@ func parseListener(item *ast.ObjectItem) (*Listener, error) {
 		l.parseChrootNamespaceSettings,
 		l.parseRedactionSettings,
 		l.parseDisableReplicationStatusEndpointSettings,
+		l.parseDisableRequestLimiter,
 	} {
 		err := parser()
 		if err != nil {
@@ -370,6 +377,17 @@ func (l *Listener) parseDisableReplicationStatusEndpointSettings() error {
 	return nil
 }
 
+// parseDisableRequestLimiter attempts to parse the raw disable_request_limiter
+// setting. The receiving Listener's DisableRequestLimiter field will be set
+// with the successfully parsed value or return an error
+func (l *Listener) parseDisableRequestLimiter() error {
+	if err := parseAndClearBool(&l.DisableRequestLimiterRaw, &l.DisableRequestLimiter); err != nil {
+		return fmt.Errorf("invalid value for disable_request_limiter: %w", err)
+	}
+
+	return nil
+}
+
 // parseChrootNamespace attempts to parse the raw listener chroot namespace settings.
 // The state of the listener will be modified, raw data will be cleared upon
 // successful parsing.
@@ -444,6 +462,10 @@ func (l *Listener) parseRequestSettings() error {
 
 	if err := parseAndClearBool(&l.RequireRequestHeaderRaw, &l.RequireRequestHeader); err != nil {
 		return fmt.Errorf("invalid value for require_request_header: %w", err)
+	}
+
+	if err := parseAndClearBool(&l.DisableRequestLimiterRaw, &l.DisableRequestLimiter); err != nil {
+		return fmt.Errorf("invalid value for disable_request_limiter: %w", err)
 	}
 
 	return nil

@@ -1,0 +1,24 @@
+### Audit fails to recover from panics when formatting audit entries
+
+#### Affected versions
+
+- 1.15.0 - 1.15.5
+
+#### Issue
+
+Due to an issue in the new event framework, Vault tries to resolve panics that
+occur when formatting audit entries. Vault cannot resolve the panic correctly,
+which results in the server terminating unexpectedly.
+
+The panic issue was resolved in `1.15.6`.
+
+#### Workaround
+
+Set the `VAULT_AUDIT_DISABLE_EVENTLOGGER` environment variable to `true` to
+disable the new underlying event framework and restart Vault:
+
+```shell-session
+$ export VAULT_AUDIT_DISABLE_EVENTLOGGER=true
+```
+
+On startup, Vault reverts to the audit behavior used in `1.14.x`.

@@ -77,6 +77,7 @@ type Vault struct {
 	ClientCert       string      `hcl:"client_cert"`
 	ClientKey        string      `hcl:"client_key"`
 	TLSServerName    string      `hcl:"tls_server_name"`
+	Namespace        string      `hcl:"namespace"`
 	Retry            *Retry      `hcl:"retry"`
 }
 
@@ -92,11 +93,12 @@ type transportDialer interface {
 
 // APIProxy contains any configuration needed for proxy mode
 type APIProxy struct {
-	UseAutoAuthTokenRaw interface{} `hcl:"use_auto_auth_token"`
-	UseAutoAuthToken    bool        `hcl:"-"`
-	ForceAutoAuthToken  bool        `hcl:"-"`
-	EnforceConsistency  string      `hcl:"enforce_consistency"`
-	WhenInconsistent    string      `hcl:"when_inconsistent"`
+	UseAutoAuthTokenRaw        interface{} `hcl:"use_auto_auth_token"`
+	UseAutoAuthToken           bool        `hcl:"-"`
+	ForceAutoAuthToken         bool        `hcl:"-"`
+	EnforceConsistency         string      `hcl:"enforce_consistency"`
+	WhenInconsistent           string      `hcl:"when_inconsistent"`
+	PrependConfiguredNamespace bool        `hcl:"prepend_configured_namespace"`
 }
 
 // Cache contains any configuration needed for Cache mode
@@ -107,6 +109,7 @@ type Cache struct {
 	DisableCachingDynamicSecrets                  bool                            `hcl:"disable_caching_dynamic_secrets"`
 	StaticSecretTokenCapabilityRefreshIntervalRaw interface{}                     `hcl:"static_secret_token_capability_refresh_interval"`
 	StaticSecretTokenCapabilityRefreshInterval    time.Duration                   `hcl:"-"`
+	StaticSecretTokenCapabilityRefreshBehaviour   string                          `hcl:"static_secret_token_capability_refresh_behavior"`
 }
 
 // AutoAuth is the configured authentication method and sinks
@@ -267,6 +270,15 @@ func (c *Config) ValidateConfig() error {
 
 	if c.AutoAuth == nil && c.Cache == nil && len(c.Listeners) == 0 {
 		return fmt.Errorf("no auto_auth, cache, or listener block found in config")
+	}
+
+	if c.Cache != nil && c.Cache.StaticSecretTokenCapabilityRefreshBehaviour != "" {
+		switch c.Cache.StaticSecretTokenCapabilityRefreshBehaviour {
+		case "pessimistic":
+		case "optimistic":
+		default:
+			return fmt.Errorf("cache.static_secret_token_capability_refresh_behavior must be either \"optimistic\" or \"pessimistic\"")
+		}
 	}
 
 	return nil

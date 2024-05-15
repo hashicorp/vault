@@ -1,0 +1,67 @@
+---
+layout: docs
+page_title: Upgrade to Vault 1.17.x - Guides
+description: |-
+  Deprecations, important or breaking changes, and remediation recommendations
+  for anyone upgrading to 1.17.x from Vault 1.16.x.
+---
+
+# Overview
+
+The Vault 1.17.x upgrade guide contains information on deprecations, important
+or breaking changes, and remediation recommendations for anyone upgrading from
+Vault 1.16. **Please read carefully**.
+
+## Important changes
+
+### Allowed audit headers now have unremovable defaults
+
+The [config auditing API endpoint](/vault/api-docs/system/config-auditing#create-update-audit-request-header)
+tells Vault to log incoming request headers (when present) in the audit log.
+
+Previously, Vault only logged headers that were explicitly configured for
+logging. As of version 1.17, Vault automatically logs a predefined set of
+[default headers](/vault/docs/audit#default-headers). By default, the header
+values are not HMAC encrypted. You must explicitly configure the
+[HMAC setting](/vault/api-docs/system/config-auditing#hmac) for each of the
+default headers if required.
+
+Refer to the
+[audit request headers documentation](/vault/docs/audit#audit-request-headers)
+for more information.
+
+### PKI sign-intermediate now truncates notAfter field to signing issuer
+
+Prior to 1.17.x, Vault allowed the calculated sign-intermediate `notAfter` field
+to go beyond the signing issuer `notAfter` field. The extended value lead to a
+CA chain that would not validate properly. As of 1.17.x, Vault truncates the
+intermediary `notAfter` value to the signing issuer `notAfter` if the calculated
+field is greater.
+
+#### How to opt out
+
+You can use the new `enforce_leaf_not_after_behavior` flag on the
+sign-intermediate API along with the `leaf_not_after_behavior` flag for the
+signing issuer to opt out of the truncating behavior.
+
+When you set `enforce_leaf_not_after_behavior` to true, the sign-intermediate
+API uses the `leaf_not_after_behavior` value configured for the signing issuer
+to control truncation the behavior. Setting the issuer `leaf_not_after_behavior`
+field to `permit` and `enforce_leaf_not_after_behavior` to true restores the
+legacy behavior.
+
+### Request limiter deprecation
+
+Vault 1.16.0 included an experimental request limiter. The limiter was disabled
+by default. Further testing indicated that an alternative approach improves
+performance and reduces risk for many workloads. Vault 1.17.0 includes a
+new [adaptive overload
+protection](/vault/docs/concepts/adaptive-overload-protection) feature that
+prevents outages when Vault is overwhelmed by write requests. Adaptive overload
+protection is a beta feature in 1.17.0 and is disabled by default.
+
+The beta request limiter will be removed from Vault entirely in a later release.
+
+## Known issues and workarounds
+
+@include 'known-issues/ocsp-redirect.mdx'

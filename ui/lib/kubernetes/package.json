@@ -10,7 +10,8 @@
     "ember-concurrency": "*",
     "@ember/test-waiters": "*",
     "ember-inflector": "*",
-    "@hashicorp/design-system-components": "*"
+    "@hashicorp/design-system-components": "*",
+    "ember-auto-import": "*"
   },
   "ember-addon": {
     "paths": [

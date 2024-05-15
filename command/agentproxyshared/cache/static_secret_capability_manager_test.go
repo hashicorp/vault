@@ -299,9 +299,11 @@ func TestSubmitWorkUpdatesIndex(t *testing.T) {
 
 	newIndex, err := sscm.leaseCache.db.GetCapabilitiesIndex(cachememdb.IndexNameID, indexId)
 	require.Nil(t, err)
+	newIndex.IndexLock.RLock()
 	require.Equal(t, map[string]struct{}{
 		"auth/token/lookup-self": {},
 	}, newIndex.ReadablePaths)
+	newIndex.IndexLock.RUnlock()
 
 	// Forcefully stop any remaining workers
 	sscm.workerPool.Stop()
@@ -337,6 +339,88 @@ func TestSubmitWorkUpdatesIndexWithBadToken(t *testing.T) {
 	// This entry should be evicted.
 	newIndex, err := sscm.leaseCache.db.GetCapabilitiesIndex(cachememdb.IndexNameID, indexId)
 	require.Equal(t, err, cachememdb.ErrCacheItemNotFound)
+	require.Nil(t, newIndex)
+
+	// Forcefully stop any remaining workers
+	sscm.workerPool.Stop()
+}
+
+// TestSubmitWorkSealedVaultOptimistic tests that the capability manager
+// behaves as expected when
+// sscm.tokenCapabilityRefreshBehaviour == TokenCapabilityRefreshBehaviourOptimistic
+func TestSubmitWorkSealedVaultOptimistic(t *testing.T) {
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+
+	token := "not real token"
+	indexId := hashStaticSecretIndex(token)
+
+	sscm := testNewStaticSecretCapabilityManager(t, client)
+	index := &cachememdb.CapabilitiesIndex{
+		ID:    indexId,
+		Token: token,
+		ReadablePaths: map[string]struct{}{
+			"foo/bar":                {},
+			"auth/token/lookup-self": {},
+		},
+	}
+	err := sscm.leaseCache.db.SetCapabilitiesIndex(index)
+	require.Nil(t, err)
+
+	// Seal the cluster
+	cluster.EnsureCoresSealed(t)
+
+	sscm.StartRenewingCapabilities(index)
+
+	// Wait for the job to complete at least once...
+	time.Sleep(3 * time.Second)
+
+	// This entry should not be evicted.
+	newIndex, err := sscm.leaseCache.db.GetCapabilitiesIndex(cachememdb.IndexNameID, indexId)
+	require.NoError(t, err)
+	require.NotNil(t, newIndex)
+
+	// Forcefully stop any remaining workers
+	sscm.workerPool.Stop()
+}
+
+// TestSubmitWorkSealedVaultPessimistic tests that the capability manager
+// behaves as expected when
+// sscm.tokenCapabilityRefreshBehaviour == TokenCapabilityRefreshBehaviourPessimistic
+func TestSubmitWorkSealedVaultPessimistic(t *testing.T) {
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+
+	token := "not real token"
+	indexId := hashStaticSecretIndex(token)
+
+	sscm := testNewStaticSecretCapabilityManager(t, client)
+	sscm.tokenCapabilityRefreshBehaviour = TokenCapabilityRefreshBehaviourPessimistic
+
+	index := &cachememdb.CapabilitiesIndex{
+		ID:    indexId,
+		Token: token,
+		ReadablePaths: map[string]struct{}{
+			"foo/bar":                {},
+			"auth/token/lookup-self": {},
+		},
+	}
+	err := sscm.leaseCache.db.SetCapabilitiesIndex(index)
+	require.Nil(t, err)
+
+	// Seal the cluster
+	cluster.EnsureCoresSealed(t)
+
+	sscm.StartRenewingCapabilities(index)
+
+	// Wait for the job to complete at least once...
+	time.Sleep(3 * time.Second)
+
+	// This entry should be evicted.
+	newIndex, err := sscm.leaseCache.db.GetCapabilitiesIndex(cachememdb.IndexNameID, indexId)
+	require.Error(t, err)
 	require.Nil(t, newIndex)
 
 	// Forcefully stop any remaining workers
@@ -413,9 +497,11 @@ func TestSubmitWorkUpdatesAllIndexes(t *testing.T) {
 
 	newIndex, err := sscm.leaseCache.db.GetCapabilitiesIndex(cachememdb.IndexNameID, indexId)
 	require.Nil(t, err)
+	newIndex.IndexLock.RLock()
 	require.Equal(t, map[string]struct{}{
 		"auth/token/lookup-self": {},
 	}, newIndex.ReadablePaths)
+	newIndex.IndexLock.RUnlock()
 
 	// For this, we expect the token to have been deleted
 	newPathIndex1, err := sscm.leaseCache.db.Get(cachememdb.IndexNameID, pathIndexId1)

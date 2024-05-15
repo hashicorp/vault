@@ -74,7 +74,7 @@ CMD ["server", "-dev"]
 
 
 ## UBI DOCKERFILE ##
-FROM registry.access.redhat.com/ubi8/ubi-minimal:8.8 as ubi
+FROM registry.access.redhat.com/ubi8/ubi-minimal:8.9 as ubi
 
 ARG BIN_NAME
 # PRODUCT_VERSION is the version built dist/$TARGETOS/$TARGETARCH/$BIN_NAME,
