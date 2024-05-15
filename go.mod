@@ -218,7 +218,7 @@ require (
 	golang.org/x/tools v0.14.0
 	google.golang.org/api v0.134.0
 	google.golang.org/grpc v1.60.1
-	google.golang.org/protobuf v1.33.0
+	google.golang.org/protobuf v1.34.1
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
 	k8s.io/utils v0.0.0-20230220204549-a5ecb0141aa5
 	layeh.com/radius v0.0.0-20231213012653-1006025d24f8
