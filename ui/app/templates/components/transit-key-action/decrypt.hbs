@@ -65,8 +65,6 @@
         @textToCopy={{@plaintext}}
         @color="secondary"
         @container="#transit-decrypt-modal"
-        @isFullWidth={{true}}
-        @isTruncated={{true}}
         @onError={{(fn (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger"))}}
         data-test-encrypted-value="plaintext"
       />

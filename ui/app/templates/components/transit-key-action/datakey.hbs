@@ -96,8 +96,6 @@
         @textToCopy={{@ciphertext}}
         @color="secondary"
         @container="#transit-datakey-modal"
-        @isFullWidth={{true}}
-        @isTruncated={{true}}
         @onError={{(fn (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger"))}}
       />
     </M.Body>
