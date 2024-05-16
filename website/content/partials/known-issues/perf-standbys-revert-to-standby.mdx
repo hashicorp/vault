@@ -17,8 +17,8 @@ storage error:
 ```
 
 New nodes added to a cluster with an older versioned leader will see the
-leader’s storage entry and attempt to update it with the new minimum value for
-`retention months`. This storage write will result in a readonly error on the
+leader’s storage entry and attempt to update it with a new minimum value of `48`
+for `retention months`. The storage write will result in a read-only error on
 newly added nodes.
 
 Performance Standby nodes will revert to Standby after upgrading. You can verify
@@ -29,16 +29,16 @@ Deployments that rely on scaling across Performance Standbys will now forward
 all requests to the active node, increasing the utilization of the active node.
 
 <Note title="Post-upgrade cluster membership">
-After a full upgrade is completed and the leader steps down, one of the standbys
-with this new value will become leader and begin replicating the new value to
-all other nodes.
+After a full upgrade is completed and the old leader steps down, one of the
+Standby nodes with the new value will become leader and begin replicating the
+updated storage entry to all other nodes.
 
 Once the the new leader is elected on an affected version of Vault. Standby
 nodes on the affected version will receive the update and be able to unseal
 again as Performance Standby.
 
-Any new node added to the cluster after the upgrade will also be able to unseal
-as Performance Standbys.
+Any new node added to the cluster after the leader upgrade will also be able to
+unseal as Performance Standbys.
 </Note>
 
 A fix for the read-only storage error has been prioritized and escalated. The
@@ -58,6 +58,6 @@ If the active node has already been upgraded to the new version, do one of the f
 1. Stop/start the Standby nodes.
 2. Add more nodes with the affected version to the cluster.
 
-If the active node has not been upgraded to the new version, update the
+If the active node is still on an unaffected version of Vault, update
 `retention_months` value to `48` on the active node via the
 [/sys/counters/config](/vault/api-docs/sys/counters/config) endpoint.
