@@ -199,7 +199,7 @@
     "lodash.template@^4.5.0": "patch:lodash.template@npm%3A4.5.0#./.yarn/patches/lodash.template-npm-4.5.0-5272df3039.patch"
   },
   "engines": {
-    "node": ">= 18"
+    "node": "20"
   },
   "ember": {
     "edition": "octane"
