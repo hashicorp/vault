@@ -10,13 +10,15 @@
 
 If you previously set a value for `retention_months` via the
 [sys/internal/counters/config](/vault/api-docs/system/internal-counters#update-the-client-count-configuration)
-endpoint, upgrading to Vault versions 1.14.12, 1.15.8, and 1.16.2 will cause
-Performance Standby nodes to revert to Standby.
+endpoint, upgrading to Vault Enterprise versions 1.14.12, 1.15.8, and 1.16.2
+will cause Performance Standby nodes to revert to Standby.
 
-Adding nodes with Vault versions 1.14.12, 1.15.8, or 1.16.2 to a cluster with an
-older versioned leader will see any previously set `retention_months` value and
-attempt to write the new minimum value of `48`. The storage write will result in
-a read-only error:
+@alerts/enterprise-only
+
+Adding nodes with Vault Enterprise versions 1.14.12, 1.15.8, or 1.16.2 to a
+cluster with an older version leader will see any previously set
+`retention_months` value and attempt to write the new minimum value of `48`. The
+storage write will result in a read-only error:
 
 ```
 [ERROR] core: performance standby post-unseal setup failed: error="cannot write to readonly storage"
