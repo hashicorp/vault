@@ -8,7 +8,9 @@
 
 #### Issue
 
-Upgrading to Vault versions 1.14.12, 1.15.8, and 1.16.2 will cause Performance
+If you previously set a value for `retention_months` via the
+[sys/internal/counters/config](/vault-api/sys/counters/config) endpoint,
+upgrading to Vault versions 1.14.12, 1.15.8, and 1.16.2 will cause Performance
 Standby nodes to attempt a storage write during unseal, resulting in a read-only
 storage error:
 
@@ -16,10 +18,10 @@ storage error:
 [ERROR] core: performance standby post-unseal setup failed: error="cannot write to readonly storage"
 ```
 
-New nodes added to a cluster with an older versioned leader will see the
-leader’s storage entry and attempt to update it with a new minimum value of `48`
-for `retention months`. The storage write will result in a read-only error on
-newly added nodes.
+Adding nodes with Vault versions 1.14.12, 1.15.8, or 1.16.2 to a cluster with an
+older versioned leader will see any previously set `retention_months` value and
+attempt to update it to the new minimum value of `48`. The storage write will
+result in a read-only error.
 
 Performance Standby nodes will revert to Standby after upgrading. You can verify
 the status of your nodes by checking the
@@ -44,14 +46,16 @@ refer to the workaround section for options.
 #### Workaround
 
 Once the leader of the cluster has been updgraded to version 1.14.12, 1.15.8, or
-1.16.2, the workaround is to update the `retention_months` value via the
-[sys/counters/config](/vault/api-docs/sys/counters/config) endpoint:
+1.16.2, the workaround is to update the `retention_months` value on the active
+node via the [sys/counters/config](/vault/api-docs/sys/counters/config)
+endpoint:
+
 ```shell
-$ vault write sys/counters/config retention_months=48
+$ vault write sys/internal/counters/config retention_months=48
 ```
+
 This entry will be replicated to all nodes in the cluster, allowing them to
 immediately unseal as Performance Standbys.
 
 After this point, adding new nodes to the cluster will not cause the read-only
 error.
-
