@@ -16,9 +16,25 @@ storage error:
 [ERROR] core: performance standby post-unseal setup failed: error="cannot write to readonly storage"
 ```
 
+This issue manifests due to the way upgrades are performed. New nodes added to a
+cluster with an older versioned leader will see the leader’s storage entry and
+attempt to update it with the new minimum value for `retention months`. This
+storage write will result in a readonly error on the newly added nodes.
+
 Performance Standby nodes will revert to Standby after upgrading. You can verify
 the status of your cluster nodes by checking the
 [/sys/health](/vault/api-docs/system/health) endpoint.
+
+After a full upgrade is completed and the leader steps down, one of the standbys
+with this new value will become the active node and begin replicating the new
+value to all other nodes.
+
+This means that the Standby nodes on the affected version will receive the
+update and be able to unseal as Performance Standby nodes once the new leader is
+elected.
+
+Any new new node added to the cluster after the upgrade will also be able to
+unseal as Performance Standbys.
 
 Deployments that rely on scaling across Performance Standbys will now forward
 all requests to the active node, increasing the utilization of the active node.
@@ -33,22 +49,13 @@ refer to the workaround section for options.
 
 #### Workaround
 
-There is currently no known workaround for this issue.
+There are several workaround for this known issue.
 
-If you have already upgraded to the affected versions, you have two options:
+If the active node has already been upgraded to the new version, do one of the following:
 
-1. Carefully monitor the active nodes of your upgraded clusters to ensure that
-system resources are not oversaturated and request latencies are not untenably
-high.
+1. Stop/start the Standby nodes.
+2. Add more nodes with the affected version to the cluster.
 
-2. Consider downgrading to an earlier version of Vault and restoring from backup.
-
-<Note title="Important">
-Always back up your data before upgrading! Vault does not make
-backward-compatibility guarantees for its data store. Simply replacing the
-newly-installed Vault binary with the previous version will not cleanly
-downgrade Vault, as upgrades may perform changes to the underlying data
-structure that make the data incompatible with a downgrade. If you need to roll
-back to a previous version of Vault, you should roll back your data store as
-well by restoring from backup.
-</Note>
+If the active node has not been upgraded to the new version, update the
+`retention_months` value to `48` on the active node via the
+[/sys/counters/config](/vault/api-docs/sys/counters/config) endpoint.
