@@ -13,4 +13,5 @@
 
 package tools
 
+//test comment
 //go:generate ./tools.sh install-tools
