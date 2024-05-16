@@ -22,23 +22,15 @@ for `retention months`. The storage write will result in a read-only error on
 newly added nodes.
 
 Performance Standby nodes will revert to Standby after upgrading. You can verify
-the status of your cluster nodes by checking the
+the status of your nodes by checking the
 [/sys/health](/vault/api-docs/system/health) endpoint.
 
 Deployments that rely on scaling across Performance Standbys will now forward
 all requests to the active node, increasing the utilization of the active node.
 
 <Note title="Post-upgrade cluster membership">
-After a full upgrade is completed and the old leader steps down, one of the
-Standby nodes with the new value will become leader and begin replicating the
-updated storage entry to all other nodes.
-
-Once the the new leader is elected on an affected version of Vault. Standby
-nodes on the affected version will receive the update and be able to unseal
-again as Performance Standby.
-
-Any new node added to the cluster after the leader upgrade will also be able to
-unseal as Performance Standbys.
+During the last step of a full upgrade, the old leader steps down. One of the
+Standby nodes will become leader.
 </Note>
 
 A fix for the read-only storage error has been prioritized and escalated. The
@@ -51,13 +43,16 @@ refer to the workaround section for options.
 
 #### Workaround
 
-There are several workaround for this known issue.
+The workaround for this issue is to update the `retention_months` value vaie the
+[sys/counters/config](/vault/api-docs/sys/counters/config) endpoint:
 
-If the active node has already been upgraded to the new version, do one of the following:
+```
+$ vault write sys/counters/config retention_months=48
+```
 
-1. Stop/start the Standby nodes.
-2. Add more nodes with the affected version to the cluster.
+This entry will be replicated to all nodes in the cluster, allowing them to
+immediately unseal as Performance Standbys.
 
-If the active node is still on an unaffected version of Vault, update
-`retention_months` value to `48` on the active node via the
-[/sys/counters/config](/vault/api-docs/sys/counters/config) endpoint.
+After this point, adding new nodes to the cluster will not cause the read-only
+error.
+
