@@ -16,28 +16,30 @@ storage error:
 [ERROR] core: performance standby post-unseal setup failed: error="cannot write to readonly storage"
 ```
 
-This issue manifests due to the way upgrades are performed. New nodes added to a
-cluster with an older versioned leader will see the leader’s storage entry and
-attempt to update it with the new minimum value for `retention months`. This
-storage write will result in a readonly error on the newly added nodes.
+New nodes added to a cluster with an older versioned leader will see the
+leader’s storage entry and attempt to update it with the new minimum value for
+`retention months`. This storage write will result in a readonly error on the
+newly added nodes.
 
 Performance Standby nodes will revert to Standby after upgrading. You can verify
 the status of your cluster nodes by checking the
 [/sys/health](/vault/api-docs/system/health) endpoint.
 
-After a full upgrade is completed and the leader steps down, one of the standbys
-with this new value will become the active node and begin replicating the new
-value to all other nodes.
-
-This means that the Standby nodes on the affected version will receive the
-update and be able to unseal as Performance Standby nodes once the new leader is
-elected.
-
-Any new new node added to the cluster after the upgrade will also be able to
-unseal as Performance Standbys.
-
 Deployments that rely on scaling across Performance Standbys will now forward
 all requests to the active node, increasing the utilization of the active node.
+
+<Note title="Post-upgrade cluster membership">
+After a full upgrade is completed and the leader steps down, one of the standbys
+with this new value will become leader and begin replicating the new value to
+all other nodes.
+
+Once the the new leader is elected on an affected version of Vault. Standby
+nodes on the affected version will receive the update and be able to unseal
+again as Performance Standby.
+
+Any new node added to the cluster after the upgrade will also be able to unseal
+as Performance Standbys.
+</Note>
 
 A fix for the read-only storage error has been prioritized and escalated. The
 fix will be in releases 1.14.13, 1.15.9 and 1.16.3.
