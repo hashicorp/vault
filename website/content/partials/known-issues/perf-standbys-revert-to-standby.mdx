@@ -15,8 +15,8 @@ Performance Standby nodes to revert to Standby.
 
 Adding nodes with Vault versions 1.14.12, 1.15.8, or 1.16.2 to a cluster with an
 older versioned leader will see any previously set `retention_months` value and
-attempt to the new minimum value of `48`. The storage write will result in a
-read-only error:
+attempt to write the new minimum value of `48`. The storage write will result in
+a read-only error:
 
 ```
 [ERROR] core: performance standby post-unseal setup failed: error="cannot write to readonly storage"
