@@ -9,7 +9,6 @@ import { setupApplicationTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
 
 import { storageKey } from 'vault/services/control-group';
-import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import authForm from 'vault/tests/pages/components/auth-form';
 import controlGroup from 'vault/tests/pages/components/control-group';
 import controlGroupSuccess from 'vault/tests/pages/components/control-group-success';
@@ -18,7 +17,6 @@ import authPage from 'vault/tests/pages/auth';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { runCmd } from 'vault/tests/helpers/commands';
 
-const consoleComponent = create(consoleClass);
 const authFormComponent = create(authForm);
 const controlGroupComponent = create(controlGroup);
 const controlGroupSuccessComponent = create(controlGroupSuccess);
@@ -82,9 +80,7 @@ module('Acceptance | Enterprise | control groups', function (hooks) {
   const ADMIN_PASSWORD = 'test';
   const setupControlGroup = async (context) => {
     await visit('/vault/secrets');
-    await consoleComponent.toggle();
-    await settled();
-    await runCmd([
+    const userpassAccessor = await runCmd([
       //enable kv-v1 mount and write a secret
       'write sys/mounts/kv type=kv',
       'write kv/foo bar=baz',
@@ -99,28 +95,23 @@ module('Acceptance | Enterprise | control groups', function (hooks) {
       // read out mount to get the accessor
       'read -field=accessor sys/internal/ui/mounts/auth/userpass',
     ]);
-    await settled();
-    const userpassAccessor = consoleComponent.lastTextOutput;
 
-    await runCmd([
+    const authorizerEntityId = await runCmd([
       // lookup entity id for our authorizer
       `write -field=id identity/lookup/entity name=${ADMIN_USER}`,
     ]);
-    await settled();
-    const authorizerEntityId = consoleComponent.lastTextOutput;
-    await runCmd([
+
+    const userToken = await runCmd([
       // create alias for authorizor and add them to the managers group
       `write identity/alias mount_accessor=${userpassAccessor} entity_id=${authorizerEntityId} name=${ADMIN_USER}`,
       `write identity/group name=managers member_entity_ids=${authorizerEntityId} policies=authorizer`,
       // create a token to request access to kv/foo
       'write -field=client_token auth/token/create policies=kv-control-group',
     ]);
+    context.userToken = userToken;
+    await authPage.login(userToken);
     await settled();
-    context.userToken = consoleComponent.lastLogOutput;
-
-    await authPage.login(context.userToken);
-    await settled();
-    return this;
+    return context;
   };
 
   test('for v2 secrets it redirects you if you try to navigate to a Control Group restricted path', async function (assert) {
@@ -217,12 +208,7 @@ module('Acceptance | Enterprise | control groups', function (hooks) {
 
   test('it displays the warning in the console when making a request to a Control Group path', async function (assert) {
     await setupControlGroup(this);
-    await settled();
-    await consoleComponent.toggle();
-    await settled();
-    await runCmd('read kv/foo');
-    await settled();
-    const output = consoleComponent.lastLogOutput;
+    const output = await runCmd('read kv/foo');
     assert.ok(output.includes('A Control Group was encountered at kv/foo'));
     assert.ok(output.includes('The Control Group Token is'));
     assert.ok(output.includes('The Accessor is'));
