@@ -169,7 +169,7 @@
     "escape-string-regexp": "^2.0.0",
     "eslint": "^8.37.0",
     "eslint-config-prettier": "^8.8.0",
-    "eslint-plugin-compat": "4.0.2",
+    "eslint-plugin-compat": "^4.2.0",
     "eslint-plugin-ember": "^11.5.0",
     "eslint-plugin-n": "^15.7.0",
     "eslint-plugin-prettier": "^4.2.1",
