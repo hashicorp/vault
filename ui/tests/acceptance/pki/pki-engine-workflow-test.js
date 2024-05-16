@@ -111,6 +111,7 @@ module('Acceptance | pki workflow', function (hooks) {
       allow_subdomains=true \
       max_ttl="720h"`,
       ]);
+
       await runCmd([`write ${this.mountPath}/root/generate/internal common_name="Hashicorp Test"`]);
       const pki_admin_policy = adminPolicy(this.mountPath, 'roles');
       const pki_reader_policy = readerPolicy(this.mountPath, 'roles');
