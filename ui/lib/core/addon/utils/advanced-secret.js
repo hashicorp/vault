@@ -31,8 +31,7 @@ export function obfuscateData(obj) {
     if (Array.isArray(obj[key])) {
       newObj[key] = obj[key].map(() => '********');
     } else if (typeof obj[key] === 'object') {
-      // unfortunately in javascript if the value of a key is null
-      // calling typeof on this value will return object even if it is a string ex: { "test" : null }
+      // unfortunately in javascript typeof null returns object
       // this is due to a "historical js bug that will never be fixed"
       // we handle this situation here
       if (obj[key] === null) {
