@@ -35,14 +35,19 @@ export const filterVersionHistory = (
   end: string
 ) => {
   if (versionHistory) {
-    const notableUpgrades = ['1.9', '1.10', '1.17'];
     const upgrades = versionHistory.reduce((array: ClientsVersionHistoryModel[], upgradeData) => {
-      const includesVersion = (v: string) =>
-        // only add first match, disregard subsequent patch releases of the same version
-        upgradeData.version.match(v) && !array.some((d: ClientsVersionHistoryModel) => d.version.match(v));
+      const isRelevantHistory = (v: string) => {
+        return (
+          upgradeData.version.match(v) &&
+          // only add if there is a previous version, otherwise this upgrade is the users' first version
+          upgradeData.previousVersion &&
+          // only add first match, disregard subsequent patch releases of the same version
+          !array.some((d: ClientsVersionHistoryModel) => d.version.match(v))
+        );
+      };
 
-      notableUpgrades.forEach((v) => {
-        if (includesVersion(v)) array.push(upgradeData);
+      ['1.9', '1.10', '1.17'].forEach((v) => {
+        if (isRelevantHistory(v)) array.push(upgradeData);
       });
 
       return array;
