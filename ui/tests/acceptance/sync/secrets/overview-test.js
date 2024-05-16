@@ -2,19 +2,19 @@
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
  */
-
+/* eslint-disable qunit/require-expect */
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import syncScenario from 'vault/mirage/scenarios/sync';
 import syncHandlers from 'vault/mirage/handlers/sync';
 import authPage from 'vault/tests/pages/auth';
-import { click, visit, currentURL, waitFor } from '@ember/test-helpers';
+import { click, waitFor, visit, currentURL } from '@ember/test-helpers';
 import { PAGE as ts } from 'vault/tests/helpers/sync/sync-selectors';
 import { runCmd } from 'vault/tests/helpers/commands';
 
 // sync is an enterprise feature but since mirage is used the enterprise label has been intentionally omitted from the module name
-module('Acceptance | enterprise | sync | overview', function (hooks) {
+module('Acceptance | sync | overview', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
@@ -163,7 +163,7 @@ module('Acceptance | enterprise | sync | overview', function (hooks) {
         assert.strictEqual(
           req.requestHeaders['X-Vault-Namespace'],
           undefined,
-          'Request is made to root namespace'
+          'Request is made to undefined namespace'
         );
         return {};
       });
@@ -177,10 +177,10 @@ module('Acceptance | enterprise | sync | overview', function (hooks) {
       await click(ts.overview.optInConfirm);
     });
 
-    test.skip('it should make activation-flag requests to correct namespace when managed', async function (assert) {
-      // TODO: unskip for 1.16.1 when managed is supported
-      assert.expect(3);
-      this.owner.lookup('service:flags').setFeatureFlags(['VAULT_CLOUD_ADMIN_NAMESPACE']);
+    test('it should make activation-flag requests to correct namespace when managed', async function (assert) {
+      assert.expect(4);
+      // should call GET activation-flags twice because we need an updated response after activating the feature
+      this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
 
       this.server.get('/sys/activation-flags', (_, req) => {
         assert.deepEqual(req.requestHeaders, {}, 'Request is unauthenticated and in root namespace');
@@ -195,7 +195,7 @@ module('Acceptance | enterprise | sync | overview', function (hooks) {
         assert.strictEqual(
           req.requestHeaders['X-Vault-Namespace'],
           'admin',
-          'Request is made to admin namespace'
+          'Request is made to the admin namespace'
         );
         return {};
       });

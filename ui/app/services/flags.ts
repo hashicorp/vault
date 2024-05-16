@@ -7,6 +7,7 @@ import Service, { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { keepLatestTask } from 'ember-concurrency';
 import { DEBUG } from '@glimmer/env';
+import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import type StoreService from 'vault/services/store';
 import type VersionService from 'vault/services/version';
 
@@ -24,22 +25,37 @@ export default class flagsService extends Service {
   @service declare readonly version: VersionService;
   @service declare readonly store: StoreService;
 
-  @tracked flags: string[] = [];
   @tracked activatedFlags: string[] = [];
+  @tracked featureFlags: string[] = [];
 
-  setFeatureFlags(flags: string[]) {
-    this.flags = flags;
+  get isHvdManaged(): boolean {
+    return this.featureFlags?.includes(FLAGS.vaultCloudNamespace);
   }
 
-  get hvdManagedNamespaceRoot() {
-    if (this.flags && this.flags.includes(FLAGS.vaultCloudNamespace)) {
-      return 'admin';
+  get hvdManagedNamespaceRoot(): string | null {
+    return this.isHvdManaged ? 'admin' : null;
+  }
+
+  getFeatureFlags = keepLatestTask(async () => {
+    try {
+      const result = await fetch('/v1/sys/internal/ui/feature-flags', {
+        method: 'GET',
+      });
+
+      if (result.status === 200) {
+        const body = await result.json();
+        this.featureFlags = body.feature_flags || [];
+      }
+    } catch (error) {
+      if (DEBUG) console.error(error); // eslint-disable-line no-console
     }
-    return null;
+  });
+
+  fetchFeatureFlags() {
+    return this.getFeatureFlags.perform();
   }
 
-  // TODO getter will be used in the upcoming persona service
-  get secretsSyncIsActivated() {
+  get secretsSyncIsActivated(): boolean {
     return this.activatedFlags.includes('secrets-sync');
   }
 
@@ -60,5 +76,14 @@ export default class flagsService extends Service {
 
   fetchActivatedFlags() {
     return this.getActivatedFlags.perform();
+  }
+
+  @lazyCapabilities(apiPath`sys/activation-flags/secrets-sync/activate`) secretsSyncActivatePath;
+
+  get canActivateSecretsSync() {
+    return (
+      this.secretsSyncActivatePath.get('canCreate') !== false ||
+      this.secretsSyncActivatePath.get('canUpdate') !== false
+    );
   }
 }
