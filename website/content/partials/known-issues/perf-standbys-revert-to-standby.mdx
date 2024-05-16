@@ -29,8 +29,8 @@ Deployments that rely on scaling across Performance Standbys will now forward
 all requests to the active node, increasing the utilization of the active node.
 
 <Note title="Post-upgrade cluster membership">
-During the last step of a full upgrade, the old leader steps down. One of the
-Standby nodes will become leader.
+During the last step of a full upgrade, the old leader steps down, causing one
+of the Standby nodes to become leader.
 </Note>
 
 A fix for the read-only storage error has been prioritized and escalated. The
@@ -43,13 +43,12 @@ refer to the workaround section for options.
 
 #### Workaround
 
-The workaround for this issue is to update the `retention_months` value vaie the
+Once the leader of the cluster has been updgraded to version 1.14.12, 1.15.8, or
+1.16.2, the workaround is to update the `retention_months` value via the
 [sys/counters/config](/vault/api-docs/sys/counters/config) endpoint:
-
-```
+```shell
 $ vault write sys/counters/config retention_months=48
 ```
-
 This entry will be replicated to all nodes in the cluster, allowing them to
 immediately unseal as Performance Standbys.
 
