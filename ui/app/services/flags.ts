@@ -31,7 +31,7 @@ export default class flagsService extends Service {
     this.flags = flags;
   }
 
-  get managedNamespaceRoot() {
+  get hvdManagedNamespaceRoot() {
     if (this.flags && this.flags.includes(FLAGS.vaultCloudNamespace)) {
       return 'admin';
     }

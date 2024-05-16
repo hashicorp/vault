@@ -49,7 +49,7 @@ export default class VersionService extends Service {
 
   get hasSecretsSync() {
     // TODO remove this conditional when we allow secrets sync in managed clusters
-    if (this.flags.managedNamespaceRoot !== null) return false;
+    if (this.flags.hvdManagedNamespaceRoot !== null) return false;
     return this.features.includes('Secrets Sync');
   }
 

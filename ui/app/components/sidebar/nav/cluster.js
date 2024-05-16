@@ -24,7 +24,7 @@ export default class SidebarNavClusterComponent extends Component {
 
   get showSync() {
     // Only show sync if cluster is not managed
-    return this.flags.managedNamespaceRoot === null;
+    return this.flags.hvdManagedNamespaceRoot === null;
   }
 
   get syncBadge() {

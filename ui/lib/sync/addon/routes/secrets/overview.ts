@@ -17,7 +17,7 @@ export default class SyncSecretsOverviewRoute extends Route {
   @service declare readonly flags: FlagsService;
 
   beforeModel(): void | Promise<unknown> {
-    if (this.flags.managedNamespaceRoot !== null) {
+    if (this.flags.hvdManagedNamespaceRoot !== null) {
       this.router.transitionTo('vault.cluster.dashboard');
     }
   }
