@@ -41,9 +41,7 @@ const oidcEntity = async function (name, policy) {
       `write sys/policies/acl/${name} policy=${window.btoa(policy)}`,
       `write identity/entity name="${OIDC_USER}" policies="${name}" metadata="email=vault@hashicorp.com" metadata="phone_number=123-456-7890"`,
       `read -field=id identity/entity/name/${OIDC_USER}`,
-    ],
-    false
-  );
+    ]);
 };
 
 const oidcGroup = async function (entityId) {
