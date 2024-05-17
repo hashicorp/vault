@@ -130,7 +130,9 @@ func TestCoreWithSeal(t testing.T, testSeal Seal, enableRaw bool) *Core {
 		EnableRaw:       enableRaw,
 		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		AuditBackends: map[string]audit.Factory{
-			"file": audit.NewFileBackend,
+			audit.TypeFile:   audit.NewFileBackend,
+			audit.TypeSocket: audit.NewSocketBackend,
+			audit.TypeSyslog: audit.NewSyslogBackend,
 		},
 	}
 	return TestCoreWithSealAndUI(t, conf)
@@ -1414,13 +1416,17 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	coreConfig := &CoreConfig{
 		LogicalBackends:    make(map[string]logical.Factory),
 		CredentialBackends: make(map[string]logical.Factory),
-		AuditBackends:      make(map[string]audit.Factory),
-		RedirectAddr:       fmt.Sprintf("https://127.0.0.1:%d", listeners[0][0].Address.Port),
-		ClusterAddr:        "https://127.0.0.1:0",
-		DisableMlock:       true,
-		EnableUI:           true,
-		EnableRaw:          true,
-		BuiltinRegistry:    corehelpers.NewMockBuiltinRegistry(),
+		AuditBackends: map[string]audit.Factory{
+			audit.TypeFile:   audit.NewFileBackend,
+			audit.TypeSocket: audit.NewSocketBackend,
+			audit.TypeSyslog: audit.NewSyslogBackend,
+		},
+		RedirectAddr:    fmt.Sprintf("https://127.0.0.1:%d", listeners[0][0].Address.Port),
+		ClusterAddr:     "https://127.0.0.1:0",
+		DisableMlock:    true,
+		EnableUI:        true,
+		EnableRaw:       true,
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 	}
 
 	if base != nil {
@@ -1534,13 +1540,6 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		c := new(server.Config)
 		c.SharedConfig = &configutil.SharedConfig{LogFormat: logging.UnspecifiedFormat.String()}
 		coreConfig.RawConfig = c
-	}
-
-	// If the caller didn't supply any configuration for types of audit device,
-	// default to adding `file` (and enabling it later).
-	addAuditBackend := len(coreConfig.AuditBackends) == 0
-	if addAuditBackend {
-		coreConfig.AuditBackends[audit.TypeFile] = audit.NewFileBackend
 	}
 
 	if coreConfig.Physical == nil && (opts == nil || opts.PhysicalFactory == nil) {
@@ -1658,7 +1657,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 	// Initialize cores
 	if opts == nil || !opts.SkipInit {
-		testCluster.initCores(t, opts, addAuditBackend)
+		testCluster.initCores(t, opts)
 	}
 
 	// Assign clients
@@ -1969,14 +1968,9 @@ func (testCluster *TestCluster) setupClusterListener(
 	core.SetClusterHandler(handler)
 }
 
-func (tc *TestCluster) InitCores(t testing.T, opts *TestClusterOptions, addAuditBackend bool) {
-	tc.initCores(t, opts, addAuditBackend)
-}
-
 // initCores attempts to initialize a core for a test cluster using the supplied
-// options. If the addAuditBackend flag is true, the core will have a file audit
-// device enabled with the 'discard' file path (See: /vault/docs/audit/file#discard).
-func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAuditBackend bool) {
+// options.
+func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions) {
 	leader := tc.Cores[0]
 
 	bKeys, rKeys, root := TestCoreInitClusterWrapperSetup(t, leader.Core, leader.Handler)
@@ -2082,29 +2076,6 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 		t.Fatal(err)
 	}
 	tc.ID = cluster.ID
-
-	// Enable auditing if required
-	if addAuditBackend {
-		auditReq := &logical.Request{
-			Operation:   logical.UpdateOperation,
-			ClientToken: tc.RootToken,
-			Path:        "sys/audit/file",
-			Data: map[string]interface{}{
-				"type": audit.TypeFile,
-				"options": map[string]string{
-					"file_path": "discard",
-				},
-			},
-		}
-		resp, err := leader.Core.HandleRequest(namespace.RootContext(ctx), auditReq)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if resp.IsError() {
-			t.Fatal(err)
-		}
-	}
 
 	// Configure a secret engine (kv)
 	kvVersion := "1"
