@@ -1865,12 +1865,21 @@
       },
       {
         "title": "SAML",
-        "path": "auth/saml",
         "badge": {
           "text": "ENTERPRISE",
           "type": "outlined",
           "color": "neutral"
-        }
+        },
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "auth/saml"
+          },
+          {
+            "title": "ADFS",
+            "path": "auth/saml/adfs"
+          }
+        ]
       },
       {
         "title": "TLS Certificates",

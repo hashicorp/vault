@@ -1,0 +1,740 @@
+---
+id: 48da2266-1435-4803-874c-32a3c825c351
+layout: docs
+page_title: Configure Vault with ADFS for SAML
+description: >-
+  Configure Vault to use Active Directory Federation Services (ADFS) as an SAML
+  provider.
+---
+
+# Configure Vault with ADFS for SAML
+
+<EnterpriseAlert />
+
+Configure your Vault instance to work with Active Directory Federation Services
+(ADFS) and use ADFS accounts with SAML for Vault login.
+
+## Before you start
+
+- You must have Vault Enterprise or HCP Vault v1.15.5+**.
+- You must be running ADFS on Windows Server**.
+- You must know your Vault admin token**. If you do not have a valid admin
+   token, you can generate a new token in the Vault UI or with the
+   [Vault CLI](/vault/docs/commands/token/create).
+
+## Step 1: Enable the SAML authN method for Vault
+
+<Tabs>
+
+<Tab heading="Vault CLI">
+
+1. Save your Vault instance URL to the `VAULT_ADDR` environment variable.
+
+   ```shell-session
+   $ export VAULT_ADDR="<URL_FOR_YOUR_VAULT_INSTALLATION>"
+   ```
+
+   Example:
+
+   <CodeBlockConfig hideClipboard>
+
+   ```shell-session
+   $ export VAULT_ADDR="https://myvault.example.com:8200"
+   ```
+
+   </CodeBlockConfig>
+
+1. Save your Vault instance URL to the `VAULT_TOKEN` environment variable.
+
+   ```shell-session
+   $ export VAULT_TOKEN="<YOUR_VAULT_ACCESS_TOKEN>"
+   ```
+
+   Example:
+
+   <CodeBlockConfig hideClipboard>
+
+   ```shell-session
+   $ export VAULT_TOKEN="XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
+   ```
+
+   </CodeBlockConfig>
+
+1. **If you use Vault Enterprise or Vault HCP**, set the namespace where you
+   have the SAML plugin mounted to the `VAULT_NAMESPACE` environment variable.
+
+   ```shell-session
+   $ export VAULT_NAMESPACE="<SAML_NAMESPACE>"
+   ```
+
+   Example:
+
+   <CodeBlockConfig hideClipboard>
+
+   ```shell-session
+   $ export VAULT_NAMESPACE="admin"
+   ```
+
+   </CodeBlockConfig>
+
+1. Enable the SAML authentication plugin.
+
+   ```shell-session
+   $ vault auth enable saml
+   ```
+
+</Tab>
+<Tab heading="Vault UI">
+
+1. Open the web UI for your Vault instance.
+
+1. Select **Access** from the left-hand menu.
+
+1. Right click **Enable new method** on the Access page.
+
+1. Select **SAML**.
+
+1. Click **Next**.
+
+1. Set the mount path for the SAML plugin.
+
+1. Click **Enable Method**.
+
+1. Click **Update Options** to enable the plugin.
+
+</Tab>
+</Tabs>
+
+## Step 2: Create a new relying party trusts in ADFS
+
+<Note title="Save the Relying party trust identifier">
+
+Make note of the **Relying party trust identifier** entered on your ADFS.
+You will need it to configure your SAML plugin for Vault.
+
+</Note>
+
+1. Open your Windows Server UI.
+
+1. Go to the Server Manager screen and click **Tools**.
+
+1. Select **AD FS Management**.
+
+1. Right-click on **Relying Party Trusts** and select **Add Relying Party Trust...**.
+
+1. Follow the prompts to create a new party trust with the following:
+
+   - Check **Claims aware** and Start
+   - Check **Enter data about relying party manually** and Next
+   - **Display name:** Vault and Next
+   - You don't need to add a certificate so you can click on Next
+   - Check **Enable support for the SAML 2.0 WebSSO protocol**
+   - Enter the callback endpoint of your Vault, for exemple: `https://myvault.example.com:8200/v1/auth/saml/callback`
+   - Example with Namespaces:
+
+   | Namespace path  | Callback Endpoint URL                                                 |
+   |-----------------|-----------------------------------------------------------------------|
+   | `admin/`        | `https://myvault.example.com:8200/v1/admin/auth/saml/callback`        |
+   | `org/security/` | `https://myvault.example.com:8200/v1/org/security/auth/saml/callback` |
+
+   - **Relying party trust identifier:** Create your own identifier, for example: MyVaultIdentifier
+   - Access control policy: select an existing policy or `Permit everyone`
+   - Review the information and click Next
+   - Check **Configure claims issuance policy for this application** and Close
+
+## Step 3: Configure the claim issuance policy
+
+1. Right-click on your, just created, **Relying Party Trust** and select **Edit Claim Issuance Policy...**.
+
+1. Click **Add Rule...** and follow the prompts to create a new Transform Claim Rule with the following informations.
+
+   - Select **Send LDAP Attributes as Claims**
+   - Rule name: `Vault SAML Claims`
+   - Attribute store: `Active Directory`
+   - Complete the array using the following informations:
+
+   | LDAP attribute                     | Outgoing claim type           |
+   |------------------------------------|-------------------------------|
+   | `E-Mail-Addresses`                 | `Name ID`                     |
+   | `E-Mail-Addresses`                 | `E-Mail Address`              |
+   | `Token-Groups - Unqualified Names` | `groups`                      |
+
+<Note>
+
+If you replace `groups` with `Group`, you will need to use `http://schemas.xmlsoap.org/claims/Group` instead of `groups` **in Step 6**.
+
+</Note>
+
+## Step 4: Modification du SAML Signature ADFS
+
+1. Open a PowerShell CLI.
+
+1. Set the SAML siganture to false.
+
+   ```powershell
+   $ Set-AdfsRelyingPartyTrust -TargetName "<NAME_OF_THE_IDENTIFIER>" -SignedSamlRequestsRequired $false
+   ```
+
+   Example:
+
+   ```powershell
+   $ Set-AdfsRelyingPartyTrust -TargetName "Vault" -SignedSamlRequestsRequired $false
+   ```
+
+## Step 5: Configure the SAML plugin
+
+Use the client ID and shared secret for your ADFS application group to finish
+the configuration of the SAML plugin.
+
+<Tabs>
+<Tab heading="Vault CLI">
+
+Use the `vault write` CLI command to save the configuration details for the SAML
+plugin where:
+
+- `ADFS_URL` is the discovery URL for your ADFS instance. For example,
+  `https://adfs.example.com/`
+- `VAULT_ADDR` is the URL for your Vault instance. For example,
+  `https://myvault.example.com:8200`
+- `ADFS_ROLE` is the name of your role. For example, `adfs-default`.
+- `RELYING_PARTY_TRUST_IDENTIFIER` is the identifier you set in your ADFS, for example: MyVaultIdentifier
+
+<Note>
+
+If you have a `Namespace` do not forget it in your `acs_urls`, for example: `<VAULT_ADDR>/v1/<NAMESPACE>/auth/saml/callback`
+
+</Note>
+
+```shell-session
+$ vault write auth/saml/config default_role="<ADFS_ROLE>" \
+idp_metadata_url="<ADFS_URL>/federationmetadata/2007-06/federationmetadata.xml" \
+entity_id="<RELYING_PARTY_TRUST_IDENTIFIER>" \
+acs_urls="<VAULT_ADDR>/v1/auth/saml/callback"
+```
+
+</Tab>
+</Tabs>
+
+## Step 6: Create a default ADFS role in Vault
+
+Use the `vault write` CLI command to create a default role for users authenticating with ADFS where:
+
+- `YOUR_SAML_MOUNT_PATH` is the mount path for the SAML plugin.. For example, `adfs`.
+- `YOUR_EXISTING_AD_GROUP` is the name or a map seperated by a coma of groups in your AD. For example, one group: `VaultAdmin` two groups: `VaultAdmin,VaultUser`.
+- `YOUR_DOMAIN` is the name or a map seperated by a coma of groups in your AD. For example, one domain: `*@example.com` two domains: `*@example.com,*@ext.example.com`.
+- `ADFS_ROLE` is the name of your role. For example, `adfs-default`.
+
+```shell-session
+$ vault write auth/saml/role/<ADFS_ROLE>  \
+bound_subjects="<YOUR_DOMAIN>" \
+bound_subjects_type="glob" \
+groups_attribute=groups \
+bound_attributes=groups="<YOUR_EXISTING_AD_GROUP>" \
+token_policies="default" \
+ttl="1h"
+```
+
+```shell-session
+$ vault write auth/saml/role/adfs-default  \
+bound_subjects="*@example.com,*@ext.example.com" \
+bound_subjects_type="glob" \
+groups_attribute=groups \
+bound_attributes=groups="VaultAdmin,VaultUser" \
+token_policies="default" \
+ttl="1h"
+```
+
+## Link Active Directory groups to Vault (Optional)
+
+1. Enable the KV secret engine in Vault for ADFS.
+
+   ```shell-session
+   $ vault secrets enable -path=<ADFS_KV_PLUGIN_PATH> kv-v2
+   ```
+
+   Example:
+
+   <CodeBlockConfig hideClipboard>
+
+   ```shell-session
+   $ vault secrets enable -path=adfs-kv kv-v2
+   ```
+
+   </CodeBlockConfig>
+
+1. Create a read-only policy against the KV plugin for ADFS:
+
+   ```shell-session
+   $ vault policy write <RO_ADFS_POLICY_NAME> - << EOF
+   # Read and list policy for the ADFS KV mount
+   path "<ADFS_KV_PLUGIN_PATH>/*" {
+     capabilities = ["read", "list"]
+   }
+   EOF
+   ```
+
+   Example:
+
+   <CodeBlockConfig hideClipboard>
+
+   ```shell-session
+   $ vault policy write read-adfs-test - << EOF
+   # Read and list policy for the ADFS KV mount
+   path "adfs-kv/*" {
+     capabilities = ["read", "list"]
+   }
+   EOF
+   ```
+
+   </CodeBlockConfig>
+
+1. Write a test value to the `kv` plugin.
+
+   ```shell-session
+   $ vault kv put <ADFS_KV_PLUGIN_PATH>/test test_key="test value"
+   ```
+
+   Example:
+
+   <CodeBlockConfig hideClipboard>
+
+   ```shell-session
+   $ vault kv put adfs-kv/test test_key="test value"
+   ```
+
+   </CodeBlockConfig>
+
+Now you can create a Vault group and link to an AD group.
+
+<Tabs>
+<Tab heading="Vault CLI">
+
+1. Create an external group in Vault and save the group ID to a file named
+   `group_id.txt`.
+
+   ```shell-session
+   $ vault write \
+     -format=json \
+     identity/group name="SamlVaultReader" \
+     policies="read-adfs-test" \
+     type="external" | jq -r ".data.id" > group_id.txt
+   ```
+
+1. Retrieve the mount accessor for the ADFS authentication method and save it to
+   a file named `accessor_adfs.txt`.
+
+   ```shell-session
+   $ vault auth list -format=json | \
+     jq -r '.["<YOUR_SAML_MOUNT_PATH>/"].accessor' > \
+     accessor_adfs.txt
+   ```
+1. Create a group alias:
+
+   ```shell-session
+   $ vault write identity/group-alias \
+     name="<YOUR_EXISTING_AD_GROUP>"  \
+     mount_accessor=$(cat accessor_adfs.txt) \
+     canonical_id="$(cat group_id.txt)"
+   ```
+
+1. Login to Vault as an AD user who is a member of YOUR_EXISTING_AD_GROUP.
+
+1. Read your test value from the KV plugin:
+
+   ```shell-session
+   $ vault kv get adfs-kv/test
+   ```
+
+</Tab>
+<Tab heading="Vault UI">
+
+1. Open the Vault UI.
+
+1. Select **Access**.
+
+1. Select **Groups**.
+
+1. Click **Create group**.
+
+1. Follow the prompts to create an external group with the following
+   information.
+
+     - Name: your new Vault group name
+     - Type: `external`
+     - Policies: the read-only ADFS policy you created. For example,
+       `read-adfs-test`.
+
+1. Click on **Add alias** and follow the prompts to map the Vault group name
+   to an existing group on your AD.
+
+   - Name: the name of an existing AD group (**must match exactly**).
+   - Auth Backend: `<YOUR_SAML_MOUNT_PATH>/ (saml)`
+
+1. Login to Vault as an AD user who is a member of the aliased AD group.
+
+1. Read your test value from the KV plugin.
+
+</Tab>
+</Tabs>
+
+## Troubleshooting: How to get more information from SAML responses.
+
+### Command to know to help you to troubleshoot
+
+1. Command to add the SAML responses in the debbug logs.
+
+   <Note title="Warning">
+
+   This is not recommended in production since sensitive information may be present in SAML responses.
+
+   </Note>
+
+   On the **Step 4** you can add `verbose_logging=true` to stream in the log the information of SAML Claims.
+
+   ```shell-session
+   $ vault write auth/saml/config default_role="<ADFS_ROLE>" \
+   verbose_logging=true
+   ```
+
+1. Command to desactivate the SAML responses in the debug log.
+
+   <Note>
+
+   When you finish to debbug the SAML, do not forget to set `verbose_logging` to `false`
+
+   </Note>
+
+   ```shell-session
+   $ vault write auth/saml/config default_role="<ADFS_ROLE>" \
+   verbose_logging=false
+   ```
+
+1. Stream the debug logs directly to your CLI
+
+   ```shell-session
+   $ vault monitor -log-level=debug
+   ```
+
+### Analyse the SAML response
+
+In the SAML response, we have 2 importants part to help your debugging:
+
+1. `role` is the configuration of your SAML role.
+
+1. `user context` are the informations inside the SAML response and need to match the informations in the `role` part. We only use the `attributes` part.
+
+<CodeBlockConfig hideClipboard highlight="3-16,21-24">
+
+```json
+[DEBUG] auth.saml.auth_saml_1d2227e7: validating user context for role: api=callback role_name=default-saml
+role="{
+  "token_bound_cidrs":null,
+  "token_explicit_max_ttl":0,
+  "token_max_ttl":0,
+  "token_no_default_policy":false,
+  "token_num_uses":0,
+  "token_period":0,
+  "token_policies":["default"],
+  "token_type":0,
+  "token_ttl":0,
+  "BoundSubjects":["*@example.com","*@ext.example.com"],
+  "BoundSubjectsType":"glob",
+  "BoundAttributes":{"groups":["VaultAdmin","VaultUser"]},
+  "BoundAttributesType":"string",
+  "GroupsAttribute":"groups"
+}"
+user context="{
+  "attributes":
+  {
+    "groups":["Domain Users","VaultAdmin"],
+    "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress":["rs@example.com"]
+  },
+  "subject":"rs@example.com"
+}"
+```
+
+</CodeBlockConfig>
+
+### Unable to connect to Vault with SAML
+
+If you have an error when you try to login, you must verify `BoundSubjects`, `BoundAttributes` and `GroupsAttribute` and compare it to the `user context`
+
+### Case number 1
+
+<CodeBlockConfig hideClipboard highlight="12,14,16,18-25">
+
+```json
+[DEBUG] auth.saml.auth_saml_1d2227e7: validating user context for role: api=callback role_name=default-saml
+role="{
+  "token_bound_cidrs":null,
+  "token_explicit_max_ttl":0,
+  "token_max_ttl":0,
+  "token_no_default_policy":false,
+  "token_num_uses":0,
+  "token_period":0,
+  "token_policies":["default"],
+  "token_type":0,
+  "token_ttl":0,
+  "BoundSubjects":["*@example.com","*@ext.example.com"],
+  "BoundSubjectsType":"glob",
+  "BoundAttributes":{"groups":["VaultAdmin","VaultUser"]},
+  "BoundAttributesType":"string",
+  "GroupsAttribute":"groups"
+}"
+user context="{
+  "attributes":
+  {
+    "http://schemas.xmlsoap.org/claims/Group":["Domain Users","VaultAdmin"],
+    "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress":["rs@example.com"]
+  },
+  "subject":"rs@example.com"
+}"
+```
+
+</CodeBlockConfig>
+
+The SAML role expects a `groups` response in the `BoundAttributes` and `GroupsAttribute` fields, but the SAML response does not have these fields. The field declared in the response corresponding to a list of groups is `http://schemas.xmlsoap.org/claims/Group`
+
+2 Solutions
+
+<Tabs>
+<Tab heading="Solution 1">
+
+Modify the `BoundAttributes` and `GroupsAttribute` fields in relation to the SAML response.
+
+```shell-session
+$ vault write auth/saml/role/default-saml \
+groups_attribute="http://schemas.xmlsoap.org/claims/Group" \
+bound_attributes="http://schemas.xmlsoap.org/claims/Group"="VaultAdmin,VaultUser"
+```
+
+</Tab>
+<Tab heading="Solution 2">
+
+You can modify in the ADFS the Claim Issuance Policy you created and verify the tab
+
+| LDAP attribute                     | Outgoing claim type           |
+|------------------------------------|-------------------------------|
+| `Token-Groups - Unqualified Names` | `groups`                      |
+
+</Tab>
+</Tabs>
+
+### Case number 2
+
+<CodeBlockConfig hideClipboard highlight="12,14,16,18-25">
+
+```json
+[DEBUG] auth.saml.auth_saml_b1886dfe: validating user context for role: api=callback role_name=default-saml
+role="{
+  "token_bound_cidrs":null,
+  "token_explicit_max_ttl":0,
+  "token_max_ttl":0,
+  "token_no_default_policy":false,
+  "token_num_uses":0,
+  "token_period":0,
+  "token_policies":["default"],
+  "token_type":0,
+  "token_ttl":0,
+  "BoundSubjects":["*@example.com *@ext.example.com"],
+  "BoundSubjectsType":"glob",
+  "BoundAttributes":{"groups":["VaultAdmin","VaultUser"]},
+  "BoundAttributesType":"string",
+  "GroupsAttribute":"groups"
+}"
+user context="{
+  "attributes":
+  {
+    "groups":["Domain Users","VaultAdmin"],
+    "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress":["rs@example.com"]
+  },
+  "subject":"rs@example.com"
+}"
+```
+
+</CodeBlockConfig>
+
+In this situation the SAML role expects a comma separated list in `BoundSubjects`.
+
+To resolve it, modify the `BoundSubjects`.
+
+```shell-session
+$ vault write auth/saml/role/default-saml \
+bound_subjects="*@example.com, *@ext.example.com"
+```
+
+Try to login again.
+
+### Groups and policies are not automatically mapped
+
+1. Analyze the role configuration.
+
+```shell-session
+$ vault read auth/saml/role/default-saml
+```
+
+<CodeBlockConfig hideClipboard highlight="3,7">
+
+```shell-session
+Key                        Value
+---                        -----
+bound_attributes           map[http://schemas.xmlsoap.org/claims/Group:[VaultAdmin VaultUser]]
+bound_attributes_type      string
+bound_subjects             [*@example.com *@ext.example.com]
+bound_subjects_type        glob
+groups_attribute           groups
+token_bound_cidrs          []
+token_explicit_max_ttl     0s
+token_max_ttl              0s
+token_no_default_policy    false
+token_num_uses             0
+token_period               0s
+token_policies             [default]
+token_ttl                  0s
+token_type                 default
+```
+
+</CodeBlockConfig>
+
+The `groups_attribute` is set to `groups` so you need to find this information inside the SAML claims.
+
+1. Analyse the SAML response.
+
+<CodeBlockConfig hideClipboard highlight="14,16,21">
+
+```json
+[DEBUG] auth.saml.auth_saml_1d2227e7: validating user context for role: api=callback role_name=default-saml
+role="{
+  "token_bound_cidrs":null,
+  "token_explicit_max_ttl":0,
+  "token_max_ttl":0,
+  "token_no_default_policy":false,
+  "token_num_uses":0,
+  "token_period":0,
+  "token_policies":["default"],
+  "token_type":0,
+  "token_ttl":0,
+  "BoundSubjects":["*@example.com","*@ext.example.com"],
+  "BoundSubjectsType":"glob",
+  "BoundAttributes":{"http://schemas.xmlsoap.org/claims/Group":["VaultAdmin","VaultUser"]},
+  "BoundAttributesType":"string",
+  "GroupsAttribute":"groups"
+  }"
+user context="{
+  "attributes":
+  {
+    "http://schemas.xmlsoap.org/claims/Group":["Domain Users","VaultAdmin"],
+    "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress":["rs@example.com"]
+  },
+  "subject":"rs@example.com"
+}"
+```
+
+</CodeBlockConfig>
+
+The `GroupsAttribute` is set to `groups` and Vault doesn't find it in the SAML
+response. There are two options to map it correctly.
+
+<Tabs>
+<Tab heading="Solution 1">
+
+Check the attribute of group inside the `user context` in the context: `"http://schemas.xmlsoap.org/claims/Group\":[\"Domain Users\",\"VaultAdmin\"]` so we need to modify the `groups_attribute` to match `http://schemas.xmlsoap.org/claims/Group`
+
+```shell-session
+$ vault write auth/saml/role/default-saml \
+groups_attribute=http://schemas.xmlsoap.org/claims/Group
+```
+
+</Tab>
+<Tab heading="Solution 2">
+
+1. You can modify in the ADFS the Claim Issuance Policy you created and verify the line of **LDAP attribute:** `Token-Groups - Unqualified Names` and the **Outgoing claim type:** is set to `groups`
+
+1. You also need to change the `BoundAttributes` to `groups`
+
+```shell-session
+$ vault write auth/saml/role/default-saml bound_attributes=groups="<YOUR_AD_GROUP>"
+```
+
+Example:
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault write auth/saml/role/default-saml \
+bound_attributes=groups="VaultAdmin,VaultUser"
+```
+
+</CodeBlockConfig>
+
+1. You can try to connect to Vault and normally the SAML response where `BoundAttributes`, `GroupsAttribute` and in the `user context` have `groups`
+
+<CodeBlockConfig hideClipboard highlight="14,16,21">
+
+```json
+[DEBUG] auth.saml.auth_saml_1d2227e7: validating user context for role: api=callback role_name=default-saml
+role="{
+  "token_bound_cidrs":null,
+  "token_explicit_max_ttl":0,
+  "token_max_ttl":0,
+  "token_no_default_policy":false,
+  "token_num_uses":0,
+  "token_period":0,
+  "token_policies":["default"],
+  "token_type":0,
+  "token_ttl":0,
+  "BoundSubjects":["*@example.com","*@ext.example.com"],
+  "BoundSubjectsType":"glob",
+  "BoundAttributes":{"groups":["VaultAdmin","VaultUser"]},
+  "BoundAttributesType":"string",
+  "GroupsAttribute":"groups"
+}"
+user context="{
+  "attributes":
+  {
+    "groups":["Domain Users","VaultAdmin"],
+    "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress":["rs@example.com"]
+  },
+  "subject":"rs@example.com"
+}"
+```
+
+</CodeBlockConfig>
+
+</Tab>
+</Tabs>
+
+### Error 320 in the event log of your ADFS
+
+<CodeBlockConfig hideClipboard highlight="1,4">
+
+```shell-session
+The verification of the SAML message signature failed.
+Message issuer: MyVaultIdentifier
+Exception details:
+MSIS7086: The relying party trust 'MyVaultIdentifier' indicates that authentication requests sent by this relying party will be signed but no signature is present.
+```
+
+</CodeBlockConfig>
+
+If you have this error, you will verify the configuration of your ADFS Relying Party Trust:
+- Open a PowerShell CLI
+
+  ```powershell
+  $ Get-AdfsRelyingPartyTrust -Name "Vault"
+  ```
+
+- Verify the field `SignedSamlRequestsRequired` is set to `false`
+- If it's set to `true` follow this:
+
+  ```powershell
+  $ Set-AdfsRelyingPartyTrust -TargetName "Vault" -SignedSamlRequestsRequired $false
+  ```
+
+You can try to connect again to Vault with SAML
+
+## Help and reference
+
+- [SAML auth method Documentation](https://developer.hashicorp.com/vault/docs/auth/saml)
+- [SAML API Documentation](https://developer.hashicorp.com/vault/api-docs/auth/saml)
+- [Set up an AD FS lab environment](https://learn.microsoft.com/en-us/windows-server/identity/ad-fs/operations/set-up-an-ad-fs-lab-environment)
