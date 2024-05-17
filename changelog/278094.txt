@@ -1,3 +1,0 @@
-```release-note:bug
-ui: Fix KVv2 json editor to allow null values.
-```
