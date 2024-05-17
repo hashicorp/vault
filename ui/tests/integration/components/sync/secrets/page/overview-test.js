@@ -153,7 +153,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     });
   });
 
-  module('secrets sync is not activated and license has secrets sync meep', function (hooks) {
+  module('secrets sync is not activated and license has secrets sync', function (hooks) {
     hooks.beforeEach(async function () {
       this.isActivated = false;
     });
