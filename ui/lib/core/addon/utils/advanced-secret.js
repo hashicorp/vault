@@ -35,7 +35,7 @@ export function obfuscateData(obj) {
       // this is due to a "historical js bug that will never be fixed"
       // we handle this situation here
       newObj[key] = '********';
-    } else if (typeof obj[key] === 'object' && obj[key] !== null) {
+    } else if (typeof obj[key] === 'object') {
       newObj[key] = obfuscateData(obj[key]);
     } else {
       newObj[key] = '********';
