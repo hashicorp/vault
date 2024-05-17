@@ -137,7 +137,10 @@ runs:
       run: make ci-build
     - if: inputs.vault-edition != 'ce'
       shell: bash
-      run: make ci-prepare-legal
+      run: make ci-prepare-ent-legal
+    - if: inputs.vault-edition == 'ce'
+      shell: bash
+      run: make ci-prepare-ce-legal
     - name: Bundle Vault
       env:
         BUNDLE_PATH: out/${{ steps.metadata.outputs.artifact-basename }}.zip
