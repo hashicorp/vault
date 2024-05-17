@@ -180,7 +180,7 @@ function main() {
     prepare_ent_legal
   ;;
   prepare-ce-legal)
-    prepare_ent_legal
+    prepare_ce_legal
   ;;
   revision)
     build_revision
