@@ -19,6 +19,7 @@ const validations = {
   'excludeCnFromSans',
   'customTtl',
   'notBeforeDuration',
+  'enforceLeafNotAfterBehavior',
   'format',
   'permittedDnsDomains',
   'maxPathLength',
@@ -55,6 +56,11 @@ export default class PkiSignIntermediateModel extends PkiCertificateBaseModel {
     defaultValue: '30s',
   })
   notBeforeDuration;
+
+  @attr('boolean', {
+    subText: "Do not truncate the NotAfter field, use the issuer's configured leaf_not_after_behavior",
+  })
+  enforceLeafNotAfterBehavior;
 
   @attr({
     label: 'Permitted DNS domains',

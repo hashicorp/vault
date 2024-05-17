@@ -7,7 +7,8 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { currentURL, settled, click, visit, fillIn, typeIn, waitFor } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
-import { selectChoose, clickTrigger } from 'ember-power-select/test-support/helpers';
+import { selectChoose } from 'ember-power-select/test-support';
+import { clickTrigger } from 'ember-power-select/test-support/helpers';
 
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import connectionPage from 'vault/tests/pages/secrets/backend/database/connection';

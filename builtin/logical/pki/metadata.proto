@@ -1,13 +1,17 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: BUSL-1.1
 
+syntax = "proto3";
+
 package pki;
-option go_package = "github.com/hashicorp/vault-enterprise/builtin/logical;pki";
+
 import "google/protobuf/timestamp.proto";
 
+option go_package = "github.com/hashicorp/vault/builtin/logical/pki";
+
 message CertificateMetadata {
-  required string issuer_id = 1;
-  required string role = 2;
-  required google.protobuf.Timestamp expiration = 3;
+  string issuer_id = 1;
+  string role = 2;
+  google.protobuf.Timestamp expiration = 3;
   optional bytes client_metadata = 4;
 }
