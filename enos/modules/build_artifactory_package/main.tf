@@ -57,6 +57,7 @@ variable "artifact_path" { default = null }
 variable "artifact_type" { default = null }
 variable "artifactory_repo" { default = null }
 variable "build_tags" { default = null }
+variable "build_ui" { default = null }
 variable "bundle_path" { default = null }
 variable "goarch" { default = null }
 variable "goos" { default = null }
