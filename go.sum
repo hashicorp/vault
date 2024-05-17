@@ -2365,8 +2365,9 @@ github.com/hashicorp/go-hclog v0.14.1/go.mod h1:whpDNt7SSdeAju8AWKIWsul05p54N/39
 github.com/hashicorp/go-hclog v0.16.2/go.mod h1:whpDNt7SSdeAju8AWKIWsul05p54N/39EeqMAyrmvFQ=
 github.com/hashicorp/go-hclog v1.0.0/go.mod h1:whpDNt7SSdeAju8AWKIWsul05p54N/39EeqMAyrmvFQ=
 github.com/hashicorp/go-hclog v1.5.0/go.mod h1:W4Qnvbt70Wk/zYJryRzDRU/4r0kIg0PVHBcfoyhpF5M=
-github.com/hashicorp/go-hclog v1.6.2 h1:NOtoftovWkDheyUM/8JW3QMiXyxJK3uHRK7wV04nD2I=
 github.com/hashicorp/go-hclog v1.6.2/go.mod h1:W4Qnvbt70Wk/zYJryRzDRU/4r0kIg0PVHBcfoyhpF5M=
+github.com/hashicorp/go-hclog v1.6.3 h1:Qr2kF+eVWjTiYmU7Y31tYlP1h0q/X3Nl3tPGdaB11/k=
+github.com/hashicorp/go-hclog v1.6.3/go.mod h1:W4Qnvbt70Wk/zYJryRzDRU/4r0kIg0PVHBcfoyhpF5M=
 github.com/hashicorp/go-immutable-radix v1.0.0/go.mod h1:0y9vanUI8NX6FsYoO3zeMjhV/C5i9g4Q3DwcSNZ4P60=
 github.com/hashicorp/go-immutable-radix v1.3.0/go.mod h1:0y9vanUI8NX6FsYoO3zeMjhV/C5i9g4Q3DwcSNZ4P60=
 github.com/hashicorp/go-immutable-radix v1.3.1 h1:DKHmCUm2hRBK510BaiZlwvpD40f8bJFeZnpfm2KLowc=
@@ -2543,8 +2544,8 @@ github.com/hashicorp/vault-plugin-database-elasticsearch v0.14.0 h1:7v7+WTlQKG/Z
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.14.0/go.mod h1:JKcIsHm0bi9tdNnwyOQKGkt8vEz/oO3KjQIsisViu1s=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.11.0 h1:DNIwrmviDOq/BdIhFaU6wMYolOl/0N54xYBCy41HN3U=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.11.0/go.mod h1:DTrqLTHGxHVPudf4OUnxA3RPFDYwDzvTPuGinok/sH8=
-github.com/hashicorp/vault-plugin-database-redis v0.2.3 h1:Tp/gxLv1XysUgmaufzm9UbP82wZSp8D6nmLw7NqXS8E=
-github.com/hashicorp/vault-plugin-database-redis v0.2.3/go.mod h1:VdBXwRbeN597kcmBptvfPRD55BjrExEFEMPOK+NjH5M=
+github.com/hashicorp/vault-plugin-database-redis v0.3.0 h1:chSbAsc7cYkn5ajQ/528nKoCm9ExGpJaDjTDos2IUa4=
+github.com/hashicorp/vault-plugin-database-redis v0.3.0/go.mod h1:Tr6VELF9q/VAslIO7+ROykrzrvEONVaONrcsthX9qcY=
 github.com/hashicorp/vault-plugin-database-redis-elasticache v0.3.0 h1:8sNYuHOxpUxcq1pxhR4HdYfZIaeEVCiWV5lV25u10ic=
 github.com/hashicorp/vault-plugin-database-redis-elasticache v0.3.0/go.mod h1:IoJwgHiY1vvIbBWO/lidH6wN85jVGnY4k78tZe1jctU=
 github.com/hashicorp/vault-plugin-database-snowflake v0.10.0 h1:XmGY3YsEwhs/LHHO6I9MmiHcI0peL31cQCbHMCniMro=
