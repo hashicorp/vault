@@ -52,12 +52,14 @@ func TestAudit_ReadOnlyViewDuringMount(t *testing.T) {
 
 func TestCore_EnableAudit(t *testing.T) {
 	c, keys, _ := TestCoreUnsealed(t)
-	c.auditBackends["noop"] = audit.NoopAuditFactory(nil)
 
 	me := &MountEntry{
 		Table: auditTableType,
 		Path:  "foo",
-		Type:  "noop",
+		Type:  audit.TypeFile,
+		Options: map[string]string{
+			"file_path": "discard",
+		},
 	}
 	err := c.enableAudit(namespace.RootContext(context.Background()), me, true)
 	if err != nil {
@@ -69,11 +71,15 @@ func TestCore_EnableAudit(t *testing.T) {
 	}
 
 	conf := &CoreConfig{
-		Physical:      c.physical,
-		AuditBackends: make(map[string]audit.Factory),
-		DisableMlock:  true,
+		AuditBackends: map[string]audit.Factory{
+			audit.TypeFile:   audit.NewFileBackend,
+			audit.TypeSocket: audit.NewSocketBackend,
+			audit.TypeSyslog: audit.NewSyslogBackend,
+		},
+		DisableMlock: true,
+		Physical:     c.physical,
 	}
-	conf.AuditBackends["noop"] = audit.NoopAuditFactory(nil)
+
 	c2, err := NewCore(conf)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -102,7 +108,8 @@ func TestCore_EnableAudit(t *testing.T) {
 
 func TestCore_EnableAudit_MixedFailures(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
-	c.auditBackends["noop"] = audit.NoopAuditFactory(nil)
+
+	// Additional audit backend type that will fail.
 	c.auditBackends["fail"] = func(config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, error) {
 		return nil, fmt.Errorf("failing enabling")
 	}
@@ -113,14 +120,20 @@ func TestCore_EnableAudit_MixedFailures(t *testing.T) {
 			{
 				Table: auditTableType,
 				Path:  "noop/",
-				Type:  "noop",
+				Type:  audit.TypeFile,
 				UUID:  "abcd",
+				Options: map[string]string{
+					"file_path": "discard",
+				},
 			},
 			{
 				Table: auditTableType,
 				Path:  "noop2/",
-				Type:  "noop",
+				Type:  audit.TypeFile,
 				UUID:  "bcde",
+				Options: map[string]string{
+					"file_path": "discard",
+				},
 			},
 		},
 	}
@@ -151,7 +164,8 @@ func TestCore_EnableAudit_MixedFailures(t *testing.T) {
 // correctly
 func TestCore_EnableAudit_Local(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
-	c.auditBackends["noop"] = audit.NoopAuditFactory(nil)
+
+	// Additional audit backend that will always fail.
 	c.auditBackends["fail"] = func(config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, error) {
 		return nil, fmt.Errorf("failing enabling")
 	}
@@ -162,20 +176,26 @@ func TestCore_EnableAudit_Local(t *testing.T) {
 			{
 				Table:       auditTableType,
 				Path:        "noop/",
-				Type:        "noop",
+				Type:        audit.TypeFile,
 				UUID:        "abcd",
 				Accessor:    "noop-abcd",
 				NamespaceID: namespace.RootNamespaceID,
 				namespace:   namespace.RootNamespace,
+				Options: map[string]string{
+					"file_path": "discard",
+				},
 			},
 			{
 				Table:       auditTableType,
 				Path:        "noop2/",
-				Type:        "noop",
+				Type:        audit.TypeFile,
 				UUID:        "bcde",
 				Accessor:    "noop-bcde",
 				NamespaceID: namespace.RootNamespaceID,
 				namespace:   namespace.RootNamespace,
+				Options: map[string]string{
+					"file_path": "discard",
+				},
 			},
 		},
 	}
@@ -237,7 +257,6 @@ func TestCore_EnableAudit_Local(t *testing.T) {
 
 func TestCore_DisableAudit(t *testing.T) {
 	c, keys, _ := TestCoreUnsealed(t)
-	c.auditBackends["noop"] = audit.NoopAuditFactory(nil)
 
 	existed, err := c.disableAudit(namespace.RootContext(context.Background()), "foo", true)
 	if existed && err != nil {
@@ -247,7 +266,10 @@ func TestCore_DisableAudit(t *testing.T) {
 	me := &MountEntry{
 		Table: auditTableType,
 		Path:  "foo",
-		Type:  "noop",
+		Type:  audit.TypeFile,
+		Options: map[string]string{
+			"file_path": "discard",
+		},
 	}
 	err = c.enableAudit(namespace.RootContext(context.Background()), me, true)
 	if err != nil {
@@ -621,13 +643,15 @@ func TestAudit_enableAudit(t *testing.T) {
 	defer cluster.Cleanup()
 
 	c := cluster.Cores[0]
-	c.auditBackends["noop"] = audit.NoopAuditFactory(nil)
 
 	me := &MountEntry{
-		Table:   auditTableType,
-		Path:    "foo",
-		Type:    "noop",
-		Options: map[string]string{"fallback": "true"},
+		Table: auditTableType,
+		Path:  "foo",
+		Type:  audit.TypeFile,
+		Options: map[string]string{
+			"file_path": "discard",
+			"fallback":  "true",
+		},
 	}
 	err := c.enableAudit(namespace.RootContext(context.Background()), me, true)
 
@@ -645,13 +669,15 @@ func TestAudit_newAuditBackend(t *testing.T) {
 	defer cluster.Cleanup()
 
 	c := cluster.Cores[0]
-	c.auditBackends["noop"] = audit.NoopAuditFactory(nil)
 
 	me := &MountEntry{
-		Table:   auditTableType,
-		Path:    "foo",
-		Type:    "noop",
-		Options: map[string]string{"fallback": "true"},
+		Table: auditTableType,
+		Path:  "foo",
+		Type:  audit.TypeFile,
+		Options: map[string]string{
+			"file_path": "discard",
+			"fallback":  "true",
+		},
 	}
 
 	_, err := c.newAuditBackend(me, &logical.InmemStorage{}, me.Options)

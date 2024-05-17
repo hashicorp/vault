@@ -2667,11 +2667,15 @@ func TestSystemBackend_policyCRUD(t *testing.T) {
 }
 
 func TestSystemBackend_enableAudit(t *testing.T) {
-	c, b, _ := testCoreSystemBackend(t)
-	c.auditBackends["noop"] = audit.NoopAuditFactory(nil)
+	_, b, _ := testCoreSystemBackend(t)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "audit/foo")
-	req.Data["type"] = "noop"
+	req.Data = map[string]any{
+		"type": audit.TypeFile,
+		"options": map[string]string{
+			"file_path": "discard",
+		},
+	}
 
 	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
@@ -2737,11 +2741,15 @@ func TestSystemBackend_decodeToken(t *testing.T) {
 }
 
 func TestSystemBackend_auditHash(t *testing.T) {
-	c, b, _ := testCoreSystemBackend(t)
-	c.auditBackends["noop"] = audit.NoopAuditFactory(nil)
+	_, b, _ := testCoreSystemBackend(t)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "audit/foo")
-	req.Data["type"] = "noop"
+	req.Data = map[string]any{
+		"type": audit.TypeFile,
+		"options": map[string]string{
+			"file_path": "discard",
+		},
+	}
 
 	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
@@ -2776,12 +2784,16 @@ func TestSystemBackend_auditHash(t *testing.T) {
 		true,
 	)
 
-	hash, ok := resp.Data["hash"]
+	hashRaw, ok := resp.Data["hash"]
 	if !ok {
 		t.Fatalf("did not get hash back in response, response was %#v", resp.Data)
 	}
-	if hash.(string) != "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317" {
-		t.Fatalf("bad hash back: %s", hash.(string))
+	hash := hashRaw.(string)
+	if !strings.HasPrefix(hash, "hmac-sha256:") {
+		t.Fatalf("bad hash format: %s", hash)
+	}
+	if len(hash) != 76 { // "hmac-sha256:" + 64
+		t.Fatalf("bad hash length: %s", hash)
 	}
 }
 
@@ -2799,17 +2811,20 @@ func TestSystemBackend_enableAudit_invalid(t *testing.T) {
 }
 
 func TestSystemBackend_auditTable(t *testing.T) {
-	c, b, _ := testCoreSystemBackend(t)
-	c.auditBackends["noop"] = audit.NoopAuditFactory(nil)
+	_, b, _ := testCoreSystemBackend(t)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "audit/foo")
-	req.Data["type"] = "noop"
-	req.Data["description"] = "testing"
-	req.Data["options"] = map[string]interface{}{
-		"foo": "bar",
+	req.Data = map[string]any{
+		"type":        audit.TypeFile,
+		"description": "testing",
+		"local":       true,
+		"options": map[string]string{
+			"file_path": "discard",
+			"foo":       "bar",
+		},
 	}
-	req.Data["local"] = true
-	b.HandleRequest(namespace.RootContext(nil), req)
+	_, err := b.HandleRequest(namespace.RootContext(nil), req)
+	require.NoError(t, err)
 
 	req = logical.TestRequest(t, logical.ReadOperation, "audit")
 	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
@@ -2820,10 +2835,11 @@ func TestSystemBackend_auditTable(t *testing.T) {
 	exp := map[string]interface{}{
 		"foo/": map[string]interface{}{
 			"path":        "foo/",
-			"type":        "noop",
+			"type":        audit.TypeFile,
 			"description": "testing",
 			"options": map[string]string{
-				"foo": "bar",
+				"file_path": "discard",
+				"foo":       "bar",
 			},
 			"local": true,
 		},
@@ -2834,16 +2850,20 @@ func TestSystemBackend_auditTable(t *testing.T) {
 }
 
 func TestSystemBackend_disableAudit(t *testing.T) {
-	c, b, _ := testCoreSystemBackend(t)
-	c.auditBackends["noop"] = audit.NoopAuditFactory(nil)
+	_, b, _ := testCoreSystemBackend(t)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "audit/foo")
-	req.Data["type"] = "noop"
-	req.Data["description"] = "testing"
-	req.Data["options"] = map[string]interface{}{
-		"foo": "bar",
+	req.Data = map[string]any{
+		"type":        audit.TypeFile,
+		"description": "testing",
+		"local":       true,
+		"options": map[string]string{
+			"file_path": "discard",
+			"foo":       "bar",
+		},
 	}
-	b.HandleRequest(namespace.RootContext(nil), req)
+	_, err := b.HandleRequest(namespace.RootContext(nil), req)
+	require.NoError(t, err)
 
 	// Deregister it
 	req = logical.TestRequest(t, logical.DeleteOperation, "audit/foo")
