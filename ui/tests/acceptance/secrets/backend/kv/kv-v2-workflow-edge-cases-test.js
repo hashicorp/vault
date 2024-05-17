@@ -285,7 +285,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     assert.strictEqual(
       codemirror().getValue(),
       `{
-  \"\": \"\" 
+  \"\": \"\"
 }`
     );
     codemirror().setValue('{ "foo3": { "name": "bar3" } }');
