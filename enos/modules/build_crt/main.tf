@@ -29,6 +29,7 @@ variable "artifactory_token" { default = null }
 variable "arch" { default = null }
 variable "artifact_path" { default = null }
 variable "artifact_type" { default = null }
+variable "build_ui" { default = null }
 variable "distro" { default = null }
 variable "distro_version" { default = null }
 variable "edition" { default = null }
