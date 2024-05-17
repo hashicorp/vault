@@ -18,11 +18,8 @@ import { allEngines } from 'vault/helpers/mountable-secret-engines';
 
 const uiConsole = create(consoleClass);
 
-const getRandomPort = () => {
-  let a = Math.floor(100000 + Math.random() * 900000);
-  a = String(a);
-  return a.substring(0, 4);
-};
+// port has a lower limit of 1024
+const getRandomPort = () => Math.floor(Math.random() * 5000 + 1024);
 
 const mount = async (shouldConfig = true) => {
   const now = Date.now();
