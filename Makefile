@@ -366,9 +366,13 @@ ci-get-version-package:
 ci-install-external-tools:
 	@$(CURDIR)/scripts/ci-helper.sh install-external-tools
 
-.PHONY: ci-prepare-legal
-ci-prepare-legal:
-	@$(CURDIR)/scripts/ci-helper.sh prepare-legal
+.PHONY: ci-prepare-ent-legal
+ci-prepare-ent-legal:
+	@$(CURDIR)/scripts/ci-helper.sh prepare-ent-legal
+
+.PHONY: ci-prepare-ce-legal
+ci-prepare-ce-legal:
+	@$(CURDIR)/scripts/ci-helper.sh prepare-ce-legal
 
 .PHONY: ci-update-external-tool-modules
 ci-update-external-tool-modules:
