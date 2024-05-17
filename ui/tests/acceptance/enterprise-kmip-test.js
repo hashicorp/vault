@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { currentURL, currentRouteName, settled, fillIn, waitUntil, find } from '@ember/test-helpers';
+import { currentURL, currentRouteName, settled, fillIn, waitUntil, find, click } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 
@@ -12,15 +12,10 @@ import scopesPage from 'vault/tests/pages/secrets/backend/kmip/scopes';
 import rolesPage from 'vault/tests/pages/secrets/backend/kmip/roles';
 import credentialsPage from 'vault/tests/pages/secrets/backend/kmip/credentials';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { allEngines } from 'vault/helpers/mountable-secret-engines';
 import { runCmd } from 'vault/tests/helpers/commands';
 import { v4 as uuidv4 } from 'uuid';
-
-const getRandomPort = () => {
-  let a = Math.floor(100000 + Math.random() * 900000);
-  a = String(a);
-  return a.substring(0, 4);
-};
 
 const mount = async (backend) => {
   const res = await runCmd(`write sys/mounts/${backend} type=kmip`);
@@ -32,7 +27,7 @@ const mount = async (backend) => {
 };
 
 const mountWithConfig = async (backend) => {
-  const addr = `127.0.0.1:${getRandomPort()}`; // use random port
+  const addr = `127.0.0.1:5696`;
   await mount(backend);
   const res = await runCmd(`write ${backend}/config listen_addrs=${addr}`);
   if (res.includes('Error')) {
@@ -92,7 +87,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     await runCmd([`delete sys/mounts/${this.backend}`], false);
   });
 
-  test('it should enables KMIP & transitions to addon engine route after mount success', async function (assert) {
+  test('it should enable KMIP & transitions to addon engine route after mount success', async function (assert) {
     // test supported backends that ARE ember engines (enterprise only engines are tested individually)
     const engine = allEngines().find((e) => e.type === 'kmip');
 
@@ -127,7 +122,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
       `/vault/secrets/${backend}/kmip/configure`,
       'configuration navigates to the configure page'
     );
-    const addr = `127.0.0.1:${getRandomPort()}`;
+    const addr = `127.0.0.1:5696`;
     await fillIn('[data-test-string-list-input="0"]', addr);
     await scopesPage.submit();
     await settled();
@@ -183,6 +178,19 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     assert.strictEqual(scopesPage.listItemLinks.length, 1, 'renders a single scope');
   });
 
+  test('it navigates to kmip scopes view using breadcrumbs', async function (assert) {
+    const backend = await mountWithConfig(this.backend);
+    await scopesPage.visitCreate({ backend });
+    await settled();
+    await click(GENERAL.breadcrumbLink(backend));
+
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.kmip.scopes.index',
+      'Breadcrumb transitions to scopes list'
+    );
+  });
+
   test('it can delete a scope from the list', async function (assert) {
     const { backend } = await createScope(this.backend);
     await scopesPage.visit({ backend });
@@ -232,6 +240,27 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     );
 
     assert.strictEqual(rolesPage.listItemLinks.length, 1, 'renders a single role');
+  });
+
+  test('it navigates to kmip roles view using breadcrumbs', async function (assert) {
+    const { backend, scope, role } = await createRole(this.backend);
+    await settled();
+    await rolesPage.visitDetail({ backend, scope, role });
+    // navigate to scope from role
+    await click(GENERAL.breadcrumbLink(scope));
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.kmip.scope.roles',
+      'Breadcrumb transitions to scope details'
+    );
+    await rolesPage.visitDetail({ backend, scope, role });
+    // navigate to scopes from role
+    await click(GENERAL.breadcrumbLink(backend));
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.kmip.scopes.index',
+      'Breadcrumb transitions to scopes list'
+    );
   });
 
   test('it can delete a role from the list', async function (assert) {

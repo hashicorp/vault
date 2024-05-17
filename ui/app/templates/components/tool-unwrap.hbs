@@ -46,9 +46,7 @@
     <Hds::Copy::Button
       @text="Copy unwrapped data"
       @textToCopy={{stringify @unwrap_data}}
-      @onError={{(fn
-        (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
-      )}}
+      @onError={{(fn (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger"))}}
       class="primary"
     />
     <Hds::Button {{on "click" this.onClear}} @color="secondary" @text="Back" />

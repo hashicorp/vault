@@ -143,7 +143,7 @@
     "escape-string-regexp": "^2.0.0",
     "eslint": "^8.52.0",
     "eslint-config-prettier": "^9.0.0",
-    "eslint-plugin-compat": "4.0.2",
+    "eslint-plugin-compat": "^4.2.0",
     "eslint-plugin-ember": "^11.11.1",
     "eslint-plugin-n": "^16.2.0",
     "eslint-plugin-prettier": "^5.0.1",
@@ -199,7 +199,7 @@
     "lodash.template@^4.5.0": "patch:lodash.template@npm%3A4.5.0#./.yarn/patches/lodash.template-npm-4.5.0-5272df3039.patch"
   },
   "engines": {
-    "node": ">= 18"
+    "node": "20"
   },
   "ember": {
     "edition": "octane"
