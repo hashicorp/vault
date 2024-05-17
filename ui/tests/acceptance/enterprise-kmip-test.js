@@ -17,6 +17,9 @@ import { allEngines } from 'vault/helpers/mountable-secret-engines';
 import { runCmd } from 'vault/tests/helpers/commands';
 import { v4 as uuidv4 } from 'uuid';
 
+// port has a lower limit of 1024
+const getRandomPort = () => Math.floor(Math.random() * 5000 + 1024);
+
 const mount = async (backend) => {
   const res = await runCmd(`write sys/mounts/${backend} type=kmip`);
   await settled();
@@ -27,7 +30,7 @@ const mount = async (backend) => {
 };
 
 const mountWithConfig = async (backend) => {
-  const addr = `127.0.0.1:5696`;
+  const addr = `127.0.0.1:${getRandomPort()}`;
   await mount(backend);
   const res = await runCmd(`write ${backend}/config listen_addrs=${addr}`);
   if (res.includes('Error')) {
@@ -122,7 +125,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
       `/vault/secrets/${backend}/kmip/configure`,
       'configuration navigates to the configure page'
     );
-    const addr = `127.0.0.1:5696`;
+    const addr = `127.0.0.1:${getRandomPort()}`;
     await fillIn('[data-test-string-list-input="0"]', addr);
     await scopesPage.submit();
     await settled();
