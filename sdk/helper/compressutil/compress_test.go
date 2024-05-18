@@ -52,6 +52,11 @@ func TestCompressUtil_CompressDecompress(t *testing.T) {
 			CompressionConfig{Type: CompressionTypeLZW},
 			CompressionCanaryLZW,
 		},
+		{
+			"Zstd",
+			CompressionConfig{Type: CompressionTypeZstd},
+			CompressionCanaryZstd,
+		},
 	}
 
 	inputJSONBytes := []byte(`{"sample":"data","verification":"process"}`)
