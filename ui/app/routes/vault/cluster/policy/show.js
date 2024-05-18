@@ -9,13 +9,14 @@ import UnloadModelRoute from 'vault/mixins/unload-model-route';
 import { service } from '@ember/service';
 
 export default Route.extend(UnloadModelRoute, {
+  router: service(),
   store: service(),
 
   beforeModel() {
     const params = this.paramsFor(this.routeName);
     const policyType = this.policyType();
     if (policyType === 'acl' && params.policy_name === 'root') {
-      return this.transitionTo('vault.cluster.policies', 'acl');
+      return this.router.transitionTo('vault.cluster.policies', 'acl');
     }
   },
 

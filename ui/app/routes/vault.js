@@ -42,7 +42,7 @@ export default class VaultRoute extends Route {
   }
 
   redirect(model, transition) {
-    if (model.get('length') === 1 && transition.targetName === 'vault.index') {
+    if (model.length === 1 && transition.targetName === 'vault.index') {
       return this.router.transitionTo('vault.cluster', model[0].name);
     }
   }

@@ -4,11 +4,13 @@
  */
 
 import Controller from '@ember/controller';
+import { service } from '@ember/service';
 
 export default Controller.extend({
+  router: service(),
   actions: {
     lookupLease(id) {
-      this.transitionToRoute('vault.cluster.access.leases.show', id);
+      this.router.transitionTo('vault.cluster.access.leases.show', id);
     },
   },
 });

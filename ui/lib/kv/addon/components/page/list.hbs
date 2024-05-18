@@ -5,8 +5,17 @@
 
 <KvPageHeader @breadcrumbs={{@breadcrumbs}} @mountName={{@backend}}>
   <:tabLinks>
-    <li><LinkTo @route={{this.router.currentRoute.localName}} data-test-secrets-tab="Secrets">Secrets</LinkTo></li>
-    <li><LinkTo @route="configuration" data-test-secrets-tab="Configuration">Configuration</LinkTo></li>
+    <li>
+      <LinkTo
+        @route={{this.router.currentRoute.localName}}
+        @models={{@currentRouteParams}}
+        data-test-secrets-tab="Secrets"
+        @current-when={{true}}
+      >Secrets</LinkTo>
+    </li>
+    <li>
+      <LinkTo @route="configuration" @model={{@backend}} data-test-secrets-tab="Configuration">Configuration</LinkTo>
+    </li>
   </:tabLinks>
 
   <:toolbarFilters>
@@ -17,7 +26,13 @@
   </:toolbarFilters>
 
   <:toolbarActions>
-    <ToolbarLink data-test-toolbar-create-secret @route="create" @query={{hash initialKey=@filterValue}} @type="add">
+    <ToolbarLink
+      data-test-toolbar-create-secret
+      @route="create"
+      @model={{@backend}}
+      @query={{hash initialKey=@filterValue}}
+      @type="add"
+    >
       Create secret
     </ToolbarLink>
   </:toolbarActions>
@@ -57,7 +72,7 @@
       <LinkedBlock
         data-test-list-item={{metadata.path}}
         class="list-item-row"
-        @params={{array (if metadata.pathIsDirectory "list-directory" "secret.details") metadata.fullSecretPath}}
+        @params={{array (if metadata.pathIsDirectory "list-directory" "secret.details") @backend metadata.fullSecretPath}}
         @linkPrefix={{this.mountPoint}}
       >
         <div class="level is-mobile">
@@ -79,21 +94,29 @@
                   data-test-popup-menu-trigger
                 />
                 {{#if metadata.pathIsDirectory}}
-                  <dd.Interactive @text="Content" @route="list-directory" @model={{metadata.fullSecretPath}} />
+                  <dd.Interactive
+                    @text="Content"
+                    @route="list-directory"
+                    @models={{array @backend metadata.fullSecretPath}}
+                  />
                 {{else}}
-                  <dd.Interactive @text="Details" @route="secret.details" @model={{metadata.fullSecretPath}} />
+                  <dd.Interactive
+                    @text="Details"
+                    @route="secret.details"
+                    @models={{array @backend metadata.fullSecretPath}}
+                  />
                   {{#if metadata.canReadMetadata}}
                     <dd.Interactive
                       @text="View version history"
                       @route="secret.metadata.versions"
-                      @model={{metadata.fullSecretPath}}
+                      @models={{array @backend metadata.fullSecretPath}}
                     />
                   {{/if}}
                   {{#if metadata.canCreateVersionData}}
                     <dd.Interactive
                       @text="Create new version"
                       @route="secret.details.edit"
-                      @model={{metadata.fullSecretPath}}
+                      @models={{array @backend metadata.fullSecretPath}}
                       data-test-popup-create-new-version
                     />
                   {{/if}}
@@ -120,12 +143,12 @@
         @confirmMessage="This will permanently delete this secret and all its versions."
       />
     {{/if}}
-    {{! Pagination }}
     <Hds::Pagination::Numbered
       @currentPage={{@secrets.meta.currentPage}}
       @currentPageSize={{@secrets.meta.pageSize}}
       @route={{this.router.currentRoute.localName}}
       @showSizeSelector={{false}}
+      @models={{@currentRouteParams}}
       @totalItems={{@secrets.meta.total}}
       @queryFunction={{this.paginationQueryParams}}
       data-test-pagination

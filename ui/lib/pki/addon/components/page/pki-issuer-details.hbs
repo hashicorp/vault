@@ -16,31 +16,47 @@
       />
     {{/if}}
     {{#if @canCrossSign}}
-      <ToolbarLink @route="issuers.issuer.cross-sign" @type="pen-tool" @model={{@issuer.id}} data-test-pki-issuer-cross-sign>
+      <ToolbarLink
+        @route="issuers.issuer.cross-sign"
+        @type="pen-tool"
+        @models={{array @backend @issuer.id}}
+        data-test-pki-issuer-cross-sign
+      >
         Cross-sign issuers
       </ToolbarLink>
     {{/if}}
     {{#if @canSignIntermediate}}
-      <ToolbarLink @route="issuers.issuer.sign" @type="pen-tool" @issuer={{@issuer.id}} data-test-pki-issuer-sign-int>
+      <ToolbarLink
+        @route="issuers.issuer.sign"
+        @type="pen-tool"
+        @models={{array @backend @issuer.id}}
+        data-test-pki-issuer-sign-int
+      >
         Sign Intermediate
       </ToolbarLink>
     {{/if}}
-    <BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
+    <BasicDropdown
+      @class="popup-menu"
+      @horizontalPosition="auto-right"
+      @verticalPosition="below"
+      @renderInPlace={{true}}
+      as |D|
+    >
       <D.Trigger
-        data-test-popup-menu-trigger="true"
         class={{concat "toolbar-link" (if D.isOpen " is-active")}}
         @htmlTag="button"
         data-test-issuer-download
+        data-test-popup-menu-trigger
       >
         Download
-        <Chevron @direction="down" @isButton={{true}} />
+        <Chevron @direction={{if D.isOpen "up" "down"}} @isButton={{true}} />
       </D.Trigger>
       <D.Content @defaultClass="popup-menu-content">
         <nav class="box menu" aria-label="snapshots actions">
           <ul class="menu-list">
             {{#if @pem}}
               {{! should never be null, but if it is we don't want to let users download an empty file }}
-              <li class="action">
+              <li>
                 <DownloadButton
                   class="link"
                   @filename={{@issuer.id}}
@@ -54,7 +70,7 @@
             {{/if}}
             {{#if @der}}
               {{! should never be null, but if it is we don't want to let users download an empty file }}
-              <li class="action">
+              <li>
                 <DownloadButton
                   class="link"
                   @filename={{@issuer.id}}
@@ -72,7 +88,7 @@
     </BasicDropdown>
 
     {{#if @canConfigure}}
-      <ToolbarLink @route="issuers.issuer.edit" @model={{@issuer.id}} data-test-pki-issuer-configure>
+      <ToolbarLink @route="issuers.issuer.edit" @models={{array @backend @issuer.id}} data-test-pki-issuer-configure>
         Configure
       </ToolbarLink>
     {{/if}}
@@ -82,7 +98,7 @@
 {{#if @issuer.isDefault}}
   <p class="has-top-margin-m">
     This is your default issuer certificate. You will see it in your
-    <LinkTo @route="issuers.index">
+    <LinkTo @route="issuers.index" @model={{@backend}}>
       list of Issuers.
     </LinkTo>
     You may also want to configure its usage and other behaviors.
@@ -105,7 +121,7 @@
           {{else if (eq attr.name "keyId")}}
             <InfoTableRow @label={{or attr.options.label (humanize (dasherize attr.name))}} @value={{get @issuer attr.name}}>
               {{#if @issuer.keyId}}
-                <LinkTo @route="keys.key.details" @model={{@issuer.keyId}}>{{@issuer.keyId}}</LinkTo>
+                <LinkTo @route="keys.key.details" @models={{array @backend @issuer.keyId}}>{{@issuer.keyId}}</LinkTo>
               {{else}}
                 <Icon @name="minus" />
               {{/if}}
@@ -175,7 +191,12 @@
     </M.Body>
     <M.Footer as |F|>
       <Hds::ButtonSet>
-        <Hds::Button @text="Generate new root" @route="issuers.issuer.rotate-root" data-test-root-rotate-step-one />
+        <Hds::Button
+          @text="Generate new root"
+          @route="issuers.issuer.rotate-root"
+          @models={{array @backend @issuer.id}}
+          data-test-root-rotate-step-one
+        />
         <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} />
       </Hds::ButtonSet>
     </M.Footer>

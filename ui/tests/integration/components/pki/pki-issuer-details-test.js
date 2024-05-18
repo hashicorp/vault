@@ -8,7 +8,7 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { render, settled } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
-import { SELECTORS } from 'vault/tests/helpers/pki/pki-issuer-details';
+import { PKI_ISSUER_DETAILS } from 'vault/tests/helpers/pki/pki-selectors';
 
 module('Integration | Component | page/pki-issuer-details', function (hooks) {
   setupRenderingTest(hooks);
@@ -30,12 +30,12 @@ module('Integration | Component | page/pki-issuer-details', function (hooks) {
       this.context
     );
 
-    assert.dom(SELECTORS.rotateRoot).doesNotExist();
-    assert.dom(SELECTORS.crossSign).doesNotExist();
-    assert.dom(SELECTORS.signIntermediate).doesNotExist();
-    assert.dom(SELECTORS.download).hasText('Download');
-    assert.dom(SELECTORS.configure).doesNotExist();
-    assert.dom(SELECTORS.parsingAlertBanner).doesNotExist();
+    assert.dom(PKI_ISSUER_DETAILS.rotateRoot).doesNotExist();
+    assert.dom(PKI_ISSUER_DETAILS.crossSign).doesNotExist();
+    assert.dom(PKI_ISSUER_DETAILS.signIntermediate).doesNotExist();
+    assert.dom(PKI_ISSUER_DETAILS.download).hasText('Download');
+    assert.dom(PKI_ISSUER_DETAILS.configure).doesNotExist();
+    assert.dom(PKI_ISSUER_DETAILS.parsingAlertBanner).doesNotExist();
   });
 
   test('it renders toolbar actions depending on passed capabilities', async function (assert) {
@@ -59,12 +59,12 @@ module('Integration | Component | page/pki-issuer-details', function (hooks) {
       this.context
     );
 
-    assert.dom(SELECTORS.parsingAlertBanner).doesNotExist();
-    assert.dom(SELECTORS.rotateRoot).hasText('Rotate this root');
-    assert.dom(SELECTORS.crossSign).hasText('Cross-sign issuers');
-    assert.dom(SELECTORS.signIntermediate).hasText('Sign Intermediate');
-    assert.dom(SELECTORS.download).hasText('Download');
-    assert.dom(SELECTORS.configure).hasText('Configure');
+    assert.dom(PKI_ISSUER_DETAILS.parsingAlertBanner).doesNotExist();
+    assert.dom(PKI_ISSUER_DETAILS.rotateRoot).hasText('Rotate this root');
+    assert.dom(PKI_ISSUER_DETAILS.crossSign).hasText('Cross-sign issuers');
+    assert.dom(PKI_ISSUER_DETAILS.signIntermediate).hasText('Sign Intermediate');
+    assert.dom(PKI_ISSUER_DETAILS.download).hasText('Download');
+    assert.dom(PKI_ISSUER_DETAILS.configure).hasText('Configure');
 
     this.set('canRotate', false);
     this.set('canCrossSign', false);
@@ -72,11 +72,11 @@ module('Integration | Component | page/pki-issuer-details', function (hooks) {
     this.set('canConfigure', false);
     await settled();
 
-    assert.dom(SELECTORS.rotateRoot).doesNotExist();
-    assert.dom(SELECTORS.crossSign).doesNotExist();
-    assert.dom(SELECTORS.signIntermediate).doesNotExist();
-    assert.dom(SELECTORS.download).hasText('Download');
-    assert.dom(SELECTORS.configure).doesNotExist();
+    assert.dom(PKI_ISSUER_DETAILS.rotateRoot).doesNotExist();
+    assert.dom(PKI_ISSUER_DETAILS.crossSign).doesNotExist();
+    assert.dom(PKI_ISSUER_DETAILS.signIntermediate).doesNotExist();
+    assert.dom(PKI_ISSUER_DETAILS.download).hasText('Download');
+    assert.dom(PKI_ISSUER_DETAILS.configure).doesNotExist();
   });
 
   test('it renders correct details by default', async function (assert) {
@@ -88,24 +88,26 @@ module('Integration | Component | page/pki-issuer-details', function (hooks) {
     );
 
     // Default group details:
-    assert.dom(SELECTORS.defaultGroup).exists('Default group of details exists');
-    assert.dom(SELECTORS.valueByName('Certificate')).exists('Certificate detail exists');
-    assert.dom(SELECTORS.copyButtonByName('Certificate')).exists('Certificate is copyable');
-    assert.dom(SELECTORS.valueByName('CA Chain')).exists('CA Chain detail exists');
-    assert.dom(SELECTORS.copyButtonByName('CA Chain')).exists('CA Chain is copyable');
-    assert.dom(SELECTORS.valueByName('Common name')).exists('Common name detail exists');
-    assert.dom(SELECTORS.valueByName('Issuer name')).exists('Issuer name detail exists');
-    assert.dom(SELECTORS.valueByName('Issuer ID')).exists('Issuer ID detail exists');
-    assert.dom(SELECTORS.copyButtonByName('Issuer ID')).exists('Issuer ID is copyable');
-    assert.dom(SELECTORS.valueByName('Default key ID')).exists('Default key ID detail exists');
+    assert.dom(PKI_ISSUER_DETAILS.defaultGroup).exists('Default group of details exists');
+    assert.dom(PKI_ISSUER_DETAILS.valueByName('Certificate')).exists('Certificate detail exists');
+    assert.dom(PKI_ISSUER_DETAILS.copyButtonByName('Certificate')).exists('Certificate is copyable');
+    assert.dom(PKI_ISSUER_DETAILS.valueByName('CA Chain')).exists('CA Chain detail exists');
+    assert.dom(PKI_ISSUER_DETAILS.copyButtonByName('CA Chain')).exists('CA Chain is copyable');
+    assert.dom(PKI_ISSUER_DETAILS.valueByName('Common name')).exists('Common name detail exists');
+    assert.dom(PKI_ISSUER_DETAILS.valueByName('Issuer name')).exists('Issuer name detail exists');
+    assert.dom(PKI_ISSUER_DETAILS.valueByName('Issuer ID')).exists('Issuer ID detail exists');
+    assert.dom(PKI_ISSUER_DETAILS.copyButtonByName('Issuer ID')).exists('Issuer ID is copyable');
+    assert.dom(PKI_ISSUER_DETAILS.valueByName('Default key ID')).exists('Default key ID detail exists');
 
     // Issuer URLs group details:
-    assert.dom(SELECTORS.urlsGroup).exists('Issuer URLs group of details exists');
-    assert.dom(SELECTORS.valueByName('Issuing certificates')).exists('Issuing certificates detail exists');
+    assert.dom(PKI_ISSUER_DETAILS.urlsGroup).exists('Issuer URLs group of details exists');
     assert
-      .dom(SELECTORS.valueByName('CRL distribution points'))
+      .dom(PKI_ISSUER_DETAILS.valueByName('Issuing certificates'))
+      .exists('Issuing certificates detail exists');
+    assert
+      .dom(PKI_ISSUER_DETAILS.valueByName('CRL distribution points'))
       .exists('CRL distribution points detail exists');
-    assert.dom(SELECTORS.valueByName('OCSP servers')).exists('OCSP servers detail exists');
+    assert.dom(PKI_ISSUER_DETAILS.valueByName('OCSP servers')).exists('OCSP servers detail exists');
   });
 
   test('it renders parsing error banner if issuer certificate contains unsupported OIDs', async function (assert) {
@@ -128,9 +130,9 @@ module('Integration | Component | page/pki-issuer-details', function (hooks) {
       this.context
     );
 
-    assert.dom(SELECTORS.parsingAlertBanner).exists();
+    assert.dom(PKI_ISSUER_DETAILS.parsingAlertBanner).exists();
     assert
-      .dom(SELECTORS.parsingAlertBanner)
+      .dom(PKI_ISSUER_DETAILS.parsingAlertBanner)
       .hasText(
         "There was an error parsing certificate metadata Vault cannot display unparsed values, but this will not interfere with the certificate's functionality. However, if you wish to cross-sign this issuer it must be done manually using the CLI. Parsing error(s): certificate contains stuff we cannot parse"
       );
@@ -156,9 +158,9 @@ module('Integration | Component | page/pki-issuer-details', function (hooks) {
       this.context
     );
 
-    assert.dom(SELECTORS.parsingAlertBanner).exists();
+    assert.dom(PKI_ISSUER_DETAILS.parsingAlertBanner).exists();
     assert
-      .dom(SELECTORS.parsingAlertBanner)
+      .dom(PKI_ISSUER_DETAILS.parsingAlertBanner)
       .hasText(
         "There was an error parsing certificate metadata Vault cannot display unparsed values, but this will not interfere with the certificate's functionality. However, if you wish to cross-sign this issuer it must be done manually using the CLI."
       );
@@ -184,9 +186,9 @@ module('Integration | Component | page/pki-issuer-details', function (hooks) {
       this.context
     );
 
-    assert.dom(SELECTORS.parsingAlertBanner).exists();
+    assert.dom(PKI_ISSUER_DETAILS.parsingAlertBanner).exists();
     assert
-      .dom(SELECTORS.parsingAlertBanner)
+      .dom(PKI_ISSUER_DETAILS.parsingAlertBanner)
       .hasText(
         "There was an error parsing certificate metadata Vault cannot display unparsed values, but this will not interfere with the certificate's functionality. However, if you wish to cross-sign this issuer it must be done manually using the CLI."
       );

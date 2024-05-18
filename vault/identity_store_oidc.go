@@ -64,10 +64,6 @@ func (c *oidcConfig) fullIssuer(child string) (string, error) {
 	return issuer, nil
 }
 
-func validChildIssuer(child string) bool {
-	return child == baseIdentityTokenIssuer || child == pluginIdentityTokenIssuer
-}
-
 type expireableKey struct {
 	KeyID    string    `json:"key_id"`
 	ExpireAt time.Time `json:"expire_at"`
@@ -150,22 +146,15 @@ var (
 )
 
 const (
-	issuerPath           = "identity/oidc"
-	oidcTokensPrefix     = "oidc_tokens/"
-	namedKeyCachePrefix  = "namedKeys/"
-	oidcConfigStorageKey = oidcTokensPrefix + "config/"
-	namedKeyConfigPath   = oidcTokensPrefix + "named_keys/"
-	publicKeysConfigPath = oidcTokensPrefix + "public_keys/"
-	roleConfigPath       = oidcTokensPrefix + "roles/"
-
-	// Identity tokens have a base issuer and plugin issuer
-	baseIdentityTokenIssuer   = ""
-	pluginIdentityTokenIssuer = "plugins"
-
-	pluginTokenSubjectPrefix   = "plugin-identity"
-	pluginTokenPrivateClaimKey = "vaultproject.io"
-	secretTableValue           = "secret"
-	deleteKeyErrorFmt          = "unable to delete key %q because it is currently referenced by these %s: %s"
+	issuerPath              = "identity/oidc"
+	oidcTokensPrefix        = "oidc_tokens/"
+	namedKeyCachePrefix     = "namedKeys/"
+	oidcConfigStorageKey    = oidcTokensPrefix + "config/"
+	namedKeyConfigPath      = oidcTokensPrefix + "named_keys/"
+	publicKeysConfigPath    = oidcTokensPrefix + "public_keys/"
+	roleConfigPath          = oidcTokensPrefix + "roles/"
+	baseIdentityTokenIssuer = ""
+	deleteKeyErrorFmt       = "unable to delete key %q because it is currently referenced by these %s: %s"
 )
 
 // optionalChildIssuerRegex is a regex for optionally accepting a field in an
@@ -1094,99 +1083,6 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 		"ttl":       int64(role.TokenTTL.Seconds()),
 	}
 	return retResp, nil
-}
-
-func (i *IdentityStore) generatePluginIdentityToken(ctx context.Context, storage logical.Storage, me *MountEntry, audience string, ttl time.Duration) (string, time.Duration, error) {
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
-		return "", 0, err
-	}
-
-	if me == nil {
-		i.Logger().Error("unexpected nil mount entry when generating plugin identity token")
-		return "", 0, errors.New("mount entry must not be nil")
-	}
-
-	key := defaultKeyName
-	if me.Config.IdentityTokenKey != "" {
-		key = me.Config.IdentityTokenKey
-	}
-	if ttl == 0 {
-		ttl = time.Hour
-	}
-	namedKey, err := i.getNamedKey(ctx, storage, key)
-	if err != nil {
-		return "", 0, err
-	}
-	if namedKey == nil {
-		return "", 0, fmt.Errorf("key %q not found", key)
-	}
-
-	// Validate that the role is allowed to sign with its key (the key could have been updated)
-	if !strutil.StrListContains(namedKey.AllowedClientIDs, "*") && !strutil.StrListContains(namedKey.AllowedClientIDs, audience) {
-		return "", 0, fmt.Errorf("the key %q does not list %q as an allowed audience", key, audience)
-	}
-
-	config, err := i.getOIDCConfig(ctx, storage)
-	if err != nil {
-		return "", 0, err
-	}
-
-	// Cap the TTL to the key's verification TTL. This is the maximum amount of
-	// time the key will remain in the JWKS after it's been rotated.
-	if ttl > namedKey.VerificationTTL {
-		ttl = namedKey.VerificationTTL
-	}
-
-	// Tokens for plugins have a distinct issuer from Vault's identity token issuer
-	issuer, err := config.fullIssuer(pluginIdentityTokenIssuer)
-	if err != nil {
-		return "", 0, err
-	}
-
-	// The subject uniquely identifies the plugin
-	subject := fmt.Sprintf("%s:%s:%s:%s", pluginTokenSubjectPrefix, ns.ID,
-		translateTableClaim(me.Table), me.Accessor)
-
-	now := time.Now()
-	claims := map[string]any{
-		"iss": issuer,
-		"sub": subject,
-		"aud": []string{audience},
-		"nbf": now.Unix(),
-		"iat": now.Unix(),
-		"exp": now.Add(ttl).Unix(),
-		pluginTokenPrivateClaimKey: map[string]any{
-			"namespace_id":   ns.ID,
-			"namespace_path": ns.Path,
-			"class":          translateTableClaim(me.Table),
-			"plugin":         me.Type,
-			"version":        me.RunningVersion,
-			"path":           me.Path,
-			"accessor":       me.Accessor,
-			"local":          me.Local,
-		},
-	}
-	payload, err := json.Marshal(claims)
-	if err != nil {
-		return "", 0, err
-	}
-
-	signedToken, err := namedKey.signPayload(payload)
-	if err != nil {
-		return "", 0, fmt.Errorf("error signing plugin identity token: %w", err)
-	}
-
-	return signedToken, ttl, nil
-}
-
-func translateTableClaim(table string) string {
-	switch table {
-	case mountTableType:
-		return secretTableValue
-	default:
-		return table
-	}
 }
 
 func (i *IdentityStore) getNamedKey(ctx context.Context, s logical.Storage, name string) (*namedKey, error) {

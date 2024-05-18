@@ -9,6 +9,7 @@
     @subText="The total number of issuers in this PKI mount. Includes both root and intermediate certificates."
     @actionText="View issuers"
     @actionTo="issuers"
+    @actionModel={{@engine.id}}
   >
     <Hds::Text::Display @tag="h2" @size="500">
       {{format-number (if (eq @issuers 404) 0 @issuers.length)}}
@@ -20,6 +21,7 @@
       @subText="The total number of roles in this PKI mount that have been created to generate certificates."
       @actionText="View roles"
       @actionTo="roles"
+      @actionModel={{@engine.id}}
     >
       <Hds::Text::Display @tag="h2" @size="500">
         {{format-number (if (eq @roles 404) 0 @roles.length)}}
@@ -30,6 +32,7 @@
     <div class="has-top-margin-m is-flex">
       <SearchSelect
         class="is-flex-grow-1"
+        @ariaLabel="Role"
         @selectLimit="1"
         @models={{array "pki/role"}}
         @backend={{@engine.id}}
@@ -37,6 +40,7 @@
         @disallowNewItems={{true}}
         @onChange={{this.handleRolesInput}}
         @fallbackComponent="input-search"
+        @renderInPlace={{true}}
         data-test-issue-certificate-input
       />
       <Hds::Button
@@ -55,6 +59,7 @@
     <div class="has-top-margin-m {{unless this.certificateValue 'is-flex'}}">
       <SearchSelect
         class="is-flex-grow-1"
+        @ariaLabel="Certificate serial number"
         @selectLimit="1"
         @models={{array "pki/certificate/base"}}
         @backend={{@engine.id}}
@@ -62,6 +67,7 @@
         @disallowNewItems={{true}}
         @onChange={{this.handleCertificateInput}}
         @fallbackComponent="input-search"
+        @renderInPlace={{true}}
         data-test-view-certificate-input
       />
       <Hds::Button
@@ -79,6 +85,7 @@
     <div class="has-top-margin-m is-flex">
       <SearchSelect
         class="is-flex-grow-1"
+        @ariaLabel="Issuer name or ID"
         @selectLimit="1"
         @models={{array "pki/issuer"}}
         @backend={{@engine.id}}
@@ -87,7 +94,8 @@
         @onChange={{this.handleIssuerSearch}}
         @fallbackComponent="input-search"
         @shouldRenderName={{true}}
-        @nameKey={{"issuerName"}}
+        @nameKey="issuerName"
+        @renderInPlace={{true}}
         data-test-issue-issuer-input
       />
       <Hds::Button

@@ -7,7 +7,10 @@ import (
 	"context"
 	"testing"
 
+	"github.com/hashicorp/vault/sdk/helper/pluginidentityutil"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestBackend_pathConfigClient(t *testing.T) {
@@ -128,4 +131,48 @@ func TestBackend_pathConfigClient(t *testing.T) {
 		t.Fatalf("expected sts_region: '%#v'; returned sts_region: '%#v'",
 			data["sts_region"], resp.Data["sts_region"])
 	}
+}
+
+// TestBackend_PathConfigClient_PluginIdentityToken tests that configuration
+// of plugin WIF returns an immediate error.
+func TestBackend_PathConfigClient_PluginIdentityToken(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	config.System = &testSystemView{}
+
+	b, err := Backend(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = b.Setup(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	configData := map[string]interface{}{
+		"identity_token_ttl":      int64(10),
+		"identity_token_audience": "test-aud",
+		"role_arn":                "test-role-arn",
+	}
+
+	configReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Storage:   config.StorageView,
+		Path:      "config/client",
+		Data:      configData,
+	}
+
+	resp, err := b.HandleRequest(context.Background(), configReq)
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.ErrorContains(t, resp.Error(), pluginidentityutil.ErrPluginWorkloadIdentityUnsupported.Error())
+}
+
+type testSystemView struct {
+	logical.StaticSystemView
+}
+
+func (d testSystemView) GenerateIdentityToken(_ context.Context, _ *pluginutil.IdentityTokenRequest) (*pluginutil.IdentityTokenResponse, error) {
+	return nil, pluginidentityutil.ErrPluginWorkloadIdentityUnsupported
 }

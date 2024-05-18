@@ -78,8 +78,8 @@ export default class KvSecretsListRoute extends Route {
     } else {
       breadcrumbsArray = [
         ...breadcrumbsArray,
-        { label: resolvedModel.backend, route: 'list' },
-        ...breadcrumbsForSecret(resolvedModel.pathToSecret, true),
+        { label: resolvedModel.backend, route: 'list', model: resolvedModel.backend },
+        ...breadcrumbsForSecret(resolvedModel.backend, resolvedModel.pathToSecret, true),
       ];
     }
 

@@ -52,6 +52,11 @@ const (
 	mountTableType = "mounts"
 )
 
+func init() {
+	// Register the keys we use for mount tables
+	registerMountOrNamespaceTablePaths(coreMountConfigPath, coreLocalMountConfigPath)
+}
+
 // ListingVisibilityType represents the types for listing visibility
 type ListingVisibilityType string
 
@@ -144,25 +149,15 @@ type MountTable struct {
 	Entries []*MountEntry `json:"entries"`
 }
 
+//go:generate enumer -type=MountMigrationStatus -trimprefix=MigrationStatus -transform=kebab
+
 type MountMigrationStatus int
 
 const (
-	MigrationInProgressStatus MountMigrationStatus = iota
-	MigrationSuccessStatus
-	MigrationFailureStatus
+	MigrationStatusInProgress MountMigrationStatus = iota
+	MigrationStatusSuccess
+	MigrationStatusFailure
 )
-
-func (m MountMigrationStatus) String() string {
-	switch m {
-	case MigrationInProgressStatus:
-		return "in-progress"
-	case MigrationSuccessStatus:
-		return "success"
-	case MigrationFailureStatus:
-		return "failure"
-	}
-	return "unknown"
-}
 
 type MountMigrationInfo struct {
 	SourceMount     string `json:"source_mount"`
@@ -953,7 +948,7 @@ func (c *Core) unmountInternal(ctx context.Context, path string, updateStorage b
 
 	removePathCheckers(c, entry, viewPath)
 
-	if c.quotaManager != nil {
+	if c.quotaManager != nil && !c.IsPerfSecondary() {
 		if err := c.quotaManager.HandleBackendDisabling(ctx, ns.Path, path); err != nil {
 			c.logger.Error("failed to update quotas after disabling mount", "path", path, "error", err)
 			return err
@@ -1308,6 +1303,24 @@ func (c *Core) loadMounts(ctx context.Context) error {
 			return namespace.ErrNoNamespace
 		}
 		entry.namespace = ns
+
+		// Subtle/hacky: re-register ns with namespaceManager to ensure that in the
+		// case where duplicate namespaces existed due to historical race bugs, we
+		// still ensure the correct namespaces are the ones that "win" the path
+		// registrations. This became an issue when we added Core.warmNamespaceCache
+		// and subsequently discovered customers had latent corruption where there
+		// were multiple namespace IDs with the same path in the namespaces config
+		// entry and loading them into cache made it non-deterministic which one won
+		// the slot in the path index due to map iteration randomness. By explicitly
+		// re-registering them here we enforce the same consistent order of
+		// registration into the path index that we had before warming and so
+		// prevent any apparent regressions. Note that mount entries are a slice not
+		// a map so consistent even if we ever did allow duplicates to be stored. We
+		// want to fix all the root causes of those duplicates but also want to
+		// restore the previous behavior that masked them as a problem. They will
+		// likely be there for a long time to come as they are persistent now even
+		// if we find all the bugs that allowed it to get in that state.
+		NamespaceRegister(ctx, ns, c)
 
 		// Sync values to the cache
 		entry.SyncCache()
@@ -1955,7 +1968,7 @@ func (c *Core) createMigrationStatus(from, to namespace.MountPathDetails) (strin
 	migrationInfo := MountMigrationInfo{
 		SourceMount:     from.Namespace.Path + from.MountPath,
 		TargetMount:     to.Namespace.Path + to.MountPath,
-		MigrationStatus: MigrationInProgressStatus.String(),
+		MigrationStatus: MigrationStatusInProgress.String(),
 	}
 	c.mountMigrationTracker.Store(migrationID, migrationInfo)
 	return migrationID, nil

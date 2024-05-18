@@ -15,13 +15,15 @@ export default class PkiTidyAutoConfigureRoute extends Route {
   // inherits model from tidy/auto
 
   setupController(controller, resolvedModel) {
+    // autoTidyConfig id is the backend path
+    const { id: backend } = resolvedModel;
     super.setupController(controller, resolvedModel);
     controller.breadcrumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: this.secretMountPath.currentPath, route: 'overview' },
-      { label: 'configuration', route: 'configuration.index' },
-      { label: 'tidy', route: 'tidy' },
-      { label: 'auto', route: 'tidy.auto' },
+      { label: this.secretMountPath.currentPath, route: 'overview', model: backend },
+      { label: 'configuration', route: 'configuration.index', model: backend },
+      { label: 'tidy', route: 'tidy', model: backend },
+      { label: 'auto', route: 'tidy.auto', model: backend },
       { label: 'configure' },
     ];
   }

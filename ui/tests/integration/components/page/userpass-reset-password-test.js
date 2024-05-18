@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { Response } from 'miragejs';
-import { click, fillIn, render } from '@ember/test-helpers';
+import { click, fillIn, render, settled } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 
 const S = {
@@ -44,6 +44,8 @@ module('Integration | Component | page/userpass-reset-password', function (hooks
 
     await fillIn(S.input, 'new');
     await click(S.save);
+    // eslint-disable-next-line ember/no-settled-after-test-helper
+    await settled();
 
     assert.dom(S.input).hasValue('', 'After successful save shows input again with empty value');
   });
@@ -64,6 +66,8 @@ module('Integration | Component | page/userpass-reset-password', function (hooks
     await fillIn(S.input, 'invalid-pw');
     await click(S.save);
 
+    // eslint-disable-next-line ember/no-settled-after-test-helper
+    await settled();
     assert.dom(S.error).hasText('Error some error occurred', 'Shows error from API');
   });
 });

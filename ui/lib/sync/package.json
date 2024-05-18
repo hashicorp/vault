@@ -11,6 +11,7 @@
     "ember-concurrency": "*",
     "@ember/test-waiters": "*",
     "ember-cli-typescript": "*",
+    "ember-auto-import": "*",
     "@types/ember": "latest",
     "@types/ember-data": "latest",
     "@types/ember-data__store": "latest",

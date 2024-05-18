@@ -16,16 +16,29 @@ module "backend_raft" {
   source = "./modules/backend_raft"
 }
 
+// Find any artifact in Artifactory. Requires the version, revision, and edition.
+module "build_artifactory" {
+  source = "./modules/build_artifactory_artifact"
+}
+
+// Find any released RPM or Deb in Artifactory. Requires the version, edition, distro, and distro
+// version.
+module "build_artifactory_package" {
+  source = "./modules/build_artifactory_package"
+}
+
+// A shim "build module" suitable for use when using locally pre-built artifacts or a zip bundle
+// from releases.hashicorp.com. When using a local pre-built artifact it requires the local
+// artifact path. When using a release zip it does nothing as you'll need to configure the
+// vault_cluster module with release info instead.
 module "build_crt" {
   source = "./modules/build_crt"
 }
 
+// Build the local branch and package it into a zip artifact. Requires the goarch, goos, build tags,
+// and bundle path.
 module "build_local" {
   source = "./modules/build_local"
-}
-
-module "build_artifactory" {
-  source = "./modules/vault_artifactory_artifact"
 }
 
 module "create_vpc" {
@@ -183,6 +196,12 @@ module "vault_setup_perf_secondary" {
   vault_install_dir = var.vault_install_dir
 }
 
+module "vault_step_down" {
+  source = "./modules/vault_step_down"
+
+  vault_install_dir = var.vault_install_dir
+}
+
 module "vault_test_ui" {
   source = "./modules/vault_test_ui"
 
@@ -202,7 +221,6 @@ module "vault_upgrade" {
   vault_install_dir    = var.vault_install_dir
   vault_instance_count = var.vault_instance_count
 }
-
 
 module "vault_verify_autopilot" {
   source = "./modules/vault_verify_autopilot"

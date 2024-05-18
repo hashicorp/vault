@@ -2,11 +2,12 @@
 # SPDX-License-Identifier: BUSL-1.1
 
 globals {
-  archs            = ["amd64", "arm64"]
-  artifact_sources = ["local", "crt", "artifactory"]
-  artifact_types   = ["bundle", "package"]
-  backends         = ["consul", "raft"]
-  backend_tag_key  = "VaultStorage"
+  archs                = ["amd64", "arm64"]
+  artifact_sources     = ["local", "crt", "artifactory"]
+  artifact_types       = ["bundle", "package"]
+  backends             = ["consul", "raft"]
+  backend_license_path = abspath(var.backend_license_path != null ? var.backend_license_path : joinpath(path.root, "./support/consul.hclic"))
+  backend_tag_key      = "VaultStorage"
   build_tags = {
     "ce"               = ["ui"]
     "ent"              = ["ui", "enterprise", "ent"]
@@ -14,6 +15,7 @@ globals {
     "ent.hsm"          = ["ui", "enterprise", "cgo", "hsm", "venthsm"]
     "ent.hsm.fips1402" = ["ui", "enterprise", "cgo", "hsm", "fips", "fips_140_2", "ent.hsm.fips1402"]
   }
+  config_modes    = ["env", "file"]
   consul_versions = ["1.14.11", "1.15.7", "1.16.3", "1.17.0"]
   distros         = ["ubuntu", "rhel"]
   distro_version = {

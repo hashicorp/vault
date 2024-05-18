@@ -26,8 +26,8 @@ module('Unit | Serializer | sync | association', function (hooks) {
     const payload = {
       data: {
         associated_secrets: {
-          'foo/bar': associations[0],
-          'test/my-secret': associations[1],
+          'foo_12345/bar': associations[0],
+          'test_12345/my-secret': associations[1],
         },
         store_name: destinationName,
         store_type: destinationType,
@@ -46,13 +46,13 @@ module('Unit | Serializer | sync | association', function (hooks) {
     const payload = {
       data: {
         associated_secrets: {
-          'foo/bar': {
+          'foo_12345/bar': {
             mount: 'foo',
             secret_name: 'bar',
             sync_status: 'SYNCED',
             updated_at: '2023-09-20T10:51:53.961861096-04:00',
           },
-          'bar/baz': {
+          'bar_12345/baz': {
             mount: 'bar',
             secret_name: 'baz',
             sync_status: 'UNSYNCED',
@@ -69,13 +69,13 @@ module('Unit | Serializer | sync | association', function (hooks) {
       type: 'aws-sm',
       associationCount: 2,
       status: '1 Unsynced',
-      lastUpdated: new Date(payload.data.associated_secrets['bar/baz'].updated_at),
+      lastUpdated: new Date(payload.data.associated_secrets['bar_12345/baz'].updated_at),
     };
     let normalized = this.serializer.normalizeFetchByDestinations(payload);
 
     assert.deepEqual(normalized, expected, 'Response is normalized from fetchByDestinations request');
 
-    payload.data.associated_secrets['bar/baz'].sync_status = 'SYNCED';
+    payload.data.associated_secrets['bar_12345/baz'].sync_status = 'SYNCED';
     normalized = this.serializer.normalizeFetchByDestinations(payload);
 
     assert.strictEqual(

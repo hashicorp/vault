@@ -26,7 +26,7 @@ export default Component.extend({
     });
 
     if (this.showReplication === false) {
-      const feature = this.allFeatures.findBy('key', 'replication');
+      const feature = this.allFeatures.find((f) => f.key === 'replication');
       feature.show = false;
     }
   },
@@ -134,7 +134,7 @@ export default Component.extend({
   showReplication: or('version.hasPerfReplication', 'version.hasDRReplication'),
 
   selectedFeatures: computed('allFeatures.@each.selected', function () {
-    return this.allFeatures.filterBy('selected').mapBy('key');
+    return this.allFeatures.filter((feature) => feature.selected).map((feature) => feature.key);
   }),
 
   cannotStartWizard: not('selectedFeatures.length'),

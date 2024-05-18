@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { Response } from 'miragejs';
+import { debug } from '@ember/debug';
 
 export const OIDC_BASE_URL = `/vault/access/oidc`;
 
@@ -57,49 +57,6 @@ export const SELECTORS = {
   providerClientsTab: '[data-test-oidc-provider-clients]',
 };
 
-export function overrideMirageResponse(httpStatus, data) {
-  if (httpStatus === 403) {
-    return new Response(
-      403,
-      { 'Content-Type': 'application/json' },
-      JSON.stringify({ errors: ['permission denied'] })
-    );
-  }
-  if (httpStatus === 404) {
-    return new Response(404, { 'Content-Type': 'application/json' });
-  }
-  if (httpStatus === 200) {
-    return new Response(200, { 'Content-Type': 'application/json' }, JSON.stringify(data));
-  }
-  return {
-    request_id: crypto.randomUUID(),
-    lease_id: '',
-    renewable: false,
-    lease_duration: 0,
-    wrap_info: null,
-    warnings: null,
-    auth: null,
-    data: { ...data },
-  };
-}
-
-export function overrideCapabilities(requestPath, capabilitiesArray) {
-  // sample of capabilitiesArray: ['read', 'update']
-  return {
-    request_id: '40f7e44d-af5c-9b60-bd20-df72eb17e294',
-    lease_id: '',
-    renewable: false,
-    lease_duration: 0,
-    data: {
-      capabilities: capabilitiesArray,
-      [requestPath]: capabilitiesArray,
-    },
-    wrap_info: null,
-    warnings: null,
-    auth: null,
-  };
-}
-
 export async function clearRecord(store, modelType, id) {
   await store
     .findRecord(modelType, id)
@@ -107,6 +64,7 @@ export async function clearRecord(store, modelType, id) {
       deleteModelRecord(model);
     })
     .catch(() => {
+      debug(`Clearing record failed for ${modelType} with id: ${id}`);
       // swallow error
     });
 }

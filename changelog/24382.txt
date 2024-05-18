@@ -1,4 +1,4 @@
 ```release-note:feature
-**Default Lease Count Quota**: Apply a new global default lease count quota of 300k leases for all
+**Default Lease Count Quota (enterprise)**: Apply a new global default lease count quota of 300k leases for all
 new installs of Vault.
 ```

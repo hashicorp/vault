@@ -17,7 +17,7 @@ export function setupModels(hooks) {
       id: destination.name,
     });
     this.destination = this.store.peekRecord(destinationModelName, destination.name);
-    this.destinations = this.store.peekAll(destinationModelName).toArray();
+    this.destinations = this.store.peekAll(destinationModelName);
     this.destinations.meta = {
       filteredTotal: this.destinations.length,
       currentPage: 1,
@@ -43,7 +43,7 @@ export function setupModels(hooks) {
     });
 
     this.association = this.store.peekRecord(associationModelName, associationId);
-    this.associations = this.store.peekAll(associationModelName).toArray();
+    this.associations = this.store.peekAll(associationModelName);
     this.associations.meta = {
       filteredTotal: this.associations.length,
       currentPage: 1,

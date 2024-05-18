@@ -28,14 +28,15 @@ export const getManagedNamespace = (nsParam, root) => {
 };
 
 export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
-  namespaceService: service('namespace'),
-  version: service(),
-  permissions: service(),
-  store: service(),
   auth: service(),
-  customMessages: service(),
-  featureFlagService: service('featureFlag'),
   currentCluster: service(),
+  customMessages: service(),
+  flagsService: service('flags'),
+  namespaceService: service('namespace'),
+  permissions: service(),
+  router: service(),
+  store: service(),
+  version: service(),
   modelTypes: computed(function () {
     return ['node', 'secret', 'secret-engine'];
   }),
@@ -50,14 +51,14 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     const { cluster_name } = params;
     const records = this.store.peekAll('cluster');
     const cluster = records.find((record) => record.name === cluster_name);
-    return cluster ? cluster.get('id') : null;
+    return cluster?.id ?? null;
   },
 
   async beforeModel() {
     const params = this.paramsFor(this.routeName);
     let namespace = params.namespaceQueryParam;
-    const currentTokenName = this.auth.get('currentTokenName');
-    const managedRoot = this.featureFlagService.managedNamespaceRoot;
+    const currentTokenName = this.auth.currentTokenName;
+    const managedRoot = this.flagsService.hvdManagedNamespaceRoot;
     assert(
       'Cannot use VAULT_CLOUD_ADMIN_NAMESPACE flag with non-enterprise Vault version',
       !(managedRoot && this.version.isCommunity)
@@ -69,12 +70,12 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
       namespace = storage?.userRootNamespace;
       // only redirect if something other than nothing
       if (namespace) {
-        this.transitionTo({ queryParams: { namespace } });
+        this.router.transitionTo({ queryParams: { namespace } });
       }
     } else if (managedRoot !== null) {
       const managed = getManagedNamespace(namespace, managedRoot);
       if (managed !== namespace) {
-        this.transitionTo({ queryParams: { namespace: managed } });
+        this.router.transitionTo({ queryParams: { namespace: managed } });
       }
     }
     this.namespaceService.setNamespace(namespace);
@@ -122,11 +123,15 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
   afterModel(model, transition) {
     this._super(...arguments);
     this.currentCluster.setCluster(model);
+    if (model.needsInit && this.auth.currentToken) {
+      // clear token to prevent infinite load state
+      this.auth.deleteCurrentToken();
+    }
 
     // Check that namespaces is enabled and if not,
     // clear the namespace by transition to this route w/o it
     if (this.namespaceService.path && !this.version.hasNamespaces) {
-      return this.transitionTo(this.routeName, { queryParams: { namespace: '' } });
+      return this.router.transitionTo(this.routeName, { queryParams: { namespace: '' } });
     }
     return this.transitionToTargetRoute(transition);
   },
