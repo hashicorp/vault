@@ -24,11 +24,6 @@ replace github.com/hashicorp/vault/api/auth/userpass => ./api/auth/userpass
 
 replace github.com/hashicorp/vault/sdk => ./sdk
 
-// This tag has since been deleted, but it's referenced by sentinel, so we use a replace directive
-// so that the build works and Go does not complain. Note that while an IDE may say that this is an
-// unused dependency, removing this will cause `go list -m all` to fail.
-replace rsc.io/script v0.0.0-00010101000000-000000000000 => rsc.io/script v0.0.2-0.20231205190631-334f6c18cff3
-
 require (
 	cloud.google.com/go/cloudsqlconn v1.4.3
 	cloud.google.com/go/monitoring v1.17.0
@@ -57,7 +52,7 @@ require (
 	github.com/cockroachdb/cockroach-go/v2 v2.3.8
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf
 	github.com/denisenkom/go-mssqldb v0.12.3
-	github.com/docker/docker v25.0.2+incompatible
+	github.com/docker/docker v25.0.5+incompatible
 	github.com/duosecurity/duo_api_golang v0.0.0-20190308151101-6c680f768e74
 	github.com/dustin/go-humanize v1.0.1
 	github.com/fatih/color v1.16.0
@@ -90,7 +85,7 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-discover v0.0.0-20210818145131-c573d69da192
 	github.com/hashicorp/go-gcp-common v0.8.0
-	github.com/hashicorp/go-hclog v1.6.2
+	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-kms-wrapping/entropy/v2 v2.0.1
 	github.com/hashicorp/go-kms-wrapping/v2 v2.0.16
 	github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2 v2.0.9
@@ -140,20 +135,20 @@ require (
 	github.com/hashicorp/vault-plugin-auth-centrify v0.15.1
 	github.com/hashicorp/vault-plugin-auth-cf v0.16.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.16.2
-	github.com/hashicorp/vault-plugin-auth-jwt v0.20.2
+	github.com/hashicorp/vault-plugin-auth-jwt v0.20.3
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.11.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.18.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.15.1
 	github.com/hashicorp/vault-plugin-database-couchbase v0.10.1
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.14.0
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.11.0
-	github.com/hashicorp/vault-plugin-database-redis v0.2.3
+	github.com/hashicorp/vault-plugin-database-redis v0.3.0
 	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.3.0
 	github.com/hashicorp/vault-plugin-database-snowflake v0.10.0
 	github.com/hashicorp/vault-plugin-mock v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-ad v0.17.0
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.16.0
-	github.com/hashicorp/vault-plugin-secrets-azure v0.17.1
+	github.com/hashicorp/vault-plugin-secrets-azure v0.17.2
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.18.0
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.16.0
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.7.0
@@ -165,7 +160,7 @@ require (
 	github.com/hashicorp/vault/api v1.12.0
 	github.com/hashicorp/vault/api/auth/approle v0.1.0
 	github.com/hashicorp/vault/api/auth/userpass v0.1.0
-	github.com/hashicorp/vault/sdk v0.11.0
+	github.com/hashicorp/vault/sdk v0.12.0
 	github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20230201201504-b741fa893d77
 	github.com/influxdata/influxdb1-client v0.0.0-20200827194710-b269163b24ab
 	github.com/jackc/pgx/v4 v4.18.3
@@ -219,18 +214,18 @@ require (
 	go.opentelemetry.io/otel/trace v1.24.0
 	go.uber.org/atomic v1.11.0
 	go.uber.org/goleak v1.2.1
-	golang.org/x/crypto v0.22.0
+	golang.org/x/crypto v0.23.0
 	golang.org/x/exp v0.0.0-20240222234643-814bf88cf225
-	golang.org/x/net v0.24.0
+	golang.org/x/net v0.25.0
 	golang.org/x/oauth2 v0.18.0
 	golang.org/x/sync v0.7.0
-	golang.org/x/sys v0.19.0
-	golang.org/x/term v0.19.0
-	golang.org/x/text v0.14.0
+	golang.org/x/sys v0.20.0
+	golang.org/x/term v0.20.0
+	golang.org/x/text v0.15.0
 	golang.org/x/tools v0.18.0
 	google.golang.org/api v0.163.0
 	google.golang.org/grpc v1.61.1
-	google.golang.org/protobuf v1.33.0
+	google.golang.org/protobuf v1.34.1
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
 	k8s.io/apimachinery v0.29.1
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
@@ -336,7 +331,7 @@ require (
 	github.com/dgryski/go-metro v0.0.0-20180109044635-280f6062b5bc // indirect
 	github.com/digitalocean/godo v1.7.5 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
-	github.com/distribution/reference v0.5.0 // indirect
+	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/cli v25.0.1+incompatible // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
@@ -467,7 +462,7 @@ require (
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0-rc2.0.20221005185240-3a7f492d3f1b // indirect
-	github.com/opencontainers/runc v1.1.12 // indirect
+	github.com/opencontainers/runc v1.2.0-rc.1 // indirect
 	github.com/opentracing/opentracing-go v1.2.1-0.20220228012449-10b1cf09e00b // indirect
 	github.com/oracle/oci-go-sdk/v59 v59.0.0 // indirect
 	github.com/oracle/oci-go-sdk/v60 v60.0.0 // indirect
@@ -531,7 +526,6 @@ require (
 	google.golang.org/genproto v0.0.0-20240125205218-1f4bbc51befe // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240125205218-1f4bbc51befe // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240125205218-1f4bbc51befe // indirect
-	gopkg.in/go-jose/go-jose.v2 v2.6.3 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.66.2 // indirect
 	gopkg.in/jcmturner/goidentity.v3 v3.0.0 // indirect

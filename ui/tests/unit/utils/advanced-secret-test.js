@@ -108,7 +108,40 @@ module('Unit | Utility | advanced-secret', function () {
         },
       ].forEach((test) => {
         const result = obfuscateData(test.data);
-        assert.deepEqual(result, test.obscured, `obfuscates values of ${test.name}`);
+        assert.deepEqual(result, test.obscured, `obfuscates object values of ${test.name}`);
+      });
+    });
+
+    test('it obfuscates null values', function (assert) {
+      assert.expect(2);
+      [
+        {
+          name: 'null value',
+          data: {
+            one: 'fish',
+            two: 'fish',
+            three: 'fish',
+            blue: null,
+          },
+          obscured: {
+            blue: '********',
+            one: '********',
+            three: '********',
+            two: '********',
+          },
+        },
+        {
+          name: 'null value nested-object',
+          data: {
+            one: { two: null },
+          },
+          obscured: {
+            one: { two: '********' },
+          },
+        },
+      ].forEach((test) => {
+        const result = obfuscateData(test.data);
+        assert.deepEqual(result, test.obscured, `obfuscates null values of ${test.name}`);
       });
     });
 
