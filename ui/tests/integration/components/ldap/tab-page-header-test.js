@@ -34,7 +34,7 @@ module('Integration | Component | ldap | TabPageHeader', function (hooks) {
     await render(hbs`<TabPageHeader @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`, {
       owner: this.engine,
     });
-    assert.dom('[data-test-breadcrumbs] li:nth-child(1) a').hasText('secrets', 'Secrets breadcrumb renders');
+    assert.dom('[data-test-breadcrumbs] li:nth-child(1) a').hasText('Secrets', 'Secrets breadcrumb renders');
 
     assert
       .dom('[data-test-breadcrumbs] li:nth-child(2)')
