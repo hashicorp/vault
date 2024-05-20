@@ -34,7 +34,7 @@ module('Integration | Component | kv | kv-page-header', function (hooks) {
 
     this.model = this.store.peekRecord('kv/data', this.id);
     this.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.model.backend, route: 'secrets' },
       { label: this.model.path, route: 'secrets.secret.details', model: this.model.path },
       { label: 'edit' },

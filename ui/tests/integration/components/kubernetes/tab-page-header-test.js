@@ -27,7 +27,7 @@ module('Integration | Component | kubernetes | TabPageHeader', function (hooks) 
     });
     this.model = this.store.peekRecord('secret-engine', 'kubernetes-test');
     this.mount = this.model.path.slice(0, -1);
-    this.breadcrumbs = [{ label: 'secrets', route: 'secrets', linkExternal: true }, { label: this.mount }];
+    this.breadcrumbs = [{ label: 'Secrets', route: 'secrets', linkExternal: true }, { label: this.mount }];
   });
 
   test('it should render breadcrumbs', async function (assert) {
