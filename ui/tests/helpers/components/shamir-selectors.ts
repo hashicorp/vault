@@ -12,3 +12,9 @@ export const SHAMIR_FORM = {
   progress: '.shamir-progress',
   error: '[data-test-message-error]',
 };
+
+export const RADIAL_PROGRESS = {
+  svg: '[data-test-radial-progress]',
+  path: '[data-test-path]',
+  progress: '[data-test-progress]',
+};
