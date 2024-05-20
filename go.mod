@@ -44,7 +44,7 @@ require (
 	github.com/armon/go-metrics v0.4.1
 	github.com/armon/go-radix v1.0.0
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
-	github.com/aws/aws-sdk-go v1.50.13
+	github.com/aws/aws-sdk-go v1.53.5
 	github.com/aws/aws-sdk-go-v2/config v1.18.19
 	github.com/axiomhq/hyperloglog v0.0.0-20220105174342-98591331716a
 	github.com/cenkalti/backoff/v3 v3.2.2
@@ -142,7 +142,7 @@ require (
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.15.0
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.11.0
 	github.com/hashicorp/vault-plugin-database-redis v0.3.0
-	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.3.0
+	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.4.0
 	github.com/hashicorp/vault-plugin-database-snowflake v0.11.0
 	github.com/hashicorp/vault-plugin-mock v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-ad v0.17.0
@@ -153,7 +153,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.7.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.18.0
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.11.0
-	github.com/hashicorp/vault-plugin-secrets-openldap v0.12.1
+	github.com/hashicorp/vault-plugin-secrets-openldap v0.13.0
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.7.5
 	github.com/hashicorp/vault-testing-stepwise v0.1.4
 	github.com/hashicorp/vault/api v1.13.0
