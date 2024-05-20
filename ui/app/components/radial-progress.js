@@ -29,6 +29,6 @@ export default class KvDataFields extends Component {
   }
 
   get dashArrayOffset() {
-    return this.c * (1 - this.progressDecimal);
+    return this.c * (1 - this.args.progressDecimal);
   }
 }
