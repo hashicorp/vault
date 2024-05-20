@@ -44,8 +44,8 @@ module('Integration | Component | kv-v2 | KvDataFields', function (hooks) {
 
     assert.strictEqual(
       codemirror().getValue(' '),
-      `{ \"\": \"\" }`, // eslint-disable-line no-useless-escape
-      'json editor initializes with empty object'
+      `{   \"\": \"\" }`, // eslint-disable-line no-useless-escape
+      'json editor initializes with empty object that includes whitespace'
     );
     await fillIn(`${FORM.jsonEditor} textarea`, 'blah');
     assert.strictEqual(codemirror().state.lint.marked.length, 1, 'codemirror lints input');

@@ -2,7 +2,7 @@
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
  */
-
+/* eslint-disable no-useless-escape */
 import { module, test } from 'qunit';
 import { v4 as uuidv4 } from 'uuid';
 import { click, currentURL, fillIn, findAll, setupOnerror, typeIn, visit } from '@ember/test-helpers';
@@ -276,7 +276,13 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await fillIn(FORM.inputByAttr('path'), 'complex');
 
     await click(FORM.toggleJson);
-    assert.strictEqual(codemirror().getValue(), '{ "": "" }');
+
+    assert.strictEqual(
+      codemirror().getValue(),
+      `{
+  \"\": \"\"
+}`
+    );
     codemirror().setValue('{ "foo3": { "name": "bar3" } }');
     await click(FORM.saveBtn);
     // Future: test that json is automatic on details too
