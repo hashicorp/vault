@@ -59,7 +59,7 @@ module('Integration | Component | kv | Page::List', function (hooks) {
     this.model.meta = META;
     this.backend = 'kv-engine';
     this.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.backend, route: 'list' },
     ];
     this.failedDirectoryQuery = false;

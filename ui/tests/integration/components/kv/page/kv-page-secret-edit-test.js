@@ -33,7 +33,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
       casVersion: 1,
     });
     this.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.backend, route: 'list' },
       { label: 'edit' },
     ];
