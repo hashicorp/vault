@@ -28,6 +28,8 @@ import (
 	"golang.org/x/crypto/ed25519"
 )
 
+// Ordering of these items needs to match the iota order defined in policy.go. Ordering changes
+// should never occur, as it would lead to a key type change within existing stored policies.
 var allTestKeyTypes = []KeyType{
 	KeyType_AES256_GCM96, KeyType_ECDSA_P256, KeyType_ED25519, KeyType_RSA2048,
 	KeyType_RSA4096, KeyType_ChaCha20_Poly1305, KeyType_ECDSA_P384, KeyType_ECDSA_P521, KeyType_AES128_GCM96,
