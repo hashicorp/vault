@@ -311,7 +311,7 @@ func (b *SystemBackend) handleActivityConfigRead(ctx context.Context, req *logic
 		return logical.ErrorResponse("no activity log present"), nil
 	}
 
-	config, err := a.loadConfigOrDefault(ctx, b.Core.ManualLicenseReportingEnabled())
+	config, err := a.loadConfigOrDefault(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -348,7 +348,7 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 
 	warnings := make([]string, 0)
 
-	config, err := a.loadConfigOrDefault(ctx, b.Core.ManualLicenseReportingEnabled())
+	config, err := a.loadConfigOrDefault(ctx)
 	if err != nil {
 		return nil, err
 	}
