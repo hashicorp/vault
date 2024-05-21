@@ -171,7 +171,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
         .dom(PAGE.error.message)
         .hasText(`Sorry, we were unable to find any content at /v1/${backend}/data/${root}/${subdirectory}.`);
 
-      assert.dom(PAGE.breadcrumbAtIdx(0)).hasText('secrets');
+      assert.dom(PAGE.breadcrumbAtIdx(0)).hasText('Secrets');
       assert.dom(PAGE.breadcrumbAtIdx(1)).hasText(backend);
       assert.dom(PAGE.secretTab('Secrets')).doesNotHaveClass('is-active');
       assert.dom(PAGE.secretTab('Configuration')).doesNotHaveClass('is-active');
