@@ -150,6 +150,17 @@ const azure = {
       label: 'Tenant ID',
       type: 'string',
     },
+    identityTokenAudience: {
+      editType: 'string',
+      fieldGroup: 'default',
+      helpText: 'Audience of plugin identity tokens',
+      type: 'string',
+    },
+    identityTokenTtl: {
+      editType: 'ttl',
+      fieldGroup: 'default',
+      helpText: 'Time-to-live of plugin identity tokens',
+    },
   },
 };
 
@@ -388,6 +399,23 @@ const gcp = {
       fieldGroup: 'default',
       defaultValue: 'field1,field2',
       label: 'iam_metadata',
+    },
+    identityTokenAudience: {
+      editType: 'string',
+      fieldGroup: 'default',
+      helpText: 'Audience of plugin identity tokens',
+      type: 'string',
+    },
+    identityTokenTtl: {
+      editType: 'ttl',
+      fieldGroup: 'default',
+      helpText: 'Time-to-live of plugin identity tokens',
+    },
+    serviceAccountEmail: {
+      editType: 'string',
+      fieldGroup: 'default',
+      helpText: 'Email ID for the Service Account to impersonate for Workload Identity Federation.',
+      type: 'string',
     },
   },
 };
