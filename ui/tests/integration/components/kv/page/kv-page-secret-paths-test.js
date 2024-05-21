@@ -19,7 +19,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Paths', function (hooks)
     this.backend = 'kv-engine';
     this.path = 'my-secret';
     this.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.backend, route: 'list' },
       { label: this.path },
     ];

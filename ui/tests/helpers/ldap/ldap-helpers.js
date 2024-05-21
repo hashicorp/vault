@@ -18,7 +18,7 @@ export const createSecretsEngine = (store) => {
 };
 
 export const generateBreadcrumbs = (backend, childRoute) => {
-  const breadcrumbs = [{ label: 'secrets', route: 'secrets', linkExternal: true }];
+  const breadcrumbs = [{ label: 'Secrets', route: 'secrets', linkExternal: true }];
   const root = { label: backend };
   if (childRoute) {
     root.route = 'overview';

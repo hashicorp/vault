@@ -30,7 +30,7 @@ module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hook
     this.secret = this.store.createRecord('kv/data', { backend: this.backend, casVersion: 0 });
     this.metadata = this.store.createRecord('kv/metadata', { backend: this.backend });
     this.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.backend, route: 'list' },
       { label: 'create' },
     ];

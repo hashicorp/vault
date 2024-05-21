@@ -12,7 +12,7 @@ export default class KubernetesErrorRoute extends Route {
   setupController(controller) {
     super.setupController(...arguments);
     controller.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.secretMountPath.currentPath, route: 'overview' },
     ];
     controller.backend = this.modelFor('application');

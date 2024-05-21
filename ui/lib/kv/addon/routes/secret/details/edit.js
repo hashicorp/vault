@@ -35,7 +35,7 @@ export default class KvSecretDetailsEditRoute extends Route {
     super.setupController(controller, resolvedModel);
 
     controller.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: resolvedModel.backend, route: 'list', model: resolvedModel.backend },
       ...breadcrumbsForSecret(resolvedModel.backend, resolvedModel.path),
       { label: 'edit' },
