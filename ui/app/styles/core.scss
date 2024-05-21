@@ -66,7 +66,6 @@
 @import './components/doc-link';
 @import './components/empty-state-component';
 @import './components/env-banner';
-@import './components/features-selection';
 @import './components/form-section';
 @import './components/global-flash';
 @import './components/icon';
@@ -112,5 +111,4 @@
 @import './components/transit-card';
 @import './components/ttl-picker';
 @import './components/unseal-warning';
-// @import './components/ui-wizard'; // remove, see PR https://github.com/hashicorp/vault/pull/19220
 @import './components/vault-loading';
