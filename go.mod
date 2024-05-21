@@ -137,10 +137,10 @@ require (
 	github.com/hashicorp/vault-plugin-auth-jwt v0.20.3
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.11.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.18.0
-	github.com/hashicorp/vault-plugin-auth-oci v0.15.1
+	github.com/hashicorp/vault-plugin-auth-oci v0.16.0
 	github.com/hashicorp/vault-plugin-database-couchbase v0.11.0
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.15.0
-	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.11.0
+	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.12.0
 	github.com/hashicorp/vault-plugin-database-redis v0.3.0
 	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.4.0
 	github.com/hashicorp/vault-plugin-database-snowflake v0.11.0
@@ -151,7 +151,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.18.0
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.16.0
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.7.0
-	github.com/hashicorp/vault-plugin-secrets-kv v0.18.0
+	github.com/hashicorp/vault-plugin-secrets-kv v0.19.0
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.12.0
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.13.0
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.8.0
@@ -207,7 +207,7 @@ require (
 	go.etcd.io/etcd/client/v2 v2.305.5
 	go.etcd.io/etcd/client/v3 v3.5.7
 	go.mongodb.org/atlas v0.36.0
-	go.mongodb.org/mongo-driver v1.13.1
+	go.mongodb.org/mongo-driver v1.14.0
 	go.opentelemetry.io/otel v1.24.0
 	go.opentelemetry.io/otel/sdk v1.24.0
 	go.opentelemetry.io/otel/trace v1.24.0
