@@ -155,6 +155,13 @@ export default class SecretEngineModel extends Model {
     return `vault.cluster.secrets.backend.list-root`;
   }
 
+  get backendConfigurationLink() {
+    if (isAddonEngine(this.engineType, this.version)) {
+      return `vault.cluster.secrets.backend.${this.engineType}.configuration`;
+    }
+    return `vault.cluster.secrets.backend.configuration`;
+  }
+
   get localDisplay() {
     return this.local ? 'local' : 'replicated';
   }
