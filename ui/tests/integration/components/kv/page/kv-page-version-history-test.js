@@ -36,7 +36,7 @@ module('Integration | Component | kv | Page::Secret::Metadata::Version-History',
     });
     this.metadata = store.peekRecord('kv/metadata', metadata.id);
     this.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.metadata.backend, route: 'list' },
       { label: this.metadata.path, route: 'secret.details', model: this.metadata.path },
       { label: 'version history' },
