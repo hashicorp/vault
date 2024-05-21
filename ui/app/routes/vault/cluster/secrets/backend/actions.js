@@ -33,7 +33,7 @@ export default EditBase.extend({
     controller.set('selectedAction', selectedAction || model.secret.supportedActions[0]);
     controller.set('breadcrumbs', [
       {
-        label: 'secrets',
+        label: 'Secrets',
         route: 'vault.cluster.secrets',
       },
       {

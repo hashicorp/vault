@@ -34,7 +34,7 @@ module('Integration | Component | kv | kv-page-header', function (hooks) {
 
     this.model = this.store.peekRecord('kv/data', this.id);
     this.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.model.backend, route: 'secrets' },
       { label: this.model.path, route: 'secrets.secret.details', model: this.model.path },
       { label: 'edit' },
@@ -46,7 +46,7 @@ module('Integration | Component | kv | kv-page-header', function (hooks) {
     await render(hbs`<KvPageHeader @breadcrumbs={{this.breadcrumbs}} @pageTitle="Create new version"/>`, {
       owner: this.engine,
     });
-    assert.dom('[data-test-breadcrumbs] li:nth-child(1) a').hasText('secrets', 'Secrets breadcrumb renders');
+    assert.dom('[data-test-breadcrumbs] li:nth-child(1) a').hasText('Secrets', 'Secrets breadcrumb renders');
     assert.dom('[data-test-breadcrumbs] li:nth-child(2) a').hasText(this.backend, 'engine name renders');
     assert.dom('[data-test-breadcrumbs] li:nth-child(3) a').hasText(this.path, 'secret path renders');
     assert
