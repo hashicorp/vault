@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/anypb"
 )
@@ -911,4 +912,40 @@ func TestIdentityStore_DeleteCaseSensitivityKey(t *testing.T) {
 	if storageEntry != nil {
 		t.Fatalf("bad: expected no entry for casesensitivity key")
 	}
+}
+
+func TestIdentityStoreInvalidate_Entities(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+
+	id, err := uuid.GenerateUUID()
+	require.NoError(t, err)
+
+	entity := &identity.Entity{
+		Name:        "test",
+		NamespaceID: namespace.RootNamespaceID,
+		ID:          id,
+		Aliases:     []*identity.Alias{},
+	}
+
+	p := c.identityStore.entityPacker
+
+	// Persist the entity which we are merging to
+	entityAsAny, err := anypb.New(entity)
+	require.NoError(t, err)
+
+	item := &storagepacker.Item{
+		ID:      id,
+		Message: entityAsAny,
+	}
+
+	c.identityStore.entityPacker.PutItem(context.Background(), item)
+
+	c.identityStore.Invalidate(context.Background(), p.BucketKey(id))
+
+	txn := c.identityStore.db.Txn(true)
+	defer txn.Abort()
+
+	memEntity, err := c.identityStore.MemDBEntityByIDInTxn(txn, id, true)
+	assert.NoError(t, err)
+	assert.NotNil(t, memEntity)
 }
