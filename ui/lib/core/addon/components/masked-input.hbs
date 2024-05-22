@@ -39,9 +39,10 @@
     <Hds::Copy::Button
       @text="Copy"
       @isIconOnly={{true}}
-      @textToCopy={{@value}}
+      @textToCopy={{this.copyValue}}
+      @onError={{(fn (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger"))}}
       class="transparent has-padding-xxs"
-      data-test-copy-button={{or @value true}}
+      data-test-copy-button={{or this.copyValue true}}
     />
   {{/if}}
   {{#if @allowDownload}}

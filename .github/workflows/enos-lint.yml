@@ -17,9 +17,9 @@ jobs:
       runs-on: ${{ steps.metadata.outputs.runs-on }}
       version: ${{ steps.metadata.outputs.version }}
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
       - id: set-product-version
-        uses: hashicorp/actions-set-product-version@v1
+        uses: hashicorp/actions-set-product-version@v2
       - id: metadata
         run: |
           echo "version=${{ steps.set-product-version.outputs.product-version }}" >> "$GITHUB_OUTPUT"
@@ -37,10 +37,11 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       ENOS_VAR_tfc_api_token: ${{ secrets.TF_API_TOKEN }}
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_wrapper: false
+          terraform_version: "1.7.5" # Pin until 1.8.x crash has been resolved
       - uses: hashicorp/action-setup-enos@v1
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}

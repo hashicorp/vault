@@ -49,6 +49,7 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
 
   test('it should hide links and headings user does not have access too', async function (assert) {
     await renderComponent();
+
     assert
       .dom('[data-test-sidebar-nav-link]')
       .exists({ count: 3 }, 'Nav links are hidden other than secrets, secrets sync and dashboard');
@@ -83,6 +84,31 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
     });
   });
 
+  test('it should render badge for promotional links on community version', async function (assert) {
+    const promotionalLinks = ['Secrets Sync'];
+    // if no features passed, it defaults to all features and we need to specifically remove Secrets Sync
+    stubFeaturesAndPermissions(this.owner, false, true, []);
+    await renderComponent();
+
+    promotionalLinks.forEach((link) => {
+      assert
+        .dom(`[data-test-sidebar-nav-link="${link}"]`)
+        .hasText(`${link} Enterprise`, `${link} link renders Enterprise badge`);
+    });
+  });
+
+  test('it should render badge for promotional links on enterprise version', async function (assert) {
+    const promotionalLinks = ['Secrets Sync'];
+    stubFeaturesAndPermissions(this.owner, true, true, ['Namespaces']);
+    await renderComponent();
+
+    promotionalLinks.forEach((link) => {
+      assert
+        .dom(`[data-test-sidebar-nav-link="${link}"]`)
+        .hasText(`${link} Premium`, `${link} link renders Premium badge`);
+    });
+  });
+
   test('it should hide enterprise related links in child namespace', async function (assert) {
     const links = [
       'Disaster Recovery',
@@ -108,6 +134,19 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
       assert
         .dom(`[data-test-sidebar-nav-link="${link}"]`)
         .doesNotExist(`${link} is hidden in child namespace`);
+    });
+  });
+
+  test('it should render badge for promotional links on managed clusters', async function (assert) {
+    this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
+    const promotionalLinks = ['Secrets Sync'];
+    stubFeaturesAndPermissions(this.owner, true, true);
+    await renderComponent();
+
+    promotionalLinks.forEach((link) => {
+      assert
+        .dom(`[data-test-sidebar-nav-link="${link}"]`)
+        .hasText(`${link} Plus`, `${link} link renders Plus badge`);
     });
   });
 });

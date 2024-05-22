@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/helper/constants"
@@ -19,9 +20,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
-
-	"github.com/hashicorp/go-secure-stdlib/parseutil"
-
 	"github.com/stretchr/testify/require"
 )
 
@@ -1475,7 +1473,7 @@ func TestCRLIssuerRemoval(t *testing.T) {
 
 	// List items in storage under both CRL paths so we know what is there in
 	// the "good" state.
-	crlList, err := s.List(ctx, "crls/")
+	crlList, err := s.List(ctx, issuing.PathCrls)
 	require.NoError(t, err)
 	require.Contains(t, crlList, "config")
 	require.Greater(t, len(crlList), 1)
@@ -1513,7 +1511,7 @@ func TestCRLIssuerRemoval(t *testing.T) {
 	}
 
 	// Finally list storage entries again to ensure they are cleaned up.
-	afterCRLList, err := s.List(ctx, "crls/")
+	afterCRLList, err := s.List(ctx, issuing.PathCrls)
 	require.NoError(t, err)
 	for _, entry := range crlList {
 		require.Contains(t, afterCRLList, entry)

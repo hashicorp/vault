@@ -18,9 +18,8 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/pki"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/vault"
-
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault"
 	"github.com/stretchr/testify/require"
 )
 

@@ -7,11 +7,10 @@ import (
 	"net"
 	"testing"
 
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/require"
-
-	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 )
 
 // TestACME_ValidateIdentifiersAgainstRole Verify the ACME order creation

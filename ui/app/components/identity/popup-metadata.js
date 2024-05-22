@@ -3,32 +3,45 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Base from './_popup-base';
-import { computed } from '@ember/object';
-import { alias } from '@ember/object/computed';
+import { action } from '@ember/object';
+import { service } from '@ember/service';
+import Component from '@glimmer/component';
+import { tracked } from '@glimmer/tracking';
+import errorMessage from 'vault/utils/error-message';
 
-export default Base.extend({
-  model: alias('params.firstObject'),
-  key: computed('params', function () {
-    return this.params.objectAt(1);
-  }),
+export default class IdentityPopupMetadata extends Component {
+  @service flashMessages;
+  @tracked showConfirmModal = false;
 
-  messageArgs(model, key) {
-    return [model, key];
-  },
+  onSuccess(key) {
+    if (this.args.onSuccess) {
+      this.args.onSuccess();
+    }
+    this.flashMessages.success(`Successfully removed '${key}' from metadata`);
+  }
+  onError(err, key) {
+    if (this.args.onError) {
+      this.args.onError();
+    }
+    const error = errorMessage(err);
+    this.flashMessages.danger(`There was a problem removing '${key}' from the metadata - ${error}`);
+  }
 
-  successMessage(model, key) {
-    return `Successfully removed '${key}' from metadata`;
-  },
-  errorMessage(e, model, key) {
-    const error = e.errors ? e.errors.join(' ') : e.message;
-    return `There was a problem removing '${key}' from the metadata - ${error}`;
-  },
+  transaction() {
+    const metadata = this.args.model.metadata;
+    delete metadata[this.args.key];
+    this.args.model.metadata = { ...metadata };
+    return this.args.model.save();
+  }
 
-  transaction(model, key) {
-    const metadata = model.metadata;
-    delete metadata[key];
-    model.set('metadata', { ...metadata });
-    return model.save();
-  },
-});
+  @action
+  async removeMetadata() {
+    const key = this.args.key;
+    try {
+      await this.transaction();
+      this.onSuccess(key);
+    } catch (e) {
+      this.onError(e, key);
+    }
+  }
+}

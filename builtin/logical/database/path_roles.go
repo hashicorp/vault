@@ -238,11 +238,12 @@ func (b *databaseBackend) pathStaticRoleExistenceCheck(ctx context.Context, req 
 }
 
 func (b *databaseBackend) pathRoleDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	err := req.Storage.Delete(ctx, databaseRolePath+data.Get("name").(string))
+	name := data.Get("name").(string)
+	err := req.Storage.Delete(ctx, databaseRolePath+name)
 	if err != nil {
 		return nil, err
 	}
-
+	b.dbEvent(ctx, "role-delete", req.Path, name, true)
 	return nil, nil
 }
 
@@ -283,6 +284,7 @@ func (b *databaseBackend) pathStaticRoleDelete(ctx context.Context, req *logical
 		}
 	}
 
+	b.dbEvent(ctx, "static-role-delete", req.Path, name, true)
 	return nil, merr.ErrorOrNil()
 }
 
@@ -498,6 +500,7 @@ func (b *databaseBackend) pathRoleCreateUpdate(ctx context.Context, req *logical
 		return nil, err
 	}
 
+	b.dbEvent(ctx, fmt.Sprintf("role-%s", req.Operation), req.Path, name, true)
 	return nil, nil
 }
 
@@ -696,7 +699,7 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 	if err := b.pushItem(item); err != nil {
 		return nil, err
 	}
-
+	b.dbEvent(ctx, fmt.Sprintf("static-role-%s", req.Operation), req.Path, name, true)
 	return response, nil
 }
 

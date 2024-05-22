@@ -3,10 +3,15 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Service, { inject as service } from '@ember/service';
+import Service, { service } from '@ember/service';
+import { tracked } from '@glimmer/tracking';
 import { sanitizePath, sanitizeStart } from 'core/utils/sanitize-path';
 import { task } from 'ember-concurrency';
 
+export const PERMISSIONS_BANNER_STATES = {
+  readFailed: 'read-failed',
+  noAccess: 'no-ns-access',
+};
 const API_PATHS = {
   access: {
     methods: 'sys/auth',
@@ -62,19 +67,46 @@ const API_PATHS_TO_ROUTE_PARAMS = {
   It fetches a users' policy from the resultant-acl endpoint and stores their
   allowed exact and glob paths as state. It also has methods for checking whether
   a user has permission for a given path.
+  The data from the resultant-acl endpoint has the following shape:
+  {
+    exact_paths: {
+      [key: string]: {
+        capabilities: string[];
+      };
+    };
+    glob_paths: {
+      [key: string]: {
+        capabilities: string[];
+      };
+    };
+    root: boolean;
+    chroot_namespace?: string;
+  };
+  There are a couple nuances to be aware of about this response. When a
+  chroot_namespace is set, all of the paths in the response will be prefixed
+  with that namespace. Additionally, this endpoint is only added to the default
+  policy in the user's root namespace, so we make the call to the user's root
+  namespace (the namespace where the user's auth method is mounted) no matter
+  what the current namespace is.
 */
 
-export default Service.extend({
-  exactPaths: null,
-  globPaths: null,
-  canViewAll: null,
-  readFailed: false,
-  chrootNamespace: null,
-  store: service(),
-  auth: service(),
-  namespace: service(),
+export default class PermissionsService extends Service {
+  @tracked exactPaths = null;
+  @tracked globPaths = null;
+  @tracked canViewAll = null;
+  @tracked permissionsBanner = null;
+  @tracked chrootNamespace = null;
+  @service store;
+  @service namespace;
 
-  getPaths: task(function* () {
+  get baseNs() {
+    const currentNs = this.namespace.path;
+    return this.chrootNamespace
+      ? `${sanitizePath(this.chrootNamespace)}/${sanitizePath(currentNs)}`
+      : sanitizePath(currentNs);
+  }
+
+  @task *getPaths() {
     if (this.paths) {
       return;
     }
@@ -85,26 +117,63 @@ export default Service.extend({
       return;
     } catch (err) {
       // If no policy can be found, default to showing all nav items.
-      this.set('canViewAll', true);
-      this.set('readFailed', true);
+      this.canViewAll = true;
+      this.permissionsBanner = PERMISSIONS_BANNER_STATES.readFailed;
     }
-  }),
+  }
+
+  get wildcardPath() {
+    const ns = [sanitizePath(this.chrootNamespace), sanitizePath(this.namespace.userRootNamespace)].join('/');
+    // wildcard path comes back from root namespace as empty string,
+    // but within a namespace it's the namespace itself ending with a slash
+    return ns === '/' ? '' : `${sanitizePath(ns)}/`;
+  }
+
+  /**
+   * hasWildcardAccess checks if the user has a wildcard policy
+   * @param {object} globPaths key is path, value is object with capabilities
+   * @returns {boolean} whether the user's policy includes wildcard access to NS
+   */
+  hasWildcardAccess(globPaths = {}) {
+    // First check if the wildcard path is in the globPaths object
+    if (!Object.keys(globPaths).includes(this.wildcardPath)) return false;
+
+    // if so, make sure the current namespace is a child of the wildcard path
+    return this.namespace.path.startsWith(this.wildcardPath);
+  }
+
+  // This method is called to recalculate whether to show the permissionsBanner when the namespace changes
+  calcNsAccess() {
+    if (this.canViewAll) {
+      this.permissionsBanner = null;
+      return;
+    }
+    const namespace = this.baseNs;
+    const allowed =
+      // check if the user has wildcard access to the relative root namespace
+      this.hasWildcardAccess(this.globPaths) ||
+      // or if any of their glob paths start with the namespace
+      Object.keys(this.globPaths).any((k) => k.startsWith(namespace)) ||
+      // or if any of their exact paths start with the namespace
+      Object.keys(this.exactPaths).any((k) => k.startsWith(namespace));
+    this.permissionsBanner = allowed ? null : PERMISSIONS_BANNER_STATES.noAccess;
+  }
 
   setPaths(resp) {
-    this.set('exactPaths', resp.data.exact_paths);
-    this.set('globPaths', resp.data.glob_paths);
-    this.set('canViewAll', resp.data.root);
-    this.set('chrootNamespace', resp.data.chroot_namespace);
-    this.set('readFailed', false);
-  },
+    this.exactPaths = resp.data.exact_paths;
+    this.globPaths = resp.data.glob_paths;
+    this.canViewAll = resp.data.root;
+    this.chrootNamespace = resp.data.chroot_namespace;
+    this.calcNsAccess();
+  }
 
   reset() {
-    this.set('exactPaths', null);
-    this.set('globPaths', null);
-    this.set('canViewAll', null);
-    this.set('readFailed', false);
-    this.set('chrootNamespace', null);
-  },
+    this.exactPaths = null;
+    this.globPaths = null;
+    this.canViewAll = null;
+    this.chrootNamespace = null;
+    this.permissionsBanner = null;
+  }
 
   hasNavPermission(navItem, routeParams, requireAll) {
     if (routeParams) {
@@ -119,7 +188,7 @@ export default Service.extend({
       });
     }
     return Object.values(API_PATHS[navItem]).some((path) => this.hasPermission(path));
-  },
+  }
 
   navPathParams(navItem) {
     const path = Object.values(API_PATHS[navItem]).find((path) => this.hasPermission(path));
@@ -128,18 +197,16 @@ export default Service.extend({
     }
 
     return API_PATHS_TO_ROUTE_PARAMS[path];
-  },
+  }
 
   pathNameWithNamespace(pathName) {
-    const namespace = this.chrootNamespace
-      ? `${sanitizePath(this.chrootNamespace)}/${sanitizePath(this.namespace.path)}`
-      : sanitizePath(this.namespace.path);
+    const namespace = this.baseNs;
     if (namespace) {
       return `${sanitizePath(namespace)}/${sanitizeStart(pathName)}`;
     } else {
       return pathName;
     }
-  },
+  }
 
   hasPermission(pathName, capabilities = [null]) {
     if (this.canViewAll) {
@@ -151,7 +218,7 @@ export default Service.extend({
       (capability) =>
         this.hasMatchingExactPath(path, capability) || this.hasMatchingGlobPath(path, capability)
     );
-  },
+  }
 
   hasMatchingExactPath(pathName, capability) {
     const exactPaths = this.exactPaths;
@@ -166,7 +233,7 @@ export default Service.extend({
       return hasMatchingPath;
     }
     return false;
-  },
+  }
 
   hasMatchingGlobPath(pathName, capability) {
     const globPaths = this.globPaths;
@@ -185,13 +252,13 @@ export default Service.extend({
       return hasMatchingPath;
     }
     return false;
-  },
+  }
 
   hasCapability(path, capability) {
     return path.capabilities.includes(capability);
-  },
+  }
 
   isDenied(path) {
     return path.capabilities.includes('deny');
-  },
-});
+  }
+}

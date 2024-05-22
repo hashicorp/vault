@@ -11,9 +11,9 @@
  */
 export function isAdvancedSecret(value) {
   try {
-    const json = JSON.parse(value);
-    if (Array.isArray(json)) return false;
-    return Object.values(json).some((value) => typeof value !== 'string');
+    const obj = typeof value === 'string' ? JSON.parse(value) : value;
+    if (Array.isArray(obj)) return false;
+    return Object.values(obj).any((value) => typeof value !== 'string');
   } catch (e) {
     return false;
   }
@@ -30,6 +30,11 @@ export function obfuscateData(obj) {
   for (const key of Object.keys(obj)) {
     if (Array.isArray(obj[key])) {
       newObj[key] = obj[key].map(() => '********');
+    } else if (obj[key] === null) {
+      // unfortunately in javascript typeof null returns object
+      // this is due to a "historical js bug that will never be fixed"
+      // we handle this situation here
+      newObj[key] = '********';
     } else if (typeof obj[key] === 'object') {
       newObj[key] = obfuscateData(obj[key]);
     } else {

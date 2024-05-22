@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/limits"
 	"github.com/hashicorp/vault/sdk/helper/license"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -88,6 +89,8 @@ func (c *Core) teardownReplicationResolverHandler() {}
 func (c *Core) createSecondaries(_ hclog.Logger)    {}
 
 func (c *Core) addExtraLogicalBackends(_ string) {}
+
+func (c *Core) addExtraEventBackends() {}
 
 func (c *Core) addExtraCredentialBackends() {}
 
@@ -211,3 +214,11 @@ func DiagnoseCheckLicense(ctx context.Context, vaultCore *Core, coreConfig CoreC
 func createCustomMessageManager(storage logical.Storage, _ *Core) CustomMessagesManager {
 	return uicustommessages.NewManager(storage)
 }
+
+// GetRequestLimiter is a stub for CE. The caller will handle the nil case as a no-op.
+func (c *Core) GetRequestLimiter(key string) *limits.RequestLimiter {
+	return nil
+}
+
+// ReloadRequestLimiter is a no-op on CE.
+func (c *Core) ReloadRequestLimiter() {}

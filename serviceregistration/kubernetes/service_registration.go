@@ -106,6 +106,10 @@ func (r *serviceRegistration) NotifyInitializedStateChange(isInitialized bool) e
 	return nil
 }
 
+func (c *serviceRegistration) NotifyConfigurationReload(conf *map[string]string) error {
+	return nil
+}
+
 func getRequiredField(logger hclog.Logger, config map[string]string, envVar, configParam string) (string, error) {
 	value := ""
 	switch {

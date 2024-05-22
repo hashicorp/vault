@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/hashicorp/cli"
-
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 )
 

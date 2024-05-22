@@ -8,12 +8,10 @@ import (
 	"fmt"
 	"sync"
 
-	UUID "github.com/hashicorp/go-uuid"
-
-	"github.com/hashicorp/vault/sdk/helper/logging"
-
 	"github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
+	UUID "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/sdk/helper/logging"
 )
 
 type TestSealOpts struct {
@@ -125,7 +123,7 @@ func (t *ToggleableWrapper) Encrypt(ctx context.Context, bytes []byte, opts ...w
 	return t.Wrapper.Encrypt(ctx, bytes, opts...)
 }
 
-func (t ToggleableWrapper) Decrypt(ctx context.Context, info *wrapping.BlobInfo, opts ...wrapping.Option) ([]byte, error) {
+func (t *ToggleableWrapper) Decrypt(ctx context.Context, info *wrapping.BlobInfo, opts ...wrapping.Option) ([]byte, error) {
 	t.l.RLock()
 	defer t.l.RUnlock()
 	if t.error != nil {

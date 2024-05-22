@@ -91,6 +91,8 @@ export default class DestinationSyncPageComponent extends Component<Args> {
       });
       await association.save({ adapterOptions: { action: 'set' } });
       this.syncedSecret = this.secretPath;
+      // reset the secret path to help make it clear that the sync was successful
+      this.secretPath = '';
     } catch (error) {
       this.error = `Sync operation error: \n ${errorMessage(error)}`;
     }

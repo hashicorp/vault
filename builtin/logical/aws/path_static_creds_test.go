@@ -9,9 +9,7 @@ import (
 	"testing"
 
 	"github.com/fatih/structs"
-
 	"github.com/hashicorp/vault/sdk/framework"
-
 	"github.com/hashicorp/vault/sdk/logical"
 )
 

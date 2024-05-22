@@ -8,6 +8,7 @@ import { computed } from '@ember/object';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import apiPath from 'vault/utils/api-path';
 import lazyCapabilities from 'vault/macros/lazy-capabilities';
+import { removeManyFromArray } from 'vault/helpers/remove-from-array';
 
 export const COMPUTEDS = {
   operationFields: computed('newFields', function () {
@@ -15,7 +16,7 @@ export const COMPUTEDS = {
   }),
 
   operationFieldsWithoutSpecial: computed('operationFields', function () {
-    return this.operationFields.slice().removeObjects(['operationAll', 'operationNone']);
+    return removeManyFromArray(this.operationFields, ['operationAll', 'operationNone']);
   }),
 
   tlsFields: computed(function () {
@@ -25,12 +26,12 @@ export const COMPUTEDS = {
   // For rendering on the create/edit pages
   defaultFields: computed('newFields', 'operationFields', 'tlsFields', function () {
     const excludeFields = ['role'].concat(this.operationFields, this.tlsFields);
-    return this.newFields.slice().removeObjects(excludeFields);
+    return removeManyFromArray(this.newFields, excludeFields);
   }),
 
   // For adapter/serializer
   nonOperationFields: computed('newFields', 'operationFields', function () {
-    return this.newFields.slice().removeObjects(this.operationFields);
+    return removeManyFromArray(this.newFields, this.operationFields);
   }),
 };
 
@@ -64,9 +65,11 @@ export default Model.extend(COMPUTEDS, {
 
     const attributes = ['operationAddAttribute', 'operationGetAttributes'];
     const server = ['operationDiscoverVersions'];
-    const others = this.operationFieldsWithoutSpecial
-      .slice()
-      .removeObjects(objects.concat(attributes, server));
+    const others = removeManyFromArray(this.operationFieldsWithoutSpecial, [
+      ...objects,
+      ...attributes,
+      ...server,
+    ]);
     const groups = [
       { 'Managed Cryptographic Objects': objects },
       { 'Object Attributes': attributes },

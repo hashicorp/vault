@@ -11,7 +11,7 @@ import { render, click, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { Response } from 'miragejs';
 import sinon from 'sinon';
-import { generateBreadcrumbs } from 'vault/tests/helpers/ldap';
+import { generateBreadcrumbs } from 'vault/tests/helpers/ldap/ldap-helpers';
 
 const selectors = {
   radioCard: '[data-test-radio-card="OpenLDAP"]',

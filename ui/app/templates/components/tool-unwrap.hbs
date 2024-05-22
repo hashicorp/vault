@@ -43,7 +43,12 @@
     </T.Panel>
   </Hds::Tabs>
   <Hds::ButtonSet class="has-top-padding-m">
-    <Hds::Copy::Button @text="Copy unwrapped data" @textToCopy={{stringify @unwrap_data}} class="primary" />
+    <Hds::Copy::Button
+      @text="Copy unwrapped data"
+      @textToCopy={{stringify @unwrap_data}}
+      @onError={{(fn (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger"))}}
+      class="primary"
+    />
     <Hds::Button {{on "click" this.onClear}} @color="secondary" @text="Back" />
   </Hds::ButtonSet>
 {{else}}

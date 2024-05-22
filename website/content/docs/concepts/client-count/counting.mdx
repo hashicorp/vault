@@ -2,7 +2,7 @@
 layout: docs
 page_title: Client count calculation
 description: |-
-  Technical overview of client count calculations in Vault 
+  Technical overview of client count calculations in Vault
 ---
 
 # Client count calculation
@@ -10,15 +10,17 @@ description: |-
 Vault provides usage telemetry for the number of clients based on the number of
 unique entity assignments within a Vault cluster over a given billing period:
 
-- Standard entity assignments based on authentication method for active entities. 
+- Standard entity assignments based on authentication method for active entities.
 - Constructed entity assignments for active non-entity tokens, including batch
   tokens created by performance standby nodes.
 - Certificate entity assignments for ACME connections.
+- Secrets being synced to at least one sync destination.
 
 ```markdown
 CLIENT_COUNT_PER_CLUSTER = UNIQUE_STANDARD_ENTITIES +
                            UNIQUE_CONSTRUCTED_ENTITIES +
-                           UNIQUE CERTIFICATE_ENTITIES
+                           UNIQUE_CERTIFICATE_ENTITIES +
+                           UNIQUE_SYNCED_SECRETS
 ```
 
 Vault does not aggregate or de-duplicate clients across clusters, but all logs
@@ -86,7 +88,7 @@ accuracy estimate for the approximation decreases as the difference between the
 number of clients in the current month and the number of clients in the billing
 period increases.
 
-### Testing verification for client count approximations 
+### Testing verification for client count approximations
 
 Given `CM` as the number of clients for the current month and `BP` as the number
 of clients in the billing period, we found that the approximation becomes
@@ -143,8 +145,8 @@ active entity in the client log consumes a few bytes of storage. As a safety
 measure against runaway storage growth, Vault limits the number of entity
 records to 656,000 per month, but typical storage costs are much less.
 
-On average, 1000 monthly active entities requires 1.5 MiB of storage capacity
-over the default 24-month retention period.
+On average, 1000 monthly active entities requires 3.0 MiB of storage capacity
+over the default 48-month retention period.
 
 @include "content-footer-title.mdx"
 

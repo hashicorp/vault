@@ -24,14 +24,15 @@ import (
 	"testing"
 	"time"
 
-	"golang.org/x/crypto/acme"
-
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/logical/pkiext"
 	"github.com/hashicorp/vault/helper/testhelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	hDocker "github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/acme"
 )
 
 //go:embed testdata/caddy_http.json
@@ -94,6 +95,7 @@ type caddyConfig struct {
 func SubtestACMECaddy(configTemplate string, enableEAB bool) func(*testing.T, *VaultPkiCluster) {
 	return func(t *testing.T, cluster *VaultPkiCluster) {
 		ctx := context.Background()
+		logger := corehelpers.NewTestLogger(t)
 
 		// Roll a random run ID for mount and hostname uniqueness.
 		runID, err := uuid.GenerateUUID()
@@ -118,14 +120,14 @@ func SubtestACMECaddy(configTemplate string, enableEAB bool) func(*testing.T, *V
 
 		directory := fmt.Sprintf("https://%s:8200/v1/%s/acme/directory", pki.GetActiveContainerIP(), runID)
 		vaultNetwork := pki.GetContainerNetworkName()
-		t.Logf("dir: %s", directory)
+		logger.Trace("dir", "dir", directory)
 
-		logConsumer, logStdout, logStderr := getDockerLog(t)
+		logConsumer, logStdout, logStderr := getDockerLog(logger)
 
 		sleepTimer := "45"
 
 		// Kick off Caddy container.
-		t.Logf("creating on network: %v", vaultNetwork)
+		logger.Trace("creating on network", "network", vaultNetwork)
 		caddyRunner, err := hDocker.NewServiceRunner(hDocker.RunOptions{
 			ImageRepo:     "docker.mirror.hashicorp.services/library/caddy",
 			ImageTag:      "2.6.4",
@@ -185,7 +187,7 @@ func SubtestACMECaddy(configTemplate string, enableEAB bool) func(*testing.T, *V
 			"--config", "/tmp/caddy_config.json",
 		}
 		stdout, stderr, retcode, err := caddyRunner.RunCmdWithOutput(ctx, caddyResult.Container.ID, caddyCmd)
-		t.Logf("Caddy Start Command: %v\nstdout: %v\nstderr: %v\n", caddyCmd, string(stdout), string(stderr))
+		logger.Trace("Caddy Start Command", "cmd", caddyCmd, "stdout", string(stdout), "stderr", string(stderr))
 		require.NoError(t, err, "got error running Caddy start command")
 		require.Equal(t, 0, retcode, "expected zero retcode Caddy start command result")
 
@@ -224,20 +226,22 @@ func SubtestACMECaddy(configTemplate string, enableEAB bool) func(*testing.T, *V
 			"https://" + hostname + "/",
 		}
 		stdout, stderr, retcode, err = curlRunner.RunCmdWithOutput(ctx, curlResult.Container.ID, curlCmd)
-		t.Logf("cURL Command: %v\nstdout: %v\nstderr: %v\n", curlCmd, string(stdout), string(stderr))
+		logger.Trace("cURL Command", "cmd", curlCmd, "stdout", string(stdout), "stderr", string(stderr))
 		require.NoError(t, err, "got error running cURL command")
 		require.Equal(t, 0, retcode, "expected zero retcode cURL command result")
 	}
 }
 
 func SubtestACMECertbot(t *testing.T, cluster *VaultPkiCluster) {
+	logger := corehelpers.NewTestLogger(t)
+
 	pki, err := cluster.CreateAcmeMount("pki")
 	require.NoError(t, err, "failed setting up acme mount")
 
 	directory := "https://" + pki.GetActiveContainerIP() + ":8200/v1/pki/acme/directory"
 	vaultNetwork := pki.GetContainerNetworkName()
 
-	logConsumer, logStdout, logStderr := getDockerLog(t)
+	logConsumer, logStdout, logStderr := getDockerLog(logger)
 
 	// Default to 45 second timeout, but bump to 120 when running locally or if nightly regression
 	// flag is provided.
@@ -246,7 +250,7 @@ func SubtestACMECertbot(t *testing.T, cluster *VaultPkiCluster) {
 		sleepTimer = "120"
 	}
 
-	t.Logf("creating on network: %v", vaultNetwork)
+	logger.Trace("creating on network", "network", vaultNetwork)
 	runner, err := hDocker.NewServiceRunner(hDocker.RunOptions{
 		ImageRepo:     "docker.mirror.hashicorp.services/certbot/certbot",
 		ImageTag:      "latest",
@@ -295,10 +299,10 @@ func SubtestACMECertbot(t *testing.T, cluster *VaultPkiCluster) {
 	logCatCmd := []string{"cat", "/var/log/letsencrypt/letsencrypt.log"}
 
 	stdout, stderr, retcode, err := runner.RunCmdWithOutput(ctx, result.Container.ID, certbotCmd)
-	t.Logf("Certbot Issue Command: %v\nstdout: %v\nstderr: %v\n", certbotCmd, string(stdout), string(stderr))
+	logger.Trace("Certbot Issue Command", "cmd", certbotCmd, "stdout", string(stdout), "stderr", string(stderr))
 	if err != nil || retcode != 0 {
 		logsStdout, logsStderr, _, _ := runner.RunCmdWithOutput(ctx, result.Container.ID, logCatCmd)
-		t.Logf("Certbot logs\nstdout: %v\nstderr: %v\n", string(logsStdout), string(logsStderr))
+		logger.Trace("Certbot logs", "stdout", string(logsStdout), "stderr", string(logsStderr))
 	}
 	require.NoError(t, err, "got error running issue command")
 	require.Equal(t, 0, retcode, "expected zero retcode issue command result")
@@ -323,10 +327,10 @@ func SubtestACMECertbot(t *testing.T, cluster *VaultPkiCluster) {
 	}
 
 	stdout, stderr, retcode, err = runner.RunCmdWithOutput(ctx, result.Container.ID, certbotRenewCmd)
-	t.Logf("Certbot Renew Command: %v\nstdout: %v\nstderr: %v\n", certbotRenewCmd, string(stdout), string(stderr))
+	logger.Trace("Certbot Renew Command", "cmd", certbotRenewCmd, "stdout", string(stdout), "stderr", string(stderr))
 	if err != nil || retcode != 0 {
 		logsStdout, logsStderr, _, _ := runner.RunCmdWithOutput(ctx, result.Container.ID, logCatCmd)
-		t.Logf("Certbot logs\nstdout: %v\nstderr: %v\n", string(logsStdout), string(logsStderr))
+		logger.Trace("Certbot logs", "stdout", string(logsStdout), "stderr", string(logsStderr))
 	}
 	require.NoError(t, err, "got error running renew command")
 	require.Equal(t, 0, retcode, "expected zero retcode renew command result")
@@ -344,20 +348,20 @@ func SubtestACMECertbot(t *testing.T, cluster *VaultPkiCluster) {
 	}
 
 	stdout, stderr, retcode, err = runner.RunCmdWithOutput(ctx, result.Container.ID, certbotRevokeCmd)
-	t.Logf("Certbot Revoke Command: %v\nstdout: %v\nstderr: %v\n", certbotRevokeCmd, string(stdout), string(stderr))
+	logger.Trace("Certbot Revoke Command", "cmd", certbotRevokeCmd, "stdout", string(stdout), "stderr", string(stderr))
 	if err != nil || retcode != 0 {
 		logsStdout, logsStderr, _, _ := runner.RunCmdWithOutput(ctx, result.Container.ID, logCatCmd)
-		t.Logf("Certbot logs\nstdout: %v\nstderr: %v\n", string(logsStdout), string(logsStderr))
+		logger.Trace("Certbot logs", "stdout", string(logsStdout), "stderr", string(logsStderr))
 	}
 	require.NoError(t, err, "got error running revoke command")
 	require.Equal(t, 0, retcode, "expected zero retcode revoke command result")
 
 	// Revoking twice should fail.
 	stdout, stderr, retcode, err = runner.RunCmdWithOutput(ctx, result.Container.ID, certbotRevokeCmd)
-	t.Logf("Certbot Double Revoke Command: %v\nstdout: %v\nstderr: %v\n", certbotRevokeCmd, string(stdout), string(stderr))
+	logger.Trace("Certbot Double Revoke Command", "cmd", certbotRevokeCmd, "stdout", string(stdout), "stderr", string(stderr))
 	if err != nil || retcode == 0 {
 		logsStdout, logsStderr, _, _ := runner.RunCmdWithOutput(ctx, result.Container.ID, logCatCmd)
-		t.Logf("Certbot logs\nstdout: %v\nstderr: %v\n", string(logsStdout), string(logsStderr))
+		logger.Trace("Certbot logs", "stdout", string(logsStdout), "stderr", string(logsStderr))
 	}
 
 	require.NoError(t, err, "got error running double revoke command")
@@ -381,10 +385,10 @@ func SubtestACMECertbot(t *testing.T, cluster *VaultPkiCluster) {
 		}
 
 		stdout, stderr, retcode, err = runner.RunCmdWithOutput(ctx, result.Container.ID, certbotInvalidIssueCmd)
-		t.Logf("Certbot Invalid Issue Command: %v\nstdout: %v\nstderr: %v\n", certbotInvalidIssueCmd, string(stdout), string(stderr))
+		logger.Trace("Certbot Invalid Issue Command", "cmd", certbotInvalidIssueCmd, "stdout", string(stdout), "stderr", string(stderr))
 		if err != nil || retcode != 0 {
 			logsStdout, logsStderr, _, _ := runner.RunCmdWithOutput(ctx, result.Container.ID, logCatCmd)
-			t.Logf("Certbot logs\nstdout: %v\nstderr: %v\n", string(logsStdout), string(logsStderr))
+			logger.Trace("Certbot logs", "stdout", string(logsStdout), "stderr", string(logsStderr))
 		}
 		require.NoError(t, err, "got error running issue command")
 		require.NotEqual(t, 0, retcode, "expected non-zero retcode issue command result")
@@ -400,26 +404,28 @@ func SubtestACMECertbot(t *testing.T, cluster *VaultPkiCluster) {
 	}
 
 	stdout, stderr, retcode, err = runner.RunCmdWithOutput(ctx, result.Container.ID, certbotUnregisterCmd)
-	t.Logf("Certbot Unregister Command: %v\nstdout: %v\nstderr: %v\n", certbotUnregisterCmd, string(stdout), string(stderr))
+	logger.Trace("Certbot Unregister Command", "cmd", certbotUnregisterCmd, "stdout", string(stdout), "stderr", string(stderr))
 	if err != nil || retcode != 0 {
 		logsStdout, logsStderr, _, _ := runner.RunCmdWithOutput(ctx, result.Container.ID, logCatCmd)
-		t.Logf("Certbot logs\nstdout: %v\nstderr: %v\n", string(logsStdout), string(logsStderr))
+		logger.Trace("Certbot logs", "stdout", string(logsStdout), "stderr", string(logsStderr))
 	}
 	require.NoError(t, err, "got error running unregister command")
 	require.Equal(t, 0, retcode, "expected zero retcode unregister command result")
 
 	// Attempting to close out our ACME account twice should fail
 	stdout, stderr, retcode, err = runner.RunCmdWithOutput(ctx, result.Container.ID, certbotUnregisterCmd)
-	t.Logf("Certbot double Unregister Command: %v\nstdout: %v\nstderr: %v\n", certbotUnregisterCmd, string(stdout), string(stderr))
+	logger.Trace("Certbot Double Unregister Command", "cmd", certbotUnregisterCmd, "stdout", string(stdout), "stderr", string(stderr))
 	if err != nil || retcode != 0 {
 		logsStdout, logsStderr, _, _ := runner.RunCmdWithOutput(ctx, result.Container.ID, logCatCmd)
-		t.Logf("Certbot double logs\nstdout: %v\nstderr: %v\n", string(logsStdout), string(logsStderr))
+		logger.Trace("Certbot logs", "stdout", string(logsStdout), "stderr", string(logsStderr))
 	}
 	require.NoError(t, err, "got error running double unregister command")
 	require.Equal(t, 1, retcode, "expected non-zero retcode double unregister command result")
 }
 
 func SubtestACMECertbotEab(t *testing.T, cluster *VaultPkiCluster) {
+	logger := corehelpers.NewTestLogger(t)
+
 	mountName := "pki-certbot-eab"
 	pki, err := cluster.CreateAcmeMount(mountName)
 	require.NoError(t, err, "failed setting up acme mount")
@@ -434,9 +440,9 @@ func SubtestACMECertbotEab(t *testing.T, cluster *VaultPkiCluster) {
 	directory := "https://" + pki.GetActiveContainerIP() + ":8200/v1/" + mountName + "/acme/directory"
 	vaultNetwork := pki.GetContainerNetworkName()
 
-	logConsumer, logStdout, logStderr := getDockerLog(t)
+	logConsumer, logStdout, logStderr := getDockerLog(logger)
 
-	t.Logf("creating on network: %v", vaultNetwork)
+	logger.Trace("creating on network", "network", vaultNetwork)
 	runner, err := hDocker.NewServiceRunner(hDocker.RunOptions{
 		ImageRepo:     "docker.mirror.hashicorp.services/certbot/certbot",
 		ImageTag:      "latest",
@@ -483,10 +489,10 @@ func SubtestACMECertbotEab(t *testing.T, cluster *VaultPkiCluster) {
 	logCatCmd := []string{"cat", "/var/log/letsencrypt/letsencrypt.log"}
 
 	stdout, stderr, retcode, err := runner.RunCmdWithOutput(ctx, result.Container.ID, certbotCmd)
-	t.Logf("Certbot Issue Command: %v\nstdout: %v\nstderr: %v\n", certbotCmd, string(stdout), string(stderr))
+	logger.Trace("Certbot Issue Command", "cmd", certbotCmd, "stdout", string(stdout), "stderr", string(stderr))
 	if err != nil || retcode != 0 {
 		logsStdout, logsStderr, _, _ := runner.RunCmdWithOutput(ctx, result.Container.ID, logCatCmd)
-		t.Logf("Certbot logs\nstdout: %v\nstderr: %v\n", string(logsStdout), string(logsStderr))
+		logger.Trace("Certbot logs", "stdout", string(logsStdout), "stderr", string(logsStderr))
 	}
 	require.NoError(t, err, "got error running issue command")
 	require.Equal(t, 0, retcode, "expected zero retcode issue command result")
@@ -507,10 +513,10 @@ func SubtestACMECertbotEab(t *testing.T, cluster *VaultPkiCluster) {
 	}
 
 	stdout, stderr, retcode, err = runner.RunCmdWithOutput(ctx, result.Container.ID, certbotRenewCmd)
-	t.Logf("Certbot Renew Command: %v\nstdout: %v\nstderr: %v\n", certbotRenewCmd, string(stdout), string(stderr))
+	logger.Trace("Certbot Renew Command", "cmd", certbotRenewCmd, "stdout", string(stdout), "stderr", string(stderr))
 	if err != nil || retcode != 0 {
 		logsStdout, logsStderr, _, _ := runner.RunCmdWithOutput(ctx, result.Container.ID, logCatCmd)
-		t.Logf("Certbot logs\nstdout: %v\nstderr: %v\n", string(logsStdout), string(logsStderr))
+		logger.Trace("Certbot logs", "stdout", string(logsStdout), "stderr", string(logsStderr))
 	}
 	require.NoError(t, err, "got error running renew command")
 	require.Equal(t, 0, retcode, "expected zero retcode renew command result")
@@ -528,20 +534,20 @@ func SubtestACMECertbotEab(t *testing.T, cluster *VaultPkiCluster) {
 	}
 
 	stdout, stderr, retcode, err = runner.RunCmdWithOutput(ctx, result.Container.ID, certbotRevokeCmd)
-	t.Logf("Certbot Revoke Command: %v\nstdout: %v\nstderr: %v\n", certbotRevokeCmd, string(stdout), string(stderr))
+	logger.Trace("Certbot Revoke Command", "cmd", certbotRevokeCmd, "stdout", string(stdout), "stderr", string(stderr))
 	if err != nil || retcode != 0 {
 		logsStdout, logsStderr, _, _ := runner.RunCmdWithOutput(ctx, result.Container.ID, logCatCmd)
-		t.Logf("Certbot logs\nstdout: %v\nstderr: %v\n", string(logsStdout), string(logsStderr))
+		logger.Trace("Certbot logs", "stdout", string(logsStdout), "stderr", string(logsStderr))
 	}
 	require.NoError(t, err, "got error running revoke command")
 	require.Equal(t, 0, retcode, "expected zero retcode revoke command result")
 
 	// Revoking twice should fail.
 	stdout, stderr, retcode, err = runner.RunCmdWithOutput(ctx, result.Container.ID, certbotRevokeCmd)
-	t.Logf("Certbot Double Revoke Command: %v\nstdout: %v\nstderr: %v\n", certbotRevokeCmd, string(stdout), string(stderr))
+	logger.Trace("Certbot Double Revoke Command", "cmd", certbotRevokeCmd, "stdout", string(stdout), "stderr", string(stderr))
 	if err != nil || retcode == 0 {
 		logsStdout, logsStderr, _, _ := runner.RunCmdWithOutput(ctx, result.Container.ID, logCatCmd)
-		t.Logf("Certbot logs\nstdout: %v\nstderr: %v\n", string(logsStdout), string(logsStderr))
+		logger.Trace("Certbot logs", "stdout", string(logsStdout), "stderr", string(logsStderr))
 	}
 
 	require.NoError(t, err, "got error running double revoke command")
@@ -549,6 +555,8 @@ func SubtestACMECertbotEab(t *testing.T, cluster *VaultPkiCluster) {
 }
 
 func SubtestACMEIPAndDNS(t *testing.T, cluster *VaultPkiCluster) {
+	logger := corehelpers.NewTestLogger(t)
+
 	pki, err := cluster.CreateAcmeMount("pki-ip-dns-sans")
 	require.NoError(t, err, "failed setting up acme mount")
 
@@ -558,7 +566,7 @@ func SubtestACMEIPAndDNS(t *testing.T, cluster *VaultPkiCluster) {
 	basePath, err := pki.UpdateClusterConfigLocalAddr()
 	require.NoError(t, err, "failed updating cluster config")
 
-	logConsumer, logStdout, logStderr := getDockerLog(t)
+	logConsumer, logStdout, logStderr := getDockerLog(logger)
 
 	// Setup an nginx container that we can have respond the queries for ips
 	runner, err := hDocker.NewServiceRunner(hDocker.RunOptions{
@@ -588,7 +596,7 @@ func SubtestACMEIPAndDNS(t *testing.T, cluster *VaultPkiCluster) {
 	}
 	stdout, stderr, retcode, err := runner.RunCmdWithOutput(ctx, nginxContainerId, createChallengeFolderCmd)
 	require.NoError(t, err, "failed to create folder in nginx container")
-	t.Logf("Update host file command: %v\nstdout: %v\nstderr: %v", createChallengeFolderCmd, string(stdout), string(stderr))
+	logger.Trace("Update host file command", "cmd", createChallengeFolderCmd, "stdout", string(stdout), "stderr", string(stderr))
 	require.Equal(t, 0, retcode, "expected zero retcode from mkdir in nginx container")
 
 	ipAddr := networks[pki.GetContainerNetworkName()]
@@ -624,7 +632,7 @@ func SubtestACMEIPAndDNS(t *testing.T, cluster *VaultPkiCluster) {
 		for _, auth := range auths {
 			for _, challenge := range auth.Challenges {
 				if challenge.Status != acme.StatusPending {
-					t.Logf("ignoring challenge not in status pending: %v", challenge)
+					logger.Trace("ignoring challenge not in status pending", "challenge", challenge)
 					continue
 				}
 
@@ -688,6 +696,8 @@ func SubtestACMEIPAndDNS(t *testing.T, cluster *VaultPkiCluster) {
 type acmeGoValidatorProvisionerFunc func(acmeClient *acme.Client, auths []*acme.Authorization) []*acme.Challenge
 
 func doAcmeValidationWithGoLibrary(t *testing.T, directoryUrl string, acmeOrderIdentifiers []acme.AuthzID, cr *x509.CertificateRequest, provisioningFunc acmeGoValidatorProvisionerFunc, expectedFailure string) *x509.Certificate {
+	logger := corehelpers.NewTestLogger(t)
+
 	// Since we are contacting Vault through the host ip/port, the certificate will not validate properly
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
@@ -696,8 +706,7 @@ func doAcmeValidationWithGoLibrary(t *testing.T, directoryUrl string, acmeOrderI
 
 	accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	require.NoError(t, err, "failed creating rsa account key")
-
-	t.Logf("Using the following url for the ACME directory: %s", directoryUrl)
+	logger.Trace("Using the following url for the ACME directory", "url", directoryUrl)
 	acmeClient := &acme.Client{
 		Key:          accountKey,
 		HTTPClient:   httpClient,
@@ -742,7 +751,7 @@ func doAcmeValidationWithGoLibrary(t *testing.T, directoryUrl string, acmeOrderI
 	csr, err := x509.CreateCertificateRequest(rand.Reader, cr, csrKey)
 	require.NoError(t, err, "failed generating csr")
 
-	t.Logf("[TEST-LOG] Created CSR: %v", hex.EncodeToString(csr))
+	logger.Trace("[TEST-LOG] Created CSR", "csr", hex.EncodeToString(csr))
 
 	certs, _, err := acmeClient.CreateOrderCert(testCtx, order.FinalizeURL, csr, false)
 	if err != nil {
@@ -763,6 +772,8 @@ func doAcmeValidationWithGoLibrary(t *testing.T, directoryUrl string, acmeOrderI
 }
 
 func SubtestACMEWildcardDNS(t *testing.T, cluster *VaultPkiCluster) {
+	logger := corehelpers.NewTestLogger(t)
+
 	pki, err := cluster.CreateAcmeMount("pki-dns-wildcards")
 	require.NoError(t, err, "failed setting up acme mount")
 
@@ -792,7 +803,7 @@ func SubtestACMEWildcardDNS(t *testing.T, cluster *VaultPkiCluster) {
 		for _, auth := range auths {
 			for _, challenge := range auth.Challenges {
 				if challenge.Status != acme.StatusPending {
-					t.Logf("ignoring challenge not in status pending: %v", challenge)
+					logger.Trace("ignoring challenge not in status pending", "challenge", challenge)
 					continue
 				}
 
@@ -838,6 +849,8 @@ func SubtestACMEWildcardDNS(t *testing.T, cluster *VaultPkiCluster) {
 }
 
 func SubtestACMEPreventsICADNS(t *testing.T, cluster *VaultPkiCluster) {
+	logger := corehelpers.NewTestLogger(t)
+
 	pki, err := cluster.CreateAcmeMount("pki-dns-ica")
 	require.NoError(t, err, "failed setting up acme mount")
 
@@ -873,7 +886,7 @@ func SubtestACMEPreventsICADNS(t *testing.T, cluster *VaultPkiCluster) {
 		for _, auth := range auths {
 			for _, challenge := range auth.Challenges {
 				if challenge.Status != acme.StatusPending {
-					t.Logf("ignoring challenge not in status pending: %v", challenge)
+					logger.Trace("ignoring challenge not in status pending", "challenge", challenge)
 					continue
 				}
 
@@ -916,6 +929,8 @@ func SubtestACMEPreventsICADNS(t *testing.T, cluster *VaultPkiCluster) {
 // secondary node, and midway through the challenge verification process, seal the
 // active node and make sure we can complete the ACME session on the new active node.
 func SubtestACMEStepDownNode(t *testing.T, cluster *VaultPkiCluster) {
+	logger := corehelpers.NewTestLogger(t)
+
 	pki, err := cluster.CreateAcmeMount("stepdown-test")
 	require.NoError(t, err)
 
@@ -976,7 +991,7 @@ func SubtestACMEStepDownNode(t *testing.T, cluster *VaultPkiCluster) {
 	var challengesToAccept []*acme.Challenge
 	for _, challenge := range authorization.Challenges {
 		if challenge.Status != acme.StatusPending {
-			t.Logf("ignoring challenge not in status pending: %v", challenge)
+			logger.Trace("ignoring challenge not in status pending", "challenge", challenge)
 			continue
 		}
 
@@ -1014,10 +1029,10 @@ func SubtestACMEStepDownNode(t *testing.T, cluster *VaultPkiCluster) {
 
 	// Seal the active node now and wait for the next node to appear
 	previousActiveNode := pki.GetActiveClusterNode()
-	t.Logf("Stepping down node id: %s", previousActiveNode.NodeID)
+	logger.Trace("Stepping down node", "node_id", previousActiveNode.NodeID)
 
 	haStatus, _ := previousActiveNode.APIClient().Sys().HAStatus()
-	t.Logf("Node: %v HaStatus: %v\n", previousActiveNode.NodeID, haStatus)
+	logger.Trace("HA Status", "node", previousActiveNode.NodeID, "ha_status", haStatus)
 
 	testhelpers.RetryUntil(t, 2*time.Minute, func() error {
 		state, err := previousActiveNode.APIClient().Sys().RaftAutopilotState()
@@ -1025,8 +1040,7 @@ func SubtestACMEStepDownNode(t *testing.T, cluster *VaultPkiCluster) {
 			return err
 		}
 
-		t.Logf("Node: %v Raft AutoPilotState: %v\n", previousActiveNode.NodeID, state)
-
+		logger.Trace("Raft AutoPilotState", "node", previousActiveNode.NodeID, "state", state)
 		if !state.Healthy {
 			return fmt.Errorf("raft auto pilot state is not healthy")
 		}
@@ -1034,19 +1048,19 @@ func SubtestACMEStepDownNode(t *testing.T, cluster *VaultPkiCluster) {
 		// Make sure that we have at least one node that can take over prior to sealing the current active node.
 		if state.FailureTolerance < 1 {
 			msg := fmt.Sprintf("there is no fault tolerance within raft state yet: %d", state.FailureTolerance)
-			t.Log(msg)
+			logger.Trace(msg)
 			return errors.New(msg)
 		}
 
 		return nil
 	})
 
-	t.Logf("Sealing active node")
+	logger.Trace("Sealing active node")
 	err = previousActiveNode.APIClient().Sys().Seal()
 	require.NoError(t, err, "failed stepping down node")
 
 	// Add our DNS records now
-	t.Logf("Adding DNS records")
+	logger.Trace("Adding DNS records")
 	for dnsHost, dnsValue := range dnsTxtRecordsToAdd {
 		err = pki.AddDNSRecord(dnsHost, "TXT", dnsValue)
 		require.NoError(t, err, "failed adding DNS record: %s:%s", dnsHost, dnsValue)
@@ -1059,7 +1073,7 @@ func SubtestACMEStepDownNode(t *testing.T, cluster *VaultPkiCluster) {
 			return fmt.Errorf("existing node is still the leader after stepdown: %s", newNode.NodeID)
 		}
 
-		t.Logf("New active node has node id: %v", newNode.NodeID)
+		logger.Trace("New active node", "node_id", newNode.NodeID)
 		return nil
 	})
 
@@ -1070,10 +1084,10 @@ func SubtestACMEStepDownNode(t *testing.T, cluster *VaultPkiCluster) {
 		myAuth, authErr := acmeClient.GetAuthorization(testCtx, authUrl)
 		require.NoError(t, authErr, "failed to lookup authorization at url: %s and wait order failed with: %v", authUrl, err)
 
-		t.Logf("Authorization Status: %s", myAuth.Status)
+		logger.Trace("Authorization Status", "status", myAuth.Status)
 		for _, challenge := range myAuth.Challenges {
 			// The engine failed on one of the challenges, we are done waiting
-			t.Logf("challenge: %v state: %v Error: %v", challenge.Type, challenge.Status, challenge.Error)
+			logger.Trace("challenge", "type", challenge.Type, "status", challenge.Status, "error", challenge.Error)
 		}
 
 		require.NoError(t, err, "failed waiting for order to be ready")
@@ -1091,9 +1105,9 @@ func SubtestACMEStepDownNode(t *testing.T, cluster *VaultPkiCluster) {
 	require.NoError(t, err, "failed parsing acme cert bytes")
 }
 
-func getDockerLog(t *testing.T) (func(s string), *pkiext.LogConsumerWriter, *pkiext.LogConsumerWriter) {
+func getDockerLog(logger hclog.Logger) (func(s string), *pkiext.LogConsumerWriter, *pkiext.LogConsumerWriter) {
 	logConsumer := func(s string) {
-		t.Logf(s)
+		logger.Trace(s)
 	}
 
 	logStdout := &pkiext.LogConsumerWriter{logConsumer}

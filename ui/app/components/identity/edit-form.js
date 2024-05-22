@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 import { task } from 'ember-concurrency';
@@ -77,7 +77,7 @@ export default Component.extend({
     // components are torn down after store is disconnected and will cause an error if attempt to unload record
     const noTeardown = this.store && !this.store.isDestroying;
     const model = this.model;
-    if (noTeardown && model && model.get('isDirty') && !model.isDestroyed && !model.isDestroying) {
+    if (noTeardown && model && model.isDirty && !model.isDestroyed && !model.isDestroying) {
       model.rollbackAttributes();
     }
     this._super(...arguments);

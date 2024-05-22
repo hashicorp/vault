@@ -6,17 +6,11 @@
 import { currentURL, click } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { create } from 'ember-cli-page-object';
+import { runCmd, createNS } from 'vault/tests/helpers/commands';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import parseURL from 'core/utils/parse-url';
-import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import authPage from 'vault/tests/pages/auth';
 
-const shell = create(consoleClass);
-
-const createNS = async (name) => {
-  await shell.runCommands(`write sys/namespaces/${name} -force`);
-};
 const SELECTORS = {
   authTab: (path) => `[data-test-auth-method="${path}"] a`,
 };
@@ -33,7 +27,7 @@ module('Acceptance | Enterprise | oidc auth namespace test', function (hooks) {
     this.server.post(`/auth/:path/config`, () => {});
 
     this.enableOidc = (path, role = '') => {
-      return shell.runCommands([
+      return runCmd([
         `write sys/auth/${path} type=oidc`,
         `write auth/${path}/config default_role="${role}" oidc_discovery_url="https://example.com"`,
         // show method as tab
@@ -41,7 +35,7 @@ module('Acceptance | Enterprise | oidc auth namespace test', function (hooks) {
       ]);
     };
 
-    this.disableOidc = (path) => shell.runCommands([`delete /sys/auth/${path}`]);
+    this.disableOidc = (path) => runCmd([`delete /sys/auth/${path}`]);
   });
 
   test('oidc: request is made to auth_url when a namespace is inputted', async function (assert) {
@@ -61,7 +55,7 @@ module('Acceptance | Enterprise | oidc auth namespace test', function (hooks) {
     // enable oidc in root namespace, without default role
     await this.enableOidc(this.rootOidc);
     // create child namespace to enable oidc
-    await createNS(this.namespace);
+    await runCmd(createNS(this.namespace), false);
     // enable oidc in child namespace with default role
     await authPage.loginNs(this.namespace);
     await this.enableOidc(this.nsOidc, `${this.nsOidc}-role`);
@@ -83,6 +77,6 @@ module('Acceptance | Enterprise | oidc auth namespace test', function (hooks) {
     await authPage.login();
     await this.disableOidc(this.rootOidc);
     await this.disableOidc(this.nsOidc);
-    await shell.runCommands([`delete /sys/auth/${this.namespace}`]);
+    await runCmd([`delete /sys/auth/${this.namespace}`]);
   });
 });

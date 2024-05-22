@@ -4,7 +4,7 @@
  */
 
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 
 /**
  * the overview, roles, issuers, certificates, and key routes all need to be aware of the whether there is a config for the engine

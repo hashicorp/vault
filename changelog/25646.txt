@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Adds allowed_response_headers, plugin_version and user_lockout_config params to auth method configuration
+```

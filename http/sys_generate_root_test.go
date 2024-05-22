@@ -231,7 +231,7 @@ func testCoreUnsealedWithAudit(t *testing.T, records **[][]byte) (*vault.Core, [
 	conf := &vault.CoreConfig{
 		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		AuditBackends: map[string]audit.Factory{
-			"noop": corehelpers.NoopAuditFactory(records),
+			"noop": audit.NoopAuditFactory(records),
 		},
 	}
 	core, keys, token := vault.TestCoreUnsealedWithConfig(t, conf)

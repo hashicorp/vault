@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -81,7 +82,18 @@ func stabilizeAndPromote(t *testing.T, client *api.Client, nodeID string) {
 	var err error
 	for time.Now().Before(deadline) {
 		state, err = client.Sys().RaftAutopilotState()
-		require.NoError(t, err)
+		// If the state endpoint gets called during a leader election, we'll get an error about
+		// there not being an active cluster node. Rather than erroring out of this loop, just
+		// ignore the error and keep trying. It should resolve in a few seconds. There's a
+		// deadline after all, so it's not like this loop will continue indefinitely.
+		if err != nil {
+			if strings.Contains(err.Error(), "active cluster node not found") {
+				continue
+			}
+
+			t.Fatal(err)
+		}
+
 		if state != nil && state.Servers != nil && state.Servers[nodeID].Status == "voter" {
 			failed = false
 			break
@@ -121,7 +133,6 @@ func stabilize(t *testing.T, client *api.Client) {
 // nodes that use raft-wal (and vice-versa)
 // Having a cluster of mixed nodes, some using raft-boltdb and some using raft-wal, is not a problem.
 func TestDocker_LogStore_Boltdb_To_Raftwal_And_Back(t *testing.T) {
-	t.Parallel()
 	binary := os.Getenv("VAULT_BINARY")
 	if binary == "" {
 		t.Skip("only running docker test when $VAULT_BINARY present")

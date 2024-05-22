@@ -7,7 +7,7 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { next } from '@ember/runloop';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { isDeleted } from 'kv/utils/kv-deleted';
@@ -37,13 +37,15 @@ export default class KvSecretDetails extends Component {
   @tracked showJsonView = false;
   @tracked wrappedData = null;
   @tracked syncStatus = null; // array of association sync status info by destination
-  secretDataIsAdvanced;
 
   constructor() {
     super(...arguments);
     this.fetchSyncStatus.perform();
     this.originalSecret = JSON.stringify(this.args.secret.secretData || {});
-    this.secretDataIsAdvanced = isAdvancedSecret(this.originalSecret);
+    if (isAdvancedSecret(this.originalSecret)) {
+      // Default to JSON view if advanced
+      this.showJsonView = true;
+    }
   }
 
   @action

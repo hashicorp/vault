@@ -4,7 +4,7 @@
  */
 import Model, { attr } from '@ember-data/model';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
-import { isAfter, addDays, startOfDay, parseISO } from 'date-fns';
+import { isAfter, addDays, startOfDay, parseISO, isBefore } from 'date-fns';
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 
@@ -20,6 +20,28 @@ const validations = {
         return title || href ? !!(title && href) : true;
       },
       message: 'Link title and url are required.',
+    },
+  ],
+  startTime: [
+    {
+      validator(model) {
+        if (!model.endTime) return true;
+        const start = new Date(model.startTime);
+        const end = new Date(model.endTime);
+        return isBefore(start, end);
+      },
+      message: 'Start time is after end time.',
+    },
+  ],
+  endTime: [
+    {
+      validator(model) {
+        if (!model.endTime) return true;
+        const start = new Date(model.startTime);
+        const end = new Date(model.endTime);
+        return isAfter(end, start);
+      },
+      message: 'End time is before start time.',
     },
   ],
 };
@@ -95,7 +117,7 @@ export default class MessageModel extends Model {
   @attr('object', {
     editType: 'kv',
     keyPlaceholder: 'Display text (e.g. Learn more)',
-    valuePlaceholder: 'Link URL (e.g. https://www.learnmore.com)',
+    valuePlaceholder: 'Link URL (e.g. https://www.hashicorp.com/)',
     label: 'Link (optional)',
     isSingleRow: true,
     allowWhiteSpace: true,
@@ -109,17 +131,18 @@ export default class MessageModel extends Model {
 
   // capabilities
   @lazyCapabilities(apiPath`sys/config/ui/custom-messages`) customMessagesPath;
+  @lazyCapabilities(apiPath`sys/config/ui/custom-messages/${'id'}`, 'id') customMessagePath;
 
   get canCreateCustomMessages() {
     return this.customMessagesPath.get('canCreate') !== false;
   }
   get canReadCustomMessages() {
-    return this.customMessagesPath.get('canRead') !== false;
+    return this.customMessagePath.get('canRead') !== false;
   }
   get canEditCustomMessages() {
-    return this.customMessagesPath.get('canUpdate') !== false;
+    return this.customMessagePath.get('canUpdate') !== false;
   }
   get canDeleteCustomMessages() {
-    return this.customMessagesPath.get('canDelete') !== false;
+    return this.customMessagePath.get('canDelete') !== false;
   }
 }

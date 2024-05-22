@@ -20,12 +20,14 @@
       as |A|
     >
       <A.Title data-test-custom-alert-title={{@message.title}}>{{@message.title}}</A.Title>
-      <A.Description data-test-custom-alert-description={{@message.title}}>
-        {{@message.message}}
-      </A.Description>
+      {{#each (new-line-split @message.message) as |msg|}}
+        <A.Description data-test-custom-alert-description={{@message.title}}>
+          {{msg}}
+        </A.Description>
+      {{/each}}
       {{#unless (is-empty-value @message.link)}}
         {{#each-in @message.link as |title href|}}
-          <A.Link::Standalone
+          <A.LinkStandalone
             @color="secondary"
             @icon="external-link"
             @isHrefExternal={{true}}

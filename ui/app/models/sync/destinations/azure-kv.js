@@ -8,17 +8,31 @@ import { attr } from '@ember-data/model';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 
 const displayFields = [
+  // connection details
   'name',
   'keyVaultUri',
   'tenantId',
   'cloud',
   'clientId',
   'clientSecret',
+  // vault sync config options
+  'granularity',
   'secretNameTemplate',
   'customTags',
 ];
 const formFieldGroups = [
-  { default: ['name', 'keyVaultUri', 'tenantId', 'cloud', 'clientId', 'secretNameTemplate', 'customTags'] },
+  {
+    default: [
+      'name',
+      'keyVaultUri',
+      'tenantId',
+      'cloud',
+      'clientId',
+      'granularity',
+      'secretNameTemplate',
+      'customTags',
+    ],
+  },
   { Credentials: ['clientSecret'] },
 ];
 @withFormFields(displayFields, formFieldGroups)

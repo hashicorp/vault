@@ -33,7 +33,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
       casVersion: 1,
     });
     this.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.backend, route: 'list' },
       { label: 'edit' },
     ];
@@ -114,7 +114,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
       { owner: this.engine }
     );
 
-    assert.dom(PAGE.edit.toggleDiff).isDisabled('Diff toggle is disabled');
+    assert.dom(PAGE.edit.toggleDiff).isNotDisabled('Diff toggle is not disabled');
     assert.dom(PAGE.edit.toggleDiffDescription).hasText('No changes to show. Update secret to view diff');
     assert.dom(PAGE.diff.visualDiff).doesNotExist('Does not show visual diff');
 

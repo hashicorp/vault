@@ -216,8 +216,8 @@ func fetchCertBySerial(sc *storageContext, prefix, serial string) (*logical.Stor
 			path += deltaCRLPathSuffix
 		}
 	default:
-		legacyPath = "certs/" + colonSerial
-		path = "certs/" + hyphenSerial
+		legacyPath = issuing.PathCerts + colonSerial
+		path = issuing.PathCerts + hyphenSerial
 	}
 
 	certEntry, err = sc.Storage.Get(sc.Context, path)
@@ -253,7 +253,7 @@ func fetchCertBySerial(sc *storageContext, prefix, serial string) (*logical.Stor
 	certCounter := sc.Backend.GetCertificateCounter()
 	certsCounted := certCounter.IsInitialized()
 	if err = sc.Storage.Put(sc.Context, certEntry); err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("error saving certificate with serial %s to new location", serial)}
+		return nil, errutil.InternalError{Err: fmt.Sprintf("error saving certificate with serial %s to new location: %s", serial, err)}
 	}
 	if err = sc.Storage.Delete(sc.Context, legacyPath); err != nil {
 		// If we fail here, we have an extra (copy) of a cert in storage, add to metrics:

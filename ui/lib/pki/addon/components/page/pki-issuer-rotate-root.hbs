@@ -8,7 +8,7 @@
     <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
   </p.top>
   <p.levelLeft>
-    <h1 class="title is-3" data-test-pki-page-title>
+    <h1 class="title is-3" data-test-page-title>
       {{if @newRootModel.id "View Issuer Certificate" "Generate New Root"}}
     </h1>
   </p.levelLeft>
@@ -20,7 +20,7 @@
       <ToolbarLink
         @route="issuers.issuer.cross-sign"
         @type="pen-tool"
-        @model={{@newRootModel.issuerId}}
+        @models={{array @newRootModel.backend @newRootModel.issuerId}}
         data-test-pki-issuer-cross-sign
       >
         Cross-sign issuers
@@ -28,12 +28,18 @@
       <ToolbarLink
         @route="issuers.issuer.sign"
         @type="pen-tool"
-        @model={{@newRootModel.issuerId}}
+        @models={{array @newRootModel.backend @newRootModel.issuerId}}
         data-test-pki-issuer-sign-int
       >
         Sign Intermediate
       </ToolbarLink>
-      <BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
+      <BasicDropdown
+        @class="popup-menu"
+        @horizontalPosition="auto-right"
+        @verticalPosition="below"
+        @renderInPlace={{true}}
+        as |D|
+      >
         <D.Trigger
           data-test-popup-menu-trigger
           class={{concat "toolbar-link" (if D.isOpen " is-active")}}
@@ -46,7 +52,7 @@
         <D.Content @defaultClass="popup-menu-content">
           <nav class="box menu" aria-label="snapshots actions">
             <ul class="menu-list">
-              <li class="action">
+              <li>
                 <DownloadButton
                   class="link"
                   @filename={{@newRootModel.issuerId}}
@@ -57,7 +63,7 @@
                   @hideIcon={{true}}
                 />
               </li>
-              <li class="action">
+              <li>
                 <DownloadButton
                   class="link"
                   @filename={{@newRootModel.issuerId}}
@@ -72,7 +78,11 @@
           </nav>
         </D.Content>
       </BasicDropdown>
-      <ToolbarLink @route="issuers.issuer.edit" @model={{@newRootModel.issuerId}} data-test-pki-issuer-configure>
+      <ToolbarLink
+        @route="issuers.issuer.edit"
+        @models={{array @newRootModel.backend @newRootModel.issuerId}}
+        data-test-pki-issuer-configure
+      >
         Configure
       </ToolbarLink>
     </ToolbarActions>
@@ -93,11 +103,12 @@
         If you’re ready, you can begin cross-signing issuers now. If not, the option to cross-sign is available when you use
         this certificate.
       </A.Description>
-      <A.Link::Standalone
+      <A.LinkStandalone
         @icon="arrow-right"
         @iconPosition="trailing"
         @text="Cross-sign issuers"
         @route="issuers.issuer.cross-sign"
+        @models={{array @newRootModel.backend @newRootModel.issuerId}}
       />
 
     </Hds::Alert>
@@ -166,8 +177,8 @@
 
       <hr class="has-background-gray-100" />
       <Hds::ButtonSet>
-        <Hds::Button @text="Done" type="submit" data-test-pki-rotate-root-save />
-        <Hds::Button @text="Cancel" @color="secondary" {{on "click" @onCancel}} data-test-pki-rotate-root-cancel />
+        <Hds::Button @text="Done" type="submit" data-test-save />
+        <Hds::Button @text="Cancel" @color="secondary" {{on "click" @onCancel}} data-test-cancel />
       </Hds::ButtonSet>
       {{#if this.invalidFormAlert}}
         <div class="control">

@@ -23,11 +23,6 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-const (
-	expectedEnvKey   = "FOO"
-	expectedEnvValue = "BAR"
-)
-
 // logicalVersionMap is a map of version to test plugin
 var logicalVersionMap = map[string]string{
 	"v4":             "TestBackend_PluginMain_V4_Logical",
@@ -202,7 +197,7 @@ func TestSystemBackend_Plugin_MissingBinary(t *testing.T) {
 			// since that's how we create the file for catalog registration in the test
 			// helper.
 			pluginFileName := filepath.Base(os.Args[0])
-			err = os.Remove(filepath.Join(cluster.TempDir, pluginFileName))
+			err = os.Remove(filepath.Join(cluster.Cores[0].CoreConfig.PluginDirectory, pluginFileName))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -699,50 +694,69 @@ func testSystemBackendMock(t *testing.T, numCores, numMounts int, backendType lo
 	return cluster
 }
 
+// TestSystemBackend_Plugin_Env ensures we use env vars specified during plugin
+// registration, and get the priority between OS and plugin env vars correct.
 func TestSystemBackend_Plugin_Env(t *testing.T) {
-	kvPair := fmt.Sprintf("%s=%s", expectedEnvKey, expectedEnvValue)
-	cluster := testSystemBackend_SingleCluster_Env(t, []string{kvPair})
-	defer cluster.Cleanup()
-}
-
-// testSystemBackend_SingleCluster_Env is a helper func that returns a single
-// cluster and a single mounted plugin logical backend.
-func testSystemBackend_SingleCluster_Env(t *testing.T, env []string) *vault.TestCluster {
 	pluginDir := corehelpers.MakeTestPluginDir(t)
 	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"test": plugin.Factory,
-		},
 		PluginDirectory: pluginDir,
 	}
 
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc:        vaulthttp.Handler,
-		KeepStandbysSealed: true,
-		NumCores:           1,
-		TempDir:            pluginDir,
+		HandlerFunc: vaulthttp.Handler,
+		NumCores:    1,
+		TempDir:     pluginDir,
 	})
 	cluster.Start()
+	t.Cleanup(cluster.Cleanup)
 
 	core := cluster.Cores[0]
 	vault.TestWaitActive(t, core.Core)
 	client := core.Client
 
-	env = append([]string{pluginutil.PluginCACertPEMEnv + "=" + cluster.CACertPEMFile}, env...)
-	vault.TestAddTestPlugin(t, core.Core, "mock-plugin", consts.PluginTypeSecrets, "", "TestBackend_PluginMainEnv", env)
-	options := map[string]interface{}{
-		"type": "mock-plugin",
+	key := t.Name() + "_FOO"
+	osValue := "bar"
+	pluginValue := "baz"
+	t.Setenv(key, osValue)
+	env := []string{
+		fmt.Sprintf("%s=%s", key, pluginValue),
+		pluginutil.PluginCACertPEMEnv + "=" + cluster.CACertPEMFile,
 	}
+	vault.TestAddTestPlugin(t, core.Core, "mock-plugin", consts.PluginTypeSecrets, "", "TestBackend_PluginMainLogical", env)
 
-	resp, err := client.Logical().Write("sys/mounts/mock", options)
+	err := client.Sys().Mount("mock", &api.MountInput{
+		Type: "mock-plugin",
+	})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp != nil {
-		t.Fatalf("bad: %v", resp)
+
+	// Plugin env should take precedence by default.
+	resp, err := client.Logical().Read("mock/env/" + key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || resp.Data["key"] != pluginValue {
+		t.Fatal(resp)
 	}
 
-	return cluster
+	// Now set the flag that reverts to legacy behavior and reload the plugin.
+	t.Setenv(pluginutil.PluginUseLegacyEnvLayering, "true")
+	_, err = client.Sys().RootReloadPlugin(context.Background(), &api.RootReloadPluginInput{
+		Plugin: "mock-plugin",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Now the OS value should take precedence.
+	resp, err = client.Logical().Read("mock/env/" + key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || resp.Data["key"] != osValue {
+		t.Fatal(resp)
+	}
 }
 
 func TestBackend_PluginMain_V4_Logical(t *testing.T) {
@@ -914,39 +928,6 @@ func TestBackend_PluginMainCredentials(t *testing.T) {
 	flags.Parse(args)
 
 	factoryFunc := mock.FactoryType(logical.TypeCredential)
-
-	err := lplugin.Serve(&lplugin.ServeOpts{
-		BackendFactoryFunc: factoryFunc,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
-// TestBackend_PluginMainEnv is a mock plugin that simply checks for the existence of FOO env var.
-func TestBackend_PluginMainEnv(t *testing.T) {
-	args := []string{}
-	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" && os.Getenv(pluginutil.PluginMetadataModeEnv) != "true" {
-		return
-	}
-
-	// Check on actual vs expected env var
-	actual := os.Getenv(expectedEnvKey)
-	if actual != expectedEnvValue {
-		t.Fatalf("expected: %q, got: %q", expectedEnvValue, actual)
-	}
-
-	caPEM := os.Getenv(pluginutil.PluginCACertPEMEnv)
-	if caPEM == "" {
-		t.Fatal("CA cert not passed in")
-	}
-	args = append(args, fmt.Sprintf("--ca-cert=%s", caPEM))
-
-	apiClientMeta := &api.PluginAPIClientMeta{}
-	flags := apiClientMeta.FlagSet()
-	flags.Parse(args)
-
-	factoryFunc := mock.FactoryType(logical.TypeLogical)
 
 	err := lplugin.Serve(&lplugin.ServeOpts{
 		BackendFactoryFunc: factoryFunc,

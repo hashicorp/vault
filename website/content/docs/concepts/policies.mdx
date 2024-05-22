@@ -169,6 +169,8 @@ corresponding path and capability - even Vault's internal core configuration
 endpoints live under the `"sys/"` path. Policies define access to these paths and
 capabilities, which controls a token's access to credentials in Vault.
 
+## Priority matching
+
 ~> **Note:** The policy rules that Vault applies are determined by the most-specific match
 available, using the priority rules described below. This may be an exact match
 or the longest-prefix match of a glob. If the same pattern appears in multiple
@@ -869,6 +871,11 @@ new set of policies.
 However, the _contents_ of policies are parsed in real-time whenever the token is used.
 As a result, if a policy is modified, the modified rules will be in force the
 next time a token, with that policy attached, is used to make a call to Vault.
+
+## UI policy requirements
+
+@include 'ui/policy-requirements.mdx'
+
 
 ## Tutorial
 

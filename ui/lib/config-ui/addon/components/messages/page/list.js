@@ -3,12 +3,14 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+import Ember from 'ember';
 import Component from '@glimmer/component';
-import { inject as service } from '@ember/service';
-import { task } from 'ember-concurrency';
+import { service } from '@ember/service';
+import { task, timeout } from 'ember-concurrency';
 import { dateFormat } from 'core/helpers/date-format';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
+import errorMessage from 'vault/utils/error-message';
 
 /**
  * @module Page::MessagesList
@@ -28,6 +30,7 @@ export default class MessagesList extends Component {
   @service customMessages;
 
   @tracked showMaxMessageModal = false;
+  @tracked messageToDelete = null;
 
   get formattedMessages() {
     return this.args.messages.map((message) => {
@@ -77,20 +80,47 @@ export default class MessagesList extends Component {
     };
   }
 
+  transitionToMessagesWithParams(queryParams) {
+    this.router.transitionTo('vault.cluster.config-ui.messages', {
+      // always reset back to page 1 when changing filters
+      queryParams: { ...queryParams, page: 1 },
+    });
+  }
+
   @task
   *deleteMessage(message) {
-    this.store.clearDataset('config-ui/message');
-    yield message.destroyRecord(message.id);
-    this.router.transitionTo('vault.cluster.config-ui.messages');
-    this.customMessages.fetchMessages(this.namespace.path);
-    this.flashMessages.success(`Successfully deleted ${message.title}.`);
+    try {
+      this.store.clearDataset('config-ui/message');
+      yield message.destroyRecord(message.id);
+      this.router.transitionTo('vault.cluster.config-ui.messages');
+      this.customMessages.fetchMessages(this.namespace.path);
+      this.flashMessages.success(`Successfully deleted ${message.title}.`);
+    } catch (e) {
+      const message = errorMessage(e);
+      this.flashMessages.danger(message);
+    } finally {
+      this.messageToDelete = null;
+    }
+  }
+
+  @task
+  *handleSearch(evt) {
+    evt.preventDefault();
+    const formData = new FormData(evt.target);
+    // shows loader to indicate that the search was executed
+    yield timeout(Ember.testing ? 0 : 250);
+    const params = {};
+    for (const key of formData.keys()) {
+      const valDefault = key === 'pageFilter' ? '' : null;
+      const val = formData.get(key) || valDefault;
+      params[key] = val;
+    }
+    this.transitionToMessagesWithParams(params);
   }
 
   @action
-  onFilterChange(pageFilter) {
-    this.router.transitionTo('vault.cluster.config-ui.messages', {
-      queryParams: { pageFilter },
-    });
+  resetFilters() {
+    this.transitionToMessagesWithParams({ pageFilter: '', status: null, type: null });
   }
 
   @action

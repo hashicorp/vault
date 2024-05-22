@@ -127,6 +127,9 @@ type ExtendedSystemView interface {
 	// APILockShouldBlockRequest returns whether a namespace for the requested
 	// mount is locked and should be blocked
 	APILockShouldBlockRequest() (bool, error)
+
+	// GetPinnedPluginVersion returns the pinned version for the given plugin, if any.
+	GetPinnedPluginVersion(ctx context.Context, pluginType consts.PluginType, pluginName string) (*pluginutil.PinnedVersion, error)
 }
 
 type PasswordGenerator func() (password string, err error)

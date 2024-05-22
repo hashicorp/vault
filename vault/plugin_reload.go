@@ -8,11 +8,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/versions"
-
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin"
@@ -65,7 +63,7 @@ func (c *Core) reloadMatchingPluginMounts(ctx context.Context, ns *namespace.Nam
 			errors = multierror.Append(errors, fmt.Errorf("cannot reload plugin on %q: %w", mount, err))
 			continue
 		}
-		c.logger.Info("successfully reloaded plugin", "plugin", entry.Accessor, "path", entry.Path, "version", entry.Version)
+		c.logger.Info("successfully reloaded plugin", "plugin", entry.Accessor, "path", entry.Path, "version", entry.RunningVersion)
 	}
 	return errors
 }
@@ -106,7 +104,7 @@ func (c *Core) reloadMatchingPlugin(ctx context.Context, ns *namespace.Namespace
 					return reloaded, err
 				}
 				reloaded++
-				c.logger.Info("successfully reloaded plugin", "plugin", pluginName, "namespace", entry.Namespace(), "path", entry.Path, "version", entry.Version)
+				c.logger.Info("successfully reloaded plugin", "plugin", pluginName, "namespace", entry.Namespace(), "path", entry.Path, "version", entry.RunningVersion)
 			} else if database && entry.Type == "database" {
 				// The combined database plugin is itself a secrets engine, but
 				// knowledge of whether a database plugin is in use within a particular
@@ -152,7 +150,7 @@ func (c *Core) reloadMatchingPlugin(ctx context.Context, ns *namespace.Namespace
 					return reloaded, err
 				}
 				reloaded++
-				c.logger.Info("successfully reloaded plugin", "plugin", entry.Accessor, "path", entry.Path, "version", entry.Version)
+				c.logger.Info("successfully reloaded plugin", "plugin", entry.Accessor, "path", entry.Path, "version", entry.RunningVersion)
 			}
 		}
 	}
@@ -224,28 +222,15 @@ func (c *Core) reloadBackendCommon(ctx context.Context, entry *MountEntry, isAut
 	oldSha := entry.RunningSha256
 	if !isAuth {
 		// Dispense a new backend
-		backend, entry.RunningSha256, err = c.newLogicalBackend(ctx, entry, sysView, view)
+		backend, err = c.newLogicalBackend(ctx, entry, sysView, view)
 	} else {
-		backend, entry.RunningSha256, err = c.newCredentialBackend(ctx, entry, sysView, view)
+		backend, err = c.newCredentialBackend(ctx, entry, sysView, view)
 	}
 	if err != nil {
 		return err
 	}
 	if backend == nil {
 		return fmt.Errorf("nil backend of type %q returned from creation function", entry.Type)
-	}
-
-	// update the entry running version with the configured version, which was verified during registration.
-	entry.RunningVersion = entry.Version
-	if entry.RunningVersion == "" {
-		// don't set the running version to a builtin if it is running as an external plugin
-		if entry.RunningSha256 == "" {
-			if isAuth {
-				entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeCredential, entry.Type)
-			} else {
-				entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeSecrets, entry.Type)
-			}
-		}
 	}
 
 	// update the mount table since we changed the runningSha

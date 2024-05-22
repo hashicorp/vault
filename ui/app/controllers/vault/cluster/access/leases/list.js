@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { computed } from '@ember/object';
 import Controller, { inject as controller } from '@ember/controller';
 import ListController from 'core/mixins/list-controller';
@@ -11,6 +11,7 @@ import { keyIsFolder } from 'core/utils/key-utils';
 
 export default Controller.extend(ListController, {
   flashMessages: service(),
+  router: service(),
   store: service(),
   clusterController: controller('vault.cluster'),
 
@@ -61,7 +62,7 @@ export default Controller.extend(ListController, {
       const fn = adapter[method];
       fn.call(adapter, prefix)
         .then(() => {
-          return this.transitionToRoute('vault.cluster.access.leases.list-root').then(() => {
+          return this.router.transitionTo('vault.cluster.access.leases.list-root').then(() => {
             this.flashMessages.success(`All of the leases under ${prefix} will be revoked.`);
           });
         })

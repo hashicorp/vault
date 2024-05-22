@@ -34,6 +34,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/patrickmn/go-cache"
 	"golang.org/x/crypto/ed25519"
+	"golang.org/x/exp/maps"
 )
 
 type oidcConfig struct {
@@ -61,10 +62,6 @@ func (c *oidcConfig) fullIssuer(child string) (string, error) {
 	}
 
 	return issuer, nil
-}
-
-func validChildIssuer(child string) bool {
-	return child == baseIdentityTokenIssuer || child == pluginIdentityTokenIssuer
 }
 
 type expireableKey struct {
@@ -126,23 +123,12 @@ type oidcCache struct {
 	c *cache.Cache
 }
 
-var errNilNamespace = errors.New("nil namespace in oidc cache request")
-
-const (
-	issuerPath           = "identity/oidc"
-	oidcTokensPrefix     = "oidc_tokens/"
-	namedKeyCachePrefix  = "namedKeys/"
-	oidcConfigStorageKey = oidcTokensPrefix + "config/"
-	namedKeyConfigPath   = oidcTokensPrefix + "named_keys/"
-	publicKeysConfigPath = oidcTokensPrefix + "public_keys/"
-	roleConfigPath       = oidcTokensPrefix + "roles/"
-
-	// Identity tokens have a base issuer and plugin issuer
-	baseIdentityTokenIssuer   = ""
-	pluginIdentityTokenIssuer = "plugins"
-)
-
 var (
+	errNilNamespace = errors.New("nil namespace in oidc cache request")
+
+	// pseudo-namespace for cache items that don't belong to any real namespace.
+	noNamespace = &namespace.Namespace{ID: "__NO_NAMESPACE"}
+
 	reservedClaims = []string{
 		"iat", "aud", "exp", "iss",
 		"sub", "namespace", "nonce",
@@ -159,8 +145,17 @@ var (
 	}
 )
 
-// pseudo-namespace for cache items that don't belong to any real namespace.
-var noNamespace = &namespace.Namespace{ID: "__NO_NAMESPACE"}
+const (
+	issuerPath              = "identity/oidc"
+	oidcTokensPrefix        = "oidc_tokens/"
+	namedKeyCachePrefix     = "namedKeys/"
+	oidcConfigStorageKey    = oidcTokensPrefix + "config/"
+	namedKeyConfigPath      = oidcTokensPrefix + "named_keys/"
+	publicKeysConfigPath    = oidcTokensPrefix + "public_keys/"
+	roleConfigPath          = oidcTokensPrefix + "roles/"
+	baseIdentityTokenIssuer = ""
+	deleteKeyErrorFmt       = "unable to delete key %q because it is currently referenced by these %s: %s"
+)
 
 // optionalChildIssuerRegex is a regex for optionally accepting a field in an
 // API request as a single path segment. Adapted from framework.OptionalParamRegex
@@ -784,6 +779,56 @@ func (i *IdentityStore) roleNamesReferencingTargetKeyName(ctx context.Context, r
 	return names, nil
 }
 
+// listMounts returns all mount entries in the namespace.
+// Returns an error if the namespace is nil.
+func (i *IdentityStore) listMounts(ns *namespace.Namespace) ([]*MountEntry, error) {
+	if ns == nil {
+		return nil, errors.New("namespace must not be nil")
+	}
+
+	secretMounts, err := i.mountLister.ListMounts()
+	if err != nil {
+		return nil, err
+	}
+	authMounts, err := i.mountLister.ListAuths()
+	if err != nil {
+		return nil, err
+	}
+
+	var allMounts []*MountEntry
+	for _, mount := range append(authMounts, secretMounts...) {
+		if mount.NamespaceID == ns.ID {
+			allMounts = append(allMounts, mount)
+		}
+	}
+
+	return allMounts, nil
+}
+
+// mountsReferencingKey returns a sorted list of all mount entry paths referencing
+// the key in the namespace. Returns an error if the namespace is nil.
+func (i *IdentityStore) mountsReferencingKey(ns *namespace.Namespace, key string) ([]string, error) {
+	if ns == nil {
+		return nil, errors.New("namespace must not be nil")
+	}
+
+	allMounts, err := i.listMounts(ns)
+	if err != nil {
+		return nil, err
+	}
+
+	pathsWithKey := make(map[string]struct{})
+	for _, mount := range allMounts {
+		if mount.Config.IdentityTokenKey == key {
+			pathsWithKey[mount.Path] = struct{}{}
+		}
+	}
+
+	paths := maps.Keys(pathsWithKey)
+	sort.Strings(paths)
+	return paths, nil
+}
+
 // handleOIDCDeleteKey is used to delete a key
 func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	ns, err := namespace.FromContext(ctx)
@@ -807,8 +852,8 @@ func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Requ
 	}
 
 	if len(roleNames) > 0 {
-		errorMessage := fmt.Sprintf("unable to delete key %q because it is currently referenced by these roles: %s",
-			targetKeyName, strings.Join(roleNames, ", "))
+		errorMessage := fmt.Sprintf(deleteKeyErrorFmt,
+			targetKeyName, "roles", strings.Join(roleNames, ", "))
 		i.oidcLock.Unlock()
 		return logical.ErrorResponse(errorMessage), logical.ErrInvalidRequest
 	}
@@ -820,8 +865,20 @@ func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Requ
 	}
 
 	if len(clientNames) > 0 {
-		errorMessage := fmt.Sprintf("unable to delete key %q because it is currently referenced by these clients: %s",
-			targetKeyName, strings.Join(clientNames, ", "))
+		errorMessage := fmt.Sprintf(deleteKeyErrorFmt,
+			targetKeyName, "clients", strings.Join(clientNames, ", "))
+		i.oidcLock.Unlock()
+		return logical.ErrorResponse(errorMessage), logical.ErrInvalidRequest
+	}
+
+	mounts, err := i.mountsReferencingKey(ns, targetKeyName)
+	if err != nil {
+		i.oidcLock.Unlock()
+		return nil, err
+	}
+	if len(mounts) > 0 {
+		errorMessage := fmt.Sprintf(deleteKeyErrorFmt,
+			targetKeyName, "mounts", strings.Join(mounts, ", "))
 		i.oidcLock.Unlock()
 		return logical.ErrorResponse(errorMessage), logical.ErrInvalidRequest
 	}
@@ -1804,14 +1861,16 @@ func (i *IdentityStore) generatePublicJWKS(ctx context.Context, s logical.Storag
 		return nil, err
 	}
 
-	// only return keys that are associated with a role
+	// Only return keys that are associated with a role or plugin mount
+	// by collecting and de-duplicating keys and key IDs for each
+	keyNames := make(map[string]struct{})
+	keyIDs := make(map[string]struct{})
+
+	// First collect the set of unique key names
 	roleNames, err := s.List(ctx, roleConfigPath)
 	if err != nil {
 		return nil, err
 	}
-
-	// collect and deduplicate the key IDs for all roles
-	keyIDs := make(map[string]struct{})
 	for _, roleName := range roleNames {
 		role, err := i.getOIDCRole(ctx, s, roleName)
 		if err != nil {
@@ -1821,13 +1880,30 @@ func (i *IdentityStore) generatePublicJWKS(ctx context.Context, s logical.Storag
 			continue
 		}
 
-		roleKeyIDs, err := i.keyIDsByName(ctx, s, role.Key)
+		keyNames[role.Key] = struct{}{}
+	}
+	mounts, err := i.listMounts(ns)
+	if err != nil {
+		return nil, err
+	}
+	for _, me := range mounts {
+		key := defaultKeyName
+		if me.Config.IdentityTokenKey != "" {
+			key = me.Config.IdentityTokenKey
+		}
+
+		keyNames[key] = struct{}{}
+	}
+
+	// Second collect the set of unique key IDs for each key name
+	for name := range keyNames {
+		ids, err := i.keyIDsByName(ctx, s, name)
 		if err != nil {
 			return nil, err
 		}
 
-		for _, keyID := range roleKeyIDs {
-			keyIDs[keyID] = struct{}{}
+		for _, id := range ids {
+			keyIDs[id] = struct{}{}
 		}
 	}
 

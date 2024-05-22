@@ -27,6 +27,7 @@ import (
 	"github.com/hashicorp/vault/sdk/queue"
 	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/robfig/cron/v3"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	mongodbatlasapi "go.mongodb.org/atlas/mongodbatlas"
@@ -35,6 +36,7 @@ import (
 )
 
 const (
+	mockv5                       = "mockv5"
 	dbUser                       = "vaultstatictest"
 	dbUserDefaultPassword        = "password"
 	testMinRotationWindowSeconds = 5
@@ -257,6 +259,8 @@ func TestBackend_StaticRole_Rotation_Schedule_ErrorRecover(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 	config.System = sys
+	eventSender := logical.NewMockEventSender()
+	config.EventsSender = eventSender
 
 	lb, err := Factory(context.Background(), config)
 	if err != nil {
@@ -382,7 +386,6 @@ func TestBackend_StaticRole_Rotation_Schedule_ErrorRecover(t *testing.T) {
 		// should match because rotations should not occur outside the rotation window
 		t.Fatalf("expected passwords to match, got (%s)", checkPassword)
 	}
-
 	// Verify new username/password
 	verifyPgConn(t, username, checkPassword, connURL)
 
@@ -409,6 +412,29 @@ func TestBackend_StaticRole_Rotation_Schedule_ErrorRecover(t *testing.T) {
 
 	// Verify new username/password
 	verifyPgConn(t, username, checkPassword, connURL)
+
+	eventSender.Stop() // avoid race detector
+	// check that we got a successful rotation event
+	if len(eventSender.Events) == 0 {
+		t.Fatal("Expected to have some events but got none")
+	}
+	// check that we got a rotate-fail event
+	found := false
+	for _, event := range eventSender.Events {
+		if string(event.Type) == "database/rotate-fail" {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found)
+	found = false
+	for _, event := range eventSender.Events {
+		if string(event.Type) == "database/rotate" {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found)
 }
 
 // Sanity check to make sure we don't allow an attempt of rotating credentials
@@ -1421,7 +1447,7 @@ func TestStoredWALsCorrectlyProcessed(t *testing.T) {
 
 	rotationPeriodData := map[string]interface{}{
 		"username":        "hashicorp",
-		"db_name":         "mockv5",
+		"db_name":         mockv5,
 		"rotation_period": "86400s",
 	}
 
@@ -1475,7 +1501,7 @@ func TestStoredWALsCorrectlyProcessed(t *testing.T) {
 			},
 			map[string]interface{}{
 				"username":          "hashicorp",
-				"db_name":           "mockv5",
+				"db_name":           mockv5,
 				"rotation_schedule": "*/10 * * * * *",
 			},
 		},
@@ -1674,9 +1700,9 @@ func setupMockDB(b *databaseBackend) *mockNewDatabase {
 	dbi := &dbPluginInstance{
 		database: dbw,
 		id:       "foo-id",
-		name:     "mockV5",
+		name:     mockv5,
 	}
-	b.connections.Put("mockv5", dbi)
+	b.connections.Put(mockv5, dbi)
 
 	return mockDB
 }
@@ -1685,7 +1711,7 @@ func setupMockDB(b *databaseBackend) *mockNewDatabase {
 // plugin init code paths, allowing us to use a manually populated mock DB object.
 func configureDBMount(t *testing.T, storage logical.Storage) {
 	t.Helper()
-	entry, err := logical.StorageEntryJSON(fmt.Sprintf("config/mockv5"), &DatabaseConfig{
+	entry, err := logical.StorageEntryJSON(fmt.Sprintf("config/"+mockv5), &DatabaseConfig{
 		AllowedRoles: []string{"*"},
 	})
 	if err != nil {

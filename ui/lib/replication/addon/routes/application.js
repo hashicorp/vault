@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { setProperties } from '@ember/object';
 import { hash } from 'rsvp';
 import Route from '@ember/routing/route';
@@ -33,10 +33,10 @@ export default Route.extend(ClusterRoute, {
     return hash({
       canEnablePrimary: this.store
         .findRecord('capabilities', 'sys/replication/primary/enable')
-        .then((c) => c.get('canUpdate')),
+        .then((c) => c.canUpdate),
       canEnableSecondary: this.store
         .findRecord('capabilities', 'sys/replication/secondary/enable')
-        .then((c) => c.get('canUpdate')),
+        .then((c) => c.canUpdate),
     }).then(({ canEnablePrimary, canEnableSecondary }) => {
       setProperties(model, {
         canEnablePrimary,
