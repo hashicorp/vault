@@ -14,7 +14,7 @@ export default IdentityModel.extend({
   formFields: computed(function () {
     return ['name', 'mountAccessor'];
   }),
-  group: belongsTo('identity/group', { readOnly: true, async: false }),
+  group: belongsTo('identity/group', { readOnly: true, async: false, inverse: 'alias' }),
 
   name: attr('string'),
   canonicalId: attr('string'),

@@ -15,7 +15,7 @@
       <StatText
         @label="Total clients"
         @subText="The total number of entity and non-entity clients for this date range."
-        @value={{this.totalUsageCounts.clients}}
+        @value={{this.tokenStats.total}}
         @tooltipText="This number is the total for the queried date range. The chart displays a monthly breakdown of total clients per month."
         @size="l"
       />
@@ -31,7 +31,12 @@
     </:stats>
 
     <:chart>
-      <Clients::VerticalBarChart @dataset={{this.byMonthActivityData}} @chartLegend={{this.legend}} />
+      <Clients::Charts::VerticalBarStacked
+        @chartTitle="Entity/Non-entity clients usage"
+        @data={{this.byMonthActivityData}}
+        @chartLegend={{this.legend}}
+        @chartHeight={{250}}
+      />
     </:chart>
   </Clients::ChartContainer>
 
@@ -60,7 +65,12 @@
     </:stats>
 
     <:chart>
-      <Clients::VerticalBarChart @dataset={{this.byMonthNewClients}} @chartLegend={{this.legend}} />
+      <Clients::Charts::VerticalBarStacked
+        @chartTitle="Monthly new"
+        @data={{this.byMonthNewClients}}
+        @chartLegend={{this.legend}}
+        @chartHeight={{250}}
+      />
     </:chart>
 
     <:emptyState>
@@ -90,21 +100,21 @@
     <StatText
       class="column"
       @label="Total clients"
-      @value={{this.tokenUsageCounts.clients}}
+      @value={{this.tokenStats.total}}
       @size="l"
       @subText="The number of clients which interacted with Vault during this month. This is Vault’s primary billing metric."
     />
     <StatText
       class="column"
       @label="Entity"
-      @value={{this.tokenUsageCounts.entity_clients}}
+      @value={{this.tokenStats.entity_clients}}
       @size="l"
       @subText="Representations of a particular user, client, or application that created a token via login."
     />
     <StatText
       class="column"
       @label="Non-entity"
-      @value={{this.tokenUsageCounts.non_entity_clients}}
+      @value={{this.tokenStats.non_entity_clients}}
       @size="l"
       @subText="Clients created with a shared set of permissions, but not associated with an entity."
     />

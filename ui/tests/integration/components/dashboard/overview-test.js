@@ -16,7 +16,11 @@ module('Integration | Component | dashboard/overview', function (hooks) {
 
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
-
+    this.permissions = this.owner.lookup('service:permissions');
+    this.version = this.owner.lookup('service:version');
+    this.version.version = '1.13.1+ent';
+    this.version.type = 'enterprise';
+    this.isRootNamespace = true;
     this.replication = {
       dr: {
         clusterId: '123',
@@ -60,20 +64,29 @@ module('Integration | Component | dashboard/overview', function (hooks) {
       ],
     };
     this.refreshModel = () => {};
-  });
-
-  test('it should show dashboard empty states', async function (assert) {
-    this.version = this.owner.lookup('service:version');
-    this.version.version = '1.13.1';
-    this.isRootNamespace = true;
-    await render(
-      hbs`
+    this.renderComponent = async () => {
+      return await render(
+        hbs`
         <Dashboard::Overview
+          @secretsEngines={{this.secretsEngines}}
+          @vaultConfiguration={{this.vaultConfiguration}}
+          @replication={{this.replication}}
           @version={{this.version}}
           @isRootNamespace={{this.isRootNamespace}}
-          @refreshModel={{this.refreshModel}} />
+          @refreshModel={{this.refreshModel}} 
+          @replicationUpdatedAt={{this.replicationUpdatedAt}}
+          />
       `
-    );
+      );
+    };
+  });
+
+  test('it should show dashboard empty states in root namespace', async function (assert) {
+    this.version.version = '1.13.1';
+    this.secretsEngines = null;
+    this.replication = null;
+    this.vaultConfiguration = null;
+    await this.renderComponent();
     assert.dom(DASHBOARD.cardHeader('Vault version')).exists();
     assert.dom(DASHBOARD.cardName('secrets-engines')).exists();
     assert.dom(DASHBOARD.emptyState('secrets-engines')).exists();
@@ -85,126 +98,123 @@ module('Integration | Component | dashboard/overview', function (hooks) {
     assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
   });
 
-  test('it should hide client count and replication card on community', async function (assert) {
-    this.version = this.owner.lookup('service:version');
-    this.version.version = '1.13.1';
-    this.isRootNamespace = true;
+  module('client count and replication card', function () {
+    test('it should hide cards on community in root namespace', async function (assert) {
+      this.version.version = '1.13.1';
+      this.version.type = 'community';
+      this.server.get(
+        'sys/internal/counters/activity',
+        () => new Error('uh oh! a request was made to sys/internal/counters/activity')
+      );
+      await this.renderComponent();
 
-    await render(
-      hbs`
-        <Dashboard::Overview
-          @secretsEngines={{this.secretsEngines}}
-          @vaultConfiguration={{this.vaultConfiguration}}
-          @replication={{this.replication}}
-          @version={{this.version}}
-          @isRootNamespace={{this.isRootNamespace}}
-          @refreshModel={{this.refreshModel}} />
-      `
-    );
+      assert.dom(DASHBOARD.cardHeader('Vault version')).exists();
+      assert.dom(DASHBOARD.cardName('secrets-engines')).exists();
+      assert.dom(DASHBOARD.cardName('learn-more')).exists();
+      assert.dom(DASHBOARD.cardName('quick-actions')).exists();
+      assert.dom(DASHBOARD.cardName('configuration-details')).exists();
+      assert.dom(DASHBOARD.cardName('replication')).doesNotExist();
+      assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
+    });
 
-    assert.dom(DASHBOARD.cardHeader('Vault version')).exists();
-    assert.dom(DASHBOARD.cardName('secrets-engines')).exists();
-    assert.dom(DASHBOARD.cardName('learn-more')).exists();
-    assert.dom(DASHBOARD.cardName('quick-actions')).exists();
-    assert.dom(DASHBOARD.cardName('configuration-details')).exists();
-    assert.dom(DASHBOARD.cardName('replication')).doesNotExist();
-    assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
-  });
+    test('it should hide cards on enterprise if permission but not in root namespace', async function (assert) {
+      this.permissions.exactPaths = {
+        'sys/internal/counters/activity': {
+          capabilities: ['read'],
+        },
+        'sys/replication/status': {
+          capabilities: ['read'],
+        },
+      };
+      this.isRootNamespace = false;
+      await this.renderComponent();
+      assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
+      assert.dom(DASHBOARD.cardName('replication')).doesNotExist();
+    });
 
-  test('it should show client count on enterprise w/ license', async function (assert) {
-    this.version = this.owner.lookup('service:version');
-    this.version.version = '1.13.1+ent';
-    this.version.type = 'enterprise';
-    this.license = {
-      autoloaded: {
-        license_id: '7adbf1f4-56ef-35cd-3a6c-50ef2627865d',
-      },
-    };
+    test('it should show cards on enterprise if has permission and in root namespace', async function (assert) {
+      this.permissions.exactPaths = {
+        'sys/internal/counters/activity': {
+          capabilities: ['read'],
+        },
+        'sys/replication/status': {
+          capabilities: ['read'],
+        },
+      };
+      await this.renderComponent();
+      assert.dom(DASHBOARD.cardHeader('Vault version')).exists();
+      assert.dom(DASHBOARD.cardName('secrets-engines')).exists();
+      assert.dom(DASHBOARD.cardName('learn-more')).exists();
+      assert.dom(DASHBOARD.cardName('quick-actions')).exists();
+      assert.dom(DASHBOARD.cardName('configuration-details')).exists();
+      assert.dom(DASHBOARD.cardName('client-count')).exists();
+      assert.dom(DASHBOARD.cardName('replication')).exists();
+    });
 
-    await render(
-      hbs`
-      <Dashboard::Overview
-      @secretsEngines={{this.secretsEngines}}
-      @vaultConfiguration={{this.vaultConfiguration}}
-      @replication={{this.replication}}
-      @version={{this.version}}
-      @isRootNamespace={{true}}
-      @license={{this.license}}
-      @refreshModel={{this.refreshModel}} />`
-    );
-    assert.dom(DASHBOARD.cardHeader('Vault version')).exists();
-    assert.dom(DASHBOARD.cardName('secrets-engines')).exists();
-    assert.dom(DASHBOARD.cardName('learn-more')).exists();
-    assert.dom(DASHBOARD.cardName('quick-actions')).exists();
-    assert.dom(DASHBOARD.cardName('configuration-details')).exists();
-    assert.dom(DASHBOARD.cardName('client-count')).exists();
-  });
+    test('it should hide cards on enterprise in root namespace but no permission', async function (assert) {
+      await this.renderComponent();
+      assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
+      assert.dom(DASHBOARD.cardName('replication')).doesNotExist();
+    });
 
-  test('it should hide client count on enterprise w/o license ', async function (assert) {
-    this.version = this.owner.lookup('service:version');
-    this.version.version = '1.13.1+ent';
-    this.version.type = 'enterprise';
-    this.isRootNamespace = true;
+    test('it should hide cards on enterprise if no permission and not in root namespace', async function (assert) {
+      this.isRootNamespace = false;
+      await this.renderComponent();
+      assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
+      assert.dom(DASHBOARD.cardName('replication')).doesNotExist();
+    });
 
-    await render(
-      hbs`
-      <Dashboard::Overview
-        @secretsEngines={{this.secretsEngines}}
-        @vaultConfiguration={{this.vaultConfiguration}}
-        @replication={{this.replication}}
-        @version={{this.version}}
-        @isRootNamespace={{this.isRootNamespace}}
-        @refreshModel={{this.refreshModel}}
-      />`
-    );
+    test('it should hide client count on enterprise in root namespace if no activity permission', async function (assert) {
+      this.permissions.exactPaths = {
+        'sys/internal/counters/activity': {
+          capabilities: ['deny'],
+        },
+        'sys/replication/status': {
+          capabilities: ['read'],
+        },
+      };
 
-    assert.dom(DASHBOARD.cardHeader('Vault version')).exists();
-    assert.dom('[data-test-badge-namespace]').exists();
-    assert.dom(DASHBOARD.cardName('secrets-engines')).exists();
-    assert.dom(DASHBOARD.cardName('learn-more')).exists();
-    assert.dom(DASHBOARD.cardName('quick-actions')).exists();
-    assert.dom(DASHBOARD.cardName('configuration-details')).exists();
-    assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
-  });
+      await this.renderComponent();
+      assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
+      assert.dom(DASHBOARD.cardName('replication')).exists();
+    });
 
-  test('it should hide replication on enterprise not on root namespace', async function (assert) {
-    this.version = this.owner.lookup('service:version');
-    this.version.version = '1.13.1+ent';
-    this.version.type = 'enterprise';
-    this.isRootNamespace = false;
-    this.license = {
-      autoloaded: {
-        license_id: '7adbf1f4-56ef-35cd-3a6c-50ef2627865d',
-      },
-    };
+    test('it should hide replication on enterprise in root namespace if no replication status permission', async function (assert) {
+      this.permissions.exactPaths = {
+        'sys/internal/counters/activity': {
+          capabilities: ['read'],
+        },
+        'sys/replication/status': {
+          capabilities: ['deny'],
+        },
+      };
 
-    await render(
-      hbs`
-      <Dashboard::Overview
-        @version={{this.version}}
-        @isRootNamespace={{this.isRootNamespace}}
-        @secretsEngines={{this.secretsEngines}}
-        @vaultConfiguration={{this.vaultConfiguration}}
-        @replication={{this.replication}}
-        @license={{this.license}}
-        @refreshModel={{this.refreshModel}} />`
-    );
+      await this.renderComponent();
+      assert.dom(DASHBOARD.cardName('client-count')).exists();
+      assert.dom(DASHBOARD.cardName('replication')).doesNotExist();
+    });
 
-    assert.dom(DASHBOARD.cardHeader('Vault version')).exists();
-    assert.dom('[data-test-badge-namespace]').exists();
-    assert.dom(DASHBOARD.cardName('secrets-engines')).exists();
-    assert.dom(DASHBOARD.cardName('learn-more')).exists();
-    assert.dom(DASHBOARD.cardName('quick-actions')).exists();
-    assert.dom(DASHBOARD.cardName('configuration-details')).exists();
-    assert.dom(DASHBOARD.cardName('replication')).doesNotExist();
-    assert.dom(DASHBOARD.cardName('client-count')).exists();
+    test('it should hide replication on enterprise if has permission and in root namespace but is empty', async function (assert) {
+      this.permissions.exactPaths = {
+        'sys/internal/counters/activity': {
+          capabilities: ['read'],
+        },
+        'sys/replication/status': {
+          capabilities: ['read'],
+        },
+      };
+      this.replication = {};
+      await this.renderComponent();
+      assert.dom(DASHBOARD.cardName('client-count')).exists();
+      assert.dom(DASHBOARD.cardName('replication')).doesNotExist();
+    });
   });
 
   module('learn more card', function () {
     test('shows the learn more card on community', async function (assert) {
-      await render(
-        hbs`<Dashboard::Overview @secretsEngines={{this.secretsEngines}} @vaultConfiguration={{this.vaultConfiguration}} @replication={{this.replication}} @refreshModel={{this.refreshModel}} />`
-      );
+      this.version.version = '1.13.1';
+      this.version.type = 'community';
+      await this.renderComponent();
 
       assert.dom('[data-test-learn-more-title]').hasText('Learn more');
       assert
@@ -218,33 +228,13 @@ module('Integration | Component | dashboard/overview', function (hooks) {
         .hasText("Don't see what you're looking for on this page? Let us know via our feedback form .");
     });
     test('shows the learn more card on enterprise', async function (assert) {
-      this.version = this.owner.lookup('service:version');
-      this.version.version = '1.13.1+ent';
-      this.version.type = 'enterprise';
       this.version.features = [
         'Performance Replication',
         'DR Replication',
         'Namespaces',
         'Transform Secrets Engine',
       ];
-      this.isRootNamespace = true;
-      this.license = {
-        autoloaded: {
-          license_id: '7adbf1f4-56ef-35cd-3a6c-50ef2627865d',
-        },
-      };
-      await render(
-        hbs`
-          <Dashboard::Overview
-            @version={{this.version}}
-            @isRootNamespace={{this.isRootNamespace}}
-            @license={{this.license}}
-            @secretsEngines={{this.secretsEngines}}
-            @vaultConfiguration={{this.vaultConfiguration}}
-            @replication={{this.replication}}
-            @refreshModel={{this.refreshModel}} />
-        `
-      );
+      await this.renderComponent();
       assert.dom('[data-test-learn-more-title]').hasText('Learn more');
       assert
         .dom('[data-test-learn-more-subtext]')

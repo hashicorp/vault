@@ -70,6 +70,7 @@ const (
 	KeyType_HMAC
 	KeyType_AES128_CMAC
 	KeyType_AES256_CMAC
+	// If adding to this list please update allTestKeyTypes in policy_test.go
 )
 
 const (
@@ -176,6 +177,17 @@ func (kt KeyType) CMACSupported() bool {
 		return true
 	default:
 		return false
+	}
+}
+
+func (kt KeyType) HMACSupported() bool {
+	switch {
+	case kt.CMACSupported():
+		return false
+	case kt == KeyType_MANAGED_KEY:
+		return false
+	default:
+		return true
 	}
 }
 
@@ -713,8 +725,10 @@ func (p *Policy) NeedsUpgrade() bool {
 		return true
 	}
 
-	if p.Keys[strconv.Itoa(p.LatestVersion)].HMACKey == nil || len(p.Keys[strconv.Itoa(p.LatestVersion)].HMACKey) == 0 {
-		return true
+	if p.Type.HMACSupported() {
+		if p.Keys[strconv.Itoa(p.LatestVersion)].HMACKey == nil || len(p.Keys[strconv.Itoa(p.LatestVersion)].HMACKey) == 0 {
+			return true
+		}
 	}
 
 	return false
@@ -775,18 +789,20 @@ func (p *Policy) Upgrade(ctx context.Context, storage logical.Storage, randReade
 		persistNeeded = true
 	}
 
-	if p.Keys[strconv.Itoa(p.LatestVersion)].HMACKey == nil || len(p.Keys[strconv.Itoa(p.LatestVersion)].HMACKey) == 0 {
-		entry := p.Keys[strconv.Itoa(p.LatestVersion)]
-		hmacKey, err := uuid.GenerateRandomBytesWithReader(32, randReader)
-		if err != nil {
-			return err
-		}
-		entry.HMACKey = hmacKey
-		p.Keys[strconv.Itoa(p.LatestVersion)] = entry
-		persistNeeded = true
+	if p.Type.HMACSupported() {
+		if p.Keys[strconv.Itoa(p.LatestVersion)].HMACKey == nil || len(p.Keys[strconv.Itoa(p.LatestVersion)].HMACKey) == 0 {
+			entry := p.Keys[strconv.Itoa(p.LatestVersion)]
+			hmacKey, err := uuid.GenerateRandomBytesWithReader(32, randReader)
+			if err != nil {
+				return err
+			}
+			entry.HMACKey = hmacKey
+			p.Keys[strconv.Itoa(p.LatestVersion)] = entry
+			persistNeeded = true
 
-		if p.Type == KeyType_HMAC {
-			entry.HMACKey = entry.Key
+			if p.Type == KeyType_HMAC {
+				entry.HMACKey = entry.Key
+			}
 		}
 	}
 
@@ -1527,13 +1543,13 @@ func (p *Policy) ImportPublicOrPrivate(ctx context.Context, storage logical.Stor
 		return fmt.Errorf("unable to import only public key for derived Ed25519 key: imported key should not be an Ed25519 key pair but is instead an HKDF key")
 	}
 
-	if (p.Type == KeyType_AES128_GCM96 && len(key) != 16) ||
-		((p.Type == KeyType_AES256_GCM96 || p.Type == KeyType_ChaCha20_Poly1305) && len(key) != 32) ||
+	if ((p.Type == KeyType_AES128_GCM96 || p.Type == KeyType_AES128_CMAC) && len(key) != 16) ||
+		((p.Type == KeyType_AES256_GCM96 || p.Type == KeyType_ChaCha20_Poly1305 || p.Type == KeyType_AES256_CMAC) && len(key) != 32) ||
 		(p.Type == KeyType_HMAC && (len(key) < HmacMinKeySize || len(key) > HmacMaxKeySize)) {
 		return fmt.Errorf("invalid key size %d bytes for key type %s", len(key), p.Type)
 	}
 
-	if p.Type == KeyType_AES128_GCM96 || p.Type == KeyType_AES256_GCM96 || p.Type == KeyType_ChaCha20_Poly1305 || p.Type == KeyType_HMAC {
+	if p.Type == KeyType_AES128_GCM96 || p.Type == KeyType_AES256_GCM96 || p.Type == KeyType_ChaCha20_Poly1305 || p.Type == KeyType_HMAC || p.Type == KeyType_AES128_CMAC || p.Type == KeyType_AES256_CMAC {
 		entry.Key = key
 		if p.Type == KeyType_HMAC {
 			p.KeySize = len(key)
@@ -1736,6 +1752,8 @@ func (p *Policy) RotateInMemory(randReader io.Reader) (retErr error) {
 		if err != nil {
 			return err
 		}
+
+		entry.RSAPublicKey = entry.RSAKey.Public().(*rsa.PublicKey)
 	}
 
 	if p.ConvergentEncryption {
@@ -2394,7 +2412,7 @@ func (ke *KeyEntry) WrapKey(targetKey interface{}, targetKeyType KeyType, hash h
 
 	var preppedTargetKey []byte
 	switch targetKeyType {
-	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_HMAC:
+	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_HMAC, KeyType_AES128_CMAC, KeyType_AES256_CMAC:
 		var ok bool
 		preppedTargetKey, ok = targetKey.([]byte)
 		if !ok {

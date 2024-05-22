@@ -233,7 +233,7 @@ func (c *Core) disableAudit(ctx context.Context, path string, updateStorage bool
 	if updateStorage {
 		// Update the audit table
 		if err := c.persistAudit(ctx, newTable, entry.Local); err != nil {
-			return existed, errors.New("failed to update audit table")
+			return existed, fmt.Errorf("failed to update audit table: %w: %w", audit.ErrInternal, err)
 		}
 	}
 

@@ -77,11 +77,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       .maxTTLVal(maxTTLHours)
       .submit();
     await configPage.visit({ backend: path });
-    assert.strictEqual(
-      configPage.defaultTTL,
-      '0',
-      'shows 0 (with no seconds) which means using the system default TTL'
-    ); // https://developer.hashicorp.com/vault/api-docs/system/mounts#default_lease_ttl-1
+    assert.strictEqual(configPage.defaultTTL, '1 month 1 day', 'shows system default TTL');
     assert.strictEqual(configPage.maxTTL, `${this.calcDays(maxTTLHours)}`, 'shows the proper max TTL');
   });
 
@@ -157,12 +153,16 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
         capabilities = ["read"]
       }
     `;
-    await consoleComponent.runCommands([
-      // delete any previous mount with same name
-      `delete sys/mounts/${enginePath}`,
-      `write sys/policies/acl/kv-v2-degrade policy=${btoa(V2_POLICY)}`,
-      'write -field=client_token auth/token/create policies=kv-v2-degrade',
-    ]);
+    await consoleComponent.toggle();
+    await consoleComponent.runCommands(
+      [
+        // delete any previous mount with same name
+        `delete sys/mounts/${enginePath}`,
+        `write sys/policies/acl/kv-v2-degrade policy=${btoa(V2_POLICY)}`,
+        'write -field=client_token auth/token/create policies=kv-v2-degrade',
+      ],
+      false
+    );
     await settled();
     const userToken = consoleComponent.lastLogOutput;
     await logout.visit();

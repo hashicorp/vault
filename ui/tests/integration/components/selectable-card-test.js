@@ -26,4 +26,10 @@ module('Integration | Component selectable-card', function (hooks) {
     await render(hbs`<SelectableCard  @onClick={{this.onClick}}>hello</SelectableCard>`);
     assert.dom('.selectable-card').hasText('hello');
   });
+
+  test('it does not process click event on disabled card', async function (assert) {
+    await render(hbs`<SelectableCard @onClick={{this.onClick}} @disabled={{true}}>disabled</SelectableCard>`);
+    await click('.selectable-card');
+    assert.notOk(this.onClick.calledOnce, 'does not call the click event');
+  });
 });

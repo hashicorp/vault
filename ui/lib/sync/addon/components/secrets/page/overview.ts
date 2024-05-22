@@ -7,35 +7,34 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
-import { waitFor } from '@ember/test-waiters';
 import { action } from '@ember/object';
-import errorMessage from 'vault/utils/error-message';
 import Ember from 'ember';
 
 import type FlashMessageService from 'vault/services/flash-messages';
 import type StoreService from 'vault/services/store';
-import type RouterService from '@ember/routing/router-service';
 import type VersionService from 'vault/services/version';
+import type FlagsService from 'vault/services/flags';
 import type { SyncDestinationAssociationMetrics } from 'vault/vault/adapters/sync/association';
 import type SyncDestinationModel from 'vault/vault/models/sync/destination';
 
 interface Args {
   destinations: Array<SyncDestinationModel>;
   totalVaultSecrets: number;
-  activatedFeatures: Array<string>;
+  isActivated: boolean;
+  licenseHasSecretsSync: boolean;
+  isHvdManaged: boolean;
 }
 
 export default class SyncSecretsDestinationsPageComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly store: StoreService;
-  @service declare readonly router: RouterService;
   @service declare readonly version: VersionService;
+  @service declare readonly flags: FlagsService;
 
   @tracked destinationMetrics: SyncDestinationAssociationMetrics[] = [];
   @tracked page = 1;
   @tracked showActivateSecretsSyncModal = false;
-  @tracked hasConfirmedDocs = false;
-  @tracked error = null;
+  @tracked activationError: null | string = null;
   // eventually remove when we deal with permissions on activation-features
   @tracked hideOptIn = false;
   @tracked hideError = false;
@@ -63,24 +62,7 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   });
 
   @action
-  resetOptInModal() {
-    this.showActivateSecretsSyncModal = false;
-    this.hasConfirmedDocs = false;
-  }
-
-  @task
-  @waitFor
-  *onFeatureConfirm() {
-    try {
-      yield this.store
-        .adapterFor('application')
-        .ajax('/v1/sys/activation-flags/secrets-sync/activate', 'POST', { namespace: null });
-      this.router.transitionTo('vault.cluster.sync.secrets.overview');
-    } catch (error) {
-      this.error = errorMessage(error);
-      this.flashMessages.danger(`Error enabling feature \n ${errorMessage(error)}`);
-    } finally {
-      this.resetOptInModal();
-    }
+  onModalError(errorMsg: string) {
+    this.activationError = errorMsg;
   }
 }

@@ -126,7 +126,6 @@ func TestAutoAuthSelfHealing_TokenFileAuth_SinkOutput(t *testing.T) {
 	}
 
 	pathTemplateOutput := makeTempFile(t, "template-output", "")
-	originalTemplateFileInfo, err := os.Stat(pathSinkFile)
 	require.NoError(t, err)
 	templateTest := &ctconfig.TemplateConfig{
 		Contents:    pointerutil.StringPtr(`{{ with secret "auth/token/lookup-self" }}{{ .Data.id }}{{ end }}`),
@@ -139,10 +138,9 @@ func TestAutoAuthSelfHealing_TokenFileAuth_SinkOutput(t *testing.T) {
 		errCh <- server.Run(ctx, ah.TemplateTokenCh, templatesToRender, ah.AuthInProgress, ah.InvalidToken)
 	}()
 
-	// Send token to template channel
+	// Send token to template channel, and wait for the template to render
 	ah.TemplateTokenCh <- token
-	templateFileInfo, err := waitForFiles(t, pathTemplateOutput, originalTemplateFileInfo.ModTime())
-	require.NoError(t, err)
+	err = waitForFileContent(t, pathTemplateOutput, token)
 
 	// Revoke Token
 	err = serverClient.Auth().Token().RevokeOrphan(token)
@@ -160,23 +158,13 @@ func TestAutoAuthSelfHealing_TokenFileAuth_SinkOutput(t *testing.T) {
 	err = os.WriteFile(pathVaultToken, []byte(newToken), 0o600)
 	require.NoError(t, err)
 
-	// Wait for auto-auth to complete
-	_, err = waitForFiles(t, pathSinkFile, templateFileInfo.ModTime())
+	// Wait for auto-auth to complete and verify token has been written to the sink
+	// and the template has been re-rendered
+	err = waitForFileContent(t, pathSinkFile, newToken)
 	require.NoError(t, err)
 
-	// Verify the new token has been written to a file sink after re-authenticating using lookup-self
-	tokenInSink, err := os.ReadFile(pathSinkFile)
+	err = waitForFileContent(t, pathTemplateOutput, newToken)
 	require.NoError(t, err)
-	require.Equal(t, newToken, string(tokenInSink))
-
-	// Wait for the template file to have re-rendered
-	_, err = waitForFiles(t, pathTemplateOutput, templateFileInfo.ModTime())
-	require.NoError(t, err)
-
-	// Verify the template has now been correctly rendered with the new token
-	templateContents, err := os.ReadFile(pathTemplateOutput)
-	require.NoError(t, err)
-	require.Equal(t, newToken, string(templateContents))
 
 	// Calling cancel will stop the 'Run' funcs we started in Goroutines, we should
 	// then check that there were no errors in our channel.
@@ -260,8 +248,6 @@ path "/secret/*" {
 
 	// Create sink file
 	pathSinkFile := makeTempFile(t, "sink-file", "")
-	fileInfo, err := os.Stat(pathSinkFile)
-	require.NoError(t, err)
 
 	config := &sink.SinkConfig{
 		Logger: logger.Named("sink.file"),
@@ -311,9 +297,6 @@ path "/secret/*" {
 	}
 
 	pathTemplateDestination := makeTempFile(t, "kv-data", "")
-	fileInfo, err = os.Stat(pathTemplateDestination)
-	require.NoError(t, err)
-	templateDestModTime := fileInfo.ModTime()
 	templateTest := &ctconfig.TemplateConfig{
 		Contents:    pointerutil.StringPtr(`"{{ with secret "secret/data/otherapp" }}{{ .Data.data.username }}{{ end }}"`),
 		Destination: pointerutil.StringPtr(pathTemplateDestination),
@@ -353,15 +336,12 @@ path "/secret/*" {
 	// Verify that the new token has NOT been written to the token sink
 	tokenInSink, err := os.ReadFile(pathSinkFile)
 	require.NoError(t, err)
-	require.NotEqual(t, newToken, string(tokenInSink))
 	require.Equal(t, token, string(tokenInSink))
 
-	fileInfo, err = os.Stat(pathTemplateDestination)
+	// Validate that the template still hasn't been rendered.
+	templateContent, err := os.ReadFile(pathTemplateDestination)
 	require.NoError(t, err)
-	newTemplateDestModTime := fileInfo.ModTime()
-	// Verify that the template hasn't been rendered
-	// since we still have invalid permissions
-	require.Equal(t, templateDestModTime, newTemplateDestModTime)
+	require.Equal(t, "", string(templateContent))
 
 	cancel()
 	wrapUpTimeout := 5 * time.Second
@@ -378,35 +358,38 @@ path "/secret/*" {
 	}
 }
 
-func waitForFiles(t *testing.T, filePath string, prevModTime time.Time) (os.FileInfo, error) {
+// waitForFileContent waits for the file at filePath to exist and contain fileContent
+// or it will return in an error. Waits for five seconds, with 100ms intervals.
+// Returns nil if content became the same, or non-nil if it didn't.
+func waitForFileContent(t *testing.T, filePath, expectedContent string) error {
 	t.Helper()
 
 	var err error
-	var fileInfo os.FileInfo
 	tick := time.Tick(100 * time.Millisecond)
 	timeout := time.After(5 * time.Second)
 	// We need to wait for the files to be updated...
 	for {
 		select {
 		case <-timeout:
-			return nil, fmt.Errorf("timed out waiting for files, last error: %w", err)
+			return fmt.Errorf("timed out waiting for file content, last error: %w", err)
 		case <-tick:
 		}
 
-		fileInfo, err = os.Stat(filePath)
+		content, err := os.ReadFile(filePath)
 		if err != nil {
 			if errors.Is(err, os.ErrNotExist) {
 				continue
 			}
-			return nil, err
+			return err
 		}
-		// Keep waiting until the file has been updated since the previous mod time
-		if !fileInfo.ModTime().After(prevModTime) {
-			err = fmt.Errorf("file not yet updated, prevModTime+%s, currentModTime=%s", prevModTime, fileInfo.ModTime())
+
+		stringContent := string(content)
+		if stringContent != expectedContent {
+			err = fmt.Errorf("content not yet the same, expectedContent=%s, content=%s", expectedContent, stringContent)
 			continue
 		}
 
-		return fileInfo, nil
+		return nil
 	}
 }
 

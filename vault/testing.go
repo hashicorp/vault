@@ -130,7 +130,9 @@ func TestCoreWithSeal(t testing.T, testSeal Seal, enableRaw bool) *Core {
 		EnableRaw:       enableRaw,
 		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		AuditBackends: map[string]audit.Factory{
-			"file": audit.NewFileBackend,
+			audit.TypeFile:   audit.NewFileBackend,
+			audit.TypeSocket: audit.NewSocketBackend,
+			audit.TypeSyslog: audit.NewSyslogBackend,
 		},
 	}
 	return TestCoreWithSealAndUI(t, conf)
@@ -1415,9 +1417,9 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		LogicalBackends:    make(map[string]logical.Factory),
 		CredentialBackends: make(map[string]logical.Factory),
 		AuditBackends: map[string]audit.Factory{
-			"file":   audit.NewFileBackend,
-			"socket": audit.NewSocketBackend,
-			"syslog": audit.NewSyslogBackend,
+			audit.TypeFile:   audit.NewFileBackend,
+			audit.TypeSocket: audit.NewSocketBackend,
+			audit.TypeSyslog: audit.NewSyslogBackend,
 		},
 		RedirectAddr:    fmt.Sprintf("https://127.0.0.1:%d", listeners[0][0].Address.Port),
 		ClusterAddr:     "https://127.0.0.1:0",
@@ -1540,11 +1542,6 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.RawConfig = c
 	}
 
-	addAuditBackend := len(coreConfig.AuditBackends) == 0
-	if addAuditBackend {
-		coreConfig.AuditBackends["noop"] = audit.NoopAuditFactory(nil)
-	}
-
 	if coreConfig.Physical == nil && (opts == nil || opts.PhysicalFactory == nil) {
 		coreConfig.Physical, err = physInmem.NewInmem(nil, testCluster.Logger)
 		if err != nil {
@@ -1660,7 +1657,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 	// Initialize cores
 	if opts == nil || !opts.SkipInit {
-		testCluster.initCores(t, opts, addAuditBackend)
+		testCluster.initCores(t, opts)
 	}
 
 	// Assign clients
@@ -1971,11 +1968,9 @@ func (testCluster *TestCluster) setupClusterListener(
 	core.SetClusterHandler(handler)
 }
 
-func (tc *TestCluster) InitCores(t testing.T, opts *TestClusterOptions, addAuditBackend bool) {
-	tc.initCores(t, opts, addAuditBackend)
-}
-
-func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAuditBackend bool) {
+// initCores attempts to initialize a core for a test cluster using the supplied
+// options.
+func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions) {
 	leader := tc.Cores[0]
 
 	bKeys, rKeys, root := TestCoreInitClusterWrapperSetup(t, leader.Core, leader.Handler)
@@ -2081,24 +2076,6 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 		t.Fatal(err)
 	}
 	tc.ID = cluster.ID
-
-	// Enable auditing if required
-	if addAuditBackend {
-		auditReq := &logical.Request{
-			Operation:   logical.UpdateOperation,
-			ClientToken: tc.RootToken,
-			Path:        "sys/audit/noop",
-			Data:        map[string]interface{}{"type": "noop"},
-		}
-		resp, err := leader.Core.HandleRequest(namespace.RootContext(ctx), auditReq)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if resp.IsError() {
-			t.Fatal(err)
-		}
-	}
 
 	// Configure a secret engine (kv)
 	kvVersion := "1"

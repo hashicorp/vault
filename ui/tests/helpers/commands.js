@@ -1,9 +1,10 @@
-import consoleClass from 'vault/tests/pages/components/console/ui-panel';
-import { create } from 'ember-cli-page-object';
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
  */
+
+import consoleClass from 'vault/tests/pages/components/console/ui-panel';
+import { create } from 'ember-cli-page-object';
 
 /**
  * Helper functions to run common commands in the consoleComponent during tests.
@@ -45,8 +46,10 @@ export async function runCmd(commands, throwErrors = true) {
   if (!Array.isArray(commands)) {
     commands = [commands];
   }
-  await cc.runCommands(commands);
+  await cc.toggle();
+  await cc.runCommands(commands, false);
   const lastOutput = cc.lastLogOutput;
+  await cc.toggle();
   if (throwErrors && lastOutput.includes('Error')) {
     throw new Error(`Error occurred while running commands: "${commands.join('; ')}" - ${lastOutput}`);
   }

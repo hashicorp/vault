@@ -50,4 +50,16 @@ module('Unit | Adapter | secret engine', function (hooks) {
     const adapter = this.owner.lookup('adapter:secret-engine');
     adapter['query'](storeStub, type, { path: 'foo/bar/baz' });
   });
+
+  test('Fails gracefully finding records for non ssh engines', function (assert) {
+    assert.expect(1);
+    const snapshot = {
+      attr() {
+        return { type: 'aws', path: 'aws/' };
+      },
+    };
+    const adapter = this.owner.lookup('adapter:secret-engine');
+    const response = adapter.findRecord(storeStub, 'aws', { path: 'aws' }, snapshot);
+    assert.propEqual(response, { data: {} }, 'returns empty data object');
+  });
 });

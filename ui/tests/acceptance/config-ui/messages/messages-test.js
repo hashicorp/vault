@@ -12,34 +12,22 @@ import logout from 'vault/tests/pages/logout';
 import { format, addDays, startOfDay } from 'date-fns';
 import { datetimeLocalStringFormat } from 'core/utils/date-formatters';
 import { CUSTOM_MESSAGES } from 'vault/tests/helpers/config-ui/message-selectors';
-import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+
+const MESSAGES_LIST = {
+  listItem: '.linked-block',
+  filterBy: (name) => `[data-test-filter-by="${name}"]`,
+  filterSubmit: '[data-test-filter-submit]',
+  filterReset: '[data-test-filter-reset]',
+};
 
 module('Acceptance | Community | config-ui/messages', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
-    this.server.get('/sys/health', function () {
-      return {
-        enterprise: false,
-        initialized: true,
-        sealed: false,
-        standby: false,
-        license: {
-          expiry: '2024-01-12T23:20:50.52Z',
-          state: 'stored',
-        },
-        performance_standby: false,
-        replication_performance_mode: 'disabled',
-        replication_dr_mode: 'disabled',
-        server_time_utc: 1622562585,
-        version: '1.16.0',
-        cluster_name: 'vault-cluster-e779cd7c',
-        cluster_id: '5f20f5ab-acea-0481-787e-71ec2ff5a60b',
-        last_wal: 121,
-      };
-    });
+    const version = this.owner.lookup('service:version');
+    version.type = 'community';
     await authPage.login();
   });
 
@@ -58,6 +46,8 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
+    const version = this.owner.lookup('service:version');
+    version.type = 'enterprise';
     this.messageDetailId = () => {
       return currentURL().match(/messages\/(.*)\/details/)[1];
     };
@@ -97,26 +87,6 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
       await click(CUSTOM_MESSAGES.confirmActionButton('Delete message'));
       await click(GENERAL.confirmButton);
     };
-    this.server.get('/sys/health', function () {
-      return {
-        enterprise: true,
-        initialized: true,
-        sealed: false,
-        standby: false,
-        license: {
-          expiry: '2024-01-12T23:20:50.52Z',
-          state: 'stored',
-        },
-        performance_standby: false,
-        replication_performance_mode: 'disabled',
-        replication_dr_mode: 'disabled',
-        server_time_utc: 1622562585,
-        version: '1.16.0+ent',
-        cluster_name: 'vault-cluster-e779cd7c',
-        cluster_id: '5f20f5ab-acea-0481-787e-71ec2ff5a60b',
-        last_wal: 121,
-      };
-    });
     await authPage.login();
   });
 
@@ -126,10 +96,10 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
   test('it should show an empty state when no messages are created', async function (assert) {
     assert.expect(4);
     await click(CUSTOM_MESSAGES.navLink);
-    assert.dom('[data-test-component="empty-state"]').exists();
+    assert.dom(GENERAL.emptyStateTitle).exists();
     assert.dom(GENERAL.emptyStateTitle).hasText('No messages yet');
     await click(CUSTOM_MESSAGES.tab('On login page'));
-    assert.dom('[data-test-component="empty-state"]').exists();
+    assert.dom(GENERAL.emptyStateTitle).exists();
     assert.dom(GENERAL.emptyStateTitle).hasText('No messages yet');
   });
 
@@ -165,37 +135,41 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
       await click(CUSTOM_MESSAGES.listItem('Awesome custom message title'));
       await click(CUSTOM_MESSAGES.confirmActionButton('Delete message'));
       await click(GENERAL.confirmButton);
-      assert.dom('[data-test-component="empty-state"]').exists('Message was deleted');
+      assert.dom(GENERAL.emptyStateTitle).exists('Message was deleted');
     });
     test('it should filter by type and status', async function (assert) {
       await this.createMessage('banner', null);
       const msg1 = this.messageDetailId();
       await this.createMessage('banner');
       const msg2 = this.messageDetailId();
-      await visit('vault/config-ui/messages');
+      await visit('vault/config-ui/messages?pageFilter=foobar&status=inactive&type=banner');
+      // check that filters inherit param values
+      assert.dom(MESSAGES_LIST.filterBy('pageFilter')).hasValue('foobar');
+      assert.dom(MESSAGES_LIST.filterBy('status')).hasValue('inactive');
+      assert.dom(MESSAGES_LIST.filterBy('type')).hasValue('banner');
+      assert.dom(GENERAL.emptyStateTitle).exists();
+
+      // clear filters works
+      await click(MESSAGES_LIST.filterReset);
+      assert.dom(MESSAGES_LIST.listItem).exists({ count: 2 });
 
       // check number of messages with status filters
-      await clickTrigger('#filter-by-message-status');
-      await click('.ember-power-select-options [data-option-index="0"]');
-      assert.dom('.linked-block').exists({ count: 1 }, 'filtered by active');
-      await click('[data-test-selected-list-button="delete"]');
-      await clickTrigger('#filter-by-message-status');
-      await click('.ember-power-select-options [data-option-index="1"]');
-      assert.dom('.linked-block').exists({ count: 1 }, 'filtered by inactive');
-      await click('[data-test-selected-list-button="delete"]');
+      await fillIn(MESSAGES_LIST.filterBy('status'), 'active');
+      assert.dom(MESSAGES_LIST.listItem).exists({ count: 2 }, 'list does not filter before clicking submit');
+      await click(MESSAGES_LIST.filterSubmit);
+      assert.dom(MESSAGES_LIST.listItem).exists({ count: 1 });
 
       // check number of messages with type filters
-      await clickTrigger('#filter-by-message-type');
-      await click('.ember-power-select-options [data-option-index="0"]');
-      assert.dom('.linked-block').exists({ count: 0 }, 'filtered by modal');
-      await click('[data-test-selected-list-button="delete"]');
-      await clickTrigger('#filter-by-message-type');
-      await click('.ember-power-select-options [data-option-index="1"]');
-      assert.dom('.linked-block').exists({ count: 2 }, 'filtered by banner');
-      await click('[data-test-selected-list-button="delete"]');
+      await click(MESSAGES_LIST.filterReset);
+      await fillIn(MESSAGES_LIST.filterBy('type'), 'modal');
+      await click(MESSAGES_LIST.filterSubmit);
+      assert.dom(GENERAL.emptyStateTitle).exists();
 
-      // check number of messages with no filters
-      assert.dom('.linked-block').exists({ count: 2 }, 'no filters selected');
+      // unsetting a filter will reset that item in the query
+      await fillIn(MESSAGES_LIST.filterBy('type'), '');
+      await fillIn(MESSAGES_LIST.filterBy('status'), 'inactive');
+      await click(MESSAGES_LIST.filterSubmit);
+      assert.dom(MESSAGES_LIST.listItem).exists({ count: 1 });
 
       // clean up custom messages
       await this.deleteMessage(msg1);
@@ -270,7 +244,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
       await click(CUSTOM_MESSAGES.listItem('Awesome custom message title'));
       await click(CUSTOM_MESSAGES.confirmActionButton('Delete message'));
       await click(GENERAL.confirmButton);
-      assert.dom('[data-test-component="empty-state"]').exists('Message was deleted');
+      assert.dom(GENERAL.emptyStateTitle).exists('Message was deleted');
     });
     test('it should show info message on create and edit form', async function (assert) {
       assert.expect(1);

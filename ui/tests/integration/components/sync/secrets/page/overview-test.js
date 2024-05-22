@@ -15,6 +15,7 @@ import syncHandlers from 'vault/mirage/handlers/sync';
 import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
 import { Response } from 'miragejs';
 import { dateFormat } from 'core/helpers/date-format';
+import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 
 const { title, tab, overviewCard, cta, overview, pagination, emptyStateTitle, emptyStateMessage } = PAGE;
 
@@ -24,19 +25,24 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
+    // allow capabilities as root by default to allow users to POST to the secrets-sync/activate endpoint
+    this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
     this.version = this.owner.lookup('service:version');
+    this.store = this.owner.lookup('service:store');
     this.version.type = 'enterprise';
     this.version.features = ['Secrets Sync'];
+
     syncScenario(this.server);
     syncHandlers(this.server);
 
-    const store = this.owner.lookup('service:store');
-    this.destinations = await store.query('sync/destination', {});
+    this.destinations = await this.store.query('sync/destination', {});
     this.isActivated = true;
+    this.licenseHasSecretsSync = true;
+    this.isHvdManaged = false;
 
     this.renderComponent = () => {
       return render(
-        hbs`<Secrets::Page::Overview @destinations={{this.destinations}} @totalVaultSecrets={{7}} @isActivated={{this.isActivated}} />`,
+        hbs`<Secrets::Page::Overview @destinations={{this.destinations}} @totalVaultSecrets={{7}} @isActivated={{this.isActivated}} @licenseHasSecretsSync={{this.licenseHasSecretsSync}} @isHvdManaged={{this.isHvdManaged}} />`,
         {
           owner: this.engine,
         }
@@ -57,9 +63,9 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
   module('community', function (hooks) {
     hooks.beforeEach(function () {
       this.version.type = 'community';
-      this.version.features = [];
-      this.destinations = [];
       this.isActivated = false;
+      this.licenseHasSecretsSync = false;
+      this.destinations = [];
     });
 
     test('it should show an upsell CTA', async function (assert) {
@@ -69,11 +75,13 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
         .dom(title)
         .hasText('Secrets Sync Enterprise feature', 'page title indicates feature is only for Enterprise');
       assert.dom(cta.button).doesNotExist();
+      assert.dom(cta.summary).exists();
     });
   });
 
   module('ent', function (hooks) {
     hooks.beforeEach(function () {
+      this.isActivated = false;
       this.destinations = [];
     });
 
@@ -90,6 +98,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
 
     test('it should show create CTA if license has the secrets sync feature', async function (assert) {
       this.version.features = ['Secrets Sync'];
+      this.isActivated = true;
       await this.renderComponent();
 
       assert.dom(title).hasText('Secrets Sync');
@@ -98,44 +107,80 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     });
   });
 
-  module('secrets sync not activated', function (hooks) {
+  module('managed', function (hooks) {
+    hooks.beforeEach(function () {
+      this.isActivated = false;
+      this.isHvdManaged = true;
+      this.destinations = [];
+    });
+
+    test('it should show the opt-in banner if feature is not activated', async function (assert) {
+      await this.renderComponent();
+
+      assert.dom(overview.optInBanner.container).exists('Opt-in banner is shown');
+    });
+
+    test('it should not show the opt-in banner if feature is activated', async function (assert) {
+      this.isActivated = true;
+      await this.renderComponent();
+
+      assert.dom(overview.optInBanner.container).doesNotExist('Opt-in banner is not shown');
+    });
+  });
+
+  module('user does not have post permissions to activate', function (hooks) {
+    hooks.beforeEach(function () {
+      this.isActivated = false;
+      this.destinations = [];
+      this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub(['read']));
+    });
+
+    test('it should show the opt-in banner without the ability to activate', async function (assert) {
+      await this.renderComponent();
+
+      assert
+        .dom(overview.optInBanner.description)
+        .hasText(
+          'To use this feature, specific activation is required. Please contact your administrator to activate.'
+        );
+      assert.dom(overview.optInBanner.enable).doesNotExist('Opt-in enable button does not show');
+    });
+
+    test('it should not show allow the user to dismiss the opt-in banner', async function (assert) {
+      await this.renderComponent();
+
+      assert.dom(overview.optInBanner.dismiss).doesNotExist('dismiss opt-in banner does not show');
+    });
+  });
+
+  module('secrets sync is not activated and license has secrets sync', function (hooks) {
     hooks.beforeEach(async function () {
       this.isActivated = false;
     });
 
-    test('it should show the opt-in banner', async function (assert) {
+    test('it should show the opt-in banner with activate description', async function (assert) {
       await this.renderComponent();
 
-      assert.dom(overview.optInBanner).exists('Opt-in banner is shown');
+      assert.dom(overview.optInBanner.container).exists('Opt-in banner is shown');
+      assert
+        .dom(overview.optInBanner.description)
+        .hasText(
+          "To use this feature, specific activation is required. Please review the feature documentation and enable it. If you're upgrading from beta, your previous data will be accessible after activation."
+        );
+    });
+
+    test('it should show dismiss banner', async function (assert) {
+      await this.renderComponent();
+
+      assert.dom(overview.optInBanner.dismiss).exists('dismiss opt-in banner shows');
     });
 
     test('it should navigate to the opt-in modal', async function (assert) {
       await this.renderComponent();
 
-      await click(overview.optInBannerEnable);
+      await click(overview.optInBanner.enable);
 
-      assert.dom(overview.optInModal).exists('Opt-in modal is shown');
-      assert.dom(overview.optInConfirm).isDisabled('Confirm button is disabled when checkbox is unchecked');
-
-      await click(overview.optInCheck);
-      assert.dom(overview.optInConfirm).isNotDisabled('confirm button is enabled once checkbox is checked');
-    });
-
-    test('it should make a POST to activate the feature', async function (assert) {
-      assert.expect(1);
-
-      await this.renderComponent();
-
-      this.server.post('/sys/activation-flags/secrets-sync/activate', () => {
-        assert.true(true, 'POST to secrets-sync/activate is called');
-        return {};
-      });
-
-      await this.renderComponent();
-
-      await click(overview.optInBannerEnable);
-      await click(overview.optInCheck);
-      await click(overview.optInConfirm);
+      assert.dom(overview.activationModal.container).exists('Opt-in modal is shown');
     });
 
     test('it shows an error if activation fails', async function (assert) {
@@ -143,12 +188,24 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
 
       this.server.post('/sys/activation-flags/secrets-sync/activate', () => new Response(403));
 
-      await click(overview.optInBannerEnable);
-      await click(overview.optInCheck);
-      await click(overview.optInConfirm);
+      await click(overview.optInBanner.enable);
+      await click(overview.activationModal.checkbox);
+      await click(overview.activationModal.confirm);
 
       assert.dom(overview.optInError).exists('shows an error banner');
-      assert.dom(overview.optInBanner).exists('banner is visible so user can try to opt-in again');
+      assert.dom(overview.optInBanner.container).exists('banner is visible so user can try to opt-in again');
+    });
+  });
+
+  module('secrets sync is not activated and license does not have secrets sync', function (hooks) {
+    hooks.beforeEach(async function () {
+      this.licenseHasSecretsSync = false;
+    });
+
+    test('it should hide the opt-in banner', async function (assert) {
+      await this.renderComponent();
+
+      assert.dom(overview.optInBanner.container).doesNotExist();
     });
   });
 
@@ -156,7 +213,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     test('it should hide the opt-in banner', async function (assert) {
       await this.renderComponent();
 
-      assert.dom(overview.optInBanner).doesNotExist();
+      assert.dom(overview.optInBanner.container).doesNotExist();
     });
   });
 

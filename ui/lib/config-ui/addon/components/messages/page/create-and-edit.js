@@ -37,12 +37,12 @@ export default class MessagesList extends Component {
   @tracked userConfirmation = '';
 
   willDestroy() {
-    super.willDestroy();
     const noTeardown = this.store && !this.store.isDestroying;
     const { model } = this;
     if (noTeardown && model && model.isDirty && !model.isDestroyed && !model.isDestroying) {
       model.rollbackAttributes();
     }
+    super.willDestroy();
   }
 
   validate() {
