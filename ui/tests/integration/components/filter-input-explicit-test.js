@@ -41,7 +41,7 @@ module('Integration | Component | filter-input-explicit', function (hooks) {
   test('it should call handleSearch on submit', async function (assert) {
     assert.expect(1);
 
-    this.handleSubmit = () => {
+    this.handleSearch = () => {
       assert.ok(true, 'handleSearch was called');
     };
 
