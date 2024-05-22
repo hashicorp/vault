@@ -124,7 +124,7 @@ require (
 	github.com/hashicorp/hcp-scada-provider v0.2.2
 	github.com/hashicorp/hcp-sdk-go v0.75.0
 	github.com/hashicorp/nomad/api v0.0.0-20240213164230-c364cb57298d
-	github.com/hashicorp/raft v1.6.1
+	github.com/hashicorp/raft v1.6.2-0.20240408142740-ddcbc506e2c0
 	github.com/hashicorp/raft-autopilot v0.2.0
 	github.com/hashicorp/raft-boltdb/v2 v2.3.0
 	github.com/hashicorp/raft-snapshot v1.0.4
@@ -396,7 +396,7 @@ require (
 	github.com/hashicorp/consul/proto-public v0.6.1 // indirect
 	github.com/hashicorp/cronexpr v1.1.2 // indirect
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
-	github.com/hashicorp/go-msgpack/v2 v2.1.1 // indirect
+	github.com/hashicorp/go-msgpack/v2 v2.1.2 // indirect
 	github.com/hashicorp/go-secure-stdlib/fileutil v0.1.0 // indirect
 	github.com/hashicorp/go-secure-stdlib/plugincontainer v0.3.0 // indirect
 	github.com/hashicorp/go-slug v0.15.0 // indirect
