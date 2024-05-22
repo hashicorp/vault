@@ -1612,8 +1612,8 @@ github.com/hashicorp/vault-plugin-secrets-gcp v0.19.0 h1:5FRAVA3JYpn7zDMebQ3V622
 github.com/hashicorp/vault-plugin-secrets-gcp v0.19.0/go.mod h1:/xdangTVszef3HQdZ0Ct2MmokRuYSpjx/SyX7aWxTbg=
 github.com/hashicorp/vault-plugin-secrets-gcpkms v0.17.0 h1:GeARWON8OFWZFsulNOQqvDRG2H/38l9ye35VFk5MO1g=
 github.com/hashicorp/vault-plugin-secrets-gcpkms v0.17.0/go.mod h1:IQl89mmTl+GISbF16Rxr2d8YCfUfEdLeZJkV2rjuZCQ=
-github.com/hashicorp/vault-plugin-secrets-kubernetes v0.7.0 h1:IRsrGZyYjecQrAvpKXodQDus4oQRpGDUsQiyJ8Szlmk=
-github.com/hashicorp/vault-plugin-secrets-kubernetes v0.7.0/go.mod h1:StJ4o4D+ChaQ3lKzaWB5CAGDx62ONP9pDFr7iK8i9HU=
+github.com/hashicorp/vault-plugin-secrets-kubernetes v0.8.0 h1:PhLMvNO+VbTYzX04tZDkgQIrBxjDBYTbVFQsa7qbE84=
+github.com/hashicorp/vault-plugin-secrets-kubernetes v0.8.0/go.mod h1:idMLjrXasvIFI1DclLprHkbz3KrJtTd2Cq5jOYMr6WE=
 github.com/hashicorp/vault-plugin-secrets-kv v0.19.0 h1:vF38KPiu0pDK/WZYRPE4M9hmHd4EvO5Opkuokv+lkIE=
 github.com/hashicorp/vault-plugin-secrets-kv v0.19.0/go.mod h1:CxMY+Q23bIbkFk5dj+D9yI5fJ2uHQfpUiua11xo6mHM=
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.12.0 h1:zbddJmujV0YrtePRSeCsXxfloL0RbDyLhQsJ6l3yjrw=
@@ -3162,8 +3162,8 @@ k8s.io/apimachinery v0.18.2/go.mod h1:9SnR/e11v5IbyPCGbvJViimtJ0SwHG4nfZFjU77ftc
 k8s.io/apimachinery v0.29.3 h1:2tbx+5L7RNvqJjn7RIuIKu9XTsIZ9Z5wX2G22XAa5EU=
 k8s.io/apimachinery v0.29.3/go.mod h1:hx/S4V2PNW4OMg3WizRrHutyB5la0iCUbZym+W0EQIU=
 k8s.io/client-go v0.18.2/go.mod h1:Xcm5wVGXX9HAA2JJ2sSBUn3tCJ+4SVlCbl2MNNv+CIU=
-k8s.io/client-go v0.29.1 h1:19B/+2NGEwnFLzt0uB5kNJnfTsbV8w6TgQRz9l7ti7A=
-k8s.io/client-go v0.29.1/go.mod h1:TDG/psL9hdet0TI9mGyHJSgRkW3H9JZk2dNEUS7bRks=
+k8s.io/client-go v0.29.3 h1:R/zaZbEAxqComZ9FHeQwOh3Y1ZUs7FaHKZdQtIc2WZg=
+k8s.io/client-go v0.29.3/go.mod h1:tkDisCvgPfiRpxGnOORfkljmS+UrW+WtXAy2fTvXJB0=
 k8s.io/gengo v0.0.0-20190128074634-0689ccc1d7d6/go.mod h1:ezvh/TsK7cY6rbqRK0oQQ8IAqLxYwwyPxAX1Pzy0ii0=
 k8s.io/klog v0.0.0-20181102134211-b9b56d5dfc92/go.mod h1:Gq+BEi5rUBO/HRz0bTSXDUcqjScdoY3a9IHpCEIOOfk=
 k8s.io/klog v0.3.0/go.mod h1:Gq+BEi5rUBO/HRz0bTSXDUcqjScdoY3a9IHpCEIOOfk=
