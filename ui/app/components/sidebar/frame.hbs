@@ -49,7 +49,14 @@
     <LinkStatus @status={{this.currentCluster.cluster.hcpLinkStatus}} />
     {{yield}}
     <div data-test-console-panel class={{if this.console.isOpen "panel-open"}}>
-      <Console::UiPanel @isFullscreen={{this.consoleFullscreen}} />
+      {{#if this.console.isOpen}}
+        <Console::UiPanel
+          @isFullscreen={{this.consoleFullscreen}}
+          {{focus-trap
+            focusTrapOptions=(hash initialFocus="#console-input" clickOutsideDeactivates=true onDeactivate=this.closeConsole)
+          }}
+        />
+      {{/if}}
     </div>
   </Frame.Main>
 </Hds::AppFrame>

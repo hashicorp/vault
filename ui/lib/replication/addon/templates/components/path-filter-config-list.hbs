@@ -89,6 +89,7 @@
     @label="Paths in this {{this.config.mode}}"
     @options={{this.autoCompleteOptions}}
     @search={{perform this.setAutoCompleteOptions}}
+    @renderInPlace={{true}}
   />
 {{/if}}
 {{#if (and (not this.config.mode) this.startedWithMode)}}

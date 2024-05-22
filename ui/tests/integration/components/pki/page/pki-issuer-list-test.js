@@ -47,9 +47,12 @@ module('Integration | Component | page/pki-issuer-list', function (hooks) {
     issuers.meta = STANDARD_META;
     this.issuers = issuers;
 
-    await render(hbs`<Page::PkiIssuerList @issuers={{this.issuers}} @mountPoint={{this.engineId}} />`, {
-      owner: this.engine,
-    });
+    await render(
+      hbs`<Page::PkiIssuerList @backend="pki-mount" @issuers={{this.issuers}} @mountPoint={{this.engineId}} />`,
+      {
+        owner: this.engine,
+      }
+    );
 
     this.issuers.forEach(async (issuer, idx) => {
       assert
@@ -76,9 +79,12 @@ module('Integration | Component | page/pki-issuer-list', function (hooks) {
     const issuers = this.store.peekAll('pki/issuer');
     issuers.meta = STANDARD_META;
     this.issuers = issuers;
-    await render(hbs`<Page::PkiIssuerList @issuers={{this.issuers}} @mountPoint={{this.engineId}} />`, {
-      owner: this.engine,
-    });
+    await render(
+      hbs`<Page::PkiIssuerList @backend="pki-mount" @issuers={{this.issuers}} @mountPoint={{this.engineId}} />`,
+      {
+        owner: this.engine,
+      }
+    );
     assert.dom(`[data-test-is-default="1"]`).hasText('default issuer');
   });
 });

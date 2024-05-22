@@ -25,7 +25,7 @@ export default Base.extend({
       !cluster[replicationMode].isPrimary ||
       !cluster.canAddSecondary
     ) {
-      return this.transitionTo('mode', replicationMode);
+      return this.router.transitionTo('vault.cluster.replication.mode', replicationMode);
     }
   },
 });

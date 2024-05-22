@@ -36,7 +36,7 @@ module('Integration | Component | kubernetes | Page::Roles', function (hooks) {
     this.roles = this.store.peekAll('kubernetes/role');
     this.filterValue = '';
     this.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.backend.id },
     ];
     this.promptConfig = false;

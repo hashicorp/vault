@@ -6,15 +6,13 @@
 <Dashboard::VaultVersionTitle @version={{@version}} />
 
 <div class="has-bottom-margin-xl">
-  <div class="is-flex-row has-gap-l">
-    {{#if (and @version.isEnterprise (or @license @isRootNamespace))}}
-      <div class="is-flex-column is-flex-1 has-gap-l">
-        {{#if @license}}
-          <Dashboard::ClientCountCard @license={{@license}} />
+  <div class="is-flex-row gap-24">
+    {{#if (and @version.isEnterprise @isRootNamespace)}}
+      <div class="is-flex-column is-flex-1 gap-24">
+        {{#if (has-permission "clients" routeParams="activity")}}
+          <Dashboard::ClientCountCard />
         {{/if}}
-        {{#if
-          (and @isRootNamespace (has-permission "status" routeParams="replication") (not (is-empty-value @replication)))
-        }}
+        {{#if (and (has-permission "status" routeParams="replication") (not (is-empty-value @replication)))}}
           <Dashboard::ReplicationCard
             @replication={{@replication}}
             @version={{@version}}
@@ -25,7 +23,7 @@
         <Dashboard::SecretsEnginesCard @secretsEngines={{@secretsEngines}} />
       </div>
 
-      <div class="is-flex-column is-flex-1 has-gap-l">
+      <div class="is-flex-column is-flex-1 gap-24">
         <Dashboard::QuickActionsCard @secretsEngines={{@secretsEngines}} />
         {{#if @vaultConfiguration}}
           <Dashboard::VaultConfigurationDetailsCard @vaultConfiguration={{@vaultConfiguration}} />
@@ -37,14 +35,14 @@
       </div>
 
     {{else}}
-      <div class="is-flex-column is-flex-1 has-gap-l">
+      <div class="is-flex-column is-flex-1 gap-24">
         <Dashboard::SecretsEnginesCard @secretsEngines={{@secretsEngines}} />
         <div>
           <Dashboard::LearnMoreCard @isEnterprise={{@version.isEnterprise}} />
           <Dashboard::SurveyLinkText />
         </div>
       </div>
-      <div class="is-flex-column is-flex-1 has-gap-l">
+      <div class="is-flex-column is-flex-1 gap-24">
         <Dashboard::QuickActionsCard @secretsEngines={{@secretsEngines}} />
         {{#if @vaultConfiguration}}
           <Dashboard::VaultConfigurationDetailsCard @vaultConfiguration={{@vaultConfiguration}} />

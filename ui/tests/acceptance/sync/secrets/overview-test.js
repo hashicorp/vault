@@ -117,16 +117,20 @@ module('Acceptance | sync | overview', function (hooks) {
         .dom(ts.cta.button)
         .doesNotExist('create first destination is not available until feature has been activated');
 
-      assert.dom(ts.overview.optInBanner).exists();
-      await click(ts.overview.optInBannerEnable);
+      assert.dom(ts.overview.optInBanner.container).exists();
+      await click(ts.overview.optInBanner.enable);
 
-      assert.dom(ts.overview.optInModal).exists('modal to opt-in and activate feature is shown');
-      await click(ts.overview.optInCheck);
-      await click(ts.overview.optInConfirm);
-
-      assert.dom(ts.overview.optInModal).doesNotExist('modal is gone once activation has been submitted');
       assert
-        .dom(ts.overview.optInBanner)
+        .dom(ts.overview.activationModal.container)
+        .exists('modal to opt-in and activate feature is shown');
+      await click(ts.overview.activationModal.checkbox);
+      await click(ts.overview.activationModal.confirm);
+
+      assert
+        .dom(ts.overview.activationModal.container)
+        .doesNotExist('modal is gone once activation has been submitted');
+      assert
+        .dom(ts.overview.optInBanner.container)
         .doesNotExist('opt-in banner is gone once activation has been submitted');
 
       await click(ts.cta.button);
@@ -148,8 +152,8 @@ module('Acceptance | sync | overview', function (hooks) {
     });
 
     test('it should make activation-flag requests to correct namespace', async function (assert) {
-      assert.expect(3);
-
+      assert.expect(4);
+      // should call GET activation-flags twice because we need an updated response after activating the feature
       this.server.get('/sys/activation-flags', (_, req) => {
         assert.deepEqual(req.requestHeaders, {}, 'Request is unauthenticated and in root namespace');
         return {
@@ -163,7 +167,7 @@ module('Acceptance | sync | overview', function (hooks) {
         assert.strictEqual(
           req.requestHeaders['X-Vault-Namespace'],
           undefined,
-          'Request is made to root namespace'
+          'Request is made to undefined namespace'
         );
         return {};
       });
@@ -172,15 +176,15 @@ module('Acceptance | sync | overview', function (hooks) {
       assert.dom('[data-test-badge-namespace]').hasText('foo');
 
       await click(ts.navLink('Secrets Sync'));
-      await click(ts.overview.optInBannerEnable);
-      await click(ts.overview.optInCheck);
-      await click(ts.overview.optInConfirm);
+      await click(ts.overview.optInBanner.enable);
+      await click(ts.overview.activationModal.checkbox);
+      await click(ts.overview.activationModal.confirm);
     });
 
-    test.skip('it should make activation-flag requests to correct namespace when managed', async function (assert) {
-      // TODO: unskip for 1.16.1 when managed is supported
-      assert.expect(3);
-      this.owner.lookup('service:feature-flag').setFeatureFlags(['VAULT_CLOUD_ADMIN_NAMESPACE']);
+    test('it should make activation-flag requests to correct namespace when managed', async function (assert) {
+      assert.expect(4);
+      // should call GET activation-flags twice because we need an updated response after activating the feature
+      this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
 
       this.server.get('/sys/activation-flags', (_, req) => {
         assert.deepEqual(req.requestHeaders, {}, 'Request is unauthenticated and in root namespace');
@@ -195,7 +199,7 @@ module('Acceptance | sync | overview', function (hooks) {
         assert.strictEqual(
           req.requestHeaders['X-Vault-Namespace'],
           'admin',
-          'Request is made to admin namespace'
+          'Request is made to the admin namespace'
         );
         return {};
       });
@@ -204,9 +208,9 @@ module('Acceptance | sync | overview', function (hooks) {
       assert.dom('[data-test-badge-namespace]').hasText('foo');
 
       await click(ts.navLink('Secrets Sync'));
-      await click(ts.overview.optInBannerEnable);
-      await click(ts.overview.optInCheck);
-      await click(ts.overview.optInConfirm);
+      await click(ts.overview.optInBanner.enable);
+      await click(ts.overview.activationModal.checkbox);
+      await click(ts.overview.activationModal.confirm);
     });
   });
 });

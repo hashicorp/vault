@@ -109,5 +109,10 @@ module.exports = [
     source: '/vault/api-docs/system/plugins-reload-backend',
     destination: '/vault/api-docs/system/plugins-reload',
     permanent: true,
+  },
+  {
+    source: '/vault/docs/deprecation/faq',
+    destination: '/vault/docs/deprecation',
+    permanent: true,
   }
 ]

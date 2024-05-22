@@ -41,7 +41,6 @@
   display: flex;
   height: 3rem;
   justify-content: space-between;
-  overflow-x: auto;
   width: 100%;
 
   @include from($mobile) {
@@ -135,4 +134,8 @@ a.disabled.toolbar-link {
   height: 32px;
   margin: 0 $spacing-8;
   width: 0;
+}
+
+.segment-filter {
+  width: min-content;
 }

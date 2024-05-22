@@ -41,35 +41,3 @@ func TestMetricLabelerAuditSink_Label(t *testing.T) {
 		})
 	}
 }
-
-// TestMetricLabelerAuditFallback_Label ensures we always get the right label based
-// on the input value of the error for fallback devices.
-func TestMetricLabelerAuditFallback_Label(t *testing.T) {
-	t.Parallel()
-
-	tests := map[string]struct {
-		err      error
-		expected []string
-	}{
-		"nil": {
-			err:      nil,
-			expected: []string{"audit", "fallback", "success"},
-		},
-		"error": {
-			err:      errors.New("I am an error"),
-			expected: []string{"audit", "sink", "failure"},
-		},
-	}
-
-	for name, tc := range tests {
-		name := name
-		tc := tc
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			m := &metricLabelerAuditFallback{}
-			result := m.Labels(nil, tc.err)
-			assert.Equal(t, tc.expected, result)
-		})
-	}
-}
