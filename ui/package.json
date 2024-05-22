@@ -224,7 +224,6 @@
     "@babel/core": "^7.24.0",
     "@hashicorp/design-system-components": "^4.1.0",
     "@hashicorp/ember-flight-icons": "^5.0.1",
-    "caniuse-lite": "^1.0.30001621",
     "ember-auto-import": "^2.7.2",
     "handlebars": "4.7.7",
     "highlight.js": "^10.4.1",
