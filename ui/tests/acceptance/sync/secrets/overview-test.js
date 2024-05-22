@@ -117,16 +117,20 @@ module('Acceptance | sync | overview', function (hooks) {
         .dom(ts.cta.button)
         .doesNotExist('create first destination is not available until feature has been activated');
 
-      assert.dom(ts.overview.optInBanner).exists();
-      await click(ts.overview.optInBannerEnable);
+      assert.dom(ts.overview.optInBanner.container).exists();
+      await click(ts.overview.optInBanner.enable);
 
-      assert.dom(ts.overview.optInModal).exists('modal to opt-in and activate feature is shown');
-      await click(ts.overview.optInCheck);
-      await click(ts.overview.optInConfirm);
-
-      assert.dom(ts.overview.optInModal).doesNotExist('modal is gone once activation has been submitted');
       assert
-        .dom(ts.overview.optInBanner)
+        .dom(ts.overview.activationModal.container)
+        .exists('modal to opt-in and activate feature is shown');
+      await click(ts.overview.activationModal.checkbox);
+      await click(ts.overview.activationModal.confirm);
+
+      assert
+        .dom(ts.overview.activationModal.container)
+        .doesNotExist('modal is gone once activation has been submitted');
+      assert
+        .dom(ts.overview.optInBanner.container)
         .doesNotExist('opt-in banner is gone once activation has been submitted');
 
       await click(ts.cta.button);
@@ -172,9 +176,9 @@ module('Acceptance | sync | overview', function (hooks) {
       assert.dom('[data-test-badge-namespace]').hasText('foo');
 
       await click(ts.navLink('Secrets Sync'));
-      await click(ts.overview.optInBannerEnable);
-      await click(ts.overview.optInCheck);
-      await click(ts.overview.optInConfirm);
+      await click(ts.overview.optInBanner.enable);
+      await click(ts.overview.activationModal.checkbox);
+      await click(ts.overview.activationModal.confirm);
     });
 
     test('it should make activation-flag requests to correct namespace when managed', async function (assert) {
@@ -204,9 +208,9 @@ module('Acceptance | sync | overview', function (hooks) {
       assert.dom('[data-test-badge-namespace]').hasText('foo');
 
       await click(ts.navLink('Secrets Sync'));
-      await click(ts.overview.optInBannerEnable);
-      await click(ts.overview.optInCheck);
-      await click(ts.overview.optInConfirm);
+      await click(ts.overview.optInBanner.enable);
+      await click(ts.overview.activationModal.checkbox);
+      await click(ts.overview.activationModal.confirm);
     });
   });
 });

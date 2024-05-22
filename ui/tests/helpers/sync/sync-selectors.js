@@ -51,14 +51,18 @@ export const PAGE = {
     },
   },
   overview: {
-    optInBanner: '[data-test-secrets-sync-opt-in-banner]',
-    optInBannerEnable: '[data-test-secrets-sync-opt-in-banner-enable]',
-    optInBannerDescription: '[data-test-secrets-sync-opt-in-banner-description]',
-    optInDismiss: '[data-test-secrets-sync-opt-in-banner] [data-test-icon="x"]',
-    optInModal: '[data-test-secrets-sync-opt-in-modal]',
-    optInCheck: '[data-test-opt-in-check]',
-    optInConfirm: '[data-test-opt-in-confirm]',
-    optInCancel: '[data-test-opt-in-cancel]',
+    optInBanner: {
+      container: '[data-test-secrets-sync-opt-in-banner]',
+      enable: '[data-test-secrets-sync-opt-in-banner-enable]',
+      description: '[data-test-secrets-sync-opt-in-banner-description]',
+      dismiss: '[data-test-secrets-sync-opt-in-banner] [data-test-icon="x"]',
+    },
+    activationModal: {
+      container: '[data-test-secrets-sync-opt-in-modal]',
+      checkbox: '[data-test-opt-in-check]',
+      confirm: '[data-test-opt-in-confirm]',
+      cancel: '[data-test-opt-in-cancel]',
+    },
     optInError: '[data-test-opt-in-error]',
     createDestination: '[data-test-create-destination]',
     table: {
