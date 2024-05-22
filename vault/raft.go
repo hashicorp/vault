@@ -11,7 +11,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -1226,26 +1225,15 @@ func (c *Core) raftLeaderInfo(leaderInfo *raft.LeaderJoinInfo, disco *discover.D
 			// default to 8200 when no port is provided
 			port = 8200
 		}
-		// Addrs returns either IPv4 or IPv6 address, without scheme or port
+		// Addrs returns either IPv4 or IPv6 address, without scheme and most of them without port
+		// IPv6 can be explicit such as "[::1]" or implicit "::1"
 		clusterIPs, err := disco.Addrs(leaderInfo.AutoJoin, c.logger.StandardLogger(nil))
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse addresses from auto-join metadata: %w", err)
 		}
 		for _, ip := range clusterIPs {
-			if count := strings.Count(ip, ":"); count >= 2 && !strings.HasPrefix(ip, "[") {
-				// An IPv6 address in implicit form, however we need it in explicit form to use in a URL.
-				ip = fmt.Sprintf("[%s]", ip)
-			} else if count > 0 && !strings.HasSuffix(ip, "]") {
-				tmpIp, portStr, err := net.SplitHostPort(ip)
-				if err == nil {
-					ip = tmpIp
-					tmpPort, err := strconv.Atoi(portStr)
-					if err == nil {
-						port = uint(tmpPort)
-					}
-				}
-			}
-			u := fmt.Sprintf("%s://%s:%d", scheme, ip, port)
+			addr := formatDiscoveredAddr(ip, port)
+			u := fmt.Sprintf("%s://%s", scheme, addr)
 			info := *leaderInfo
 			info.LeaderAPIAddr = u
 			ret = append(ret, &info)
@@ -1466,4 +1454,20 @@ func newDiscover() (*discover.Discover, error) {
 	return discover.New(
 		discover.WithProviders(providers),
 	)
+}
+
+// formatAddr join ip and port if addr does not already contain a port
+func formatDiscoveredAddr(addr string, defaultPort uint) string {
+	// addr is an implicit IPv6 address
+	if !strings.HasPrefix(addr, "[") && strings.Count(addr, ":") > 1 {
+		return fmt.Sprintf("[%s]:%d", addr, defaultPort)
+	}
+	ip, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return fmt.Sprintf("%s:%d", addr, defaultPort)
+	}
+	if strings.ContainsRune(ip, ':') {
+		ip = fmt.Sprintf("[%s]", ip)
+	}
+	return fmt.Sprintf("%s:%s", ip, port)
 }
