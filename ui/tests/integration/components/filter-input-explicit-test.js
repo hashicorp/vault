@@ -38,14 +38,16 @@ module('Integration | Component | filter-input-explicit', function (hooks) {
     assert.dom(GENERAL.filterInputExplicit).hasValue('foo', 'Value passed to input element');
   });
 
-  test.skip('it should call handleSearch on submit', async function (assert) {
+  test('it should call handleSearch on submit', async function (assert) {
     assert.expect(1);
+
+    this.handleSubmit = () => {
+      assert.ok(true, 'handleSearch was called');
+    };
 
     await this.renderComponent();
     await typeIn(GENERAL.filterInputExplicit, 'bar');
-    await click(GENERAL.filterInputExplicitSubmit);
-
-    // assert.ok(this.handleSearch.perform.calledOnce);
+    await click(GENERAL.filterInputExplicitSearch);
   });
 
   test('it should send keydown event on keydown', async function (assert) {

@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<form {{on "submit" (perform @handleSearch)}}>
+<form {{on "submit" @handleSearch}}>
   <Hds::SegmentedGroup as |S|>
     <S.TextInput
       @value={{@query}}
@@ -14,12 +14,6 @@
       {{on "keydown" @handleKeyDown}}
       data-test-filter-input-explicit
     />
-    <S.Button
-      @color="secondary"
-      @text="Search"
-      @icon={{if @handleSearch.isRunning "loading" "search"}}
-      type="submit"
-      data-test-filter-input-explicit-submit
-    />
+    <S.Button @color="secondary" @text="Search" @icon="search" type="submit" data-test-filter-input-explicit-search />
   </Hds::SegmentedGroup>
 </form>
