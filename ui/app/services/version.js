@@ -7,9 +7,13 @@ import Service, { inject as service } from '@ember/service';
 import { keepLatestTask, task } from 'ember-concurrency';
 import { tracked } from '@glimmer/tracking';
 
+/**
+ * This service returns information about a cluster's license/features, version and type (community vs enterprise).
+ */
+
 export default class VersionService extends Service {
   @service store;
-  @service featureFlag;
+  @service flags;
   @tracked features = [];
   @tracked version = null;
   @tracked type = null;
@@ -44,7 +48,6 @@ export default class VersionService extends Service {
   }
 
   get hasSecretsSync() {
-    if (this.featureFlag.managedNamespaceRoot !== null) return false;
     return this.features.includes('Secrets Sync');
   }
 

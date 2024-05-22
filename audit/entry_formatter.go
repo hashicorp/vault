@@ -35,47 +35,6 @@ type timeProvider interface {
 // nonPersistentSalt is used for obtaining a salt that is not persisted.
 type nonPersistentSalt struct{}
 
-// formatterConfig is used to provide basic configuration to a formatter.
-// Use newFormatterConfig to initialize the formatterConfig struct.
-type formatterConfig struct {
-	raw          bool
-	hmacAccessor bool
-
-	// Vault lacks pagination in its APIs. As a result, certain list operations can return **very** large responses.
-	// The user's chosen audit sinks may experience difficulty consuming audit records that swell to tens of megabytes
-	// of JSON. The responses of list operations are typically not very interesting, as they are mostly lists of keys,
-	// or, even when they include a "key_info" field, are not returning confidential information. They become even less
-	// interesting once HMAC-ed by the audit system.
-	//
-	// Some example Vault "list" operations that are prone to becoming very large in an active Vault installation are:
-	//   auth/token/accessors/
-	//   identity/entity/id/
-	//   identity/entity-alias/id/
-	//   pki/certs/
-	//
-	// This option exists to provide such users with the option to have response data elided from audit logs, only when
-	// the operation type is "list". For added safety, the elision only applies to the "keys" and "key_info" fields
-	// within the response data - these are conventionally the only fields present in a list response - see
-	// logical.ListResponse, and logical.ListResponseWithInfo. However, other fields are technically possible if a
-	// plugin author writes unusual code, and these will be preserved in the audit log even with this option enabled.
-	// The elision replaces the values of the "keys" and "key_info" fields with an integer count of the number of
-	// entries. This allows even the elided audit logs to still be useful for answering questions like
-	// "Was any data returned?" or "How many records were listed?".
-	elideListResponses bool
-
-	// This should only ever be used in a testing context
-	omitTime bool
-
-	// The required/target format for the event (supported: JSONFormat and JSONxFormat).
-	requiredFormat format
-
-	// headerFormatter specifies the formatter used for headers that existing in any incoming audit request.
-	headerFormatter HeaderFormatter
-
-	// prefix specifies a prefix that should be prepended to any formatted request or response before serialization.
-	prefix string
-}
-
 // entryFormatter should be used to format audit requests and responses.
 // NOTE: Use newEntryFormatter to initialize the entryFormatter struct.
 type entryFormatter struct {

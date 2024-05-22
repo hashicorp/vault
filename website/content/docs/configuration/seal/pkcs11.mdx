@@ -280,7 +280,9 @@ This seal supports rotating keys by using different key labels to track key vers
 the key value, generate a new key in a different key label in the HSM and update Vault's
 configuration with the new key label value. Restart your vault instance to pick up the new key
 label and all new encryption operations will use the updated key label. Old keys must not be disabled
-or deleted and are used to decrypt older data.
+or deleted and are used to decrypt older data. To disable or delete old keys, Vault needs to
+ perform [seal-rewrap](/vault/api-docs/system/sealwrap-rewrap#start-a-seal-rewrap-process)
+ so  that data encrypted by the old key can be decrypted using the new key. 
 
 **NOTE**: Prior to version 0.10.1, key information was not tracked with the ciphertext. If
 rotation is desired for data that was seal wrapped prior to this version must also set

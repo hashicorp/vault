@@ -8,7 +8,8 @@
   data-test-stat-text={{or @label "true"}}
   ...attributes
 >
-  <div class="stat-label has-bottom-margin-xs">{{@label}}
+  <div class="stat-label has-bottom-margin-xs">
+    {{@label}}
     {{#if @tooltipText}}
       <Hds::TooltipButton @text={{@tooltipText}} aria-label="more information about {{@label}}">
         <FlightIcon @name="info" />

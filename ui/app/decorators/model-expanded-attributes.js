@@ -40,7 +40,11 @@ export function withExpandedAttributes() {
         return groups.map((obj) => {
           const [key, stringArray] = Object.entries(obj)[0];
           const expanded = stringArray.map((fieldName) => this.allByKey[fieldName]).filter((f) => !!f);
-          assert(`all fields found in allByKey for group ${key}`, expanded.length === stringArray.length);
+          // if this fails, it might mean there are missing fields in the model or the model must be hydrated via OpenAPI
+          assert(
+            `all model fields found in allByKey for group ${key}`,
+            expanded.length === stringArray.length
+          );
           return { [key]: expanded };
         });
       }

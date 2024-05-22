@@ -11,9 +11,11 @@ export default class AccessMethodIndexRoute extends Route {
   @service router;
 
   beforeModel() {
-    let { methodType, paths } = this.modelFor('vault.cluster.access.method');
-    paths = paths ? paths.paths.filter((path) => path.navigation === true) : null;
-    const activeTab = tabsForAuthSection([methodType, 'authConfig', paths])[0].routeParams;
-    return this.router.transitionTo(...activeTab);
+    const methodModel = this.modelFor('vault.cluster.access.method');
+    const paths = methodModel.paths
+      ? methodModel.paths.paths.filter((path) => path.navigation === true)
+      : null;
+    const activeTab = tabsForAuthSection([methodModel, 'authConfig', paths])[0];
+    return this.router.transitionTo(activeTab.route, ...activeTab.routeParams);
   }
 }

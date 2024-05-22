@@ -12,7 +12,7 @@ import sinon from 'sinon';
 import timestamp from 'core/utils/timestamp';
 import authPage from 'vault/tests/pages/auth';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
+import { CHARTS, CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
 import { ACTIVITY_RESPONSE_STUB, assertBarChart } from 'vault/tests/helpers/clients/client-count-helpers';
 import { formatNumber } from 'core/helpers/format-number';
 import { LICENSE_START, STATIC_NOW } from 'vault/mirage/handlers/clients';
@@ -24,11 +24,8 @@ module('Acceptance | clients | counts | acme', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.before(function () {
-    sinon.stub(timestamp, 'now').callsFake(() => STATIC_NOW);
-  });
-
   hooks.beforeEach(async function () {
+    sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
     this.server.get('sys/internal/counters/activity', () => {
       return {
         request_id: 'some-activity-id',
@@ -52,10 +49,6 @@ module('Acceptance | clients | counts | acme', function (hooks) {
 
     await authPage.login();
     return visit('/vault');
-  });
-
-  hooks.after(function () {
-    timestamp.now.restore();
   });
 
   test('it navigates to acme tab', async function (assert) {
@@ -146,7 +139,7 @@ module('Acceptance | clients | counts | acme', function (hooks) {
     // no data because this is an auth mount (acme_clients come from pki mounts)
     await click(searchSelect.option(searchSelect.optionIndex('auth/authid/0')));
     assert.dom(CLIENT_COUNT.statText('Total ACME clients')).hasTextContaining('0');
-    assert.dom(`${CLIENT_COUNT.charts.chart('ACME usage')} ${CLIENT_COUNT.charts.dataBar}`).isNotVisible();
-    assert.dom(CLIENT_COUNT.chartContainer('Monthly new')).doesNotExist();
+    assert.dom(`${CHARTS.chart('ACME usage')} ${CHARTS.verticalBar}`).isNotVisible();
+    assert.dom(CHARTS.container('Monthly new')).doesNotExist();
   });
 });

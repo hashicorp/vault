@@ -21,20 +21,26 @@ export default ApplicationAdapter.extend({
 
   findAll(store, type, sinceToken, snapshotRecordArray) {
     const isUnauthenticated = snapshotRecordArray?.adapterOptions?.unauthenticated;
-    if (isUnauthenticated) {
+    // sys/internal/ui/mounts returns the actual value of the system TTL
+    // instead of '0' which just indicates the mount is using system defaults
+    const useMountsEndpoint = snapshotRecordArray?.adapterOptions?.useMountsEndpoint;
+    if (isUnauthenticated || useMountsEndpoint) {
       const url = `/${this.urlPrefix()}/internal/ui/mounts`;
       return this.ajax(url, 'GET', {
-        unauthenticated: true,
+        unauthenticated: isUnauthenticated,
       })
         .then((result) => {
           return {
             data: result.data.auth,
           };
         })
-        .catch(() => {
-          return {
-            data: {},
-          };
+        .catch((e) => {
+          if (isUnauthenticated) return { data: {} };
+
+          if (e instanceof AdapterError) {
+            set(e, 'policyPath', 'sys/internal/ui/mounts');
+          }
+          throw e;
         });
     }
     return this.ajax(this.url(), 'GET').catch((e) => {

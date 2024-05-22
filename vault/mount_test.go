@@ -722,12 +722,14 @@ func TestDefaultMountTable(t *testing.T) {
 
 func TestCore_MountTable_UpgradeToTyped(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
-	c.auditBackends["noop"] = audit.NoopAuditFactory(nil)
 
 	me := &MountEntry{
 		Table: auditTableType,
 		Path:  "foo",
-		Type:  "noop",
+		Type:  audit.TypeFile,
+		Options: map[string]string{
+			"file_path": "discard",
+		},
 	}
 	err := c.enableAudit(namespace.RootContext(nil), me, true)
 	if err != nil {

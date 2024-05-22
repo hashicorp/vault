@@ -4,10 +4,7 @@
  */
 
 import { click, findAll } from '@ember/test-helpers';
-
-import { LICENSE_START } from 'vault/mirage/handlers/clients';
-import { addMonths } from 'date-fns';
-import { CLIENT_COUNT } from './client-count-selectors';
+import { CLIENT_COUNT, CHARTS } from './client-count-selectors';
 
 export async function dateDropdownSelect(month, year) {
   const { dateDropdown, counts } = CLIENT_COUNT;
@@ -19,18 +16,18 @@ export async function dateDropdownSelect(month, year) {
   await click(dateDropdown.submit);
 }
 
-export function assertBarChart(assert, chartName, byMonthData) {
-  // assertion count is byMonthData.length + 2
-  const chart = CLIENT_COUNT.charts.chart(chartName);
-  const dataBars = findAll(`${chart} ${CLIENT_COUNT.charts.dataBar}`).filter((b) => b.hasAttribute('height'));
-  const xAxisLabels = findAll(`${chart} ${CLIENT_COUNT.charts.xAxisLabel}`);
-
-  assert.strictEqual(
-    dataBars.length,
-    byMonthData.filter((m) => m.clients).length,
-    `${chartName}: it renders bars for each non-zero month`
+export function assertBarChart(assert, chartName, byMonthData, isStacked = false) {
+  // assertion count is byMonthData.length, plus 2
+  const chart = CHARTS.chart(chartName);
+  const dataBars = findAll(`${chart} ${CHARTS.verticalBar}`).filter(
+    (b) => b.hasAttribute('height') && b.getAttribute('height') !== '0'
   );
+  const xAxisLabels = findAll(`${chart} ${CHARTS.xAxisLabel}`);
 
+  let count = byMonthData.filter((m) => m.clients).length;
+  if (isStacked) count = count * 2;
+
+  assert.strictEqual(dataBars.length, count, `${chartName}: it renders bars for each non-zero month`);
   assert.strictEqual(
     xAxisLabels.length,
     byMonthData.length,
@@ -567,34 +564,6 @@ export const MIXED_ACTIVITY_RESPONSE_STUB = {
     },
   ],
 };
-// format returned by model hook in routes/vault/cluster/clients.ts
-export const VERSION_HISTORY = [
-  {
-    version: '1.9.0',
-    previousVersion: null,
-    timestampInstalled: LICENSE_START.toISOString(),
-  },
-  {
-    version: '1.9.1',
-    previousVersion: '1.9.0',
-    timestampInstalled: addMonths(LICENSE_START, 1).toISOString(),
-  },
-  {
-    version: '1.10.1',
-    previousVersion: '1.9.1',
-    timestampInstalled: addMonths(LICENSE_START, 2).toISOString(),
-  },
-  {
-    version: '1.14.4',
-    previousVersion: '1.10.1',
-    timestampInstalled: addMonths(LICENSE_START, 3).toISOString(),
-  },
-  {
-    version: '1.16.0',
-    previousVersion: '1.14.4',
-    timestampInstalled: addMonths(LICENSE_START, 4).toISOString(),
-  },
-];
 
 // order of this array matters because index 0 is a month without data
 export const SERIALIZED_ACTIVITY_RESPONSE = {

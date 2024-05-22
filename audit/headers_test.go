@@ -458,7 +458,7 @@ func TestAuditedHeaders_invalidate(t *testing.T) {
 	// Invalidate and check we now see the header we stored
 	err = ahc.Invalidate(context.Background())
 	require.NoError(t, err)
-	require.Len(t, ahc.headerSettings, 1)
+	require.Equal(t, len(ahc.DefaultHeaders())+1, len(ahc.headerSettings)) // (defaults + 1).
 	_, ok := ahc.headerSettings["x-magic-header"]
 	require.True(t, ok)
 
@@ -475,7 +475,7 @@ func TestAuditedHeaders_invalidate(t *testing.T) {
 	// Invalidate and check we now see the header we stored
 	err = ahc.Invalidate(context.Background())
 	require.NoError(t, err)
-	require.Len(t, ahc.headerSettings, 2)
+	require.Equal(t, len(ahc.DefaultHeaders())+2, len(ahc.headerSettings)) // (defaults + 2 new headers)
 	_, ok = ahc.headerSettings["x-magic-header"]
 	require.True(t, ok)
 	_, ok = ahc.headerSettings["x-even-more-magic-header"]
@@ -502,7 +502,7 @@ func TestAuditedHeaders_invalidate_nil_view(t *testing.T) {
 	// Invalidate and check we now see the header we stored
 	err = ahc.Invalidate(context.Background())
 	require.NoError(t, err)
-	require.Len(t, ahc.headerSettings, 1)
+	require.Equal(t, len(ahc.DefaultHeaders())+1, len(ahc.headerSettings)) // defaults + 1
 	_, ok := ahc.headerSettings["x-magic-header"]
 	require.True(t, ok)
 
@@ -516,7 +516,7 @@ func TestAuditedHeaders_invalidate_nil_view(t *testing.T) {
 	// Invalidate should clear out the existing headers without error
 	err = ahc.Invalidate(context.Background())
 	require.NoError(t, err)
-	require.Len(t, ahc.headerSettings, 0)
+	require.Equal(t, len(ahc.DefaultHeaders()), len(ahc.headerSettings)) // defaults
 }
 
 // TestAuditedHeaders_invalidate_bad_data ensures that we correctly error if the
@@ -583,4 +583,50 @@ func TestAuditedHeaders_headers(t *testing.T) {
 	require.Len(t, s, 2)
 	require.Equal(t, true, s["juan"].HMAC)
 	require.Equal(t, false, s["john"].HMAC)
+}
+
+// TestAuditedHeaders_invalidate_defaults checks that we ensure any 'default' headers
+// are present after invalidation, and if they were loaded from storage then they
+// do not get overwritten with our defaults.
+func TestAuditedHeaders_invalidate_defaults(t *testing.T) {
+	t.Parallel()
+
+	view := newMockStorage(t)
+	ahc, err := NewHeadersConfig(view)
+	require.NoError(t, err)
+	require.Len(t, ahc.headerSettings, 0)
+
+	// Store some data using the view.
+	fakeHeaders1 := map[string]*HeaderSettings{"x-magic-header": {}}
+	fakeBytes1, err := json.Marshal(fakeHeaders1)
+	require.NoError(t, err)
+	err = view.Put(context.Background(), &logical.StorageEntry{Key: auditedHeadersEntry, Value: fakeBytes1})
+	require.NoError(t, err)
+
+	// Invalidate and check we now see the header we stored
+	err = ahc.Invalidate(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, len(ahc.DefaultHeaders())+1, len(ahc.headerSettings)) // (defaults + 1 new header)
+	_, ok := ahc.headerSettings["x-magic-header"]
+	require.True(t, ok)
+	s, ok := ahc.headerSettings["x-correlation-id"]
+	require.True(t, ok)
+	require.False(t, s.HMAC)
+
+	// Add correlation ID specifically with HMAC and make sure it doesn't get blasted away.
+	fakeHeaders1 = map[string]*HeaderSettings{"x-magic-header": {}, "X-Correlation-ID": {HMAC: true}}
+	fakeBytes1, err = json.Marshal(fakeHeaders1)
+	require.NoError(t, err)
+	err = view.Put(context.Background(), &logical.StorageEntry{Key: auditedHeadersEntry, Value: fakeBytes1})
+	require.NoError(t, err)
+
+	// Invalidate and check we now see the header we stored
+	err = ahc.Invalidate(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, len(ahc.DefaultHeaders())+1, len(ahc.headerSettings)) // (defaults + 1 new header, 1 is also a default)
+	_, ok = ahc.headerSettings["x-magic-header"]
+	require.True(t, ok)
+	s, ok = ahc.headerSettings["x-correlation-id"]
+	require.True(t, ok)
+	require.True(t, s.HMAC)
 }

@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { create } from 'ember-cli-page-object';
-import { fillIn } from '@ember/test-helpers';
+import { fillIn, settled } from '@ember/test-helpers';
 import { v4 as uuidv4 } from 'uuid';
 
 import enablePage from 'vault/tests/pages/settings/auth/enable';
@@ -59,6 +59,8 @@ module('Acceptance | settings/auth/configure/section', function (hooks) {
   for (const type of ['aws', 'azure', 'gcp', 'github', 'kubernetes']) {
     test(`it shows tabs for auth method: ${type}`, async function (assert) {
       const path = `${type}-showtab-${this.uid}`;
+      await cli.toggle();
+      await settled();
       await cli.consoleInput(`write sys/auth/${path} type=${type}`);
       await cli.enter();
       await indexPage.visit({ path });

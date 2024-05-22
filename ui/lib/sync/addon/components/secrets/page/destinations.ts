@@ -41,8 +41,8 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   }
 
   willDestroy(): void {
-    super.willDestroy();
     this.router.off('routeDidChange', this.focusNameFilter);
+    super.willDestroy();
   }
 
   focusNameFilter(transition?: Transition) {

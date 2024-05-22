@@ -478,6 +478,29 @@ func (c CtxKeyInFlightRequestID) String() string {
 	return "in-flight-request-ID"
 }
 
+type CtxKeyInFlightRequestPriority struct{}
+
+func (c CtxKeyInFlightRequestPriority) String() string {
+	return "in-flight-request-priority"
+}
+
+// CtxKeyInFlightTraceID is used for passing a trace ID through request
+// forwarding. The CtxKeyInFlightRequestID created at the HTTP layer is
+// propagated on through any forwarded requests using this key.
+//
+// Note that this applies to replication service RPCs (including
+// ForwardingRequest from perf standbys or secondaries). The Forwarding RPC
+// service may propagate the context but the handling on the active node runs
+// back through the `http` package handler which builds a new context from HTTP
+// request properties and creates a fresh request ID. Forwarding RPC is used
+// exclusively in Community Edition but also in some special cases in Enterprise
+// such as when forwarding is forced by an HTTP header.
+type CtxKeyInFlightTraceID struct{}
+
+func (c CtxKeyInFlightTraceID) String() string {
+	return "in-flight-trace-ID"
+}
+
 type CtxKeyRequestRole struct{}
 
 func (c CtxKeyRequestRole) String() string {

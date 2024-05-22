@@ -7,6 +7,7 @@ scenario "seal_ha" {
     artifact_source = global.artifact_sources
     artifact_type   = global.artifact_types
     backend         = global.backends
+    config_mode     = global.config_modes
     consul_version  = global.consul_versions
     distro          = global.distros
     edition         = global.editions
@@ -218,6 +219,7 @@ scenario "seal_ha" {
       backend_cluster_name    = step.create_vault_cluster_backend_targets.cluster_name
       backend_cluster_tag_key = global.backend_tag_key
       cluster_name            = step.create_vault_cluster_targets.cluster_name
+      config_mode             = matrix.config_mode
       consul_license          = (matrix.backend == "consul" && var.backend_edition == "ent") ? step.read_backend_license.license : null
       consul_release = matrix.backend == "consul" ? {
         edition = var.backend_edition
@@ -365,9 +367,57 @@ scenario "seal_ha" {
   }
 
   // Wait for our cluster to elect a leader
-  step "wait_for_new_leader" {
+  step "wait_for_leader_election" {
     module     = module.vault_wait_for_leader
     depends_on = [step.add_ha_seal_to_cluster]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      timeout           = 120 # seconds
+      vault_hosts       = step.create_vault_cluster_targets.hosts
+      vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_vault_cluster.root_token
+    }
+  }
+
+  step "get_leader_ip_for_step_down" {
+    module     = module.vault_get_cluster_ips
+    depends_on = [step.wait_for_leader_election]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_hosts       = step.create_vault_cluster_targets.hosts
+      vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_vault_cluster.root_token
+    }
+  }
+
+  // Force a step down to trigger a new leader election
+  step "vault_leader_step_down" {
+    module     = module.vault_step_down
+    depends_on = [step.get_leader_ip_for_step_down]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_install_dir = local.vault_install_dir
+      leader_host       = step.get_leader_ip_for_step_down.leader_host
+      vault_root_token  = step.create_vault_cluster.root_token
+    }
+  }
+
+  // Wait for our cluster to elect a leader
+  step "wait_for_new_leader" {
+    module     = module.vault_wait_for_leader
+    depends_on = [step.vault_leader_step_down]
 
     providers = {
       enos = local.enos_provider[matrix.distro]

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/fatih/structs"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -246,6 +247,10 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 		}
 
 		polReq.ManagedKeyUUID = keyId
+	}
+
+	if polReq.KeyType.CMACSupported() && !constants.IsEnterprise {
+		return logical.ErrorResponse(ErrCmacEntOnly.Error()), logical.ErrInvalidRequest
 	}
 
 	p, upserted, err := b.GetPolicy(ctx, polReq, b.GetRandomReader())
