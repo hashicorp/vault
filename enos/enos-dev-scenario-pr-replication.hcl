@@ -3,11 +3,6 @@
 
 scenario "dev_pr_replication" {
   description = <<-EOF
-    This scenario spins up a single Vault cluster with either an external Consul cluster or
-    integrated Raft for storage. None of our test verification is included in this scenario in order
-    to improve end-to-end speed. If you wish to perform such verification you'll need to use a
-    non-dev scenario instead.
-
     This scenario spins up a two Vault clusters with either an external Consul cluster or
     integrated Raft for storage. The secondary cluster is configured with performance replication
     from the primary cluster. None of our test verification is included in this scenario in order
@@ -46,6 +41,7 @@ scenario "dev_pr_replication" {
     aws_region                = "us-west-2"
     aws_ssh_keypair_name      = "<YOUR REGION SPECIFIC KEYPAIR NAME>"
     aws_ssh_keypair_key_path  = "/path/to/your/private/key.pem"
+    dev_build_local_ui        = false
     dev_consul_version        = "1.18.1"
     vault_license_path        = "./support/vault.hclic"
     vault_product_version     = "1.16.2"
@@ -147,7 +143,7 @@ scenario "dev_pr_replication" {
   }
 
   // Begin scenario steps. These are the steps we'll perform to get your cluster up and running.
-  step "maybe_build_or_find_artifact" {
+  step "build_or_find_vault_artifact" {
     description = <<-EOF
       Depending on how we intend to get our Vault artifact, this step either builds vault from our
       current branch or finds debian or redhat packages in Artifactory. If we're using a zip bundle
@@ -179,8 +175,7 @@ scenario "dev_pr_replication" {
           tags. If left unset we'll automatically use the build tags that correspond to the edition
           variant.
     EOF
-    module      = matrix.artifact == "local" ? "build_local" : local.use_artifactory ? "build_artifactory_package" : null
-    skip_step   = matrix.artifact == "zip"
+    module      = matrix.artifact == "local" ? "build_local" : local.use_artifactory ? "build_artifactory_package" : "build_crt"
 
     variables {
       // Used for all modules
@@ -188,7 +183,8 @@ scenario "dev_pr_replication" {
       edition         = matrix.edition
       product_version = var.vault_product_version
       // Required for the local build which will always result in using a local zip bundle
-      artifact_path = var.vault_artifact_path
+      artifact_path = matrix.artifact == "local" ? abspath(var.vault_artifact_path) : null
+      build_ui      = var.dev_build_local_ui
       build_tags    = var.vault_local_build_tags != null ? var.vault_local_build_tags : global.build_tags[matrix.edition]
       goarch        = matrix.arch
       goos          = "linux"
@@ -491,6 +487,7 @@ scenario "dev_pr_replication" {
     depends_on = [
       step.create_primary_backend_cluster,
       step.create_primary_cluster_targets,
+      step.build_or_find_vault_artifact,
     ]
 
     providers = {
@@ -501,7 +498,7 @@ scenario "dev_pr_replication" {
       // We set vault_artifactory_release when we want to get a .deb or .rpm package from Artifactory.
       // We set vault_release when we want to get a .zip bundle from releases.hashicorp.com
       // We only set one or the other, never both.
-      artifactory_release     = local.use_artifactory ? step.maybe_build_or_find_artifact.release : null
+      artifactory_release     = local.use_artifactory ? step.build_or_find_vault_artifact.release : null
       backend_cluster_name    = step.create_primary_cluster_backend_targets.cluster_name
       backend_cluster_tag_key = global.backend_tag_key
       cluster_name            = step.create_primary_cluster_targets.cluster_name
@@ -603,7 +600,7 @@ scenario "dev_pr_replication" {
       // We set vault_artifactory_release when we want to get a .deb or .rpm package from Artifactory.
       // We set vault_release when we want to get a .zip bundle from releases.hashicorp.com
       // We only set one or the other, never both.
-      artifactory_release     = local.use_artifactory ? step.maybe_build_or_find_artifact.release : null
+      artifactory_release     = local.use_artifactory ? step.build_or_find_vault_artifact.release : null
       backend_cluster_name    = step.create_secondary_cluster_backend_targets.cluster_name
       backend_cluster_tag_key = global.backend_tag_key
       cluster_name            = step.create_secondary_cluster_targets.cluster_name

@@ -250,7 +250,7 @@ resource "enos_remote_exec" "configure_login_shell_profile" {
 
   environment = {
     VAULT_ADDR        = "http://127.0.0.1:8200"
-    VAULT_TOKEN       = enos_vault_init.leader[0].root_token
+    VAULT_TOKEN       = var.root_token != null ? var.root_token : try(enos_vault_init.leader[0].root_token, "_")
     VAULT_INSTALL_DIR = var.install_dir
   }
 

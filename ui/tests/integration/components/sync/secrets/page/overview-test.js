@@ -117,14 +117,14 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     test('it should show the opt-in banner if feature is not activated', async function (assert) {
       await this.renderComponent();
 
-      assert.dom(overview.optInBanner).exists('Opt-in banner is shown');
+      assert.dom(overview.optInBanner.container).exists('Opt-in banner is shown');
     });
 
     test('it should not show the opt-in banner if feature is activated', async function (assert) {
       this.isActivated = true;
       await this.renderComponent();
 
-      assert.dom(overview.optInBanner).doesNotExist('Opt-in banner is not shown');
+      assert.dom(overview.optInBanner.container).doesNotExist('Opt-in banner is not shown');
     });
   });
 
@@ -139,21 +139,21 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
       await this.renderComponent();
 
       assert
-        .dom(overview.optInBannerDescription)
+        .dom(overview.optInBanner.description)
         .hasText(
           'To use this feature, specific activation is required. Please contact your administrator to activate.'
         );
-      assert.dom(overview.optInBannerEnable).doesNotExist('Opt-in enable button does not show');
+      assert.dom(overview.optInBanner.enable).doesNotExist('Opt-in enable button does not show');
     });
 
     test('it should not show allow the user to dismiss the opt-in banner', async function (assert) {
       await this.renderComponent();
 
-      assert.dom(overview.optInDismiss).doesNotExist('dismiss opt-in banner does not show');
+      assert.dom(overview.optInBanner.dismiss).doesNotExist('dismiss opt-in banner does not show');
     });
   });
 
-  module('secrets sync is not activated and license has secrets sync meep', function (hooks) {
+  module('secrets sync is not activated and license has secrets sync', function (hooks) {
     hooks.beforeEach(async function () {
       this.isActivated = false;
     });
@@ -161,9 +161,9 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     test('it should show the opt-in banner with activate description', async function (assert) {
       await this.renderComponent();
 
-      assert.dom(overview.optInBanner).exists('Opt-in banner is shown');
+      assert.dom(overview.optInBanner.container).exists('Opt-in banner is shown');
       assert
-        .dom(overview.optInBannerDescription)
+        .dom(overview.optInBanner.description)
         .hasText(
           "To use this feature, specific activation is required. Please review the feature documentation and enable it. If you're upgrading from beta, your previous data will be accessible after activation."
         );
@@ -172,36 +172,15 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     test('it should show dismiss banner', async function (assert) {
       await this.renderComponent();
 
-      assert.dom(overview.optInDismiss).exists('dismiss opt-in banner shows');
+      assert.dom(overview.optInBanner.dismiss).exists('dismiss opt-in banner shows');
     });
 
     test('it should navigate to the opt-in modal', async function (assert) {
       await this.renderComponent();
 
-      await click(overview.optInBannerEnable);
+      await click(overview.optInBanner.enable);
 
-      assert.dom(overview.optInModal).exists('Opt-in modal is shown');
-      assert.dom(overview.optInConfirm).isDisabled('Confirm button is disabled when checkbox is unchecked');
-
-      await click(overview.optInCheck);
-      assert.dom(overview.optInConfirm).isNotDisabled('confirm button is enabled once checkbox is checked');
-    });
-
-    test('it should make a POST to activate the feature', async function (assert) {
-      assert.expect(1);
-
-      await this.renderComponent();
-
-      this.server.post('/sys/activation-flags/secrets-sync/activate', () => {
-        assert.true(true, 'POST to secrets-sync/activate is called');
-        return {};
-      });
-
-      await this.renderComponent();
-
-      await click(overview.optInBannerEnable);
-      await click(overview.optInCheck);
-      await click(overview.optInConfirm);
+      assert.dom(overview.activationModal.container).exists('Opt-in modal is shown');
     });
 
     test('it shows an error if activation fails', async function (assert) {
@@ -209,12 +188,12 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
 
       this.server.post('/sys/activation-flags/secrets-sync/activate', () => new Response(403));
 
-      await click(overview.optInBannerEnable);
-      await click(overview.optInCheck);
-      await click(overview.optInConfirm);
+      await click(overview.optInBanner.enable);
+      await click(overview.activationModal.checkbox);
+      await click(overview.activationModal.confirm);
 
       assert.dom(overview.optInError).exists('shows an error banner');
-      assert.dom(overview.optInBanner).exists('banner is visible so user can try to opt-in again');
+      assert.dom(overview.optInBanner.container).exists('banner is visible so user can try to opt-in again');
     });
   });
 
@@ -226,7 +205,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     test('it should hide the opt-in banner', async function (assert) {
       await this.renderComponent();
 
-      assert.dom(overview.optInBanner).doesNotExist();
+      assert.dom(overview.optInBanner.container).doesNotExist();
     });
   });
 
@@ -234,7 +213,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     test('it should hide the opt-in banner', async function (assert) {
       await this.renderComponent();
 
-      assert.dom(overview.optInBanner).doesNotExist();
+      assert.dom(overview.optInBanner.container).doesNotExist();
     });
   });
 
