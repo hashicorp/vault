@@ -43,7 +43,7 @@ module('Integration | Component | kubernetes | Page::Overview', function (hooks)
     this.backend = this.store.peekRecord('secret-engine', 'kubernetes-test');
     this.roles = this.store.peekAll('kubernetes/role');
     this.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.backend.id },
     ];
     this.promptConfig = false;

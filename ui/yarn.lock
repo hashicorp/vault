@@ -18246,7 +18246,6 @@ __metadata:
     uuid: ^9.0.0
     walk-sync: ^2.0.2
     webpack: 5.89.0
-    xstate: ^3.3.3
   languageName: unknown
   linkType: soft
 
@@ -18681,13 +18680,6 @@ __metadata:
   version: 4.0.0
   resolution: "xdg-basedir@npm:4.0.0"
   checksum: 0073d5b59a37224ed3a5ac0dd2ec1d36f09c49f0afd769008a6e9cd3cd666bd6317bd1c7ce2eab47e1de285a286bad11a9b038196413cd753b79770361855f3c
-  languageName: node
-  linkType: hard
-
-"xstate@npm:^3.3.3":
-  version: 3.3.3
-  resolution: "xstate@npm:3.3.3"
-  checksum: b659cf8c7ac5f48ef68bd55d8b5a60fb3b34686222c8d4e8966b9e8d7fd59569cf02e135fba5969d1f7b96cd3f617b1131b38970b90930371e668af7f6b4d2f6
   languageName: node
   linkType: hard
 

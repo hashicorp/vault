@@ -175,8 +175,7 @@
     "tracked-built-ins": "^3.3.0",
     "typescript": "^4.9.5",
     "walk-sync": "^2.0.2",
-    "webpack": "5.89.0",
-    "xstate": "^3.3.3"
+    "webpack": "5.89.0"
   },
   "resolutions": {
     "ansi-html": "^0.0.8",
