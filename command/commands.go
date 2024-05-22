@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/cli"
 	hcpvlib "github.com/hashicorp/vault-hcp-lib"
 	credAliCloud "github.com/hashicorp/vault-plugin-auth-alicloud"
-	credCentrify "github.com/hashicorp/vault-plugin-auth-centrify"
 	credCF "github.com/hashicorp/vault-plugin-auth-cf"
 	credGcp "github.com/hashicorp/vault-plugin-auth-gcp/plugin"
 	credOIDC "github.com/hashicorp/vault-plugin-auth-jwt"
@@ -218,7 +217,6 @@ var (
 	loginHandlers = map[string]LoginHandler{
 		"alicloud": &credAliCloud.CLIHandler{},
 		"aws":      &credAws.CLIHandler{},
-		"centrify": &credCentrify.CLIHandler{},
 		"cert":     &credCert.CLIHandler{},
 		"cf":       &credCF.CLIHandler{},
 		"gcp":      &credGcp.CLIHandler{},

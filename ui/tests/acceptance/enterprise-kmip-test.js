@@ -17,11 +17,8 @@ import { allEngines } from 'vault/helpers/mountable-secret-engines';
 import { runCmd } from 'vault/tests/helpers/commands';
 import { v4 as uuidv4 } from 'uuid';
 
-const getRandomPort = () => {
-  let a = Math.floor(100000 + Math.random() * 900000);
-  a = String(a);
-  return a.substring(0, 4);
-};
+// port has a lower limit of 1024
+const getRandomPort = () => Math.floor(Math.random() * 5000 + 1024);
 
 const mount = async (backend) => {
   const res = await runCmd(`write sys/mounts/${backend} type=kmip`);
@@ -33,7 +30,7 @@ const mount = async (backend) => {
 };
 
 const mountWithConfig = async (backend) => {
-  const addr = `127.0.0.1:${getRandomPort()}`; // use random port
+  const addr = `127.0.0.1:${getRandomPort()}`;
   await mount(backend);
   const res = await runCmd(`write ${backend}/config listen_addrs=${addr}`);
   if (res.includes('Error')) {

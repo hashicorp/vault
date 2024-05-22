@@ -70,6 +70,7 @@ const (
 	KeyType_HMAC
 	KeyType_AES128_CMAC
 	KeyType_AES256_CMAC
+	// If adding to this list please update allTestKeyTypes in policy_test.go
 )
 
 const (
@@ -176,6 +177,17 @@ func (kt KeyType) CMACSupported() bool {
 		return true
 	default:
 		return false
+	}
+}
+
+func (kt KeyType) HMACSupported() bool {
+	switch {
+	case kt.CMACSupported():
+		return false
+	case kt == KeyType_MANAGED_KEY:
+		return false
+	default:
+		return true
 	}
 }
 
@@ -713,8 +725,10 @@ func (p *Policy) NeedsUpgrade() bool {
 		return true
 	}
 
-	if p.Keys[strconv.Itoa(p.LatestVersion)].HMACKey == nil || len(p.Keys[strconv.Itoa(p.LatestVersion)].HMACKey) == 0 {
-		return true
+	if p.Type.HMACSupported() {
+		if p.Keys[strconv.Itoa(p.LatestVersion)].HMACKey == nil || len(p.Keys[strconv.Itoa(p.LatestVersion)].HMACKey) == 0 {
+			return true
+		}
 	}
 
 	return false
@@ -775,18 +789,20 @@ func (p *Policy) Upgrade(ctx context.Context, storage logical.Storage, randReade
 		persistNeeded = true
 	}
 
-	if p.Keys[strconv.Itoa(p.LatestVersion)].HMACKey == nil || len(p.Keys[strconv.Itoa(p.LatestVersion)].HMACKey) == 0 {
-		entry := p.Keys[strconv.Itoa(p.LatestVersion)]
-		hmacKey, err := uuid.GenerateRandomBytesWithReader(32, randReader)
-		if err != nil {
-			return err
-		}
-		entry.HMACKey = hmacKey
-		p.Keys[strconv.Itoa(p.LatestVersion)] = entry
-		persistNeeded = true
+	if p.Type.HMACSupported() {
+		if p.Keys[strconv.Itoa(p.LatestVersion)].HMACKey == nil || len(p.Keys[strconv.Itoa(p.LatestVersion)].HMACKey) == 0 {
+			entry := p.Keys[strconv.Itoa(p.LatestVersion)]
+			hmacKey, err := uuid.GenerateRandomBytesWithReader(32, randReader)
+			if err != nil {
+				return err
+			}
+			entry.HMACKey = hmacKey
+			p.Keys[strconv.Itoa(p.LatestVersion)] = entry
+			persistNeeded = true
 
-		if p.Type == KeyType_HMAC {
-			entry.HMACKey = entry.Key
+			if p.Type == KeyType_HMAC {
+				entry.HMACKey = entry.Key
+			}
 		}
 	}
 
