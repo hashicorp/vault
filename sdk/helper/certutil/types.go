@@ -171,7 +171,7 @@ func GetPrivateKeyTypeFromPublicKey(pubKey crypto.PublicKey) PrivateKeyType {
 		return RSAPrivateKey
 	case *ecdsa.PublicKey:
 		return ECPrivateKey
-	case *ed25519.PublicKey:
+	case ed25519.PublicKey:
 		return Ed25519PrivateKey
 	default:
 		return UnknownPrivateKey
