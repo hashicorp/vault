@@ -12,7 +12,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"path"
 	"sort"
 	"strconv"
 	"strings"
@@ -266,9 +265,18 @@ func NewActivityLog(core *Core, logger log.Logger, view *BarrierView, metrics me
 		precomputedQueryWritten:  make(chan struct{}),
 	}
 
-	config, err := a.loadConfigOrDefault(core.activeContext, core.ManualLicenseReportingEnabled())
+	config, err := a.loadConfigOrDefault(core.activeContext)
 	if err != nil {
 		return nil, err
+	}
+
+	// check if the retention time is lesser than the default in storage when reporting is enabled to support upgrades
+	if (config.RetentionMonths < ActivityLogMinimumRetentionMonths) && core.ManualLicenseReportingEnabled() {
+		updatedConfig, err := a.setDefaultRetentionMonthsInConfig(core.activeContext, config)
+		if err != nil {
+			return nil, err
+		}
+		config = updatedConfig
 	}
 
 	a.SetConfigInit(config)
@@ -1894,7 +1902,7 @@ func defaultActivityConfig() activityConfig {
 	}
 }
 
-func (a *ActivityLog) loadConfigOrDefault(ctx context.Context, isReportingEnabled bool) (activityConfig, error) {
+func (a *ActivityLog) loadConfigOrDefault(ctx context.Context) (activityConfig, error) {
 	// Load from storage
 	var config activityConfig
 	configRaw, err := a.view.Get(ctx, activityConfigKey)
@@ -1908,25 +1916,20 @@ func (a *ActivityLog) loadConfigOrDefault(ctx context.Context, isReportingEnable
 	if err := configRaw.DecodeJSON(&config); err != nil {
 		return config, err
 	}
-
-	// check if the retention time is lesser than the default when reporting is enabled
-	if (config.RetentionMonths < ActivityLogMinimumRetentionMonths) && isReportingEnabled {
-		updatedConfig, err := a.setDefaultRetentionMonthsInConfig(ctx, config)
-		if err != nil {
-			return config, err
-		}
-		return updatedConfig, nil
-	}
 	return config, nil
 }
 
 // setDefaultRetentionMonthsInConfig sets the retention months in activity config with default value.
 // This supports upgrades from versions prior to set the new default ActivityLogMinimumRetentionMonths.
 func (a *ActivityLog) setDefaultRetentionMonthsInConfig(ctx context.Context, inputConfig activityConfig) (activityConfig, error) {
+	if a.core.perfStandby {
+		return inputConfig, nil
+	}
+
 	inputConfig.RetentionMonths = ActivityLogMinimumRetentionMonths
 
 	// Store the config
-	entry, err := logical.StorageEntryJSON(path.Join(activitySubPath, activityConfigKey), inputConfig)
+	entry, err := logical.StorageEntryJSON(activityConfigKey, inputConfig)
 	if err != nil {
 		return inputConfig, err
 	}
