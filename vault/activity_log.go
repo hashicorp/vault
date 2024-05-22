@@ -1936,9 +1936,6 @@ func (a *ActivityLog) setDefaultRetentionMonthsInConfig(ctx context.Context, inp
 	if err := a.view.Put(ctx, entry); err != nil {
 		return inputConfig, err
 	}
-
-	// Set the new config on the activity log
-	a.SetConfig(ctx, inputConfig)
 	return inputConfig, nil
 }
 
