@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
-	"crypto/x509"
 	"encoding/base64"
 	"fmt"
 	"io"
@@ -330,7 +329,7 @@ func TestDefaulRetryPolicy(t *testing.T) {
 		},
 		"don't retry connection failures": {
 			err: &url.Error{
-				Err: x509.UnknownAuthorityError{},
+				Err: &tls.CertificateVerificationError{},
 			},
 		},
 		"don't retry on 200": {
