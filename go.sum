@@ -1473,8 +1473,10 @@ github.com/hashicorp/go-raftchunking v0.6.3-0.20191002164813-7e9e8525653a h1:Fmn
 github.com/hashicorp/go-raftchunking v0.6.3-0.20191002164813-7e9e8525653a/go.mod h1:xbXnmKqX9/+RhPkJ4zrEx4738HacP72aaUPlT2RZ4sU=
 github.com/hashicorp/go-retryablehttp v0.5.3/go.mod h1:9B5zBasrRhHXnJnui7y6sL7es7NDiJgTc6Er0maI1Xs=
 github.com/hashicorp/go-retryablehttp v0.6.6/go.mod h1:vAew36LZh98gCBJNLH42IQ1ER/9wtLZZ8meHqQvEYWY=
-github.com/hashicorp/go-retryablehttp v0.7.5 h1:bJj+Pj19UZMIweq/iie+1u5YCdGrnxCT9yvm0e+Nd5M=
-github.com/hashicorp/go-retryablehttp v0.7.5/go.mod h1:Jy/gPYAdjqffZ/yFGCFV2doI5wjtH1ewM9u8iYVjtX8=
+github.com/hashicorp/go-retryablehttp v0.7.1/go.mod h1:vAew36LZh98gCBJNLH42IQ1ER/9wtLZZ8meHqQvEYWY=
+github.com/hashicorp/go-retryablehttp v0.7.6 h1:TwRYfx2z2C4cLbXmT8I5PgP/xmuqASDyiVuGYfs9GZM=
+github.com/hashicorp/go-retryablehttp v0.7.6/go.mod h1:pkQpWZeYWskR+D1tR2O5OcBFOxfA7DoAO6xtkuQnHTk=
+github.com/hashicorp/go-rootcerts v1.0.0/go.mod h1:K6zTfqpRlCUIjkwsN4Z+hiSfzSTQa6eBIzfwKfwNnHU=
 github.com/hashicorp/go-rootcerts v1.0.2 h1:jzhAVGtqPKbwpyCPELlgNWhE1znq+qwJtW5Oi2viEzc=
 github.com/hashicorp/go-rootcerts v1.0.2/go.mod h1:pqUvnprVnM5bf7AOirdbb01K4ccR319Vf4pU3K5EGc8=
 github.com/hashicorp/go-secure-stdlib/awsutil v0.3.0 h1:I8bynUKMh9I7JdwtW9voJ0xmHvBpxQtLjrMFDYmhOxY=
@@ -1592,8 +1594,8 @@ github.com/hashicorp/vault-plugin-auth-oci v0.16.0 h1:V8vz5b/rqo16cKuvczv8s6n5w6
 github.com/hashicorp/vault-plugin-auth-oci v0.16.0/go.mod h1:BFcFkE1w2uPvQG52a2ZT7XsFENr0W2N7y4FwTqvDk/c=
 github.com/hashicorp/vault-plugin-database-couchbase v0.11.0 h1:SH+/CQUZayrmgqgozeyM8Ctz6i6ZkwT/q7fyB5OKFfg=
 github.com/hashicorp/vault-plugin-database-couchbase v0.11.0/go.mod h1:R4KHWLLyQhHUACZuFJqlNFasbm3hoDyF/kruiUvTEmM=
-github.com/hashicorp/vault-plugin-database-elasticsearch v0.14.0 h1:7v7+WTlQKG/ZikiW3Q4Hef6UBw9A2Q4xAB0ytOkXNdU=
-github.com/hashicorp/vault-plugin-database-elasticsearch v0.14.0/go.mod h1:JKcIsHm0bi9tdNnwyOQKGkt8vEz/oO3KjQIsisViu1s=
+github.com/hashicorp/vault-plugin-database-elasticsearch v0.15.0 h1:RGH87sxehWL74/JsEV8BacmErLeNRfxg6Pv1tudjGFU=
+github.com/hashicorp/vault-plugin-database-elasticsearch v0.15.0/go.mod h1:LYqjVkcdXvGCPDdYNeOM0j3MqWSkMAWeZ4r++Xn+tS8=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.12.0 h1:SQLOOQcF/BuKXh/6AnVYTbCrwyK9MlqzP6AVaqZBAMA=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.12.0/go.mod h1:++CfUO0B7GQk2dy6nawWVMcNHKdA1nhxoZx6dbMbudI=
 github.com/hashicorp/vault-plugin-database-redis v0.3.0 h1:chSbAsc7cYkn5ajQ/528nKoCm9ExGpJaDjTDos2IUa4=
