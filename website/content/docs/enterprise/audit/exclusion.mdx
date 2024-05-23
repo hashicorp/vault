@@ -92,7 +92,7 @@ Exclude the request `data` field for audit entries with a mount type of `transit
 ```
 #### Multiple exclusions
 
-Use multiple JSON blocks to exclude:
+Use multiple JSON objects to exclude:
 
 * `data` from both the request and response when the mount type is `transit`.
 * `entity_id` from requests where the `/auth/client_token` starts with `hmac`
