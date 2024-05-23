@@ -168,7 +168,6 @@ scenario "dev_single_cluster" {
           variant.
     EOF
     module      = matrix.artifact == "local" ? "build_local" : local.use_artifactory ? "build_artifactory_package" : "build_crt"
-    skip_step   = matrix.artifact == "zip"
 
     variables {
       // Used for all modules
