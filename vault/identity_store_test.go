@@ -917,6 +917,8 @@ func TestIdentityStore_DeleteCaseSensitivityKey(t *testing.T) {
 func TestIdentityStoreInvalidate_Entities(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 
+	// Create an entity in storage then call the Invalidate function
+	//
 	id, err := uuid.GenerateUUID()
 	require.NoError(t, err)
 
@@ -925,6 +927,7 @@ func TestIdentityStoreInvalidate_Entities(t *testing.T) {
 		NamespaceID: namespace.RootNamespaceID,
 		ID:          id,
 		Aliases:     []*identity.Alias{},
+		BucketKey:   c.identityStore.entityPacker.BucketKey(id),
 	}
 
 	p := c.identityStore.entityPacker
@@ -938,14 +941,51 @@ func TestIdentityStoreInvalidate_Entities(t *testing.T) {
 		Message: entityAsAny,
 	}
 
-	c.identityStore.entityPacker.PutItem(context.Background(), item)
+	err = p.PutItem(context.Background(), item)
+	require.NoError(t, err)
 
 	c.identityStore.Invalidate(context.Background(), p.BucketKey(id))
 
 	txn := c.identityStore.db.Txn(true)
-	defer txn.Abort()
 
 	memEntity, err := c.identityStore.MemDBEntityByIDInTxn(txn, id, true)
 	assert.NoError(t, err)
 	assert.NotNil(t, memEntity)
+
+	txn.Abort()
+
+	// Modify the entity in storage then call the Invalidate function
+	entity.Metadata = make(map[string]string)
+	entity.Metadata["foo"] = "bar"
+
+	entityAsAny, err = anypb.New(entity)
+	require.NoError(t, err)
+
+	item.Message = entityAsAny
+
+	p.PutItem(context.Background(), item)
+
+	c.identityStore.Invalidate(context.Background(), p.BucketKey(id))
+
+	txn = c.identityStore.db.Txn(true)
+
+	memEntity, err = c.identityStore.MemDBEntityByIDInTxn(txn, id, true)
+	assert.NoError(t, err)
+	assert.Contains(t, memEntity.Metadata, "foo")
+
+	txn.Abort()
+
+	// Delete the entity in storage then call the Invalidate function
+	err = p.DeleteItem(context.Background(), id)
+	require.NoError(t, err)
+
+	c.identityStore.Invalidate(context.Background(), p.BucketKey(id))
+
+	txn = c.identityStore.db.Txn(true)
+
+	memEntity, err = c.identityStore.MemDBEntityByIDInTxn(txn, id, true)
+	assert.NoError(t, err)
+	assert.Nil(t, memEntity)
+
+	txn.Abort()
 }
