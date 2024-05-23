@@ -45,8 +45,9 @@ an escaped JSON string) of exclusion objects.
 
 ### Exclusion object
 
-- `condition` `(string: <optional>)` - predicate expression using [filtering syntax](/vault/docs/concepts/filtering),
-when matched Vault will attempt to remove values identified by `fields`.
+- `condition` `(string: <optional>)` - predicate expression using
+  [filtering syntax](/vault/docs/concepts/filtering). When matched, Vault removes
+  the values identified by `fields`.
 - `fields` `(string[] <required>)` - collection of fields in the audit entry to exclude,
 identified using [JSON pointer](https://tools.ietf.org/html/rfc6901) syntax.
 
