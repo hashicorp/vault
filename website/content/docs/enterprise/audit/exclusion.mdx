@@ -113,14 +113,14 @@ Use multiple JSON blocks to exclude:
 
 ## Audit entry structure
 
-In order to accurately construct `condition` and `fields` the Vault Operator will
-have to understand the structure of the (request/response) audit entry.
+To accurately construct `condition` and `fields`, Vault operators need a solid
+understanding of their audit entry structures. At a high level, there are only
+**request** audit entries and **response** audit entries, but each of these
+entries can contain different objects such as `auth`, `request` and `response`.
 
-This information can be obtained by reverse engineering the audit logs, however it
-the following can be used to understand the structure in a more proactive way.
-
-At a high level, there are only request audit entries and response audit entries,
-each of these entries contain different objects such as `auth`, `request` and `response`.
+We strongly encourage operaters to review existing audit logs from a timeframe
+of at least 2-4 weeks to better identify appropriate exclusion conditions and
+fields.
 
 ### Request audit entry
 
