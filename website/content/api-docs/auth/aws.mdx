@@ -54,7 +54,7 @@ capabilities, the credentials are fetched automatically.
   access to `iam:GetInstanceProfile`. If, however, an alternate sts
   configuration is set for the target account, then the credentials must be
   permissioned to call `sts:AssumeRole` on the configured role, and that role
-  must have the permissions described here.
+  must have the permissions described here. Mutually exclusive with `identity_token_audience`.
 - `secret_key` `(string: "")` - AWS Secret key with permissions to query AWS
   APIs.
 - `role_arn` `(string: "")` – <EnterpriseAlert product="vault" inline /> Role ARN to assume
