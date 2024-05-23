@@ -19,12 +19,12 @@ import { tracked } from '@glimmer/tracking';
  *
  *
  * @param {Function} onConfirmAction - The action to take upon confirming.
- * @param {String} [confirmTitle=Are you sure?] - The title to display in the confirmation modal.
- * @param {String} [confirmMessage=You will not be able to recover it later.] - The message to display when confirming.
+ * @param {String} [confirmTitle="Are you sure?"] - The title to display in the confirmation modal.
+ * @param {String} [confirmMessage="You will not be able to recover it later."] - The message to display when confirming.
  * @param {Boolean} isInDropdown - If true styles for dropdowns, button color is 'critical', and renders inside `<li>` elements via `<Hds::Dropdown::ListItem::Interactive`
  * @param {String} buttonText - Text for the button that toggles modal to open.
- * @param {String} [buttonColor=primary] - Color of button that toggles modal, only applies when @isInDropdown=false. Options are primary, secondary (use for toolbars), tertiary, or critical
- * @param {String} [modalColor=critical] - Styles modal color, if 'critical' confirm button is also 'critical'. Possible values: critical, warning or neutral ('neutral' used for @disabledMessage modal)
+ * @param {String} [buttonColor="primary"] - Color of button that toggles modal, only applies when @isInDropdown=false. Options are primary, secondary (use for toolbars), tertiary, or critical
+ * @param {String} [modalColor="critical"] - Styles modal color, if 'critical' confirm button is also 'critical'. Possible values: critical, warning or neutral ('neutral' used for @disabledMessage modal)
  * @param {Boolean} [isRunning] - Disables the modal confirm button - usually a concurrency task that informs the modal if a process is still running
  * @param {String} [disabledMessage] - A message explaining why the confirm action is not allowed, usually combined with a conditional that returns a string if true
  *

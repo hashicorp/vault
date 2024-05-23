@@ -16,7 +16,7 @@ import Component from '@glimmer/component';
  * * Use HDS links with @isHrefExternal={{true}} instead
  * <Hds::Link::Inline @icon="external-link" @isHrefExternal={{true}} @href="https://hashicorp.com">My link</Hds::Link::Inline>
  *
- * @param {string} href=https://example.com/ - The full href with protocol
+ * @param {string} href - The full href with protocol
  * @param {boolean} [sameTab=false] - by default, these links open in new tab. To override, pass @sameTab={{true}}
  *
  */

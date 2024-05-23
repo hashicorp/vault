@@ -26,25 +26,40 @@ The `docs/components/` directory is where generated markdown files for component
 
 ## Writing documentation for a component
 
-1. Accurate `jsdoc` syntax is important so `jsdoc-to-markdown` properly generates the markdown file for that component.
-
-2. Docfy renders an actual instance of the component beneath `@example` as a sample. Make sure component uses proper hbs syntax. The component args **cannot span multiple lines**.
-
-### jsdoc examples:
-
-- **confirmation-modal** [github link](https://github.com/hashicorp/vault/blob/main/ui/lib/core/addon/components/confirmation-modal.js) | [VScode link](../lib/core/addon/components/confirmation-modal.js)
-- **certificate-card** [github link](https://github.com/hashicorp/vault/blob/main/ui/lib/core/addon/components/certificate-card.js) | [VScode link](../lib/core/addon/components/certificate-card.js)
-
-### @deprecated example
-
-- **alert-inline** [github link](https://github.com/hashicorp/vault/blob/main/ui/lib/core/addon/components/alert-inline.js) | [VScode link](../lib/core/addon/components/alert-inline.js)
+| jsdoc examples                       |                                                                                                            |                                                               |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| form-field (`@description` example)  | [github ](https://github.com/hashicorp/vault/blob/main/ui/lib/core/addon/components/form-field.js)         | [vscode ](../lib/core/addon/components/form-field.js)         |
+| confirmation-modal                   | [github ](https://github.com/hashicorp/vault/blob/main/ui/lib/core/addon/components/confirmation-modal.js) | [vscode ](../lib/core/addon/components/confirmation-modal.js) |
+| certificate-card                     | [github ](https://github.com/hashicorp/vault/blob/main/ui/lib/core/addon/components/certificate-card.js)   | [vscode ](../lib/core/addon/components/certificate-card.js)   |
+| alert-inline (`@deprecated` example) | [github](https://github.com/hashicorp/vault/blob/main/ui/lib/core/addon/components/alert-inline.js)        | [vscode ](../lib/core/addon/components/alert-inline.js)       |
 
 ### Syntax tips
 
+Docfy renders an actual instance of the component beneath `@example` as a sample. Make sure component uses proper hbs syntax and all args are on a single line.
+Accurate `jsdoc` syntax is important so `jsdoc-to-markdown` properly generates the markdown file for that component.
+
+> - Check the generated markdown file for syntax errors or typos, to update edit the jsdoc and re-run the generator. _Do not edit component markdown files directly_
 > - Param types: `object`, `string`, `function`, `array`
 > - Do not include `null` for empty default values
-> - The script automatically wraps default string values in quotes, do not include them in the jsdoc default values
 > - Wrap optional params in brackets `[]`
+> - To include a codeblock in your module's description use `@description`
+
+```
+❌ multi-line jsdoc will not render the component example
+* @example
+* <Block
+*  @title="Example"
+*  @description="My component"
+* />
+```
+
+```
+✅ this will render
+* @example
+* <Block @title="Example" description="My component" />
+```
+
+**Template**
 
 ```
 /**
@@ -52,18 +67,14 @@ The `docs/components/` directory is where generated markdown files for component
  * Description of the component
  *
  * @example
- <ComponentName @param={{}} optionalParam={{}} />
+ * <ComponentName @param={{}} optionalParam={{}} />
  *
- * @param {type} paramName - description
- * @param {string} requiredParam=foo - Do not wrap default values in strings
- * @param {array} [optionalParamName] - An optional parameter
- * @param {string} [param=some default value] - An optional parameter with a default value
+ * @param {object} paramName - description
+ * @param {array} requiredParam=foo - foo is the default value here
+ * @param {function} [optionalParamName] - An optional parameter
+ * @param {string} [param="some default value"] - An optional parameter with a default value
  */
 ```
-
-3. Check the markdown file for syntax errors or typos, then navigate to the component url `http://localhost:4200/ui/docs/components/some-component-name`
-
-4. Fix the jsdoc and rerun `yarn docfy-md some-component-name` to check.
 
 ### More info
 
