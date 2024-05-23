@@ -26,10 +26,21 @@ The `docs/components/` directory is where generated markdown files for component
 
 ## Writing documentation for a component
 
-1. Accurate `jsdoc` syntax is important so `jsdoc-to-markdown` properly generates the markdown file for that component. The component under `@example` needs the accurate syntax because docfy will render an actual instance of the component. The component args **cannot span multiple lines**.
+1. Accurate `jsdoc` syntax is important so `jsdoc-to-markdown` properly generates the markdown file for that component.
 
-> _Syntax notes:_
->
+2. Docfy renders an actual instance of the component beneath `@example` as a sample. Make sure component uses proper hbs syntax. The component args **cannot span multiple lines**.
+
+### jsdoc examples:
+
+- **confirmation-modal** [github link](https://github.com/hashicorp/vault/blob/main/ui/lib/core/addon/components/confirmation-modal.js) | [VScode link](../lib/core/addon/components/confirmation-modal.js)
+- **certificate-card** [github link](https://github.com/hashicorp/vault/blob/main/ui/lib/core/addon/components/certificate-card.js) | [VScode link](../lib/core/addon/components/certificate-card.js)
+
+### @deprecated example
+
+- **alert-inline** [github link](https://github.com/hashicorp/vault/blob/main/ui/lib/core/addon/components/alert-inline.js) | [VScode link](../lib/core/addon/components/alert-inline.js)
+
+### Syntax tips
+
 > - Param types: `object`, `string`, `function`, `array`
 > - Do not include `null` for empty default values
 > - The script automatically wraps default string values in quotes, do not include them in the jsdoc default values
@@ -50,9 +61,9 @@ The `docs/components/` directory is where generated markdown files for component
  */
 ```
 
-2. Check the markdown file for syntax errors or typos, then navigate to the component url `http://localhost:4200/ui/docs/components/some-component-name`
+3. Check the markdown file for syntax errors or typos, then navigate to the component url `http://localhost:4200/ui/docs/components/some-component-name`
 
-3. Fix the jsdoc and rerun `yarn docfy-md some-component-name` to check.
+4. Fix the jsdoc and rerun `yarn docfy-md some-component-name` to check.
 
 ### More info
 
