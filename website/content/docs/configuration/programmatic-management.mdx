@@ -95,7 +95,7 @@ To manage your Vault secret engines in Terraform:
    secret engines under the `admin` namespace:
 
     ```shell-session
-    # vault secrets list -namespace=admin | grep -vEw '(cubbyhole|identity|sys)'
+    $ vault secrets list -namespace=admin | grep -vEw '(cubbyhole|identity|sys)'
 
     Path           Type            Accessor                 Description
     ----           ----            --------                 -----------
