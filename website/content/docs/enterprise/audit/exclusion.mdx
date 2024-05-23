@@ -28,7 +28,7 @@ your auditing process.
 </Warning>
 
 Once you enable an audit device with exclusions, every audit entry Vault sends to
-that audit device is compared to an (optional) predicate expression (condition).
+that audit device is compared to an (optional) condition in the form of a predicate expression.
 Before being written to the audit log for the device, audit entries that match the
 expression are then modified to remove the fields specified for that condition.
 It is possible to specify multiple sets of condition and field combinations for an
