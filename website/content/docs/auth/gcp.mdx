@@ -116,19 +116,24 @@ management tool.
         service_account_email="<SERVICE ACCOUNT EMAIL>"
    ```
 
-   Vault's identity token provider will internally sign the plugin identity token JWT.
-   Given a trust relationship is configured between Vault and GCP via
-   Web Identity Federation, the auth engine can exchange this identity token to obtain
-   [federated access tokens](https://cloud.google.com/docs/authentication/token-types#access).
+   Vault's identity token provider signs the plugin identity token JWT internally.
+   If a trust relationship exists between Vault and GCP through WIF, the auth
+   engine can exchange the Vault identity token for a
+   [federated access token](https://cloud.google.com/docs/authentication/token-types#access).
 
-   ~> **Notice:** For this trust relationship to be established, GCP must have
-   a [Workload Identity Pool and Provider](https://cloud.google.com/iam/docs/manage-workload-identity-pools-providers)
-   configured with information about the fully qualified and network-reachable
-   Issuer URL for Vault's plugin [identity token provider](/vault/api-docs/secret/identity/tokens#read-plugin-identity-well-known-configurations).
-   This is to ensure that GCP can fetch the JWKS [public keys](/vault/api-docs/secret/identity/tokens#read-active-public-keys)
-   and verify the plugin identity token signature. To configure Vault's Issuer,
-   please refer to the Identity Tokens
-   [documentation](/vault/api-docs/secret/identity/tokens#configure-the-identity-tokens-backend)
+   To configure a trusted relationship between Vault and GCP:
+       - You must configure the [identity token issuer backend](/vault/api-docs/secret/identity/tokens#configure-the-identity-tokens-backend)
+         for Vault.
+       - GCP must have a
+         [workload identity pool and provider](https://cloud.google.com/iam/docs/manage-workload-identity-pools-providers)
+         configured with information about the fully qualified and network-reachable
+         issuer URL for the Vault plugin's
+         [identity token provider](/vault/api-docs/secret/identity/tokens#read-plugin-identity-well-known-configurations).
+
+   Establishing a trusted relationship between Vault and GCP ensures that GCP
+   can fetch JWKS
+   [public keys](/vault/api-docs/secret/identity/tokens#read-active-public-keys)
+   and verify the plugin identity token signature.
 
 1. Create a named role:
 
@@ -258,12 +263,12 @@ for more information.
 
 <EnterpriseAlert product="vault" />
 
-The GCP auth engine supports the Plugin WIF workflow, and has a source of identity called
-a plugin identity token. The plugin identity token is a JWT that is internally signed by Vault's
+The GCP auth engine supports the plugin WIF workflow and has a source of identity called
+a plugin identity token. A plugin identity token is a JWT that is signed internally by the Vault
 [plugin identity token issuer](/vault/api-docs/secret/identity/tokens#read-plugin-workload-identity-issuer-s-openid-configuration).
 
 If there is a trust relationship configured between Vault and GCP through
-[Workload Identity Federation](https://cloud.google.com/iam/docs/workload-identity-federation),
+[workload identity federation](https://cloud.google.com/iam/docs/workload-identity-federation),
 the auth engine can exchange its identity token for short-lived access tokens needed to
 perform its actions.
 
@@ -279,19 +284,19 @@ APIs are network-reachable by GCP. We recommend using an API proxy or gateway
 if you need to limit Vault API exposure.
 
 1. Create a
-    [Workload Identity Pool and Provider](https://cloud.google.com/iam/docs/workload-identity-federation-with-other-providers#create-pool-provider)
+    [workload identity pool and provider](https://cloud.google.com/iam/docs/workload-identity-federation-with-other-providers#create-pool-provider)
     in GCP.
     1. The provider URL **must** point at your [Vault plugin identity token issuer](/vault/api-docs/secret/identity/tokens#read-plugin-workload-identity-issuer-s-openid-configuration) with the
     `/.well-known/openid-configuration` suffix removed. For example:
     `https://host:port/v1/identity/oidc/plugins`.
-    1. The audience should uniquely identify the recipient of the plugin identity
-    token. This can be the [default audience](https://cloud.google.com/iam/docs/workload-identity-federation-with-other-providers#prepare)
-    for the Identity Pool or a custom value less than 256 characters.
+    1. Uniquely identify the recipient of the plugin identity token as the audience.
+    You can use the [default audience](https://cloud.google.com/iam/docs/workload-identity-federation-with-other-providers#prepare)
+    for the identity pool or a custom value less than 256 characters.
 
 1. [Authenticate a workload](https://cloud.google.com/iam/docs/workload-identity-federation-with-other-providers#authenticate)
-in GCP by granting the Identity Pool access to a dedicated service account using service account impersonation.
-To allow the GCP Auth engine to impersonate the service account, filter using the the unique `sub` claim issued by plugin identity tokens.
-This will be of the form `plugin-identity:<NAMESPACE>:auth:<GCP_AUTH_MOUNT_ACCESSOR>`.
+in GCP by granting the identity pool access to a dedicated service account using service account impersonation.
+Filter requests using the unique `sub` claim issued by plugin identity tokens so the GCP Auth engine can
+impersonate the service account. `sub` claims have the form: `plugin-identity:<NAMESPACE>:auth:<GCP_AUTH_MOUNT_ACCESSOR>`.
 
 1. Configure the GCP auth engine with the OIDC audience value and service account
 email.

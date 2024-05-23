@@ -21,25 +21,25 @@ at any location, please update your API calls accordingly.
 Configures the credentials required for the plugin to perform API calls
 to Google Cloud. These credentials will be used to query the status of IAM
 entities and get service account or other Google public certificates
-to confirm signed JWTs passed in during login. Credentials can be configured
-either with Application Credentials for a privileged service account,
+to confirm signed JWTs passed in during login. You can configure
+credentials either with Application Credentials for a privileged service account,
 or using Plugin Workload Identity Federation (WIF).
 
 ### IAM
-There are multiple ways to pass root credentials to the Vault server, specified
-below with the highest precedence first. If credentials already exist, this will
-overwrite them.
+Vault uses the official Google Cloud SDK to source credentials from environment variables and shared files.
 
-The official Google Cloud SDK is used for sourcing credentials from env vars and shared
-files.
+From the highest precedence to lowest, you can pass root credentials to the Vault server in the following ways:
 
-- Static credentials provided to the API as a payload
+1. Provide static credentials to the API as a payload.
 
-- [Plugin workload identity federation](/vault/docs/auth/gcp#plugin-workload-identity-federation-wif)
-credentials
+1. Use [plugin workload identity federation](/vault/docs/auth/gcp#plugin-workload-identity-federation-wif) credentials.
 
-- [Application Default Credentials](https://cloud.google.com/docs/authentication/application-default-credentials)
-in the environment **on the server**
+1. Set [application default credentials](https://cloud.google.com/docs/authentication/application-default-credentials)
+as environment variables on the Vault server.
+
+<Warning title="Destructive action">
+  Passing Vault new root credentials overwrites any preexisting root credentials.
+</Warning>
 
 | Method | Path               |
 | :----- | :----------------- |
