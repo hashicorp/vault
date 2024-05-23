@@ -63,6 +63,11 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   });
 
   @action
+  clearActivationErrors() {
+    this.activationErrors = null;
+  }
+
+  @action
   onModalError(errorMsg: string) {
     if (DEBUG) console.error(errorMsg); // eslint-disable-line no-console
 

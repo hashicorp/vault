@@ -12,6 +12,7 @@ import { render, click, settled, findAll } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import syncScenario from 'vault/mirage/scenarios/sync';
 import syncHandlers from 'vault/mirage/handlers/sync';
+import sinon from 'sinon';
 import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
 import { Response } from 'miragejs';
 import { dateFormat } from 'core/helpers/date-format';
@@ -227,6 +228,37 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
         .dom(overview.optInError)
         .containsText('Something bad happened', 'shows an error banner with error message from the API');
       assert.dom(overview.optInBanner.container).exists('banner is visible so user can try to opt-in again');
+    });
+
+    test('it should clear activation errors when the user tries to opt-in again', async function (assert) {
+      // don't worry about transitioning the route in this test
+      sinon.stub(this.owner.lookup('service:router'), 'refresh');
+
+      await this.renderComponent();
+
+      let callCount = 0;
+
+      // first call fails, second call succeeds
+      this.server.post('/sys/activation-flags/secrets-sync/activate', () => {
+        callCount++;
+        if (callCount === 1) {
+          return new Response(403, {}, { errors: ['Something bad happened'] });
+        } else {
+          return {};
+        }
+      });
+
+      await click(overview.optInBanner.enable);
+      await click(overview.activationModal.checkbox);
+      await click(overview.activationModal.confirm);
+
+      assert.dom(overview.optInError).exists('shows an error banner');
+
+      await click(overview.optInBanner.enable);
+      await click(overview.activationModal.checkbox);
+      await click(overview.activationModal.confirm);
+
+      assert.dom(overview.optInError).doesNotExist('error banner is cleared upon trying to opt-in again');
     });
   });
 
