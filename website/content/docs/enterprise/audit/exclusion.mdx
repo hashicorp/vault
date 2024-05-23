@@ -29,10 +29,10 @@ your auditing process.
 
 Once you enable an audit device with exclusions, every audit entry Vault sends to
 that audit device is compared to an (optional) condition in the form of a predicate expression.
-Before being written to the audit log for the device, audit entries that match the
-expression are then modified to remove the fields specified for that condition.
-It is possible to specify multiple sets of condition and field combinations for an
-individual audit device.
+Vault checks exclusions before writing to the audit log for a device. Vault modifies
+any audit entries that match the exclusion expression to remove the fields
+specified for that condition. You can specify multiple sets of condition and field
+combinations for an individual audit device.
 
 When you enable audit devices that use exclusion, the behavior of any existing audit
 device and the behavior of new audit devices that **do not** use exclusion remains
