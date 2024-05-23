@@ -13,8 +13,9 @@ import { assert } from '@ember/debug';
 /**
  * @module DownloadButton
  * DownloadButton wraps an Hds::Button to perform a download action. [Docs for HDS args](https://helios.hashicorp.design/components/button?tab=code)
- * * NOTE: when using in an engine, remember to add the 'download' service to its dependencies (in /engine.js) and map to it in /app.js
- * [ember-docs](https://ember-engines.com/docs/services)
+ * * **NOTE**: when using in an engine, remember to add the 'download' service to its dependencies (in /engine.js) and map to it in /app.js
+ * [Ember Engines Services](https://ember-engines.com/docs/services)
+ *
  * @example
  * <DownloadButton @text="Download this stuff" @color="secondary" @data="download data" @filename="my file" />
  *
