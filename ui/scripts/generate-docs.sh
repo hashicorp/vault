@@ -12,6 +12,4 @@ for FILE in ./lib/core/addon/components/*.js;  do
   fi
 
   yarn docfy-md $component core
-
-  echo "✅ $component" 
 done
