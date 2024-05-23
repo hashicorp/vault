@@ -60,9 +60,9 @@ identified using [JSON pointer](https://tools.ietf.org/html/rfc6901) syntax.
 ]
 ```
 
-Each `condition` is compared against the same golden source, immutable audit entry.
-This means excluding a particular field in a preceding exclusion, won't impact a
-subsequent condition evaluation.
+Vault always compares exclusion conditions against the original, immutable audit
+entry (the "golden source"). As a result, evaluating a given condition does not
+affect the evaluation of subsequent conditions.
 
 ### Exclusion examples
 
