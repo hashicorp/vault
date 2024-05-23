@@ -38,13 +38,7 @@ export default class RolesPageComponent extends Component {
 
   navigate(pageFilter) {
     const route = `${this.mountPoint}.roles.index`;
-    const args = [route];
-
-    args.push({
-      queryParams: {
-        pageFilter: pageFilter ? pageFilter : null,
-      },
-    });
+    const args = [route, { queryParams: { pageFilter: pageFilter || null } }];
     this.router.transitionTo(...args);
   }
 

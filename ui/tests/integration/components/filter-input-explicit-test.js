@@ -28,7 +28,6 @@ module('Integration | Component | filter-input-explicit', function (hooks) {
   });
 
   test('it renders', async function (assert) {
-    assert.expect(2);
     this.query = 'foo';
     await this.renderComponent();
 
@@ -40,10 +39,7 @@ module('Integration | Component | filter-input-explicit', function (hooks) {
 
   test('it should call handleSearch on submit', async function (assert) {
     assert.expect(1);
-
-    this.handleSearch = () => {
-      assert.ok(true, 'handleSearch was called');
-    };
+    this.handleSearch.calledOnce;
 
     await this.renderComponent();
     await typeIn(GENERAL.filterInputExplicit, 'bar');
@@ -53,14 +49,12 @@ module('Integration | Component | filter-input-explicit', function (hooks) {
   test('it should send keydown event on keydown', async function (assert) {
     assert.expect(3); // handle key down called twice
 
-    this.handleKeyDown = () => {
-      assert.ok(true, 'handleKeydown was called');
-    };
+    assert.true(this.handleKeydown.calledTwice);
 
     await this.renderComponent();
     await typeIn(GENERAL.filterInputExplicit, 'a');
     await typeIn(GENERAL.filterInputExplicit, 'b');
 
-    assert.ok(this.handleSearch.notCalled);
+    assert.true(this.handleSearch.notCalled);
   });
 });
