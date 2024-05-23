@@ -12,7 +12,7 @@
     "build": "ember build --environment=production && cp metadata.json ../http/web_ui/metadata.json",
     "build:dev": "ember build",
     "docs": "sh scripts/generate-docs.sh",
-    "generate-docfy-md": "node scripts/docfy-md.js",
+    "docfy-md": "node scripts/docfy-md.js",
     "lint:css": "stylelint \"**/*.css\"",
     "lint:css:fix": "yarn lint:css --fix",
     "lint:fix": "concurrently -c \"auto\" -n lint: \"yarn:lint:*:fix\"",

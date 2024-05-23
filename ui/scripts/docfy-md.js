@@ -8,10 +8,10 @@
 /* eslint-disable */
 
 // run this script from the ui directory:
-// yarn generate-docfy-md some-component
+// yarn docfy-md some-component
 //
 // or if the docs are for a component in an in-repo-addon or an engine:
-// yarn generate-docfy-md some-component name-of-engine
+// yarn docfy-md some-component name-of-engine
 
 const fs = require('fs');
 const jsdoc2md = require('jsdoc-to-markdown');
@@ -38,7 +38,9 @@ const options = {
 
 try {
   const md = jsdoc2md.renderSync(options);
+  if (md.includes('ERROR')) throw `${md} (there is probably no jsdoc for this component)`;
   fs.writeFileSync(outputFile, md);
 } catch (error) {
-  console.log(name, error);
+  console.log(`❌ ${name}`);
+  console.log(error);
 }
