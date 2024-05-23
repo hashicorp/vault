@@ -226,6 +226,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
 
       assert
         .dom(overview.optInError)
+        .exists({ count: 1 })
         .containsText('Something bad happened', 'shows an error banner with error message from the API');
       assert.dom(overview.optInBanner.container).exists('banner is visible so user can try to opt-in again');
     });
