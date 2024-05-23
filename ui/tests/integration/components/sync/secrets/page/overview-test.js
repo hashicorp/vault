@@ -8,7 +8,7 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { render, click, settled } from '@ember/test-helpers';
+import { render, click, settled, findAll } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import syncScenario from 'vault/mirage/scenarios/sync';
 import syncHandlers from 'vault/mirage/handlers/sync';
@@ -126,6 +126,34 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
 
       assert.dom(overview.optInBanner.container).doesNotExist('Opt-in banner is not shown');
     });
+
+    test('it should show activation error if cluster is not Plus tier', async function (assert) {
+      await this.renderComponent();
+
+      this.server.post(
+        '/sys/activation-flags/secrets-sync/activate',
+        () => new Response(403, {}, { errors: ['Something bad happened'] })
+      );
+
+      await click(overview.optInBanner.enable);
+      await click(overview.activationModal.checkbox);
+      await click(overview.activationModal.confirm);
+
+      assert.dom(overview.optInError).exists({ count: 2 }, 'shows the API and custom tier error banners');
+
+      const errorBanners = findAll(overview.optInError);
+
+      assert.dom(errorBanners[0]).containsText('Something bad happened', 'shows the API error message');
+
+      assert
+        .dom(errorBanners[1])
+        .containsText(
+          'Error Secrets Sync is available for Plus tier clusters only. Please check the tier of your cluster to enable Secrets Sync.',
+          'shows the custom tier-related error message'
+        );
+
+      assert.dom(overview.optInBanner.container).exists('banner is visible so user can try to opt-in again');
+    });
   });
 
   module('user does not have post permissions to activate', function (hooks) {
@@ -186,13 +214,18 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     test('it shows an error if activation fails', async function (assert) {
       await this.renderComponent();
 
-      this.server.post('/sys/activation-flags/secrets-sync/activate', () => new Response(403));
+      this.server.post(
+        '/sys/activation-flags/secrets-sync/activate',
+        () => new Response(403, {}, { errors: ['Something bad happened'] })
+      );
 
       await click(overview.optInBanner.enable);
       await click(overview.activationModal.checkbox);
       await click(overview.activationModal.confirm);
 
-      assert.dom(overview.optInError).exists('shows an error banner');
+      assert
+        .dom(overview.optInError)
+        .containsText('Something bad happened', 'shows an error banner with error message from the API');
       assert.dom(overview.optInBanner.container).exists('banner is visible so user can try to opt-in again');
     });
   });
