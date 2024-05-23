@@ -83,7 +83,7 @@ To manage your Vault secret engines in Terraform:
    that you need to migrate. For example:
 
     ```shell-session
-    # vault secrets list | grep -vEw '(cubbyhole|identity|sys)'
+    $ vault secrets list | grep -vEw '(cubbyhole|identity|sys)'
 
     Path          Type         Accessor              Description
     ----          ----         --------              -----------
