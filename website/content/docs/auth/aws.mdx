@@ -355,12 +355,12 @@ are needed.
 
 <EnterpriseAlert product="vault" />
 
-The AWS auth engine supports the Plugin WIF workflow, and has a source of identity called
-a plugin identity token. The plugin identity token is a JWT that is internally signed by Vault's
+The AWS auth engine supports the plugin WIF workflow and has a source of identity called
+a plugin identity token. A plugin identity token is a JWT that is signed internally by the Vault's
 [plugin identity token issuer](/vault/api-docs/secret/identity/tokens#read-plugin-workload-identity-issuer-s-openid-configuration).
 
 If there is a trust relationship configured between Vault and AWS through
-[Web Identity Federation](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_oidc.html),
+[workload identity federation](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_oidc.html),
 the auth engine can exchange its identity token for short-lived STS credentials needed to
 perform its actions.
 
@@ -381,8 +381,8 @@ To configure the auth engine to use plugin WIF:
   1. The provider URL **must** point at your [Vault plugin identity token issuer](/vault/api-docs/secret/identity/tokens#read-plugin-workload-identity-issuer-s-openid-configuration) with the
   `/.well-known/openid-configuration` suffix removed. For example:
   `https://host:port/v1/identity/oidc/plugins`.
-  1. The audience should uniquely identify the recipient of the plugin identity
-  token. In AWS, the recipient is the identity provider. We recommend using
+  1. Uniquely identify the recipient of the plugin identity token as the audience.
+  In AWS, the recipient is the identity provider. We recommend using
   the `host:port/v1/identity/oidc/plugins` portion of the provider URL as your
   recipient since it will be unique for each configured identity provider.
 

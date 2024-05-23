@@ -29,7 +29,7 @@ custom endpoints to talk to AWS APIs. The instance identity document
 fetched from the PKCS#7 signature will provide the EC2 instance ID. The
 credentials configured using this endpoint will be used to query the status
 of the instances via DescribeInstances API. If static credentials are not
-provided using this endpoint or [Plugin workload identity federation](/vault/docs/auth/aws#plugin-workload-identity-federation-wif)
+provided using this endpoint, or [plugin workload identity federation](/vault/docs/auth/aws#plugin-workload-identity-federation-wif)
 credentials are also not provided, then the credentials will be retrieved from
 the environment variables `AWS_ACCESS_KEY`, `AWS_SECRET_KEY` and
 `AWS_REGION` respectively. If the credentials are still not found and if the
