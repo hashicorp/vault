@@ -27,7 +27,7 @@ export default Controller.extend(ListController, {
   backendCrumb: computed('clusterController.model.name', function () {
     return {
       label: 'leases',
-      text: 'leases',
+      text: 'Leases',
       path: 'vault.cluster.access.leases.list-root',
       model: this.clusterController.model.name,
     };
