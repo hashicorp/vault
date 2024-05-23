@@ -14,12 +14,13 @@ export default AuthConfig.extend({
   useOpenAPI: true,
   kubernetesHost: attr('string', {
     helpText:
-      'Host must be a host string, a host:port pair, or a URL to the base of the Kubernetes API server',
+      'Host must be a host string, a host:port pair, or a URL to the base of the Kubernetes API server.',
   }),
 
   kubernetesCaCert: attr('string', {
     editType: 'file',
-    helpText: 'PEM encoded CA cert for use by the TLS client used to talk with the Kubernetes API',
+    helpText:
+      "Optional PEM encoded CA cert for use by the TLS client used to talk with the Kubernetes API. If it is not set and disable_local_ca_jwt is true, the system's trusted CA certificate pool will be used.",
   }),
 
   tokenReviewerJwt: attr('string', {
