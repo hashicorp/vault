@@ -692,7 +692,7 @@ func (i *IdentityStore) invalidateEntityBucket(ctx context.Context, key string) 
 		for _, item := range bucket.Items {
 			bucketEntity, err := i.parseEntityFromBucketItem(ctx, item)
 			if err != nil {
-				i.logger.Error("failed to fetch entity during local alias invalidation", "entity_id", alias.CanonicalID, "error", err)
+				i.logger.Error("failed to parse entity from bucket entry item", "error", err)
 				return
 			}
 
@@ -1025,8 +1025,6 @@ func (i *IdentityStore) invalidateLocalAliasesBucket(ctx context.Context, key st
 				}
 			}
 		}
-		txn.Commit()
-		return
 	}
 
 	// Any local aliases still remaining in memDBLocalAliases do not exist in
