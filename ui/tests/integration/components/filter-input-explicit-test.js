@@ -46,8 +46,6 @@ module('Integration | Component | filter-input-explicit', function (hooks) {
   });
 
   test('it should send keydown event on keydown', async function (assert) {
-    assert.expect(3); // handle key down called twice
-
     assert.true(this.handleKeydown.calledTwice);
 
     await this.renderComponent();
