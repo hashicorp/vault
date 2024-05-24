@@ -1,0 +1,3 @@
+```release-note:change
+core/identity: improve performance for secondary nodes receiving identity related updates through replication
+```
