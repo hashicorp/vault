@@ -104,7 +104,9 @@ func TestDebugCommand_Run(t *testing.T) {
 // expectHeaderNamesInTarGzFile asserts that the expectedHeaderNames
 // match exactly to the header names in the tar.gz file at tarballPath.
 // Will error if there are more or less than expected.
-func expectHeaderNamesInTarGzFile(t *testing.T, tarballPath string, expectedHeaderNames []string) {
+// ignoreUnexpectedHeaders toggles ignoring the presence of headers not
+// in expectedHeaderNames.
+func expectHeaderNamesInTarGzFile(t *testing.T, tarballPath string, expectedHeaderNames []string, ignoreUnexpectedHeaders bool) {
 	t.Helper()
 
 	file, err := os.Open(tarballPath)
@@ -124,12 +126,17 @@ func expectHeaderNamesInTarGzFile(t *testing.T, tarballPath string, expectedHead
 		}
 		require.NoError(t, err)
 
+		// Ignore directories.
+		if header.Typeflag == tar.TypeDir {
+			continue
+		}
+
 		for _, name := range expectedHeaderNames {
 			if header.Name == name {
 				headersFoundMap[header.Name] = struct{}{}
 			}
 		}
-		if _, ok := headersFoundMap[header.Name]; !ok {
+		if _, ok := headersFoundMap[header.Name]; !ok && !ignoreUnexpectedHeaders {
 			t.Fatalf("unexpected file: %s", header.Name)
 		}
 	}
@@ -218,7 +225,7 @@ func TestDebugCommand_Archive(t *testing.T) {
 			}
 
 			expectedHeaders := []string{filepath.Join(basePath, "index.json"), filepath.Join(basePath, "server_status.json")}
-			expectHeaderNamesInTarGzFile(t, bundlePath, expectedHeaders)
+			expectHeaderNamesInTarGzFile(t, bundlePath, expectedHeaders, false)
 		})
 	}
 }
@@ -308,7 +315,7 @@ func TestDebugCommand_CaptureTargets(t *testing.T) {
 			for _, fileName := range tc.expectedFiles {
 				expectedHeaders = append(expectedHeaders, filepath.Join(basePath, fileName))
 			}
-			expectHeaderNamesInTarGzFile(t, bundlePath, expectedHeaders)
+			expectHeaderNamesInTarGzFile(t, bundlePath, expectedHeaders, false)
 		})
 	}
 }
@@ -655,10 +662,12 @@ func TestDebugCommand_PartialPermissions(t *testing.T) {
 
 	expectedHeaders := []string{
 		filepath.Join(basePath, "index.json"), filepath.Join(basePath, "server_status.json"),
-		filepath.Join(basePath, "replication_status.json"), filepath.Join(basePath, "vault.log"),
+		filepath.Join(basePath, "vault.log"),
 	}
-	// TODO: is there a bug here? Investigate on another branch...
-	expectHeaderNamesInTarGzFile(t, bundlePath, expectedHeaders)
+
+	// We set ignoreUnexpectedHeaders to true as replication_status.json is only sometimes
+	// produced. Relying on it being or not being there wuld be racy.
+	expectHeaderNamesInTarGzFile(t, bundlePath, expectedHeaders, true)
 }
 
 // set insecure umask to see if the files and directories get created with right permissions

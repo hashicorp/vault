@@ -1019,15 +1019,19 @@ func archiveToTgz(sourceDir, destination string) error {
 			if err != nil {
 				return err
 			}
-			if !info.IsDir() {
-				return addFileToTar(sourceDir, filePath, tarWriter)
-			}
+			// if !info.IsDir() {
+			return addFileToTar(sourceDir, filePath, tarWriter)
+			//}
 			return nil
 		})
 
 	return err
 }
 
+// addFileToTar takes a file at filePath and adds it to the tar
+// being written to by tarWriter, alongside its header. T
+// The tar header name will be relative. Example: If we're tarring
+// a file in ~/a/b/c/foo/bar.json, the header name will be foo/bar.json
 func addFileToTar(sourceDir, filePath string, tarWriter *tar.Writer) error {
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -1040,23 +1044,41 @@ func addFileToTar(sourceDir, filePath string, tarWriter *tar.Writer) error {
 		return fmt.Errorf("failed to stat file %q: %s", filePath, err)
 	}
 
+	var link string
+	mode := stat.Mode()
+	if mode&os.ModeSymlink != 0 {
+		if link, err = os.Readlink(filePath); err != nil {
+			return fmt.Errorf("failed to read symlink for file %q: %s", filePath, err)
+		}
+	}
+	tarHeader, err := tar.FileInfoHeader(stat, link)
+	if err != nil {
+		return fmt.Errorf("failed to create tar header for file %q: %s", filePath, err)
+	}
+
 	// The tar header name should be relative, so remove the sourceDir from it,
 	// but preserve the last directory name.
-	// Example: If we're making a preserving a file in ~/a/b/c/foo/bar.json
+	// Example: If we're tarring a file in ~/a/b/c/foo/bar.json
 	// The name should be foo/bar.json
 	sourceDirExceptLastDir := filepath.Dir(sourceDir)
 	headerName := strings.TrimPrefix(filepath.Clean(filePath), filepath.Clean(sourceDirExceptLastDir)+"/")
 
-	tarHeader := &tar.Header{
-		Name:    headerName,
-		Size:    stat.Size(),
-		Mode:    int64(stat.Mode()),
-		ModTime: stat.ModTime(),
+	// Directories should end with a slash.
+	if stat.IsDir() && !strings.HasSuffix(headerName, "/") {
+		headerName += "/"
 	}
+	tarHeader.Name = headerName
 
 	err = tarWriter.WriteHeader(tarHeader)
 	if err != nil {
 		return fmt.Errorf("failed to write tar header for file %q: %s", filePath, err)
+	}
+
+	// If it's not a regular file (e.g. link or directory) we shouldn't
+	// copy the file. The body of a tar entry (i.e. what's done by the
+	// below io.Copy call) is only required for tar files of TypeReg.
+	if tarHeader.Typeflag != tar.TypeReg {
+		return nil
 	}
 
 	_, err = io.Copy(tarWriter, file)
