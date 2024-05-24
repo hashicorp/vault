@@ -986,12 +986,12 @@ func (c *DebugCommand) compress(dst string) error {
 	}
 
 	if err := archiveToTgz(c.flagOutput, dst); err != nil {
-		return fmt.Errorf("failed to compress data: %s", err)
+		return fmt.Errorf("failed to compress data: %w", err)
 	}
 
 	// If everything is fine up to this point, remove original directory
 	if err := os.RemoveAll(c.flagOutput); err != nil {
-		return fmt.Errorf("failed to remove data directory: %s", err)
+		return fmt.Errorf("failed to remove data directory: %w", err)
 	}
 
 	return nil
@@ -1002,7 +1002,7 @@ func (c *DebugCommand) compress(dst string) error {
 func archiveToTgz(sourceDir, destination string) error {
 	file, err := os.Create(destination)
 	if err != nil {
-		return fmt.Errorf("failed to create file: %s", err)
+		return fmt.Errorf("failed to create file: %w", err)
 	}
 	defer file.Close()
 
@@ -1030,25 +1030,25 @@ func archiveToTgz(sourceDir, destination string) error {
 func addFileToTar(sourceDir, filePath string, tarWriter *tar.Writer) error {
 	file, err := os.Open(filePath)
 	if err != nil {
-		return fmt.Errorf("failed to open file %q: %s", filePath, err)
+		return fmt.Errorf("failed to open file %q: %w", filePath, err)
 	}
 	defer file.Close()
 
 	stat, err := file.Stat()
 	if err != nil {
-		return fmt.Errorf("failed to stat file %q: %s", filePath, err)
+		return fmt.Errorf("failed to stat file %q: %w", filePath, err)
 	}
 
 	var link string
 	mode := stat.Mode()
 	if mode&os.ModeSymlink != 0 {
 		if link, err = os.Readlink(filePath); err != nil {
-			return fmt.Errorf("failed to read symlink for file %q: %s", filePath, err)
+			return fmt.Errorf("failed to read symlink for file %q: %w", filePath, err)
 		}
 	}
 	tarHeader, err := tar.FileInfoHeader(stat, link)
 	if err != nil {
-		return fmt.Errorf("failed to create tar header for file %q: %s", filePath, err)
+		return fmt.Errorf("failed to create tar header for file %q: %w", filePath, err)
 	}
 
 	// The tar header name should be relative, so remove the sourceDir from it,
@@ -1066,7 +1066,7 @@ func addFileToTar(sourceDir, filePath string, tarWriter *tar.Writer) error {
 
 	err = tarWriter.WriteHeader(tarHeader)
 	if err != nil {
-		return fmt.Errorf("failed to write tar header for file %q: %s", filePath, err)
+		return fmt.Errorf("failed to write tar header for file %q: %w", filePath, err)
 	}
 
 	// If it's not a regular file (e.g. link or directory) we shouldn't
@@ -1078,7 +1078,7 @@ func addFileToTar(sourceDir, filePath string, tarWriter *tar.Writer) error {
 
 	_, err = io.Copy(tarWriter, file)
 	if err != nil {
-		return fmt.Errorf("failed to copy file %q into tarball: %s", filePath, err)
+		return fmt.Errorf("failed to copy file %q into tarball: %w", filePath, err)
 	}
 
 	return nil
