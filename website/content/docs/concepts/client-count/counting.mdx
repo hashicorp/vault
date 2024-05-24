@@ -26,17 +26,6 @@ CLIENT_COUNT_PER_CLUSTER = UNIQUE_STANDARD_ENTITIES +
 Vault does not aggregate or de-duplicate clients across clusters, but all logs
 and precomputed reports are included in DR replication.
 
-<Note heading="Certificate entities currently reported as non-entity clients">
-
-  Vault currently rolls certificate entities into the non-entity client count
-  in the UI and API query requests. For more detailed information on certificate
-  entities, use the
-  [internal counter endpoint](/vault/api-docs/system/internal-counters) to query
-  monthly data for the PKI mount path or export historic data and look for
-  `client_type=pki-acme`.
-
-</Note>
-
 ## How Vault tracks clients
 
 Each time a client authenticates, Vault checks whether the corresponding entity
