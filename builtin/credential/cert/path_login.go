@@ -34,6 +34,8 @@ type ParsedCert struct {
 	Certificates []*x509.Certificate
 }
 
+const certAuthFailMsg = "failed to match all constraints for this login certificate"
+
 func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "login",
@@ -312,10 +314,11 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d
 	// If no trusted chain was found, client is not authenticated
 	// This check happens after checking for a matching configured non-CA certs
 	if len(trustedChains) == 0 {
-		if retErr == nil {
-			return nil, logical.ErrorResponse(fmt.Sprintf("invalid certificate or no client certificate supplied; additionally got errors during verification: %v", retErr)), nil
+		if retErr != nil {
+			return nil, logical.ErrorResponse(fmt.Sprintf("%s; additionally got errors during verification: %v", certAuthFailMsg, retErr)), nil
 		}
-		return nil, logical.ErrorResponse("invalid certificate or no client certificate supplied"), nil
+
+		return nil, logical.ErrorResponse(certAuthFailMsg), nil
 	}
 
 	// Search for a ParsedCert that intersects with the validated chains and any additional constraints
@@ -350,10 +353,10 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d
 	}
 
 	if retErr != nil {
-		return nil, logical.ErrorResponse(fmt.Sprintf("no chain matching all constraints could be found for this login certificate; additionally got errors during verification: %v", retErr)), nil
+		return nil, logical.ErrorResponse(fmt.Sprintf("%s; additionally got errors during verification: %v", certAuthFailMsg, retErr)), nil
 	}
 
-	return nil, logical.ErrorResponse("no chain matching all constraints could be found for this login certificate"), nil
+	return nil, logical.ErrorResponse(certAuthFailMsg), nil
 }
 
 func (b *backend) matchesConstraints(ctx context.Context, clientCert *x509.Certificate, trustedChain []*x509.Certificate,

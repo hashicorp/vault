@@ -202,7 +202,7 @@ func testAccStepResolveRoleExpectRoleResolutionToFail(t *testing.T, connState tl
 				t.Fatal("Error not part of response.")
 			}
 
-			if !strings.Contains(errString, "invalid certificate") {
+			if !strings.Contains(errString, certAuthFailMsg) {
 				t.Fatalf("Error was not due to invalid role name. Error: %s", errString)
 			}
 			return nil
@@ -230,7 +230,7 @@ func testAccStepResolveRoleOCSPFail(t *testing.T, connState tls.ConnectionState,
 				t.Fatal("Error not part of response.")
 			}
 
-			if !strings.Contains(errString, "no chain matching") {
+			if !strings.Contains(errString, certAuthFailMsg) {
 				t.Fatalf("Error was not due to OCSP failure. Error: %s", errString)
 			}
 			return nil
