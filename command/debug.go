@@ -1024,7 +1024,7 @@ func archiveToTgz(sourceDir, destination string) error {
 }
 
 // addFileToTar takes a file at filePath and adds it to the tar
-// being written to by tarWriter, alongside its header. T
+// being written to by tarWriter, alongside its header.
 // The tar header name will be relative. Example: If we're tarring
 // a file in ~/a/b/c/foo/bar.json, the header name will be foo/bar.json
 func addFileToTar(sourceDir, filePath string, tarWriter *tar.Writer) error {
