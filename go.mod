@@ -99,7 +99,7 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-plugin v1.6.0
 	github.com/hashicorp/go-raftchunking v0.6.3-0.20191002164813-7e9e8525653a
-	github.com/hashicorp/go-retryablehttp v0.7.5
+	github.com/hashicorp/go-retryablehttp v0.7.6
 	github.com/hashicorp/go-rootcerts v1.0.2
 	github.com/hashicorp/go-secure-stdlib/awsutil v0.3.0
 	github.com/hashicorp/go-secure-stdlib/base62 v0.1.2
@@ -135,11 +135,11 @@ require (
 	github.com/hashicorp/vault-plugin-auth-cf v0.17.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.18.0
 	github.com/hashicorp/vault-plugin-auth-jwt v0.20.3
-	github.com/hashicorp/vault-plugin-auth-kerberos v0.11.0
-	github.com/hashicorp/vault-plugin-auth-kubernetes v0.18.0
+	github.com/hashicorp/vault-plugin-auth-kerberos v0.12.0
+	github.com/hashicorp/vault-plugin-auth-kubernetes v0.19.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.16.0
 	github.com/hashicorp/vault-plugin-database-couchbase v0.11.0
-	github.com/hashicorp/vault-plugin-database-elasticsearch v0.14.0
+	github.com/hashicorp/vault-plugin-database-elasticsearch v0.15.0
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.12.0
 	github.com/hashicorp/vault-plugin-database-redis v0.3.0
 	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.4.0
@@ -150,16 +150,16 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-azure v0.19.0
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.19.0
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.17.0
-	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.7.0
+	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.8.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.19.0
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.12.0
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.13.0
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.8.0
 	github.com/hashicorp/vault-testing-stepwise v0.1.4
-	github.com/hashicorp/vault/api v1.13.0
+	github.com/hashicorp/vault/api v1.14.0
 	github.com/hashicorp/vault/api/auth/approle v0.1.0
 	github.com/hashicorp/vault/api/auth/userpass v0.1.0
-	github.com/hashicorp/vault/sdk v0.12.0
+	github.com/hashicorp/vault/sdk v0.13.0
 	github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20230201201504-b741fa893d77
 	github.com/influxdata/influxdb1-client v0.0.0-20200827194710-b269163b24ab
 	github.com/jackc/pgx/v4 v4.18.3
@@ -208,9 +208,9 @@ require (
 	go.etcd.io/etcd/client/v3 v3.5.7
 	go.mongodb.org/atlas v0.36.0
 	go.mongodb.org/mongo-driver v1.14.0
-	go.opentelemetry.io/otel v1.24.0
-	go.opentelemetry.io/otel/sdk v1.24.0
-	go.opentelemetry.io/otel/trace v1.24.0
+	go.opentelemetry.io/otel v1.27.0
+	go.opentelemetry.io/otel/sdk v1.27.0
+	go.opentelemetry.io/otel/trace v1.27.0
 	go.uber.org/atomic v1.11.0
 	go.uber.org/goleak v1.3.0
 	golang.org/x/crypto v0.23.0
@@ -226,7 +226,7 @@ require (
 	google.golang.org/grpc v1.64.0
 	google.golang.org/protobuf v1.34.1
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
-	k8s.io/apimachinery v0.29.1
+	k8s.io/apimachinery v0.29.3
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
 	layeh.com/radius v0.0.0-20231213012653-1006025d24f8
 	nhooyr.io/websocket v1.8.11
@@ -235,6 +235,7 @@ require (
 require (
 	cloud.google.com/go/longrunning v0.5.7 // indirect
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
+	gopkg.in/go-jose/go-jose.v2 v2.6.3 // indirect
 )
 
 require (
@@ -308,7 +309,7 @@ require (
 	github.com/boltdb/bolt v1.3.1 // indirect
 	github.com/boombuler/barcode v1.0.1 // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
-	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
+	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/census-instrumentation/opencensus-proto v0.4.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/circonus-labs/circonus-gometrics v2.3.1+incompatible // indirect
@@ -338,7 +339,7 @@ require (
 	github.com/digitalocean/godo v1.7.5 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
-	github.com/docker/cli v25.0.1+incompatible // indirect
+	github.com/docker/cli v25.0.5+incompatible // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dsnet/compress v0.0.2-0.20210315054119-f66993602bf5 // indirect
@@ -521,15 +522,15 @@ require (
 	go.etcd.io/etcd/api/v3 v3.5.7 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.49.0 // indirect
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.49.0 // indirect
-	go.opentelemetry.io/otel/metric v1.24.0 // indirect
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.52.0 // indirect
+	go.opentelemetry.io/otel/metric v1.27.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/mod v0.17.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	google.golang.org/genproto v0.0.0-20240520151616-dc85e6b867a5 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20240513163218-0867130af1f8 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240513163218-0867130af1f8 // indirect; indirect\
+	google.golang.org/genproto/googleapis/api v0.0.0-20240520151616-dc85e6b867a5 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240515191416-fc5f0ca64291 // indirect; indirect\
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/jcmturner/goidentity.v3 v3.0.0 // indirect
@@ -538,8 +539,8 @@ require (
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/api v0.29.1 // indirect
-	k8s.io/client-go v0.29.1 // indirect
+	k8s.io/api v0.29.3 // indirect
+	k8s.io/client-go v0.29.3 // indirect
 	k8s.io/klog/v2 v2.110.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
