@@ -666,7 +666,7 @@ func TestDebugCommand_PartialPermissions(t *testing.T) {
 	}
 
 	// We set ignoreUnexpectedHeaders to true as replication_status.json is only sometimes
-	// produced. Relying on it being or not being there wuld be racy.
+	// produced. Relying on it being or not being there would be racy.
 	expectHeaderNamesInTarGzFile(t, bundlePath, expectedHeaders, true)
 }
 
