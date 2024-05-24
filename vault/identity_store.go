@@ -723,6 +723,11 @@ func (i *IdentityStore) invalidateEntityBucket(ctx context.Context, key string) 
 
 			// If the entity is not in MemDB or if it is but differs from the
 			// state that's in the bucket storage entry, upsert it into MemDB.
+
+			// We've considered the use of github.com/google/go-cmp here,
+			// but opted for sticking with reflect.DeepEqual because go-cmp
+			// is intended for testing and is able to panic in some
+			// situations.
 			if memDBEntity == nil || !reflect.DeepEqual(memDBEntity, bucketEntity) {
 				// The entity is not in MemDB, it's a new entity. Add it to MemDB.
 				err = i.upsertEntityInTxn(ctx, txn, bucketEntity, nil, false)
@@ -737,7 +742,7 @@ func (i *IdentityStore) invalidateEntityBucket(ctx context.Context, key string) 
 				// cluster. Since this invalidation is signaling that the
 				// entity is now in the primary cluster's storage, the locally
 				// cached entry can be removed.
-				if i.localNode.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) && i.localNode.HAState() != consts.PerfStandby {
+				if i.localNode.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) && i.localNode.HAState() == consts.Active {
 					if err := i.localAliasPacker.DeleteItem(ctx, bucketEntity.ID+tmpSuffix); err != nil {
 						i.logger.Error("failed to clear local alias entity cache", "error", err, "entity_id", bucketEntity.ID)
 						return
@@ -765,7 +770,7 @@ func (i *IdentityStore) invalidateEntityBucket(ctx context.Context, key string) 
 
 		// In addition, if this is an active node of a performance secondary
 		// cluster, remove the local alias storage entry for this deleted entity.
-		if i.localNode.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) && i.localNode.HAState() != consts.PerfStandby {
+		if i.localNode.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) && i.localNode.HAState() == consts.Active {
 			if err := i.localAliasPacker.DeleteItem(ctx, memDBEntity.ID); err != nil {
 				i.logger.Error("failed to clear local alias for entity", "error", err, "entity_id", memDBEntity.ID)
 				return
@@ -847,9 +852,10 @@ func (i *IdentityStore) invalidateGroupBucket(ctx context.Context, key string) {
 	}
 
 	txn.Commit()
-	return
 }
 
+// invalidateOIDCToken is called by the Invalidate function to handle the
+// invalidation of an OIDC token storage entry.
 func (i *IdentityStore) invalidateOIDCToken(ctx context.Context) {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
@@ -865,6 +871,8 @@ func (i *IdentityStore) invalidateOIDCToken(ctx context.Context) {
 	}
 }
 
+// invalidateClientPath is called by the Invalidate function to handle the
+// invalidation of a client path storage entry.
 func (i *IdentityStore) invalidateClientPath(ctx context.Context, key string) {
 	name := strings.TrimPrefix(key, clientPath)
 
@@ -875,6 +883,8 @@ func (i *IdentityStore) invalidateClientPath(ctx context.Context, key string) {
 	}
 }
 
+// invalidateLocalAliasBucket is called by the Invalidate function to handle the
+// invalidation of a local alias bucket storage entry.
 func (i *IdentityStore) invalidateLocalAliasesBucket(ctx context.Context, key string) {
 	// This invalidation only happens on performance standby servers
 
@@ -996,6 +1006,10 @@ func (i *IdentityStore) invalidateLocalAliasesBucket(ctx context.Context, key st
 					}
 				}
 
+				// We've considered the use of github.com/google/go-cmp here,
+				// but opted for sticking with reflect.DeepEqual because go-cmp
+				// is intended for testing and is able to panic in some
+				// situations.
 				if memDBLocalAlias == nil || !reflect.DeepEqual(memDBLocalAlias, bucketLocalAlias) {
 					// The bucketLocalAlias is not in MemDB or it has changed in
 					// storage.
