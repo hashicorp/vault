@@ -914,6 +914,8 @@ func TestIdentityStore_DeleteCaseSensitivityKey(t *testing.T) {
 	}
 }
 
+// TestIdentityStoreInvalidate_Entities verifies the proper handling of
+// entities in the Invalidate method.
 func TestIdentityStoreInvalidate_Entities(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 
@@ -990,6 +992,8 @@ func TestIdentityStoreInvalidate_Entities(t *testing.T) {
 	txn.Commit()
 }
 
+// TestIdentityStoreInvalidate_LocalAliasesWithEntity verifies the correct
+// handling of local aliases in the Invalidate method.
 func TestIdentityStoreInvalidate_LocalAliasesWithEntity(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 
@@ -1068,6 +1072,8 @@ func TestIdentityStoreInvalidate_LocalAliasesWithEntity(t *testing.T) {
 	txn.Commit()
 }
 
+// TestIdentityStoreInvalidate_TemporaryEntity verifies the proper handling of
+// temporary entities in the Invalidate method.
 func TestIdentityStoreInvalidate_TemporaryEntity(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 
