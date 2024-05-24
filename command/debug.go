@@ -985,10 +985,6 @@ func (c *DebugCommand) compress(dst string) error {
 		defer osutil.Umask(osutil.Umask(0o077))
 	}
 
-	//tgz := archiver.NewTarGz()
-	//if err := tgz.Archive([]string{c.flagOutput}, dst); err != nil {
-	//	return fmt.Errorf("failed to compress data: %s", err)
-	//}
 	if err := archiveToTgz(c.flagOutput, dst); err != nil {
 		return fmt.Errorf("failed to compress data: %s", err)
 	}
@@ -1001,6 +997,8 @@ func (c *DebugCommand) compress(dst string) error {
 	return nil
 }
 
+// archiveToTgz compresses all the files in sourceDir to a
+// a tarball at destination.
 func archiveToTgz(sourceDir, destination string) error {
 	file, err := os.Create(destination)
 	if err != nil {
@@ -1019,10 +1017,7 @@ func archiveToTgz(sourceDir, destination string) error {
 			if err != nil {
 				return err
 			}
-			// if !info.IsDir() {
 			return addFileToTar(sourceDir, filePath, tarWriter)
-			//}
-			return nil
 		})
 
 	return err
