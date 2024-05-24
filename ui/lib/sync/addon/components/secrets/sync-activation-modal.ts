@@ -17,6 +17,7 @@ import type RouterService from '@ember/routing/router-service';
 interface Args {
   onClose: () => void;
   onError: (errorMessage: string) => void;
+  onConfirm: () => void;
   isHvdManaged: boolean;
 }
 
@@ -30,6 +31,9 @@ export default class SyncActivationModal extends Component<Args> {
   @task
   @waitFor
   *onFeatureConfirm() {
+    // clear any previous errors in the parent component
+    this.args.onConfirm();
+
     // must return null instead of root for non managed cluster.
     // child namespaces are not sent.
     const namespace = this.args.isHvdManaged ? 'admin' : null;

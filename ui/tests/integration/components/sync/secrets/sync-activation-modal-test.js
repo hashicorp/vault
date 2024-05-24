@@ -23,12 +23,13 @@ module('Integration | Component | Secrets::SyncActivationModal', function (hooks
   hooks.beforeEach(function () {
     this.onClose = sinon.stub();
     this.onError = sinon.stub();
+    this.onConfirm = sinon.stub();
     this.isHvdManaged = false;
 
     this.renderComponent = async () => {
       await render(
         hbs`
-      <Secrets::SyncActivationModal @onClose={{this.onClose}} @onError={{this.onError}} @isHvdManaged={{this.isHvdManaged}}/>
+      <Secrets::SyncActivationModal @onClose={{this.onClose}} @onError={{this.onError}} @onConfirm={{this.onConfirm}} @isHvdManaged={{this.isHvdManaged}}/>
     `,
         { owner: this.engine }
       );
@@ -68,6 +69,15 @@ module('Integration | Component | Secrets::SyncActivationModal', function (hooks
     hooks.beforeEach(function () {
       const router = this.owner.lookup('service:router');
       this.refreshStub = sinon.stub(router, 'refresh');
+    });
+
+    test('it calls onConfirm', async function (assert) {
+      await this.renderComponent();
+
+      await click(SELECTORS.checkbox);
+      await click(SELECTORS.confirm);
+
+      assert.true(this.onConfirm.called);
     });
 
     module('success', function (hooks) {
