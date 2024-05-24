@@ -80,7 +80,7 @@ export default Route.extend({
       const parentKey = parentKeyForKey(secret);
       const mode = this.routeName.split('.').pop();
       // for kv v2, redirect users from the old url to the new engine url (1.15.0 +)
-      if (secretEngine.type === 'kv' && secretEngine.version === 2) {
+      if ((secretEngine.type === 'kv' || secretEngine.type === 'generic') && secretEngine.version === 2) {
         // if no secret param redirect to the create route
         // if secret param they are either viewing or editing secret so navigate to the details route
         if (!secret) {
