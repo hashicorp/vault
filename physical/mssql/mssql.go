@@ -14,10 +14,10 @@ import (
 	"time"
 
 	metrics "github.com/armon/go-metrics"
-	_ "github.com/denisenkom/go-mssqldb"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
+	mssql "github.com/microsoft/go-mssqldb"
 )
 
 // Verify MSSQLBackend satisfies the correct interfaces
