@@ -83,7 +83,11 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 
 	connectionTimeout := getConfValue("connectiontimeout", "30")
 
-	logLevel := getConfValue("loglevel", "0")
+	logLevel := getConfValue("logLevel", "0")
+	// SetLogger only if needed
+	if logLevel != "0" {
+		mssql.SetLogger(logger.StandardLogger(nil))
+	}
 
 	schema := getConfValue("schema", "dbo")
 	if !validIdentifierRE.MatchString(schema) {
