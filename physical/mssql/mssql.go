@@ -174,6 +174,18 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		}
 	}
 
+	// Mismatched data types on table and parameter may cause long running queries
+	// README.md: https://github.com/microsoft/go-mssqldb
+	if databaseCollation != "" {
+		dbCollation := ""
+		err = db.QueryRow("SELECT DATABASEPROPERTYEX('" + database + "', 'Collation')").Scan(&dbCollation)
+		if err != nil || dbCollation == "" {
+			logger.Warn("Cannot get database collation", err)
+		} else if dbCollation != databaseCollation {
+			logger.Warn("Database and vault config collation mismatch. This may cause long running queries!", dbCollation, databaseCollation)
+		}
+	}
+
 	db.SetMaxOpenConns(maxParInt)
 
 	dbTable := schema + "." + table
@@ -208,11 +220,12 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	}
 
 	statements := map[string]string{
-		"put": "IF EXISTS(SELECT 1 FROM " + dbTable + " WHERE Path = ?) UPDATE " + dbTable + " SET Value = ? WHERE Path = ?" +
-			" ELSE INSERT INTO " + dbTable + " VALUES(?, ?)",
-		"get":    "SELECT Value FROM " + dbTable + " WHERE Path = ?",
-		"delete": "DELETE FROM " + dbTable + " WHERE Path = ?",
-		"list":   "SELECT Path FROM " + dbTable + " WHERE Path LIKE ?",
+		"put": "DECLARE @qP VARCHAR(512) = CAST(:1 AS VARCHAR(512));" +
+			" IF EXISTS(SELECT 1 FROM " + dbTable + " WHERE Path = @qP) UPDATE " + dbTable + " SET Value = :2 WHERE Path = @qP" +
+			" ELSE INSERT INTO " + dbTable + " VALUES(@qP, :2)",
+		"get":    "SELECT Value FROM " + dbTable + " WHERE Path = CAST(? AS VARCHAR(512))",
+		"delete": "DELETE FROM " + dbTable + " WHERE Path = CAST(? AS VARCHAR(512))",
+		"list":   "SELECT Path FROM " + dbTable + " WHERE Path LIKE CAST(? AS VARCHAR(512))",
 	}
 
 	for name, query := range statements {
@@ -242,7 +255,7 @@ func (m *MSSQLBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	m.permitPool.Acquire()
 	defer m.permitPool.Release()
 
-	_, err := m.statements["put"].Exec(entry.Key, entry.Value, entry.Key, entry.Key, entry.Value)
+	_, err := m.statements["put"].Exec(entry.Key, entry.Value)
 	if err != nil {
 		return err
 	}
