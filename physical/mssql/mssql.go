@@ -6,6 +6,7 @@ package mssql
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"regexp"
 	"sort"
@@ -34,6 +35,7 @@ type MSSQLBackend struct {
 }
 
 func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
+	var err error
 	validIdentifierRE := regexp.MustCompile(`^[\p{L}_][\p{L}\p{Nd}@#$_]*$`)
 
 	// <-- CLOSURE FUNCTION: get config value with defaults
@@ -107,37 +109,93 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		connectionString += ";port=" + port
 	}
 
-	db, err := sql.Open("mssql", connectionString)
+	connectionDatabase := ";database=" + database
+
+	// <-- CLOSURE FUNCTION: openConnection
+	openConnection := func(connectionStringEx string) (*sql.DB, error) {
+		db, err := sql.Open("mssql", connectionString+connectionStringEx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to connect to mssql: %w", err)
+		}
+		return db, nil
+	} // --> END
+
+	// <-- CLOSURE FUNCTION: createDatabase
+	errNoDefaultDb := errors.New("mssql: Cannot open requested database")
+	createDatabase := func(db *sql.DB, database string, collation string) error {
+		exQuery := database
+		if collation != "" {
+			exQuery += " COLLATE " + collation
+		}
+		_, err := db.Exec("IF NOT EXISTS(SELECT * FROM sys.databases WHERE name = ?) CREATE DATABASE "+exQuery, database)
+		if err != nil {
+			var sqlErr mssql.Error
+			if errors.As(err, &sqlErr) && sqlErr.SQLErrorNumber() == 4063 {
+				return errNoDefaultDb
+			}
+			err = fmt.Errorf("failed to create mssql database: %w", err)
+		}
+		return err
+	} // --> END
+
+	// Open connection with database parameter
+	var db *sql.DB
+	db, err = openConnection(connectionDatabase)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to mssql: %w", err)
+		return nil, err
+	}
+
+	// Create database if exist and empty
+	err = createDatabase(db, database, databaseCollation)
+	if err != nil {
+		if err == errNoDefaultDb {
+			// Database not exist
+			// 4063: Cannot open database that was requested by the login. Using the user default database instead.
+			err = db.Close()
+			if err == nil {
+				// if ok, Reopen connection without database parameter
+				db, err = openConnection("")
+				if err == nil {
+					// if ok, Create database
+					err = createDatabase(db, database, databaseCollation)
+					if err == nil {
+						err = db.Close()
+						if err == nil {
+							// if ok, Reopen connection with database parameter
+							db, err = openConnection(connectionDatabase)
+						}
+					}
+				}
+			}
+		}
+		// Fail if there are errors
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	db.SetMaxOpenConns(maxParInt)
 
-	if _, err := db.Exec("IF NOT EXISTS(SELECT * FROM sys.databases WHERE name = ?) CREATE DATABASE "+database, database); err != nil {
-		return nil, fmt.Errorf("failed to create mssql database: %w", err)
-	}
-
-	dbTable := database + "." + schema + "." + table
+	dbTable := schema + "." + table
 	createQuery := "IF NOT EXISTS(SELECT 1 FROM " + database + ".INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_NAME=? AND TABLE_SCHEMA=?) CREATE TABLE " + dbTable + " (Path VARCHAR(512) PRIMARY KEY, Value VARBINARY(MAX))"
 
 	if schema != "dbo" {
-
+		var errFmt string = "failed to check if mssql schema exists: %w"
 		var num int
 		err = db.QueryRow("SELECT 1 FROM "+database+".sys.schemas WHERE name = ?", schema).Scan(&num)
-
-		switch {
-		case err == sql.ErrNoRows:
-			if _, err := db.Exec("USE " + database + "; EXEC ('CREATE SCHEMA " + schema + "')"); err != nil {
-				return nil, fmt.Errorf("failed to create mssql schema: %w", err)
-			}
-
-		case err != nil:
-			return nil, fmt.Errorf("failed to check if mssql schema exists: %w", err)
+		if err != nil && err == sql.ErrNoRows {
+			// CREATE SCHEMA
+			errFmt = "failed to create mssql schema: %w"
+			_, err = db.Exec("USE " + database + "; EXEC ('CREATE SCHEMA " + schema + "')")
+		}
+		// Fail if there are errors
+		if err != nil {
+			return nil, fmt.Errorf(errFmt, err)
 		}
 	}
 
-	if _, err := db.Exec(createQuery, table, schema); err != nil {
+	_, err = db.Exec(createQuery, table, schema)
+	if err != nil {
 		return nil, fmt.Errorf("failed to create mssql table: %w", err)
 	}
 
@@ -158,7 +216,8 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	}
 
 	for name, query := range statements {
-		if err := m.prepare(name, query); err != nil {
+		err = m.prepare(name, query)
+		if err != nil {
 			return nil, err
 		}
 	}
