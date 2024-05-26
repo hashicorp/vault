@@ -22,7 +22,7 @@ import (
 
 // Verify MSSQLBackend satisfies the correct interfaces
 var (
-	_               physical.Backend = (*MSSQLBackend)(nil)
+	_ physical.Backend = (*MSSQLBackend)(nil)
 )
 
 type MSSQLBackend struct {
@@ -34,31 +34,30 @@ type MSSQLBackend struct {
 }
 
 func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
-	username, ok := conf["username"]
-	if !ok {
-		username = ""
-	}
 	validIdentifierRE := regexp.MustCompile(`^[\p{L}_][\p{L}\p{Nd}@#$_]*$`)
 
-	password, ok := conf["password"]
-	if !ok {
-		password = ""
-	}
+	// <-- CLOSURE FUNCTION: get config value with defaults
+	getConfValue := func(confKey string, defaultValue string) string {
+		confVal, ok := conf[confKey]
+		if ok || confVal != "" {
+			return confVal
+		}
+		return defaultValue
+	} // --> END
 
-	server, ok := conf["server"]
-	if !ok || server == "" {
+	username := getConfValue("username", "")
+	password := getConfValue("password", "")
+
+	server := getConfValue("server", "")
+	if server == "" {
 		return nil, fmt.Errorf("missing server")
 	}
 
-	port, ok := conf["port"]
-	if !ok {
-		port = ""
-	}
+	port := getConfValue("port", "")
 
-	maxParStr, ok := conf["max_parallel"]
-	var maxParInt int
-	var err error
-	if ok {
+	maxParInt := physical.DefaultParallelOperations
+	maxParStr := getConfValue("max_parallel", "")
+	if maxParStr != "" {
 		maxParInt, err = strconv.Atoi(maxParStr)
 		if err != nil {
 			return nil, fmt.Errorf("failed parsing max_parallel parameter: %w", err)
@@ -66,48 +65,27 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		if logger.IsDebug() {
 			logger.Debug("max_parallel set", "max_parallel", maxParInt)
 		}
-	} else {
-		maxParInt = physical.DefaultParallelOperations
 	}
 
-	database, ok := conf["database"]
-	if !ok {
-		database = "Vault"
-	}
-
+	database := getConfValue("database", "Vault")
 	if !validIdentifierRE.MatchString(database) {
 		return nil, fmt.Errorf("invalid database name")
 	}
 
-	table, ok := conf["table"]
-	if !ok {
-		table = "Vault"
-	}
+	databaseCollation := getConfValue("databaseCollation", "")
 
+	table := getConfValue("table", "Vault")
 	if !validIdentifierRE.MatchString(table) {
 		return nil, fmt.Errorf("invalid table name")
 	}
 
-	appname, ok := conf["appname"]
-	if !ok {
-		appname = "Vault"
-	}
+	appname := getConfValue("appname", "Vault")
 
-	connectionTimeout, ok := conf["connectiontimeout"]
-	if !ok {
-		connectionTimeout = "30"
-	}
+	connectionTimeout := getConfValue("connectiontimeout", "30")
 
-	logLevel, ok := conf["loglevel"]
-	if !ok {
-		logLevel = "0"
-	}
+	logLevel := getConfValue("loglevel", "0")
 
-	schema, ok := conf["schema"]
-	if !ok || schema == "" {
-		schema = "dbo"
-	}
-
+	schema := getConfValue("schema", "dbo")
 	if !validIdentifierRE.MatchString(schema) {
 		return nil, fmt.Errorf("invalid schema name")
 	}
