@@ -23,7 +23,6 @@ import (
 // Verify MSSQLBackend satisfies the correct interfaces
 var (
 	_               physical.Backend = (*MSSQLBackend)(nil)
-	identifierRegex                  = regexp.MustCompile(`^[\p{L}_][\p{L}\p{Nd}@#$_]*$`)
 )
 
 type MSSQLBackend struct {
@@ -34,18 +33,12 @@ type MSSQLBackend struct {
 	permitPool *physical.PermitPool
 }
 
-func isInvalidIdentifier(name string) bool {
-	if !identifierRegex.MatchString(name) {
-		return true
-	}
-	return false
-}
-
 func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
 	username, ok := conf["username"]
 	if !ok {
 		username = ""
 	}
+	validIdentifierRE := regexp.MustCompile(`^[\p{L}_][\p{L}\p{Nd}@#$_]*$`)
 
 	password, ok := conf["password"]
 	if !ok {
@@ -82,7 +75,7 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		database = "Vault"
 	}
 
-	if isInvalidIdentifier(database) {
+	if !validIdentifierRE.MatchString(database) {
 		return nil, fmt.Errorf("invalid database name")
 	}
 
@@ -91,7 +84,7 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		table = "Vault"
 	}
 
-	if isInvalidIdentifier(table) {
+	if !validIdentifierRE.MatchString(table) {
 		return nil, fmt.Errorf("invalid table name")
 	}
 
@@ -115,7 +108,7 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		schema = "dbo"
 	}
 
-	if isInvalidIdentifier(schema) {
+	if !validIdentifierRE.MatchString(schema) {
 		return nil, fmt.Errorf("invalid schema name")
 	}
 
