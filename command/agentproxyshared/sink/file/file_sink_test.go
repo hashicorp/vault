@@ -136,6 +136,9 @@ func TestFileSinkMode(t *testing.T) {
 	}
 }
 
+// TestFileSinkMode_Ownership tests that the file is owned by the group specified
+// in the configuration. This test requires the current user to be in at least two
+// groups. If the user is not in two groups, the test will be skipped.
 func TestFileSinkMode_Ownership(t *testing.T) {
 	groups, err := os.Getgroups()
 	if err != nil {
