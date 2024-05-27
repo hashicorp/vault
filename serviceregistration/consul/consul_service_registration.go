@@ -232,7 +232,7 @@ func (c *serviceRegistration) merge(conf map[string]string) error {
 	}
 
 	// Get user-defined meta tags to attach to the registered service name
-	var metaTags = map[string]string{}
+	metaTags := map[string]string{}
 	if metaTagsJSON, ok := conf["service_meta"]; ok {
 		if err := json.Unmarshal([]byte(metaTagsJSON), &metaTags); err != nil {
 			return errors.New("service tags must be a dictionary of string keys and values")
