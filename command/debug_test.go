@@ -5,9 +5,10 @@ package command
 
 import (
 	"archive/tar"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -18,7 +19,7 @@ import (
 
 	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
-	"github.com/mholt/archiver/v3"
+	"github.com/stretchr/testify/require"
 )
 
 func testDebugCommand(tb testing.TB) (*cli.MockUi, *DebugCommand) {
@@ -35,11 +36,7 @@ func testDebugCommand(tb testing.TB) (*cli.MockUi, *DebugCommand) {
 func TestDebugCommand_Run(t *testing.T) {
 	t.Parallel()
 
-	testDir, err := ioutil.TempDir("", "vault-debug")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(testDir)
+	testDir := t.TempDir()
 
 	cases := []struct {
 		name string
@@ -104,6 +101,54 @@ func TestDebugCommand_Run(t *testing.T) {
 	}
 }
 
+// expectHeaderNamesInTarGzFile asserts that the expectedHeaderNames
+// match exactly to the header names in the tar.gz file at tarballPath.
+// Will error if there are more or less than expected.
+// ignoreUnexpectedHeaders toggles ignoring the presence of headers not
+// in expectedHeaderNames.
+func expectHeaderNamesInTarGzFile(t *testing.T, tarballPath string, expectedHeaderNames []string, ignoreUnexpectedHeaders bool) {
+	t.Helper()
+
+	file, err := os.Open(tarballPath)
+	require.NoError(t, err)
+
+	uncompressedStream, err := gzip.NewReader(file)
+	require.NoError(t, err)
+
+	tarReader := tar.NewReader(uncompressedStream)
+	headersFoundMap := make(map[string]any)
+
+	for {
+		header, err := tarReader.Next()
+		if err == io.EOF {
+			// We're at the end of the tar.
+			break
+		}
+		require.NoError(t, err)
+
+		// Ignore directories.
+		if header.Typeflag == tar.TypeDir {
+			continue
+		}
+
+		for _, name := range expectedHeaderNames {
+			if header.Name == name {
+				headersFoundMap[header.Name] = struct{}{}
+			}
+		}
+		if _, ok := headersFoundMap[header.Name]; !ok && !ignoreUnexpectedHeaders {
+			t.Fatalf("unexpected file: %s", header.Name)
+		}
+	}
+
+	// Expect that every expectedHeader was found at some point
+	for _, name := range expectedHeaderNames {
+		if _, ok := headersFoundMap[name]; !ok {
+			t.Fatalf("missing header from tar: %s", name)
+		}
+	}
+}
+
 func TestDebugCommand_Archive(t *testing.T) {
 	t.Parallel()
 
@@ -137,11 +182,7 @@ func TestDebugCommand_Archive(t *testing.T) {
 
 			// Create temp dirs for each test case since os.Stat and tgz.Walk
 			// (called down below) exhibits raciness otherwise.
-			testDir, err := ioutil.TempDir("", "vault-debug")
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer os.RemoveAll(testDir)
+			testDir := t.TempDir()
 
 			client, closer := testVaultServer(t)
 			defer closer()
@@ -177,32 +218,14 @@ func TestDebugCommand_Archive(t *testing.T) {
 			}
 
 			bundlePath := filepath.Join(testDir, basePath+expectedExt)
-			_, err = os.Stat(bundlePath)
+			_, err := os.Stat(bundlePath)
 			if os.IsNotExist(err) {
 				t.Log(ui.OutputWriter.String())
 				t.Fatal(err)
 			}
 
-			tgz := archiver.NewTarGz()
-			err = tgz.Walk(bundlePath, func(f archiver.File) error {
-				fh, ok := f.Header.(*tar.Header)
-				if !ok {
-					return fmt.Errorf("invalid file header: %#v", f.Header)
-				}
-
-				// Ignore base directory and index file
-				if fh.Name == basePath+"/" || fh.Name == filepath.Join(basePath, "index.json") {
-					return nil
-				}
-
-				if fh.Name != filepath.Join(basePath, "server_status.json") {
-					return fmt.Errorf("unexpected file: %s", fh.Name)
-				}
-				return nil
-			})
-			if err != nil {
-				t.Fatal(err)
-			}
+			expectedHeaders := []string{filepath.Join(basePath, "index.json"), filepath.Join(basePath, "server_status.json")}
+			expectHeaderNamesInTarGzFile(t, bundlePath, expectedHeaders, false)
 		})
 	}
 }
@@ -258,11 +281,7 @@ func TestDebugCommand_CaptureTargets(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			testDir, err := ioutil.TempDir("", "vault-debug")
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer os.RemoveAll(testDir)
+			testDir := t.TempDir()
 
 			client, closer := testVaultServer(t)
 			defer closer()
@@ -287,45 +306,22 @@ func TestDebugCommand_CaptureTargets(t *testing.T) {
 			}
 
 			bundlePath := filepath.Join(testDir, basePath+debugCompressionExt)
-			_, err = os.Open(bundlePath)
+			_, err := os.Open(bundlePath)
 			if err != nil {
 				t.Fatalf("failed to open archive: %s", err)
 			}
 
-			tgz := archiver.NewTarGz()
-			err = tgz.Walk(bundlePath, func(f archiver.File) error {
-				fh, ok := f.Header.(*tar.Header)
-				if !ok {
-					t.Fatalf("invalid file header: %#v", f.Header)
-				}
-
-				// Ignore base directory and index file
-				if fh.Name == basePath+"/" || fh.Name == filepath.Join(basePath, "index.json") {
-					return nil
-				}
-
-				for _, fileName := range tc.expectedFiles {
-					if fh.Name == filepath.Join(basePath, fileName) {
-						return nil
-					}
-				}
-
-				// If we reach here, it means that this is an unexpected file
-				return fmt.Errorf("unexpected file: %s", fh.Name)
-			})
-			if err != nil {
-				t.Fatal(err)
+			expectedHeaders := []string{filepath.Join(basePath, "index.json")}
+			for _, fileName := range tc.expectedFiles {
+				expectedHeaders = append(expectedHeaders, filepath.Join(basePath, fileName))
 			}
+			expectHeaderNamesInTarGzFile(t, bundlePath, expectedHeaders, false)
 		})
 	}
 }
 
 func TestDebugCommand_Pprof(t *testing.T) {
-	testDir, err := ioutil.TempDir("", "vault-debug")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(testDir)
+	testDir := t.TempDir()
 
 	client, closer := testVaultServer(t)
 	defer closer()
@@ -379,11 +375,7 @@ func TestDebugCommand_Pprof(t *testing.T) {
 func TestDebugCommand_IndexFile(t *testing.T) {
 	t.Parallel()
 
-	testDir, err := ioutil.TempDir("", "vault-debug")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(testDir)
+	testDir := t.TempDir()
 
 	client, closer := testVaultServer(t)
 	defer closer()
@@ -409,7 +401,7 @@ func TestDebugCommand_IndexFile(t *testing.T) {
 		t.Fatalf("expected %d to be %d", code, exp)
 	}
 
-	content, err := ioutil.ReadFile(filepath.Join(outputPath, "index.json"))
+	content, err := os.ReadFile(filepath.Join(outputPath, "index.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -426,11 +418,7 @@ func TestDebugCommand_IndexFile(t *testing.T) {
 func TestDebugCommand_TimingChecks(t *testing.T) {
 	t.Parallel()
 
-	testDir, err := ioutil.TempDir("", "vault-debug")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(testDir)
+	testDir := t.TempDir()
 
 	cases := []struct {
 		name            string
@@ -585,11 +573,7 @@ func TestDebugCommand_OutputExists(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			testDir, err := ioutil.TempDir("", "vault-debug")
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer os.RemoveAll(testDir)
+			testDir := t.TempDir()
 
 			client, closer := testVaultServer(t)
 			defer closer()
@@ -602,12 +586,12 @@ func TestDebugCommand_OutputExists(t *testing.T) {
 
 			// Create a conflicting file/directory
 			if tc.compress {
-				_, err = os.Create(outputPath)
+				_, err := os.Create(outputPath)
 				if err != nil {
 					t.Fatal(err)
 				}
 			} else {
-				err = os.Mkdir(outputPath, 0o700)
+				err := os.Mkdir(outputPath, 0o700)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -639,11 +623,7 @@ func TestDebugCommand_OutputExists(t *testing.T) {
 func TestDebugCommand_PartialPermissions(t *testing.T) {
 	t.Parallel()
 
-	testDir, err := ioutil.TempDir("", "vault-debug")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(testDir)
+	testDir := t.TempDir()
 
 	client, closer := testVaultServer(t)
 	defer closer()
@@ -680,38 +660,14 @@ func TestDebugCommand_PartialPermissions(t *testing.T) {
 		t.Fatalf("failed to open archive: %s", err)
 	}
 
-	tgz := archiver.NewTarGz()
-	err = tgz.Walk(bundlePath, func(f archiver.File) error {
-		fh, ok := f.Header.(*tar.Header)
-		if !ok {
-			t.Fatalf("invalid file header: %#v", f.Header)
-		}
-
-		// Ignore base directory and index file
-		if fh.Name == basePath+"/" {
-			return nil
-		}
-
-		// Ignore directories, which still get created by pprof but should
-		// otherwise be empty.
-		if fh.FileInfo().IsDir() {
-			return nil
-		}
-
-		switch {
-		case fh.Name == filepath.Join(basePath, "index.json"):
-		case fh.Name == filepath.Join(basePath, "replication_status.json"):
-		case fh.Name == filepath.Join(basePath, "server_status.json"):
-		case fh.Name == filepath.Join(basePath, "vault.log"):
-		default:
-			return fmt.Errorf("unexpected file: %s", fh.Name)
-		}
-
-		return nil
-	})
-	if err != nil {
-		t.Fatal(err)
+	expectedHeaders := []string{
+		filepath.Join(basePath, "index.json"), filepath.Join(basePath, "server_status.json"),
+		filepath.Join(basePath, "vault.log"),
 	}
+
+	// We set ignoreUnexpectedHeaders to true as replication_status.json is only sometimes
+	// produced. Relying on it being or not being there would be racy.
+	expectHeaderNamesInTarGzFile(t, bundlePath, expectedHeaders, true)
 }
 
 // set insecure umask to see if the files and directories get created with right permissions
@@ -748,11 +704,7 @@ func TestDebugCommand_InsecureUmask(t *testing.T) {
 			// set insecure umask
 			defer syscall.Umask(syscall.Umask(0))
 
-			testDir, err := ioutil.TempDir("", "vault-debug")
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer os.RemoveAll(testDir)
+			testDir := t.TempDir()
 
 			client, closer := testVaultServer(t)
 			defer closer()
@@ -796,20 +748,22 @@ func TestDebugCommand_InsecureUmask(t *testing.T) {
 			// check permissions of the files within the parent directory
 			switch tc.compress {
 			case true:
-				tgz := archiver.NewTarGz()
+				file, err := os.Open(bundlePath)
+				require.NoError(t, err)
 
-				err = tgz.Walk(bundlePath, func(f archiver.File) error {
-					fh, ok := f.Header.(*tar.Header)
-					if !ok {
-						return fmt.Errorf("invalid file header: %#v", f.Header)
-					}
-					err = isValidFilePermissions(fh.FileInfo())
-					if err != nil {
-						t.Fatalf(err.Error())
-					}
-					return nil
-				})
+				uncompressedStream, err := gzip.NewReader(file)
+				require.NoError(t, err)
 
+				tarReader := tar.NewReader(uncompressedStream)
+
+				for {
+					header, err := tarReader.Next()
+					if err == io.EOF {
+						break
+					}
+					err = isValidFilePermissions(header.FileInfo())
+					require.NoError(t, err)
+				}
 			case false:
 				err = filepath.Walk(bundlePath, func(path string, info os.FileInfo, err error) error {
 					err = isValidFilePermissions(info)
@@ -820,9 +774,7 @@ func TestDebugCommand_InsecureUmask(t *testing.T) {
 				})
 			}
 
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 		})
 	}
 }
