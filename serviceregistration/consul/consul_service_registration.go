@@ -232,17 +232,15 @@ func (c *serviceRegistration) merge(conf map[string]string) error {
 	}
 
 	// Get user-defined meta tags to attach to the registered service name
-	metaTagsJSON, ok := conf["service_meta"]
 	var metaTags = map[string]string{}
-	if ok {
+	if metaTagsJSON, ok := conf["service_meta"]; ok {
 		if err := json.Unmarshal([]byte(metaTagsJSON), &metaTags); err != nil {
 			return errors.New("service tags must be a dictionary of string keys and values")
 		}
-		metaTags["external-source"] = metaExternalSource
-
-		if c.logger.IsDebug() {
-			c.logger.Debug("config service_meta set", "service_meta", metaTags)
-		}
+	}
+	metaTags["external-source"] = metaExternalSource
+	if c.logger.IsDebug() {
+		c.logger.Debug("config service_meta set", "service_meta", metaTags)
 	}
 
 	// Get the service-specific address to override the use of the HA redirect address
