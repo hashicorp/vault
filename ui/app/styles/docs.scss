@@ -76,6 +76,7 @@
   pre code {
     overflow-x: scroll;
     max-width: 700px;
+    white-space: pre-line;
   }
 
   pre,
@@ -106,6 +107,7 @@
     border: 1px solid $grey-lightest;
     border-radius: 6px;
     padding: 1rem;
+    overflow: scroll;
 
     .docfy-demo__example {
       & pre,
