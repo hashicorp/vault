@@ -38,20 +38,18 @@ module('Integration | Component | filter-input-explicit', function (hooks) {
   });
 
   test('it should call handleSearch on submit', async function (assert) {
-    this.handleSearch.calledOnce;
-
     await this.renderComponent();
     await typeIn(GENERAL.filterInputExplicit, 'bar');
     await click(GENERAL.filterInputExplicitSearch);
+    assert.ok(this.handleSearch.calledOnce, 'handleSearch was called once');
   });
 
   test('it should send keydown event on keydown', async function (assert) {
-    assert.true(this.handleKeydown.calledTwice);
-
     await this.renderComponent();
     await typeIn(GENERAL.filterInputExplicit, 'a');
     await typeIn(GENERAL.filterInputExplicit, 'b');
 
-    assert.true(this.handleSearch.notCalled);
+    assert.ok(this.handleKeyDown.calledTwice, 'handle keydown was called twice');
+    assert.ok(this.handleSearch.notCalled, 'handleSearch was not called on a keydown event');
   });
 });
