@@ -10,11 +10,17 @@ import hbs from 'htmlbars-inline-precompile';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import sinon from 'sinon';
 
+const handler = (e) => {
+  // required because filter-input-explicit passes handleSearch on form submit
+  if (e && e.preventDefault) e.preventDefault();
+  return;
+};
+
 module('Integration | Component | filter-input-explicit', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
-    this.handleSearch = sinon.spy();
+    this.handleSearch = sinon.spy(handler);
     this.handleInput = sinon.spy();
     this.handleKeyDown = sinon.spy();
     this.query = '';
