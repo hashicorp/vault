@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-/* eslint-disable qunit/require-expect */
 import sinon from 'sinon';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
