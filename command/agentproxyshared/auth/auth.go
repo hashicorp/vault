@@ -535,7 +535,6 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 					metrics.IncrCounter([]string{ah.metricsSignifier, "auth", "failure"}, 1)
 					// Set unauthenticated when authentication fails
 					metrics.SetGauge([]string{ah.metricsSignifier, "authenticated"}, 0)
-					ah.logger.Error("error renewing token", "error", err)
 
 					// Add some exponential backoff so that if auth is successful
 					// but the watcher errors, we won't go into an immediate
