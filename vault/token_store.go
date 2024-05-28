@@ -3435,8 +3435,10 @@ func (ts *TokenStore) handleLookup(ctx context.Context, req *logical.Request, da
 			return nil, err
 		}
 		if len(identityPolicies) != 0 {
-			resp.Data["identity_policies"] = identityPolicies[out.NamespaceID]
-			delete(identityPolicies, out.NamespaceID)
+			if _, ok := identityPolicies[out.NamespaceID]; ok {
+				resp.Data["identity_policies"] = identityPolicies[out.NamespaceID]
+				delete(identityPolicies, out.NamespaceID)
+			}
 			resp.Data["external_namespace_policies"] = identityPolicies
 		}
 	}
