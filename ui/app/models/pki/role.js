@@ -4,77 +4,20 @@
  */
 
 import Model, { attr } from '@ember-data/model';
+import { service } from '@ember/service';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { withModelValidations } from 'vault/decorators/model-validations';
-import { withFormFields } from 'vault/decorators/model-form-fields';
+import { withExpandedAttributes } from 'vault/decorators/model-expanded-attributes';
 
 const validations = {
   name: [{ type: 'presence', message: 'Name is required.' }],
 };
 
-const fieldGroups = [
-  {
-    default: [
-      'name',
-      'issuerRef',
-      'customTtl',
-      'notBeforeDuration',
-      'maxTtl',
-      'generateLease',
-      'noStore',
-      'noStoreMetadata',
-      'addBasicConstraints',
-    ],
-  },
-  {
-    'Domain handling': [
-      'allowedDomains',
-      'allowedDomainsTemplate',
-      'allowBareDomains',
-      'allowSubdomains',
-      'allowGlobDomains',
-      'allowWildcardCertificates',
-      'allowLocalhost', // default: true (returned true by OpenApi)
-      'allowAnyName',
-      'enforceHostnames', // default: true (returned true by OpenApi)
-    ],
-  },
-  {
-    'Key parameters': ['keyType', 'keyBits', 'signatureBits'],
-  },
-  {
-    'Key usage': ['keyUsage', 'extKeyUsage', 'extKeyUsageOids'],
-  },
-  { 'Policy identifiers': ['policyIdentifiers'] },
-  {
-    'Subject Alternative Name (SAN) Options': [
-      'allowIpSans',
-      'allowedUriSans',
-      'allowUriSansTemplate',
-      'allowedOtherSans',
-    ],
-  },
-  {
-    'Additional subject fields': [
-      'allowedUserIds',
-      'allowedSerialNumbers',
-      'requireCn',
-      'useCsrCommonName',
-      'useCsrSans',
-      'ou',
-      'organization',
-      'country',
-      'locality',
-      'province',
-      'streetAddress',
-      'postalCode',
-    ],
-  },
-];
-
-@withFormFields(null, fieldGroups)
+@withExpandedAttributes()
 @withModelValidations(validations)
 export default class PkiRoleModel extends Model {
+  @service version; // noStoreMetadata is enterprise-only, so we need this available
+
   get useOpenAPI() {
     // must be a getter so it can be accessed in path-help.js
     return true;
@@ -84,6 +27,72 @@ export default class PkiRoleModel extends Model {
   }
 
   @attr('string', { readOnly: true }) backend;
+
+  get formFieldGroups() {
+    const defaultArray = [
+      'name',
+      'issuerRef',
+      'customTtl',
+      'notBeforeDuration',
+      'maxTtl',
+      'generateLease',
+      'noStore',
+      'noStoreMetadata',
+      'addBasicConstraints',
+    ];
+    if (this.version.isCommunity) {
+      defaultArray.splice(defaultArray.indexOf('noStoreMetadata'), 1); // remove noStoreMetadata, which is enterprise-only
+    }
+    return this._expandGroups([
+      {
+        default: defaultArray,
+      },
+      {
+        'Domain handling': [
+          'allowedDomains',
+          'allowedDomainsTemplate',
+          'allowBareDomains',
+          'allowSubdomains',
+          'allowGlobDomains',
+          'allowWildcardCertificates',
+          'allowLocalhost', // default: true (returned true by OpenApi)
+          'allowAnyName',
+          'enforceHostnames', // default: true (returned true by OpenApi)
+        ],
+      },
+      {
+        'Key parameters': ['keyType', 'keyBits', 'signatureBits'],
+      },
+      {
+        'Key usage': ['keyUsage', 'extKeyUsage', 'extKeyUsageOids'],
+      },
+      { 'Policy identifiers': ['policyIdentifiers'] },
+      {
+        'Subject Alternative Name (SAN) Options': [
+          'allowIpSans',
+          'allowedUriSans',
+          'allowUriSansTemplate',
+          'allowedOtherSans',
+        ],
+      },
+      {
+        'Additional subject fields': [
+          'allowedUserIds',
+          'allowedSerialNumbers',
+          'requireCn',
+          'useCsrCommonName',
+          'useCsrSans',
+          'ou',
+          'organization',
+          'country',
+          'locality',
+          'province',
+          'streetAddress',
+          'postalCode',
+        ],
+      },
+    ]);
+  }
 
   /* Overriding OpenApi default options */
   @attr('string', {
