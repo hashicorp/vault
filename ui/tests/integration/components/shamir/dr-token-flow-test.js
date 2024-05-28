@@ -9,8 +9,8 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, fillIn, render, waitFor } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { overrideResponse } from 'vault/tests/helpers/stubs';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { overrideResponse } from 'vault/tests/helpers/clients';
+import { SELECTORS as GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | shamir/dr-token-flow', function (hooks) {
   setupRenderingTest(hooks);
