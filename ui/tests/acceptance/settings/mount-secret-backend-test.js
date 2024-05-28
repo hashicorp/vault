@@ -153,12 +153,16 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
         capabilities = ["read"]
       }
     `;
-    await consoleComponent.runCommands([
-      // delete any previous mount with same name
-      `delete sys/mounts/${enginePath}`,
-      `write sys/policies/acl/kv-v2-degrade policy=${btoa(V2_POLICY)}`,
-      'write -field=client_token auth/token/create policies=kv-v2-degrade',
-    ]);
+    await consoleComponent.toggle();
+    await consoleComponent.runCommands(
+      [
+        // delete any previous mount with same name
+        `delete sys/mounts/${enginePath}`,
+        `write sys/policies/acl/kv-v2-degrade policy=${btoa(V2_POLICY)}`,
+        'write -field=client_token auth/token/create policies=kv-v2-degrade',
+      ],
+      false
+    );
     await settled();
     const userToken = consoleComponent.lastLogOutput;
     await logout.visit();

@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -23,6 +24,7 @@ const (
 	pathConfigAcmeHelpSyn  = "Configuration of ACME Endpoints"
 	pathConfigAcmeHelpDesc = "Here we configure:\n\nenabled=false, whether ACME is enabled, defaults to false meaning that clusters will by default not get ACME support,\nallowed_issuers=\"default\", which issuers are allowed for use with ACME; by default, this will only be the primary (default) issuer,\nallowed_roles=\"*\", which roles are allowed for use with ACME; by default these will be all roles matching our selection criteria,\ndefault_directory_policy=\"\", either \"forbid\", preventing the default directory from being used at all, \"role:<role_name>\" which is the role to be used for non-role-qualified ACME requests; or \"sign-verbatim\", the default meaning ACME issuance will be equivalent to sign-verbatim.,\ndns_resolver=\"\", which specifies a custom DNS resolver to use for all ACME-related DNS lookups"
 	disableAcmeEnvVar      = "VAULT_DISABLE_PUBLIC_ACME"
+	defaultAcmeMaxTTL      = 90 * (24 * time.Hour)
 )
 
 type acmeConfigEntry struct {
@@ -33,6 +35,7 @@ type acmeConfigEntry struct {
 	DefaultDirectoryPolicy string        `json:"default_directory_policy"`
 	DNSResolver            string        `json:"dns_resolver"`
 	EabPolicyName          EabPolicyName `json:"eab_policy_name"`
+	MaxTTL                 time.Duration `json:"max_ttl"`
 }
 
 var defaultAcmeConfig = acmeConfigEntry{
@@ -43,6 +46,7 @@ var defaultAcmeConfig = acmeConfigEntry{
 	DefaultDirectoryPolicy: "sign-verbatim",
 	DNSResolver:            "",
 	EabPolicyName:          eabPolicyNotRequired,
+	MaxTTL:                 defaultAcmeMaxTTL,
 }
 
 var (
@@ -67,6 +71,11 @@ func (sc *storageContext) getAcmeConfig() (*acmeConfigEntry, error) {
 
 	if err := entry.DecodeJSON(&mapping); err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to decode ACME configuration: %v", err)}
+	}
+
+	// Update previous stored configurations to use the default max ttl we used to enforce
+	if mapping.MaxTTL == 0 {
+		mapping.MaxTTL = defaultAcmeMaxTTL
 	}
 
 	return &mapping, nil
@@ -129,6 +138,11 @@ func pathAcmeConfig(b *backend) *framework.Path {
 				Description: `Specify the policy to use for external account binding behaviour, 'not-required', 'new-account-required' or 'always-required'`,
 				Default:     "always-required",
 			},
+			"max_ttl": {
+				Type:        framework.TypeDurationSecond,
+				Description: `Specify the maximum TTL for ACME certificates. Role TTL values will be limited to this value`,
+				Default:     defaultAcmeMaxTTL.Seconds(),
+			},
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -183,6 +197,7 @@ func genResponseFromAcmeConfig(config *acmeConfigEntry, warnings []string) *logi
 			"enabled":                  config.Enabled,
 			"dns_resolver":             config.DNSResolver,
 			"eab_policy":               config.EabPolicyName,
+			"max_ttl":                  config.MaxTTL.Seconds(),
 		},
 		Warnings: warnings,
 	}
@@ -249,6 +264,14 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 				eabPolicyNotRequired, eabPolicyNewAccountRequired, eabPolicyAlwaysRequired)
 		}
 		config.EabPolicyName = eabPolicy.Name
+	}
+
+	if maxTTLRaw, ok := d.GetOk("max_ttl"); ok {
+		maxTTL := time.Second * time.Duration(maxTTLRaw.(int))
+		if maxTTL <= 0 {
+			return nil, fmt.Errorf("invalid max_ttl value, must be greater than 0")
+		}
+		config.MaxTTL = maxTTL
 	}
 
 	// Validate Default Directory Behavior:

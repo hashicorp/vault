@@ -39,6 +39,7 @@ import { format, isSameMonth } from 'date-fns';
  * @param {string} responseTimestamp -  ISO timestamp created in serializer to timestamp the response, renders in bottom left corner below attribution chart
  * @param {boolean} isHistoricalMonth - when true data is from a single, historical month so side-by-side charts should display for attribution data
  * @param {array} upgradesDuringActivity - array of objects containing version history upgrade data
+ * @param {boolean} isSecretsSyncActivated - boolean to determine if secrets sync is activated
  */
 
 export default class Attribution extends Component {
@@ -163,15 +164,15 @@ export default class Attribution extends Component {
     // added to clarify that the row of namespace totals without an auth method (blank) are not additional clients
     // but indicate the total clients for that ns, including its auth methods
     const upgrade = this.args.upgradesDuringActivity?.length
-      ? `\n **data contains an upgrade, mount summation may not equal namespace totals`
+      ? `\n **data contains an upgrade (mount summation may not equal namespace totals)`
       : '';
     const descriptionOfBlanks = this.isSingleNamespace
       ? ''
-      : `\n  *namespace totals, inclusive of mount clients${upgrade}`;
+      : `\n *namespace totals, inclusive of mount clients${upgrade}`;
     // client type order here should match array order returned by destructureCountsToArray
     let csvHeader = [
       'Namespace path',
-      `Mount path${descriptionOfBlanks}`,
+      `"Mount path${descriptionOfBlanks}"`, // double quotes necessary so description stays inside this cell
       'Total clients',
       'Entity clients',
       'Non-entity clients',
