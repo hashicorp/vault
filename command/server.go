@@ -122,7 +122,7 @@ type ServerCommand struct {
 	flagConfigs            []string
 	flagRecovery           bool
 	flagExperiments        []string
-	flagHeapProfile        string
+	flagCLIDump            string
 	flagDev                bool
 	flagDevTLS             bool
 	flagDevTLSCertDir      string
@@ -227,8 +227,8 @@ func (c *ServerCommand) Flags() *FlagSets {
 	})
 
 	f.StringVar(&StringVar{
-		Name:       "heap-profile",
-		Target:     &c.flagHeapProfile,
+		Name:       "pprof-dump-dir",
+		Target:     &c.flagCLIDump,
 		Completion: complete.PredictDirs("*"),
 		Usage:      "Directory where generated profiles are created. If left unset, files are not generated.",
 	})
@@ -1624,9 +1624,9 @@ func (c *ServerCommand) Run(args []string) int {
 		coreShutdownDoneCh = core.ShutdownDone()
 	}
 
-	heapProfCh := make(chan struct{})
-	if c.flagHeapProfile != "" {
-		go func() { heapProfCh <- struct{}{} }()
+	cliDumpCh := make(chan struct{})
+	if c.flagCLIDump != "" {
+		go func() { cliDumpCh <- struct{}{} }()
 	}
 
 	// Wait for shutdown
@@ -1822,12 +1822,14 @@ func (c *ServerCommand) Run(args []string) int {
 			}
 
 			c.logger.Info(fmt.Sprintf("Wrote pprof files to: %s", pprofPath))
-		case <-heapProfCh:
-			path := c.flagHeapProfile
-			if _, err := os.Stat(path); err != nil {
-				c.logger.Error("Checking heap profile path failed", "error", err)
+		case <-cliDumpCh:
+			path := c.flagCLIDump
+
+			if _, err := os.Stat(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+				c.logger.Error("Checking cli dump path failed", "error", err)
 				continue
 			}
+
 			pprofPath := filepath.Join(path, "vault-pprof")
 			err := os.MkdirAll(pprofPath, os.ModePerm)
 			if err != nil {
@@ -1864,7 +1866,7 @@ func (c *ServerCommand) Run(args []string) int {
 				pFile.Close()
 			}
 
-			c.logger.Info(fmt.Sprintf("Wrote pprof files to: %s", pprofPath))
+			c.logger.Info(fmt.Sprintf("Wrote startup pprof files to: %s", pprofPath))
 		}
 	}
 	// Notify systemd that the server is shutting down
