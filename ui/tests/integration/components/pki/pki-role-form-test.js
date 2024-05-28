@@ -37,7 +37,6 @@ module('Integration | Component | pki-role-form', function (hooks) {
   });
 
   test('it should render default fields and toggle groups', async function (assert) {
-    assert.expect(13);
     await render(
       hbs`
       <PkiRoleForm
@@ -55,6 +54,7 @@ module('Integration | Component | pki-role-form', function (hooks) {
     assert.dom(GENERAL.ttl.toggle('Max TTL')).exists();
     assert.dom(GENERAL.fieldByAttr('generateLease')).exists();
     assert.dom(GENERAL.fieldByAttr('noStore')).exists();
+    assert.dom(GENERAL.fieldByAttr('noStoreMetadata')).exists();
     assert.dom(GENERAL.inputByAttr('addBasicConstraints')).exists();
     assert.dom(PKI_ROLE_FORM.domainHandling).exists('shows form-field group add domain handling');
     assert.dom(PKI_ROLE_FORM.keyParams).exists('shows form-field group key params');

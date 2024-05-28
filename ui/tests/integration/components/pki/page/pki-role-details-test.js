@@ -20,6 +20,7 @@ module('Integration | Component | pki role details page', function (hooks) {
       name: 'Foobar',
       backend: 'pki',
       noStore: false,
+      noStoreMetadata: true,
       keyUsage: [],
       extKeyUsage: ['bar', 'baz'],
       ttl: 600,
@@ -27,7 +28,6 @@ module('Integration | Component | pki role details page', function (hooks) {
   });
 
   test('it should render the page component', async function (assert) {
-    assert.expect(5);
     await render(
       hbs`
       <Page::PkiRoleDetails @role={{this.model}} />
@@ -44,6 +44,9 @@ module('Integration | Component | pki role details page', function (hooks) {
     assert
       .dom(PKI_ROLE_DETAILS.noStoreValue)
       .containsText('Yes', 'noStore shows opposite of what the value is');
+    assert
+      .dom(PKI_ROLE_DETAILS.noStoreMetadataValue)
+      .containsText('No', 'noStoreMetadata shows opposite of what the value is');
     assert.dom(PKI_ROLE_DETAILS.customTtlValue).containsText('10 minutes', 'TTL shown as duration');
   });
 
