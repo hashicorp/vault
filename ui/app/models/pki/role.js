@@ -22,6 +22,7 @@ const fieldGroups = [
       'maxTtl',
       'generateLease',
       'noStore',
+      'noStoreMetadata',
       'addBasicConstraints',
     ],
   },
@@ -145,6 +146,14 @@ export default class PkiRoleModel extends Model {
     docLink: '/vault/api-docs/secret/pki#create-update-role',
   })
   noStore;
+
+  @attr('boolean', {
+    label: 'Do not store certificate metadata in storage backend',
+    detailsLabel: 'Store metadata in storage backend', // template reverses value
+    subText:
+      'We don’t recommend storing metadata, since this information creates overhead in storage, and requires clean up.',
+  })
+  noStoreMetadata;
 
   @attr('boolean', {
     label: 'Basic constraints valid for non-CA',
