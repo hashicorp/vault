@@ -16,14 +16,14 @@ protect against overutilization, and budget for predicted consumption. Manual
 reporting shares the minimum data required to validate license utilization as
 defined in our contracts. The reports consist of mostly computed metrics and
 will never contain Personal Identifiable Information (PII) or other sensitive
-information. 
+information.
 
 Manual license utilization shares the same data as automated license utilization
 but is more time consuming. Unless you are running in an air-gapped environment
 or have another reason to report data manually, we strongly recommend using
 automated reporting instead. If you have disabled automated license reporting,
 you can re-enable it by reversing the opt-out process described in the
-[documentation](/vault/docs/enterprise/license/utilization-reporting#opt-out). 
+[documentation](/vault/docs/enterprise/license/utilization-reporting#opt-out).
 
 If you are considering manual reporting because you’re worried about your data,
 we strongly recommend that you review the [example
@@ -37,7 +37,7 @@ reporting in favor of manual reporting.
 ### Generate a data bundle
 
 Data bundles include collections of JSON snapshots that contain license
-utilization information.  
+utilization information.
 
 1. Login into your [cluster node](/vault/tutorials/cloud/vault-access-cluster).
 1. Run this CLI command to generate a data bundle:
@@ -46,12 +46,12 @@ utilization information.
    $ vault operator utilization
    ```
 
-   By default, the bundle will include all historical snapshots. 
+   By default, the bundle will include all historical snapshots.
 
    You can provide context about the conditions under which the report was
    generated and submitted by providing a comment. This optional comment will
    not be included in the license utilization bundle, but will be included in
-   the Vault server logs. 
+   the Vault server logs.
 
    **Example:**
 
@@ -63,7 +63,7 @@ utilization information.
    This command will export all the persisted snapshots into a bundle. The
    message “Change Control 654987” will not be included in the bundle but will
    be included in Vault server logs. The `-output` flags specifies the output
-   location of the JSON bundle. 
+   location of the JSON bundle.
 
    **Available command flags:**
 
@@ -74,8 +74,8 @@ utilization information.
 
    - `-today-only` `(bool: false)` - To include only today’s snapshot, no
    historical snapshots. If no snapshots were persisted in the last 24 hrs, it
-   takes a snapshot and exports it to a bundle. (optional)    
-   
+   takes a snapshot and exports it to a bundle. (optional)
+
    - `-output` `(string: “”)` - Specifies the output path for the bundle.
    Defaults to a time-based generated file name. (optional)
 
@@ -87,18 +87,18 @@ utilization information.
 
     a. If the upload succeeded, the HCP user interface will change the file
     status to **Uploaded** in green.
-    
+
     b. If the upload failed, the file status will say **Failed** in red, and
-    will include error information. 
+    will include error information.
 
 If the upload fails make sure you haven’t modified the file signature. If the
-error persists, please contact your account representative. 
+error persists, please contact your account representative.
 
 
 ## Enable manual reporting
 
 Upgrade to a release that supports manual license utilization reporting. These
-releases include: 
+releases include:
 
 - Vault Enterprise 1.16.0 and later
 - Vault Enterprise 1.15.6 and later
@@ -107,7 +107,7 @@ releases include:
 ## Configuration
 
 Administrators can manage disk space for storing snapshots by defining the
-number of days snapshots can be retained. 
+number of days snapshots can be retained.
 
 ```hcl
 reporting {
@@ -115,7 +115,7 @@ reporting {
 }
 ```
 
-The default retention period is 400 days. 
+The default retention period is 400 days.
 
 ## Data file content
 
@@ -130,6 +130,11 @@ The default retention period is 400 days.
   "product": "vault",
   "process_id": "01HP5NJS21HN50FY0CBS0SYGCH",
   "metrics": {
+    "clientcount.current_month_estimate.type.acme_client": {
+      "key": "clientcount.current_month_estimate.type.acme_client",
+      "value": 0,
+      "mode": "write"
+    },
     "clientcount.current_month_estimate.type.entity": {
       "key": "clientcount.current_month_estimate.type.entity",
       "value": 20,
@@ -142,6 +147,11 @@ The default retention period is 400 days.
     },
     "clientcount.current_month_estimate.type.secret_sync": {
       "key": "clientcount.current_month_estimate.type.secret_sync",
+      "value": 0,
+      "mode": "write"
+    },
+    "clientcount.previous_month_complete.type.acme_client": {
+      "key": "clientcount.previous_month_complete.type.acme_client",
       "value": 0,
       "mode": "write"
     },
