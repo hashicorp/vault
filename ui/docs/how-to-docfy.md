@@ -13,7 +13,7 @@ Side nav links correspond to the file + directory structure within the `docs/` d
 
 ## generating component docs
 
-The `docs/components/` directory is where _generated_ markdown files for components live after running `yarn docs`. **Do not edit component markdown files directly** - instead make changes to the `jsdoc` to update. The `docs/component/*` files are included in `.gitignore` so they are not pushed to main. `jsdoc-to-markdown` errors log in the console.
+The `docs/components` directory is where _generated_ markdown files for components live after running `yarn docs`. **Do not edit component markdown files directly** - instead make changes to the `jsdoc` to update. The `docs/components/*` files are included in `.gitignore` so they are not pushed to main. `jsdoc-to-markdown` errors log in the console.
 
 | Command                             | Description                                                                |
 | ----------------------------------- | -------------------------------------------------------------------------- |
@@ -40,7 +40,7 @@ Accurate `jsdoc` syntax is important so `jsdoc-to-markdown` properly generates t
 
 Docfy renders an actual instance of the component beneath `@example` as a sample. Make sure component uses proper hbs syntax and all args are on a single line.
 
-> - Check the generated markdown file for syntax errors or typos, to update edit the jsdoc and re-run the generator. _Do not edit component markdown files directly_
+> - Check the generated markdown file for syntax errors or typos. To update the markdown, first edit the jsdoc then re-run the generator. _Do not edit component markdown files directly_
 > - Param types: `object`, `string`, `function`, `array`
 > - Do not include `null` for empty default values
 > - Wrap optional params in brackets `[]`
