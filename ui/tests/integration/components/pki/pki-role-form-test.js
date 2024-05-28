@@ -82,7 +82,7 @@ module('Integration | Component | pki-role-form', function (hooks) {
   `,
       { owner: this.engine }
     );
-    assert.dom(GENERAL.fieldByAttr('noStoreMetadata')).exists('noStoreMetadata is shown for enterprise only');
+    assert.dom(GENERAL.fieldByAttr('noStoreMetadata')).exists();
   });
 
   test('it should save a new pki role with various options selected', async function (assert) {
