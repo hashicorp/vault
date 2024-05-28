@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<div class="lineal-chart" data-test-chart={{@chartTitle}}>
+<div class="lineal-chart" data-test-chart={{or @chartTitle "vertical bar chart"}}>
   <Lineal::Fluid as |width|>
     {{#let
       (scale-band domain=this.xDomain range=(array 0 width) padding=0.1)
@@ -11,10 +11,8 @@
       (scale-linear range=(array 0 this.chartHeight) domain=this.yDomain)
       as |xScale yScale hScale|
     }}
-      <svg width={{width}} height={{this.chartHeight}} data-test-sync-bar-chart>
-        <title>
-          {{@chartTitle}}
-        </title>
+      <svg width={{width}} height={{this.chartHeight}}>
+        <title>{{@chartTitle}}</title>
 
         {{#if (and xScale.isValid yScale.isValid)}}
           <Lineal::Axis
@@ -99,7 +97,7 @@
       <:head as |H|>
         <H.Tr>
           <H.Th>Month</H.Th>
-          <H.Th>Count of secret syncs</H.Th>
+          <H.Th>{{if @dataKey (humanize @dataKey)}} Count</H.Th>
         </H.Tr>
       </:head>
       <:body as |B|>

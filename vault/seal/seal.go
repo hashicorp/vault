@@ -59,6 +59,7 @@ type SealGenerationInfo struct {
 	Generation uint64
 	Seals      []*configutil.KMS
 	rewrapped  atomic.Bool
+	Enabled    bool
 }
 
 // Validate is used to sanity check the seal generation info being created
@@ -79,6 +80,15 @@ func (sgi *SealGenerationInfo) Validate(existingSgi *SealGenerationInfo, hasPart
 		// No point in comparing anything more as we don't have any information around the
 		// existing seal if any actually existed
 		return nil
+	}
+
+	// Validate that we're in a safe spot with respect to disabling multiseal
+	if existingSgi.Enabled && !sgi.Enabled {
+		if len(existingSgi.Seals) > 1 {
+			return fmt.Errorf("multi-seal is disabled but previous configuration had multiple seals.  re-enable and migrate to a single seal before disabling multi-seal")
+		} else if !existingSgi.IsRewrapped() {
+			return fmt.Errorf("multi-seal is disabled but previous storage was not fully re-wrapped, re-enable multi-seal and allow rewrapping to complete before disabling multi-seal")
+		}
 	}
 
 	existingSealNameAndType := sealNameAndTypeAsStr(existingSgi.Seals)
@@ -234,6 +244,7 @@ type sealGenerationInfoJson struct {
 	Generation uint64
 	Seals      []*configutil.KMS
 	Rewrapped  bool
+	Enabled    bool
 }
 
 func (sgi *SealGenerationInfo) MarshalJSON() ([]byte, error) {
@@ -241,6 +252,7 @@ func (sgi *SealGenerationInfo) MarshalJSON() ([]byte, error) {
 		Generation: sgi.Generation,
 		Seals:      sgi.Seals,
 		Rewrapped:  sgi.IsRewrapped(),
+		Enabled:    sgi.Enabled,
 	})
 }
 
@@ -253,6 +265,7 @@ func (sgi *SealGenerationInfo) UnmarshalJSON(b []byte) error {
 	sgi.Generation = value.Generation
 	sgi.Seals = value.Seals
 	sgi.SetRewrapped(value.Rewrapped)
+	sgi.Enabled = value.Enabled
 
 	return nil
 }
@@ -412,6 +425,10 @@ func healthyWrappers(wrapper *SealWrapper) bool {
 	return wrapper.IsHealthy()
 }
 
+func unhealthyWrappers(wrapper *SealWrapper) bool {
+	return !wrapper.IsHealthy()
+}
+
 func enabledWrappers(wrapper *SealWrapper) bool {
 	return !wrapper.Disabled
 }
@@ -490,11 +507,17 @@ func (a *access) IsUpToDate(ctx context.Context, value *MultiWrapValue, forceKey
 			return false, JoinSealWrapErrors("cannot determine key IDs of Access wrappers", errs)
 		}
 		if len(errs) > 0 {
-			msg := "could not determine key IDs of some Access wrappers"
-			a.logger.Error("partial failure refreshing seal key IDs", "err", JoinSealWrapErrors(msg, errs))
-			return false, JoinSealWrapErrors(msg, errs)
+			a.logger.Warn("cannot determine if seal wrapped entry needs update: there were errors determining the key IDs for one or more seals")
+			a.logger.Debug("cannot determine if seal wrapped entry needs update", "err", JoinSealWrapErrors("error refreshing key IDs of Access wrappers", errs))
+
+			// Return true, since the encrypted values cannot be re-encrypted without
+			// losing the ciphertext of unhealthy wrappers.
+			return true, nil
 		}
-		a.keyIdSet.set(test)
+	} else if !a.keyIdSet.initialized() {
+		// Since the key ID set is not initialized, we cannot determine if the value is up-to-date, so assume it is.
+		// Note that we cannot just force an update, since that breaks migrations to a Shamir defaultSeal.
+		return true, nil
 	}
 
 	return a.keyIdSet.equal(value), nil
@@ -513,10 +536,30 @@ const (
 
 // Encrypt uses the underlying seal to encrypt the plaintext and returns it.
 func (a *access) Encrypt(ctx context.Context, plaintext []byte, options ...wrapping.Option) (*MultiWrapValue, map[string]error) {
+	errs := make(map[string]error)
+
 	// Note that we do not encrypt with disabled wrappers. Disabled wrappers are only used to decrypt.
 	candidateWrappers := a.filterSealWrappers(enabledWrappers, healthyWrappers)
-	if len(candidateWrappers) == 0 {
-		// If all seals are unhealthy, try any way since a seal may have recovered
+	if len(candidateWrappers) > 0 {
+		// As there are healthy wrappers, add errors for any unhealthy ones, so that it
+		// it is clear that the resulting MultiWrapValue is missing ciphertext for some seals.
+		for i, unhealthyWrapper := range a.filterSealWrappers(enabledWrappers, unhealthyWrappers) {
+			var keyId string
+			if unhealthyWrapper.Wrapper != nil {
+				// Annoying, apparently Wrapper may be null, see setSeal() in server.go,
+				// in the config seal loop.
+				keyId, _ = unhealthyWrapper.Wrapper.KeyId(ctx)
+			}
+			if keyId == "" {
+				keyId = unhealthyWrapper.Name
+				if _, duplicated := errs[keyId]; duplicated {
+					keyId = fmt.Sprintf("%s-%d", keyId, i)
+				}
+			}
+			errs[keyId] = errors.New("seal is unhealthy")
+		}
+	} else {
+		// If all seals are unhealthy, try with all of them since a seal may have recovered.
 		candidateWrappers = a.filterSealWrappers(enabledWrappers)
 	}
 	enabledWrappersByPriority := filterSealWrappers(candidateWrappers, configuredWrappers)
@@ -590,7 +633,6 @@ GATHER_RESULTS:
 
 	// Sort out the successful results from the errors
 	var slots []*wrapping.BlobInfo
-	errs := make(map[string]error)
 	for _, sealWrapper := range enabledWrappersByPriority {
 		if result, ok := results[sealWrapper.Name]; ok {
 			if result.err != nil {
@@ -922,6 +964,10 @@ func (v *MultiWrapValue) BlobInfoForKeyId(keyId string) *wrapping.BlobInfo {
 
 type keyIdSet struct {
 	keyIds atomic.Pointer[[]string]
+}
+
+func (s *keyIdSet) initialized() bool {
+	return len(s.get()) > 0
 }
 
 func (s *keyIdSet) set(value *MultiWrapValue) {

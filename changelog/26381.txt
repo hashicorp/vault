@@ -1,0 +1,3 @@
+```release-note:bug
+core/seal: During a seal reload through SIGHUP, only write updated seal barrier on an active node
+```

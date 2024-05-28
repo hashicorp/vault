@@ -131,17 +131,18 @@ export default class MessageModel extends Model {
 
   // capabilities
   @lazyCapabilities(apiPath`sys/config/ui/custom-messages`) customMessagesPath;
+  @lazyCapabilities(apiPath`sys/config/ui/custom-messages/${'id'}`, 'id') customMessagePath;
 
   get canCreateCustomMessages() {
     return this.customMessagesPath.get('canCreate') !== false;
   }
   get canReadCustomMessages() {
-    return this.customMessagesPath.get('canRead') !== false;
+    return this.customMessagePath.get('canRead') !== false;
   }
   get canEditCustomMessages() {
-    return this.customMessagesPath.get('canUpdate') !== false;
+    return this.customMessagePath.get('canUpdate') !== false;
   }
   get canDeleteCustomMessages() {
-    return this.customMessagesPath.get('canDelete') !== false;
+    return this.customMessagePath.get('canDelete') !== false;
   }
 }

@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	"github.com/hashicorp/vault/command/agentproxyshared/auth"
@@ -184,7 +184,7 @@ func TestTokenPreload_UsingAutoAuth(t *testing.T) {
 	}()
 
 	go func() {
-		errCh <- ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config})
+		errCh <- ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config}, ah.AuthInProgress)
 	}()
 	defer func() {
 		select {

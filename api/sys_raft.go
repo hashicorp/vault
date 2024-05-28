@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -100,6 +101,23 @@ type AutopilotState struct {
 	OptimisticFailureTolerance int                         `mapstructure:"optimistic_failure_tolerance,omitempty"`
 }
 
+func (a *AutopilotState) String() string {
+	var result string
+	result += fmt.Sprintf("Healthy: %t. FailureTolerance: %d. Leader: %s. OptimisticFailureTolerance: %d\n", a.Healthy, a.FailureTolerance, a.Leader, a.OptimisticFailureTolerance)
+	for _, s := range a.Servers {
+		result += fmt.Sprintf("Server: %s\n", s)
+	}
+	result += fmt.Sprintf("Voters: %v\n", a.Voters)
+	result += fmt.Sprintf("NonVoters: %v\n", a.NonVoters)
+
+	for name, zone := range a.RedundancyZones {
+		result += fmt.Sprintf("RedundancyZone %s: %s\n", name, &zone)
+	}
+
+	result += fmt.Sprintf("Upgrade: %s", a.Upgrade)
+	return result
+}
+
 // AutopilotServer represents the server blocks in the response of the raft
 // autopilot state API.
 type AutopilotServer struct {
@@ -119,10 +137,19 @@ type AutopilotServer struct {
 	NodeType       string `mapstructure:"node_type,omitempty"`
 }
 
+func (a *AutopilotServer) String() string {
+	return fmt.Sprintf("ID: %s. Name: %s. Address: %s. NodeStatus: %s. LastContact: %s. LastTerm: %d. LastIndex: %d. Healthy: %t. StableSince: %s. Status: %s. Version: %s. UpgradeVersion: %s. RedundancyZone: %s. NodeType: %s",
+		a.ID, a.Name, a.Address, a.NodeStatus, a.LastContact, a.LastTerm, a.LastIndex, a.Healthy, a.StableSince, a.Status, a.Version, a.UpgradeVersion, a.RedundancyZone, a.NodeType)
+}
+
 type AutopilotZone struct {
 	Servers          []string `mapstructure:"servers,omitempty"`
 	Voters           []string `mapstructure:"voters,omitempty"`
 	FailureTolerance int      `mapstructure:"failure_tolerance,omitempty"`
+}
+
+func (a *AutopilotZone) String() string {
+	return fmt.Sprintf("Servers: %v. Voters: %v. FailureTolerance: %d", a.Servers, a.Voters, a.FailureTolerance)
 }
 
 type AutopilotUpgrade struct {
@@ -137,11 +164,27 @@ type AutopilotUpgrade struct {
 	RedundancyZones           map[string]AutopilotZoneUpgradeVersions `mapstructure:"redundancy_zones,omitempty"`
 }
 
+func (a *AutopilotUpgrade) String() string {
+	result := fmt.Sprintf("Status: %s. TargetVersion: %s. TargetVersionVoters: %v. TargetVersionNonVoters: %v. TargetVersionReadReplicas: %v. OtherVersionVoters: %v. OtherVersionNonVoters: %v. OtherVersionReadReplicas: %v",
+		a.Status, a.TargetVersion, a.TargetVersionVoters, a.TargetVersionNonVoters, a.TargetVersionReadReplicas, a.OtherVersionVoters, a.OtherVersionNonVoters, a.OtherVersionReadReplicas)
+
+	for name, zone := range a.RedundancyZones {
+		result += fmt.Sprintf("Redundancy Zone %s: %s", name, zone)
+	}
+
+	return result
+}
+
 type AutopilotZoneUpgradeVersions struct {
 	TargetVersionVoters    []string `mapstructure:"target_version_voters,omitempty"`
 	TargetVersionNonVoters []string `mapstructure:"target_version_non_voters,omitempty"`
 	OtherVersionVoters     []string `mapstructure:"other_version_voters,omitempty"`
 	OtherVersionNonVoters  []string `mapstructure:"other_version_non_voters,omitempty"`
+}
+
+func (a *AutopilotZoneUpgradeVersions) String() string {
+	return fmt.Sprintf("TargetVersionVoters: %v. TargetVersionNonVoters: %v. OtherVersionVoters: %v. OtherVersionNonVoters: %v",
+		a.TargetVersionVoters, a.TargetVersionNonVoters, a.OtherVersionVoters, a.OtherVersionNonVoters)
 }
 
 // RaftJoin wraps RaftJoinWithContext using context.Background.

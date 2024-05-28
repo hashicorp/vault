@@ -4,19 +4,23 @@
 ~}}
 
 <form
-  onsubmit={{action
-    @doSubmit
-    (hash
-      input=@input
-      signature=@signature
-      signature_algorithm=@signature_algorithm
-      hmac=@hmac
-      hash_algorithm=@hash_algorithm
-      context=@context
-      prehashed=@prehashed
-      encodedBase64=@encodedBase64
+  {{on
+    "submit"
+    (fn
+      @doSubmit
+      (hash
+        input=@trackedInput
+        signature=@signature
+        signature_algorithm=@signature_algorithm
+        hmac=@hmac
+        hash_algorithm=@hash_algorithm
+        context=@context
+        prehashed=@prehashed
+        encodedBase64=@encodedBase64
+      )
     )
   }}
+  ...attributes
 >
   <div class="box is-sideless is-fullwidth is-marginless">
     <div class="content has-bottom-margin-l">
@@ -26,15 +30,21 @@
       <div class="control is-relative">
         <JsonEditor
           @title="Input"
-          @value={{@input}}
-          @valueUpdated={{action (mut @input)}}
+          @value={{@trackedInput}}
+          @valueUpdated={{fn (mut @trackedInput)}}
           @mode="ruby"
           @data-test-transit-input="input"
         />
       </div>
     </div>
     <div class="field">
-      <Input @type="checkbox" id="encodedBase64" @checked={{@encodedBase64}} data-test-transit-input="encodedBase64" />
+      <Input
+        @type="checkbox"
+        id="encodedBase64"
+        @checked={{@encodedBase64}}
+        {{on "change" @toggleEncodeBase64}}
+        data-test-transit-input="encodedBase64"
+      />
       <label for="encodedBase64">This data is already encoded in base64</label>
     </div>
     {{#if (and @key.supportsSigning @key.derived (not @hmac))}}
@@ -64,7 +74,7 @@
                   id="verification"
                   onchange={{queue
                     (action (mut @verification) value="target.value")
-                    (action @clearParams (array "hmac" "signature"))
+                    (fn @clearSpecificProps (array "hmac" "signature"))
                   }}
                 >
                   {{#each (array "Signature" "HMAC") as |type|}}
@@ -145,18 +155,13 @@
           {{#if (or (and @verification (eq @verification "HMAC")) @hmac)}}
             <div class="field is-flex-column is-flex-grow-1">
               <div class="control is-flex-column is-flex-grow-1">
-                <JsonEditor @title="HMAC" @value={{@hmac}} @valueUpdated={{action (mut @hmac)}} @mode="ruby" />
+                <JsonEditor @title="HMAC" @value={{@hmac}} @valueUpdated={{fn (mut @hmac)}} @mode="ruby" />
               </div>
             </div>
           {{else}}
             <div class="field is-flex-column is-flex-grow-1">
               <div class="control is-flex-column is-flex-grow-1">
-                <JsonEditor
-                  @title="Signature"
-                  @value={{@signature}}
-                  @valueUpdated={{action (mut @signature)}}
-                  @mode="ruby"
-                />
+                <JsonEditor @title="Signature" @value={{@signature}} @valueUpdated={{fn (mut @signature)}} @mode="ruby" />
               </div>
             </div>
           {{/if}}
@@ -165,7 +170,7 @@
     {{else}}
       <div class="field">
         <div class="control">
-          <JsonEditor @title="HMAC" @value={{@hmac}} @valueUpdated={{action (mut @hmac)}} @mode="ruby" />
+          <JsonEditor @title="HMAC" @value={{@hmac}} @valueUpdated={{fn (mut @hmac)}} @mode="ruby" />
         </div>
       </div>
       <div class="field">
@@ -186,7 +191,7 @@
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <Hds::Button @text="Verify" @icon={{if @loading "loading"}} type="submit" disabled={{@loading}} />
+      <Hds::Button @text="Verify" @icon={{if @submitIsRunning "loading"}} type="submit" disabled={{@submitIsRunning}} />
     </div>
   </div>
 </form>

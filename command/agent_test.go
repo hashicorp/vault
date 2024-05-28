@@ -162,23 +162,9 @@ func testAgentExitAfterAuth(t *testing.T, viaFlag bool) {
 	os.Remove(in)
 	t.Logf("input: %s", in)
 
-	sink1f, err := os.CreateTemp("", "sink1.jwt.test.")
-	if err != nil {
-		t.Fatal(err)
-	}
-	sink1 := sink1f.Name()
-	sink1f.Close()
-	os.Remove(sink1)
-	t.Logf("sink1: %s", sink1)
+	sinkFileName1 := makeTempFile(t, "sink-file", "")
 
-	sink2f, err := os.CreateTemp("", "sink2.jwt.test.")
-	if err != nil {
-		t.Fatal(err)
-	}
-	sink2 := sink2f.Name()
-	sink2f.Close()
-	os.Remove(sink2)
-	t.Logf("sink2: %s", sink2)
+	sinkFileName2 := makeTempFile(t, "sink-file", "")
 
 	conff, err := os.CreateTemp("", "conf.jwt.test.")
 	if err != nil {
@@ -228,7 +214,7 @@ auto_auth {
 }
 `
 
-	config = fmt.Sprintf(config, exitAfterAuthTemplText, in, sink1, sink2)
+	config = fmt.Sprintf(config, exitAfterAuthTemplText, in, sinkFileName1, sinkFileName2)
 	if err := os.WriteFile(conf, []byte(config), 0o600); err != nil {
 		t.Fatal(err)
 	} else {
@@ -261,7 +247,7 @@ auto_auth {
 		t.Fatal("timeout reached while waiting for agent to exit")
 	}
 
-	sink1Bytes, err := os.ReadFile(sink1)
+	sink1Bytes, err := os.ReadFile(sinkFileName1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -269,7 +255,7 @@ auto_auth {
 		t.Fatal("got no output from sink 1")
 	}
 
-	sink2Bytes, err := os.ReadFile(sink2)
+	sink2Bytes, err := os.ReadFile(sinkFileName2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -373,7 +359,6 @@ listener "tcp" {
 		listenAddr3,
 	)
 	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
 
 	// Start the agent
 	ui, cmd := testAgentCommand(t, logger)
@@ -475,7 +460,6 @@ listener "tcp" {
 `, generateListenerAddress(t))
 
 	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
 
 	// Start the agent
 	ui, cmd := testAgentCommand(t, logger)
@@ -487,6 +471,112 @@ listener "tcp" {
 		t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
 		t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
 	}
+}
+
+// TestAgent_NoAutoAuthTokenIfNotConfigured tests that API proxy will not use the auto-auth token
+// unless configured to.
+func TestAgent_NoAutoAuthTokenIfNotConfigured(t *testing.T) {
+	logger := logging.NewVaultLogger(hclog.Trace)
+	cluster := minimal.NewTestSoloCluster(t, nil)
+
+	serverClient := cluster.Cores[0].Client
+
+	// Unset the environment variable so that proxy picks up the right test
+	// cluster address
+	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
+	os.Unsetenv(api.EnvVaultAddress)
+
+	// Create token file
+	tokenFileName := makeTempFile(t, "token-file", serverClient.Token())
+
+	sinkFileName := makeTempFile(t, "sink-file", "")
+
+	autoAuthConfig := fmt.Sprintf(`
+auto_auth {
+    method {
+		type = "token_file"
+        config = {
+            token_file_path = "%s"
+        }
+    }
+
+	sink "file" {
+		config = {
+			path = "%s"
+		}
+	}
+}`, tokenFileName, sinkFileName)
+
+	apiProxyConfig := `
+api_proxy {
+	use_auto_auth_token = false
+}
+`
+	listenAddr := generateListenerAddress(t)
+	listenConfig := fmt.Sprintf(`
+listener "tcp" {
+  address = "%s"
+  tls_disable = true
+}
+`, listenAddr)
+
+	config := fmt.Sprintf(`
+vault {
+  address = "%s"
+  tls_skip_verify = true
+}
+%s
+%s
+%s
+`, serverClient.Address(), apiProxyConfig, listenConfig, autoAuthConfig)
+	configPath := makeTempFile(t, "config.hcl", config)
+
+	// Start proxy
+	ui, cmd := testAgentCommand(t, logger)
+	cmd.startedCh = make(chan struct{})
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		code := cmd.Run([]string{"-config", configPath})
+		if code != 0 {
+			t.Errorf("non-zero return code when running agent: %d", code)
+			t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
+			t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
+		}
+		wg.Done()
+	}()
+
+	select {
+	case <-cmd.startedCh:
+	case <-time.After(5 * time.Second):
+		t.Errorf("timeout")
+	}
+
+	proxyClient, err := api.NewClient(api.DefaultConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
+	proxyClient.SetToken("")
+	err = proxyClient.SetAddress("http://" + listenAddr)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Wait for the sink to be populated.
+	// Realistically won't be this long, but keeping it long just in case, for CI.
+	time.Sleep(10 * time.Second)
+
+	secret, err := proxyClient.Auth().Token().CreateOrphan(&api.TokenCreateRequest{
+		Policies: []string{"default"},
+		TTL:      "30m",
+	})
+	if secret != nil || err == nil {
+		t.Fatal("expected this to fail, since without a token you should not be able to make a token")
+	}
+
+	close(cmd.ShutdownCh)
+	wg.Wait()
 }
 
 // TestAgent_Template_UserAgent Validates that the User-Agent sent to Vault
@@ -588,7 +678,6 @@ auto_auth {
 
 	config = fmt.Sprintf(config, serverClient.Address(), roleIDPath, secretIDPath, templateConfig)
 	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
 
 	// Start the agent
 	ui, cmd := testAgentCommand(t, logger)
@@ -793,7 +882,6 @@ auto_auth {
 
 			config = fmt.Sprintf(config, serverClient.Address(), roleIDPath, secretIDPath, templateConfig, exitAfterAuth)
 			configPath := makeTempFile(t, "config.hcl", config)
-			defer os.Remove(configPath)
 
 			// Start the agent
 			ui, cmd := testAgentCommand(t, logger)
@@ -919,10 +1007,6 @@ func setupAppRole(t *testing.T, serverClient *api.Client) (string, string) {
 	// Write the RoleID and SecretID to temp files
 	roleIDPath := makeTempFile(t, "role_id.txt", roleID+"\n")
 	secretIDPath := makeTempFile(t, "secret_id.txt", secretID+"\n")
-	t.Cleanup(func() {
-		os.Remove(roleIDPath)
-		os.Remove(secretIDPath)
-	})
 
 	return roleIDPath, secretIDPath
 }
@@ -1071,7 +1155,6 @@ auto_auth {
 
 			config = fmt.Sprintf(config, roleIDPath, secretIDPath, templateConfig)
 			configPath := makeTempFile(t, "config.hcl", config)
-			defer os.Remove(configPath)
 
 			// Start the agent
 			ui, cmd := testAgentCommand(t, logger)
@@ -1248,7 +1331,6 @@ exit_after_auth = true
 
 	config = fmt.Sprintf(config, serverClient.Address(), roleIDPath, secretIDPath, tmpDir, tmpDir, tmpDir)
 	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
 
 	// Start the agent
 	ui, cmd := testAgentCommand(t, logger)
@@ -1358,19 +1440,33 @@ func request(t *testing.T, client *api.Client, req *api.Request, expectedStatusC
 	return body
 }
 
-// makeTempFile creates a temp file and populates it.
+// makeTempFile creates a temp file with the specified name, populates it with the
+// supplied contents and closes it. The path to the file is returned, also the file
+// will be automatically removed when the test which created it, finishes.
 func makeTempFile(t *testing.T, name, contents string) string {
 	t.Helper()
-	f, err := os.CreateTemp("", name)
+
+	f, err := os.Create(filepath.Join(t.TempDir(), name))
 	if err != nil {
 		t.Fatal(err)
 	}
 	path := f.Name()
-	f.WriteString(contents)
-	f.Close()
+
+	_, err = f.WriteString(contents)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = f.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	return path
 }
 
+// populateTempFile creates a temp file with the specified name, populates it with the
+// supplied contents and closes it. The file pointer is returned.
 func populateTempFile(t *testing.T, name, contents string) *os.File {
 	t.Helper()
 
@@ -1471,8 +1567,7 @@ func TestAgent_Template_Retry(t *testing.T) {
 	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
 	os.Unsetenv(api.EnvVaultAddress)
 
-	methodConf, cleanup := prepAgentApproleKV(t, serverClient)
-	defer cleanup()
+	methodConf := prepAgentApproleKV(t, serverClient)
 
 	err := serverClient.Sys().TuneMount("secret", api.MountConfigInput{
 		Options: map[string]string{
@@ -1575,7 +1670,6 @@ template_config {
 `, methodConf, serverClient.Address(), retryConf, templateConfig)
 
 			configPath := makeTempFile(t, "config.hcl", config)
-			defer os.Remove(configPath)
 
 			// Start the agent
 			_, cmd := testAgentCommand(t, logger)
@@ -1655,7 +1749,7 @@ template_config {
 // such that the resulting token will have global permissions across /kv
 // and /secret mounts.  Returns the auto_auth config stanza to setup an Agent
 // to connect using approle.
-func prepAgentApproleKV(t *testing.T, client *api.Client) (string, func()) {
+func prepAgentApproleKV(t *testing.T, client *api.Client) string {
 	t.Helper()
 
 	policyAutoAuthAppRole := `
@@ -1716,11 +1810,7 @@ auto_auth {
 }
 `, roleIDFile, secretIDFile)
 
-	cleanup := func() {
-		_ = os.Remove(roleIDFile)
-		_ = os.Remove(secretIDFile)
-	}
-	return config, cleanup
+	return config
 }
 
 // TestAgent_AutoAuth_UserAgent tests that the User-Agent sent
@@ -1754,13 +1844,7 @@ func TestAgent_AutoAuth_UserAgent(t *testing.T) {
 	// Enable the approle auth method
 	roleIDPath, secretIDPath := setupAppRole(t, serverClient)
 
-	sinkf, err := os.CreateTemp("", "sink.test.")
-	if err != nil {
-		t.Fatal(err)
-	}
-	sink := sinkf.Name()
-	sinkf.Close()
-	os.Remove(sink)
+	sinkFileName := makeTempFile(t, "sink-file", "")
 
 	autoAuthConfig := fmt.Sprintf(`
 auto_auth {
@@ -1777,7 +1861,7 @@ auto_auth {
 			path = "%s"
 		}
 	}
-}`, roleIDPath, secretIDPath, sink)
+}`, roleIDPath, secretIDPath, sinkFileName)
 
 	listenAddr := generateListenerAddress(t)
 	listenConfig := fmt.Sprintf(`
@@ -1799,7 +1883,6 @@ api_proxy {
 %s
 `, serverClient.Address(), listenConfig, autoAuthConfig)
 	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
 
 	// Unset the environment variable so that agent picks up the right test
 	// cluster address
@@ -1895,7 +1978,6 @@ vault {
 %s
 `, serverClient.Address(), listenConfig)
 	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
 
 	// Start the agent
 	_, cmd := testAgentCommand(t, logger)
@@ -1987,7 +2069,6 @@ vault {
 %s
 `, serverClient.Address(), listenConfig, cacheConfig)
 	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
 
 	// Start the agent
 	_, cmd := testAgentCommand(t, logger)
@@ -2063,7 +2144,6 @@ vault {
 %s
 `, serverClient.Address(), cacheConfig, listenConfig)
 	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
 
 	// Start the agent
 	_, cmd := testAgentCommand(t, logger)
@@ -2234,7 +2314,6 @@ vault {
 %s
 `, serverClient.Address(), retryConf, cacheConfig, listenConfig)
 			configPath := makeTempFile(t, "config.hcl", config)
-			defer os.Remove(configPath)
 
 			// Start the agent
 			_, cmd := testAgentCommand(t, logger)
@@ -2313,8 +2392,7 @@ func TestAgent_TemplateConfig_ExitOnRetryFailure(t *testing.T) {
 	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
 	os.Unsetenv(api.EnvVaultAddress)
 
-	autoAuthConfig, cleanup := prepAgentApproleKV(t, serverClient)
-	defer cleanup()
+	autoAuthConfig := prepAgentApproleKV(t, serverClient)
 
 	err := serverClient.Sys().TuneMount("secret", api.MountConfigInput{
 		Options: map[string]string{
@@ -2498,7 +2576,6 @@ vault {
 `, autoAuthConfig, serverClient.Address(), listenConfig, templateConfig, template)
 
 			configPath := makeTempFile(t, "config.hcl", config)
-			defer os.Remove(configPath)
 
 			// Start the agent
 			ui, cmd := testAgentCommand(t, logger)
@@ -2613,7 +2690,6 @@ listener "tcp" {
 }
 `, listenAddr)
 	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
 
 	// Start the agent
 	ui, cmd := testAgentCommand(t, logging.NewVaultLogger(hclog.Trace))
@@ -2709,7 +2785,6 @@ cache {}
 `, serverClient.Address(), listenAddr, listenAddr2)
 
 	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
 
 	// Start the agent
 	_, cmd := testAgentCommand(t, nil)
@@ -3065,7 +3140,6 @@ vault {
 %s
 `, serverClient.Address(), listenConfig)
 	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
 
 	// Start the agent
 	ui, cmd := testAgentCommand(t, logger)
@@ -3102,6 +3176,143 @@ vault {
 
 	if code != 0 {
 		t.Fatalf("got a non-zero exit status: %d, stdout/stderr: %s", code, output)
+	}
+}
+
+// TestAgent_TokenRenewal tests that LifeTimeWatcher does not make
+// many renewal attempts if the token's policy does not allow for it to renew
+// itself. Prior to a bug fix in the PR that added this test, this would have resulted
+// in hundreds of token renewal requests with no backoff.
+func TestAgent_TokenRenewal(t *testing.T) {
+	logger := logging.NewVaultLogger(hclog.Trace)
+	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	serverClient := cluster.Cores[0].Client
+
+	auditLogFileName := makeTempFile(t, "audit-log", "")
+	err := serverClient.Sys().EnableAuditWithOptions("file-audit-for-TestAgent_TokenRenewal", &api.EnableAuditOptions{
+		Type: "file",
+		Options: map[string]string{
+			"file_path": auditLogFileName,
+		},
+	})
+	require.NoError(t, err)
+
+	// Unset the environment variable so that agent picks up the right test
+	// cluster address
+	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
+	os.Unsetenv(api.EnvVaultAddress)
+
+	policyName := "less-than-default"
+	// Has a subset of the default policy's permissions
+	// Specifically removing renew-self.
+	err = serverClient.Sys().PutPolicy(policyName, `
+path "auth/token/lookup-self" {
+    capabilities = ["read"]
+}
+
+# Allow tokens to revoke themselves
+path "auth/token/revoke-self" {
+    capabilities = ["update"]
+}
+
+# Allow a token to look up its own capabilities on a path
+path "sys/capabilities-self" {
+    capabilities = ["update"]
+}
+`)
+	require.NoError(t, err)
+
+	renewable := true
+	// Make the token renewable but give it no permissions
+	// (e.g. the permission to renew itself)
+	tokenCreateRequest := &api.TokenCreateRequest{
+		Policies:        []string{policyName},
+		TTL:             "10s",
+		Renewable:       &renewable,
+		NoDefaultPolicy: true,
+	}
+
+	secret, err := serverClient.Auth().Token().CreateOrphan(tokenCreateRequest)
+	require.NoError(t, err)
+	lowPermissionToken := secret.Auth.ClientToken
+
+	tokenFileName := makeTempFile(t, "token-file", lowPermissionToken)
+
+	sinkFileName := makeTempFile(t, "sink-file", "")
+
+	autoAuthConfig := fmt.Sprintf(`
+auto_auth {
+    method {
+		type = "token_file"
+        config = {
+            token_file_path = "%s"
+        }
+    }
+
+	sink "file" {
+		config = {
+			path = "%s"
+		}
+	}
+}`, tokenFileName, sinkFileName)
+
+	config := fmt.Sprintf(`
+vault {
+  address = "%s"
+  tls_skip_verify = true
+}
+
+log_level = "trace"
+
+%s
+`, serverClient.Address(), autoAuthConfig)
+	configPath := makeTempFile(t, "config.hcl", config)
+
+	// Start the agent
+	ui, cmd := testAgentCommand(t, logger)
+
+	cmd.startedCh = make(chan struct{})
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		cmd.Run([]string{"-config", configPath})
+		wg.Done()
+	}()
+
+	select {
+	case <-cmd.startedCh:
+	case <-time.After(5 * time.Second):
+		t.Errorf("timeout")
+		t.Errorf("stdout: %s", ui.OutputWriter.String())
+		t.Errorf("stderr: %s", ui.ErrorWriter.String())
+	}
+
+	// Sleep, to allow the renewal/auth process to work and ensure that it doesn't
+	// go crazy with renewals.
+	time.Sleep(30 * time.Second)
+
+	fileBytes, err := os.ReadFile(auditLogFileName)
+	require.NoError(t, err)
+	stringAudit := string(fileBytes)
+
+	// This is a bit of an imperfect way to test things, but we want to make sure
+	// that a token like this doesn't keep triggering retries.
+	// Due to the fact this is an auto-auth specific thing, unit tests for the
+	// LifetimeWatcher wouldn't be sufficient here.
+	// Prior to the fix made in the same PR this test was added, it would trigger many, many
+	// retries (hundreds to thousands in less than a minute).
+	// We really want to make sure that doesn't happen.
+	numberOfRenewSelves := strings.Count(stringAudit, "auth/token/renew-self")
+	// We actually expect ~6, but I added some buffer for CI weirdness. It can also vary
+	// due to the grace added/removed from the sleep in LifetimeWatcher too.
+	if numberOfRenewSelves > 10 {
+		t.Fatalf("did too many renews -- Vault received %d renew-self requests", numberOfRenewSelves)
 	}
 }
 
@@ -3258,7 +3469,6 @@ func TestAgent_DeleteAfterVersion_Rendering(t *testing.T) {
 	require.NoError(t, err)
 
 	tokenFileName := makeTempFile(t, "token-file", serverClient.Token())
-	defer os.Remove(tokenFileName)
 
 	autoAuthConfig := fmt.Sprintf(`
 auto_auth {
@@ -3292,7 +3502,6 @@ template {
 
 	config = fmt.Sprintf(config, serverClient.Address(), autoAuthConfig, templateConfig)
 	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
 
 	// Start the agent
 	ui, cmd := testAgentCommand(t, logger)
@@ -3366,9 +3575,7 @@ func generateListenerAddress(t *testing.T) string {
 	t.Helper()
 
 	ln1, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	listenAddr := ln1.Addr().String()
 	ln1.Close()
 	return listenAddr

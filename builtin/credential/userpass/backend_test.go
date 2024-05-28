@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
-	sockaddr "github.com/hashicorp/go-sockaddr"
+	"github.com/hashicorp/go-sockaddr"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"

@@ -480,6 +480,87 @@ func TestIntegration_AutoIssuer(t *testing.T) {
 	require.Equal(t, issuerIdOneReimported, resp.Data["default"])
 }
 
+// TestLDAPAiaCrlUrls validates we can properly handle CRL urls that are ldap based.
+func TestLDAPAiaCrlUrls(t *testing.T) {
+	t.Parallel()
+
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"pki": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		NumCores:    1,
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+	singleCore := cluster.Cores[0]
+	vault.TestWaitActive(t, singleCore.Core)
+	client := singleCore.Client
+
+	mountPKIEndpoint(t, client, "pki")
+
+	// Attempt multiple urls
+	crls := []string{
+		"ldap://ldap.example.com/cn=example%20CA,dc=example,dc=com?certificateRevocationList;binary",
+		"ldap://ldap.example.com/cn=CA,dc=example,dc=com?authorityRevocationList;binary",
+	}
+
+	_, err := client.Logical().Write("pki/config/urls", map[string]interface{}{
+		"crl_distribution_points": crls,
+	})
+	require.NoError(t, err)
+
+	resp, err := client.Logical().Read("pki/config/urls")
+	require.NoError(t, err, "failed reading config/urls")
+	require.NotNil(t, resp, "resp was nil")
+	require.NotNil(t, resp.Data, "data within response was nil")
+	require.NotEmpty(t, resp.Data["crl_distribution_points"], "crl_distribution_points was nil within data")
+	require.Len(t, resp.Data["crl_distribution_points"], len(crls))
+
+	for _, crlVal := range crls {
+		require.Contains(t, resp.Data["crl_distribution_points"], crlVal)
+	}
+
+	resp, err = client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+		"ttl":         "40h",
+		"common_name": "Root R1",
+		"key_type":    "ec",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.NotEmpty(t, resp.Data["issuer_id"])
+	rootIssuerId := resp.Data["issuer_id"].(string)
+
+	_, err = client.Logical().Write("pki/roles/example-root", map[string]interface{}{
+		"allowed_domains":  "example.com",
+		"allow_subdomains": "true",
+		"max_ttl":          "1h",
+		"key_type":         "ec",
+		"issuer_ref":       rootIssuerId,
+	})
+	require.NoError(t, err)
+
+	resp, err = client.Logical().Write("pki/issue/example-root", map[string]interface{}{
+		"common_name": "test.example.com",
+		"ttl":         "5m",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.NotEmpty(t, resp.Data["certificate"])
+
+	certPEM := resp.Data["certificate"].(string)
+	certBlock, _ := pem.Decode([]byte(certPEM))
+	require.NotNil(t, certBlock)
+	cert, err := x509.ParseCertificate(certBlock.Bytes)
+	require.NoError(t, err)
+
+	require.EqualValues(t, crls, cert.CRLDistributionPoints)
+}
+
 func TestIntegrationOCSPClientWithPKI(t *testing.T) {
 	t.Parallel()
 
@@ -629,9 +710,6 @@ func TestIntegrationOCSPClientWithPKI(t *testing.T) {
 		ocspClient := vaultocsp.New(func() hclog.Logger {
 			return testLogger
 		}, 10)
-
-		err = ocspClient.VerifyLeafCertificate(context.Background(), cert, issuer, conf)
-		require.NoError(t, err)
 
 		_, err = client.Logical().Write("pki/revoke", map[string]interface{}{
 			"serial_number": serialNumber,

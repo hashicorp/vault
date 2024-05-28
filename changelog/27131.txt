@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix configuration link from Secret Engine list view for Ember engines.
+```

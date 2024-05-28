@@ -6,7 +6,7 @@ terraform {
     # We need to specify the provider source in each module until we publish it
     # to the public registry
     enos = {
-      source  = "app.terraform.io/hashicorp-qti/enos"
+      source  = "registry.terraform.io/hashicorp-forge/enos"
       version = ">= 0.4.0"
     }
   }
@@ -127,13 +127,13 @@ module "start_vault" {
 
   cluster_name              = var.cluster_name
   config_dir                = var.config_dir
+  config_mode               = var.config_mode
   install_dir               = var.install_dir
   license                   = var.license
   log_level                 = var.log_level
   manage_service            = var.manage_service
   seal_attributes           = var.seal_attributes
   seal_attributes_secondary = var.seal_attributes_secondary
-  seal_ha_beta              = var.seal_ha_beta
   seal_type                 = var.seal_type
   seal_type_secondary       = var.seal_type_secondary
   service_username          = local.vault_service_user
@@ -231,6 +231,30 @@ resource "enos_vault_unseal" "maybe_force_unseal" {
     var.shamir_unseal_keys,
     try(enos_vault_init.leader[0].unseal_keys_hex, null),
   )
+
+  transport = {
+    ssh = {
+      host = each.value.public_ip
+    }
+  }
+}
+
+# Add the vault install location to the PATH and set up VAULT_ADDR and VAULT_TOKEN environement
+# variables in the login shell so we don't have to do it if/when we login in to a cluster node.
+resource "enos_remote_exec" "configure_login_shell_profile" {
+  depends_on = [
+    enos_vault_init.leader,
+    enos_vault_unseal.leader,
+  ]
+  for_each = var.target_hosts
+
+  environment = {
+    VAULT_ADDR        = "http://127.0.0.1:8200"
+    VAULT_TOKEN       = var.root_token != null ? var.root_token : try(enos_vault_init.leader[0].root_token, "_")
+    VAULT_INSTALL_DIR = var.install_dir
+  }
+
+  scripts = [abspath("${path.module}/scripts/set-up-login-shell-profile.sh")]
 
   transport = {
     ssh = {

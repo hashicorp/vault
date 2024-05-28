@@ -1,3 +1,0 @@
-```release-note:feature
-**Audit Filtering**: Audit devices support expression-based filter rules (powered by go-bexpr) to determine which entries are written to the audit log.```
-```

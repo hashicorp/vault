@@ -8,7 +8,7 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import { STANDARD_META } from 'vault/tests/helpers/pki';
+import { STANDARD_META } from 'vault/tests/helpers/pagination';
 
 module('Integration | Component | pki-paginated-list', function (hooks) {
   setupRenderingTest(hooks);
@@ -34,8 +34,8 @@ module('Integration | Component | pki-paginated-list', function (hooks) {
         key_name: 'another-key',
       },
     });
-    // toArray to mimic what happens in lazyPaginatedQuery
-    const keyModels = this.store.peekAll('pki/key').toArray();
+    // mimic what happens in lazyPaginatedQuery
+    const keyModels = this.store.peekAll('pki/key');
     keyModels.meta = STANDARD_META;
     this.list = keyModels;
     const emptyList = this.store.peekAll('pki/foo');
@@ -53,7 +53,7 @@ module('Integration | Component | pki-paginated-list', function (hooks) {
     this.set('hasConfig', null);
     await render(
       hbs`
-      <PkiPaginatedList @list={{this.list}} @hasConfig={{this.hasConfig}}>
+      <PkiPaginatedList @backend="pki-mount" @list={{this.list}} @hasConfig={{this.hasConfig}}>
         <:list as |items|>
           {{#each items as |item|}}
             <div data-test-item={{item.keyId}}>{{item.keyName}}</div>
@@ -87,7 +87,7 @@ module('Integration | Component | pki-paginated-list', function (hooks) {
     this.set('hasConfig', true);
     await render(
       hbs`
-      <PkiPaginatedList @list={{this.emptyList}} @hasConfig={{this.hasConfig}}>
+      <PkiPaginatedList @backend="pki-mount" @list={{this.emptyList}} @hasConfig={{this.hasConfig}}>
         <:list>
           List item
         </:list>
@@ -118,7 +118,7 @@ module('Integration | Component | pki-paginated-list', function (hooks) {
     this.set('model', this.list);
     await render(
       hbs`
-      <PkiPaginatedList @list={{this.model}} @hasConfig={{this.hasConfig}}>
+      <PkiPaginatedList @backend="pki-mount" @list={{this.model}} @hasConfig={{this.hasConfig}}>
         <:actions>
           <div data-test-button>Action</div>
         </:actions>

@@ -31,3 +31,7 @@ func entCheckStorageType(coreConfig *vault.CoreConfig) bool {
 func entGetFIPSInfoKey() string {
 	return ""
 }
+
+func entGetRequestLimiterStatus(coreConfig vault.CoreConfig) string {
+	return ""
+}

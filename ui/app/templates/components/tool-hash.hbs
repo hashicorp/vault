@@ -25,9 +25,7 @@
       <Hds::Copy::Button
         @text="Copy"
         @textToCopy={{@sum}}
-        @onError={{(fn
-          (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
-        )}}
+        @onError={{(fn (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger"))}}
         class="primary"
       />
     </div>
@@ -39,7 +37,7 @@
   <div class="box is-sideless is-fullwidth is-marginless">
     <MessageError @errors={{@errors}} />
     <div class="field">
-      <label for="input" class="is-label">
+      <label for="input-hash" class="is-label">
         Input
       </label>
       <div class="control">

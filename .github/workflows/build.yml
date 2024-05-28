@@ -105,13 +105,13 @@ jobs:
       workflow-trigger: ${{ steps.metadata.outputs.workflow-trigger }}
     steps:
       # Run the changed-files action to determine what Git reference we should check out
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
       - uses: ./.github/actions/changed-files
         id: changed-files
       - uses: ./.github/actions/checkout
         id: checkout # Make sure we check out correct ref after checking changed files
       # Get the vault version metadata
-      - uses: hashicorp/actions-set-product-version@v1
+      - uses: hashicorp/actions-set-product-version@v2
         id: set-product-version
         with:
           checkout: false # don't override the reference we've checked out
@@ -159,7 +159,7 @@ jobs:
     outputs:
       cache-key: ui-${{ steps.ui-hash.outputs.ui-hash }}
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
         with:
           ref: ${{ needs.setup.outputs.checkout-ref }}
       - name: Get UI hash
@@ -167,7 +167,7 @@ jobs:
         run: echo "ui-hash=$(git ls-tree HEAD ui --object-only)" | tee -a "$GITHUB_OUTPUT"
       - name: Set up UI asset cache
         id: cache-ui-assets
-        uses: actions/cache@13aacd865c20de90d75de3b17ebe84f7a17d57d2 # v4.0.0
+        uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
         with:
           enableCrossOsArchive: true
           lookup-only: true
@@ -177,7 +177,7 @@ jobs:
           key: ui-${{ steps.ui-hash.outputs.ui-hash }}
       - if: steps.cache-ui-assets.outputs.cache-hit != 'true'
         name: Set up node and yarn
-        uses: actions/setup-node@b39b52d1213e96004bfcb1c61a8a6fa8ab84f3e8 # v4.0.1
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
         with:
           node-version-file: ui/package.json
           cache: yarn
@@ -291,7 +291,7 @@ jobs:
       - test
       - test-containers
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
       - id: status
         name: Determine status
         run: |
@@ -312,7 +312,7 @@ jobs:
       - if: needs.setup.outputs.is-enterprise == 'true'
         id: secrets
         name: Fetch Vault Secrets
-        uses: hashicorp/vault-action@9f522b85981b491eab9a52c144d15aedbd0bf371 # v2.8.0
+        uses: hashicorp/vault-action@v3
         with:
           url: ${{ steps.vault-auth.outputs.addr }}
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
@@ -322,7 +322,10 @@ jobs:
       - id: slackbot-token
         run:
           echo "slackbot-token=${{ needs.setup.outputs.is-enterprise != 'true' && secrets.SLACK_BOT_TOKEN || steps.secrets.outputs.SLACK_BOT_TOKEN }}" >> "$GITHUB_OUTPUT"
-      - if: needs.setup.outputs.workflow-trigger == 'pull_request'
+      - if: |
+          needs.setup.outputs.workflow-trigger == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name &&
+          (github.repository == 'hashicorp/vault' || github.repository == 'hashicorp/vault-enterprise')
         name: Create or update a build status comment on the pull request
         env:
           ARTIFACTS: ${{ needs.artifacts.result }}
@@ -339,9 +342,7 @@ jobs:
           always() &&
           steps.status.outputs.result != 'success' &&
           (github.ref_name == 'main' || startsWith(github.ref_name, 'release/'))
-        uses: slackapi/slack-github-action@6c661ce58804a1a20f6dc5fbee7f0381b469e001 # v1.25.0
-        # We intentionally aren't using the following here since it's from an internal repo
-        # uses: hashicorp/cloud-gha-slack-notifier@730a033037b8e603adf99ebd3085f0fdfe75e2f4 #v1
+        uses: slackapi/slack-github-action@70cd7be8e40a46e8b0eced40b0de447bdb42f68e # v1.26.0
         env:
           SLACK_BOT_TOKEN: ${{ steps.slackbot-token.outputs.slackbot-token }}
         with:
@@ -381,12 +382,13 @@ jobs:
               ]
             }
       - uses: hashicorp/actions-generate-metadata@v1
+        if: needs.artifacts.result == 'success' # create build metadata if we successfully created artifacts
         id: generate-metadata-file
         with:
           version: ${{ needs.setup.outputs.vault-version-metadata }}
           product: ${{ needs.setup.outputs.vault-binary-name }}
-      # Use actions/upload-artifact @3.x until https://hashicorp.atlassian.net/browse/HREL-99 is resolved
-      - uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
+      - uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+        if: steps.generate-metadata-file.outcome == 'success' # upload our metadata if we created it
         with:
           name: metadata.json
           path: ${{ steps.generate-metadata-file.outputs.filepath }}

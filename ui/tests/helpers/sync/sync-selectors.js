@@ -4,7 +4,7 @@
  */
 
 import { click, fillIn } from '@ember/test-helpers';
-import { SELECTORS as GENERAL } from 'vault/tests/helpers/general-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 export const PAGE = {
   ...GENERAL,
@@ -51,6 +51,19 @@ export const PAGE = {
     },
   },
   overview: {
+    optInBanner: {
+      container: '[data-test-secrets-sync-opt-in-banner]',
+      enable: '[data-test-secrets-sync-opt-in-banner-enable]',
+      description: '[data-test-secrets-sync-opt-in-banner-description]',
+      dismiss: '[data-test-secrets-sync-opt-in-banner] [data-test-icon="x"]',
+    },
+    activationModal: {
+      container: '[data-test-secrets-sync-opt-in-modal]',
+      checkbox: '[data-test-opt-in-check]',
+      confirm: '[data-test-opt-in-confirm]',
+      cancel: '[data-test-opt-in-cancel]',
+    },
+    optInError: '[data-test-opt-in-error]',
     createDestination: '[data-test-create-destination]',
     table: {
       row: '[data-test-overview-table-row]',
@@ -63,7 +76,7 @@ export const PAGE = {
       action: (name) => `[data-test-overview-table-action="${name}"]`,
     },
   },
-  syncBadge: {
+  badgeText: {
     icon: (name) => `[data-test-icon="${name}"]`,
     text: '.hds-badge__text',
   },
@@ -76,6 +89,8 @@ export const PAGE = {
     fillInByAttr: async (attr, value) => {
       // for handling more complex form input elements by attr name
       switch (attr) {
+        case 'granularity':
+          return await click(`[data-test-radio="secret-key"]`);
         case 'credentials':
           await click('[data-test-text-toggle]');
           return fillIn('[data-test-text-file-textarea]', value);

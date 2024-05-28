@@ -6,6 +6,8 @@ package awsauth
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
@@ -14,7 +16,10 @@ import (
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/sts"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
+	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -58,6 +63,26 @@ func (b *backend) getRawClientConfig(ctx context.Context, s logical.Storage, reg
 		credsConfig.AccessKey = config.AccessKey
 		credsConfig.SecretKey = config.SecretKey
 		maxRetries = config.MaxRetries
+
+		if config.IdentityTokenAudience != "" {
+			ns, err := namespace.FromContext(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get namespace from context: %w", err)
+			}
+
+			fetcher := &PluginIdentityTokenFetcher{
+				sys:      b.System(),
+				logger:   b.Logger(),
+				ns:       ns,
+				audience: config.IdentityTokenAudience,
+				ttl:      config.IdentityTokenTTL,
+			}
+
+			sessionSuffix := strconv.FormatInt(time.Now().UnixNano(), 10)
+			credsConfig.RoleSessionName = fmt.Sprintf("vault-aws-auth-%s", sessionSuffix)
+			credsConfig.WebIdentityTokenFetcher = fetcher
+			credsConfig.RoleARN = config.RoleARN
+		}
 	}
 
 	credsConfig.HTTPClient = cleanhttp.DefaultClient()
@@ -84,7 +109,7 @@ func (b *backend) getRawClientConfig(ctx context.Context, s logical.Storage, reg
 // It uses getRawClientConfig to obtain config for the runtime environment, and if
 // stsRole is a non-empty string, it will use AssumeRole to obtain a set of assumed
 // credentials. The credentials will expire after 15 minutes but will auto-refresh.
-func (b *backend) getClientConfig(ctx context.Context, s logical.Storage, region, stsRole, accountID, clientType string) (*aws.Config, error) {
+func (b *backend) getClientConfig(ctx context.Context, s logical.Storage, region, stsRole, externalID, accountID, clientType string) (*aws.Config, error) {
 	config, err := b.getRawClientConfig(ctx, s, region, clientType)
 	if err != nil {
 		return nil, err
@@ -105,7 +130,7 @@ func (b *backend) getClientConfig(ctx context.Context, s logical.Storage, region
 		if err != nil {
 			return nil, err
 		}
-		assumedCredentials := stscreds.NewCredentials(sess, stsRole)
+		assumedCredentials := stscreds.NewCredentials(sess, stsRole, func(p *stscreds.AssumeRoleProvider) { p.ExternalID = aws.String(externalID) })
 		// Test that we actually have permissions to assume the role
 		if _, err = assumedCredentials.Get(); err != nil {
 			return nil, err
@@ -180,22 +205,22 @@ func (b *backend) setCachedUserId(userId, arn string) {
 	}
 }
 
-func (b *backend) stsRoleForAccount(ctx context.Context, s logical.Storage, accountID string) (string, error) {
+func (b *backend) stsRoleForAccount(ctx context.Context, s logical.Storage, accountID string) (string, string, error) {
 	// Check if an STS configuration exists for the AWS account
 	sts, err := b.lockedAwsStsEntry(ctx, s, accountID)
 	if err != nil {
-		return "", fmt.Errorf("error fetching STS config for account ID %q: %w", accountID, err)
+		return "", "", fmt.Errorf("error fetching STS config for account ID %q: %w", accountID, err)
 	}
 	// An empty STS role signifies the master account
 	if sts != nil {
-		return sts.StsRole, nil
+		return sts.StsRole, sts.ExternalID, nil
 	}
-	return "", nil
+	return "", "", nil
 }
 
 // clientEC2 creates a client to interact with AWS EC2 API
 func (b *backend) clientEC2(ctx context.Context, s logical.Storage, region, accountID string) (*ec2.EC2, error) {
-	stsRole, err := b.stsRoleForAccount(ctx, s, accountID)
+	stsRole, stsExternalID, err := b.stsRoleForAccount(ctx, s, accountID)
 	if err != nil {
 		return nil, err
 	}
@@ -218,7 +243,7 @@ func (b *backend) clientEC2(ctx context.Context, s logical.Storage, region, acco
 
 	// Create an AWS config object using a chain of providers
 	var awsConfig *aws.Config
-	awsConfig, err = b.getClientConfig(ctx, s, region, stsRole, accountID, "ec2")
+	awsConfig, err = b.getClientConfig(ctx, s, region, stsRole, stsExternalID, accountID, "ec2")
 	if err != nil {
 		return nil, err
 	}
@@ -247,7 +272,7 @@ func (b *backend) clientEC2(ctx context.Context, s logical.Storage, region, acco
 
 // clientIAM creates a client to interact with AWS IAM API
 func (b *backend) clientIAM(ctx context.Context, s logical.Storage, region, accountID string) (*iam.IAM, error) {
-	stsRole, err := b.stsRoleForAccount(ctx, s, accountID)
+	stsRole, stsExternalID, err := b.stsRoleForAccount(ctx, s, accountID)
 	if err != nil {
 		return nil, err
 	}
@@ -277,7 +302,7 @@ func (b *backend) clientIAM(ctx context.Context, s logical.Storage, region, acco
 
 	// Create an AWS config object using a chain of providers
 	var awsConfig *aws.Config
-	awsConfig, err = b.getClientConfig(ctx, s, region, stsRole, accountID, "iam")
+	awsConfig, err = b.getClientConfig(ctx, s, region, stsRole, stsExternalID, accountID, "iam")
 	if err != nil {
 		return nil, err
 	}
@@ -301,4 +326,37 @@ func (b *backend) clientIAM(ctx context.Context, s logical.Storage, region, acco
 		b.IAMClientsMap[region][stsRole] = client
 	}
 	return b.IAMClientsMap[region][stsRole], nil
+}
+
+// PluginIdentityTokenFetcher fetches plugin identity tokens from Vault. It is provided
+// to the AWS SDK client to keep assumed role credentials refreshed through expiration.
+// When the client's STS credentials expire, it will use this interface to fetch a new
+// plugin identity token and exchange it for new STS credentials.
+type PluginIdentityTokenFetcher struct {
+	sys      logical.SystemView
+	logger   hclog.Logger
+	audience string
+	ns       *namespace.Namespace
+	ttl      time.Duration
+}
+
+var _ stscreds.TokenFetcher = (*PluginIdentityTokenFetcher)(nil)
+
+func (f PluginIdentityTokenFetcher) FetchToken(ctx aws.Context) ([]byte, error) {
+	nsCtx := namespace.ContextWithNamespace(ctx, f.ns)
+	resp, err := f.sys.GenerateIdentityToken(nsCtx, &pluginutil.IdentityTokenRequest{
+		Audience: f.audience,
+		TTL:      f.ttl,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate plugin identity token: %w", err)
+	}
+	f.logger.Info("fetched new plugin identity token")
+
+	if resp.TTL < f.ttl {
+		f.logger.Debug("generated plugin identity token has shorter TTL than requested",
+			"requested", f.ttl, "actual", resp.TTL)
+	}
+
+	return []byte(resp.Token.Token()), nil
 }

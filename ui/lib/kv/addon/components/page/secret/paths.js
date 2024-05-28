@@ -55,8 +55,8 @@ export default class KvSecretPaths extends Component {
   }
 
   get commands() {
-    const cliPath = this.paths.findBy('label', 'CLI path').snippet;
-    const apiPath = this.paths.findBy('label', 'API path').snippet;
+    const cliPath = this.paths.find((p) => p.label === 'CLI path').snippet;
+    const apiPath = this.paths.find((p) => p.label === 'API path').snippet;
     // as a future improvement, it might be nice to use window.location.protocol here:
     const url = `https://127.0.0.1:8200${apiPath}`;
 
