@@ -55,11 +55,15 @@
     ]
   },
   "devDependencies": {
+    "@babel/cli": "^7.24.6",
     "@babel/core": "^7.23.2",
     "@babel/eslint-parser": "^7.22.15",
+    "@babel/plugin-proposal-class-properties": "^7.18.6",
     "@babel/plugin-proposal-decorators": "^7.23.2",
-    "@babel/plugin-proposal-object-rest-spread": "^7.12.1",
+    "@babel/plugin-proposal-object-rest-spread": "^7.20.7",
     "@babel/plugin-transform-block-scoping": "^7.12.1",
+    "@babel/preset-env": "^7.24.6",
+    "@babel/preset-typescript": "^7.24.6",
     "@docfy/ember": "^0.8.5",
     "@ember-data/legacy-compat": "~4.12.4",
     "@ember/legacy-built-in-components": "^0.4.1",
@@ -153,6 +157,7 @@
     "eslint-plugin-qunit": "^8.0.1",
     "filesize": "^4.2.1",
     "flat": "^6.0.1",
+    "jsdoc-babel": "^0.5.0",
     "jsdoc-to-markdown": "^8.0.1",
     "jsondiffpatch": "^0.4.1",
     "jsonlint": "^1.6.3",
@@ -177,7 +182,7 @@
     "swagger-ui-dist": "^5.9.0",
     "text-encoder-lite": "2.0.0",
     "tracked-built-ins": "^3.3.0",
-    "typescript": "^4.9.5",
+    "typescript": "^5.4.5",
     "walk-sync": "^2.0.2",
     "webpack": "5.89.0"
   },

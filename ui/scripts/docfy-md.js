@@ -13,18 +13,17 @@ yarn docfy-md some-component
 
 or if the docs are for a component in an in-repo-addon or an engine:
 yarn docfy-md some-component name-of-engine
-
-this script is currently limited to only .js files
-for some reason when the input file is a typescript file
-the following error is returned "JSDOC_ERROR: There are no input files to process."
 */
 
 const fs = require('fs');
 const jsdoc2md = require('jsdoc-to-markdown');
-const [nameOrFile, addonOrEngine] = process.argv.slice(2);
 
-const name = nameOrFile.includes('.') ? nameOrFile?.split('.')[0] : nameOrFile; // can pass component-name or component-name.js
-const path = nameOrFile.includes('.') ? nameOrFile : `${nameOrFile}.js`; // default to js
+// the fullFilepath arg will override the assumed inputFile which is built using the addonOrEngine arg
+const [nameOrFile, addonOrEngine, fullFilepath] = process.argv.slice(2);
+
+const isFile = nameOrFile.includes('.');
+const name = isFile ? nameOrFile?.split('.')[0] : nameOrFile; // can pass component-name or component-name.js
+const path = isFile ? nameOrFile : `${nameOrFile}.js`; // default to js
 
 const inputFile = addonOrEngine ? `lib/${addonOrEngine}/addon/components/${path}` : `app/components/${path}`;
 const outputFile = `docs/components/${name}.md`;
@@ -37,13 +36,15 @@ const outputFormat = `
 `;
 
 const options = {
-  files: inputFile,
+  files: fullFilepath || inputFile,
   'example-lang': 'hbs preview-template',
+  configure: './jsdoc2md.json',
   template: outputFormat,
 };
 
 try {
   const md = jsdoc2md.renderSync(options);
+  // for some reason components without a jsdoc @module doesn't throw, so throw manually
   if (md.includes('ERROR')) throw `${md} (there is probably no jsdoc for this component)`;
   fs.writeFileSync(outputFile, md);
   console.log(`✅ ${name}`);
