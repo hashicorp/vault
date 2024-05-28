@@ -7,7 +7,7 @@ description: >-
 
 <!--
   copied from docs/api/api-reference.md in the vault-secrets-operator repo.
-  commit SHA=513441e0a912dbae2ddd7dc6bcee6a562f8d52e1
+  commit SHA=c30a82b68399a94b053f98b134f310305936dc27
 -->
 # API Reference
 
@@ -212,7 +212,7 @@ with a timestamp value of when the trigger was executed.
 E.g. vso.secrets.hashicorp.com/restartedAt: "2023-03-23T13:39:31Z"
 
 
-Supported resources: Deployment, DaemonSet, StatefulSet
+Supported resources: Deployment, DaemonSet, StatefulSet, argo.Rollout
 
 
 
@@ -224,8 +224,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `kind` _string_ |  |  | Enum: [Deployment DaemonSet StatefulSet] <br /> |
-| `name` _string_ |  |  |  |
+| `kind` _string_ | Kind of the resource |  | Enum: [Deployment DaemonSet StatefulSet argo.Rollout] <br /> |
+| `name` _string_ | Name of the resource |  |  |
 
 
 #### SecretTransformation
