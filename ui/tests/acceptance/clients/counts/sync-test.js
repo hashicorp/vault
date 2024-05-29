@@ -45,11 +45,11 @@ module('Acceptance | clients | sync', function (hooks) {
     });
 
     test('it should show an empty state when secrets sync is not activated', async function (assert) {
-      assert.expect(3);
+      assert.expect(2);
 
       this.server.get('/sys/activation-flags', () => {
         assert.true(true, '/sys/activation-flags/ is called to check if secrets-sync is activated');
-
+        // called once from the higher level application route
         return {
           data: {
             activated: [],
@@ -59,7 +59,6 @@ module('Acceptance | clients | sync', function (hooks) {
       });
 
       assert.dom(GENERAL.emptyStateTitle).exists('Shows empty state when secrets-sync is not activated');
-
       await click(`${GENERAL.emptyStateActions} .hds-link-standalone`);
       assert.strictEqual(
         currentURL(),

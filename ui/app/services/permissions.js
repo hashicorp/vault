@@ -51,6 +51,7 @@ const API_PATHS = {
   },
   sync: {
     destinations: 'sys/sync/destinations',
+    associations: 'sys/sync/associations',
     config: 'sys/sync/config',
   },
 };
