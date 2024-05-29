@@ -151,7 +151,7 @@
         </Hds::Alert>
       {{/if}}
 
-      <Clients::Counts::NavBar @showSecretsSyncClientCounts={{this.showSecretsSyncClientCounts}} />
+      <Clients::Counts::NavBar @showSecretsSyncClientCounts={{(or @hasSecretsSyncClients this.flags.showSecretsSync)}} />
 
       {{! CLIENT COUNT PAGE COMPONENTS RENDER HERE }}
       {{yield}}

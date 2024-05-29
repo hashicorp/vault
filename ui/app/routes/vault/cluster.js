@@ -55,10 +55,12 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
   },
 
   async beforeModel() {
+    await this.flagsService.fetchActivatedFlags();
     const params = this.paramsFor(this.routeName);
     let namespace = params.namespaceQueryParam;
     const currentTokenName = this.auth.currentTokenName;
     const managedRoot = this.flagsService.hvdManagedNamespaceRoot;
+
     assert(
       'Cannot use VAULT_CLOUD_ADMIN_NAMESPACE flag with non-enterprise Vault version',
       !(managedRoot && this.version.isCommunity)

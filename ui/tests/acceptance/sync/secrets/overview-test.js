@@ -19,16 +19,25 @@ module('Acceptance | sync | overview', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
-    syncHandlers(this.server);
     this.version = this.owner.lookup('service:version');
     this.version.features = ['Secrets Sync'];
 
-    await authPage.login();
+    // await authPage.login();
   });
 
   module('when feature is activated', function (hooks) {
     hooks.beforeEach(async function () {
-      syncScenario(this.server);
+      syncHandlers(this.server);
+      this.server.get('/sys/activation-flags', () => {
+        return {
+          data: {
+            activated: ['secrets-sync'],
+            unactivated: [''],
+          },
+        };
+      });
+
+      await authPage.login();
     });
 
     test('it fetches destinations and associations', async function (assert) {
@@ -47,6 +56,7 @@ module('Acceptance | sync | overview', function (hooks) {
     module('when there are pre-existing destinations', function (hooks) {
       hooks.beforeEach(async function () {
         syncScenario(this.server);
+        await authPage.login();
       });
 
       test('it should transition to correct routes when performing actions', async function (assert) {
@@ -71,7 +81,6 @@ module('Acceptance | sync | overview', function (hooks) {
   module('when feature is not activated', function (hooks) {
     hooks.beforeEach(async function () {
       let wasActivatePOSTCalled = false;
-
       // simulate the feature being activated once /secrets-sync/activate has been called
       this.server.get('/sys/activation-flags', () => {
         if (wasActivatePOSTCalled) {
@@ -95,6 +104,7 @@ module('Acceptance | sync | overview', function (hooks) {
         wasActivatePOSTCalled = true;
         return {};
       });
+      await authPage.login();
     });
 
     test('it does not fetch destinations and associations', async function (assert) {
@@ -145,6 +155,7 @@ module('Acceptance | sync | overview', function (hooks) {
   module('enterprise with namespaces', function (hooks) {
     hooks.beforeEach(async function () {
       this.version.features = ['Secrets Sync', 'Namespaces'];
+      await authPage.login();
       await runCmd(`write sys/namespaces/admin -f`, false);
       await authPage.loginNs('admin');
       await runCmd(`write sys/namespaces/foo -f`, false);
@@ -154,16 +165,27 @@ module('Acceptance | sync | overview', function (hooks) {
     test('it should make activation-flag requests to correct namespace', async function (assert) {
       assert.expect(4);
       // should call GET activation-flags twice because we need an updated response after activating the feature
+      let wasActivatePOSTCalled = false;
       this.server.get('/sys/activation-flags', (_, req) => {
         assert.deepEqual(req.requestHeaders, {}, 'Request is unauthenticated and in root namespace');
-        return {
-          data: {
-            activated: [''],
-            unactivated: ['secrets-sync'],
-          },
-        };
+        if (wasActivatePOSTCalled) {
+          return {
+            data: {
+              activated: ['secrets-sync'],
+              unactivated: [''],
+            },
+          };
+        } else {
+          return {
+            data: {
+              activated: [''],
+              unactivated: ['secrets-sync'],
+            },
+          };
+        }
       });
       this.server.post('/sys/activation-flags/secrets-sync/activate', (_, req) => {
+        wasActivatePOSTCalled = true;
         assert.strictEqual(
           req.requestHeaders['X-Vault-Namespace'],
           undefined,
@@ -174,7 +196,6 @@ module('Acceptance | sync | overview', function (hooks) {
 
       // confirm we're in admin/foo
       assert.dom('[data-test-badge-namespace]').hasText('foo');
-
       await click(ts.navLink('Secrets Sync'));
       await click(ts.overview.optInBanner.enable);
       await click(ts.overview.activationModal.checkbox);
