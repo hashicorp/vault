@@ -61,7 +61,7 @@
         "routes": [
           {
             "title": "Security Model",
-            "path": "internals/security/index"
+            "path": "internals/security"
           },
           {
             "title": "Recommended patterns",
