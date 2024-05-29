@@ -8,6 +8,10 @@ on:
         description: 'Full name of the plugin, e.g., vault-plugin-auth-kubernetes'
         required: true
         type: string
+      branch:
+        description: 'Git branch name to use'
+        required: true
+        type: string
       version:
         description: 'Version of the plugin with *NO* "v", e.g., 1.2.3'
         required: true
@@ -21,7 +25,7 @@ jobs:
   plugin-update:
     runs-on: ubuntu-latest
     env:
-      VAULT_BRANCH: "update/${{ inputs.plugin }}/v${{ inputs.version }}"
+      VAULT_BRANCH: ${{ inputs.branch }}
       REVIEWER: ${{ inputs.reviewer || github.actor }}
     steps:
       - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6

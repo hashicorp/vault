@@ -351,6 +351,60 @@ are needed.
   [Rotate Root Credentials](/vault/api-docs/auth/aws#rotate-root-credentials)
   API call.
 
+## Plugin Workload Identity Federation (WIF)
+
+<EnterpriseAlert product="vault" />
+
+The AWS auth engine supports the plugin WIF workflow and has a source of identity called
+a plugin identity token. A plugin identity token is a JWT that is signed internally by the Vault's
+[plugin identity token issuer](/vault/api-docs/secret/identity/tokens#read-plugin-workload-identity-issuer-s-openid-configuration).
+
+If there is a trust relationship configured between Vault and AWS through
+[workload identity federation](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_oidc.html),
+the auth engine can exchange its identity token for short-lived STS credentials needed to
+perform its actions.
+
+Exchanging identity tokens for STS credentials lets the AWS auth engine
+operate without configuring explicit access to sensitive IAM security
+credentials.
+
+To configure the auth engine to use plugin WIF:
+
+1. Ensure that Vault [openid-configuration](/vault/api-docs/secret/identity/tokens#read-plugin-identity-token-issuer-s-openid-configuration)
+  and [public JWKS](/vault/api-docs/secret/identity/tokens#read-plugin-identity-token-issuer-s-public-jwks)
+  APIs are network-reachable by AWS. We recommend using an API proxy or gateway
+  if you need to limit Vault API exposure.
+
+1. Create an
+  [IAM OIDC identity provider](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_create_oidc.html)
+  in AWS.
+  1. The provider URL **must** point at your [Vault plugin identity token issuer](/vault/api-docs/secret/identity/tokens#read-plugin-workload-identity-issuer-s-openid-configuration) with the
+  `/.well-known/openid-configuration` suffix removed. For example:
+  `https://host:port/v1/identity/oidc/plugins`.
+  1. Uniquely identify the recipient of the plugin identity token as the audience.
+  In AWS, the recipient is the identity provider. We recommend using
+  the `host:port/v1/identity/oidc/plugins` portion of the provider URL as your
+  recipient since it will be unique for each configured identity provider.
+
+1. Create a [web identity role](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_create_for-idp_oidc.html#idp_oidc_Create)
+  in AWS with the same audience used for your IAM OIDC identity provider.
+
+1. Configure the AWS auth engine with the IAM OIDC audience value and web
+  identity role ARN.
+
+```shell-session
+$ vault write auth/aws/config/client \
+    identity_token_audience="vault.example/v1/identity/oidc/plugins" \
+    role_arn="arn:aws:iam::123456789123:role/example-web-identity-role"
+```
+
+Your auth engine can now use plugin WIF for its configuration credentials.
+By default, WIF [credentials](https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRoleWithWebIdentity.html)
+have a time-to-live of 1 hour and automatically refresh when they expire.
+
+Please see the [API documentation](/vault/api-docs/auth/aws#configure-client)
+for more details on the fields associated with plugin WIF.
+
 ## Client nonce
 
 Note: this only applies to the ec2 auth method.
@@ -609,8 +663,18 @@ The IAM account or role to which the credentials map must allow the
 `ec2:DescribeInstances` action. In addition, if IAM Role binding is used (see
 `bound_iam_role_arn` below), `iam:GetInstanceProfile` must also be allowed.
 
+To provide IAM security credentials to Vault, we recommend using Vault
+[plugin workload identity federation](#plugin-workload-identity-federation-wif)
+(WIF).
+
 ```shell-session
-$ vault write auth/aws/config/client secret_key=vCtSM8ZUEQ3mOFVlYPBQkf2sO6F/W7a5TVzrl3Oj access_key=VKIAJBRHKH6EVTTNXDHA
+$ vault write auth/aws/config/client \
+    secret_key=vCtSM8ZUEQ3mOFVlYPBQkf2sO6F/W7a5TVzrl3Oj \
+    access_key=VKIAJBRHKH6EVTTNXDHA
+
+$ vault auth/aws/config/client \
+    identity_token_audience="vault.example/v1/identity/oidc/plugins" \
+    role_arn="arn:aws:iam::123456789123:role/example-web-identity-role"
 ```
 
 #### Configure the policies on the role.
