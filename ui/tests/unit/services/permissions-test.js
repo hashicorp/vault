@@ -352,8 +352,9 @@ module('Unit | Service | permissions', function (hooks) {
         scenario: 'when namespace access denied for child ns',
         chroot: null,
         userRoot: 'bar',
-        currentNs: 'bar/baz',
+        currentNs: 'bar/baz/bin',
         globs: {
+          'bar/': { capabilities: ['read'] },
           'bar/baz/': { capabilities: ['deny'] },
         },
         expectedAccess: false,
