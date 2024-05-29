@@ -163,29 +163,18 @@ module('Acceptance | sync | overview', function (hooks) {
     });
 
     test('it should make activation-flag requests to correct namespace', async function (assert) {
-      assert.expect(4);
-      // should call GET activation-flags twice because we need an updated response after activating the feature
-      let wasActivatePOSTCalled = false;
+      assert.expect(3);
+
       this.server.get('/sys/activation-flags', (_, req) => {
         assert.deepEqual(req.requestHeaders, {}, 'Request is unauthenticated and in root namespace');
-        if (wasActivatePOSTCalled) {
-          return {
-            data: {
-              activated: ['secrets-sync'],
-              unactivated: [''],
-            },
-          };
-        } else {
-          return {
-            data: {
-              activated: [''],
-              unactivated: ['secrets-sync'],
-            },
-          };
-        }
+        return {
+          data: {
+            activated: [''],
+            unactivated: ['secrets-sync'],
+          },
+        };
       });
       this.server.post('/sys/activation-flags/secrets-sync/activate', (_, req) => {
-        wasActivatePOSTCalled = true;
         assert.strictEqual(
           req.requestHeaders['X-Vault-Namespace'],
           undefined,
@@ -203,8 +192,7 @@ module('Acceptance | sync | overview', function (hooks) {
     });
 
     test('it should make activation-flag requests to correct namespace when managed', async function (assert) {
-      assert.expect(4);
-      // should call GET activation-flags twice because we need an updated response after activating the feature
+      assert.expect(3);
       this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
 
       this.server.get('/sys/activation-flags', (_, req) => {
