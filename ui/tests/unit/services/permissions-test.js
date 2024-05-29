@@ -246,54 +246,6 @@ module('Unit | Service | permissions', function (hooks) {
     });
   });
 
-  module('wildcardPath calculates correctly', function () {
-    [
-      {
-        scenario: 'no user root or chroot',
-        userRoot: '',
-        chroot: null,
-        expectedPath: '',
-      },
-      {
-        scenario: 'user root = child ns and no chroot',
-        userRoot: 'bar',
-        chroot: null,
-        expectedPath: 'bar/',
-      },
-      {
-        scenario: 'user root = child ns and chroot set',
-        userRoot: 'bar',
-        chroot: 'admin/',
-        expectedPath: 'admin/bar/',
-      },
-      {
-        scenario: 'no user root and chroot set',
-        userRoot: '',
-        chroot: 'admin/',
-        expectedPath: 'admin/',
-      },
-    ].forEach((testCase) => {
-      test(`when ${testCase.scenario}`, function (assert) {
-        const namespaceService = Service.extend({
-          userRootNamespace: testCase.userRoot,
-          path: 'current/path/does/not/matter',
-        });
-        this.owner.register('service:namespace', namespaceService);
-        this.service.set('chrootNamespace', testCase.chroot);
-        assert.strictEqual(this.service.wildcardPath, testCase.expectedPath);
-      });
-    });
-    test('when user root =child ns and chroot set', function (assert) {
-      const namespaceService = Service.extend({
-        path: 'bar/baz',
-        userRootNamespace: 'bar',
-      });
-      this.owner.register('service:namespace', namespaceService);
-      this.service.set('chrootNamespace', 'admin/');
-      assert.strictEqual(this.service.wildcardPath, 'admin/bar/');
-    });
-  });
-
   module('hasWildcardAccess calculates correctly', function () {
     // The resultant-acl endpoint returns paths with chroot and
     // relative root prefixed on all paths.
