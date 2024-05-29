@@ -65,7 +65,10 @@ export default Route.extend({
     },
   },
 
-  beforeModel() {
-    return this.flagsService.fetchFeatureFlags();
+  async beforeModel() {
+    // activatedFlags are called this high up in routing to show/hide Secrets sync on sidebar nav. More deeply nested in routing, this flag determines to hide/show an activation banner for Secrets sync.
+    // featureFlags are used for all sorts of things but need to be this high in routing because it determines if the cluster isHvdManaged or not.
+    await this.flagsService.fetchActivatedFlags();
+    await this.flagsService.fetchFeatureFlags();
   },
 });

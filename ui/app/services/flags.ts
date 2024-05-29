@@ -10,6 +10,7 @@ import { DEBUG } from '@glimmer/env';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import type StoreService from 'vault/services/store';
 import type VersionService from 'vault/services/version';
+import type PermissionsService from 'vault/services/permissions';
 
 const FLAGS = {
   vaultCloudNamespace: 'VAULT_CLOUD_ADMIN_NAMESPACE',
@@ -24,6 +25,7 @@ const FLAGS = {
 export default class flagsService extends Service {
   @service declare readonly version: VersionService;
   @service declare readonly store: StoreService;
+  @service declare readonly permissions: PermissionsService;
 
   @tracked activatedFlags: string[] = [];
   @tracked featureFlags: string[] = [];
@@ -60,7 +62,6 @@ export default class flagsService extends Service {
   }
 
   getActivatedFlags = keepLatestTask(async () => {
-    if (this.version.isCommunity) return;
     // Response could change between user sessions.
     // Fire off endpoint without checking if activated features are already set.
     try {
@@ -85,5 +86,22 @@ export default class flagsService extends Service {
       this.secretsSyncActivatePath.get('canCreate') !== false ||
       this.secretsSyncActivatePath.get('canUpdate') !== false
     );
+  }
+
+  get showSecretsSync() {
+    const isHvdManaged = this.isHvdManaged;
+    const onLicense = this.version.hasSecretsSync;
+    const isEnterprise = this.version.isEnterprise;
+    const isActivated = this.secretsSyncIsActivated;
+
+    if (isHvdManaged) return true;
+    if (isEnterprise && !onLicense) return false;
+    if (!isEnterprise) return false;
+    if (isActivated) {
+      // if activated but the user does not have permissions to do anything on the `sys/sync` endpoint, hide navigation link.
+      return this.permissions.hasNavPermission('sync');
+    }
+    // The only remaining option is Enterprise with Secrets Sync on the license but the feature is not activated. In this case, we want to show the upsell page and message about either activating or having an admin activate.
+    return true;
   }
 }
