@@ -167,7 +167,7 @@ export default class ClientsCountsPageComponent extends Component<Args> {
     return activity?.total;
   }
 
-  get showSecretsSync(): boolean {
+  get showSecretsSyncClientCounts(): boolean {
     const { activity } = this.args;
     // if there is any sync client data, show it
     if (activity && activity?.total?.secret_syncs > 0) return true;
