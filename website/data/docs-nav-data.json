@@ -57,10 +57,13 @@
         "path": "internals/integrated-storage"
       },
       {
+        "title": "Recommended patterns",
+        "path": "internals/recommended-patterns"
+      },
+      {
         "title": "Security Model",
         "path": "internals/security"
       },
-
       {
         "title": "Telemetry",
         "routes": [
