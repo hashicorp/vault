@@ -94,14 +94,15 @@ export default class flagsService extends Service {
     const isEnterprise = this.version.isEnterprise;
     const isActivated = this.secretsSyncIsActivated;
 
+    if (!isEnterprise) return false;
     if (isHvdManaged) return true;
     if (isEnterprise && !onLicense) return false;
-    if (!isEnterprise) return false;
+    // only remaining version is Enterprise with Secrets Sync on their license
     if (isActivated) {
-      // if activated but the user does not have permissions to do anything on the `sys/sync` endpoint, hide navigation link.
+      // if the feature is activated but the user does not have permissions on the `sys/sync` endpoint, hide navigation link.
       return this.permissions.hasNavPermission('sync');
     }
-    // The only remaining option is Enterprise with Secrets Sync on the license but the feature is not activated. In this case, we want to show the upsell page and message about either activating or having an admin activate.
+    // only remaining option now is Enterprise with Secrets Sync on the license but the feature is not activated. In this case, we want to show the upsell page and message about either activating or having an admin activate.
     return true;
   }
 }

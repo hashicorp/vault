@@ -50,7 +50,8 @@ const API_PATHS = {
     customMessages: 'sys/config/ui/custom-messages',
   },
   sync: {
-    sync: 'sys/sync',
+    destinations: 'sys/sync/destinations',
+    config: 'sys/sync/config',
   },
 };
 
@@ -190,7 +191,11 @@ export default class PermissionsService extends Service {
         return this.hasPermission(API_PATHS[navItem][param], capability);
       });
     }
-    return Object.values(API_PATHS[navItem]).some((path) => this.hasPermission(path));
+    return Object.values(API_PATHS[navItem]).some((path) => {
+      const test = this.hasPermission(path);
+
+      return test;
+    });
   }
 
   navPathParams(navItem) {
@@ -216,7 +221,6 @@ export default class PermissionsService extends Service {
       return true;
     }
     const path = this.pathNameWithNamespace(pathName);
-
     return capabilities.every(
       (capability) =>
         this.hasMatchingExactPath(path, capability) || this.hasMatchingGlobPath(path, capability)
@@ -240,6 +244,7 @@ export default class PermissionsService extends Service {
 
   hasMatchingGlobPath(pathName, capability) {
     const globPaths = this.globPaths;
+
     if (globPaths) {
       const matchingPath = Object.keys(globPaths).find((k) => {
         return pathName.includes(k) || pathName.includes(k.replace(/\/$/, ''));

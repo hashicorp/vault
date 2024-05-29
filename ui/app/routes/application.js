@@ -66,8 +66,8 @@ export default Route.extend({
   },
 
   async beforeModel() {
-    // activatedFlags are called this high up in routing to return a response used to show/hide Secrets sync on sidebar nav.
-    // featureFlags are called this high in routing because to determine isHvdManaged things, etc.
+    // activatedFlags are called this high in routing to return a response used to show/hide Secrets sync on sidebar nav.
+    // featureFlags are called this high in routing to determine isHvdManaged things, etc.
     await this.flagsService.fetchActivatedFlags();
     await this.flagsService.fetchFeatureFlags();
   },
