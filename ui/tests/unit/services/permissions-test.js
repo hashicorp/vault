@@ -366,15 +366,54 @@ module('Unit | Service | permissions', function (hooks) {
         globs: {},
         expectedAccess: false,
       },
+      {
+        scenario: 'when nested access granted in root namespace',
+        chroot: null,
+        userRoot: '',
+        currentNs: 'foo/bing',
+        globs: {
+          'foo/': { capabilities: ['read'] },
+        },
+        expectedAccess: true,
+      },
+      {
+        scenario: 'when nested access granted in root namespace and chroot',
+        chroot: 'foo/',
+        userRoot: '',
+        currentNs: 'foo/bing/baz',
+        globs: {
+          'foo/bing/': { capabilities: ['read'] },
+        },
+        expectedAccess: true,
+      },
+      {
+        scenario: 'when access granted via parent namespace and chroot',
+        chroot: null,
+        userRoot: 'foo',
+        currentNs: 'foo/bing/baz',
+        globs: {
+          'foo/bing/': { capabilities: ['read'] },
+        },
+        expectedAccess: true,
+      },
+      {
+        scenario: 'when namespace access denied for child ns',
+        chroot: null,
+        userRoot: 'bar',
+        currentNs: 'bar/baz',
+        globs: {
+          'bar/baz/': { capabilities: ['deny'] },
+        },
+        expectedAccess: false,
+      },
     ].forEach((testCase) => {
-      test(`when ${testCase.scenario}`, function (assert) {
+      test(testCase.scenario, function (assert) {
         const namespaceService = Service.extend({
-          path: testCase.currentNs,
           userRootNamespace: testCase.userRoot,
         });
         this.owner.register('service:namespace', namespaceService);
         this.service.set('chrootNamespace', testCase.chroot);
-        const result = this.service.hasWildcardAccess(testCase.globs);
+        const result = this.service.hasWildcardAccess(testCase.currentNs, testCase.globs);
         assert.strictEqual(result, testCase.expectedAccess);
       });
     });
