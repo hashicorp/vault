@@ -21,22 +21,11 @@ module('Acceptance | sync | overview', function (hooks) {
   hooks.beforeEach(async function () {
     this.version = this.owner.lookup('service:version');
     this.version.features = ['Secrets Sync'];
-
-    // await authPage.login();
   });
 
   module('when feature is activated', function (hooks) {
     hooks.beforeEach(async function () {
       syncHandlers(this.server);
-      this.server.get('/sys/activation-flags', () => {
-        return {
-          data: {
-            activated: ['secrets-sync'],
-            unactivated: [''],
-          },
-        };
-      });
-
       await authPage.login();
     });
 
@@ -150,76 +139,76 @@ module('Acceptance | sync | overview', function (hooks) {
         'create new destination is available once feature is activated'
       );
     });
-  });
 
-  module('enterprise with namespaces', function (hooks) {
-    hooks.beforeEach(async function () {
-      this.version.features = ['Secrets Sync', 'Namespaces'];
-      await authPage.login();
-      await runCmd(`write sys/namespaces/admin -f`, false);
-      await authPage.loginNs('admin');
-      await runCmd(`write sys/namespaces/foo -f`, false);
-      await authPage.loginNs('admin/foo');
-    });
+    module('enterprise with namespaces', function (hooks) {
+      hooks.beforeEach(async function () {
+        this.version.features = ['Secrets Sync', 'Namespaces'];
 
-    test('it should make activation-flag requests to correct namespace', async function (assert) {
-      assert.expect(3);
-
-      this.server.get('/sys/activation-flags', (_, req) => {
-        assert.deepEqual(req.requestHeaders, {}, 'Request is unauthenticated and in root namespace');
-        return {
-          data: {
-            activated: [''],
-            unactivated: ['secrets-sync'],
-          },
-        };
-      });
-      this.server.post('/sys/activation-flags/secrets-sync/activate', (_, req) => {
-        assert.strictEqual(
-          req.requestHeaders['X-Vault-Namespace'],
-          undefined,
-          'Request is made to undefined namespace'
-        );
-        return {};
+        await runCmd(`write sys/namespaces/admin -f`, false);
+        await authPage.loginNs('admin');
+        await runCmd(`write sys/namespaces/foo -f`, false);
+        await authPage.loginNs('admin/foo');
       });
 
-      // confirm we're in admin/foo
-      assert.dom('[data-test-badge-namespace]').hasText('foo');
-      await click(ts.navLink('Secrets Sync'));
-      await click(ts.overview.optInBanner.enable);
-      await click(ts.overview.activationModal.checkbox);
-      await click(ts.overview.activationModal.confirm);
-    });
+      test('it should make activation-flag requests to correct namespace', async function (assert) {
+        assert.expect(3);
 
-    test('it should make activation-flag requests to correct namespace when managed', async function (assert) {
-      assert.expect(3);
-      this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
+        this.server.get('/sys/activation-flags', (_, req) => {
+          assert.deepEqual(req.requestHeaders, {}, 'Request is unauthenticated and in root namespace');
+          return {
+            data: {
+              activated: [''],
+              unactivated: ['secrets-sync'],
+            },
+          };
+        });
+        this.server.post('/sys/activation-flags/secrets-sync/activate', (_, req) => {
+          assert.strictEqual(
+            req.requestHeaders['X-Vault-Namespace'],
+            undefined,
+            'Request is made to undefined namespace'
+          );
+          return {};
+        });
 
-      this.server.get('/sys/activation-flags', (_, req) => {
-        assert.deepEqual(req.requestHeaders, {}, 'Request is unauthenticated and in root namespace');
-        return {
-          data: {
-            activated: [''],
-            unactivated: ['secrets-sync'],
-          },
-        };
+        // confirm we're in admin/foo
+        assert.dom('[data-test-badge-namespace]').hasText('foo');
+        await click(ts.navLink('Secrets Sync'));
+        await click(ts.overview.optInBanner.enable);
+        await click(ts.overview.activationModal.checkbox);
+        await click(ts.overview.activationModal.confirm);
       });
-      this.server.post('/sys/activation-flags/secrets-sync/activate', (_, req) => {
-        assert.strictEqual(
-          req.requestHeaders['X-Vault-Namespace'],
-          'admin',
-          'Request is made to the admin namespace'
-        );
-        return {};
+
+      test('it should make activation-flag requests to correct namespace when managed', async function (assert) {
+        assert.expect(3);
+        this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
+
+        this.server.get('/sys/activation-flags', (_, req) => {
+          assert.deepEqual(req.requestHeaders, {}, 'Request is unauthenticated and in root namespace');
+          return {
+            data: {
+              activated: [''],
+              unactivated: ['secrets-sync'],
+            },
+          };
+        });
+        this.server.post('/sys/activation-flags/secrets-sync/activate', (_, req) => {
+          assert.strictEqual(
+            req.requestHeaders['X-Vault-Namespace'],
+            'admin',
+            'Request is made to the admin namespace'
+          );
+          return {};
+        });
+
+        // confirm we're in admin/foo
+        assert.dom('[data-test-badge-namespace]').hasText('foo');
+
+        await click(ts.navLink('Secrets Sync'));
+        await click(ts.overview.optInBanner.enable);
+        await click(ts.overview.activationModal.checkbox);
+        await click(ts.overview.activationModal.confirm);
       });
-
-      // confirm we're in admin/foo
-      assert.dom('[data-test-badge-namespace]').hasText('foo');
-
-      await click(ts.navLink('Secrets Sync'));
-      await click(ts.overview.optInBanner.enable);
-      await click(ts.overview.activationModal.checkbox);
-      await click(ts.overview.activationModal.confirm);
     });
   });
 });
