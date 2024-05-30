@@ -151,9 +151,8 @@ export default class PermissionsService extends Service {
       return false;
     }
 
-    // if there is a match, make sure it is an ancestor of the target namespace
-    // and the capabilities do not include deny
-    return targetNs.startsWith(matchKey) && !this.isDenied(globPaths[matchKey]);
+    // if there is a match make sure the capabilities do not include deny
+    return !this.isDenied(globPaths[matchKey]);
   }
 
   // This method is called to recalculate whether to show the permissionsBanner when the namespace changes
