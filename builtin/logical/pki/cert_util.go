@@ -62,9 +62,6 @@ var (
 	middleWildRegex    = labelRegex + `\*` + labelRegex
 	leftWildLabelRegex = regexp.MustCompile(`^(` + allWildRegex + `|` + startWildRegex + `|` + endWildRegex + `|` + middleWildRegex + `)$`)
 
-	// OIDs for X.509 certificate extensions used below.
-	oidExtensionSubjectAltName = issuing.OidExtensionSubjectAltName
-
 	// Cloned from https://github.com/golang/go/blob/82c713feb05da594567631972082af2fcba0ee4f/src/crypto/x509/x509.go#L327-L379
 	oidSignatureMD2WithRSA      = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 2}
 	oidSignatureMD5WithRSA      = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 4}
@@ -219,8 +216,8 @@ func fetchCertBySerial(sc *storageContext, prefix, serial string) (*logical.Stor
 			path += deltaCRLPathSuffix
 		}
 	default:
-		legacyPath = "certs/" + colonSerial
-		path = "certs/" + hyphenSerial
+		legacyPath = issuing.PathCerts + colonSerial
+		path = issuing.PathCerts + hyphenSerial
 	}
 
 	certEntry, err = sc.Storage.Get(sc.Context, path)
@@ -256,7 +253,7 @@ func fetchCertBySerial(sc *storageContext, prefix, serial string) (*logical.Stor
 	certCounter := sc.Backend.GetCertificateCounter()
 	certsCounted := certCounter.IsInitialized()
 	if err = sc.Storage.Put(sc.Context, certEntry); err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("error saving certificate with serial %s to new location", serial)}
+		return nil, errutil.InternalError{Err: fmt.Sprintf("error saving certificate with serial %s to new location: %s", serial, err)}
 	}
 	if err = sc.Storage.Delete(sc.Context, legacyPath); err != nil {
 		// If we fail here, we have an extra (copy) of a cert in storage, add to metrics:
@@ -482,8 +479,8 @@ func signCert(b *backend, data *inputBundle, caSign *certutil.CAInfoBundle, isCA
 	return issuing.SignCert(b.System(), data.role, entityInfo, caSign, signCertInput)
 }
 
-func getOtherSANsFromX509Extensions(exts []pkix.Extension) ([]issuing.OtherNameUtf8, error) {
-	return issuing.GetOtherSANsFromX509Extensions(exts)
+func getOtherSANsFromX509Extensions(exts []pkix.Extension) ([]certutil.OtherNameUtf8, error) {
+	return certutil.GetOtherSANsFromX509Extensions(exts)
 }
 
 var _ issuing.CreationBundleInput = CreationBundleInputFromFieldData{}
@@ -699,7 +696,7 @@ func handleOtherSANs(in *x509.Certificate, sans map[string][]string) error {
 	// Marshal and add to ExtraExtensions
 	ext := pkix.Extension{
 		// This is the defined OID for subjectAltName
-		Id: asn1.ObjectIdentifier(oidExtensionSubjectAltName),
+		Id: certutil.OidExtensionSubjectAltName,
 	}
 	var err error
 	ext.Value, err = asn1.Marshal(rawValues)

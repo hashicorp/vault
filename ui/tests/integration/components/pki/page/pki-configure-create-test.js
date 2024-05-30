@@ -8,8 +8,9 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, render } from '@ember/test-helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { hbs } from 'ember-cli-htmlbars';
-import { SELECTORS } from 'vault/tests/helpers/pki/pki-configure-create';
 import sinon from 'sinon';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { PKI_CONFIGURE_CREATE } from 'vault/tests/helpers/pki/pki-selectors';
 
 module('Integration | Component | page/pki-configure-create', function (hooks) {
   setupRenderingTest(hooks);
@@ -20,8 +21,8 @@ module('Integration | Component | page/pki-configure-create', function (hooks) {
     this.store = this.owner.lookup('service:store');
     this.cancelSpy = sinon.spy();
     this.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: 'pki', route: 'overview' },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
+      { label: 'pki', route: 'overview', model: 'pki' },
       { label: 'configure' },
     ];
     this.config = this.store.createRecord('pki/action');
@@ -40,22 +41,22 @@ module('Integration | Component | page/pki-configure-create', function (hooks) {
     `,
       this.context
     );
-    assert.dom(SELECTORS.breadcrumbContainer).exists('breadcrumbs exist');
-    assert.dom(SELECTORS.title).hasText('Configure PKI');
-    assert.dom(SELECTORS.option).exists({ count: 3 }, 'Three configuration options are shown');
-    assert.dom(SELECTORS.cancelButton).exists('Cancel link is shown');
-    assert.dom(SELECTORS.saveButton).isDisabled('Done button is disabled');
+    assert.dom(GENERAL.breadcrumbs).exists();
+    assert.dom(GENERAL.title).hasText('Configure PKI');
+    assert.dom(PKI_CONFIGURE_CREATE.option).exists({ count: 3 });
+    assert.dom(GENERAL.cancelButton).exists('Cancel link is shown');
+    assert.dom(GENERAL.saveButton).isDisabled('Done button is disabled');
 
-    await click(SELECTORS.optionByKey('import'));
-    assert.dom(SELECTORS.optionByKey('import')).isChecked('Selected item is checked');
+    await click(PKI_CONFIGURE_CREATE.optionByKey('import'));
+    assert.dom(PKI_CONFIGURE_CREATE.optionByKey('import')).isChecked();
 
-    await click(SELECTORS.optionByKey('generate-csr'));
-    assert.dom(SELECTORS.optionByKey('generate-csr')).isChecked('Selected item is checked');
+    await click(PKI_CONFIGURE_CREATE.optionByKey('generate-csr'));
+    assert.dom(PKI_CONFIGURE_CREATE.optionByKey('generate-csr')).isChecked();
 
-    await click(SELECTORS.optionByKey('generate-root'));
-    assert.dom(SELECTORS.optionByKey('generate-root')).isChecked('Selected item is checked');
+    await click(PKI_CONFIGURE_CREATE.optionByKey('generate-root'));
+    assert.dom(PKI_CONFIGURE_CREATE.optionByKey('generate-root')).isChecked();
 
-    await click(SELECTORS.generateRootCancel);
-    assert.ok(this.cancelSpy.calledOnce);
+    await click(GENERAL.cancelButton);
+    assert.true(this.cancelSpy.calledOnce, 'cancel action is called');
   });
 });

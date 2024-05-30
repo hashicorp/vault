@@ -4,11 +4,12 @@
  */
 
 import Component from '@glimmer/component';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
+import { removeFromArray } from 'vault/helpers/remove-from-array';
 
 /**
  * @module KeymgmtProviderEdit
@@ -94,8 +95,9 @@ export default class KeymgmtProviderEdit extends Component {
   @action
   async onDeleteKey(model) {
     try {
+      const providerKeys = removeFromArray(this.args.model.keys, model);
       await model.destroyRecord();
-      this.args.model.keys.removeObject(model);
+      this.args.model.keys = providerKeys;
     } catch (error) {
       this.flashMessages.danger(error.errors.join('. '));
     }

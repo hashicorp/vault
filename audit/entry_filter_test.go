@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestEntryFilter_NewEntryFilter tests that we can create EntryFilter types correctly.
+// TestEntryFilter_NewEntryFilter tests that we can create entryFilter types correctly.
 func TestEntryFilter_NewEntryFilter(t *testing.T) {
 	t.Parallel()
 
@@ -27,20 +27,41 @@ func TestEntryFilter_NewEntryFilter(t *testing.T) {
 		"empty-filter": {
 			Filter:               "",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.NewEntryFilter: cannot create new audit filter with empty filter expression: invalid parameter",
+			ExpectedErrorMessage: "cannot create new audit filter with empty filter expression: invalid configuration",
 		},
 		"spacey-filter": {
 			Filter:               "    ",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.NewEntryFilter: cannot create new audit filter with empty filter expression: invalid parameter",
+			ExpectedErrorMessage: "cannot create new audit filter with empty filter expression: invalid configuration",
 		},
 		"bad-filter": {
 			Filter:               "____",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.NewEntryFilter: cannot create new audit filter",
+			ExpectedErrorMessage: "cannot create new audit filter",
 		},
-		"good-filter": {
-			Filter:          "foo == bar",
+		"unsupported-field-filter": {
+			Filter:               "foo == bar",
+			IsErrorExpected:      true,
+			ExpectedErrorMessage: "filter references an unsupported field: foo == bar",
+		},
+		"good-filter-operation": {
+			Filter:          "operation == create",
+			IsErrorExpected: false,
+		},
+		"good-filter-mount_type": {
+			Filter:          "mount_type == kv",
+			IsErrorExpected: false,
+		},
+		"good-filter-mount_point": {
+			Filter:          "mount_point == \"/auth/userpass\"",
+			IsErrorExpected: false,
+		},
+		"good-filter-namespace": {
+			Filter:          "namespace == juan",
+			IsErrorExpected: false,
+		},
+		"good-filter-path": {
+			Filter:          "path == foo",
 			IsErrorExpected: false,
 		},
 	}
@@ -51,9 +72,10 @@ func TestEntryFilter_NewEntryFilter(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			f, err := NewEntryFilter(tc.Filter)
+			f, err := newEntryFilter(tc.Filter)
 			switch {
 			case tc.IsErrorExpected:
+				require.Error(t, err)
 				require.ErrorContains(t, err, tc.ExpectedErrorMessage)
 				require.Nil(t, f)
 			default:
@@ -68,7 +90,7 @@ func TestEntryFilter_NewEntryFilter(t *testing.T) {
 func TestEntryFilter_Reopen(t *testing.T) {
 	t.Parallel()
 
-	f := &EntryFilter{}
+	f := &entryFilter{}
 	res := f.Reopen()
 	require.Nil(t, res)
 }
@@ -77,7 +99,7 @@ func TestEntryFilter_Reopen(t *testing.T) {
 func TestEntryFilter_Type(t *testing.T) {
 	t.Parallel()
 
-	f := &EntryFilter{}
+	f := &entryFilter{}
 	require.Equal(t, eventlogger.NodeTypeFilter, f.Type())
 }
 
@@ -91,7 +113,7 @@ func TestEntryFilter_Process_ContextDone(t *testing.T) {
 	// Explicitly cancel the context
 	cancel()
 
-	l, err := NewEntryFilter("foo == bar")
+	l, err := newEntryFilter("operation == foo")
 	require.NoError(t, err)
 
 	// Fake audit event
@@ -100,7 +122,7 @@ func TestEntryFilter_Process_ContextDone(t *testing.T) {
 
 	// Fake event logger event
 	e := &eventlogger.Event{
-		Type:      eventlogger.EventType(event.AuditType.String()),
+		Type:      event.AuditType.AsEventType(),
 		CreatedAt: time.Now(),
 		Formatted: make(map[string][]byte),
 		Payload:   a,
@@ -120,11 +142,11 @@ func TestEntryFilter_Process_ContextDone(t *testing.T) {
 func TestEntryFilter_Process_NilEvent(t *testing.T) {
 	t.Parallel()
 
-	l, err := NewEntryFilter("foo == bar")
+	l, err := newEntryFilter("operation == foo")
 	require.NoError(t, err)
 	e, err := l.Process(context.Background(), nil)
 	require.Error(t, err)
-	require.EqualError(t, err, "audit.(EntryFilter).Process: event is nil: invalid parameter")
+	require.EqualError(t, err, "event is nil: invalid internal parameter")
 
 	// Ensure that the pipeline won't continue.
 	require.Nil(t, e)
@@ -136,11 +158,11 @@ func TestEntryFilter_Process_NilEvent(t *testing.T) {
 func TestEntryFilter_Process_BadPayload(t *testing.T) {
 	t.Parallel()
 
-	l, err := NewEntryFilter("foo == bar")
+	l, err := newEntryFilter("operation == foo")
 	require.NoError(t, err)
 
 	e := &eventlogger.Event{
-		Type:      eventlogger.EventType(event.AuditType.String()),
+		Type:      event.AuditType.AsEventType(),
 		CreatedAt: time.Now(),
 		Formatted: make(map[string][]byte),
 		Payload:   nil,
@@ -148,7 +170,7 @@ func TestEntryFilter_Process_BadPayload(t *testing.T) {
 
 	e2, err := l.Process(context.Background(), e)
 	require.Error(t, err)
-	require.EqualError(t, err, "audit.(EntryFilter).Process: cannot parse event payload: invalid parameter")
+	require.EqualError(t, err, "cannot parse event payload: invalid internal parameter")
 
 	// Ensure that the pipeline won't continue.
 	require.Nil(t, e2)
@@ -159,7 +181,7 @@ func TestEntryFilter_Process_BadPayload(t *testing.T) {
 func TestEntryFilter_Process_NoAuditDataInPayload(t *testing.T) {
 	t.Parallel()
 
-	l, err := NewEntryFilter("foo == bar")
+	l, err := newEntryFilter("operation == foo")
 	require.NoError(t, err)
 
 	a, err := NewEvent(RequestType)
@@ -169,7 +191,7 @@ func TestEntryFilter_Process_NoAuditDataInPayload(t *testing.T) {
 	a.Data = nil
 
 	e := &eventlogger.Event{
-		Type:      eventlogger.EventType(event.AuditType.String()),
+		Type:      event.AuditType.AsEventType(),
 		CreatedAt: time.Now(),
 		Formatted: make(map[string][]byte),
 		Payload:   a,
@@ -187,7 +209,7 @@ func TestEntryFilter_Process_NoAuditDataInPayload(t *testing.T) {
 func TestEntryFilter_Process_FilterSuccess(t *testing.T) {
 	t.Parallel()
 
-	l, err := NewEntryFilter("mount_type == juan")
+	l, err := newEntryFilter("mount_type == juan")
 	require.NoError(t, err)
 
 	a, err := NewEvent(RequestType)
@@ -201,7 +223,7 @@ func TestEntryFilter_Process_FilterSuccess(t *testing.T) {
 	}
 
 	e := &eventlogger.Event{
-		Type:      eventlogger.EventType(event.AuditType.String()),
+		Type:      event.AuditType.AsEventType(),
 		CreatedAt: time.Now(),
 		Formatted: make(map[string][]byte),
 		Payload:   a,
@@ -220,7 +242,7 @@ func TestEntryFilter_Process_FilterSuccess(t *testing.T) {
 func TestEntryFilter_Process_FilterFail(t *testing.T) {
 	t.Parallel()
 
-	l, err := NewEntryFilter("mount_type == john and operation == create and namespace == root")
+	l, err := newEntryFilter("mount_type == john and operation == create and namespace == root")
 	require.NoError(t, err)
 
 	a, err := NewEvent(RequestType)
@@ -234,7 +256,7 @@ func TestEntryFilter_Process_FilterFail(t *testing.T) {
 	}
 
 	e := &eventlogger.Event{
-		Type:      eventlogger.EventType(event.AuditType.String()),
+		Type:      event.AuditType.AsEventType(),
 		CreatedAt: time.Now(),
 		Formatted: make(map[string][]byte),
 		Payload:   a,

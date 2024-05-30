@@ -8,13 +8,12 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	"os"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
-
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -40,12 +39,6 @@ const (
 	// auditTableType is the value we expect to find for the audit table and
 	// corresponding entries
 	auditTableType = "audit"
-
-	// featureFlagDisableEventLogger contains the feature flag name which can be
-	// used to disable internal eventlogger behavior for the audit system.
-	// NOTE: this is an undocumented and temporary feature flag, it should not
-	// be relied on to remain part of Vault for any subsequent releases.
-	featureFlagDisableEventLogger = "VAULT_AUDIT_DISABLE_EVENTLOGGER"
 )
 
 // loadAuditFailed if loading audit tables encounters an error
@@ -69,8 +62,18 @@ func (c *Core) generateAuditTestProbe() (*logical.LogInput, error) {
 	}, nil
 }
 
-// enableAudit is used to enable a new audit backend
+// enableAudit is used to enable a new audit backend that didn't exist in storage beforehand.
 func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage bool) error {
+	// Check ahead of time if the type of audit device we're trying to enable is configured in Vault.
+	if _, ok := c.auditBackends[entry.Type]; !ok {
+		return fmt.Errorf("unknown backend type: %q: %w", entry.Type, audit.ErrExternalOptions)
+	}
+
+	// We can check early to ensure that non-Enterprise versions aren't trying to supply Enterprise only options.
+	if audit.HasInvalidOptions(entry.Options) {
+		return fmt.Errorf("enterprise-only options supplied: %w", audit.ErrExternalOptions)
+	}
+
 	// Ensure we end the path in a slash
 	if !strings.HasSuffix(entry.Path, "/") {
 		entry.Path += "/"
@@ -78,10 +81,27 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 
 	// Ensure there is a name
 	if entry.Path == "/" {
-		return fmt.Errorf("backend path must be specified")
+		return fmt.Errorf("backend path must be specified: %w", audit.ErrExternalOptions)
 	}
 
-	// Update the audit table
+	if skipTestRaw, ok := entry.Options["skip_test"]; ok {
+		skipTest, err := parseutil.ParseBool(skipTestRaw)
+		if err != nil {
+			return fmt.Errorf("cannot parse supplied 'skip_test' setting: %w", audit.ErrExternalOptions)
+		}
+
+		// Reassigning the value means we can ensure that the formatting
+		// of it as a string is consistent for future comparisons.
+		entry.Options["skip_test"] = strconv.FormatBool(skipTest)
+	}
+
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return fmt.Errorf("%w: %w", audit.ErrInternal, err)
+	}
+	entry.NamespaceID = ns.ID
+	entry.namespace = ns
+
 	c.auditLock.Lock()
 	defer c.auditLock.Unlock()
 
@@ -93,7 +113,7 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 		case strings.HasPrefix(ent.Path, entry.Path):
 			fallthrough
 		case strings.HasPrefix(entry.Path, ent.Path):
-			return fmt.Errorf("path already in use")
+			return fmt.Errorf("path already in use: %w", audit.ErrExternalOptions)
 		}
 	}
 
@@ -101,44 +121,42 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 	if entry.UUID == "" {
 		entryUUID, err := uuid.GenerateUUID()
 		if err != nil {
-			return err
+			return fmt.Errorf("%w: %w", audit.ErrInternal, err)
 		}
 		entry.UUID = entryUUID
 	}
 	if entry.Accessor == "" {
 		accessor, err := c.generateMountAccessor("audit_" + entry.Type)
 		if err != nil {
-			return err
+			return fmt.Errorf("%w: %w", audit.ErrInternal, err)
 		}
 		entry.Accessor = accessor
 	}
 	viewPath := entry.ViewPath()
 	view := NewBarrierView(c.barrier, viewPath)
-	addAuditPathChecker(c, entry, view, viewPath)
-	origViewReadOnlyErr := view.getReadOnlyErr()
 
 	// Mark the view as read-only until the mounting is complete and
 	// ensure that it is reset after. This ensures that there will be no
 	// writes during the construction of the backend.
+	defer view.setReadOnlyErr(view.getReadOnlyErr())
 	view.setReadOnlyErr(logical.ErrSetupReadOnly)
-	defer view.setReadOnlyErr(origViewReadOnlyErr)
 
 	// Lookup the new backend
-	backend, err := c.newAuditBackend(ctx, entry, view, entry.Options)
+	backend, err := c.newAuditBackend(entry, view, entry.Options)
 	if err != nil {
 		return err
 	}
 	if backend == nil {
-		return fmt.Errorf("nil audit backend of type %q returned from factory", entry.Type)
+		return fmt.Errorf("nil audit backend of type %q: %w", entry.Type, audit.ErrInternal)
 	}
 
 	if entry.Options["skip_test"] != "true" {
 		// Test the new audit device and report failure if it doesn't work.
 		testProbe, err := c.generateAuditTestProbe()
 		if err != nil {
-			return err
+			return fmt.Errorf("error generating test probe: %w: %w", audit.ErrInternal, err)
 		}
-		err = backend.LogTestMessage(ctx, testProbe, entry.Options)
+		err = backend.LogTestMessage(ctx, testProbe)
 		if err != nil {
 			c.logger.Error("new audit backend failed test", "path", entry.Path, "type", entry.Type, "error", err)
 			return fmt.Errorf("audit backend failed test message: %w", err)
@@ -146,30 +164,27 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 		}
 	}
 
-	newTable := c.audit.shallowClone()
-	newTable.Entries = append(newTable.Entries, entry)
-
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
-		return err
-	}
-	entry.NamespaceID = ns.ID
-	entry.namespace = ns
-
-	if updateStorage {
-		if err := c.persistAudit(ctx, newTable, entry.Local); err != nil {
-			return errors.New("failed to update audit table")
-		}
-	}
-
-	c.audit = newTable
-
-	// Register the backend
-	err = c.auditBroker.Register(entry.Path, backend, entry.Local)
+	// Now that we're happy that the backend has been created correctly, we can
+	// try to register the backend with the audit broker.
+	// An error at this point doesn't cause issues anywhere outside the broker.
+	err = c.auditBroker.Register(backend, entry.Local)
 	if err != nil {
 		return fmt.Errorf("failed to register %q audit backend %q: %w", entry.Type, entry.Path, err)
 	}
 
+	// Update a copy of the mount table, we will swap out the oneCore has access to
+	// for this one unless there is a problem persisting storage (if required).
+	newTable := c.audit.shallowClone()
+	newTable.Entries = append(newTable.Entries, entry)
+	if updateStorage {
+		if err := c.persistAudit(ctx, newTable, entry.Local); err != nil {
+			return fmt.Errorf("failed to update audit table: %w: %w", audit.ErrInternal, err)
+		}
+	}
+
+	// Wrap things up, add the path checker, swap the table, log our success.
+	addAuditPathChecker(c, entry, view, viewPath)
+	c.audit = newTable
 	c.logger.Info("enabled audit backend", "path", entry.Path, "type", entry.Type)
 	return nil
 }
@@ -218,7 +233,7 @@ func (c *Core) disableAudit(ctx context.Context, path string, updateStorage bool
 	if updateStorage {
 		// Update the audit table
 		if err := c.persistAudit(ctx, newTable, entry.Local); err != nil {
-			return existed, errors.New("failed to update audit table")
+			return existed, fmt.Errorf("failed to update audit table: %w: %w", audit.ErrInternal, err)
 		}
 	}
 
@@ -402,17 +417,13 @@ func (c *Core) setupAudits(ctx context.Context) error {
 	c.auditLock.Lock()
 	defer c.auditLock.Unlock()
 
-	disableEventLogger, err := parseutil.ParseBool(os.Getenv(featureFlagDisableEventLogger))
-	if err != nil {
-		return fmt.Errorf("unable to parse feature flag: %q: %w", featureFlagDisableEventLogger, err)
-	}
-
 	brokerLogger := c.baseLogger.Named("audit")
 
-	broker, err := NewAuditBroker(brokerLogger, !disableEventLogger)
+	broker, err := audit.NewBroker(brokerLogger)
 	if err != nil {
 		return err
 	}
+	c.auditBroker = broker
 
 	var successCount int
 
@@ -420,19 +431,17 @@ func (c *Core) setupAudits(ctx context.Context) error {
 		// Create a barrier view using the UUID
 		viewPath := entry.ViewPath()
 		view := NewBarrierView(c.barrier, viewPath)
-		addAuditPathChecker(c, entry, view, viewPath)
-		origViewReadOnlyErr := view.getReadOnlyErr()
 
 		// Mark the view as read-only until the mounting is complete and
 		// ensure that it is reset after. This ensures that there will be no
 		// writes during the construction of the backend.
 		view.setReadOnlyErr(logical.ErrSetupReadOnly)
 		c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
-			view.setReadOnlyErr(origViewReadOnlyErr)
+			view.setReadOnlyErr(view.getReadOnlyErr())
 		})
 
 		// Initialize the backend
-		backend, err := c.newAuditBackend(ctx, entry, view, entry.Options)
+		backend, err := c.newAuditBackend(entry, view, entry.Options)
 		if err != nil {
 			c.logger.Error("failed to create audit entry", "path", entry.Path, "error", err)
 			continue
@@ -443,12 +452,13 @@ func (c *Core) setupAudits(ctx context.Context) error {
 		}
 
 		// Mount the backend
-		err = broker.Register(entry.Path, backend, entry.Local)
+		err = broker.Register(backend, entry.Local)
 		if err != nil {
 			c.logger.Error("failed to setup audit backed", "path", entry.Path, "type", entry.Type, "error", err)
 			continue
 		}
 
+		addAuditPathChecker(c, entry, view, viewPath)
 		successCount++
 	}
 
@@ -456,7 +466,6 @@ func (c *Core) setupAudits(ctx context.Context) error {
 		return errLoadAuditFailed
 	}
 
-	c.auditBroker = broker
 	c.AddLogger(brokerLogger)
 	return nil
 }
@@ -490,7 +499,7 @@ func (c *Core) teardownAudits() error {
 // audit lock needs to be held before calling this.
 func (c *Core) removeAuditReloadFunc(entry *MountEntry) {
 	switch entry.Type {
-	case "file":
+	case audit.TypeFile:
 		key := "audit_file|" + entry.Path
 		c.reloadFuncsLock.Lock()
 
@@ -505,42 +514,39 @@ func (c *Core) removeAuditReloadFunc(entry *MountEntry) {
 }
 
 // newAuditBackend is used to create and configure a new audit backend by name
-func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logical.Storage, conf map[string]string) (audit.Backend, error) {
+func (c *Core) newAuditBackend(entry *MountEntry, view logical.Storage, conf map[string]string) (audit.Backend, error) {
+	// Ensure that non-Enterprise versions aren't trying to supply Enterprise only options.
+	if audit.HasInvalidOptions(entry.Options) {
+		return nil, fmt.Errorf("enterprise-only options supplied: %w", audit.ErrInvalidParameter)
+	}
+
 	f, ok := c.auditBackends[entry.Type]
 	if !ok {
-		return nil, fmt.Errorf("unknown backend type: %q", entry.Type)
+		return nil, fmt.Errorf("unknown backend type: %q: %w", entry.Type, audit.ErrInvalidParameter)
 	}
 	saltConfig := &salt.Config{
 		HMAC:     sha256.New,
 		HMACType: "hmac-sha256",
 		Location: salt.DefaultLocation,
 	}
-
-	disableEventLogger, err := parseutil.ParseBool(os.Getenv(featureFlagDisableEventLogger))
-	if err != nil {
-		return nil, fmt.Errorf("unable to parse feature flag: %q: %w", featureFlagDisableEventLogger, err)
-	}
-
-	be, err := f(
-		ctx, &audit.BackendConfig{
-			SaltView:   view,
-			SaltConfig: saltConfig,
-			Config:     conf,
-			MountPath:  entry.Path,
-		},
-		!disableEventLogger,
-		c.auditedHeaders)
-	if err != nil {
-		return nil, err
-	}
-	if be == nil {
-		return nil, fmt.Errorf("nil backend returned from %q factory function", entry.Type)
-	}
-
 	auditLogger := c.baseLogger.Named("audit")
 
+	be, err := f(&audit.BackendConfig{
+		SaltView:   view,
+		SaltConfig: saltConfig,
+		Config:     conf,
+		MountPath:  entry.Path,
+		Logger:     auditLogger,
+	}, c.auditedHeaders)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create new audit backend: %w", err)
+	}
+	if be == nil {
+		return nil, fmt.Errorf("nil backend returned from %q factory function: %w", entry.Type, audit.ErrInternal)
+	}
+
 	switch entry.Type {
-	case "file":
+	case audit.TypeFile:
 		key := "audit_file|" + entry.Path
 
 		c.reloadFuncsLock.Lock()
@@ -554,15 +560,15 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 
 		c.reloadFuncs[key] = append(c.reloadFuncs[key], func() error {
 			auditLogger.Info("reloading file audit backend", "path", entry.Path)
-			return be.Reload(ctx)
+			return be.Reload()
 		})
 
 		c.reloadFuncsLock.Unlock()
-	case "socket":
+	case audit.TypeSocket:
 		if auditLogger.IsDebug() && entry.Options != nil {
 			auditLogger.Debug("socket backend options", "path", entry.Path, "address", entry.Options["address"], "socket type", entry.Options["socket_type"])
 		}
-	case "syslog":
+	case audit.TypeSyslog:
 		if auditLogger.IsDebug() && entry.Options != nil {
 			auditLogger.Debug("syslog backend options", "path", entry.Path, "facility", entry.Options["facility"], "tag", entry.Options["tag"])
 		}
@@ -593,14 +599,14 @@ func (b *basicAuditor) AuditRequest(ctx context.Context, input *logical.LogInput
 	if b.c.auditBroker == nil {
 		return consts.ErrSealed
 	}
-	return b.c.auditBroker.LogRequest(ctx, input, b.c.auditedHeaders)
+	return b.c.auditBroker.LogRequest(ctx, input)
 }
 
 func (b *basicAuditor) AuditResponse(ctx context.Context, input *logical.LogInput) error {
 	if b.c.auditBroker == nil {
 		return consts.ErrSealed
 	}
-	return b.c.auditBroker.LogResponse(ctx, input, b.c.auditedHeaders)
+	return b.c.auditBroker.LogResponse(ctx, input)
 }
 
 type genericAuditor struct {
@@ -613,12 +619,12 @@ func (g genericAuditor) AuditRequest(ctx context.Context, input *logical.LogInpu
 	ctx = namespace.ContextWithNamespace(ctx, g.namespace)
 	logInput := *input
 	logInput.Type = g.mountType + "-request"
-	return g.c.auditBroker.LogRequest(ctx, &logInput, g.c.auditedHeaders)
+	return g.c.auditBroker.LogRequest(ctx, &logInput)
 }
 
 func (g genericAuditor) AuditResponse(ctx context.Context, input *logical.LogInput) error {
 	ctx = namespace.ContextWithNamespace(ctx, g.namespace)
 	logInput := *input
 	logInput.Type = g.mountType + "-response"
-	return g.c.auditBroker.LogResponse(ctx, &logInput, g.c.auditedHeaders)
+	return g.c.auditBroker.LogResponse(ctx, &logInput)
 }

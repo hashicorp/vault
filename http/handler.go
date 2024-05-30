@@ -6,7 +6,10 @@ package http
 import (
 	"bytes"
 	"context"
+	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
@@ -29,7 +32,9 @@ import (
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/http/priority"
 	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/limits"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/pathmanager"
@@ -247,6 +252,7 @@ func handler(props *vault.HandlerProperties) http.Handler {
 	wrappedHandler = rateLimitQuotaWrapping(wrappedHandler, core)
 	wrappedHandler = entWrapGenericHandler(core, wrappedHandler, props)
 	wrappedHandler = wrapMaxRequestSizeHandler(wrappedHandler, props)
+	wrappedHandler = priority.WrapRequestPriorityHandler(wrappedHandler)
 
 	// Add an extra wrapping handler if the DisablePrintableCheck listener
 	// setting isn't true that checks for non-printable characters in the
@@ -260,6 +266,17 @@ func handler(props *vault.HandlerProperties) http.Handler {
 	// a value indicating that the replication status endpoints are disabled.
 	if props.ListenerConfig != nil && props.ListenerConfig.DisableReplicationStatusEndpoints {
 		wrappedHandler = disableReplicationStatusEndpointWrapping(wrappedHandler)
+	}
+
+	// Add an extra wrapping handler if any of the Redaction settings are
+	// true that will create a new request with a context containing the
+	// redaction settings.
+	if props.ListenerConfig != nil && (props.ListenerConfig.RedactAddresses || props.ListenerConfig.RedactClusterName || props.ListenerConfig.RedactVersion) {
+		wrappedHandler = redactionSettingsWrapping(wrappedHandler, props.ListenerConfig.RedactVersion, props.ListenerConfig.RedactAddresses, props.ListenerConfig.RedactClusterName)
+	}
+
+	if props.ListenerConfig != nil && props.ListenerConfig.DisableRequestLimiter {
+		wrappedHandler = wrapRequestLimiterHandler(wrappedHandler, props)
 	}
 
 	return wrappedHandler
@@ -347,7 +364,8 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 	// return an HTTP error here. This information is best effort.
 	hostname, _ := os.Hostname()
 
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	var hf func(w http.ResponseWriter, r *http.Request)
+	hf = func(w http.ResponseWriter, r *http.Request) {
 		// This block needs to be here so that upon sending SIGHUP, custom response
 		// headers are also reloaded into the handlers.
 		var customHeaders map[string][]*logical.CustomHeader
@@ -409,10 +427,13 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		case strings.HasPrefix(r.URL.Path, "/ui"), r.URL.Path == "/robots.txt", r.URL.Path == "/":
 			// RFC 5785
 		case strings.HasPrefix(r.URL.Path, "/.well-known/"):
+			perfStandby := core.PerfStandby()
 			standby, err := core.Standby()
 			if err != nil {
 				core.Logger().Warn("error resolving standby status handling .well-known path", "error", err)
-			} else if standby {
+			} else if standby && !perfStandby {
+				// Standby nodes, not performance standbys, don't start plugins
+				// so registration can not happen, instead redirect to active
 				respondStandby(core, w, r.URL)
 				cancelFunc()
 				return
@@ -422,16 +443,11 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 					core.Logger().Warn("error resolving potential API redirect", "error", err)
 				} else {
 					if redir != "" {
-						dest := url.URL{
-							Path:     redir,
-							RawQuery: r.URL.RawQuery,
-						}
-						w.Header().Set("Location", dest.String())
-						if r.Method == http.MethodGet || r.Proto == "HTTP/1.0" {
-							w.WriteHeader(http.StatusFound)
-						} else {
-							w.WriteHeader(http.StatusTemporaryRedirect)
-						}
+						newReq := r.Clone(ctx)
+						// Save the original path for audit logging.
+						newReq.RequestURI = newReq.URL.Path
+						newReq.URL.Path = redir
+						hf(w, newReq)
 						cancelFunc()
 						return
 					}
@@ -445,7 +461,12 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		// The uuid for the request is going to be generated when a logical
 		// request is generated. But, here we generate one to be able to track
 		// in-flight requests, and use that to update the req data with clientID
-		inFlightReqID, err := uuid.GenerateUUID()
+		reqIDGen := props.RequestIDGenerator
+		if reqIDGen == nil {
+			// By default use a UUID
+			reqIDGen = uuid.GenerateUUID
+		}
+		inFlightReqID, err := reqIDGen()
 		if err != nil {
 			respondError(nw, http.StatusInternalServerError, fmt.Errorf("failed to generate an identifier for the in-flight request"))
 		}
@@ -487,7 +508,8 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		h.ServeHTTP(nw, r)
 
 		cancelFunc()
-	})
+	}
+	return http.HandlerFunc(hf)
 }
 
 func WrapForwardedForHandler(h http.Handler, l *configutil.Listener) http.Handler {
@@ -495,6 +517,8 @@ func WrapForwardedForHandler(h http.Handler, l *configutil.Listener) http.Handle
 	hopSkips := l.XForwardedForHopSkips
 	authorizedAddrs := l.XForwardedForAuthorizedAddrs
 	rejectNotAuthz := l.XForwardedForRejectNotAuthorized
+	clientCertHeader := l.XForwardedForClientCertHeader
+	clientCertHeaderDecoders := l.XForwardedForClientCertHeaderDecoders
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		headers, headersOK := r.Header[textproto.CanonicalMIMEHeaderKey("X-Forwarded-For")]
 		if !headersOK || len(headers) == 0 {
@@ -577,6 +601,60 @@ func WrapForwardedForHandler(h http.Handler, l *configutil.Listener) http.Handle
 		}
 
 		r.RemoteAddr = net.JoinHostPort(acc[indexToUse], port)
+
+		// Import the Client Certificate forwarded by the reverse proxy
+		// There should be only 1 instance of the header, but looping allows for more flexibility
+		clientCertHeaders, clientCertHeadersOK := r.Header[textproto.CanonicalMIMEHeaderKey(clientCertHeader)]
+		if clientCertHeadersOK && len(clientCertHeaders) > 0 {
+			var client_certs []*x509.Certificate
+			for _, header := range clientCertHeaders {
+				// Multiple certs should be comma delimetered
+				vals := strings.Split(header, ",")
+				for _, v := range vals {
+					actions := strings.Split(clientCertHeaderDecoders, ",")
+					for _, action := range actions {
+						switch action {
+						case "URL":
+							decoded, err := url.QueryUnescape(v)
+							if err != nil {
+								respondError(w, http.StatusBadRequest, fmt.Errorf("failed to url unescape the client certificate: %w", err))
+								return
+							}
+							v = decoded
+						case "BASE64":
+							decoded, err := base64.StdEncoding.DecodeString(v)
+							if err != nil {
+								respondError(w, http.StatusBadRequest, fmt.Errorf("failed to base64 decode the client certificate: %w", err))
+								return
+							}
+							v = string(decoded[:])
+						case "DER":
+							decoded, _ := pem.Decode([]byte(v))
+							if decoded == nil {
+								respondError(w, http.StatusBadRequest, fmt.Errorf("failed to convert the client certificate to DER format: %w", err))
+								return
+							}
+							v = string(decoded.Bytes[:])
+						default:
+							respondError(w, http.StatusBadRequest, fmt.Errorf("unknown decode option specified: %s", action))
+							return
+						}
+					}
+
+					cert, err := x509.ParseCertificate([]byte(v))
+					if err != nil {
+						respondError(w, http.StatusBadRequest, fmt.Errorf("failed to parse the client certificate: %w", err))
+						return
+					}
+					client_certs = append(client_certs, cert)
+				}
+			}
+			if r.TLS == nil {
+				respondError(w, http.StatusBadRequest, fmt.Errorf("Server must use TLS for certificate authentication"))
+			} else {
+				r.TLS.PeerCertificates = append(client_certs, r.TLS.PeerCertificates...)
+			}
+		}
 		h.ServeHTTP(w, r)
 	})
 }
@@ -789,6 +867,7 @@ func forwardBasedOnHeaders(core *vault.Core, r *http.Request) (bool, error) {
 			return false, fmt.Errorf("forwarding via header %s disabled in configuration", VaultForwardHeaderName)
 		}
 		if rawForward == "active-node" {
+			core.Logger().Trace("request will be routed based on the 'active-node' header")
 			return true, nil
 		}
 		return false, nil
@@ -885,6 +964,7 @@ func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 	}
 	path := ns.TrimmedPath(r.URL.Path[len("/v1/"):])
 	if alwaysRedirectPaths.HasPath(path) {
+		core.Logger().Trace("cannot forward request (path included in always redirect paths), falling back to redirection to standby")
 		respondStandby(core, w, r.URL)
 		return
 	}
@@ -895,7 +975,7 @@ func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 	statusCode, header, retBytes, err := core.ForwardRequest(r)
 	if err != nil {
 		if err == vault.ErrCannotForward {
-			core.Logger().Debug("cannot forward request (possibly disabled on active node), falling back")
+			core.Logger().Trace("cannot forward request (possibly disabled on active node), falling back to redirection to standby")
 		} else {
 			core.Logger().Error("forward request error", "error", err)
 		}
@@ -904,6 +984,8 @@ func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 		respondStandby(core, w, r.URL)
 		return
 	}
+
+	core.Logger().Trace("request forwarded", "statusCode", statusCode)
 
 	for k, v := range header {
 		w.Header()[k] = v
@@ -916,12 +998,51 @@ func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 // request is a helper to perform a request and properly exit in the
 // case of an error.
 func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *logical.Request) (*logical.Response, bool, bool) {
+	lim := &limits.HTTPLimiter{
+		Method:      rawReq.Method,
+		PathLimited: r.PathLimited,
+		LookupFunc:  core.GetRequestLimiter,
+	}
+	lsnr, ok := lim.Acquire(rawReq.Context())
+	if !ok {
+		resp := &logical.Response{}
+		logical.RespondWithStatusCode(resp, r, http.StatusServiceUnavailable)
+		respondError(w, http.StatusServiceUnavailable, limits.ErrCapacity)
+		return resp, false, false
+	}
+
+	// To guard against leaking RequestListener slots, we should ignore Limiter
+	// measurements on panic. OnIgnore will check to see if a RequestListener
+	// slot has been acquired and not released, which could happen on
+	// recoverable panics.
+	defer lsnr.OnIgnore()
+
 	resp, err := core.HandleRequest(rawReq.Context(), r)
+
+	// Do the limiter measurement
+	if err != nil {
+		lsnr.OnDropped()
+	} else {
+		lsnr.OnSuccess()
+	}
+
 	if r.LastRemoteWAL() > 0 && !core.EntWaitUntilWALShipped(rawReq.Context(), r.LastRemoteWAL()) {
 		if resp == nil {
 			resp = &logical.Response{}
 		}
 		resp.AddWarning("Timeout hit while waiting for local replicated cluster to apply primary's write; this client may encounter stale reads of values written during this operation.")
+	}
+
+	// We need to rely on string comparison here because the error could be
+	// returned from an RPC client call with a non-ReplicatedResponse return
+	// value (see: PersistAlias). In these cases, the error we get back will
+	// contain the non-wrapped error message string we're looking for. We would
+	// love to clean up all error wrapping to be consistent in Vault but we
+	// considered that too high risk for now.
+	if err != nil && strings.Contains(err.Error(), consts.ErrOverloaded.Error()) {
+		logical.RespondWithStatusCode(resp, r, http.StatusServiceUnavailable)
+		respondError(w, http.StatusServiceUnavailable, err)
+		return resp, false, false
 	}
 	if errwrap.Contains(err, consts.ErrStandby.Error()) {
 		respondStandby(core, w, rawReq.URL)

@@ -1,0 +1,3 @@
+```release-note:change
+auth/kerberos: Update plugin to v0.12.0
+```

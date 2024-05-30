@@ -101,12 +101,12 @@ export default class OidcClientModel extends Model {
   // CAPABILITIES //
   @lazyCapabilities(apiPath`identity/oidc/client/${'name'}`, 'name') clientPath;
   get canRead() {
-    return this.clientPath.get('canRead');
+    return this.clientPath.get('canRead') !== false;
   }
   get canEdit() {
-    return this.clientPath.get('canUpdate');
+    return this.clientPath.get('canUpdate') !== false;
   }
   get canDelete() {
-    return this.clientPath.get('canDelete');
+    return this.clientPath.get('canDelete') !== false;
   }
 }

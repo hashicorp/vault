@@ -8,7 +8,7 @@
 <Toolbar>
   <ToolbarActions>
     {{#unless this.model.hasConfig}}
-      <ToolbarLink @route="configuration.create">
+      <ToolbarLink @route="configuration.create" @model={{this.model.engine.id}}>
         Configure PKI
       </ToolbarLink>
     {{/unless}}
@@ -19,8 +19,12 @@
   <Page::PkiOverview @issuers={{this.model.issuers}} @roles={{this.model.roles}} @engine={{this.model.engine}} />
 {{else}}
   <EmptyState @title="PKI not configured" @message={{this.notConfiguredMessage}}>
-    <LinkTo @route="configuration.create">
-      Configure PKI
-    </LinkTo>
+    <Hds::Link::Standalone
+      @icon="chevron-right"
+      @iconPosition="trailing"
+      @text="Configure PKI"
+      @route="configuration.create"
+      @model={{this.model.engine.id}}
+    />
   </EmptyState>
 {{/if}}

@@ -13,7 +13,12 @@ export default class App extends Application {
   podModulePrefix = config.podModulePrefix;
   Resolver = Resolver;
   engines = {
-    openApiExplorer: {
+    'config-ui': {
+      dependencies: {
+        services: ['auth', 'flash-messages', 'namespace', 'router', 'store', 'version', 'custom-messages'],
+      },
+    },
+    'open-api-explorer': {
       dependencies: {
         services: ['auth', 'flash-messages', 'namespace', 'router', 'version'],
       },
@@ -109,10 +114,10 @@ export default class App extends Application {
     },
     sync: {
       dependencies: {
-        services: ['flash-messages', 'router', 'store', 'version'],
+        services: ['flash-messages', 'flags', 'router', 'store', 'version'],
         externalRoutes: {
           kvSecretDetails: 'vault.cluster.secrets.backend.kv.secret.details',
-          clientCountDashboard: 'vault.cluster.clients.dashboard',
+          clientCountOverview: 'vault.cluster.clients',
         },
       },
     },
@@ -120,3 +125,7 @@ export default class App extends Application {
 }
 
 loadInitializers(App, config.modulePrefix);
+
+/**
+ * @typedef {import('ember-source/types')} EmberTypes
+ */

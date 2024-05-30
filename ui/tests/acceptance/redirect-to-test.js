@@ -25,7 +25,12 @@ const visit = async (url) => {
 const consoleComponent = create(consoleClass);
 
 const wrappedAuth = async () => {
-  await consoleComponent.runCommands(`write -field=token auth/token/create policies=default -wrap-ttl=5m`);
+  await consoleComponent.toggle();
+  await settled();
+  await consoleComponent.runCommands(
+    `write -field=token auth/token/create policies=default -wrap-ttl=5m`,
+    false
+  );
   await settled();
   // because of flaky test, trying to capture the token using a dom selector instead of the page object
   const token = document.querySelector('[data-test-component="console/log-text"] pre').textContent;
@@ -40,6 +45,7 @@ const setupWrapping = async () => {
   await settled();
   await auth.visit();
   await settled();
+  await auth.authType('token');
   await auth.tokenInput('root').submit();
   await settled();
   const wrappedToken = await wrappedAuth();
@@ -57,10 +63,12 @@ module('Acceptance | redirect_to query param functionality', function (hooks) {
   test('redirect to a route after authentication', async function (assert) {
     const url = '/vault/secrets/secret/kv/create';
     await visit(url);
+
     assert.ok(
       currentURL().includes(`redirect_to=${encodeURIComponent(url)}`),
-      'encodes url for the query param'
+      `encodes url for the query param in ${currentURL()}`
     );
+    await auth.authType('token');
     // the login method on this page does another visit call that we don't want here
     await auth.tokenInput('root').submit();
     await settled();
@@ -80,6 +88,7 @@ module('Acceptance | redirect_to query param functionality', function (hooks) {
       currentURL().includes(`?redirect_to=${encodeURIComponent(url)}`),
       'encodes url for the query param'
     );
+    await auth.authType('token');
     await auth.tokenInput('root').submit();
     await settled();
     assert.strictEqual(currentURL(), url, 'navigates to the redirect_to with the query param after auth');

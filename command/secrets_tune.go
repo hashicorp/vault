@@ -36,6 +36,7 @@ type SecretsTuneCommand struct {
 	flagPluginVersion             string
 	flagAllowedManagedKeys        []string
 	flagDelegatedAuthAccessors    []string
+	flagIdentityTokenKey          string
 }
 
 func (c *SecretsTuneCommand) Synopsis() string {
@@ -167,6 +168,13 @@ func (c *SecretsTuneCommand) Flags() *FlagSets {
 			"each time with 1 accessor.",
 	})
 
+	f.StringVar(&StringVar{
+		Name:    flagNameIdentityTokenKey,
+		Target:  &c.flagIdentityTokenKey,
+		Default: "default",
+		Usage:   "Select the key used to sign plugin identity tokens.",
+	})
+
 	return set
 }
 
@@ -254,6 +262,10 @@ func (c *SecretsTuneCommand) Run(args []string) int {
 
 		if fl.Name == flagNameDelegatedAuthAccessors {
 			mountConfigInput.DelegatedAuthAccessors = c.flagDelegatedAuthAccessors
+		}
+
+		if fl.Name == flagNameIdentityTokenKey {
+			mountConfigInput.IdentityTokenKey = c.flagIdentityTokenKey
 		}
 	})
 

@@ -105,8 +105,11 @@ type ClusterOptions struct {
 }
 
 type VaultNodeListenerConfig struct {
-	Port            int
-	ChrootNamespace string
+	Port              int
+	ChrootNamespace   string
+	RedactAddresses   bool
+	RedactClusterName bool
+	RedactVersion     bool
 }
 
 type CA struct {

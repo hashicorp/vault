@@ -3,30 +3,5 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<PageHeader as |p|>
-  <p.levelLeft>
-    <h1 class="title is-3">
-      Vault Usage Metrics
-    </h1>
-  </p.levelLeft>
-</PageHeader>
-
-<div class="tabs-container box is-bottomless is-marginless is-fullwidth is-paddingless">
-  <nav class="tabs" aria-label="navigation for managing client counts">
-    <ul>
-      <LinkTo @route="vault.cluster.clients.dashboard" data-test-dashboard>
-        Dashboard
-      </LinkTo>
-      {{#if (or @model.config.canRead @model.canRead)}}
-        <LinkTo
-          @route="vault.cluster.clients.config"
-          @current-when="vault.cluster.clients.config vault.cluster.clients.edit"
-        >
-          Configuration
-        </LinkTo>
-      {{/if}}
-    </ul>
-  </nav>
-</div>
-
+<Sidebar::Nav::Clients @canReadConfig={{this.model.config.canRead}} />
 {{outlet}}

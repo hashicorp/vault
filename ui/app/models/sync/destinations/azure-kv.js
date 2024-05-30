@@ -6,10 +6,34 @@
 import SyncDestinationModel from '../destination';
 import { attr } from '@ember-data/model';
 import { withFormFields } from 'vault/decorators/model-form-fields';
-const displayFields = ['name', 'keyVaultUri', 'tenantId', 'cloud', 'clientId', 'clientSecret'];
+
+const displayFields = [
+  // connection details
+  'name',
+  'keyVaultUri',
+  'tenantId',
+  'cloud',
+  'clientId',
+  'clientSecret',
+  // vault sync config options
+  'granularity',
+  'secretNameTemplate',
+  'customTags',
+];
 const formFieldGroups = [
-  { default: ['name', 'tenantId', 'cloud', 'clientId'] },
-  { Credentials: ['keyVaultUri', 'clientSecret'] },
+  {
+    default: [
+      'name',
+      'keyVaultUri',
+      'tenantId',
+      'cloud',
+      'clientId',
+      'granularity',
+      'secretNameTemplate',
+      'customTags',
+    ],
+  },
+  { Credentials: ['clientSecret'] },
 ];
 @withFormFields(displayFields, formFieldGroups)
 export default class SyncDestinationsAzureKeyVaultModel extends SyncDestinationModel {
@@ -19,7 +43,7 @@ export default class SyncDestinationsAzureKeyVaultModel extends SyncDestinationM
       'URI of an existing Azure Key Vault instance. If empty, Vault will use the KEY_VAULT_URI environment variable if configured.',
     editDisabled: true,
   })
-  keyVaultUri; // obfuscated, never returned by API
+  keyVaultUri;
 
   @attr('string', {
     label: 'Client ID',
@@ -47,4 +71,11 @@ export default class SyncDestinationsAzureKeyVaultModel extends SyncDestinationM
     editDisabled: true,
   })
   cloud;
+
+  @attr('object', {
+    subText:
+      'An optional set of informational key-value pairs added as additional metadata on secrets synced to this destination. Custom tags are merged with built-in tags.',
+    editType: 'kv',
+  })
+  customTags;
 }

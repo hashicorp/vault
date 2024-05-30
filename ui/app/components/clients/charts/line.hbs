@@ -1,0 +1,129 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+<div>
+  {{#if this.data}}
+    <div class="lineal-chart" data-test-chart={{or @chartTitle "line chart"}}>
+      <Lineal::Fluid as |width|>
+        {{#let
+          (scale-point domain=this.xDomain range=(array 0 width) padding=0.2)
+          (scale-linear domain=this.yDomain range=(array this.chartHeight 0) nice=true)
+          (scale-linear range=(array 0 this.chartHeight))
+          as |xScale yScale tooltipScale|
+        }}
+          <svg width={{width}} height={{this.chartHeight}} class="chart has-grid">
+            <title>{{@chartTitle}}</title>
+
+            {{#if (and xScale.isValid yScale.isValid)}}
+              <Lineal::Axis
+                @scale={{yScale}}
+                @tickCount="4"
+                @tickPadding={{10}}
+                @tickSizeInner={{concat "-" width}}
+                @tickFormat={{this.formatCount}}
+                @orientation="left"
+                @includeDomain={{false}}
+                class="lineal-axis"
+                data-test-y-axis
+              />
+              <Lineal::Axis
+                @scale={{xScale}}
+                @orientation="bottom"
+                transform="translate(0,{{yScale.range.min}})"
+                @includeDomain={{false}}
+                @tickSize="0"
+                @tickPadding={{10}}
+                @tickFormat={{this.formatMonth}}
+                @tickCount={{this.data.length}}
+                class="lineal-axis"
+                data-test-x-axis
+              />
+              {{#each this.upgradedMonths as |d|}}
+                <circle
+                  class="upgrade-circle"
+                  cx={{xScale.compute d.x}}
+                  cy={{yScale.compute d.y}}
+                  r="10"
+                  fill="#FDEEBA"
+                  stroke="none"
+                  data-test-line-chart="upgrade-{{d.month}}"
+                ></circle>
+              {{/each}}
+            {{/if}}
+            <Lineal::Line
+              @data={{this.data}}
+              @x="x"
+              @y="y"
+              @xScale={{xScale}}
+              @yScale={{yScale}}
+              stroke="#0c56e9"
+              stroke-width="0.5"
+              fill="none"
+            />
+            {{! this is here to qualify the scales }}
+            <Lineal::Line
+              @data={{this.data}}
+              @x="x"
+              @y="y"
+              @xScale={{xScale}}
+              @yScale={{tooltipScale}}
+              stroke="none"
+              fill="none"
+            />
+            {{#if (and xScale.isValid yScale.isValid)}}
+              {{#each this.data as |d|}}
+                {{#if (this.hasValue d.y)}}
+                  <circle
+                    cx={{xScale.compute d.x}}
+                    cy={{yScale.compute d.y}}
+                    r="3.5"
+                    fill="#cce3fe"
+                    stroke="#0c56e9"
+                    stroke-width="1.5"
+                    data-test-plot-point
+                  ></circle>
+                  <circle
+                    role="button"
+                    aria-label="Show exact counts for {{date-format d.x 'MMMM yyyy'}}"
+                    cx={{xScale.compute d.x}}
+                    cy={{yScale.compute d.y}}
+                    r="10"
+                    fill="transparent"
+                    {{on "mouseover" (fn (mut this.activeDatum) d)}}
+                    {{on "mouseout" (fn (mut this.activeDatum) null)}}
+                    data-test-hover-circle={{date-format d.x "M/yy"}}
+                  ></circle>
+                {{/if}}
+              {{/each}}
+            {{/if}}
+
+          </svg>
+          {{#if this.activeDatum}}
+            <div
+              class="lineal-tooltip-position from-top-left chart-tooltip"
+              role="status"
+              {{style
+                --x=(this.tooltipX (xScale.compute this.activeDatum.x))
+                --y=(this.tooltipY (yScale.compute this.activeDatum.y))
+              }}
+              data-test-tooltip
+            >
+
+              <p class="bold" data-test-tooltip-month>{{date-format this.activeDatum.x "MMMM yyyy"}}</p>
+              <p>{{format-number this.activeDatum.y}} total clients</p>
+              <p>{{format-number (or this.activeDatum.new)}} new clients</p>
+              {{#if this.activeDatum.tooltipUpgrade}}
+                <br />
+                <p class="has-text-highlight">{{this.activeDatum.tooltipUpgrade}}</p>
+              {{/if}}
+              <div class="chart-tooltip-arrow"></div>
+            </div>
+          {{/if}}
+        {{/let}}
+      </Lineal::Fluid>
+    </div>
+  {{else}}
+    <EmptyState @subTitle={{or @noDataMessage "No data to display"}} @bottomBorder={{true}} />
+  {{/if}}
+</div>

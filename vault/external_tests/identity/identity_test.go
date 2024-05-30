@@ -30,10 +30,10 @@ func TestIdentityStore_ExternalGroupMemberships_DifferentMounts(t *testing.T) {
 	require.NoError(t, err)
 	entityID := secret.Data["id"].(string)
 
-	cleanup, config1 := ldaphelper.PrepareTestContainer(t, "latest")
+	cleanup, config1 := ldaphelper.PrepareTestContainer(t, "master")
 	defer cleanup()
 
-	cleanup2, config2 := ldaphelper.PrepareTestContainer(t, "latest")
+	cleanup2, config2 := ldaphelper.PrepareTestContainer(t, "master")
 	defer cleanup2()
 
 	setupFunc := func(path string, cfg *ldaputil.ConfigEntry) string {
@@ -222,7 +222,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 		t.Fatalf("bad: group alias: %#v\n", aliasMap)
 	}
 
-	cleanup, cfg := ldaphelper.PrepareTestContainer(t, "latest")
+	cleanup, cfg := ldaphelper.PrepareTestContainer(t, "master")
 	defer cleanup()
 
 	// Configure LDAP auth
@@ -457,7 +457,7 @@ func TestIdentityStore_Integ_RemoveFromExternalGroup(t *testing.T) {
 		t.Fatalf("bad: group alias: %#v\n", aliasMap)
 	}
 
-	cleanup, cfg := ldaphelper.PrepareTestContainer(t, "latest")
+	cleanup, cfg := ldaphelper.PrepareTestContainer(t, "master")
 	defer cleanup()
 
 	// Configure LDAP auth

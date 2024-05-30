@@ -1,0 +1,67 @@
+---
+layout: docs
+page_title: Plugin Development — Event Notifications
+description: Learn about developing event notifications in Vault plugins.
+---
+
+# Event notifications development in Vault plugins
+
+@include 'alerts/enterprise-only.mdx'
+
+~> Advanced topic! Plugin development is a highly advanced topic in Vault, and
+is not required knowledge for day-to-day usage. If you don't plan on writing any
+plugins, we recommend not reading this section of the documentation.
+
+[Event notifications](/vault/docs/concepts/events) can provide useful information from your plugin that might be helpful to operators and clients of Vault clusters. Any plugin running in Vault Enterprise 1.16+ can generate such events.
+
+This article assumes that the plugin is written in the Go programming language.
+It is possible for non-Go plugins to send events as well by calling the [`SendEvent` gRPC call](https://github.com/hashicorp/vault/blob/da00addcb60e5fc4fef308715c0a1bd81c475167/sdk/plugin/pb/backend.proto#L713) directly.
+
+## Sending event notifications in plugins
+
+Sending event notifications within a plugin is as simple as calling:
+
+```go
+err := logical.SendEvent(ctx, b, eventType, metadata...)
+```
+
+where:
+
+- `ctx` is a `context.Context` interface that is currently unused,
+- `b` is your plugin backend, which implements the `logical.EventSender` interface,
+- `eventType` is a string for your event type,
+- `metadata` is a list of strings, which are interpreted as pairs that will be added to the event notification metadata, e.g., `metadata := []string{"key1", "value1", "key2", "value2"}` means that the metadata will include the pairs `key1: value1` and `key2: value2`, and,
+- `logical` refers to `github.com/hashicorp/vault/sdk/logical`.
+
+`logical.SendEvent` is non-blocking and sends the event notifications asynchronously.
+
+~> Note: It is possible to call `b.SendEvent()` directly, but it is less convenient since it requires a full protobuf struct to be passed in.
+
+## Best practices
+
+While there are no strict rules for what events a plugin may generate, there are some best practices to follow:
+
+- **Do *not* include sensitive or secret data** in the event notification. Events are not protected by the same policy as the underlying secret.
+
+- Only generate event notificiations on writes and actionable errors, **not** reads. Generally, reads are more frequent than writes so generating event notifications for every read operation could have a negative impact on the server performance. Operators that need to be notified when information is read are usually better served by using Vault [audit logs](/vault/docs/audit).
+
+- Prefix event types with your plugin name to avoid clashing with other plugins' event types. For example, the database plugin uses the `database/` prefix for all of its event notifications.
+
+- Use [common metadata keys](https://github.com/hashicorp/vault/blob/da00addcb60e5fc4fef308715c0a1bd81c475167/sdk/logical/events.go#L13-L25), such as `data_path` for the API path to the secret the event notification is about, and `operation` to indicate what modification took place.
+
+- Document the event types that your plugin produces, including descriptions of when those are generated.
+
+- Use `logical.SendEvent()` to send event notifications. Although it is possible to call the `framework.Backend` or gRPC methods directly to send event notifications, `logical.SendEvent` abstracts away much of that for you.
+
+- Send event notifications at the end of your methods, or in a `defer`, to ensure that the event notification has the most up-to-date information.
+
+- Fail gracefully if the event notification system is unavailble. This is detected as an error when sending events, such as `framework.ErrNoEvents`, which usually occurs when running on older versions of Vault where event notifications are not present or have been disabled.
+
+- Generate events in all editions of Vault. Even though it is not possible to subscribe to event notifications in the Community Edition of Vault, plugins are generally unaware of what edition of Vault they are connected to and should generate events regardless.
+
+## Examples
+
+Here are some examples of adding event notifications to the KV and database plugins in Vault:
+
+- https://github.com/hashicorp/vault-plugin-secrets-kv/pull/88
+- https://github.com/hashicorp/vault/pull/24718

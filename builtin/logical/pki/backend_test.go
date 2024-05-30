@@ -35,16 +35,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
-	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
-	"golang.org/x/exp/maps"
-
-	"github.com/hashicorp/vault/helper/testhelpers"
-
-	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
-
-	"github.com/stretchr/testify/require"
-
 	"github.com/armon/go-metrics"
 	"github.com/fatih/structs"
 	"github.com/go-test/deep"
@@ -52,15 +42,20 @@ import (
 	"github.com/hashicorp/vault/api"
 	auth "github.com/hashicorp/vault/api/auth/userpass"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
+	"github.com/hashicorp/vault/helper/testhelpers"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/mapstructure"
+	"github.com/stretchr/testify/require"
+	"golang.org/x/exp/maps"
 	"golang.org/x/net/idna"
-
-	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 )
 
 var stepCount = 0
@@ -725,6 +720,10 @@ func generateCSR(t *testing.T, csrTemplate *x509.CertificateRequest, keyType str
 		t.Fatalf("Got error generating private key for CSR: %v", err)
 	}
 
+	return generateCSRWithKey(t, csrTemplate, priv)
+}
+
+func generateCSRWithKey(t *testing.T, csrTemplate *x509.CertificateRequest, priv interface{}) (interface{}, []byte, string) {
 	csr, err := x509.CreateCertificateRequest(rand.Reader, csrTemplate, priv)
 	if err != nil {
 		t.Fatalf("Got error generating CSR: %v", err)
@@ -1599,7 +1598,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 	}
 
 	{
-		getOtherCheck := func(expectedOthers ...issuing.OtherNameUtf8) logicaltest.TestCheckFunc {
+		getOtherCheck := func(expectedOthers ...certutil.OtherNameUtf8) logicaltest.TestCheckFunc {
 			return func(resp *logical.Response) error {
 				var certBundle certutil.CertBundle
 				err := mapstructure.Decode(resp.Data, &certBundle)
@@ -1615,7 +1614,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 				if err != nil {
 					return err
 				}
-				var expected []issuing.OtherNameUtf8
+				var expected []certutil.OtherNameUtf8
 				expected = append(expected, expectedOthers...)
 				if diff := deep.Equal(foundOthers, expected); len(diff) > 0 {
 					return fmt.Errorf("wrong SAN IPs, diff: %v", diff)
@@ -1624,8 +1623,8 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			}
 		}
 
-		addOtherSANTests := func(useCSRs, useCSRSANs bool, allowedOtherSANs []string, errorOk bool, otherSANs []string, csrOtherSANs []issuing.OtherNameUtf8, check logicaltest.TestCheckFunc) {
-			otherSansMap := func(os []issuing.OtherNameUtf8) map[string][]string {
+		addOtherSANTests := func(useCSRs, useCSRSANs bool, allowedOtherSANs []string, errorOk bool, otherSANs []string, csrOtherSANs []certutil.OtherNameUtf8, check logicaltest.TestCheckFunc) {
+			otherSansMap := func(os []certutil.OtherNameUtf8) map[string][]string {
 				ret := make(map[string][]string)
 				for _, o := range os {
 					ret[o.Oid] = append(ret[o.Oid], o.Value)
@@ -1659,14 +1658,14 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		roleVals.UseCSRCommonName = true
 		commonNames.Localhost = true
 
-		newOtherNameUtf8 := func(s string) (ret issuing.OtherNameUtf8) {
+		newOtherNameUtf8 := func(s string) (ret certutil.OtherNameUtf8) {
 			pieces := strings.Split(s, ";")
 			if len(pieces) == 2 {
 				piecesRest := strings.Split(pieces[1], ":")
 				if len(piecesRest) == 2 {
 					switch strings.ToUpper(piecesRest[0]) {
 					case "UTF-8", "UTF8":
-						return issuing.OtherNameUtf8{Oid: pieces[0], Value: piecesRest[1]}
+						return certutil.OtherNameUtf8{Oid: pieces[0], Value: piecesRest[1]}
 					}
 				}
 			}
@@ -1676,7 +1675,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		oid1 := "1.3.6.1.4.1.311.20.2.3"
 		oth1str := oid1 + ";utf8:devops@nope.com"
 		oth1 := newOtherNameUtf8(oth1str)
-		oth2 := issuing.OtherNameUtf8{oid1, "me@example.com"}
+		oth2 := certutil.OtherNameUtf8{oid1, "me@example.com"}
 		// allowNone, allowAll := []string{}, []string{oid1 + ";UTF-8:*"}
 		allowNone, allowAll := []string{}, []string{"*"}
 
@@ -1691,15 +1690,15 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 
 		// Given OtherSANs as API argument and useCSRSANs false, CSR arg ignored.
 		addOtherSANTests(useCSRs, false, allowAll, false, []string{oth1str},
-			[]issuing.OtherNameUtf8{oth2}, getOtherCheck(oth1))
+			[]certutil.OtherNameUtf8{oth2}, getOtherCheck(oth1))
 
 		if useCSRs {
 			// OtherSANs not allowed, valid OtherSANs provided via CSR, should be an error.
-			addOtherSANTests(useCSRs, true, allowNone, true, nil, []issuing.OtherNameUtf8{oth1}, nil)
+			addOtherSANTests(useCSRs, true, allowNone, true, nil, []certutil.OtherNameUtf8{oth1}, nil)
 
 			// Given OtherSANs as both API and CSR arguments and useCSRSANs=true, API arg ignored.
 			addOtherSANTests(useCSRs, false, allowAll, false, []string{oth2.String()},
-				[]issuing.OtherNameUtf8{oth1}, getOtherCheck(oth2))
+				[]certutil.OtherNameUtf8{oth1}, getOtherCheck(oth2))
 		}
 	}
 
@@ -2104,7 +2103,7 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 	// list certs/
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation:  logical.ListOperation,
-		Path:       "certs/",
+		Path:       issuing.PathCerts,
 		Storage:    storage,
 		MountPoint: "pki/",
 	})
@@ -2177,7 +2176,7 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 		// On older versions of Go this test will fail due to an explicit check for duplicate otherNames later in this test.
 		ExtraExtensions: []pkix.Extension{
 			{
-				Id:       oidExtensionSubjectAltName,
+				Id:       certutil.OidExtensionSubjectAltName,
 				Critical: false,
 				Value:    []byte{0x30, 0x26, 0xA0, 0x24, 0x06, 0x0A, 0x2B, 0x06, 0x01, 0x04, 0x01, 0x82, 0x37, 0x14, 0x02, 0x03, 0xA0, 0x16, 0x0C, 0x14, 0x75, 0x73, 0x65, 0x72, 0x6E, 0x61, 0x6D, 0x65, 0x40, 0x65, 0x78, 0x61, 0x6D, 0x70, 0x6C, 0x65, 0x2E, 0x63, 0x6F, 0x6D},
 			},
@@ -2339,7 +2338,7 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 	// We assume that there is only one SAN in the original CSR and that it is an otherName.
 	san_count := 0
 	for _, ext := range cert.Extensions {
-		if ext.Id.Equal(oidExtensionSubjectAltName) {
+		if ext.Id.Equal(certutil.OidExtensionSubjectAltName) {
 			san_count += 1
 		}
 	}
@@ -2540,6 +2539,59 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	}
 }
 
+// TestBackend_SignIntermediate_EnforceLeafFlag verifies if the flag is true
+// that we will leverage the issuer's configured behavior
+func TestBackend_SignIntermediate_EnforceLeafFlag(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"ttl":         "40h",
+		"common_name": "myvault.com",
+	})
+	require.NoError(t, err, "failed generating root cert")
+	rootCert := parseCert(t, resp.Data["certificate"].(string))
+
+	_, err = CBWrite(b, s, "issuer/default", map[string]interface{}{
+		"leaf_not_after_behavior": "err",
+	})
+	require.NoError(t, err, "failed updating root issuer cert behavior")
+
+	resp, err = CBWrite(b, s, "intermediate/generate/internal", map[string]interface{}{
+		"common_name": "myint.com",
+	})
+	require.NoError(t, err, "failed generating intermediary CSR")
+	csr := resp.Data["csr"]
+
+	_, err = CBWrite(b, s, "root/sign-intermediate", map[string]interface{}{
+		"common_name":                     "myint.com",
+		"other_sans":                      "1.3.6.1.4.1.311.20.2.3;utf8:caadmin@example.com",
+		"csr":                             csr,
+		"ttl":                             "60h",
+		"enforce_leaf_not_after_behavior": true,
+	})
+	require.Error(t, err, "sign-intermediate should have failed as root issuer leaf behavior is set to err")
+
+	// Now test with permit, the old default behavior
+	_, err = CBWrite(b, s, "issuer/default", map[string]interface{}{
+		"leaf_not_after_behavior": "permit",
+	})
+	require.NoError(t, err, "failed updating root issuer cert behavior to permit")
+
+	resp, err = CBWrite(b, s, "root/sign-intermediate", map[string]interface{}{
+		"common_name":                     "myint.com",
+		"other_sans":                      "1.3.6.1.4.1.311.20.2.3;utf8:caadmin@example.com",
+		"csr":                             csr,
+		"ttl":                             "60h",
+		"enforce_leaf_not_after_behavior": true,
+	})
+	require.NoError(t, err, "failed to sign intermediary CA with permit as issuer")
+	intCert := parseCert(t, resp.Data["certificate"].(string))
+
+	require.Truef(t, rootCert.NotAfter.Before(intCert.NotAfter),
+		"root cert notAfter %v was not before ca cert's notAfter %v", rootCert.NotAfter, intCert.NotAfter)
+}
+
 func TestBackend_SignIntermediate_AllowedPastCAValidity(t *testing.T) {
 	t.Parallel()
 	b_root, s_root := CreateBackendWithStorage(t)
@@ -2547,13 +2599,15 @@ func TestBackend_SignIntermediate_AllowedPastCAValidity(t *testing.T) {
 	var err error
 
 	// Direct issuing from root
-	_, err = CBWrite(b_root, s_root, "root/generate/internal", map[string]interface{}{
+	resp, err := CBWrite(b_root, s_root, "root/generate/internal", map[string]interface{}{
 		"ttl":         "40h",
 		"common_name": "myvault.com",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	rootCert := parseCert(t, resp.Data["certificate"].(string))
 
 	_, err = CBWrite(b_root, s_root, "roles/test", map[string]interface{}{
 		"allow_bare_domains": true,
@@ -2564,7 +2618,7 @@ func TestBackend_SignIntermediate_AllowedPastCAValidity(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp, err := CBWrite(b_int, s_int, "intermediate/generate/internal", map[string]interface{}{
+	resp, err = CBWrite(b_int, s_int, "intermediate/generate/internal", map[string]interface{}{
 		"common_name": "myint.com",
 	})
 	schema.ValidateResponse(t, schema.GetResponseSchema(t, b_root.Route("intermediate/generate/internal"), logical.UpdateOperation), resp, true)
@@ -2615,6 +2669,9 @@ func TestBackend_SignIntermediate_AllowedPastCAValidity(t *testing.T) {
 	cert := parseCert(t, resp.Data["certificate"].(string))
 	certSkid := certutil.GetHexFormatted(cert.SubjectKeyId, ":")
 	require.Equal(t, intSkid, certSkid)
+
+	require.Equal(t, rootCert.NotAfter, cert.NotAfter, "intermediary cert's NotAfter did not match root cert's NotAfter")
+	require.Contains(t, resp.Warnings, intCaTruncatationWarning, "missing warning about intermediary CA notAfter truncation")
 }
 
 func TestBackend_ConsulSignLeafWithLegacyRole(t *testing.T) {
@@ -3130,13 +3187,13 @@ func TestBackend_OID_SANs(t *testing.T) {
 		cert.DNSNames[2] != "foobar.com" {
 		t.Fatalf("unexpected DNS SANs %v", cert.DNSNames)
 	}
-	expectedOtherNames := []issuing.OtherNameUtf8{{oid1, val1}, {oid2, val2}}
+	expectedOtherNames := []certutil.OtherNameUtf8{{oid1, val1}, {oid2, val2}}
 	foundOtherNames, err := getOtherSANsFromX509Extensions(cert.Extensions)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Sort our returned list as SANS are built internally with a map so ordering can be inconsistent
-	slices.SortFunc(foundOtherNames, func(a, b issuing.OtherNameUtf8) int { return cmp.Compare(a.Oid, b.Oid) })
+	slices.SortFunc(foundOtherNames, func(a, b certutil.OtherNameUtf8) int { return cmp.Compare(a.Oid, b.Oid) })
 
 	if diff := deep.Equal(expectedOtherNames, foundOtherNames); len(diff) != 0 {
 		t.Errorf("unexpected otherNames: %v", diff)
@@ -3710,6 +3767,10 @@ func TestReadWriteDeleteRoles(t *testing.T) {
 		"allowed_user_ids":                   []interface{}{},
 	}
 
+	if issuing.MetadataPermitted {
+		expectedData["no_store_metadata"] = false
+	}
+
 	if diff := deep.Equal(expectedData, resp.Data); len(diff) > 0 {
 		t.Fatalf("pki role default values have changed, diff: %v", diff)
 	}
@@ -4051,6 +4112,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 			"tidy_move_legacy_ca_bundle":            false,
 			"tidy_revocation_queue":                 false,
 			"tidy_cross_cluster_revoked_certs":      false,
+			"tidy_cert_metadata":                    false,
 			"pause_duration":                        "0s",
 			"state":                                 "Finished",
 			"error":                                 nil,
@@ -4072,6 +4134,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 			"acme_account_revoked_count":            json.Number("0"),
 			"acme_account_deleted_count":            json.Number("0"),
 			"total_acme_account_count":              json.Number("0"),
+			"cert_metadata_deleted_count":           json.Number("0"),
 		}
 		// Let's copy the times from the response so that we can use deep.Equal()
 		timeStarted, ok := tidyStatus.Data["time_started"]
@@ -6781,7 +6844,7 @@ func TestProperAuthing(t *testing.T) {
 		"cert/unified-delta-crl":                 shouldBeUnauthedReadList,
 		"cert/unified-delta-crl/raw":             shouldBeUnauthedReadList,
 		"cert/unified-delta-crl/raw/pem":         shouldBeUnauthedReadList,
-		"certs/":                                 shouldBeAuthed,
+		issuing.PathCerts:                        shouldBeAuthed,
 		"certs/revoked/":                         shouldBeAuthed,
 		"certs/revocation-queue/":                shouldBeAuthed,
 		"certs/unified-revoked/":                 shouldBeAuthed,

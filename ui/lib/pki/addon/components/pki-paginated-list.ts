@@ -26,6 +26,7 @@ interface Args {
   list: unknown[];
   listRoute: string;
   hasConfig?: boolean;
+  backend: string;
 }
 export default class PkiPaginatedListComponent extends Component<Args> {
   get paginationQueryParams() {

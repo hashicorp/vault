@@ -197,10 +197,12 @@ module('Integration | Component | InfoTableRow', function (hooks) {
   });
   test('Truncates the label if too long', async function (assert) {
     this.set('label', 'abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz');
-    await render(hbs`<InfoTableRow
+    await render(hbs`<div style="width: 100px;">
+      <InfoTableRow
         @label={{this.label}}
         @value={{this.value}}
-      />`);
+      />
+    </div>`);
     assert.dom('[data-test-component="info-table-row"]').exists('Row renders');
     assert.dom('[data-test-label-div].label-overflow').exists('Label has class label-overflow');
     await triggerEvent('[data-test-row-label]', 'mouseenter');

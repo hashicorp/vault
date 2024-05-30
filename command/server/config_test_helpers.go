@@ -11,13 +11,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/go-test/deep"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/hcl/hcl/token"
 	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/stretchr/testify/require"
 )
 
 var DefaultCustomHeaders = map[string]map[string]string{
@@ -476,6 +475,9 @@ func testLoadConfigFile(t *testing.T) {
 		EnableResponseHeaderRaftNodeIDRaw: true,
 
 		LicensePath: "/path/to/license",
+
+		PluginDirectory: "/path/to/plugins",
+		PluginTmpdir:    "/tmp/plugins",
 	}
 
 	addExpectedEntConfig(expected, []string{})
@@ -789,8 +791,9 @@ func testConfig_Sanitized(t *testing.T) {
 		"listeners": []interface{}{
 			map[string]interface{}{
 				"config": map[string]interface{}{
-					"address":          "127.0.0.1:443",
-					"chroot_namespace": "admin/",
+					"address":                 "127.0.0.1:443",
+					"chroot_namespace":        "admin/",
+					"disable_request_limiter": false,
 				},
 				"type": configutil.TCP,
 			},
@@ -800,6 +803,7 @@ func testConfig_Sanitized(t *testing.T) {
 		"max_lease_ttl":    (30 * 24 * time.Hour) / time.Second,
 		"pid_file":         "./pidfile",
 		"plugin_directory": "",
+		"plugin_tmpdir":    "",
 		"seals": []interface{}{
 			map[string]interface{}{
 				"disabled": false,
@@ -889,6 +893,7 @@ listener "tcp" {
   redact_addresses = true
   redact_cluster_name = true
   redact_version = true
+  disable_request_limiter = true
 }
 listener "unix" {
   address = "/var/run/vault.sock"
@@ -898,6 +903,7 @@ listener "unix" {
   redact_addresses = true
   redact_cluster_name = true
   redact_version = true
+  disable_request_limiter = true
 }`))
 
 	config := Config{
@@ -951,16 +957,18 @@ listener "unix" {
 					RedactAddresses:       true,
 					RedactClusterName:     true,
 					RedactVersion:         true,
+					DisableRequestLimiter: true,
 				},
 				{
-					Type:              "unix",
-					Address:           "/var/run/vault.sock",
-					SocketMode:        "644",
-					SocketUser:        "1000",
-					SocketGroup:       "1000",
-					RedactAddresses:   false,
-					RedactClusterName: false,
-					RedactVersion:     false,
+					Type:                  "unix",
+					Address:               "/var/run/vault.sock",
+					SocketMode:            "644",
+					SocketUser:            "1000",
+					SocketGroup:           "1000",
+					RedactAddresses:       false,
+					RedactClusterName:     false,
+					RedactVersion:         false,
+					DisableRequestLimiter: true,
 				},
 			},
 		},

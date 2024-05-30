@@ -40,11 +40,7 @@ module('Integration | Component | confirm-action', function (hooks) {
       'hds-modal hds-modal--size-small hds-modal--color-critical has-text-left',
       'renders critical modal color by default'
     );
-    assert.strictEqual(
-      find(SELECTORS.confirm).className,
-      'hds-button hds-button--size-medium hds-button--color-critical',
-      'renders critical confirm button'
-    );
+    assert.dom(SELECTORS.confirm).hasClass('hds-button--color-critical', 'renders critical confirm button');
     assert.dom(SELECTORS.title).hasText('Are you sure?', 'renders default title');
     assert
       .dom(SELECTORS.message)
@@ -142,23 +138,10 @@ module('Integration | Component | confirm-action', function (hooks) {
       />
       `);
 
-    // hasClass assertion wasn't working so this is the workaround
-    assert.strictEqual(
-      find(SELECTORS.modalToggle).className,
-      'hds-button hds-button--size-medium hds-button--color-secondary',
-      'renders @buttonColor classes'
-    );
+    assert.dom(SELECTORS.modalToggle).hasClass('hds-button--color-secondary', 'renders @buttonColor classes');
     await click(SELECTORS.modalToggle);
-    assert.strictEqual(
-      find('#confirm-action-modal').className,
-      'hds-modal hds-modal--size-small hds-modal--color-warning has-text-left',
-      'renders warning modal'
-    );
-    assert.strictEqual(
-      find(SELECTORS.confirm).className,
-      'hds-button hds-button--size-medium hds-button--color-primary',
-      'renders primary confirm button'
-    );
+    assert.dom('#confirm-action-modal').hasClass('hds-modal--color-warning', 'renders warning modal');
+    assert.dom(SELECTORS.confirm).hasClass('hds-button--color-primary', 'renders primary confirm button');
     assert.dom(SELECTORS.title).hasText('Do this?', 'renders passed title');
     assert.dom(SELECTORS.message).hasText('Are you really, really sure?', 'renders passed body text');
     assert.dom(SELECTORS.confirm).hasText('Confirm');

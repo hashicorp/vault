@@ -161,6 +161,11 @@ func (e extendedSystemViewImpl) DeregisterWellKnownRedirect(ctx context.Context,
 	return e.core.WellKnownRedirects.DeregisterSource(e.mountEntry.UUID, src)
 }
 
+// GetPinnedPluginVersion implements logical.ExtendedSystemView.
+func (e extendedSystemViewImpl) GetPinnedPluginVersion(ctx context.Context, pluginType consts.PluginType, pluginName string) (*pluginutil.PinnedVersion, error) {
+	return e.core.pluginCatalog.GetPinnedVersion(ctx, pluginType, pluginName)
+}
+
 func (d dynamicSystemView) DefaultLeaseTTL() time.Duration {
 	def, _ := d.fetchTTLs()
 	return def
@@ -451,4 +456,26 @@ func (d dynamicSystemView) ClusterID(ctx context.Context) (string, error) {
 	}
 
 	return clusterInfo.ID, nil
+}
+
+func (d dynamicSystemView) GenerateIdentityToken(ctx context.Context, req *pluginutil.IdentityTokenRequest) (*pluginutil.IdentityTokenResponse, error) {
+	mountEntry := d.mountEntry
+	if mountEntry == nil {
+		return nil, fmt.Errorf("no mount entry")
+	}
+	nsCtx := namespace.ContextWithNamespace(ctx, mountEntry.Namespace())
+	storage := d.core.router.MatchingStorageByAPIPath(nsCtx, mountPathIdentity)
+	if storage == nil {
+		return nil, fmt.Errorf("failed to find storage entry for identity mount")
+	}
+
+	token, ttl, err := d.core.IdentityStore().generatePluginIdentityToken(nsCtx, storage, d.mountEntry, req.Audience, req.TTL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate plugin identity token: %w", err)
+	}
+
+	return &pluginutil.IdentityTokenResponse{
+		Token: pluginutil.IdentityToken(token),
+		TTL:   ttl,
+	}, nil
 }

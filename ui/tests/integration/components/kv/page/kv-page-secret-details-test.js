@@ -13,7 +13,6 @@ import { kvDataPath, kvMetadataPath } from 'vault/utils/kv-path';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import { FORM, PAGE, parseJsonEditor } from 'vault/tests/helpers/kv/kv-selectors';
 import { syncStatusResponse } from 'vault/mirage/handlers/sync';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Integration | Component | kv-v2 | Page::Secret::Details', function (hooks) {
   setupRenderingTest(hooks);
@@ -80,7 +79,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
       metadata: this.metadata,
     };
     this.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.model.backend, route: 'list' },
       { label: this.model.path },
     ];
@@ -90,12 +89,6 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
       secret: this.secretComplex,
       metadata: this.metadata,
     };
-    setRunOptions({
-      rules: {
-        // TODO: Fix JSONEditor component
-        label: { enabled: false },
-      },
-    });
   });
 
   test('it renders secret details and toggles json view', async function (assert) {
@@ -135,6 +128,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
     await click(FORM.toggleMasked);
     assert.dom(PAGE.infoRowValue('foo')).hasText('bar', 'renders secret value');
     await click(FORM.toggleJson);
+    await click(FORM.toggleJsonValues);
     assert.propEqual(parseJsonEditor(find), this.secretData, 'json editor renders secret data');
     assert
       .dom(PAGE.detail.versionTimestamp)
@@ -142,7 +136,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
   });
 
   test('it renders json view when secret is complex', async function (assert) {
-    assert.expect(3);
+    assert.expect(4);
     await render(
       hbs`
        <Page::Secret::Details
@@ -154,7 +148,8 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
       { owner: this.engine }
     );
     assert.dom(PAGE.infoRowValue('foo')).doesNotExist('does not render rows of secret data');
-    assert.dom(FORM.toggleJson).isDisabled();
+    assert.dom(FORM.toggleJson).isChecked();
+    assert.dom(FORM.toggleJson).isNotDisabled();
     assert.dom('[data-test-component="code-mirror-modifier"]').exists('shows json editor');
   });
 
@@ -240,8 +235,8 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
       .exists('renders current version icon');
   });
 
-  test('it renders sync status page alert', async function (assert) {
-    assert.expect(5); // assert count important because confirms request made to fetch sync status twice
+  test('it renders sync status page alert and refreshes', async function (assert) {
+    assert.expect(6); // assert count important because confirms request made to fetch sync status twice
     const destinationName = 'my-destination';
     this.server.create('sync-association', {
       type: 'aws-sm',
@@ -250,7 +245,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
       secret_name: this.path,
     });
     this.server.get(`sys/sync/associations/destinations`, (schema, req) => {
-      // this assertion should be hit twice, once on init and again when the 'Refresh' button is clicked
+      // these assertions should be hit twice, once on init and again when the 'Refresh' button is clicked
       assert.ok(true, 'request made to fetch sync status');
       assert.propEqual(
         req.queryParams,
@@ -281,8 +276,56 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
         'Synced my-destination - last updated September',
         'renders sync status alert banner'
       );
-
+    assert
+      .dom(PAGE.detail.syncAlert())
+      .hasTextContaining(
+        'This secret has been synced from Vault to 1 destination. Updates to this secret will automatically sync to its destination.',
+        'renders alert header referring to singular destination'
+      );
     // sync status refresh button
     await click(`${PAGE.detail.syncAlert()} button`);
+  });
+
+  test('it renders sync status page alert for multiple destinations', async function (assert) {
+    assert.expect(3); // assert count important because confirms request made to fetch sync status twice
+    this.server.create('sync-association', {
+      type: 'aws-sm',
+      name: 'aws-dest',
+      mount: this.backend,
+      secret_name: this.path,
+    });
+    this.server.create('sync-association', {
+      type: 'gh',
+      name: 'gh-dest',
+      mount: this.backend,
+      secret_name: this.path,
+    });
+    this.server.get(`sys/sync/associations/destinations`, (schema, req) => {
+      return syncStatusResponse(schema, req);
+    });
+
+    await render(
+      hbs`
+       <Page::Secret::Details
+        @path={{this.model.path}}
+        @secret={{this.model.secret}}
+        @metadata={{this.model.metadata}}
+        @breadcrumbs={{this.breadcrumbs}}
+      />
+      `,
+      { owner: this.engine }
+    );
+    assert
+      .dom(PAGE.detail.syncAlert('aws-dest'))
+      .hasTextContaining('Synced aws-dest - last updated September', 'renders status for aws destination');
+    assert
+      .dom(PAGE.detail.syncAlert('gh-dest'))
+      .hasTextContaining('Syncing gh-dest - last updated September', 'renders status for gh destination');
+    assert
+      .dom(PAGE.detail.syncAlert())
+      .hasTextContaining(
+        'This secret has been synced from Vault to 2 destinations. Updates to this secret will automatically sync to its destinations.',
+        'renders alert title referring to plural destinations'
+      );
   });
 });

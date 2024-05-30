@@ -5,6 +5,12 @@
 
 import { helper as buildHelper } from '@ember/component/helper';
 
+/**
+ * These are all the auth methods that can be mounted.
+ * Some methods may not be available for login via the UI,
+ * which are in the `supported-auth-backends` helper.
+ */
+
 const ENTERPRISE_AUTH_METHODS = [
   {
     displayName: 'SAML',
@@ -28,6 +34,7 @@ const MOUNTABLE_AUTH_METHODS = [
     value: 'approle',
     type: 'approle',
     category: 'generic',
+    glyph: 'cpu',
   },
   {
     displayName: 'AWS',
@@ -61,14 +68,14 @@ const MOUNTABLE_AUTH_METHODS = [
     displayName: 'JWT',
     value: 'jwt',
     type: 'jwt',
-    glyph: 'auth',
+    glyph: 'jwt',
     category: 'generic',
   },
   {
     displayName: 'OIDC',
     value: 'oidc',
     type: 'oidc',
-    glyph: 'auth',
+    glyph: 'openid-color',
     category: 'generic',
   },
   {
@@ -82,7 +89,7 @@ const MOUNTABLE_AUTH_METHODS = [
     displayName: 'LDAP',
     value: 'ldap',
     type: 'ldap',
-    glyph: 'auth',
+    glyph: 'folder-users',
     category: 'infra',
   },
   {
@@ -96,7 +103,7 @@ const MOUNTABLE_AUTH_METHODS = [
     displayName: 'RADIUS',
     value: 'radius',
     type: 'radius',
-    glyph: 'auth',
+    glyph: 'mainframe',
     category: 'infra',
   },
   {
@@ -104,6 +111,7 @@ const MOUNTABLE_AUTH_METHODS = [
     value: 'cert',
     type: 'cert',
     category: 'generic',
+    glyph: 'certificate',
   },
   {
     displayName: 'Username & Password',

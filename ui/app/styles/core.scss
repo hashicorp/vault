@@ -23,6 +23,7 @@
 @import './core/box';
 @import './core/buttons';
 @import './core/charts';
+@import './core/charts-lineal';
 @import './core/checkbox-and-radio';
 @import './core/columns';
 @import './core/containers';
@@ -57,6 +58,7 @@
 @import './components/b64-toggle';
 @import './components/box-label';
 @import './components/calendar-widget';
+@import './components/chart-container';
 @import './components/cluster-banners';
 @import './components/codemirror';
 @import './components/console-ui-panel';
@@ -64,7 +66,6 @@
 @import './components/doc-link';
 @import './components/empty-state-component';
 @import './components/env-banner';
-@import './components/features-selection';
 @import './components/form-section';
 @import './components/global-flash';
 @import './components/icon';
@@ -110,5 +111,4 @@
 @import './components/transit-card';
 @import './components/ttl-picker';
 @import './components/unseal-warning';
-// @import './components/ui-wizard'; // remove, see PR https://github.com/hashicorp/vault/pull/19220
 @import './components/vault-loading';

@@ -105,7 +105,7 @@ module('Acceptance | sidebar navigation', function (hooks) {
     assert.expect(7);
 
     await click(link('Tools'));
-    assert.dom(panel('Tools')).exists('Access nav panel renders');
+    assert.dom(panel('Tools')).exists('Tools nav panel renders');
 
     const links = [
       { label: 'Wrap', route: '/vault/tools/wrap' },
@@ -120,6 +120,20 @@ module('Acceptance | sidebar navigation', function (hooks) {
       await click(link(l.label));
       assert.strictEqual(currentURL(), l.route, `${l.label} route renders`);
     }
+  });
+
+  test('it should link to correct routes at the client counts level', async function (assert) {
+    assert.expect(7);
+    await click(link('Client Count'));
+    assert.dom(panel('Client Count')).exists('Client counts nav panel renders');
+    assert.strictEqual(currentURL(), '/vault/clients/counts/overview', 'Top level nav link renders overview');
+    assert.dom(link('Vault Usage Metrics')).hasClass('active');
+    await click(link('Configuration'));
+    assert.strictEqual(currentURL(), '/vault/clients/config', 'Clients configuration renders');
+    assert.dom(link('Configuration')).hasClass('active');
+    await click(link('Vault Usage Metrics'));
+    assert.strictEqual(currentURL(), '/vault/clients/counts/overview', 'Sub nav link navigates to overview');
+    assert.dom(link('Vault Usage Metrics')).hasClass('active');
   });
 
   test('it should display access nav when mounting and configuring auth methods', async function (assert) {

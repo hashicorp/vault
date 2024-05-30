@@ -7,9 +7,23 @@ import SyncDestinationModel from '../destination';
 import { attr } from '@ember-data/model';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 
-const displayFields = ['name', 'region', 'accessKeyId', 'secretAccessKey'];
+const displayFields = [
+  // connection details
+  'name',
+  'region',
+  'accessKeyId',
+  'secretAccessKey',
+  'roleArn',
+  'externalId',
+  // sync config options
+  'granularity',
+  'secretNameTemplate',
+  'customTags',
+];
 const formFieldGroups = [
-  { default: ['name', 'region'] },
+  {
+    default: ['name', 'region', 'roleArn', 'externalId', 'granularity', 'secretNameTemplate', 'customTags'],
+  },
   { Credentials: ['accessKeyId', 'secretAccessKey'] },
 ];
 @withFormFields(displayFields, formFieldGroups)
@@ -34,4 +48,25 @@ export default class SyncDestinationsAwsSecretsManagerModel extends SyncDestinat
     editDisabled: true,
   })
   region;
+
+  @attr('object', {
+    subText:
+      'An optional set of informational key-value pairs added as additional metadata on secrets synced to this destination. Custom tags are merged with built-in tags.',
+    editType: 'kv',
+  })
+  customTags;
+
+  @attr('string', {
+    label: 'Role ARN',
+    subText:
+      'Specifies a role to assume when connecting to AWS. When assuming a role, Vault uses temporary STS credentials to authenticate.',
+  })
+  roleArn;
+
+  @attr('string', {
+    label: 'External ID',
+    subText:
+      'Optional extra protection that must match the trust policy granting access to the AWS IAM role ARN. We recommend using a different random UUID per destination.',
+  })
+  externalId;
 }

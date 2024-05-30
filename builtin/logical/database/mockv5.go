@@ -51,6 +51,9 @@ func (m MockDatabaseV5) Initialize(ctx context.Context, req v5.InitializeRequest
 		"req", req)
 
 	config := req.Config
+	if config == nil {
+		config = map[string]interface{}{}
+	}
 	config["from-plugin"] = "this value is from the plugin itself"
 
 	resp := v5.InitializeResponse{

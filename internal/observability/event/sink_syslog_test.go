@@ -24,12 +24,12 @@ func TestNewSyslogSink(t *testing.T) {
 		"format-empty": {
 			format:         "",
 			wantErr:        true,
-			expectedErrMsg: "event.NewSyslogSink: format is required: invalid parameter",
+			expectedErrMsg: "format is required: invalid parameter",
 		},
 		"format-whitespace": {
 			format:         "   ",
 			wantErr:        true,
-			expectedErrMsg: "event.NewSyslogSink: format is required: invalid parameter",
+			expectedErrMsg: "format is required: invalid parameter",
 		},
 		"happy": {
 			format: "json",

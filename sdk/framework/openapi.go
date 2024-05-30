@@ -1174,24 +1174,26 @@ func hyphenatedToTitleCase(in string) string {
 // cleanedResponse is identical to logical.Response but with nulls
 // removed from from JSON encoding
 type cleanedResponse struct {
-	Secret   *logical.Secret            `json:"secret,omitempty"`
-	Auth     *logical.Auth              `json:"auth,omitempty"`
-	Data     map[string]interface{}     `json:"data,omitempty"`
-	Redirect string                     `json:"redirect,omitempty"`
-	Warnings []string                   `json:"warnings,omitempty"`
-	WrapInfo *wrapping.ResponseWrapInfo `json:"wrap_info,omitempty"`
-	Headers  map[string][]string        `json:"headers,omitempty"`
+	Secret    *logical.Secret            `json:"secret,omitempty"`
+	Auth      *logical.Auth              `json:"auth,omitempty"`
+	Data      map[string]interface{}     `json:"data,omitempty"`
+	Redirect  string                     `json:"redirect,omitempty"`
+	Warnings  []string                   `json:"warnings,omitempty"`
+	WrapInfo  *wrapping.ResponseWrapInfo `json:"wrap_info,omitempty"`
+	Headers   map[string][]string        `json:"headers,omitempty"`
+	MountType string                     `json:"mount_type,omitempty"`
 }
 
 func cleanResponse(resp *logical.Response) *cleanedResponse {
 	return &cleanedResponse{
-		Secret:   resp.Secret,
-		Auth:     resp.Auth,
-		Data:     resp.Data,
-		Redirect: resp.Redirect,
-		Warnings: resp.Warnings,
-		WrapInfo: resp.WrapInfo,
-		Headers:  resp.Headers,
+		Secret:    resp.Secret,
+		Auth:      resp.Auth,
+		Data:      resp.Data,
+		Redirect:  resp.Redirect,
+		Warnings:  resp.Warnings,
+		WrapInfo:  resp.WrapInfo,
+		Headers:   resp.Headers,
+		MountType: resp.MountType,
 	}
 }
 

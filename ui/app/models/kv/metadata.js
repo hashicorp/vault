@@ -51,6 +51,7 @@ export default class KvSecretMetadataModel extends Model {
 
   @attr('object', {
     editType: 'kv',
+    isSectionHeader: true,
     subText: 'An optional set of informational key-value pairs that will be stored with all secret versions.',
   })
   customMetadata;

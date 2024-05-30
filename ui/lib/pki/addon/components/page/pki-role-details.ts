@@ -5,7 +5,7 @@
 
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import errorMessage from 'vault/utils/error-message';
 import type SecretMountPath from 'vault/services/secret-mount-path';
 import type FlashMessageService from 'vault/services/flash-messages';
@@ -23,7 +23,7 @@ export default class DetailsPage extends Component<Args> {
 
   get breadcrumbs() {
     return [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.secretMountPath.currentPath, route: 'overview' },
       { label: 'roles', route: 'roles.index' },
       { label: this.args.role.id },

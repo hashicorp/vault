@@ -5,7 +5,7 @@
 
 import { resolve } from 'rsvp';
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import ControlGroupError from 'vault/lib/control-group-error';
 
 const SUPPORTED_DYNAMIC_BACKENDS = ['database', 'ssh', 'aws'];
@@ -13,11 +13,8 @@ const SUPPORTED_DYNAMIC_BACKENDS = ['database', 'ssh', 'aws'];
 export default Route.extend({
   templateName: 'vault/cluster/secrets/backend/credentials',
   pathHelp: service('path-help'),
+  router: service(),
   store: service(),
-
-  backendModel() {
-    return this.modelFor('vault.cluster.secrets.backend');
-  },
 
   beforeModel() {
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
@@ -56,16 +53,14 @@ export default Route.extend({
 
   async model(params) {
     const role = params.secret;
-    const backendModel = this.backendModel();
-    const backendPath = backendModel.get('id');
-    const backendType = backendModel.get('type');
+    const { id: backendPath, type: backendType } = this.modelFor('vault.cluster.secrets.backend');
     const roleType = params.roleType;
     let dbCred;
     if (backendType === 'database') {
       dbCred = await this.getDatabaseCredential(backendPath, role, roleType);
     }
-    if (!SUPPORTED_DYNAMIC_BACKENDS.includes(backendModel.get('type'))) {
-      return this.transitionTo('vault.cluster.secrets.backend.list-root', backendPath);
+    if (!SUPPORTED_DYNAMIC_BACKENDS.includes(backendType)) {
+      return this.router.transitionTo('vault.cluster.secrets.backend.list-root', backendPath);
     }
     return resolve({
       backendPath,

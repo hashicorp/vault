@@ -10,6 +10,7 @@
     "ember-cli-babel": "*",
     "ember-concurrency": "*",
     "@ember/test-waiters": "*",
+    "ember-auto-import": "*",
     "ember-cli-typescript": "*",
     "@types/ember": "latest",
     "@types/ember-data": "latest",

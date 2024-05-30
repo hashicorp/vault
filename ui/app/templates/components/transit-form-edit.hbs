@@ -100,7 +100,13 @@
         </div>
       {{/if}}
       <div class="control">
-        <Hds::Button @text="Cancel" @color="secondary" @route="vault.cluster.secrets.backend.show" @model={{@key.id}} />
+        <Hds::Button
+          @text="Cancel"
+          @color="secondary"
+          @route="vault.cluster.secrets.backend.show"
+          @models={{array @key.backend @key.id}}
+          @query={{hash tab="details"}}
+        />
       </div>
     </div>
     {{#if (and @key.canDelete @capabilities.canDelete)}}

@@ -34,10 +34,11 @@ func TestMakeConfig(t *testing.T) {
 		mlockEnabled      bool
 		mlockEnabledTimes int
 
-		expectedConfig   *plugin.ClientConfig
-		expectTLSConfig  bool
-		expectRunnerFunc bool
-		skipSecureConfig bool
+		expectedConfig       *plugin.ClientConfig
+		expectTLSConfig      bool
+		expectRunnerFunc     bool
+		skipSecureConfig     bool
+		useLegacyEnvLayering bool
 	}
 
 	tests := map[string]testCase{
@@ -66,8 +67,9 @@ func TestMakeConfig(t *testing.T) {
 
 			responseWrapInfoTimes: 0,
 
-			mlockEnabled:      false,
-			mlockEnabledTimes: 1,
+			mlockEnabled:         false,
+			mlockEnabledTimes:    1,
+			useLegacyEnvLayering: true,
 
 			expectedConfig: &plugin.ClientConfig{
 				HandshakeConfig: plugin.HandshakeConfig{
@@ -83,12 +85,12 @@ func TestMakeConfig(t *testing.T) {
 				Cmd: commandWithEnv(
 					"echo",
 					[]string{"foo", "bar"},
-					[]string{
+					append(append([]string{
 						"initial=true",
 						fmt.Sprintf("%s=%s", PluginVaultVersionEnv, "dummyversion"),
 						fmt.Sprintf("%s=%t", PluginMetadataModeEnv, true),
 						fmt.Sprintf("%s=%t", PluginAutoMTLSEnv, false),
-					},
+					}, os.Environ()...), PluginUseLegacyEnvLayering+"=true"),
 				),
 				SecureConfig: &plugin.SecureConfig{
 					Checksum: []byte("some_sha256"),
@@ -98,8 +100,9 @@ func TestMakeConfig(t *testing.T) {
 					plugin.ProtocolNetRPC,
 					plugin.ProtocolGRPC,
 				},
-				Logger:   hclog.NewNullLogger(),
-				AutoMTLS: false,
+				Logger:      hclog.NewNullLogger(),
+				AutoMTLS:    false,
+				SkipHostEnv: true,
 			},
 			expectTLSConfig: false,
 		},
@@ -148,14 +151,14 @@ func TestMakeConfig(t *testing.T) {
 				Cmd: commandWithEnv(
 					"echo",
 					[]string{"foo", "bar"},
-					[]string{
+					append(os.Environ(), []string{
 						"initial=true",
 						fmt.Sprintf("%s=%t", PluginMlockEnabled, true),
 						fmt.Sprintf("%s=%s", PluginVaultVersionEnv, "dummyversion"),
 						fmt.Sprintf("%s=%t", PluginMetadataModeEnv, false),
 						fmt.Sprintf("%s=%t", PluginAutoMTLSEnv, false),
 						fmt.Sprintf("%s=%s", PluginUnwrapTokenEnv, "testtoken"),
-					},
+					}...),
 				),
 				SecureConfig: &plugin.SecureConfig{
 					Checksum: []byte("some_sha256"),
@@ -165,8 +168,9 @@ func TestMakeConfig(t *testing.T) {
 					plugin.ProtocolNetRPC,
 					plugin.ProtocolGRPC,
 				},
-				Logger:   hclog.NewNullLogger(),
-				AutoMTLS: false,
+				Logger:      hclog.NewNullLogger(),
+				AutoMTLS:    false,
+				SkipHostEnv: true,
 			},
 			expectTLSConfig: true,
 		},
@@ -212,12 +216,12 @@ func TestMakeConfig(t *testing.T) {
 				Cmd: commandWithEnv(
 					"echo",
 					[]string{"foo", "bar"},
-					[]string{
+					append(os.Environ(), []string{
 						"initial=true",
 						fmt.Sprintf("%s=%s", PluginVaultVersionEnv, "dummyversion"),
 						fmt.Sprintf("%s=%t", PluginMetadataModeEnv, true),
 						fmt.Sprintf("%s=%t", PluginAutoMTLSEnv, true),
-					},
+					}...),
 				),
 				SecureConfig: &plugin.SecureConfig{
 					Checksum: []byte("some_sha256"),
@@ -227,8 +231,9 @@ func TestMakeConfig(t *testing.T) {
 					plugin.ProtocolNetRPC,
 					plugin.ProtocolGRPC,
 				},
-				Logger:   hclog.NewNullLogger(),
-				AutoMTLS: true,
+				Logger:      hclog.NewNullLogger(),
+				AutoMTLS:    true,
+				SkipHostEnv: true,
 			},
 			expectTLSConfig: false,
 		},
@@ -274,12 +279,12 @@ func TestMakeConfig(t *testing.T) {
 				Cmd: commandWithEnv(
 					"echo",
 					[]string{"foo", "bar"},
-					[]string{
+					append(os.Environ(), []string{
 						"initial=true",
 						fmt.Sprintf("%s=%s", PluginVaultVersionEnv, "dummyversion"),
 						fmt.Sprintf("%s=%t", PluginMetadataModeEnv, false),
 						fmt.Sprintf("%s=%t", PluginAutoMTLSEnv, true),
-					},
+					}...),
 				),
 				SecureConfig: &plugin.SecureConfig{
 					Checksum: []byte("some_sha256"),
@@ -289,8 +294,9 @@ func TestMakeConfig(t *testing.T) {
 					plugin.ProtocolNetRPC,
 					plugin.ProtocolGRPC,
 				},
-				Logger:   hclog.NewNullLogger(),
-				AutoMTLS: true,
+				Logger:      hclog.NewNullLogger(),
+				AutoMTLS:    true,
+				SkipHostEnv: true,
 			},
 			expectTLSConfig: false,
 		},
@@ -322,7 +328,7 @@ func TestMakeConfig(t *testing.T) {
 			responseWrapInfoTimes: 0,
 
 			mlockEnabled:      false,
-			mlockEnabledTimes: 1,
+			mlockEnabledTimes: 2,
 
 			expectedConfig: &plugin.ClientConfig{
 				HandshakeConfig: plugin.HandshakeConfig{
@@ -341,9 +347,10 @@ func TestMakeConfig(t *testing.T) {
 					plugin.ProtocolNetRPC,
 					plugin.ProtocolGRPC,
 				},
-				Logger:      hclog.NewNullLogger(),
-				AutoMTLS:    true,
-				SkipHostEnv: true,
+				Logger:              hclog.NewNullLogger(),
+				AutoMTLS:            true,
+				SkipHostEnv:         true,
+				GRPCBrokerMultiplex: true,
 				UnixSocketConfig: &plugin.UnixSocketConfig{
 					Group: strconv.Itoa(os.Getgid()),
 				},
@@ -367,6 +374,10 @@ func TestMakeConfig(t *testing.T) {
 
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
+
+			if test.useLegacyEnvLayering {
+				t.Setenv(PluginUseLegacyEnvLayering, "true")
+			}
 
 			config, err := test.rc.makeConfig(ctx)
 			if err != nil {

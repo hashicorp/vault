@@ -1,3 +1,0 @@
-```release-note:feature
-core: add sys/internal/ui/version endpoint
-```

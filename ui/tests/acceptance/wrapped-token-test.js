@@ -14,7 +14,12 @@ import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 const consoleComponent = create(consoleClass);
 
 const wrappedAuth = async () => {
-  await consoleComponent.runCommands(`write -field=token auth/token/create policies=default -wrap-ttl=3m`);
+  await consoleComponent.toggle();
+  await settled();
+  await consoleComponent.runCommands(
+    `write -field=token auth/token/create policies=default -wrap-ttl=3m`,
+    false
+  );
   await settled();
   return consoleComponent.lastLogOutput;
 };
@@ -24,6 +29,7 @@ const setupWrapping = async () => {
   await settled();
   await auth.visit();
   await settled();
+  await auth.authType('token');
   await auth.tokenInput('root').submit();
   await settled();
   const token = await wrappedAuth();

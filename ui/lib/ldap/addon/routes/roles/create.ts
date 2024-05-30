@@ -4,7 +4,7 @@
  */
 
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 
 import type Store from '@ember-data/store';
 import type SecretMountPath from 'vault/services/secret-mount-path';
