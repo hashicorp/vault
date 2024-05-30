@@ -49,7 +49,7 @@ module('Acceptance | clients | sync', function (hooks) {
 
       this.server.get('/sys/activation-flags', () => {
         assert.true(true, '/sys/activation-flags/ is called to check if secrets-sync is activated');
-        // called once from the higher level application route
+        // called once from the higher level cluster route
         return {
           data: {
             activated: [],
