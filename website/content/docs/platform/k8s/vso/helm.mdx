@@ -11,7 +11,7 @@ The chart is customizable using
 [Helm configuration values](https://helm.sh/docs/intro/using_helm/#customizing-the-chart-before-installing).
 
 <!-- DO NOT EDIT. The docs below are generated automatically. To change, edit
-                  the vault-secrets-operator repo's values.yaml: file commit=f9ddeb63c4d884360c3eeb127d09d13de34393f4 -->
+                  the vault-secrets-operator repo's values.yaml: file commit=bf1746f1937f25b4cb28f15d4b818303f3a78dd9 -->
 <!-- codegen: start -->
 
 ## Top-Level Stanzas
@@ -165,7 +165,7 @@ Use these links to navigate to a particular top-level stanza.
 
       - `repository` ((#v-controller-manager-image-repository)) (`string: hashicorp/vault-secrets-operator`)
 
-      - `tag` ((#v-controller-manager-image-tag)) (`string: 0.7.0`)
+      - `tag` ((#v-controller-manager-image-tag)) (`string: 0.7.1`)
 
     - `logging` ((#v-controller-manager-logging)) - logging
 
@@ -587,7 +587,7 @@ Use these links to navigate to a particular top-level stanza.
 
   - `serviceMonitor` ((#v-telemetry-servicemonitor))
 
-    - `nabled` ((#v-telemetry-servicemonitor-nabled)) (`boolean: false`) - The Prometheus operator *must* be installed before enabling this feature,
+    - `enabled` ((#v-telemetry-servicemonitor-enabled)) (`boolean: false`) - The Prometheus operator *must* be installed before enabling this feature,
       if not the chart will fail to install due to missing CustomResourceDefinitions
       provided by the operator.
 

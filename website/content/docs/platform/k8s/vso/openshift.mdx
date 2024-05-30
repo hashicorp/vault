@@ -32,7 +32,7 @@ The Vault Secrets Operator may also be installed in OpenShift using the Helm cha
 $ helm install vault-secrets-operator hashicorp/vault-secrets-operator \
   --create-namespace \
   --namespace vault-secrets-operator \
-  --version 0.7.0 \
+  --version 0.7.1 \
   --values values.yaml
 ```
 
@@ -65,7 +65,7 @@ controller:
   manager:
     image:
       repository: registry.connect.redhat.com/hashicorp/vault-secrets-operator
-      tag: 0.7.0-ubi
+      tag: 0.7.1-ubi
     resources:
       limits:
         memory: 256Mi
