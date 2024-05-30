@@ -59,6 +59,7 @@ module('Acceptance | clients | sync', function (hooks) {
       });
 
       assert.dom(GENERAL.emptyStateTitle).exists('Shows empty state when secrets-sync is not activated');
+
       await click(`${GENERAL.emptyStateActions} .hds-link-standalone`);
       assert.strictEqual(
         currentURL(),

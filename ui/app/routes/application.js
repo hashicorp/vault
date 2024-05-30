@@ -65,7 +65,7 @@ export default Route.extend({
     },
   },
 
-  async beforeModel() {
-    await this.flagsService.fetchFeatureFlags();
+  beforeModel() {
+    return this.flagsService.fetchFeatureFlags();
   },
 });

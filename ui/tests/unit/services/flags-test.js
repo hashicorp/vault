@@ -188,8 +188,8 @@ module('Unit | Service | flags', function (hooks) {
         });
 
         test('it returns true when not activated ', function (assert) {
-          // the activate endpoint is located at a different path than all sys/sync.
-          // the expected UX experience is that if the feature is not activated, regardless of permissions
+          // the activate endpoint is located at a different path than sys/sync.
+          // the expected UX experience: if the feature is not activated, regardless of permissions
           // the user should see the landing page and a banner that tells them to either have an admin activate the feature or activate it themselves
           this.service.activatedFlags = [];
           assert.true(this.service.showSecretsSync);
