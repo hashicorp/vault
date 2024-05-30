@@ -705,7 +705,7 @@ func (c *Client) SetAddress(addr string) error {
 
 	parsedAddr, err := c.config.ParseAddress(addr)
 	if err != nil {
-		return errwrap.Wrapf("failed to set address: {{err}}", err)
+		return fmt.Errorf("failed to set address: %w", err)
 	}
 
 	c.addr = parsedAddr
