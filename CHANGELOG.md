@@ -2,7 +2,7 @@
 - [v1.0.0 - v1.9.10](CHANGELOG-pre-v1.10.md)
 - [v0.11.6 and earlier](CHANGELOG-v0.md)
 
-## 1.17.0-RC1
+## 1.17.0-rc1
 ### May 30, 2024
 
 CHANGES:
