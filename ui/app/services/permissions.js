@@ -123,13 +123,13 @@ export default class PermissionsService extends Service {
   }
 
   /**
-   * hasWildcardAccess checks if the user has a wildcard access to target namespace
+   * hasWildcardNsAccess checks if the user has a wildcard access to target namespace
    * via full glob path or any ancestors of the target namespace
    * @param {string} targetNs is the current/target namespace that we are checking access for
    * @param {object} globPaths key is path, value is object with capabilities
    * @returns {boolean} whether the user's policy includes wildcard access to NS
    */
-  hasWildcardAccess(targetNs, globPaths = {}) {
+  hasWildcardNsAccess(targetNs, globPaths = {}) {
     const nsParts = sanitizePath(targetNs).split('/');
     let matchKey = null;
     // For each section of the namespace, check if there is a matching wildcard path
@@ -165,11 +165,11 @@ export default class PermissionsService extends Service {
     const namespace = this.fullCurrentNamespace;
     const allowed =
       // check if the user has wildcard access to the relative root namespace
-      this.hasWildcardAccess(namespace, this.globPaths) ||
+      this.hasWildcardNsAccess(namespace, this.globPaths) ||
       // or if any of their glob paths start with the namespace
-      Object.keys(this.globPaths).any((k) => k.startsWith(namespace)) ||
+      Object.keys(this.globPaths).any((k) => k.startsWith(namespace) && !this.isDenied(this.globPaths[k])) ||
       // or if any of their exact paths start with the namespace
-      Object.keys(this.exactPaths).any((k) => k.startsWith(namespace));
+      Object.keys(this.exactPaths).any((k) => k.startsWith(namespace) && !this.isDenied(this.exactPaths[k]));
     this.permissionsBanner = allowed ? null : PERMISSIONS_BANNER_STATES.noAccess;
   }
 
