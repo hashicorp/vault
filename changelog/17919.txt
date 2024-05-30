@@ -1,0 +1,3 @@
+```release-note:improvement
+api: property based testing for LifetimeWatcher sleep duration calculation
+```

@@ -1,0 +1,3 @@
+```release-note:bug
+auth/approle: Add nil check for the secret ID entry when deleting via secret id accessor preventing cross role secret id deletion
+```

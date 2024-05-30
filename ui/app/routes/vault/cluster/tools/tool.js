@@ -1,21 +1,18 @@
-import { inject as service } from '@ember/service';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Route from '@ember/routing/route';
 import { toolsActions } from 'vault/helpers/tools-actions';
 
 export default Route.extend({
-  wizard: service(),
-
-  beforeModel(transition) {
-    const supportedActions = toolsActions();
-    const { selected_action: selectedAction } = this.paramsFor(this.routeName);
-    if (!selectedAction || !supportedActions.includes(selectedAction)) {
-      transition.abort();
-      return this.transitionTo(this.routeName, supportedActions[0]);
-    }
-  },
-
   model(params) {
-    return params.selected_action;
+    const supportedActions = toolsActions();
+    if (supportedActions.includes(params.selected_action)) {
+      return params.selected_action;
+    }
+    throw new Error('Given param is not a supported tool action');
   },
 
   setupController(controller, model) {
@@ -26,9 +23,6 @@ export default Route.extend({
   actions: {
     didTransition() {
       const params = this.paramsFor(this.routeName);
-      if (this.wizard.currentMachine === 'tools') {
-        this.wizard.transitionFeatureMachine(this.wizard.featureState, params.selected_action.toUpperCase());
-      }
       /* eslint-disable-next-line ember/no-controller-access-in-routes */
       this.controller.setProperties(params);
       return true;

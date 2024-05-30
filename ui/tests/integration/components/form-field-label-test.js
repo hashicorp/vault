@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
@@ -37,8 +42,10 @@ module('Integration | Component | form-field-label', function (hooks) {
     assert.dom('[data-test-help-text]').hasText(this.helpText, 'Help text renders in tooltip');
     assert.dom('.sub-text').hasText(this.subText, 'Sub text renders');
     assert.dom('a').doesNotExist('docLink hidden when not provided');
-    this.set('docLink', 'foo.com/bar');
+    this.set('docLink', '/doc/path');
     assert.dom('.sub-text').includesText('See our documentation for help', 'Doc link text renders');
-    assert.dom('a').hasAttribute('href', this.docLink, 'Doc link renders');
+    assert
+      .dom('a')
+      .hasAttribute('href', 'https://developer.hashicorp.com' + this.docLink, 'Doc link renders');
   });
 });

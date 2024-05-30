@@ -1,0 +1,63 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<PageHeader as |p|>
+  <p.top>
+    <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3" data-test-header-title>
+      {{@model.name}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+<Toolbar>
+  <ToolbarActions aria-label="actions for role {{@role.id}}">
+    {{#if @model.canDelete}}
+      <ConfirmAction
+        @buttonText="Delete role"
+        class="toolbar-button"
+        @buttonColor="secondary"
+        @onConfirmAction={{this.delete}}
+        data-test-delete
+      />
+      <div class="toolbar-separator"></div>
+    {{/if}}
+    {{#if @model.canReadCreds}}
+      <ToolbarLink @route="roles.role.credentials" data-test-get-credentials>
+        Get credentials
+      </ToolbarLink>
+    {{/if}}
+    {{#if @model.canRotateStaticCreds}}
+      <ConfirmAction
+        @buttonText="Rotate credentials"
+        class="toolbar-button"
+        @buttonColor="secondary"
+        @confirmTitle="Rotate credentials?"
+        @confirmMessage="When manually rotating credentials, the rotation period will start over."
+        @modalColor="warning"
+        @isRunning={{this.rotateCredentials.isRunning}}
+        @onConfirmAction={{perform this.rotateCredentials}}
+        data-test-rotate-credentials
+      />
+    {{/if}}
+    {{#if @model.canEdit}}
+      <ToolbarLink @route="roles.role.edit" data-test-edit>
+        Edit role
+      </ToolbarLink>
+    {{/if}}
+  </ToolbarActions>
+</Toolbar>
+
+{{#each @model.displayFields as |field|}}
+  {{#let (get @model field.name) as |value|}}
+    <InfoTableRow
+      data-test-filtered-field
+      @label={{or field.options.detailsLabel field.options.label}}
+      @value={{if (eq field.options.editType "ttl") (format-duration value) value}}
+    />
+  {{/let}}
+{{/each}}

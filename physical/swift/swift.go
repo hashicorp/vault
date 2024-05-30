@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package swift
 
 import (
@@ -9,10 +12,9 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/hashicorp/go-hclog"
-
 	metrics "github.com/armon/go-metrics"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/ncw/swift"

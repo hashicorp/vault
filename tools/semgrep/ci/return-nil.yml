@@ -1,5 +1,8 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 rules:
-  - id: return-nil
+  - id: hc-return-nil
     patterns:
       - pattern-either:
           - pattern: |

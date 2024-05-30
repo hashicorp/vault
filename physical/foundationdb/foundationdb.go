@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 //go:build foundationdb
 
 package foundationdb
@@ -12,15 +15,13 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/hashicorp/go-hclog"
-	uuid "github.com/hashicorp/go-uuid"
-
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/subspace"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
-
 	metrics "github.com/armon/go-metrics"
+	log "github.com/hashicorp/go-hclog"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/physical"
 )
 
@@ -122,8 +123,8 @@ func decoratePath(path string) ([]byte, error) {
 
 // Turn a decorated byte array back into a path string
 func undecoratePath(decoratedPath []byte) string {
-	ret := strings.Replace(string(decoratedPath), dirPathMarker, "/", -1)
-	ret = strings.Replace(ret, dirEntryMarker, "/", -1)
+	ret := strings.ReplaceAll(string(decoratedPath), dirPathMarker, "/")
+	ret = strings.ReplaceAll(ret, dirEntryMarker, "/")
 
 	return strings.TrimLeft(ret, "/")
 }
@@ -233,12 +234,12 @@ func NewFDBBackend(conf map[string]string, logger log.Logger) (physical.Backend,
 
 	db, err := fdb.Open(fdbClusterFile, []byte("DB"))
 	if err != nil {
-		return nil, fmt.Errorf("failed to open database with cluster file '%s': %w", fdbClusterFile, err)
+		return nil, fmt.Errorf("failed to open database with cluster file %q: %w", fdbClusterFile, err)
 	}
 
 	topDir, err := directory.CreateOrOpen(db, dirPath, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create/open top-level directory '%s': %w", path, err)
+		return nil, fmt.Errorf("failed to create/open top-level directory %q: %w", path, err)
 	}
 
 	// Setup the backend
@@ -448,7 +449,6 @@ func (f *FDBBackend) Put(ctx context.Context, entry *physical.Entry) error {
 
 		return nil, nil
 	})
-
 	if err != nil {
 		return fmt.Errorf("put failed for item %s: %w", entry.Key, err)
 	}
@@ -506,7 +506,6 @@ func (f *FDBBackend) Delete(ctx context.Context, key string) error {
 
 		return nil, nil
 	})
-
 	if err != nil {
 		return fmt.Errorf("delete failed for item %s: %w", key, err)
 	}

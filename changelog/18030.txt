@@ -1,0 +1,3 @@
+```release-note:improvement
+storage/raft: Add `retry_join_as_non_voter` config option.
+```

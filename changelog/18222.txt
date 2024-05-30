@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki: Respond with written data to `config/auto-tidy`, `config/crl`, and `roles/:role`.
+```

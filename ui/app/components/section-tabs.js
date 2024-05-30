@@ -1,13 +1,12 @@
-import Component from '@ember/component';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
 
-const SectionTabs = Component.extend({
-  tagName: '',
-  model: null,
-  tabType: 'authSettings',
-});
+import Component from '@glimmer/component';
 
-SectionTabs.reopenClass({
-  positionalParams: ['model', 'tabType', 'paths'],
-});
-
-export default SectionTabs;
+export default class SectionTabs extends Component {
+  get tabType() {
+    return this.args.tabType || 'authSettings';
+  }
+}

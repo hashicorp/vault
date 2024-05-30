@@ -1,9 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
 	"strings"
 
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/cli"
 )
 
 var _ cli.Command = (*NamespaceCommand)(nil)
@@ -35,6 +38,10 @@ Usage: vault namespace <subcommand> [options] [args]
   Create a new namespace:
 
       $ vault namespace create
+
+  Patch an existing namespace:
+
+      $ vault namespace patch
 
   Delete an existing namespace:
 

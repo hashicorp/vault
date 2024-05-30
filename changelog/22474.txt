@@ -1,0 +1,3 @@
+```release-note:feature
+Add subscribe capability and subscribe_event_types to policies for events.
+```

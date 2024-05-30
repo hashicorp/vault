@@ -1,0 +1,47 @@
+### Default lease count quota enabled when upgrading from Vault versions before 1.9
+
+#### Affected versions
+
+- 1.16+
+
+#### Issue
+
+Vault began tracking version history as of version 1.9. As of version 1.16, new
+Vault installs automatically enable a lease count quota by consulting the
+version history. If the version history is empty on upgrade, Vault treats the
+upgrade as a new install and automatically enables a default lease count quota.
+
+Before you upgrade Vault from a version prior to 1.9 to versions 1.16+,
+you should check the current number of unexpired leases via the
+[`vault.expire.num_leases`](/vault/docs/internals/telemetry#token-identity-and-lease-metrics)
+metric.
+
+If the number of unexpired leases is below the [default lease count
+quota](/vault/docs/enterprise/lease-count-quotas#default-lease-count-quota),
+value of 300000 no extra steps are required.
+
+If the number of unexpired leases is greater than the default threshold of
+300000, there is a two step workaround to safely upgrade without the default
+lease count quota:
+
+1. Upgrade to any Vault version prior to 1.16 (between 1.9 and 1.15) to populate the
+   version store.
+2. Upgrade to Vault version 1.16+.
+
+You can review, modify, and delete the global default quota at any point with
+the
+[`/sys/quotas/lease-count/default`](/vault/api-docs/system/lease-count-quotas)
+endpoint:
+
+```shell-session
+$ vault read sys/quotas/lease-count/default
+$ vault delete sys/quotas/lease-count/default
+$ vault write sys/quotas/lease-count/default max_leases=<# of max leases>
+```
+
+Refer to [Protecting Vault with Resource
+Quotas](/vault/tutorials/operations/resource-quotas) for a step-by-step tutorial
+on quota tuning.
+
+Refer to [Lease Explosions](/vault/docs/concepts/lease-explosions) for more
+information on lease management.

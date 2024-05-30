@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/gcp: Fixes duplicate static account key creation from performance secondary clusters. 
+```

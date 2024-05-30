@@ -1,7 +1,11 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package cert
 
 import (
 	"context"
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -17,6 +21,7 @@ import (
 	mathrand "math/rand"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -25,24 +30,22 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
+	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-rootcerts"
 	"github.com/hashicorp/go-sockaddr"
-
-	"golang.org/x/net/http2"
-
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
-	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
-	vaulthttp "github.com/hashicorp/vault/http"
-
-	rootcerts "github.com/hashicorp/go-rootcerts"
 	"github.com/hashicorp/vault/builtin/logical/pki"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/mapstructure"
+	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/ocsp"
+	"golang.org/x/net/http2"
 )
 
 const (
@@ -250,9 +253,6 @@ func connectionState(serverCAPath, serverCertPath, serverKeyPath, clientCertPath
 func TestBackend_PermittedDNSDomainsIntermediateCA(t *testing.T) {
 	// Enable PKI secret engine and Cert auth method
 	coreConfig := &vault.CoreConfig{
-		DisableMlock: true,
-		DisableCache: true,
-		Logger:       log.NewNullLogger(),
 		CredentialBackends: map[string]logical.Factory{
 			"cert": Factory,
 		},
@@ -445,7 +445,7 @@ func TestBackend_PermittedDNSDomainsIntermediateCA(t *testing.T) {
 	}
 
 	// Create a new api client with the desired TLS configuration
-	newClient := getAPIClient(cores[0].Listeners[0].Address.Port, cores[0].TLSConfig)
+	newClient := getAPIClient(cores[0].Listeners[0].Address.Port, cores[0].TLSConfig())
 
 	secret, err = newClient.Logical().Write("auth/cert/login", map[string]interface{}{
 		"name": "myvault-dot-com",
@@ -455,6 +455,178 @@ func TestBackend_PermittedDNSDomainsIntermediateCA(t *testing.T) {
 	}
 	if secret.Auth == nil || secret.Auth.ClientToken == "" {
 		t.Fatalf("expected a successful authentication")
+	}
+
+	// testing pathLoginRenew for cert auth
+	oldAccessor := secret.Auth.Accessor
+	newClient.SetToken(client.Token())
+	secret, err = newClient.Logical().Write("auth/token/renew-accessor", map[string]interface{}{
+		"accessor":  secret.Auth.Accessor,
+		"increment": 3600,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if secret.Auth == nil || secret.Auth.ClientToken != "" || secret.Auth.LeaseDuration != 3600 || secret.Auth.Accessor != oldAccessor {
+		t.Fatalf("unexpected accessor renewal")
+	}
+}
+
+func TestBackend_MetadataBasedACLPolicy(t *testing.T) {
+	// Start cluster with cert auth method enabled
+	coreConfig := &vault.CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"cert": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+	cores := cluster.Cores
+	vault.TestWaitActive(t, cores[0].Core)
+	client := cores[0].Client
+
+	var err error
+
+	// Enable the cert auth method
+	err = client.Sys().EnableAuthWithOptions("cert", &api.EnableAuthOptions{
+		Type: "cert",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Enable metadata in aliases
+	_, err = client.Logical().Write("auth/cert/config", map[string]interface{}{
+		"enable_identity_alias_metadata": true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Retrieve its accessor id
+	auths, err := client.Sys().ListAuth()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var accessor string
+
+	for _, auth := range auths {
+		if auth.Type == "cert" {
+			accessor = auth.Accessor
+		}
+	}
+
+	if accessor == "" {
+		t.Fatal("failed to find cert auth accessor")
+	}
+
+	// Write ACL policy
+	err = client.Sys().PutPolicy("metadata-based", fmt.Sprintf(`
+path "kv/cn/{{identity.entity.aliases.%s.metadata.common_name}}" {
+	capabilities = ["read"]
+}
+path "kv/ext/{{identity.entity.aliases.%s.metadata.2-1-1-1}}" {
+	capabilities = ["read"]
+}
+`, accessor, accessor))
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	ca, err := ioutil.ReadFile("test-fixtures/root/rootcacert.pem")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Set the trusted certificate in the backend
+	_, err = client.Logical().Write("auth/cert/certs/test", map[string]interface{}{
+		"display_name":                "test",
+		"policies":                    "metadata-based",
+		"certificate":                 string(ca),
+		"allowed_metadata_extensions": "2.1.1.1,1.2.3.45",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// This function is a copy-paste from the NewTestCluster, with the
+	// modification to reconfigure the TLS on the api client with a
+	// specific client certificate.
+	getAPIClient := func(port int, tlsConfig *tls.Config) *api.Client {
+		transport := cleanhttp.DefaultPooledTransport()
+		transport.TLSClientConfig = tlsConfig.Clone()
+		if err := http2.ConfigureTransport(transport); err != nil {
+			t.Fatal(err)
+		}
+		client := &http.Client{
+			Transport: transport,
+			CheckRedirect: func(*http.Request, []*http.Request) error {
+				// This can of course be overridden per-test by using its own client
+				return fmt.Errorf("redirects not allowed in these tests")
+			},
+		}
+		config := api.DefaultConfig()
+		if config.Error != nil {
+			t.Fatal(config.Error)
+		}
+		config.Address = fmt.Sprintf("https://127.0.0.1:%d", port)
+		config.HttpClient = client
+
+		// Set the client certificates
+		config.ConfigureTLS(&api.TLSConfig{
+			CACertBytes: cluster.CACertPEM,
+			ClientCert:  "test-fixtures/root/rootcawextcert.pem",
+			ClientKey:   "test-fixtures/root/rootcawextkey.pem",
+		})
+
+		apiClient, err := api.NewClient(config)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return apiClient
+	}
+
+	// Create a new api client with the desired TLS configuration
+	newClient := getAPIClient(cores[0].Listeners[0].Address.Port, cores[0].TLSConfig())
+
+	var secret *api.Secret
+
+	secret, err = newClient.Logical().Write("auth/cert/login", map[string]interface{}{
+		"name": "test",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if secret.Auth == nil || secret.Auth.ClientToken == "" {
+		t.Fatalf("expected a successful authentication")
+	}
+
+	// Check paths guarded by ACL policy
+	newClient.SetToken(secret.Auth.ClientToken)
+
+	_, err = newClient.Logical().Read("kv/cn/example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = newClient.Logical().Read("kv/cn/not.example.com")
+	if err == nil {
+		t.Fatal("expected access denied")
+	}
+
+	_, err = newClient.Logical().Read("kv/ext/A UTF8String Extension")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = newClient.Logical().Read("kv/ext/bar")
+	if err == nil {
+		t.Fatal("expected access denied")
 	}
 }
 
@@ -750,6 +922,21 @@ func TestBackend_RegisteredNonCA_CRL(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
+	// Ensure the CRL shows up on a list.
+	listReq := &logical.Request{
+		Operation: logical.ListOperation,
+		Storage:   storage,
+		Path:      "crls",
+		Data:      map[string]interface{}{},
+	}
+	resp, err = b.HandleRequest(context.Background(), listReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if len(resp.Data) != 1 || len(resp.Data["keys"].([]string)) != 1 || resp.Data["keys"].([]string)[0] != "issuedcrl" {
+		t.Fatalf("bad listing: resp:%v", resp)
+	}
+
 	// Attempt login with the same connection state but with the CRL registered
 	resp, err = b.HandleRequest(context.Background(), loginReq)
 	if err != nil {
@@ -902,14 +1089,20 @@ func TestBackend_CRLs(t *testing.T) {
 }
 
 func testFactory(t *testing.T) logical.Backend {
+	storage := &logical.InmemStorage{}
 	b, err := Factory(context.Background(), &logical.BackendConfig{
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: 1000 * time.Second,
 			MaxLeaseTTLVal:     1800 * time.Second,
 		},
-		StorageView: &logical.InmemStorage{},
+		StorageView: storage,
 	})
 	if err != nil {
+		t.Fatalf("error: %s", err)
+	}
+	if err := b.Initialize(context.Background(), &logical.InitializationRequest{
+		Storage: storage,
+	}); err != nil {
 		t.Fatalf("error: %s", err)
 	}
 	return b
@@ -1107,10 +1300,23 @@ func TestBackend_ext_singleCert(t *testing.T) {
 			testAccStepLoginInvalid(t, connState),
 			testAccStepCert(t, "web", ca, "foo", allowed{names: "invalid", ext: "2.1.1.1:*,2.1.1.2:The Wrong Value"}, false),
 			testAccStepLoginInvalid(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{names: "example.com", ext: "hex:2.5.29.17:*87047F000002*"}, false),
+			testAccStepLoginInvalid(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{names: "example.com", ext: "hex:2.5.29.17:*87047F000001*"}, false),
+			testAccStepLogin(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{names: "example.com", ext: "2.5.29.17:"}, false),
+			testAccStepLogin(t, connState),
+			testAccStepReadConfig(t, config{EnableIdentityAliasMetadata: false}, connState),
 			testAccStepCert(t, "web", ca, "foo", allowed{metadata_ext: "2.1.1.1,1.2.3.45"}, false),
-			testAccStepLoginWithMetadata(t, connState, "web", map[string]string{"2-1-1-1": "A UTF8String Extension"}),
+			testAccStepLoginWithMetadata(t, connState, "web", map[string]string{"2-1-1-1": "A UTF8String Extension"}, false),
 			testAccStepCert(t, "web", ca, "foo", allowed{metadata_ext: "1.2.3.45"}, false),
-			testAccStepLoginWithMetadata(t, connState, "web", map[string]string{}),
+			testAccStepLoginWithMetadata(t, connState, "web", map[string]string{}, false),
+			testAccStepSetConfig(t, config{EnableIdentityAliasMetadata: true}, connState),
+			testAccStepReadConfig(t, config{EnableIdentityAliasMetadata: true}, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{metadata_ext: "2.1.1.1,1.2.3.45"}, false),
+			testAccStepLoginWithMetadata(t, connState, "web", map[string]string{"2-1-1-1": "A UTF8String Extension"}, true),
+			testAccStepCert(t, "web", ca, "foo", allowed{metadata_ext: "1.2.3.45"}, false),
+			testAccStepLoginWithMetadata(t, connState, "web", map[string]string{}, true),
 		},
 	})
 }
@@ -1515,6 +1721,42 @@ func testAccStepDeleteCRL(t *testing.T, connState tls.ConnectionState) logicalte
 	}
 }
 
+func testAccStepSetConfig(t *testing.T, conf config, connState tls.ConnectionState) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "config",
+		ConnState: &connState,
+		Data: map[string]interface{}{
+			"enable_identity_alias_metadata": conf.EnableIdentityAliasMetadata,
+		},
+	}
+}
+
+func testAccStepReadConfig(t *testing.T, conf config, connState tls.ConnectionState) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.ReadOperation,
+		Path:      "config",
+		ConnState: &connState,
+		Check: func(resp *logical.Response) error {
+			value, ok := resp.Data["enable_identity_alias_metadata"]
+			if !ok {
+				t.Fatalf("enable_identity_alias_metadata not found in response")
+			}
+
+			b, ok := value.(bool)
+			if !ok {
+				t.Fatalf("bad: expected enable_identity_alias_metadata to be a bool")
+			}
+
+			if b != conf.EnableIdentityAliasMetadata {
+				t.Fatalf("bad: expected enable_identity_alias_metadata to be %t, got %t", conf.EnableIdentityAliasMetadata, b)
+			}
+
+			return nil
+		},
+	}
+}
+
 func testAccStepLogin(t *testing.T, connState tls.ConnectionState) logicaltest.TestStep {
 	return testAccStepLoginWithName(t, connState, "")
 }
@@ -1560,7 +1802,7 @@ func testAccStepLoginDefaultLease(t *testing.T, connState tls.ConnectionState) l
 	}
 }
 
-func testAccStepLoginWithMetadata(t *testing.T, connState tls.ConnectionState, certName string, metadata map[string]string) logicaltest.TestStep {
+func testAccStepLoginWithMetadata(t *testing.T, connState tls.ConnectionState, certName string, metadata map[string]string, expectAliasMetadata bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation:       logical.UpdateOperation,
 		Path:            "login",
@@ -1582,6 +1824,21 @@ func testAccStepLoginWithMetadata(t *testing.T, connState tls.ConnectionState, c
 
 				if value != expected {
 					t.Fatalf("expected metadata key %s to equal %s, but got: %s", key, expected, value)
+				}
+
+				if expectAliasMetadata {
+					value, ok = resp.Auth.Alias.Metadata[key]
+					if !ok {
+						t.Fatalf("missing alias metadata key: %s", key)
+					}
+
+					if value != expected {
+						t.Fatalf("expected metadata key %s to equal %s, but got: %s", key, expected, value)
+					}
+				} else {
+					if len(resp.Auth.Alias.Metadata) > 0 {
+						t.Fatal("found alias metadata keys, but should not have any")
+					}
 				}
 			}
 
@@ -1618,7 +1875,8 @@ func testAccStepLoginWithNameInvalid(t *testing.T, connState tls.ConnectionState
 }
 
 func testAccStepListCerts(
-	t *testing.T, certs []string) []logicaltest.TestStep {
+	t *testing.T, certs []string,
+) []logicaltest.TestStep {
 	return []logicaltest.TestStep{
 		{
 			Operation: logical.ListOperation,
@@ -1674,26 +1932,33 @@ type allowed struct {
 	metadata_ext         string // allowed metadata extensions to add to identity alias
 }
 
-func testAccStepCert(
-	t *testing.T, name string, cert []byte, policies string, testData allowed, expectError bool) logicaltest.TestStep {
+func testAccStepCert(t *testing.T, name string, cert []byte, policies string, testData allowed, expectError bool) logicaltest.TestStep {
+	return testAccStepCertWithExtraParams(t, name, cert, policies, testData, expectError, nil)
+}
+
+func testAccStepCertWithExtraParams(t *testing.T, name string, cert []byte, policies string, testData allowed, expectError bool, extraParams map[string]interface{}) logicaltest.TestStep {
+	data := map[string]interface{}{
+		"certificate":                  string(cert),
+		"policies":                     policies,
+		"display_name":                 name,
+		"allowed_names":                testData.names,
+		"allowed_common_names":         testData.common_names,
+		"allowed_dns_sans":             testData.dns,
+		"allowed_email_sans":           testData.emails,
+		"allowed_uri_sans":             testData.uris,
+		"allowed_organizational_units": testData.organizational_units,
+		"required_extensions":          testData.ext,
+		"allowed_metadata_extensions":  testData.metadata_ext,
+		"lease":                        1000,
+	}
+	for k, v := range extraParams {
+		data[k] = v
+	}
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "certs/" + name,
 		ErrorOk:   expectError,
-		Data: map[string]interface{}{
-			"certificate":                  string(cert),
-			"policies":                     policies,
-			"display_name":                 name,
-			"allowed_names":                testData.names,
-			"allowed_common_names":         testData.common_names,
-			"allowed_dns_sans":             testData.dns,
-			"allowed_email_sans":           testData.emails,
-			"allowed_uri_sans":             testData.uris,
-			"allowed_organizational_units": testData.organizational_units,
-			"required_extensions":          testData.ext,
-			"allowed_metadata_extensions":  testData.metadata_ext,
-			"lease":                        1000,
-		},
+		Data:      data,
 		Check: func(resp *logical.Response) error {
 			if resp == nil && expectError {
 				return fmt.Errorf("expected error but received nil")
@@ -1703,8 +1968,30 @@ func testAccStepCert(
 	}
 }
 
+func testAccStepReadCertPolicy(t *testing.T, name string, expectError bool, expected map[string]interface{}) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.ReadOperation,
+		Path:      "certs/" + name,
+		ErrorOk:   expectError,
+		Data:      nil,
+		Check: func(resp *logical.Response) error {
+			if (resp == nil || len(resp.Data) == 0) && expectError {
+				return fmt.Errorf("expected error but received nil")
+			}
+			for key, expectedValue := range expected {
+				actualValue := resp.Data[key]
+				if expectedValue != actualValue {
+					return fmt.Errorf("Expected to get [%v]=[%v] but read [%v]=[%v] from server for certs/%v: %v", key, expectedValue, key, actualValue, name, resp)
+				}
+			}
+			return nil
+		},
+	}
+}
+
 func testAccStepCertLease(
-	t *testing.T, name string, cert []byte, policies string) logicaltest.TestStep {
+	t *testing.T, name string, cert []byte, policies string,
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "certs/" + name,
@@ -1718,7 +2005,8 @@ func testAccStepCertLease(
 }
 
 func testAccStepCertTTL(
-	t *testing.T, name string, cert []byte, policies string) logicaltest.TestStep {
+	t *testing.T, name string, cert []byte, policies string,
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "certs/" + name,
@@ -1732,7 +2020,8 @@ func testAccStepCertTTL(
 }
 
 func testAccStepCertMaxTTL(
-	t *testing.T, name string, cert []byte, policies string) logicaltest.TestStep {
+	t *testing.T, name string, cert []byte, policies string,
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "certs/" + name,
@@ -1747,7 +2036,8 @@ func testAccStepCertMaxTTL(
 }
 
 func testAccStepCertNoLease(
-	t *testing.T, name string, cert []byte, policies string) logicaltest.TestStep {
+	t *testing.T, name string, cert []byte, policies string,
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "certs/" + name,
@@ -1771,6 +2061,11 @@ func testConnState(certPath, keyPath, rootCertPath string) (tls.ConnectionState,
 	if err != nil {
 		return tls.ConnectionState{}, err
 	}
+
+	return testConnStateWithCert(cert, rootCAs)
+}
+
+func testConnStateWithCert(cert tls.Certificate, rootCAs *x509.CertPool) (tls.ConnectionState, error) {
 	listenConf := &tls.Config{
 		Certificates:       []tls.Certificate{cert},
 		ClientAuth:         tls.RequestClientCert,
@@ -2050,4 +2345,597 @@ func TestBackend_CertUpgrade(t *testing.T) {
 	if diff := deep.Equal(certEntry, exp); diff != nil {
 		t.Fatal(diff)
 	}
+}
+
+// TestOCSPFailOpenWithBadIssuer validates we fail all different types of cert auth
+// login scenarios if we encounter an OCSP verification error
+func TestOCSPFailOpenWithBadIssuer(t *testing.T) {
+	caFile := "test-fixtures/root/rootcacert.pem"
+	pemCa, err := os.ReadFile(caFile)
+	require.NoError(t, err, "failed reading in file %s", caFile)
+	caTLS := loadCerts(t, caFile, "test-fixtures/root/rootcakey.pem")
+	leafTLS := loadCerts(t, "test-fixtures/keys/cert.pem", "test-fixtures/keys/key.pem")
+
+	rootConfig := &rootcerts.Config{
+		CAFile: caFile,
+	}
+	rootCAs, err := rootcerts.LoadCACerts(rootConfig)
+	connState, err := testConnStateWithCert(leafTLS, rootCAs)
+	require.NoError(t, err, "error testing connection state: %v", err)
+
+	badCa, badCaKey := createCa(t)
+
+	// Setup an OCSP handler
+	ocspHandler := func(ca *x509.Certificate, caKey crypto.Signer) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			now := time.Now()
+			ocspRes := ocsp.Response{
+				SerialNumber: leafTLS.Leaf.SerialNumber,
+				ThisUpdate:   now.Add(-1 * time.Hour),
+				NextUpdate:   now.Add(30 * time.Minute),
+				Status:       ocsp.Good,
+			}
+			response, err := ocsp.CreateResponse(ca, ca, ocspRes, caKey)
+			if err != nil {
+				t.Fatalf("failed generating OCSP response: %v", err)
+			}
+			_, _ = w.Write(response)
+		})
+	}
+	goodTs := httptest.NewServer(ocspHandler(caTLS.Leaf, caTLS.PrivateKey.(crypto.Signer)))
+	badTs := httptest.NewServer(ocspHandler(badCa, badCaKey))
+	defer goodTs.Close()
+	defer badTs.Close()
+
+	steps := []logicaltest.TestStep{
+		// step 1/2: This should fail as we get a response from a bad root, even with ocsp_fail_open is set to true
+		testAccStepCertWithExtraParams(t, "web", pemCa, "foo", allowed{names: "cert.example.com"}, false,
+			map[string]interface{}{
+				"ocsp_enabled":           true,
+				"ocsp_servers_override":  []string{badTs.URL},
+				"ocsp_query_all_servers": false,
+				"ocsp_fail_open":         true,
+			}),
+		testAccStepLoginInvalid(t, connState),
+		// step 3/4: This should fail as we query all the servers which will get a response with an invalid signature
+		testAccStepCertWithExtraParams(t, "web", pemCa, "foo", allowed{names: "cert.example.com"}, false,
+			map[string]interface{}{
+				"ocsp_enabled":           true,
+				"ocsp_servers_override":  []string{goodTs.URL, badTs.URL},
+				"ocsp_query_all_servers": true,
+				"ocsp_fail_open":         true,
+			}),
+		testAccStepLoginInvalid(t, connState),
+		// step 5/6: This should fail as we will query the OCSP server with the bad root key first.
+		testAccStepCertWithExtraParams(t, "web", pemCa, "foo", allowed{names: "cert.example.com"}, false,
+			map[string]interface{}{
+				"ocsp_enabled":           true,
+				"ocsp_servers_override":  []string{badTs.URL, goodTs.URL},
+				"ocsp_query_all_servers": false,
+				"ocsp_fail_open":         true,
+			}),
+		testAccStepLoginInvalid(t, connState),
+		// step 7/8: This should pass as we will only query the first server with the valid root signature
+		testAccStepCertWithExtraParams(t, "web", pemCa, "foo", allowed{names: "cert.example.com"}, false,
+			map[string]interface{}{
+				"ocsp_enabled":           true,
+				"ocsp_servers_override":  []string{goodTs.URL, badTs.URL},
+				"ocsp_query_all_servers": false,
+				"ocsp_fail_open":         true,
+			}),
+		testAccStepLogin(t, connState),
+	}
+
+	// Setup a new factory everytime to avoid OCSP caching from influencing the test
+	for i := 0; i < len(steps); i += 2 {
+		setup := i
+		execute := i + 1
+		t.Run(fmt.Sprintf("steps-%d-%d", setup+1, execute+1), func(t *testing.T) {
+			logicaltest.Test(t, logicaltest.TestCase{
+				CredentialBackend: testFactory(t),
+				Steps:             []logicaltest.TestStep{steps[setup], steps[execute]},
+			})
+		})
+	}
+}
+
+// TestOCSPWithMixedValidResponses validates the expected behavior of multiple OCSP servers configured,
+// with and without ocsp_query_all_servers enabled or disabled.
+func TestOCSPWithMixedValidResponses(t *testing.T) {
+	caFile := "test-fixtures/root/rootcacert.pem"
+	pemCa, err := os.ReadFile(caFile)
+	require.NoError(t, err, "failed reading in file %s", caFile)
+	caTLS := loadCerts(t, caFile, "test-fixtures/root/rootcakey.pem")
+	leafTLS := loadCerts(t, "test-fixtures/keys/cert.pem", "test-fixtures/keys/key.pem")
+
+	rootConfig := &rootcerts.Config{
+		CAFile: caFile,
+	}
+	rootCAs, err := rootcerts.LoadCACerts(rootConfig)
+	connState, err := testConnStateWithCert(leafTLS, rootCAs)
+	require.NoError(t, err, "error testing connection state: %v", err)
+
+	// Setup an OCSP handler
+	ocspHandler := func(status int) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			now := time.Now()
+			ocspRes := ocsp.Response{
+				SerialNumber: leafTLS.Leaf.SerialNumber,
+				ThisUpdate:   now.Add(-1 * time.Hour),
+				NextUpdate:   now.Add(30 * time.Minute),
+				Status:       status,
+			}
+			response, err := ocsp.CreateResponse(caTLS.Leaf, caTLS.Leaf, ocspRes, caTLS.PrivateKey.(crypto.Signer))
+			if err != nil {
+				t.Fatalf("failed generating OCSP response: %v", err)
+			}
+			_, _ = w.Write(response)
+		})
+	}
+	goodTs := httptest.NewServer(ocspHandler(ocsp.Good))
+	revokeTs := httptest.NewServer(ocspHandler(ocsp.Revoked))
+	defer goodTs.Close()
+	defer revokeTs.Close()
+
+	steps := []logicaltest.TestStep{
+		// step 1/2: This should pass as we will query the first server and get a valid good response, not testing
+		// the second configured server
+		testAccStepCertWithExtraParams(t, "web", pemCa, "foo", allowed{names: "cert.example.com"}, false,
+			map[string]interface{}{
+				"ocsp_enabled":           true,
+				"ocsp_servers_override":  []string{goodTs.URL, revokeTs.URL},
+				"ocsp_query_all_servers": false,
+			}),
+		testAccStepLogin(t, connState),
+		// step 3/4: This should fail as we will query the revoking OCSP server first and get a revoke response
+		testAccStepCertWithExtraParams(t, "web", pemCa, "foo", allowed{names: "cert.example.com"}, false,
+			map[string]interface{}{
+				"ocsp_enabled":           true,
+				"ocsp_servers_override":  []string{revokeTs.URL, goodTs.URL},
+				"ocsp_query_all_servers": false,
+			}),
+		testAccStepLoginInvalid(t, connState),
+		// step 5/6: This should fail as we will query all the OCSP servers and prefer the revoke response
+		testAccStepCertWithExtraParams(t, "web", pemCa, "foo",
+			allowed{names: "cert.example.com"}, false, map[string]interface{}{
+				"ocsp_enabled":           true,
+				"ocsp_servers_override":  []string{goodTs.URL, revokeTs.URL},
+				"ocsp_query_all_servers": true,
+			}),
+		testAccStepLoginInvalid(t, connState),
+	}
+
+	// Setup a new factory everytime to avoid OCSP caching from influencing the test
+	for i := 0; i < len(steps); i += 2 {
+		setup := i
+		execute := i + 1
+		t.Run(fmt.Sprintf("steps-%d-%d", setup+1, execute+1), func(t *testing.T) {
+			logicaltest.Test(t, logicaltest.TestCase{
+				CredentialBackend: testFactory(t),
+				Steps:             []logicaltest.TestStep{steps[setup], steps[execute]},
+			})
+		})
+	}
+}
+
+// TestOCSPFailOpenWithGoodResponse validates the expected behavior with multiple OCSP servers configured
+// one that returns a Good response the other is not available, along with the ocsp_fail_open in multiple modes
+func TestOCSPFailOpenWithGoodResponse(t *testing.T) {
+	caFile := "test-fixtures/root/rootcacert.pem"
+	pemCa, err := os.ReadFile(caFile)
+	require.NoError(t, err, "failed reading in file %s", caFile)
+	caTLS := loadCerts(t, caFile, "test-fixtures/root/rootcakey.pem")
+	leafTLS := loadCerts(t, "test-fixtures/keys/cert.pem", "test-fixtures/keys/key.pem")
+
+	rootConfig := &rootcerts.Config{
+		CAFile: caFile,
+	}
+	rootCAs, err := rootcerts.LoadCACerts(rootConfig)
+	connState, err := testConnStateWithCert(leafTLS, rootCAs)
+	require.NoError(t, err, "error testing connection state: %v", err)
+
+	// Setup an OCSP handler
+	ocspHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		now := time.Now()
+		ocspRes := ocsp.Response{
+			SerialNumber: leafTLS.Leaf.SerialNumber,
+			ThisUpdate:   now.Add(-1 * time.Hour),
+			NextUpdate:   now.Add(30 * time.Minute),
+			Status:       ocsp.Good,
+		}
+		response, err := ocsp.CreateResponse(caTLS.Leaf, caTLS.Leaf, ocspRes, caTLS.PrivateKey.(crypto.Signer))
+		if err != nil {
+			t.Fatalf("failed generating OCSP response: %v", err)
+		}
+		_, _ = w.Write(response)
+	})
+	ts := httptest.NewServer(ocspHandler)
+	defer ts.Close()
+
+	steps := []logicaltest.TestStep{
+		// Step 1/2 With no proper responses from any OCSP server and fail_open to true, we should pass validation
+		// as fail_open is true
+		testAccStepCertWithExtraParams(t, "web", pemCa, "foo", allowed{names: "cert.example.com"}, false,
+			map[string]interface{}{
+				"ocsp_enabled":           true,
+				"ocsp_servers_override":  []string{"http://127.0.0.1:30000", "http://127.0.0.1:30001"},
+				"ocsp_fail_open":         true,
+				"ocsp_query_all_servers": false,
+				"ocsp_max_retries":       0,
+			}),
+		testAccStepLogin(t, connState),
+		// Step 3/4 With no proper responses from any OCSP server and fail_open to false we should fail validation
+		// as fail_open is false
+		testAccStepCertWithExtraParams(t, "web", pemCa, "foo",
+			allowed{names: "cert.example.com"}, false, map[string]interface{}{
+				"ocsp_enabled":           true,
+				"ocsp_servers_override":  []string{"http://127.0.0.1:30000", "http://127.0.0.1:30001"},
+				"ocsp_fail_open":         false,
+				"ocsp_query_all_servers": false,
+				"ocsp_max_retries":       0,
+			}),
+		testAccStepLoginInvalid(t, connState),
+		// Step 5/6 With a single positive response, query all servers set to false and fail open true, pass validation
+		// as query all servers is false
+		testAccStepCertWithExtraParams(t, "web", pemCa, "foo", allowed{names: "cert.example.com"}, false,
+			map[string]interface{}{
+				"ocsp_enabled":           true,
+				"ocsp_servers_override":  []string{ts.URL, "http://127.0.0.1:30001"},
+				"ocsp_fail_open":         true,
+				"ocsp_query_all_servers": false,
+				"ocsp_max_retries":       0,
+			}),
+		testAccStepLogin(t, connState),
+		// Step 7/8 With a single positive response, query all servers set to false and fail open false, pass validation
+		// as query all servers is false
+		testAccStepCertWithExtraParams(t, "web", pemCa, "foo",
+			allowed{names: "cert.example.com"}, false, map[string]interface{}{
+				"ocsp_enabled":           true,
+				"ocsp_servers_override":  []string{ts.URL, "http://127.0.0.1:30001"},
+				"ocsp_fail_open":         false,
+				"ocsp_query_all_servers": false,
+				"ocsp_max_retries":       0,
+			}),
+		testAccStepLogin(t, connState),
+		// Step 9/10 With a single positive response, query all servers set to true and fail open true, pass validation
+		// as fail open is true
+		testAccStepCertWithExtraParams(t, "web", pemCa, "foo", allowed{names: "cert.example.com"}, false,
+			map[string]interface{}{
+				"ocsp_enabled":           true,
+				"ocsp_servers_override":  []string{ts.URL, "http://127.0.0.1:30001"},
+				"ocsp_fail_open":         true,
+				"ocsp_query_all_servers": true,
+				"ocsp_max_retries":       0,
+			}),
+		testAccStepLogin(t, connState),
+		// Step 11/12 With a single positive response, query all servers set to true and fail open false, fail validation
+		// as not all servers agree
+		testAccStepCertWithExtraParams(t, "web", pemCa, "foo",
+			allowed{names: "cert.example.com"}, false, map[string]interface{}{
+				"ocsp_enabled":           true,
+				"ocsp_servers_override":  []string{ts.URL, "http://127.0.0.1:30001"},
+				"ocsp_fail_open":         false,
+				"ocsp_query_all_servers": true,
+				"ocsp_max_retries":       0,
+			}),
+		testAccStepLoginInvalid(t, connState),
+	}
+
+	// Setup a new factory everytime to avoid OCSP caching from influencing the test
+	for i := 0; i < len(steps); i += 2 {
+		setup := i
+		execute := i + 1
+		t.Run(fmt.Sprintf("steps-%d-%d", setup+1, execute+1), func(t *testing.T) {
+			logicaltest.Test(t, logicaltest.TestCase{
+				CredentialBackend: testFactory(t),
+				Steps:             []logicaltest.TestStep{steps[setup], steps[execute]},
+			})
+		})
+	}
+}
+
+// TestOCSPFailOpenWithRevokeResponse validates the expected behavior with multiple OCSP servers configured
+// one that returns a Revoke response the other is not available, along with the ocsp_fail_open in multiple modes
+func TestOCSPFailOpenWithRevokeResponse(t *testing.T) {
+	caFile := "test-fixtures/root/rootcacert.pem"
+	pemCa, err := os.ReadFile(caFile)
+	require.NoError(t, err, "failed reading in file %s", caFile)
+	caTLS := loadCerts(t, caFile, "test-fixtures/root/rootcakey.pem")
+	leafTLS := loadCerts(t, "test-fixtures/keys/cert.pem", "test-fixtures/keys/key.pem")
+
+	rootConfig := &rootcerts.Config{
+		CAFile: caFile,
+	}
+	rootCAs, err := rootcerts.LoadCACerts(rootConfig)
+	connState, err := testConnStateWithCert(leafTLS, rootCAs)
+	require.NoError(t, err, "error testing connection state: %v", err)
+
+	// Setup an OCSP handler
+	ocspHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		now := time.Now()
+		ocspRes := ocsp.Response{
+			SerialNumber: leafTLS.Leaf.SerialNumber,
+			ThisUpdate:   now.Add(-1 * time.Hour),
+			NextUpdate:   now.Add(30 * time.Minute),
+			Status:       ocsp.Revoked,
+		}
+		response, err := ocsp.CreateResponse(caTLS.Leaf, caTLS.Leaf, ocspRes, caTLS.PrivateKey.(crypto.Signer))
+		if err != nil {
+			t.Fatalf("failed generating OCSP response: %v", err)
+		}
+		_, _ = w.Write(response)
+	})
+	ts := httptest.NewServer(ocspHandler)
+	defer ts.Close()
+
+	// With no OCSP servers available, make sure that we behave as we expect
+	steps := []logicaltest.TestStep{
+		// Step 1/2 With a single revoke response, query all servers set to false and fail open true, fail validation
+		testAccStepCertWithExtraParams(t, "web", pemCa, "foo", allowed{names: "cert.example.com"}, false,
+			map[string]interface{}{
+				"ocsp_enabled":           true,
+				"ocsp_servers_override":  []string{ts.URL, "http://127.0.0.1:30001"},
+				"ocsp_fail_open":         true,
+				"ocsp_query_all_servers": false,
+				"ocsp_max_retries":       0,
+			}),
+		testAccStepLoginInvalid(t, connState),
+		// Step 3/4 With a single revoke response, query all servers set to false and fail open false, fail validation
+		testAccStepCertWithExtraParams(t, "web", pemCa, "foo",
+			allowed{names: "cert.example.com"}, false, map[string]interface{}{
+				"ocsp_enabled":           true,
+				"ocsp_servers_override":  []string{ts.URL, "http://127.0.0.1:30001"},
+				"ocsp_fail_open":         false,
+				"ocsp_query_all_servers": false,
+				"ocsp_max_retries":       0,
+			}),
+		testAccStepLoginInvalid(t, connState),
+		// Step 5/6 With a single revoke response, query all servers set to true and fail open false, fail validation
+		testAccStepCertWithExtraParams(t, "web", pemCa, "foo",
+			allowed{names: "cert.example.com"}, false, map[string]interface{}{
+				"ocsp_enabled":           true,
+				"ocsp_servers_override":  []string{ts.URL, "http://127.0.0.1:30001"},
+				"ocsp_fail_open":         false,
+				"ocsp_query_all_servers": true,
+				"ocsp_max_retries":       0,
+			}),
+		testAccStepLoginInvalid(t, connState),
+		// Step 7/8 With a single revoke response, query all servers set to true and fail open true, fail validation
+		testAccStepCertWithExtraParams(t, "web", pemCa, "foo", allowed{names: "cert.example.com"}, false,
+			map[string]interface{}{
+				"ocsp_enabled":           true,
+				"ocsp_servers_override":  []string{ts.URL, "http://127.0.0.1:30001"},
+				"ocsp_fail_open":         true,
+				"ocsp_query_all_servers": true,
+				"ocsp_max_retries":       0,
+			}),
+		testAccStepLoginInvalid(t, connState),
+	}
+
+	// Setup a new factory everytime to avoid OCSP caching from influencing the test
+	for i := 0; i < len(steps); i += 2 {
+		setup := i
+		execute := i + 1
+		t.Run(fmt.Sprintf("steps-%d-%d", setup+1, execute+1), func(t *testing.T) {
+			logicaltest.Test(t, logicaltest.TestCase{
+				CredentialBackend: testFactory(t),
+				Steps:             []logicaltest.TestStep{steps[setup], steps[execute]},
+			})
+		})
+	}
+}
+
+// TestOCSPFailOpenWithUnknownResponse validates the expected behavior with multiple OCSP servers configured
+// one that returns an Unknown response the other is not available, along with the ocsp_fail_open in multiple modes
+func TestOCSPFailOpenWithUnknownResponse(t *testing.T) {
+	caFile := "test-fixtures/root/rootcacert.pem"
+	pemCa, err := os.ReadFile(caFile)
+	require.NoError(t, err, "failed reading in file %s", caFile)
+	caTLS := loadCerts(t, caFile, "test-fixtures/root/rootcakey.pem")
+	leafTLS := loadCerts(t, "test-fixtures/keys/cert.pem", "test-fixtures/keys/key.pem")
+
+	rootConfig := &rootcerts.Config{
+		CAFile: caFile,
+	}
+	rootCAs, err := rootcerts.LoadCACerts(rootConfig)
+	connState, err := testConnStateWithCert(leafTLS, rootCAs)
+	require.NoError(t, err, "error testing connection state: %v", err)
+
+	// Setup an OCSP handler
+	ocspHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		now := time.Now()
+		ocspRes := ocsp.Response{
+			SerialNumber: leafTLS.Leaf.SerialNumber,
+			ThisUpdate:   now.Add(-1 * time.Hour),
+			NextUpdate:   now.Add(30 * time.Minute),
+			Status:       ocsp.Unknown,
+		}
+		response, err := ocsp.CreateResponse(caTLS.Leaf, caTLS.Leaf, ocspRes, caTLS.PrivateKey.(crypto.Signer))
+		if err != nil {
+			t.Fatalf("failed generating OCSP response: %v", err)
+		}
+		_, _ = w.Write(response)
+	})
+	ts := httptest.NewServer(ocspHandler)
+	defer ts.Close()
+
+	// With no OCSP servers available, make sure that we behave as we expect
+	steps := []logicaltest.TestStep{
+		// Step 1/2 With a single unknown response, query all servers set to false and fail open true, pass validation
+		testAccStepCertWithExtraParams(t, "web", pemCa, "foo", allowed{names: "cert.example.com"}, false,
+			map[string]interface{}{
+				"ocsp_enabled":           true,
+				"ocsp_servers_override":  []string{ts.URL, "http://127.0.0.1:30001"},
+				"ocsp_fail_open":         true,
+				"ocsp_query_all_servers": false,
+				"ocsp_max_retries":       0,
+			}),
+		testAccStepLogin(t, connState),
+		// Step 3/4 With a single unknown response, query all servers set to false and fail open false, fail validation
+		testAccStepCertWithExtraParams(t, "web", pemCa, "foo",
+			allowed{names: "cert.example.com"}, false, map[string]interface{}{
+				"ocsp_enabled":           true,
+				"ocsp_servers_override":  []string{ts.URL, "http://127.0.0.1:30001"},
+				"ocsp_fail_open":         false,
+				"ocsp_query_all_servers": false,
+				"ocsp_max_retries":       0,
+			}),
+		testAccStepLoginInvalid(t, connState),
+		// Step 5/6 With a single unknown response, query all servers set to true and fail open true, fail validation
+		testAccStepCertWithExtraParams(t, "web", pemCa, "foo", allowed{names: "cert.example.com"}, false,
+			map[string]interface{}{
+				"ocsp_enabled":           true,
+				"ocsp_servers_override":  []string{ts.URL, "http://127.0.0.1:30001"},
+				"ocsp_fail_open":         true,
+				"ocsp_query_all_servers": true,
+				"ocsp_max_retries":       0,
+			}),
+		testAccStepLogin(t, connState),
+		// Step 7/8 With a single unknown response, query all servers set to true and fail open false, fail validation
+		testAccStepCertWithExtraParams(t, "web", pemCa, "foo",
+			allowed{names: "cert.example.com"}, false, map[string]interface{}{
+				"ocsp_enabled":           true,
+				"ocsp_servers_override":  []string{ts.URL, "http://127.0.0.1:30001"},
+				"ocsp_fail_open":         false,
+				"ocsp_query_all_servers": true,
+				"ocsp_max_retries":       0,
+			}),
+		testAccStepLoginInvalid(t, connState),
+	}
+
+	// Setup a new factory everytime to avoid OCSP caching from influencing the test
+	for i := 0; i < len(steps); i += 2 {
+		setup := i
+		execute := i + 1
+		t.Run(fmt.Sprintf("steps-%d-%d", setup+1, execute+1), func(t *testing.T) {
+			logicaltest.Test(t, logicaltest.TestCase{
+				CredentialBackend: testFactory(t),
+				Steps:             []logicaltest.TestStep{steps[setup], steps[execute]},
+			})
+		})
+	}
+}
+
+// TestOcspMaxRetriesUpdate verifies that the ocsp_max_retries field is properly initialized
+// with our default value of 4, legacy roles have it initialized automatically to 4 and we
+// can properly store and retrieve updates to the field.
+func TestOcspMaxRetriesUpdate(t *testing.T) {
+	storage := &logical.InmemStorage{}
+	ctx := context.Background()
+
+	lb, err := Factory(context.Background(), &logical.BackendConfig{
+		System: &logical.StaticSystemView{
+			DefaultLeaseTTLVal: 300 * time.Second,
+			MaxLeaseTTLVal:     1800 * time.Second,
+		},
+		StorageView: storage,
+	})
+	require.NoError(t, err, "failed creating backend")
+
+	caFile := "test-fixtures/root/rootcacert.pem"
+	pemCa, err := os.ReadFile(caFile)
+	require.NoError(t, err, "failed reading in file %s", caFile)
+
+	data := map[string]interface{}{
+		"certificate":  string(pemCa),
+		"display_name": "test",
+	}
+
+	// Test initial creation of role sets ocsp_max_retries to a default of 4
+	_, err = lb.HandleRequest(ctx, &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "certs/test",
+		Data:      data,
+		Storage:   storage,
+	})
+	require.NoError(t, err, "failed initial role creation request")
+
+	resp, err := lb.HandleRequest(ctx, &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "certs/test",
+		Storage:   storage,
+	})
+	require.NoError(t, err, "failed reading role request")
+	require.NotNil(t, resp)
+	require.Equal(t, 4, resp.Data["ocsp_max_retries"], "ocsp config didn't match expectations")
+
+	// Test we can update the field and read it back
+	data["ocsp_max_retries"] = 1
+	_, err = lb.HandleRequest(ctx, &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "certs/test",
+		Data:      data,
+		Storage:   storage,
+	})
+	require.NoError(t, err, "failed updating role request")
+
+	resp, err = lb.HandleRequest(ctx, &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "certs/test",
+		Storage:   storage,
+	})
+	require.NoError(t, err, "failed reading role request")
+	require.NotNil(t, resp)
+	require.Equal(t, 1, resp.Data["ocsp_max_retries"], "ocsp config didn't match expectations on update")
+
+	// Verify existing storage entries get updated with a value of 4
+	entry := &logical.StorageEntry{
+		Key: "cert/legacy",
+		Value: []byte(`{"token_bound_cidrs":null,"token_explicit_max_ttl":0,"token_max_ttl":0,
+						"token_no_default_policy":false,"token_num_uses":0,"token_period":0,
+						"token_policies":null,"token_type":0,"token_ttl":0,"Name":"test",
+						"Certificate":"-----BEGIN CERTIFICATE-----\nMIIDPDCCAiSgAwIBAgIUb5id+GcaMeMnYBv3MvdTGWigyJ0wDQYJKoZIhvcNAQEL\nBQAwFjEUMBIGA1UEAxMLZXhhbXBsZS5jb20wHhcNMTYwMjI5MDIyNzI5WhcNMjYw\nMjI2MDIyNzU5WjAWMRQwEgYDVQQDEwtleGFtcGxlLmNvbTCCASIwDQYJKoZIhvcN\nAQEBBQADggEPADCCAQoCggEBAOxTMvhTuIRc2YhxZpmPwegP86cgnqfT1mXxi1A7\nQ7qax24Nqbf00I3oDMQtAJlj2RB3hvRSCb0/lkF7i1Bub+TGxuM7NtZqp2F8FgG0\nz2md+W6adwW26rlxbQKjmRvMn66G9YPTkoJmPmxt2Tccb9+apmwW7lslL5j8H48x\nAHJTMb+PMP9kbOHV5Abr3PT4jXUPUr/mWBvBiKiHG0Xd/HEmlyOEPeAThxK+I5tb\n6m+eB+7cL9BsvQpy135+2bRAxUphvFi5NhryJ2vlAvoJ8UqigsNK3E28ut60FAoH\nSWRfFUFFYtfPgTDS1yOKU/z/XMU2giQv2HrleWt0mp4jqBUCAwEAAaOBgTB/MA4G\nA1UdDwEB/wQEAwIBBjAPBgNVHRMBAf8EBTADAQH/MB0GA1UdDgQWBBSdxLNP/ocx\n7HK6JT3/sSAe76iTmzAfBgNVHSMEGDAWgBSdxLNP/ocx7HK6JT3/sSAe76iTmzAc\nBgNVHREEFTATggtleGFtcGxlLmNvbYcEfwAAATANBgkqhkiG9w0BAQsFAAOCAQEA\nwHThDRsXJunKbAapxmQ6bDxSvTvkLA6m97TXlsFgL+Q3Jrg9HoJCNowJ0pUTwhP2\nU946dCnSCkZck0fqkwVi4vJ5EQnkvyEbfN4W5qVsQKOFaFVzep6Qid4rZT6owWPa\ncNNzNcXAee3/j6hgr6OQ/i3J6fYR4YouYxYkjojYyg+CMdn6q8BoV0BTsHdnw1/N\nScbnBHQIvIZMBDAmQueQZolgJcdOuBLYHe/kRy167z8nGg+PUFKIYOL8NaOU1+CJ\nt2YaEibVq5MRqCbRgnd9a2vG0jr5a3Mn4CUUYv+5qIjP3hUusYenW1/EWtn1s/gk\nzehNe5dFTjFpylg1o6b8Ow==\n-----END CERTIFICATE-----\n",
+						"DisplayName":"test","Policies":null,"TTL":0,"MaxTTL":0,"Period":0,
+						"AllowedNames":null,"AllowedCommonNames":null,"AllowedDNSSANs":null,
+						"AllowedEmailSANs":null,"AllowedURISANs":null,"AllowedOrganizationalUnits":null,
+						"RequiredExtensions":null,"AllowedMetadataExtensions":null,"BoundCIDRs":null,
+						"OcspCaCertificates":"","OcspEnabled":false,"OcspServersOverride":null,
+						"OcspFailOpen":false,"OcspQueryAllServers":false}`),
+	}
+	err = storage.Put(ctx, entry)
+	require.NoError(t, err, "failed putting legacy storage entry")
+
+	resp, err = lb.HandleRequest(ctx, &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "certs/legacy",
+		Storage:   storage,
+	})
+	require.NoError(t, err, "failed reading role request")
+	require.NotNil(t, resp)
+	require.Equal(t, 4, resp.Data["ocsp_max_retries"], "ocsp config didn't match expectations on legacy entry")
+}
+
+func loadCerts(t *testing.T, certFile, certKey string) tls.Certificate {
+	caTLS, err := tls.LoadX509KeyPair(certFile, certKey)
+	require.NoError(t, err, "failed reading ca/key files")
+
+	caTLS.Leaf, err = x509.ParseCertificate(caTLS.Certificate[0])
+	require.NoError(t, err, "failed parsing certificate from file %s", certFile)
+
+	return caTLS
+}
+
+func createCa(t *testing.T) (*x509.Certificate, *ecdsa.PrivateKey) {
+	rootCaKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err, "failed generated root key for CA")
+
+	// Validate we reject CSRs that contain CN that aren't in the original order
+	cr := &x509.Certificate{
+		Subject:               pkix.Name{CommonName: "Root Cert"},
+		SerialNumber:          big.NewInt(1),
+		IsCA:                  true,
+		BasicConstraintsValid: true,
+		SignatureAlgorithm:    x509.ECDSAWithSHA256,
+		NotBefore:             time.Now().Add(-1 * time.Second),
+		NotAfter:              time.Now().AddDate(1, 0, 0),
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageOCSPSigning},
+	}
+	rootCaBytes, err := x509.CreateCertificate(rand.Reader, cr, cr, &rootCaKey.PublicKey, rootCaKey)
+	require.NoError(t, err, "failed generating root ca")
+
+	rootCa, err := x509.ParseCertificate(rootCaBytes)
+	require.NoError(t, err, "failed parsing root ca")
+
+	return rootCa, rootCaKey
 }

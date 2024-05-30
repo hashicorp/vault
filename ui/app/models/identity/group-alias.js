@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { belongsTo, attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 import { alias } from '@ember/object/computed';
@@ -9,7 +14,7 @@ export default IdentityModel.extend({
   formFields: computed(function () {
     return ['name', 'mountAccessor'];
   }),
-  group: belongsTo('identity/group', { readOnly: true, async: false }),
+  group: belongsTo('identity/group', { readOnly: true, async: false, inverse: 'alias' }),
 
   name: attr('string'),
   canonicalId: attr('string'),

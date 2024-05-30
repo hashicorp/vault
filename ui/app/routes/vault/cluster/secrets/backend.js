@@ -1,11 +1,19 @@
-import { inject as service } from '@ember/service';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { service } from '@ember/service';
 import Route from '@ember/routing/route';
 export default Route.extend({
   flashMessages: service(),
+  router: service(),
   secretMountPath: service(),
+  store: service(),
   oldModel: null,
+
   model(params) {
-    let { backend } = params;
+    const { backend } = params;
     this.secretMountPath.update(backend);
     return this.store
       .query('secret-engine', {
@@ -13,15 +21,15 @@ export default Route.extend({
       })
       .then((model) => {
         if (model) {
-          return model.get('firstObject');
+          return model[0];
         }
       });
   },
 
   afterModel(model, transition) {
-    let path = model && model.get('path');
+    const path = model && model.path;
     if (transition.targetName === this.routeName) {
-      return this.replaceWith('vault.cluster.secrets.backend.list-root', path);
+      return this.router.replaceWith('vault.cluster.secrets.backend.list-root', path);
     }
   },
 });

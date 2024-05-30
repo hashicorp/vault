@@ -1,0 +1,3 @@
+```release-note:bug
+serviceregistration: Fix bug where multiple nodes in a secondary cluster could be labelled active after updating the cluster's primary
+```

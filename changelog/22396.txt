@@ -1,0 +1,3 @@
+```release-note:improvement
+website/docs: Fix link formatting in Vault lambda extension docs
+```

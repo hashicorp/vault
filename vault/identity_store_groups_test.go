@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -1083,11 +1086,12 @@ func TestIdentityStore_GroupMultiCase(t *testing.T) {
 
 /*
 Test groups hierarchy:
-                ------- eng(entityID3) -------
-                |                            |
-         ----- vault -----        -- ops(entityID2) --
-         |               |        |                  |
-   kube(entityID1)    identity    build            deploy
+
+	             ------- eng(entityID3) -------
+	             |                            |
+	      ----- vault -----        -- ops(entityID2) --
+	      |               |        |                  |
+	kube(entityID1)    identity    build            deploy
 */
 func TestIdentityStore_GroupHierarchyCases(t *testing.T) {
 	var resp *logical.Response

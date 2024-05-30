@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package cassandra
 
 import (
@@ -6,11 +9,13 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/gocql/gocql"
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	"github.com/hashicorp/vault/sdk/helper/docker"
 )
 
 type containerConfig struct {
@@ -77,6 +82,12 @@ func (h Host) ConnectionURL() string {
 
 func PrepareTestContainer(t *testing.T, opts ...ContainerOpt) (Host, func()) {
 	t.Helper()
+
+	// Skipping on ARM, as this image can't run on ARM architecture
+	if strings.Contains(runtime.GOARCH, "arm") {
+		t.Skip("Skipping, as this image is not supported on ARM architectures")
+	}
+
 	if os.Getenv("CASSANDRA_HOSTS") != "" {
 		host, port, err := net.SplitHostPort(os.Getenv("CASSANDRA_HOSTS"))
 		if err != nil {
@@ -90,9 +101,10 @@ func PrepareTestContainer(t *testing.T, opts ...ContainerOpt) (Host, func()) {
 	}
 
 	containerCfg := &containerConfig{
-		imageName: "cassandra",
-		version:   "3.11",
-		env:       []string{"CASSANDRA_BROADCAST_ADDRESS=127.0.0.1"},
+		imageName:     "docker.mirror.hashicorp.services/library/cassandra",
+		containerName: "cassandra",
+		version:       "3.11",
+		env:           []string{"CASSANDRA_BROADCAST_ADDRESS=127.0.0.1"},
 	}
 
 	for _, opt := range opts {

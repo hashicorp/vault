@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package diagnose
 
 import (
@@ -10,9 +13,8 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/otel/attribute"
-
 	wordwrap "github.com/mitchellh/go-wordwrap"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
@@ -178,7 +180,7 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 	if !ok {
 		r = &Result{
 			Name:    s.Name(),
-			Message: s.StatusMessage(),
+			Message: s.Status().Description,
 			Time:    s.StartTime(),
 		}
 		for _, e := range s.Events() {
@@ -255,7 +257,7 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 				}
 			}
 		}
-		switch s.StatusCode() {
+		switch s.Status().Code {
 		case codes.Unset:
 			if len(r.Warnings) > 0 {
 				r.Status = WarningStatus
@@ -276,7 +278,7 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 	return r
 }
 
-func findAttribute(e trace.Event, attr attribute.Key) string {
+func findAttribute(e sdktrace.Event, attr attribute.Key) string {
 	for _, a := range e.Attributes {
 		if a.Key == attr {
 			return a.Value.AsString()
@@ -285,7 +287,7 @@ func findAttribute(e trace.Event, attr attribute.Key) string {
 	return ""
 }
 
-func findAttributes(e trace.Event, attr1, attr2 attribute.Key) (string, string) {
+func findAttributes(e sdktrace.Event, attr1, attr2 attribute.Key) (string, string) {
 	var av1, av2 string
 	for _, a := range e.Attributes {
 		switch a.Key {

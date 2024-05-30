@@ -1,0 +1,3 @@
+```release-note:bug
+auth/kubernetes: fixes and dep updates for the auth-kubernetes plugin (see plugin changelog for details)
+```

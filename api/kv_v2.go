@@ -1,8 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 	"sort"
 	"strconv"
 	"time"
@@ -115,7 +120,7 @@ func (kv *KVv2) Get(ctx context.Context, secretPath string) (*KVSecret, error) {
 		return nil, fmt.Errorf("error encountered while reading secret at %s: %w", pathToRead, err)
 	}
 	if secret == nil {
-		return nil, fmt.Errorf("no secret found at %s", pathToRead)
+		return nil, fmt.Errorf("%w: at %s", ErrSecretNotFound, pathToRead)
 	}
 
 	kvSecret, err := extractDataAndVersionMetadata(secret)
@@ -123,11 +128,7 @@ func (kv *KVv2) Get(ctx context.Context, secretPath string) (*KVSecret, error) {
 		return nil, fmt.Errorf("error parsing secret at %s: %w", pathToRead, err)
 	}
 
-	cm, err := extractCustomMetadata(secret)
-	if err != nil {
-		return nil, fmt.Errorf("error reading custom metadata for secret at %s: %w", pathToRead, err)
-	}
-	kvSecret.CustomMetadata = cm
+	kvSecret.CustomMetadata = extractCustomMetadata(secret)
 
 	return kvSecret, nil
 }
@@ -149,7 +150,7 @@ func (kv *KVv2) GetVersion(ctx context.Context, secretPath string, version int) 
 		return nil, err
 	}
 	if secret == nil {
-		return nil, fmt.Errorf("no secret with version %d found at %s", version, pathToRead)
+		return nil, fmt.Errorf("%w: for version %d at %s", ErrSecretNotFound, version, pathToRead)
 	}
 
 	kvSecret, err := extractDataAndVersionMetadata(secret)
@@ -157,11 +158,7 @@ func (kv *KVv2) GetVersion(ctx context.Context, secretPath string, version int) 
 		return nil, fmt.Errorf("error parsing secret at %s: %w", pathToRead, err)
 	}
 
-	cm, err := extractCustomMetadata(secret)
-	if err != nil {
-		return nil, fmt.Errorf("error reading custom metadata for secret at %s: %w", pathToRead, err)
-	}
-	kvSecret.CustomMetadata = cm
+	kvSecret.CustomMetadata = extractCustomMetadata(secret)
 
 	return kvSecret, nil
 }
@@ -175,7 +172,7 @@ func (kv *KVv2) GetVersionsAsList(ctx context.Context, secretPath string) ([]KVV
 		return nil, err
 	}
 	if secret == nil || secret.Data == nil {
-		return nil, fmt.Errorf("no secret metadata found at %s", pathToRead)
+		return nil, fmt.Errorf("%w: no metadata at %s", ErrSecretNotFound, pathToRead)
 	}
 
 	md, err := extractFullMetadata(secret)
@@ -202,7 +199,7 @@ func (kv *KVv2) GetMetadata(ctx context.Context, secretPath string) (*KVMetadata
 		return nil, err
 	}
 	if secret == nil || secret.Data == nil {
-		return nil, fmt.Errorf("no secret metadata found at %s", pathToRead)
+		return nil, fmt.Errorf("%w: no metadata at %s", ErrSecretNotFound, pathToRead)
 	}
 
 	md, err := extractFullMetadata(secret)
@@ -244,7 +241,7 @@ func (kv *KVv2) Put(ctx context.Context, secretPath string, data map[string]inte
 		return nil, fmt.Errorf("error writing secret to %s: %w", pathToWriteTo, err)
 	}
 	if secret == nil {
-		return nil, fmt.Errorf("no secret was written to %s", pathToWriteTo)
+		return nil, fmt.Errorf("%w: after writing to %s", ErrSecretNotFound, pathToWriteTo)
 	}
 
 	metadata, err := extractVersionMetadata(secret)
@@ -258,11 +255,7 @@ func (kv *KVv2) Put(ctx context.Context, secretPath string, data map[string]inte
 		Raw:             secret,
 	}
 
-	cm, err := extractCustomMetadata(secret)
-	if err != nil {
-		return nil, fmt.Errorf("error reading custom metadata for secret at %s: %w", pathToWriteTo, err)
-	}
-	kvSecret.CustomMetadata = cm
+	kvSecret.CustomMetadata = extractCustomMetadata(secret)
 
 	return kvSecret, nil
 }
@@ -325,19 +318,19 @@ func (kv *KVv2) Patch(ctx context.Context, secretPath string, newData map[string
 	// Determine which kind of patch to use,
 	// the newer HTTP Patch style or the older read-then-write style
 	var kvs *KVSecret
-	var perr error
+	var err error
 	switch patchMethod {
 	case "rw":
-		kvs, perr = readThenWrite(ctx, kv.c, kv.mountPath, secretPath, newData)
+		kvs, err = readThenWrite(ctx, kv.c, kv.mountPath, secretPath, newData)
 	case "patch":
-		kvs, perr = mergePatch(ctx, kv.c, kv.mountPath, secretPath, newData, opts...)
+		kvs, err = mergePatch(ctx, kv.c, kv.mountPath, secretPath, newData, opts...)
 	case "":
-		kvs, perr = mergePatch(ctx, kv.c, kv.mountPath, secretPath, newData, opts...)
+		kvs, err = mergePatch(ctx, kv.c, kv.mountPath, secretPath, newData, opts...)
 	default:
 		return nil, fmt.Errorf("unsupported patch method provided; value for patch method should be string \"rw\" or \"patch\"")
 	}
-	if perr != nil {
-		return nil, fmt.Errorf("unable to perform patch: %w", perr)
+	if err != nil {
+		return nil, fmt.Errorf("unable to perform patch: %w", err)
 	}
 	if kvs == nil {
 		return nil, fmt.Errorf("no secret was written to %s", secretPath)
@@ -478,7 +471,7 @@ func (kv *KVv2) Rollback(ctx context.Context, secretPath string, toVersion int) 
 	// Now run it again and read the version we want to roll back to
 	rollbackVersion, err := kv.GetVersion(ctx, secretPath, toVersion)
 	if err != nil {
-		return nil, fmt.Errorf("unable to get previous version %d of secret: %s", toVersion, err)
+		return nil, fmt.Errorf("unable to get previous version %d of secret: %w", toVersion, err)
 	}
 
 	err = validateRollbackVersion(rollbackVersion)
@@ -495,30 +488,24 @@ func (kv *KVv2) Rollback(ctx context.Context, secretPath string, toVersion int) 
 	return kvs, nil
 }
 
-func extractCustomMetadata(secret *Secret) (map[string]interface{}, error) {
+func extractCustomMetadata(secret *Secret) map[string]interface{} {
 	// Logical Writes return the metadata directly, Reads return it nested inside the "metadata" key
 	customMetadataInterface, ok := secret.Data["custom_metadata"]
 	if !ok {
-		metadataInterface, ok := secret.Data["metadata"]
-		if !ok { // if that's not found, bail since it should have had one or the other
-			return nil, fmt.Errorf("secret is missing expected fields")
-		}
+		metadataInterface := secret.Data["metadata"]
 		metadataMap, ok := metadataInterface.(map[string]interface{})
 		if !ok {
-			return nil, fmt.Errorf("unexpected type for 'metadata' element: %T (%#v)", metadataInterface, metadataInterface)
+			return nil
 		}
-		customMetadataInterface, ok = metadataMap["custom_metadata"]
-		if !ok {
-			return nil, fmt.Errorf("metadata missing expected field \"custom_metadata\": %v", metadataMap)
-		}
+		customMetadataInterface = metadataMap["custom_metadata"]
 	}
 
 	cm, ok := customMetadataInterface.(map[string]interface{})
-	if !ok && customMetadataInterface != nil {
-		return nil, fmt.Errorf("unexpected type for 'metadata' element: %T (%#v)", customMetadataInterface, customMetadataInterface)
+	if !ok {
+		return nil
 	}
 
-	return cm, nil
+	return cm
 }
 
 func extractDataAndVersionMetadata(secret *Secret) (*KVSecret, error) {
@@ -687,18 +674,28 @@ func mergePatch(ctx context.Context, client *Client, mountPath string, secretPat
 
 	secret, err := client.Logical().JSONMergePatch(ctx, pathToMergePatch, wrappedData)
 	if err != nil {
-		// If it's a 405, that probably means the server is running a pre-1.9
-		// Vault version that doesn't support the HTTP PATCH method.
-		// Fall back to the old way of doing it.
-		if re, ok := err.(*ResponseError); ok && re.StatusCode == 405 {
-			return readThenWrite(ctx, client, mountPath, secretPath, newData)
+		var re *ResponseError
+
+		if errors.As(err, &re) {
+			switch re.StatusCode {
+			// 403
+			case http.StatusForbidden:
+				return nil, fmt.Errorf("received 403 from Vault server; please ensure that token's policy has \"patch\" capability: %w", err)
+
+			// 404
+			case http.StatusNotFound:
+				return nil, fmt.Errorf("%w: performing merge patch to %s", ErrSecretNotFound, pathToMergePatch)
+
+			// 405
+			case http.StatusMethodNotAllowed:
+				// If it's a 405, that probably means the server is running a pre-1.9
+				// Vault version that doesn't support the HTTP PATCH method.
+				// Fall back to the old way of doing it.
+				return readThenWrite(ctx, client, mountPath, secretPath, newData)
+			}
 		}
 
-		if re, ok := err.(*ResponseError); ok && re.StatusCode == 403 {
-			return nil, fmt.Errorf("received 403 from Vault server; please ensure that token's policy has \"patch\" capability: %w", err)
-		}
-
-		return nil, fmt.Errorf("error performing merge patch to %s: %s", pathToMergePatch, err)
+		return nil, fmt.Errorf("error performing merge patch to %s: %w", pathToMergePatch, err)
 	}
 
 	metadata, err := extractVersionMetadata(secret)
@@ -712,11 +709,7 @@ func mergePatch(ctx context.Context, client *Client, mountPath string, secretPat
 		Raw:             secret,
 	}
 
-	cm, err := extractCustomMetadata(secret)
-	if err != nil {
-		return nil, fmt.Errorf("error reading custom metadata for secret %s: %w", secretPath, err)
-	}
-	kvSecret.CustomMetadata = cm
+	kvSecret.CustomMetadata = extractCustomMetadata(secret)
 
 	return kvSecret, nil
 }
@@ -730,7 +723,7 @@ func readThenWrite(ctx context.Context, client *Client, mountPath string, secret
 
 	// Make sure the secret already exists
 	if existingVersion == nil || existingVersion.Data == nil {
-		return nil, fmt.Errorf("no existing secret was found at %s when doing read-then-write patch operation: %w", secretPath, err)
+		return nil, fmt.Errorf("%w: at %s as part of read-then-write patch operation", ErrSecretNotFound, secretPath)
 	}
 
 	// Verify existing secret has metadata

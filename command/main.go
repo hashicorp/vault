@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -12,16 +15,28 @@ import (
 	"text/tabwriter"
 
 	"github.com/fatih/color"
+	"github.com/hashicorp/cli"
+	hcpvlib "github.com/hashicorp/vault-hcp-lib"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/command/token"
-	colorable "github.com/mattn/go-colorable"
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/vault/api/tokenhelper"
+	"github.com/mattn/go-colorable"
 )
 
 type VaultUI struct {
 	cli.Ui
 	format   string
 	detailed bool
+}
+
+const (
+	globalFlagOutputCurlString = "output-curl-string"
+	globalFlagOutputPolicy     = "output-policy"
+	globalFlagFormat           = "format"
+	globalFlagDetailed         = "detailed"
+)
+
+var globalFlags = []string{
+	globalFlagOutputCurlString, globalFlagOutputPolicy, globalFlagFormat, globalFlagDetailed,
 }
 
 // setupEnv parses args and may replace them and sets some env vars to known
@@ -47,38 +62,28 @@ func setupEnv(args []string) (retArgs []string, format string, detailed bool, ou
 			break
 		}
 
-		if arg == "-output-curl-string" || arg == "--output-curl-string" {
+		if isGlobalFlag(arg, globalFlagOutputCurlString) {
 			outputCurlString = true
 			continue
 		}
 
-		if arg == "-output-policy" || arg == "--output-policy" {
+		if isGlobalFlag(arg, globalFlagOutputPolicy) {
 			outputPolicy = true
 			continue
 		}
 
 		// Parse a given flag here, which overrides the env var
-		if strings.HasPrefix(arg, "--format=") {
-			format = strings.TrimPrefix(arg, "--format=")
-		}
-		if strings.HasPrefix(arg, "-format=") {
-			format = strings.TrimPrefix(arg, "-format=")
+		if isGlobalFlagWithValue(arg, globalFlagFormat) {
+			format = getGlobalFlagValue(arg)
 		}
 		// For backwards compat, it could be specified without an equal sign
-		if arg == "-format" || arg == "--format" {
+		if isGlobalFlag(arg, globalFlagFormat) {
 			nextArgFormat = true
 		}
 
 		// Parse a given flag here, which overrides the env var
-		if strings.HasPrefix(arg, "--detailed=") {
-			detailed, err = strconv.ParseBool(strings.TrimPrefix(arg, "--detailed="))
-			if err != nil {
-				detailed = false
-			}
-			haveDetailed = true
-		}
-		if strings.HasPrefix(arg, "-detailed=") {
-			detailed, err = strconv.ParseBool(strings.TrimPrefix(arg, "-detailed="))
+		if isGlobalFlagWithValue(arg, globalFlagDetailed) {
+			detailed, err = strconv.ParseBool(getGlobalFlagValue(globalFlagDetailed))
 			if err != nil {
 				detailed = false
 			}
@@ -86,7 +91,7 @@ func setupEnv(args []string) (retArgs []string, format string, detailed bool, ou
 		}
 		// For backwards compat, it could be specified without an equal sign to enable
 		// detailed output.
-		if arg == "-detailed" || arg == "--detailed" {
+		if isGlobalFlag(arg, globalFlagDetailed) {
 			detailed = true
 			haveDetailed = true
 		}
@@ -115,12 +120,27 @@ func setupEnv(args []string) (retArgs []string, format string, detailed bool, ou
 	return args, format, detailed, outputCurlString, outputPolicy
 }
 
+func isGlobalFlag(arg string, flag string) bool {
+	return arg == "-"+flag || arg == "--"+flag
+}
+
+func isGlobalFlagWithValue(arg string, flag string) bool {
+	return strings.HasPrefix(arg, "--"+flag+"=") || strings.HasPrefix(arg, "-"+flag+"=")
+}
+
+func getGlobalFlagValue(arg string) string {
+	_, value, _ := strings.Cut(arg, "=")
+
+	return value
+}
+
 type RunOptions struct {
-	TokenHelper token.TokenHelper
-	Stdout      io.Writer
-	Stderr      io.Writer
-	Address     string
-	Client      *api.Client
+	TokenHelper    tokenhelper.TokenHelper
+	HCPTokenHelper hcpvlib.HCPTokenHelper
+	Stdout         io.Writer
+	Stderr         io.Writer
+	Address        string
+	Client         *api.Client
 }
 
 func Run(args []string) int {
@@ -202,18 +222,19 @@ func RunCustom(args []string, runOpts *RunOptions) int {
 		return 1
 	}
 
-	initCommands(ui, serverCmdUi, runOpts)
+	commands := initCommands(ui, serverCmdUi, runOpts)
 
 	hiddenCommands := []string{"version"}
 
 	cli := &cli.CLI{
 		Name:     "vault",
 		Args:     args,
-		Commands: Commands,
+		Commands: commands,
 		HelpFunc: groupedHelpFunc(
 			cli.BasicHelpFunc("vault"),
 		),
-		HelpWriter:                 runOpts.Stderr,
+		HelpWriter:                 runOpts.Stdout,
+		ErrorWriter:                runOpts.Stderr,
 		HiddenCommands:             hiddenCommands,
 		Autocomplete:               true,
 		AutocompleteNoDefaultFlags: true,

@@ -10,7 +10,7 @@ The `/sys/plugins/catalog` endpoint is used to read, register, update, and
 remove plugins in Vault's catalog. Plugins must be registered before use, and
 once registered backends can use the plugin by querying the catalog.
 
-## LIST Plugins
+## LIST plugins
 
 This endpoint lists the plugins in the catalog by type.
 
@@ -18,7 +18,7 @@ This endpoint lists the plugins in the catalog by type.
 | :----- | :--------------------- |
 | `GET`  | `/sys/plugins/catalog` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -26,9 +26,9 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/plugins/catalog
 ```
 
-### Sample Response
+### Sample response
 
-```javascript
+```json
 {
     "data": {
         "auth": [
@@ -44,18 +44,54 @@ $ curl \
             "mysql-database-plugin",
             "postgresql-database-plugin"
         ],
+        "detailed": [
+            {
+                "builtin": true,
+                "deprecation_status": "supported",
+                "name": "aws",
+                "type": "auth",
+                "version": "v1.12.0+builtin.vault"
+            },
+            ...
+            {
+                "builtin": true,
+                "deprecation_status": "supported",
+                "name": "cassandra-database-plugin",
+                "type": "database",
+                "version": "v1.12.0+builtin.vault"
+            },
+            ...
+            {
+                "builtin": true,
+                "deprecation_status": "supported",
+                "name": "aws",
+                "type": "secret",
+                "version": "v1.12.0+builtin.vault"
+            },
+            ...
+            {
+                "builtin": false,
+                "name": "example-plugin",
+                "type": "secret",
+                "oci_image": "example-secret-plugin-oci-image",
+                "runtime": "example-runtime",
+                "version": "v1.0.0"
+            },
+            ...
+        ],
         "secret": [
             "ad",
             "aws",
             "azure",
             "gcp",
-            "transit"
+            "transit",
+            "example-plugin",
         ]
     }
 }
 ```
 
-## LIST Plugins
+## LIST plugins
 
 This endpoint lists the plugins in the catalog by type.
 
@@ -65,7 +101,7 @@ This endpoint lists the plugins in the catalog by type.
 | `LIST` | `/sys/plugins/catalog/database` |
 | `LIST` | `/sys/plugins/catalog/secret`   |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -74,9 +110,9 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/plugins/catalog/auth
 ```
 
-### Sample Response
+### Sample response
 
-```javascript
+```json
 {
     "data": {
         "keys": [
@@ -90,7 +126,7 @@ $ curl \
 }
 ```
 
-## Register Plugin
+## Register plugin
 
 This endpoint registers a new plugin, or updates an existing one with the
 supplied name.
@@ -111,12 +147,23 @@ supplied name.
 - `type` `(string: <required>)` – Specifies the type of this plugin. May be
   "auth", "database", or "secret".
 
-- `sha256` `(string: <required>)` – This is the SHA256 sum of the plugin's
-  binary. Before a plugin is run it's SHA will be checked against this value, if
-  they do not match the plugin can not be run.
+- `oci_image` `(string: "")` - Specifies OCI image to run. If specified, setting `command`,
+  `args`, and `env` will update the container's entrypoint, args, and environment
+  variables (append-only) respectively.
 
-- `command` `(string: <required>)` – Specifies the command used to execute the
-  plugin. This is relative to the plugin directory. e.g. `"myplugin"`.
+- `runtime` `(string: "")` - Specifies Vault plugin runtime to use if `oci_image` is specified.
+  See [/sys/plugins/runtimes/catalog](/vault/api-docs/system/plugins-runtimes-catalog) for additional information.
+
+- `version` `(string: "")` - Specifies the semantic version of the plugin. Used as the tag
+  when specifying `oci_image`, but with any leading 'v' trimmed.
+
+- `sha256` `(string: <required>)` – This is the SHA256 sum of the plugin's
+  binary or the OCI image. Before a plugin is run, its SHA will be checked against this value.
+  If they do not match the plugin can not be run.
+
+- `command` `(string: <required>)` - Specifies the command used to execute the
+  plugin. This is relative to the plugin directory. e.g. `"myplugin"`, or if `oci_image`
+  is also specified, it is relative to the image's working directory.
 
 - `args` `(array: [])` – Specifies the arguments used to execute the plugin. If
   the arguments are provided here, the `command` parameter should only contain
@@ -126,7 +173,7 @@ supplied name.
   execution of the plugin. Each entry is of the form "key=value". e.g
   `"FOO=BAR"`.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -135,7 +182,17 @@ supplied name.
 }
 ```
 
-### Sample Request
+### Sample payload using OCI image
+
+```json
+{
+  "sha256": "d150b9a0fbfddef9709d8ff92e5e6053ccd246b78632fc03b8548457026961a9",
+  "oci_image": "example-secret-plugin-oci-image",
+  "runtime": "example-runtime"
+}
+```
+
+### Sample request
 
 ```shell-session
 $ curl \
@@ -145,16 +202,16 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/plugins/catalog/secret/example-plugin
 ```
 
-## Read Plugin
+## Read plugin
 
 This endpoint returns the configuration data for the plugin with the given name.
 
 - **`sudo` required** – This endpoint requires `sudo` capability in addition to
   any path-specific capabilities.
 
-| Method | Path                               |
-| :----- | :--------------------------------- |
-| `GET`  | `/sys/plugins/catalog/:type/:name` |
+| Method | Path                                                |
+| :----- | :-------------------------------------------------- |
+| `GET`  | `/sys/plugins/catalog/:type/:name?version=:version` |
 
 ### Parameters
 
@@ -164,39 +221,45 @@ This endpoint returns the configuration data for the plugin with the given name.
 - `type` `(string: <required>)` – Specifies the type of this plugin. May be
   "auth", "database", or "secret".
 
-### Sample Request
+- `version` `(string: "")` – The semantic version of the plugin to read. Required
+  if the plugin was registered with a version.
+
+### Sample request
 
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request GET \
-    http://127.0.0.1:8200/v1/sys/plugins/catalog/secret/example-plugin
+    http://127.0.0.1:8200/v1/sys/plugins/catalog/secret/example-plugin?version=v1.0.0
 ```
 
-### Sample Response
+### Sample response
 
-```javascript
+```json
 {
-	"data": {
-		"args": [],
-		"builtin": false,
-		"command": "/tmp/vault-plugins/mysql-database-plugin",
-		"name": "example-plugin",
-		"sha256": "0TC5oPv93vlwnY/5Ll5gU8zSRreGMvwDuFSEVwJpYek="
-	}
+  "data": {
+    "args": [],
+    "builtin": false,
+    "runtime": "example-runtime",
+    "oci_image": "example-secret-plugin-oci-image",
+    "command": "/example-secret-plugin",
+    "name": "example-plugin",
+    "sha256": "0TC5oPv93vlwnY/5Ll5gU8zSRreGMvwDuFSEVwJpYek=",
+    "version": "v1.0.0"
+  }
 }
 ```
 
-## Remove Plugin from Catalog
+## Remove plugin from catalog
 
 This endpoint removes the plugin with the given name.
 
 - **`sudo` required** – This endpoint requires `sudo` capability in addition to
   any path-specific capabilities.
 
-| Method   | Path                               |
-| :------- | :--------------------------------- |
-| `DELETE` | `/sys/plugins/catalog/:type/:name` |
+| Method   | Path                                                |
+| :------- | :-------------------------------------------------- |
+| `DELETE` | `/sys/plugins/catalog/:type/:name?version=:version` |
 
 ### Parameters
 
@@ -206,11 +269,14 @@ This endpoint removes the plugin with the given name.
 - `type` `(string: <required>)` – Specifies the type of this plugin. May be
   "auth", "database", or "secret".
 
-### Sample Request
+- `version` `(string: "")` – Specifies the semantic version of the plugin
+  to delete.
+
+### Sample request
 
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    http://127.0.0.1:8200/v1/sys/plugins/catalog/secret/example-plugin
+    http://127.0.0.1:8200/v1/sys/plugins/catalog/secret/example-plugin?version=v1.0.0
 ```

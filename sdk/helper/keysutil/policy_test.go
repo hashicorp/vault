@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package keysutil
 
 import (
@@ -8,18 +11,136 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"errors"
+	"fmt"
+	mathrand "math/rand"
 	"reflect"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
-	"golang.org/x/crypto/ed25519"
-
+	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/copystructure"
+	"golang.org/x/crypto/ed25519"
 )
+
+// Ordering of these items needs to match the iota order defined in policy.go. Ordering changes
+// should never occur, as it would lead to a key type change within existing stored policies.
+var allTestKeyTypes = []KeyType{
+	KeyType_AES256_GCM96, KeyType_ECDSA_P256, KeyType_ED25519, KeyType_RSA2048,
+	KeyType_RSA4096, KeyType_ChaCha20_Poly1305, KeyType_ECDSA_P384, KeyType_ECDSA_P521, KeyType_AES128_GCM96,
+	KeyType_RSA3072, KeyType_MANAGED_KEY, KeyType_HMAC, KeyType_AES128_CMAC, KeyType_AES256_CMAC,
+}
+
+func TestPolicy_KeyTypes(t *testing.T) {
+	// Make sure the iota value never change for key types, as existing storage would be affected
+	for i, keyType := range allTestKeyTypes {
+		if int(keyType) != i {
+			t.Fatalf("iota of keytype %s changed, expected %d got %d", keyType.String(), i, keyType)
+		}
+	}
+
+	// Make sure we have a string presentation for all types
+	for _, keyType := range allTestKeyTypes {
+		if strings.Contains(keyType.String(), "unknown") {
+			t.Fatalf("keytype with iota of %d should not contain 'unknown', missing in String() switch statement", keyType)
+		}
+	}
+}
+
+func TestPolicy_HmacCmacSuported(t *testing.T) {
+	// Test HMAC supported feature
+	for _, keyType := range allTestKeyTypes {
+		switch keyType {
+		case KeyType_MANAGED_KEY:
+			if keyType.HMACSupported() {
+				t.Fatalf("hmac should not have been not be supported for keytype %s", keyType.String())
+			}
+			if keyType.CMACSupported() {
+				t.Fatalf("cmac should not have been be supported for keytype %s", keyType.String())
+			}
+		case KeyType_AES128_CMAC, KeyType_AES256_CMAC:
+			if keyType.HMACSupported() {
+				t.Fatalf("hmac should have been not be supported for keytype %s", keyType.String())
+			}
+			if !keyType.CMACSupported() {
+				t.Fatalf("cmac should have been be supported for keytype %s", keyType.String())
+			}
+		default:
+			if !keyType.HMACSupported() {
+				t.Fatalf("hmac should have been supported for keytype %s", keyType.String())
+			}
+			if keyType.CMACSupported() {
+				t.Fatalf("cmac should not have been supported for keytype %s", keyType.String())
+			}
+		}
+	}
+}
+
+func TestPolicy_CMACKeyUpgrade(t *testing.T) {
+	ctx := context.Background()
+	lm, _ := NewLockManager(false, 0)
+	storage := &logical.InmemStorage{}
+	p, upserted, err := lm.GetPolicy(ctx, PolicyRequest{
+		Upsert:  true,
+		Storage: storage,
+		KeyType: KeyType_AES256_CMAC,
+		Name:    "test",
+	}, rand.Reader)
+	if err != nil {
+		t.Fatalf("failed loading policy: %v", err)
+	}
+	if p == nil {
+		t.Fatal("nil policy")
+	}
+	if !upserted {
+		t.Fatal("expected an upsert")
+	}
+
+	// This verifies we don't have a hmac key
+	_, err = p.HMACKey(1)
+	if err == nil {
+		t.Fatal("cmac key should not return an hmac key but did on initial creation")
+	}
+
+	if p.NeedsUpgrade() {
+		t.Fatal("cmac key should not require an upgrade after initial key creation")
+	}
+
+	err = p.Upgrade(ctx, storage, rand.Reader)
+	if err != nil {
+		t.Fatalf("an error was returned from upgrade method: %v", err)
+	}
+	p.Unlock()
+
+	// Now reload our policy from disk and make sure we still don't have a hmac key
+	p, upserted, err = lm.GetPolicy(ctx, PolicyRequest{
+		Upsert:  true,
+		Storage: storage,
+		KeyType: KeyType_AES256_CMAC,
+		Name:    "test",
+	}, rand.Reader)
+	if err != nil {
+		t.Fatalf("failed loading policy: %v", err)
+	}
+	if p == nil {
+		t.Fatal("nil policy")
+	}
+	if upserted {
+		t.Fatal("expected the key to exist but upserted was true")
+	}
+
+	p.Unlock()
+
+	_, err = p.HMACKey(1)
+	if err == nil {
+		t.Fatal("cmac key should not return an hmac key post upgrade")
+	}
+}
 
 func TestPolicy_KeyEntryMapUpgrade(t *testing.T) {
 	now := time.Now()
@@ -698,6 +819,26 @@ func generateTestKeys() (map[KeyType][]byte, error) {
 	}
 	keyMap[KeyType_RSA2048] = rsaKeyBytes
 
+	rsaKey, err = rsa.GenerateKey(rand.Reader, 3072)
+	if err != nil {
+		return nil, err
+	}
+	rsaKeyBytes, err = x509.MarshalPKCS8PrivateKey(rsaKey)
+	if err != nil {
+		return nil, err
+	}
+	keyMap[KeyType_RSA3072] = rsaKeyBytes
+
+	rsaKey, err = rsa.GenerateKey(rand.Reader, 4096)
+	if err != nil {
+		return nil, err
+	}
+	rsaKeyBytes, err = x509.MarshalPKCS8PrivateKey(rsaKey)
+	if err != nil {
+		return nil, err
+	}
+	keyMap[KeyType_RSA4096] = rsaKeyBytes
+
 	ecdsaKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return nil, err
@@ -753,4 +894,289 @@ func BenchmarkSymmetric(b *testing.B) {
 			b.Fail()
 		}
 	}
+}
+
+func saltOptions(options SigningOptions, saltLength int) SigningOptions {
+	return SigningOptions{
+		HashAlgorithm: options.HashAlgorithm,
+		Marshaling:    options.Marshaling,
+		SaltLength:    saltLength,
+		SigAlgorithm:  options.SigAlgorithm,
+	}
+}
+
+func manualVerify(depth int, t *testing.T, p *Policy, input []byte, sig *SigningResult, options SigningOptions) {
+	tabs := strings.Repeat("\t", depth)
+	t.Log(tabs, "Manually verifying signature with options:", options)
+
+	tabs = strings.Repeat("\t", depth+1)
+	verified, err := p.VerifySignatureWithOptions(nil, input, sig.Signature, &options)
+	if err != nil {
+		t.Fatal(tabs, "❌ Failed to manually verify signature:", err)
+	}
+	if !verified {
+		t.Fatal(tabs, "❌ Failed to manually verify signature")
+	}
+}
+
+func autoVerify(depth int, t *testing.T, p *Policy, input []byte, sig *SigningResult, options SigningOptions) {
+	tabs := strings.Repeat("\t", depth)
+	t.Log(tabs, "Automatically verifying signature with options:", options)
+
+	tabs = strings.Repeat("\t", depth+1)
+	verified, err := p.VerifySignature(nil, input, options.HashAlgorithm, options.SigAlgorithm, options.Marshaling, sig.Signature)
+	if err != nil {
+		t.Fatal(tabs, "❌ Failed to automatically verify signature:", err)
+	}
+	if !verified {
+		t.Fatal(tabs, "❌ Failed to automatically verify signature")
+	}
+}
+
+func Test_RSA_PSS(t *testing.T) {
+	t.Log("Testing RSA PSS")
+	mathrand.Seed(time.Now().UnixNano())
+
+	var userError errutil.UserError
+	ctx := context.Background()
+	storage := &logical.InmemStorage{}
+	// https://crypto.stackexchange.com/a/1222
+	input := []byte("the ancients say the longer the salt, the more provable the security")
+	sigAlgorithm := "pss"
+
+	tabs := make(map[int]string)
+	for i := 1; i <= 6; i++ {
+		tabs[i] = strings.Repeat("\t", i)
+	}
+
+	test_RSA_PSS := func(t *testing.T, p *Policy, rsaKey *rsa.PrivateKey, hashType HashType,
+		marshalingType MarshalingType,
+	) {
+		unsaltedOptions := SigningOptions{
+			HashAlgorithm: hashType,
+			Marshaling:    marshalingType,
+			SigAlgorithm:  sigAlgorithm,
+		}
+		cryptoHash := CryptoHashMap[hashType]
+		minSaltLength := p.minRSAPSSSaltLength()
+		maxSaltLength := p.maxRSAPSSSaltLength(rsaKey.N.BitLen(), cryptoHash)
+		hash := cryptoHash.New()
+		hash.Write(input)
+		input = hash.Sum(nil)
+
+		// 1. Make an "automatic" signature with the given key size and hash algorithm,
+		// but an automatically chosen salt length.
+		t.Log(tabs[3], "Make an automatic signature")
+		sig, err := p.Sign(0, nil, input, hashType, sigAlgorithm, marshalingType)
+		if err != nil {
+			// A bit of a hack but FIPS go does not support some hash types
+			if isUnsupportedGoHashType(hashType, err) {
+				t.Skip(tabs[4], "skipping test as FIPS Go does not support hash type")
+				return
+			}
+			t.Fatal(tabs[4], "❌ Failed to automatically sign:", err)
+		}
+
+		// 1.1 Verify this automatic signature using the *inferred* salt length.
+		autoVerify(4, t, p, input, sig, unsaltedOptions)
+
+		// 1.2. Verify this automatic signature using the *correct, given* salt length.
+		manualVerify(4, t, p, input, sig, saltOptions(unsaltedOptions, maxSaltLength))
+
+		// 1.3. Try to verify this automatic signature using *incorrect, given* salt lengths.
+		t.Log(tabs[4], "Test incorrect salt lengths")
+		incorrectSaltLengths := []int{minSaltLength, maxSaltLength - 1}
+		for _, saltLength := range incorrectSaltLengths {
+			t.Log(tabs[5], "Salt length:", saltLength)
+			saltedOptions := saltOptions(unsaltedOptions, saltLength)
+
+			verified, _ := p.VerifySignatureWithOptions(nil, input, sig.Signature, &saltedOptions)
+			if verified {
+				t.Fatal(tabs[6], "❌ Failed to invalidate", verified, "signature using incorrect salt length:", err)
+			}
+		}
+
+		// 2. Rule out boundary, invalid salt lengths.
+		t.Log(tabs[3], "Test invalid salt lengths")
+		invalidSaltLengths := []int{minSaltLength - 1, maxSaltLength + 1}
+		for _, saltLength := range invalidSaltLengths {
+			t.Log(tabs[4], "Salt length:", saltLength)
+			saltedOptions := saltOptions(unsaltedOptions, saltLength)
+
+			// 2.1. Fail to sign.
+			t.Log(tabs[5], "Try to make a manual signature")
+			_, err := p.SignWithOptions(0, nil, input, &saltedOptions)
+			if !errors.As(err, &userError) {
+				t.Fatal(tabs[6], "❌ Failed to reject invalid salt length:", err)
+			}
+
+			// 2.2. Fail to verify.
+			t.Log(tabs[5], "Try to verify an automatic signature using an invalid salt length")
+			_, err = p.VerifySignatureWithOptions(nil, input, sig.Signature, &saltedOptions)
+			if !errors.As(err, &userError) {
+				t.Fatal(tabs[6], "❌ Failed to reject invalid salt length:", err)
+			}
+		}
+
+		// 3. For three possible valid salt lengths...
+		t.Log(tabs[3], "Test three possible valid salt lengths")
+		midSaltLength := mathrand.Intn(maxSaltLength-1) + 1 // [1, maxSaltLength)
+		validSaltLengths := []int{minSaltLength, midSaltLength, maxSaltLength}
+		for _, saltLength := range validSaltLengths {
+			t.Log(tabs[4], "Salt length:", saltLength)
+			saltedOptions := saltOptions(unsaltedOptions, saltLength)
+
+			// 3.1. Make a "manual" signature with the given key size, hash algorithm, and salt length.
+			t.Log(tabs[5], "Make a manual signature")
+			sig, err := p.SignWithOptions(0, nil, input, &saltedOptions)
+			if err != nil {
+				t.Fatal(tabs[6], "❌ Failed to manually sign:", err)
+			}
+
+			// 3.2. Verify this manual signature using the *correct, given* salt length.
+			manualVerify(6, t, p, input, sig, saltedOptions)
+
+			// 3.3. Verify this manual signature using the *inferred* salt length.
+			autoVerify(6, t, p, input, sig, unsaltedOptions)
+		}
+	}
+
+	rsaKeyTypes := []KeyType{KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096}
+	testKeys, err := generateTestKeys()
+	if err != nil {
+		t.Fatalf("error generating test keys: %s", err)
+	}
+
+	// 1. For each standard RSA key size 2048, 3072, and 4096...
+	for _, rsaKeyType := range rsaKeyTypes {
+		t.Log("Key size: ", rsaKeyType)
+		p := &Policy{
+			Name: fmt.Sprint(rsaKeyType), // NOTE: crucial to create a new key per key size
+			Type: rsaKeyType,
+		}
+
+		rsaKeyBytes := testKeys[rsaKeyType]
+		err := p.Import(ctx, storage, rsaKeyBytes, rand.Reader)
+		if err != nil {
+			t.Fatal(tabs[1], "❌ Failed to import key:", err)
+		}
+		rsaKeyAny, err := x509.ParsePKCS8PrivateKey(rsaKeyBytes)
+		if err != nil {
+			t.Fatalf("error parsing test keys: %s", err)
+		}
+		rsaKey := rsaKeyAny.(*rsa.PrivateKey)
+
+		// 2. For each hash algorithm...
+		for hashAlgorithm, hashType := range HashTypeMap {
+			t.Log(tabs[1], "Hash algorithm:", hashAlgorithm)
+			if hashAlgorithm == "none" {
+				continue
+			}
+
+			// 3. For each marshaling type...
+			for marshalingName, marshalingType := range MarshalingTypeMap {
+				t.Log(tabs[2], "Marshaling type:", marshalingName)
+				testName := fmt.Sprintf("%s-%s-%s", rsaKeyType, hashAlgorithm, marshalingName)
+				t.Run(testName, func(t *testing.T) { test_RSA_PSS(t, p, rsaKey, hashType, marshalingType) })
+			}
+		}
+	}
+}
+
+func Test_RSA_PKCS1(t *testing.T) {
+	t.Log("Testing RSA PKCS#1v1.5")
+
+	ctx := context.Background()
+	storage := &logical.InmemStorage{}
+	// https://crypto.stackexchange.com/a/1222
+	input := []byte("Sphinx of black quartz, judge my vow")
+	sigAlgorithm := "pkcs1v15"
+
+	tabs := make(map[int]string)
+	for i := 1; i <= 6; i++ {
+		tabs[i] = strings.Repeat("\t", i)
+	}
+
+	test_RSA_PKCS1 := func(t *testing.T, p *Policy, rsaKey *rsa.PrivateKey, hashType HashType,
+		marshalingType MarshalingType,
+	) {
+		unsaltedOptions := SigningOptions{
+			HashAlgorithm: hashType,
+			Marshaling:    marshalingType,
+			SigAlgorithm:  sigAlgorithm,
+		}
+		cryptoHash := CryptoHashMap[hashType]
+
+		// PKCS#1v1.5 NoOID uses a direct input and assumes it is pre-hashed.
+		if hashType != 0 {
+			hash := cryptoHash.New()
+			hash.Write(input)
+			input = hash.Sum(nil)
+		}
+
+		// 1. Make a signature with the given key size and hash algorithm.
+		t.Log(tabs[3], "Make an automatic signature")
+		sig, err := p.Sign(0, nil, input, hashType, sigAlgorithm, marshalingType)
+		if err != nil {
+			// A bit of a hack but FIPS go does not support some hash types
+			if isUnsupportedGoHashType(hashType, err) {
+				t.Skip(tabs[4], "skipping test as FIPS Go does not support hash type")
+				return
+			}
+			t.Fatal(tabs[4], "❌ Failed to automatically sign:", err)
+		}
+
+		// 1.1 Verify this signature using the *inferred* salt length.
+		autoVerify(4, t, p, input, sig, unsaltedOptions)
+	}
+
+	rsaKeyTypes := []KeyType{KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096}
+	testKeys, err := generateTestKeys()
+	if err != nil {
+		t.Fatalf("error generating test keys: %s", err)
+	}
+
+	// 1. For each standard RSA key size 2048, 3072, and 4096...
+	for _, rsaKeyType := range rsaKeyTypes {
+		t.Log("Key size: ", rsaKeyType)
+		p := &Policy{
+			Name: fmt.Sprint(rsaKeyType), // NOTE: crucial to create a new key per key size
+			Type: rsaKeyType,
+		}
+
+		rsaKeyBytes := testKeys[rsaKeyType]
+		err := p.Import(ctx, storage, rsaKeyBytes, rand.Reader)
+		if err != nil {
+			t.Fatal(tabs[1], "❌ Failed to import key:", err)
+		}
+		rsaKeyAny, err := x509.ParsePKCS8PrivateKey(rsaKeyBytes)
+		if err != nil {
+			t.Fatalf("error parsing test keys: %s", err)
+		}
+		rsaKey := rsaKeyAny.(*rsa.PrivateKey)
+
+		// 2. For each hash algorithm...
+		for hashAlgorithm, hashType := range HashTypeMap {
+			t.Log(tabs[1], "Hash algorithm:", hashAlgorithm)
+
+			// 3. For each marshaling type...
+			for marshalingName, marshalingType := range MarshalingTypeMap {
+				t.Log(tabs[2], "Marshaling type:", marshalingName)
+				testName := fmt.Sprintf("%s-%s-%s", rsaKeyType, hashAlgorithm, marshalingName)
+				t.Run(testName, func(t *testing.T) { test_RSA_PKCS1(t, p, rsaKey, hashType, marshalingType) })
+			}
+		}
+	}
+}
+
+// Normal Go builds support all the hash functions for RSA_PSS signatures but the
+// FIPS Go build does not support at this time the SHA3 hashes as FIPS 140_2 does
+// not accept them.
+func isUnsupportedGoHashType(hashType HashType, err error) bool {
+	switch hashType {
+	case HashTypeSHA3224, HashTypeSHA3256, HashTypeSHA3384, HashTypeSHA3512:
+		return strings.Contains(err.Error(), "unsupported hash function")
+	}
+
+	return false
 }

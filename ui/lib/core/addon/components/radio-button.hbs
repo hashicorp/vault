@@ -1,1 +1,13 @@
-<input ...attributes checked={{eq @value @groupValue}} type="radio" {{on "change" (fn @onChange @value)}} />
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<input
+  ...attributes
+  checked={{eq @value @groupValue}}
+  disabled={{@disabled}}
+  type="radio"
+  {{on "change" (fn @onChange @value)}}
+  aria-checked={{eq @value @groupValue}}
+/>

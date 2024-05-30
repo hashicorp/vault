@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package mysql
 
 import (
@@ -16,7 +19,7 @@ import (
 
 const (
 	defaultMysqlRevocationStmts = `
-		REVOKE ALL PRIVILEGES, GRANT OPTION FROM '{{name}}'@'%'; 
+		REVOKE ALL PRIVILEGES, GRANT OPTION FROM '{{name}}'@'%';
 		DROP USER '{{name}}'@'%'
 	`
 
@@ -174,8 +177,8 @@ func (m *MySQL) DeleteUser(ctx context.Context, req dbplugin.DeleteUserRequest) 
 			// This is not a prepared statement because not all commands are supported
 			// 1295: This command is not supported in the prepared statement protocol yet
 			// Reference https://mariadb.com/kb/en/mariadb/prepare-statement/
-			query = strings.Replace(query, "{{name}}", req.Username, -1)
-			query = strings.Replace(query, "{{username}}", req.Username, -1)
+			query = strings.ReplaceAll(query, "{{name}}", req.Username)
+			query = strings.ReplaceAll(query, "{{username}}", req.Username)
 			_, err = tx.ExecContext(ctx, query)
 			if err != nil {
 				return dbplugin.DeleteUserResponse{}, err

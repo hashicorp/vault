@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: update detail views that render ttl durations to display full unit instead of letter (i.e. 'days' instead of 'd')
+```

@@ -1,0 +1,3 @@
+```release-note:improvement
+openapi: Change gen_openapi.sh to generate schema with generic mount paths
+```

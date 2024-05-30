@@ -1,0 +1,66 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
+---
+name: Set up buf from Github releases
+description: Set up buf from Github releases
+
+inputs:
+  destination:
+    description: "Where to install the buf binary (default: $HOME/bin/buf)"
+    type: boolean
+    default: "$HOME/bin/buf"
+  version:
+    description: "The version to install (default: latest)"
+    type: string
+    default: Latest
+
+outputs:
+  destination:
+    description: Where the installed buf binary is
+    value: ${{ steps.install.outputs.destination }}
+  destination-dir:
+    description: The directory where the installed buf binary is
+    value: ${{ steps.install.outputs.destination-dir }}
+  version:
+    description: The installed version of buf
+    value: ${{ steps.install.outputs.version }}
+
+runs:
+  using: composite
+  steps:
+    - id: install
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        VERSION=$(gh release list -R bufbuild/buf --exclude-drafts --exclude-pre-releases | grep ${{ inputs.version }} | cut -f1)
+
+        mkdir -p $(dirname ${{ inputs.destination }})
+        DESTINATION="$(readlink -f "${{ inputs.destination }}")"
+        DESTINATION_DIR="$(dirname "$DESTINATION")"
+        echo "$DESTINATION_DIR" >> "$GITHUB_PATH"
+
+        {
+          echo "destination=$DESTINATION"
+          echo "destination-dir=$DESTINATION_DIR"
+          echo "version=$VERSION"
+        } | tee -a "$GITHUB_OUTPUT"
+
+        ARCH="$(echo "$RUNNER_ARCH" | tr '[:upper:]' '[:lower:]')"
+        OS="$RUNNER_OS"
+        if [ "$ARCH" = "x64" ]; then
+          export ARCH="x86_64"
+        fi
+        if [ "$ARCH" = "arm64" ] && [ "$OS" = "Linux" ]; then
+          export ARCH="aarch64"
+        fi
+        if [ "$OS" = "macOS" ]; then
+          export OS="Darwin"
+        fi
+
+        mkdir -p tmp
+        gh release download "$VERSION" -p "buf-${OS}-${ARCH}.tar.gz" -O tmp/buf.tgz -R bufbuild/buf
+        pushd tmp && tar -xvf buf.tgz && popd
+        mv tmp/buf/bin/buf "$DESTINATION"
+        rm -rf tmp

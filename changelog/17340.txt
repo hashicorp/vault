@@ -1,0 +1,3 @@
+```release-note:bug
+plugins: Corrected the path to check permissions on when the registered plugin name does not match the plugin binary's filename.
+```

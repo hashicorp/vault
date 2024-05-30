@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import ApplicationAdapter from '../application';
 
 export default ApplicationAdapter.extend({
@@ -16,7 +21,7 @@ export default ApplicationAdapter.extend({
     return url;
   },
   optionsForQuery(id) {
-    let data = {};
+    const data = {};
     if (!id) {
       data['list'] = true;
     }
@@ -51,6 +56,7 @@ export default ApplicationAdapter.extend({
       return {
         data: {
           id,
+          name: id,
           ...data,
         },
       };

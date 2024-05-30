@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package plugin
 
 import (
@@ -147,6 +150,21 @@ func TestGRPCBackendPlugin_Initialize(t *testing.T) {
 	}
 }
 
+func TestGRPCBackendPlugin_Version(t *testing.T) {
+	b, cleanup := testGRPCBackend(t)
+	defer cleanup()
+
+	versioner, ok := b.(logical.PluginVersioner)
+	if !ok {
+		t.Fatalf("Expected %T to implement logical.PluginVersioner interface", b)
+	}
+
+	version := versioner.PluginVersion().Version
+	if version != "v0.0.0+mock" {
+		t.Fatalf("Got version %s, expected 'mock'", version)
+	}
+}
+
 func testGRPCBackend(t *testing.T) (logical.Backend, func()) {
 	// Create a mock provider
 	pluginMap := map[string]gplugin.Plugin{
@@ -159,7 +177,7 @@ func testGRPCBackend(t *testing.T) (logical.Backend, func()) {
 			}),
 		},
 	}
-	client, _ := gplugin.TestPluginGRPCConn(t, pluginMap)
+	client, _ := gplugin.TestPluginGRPCConn(t, false, pluginMap)
 	cleanup := func() {
 		client.Close()
 	}

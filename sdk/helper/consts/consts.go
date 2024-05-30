@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package consts
 
 const (
@@ -15,6 +18,10 @@ const (
 	// RequestHeaderName is the name of the header used by the Agent for
 	// SSRF protection.
 	RequestHeaderName = "X-Vault-Request"
+
+	// WrapTTLHeaderName is the name of the header containing a directive to
+	// wrap the response
+	WrapTTLHeaderName = "X-Vault-Wrap-TTL"
 
 	// PerformanceReplicationALPN is the negotiated protocol used for
 	// performance replication.
@@ -34,4 +41,10 @@ const (
 	ReplicationResolverALPN = "replication_resolver_v1"
 
 	VaultEnableFilePermissionsCheckEnv = "VAULT_ENABLE_FILE_PERMISSIONS_CHECK"
+
+	VaultDisableUserLockout = "VAULT_DISABLE_USER_LOCKOUT"
+
+	PerformanceReplicationPathTarget = "performance"
+
+	DRReplicationPathTarget = "dr"
 )

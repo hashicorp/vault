@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package approle
 
 import (
@@ -17,8 +20,21 @@ func pathTidySecretID(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "tidy/secret-id$",
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathTidySecretIDUpdate,
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAppRole,
+			OperationSuffix: "secret-id",
+			OperationVerb:   "tidy",
+		},
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathTidySecretIDUpdate,
+				Responses: map[int][]framework.Response{
+					http.StatusAccepted: {{
+						Description: http.StatusText(http.StatusAccepted),
+					}},
+				},
+			},
 		},
 
 		HelpSynopsis:    pathTidySecretIDSyn,
