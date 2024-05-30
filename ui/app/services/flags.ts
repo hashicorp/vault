@@ -64,6 +64,7 @@ export default class flagsService extends Service {
   getActivatedFlags = keepLatestTask(async () => {
     // Response could change between user sessions.
     // Fire off endpoint without checking if activated features are already set.
+    if (this.version.isCommunity) return;
     try {
       const response = await this.store
         .adapterFor('application')
