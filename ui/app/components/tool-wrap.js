@@ -31,13 +31,8 @@ import { tracked } from '@glimmer/tracking';
  */
 
 export default class ToolWrap extends Component {
-  @tracked data = '{\n}';
   @tracked buttonDisabled = false;
 
-  @action
-  onClear() {
-    this.args.onClear();
-  }
   @action
   updateTtl(evt) {
     if (!evt) return;
@@ -48,7 +43,6 @@ export default class ToolWrap extends Component {
   codemirrorUpdated(val, codemirror) {
     codemirror.performLint();
     const hasErrors = codemirror?.state.lint.marked?.length > 0;
-    this.data = val;
     this.buttonDisabled = hasErrors;
     this.args.codemirrorUpdated(val, hasErrors);
   }

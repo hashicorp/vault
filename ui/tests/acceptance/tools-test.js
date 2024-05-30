@@ -61,8 +61,7 @@ module('Acceptance | tools', function (hooks) {
     // wrap
     await click(TS.submit);
     const wrappedToken = await waitUntil(() => find(TS.toolsInput('wrapping-token')));
-    tokenStore.set(wrappedToken.value);
-    assert.dom(TS.toolsInput('wrapping-token')).hasValue(wrappedToken.value, 'has a wrapping token');
+    tokenStore.set(wrappedToken.innerText);
 
     //lookup
     await click(GENERAL.navLink('Lookup'));
@@ -112,7 +111,7 @@ module('Acceptance | tools', function (hooks) {
     const randomBytes = await waitUntil(() => find(TS.toolsInput('random-bytes')));
     assert.ok(randomBytes.value, 'shows the returned value of random bytes');
 
-    //hash
+    // hash
     await click(GENERAL.navLink('Hash'));
 
     await fillIn(TS.toolsInput('hash-input'), 'foo');
