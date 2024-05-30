@@ -35,8 +35,7 @@ module('Acceptance | sync | destination (singular)', function (hooks) {
   });
 
   test('it should transition to correct routes when performing actions', async function (assert) {
-    await click(ts.navLink('Dashboard')); // add click to Dashboard to avoid race condition where Secrets Sync link does not show yet
-    await click(ts.navLink('Secrets Sync'));
+    await visit('/vault/sync/secrets/overview');
     await click(ts.tab('Destinations'));
     await click(ts.listItem);
     assert.dom(ts.tab('Secrets')).hasClass('active', 'Secrets tab is active');
