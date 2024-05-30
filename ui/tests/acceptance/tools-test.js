@@ -21,14 +21,9 @@ import authPage from 'vault/tests/pages/auth';
 import { capitalize } from '@ember/string';
 import codemirror from 'vault/tests/helpers/codemirror';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { GENERAL } from '../helpers/general-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { TOOLS_SELECTORS as TS } from 'vault/tests/helpers/tools-selectors';
 
-const SELECTORS = {
-  submit: '[data-test-tools-submit]',
-  toolsInput: (attr) => `[data-test-tools-input="${attr}"]`,
-  tab: (item) => `[data-test-tab="${item}"]`,
-  button: (action) => `[data-test-button="${action}"]`,
-};
 module('Acceptance | tools', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
@@ -64,16 +59,16 @@ module('Acceptance | tools', function (hooks) {
     codemirror().setValue(DATA_TO_WRAP);
 
     // wrap
-    await click(SELECTORS.submit);
-    const wrappedToken = await waitUntil(() => find(SELECTORS.toolsInput('wrapping-token')));
+    await click(TS.submit);
+    const wrappedToken = await waitUntil(() => find(TS.toolsInput('wrapping-token')));
     tokenStore.set(wrappedToken.value);
-    assert.dom(SELECTORS.toolsInput('wrapping-token')).hasValue(wrappedToken.value, 'has a wrapping token');
+    assert.dom(TS.toolsInput('wrapping-token')).hasValue(wrappedToken.value, 'has a wrapping token');
 
     //lookup
     await click(GENERAL.navLink('Lookup'));
 
-    await fillIn(SELECTORS.toolsInput('wrapping-token'), tokenStore.get());
-    await click(SELECTORS.submit);
+    await fillIn(TS.toolsInput('wrapping-token'), tokenStore.get());
+    await click(TS.submit);
     await waitUntil(() => findAll('[data-test-component="info-table-row"]').length >= 3);
     assert.dom(GENERAL.infoRowValue('Creation path')).hasText('sys/wrapping/wrap', 'show creation path row');
     assert.dom(GENERAL.infoRowValue('Creation time')).exists();
@@ -82,9 +77,9 @@ module('Acceptance | tools', function (hooks) {
     //rewrap
     await click(GENERAL.navLink('Rewrap'));
 
-    await fillIn(SELECTORS.toolsInput('wrapping-token'), tokenStore.get());
-    await click(SELECTORS.submit);
-    const rewrappedToken = await waitUntil(() => find(SELECTORS.toolsInput('rewrapped-token')));
+    await fillIn(TS.toolsInput('wrapping-token'), tokenStore.get());
+    await click(TS.submit);
+    const rewrappedToken = await waitUntil(() => find(TS.toolsInput('rewrapped-token')));
     assert.ok(rewrappedToken.value, 'has a new re-wrapped token');
     assert.notEqual(rewrappedToken.value, tokenStore.get(), 're-wrapped token is not the wrapped token');
     tokenStore.set(rewrappedToken.value);
@@ -93,17 +88,17 @@ module('Acceptance | tools', function (hooks) {
     //unwrap
     await click(GENERAL.navLink('Unwrap'));
 
-    await fillIn(SELECTORS.toolsInput('wrapping-token'), tokenStore.get());
-    await click(SELECTORS.submit);
+    await fillIn(TS.toolsInput('wrapping-token'), tokenStore.get());
+    await click(TS.submit);
     await waitFor('.CodeMirror');
     assert.deepEqual(
       JSON.parse(codemirror().getValue()),
       JSON.parse(DATA_TO_WRAP),
       'unwrapped data equals input data'
     );
-    await waitUntil(() => find(SELECTORS.tab('details')));
-    await click(SELECTORS.tab('details'));
-    await click(SELECTORS.tab('data'));
+    await waitUntil(() => find(TS.tab('details')));
+    await click(TS.tab('details'));
+    await click(TS.tab('data'));
     assert.deepEqual(
       JSON.parse(codemirror().getValue()),
       JSON.parse(DATA_TO_WRAP),
@@ -112,28 +107,28 @@ module('Acceptance | tools', function (hooks) {
     //random
     await click(GENERAL.navLink('Random'));
 
-    assert.dom(SELECTORS.toolsInput('bytes')).hasValue('32', 'defaults to 32 bytes');
-    await click(SELECTORS.submit);
-    const randomBytes = await waitUntil(() => find(SELECTORS.toolsInput('random-bytes')));
+    assert.dom(TS.toolsInput('bytes')).hasValue('32', 'defaults to 32 bytes');
+    await click(TS.submit);
+    const randomBytes = await waitUntil(() => find(TS.toolsInput('random-bytes')));
     assert.ok(randomBytes.value, 'shows the returned value of random bytes');
 
     //hash
     await click(GENERAL.navLink('Hash'));
 
-    await fillIn(SELECTORS.toolsInput('hash-input'), 'foo');
+    await fillIn(TS.toolsInput('hash-input'), 'foo');
     await click('[data-test-transit-b64-toggle="input"]');
 
-    await click(SELECTORS.submit);
-    let sumInput = await waitUntil(() => find(SELECTORS.toolsInput('sum')));
+    await click(TS.submit);
+    let sumInput = await waitUntil(() => find(TS.toolsInput('sum')));
     assert
       .dom(sumInput)
       .hasValue('LCa0a2j/xo/5m0U8HTBBNBNCLXBkg7+g+YpeiGJm564=', 'hashes the data, encodes input');
-    await click(SELECTORS.button('Back'));
+    await click(TS.button('Back'));
 
-    await fillIn(SELECTORS.toolsInput('hash-input'), 'e2RhdGE6ImZvbyJ9');
+    await fillIn(TS.toolsInput('hash-input'), 'e2RhdGE6ImZvbyJ9');
 
-    await click(SELECTORS.submit);
-    sumInput = await waitUntil(() => find(SELECTORS.toolsInput('sum')));
+    await click(TS.submit);
+    sumInput = await waitUntil(() => find(TS.toolsInput('sum')));
     assert
       .dom(sumInput)
       .hasValue('JmSi2Hhbgu2WYOrcOyTqqMdym7KT3sohCwAwaMonVrc=', 'hashes the data, passes b64 input through');
@@ -167,8 +162,8 @@ module('Acceptance | tools', function (hooks) {
     //unwrap
     await click(GENERAL.navLink('Unwrap'));
 
-    await fillIn(SELECTORS.toolsInput('wrapping-token'), 'sometoken');
-    await click(SELECTORS.submit);
+    await fillIn(TS.toolsInput('wrapping-token'), 'sometoken');
+    await click(TS.submit);
 
     await waitFor('.CodeMirror');
     assert.deepEqual(

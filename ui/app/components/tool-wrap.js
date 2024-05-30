@@ -12,7 +12,6 @@ import { tracked } from '@glimmer/tracking';
  * ToolWrap components are components that sys/wrapping/wrap functionality.  Most of the functionality is passed through as actions from the tool-actions-form and then called back with properties.
  *
  * @example
- * ```js
  * <ToolWrap
  *  @onClear={{action "onClear"}}
  *  @token={{token}}
@@ -21,14 +20,14 @@ import { tracked } from '@glimmer/tracking';
  *  @updateTtl={{action "updateTtl"}}
  *  @buttonDisabled={{buttonDisabled}}
  *  @errors={{errors}}/>
- * ```
- * @param onClear {Function} - parent action that is passed through. Must be passed as {{action "onClear"}}
- * @param token=null {String} - property passed from parent to child and then passed back up to parent
- * @param selectedAction="wrap" - passed in from parent.  This is the wrap action, others include hash, etc.
- * @param codemirrorUpdated {Function} - parent action that is passed through. Must be passed as {{action "codemirrorUpdated"}}.
- * @param updateTtl {Function} - parent action that is passed through. Must be passed as {{action "updateTtl"}}
- * @param buttonDisabled=false {Boolean} - false default and if there is an error on codemirror it turns to true.
- * @param error=null {Object} - errors passed from parent as default then from child back to parent.
+ *
+ * @param {function} onClear - parent action that is passed through. Must be passed as {{action "onClear"}}
+ * @param {string} token=null - property passed from parent to child and then passed back up to parent
+ * @param {string} selectedAction="wrap" - passed in from parent.  This is the wrap action, others include hash, etc.
+ * @param {function} codemirrorUpdated - parent action that is passed through. Must be passed as {{action "codemirrorUpdated"}}.
+ * @param {function} updateTtl - parent action that is passed through. Must be passed as {{action "updateTtl"}}
+ * @param {boolean} buttonDisabled=false - false default and if there is an error on codemirror it turns to true.
+ * @param {object} error=null - errors passed from parent as default then from child back to parent.
  */
 
 export default class ToolWrap extends Component {
