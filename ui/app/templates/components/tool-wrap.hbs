@@ -34,10 +34,11 @@
         @textToCopy={{@token}}
         @onError={{(fn (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger"))}}
         class="primary"
+        data-test-button="Copy"
       />
     </div>
     <div class="control">
-      <Hds::Button @text="Back" @color="secondary" {{on "click" this.onClear}} />
+      <Hds::Button @text="Back" @color="secondary" {{on "click" this.onClear}} data-test-button="Back" />
     </div>
   </div>
 {{else}}
@@ -65,7 +66,7 @@
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <Hds::Button @text="Wrap data" type="submit" data-test-tools-submit="true" disabled={{@buttonDisabled}} />
+      <Hds::Button @text="Wrap data" type="submit" data-test-tools-submit disabled={{@buttonDisabled}} />
     </div>
   </div>
 {{/if}}
