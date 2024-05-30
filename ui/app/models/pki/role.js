@@ -4,76 +4,20 @@
  */
 
 import Model, { attr } from '@ember-data/model';
+import { service } from '@ember/service';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { withModelValidations } from 'vault/decorators/model-validations';
-import { withFormFields } from 'vault/decorators/model-form-fields';
+import { withExpandedAttributes } from 'vault/decorators/model-expanded-attributes';
 
 const validations = {
   name: [{ type: 'presence', message: 'Name is required.' }],
 };
 
-const fieldGroups = [
-  {
-    default: [
-      'name',
-      'issuerRef',
-      'customTtl',
-      'notBeforeDuration',
-      'maxTtl',
-      'generateLease',
-      'noStore',
-      'addBasicConstraints',
-    ],
-  },
-  {
-    'Domain handling': [
-      'allowedDomains',
-      'allowedDomainsTemplate',
-      'allowBareDomains',
-      'allowSubdomains',
-      'allowGlobDomains',
-      'allowWildcardCertificates',
-      'allowLocalhost', // default: true (returned true by OpenApi)
-      'allowAnyName',
-      'enforceHostnames', // default: true (returned true by OpenApi)
-    ],
-  },
-  {
-    'Key parameters': ['keyType', 'keyBits', 'signatureBits'],
-  },
-  {
-    'Key usage': ['keyUsage', 'extKeyUsage', 'extKeyUsageOids'],
-  },
-  { 'Policy identifiers': ['policyIdentifiers'] },
-  {
-    'Subject Alternative Name (SAN) Options': [
-      'allowIpSans',
-      'allowedUriSans',
-      'allowUriSansTemplate',
-      'allowedOtherSans',
-    ],
-  },
-  {
-    'Additional subject fields': [
-      'allowedUserIds',
-      'allowedSerialNumbers',
-      'requireCn',
-      'useCsrCommonName',
-      'useCsrSans',
-      'ou',
-      'organization',
-      'country',
-      'locality',
-      'province',
-      'streetAddress',
-      'postalCode',
-    ],
-  },
-];
-
-@withFormFields(null, fieldGroups)
+@withExpandedAttributes()
 @withModelValidations(validations)
 export default class PkiRoleModel extends Model {
+  @service version; // noStoreMetadata is enterprise-only, so we need this available
+
   get useOpenAPI() {
     // must be a getter so it can be accessed in path-help.js
     return true;
@@ -83,6 +27,73 @@ export default class PkiRoleModel extends Model {
   }
 
   @attr('string', { readOnly: true }) backend;
+
+  get formFieldGroups() {
+    let defaultArray = [
+      'name',
+      'issuerRef',
+      'customTtl',
+      'notBeforeDuration',
+      'maxTtl',
+      'generateLease',
+      'noStore',
+      'noStoreMetadata',
+      'addBasicConstraints',
+    ];
+    if (this.version.isCommunity) {
+      const entFields = ['noStoreMetadata'];
+      defaultArray = defaultArray.filter((field) => !entFields.includes(field));
+    }
+    return this._expandGroups([
+      {
+        default: defaultArray,
+      },
+      {
+        'Domain handling': [
+          'allowedDomains',
+          'allowedDomainsTemplate',
+          'allowBareDomains',
+          'allowSubdomains',
+          'allowGlobDomains',
+          'allowWildcardCertificates',
+          'allowLocalhost', // default: true (returned true by OpenApi)
+          'allowAnyName',
+          'enforceHostnames', // default: true (returned true by OpenApi)
+        ],
+      },
+      {
+        'Key parameters': ['keyType', 'keyBits', 'signatureBits'],
+      },
+      {
+        'Key usage': ['keyUsage', 'extKeyUsage', 'extKeyUsageOids'],
+      },
+      { 'Policy identifiers': ['policyIdentifiers'] },
+      {
+        'Subject Alternative Name (SAN) Options': [
+          'allowIpSans',
+          'allowedUriSans',
+          'allowUriSansTemplate',
+          'allowedOtherSans',
+        ],
+      },
+      {
+        'Additional subject fields': [
+          'allowedUserIds',
+          'allowedSerialNumbers',
+          'requireCn',
+          'useCsrCommonName',
+          'useCsrSans',
+          'ou',
+          'organization',
+          'country',
+          'locality',
+          'province',
+          'streetAddress',
+          'postalCode',
+        ],
+      },
+    ]);
+  }
 
   /* Overriding OpenApi default options */
   @attr('string', {
@@ -145,6 +156,14 @@ export default class PkiRoleModel extends Model {
     docLink: '/vault/api-docs/secret/pki#create-update-role',
   })
   noStore;
+
+  @attr('boolean', {
+    label: 'Do not store certificate metadata in storage backend',
+    detailsLabel: 'Store metadata in storage backend', // template reverses value
+    subText:
+      'We don’t recommend storing metadata, since this information creates overhead in storage, and requires clean up.',
+  })
+  noStoreMetadata;
 
   @attr('boolean', {
     label: 'Basic constraints valid for non-CA',

@@ -72,7 +72,7 @@
             @value={{val}}
             @alwaysRender={{true}}
           />
-        {{else if (eq attr.name "noStore")}}
+        {{else if (includes attr.name (array "noStore" "noStoreMetadata"))}}
           <InfoTableRow
             @label={{capitalize (or attr.options.detailsLabel attr.options.label (humanize (dasherize attr.name)))}}
             @value={{not val}}
