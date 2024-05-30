@@ -47,8 +47,7 @@ module('Integration | Component | tools/tool-wrap', function (hooks) {
   });
 
   test('it renders token view', async function (assert) {
-    this.token =
-      'hvs.CAESINovdwZPz7-3gL60bE_MLzaPF6_xjhfel7SmsVeZwihaGiIKHGh2cy5XZWtEeEt5WmRwS1VYSTNDb1BBVUNsVFAQ3JIK';
+    this.token = 'blah.jhfel7SmsVeZwihaGiIKHGh2cy5XZWtEeEt5WmRwS1VYSTNDb1BBVUNsVFAQ3JIK';
     await this.renderComponent();
 
     assert.dom('h1').hasText('Wrap Data');
