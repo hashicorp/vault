@@ -1,3 +1,18 @@
+## 1.14.13 Enterprise
+### May 30, 2024
+CHANGES:
+* auth/jwt: Update plugin to v0.16.1 [[GH-27122](https://github.com/hashicorp/vault/pull/27122)]
+* core: Bump Go version to 1.22.2.
+
+IMPROVEMENTS:
+* website/docs: Add note about eventual consietency with the MongoDB Atlas database secrets engine [[GH-24152](https://github.com/hashicorp/vault/pull/24152)]
+
+BUG FIXES:
+* activity (enterprise): fix read-only storage error on upgrades
+* pki: Fix error in cross-signing using ed25519 keys [[GH-27093](https://github.com/hashicorp/vault/pull/27093)]
+* replication (enterprise): fix "given mount path is not in the same namespace as the request" error that can occur when enabling replication for the first time on a secondary cluster
+* secrets/transit: Use 'hash_algorithm' parameter if present in HMAC verify requests. Otherwise fall back to deprecated 'algorithm' parameter. [[GH-27211](https://github.com/hashicorp/vault/pull/27211)]
+
 ## 1.14.12 Enterprise
 ### April 24, 2024
 
