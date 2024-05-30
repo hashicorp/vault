@@ -53,6 +53,7 @@ const API_PATHS = {
     destinations: 'sys/sync/destinations',
     associations: 'sys/sync/associations',
     config: 'sys/sync/config',
+    github: 'sys/sync/github-apps',
   },
 };
 
@@ -192,11 +193,7 @@ export default class PermissionsService extends Service {
         return this.hasPermission(API_PATHS[navItem][param], capability);
       });
     }
-    return Object.values(API_PATHS[navItem]).some((path) => {
-      const test = this.hasPermission(path);
-
-      return test;
-    });
+    return Object.values(API_PATHS[navItem]).some((path) => this.hasPermission(path));
   }
 
   navPathParams(navItem) {
@@ -222,6 +219,7 @@ export default class PermissionsService extends Service {
       return true;
     }
     const path = this.pathNameWithNamespace(pathName);
+
     return capabilities.every(
       (capability) =>
         this.hasMatchingExactPath(path, capability) || this.hasMatchingGlobPath(path, capability)
@@ -245,7 +243,6 @@ export default class PermissionsService extends Service {
 
   hasMatchingGlobPath(pathName, capability) {
     const globPaths = this.globPaths;
-
     if (globPaths) {
       const matchingPath = Object.keys(globPaths).find((k) => {
         return pathName.includes(k) || pathName.includes(k.replace(/\/$/, ''));

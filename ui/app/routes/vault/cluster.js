@@ -55,7 +55,6 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
   },
 
   async beforeModel() {
-    await this.flagsService.fetchActivatedFlags();
     const params = this.paramsFor(this.routeName);
     let namespace = params.namespaceQueryParam;
     const currentTokenName = this.auth.currentTokenName;
