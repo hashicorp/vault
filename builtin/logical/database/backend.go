@@ -1,12 +1,14 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package database
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/rpc"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -15,6 +17,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/builtin/logical/database/schedule"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/syncmap"
 	"github.com/hashicorp/vault/internalshared/configutil"
@@ -39,9 +42,10 @@ type dbPluginInstance struct {
 	sync.RWMutex
 	database databaseVersionWrapper
 
-	id     string
-	name   string
-	closed bool
+	id                   string
+	name                 string
+	runningPluginVersion string
+	closed               bool
 }
 
 func (dbi *dbPluginInstance) ID() string {
@@ -106,6 +110,7 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 				pathListPluginConnection(&b),
 				pathConfigurePluginConnection(&b),
 				pathResetConnection(&b),
+				pathReloadPlugin(&b),
 			},
 			pathListRoles(&b),
 			pathRoles(&b),
@@ -127,6 +132,8 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 	b.connections = syncmap.NewSyncMap[string, *dbPluginInstance]()
 	b.queueCtx, b.cancelQueueCtx = context.WithCancel(context.Background())
 	b.roleLocks = locksutil.CreateLocks()
+	b.schedule = &schedule.DefaultSchedule{}
+
 	return &b
 }
 
@@ -154,8 +161,9 @@ func (b *databaseBackend) collectPluginInstanceGaugeValues(context.Context) ([]m
 
 type databaseBackend struct {
 	// connections holds configured database connections by config name
-	connections *syncmap.SyncMap[string, *dbPluginInstance]
-	logger      log.Logger
+	createConnectionLock sync.Mutex
+	connections          *syncmap.SyncMap[string, *dbPluginInstance]
+	logger               log.Logger
 
 	*framework.Backend
 	// credRotationQueue is an in-memory priority queue used to track Static Roles
@@ -176,6 +184,8 @@ type databaseBackend struct {
 	// the running gauge collection process
 	gaugeCollectionProcess     *metricsutil.GaugeCollectionProcess
 	gaugeCollectionProcessStop sync.Once
+
+	schedule schedule.Scheduler
 }
 
 func (b *databaseBackend) DatabaseConfig(ctx context.Context, s logical.Storage, name string) (*DatabaseConfig, error) {
@@ -282,7 +292,19 @@ func (b *databaseBackend) GetConnection(ctx context.Context, s logical.Storage, 
 }
 
 func (b *databaseBackend) GetConnectionWithConfig(ctx context.Context, name string, config *DatabaseConfig) (*dbPluginInstance, error) {
+	// fast path, reuse the existing connection
 	dbi := b.connections.Get(name)
+	if dbi != nil {
+		return dbi, nil
+	}
+
+	// slow path, create a new connection
+	// if we don't lock the rest of the operation, there is a race condition for multiple callers of this function
+	b.createConnectionLock.Lock()
+	defer b.createConnectionLock.Unlock()
+
+	// check again in case we lost the race
+	dbi = b.connections.Get(name)
 	if dbi != nil {
 		return dbi, nil
 	}
@@ -292,7 +314,17 @@ func (b *databaseBackend) GetConnectionWithConfig(ctx context.Context, name stri
 		return nil, err
 	}
 
-	dbw, err := newDatabaseWrapper(ctx, config.PluginName, config.PluginVersion, b.System(), b.logger)
+	// Override the configured version if there is a pinned version.
+	pinnedVersion, err := b.getPinnedVersion(ctx, config.PluginName)
+	if err != nil {
+		return nil, err
+	}
+	pluginVersion := config.PluginVersion
+	if pinnedVersion != "" {
+		pluginVersion = pinnedVersion
+	}
+
+	dbw, err := newDatabaseWrapper(ctx, config.PluginName, pluginVersion, b.System(), b.logger)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create database instance: %w", err)
 	}
@@ -308,18 +340,22 @@ func (b *databaseBackend) GetConnectionWithConfig(ctx context.Context, name stri
 	}
 
 	dbi = &dbPluginInstance{
-		database: dbw,
-		id:       id,
-		name:     name,
+		database:             dbw,
+		id:                   id,
+		name:                 name,
+		runningPluginVersion: pluginVersion,
 	}
-	oldConn := b.connections.Put(name, dbi)
-	if oldConn != nil {
-		err := oldConn.Close()
+	conn, ok := b.connections.PutIfEmpty(name, dbi)
+	if !ok {
+		// this is a bug
+		b.Logger().Warn("BUG: there was a race condition adding to the database connection map")
+		// There was already an existing connection, so we will use that and close our new one to avoid a race condition.
+		err := dbi.Close()
 		if err != nil {
-			b.Logger().Warn("Error closing database connection", "error", err)
+			b.Logger().Warn("Error closing new database connection", "error", err)
 		}
 	}
-	return dbi, nil
+	return conn, nil
 }
 
 // ClearConnection closes the database connection and
@@ -378,6 +414,28 @@ func (b *databaseBackend) clean(_ context.Context) {
 		}
 		b.gaugeCollectionProcess = nil
 	})
+}
+
+func (b *databaseBackend) dbEvent(ctx context.Context,
+	operation string,
+	path string,
+	name string,
+	modified bool,
+	additionalMetadataPairs ...string,
+) {
+	metadata := []string{
+		logical.EventMetadataModified, strconv.FormatBool(modified),
+		logical.EventMetadataOperation, operation,
+		"path", path,
+	}
+	if name != "" {
+		metadata = append(metadata, "name", name)
+	}
+	metadata = append(metadata, additionalMetadataPairs...)
+	err := logical.SendEvent(ctx, b, fmt.Sprintf("database/%s", operation), metadata...)
+	if err != nil && !errors.Is(err, framework.ErrNoEvents) {
+		b.Logger().Error("Error sending event", "error", err)
+	}
 }
 
 const backendHelp = `

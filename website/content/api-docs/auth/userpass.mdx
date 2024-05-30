@@ -27,8 +27,8 @@ Create a new user or update an existing user. This path honors the distinction b
 ### Parameters
 
 - `username` `(string: <required>)` – The username for the user. Accepted characters: alphanumeric plus "_", "-", "." (underscore, hyphen and period); username cannot begin with a hyphen, nor can it begin or end with a period.
-- `password` `(string: <required>)` - The password for the user. Only required
-  when creating the user.
+- `password` `(string: <required if password_hash is not given>)` - Password for the current user. Only required when creating the user.  Mutually exclusive with `password_hash`.
+- `password_hash` `(string: <required if password is not given>)` - Pre-hashed password for the current user in bcrypt format. Mutually exclusive with `password`.
 
 @include 'tokenfields.mdx'
 

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package cockroachdb
 
@@ -14,13 +14,11 @@ import (
 	"unicode"
 
 	metrics "github.com/armon/go-metrics"
-	"github.com/cockroachdb/cockroach-go/crdb"
+	"github.com/cockroachdb/cockroach-go/v2/crdb"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
-
-	// CockroachDB uses the Postgres SQL driver
 	_ "github.com/jackc/pgx/v4/stdlib"
 )
 

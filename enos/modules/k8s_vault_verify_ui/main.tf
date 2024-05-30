@@ -1,12 +1,12 @@
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 
 terraform {
   required_providers {
     enos = {
-      version = ">= 0.1.17"
-      source  = "app.terraform.io/hashicorp-qti/enos"
+      version = "> 0.4.0"
+      source  = "registry.terraform.io/hashicorp-forge/enos"
     }
   }
 }

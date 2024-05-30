@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package dbplugin_test
 
@@ -13,6 +13,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -106,14 +107,18 @@ func (m *mockPlugin) SetCredentials(ctx context.Context, statements dbplugin.Sta
 }
 
 func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
-	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+	t.Helper()
+	pluginDir := corehelpers.MakeTestPluginDir(t)
+	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
+		PluginDirectory: pluginDir,
+	}, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
 	cluster.Start()
 	cores := cluster.Cores
 
 	sys := vault.TestDynamicSystemView(cores[0].Core, nil)
-	vault.TestAddTestPlugin(t, cores[0].Core, "test-plugin", consts.PluginTypeDatabase, "", "TestPlugin_GRPC_Main", []string{}, "")
+	vault.TestAddTestPlugin(t, cores[0].Core, "test-plugin", consts.PluginTypeDatabase, "", "TestPlugin_GRPC_Main", []string{})
 
 	return cluster, sys
 }

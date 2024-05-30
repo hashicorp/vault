@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 //go:build !enterprise
 
@@ -14,7 +14,7 @@ import (
 
 type entConfig struct{}
 
-func (ec *entConfig) parseConfig(list *ast.ObjectList) error {
+func (ec *entConfig) parseConfig(list *ast.ObjectList, source string) error {
 	return nil
 }
 

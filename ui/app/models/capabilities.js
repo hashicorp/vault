@@ -1,11 +1,11 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 // This model represents the capabilities on a given `path`
 // `path` is also the primaryId
-// https://www.vaultproject.io/docs/concepts/policies.html#capabilities
+// https://developer.hashicorp.com/vault/docs/concepts/policies#capabilities
 
 import Model, { attr } from '@ember-data/model';
 

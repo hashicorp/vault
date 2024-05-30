@@ -1,10 +1,10 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 
 export default class PkiIssuerIndexRoute extends Route {
   @service store;
@@ -21,9 +21,9 @@ export default class PkiIssuerIndexRoute extends Route {
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
     controller.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: this.secretMountPath.currentPath, route: 'overview' },
-      { label: 'issuers', route: 'issuers.index' },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
+      { label: this.secretMountPath.currentPath, route: 'overview', model: this.secretMountPath.currentPath },
+      { label: 'issuers', route: 'issuers.index', model: this.secretMountPath.currentPath },
     ];
   }
 }

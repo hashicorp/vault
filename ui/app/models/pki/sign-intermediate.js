@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { attr } from '@ember-data/model';
@@ -19,6 +19,7 @@ const validations = {
   'excludeCnFromSans',
   'customTtl',
   'notBeforeDuration',
+  'enforceLeafNotAfterBehavior',
   'format',
   'permittedDnsDomains',
   'maxPathLength',
@@ -55,6 +56,11 @@ export default class PkiSignIntermediateModel extends PkiCertificateBaseModel {
     defaultValue: '30s',
   })
   notBeforeDuration;
+
+  @attr('boolean', {
+    subText: "Do not truncate the NotAfter field, use the issuer's configured leaf_not_after_behavior",
+  })
+  enforceLeafNotAfterBehavior;
 
   @attr({
     label: 'Permitted DNS domains',

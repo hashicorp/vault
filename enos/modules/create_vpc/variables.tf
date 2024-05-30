@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 variable "name" {
   type        = string
   default     = "vault-ci"
@@ -20,10 +23,4 @@ variable "common_tags" {
   description = "Tags to set for all resources"
   type        = map(string)
   default     = { "Project" : "vault-ci" }
-}
-
-variable "create_kms_key" {
-  description = "Whether or not to create an key management service key"
-  type        = bool
-  default     = true
 }

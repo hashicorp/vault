@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div class="action-block is-rounded" data-test-recover-replication>
   <div class="action-block-info">
     <h3 class="title is-5 is-marginless">
@@ -9,40 +14,30 @@
   </div>
 
   <div class="action-block-action">
-    <button
-      type="button"
-      class="button is-secondary"
-      onclick={{action (mut this.isModalActive) true}}
-      data-test-replication-action-trigger
-    >
-      Recover
-    </button>
+    <Hds::Button
+      @text="Recover"
+      @color="secondary"
+      {{on "click" (action (mut this.isModalActive) true)}}
+      data-test-replication-action-trigger="recover"
+    />
   </div>
 </div>
 
-<Modal
-  @title="Begin recovery?"
-  @onClose={{action (mut this.isModalActive) false}}
-  @isActive={{this.isModalActive}}
-  @type="warning"
-  @showCloseButton={{true}}
->
-  <section class="modal-card-body">
-    <p>
-      If replication is in an adverse state, we can begin recovery. This will attempt to recover to continue syncing.
-    </p>
-  </section>
-  <footer class="modal-card-foot modal-card-foot-outlined">
-    <button type="button" class="button is-primary" onclick={{action "onSubmit" "recover"}} data-test-recover-confirm-button>
-      Recover
-    </button>
-    <button
-      type="button"
-      class="button is-secondary"
-      onclick={{action (mut this.isModalActive) false}}
-      data-test-recover-cancel-button
-    >
-      Cancel
-    </button>
-  </footer>
-</Modal>
+{{#if this.isModalActive}}
+  <Hds::Modal id="replication-recover-modal" @color="warning" @onClose={{fn (mut this.isModalActive) false}} as |M|>
+    <M.Header @icon="alert-triangle">
+      Begin recovery?
+    </M.Header>
+    <M.Body>
+      <p>
+        If replication is in an adverse state, we can begin recovery. This will attempt to recover to continue syncing.
+      </p>
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::ButtonSet>
+        <Hds::Button @text="Recover" {{on "click" (fn this.onSubmit "recover")}} data-test-confirm-button />
+        <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} data-test-recover-cancel-button />
+      </Hds::ButtonSet>
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}

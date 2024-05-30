@@ -1,11 +1,11 @@
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 
 terraform {
   required_providers {
     enos = {
-      source = "app.terraform.io/hashicorp-qti/enos"
+      source = "registry.terraform.io/hashicorp-forge/enos"
     }
   }
 }
@@ -22,9 +22,11 @@ locals {
 resource "enos_remote_exec" "smoke-verify-ui" {
   for_each = local.instances
 
-  content = templatefile("${path.module}/templates/smoke-verify-ui.sh", {
-    vault_install_dir = var.vault_install_dir,
-  })
+  environment = {
+    VAULT_ADDR = var.vault_addr,
+  }
+
+  scripts = [abspath("${path.module}/scripts/smoke-verify-ui.sh")]
 
   transport = {
     ssh = {

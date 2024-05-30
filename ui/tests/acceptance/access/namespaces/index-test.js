@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { currentRouteName } from '@ember/test-helpers';
@@ -9,7 +9,6 @@ import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import page from 'vault/tests/pages/access/namespaces/index';
 import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
 
 module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
   setupApplicationTest(hooks);
@@ -17,10 +16,6 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
 
   hooks.beforeEach(function () {
     return authPage.login();
-  });
-
-  hooks.afterEach(function () {
-    return logout.visit();
   });
 
   test('it navigates to namespaces page', async function (assert) {
@@ -40,6 +35,6 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
     // Default page size is 15
     assert.strictEqual(store.peekAll('namespace').length, 15, 'Store has 15 namespaces records');
     assert.dom('.list-item-row').exists({ count: 15 });
-    assert.dom('[data-test-list-view-pagination]').exists();
+    assert.dom('.hds-pagination').exists();
   });
 });

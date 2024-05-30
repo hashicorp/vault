@@ -1,13 +1,14 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import ApplicationAdapter from './application';
 
 export default ApplicationAdapter.extend({
   query() {
-    return this.ajax(this.urlForQuery(), 'GET');
+    const namespace = this.namespaceService.userRootNamespace ?? this.namespaceService.path;
+    return this.ajax(this.urlForQuery(), 'GET', { namespace });
   },
 
   urlForQuery() {

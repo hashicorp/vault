@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Base from '../../replication-base';
@@ -12,8 +12,8 @@ export default Base.extend({
 
   redirect(model) {
     const replicationMode = this.replicationMode;
-    if (!model.get(`${replicationMode}.isPrimary`) || !model.get('canRevokeSecondary')) {
-      return this.transitionTo('index');
+    if (!model[replicationMode].isPrimary || !model.canRevokeSecondary) {
+      return this.router.transitionTo('vault.cluster.replication.index');
     }
   },
 

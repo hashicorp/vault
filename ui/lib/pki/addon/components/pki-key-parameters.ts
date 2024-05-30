@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
@@ -56,7 +56,9 @@ export default class PkiKeyParameters extends Component<Args> {
 
     if (name === 'keyType' && Object.keys(KEY_BITS_OPTIONS)?.includes(selection)) {
       const bitOptions = KEY_BITS_OPTIONS[selection as keyof TypeOptions];
-      this.args.model.keyBits = bitOptions?.firstObject;
+      if (bitOptions) {
+        this.args.model.keyBits = bitOptions[0];
+      }
     }
   }
 

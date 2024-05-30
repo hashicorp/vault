@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { currentRouteName, settled } from '@ember/test-helpers';
@@ -26,7 +26,7 @@ module('Acceptance | alicloud/enable', function (hooks) {
     await settled();
     await mountSecrets.selectType('alicloud');
     await settled();
-    await mountSecrets.next().path(enginePath).submit();
+    await mountSecrets.path(enginePath).submit();
     await settled();
 
     assert.strictEqual(

@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix broken help link in console for the web command.
+```

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package oci
 
@@ -165,7 +165,6 @@ func (a *ociMethod) Authenticate(context.Context, *api.Client) (string, http.Hea
 	signer := common.DefaultRequestSigner(a.configurationProvider)
 
 	err = signer.Sign(request)
-
 	if err != nil {
 		return "", nil, nil, fmt.Errorf("error signing authentication request: %w", err)
 	}

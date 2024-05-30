@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package database
 
@@ -75,8 +75,17 @@ func pathRotateRootCredentials(b *databaseBackend) []*framework.Path {
 }
 
 func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (resp *logical.Response, err error) {
 		name := data.Get("name").(string)
+		modified := false
+		defer func() {
+			if err == nil {
+				b.dbEvent(ctx, "rotate-root", req.Path, name, modified)
+			} else {
+				b.dbEvent(ctx, "rotate-root-fail", req.Path, name, modified)
+			}
+		}()
+
 		if name == "" {
 			return logical.ErrorResponse(respErrEmptyName), nil
 		}
@@ -159,6 +168,7 @@ func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationF
 		if newConfigDetails != nil {
 			config.ConnectionDetails = newConfigDetails
 		}
+		modified = true
 
 		// 1.12.0 and 1.12.1 stored builtin plugins in storage, but 1.12.2 reverted
 		// that, so clean up any pre-existing stored builtin versions on write.
@@ -179,8 +189,16 @@ func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationF
 }
 
 func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (_ *logical.Response, err error) {
 		name := data.Get("name").(string)
+		modified := false
+		defer func() {
+			if err == nil {
+				b.dbEvent(ctx, "rotate", req.Path, name, modified)
+			} else {
+				b.dbEvent(ctx, "rotate-fail", req.Path, name, modified)
+			}
+		}()
 		if name == "" {
 			return logical.ErrorResponse("empty role name attribute given"), nil
 		}
@@ -224,9 +242,10 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 				item.Value = resp.WALID
 			}
 		} else {
-			item.Priority = resp.RotationTime.Add(role.StaticAccount.RotationPeriod).Unix()
+			item.Priority = role.StaticAccount.NextRotationTimeFromInput(resp.RotationTime).Unix()
 			// Clear any stored WAL ID as we must have successfully deleted our WAL to get here.
 			item.Value = ""
+			modified = true
 		}
 
 		// Add their rotation to the queue

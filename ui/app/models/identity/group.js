@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { belongsTo, attr } from '@ember-data/model';
@@ -37,6 +37,7 @@ export default IdentityModel.extend({
   }),
   metadata: attr('object', {
     editType: 'kv',
+    isSectionHeader: true,
   }),
   policies: attr({
     editType: 'yield',
@@ -77,19 +78,11 @@ export default IdentityModel.extend({
   ),
   policyPath: lazyCapabilities(apiPath`sys/policies`),
   canCreatePolicies: alias('policyPath.canCreate'),
-  alias: belongsTo('identity/group-alias', { async: false, readOnly: true }),
+  alias: belongsTo('identity/group-alias', { async: false, readOnly: true, inverse: 'group' }),
   updatePath: identityCapabilities(),
   canDelete: alias('updatePath.canDelete'),
   canEdit: alias('updatePath.canUpdate'),
 
   aliasPath: lazyCapabilities(apiPath`identity/group-alias`),
-  canAddAlias: computed('aliasPath.canCreate', 'type', 'alias', function () {
-    const type = this.type;
-    const alias = this.alias;
-    // internal groups can't have aliases, and external groups can only have one
-    if (type === 'internal' || alias) {
-      return false;
-    }
-    return this.aliasPath.canCreate;
-  }),
+  canAddAlias: alias('aliasPath.canCreate'),
 });

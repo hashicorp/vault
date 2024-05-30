@@ -1,28 +1,29 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 // This file defines the style for .tag
 
 .tag:not(body) {
   align-items: center;
-  background-color: $ui-gray-100;
+  // same as HDS::Badge @color=neutral
+  background-color: var(--token-color-surface-strong);
+  color: var(--token-color-foreground-primary);
   border-radius: $radius;
-  color: $grey;
   display: inline-flex;
   font-size: $size-8;
   font-weight: $font-weight-normal;
   height: auto;
   justify-content: center;
   line-height: 1.5;
-  margin-right: $size-10;
-  padding: 0 $size-10;
+  margin-right: $spacing-8;
+  padding: 0 $spacing-8;
   white-space: nowrap;
   vertical-align: middle;
 
   code {
-    color: $grey;
+    color: var(--token-color-foreground-primary);
   }
 
   .icon {
@@ -34,7 +35,7 @@
   }
 
   &.has-extra-padding {
-    padding: $size-11 $spacing-xxs;
+    padding: $spacing-4 $spacing-4;
   }
 }
 

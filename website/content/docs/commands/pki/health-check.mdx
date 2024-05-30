@@ -172,6 +172,7 @@ Use `vault write` to enable CRL auto-rebuild:
 
 ```shell-session
 $ vault write <mount>/config/crl auto_rebuild=true
+```
 
 ### Hardware-Backed root certificate
 
@@ -281,11 +282,13 @@ other (potentially dangerous) quirks.
 
 Checks each role to see whether `no_store` is set to `false`.
 
-<Important>
+<Warning>
+
 Vault will provide warnings and performance will suffer if you have a large
 number of certificates without temporal CRL auto-rebuilding and set `no_store`
 to `true`.
-</Important>
+
+</Warning>
 
 
 **Remediation steps**:
@@ -315,7 +318,7 @@ This health check checks whether audit information is accessible to log consumer
 Use `vault secrets tune` to set the desired audit parameters:
 
 ```shell-session
-vault secrets tune \
+$ vault secrets tune \
   -audit-non-hmac-response-keys=certificate \
   -audit-non-hmac-response-keys=issuing_ca \
   -audit-non-hmac-response-keys=serial_number \
@@ -380,22 +383,25 @@ This health check verifies if the `If-Modified-Since` header has been added to `
 
 1. Update `allowed_response_headers` and `passthrough_request_headers` for all
    policies with `vault secrets tune`:
-    ```shell-session
-    vault secrets tune \
+
+  ```shell-session
+  $ vault secrets tune \
       -passthrough-request-headers="If-Modified-Since" \
       -allowed-response-headers="Last-Modified" \
       <mount>
-    ```
+  ```
+
 1. Update ACME-specific headers with `vault secrets tune` (if you are using ACME):
-    ```shell-session
-    vault secrets tune \
+
+  ```shell-session
+  $ vault secrets tune \
       -passthrough-request-headers="If-Modified-Since" \
       -allowed-response-headers="Last-Modified" \
       -allowed-response-headers="Replay-Nonce" \
       -allowed-response-headers="Link" \
       -allowed-response-headers="Location" \
       <mount>
-    ```
+  ```
 
 ### Auto-Tidy disabled
 
@@ -419,14 +425,14 @@ This health check verifies that auto-tidy is enabled, with sane defaults for int
 Use `vault write` to enable auto-tidy with the recommended defaults:
 
 ```shell-session
-vault write <mount>/config/auto-tidy \
-  enabled=true \
-  tidy_cert_store=true \
-  tidy_revoked_certs=true \
-  tidy_acme=true \
-  tidy_revocation_queue=true \
-  tidy_cross_cluster_revoked_certs=true \
-  tidy_revoked_cert_issuer_associations=true
+$ vault write <mount>/config/auto-tidy \
+    enabled=true \
+    tidy_cert_store=true \
+    tidy_revoked_certs=true \
+    tidy_acme=true \
+    tidy_revocation_queue=true \
+    tidy_cross_cluster_revoked_certs=true \
+    tidy_revoked_cert_issuer_associations=true
 ```
 
 ### Tidy hasn't run
@@ -447,15 +453,17 @@ This health check verifies that tidy has run within the last run window. This ca
 **Remediation steps**:
 
 1. Schedule a manual run of tidy with `vault write`:
-    ```shell-session
-    vault write <mount>/tidy \
+
+  ```shell-session
+  $ vault write <mount>/tidy \
       tidy_cert_store=true \
       tidy_revoked_certs=true \
       tidy_acme=true \
       tidy_revocation_queue=true \
       tidy_cross_cluster_revoked_certs=true \
       tidy_revoked_cert_issuer_associations=true
-    ```
+  ```
+
 1. Review the tidy status endpoint, `vault read <mount>/tidy-status` for
    additional information.
 1. Re-configure auto-tidy based on the log information and results of your
@@ -482,18 +490,18 @@ This health check verifies that this cluster has a reasonable number of certific
 
 1. Verify that tidy ran recently with `vault read`:
     ```shell-session
-    vault read <mount>/tidy-status
+    $ vault read <mount>/tidy-status
     ````
 1. Schedule a manual run of tidy with `vault write`:
-	    ```shell-session
-	    vault write <mount>/tidy \
-	      tidy_cert_store=true \
-	      tidy_revoked_certs=true \
-	      tidy_acme=true \
-	      tidy_revocation_queue=true \
-	      tidy_cross_cluster_revoked_certs=true \
-	      tidy_revoked_cert_issuer_associations=true
-	    ```
+    ```shell-session
+    $ vault write <mount>/tidy \
+      tidy_cert_store=true \
+      tidy_revoked_certs=true \
+      tidy_acme=true \
+      tidy_revocation_queue=true \
+      tidy_cross_cluster_revoked_certs=true \
+      tidy_revoked_cert_issuer_associations=true
+    ```
 1. Enable `auto-tidy`.
 1. Make sure that you are not renewing certificates too soon. Certificate
    lifetimes should reflect the expected usage of the certificate. If the TTL is
@@ -535,7 +543,7 @@ This health check verifies if the `"Replay-Nonce`, `Link`, and `Location` header
 
 Use `vault secrets tune` to add the missing headers to `allowed_response_headers`:
 ```shell-session
-vault secrets tune \
+$ vault secrets tune \
   -allowed-response-headers="Last-Modified" \
   -allowed-response-headers="Replay-Nonce" \
   -allowed-response-headers="Link" \

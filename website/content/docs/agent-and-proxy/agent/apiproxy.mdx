@@ -6,13 +6,23 @@ description: >-
   for Vault's API.
 ---
 
-# Vault agent API proxy
+# Vault Agent API proxy
 
 Vault Agent's API Proxy functionality allows you to use Vault Agent's API as a proxy
 for Vault's API.
 
 ~> Note: This functionality will be deprecated in a future release. Please
 switch to using [Vault Proxy](/vault/docs/agent-and-proxy/proxy) for API proxying purposes, instead.
+
+<Note title="Use Vault Proxy for static secret caching">
+
+  [Static secret caching](/vault/docs/agent-and-proxy/proxy/caching/static-secret-caching)
+  (KVv1 and KVv2) with API proxy minimizes the number of requests forwarded to
+  Vault. Vault Agent does not support static secret caching with API proxy. We
+  recommend using [Vault Proxy](/vault/docs/agent-and-proxy/proxy) for API Proxy
+  related workflows.
+
+</Note>
 
 ## Functionality
 
@@ -29,7 +39,7 @@ request to Vault. See the [caching docs](/vault/docs/agent-and-proxy/agent/cachi
 ## Using Auto-Auth token
 
 Vault Agent allows for easy authentication to Vault in a wide variety of
-environments using [Auto-Auth](/vault/docs/agent-and-proxy/agent/autoauth). By setting the
+environments using [Auto-Auth](/vault/docs/agent-and-proxy/autoauth). By setting the
 `use_auto_auth_token` (see below) configuration, clients will not be required
 to provide a Vault token to the requests made to the Agent. When this
 configuration is set, if the request doesn't already bear a token, then the

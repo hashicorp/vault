@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package syncmap
 
 import "sync"
@@ -57,6 +60,20 @@ func (m *SyncMap[K, V]) Put(k K, v V) V {
 	oldV := m.data[k]
 	m.data[k] = v
 	return oldV
+}
+
+// PutIfEmpty adds the given key-value pair to the map only if there is no value already in it,
+// and returns the new value and true if so.
+// If there is already a value, it returns the existing value and false.
+func (m *SyncMap[K, V]) PutIfEmpty(k K, v V) (V, bool) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+	oldV, ok := m.data[k]
+	if ok {
+		return oldV, false
+	}
+	m.data[k] = v
+	return v, true
 }
 
 // Clear deletes all entries from the map, and returns the previous map.

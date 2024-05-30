@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -12,9 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/logical"
-
 	"github.com/hashicorp/go-kms-wrapping/entropy/v2"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // See comment in command/format.go

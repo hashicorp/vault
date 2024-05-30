@@ -10,7 +10,17 @@ description: >-
 
 # `gcpckms` seal
 
--> **Note:** The Seal Wrap functionality is enabled by default. For this reason, the KMS service must be available throughout Vault's runtime and not just during the unseal process. Refer to the [Seal Wrap](/vault/docs/enterprise/sealwrap) documenation for more information.
+<Note title="Seal wrapping requires Vault Enterprise">
+
+  All Vault versions support **auto-unseal** for GCP Cloud, but **seal wrapping**
+  requires Vault Enterprise.
+  
+  Vault Enterprise enables seal wrapping by default, which means the KMS service
+  must be available at runtime and not just during the unseal process. Refer to
+  the [Seal wrap](/vault/docs/enterprise/sealwrap) overview for more
+  information.
+
+</Note>
 
 The GCP Cloud KMS seal configures Vault to use GCP Cloud KMS as the seal
 wrapping mechanism. The GCP Cloud KMS seal is activated by one of the following:
@@ -50,7 +60,7 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
 - `project` `(string: <required>)`: The GCP project ID to use. May also be
   specified by the `GOOGLE_PROJECT` environment variable.
 
-- `region` `(string: "us-east-1")`: The GCP region/location where the key ring
+- `region` `(string: <required>)`: The GCP region/location where the key ring
   lives. May also be specified by the `GOOGLE_REGION` environment variable.
 
 - `key_ring` `(string: <required>)`: The GCP CKMS key ring to use. May also be

@@ -6,7 +6,10 @@ description: Tokens are a core auth method in Vault. Concepts and important feat
 
 # Tokens
 
-!> **Warning**: Since tokens are considered opaque values, their structure is undocumented and subject to change. For these reasons, we do not recommend using tokens within your scripts or for automation since it can cause breakage.
+<Warning heading="Internal token structure is volatile">
+  Tokens are opaque values so their structure is undocumented and subject to change.
+  Scripts and automations that rely on the internal structure of a token in scripts will break.
+</Warning>
 
 Tokens are the core method for _authentication_ within Vault. Tokens
 can be used directly or [auth methods](/vault/docs/concepts/auth)
@@ -284,3 +287,13 @@ to Vault).
 As a corollary, batch tokens can be used across performance replication
 clusters, but only if they are orphan, since non-orphan tokens will not be able
 to ensure the validity of the parent token.
+
+## Error Responses
+
+When using a token that has been revoked, exceeded its TTL, or is an otherwise invalid value, Vault will respond
+with a `403` response code error containing the following error messages: `invalid token` and `permission denied`.
+
+When using a token with incorrect policy access, Vault will respond with a `403` response code error containing the error message
+`permission denied`.
+
+

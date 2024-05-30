@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package event
 
@@ -23,12 +23,12 @@ func TestEventType_Validate(t *testing.T) {
 		"empty": {
 			Value:         "",
 			IsValid:       false,
-			ExpectedError: "event.(EventType).Validate: '' is not a valid event type: invalid parameter",
+			ExpectedError: "invalid event type \"\": invalid parameter",
 		},
 		"random": {
 			Value:         "random",
 			IsValid:       false,
-			ExpectedError: "event.(EventType).Validate: 'random' is not a valid event type: invalid parameter",
+			ExpectedError: "invalid event type \"random\": invalid parameter",
 		},
 	}
 

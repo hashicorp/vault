@@ -1,19 +1,18 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { alias } from '@ember/object/computed';
 import Component from '@ember/component';
 import ReplicationActions from 'core/mixins/replication-actions';
 import layout from '../templates/components/replication-actions';
-import { A } from '@ember/array';
 
 const DEFAULTS = {
   token: null,
   primary_api_addr: null,
   primary_cluster_addr: null,
-  errors: A(),
+  errors: null,
   id: null,
   force: false,
 };

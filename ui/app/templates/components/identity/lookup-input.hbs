@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <form {{action (perform this.lookup) on="submit"}}>
   <div class="field is-flex">
     <div class="control">
@@ -21,7 +26,7 @@
       <Input class="input" @value={{this.paramValue}} placeholder={{capitalize this.param}} />
     </div>
     <div class="control">
-      <button type="submit" class="button is-hidden">Lookup</button>
+      <Hds::Button @text="Lookup" @color="secondary" class="is-hidden" type="submit" />
     </div>
   </div>
 </form>

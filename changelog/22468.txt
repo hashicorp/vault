@@ -1,0 +1,3 @@
+```release-note:bug
+core/metrics: vault.raft_storage.bolt.write.time should be a counter not a summary
+```

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 /*
  * The healthcheck package attempts to allow generic checks of arbitrary
@@ -128,7 +128,7 @@ func (e *Executor) Execute() (map[string][]*Result, error) {
 
 		for _, result := range results {
 			result.Endpoint = e.templatePath(result.Endpoint)
-			result.StatusDisplay = ResultStatusNameMap[result.Status]
+			result.StatusDisplay = result.Status.String()
 		}
 
 		ret[checker.Name()] = results
@@ -252,6 +252,7 @@ type Check interface {
 	Evaluate(e *Executor) ([]*Result, error)
 }
 
+//go:generate enumer -type=ResultStatus -trimprefix=Result -transform=snake
 type ResultStatus int
 
 const (
@@ -263,16 +264,6 @@ const (
 	ResultInvalidVersion
 	ResultInsufficientPermissions
 )
-
-var ResultStatusNameMap = map[ResultStatus]string{
-	ResultNotApplicable:           "not_applicable",
-	ResultOK:                      "ok",
-	ResultInformational:           "informational",
-	ResultWarning:                 "warning",
-	ResultCritical:                "critical",
-	ResultInvalidVersion:          "invalid_version",
-	ResultInsufficientPermissions: "insufficient_permissions",
-}
 
 var NameResultStatusMap = map[string]ResultStatus{
 	"not_applicable":           ResultNotApplicable,

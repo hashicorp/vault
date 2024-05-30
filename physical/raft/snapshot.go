@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package raft
 
@@ -18,13 +18,12 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
+	bolt "github.com/hashicorp-forge/bbolt"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
 	"github.com/rboyer/safeio"
-	bolt "go.etcd.io/bbolt"
 	"go.uber.org/atomic"
-
-	"github.com/hashicorp/raft"
 )
 
 const (
@@ -150,7 +149,7 @@ func (f *BoltSnapshotStore) List() ([]*raft.SnapshotMeta, error) {
 	return []*raft.SnapshotMeta{meta}, nil
 }
 
-// getBoltSnapshotMeta returns the fsm's latest state and configuration.
+// getMetaFromFSM returns the fsm's latest state and configuration.
 func (f *BoltSnapshotStore) getMetaFromFSM() (*raft.SnapshotMeta, error) {
 	latestIndex, latestConfig := f.fsm.LatestState()
 	meta := &raft.SnapshotMeta{

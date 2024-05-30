@@ -29,7 +29,8 @@ custom endpoints to talk to AWS APIs. The instance identity document
 fetched from the PKCS#7 signature will provide the EC2 instance ID. The
 credentials configured using this endpoint will be used to query the status
 of the instances via DescribeInstances API. If static credentials are not
-provided using this endpoint, then the credentials will be retrieved from
+provided using this endpoint, or [plugin workload identity federation](/vault/docs/auth/aws#plugin-workload-identity-federation-wif)
+credentials are also not provided, then the credentials will be retrieved from
 the environment variables `AWS_ACCESS_KEY`, `AWS_SECRET_KEY` and
 `AWS_REGION` respectively. If the credentials are still not found and if the
 method is configured on an EC2 instance with metadata querying
@@ -53,9 +54,17 @@ capabilities, the credentials are fetched automatically.
   access to `iam:GetInstanceProfile`. If, however, an alternate sts
   configuration is set for the target account, then the credentials must be
   permissioned to call `sts:AssumeRole` on the configured role, and that role
-  must have the permissions described here.
+  must have the permissions described here. Mutually exclusive with `identity_token_audience`.
 - `secret_key` `(string: "")` - AWS Secret key with permissions to query AWS
   APIs.
+- `role_arn` `(string: "")` – <EnterpriseAlert product="vault" inline /> Role ARN to assume
+  for plugin workload identity federation. Required with `identity_token_audience`.
+- `identity_token_audience` `(string: "")` - <EnterpriseAlert product="vault" inline /> The
+  audience claim value for plugin identity tokens. Must match an allowed audience configured
+  for the target [IAM OIDC identity provider](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_create_oidc.html#manage-oidc-provider-console).
+  Mutually exclusive with `access_key`.
+- `identity_token_ttl` `(string/int: 3600)` - <EnterpriseAlert product="vault" inline /> The
+  TTL of generated tokens. Defaults to 1 hour. Uses [duration format strings](/vault/docs/concepts/duration-format).
 - `endpoint` `(string: "")` - URL to override the default generated endpoint for
   making AWS EC2 API calls.
 - `iam_endpoint` `(string: "")` - URL to override the default generated endpoint
@@ -65,6 +74,10 @@ capabilities, the credentials are fetched automatically.
 - `sts_region` `(string: "")` - Region to override the default region for making
   AWS STS API calls. Should only be set if `sts_endpoint` is set. If so, should
   be set to the region in which the custom `sts_endpoint` resides.
+- `use_sts_region_from_client` `(boolean: false)` - If set, overrides both `sts_endpoint`
+  and `sts_region` to instead use the region specified in the client request headers for
+  IAM-based authentication . This can be useful when you have client requests coming from
+  different regions and want flexibility in which regional STS API is used.
 - `iam_server_id_header_value` `(string: "")` - The value to require in the
   `X-Vault-AWS-IAM-Server-ID` header as part of GetCallerIdentity requests that
   are used in the iam auth method. If not set, then no value is required or
@@ -123,6 +136,7 @@ $ curl \
     "iam_endpoint": "",
     "sts_endpoint": "",
     "sts_region": "",
+    "use_sts_region_from_client": false,
     "iam_server_id_header_value": ""
   }
 }
@@ -198,16 +212,17 @@ This configures the way that Vault interacts with the
 ### Parameters
 
 - `iam_alias` `(string: "role_id")` - How to generate the identity alias when
-  using the `iam` auth method. Valid choices are `role_id`, `unique_id`, and
-  `full_arn` When `role_id` is selected, the randomly generated ID of the role
+  using the `iam` auth method. Valid choices are `role_id`, `unique_id`, `canonical_arn` and
+  `full_arn`. When `role_id` is selected, the randomly generated ID of the Vault role
   is used. When `unique_id` is selected, the [IAM Unique
   ID](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_identifiers#identifiers-unique-ids)
   of the IAM principal (either the user or role) is used as the identity alias
-  name. When `full_arn` is selected, the ARN returned by the
-  `sts:GetCallerIdentity` call is used as the alias name. This is either
+  name. When `canonical_arn` is selected, the role ARN returned by the `sts:GetCallerIdentity`call
+  will be used. This will be `arn:aws:iam::<account_id>:role/<role name>`. When `full_arn` is selected,
+  the ARN returned by the `sts:GetCallerIdentity` call is used as the alias name. This is either
   `arn:aws:iam::<account_id>:user/<optional_path/><user_name>` or
   `arn:aws:sts::<account_id>:assumed-role/<role_name_without_path>/<role_session_name>`.
-  **Note**: if you select `full_arn` and then delete and recreate the IAM role,
+  **Note**: if you select `canonical_arn` or `full_arn` and then delete and recreate the IAM role,
   Vault won't be aware and any identity aliases set up for the role name will
   still be valid.
 
@@ -224,7 +239,7 @@ This configures the way that Vault interacts with the
 - `ec2_alias` `(string: "role_id")` - Configures how to generate the identity
   alias when using the `ec2` auth method. Valid choices are `role_id`,
   `instance_id`, and `image_id`. When `role_id` is selected, the randomly
-  generated ID of the role is used. When `instance_id` is selected, the
+  generated ID of the Vault role is used. When `instance_id` is selected, the
   instance identifier is used as the identity alias name. When `image_id` is
   selected, AMI ID of the instance is used as the identity alias name.
 
@@ -432,6 +447,8 @@ when validating IAM principals or EC2 instances in the particular AWS account.
 - `sts_role` `(string: <required>)` - AWS ARN for STS role to be assumed when
   interacting with the account specified. The Vault server must have
   permissions to assume this role.
+- `external_id` `(string: "")` - The external ID expected by the STS role. The
+   associated STS role **must** be configured to require the external ID.
 
 ### Sample payload
 
@@ -1052,7 +1069,7 @@ for more information on the signature types.
   when using the ec2 auth method.
 - `signature` `(string: <required-ec2>)` - Base64-encoded SHA256 RSA signature of
   the instance identity document, which can usually be obtained from the
-  `http://169.254.169.254/latest/dynamic/instance-identity/document` endpoint.
+  `http://169.254.169.254/latest/dynamic/instance-identity/signature` endpoint.
   Either both this _AND_ `identity` must be set _OR_ `pkcs7` must be set
   when using the ec2 auth method.
 - `pkcs7` `(string: <required-ec2>)` - PKCS#7 signature of the identity document
@@ -1073,18 +1090,18 @@ for more information on the signature types.
   enabled on either the role or the role tag, the `nonce` holds no significance.
   This is ignored unless using the ec2 auth method.
 - `iam_http_request_method` `(string: <required-iam>)` - HTTP method used in the
-  signed request. Currently only POST is supported, but other methods may be
-  supported in the future. This is required when using the iam auth method.
+  signed request. This is required when using the iam auth method.
 - `iam_request_url` `(string: <required-iam>)` - Base64-encoded HTTP URL used in
   the signed request. Most likely just `aHR0cHM6Ly9zdHMuYW1hem9uYXdzLmNvbS8=`
   (base64-encoding of `https://sts.amazonaws.com/`) as most requests will
-  probably use POST with an empty URI. This is required when using the iam auth
-  method.
+  probably use POST with an empty URI. If using GET method this will contain
+  the authentication headers that have been hoisted out of the message body.
+  This is required when using the iam auth method.
 - `iam_request_body` `(string: <required-iam>)` - Base64-encoded body of the
   signed request. Most likely
   `QWN0aW9uPUdldENhbGxlcklkZW50aXR5JlZlcnNpb249MjAxMS0wNi0xNQ==`, which is the
   base64 encoding of `Action=GetCallerIdentity&Version=2011-06-15`. This is
-  required when using the iam auth method.
+  required when using the iam auth method with POST signed requests.
 - `iam_request_headers` `(string: <required-iam>)` - Key/value pairs of headers
   for use in the `sts:GetCallerIdentity` HTTP requests headers. Can be either a
   Base64-encoded, JSON-serialized string, or a JSON object of key/value pairs. The
@@ -1098,7 +1115,13 @@ for more information on the signature types.
 ### Sample payload
 
 ```json
-{}
+{
+  "iam_http_request_method": "POST",
+  "iam_request_body": "QWN0aW9uPUdldENhbG...",
+  "iam_request_headers": "eyJBdXRob3JpemF0aW9uIj...",
+  "iam_request_url": "aHR0cHM6L...",
+  "role": "dev-role"
+}
 ```
 
 ### Sample request

@@ -7,10 +7,10 @@ description: |-
 
 # Automated upgrades
 
-~> **Note**: Automated Upgrades requires [Vault Enterprise](https://www.hashicorp.com/products/vault/) to be
-configured to use Integrated Storage.
+@include 'alerts/enterprise-only.mdx'
 
-Vault Enterprise Automated Upgrades allows operators to upgrade the Vault version currently running in a cluster automatically.
+Operators running Vault Enterprise with integrated storage can use automated
+upgrades to upgrade the Vault version currently running in a cluster automatically.
  There are a few different ways to make this upgrade happen,
 and control which versions are being upgraded to. With no additional configuration,
 Vault will check the version of Vault that each node in the cluster is running. If a blue/green

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 /* eslint qunit/no-conditional-assertions: "warn" */
@@ -32,37 +32,31 @@ module('Integration | Component | replication known-secondaries-table', function
   });
 
   test('it shows the secondary URL and connection_status', async function (assert) {
-    assert.expect(9);
+    assert.expect(13);
     await render(hbs`<KnownSecondariesTable @secondaries={{this.secondaries}} />`, this.context);
 
     SECONDARIES.forEach((secondary) => {
-      assert.strictEqual(
-        this.element.querySelector(`[data-test-secondaries=row-for-${secondary.node_id}]`).innerHTML.trim(),
-        secondary.node_id,
-        'shows a table row and ID for each known secondary'
-      );
+      assert
+        .dom(`[data-test-secondaries-node="${secondary.node_id}"]`)
+        .hasText(secondary.node_id, 'shows a table row and ID for each known secondary');
+      const expectedAPIAddr = secondary.api_address || 'URL unavailable';
+      const expectedTag = secondary.api_address ? 'a' : 'p';
+      assert.dom(`[data-test-secondaries-api-address="${secondary.node_id}"]`).hasText(expectedAPIAddr);
+      assert
+        .dom(`[data-test-secondaries-api-address="${secondary.node_id}"] ${expectedTag}`)
+        .exists('has correct tag');
 
-      if (secondary.api_address) {
-        const expectedUrl = `${secondary.api_address}/ui/`;
-
-        assert.strictEqual(
-          this.element.querySelector(`[data-test-secondaries=api-address-for-${secondary.node_id}]`).href,
-          expectedUrl,
-          'renders a URL to the secondary UI'
-        );
-      } else {
-        assert.notOk(
-          this.element.querySelector(`[data-test-secondaries=api-address-for-${secondary.node_id}]`)
-        );
-      }
-
-      assert.strictEqual(
-        this.element
-          .querySelector(`[data-test-secondaries=connection-status-for-${secondary.node_id}]`)
-          .innerHTML.trim(),
-        secondary.connection_status,
-        'shows the connection status'
-      );
+      assert
+        .dom(`[data-test-secondaries-connection-status="${secondary.node_id}"]`)
+        .hasText(secondary.connection_status, 'shows the connection status');
     });
+
+    assert
+      .dom(`[data-test-secondaries-api-address="secondary-1"] a`)
+      .hasAttribute(
+        'href',
+        'https://127.0.0.1:52304/ui/',
+        'secondary with API address has correct href attribute'
+      );
   });
 });

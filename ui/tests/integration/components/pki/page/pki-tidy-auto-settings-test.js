@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { render } from '@ember/test-helpers';
@@ -16,9 +21,9 @@ module('Integration | Component | page/pki-tidy-auto-settings', function (hooks)
     this.store = this.owner.lookup('service:store');
 
     this.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: backend, route: 'overview' },
-      { label: 'tidy', route: 'tidy.index' },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
+      { label: backend, route: 'overview', model: backend },
+      { label: 'tidy', route: 'tidy.index', model: backend },
       { label: 'auto' },
     ];
   });

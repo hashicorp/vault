@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Model, { attr } from '@ember-data/model';
@@ -39,6 +39,13 @@ export default class PkiConfigAcmeModel extends Model {
   })
   allowedRoles;
 
+  @attr('boolean', {
+    label: 'Allow role ExtKeyUsage',
+    subText:
+      "When enabled, respect the role's ExtKeyUsage flags. Otherwise, ACME certificates are forced to ServerAuth.",
+  })
+  allowRoleExtKeyUsage;
+
   @attr('array', {
     editType: 'stringArray',
     subText:
@@ -58,6 +65,15 @@ export default class PkiConfigAcmeModel extends Model {
       'An optional overriding DNS resolver to use for challenge verification lookups. When not specified, the default system resolver will be used. This allows domains on peered networks with an accessible DNS resolver to be validated.',
   })
   dnsResolver;
+
+  @attr({
+    label: 'Max TTL',
+    editType: 'ttl',
+    hideToggle: true,
+    helperTextEnabled:
+      'Specify the maximum TTL for ACME certificates. Role TTL values will be limited to this value.',
+  })
+  maxTtl;
 
   @lazyCapabilities(apiPath`${'id'}/config/acme`, 'id')
   acmePath;

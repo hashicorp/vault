@@ -8,7 +8,9 @@ description: >-
 
 # `/sys/sealwrap/rewrap`
 
-~> **Enterprise Only** – These endpoints require Vault Enterprise.
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
 
 The `/sys/sealwrap/rewrap` endpoint is used to rewrap all seal wrapped entries.
 This is useful when you want to upgrade seal wrapped entries to use the latest

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package approle
 
@@ -13,7 +13,7 @@ import (
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/parseip"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
@@ -218,7 +218,7 @@ can only be set during role creation and once set, it can't be reset later.`,
 								Description: "Number of times a secret ID can access the role, after which the secret ID will expire.",
 							},
 							"secret_id_ttl": {
-								Type:        framework.TypeDurationSecond,
+								Type:        framework.TypeInt64,
 								Required:    true,
 								Description: "Duration in seconds after which the issued secret ID expires.",
 							},
@@ -233,12 +233,12 @@ can only be set during role creation and once set, it can't be reset later.`,
 								Description: `Comma separated string or JSON list of CIDR blocks. If set, specifies the blocks of IP addresses which are allowed to use the generated token.`,
 							},
 							"token_explicit_max_ttl": {
-								Type:        framework.TypeDurationSecond,
+								Type:        framework.TypeInt64,
 								Required:    true,
 								Description: "If set, tokens created via this role carry an explicit maximum TTL. During renewal, the current maximum TTL values of the role and the mount are not checked for changes, and any updates to these values will have no effect on the token being renewed.",
 							},
 							"token_max_ttl": {
-								Type:        framework.TypeDurationSecond,
+								Type:        framework.TypeInt64,
 								Required:    true,
 								Description: "The maximum lifetime of the generated token",
 							},
@@ -248,7 +248,7 @@ can only be set during role creation and once set, it can't be reset later.`,
 								Description: "If true, the 'default' policy will not automatically be added to generated tokens",
 							},
 							"token_period": {
-								Type:        framework.TypeDurationSecond,
+								Type:        framework.TypeInt64,
 								Required:    true,
 								Description: "If set, tokens created via this role will have no max lifetime; instead, their renewal period will be fixed to this value.",
 							},
@@ -264,7 +264,7 @@ can only be set during role creation and once set, it can't be reset later.`,
 								Description: "The type of token to generate, service or batch",
 							},
 							"token_ttl": {
-								Type:        framework.TypeDurationSecond,
+								Type:        framework.TypeInt64,
 								Required:    true,
 								Description: "The initial ttl of the token to generate",
 							},
@@ -274,7 +274,7 @@ can only be set during role creation and once set, it can't be reset later.`,
 								Description: "The maximum number of times a token may be used, a value of zero means unlimited",
 							},
 							"period": {
-								Type:        framework.TypeDurationSecond,
+								Type:        framework.TypeInt64,
 								Required:    false,
 								Description: tokenutil.DeprecationText("token_period"),
 								Deprecated:  true,
@@ -311,17 +311,6 @@ can only be set during role creation and once set, it can't be reset later.`,
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
 					Callback: b.pathRoleList,
-					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
-							Description: "OK",
-							Fields: map[string]*framework.FieldSchema{
-								"keys": {
-									Type:     framework.TypeStringSlice,
-									Required: true,
-								},
-							},
-						}},
-					},
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-list"][0]),
@@ -667,7 +656,7 @@ to 0, meaning no expiration.`,
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
 								"secret_id_ttl": {
-									Type:        framework.TypeDurationSecond,
+									Type:        framework.TypeInt64,
 									Required:    true,
 									Description: "Duration in seconds after which the issued secret ID should expire. Defaults to 0, meaning no expiration.",
 								},
@@ -716,13 +705,13 @@ to 0, meaning no expiration.`,
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
 								"period": {
-									Type:        framework.TypeDurationSecond,
+									Type:        framework.TypeInt64,
 									Required:    false,
 									Description: tokenutil.DeprecationText("token_period"),
 									Deprecated:  true,
 								},
 								"token_period": {
-									Type:        framework.TypeDurationSecond,
+									Type:        framework.TypeInt64,
 									Required:    true,
 									Description: defTokenFields["token_period"].Description,
 								},
@@ -810,7 +799,7 @@ to 0, meaning no expiration.`,
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
 								"token_ttl": {
-									Type:        framework.TypeDurationSecond,
+									Type:        framework.TypeInt64,
 									Required:    true,
 									Description: defTokenFields["token_ttl"].Description,
 								},
@@ -854,7 +843,7 @@ to 0, meaning no expiration.`,
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
 								"token_max_ttl": {
-									Type:        framework.TypeDurationSecond,
+									Type:        framework.TypeInt64,
 									Required:    true,
 									Description: defTokenFields["token_max_ttl"].Description,
 								},
@@ -966,7 +955,7 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 									Description: "Accessor of the secret ID",
 								},
 								"secret_id_ttl": {
-									Type:        framework.TypeDurationSecond,
+									Type:        framework.TypeInt64,
 									Required:    true,
 									Description: "Duration in seconds after which the issued secret ID expires.",
 								},
@@ -983,17 +972,6 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 					Callback: b.pathRoleSecretIDList,
 					DisplayAttrs: &framework.DisplayAttributes{
 						OperationSuffix: "secret-ids",
-					},
-					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
-							Description: "OK",
-							Fields: map[string]*framework.FieldSchema{
-								"keys": {
-									Required: true,
-									Type:     framework.TypeStringSlice,
-								},
-							},
-						}},
 					},
 				},
 			},
@@ -1030,7 +1008,7 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 									Description: "Accessor of the secret ID",
 								},
 								"secret_id_ttl": {
-									Type:        framework.TypeDurationSecond,
+									Type:        framework.TypeInt64,
 									Required:    true,
 									Description: "Duration in seconds after which the issued secret ID expires.",
 								},
@@ -1087,6 +1065,7 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 				"secret_id": {
 					Type:        framework.TypeString,
 					Description: "SecretID attached to the role.",
+					Query:       true,
 				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
@@ -1138,7 +1117,7 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 									Description: "Accessor of the secret ID",
 								},
 								"secret_id_ttl": {
-									Type:        framework.TypeDurationSecond,
+									Type:        framework.TypeInt64,
 									Required:    true,
 									Description: "Duration in seconds after which the issued secret ID expires.",
 								},
@@ -1195,6 +1174,7 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 				"secret_id_accessor": {
 					Type:        framework.TypeString,
 					Description: "Accessor of the SecretID",
+					Query:       true,
 				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
@@ -1277,7 +1257,7 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 									Description: "Accessor of the secret ID",
 								},
 								"secret_id_ttl": {
-									Type:        framework.TypeDurationSecond,
+									Type:        framework.TypeInt64,
 									Required:    true,
 									Description: "Duration in seconds after which the issued secret ID expires.",
 								},

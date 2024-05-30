@@ -1,78 +1,23 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Model, { attr } from '@ember-data/model';
+import { service } from '@ember/service';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { withModelValidations } from 'vault/decorators/model-validations';
-import { withFormFields } from 'vault/decorators/model-form-fields';
+import { withExpandedAttributes } from 'vault/decorators/model-expanded-attributes';
 
 const validations = {
   name: [{ type: 'presence', message: 'Name is required.' }],
 };
 
-const fieldGroups = [
-  {
-    default: [
-      'name',
-      'issuerRef',
-      'customTtl',
-      'notBeforeDuration',
-      'maxTtl',
-      'generateLease',
-      'noStore',
-      'addBasicConstraints',
-    ],
-  },
-  {
-    'Domain handling': [
-      'allowedDomains',
-      'allowedDomainsTemplate',
-      'allowBareDomains',
-      'allowSubdomains',
-      'allowGlobDomains',
-      'allowWildcardCertificates',
-      'allowLocalhost', // default: true (returned true by OpenApi)
-      'allowAnyName',
-      'enforceHostnames', // default: true (returned true by OpenApi)
-    ],
-  },
-  {
-    'Key parameters': ['keyType', 'keyBits', 'signatureBits'],
-  },
-  {
-    'Key usage': ['keyUsage', 'extKeyUsage', 'extKeyUsageOids'],
-  },
-  { 'Policy identifiers': ['policyIdentifiers'] },
-  {
-    'Subject Alternative Name (SAN) Options': [
-      'allowIpSans',
-      'allowedUriSans',
-      'allowUriSansTemplate',
-      'allowedOtherSans',
-    ],
-  },
-  {
-    'Additional subject fields': [
-      'allowedSerialNumbers',
-      'requireCn',
-      'useCsrCommonName',
-      'useCsrSans',
-      'ou',
-      'organization',
-      'country',
-      'locality',
-      'province',
-      'streetAddress',
-      'postalCode',
-    ],
-  },
-];
-
-@withFormFields(null, fieldGroups)
+@withExpandedAttributes()
 @withModelValidations(validations)
 export default class PkiRoleModel extends Model {
+  @service version; // noStoreMetadata is enterprise-only, so we need this available
+
   get useOpenAPI() {
     // must be a getter so it can be accessed in path-help.js
     return true;
@@ -82,6 +27,73 @@ export default class PkiRoleModel extends Model {
   }
 
   @attr('string', { readOnly: true }) backend;
+
+  get formFieldGroups() {
+    let defaultArray = [
+      'name',
+      'issuerRef',
+      'customTtl',
+      'notBeforeDuration',
+      'maxTtl',
+      'generateLease',
+      'noStore',
+      'noStoreMetadata',
+      'addBasicConstraints',
+    ];
+    if (this.version.isCommunity) {
+      const entFields = ['noStoreMetadata'];
+      defaultArray = defaultArray.filter((field) => !entFields.includes(field));
+    }
+    return this._expandGroups([
+      {
+        default: defaultArray,
+      },
+      {
+        'Domain handling': [
+          'allowedDomains',
+          'allowedDomainsTemplate',
+          'allowBareDomains',
+          'allowSubdomains',
+          'allowGlobDomains',
+          'allowWildcardCertificates',
+          'allowLocalhost', // default: true (returned true by OpenApi)
+          'allowAnyName',
+          'enforceHostnames', // default: true (returned true by OpenApi)
+        ],
+      },
+      {
+        'Key parameters': ['keyType', 'keyBits', 'signatureBits'],
+      },
+      {
+        'Key usage': ['keyUsage', 'extKeyUsage', 'extKeyUsageOids'],
+      },
+      { 'Policy identifiers': ['policyIdentifiers'] },
+      {
+        'Subject Alternative Name (SAN) Options': [
+          'allowIpSans',
+          'allowedUriSans',
+          'allowUriSansTemplate',
+          'allowedOtherSans',
+        ],
+      },
+      {
+        'Additional subject fields': [
+          'allowedUserIds',
+          'allowedSerialNumbers',
+          'requireCn',
+          'useCsrCommonName',
+          'useCsrSans',
+          'ou',
+          'organization',
+          'country',
+          'locality',
+          'province',
+          'streetAddress',
+          'postalCode',
+        ],
+      },
+    ]);
+  }
 
   /* Overriding OpenApi default options */
   @attr('string', {
@@ -132,7 +144,6 @@ export default class PkiRoleModel extends Model {
     label: 'Generate lease with certificate',
     subText:
       'Specifies if certificates issued/signed against this role will have Vault leases attached to them.',
-    editType: 'boolean',
     docLink: '/vault/api-docs/secret/pki#create-update-role',
   })
   generateLease;
@@ -142,16 +153,22 @@ export default class PkiRoleModel extends Model {
     detailsLabel: 'Store in storage backend', // template reverses value
     subText:
       'This can improve performance when issuing large numbers of certificates. However, certificates issued in this way cannot be enumerated or revoked.',
-    editType: 'boolean',
     docLink: '/vault/api-docs/secret/pki#create-update-role',
   })
   noStore;
 
   @attr('boolean', {
+    label: 'Do not store certificate metadata in storage backend',
+    detailsLabel: 'Store metadata in storage backend', // template reverses value
+    subText:
+      'We don’t recommend storing metadata, since this information creates overhead in storage, and requires clean up.',
+  })
+  noStoreMetadata;
+
+  @attr('boolean', {
     label: 'Basic constraints valid for non-CA',
     detailsLabel: 'Add basic constraints',
     subText: 'Mark Basic Constraints valid when issuing non-CA certificates.',
-    editType: 'boolean',
   })
   addBasicConstraints;
   /* End of overriding default options */
@@ -206,7 +223,6 @@ export default class PkiRoleModel extends Model {
   @attr('boolean', {
     label: 'Allow IP SANs',
     subText: 'Specifies if clients can request IP Subject Alternative Names.',
-    editType: 'boolean',
     defaultValue: true,
   })
   allowIpSans;
@@ -222,7 +238,6 @@ export default class PkiRoleModel extends Model {
   @attr('boolean', {
     label: 'Allow URI SANs template',
     subText: 'If true, the URI SANs above may contain templates, as with ACL Path Templating.',
-    editType: 'boolean',
     docLink: '/vault/docs/concepts/policies',
   })
   allowUriSansTemplate;
@@ -293,6 +308,7 @@ export default class PkiRoleModel extends Model {
   })
   extKeyUsageOids;
 
+  @attr({ editType: 'stringArray' }) allowedUserIds;
   @attr({ editType: 'stringArray' }) organization;
   @attr({ editType: 'stringArray' }) country;
   @attr({ editType: 'stringArray' }) locality;

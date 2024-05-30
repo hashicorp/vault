@@ -6,6 +6,8 @@ description: An overview of how Sentinel interacts with Vault Enterprise.
 
 # Properties
 
+@include 'alerts/enterprise-and-hcp.mdx'
+
 Vault injects a rich set of data into the running Sentinel environment,
 allowing for very fine-grained controls. The set of available properties are
 enumerated on this page.
@@ -40,12 +42,12 @@ The following properties are available in the `request` namespace.
 
 ### Replication properties
 
-The following properties exists at the `replication.mode` namespace.
+The following properties exists at the `replication` namespace.
 
 | Name          | Type     | Description                                                                                                    |
 | :------------ | :------- | :------------------------------------------------------------------------------------------------------------- |
-| `dr`          | `string` | The state of DR replication. Valid values are "disabled", "bootstrapping", "primary", and "secondary"          |
-| `replication` | `string` | The state of performance replication. Valid values are "disabled", "bootstrapping", "primary", and "secondary" |
+| `dr.mode`          | `string` | The state of DR replication. Valid values are "disabled", "bootstrapping", "primary", and "secondary"          |
+| `performance.mode` | `string` | The state of performance replication. Valid values are "disabled", "bootstrapping", "primary", and "secondary" |
 
 ## Token properties
 

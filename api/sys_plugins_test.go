@@ -161,6 +161,21 @@ func TestGetPlugin(t *testing.T) {
 				Version:           "",
 			},
 		},
+		"oci image": {
+			version: "v0.16.0",
+			body:    getResponseOCIImageVersion,
+			expected: GetPluginResponse{
+				Args:              []string{},
+				Builtin:           false,
+				Command:           "",
+				Name:              "jwt",
+				OCIImage:          "hashicorp/vault-plugin-auth-jwt",
+				Runtime:           "gvisor",
+				SHA256:            "8ba442dba253803685b05e35ad29dcdebc48dec16774614aa7a4ebe53c1e90e1",
+				DeprecationStatus: "",
+				Version:           "v0.16.0",
+			},
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			mockVaultServer := httptest.NewServer(http.HandlerFunc(mockVaultHandlerInfo(tc.body)))
@@ -247,6 +262,25 @@ const getResponseOldServerVersion = `{
         "command": "",
         "name": "azure",
         "sha256": ""
+    },
+    "wrap_info": null,
+    "warnings": null,
+    "auth": null
+}`
+
+const getResponseOCIImageVersion = `{
+	"request_id": "e93d3f93-8e4f-8443-a803-f1c97c495241",
+    "lease_id": "",
+    "renewable": false,
+    "lease_duration": 0,
+    "data": {
+        "args": [],
+        "builtin": false,
+        "name": "jwt",
+        "oci_image" : "hashicorp/vault-plugin-auth-jwt",
+        "runtime" : "gvisor",
+        "sha256": "8ba442dba253803685b05e35ad29dcdebc48dec16774614aa7a4ebe53c1e90e1",
+        "version": "v0.16.0"
     },
     "wrap_info": null,
     "warnings": null,

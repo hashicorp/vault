@@ -1,10 +1,9 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { attr } from '@ember-data/model';
-import { assign } from '@ember/polyfills';
 import { camelize, capitalize } from '@ember/string';
 
 export const expandOpenApiProps = function (props) {
@@ -35,7 +34,7 @@ export const expandOpenApiProps = function (props) {
 
     editType = editType || type;
 
-    if (format === 'seconds') {
+    if (format === 'seconds' || format === 'duration') {
       editType = 'ttl';
     } else if (items) {
       editType = items.type + capitalize(type);
@@ -90,7 +89,7 @@ export const combineAttributes = function (oldAttrs, newProps) {
   if (oldAttrs) {
     oldAttrs.forEach(function (value, name) {
       if (newProps[name]) {
-        newAttrs[name] = attr(newProps[name].type, assign({}, newProps[name], value.options));
+        newAttrs[name] = attr(newProps[name].type, { ...newProps[name], ...value.options });
       } else {
         newAttrs[name] = attr(value.type, value.options);
       }

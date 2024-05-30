@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 // This file defines the style for .control
@@ -51,14 +51,15 @@
       padding-right: 10em;
     }
   }
-
-  &.is-align-end {
-    display: flex;
-    align-self: end;
-  }
 }
 
-.control.is-expanded {
-  flex-grow: 1;
-  flex-shrink: 1;
+.control {
+  &.is-expanded {
+    flex-grow: 1;
+    flex-shrink: 1;
+  }
+  &.is-narrow {
+    flex: none;
+    width: 6%;
+  }
 }

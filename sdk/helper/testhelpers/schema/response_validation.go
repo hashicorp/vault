@@ -150,6 +150,18 @@ func GetResponseSchema(t *testing.T, path *framework.Path, operation logical.Ope
 	}
 
 	if len(schemaResponses) == 0 {
+		// ListOperations have a default response schema that is implicit unless overridden
+		if operation == logical.ListOperation {
+			return &framework.Response{
+				Description: "OK",
+				Fields: map[string]*framework.FieldSchema{
+					"keys": {
+						Type: framework.TypeStringSlice,
+					},
+				},
+			}
+		}
+
 		t.Fatalf(
 			"could not find response schema: %s: %q operation: no responses found",
 			path.Pattern,

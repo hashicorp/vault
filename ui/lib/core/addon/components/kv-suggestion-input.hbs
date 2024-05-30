@@ -1,0 +1,35 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+<div ...attributes {{did-update this.updateSuggestions @mountPath}}>
+  {{#if @label}}
+    <FormFieldLabel for={{this.inputId}} @label={{@label}} @subText={{@subText}} />
+  {{/if}}
+  <FilterInput
+    id={{this.inputId}}
+    placeholder="Path to secret"
+    value={{@value}}
+    disabled={{not @mountPath}}
+    @hideIcon={{true}}
+    @onInput={{this.onInput}}
+    {{! used to trigger dropdown to open }}
+    {{on "click" this.onInputClick}}
+    data-test-kv-suggestion-input
+  />
+  <PowerSelect
+    @eventType="click"
+    @options={{this.secrets}}
+    @onChange={{this.onSuggestionSelect}}
+    @renderInPlace={{true}}
+    @disabled={{not @mountPath}}
+    @registerAPI={{fn (mut this.powerSelectAPI)}}
+    {{! hide trigger component and use API to toggle dropdown }}
+    @triggerClass="is-hidden"
+    @noMatchesMessage="No suggestions for this path"
+    data-test-kv-suggestion-select
+    as |secret|
+  >
+    {{secret.path}}
+  </PowerSelect>
+</div>

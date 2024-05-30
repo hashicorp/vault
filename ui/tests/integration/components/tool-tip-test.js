@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -11,7 +11,7 @@ import hbs from 'htmlbars-inline-precompile';
 module('Integration | Component | tool-tip', function (hooks) {
   setupRenderingTest(hooks);
 
-  test('it should open and close on mouse enter and leave', async function (assert) {
+  test.skip('it should open and close on mouse enter and leave', async function (assert) {
     await render(hbs`
       <ToolTip as |T|>
         <T.Trigger>

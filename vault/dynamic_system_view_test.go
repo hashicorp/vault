@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	log "github.com/hashicorp/go-hclog"
 	ldapcred "github.com/hashicorp/vault/builtin/credential/ldap"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -38,11 +37,7 @@ rule "charset" {
 )
 
 func TestIdentity_BackendTemplating(t *testing.T) {
-	var err error
 	coreConfig := &CoreConfig{
-		DisableMlock: true,
-		DisableCache: true,
-		Logger:       log.NewNullLogger(),
 		CredentialBackends: map[string]logical.Factory{
 			"ldap": ldapcred.Factory,
 		},
@@ -178,11 +173,7 @@ func TestIdentity_BackendTemplating(t *testing.T) {
 }
 
 func TestDynamicSystemView_GeneratePasswordFromPolicy_successful(t *testing.T) {
-	var err error
 	coreConfig := &CoreConfig{
-		DisableMlock:       true,
-		DisableCache:       true,
-		Logger:             log.NewNullLogger(),
 		CredentialBackends: map[string]logical.Factory{},
 	}
 
@@ -201,7 +192,7 @@ func TestDynamicSystemView_GeneratePasswordFromPolicy_successful(t *testing.T) {
 	req.ClientToken = cluster.RootToken
 	req.Data["policy"] = b64Policy
 
-	_, err = core.HandleRequest(namespace.RootContext(nil), req)
+	_, err := core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

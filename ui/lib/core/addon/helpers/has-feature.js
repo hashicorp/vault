@@ -1,10 +1,10 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 /* eslint-disable ember/no-observers */
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { assert } from '@ember/debug';
 import Helper from '@ember/component/helper';
 import { observer } from '@ember/object';

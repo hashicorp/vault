@@ -1,28 +1,32 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Controller from '@ember/controller';
-import { task } from 'ember-concurrency';
+import { service } from '@ember/service';
 
 export default Controller.extend({
+  router: service(),
   showRoute: 'vault.cluster.access.identity.show',
   showTab: 'details',
-  navAfterSave: task(function* ({ saveType, model }) {
-    const isDelete = saveType === 'delete';
-    const type = model.get('identityType');
-    const listRoutes = {
-      'entity-alias': 'vault.cluster.access.identity.aliases.index',
-      'group-alias': 'vault.cluster.access.identity.aliases.index',
-      group: 'vault.cluster.access.identity.index',
-      entity: 'vault.cluster.access.identity.index',
-    };
-    const routeName = listRoutes[type];
-    if (!isDelete) {
-      yield this.transitionToRoute(this.showRoute, model.id, this.showTab);
-      return;
-    }
-    yield this.transitionToRoute(routeName);
-  }),
+
+  actions: {
+    navAfterSave({ saveType, model }) {
+      const isDelete = saveType === 'delete';
+      const type = model.identityType;
+      const listRoutes = {
+        'entity-alias': 'vault.cluster.access.identity.aliases.index',
+        'group-alias': 'vault.cluster.access.identity.aliases.index',
+        group: 'vault.cluster.access.identity.index',
+        entity: 'vault.cluster.access.identity.index',
+      };
+      if (!isDelete) {
+        this.router.transitionTo(this.showRoute, model.id, this.showTab);
+      } else {
+        const routeName = listRoutes[type];
+        this.router.transitionTo(routeName);
+      }
+    },
+  },
 });

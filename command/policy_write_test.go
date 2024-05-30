@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package command
 
@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/cli"
 )
 
 func testPolicyWriteCommand(tb testing.TB) (*cli.MockUi, *PolicyWriteCommand) {

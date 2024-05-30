@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Separates out client counts dashboard to overview and entity/non-entity tabs
+```

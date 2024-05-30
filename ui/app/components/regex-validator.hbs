@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if @attr}}
   <div class="field" data-test-regex-validator-pattern>
     <div class="regex-label-wrapper">
@@ -27,8 +32,6 @@
       <div>
         <Toggle
           @name={{concat @attr.name "-validation-toggle"}}
-          @status="success"
-          @size="small"
           @checked={{this.showTestValue}}
           @onChange={{this.toggleTestValue}}
         >

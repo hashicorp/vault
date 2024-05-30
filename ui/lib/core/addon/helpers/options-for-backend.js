@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { helper as buildHelper } from '@ember/component/helper';
@@ -152,8 +152,7 @@ export function optionsForBackend(backend, tab) {
   const selected = SECRET_BACKENDS[backend];
   let backendOptions;
   if (selected && selected.tabs) {
-    const tabData =
-      selected.tabs.findBy('name', tab) || selected.tabs.findBy('modelPrefix', tab) || selected.tabs[0];
+    const tabData = selected.tabs.find((t) => t.name === tab || t.modelPrefix === tab) || selected.tabs[0];
     backendOptions = { ...selected, ...tabData };
   } else if (selected) {
     backendOptions = selected;

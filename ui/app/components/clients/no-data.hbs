@@ -1,0 +1,27 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{#if (eq @config.enabled "On")}}
+  <EmptyState
+    @title="No data received {{if @dateRangeMessage @dateRangeMessage}}"
+    @message="Tracking is turned on and Vault is gathering data. It should appear here within 30 minutes."
+    class="is-shadowless"
+  />
+{{else}}
+  <EmptyState
+    @title="Data tracking is disabled"
+    @message="Tracking is disabled, and no data is being collected. To turn it on, edit the configuration."
+    class="is-shadowless"
+  >
+    {{#if @config.canEdit}}
+      <Hds::Link::Standalone
+        @icon="chevron-right"
+        @iconPosition="trailing"
+        @text="Go to configuration"
+        @route="vault.cluster.clients.config"
+      />
+    {{/if}}
+  </EmptyState>
+{{/if}}

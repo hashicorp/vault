@@ -20,16 +20,16 @@ Lambda function, depending on your desired architecture.
 
 amd64 (x86_64):
 ```text
-arn:aws:lambda:<your-region>:634166935893:layer:vault-lambda-extension:13
+arn:aws:lambda:<your-region>:634166935893:layer:vault-lambda-extension:18
 ```
 
 arm64:
 ```text
-arn:aws:lambda:<your-region>:634166935893:layer:vault-lambda-extension-arm64:1
+arn:aws:lambda:<your-region>:634166935893:layer:vault-lambda-extension-arm64:6
 ```
 
 Where region may be any of `af-south-1`, `ap-east-1`, `ap-northeast-1`,
-`ap-northeast-2`, `ap-northeast-3`, `ap-south-1`, `ap-southeast-1`,
+`ap-northeast-2`, `ap-northeast-3`, `ap-south-1`, `ap-south-2`, `ap-southeast-1`,
 `ap-southeast-2`, `ca-central-1`, `eu-central-1`, `eu-north-1`, `eu-south-1`,
 `eu-west-1`, `eu-west-2`, `eu-west-3`, `me-south-1`, `sa-east-1`, `us-east-1`,
 `us-east-2`, `us-west-1`, `us-west-2`.
@@ -53,7 +53,7 @@ to read secrets, which can both be used side-by-side:
 - An instance of Vault accessible from AWS Lambda
 - An authenticated `vault` client
 - A secret in Vault that you want your Lambda to access, and a policy giving read access to it
-- Your Lambda function must use one of the [supported runtimes][https://docs.aws.amazon.com/lambda/latest/dg/runtimes-extensions-api.html] for extensions
+- Your Lambda function must use one of the [supported runtimes](https://docs.aws.amazon.com/lambda/latest/dg/runtimes-extensions-api.html) for extensions
 
 #### Step 1. configure Vault
 

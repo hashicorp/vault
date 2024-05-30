@@ -68,8 +68,8 @@ backend_lint() {
     return 0
   fi
 
-  # Only run fmtcheck on staged files
-  ./scripts/gofmtcheck.sh "${staged}" || block "Backend linting failed; run 'make fmt' to fix."
+  # Only run check-fmt on staged files
+  ./scripts/go-helper.sh check-fmt "${staged}" || block "Backend linting failed; run 'make fmt' to fix."
 }
 
 for CHECK in $CHECKS; do

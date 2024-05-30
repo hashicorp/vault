@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package token
 
@@ -102,7 +102,7 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
 	defer cleanup()
 
 	// Configure LDAP auth

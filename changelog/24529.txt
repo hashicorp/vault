@@ -1,0 +1,3 @@
+```release-note:improvement
+website/docs: Update references to Key Value secrets engine from 'K/V' to 'KV'
+```

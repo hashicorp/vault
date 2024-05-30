@@ -1,25 +1,24 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
 import { assert } from '@ember/debug';
 
 const DIRECTIONS = ['right', 'left', 'up', 'down'];
 
 /**
- * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
- */
-
-/**
+ * @deprecated
  * @module Chevron
- * `Chevron` components render `Icon` with one of the `chevron-` glyphs.
+ * * Use HDS icons instead
+ * Chevron components render Icon with one of the "chevron-" glyphs.
  *
  * @example
- * ```js
  * <Chevron @direction="up" />
- * ```
  *
- * @param [direction="right"] {String} - the direction the chevron icon points. Accepted values are
- * "right", "down", "left", "up".
- * @param [isButton=false] {String} - if true, adjusts the CSS classes to push the icon closer to the right of a button.
+ * @param {string} [direction="right"] - the direction the chevron icon points. Accepted values are "right", "down", "left", "up".
+ * @param {string} [isButton=false] - if true, adjusts the CSS classes to push the icon closer to the right of a button.
  *
  */
 

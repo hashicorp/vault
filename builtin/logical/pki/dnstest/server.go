@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package dnstest
 
@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/stretchr/testify/require"
@@ -20,6 +21,7 @@ import (
 type TestServer struct {
 	t   *testing.T
 	ctx context.Context
+	log hclog.Logger
 
 	runner  *docker.Runner
 	network string
@@ -45,6 +47,7 @@ func SetupResolverOnNetwork(t *testing.T, domain string, network string) *TestSe
 	ts.domains = []string{domain}
 	ts.records = map[string]map[string][]string{}
 	ts.network = network
+	ts.log = hclog.L()
 
 	ts.setupRunner(domain, network)
 	ts.startContainer(network)
@@ -61,9 +64,10 @@ func (ts *TestServer) setupRunner(domain string, network string) {
 		ContainerName: "bind9-dns-" + strings.ReplaceAll(domain, ".", "-"),
 		NetworkName:   network,
 		Ports:         []string{"53/udp"},
-		LogConsumer: func(s string) {
-			ts.t.Logf(s)
-		},
+		// DNS container logging was disabled to reduce content within CI logs.
+		//LogConsumer: func(s string) {
+		//	ts.log.Info(s)
+		//},
 	})
 	require.NoError(ts.t, err)
 }
@@ -111,7 +115,7 @@ func (ts *TestServer) startContainer(network string) {
 		ts.startup.StartResult.RealIP = mapping[network]
 	}
 
-	ts.t.Logf("[dnsserv] Addresses of DNS resolver: local=%v / container=%v", ts.GetLocalAddr(), ts.GetRemoteAddr())
+	ts.log.Info(fmt.Sprintf("[dnsserv] Addresses of DNS resolver: local=%v / container=%v", ts.GetLocalAddr(), ts.GetRemoteAddr()))
 }
 
 func (ts *TestServer) buildNamedConf() string {
@@ -181,7 +185,7 @@ func (ts *TestServer) pushNamedConf() {
 	contents[cfgPath] = docker.PathContentsFromString(namedCfg)
 	contents[cfgPath].SetOwners(0, 142) // root, bind
 
-	ts.t.Logf("Generated bind9 config (%s):\n%v\n", cfgPath, namedCfg)
+	ts.log.Info(fmt.Sprintf("Generated bind9 config (%s):\n%v\n", cfgPath, namedCfg))
 
 	err := ts.runner.CopyTo(ts.startup.Container.ID, "/", contents)
 	require.NoError(ts.t, err, "failed pushing updated named.conf.options to container")
@@ -196,7 +200,7 @@ func (ts *TestServer) pushZoneFiles() {
 		contents[path] = docker.PathContentsFromString(zoneFile)
 		contents[path].SetOwners(0, 142) // root, bind
 
-		ts.t.Logf("Generated bind9 zone file for %v (%s):\n%v\n", domain, path, zoneFile)
+		ts.log.Info(fmt.Sprintf("Generated bind9 zone file for %v (%s):\n%v\n", domain, path, zoneFile))
 	}
 
 	err := ts.runner.CopyTo(ts.startup.Container.ID, "/", contents)

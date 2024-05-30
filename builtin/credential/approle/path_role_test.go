@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package approle
 
@@ -923,7 +923,7 @@ func TestAppRoleSecretIDLookup(t *testing.T) {
 	expected := &logical.Response{
 		Data: map[string]interface{}{
 			"http_content_type": "application/json",
-			"http_raw_body":     `{"request_id":"","lease_id":"","renewable":false,"lease_duration":0,"data":{"error":"failed to find accessor entry for secret_id_accessor: \"invalid\""},"wrap_info":null,"warnings":null,"auth":null}`,
+			"http_raw_body":     `{"request_id":"","lease_id":"","renewable":false,"lease_duration":0,"data":{"error":"failed to find accessor entry for secret_id_accessor: \"invalid\""},"wrap_info":null,"warnings":null,"auth":null,"mount_type":""}`,
 			"http_status_code":  404,
 		},
 	}

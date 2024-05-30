@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package awsauth
 
@@ -395,7 +395,7 @@ func (b *backend) initialize(ctx context.Context, req *logical.InitializationReq
 	return nil
 }
 
-// awsVersion stores info about the the latest aws version that we have
+// awsVersion stores info about the latest aws version that we have
 // upgraded to.
 type awsVersion struct {
 	Version int `json:"version"`

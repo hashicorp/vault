@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package exec
 
 import (
@@ -5,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -18,7 +22,6 @@ import (
 	ctconfig "github.com/hashicorp/consul-template/config"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-retryablehttp"
-
 	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
@@ -109,7 +112,6 @@ func TestExecServer_Run(t *testing.T) {
 		// test app parameters
 		testAppArgs       []string
 		testAppStopSignal os.Signal
-		testAppPort       int
 
 		// simulate a shutdown of agent, which, in turn stops the test app
 		simulateShutdown             bool
@@ -131,7 +133,6 @@ func TestExecServer_Run(t *testing.T) {
 			}},
 			testAppArgs:       []string{"--stop-after", "10s"},
 			testAppStopSignal: syscall.SIGTERM,
-			testAppPort:       34001,
 			expected: map[string]string{
 				"MY_USER":     "app-user",
 				"MY_PASSWORD": "s3cr3t",
@@ -151,7 +152,6 @@ func TestExecServer_Run(t *testing.T) {
 			staticSecretRenderInterval: 5 * time.Second,
 			testAppArgs:                []string{"--stop-after", "15s", "--sleep-after-stop-signal", "0s"},
 			testAppStopSignal:          syscall.SIGTERM,
-			testAppPort:                34002,
 			expected: map[string]string{
 				"MY_USER":     "app-user",
 				"MY_PASSWORD": "s3cr3t-two",
@@ -168,7 +168,6 @@ func TestExecServer_Run(t *testing.T) {
 			}},
 			testAppArgs:          []string{"--stop-after", "1s"},
 			testAppStopSignal:    syscall.SIGTERM,
-			testAppPort:          34003,
 			expectedTestDuration: 15 * time.Second,
 			expectedError:        &ProcessExitError{0},
 		},
@@ -181,7 +180,6 @@ func TestExecServer_Run(t *testing.T) {
 			}},
 			testAppArgs:          []string{"--stop-after", "1s", "--exit-code", "5"},
 			testAppStopSignal:    syscall.SIGTERM,
-			testAppPort:          34004,
 			expectedTestDuration: 15 * time.Second,
 			expectedError:        &ProcessExitError{5},
 		},
@@ -194,7 +192,6 @@ func TestExecServer_Run(t *testing.T) {
 			}},
 			testAppArgs:                  []string{"--stop-after", "30s", "--sleep-after-stop-signal", "1s"},
 			testAppStopSignal:            syscall.SIGTERM,
-			testAppPort:                  34005,
 			simulateShutdown:             true,
 			simulateShutdownWaitDuration: 3 * time.Second,
 			expectedTestDuration:         15 * time.Second,
@@ -209,7 +206,6 @@ func TestExecServer_Run(t *testing.T) {
 			}},
 			testAppArgs:                  []string{"--stop-after", "30s", "--sleep-after-stop-signal", "1s", "--use-sigusr1"},
 			testAppStopSignal:            syscall.SIGUSR1,
-			testAppPort:                  34006,
 			simulateShutdown:             true,
 			simulateShutdownWaitDuration: 3 * time.Second,
 			expectedTestDuration:         15 * time.Second,
@@ -225,7 +221,6 @@ func TestExecServer_Run(t *testing.T) {
 			}},
 			testAppArgs:                  []string{"--stop-after", "60s", "--sleep-after-stop-signal", "60s"},
 			testAppStopSignal:            syscall.SIGTERM,
-			testAppPort:                  34007,
 			simulateShutdown:             true,
 			simulateShutdownWaitDuration: 32 * time.Second, // the test app should be stopped immediately after 30s
 			expectedTestDuration:         45 * time.Second,
@@ -248,13 +243,15 @@ func TestExecServer_Run(t *testing.T) {
 			ctx, cancelContextFunc := context.WithTimeout(context.Background(), testCase.expectedTestDuration)
 			defer cancelContextFunc()
 
+			port := findOpenPort(t)
+
 			testAppCommand := []string{
 				testAppBinary,
 				"--port",
-				strconv.Itoa(testCase.testAppPort),
+				strconv.Itoa(port),
 			}
 
-			execServer := NewServer(&ServerConfig{
+			execServer, err := NewServer(&ServerConfig{
 				Logger: logging.NewVaultLogger(hclog.Trace),
 				AgentConfig: &config.Config{
 					Vault: &config.Vault{
@@ -277,6 +274,9 @@ func TestExecServer_Run(t *testing.T) {
 				LogLevel:  hclog.Trace,
 				LogWriter: hclog.DefaultOutput,
 			})
+			if err != nil {
+				t.Fatalf("could not create exec server: %q", err)
+			}
 
 			// start the exec server
 			var (
@@ -292,7 +292,7 @@ func TestExecServer_Run(t *testing.T) {
 
 			// ensure the test app is running after 3 seconds
 			var (
-				testAppAddr      = fmt.Sprintf("http://localhost:%d", testCase.testAppPort)
+				testAppAddr      = fmt.Sprintf("http://localhost:%d", port)
 				testAppStartedCh = make(chan error)
 			)
 			if testCase.expectedError == nil {
@@ -376,4 +376,205 @@ func TestExecServer_Run(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestExecServer_LogFiles(t *testing.T) {
+	goBinary, err := exec.LookPath("go")
+	if err != nil {
+		t.Fatalf("could not find go binary on path: %s", err)
+	}
+
+	testAppBinary := filepath.Join(os.TempDir(), "test-app")
+
+	if err := exec.Command(goBinary, "build", "-o", testAppBinary, "./test-app").Run(); err != nil {
+		t.Fatalf("could not build the test application: %s", err)
+	}
+	t.Cleanup(func() {
+		if err := os.Remove(testAppBinary); err != nil {
+			t.Fatalf("could not remove %q test application: %s", testAppBinary, err)
+		}
+	})
+
+	testCases := map[string]struct {
+		testAppArgs []string
+		stderrFile  string
+		stdoutFile  string
+
+		expectedError error
+	}{
+		"can_log_stderr_to_file": {
+			stderrFile: "vault-exec-test.stderr.log",
+		},
+		"can_log_stdout_to_file": {
+			stdoutFile:  "vault-exec-test.stdout.log",
+			testAppArgs: []string{"-log-to-stdout"},
+		},
+		"cant_open_file": {
+			stderrFile:    "/file/does/not/exist",
+			expectedError: os.ErrNotExist,
+		},
+	}
+
+	for tcName, testCase := range testCases {
+		t.Run(tcName, func(t *testing.T) {
+			fakeVault := fakeVaultServer(t)
+			defer fakeVault.Close()
+
+			port := findOpenPort(t)
+			testAppCommand := []string{
+				testAppBinary,
+				"--port",
+				strconv.Itoa(port),
+				"--stop-after",
+				"60s",
+			}
+
+			execConfig := &config.ExecConfig{
+				RestartOnSecretChanges: "always",
+				Command:                append(testAppCommand, testCase.testAppArgs...),
+			}
+
+			if testCase.stdoutFile != "" {
+				execConfig.ChildProcessStdout = filepath.Join(os.TempDir(), "vault-agent-exec.stdout.log")
+				t.Cleanup(func() {
+					_ = os.Remove(execConfig.ChildProcessStdout)
+				})
+			}
+
+			if testCase.stderrFile != "" {
+				execConfig.ChildProcessStderr = filepath.Join(os.TempDir(), "vault-agent-exec.stderr.log")
+				t.Cleanup(func() {
+					_ = os.Remove(execConfig.ChildProcessStderr)
+				})
+			}
+
+			execServer, err := NewServer(&ServerConfig{
+				Logger: logging.NewVaultLogger(hclog.Trace),
+				AgentConfig: &config.Config{
+					Vault: &config.Vault{
+						Address: fakeVault.URL,
+						Retry: &config.Retry{
+							NumRetries: 3,
+						},
+					},
+					Exec: execConfig,
+					EnvTemplates: []*ctconfig.TemplateConfig{{
+						Contents:                 pointerutil.StringPtr(`{{ with secret "kv/my-app/creds" }}{{ .Data.data.user }}{{ end }}`),
+						MapToEnvironmentVariable: pointerutil.StringPtr("MY_USER"),
+					}},
+					TemplateConfig: &config.TemplateConfig{
+						ExitOnRetryFailure:    true,
+						StaticSecretRenderInt: 5 * time.Second,
+					},
+				},
+				LogLevel:  hclog.Trace,
+				LogWriter: hclog.DefaultOutput,
+			})
+			if err != nil {
+				if testCase.expectedError != nil {
+					if errors.Is(err, testCase.expectedError) {
+						t.Log("test passes! caught expected err")
+						return
+					} else {
+						t.Fatalf("caught error %q did not match expected error %q", err, testCase.expectedError)
+					}
+				}
+				t.Fatalf("could not create exec server: %q", err)
+			}
+
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			// start the exec server
+			var (
+				execServerErrCh   = make(chan error)
+				execServerTokenCh = make(chan string, 1)
+			)
+			go func() {
+				execServerErrCh <- execServer.Run(ctx, execServerTokenCh)
+			}()
+
+			// send a dummy token to kick off the server
+			execServerTokenCh <- "my-token"
+
+			// ensure the test app is running after 500ms
+			var (
+				testAppAddr      = fmt.Sprintf("http://localhost:%d", port)
+				testAppStartedCh = make(chan error)
+			)
+			time.AfterFunc(500*time.Millisecond, func() {
+				_, err := retryablehttp.Head(testAppAddr)
+				testAppStartedCh <- err
+			})
+
+			select {
+			case <-ctx.Done():
+				t.Fatal("timeout reached before templates were rendered")
+
+			case err := <-execServerErrCh:
+				if testCase.expectedError == nil && err != nil {
+					t.Fatalf("exec server did not expect an error, got: %v", err)
+				}
+
+				if errors.Is(err, testCase.expectedError) {
+					t.Fatalf("exec server expected error %v; got %v", testCase.expectedError, err)
+				}
+
+				t.Log("exec server exited without an error")
+
+				return
+
+			case <-testAppStartedCh:
+				t.Log("test app started successfully")
+			}
+
+			// let the app run a bit
+			time.Sleep(5 * time.Second)
+			// stop the app
+			cancel()
+			// wait for app to stop
+			time.Sleep(5 * time.Second)
+
+			// check if the files have content
+			if testCase.stdoutFile != "" {
+				stdoutInfo, err := os.Stat(execConfig.ChildProcessStdout)
+				if err != nil {
+					t.Fatalf("error calling stat on stdout file: %q", err)
+				}
+				if stdoutInfo.Size() == 0 {
+					t.Fatalf("stdout log file does not have any data!")
+				}
+			}
+
+			if testCase.stderrFile != "" {
+				stderrInfo, err := os.Stat(execConfig.ChildProcessStderr)
+				if err != nil {
+					t.Fatalf("error calling stat on stderr file: %q", err)
+				}
+				if stderrInfo.Size() == 0 {
+					t.Fatalf("stderr log file does not have any data!")
+				}
+			}
+		})
+	}
+}
+
+// findOpenPort generates a random open port, using Go's :0 to find a port,
+// for us to then use as the test binary's port to use.
+// This is a little race-y, as something else could open the port before
+// we use it, but we're not the process that needs to open the port,
+// and we still need to be able to access it.
+// We should be fine so long as we don't make the tests parallel.
+func findOpenPort(t *testing.T) int {
+	t.Helper()
+	ln, err := net.Listen("tcp", ":0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	port := ln.Addr().(*net.TCPAddr).Port
+	err = ln.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return port
 }
