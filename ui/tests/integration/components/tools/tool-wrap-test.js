@@ -28,7 +28,6 @@ module('Integration | Component | tools/tool-wrap', function (hooks) {
       await render(hbs`
     <ToolWrap
       @token={{this.token}}
-      @selectedAction="wrap"
       @buttonDisabled={{this.buttonDisabled}}
       @errors={{this.errors}}
       @onClear={{this.onClear}}

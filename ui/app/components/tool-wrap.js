@@ -15,7 +15,6 @@ import { tracked } from '@glimmer/tracking';
  * <ToolWrap
  *  @onClear={{action "onClear"}}
  *  @token={{token}}
- *  @selectedAction="wrap"
  *  @codemirrorUpdated={{action "codemirrorUpdated"}}
  *  @updateTtl={{action "updateTtl"}}
  *  @buttonDisabled={{buttonDisabled}}
@@ -23,7 +22,6 @@ import { tracked } from '@glimmer/tracking';
  *
  * @param {function} onClear - parent action that is passed through. Must be passed as {{action "onClear"}}
  * @param {string} token=null - property passed from parent to child and then passed back up to parent
- * @param {string} selectedAction="wrap" - passed in from parent.  This is the wrap action, others include hash, etc.
  * @param {function} codemirrorUpdated - parent action that is passed through. Must be passed as {{action "codemirrorUpdated"}}.
  * @param {function} updateTtl - parent action that is passed through. Must be passed as {{action "updateTtl"}}
  * @param {boolean} buttonDisabled=false - false default and if there is an error on codemirror it turns to true.

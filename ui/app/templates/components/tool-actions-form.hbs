@@ -54,7 +54,6 @@
   {{else if (eq this.selectedAction "wrap")}}
     <ToolWrap
       @token={{this.token}}
-      @selectedAction={{this.selectedAction}}
       @onBack={{action "onBack" (array "token")}}
       @onClear={{action "onClear"}}
       @codemirrorUpdated={{action "codemirrorUpdated"}}
