@@ -45,7 +45,7 @@ module('Integration | Component | tools/tool-wrap', function (hooks) {
 
     assert.dom('h1').hasText('Wrap Data', 'Title renders');
     assert.strictEqual(codemirror().getValue(' '), '{ }', 'json editor initializes with empty object');
-    assert.dom(GENERAL.toggleInput('Wrap TTL')).isNotChecked('Wrap TTL defaults to disabled');
+    assert.dom(GENERAL.toggleInput('Wrap TTL')).isNotChecked('Wrap TTL defaults to unchecked');
     assert.dom(TS.submit).isDisabled();
     assert.dom(TS.toolsInput('wrapping-token')).doesNotExist();
     assert.dom(TS.button('Back')).doesNotExist();
