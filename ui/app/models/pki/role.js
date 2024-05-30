@@ -29,7 +29,7 @@ export default class PkiRoleModel extends Model {
   @attr('string', { readOnly: true }) backend;
 
   get formFieldGroups() {
-    const defaultArray = [
+    let defaultArray = [
       'name',
       'issuerRef',
       'customTtl',
@@ -41,7 +41,8 @@ export default class PkiRoleModel extends Model {
       'addBasicConstraints',
     ];
     if (this.version.isCommunity) {
-      defaultArray.splice(defaultArray.indexOf('noStoreMetadata'), 1); // remove noStoreMetadata, which is enterprise-only
+      const entFields = ['noStoreMetadata'];
+      defaultArray = defaultArray.filter((field) => !entFields.includes(field));
     }
     return this._expandGroups([
       {
