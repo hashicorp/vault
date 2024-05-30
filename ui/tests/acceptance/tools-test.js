@@ -46,6 +46,7 @@ module('Acceptance | tools', function (hooks) {
       },
     };
   };
+
   test('tools functionality', async function (assert) {
     var tokenStore = createTokenStore();
     await visit('/vault/tools');
@@ -63,7 +64,7 @@ module('Acceptance | tools', function (hooks) {
     const wrappedToken = await waitUntil(() => find(TS.toolsInput('wrapping-token')));
     tokenStore.set(wrappedToken.innerText);
 
-    //lookup
+    // lookup
     await click(GENERAL.navLink('Lookup'));
 
     await fillIn(TS.toolsInput('wrapping-token'), tokenStore.get());
@@ -73,7 +74,7 @@ module('Acceptance | tools', function (hooks) {
     assert.dom(GENERAL.infoRowValue('Creation time')).exists();
     assert.dom(GENERAL.infoRowValue('Creation TTL')).hasText('1800', 'show creation ttl row');
 
-    //rewrap
+    // rewrap
     await click(GENERAL.navLink('Rewrap'));
 
     await fillIn(TS.toolsInput('wrapping-token'), tokenStore.get());
@@ -84,7 +85,7 @@ module('Acceptance | tools', function (hooks) {
     tokenStore.set(rewrappedToken.value);
     await settled();
 
-    //unwrap
+    // unwrap
     await click(GENERAL.navLink('Unwrap'));
 
     await fillIn(TS.toolsInput('wrapping-token'), tokenStore.get());
@@ -170,5 +171,58 @@ module('Acceptance | tools', function (hooks) {
       AUTH_RESPONSE.auth,
       'unwrapped data equals input data'
     );
+  });
+
+  module('wrap', function () {
+    test('it wraps data again after clicking "Back"', async function (assert) {
+      const tokenStore = createTokenStore();
+      await visit('/vault/tools/wrap');
+
+      await waitFor('.CodeMirror');
+      codemirror().setValue(DATA_TO_WRAP);
+
+      // initial wrap
+      await click(TS.submit);
+      await waitUntil(() => find(TS.toolsInput('wrapping-token')));
+      await click(TS.button('Back'));
+
+      // wrap again
+      await click(TS.submit);
+      const wrappedToken = await waitUntil(() => find(TS.toolsInput('wrapping-token')));
+      tokenStore.set(wrappedToken.innerText);
+
+      // there was a bug where clicking "back" cleared the parent's data, but not the child form component
+      // so when users attempted to wrap data again the payload was actually empty and unwrapping the token returned {token: ""}
+      // it is user desired behavior that the form does not clear on back, and that wrapping can be immediately repeated
+      // we use lookup to check our token from the second wrap returns the unwrapped data we expect
+      await click(GENERAL.navLink('Lookup'));
+      await fillIn(TS.toolsInput('wrapping-token'), tokenStore.get());
+      await click(TS.submit);
+      await waitUntil(() => findAll('[data-test-component="info-table-row"]').length >= 3);
+      assert.dom(GENERAL.infoRowValue('Creation TTL')).hasText('1800', 'show creation ttl row');
+    });
+
+    test('it sends wrap ttl', async function (assert) {
+      const tokenStore = createTokenStore();
+      await visit('/vault/tools/wrap');
+
+      await waitFor('.CodeMirror');
+      codemirror().setValue(DATA_TO_WRAP);
+
+      // update to non-default ttl
+      await click(GENERAL.toggleInput('Wrap TTL'));
+      await fillIn(GENERAL.ttl.input('Wrap TTL'), '20');
+
+      await click(TS.submit);
+      const wrappedToken = await waitUntil(() => find(TS.toolsInput('wrapping-token')));
+      tokenStore.set(wrappedToken.innerText);
+
+      // lookup to check unwrapped data is what we expect
+      await click(GENERAL.navLink('Lookup'));
+      await fillIn(TS.toolsInput('wrapping-token'), tokenStore.get());
+      await click(TS.submit);
+      await waitUntil(() => findAll('[data-test-component="info-table-row"]').length >= 3);
+      assert.dom(GENERAL.infoRowValue('Creation TTL')).hasText('1200', 'show creation ttl row');
+    });
   });
 });
