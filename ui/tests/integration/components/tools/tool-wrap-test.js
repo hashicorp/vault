@@ -44,6 +44,8 @@ module('Integration | Component | tools/tool-wrap', function (hooks) {
     assert.dom(GENERAL.toggleInput('Wrap TTL')).isNotChecked('Wrap TTL defaults to disabled');
     assert.dom(TS.submit).isDisabled();
     assert.dom(TS.toolsInput('wrapping-token')).doesNotExist();
+    assert.dom(TS.button('Copy')).doesNotExist();
+    assert.dom(TS.button('Back')).doesNotExist();
   });
 
   test('it renders token view', async function (assert) {
@@ -54,6 +56,7 @@ module('Integration | Component | tools/tool-wrap', function (hooks) {
     assert.dom('label').hasText('Wrapped token');
     assert.dom('.CodeMirror').doesNotExist();
     assert.dom(TS.toolsInput('wrapping-token')).hasValue(this.token);
+    assert.dom(TS.button('Copy')).exists();
     await click(TS.button('Back'));
     assert.true(this.onClear.calledOnce, 'onClear is called');
   });
@@ -66,7 +69,7 @@ module('Integration | Component | tools/tool-wrap', function (hooks) {
     await click(GENERAL.toggleInput('Wrap TTL'));
     await fillIn(GENERAL.ttl.input('Wrap TTL'), '20');
 
-    assert.propEqual(this.codemirrorUpdated.lastCall.args, ['{"foo": "bar"}', false]);
-    assert.propEqual(this.updateTtl.lastCall.args, ['1200s']);
+    assert.propEqual(this.codemirrorUpdated.lastCall.args, [this.data, false], 'codemirrorUpdated is called');
+    assert.propEqual(this.updateTtl.lastCall.args, ['1200s'], 'updateTtl is called');
   });
 });
