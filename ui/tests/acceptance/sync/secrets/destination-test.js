@@ -14,7 +14,7 @@ import { settled, click, visit, currentURL, fillIn, currentRouteName } from '@em
 import { PAGE as ts } from 'vault/tests/helpers/sync/sync-selectors';
 
 // sync is an enterprise feature but since mirage is used the enterprise label has been intentionally omitted from the module name
-module('Acceptance | sync | destination', function (hooks) {
+module('Acceptance | sync | destination (singular)', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
@@ -35,6 +35,7 @@ module('Acceptance | sync | destination', function (hooks) {
   });
 
   test('it should transition to correct routes when performing actions', async function (assert) {
+    await click(ts.navLink('Dashboard')); // add click to Dashboard to avoid race condition where Secrets Sync link does not show yet
     await click(ts.navLink('Secrets Sync'));
     await click(ts.tab('Destinations'));
     await click(ts.listItem);
