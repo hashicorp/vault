@@ -4,7 +4,9 @@
 
 ## 1.17.0-RC1
 ### May 30, 2024
+
 CHANGES:
+
 * api: Upgrade from github.com/go-jose/go-jose/v3 v3.0.3 to github.com/go-jose/go-jose/v4 v4.0.1. [[GH-26527](https://github.com/hashicorp/vault/pull/26527)]
 * audit: breaking change - Vault now allows audit logs to contain 'correlation-id' and 'x-correlation-id' headers when they are present in the incoming request. By default they are not HMAC'ed (but can be configured to HMAC by Vault Operators). [[GH-26777](https://github.com/hashicorp/vault/pull/26777)]
 * auth/alicloud: Update plugin to v0.18.0 [[GH-27133](https://github.com/hashicorp/vault/pull/27133)]
