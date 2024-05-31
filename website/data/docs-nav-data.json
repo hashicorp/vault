@@ -1,6 +1,134 @@
 [
   {
     "title": "What is Vault?",
+    "routes": [
+      {
+        "title": "Overview",
+        "href": "#"
+      },
+      {
+        "title": "Architecture",
+        "href": "#"
+      },
+      {
+        "title": "Internals",
+        "href": "#"
+      }
+    ]
+  },
+  
+  {
+    "title": "Recent updates",
+    "routes": [
+      {
+        "title": "Release notices",
+        "href": "#"
+      },
+      {
+        "title": "Important changes",
+        "href": "#"
+      },
+      {
+        "title": "Changelog",
+        "href": "#"
+      },
+      {
+        "title": "Deprecation notices",
+        "href": "#"
+      }
+    ]
+  },
+
+  {
+    "title": "Compatibility and licensing",
+    "routes": [
+      {
+        "title": "UI browser support",
+        "href": "#"
+      },
+      {
+        "title": "Interoperability matrix",
+        "href": "#"
+      },
+      {
+        "title": "Licensing overview",
+        "href": "#"
+      },
+      {
+        "title": "Long-term support",
+        "href": "#",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "highlight"
+        }
+      }
+    ]
+  },
+
+  {
+    "divider": true
+  },
+
+  {
+    "heading": "MANAGE VAULT"
+  },
+
+  {
+    "title": "Get started",
+    "routes": [
+      {
+        "title": "Start Vault in development mode",
+        "href": "#"
+      },
+      {
+        "title": "Create a Vault configuration",
+        "href": "#"
+      },
+      {
+        "title": "Initialize Vault",
+        "href": "#"
+      },
+      {
+        "title": "Install a Vault license",
+        "href": "#"
+      }
+    ]
+  },
+  {
+    "title": "Design your deployment",
+    "routes": [
+      {
+        "title": "Design a robust cluster",
+        "href": "#"
+      },
+      {
+        "title": "Namespace planning",
+        "href": "#"
+      },
+      {
+        "title": "Quotas and leases",
+        "href": "#"
+      }
+    ]
+  },
+
+
+
+
+
+
+  {
+    "divider": true
+  },
+  {
+    "heading": "OLD NAV"
+  },
+  {
+    "divider": true
+  },
+  {
+    "title": "What is Vault?",
     "path": "what-is-vault"
   },
   {
