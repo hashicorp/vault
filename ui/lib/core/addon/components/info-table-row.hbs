@@ -1,0 +1,117 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{#if (or (has-block) this.isVisible)}}
+  <div class="info-table-row" data-test-component="info-table-row" ...attributes>
+    <div
+      class="column {{or @labelWidth 'is-one-quarter'}} {{if this.hasLabelOverflow 'label-overflow'}}"
+      data-test-label-div
+      {{did-insert this.calculateLabelOverflow}}
+    >
+      {{#if @label}}
+        {{#if this.hasLabelOverflow}}
+          <ToolTip @verticalPosition="below" @horizontalPosition="left" as |T|>
+            <T.Trigger @tabindex={{false}}>
+              <span class="is-label has-text-grey-dark" data-test-row-label={{@label}}>{{@label}}</span>
+            </T.Trigger>
+            <T.Content @defaultClass="tool-tip">
+              <div class="box fit-content" data-test-label-tooltip>
+                {{@label}}
+              </div>
+            </T.Content>
+          </ToolTip>
+        {{else}}
+          <span class="is-label has-text-grey-dark" data-test-row-label={{@label}}>{{@label}}</span>
+        {{/if}}
+        {{#if @helperText}}
+          <div>
+            <span class="is-label helper-text has-text-grey">{{@helperText}}</span>
+          </div>
+        {{/if}}
+      {{else}}
+        <Icon @name="minus" />
+      {{/if}}
+    </div>
+    <div class="column is-flex-center {{if @truncateValue 'is-two-thirds'}}" data-test-value-div={{@label}}>
+      {{#if @addCopyButton}}
+        <Hds::Copy::Button
+          @text="Copy"
+          @isIconOnly={{true}}
+          @textToCopy={{@value}}
+          @onError={{(fn
+            (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")
+          )}}
+          class="transparent has-padding-xxs"
+          data-test-copy-button={{@value}}
+        />
+      {{/if}}
+      {{#if (has-block)}}
+        {{yield}}
+      {{else if this.valueIsBoolean}}
+        {{#if @value}}
+          <Icon class="icon-true" @name="check-circle" data-test-boolean-true />
+          Yes
+        {{else}}
+          <Icon @name="x-square" class="icon-false" data-test-boolean-false />
+          No
+        {{/if}}
+        {{! @alwaysRender (this.isVisible) is still true }}
+      {{else if this.valueIsEmpty}}
+        {{#if @defaultShown}}
+          <span data-test-row-value={{@label}}>{{@defaultShown}}</span>
+        {{else}}
+          <Icon @name="minus" />
+        {{/if}}
+      {{else if @formatDate}}
+        {{date-format @value @formatDate}}
+      {{else if @formatTtl}}
+        {{format-duration @value}}
+      {{else}}
+        {{#if (eq @type "array")}}
+          <InfoTableItemArray
+            @label={{@label}}
+            @backend={{@backend}}
+            @displayArray={{@value}}
+            @isLink={{@isLink}}
+            @modelType={{@modelType}}
+            @queryParam={{@queryParam}}
+            @wildcardLabel={{@wildcardLabel}}
+            @rootRoute={{@rootRoute}}
+            @itemRoute={{@itemRoute}}
+            @doNotTruncate={{@doNotTruncate}}
+            @renderItemName={{@renderItemName}}
+          />
+        {{else}}
+          {{#if @tooltipText}}
+            <ToolTip @verticalPosition="above" @horizontalPosition="left" as |T|>
+              <T.Trigger @tabindex={{false}}>
+                <span class="is-word-break has-text-black" data-test-row-value={{@label}}>{{@value}}</span>
+              </T.Trigger>
+              <T.Content @defaultClass="tool-tip">
+                <div class="box is-flex-center">
+                  {{@tooltipText}}
+                  {{#if @isTooltipCopyable}}
+                    <Hds::Copy::Button
+                      @text="Copy"
+                      @isIconOnly={{true}}
+                      @textToCopy={{@tooltipText}}
+                      @onError={{(fn
+                        (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")
+                      )}}
+                      class="transparent white-icon"
+                      data-test-tooltip-copy={{@tooltipText}}
+                    />
+                  {{/if}}
+                </div>
+              </T.Content>
+            </ToolTip>
+          {{else}}
+            <span class="is-word-break has-text-black" data-test-row-value={{@label}}>{{@value}}</span>
+          {{/if}}
+        {{/if}}
+      {{/if}}
+    </div>
+  </div>
+{{/if}}

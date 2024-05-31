@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/kv: add patch support for KVv2 key metadata
+```

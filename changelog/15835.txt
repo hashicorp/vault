@@ -1,0 +1,3 @@
+```release-note:bug
+api/sys/internal/specs/openapi: support a new "dynamic" query parameter to generate generic mountpaths
+```

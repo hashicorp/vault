@@ -1,0 +1,705 @@
+---
+layout: api
+page_title: /sys/replication - HTTP API
+description: >-
+  The '/sys/replication/performance' endpoint focuses on managing general
+  operations in Vault Enterprise Performance Replication
+---
+
+# `/sys/replication/performance`
+
+## Check performance status
+
+@include 'alerts/enterprise-and-hcp.mdx'
+
+This endpoint prints information about the status of replication (mode,
+sync progress, etc).
+
+This is an unauthenticated endpoint.
+
+| Method | Path                                  |
+| :----- | :------------------------------------ |
+| `GET`  | `/sys/replication/performance/status` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    http://127.0.0.1:8200/v1/sys/replication/performance/status
+```
+
+### Sample response from primary
+
+The printed status of the replication environment. As an example, for a
+primary, it will look something like:
+
+```json
+{
+  "data": {
+    "cluster_id": "00616ea0-3094-5017-29f9-644f3633f0da",
+    "corrupted_merkle_tree": false,
+    "known_secondaries": [
+      "cd0463e0-a37f-7421-345e-aad53007479f"
+    ],
+    "last_corruption_check_epoch": "-62135596800",
+    "last_performance_wal": 223,
+    "last_reindex_epoch": "0",
+    "last_wal": 223,
+    "merkle_root": "7b75cf69bb9a862913b0de2478164e046d242e0f",
+    "mode": "primary",
+    "primary_cluster_addr": "",
+    "secondaries": [
+      {
+        "api_address": "https://127.0.0.1:49155",
+        "clock_skew_ms": "0",
+        "cluster_address": "https://127.0.0.1:49160",
+        "connection_status": "connected",
+        "last_heartbeat": "2024-03-04T10:05:56-05:00",
+        "last_heartbeat_duration_ms": "0",
+        "node_id": "cd0463e0-a37f-7421-345e-aad53007479f",
+        "replication_primary_canary_age_ms": "660"
+      }
+    ],
+    "ssct_generation_counter": 0,
+    "state": "running"
+  }
+}
+```
+
+### Sample response from secondary
+
+The printed status of the replication environment. As an example, for a
+secondary, it will look something like:
+
+```json
+{
+  "data": {
+    "cluster_id": "00616ea0-3094-5017-29f9-644f3633f0da",
+    "connection_state": "ready",
+    "corrupted_merkle_tree": false,
+    "known_primary_cluster_addrs": [
+      "https://127.0.0.1:65524",
+      "https://127.0.0.1:65525",
+      "https://127.0.0.1:65526"
+    ],
+    "last_corruption_check_epoch": "-62135596800",
+    "last_reindex_epoch": "1709564740",
+    "last_remote_wal": 223,
+    "last_start": "2024-03-04T10:05:48-05:00",
+    "merkle_root": "7b75cf69bb9a862913b0de2478164e046d242e0f",
+    "mode": "secondary",
+    "primaries": [
+      {
+        "api_address": "https://127.0.0.1:65521",
+        "clock_skew_ms": "0",
+        "cluster_address": "https://127.0.0.1:65524",
+        "connection_status": "connected",
+        "last_heartbeat": "2024-03-04T10:05:56-05:00",
+        "last_heartbeat_duration_ms": "0",
+        "replication_primary_canary_age_ms": "660"
+      }
+    ],
+    "primary_cluster_addr": "https://127.0.0.1:65524",
+    "secondary_id": "cd0463e0-a37f-7421-345e-aad53007479f",
+    "ssct_generation_counter": 0,
+    "state": "stream-wals"
+  }
+}
+```
+
+## Enable performance primary replication
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
+This endpoint enables replication in primary mode. This is used when replication
+is currently disabled on the cluster (if the cluster is already a secondary, it
+must be promoted).
+
+!> Only one primary should be active at a given time. Multiple primaries may
+result in data loss!
+
+| Method | Path                                          |
+| :----- | :-------------------------------------------- |
+| `POST` | `/sys/replication/performance/primary/enable` |
+
+### Parameters
+
+- `primary_cluster_addr` `(string: "")` – Specifies the cluster address that the
+  primary gives to secondary nodes. Useful if the primary's cluster address is
+  not directly accessible and must be accessed via an alternate path/address,
+  such as through a TCP-based load balancer. If not set, uses vault's configured
+  cluster address.
+
+### Sample payload
+
+```json
+{}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/replication/performance/primary/enable
+```
+
+## Demote performance primary
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
+This endpoint demotes a performance primary cluster to a performance secondary.
+This secondary cluster will not attempt to connect to a primary (see the update-primary call),
+but will maintain knowledge of its cluster ID and can be reconnected to the same
+replication set without wiping local storage.
+
+| Method | Path                                          |
+| :----- | :-------------------------------------------- |
+| `POST` | `/sys/replication/performance/primary/demote` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    http://127.0.0.1:8200/v1/sys/replication/performance/primary/demote
+```
+
+## Disable performance primary
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
+This endpoint disables Performance Replication entirely on the cluster. Any
+performance secondaries will no longer be able to connect. Caution: re-enabling
+this node as a primary or secondary will change its cluster ID; in the secondary
+case this means a wipe of the underlying storage when connected to a primary,
+and in the primary case, secondaries connecting back to the cluster (even if
+they have connected before) will require a wipe of the underlying storage.
+
+| Method | Path                                           |
+| :----- | :--------------------------------------------- |
+| `POST` | `/sys/replication/performance/primary/disable` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    http://127.0.0.1:8200/v1/sys/replication/performance/primary/disable
+```
+
+## Generate performance secondary token
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
+This endpoint generates a performance secondary activation token for the
+cluster with the given opaque identifier, which must be unique. This
+identifier can later be used to revoke a secondary's access.
+
+**This endpoint requires 'sudo' capability.**
+
+| Method | Path                                                   |
+| :----- | :----------------------------------------------------- |
+| `POST` | `/sys/replication/performance/primary/secondary-token` |
+
+### Parameters
+
+- `id` `(string: <required>)` – Specifies an opaque identifier, e.g. 'us-east'
+
+- `ttl` `(string: "30m")` – Specifies the TTL for the secondary activation
+  token.
+
+- `secondary_public_key` `(string: "")` – Specifies the secondary's generated
+  public key, if using encryption rather than response wrapping to protect the
+  secondary credentials. (Vault 1.3+)
+
+### Sample payload
+
+```json
+{
+  "id": "us-east-1"
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/replication/performance/primary/secondary-token
+```
+
+### Sample response
+
+```json
+{
+  "request_id": "",
+  "lease_id": "",
+  "lease_duration": 0,
+  "renewable": false,
+  "data": null,
+  "warnings": null,
+  "wrap_info": {
+    "token": "fb79b9d3-d94e-9eb6-4919-c559311133d6",
+    "ttl": 300,
+    "creation_time": "2016-09-28T14:41:00.56961496-04:00",
+    "wrapped_accessor": ""
+  }
+}
+```
+
+## Revoke performance secondary token
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
+This endpoint revokes a performance secondary's ability to connect to the
+performance primary cluster; the secondary will immediately be disconnected and
+will not be allowed to connect again unless given a new activation token.
+
+| Method | Path                                                    |
+| :----- | :------------------------------------------------------ |
+| `POST` | `/sys/replication/performance/primary/revoke-secondary` |
+
+### Parameters
+
+- `id` `(string: <required>)` – Specifies an opaque identifier, e.g. 'us-east'
+
+### Sample payload
+
+```json
+{
+  "id": "us-east"
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/replication/performance/primary/revoke-secondary
+```
+
+## Create paths filter
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
+This endpoint is used to modify the mounts and namespaces that are filtered to a secondary.
+Filtering can be specified in allow mode or deny mode. In allow
+mode the secret and auth mounts that are specified are included to the
+selected secondary. In deny mode, the mount and namespace paths are excluded.
+
+| Method | Path                                                    |
+| :----- | :------------------------------------------------------ |
+| `POST` | `/sys/replication/performance/primary/paths-filter/:id` |
+
+### Parameters
+
+- `id` `(string: <required>)` – Specifies the unique performance secondary identifier. Note that this identifier is
+  not arbitrary. This should be the secondary cluster ID as reported by the `cluster_id` field of the [replication status](/vault/api-docs/system/replication#check-status) API
+  endpoint. If, for example, a new performance secondary token
+  [is created](/vault/api-docs/system/replication/replication-performance#generate-performance-secondary-token), and used to call
+  [update-primary](/vault/api-docs/system/replication/replication-performance#update-performance-secondary-s-primary), then path filters will need
+  to be re-created via this API endpoint.
+
+- `mode` `(string: "allow")` – Specifies the filtering mode. Available values
+  are "allow" and "deny".
+
+- `paths` `(array: [])` – The list of mount and namespace paths that are filtered.
+
+### Sample payload
+
+```json
+{
+  "mode": "allow",
+  "paths": ["secret/", "ns1/"]
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/replication/performance/primary/paths-filter/mySecondaryID
+```
+
+## Read paths filter
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
+This endpoint is used to read the mode and the mount/namespace paths that are filtered
+for a secondary.
+
+| Method | Path                                                    | |
+| :----- | :------------------------------------------------------ | ------------------ |
+| `GET`  | `/sys/replication/performance/primary/paths-filter/:id` | `200 (empty body)` |
+
+### Parameters
+
+- `id` `(string: <required>)` – Specifies the unique performance secondary identifier.
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/replication/performance/primary/paths-filter/mySecondaryID
+```
+
+### Sample response
+
+```json
+{
+  "mode": "allow",
+  "paths": ["secret/", "ns1/"]
+}
+```
+
+## Delete paths filter
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
+This endpoint is used to delete the mount and namespace filters for a secondary.
+
+| Method   | Path                                                    |
+| :------- | :------------------------------------------------------ |
+| `DELETE` | `/sys/replication/performance/primary/paths-filter/:id` |
+
+### Parameters
+
+- `id` `(string: <required>)` – Specifies the unique performance secondary identifier.
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request DELETE \
+    http://127.0.0.1:8200/v1/sys/replication/performance/primary/paths-filter/mySecondaryID
+```
+
+## Read dynamically generated filter (PRIMARY)
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
+This endpoint is used to read the namespace and the mount paths that are dynamically
+filtered for a secondary on the primary.
+
+| Method | Path                                                      | |
+| :----- | :-------------------------------------------------------- | ------------------ |
+| `GET`  | `/sys/replication/performance/primary/dynamic-filter/:id` | `200 (empty body)` |
+
+### Parameters
+
+- `id` `(string: <required>)` – Specifies the unique performance secondary identifier.
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/replication/performance/primary/dynamic-filter/mySecondaryID
+```
+
+### Sample response
+
+```json
+{
+  "dynamic_filtered_mounts": ["ns1/ns2/secret/", "ns1/kv/"],
+  "dynamic_filtered_namespaces": ["ns1/", "ns1/ns2/"]
+}
+```
+
+## Read dynamically generated filter (SECONDARY)
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
+This endpoint is used to read the namespace and the mount paths that are dynamically
+filtered for a secondary on the secondary.
+
+| Method | Path                                                        | |
+| :----- | :---------------------------------------------------------- | ------------------ |
+| `GET`  | `/sys/replication/performance/secondary/dynamic-filter/:id` | `200 (empty body)` |
+
+### Parameters
+
+- `id` `(string: <required>)` – Specifies the unique performance secondary identifier.
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/replication/performance/secondary/dynamic-filter/mySecondaryID
+```
+
+### Sample response
+
+```json
+{
+  "dynamic_filtered_mounts": ["ns1/ns2/secret/", "ns1/kv/"],
+  "dynamic_filtered_namespaces": ["ns1/", "ns1/ns2/"]
+}
+```
+
+## Fetch performance secondary public key
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
+This endpoint allows fetching a public key that is used to encrypt the returned
+credential information (instead of using a response wrapped token). This avoids
+needing to make an API call to the primary during activation.
+
+| Method | Path                                                         |
+| :----- | :----------------------------------------------------------- |
+| `POST` | `/sys/replication/performance/secondary/generate-public-key` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    http://127.0.0.1:8200/v1/sys/replication/performance/secondary/generate-public-key
+```
+
+## Enable performance secondary
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
+This endpoint enables Performance Replication on a secondary using a secondary activation
+token.
+
+!> This will immediately clear all data in the secondary cluster!
+
+| Method | Path                                            |
+| :----- | :---------------------------------------------- |
+| `POST` | `/sys/replication/performance/secondary/enable` |
+
+### Parameters
+
+- `token` `(string: <required>)` – Specifies the secondary activation token
+  fetched from the primary.
+
+- `primary_api_addr` `(string: "")` – Set this to the API address (normal Vault
+  address) to override the value embedded in the token. This can be useful if
+  the primary's redirect address is not accessible directly from this cluster
+  (e.g. through a load balancer).
+
+- `ca_file` `(string: "")` – Specifies the path to a CA root file (PEM format)
+  that the secondary can use when unwrapping the token from the primary. If this
+  and ca_path are not given, defaults to system CA roots.
+
+- `ca_path` `(string: "")` – Specifies the path to a CA root directory
+  containing PEM-format files that the secondary can use when unwrapping the
+  token from the primary. If this and ca_file are not given, defaults to system
+  CA roots.
+
+### Sample payload
+
+```json
+{
+  "token": "..."
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/replication/performance/secondary/enable
+```
+
+## Promote performance secondary
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
+This endpoint promotes the performance secondary cluster to performance primary.
+For data safety and security reasons, new secondary tokens will need to be
+issued to other secondaries, and there should never be more than one performance
+primary at a time.
+
+| Method | Path                                             |
+| :----- | :----------------------------------------------- |
+| `POST` | `/sys/replication/performance/secondary/promote` |
+
+### Parameters
+
+- `primary_cluster_addr` `(string: "")` – Specifies the cluster address that the
+  primary gives to secondary nodes. Useful if the primary's cluster address is
+  not directly accessible and must be accessed via an alternate path/address
+  (e.g. through a load balancer).
+- `force` `(bool: false)` - If true the cluster will be promoted even if it fails
+  certain safety checks. Caution: Forcing promotion could result in data loss if
+  data isn't fully replicated.
+
+### Sample payload
+
+```json
+{}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/replication/performance/secondary/promote
+```
+
+## Disable performance secondary
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
+This endpoint disables Performance Replication entirely on the cluster. The cluster will no
+longer be able to connect to the performance primary.
+
+!> Re-enabling this node as a performance primary or secondary will change its cluster ID;
+in the secondary case this means a wipe of the underlying storage when connected
+to a primary, and in the primary case, secondaries connecting back to the
+cluster (even if they have connected before) will require a wipe of the
+underlying storage.
+
+| Method | Path                                             |
+| :----- | :----------------------------------------------- |
+| `POST` | `/sys/replication/performance/secondary/disable` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    http://127.0.0.1:8200/v1/sys/replication/performance/secondary/disable
+```
+
+## Update performance secondary's primary
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
+The update endpoint changes the primary cluster assigned to a
+performance secondary cluster. Changing the primary cluster assignment
+does not wipe data in the secondary cluster.
+
+There are two ways to update the primary assignment:
+
+1. **Use a secondary activation token with the `token` parameter**.
+1. **Use primary cluster addresses with the `update_primary_addrs` parameter**.
+   During the update, cluster addresses are pinged one at a time via gRPC. The
+   first cluster to respond successfully is assigned as the new primary address.
+
+The two update methods are mutually exclusive. You may use one or the other,
+but not both. A good rule of thumb is to use `token` on DR secondary
+clusters and `update_primary_addrs` on performance secondary clusters.
+
+| Method | Path                                                    |
+| :----- | :------------------------------------------------------ |
+| `POST` | `/sys/replication/performance/secondary/update-primary` |
+
+### Parameters
+
+- `token` `(string: <required>)` – Specifies the secondary activation token
+  fetched from the primary. If you set this to a blank string, the cluster will
+  stay a secondary but clear its knowledge of any past primary (and thus not
+  attempt to connect to the previous primary). This can be useful if the primary
+  is down to stop the secondary from trying to reconnect to it.
+
+- `primary_api_addr` `(string: )` – Specifies the API address (normal Vault
+  address) to override the value embedded in the token. This can be useful if
+  the primary's redirect address is not accessible directly from this cluster.
+
+- `ca_file` `(string: "")` – Specifies the path to a CA root file (PEM format)
+  that the secondary can use when unwrapping the token from the primary. If this
+  and ca_path are not given, defaults to system CA roots.
+
+- `ca_path` `string: ()` – Specifies the path to a CA root directory containing
+  PEM-format files that the secondary can use when unwrapping the token from the
+  primary. If this and ca_file are not given, defaults to system CA roots.
+
+- `update_primary_addrs` `array: []` – List of cluster addresses for potential
+  primary clusters. These addresses will be pinged in sequence, and if any of them
+  respond successfully, these will be recorded as the new primary addresses. This is
+  a lighter weight version of specifying a token and should result in less disruption
+  of replication.
+
+### Sample payload
+
+```json
+{
+  "token": "..."
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/replication/performance/secondary/update-primary
+```
+
+### Sample payload
+
+```json
+{
+  "update_primary_addrs": ["10.0.0.2:8201"]
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/replication/performance/secondary/update-primary
+```

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package identity
 
 import (
@@ -26,7 +29,7 @@ func TestIdentityStore_EntityDisabled(t *testing.T) {
 					logical.ReadOperation: func(context.Context, *logical.Request, *framework.FieldData) (*logical.Response, error) {
 						return &logical.Response{
 							Headers: map[string][]string{
-								"www-authenticate": []string{"Negotiate"},
+								"www-authenticate": {"Negotiate"},
 							},
 						}, logical.CodedError(401, "authentication required")
 					},
@@ -39,7 +42,7 @@ func TestIdentityStore_EntityDisabled(t *testing.T) {
 						return &logical.Response{
 							Auth: &logical.Auth{},
 							Headers: map[string][]string{
-								"www-authenticate": []string{"Negotiate"},
+								"www-authenticate": {"Negotiate"},
 							},
 						}, nil
 					},

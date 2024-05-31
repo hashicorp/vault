@@ -1,0 +1,12 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<Mfa::MfaLoginEnforcementHeader @heading="Update enforcement" />
+<Mfa::MfaLoginEnforcementForm
+  @model={{this.model}}
+  @onSave={{transition-to "vault.cluster.access.mfa.enforcements.enforcement" this.model.name}}
+  @onClose={{transition-to "vault.cluster.access.mfa.enforcements.enforcement" this.model.name}}
+  class="has-top-margin-l"
+/>

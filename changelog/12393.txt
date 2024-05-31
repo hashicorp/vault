@@ -1,0 +1,3 @@
+```release-note: improvement
+core: observe the client counts broken down by namespace for partial month client count
+```

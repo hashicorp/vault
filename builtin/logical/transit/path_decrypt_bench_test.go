@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package transit
 
 import (
@@ -62,7 +65,7 @@ func BTransit_BatchDecryption(b *testing.B, bsize int) {
 		b.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	batchResponseItems := resp.Data["batch_results"].([]BatchResponseItem)
+	batchResponseItems := resp.Data["batch_results"].([]EncryptBatchResponseItem)
 	batchDecryptionInput := make([]interface{}, len(batchResponseItems))
 	for i, item := range batchResponseItems {
 		batchDecryptionInput[i] = map[string]interface{}{"ciphertext": item.Ciphertext}

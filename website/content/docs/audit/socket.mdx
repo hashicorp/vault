@@ -1,0 +1,44 @@
+---
+layout: docs
+page_title: Socket - Audit Devices
+description: The "socket" audit device writes audit writes to a TCP or UDP socket.
+---
+
+# Socket audit device
+
+The `socket` audit device writes to a TCP, UDP, or UNIX socket.
+
+~> **Warning:** The loss of audit logs may occur when using the UDP socket audit type. Because UDP socket audit type is connectionless, meaning the UDP endpoint becomes unavailable, it’s possible that any number of audit logs written to it may get lost, even though the request will still succeed. Vault does not provide an indication for the loss of audit logs. Therefore, we recommend using your device in conjunction with a secondary “non-socket” audit device to ensure accuracy and to guarantee that audit logs will not be lost.
+
+~> **Warning:** When using a TCP socket audit type, and connection loss to the socket occurs, a single audit entry may be omitted from the audit entry. The request from the TCP socket audit type will succeed despite the omission of the audit entry.
+
+## Enabling
+
+Enable at the default path:
+
+```shell-session
+$ vault audit enable socket
+```
+
+Supply configuration parameters via K=V pairs:
+
+```shell-session
+$ vault audit enable socket address=127.0.0.1:9090 socket_type=tcp
+```
+
+## Configuration
+
+The `socket` audit device supports the common configuration options documented on
+the [main Audit Devices page](/vault/docs/audit#common-configuration-options), and
+these device-specific options:
+
+- `address` `(string: "")` - The socket server address to use. Example
+  `127.0.0.1:9090` or `/tmp/audit.sock`.
+
+- `socket_type` `(string: "tcp")` - The socket type to use, any type compatible
+  with [net.Dial](https://golang.org/pkg/net/#Dial) is acceptable. It's
+  important to note if TCP is used and the destination socket becomes unavailable
+  Vault may become unresponsive per [Blocked Audit Devices](/vault/docs/audit/#blocked-audit-devices).
+
+- `write_timeout` `(string: 2s)` - The (deadline) time in seconds to allow writes to be completed over the socket.
+  A zero value means that write attempts will *not* time out.

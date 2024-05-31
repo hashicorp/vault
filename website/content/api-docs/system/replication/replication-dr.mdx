@@ -1,0 +1,931 @@
+---
+layout: api
+page_title: /sys/replication - HTTP API
+description: >-
+  The '/sys/replication/dr' endpoint focuses on managing general operations in
+  Vault Enterprise Disaster Recovery replication
+---
+
+# `/sys/replication/dr`
+
+## Check DR status
+
+@include 'alerts/enterprise-and-hcp.mdx'
+
+This endpoint prints information about the status of replication (mode,
+sync progress, etc).
+
+This is an unauthenticated endpoint.
+
+| Method | Path                         |
+| :----- | :--------------------------- |
+| `GET`  | `/sys/replication/dr/status` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    http://127.0.0.1:8200/v1/sys/replication/dr/status
+```
+
+### Sample response from primary
+
+The printed status of the replication environment. As an example, for a
+primary, it will look something like:
+
+```json
+{
+  "data": {
+    "cluster_id": "eef2a5ab-51e2-1c05-407c-8b4dc8d09ebf",
+    "corrupted_merkle_tree": false,
+    "known_secondaries": [
+      "4ca6b639-046b-5bb1-8043-6788ddf09121"
+    ],
+    "last_corruption_check_epoch": "-62135596800",
+    "last_dr_wal": 223,
+    "last_reindex_epoch": "0",
+    "last_wal": 223,
+    "merkle_root": "2494830f1a1c304829b5742a232d39b5457bce9a",
+    "mode": "primary",
+    "primary_cluster_addr": "",
+    "secondaries": [
+      {
+        "api_address": "https://127.0.0.1:65531",
+        "clock_skew_ms": "0",
+        "cluster_address": "https://127.0.0.1:65534",
+        "connection_status": "connected",
+        "last_heartbeat": "2024-03-04T10:05:56-05:00",
+        "last_heartbeat_duration_ms": "0",
+        "node_id": "4ca6b639-046b-5bb1-8043-6788ddf09121",
+        "replication_primary_canary_age_ms": "696"
+      }
+    ],
+    "ssct_generation_counter": 0,
+    "state": "running"
+  }
+}
+```
+
+### Sample response from secondary
+
+The printed status of the replication environment. As an example, for a
+secondary, it will look something like:
+
+```json
+{
+  "data": {
+    "cluster_id": "eef2a5ab-51e2-1c05-407c-8b4dc8d09ebf",
+    "connection_state": "ready",
+    "corrupted_merkle_tree": false,
+    "known_primary_cluster_addrs": [
+      "https://127.0.0.1:65524",
+      "https://127.0.0.1:65525",
+      "https://127.0.0.1:65526"
+    ],
+    "last_corruption_check_epoch": "-62135596800",
+    "last_reindex_epoch": "1709564746",
+    "last_remote_wal": 223,
+    "last_start": "2024-03-04T10:05:46-05:00",
+    "merkle_root": "2494830f1a1c304829b5742a232d39b5457bce9a",
+    "mode": "secondary",
+    "primaries": [
+      {
+        "api_address": "https://127.0.0.1:65521",
+        "clock_skew_ms": "0",
+        "cluster_address": "https://127.0.0.1:65524",
+        "connection_status": "connected",
+        "last_heartbeat": "2024-03-04T10:05:56-05:00",
+        "last_heartbeat_duration_ms": "0",
+        "replication_primary_canary_age_ms": "697"
+      }
+    ],
+    "primary_cluster_addr": "https://127.0.0.1:65524",
+    "secondary_id": "4ca6b639-046b-5bb1-8043-6788ddf09121",
+    "ssct_generation_counter": 0,
+    "state": "stream-wals"
+  }
+}
+```
+
+## Enable DR primary replication
+
+@include 'alerts/restricted-root.mdx'
+
+@include 'alerts/enterprise-only.mdx'
+
+This endpoint enables DR replication in primary mode. This is used when DR replication
+is currently disabled on the cluster (if the cluster is already a secondary, it
+must be promoted).
+
+| Method | Path                                 |
+| :----- | :----------------------------------- |
+| `POST` | `/sys/replication/dr/primary/enable` |
+
+### Parameters
+
+- `primary_cluster_addr` `(string: "")` – Specifies the cluster address that the
+  primary gives to secondary nodes. Useful if the primary's cluster address is
+  not directly accessible and must be accessed via an alternate path/address,
+  such as through a TCP-based load balancer.
+
+### Sample payload
+
+```json
+{}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/replication/dr/primary/enable
+```
+
+## Demote DR primary
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
+This endpoint demotes a DR primary cluster to a secondary. This DR secondary cluster
+will not attempt to connect to a primary (see the update-primary call), but will
+maintain knowledge of its cluster ID and can be reconnected to the same
+DR replication set without wiping local storage.
+
+| Method | Path                                 |
+| :----- | :----------------------------------- |
+| `POST` | `/sys/replication/dr/primary/demote` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    http://127.0.0.1:8200/v1/sys/replication/dr/primary/demote
+```
+
+## Disable DR primary
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
+This endpoint disables DR replication entirely on the cluster. Any secondaries will
+no longer be able to connect. Caution: re-enabling this node as a primary or
+secondary will change its cluster ID; in the secondary case this means a wipe of
+the underlying storage when connected to a primary, and in the primary case,
+secondaries connecting back to the cluster (even if they have connected before)
+will require a wipe of the underlying storage.
+
+| Method | Path                                  |
+| :----- | :------------------------------------ |
+| `POST` | `/sys/replication/dr/primary/disable` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    http://127.0.0.1:8200/v1/sys/replication/dr/primary/disable
+```
+
+## Generate DR secondary token
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
+This endpoint generates a DR secondary activation token for the
+cluster with the given opaque identifier, which must be unique. This
+identifier can later be used to revoke a DR secondary's access.
+
+**This endpoint requires 'sudo' capability.**
+
+| Method | Path                                          |
+| :----- | :-------------------------------------------- |
+| `POST` | `/sys/replication/dr/primary/secondary-token` |
+
+### Parameters
+
+- `id` `(string: <required>)` – Specifies an opaque identifier, e.g. 'us-east'
+
+- `ttl` `(string: "30m")` – Specifies the TTL for the secondary activation
+  token.
+
+- `secondary_public_key` `(string: "")` – Specifies the secondary's generated
+  public key, if using encryption rather than response wrapping to protect the
+  secondary credentials. (Vault 1.3+). Use this to avoid making an API call to
+  the primary during secondary activation.
+
+### Sample payload
+
+```json
+{
+  "id": "us-east-1"
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/replication/dr/primary/secondary-token
+```
+
+### Sample response
+
+```json
+{
+  "request_id": "",
+  "lease_id": "",
+  "lease_duration": 0,
+  "renewable": false,
+  "data": null,
+  "warnings": null,
+  "wrap_info": {
+    "token": "fb79b9d3-d94e-9eb6-4919-c559311133d6",
+    "ttl": 300,
+    "creation_time": "2016-09-28T14:41:00.56961496-04:00",
+    "wrapped_accessor": ""
+  }
+}
+```
+
+## Revoke DR secondary token
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
+This endpoint revokes a DR secondary's ability to connect to the DR primary cluster;
+the DR secondary will immediately be disconnected and will not be allowed to
+connect again unless given a new activation token.  This command can be run from any node on the DR primary cluster.
+
+| Method | Path                                           |
+| :----- | :--------------------------------------------- |
+| `POST` | `/sys/replication/dr/primary/revoke-secondary` |
+
+### Parameters
+
+- `id` `(string: <required>)` – Specifies an opaque identifier, e.g. 'us-east'
+
+### Sample payload
+
+```json
+{
+  "id": "us-east"
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/replication/dr/primary/revoke-secondary
+```
+
+## Generate DR secondary public key
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
+This endpoint allows generating a public key that is used to encrypt the returned
+credential information (instead of using a response wrapped token). This avoids
+needing to make an API call to the primary during activation.
+
+| Method | Path                                                |
+| :----- | :-------------------------------------------------- |
+| `POST` | `/sys/replication/dr/secondary/generate-public-key` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    http://127.0.0.1:8200/v1/sys/replication/dr/secondary/generate-public-key
+```
+
+## Enable DR secondary
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
+This endpoint enables replication on a DR secondary using a DR secondary activation
+token.
+
+!> This will immediately clear all data in the secondary cluster!
+
+| Method | Path                                   |
+| :----- | :------------------------------------- |
+| `POST` | `/sys/replication/dr/secondary/enable` |
+
+### Parameters
+
+- `token` `(string: <required>)` – Specifies the secondary activation token
+  fetched from the primary.
+
+- `primary_api_addr` `(string: "")` – Set this to the API address (normal Vault
+  address) to override the value embedded in the token. This can be useful if
+  the primary's redirect address is not accessible directly from this cluster
+  (e.g. through a load balancer).
+
+- `ca_file` `(string: "")` – Specifies the path to a CA root file (PEM format)
+  that the secondary can use when unwrapping the token from the primary. If this
+  and ca_path are not given, defaults to system CA roots.
+
+- `ca_path` `(string: "")` – Specifies the path to a CA root directory
+  containing PEM-format files that the secondary can use when unwrapping the
+  token from the primary. If this and ca_file are not given, defaults to system
+  CA roots.
+
+### Sample payload
+
+```json
+{
+  "token": "..."
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/replication/dr/secondary/enable
+```
+
+## Promote DR secondary
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
+This endpoint promotes the DR secondary cluster to DR primary. For data safety and
+security reasons, new secondary tokens will need to be issued to other
+secondaries, and there should never be more than one primary at a time.
+
+If the DR secondary's primary cluster is also in a performance replication set,
+the DR secondary will be promoted into that replication set. Care should be
+taken when promoting to ensure multiple performance primary clusters are not
+active at the same time.
+
+If the DR secondary's primary cluster is a performance secondary, the promoted
+cluster will attempt to connect to the performance primary cluster using the
+same secondary token.
+
+This endpoint requires a DR Operation Token to be provided as means of
+authorization. See the [DR Operation Token API
+docs](#generate-disaster-recovery-operation-token) for more information.
+
+!> Only one performance primary should be active at a given time. Multiple primaries may
+result in data loss!
+
+~> It is not safe to replicate from a newer version of Vault to an older version.
+When upgrading replicated clusters, ensure that upstream clusters are always
+on older versions of Vault than downstream clusters. See
+[Upgrading Vault](/vault/docs/upgrading#replication-installations) for an example.
+
+
+| Method | Path                                    |
+| :----- | :-------------------------------------- |
+| `POST` | `/sys/replication/dr/secondary/promote` |
+
+### Parameters
+
+- `dr_operation_token` `(string: <required>)` - DR operation token used to authorize this request.
+- `primary_cluster_addr` `(string: "")` – Specifies the cluster address that the
+  primary gives to secondary nodes. Useful if the primary's cluster address is
+  not directly accessible and must be accessed via an alternate path/address
+  (e.g. through a load balancer).
+- `force` `(bool: false)` - If true the cluster will be promoted even if it fails
+  certain safety checks. Caution: Forcing promotion could result in data loss if
+  data isn't fully replicated.
+
+### Sample payload
+
+```json
+{
+  "dr_operation_token": "ijH8tphEHaBtgx+IvPfxDsSi2LV4j9k+Lad6eqT5cJw="
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/replication/dr/secondary/promote
+```
+
+### Sample response
+
+```json
+{
+  "progress": 0,
+  "required": 1,
+  "complete": false,
+  "request_id": "ad8f9074-0e24-d30e-83cd-595c9652ff89",
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": {
+    "complete": false,
+    "progress": 0,
+    "required": 1
+  },
+  "wrap_info": null,
+  "warnings": null,
+  "auth": null
+}
+```
+
+## Disable DR secondary
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
+This endpoint disables DR replication entirely on the cluster. The cluster will no
+longer be able to connect to the DR primary.
+
+This endpoint requires a DR Operation Token to be provided as means of authorization. See the DR Operation Token API docs for more information.
+
+!> Re-enabling this node as a DR primary or secondary will change its cluster ID;
+in the secondary case this means a wipe of the underlying storage when connected
+to a primary, and in the primary case, secondaries connecting back to the
+cluster (even if they have connected before) will require a wipe of the
+underlying storage.
+
+| Method | Path                                    |
+| :----- | :-------------------------------------- |
+| `POST` | `/sys/replication/dr/secondary/disable` |
+
+### Sample payload
+
+```json
+{
+  "dr_operation_token": "..."
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/replication/dr/secondary/disable
+```
+
+## Update DR secondary's primary
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
+The update endpoint changes the primary cluster assigned to a DR
+secondary cluster. Changing the primary cluster assignment does not
+ wipe data in the secondary cluster.
+
+This endpoint requires a DR Operation Token to be provided as means of
+authorization. See the [DR Operation Token API
+docs](#generate-disaster-recovery-operation-token) for more information.
+
+There are two ways to update the primary assignment:
+
+1. **Use a secondary activation token with the `token` parameter**. An
+    activation token is required after a DR failover when updating a newly
+    demoted DR secondary cluster.
+
+1. **Use primary cluster addresses with the `update_primary_addrs` parameter**.
+    During the update, cluster addresses are pinged one at a time via gRPC.
+    The first cluster to respond successfully is assigned as the new primary
+    address. Updating with cluster addresses is not allowed after a DR
+    failover when updating a newly demoted DR secondary cluster.
+
+The two update methods are mutually exclusive. You may use one or the
+other, but not both. A good rule of thumb is to use `token` on DR secondary
+clusters and `update_primary_addrs` on performance secondary clusters.
+
+| Method | Path                                           |
+| :----- | :--------------------------------------------- |
+| `POST` | `/sys/replication/dr/secondary/update-primary` |
+
+### Parameters
+
+- `dr_operation_token` `(string: <required>)` - DR operation token used to authorize this request.
+
+- `token` `(string: <required>)` – Specifies the secondary activation token
+  fetched from the primary. If you set this to a blank string, the cluster will
+  stay a secondary but clear its knowledge of any past primary (and thus not
+  attempt to connect to the previous primary). This can be useful if the primary
+  is down to stop the secondary from trying to reconnect to it.
+
+- `primary_api_addr` `(string: )` – Specifies the API address (normal Vault
+  address) to override the value embedded in the token. This can be useful if
+  the primary's redirect address is not accessible directly from this cluster.
+
+- `ca_file` `(string: "")` – Specifies the path to a CA root file (PEM format)
+  that the secondary can use when unwrapping the token from the primary. If this
+  and ca_path are not given, defaults to system CA roots.
+
+- `ca_path` `string: ()` – Specifies the path to a CA root directory containing
+  PEM-format files that the secondary can use when unwrapping the token from the
+  primary. If this and ca_file are not given, defaults to system CA roots.
+
+- `update_primary_addrs` `array: []` – List of cluster addresses for potential
+  primary clusters. These addresses will be pinged in sequence, and if any of them
+  respond successfully, these will be recorded as the new primary addresses. This is
+  a lighter weight version of specifying a token and should result in less disruption
+  of replication.
+
+### Sample payload
+
+```json
+{
+  "dr_operation_token": "...",
+  "token": "..."
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/replication/dr/secondary/update-primary
+```
+
+### Sample payload
+
+```json
+{
+  "dr_operation_token": "...",
+  "update_primary_addrs": ["10.0.0.2:8201"]
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/replication/dr/secondary/update-primary
+```
+
+## Generate disaster recovery operation token
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
+The `/sys/replication/dr/secondary/generate-operation-token` endpoint is used to create a new Disaster
+Recovery operation token for a DR secondary. These tokens are used to authorize
+certain DR Operations. They should be treated like traditional root tokens by
+being generated when needed and deleted soon after.
+
+## Read generation progress
+
+@include 'alerts/enterprise-only.mdx'
+
+This endpoint reads the configuration and process of the current generation
+attempt.
+
+| Method | Path                                                             |
+| :----- | :--------------------------------------------------------------- |
+| `GET`  | `/sys/replication/dr/secondary/generate-operation-token/attempt` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    http://127.0.0.1:8200/v1/sys/replication/dr/secondary/generate-operation-token/attempt
+```
+
+### Sample response
+
+```json
+{
+  "started": true,
+  "nonce": "2dbd10f1-8528-6246-09e7-82b25b8aba63",
+  "progress": 1,
+  "required": 3,
+  "encoded_token": "",
+  "pgp_fingerprint": "",
+  "complete": false
+}
+```
+
+If a generation is started, `progress` is how many unseal keys have been
+provided for this generation attempt, where `required` must be reached to
+complete. The `nonce` for the current attempt and whether the attempt is
+complete is also displayed. If a PGP key is being used to encrypt the final
+token, its fingerprint will be returned. Note that if an OTP is being used to
+encode the final token, it will never be returned.
+
+## Start token generation
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
+This endpoint initializes a new generation attempt. Only a single
+generation attempt can take place at a time.
+
+| Method | Path                                                             |
+| :----- | :--------------------------------------------------------------- |
+| `POST` | `/sys/replication/dr/secondary/generate-operation-token/attempt` |
+
+### Parameters
+
+- `pgp_key` `(string: <optional>)` – Specifies a base64-encoded PGP public key.
+  The raw bytes of the token will be encrypted with this value before being
+  returned to the final unseal key provider.
+
+### Sample request
+
+```shell-session
+$ curl \
+    --request POST \
+    http://127.0.0.1:8200/v1/sys/replication/dr/secondary/generate-operation-token/attempt
+```
+
+### Sample response
+
+```json
+{
+  "started": true,
+  "nonce": "2dbd10f1-8528-6246-09e7-82b25b8aba63",
+  "progress": 1,
+  "required": 3,
+  "encoded_token": "",
+  "otp": "2vPFYG8gUSW9npwzyvxXMug0",
+  "otp_length": 24,
+  "complete": false
+}
+```
+
+## Cancel generation
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
+This endpoint cancels any in-progress generation attempt. This clears any
+progress made. This must be called to change the OTP or PGP key being used.
+
+| Method   | Path                                                             |
+| :------- | :--------------------------------------------------------------- |
+| `DELETE` | `/sys/replication/dr/secondary/generate-operation-token/attempt` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --request DELETE \
+    http://127.0.0.1:8200/v1/sys/replication/dr/secondary/generate-operation-token/attempt
+```
+
+## Provide key share to generate token
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
+This endpoint is used to enter a single root key share to progress the
+generation attempt. If the threshold number of root key shares is reached,
+Vault will complete the generation and issue the new token. Otherwise,
+this API must be called multiple times until that threshold is met. The attempt
+nonce must be provided with each call.
+
+| Method | Path                                                            |
+| :----- | :-------------------------------------------------------------- |
+| `POST` | `/sys/replication/dr/secondary/generate-operation-token/update` |
+
+### Parameters
+
+- `key` `(string: <required>)` – Specifies a single root key share.
+
+- `nonce` `(string: <required>)` – Specifies the nonce of the attempt.
+
+### Sample payload
+
+```json
+{
+  "key": "acbd1234",
+  "nonce": "ad235"
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/replication/dr/secondary/generate-operation-token/update
+```
+
+### Sample response
+
+This returns a JSON-encoded object indicating the attempt nonce, and completion
+status, and the encoded token, if the attempt is complete.
+
+```json
+{
+  "started": true,
+  "nonce": "2dbd10f1-8528-6246-09e7-82b25b8aba63",
+  "progress": 3,
+  "required": 3,
+  "pgp_fingerprint": "",
+  "complete": true,
+  "encoded_token": "FPzkNBvwNDeFh4SmGA8c+w=="
+}
+```
+
+## Delete DR operation token
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
+This endpoint revokes the DR Operation Token. This token does not have a TTL
+and therefore should be deleted when it is no longer needed.
+
+| Method | Path                                                   |
+| :----- | :----------------------------------------------------- |
+| `POST` | `/sys/replication/dr/secondary/operation-token/delete` |
+
+### Parameters
+
+- `dr_operation_token` `(string: <required>)` - DR operation token used to authorize this request.
+
+### Sample payload
+
+```json
+{
+  "dr_operation_token": "..."
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/replication/dr/secondary/operation-token/delete
+```
+
+## Reindex Replication
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
+This endpoint reindexes the local data storage. This can cause a very long delay
+depending on the number and size of objects in the data store.
+
+**This endpoint requires a disaster recovery operation token.**
+
+| Method | Path                                     |
+| :----- | :--------------------------------------- |
+| `POST` | `/sys/replication/dr/secondary/reindex` |
+
+### Parameters
+
+- `diff` `(bool: false)` – Enables a slower re-indexing which will perform a key
+  level check to diagnose issues. Defaults false.
+
+- `force` `(bool: false)` – Forces a complete re-indexing which only scans data
+  available in the storage. Defaults false.
+
+- `skip_flush` `(bool: false)` – Skips the tree flushing stage of the reindex
+  process. This setting can be used to reduce the amount of time the tree is locked
+  during a reindex process. If this node is killed before the full tree has been
+  asynchronously flushed the reindex may not have applied fully and a new reindex
+  may need to be done. Defaults false.
+
+- `dr_operation_token` `(string: <required>)` - DR operation token used to authorize
+  this request.
+
+### Sample Payload
+
+```json
+{
+  "dr_operation_token": "..."
+}
+```
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    http://127.0.0.1:8200/v1/sys/replication/dr/secondary/reindex
+```
+
+### Sample Response
+
+```json
+{
+  "warnings": ["..."]
+}
+```
+
+## `/sys/replication/dr/secondary/merkle-check`
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
+The Merkle check endpoint prints information about the corruption status of the Merkle tree on a DR
+secondary cluster. Check [merkle tree corruption](/vault/api-docs/system/replication#check-merkle-tree-corruption) for more details.
+
+Requests to `/sys/replication/dr/secondary/merkle-check` must provide a DR
+Operation Token as authorization. See the [DR Operation Token API
+docs](#generate-disaster-recovery-operation-token) for more information.
+
+| Method  | Path                                         |
+| :------ | :------------------------------------------- |
+| `POST`  | `/sys/replication/dr/secondary/merkle-check` |
+
+### Parameters
+
+- `dr_operation_token` `(string: <required>)` - DR operation token used to authorize the request.
+
+### Sample request
+
+```shell-session
+$ curl \
+    http://127.0.0.1:8200/v1/sys/replication/dr/secondary/merkle-check
+```
+
+### Sample response
+
+The response provides information about the health of the Merkle composite tree.
+It indicates whether the root of the tree is corrupted and also identifies any
+corruption in the roots of its subtrees, including replicated and local subtrees.
+In the event of corruption within a page or subpage of the tree, it includes the
+page number along with a list of corrupted subpage numbers. The status details
+indicate the extent of corruption within the Merkle tree.
+
+```json
+{
+  "request_id": "d4b2ad1a-6e5f-7f9e-edfe-558eb89a40e6",
+  "lease_id": "",
+  "lease_duration": 0,
+  "renewable": false,
+  "data": {
+    "merkle_corruption_report": {
+      "corrupted_root": false,
+      "corrupted_tree_map": {
+        "1": {
+          "corrupted_index_tuples_map": {
+            "5": {
+              "corrupted": false,
+              "subpages": [
+                28
+              ]
+            }
+          },
+          "corrupted_subtree_root": false,
+          "root_hash": "DyGc6rQTV9XgyNSff3zimhi3FJM=",
+          "tree_type": "replicated"
+        },
+        "2": {
+          "corrupted_index_tuples_map": null,
+          "corrupted_subtree_root": false,
+          "root_hash": "EXmRTdfYCZTm5i9wLef9RQqyLCw=",
+          "tree_type": "local"
+        }
+      },
+      "last_corruption_check_epoch": "2023-09-11T11:25:59.44956-07:00"
+    }
+  }
+}
+```

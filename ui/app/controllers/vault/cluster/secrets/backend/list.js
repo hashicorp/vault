@@ -1,24 +1,36 @@
-import { computed } from '@ember/object';
-import { inject as service } from '@ember/service';
-import Controller from '@ember/controller';
-import utils from 'vault/lib/key-utils';
-import BackendCrumbMixin from 'vault/mixins/backend-crumb';
-import WithNavToNearestAncestor from 'vault/mixins/with-nav-to-nearest-ancestor';
-import ListController from 'core/mixins/list-controller';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
 
-export default Controller.extend(ListController, BackendCrumbMixin, WithNavToNearestAncestor, {
+import { or } from '@ember/object/computed';
+import { computed } from '@ember/object';
+import { service } from '@ember/service';
+import Controller from '@ember/controller';
+import BackendCrumbMixin from 'vault/mixins/backend-crumb';
+import ListController from 'core/mixins/list-controller';
+import { keyIsFolder } from 'core/utils/key-utils';
+
+export default Controller.extend(ListController, BackendCrumbMixin, {
   flashMessages: service(),
   queryParams: ['page', 'pageFilter', 'tab'],
 
   tab: '',
 
-  filterIsFolder: computed('filter', function() {
-    return !!utils.keyIsFolder(this.get('filter'));
+  // callback from HDS pagination to set the queryParams page
+  get paginationQueryParams() {
+    return (page) => {
+      return {
+        page,
+      };
+    };
+  },
+
+  filterIsFolder: computed('filter', function () {
+    return !!keyIsFolder(this.filter);
   }),
 
-  isConfigurableTab: computed('isCertTab', 'isConfigure', function() {
-    return this.get('isCertTab') || this.get('isConfigure');
-  }),
+  isConfigurableTab: or('isCertTab', 'isConfigure'),
 
   actions: {
     chooseAction(action) {
@@ -30,24 +42,27 @@ export default Controller.extend(ListController, BackendCrumbMixin, WithNavToNea
       this.set('loading-' + item.id, true);
       backend
         .saveZeroAddressConfig()
-        .catch(e => {
+        .catch((e) => {
           item.set('zeroAddress', false);
-          this.get('flashMessages').danger(e.message);
+          this.flashMessages.danger(e.message);
         })
         .finally(() => {
           this.set('loading-' + item.id, false);
         });
     },
 
-    delete(item, type) {
+    delete(item) {
       const name = item.id;
-      item.destroyRecord().then(() => {
-        this.get('flashMessages').success(`${name} was successfully deleted.`);
-        this.send('reload');
-        if (type === 'secret') {
-          this.navToNearestAncestor.perform(name);
-        }
-      });
+      item
+        .destroyRecord()
+        .then(() => {
+          this.flashMessages.success(`${name} was successfully deleted.`);
+          this.send('reload');
+        })
+        .catch((e) => {
+          const error = e.errors ? e.errors.join('. ') : e.message;
+          this.flashMessages.danger(error);
+        });
     },
   },
 });

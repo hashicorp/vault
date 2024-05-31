@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix issue with KV not recomputing model when you changed versions.
+```

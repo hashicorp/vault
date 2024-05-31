@@ -1,0 +1,235 @@
+---
+layout: docs
+page_title: Kerberos - Auth Methods
+description: The Kerberos auth method allows automated authentication of Kerberos entities.
+---
+
+# Kerberos auth method
+
+@include 'x509-sha1-deprecation.mdx'
+
+The `kerberos` auth method provides an automated mechanism to retrieve
+a Vault token for Kerberos entities.
+
+[Kerberos](https://web.mit.edu/kerberos/) is a network authentication
+protocol invented by MIT in the 1980s. Its name is inspired by Cerberus,
+the three-headed hound of Hades from Greek mythology. The three heads
+refer to Kerberos' three entities - an authentication server, a ticket
+granting server, and a principals database. Kerberos underlies
+authentication in Active Directory, and its purpose is to _distribute_
+a network's authentication workload.
+
+Vault's Kerberos auth method was originally written by the folks at
+[Winton](https://github.com/wintoncode), to whom we owe a special thanks
+for both originally building the plugin, and for collaborating to bring
+it into HashiCorp's maintenance.
+
+## Prerequisites
+
+Kerberos is a very hands-on auth method. Other auth methods like
+[LDAP](/vault/docs/auth/ldap) and
+[Azure](/vault/docs/auth/azure) only require
+a cursory amount of knowledge for configuration and use.
+Kerberos, on the other hand, is best used by people already familiar
+with it. We recommend that you use simpler authentication methods if
+your use case is achievable through them. If not, we recommend that
+before approaching Kerberos, you become familiar with its fundamentals.
+
+- [MicroNugget: How Kerberos Works in Windows Active Directory](https://www.youtube.com/watch?v=kp5d8Yv3-0c)
+- [MIT's Kerberos Documentation](https://web.mit.edu/kerberos/)
+- [Kerberos: The Definitive Guide](https://www.amazon.com/Kerberos-Definitive-Guide-ebook-dp-B004P1J81C/dp/B004P1J81C/ref=mt_kindle?_encoding=UTF8&me=&qid=1573685442)
+
+Regardless of how you gain your knowledge, before using this auth method,
+ensure you are comfortable with Kerberos' high-level architecture, and
+ensure you've gone through the exercise of:
+
+- Creating a valid `krb5.conf` file
+- Creating a valid `keytab` file
+- Authenticating to your domain server with your `keytab` file using `kinit`
+
+With that knowledge in hand, and with an environment that's already tested
+and confirmed working, you will be ready to use Kerberos with Vault.
+
+## Configuration
+
+- Enable Kerberos authentication in Vault:
+
+```shell-session
+$ vault auth enable \
+    -passthrough-request-headers=Authorization \
+    -allowed-response-headers=www-authenticate \
+    kerberos
+```
+
+- Create a `keytab` for the Kerberos plugin (this keytab is used by the Vault server itself, another keytab should be generated for login purposes):
+
+```shell-session
+$ ktutil
+ktutil:  addent -password -p your_service_account@REALM.COM -e aes256-cts -k 1
+Password for your_service_account@REALM.COM:
+ktutil:  list -e
+slot KVNO Principal
+---- ---- ---------------------------------------------------------------------
+  1    1            your_service_account@REALM.COM (aes256-cts-hmac-sha1-96)
+ktutil:  wkt vault.keytab
+```
+
+The KVNO (`-k 1`) should match the KVNO of the service account. An error will show in the Vault logs if this is incorrect.
+
+Different encryption types can also be added to the `keytab`, for example `-e rc4-hmac` with additional `addent` commands.
+
+Then base64 encode it:
+
+```shell-session
+$ base64 vault.keytab > vault.keytab.base64
+```
+
+- Configure the Kerberos auth method with the `keytab` and
+  entry name that will be used to verify inbound login
+  requests:
+
+```shell-session
+$ vault write auth/kerberos/config \
+    keytab=@vault.keytab.base64 \
+    service_account="vault_svc"
+```
+
+- Configure the Kerberos auth method to communicate with
+  LDAP using the service account configured above. This is
+  a sample LDAP configuration. Yours will vary. Ensure you've
+  first tested your configuration from the Vault server using
+  a tool like `ldapsearch`.
+
+```shell-session
+$ vault write auth/kerberos/config/ldap \
+    binddn=vault_svc@MATRIX.LAN \
+    bindpass=$VAULT_SVC_PASSWORD \
+    groupattr=sAMAccountName \
+    groupdn="DC=MATRIX,DC=LAN" \
+    groupfilter="(&(objectClass=group)(member:1.2.840.113556.1.4.1941:={{.UserDN}}))" \
+    userdn="CN=Users,DC=MATRIX,DC=LAN" \
+    userattr=sAMAccountName \
+    upndomain=MATRIX.LAN \
+    url=ldaps://somewhere.foo
+```
+
+The LDAP above relies upon the same code as the LDAP auth method.
+See [its documentation](/vault/docs/auth/ldap)
+for further discussion of available parameters.
+
+- Configure the Vault policies that should be granted to those
+  who successfully authenticate based on their LDAP group membership.
+  Since this is identical to the LDAP auth method, see
+  [Group Membership Resolution](/vault/docs/auth/ldap#group-membership-resolution)
+  and [LDAP Group -> Policy Mapping](/vault/docs/auth/ldap#ldap-group-policy-mapping)
+  for further discussion.
+
+```shell-session
+$ vault write auth/kerberos/groups/engineering-team \
+    policies=engineers
+```
+
+The above group grants the "engineers" policy to those who authenticate
+via Kerberos and are found to be members of the "engineering-team" LDAP
+group.
+
+## Authentication
+
+From a client machine with a valid `krb5.conf` and `keytab`, perform a command
+like the following:
+
+```shell-session
+$ vault login -method=kerberos \
+    username=grace \
+    service=HTTP/my-service \
+    realm=MATRIX.LAN \
+    keytab_path=/etc/krb5/krb5.keytab  \
+    krb5conf_path=/etc/krb5.conf \
+    disable_fast_negotiation=false
+```
+
+- `krb5conf_path` is the path to a valid `krb5.conf` file describing how to
+  communicate with the Kerberos environment.
+- `keytab_path` is the path to the `keytab` in which the entry lives for the
+  entity authenticating to Vault. Keytab files should be protected from other
+  users on a shared server using appropriate file permissions.
+- `username` is the username for the entry _within_ the `keytab` to use for
+  logging into Kerberos. This username must match a service account in LDAP.
+- `service` is the service principal name to use in obtaining a service ticket for
+  gaining a SPNEGO token. This service must exist in LDAP.
+- `realm` is the name of the Kerberos realm. This realm must match the UPNDomain
+  configured on the LDAP connection. This check is case-sensitive.
+- `disable_fast_negotiation` is for disabling the Kerberos auth method's default
+  of using FAST negotiation. FAST is a pre-authentication framework for Kerberos.
+  It includes a mechanism for tunneling pre-authentication exchanges using armoured
+  KDC messages. FAST provides increased resistance to passive password guessing attacks.
+  Some common Kerberos implementations do not support FAST negotiation.
+- `remove_instance_name` removes any instance names from a Kerberos service 
+  principal name when parsing the keytab file. For example when this is set to true, 
+  if a keytab has the service principal name `foo/localhost@example.com`, the CLI 
+  will strip the service principal name to just be `foo@example.com`.
+
+## Troubleshooting
+
+### Identify the malfunctioning piece
+
+Once the malfunctioning piece of the journey is identified, you can focus
+your debugging efforts in the most useful direction.
+
+1. Use `ldapsearch` while logged into your machine hosting Vault to ensure
+   your LDAP configuration is functional.
+2. Authenticate to your domain server using `kinit`, your `keytab`, and your
+   `krb5.conf`. Do this with both Vault's `keytab`, and any client `keytab` being
+   used for logging in. This ensures your Kerberos network is working.
+3. While logged into your client machine, verify you can reach Vault
+   through the following command: `$ curl $VAULT_ADDR/v1/sys/health`.
+
+### Build clear steps to reproduce the problem
+
+If possible, make it easy for someone else to reproduce the problem who
+is outside of your company. For instance, if you expect that you should
+be able to login using a command like:
+
+```shell-session
+$ vault login -method=kerberos \
+    username=my-name \
+    service=HTTP/my-service \
+    realm=EXAMPLE.COM \
+    keytab_path=/etc/krb5/krb5.keytab  \
+    krb5conf_path=/etc/krb5.conf
+```
+
+Then make sure you're ready to share the error output of that command, the
+contents of the `krb5.conf` file, and [the entries listed](https://docs.oracle.com/cd/E19683-01/806-4078/6jd6cjs1q/index.html)
+in the `keytab` file.
+
+After you've stripped the issue down to its simplest form, if you still
+encounter difficulty resolving it, it will be much easier to gain assistance
+by posting your reproduction to the [Vault Forum](https://discuss.hashicorp.com/c/vault)
+or by providing it to [HashiCorp Support](https://www.hashicorp.com/support)
+(if applicable.)
+
+### Additional troubleshooting resources
+
+- [Troubleshooting Vault](/vault/tutorials/monitoring/troubleshooting-vault)
+- [The plugin's code](https://github.com/hashicorp/vault-plugin-auth-kerberos)
+
+The Vault Kerberos library has a working integration test environment that
+can be referenced as an example of a full Kerberos and LDAP environment.
+It runs through Docker and can be started through either one of the following
+commands:
+
+```shell-session
+$ make integration
+$ make dev-env
+```
+
+These commands run variations of [a script](https://github.com/hashicorp/vault-plugin-auth-kerberos/blob/master/scripts/integration_env.sh)
+that spins up a full environment, adds users, and executes a login from a
+client.
+
+## API
+
+The Kerberos auth method has a full HTTP API. Please see the
+[Kerberos auth method API](/vault/api-docs/auth/kerberos) for more
+details.

@@ -1,0 +1,144 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
+  <D.Trigger data-test-calendar-widget-trigger class={{concat "toolbar-link" (if D.isOpen " is-active")}} @htmlTag="button">
+    {{date-format this.startDate "MMM yyyy"}}
+    -
+    {{date-format this.endDate "MMM yyyy"}}
+    <Chevron @direction="down" @isButton={{true}} />
+  </D.Trigger>
+  <D.Content @defaultClass={{concat "popup-menu-content calendar-content" (if this.showCalendar " calendar-open")}}>
+    <nav class="box menu" aria-label="calendar date selector navigation">
+      <Hds::Text::Body class="calendar-title" @color="faint">DATE OPTIONS</Hds::Text::Body>
+      {{! TODO Hds::Dropdown swapout }}
+      <ul class="menu-list">
+        <li>
+          <button
+            data-test-current-month
+            class="link is-no-underline has-text-weight-semibold is-ghost"
+            type="button"
+            name="currentMonth"
+            {{on "click" (fn this.handleDateShortcut D.actions)}}
+          >
+            Current month
+          </button>
+        </li>
+        <li>
+          <button
+            data-test-current-billing-period
+            class="link is-no-underline has-text-weight-semibold is-ghost"
+            type="button"
+            name="reset"
+            {{on "click" (fn this.handleDateShortcut D.actions)}}
+          >
+            Current billing period
+          </button>
+        </li>
+        <li>
+          <button
+            data-test-show-calendar
+            class={{concat "link is-no-underline has-text-weight-semibold is-ghost" (if this.showCalendar " is-active")}}
+            type="button"
+            {{on "click" this.toggleShowCalendar}}
+          >
+            <div class="level is-mobile">
+              <span class="level-left">
+                Custom end month
+              </span>
+              <Chevron class="has-text-grey-light level-right" />
+            </div>
+          </button>
+        </li>
+      </ul>
+    </nav>
+    {{#if this.showCalendar}}
+      <div class="calendar-widget-container" data-test-calendar-widget-container>
+        <div class="select-year">
+          {{#if this.disablePastYear}}
+            <Hds::TooltipButton
+              @text={{concat
+                (sub this.displayYear 1)
+                " is unavailable because it is before your start date. Change your start month to a date in "
+                (sub this.displayYear 1)
+                " to see data for this year."
+              }}
+              aria-label="More information about why previous year is disabled"
+            >
+              <Hds::Button
+                data-test-previous-year
+                id="previous-year"
+                disabled={{true}}
+                {{on "click" this.subYear}}
+                @color="secondary"
+                @text="previous year"
+                @icon="chevron-left"
+                @isIconOnly={{true}}
+              />
+            </Hds::TooltipButton>
+          {{else}}
+            <Hds::Button
+              data-test-previous-year
+              id="previous-year"
+              {{on "click" this.subYear}}
+              @color="secondary"
+              @text="previous year"
+              @icon="chevron-left"
+              @isIconOnly={{true}}
+            />
+          {{/if}}
+
+          <Hds::Text::Display data-test-display-year>
+            {{this.displayYear}}
+          </Hds::Text::Display>
+
+          {{#if this.disableFutureYear}}
+            <Hds::TooltipButton
+              @text={{concat
+                (add this.displayYear 1)
+                " is unavailable because data is only available up to the current month."
+              }}
+              aria-label="More information about why next year is disabled"
+            >
+              <Hds::Button
+                data-test-next-year
+                id="next-year"
+                disabled={{true}}
+                {{on "click" this.addYear}}
+                @color="secondary"
+                @text="next year"
+                @icon="chevron-right"
+                @isIconOnly={{true}}
+              />
+            </Hds::TooltipButton>
+          {{else}}
+            <Hds::Button
+              data-test-next-year
+              id="next-year"
+              {{on "click" this.addYear}}
+              @color="secondary"
+              @text="next year"
+              @icon="chevron-right"
+              @isIconOnly={{true}}
+            />
+          {{/if}}
+        </div>
+        <div class="calendar-widget-grid calendar-widget">
+          {{#each this.widgetMonths as |month|}}
+            <Hds::Button
+              @text={{month.name}}
+              @color="secondary"
+              @size="small"
+              disabled={{month.readonly}}
+              data-test-calendar-month={{month.name}}
+              id={{month.index}}
+              {{on "click" (fn this.selectMonth month D.actions)}}
+            />
+          {{/each}}
+        </div>
+      </div>
+    {{/if}}
+  </D.Content>
+</BasicDropdown>

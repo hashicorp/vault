@@ -1,0 +1,3 @@
+```release-note:feature
+* **Login MFA**: Single and two phase MFA is now available when authenticating to Vault.
+```

@@ -1,0 +1,77 @@
+---
+layout: docs
+page_title: Recovery Mode
+description: Recovery mode allows for doing surgery on a Vault that won't start.
+---
+
+# Recovery mode
+
+Vault can be started using the `-recovery` flag to bring it up in Recovery Mode.
+The main purpose of recovery mode is to allow direct access to storage in case
+Vault isn't starting up due to some newly discovered bug.  This probably won't
+be helpful without a Vault expert on hand to advise.
+
+Differences between recovery mode and regular Vault operation:
+- none of the usual subsystems run, e.g. expiration, clustering, RPCs from other nodes
+- instead of a regular unseal request, unseal a node by generating a recovery token
+- all requests are to `sys/raw` and are authenticated using the recovery token
+
+## Recovery process
+
+The usual way recovery mode is used is:
+- seal or stop all nodes in the cluster
+- if using Integrated Storage, run `vault status` on each node to find the highest-index ones
+  (this will require they be running and sealed, as if unsealed a new leader might be
+  elected and writes could happen, confusing the issue)
+- restart the target node in recovery mode
+- generate a recovery token on that node
+- use the recovery token to perform sys/raw requests to repair the node
+- if using Integrated Storage, reform the raft cluster as described below
+
+## Integrated storage for HA only (ha_storage)
+
+If Integrated Storage is used in hybrid mode (i.e. for `ha_storage`),
+recovery mode will not allow for changes to the Raft data but instead allow for
+modification of the underlying physical data that is associated with Vault's
+storage backend.  This means that the notes regarding Integrated Storage in
+this doc do not apply.
+
+## Integrated storage
+
+With Integrated Storage, not all nodes are equal.  It's possible that some
+nodes are further behind - i.e. haven't applied as many Raft logs.  It is
+important when choosing a node to use for recovery that it has the highest
+AppliedIndex found in the cluster.
+
+Each node's AppliedIndex value can be obtained by running `vault status` against
+the node sealed nodes of the cluster after bringing it down.
+
+## Recovery tokens
+
+Recovery tokens are issued in much the same way as root tokens are generated,
+only using a different endpoint, and the Vault node must be sealed first.
+Unlike root tokens, the recovery token is not persisted, so if Vault
+is restarted into recovery mode a new one must be generated.
+
+Only a single recovery token can be generated. If lost, restart Vault and
+generate a new one.
+
+## Raw requests
+
+Requests can be issued to `sys/raw` in just the same way as in regular Vault
+server mode. The only difference is that in recovery mode, `X-Vault-Token`
+must contain a recovery token instead of a service or batch token.
+
+## Reform the raft cluster
+
+Recovery mode Vault automatically resizes the cluster to size 1.  This is
+necessary because the Raft protocol won't allow changes to be made without a
+quorum, and in recovery mode we wish to make changes using a single node.
+
+This means that after having used recovery mode, part of the procedure for
+returning to active service must include re-forming the raft cluster.  There
+are two ways to do so: either delete the vault data directory on the other nodes
+and re-join them to the recovered node, or use the
+[Manual Recovery Using peers.json](/vault/docs/concepts/integrated-storage#manual-recovery-using-peers-json)
+approach to get all nodes to agree on what nodes are part of the cluster.
+

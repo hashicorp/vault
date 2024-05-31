@@ -1,0 +1,89 @@
+{
+  "openapi": "3.0.2",
+  "info": {
+    "title": "HashiCorp Vault API",
+    "description": "HTTP API that gives you full access to Vault. All API routes are prefixed with `/v1/`.",
+    "version": "<vault_version>",
+    "license": {
+      "name": "Mozilla Public License 2.0",
+      "url": "https://www.mozilla.org/en-US/MPL/2.0"
+    }
+  },
+  "paths": {
+    "/foo/{id}/": {
+      "description": "Synopsis",
+      "parameters": [
+        {
+          "name": "id",
+          "description": "id path parameter",
+          "in": "path",
+          "schema": {
+            "type": "string"
+          },
+          "required": true
+        }
+      ],
+      "x-vault-sudo": true,
+      "x-vault-displayAttrs": {
+        "navigation": true
+      },
+      "get": {
+        "summary": "List Summary",
+        "description": "List Description",
+        "operationId": "kv-list-foo-id",
+        "tags": [
+          "secrets"
+        ],
+        "parameters": [
+          {
+            "name": "format",
+            "description": "a query param",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "list",
+            "description": "Must be set to `true`",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true"
+              ]
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "StandardListResponse": {
+        "type": "object",
+        "properties": {
+          "keys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}

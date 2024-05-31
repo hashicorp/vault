@@ -1,0 +1,37 @@
+---
+layout: api
+page_title: /sys/internal/ui/resultant-acl - HTTP API
+description: >-
+  The `/sys/internal/ui/resultant-acl` endpoint exposes resultant-acl to the UI.
+---
+
+# `/sys/internal/ui/resultant-acl`
+
+The `/sys/internal/ui/resultant-acl` endpoint is used to expose resultant-acl
+to the UI so that it can change its behavior in response.
+
+This is currently only being used internally for the UI. Due to the nature of its
+intended usage, there is no guarantee on backwards compatibility for this endpoint.
+
+## Get resultant-acl
+
+This endpoint lists the resultant-acl relevant to the UI.
+
+| Method | Path                             |
+| :----- | :------------------------------- |
+| `GET`  | `/sys/internal/ui/resultant-acl` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    http://127.0.0.1:8200/v1/sys/internal/ui/resultant-acl
+```
+
+### Sample response
+
+```json
+{
+  "resultant-acl": []
+}
+```

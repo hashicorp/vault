@@ -1,0 +1,3 @@
+```release-note:bug
+license: Fix license caching issue that prevents new licenses to get picked up by the license manager
+```

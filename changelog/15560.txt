@@ -1,0 +1,3 @@
+```release-note:bug
+ui: fix form validations ignoring default values and disabling submit button 
+```

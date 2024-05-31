@@ -1,0 +1,63 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
+---
+name: Set up misspell from Github releases
+description: Set up misspell from Github releases
+
+inputs:
+  destination:
+    description: "Where to install the misspell binary (default: $HOME/bin/misspell)"
+    type: boolean
+    default: "$HOME/bin/misspell"
+  version:
+    description: "The version to install (default: latest)"
+    type: string
+    default: Latest
+
+outputs:
+  destination:
+    description: Where the installed misspell binary is
+    value: ${{ steps.install.outputs.destination }}
+  destination-dir:
+    description: The directory where the installed misspell binary is
+    value: ${{ steps.install.outputs.destination-dir }}
+  version:
+    description: The installed version of misspell
+    value: ${{ steps.install.outputs.version }}
+
+runs:
+  using: composite
+  steps:
+    - id: install
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        VERSION=$(gh release list -R golangci/misspell --exclude-drafts --exclude-pre-releases | grep ${{ inputs.version }} | cut -f1)
+
+        mkdir -p $(dirname ${{ inputs.destination }})
+        DESTINATION="$(readlink -f "${{ inputs.destination }}")"
+        DESTINATION_DIR="$(dirname "$DESTINATION")"
+        echo "$DESTINATION_DIR" >> "$GITHUB_PATH"
+
+        {
+          echo "destination=$DESTINATION"
+          echo "version=$VERSION"
+          echo "destination-dir=$DESTINATION_DIR"
+        } | tee -a "$GITHUB_OUTPUT"
+
+        ARCH="$(echo "$RUNNER_ARCH" | tr '[:upper:]' '[:lower:]')"
+        OS="$(echo "$RUNNER_OS" | tr '[:upper:]' '[:lower:]')"
+        if [ "$ARCH" = "x64" ]; then
+          export ARCH="amd64"
+        fi
+        if [ "$OS" = "macos" ]; then
+          export OS="darwin"
+        fi
+
+        mkdir -p tmp
+        gh release download "$VERSION" -p "misspell_*_${OS}_${ARCH}.tar.gz" -O tmp/misspell.tgz -R golangci/misspell
+        pushd tmp && tar -xvf misspell.tgz && popd
+        mv tmp/misspell "$DESTINATION"
+        rm -rf tmp

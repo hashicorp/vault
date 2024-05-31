@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 // This package is used to implement Key Derivation Functions (KDF)
 // based on the recommendations of NIST SP 800-108. These are useful
 // for generating unique-per-transaction keys, or situations in which
@@ -9,6 +12,7 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
+	"math"
 )
 
 // PRF is a pseudo-random function that takes a key or seed,
@@ -35,6 +39,10 @@ func CounterMode(prf PRF, prfLen uint32, key []byte, context []byte, bits uint32
 	rounds := bits / prfLen
 	if bits%prfLen != 0 {
 		rounds++
+	}
+
+	if len(context) > math.MaxInt-8 {
+		return nil, fmt.Errorf("too much context specified; would overflow: %d bytes", len(context))
 	}
 
 	// Allocate and setup the input

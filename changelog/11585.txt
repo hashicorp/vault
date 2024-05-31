@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/database: Fixes issue for V4 database interface where `SetCredentials` wasn't falling back to using `RotateRootCredentials` if `SetCredentials` is `Unimplemented`
+```

@@ -1,12 +1,14 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
 
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/cli"
 )
 
 func testAuditEnableCommand(tb testing.TB) (*cli.MockUi, *AuditEnableCommand) {
@@ -32,7 +34,7 @@ func TestAuditEnableCommand_Run(t *testing.T) {
 		{
 			"empty",
 			nil,
-			"Missing TYPE!",
+			"Error enabling audit device: audit type missing. Valid types include 'file', 'socket' and 'syslog'.",
 			1,
 		},
 		{
@@ -166,30 +168,16 @@ func TestAuditEnableCommand_Run(t *testing.T) {
 		client, closer := testVaultServerAllBackends(t)
 		defer closer()
 
-		files, err := ioutil.ReadDir("../builtin/audit")
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		var backends []string
-		for _, f := range files {
-			if f.IsDir() {
-				backends = append(backends, f.Name())
-			}
-		}
-
-		for _, b := range backends {
+		for _, name := range []string{"file", "socket", "syslog"} {
 			ui, cmd := testAuditEnableCommand(t)
 			cmd.client = client
 
-			args := []string{
-				b,
-			}
-			switch b {
+			args := []string{name}
+			switch name {
 			case "file":
 				args = append(args, "file_path=discard")
 			case "socket":
-				args = append(args, "address=127.0.0.1:8888")
+				args = append(args, "address=127.0.0.1:8888", "skip_test=true")
 			case "syslog":
 				if _, exists := os.LookupEnv("WSLENV"); exists {
 					t.Log("skipping syslog test on WSL")
@@ -198,7 +186,7 @@ func TestAuditEnableCommand_Run(t *testing.T) {
 			}
 			code := cmd.Run(args)
 			if exp := 0; code != exp {
-				t.Errorf("type %s, expected %d to be %d - %s", b, code, exp, ui.OutputWriter.String()+ui.ErrorWriter.String())
+				t.Errorf("type %s, expected %d to be %d - %s", name, code, exp, ui.OutputWriter.String()+ui.ErrorWriter.String())
 			}
 		}
 	})

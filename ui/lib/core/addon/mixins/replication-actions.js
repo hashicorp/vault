@@ -1,4 +1,9 @@
-import { inject as service } from '@ember/service';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { service } from '@ember/service';
 import { or } from '@ember/object/computed';
 import { isPresent } from '@ember/utils';
 import Mixin from '@ember/object/mixin';
@@ -8,11 +13,10 @@ export default Mixin.create({
   store: service(),
   router: service(),
   loading: or('save.isRunning', 'submitSuccess.isRunning'),
-  onEnable() {},
   onDisable() {},
   onPromote() {},
-  submitHandler: task(function*(action, clusterMode, data, event) {
-    let replicationMode = (data && data.replicationMode) || this.get('replicationMode');
+  submitHandler: task(function* (action, clusterMode, data, event) {
+    const replicationMode = (data && data.replicationMode) || this.replicationMode;
     if (event && event.preventDefault) {
       event.preventDefault();
     }
@@ -36,10 +40,10 @@ export default Mixin.create({
     return yield this.save.perform(action, replicationMode, clusterMode, data);
   }),
 
-  save: task(function*(action, replicationMode, clusterMode, data) {
+  save: task(function* (action, replicationMode, clusterMode, data) {
     let resp;
     try {
-      resp = yield this.get('store')
+      resp = yield this.store
         .adapterFor('cluster')
         .replicationAction(action, replicationMode, clusterMode, data);
     } catch (e) {
@@ -48,10 +52,9 @@ export default Mixin.create({
     return yield this.submitSuccess.perform(resp, action, clusterMode);
   }).drop(),
 
-  submitSuccess: task(function*(resp, action, mode) {
-    const cluster = this.get('cluster');
-    const replicationMode = this.get('selectedReplicationMode') || this.get('replicationMode');
-    const store = this.get('store');
+  submitSuccess: task(function* (resp, action) {
+    // enable action is handled separately in EnableReplicationForm component
+    const cluster = this.cluster;
     if (!cluster) {
       return;
     }
@@ -70,20 +73,6 @@ export default Mixin.create({
     if (this.reset) {
       this.reset();
     }
-    if (action === 'enable') {
-      // do something to show model is pending
-      cluster.set(
-        replicationMode,
-        store.createFragment('replication-attributes', {
-          mode: 'bootstrapping',
-        })
-      );
-      if (mode === 'secondary' && replicationMode === 'performance') {
-        // if we're enabing a secondary, there could be mount filtering,
-        // so we should unload all of the backends
-        store.unloadAll('secret-engine');
-      }
-    }
     try {
       yield cluster.reload();
     } catch (e) {
@@ -95,11 +84,6 @@ export default Mixin.create({
     }
     if (action === 'promote') {
       yield this.onPromote();
-    }
-    if (action === 'enable') {
-      /// onEnable is a method available only to route vault.cluster.replication.index
-      // if action 'enable' is called from vault.cluster.replication.mode.index this method is not called
-      yield this.onEnable(replicationMode, mode);
     }
   }).drop(),
 

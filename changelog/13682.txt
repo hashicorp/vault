@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Add duration and start_time to completed requests log entries
+```

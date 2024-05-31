@@ -1,0 +1,3 @@
+```release-note:improvement
+docs: Clarify the behaviour of local mounts in the context of DR replication
+```

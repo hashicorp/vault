@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Implemented background thread to update locked user entries every 15 minutes to prevent brute forcing in auth methods. 
+```

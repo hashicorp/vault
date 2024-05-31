@@ -1,16 +1,20 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { belongsTo, attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import IdentityModel from './_base';
-import DS from 'ember-data';
 import identityCapabilities from 'vault/macros/identity-capabilities';
-const { attr, belongsTo } = DS;
 
 export default IdentityModel.extend({
   parentType: 'entity',
-  formFields: computed(function() {
+  formFields: computed(function () {
     return ['name', 'mountAccessor'];
   }),
-  entity: belongsTo('identity/entity', { readOnly: true, async: false }),
+  entity: belongsTo('identity/entity', { readOnly: true, async: false, inverse: 'aliases' }),
 
   name: attr('string'),
   canonicalId: attr('string'),
@@ -20,6 +24,7 @@ export default IdentityModel.extend({
   }),
   metadata: attr({
     editType: 'kv',
+    isSectionHeader: true,
   }),
   mountPath: attr('string', {
     readOnly: true,

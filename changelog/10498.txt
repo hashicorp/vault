@@ -1,0 +1,4 @@
+```release-note:bug
+core: Make all APIs that report init status consistent, and make them report
+initialized=true when a Raft join is in progress.
+```

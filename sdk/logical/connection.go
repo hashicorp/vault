@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package logical
 
 import (
@@ -9,6 +12,9 @@ import (
 type Connection struct {
 	// RemoteAddr is the network address that sent the request.
 	RemoteAddr string `json:"remote_addr"`
+
+	// RemotePort is the network port that sent the request.
+	RemotePort int `json:"remote_port"`
 
 	// ConnState is the TLS connection state if applicable.
 	ConnState *tls.ConnectionState `sentinel:""`

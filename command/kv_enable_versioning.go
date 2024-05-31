@@ -1,16 +1,21 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
-	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*KVEnableVersioningCommand)(nil)
-var _ cli.CommandAutocomplete = (*KVEnableVersioningCommand)(nil)
+var (
+	_ cli.Command             = (*KVEnableVersioningCommand)(nil)
+	_ cli.CommandAutocomplete = (*KVEnableVersioningCommand)(nil)
+)
 
 type KVEnableVersioningCommand struct {
 	*BaseCommand
@@ -22,11 +27,11 @@ func (c *KVEnableVersioningCommand) Synopsis() string {
 
 func (c *KVEnableVersioningCommand) Help() string {
 	helpText := `
-Usage: vault kv enable-versions [options] KEY
+Usage: vault kv enable-versioning [options] KEY
 
   This command turns on versioning for the backend at the provided path.
 
-      $ vault kv enable-versions secret
+      $ vault kv enable-versioning secret
 
   Additional flags and more advanced use cases are detailed below.
 

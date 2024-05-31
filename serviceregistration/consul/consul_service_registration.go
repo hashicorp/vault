@@ -1,6 +1,11 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package consul
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -15,13 +20,13 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul/api"
-	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	sr "github.com/hashicorp/vault/serviceregistration"
+	"github.com/hashicorp/vault/vault/diagnose"
 	atomicB "go.uber.org/atomic"
 	"golang.org/x/net/http2"
 )
@@ -47,27 +52,33 @@ const (
 
 	// reconcileTimeout is how often Vault should query Consul to detect
 	// and fix any state drift.
-	reconcileTimeout = 60 * time.Second
+	DefaultReconcileTimeout = 60 * time.Second
+
+	// metaExternalSource is a metadata value for external-source that can be
+	// used by the Consul UI.
+	metaExternalSource = "vault"
 )
 
-var (
-	hostnameRegex = regexp.MustCompile(`^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$`)
-)
+var hostnameRegex = regexp.MustCompile(`^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$`)
 
 // serviceRegistration is a ServiceRegistration that advertises the state of
 // Vault to Consul.
 type serviceRegistration struct {
 	Client *api.Client
+	config *api.Config
 
 	logger              log.Logger
 	serviceLock         sync.RWMutex
+	registeredServiceID string
 	redirectHost        string
 	redirectPort        int64
 	serviceName         string
 	serviceTags         []string
+	serviceMeta         map[string]string
 	serviceAddress      *string
 	disableRegistration bool
 	checkTimeout        time.Duration
+	reconcileTimeout    time.Duration
 
 	notifyActiveCh      chan struct{}
 	notifySealedCh      chan struct{}
@@ -82,72 +93,32 @@ type serviceRegistration struct {
 
 // NewConsulServiceRegistration constructs a Consul-based ServiceRegistration.
 func NewServiceRegistration(conf map[string]string, logger log.Logger, state sr.State) (sr.ServiceRegistration, error) {
-	// Allow admins to disable consul integration
-	disableReg, ok := conf["disable_registration"]
-	var disableRegistration bool
-	if ok && disableReg != "" {
-		b, err := parseutil.ParseBool(disableReg)
-		if err != nil {
-			return nil, errwrap.Wrapf("failed parsing disable_registration parameter: {{err}}", err)
-		}
-		disableRegistration = b
-	}
-	if logger.IsDebug() {
-		logger.Debug("config disable_registration set", "disable_registration", disableRegistration)
+	if logger == nil {
+		return nil, errors.New("logger is required")
 	}
 
-	// Get the service name to advertise in Consul
-	service, ok := conf["service"]
-	if !ok {
-		service = DefaultServiceName
-	}
-	if !hostnameRegex.MatchString(service) {
-		return nil, errors.New("service name must be valid per RFC 1123 and can contain only alphanumeric characters or dashes")
-	}
-	if logger.IsDebug() {
-		logger.Debug("config service set", "service", service)
-	}
+	// Setup the backend
+	c := &serviceRegistration{
+		logger: logger,
 
-	// Get the additional tags to attach to the registered service name
-	tags := conf["service_tags"]
-	if logger.IsDebug() {
-		logger.Debug("config service_tags set", "service_tags", tags)
+		notifyActiveCh:      make(chan struct{}),
+		notifySealedCh:      make(chan struct{}),
+		notifyPerfStandbyCh: make(chan struct{}),
+		notifyInitializedCh: make(chan struct{}),
+
+		isActive:      atomicB.NewBool(state.IsActive),
+		isSealed:      atomicB.NewBool(state.IsSealed),
+		isPerfStandby: atomicB.NewBool(state.IsPerformanceStandby),
+		isInitialized: atomicB.NewBool(state.IsInitialized),
 	}
 
-	// Get the service-specific address to override the use of the HA redirect address
-	var serviceAddr *string
-	serviceAddrStr, ok := conf["service_address"]
-	if ok {
-		serviceAddr = &serviceAddrStr
-	}
-	if logger.IsDebug() {
-		logger.Debug("config service_address set", "service_address", serviceAddr)
-	}
+	c.serviceLock.Lock()
+	defer c.serviceLock.Unlock()
+	err := c.merge(conf)
+	return c, err
+}
 
-	checkTimeout := defaultCheckTimeout
-	checkTimeoutStr, ok := conf["check_timeout"]
-	if ok {
-		d, err := parseutil.ParseDurationSecond(checkTimeoutStr)
-		if err != nil {
-			return nil, err
-		}
-
-		min, _ := durationMinusBufferDomain(d, checkMinBuffer, checkJitterFactor)
-		if min < checkMinBuffer {
-			return nil, fmt.Errorf("consul check_timeout must be greater than %v", min)
-		}
-
-		checkTimeout = d
-		if logger.IsDebug() {
-			logger.Debug("config check_timeout set", "check_timeout", d)
-		}
-	}
-
-	// Configure the client
-	consulConf := api.DefaultConfig()
-	// Set MaxIdleConnsPerHost to the number of processes used in expiration.Restore
-	consulConf.Transport.MaxIdleConnsPerHost = consts.ExpirationRestoreWorkerCount
-
+func SetupSecureTLS(ctx context.Context, consulConf *api.Config, conf map[string]string, logger log.Logger, isDiagnose bool) error {
 	if addr, ok := conf["address"]; ok {
 		consulConf.Address = addr
 		if logger.IsDebug() {
@@ -181,47 +152,39 @@ func NewServiceRegistration(conf map[string]string, logger log.Logger, state sr.
 	}
 
 	if consulConf.Scheme == "https" {
+		if isDiagnose {
+			certPath, okCert := conf["tls_cert_file"]
+			keyPath, okKey := conf["tls_key_file"]
+			if okCert && okKey {
+				warnings, err := diagnose.TLSFileChecks(certPath, keyPath)
+				for _, warning := range warnings {
+					diagnose.Warn(ctx, warning)
+				}
+				if err != nil {
+					return err
+				}
+				return nil
+			}
+			return fmt.Errorf("key or cert path: %s, %s, cannot be loaded from consul config file", certPath, keyPath)
+		}
+
 		// Use the parsed Address instead of the raw conf['address']
 		tlsClientConfig, err := tlsutil.SetupTLSConfig(conf, consulConf.Address)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		consulConf.Transport.TLSClientConfig = tlsClientConfig
 		if err := http2.ConfigureTransport(consulConf.Transport); err != nil {
-			return nil, err
+			return err
 		}
 		logger.Debug("configured TLS")
+	} else {
+		if isDiagnose {
+			diagnose.Skipped(ctx, "HTTPS is not used, Skipping TLS verification.")
+		}
 	}
-
-	consulConf.HttpClient = &http.Client{Transport: consulConf.Transport}
-	client, err := api.NewClient(consulConf)
-	if err != nil {
-		return nil, errwrap.Wrapf("client setup failed: {{err}}", err)
-	}
-
-	// Setup the backend
-	c := &serviceRegistration{
-		Client: client,
-
-		logger:              logger,
-		serviceName:         service,
-		serviceTags:         strutil.ParseDedupLowercaseAndSortStrings(tags, ","),
-		serviceAddress:      serviceAddr,
-		checkTimeout:        checkTimeout,
-		disableRegistration: disableRegistration,
-
-		notifyActiveCh:      make(chan struct{}),
-		notifySealedCh:      make(chan struct{}),
-		notifyPerfStandbyCh: make(chan struct{}),
-		notifyInitializedCh: make(chan struct{}),
-
-		isActive:      atomicB.NewBool(state.IsActive),
-		isSealed:      atomicB.NewBool(state.IsSealed),
-		isPerfStandby: atomicB.NewBool(state.IsPerformanceStandby),
-		isInitialized: atomicB.NewBool(state.IsInitialized),
-	}
-	return c, nil
+	return nil
 }
 
 func (c *serviceRegistration) Run(shutdownCh <-chan struct{}, wait *sync.WaitGroup, redirectAddr string) error {
@@ -232,6 +195,125 @@ func (c *serviceRegistration) Run(shutdownCh <-chan struct{}, wait *sync.WaitGro
 			}
 		}
 	}()
+	return nil
+}
+
+func (c *serviceRegistration) merge(conf map[string]string) error {
+	// Allow admins to disable consul integration
+	disableReg, ok := conf["disable_registration"]
+	var disableRegistration bool
+	if ok && disableReg != "" {
+		b, err := parseutil.ParseBool(disableReg)
+		if err != nil {
+			return fmt.Errorf("failed parsing disable_registration parameter: %w", err)
+		}
+		disableRegistration = b
+	}
+	if c.logger.IsDebug() {
+		c.logger.Debug("config disable_registration set", "disable_registration", disableRegistration)
+	}
+
+	// Get the service name to advertise in Consul
+	service, ok := conf["service"]
+	if !ok {
+		service = DefaultServiceName
+	}
+	if !hostnameRegex.MatchString(service) {
+		return errors.New("service name must be valid per RFC 1123 and can contain only alphanumeric characters or dashes")
+	}
+	if c.logger.IsDebug() {
+		c.logger.Debug("config service set", "service", service)
+	}
+
+	// Get the additional tags to attach to the registered service name
+	tags := conf["service_tags"]
+	if c.logger.IsDebug() {
+		c.logger.Debug("config service_tags set", "service_tags", tags)
+	}
+
+	// Get user-defined meta tags to attach to the registered service name
+	metaTags := map[string]string{}
+	if metaTagsJSON, ok := conf["service_meta"]; ok {
+		if err := json.Unmarshal([]byte(metaTagsJSON), &metaTags); err != nil {
+			return errors.New("service tags must be a dictionary of string keys and values")
+		}
+	}
+	metaTags["external-source"] = metaExternalSource
+	if c.logger.IsDebug() {
+		c.logger.Debug("config service_meta set", "service_meta", metaTags)
+	}
+
+	// Get the service-specific address to override the use of the HA redirect address
+	var serviceAddr *string
+	serviceAddrStr, ok := conf["service_address"]
+	if ok {
+		serviceAddr = &serviceAddrStr
+	}
+	if c.logger.IsDebug() {
+		c.logger.Debug("config service_address set", "service_address", serviceAddrStr)
+	}
+
+	checkTimeout := defaultCheckTimeout
+	checkTimeoutStr, ok := conf["check_timeout"]
+	if ok {
+		d, err := parseutil.ParseDurationSecond(checkTimeoutStr)
+		if err != nil {
+			return err
+		}
+
+		min, _ := durationMinusBufferDomain(d, checkMinBuffer, checkJitterFactor)
+		if min < checkMinBuffer {
+			return fmt.Errorf("consul check_timeout must be greater than %v", min)
+		}
+
+		checkTimeout = d
+		if c.logger.IsDebug() {
+			c.logger.Debug("config check_timeout set", "check_timeout", d)
+		}
+	}
+
+	reconcileTimeout := DefaultReconcileTimeout
+	reconcileTimeoutStr, ok := conf["reconcile_timeout"]
+	if ok {
+		d, err := parseutil.ParseDurationSecond(reconcileTimeoutStr)
+		if err != nil {
+			return err
+		}
+
+		min, _ := durationMinusBufferDomain(d, checkMinBuffer, checkJitterFactor)
+		if min < checkMinBuffer {
+			return fmt.Errorf("consul reconcile_timeout must be greater than %v", min)
+		}
+
+		reconcileTimeout = d
+		if c.logger.IsDebug() {
+			c.logger.Debug("config reconcile_timeout set", "reconcile_timeout", d)
+		}
+	}
+
+	// Configure the client
+	consulConf := api.DefaultConfig()
+	// Set MaxIdleConnsPerHost to the number of processes used in expiration.Restore
+	consulConf.Transport.MaxIdleConnsPerHost = consts.ExpirationRestoreWorkerCount
+
+	SetupSecureTLS(context.Background(), consulConf, conf, c.logger, false)
+
+	consulConf.HttpClient = &http.Client{Transport: consulConf.Transport}
+	client, err := api.NewClient(consulConf)
+	if err != nil {
+		return fmt.Errorf("client setup failed: %w", err)
+	}
+
+	c.Client = client
+	c.config = consulConf
+	c.serviceName = service
+	c.serviceTags = strutil.ParseDedupAndSortStrings(tags, ",")
+	c.serviceMeta = metaTags
+	c.serviceAddress = serviceAddr
+	c.checkTimeout = checkTimeout
+	c.disableRegistration = disableRegistration
+	c.reconcileTimeout = reconcileTimeout
+
 	return nil
 }
 
@@ -281,10 +363,29 @@ func (c *serviceRegistration) NotifyInitializedStateChange(isInitialized bool) e
 	default:
 		// NOTE: If this occurs Vault's initialized status could be out of
 		// sync with Consul until checkTimer expires.
-		c.logger.Warn("concurrent initalize state change notify dropped")
+		c.logger.Warn("concurrent initialize state change notify dropped")
 	}
 
 	return nil
+}
+
+func (c *serviceRegistration) NotifyConfigurationReload(conf *map[string]string) error {
+	c.serviceLock.Lock()
+	defer c.serviceLock.Unlock()
+	if conf == nil {
+		if c.logger.IsDebug() {
+			c.logger.Debug("registration is now empty, deregistering service from consul")
+		}
+		c.disableRegistration = true
+		err := c.deregisterService()
+		c.Client = nil
+		return err
+	} else {
+		if c.logger.IsDebug() {
+			c.logger.Debug("service registration configuration received, merging with existing configuation")
+		}
+		return c.merge(*conf)
+	}
 }
 
 func (c *serviceRegistration) checkDuration() time.Duration {
@@ -327,12 +428,11 @@ func (c *serviceRegistration) runEventDemuxer(waitGroup *sync.WaitGroup, shutdow
 	// demuxer share a lock to synchronize information at the beginning
 	// and end of a handler's life (or after a handler wakes up from
 	// sleeping during a back-off/retry).
-	var shutdown bool
-	var registeredServiceID string
+	var shutdown atomicB.Bool
 	checkLock := new(int32)
 	serviceRegLock := new(int32)
 
-	for !shutdown {
+	for !shutdown.Load() {
 		select {
 		case <-c.notifyActiveCh:
 			// Run reconcile immediately upon active state change notification
@@ -348,16 +448,19 @@ func (c *serviceRegistration) runEventDemuxer(waitGroup *sync.WaitGroup, shutdow
 			checkTimer.Reset(0)
 		case <-reconcileTimer.C:
 			// Unconditionally rearm the reconcileTimer
-			reconcileTimer.Reset(reconcileTimeout - randomStagger(reconcileTimeout/checkJitterFactor))
+			c.serviceLock.RLock()
+			reconcileTimer.Reset(c.reconcileTimeout - randomStagger(c.reconcileTimeout/checkJitterFactor))
+			disableRegistration := c.disableRegistration
+			c.serviceLock.RUnlock()
 
 			// Abort if service discovery is disabled or a
 			// reconcile handler is already active
-			if !c.disableRegistration && atomic.CompareAndSwapInt32(serviceRegLock, 0, 1) {
+			if !disableRegistration && atomic.CompareAndSwapInt32(serviceRegLock, 0, 1) {
 				// Enter handler with serviceRegLock held
 				go func() {
 					defer atomic.CompareAndSwapInt32(serviceRegLock, 1, 0)
-					for !shutdown {
-						serviceID, err := c.reconcileConsul(registeredServiceID)
+					for !shutdown.Load() {
+						serviceID, err := c.reconcileConsul()
 						if err != nil {
 							if c.logger.IsWarn() {
 								c.logger.Warn("reconcile unable to talk with Consul backend", "error", err)
@@ -367,28 +470,38 @@ func (c *serviceRegistration) runEventDemuxer(waitGroup *sync.WaitGroup, shutdow
 						}
 
 						c.serviceLock.Lock()
-						defer c.serviceLock.Unlock()
+						c.registeredServiceID = serviceID
+						c.serviceLock.Unlock()
 
-						registeredServiceID = serviceID
 						return
 					}
 				}()
 			}
 		case <-checkTimer.C:
 			checkTimer.Reset(c.checkDuration())
+			c.serviceLock.RLock()
+			disableRegistration := c.disableRegistration
+			c.serviceLock.RUnlock()
+
 			// Abort if service discovery is disabled or a
 			// reconcile handler is active
-			if !c.disableRegistration && atomic.CompareAndSwapInt32(checkLock, 0, 1) {
+			if !disableRegistration && atomic.CompareAndSwapInt32(checkLock, 0, 1) {
 				// Enter handler with checkLock held
 				go func() {
 					defer atomic.CompareAndSwapInt32(checkLock, 1, 0)
-					for !shutdown {
-						if err := c.runCheck(c.isSealed.Load()); err != nil {
-							if c.logger.IsWarn() {
-								c.logger.Warn("check unable to talk with Consul backend", "error", err)
+					for !shutdown.Load() {
+						c.serviceLock.RLock()
+						registeredServiceID := c.registeredServiceID
+						c.serviceLock.RUnlock()
+
+						if registeredServiceID != "" {
+							if err := c.runCheck(c.isSealed.Load()); err != nil {
+								if c.logger.IsWarn() {
+									c.logger.Warn("check unable to talk with Consul backend", "error", err)
+								}
+								time.Sleep(consulRetryInterval)
+								continue
 							}
-							time.Sleep(consulRetryInterval)
-							continue
 						}
 						return
 					}
@@ -396,17 +509,27 @@ func (c *serviceRegistration) runEventDemuxer(waitGroup *sync.WaitGroup, shutdow
 			}
 		case <-shutdownCh:
 			c.logger.Info("shutting down consul backend")
-			shutdown = true
+			shutdown.Store(true)
 		}
 	}
 
-	c.serviceLock.RLock()
-	defer c.serviceLock.RUnlock()
-	if err := c.Client.Agent().ServiceDeregister(registeredServiceID); err != nil {
-		if c.logger.IsWarn() {
-			c.logger.Warn("service deregistration failed", "error", err)
+	c.serviceLock.Lock()
+	defer c.serviceLock.Unlock()
+	c.deregisterService()
+}
+
+func (c *serviceRegistration) deregisterService() error {
+	if c.registeredServiceID != "" {
+		if err := c.Client.Agent().ServiceDeregister(c.registeredServiceID); err != nil {
+			if c.logger.IsWarn() {
+				c.logger.Warn("service deregistration failed", "error", err)
+			}
+			return err
 		}
+		c.registeredServiceID = ""
 	}
+
+	return nil
 }
 
 // checkID returns the ID used for a Consul Check.  Assume at least a read
@@ -423,10 +546,12 @@ func (c *serviceRegistration) serviceID() string {
 
 // reconcileConsul queries the state of Vault Core and Consul and fixes up
 // Consul's state according to what's in Vault.  reconcileConsul is called
-// without any locks held and can be run concurrently, therefore no changes
+// with a read lock and can be run concurrently, therefore no changes
 // to serviceRegistration can be made in this method (i.e. wtb const receiver for
 // compiler enforced safety).
-func (c *serviceRegistration) reconcileConsul(registeredServiceID string) (serviceID string, err error) {
+func (c *serviceRegistration) reconcileConsul() (serviceID string, err error) {
+	c.serviceLock.RLock()
+	defer c.serviceLock.RUnlock()
 	agent := c.Client.Agent()
 	catalog := c.Client.Catalog()
 
@@ -448,7 +573,7 @@ func (c *serviceRegistration) reconcileConsul(registeredServiceID string) (servi
 	var reregister bool
 
 	switch {
-	case currentVaultService == nil, registeredServiceID == "":
+	case currentVaultService == nil, c.registeredServiceID == "":
 		reregister = true
 	default:
 		switch {
@@ -476,6 +601,7 @@ func (c *serviceRegistration) reconcileConsul(registeredServiceID string) (servi
 		ID:                serviceID,
 		Name:              c.serviceName,
 		Tags:              tags,
+		Meta:              c.serviceMeta,
 		Port:              int(c.redirectPort),
 		Address:           serviceAddress,
 		EnableTagOverride: false,
@@ -498,11 +624,11 @@ func (c *serviceRegistration) reconcileConsul(registeredServiceID string) (servi
 	}
 
 	if err := agent.ServiceRegister(service); err != nil {
-		return "", errwrap.Wrapf(`service registration failed: {{err}}`, err)
+		return "", fmt.Errorf(`service registration failed: %w`, err)
 	}
 
 	if err := agent.CheckRegister(sealedCheck); err != nil {
-		return serviceID, errwrap.Wrapf(`service check registration failed: {{err}}`, err)
+		return serviceID, fmt.Errorf(`service check registration failed: %w`, err)
 	}
 
 	return serviceID, nil
@@ -546,7 +672,7 @@ func (c *serviceRegistration) setRedirectAddr(addr string) (err error) {
 
 	url, err := url.Parse(addr)
 	if err != nil {
-		return errwrap.Wrapf(fmt.Sprintf("failed to parse redirect URL %q: {{err}}", addr), err)
+		return fmt.Errorf("failed to parse redirect URL %q: %w", addr, err)
 	}
 
 	var portStr string
@@ -560,12 +686,12 @@ func (c *serviceRegistration) setRedirectAddr(addr string) (err error) {
 			portStr = "-1"
 			c.redirectHost = url.Path
 		} else {
-			return errwrap.Wrapf(fmt.Sprintf(`failed to find a host:port in redirect address "%v": {{err}}`, url.Host), err)
+			return fmt.Errorf("failed to find a host:port in redirect address %q: %w", url.Host, err)
 		}
 	}
 	c.redirectPort, err = strconv.ParseInt(portStr, 10, 0)
 	if err != nil || c.redirectPort < -1 || c.redirectPort > 65535 {
-		return errwrap.Wrapf(fmt.Sprintf(`failed to parse valid port "%v": {{err}}`, portStr), err)
+		return fmt.Errorf("failed to parse valid port %q: %w", portStr, err)
 	}
 
 	return nil

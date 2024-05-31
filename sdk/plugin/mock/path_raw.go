@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package mock
 
 import (
@@ -25,5 +28,4 @@ func (b *backend) pathRawRead(ctx context.Context, req *logical.Request, data *f
 			logical.HTTPStatusCode:  200,
 		},
 	}, nil
-
 }

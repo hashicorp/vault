@@ -1,10 +1,15 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { isPresent } from '@ember/utils';
 import { alias } from '@ember/object/computed';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import Controller from '@ember/controller';
-import { copy } from 'ember-copy';
 import { resolve } from 'rsvp';
 import decodeConfigFromJWT from 'replication/utils/decode-config-from-jwt';
+import { buildWaiter } from '@ember/test-waiters';
 
 const DEFAULTS = {
   token: null,
@@ -18,14 +23,17 @@ const DEFAULTS = {
     paths: [],
   },
 };
+const waiter = buildWaiter('replication-actions');
 
-export default Controller.extend(copy(DEFAULTS, true), {
+export default Controller.extend(structuredClone(DEFAULTS), {
   isModalActive: false,
+  isTokenCopied: false,
   expirationDate: null,
+  router: service(),
   store: service(),
   rm: service('replication-mode'),
   replicationMode: alias('rm.mode'),
-  flashMessages: service(),
+  secondaryToRevoke: null,
 
   submitError(e) {
     if (e.errors) {
@@ -36,23 +44,23 @@ export default Controller.extend(copy(DEFAULTS, true), {
   },
 
   saveFilterConfig() {
-    const config = this.get('filterConfig');
-    const id = this.get('id');
+    const config = this.filterConfig;
+    const id = this.id;
     config.id = id;
     // if there is no mode, then they don't want to filter, so we don't save a filter config
     if (!config.mode) {
       return resolve();
     }
-    const configRecord = this.get('store').createRecord('path-filter-config', config);
-    return configRecord.save().catch(e => this.submitError(e));
+    const configRecord = this.store.createRecord('path-filter-config', config);
+    return configRecord.save().catch((e) => this.submitError(e));
   },
 
   reset() {
-    this.setProperties(copy(DEFAULTS, true));
+    this.setProperties(structuredClone(DEFAULTS));
   },
 
   submitSuccess(resp, action) {
-    const cluster = this.get('model');
+    const cluster = this.model;
     if (!cluster) {
       return;
     }
@@ -81,7 +89,8 @@ export default Controller.extend(copy(DEFAULTS, true), {
   },
 
   submitHandler(action, clusterMode, data, event) {
-    const replicationMode = this.get('replicationMode');
+    const waiterToken = waiter.beginAsync();
+    const replicationMode = this.replicationMode;
     if (event && event.preventDefault) {
       event.preventDefault();
     }
@@ -99,42 +108,34 @@ export default Controller.extend(copy(DEFAULTS, true), {
       }, {});
     }
 
-    return this.get('store')
+    return this.store
       .adapterFor('cluster')
       .replicationAction(action, replicationMode, clusterMode, data)
       .then(
-        resp => {
+        (resp) => {
           return this.saveFilterConfig().then(() => {
             return this.submitSuccess(resp, action, clusterMode);
           });
         },
         (...args) => this.submitError(...args)
-      );
+      )
+      .finally(() => {
+        this.set('secondaryToRevoke', null);
+        waiter.endAsync(waiterToken);
+      });
   },
 
   actions: {
     onSubmit(/*action, mode, data, event*/) {
       return this.submitHandler(...arguments);
     },
-    copyClose(successMessage) {
-      // separate action for copy & close button so it does not try and use execCommand to copy token to clipboard
-      if (!!successMessage && typeof successMessage === 'string') {
-        this.get('flashMessages').success(successMessage);
-      }
+    closeTokenModal() {
       this.toggleProperty('isModalActive');
-      this.transitionToRoute('mode.secondaries');
+      this.router.transitionTo('vault.cluster.replication.mode.secondaries');
+      this.set('isTokenCopied', false);
     },
-    toggleModal(successMessage) {
-      if (!!successMessage && typeof successMessage === 'string') {
-        this.get('flashMessages').success(successMessage);
-      }
-      // use copy browser extension to copy token if you close the modal by clicking outside of it.
-      const htmlSelectedToken = document.querySelector('#token-textarea');
-      htmlSelectedToken.select();
-      document.execCommand('copy');
-
-      this.toggleProperty('isModalActive');
-      this.transitionToRoute('mode.secondaries');
+    onCopy() {
+      this.set('isTokenCopied', true);
     },
     clear() {
       this.reset();

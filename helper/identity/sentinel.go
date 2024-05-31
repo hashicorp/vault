@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package identity
 
 import "github.com/golang/protobuf/ptypes"
@@ -74,6 +77,7 @@ func (a *Alias) SentinelKeys() []string {
 	return []string{
 		"id",
 		"mount_type",
+		"mount_accessor",
 		"mount_path",
 		"meta",
 		"metadata",

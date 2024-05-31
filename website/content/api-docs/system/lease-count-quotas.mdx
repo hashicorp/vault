@@ -1,0 +1,170 @@
+---
+layout: api
+page_title: /sys/quotas/lease-count - HTTP API
+description: The `/sys/quotas/lease-count` endpoint is used to create, edit and delete lease count quotas.
+---
+
+# `/sys/quotas/lease-count`
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-admin.mdx'
+
+The `/sys/quotas/lease-count` endpoint is used to create, edit and delete lease count quotas.
+
+## Create or update a lease count quota
+
+This endpoint is used to create a lease count quota with an identifier, `name`.
+A lease count quota must include a `max_leases` value with an optional `path`
+that can either be a namespace or mount, and can optionally include a path suffix following
+the mount to restrict more specific API paths.
+
+Upon creating a lease count quota, it will be populated with the current count of leases from this path. If there are
+more leases present than the specified `max_leases`, this will cause the lease count to go over the specified
+`max_leases`.
+
+The initial population process can cause a lot of work for Vault - and while creating one lease count quota
+is always fine, if you're planning to create — for example — thousands of lease count quotas for paths with
+millions of leases in an automated way, it is recommended to space out the creation requests.
+
+| Method | Path                            |
+| :----- | :------------------------------ |
+| `POST` | `/sys/quotas/lease-count/:name` |
+
+### Parameters
+
+- `name` `(string: "")` - The name of the quota.
+- `path` `(string: "")` - Path of the mount or namespace to apply the quota.
+  A blank path configures a global lease count quota. For example `namespace1/`
+  adds a quota to a full namespace, `namespace1/auth/userpass` adds a quota to
+  `userpass` in `namespace1`, and `namespace1/kv-v2/data/foo/bar` adds a quota to
+  a specific secret on a KV v2 mount in `namespace1`. A trailing glob (`*`) can also
+  be added as part of the path after the mount to match paths that share the same prefix
+  prior to the glob. `namespace1/kv-v2/data/foo/*` would match both `namespace1/kv-v2/data/foo/bar`
+  and `namespace1/kv-v2/data/foo/baz`. Updating this field on an existing
+  quota can have "moving" effects. For example, updating `namespace1` to
+  `namespace1/auth/userpass` moves this quota from being a namespace quota to a
+  namespace-specific mount quota. Non-global quotas are not inherited by child
+  namespaces. Quotas cannot be created or modified in parent or sibling namespaces.
+  **Note, namespaces are supported in Enterprise only**.
+- `max_leases` `(int: 0)` - Maximum number of leases allowed by the quota rule.
+- `role` `(string: "")` - If set on a quota where `path` is set to an auth mount with a
+  concept of roles (such as `/auth/approle/`), this will make the quota restrict login
+  requests to that mount that are made with the specified role. The request will fail if
+  the auth mount does not have a concept of roles, or `path` is not an auth mount.
+- `inheritable` `(bool: false)` - If set to `true` on a quota where `path` is set to a namespace,
+   the same quota will be cumulatively applied to all child namespace. The `inheritable` parameter cannot be set to
+  `true` if the `path` does not specify a namespace. Only the quotas associated
+  with the root namespace are inheritable by default.
+
+
+### Sample payload
+
+```json
+{
+  "path": "",
+  "max_leases": 1000
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --request POST \
+    --header "X-Vault-Token: ..." \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/quotas/lease-count/global-lease-count-quota
+```
+
+## Delete a lease count quota
+
+A lease count quota can be deleted by `name`.
+Quotas that exist in a parent or a sibling namespace cannot be deleted.
+
+| Method   | Path                            |
+| :------- | :------------------------------ |
+| `DELETE` | `/sys/quotas/lease-count/:name` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --request DELETE \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/quotas/lease-count/global-lease-count-quota
+```
+
+## Get a lease count quota
+
+A lease count quota can be retrieved by `name`.
+
+| Method | Path                            |
+| :----- | :------------------------------ |
+| `GET`  | `/sys/quotas/lease-count/:name` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --request GET \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/quotas/lease-count/global-lease-count-quota
+```
+
+### Sample response
+
+```json
+{
+  "request_id": "21514bc6-2c19-42b9-a8a7-cab27aff5815",
+  "lease_id": "",
+  "lease_duration": 0,
+  "renewable": false,
+  "data": {
+    "max_leases": 1000,
+    "name": "global-lease-count-quota",
+    "path": "",
+    "role": "",
+    "type": "lease-count"
+  },
+  "warnings": null
+}
+```
+
+## List lease count quotas
+
+This endpoint returns a list of all the lease count quotas across all namespaces.
+Note that this level of access differs from creating, updating, and deleting
+quotas which restricts access to parent and sibling namespaces. A 404 response
+will be returned if no lease count quota has been created.
+
+| Method | Path                      |
+| :----- | :------------------------ |
+| `LIST` | `/sys/quotas/lease-count` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --request LIST \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/quotas/lease-count
+```
+
+### Sample response
+
+```json
+{
+  "auth": null,
+  "data": {
+    "keys": ["global-lease-count-quota"]
+  },
+  "lease_duration": 0,
+  "lease_id": "",
+  "renewable": false,
+  "request_id": "ab633ee1-a692-ba03-083b-f1bd91c51c28",
+  "warnings": null,
+  "wrap_info": null
+}
+```
+

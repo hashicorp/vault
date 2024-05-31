@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package mock
 
 import (
@@ -24,5 +27,4 @@ func (b *backend) pathSpecialRead(ctx context.Context, req *logical.Request, dat
 			"data": "foo",
 		},
 	}, nil
-
 }

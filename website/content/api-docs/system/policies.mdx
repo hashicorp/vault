@@ -1,0 +1,379 @@
+---
+layout: api
+page_title: /sys/policies/ - HTTP API
+description: >-
+  The `/sys/policies/` endpoints are used to manage ACL, RGP, and EGP policies
+  in Vault.
+---
+
+# `/sys/policies/`
+
+The `/sys/policies` endpoints are used to manage ACL, RGP, and EGP policies in Vault.
+
+<Note>
+<code>/sys/policies</code> endpoints are only available in Vault version 0.9+.
+RGPs and EGPs are Vault Enterprise upgrade features that are not available in
+Vault Open Source or basic Vault Enterprise installations.
+</Note>
+
+## List ACL policies
+
+This endpoint lists all configured ACL policies.
+
+| Method | Path                |
+| :----- | :------------------ |
+| `LIST` | `/sys/policies/acl` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    -X LIST --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/policies/acl
+```
+
+### Sample response
+
+```json
+{
+  "keys": ["root", "my-policy"]
+}
+```
+
+## Read ACL policy
+
+This endpoint retrieves information about the named ACL policy.
+
+| Method | Path                      |
+| :----- | :------------------------ |
+| `GET`  | `/sys/policies/acl/:name` |
+
+### Parameters
+
+- `name` `(string: <required>)` – Specifies the name of the policy to retrieve.
+  This is specified as part of the request URL.
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/policies/acl/my-policy
+```
+
+### Sample response
+
+```json
+{
+  "name": "deploy",
+  "policy": "path \"secret/foo\" {..."
+}
+```
+
+## Create/Update ACL policy
+
+This endpoint adds a new or updates an existing ACL policy. Once a policy is
+updated, it takes effect immediately to all associated users.
+
+| Method | Path                      |
+| :----- | :------------------------ |
+| `POST`  | `/sys/policies/acl/:name` |
+
+### Parameters
+
+- `name` `(string: <required>)` – Specifies the name of the policy to create.
+  This is specified as part of the request URL.
+
+- `policy` `(string: <required>)` - Specifies the policy document. This can be
+  base64-encoded to avoid string escaping.
+
+### Sample payload
+
+```json
+{
+  "policy": "path \"secret/foo\" {..."
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/policies/acl/my-policy
+```
+
+## Delete ACL policy
+
+This endpoint deletes the ACL policy with the given name. This will immediately
+affect all users associated with this policy. (A deleted policy set on a token
+acts as an empty policy.)
+
+| Method   | Path                      |
+| :------- | :------------------------ |
+| `DELETE` | `/sys/policies/acl/:name` |
+
+### Parameters
+
+- `name` `(string: <required>)` – Specifies the name of the policy to delete.
+  This is specified as part of the request URL.
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request DELETE \
+    http://127.0.0.1:8200/v1/sys/policies/acl/my-policy
+```
+
+## List RGP policies
+
+This endpoint lists all configured RGP policies.
+
+| Method | Path                |
+| :----- | :------------------ |
+| `LIST` | `/sys/policies/rgp` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    -X LIST --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/policies/rgp
+```
+
+### Sample response
+
+```json
+{
+  "keys": ["webapp", "database"]
+}
+```
+
+## Read RGP policy
+
+This endpoint retrieves information about the named RGP policy.
+
+| Method | Path                      |
+| :----- | :------------------------ |
+| `GET`  | `/sys/policies/rgp/:name` |
+
+### Parameters
+
+- `name` `(string: <required>)` – Specifies the name of the policy to retrieve.
+  This is specified as part of the request URL.
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/policies/rgp/webapp
+```
+
+### Sample response
+
+```json
+{
+  "name": "webapp",
+  "policy": "rule main = {...",
+  "enforcement_level": "soft-mandatory"
+}
+```
+
+## Create/Update RGP policy
+
+This endpoint adds a new or updates an existing RGP policy. Once a policy is
+updated, it takes effect immediately to all associated users.
+
+| Method | Path                      |
+| :----- | :------------------------ |
+| `POST` | `/sys/policies/rgp/:name` |
+
+### Parameters
+
+- `name` `(string: <required>)` – Specifies the name of the policy to create.
+  This is specified as part of the request URL.
+
+- `policy` `(string: <required>)` - Specifies the policy document. This can be
+  base64-encoded to avoid string escaping.
+
+- `enforcement_level` `(string: <required>)` - Specifies the enforcement level
+  to use. This must be one of `advisory`, `soft-mandatory`, or
+  `hard-mandatory`.
+
+### Sample payload
+
+```json
+{
+  "policy": "rule main = {...",
+  "enforcement_level": "soft-mandatory"
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/policies/rgp/webapp
+```
+
+## Delete RGP policy
+
+This endpoint deletes the RGP policy with the given name. This will immediately
+affect all users associated with this policy. (A deleted policy set on a token
+acts as an empty policy.)
+
+| Method   | Path                      |
+| :------- | :------------------------ |
+| `DELETE` | `/sys/policies/rgp/:name` |
+
+### Parameters
+
+- `name` `(string: <required>)` – Specifies the name of the policy to delete.
+  This is specified as part of the request URL.
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request DELETE \
+    http://127.0.0.1:8200/v1/sys/policies/rgp/webapp
+```
+
+## List EGP policies
+
+This endpoint lists all configured EGP policies. Since EGP policies act on a
+path, this endpoint returns two identifiers:
+
+- `keys` contains a mapping of names to associated paths in a format that
+  `vault list` understands
+- `name_path_map` contains an object mapping names to paths and glob status in
+  a more machine-friendly format
+
+| Method | Path                |
+| :----- | :------------------ |
+| `LIST` | `/sys/policies/egp` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    -X LIST --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/policies/egp
+```
+
+### Sample response
+
+```json
+{
+  "keys": ["breakglass"]
+}
+```
+
+## Read EGP policy
+
+This endpoint retrieves information about the named EGP policy.
+
+| Method | Path                      |
+| :----- | :------------------------ |
+| `GET`  | `/sys/policies/egp/:name` |
+
+### Parameters
+
+- `name` `(string: <required>)` – Specifies the name of the policy to retrieve.
+  This is specified as part of the request URL.
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/policies/egp/breakglass
+```
+
+### Sample response
+
+```json
+{
+  "enforcement_level": "soft-mandatory",
+  "name": "breakglass",
+  "paths": ["*"],
+  "policy": "rule main = {..."
+}
+```
+
+## Create/Update EGP policy
+
+This endpoint adds a new or updates an existing EGP policy. Once a policy is
+updated, it takes effect immediately to all associated users.
+
+| Method | Path                      |
+| :----- | :------------------------ |
+| `POST` | `/sys/policies/egp/:name` |
+
+### Parameters
+
+- `name` `(string: <required>)` – Specifies the name of the policy to create.
+  This is specified as part of the request URL.
+
+- `policy` `(string: <required>)` - Specifies the policy document. This can be
+  base64-encoded to avoid string escaping.
+
+- `enforcement_level` `(string: <required>)` - Specifies the enforcement level
+  to use. This must be one of `advisory`, `soft-mandatory`, or
+  `hard-mandatory`.
+
+- `paths` `(string or array: required)` - Specifies the paths on which this EGP
+  should be applied, either as a comma-separated list or an array. Glob
+  characters can denote suffixes, e.g. `secret/*`; a path of `*` will affect
+  all authenticated and login requests.
+
+### Sample payload
+
+```json
+{
+  "policy": "rule main = {...",
+  "paths": ["*", "secret/*", "transit/keys/*"],
+  "enforcement_level": "soft-mandatory"
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/policies/egp/breakglass
+```
+
+## Delete EGP policy
+
+This endpoint deletes the EGP policy with the given name from all paths on which it was configured.
+
+| Method   | Path                      |
+| :------- | :------------------------ |
+| `DELETE` | `/sys/policies/egp/:name` |
+
+### Parameters
+
+- `name` `(string: <required>)` – Specifies the name of the policy to delete.
+  This is specified as part of the request URL.
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request DELETE \
+    http://127.0.0.1:8200/v1/sys/policies/egp/breakglass
+```

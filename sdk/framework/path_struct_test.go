@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package framework
 
 import (
@@ -12,7 +15,7 @@ func TestPathStruct(t *testing.T) {
 		Name: "foo",
 		Path: "bar",
 		Schema: map[string]*FieldSchema{
-			"value": &FieldSchema{Type: TypeString},
+			"value": {Type: TypeString},
 		},
 		Read: true,
 	}

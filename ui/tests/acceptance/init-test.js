@@ -1,19 +1,14 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { waitFor } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-
+import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { setupMirage } from 'ember-cli-mirage/test-support';
 import initPage from 'vault/tests/pages/init';
-import Pretender from 'pretender';
-
-const HEALTH_RESPONSE = {
-  initialized: false,
-  sealed: true,
-  standby: true,
-  performance_standby: false,
-  replication_performance_mode: 'unknown',
-  replication_dr_mode: 'unknown',
-  server_time_utc: 1538066726,
-  version: '0.11.0+prem',
-};
 
 const CLOUD_SEAL_RESPONSE = {
   keys: [],
@@ -59,59 +54,66 @@ const SEAL_STATUS_RESPONSE = {
   initialized: false,
 };
 
-module('Acceptance | init', function(hooks) {
+const assertRequest = (req, assert, isCloud) => {
+  const json = JSON.parse(req.requestBody);
+  for (const key of ['recovery_shares', 'recovery_threshold']) {
+    assert[isCloud ? 'ok' : 'notOk'](
+      json[key],
+      `requestBody ${isCloud ? 'includes' : 'does not include'} cloud seal specific attribute: ${key}`
+    );
+  }
+  for (const key of ['secret_shares', 'secret_threshold']) {
+    assert[isCloud ? 'notOk' : 'ok'](
+      json[key],
+      `requestBody ${isCloud ? 'does not include' : 'includes'} shamir specific attribute: ${key}`
+    );
+  }
+};
+
+module('Acceptance | init', function (hooks) {
   setupApplicationTest(hooks);
+  setupMirage(hooks);
 
-  let setInitResponse = (server, resp) => {
-    server.put('/v1/sys/init', () => {
-      return [200, { 'Content-Type': 'application/json' }, JSON.stringify(resp)];
+  test('cloud seal init', async function (assert) {
+    // continue button is disabled, violating color-contrast
+    setRunOptions({
+      rules: {
+        'color-contrast': { enabled: false },
+      },
     });
-  };
-  let setStatusResponse = (server, resp) => {
-    server.get('/v1/sys/seal-status', () => {
-      return [200, { 'Content-Type': 'application/json' }, JSON.stringify(resp)];
+    assert.expect(6);
+    this.server.put('/sys/init', (schema, req) => {
+      assertRequest(req, assert, true);
+      return CLOUD_SEAL_RESPONSE;
     });
-  };
-  hooks.beforeEach(function() {
-    this.server = new Pretender();
-    this.server.get('/v1/sys/health', () => {
-      return [200, { 'Content-Type': 'application/json' }, JSON.stringify(HEALTH_RESPONSE)];
+    this.server.get('/sys/seal-status', () => {
+      return CLOUD_SEAL_STATUS_RESPONSE;
     });
-  });
 
-  hooks.afterEach(function() {
-    this.server.shutdown();
-  });
-
-  test('cloud seal init', async function(assert) {
-    setInitResponse(this.server, CLOUD_SEAL_RESPONSE);
-    setStatusResponse(this.server, CLOUD_SEAL_STATUS_RESPONSE);
     await initPage.init(5, 3);
-    assert.equal(
+    await waitFor('[data-test-advance-button]');
+    assert.strictEqual(
       initPage.keys.length,
       CLOUD_SEAL_RESPONSE.recovery_keys.length,
       'shows all of the recovery keys'
     );
-    assert.equal(initPage.buttonText, 'Continue to Authenticate', 'links to authenticate');
-    let { requestBody } = this.server.handledRequests.findBy('url', '/v1/sys/init');
-    requestBody = JSON.parse(requestBody);
-    for (let attr of ['recovery_shares', 'recovery_threshold']) {
-      assert.ok(requestBody[attr], `requestBody includes cloud seal specific attribute: ${attr}`);
-    }
+    assert.strictEqual(initPage.buttonText, 'Continue to Authenticate', 'links to authenticate');
   });
 
-  test('shamir seal init', async function(assert) {
-    setInitResponse(this.server, SEAL_RESPONSE);
-    setStatusResponse(this.server, SEAL_STATUS_RESPONSE);
+  test('shamir seal init', async function (assert) {
+    assert.expect(6);
+
+    this.server.put('/sys/init', (schema, req) => {
+      assertRequest(req, assert, false);
+      return SEAL_RESPONSE;
+    });
+    this.server.get('/sys/seal-status', () => {
+      return SEAL_STATUS_RESPONSE;
+    });
 
     await initPage.init(3, 2);
-    assert.equal(initPage.keys.length, SEAL_RESPONSE.keys.length, 'shows all of the recovery keys');
-    assert.equal(initPage.buttonText, 'Continue to Unseal', 'links to unseal');
-
-    let { requestBody } = this.server.handledRequests.findBy('url', '/v1/sys/init');
-    requestBody = JSON.parse(requestBody);
-    for (let attr of ['recovery_shares', 'recovery_threshold']) {
-      assert.notOk(requestBody[attr], `requestBody does not include cloud seal specific attribute: ${attr}`);
-    }
+    await waitFor('[data-test-advance-button]');
+    assert.strictEqual(initPage.keys.length, SEAL_RESPONSE.keys.length, 'shows all of the recovery keys');
+    assert.strictEqual(initPage.buttonText, 'Continue to Unseal', 'links to unseal');
   });
 });

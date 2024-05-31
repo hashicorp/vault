@@ -1,0 +1,144 @@
+---
+layout: docs
+page_title: Glossary of Terms
+sidebar_title: Glossary
+description: |-
+  Vault Glossary.
+---
+
+# Glossary
+
+This page collects brief definitions of some of the technical terms used in the
+documentation for Vault.
+
+- [Audit Device](#audit-device)
+- [Auth Method](#auth-method)
+- [Barrier](#barrier)
+- [Client Token](#client-token)
+- [Plugin](#plugin)
+- [Request](#request)
+- [Secret](#secret)
+- [Secrets Engine](#secrets-engine)
+- [Server](#server)
+- [Storage Backend](#storage-backend)
+
+### Audit device
+
+An audit device is responsible for managing audit logs.
+Every request to Vault and response from Vault goes through the configured
+audit devices. This provides a simple way to integrate Vault with multiple
+audit logging destinations of different types.
+
+### Auth method
+
+An auth method is used to authenticate users or applications
+which are connecting to Vault. Once authenticated, the auth method returns the
+list of applicable policies which should be applied. Vault takes an
+authenticated user and returns a client token that can be used for future
+requests. As an example, the `userpass` auth method uses a username and
+password to authenticate the user. Alternatively, the `github` auth method
+allows users to authenticate via GitHub.
+
+### Barrier
+
+Almost everything Vault writes to storage is encrypted using the keyring, which is protected by the seal. We refer to this practice as "the barrier". There are a few exceptions to the rule, for example, the seal configuration is stored in an unencrypted file since it's needed to unseal the barrier, and the keyring is encrypted using the root key, while the root key is encrypted using the seal.
+
+### Client token
+
+A client token (aka "Vault Token") is conceptually
+similar to a session cookie on a web site. Once a user authenticates, Vault
+returns a client token which is used for future requests. The token is used by
+Vault to verify the identity of the client and to enforce the applicable ACL
+policies. This token is passed via HTTP headers.
+
+### Plugin
+
+Plugins are a feature of Vault that can be enabled, disabled, and customized to
+some degree. All Vault [auth methods](/vault/docs/auth) and [secrets engines](/vault/docs/secrets)
+are considered plugins.
+
+#### Built-in plugin
+
+Built-in plugins are shipped with Vault, often for commonly used
+implementations, and require no additional operator intervention to run.
+Built-in plugins are just like any other backend code inside Vault.
+
+#### External plugin
+
+External plugins are not shipped with Vault and require additional operator
+intervention to run. Vault's external plugins are completely separate,
+standalone applications that Vault executes and communicates with over RPC.
+Each time a Vault secret engine or auth method is mounted, a new process is
+spawned.
+
+#### External multiplexed plugin
+
+An external plugin may make use of [plugin multiplexing](/vault/docs/plugins/plugin-architecture#plugin-multiplexing).
+A multiplexed plugin allows a single plugin process to be used for multiple
+mounts of the same type.
+
+### Request
+
+A request being made to Vault contains all relevant parameters and context in order
+for Vault to be able to act accordingly. Vault represents this request internally
+in a way that understands:
+
+* Mount Point - Used to generate relative paths.
+* Mount Type - The type of mount the request is interacting with.
+* Namespace - The [namespace](/vault/docs/enterprise/namespaces) the request is taking place within.
+* Operation - See [the operation description](#operation) below for the supported operations.
+* Path - The full path of the request.
+
+<Note title="Request's Namespace">
+  The Namespace a request is targeting may be specified either as part of the path
+  or the Vault Namespace header.
+</Note>
+
+Please see our Enterprise documentation for further information on how
+[Namespaces can be specified](/vault/docs/enterprise/namespaces#vault-api-and-namespaces)
+as part of a request.
+
+#### Operation
+
+The request's operation can be one of the following: `alias-lookahead`, `create`, `delete`,
+`header`, `help`, `list`, `patch`, `read`, `renew`, `resolve-role`, `revoke`, `rollback`
+`update`.
+
+### Secret
+
+A secret is the term for anything returned by Vault which
+contains confidential or cryptographic material. Not everything returned by
+Vault is a secret, for example system configuration, status information, or
+policies are not considered secrets. Dynamic secrets always have an associated lease, and static secrets do not.
+This means clients cannot assume that the dynamic secret contents can be used
+indefinitely. Vault will revoke a dynamic secret at the end of the lease, and an
+operator may intervene to revoke the Dynamic Secret before the lease is over. This
+contract between Vault and its clients is critical, as it allows for changes
+in keys and policies without manual intervention.
+
+### Secrets engine
+
+A secrets engine is responsible for managing secrets.
+Simple secrets engines, such as the "kv" secrets engine, return the same
+secret when queried. Some secrets engines support using policies to
+dynamically generate a secret each time they are queried. This allows for
+unique secrets to be used which allows Vault to do fine-grained revocation and
+policy updates. As an example, a MySQL secrets engine could be configured with
+a "web" policy. When the "web" secret is read, a new MySQL user/password pair
+will be generated with a limited set of privileges for the web server.
+
+### Server
+
+Vault depends on a long-running instance which operates as a
+server. The Vault server provides an API which clients interact with and
+manages the interaction between all the secrets engines, ACL enforcement, and
+secret lease revocation. Having a server based architecture decouples clients
+from the security keys and policies, enables centralized audit logging, and
+simplifies administration for operators.
+
+### Storage backend
+
+A storage backend is responsible for durable storage of
+_encrypted_ data. Backends are not trusted by Vault and are only expected to
+provide durability. The storage backend is configured when starting the Vault
+server.

@@ -1,10 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package policyutil
 
 import (
 	"sort"
 	"strings"
 
-	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 )
 
 const (
@@ -76,41 +79,33 @@ func SanitizePolicies(policies []string, addDefault bool) []string {
 // EquivalentPolicies checks whether the given policy sets are equivalent, as in,
 // they contain the same values. The benefit of this method is that it leaves
 // the "default" policy out of its comparisons as it may be added later by core
-// after a set of policies has been saved by a backend.
+// after a set of policies has been saved by a backend and performs policy name
+// normalization.
 func EquivalentPolicies(a, b []string) bool {
-	switch {
-	case a == nil && b == nil:
-		return true
-	case a == nil && len(b) == 1 && b[0] == "default":
-		return true
-	case b == nil && len(a) == 1 && a[0] == "default":
-		return true
-	case a == nil || b == nil:
-		return false
-	}
-
 	// First we'll build maps to ensure unique values and filter default
-	mapA := map[string]bool{}
-	mapB := map[string]bool{}
+	mapA := map[string]struct{}{}
+	mapB := map[string]struct{}{}
 	for _, keyA := range a {
+		keyA := strings.ToLower(keyA)
 		if keyA == "default" {
 			continue
 		}
-		mapA[keyA] = true
+		mapA[keyA] = struct{}{}
 	}
 	for _, keyB := range b {
+		keyB := strings.ToLower(keyB)
 		if keyB == "default" {
 			continue
 		}
-		mapB[keyB] = true
+		mapB[keyB] = struct{}{}
 	}
 
 	// Now we'll build our checking slices
 	var sortedA, sortedB []string
-	for keyA, _ := range mapA {
+	for keyA := range mapA {
 		sortedA = append(sortedA, keyA)
 	}
-	for keyB, _ := range mapB {
+	for keyB := range mapB {
 		sortedB = append(sortedB, keyB)
 	}
 	sort.Strings(sortedA)

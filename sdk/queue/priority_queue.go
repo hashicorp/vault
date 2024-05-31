@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 // Package queue  provides Vault plugins with a Priority Queue. It can be used
 // as an in-memory list of queue.Item sorted by their priority, and offers
 // methods to find or remove items by their key. Internally it uses
@@ -85,12 +88,12 @@ func (pq *PriorityQueue) Len() int {
 // wrapper/convenience method that calls heap.Pop, so consumers do not need to
 // invoke heap functions directly
 func (pq *PriorityQueue) Pop() (*Item, error) {
-	if pq.Len() == 0 {
-		return nil, ErrEmpty
-	}
-
 	pq.lock.Lock()
 	defer pq.lock.Unlock()
+
+	if pq.data.Len() == 0 {
+		return nil, ErrEmpty
+	}
 
 	item := heap.Pop(&pq.data).(*Item)
 	delete(pq.dataMap, item.Key)

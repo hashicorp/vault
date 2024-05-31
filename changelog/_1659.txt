@@ -1,0 +1,3 @@
+```release-note:bug
+storage/raft (enterprise): Reading a non-existent auto snapshot config now returns 404.
+```

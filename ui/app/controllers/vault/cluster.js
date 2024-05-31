@@ -1,7 +1,13 @@
-import { inject as service } from '@ember/service';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+/* eslint-disable ember/no-observers */
+import { service } from '@ember/service';
 import { alias } from '@ember/object/computed';
 import Controller from '@ember/controller';
-import { observer, computed } from '@ember/object';
+import { observer } from '@ember/object';
 export default Controller.extend({
   auth: service(),
   store: service(),
@@ -9,6 +15,8 @@ export default Controller.extend({
   router: service(),
   permissions: service(),
   namespaceService: service('namespace'),
+  flashMessages: service(),
+  customMessages: service(),
 
   vaultVersion: service('version'),
   console: service(),
@@ -24,44 +32,14 @@ export default Controller.extend({
 
   namespaceQueryParam: '',
 
-  /* eslint-disable-next-line ember/no-observers */
-  onQPChange: observer('namespaceQueryParam', function() {
-    this.get('namespaceService').setNamespace(this.get('namespaceQueryParam'));
+  onQPChange: observer('namespaceQueryParam', function () {
+    this.namespaceService.setNamespace(this.namespaceQueryParam);
   }),
 
   consoleOpen: alias('console.isOpen'),
+  activeCluster: alias('auth.activeCluster'),
 
-  activeCluster: computed('auth.activeCluster', function() {
-    return this.get('store').peekRecord('cluster', this.get('auth.activeCluster'));
-  }),
-
-  activeClusterName: computed('activeCluster', function() {
-    const activeCluster = this.get('activeCluster');
-    return activeCluster ? activeCluster.get('name') : null;
-  }),
-
-  showNav: computed(
-    'router.currentRouteName',
-    'activeClusterName',
-    'auth.currentToken',
-    'activeCluster.{dr.isSecondary,needsInit,sealed}',
-    function() {
-      if (
-        this.get('activeCluster.dr.isSecondary') ||
-        this.get('activeCluster.needsInit') ||
-        this.get('activeCluster.sealed')
-      ) {
-        return false;
-      }
-      if (
-        this.activeClusterName &&
-        this.auth.currentToken &&
-        this.router.currentRouteName !== 'vault.cluster.auth'
-      ) {
-        return true;
-      }
-    }
-  ),
+  permissionBanner: alias('permissions.permissionsBanner'),
 
   actions: {
     toggleConsole() {

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package http
 
 import (
@@ -5,19 +8,17 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/version"
 	"github.com/hashicorp/vault/vault"
 )
 
 func handleSysSeal(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		req, _, statusCode, err := buildLogicalRequest(core, w, r)
+		req, _, statusCode, err := buildLogicalRequest(core, w, r, "")
 		if err != nil || statusCode != 0 {
 			respondError(w, statusCode, err)
 			return
@@ -47,7 +48,7 @@ func handleSysSeal(core *vault.Core) http.Handler {
 
 func handleSysStepDown(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		req, _, statusCode, err := buildLogicalRequest(core, w, r)
+		req, _, statusCode, err := buildLogicalRequest(core, w, r, "")
 		if err != nil || statusCode != 0 {
 			respondError(w, statusCode, err)
 			return
@@ -101,20 +102,6 @@ func handleSysUnseal(core *vault.Core) http.Handler {
 			return
 		}
 
-		isInSealMigration := core.IsInSealMigration()
-		if !req.Migrate && isInSealMigration {
-			respondError(
-				w, http.StatusBadRequest,
-				errors.New("'migrate' parameter must be set true in JSON body when in seal migration mode"))
-			return
-		}
-		if req.Migrate && !isInSealMigration {
-			respondError(
-				w, http.StatusBadRequest,
-				errors.New("'migrate' parameter set true in JSON body when not in seal migration mode"))
-			return
-		}
-
 		if req.Key == "" {
 			respondError(
 				w, http.StatusBadRequest,
@@ -138,9 +125,10 @@ func handleSysUnseal(core *vault.Core) http.Handler {
 			}
 		}
 
-		// Attempt the unseal
-		if core.SealAccess().RecoveryKeySupported() {
-			_, err = core.UnsealWithRecoveryKeys(key)
+		// Attempt the unseal.  If migrate was specified, the key should correspond
+		// to the old seal.
+		if req.Migrate {
+			_, err = core.UnsealMigrate(key)
 		} else {
 			_, err = core.Unseal(key)
 		}
@@ -164,95 +152,63 @@ func handleSysUnseal(core *vault.Core) http.Handler {
 	})
 }
 
-func handleSysSealStatus(core *vault.Core) http.Handler {
+func handleSysSealStatus(core *vault.Core, opt ...ListenerConfigOption) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "GET" {
 			respondError(w, http.StatusMethodNotAllowed, nil)
 			return
 		}
 
-		handleSysSealStatusRaw(core, w, r)
+		handleSysSealStatusRaw(core, w, r, opt...)
 	})
 }
 
-func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
+func handleSysSealBackendStatus(core *vault.Core) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" {
+			respondError(w, http.StatusMethodNotAllowed, nil)
+			return
+		}
 
-	sealed := core.Sealed()
+		handleSysSealBackendStatusRaw(core, w, r)
+	})
+}
 
-	var sealConfig *vault.SealConfig
-	var err error
-	if core.SealAccess().RecoveryKeySupported() {
-		sealConfig, err = core.SealAccess().RecoveryConfig(ctx)
-	} else {
-		sealConfig, err = core.SealAccess().BarrierConfig(ctx)
+func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Request, opt ...ListenerConfigOption) {
+	ctx := r.Context()
+
+	var tokenPresent bool
+	token := r.Header.Get(consts.AuthHeaderName)
+	if token != "" {
+		// We don't care about the error, we just want to know if the token exists
+		lock := core.HALock()
+		lock.Lock()
+		tokenEntry, err := core.LookupToken(ctx, token)
+		lock.Unlock()
+		tokenPresent = err == nil && tokenEntry != nil
 	}
+
+	// If there are is no valid token then we will redact the specified values
+	if tokenPresent {
+		ctx = logical.CreateContextRedactionSettings(ctx, false, false, false)
+	}
+
+	status, err := core.GetSealStatus(ctx, true)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
 		return
 	}
-
-	if sealConfig == nil {
-		respondOk(w, &SealStatusResponse{
-			Type:         core.SealAccess().BarrierType(),
-			Initialized:  false,
-			Sealed:       true,
-			RecoverySeal: core.SealAccess().RecoveryKeySupported(),
-			StorageType:  core.StorageType(),
-			Version:      version.GetVersion().VersionNumber(),
-		})
-		return
-	}
-
-	// Fetch the local cluster name and identifier
-	var clusterName, clusterID string
-	if !sealed {
-		cluster, err := core.Cluster(ctx)
-		if err != nil {
-			respondError(w, http.StatusInternalServerError, err)
-			return
-		}
-		if cluster == nil {
-			respondError(w, http.StatusInternalServerError, fmt.Errorf("failed to fetch cluster details"))
-			return
-		}
-		clusterName = cluster.Name
-		clusterID = cluster.ID
-	}
-
-	progress, nonce := core.SecretProgress()
-
-	respondOk(w, &SealStatusResponse{
-		Type:         sealConfig.Type,
-		Initialized:  true,
-		Sealed:       sealed,
-		T:            sealConfig.SecretThreshold,
-		N:            sealConfig.SecretShares,
-		Progress:     progress,
-		Nonce:        nonce,
-		Version:      version.GetVersion().VersionNumber(),
-		Migration:    core.IsInSealMigration(),
-		ClusterName:  clusterName,
-		ClusterID:    clusterID,
-		RecoverySeal: core.SealAccess().RecoveryKeySupported(),
-		StorageType:  core.StorageType(),
-	})
+	respondOk(w, status)
 }
 
-type SealStatusResponse struct {
-	Type         string `json:"type"`
-	Initialized  bool   `json:"initialized"`
-	Sealed       bool   `json:"sealed"`
-	T            int    `json:"t"`
-	N            int    `json:"n"`
-	Progress     int    `json:"progress"`
-	Nonce        string `json:"nonce"`
-	Version      string `json:"version"`
-	Migration    bool   `json:"migration"`
-	ClusterName  string `json:"cluster_name,omitempty"`
-	ClusterID    string `json:"cluster_id,omitempty"`
-	RecoverySeal bool   `json:"recovery_seal"`
-	StorageType  string `json:"storage_type,omitempty"`
+func handleSysSealBackendStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Request) {
+	ctx := context.Background()
+	status, err := core.GetSealBackendStatus(ctx)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, err)
+		return
+	}
+	respondOk(w, status)
 }
 
 // Note: because we didn't provide explicit tagging in the past we can't do it

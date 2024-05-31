@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/database/mssql: Accept a boolean for `contained_db`, rather than just a string.
+```

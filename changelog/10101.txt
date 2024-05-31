@@ -1,0 +1,3 @@
+```release-note:bug
+identity: dedup from_entity_ids when merging two entities
+```

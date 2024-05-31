@@ -1,0 +1,108 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
+syntax = "proto3";
+package dbplugin.v5;
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/hashicorp/vault/sdk/database/dbplugin/v5/proto";
+
+/////////////////
+// Initialize()
+/////////////////
+message InitializeRequest {
+  google.protobuf.Struct config_data = 1;
+  bool verify_connection = 2;
+}
+
+message InitializeResponse {
+  google.protobuf.Struct config_data = 1;
+}
+/////////////////
+// NewUser()
+/////////////////
+
+message NewUserRequest {
+  UsernameConfig username_config = 1;
+  string password = 2;
+  google.protobuf.Timestamp expiration = 3;
+  Statements statements = 4;
+  Statements rollback_statements = 5;
+  int32 credential_type = 6;
+  bytes public_key = 7;
+  string subject = 8;
+}
+
+message UsernameConfig {
+  string display_name = 1;
+  string role_name = 2;
+}
+
+message NewUserResponse {
+  string username = 1;
+}
+
+/////////////////
+// UpdateUser()
+/////////////////
+message UpdateUserRequest {
+  string username = 1;
+  ChangePassword password = 2;
+  ChangeExpiration expiration = 3;
+  ChangePublicKey public_key = 4;
+  int32 credential_type = 5;
+}
+
+message ChangePassword {
+  string new_password = 1;
+  Statements statements = 2;
+}
+
+message ChangePublicKey {
+  bytes new_public_key = 1;
+  Statements statements = 2;
+}
+
+message ChangeExpiration {
+  google.protobuf.Timestamp new_expiration = 1;
+  Statements statements = 2;
+}
+
+message UpdateUserResponse {}
+
+/////////////////
+// DeleteUser()
+/////////////////
+message DeleteUserRequest {
+  string username = 1;
+  Statements statements = 2;
+}
+
+message DeleteUserResponse {}
+
+/////////////////
+// Type()
+/////////////////
+message TypeResponse {
+  string Type = 1;
+}
+
+/////////////////
+// General purpose
+/////////////////
+message Statements {
+  repeated string Commands = 1;
+}
+
+message Empty {}
+
+service Database {
+  rpc Initialize(InitializeRequest) returns (InitializeResponse);
+  rpc NewUser(NewUserRequest) returns (NewUserResponse);
+  rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse);
+  rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse);
+  rpc Type(Empty) returns (TypeResponse);
+  rpc Close(Empty) returns (Empty);
+}

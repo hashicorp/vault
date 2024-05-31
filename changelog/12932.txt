@@ -1,0 +1,3 @@
+```release-note:feature
+**OIDC Identity Provider (Tech Preview)**: Adds support for Vault to be an OpenID Connect (OIDC) provider.
+```

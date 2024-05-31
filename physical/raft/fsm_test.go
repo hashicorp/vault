@@ -1,23 +1,25 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package raft
 
 import (
 	"context"
-	fmt "fmt"
-	"io/ioutil"
+	"fmt"
 	"math/rand"
-	"os"
+	"sort"
 	"testing"
 
-	proto "github.com/golang/protobuf/proto"
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/go-test/deep"
+	"github.com/golang/protobuf/proto"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/raft"
+	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/stretchr/testify/require"
 )
 
-func getFSM(t testing.TB) (*FSM, string) {
-	raftDir, err := ioutil.TempDir("", "vault-raft-")
-	if err != nil {
-		t.Fatal(err)
-	}
+func getFSM(t testing.TB) *FSM {
+	raftDir := t.TempDir()
 	t.Logf("raft dir: %s", raftDir)
 
 	logger := hclog.New(&hclog.LoggerOptions{
@@ -25,17 +27,16 @@ func getFSM(t testing.TB) (*FSM, string) {
 		Level: hclog.Trace,
 	})
 
-	fsm, err := NewFSM(raftDir, logger)
+	fsm, err := NewFSM(raftDir, "", logger)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	return fsm, raftDir
+	return fsm
 }
 
 func TestFSM_Batching(t *testing.T) {
-	fsm, dir := getFSM(t)
-	defer os.RemoveAll(dir)
+	fsm := getFSM(t)
 
 	var index uint64
 	var term uint64 = 1
@@ -49,9 +50,9 @@ func TestFSM_Batching(t *testing.T) {
 				Type:  raft.LogConfiguration,
 				Data: raft.EncodeConfiguration(raft.Configuration{
 					Servers: []raft.Server{
-						raft.Server{
-							Address: raft.ServerAddress("test"),
-							ID:      raft.ServerID("test"),
+						{
+							Address: "test",
+							ID:      "test",
 						},
 					},
 				}),
@@ -124,4 +125,72 @@ func TestFSM_Batching(t *testing.T) {
 	if latestConfig == nil && term > 1 {
 		t.Fatal("config wasn't updated")
 	}
+}
+
+func TestFSM_List(t *testing.T) {
+	fsm := getFSM(t)
+
+	ctx := context.Background()
+	count := 100
+	keys := rand.Perm(count)
+	var sorted []string
+	for _, k := range keys {
+		err := fsm.Put(ctx, &physical.Entry{Key: fmt.Sprintf("foo/%d/bar", k)})
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = fsm.Put(ctx, &physical.Entry{Key: fmt.Sprintf("foo/%d/baz", k)})
+		if err != nil {
+			t.Fatal(err)
+		}
+		sorted = append(sorted, fmt.Sprintf("%d/", k))
+	}
+	sort.Strings(sorted)
+
+	got, err := fsm.List(ctx, "foo/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	sort.Strings(got)
+	if diff := deep.Equal(sorted, got); len(diff) > 0 {
+		t.Fatal(diff)
+	}
+}
+
+// TestFSM_UnknownOperation calls ApplyBatch with a batch that has an unknown
+// command operation type. The test verifies that the call panics
+func TestFSM_UnknownOperation(t *testing.T) {
+	fsm := getFSM(t)
+	command := &LogData{
+		Operations: make([]*LogOperation, 5),
+	}
+
+	for i := range command.Operations {
+		op := putOp
+		if i == 4 {
+			// the last operation has an invalid op type
+			op = 0
+		}
+		command.Operations[i] = &LogOperation{
+			OpType: op,
+			Key:    fmt.Sprintf("key-%d", i),
+			Value:  []byte(fmt.Sprintf("value-%d", i)),
+		}
+	}
+	commandBytes, err := proto.Marshal(command)
+	require.NoError(t, err)
+
+	defer func() {
+		r := recover()
+		require.NotNil(t, r)
+		require.Contains(t, r, "failed to store data")
+	}()
+	fsm.ApplyBatch([]*raft.Log{{
+		Index: 0,
+		Term:  1,
+		Type:  raft.LogCommand,
+		Data:  commandBytes,
+	}})
+
+	require.Fail(t, "failed to panic")
 }

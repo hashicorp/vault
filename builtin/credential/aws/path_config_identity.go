@@ -1,12 +1,15 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package awsauth
 
 import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/authmetadata"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -29,6 +32,7 @@ var (
 			"inferred_aws_region",
 			"inferred_entity_id",
 			"inferred_entity_type",
+			"inferred_hostname",
 		},
 	}
 
@@ -54,11 +58,16 @@ var (
 func (b *backend) pathConfigIdentity() *framework.Path {
 	return &framework.Path{
 		Pattern: "config/identity$",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"iam_alias": {
 				Type:        framework.TypeString,
 				Default:     identityAliasIAMUniqueID,
-				Description: fmt.Sprintf("Configure how the AWS auth method generates entity aliases when using IAM auth. Valid values are %q, %q, and %q. Defaults to %q.", identityAliasRoleID, identityAliasIAMUniqueID, identityAliasIAMFullArn, identityAliasRoleID),
+				Description: fmt.Sprintf("Configure how the AWS auth method generates entity aliases when using IAM auth. Valid values are %q, %q, %q and %q. Defaults to %q.", identityAliasRoleID, identityAliasIAMUniqueID, identityAliasIAMFullArn, identityAliasIAMCanonicalArn, identityAliasRoleID),
 			},
 			iamAuthMetadataFields.FieldName: authmetadata.FieldSchema(iamAuthMetadataFields),
 			"ec2_alias": {
@@ -72,9 +81,16 @@ func (b *backend) pathConfigIdentity() *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: pathConfigIdentityRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "identity-integration-configuration",
+				},
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: pathConfigIdentityUpdate,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "identity-integration",
+				},
 			},
 		},
 
@@ -135,7 +151,7 @@ func pathConfigIdentityUpdate(ctx context.Context, req *logical.Request, data *f
 	iamAliasRaw, ok := data.GetOk("iam_alias")
 	if ok {
 		iamAlias := iamAliasRaw.(string)
-		allowedIAMAliasValues := []string{identityAliasRoleID, identityAliasIAMUniqueID, identityAliasIAMFullArn}
+		allowedIAMAliasValues := []string{identityAliasRoleID, identityAliasIAMUniqueID, identityAliasIAMFullArn, identityAliasIAMCanonicalArn}
 		if !strutil.StrListContains(allowedIAMAliasValues, iamAlias) {
 			return logical.ErrorResponse(fmt.Sprintf("iam_alias of %q not in set of allowed values: %v", iamAlias, allowedIAMAliasValues)), nil
 		}
@@ -178,11 +194,14 @@ type identityConfig struct {
 	EC2AuthMetadataHandler *authmetadata.Handler `json:"ec2_auth_metadata_handler"`
 }
 
-const identityAliasIAMUniqueID = "unique_id"
-const identityAliasIAMFullArn = "full_arn"
-const identityAliasEC2InstanceID = "instance_id"
-const identityAliasEC2ImageID = "image_id"
-const identityAliasRoleID = "role_id"
+const (
+	identityAliasIAMUniqueID     = "unique_id"
+	identityAliasIAMFullArn      = "full_arn"
+	identityAliasIAMCanonicalArn = "canonical_arn"
+	identityAliasEC2InstanceID   = "instance_id"
+	identityAliasEC2ImageID      = "image_id"
+	identityAliasRoleID          = "role_id"
+)
 
 const pathConfigIdentityHelpSyn = `
 Configure the way the AWS auth method interacts with the identity store

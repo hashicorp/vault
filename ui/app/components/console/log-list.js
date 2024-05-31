@@ -1,9 +1,12 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { reads } from '@ember/object/computed';
 import Component from '@ember/component';
-import { computed } from '@ember/object';
 
 export default Component.extend({
   content: null,
-  list: computed('content', function() {
-    return this.get('content').keys;
-  }),
+  list: reads('content.keys'),
 });

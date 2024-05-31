@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki: Allow URI SAN templates in allowed_uri_sans when allowed_uri_sans_template is set to true.
+```

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package http
 
 import (
@@ -56,6 +59,7 @@ func TestSysConfigCors(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"enabled":         true,
 			"allowed_origins": []interface{}{addr},
@@ -74,5 +78,4 @@ func TestSysConfigCors(t *testing.T) {
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: expected: %#v\nactual: %#v", expected, actual)
 	}
-
 }

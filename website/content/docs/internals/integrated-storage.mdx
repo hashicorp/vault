@@ -1,0 +1,279 @@
+---
+layout: docs
+page_title: Raft integrated storage
+description: Learn about integrated Raft storage in Vault.
+---
+
+# Integrated Raft storage
+
+Vault supports several options for durable information storage. Each backend
+offers pros, cons, advantages, and trade-offs. For example, some backends
+support high availability while others provide a more robust backup and
+restoration process. Integrated storage is a "built-in" storage option that
+supports backup/restore workflows, high availability, and Enterprise replication
+features without relying on third-party systems.
+
+## Raft protocol overview
+
+<Highlight>
+
+  [The Secret Lives of Data] has a nice visual explanation of Raft storage.
+
+</Highlight>
+
+Raft storage uses a [consensus protocol] based on [Paxos] and the work in
+["Raft: In search of an Understandable Consensus Algorithm"] to provide CAP
+[consistency].
+
+Raft performance is bound by disk I/O and network latency, and
+comparable to Paxos. With stable leadership, committing a log entry requires a
+single round trip to half of the peer set.
+
+Compared to Paxos, Raft is designed to have fewer states and a simpler, more
+understandable algorithm that depends on the following elements:
+
+- **Log** - An ordered sequence of entries (replicated log) that tracks cluster
+  changes. For example, writing data is a new event, which creates a
+  corresponding log entry.
+
+- **Peer set** - The set of all members participating in log replication. All
+  server nodes are in the peer set of the local cluster.
+
+- **Leader** - At any given time, the peer set elects a single node to be the
+  leader. Leaders ingest new log entries, replicate the log to followers, and
+  manage when an entry should be committed. Leaders manage log replication and
+  inconsistencies within replicated log entries may indicate an issue with the
+  leader.
+
+- **Quorum** - A majority of members from a peer set. For a peer set of size `N`,
+  quorum requires at least `ceil( (N + 1) / 2 )` members. For example, quorum in
+  a peer set of 5 members requires 3 nodes. If a cluster cannot achieve quorum,
+  **the cluster becomes unavailable** and cannot commit new logs.
+
+- **Committed entry** - A log entry that is replicated to a quorum of nodes. Log
+  entries are only applied once they are committed.
+
+- **Deterministic finite-state machine ([DFSM])** - A collection of known states
+  with predictable transitions between the states. In Raft, the DFSM transitions
+  between states whenever new logs are applied. By DFSM rules, multiple
+  applications of the same sequence of logs must always result in the same final
+  state.
+
+### Node states
+
+Raft nodes are always in one of following states:
+
+- **follower** - All nodes start as a follower. Followers accept log entries
+  from a leader and cast votes for leader selection.
+- **candidate** - A node self-promotes to the candidate state whenever it goes
+  without receiving log entries for a given period of time. During
+  self-promotion, candidates request votes from the rest of their peer set.
+- **leader** - Nodes become leaders once they receive a quorum of votes as a
+  candidate.
+
+### Writing logs
+
+With Raft, a log entry is an opaque binary blob. Once the peer set elects a
+leader, the peer set can accept new log entries. When clients ask the set to
+append a new log entry, the leader writes the entry to durable storage and tries
+to replicate the data to a quorum of followers. Once the log entry is
+**committed**, the leader **applies** the log entry to a deterministic finite
+state machine to maintain the cluster state.
+
+<Note title="Raft in Vault">
+
+  Vault uses [BoltDB](https://github.com/etcd-io/bbolt) or WAL Raft as the
+  deterministic finite state machine and blocks writes until they are both
+  committed **and** applied.
+
+</Note>
+
+### Compacting logs
+
+To avoid unbounded growth in the replicated logs, Raft saves the current state
+to snapshots then compacts the associated logs. Because the finite-state machine
+is deterministic, restoring a snapshot of the DFSM always results in the same
+state as replaying the sequence of logs associated with the snapshot. Taking
+snapshots lets Raft capture the DFSM state at any point in time and then remove
+the logs used to reach that state, thereby compacting the log data.
+
+<Note title="Raft in Vault">
+
+  Vault compacts logs automatically to prevent unbounded disk usage while also
+  minimizing the time spent replaying logs. Using BoltDB as the DFSM also keeps
+  the Vault snapshots lightweight because the Vault data is already persisted to
+  disk in BoltDB, the snapshot process just needs to truncate the Raft logs.
+
+</Note>
+
+### Quorum
+
+Raft consensus is fault-tolerant when a peer set has quorum. However, when a
+quorum of nodes is **not** available, the peer set cannot process log entries,
+elect leaders, or manage peer membership.
+
+For example, suppose there are only 2 peers: A and B. To have quorum, both nodes
+must participate, so the quorum size is 2. As a result, both nodes must agree
+before they can commit a log entry. If one of the nodes fails, the remaining
+node cannot reach quorum; the peer set can no longer add or remove nodes or
+commit additional log entries. When the peer set can no longer take action, it
+becomes **unavailable**. Once a peer set becomes unavailable, it can only be
+recovered manually by removing the failing node and restarting the remaining
+node in bootstrap mode so it self-elects as leader.
+
+## Raft leadership in Vault
+
+When a single Vault server (node)
+[initializes](/vault/docs/commands/operator/init/#operator-init), it establishes
+a cluster (peer set) of size 1 and self-elects itself as leader. Once the
+cluster has a leader, additional servers can join the cluster using an
+encrypted challenge/answer workflow. For the join process to work, all nodes
+in a single Raft cluster must share the same seal configuration. If the cluster
+is configured to use auto-unseal, the join process automatically decrypts the
+challenge and responds with the answer using the configured seal. For other seal
+options, like a Shamir seal, nodes must have access to the unseal keys before
+joining so they can decrypt the challenge and respond with the decrypted answer.
+
+In a [high availability](/vault/docs/internals/high-availability#design-overview)
+configuration, the active Vault node is the leader node and all standby nodes
+are followers.
+
+## BoltDB Raft logs
+
+BoltDB is a single file database, which means BoltDB cannot shrink the file on
+disk to recover space when you delete data. Instead, BoltDB notes the places
+where the deleted data was stored on a "freelist". On subsequent writes, BoltDB
+consults the freelist to reuse old pages before allocating new space to persist
+the data.
+
+<Warning title="BoltDB requires careful tuning">
+
+1. On Vault clusters with high churn, the BoltDB freelist can become quite large
+   and the database file can become highly fragmented. Large freelists and
+   fragmented database files can slow BoltDB transaction and directly impact the
+   performance of your Vault cluster.
+1. On busy Vault clusters, where new followers struggle to sync Raft snapshots
+   before receiving subsequent snapshots from the leader, the BoltDB file is
+   susceptible to sudden bursts of writes. Not only will new followers potentially
+   fail to join quorum, Vault installations that do not provide for spiky file
+   growth or over-allocate and waste disk space will likely see poor performance.
+
+</Warning>
+
+## Write-ahead Raft logs
+
+@include 'alerts/experimental.mdx'
+
+By default, Vault uses the `raft-boltdb` library for BoltDB to store Raft logs,
+but you can also configure Vault to use the
+[`raft-wal`](https://github.com/hashicorp/raft-wal) library for write-ahead Raft
+logs.
+
+Library       | Filename(s)                                                | Storage directory
+------------- |------------------------------------------------------------| ----------------
+`raft-boltdb` | `raft.db`                                                  | `raft`
+`raft-wal`    | `wal-meta.db`, `XXXXXXXXXXXXXXXXXXXX-XXXXXXXXXXXXXXXX.wal` | `raft/wal`
+
+The `raft-wal` library is designed specifically for storing Raft logs. Rather
+than using a freelist like `raft-boltdb`, `raft-wal` maintains a directory of
+files as its data store and compacts data over time to free up space when a
+given file is no longer needed.
+
+Storing data as files in a directory also means that the `raft-wal` library can
+easily increase or decrease the number of logs retained by leaders before
+truncating and compacting without risking poor performance from spiky writes.
+
+## Quorum management in Vault
+
+### With autopilot
+
+With the [autopilot](/vault/docs/concepts/integrated-storage/autopilot) feature,
+Vault uses a configurable set of parameters to confirm a node is healthy before
+considering it an eligible voter in the quorum list.
+
+Autopilot is enabled by default and includes stabilization logic for nodes
+joining the cluster:
+
+- A node joins the cluster as a non-voter.
+- The joined node syncs with the current Raft index.
+- Once the configured stability threshold is met, the node becomes a full voting
+  member of the cluster.
+
+<Warning title="Verify your stability threshold is appropriate">
+
+  Setting the stability threshold too low can lead to cluster instability because
+  nodes may begin voting before they are fully in sync with the Raft index.
+
+</Warning>
+
+Autopilot also includes a dead server cleanup feature. When you enable dead
+server cleanup with the
+[Autopilot API](/vault/api-docs/system/storage/raftautopilot), Vault
+automatically removes unhealthy nodes from the Raft cluster without manual
+operator intervention.
+
+### Without autopilot
+
+Without autopilot, when a node joins a Raft cluster, the node tries to catch up
+with the peer set just by replicating data received from the leader. While the
+node is in the initial synchronization state, it cannot vote, but **is** counted for
+the purposes of quorum. If multiple nodes join the cluster simultaneously (or
+within a small enough window) the cluster may exceed the expected failure
+tolerance, quorum may be lost, and the cluster can fail.
+
+For example, consider a 3-node cluster with a large amount of data and a failure
+tolerance of 1. If 3 nodes join the cluster at the same time, the cluster size
+becomes 6 with an expected failure tolerance of 2. But 3 of the nodes are still
+synchronizing and cannot vote, which means the cluster loses quorum.
+
+If you are not using autopilot, we strongly recommend that you ensure all new
+nodes have Raft indexes that are in sync (or very close to in sync) with the
+leader before adding additional nodes. You can check the status of current Raft
+indexes with the `vault status` CLI command.
+
+## Quorum size and failure tolerance
+
+The table below compares quorum size and failure tolerance for various
+cluster sizes.
+
+Servers | Quorum size | Failure tolerance
+:-----: | :---------: | :---------------:
+1       | 1           | 0
+2       | 2           | 0
+3       | 2           | 1
+4       | 3           | 1
+**5**   | **3**       | **2**
+6       | 4           | 2
+7       | 4           | 3
+
+<Highlight title="Best practice">
+
+  For best performance, we recommended at least 5 servers for a standard
+  production deployment to maintained a minimum failure tolerance of 2. We also
+  recommend maintaining a cluster with an odd number of nodes to avoid voting
+  stalemates.
+
+  We **strongly discourage** single server deployments for production use due to
+  the high risk of data loss during failure scenarios.
+
+</Highlight>
+
+To maintain failure tolerance during maintenance and other changes, we recommend
+sequentially scaling and reverting your cluster, 2 nodes at a time.
+
+For example, if you start with a 5-node cluster:
+
+1. Scale the cluster to 7 nodes.
+1. Confirm the new nodes are joined and in sync with the rest of the peer set.
+1. Stop or destroy 2 of the older nodes.
+1. Repeat this process 2 more times to cycle out the rest of the pre-existing nodes.
+
+You should always maintain quorum to limit the impact on failure tolerance when
+changing or scaling your Vault instance.
+
+[consensus protocol]: https://en.wikipedia.org/wiki/Consensus_(computer_science)
+[consistency]: https://en.wikipedia.org/wiki/CAP_theorem
+["Raft: In search of an Understandable Consensus Algorithm"]: https://raft.github.io/raft.pdf
+[paxos]: https://en.wikipedia.org/wiki/Paxos_%28computer_science%29
+[The Secret Lives of Data]: http://thesecretlivesofdata.com/raft
+[FSM]: https://en.wikipedia.org/wiki/Finite-state_machine

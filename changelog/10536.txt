@@ -1,0 +1,4 @@
+```release-note:bug
+core: Fix rate limit resource quota migration from 1.5.x to 1.6.x by ensuring `purgeInterval` and
+`staleAge` are set appropriately.
+```

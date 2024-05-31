@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki: Allow signing of self-issued certs with a different signature algorithm.
+```

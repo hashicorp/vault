@@ -1,0 +1,3 @@
+```release-note:bug
+agent/template: Fix parsing error for the exec stanza
+```

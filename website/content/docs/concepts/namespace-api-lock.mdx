@@ -1,0 +1,85 @@
+---
+layout: docs
+page_title: Namespace API Lock
+description: Lock the Vault API on a per-namespace basis.
+---
+
+# Namespace lock and unlock
+
+Vault makes the API available (unlocked) by default for all namespaces. In
+this state, Vault can respond to all API/CLI ('API' from here on out) requests
+as normal.
+
+A Vault administrator can lock the API for particular namespaces. In this state,
+Vault blocks all but a selected few API endpoints from responding to clients
+operating in a locked namespace (or a descendant of a locked namespace). The
+endpoints that do respond, the exempt paths, are largely the same as the Vault
+unauthenticated paths. They are mainly used for checking the status of various
+systems (e.g., `sys/health`), or for unlocking the API.
+
+When the API is locked for a particular namespace, it is also locked for all
+descendants of that namespace. If the API was already locked for a descendant,
+that lock will remain, but Vault must be unlocked for the parent before
+unlocking the descendant.
+
+## Why?
+
+Blocking access to much of Vault can be an important break-glass tool in the
+event of unexpected behavior.
+
+For HCP Vault Dedicated, this provides functionality analogous to sealing Vault, without
+the Vault administrator requesting that the Managed Service Provider seal/unseal
+Vault.
+
+This feature also becomes valuable for secure multitenancy in a variety of Vault
+deployment strategies. You can restrict Vault access for just part of an
+organization, without affecting adjacent parts of the business. If unexpected
+behavior is detected in sub-organization A, an administrator can disable Vault
+access for any entity under sub-organization A, without disabling access for
+sub-organization B. Once the cause has been identified and resolved, the API can
+be unlocked for sub-organization A.
+
+## Locking
+
+The API can be locked by running `vault namespace lock` (or via the API) while
+operating in the namespace to lock. Optionally, a subpath can be provided to
+lock a descendant of the current namespace.
+
+An unlock key will be returned, which can be used to unlock the API for that
+namespace. Preserve this key to unlock the API in the future.
+
+When the API is locked for a namespace, it will also be locked for all
+descendants of that namespace. If an authenticated client attempts to access
+Vault from a locked namespace, the returned error will inform that client of the
+locking namespace.
+
+## Unlocking
+
+The API can be unlocked by running `vault namespace unlock` (or via the API)
+while operating in the namespace to unlock. Optionally, a subpath can be
+provided to unlock a descendant of the current namespace.
+
+In general, an unlock key is required to unlock the API. This is the same as the
+unlock key provided when the namespace was locked.
+
+The unlock key requirement can be overriden by using a root token with the
+unlock request. In this case, the unlock key does not need to be provided.
+
+When the API is unlocked, it will also be unlocked for all descendants that were
+locked with it. If a descendant namespace was previously locked, that lock will
+remain in place.
+
+## API locked response
+
+If a request is made to a non-exempt path from a locked namespace, e.g. `nsA`,
+Vault responds with an HTTP 503: Service Unavailable. It will also produce the
+following error:
+
+`API access to this namespace has been locked by an administrator - "nsA" must be unlocked to gain access.`
+
+Similarly, the same error will return if a request is made in a descendant of
+`nsA`.
+
+## How does this work with replication?
+
+API Lock status is replicated to all clusters, and observed at all nodes.

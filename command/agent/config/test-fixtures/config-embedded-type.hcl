@@ -1,4 +1,8 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 pid_file = "./pidfile"
+log_file = "/var/log/vault/vault-agent.log"
 
 auto_auth {
 	method "aws" {
@@ -23,6 +27,7 @@ auto_auth {
 		aad_env_var = "TEST_AAD_ENV"
 		dh_type = "curve25519"
 		dh_path = "/tmp/file-foo-dhpath2"
+		derive_key = true
 		config = {
 			path = "/tmp/file-bar"
 		}

@@ -1,11 +1,15 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
 	"reflect"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/posener/complete"
 )
 
@@ -343,13 +347,10 @@ func TestPredict_Plugins(t *testing.T) {
 			[]string{
 				"ad",
 				"alicloud",
-				"app-id",
 				"approle",
 				"aws",
 				"azure",
-				"cassandra",
 				"cassandra-database-plugin",
-				"centrify",
 				"cert",
 				"cf",
 				"consul",
@@ -362,17 +363,15 @@ func TestPredict_Plugins(t *testing.T) {
 				"influxdb-database-plugin",
 				"jwt",
 				"kerberos",
+				"keymgmt",
 				"kmip",
 				"kubernetes",
 				"kv",
 				"ldap",
-				"mongodb",
 				"mongodb-database-plugin",
 				"mongodbatlas",
 				"mongodbatlas-database-plugin",
-				"mssql",
 				"mssql-database-plugin",
-				"mysql",
 				"mysql-aurora-database-plugin",
 				"mysql-database-plugin",
 				"mysql-legacy-database-plugin",
@@ -384,12 +383,16 @@ func TestPredict_Plugins(t *testing.T) {
 				"openldap",
 				"pcf", // Deprecated.
 				"pki",
-				"postgresql",
 				"postgresql-database-plugin",
 				"rabbitmq",
 				"radius",
+				"redis-database-plugin",
+				"redis-elasticache-database-plugin",
 				"redshift-database-plugin",
+				"saml",
+				"snowflake-database-plugin",
 				"ssh",
+				"terraform",
 				"totp",
 				"transform",
 				"transit",
@@ -409,6 +412,14 @@ func TestPredict_Plugins(t *testing.T) {
 
 				act := p.plugins()
 
+				if !strutil.StrListContains(act, "keymgmt") {
+					for i, v := range tc.exp {
+						if v == "keymgmt" {
+							tc.exp = append(tc.exp[:i], tc.exp[i+1:]...)
+							break
+						}
+					}
+				}
 				if !strutil.StrListContains(act, "kmip") {
 					for i, v := range tc.exp {
 						if v == "kmip" {
@@ -425,8 +436,16 @@ func TestPredict_Plugins(t *testing.T) {
 						}
 					}
 				}
-				if !reflect.DeepEqual(act, tc.exp) {
-					t.Errorf("expected:%q, got: %q", tc.exp, act)
+				if !strutil.StrListContains(act, "saml") {
+					for i, v := range tc.exp {
+						if v == "saml" {
+							tc.exp = append(tc.exp[:i], tc.exp[i+1:]...)
+							break
+						}
+					}
+				}
+				if d := cmp.Diff(act, tc.exp); len(d) > 0 {
+					t.Errorf("expected: %q, got: %q, diff: %v", tc.exp, act, d)
 				}
 			})
 		}
@@ -541,7 +560,80 @@ func TestPredict_Paths(t *testing.T) {
 				p := NewPredict()
 				p.client = client
 
-				act := p.paths(tc.path, tc.includeFiles)
+				act := p.paths("kv", "1", tc.path, tc.includeFiles)
+				if !reflect.DeepEqual(act, tc.exp) {
+					t.Errorf("expected %q to be %q", act, tc.exp)
+				}
+			})
+		}
+	})
+}
+
+func TestPredict_PathsKVv2(t *testing.T) {
+	t.Parallel()
+
+	client, closer := testVaultServerWithKVVersion(t, "2")
+	defer closer()
+
+	data := map[string]interface{}{"data": map[string]interface{}{"a": "b"}}
+	if _, err := client.Logical().Write("secret/data/bar", data); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := client.Logical().Write("secret/data/foo", data); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := client.Logical().Write("secret/data/zip/zap", data); err != nil {
+		t.Fatal(err)
+	}
+
+	cases := []struct {
+		name         string
+		path         string
+		includeFiles bool
+		exp          []string
+	}{
+		{
+			"bad_path",
+			"nope/not/a/real/path/ever",
+			true,
+			[]string{"nope/not/a/real/path/ever"},
+		},
+		{
+			"good_path",
+			"secret/",
+			true,
+			[]string{"secret/bar", "secret/foo", "secret/zip/"},
+		},
+		{
+			"good_path_no_files",
+			"secret/",
+			false,
+			[]string{"secret/zip/"},
+		},
+		{
+			"partial_match",
+			"secret/z",
+			true,
+			[]string{"secret/zip/"},
+		},
+		{
+			"partial_match_no_files",
+			"secret/z",
+			false,
+			[]string{"secret/zip/"},
+		},
+	}
+
+	t.Run("group", func(t *testing.T) {
+		for _, tc := range cases {
+			tc := tc
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
+
+				p := NewPredict()
+				p.client = client
+
+				act := p.paths("kv", "2", tc.path, tc.includeFiles)
 				if !reflect.DeepEqual(act, tc.exp) {
 					t.Errorf("expected %q to be %q", act, tc.exp)
 				}

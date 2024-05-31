@@ -1,5 +1,10 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@ember/component';
-import keys from 'vault/lib/keycodes';
+import keys from 'core/utils/key-codes';
 
 export default Component.extend({
   onExecuteCommand() {},
@@ -12,20 +17,21 @@ export default Component.extend({
   actions: {
     handleKeyUp(event) {
       const keyCode = event.keyCode;
+      const val = event.target.value;
       switch (keyCode) {
         case keys.ENTER:
-          this.get('onExecuteCommand')(event.target.value);
+          this.onExecuteCommand(val);
           break;
         case keys.UP:
         case keys.DOWN:
-          this.get('onShiftCommand')(keyCode);
+          this.onShiftCommand(keyCode);
           break;
         default:
-          this.get('onValueUpdate')(event.target.value);
+          this.onValueUpdate(val);
       }
     },
     fullscreen() {
-      this.get('onFullscreen')();
+      this.onFullscreen();
     },
   },
 });

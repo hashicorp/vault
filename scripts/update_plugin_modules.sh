@@ -1,4 +1,7 @@
 #!/bin/sh
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 
 set -e
 
@@ -32,7 +35,7 @@ do
 		cd ..
 	fi
 	cd vault
-	go get github.com/hashicorp/$plugin@master
+	go get github.com/hashicorp/$plugin@main
 	cd ..
 done
 

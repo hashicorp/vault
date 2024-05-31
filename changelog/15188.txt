@@ -1,0 +1,3 @@
+```release-note:bug
+cli: kv get command now honors trailing spaces to retrieve secrets
+```

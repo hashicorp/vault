@@ -1,0 +1,114 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+// MISC STYLES for non-lineal charts
+
+.legend-colors {
+  height: 10px;
+  width: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  // numbers are indices because chart legend is iterated over
+  &.dot-0 {
+    background-color: var(--token-color-palette-blue-100);
+  }
+  &.dot-1 {
+    background-color: var(--token-color-palette-blue-200);
+  }
+  &.dot-2 {
+    background-color: var(--token-color-palette-neutral-300);
+  }
+  &.dot-3 {
+    background-color: var(--token-color-palette-neutral-500);
+  }
+}
+
+.legend-label {
+  padding-left: $spacing-8;
+  padding-right: $spacing-36;
+}
+
+.chart-tooltip {
+  background-color: $black;
+  color: white;
+  font-size: $size-9;
+  padding: 6px;
+  border-radius: $radius-large;
+  flex-wrap: nowrap;
+  width: fit-content;
+
+  .bold {
+    font-weight: $font-weight-bold;
+  }
+}
+
+.is-label-fit-content {
+  max-width: fit-content !important;
+}
+
+.chart-tooltip-arrow {
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 9px solid $black;
+  position: absolute;
+  opacity: 0.8;
+  bottom: -9px;
+  left: calc(50% - 5px);
+}
+
+.has-grid {
+  g > text {
+    color: $ui-gray-500;
+    font-size: $size-9;
+  }
+
+  g > line {
+    // TODO: mix-blend doesn't work in firefox browser?
+    mix-blend-mode: darken;
+    color: $ui-gray-300;
+  }
+}
+
+.is-horizontal {
+  .tick > text {
+    font-weight: $font-weight-semibold;
+    font-size: $size-9;
+  }
+}
+
+// RESPONSIVE STYLING //
+
+@media only screen and (max-width: 950px) {
+  .dual-chart-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: 0.2fr 0.75fr 0.75fr 0.2fr;
+    width: 100%;
+  }
+
+  .chart-container-left {
+    grid-column-start: 1;
+    grid-column-end: 4;
+    grid-row-start: 2;
+    grid-row-end: 3;
+    margin-left: $spacing-48;
+    margin-right: $spacing-48;
+  }
+  .chart-container-right {
+    grid-column-start: 1;
+    grid-column-end: 4;
+    grid-row-start: 3;
+    grid-row-end: 4;
+    margin-left: $spacing-48;
+    margin-right: $spacing-48;
+  }
+
+  .timestamp {
+    grid-column-start: 1;
+    grid-row-start: 4;
+  }
+}

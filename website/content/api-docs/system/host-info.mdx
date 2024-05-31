@@ -1,0 +1,84 @@
+---
+layout: api
+page_title: /sys/host-info - HTTP API
+description: The '/sys/host-info' endpoint is used to retrieve host information
+---
+
+# `/sys/host-info`
+
+@include 'alerts/restricted-root.mdx'
+
+The `/sys/host-info` endpoint is used retrieve information about the
+host instance that the Vault server is running on.
+
+## Collect host information
+
+This endpoint returns information about the host instance that the Vault
+server is running on. The data returned includes CPU information, CPU
+times, disk usage, host info, and memory statistics.
+
+| Method | Path             |
+| :----- | :--------------- |
+| `GET`  | `/sys/host-info` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/host-info
+```
+
+### Sample response
+
+```json
+{
+  "data": {
+    "cpu": [
+      {
+        "cpu": 0,
+        "vendorId": "GenuineIntel",
+        "family": "6",
+        "model": "78",
+        ...
+      },
+      ...
+    ],
+    "cpu_times": [
+      {
+        "cpu": "cpu",
+        "user": 7491,
+        "system": 16833,
+        "idle": 5726276,
+        ...
+      },
+      ...
+    ],
+    "disk": [
+      {
+        "path": "/",
+        "fstype": "ext4",
+        "total": 410352476160,
+        "free": 102141169664,
+        "used": 306428051456,
+        ...
+      },
+      ...
+    ],
+    "host": {
+      "hostname": "vault-server-1",
+      "uptime": 28618,
+      "bootTime": 1570114491,
+      "procs": 439,
+      ...
+    },
+    "memory": {
+      "total": 17179869184,
+      "available": 6203424768,
+      "used": 10976444416,
+      ...
+    },
+    "timestamp": "2019-10-03T22:51:49.715927Z"
+  }
+}
+```

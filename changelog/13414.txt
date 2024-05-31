@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/database: Add database configuration parameter 'disable_escaping' for username and password when connecting to a database.
+```

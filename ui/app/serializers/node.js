@@ -1,9 +1,13 @@
-import { assign } from '@ember/polyfills';
-import { decamelize } from '@ember/string';
-import DS from 'ember-data';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
 
-export default DS.RESTSerializer.extend(DS.EmbeddedRecordsMixin, {
-  keyForAttribute: function(attr) {
+import RESTSerializer, { EmbeddedRecordsMixin } from '@ember-data/serializer/rest';
+import { decamelize } from '@ember/string';
+
+export default RESTSerializer.extend(EmbeddedRecordsMixin, {
+  keyForAttribute: function (attr) {
     return decamelize(attr);
   },
 
@@ -20,7 +24,7 @@ export default DS.RESTSerializer.extend(DS.EmbeddedRecordsMixin, {
 
   nodeFromObject(name, payload) {
     const nodeObj = payload.nodes[name];
-    return assign(nodeObj, {
+    return Object.assign(nodeObj, {
       name,
       id: name,
     });
@@ -28,8 +32,8 @@ export default DS.RESTSerializer.extend(DS.EmbeddedRecordsMixin, {
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     const nodes = payload.nodes
-      ? Object.keys(payload.nodes).map(name => this.nodeFromObject(name, payload))
-      : [assign(payload, { id: '1' })];
+      ? Object.keys(payload.nodes).map((name) => this.nodeFromObject(name, payload))
+      : [Object.assign(payload, { id: '1' })];
 
     const transformedPayload = { nodes: nodes };
 

@@ -1,10 +1,14 @@
-import { isNone, isBlank } from '@ember/utils';
-import { assign } from '@ember/polyfills';
-import { decamelize } from '@ember/string';
-import DS from 'ember-data';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
 
-export default DS.RESTSerializer.extend({
-  keyForAttribute: function(attr) {
+import RESTSerializer from '@ember-data/serializer/rest';
+import { isNone, isBlank } from '@ember/utils';
+import { decamelize } from '@ember/string';
+
+export default RESTSerializer.extend({
+  keyForAttribute: function (attr) {
     return decamelize(attr);
   },
 
@@ -20,7 +24,7 @@ export default DS.RESTSerializer.extend({
   },
 
   normalizeItems(payload) {
-    assign(payload, payload.data);
+    Object.assign(payload, payload.data);
     delete payload.data;
     return payload;
   },
@@ -28,8 +32,8 @@ export default DS.RESTSerializer.extend({
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     const responseJSON = this.normalizeItems(payload);
     const { modelName } = primaryModelClass;
-    let transformedPayload = { [modelName]: responseJSON };
-    let ret = this._super(store, primaryModelClass, transformedPayload, id, requestType);
+    const transformedPayload = { [modelName]: responseJSON };
+    const ret = this._super(store, primaryModelClass, transformedPayload, id, requestType);
     return ret;
   },
 

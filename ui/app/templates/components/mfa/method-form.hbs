@@ -1,0 +1,37 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<div class="box is-sideless is-fullwidth is-marginless" ...attributes>
+  {{#each @model.attrs as |attr|}}
+    <FormField @attr={{attr}} @model={{@model}} @modelValidations={{or @validations this.editValidations}} />
+  {{/each}}
+</div>
+{{#if @hasActions}}
+  <div class="field is-grouped-split box is-fullwidth is-bottomless">
+    <Hds::ButtonSet>
+      <Hds::Button
+        @text="Save"
+        @icon={{if this.save.isRunning "loading"}}
+        {{on "click" this.initSave}}
+        disabled={{this.save.isRunning}}
+        data-test-mfa-save
+      />
+      <Hds::Button @text="Cancel" @color="secondary" disabled={{this.save.isRunning}} {{on "click" this.cancel}} />
+    </Hds::ButtonSet>
+  </div>
+{{/if}}
+
+<ConfirmationModal
+  @title="Edit {{@model.type}} configuration?"
+  @onClose={{action (mut this.isEditModalActive) false}}
+  @isActive={{this.isEditModalActive}}
+  @confirmText={{@model.type}}
+  @onConfirm={{perform this.save}}
+>
+  <p>
+    Editing this configuration will have an impact on all authentication types, methods, groups and entities which make use
+    of this MFA method. Please make sure you want to make these changes before doing so.
+  </p>
+</ConfirmationModal>

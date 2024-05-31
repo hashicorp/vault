@@ -1,15 +1,20 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
 	"fmt"
 	"strings"
 
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/cli"
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*NamespaceLookupCommand)(nil)
-var _ cli.CommandAutocomplete = (*NamespaceLookupCommand)(nil)
+var (
+	_ cli.Command             = (*NamespaceLookupCommand)(nil)
+	_ cli.CommandAutocomplete = (*NamespaceLookupCommand)(nil)
+)
 
 type NamespaceLookupCommand struct {
 	*BaseCommand

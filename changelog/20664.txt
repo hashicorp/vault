@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/pki: Support setting both maintain_stored_certificate_counts=false and publish_stored_certificate_count_metrics=false explicitly in tidy config.
+```

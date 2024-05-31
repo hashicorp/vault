@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -7,14 +10,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*SecretsEnableCommand)(nil)
-var _ cli.CommandAutocomplete = (*SecretsEnableCommand)(nil)
+var (
+	_ cli.Command             = (*SecretsEnableCommand)(nil)
+	_ cli.CommandAutocomplete = (*SecretsEnableCommand)(nil)
+)
 
 type SecretsEnableCommand struct {
 	*BaseCommand
@@ -30,11 +34,15 @@ type SecretsEnableCommand struct {
 	flagAllowedResponseHeaders    []string
 	flagForceNoCache              bool
 	flagPluginName                string
+	flagPluginVersion             string
 	flagOptions                   map[string]string
 	flagLocal                     bool
 	flagSealWrap                  bool
 	flagExternalEntropyAccess     bool
 	flagVersion                   int
+	flagAllowedManagedKeys        []string
+	flagDelegatedAuthAccessors    []string
+	flagIdentityTokenKey          string
 }
 
 func (c *SecretsEnableCommand) Synopsis() string {
@@ -122,15 +130,15 @@ func (c *SecretsEnableCommand) Flags() *FlagSets {
 	f.StringSliceVar(&StringSliceVar{
 		Name:   flagNameAuditNonHMACRequestKeys,
 		Target: &c.flagAuditNonHMACRequestKeys,
-		Usage: "Comma-separated string or list of keys that will not be HMAC'd by audit " +
-			"devices in the request data object.",
+		Usage: "Key that will not be HMAC'd by audit devices in the request data object. " +
+			"To specify multiple values, specify this flag multiple times.",
 	})
 
 	f.StringSliceVar(&StringSliceVar{
 		Name:   flagNameAuditNonHMACResponseKeys,
 		Target: &c.flagAuditNonHMACResponseKeys,
-		Usage: "Comma-separated string or list of keys that will not be HMAC'd by audit " +
-			"devices in the response data object.",
+		Usage: "Key that will not be HMAC'd by audit devices in the response data object. " +
+			"To specify multiple values, specify this flag multiple times.",
 	})
 
 	f.StringVar(&StringVar{
@@ -142,15 +150,15 @@ func (c *SecretsEnableCommand) Flags() *FlagSets {
 	f.StringSliceVar(&StringSliceVar{
 		Name:   flagNamePassthroughRequestHeaders,
 		Target: &c.flagPassthroughRequestHeaders,
-		Usage: "Comma-separated string or list of request header values that " +
-			"will be sent to the plugins",
+		Usage: "Request header value that will be sent to the plugins. To specify multiple " +
+			"values, specify this flag multiple times.",
 	})
 
 	f.StringSliceVar(&StringSliceVar{
 		Name:   flagNameAllowedResponseHeaders,
 		Target: &c.flagAllowedResponseHeaders,
-		Usage: "Comma-separated string or list of response header values that " +
-			"plugins will be allowed to set",
+		Usage: "Response header value that plugins will be allowed to set. To specify multiple " +
+			"values, specify this flag multiple times.",
 	})
 
 	f.BoolVar(&BoolVar{
@@ -165,9 +173,16 @@ func (c *SecretsEnableCommand) Flags() *FlagSets {
 	f.StringVar(&StringVar{
 		Name:       "plugin-name",
 		Target:     &c.flagPluginName,
-		Completion: c.PredictVaultPlugins(consts.PluginTypeSecrets, consts.PluginTypeDatabase),
+		Completion: c.PredictVaultPlugins(api.PluginTypeSecrets, api.PluginTypeDatabase),
 		Usage: "Name of the secrets engine plugin. This plugin name must already " +
 			"exist in Vault's plugin catalog.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:    flagNamePluginVersion,
+		Target:  &c.flagPluginVersion,
+		Default: "",
+		Usage:   "Select the semantic version of the plugin to enable.",
 	})
 
 	f.StringMapVar(&StringMapVar{
@@ -205,6 +220,29 @@ func (c *SecretsEnableCommand) Flags() *FlagSets {
 		Target:  &c.flagVersion,
 		Default: 0,
 		Usage:   "Select the version of the engine to run. Not supported by all engines.",
+	})
+
+	f.StringSliceVar(&StringSliceVar{
+		Name:   flagNameAllowedManagedKeys,
+		Target: &c.flagAllowedManagedKeys,
+		Usage: "Managed key name(s) that the mount in question is allowed to access. " +
+			"Note that multiple keys may be specified by providing this option multiple times, " +
+			"each time with 1 key.",
+	})
+
+	f.StringSliceVar(&StringSliceVar{
+		Name:   flagNameDelegatedAuthAccessors,
+		Target: &c.flagDelegatedAuthAccessors,
+		Usage: "A list of permitted authentication accessors this backend can delegate authentication to. " +
+			"Note that multiple values may be specified by providing this option multiple times, " +
+			"each time with 1 accessor.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:    flagNameIdentityTokenKey,
+		Target:  &c.flagIdentityTokenKey,
+		Default: "default",
+		Usage:   "Select the key used to sign plugin identity tokens.",
 	})
 
 	return set
@@ -305,6 +343,22 @@ func (c *SecretsEnableCommand) Run(args []string) int {
 		if fl.Name == flagNameAllowedResponseHeaders {
 			mountInput.Config.AllowedResponseHeaders = c.flagAllowedResponseHeaders
 		}
+
+		if fl.Name == flagNameAllowedManagedKeys {
+			mountInput.Config.AllowedManagedKeys = c.flagAllowedManagedKeys
+		}
+
+		if fl.Name == flagNameDelegatedAuthAccessors {
+			mountInput.Config.DelegatedAuthAccessors = c.flagDelegatedAuthAccessors
+		}
+
+		if fl.Name == flagNamePluginVersion {
+			mountInput.Config.PluginVersion = c.flagPluginVersion
+		}
+
+		if fl.Name == flagNameIdentityTokenKey {
+			mountInput.Config.IdentityTokenKey = c.flagIdentityTokenKey
+		}
 	})
 
 	if err := client.Sys().Mount(mountPath, mountInput); err != nil {
@@ -315,6 +369,9 @@ func (c *SecretsEnableCommand) Run(args []string) int {
 	thing := engineType + " secrets engine"
 	if engineType == "plugin" {
 		thing = c.flagPluginName + " plugin"
+	}
+	if c.flagPluginVersion != "" {
+		thing += " version " + c.flagPluginVersion
 	}
 	c.UI.Output(fmt.Sprintf("Success! Enabled the %s at: %s", thing, mountPath))
 	return 0

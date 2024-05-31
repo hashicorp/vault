@@ -1,0 +1,3 @@
+```release-note: bug
+auth/aws: Fixes ec2 login no longer supporting DSA signature verification
+```

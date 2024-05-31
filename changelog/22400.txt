@@ -1,0 +1,3 @@
+```release-note:change
+telemetry: Replace `vault.rollback.attempt.{MOUNT_POINT}` and `vault.route.rollback.{MOUNT_POINT}` metrics with `vault.rollback.attempt` and `vault.route.rollback metrics` by default. Added a telemetry configuration `add_mount_point_rollback_metrics` which, when set to true, causes vault to emit the metrics with mount points in their names.
+```

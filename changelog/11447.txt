@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Update ember to latest LTS and upgrade UI dependencies
+```

@@ -1,0 +1,278 @@
+---
+layout: docs
+page_title: Limits and Maximums
+description: Learn about the maximum number of objects within Vault.
+---
+
+# Vault limits and maximums
+
+Vault imposes fixed upper limits on the size of certain fields and
+objects, and configurable limits on others. Vault also has upper
+bounds that are a consequence of its underlying storage. This page
+attempts to collect these limits, to assist in planning Vault
+deployments.
+
+In some cases, the system will show performance problems in advance of
+the absolute limits being reached.
+
+## Storage-Related limits
+
+### Storage entry size
+
+@include 'storage-entry-size.mdx'
+
+Many of the other limits within Vault derive from the maximum size of
+a storage entry, as described in the next sections. It is possible to
+recover from an error where a storage entry has reached its maximum
+size by reconfiguring Vault or Consul to a larger maximum storage
+entry.
+
+### Mount point limits
+
+All secret engine mount points, and all auth mount points, must each fit
+within a single storage entry. Each JSON object describing a mount
+takes about 500 bytes, but is stored in compressed form at a typical cost of
+about 75 bytes. Each of (1) auth mounts, (2) secret engine mount points,
+(3) local-only auth methods, and (4) local-only secret engine mounts are
+stored separately, so the limit applies to each independently.
+
+|                                              | Consul default (512 KiB) | Integrated storage default (1 MiB) |
+| -------------------------------------------- | ------------------------ | ---------------------------------- |
+| Maximum number of secret engine mount points | ~7000                    | ~14000                             |
+| Maximum number of enabled auth methods       | ~7000                    | ~14000                             |
+| Maximum mount point length                   | no enforced limit        | no enforced limit                  |
+
+Specifying distinct per-mount options, or using long mount point paths, can
+increase the space required per mount.
+
+The number of mount points can be monitored by reading the
+[`sys/auth`](/vault/api-docs/system/auth) and
+[`sys/mounts`](/vault/api-docs/system/mounts) endpoints from the root namespace and
+similar sub-paths for namespaces respectively, like: `namespace1/sys/auth`,
+`namespace1/sys/mounts`, etc.
+
+Alternatively, use the
+[`vault.core.mount_table.num_entries`](/vault/docs/internals/telemetry/metrics/core-system#vault-core-mount_table-num_entries)
+and
+[`vault.core.mount_table.size`](/vault/docs/internals/telemetry/metrics/core-system#vault-core-mount_table-size)
+telemetry metrics to monitor the number of mount points and size of each mount table.
+
+### Namespace limits
+
+@include 'namespace-limits.mdx'
+
+### Entity and group limits
+
+The metadata that may be attached to an identity entity or an entity group
+has the following constraints:
+
+|                                       | Limit     |
+| ------------------------------------- | --------- |
+| Number of key-value pairs in metadata | 64        |
+| Metadata key size                     | 128 bytes |
+| Metadata value size                   | 512 bytes |
+
+Vault shards the entities across 256 storage entries. This creates a
+hard limit of 128MiB storage space used for entities on Consul, or
+256MiB on integrated storage with its default settings. Entity aliases
+are stored inline in the Entity objects and so consume the same pool
+of storage. Entity definitions are compressed within each storage
+entry, and the pre-compression size varies with the number of entity
+aliases and the amount of metadata. Minimally-populated entities
+about 200 bytes after compression.
+
+Group definitions are stored separately, in their own pool of 256
+storage entries. The size of each group object depends on the number
+of members and the amount of metadata. Group aliases and group
+membership information is stored inline in each Group object. A group
+with no metadata, holding 10 entities, will use about 500 bytes per
+group. A group holding 100 entities would instead consume about 4,000
+bytes.
+
+The following table shows a best-case estimate and a more conservative
+estimate for entities and groups. The number is slightly less than the
+amount that fits in one shard, to reflect the fact that the first
+shard to fill up will start inducing failures. This maximum will
+decrease if each entity has a large amount of metadata, or if each
+group has a large number of members.
+
+|                                                                                          | Consul default (512 KiB) | Integrated storage default (1 MiB) |
+| ---------------------------------------------------------------------------------------- | ------------------------ | ---------------------------------- |
+| Maximum number of identity entities (best case, 200 bytes per entity)                    | ~610,000                 | ~1,250,000                         |
+| Maximum number of identity entities (conservative case, 500 bytes per entity)            | ~250,000                 | ~480,000                           |
+| Maximum number of identity entities (maximum permitted metadata, 41160 bytes per entity) | 670                      | 2,400                              |
+| Maximum number of groups (10 entities per group)                                         | ~250,000                 | ~480,000                           |
+| Maximum number of groups (100 entities per group)                                        | ~22,000                  | ~50,000                            |
+| Maximum number of members in a group                                                     | ~11,500                  | ~23,000                            |
+
+The number of entities can be monitored using Vault's [telemetry](/vault/docs/internals/telemetry#token-identity-and-lease-metrics); see `vault.identity.num_entities` (total) or `vault.identity.entities.count` (by namespace).
+
+The cost of entity and group updates grows as the number of objects in
+each shard increases. This cost can be monitored via the
+`vault.identity.upsert_entity_txn` and
+the `vault.identity.upsert_group_txn` metrics.
+
+Very large internal groups should be avoided (more than 1000 members),
+because the membership list in a group must reside in a single storage entry.
+Instead, consider using [external groups](/vault/docs/concepts/identity#external-vs-internal-groups) or split the group up into multiple sub-groups.
+
+### Token limits
+
+One storage entry is used per token; there is thus no
+upper bound on the number of active tokens. There are no restrictions on
+the token metadata field, other than the entire token must fit into one
+storage entry:
+
+|                                       | Limit    |
+| ------------------------------------- | -------- |
+| Number of key-value pairs in metadata | no limit |
+| Metadata key size                     | no limit |
+| Metadata value size                   | no limit |
+| Total size of token metadata          | 512 KiB  |
+
+### Policy limits
+
+The maximum size of a policy is limited by the storage
+entry size. Policy lists that appear in tokens or entities must fit
+within a single storage entry.
+
+|                                                | Consul default (512 KiB) | Integrated storage default (1 MiB) |
+| ---------------------------------------------- | ------------------------ | ---------------------------------- |
+| Maximum policy size                            | 512 KiB                  | 1 MiB                              |
+| Maximum number of policies per namespace       | no limit                 | no limit                           |
+| Maximum number of policies per token           | ~14,000                  | ~28,000                            |
+| Maximum number of policies per entity or group | ~14,000                  | ~28,000                            |
+
+Each time a token is used, Vault must assemble the collection of
+policies attached to that token, to the entity, to any groups that the
+entity belongs to, and recursively to any groups that contain those groups.
+Very large numbers of policies are possible, but can cause Vault’s
+response time to increase. You can monitor the
+[`vault.core.fetch_acl_and_token`](/vault/docs/internals/telemetry#core-metrics)
+metric to determine if the time required to assemble an access control list
+is becoming excessive.
+
+### Versioned key-value store (kv-v2 secret engine)
+
+|                                                          | Limit                                                      |
+| -------------------------------------------------------- | ---------------------------------------------------------- |
+| Number of secrets                                        | no limit, up to available storage capacity                 |
+| Maximum size of one version of a secret                  | slightly less than one storage entry (512 KiB or 1024 KiB) |
+| Number of versions of a secret                           | default 10; configurable per-secret or per-mount           |
+| Maximum number of versions (not checked when configured) | at least 24,000                                            |
+
+Each version of a secret must fit in a single storage entry; the
+key-value pairs are converted to JSON before storage.
+
+Version metadata consumes 21 bytes per version and must fit in a
+single storage entry, separate from the stored data.
+
+Each secret also has version-agnostic metadata. This data can contain a `custom_metadata` field of
+user-provided key-value pairs. Vault imposes the following custom metadata limits:
+
+|                                           | Limit     |
+| ----------------------------------------- | --------- |
+| Number of custom metadata key-value pairs | 64        |
+| Custom metadata key size                  | 128 bytes |
+| Custom metadata value size                | 512 bytes |
+
+### Transit secret engine
+
+The maximum size of a Transit ciphertext or plaintext is limited by Vault's
+maximum request size, as described [below](#request-size).
+
+All archived versions of a single key must fit in a single storage entry.
+This limit depends on the key size.
+
+| Key length           | Consul default (512 KiB) | Integrated storage default (1 MiB) |
+| -------------------- | ------------------------ | ---------------------------------- |
+| aes128-gcm96 keys    | 2008                     | 4017                               |
+| aes256-gcm96 keys    | 1865                     | 3731                               |
+| chacha-poly1305 keys | 1865                     | 3731                               |
+| ed25519 keys         | 1420                     | 2841                               |
+| ecdsa-p256 keys      | 817                      | 1635                               |
+| ecdsa-p384 keys      | 659                      | 1318                               |
+| ecdsa-p523 keys      | 539                      | 1078                               |
+| 1024-bit RSA keys    | 169                      | 333                                |
+| 2048-bit RSA keys    | 116                      | 233                                |
+| 4096-bit RSA keys    | 89                       | 178                                |
+
+## Other limits
+
+### Request size
+
+The maximum size of an HTTP request sent to Vault is limited by
+the `max_request_size` option in the [listener stanza](/vault/docs/configuration/listener/tcp). It defaults to 32 MiB. This value, minus the overhead of
+the HTTP request itself, places an upper bound on any Transit operation,
+and on the maximum size of any key-value secrets.
+
+### Request duration
+
+The maximum duration of a Vault operation is
+[`max_request_duration`](/vault/docs//configuration/listener/tcp), which defaults to
+90 seconds. If a particular secret engine takes longer than this to perform an
+operation on a remote service, the Vault client will see a failure.
+
+The environment variable [`VAULT_CLIENT_TIMEOUT`](/vault/docs/commands#vault_client_timeout) sets a client-side maximum duration as well,
+which is 60 seconds by default.
+
+### Cluster and replication limits
+
+There are no implementation limits on the maximum size of a cluster,
+or the maximum number of replicas associated with a primary. However,
+each replica or performance standby adds considerable overhead to the
+active node, as each write must be duplicated to all standbys. The overhead of
+resyncing multiple replicas at once is also high.
+
+Monitor the active Vault node's CPU and network utilization, as well as
+the lag between the last WAL and replica WAL, to determine if the
+maximum number of replicas has been exceeded.
+
+|                                        | Limit                                  |
+| -------------------------------------- | -------------------------------------- |
+| Maximum cluster size                   | no limit, up to active node capability |
+| Maximum number of DR replicas          | no limit, up to active node capability |
+| Maximum number of performance replicas | no limit, up to active node capability |
+
+### Lease limits
+
+A systemwide [maximum TTL](/vault/docs/configuration#max_lease_ttl), and a
+[maximum TTL per mount point](/vault/api-docs/system/mounts#max_lease_ttl-1) can be
+configured.
+
+Although no technical maximum exists, high lease counts can cause
+degradation in system performance. We recommend short default
+time-to-live values on tokens and leases to avoid a large backlog of
+unexpired leases, or a large number of simultaneous expirations.
+
+|                                    | Limit                     |
+| ---------------------------------- | ------------------------- |
+| Maximum number of leases           | advisory limit at 256,000 |
+| Maximum duration of lease or token | 768 hours by default      |
+
+The current number of unexpired leases can be monitored via the
+[`vault.expire.num_leases`](/vault/docs/internals/telemetry#token-identity-and-lease-metrics) metric.
+
+### Transform limits
+
+The Transform secret engine obeys the [FF3-1 minimum and maximum sizes
+on the length of an input](/vault/docs/secrets/transform#input-limits), which
+are a function of the alphabet size.
+
+### External plugin limits
+
+The [plugin system](/vault/docs/plugins) launches a separate process
+initiated by Vault that communicates over RPC. For each secret engine and auth
+method that's enabled as an external plugin, Vault will spawn a process on the
+host system. For the Database Secrets Engines, external database plugins will
+spawn a process for every configured connection.
+
+Regardless of plugin type, each of these processes will incur resource overhead
+on the system, including but not limited to resources such as CPU, memory,
+networking, and file descriptors. There's no specific limit on the number
+secrets engines, auth methods, or database configured connections that can be
+enabled. This ultimately depends on the particular plugin resource utilization,
+the extent to which that plugin is being called, and the available resources on
+the system. For plugins of the same type, each additional process will incur a
+roughly linear increase in resource utilization. This assumes the usage of each
+plugin of the same type is similar.

@@ -1,0 +1,4 @@
+```release-note:bug
+auth/jwt: Updates the [hashicorp/cap](https://github.com/hashicorp/cap) library to `v0.1.0` to
+bring in a verification key caching fix.
+```

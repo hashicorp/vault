@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package agent
 
 import (
@@ -12,16 +15,15 @@ import (
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials"
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials/providers"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/sts"
-	hclog "github.com/hashicorp/go-hclog"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	vaultalicloud "github.com/hashicorp/vault-plugin-auth-alicloud"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/command/agent/auth"
-	agentalicloud "github.com/hashicorp/vault/command/agent/auth/alicloud"
-	"github.com/hashicorp/vault/command/agent/sink"
-	"github.com/hashicorp/vault/command/agent/sink/file"
+	"github.com/hashicorp/vault/command/agentproxyshared/auth"
+	agentalicloud "github.com/hashicorp/vault/command/agentproxyshared/auth/alicloud"
+	"github.com/hashicorp/vault/command/agentproxyshared/sink"
+	"github.com/hashicorp/vault/command/agentproxyshared/sink/file"
+	"github.com/hashicorp/vault/helper/testhelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
@@ -37,9 +39,15 @@ func TestAliCloudEndToEnd(t *testing.T) {
 		t.SkipNow()
 	}
 
-	logger := logging.NewVaultLogger(hclog.Trace)
+	// Ensure each cred is populated.
+	credNames := []string{
+		envVarAlicloudAccessKey,
+		envVarAlicloudSecretKey,
+		envVarAlicloudRoleArn,
+	}
+	testhelpers.SkipUnlessEnvVarsSet(t, credNames)
+
 	coreConfig := &vault.CoreConfig{
-		Logger: logger,
 		CredentialBackends: map[string]logical.Factory{
 			"alicloud": vaultalicloud.Factory,
 		},
@@ -66,11 +74,7 @@ func TestAliCloudEndToEnd(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	timer := time.AfterFunc(30*time.Second, func() {
-		cancelFunc()
-	})
-	defer timer.Stop()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 
 	// We're going to feed alicloud auth creds via env variables.
 	if err := setAliCloudEnvCreds(); err != nil {
@@ -83,7 +87,7 @@ func TestAliCloudEndToEnd(t *testing.T) {
 	}()
 
 	am, err := agentalicloud.NewAliCloudAuthMethod(&auth.AuthConfig{
-		Logger:    logger.Named("auth.alicloud"),
+		Logger:    cluster.Logger.Named("auth.alicloud"),
 		MountPath: "auth/alicloud",
 		Config: map[string]interface{}{
 			"role":                     "test",
@@ -96,14 +100,23 @@ func TestAliCloudEndToEnd(t *testing.T) {
 	}
 
 	ahConfig := &auth.AuthHandlerConfig{
-		Logger: logger.Named("auth.handler"),
+		Logger: cluster.Logger.Named("auth.handler"),
 		Client: client,
 	}
 
 	ah := auth.NewAuthHandler(ahConfig)
-	go ah.Run(ctx, am)
+	errCh := make(chan error)
+	go func() {
+		errCh <- ah.Run(ctx, am)
+	}()
 	defer func() {
-		<-ah.DoneCh
+		select {
+		case <-ctx.Done():
+		case err := <-errCh:
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
 	}()
 
 	tmpFile, err := ioutil.TempFile("", "auth.tokensink.test.")
@@ -116,7 +129,7 @@ func TestAliCloudEndToEnd(t *testing.T) {
 	t.Logf("output: %s", tokenSinkFileName)
 
 	config := &sink.SinkConfig{
-		Logger: logger.Named("sink.file"),
+		Logger: cluster.Logger.Named("sink.file"),
 		Config: map[string]interface{}{
 			"path": tokenSinkFileName,
 		},
@@ -130,13 +143,28 @@ func TestAliCloudEndToEnd(t *testing.T) {
 	config.Sink = fs
 
 	ss := sink.NewSinkServer(&sink.SinkServerConfig{
-		Logger: logger.Named("sink.server"),
+		Logger: cluster.Logger.Named("sink.server"),
 		Client: client,
 	})
-	go ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config})
-	defer func() {
-		<-ss.DoneCh
+	go func() {
+		errCh <- ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config}, ah.AuthInProgress)
 	}()
+	defer func() {
+		select {
+		case <-ctx.Done():
+		case err := <-errCh:
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+	}()
+
+	// This has to be after the other defers so it happens first. It allows
+	// successful test runs to immediately cancel all of the runner goroutines
+	// and unblock any of the blocking defer calls by the runner's DoneCh that
+	// comes before this and avoid successful tests from taking the entire
+	// timeout duration.
+	defer cancel()
 
 	if stat, err := os.Lstat(tokenSinkFileName); err == nil {
 		t.Fatalf("expected err but got %s", stat)
@@ -170,7 +198,7 @@ func setAliCloudEnvCreds() error {
 	}
 	assumeRoleReq := sts.CreateAssumeRoleRequest()
 	assumeRoleReq.RoleArn = os.Getenv(envVarAlicloudRoleArn)
-	assumeRoleReq.RoleSessionName = strings.Replace(roleSessionName, "-", "", -1)
+	assumeRoleReq.RoleSessionName = strings.ReplaceAll(roleSessionName, "-", "")
 	assumeRoleResp, err := client.AssumeRole(assumeRoleReq)
 	if err != nil {
 		return err

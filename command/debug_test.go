@@ -1,19 +1,25 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
 	"archive/tar"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
-	"github.com/mholt/archiver"
-	"github.com/mitchellh/cli"
+	"github.com/stretchr/testify/require"
 )
 
 func testDebugCommand(tb testing.TB) (*cli.MockUi, *DebugCommand) {
@@ -30,11 +36,7 @@ func testDebugCommand(tb testing.TB) (*cli.MockUi, *DebugCommand) {
 func TestDebugCommand_Run(t *testing.T) {
 	t.Parallel()
 
-	testDir, err := ioutil.TempDir("", "vault-debug")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(testDir)
+	testDir := t.TempDir()
 
 	cases := []struct {
 		name string
@@ -99,6 +101,54 @@ func TestDebugCommand_Run(t *testing.T) {
 	}
 }
 
+// expectHeaderNamesInTarGzFile asserts that the expectedHeaderNames
+// match exactly to the header names in the tar.gz file at tarballPath.
+// Will error if there are more or less than expected.
+// ignoreUnexpectedHeaders toggles ignoring the presence of headers not
+// in expectedHeaderNames.
+func expectHeaderNamesInTarGzFile(t *testing.T, tarballPath string, expectedHeaderNames []string, ignoreUnexpectedHeaders bool) {
+	t.Helper()
+
+	file, err := os.Open(tarballPath)
+	require.NoError(t, err)
+
+	uncompressedStream, err := gzip.NewReader(file)
+	require.NoError(t, err)
+
+	tarReader := tar.NewReader(uncompressedStream)
+	headersFoundMap := make(map[string]any)
+
+	for {
+		header, err := tarReader.Next()
+		if err == io.EOF {
+			// We're at the end of the tar.
+			break
+		}
+		require.NoError(t, err)
+
+		// Ignore directories.
+		if header.Typeflag == tar.TypeDir {
+			continue
+		}
+
+		for _, name := range expectedHeaderNames {
+			if header.Name == name {
+				headersFoundMap[header.Name] = struct{}{}
+			}
+		}
+		if _, ok := headersFoundMap[header.Name]; !ok && !ignoreUnexpectedHeaders {
+			t.Fatalf("unexpected file: %s", header.Name)
+		}
+	}
+
+	// Expect that every expectedHeader was found at some point
+	for _, name := range expectedHeaderNames {
+		if _, ok := headersFoundMap[name]; !ok {
+			t.Fatalf("missing header from tar: %s", name)
+		}
+	}
+}
+
 func TestDebugCommand_Archive(t *testing.T) {
 	t.Parallel()
 
@@ -132,11 +182,7 @@ func TestDebugCommand_Archive(t *testing.T) {
 
 			// Create temp dirs for each test case since os.Stat and tgz.Walk
 			// (called down below) exhibits raciness otherwise.
-			testDir, err := ioutil.TempDir("", "vault-debug")
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer os.RemoveAll(testDir)
+			testDir := t.TempDir()
 
 			client, closer := testVaultServer(t)
 			defer closer()
@@ -172,29 +218,14 @@ func TestDebugCommand_Archive(t *testing.T) {
 			}
 
 			bundlePath := filepath.Join(testDir, basePath+expectedExt)
-			_, err = os.Stat(bundlePath)
+			_, err := os.Stat(bundlePath)
 			if os.IsNotExist(err) {
 				t.Log(ui.OutputWriter.String())
 				t.Fatal(err)
 			}
 
-			tgz := archiver.NewTarGz()
-			err = tgz.Walk(bundlePath, func(f archiver.File) error {
-				fh, ok := f.Header.(*tar.Header)
-				if !ok {
-					t.Fatalf("invalid file header: %#v", f.Header)
-				}
-
-				// Ignore base directory and index file
-				if fh.Name == basePath+"/" || fh.Name == filepath.Join(basePath, "index.json") {
-					return nil
-				}
-
-				if fh.Name != filepath.Join(basePath, "server_status.json") {
-					t.Fatalf("unxexpected file: %s", fh.Name)
-				}
-				return nil
-			})
+			expectedHeaders := []string{filepath.Join(basePath, "index.json"), filepath.Join(basePath, "server_status.json")}
+			expectHeaderNamesInTarGzFile(t, bundlePath, expectedHeaders, false)
 		})
 	}
 }
@@ -233,6 +264,11 @@ func TestDebugCommand_CaptureTargets(t *testing.T) {
 			[]string{"server_status.json"},
 		},
 		{
+			"in-flight-req",
+			[]string{"requests"},
+			[]string{"requests.json"},
+		},
+		{
 			"all-minus-pprof",
 			[]string{"config", "host", "metrics", "replication-status", "server-status"},
 			[]string{"config.json", "host_info.json", "metrics.json", "replication_status.json", "server_status.json"},
@@ -245,11 +281,7 @@ func TestDebugCommand_CaptureTargets(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			testDir, err := ioutil.TempDir("", "vault-debug")
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer os.RemoveAll(testDir)
+			testDir := t.TempDir()
 
 			client, closer := testVaultServer(t)
 			defer closer()
@@ -274,45 +306,22 @@ func TestDebugCommand_CaptureTargets(t *testing.T) {
 			}
 
 			bundlePath := filepath.Join(testDir, basePath+debugCompressionExt)
-			_, err = os.Open(bundlePath)
+			_, err := os.Open(bundlePath)
 			if err != nil {
 				t.Fatalf("failed to open archive: %s", err)
 			}
 
-			tgz := archiver.NewTarGz()
-			err = tgz.Walk(bundlePath, func(f archiver.File) error {
-				fh, ok := f.Header.(*tar.Header)
-				if !ok {
-					t.Fatalf("invalid file header: %#v", f.Header)
-				}
-
-				// Ignore base directory and index file
-				if fh.Name == basePath+"/" || fh.Name == filepath.Join(basePath, "index.json") {
-					return nil
-				}
-
-				for _, fileName := range tc.expectedFiles {
-					if fh.Name == filepath.Join(basePath, fileName) {
-						return nil
-					}
-				}
-
-				// If we reach here, it means that this is an unexpected file
-				return fmt.Errorf("unexpected file: %s", fh.Name)
-			})
-			if err != nil {
-				t.Fatal(err)
+			expectedHeaders := []string{filepath.Join(basePath, "index.json")}
+			for _, fileName := range tc.expectedFiles {
+				expectedHeaders = append(expectedHeaders, filepath.Join(basePath, fileName))
 			}
+			expectHeaderNamesInTarGzFile(t, bundlePath, expectedHeaders, false)
 		})
 	}
 }
 
 func TestDebugCommand_Pprof(t *testing.T) {
-	testDir, err := ioutil.TempDir("", "vault-debug")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(testDir)
+	testDir := t.TempDir()
 
 	client, closer := testVaultServer(t)
 	defer closer()
@@ -366,11 +375,7 @@ func TestDebugCommand_Pprof(t *testing.T) {
 func TestDebugCommand_IndexFile(t *testing.T) {
 	t.Parallel()
 
-	testDir, err := ioutil.TempDir("", "vault-debug")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(testDir)
+	testDir := t.TempDir()
 
 	client, closer := testVaultServer(t)
 	defer closer()
@@ -396,7 +401,7 @@ func TestDebugCommand_IndexFile(t *testing.T) {
 		t.Fatalf("expected %d to be %d", code, exp)
 	}
 
-	content, err := ioutil.ReadFile(filepath.Join(outputPath, "index.json"))
+	content, err := os.ReadFile(filepath.Join(outputPath, "index.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -413,11 +418,7 @@ func TestDebugCommand_IndexFile(t *testing.T) {
 func TestDebugCommand_TimingChecks(t *testing.T) {
 	t.Parallel()
 
-	testDir, err := ioutil.TempDir("", "vault-debug")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(testDir)
+	testDir := t.TempDir()
 
 	cases := []struct {
 		name            string
@@ -524,6 +525,10 @@ func TestDebugCommand_NoConnection(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	if err := client.SetAddress(""); err != nil {
+		t.Fatal(err)
+	}
+
 	_, cmd := testDebugCommand(t)
 	cmd.client = client
 	cmd.skipTimingChecks = true
@@ -568,11 +573,7 @@ func TestDebugCommand_OutputExists(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			testDir, err := ioutil.TempDir("", "vault-debug")
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer os.RemoveAll(testDir)
+			testDir := t.TempDir()
 
 			client, closer := testVaultServer(t)
 			defer closer()
@@ -585,12 +586,12 @@ func TestDebugCommand_OutputExists(t *testing.T) {
 
 			// Create a conflicting file/directory
 			if tc.compress {
-				_, err = os.Create(outputPath)
+				_, err := os.Create(outputPath)
 				if err != nil {
 					t.Fatal(err)
 				}
 			} else {
-				err = os.Mkdir(outputPath, 0755)
+				err := os.Mkdir(outputPath, 0o700)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -622,11 +623,7 @@ func TestDebugCommand_OutputExists(t *testing.T) {
 func TestDebugCommand_PartialPermissions(t *testing.T) {
 	t.Parallel()
 
-	testDir, err := ioutil.TempDir("", "vault-debug")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(testDir)
+	testDir := t.TempDir()
 
 	client, closer := testVaultServer(t)
 	defer closer()
@@ -663,35 +660,139 @@ func TestDebugCommand_PartialPermissions(t *testing.T) {
 		t.Fatalf("failed to open archive: %s", err)
 	}
 
-	tgz := archiver.NewTarGz()
-	err = tgz.Walk(bundlePath, func(f archiver.File) error {
-		fh, ok := f.Header.(*tar.Header)
-		if !ok {
-			t.Fatalf("invalid file header: %#v", f.Header)
-		}
-
-		// Ignore base directory and index file
-		if fh.Name == basePath+"/" {
-			return nil
-		}
-
-		// Ignore directories, which still get created by pprof but should
-		// otherwise be empty.
-		if fh.FileInfo().IsDir() {
-			return nil
-		}
-
-		switch {
-		case fh.Name == filepath.Join(basePath, "index.json"):
-		case fh.Name == filepath.Join(basePath, "replication_status.json"):
-		case fh.Name == filepath.Join(basePath, "server_status.json"):
-		default:
-			return fmt.Errorf("unexpected file: %s", fh.Name)
-		}
-
-		return nil
-	})
-	if err != nil {
-		t.Fatal(err)
+	expectedHeaders := []string{
+		filepath.Join(basePath, "index.json"), filepath.Join(basePath, "server_status.json"),
+		filepath.Join(basePath, "vault.log"),
 	}
+
+	// We set ignoreUnexpectedHeaders to true as replication_status.json is only sometimes
+	// produced. Relying on it being or not being there would be racy.
+	expectHeaderNamesInTarGzFile(t, bundlePath, expectedHeaders, true)
+}
+
+// set insecure umask to see if the files and directories get created with right permissions
+func TestDebugCommand_InsecureUmask(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("test does not work in windows environment")
+	}
+	t.Parallel()
+
+	cases := []struct {
+		name        string
+		compress    bool
+		outputFile  string
+		expectError bool
+	}{
+		{
+			"with-compress",
+			true,
+			"with-compress.tar.gz",
+			false,
+		},
+		{
+			"no-compress",
+			false,
+			"no-compress",
+			false,
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			// set insecure umask
+			defer syscall.Umask(syscall.Umask(0))
+
+			testDir := t.TempDir()
+
+			client, closer := testVaultServer(t)
+			defer closer()
+
+			ui, cmd := testDebugCommand(t)
+			cmd.client = client
+			cmd.skipTimingChecks = true
+
+			outputPath := filepath.Join(testDir, tc.outputFile)
+
+			args := []string{
+				fmt.Sprintf("-compress=%t", tc.compress),
+				"-duration=1s",
+				"-interval=1s",
+				"-metrics-interval=1s",
+				fmt.Sprintf("-output=%s", outputPath),
+			}
+
+			code := cmd.Run(args)
+			if exp := 0; code != exp {
+				t.Log(ui.ErrorWriter.String())
+				t.Fatalf("expected %d to be %d", code, exp)
+			}
+			// If we expect an error we're done here
+			if tc.expectError {
+				return
+			}
+
+			bundlePath := filepath.Join(testDir, tc.outputFile)
+			fs, err := os.Stat(bundlePath)
+			if os.IsNotExist(err) {
+				t.Log(ui.OutputWriter.String())
+				t.Fatal(err)
+			}
+			// check permissions of the parent debug directory
+			err = isValidFilePermissions(fs)
+			if err != nil {
+				t.Fatalf(err.Error())
+			}
+
+			// check permissions of the files within the parent directory
+			switch tc.compress {
+			case true:
+				file, err := os.Open(bundlePath)
+				require.NoError(t, err)
+
+				uncompressedStream, err := gzip.NewReader(file)
+				require.NoError(t, err)
+
+				tarReader := tar.NewReader(uncompressedStream)
+
+				for {
+					header, err := tarReader.Next()
+					if err == io.EOF {
+						break
+					}
+					err = isValidFilePermissions(header.FileInfo())
+					require.NoError(t, err)
+				}
+			case false:
+				err = filepath.Walk(bundlePath, func(path string, info os.FileInfo, err error) error {
+					err = isValidFilePermissions(info)
+					if err != nil {
+						t.Fatalf(err.Error())
+					}
+					return nil
+				})
+			}
+
+			require.NoError(t, err)
+		})
+	}
+}
+
+func isValidFilePermissions(info os.FileInfo) (err error) {
+	mode := info.Mode()
+	// check group permissions
+	for i := 4; i < 7; i++ {
+		if string(mode.String()[i]) != "-" {
+			return fmt.Errorf("expected no permissions for group but got %s permissions for file %s", string(mode.String()[i]), info.Name())
+		}
+	}
+
+	// check others permissions
+	for i := 7; i < 10; i++ {
+		if string(mode.String()[i]) != "-" {
+			return fmt.Errorf("expected no permissions for others but got %s permissions for file %s", string(mode.String()[i]), info.Name())
+		}
+	}
+	return err
 }

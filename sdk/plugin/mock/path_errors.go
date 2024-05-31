@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package mock
 
 import (
@@ -15,25 +18,24 @@ import (
 // it is used to test the invalidate func.
 func errorPaths(b *backend) []*framework.Path {
 	return []*framework.Path{
-		&framework.Path{
+		{
 			Pattern: "errors/rpc",
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ReadOperation: b.pathErrorRPCRead,
 			},
 		},
-		&framework.Path{
+		{
 			Pattern: "errors/kill",
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ReadOperation: b.pathErrorRPCRead,
 			},
 		},
-		&framework.Path{
+		{
 			Pattern: "errors/type",
 			Fields: map[string]*framework.FieldSchema{
-				"err_type": &framework.FieldSchema{Type: framework.TypeInt},
+				"err_type": {Type: framework.TypeInt},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.CreateOperation: b.pathErrorRPCRead,
 				logical.UpdateOperation: b.pathErrorRPCRead,
 			},
 		},
@@ -71,5 +73,4 @@ func (b *backend) pathErrorRPCRead(ctx context.Context, req *logical.Request, da
 	}
 
 	return nil, err
-
 }

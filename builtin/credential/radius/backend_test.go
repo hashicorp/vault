@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package radius
 
 import (
@@ -5,14 +8,15 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"runtime"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	"github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/ory/dockertest"
 )
 
 const (
@@ -27,45 +31,88 @@ const (
 )
 
 func prepareRadiusTestContainer(t *testing.T) (func(), string, int) {
+	if strings.Contains(runtime.GOARCH, "arm") {
+		t.Skip("Skipping, as this image is not supported on ARM architectures")
+	}
+
 	if os.Getenv(envRadiusRadiusHost) != "" {
 		port, _ := strconv.Atoi(os.Getenv(envRadiusPort))
 		return func() {}, os.Getenv(envRadiusRadiusHost), port
 	}
 
-	pool, err := dockertest.NewPool("")
+	// Now allow any client to connect to this radiusd instance by writing our
+	// own clients.conf file.
+	//
+	// This is necessary because we lack control over the container's network
+	// IPs. We might be running in Circle CI (with variable IPs per new
+	// network) or in Podman (which uses an entirely different set of default
+	// ranges than Docker).
+	//
+	// See also: https://freeradius.org/radiusd/man/clients.conf.html
+	ctx := context.Background()
+	clientsConfig := `
+client 0.0.0.0/1 {
+ ipaddr = 0.0.0.0/1
+ secret = testing123
+ shortname = all-clients-first
+}
+
+client 128.0.0.0/1 {
+ ipaddr = 128.0.0.0/1
+ secret = testing123
+ shortname = all-clients-second
+}
+`
+
+	containerfile := `
+FROM docker.mirror.hashicorp.services/jumanjiman/radiusd:latest
+
+COPY clients.conf /etc/raddb/clients.conf
+`
+
+	bCtx := docker.NewBuildContext()
+	bCtx["clients.conf"] = docker.PathContentsFromBytes([]byte(clientsConfig))
+
+	imageName := "vault_radiusd_any_client"
+	imageTag := "latest"
+
+	runner, err := docker.NewServiceRunner(docker.RunOptions{
+		ImageRepo:     imageName,
+		ImageTag:      imageTag,
+		ContainerName: "radiusd",
+		Cmd:           []string{"-f", "-l", "stdout", "-X"},
+		Ports:         []string{"1812/udp"},
+		LogConsumer: func(s string) {
+			if t.Failed() {
+				t.Logf("container logs: %s", s)
+			}
+		},
+	})
 	if err != nil {
-		t.Fatalf("Failed to connect to docker: %s", err)
+		t.Fatalf("Could not provision docker service runner: %s", err)
 	}
 
-	runOpts := &dockertest.RunOptions{
-		Repository:   "jumanjiman/radiusd",
-		Cmd:          []string{"-f", "-l", "stdout"},
-		ExposedPorts: []string{"1812/udp"},
-		Tag:          "latest",
-	}
-	resource, err := pool.RunWithOptions(runOpts)
+	output, err := runner.BuildImage(ctx, containerfile, bCtx,
+		docker.BuildRemove(true), docker.BuildForceRemove(true),
+		docker.BuildPullParent(true),
+		docker.BuildTags([]string{imageName + ":" + imageTag}))
 	if err != nil {
-		t.Fatalf("Could not start local radius docker container: %s", err)
+		t.Fatalf("Could not build new image: %v", err)
 	}
 
-	cleanup := func() {
-		docker.CleanupResource(t, pool, resource)
-	}
+	t.Logf("Image build output: %v", string(output))
 
-	port, _ := strconv.Atoi(resource.GetPort("1812/udp"))
-	address := fmt.Sprintf("127.0.0.1")
-
-	// exponential backoff-retry
-	if err = pool.Retry(func() error {
-		// There's no straightfoward way to check the state, but the server starts
-		// up quick so a 2 second sleep should be enough.
+	svc, err := runner.StartService(context.Background(), func(ctx context.Context, host string, port int) (docker.ServiceConfig, error) {
 		time.Sleep(2 * time.Second)
-		return nil
-	}); err != nil {
-		cleanup()
-		t.Fatalf("Could not connect to radius docker container: %s", err)
+		return docker.NewServiceHostPort(host, port), nil
+	})
+	if err != nil {
+		t.Fatalf("Could not start docker radiusd: %s", err)
 	}
-	return cleanup, address, port
+
+	pieces := strings.Split(svc.Config.Address(), ":")
+	port, _ := strconv.Atoi(pieces[1])
+	return svc.Cleanup, pieces[0], port
 }
 
 func TestBackend_Config(t *testing.T) {
@@ -279,7 +326,8 @@ func testStepUserList(t *testing.T, users []string) logicaltest.TestStep {
 }
 
 func testStepUpdateUser(
-	t *testing.T, name string, policies string) logicaltest.TestStep {
+	t *testing.T, name string, policies string,
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "users/" + name,
@@ -306,7 +354,7 @@ func testAccUserLoginPolicy(t *testing.T, user string, data map[string]interface
 		Data:            data,
 		ErrorOk:         expectError,
 		Unauthenticated: true,
-		//Check:           logicaltest.TestCheckAuth(policies),
+		// Check:           logicaltest.TestCheckAuth(policies),
 		Check: func(resp *logical.Response) error {
 			res := logicaltest.TestCheckAuth(policies)(resp)
 			if res != nil && expectError {

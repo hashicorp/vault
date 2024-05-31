@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Update Oracle Cloud library to enable seal integration with the uk-gov-london-1 region
+```

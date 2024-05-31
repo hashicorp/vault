@@ -1,0 +1,16 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
+syntax = "proto3";
+package pluginutil.multiplexing;
+
+option go_package = "github.com/hashicorp/vault/sdk/helper/pluginutil";
+
+message MultiplexingSupportRequest {}
+message MultiplexingSupportResponse {
+  bool supported = 1;
+}
+
+service PluginMultiplexing {
+  rpc MultiplexingSupport(MultiplexingSupportRequest) returns (MultiplexingSupportResponse);
+}

@@ -1,4 +1,9 @@
-import { collection, clickable, fillable, text, value } from 'ember-cli-page-object';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { collection, clickable, fillable, text, value, isPresent } from 'ember-cli-page-object';
 
 export default {
   tabs: collection('[data-test-auth-method]', {
@@ -10,6 +15,11 @@ export default {
   token: fillable('[data-test-token]'),
   tokenValue: value('[data-test-token]'),
   password: fillable('[data-test-password]'),
-  errorText: text('[data-test-auth-error]'),
+  errorText: text('[data-test-message-error]'),
+  errorMessagePresent: isPresent('[data-test-message-error]'),
+  descriptionText: text('[data-test-description]'),
   login: clickable('[data-test-auth-submit]'),
+  oidcRole: fillable('[data-test-role]'),
+  oidcMoreOptions: clickable('[data-test-yield-content] button'),
+  oidcMountPath: fillable('#custom-path'),
 };

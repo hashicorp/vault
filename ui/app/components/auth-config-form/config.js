@@ -1,49 +1,44 @@
-import { inject as service } from '@ember/service';
-import Component from '@ember/component';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import AdapterError from '@ember-data/adapter/error';
+import { service } from '@ember/service';
+import Component from '@glimmer/component';
 import { task } from 'ember-concurrency';
-import DS from 'ember-data';
+import { waitFor } from '@ember/test-waiters';
 
 /**
  * @module AuthConfigForm/Config
  * The `AuthConfigForm/Config` is the base form to configure auth methods.
  *
  * @example
- * ```js
- * {{auth-config-form/config model.model}}
- * ```
+ * <AuthConfigForm::Config @model={{this.model}} />
  *
  * @property model=null {DS.Model} - The corresponding auth model that is being configured.
  *
  */
 
-const AuthConfigBase = Component.extend({
-  tagName: '',
-  model: null,
+export default class AuthConfigBase extends Component {
+  @service flashMessages;
+  @service router;
 
-  flashMessages: service(),
-  router: service(),
-  wizard: service(),
-  saveModel: task(function*() {
+  @task
+  @waitFor
+  *saveModel(evt) {
+    evt.preventDefault();
     try {
-      yield this.model.save();
+      yield this.args.model.save();
     } catch (err) {
       // AdapterErrors are handled by the error-message component
       // in the form
-      if (err instanceof DS.AdapterError === false) {
+      if (err instanceof AdapterError === false) {
         throw err;
       }
       return;
     }
-    if (this.wizard.currentMachine === 'authentication' && this.wizard.featureState === 'config') {
-      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE');
-    }
     this.router.transitionTo('vault.cluster.access.methods').followRedirects();
     this.flashMessages.success('The configuration was saved successfully.');
-  }).withTestWaiter(),
-});
-
-AuthConfigBase.reopenClass({
-  positionalParams: ['model'],
-});
-
-export default AuthConfigBase;
+  }
+}

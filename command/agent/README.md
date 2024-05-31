@@ -12,4 +12,4 @@ addressing the following challenges:
 
 See the usage documentation on the Vault website here:
 
-- https://www.vaultproject.io/docs/agent/
+- https://developer.hashicorp.com/vault/docs/agent-and-proxy/agent

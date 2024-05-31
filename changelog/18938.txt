@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/pki: OCSP GET request parameter was not being URL unescaped before processing.
+```

@@ -1,0 +1,154 @@
+---
+layout: api
+page_title: /sys/plugins/pins - HTTP API
+description: The `/sys/plugins/pins` endpoint is used to manage pinned plugin versions.
+---
+
+# `/sys/plugins/pins`
+
+Use the `/sys/plugins/pins` endpoint to read, create, update, and delete pinned
+plugin versions in your Vault catalog.
+
+When you pin a plugin version, Vault starts all instances of that name and type
+with the configured version, even if the mount was originally configured with a
+different version.
+
+<Note tile="Behavioral notes">
+
+- You must register a plugin version before pinning it.
+- You must delete a pin before deleting the associated plugin version.
+- You must [reload](/vault/api-docs/system/plugins-reload) any plugins currently
+  in use for the pinned version to take effect.
+
+</Note>
+
+## Create/update pinned version
+
+Create a pinned version for a plugin with the given type and name.
+
+| Method | Path                            |
+| :----- | :------------------------------ |
+| `POST` | `/sys/plugins/pins/:type/:name` |
+
+### Parameters
+
+- `type` `(string: <required>)` – Path parameter specifying the target plugin
+  type for the pinned version. May be "auth", "database", or "secret".
+
+- `name` `(string: <required>)` – Path parameter specifying the plugin name for
+  the pinned version.
+
+- `version` `(string: <required>)` - Specifies the semantic version of the plugin
+  to pin. Cannot be a builtin version and must already exist in the catalog.
+
+### Sample payload
+
+```json
+{
+  "version": "v1.0.0"
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/plugins/pins/auth/github
+```
+
+## List pinned versions
+
+This endpoint lists all pinned versions.
+
+| Method | Path                |
+| :----- | :------------------ |
+| `GET`  | `/sys/plugins/pins` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/plugins/pins
+```
+
+### Sample response
+
+```json
+{
+    "data": {
+        "pinned_versions": [
+            {
+                "name": "github",
+                "type": "auth",
+                "version": "v1.0.0"
+            }
+        ]
+    }
+}
+```
+
+## Read pinned version
+
+Read the pinned version for a plugin with the given type and name.
+
+| Method | Path                            |
+| :----- | :------------------------------ |
+| `GET`  | `/sys/plugins/pins/:type/:name` |
+
+### Parameters
+
+- `type` `(string: <required>)` – Path parameter specifying the target plugin
+  type for the pinned version. May be "auth", "database", or "secret".
+
+- `name` `(string: <required>)` – Path parameter specifying the plugin name for
+  the pinned version.
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request GET \
+    http://127.0.0.1:8200/v1/sys/plugins/pins/auth/github
+```
+
+### Sample response
+
+```json
+{
+    "data": {
+        "name": "github",
+        "type": "auth",
+        "version": "v1.0.0"
+    }
+}
+```
+
+## Delete pinned version
+
+Delete any pinned version for a plugin with the given type and name.
+
+| Method   | Path                           |
+| :------- | :----------------------------- |
+| `DELETE` | `/sys/plugins/pins/:type/:name |
+
+### Parameters
+
+- `type` `(string: <required>)` – Path parameter specifying the target plugin
+  type for the pinned version. May be "auth", "database", or "secret".
+
+- `name` `(string: <required>)` – Path parameter specifying the plugin name for
+  the pinned version.
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request DELETE \
+    http://127.0.0.1:8200/v1/sys/plugins/pins/auth/github
+```

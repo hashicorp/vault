@@ -1,0 +1,37 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{#if @isInDropdown}}
+  {{! Hds component renders <li> and <button> elements }}
+  <Hds::Dropdown::ListItem::Interactive
+    data-test-confirm-action-trigger
+    @text={{@buttonText}}
+    @color="critical"
+    {{on "click" (fn (mut this.showConfirmModal) true)}}
+    ...attributes
+    {{! remove class when dropdown/popup menus are replaced with Hds::Dropdown }}
+    class="hds-confirm-action-critical"
+  />
+{{else}}
+  <Hds::Button
+    data-test-confirm-action-trigger
+    @text={{@buttonText}}
+    @color={{@buttonColor}}
+    {{on "click" (fn (mut this.showConfirmModal) true)}}
+    ...attributes
+  />
+{{/if}}
+
+{{#if this.showConfirmModal}}
+  <ConfirmModal
+    @color={{this.modalColor}}
+    @onClose={{fn (mut this.showConfirmModal) false}}
+    @onConfirm={{this.onConfirm}}
+    @confirmTitle={{@confirmTitle}}
+    @confirmMessage={{this.confirmMessage}}
+    @disabledMessage={{@disabledMessage}}
+    @isRunning={{@isRunning}}
+  />
+{{/if}}

@@ -1,16 +1,15 @@
-import { attribute, clickable, fillable, isPresent } from 'ember-cli-page-object';
-import { focus, blur } from '@ember/test-helpers';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { clickable, isPresent } from 'ember-cli-page-object';
 
 export default {
-  wrapperClass: attribute('class', '[data-test-masked-input]'),
-  enterText: fillable('[data-test-textarea]'),
   textareaIsPresent: isPresent('[data-test-textarea]'),
   copyButtonIsPresent: isPresent('[data-test-copy-button]'),
-  toggleMasked: clickable('[data-test-button]'),
-  async focusField() {
-    return focus('[data-test-textarea]');
-  },
-  async blurField() {
-    return blur('[data-test-textarea]');
-  },
+  downloadIconIsPresent: isPresent('[data-test-download-icon]'),
+  downloadButtonIsPresent: isPresent('[data-test-download-button]'),
+  toggleMasked: clickable('[data-test-button="toggle-masked"]'),
+  copyValue: clickable('[data-test-copy-button]'),
 };

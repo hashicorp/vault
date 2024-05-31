@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import ApplicationAdapter from './application';
 
 export default ApplicationAdapter.extend({
@@ -6,7 +11,7 @@ export default ApplicationAdapter.extend({
   },
 
   findRecord(store, type, id) {
-    return this.ajax(this.url(id), 'GET').then(resp => {
+    return this.ajax(this.url(id), 'GET').then((resp) => {
       resp.id = id;
       return resp;
     });

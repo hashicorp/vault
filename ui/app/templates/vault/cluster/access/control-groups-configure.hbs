@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if (has-feature "Control Groups")}}
   <PageHeader as |p|>
     <p.levelLeft>
@@ -6,7 +11,7 @@
       </h1>
     </p.levelLeft>
   </PageHeader>
-  <EditForm @model={{model}} @onSave={{action "onSave"}} />
+  <EditForm @model={{this.model}} @onSave={{action "onSave"}} />
 {{else}}
   <UpgradePage @title="Control Groups" @minimumEdition="Vault Enterprise Premium" />
 {{/if}}

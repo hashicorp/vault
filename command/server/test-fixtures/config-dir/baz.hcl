@@ -1,9 +1,15 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 telemetry {
     statsd_address = "baz"
     statsite_address = "qux"
     disable_hostname = true
     usage_gauge_period = "5m"
     maximum_gauge_cardinality = 100
+}
+sentinel {
+    additional_enabled_modules = ["http"]
 }
 ui=true
 raw_storage_endpoint=true

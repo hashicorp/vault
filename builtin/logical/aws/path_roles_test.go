@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package aws
 
 import (
@@ -18,7 +21,7 @@ func TestBackend_PathListRoles(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 
-	b := Backend()
+	b := Backend(config)
 	if err := b.Setup(context.Background(), config); err != nil {
 		t.Fatal(err)
 	}
@@ -159,7 +162,6 @@ func TestUpgradeLegacyPolicyEntry(t *testing.T) {
 }
 
 func TestUserPathValidity(t *testing.T) {
-
 	testCases := []struct {
 		description string
 		userPath    string
@@ -222,7 +224,7 @@ func TestRoleCRUDWithPermissionsBoundary(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 
-	b := Backend()
+	b := Backend(config)
 	if err := b.Setup(context.Background(), config); err != nil {
 		t.Fatal(err)
 	}
@@ -266,7 +268,7 @@ func TestRoleWithPermissionsBoundaryValidation(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 
-	b := Backend()
+	b := Backend(config)
 	if err := b.Setup(context.Background(), config); err != nil {
 		t.Fatal(err)
 	}
@@ -339,7 +341,7 @@ func TestRoleEntryValidationCredTypes(t *testing.T) {
 }
 
 func TestRoleEntryValidationIamUserCred(t *testing.T) {
-	var allowAllPolicyDocument = `{"Version": "2012-10-17", "Statement": [{"Sid": "AllowAll", "Effect": "Allow", "Action": "*", "Resource": "*"}]}`
+	allowAllPolicyDocument := `{"Version": "2012-10-17", "Statement": [{"Sid": "AllowAll", "Effect": "Allow", "Action": "*", "Resource": "*"}]}`
 	roleEntry := awsRoleEntry{
 		CredentialTypes:        []string{iamUserCred},
 		PolicyArns:             []string{adminAccessPolicyARN},
@@ -384,7 +386,7 @@ func TestRoleEntryValidationIamUserCred(t *testing.T) {
 }
 
 func TestRoleEntryValidationAssumedRoleCred(t *testing.T) {
-	var allowAllPolicyDocument = `{"Version": "2012-10-17", "Statement": [{"Sid": "AllowAll", "Effect": "Allow", "Action": "*", "Resource": "*"}]}`
+	allowAllPolicyDocument := `{"Version": "2012-10-17", "Statement": [{"Sid": "AllowAll", "Effect": "Allow", "Action": "*", "Resource": "*"}]}`
 	roleEntry := awsRoleEntry{
 		CredentialTypes: []string{assumedRoleCred},
 		RoleArns:        []string{"arn:aws:iam::123456789012:role/SomeRole"},
@@ -414,7 +416,7 @@ func TestRoleEntryValidationAssumedRoleCred(t *testing.T) {
 }
 
 func TestRoleEntryValidationFederationTokenCred(t *testing.T) {
-	var allowAllPolicyDocument = `{"Version": "2012-10-17", "Statement": [{"Sid": "AllowAll", "Effect": "Allow", "Action": "*", "Resource": "*"}]}`
+	allowAllPolicyDocument := `{"Version": "2012-10-17", "Statement": [{"Sid": "AllowAll", "Effect": "Allow", "Action": "*", "Resource": "*"}]}`
 	roleEntry := awsRoleEntry{
 		CredentialTypes: []string{federationTokenCred},
 		PolicyDocument:  allowAllPolicyDocument,
@@ -446,5 +448,4 @@ func TestRoleEntryValidationFederationTokenCred(t *testing.T) {
 	if roleEntry.validate() == nil {
 		t.Errorf("bad: invalid roleEntry with unrecognized PermissionsBoundary %#v passed validation", roleEntry)
 	}
-
 }

@@ -1,0 +1,5 @@
+```release-note:bug
+core: fix bug where deadlock detection was always on for expiration and quotas. 
+These can now be configured individually with `detect_deadlocks`.
+```
+

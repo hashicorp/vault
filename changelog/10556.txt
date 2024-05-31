@@ -1,0 +1,3 @@
+```release-note:bug
+agent: Only set the namespace if the VAULT_NAMESPACE env var isn't present
+```

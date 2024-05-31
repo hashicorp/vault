@@ -1,0 +1,65 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+$dark-gray: #535f73;
+
+.calendar-content {
+  display: flex;
+  width: 234px;
+
+  &.calendar-open {
+    width: 500px;
+  }
+
+  > .menu {
+    margin-bottom: 0px;
+  }
+}
+.calendar-title {
+  padding: $spacing-10 $spacing-12;
+}
+
+.select-year {
+  grid-area: select-year;
+  margin: 10px 24px;
+  font-weight: $font-weight-bold;
+  display: flex;
+  justify-content: space-between;
+  align-items: first baseline;
+}
+
+.calendar-widget {
+  grid-area: calendar-widget;
+}
+
+.border-col {
+  grid-area: border-col;
+  background-color: $ui-gray-200;
+}
+
+.calendar-widget-container {
+  display: grid;
+  grid-template-areas:
+    'select-year'
+    'calendar-widget';
+  grid-template-columns: 1fr;
+  grid-template-rows: 0.7fr 3fr;
+  box-shadow: $box-shadow, $box-shadow-middle;
+  background-color: white;
+  border-radius: $radius;
+}
+
+.calendar-widget-grid {
+  display: grid;
+  grid-template-columns: 110px 110px;
+  grid-template-rows: repeat(2, 1fr);
+  grid-gap: 0.7rem;
+  padding: 7px 28px 28px 28px;
+}
+
+// for modal-dialog tooltips
+.ember-modal-dialog {
+  z-index: 1000;
+}

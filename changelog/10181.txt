@@ -1,0 +1,3 @@
+```release-note:bug
+storage/dynamodb: Handle throttled batch write requests by retrying, without which writes could be lost.
+```

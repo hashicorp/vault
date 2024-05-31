@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/pki: Stop processing in-flight ACME verifications when an active node steps down
+```

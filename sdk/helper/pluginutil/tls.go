@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pluginutil
 
 import (
@@ -82,8 +85,6 @@ func createClientTLSConfig(certBytes []byte, key *ecdsa.PrivateKey) (*tls.Config
 		ServerName:   clientCert.Subject.CommonName,
 		MinVersion:   tls.VersionTLS12,
 	}
-
-	tlsConfig.BuildNameToCertificate()
 
 	return tlsConfig, nil
 }

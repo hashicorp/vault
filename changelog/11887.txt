@@ -1,0 +1,3 @@
+```release-note:bug
+secret/totp: pad input key to ensure length is a multiple of 8
+```

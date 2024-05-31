@@ -1,40 +1,44 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { hash } from 'rsvp';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import EditBase from './secret-edit';
 
-let secretModel = (store, backend, key) => {
-  let backendModel = store.peekRecord('secret-engine', backend);
-  let modelType = backendModel.get('modelTypeForKV');
-  if (modelType !== 'secret-v2') {
-    let model = store.createRecord(modelType, {
-      path: key,
-    });
-    return model;
-  }
-  let secret = store.createRecord(modelType);
-  secret.set('engine', backendModel);
-  let version = store.createRecord('secret-v2-version', {
+const secretModel = (store, backend, key) => {
+  const model = store.createRecord('secret', {
     path: key,
   });
-  secret.set('selectedVersion', version);
-  return secret;
+  return model;
+};
+
+const transformModel = (queryParams) => {
+  const modelType = 'transform';
+  if (!queryParams || !queryParams.itemType) return modelType;
+
+  return `${modelType}/${queryParams.itemType}`;
 };
 
 export default EditBase.extend({
-  wizard: service(),
+  store: service(),
+
   createModel(transition) {
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
-    const modelType = this.modelType(backend);
+    let modelType = this.modelType(backend, null, { queryParams: transition.to.queryParams });
     if (modelType === 'role-ssh') {
       return this.store.createRecord(modelType, { keyType: 'ca' });
     }
-    if (modelType !== 'secret' && modelType !== 'secret-v2') {
-      if (this.get('wizard.featureState') === 'details' && this.get('wizard.componentState') === 'transit') {
-        this.get('wizard').transitionFeatureMachine('details', 'CONTINUE', 'transit');
-      }
+    if (modelType === 'transform') {
+      modelType = transformModel(transition.to.queryParams);
+    }
+    if (modelType === 'database/connection' && transition.to?.queryParams?.itemType === 'role') {
+      modelType = 'database/role';
+    }
+    if (modelType !== 'secret') {
       return this.store.createRecord(modelType);
     }
-
     return secretModel(this.store, backend, transition.to.queryParams.initialKey);
   },
 

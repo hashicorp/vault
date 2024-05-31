@@ -1,0 +1,3 @@
+```release-note:bug
+ui: fix search-select component showing blank selections when editing group member entity
+```

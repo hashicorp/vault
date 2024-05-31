@@ -1,0 +1,3 @@
+```release-note:improvement
+agent: Added `token_file` auto-auth configuration to allow using a pre-existing token for Vault Agent.
+```

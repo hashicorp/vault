@@ -1,20 +1,26 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package main
 
 import (
 	"log"
 	"os"
 
-	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/plugins/database/redshift"
+	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 )
 
 func main() {
-	apiClientMeta := &api.PluginAPIClientMeta{}
-	flags := apiClientMeta.FlagSet()
-	flags.Parse(os.Args[1:])
-
-	if err := redshift.Run(apiClientMeta.GetTLSConfig()); err != nil {
+	if err := Run(); err != nil {
 		log.Println(err)
 		os.Exit(1)
 	}
+}
+
+// Run instantiates a RedShift object, and runs the RPC server for the plugin
+func Run() error {
+	dbplugin.ServeMultiplex(redshift.New)
+
+	return nil
 }

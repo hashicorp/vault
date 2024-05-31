@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 pid_file = "./pidfile"
 
 auto_auth {
@@ -7,6 +10,7 @@ auto_auth {
 		config = {
 			role = "foobar"
 		}
+		max_backoff = "2m"
 	}
 
 	sink {

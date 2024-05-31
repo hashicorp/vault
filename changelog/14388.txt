@@ -1,0 +1,3 @@
+```release-note:improvement
+api: Add context-aware functions to vault/api for each API wrapper function.
+```

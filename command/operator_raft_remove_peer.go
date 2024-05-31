@@ -1,18 +1,25 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
 	"fmt"
 	"strings"
 
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/cli"
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*OperatorRaftRemovePeerCommand)(nil)
-var _ cli.CommandAutocomplete = (*OperatorRaftRemovePeerCommand)(nil)
+var (
+	_ cli.Command             = (*OperatorRaftRemovePeerCommand)(nil)
+	_ cli.CommandAutocomplete = (*OperatorRaftRemovePeerCommand)(nil)
+)
 
 type OperatorRaftRemovePeerCommand struct {
 	*BaseCommand
+
+	flagDRToken string
 }
 
 func (c *OperatorRaftRemovePeerCommand) Synopsis() string {
@@ -34,6 +41,17 @@ Usage: vault operator raft remove-peer <server_id>
 
 func (c *OperatorRaftRemovePeerCommand) Flags() *FlagSets {
 	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	f := set.NewFlagSet("Command Options")
+
+	f.StringVar(&StringVar{
+		Name:       "dr-token",
+		Target:     &c.flagDRToken,
+		Default:    "",
+		EnvVar:     "",
+		Completion: complete.PredictAnything,
+		Usage:      "DR operation token used to authorize this request (if a DR secondary node).",
+	})
+
 	return set
 }
 
@@ -76,7 +94,8 @@ func (c *OperatorRaftRemovePeerCommand) Run(args []string) int {
 	}
 
 	_, err = client.Logical().Write("sys/storage/raft/remove-peer", map[string]interface{}{
-		"server_id": serverID,
+		"server_id":          serverID,
+		"dr_operation_token": c.flagDRToken,
 	})
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error removing the peer from raft cluster: %s", err))

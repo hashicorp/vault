@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package compressutil
 
 import (
@@ -14,31 +17,38 @@ func TestCompressUtil_CompressDecompress(t *testing.T) {
 		compressionConfig CompressionConfig
 		canary            byte
 	}{
-		{"GZIP default implicit",
+		{
+			"GZIP default implicit",
 			CompressionConfig{Type: CompressionTypeGzip},
 			CompressionCanaryGzip,
 		},
-		{"GZIP default explicit",
+		{
+			"GZIP default explicit",
 			CompressionConfig{Type: CompressionTypeGzip, GzipCompressionLevel: gzip.DefaultCompression},
 			CompressionCanaryGzip,
 		},
-		{"GZIP best speed",
+		{
+			"GZIP best speed",
 			CompressionConfig{Type: CompressionTypeGzip, GzipCompressionLevel: gzip.BestSpeed},
 			CompressionCanaryGzip,
 		},
-		{"GZIP best compression",
+		{
+			"GZIP best compression",
 			CompressionConfig{Type: CompressionTypeGzip, GzipCompressionLevel: gzip.BestCompression},
 			CompressionCanaryGzip,
 		},
-		{"Snappy",
+		{
+			"Snappy",
 			CompressionConfig{Type: CompressionTypeSnappy},
 			CompressionCanarySnappy,
 		},
-		{"LZ4",
+		{
+			"LZ4",
 			CompressionConfig{Type: CompressionTypeLZ4},
 			CompressionCanaryLZ4,
 		},
-		{"LZW",
+		{
+			"LZW",
 			CompressionConfig{Type: CompressionTypeLZW},
 			CompressionCanaryLZW,
 		},
@@ -79,6 +89,15 @@ func TestCompressUtil_CompressDecompress(t *testing.T) {
 		if !bytes.Equal(inputJSONBytes, decompressedJSONBytes) {
 			t.Fatalf("bad (%s): decompressed value;\nexpected: %q\nactual: %q", test.compressionType, string(inputJSONBytes), string(decompressedJSONBytes))
 		}
+
+		decompressedJSONBytes, compressionType, wasNotCompressed, err := DecompressWithCanary(compressedJSONBytes)
+		if err != nil {
+			t.Fatalf("decompress error (%s): %s", test.compressionType, err)
+		}
+
+		if compressionType != test.compressionConfig.Type {
+			t.Fatalf("bad compressionType value;\nexpected: %q\naction: %q", test.compressionConfig.Type, compressionType)
+		}
 	}
 }
 
@@ -95,5 +114,42 @@ func TestCompressUtil_InvalidConfigurations(t *testing.T) {
 	// Test invalid configuration
 	if _, err := Compress(inputJSONBytes, &CompressionConfig{}); err == nil {
 		t.Fatal("expected an error")
+	}
+}
+
+// TestDecompressWithCanaryLargeInput tests that DecompressWithCanary works
+// as expected even with large values.
+func TestDecompressWithCanaryLargeInput(t *testing.T) {
+	t.Parallel()
+
+	inputJSON := `{"sample":"data`
+	for i := 0; i < 100000; i++ {
+		inputJSON += " and data"
+	}
+	inputJSON += `"}`
+	inputJSONBytes := []byte(inputJSON)
+
+	compressedJSONBytes, err := Compress(inputJSONBytes, &CompressionConfig{Type: CompressionTypeGzip, GzipCompressionLevel: gzip.BestCompression})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	decompressedJSONBytes, wasNotCompressed, err := Decompress(compressedJSONBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check if the input for decompress was not compressed in the first place
+	if wasNotCompressed {
+		t.Fatalf("bytes were not compressed as expected")
+	}
+
+	if len(decompressedJSONBytes) == 0 {
+		t.Fatalf("bytes were not compressed as expected")
+	}
+
+	// Compare the value after decompression
+	if !bytes.Equal(inputJSONBytes, decompressedJSONBytes) {
+		t.Fatalf("decompressed value differs: decompressed value;\nexpected: %q\nactual: %q", string(inputJSONBytes), string(decompressedJSONBytes))
 	}
 }

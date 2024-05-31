@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package cluster
 
 import (
@@ -9,7 +12,7 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/sdk/helper/base62"
+	"github.com/hashicorp/go-secure-stdlib/base62"
 	"go.uber.org/atomic"
 )
 
@@ -30,6 +33,8 @@ type InmemLayer struct {
 	stopCh  chan struct{}
 
 	connectionCh chan *ConnectionInfo
+	readerDelay  time.Duration
+	forceTimeout string
 }
 
 // NewInmemLayer returns a new in-memory layer configured to listen on the
@@ -50,6 +55,33 @@ func (l *InmemLayer) SetConnectionCh(ch chan *ConnectionInfo) {
 	l.l.Lock()
 	l.connectionCh = ch
 	l.l.Unlock()
+}
+
+func (l *InmemLayer) SetReaderDelay(delay time.Duration) {
+	l.l.Lock()
+	defer l.l.Unlock()
+
+	l.readerDelay = delay
+
+	// Update the existing server and client connections
+	for _, servConns := range l.servConns {
+		for _, c := range servConns {
+			c.(*delayedConn).SetDelay(delay)
+		}
+	}
+
+	for _, clientConns := range l.clientConns {
+		for _, c := range clientConns {
+			c.(*delayedConn).SetDelay(delay)
+		}
+	}
+}
+
+func (l *InmemLayer) SetForceTimeout(addr string) {
+	l.l.Lock()
+	defer l.l.Unlock()
+
+	l.forceTimeout = addr
 }
 
 // Addrs implements NetworkLayer.
@@ -75,7 +107,7 @@ func (l *InmemLayer) Listeners() []NetworkListener {
 
 	l.listener = &inmemListener{
 		addr:         l.addr,
-		pendingConns: make(chan net.Conn),
+		pendingConns: make(chan net.Conn, 1),
 
 		stopped: atomic.NewBool(false),
 		stopCh:  make(chan struct{}),
@@ -87,15 +119,34 @@ func (l *InmemLayer) Listeners() []NetworkListener {
 // Dial implements NetworkLayer.
 func (l *InmemLayer) Dial(addr string, timeout time.Duration, tlsConfig *tls.Config) (*tls.Conn, error) {
 	l.l.Lock()
-	defer l.l.Unlock()
+	connectionCh := l.connectionCh
 
 	if addr == l.addr {
 		panic(fmt.Sprintf("%q attempted to dial itself", l.addr))
 	}
 
+	// This simulates an i/o timeout by sleeping for 20 seconds and returning
+	// an error when the forceTimeout name is the same as the host we are
+	// currently connecting to. Useful for checking how gRPC connections react
+	// with timeouts.
+	if l.forceTimeout == addr {
+		l.logger.Debug("forcing timeout", "addr", addr, "me", l.addr)
+
+		// gRPC sets a deadline of 20 seconds on the dial attempt, so
+		// matching that here.
+		time.Sleep(time.Second * 20)
+		l.l.Unlock()
+		return nil, deadlineError("i/o timeout")
+	}
+
 	peer, ok := l.peers[addr]
+	l.l.Unlock()
 	if !ok {
 		return nil, errors.New("inmemlayer: no address found")
+	}
+
+	if timeout < 0 {
+		return nil, fmt.Errorf("inmemlayer: timeout given is less than 0: %d", timeout)
 	}
 
 	alpn := ""
@@ -104,12 +155,12 @@ func (l *InmemLayer) Dial(addr string, timeout time.Duration, tlsConfig *tls.Con
 	}
 
 	if l.logger.IsDebug() {
-		l.logger.Debug("dailing connection", "node", l.addr, "remote", addr, "alpn", alpn)
+		l.logger.Debug("dialing connection", "node", l.addr, "remote", addr, "alpn", alpn)
 	}
 
-	if l.connectionCh != nil {
+	if connectionCh != nil {
 		select {
-		case l.connectionCh <- &ConnectionInfo{
+		case connectionCh <- &ConnectionInfo{
 			Node:     l.addr,
 			Remote:   addr,
 			IsServer: false,
@@ -127,7 +178,9 @@ func (l *InmemLayer) Dial(addr string, timeout time.Duration, tlsConfig *tls.Con
 
 	tlsConn := tls.Client(conn, tlsConfig)
 
-	l.clientConns[addr] = append(l.clientConns[addr], tlsConn)
+	l.l.Lock()
+	l.clientConns[addr] = append(l.clientConns[addr], conn)
+	l.l.Unlock()
 
 	return tlsConn, nil
 }
@@ -136,27 +189,34 @@ func (l *InmemLayer) Dial(addr string, timeout time.Duration, tlsConfig *tls.Con
 // needs to be Accepted.
 func (l *InmemLayer) clientConn(addr string) (net.Conn, error) {
 	l.l.Lock()
-	defer l.l.Unlock()
 
 	if l.listener == nil {
+		l.l.Unlock()
 		return nil, errors.New("inmemlayer: listener not started")
 	}
 
 	_, ok := l.peers[addr]
 	if !ok {
+		l.l.Unlock()
 		return nil, errors.New("inmemlayer: no peer found")
 	}
 
 	retConn, servConn := net.Pipe()
 
+	retConn = newDelayedConn(retConn, l.readerDelay)
+	servConn = newDelayedConn(servConn, l.readerDelay)
+
 	l.servConns[addr] = append(l.servConns[addr], servConn)
+	connectionCh := l.connectionCh
+	pendingConns := l.listener.pendingConns
+	l.l.Unlock()
 
 	if l.logger.IsDebug() {
 		l.logger.Debug("received connection", "node", l.addr, "remote", addr)
 	}
-	if l.connectionCh != nil {
+	if connectionCh != nil {
 		select {
-		case l.connectionCh <- &ConnectionInfo{
+		case connectionCh <- &ConnectionInfo{
 			Node:     l.addr,
 			Remote:   addr,
 			IsServer: true,
@@ -167,8 +227,8 @@ func (l *InmemLayer) clientConn(addr string) (net.Conn, error) {
 	}
 
 	select {
-	case l.listener.pendingConns <- servConn:
-	case <-time.After(2 * time.Second):
+	case pendingConns <- servConn:
+	case <-time.After(5 * time.Second):
 		return nil, errors.New("inmemlayer: timeout while accepting connection")
 	}
 
@@ -297,6 +357,7 @@ type inmemAddr struct {
 func (a inmemAddr) Network() string {
 	return "inmem"
 }
+
 func (a inmemAddr) String() string {
 	return a.addr
 }
@@ -369,6 +430,18 @@ func (ic *InmemLayerCluster) Layers() []NetworkLayer {
 func (ic *InmemLayerCluster) SetConnectionCh(ch chan *ConnectionInfo) {
 	for _, node := range ic.layers {
 		node.SetConnectionCh(ch)
+	}
+}
+
+func (ic *InmemLayerCluster) SetReaderDelay(delay time.Duration) {
+	for _, node := range ic.layers {
+		node.SetReaderDelay(delay)
+	}
+}
+
+func (ic *InmemLayerCluster) SetForceTimeout(addr string) {
+	for _, node := range ic.layers {
+		node.SetForceTimeout(addr)
 	}
 }
 

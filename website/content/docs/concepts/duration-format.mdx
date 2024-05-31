@@ -1,0 +1,39 @@
+---
+layout: docs
+page_title: Duration String Format
+description: A description of Vault's duration string format used throughout Vault.
+---
+
+# Duration string format
+
+Vault uses a unique duration string format as part of its configuration and APIs.
+This format is used throughout Vault wherever durations are provided. For
+example, telemetry configuration contains various options using this format, such as
+`usage_gauge_period`, which is the interval of collection for high-cardinality usage data.
+
+## How it works
+
+A duration string is a possibly signed sequence of decimal numbers, each with an optional fraction and
+an optional unit suffix. If no unit is given, we interpret the numbers as seconds.
+
+Valid time units are:
+
+- `ns` Nanoseconds
+- `us` (or `µs`): Microseconds
+- `ms`: Milliseconds
+- `s`: Seconds
+- `m`: Minutes
+- `h`: Hours
+- `d`: Days
+
+## Examples
+
+Example values could be:
+
+- `100` (One hundred seconds, equivalent to `100s`)
+- `60h` (Sixty hours)
+- `1.5h` (One and a half hours)
+- `50d` (Fifty days)
+- `100ms` (One hundred milliseconds)
+- `50ns` (Fifty nanoseconds)
+

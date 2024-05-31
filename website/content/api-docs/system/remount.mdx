@@ -1,0 +1,117 @@
+---
+layout: api
+page_title: /sys/remount - HTTP API
+description: >-
+  The '/sys/remount' endpoint is used remount a mounted backend to a new
+  endpoint.
+---
+
+# Remount ( API )
+
+The Remount documentation details the endpoints required to trigger and monitor the status of a remount operation.
+
+## Move backend
+
+The `/sys/remount` endpoint moves an already-mounted backend to a new mount point. Remounting works for both secret
+engines and auth methods.
+
+Vault returns a migration ID when the remount operation completes. You
+can use the migration ID to look up the status of the mount migration.
+More details about the remount operation are described in
+[Mount Migration](/vault/docs/concepts/mount-migration).
+
+~> Note: This endpoint requires a policy with both `sudo` and `update` capabilities to `sys/remount`
+
+~> Note: A mount migration will revoke all leases for the secrets of a secrets backend or tokens of an auth backend,
+depending on which type of backend is being moved.
+
+
+| Method | Path           |
+| :----- | :------------- |
+| `POST` | `/sys/remount` |
+
+### Parameters
+
+- `from` `(string: <required>)` – Specifies the previous mount point.
+
+- `to` `(string: <required>)` – Specifies the new destination mount point.
+
+### Sample payload ( cross namespace )
+
+```json
+{
+  "from": "ns1/ns2/secret",
+  "to": "ns1/ns3/new-secret"
+}
+```
+
+### Sample payload ( cross namespace, auth mount )
+
+```json
+{
+  "from": "ns1/ns2/auth/approle",
+  "to": "ns1/ns3/auth/new-approle"
+}
+```
+
+### Sample payload ( within namespace )
+
+```json
+{
+  "from": "secret",
+  "to": "new-secret"
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/remount
+```
+
+### Sample response
+
+```json
+{
+  "migration_id": "ef3ba21c-8be8-4e5f-8d00-cb46a532c665"
+}
+```
+
+## Monitor migration status
+
+This endpoint is used to monitor the status of a mount migration operation, using the ID returned in the response
+of the `sys/remount` call. The response contains the passed-in ID, the source and target mounts, and a status field
+that displays `in-progress`, `success` or `failure`.
+
+| Method | Path           |
+| :----- | :------------- |
+| `GET` | `/sys/remount/status/:migration_id` |
+
+### Parameters
+
+- `migration_id` `(string: <required>)` – Specifies the id of the mount migration
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/remount/status/ef3ba21c-8be8-4e5f-8d00-cb46a532c665
+```
+
+### Sample response
+
+```json
+{
+  "migration_id": "ef3ba21c-8be8-4e5f-8d00-cb46a532c665",
+  "migration_info": {
+    "source_mount": "ns1/ns2/secret",
+    "target_mount": "ns1/ns3/new-secret",
+    "status": "in-progress",
+  }
+}
+```

@@ -1,0 +1,434 @@
+---
+layout: api
+page_title: Okta - Auth Methods - HTTP API
+description: This is the API documentation for the Vault Okta auth method.
+---
+
+# Okta auth method (API)
+
+This is the API documentation for the Vault Okta auth method. For
+general information about the usage and operation of the Okta method, please
+see the [Vault Okta method documentation](/vault/docs/auth/okta).
+
+This documentation assumes the Okta method is mounted at the `/auth/okta`
+path in Vault. Since it is possible to enable auth methods at any location,
+please update your API calls accordingly.
+
+## Create configuration
+
+Configures the connection parameters for Okta. This path honors the
+distinction between the `create` and `update` capabilities inside ACL policies.
+
+| Method | Path                |
+| :----- | :------------------ |
+| `POST` | `/auth/okta/config` |
+
+### Parameters
+
+- `org_name` `(string: <required>)` - Name of the organization to be used in the
+  Okta API.
+- `api_token` `(string: "")` - Okta API token. This is required to query Okta
+  for user group membership. If this is not supplied only locally configured
+  groups will be enabled.
+  **Support for okta auth without api_token is deprecated in Vault 1.4**
+- `base_url` `(string: "")` - If set, will be used as the base domain
+  for API requests. If unset, "okta.com" will be used. Other valid examples
+  are oktapreview.com, and okta-emea.com.
+- `bypass_okta_mfa` `(bool: false)` - Whether to bypass an Okta MFA request.
+  Useful if using one of Vault's built-in MFA mechanisms, but this will also
+  cause certain other statuses to be ignored, such as `PASSWORD_EXPIRED`.
+
+@include 'tokenfields.mdx'
+
+### Sample payload
+
+```json
+{
+  "org_name": "example",
+  "api_token": "abc123"
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/auth/okta/config
+```
+
+## Read configuration
+
+Reads the Okta configuration.
+
+| Method | Path                |
+| :----- | :------------------ |
+| `GET`  | `/auth/okta/config` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/auth/okta/config
+```
+
+### Sample response
+
+```json
+{
+  "request_id": "812229d7-a82e-0b20-c35b-81ce8c1b9fa6",
+  "lease_id": "",
+  "lease_duration": 0,
+  "renewable": false,
+  "data": {
+    "base_url": "okta.com",
+    "bypass_okta_mfa": false,
+    "org_name": "example",
+    "token_bound_cidrs": [],
+    "token_explicit_max_ttl": 0,
+    "token_max_ttl": 0,
+    "token_no_default_policy": false,
+    "token_num_uses": 0,
+    "token_period": 0,
+    "token_policies": [],
+    "token_ttl": 0,
+    "token_type": "default"
+  },
+  "warnings": null
+}
+```
+
+## List users
+
+List the users configured in the Okta method.
+
+| Method | Path               |
+| :----- | :----------------- |
+| `LIST` | `/auth/okta/users` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request LIST \
+    http://127.0.0.1:8200/v1/auth/okta/users
+```
+
+### Sample response
+
+```json
+{
+  "auth": null,
+  "warnings": null,
+  "wrap_info": null,
+  "data": {
+    "keys": ["fred", "jane"]
+  },
+  "lease_duration": 0,
+  "renewable": false,
+  "lease_id": ""
+}
+```
+
+## Register user
+
+Registers a new user and maps a set of policies to it.
+
+| Method | Path                         |
+| :----- | :--------------------------- |
+| `POST` | `/auth/okta/users/:username` |
+
+### Parameters
+
+- `username` `(string: <required>)` - Name of the user.
+- `groups` `(array: [])` - List or comma-separated string of groups associated with the user.
+- `policies` `(array: [])` - List or comma-separated string of policies associated with the user.
+
+```json
+{
+  "policies": ["dev", "prod"]
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/auth/okta/users/fred
+```
+
+## Read user
+
+Reads the properties of an existing username.
+
+| Method | Path                         |
+| :----- | :--------------------------- |
+| `GET`  | `/auth/okta/users/:username` |
+
+### Parameters
+
+- `username` `(string: <required>)` - Username for this user.
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/auth/okta/users/test-user
+```
+
+### Sample response
+
+```json
+{
+  "request_id": "812229d7-a82e-0b20-c35b-81ce8c1b9fa6",
+  "lease_id": "",
+  "lease_duration": 0,
+  "renewable": false,
+  "data": {
+    "policies": ["default", "dev"],
+    "groups": []
+  },
+  "warnings": null
+}
+```
+
+## Delete user
+
+Deletes an existing username from the method.
+
+| Method   | Path                         |
+| :------- | :--------------------------- |
+| `DELETE` | `/auth/okta/users/:username` |
+
+### Parameters
+
+- `username` `(string: <required>)` - Username for this user.
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request DELETE \
+    http://127.0.0.1:8200/v1/auth/okta/users/test-user
+```
+
+## List groups
+
+List the groups configured in the Okta method.
+
+| Method | Path                |
+| :----- | :------------------ |
+| `LIST` | `/auth/okta/groups` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request LIST \
+    http://127.0.0.1:8200/v1/auth/okta/groups
+```
+
+### Sample response
+
+```json
+{
+  "auth": null,
+  "warnings": null,
+  "wrap_info": null,
+  "data": {
+    "keys": ["admins", "dev-users"]
+  },
+  "lease_duration": 0,
+  "renewable": false,
+  "lease_id": ""
+}
+```
+
+## Register group
+
+Registers a new group and maps a set of policies to it.
+
+| Method | Path                      |
+| :----- | :------------------------ |
+| `POST` | `/auth/okta/groups/:name` |
+
+### Parameters
+
+- `name` `(string: <required>)` - The name of the group.
+- `policies` `(array: [])` - The list or comma-separated string of policies associated with the group.
+
+```json
+{
+  "policies": ["dev", "prod"]
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/auth/okta/groups/admins
+```
+
+## Read group
+
+Reads the properties of an existing group.
+
+| Method | Path                      |
+| :----- | :------------------------ |
+| `GET`  | `/auth/okta/groups/:name` |
+
+### Parameters
+
+- `name` `(string: <required>)` - The name for the group.
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/auth/okta/groups/admins
+```
+
+### Sample response
+
+```json
+{
+  "request_id": "812229d7-a82e-0b20-c35b-81ce8c1b9fa6",
+  "lease_id": "",
+  "lease_duration": 0,
+  "renewable": false,
+  "data": {
+    "policies": ["default", "admin"]
+  },
+  "warnings": null
+}
+```
+
+## Delete group
+
+Deletes an existing group from the method.
+
+| Method   | Path                      |
+| :------- | :------------------------ |
+| `DELETE` | `/auth/okta/groups/:name` |
+
+### Parameters
+
+- `name` `(string: <required>)` - The name for the group.
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request DELETE \
+    http://127.0.0.1:8200/v1/auth/okta/users/test-user
+```
+
+## Login
+
+Login with the username and password.
+
+| Method | Path                         |
+| :----- | :--------------------------- |
+| `POST` | `/auth/okta/login/:username` |
+
+### Parameters
+
+- `username` `(string: <required>)` - Username for this user.
+- `password` `(string: <required>)` - Password for the authenticating user.
+- `totp` `(string: <optional>)` - Okta Verify TOTP passcode.
+- `provider` `(string: <optional>)` - MFA TOTP factor provider. `GOOGLE` and `OKTA` are currently supported.
+- `nonce` `(string: <optional>)` - Nonce provided during a login request to
+  retrieve the number verification challenge for the matching request.
+
+### Sample payload
+
+```json
+{
+  "password": "Password!"
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/auth/okta/login/fred
+```
+
+### Sample response
+
+```json
+{
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": null,
+  "warnings": null,
+  "auth": {
+    "client_token": "64d2a8f2-2a2f-5688-102b-e6088b76e344",
+    "accessor": "18bb8f89-826a-56ee-c65b-1736dc5ea27d",
+    "policies": ["default"],
+    "metadata": {
+      "username": "fred",
+      "policies": "default"
+    },
+    "lease_duration": 7200,
+    "renewable": true
+  }
+}
+```
+
+## Verify
+
+Verify a number challenge that may result from an Okta Verify Push challenge.
+
+| Method | Path                         |
+| :----- | :--------------------------- |
+| `GET`  | `/auth/okta/verify/:nonce`   |
+
+### Parameters
+
+- `nonce` `(string: <required>)` - Nonce provided if performing login that
+requires number verification challenge. Logins through the vault login CLI
+command will automatically generate a nonce.
+
+### Sample request
+
+```shell-session
+$ curl \
+    http://127.0.0.1:8200/v1/auth/okta/verify/nonce/BCR66Ru6oJKPtC00PxJJ
+```
+
+### Sample response
+
+```json
+{
+  "request_id": "de6a8029-79e5-1dd1-dbe9-6405166b3f94",
+  "lease_id": "",
+  "lease_duration": 0,
+  "renewable": false,
+  "data": {
+    "correct_answer": 94
+  },
+  "warnings": null
+}
+```
+

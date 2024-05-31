@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package metricsutil
 
 import (
@@ -35,5 +38,23 @@ func TTLBucket(ttl time.Duration) string {
 	} else {
 		return bucketBoundaries[upperBound].Label
 	}
+}
 
+func ExpiryBucket(expiryTime time.Time, leaseEpsilon time.Duration, rollingWindow time.Time, labelNS string, useNS bool) *LeaseExpiryLabel {
+	if !useNS {
+		labelNS = ""
+	}
+	leaseExpiryLabel := LeaseExpiryLabel{LabelNS: labelNS}
+
+	// calculate rolling window
+	if expiryTime.Before(rollingWindow) {
+		leaseExpiryLabel.LabelName = expiryTime.Round(leaseEpsilon).String()
+		return &leaseExpiryLabel
+	}
+	return nil
+}
+
+type LeaseExpiryLabel = struct {
+	LabelName string
+	LabelNS   string
 }

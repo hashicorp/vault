@@ -1,0 +1,81 @@
+---
+layout: api
+page_title: /sys/config/state - HTTP API
+description: The '/sys/config/state' endpoint is used to retrieve the configuration state.
+---
+
+# `/sys/config/state`
+
+@include 'alerts/restricted-root.mdx'
+
+The endpoints under `sys/config/state` return Vault's configuration state.
+Currently, it only supports returning a sanitized version of the configuration.
+
+## Get sanitized configuration state
+
+This endpoint returns a sanitized version of the configuration state. The
+configuration excludes certain fields and mappings in the configuration file
+that can potentially contain sensitive information, which includes values from
+`Storage.Config`, `HAStorage.Config`, `Seals.Config` and the
+`Telemetry.CirconusAPIToken` value.
+
+| Method | Path                          |
+| :----- | :---------------------------- |
+| `GET`  | `/sys/config/state/sanitized` |
+
+### Sample request
+
+```shell-session
+$ curl \
+  --header "X-Vault-Token: ..." \
+    'http://127.0.0.1:8200/v1/sys/config/state/sanitized'
+```
+
+### Sample response
+
+```json
+{
+  "api_addr": "http://127.0.0.1:8200",
+  "cache_size": 0,
+  "cluster_addr": "",
+  "cluster_cipher_suites": "",
+  "cluster_name": "",
+  "default_lease_ttl": 0,
+  "default_max_request_duration": 0,
+  "disable_cache": false,
+  "disable_clustering": false,
+  "disable_indexing": false,
+  "disable_mlock": false,
+  "disable_performance_standby": false,
+  "disable_printable_check": false,
+  "disable_sealwrap": false,
+  "enable_ui": true,
+  "listeners": [
+    {
+      "config": {
+        "address": "127.0.0.1:8200",
+        "tls_disable": 1
+      },
+      "type": "tcp"
+    }
+  ],
+  "log_format": "",
+  "log_level": "",
+  "max_lease_ttl": 0,
+  "pid_file": "",
+  "plugin_directory": "/opt/vault/plugins",
+  "raw_storage_endpoint": false,
+  "seals": [
+    {
+      "disabled": false,
+      "type": "shamir"
+    }
+  ],
+  "storage": {
+    "cluster_addr": "",
+    "disable_clustering": false,
+    "redirect_addr": "http://127.0.0.1:8200",
+    "type": "inmem"
+  }
+}
+```

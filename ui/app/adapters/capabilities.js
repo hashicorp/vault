@@ -1,15 +1,34 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import AdapterError from '@ember-data/adapter/error';
 import { set } from '@ember/object';
 import ApplicationAdapter from './application';
-import DS from 'ember-data';
+import { sanitizePath } from 'core/utils/sanitize-path';
 
 export default ApplicationAdapter.extend({
   pathForType() {
     return 'capabilities-self';
   },
 
-  findRecord(store, type, id) {
-    return this.ajax(this.buildURL(type), 'POST', { data: { paths: [id] } }).catch(e => {
-      if (e instanceof DS.AdapterError) {
+  formatPaths(path) {
+    const { relativeNamespace } = this.namespaceService;
+    if (!relativeNamespace) {
+      return [path];
+    }
+    // ensure original path doesn't have leading slash
+    return [`${relativeNamespace}/${path.replace(/^\//, '')}`];
+  },
+
+  async findRecord(store, type, id) {
+    const paths = this.formatPaths(id);
+    return this.ajax(this.buildURL(type), 'POST', {
+      data: { paths },
+      namespace: sanitizePath(this.namespaceService.userRootNamespace),
+    }).catch((e) => {
+      if (e instanceof AdapterError) {
         set(e, 'policyPath', 'sys/capabilities-self');
       }
       throw e;
@@ -21,7 +40,7 @@ export default ApplicationAdapter.extend({
     if (!id) {
       return;
     }
-    return this.findRecord(store, type, id).then(resp => {
+    return this.findRecord(store, type, id).then((resp) => {
       resp.path = id;
       return resp;
     });

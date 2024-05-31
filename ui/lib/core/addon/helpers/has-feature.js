@@ -1,9 +1,15 @@
-import { inject as service } from '@ember/service';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+/* eslint-disable ember/no-observers */
+import { service } from '@ember/service';
 import { assert } from '@ember/debug';
 import Helper from '@ember/component/helper';
 import { observer } from '@ember/object';
 
-const FEATURES = [
+const POSSIBLE_FEATURES = [
   'HSM',
   'Performance Replication',
   'DR Replication',
@@ -12,10 +18,13 @@ const FEATURES = [
   'Seal Wrapping',
   'Control Groups',
   'Namespaces',
+  'KMIP',
+  'Transform Secrets Engine',
+  'Key Management Secrets Engine',
 ];
 
 export function hasFeature(featureName, features) {
-  if (!FEATURES.includes(featureName)) {
+  if (!POSSIBLE_FEATURES.includes(featureName)) {
     assert(`${featureName} is not one of the available values for Vault Enterprise features.`, false);
     return false;
   }
@@ -24,11 +33,10 @@ export function hasFeature(featureName, features) {
 
 export default Helper.extend({
   version: service(),
-  /* eslint-disable-next-line ember/no-observers */
-  onFeaturesChange: observer('version.features.[]', function() {
+  onFeaturesChange: observer('version.features.[]', function () {
     this.recompute();
   }),
   compute([featureName]) {
-    return hasFeature(featureName, this.get('version.features'));
+    return hasFeature(featureName, this.version.features);
   },
 });

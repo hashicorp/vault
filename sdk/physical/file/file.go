@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package file
 
 import (
@@ -14,16 +17,17 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/physical"
 )
 
 // Verify FileBackend satisfies the correct interfaces
-var _ physical.Backend = (*FileBackend)(nil)
-var _ physical.Transactional = (*TransactionalFileBackend)(nil)
-var _ physical.PseudoTransactional = (*FileBackend)(nil)
+var (
+	_ physical.Backend             = (*FileBackend)(nil)
+	_ physical.Transactional       = (*TransactionalFileBackend)(nil)
+	_ physical.PseudoTransactional = (*FileBackend)(nil)
+)
 
 // FileBackend is a physical backend that stores data on disk
 // at a given file path. It can be used for durable single server
@@ -225,34 +229,38 @@ func (b *FileBackend) PutInternal(ctx context.Context, entry *physical.Entry) er
 	if err := b.validatePath(entry.Key); err != nil {
 		return err
 	}
-
 	path, key := b.expandPath(entry.Key)
 
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
 	// Make the parent tree
-	if err := os.MkdirAll(path, 0700); err != nil {
+	if err := os.MkdirAll(path, 0o700); err != nil {
 		return err
 	}
 
 	// JSON encode the entry and write it
 	fullPath := filepath.Join(path, key)
-	f, err := os.OpenFile(
-		fullPath,
-		os.O_CREATE|os.O_TRUNC|os.O_WRONLY,
-		0600)
+	f, err := os.CreateTemp(path, key)
 	if err != nil {
 		if f != nil {
 			f.Close()
 		}
 		return err
 	}
-	if f == nil {
-		return errors.New("could not successfully get a file handle")
+
+	if err = os.Chmod(f.Name(), 0o600); err != nil {
+		if f != nil {
+			f.Close()
+		}
+		return err
 	}
 
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	default:
+	if f == nil {
+		return errors.New("could not successfully get a file handle")
 	}
 
 	enc := json.NewEncoder(f)
@@ -261,6 +269,10 @@ func (b *FileBackend) PutInternal(ctx context.Context, entry *physical.Entry) er
 	})
 	f.Close()
 	if encErr == nil {
+		err = os.Rename(f.Name(), fullPath)
+		if err != nil {
+			return err
+		}
 		return nil
 	}
 
@@ -269,7 +281,7 @@ func (b *FileBackend) PutInternal(ctx context.Context, entry *physical.Entry) er
 	// See if we ended up with a zero-byte file and if so delete it, might be a
 	// case of disk being full but the file info is in metadata that is
 	// reserved.
-	fi, err := os.Stat(fullPath)
+	fi, err := os.Stat(f.Name())
 	if err != nil {
 		return encErr
 	}
@@ -277,7 +289,7 @@ func (b *FileBackend) PutInternal(ctx context.Context, entry *physical.Entry) er
 		return encErr
 	}
 	if fi.Size() == 0 {
-		os.Remove(fullPath)
+		os.Remove(f.Name())
 	}
 	return encErr
 }

@@ -1,14 +1,20 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { alias } from '@ember/object/computed';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import Controller from '@ember/controller';
 
 export default Controller.extend({
   flashMessages: service(),
+  router: service(),
   rm: service('replication-mode'),
   replicationMode: alias('rm.mode'),
   actions: {
     resetConfig(config) {
-      if (config.get('isNew')) {
+      if (config.isNew) {
         config.setProperties({
           mode: null,
           paths: [],
@@ -20,18 +26,19 @@ export default Controller.extend({
 
     saveConfig(config) {
       // if the mode is null, we want no filtering, so we should delete any existing config
-      let isDelete = config.mode === null;
-      const flash = this.get('flashMessages');
+      const isDelete = config.mode === null;
+      const flash = this.flashMessages;
       const id = config.id;
       const redirectArgs = isDelete
-        ? ['mode.secondaries', this.get('replicationMode')]
-        : ['mode.secondaries.config-show', id];
+        ? ['vault.cluster.replication.mode.secondaries', this.replicationMode]
+        : ['vault.cluster.replication.mode.secondaries.config-show', id];
       const modelMethod = isDelete ? config.destroyRecord : config.save;
 
       modelMethod
         .call(config)
         .then(() => {
-          this.transitionToRoute(...redirectArgs)
+          this.router
+            .transitionTo(...redirectArgs)
             .followRedirects()
             .then(() => {
               flash.success(
@@ -41,7 +48,7 @@ export default Controller.extend({
               );
             });
         })
-        .catch(e => {
+        .catch((e) => {
           const errString = e.errors.join('.');
           flash.error(
             `There was an error ${isDelete ? 'deleting' : 'saving'} the config for ${id}: ${errString}`

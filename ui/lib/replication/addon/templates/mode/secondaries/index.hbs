@@ -1,62 +1,57 @@
-{{#if model.replicationAttrs.isPrimary}}
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{#if this.model.replicationAttrs.isPrimary}}
   <Toolbar>
     <ToolbarActions>
-      {{#if model.replicationAttrs.knownSecondaries.length}}
-        {{#if model.canRevokeSecondary}}
-          <ToolbarLink
-            @params={{array "mode.secondaries.revoke" replicationMode}}
-          >
+      {{#if this.model.replicationAttrs.knownSecondaries.length}}
+        {{#if this.model.canRevokeSecondary}}
+          <ToolbarLink @route="mode.secondaries.revoke" @model={{this.replicationMode}}>
             Revoke secondary
           </ToolbarLink>
         {{/if}}
       {{/if}}
-      {{#if model.canAddSecondary}}
-        <ToolbarLink
-          @type="add"
-          @params={{array "mode.secondaries.add" replicationMode}}
-          @data-test-secondary-add=true
-        >
+      {{#if this.model.canAddSecondary}}
+        <ToolbarLink @route="mode.secondaries.add" @model={{this.replicationMode}} @type="add" data-test-secondary-add>
           Add secondary
         </ToolbarLink>
       {{/if}}
     </ToolbarActions>
   </Toolbar>
-  {{#if model.replicationAttrs.knownSecondaries.length}}
-    {{#each model.replicationAttrs.knownSecondaries as |secondary|}}
+  {{#if this.model.replicationAttrs.knownSecondaries.length}}
+    {{#each this.model.replicationAttrs.knownSecondaries as |secondary|}}
       <div class="list-item-row" data-test-secondary-name={{secondary}}>
         <div class="columns is-mobile">
           <div class="column is-10">
             {{secondary}}
           </div>
           <div class="column has-text-right">
-            {{#if (or (eq replicationMode 'performance') model.canRevokeSecondary)}}
-              {{#popup-menu name="secondary-details"}}
-                <nav class="menu">
-                  <ul class="menu-list">
-                    {{#if (eq replicationMode 'performance')}}
-                      <li class="action">
-                        {{#link-to "mode.secondaries.config-show" replicationMode secondary data-test-replication-mount-filter-link=true}}
-                          Mount filter config
-                        {{/link-to}}
-                      </li>
-                    {{/if}}
-                    {{#if model.canRevokeSecondary}}
-                      <li class="action">
-                        <ConfirmAction
-                          @buttonClasses="button link is-destroy"
-                          @confirmTitle="Revoke token?"
-                          @confirmMessage="This will revoke this secondary token."
-                          @confirmButtonText="Revoke"
-                          @horizontalPosition="auto-left"
-                          @onConfirmAction={{action "onSubmit" "revoke-secondary" "primary" (hash id=secondary)}}
-                        >
-                          Revoke
-                        </ConfirmAction>
-                      </li>
-                    {{/if}}
-                  </ul>
-                </nav>
-              {{/popup-menu}}
+            {{#if (or (eq this.replicationMode "performance") this.model.canRevokeSecondary)}}
+              <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+                <dd.ToggleIcon
+                  @icon="more-horizontal"
+                  @text="Secondary popup nav menu"
+                  @hasChevron={{false}}
+                  data-test-popup-menu-trigger
+                />
+                {{#if (eq this.replicationMode "performance")}}
+                  <dd.Interactive
+                    @text="Path filter config"
+                    @route="mode.secondaries.config-show"
+                    @models={{array this.replicationMode secondary}}
+                    data-test-replication-path-filter-link={{true}}
+                  />
+                {{/if}}
+                {{#if this.model.canRevokeSecondary}}
+                  <dd.Interactive
+                    @text="Revoke"
+                    @color="critical"
+                    {{on "click" (fn (mut this.secondaryToRevoke) secondary)}}
+                  />
+                {{/if}}
+              </Hds::Dropdown>
             {{/if}}
           </div>
         </div>
@@ -65,17 +60,25 @@
     {{/each}}
   {{else}}
     <EmptyState
-      @title="No known {{performanceMode}} secondary clusters associated with this cluster"
+      @title="No known {{this.performanceMode}} secondary clusters associated with this cluster"
       @message="Associated secondary clusters will be listed here. Add your first secondary cluster to get started."
     >
-      {{#if model.canAddSecondary}}
-        {{#link-to "mode.secondaries.add" replicationMode class="link" }}
-          Add secondary
-        {{/link-to}}
-      {{/if}}
-      <DocLink @path="/docs/internals/replication.html">
-        Learn more
-      </DocLink>
+      <Hds::Link::Standalone
+        @icon="docs-link"
+        @iconPosition="trailing"
+        @text="Replication documentation"
+        @href={{doc-link "/vault/docs/internals/replication"}}
+      />
     </EmptyState>
   {{/if}}
+{{/if}}
+
+{{#if this.secondaryToRevoke}}
+  <ConfirmModal
+    @color="critical"
+    @confirmTitle="Revoke token?"
+    @confirmMessage="This will revoke this secondary token."
+    @onClose={{fn (mut this.secondaryToRevoke) null}}
+    @onConfirm={{action "onSubmit" "revoke-secondary" "primary" (hash id=this.secondaryToRevoke)}}
+  />
 {{/if}}

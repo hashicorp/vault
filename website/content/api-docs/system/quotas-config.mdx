@@ -1,0 +1,115 @@
+---
+layout: api
+page_title: /sys/quotas/config - HTTP API
+description: The `/sys/quotas/config` endpoint is used to configure rate limit quotas.
+---
+
+# `/sys/quotas/config`
+
+@include 'alerts/restricted-admin.mdx'
+
+
+The `/sys/quotas/config` endpoint is used to configure rate limit quotas.
+
+## Create or update the rate limit configuration
+
+| Method | Path                 |
+| :----- | :------------------- |
+| `POST` | `/sys/quotas/config` |
+
+### Parameters
+
+- `rate_limit_exempt_paths` `([]string: [])` - Specifies the list of exempt paths
+  from all rate limit quotas. Exempt paths are relative and apply to all
+  namespaces. When `rate_limit_exempt_paths` is empty, Vault applies quotas to
+  all relative paths. Access to exemption data is read-only from the admin namespace.
+  **You cannot update `rate_limit_exempt_paths` from the admin namespace**
+- `global_rate_limit_exempt_paths` `([]string: [])` -Specifies the list of
+  exempt paths from all rate limit quotas. Global exempt paths are absolute and
+  do not apply across namespaces. When `global_rate_limit_exempt_paths` is empty,
+  Vault applies quotas to all absolute paths. You can only add, update, or delete
+  global paths within the scope of the calling namespace.
+- `enable_rate_limit_audit_logging` `(bool: false)` - If set, starts audit logging
+  of requests that get rejected due to rate limit quota rule violations.
+- `enable_rate_limit_response_headers` `(bool: false)` - If set, additional rate
+  limit quota HTTP headers will be added to responses. These include:
+  - `Retry-After`: If the request is blocked due to rate limiting, this will
+    be a suggested time, in seconds, to wait before retry after. The time suggested
+    will be the amount of time in seconds remaining before the rate limit quota
+    applicable to this request is reset. Identical to the `X-Ratelimit-Reset` header.
+  - `X-Ratelimit-Limit`: The limit of the rate limit quota applicable to this request.
+  - `X-Ratelimit-Remaining`: The remaining requests in the current interval for the
+    rate limit quota applicable to this request.
+  - `X-Ratelimit-Reset` The amount of time in seconds remaining before the rate limit quota
+    applicable to this request is reset. Identical to the `Retry-After` header.
+
+
+### Sample payload
+
+```json
+{
+  "rate_limit_exempt_paths": [
+    "sys/internal/ui/mounts",
+    "sys/generate-recovery-token/attempt",
+    "sys/generate-recovery-token/update",
+    "sys/generate-root/attempt",
+    "sys/generate-root/update",
+    "sys/health",
+    "sys/seal-status",
+    "sys/unseal"
+  ],
+  "enable_rate_limit_audit_logging": true,
+  "enable_rate_limit_response_headers": true
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --request POST \
+    --header "X-Vault-Token: ..." \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/quotas/config
+```
+
+## Get the rate limit configuration
+
+| Method | Path                 |
+| :----- | :------------------- |
+| `GET`  | `/sys/quotas/config` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --request GET \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/quotas/config
+```
+
+### Sample response
+
+```json
+{
+  "request_id": "259801bd-a0c9-9350-8eb9-26c91afd19c6",
+  "lease_id": "",
+  "lease_duration": 0,
+  "renewable": false,
+  "data": {
+    "enable_rate_limit_audit_logging": false,
+    "enable_rate_limit_response_headers": false,
+    "rate_limit_exempt_paths": [
+      "sys/internal/ui/mounts",
+      "sys/generate-recovery-token/attempt",
+      "sys/generate-recovery-token/update",
+      "sys/generate-root/attempt",
+      "sys/generate-root/update",
+      "sys/health",
+      "sys/seal-status",
+      "sys/unseal"
+    ]
+  },
+  "warnings": null
+}
+```

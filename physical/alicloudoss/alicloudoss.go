@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package alicloudoss
 
 import (
@@ -14,7 +17,6 @@ import (
 
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 	"github.com/armon/go-metrics"
-	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/physical"
 )
@@ -92,7 +94,7 @@ func NewAliCloudOSSBackend(conf map[string]string, logger log.Logger) (physical.
 
 	_, err = bucketObj.ListObjects()
 	if err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("unable to access bucket %q at endpoint %q: {{err}}", bucket, endpoint), err)
+		return nil, fmt.Errorf("unable to access bucket %q at endpoint %q: %w", bucket, endpoint, err)
 	}
 
 	maxParStr, ok := conf["max_parallel"]
@@ -100,7 +102,7 @@ func NewAliCloudOSSBackend(conf map[string]string, logger log.Logger) (physical.
 	if ok {
 		maxParInt, err = strconv.Atoi(maxParStr)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
+			return nil, fmt.Errorf("failed parsing max_parallel parameter: %w", err)
 		}
 		if logger.IsDebug() {
 			logger.Debug("max_parallel set", "max_parallel", maxParInt)
@@ -129,7 +131,6 @@ func (a *AliCloudOSSBackend) Put(ctx context.Context, entry *physical.Entry) err
 	}
 
 	return bucket.PutObject(entry.Key, bytes.NewReader(entry.Value))
-
 }
 
 // Get is used to fetch an entry

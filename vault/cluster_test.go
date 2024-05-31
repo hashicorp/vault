@@ -1,15 +1,20 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"fmt"
 	"net/http"
 	"sync"
 	"testing"
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -18,9 +23,7 @@ import (
 	"github.com/hashicorp/vault/vault/cluster"
 )
 
-var (
-	clusterTestPausePeriod = 2 * time.Second
-)
+var clusterTestPausePeriod = 2 * time.Second
 
 func TestClusterFetching(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
@@ -62,6 +65,7 @@ func TestClusterHAFetching(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer c.Shutdown()
 	keys, _ := TestCoreInit(t, c)
 	for _, key := range keys {
 		if _, err := TestCoreUnseal(c, TestKeyCopy(key)); err != nil {
@@ -171,7 +175,7 @@ func TestCluster_ListenForRequests(t *testing.T) {
 
 func TestCluster_ForwardRequests(t *testing.T) {
 	// Make this nicer for tests
-	manualStepDownSleepPeriod = 5 * time.Second
+	manualStepDownSleepPeriod = 2 * time.Second
 
 	t.Run("tcpLayer", func(t *testing.T) {
 		testCluster_ForwardRequestsCommon(t, nil)
@@ -218,7 +222,7 @@ func testCluster_ForwardRequestsCommon(t *testing.T, clusterOpts *TestClusterOpt
 	root := cluster.RootToken
 
 	// Wait for core to become active
-	TestWaitActive(t, cores[0].Core)
+	TestWaitActiveForwardingReady(t, cores[0].Core)
 
 	// Test forwarding a request. Since we're going directly from core to core
 	// with no fallback we know that if it worked, request handling is working
@@ -232,107 +236,110 @@ func testCluster_ForwardRequestsCommon(t *testing.T, clusterOpts *TestClusterOpt
 	//
 
 	// Ensure active core is cores[1] and test
-	err := cores[0].StepDown(context.Background(), &logical.Request{
-		Operation:   logical.UpdateOperation,
-		Path:        "sys/step-down",
-		ClientToken: root,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	time.Sleep(clusterTestPausePeriod)
-	_ = cores[2].StepDown(context.Background(), &logical.Request{
-		Operation:   logical.UpdateOperation,
-		Path:        "sys/step-down",
-		ClientToken: root,
-	})
-	time.Sleep(clusterTestPausePeriod)
-	TestWaitActive(t, cores[1].Core)
-	testCluster_ForwardRequests(t, cores[0], root, "core2")
-	testCluster_ForwardRequests(t, cores[2], root, "core2")
+	testCluster_Forwarding(t, cluster, 0, 1, root, "core2")
 
 	// Ensure active core is cores[2] and test
-	err = cores[1].StepDown(context.Background(), &logical.Request{
-		Operation:   logical.UpdateOperation,
-		Path:        "sys/step-down",
-		ClientToken: root,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	time.Sleep(clusterTestPausePeriod)
-	_ = cores[0].StepDown(context.Background(), &logical.Request{
-		Operation:   logical.UpdateOperation,
-		Path:        "sys/step-down",
-		ClientToken: root,
-	})
-	time.Sleep(clusterTestPausePeriod)
-	TestWaitActive(t, cores[2].Core)
-	testCluster_ForwardRequests(t, cores[0], root, "core3")
-	testCluster_ForwardRequests(t, cores[1], root, "core3")
+	testCluster_Forwarding(t, cluster, 1, 2, root, "core3")
 
 	// Ensure active core is cores[0] and test
-	err = cores[2].StepDown(context.Background(), &logical.Request{
-		Operation:   logical.UpdateOperation,
-		Path:        "sys/step-down",
-		ClientToken: root,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	time.Sleep(clusterTestPausePeriod)
-	_ = cores[1].StepDown(context.Background(), &logical.Request{
-		Operation:   logical.UpdateOperation,
-		Path:        "sys/step-down",
-		ClientToken: root,
-	})
-	time.Sleep(clusterTestPausePeriod)
-	TestWaitActive(t, cores[0].Core)
-	testCluster_ForwardRequests(t, cores[1], root, "core1")
-	testCluster_ForwardRequests(t, cores[2], root, "core1")
+	testCluster_Forwarding(t, cluster, 2, 0, root, "core1")
 
 	// Ensure active core is cores[1] and test
-	err = cores[0].StepDown(context.Background(), &logical.Request{
-		Operation:   logical.UpdateOperation,
-		Path:        "sys/step-down",
-		ClientToken: root,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	time.Sleep(clusterTestPausePeriod)
-	_ = cores[2].StepDown(context.Background(), &logical.Request{
-		Operation:   logical.UpdateOperation,
-		Path:        "sys/step-down",
-		ClientToken: root,
-	})
-	time.Sleep(clusterTestPausePeriod)
-	TestWaitActive(t, cores[1].Core)
-	testCluster_ForwardRequests(t, cores[0], root, "core2")
-	testCluster_ForwardRequests(t, cores[2], root, "core2")
+	testCluster_Forwarding(t, cluster, 0, 1, root, "core2")
 
 	// Ensure active core is cores[2] and test
-	err = cores[1].StepDown(context.Background(), &logical.Request{
+	testCluster_Forwarding(t, cluster, 1, 2, root, "core3")
+}
+
+func testCluster_Forwarding(t *testing.T, cluster *TestCluster, oldLeaderCoreIdx, newLeaderCoreIdx int, rootToken, remoteCoreID string) {
+	cluster.Logger.Info("stepping down cores to make new_idx the leader", "old_idx", oldLeaderCoreIdx, "new_idx", newLeaderCoreIdx)
+	err := cluster.Cores[oldLeaderCoreIdx].StepDown(context.Background(), &logical.Request{
 		Operation:   logical.UpdateOperation,
 		Path:        "sys/step-down",
-		ClientToken: root,
+		ClientToken: rootToken,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(clusterTestPausePeriod)
-	_ = cores[0].StepDown(context.Background(), &logical.Request{
-		Operation:   logical.UpdateOperation,
-		Path:        "sys/step-down",
-		ClientToken: root,
-	})
-	time.Sleep(clusterTestPausePeriod)
-	TestWaitActive(t, cores[2].Core)
-	testCluster_ForwardRequests(t, cores[0], root, "core3")
-	testCluster_ForwardRequests(t, cores[1], root, "core3")
+
+	waitNewLeader := func(oldIdx int) {
+		t.Helper()
+		corehelpers.RetryUntil(t, 2*clusterTestPausePeriod, func() error {
+			found := false
+			for i, core := range cluster.Cores {
+				if core.Core.Sealed() {
+					continue
+				}
+
+				isLeader, _, _, _ := core.Leader()
+				if isLeader {
+					if i == oldLeaderCoreIdx {
+						return fmt.Errorf("old leader still reigns")
+					}
+					found = true
+				}
+			}
+
+			if !found {
+				return fmt.Errorf("no leader found")
+			}
+
+			return nil
+		})
+	}
+
+	waitNewLeader(oldLeaderCoreIdx)
+
+	// We've stepped down oldLeaderCoreIdx.  Wait for a new node to become leader,
+	// then step down all the other nodes that aren't the new or old leader.
+
+	for i := 0; i < 3; i++ {
+		if i != oldLeaderCoreIdx && i != newLeaderCoreIdx {
+			cluster.Logger.Info("stepping down core", "idx", i)
+			_ = cluster.Cores[i].StepDown(context.Background(), &logical.Request{
+				Operation:   logical.UpdateOperation,
+				Path:        "sys/step-down",
+				ClientToken: rootToken,
+			})
+			waitNewLeader(i)
+		}
+	}
+
+	cluster.Logger.Info("new leader should be ready, waiting", "idx", newLeaderCoreIdx)
+	TestWaitActiveForwardingReady(t, cluster.Cores[newLeaderCoreIdx].Core)
+
+	deadline := time.Now().Add(5 * time.Second)
+	var ready int
+	for time.Now().Before(deadline) {
+		for i := 0; i < 3; i++ {
+			if i != newLeaderCoreIdx {
+				leaderParams := cluster.Cores[i].clusterLeaderParams.Load().(*ClusterLeaderParams)
+				if leaderParams != nil && leaderParams.LeaderClusterAddr == cluster.Cores[newLeaderCoreIdx].ClusterAddr() {
+					ready++
+				}
+			}
+		}
+		if ready == 2 {
+			break
+		}
+		ready = 0
+
+		time.Sleep(100 * time.Millisecond)
+	}
+	if ready != 2 {
+		t.Fatal("standbys have not discovered the new active node in time")
+	}
+
+	for i := 0; i < 3; i++ {
+		if i != newLeaderCoreIdx {
+			testCluster_ForwardRequests(t, cluster.Cores[i], rootToken, remoteCoreID)
+		}
+	}
 }
 
 func testCluster_ForwardRequests(t *testing.T, c *TestClusterCore, rootToken, remoteCoreID string) {
+	t.Helper()
+
 	standby, err := c.Standby()
 	if err != nil {
 		t.Fatal(err)
@@ -349,6 +356,13 @@ func testCluster_ForwardRequests(t *testing.T, c *TestClusterCore, rootToken, re
 	if isLeader {
 		t.Fatal("core should not be leader")
 	}
+	corehelpers.RetryUntil(t, 5*time.Second, func() error {
+		state := c.ActiveNodeReplicationState()
+		if state == 0 {
+			return fmt.Errorf("heartbeats have not yet returned a valid active node replication state: %d", state)
+		}
+		return nil
+	})
 
 	bodBuf := bytes.NewReader([]byte(`{ "foo": "bar", "zip": "zap" }`))
 	req, err := http.NewRequest("PUT", "https://pushit.real.good:9281/"+remoteCoreID, bodBuf)
@@ -356,7 +370,7 @@ func testCluster_ForwardRequests(t *testing.T, c *TestClusterCore, rootToken, re
 		t.Fatal(err)
 	}
 	req.Header.Add(consts.AuthHeaderName, rootToken)
-	req = req.WithContext(context.WithValue(req.Context(), "original_request_path", req.URL.Path))
+	req = req.WithContext(logical.CreateContextOriginalRequestPath(req.Context(), req.URL.Path))
 
 	statusCode, header, respBytes, err := c.ForwardRequest(req)
 	if err != nil {

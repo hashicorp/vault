@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pprof
 
 import (
@@ -10,116 +13,28 @@ import (
 
 	"github.com/hashicorp/go-cleanhttp"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/vault"
 	"golang.org/x/net/http2"
 )
 
 func TestSysPprof(t *testing.T) {
+	t.Parallel()
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
+		HandlerFunc:             vaulthttp.Handler,
+		RequestResponseCallback: schema.ResponseValidatingCallback(t),
 	})
 	cluster.Start()
 	defer cluster.Cleanup()
 
 	core := cluster.Cores[0].Core
 	vault.TestWaitActive(t, core)
-	client := cluster.Cores[0].Client
-
-	transport := cleanhttp.DefaultPooledTransport()
-	transport.TLSClientConfig = cluster.Cores[0].TLSConfig.Clone()
-	if err := http2.ConfigureTransport(transport); err != nil {
-		t.Fatal(err)
-	}
-	httpClient := &http.Client{
-		Transport: transport,
-	}
-
-	cases := []struct {
-		name    string
-		path    string
-		seconds string
-	}{
-		{
-			"index",
-			"/v1/sys/pprof/",
-			"",
-		},
-		{
-			"cmdline",
-			"/v1/sys/pprof/cmdline",
-			"",
-		},
-		{
-			"goroutine",
-			"/v1/sys/pprof/goroutine",
-			"",
-		},
-		{
-			"heap",
-			"/v1/sys/pprof/heap",
-			"",
-		},
-		{
-			"profile",
-			"/v1/sys/pprof/profile",
-			"1",
-		},
-		{
-			"symbol",
-			"/v1/sys/pprof/symbol",
-			"",
-		},
-		{
-			"trace",
-			"/v1/sys/pprof/trace",
-			"1",
-		},
-	}
-
-	pprofRequest := func(path string, seconds string) {
-		req := client.NewRequest("GET", path)
-		if seconds != "" {
-			req.Params.Set("seconds", seconds)
-		}
-		httpReq, err := req.ToHTTP()
-		if err != nil {
-			t.Fatal(err)
-		}
-		resp, err := httpClient.Do(httpReq)
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer resp.Body.Close()
-
-		httpRespBody, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		httpResp := make(map[string]interface{})
-
-		// Skip this error check since some endpoints return binary blobs, we
-		// only care about the ok check right after as an existence check.
-		_ = json.Unmarshal(httpRespBody, &httpResp)
-
-		// Make sure that we don't get a error response
-		if _, ok := httpResp["errors"]; ok {
-			t.Fatalf("unexpected error response: %v", httpResp["errors"])
-		}
-
-		if len(httpRespBody) == 0 {
-			t.Fatal("no pprof index returned")
-		}
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			pprofRequest(tc.path, tc.seconds)
-		})
-	}
+	SysPprof_Test(t, cluster)
 }
 
 func TestSysPprof_MaxRequestDuration(t *testing.T) {
+	t.Parallel()
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
@@ -128,7 +43,7 @@ func TestSysPprof_MaxRequestDuration(t *testing.T) {
 	client := cluster.Cores[0].Client
 
 	transport := cleanhttp.DefaultPooledTransport()
-	transport.TLSClientConfig = cluster.Cores[0].TLSConfig.Clone()
+	transport.TLSClientConfig = cluster.Cores[0].TLSConfig()
 	if err := http2.ConfigureTransport(transport); err != nil {
 		t.Fatal(err)
 	}
@@ -168,6 +83,25 @@ func TestSysPprof_MaxRequestDuration(t *testing.T) {
 		t.Fatalf("expected error response, got: %v", httpResp)
 	}
 	if len(errs) == 0 || !strings.Contains(errs[0].(string), "exceeds max request duration") {
-		t.Fatalf("unexptected error returned: %v", errs)
+		t.Fatalf("unexpected error returned: %v", errs)
 	}
+}
+
+func TestSysPprof_Standby(t *testing.T) {
+	t.Parallel()
+	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
+		DisablePerformanceStandby: true,
+	}, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+		DefaultHandlerProperties: vault.HandlerProperties{
+			ListenerConfig: &configutil.Listener{
+				Profiling: configutil.ListenerProfiling{
+					UnauthenticatedPProfAccess: true,
+				},
+			},
+		},
+	})
+	defer cluster.Cleanup()
+
+	SysPprof_Standby_Test(t, cluster)
 }

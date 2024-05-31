@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package awsauth
 
 import (
@@ -8,10 +11,12 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/awsutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	vlttesting "github.com/hashicorp/vault/helper/testhelpers/logical"
-	"github.com/hashicorp/vault/sdk/helper/awsutil"
+	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -299,7 +304,6 @@ func TestBackend_pathIam(t *testing.T) {
 		Data:      data,
 		Storage:   storage,
 	})
-
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -526,7 +530,6 @@ func TestBackend_pathRoleMixedTypes(t *testing.T) {
 	if !resp.IsError() {
 		t.Fatalf("allowed changing resolve_aws_unique_ids from true to false")
 	}
-
 }
 
 func TestAwsEc2_RoleCrud(t *testing.T) {
@@ -761,10 +764,10 @@ func TestAwsEc2_RoleDurationSeconds(t *testing.T) {
 	}
 
 	if resp.Data["ttl"].(int64) != 10 {
-		t.Fatalf("bad: period; expected: 10, actual: %d", resp.Data["ttl"])
+		t.Fatalf("bad: ttl; expected: 10, actual: %d", resp.Data["ttl"])
 	}
 	if resp.Data["max_ttl"].(int64) != 20 {
-		t.Fatalf("bad: period; expected: 20, actual: %d", resp.Data["max_ttl"])
+		t.Fatalf("bad: max_ttl; expected: 20, actual: %d", resp.Data["max_ttl"])
 	}
 	if resp.Data["period"].(int64) != 30 {
 		t.Fatalf("bad: period; expected: 30, actual: %d", resp.Data["period"])
@@ -813,7 +816,6 @@ func TestRoleEntryUpgradeV(t *testing.T) {
 }
 
 func TestRoleInitialize(t *testing.T) {
-
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
@@ -968,7 +970,6 @@ func TestRoleInitialize(t *testing.T) {
 }
 
 func TestAwsVersion(t *testing.T) {
-
 	before := awsVersion{
 		Version: 42,
 	}
@@ -1009,7 +1010,8 @@ func TestRoleResolutionWithSTSEndpointConfigured(t *testing.T) {
 	}
 
 	// Ensure aws credentials are available locally for testing.
-	credsConfig := &awsutil.CredentialsConfig{}
+	logger := logging.NewVaultLogger(hclog.Debug)
+	credsConfig := &awsutil.CredentialsConfig{Logger: logger}
 	credsChain, err := credsConfig.GenerateCredentialChain()
 	if err != nil {
 		t.Fatal(err)

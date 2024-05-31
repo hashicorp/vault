@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package quotas
 
 import (
@@ -6,13 +9,13 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/stretchr/testify/require"
-
 	"github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/builtin/logical/pki"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/atomic"
 )
 
@@ -24,16 +27,14 @@ path "/auth/token/lookup" {
 `
 )
 
-var (
-	coreConfig = &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"pki": pki.Factory,
-		},
-		CredentialBackends: map[string]logical.Factory{
-			"userpass": userpass.Factory,
-		},
-	}
-)
+var coreConfig = &vault.CoreConfig{
+	LogicalBackends: map[string]logical.Factory{
+		"pki": pki.Factory,
+	},
+	CredentialBackends: map[string]logical.Factory{
+		"userpass": userpass.Factory,
+	},
+}
 
 func setupMounts(t *testing.T, client *api.Client) {
 	t.Helper()
@@ -78,7 +79,6 @@ func setupMounts(t *testing.T, client *api.Client) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 }
 
 func teardownMounts(t *testing.T, client *api.Client) {
@@ -87,6 +87,9 @@ func teardownMounts(t *testing.T, client *api.Client) {
 		t.Fatal(err)
 	}
 	if err := client.Sys().DisableAuth("userpass"); err != nil {
+		t.Fatal(err)
+	}
+	if err := client.Sys().DisableAuth("approle"); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -127,8 +130,10 @@ func waitForRemovalOrTimeout(c *api.Client, path string, tick, to time.Duration)
 	}
 }
 
-func TestQuotas_RateLimitQuota_DupName(t *testing.T) {
+func TestQuotas_RateLimit_DupName(t *testing.T) {
 	conf, opts := teststorage.ClusterSetup(coreConfig, nil, nil)
+	opts.NoDefaultQuotas = true
+	opts.RequestResponseCallback = schema.ResponseValidatingCallback(t)
 	cluster := vault.NewTestCluster(t, conf, opts)
 	cluster.Start()
 	defer cluster.Cleanup()
@@ -159,6 +164,129 @@ func TestQuotas_RateLimitQuota_DupName(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Len(t, s.Data, 1, "incorrect number of quotas")
+}
+
+func TestQuotas_RateLimit_DupPath(t *testing.T) {
+	conf, opts := teststorage.ClusterSetup(coreConfig, nil, nil)
+	opts.NoDefaultQuotas = true
+	opts.RequestResponseCallback = schema.ResponseValidatingCallback(t)
+	cluster := vault.NewTestCluster(t, conf, opts)
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	core := cluster.Cores[0].Core
+	client := cluster.Cores[0].Client
+	vault.TestWaitActive(t, core)
+	// create a global rate limit quota
+	_, err := client.Logical().Write("sys/quotas/rate-limit/global-rlq", map[string]interface{}{
+		"rate": 10,
+		"path": "",
+	})
+	require.NoError(t, err)
+
+	// create a rate limit quota w/ 'secret' path
+	_, err = client.Logical().Write("sys/quotas/rate-limit/secret-rlq", map[string]interface{}{
+		"rate": 7.7,
+		"path": "secret",
+	})
+	require.NoError(t, err)
+
+	s, err := client.Logical().Read("sys/quotas/rate-limit/secret-rlq")
+	require.NoError(t, err)
+	require.NotEmpty(t, s.Data)
+
+	// create a rate limit quota w/ empty path (same name)
+	_, err = client.Logical().Write("sys/quotas/rate-limit/secret-rlq", map[string]interface{}{
+		"rate": 7.7,
+		"path": "",
+	})
+
+	if err == nil {
+		t.Fatal("Duplicated paths were accepted")
+	}
+}
+
+func TestQuotas_RateLimitQuota_ExemptPaths(t *testing.T) {
+	conf, opts := teststorage.ClusterSetup(coreConfig, nil, nil)
+	opts.NoDefaultQuotas = true
+	opts.RequestResponseCallback = schema.ResponseValidatingCallback(t)
+	cluster := vault.NewTestCluster(t, conf, opts)
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	core := cluster.Cores[0].Core
+	client := cluster.Cores[0].Client
+	vault.TestWaitActive(t, core)
+
+	_, err := client.Logical().Write("sys/quotas/rate-limit/rlq", map[string]interface{}{
+		"rate": 7.7,
+	})
+	require.NoError(t, err)
+
+	// ensure exempt paths are not empty by default
+	resp, err := client.Logical().Read("sys/quotas/config")
+	require.NoError(t, err)
+	require.NotEmpty(t, resp.Data["rate_limit_exempt_paths"].([]interface{}), "expected no exempt paths by default")
+
+	reqFunc := func(numSuccess, numFail *atomic.Int32) {
+		_, err := client.Logical().Read("sys/quotas/rate-limit/rlq")
+
+		if err != nil {
+			numFail.Add(1)
+		} else {
+			numSuccess.Add(1)
+		}
+	}
+
+	numSuccess, numFail, elapsed := testRPS(reqFunc, 5*time.Second)
+	ideal := 8 + (7.7 * float64(elapsed) / float64(time.Second))
+	want := int32(ideal + 1)
+	require.NotZerof(t, numFail, "expected some requests to fail; numSuccess: %d, elapsed: %d", numSuccess, elapsed)
+	require.LessOrEqualf(t, numSuccess, want, "too many successful requests;numSuccess: %d, numFail: %d, elapsed: %d", numSuccess, numFail, elapsed)
+
+	// allow time (1s) for rate limit to refill before updating the quota config
+	time.Sleep(time.Second)
+
+	_, err = client.Logical().Write("sys/quotas/config", map[string]interface{}{
+		"rate_limit_exempt_paths": []string{"sys/quotas/rate-limit"},
+	})
+	require.NoError(t, err)
+
+	// all requests should success
+	numSuccess, numFail, _ = testRPS(reqFunc, 5*time.Second)
+	require.NotZero(t, numSuccess)
+	require.Zero(t, numFail)
+}
+
+func TestQuotas_RateLimitQuota_DefaultExemptPaths(t *testing.T) {
+	conf, opts := teststorage.ClusterSetup(coreConfig, nil, nil)
+	opts.NoDefaultQuotas = true
+	opts.RequestResponseCallback = schema.ResponseValidatingCallback(t)
+	cluster := vault.NewTestCluster(t, conf, opts)
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	core := cluster.Cores[0].Core
+	client := cluster.Cores[0].Client
+	vault.TestWaitActive(t, core)
+
+	_, err := client.Logical().Write("sys/quotas/rate-limit/rlq", map[string]interface{}{
+		"rate": 1,
+	})
+	require.NoError(t, err)
+
+	resp, err := client.Logical().Read("sys/health")
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+
+	// The second sys/health call should not fail as /v1/sys/health is
+	// part of the default exempt paths
+	resp, err = client.Logical().Read("sys/health")
+	require.NoError(t, err)
+	// If the response is nil, then we are being rate limited
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
 }
 
 func TestQuotas_RateLimitQuota_Mount(t *testing.T) {
@@ -236,7 +364,7 @@ func TestQuotas_RateLimitQuota_Mount(t *testing.T) {
 
 	// update the rate limit quota with a high RPS such that no requests should fail
 	_, err = client.Logical().Write("sys/quotas/rate-limit/rlq", map[string]interface{}{
-		"rate": 1000.0,
+		"rate": 10000.0,
 		"path": "pki/",
 	})
 	if err != nil {
@@ -251,6 +379,7 @@ func TestQuotas_RateLimitQuota_Mount(t *testing.T) {
 
 func TestQuotas_RateLimitQuota_MountPrecedence(t *testing.T) {
 	conf, opts := teststorage.ClusterSetup(coreConfig, nil, nil)
+	opts.NoDefaultQuotas = true
 	cluster := vault.NewTestCluster(t, conf, opts)
 	cluster.Start()
 	defer cluster.Cleanup()
@@ -337,6 +466,7 @@ func TestQuotas_RateLimitQuota_MountPrecedence(t *testing.T) {
 
 func TestQuotas_RateLimitQuota(t *testing.T) {
 	conf, opts := teststorage.ClusterSetup(coreConfig, nil, nil)
+	opts.NoDefaultQuotas = true
 	cluster := vault.NewTestCluster(t, conf, opts)
 	cluster.Start()
 	defer cluster.Cleanup()
@@ -400,7 +530,7 @@ func TestQuotas_RateLimitQuota(t *testing.T) {
 
 	// update the rate limit quota with a high RPS such that no requests should fail
 	_, err = client.Logical().Write("sys/quotas/rate-limit/rlq", map[string]interface{}{
-		"rate": 1000.0,
+		"rate": 10000.0,
 	})
 	if err != nil {
 		t.Fatal(err)

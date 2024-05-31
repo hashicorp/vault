@@ -1,0 +1,3 @@
+```release-note:improvement
+api: Provide a helper method WithNamespace to create a cloned client with a new NS
+```

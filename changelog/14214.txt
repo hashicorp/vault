@@ -1,0 +1,3 @@
+```release-note:improvement
+agent: Adds ability to configure specific user-assigned managed identities for Azure auto-auth.
+```

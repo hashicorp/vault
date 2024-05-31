@@ -1,0 +1,6 @@
+```release-note:feature
+**Non-Disruptive Intermediate/Root Certificate Rotation**: This allows
+import, generation and configuration of any number of keys and/or issuers
+within a PKI mount, providing operators the ability to rotate certificates
+in place without affecting existing client configurations.
+```

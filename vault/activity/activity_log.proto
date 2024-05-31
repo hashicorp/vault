@@ -1,0 +1,53 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
+syntax = "proto3";
+
+package activity;
+
+option go_package = "github.com/hashicorp/vault/vault/activity";
+
+// EntityRecord is generated the first time a client is active each month. This
+// can store clients associated with entities or nonEntity clients, and really
+// is a ClientRecord, not specifically an EntityRecord.
+message EntityRecord {
+  string client_id = 1;
+  string namespace_id = 2;
+  // using the Timestamp type would cost us an extra
+  // 4 bytes per record to store nanoseconds.
+  int64 timestamp = 3;
+  // non_entity records whether the given EntityRecord is
+  // for a TWE or an entity-bound token.
+  bool non_entity = 4;
+  // MountAccessor is the auth mount accessor of the token used to perform the
+  // activity.
+  string mount_accessor = 5;
+  // client_type identifies the source of the entity record (entity,
+  // non-entity, acme, etc.)
+  string client_type = 6;
+}
+
+message LogFragment {
+  // hostname (or node ID?) where the fragment originated,
+  // used for debugging.
+  string originating_node = 1;
+
+  // active clients not yet in a log segment
+  repeated EntityRecord clients = 2;
+
+  // token counts not yet in a log segment,
+  // indexed by namespace ID
+  map<string, uint64> non_entity_tokens = 3;
+}
+
+// This activity log stores records for both clients with entities
+// and clients without entities
+message EntityActivityLog {
+  repeated EntityRecord clients = 1;
+}
+
+message TokenCount {
+  map<string, uint64> count_by_namespace_id = 1;
+}
+
+message LogFragmentResponse {}

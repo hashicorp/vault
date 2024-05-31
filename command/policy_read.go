@@ -1,15 +1,20 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
 	"fmt"
 	"strings"
 
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/cli"
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*PolicyReadCommand)(nil)
-var _ cli.CommandAutocomplete = (*PolicyReadCommand)(nil)
+var (
+	_ cli.Command             = (*PolicyReadCommand)(nil)
+	_ cli.CommandAutocomplete = (*PolicyReadCommand)(nil)
+)
 
 type PolicyReadCommand struct {
 	*BaseCommand
