@@ -2131,12 +2131,12 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 				},
 			},
 		}
-    resp, err := core.HandleRequest(ctx, req)
-    if err != nil {
-      return nil, fmt.Errorf("error creating default KV store: %w", err)
-    }
-    if resp.IsError() {
-      return nil, fmt.Errorf("failed to create default KV store: %w", resp.Error())
+		resp, err := core.HandleRequest(ctx, req)
+		if err != nil {
+		  return nil, fmt.Errorf("error creating default KV store: %w", err)
+		}
+		if resp.IsError() {
+		  return nil, fmt.Errorf("failed to create default KV store: %w", resp.Error())
 		}
 	}
 
