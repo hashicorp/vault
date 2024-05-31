@@ -149,15 +149,8 @@ export default Component.extend(DEFAULTS, {
       });
     },
 
-    updateTtl(ttl) {
-      set(this, 'wrapTTL', ttl);
-    },
-
-    codemirrorUpdated(val, hasErrors) {
-      setProperties(this, {
-        buttonDisabled: hasErrors,
-        data: val,
-      });
+    onChange(param, value) {
+      set(this, param, value);
     },
   },
 });

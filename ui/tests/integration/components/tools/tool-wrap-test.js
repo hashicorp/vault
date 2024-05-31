@@ -18,22 +18,18 @@ module('Integration | Component | tools/tool-wrap', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.codemirrorUpdated = sinon.spy();
     this.onBack = sinon.spy();
     this.onClear = sinon.spy();
-    this.updateTtl = sinon.spy();
-    this.buttonDisabled = true;
+    this.onChange = sinon.spy();
     this.data = '{\n}';
     this.renderComponent = async () => {
       await render(hbs`
     <ToolWrap
       @token={{this.token}}
-      @buttonDisabled={{this.buttonDisabled}}
       @errors={{this.errors}}
       @onClear={{this.onClear}}
       @onBack={{this.onBack}}
-      @codemirrorUpdated={{this.codemirrorUpdated}}
-      @updateTtl={{this.updateTtl}}
+      @onChange={{this.onChange}}
       @data={{this.data}}
     />`);
     };
@@ -45,7 +41,7 @@ module('Integration | Component | tools/tool-wrap', function (hooks) {
     assert.dom('h1').hasText('Wrap Data', 'Title renders');
     assert.strictEqual(codemirror().getValue(' '), '{ }', 'json editor initializes with empty object');
     assert.dom(GENERAL.toggleInput('Wrap TTL')).isNotChecked('Wrap TTL defaults to unchecked');
-    assert.dom(TS.submit).isDisabled();
+    assert.dom(TS.submit).isEnabled();
     assert.dom(TS.toolsInput('wrapping-token')).doesNotExist();
     assert.dom(TS.button('Back')).doesNotExist();
     assert.dom(TS.button('Done')).doesNotExist();
@@ -65,15 +61,21 @@ module('Integration | Component | tools/tool-wrap', function (hooks) {
     assert.true(this.onClear.calledOnce, 'onClear is called');
   });
 
-  test('it fires callback actions', async function (assert) {
-    this.buttonDisabled = false;
+  test('it calls onChange for json editor', async function (assert) {
     const data = `{"foo": "bar"}`;
     await this.renderComponent();
+    await codemirror().setValue(`{bad json}`);
+    assert.dom(TS.submit).isDisabled('submit disables if json editor has linting errors');
+
     await codemirror().setValue(data);
+    assert.dom(TS.submit).isEnabled('submit reenables if json editor has no linting errors');
+    assert.propEqual(this.onChange.lastCall.args, ['data', data], 'onChange is called with json data');
+  });
+
+  test('it calls onChange for ttl picker', async function (assert) {
+    await this.renderComponent();
     await click(GENERAL.toggleInput('Wrap TTL'));
     await fillIn(GENERAL.ttl.input('Wrap TTL'), '20');
-
-    assert.propEqual(this.codemirrorUpdated.lastCall.args, [data, false], 'codemirrorUpdated is called');
-    assert.propEqual(this.updateTtl.lastCall.args, ['1200s'], 'updateTtl is called');
+    assert.propEqual(this.onChange.lastCall.args, ['wrapTTL', '1200s'], 'onChange is called with wrapTTL');
   });
 });
