@@ -62,7 +62,7 @@ You can configure Vault with any cipher supported by the
 [`tlsutil`](https://github.com/hashicorp/go-secure-stdlib/blob/main/tlsutil/tlsutil.go#L31-L57)
 Go packages. Vault uses the `tlsutil` package to parse ciphersuite configurations.
 
-<Warning title="Sweet32 and 3DES">
+<Note title="Sweet32 and 3DES">
 
   The Go team and HashiCorp believe that the set of cyphers supported by `tls`
   and `tlsutil` is appropriate for modern, secure usage. However, some
@@ -77,7 +77,7 @@ Go packages. Vault uses the `tlsutil` package to parse ciphersuite configuration
   to remove existing client compatibility by deprecating 3DES support, however,
   the team did de-prioritize .
 
-</Warning>
+</Note>
 
 Before overriding Vault defaults, we recommend reviewing the recommended Go team
 [approach to TLS configuration](https://go.dev/blog/tls-cipher-suites) with
