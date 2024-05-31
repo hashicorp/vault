@@ -449,7 +449,7 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		}
 	}
 
-	if metadataInRequest && len(metadata.(string)) > 0 {
+	if metadataInRequest {
 		metadataBytes, err := base64.StdEncoding.DecodeString(metadata.(string))
 		if err != nil {
 			// TODO: Should we clean up the original cert here?
