@@ -8,6 +8,7 @@ import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import syncScenario from 'vault/mirage/scenarios/sync';
 import syncHandlers from 'vault/mirage/handlers/sync';
+import sinon from 'sinon';
 import authPage from 'vault/tests/pages/auth';
 import { click, waitFor, visit, currentURL } from '@ember/test-helpers';
 import { PAGE as ts } from 'vault/tests/helpers/sync/sync-selectors';
@@ -21,6 +22,7 @@ module('Acceptance | sync | overview', function (hooks) {
   hooks.beforeEach(async function () {
     this.version = this.owner.lookup('service:version');
     this.version.features = ['Secrets Sync'];
+    this.permissions = this.owner.lookup('service:permissions');
   });
 
   module('when feature is activated', function (hooks) {
@@ -63,6 +65,26 @@ module('Acceptance | sync | overview', function (hooks) {
         await click(ts.overview.table.actionToggle(0));
         await click(ts.overview.table.action('details'));
         assert.dom(ts.tab('Secrets')).hasClass('active', 'Navigates to secrets view for destination');
+      });
+    });
+
+    module('permissions', function () {
+      test('users without permissions - denies access to sync page', async function (assert) {
+        const hasNavPermission = sinon.stub(this.permissions, 'hasNavPermission');
+        hasNavPermission.returns(false);
+
+        await visit('/vault/sync/secrets/overview');
+
+        assert.strictEqual(currentURL(), '/vault/dashboard', 'redirects to cluster dashboard route');
+      });
+
+      test('users with permissions - allows access to sync page', async function (assert) {
+        const hasNavPermission = sinon.stub(this.permissions, 'hasNavPermission');
+        hasNavPermission.returns(true);
+
+        await visit('/vault/sync/secrets/overview');
+
+        assert.strictEqual(currentURL(), '/vault/sync/secrets/overview', 'stays on the sync overview route');
       });
     });
   });
@@ -209,6 +231,54 @@ module('Acceptance | sync | overview', function (hooks) {
         await click(ts.overview.activationModal.checkbox);
         await click(ts.overview.activationModal.confirm);
       });
+    });
+
+    module('permissions', function () {
+      test('users without permissions - allows access to sync page', async function (assert) {
+        const hasNavPermission = sinon.stub(this.permissions, 'hasNavPermission');
+        hasNavPermission.returns(false);
+
+        await visit('/vault/sync/secrets/overview');
+
+        assert.strictEqual(currentURL(), '/vault/sync/secrets/overview', 'stays on the sync overview route');
+      });
+
+      test('users with permissions - allows access to sync page', async function (assert) {
+        const hasNavPermission = sinon.stub(this.permissions, 'hasNavPermission');
+        hasNavPermission.returns(true);
+
+        await visit('/vault/sync/secrets/overview');
+
+        assert.strictEqual(currentURL(), '/vault/sync/secrets/overview', 'stays on the sync overview route');
+      });
+    });
+  });
+
+  module('sync NOT on license', function (hooks) {
+    hooks.beforeEach(async function () {
+      await authPage.login();
+
+      // reset features *after* login, since the login process will set the initial value according to the actual license
+      this.version.features = [];
+    });
+
+    test('it should not allow access to sync page', async function (assert) {
+      await visit('/vault/sync/secrets/overview');
+
+      assert.strictEqual(currentURL(), '/vault/dashboard', 'redirects to cluster dashboard route');
+    });
+  });
+
+  module('oss', function (hooks) {
+    hooks.beforeEach(async function () {
+      this.version.type = 'community';
+      await authPage.login();
+    });
+
+    test('it should not allow access to sync page', async function (assert) {
+      await visit('/vault/sync/secrets/overview');
+
+      assert.strictEqual(currentURL(), '/vault/dashboard', 'redirects to cluster dashboard route');
     });
   });
 });
