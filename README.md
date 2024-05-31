@@ -21,8 +21,7 @@ A modern system requires access to a multitude of secrets: database credentials,
 
 The key features of Vault are:
 
-* **Secure Secret Storage**: Arbitrary key/value secrets can be stored
-  in Vault. Vault encrypts these secrets prior to writing them to persistent
+* **Secure Secret Storage**: Vault can store arbitrary key/value pairs. Vault encrypts data before writing it to persistent
   storage, so gaining access to the raw storage isn't enough to access
   your secrets. Vault can write to disk, [Consul](https://www.consul.io),
   and more.
@@ -39,8 +38,8 @@ The key features of Vault are:
   developers to store encrypted data in a location such as a SQL database without
   having to design their own encryption methods.
 
-* **Leasing and Renewal**: All secrets in Vault have a _lease_ associated
-  with them. At the end of the lease, Vault will automatically revoke that
+* **Leasing and Renewal**: Vault associates a **lease** with each secret.
+  At the end of the lease, Vault automatically revokes the
   secret. Clients are able to renew leases via built-in renew APIs.
 
 * **Revocation**: Vault has built-in support for secret revocation. Vault
