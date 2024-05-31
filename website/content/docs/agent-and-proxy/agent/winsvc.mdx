@@ -11,6 +11,10 @@ Vault Agent can be run as a Windows service. In order to do this, you need to re
 Service Control Manager. After Vault Agent is registered, it can be started like any other Windows
 service.
 
+While this guide focuses on an example for Vault Agent, this example can be easily adapted to work for
+[Vault Proxy](/vault/docs/agent-and-proxy/proxy) by changing the config and subcommand
+given to `vault.exe` as appropriate.
+
 **Note:** These commands should be run in a PowerShell session with Administrator capabilities.
 
 ## Register Vault Agent as a Windows service
@@ -84,7 +88,7 @@ There are multiple ways to start the service.
 - Using the `sc.exe` command.
 - Using the `Start-Service` cmdlet.
 - Go to the Windows Service Manager, and look for **VaultAgent** in the service name column. Click the
-  `Start` button to start the service.
+`Start` button to start the service.
 
 ### Example starting Vault Agent using `sc.exe`
 
