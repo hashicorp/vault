@@ -72,9 +72,13 @@ module('Unit | Service | flags', function (hooks) {
     test('it does not call activation-flags endpoint if the cluster is OSS', async function (assert) {
       this.version.type = 'community';
 
-      this.server.get('sys/activation-flags', () => {
-        assert.true(false, 'activation-flags is not called');
-      });
+      this.server.get(
+        'sys/activation-flags',
+        () =>
+          new Error(
+            'uh oh! a request was made to sys/activation-flags, this should not happen for community versions'
+          )
+      );
 
       await this.service.fetchActivatedFlags();
       assert.deepEqual(this.service.activatedFlags, [], 'Activated flags are empty');
