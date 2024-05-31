@@ -47,6 +47,42 @@ also omit keys from the response when the corresponding value is empty (`""`).
   settings will apply to CLI and UI output in addition to direct API calls.
 </Note>
 
+## Default TLS configuration
+
+By default, Vault TCP listeners only accept TLS 1.2 or 1.3 connections and will
+drop connection requests from clients using TLS 1.0 or 1.1.
+
+Vault uses the following ciphersuites by default:
+
+- **TLS 1.3** - `TLS_AES_128_GCM_SHA256`, `TLS_AES_256_GCM_SHA384`, or `TLS_CHACHA20_POLY1305_SHA256`.
+- **TLS 1.2** - depends on whether you configure Vault with a RSA or ECDSA certificate. 
+
+You can configure Vault with any cipher supported by the
+[`tls`](https://pkg.go.dev/crypto/tls) and
+[`tlsutil`](https://github.com/hashicorp/go-secure-stdlib/blob/main/tlsutil/tlsutil.go#L31-L57)
+Go packages. Vault uses the `tlsutil` package to parse ciphersuite configurations.
+
+<Warning title="Sweet32 and 3DES">
+
+  The Go team and HashiCorp believe that the set of cyphers supported by `tls`
+  and `tlsutil` is appropriate for modern, secure usage. However, some
+  vulnerability scanners may flag issues with your configuration.
+
+  In particular, Sweet32 (CVE-2016-2183) is an attack against 64-bit block size
+  ciphers including 3DES that may allow an attacker to break the encryption of
+  long lived connections. According to vulnerability disclosures, Sweet32 took a
+  single HTTPS session with 785 GB of traffic to break the encryption.
+
+  As of May 2024, the Go team does not believe the risk of Sweet32 is sufficient
+  to remove existing client compatibility by deprecating 3DES support, however,
+  the team did de-prioritize .
+
+</Warning>
+
+Before overriding Vault defaults, we recommend reviewing the recommended Go team
+[approach to TLS configuration](https://go.dev/blog/tls-cipher-suites) with
+particular attention to their ciphersuite selections.
+
 ## Listener's custom response headers
 
 As of version 1.9, Vault supports defining custom HTTP response headers for the root path (`/`) and also on API endpoints (`/v1/*`).
@@ -303,6 +339,7 @@ This example shows enabling a TLS listener.
 
 ```hcl
 listener "tcp" {
+  address = "127.0.0.1:8200"
   tls_cert_file = "/etc/certs/vault.crt"
   tls_key_file  = "/etc/certs/vault.key"
 }
