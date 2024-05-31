@@ -38,7 +38,7 @@ The key features of Vault are:
   developers to store encrypted data in a location such as a SQL database without
   having to design their own encryption methods.
 
-* **Leasing and Renewal**: Vault associates a _lease_ with each secret.
+* **Leasing and Renewal**: Vault associates a **lease** with each secret.
   At the end of the lease, Vault will automatically revoke that
   secret. Clients are able to renew leases via built-in renew APIs.
 
