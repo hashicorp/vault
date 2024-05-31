@@ -21,7 +21,7 @@ A modern system requires access to a multitude of secrets: database credentials,
 
 The key features of Vault are:
 
-* **Secure Secret Storage**: Vault can store arbitrary key/value secrets. Vault encrypts these secrets prior to writing them to persistent
+* **Secure Secret Storage**: Vault can store arbitrary key/value pairs. Vault encrypts data before writing it to persistent
   storage, so gaining access to the raw storage isn't enough to access
   your secrets. Vault can write to disk, [Consul](https://www.consul.io),
   and more.
