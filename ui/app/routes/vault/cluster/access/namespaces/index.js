@@ -1,14 +1,23 @@
-import { inject as service } from '@ember/service';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { service } from '@ember/service';
 import Route from '@ember/routing/route';
 import UnloadModel from 'vault/mixins/unload-model-route';
 
 export default Route.extend(UnloadModel, {
+  store: service(),
+
   queryParams: {
     page: {
       refreshModel: true,
     },
   },
+
   version: service(),
+
   beforeModel() {
     this.store.unloadAll('namespace');
     return this.version.fetchFeatures().then(() => {
@@ -50,10 +59,11 @@ export default Route.extend(UnloadModel, {
       });
     }
   },
+
   actions: {
     error(error, transition) {
       /* eslint-disable-next-line ember/no-controller-access-in-routes */
-      const hasModel = this.controllerFor(this.routeName).get('hasModel');
+      const hasModel = this.controllerFor(this.routeName).hasModel;
       if (hasModel && error.httpStatus === 404) {
         this.set('has404', true);
         transition.abort();

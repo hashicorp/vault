@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Makes modals accessible by implementing Helios Design System modal component
+```

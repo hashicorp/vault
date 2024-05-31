@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package postgresql
 
 import (
@@ -106,7 +109,7 @@ func TestPostgreSQLBackendMaxIdleConnectionsParameter(t *testing.T) {
 	}
 	expectedErrStr := "failed parsing max_idle_connections parameter: strconv.Atoi: parsing \"bad param\": invalid syntax"
 	if err.Error() != expectedErrStr {
-		t.Errorf("Expected: \"%s\" but found \"%s\"", expectedErrStr, err.Error())
+		t.Errorf("Expected: %q but found %q", expectedErrStr, err.Error())
 	}
 }
 
@@ -156,7 +159,7 @@ func TestConnectionURL(t *testing.T) {
 	for name, tt := range cases {
 		t.Run(name, func(t *testing.T) {
 			// This is necessary to avoid always testing the branch where the env is set.
-			// As long the the env is set --- even if the value is "" --- `ok` returns true.
+			// As long the env is set --- even if the value is "" --- `ok` returns true.
 			if tt.input.envar != "" {
 				os.Setenv("VAULT_PG_CONNECTION_URL", tt.input.envar)
 				defer os.Unsetenv("VAULT_PG_CONNECTION_URL")
@@ -165,7 +168,7 @@ func TestConnectionURL(t *testing.T) {
 			got := connectionURL(tt.input.conf)
 
 			if got != tt.want {
-				t.Errorf("connectionURL(%s): want '%s', got '%s'", tt.input, tt.want, got)
+				t.Errorf("connectionURL(%s): want %q, got %q", tt.input, tt.want, got)
 			}
 		})
 	}

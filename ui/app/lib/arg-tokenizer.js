@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 // taken from https://github.com/yargs/yargs-parser/blob/v13.1.0/lib/tokenize-arg-string.js to get around import issue
 // take an un-split argv string and tokenize it.
 export default function (argString) {

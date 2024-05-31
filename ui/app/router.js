@@ -1,6 +1,11 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import EmberRouter from '@ember/routing/router';
 import config from 'vault/config/environment';
-
+import { addDocfyRoutes } from '@docfy/ember';
 export default class Router extends EmberRouter {
   location = config.locationType;
   rootURL = config.rootURL;
@@ -9,18 +14,25 @@ export default class Router extends EmberRouter {
 Router.map(function () {
   this.route('vault', { path: '/' }, function () {
     this.route('cluster', { path: '/:cluster_name' }, function () {
+      this.route('dashboard');
+      this.mount('config-ui');
+      this.mount('sync');
       this.route('oidc-provider-ns', { path: '/*namespace/identity/oidc/provider/:provider_name/authorize' });
       this.route('oidc-provider', { path: '/identity/oidc/provider/:provider_name/authorize' });
       this.route('oidc-callback', { path: '/auth/*auth_path/oidc/callback' });
       this.route('auth');
+      this.route('redirect');
       this.route('init');
       this.route('logout');
-      this.mount('open-api-explorer', { path: '/api-explorer' });
       this.route('license');
       this.route('mfa-setup');
       this.route('clients', function () {
-        this.route('current');
-        this.route('history');
+        this.route('counts', function () {
+          this.route('overview');
+          this.route('token');
+          this.route('sync');
+          this.route('acme');
+        });
         this.route('config');
         this.route('edit');
       });
@@ -46,8 +58,10 @@ Router.map(function () {
       this.route('unseal');
       this.route('tools', function () {
         this.route('tool', { path: '/:selected_action' });
+        this.mount('open-api-explorer', { path: '/api-explorer' });
       });
       this.route('access', function () {
+        this.route('reset-password');
         this.route('methods', { path: '/' });
         this.route('method', { path: '/:path' }, function () {
           this.route('index', { path: '/' });
@@ -108,11 +122,55 @@ Router.map(function () {
           this.route('index', { path: '/' });
           this.route('create');
         });
+        this.route('oidc', function () {
+          this.route('clients', function () {
+            this.route('create');
+            this.route('client', { path: '/:name' }, function () {
+              this.route('details');
+              this.route('providers');
+              this.route('edit');
+            });
+          });
+          this.route('keys', function () {
+            this.route('create');
+            this.route('key', { path: '/:name' }, function () {
+              this.route('details');
+              this.route('clients');
+              this.route('edit');
+            });
+          });
+          this.route('assignments', function () {
+            this.route('create');
+            this.route('assignment', { path: '/:name' }, function () {
+              this.route('details');
+              this.route('edit');
+            });
+          });
+          this.route('providers', function () {
+            this.route('create');
+            this.route('provider', { path: '/:name' }, function () {
+              this.route('details');
+              this.route('clients');
+              this.route('edit');
+            });
+          });
+          this.route('scopes', function () {
+            this.route('create');
+            this.route('scope', { path: '/:name' }, function () {
+              this.route('details');
+              this.route('edit');
+            });
+          });
+        });
       });
       this.route('secrets', function () {
         this.route('backends', { path: '/' });
         this.route('backend', { path: '/:backend' }, function () {
           this.mount('kmip');
+          this.mount('kubernetes');
+          this.mount('kv');
+          this.mount('ldap');
+          this.mount('pki');
           this.route('index', { path: '/' });
           this.route('configuration');
           // because globs / params can't be empty,
@@ -124,18 +182,11 @@ Router.map(function () {
 
           this.route('list', { path: '/list/*secret' });
           this.route('show', { path: '/show/*secret' });
-          this.route('diff', { path: '/diff/*id' });
-          this.route('metadata', { path: '/metadata/*secret' });
-          this.route('edit-metadata', { path: '/edit-metadata/*secret' });
           this.route('create', { path: '/create/*secret' });
           this.route('edit', { path: '/edit/*secret' });
 
           this.route('credentials-root', { path: '/credentials/' });
           this.route('credentials', { path: '/credentials/*secret' });
-
-          // kv v2 versions
-          this.route('versions-root', { path: '/versions/' });
-          this.route('versions', { path: '/versions/*secret' });
 
           // ssh sign
           this.route('sign-root', { path: '/sign/' });
@@ -166,4 +217,7 @@ Router.map(function () {
     });
     this.route('not-found', { path: '/*path' });
   });
+  if (config.environment !== 'production') {
+    addDocfyRoutes(this);
+  }
 });

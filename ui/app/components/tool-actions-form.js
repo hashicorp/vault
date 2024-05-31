@@ -1,15 +1,19 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { match } from '@ember/object/computed';
-import { assign } from '@ember/polyfills';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import Component from '@ember/component';
 import { setProperties, computed, set } from '@ember/object';
 import { addSeconds, parseISO } from 'date-fns';
-import { A } from '@ember/array';
+import { capitalize } from '@ember/string';
 
 const DEFAULTS = {
   token: null,
   rewrap_token: null,
-  errors: A(),
+  errors: null,
   wrap_info: null,
   creation_time: null,
   creation_ttl: null,
@@ -25,8 +29,8 @@ const DEFAULTS = {
 const WRAPPING_ENDPOINTS = ['lookup', 'wrap', 'unwrap', 'rewrap'];
 
 export default Component.extend(DEFAULTS, {
+  flashMessages: service(),
   store: service(),
-  wizard: service(),
   // putting these attrs here so they don't get reset when you click back
   //random
   bytes: 32,
@@ -35,7 +39,6 @@ export default Component.extend(DEFAULTS, {
   algorithm: 'sha2-256',
 
   tagName: '',
-  unwrapActiveTab: 'data',
 
   didReceiveAttrs() {
     this._super(...arguments);
@@ -78,25 +81,23 @@ export default Component.extend(DEFAULTS, {
 
   handleSuccess(resp, action) {
     let props = {};
-    let secret = (resp && resp.data) || resp.auth;
+    const secret = (resp && resp.data) || resp.auth;
     if (secret && action === 'unwrap') {
-      let details = {
+      const details = {
         'Request ID': resp.request_id,
         'Lease ID': resp.lease_id || 'None',
         Renewable: resp.renewable ? 'Yes' : 'No',
         'Lease Duration': resp.lease_duration || 'None',
       };
-      props = assign({}, props, { unwrap_data: secret }, { details: details });
+      props = { ...props, unwrap_data: secret, details: details };
     }
-    props = assign({}, props, secret);
+    props = { ...props, ...secret };
     if (resp && resp.wrap_info) {
       const keyName = action === 'rewrap' ? 'rewrap_token' : 'token';
-      props = assign({}, props, { [keyName]: resp.wrap_info.token });
-    }
-    if (props.token || props.rewrap_token || props.unwrap_data || action === 'lookup') {
-      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE');
+      props = { ...props, [keyName]: resp.wrap_info.token };
     }
     setProperties(this, props);
+    this.flashMessages.success(`${capitalize(action)} was successful.`);
   },
 
   getData() {

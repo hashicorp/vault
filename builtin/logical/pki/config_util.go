@@ -1,7 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pki
 
 import (
 	"strings"
+
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 )
 
 func (sc *storageContext) isDefaultKeySet() (bool, error) {
@@ -22,14 +27,14 @@ func (sc *storageContext) isDefaultIssuerSet() (bool, error) {
 	return strings.TrimSpace(config.DefaultIssuerId.String()) != "", nil
 }
 
-func (sc *storageContext) updateDefaultKeyId(id keyID) error {
+func (sc *storageContext) updateDefaultKeyId(id issuing.KeyID) error {
 	config, err := sc.getKeysConfig()
 	if err != nil {
 		return err
 	}
 
 	if config.DefaultKeyId != id {
-		return sc.setKeysConfig(&keyConfigEntry{
+		return sc.setKeysConfig(&issuing.KeyConfigEntry{
 			DefaultKeyId: id,
 		})
 	}
@@ -37,16 +42,15 @@ func (sc *storageContext) updateDefaultKeyId(id keyID) error {
 	return nil
 }
 
-func (sc *storageContext) updateDefaultIssuerId(id issuerID) error {
+func (sc *storageContext) updateDefaultIssuerId(id issuing.IssuerID) error {
 	config, err := sc.getIssuersConfig()
 	if err != nil {
 		return err
 	}
 
 	if config.DefaultIssuerId != id {
-		return sc.setIssuersConfig(&issuerConfigEntry{
-			DefaultIssuerId: id,
-		})
+		config.DefaultIssuerId = id
+		return sc.setIssuersConfig(config)
 	}
 
 	return nil

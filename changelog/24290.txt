@@ -1,0 +1,3 @@
+```release-note:bug
+ui: When Kv v2 secret is an object, fix so details view defaults to readOnly JSON editor.
+```

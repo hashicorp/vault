@@ -1,4 +1,7 @@
 #!/bin/sh
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 # Generate test coverage statistics for Go packages.
 #
 # Works around the fact that `go test -coverprofile` currently does not work

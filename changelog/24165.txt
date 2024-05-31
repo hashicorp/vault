@@ -1,0 +1,4 @@
+```release-note:bug
+core: Fix an error that resulted in the wrong seal type being returned by sys/seal-status while
+Vault is in seal migration mode.
+```

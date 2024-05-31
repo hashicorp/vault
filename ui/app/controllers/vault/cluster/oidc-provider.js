@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Controller from '@ember/controller';
 
 export default class VaultClusterOidcProviderController extends Controller {
@@ -13,6 +18,8 @@ export default class VaultClusterOidcProviderController extends Controller {
     'max_age',
     'code_challenge',
     'code_challenge_method',
+    'request',
+    'request_uri',
   ];
   scope = null;
   response_type = null;
@@ -25,4 +32,6 @@ export default class VaultClusterOidcProviderController extends Controller {
   max_age = null;
   code_challenge = null;
   code_challenge_method = null;
+  request = null;
+  request_uri = null;
 }

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package aws
 
 import (
@@ -10,23 +13,27 @@ import (
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/queue"
 )
 
 const (
 	rootConfigPath        = "config/root"
 	minAwsUserRollbackAge = 5 * time.Minute
+	operationPrefixAWS    = "aws"
+	operationPrefixAWSASD = "aws-config"
 )
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
-	b := Backend()
+	b := Backend(conf)
 	if err := b.Setup(ctx, conf); err != nil {
 		return nil, err
 	}
 	return b, nil
 }
 
-func Backend() *backend {
+func Backend(_ *logical.BackendConfig) *backend {
 	var b backend
+	b.credRotationQueue = queue.New()
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(backendHelp),
 
@@ -35,7 +42,8 @@ func Backend() *backend {
 				framework.WALPrefix,
 			},
 			SealWrapStorage: []string{
-				"config/root",
+				rootConfigPath,
+				pathStaticCreds + "/",
 			},
 		},
 
@@ -45,6 +53,8 @@ func Backend() *backend {
 			pathConfigLease(&b),
 			pathRoles(&b),
 			pathListRoles(&b),
+			pathStaticRoles(&b),
+			pathStaticCredentials(&b),
 			pathUser(&b),
 		},
 
@@ -55,7 +65,13 @@ func Backend() *backend {
 		Invalidate:        b.invalidate,
 		WALRollback:       b.walRollback,
 		WALRollbackMinAge: minAwsUserRollbackAge,
-		BackendType:       logical.TypeLogical,
+		PeriodicFunc: func(ctx context.Context, req *logical.Request) error {
+			if b.WriteSafeReplicationState() {
+				return b.rotateExpiredStaticCreds(ctx, req)
+			}
+			return nil
+		},
+		BackendType: logical.TypeLogical,
 	}
 
 	return &b
@@ -74,6 +90,10 @@ type backend struct {
 	// to enable mocking with AWS iface for tests
 	iamClient iamiface.IAMAPI
 	stsClient stsiface.STSAPI
+
+	// the age of a static role's credential is tracked by a priority queue and handled
+	// by the PeriodicFunc
+	credRotationQueue *queue.PriorityQueue
 }
 
 const backendHelp = `
@@ -121,7 +141,7 @@ func (b *backend) clientIAM(ctx context.Context, s logical.Storage) (iamiface.IA
 		return b.iamClient, nil
 	}
 
-	iamClient, err := nonCachedClientIAM(ctx, s, b.Logger())
+	iamClient, err := b.nonCachedClientIAM(ctx, s, b.Logger())
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +168,7 @@ func (b *backend) clientSTS(ctx context.Context, s logical.Storage) (stsiface.ST
 		return b.stsClient, nil
 	}
 
-	stsClient, err := nonCachedClientSTS(ctx, s, b.Logger())
+	stsClient, err := b.nonCachedClientSTS(ctx, s, b.Logger())
 	if err != nil {
 		return nil, err
 	}

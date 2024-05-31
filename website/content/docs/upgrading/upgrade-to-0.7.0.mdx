@@ -18,7 +18,7 @@ storage has now been renamed to `storage`. Vault will alias the old key to the
 new path, though users are encouraged to update their configuration to ensure
 minimal disruption in the future when the alias is removed.
 
-## List Operations Always Use Trailing Slash
+## List operations always use trailing slash
 
 Any list operation, whether via the `GET` or `LIST` HTTP verb, will now
 internally canonicalize the path to have a trailing slash. This makes policy
@@ -28,7 +28,7 @@ it also means that policies allowing `list` capability must be carefully
 checked to ensure that they contain a trailing slash; some policies may need
 to be split into multiple stanzas to accommodate.
 
-## PKI Defaults to Unleased Certificates
+## PKI defaults to unleased certificates
 
 When issuing certificates from the PKI backend, by default, no leases will be
 issued. If you want to manually revoke a certificate, its serial number can be

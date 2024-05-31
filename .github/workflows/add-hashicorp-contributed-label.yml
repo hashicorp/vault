@@ -1,0 +1,26 @@
+name: Add HashiCorp contributed label
+
+# The purpose of this job is to label all HashiCorp contributed PRs, so that
+# we can more easily identify community contributed PRs (anything that doesn't
+# have this label).
+# While it might seem like this is the 'reverse' of what we should do, GitHub
+# (rightly) does not allow branches from forks to have write permissions, so
+# making PRs from forks self-label themselves as community-contributed is not
+# possible.
+
+on:
+  # On every pull request, on every branch
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  add-hashicorp-contributed-label:
+    # Only run if this is NOT coming from a fork of hashicorp/vault (if this is not true, it's community contributed)
+    if: ${{ github.repository == 'hashicorp/vault' && (github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Add label to PR"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.html_url }}
+        run: gh pr edit "$PR" --add-label 'hashicorp-contributed-pr'

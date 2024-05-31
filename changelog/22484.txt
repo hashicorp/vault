@@ -1,0 +1,4 @@
+```release-note:feature
+**Database Static Role Advanced TTL Management**: Adds the ability to rotate
+static roles on a defined schedule.
+```

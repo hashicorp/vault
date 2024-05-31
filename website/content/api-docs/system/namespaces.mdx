@@ -8,7 +8,7 @@ description: The `/sys/namespaces` endpoint is used manage namespaces in Vault.
 
 The `/sys/namespaces` endpoint is used manage namespaces in Vault.
 
-## List Namespaces
+## List namespaces
 
 This endpoints lists all the namespaces.
 
@@ -16,7 +16,7 @@ This endpoints lists all the namespaces.
 | :----- | :---------------- |
 | `LIST` | `/sys/namespaces` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -25,13 +25,32 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/namespaces
 ```
 
-### Sample Response
+### Sample response
 
 ```json
-["ns1/", "ns2/"]
+{
+  "data": {
+    "key_info": {
+      "bar/": {
+        "custom_metadata": {},
+        "id": "HWmNL",
+        "path": "bar/"
+      },
+      "foo/": {
+        "custom_metadata": {},
+        "id": "5q39x",
+        "path": "foo/"
+      }
+    },
+    "keys": [
+      "bar/",
+      "foo/"
+    ]
+  }
+}
 ```
 
-## Create Namespace
+## Create namespace
 
 This endpoint creates a namespace at the given path.
 
@@ -43,17 +62,67 @@ This endpoint creates a namespace at the given path.
 
 - `path` `(string: <required>)` – Specifies the path where the namespace
   will be created.
+- `custom_metadata` `(map<string|string>: nil)` - A map of arbitrary string to string valued user-provided metadata meant
+  to describe the namespace.
 
-### Sample Request
+### Sample payload
+
+```json
+{
+  "custom_metadata": {
+    "foo": "abc",
+    "bar": "123"
+  }
+}
+```
+
+### Sample request
 
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
+    --data @payload.json \
     http://127.0.0.1:8200/v1/sys/namespaces/ns1
 ```
 
-## Delete Namespace
+## Patch namespace
+
+This endpoint patches an existing namespace at the specified path.
+
+| Method   | Path                    |
+| :------- | :---------------------- |
+| `PATCH`  | `/sys/namespaces/:path` |
+
+### Parameters
+
+- `path` `(string: <required>)` – Specifies the path of the existing namespace.
+- `custom_metadata` `(map<string|string>: nil)` - A map of arbitrary string to string valued user-provided metadata meant
+  to describe the namespace.
+
+### Sample payload
+
+```json
+{
+  "custom_metadata": {
+    "foo": "abc",
+    "bar": "123"
+  }
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --header "Content-Type: application/merge-patch+json"
+    --request PATCH \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/namespaces/ns1
+```
+
+## Delete namespace
 
 This endpoint deletes a namespace at the specified path.
 
@@ -61,7 +130,7 @@ This endpoint deletes a namespace at the specified path.
 | :------- | :---------------------- |
 | `DELETE` | `/sys/namespaces/:path` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -70,7 +139,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/namespaces/ns1
 ```
 
-## Read Namespace Information
+## Read namespace information
 
 This endpoint gets the metadata for the given namespace path.
 
@@ -78,7 +147,7 @@ This endpoint gets the metadata for the given namespace path.
 | :----- | :---------------------- |
 | `GET`  | `/sys/namespaces/:path` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -86,26 +155,30 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/namespaces/ns1
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
   "id": "gsudj",
-  "path": "ns1/"
+  "path": "ns1/",
+  "custom_metadata": {
+    "foo": "abc",
+    "bar": "123"
+  }
 }
 ```
 
-## Lock Namespace
+## Lock namespace
 
 This endpoint locks the API for the current namespace path or optional subpath.
 The behavior when interacting with Vault from a locked namespace is described in
-[API Locked Response](/docs/concepts/namespace-api-lock#api-locked-response).
+[API Locked Response](/vault/docs/concepts/namespace-api-lock#api-locked-response).
 
 | Method | Path                    |
 | :----- | :---------------------- |
 | `POST`  | `/sys/namespaces/api-lock/lock/:subpath` |
 
-### Sample Request - Current Namespace
+### Sample request - current namespace
 
 ```shell-session
 $ curl \
@@ -114,7 +187,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/namespaces/api-lock/lock
 ```
 
-### Sample Response - Current Namespace
+### Sample response - current namespace
 
 ```json
 {
@@ -122,7 +195,7 @@ $ curl \
 }
 ```
 
-### Sample Request - X-Vault-Namespace
+### Sample request - X-Vault-Namespace
 
 ```shell-session
 $ curl \
@@ -132,7 +205,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/namespaces/api-lock/lock
 ```
 
-### Sample Response - X-Vault-Namespace
+### Sample response - X-Vault-Namespace
 
 ```json
 {
@@ -140,7 +213,7 @@ $ curl \
 }
 ```
 
-### Sample Request - Descendant of Current Namespace
+### Sample request - descendant of current namespace
 
 ```shell-session
 $ curl \
@@ -149,7 +222,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/namespaces/api-lock/lock/some/descendant/subpath
 ```
 
-### Sample Response - Descendant of Current Namespace
+### Sample response - descendant of current namespace
 
 ```json
 {
@@ -157,7 +230,7 @@ $ curl \
 }
 ```
 
-## Unlock Namespace
+## Unlock namespace
 
 This endpoint unlocks the api for the current namespace path or optional subpath.
 
@@ -165,7 +238,7 @@ This endpoint unlocks the api for the current namespace path or optional subpath
 | :----- | :---------------------- |
 | `POST`  | `/sys/namespaces/api-lock/unlock/:subpath` |
 
-### Sample Payload - Current Namespace Non-Root
+### Sample payload - current namespace Non-Root
 
 ```json
 {
@@ -173,7 +246,7 @@ This endpoint unlocks the api for the current namespace path or optional subpath
 }
 ```
 
-### Sample Request - Current Namespace Non-Root
+### Sample request - current namespace Non-Root
 
 ```shell-session
 $ curl \
@@ -183,7 +256,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/namespaces/api-lock/unlock
 ```
 
-### Sample Request - Current Namespace Root
+### Sample request - current namespace root
 
 ```shell-session
 $ curl \
@@ -192,7 +265,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/namespaces/api-lock/unlock
 ```
 
-### Sample Payload - Descendant Namespace Non-Root
+### Sample payload - descendant namespace Non-Root
 
 ```json
 {
@@ -200,7 +273,7 @@ $ curl \
 }
 ```
 
-### Sample Request - Descendant Namespace Non-Root
+### Sample request - descendant namespace Non-Root
 
 ```shell-session
 $ curl \

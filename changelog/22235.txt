@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Log rollback manager failures during unmount, remount to prevent replication failures on secondary clusters.
+```

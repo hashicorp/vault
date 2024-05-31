@@ -1,0 +1,70 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<Hds::SideNav::Portal @ariaLabel="Access Navigation Links" data-test-sidebar-nav-panel="Access" as |Nav|>
+  <Nav.BackLink
+    @route="vault.cluster"
+    @current-when={{false}}
+    @icon="arrow-left"
+    @text="Back to main navigation"
+    data-test-sidebar-nav-link="Back to main navigation"
+  />
+
+  {{#if (has-permission "access" routeParams=(array "methods" "mfa" "oidc"))}}
+    <Nav.Title data-test-sidebar-nav-heading="Authentication">Authentication</Nav.Title>
+  {{/if}}
+  {{#if (has-permission "access" routeParams="methods")}}
+    <Nav.Link
+      @route="vault.cluster.access.methods"
+      @current-when="vault.cluster.access.methods vault.cluster.access.method vault.cluster.settings.auth"
+      @text="Authentication Methods"
+      data-test-sidebar-nav-link="Authentication Methods"
+    />
+  {{/if}}
+  {{#if (has-permission "access" routeParams="mfa")}}
+    <Nav.Link
+      @route="vault.cluster.access.mfa.methods"
+      @current-when="vault.cluster.access.mfa.methods vault.cluster.access.mfa.enforcements vault.cluster.access.mfa.index"
+      @text="Multi-Factor Authentication"
+      data-test-sidebar-nav-link="Multi-Factor Authentication"
+    />
+  {{/if}}
+  {{#if (has-permission "access" routeParams="oidc")}}
+    <Nav.Link @route="vault.cluster.access.oidc" @text="OIDC Provider" data-test-sidebar-nav-link="OIDC Provider" />
+  {{/if}}
+
+  {{#if (and (has-feature "Control Groups") (has-permission "access" routeParams="control-groups"))}}
+    <Nav.Title data-test-sidebar-nav-heading="Access Control">Access Control</Nav.Title>
+    <Nav.Link
+      @route="vault.cluster.access.control-groups"
+      @current-when="vault.cluster.access.control-groups vault.cluster.access.control-group-accessor vault.cluster.access.control-groups-configure"
+      @text="Control Groups"
+      data-test-sidebar-nav-link="Control Groups"
+    />
+  {{/if}}
+
+  {{#if (has-permission "access" routeParams=(array "namespaces" "groups" "entities"))}}
+    <Nav.Title data-test-sidebar-nav-heading="Organization">Organization</Nav.Title>
+  {{/if}}
+  {{#if (and (has-feature "Namespaces") (has-permission "access" routeParams="namespaces"))}}
+    <Nav.Link @route="vault.cluster.access.namespaces" @text="Namespaces" data-test-sidebar-nav-link="Namespaces" />
+  {{/if}}
+  {{#if (has-permission "access" routeParams="groups")}}
+    <Nav.Link @route="vault.cluster.access.identity" @model="groups" @text="Groups" data-test-sidebar-nav-link="Groups" />
+  {{/if}}
+  {{#if (has-permission "access" routeParams="entities")}}
+    <Nav.Link
+      @route="vault.cluster.access.identity"
+      @model="entities"
+      @text="Entities"
+      data-test-sidebar-nav-link="Entities"
+    />
+  {{/if}}
+
+  {{#if (has-permission "access" routeParams="leases")}}
+    <Nav.Title data-test-sidebar-nav-heading="Administration">Administration</Nav.Title>
+    <Nav.Link @route="vault.cluster.access.leases" @text="Leases" data-test-sidebar-nav-link="Leases" />
+  {{/if}}
+</Hds::SideNav::Portal>

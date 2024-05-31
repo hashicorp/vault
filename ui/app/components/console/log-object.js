@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { capitalize } from '@ember/string';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
@@ -16,7 +21,7 @@ export function stringifyObjectValues(data) {
 export default Component.extend({
   content: null,
   columns: computed('content', function () {
-    let data = this.content;
+    const data = this.content;
     stringifyObjectValues(data);
 
     return columnify(data, {

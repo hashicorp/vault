@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package api
 
 import (
@@ -7,26 +10,37 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/mitchellh/mapstructure"
 )
 
 // ListPluginsInput is used as input to the ListPlugins function.
 type ListPluginsInput struct {
 	// Type of the plugin. Required.
-	Type consts.PluginType `json:"type"`
+	Type PluginType `json:"type"`
 }
 
 // ListPluginsResponse is the response from the ListPlugins call.
 type ListPluginsResponse struct {
 	// PluginsByType is the list of plugins by type.
-	PluginsByType map[consts.PluginType][]string `json:"types"`
+	PluginsByType map[PluginType][]string `json:"types"`
+
+	Details []PluginDetails `json:"details,omitempty"`
 
 	// Names is the list of names of the plugins.
 	//
 	// Deprecated: Newer server responses should be returning PluginsByType (json:
 	// "types") instead.
 	Names []string `json:"names"`
+}
+
+type PluginDetails struct {
+	Type              string `json:"type"`
+	Name              string `json:"name"`
+	OCIImage          string `json:"oci_image,omitempty" mapstructure:"oci_image"`
+	Runtime           string `json:"runtime,omitempty"`
+	Version           string `json:"version,omitempty"`
+	Builtin           bool   `json:"builtin"`
+	DeprecationStatus string `json:"deprecation_status,omitempty" mapstructure:"deprecation_status"`
 }
 
 // ListPlugins wraps ListPluginsWithContext using context.Background.
@@ -40,25 +54,7 @@ func (c *Sys) ListPluginsWithContext(ctx context.Context, i *ListPluginsInput) (
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	path := ""
-	method := ""
-	if i.Type == consts.PluginTypeUnknown {
-		path = "/v1/sys/plugins/catalog"
-		method = http.MethodGet
-	} else {
-		path = fmt.Sprintf("/v1/sys/plugins/catalog/%s", i.Type)
-		method = "LIST"
-	}
-
-	req := c.c.NewRequest(method, path)
-	if method == "LIST" {
-		// Set this for broader compatibility, but we use LIST above to be able
-		// to handle the wrapping lookup function
-		req.Method = http.MethodGet
-		req.Params.Set("list", "true")
-	}
-
-	resp, err := c.c.rawRequestWithContext(ctx, req)
+	resp, err := c.c.rawRequestWithContext(ctx, c.c.NewRequest(http.MethodGet, "/v1/sys/plugins/catalog"))
 	if err != nil && resp == nil {
 		return nil, err
 	}
@@ -66,27 +62,6 @@ func (c *Sys) ListPluginsWithContext(ctx context.Context, i *ListPluginsInput) (
 		return nil, nil
 	}
 	defer resp.Body.Close()
-
-	// We received an Unsupported Operation response from Vault, indicating
-	// Vault of an older version that doesn't support the GET method yet;
-	// switch it to a LIST.
-	if resp.StatusCode == 405 {
-		req.Params.Set("list", "true")
-		resp, err := c.c.rawRequestWithContext(ctx, req)
-		if err != nil {
-			return nil, err
-		}
-		defer resp.Body.Close()
-		var result struct {
-			Data struct {
-				Keys []string `json:"keys"`
-			} `json:"data"`
-		}
-		if err := resp.DecodeJSON(&result); err != nil {
-			return nil, err
-		}
-		return &ListPluginsResponse{Names: result.Data.Keys}, nil
-	}
 
 	secret, err := ParseSecret(resp.Body)
 	if err != nil {
@@ -97,10 +72,11 @@ func (c *Sys) ListPluginsWithContext(ctx context.Context, i *ListPluginsInput) (
 	}
 
 	result := &ListPluginsResponse{
-		PluginsByType: make(map[consts.PluginType][]string),
+		PluginsByType: make(map[PluginType][]string),
 	}
-	if i.Type == consts.PluginTypeUnknown {
-		for _, pluginType := range consts.PluginTypes {
+	switch i.Type {
+	case PluginTypeUnknown:
+		for _, pluginType := range PluginTypes {
 			pluginsRaw, ok := secret.Data[pluginType.String()]
 			if !ok {
 				continue
@@ -121,12 +97,36 @@ func (c *Sys) ListPluginsWithContext(ctx context.Context, i *ListPluginsInput) (
 			}
 			result.PluginsByType[pluginType] = plugins
 		}
-	} else {
+	default:
+		pluginsRaw, ok := secret.Data[i.Type.String()]
+		if !ok {
+			return nil, fmt.Errorf("no %s entry in returned data", i.Type.String())
+		}
+
 		var respKeys []string
-		if err := mapstructure.Decode(secret.Data["keys"], &respKeys); err != nil {
+		if err := mapstructure.Decode(pluginsRaw, &respKeys); err != nil {
 			return nil, err
 		}
 		result.PluginsByType[i.Type] = respKeys
+	}
+
+	if detailed, ok := secret.Data["detailed"]; ok {
+		var details []PluginDetails
+		if err := mapstructure.Decode(detailed, &details); err != nil {
+			return nil, err
+		}
+
+		switch i.Type {
+		case PluginTypeUnknown:
+			result.Details = details
+		default:
+			// Filter for just the queried type.
+			for _, entry := range details {
+				if entry.Type == i.Type.String() {
+					result.Details = append(result.Details, entry)
+				}
+			}
+		}
 	}
 
 	return result, nil
@@ -137,16 +137,21 @@ type GetPluginInput struct {
 	Name string `json:"-"`
 
 	// Type of the plugin. Required.
-	Type consts.PluginType `json:"type"`
+	Type    PluginType `json:"type"`
+	Version string     `json:"version"`
 }
 
 // GetPluginResponse is the response from the GetPlugin call.
 type GetPluginResponse struct {
-	Args    []string `json:"args"`
-	Builtin bool     `json:"builtin"`
-	Command string   `json:"command"`
-	Name    string   `json:"name"`
-	SHA256  string   `json:"sha256"`
+	Args              []string `json:"args"`
+	Builtin           bool     `json:"builtin"`
+	Command           string   `json:"command"`
+	Name              string   `json:"name"`
+	SHA256            string   `json:"sha256"`
+	OCIImage          string   `json:"oci_image,omitempty"`
+	Runtime           string   `json:"runtime,omitempty"`
+	DeprecationStatus string   `json:"deprecation_status,omitempty"`
+	Version           string   `json:"version,omitempty"`
 }
 
 // GetPlugin wraps GetPluginWithContext using context.Background.
@@ -161,6 +166,9 @@ func (c *Sys) GetPluginWithContext(ctx context.Context, i *GetPluginInput) (*Get
 
 	path := catalogPathByType(i.Type, i.Name)
 	req := c.c.NewRequest(http.MethodGet, path)
+	if i.Version != "" {
+		req.Params.Set("version", i.Version)
+	}
 
 	resp, err := c.c.rawRequestWithContext(ctx, req)
 	if err != nil {
@@ -184,7 +192,7 @@ type RegisterPluginInput struct {
 	Name string `json:"-"`
 
 	// Type of the plugin. Required.
-	Type consts.PluginType `json:"type"`
+	Type PluginType `json:"type"`
 
 	// Args is the list of args to spawn the process with.
 	Args []string `json:"args,omitempty"`
@@ -194,6 +202,19 @@ type RegisterPluginInput struct {
 
 	// SHA256 is the shasum of the plugin.
 	SHA256 string `json:"sha256,omitempty"`
+
+	// Version is the optional version of the plugin being registered
+	Version string `json:"version,omitempty"`
+
+	// OCIImage specifies the container image to run as a plugin.
+	OCIImage string `json:"oci_image,omitempty"`
+
+	// Runtime is the Vault plugin runtime to use when running the plugin.
+	Runtime string `json:"runtime,omitempty"`
+
+	// Env specifies a list of key=value pairs to add to the plugin's environment
+	// variables.
+	Env []string `json:"env,omitempty"`
 }
 
 // RegisterPlugin wraps RegisterPluginWithContext using context.Background.
@@ -226,7 +247,10 @@ type DeregisterPluginInput struct {
 	Name string `json:"-"`
 
 	// Type of the plugin. Required.
-	Type consts.PluginType `json:"type"`
+	Type PluginType `json:"type"`
+
+	// Version of the plugin. Optional.
+	Version string `json:"version,omitempty"`
 }
 
 // DeregisterPlugin wraps DeregisterPluginWithContext using context.Background.
@@ -242,12 +266,28 @@ func (c *Sys) DeregisterPluginWithContext(ctx context.Context, i *DeregisterPlug
 
 	path := catalogPathByType(i.Type, i.Name)
 	req := c.c.NewRequest(http.MethodDelete, path)
-
+	req.Params.Set("version", i.Version)
 	resp, err := c.c.rawRequestWithContext(ctx, req)
 	if err == nil {
 		defer resp.Body.Close()
 	}
 	return err
+}
+
+// RootReloadPluginInput is used as input to the RootReloadPlugin function.
+type RootReloadPluginInput struct {
+	Plugin string     `json:"-"`               // Plugin name, as registered in the plugin catalog.
+	Type   PluginType `json:"-"`               // Plugin type: auth, secret, or database.
+	Scope  string     `json:"scope,omitempty"` // Empty to reload on current node, "global" for all nodes.
+}
+
+// RootReloadPlugin reloads plugins, possibly returning reloadID for a global
+// scoped reload. This is only available in the root namespace, and reloads
+// plugins across all namespaces, whereas ReloadPlugin is available in all
+// namespaces but only reloads plugins in use in the request's namespace.
+func (c *Sys) RootReloadPlugin(ctx context.Context, i *RootReloadPluginInput) (string, error) {
+	path := fmt.Sprintf("/v1/sys/plugins/reload/%s/%s", i.Type.String(), i.Plugin)
+	return c.reloadPluginInternal(ctx, path, i, i.Scope == "global")
 }
 
 // ReloadPluginInput is used as input to the ReloadPlugin function.
@@ -268,15 +308,20 @@ func (c *Sys) ReloadPlugin(i *ReloadPluginInput) (string, error) {
 }
 
 // ReloadPluginWithContext reloads mounted plugin backends, possibly returning
-// reloadId for a cluster scoped reload
+// reloadID for a cluster scoped reload. It is limited to reloading plugins that
+// are in use in the request's namespace. See RootReloadPlugin for an API that
+// can reload plugins across all namespaces.
 func (c *Sys) ReloadPluginWithContext(ctx context.Context, i *ReloadPluginInput) (string, error) {
+	return c.reloadPluginInternal(ctx, "/v1/sys/plugins/reload/backend", i, i.Scope == "global")
+}
+
+func (c *Sys) reloadPluginInternal(ctx context.Context, path string, body any, global bool) (string, error) {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	path := "/v1/sys/plugins/reload/backend"
 	req := c.c.NewRequest(http.MethodPut, path)
 
-	if err := req.SetJSONBody(i); err != nil {
+	if err := req.SetJSONBody(body); err != nil {
 		return "", err
 	}
 
@@ -286,7 +331,7 @@ func (c *Sys) ReloadPluginWithContext(ctx context.Context, i *ReloadPluginInput)
 	}
 	defer resp.Body.Close()
 
-	if i.Scope == "global" {
+	if global {
 		// Get the reload id
 		secret, parseErr := ParseSecret(resp.Body)
 		if parseErr != nil {
@@ -360,11 +405,11 @@ func (c *Sys) ReloadPluginStatusWithContext(ctx context.Context, reloadStatusInp
 }
 
 // catalogPathByType is a helper to construct the proper API path by plugin type
-func catalogPathByType(pluginType consts.PluginType, name string) string {
+func catalogPathByType(pluginType PluginType, name string) string {
 	path := fmt.Sprintf("/v1/sys/plugins/catalog/%s/%s", pluginType, name)
 
 	// Backwards compat, if type is not provided then use old path
-	if pluginType == consts.PluginTypeUnknown {
+	if pluginType == PluginTypeUnknown {
 		path = fmt.Sprintf("/v1/sys/plugins/catalog/%s", name)
 	}
 

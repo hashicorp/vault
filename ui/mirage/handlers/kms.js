@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 export default function (server) {
   server.get('keymgmt/key?list=true', function () {
     return {
@@ -8,7 +13,7 @@ export default function (server) {
   });
 
   server.get('keymgmt/key/:name', function (_, request) {
-    let name = request.params.name;
+    const name = request.params.name;
     return {
       data: {
         name,

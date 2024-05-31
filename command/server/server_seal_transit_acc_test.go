@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package server
 
 import (
@@ -11,8 +14,8 @@ import (
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/sdk/helper/docker"
 )
 
 func TestTransitWrapper_Lifecycle(t *testing.T) {
@@ -26,7 +29,7 @@ func TestTransitWrapper_Lifecycle(t *testing.T) {
 		"key_name":   config.keyName,
 	}
 
-	kms, _, err := configutil.GetTransitKMSFunc(nil, &configutil.KMS{Config: wrapperConfig})
+	kms, _, err := configutil.GetTransitKMSFunc(&configutil.KMS{Config: wrapperConfig})
 	if err != nil {
 		t.Fatalf("error setting wrapper config: %v", err)
 	}
@@ -72,7 +75,7 @@ func TestTransitSeal_TokenRenewal(t *testing.T) {
 		"mount_path": config.mountPath,
 		"key_name":   config.keyName,
 	}
-	kms, _, err := configutil.GetTransitKMSFunc(nil, &configutil.KMS{Config: wrapperConfig})
+	kms, _, err := configutil.GetTransitKMSFunc(&configutil.KMS{Config: wrapperConfig})
 	if err != nil {
 		t.Fatalf("error setting wrapper config: %v", err)
 	}
@@ -131,8 +134,9 @@ func prepareTestContainer(t *testing.T) (func(), *DockerVaultConfig) {
 	}
 
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
-		ImageRepo: "vault",
-		ImageTag:  "latest",
+		ContainerName: "vault",
+		ImageRepo:     "docker.mirror.hashicorp.services/hashicorp/vault",
+		ImageTag:      "latest",
 		Cmd: []string{
 			"server", "-log-level=trace", "-dev", fmt.Sprintf("-dev-root-token-id=%s", rootToken),
 			"-dev-listen-address=0.0.0.0:8200",

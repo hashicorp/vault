@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import RESTSerializer from '@ember-data/serializer/rest';
 import { AVAILABLE_PLUGIN_TYPES } from '../../utils/database-helpers';
 
@@ -6,10 +11,7 @@ export default RESTSerializer.extend({
 
   serializeAttribute(snapshot, json, key, attributes) {
     // Don't send values that are undefined
-    if (
-      undefined !== snapshot.attr(key) &&
-      (snapshot.record.get('isNew') || snapshot.changedAttributes()[key])
-    ) {
+    if (undefined !== snapshot.attr(key)) {
       this._super(snapshot, json, key, attributes);
     }
   },
@@ -20,7 +22,7 @@ export default RESTSerializer.extend({
       return connections;
     }
     // Query single record response:
-    let response = {
+    const response = {
       id: payload.id,
       name: payload.id,
       backend: payload.backend,
@@ -36,7 +38,7 @@ export default RESTSerializer.extend({
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     const nullResponses = ['updateRecord', 'createRecord', 'deleteRecord'];
     const connections = nullResponses.includes(requestType)
-      ? { name: id, backend: payload.backend }
+      ? { name: payload.data.name, backend: payload.data.backend }
       : this.normalizeSecrets(payload);
     const { modelName } = primaryModelClass;
     let transformedPayload = { [modelName]: connections };
@@ -48,20 +50,21 @@ export default RESTSerializer.extend({
   },
 
   serialize(snapshot, requestType) {
-    let data = this._super(snapshot, requestType);
+    const data = this._super(snapshot, requestType);
     if (!data.plugin_name) {
       return data;
     }
-    let pluginType = AVAILABLE_PLUGIN_TYPES.find((plugin) => plugin.value === data.plugin_name);
+    const pluginType = AVAILABLE_PLUGIN_TYPES.find((plugin) => plugin.value === data.plugin_name);
     if (!pluginType) {
       return data;
     }
-    let pluginAttributes = pluginType.fields.map((fields) => fields.attr).concat('backend');
+    const pluginAttributes = pluginType.fields.map((fields) => fields.attr).concat('backend');
 
     // filter data to only allow plugin specific attrs
-    let allowedAttributes = Object.keys(data).filter((dataAttrs) => pluginAttributes.includes(dataAttrs));
+    const allowedAttributes = Object.keys(data).filter((dataAttrs) => pluginAttributes.includes(dataAttrs));
     for (const key in data) {
-      if (!allowedAttributes.includes(key)) {
+      // All connections allow allowed_roles but it's not shown on the form
+      if (key !== 'allowed_roles' && !allowedAttributes.includes(key)) {
         delete data[key];
       }
     }

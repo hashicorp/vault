@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -11,8 +14,8 @@ import (
 	"time"
 
 	"github.com/ghodss/yaml"
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
-	"github.com/mitchellh/cli"
 	"github.com/ryanuber/columnize"
 )
 
@@ -70,6 +73,7 @@ var Formatters = map[string]Formatter{
 	"yaml":   YamlFormatter{},
 	"yml":    YamlFormatter{},
 	"pretty": PrettyFormatter{},
+	"raw":    RawFormatter{},
 }
 
 func Format(ui cli.Ui) string {
@@ -121,6 +125,27 @@ func (j JsonFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) e
 		}
 	}
 
+	ui.Output(string(b))
+	return nil
+}
+
+// An output formatter for raw output of the original request object
+type RawFormatter struct{}
+
+func (r RawFormatter) Format(data interface{}) ([]byte, error) {
+	byte_data, ok := data.([]byte)
+	if !ok {
+		return nil, fmt.Errorf("This command does not support the -format=raw option; only `vault read` does.")
+	}
+
+	return byte_data, nil
+}
+
+func (r RawFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) error {
+	b, err := r.Format(data)
+	if err != nil {
+		return err
+	}
 	ui.Output(string(b))
 	return nil
 }
@@ -301,13 +326,14 @@ func (t TableFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) 
 func (t TableFormatter) OutputSealStatusStruct(ui cli.Ui, secret *api.Secret, data interface{}) error {
 	var status SealStatusOutput = data.(SealStatusOutput)
 	var sealPrefix string
-	if status.RecoverySeal {
-		sealPrefix = "Recovery "
-	}
 
 	out := []string{}
 	out = append(out, "Key | Value")
-	out = append(out, fmt.Sprintf("%sSeal Type | %s", sealPrefix, status.Type))
+	out = append(out, fmt.Sprintf("Seal Type | %s", status.Type))
+	if status.RecoverySeal {
+		sealPrefix = "Recovery "
+		out = append(out, fmt.Sprintf("Recovery Seal Type | %s", status.RecoverySealType))
+	}
 	out = append(out, fmt.Sprintf("Initialized | %t", status.Initialized))
 	out = append(out, fmt.Sprintf("Sealed | %t", status.Sealed))
 	out = append(out, fmt.Sprintf("Total %sShares | %d", sealPrefix, status.N))
@@ -329,6 +355,12 @@ func (t TableFormatter) OutputSealStatusStruct(ui cli.Ui, secret *api.Secret, da
 	if status.ClusterName != "" && status.ClusterID != "" {
 		out = append(out, fmt.Sprintf("Cluster Name | %s", status.ClusterName))
 		out = append(out, fmt.Sprintf("Cluster ID | %s", status.ClusterID))
+	}
+
+	// Output if HCP link is configured
+	if status.HCPLinkStatus != "" {
+		out = append(out, fmt.Sprintf("HCP Link Status | %s", status.HCPLinkStatus))
+		out = append(out, fmt.Sprintf("HCP Link Resource ID | %s", status.HCPLinkResourceID))
 	}
 
 	// Output if HA is enabled
@@ -373,6 +405,9 @@ func (t TableFormatter) OutputSealStatusStruct(ui cli.Ui, secret *api.Secret, da
 	}
 	if status.LastWAL != 0 {
 		out = append(out, fmt.Sprintf("Last WAL | %d", status.LastWAL))
+	}
+	if len(status.Warnings) > 0 {
+		out = append(out, fmt.Sprintf("Warnings | %v", status.Warnings))
 	}
 
 	ui.Output(tableOutput(out, &columnize.Config{
@@ -526,6 +561,9 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret *api.Secret) error {
 				for _, constraint := range constraintSet.Any {
 					out = append(out, fmt.Sprintf("mfa_constraint_%s_%s_id %s %s", k, constraint.Type, hopeDelim, constraint.ID))
 					out = append(out, fmt.Sprintf("mfa_constraint_%s_%s_uses_passcode %s %t", k, constraint.Type, hopeDelim, constraint.UsesPasscode))
+					if constraint.Name != "" {
+						out = append(out, fmt.Sprintf("mfa_constraint_%s_%s_name %s %s", k, constraint.Type, hopeDelim, constraint.Name))
+					}
 				}
 			}
 		} else { // Token information only makes sense if no further MFA requirement (i.e. if we actually have a token)

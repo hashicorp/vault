@@ -1,0 +1,3 @@
+```release-note:improvement
+events: WebSocket subscriptions add support for boolean filter expressions
+```

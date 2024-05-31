@@ -1,19 +1,22 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package server
 
 import (
 	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/require"
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/hcl/hcl/token"
 	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/stretchr/testify/require"
 )
 
 var DefaultCustomHeaders = map[string]map[string]string{
@@ -98,18 +101,22 @@ func testLoadConfigFile_topLevel(t *testing.T, entropy *configutil.Entropy) {
 			Seals: []*configutil.KMS{
 				{
 					Type: "nopurpose",
+					Name: "nopurpose",
 				},
 				{
 					Type:    "stringpurpose",
 					Purpose: []string{"foo"},
+					Name:    "stringpurpose",
 				},
 				{
 					Type:    "commastringpurpose",
 					Purpose: []string{"foo", "bar"},
+					Name:    "commastringpurpose",
 				},
 				{
 					Type:    "slicepurpose",
 					Purpose: []string{"zip", "zap"},
+					Name:    "slicepurpose",
 				},
 			},
 		},
@@ -451,6 +458,9 @@ func testLoadConfigFile(t *testing.T) {
 		EnableRawEndpoint:    true,
 		EnableRawEndpointRaw: true,
 
+		EnableIntrospectionEndpoint:    true,
+		EnableIntrospectionEndpointRaw: true,
+
 		DisableSealWrap:    true,
 		DisableSealWrapRaw: true,
 
@@ -465,6 +475,9 @@ func testLoadConfigFile(t *testing.T) {
 		EnableResponseHeaderRaftNodeIDRaw: true,
 
 		LicensePath: "/path/to/license",
+
+		PluginDirectory: "/path/to/plugins",
+		PluginTmpdir:    "/tmp/plugins",
 	}
 
 	addExpectedEntConfig(expected, []string{})
@@ -496,8 +509,8 @@ func testUnknownFieldValidation(t *testing.T) {
 			Problem: "unknown or unsupported field bad_value found in configuration",
 			Position: token.Pos{
 				Filename: "./test-fixtures/config.hcl",
-				Offset:   583,
-				Line:     34,
+				Offset:   652,
+				Line:     37,
 				Column:   5,
 			},
 		},
@@ -532,6 +545,59 @@ func testUnknownFieldValidation(t *testing.T) {
 			t.Fatalf("could not find expected error: %v", ex.String())
 		}
 	}
+}
+
+// testUnknownFieldValidationJson tests that this valid json config does not result in
+// errors. Prior to VAULT-8519, it reported errors even with a valid config that was
+// parsed properly.
+func testUnknownFieldValidationJson(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/config_small.json")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	errors := config.Validate("./test-fixtures/config_small.json")
+	if errors != nil {
+		t.Fatal(errors)
+	}
+}
+
+// testUnknownFieldValidationHcl tests that this valid hcl config does not result in
+// errors. Prior to VAULT-8519, the json version of this config reported errors even
+// with a valid config that was parsed properly.
+// In short, this ensures the same for HCL as we test in testUnknownFieldValidationJson
+func testUnknownFieldValidationHcl(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/config_small.hcl")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	errors := config.Validate("./test-fixtures/config_small.hcl")
+	if errors != nil {
+		t.Fatal(errors)
+	}
+}
+
+// testConfigWithAdministrativeNamespaceJson tests that a config with a valid administrative namespace path is correctly validated and loaded.
+func testConfigWithAdministrativeNamespaceJson(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/config_with_valid_admin_ns.json")
+	require.NoError(t, err)
+
+	configErrors := config.Validate("./test-fixtures/config_with_valid_admin_ns.json")
+	require.Empty(t, configErrors)
+
+	require.NotEmpty(t, config.AdministrativeNamespacePath)
+}
+
+// testConfigWithAdministrativeNamespaceHcl tests that a config with a valid administrative namespace path is correctly validated and loaded.
+func testConfigWithAdministrativeNamespaceHcl(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/config_with_valid_admin_ns.hcl")
+	require.NoError(t, err)
+
+	configErrors := config.Validate("./test-fixtures/config_with_valid_admin_ns.hcl")
+	require.Empty(t, configErrors)
+
+	require.NotEmpty(t, config.AdministrativeNamespacePath)
 }
 
 func testLoadConfigFile_json(t *testing.T) {
@@ -703,12 +769,15 @@ func testConfig_Sanitized(t *testing.T) {
 		"disable_indexing":                    false,
 		"disable_mlock":                       true,
 		"disable_performance_standby":         false,
+		"experiments":                         []string(nil),
 		"plugin_file_uid":                     0,
 		"plugin_file_permissions":             0,
 		"disable_printable_check":             false,
 		"disable_sealwrap":                    true,
 		"raw_storage_endpoint":                true,
+		"introspection_endpoint":              false,
 		"disable_sentinel_trace":              true,
+		"detect_deadlocks":                    "",
 		"enable_ui":                           true,
 		"enable_response_header_hostname":     false,
 		"enable_response_header_raft_node_id": false,
@@ -722,9 +791,11 @@ func testConfig_Sanitized(t *testing.T) {
 		"listeners": []interface{}{
 			map[string]interface{}{
 				"config": map[string]interface{}{
-					"address": "127.0.0.1:443",
+					"address":                 "127.0.0.1:443",
+					"chroot_namespace":        "admin/",
+					"disable_request_limiter": false,
 				},
-				"type": "tcp",
+				"type": configutil.TCP,
 			},
 		},
 		"log_format":       "",
@@ -732,10 +803,12 @@ func testConfig_Sanitized(t *testing.T) {
 		"max_lease_ttl":    (30 * 24 * time.Hour) / time.Second,
 		"pid_file":         "./pidfile",
 		"plugin_directory": "",
+		"plugin_tmpdir":    "",
 		"seals": []interface{}{
 			map[string]interface{}{
 				"disabled": false,
 				"type":     "awskms",
+				"name":     "awskms",
 			},
 		},
 		"storage": map[string]interface{}{
@@ -777,7 +850,10 @@ func testConfig_Sanitized(t *testing.T) {
 			"lease_metrics_epsilon":                  time.Hour,
 			"num_lease_metrics_buckets":              168,
 			"add_lease_metrics_namespace_labels":     false,
+			"add_mount_point_rollback_metrics":       false,
 		},
+		"administrative_namespace_path": "admin/",
+		"imprecise_lease_role_tracking": false,
 	}
 
 	addExpectedEntSanitizedConfig(expected, []string{"http"})
@@ -810,6 +886,24 @@ listener "tcp" {
   agent_api {
     enable_quit = true
   }
+  proxy_api {
+    enable_quit = true
+  }
+  chroot_namespace = "admin"
+  redact_addresses = true
+  redact_cluster_name = true
+  redact_version = true
+  disable_request_limiter = true
+}
+listener "unix" {
+  address = "/var/run/vault.sock"
+  socket_mode = "644"
+  socket_user = "1000"
+  socket_group = "1000"
+  redact_addresses = true
+  redact_cluster_name = true
+  redact_version = true
+  disable_request_limiter = true
 }`))
 
 	config := Config{
@@ -817,15 +911,20 @@ listener "tcp" {
 	}
 	list, _ := obj.Node.(*ast.ObjectList)
 	objList := list.Filter("listener")
-	configutil.ParseListeners(config.SharedConfig, objList)
-	listeners := config.Listeners
-	if len(listeners) == 0 {
-		t.Fatalf("expected at least one listener in the config")
+	listeners, err := configutil.ParseListeners(objList)
+	require.NoError(t, err)
+	// Update the shared config
+	config.Listeners = listeners
+	// Track which types of listener were found.
+	for _, l := range config.Listeners {
+		config.found(l.Type.String(), l.Type.String())
 	}
-	listener := listeners[0]
-	if listener.Type != "tcp" {
-		t.Fatalf("expected tcp listener in the config")
-	}
+
+	require.Len(t, config.Listeners, 2)
+	tcpListener := config.Listeners[0]
+	require.Equal(t, configutil.TCP, tcpListener.Type)
+	unixListner := config.Listeners[1]
+	require.Equal(t, configutil.Unix, unixListner.Type)
 
 	expected := &Config{
 		SharedConfig: &configutil.SharedConfig{
@@ -850,7 +949,26 @@ listener "tcp" {
 					AgentAPI: &configutil.AgentAPI{
 						EnableQuit: true,
 					},
+					ProxyAPI: &configutil.ProxyAPI{
+						EnableQuit: true,
+					},
 					CustomResponseHeaders: DefaultCustomHeaders,
+					ChrootNamespace:       "admin/",
+					RedactAddresses:       true,
+					RedactClusterName:     true,
+					RedactVersion:         true,
+					DisableRequestLimiter: true,
+				},
+				{
+					Type:                  "unix",
+					Address:               "/var/run/vault.sock",
+					SocketMode:            "644",
+					SocketUser:            "1000",
+					SocketGroup:           "1000",
+					RedactAddresses:       false,
+					RedactClusterName:     false,
+					RedactVersion:         false,
+					DisableRequestLimiter: true,
 				},
 			},
 		},
@@ -859,6 +977,67 @@ listener "tcp" {
 	if diff := deep.Equal(config, *expected); diff != nil {
 		t.Fatal(diff)
 	}
+}
+
+func testParseUserLockouts(t *testing.T) {
+	obj, _ := hcl.Parse(strings.TrimSpace(`
+	user_lockout "all" {
+		lockout_duration = "40m"
+		lockout_counter_reset = "45m"
+		disable_lockout = "false"
+	}
+	  user_lockout "userpass" {
+	     lockout_threshold = "100"
+	     lockout_duration = "20m"
+	  }
+	  user_lockout "ldap" {
+		disable_lockout = "true"
+	 }`))
+
+	config := Config{
+		SharedConfig: &configutil.SharedConfig{},
+	}
+	list, _ := obj.Node.(*ast.ObjectList)
+	objList := list.Filter("user_lockout")
+	configutil.ParseUserLockouts(config.SharedConfig, objList)
+
+	sort.Slice(config.SharedConfig.UserLockouts[:], func(i, j int) bool {
+		return config.SharedConfig.UserLockouts[i].Type < config.SharedConfig.UserLockouts[j].Type
+	})
+
+	expected := &Config{
+		SharedConfig: &configutil.SharedConfig{
+			UserLockouts: []*configutil.UserLockout{
+				{
+					Type:                "all",
+					LockoutThreshold:    5,
+					LockoutDuration:     2400000000000,
+					LockoutCounterReset: 2700000000000,
+					DisableLockout:      false,
+				},
+				{
+					Type:                "userpass",
+					LockoutThreshold:    100,
+					LockoutDuration:     1200000000000,
+					LockoutCounterReset: 2700000000000,
+					DisableLockout:      false,
+				},
+				{
+					Type:                "ldap",
+					LockoutThreshold:    5,
+					LockoutDuration:     2400000000000,
+					LockoutCounterReset: 2700000000000,
+					DisableLockout:      true,
+				},
+			},
+		},
+	}
+
+	sort.Slice(expected.SharedConfig.UserLockouts[:], func(i, j int) bool {
+		return expected.SharedConfig.UserLockouts[i].Type < expected.SharedConfig.UserLockouts[j].Type
+	})
+	config.Prune()
+	require.Equal(t, config, *expected)
 }
 
 func testParseSockaddrTemplate(t *testing.T) {
@@ -978,6 +1157,7 @@ func testParseSeals(t *testing.T) {
 						"default_hmac_key_label": "vault-hsm-hmac-key",
 						"generate_key":           "true",
 					},
+					Name: "pkcs11",
 				},
 				{
 					Type:     "pkcs11",
@@ -994,10 +1174,12 @@ func testParseSeals(t *testing.T) {
 						"default_hmac_key_label": "vault-hsm-hmac-key",
 						"generate_key":           "true",
 					},
+					Name: "pkcs11-disabled",
 				},
 			},
 		},
 	}
+	addExpectedDefaultEntConfig(expected)
 	config.Prune()
 	require.Equal(t, config, expected)
 }

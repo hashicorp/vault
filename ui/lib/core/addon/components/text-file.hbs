@@ -1,0 +1,87 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{#if @uploadOnly}}
+  <label id="text-file-input-{{this.elementId}}" class="sr-only">{{or @label "File"}}</label>
+{{else}}
+  <div class="level is-mobile">
+    <div class="level-left">
+      <label id="text-file-input-{{this.elementId}}" class="has-text-weight-semibold" data-test-text-file-label>
+        {{or @label "File"}}
+        {{#if @helpText}}
+          <InfoTooltip>
+            <span data-test-help-text>
+              {{@helpText}}
+            </span>
+          </InfoTooltip>
+        {{/if}}
+      </label>
+    </div>
+    <div class="level-right">
+      <Input
+        data-test-text-toggle
+        id="use-text-{{this.elementId}}"
+        class="toggle is-success is-small"
+        @type="checkbox"
+        @checked={{this.showTextArea}}
+        {{on "change" (fn (mut this.showTextArea) (not this.showTextArea))}}
+      />
+      <label for="use-text-{{this.elementId}}" class="has-text-weight-bold is-size-8">
+        Enter as text
+      </label>
+    </div>
+  </div>
+{{/if}}
+<div class="field text-file box is-fullwidth is-marginless is-shadowless is-paddingless" data-test-component="text-file">
+  {{#if this.showTextArea}}
+    <Hds::Form::MaskedInput::Field
+      @value={{this.content}}
+      @isMultiline={{true}}
+      {{on "input" this.handleTextInput}}
+      aria-labelledby="text-file-input-{{this.elementId}}"
+      data-test-text-file-textarea
+      as |F|
+    >
+      <F.HelperText>
+        Enter the value as text.
+        {{#if @subText}}
+          {{@subText}}
+        {{/if}}
+        {{#if @docLink}}
+          See our
+          <Hds::Link::Inline @href={{doc-link @docLink}}>documentation</Hds::Link::Inline>
+          for help.
+        {{/if}}
+      </F.HelperText>
+    </Hds::Form::MaskedInput::Field>
+  {{else}}
+    <Hds::Form::FileInput::Field
+      {{on "change" this.handleFileUpload}}
+      aria-labelledby="text-file-input-{{this.elementId}}"
+      data-test-text-file-input
+      as |F|
+    >
+      <F.HelperText>
+        Select a file from your computer.
+        {{#if @subText}}
+          {{@subText}}
+        {{/if}}
+        {{#if @docLink}}
+          See our
+          <Hds::Link::Inline @href={{doc-link @docLink}}>documentation</Hds::Link::Inline>
+          for help.
+        {{/if}}
+      </F.HelperText>
+    </Hds::Form::FileInput::Field>
+    {{#if (or @validationError this.uploadError)}}
+      <AlertInline
+        @type="danger"
+        @message={{or @validationError this.uploadError}}
+        class="has-top-padding-s"
+        data-test-field-validation="text-file"
+      />
+    {{/if}}
+  {{/if}}
+</div>

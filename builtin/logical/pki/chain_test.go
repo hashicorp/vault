@@ -1,9 +1,14 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pki
 
 import (
+	"bytes"
 	"context"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/hex"
 	"encoding/pem"
 	"fmt"
 	"strconv"
@@ -11,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -113,6 +119,7 @@ type CBGenerateIntermediate struct {
 	Existing           bool
 	Name               string
 	CommonName         string
+	SKID               string
 	Parent             string
 	ImportErrorMessage string
 }
@@ -151,12 +158,31 @@ func (c CBGenerateIntermediate) Run(t testing.TB, b *backend, s logical.Storage,
 	if len(c.CommonName) > 0 {
 		data["common_name"] = c.CommonName
 	}
+	if len(c.SKID) > 0 {
+		// Copy the SKID from an existing, already-issued cert.
+		otherPEM := knownCerts[c.SKID]
+		otherCert := ToCertificate(t, otherPEM)
+
+		data["skid"] = hex.EncodeToString(otherCert.SubjectKeyId)
+	}
+
 	resp, err = CBWrite(b, s, url, data)
 	if err != nil {
 		t.Fatalf("failed to sign CSR for issuer (%v): %v / body: %v", c.Name, err, data)
 	}
 
 	knownCerts[c.Name] = strings.TrimSpace(resp.Data["certificate"].(string))
+
+	// Verify SKID if one was requested.
+	if len(c.SKID) > 0 {
+		otherPEM := knownCerts[c.SKID]
+		otherCert := ToCertificate(t, otherPEM)
+		ourCert := ToCertificate(t, knownCerts[c.Name])
+
+		if !bytes.Equal(otherCert.SubjectKeyId, ourCert.SubjectKeyId) {
+			t.Fatalf("Expected two certs to have equal SKIDs but differed: them: %v vs us: %v", otherCert.SubjectKeyId, ourCert.SubjectKeyId)
+		}
+	}
 
 	// Set the signed intermediate
 	url = "intermediate/set-signed"
@@ -287,6 +313,8 @@ func (c CBValidateChain) PrettyChain(t testing.TB, chain []string, knownCerts ma
 }
 
 func ToCertificate(t testing.TB, cert string) *x509.Certificate {
+	t.Helper()
+
 	block, _ := pem.Decode([]byte(cert))
 	if block == nil {
 		t.Fatalf("Unable to parse certificate: nil PEM block\n[%v]\n", cert)
@@ -301,6 +329,8 @@ func ToCertificate(t testing.TB, cert string) *x509.Certificate {
 }
 
 func ToCRL(t testing.TB, crl string, issuer *x509.Certificate) *pkix.CertificateList {
+	t.Helper()
+
 	block, _ := pem.Decode([]byte(crl))
 	if block == nil {
 		t.Fatalf("Unable to parse CRL: nil PEM block\n[%v]\n", crl)
@@ -513,7 +543,7 @@ func (c CBIssueLeaf) RevokeLeaf(t testing.TB, b *backend, s logical.Storage, kno
 		t.Fatalf("failed to revoke issued certificate (%v) under role %v / issuer %v: expected response parameter revocation_time was missing from response:\n%v", api_serial, c.Role, c.Issuer, resp.Data)
 	}
 
-	if !hasCRL && isDefault {
+	if !hasCRL {
 		// Nothing further we can test here. We could re-enable CRL building
 		// and check that it works, but that seems like a stretch. Other
 		// issuers might be functionally the same as this issuer (and thus
@@ -546,7 +576,7 @@ func (c CBIssueLeaf) RevokeLeaf(t testing.TB, b *backend, s logical.Storage, kno
 			if resp == nil {
 				t.Fatalf("failed to read default issuer config: nil response")
 			}
-			defaultID := resp.Data["default"].(issuerID).String()
+			defaultID := resp.Data["default"].(issuing.IssuerID).String()
 			c.Issuer = defaultID
 			issuer = nil
 		}
@@ -592,7 +622,7 @@ func (c CBIssueLeaf) RevokeLeaf(t testing.TB, b *backend, s logical.Storage, kno
 			}
 		}
 
-		t.Fatalf("expected to find certificate with serial [%v] on issuer %v's CRL but was missing: %v revoked certs\n\nCRL:\n[%v]\n\nLeaf:\n[%v]\n\nIssuer:\n[%v]\n", api_serial, c.Issuer, len(crl.TBSCertList.RevokedCertificates), raw_crl, raw_cert, raw_issuer)
+		t.Fatalf("expected to find certificate with serial [%v] on issuer %v's CRL but was missing: %v revoked certs\n\nCRL:\n[%v]\n\nLeaf:\n[%v]\n\nIssuer (hasCRL: %v):\n[%v]\n", api_serial, c.Issuer, len(crl.TBSCertList.RevokedCertificates), raw_crl, raw_cert, hasCRL, raw_issuer)
 	}
 }
 
@@ -608,7 +638,7 @@ func (c CBIssueLeaf) Run(t testing.TB, b *backend, s logical.Storage, knownKeys 
 	if resp == nil {
 		t.Fatalf("failed to read default issuer config: nil response")
 	}
-	defaultID := resp.Data["default"].(issuerID).String()
+	defaultID := resp.Data["default"].(issuing.IssuerID).String()
 
 	resp, err = CBRead(b, s, "issuer/"+c.Issuer)
 	if err != nil {
@@ -617,7 +647,7 @@ func (c CBIssueLeaf) Run(t testing.TB, b *backend, s logical.Storage, knownKeys 
 	if resp == nil {
 		t.Fatalf("failed to read issuer %v: nil response", c.Issuer)
 	}
-	ourID := resp.Data["issuer_id"].(issuerID).String()
+	ourID := resp.Data["issuer_id"].(issuing.IssuerID).String()
 	areDefault := ourID == defaultID
 
 	for _, usage := range []string{"read-only", "crl-signing", "issuing-certificates", "issuing-certificates,crl-signing"} {
@@ -829,6 +859,7 @@ var chainBuildingTestCases = []CBTestScenario{
 				Existing:   true,
 				Name:       "cross-old-new",
 				CommonName: "root-new",
+				SKID:       "root-new-a",
 				// Which old issuer is used here doesn't matter as they have
 				// the same CN and key.
 				Parent: "root-old-a",
@@ -887,6 +918,7 @@ var chainBuildingTestCases = []CBTestScenario{
 				Existing:   true,
 				Name:       "cross-new-old",
 				CommonName: "root-old",
+				SKID:       "root-old-a",
 				// Which new issuer is used here doesn't matter as they have
 				// the same CN and key.
 				Parent: "root-new-a",
@@ -1572,8 +1604,9 @@ var chainBuildingTestCases = []CBTestScenario{
 }
 
 func Test_CAChainBuilding(t *testing.T) {
+	t.Parallel()
 	for testIndex, testCase := range chainBuildingTestCases {
-		b, s := createBackendWithStorage(t)
+		b, s := CreateBackendWithStorage(t)
 
 		knownKeys := make(map[string]string)
 		knownCerts := make(map[string]string)
@@ -1595,7 +1628,7 @@ func BenchmarkChainBuilding(benchies *testing.B) {
 			bench.StopTimer()
 			bench.ResetTimer()
 
-			b, s := createBackendWithStorage(bench)
+			b, s := CreateBackendWithStorage(bench)
 
 			knownKeys := make(map[string]string)
 			knownCerts := make(map[string]string)

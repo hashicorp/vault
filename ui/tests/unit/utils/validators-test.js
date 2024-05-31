@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import validators from 'vault/utils/validators';
@@ -69,5 +74,35 @@ module('Unit | Util | validators', function (hooks) {
     assert.true(isValid, 'Valid for 0 as an integer');
     check('0');
     assert.true(isValid, 'Valid for 0 as a string');
+  });
+
+  test('it should validate white space', function (assert) {
+    let isValid;
+    const check = (prop) => (isValid = validators.containsWhiteSpace(prop));
+    check('validText');
+    assert.true(isValid, 'Valid when text contains no spaces');
+    check('valid-text');
+    assert.true(isValid, 'Valid when text contains no spaces and hyphen');
+    check('some space');
+    assert.false(isValid, 'Invalid when text contains single space');
+    check('text with spaces');
+    assert.false(isValid, 'Invalid when text contains multiple spaces');
+    check(' leadingSpace');
+    assert.false(isValid, 'Invalid when text has leading whitespace');
+    check('trailingSpace ');
+    assert.false(isValid, 'Invalid when text has trailing whitespace');
+  });
+
+  test('it should validate value ends in a slash', function (assert) {
+    let isValid;
+    const check = (prop) => (isValid = validators.endsInSlash(prop));
+    check('validText');
+    assert.true(isValid, 'Valid when text does not end in slash');
+    check('valid/Text');
+    assert.true(isValid, 'Valid when text only contains slash');
+    check('invalid/');
+    assert.false(isValid, 'Invalid when text ends in slash');
+    check('also/invalid/');
+    assert.false(isValid, 'Invalid when text contains and ends in slash');
   });
 });

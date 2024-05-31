@@ -1,0 +1,4 @@
+```release-note:improvement
+secrets/transit: Add an optional reference field to batch operation items
+which is repeated on batch responses to help more easily correlate inputs with outputs.
+```

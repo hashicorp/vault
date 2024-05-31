@@ -1,0 +1,87 @@
+---
+layout: docs
+page_title: patch - Command
+description: |-
+  The "patch" command updates data in Vault at the given path. The data can be
+  credentials, secrets, configuration, or arbitrary data. The specific behavior
+  of this command is determined at the thing mounted at the path.
+---
+
+# patch
+
+The `patch` command updates data in Vault at the given path (wrapper command for
+HTTP PATCH using the [JSON Patch format](https://datatracker.ietf.org/doc/html/rfc6902)).
+The data can be credentials, secrets, configuration, or arbitrary data. The specific
+behavior of the `patch` command is determined at the thing mounted at the path.
+
+Data is specified as "**key=value**" pairs on the command line. If the value begins
+with an "**@**", then it is loaded from a file. If the value for a key is "**-**", Vault
+will read the value from stdin rather than the command line.
+
+Some API fields require more advanced structures such as maps. These cannot
+directly be represented on the command line. However, direct control of the
+request parameters can be achieved by using `-` as the only data argument.
+This causes `vault patch` to read a JSON blob containing all request parameters
+from stdin. This argument will be ignored if used in conjunction with any
+"key=value" pairs.
+
+For a full list of examples and paths, please see the documentation that
+corresponds to the secrets engines in use.
+
+Unlike [the `write` command](/vault/docs/commands/write), the `patch` command only
+modifies data specified on the command line.
+
+## Examples
+
+Updates a PKI role to modify a single parameter:
+
+```shell-session
+$ vault patch pki/roles/example allow_localhost=false
+```
+
+### API versus CLI
+
+Updates a PKI role to modify the `allow_localhost` parameter:
+
+```shell-session
+$ vault patch pki/roles/example allow_localhost=false
+```
+
+Equivalent cURL command for this operation:
+
+```shell-session
+$ tee request_payload.json -<<EOF
+{
+   "organization": "hashicorp"
+}
+EOF
+
+$ curl --header "X-Vault-Token: $VAULT_TOKEN" \
+    --request PATCH \
+    --header 'Content-Type: application/merge-patch+json'
+    --data @request_payload.json \
+    $VAULT_ADDR/v1/pki/roles/example
+```
+
+The `vault patch` command simplifies the API call.
+
+## Usage
+
+The following flags are available in addition to the [standard set of
+flags](/vault/docs/commands) included on all commands.
+
+### Output options
+
+- `-field` `(string: "")` - Print only the field with the given name, in the format
+  specified in the `-format` directive. The result will not have a trailing
+  newline making it ideal for piping to other processes.
+
+- `-format` `(string: "table")` - Print the output in the given format. Valid
+  formats are "table", "json", or "yaml". This can also be specified via the
+  `VAULT_FORMAT` environment variable.
+
+### Command options
+
+- `-force` `(bool: false)` - Allow the operation to continue with no key=value
+  pairs. This allows writing to keys that do not need or expect data. This is
+  aliased as `-f`.

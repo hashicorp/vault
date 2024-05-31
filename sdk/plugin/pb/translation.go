@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pb
 
 import (
@@ -401,13 +404,14 @@ func ProtoResponseToLogicalResponse(r *Response) (*logical.Response, error) {
 	}
 
 	return &logical.Response{
-		Secret:   secret,
-		Auth:     auth,
-		Data:     data,
-		Redirect: r.Redirect,
-		Warnings: r.Warnings,
-		WrapInfo: wrapInfo,
-		Headers:  headers,
+		Secret:    secret,
+		Auth:      auth,
+		Data:      data,
+		Redirect:  r.Redirect,
+		Warnings:  r.Warnings,
+		WrapInfo:  wrapInfo,
+		Headers:   headers,
+		MountType: r.MountType,
 	}, nil
 }
 
@@ -488,13 +492,14 @@ func LogicalResponseToProtoResponse(r *logical.Response) (*Response, error) {
 	}
 
 	return &Response{
-		Secret:   secret,
-		Auth:     auth,
-		Data:     string(buf[:]),
-		Redirect: r.Redirect,
-		Warnings: r.Warnings,
-		WrapInfo: wrapInfo,
-		Headers:  headers,
+		Secret:    secret,
+		Auth:      auth,
+		Data:      string(buf[:]),
+		Redirect:  r.Redirect,
+		Warnings:  r.Warnings,
+		WrapInfo:  wrapInfo,
+		Headers:   headers,
+		MountType: r.MountType,
 	}, nil
 }
 
@@ -620,6 +625,7 @@ func LogicalTokenEntryToProtoTokenEntry(t *logical.TokenEntry) *TokenEntry {
 		NamespaceID:        t.NamespaceID,
 		CubbyholeID:        t.CubbyholeID,
 		Type:               uint32(t.Type),
+		ExternalID:         t.ExternalID,
 	}
 }
 
@@ -660,6 +666,7 @@ func ProtoTokenEntryToLogicalTokenEntry(t *TokenEntry) (*logical.TokenEntry, err
 		NamespaceID:        t.NamespaceID,
 		CubbyholeID:        t.CubbyholeID,
 		Type:               logical.TokenType(t.Type),
+		ExternalID:         t.ExternalID,
 	}, nil
 }
 

@@ -1,0 +1,3 @@
+```release-note:bug:
+UI: Fix "MFA-Setup permission denied error" by using user-token specific MFA generate endpoint instead of admin-generate
+```

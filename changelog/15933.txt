@@ -1,0 +1,3 @@
+```release-note:bug
+database: Invalidate queue should cancel context first to avoid deadlock
+```

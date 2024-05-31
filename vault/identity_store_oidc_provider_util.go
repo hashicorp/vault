@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -9,9 +12,9 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/go-jose/go-jose/v3"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"gopkg.in/square/go-jose.v2"
 )
 
 // validRedirect checks whether uri is in allowed using special handling for loopback uris.

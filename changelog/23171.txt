@@ -1,0 +1,6 @@
+```release-note:bug
+plugins: Runtime catalog returns 404 instead of 500 when reading a runtime that does not exist
+```
+```release-note:bug
+plugins: `vault plugin runtime list` can successfully list plugin runtimes with GET
+```
