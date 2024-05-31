@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"strings"
 
+	memdb "github.com/absolutelightning/go-memdb"
 	"github.com/golang/protobuf/ptypes"
-	memdb "github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/identity"
