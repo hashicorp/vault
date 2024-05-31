@@ -1,0 +1,15 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{#each @metadata.formFields as |attr|}}
+  {{#if (eq attr.name "customMetadata")}}
+    <FormField @attr={{attr}} @model={{@metadata}} @modelValidations={{@modelValidations}} />
+    <label class="title has-top-padding-m is-4">
+      Additional options
+    </label>
+  {{else}}
+    <FormField @attr={{attr}} @model={{@metadata}} @modelValidations={{@modelValidations}} />
+  {{/if}}
+{{/each}}

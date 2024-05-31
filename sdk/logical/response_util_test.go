@@ -1,8 +1,14 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package logical
 
 import (
+	"errors"
 	"strings"
 	"testing"
+
+	"github.com/hashicorp/vault/sdk/helper/consts"
 )
 
 func TestResponseUtil_RespondErrorCommon_basic(t *testing.T) {
@@ -39,6 +45,14 @@ func TestResponseUtil_RespondErrorCommon_basic(t *testing.T) {
 			expectedStatus: 404,
 		},
 		{
+			title: "Header not found",
+			req: &Request{
+				Operation: HeaderOperation,
+			},
+			respErr:        nil,
+			expectedStatus: 404,
+		},
+		{
 			title: "List with response and no keys",
 			req: &Request{
 				Operation: ListOperation,
@@ -59,6 +73,28 @@ func TestResponseUtil_RespondErrorCommon_basic(t *testing.T) {
 			},
 			respErr:        nil,
 			expectedStatus: 0,
+		},
+		{
+			title:   "Invalid Credentials error ",
+			respErr: ErrInvalidCredentials,
+			resp: &Response{
+				Data: map[string]interface{}{
+					"error": "error due to wrong credentials",
+				},
+			},
+			expectedErr:    errors.New("error due to wrong credentials"),
+			expectedStatus: 400,
+		},
+		{
+			title:   "Overloaded error",
+			respErr: consts.ErrOverloaded,
+			resp: &Response{
+				Data: map[string]interface{}{
+					"error": "overloaded, try again later",
+				},
+			},
+			expectedErr:    consts.ErrOverloaded,
+			expectedStatus: 503,
 		},
 	}
 

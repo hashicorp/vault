@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package plugin
 
 import (
@@ -143,3 +146,12 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 		Backend: backend,
 	}, nil
 }
+
+func (b *BackendPluginClient) PluginVersion() logical.PluginVersion {
+	if versioner, ok := b.Backend.(logical.PluginVersioner); ok {
+		return versioner.PluginVersion()
+	}
+	return logical.EmptyPluginVersion
+}
+
+var _ logical.PluginVersioner = (*BackendPluginClient)(nil)

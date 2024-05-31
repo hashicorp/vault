@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -7,7 +10,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/cli"
 	"github.com/posener/complete"
 )
 
@@ -96,7 +99,7 @@ func (c *KVPutCommand) Flags() *FlagSets {
 }
 
 func (c *KVPutCommand) AutocompleteArgs() complete.Predictor {
-	return nil
+	return c.PredictVaultFolders()
 }
 
 func (c *KVPutCommand) AutocompleteFlags() complete.Flags {
@@ -143,7 +146,7 @@ func (c *KVPutCommand) Run(args []string) int {
 
 	// If true, we're working with "-mount=secret foo" syntax.
 	// If false, we're using "secret/foo" syntax.
-	mountFlagSyntax := (c.flagMount != "")
+	mountFlagSyntax := c.flagMount != ""
 
 	var (
 		mountPath   string
@@ -155,11 +158,14 @@ func (c *KVPutCommand) Run(args []string) int {
 	if mountFlagSyntax {
 		// In this case, this arg is the secret path (e.g. "foo").
 		partialPath = sanitizePath(args[0])
-		mountPath = sanitizePath(c.flagMount)
-		_, v2, err = isKVv2(mountPath, client)
+		mountPath, v2, err = isKVv2(sanitizePath(c.flagMount), client)
 		if err != nil {
 			c.UI.Error(err.Error())
 			return 2
+		}
+
+		if v2 {
+			partialPath = path.Join(mountPath, partialPath)
 		}
 	} else {
 		// In this case, this arg is a path-like combination of mountPath/secretPath.
@@ -175,7 +181,7 @@ func (c *KVPutCommand) Run(args []string) int {
 	// Add /data to v2 paths only
 	var fullPath string
 	if v2 {
-		fullPath = addPrefixToKVPath(partialPath, mountPath, "data")
+		fullPath = addPrefixToKVPath(partialPath, mountPath, "data", false)
 		data = map[string]interface{}{
 			"data":    data,
 			"options": map[string]interface{}{},
@@ -211,6 +217,11 @@ func (c *KVPutCommand) Run(args []string) int {
 
 	if c.flagField != "" {
 		return PrintRawField(c.UI, secret, c.flagField)
+	}
+
+	// If the secret is wrapped, return the wrapped response.
+	if secret.WrapInfo != nil && secret.WrapInfo.TTL != 0 {
+		return OutputSecret(c.UI, secret)
 	}
 
 	if Format(c.UI) == "table" {

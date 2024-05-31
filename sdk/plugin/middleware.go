@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package plugin
 
 import (
@@ -97,4 +100,16 @@ func (b *BackendTracingMiddleware) Type() logical.BackendType {
 
 	b.logger.Trace("type", "status", "started")
 	return b.next.Type()
+}
+
+func (b *BackendTracingMiddleware) PluginVersion() logical.PluginVersion {
+	defer func(then time.Time) {
+		b.logger.Trace("version", "status", "finished", "took", time.Since(then))
+	}(time.Now())
+
+	b.logger.Trace("version", "status", "started")
+	if versioner, ok := b.next.(logical.PluginVersioner); ok {
+		return versioner.PluginVersion()
+	}
+	return logical.EmptyPluginVersion
 }

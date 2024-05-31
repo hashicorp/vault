@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -7,9 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
 
@@ -38,6 +40,7 @@ type AuthEnableCommand struct {
 	flagTokenType                 string
 	flagVersion                   int
 	flagPluginVersion             string
+	flagIdentityTokenKey          string
 }
 
 func (c *AuthEnableCommand) Synopsis() string {
@@ -152,7 +155,7 @@ func (c *AuthEnableCommand) Flags() *FlagSets {
 	f.StringVar(&StringVar{
 		Name:       "plugin-name",
 		Target:     &c.flagPluginName,
-		Completion: c.PredictVaultPlugins(consts.PluginTypeCredential),
+		Completion: c.PredictVaultPlugins(api.PluginTypeCredential),
 		Usage: "Name of the auth method plugin. This plugin name must already " +
 			"exist in the Vault server's plugin catalog.",
 	})
@@ -201,10 +204,17 @@ func (c *AuthEnableCommand) Flags() *FlagSets {
 	})
 
 	f.StringVar(&StringVar{
-		Name:    "plugin-version",
+		Name:    flagNamePluginVersion,
 		Target:  &c.flagPluginVersion,
 		Default: "",
-		Usage:   "Select the version of the plugin to enable.",
+		Usage:   "Select the semantic version of the plugin to enable.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:    flagNameIdentityTokenKey,
+		Target:  &c.flagIdentityTokenKey,
+		Default: "default",
+		Usage:   "Select the key used to sign plugin identity tokens.",
 	})
 
 	return set
@@ -270,7 +280,6 @@ func (c *AuthEnableCommand) Run(args []string) int {
 
 	authOpts := &api.EnableAuthOptions{
 		Type:                  authType,
-		Version:               c.flagPluginVersion,
 		Description:           c.flagDescription,
 		Local:                 c.flagLocal,
 		SealWrap:              c.flagSealWrap,
@@ -307,6 +316,14 @@ func (c *AuthEnableCommand) Run(args []string) int {
 		if fl.Name == flagNameTokenType {
 			authOpts.Config.TokenType = c.flagTokenType
 		}
+
+		if fl.Name == flagNamePluginVersion {
+			authOpts.Config.PluginVersion = c.flagPluginVersion
+		}
+
+		if fl.Name == flagNameIdentityTokenKey {
+			authOpts.Config.IdentityTokenKey = c.flagIdentityTokenKey
+		}
 	})
 
 	if err := client.Sys().EnableAuthWithOptions(authPath, authOpts); err != nil {
@@ -317,6 +334,9 @@ func (c *AuthEnableCommand) Run(args []string) int {
 	authThing := authType + " auth method"
 	if authType == "plugin" {
 		authThing = c.flagPluginName + " plugin"
+	}
+	if c.flagPluginVersion != "" {
+		authThing += " version " + c.flagPluginVersion
 	}
 	c.UI.Output(fmt.Sprintf("Success! Enabled %s at: %s", authThing, authPath))
 	return 0

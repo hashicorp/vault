@@ -1,0 +1,24 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{#if (and this.state this.version.isEnterprise)}}
+  <Hds::Alert @type="page" @color={{if (eq this.state "connected") "neutral" "warning"}} as |A|>
+    <A.Title data-test-link-status>
+      {{#if (eq this.state "connected")}}
+        This self-managed Vault is linked to
+        <Hds::Link::Inline @href="https://portal.cloud.hashicorp.com/sign-in">HCP.</Hds::Link::Inline>
+      {{else}}
+        Error connecting to HCP
+      {{/if}}
+    </A.Title>
+    {{#if this.error}}
+      <A.Description data-test-link-error>
+        Since
+        {{this.timestamp}},
+        {{this.error}}. Check the logs for more information.
+      </A.Description>
+    {{/if}}
+  </Hds::Alert>
+{{/if}}

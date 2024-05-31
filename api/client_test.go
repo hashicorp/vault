@@ -1,9 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package api
 
 import (
 	"bytes"
 	"context"
-	"crypto/x509"
+	"crypto/tls"
 	"encoding/base64"
 	"fmt"
 	"io"
@@ -19,7 +22,6 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/sdk/helper/consts"
 )
 
 func init() {
@@ -83,7 +85,7 @@ func TestClientDefaultHttpClient_unixSocket(t *testing.T) {
 	if client.addr.Scheme != "http" {
 		t.Fatalf("bad: %s", client.addr.Scheme)
 	}
-	if client.addr.Host != "/var/run/vault.sock" {
+	if client.addr.Host != "localhost" {
 		t.Fatalf("bad: %s", client.addr.Host)
 	}
 }
@@ -101,14 +103,15 @@ func TestClientSetAddress(t *testing.T) {
 		t.Fatalf("bad: expected: '172.168.2.1:8300' actual: %q", client.addr.Host)
 	}
 	// Test switching to Unix Socket address from TCP address
+	client.config.HttpClient.Transport.(*http.Transport).DialContext = nil
 	if err := client.SetAddress("unix:///var/run/vault.sock"); err != nil {
 		t.Fatal(err)
 	}
 	if client.addr.Scheme != "http" {
 		t.Fatalf("bad: expected: 'http' actual: %q", client.addr.Scheme)
 	}
-	if client.addr.Host != "/var/run/vault.sock" {
-		t.Fatalf("bad: expected: '/var/run/vault.sock' actual: %q", client.addr.Host)
+	if client.addr.Host != "localhost" {
+		t.Fatalf("bad: expected: 'localhost' actual: %q", client.addr.Host)
 	}
 	if client.addr.Path != "" {
 		t.Fatalf("bad: expected '' actual: %q", client.addr.Path)
@@ -117,6 +120,7 @@ func TestClientSetAddress(t *testing.T) {
 		t.Fatal("bad: expected DialContext to not be nil")
 	}
 	// Test switching to TCP address from Unix Socket address
+	client.config.HttpClient.Transport.(*http.Transport).DialContext = nil
 	if err := client.SetAddress("http://172.168.2.1:8300"); err != nil {
 		t.Fatal(err)
 	}
@@ -125,6 +129,9 @@ func TestClientSetAddress(t *testing.T) {
 	}
 	if client.addr.Scheme != "http" {
 		t.Fatalf("bad: expected: 'http' actual: %q", client.addr.Scheme)
+	}
+	if client.config.HttpClient.Transport.(*http.Transport).DialContext == nil {
+		t.Fatal("bad: expected DialContext to not be nil")
 	}
 }
 
@@ -209,6 +216,68 @@ func TestClientBadToken(t *testing.T) {
 	}
 }
 
+func TestClientDisableRedirects(t *testing.T) {
+	tests := map[string]struct {
+		statusCode       int
+		expectedNumReqs  int
+		disableRedirects bool
+	}{
+		"Disabled redirects: Moved permanently":  {statusCode: 301, expectedNumReqs: 1, disableRedirects: true},
+		"Disabled redirects: Found":              {statusCode: 302, expectedNumReqs: 1, disableRedirects: true},
+		"Disabled redirects: Temporary Redirect": {statusCode: 307, expectedNumReqs: 1, disableRedirects: true},
+		"Enable redirects: Moved permanently":    {statusCode: 301, expectedNumReqs: 2, disableRedirects: false},
+	}
+
+	for name, tc := range tests {
+		test := tc
+		name := name
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			numReqs := 0
+			var config *Config
+
+			respFunc := func(w http.ResponseWriter, req *http.Request) {
+				// Track how many requests the server has handled
+				numReqs++
+				// Send back the relevant status code and generate a location
+				w.Header().Set("Location", fmt.Sprintf(config.Address+"/reqs/%v", numReqs))
+				w.WriteHeader(test.statusCode)
+			}
+
+			config, ln := testHTTPServer(t, http.HandlerFunc(respFunc))
+			config.DisableRedirects = test.disableRedirects
+			defer ln.Close()
+
+			client, err := NewClient(config)
+			if err != nil {
+				t.Fatalf("%s: error %v", name, err)
+			}
+
+			req := client.NewRequest("GET", "/")
+			resp, err := client.rawRequestWithContext(context.Background(), req)
+			if err != nil {
+				t.Fatalf("%s: error %v", name, err)
+			}
+
+			if numReqs != test.expectedNumReqs {
+				t.Fatalf("%s: expected %v request(s) but got %v", name, test.expectedNumReqs, numReqs)
+			}
+
+			if resp.StatusCode != test.statusCode {
+				t.Fatalf("%s: expected status code %v got %v", name, test.statusCode, resp.StatusCode)
+			}
+
+			location, err := resp.Location()
+			if err != nil {
+				t.Fatalf("%s error %v", name, err)
+			}
+			if req.URL.String() == location.String() {
+				t.Fatalf("%s: expected request URL %v to be different from redirect URL %v", name, req.URL, resp.Request.URL)
+			}
+		})
+	}
+}
+
 func TestClientRedirect(t *testing.T) {
 	primary := func(w http.ResponseWriter, req *http.Request) {
 		w.Write([]byte("test"))
@@ -260,7 +329,7 @@ func TestDefaulRetryPolicy(t *testing.T) {
 		},
 		"don't retry connection failures": {
 			err: &url.Error{
-				Err: x509.UnknownAuthorityError{},
+				Err: &tls.CertificateVerificationError{},
 			},
 		},
 		"don't retry on 200": {
@@ -320,6 +389,7 @@ func TestClientEnvSettings(t *testing.T) {
 	oldClientKey := os.Getenv(EnvVaultClientKey)
 	oldSkipVerify := os.Getenv(EnvVaultSkipVerify)
 	oldMaxRetries := os.Getenv(EnvVaultMaxRetries)
+	oldDisableRedirects := os.Getenv(EnvVaultDisableRedirects)
 
 	os.Setenv(EnvVaultCACert, cwd+"/test-fixtures/keys/cert.pem")
 	os.Setenv(EnvVaultCACertBytes, string(caCertBytes))
@@ -328,6 +398,7 @@ func TestClientEnvSettings(t *testing.T) {
 	os.Setenv(EnvVaultClientKey, cwd+"/test-fixtures/keys/key.pem")
 	os.Setenv(EnvVaultSkipVerify, "true")
 	os.Setenv(EnvVaultMaxRetries, "5")
+	os.Setenv(EnvVaultDisableRedirects, "true")
 
 	defer func() {
 		os.Setenv(EnvVaultCACert, oldCACert)
@@ -337,6 +408,7 @@ func TestClientEnvSettings(t *testing.T) {
 		os.Setenv(EnvVaultClientKey, oldClientKey)
 		os.Setenv(EnvVaultSkipVerify, oldSkipVerify)
 		os.Setenv(EnvVaultMaxRetries, oldMaxRetries)
+		os.Setenv(EnvVaultDisableRedirects, oldDisableRedirects)
 	}()
 
 	config := DefaultConfig()
@@ -353,6 +425,9 @@ func TestClientEnvSettings(t *testing.T) {
 	}
 	if tlsConfig.InsecureSkipVerify != true {
 		t.Fatalf("bad: %v", tlsConfig.InsecureSkipVerify)
+	}
+	if config.DisableRedirects != true {
+		t.Fatalf("bad: expected disable redirects to be true: %v", config.DisableRedirects)
 	}
 }
 
@@ -375,7 +450,7 @@ func TestClientDeprecatedEnvSettings(t *testing.T) {
 func TestClientEnvNamespace(t *testing.T) {
 	var seenNamespace string
 	handler := func(w http.ResponseWriter, req *http.Request) {
-		seenNamespace = req.Header.Get(consts.NamespaceHeaderName)
+		seenNamespace = req.Header.Get(NamespaceHeaderName)
 	}
 	config, ln := testHTTPServer(t, http.HandlerFunc(handler))
 	defer ln.Close()
@@ -521,6 +596,24 @@ func TestClone(t *testing.T) {
 			},
 			token: "cloneToken",
 		},
+		{
+			name: "cloneTLSConfig-enabled",
+			config: &Config{
+				CloneTLSConfig: true,
+				clientTLSConfig: &tls.Config{
+					ServerName: "foo.bar.baz",
+				},
+			},
+		},
+		{
+			name: "cloneTLSConfig-disabled",
+			config: &Config{
+				CloneTLSConfig: false,
+				clientTLSConfig: &tls.Config{
+					ServerName: "foo.bar.baz",
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -629,8 +722,79 @@ func TestClone(t *testing.T) {
 				t.Fatalf("expected replicationStateStore %v, actual %v", parent.replicationStateStore,
 					clone.replicationStateStore)
 			}
+			if tt.config.CloneTLSConfig {
+				if !reflect.DeepEqual(parent.config.TLSConfig(), clone.config.TLSConfig()) {
+					t.Fatalf("config.clientTLSConfig doesn't match: %v vs %v",
+						parent.config.TLSConfig(), clone.config.TLSConfig())
+				}
+			} else if tt.config.clientTLSConfig != nil {
+				if reflect.DeepEqual(parent.config.TLSConfig(), clone.config.TLSConfig()) {
+					t.Fatalf("config.clientTLSConfig should not match: %v vs %v",
+						parent.config.TLSConfig(), clone.config.TLSConfig())
+				}
+			} else {
+				if !reflect.DeepEqual(parent.config.TLSConfig(), clone.config.TLSConfig()) {
+					t.Fatalf("config.clientTLSConfig doesn't match: %v vs %v",
+						parent.config.TLSConfig(), clone.config.TLSConfig())
+				}
+			}
 		})
 	}
+}
+
+// TestCloneWithHeadersNoDeadlock confirms that the cloning of the client doesn't cause
+// a deadlock.
+// Raised in https://github.com/hashicorp/vault/issues/22393 -- there was a
+// potential deadlock caused by running the problematicFunc() function in
+// multiple goroutines.
+func TestCloneWithHeadersNoDeadlock(t *testing.T) {
+	client, err := NewClient(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wg := &sync.WaitGroup{}
+
+	problematicFunc := func() {
+		client.SetCloneToken(true)
+		_, err := client.CloneWithHeaders()
+		if err != nil {
+			t.Fatal(err)
+		}
+		wg.Done()
+	}
+
+	for i := 0; i < 1000; i++ {
+		wg.Add(1)
+		go problematicFunc()
+	}
+	wg.Wait()
+}
+
+// TestCloneNoDeadlock is like TestCloneWithHeadersNoDeadlock but with
+// Clone instead of CloneWithHeaders
+func TestCloneNoDeadlock(t *testing.T) {
+	client, err := NewClient(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wg := &sync.WaitGroup{}
+
+	problematicFunc := func() {
+		client.SetCloneToken(true)
+		_, err := client.Clone()
+		if err != nil {
+			t.Fatal(err)
+		}
+		wg.Done()
+	}
+
+	for i := 0; i < 1000; i++ {
+		wg.Add(1)
+		go problematicFunc()
+	}
+	wg.Wait()
 }
 
 func TestSetHeadersRaceSafe(t *testing.T) {
@@ -1200,7 +1364,7 @@ func TestClient_SetCloneToken(t *testing.T) {
 func TestClientWithNamespace(t *testing.T) {
 	var ns string
 	handler := func(w http.ResponseWriter, req *http.Request) {
-		ns = req.Header.Get(consts.NamespaceHeaderName)
+		ns = req.Header.Get(NamespaceHeaderName)
 	}
 	config, ln := testHTTPServer(t, http.HandlerFunc(handler))
 	defer ln.Close()
@@ -1356,7 +1520,7 @@ func TestParseAddressWithUnixSocket(t *testing.T) {
 	if u.Scheme != "http" {
 		t.Fatal("Scheme not changed to http")
 	}
-	if u.Host != "/var/run/vault.sock" {
+	if u.Host != "localhost" {
 		t.Fatal("Host not changed to socket name")
 	}
 	if u.Path != "" {

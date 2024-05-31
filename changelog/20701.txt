@@ -1,0 +1,3 @@
+```release-notes:bug
+secrets/pki: Fix race during runUnifiedTransfer when deciding to skip re-running a test within a short window.
+```

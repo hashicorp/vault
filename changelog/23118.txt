@@ -1,0 +1,3 @@
+```release-note:bug
+ldaputil: Disable tests for ARM64
+```

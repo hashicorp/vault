@@ -6,7 +6,7 @@ description: |-
   bucket.
 ---
 
-# S3 Storage Backend
+# S3 storage backend
 
 The S3 storage backend is used to persist Vault's data in an [Amazon S3][s3]
 bucket.
@@ -27,7 +27,7 @@ storage "s3" {
 }
 ```
 
-## `s3` Parameters
+## `s3` parameters
 
 - `bucket` `(string: <required>)` – Specifies the name of the S3 bucket. This
   can also be provided via the environment variable `AWS_S3_BUCKET`.
@@ -74,9 +74,9 @@ cause Vault to attempt to retrieve credentials from the AWS metadata service.
 - `path` `(string: "")` - Specifies the path in the S3 Bucket where Vault
   data will be stored.
 
-## `s3` Examples
+## `s3` examples
 
-### Default Example
+### Default example
 
 This example shows using Amazon S3 as a storage backend.
 
@@ -88,7 +88,7 @@ storage "s3" {
 }
 ```
 
-### S3 KMS Encryption with Default Key
+### S3 KMS encryption with default key
 
 This example shows using Amazon S3 as a storage backend using KMS
 encryption with the default S3 KMS key for the account.
@@ -102,7 +102,7 @@ storage "s3" {
 }
 ```
 
-### S3 KMS Encryption with Custom Key
+### S3 KMS encryption with custom key
 
 This example shows using Amazon S3 as a storage backend using KMS
 encryption with a customer managed KMS key.
@@ -118,6 +118,6 @@ storage "s3" {
 
 [s3]: https://aws.amazon.com/s3/
 
-## AWS Instance Metadata Timeouts
+## AWS instance metadata timeouts
 
 @include 'aws-imds-timeout.mdx'

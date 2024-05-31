@@ -1,0 +1,3 @@
+```release-note:improvement
+auth/cert: Cache trusted certs to reduce memory usage and improve performance of logins.
+```

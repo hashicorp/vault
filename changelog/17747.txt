@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/aws: Update dependencies [[PR-17747](https://github.com/hashicorp/vault/pull/17747)]
+```

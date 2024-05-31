@@ -1,0 +1,76 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<TabPageHeader
+  @model={{@backend}}
+  @filterRoles={{not @promptConfig}}
+  @rolesFilterValue={{@filterValue}}
+  @breadcrumbs={{@breadcrumbs}}
+>
+  {{#unless @promptConfig}}
+    <ToolbarLink @route="roles.create" @type="add" data-test-toolbar-roles-action>
+      Create role
+    </ToolbarLink>
+  {{/unless}}
+</TabPageHeader>
+
+{{#if @promptConfig}}
+  <ConfigCta />
+{{else if (not @roles)}}
+  {{#if @filterValue}}
+    <EmptyState @title="There are no roles matching &quot;{{@filterValue}}&quot;" />
+  {{else}}
+    <EmptyState
+      data-test-config-cta
+      @title="No roles yet"
+      @message="When created, roles will be listed here. Create a role to start generating service account tokens."
+    />
+  {{/if}}
+{{else}}
+  <div class="has-bottom-margin-s">
+    {{#each @roles as |role|}}
+      <ListItem @linkPrefix={{this.mountPoint}} @linkParams={{array "roles.role.details" role.name}} as |Item|>
+        <Item.content>
+          <Icon @name="user" />
+          <span data-test-role={{role.name}}>{{role.name}}</span>
+        </Item.content>
+        <Item.menu>
+          {{#if (or role.canRead role.canEdit role.canDelete)}}
+            <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+              <dd.ToggleIcon
+                @icon="more-horizontal"
+                @text="More options"
+                @hasChevron={{false}}
+                data-test-popup-menu-trigger
+              />
+              {{#if role.canRead}}
+                <dd.Interactive @text="Details" @route="roles.role.details" @model={{role}} data-test-details />
+              {{/if}}
+              {{#if role.canEdit}}
+                <dd.Interactive @text="Edit" data-test-edit @route="roles.role.edit" @model={{role}} />
+              {{/if}}
+              {{#if role.canDelete}}
+                <dd.Interactive
+                  @text="Delete"
+                  data-test-delete
+                  @color="critical"
+                  {{on "click" (fn (mut this.roleToDelete) role)}}
+                />
+              {{/if}}
+            </Hds::Dropdown>
+          {{/if}}
+        </Item.menu>
+      </ListItem>
+    {{/each}}
+    {{#if this.roleToDelete}}
+      <ConfirmModal
+        @color="critical"
+        @confirmMessage="Deleting this role means that you’ll need to recreate it in order to generate credentials again."
+        @onConfirm={{fn this.onDelete this.roleToDelete}}
+        @onClose={{fn (mut this.roleToDelete) null}}
+      />
+    {{/if}}
+  </div>
+{{/if}}

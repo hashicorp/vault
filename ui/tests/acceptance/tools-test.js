@@ -1,20 +1,33 @@
-import { click, fillIn, find, findAll, currentURL, visit, settled, waitUntil } from '@ember/test-helpers';
-import Pretender from 'pretender';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import {
+  click,
+  fillIn,
+  find,
+  findAll,
+  currentURL,
+  visit,
+  settled,
+  waitUntil,
+  waitFor,
+} from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { toolsActions } from 'vault/helpers/tools-actions';
 import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
+import { capitalize } from '@ember/string';
+import codemirror from 'vault/tests/helpers/codemirror';
+import { setupMirage } from 'ember-cli-mirage/test-support';
 
 module('Acceptance | tools', function (hooks) {
   setupApplicationTest(hooks);
+  setupMirage(hooks);
 
   hooks.beforeEach(function () {
     return authPage.login();
-  });
-
-  hooks.afterEach(function () {
-    return logout.visit();
   });
 
   const DATA_TO_WRAP = JSON.stringify({ tools: 'tests' });
@@ -24,7 +37,7 @@ module('Acceptance | tools', function (hooks) {
   data-test-tools-input="wrapping-token"
   data-test-tools-input="rewrapped-token"
   data-test-tools="token-lookup-row"
-  data-test-tools-action-link=supportedAction
+  data-test-sidebar-nav-link=supportedAction
   */
 
   var createTokenStore = () => {
@@ -42,13 +55,13 @@ module('Acceptance | tools', function (hooks) {
     var tokenStore = createTokenStore();
     await visit('/vault/tools');
 
-    assert.equal(currentURL(), '/vault/tools/wrap', 'forwards to the first action');
+    assert.strictEqual(currentURL(), '/vault/tools/wrap', 'forwards to the first action');
     TOOLS_ACTIONS.forEach((action) => {
-      assert.dom(`[data-test-tools-action-link="${action}"]`).exists(`${action} link renders`);
+      assert.dom(`[data-test-sidebar-nav-link="${capitalize(action)}"]`).exists(`${action} link renders`);
     });
 
-    const { CodeMirror } = await waitUntil(() => find('.CodeMirror'));
-    CodeMirror.setValue(DATA_TO_WRAP);
+    await waitFor('.CodeMirror');
+    codemirror().setValue(DATA_TO_WRAP);
 
     // wrap
     await click('[data-test-tools-submit]');
@@ -59,7 +72,7 @@ module('Acceptance | tools', function (hooks) {
       .hasValue(wrappedToken.value, 'has a wrapping token');
 
     //lookup
-    await click('[data-test-tools-action-link="lookup"]');
+    await click('[data-test-sidebar-nav-link="Lookup"]');
 
     await fillIn('[data-test-tools-input="wrapping-token"]', tokenStore.get());
     await click('[data-test-tools-submit]');
@@ -70,7 +83,7 @@ module('Acceptance | tools', function (hooks) {
     assert.dom(rows[2]).hasText(/Creation TTL/, 'show creation ttl row');
 
     //rewrap
-    await click('[data-test-tools-action-link="rewrap"]');
+    await click('[data-test-sidebar-nav-link="Rewrap"]');
 
     await fillIn('[data-test-tools-input="wrapping-token"]', tokenStore.get());
     await click('[data-test-tools-submit]');
@@ -81,22 +94,26 @@ module('Acceptance | tools', function (hooks) {
     await settled();
 
     //unwrap
-    await click('[data-test-tools-action-link="unwrap"]');
+    await click('[data-test-sidebar-nav-link="Unwrap"]');
 
     await fillIn('[data-test-tools-input="wrapping-token"]', tokenStore.get());
     await click('[data-test-tools-submit]');
+    await waitFor('.CodeMirror');
     assert.deepEqual(
-      JSON.parse(CodeMirror.getValue()),
+      JSON.parse(codemirror().getValue()),
       JSON.parse(DATA_TO_WRAP),
       'unwrapped data equals input data'
     );
-    const buttonDetails = await waitUntil(() => find('[data-test-button-details]'));
-    await click(buttonDetails);
+    await waitUntil(() => find('[data-test-button-details]'));
+    await click('[data-test-button-details]');
     await click('[data-test-button-data]');
-    assert.dom('.CodeMirror').exists();
-
+    assert.deepEqual(
+      JSON.parse(codemirror().getValue()),
+      JSON.parse(DATA_TO_WRAP),
+      'data tab still has unwrapped data'
+    );
     //random
-    await click('[data-test-tools-action-link="random"]');
+    await click('[data-test-sidebar-nav-link="Random"]');
 
     assert.dom('[data-test-tools-input="bytes"]').hasValue('32', 'defaults to 32 bytes');
     await click('[data-test-tools-submit]');
@@ -104,7 +121,7 @@ module('Acceptance | tools', function (hooks) {
     assert.ok(randomBytes.value, 'shows the returned value of random bytes');
 
     //hash
-    await click('[data-test-tools-action-link="hash"]');
+    await click('[data-test-sidebar-nav-link="Hash"]');
 
     await fillIn('[data-test-tools-input="hash-input"]', 'foo');
     await click('[data-test-transit-b64-toggle="input"]');
@@ -145,24 +162,22 @@ module('Acceptance | tools', function (hooks) {
   };
 
   test('ensure unwrap with auth block works properly', async function (assert) {
-    this.server = new Pretender(function () {
-      this.post('/v1/sys/wrapping/unwrap', (response) => {
-        return [response, { 'Content-Type': 'application/json' }, JSON.stringify(AUTH_RESPONSE)];
-      });
+    this.server.post('/sys/wrapping/unwrap', () => {
+      return AUTH_RESPONSE;
     });
     await visit('/vault/tools');
 
     //unwrap
-    await click('[data-test-tools-action-link="unwrap"]');
+    await click('[data-test-sidebar-nav-link="Unwrap"]');
 
     await fillIn('[data-test-tools-input="wrapping-token"]', 'sometoken');
     await click('[data-test-tools-submit]');
 
+    await waitFor('.CodeMirror');
     assert.deepEqual(
-      JSON.parse(findAll('.CodeMirror')[0].CodeMirror.getValue()),
+      JSON.parse(codemirror().getValue()),
       AUTH_RESPONSE.auth,
       'unwrapped data equals input data'
     );
-    this.server.shutdown();
   });
 });

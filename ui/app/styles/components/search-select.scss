@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 .ember-power-select-dropdown {
   background: transparent;
   box-shadow: none;
@@ -39,12 +44,12 @@
 
   &::after {
     background: $white;
-    bottom: $spacing-xxs;
+    bottom: $spacing-4;
     content: '';
-    left: $spacing-xxs + $spacing-l;
+    left: $spacing-4 + $spacing-24;
     position: absolute;
-    right: $spacing-xxs;
-    top: $spacing-xxs;
+    right: $spacing-4;
+    top: $spacing-4;
     z-index: -1;
   }
 }
@@ -52,16 +57,16 @@
 .ember-power-select-search-input {
   background: transparent;
   border: 0;
-  padding: $spacing-xxs $spacing-s;
-  padding-left: $spacing-xxs + $spacing-l;
+  padding: $spacing-4 $spacing-12;
+  padding-left: $spacing-4 + $spacing-24;
 }
 
 div > .ember-power-select-options {
   background: $white;
   border: $base-border;
   box-shadow: $box-shadow-middle;
-  margin: -4px $spacing-xs 0;
-  padding: $spacing-xxs 0;
+  margin: -4px $spacing-8 0;
+  padding: $spacing-4 0;
 
   .ember-power-select-option,
   .ember-power-select-option[aria-current='true'] {
@@ -71,8 +76,8 @@ div > .ember-power-select-options {
   }
 
   .ember-power-select-option[aria-current='true'] {
-    background-color: $menu-item-hover-background-color;
-    color: $menu-item-hover-color;
+    background-color: $ui-gray-050;
+    color: $ui-gray-900;
   }
 
   .ember-power-select-option--no-matches-message {
@@ -92,7 +97,7 @@ div > .ember-power-select-options {
 .search-select-list-item {
   align-items: center;
   display: flex;
-  padding: $spacing-xxs;
+  padding: $spacing-4;
   justify-content: space-between;
   border-bottom: $light-border;
 
@@ -108,7 +113,7 @@ div > .ember-power-select-options {
 }
 
 .search-select-list-key {
-  color: $grey;
+  color: var(--token-color-foreground-faint);
   font-size: $size-8;
 }
 

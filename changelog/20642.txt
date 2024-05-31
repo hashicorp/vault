@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki: add subject key identifier to read key response
+```

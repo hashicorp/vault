@@ -1,0 +1,3 @@
+```release-note:bug
+agent: Fix agent generate-config to accept -namespace, VAULT_NAMESPACE, and other client-modifying flags. 
+```

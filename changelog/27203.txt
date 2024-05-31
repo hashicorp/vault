@@ -1,0 +1,3 @@
+```release-note:feature
+**LDAP Secrets engine hierarchical path support**: Hierarchical path handling is now supported for role and set APIs.
+```

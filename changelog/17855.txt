@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Added warning to /sys/seal-status and vault status command if potentially dangerous behaviour overrides are being used.
+```

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package plugin
 
 import (
@@ -5,12 +8,11 @@ import (
 	"math"
 	"os"
 
-	"google.golang.org/grpc"
-
 	log "github.com/hashicorp/go-hclog"
 	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"google.golang.org/grpc"
 )
 
 // BackendPluginName is the name of the plugin that can be
@@ -94,7 +96,7 @@ func ServeMultiplex(opts *ServeOpts) error {
 	logger := opts.Logger
 	if logger == nil {
 		logger = log.New(&log.LoggerOptions{
-			Level:      log.Info,
+			Level:      log.Trace,
 			Output:     os.Stderr,
 			JSONFormat: true,
 		})

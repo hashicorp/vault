@@ -1,0 +1,3 @@
+```release-note:bug
+command/namespace: Fix vault cli namespace patch examples in help text.
+```

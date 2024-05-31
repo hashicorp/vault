@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Update pki mount configuration details to match the new mount configuration details pattern
+```

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 //go:build !enterprise
 
 package vault
@@ -5,20 +8,18 @@ package vault
 import (
 	"bytes"
 	"context"
-	"sync"
 	"testing"
 
 	proto "github.com/golang/protobuf/proto"
 	log "github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 )
 
 func TestSealUnwrapper(t *testing.T) {
-	logger := log.New(&log.LoggerOptions{
-		Mutex: &sync.Mutex{},
-	})
+	logger := corehelpers.NewTestLogger(t)
 
 	// Test without transactions
 	phys, err := inmem.NewInmemHA(nil, logger)

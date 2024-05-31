@@ -1,0 +1,34 @@
+### Deadlock can occur on performance secondary clusters with many mounts
+
+#### Affected versions
+
+- 1.15.0 - 1.15.5
+- 1.14.5 - 1.14.9
+- 1.13.9 - 1.13.13
+
+#### Issue
+
+Vault 1.15.0, 1.14.5, and 1.13.9 introduced a worker pool to schedule periodic
+rollback operations on all mounts. This worker pool defaulted to using 256
+workers. The worker pool introduced a risk of deadlocking on the active node of
+**performance secondary clusters**, leaving that cluster unable to service any
+requests.
+
+The conditions required to cause the deadlock on the performance secondary:
+
+- Performance replication is enabled
+- The performance primary cluster has more than 256 non-local mounts. The more
+mounts the cluster has, the more likely the deadlock becomes
+- One of the following occurs:
+  - A replicated mount is unmounted or remounted OR
+  - A replicated namespace is deleted OR
+  - Replication paths filters are used to filter at least one mount or namespace
+
+#### Workaround
+
+Set the `VAULT_ROLLBACK_WORKERS` environment variable to a number larger than
+the number of mounts in your Vault cluster and restart Vault:
+
+```shell-session
+$ export VAULT_ROLLBACK_WORKERS=1000
+```

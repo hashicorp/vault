@@ -1,0 +1,3 @@
+```release-note:improvement
+plugins: Added environment variable flag to opt-out specific plugins from multiplexing
+```

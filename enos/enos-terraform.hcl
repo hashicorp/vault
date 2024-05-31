@@ -1,14 +1,13 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 terraform_cli "default" {
   plugin_cache_dir = var.terraform_plugin_cache_dir != null ? abspath(var.terraform_plugin_cache_dir) : null
-
-  credentials "app.terraform.io" {
-    token = var.tfc_api_token
-  }
 
   /*
   provider_installation {
     dev_overrides = {
-      "app.terraform.io/hashicorp-qti/enos" = abspath("../../enos-provider")
+      "registry.terraform.io/hashicorp-forge/enos" = abspath("../../enos-provider/dist")
     }
     direct {}
   }
@@ -24,7 +23,8 @@ terraform "default" {
     }
 
     enos = {
-      source = "app.terraform.io/hashicorp-qti/enos"
+      source  = "registry.terraform.io/hashicorp-forge/enos"
+      version = ">= 0.4.0"
     }
   }
 }

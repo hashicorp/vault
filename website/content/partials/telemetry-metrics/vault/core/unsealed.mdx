@@ -1,0 +1,10 @@
+### vault.core.unsealed ((#vault-core-unsealed))
+
+Metric type | Value   | Description
+----------- | ------- | -----------
+gauge       | boolean | Indicates whether Vault is currently unsealed
+
+- A value of `1` indicates Vault is currently **unsealed** and clients **can**
+  read secrets.
+- A value of `0` indicates Vault is currently **sealed** and clients **cannot**
+  read secrets.

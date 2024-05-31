@@ -1,24 +1,23 @@
-import { inject as service } from '@ember/service';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { service } from '@ember/service';
 import Route from '@ember/routing/route';
 import ClusterRoute from 'vault/mixins/cluster-route';
 import ListRoute from 'core/mixins/list-route';
 
 export default Route.extend(ClusterRoute, ListRoute, {
+  store: service(),
   version: service(),
-  wizard: service(),
-
-  activate() {
-    if (this.wizard.featureState === 'details') {
-      this.wizard.transitionFeatureMachine('details', 'CONTINUE', this.policyType());
-    }
-  },
 
   shouldReturnEmptyModel(policyType, version) {
-    return policyType !== 'acl' && (version.get('isOSS') || !version.get('hasSentinel'));
+    return policyType !== 'acl' && (version.isCommunity || !version.hasSentinel);
   },
 
   model(params) {
-    let policyType = this.policyType();
+    const policyType = this.policyType();
     if (this.shouldReturnEmptyModel(policyType, this.version)) {
       return;
     }
@@ -50,7 +49,7 @@ export default Route.extend(ClusterRoute, ListRoute, {
     controller.setProperties({
       model,
       filter: params.pageFilter || '',
-      page: model.get('meta.currentPage') || 1,
+      page: model.meta?.currentPage || 1,
       policyType: this.policyType(),
     });
   },
@@ -61,6 +60,7 @@ export default Route.extend(ClusterRoute, ListRoute, {
       controller.set('filter', '');
     }
   },
+
   actions: {
     willTransition(transition) {
       window.scrollTo(0, 0);

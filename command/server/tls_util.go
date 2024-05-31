@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package server
 
 import (
@@ -24,8 +27,8 @@ type CaCert struct {
 	Signer   crypto.Signer
 }
 
-// GenerateCert creates a new leaf cert from provided CA template and signer
-func GenerateCert(caCertTemplate *x509.Certificate, caSigner crypto.Signer) (string, string, error) {
+// generateCert creates a new leaf cert from provided CA template and signer
+func generateCert(caCertTemplate *x509.Certificate, caSigner crypto.Signer, extraSANs []string) (string, string, error) {
 	// Create the private key
 	signer, keyPEM, err := privateKey()
 	if err != nil {
@@ -64,6 +67,25 @@ func GenerateCert(caCertTemplate *x509.Certificate, caSigner crypto.Signer) (str
 		DNSNames:       []string{"localhost", "localhost4", "localhost6", "localhost.localdomain"},
 		AuthorityKeyId: caCertTemplate.AuthorityKeyId,
 		SubjectKeyId:   signerKeyId,
+	}
+
+	// Only add our hostname to SANs if it isn't found.
+	foundHostname := false
+	for _, value := range template.DNSNames {
+		if value == hostname {
+			foundHostname = true
+			break
+		}
+	}
+	if !foundHostname {
+		template.DNSNames = append(template.DNSNames, hostname)
+	}
+	for _, san := range extraSANs {
+		if ip := net.ParseIP(san); ip != nil {
+			template.IPAddresses = append(template.IPAddresses, ip)
+		} else {
+			template.DNSNames = append(template.DNSNames, san)
+		}
 	}
 
 	bs, err := x509.CreateCertificate(
@@ -113,7 +135,6 @@ func GenerateCA() (*CaCert, error) {
 		NotBefore:             time.Now().Add(-1 * time.Minute),
 		AuthorityKeyId:        signerKeyId,
 		SubjectKeyId:          signerKeyId,
-		IPAddresses:           []net.IP{net.ParseIP("127.0.0.1")},
 	}
 
 	bs, err := x509.CreateCertificate(

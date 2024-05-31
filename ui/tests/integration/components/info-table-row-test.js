@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { resolve } from 'rsvp';
 import Service from '@ember/service';
@@ -66,12 +71,12 @@ module('Integration | Component | InfoTableRow', function (hooks) {
 
     await triggerEvent('[data-test-value-div="test label"] .ember-basic-dropdown-trigger', 'mouseenter');
 
-    let tooltip = document.querySelector('div.box').textContent.trim();
-    assert.equal(tooltip, 'Tooltip text!', 'renders tooltip text');
+    const tooltip = document.querySelector('div.box').textContent.trim();
+    assert.strictEqual(tooltip, 'Tooltip text!', 'renders tooltip text');
   });
 
   test('it should copy tooltip', async function (assert) {
-    assert.expect(4);
+    assert.expect(3);
 
     this.set('isCopyable', false);
 
@@ -86,13 +91,12 @@ module('Integration | Component | InfoTableRow', function (hooks) {
 
     await triggerEvent('[data-test-value-div="test label"] .ember-basic-dropdown-trigger', 'mouseenter');
 
-    assert.dom('[data-test-tooltip-copy]').hasAttribute('disabled', '', 'Tooltip copy button is disabled');
+    assert.dom('[data-test-tooltip-copy]').doesNotExist('Tooltip has no copy button');
+    this.set('isCopyable', true);
+    assert.dom('[data-test-tooltip-copy]').exists('Tooltip has copy button');
     assert
       .dom('[data-test-tooltip-copy]')
-      .doesNotHaveClass('has-pointer', 'Pointer class not applied when disabled');
-    this.set('isCopyable', true);
-    assert.dom('[data-test-tooltip-copy]').doesNotHaveAttribute('disabled', 'Tooltip copy button is enabled');
-    assert.dom('[data-test-tooltip-copy]').hasClass('has-pointer', 'Pointer class applied to copy button');
+      .hasAttribute('data-test-tooltip-copy', 'Foo bar', 'Copy button will copy the tooltip text');
   });
 
   test('it renders a string with no link if isLink is true and the item type is not an array.', async function (assert) {
@@ -133,13 +137,13 @@ module('Integration | Component | InfoTableRow', function (hooks) {
 
     this.set('value', '');
     this.set('label', LABEL);
-    assert.dom('div.column.is-flex .flight-icon').exists('Renders a dash (-) for empty string value');
+    assert.dom('div.column.is-flex-center .flight-icon').exists('Renders a dash (-) for empty string value');
 
     this.set('value', null);
-    assert.dom('div.column.is-flex .flight-icon').exists('Renders a dash (-) for null value');
+    assert.dom('div.column.is-flex-center .flight-icon').exists('Renders a dash (-) for null value');
 
     this.set('value', undefined);
-    assert.dom('div.column.is-flex .flight-icon').exists('Renders a dash (-) for undefined value');
+    assert.dom('div.column.is-flex-center .flight-icon').exists('Renders a dash (-) for undefined value');
 
     this.set('default', DEFAULT);
     assert.dom('[data-test-value-div]').hasText(DEFAULT, 'Renders default text if value is empty');
@@ -147,8 +151,12 @@ module('Integration | Component | InfoTableRow', function (hooks) {
     this.set('value', '');
     this.set('label', '');
     this.set('default', '');
-    let dashCount = document.querySelectorAll('.flight-icon').length;
-    assert.equal(dashCount, 2, 'Renders dash (-) when both label and value do not exist (and no defaults)');
+    const dashCount = document.querySelectorAll('.flight-icon').length;
+    assert.strictEqual(
+      dashCount,
+      2,
+      'Renders dash (-) when both label and value do not exist (and no defaults)'
+    );
   });
 
   test('block content overrides any passed in value content', async function (assert) {
@@ -159,8 +167,8 @@ module('Integration | Component | InfoTableRow', function (hooks) {
       Block content is here
       </InfoTableRow>`);
 
-    let block = document.querySelector('[data-test-value-div]').textContent.trim();
-    assert.equal(block, 'Block content is here', 'renders block passed through');
+    const block = document.querySelector('[data-test-value-div]').textContent.trim();
+    assert.strictEqual(block, 'Block content is here', 'renders block passed through');
   });
 
   test('Row renders when block content even if alwaysRender = false', async function (assert) {
@@ -189,10 +197,12 @@ module('Integration | Component | InfoTableRow', function (hooks) {
   });
   test('Truncates the label if too long', async function (assert) {
     this.set('label', 'abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz');
-    await render(hbs`<InfoTableRow
+    await render(hbs`<div style="width: 100px;">
+      <InfoTableRow
         @label={{this.label}}
         @value={{this.value}}
-      />`);
+      />
+    </div>`);
     assert.dom('[data-test-component="info-table-row"]').exists('Row renders');
     assert.dom('[data-test-label-div].label-overflow').exists('Label has class label-overflow');
     await triggerEvent('[data-test-row-label]', 'mouseenter');
@@ -250,14 +260,37 @@ module('Integration | Component | InfoTableRow', function (hooks) {
   });
 
   test('Formats the value as date when formatDate present', async function (assert) {
-    let yearString = new Date().getFullYear().toString();
-    this.set('value', new Date());
+    this.set('value', new Date('2018-04-03T14:15:30'));
     await render(hbs`<InfoTableRow
       @label={{this.label}}
       @value={{this.value}}
       @formatDate={{'yyyy'}}
     />`);
 
-    assert.dom('[data-test-value-div]').hasText(yearString, 'Renders date with passed format');
+    assert.dom('[data-test-value-div]').hasText('2018', 'Renders date with passed format');
+  });
+
+  test('Formats the value as TTL when formatTtl present', async function (assert) {
+    this.set('value', 6000);
+    await render(hbs`<InfoTableRow
+      @label={{this.label}}
+      @value={{this.value}}
+      @formatTtl={{true}}
+    />`);
+
+    assert
+      .dom('[data-test-value-div]')
+      .hasText('1 hour 40 minutes', 'Translates number value to largest unit with carryover of minutes');
+  });
+
+  test('Formats string value when formatTtl present', async function (assert) {
+    this.set('value', '45m');
+    await render(hbs`<InfoTableRow
+      @label={{this.label}}
+      @value={{this.value}}
+      @formatTtl={{true}}
+    />`);
+
+    assert.dom('[data-test-value-div]').hasText('45 minutes', 'it formats string duration');
   });
 });

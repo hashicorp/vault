@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package zookeeper
 
 import (
@@ -6,11 +9,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-zookeeper/zk"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
-
-	"github.com/samuel/go-zookeeper/zk"
 )
 
 func TestZooKeeperBackend(t *testing.T) {
@@ -27,7 +29,6 @@ func TestZooKeeperBackend(t *testing.T) {
 	randPath := fmt.Sprintf("/vault-%d", time.Now().Unix())
 	acl := zk.WorldACL(zk.PermAll)
 	_, err = client.Create(randPath, []byte("hi"), int32(0), acl)
-
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -71,7 +72,6 @@ func TestZooKeeperHABackend(t *testing.T) {
 	randPath := fmt.Sprintf("/vault-ha-%d", time.Now().Unix())
 	acl := zk.WorldACL(zk.PermAll)
 	_, err = client.Create(randPath, []byte("hi"), int32(0), acl)
-
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

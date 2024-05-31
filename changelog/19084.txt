@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/kubernetes: add /check endpoint to determine if environment variables are set
+```

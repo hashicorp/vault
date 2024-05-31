@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package dhutil
 
 import (
@@ -10,9 +13,8 @@ import (
 	"fmt"
 	"io"
 
-	"golang.org/x/crypto/hkdf"
-
 	"golang.org/x/crypto/curve25519"
+	"golang.org/x/crypto/hkdf"
 )
 
 type PublicKeyInfo struct {
