@@ -12,7 +12,7 @@ import { action } from '@ember/object';
  *
  * @example
  * ```js
- * <ToolLookup
+ * <Tools::Lookup
  *  @creation_time={{creation_time}}
  *  @creation_ttl={{creation_ttl}}
  *  @creation_path={{creation_path}}

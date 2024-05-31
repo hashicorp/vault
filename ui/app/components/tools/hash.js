@@ -12,7 +12,7 @@ import { action } from '@ember/object';
  *
  * @example
  * ```js
- * <ToolHash
+ * <Tools::Hash
  *  @onClear={{action "onClear"}}
  *  @sum={{sum}}
  *  @algorithm={{algorithm}}

@@ -12,7 +12,7 @@ import { action } from '@ember/object';
  *
  * @example
  * ```js
- * <ToolRandom
+ * <Tools::Random
  *  @onClear={{action "onClear"}}
  *  @format={{format}}
  *  @bytes={{bytes}}

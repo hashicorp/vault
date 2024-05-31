@@ -8,11 +8,11 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 
 /**
- * @module ToolWrap
- * ToolWrap components are components that sys/wrapping/wrap functionality.  Most of the functionality is passed through as actions from the tool-actions-form and then called back with properties.
+ * @module <Tools::Wrap
+ * <Tools::Wrap components are components that sys/wrapping/wrap functionality.  Most of the functionality is passed through as actions from the tool-actions-form and then called back with properties.
  *
  * @example
- * <ToolWrap
+ * <Tools::Wrap
  *  @errors={{@errors}}
  *  @onBack={{action "onBack" (array "token")}}
  *  @onChange={{action "onChange"}}

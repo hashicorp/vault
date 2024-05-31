@@ -13,7 +13,7 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import codemirror from 'vault/tests/helpers/codemirror';
 import { TOOLS_SELECTORS as TS } from 'vault/tests/helpers/tools-selectors';
 
-module('Integration | Component | tools/tool-wrap', function (hooks) {
+module('Integration | Component | tools/wrap', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
@@ -24,7 +24,7 @@ module('Integration | Component | tools/tool-wrap', function (hooks) {
     this.data = '{\n}';
     this.renderComponent = async () => {
       await render(hbs`
-    <ToolWrap
+    <Tools::Wrap
       @token={{this.token}}
       @errors={{this.errors}}
       @onClear={{this.onClear}}

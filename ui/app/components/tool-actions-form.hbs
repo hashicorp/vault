@@ -6,7 +6,7 @@
 <form onsubmit={{action "doSubmit"}}>
   {{#if (eq this.selectedAction "hash")}}
     {{! template-lint-disable no-passed-in-event-handlers }}
-    <ToolHash
+    <Tools::Hash
       @onClear={{action "onClear"}}
       @sum={{this.sum}}
       @algorithm={{this.algorithm}}
@@ -16,7 +16,7 @@
     />
     {{! template-lint-enable no-passed-in-event-handlers }}
   {{else if (eq this.selectedAction "random")}}
-    <ToolRandom
+    <Tools::Random
       @onClear={{action "onClear"}}
       @random_bytes={{this.random_bytes}}
       @errors={{this.errors}}
@@ -24,7 +24,7 @@
       @bytes={{this.bytes}}
     />
   {{else if (eq this.selectedAction "rewrap")}}
-    <ToolRewrap
+    <Tools::Rewrap
       @onClear={{action "onClear"}}
       @rewrap_token={{this.rewrap_token}}
       @selectedAction={{this.selectedAction}}
@@ -33,7 +33,7 @@
       @bytes={{this.bytes}}
     />
   {{else if (eq this.selectedAction "unwrap")}}
-    <ToolUnwrap
+    <Tools::Unwrap
       @onClear={{action "onClear"}}
       @unwrap_data={{this.unwrap_data}}
       @details={{this.details}}
@@ -41,7 +41,7 @@
       @token={{this.token}}
     />
   {{else if (eq this.selectedAction "lookup")}}
-    <ToolLookup
+    <Tools::Lookup
       @creation_time={{this.creation_time}}
       @creation_ttl={{this.creation_ttl}}
       @creation_path={{this.creation_path}}
@@ -52,7 +52,7 @@
       @errors={{this.errors}}
     />
   {{else if (eq this.selectedAction "wrap")}}
-    <ToolWrap
+    <Tools::Wrap
       @token={{this.token}}
       @onBack={{action "onBack" (array "token")}}
       @onClear={{action "onClear"}}

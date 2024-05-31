@@ -12,7 +12,7 @@ import { action } from '@ember/object';
  *
  * @example
  * ```js
- * <ToolRewrap
+ * <Tools::Rewrap
  *  @onClear={{action "onClear"}}
  *  @token={{token}}
  *  @rewrap_token={{rewrap_token}}
