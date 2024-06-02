@@ -867,6 +867,7 @@ func forwardBasedOnHeaders(core *vault.Core, r *http.Request) (bool, error) {
 			return false, fmt.Errorf("forwarding via header %s disabled in configuration", VaultForwardHeaderName)
 		}
 		if rawForward == "active-node" {
+			core.Logger().Trace("request will be routed based on the 'active-node' header")
 			return true, nil
 		}
 		return false, nil
@@ -963,6 +964,7 @@ func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 	}
 	path := ns.TrimmedPath(r.URL.Path[len("/v1/"):])
 	if alwaysRedirectPaths.HasPath(path) {
+		core.Logger().Trace("cannot forward request (path included in always redirect paths), falling back to redirection to standby")
 		respondStandby(core, w, r.URL)
 		return
 	}
@@ -973,7 +975,7 @@ func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 	statusCode, header, retBytes, err := core.ForwardRequest(r)
 	if err != nil {
 		if err == vault.ErrCannotForward {
-			core.Logger().Debug("cannot forward request (possibly disabled on active node), falling back")
+			core.Logger().Trace("cannot forward request (possibly disabled on active node), falling back to redirection to standby")
 		} else {
 			core.Logger().Error("forward request error", "error", err)
 		}
@@ -982,6 +984,8 @@ func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 		respondStandby(core, w, r.URL)
 		return
 	}
+
+	core.Logger().Trace("request forwarded", "statusCode", statusCode)
 
 	for k, v := range header {
 		w.Header()[k] = v
