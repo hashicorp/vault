@@ -79,10 +79,10 @@ module('Acceptance | tools', function (hooks) {
 
     await fillIn(TS.toolsInput('wrapping-token'), tokenStore.get());
     await click(TS.submit);
-    const rewrappedToken = await waitUntil(() => find(TS.toolsInput('rewrapped-token')));
-    assert.ok(rewrappedToken.value, 'has a new re-wrapped token');
-    assert.notEqual(rewrappedToken.value, tokenStore.get(), 're-wrapped token is not the wrapped token');
-    tokenStore.set(rewrappedToken.value);
+    const rewrappedToken = await waitUntil(() => find(TS.toolsInput('rewrapped-token')).innerText);
+    assert.ok(rewrappedToken, 'has a new re-wrapped token');
+    assert.notEqual(rewrappedToken, tokenStore.get(), 're-wrapped token is not the wrapped token');
+    tokenStore.set(rewrappedToken);
     await settled();
 
     // unwrap

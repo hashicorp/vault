@@ -26,10 +26,8 @@
     <Tools::Rewrap
       @onClear={{action "onClear"}}
       @rewrap_token={{this.rewrap_token}}
-      @selectedAction={{this.selectedAction}}
       @errors={{this.errors}}
       @token={{this.token}}
-      @bytes={{this.bytes}}
     />
   {{else if (eq this.selectedAction "unwrap")}}
     <Tools::Unwrap
