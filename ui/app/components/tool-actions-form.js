@@ -6,8 +6,7 @@
 import { match } from '@ember/object/computed';
 import { service } from '@ember/service';
 import Component from '@ember/component';
-import { setProperties, computed, set } from '@ember/object';
-import { addSeconds, parseISO } from 'date-fns';
+import { setProperties, set } from '@ember/object';
 import { capitalize } from '@ember/string';
 
 const DEFAULTS = {
@@ -65,15 +64,6 @@ export default Component.extend(DEFAULTS, {
   },
 
   dataIsEmpty: match('data', new RegExp(DEFAULTS.data)),
-
-  expirationDate: computed('creation_time', 'creation_ttl', function () {
-    const { creation_time, creation_ttl } = this;
-    if (!(creation_time && creation_ttl)) {
-      return null;
-    }
-    // returns new Date with seconds added.
-    return addSeconds(parseISO(creation_time), creation_ttl);
-  }),
 
   handleError(e) {
     set(this, 'errors', e.errors);

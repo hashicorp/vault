@@ -16,19 +16,17 @@
     <InfoTableRow @label="Creation path" @value={{@creation_path}} />
     <InfoTableRow @label="Creation time" @value={{@creation_time}} />
     <InfoTableRow @label="Creation TTL" @value={{@creation_ttl}} />
-    {{#if @expirationDate}}
-      <InfoTableRow @label="Expiration date" @value={{@expirationDate}} />
-      <InfoTableRow @label="Expires in" @value={{date-from-now @expirationDate}} />
+    {{#if this.expirationDate}}
+      <InfoTableRow @label="Expiration date" @value={{this.expirationDate}} />
+      <InfoTableRow @label="Expires in" @value={{date-from-now this.expirationDate}} />
     {{/if}}
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
-    <div class="control">
-      <Hds::Button @text="Back" @color="secondary" {{on "click" this.onClear}} />
-    </div>
+    <Hds::Button @text="Done" @color="secondary" {{on "click" @onClear}} data-test-button="Done" />
   </div>
 {{else}}
   <div class="box is-sideless is-fullwidth is-marginless">
-    <NamespaceReminder @mode="perform" @noun={{@selectedAction}} />
+    <NamespaceReminder @mode="perform" @noun="lookup" />
     <MessageError @errors={{@errors}} />
     <div class="field">
       <label for="token" class="is-label">Wrapped token</label>
