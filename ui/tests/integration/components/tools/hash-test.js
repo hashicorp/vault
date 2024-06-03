@@ -66,14 +66,8 @@ module('Integration | Component | tools/hash', function (hooks) {
 
   test('it calls onChange when inputs change', async function (assert) {
     await this.renderComponent();
-    await fillIn(TS.toolsInput('sum'), 'foo');
+    await fillIn(TS.toolsInput('hash-input'), 'foo');
     assert.propEqual(this.onChange.lastCall.args, ['hashData', 'foo'], 'onChange is called with hash input');
-    await click(TS.toolsInput('b64-toggle'));
-    assert.propEqual(
-      this.onChange.lastCall.args,
-      ['hashData', 'Zm9v'],
-      'onChange is called with encoded hash input'
-    );
 
     await fillIn('#algorithm', 'sha2-224');
     assert.propEqual(
