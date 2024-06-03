@@ -100,6 +100,41 @@ management tool.
    environment, you will additionally need to configure your environment’s custom endpoints
    via the [custom_endpoint](/vault/api-docs/auth/gcp#custom_endpoint) configuration parameter.
 
+   In some cases, you cannot set sensitive IAM security credentials in your
+   Vault configuration. For example, your organization may require that all
+   security credentials are short-lived or explicitly tied to a machine identity.
+
+   To provide IAM security credentials to Vault, we recommend using Vault
+   [plugin workload identity federation](#plugin-workload-identity-federation-wif)
+   (WIF) as shown below.
+
+1. Alternatively, configure the audience claim value and the service account email to assume for plugin workload identity federation:
+
+   ```text
+    $ vault write auth/gcp/config \
+        identity_token_audience="<TOKEN AUDIENCE>" \
+        service_account_email="<SERVICE ACCOUNT EMAIL>"
+   ```
+
+   Vault's identity token provider signs the plugin identity token JWT internally.
+   If a trust relationship exists between Vault and GCP through WIF, the auth
+   method can exchange the Vault identity token for a
+   [federated access token](https://cloud.google.com/docs/authentication/token-types#access).
+
+   To configure a trusted relationship between Vault and GCP:
+       - You must configure the [identity token issuer backend](/vault/api-docs/secret/identity/tokens#configure-the-identity-tokens-backend)
+         for Vault.
+       - GCP must have a
+         [workload identity pool and provider](https://cloud.google.com/iam/docs/manage-workload-identity-pools-providers)
+         configured with information about the fully qualified and network-reachable
+         issuer URL for the Vault plugin's
+         [identity token provider](/vault/api-docs/secret/identity/tokens#read-plugin-identity-well-known-configurations).
+
+   Establishing a trusted relationship between Vault and GCP ensures that GCP
+   can fetch JWKS
+   [public keys](/vault/api-docs/secret/identity/tokens#read-active-public-keys)
+   and verify the plugin identity token signature.
+
 1. Create a named role:
 
    For an `iam`-type role:
@@ -224,6 +259,61 @@ account to impersonate any service account in the GCP project where it resides.
 See [Managing service account impersonation](https://cloud.google.com/iam/docs/impersonating-service-accounts)
 for more information.
 
+## Plugin Workload Identity Federation (WIF)
+
+<EnterpriseAlert product="vault" />
+
+The GCP auth method supports the plugin WIF workflow and has a source of identity called
+a plugin identity token. A plugin identity token is a JWT that is signed internally by the Vault
+[plugin identity token issuer](/vault/api-docs/secret/identity/tokens#read-plugin-workload-identity-issuer-s-openid-configuration).
+
+If there is a trust relationship configured between Vault and GCP through
+[workload identity federation](https://cloud.google.com/iam/docs/workload-identity-federation),
+the auth method can exchange its identity token for short-lived access tokens needed to
+perform its actions.
+
+Exchanging identity tokens for access tokens lets the GCP auth method
+operate without configuring explicit access to sensitive IAM security
+credentials.
+
+To configure the auth method to use plugin WIF:
+
+1. Ensure that Vault [openid-configuration](/vault/api-docs/secret/identity/tokens#read-plugin-identity-token-issuer-s-openid-configuration)
+and [public JWKS](/vault/api-docs/secret/identity/tokens#read-plugin-identity-token-issuer-s-public-jwks)
+APIs are network-reachable by GCP. We recommend using an API proxy or gateway
+if you need to limit Vault API exposure.
+
+1. Create a
+    [workload identity pool and provider](https://cloud.google.com/iam/docs/workload-identity-federation-with-other-providers#create-pool-provider)
+    in GCP.
+    1. The provider URL **must** point at your [Vault plugin identity token issuer](/vault/api-docs/secret/identity/tokens#read-plugin-workload-identity-issuer-s-openid-configuration) with the
+    `/.well-known/openid-configuration` suffix removed. For example:
+    `https://host:port/v1/identity/oidc/plugins`.
+    1. Uniquely identify the recipient of the plugin identity token as the audience.
+    You can use the [default audience](https://cloud.google.com/iam/docs/workload-identity-federation-with-other-providers#prepare)
+    for the identity pool or a custom value less than 256 characters.
+
+1. [Authenticate a workload](https://cloud.google.com/iam/docs/workload-identity-federation-with-other-providers#authenticate)
+in GCP by granting the identity pool access to a dedicated service account using service account impersonation.
+Filter requests using the unique `sub` claim issued by plugin identity tokens so the GCP Auth method can
+impersonate the service account. `sub` claims have the form: `plugin-identity:<NAMESPACE>:auth:<GCP_AUTH_MOUNT_ACCESSOR>`.
+
+1. Configure the GCP auth method with the OIDC audience value and service account
+email.
+
+   ```shell-session
+   $ vault write auth/gcp/config \
+     identity_token_audience="//iam.googleapis.com/projects/410449834127/locations/global/workloadIdentityPools/vault-gcp-auth-43777a63/providers/vault-gcp-auth-wif-provider" \
+     service_account_email="vault-plugin-wif-auth@hc-b712f250b4e04cacbadd258a90b.iam.gserviceaccount.com"
+   ```
+
+Your auth method can now use plugin WIF for its configuration credentials.
+By default, WIF [credentials](https://cloud.google.com/iam/docs/workload-identity-federation#access_management)
+have a time-to-live of 1 hour and automatically refresh when they expire.
+
+Please see the [API documentation](/vault/api-docs/auth/gcp#configure)
+for more details on the fields associated with plugin WIF.
+
 ## Group aliases
 
 As of Vault 1.0, roles can specify an `add_group_aliases` boolean parameter
@@ -275,7 +365,7 @@ for IAM service accounts looks like this:
 ### GCE login
 
 GCE login only applies to roles of type `gce` and **must be completed on an
-infrastructure running on Google Cloud**. These steps will not work from your 
+infrastructure running on Google Cloud**. These steps will not work from your
 local laptop or another cloud provider.
 
 [![Vault Google Cloud GCE Login Workflow](/img/vault-gcp-gce-auth-workflow.svg)](/img/vault-gcp-gce-auth-workflow.svg)
