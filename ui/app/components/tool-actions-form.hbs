@@ -5,16 +5,16 @@
 
 <form onsubmit={{action "doSubmit"}}>
   {{#if (eq this.selectedAction "hash")}}
-    {{! template-lint-disable no-passed-in-event-handlers }}
     <Tools::Hash
+      @onBack={{action "onBack" (array "sum")}}
       @onClear={{action "onClear"}}
+      @onChange={{action "onChange"}}
       @sum={{this.sum}}
       @algorithm={{this.algorithm}}
       @errors={{this.errors}}
       @format={{this.format}}
-      @input={{this.input}}
+      @hashData={{this.hashData}}
     />
-    {{! template-lint-enable no-passed-in-event-handlers }}
   {{else if (eq this.selectedAction "random")}}
     <Tools::Random
       @onClear={{action "onClear"}}

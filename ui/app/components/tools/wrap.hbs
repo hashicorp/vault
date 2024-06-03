@@ -15,16 +15,12 @@
   <div class="box is-sideless is-fullwidth is-marginless">
     <div class="field">
       <label for="wrap-info" class="is-label">Wrapped token</label>
-      <div class="control">
-        <Hds::Copy::Snippet
-          @textToCopy={{@token}}
-          @color="secondary"
-          data-test-tools-input="wrapping-token"
-          @onError={{(fn
-            (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")
-          )}}
-        />
-      </div>
+      <Hds::Copy::Snippet
+        @textToCopy={{@token}}
+        @color="secondary"
+        data-test-tools-input="wrapping-token"
+        @onError={{fn (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")}}
+      />
     </div>
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">

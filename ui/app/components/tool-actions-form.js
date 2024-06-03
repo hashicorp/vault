@@ -23,7 +23,7 @@ const DEFAULTS = {
   wrapTTL: null,
   sum: null,
   random_bytes: null,
-  input: null,
+  hashData: null,
 };
 
 const WRAPPING_ENDPOINTS = ['lookup', 'wrap', 'unwrap', 'rewrap'];
@@ -109,7 +109,7 @@ export default Component.extend(DEFAULTS, {
       return { bytes: this.bytes, format: this.format };
     }
     if (action === 'hash') {
-      return { input: this.input, format: this.format, algorithm: this.algorithm };
+      return { input: this.hashData, format: this.format, algorithm: this.algorithm };
     }
   },
 
