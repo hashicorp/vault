@@ -5,7 +5,6 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { setupMirage } from 'ember-cli-mirage/test-support';
 import { click, fillIn, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import sinon from 'sinon';
@@ -15,7 +14,6 @@ import { TOOLS_SELECTORS as TS } from 'vault/tests/helpers/tools-selectors';
 
 module('Integration | Component | tools/wrap', function (hooks) {
   setupRenderingTest(hooks);
-  setupMirage(hooks);
 
   hooks.beforeEach(function () {
     this.onBack = sinon.spy();

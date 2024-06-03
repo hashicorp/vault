@@ -6,7 +6,6 @@
 <form onsubmit={{action "doSubmit"}}>
   {{#if (eq this.selectedAction "hash")}}
     <Tools::Hash
-      @onBack={{action "onBack" (array "sum")}}
       @onClear={{action "onClear"}}
       @onChange={{action "onChange"}}
       @sum={{this.sum}}

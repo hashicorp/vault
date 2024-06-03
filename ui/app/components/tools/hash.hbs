@@ -24,10 +24,7 @@
     </div>
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
-    <Hds::ButtonSet>
-      <Hds::Button @icon="arrow-left" @text="Back" @color="tertiary" {{on "click" @onBack}} data-test-button="Back" />
-      <Hds::Button @text="Done" @color="secondary" {{on "click" @onClear}} data-test-button="Done" />
-    </Hds::ButtonSet>
+    <Hds::Button @text="Done" @color="secondary" {{on "click" @onClear}} data-test-button="Done" />
   </div>
 {{else}}
   <div class="box is-sideless is-fullwidth is-marginless">
