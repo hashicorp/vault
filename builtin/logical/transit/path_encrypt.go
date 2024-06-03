@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package transit
 
 import (
@@ -10,7 +13,6 @@ import (
 	"reflect"
 
 	"github.com/hashicorp/vault/helper/constants"
-
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
@@ -86,6 +88,12 @@ func (m ManagedKeyFactory) GetManagedKeyParameters() keysutil.ManagedKeyParamete
 func (b *backend) pathEncrypt() *framework.Path {
 	return &framework.Path{
 		Pattern: "encrypt/" + framework.GenericNameRegex("name"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+			OperationVerb:   "encrypt",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -451,6 +459,7 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 	if !b.System().CachingDisabled() {
 		p.Lock(false)
 	}
+	defer p.Unlock()
 
 	// Process batch request items. If encryption of any request
 	// item fails, respectively mark the error in the response
@@ -459,6 +468,13 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 	successesInBatch := false
 	for i, item := range batchInputItems {
 		if batchResponseItems[i].Error != "" {
+			userErrorInBatch = true
+			continue
+		}
+
+		if item.Nonce != "" && !nonceAllowed(p) {
+			userErrorInBatch = true
+			batchResponseItems[i].Error = ErrNonceNotAllowed.Error()
 			continue
 		}
 
@@ -531,8 +547,6 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 		}
 	} else {
 		if batchResponseItems[0].Error != "" {
-			p.Unlock()
-
 			if internalErrorInBatch {
 				return nil, errutil.InternalError{Err: batchResponseItems[0].Error}
 			}
@@ -554,9 +568,26 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 		resp.AddWarning("Attempted creation of the key during the encrypt operation, but it was created beforehand")
 	}
 
-	p.Unlock()
-
 	return batchRequestResponse(d, resp, req, successesInBatch, userErrorInBatch, internalErrorInBatch)
+}
+
+func nonceAllowed(p *keysutil.Policy) bool {
+	var supportedKeyType bool
+	switch p.Type {
+	case keysutil.KeyType_MANAGED_KEY:
+		return true
+	case keysutil.KeyType_AES128_GCM96, keysutil.KeyType_AES256_GCM96, keysutil.KeyType_ChaCha20_Poly1305:
+		supportedKeyType = true
+	default:
+		supportedKeyType = false
+	}
+
+	if supportedKeyType && p.ConvergentEncryption && p.ConvergentVersion == 1 {
+		// We only use the user supplied nonce for v1 convergent encryption keys
+		return true
+	}
+
+	return false
 }
 
 // Depending on the errors in the batch, different status codes should be returned. User errors

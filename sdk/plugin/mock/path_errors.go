@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package mock
 
 import (
@@ -33,7 +36,6 @@ func errorPaths(b *backend) []*framework.Path {
 				"err_type": {Type: framework.TypeInt},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.CreateOperation: b.pathErrorRPCRead,
 				logical.UpdateOperation: b.pathErrorRPCRead,
 			},
 		},

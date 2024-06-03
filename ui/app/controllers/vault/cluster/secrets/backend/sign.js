@@ -1,4 +1,9 @@
-import { inject as service } from '@ember/service';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { service } from '@ember/service';
 import Controller from '@ember/controller';
 import { set } from '@ember/object';
 
@@ -31,7 +36,7 @@ export default Controller.extend({
 
     newModel() {
       const model = this.model;
-      const roleModel = model.get('role');
+      const roleModel = model.role;
       model.unloadRecord();
       const newModel = this.store.createRecord('ssh-sign', {
         role: roleModel,

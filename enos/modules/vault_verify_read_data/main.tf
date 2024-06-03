@@ -1,7 +1,10 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 terraform {
   required_providers {
     enos = {
-      source = "app.terraform.io/hashicorp-qti/enos"
+      source = "registry.terraform.io/hashicorp-forge/enos"
     }
   }
 }
@@ -35,7 +38,7 @@ resource "enos_remote_exec" "verify_kv_on_node" {
     VAULT_INSTALL_DIR = var.vault_install_dir
   }
 
-  scripts = ["${path.module}/scripts/verify-data.sh"]
+  scripts = [abspath("${path.module}/scripts/verify-data.sh")]
 
   transport = {
     ssh = {

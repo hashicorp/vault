@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -7,8 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
-	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
 
@@ -36,6 +39,7 @@ type AuthTuneCommand struct {
 	flagUserLockoutDuration             time.Duration
 	flagUserLockoutCounterResetDuration time.Duration
 	flagUserLockoutDisable              bool
+	flagIdentityTokenKey                string
 }
 
 func (c *AuthTuneCommand) Synopsis() string {
@@ -192,6 +196,13 @@ func (c *AuthTuneCommand) Flags() *FlagSets {
 			"the plugin catalog, and will not start running until the plugin is reloaded.",
 	})
 
+	f.StringVar(&StringVar{
+		Name:    flagNameIdentityTokenKey,
+		Target:  &c.flagIdentityTokenKey,
+		Default: "default",
+		Usage:   "Select the key used to sign plugin identity tokens.",
+	})
+
 	return set
 }
 
@@ -290,6 +301,10 @@ func (c *AuthTuneCommand) Run(args []string) int {
 
 		if fl.Name == flagNamePluginVersion {
 			mountConfigInput.PluginVersion = c.flagPluginVersion
+		}
+
+		if fl.Name == flagNameIdentityTokenKey {
+			mountConfigInput.IdentityTokenKey = c.flagIdentityTokenKey
 		}
 	})
 

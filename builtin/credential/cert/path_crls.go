@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package cert
 
 import (
@@ -19,6 +22,10 @@ import (
 func pathListCRLs(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "crls/?$",
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixCert,
+			OperationSuffix: "crls",
+		},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathCRLsList,
@@ -41,6 +48,12 @@ func (b *backend) pathCRLsList(ctx context.Context, req *logical.Request, d *fra
 func pathCRLs(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "crls/" + framework.GenericNameRegex("name"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixCert,
+			OperationSuffix: "crl",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -177,6 +190,7 @@ func (b *backend) pathCRLDelete(ctx context.Context, req *logical.Request, d *fr
 
 	b.crlUpdateMutex.Lock()
 	defer b.crlUpdateMutex.Unlock()
+	defer b.flushTrustedCache()
 
 	_, ok := b.crls[name]
 	if !ok {
@@ -300,6 +314,8 @@ func (b *backend) setCRL(ctx context.Context, storage logical.Storage, certList 
 	}
 
 	b.crls[name] = crlInfo
+	b.flushTrustedCache()
+
 	return err
 }
 

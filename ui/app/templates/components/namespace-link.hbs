@@ -1,3 +1,7 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
 <ExternalLink
   @href={{this.namespaceLink}}
   @sameTab={{true}}
@@ -10,7 +14,7 @@
     <div class="level is-mobile">
       <span class="level-left">{{this.namespaceDisplay}}</span>
       <span class="level-right">
-        <Chevron @isButton={{true}} class="button is-ghost icon has-text-grey" />
+        <Hds::Button @text="Namespace link" @icon="chevron-right" @isIconOnly={{true}} @color="tertiary" />
       </span>
     </div>
   {{/if}}

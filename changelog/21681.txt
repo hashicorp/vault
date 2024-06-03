@@ -1,0 +1,3 @@
+```release-note:improvement
+sys/metrics (enterprise): Adds a gauge metric that tracks whether enterprise builtin secret plugins are enabled.
+```

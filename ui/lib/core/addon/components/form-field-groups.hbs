@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#each (get @model this.fieldGroups) as |fieldGroup|}}
   {{#each-in fieldGroup as |group fields|}}
     {{#if (or (not @renderGroup) (and @renderGroup (eq group @renderGroup)))}}

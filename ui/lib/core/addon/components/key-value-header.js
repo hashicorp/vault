@@ -1,5 +1,10 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
-import utils from 'vault/lib/key-utils';
+import { ancestorKeysForKey, keyPartsForKey, keyWithoutParentKey } from 'core/utils/key-utils';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 /**
@@ -7,16 +12,14 @@ import { encodePath } from 'vault/utils/path-encoding-helpers';
  * KeyValueHeader components show breadcrumbs for secret engines.
  *
  * @example
- * ```js
- <KeyValueHeader @path="vault.cluster.secrets.backend.show" @mode={{this.mode}} @root={{@root}}/>
- * ```
+ * <KeyValueHeader @path="vault.cluster.secrets.backend.show" @mode={{this.mode}}/>
+ *
  * @param {string} [mode=null] - Used to set the currentPath.
  * @param {string} [baseKey=null] - Used to generate the path backward.
  * @param {string} [path=null] - The fallback path.
  * @param {string} [root=null] - Used to set the secretPath.
  * @param {boolean} [showCurrent=true] - Boolean to show the second part of the breadcrumb, ex: the secret's name.
  * @param {boolean} [linkToPaths=true] - If true link to the path.
- * @param {boolean} [isEngine=false] - Change the LinkTo if the path is coming from an engine.
  */
 
 export default class KeyValueHeader extends Component {
@@ -56,8 +59,8 @@ export default class KeyValueHeader extends Component {
     const path = this.args.path;
     const currentPath = this.currentPath;
     const showCurrent = this.showCurrent;
-    const ancestors = utils.ancestorKeysForKey(baseKey);
-    const parts = utils.keyPartsForKey(baseKey);
+    const ancestors = ancestorKeysForKey(baseKey);
+    const parts = keyPartsForKey(baseKey);
     if (ancestors.length === 0) {
       crumbs.push({
         label: baseKey,
@@ -78,13 +81,13 @@ export default class KeyValueHeader extends Component {
         label: parts[index],
         text: this.stripTrailingSlash(parts[index]),
         path: path,
-        model: ancestor,
+        model: encodePath(ancestor),
       });
     });
 
     crumbs.push({
-      label: utils.keyWithoutParentKey(baseKey),
-      text: this.stripTrailingSlash(utils.keyWithoutParentKey(baseKey)),
+      label: keyWithoutParentKey(baseKey),
+      text: this.stripTrailingSlash(keyWithoutParentKey(baseKey)),
       path: currentPath,
       model: baseKeyModel,
     });

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { get } from '@ember/object';
 import ApplicationSerializer from './application';
 
@@ -32,9 +37,8 @@ export default ApplicationSerializer.extend({
     // to `secret_data` so it will be `secretData` in the model
     payload.secret_data = get(payload, path);
     delete payload[path];
-    // return the payload if it's expecting a single object or wrap
-    // it as an array if not
-    return requestType === 'queryRecord' ? payload : [payload];
+
+    return payload;
   },
 
   serialize(snapshot) {

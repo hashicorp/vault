@@ -1,4 +1,9 @@
 /**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+/**
  * @module TransformListItem
  * TransformListItem components are used for the list items for the Transform Secret Engines for all but Transformations.
  * This component automatically handles read-only list items if capabilities are not granted or the item is internal only.
@@ -23,7 +28,7 @@ export default Component.extend({
   isBuiltin: computed('item', 'itemType', function () {
     const item = this.item;
     if (this.itemType === 'alphabet' || this.itemType === 'template') {
-      return item.get('id').startsWith('builtin/');
+      return item.id.startsWith('builtin/');
     }
     return false;
   }),

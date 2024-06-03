@@ -1,11 +1,15 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { getRules } from '../../../utils/generated-role-rules';
-import { htmlSafe } from '@ember/template';
 import errorMessage from 'vault/utils/error-message';
 
 /**
@@ -82,7 +86,7 @@ export default class CreateAndEditRolePageComponent extends Component {
       'This specifies the Role or ClusterRole rules to use when generating a role. Kubernetes documentation is';
     const link =
       '<a href="https://kubernetes.io/docs/reference/access-authn-authz/rbac/" target="_blank" rel="noopener noreferrer">available here</>';
-    return htmlSafe(`${message} ${link}.`);
+    return `${message} ${link}.`;
   }
 
   @action
@@ -95,11 +99,11 @@ export default class CreateAndEditRolePageComponent extends Component {
     this.selectedTemplateId = '1';
 
     if (generatedRoleRules) {
-      const template = rulesTemplates.findBy('rules', generatedRoleRules);
+      const template = rulesTemplates.find((t) => t.rules === generatedRoleRules);
       if (template) {
         this.selectedTemplateId = template.id;
       } else {
-        rulesTemplates.findBy('id', '1').rules = generatedRoleRules;
+        rulesTemplates.find((t) => t.id === '1').rules = generatedRoleRules;
       }
     }
     this.roleRulesTemplates = rulesTemplates;
@@ -130,7 +134,7 @@ export default class CreateAndEditRolePageComponent extends Component {
   *save() {
     try {
       // set generatedRoleRoles to value of selected template
-      const selectedTemplate = this.roleRulesTemplates?.findBy('id', this.selectedTemplateId);
+      const selectedTemplate = this.roleRulesTemplates?.find((t) => t.id === this.selectedTemplateId);
       if (selectedTemplate) {
         this.args.model.generatedRoleRules = selectedTemplate.rules;
       }

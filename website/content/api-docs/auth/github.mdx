@@ -4,7 +4,7 @@ page_title: GitHub - Auth Methods - HTTP API
 description: This is the API documentation for the Vault GitHub auth method.
 ---
 
-# GitHub Auth Method (API)
+# GitHub auth method (API)
 
 This is the API documentation for the Vault GitHub auth method. For
 general information about the usage and operation of the GitHub method, please
@@ -14,7 +14,7 @@ This documentation assumes the GitHub method is enabled at the `/auth/github`
 path in Vault. Since it is possible to enable auth methods at any location,
 please update your API calls accordingly.
 
-## Configure Method
+## Configure method
 
 Configures the connection parameters for GitHub. This path honors the
 distinction between the `create` and `update` capabilities inside ACL policies.
@@ -40,7 +40,7 @@ distinction between the `create` and `update` capabilities inside ACL policies.
 
 @include 'tokenfields.mdx'
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -48,7 +48,7 @@ distinction between the `create` and `update` capabilities inside ACL policies.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -58,7 +58,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/github/config
 ```
 
-## Read Configuration
+## Read configuration
 
 Reads the GitHub configuration.
 
@@ -66,7 +66,7 @@ Reads the GitHub configuration.
 | :----- | :-------------------- |
 | `GET`  | `/auth/github/config` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -74,7 +74,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/github/config
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -92,7 +92,7 @@ $ curl \
 }
 ```
 
-## Map GitHub Teams
+## Map GitHub teams
 
 Map a list of policies to a team that exists in the configured GitHub organization.
 
@@ -105,7 +105,7 @@ Map a list of policies to a team that exists in the configured GitHub organizati
 - `team_name` `(string)` - GitHub team name in "slugified" format
 - `value` `(string)` - Comma separated list of policies to assign
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -113,7 +113,7 @@ Map a list of policies to a team that exists in the configured GitHub organizati
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -123,7 +123,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/github/map/teams/dev
 ```
 
-## Read Team Mapping
+## Read team mapping
 
 Reads the GitHub team policy mapping.
 
@@ -131,7 +131,7 @@ Reads the GitHub team policy mapping.
 | :----- | :---------------------------------- |
 | `GET`  | `/auth/github/map/teams/:team_name` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -139,7 +139,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/github/map/teams/dev
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -157,7 +157,7 @@ $ curl \
 }
 ```
 
-## Map GitHub Users
+## Map GitHub users
 
 Map a list of policies to a specific GitHub user exists in the configured
 organization.
@@ -171,7 +171,7 @@ organization.
 - `user_name` `(string)` - GitHub user name
 - `value` `(string)` - Comma separated list of policies to assign
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -179,7 +179,7 @@ organization.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -192,7 +192,7 @@ $ curl \
 The user with username `sethvargo` will be assigned the `sethvargo-policy`
 policy **in addition to** any team policies.
 
-## Read User Mapping
+## Read user mapping
 
 Reads the GitHub user policy mapping.
 
@@ -200,7 +200,7 @@ Reads the GitHub user policy mapping.
 | :----- | :---------------------------------- |
 | `GET`  | `/auth/github/map/users/:user_name` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -208,7 +208,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/github/map/users/sethvargo
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -238,7 +238,7 @@ Login using GitHub access token.
 
 - `token` `(string: <required>)` - GitHub personal API token.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -246,7 +246,7 @@ Login using GitHub access token.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -254,7 +254,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/github/login
 ```
 
-### Sample Response
+### Sample response
 
 ```javascript
 {

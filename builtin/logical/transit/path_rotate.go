@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package transit
 
 import (
@@ -11,6 +14,13 @@ import (
 func (b *backend) pathRotate() *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/" + framework.GenericNameRegex("name") + "/rotate",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+			OperationVerb:   "rotate",
+			OperationSuffix: "key",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -54,6 +64,7 @@ func (b *backend) pathRotateWrite(ctx context.Context, req *logical.Request, d *
 	if !b.System().CachingDisabled() {
 		p.Lock(true)
 	}
+	defer p.Unlock()
 
 	if p.Type == keysutil.KeyType_MANAGED_KEY {
 		var keyId string
@@ -68,8 +79,11 @@ func (b *backend) pathRotateWrite(ctx context.Context, req *logical.Request, d *
 		err = p.Rotate(ctx, req.Storage, b.GetRandomReader())
 	}
 
-	p.Unlock()
-	return nil, err
+	if err != nil {
+		return nil, err
+	}
+
+	return b.formatKeyPolicy(p, nil)
 }
 
 const pathRotateHelpSyn = `Rotate named encryption key`

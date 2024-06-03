@@ -12,7 +12,7 @@ and State API. These three features were introduced in Vault 1.7. The Enterprise
 feature set includes 2 main features: Automated Upgrades and Redundancy Zones.
 These two features were introduced in Vault 1.11.
 
-## Server Stabilization
+## Server stabilization
 
 Server stabilization helps to retain the stability of the Raft cluster by safely
 joining new voting nodes to the cluster. When a new voter node is joined to an
@@ -22,7 +22,7 @@ healthy for the entire duration of stabilization, then that node will be
 promoted as a voter. The server stabilization period can be tuned using
 `server_stabilization_time` (see below).
 
-## Dead Server Cleanup
+## Dead server cleanup
 
 Dead server cleanup automatically removes nodes deemed unhealthy from the
 Raft cluster, avoiding the manual operator intervention. This feature can be
@@ -34,7 +34,7 @@ and `min_quorum` (see below).
 State API provides detailed information about all the nodes in the Raft cluster
 in a single call. This API can be used for monitoring for cluster health.
 
-### Follower Health
+### Follower health
 
 Follower node health is determined by 2 factors.
 
@@ -43,7 +43,7 @@ Follower node health is determined by 2 factors.
 - Its ability to keep up with data replication from the leader node. Tuned using
   `max_trailing_logs` (see below).
 
-### Default Configuration
+### Default configuration
 
 By default, Autopilot will be enabled with clusters using Vault 1.7+,
 although dead server cleanup is not enabled by default. Upgrade of
@@ -52,7 +52,7 @@ Autopilot automatically.
 
 Autopilot exposes a [configuration
 API](/vault/api-docs/system/storage/raftautopilot#set-configuration) to manage its
-behavior. Autopilot gets initialized with the following default values.
+behavior. Autopilot gets initialized with the following default values. If these default values do not meet your expected autopilot behavior, don't forget to set them to your desired values.
 
 - `cleanup_dead_servers` - `false`
   - This controls whether to remove dead servers from
@@ -90,7 +90,7 @@ might also show up in Vault in comparison to Consul as well. Autopilot in Vault
 and Consul use different technical underpinnings requiring these differences, to
 provide the autopilot functionality.
 
-## Automated Upgrades
+## Automated upgrades
 
 Automated Upgrades lets you automatically upgrade a cluster of Vault nodes to a new version as
 updated server nodes join the cluster. Once the number of nodes on the new version is
@@ -100,7 +100,7 @@ and initiate a leadership transfer from the older version leader to one of the n
 versioned nodes. After the leadership transfer completes, the older versioned non-voting
 nodes can be removed from the cluster.
 
-## Redundancy Zones
+## Redundancy zones
 
 Redundancy Zones provide both scaling and resiliency benefits by deploying non-voting
 nodes alongside voting nodes on a per availability zone basis. When using redundancy zones,

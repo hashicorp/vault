@@ -1,13 +1,12 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import buildRoutes from 'ember-engines/routes';
 
 export default buildRoutes(function () {
   this.route('overview');
-  this.route('configuration', function () {
-    this.route('index', { path: '/' });
-    this.route('tidy');
-    this.route('create');
-    this.route('edit');
-  });
   this.route('roles', function () {
     this.route('index', { path: '/' });
     this.route('create');
@@ -28,13 +27,7 @@ export default buildRoutes(function () {
       this.route('edit');
       this.route('sign');
       this.route('cross-sign');
-    });
-  });
-  this.route('certificates', function () {
-    this.route('index', { path: '/' });
-    this.route('certificate', { path: '/:serial' }, function () {
-      this.route('details');
-      this.route('edit');
+      this.route('rotate-root');
     });
   });
   this.route('keys', function () {
@@ -45,5 +38,24 @@ export default buildRoutes(function () {
       this.route('details');
       this.route('edit');
     });
+  });
+  this.route('certificates', function () {
+    this.route('index', { path: '/' });
+    this.route('certificate', { path: '/:serial' }, function () {
+      this.route('details');
+      this.route('edit');
+    });
+  });
+  this.route('tidy', function () {
+    this.route('index', { path: '/' });
+    this.route('auto', function () {
+      this.route('configure');
+    });
+    this.route('manual');
+  });
+  this.route('configuration', function () {
+    this.route('index', { path: '/' });
+    this.route('create');
+    this.route('edit');
   });
 });

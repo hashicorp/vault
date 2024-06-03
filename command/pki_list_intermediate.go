@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -6,9 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hashicorp/vault/api"
-
 	"github.com/ghodss/yaml"
+	"github.com/hashicorp/vault/api"
 	"github.com/ryanuber/columnize"
 )
 

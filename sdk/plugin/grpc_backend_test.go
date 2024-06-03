@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package plugin
 
 import (
@@ -174,7 +177,7 @@ func testGRPCBackend(t *testing.T) (logical.Backend, func()) {
 			}),
 		},
 	}
-	client, _ := gplugin.TestPluginGRPCConn(t, pluginMap)
+	client, _ := gplugin.TestPluginGRPCConn(t, false, pluginMap)
 	cleanup := func() {
 		client.Close()
 	}

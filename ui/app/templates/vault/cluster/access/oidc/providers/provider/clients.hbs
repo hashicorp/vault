@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <Toolbar />
 
 {{#if (gt this.model.length 0)}}
@@ -7,8 +12,11 @@
     @title="No applications allowed"
     @message="Access to this provider has been limited, and no applications are allowed to use it. Edit the provider to allow access."
   >
-    <LinkTo @route="vault.cluster.access.oidc.providers.provider.edit">
-      Edit provider
-    </LinkTo>
+    <Hds::Link::Standalone
+      @icon="chevron-right"
+      @iconPosition="trailing"
+      @text="Edit provider"
+      @route="vault.cluster.access.oidc.providers.provider.edit"
+    />
   </EmptyState>
 {{/if}}

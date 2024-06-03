@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package server
 
 import (
@@ -21,6 +24,8 @@ import (
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/helper/testcluster"
+	"github.com/mitchellh/mapstructure"
 )
 
 const (
@@ -29,14 +34,8 @@ const (
 	VaultDevKeyFilename  = "vault-key.pem"
 )
 
-var (
-	entConfigValidate = func(_ *Config, _ string) []configutil.ConfigError {
-		return nil
-	}
-
-	// Modified internally for testing.
-	validExperiments = experiments.ValidExperiments()
-)
+// Modified internally for testing.
+var validExperiments = experiments.ValidExperiments()
 
 // Config is the configuration for the vault server.
 type Config struct {
@@ -70,6 +69,7 @@ type Config struct {
 	ClusterCipherSuites string `hcl:"cluster_cipher_suites"`
 
 	PluginDirectory string `hcl:"plugin_directory"`
+	PluginTmpdir    string `hcl:"plugin_tmpdir"`
 
 	PluginFileUid int `hcl:"plugin_file_uid"`
 
@@ -107,6 +107,8 @@ type Config struct {
 
 	DetectDeadlocks string `hcl:"detect_deadlocks"`
 
+	ImpreciseLeaseRoleTracking bool `hcl:"imprecise_lease_role_tracking"`
+
 	EnableResponseHeaderRaftNodeID    bool        `hcl:"-"`
 	EnableResponseHeaderRaftNodeIDRaw interface{} `hcl:"enable_response_header_raft_node_id"`
 
@@ -130,12 +132,8 @@ func (c *Config) Validate(sourceFilePath string) []configutil.ConfigError {
 	for _, l := range c.Listeners {
 		results = append(results, l.Validate(sourceFilePath)...)
 	}
-	results = append(results, c.validateEnt(sourceFilePath)...)
+	results = append(results, entValidateConfig(c, sourceFilePath)...)
 	return results
-}
-
-func (c *Config) validateEnt(sourceFilePath string) []configutil.ConfigError {
-	return entConfigValidate(c, sourceFilePath)
 }
 
 // DevConfig is a Config that is used for dev mode of Vault.
@@ -171,13 +169,13 @@ ui = true
 }
 
 // DevTLSConfig is a Config that is used for dev tls mode of Vault.
-func DevTLSConfig(storageType, certDir string) (*Config, error) {
+func DevTLSConfig(storageType, certDir string, extraSANs []string) (*Config, error) {
 	ca, err := GenerateCA()
 	if err != nil {
 		return nil, err
 	}
 
-	cert, key, err := GenerateCert(ca.Template, ca.Signer)
+	cert, key, err := generateCert(ca.Template, ca.Signer, extraSANs)
 	if err != nil {
 		return nil, err
 	}
@@ -193,7 +191,10 @@ func DevTLSConfig(storageType, certDir string) (*Config, error) {
 	if err := os.WriteFile(fmt.Sprintf("%s/%s", certDir, VaultDevKeyFilename), []byte(key), 0o400); err != nil {
 		return nil, err
 	}
+	return parseDevTLSConfig(storageType, certDir)
+}
 
+func parseDevTLSConfig(storageType, certDir string) (*Config, error) {
 	hclStr := `
 disable_mlock = true
 
@@ -216,8 +217,8 @@ storage "%s" {
 
 ui = true
 `
-
-	hclStr = fmt.Sprintf(hclStr, certDir, certDir, storageType)
+	certDirEscaped := strings.Replace(certDir, "\\", "\\\\", -1)
+	hclStr = fmt.Sprintf(hclStr, certDirEscaped, certDirEscaped, storageType)
 	parsed, err := ParseConfig(hclStr, "")
 	if err != nil {
 		return nil, err
@@ -363,6 +364,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.PluginDirectory = c2.PluginDirectory
 	}
 
+	result.PluginTmpdir = c.PluginTmpdir
+	if c2.PluginTmpdir != "" {
+		result.PluginTmpdir = c2.PluginTmpdir
+	}
+
 	result.PluginFileUid = c.PluginFileUid
 	if c2.PluginFileUid != 0 {
 		result.PluginFileUid = c2.PluginFileUid
@@ -404,6 +410,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.DetectDeadlocks = c2.DetectDeadlocks
 	}
 
+	result.ImpreciseLeaseRoleTracking = c.ImpreciseLeaseRoleTracking
+	if c2.ImpreciseLeaseRoleTracking {
+		result.ImpreciseLeaseRoleTracking = c2.ImpreciseLeaseRoleTracking
+	}
+
 	result.EnableResponseHeaderRaftNodeID = c.EnableResponseHeaderRaftNodeID
 	if c2.EnableResponseHeaderRaftNodeID {
 		result.EnableResponseHeaderRaftNodeID = c2.EnableResponseHeaderRaftNodeID
@@ -437,6 +448,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		if result.DisableClusteringRaw != nil {
 			haStorage.DisableClustering = result.DisableClustering
 		}
+	}
+
+	result.AdministrativeNamespacePath = c.AdministrativeNamespacePath
+	if c2.AdministrativeNamespacePath != "" {
+		result.AdministrativeNamespacePath = c2.AdministrativeNamespacePath
 	}
 
 	result.entConfig = c.entConfig.Merge(c2.entConfig)
@@ -486,13 +502,21 @@ func CheckConfig(c *Config, e error) (*Config, error) {
 		return c, e
 	}
 
-	if len(c.Seals) == 2 {
-		switch {
-		case c.Seals[0].Disabled && c.Seals[1].Disabled:
-			return nil, errors.New("seals: two seals provided but both are disabled")
-		case !c.Seals[0].Disabled && !c.Seals[1].Disabled:
-			return nil, errors.New("seals: two seals provided but neither is disabled")
+	if err := c.checkSealConfig(); err != nil {
+		return nil, err
+	}
+
+	sealMap := make(map[string]*configutil.KMS)
+	for _, seal := range c.Seals {
+		if seal.Name == "" {
+			return nil, errors.New("seals: seal name is empty")
 		}
+
+		if _, ok := sealMap[seal.Name]; ok {
+			return nil, errors.New("seals: seal names must be unique")
+		}
+
+		sealMap[seal.Name] = seal
 	}
 
 	return c, nil
@@ -724,7 +748,7 @@ func ParseConfig(d, source string) (*Config, error) {
 		return nil, fmt.Errorf("error validating experiment(s) from config: %w", err)
 	}
 
-	if err := result.parseConfig(list); err != nil {
+	if err := result.parseConfig(list, source); err != nil {
 		return nil, fmt.Errorf("error parsing enterprise config: %w", err)
 	}
 
@@ -763,7 +787,7 @@ func ExperimentsFromEnvAndCLI(config *Config, envKey string, flagExperiments []s
 	return nil
 }
 
-// Validate checks each experiment is a known experiment.
+// validateExperiments checks each experiment is a known experiment.
 func validateExperiments(experiments []string) error {
 	var invalid []string
 
@@ -1096,6 +1120,7 @@ func (c *Config) Sanitized() map[string]interface{} {
 		"cluster_cipher_suites": c.ClusterCipherSuites,
 
 		"plugin_directory": c.PluginDirectory,
+		"plugin_tmpdir":    c.PluginTmpdir,
 
 		"plugin_file_uid": c.PluginFileUid,
 
@@ -1123,6 +1148,8 @@ func (c *Config) Sanitized() map[string]interface{} {
 		"experiments":        c.Experiments,
 
 		"detect_deadlocks": c.DetectDeadlocks,
+
+		"imprecise_lease_role_tracking": c.ImpreciseLeaseRoleTracking,
 	}
 	for k, v := range sharedResult {
 		result[k] = v
@@ -1130,23 +1157,39 @@ func (c *Config) Sanitized() map[string]interface{} {
 
 	// Sanitize storage stanza
 	if c.Storage != nil {
+		storageType := c.Storage.Type
 		sanitizedStorage := map[string]interface{}{
-			"type":               c.Storage.Type,
+			"type":               storageType,
 			"redirect_addr":      c.Storage.RedirectAddr,
 			"cluster_addr":       c.Storage.ClusterAddr,
 			"disable_clustering": c.Storage.DisableClustering,
 		}
+
+		if storageType == "raft" {
+			sanitizedStorage["raft"] = map[string]interface{}{
+				"max_entry_size": c.Storage.Config["max_entry_size"],
+			}
+		}
+
 		result["storage"] = sanitizedStorage
 	}
 
 	// Sanitize HA storage stanza
 	if c.HAStorage != nil {
+		haStorageType := c.HAStorage.Type
 		sanitizedHAStorage := map[string]interface{}{
-			"type":               c.HAStorage.Type,
+			"type":               haStorageType,
 			"redirect_addr":      c.HAStorage.RedirectAddr,
 			"cluster_addr":       c.HAStorage.ClusterAddr,
 			"disable_clustering": c.HAStorage.DisableClustering,
 		}
+
+		if haStorageType == "raft" {
+			sanitizedHAStorage["raft"] = map[string]interface{}{
+				"max_entry_size": c.HAStorage.Config["max_entry_size"],
+			}
+		}
+
 		result["ha_storage"] = sanitizedHAStorage
 	}
 
@@ -1184,4 +1227,13 @@ func (c *Config) Prune() {
 func (c *Config) found(s, k string) {
 	delete(c.UnusedKeys, s)
 	c.FoundKeys = append(c.FoundKeys, k)
+}
+
+func (c *Config) ToVaultNodeConfig() (*testcluster.VaultNodeConfig, error) {
+	var vnc testcluster.VaultNodeConfig
+	err := mapstructure.Decode(c, &vnc)
+	if err != nil {
+		return nil, err
+	}
+	return &vnc, nil
 }

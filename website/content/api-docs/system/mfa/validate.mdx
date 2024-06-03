@@ -6,7 +6,7 @@ description: >-
   If validation succeeds, it returns an auth response which includes a client token.
 ---
 
-## Validate Login MFA Request
+## Validate login MFA request
 
 This endpoint validates a login request which is subject to MFA validation.
 
@@ -24,7 +24,7 @@ MFA methodIDs are UUID strings which are used as keys of the map. The values of 
 string slices. In cases where an MFA method is configured not to use passcodes, the passcode remains an empty string.
 
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -46,7 +46,7 @@ In versions 1.12.x and below,`passcode=` was used for Duo MFA only. Starting in 
   }
 }
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -55,7 +55,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/mfa/validate
 ```
 
-### Sample Response
+### Sample response
 
 In cases where MFA validation fails, a 403 status code is returned with
 the details about the error.

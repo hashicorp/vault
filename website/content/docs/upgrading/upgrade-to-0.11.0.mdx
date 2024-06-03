@@ -11,14 +11,14 @@ description: |-
 This page contains the list of deprecations and important or breaking changes
 for Vault 0.11.0 compared to 0.10.0. Please read it carefully.
 
-## Known Issues
+## Known issues
 
-### Nomad Integration
+### Nomad integration
 
 Users that integrate Vault with Nomad should hold off on upgrading. A modification to
 Vault's API is causing a runtime issue with the Nomad to Vault integration.
 
-### Minified JSON Policies
+### Minified JSON policies
 
 Users that generate policies in minfied JSON may cause a parsing errors due to
 a regression in the policy parser when it encounters repeating brackets. Although
@@ -27,7 +27,7 @@ should work in place of HCL. To work around this error, pretty print the JSON po
 or add spaces between repeating brackets. This regression will be addressed in
 a future release.
 
-### Common Mount Prefixes
+### Common mount prefixes
 
 Before running the upgrade, users should run `vault secrets list` and `vault auth list`
 to check their mount table to ensure that mounts do not have common prefix "folders".
@@ -35,15 +35,15 @@ For example, if there is a mount with path `team1/` and a mount with path `team1
 Vault will fail to unseal. Before upgrade, these mounts must be remounted at a path that
 does not share a common prefix.
 
-## Changes Since 0.10.4
+## Changes since 0.10.4
 
-### Request Timeouts
+### Request timeouts
 
 A default request timeout of 90s is now enforced. This setting can be
 overwritten in the config file. If you anticipate requests taking longer than
 90s this setting should be configured before upgrading.
 
-### `sys/` Top Level Injection
+### `sys/` top level injection
 
 For the last two years for backwards compatibility data for various `sys/`
 routes has been injected into both the Secret's Data map and into the top level
@@ -51,7 +51,7 @@ of the JSON response object. However, this has some subtle issues that pop up
 from time to time and is becoming increasingly complicated to maintain, so it's
 finally being removed.
 
-### Path Fallback for List Operations
+### Path fallback for list operations
 
 For a very long time Vault has automatically adjusted `list` operations to
 always end in a `/`, as list operations operates on prefixes, so all list
@@ -65,13 +65,13 @@ putting `list` capabilities in the same path block as most other capabilities
 for that path, while not providing any extra access if `list` wasn't actually
 provided there.
 
-### Performance Standbys On By Default
+### Performance standbys on by default
 
 If your flavor/license of Vault Enterprise supports Performance Standbys, they
 are on by default. You can disable this behavior per-node with the
 `disable_performance_standby` configuration flag.
 
-### AWS Secret Engine Roles
+### AWS secret engine roles
 
 Roles in the AWS Secret Engine were previously ambiguous. For example, if the
 `arn` parameter had been specified, that could have been interpreted as the ARN
@@ -108,7 +108,7 @@ credential type depending on the path used to access it (IAM User if accessed
 via the `/aws/creds/<role_name>` endpoint and Federation Token if accessed via
 the `/aws/sts/<role_name>` endpoint).
 
-## Full List Since 0.10.0
+## Full list since 0.10.0
 
 ### Revocations of dynamic secrets leases now asynchronous
 
@@ -119,20 +119,20 @@ attained via the `-sync` CLI flag or `sync` API parameter. When in
 synchronous mode, if the operation results in failure it is up to the user
 to retry.
 
-### CLI Retries
+### CLI retries
 
 The CLI will no longer retry commands on 5xx errors. This was a
 source of confusion to users as to why Vault would "hang" before returning a
 5xx error. The Go API client still defaults to two retries.
 
-### Identity Entity Alias metadata
+### Identity entity alias metadata
 
 You can no longer manually set metadata on
 entity aliases. All alias data (except the canonical entity ID it refers to)
 is intended to be managed by the plugin providing the alias information, so
 allowing it to be set manually didn't make sense.
 
-### Convergent Encryption version 3
+### Convergent encryption version 3
 
 If you are using `transit`'s convergent encryption feature, which prior to this
 release was at version 2, we recommend

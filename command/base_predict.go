@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -7,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/api/cliconfig"
 	"github.com/posener/complete"
 )
 
@@ -25,7 +29,7 @@ func (p *Predict) Client() *api.Client {
 			client, _ := api.NewClient(nil)
 
 			if client.Token() == "" {
-				helper, err := DefaultTokenHelper()
+				helper, err := cliconfig.DefaultTokenHelper()
 				if err != nil {
 					return
 				}

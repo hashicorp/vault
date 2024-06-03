@@ -1,0 +1,15 @@
+### vault.expire.leases.by_expiration ((#vault-expire-leases-by_expiration))
+
+Metric type | Value  | Description
+----------- | ------ | -----------
+gauge       | leases | The number of leases set to expire, grouped by the configured interval
+
+The relevant time intervals are defined in the telemetry stanza for your
+Vault server configuration with the following parameters:
+
+- `lease_metrics_epsilon`: 1 hour (default)
+- `num_lease_metrics_buckets`:  168 hours (default)
+- `add_lease_metrics_namespace_labels`: false (default)
+
+Vault reports the number of leases due to expire every `lease_metrics_epsilon`
+interval in the time period `current_time + num_lease_metrics_buckets`.

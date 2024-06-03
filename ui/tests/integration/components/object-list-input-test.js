@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, fillIn, render } from '@ember/test-helpers';
@@ -123,8 +128,8 @@ module('Integration | Component | object-list-input', function (hooks) {
     await render(hbs`
       <ObjectListInput
         @objectKeys={{this.keys}}
-        @onChange={{this.onChange}} 
-        @inputValue={{this.inputValue}} 
+        @onChange={{this.onChange}}
+        @inputValue={{this.inputValue}}
       />`);
 
     assert.dom(SELECTORS.listInput(firstColumn.key, 0)).hasValue('foo', 'input exists in first row');

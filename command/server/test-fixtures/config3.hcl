@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 disable_cache = true
 disable_mlock = true
 log_requests_level = "Basic"
@@ -9,6 +12,8 @@ cluster_addr = "top_level_cluster_addr"
 
 listener "tcp" {
   address = "127.0.0.1:443"
+  chroot_namespace="admin/"
+  disable_request_limiter = false
 }
 
 backend "consul" {
@@ -52,3 +57,4 @@ pid_file = "./pidfile"
 raw_storage_endpoint = true
 disable_sealwrap = true
 disable_sentinel_trace = true
+administrative_namespace_path = "admin/"

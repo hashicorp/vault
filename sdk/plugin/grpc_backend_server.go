@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package plugin
 
 import (
@@ -193,6 +196,8 @@ func (b *backendGRPCPluginServer) SpecialPaths(ctx context.Context, args *pb.Emp
 			LocalStorage:          paths.LocalStorage,
 			SealWrapStorage:       paths.SealWrapStorage,
 			WriteForwardedStorage: paths.WriteForwardedStorage,
+			Binary:                paths.Binary,
+			Limited:               paths.Limited,
 		},
 	}, nil
 }

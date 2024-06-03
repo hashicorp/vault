@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Update AlertInline component to use Helios Design System Alert component
+```

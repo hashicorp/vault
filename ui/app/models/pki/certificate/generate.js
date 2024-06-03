@@ -1,10 +1,15 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { attr } from '@ember-data/model';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 import PkiCertificateBaseModel from './base';
 
 const generateFromRole = [
   {
-    default: ['commonName', 'customTtl', 'format', 'privateKeyFormat'],
+    default: ['commonName', 'userIds', 'customTtl', 'format', 'privateKeyFormat'],
   },
   {
     'Subject Alternative Name (SAN) Options': [
@@ -16,7 +21,18 @@ const generateFromRole = [
     ],
   },
 ];
-@withFormFields(null, generateFromRole)
+// Extra fields returned on the /issue endpoint
+const certDisplayFields = [
+  'certificate',
+  'commonName',
+  'revocationTime',
+  'serialNumber',
+  'caChain',
+  'issuingCa',
+  'privateKey',
+  'privateKeyType',
+];
+@withFormFields(certDisplayFields, generateFromRole)
 export default class PkiCertificateGenerateModel extends PkiCertificateBaseModel {
   getHelpUrl(backend) {
     return `/v1/${backend}/issue/example?help=1`;

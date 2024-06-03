@@ -11,13 +11,13 @@ description: |-
 This page contains the list of deprecations and important or breaking changes
 for Vault 1.7.x compared to 1.6. Please read it carefully.
 
-## Go Version
+## Go version
 
 Vault 1.7.8 and higher are built with Go 1.16. Please review the [Go Release
 Notes](https://golang.org/doc/go1.16) for full details. Vault 1.7.0-1.7.7 are
 built with Go 1.15.
 
-## Barrier Key Auto-Rotation
+## Barrier key Auto-Rotation
 
 If your Vault installation is at least a year old, the barrier key will be
 automatically rotated once, and then subsequently will be rotated per the
@@ -26,7 +26,7 @@ ensure the number of encryptions performed by the barrier key is fewer than that
 recommended by
 [NIST SP 800-38D](https://csrc.nist.gov/publications/detail/sp/800-38d/final).
 
-## AWS Auth Endpoint Changes and Deprecations
+## AWS auth endpoint changes and deprecations
 
 AWS Auth concepts and endpoints that use the "whitelist" and "blacklist" terms
 have been updated to more inclusive language (e.g. `/auth/aws/identity-whitelist` has been
@@ -39,7 +39,7 @@ endpoint changes is available in the [AWS Auth API docs](/vault/api-docs/auth/aw
 
 @include 'entity-alias-mapping.mdx'
 
-## Known Issues
+## Known issues
 
 Due to the known issue, Transform Secrets Engine users are recommended to upgrade to version 1.7.0.
 Due to the known issue, Lease Count Quota users with DR Secondaries are recommended to upgrade to version 1.7.4.

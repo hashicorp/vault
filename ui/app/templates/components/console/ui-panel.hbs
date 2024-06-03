@@ -1,12 +1,41 @@
-<button type="button" class="button is-ghost console-close-button" {{action "closeConsole"}}>
-  <Icon @name="x" aria-label="Close console" />
-</button>
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div class="console-ui-panel-content">
-  <div class="content">
-    <p class="has-text-grey is-font-mono">
-      The Vault Browser CLI provides an easy way to execute the most common CLI commands, such as write, read, delete, and
-      list.
+  <div class="content has-bottom-margin-s">
+    <div class="console-close-button">
+      <Hds::Button
+        class="hds-side-nav__icon-button"
+        {{on "click" (action "closeConsole")}}
+        data-test-console-panel-close
+        @text="Close console"
+        @icon="x"
+        @isIconOnly={{true}}
+      />
+    </div>
+  </div>
+  <div class="content has-bottom-margin-l">
+    <p class="console-ui-panel-intro is-font-mono has-bottom-margin-s">
+      The Vault Web REPL provides an easy way to execute common Vault CLI commands, such as write, read, delete, and list. It
+      does not include KV version 2 write or put commands. For guidance, type `help`. For more detailed documentation, see
+      the
+      <Hds::Link::Inline @href={{doc-link "/vault/docs/command/web"}}>HashiCorp Developer site</Hds::Link::Inline>.
     </p>
+    <p class="console-ui-panel-intro is-font-mono has-bottom-margin-s">Examples:</p>
+    <p class="console-ui-panel-intro is-font-mono">
+      <span aria-hidden="true">→ </span>Write secrets to kv v1: write &lt;mount&gt;/my-secret foo=bar</p>
+    <p class="console-ui-panel-intro is-font-mono">
+      <span aria-hidden="true">→ </span>List kv v1 secret keys: list &lt;mount&gt;/</p>
+    <p class="console-ui-panel-intro is-font-mono">
+      <span aria-hidden="true">→ </span>Read a kv v1 secret: read &lt;mount&gt;/my-secret</p>
+    <p class="console-ui-panel-intro is-font-mono">
+      <span aria-hidden="true">→ </span>Mount a kv v2 secret engine: write sys/mounts/&lt;mount&gt; type=kv options=version=2</p>
+    <p class="console-ui-panel-intro is-font-mono">
+      <span aria-hidden="true">→ </span>Read a kv v2 secret: kv-get &lt;mount&gt;/secret-path</p>
+    <p class="console-ui-panel-intro is-font-mono">
+      <span aria-hidden="true">→ </span>Read a kv v2 secret's metadata: kv-get &lt;mount&gt;/secret-path-metadata</p>
   </div>
   <Console::OutputLog @outputLog={{this.cliLog}} />
   <Console::CommandInput

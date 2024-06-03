@@ -1,40 +1,36 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import { filterOptions, defaultMatcher } from 'ember-power-select/utils/group-utils';
+import { removeFromArray } from 'vault/helpers/remove-from-array';
+import { addToArray } from 'vault/helpers/add-to-array';
 
 /**
  * @module SearchSelectWithModal
- * The `SearchSelectWithModal` is an implementation of the [ember-power-select](https://github.com/cibernox/ember-power-select) used for form elements where options come dynamically from the API.
+ * The SearchSelectWithModal is an implementation of the [ember-power-select](https://github.com/cibernox/ember-power-select) used for form elements where options come dynamically from the API.
  * It renders a passed template component that parents a form so records can be created inline, via a modal that pops up after clicking 'No results found for "${term}". Click here to create it.' from the dropdown menu.
- * **!! NOTE: any form passed must be able to receive an @onSave and @onCancel arg so that the modal will close properly. See `oidc/client-form.hbs` that renders a modal for the `oidc-assignment-template.hbs` as an example.
+ * **!! NOTE: any form passed must be able to receive an `@onSave` and `@onCancel` arg so that the modal will close properly. See `oidc/client-form.hbs` that renders a modal for the `oidc-assignment-template.hbs` as an example.
  * @example
- * <SearchSelectWithModal
- *   @id="assignments"
- *   @models={{array "oidc/assignment"}}
- *   @label="assignment name"
- *   @subText="Search for an existing assignment, or type a new name to create it."
- *   @inputValue={{map-by "id" @model.assignments}}
- *   @onChange={{this.handleSearchSelect}}
- *   {{! since this is the "limited" radio select option we do not want to include 'allow_all' }}
- *   @excludeOptions={{array "allow_all"}}
- *   @fallbackComponent="string-list"
- *   @modalFormTemplate="modal-form/some-template"
- *   @modalSubtext="Use assignment to specify which Vault entities and groups are allowed to authenticate."
+ * <SearchSelectWithModal @id="assignments" @models={{array "oidc/assignment"}} @label="assignment name" @subText="Search for an existing assignment, or type a new name to create it." @inputValue={{map-by "id" @model.assignments}} @onChange={{this.handleSearchSelect}} @excludeOptions={{array "allow_all"}} @fallbackComponent="string-list" @modalFormTemplate="modal-form/some-template" @modalSubtext="Use assignment to specify which Vault entities and groups are allowed to authenticate."
  * />
  *
- // * component functionality
- * @param {function} onChange - The onchange action for this form field. ** SEE UTIL ** search-select-has-many.js if selecting models from a hasMany relationship
+ * component functionality
+ * @param {function} onChange - The onchange action for this form field. ** SEE EXAMPLE ** mfa-login-enforcement-form.js (onMethodChange) for example when selecting models from a hasMany relationship
  * @param {array} [inputValue] - Array of strings corresponding to the input's initial value, e.g. an array of model ids that on edit will appear as selected items below the input
  * @param {boolean} [shouldRenderName=false] - By default an item's id renders in the dropdown, `true` displays the name with its id in smaller text beside it *NOTE: the boolean flips automatically with 'identity' models
  * @param {array} [excludeOptions] - array of strings containing model ids to filter from the dropdown (ex: ['allow_all'])
 
-// * query params for dropdown items
+ * query params for dropdown items
  * @param {array} models - models to fetch from API. models with varying permissions should be ordered from least restricted to anticipated most restricted (ex. if one model is an enterprise only feature, pass it in last)
 
- // * template only/display args
+ * template only/display args
  * @param {string} id - The name of the form field
  * @param {string} [label] - Label appears above the form field
  * @param {string} [labelClass] - overwrite default label size (14px) from class="is-label"
@@ -64,7 +60,7 @@ export default class SearchSelectWithModal extends Component {
 
   addSearchText(optionsToFormat) {
     // maps over array models from query
-    return optionsToFormat.toArray().map((option) => {
+    return optionsToFormat.map((option) => {
       option.searchText = `${option.name} ${option.id}`;
       return option;
     });
@@ -74,9 +70,9 @@ export default class SearchSelectWithModal extends Component {
     // inputValues are initially an array of strings from @inputValue
     // map over so selectedOptions are objects
     return inputValues.map((option) => {
-      const matchingOption = this.dropdownOptions.findBy('id', option);
+      const matchingOption = this.dropdownOptions.find((opt) => opt.id === option);
       // remove any matches from dropdown list
-      this.dropdownOptions.removeObject(matchingOption);
+      this.dropdownOptions = removeFromArray(this.dropdownOptions, matchingOption);
       return {
         id: option,
         name: matchingOption ? matchingOption.name : option,
@@ -126,7 +122,7 @@ export default class SearchSelectWithModal extends Component {
 
   @action
   handleChange() {
-    if (this.selectedOptions.length && typeof this.selectedOptions.firstObject === 'object') {
+    if (this.selectedOptions.length && typeof this.selectedOptions[0] === 'object') {
       this.args.onChange(Array.from(this.selectedOptions, (option) => option.id));
     } else {
       this.args.onChange(this.selectedOptions);
@@ -134,12 +130,11 @@ export default class SearchSelectWithModal extends Component {
   }
 
   shouldShowCreate(id, searchResults) {
-    if (searchResults && searchResults.length && searchResults.firstObject.groupName) {
-      return !searchResults.some((group) => group.options.findBy('id', id));
+    if (searchResults && searchResults.length && searchResults[0].groupName) {
+      return !searchResults.some((group) => group.options.find((opt) => opt.id === id));
     }
     const existingOption =
-      this.dropdownOptions &&
-      (this.dropdownOptions.findBy('id', id) || this.dropdownOptions.findBy('name', id));
+      this.dropdownOptions && this.dropdownOptions.find((opt) => opt.id === id || opt.name === id);
     return !existingOption;
   }
 
@@ -164,8 +159,8 @@ export default class SearchSelectWithModal extends Component {
   // -----
   @action
   discardSelection(selected) {
-    this.selectedOptions.removeObject(selected);
-    this.dropdownOptions.pushObject(selected);
+    this.selectedOptions = removeFromArray(this.selectedOptions, selected);
+    this.dropdownOptions = addToArray(this.dropdownOptions, selected);
     this.handleChange();
   }
 
@@ -192,8 +187,8 @@ export default class SearchSelectWithModal extends Component {
       this.showModal = true;
     } else {
       // user has selected an existing item, handleChange immediately
-      this.selectedOptions.pushObject(selection);
-      this.dropdownOptions.removeObject(selection);
+      this.selectedOptions = addToArray(this.selectedOptions, selection);
+      this.dropdownOptions = removeFromArray(this.dropdownOptions, selection);
       this.handleChange();
     }
   }
@@ -205,7 +200,7 @@ export default class SearchSelectWithModal extends Component {
     this.showModal = false;
     if (model && model.currentState.isSaved) {
       const { name } = model;
-      this.selectedOptions.pushObject({ name, id: name });
+      this.selectedOptions = addToArray(this.selectedOptions, { name, id: name });
       this.handleChange();
     }
     this.nameInput = null;

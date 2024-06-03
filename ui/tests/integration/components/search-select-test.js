@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
@@ -10,6 +15,7 @@ import sinon from 'sinon';
 import waitForError from 'vault/tests/helpers/wait-for-error';
 import searchSelect from '../../pages/components/search-select';
 import { isWildcardString } from 'vault/helpers/is-wildcard-string';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const component = create(searchSelect);
 
@@ -53,6 +59,13 @@ const storeService = Service.extend({
             { id: 'model-c-id', name: 'model-c', uuid: 'c789', type: 'c' },
           ]);
           break;
+        case 'pki/issuer':
+          resolve([
+            { id: 'issuer-a-id', issuerName: 'my-first-issuer' },
+            { id: 'issuer-b-id' },
+            { id: 'issuer-c-id', issuerName: 'my-issuer-again' },
+          ]);
+          break;
         default:
           reject({ httpStatus: 404, message: 'not found' });
           break;
@@ -68,8 +81,8 @@ module('Integration | Component | search select', function (hooks) {
   hooks.beforeEach(function () {
     const mockFunctionFromParent = (selection, dropdownOptions) => {
       const modelExists =
-        !!dropdownOptions.findBy('id', selection) ||
-        !!dropdownOptions.findBy('uuid', selection) ||
+        !!dropdownOptions.find((opt) => opt.id === selection) ||
+        !!dropdownOptions.find((opt) => opt.uuid === selection) ||
         isWildcardString([selection]);
       return !modelExists ? 'The model associated with this id no longer exists' : false;
     };
@@ -77,6 +90,16 @@ module('Integration | Component | search select', function (hooks) {
     run(() => {
       this.owner.unregister('service:store');
       this.owner.register('service:store', storeService);
+    });
+    setRunOptions({
+      rules: {
+        // TODO: Fix this component
+        'color-contrast': { enabled: false },
+        label: { enabled: false },
+        'aria-input-field-name': { enabled: false },
+        'aria-required-attr': { enabled: false },
+        'aria-valid-attr-value': { enabled: false },
+      },
     });
   });
 
@@ -468,6 +491,52 @@ module('Integration | Component | search select', function (hooks) {
     assert.strictEqual(component.smallOptionIds.length, 3, 'shows 3 smaller id text and the name');
   });
 
+  test('it renders correctly when model keys are not standardized', async function (assert) {
+    const models = ['pki/issuer'];
+    this.set('models', models);
+    this.set('onChange', sinon.spy());
+    this.set('disallowNewItems', true);
+    await render(hbs`
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+        @inputValue={{this.inputValue}}
+        @shouldRenderName={{true}}
+        @nameKey="issuerName"
+        @disallowNewItems={{this.disallowNewItems}}
+      />
+    `);
+    await clickTrigger();
+    assert.strictEqual(component.options.length, 3, 'shows three options');
+    assert.strictEqual(
+      component.options.objectAt(0).text,
+      'my-first-issuer issuer-a-id',
+      'first option renders custom ID and name'
+    );
+    assert.strictEqual(
+      component.options.objectAt(1).text,
+      'issuer-b-id',
+      `second option renders only id at custom key`
+    );
+    await typeInSearch('issuer-a');
+    await settled();
+    assert.strictEqual(
+      component.options.length,
+      2,
+      'shows two options after filter, filtering on both name and id keys'
+    );
+    this.set('disallowNewItems', false);
+    await typeInSearch('new-issuer');
+    await settled();
+    assert.strictEqual(component.options.length, 1, 'shows suggestion');
+    assert.strictEqual(
+      component.options.objectAt(0).text,
+      'Click to add new item: new-issuer',
+      'Prompts to add new item'
+    );
+  });
+
   test('it does not show name and smaller id for non-identity endpoints', async function (assert) {
     const models = ['policy/acl'];
     this.set('models', models);
@@ -762,7 +831,7 @@ module('Integration | Component | search select', function (hooks) {
       spy.args[1][0],
       expectedArray,
       `onClick is called with array of objects and correct keys.
-      first object: ${Object.keys(expectedArray[0]).join(', ')}, 
+      first object: ${Object.keys(expectedArray[0]).join(', ')},
       second object: ${Object.keys(expectedArray[1]).join(', ')}`
     );
   });

@@ -1,25 +1,32 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { settled, currentRouteName, click, waitUntil, find } from '@ember/test-helpers';
-import { selectChoose, clickTrigger } from 'ember-power-select/test-support/helpers';
+import { selectChoose } from 'ember-power-select/test-support';
+import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import page from 'vault/tests/pages/access/identity/create';
 import showPage from 'vault/tests/pages/access/identity/show';
 import indexPage from 'vault/tests/pages/access/identity/index';
-
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+const SELECTORS = {
+  identityRow: (name) => `[data-test-identity-row="${name}"]`,
+  popupMenu: '[data-test-popup-menu-trigger]',
+  menuDelete: '[data-test-popup-menu="delete"]',
+};
 export const testCRUD = async (name, itemType, assert) => {
   await page.visit({ item_type: itemType });
   await settled();
   await page.editForm.name(name).submit();
   await settled();
-  assert.ok(
-    showPage.flashMessage.latestMessage.startsWith('Successfully saved'),
-    `${itemType}: shows a flash message`
-  );
+  assert.dom(GENERAL.latestFlashContent).includesText('Successfully saved');
   assert.strictEqual(
     currentRouteName(),
     'vault.cluster.access.identity.show',
     `${itemType}: navigates to show on create`
   );
   assert.ok(showPage.nameContains(name), `${itemType}: renders the name on the show page`);
-
   await indexPage.visit({ item_type: itemType });
   await settled();
   assert.strictEqual(
@@ -27,16 +34,13 @@ export const testCRUD = async (name, itemType, assert) => {
     1,
     `${itemType}: lists the entity in the entity list`
   );
-  await indexPage.items.filterBy('name', name)[0].menu();
-  await waitUntil(() => find('[data-test-item-delete]'));
-  await indexPage.delete();
-  await settled();
+
+  await click(`${SELECTORS.identityRow(name)} ${SELECTORS.popupMenu}`);
+  await waitUntil(() => find(SELECTORS.menuDelete));
+  await click(SELECTORS.menuDelete);
   await indexPage.confirmDelete();
   await settled();
-  assert.ok(
-    indexPage.flashMessage.latestMessage.startsWith('Successfully deleted'),
-    `${itemType}: shows flash message`
-  );
+  assert.dom(GENERAL.latestFlashContent).includesText('Successfully deleted');
   assert.strictEqual(indexPage.items.filterBy('name', name).length, 0, `${itemType}: the row is deleted`);
 };
 
@@ -65,10 +69,7 @@ export const testDeleteFromForm = async (name, itemType, assert) => {
   await settled();
   await page.editForm.confirmDelete();
   await settled();
-  assert.ok(
-    indexPage.flashMessage.latestMessage.startsWith('Successfully deleted'),
-    `${itemType}: shows flash message`
-  );
+  assert.dom(GENERAL.latestFlashContent).includesText('Successfully deleted');
   assert.strictEqual(
     currentRouteName(),
     'vault.cluster.access.identity.index',

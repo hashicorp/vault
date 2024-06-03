@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pgpkeys
 
 import (
@@ -53,7 +56,6 @@ func GetFingerprints(pgpKeys []string, entities []*openpgp.Entity) ([]string, er
 	if entities == nil {
 		var err error
 		entities, err = GetEntities(pgpKeys)
-
 		if err != nil {
 			return nil, err
 		}

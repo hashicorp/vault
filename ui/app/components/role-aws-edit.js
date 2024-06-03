@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { isBlank } from '@ember/utils';
 import { set } from '@ember/object';
 import RoleEdit from './role-edit';

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import ApplicationAdapter from './application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 
@@ -29,7 +34,7 @@ export default ApplicationAdapter.extend({
 
   deleteRecord(store, type, snapshot) {
     const { id } = snapshot;
-    return this.ajax(this.urlForRole(snapshot.record.get('backend'), id), 'DELETE');
+    return this.ajax(this.urlForRole(snapshot.record.backend, id), 'DELETE');
   },
 
   pathForType() {

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package schema
 
 import (
@@ -267,6 +270,36 @@ func TestValidateResponse(t *testing.T) {
 			},
 			response: map[string]interface{}{
 				"http_raw_body": "foo",
+			},
+			strict:        false,
+			errorExpected: false,
+		},
+
+		"string schema field, response has non-200 http_status_code, strict": {
+			schema: &framework.Response{
+				Fields: map[string]*framework.FieldSchema{
+					"foo": {
+						Type: framework.TypeString,
+					},
+				},
+			},
+			response: map[string]interface{}{
+				"http_status_code": 304,
+			},
+			strict:        true,
+			errorExpected: false,
+		},
+
+		"string schema field, response has non-200 http_status_code, not strict": {
+			schema: &framework.Response{
+				Fields: map[string]*framework.FieldSchema{
+					"foo": {
+						Type: framework.TypeString,
+					},
+				},
+			},
+			response: map[string]interface{}{
+				"http_status_code": 304,
 			},
 			strict:        false,
 			errorExpected: false,

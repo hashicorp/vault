@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -12,6 +15,7 @@ import (
 // logFlags are the 'log' related flags that can be shared across commands.
 type logFlags struct {
 	flagCombineLogs       bool
+	flagDisableGatedLogs  bool
 	flagLogLevel          string
 	flagLogFormat         string
 	flagLogFile           string
@@ -34,6 +38,13 @@ func (f *FlagSet) addLogFlags(l *logFlags) {
 	f.BoolVar(&BoolVar{
 		Name:    flagNameCombineLogs,
 		Target:  &l.flagCombineLogs,
+		Default: false,
+		Hidden:  true,
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:    flagDisableGatedLogs,
+		Target:  &l.flagDisableGatedLogs,
 		Default: false,
 		Hidden:  true,
 	})

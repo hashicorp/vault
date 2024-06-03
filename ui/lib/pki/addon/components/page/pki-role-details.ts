@@ -1,11 +1,16 @@
-import { action } from '@ember/object';
-import RouterService from '@ember/routing/router-service';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
-import FlashMessageService from 'vault/services/flash-messages';
-import SecretMountPath from 'vault/services/secret-mount-path';
-import { inject as service } from '@ember/service';
+import { action } from '@ember/object';
+import { service } from '@ember/service';
 import errorMessage from 'vault/utils/error-message';
-import PkiRoleModel from 'vault/models/pki/role';
+import type SecretMountPath from 'vault/services/secret-mount-path';
+import type FlashMessageService from 'vault/services/flash-messages';
+import type RouterService from '@ember/routing/router-service';
+import type PkiRoleModel from 'vault/models/pki/role';
 
 interface Args {
   role: PkiRoleModel;
@@ -18,7 +23,7 @@ export default class DetailsPage extends Component<Args> {
 
   get breadcrumbs() {
     return [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.secretMountPath.currentPath, route: 'overview' },
       { label: 'roles', route: 'roles.index' },
       { label: this.args.role.id },
