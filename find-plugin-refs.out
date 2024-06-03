@@ -1,0 +1,49 @@
+Non-database plugins that live in Vault except kv, cubbyhole, identity, pki, and transit
+./command/commands.go        "github.com/hashicorp/vault/builtin/credential/aws"
+./command/commands.go        "github.com/hashicorp/vault/builtin/credential/cert"
+./command/commands.go        "github.com/hashicorp/vault/builtin/credential/github"
+./command/commands.go        "github.com/hashicorp/vault/builtin/credential/ldap"
+./command/commands.go        "github.com/hashicorp/vault/builtin/credential/okta"
+./command/commands.go        "github.com/hashicorp/vault/builtin/credential/token"
+./command/commands.go        "github.com/hashicorp/vault/builtin/credential/userpass"
+./command/ssh.go             "github.com/hashicorp/vault/builtin/logical/ssh"
+./builtin/plugin/backend.go  "github.com/hashicorp/vault/builtin/plugin/v5"
+
+
+Database plugins that live in Vault
+./plugins/database/postgresql/postgresql.go  "github.com/hashicorp/vault/plugins/database/postgresql/scram"
+
+
+Independent plugins that imported to Vault
+./command/commands.go                                 "github.com/hashicorp/vault-plugin-auth-alicloud"
+./command/agentproxyshared/auth/alicloud/alicloud.go  "github.com/hashicorp/vault-plugin-auth-alicloud/tools"
+./command/agentproxyshared/auth/cf/cf.go              "github.com/hashicorp/vault-plugin-auth-cf"
+./command/commands.go                                 "github.com/hashicorp/vault-plugin-auth-cf"
+./command/agentproxyshared/auth/cf/cf.go              "github.com/hashicorp/vault-plugin-auth-cf/signatures"
+./command/commands.go                                 "github.com/hashicorp/vault-plugin-auth-gcp/plugin"
+./command/commands.go                                 "github.com/hashicorp/vault-plugin-auth-jwt"
+./command/agentproxyshared/auth/kerberos/kerberos.go  "github.com/hashicorp/vault-plugin-auth-kerberos"
+./command/commands.go                                 "github.com/hashicorp/vault-plugin-auth-kerberos"
+./command/commands.go                                 "github.com/hashicorp/vault-plugin-auth-oci"
+
+
+Storage plugins - all currently live in Vault
+./command/commands.go  "github.com/hashicorp/vault/physical/aerospike"
+./command/commands.go  "github.com/hashicorp/vault/physical/alicloudoss"
+./command/commands.go  "github.com/hashicorp/vault/physical/azure"
+./command/commands.go  "github.com/hashicorp/vault/physical/cassandra"
+./command/commands.go  "github.com/hashicorp/vault/physical/cockroachdb"
+./command/commands.go  "github.com/hashicorp/vault/physical/couchdb"
+./command/commands.go  "github.com/hashicorp/vault/physical/dynamodb"
+./command/commands.go  "github.com/hashicorp/vault/physical/etcd"
+./command/commands.go  "github.com/hashicorp/vault/physical/foundationdb"
+./command/commands.go  "github.com/hashicorp/vault/physical/gcs"
+./command/commands.go  "github.com/hashicorp/vault/physical/manta"
+./command/commands.go  "github.com/hashicorp/vault/physical/mssql"
+./command/commands.go  "github.com/hashicorp/vault/physical/mysql"
+./command/commands.go  "github.com/hashicorp/vault/physical/oci"
+./command/commands.go  "github.com/hashicorp/vault/physical/postgresql"
+./command/commands.go  "github.com/hashicorp/vault/physical/s3"
+./command/commands.go  "github.com/hashicorp/vault/physical/spanner"
+./command/commands.go  "github.com/hashicorp/vault/physical/swift"
+./command/commands.go  "github.com/hashicorp/vault/physical/zookeeper"
