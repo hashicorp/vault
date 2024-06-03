@@ -54,7 +54,8 @@ The Go team did not believe this attack was sufficient to remove existing client
 compatibility by deprecating 3DES support (per the researcher’s [vulnerability
 disclosure](https://sweet32.info/) it took a single HTTPS session with 785 GB of
 traffic to break the
-encryption). Go did deprioritize 3DES in favor of AES-based ciphers.
+encryption). Go did [deprioritize 3DES](https://github.com/golang/go/issues/45430) in
+favor of AES-based ciphers.
 
 </Highlight>
 
