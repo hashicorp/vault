@@ -31,13 +31,13 @@ $ helm repo add hashicorp https://helm.releases.hashicorp.com
 ```shell-session
 $ helm search repo hashicorp/vault-secrets-operator
 NAME           	CHART VERSION	APP VERSION	DESCRIPTION
-hashicorp/vault-secrets-operator	0.7.0       	0.7.0     	Official HashiCorp Vault Secrets Operator Chart
+hashicorp/vault-secrets-operator	0.7.1       	0.7.1     	Official HashiCorp Vault Secrets Operator Chart
 ```
 
 Then install the Operator:
 
 ```shell-session
-$ helm install --version 0.7.0 --create-namespace --namespace vault-secrets-operator vault-secrets-operator hashicorp/vault-secrets-operator
+$ helm install --version 0.7.1 --create-namespace --namespace vault-secrets-operator vault-secrets-operator hashicorp/vault-secrets-operator
 ```
 
 ## Upgrading using Helm
@@ -65,10 +65,10 @@ $ helm show crds --version <TARGET_VSO_VERSION> hashicorp/vault-secrets-operator
 $ helm upgrade --version <TARGET_VSO_VERSION> --namespace vault-secrets-operator vault-secrets-operator hashicorp/vault-secrets-operator
 ```
 
-For example, if you are upgrading to VSO 0.7.0:
+For example, if you are upgrading to VSO 0.7.1:
 ```shell-session
-$ helm show crds --version 0.7.0 hashicorp/vault-secrets-operator | kubectl apply -f -
-$ helm upgrade --version 0.7.0 --namespace vault-secrets-operator vault-secrets-operator hashicorp/vault-secrets-operator
+$ helm show crds --version 0.7.1 hashicorp/vault-secrets-operator | kubectl apply -f -
+$ helm upgrade --version 0.7.1 --namespace vault-secrets-operator vault-secrets-operator hashicorp/vault-secrets-operator
 ```
 
 ## Updating CRDs when using Helm
@@ -83,9 +83,9 @@ To update the VSO CRDs, replace `<TARGET_VSO_VERSION>` with the VSO version you 
 $ helm show crds --version <TARGET_VSO_VERSION> hashicorp/vault-secrets-operator | kubectl apply -f -
 ```
 
-For example, if you are upgrading to VSO 0.7.0:
+For example, if you are upgrading to VSO 0.7.1:
 ```shell-session
-$ helm show crds --version 0.7.0 hashicorp/vault-secrets-operator | kubectl apply -f -
+$ helm show crds --version 0.7.1 hashicorp/vault-secrets-operator | kubectl apply -f -
 
 customresourcedefinition.apiextensions.k8s.io/hcpauths.secrets.hashicorp.com created
 customresourcedefinition.apiextensions.k8s.io/hcpvaultsecretsapps.secrets.hashicorp.com created
@@ -112,9 +112,9 @@ You can install and update your installation using `kustomize` which allows you 
 
 To install using Kustomize, download and untar/unzip the latest release from the [Releases Page](https://github.com/hashicorp/vault-secrets-operator/releases).
 ```shell-session
-$ wget -q https://github.com/hashicorp/vault-secrets-operator/archive/refs/tags/v0.7.0.tar.gz
-$ tar -zxf v0.7.0.tar.gz
-$ cd vault-secrets-operator-0.7.0/
+$ wget -q https://github.com/hashicorp/vault-secrets-operator/archive/refs/tags/v0.7.1.tar.gz
+$ tar -zxf v0.7.1.tar.gz
+$ cd vault-secrets-operator-0.7.1/
 ```
 
 Next install using `kustomize build`:
