@@ -12,7 +12,7 @@ on:
 jobs:
   # checks that a do-not-merge label is not present for a PR
   do-not-merge-check:
-    # If there is a `do-not-merge` label, or this comes from a fork (community contributor) we ignore this check
+    # If there is a `do-not-merge` label we ignore this check
     if: ${{ contains(github.event.pull_request.labels.*.name, 'do-not-merge') }}
     runs-on: ubuntu-latest
     steps:
