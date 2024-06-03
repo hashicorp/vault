@@ -1,0 +1,3 @@
+```release-note:bug
+core (enterprise): Fix plugins mounted in namespaces being unable to use password policies
+```

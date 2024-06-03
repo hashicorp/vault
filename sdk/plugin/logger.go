@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package plugin
 
 import hclog "github.com/hashicorp/go-hclog"
@@ -32,7 +35,6 @@ func (l *LoggerServer) Error(args *LoggerArgs, reply *LoggerReply) error {
 }
 
 func (l *LoggerServer) Log(args *LoggerArgs, _ *struct{}) error {
-
 	switch translateLevel(args.Level) {
 
 	case hclog.Trace:
@@ -107,7 +109,6 @@ type LoggerReply struct {
 }
 
 func translateLevel(logxiLevel int) hclog.Level {
-
 	switch logxiLevel {
 
 	case 1000, 10:

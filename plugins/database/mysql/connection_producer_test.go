@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package mysql
 
 import (
@@ -95,10 +98,10 @@ func TestInit_clientTLS(t *testing.T) {
 		certhelpers.Parent(caCert),
 	)
 
-	writeFile(t, paths.Join(confDir, "ca.pem"), caCert.CombinedPEM(), 0644)
-	writeFile(t, paths.Join(confDir, "server-cert.pem"), serverCert.Pem, 0644)
-	writeFile(t, paths.Join(confDir, "server-key.pem"), serverCert.PrivateKeyPEM(), 0644)
-	writeFile(t, paths.Join(confDir, "client.pem"), clientCert.CombinedPEM(), 0644)
+	writeFile(t, paths.Join(confDir, "ca.pem"), caCert.CombinedPEM(), 0o644)
+	writeFile(t, paths.Join(confDir, "server-cert.pem"), serverCert.Pem, 0o644)
+	writeFile(t, paths.Join(confDir, "server-key.pem"), serverCert.PrivateKeyPEM(), 0o644)
+	writeFile(t, paths.Join(confDir, "client.pem"), clientCert.CombinedPEM(), 0o644)
 
 	// //////////////////////////////////////////////////////
 	// Set up MySQL config file
@@ -109,7 +112,7 @@ ssl-ca=/etc/mysql/ca.pem
 ssl-cert=/etc/mysql/server-cert.pem
 ssl-key=/etc/mysql/server-key.pem`
 
-	writeFile(t, paths.Join(confDir, "my.cnf"), []byte(rawConf), 0644)
+	writeFile(t, paths.Join(confDir, "my.cnf"), []byte(rawConf), 0o644)
 
 	// //////////////////////////////////////////////////////
 	// Start MySQL container
@@ -124,7 +127,7 @@ ssl-key=/etc/mysql/server-key.pem`
 
 	// //////////////////////////////////////////////////////
 	// Test
-	mysql := newMySQL(MetadataLen, MetadataLen, UsernameLen)
+	mysql := newMySQL(DefaultUserNameTemplate)
 
 	conf := map[string]interface{}{
 		"connection_url":      retURL,

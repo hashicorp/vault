@@ -1,0 +1,64 @@
+---
+layout: api
+page_title: /sys/version-history - HTTP API
+description: The `/sys/version-history` endpoint is used to retrieve the version history of a Vault.
+---
+
+# `/sys/version-history`
+
+~> **NOTE**: Tracking Vault version history was added in Vault version 1.9.0. Entries for versions installed prior to version 1.9.0 will not be available via this API.
+This API was added in 1.10.0.
+
+The `/sys/version-history` endpoint is used to retrieve the version history of a Vault.
+
+## Read version history
+
+This endpoint returns the version history of the Vault. The response will contain the following keys:
+
+- `keys`: a list of installed versions in chronological order based on the time installed
+- `key_info`: a map indexed by the versions found in the `keys` list containing the following subkeys:
+  - `build_date`: the time (in UTC) at which the Vault binary used to run the Vault server was built. **Note: Only tracked from version 1.11.0 or greater**
+  - `previous_version`: the version installed prior to this version or `null` if no prior version exists
+  - `timestamp_installed`: the time (in UTC) at which the version was installed
+
+| Method | Path                   |
+| :----- | :--------------------- |
+| `LIST`  | `/sys/version-history` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    -X LIST --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/version-history
+```
+
+### Sample response
+
+```json
+{
+  "keys": ["1.9.0", "1.9.1", "1.9.2", "1.11.0"],
+  "key_info": {
+    "1.9.0": {
+      "build_date": null,
+      "previous_version": null,
+      "timestamp_installed": "2021-11-18T10:23:16Z"
+    },
+    "1.9.1": {
+      "build_date": null,
+      "previous_version": "1.9.0",
+      "timestamp_installed": "2021-12-13T11:09:52Z"
+    },
+    "1.9.2": {
+      "build_date": null,
+      "previous_version": "1.9.1",
+      "timestamp_installed": "2021-12-23T10:56:37Z"
+    },
+    "1.11.0": {
+      "build_date": "2022-05-03T08:34:11Z",
+      "previous_version": null,
+      "timestamp_installed": "2022-05-03T13:16:04Z"
+    }
+  }
+}
+```

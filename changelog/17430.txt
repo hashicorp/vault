@@ -1,0 +1,3 @@
+```release-note:improvement
+plugins: Add plugin version information to key plugin lifecycle log lines.
+```

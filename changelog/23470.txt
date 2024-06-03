@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix AWS secret engine to allow empty policy_document field.
+```

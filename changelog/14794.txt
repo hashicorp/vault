@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix KV secret showing in the edit form after a user creates a new version but doesn't have read capabilities
+```

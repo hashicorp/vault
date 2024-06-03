@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package azurite
 
 import (
@@ -7,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/Azure/azure-storage-blob-go/azblob"
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	"github.com/hashicorp/vault/sdk/helper/docker"
 )
 
 type Config struct {
@@ -57,8 +60,10 @@ func (c Config) ContainerURL(ctx context.Context, container string) (*azblob.Con
 
 var _ docker.ServiceConfig = &Config{}
 
-const accountName = "testaccount"
-const accountKey = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw=="
+const (
+	accountName = "testaccount"
+	accountKey  = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw=="
+)
 
 func PrepareTestContainer(t *testing.T, version string) (func(), docker.ServiceConfig) {
 	if version == "" {

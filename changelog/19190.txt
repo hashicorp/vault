@@ -1,0 +1,3 @@
+```release-note:bug
+ui: show Get credentials button for static roles detail page when a user has the proper permissions.
+```

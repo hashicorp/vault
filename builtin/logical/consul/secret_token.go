@@ -1,10 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package consul
 
 import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/consul/api"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -17,7 +20,7 @@ func secretToken(b *backend) *framework.Secret {
 	return &framework.Secret{
 		Type: SecretTokenType,
 		Fields: map[string]*framework.FieldSchema{
-			"token": &framework.FieldSchema{
+			"token": {
 				Type:        framework.TypeString,
 				Description: "Request token",
 			},
@@ -42,7 +45,7 @@ func (b *backend) secretTokenRenew(ctx context.Context, req *logical.Request, d 
 
 	entry, err := req.Storage.Get(ctx, "policy/"+role)
 	if err != nil {
-		return nil, errwrap.Wrapf("error retrieving role: {{err}}", err)
+		return nil, fmt.Errorf("error retrieving role: %w", err)
 	}
 	if entry == nil {
 		return logical.ErrorResponse(fmt.Sprintf("issuing role %q not found", role)), nil
@@ -82,6 +85,24 @@ func (b *backend) secretTokenRevoke(ctx context.Context, req *logical.Request, d
 		version = versionRaw.(string)
 	}
 
+	// Extract Consul Namespace and Partition info from secret
+	var revokeWriteOptions *api.WriteOptions
+	var namespace, partition string
+
+	namespaceRaw, ok := req.Data["consul_namespace"]
+	if ok {
+		namespace = namespaceRaw.(string)
+	}
+	partitionRaw, ok := req.Data["partition"]
+	if ok {
+		partition = partitionRaw.(string)
+	}
+
+	revokeWriteOptions = &api.WriteOptions{
+		Namespace: namespace,
+		Partition: partition,
+	}
+
 	switch version {
 	case "":
 		// Pre 1.4 tokens
@@ -90,7 +111,7 @@ func (b *backend) secretTokenRevoke(ctx context.Context, req *logical.Request, d
 			return nil, err
 		}
 	case tokenPolicyType:
-		_, err := c.ACL().TokenDelete(tokenRaw.(string), nil)
+		_, err := c.ACL().TokenDelete(tokenRaw.(string), revokeWriteOptions)
 		if err != nil {
 			return nil, err
 		}

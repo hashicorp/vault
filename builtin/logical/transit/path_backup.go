@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package transit
 
 import (
@@ -10,8 +13,15 @@ import (
 func (b *backend) pathBackup() *framework.Path {
 	return &framework.Path{
 		Pattern: "backup/" + framework.GenericNameRegex("name"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+			OperationVerb:   "back-up",
+			OperationSuffix: "key",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "Name of the key",
 			},
@@ -39,5 +49,7 @@ func (b *backend) pathBackupRead(ctx context.Context, req *logical.Request, d *f
 	}, nil
 }
 
-const pathBackupHelpSyn = `Backup the named key`
-const pathBackupHelpDesc = `This path is used to backup the named key.`
+const (
+	pathBackupHelpSyn  = `Backup the named key`
+	pathBackupHelpDesc = `This path is used to backup the named key.`
+)

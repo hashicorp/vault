@@ -1,0 +1,3 @@
+```release-note:bug
+core: Fix vault operator init command to show the right curl string with -output-curl-string and right policy hcl with -output-policy
+```

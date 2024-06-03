@@ -1,0 +1,19 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<Hds::Breadcrumb>
+  {{#each this.secretPath as |path|}}
+    {{#if this.linkToPaths}}
+      <Hds::Breadcrumb::Item
+        @text={{path.text}}
+        @route={{path.path}}
+        @model={{path.model}}
+        data-test-secret-breadcrumb={{path.text}}
+      />
+    {{else}}
+      <Hds::Breadcrumb::Item @text={{path.text}} @current={{true}} />
+    {{/if}}
+  {{/each}}
+</Hds::Breadcrumb>

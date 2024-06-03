@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: JSON diff view available in "Create New Version" form for KV v2
+```

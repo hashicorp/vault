@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 
@@ -9,9 +14,9 @@ export default AuthConfig.extend({
   useOpenAPI: true,
   certificate: attr({
     label: 'Certificate',
-    editType: 'textarea',
+    editType: 'file',
   }),
-  fieldGroups: computed('newFields', function() {
+  fieldGroups: computed('newFields', function () {
     let groups = [
       {
         default: ['url'],
@@ -33,7 +38,7 @@ export default AuthConfig.extend({
         ],
       },
       {
-        'Customize User Search': ['binddn', 'userdn', 'bindpass'],
+        'Customize User Search': ['binddn', 'userdn', 'bindpass', 'userfilter'],
       },
       {
         'Customize Group Membership Search': ['groupfilter', 'groupattr', 'groupdn', 'useTokenGroups'],

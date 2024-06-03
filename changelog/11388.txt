@@ -1,0 +1,3 @@
+```release-note:enhancement
+auth/jwt: Adds ability to directly provide service account JSON in G Suite provider config.
+```

@@ -1,4 +1,7 @@
-// +build !enterprise
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
+//go:build !enterprise
 
 package quotas
 
@@ -6,9 +9,8 @@ import (
 	"context"
 
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/metricsutil"
-
-	memdb "github.com/hashicorp/go-memdb"
 )
 
 func quotaTypes() []string {
@@ -29,18 +31,31 @@ func (m *Manager) inLeasePathCache(path string) bool {
 	return false
 }
 
+func (m *Manager) setupDefaultLeaseCountQuotaInStorage(_ctx context.Context) error {
+	return nil
+}
+
 type entManager struct {
 	isPerfStandby bool
+	isDRSecondary bool
+	isNewInstall  bool
 }
 
 func (*entManager) Reset() error {
 	return nil
 }
 
-type LeaseCountQuota struct {
+type LeaseCountQuota struct{}
+
+func (l LeaseCountQuota) GetNamespacePath() string {
+	panic("implement me")
 }
 
-func (l LeaseCountQuota) allow(request *Request) (Response, error) {
+func (l LeaseCountQuota) IsInheritable() bool {
+	panic("implement me")
+}
+
+func (l LeaseCountQuota) allow(_ context.Context, _ *Request) (Response, error) {
 	panic("implement me")
 }
 
@@ -56,10 +71,14 @@ func (l LeaseCountQuota) initialize(logger log.Logger, sink *metricsutil.Cluster
 	panic("implement me")
 }
 
-func (l LeaseCountQuota) close() error {
+func (l LeaseCountQuota) close(_ context.Context) error {
 	panic("implement me")
 }
 
-func (l LeaseCountQuota) handleRemount(s string) {
+func (l LeaseCountQuota) Clone() Quota {
+	panic("implement me")
+}
+
+func (l LeaseCountQuota) handleRemount(mountPath, nsPath string) {
 	panic("implement me")
 }

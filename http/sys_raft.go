@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package http
 
 import (
@@ -8,8 +11,8 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/vault/physical/raft"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -64,10 +67,11 @@ func handleSysRaftJoinPost(core *vault.Core, w http.ResponseWriter, r *http.Requ
 			respondError(w, http.StatusBadRequest, err)
 			return
 		}
+		tlsConfig.ServerName = req.LeaderTLSServerName
 	}
 
 	if req.AutoJoinScheme != "" && (req.AutoJoinScheme != "http" && req.AutoJoinScheme != "https") {
-		respondError(w, http.StatusBadRequest, fmt.Errorf("invalid scheme '%s'; must either be http or https", req.AutoJoinScheme))
+		respondError(w, http.StatusBadRequest, fmt.Errorf("invalid scheme %q; must either be http or https", req.AutoJoinScheme))
 		return
 	}
 
@@ -99,13 +103,14 @@ type JoinResponse struct {
 }
 
 type JoinRequest struct {
-	AutoJoin         string `json:"auto_join"`
-	AutoJoinScheme   string `json:"auto_join_scheme"`
-	AutoJoinPort     uint   `json:"auto_join_port"`
-	LeaderAPIAddr    string `json:"leader_api_addr"`
-	LeaderCACert     string `json:"leader_ca_cert"`
-	LeaderClientCert string `json:"leader_client_cert"`
-	LeaderClientKey  string `json:"leader_client_key"`
-	Retry            bool   `json:"retry"`
-	NonVoter         bool   `json:"non_voter"`
+	AutoJoin            string `json:"auto_join"`
+	AutoJoinScheme      string `json:"auto_join_scheme"`
+	AutoJoinPort        uint   `json:"auto_join_port"`
+	LeaderAPIAddr       string `json:"leader_api_addr"`
+	LeaderCACert        string `json:"leader_ca_cert"`
+	LeaderClientCert    string `json:"leader_client_cert"`
+	LeaderClientKey     string `json:"leader_client_key"`
+	LeaderTLSServerName string `json:"leader_tls_servername"`
+	Retry               bool   `json:"retry"`
+	NonVoter            bool   `json:"non_voter"`
 }

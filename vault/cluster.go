@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -17,16 +20,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/cluster"
 )
 
 const (
 	// Storage path where the local cluster name and identifier are stored
 	coreLocalClusterInfoPath = "core/cluster/local/info"
+	coreLocalClusterNamePath = "core/cluster/local/name"
 
 	corePrivateKeyTypeP521    = "p521"
 	corePrivateKeyTypeED25519 = "ed25519"
@@ -59,19 +63,31 @@ type Cluster struct {
 // when Vault is sealed.
 func (c *Core) Cluster(ctx context.Context) (*Cluster, error) {
 	var cluster Cluster
+	var logicalEntry *logical.StorageEntry
+	var physicalEntry *physical.Entry
 
 	// Fetch the storage entry. This call fails when Vault is sealed.
-	entry, err := c.barrier.Get(ctx, coreLocalClusterInfoPath)
+	logicalEntry, err := c.barrier.Get(ctx, coreLocalClusterInfoPath)
 	if err != nil {
-		return nil, err
+		// Vault is sealed, pull cluster name from unencrypted storage
+		physicalEntry, err = c.physical.Get(ctx, coreLocalClusterNamePath)
+		if err != nil {
+			return nil, err
+		}
 	}
-	if entry == nil {
+	if logicalEntry == nil && physicalEntry == nil {
 		return &cluster, nil
 	}
 
 	// Decode the cluster information
-	if err = jsonutil.DecodeJSON(entry.Value, &cluster); err != nil {
-		return nil, errwrap.Wrapf("failed to decode cluster details: {{err}}", err)
+	var value []byte
+	if logicalEntry != nil {
+		value = logicalEntry.Value
+	} else {
+		value = physicalEntry.Value
+	}
+	if err = jsonutil.DecodeJSON(value, &cluster); err != nil {
+		return nil, fmt.Errorf("failed to decode cluster details: %w", err)
 	}
 
 	// Set in config file
@@ -136,7 +152,7 @@ func (c *Core) loadLocalClusterTLS(adv activeAdvertisement) (retErr error) {
 	cert, err := x509.ParseCertificate(adv.ClusterCert)
 	if err != nil {
 		c.logger.Error("failed parsing local cluster certificate", "error", err)
-		return errwrap.Wrapf("error parsing local cluster certificate: {{err}}", err)
+		return fmt.Errorf("error parsing local cluster certificate: %w", err)
 	}
 
 	c.localClusterParsedCert.Store(cert)
@@ -160,6 +176,7 @@ func (c *Core) setupCluster(ctx context.Context) error {
 	}
 
 	var modified bool
+	var generatedClusterName bool
 
 	if cluster == nil {
 		cluster = &Cluster{}
@@ -176,6 +193,7 @@ func (c *Core) setupCluster(ctx context.Context) error {
 			}
 
 			c.clusterName = fmt.Sprintf("vault-cluster-%08x", clusterNameBytes)
+			generatedClusterName = true
 		}
 
 		cluster.Name = c.clusterName
@@ -219,13 +237,12 @@ func (c *Core) setupCluster(ctx context.Context) error {
 
 		// Create a certificate
 		if c.localClusterCert.Load().([]byte) == nil {
-			c.logger.Debug("generating local cluster certificate")
-
 			host, err := uuid.GenerateUUID()
 			if err != nil {
 				return err
 			}
 			host = fmt.Sprintf("fw-%s", host)
+			c.logger.Debug("generating local cluster certificate", "host", host)
 			template := &x509.Certificate{
 				Subject: pkix.Name{
 					CommonName: host,
@@ -247,13 +264,13 @@ func (c *Core) setupCluster(ctx context.Context) error {
 			certBytes, err := x509.CreateCertificate(rand.Reader, template, template, c.localClusterPrivateKey.Load().(*ecdsa.PrivateKey).Public(), c.localClusterPrivateKey.Load().(*ecdsa.PrivateKey))
 			if err != nil {
 				c.logger.Error("error generating self-signed cert", "error", err)
-				return errwrap.Wrapf("unable to generate local cluster certificate: {{err}}", err)
+				return fmt.Errorf("unable to generate local cluster certificate: %w", err)
 			}
 
 			parsedCert, err := x509.ParseCertificate(certBytes)
 			if err != nil {
 				c.logger.Error("error parsing self-signed cert", "error", err)
-				return errwrap.Wrapf("error parsing generated certificate: {{err}}", err)
+				return fmt.Errorf("error parsing generated certificate: %w", err)
 			}
 
 			c.localClusterCert.Store(certBytes)
@@ -269,7 +286,7 @@ func (c *Core) setupCluster(ctx context.Context) error {
 			return err
 		}
 
-		// Store it
+		// Store cluster information in logical storage
 		err = c.barrier.Put(ctx, &logical.StorageEntry{
 			Key:   coreLocalClusterInfoPath,
 			Value: rawCluster,
@@ -278,8 +295,46 @@ func (c *Core) setupCluster(ctx context.Context) error {
 			c.logger.Error("failed to store cluster details", "error", err)
 			return err
 		}
+
+		// Store only cluster name in physical storage, but only if name isn't provided in config
+		if generatedClusterName {
+			rawCluster, err = json.Marshal(&Cluster{Name: cluster.Name})
+			if err != nil {
+				c.logger.Error("failed to marshal cluster name", "error", err)
+				return err
+			}
+
+			err = c.physical.Put(ctx, &physical.Entry{
+				Key:   coreLocalClusterNamePath,
+				Value: rawCluster,
+			})
+			if err != nil {
+				c.logger.Error("failed to store cluster name", "error", err)
+				return err
+			}
+		} else {
+			// check to ensure there is no entry at coreLocalClusterNamePath
+			err = c.physical.Delete(ctx, coreLocalClusterNamePath)
+			if err != nil {
+				c.logger.Error("failed to clear cluster name", "error", err)
+				return err
+			}
+
+		}
 	}
 
+	c.clusterID.Store(cluster.ID)
+	return nil
+}
+
+func (c *Core) loadCluster(ctx context.Context) error {
+	cluster, err := c.Cluster(ctx)
+	if err != nil {
+		c.logger.Error("failed to get cluster details", "error", err)
+		return err
+	}
+
+	c.clusterID.Store(cluster.ID)
 	return nil
 }
 
@@ -308,13 +363,18 @@ func (c *Core) startClusterListener(ctx context.Context) error {
 	networkLayer := c.clusterNetworkLayer
 
 	if networkLayer == nil {
-		networkLayer = cluster.NewTCPLayer(c.clusterListenerAddrs, c.logger.Named("cluster-listener.tcp"))
+		tcpLogger := c.logger.Named("cluster-listener.tcp")
+		networkLayer = cluster.NewTCPLayer(c.clusterListenerAddrs, tcpLogger)
+		c.AddLogger(tcpLogger)
 	}
 
+	listenerLogger := c.logger.Named("cluster-listener")
 	c.clusterListener.Store(cluster.NewListener(networkLayer,
 		c.clusterCipherSuites,
-		c.logger.Named("cluster-listener"),
+		listenerLogger,
 		5*c.clusterHeartbeatInterval))
+
+	c.AddLogger(listenerLogger)
 
 	err := c.getClusterListener().Run(ctx)
 	if err != nil {
@@ -322,7 +382,7 @@ func (c *Core) startClusterListener(ctx context.Context) error {
 	}
 	if strings.HasSuffix(c.ClusterAddr(), ":0") {
 		// If we listened on port 0, record the port the OS gave us.
-		c.clusterAddr.Store(fmt.Sprintf("https://%s", c.getClusterListener().Addr()))
+		c.SetClusterAddr(fmt.Sprintf("https://%s", c.getClusterListener().Addr()))
 	}
 
 	if len(c.ClusterAddr()) != 0 {
@@ -336,6 +396,15 @@ func (c *Core) startClusterListener(ctx context.Context) error {
 
 func (c *Core) ClusterAddr() string {
 	return c.clusterAddr.Load().(string)
+}
+
+func (c *Core) SetClusterAddr(s string) {
+	c.clusterAddr.Store(s)
+	rb := c.getRaftBackend()
+
+	if rb != nil && c.clusterAddrBridge != nil {
+		c.clusterAddrBridge.UpdateClusterAddr(c.GetRaftNodeID(), s)
+	}
 }
 
 func (c *Core) getClusterListener() *cluster.Listener {
@@ -372,4 +441,8 @@ func (c *Core) SetClusterListenerAddrs(addrs []*net.TCPAddr) {
 
 func (c *Core) SetClusterHandler(handler http.Handler) {
 	c.clusterHandler = handler
+}
+
+func (c *Core) ClusterID() string {
+	return c.clusterID.Load()
 }

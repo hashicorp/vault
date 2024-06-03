@@ -1,0 +1,52 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{#if @model.serialNumber}}
+  <Page::PkiCertificateDetails @model={{@model}} @onBack={{this.cancel}} />
+{{else}}
+  <form {{on "submit" (perform this.save)}} data-test-pki-generate-cert-form>
+    <div class="box is-bottomless is-fullwidth is-marginless">
+      <MessageError @errorMessage={{this.errorBanner}} />
+      <NamespaceReminder @mode="create" @noun="certificate" />
+      {{#let (get @model.formFieldGroups "0") as |defaultGroup|}}
+        {{#each defaultGroup.default as |attr|}}
+          <FormField @model={{@model}} @attr={{attr}} @modelValidations={{this.modelValidations}}>
+            <PkiNotValidAfterForm @attr={{attr}} @model={{@model}} />
+          </FormField>
+        {{/each}}
+      {{/let}}
+      <FormFieldGroups
+        @model={{@model}}
+        @renderGroup="Subject Alternative Name (SAN) Options"
+        @groupName="formFieldGroups"
+        @showHelpText={{false}}
+      />
+    </div>
+    <hr class="has-background-gray-100" />
+    <Hds::ButtonSet>
+      <Hds::Button
+        @text={{capitalize this.verb}}
+        @icon={{if this.save.isRunning "loading"}}
+        type="submit"
+        disabled={{this.save.isRunning}}
+        data-test-save
+      />
+      <Hds::Button
+        @text="Cancel"
+        @color="secondary"
+        disabled={{this.save.isRunning}}
+        {{on "click" this.cancel}}
+        data-test-cancel
+      />
+    </Hds::ButtonSet>
+
+    {{#if this.invalidFormAlert}}
+      <div class="control" data-test-alert>
+        <AlertInline @type="danger" class="has-top-padding-s" @message={{this.invalidFormAlert}} />
+      </div>
+    {{/if}}
+
+  </form>
+{{/if}}

@@ -1,14 +1,20 @@
 ---
 layout: api
 page_title: /sys/storage/raft - HTTP API
-sidebar_title: <code>/sys/storage/raft</code>
 description: |-
 
   The `/sys/storage/raft` endpoints are used to manage Vault's Raft storage
   backend.
 ---
 
-## Join a Raft cluster
+# `/sys/storage/raft`
+
+@include 'alerts/restricted-root.mdx'
+
+The `/sys/storage/raft` endpoints are used to manage Vault's Raft storage
+backend.
+
+## Join a raft cluster
 
 This endpoint joins a new server node to the Raft cluster. When using Shamir
 seal, as soon as the Vault server is brought up, this API should be invoked
@@ -39,7 +45,30 @@ leader node.
 - `leader_client_key` `(string: "")` - Client key used to communicate with
   Raft's leader node.
 
-### Sample Payload
+- `leader_tls_servername` `(string: "")` - TLS servername to use when connecting with HTTPS.
+  Should match one of the names in the DNS SANs of the remote server certificate.
+
+- `auto_join` `(string: "")` - Defines any cloud auto-join metadata. If
+  supplied, Vault will attempt to automatically discover peers in addition to what
+  can be provided via 'leader_api_addr'.
+
+- `auto_join_scheme` `(string: "https")` - URI scheme to be used for `auto_join`.
+
+- `auto_join_port` `(int: 8200)` - Port to be used for `auto_join`.
+
+- `non_voter` `(bool: false) (enterprise)` - If set, will make the server not
+  participate in the Raft quorum, and have it only receive the data replication
+  stream. This can be used to add read scalability to a cluster in cases where a
+  high volume of reads to servers are needed. The default is false.
+
+Additionally, the following options are allowed in Vault open-source, but
+relevant functionality is only supported in Vault Enterprise:
+
+- `non_voter` `(bool: false)` - Joins the node to the cluster in non-voter mode
+  which results in Vault's data being replicated to it, but does not contribute
+  to the quorum count.
+
+### Sample payload
 
 ```json
 {
@@ -50,11 +79,10 @@ leader node.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
-    --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/storage/raft/join
@@ -62,7 +90,7 @@ $ curl \
 
 **Note:** Unseal the joining node immediately after this API is invoked.
 
-## Read Raft Configuration
+## Read raft configuration
 
 This endpoint returns the details of all the nodes in the raft cluster.
 
@@ -70,7 +98,7 @@ This endpoint returns the details of all the nodes in the raft cluster.
 | :----- | :-------------------------------- |
 | `GET`  | `/sys/storage/raft/configuration` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -78,7 +106,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/storage/raft/configuration
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -111,7 +139,7 @@ $ curl \
 }
 ```
 
-## Remove a node from Raft cluster
+## Remove a node from raft cluster
 
 This endpoint removes a node from the raft cluster. An optional `dr_operation_token`
 may be provided if the node is in a DR secondary cluster.
@@ -120,7 +148,7 @@ may be provided if the node is in a DR secondary cluster.
 | :----- | :------------------------------ |
 | `POST` | `/sys/storage/raft/remove-peer` |
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -129,7 +157,7 @@ may be provided if the node is in a DR secondary cluster.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -139,7 +167,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/storage/raft/remove-peer
 ```
 
-## Take a snapshot of the Raft cluster
+## Take a snapshot of the raft cluster
 
 This endpoint returns a snapshot of the current state of the raft cluster. The
 snapshot is returned as binary data and should be redirected to a file.
@@ -149,7 +177,9 @@ Unavailable if Raft is used exclusively for `ha_storage`.
 | :----- | :--------------------------- |
 | `GET`  | `/sys/storage/raft/snapshot` |
 
-### Sample Request
+@include 'raft-large-snapshots.mdx'
+
+### Sample request
 
 ```shell-session
 $ curl \
@@ -158,7 +188,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/storage/raft/snapshot > raft.snap
 ```
 
-## Restore Raft using a snapshot
+## Restore raft using a snapshot
 
 Installs the provided snapshot, returning the cluster to the state defined in
 it. Unavailable if Raft is used exclusively for `ha_storage`.
@@ -167,17 +197,19 @@ it. Unavailable if Raft is used exclusively for `ha_storage`.
 | :----- | :--------------------------- |
 | `POST` | `/sys/storage/raft/snapshot` |
 
-### Sample Request
+@include 'raft-large-snapshots.mdx'
+
+### Sample request
 
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    -- data-binary @raft.snap
+    --data-binary @raft.snap \
     http://127.0.0.1:8200/v1/sys/storage/raft/snapshot
 ```
 
-## Force Restore Raft using a snapshot
+## Force restore raft using a snapshot
 
 Installs the provided snapshot, returning the cluster to the state defined in
 it. This is same as writing to `/sys/storage/raft/snapshot` except that this
@@ -188,12 +220,32 @@ snapshot data. Unavailable if Raft is used exclusively for `ha_storage`.
 | :----- | :--------------------------------- |
 | `POST` | `/sys/storage/raft/snapshot-force` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    --data-binary @raft.snap
+    --data-binary @raft.snap \
     http://127.0.0.1:8200/v1/sys/storage/raft/snapshot-force
+```
+
+## Bootstrap an HA node
+
+When a node uses Raft exclusively for `ha_storage`, this endpoint is used to activate
+Raft.  It is analogous to using `sys/init` to initialize storage, in that it
+only needs to be done once per cluster, after which `vault operator raft join`
+is used to add more nodes to the Raft cluster.
+
+| Method | Path                         |
+| :----- | :--------------------------- |
+| `POST` | `/sys/storage/raft/bootstrap` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    http://127.0.0.1:8200/v1/sys/storage/raft/bootstrap
 ```

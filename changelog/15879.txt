@@ -1,0 +1,3 @@
+```release-note:bug
+core: Limit SSCT WAL checks on perf standbys to raft backends only
+```

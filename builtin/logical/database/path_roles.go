@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package database
 
 import (
@@ -6,18 +9,27 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
+	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
+	"github.com/robfig/cron/v3"
 )
 
 func pathListRoles(b *databaseBackend) []*framework.Path {
 	return []*framework.Path{
-		&framework.Path{
+		{
 			Pattern: "roles/?$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixDatabase,
+				OperationVerb:   "list",
+				OperationSuffix: "roles",
+			},
 
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ListOperation: b.pathRoleList,
@@ -26,8 +38,14 @@ func pathListRoles(b *databaseBackend) []*framework.Path {
 			HelpSynopsis:    pathRoleHelpSyn,
 			HelpDescription: pathRoleHelpDesc,
 		},
-		&framework.Path{
+		{
 			Pattern: "static-roles/?$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixDatabase,
+				OperationVerb:   "list",
+				OperationSuffix: "static-roles",
+			},
 
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ListOperation: b.pathRoleList,
@@ -41,8 +59,12 @@ func pathListRoles(b *databaseBackend) []*framework.Path {
 
 func pathRoles(b *databaseBackend) []*framework.Path {
 	return []*framework.Path{
-		&framework.Path{
-			Pattern:        "roles/" + framework.GenericNameRegex("name"),
+		{
+			Pattern: "roles/" + framework.GenericNameRegex("name"),
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixDatabase,
+				OperationSuffix: "role",
+			},
 			Fields:         fieldsForType(databaseRolePath),
 			ExistenceCheck: b.pathRoleExistenceCheck,
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -56,8 +78,12 @@ func pathRoles(b *databaseBackend) []*framework.Path {
 			HelpDescription: pathRoleHelpDesc,
 		},
 
-		&framework.Path{
-			Pattern:        "static-roles/" + framework.GenericNameRegex("name"),
+		{
+			Pattern: "static-roles/" + framework.GenericNameRegex("name"),
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixDatabase,
+				OperationSuffix: "static-role",
+			},
 			Fields:         fieldsForType(databaseStaticRolePath),
 			ExistenceCheck: b.pathStaticRoleExistenceCheck,
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -86,6 +112,16 @@ func fieldsForType(roleType string) map[string]*framework.FieldSchema {
 		"db_name": {
 			Type:        framework.TypeString,
 			Description: "Name of the database this role acts on.",
+		},
+		"credential_type": {
+			Type: framework.TypeString,
+			Description: "The type of credential to manage. Options include: " +
+				"'password', 'rsa_private_key'. Defaults to 'password'.",
+			Default: "password",
+		},
+		"credential_config": {
+			Type:        framework.TypeKVPairs,
+			Description: "The configuration for the given credential_type.",
 		},
 	}
 
@@ -161,7 +197,18 @@ func staticFields() map[string]*framework.FieldSchema {
 			Type: framework.TypeDurationSecond,
 			Description: `Period for automatic
 	credential rotation of the given username. Not valid unless used with
-	"username".`,
+	"username". Mutually exclusive with "rotation_schedule."`,
+		},
+		"rotation_schedule": {
+			Type: framework.TypeString,
+			Description: `Schedule for automatic credential rotation of the
+	given username. Mutually exclusive with "rotation_period."`,
+		},
+		"rotation_window": {
+			Type: framework.TypeDurationSecond,
+			Description: `The window of time in which rotations are allowed to
+	occur starting from a given "rotation_schedule". Requires "rotation_schedule"
+	to be specified`,
 		},
 		"rotation_statements": {
 			Type: framework.TypeStringSlice,
@@ -191,11 +238,12 @@ func (b *databaseBackend) pathStaticRoleExistenceCheck(ctx context.Context, req 
 }
 
 func (b *databaseBackend) pathRoleDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	err := req.Storage.Delete(ctx, databaseRolePath+data.Get("name").(string))
+	name := data.Get("name").(string)
+	err := req.Storage.Delete(ctx, databaseRolePath+name)
 	if err != nil {
 		return nil, err
 	}
-
+	b.dbEvent(ctx, "role-delete", req.Path, name, true)
 	return nil, nil
 }
 
@@ -215,7 +263,29 @@ func (b *databaseBackend) pathStaticRoleDelete(ctx context.Context, req *logical
 		return nil, err
 	}
 
-	return nil, nil
+	walIDs, err := framework.ListWAL(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+	var merr *multierror.Error
+	for _, walID := range walIDs {
+		wal, err := b.findStaticWAL(ctx, req.Storage, walID)
+		if err != nil {
+			merr = multierror.Append(merr, err)
+			continue
+		}
+		if wal != nil && name == wal.RoleName {
+			b.Logger().Debug("deleting WAL for deleted role", "WAL ID", walID, "role", name)
+			err = framework.DeleteWAL(ctx, req.Storage, walID)
+			if err != nil {
+				b.Logger().Debug("failed to delete WAL for deleted role", "WAL ID", walID, "error", err)
+				merr = multierror.Append(merr, err)
+			}
+		}
+	}
+
+	b.dbEvent(ctx, "static-role-delete", req.Path, name, true)
+	return nil, merr.ErrorOrNil()
 }
 
 func (b *databaseBackend) pathStaticRoleRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -230,18 +300,32 @@ func (b *databaseBackend) pathStaticRoleRead(ctx context.Context, req *logical.R
 	data := map[string]interface{}{
 		"db_name":             role.DBName,
 		"rotation_statements": role.Statements.Rotation,
+		"credential_type":     role.CredentialType.String(),
 	}
 
 	// guard against nil StaticAccount; shouldn't happen but we'll be safe
 	if role.StaticAccount != nil {
 		data["username"] = role.StaticAccount.Username
 		data["rotation_statements"] = role.Statements.Rotation
-		data["rotation_period"] = role.StaticAccount.RotationPeriod.Seconds()
 		if !role.StaticAccount.LastVaultRotation.IsZero() {
 			data["last_vault_rotation"] = role.StaticAccount.LastVaultRotation
 		}
+
+		// only return one of the mutually exclusive fields in the response
+		if role.StaticAccount.UsesRotationPeriod() {
+			data["rotation_period"] = role.StaticAccount.RotationPeriod.Seconds()
+		} else if role.StaticAccount.UsesRotationSchedule() {
+			data["rotation_schedule"] = role.StaticAccount.RotationSchedule
+			// rotation_window is only valid with rotation_schedule
+			if role.StaticAccount.RotationWindow != 0 {
+				data["rotation_window"] = role.StaticAccount.RotationWindow.Seconds()
+			}
+		}
 	}
 
+	if len(role.CredentialConfig) > 0 {
+		data["credential_config"] = role.CredentialConfig
+	}
 	if len(role.Statements.Rotation) == 0 {
 		data["rotation_statements"] = []string{}
 	}
@@ -268,6 +352,10 @@ func (b *databaseBackend) pathRoleRead(ctx context.Context, req *logical.Request
 		"renew_statements":      role.Statements.Renewal,
 		"default_ttl":           role.DefaultTTL.Seconds(),
 		"max_ttl":               role.MaxTTL.Seconds(),
+		"credential_type":       role.CredentialType.String(),
+	}
+	if len(role.CredentialConfig) > 0 {
+		data["credential_config"] = role.CredentialConfig
 	}
 	if len(role.Statements.Creation) == 0 {
 		data["creation_statements"] = []string{}
@@ -334,6 +422,23 @@ func (b *databaseBackend) pathRoleCreateUpdate(ctx context.Context, req *logical
 		if role.DBName == "" {
 			return logical.ErrorResponse("database name is required"), nil
 		}
+
+		if credentialTypeRaw, ok := data.GetOk("credential_type"); ok {
+			credentialType := credentialTypeRaw.(string)
+			if err := role.setCredentialType(credentialType); err != nil {
+				return logical.ErrorResponse(err.Error()), nil
+			}
+		}
+
+		var credentialConfig map[string]string
+		if raw, ok := data.GetOk("credential_config"); ok {
+			credentialConfig = raw.(map[string]string)
+		} else if req.Operation == logical.CreateOperation {
+			credentialConfig = data.Get("credential_config").(map[string]string)
+		}
+		if err := role.setCredentialConfig(credentialConfig); err != nil {
+			return logical.ErrorResponse("credential_config validation failed: %s", err), nil
+		}
 	}
 
 	// Statements
@@ -395,10 +500,12 @@ func (b *databaseBackend) pathRoleCreateUpdate(ctx context.Context, req *logical
 		return nil, err
 	}
 
+	b.dbEvent(ctx, fmt.Sprintf("role-%s", req.Operation), req.Path, name, true)
 	return nil, nil
 }
 
 func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	response := &logical.Response{}
 	name := data.Get("name").(string)
 	if name == "" {
 		return logical.ErrorResponse("empty role name attribute given"), nil
@@ -425,7 +532,7 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 
 	// createRole is a boolean to indicate if this is a new role creation. This is
 	// can be used later by database plugins that distinguish between creating and
-	// updating roles, and may use seperate statements depending on the context.
+	// updating roles, and may use separate statements depending on the context.
 	createRole := (req.Operation == logical.CreateOperation)
 	if role == nil {
 		role = &roleEntry{
@@ -455,12 +562,17 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 	}
 	role.StaticAccount.Username = username
 
-	// If it's a Create operation, both username and rotation_period must be included
-	rotationPeriodSecondsRaw, ok := data.GetOk("rotation_period")
-	if !ok && createRole {
-		return logical.ErrorResponse("rotation_period is required to create static accounts"), nil
+	rotationPeriodSecondsRaw, rotationPeriodOk := data.GetOk("rotation_period")
+	rotationScheduleRaw, rotationScheduleOk := data.GetOk("rotation_schedule")
+	rotationWindowSecondsRaw, rotationWindowOk := data.GetOk("rotation_window")
+
+	if rotationScheduleOk && rotationPeriodOk {
+		return logical.ErrorResponse("mutually exclusive fields rotation_period and rotation_schedule were both specified; only one of them can be provided"), nil
+	} else if createRole && (!rotationScheduleOk && !rotationPeriodOk) {
+		return logical.ErrorResponse("one of rotation_schedule or rotation_period must be provided to create a static account"), nil
 	}
-	if ok {
+
+	if rotationPeriodOk {
 		rotationPeriodSeconds := rotationPeriodSecondsRaw.(int)
 		if rotationPeriodSeconds < defaultQueueTickSeconds {
 			// If rotation frequency is specified, and this is an update, the value
@@ -469,6 +581,38 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 			return logical.ErrorResponse(fmt.Sprintf("rotation_period must be %d seconds or more", defaultQueueTickSeconds)), nil
 		}
 		role.StaticAccount.RotationPeriod = time.Duration(rotationPeriodSeconds) * time.Second
+
+		if rotationWindowOk {
+			return logical.ErrorResponse("rotation_window is invalid with use of rotation_period"), nil
+		}
+
+		// Unset rotation schedule and window if rotation period is set since
+		// these are mutually exclusive
+		role.StaticAccount.RotationSchedule = ""
+		role.StaticAccount.RotationWindow = 0
+	}
+
+	if rotationScheduleOk {
+		rotationSchedule := rotationScheduleRaw.(string)
+		parsedSchedule, err := b.schedule.Parse(rotationSchedule)
+		if err != nil {
+			return logical.ErrorResponse("could not parse rotation_schedule", "error", err), nil
+		}
+		role.StaticAccount.RotationSchedule = rotationSchedule
+		role.StaticAccount.Schedule = *parsedSchedule
+
+		if rotationWindowOk {
+			rotationWindowSeconds := rotationWindowSecondsRaw.(int)
+			err := b.schedule.ValidateRotationWindow(rotationWindowSeconds)
+			if err != nil {
+				return logical.ErrorResponse("rotation_window is invalid", "error", err), nil
+			}
+			role.StaticAccount.RotationWindow = time.Duration(rotationWindowSeconds) * time.Second
+		}
+
+		// Unset rotation period if rotation schedule is set since these are
+		// mutually exclusive
+		role.StaticAccount.RotationPeriod = 0
 	}
 
 	if rotationStmtsRaw, ok := data.GetOk("rotation_statements"); ok {
@@ -477,24 +621,56 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		role.Statements.Rotation = data.Get("rotation_statements").([]string)
 	}
 
+	if credentialTypeRaw, ok := data.GetOk("credential_type"); ok {
+		credentialType := credentialTypeRaw.(string)
+		if err := role.setCredentialType(credentialType); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+	}
+
+	var credentialConfig map[string]string
+	if raw, ok := data.GetOk("credential_config"); ok {
+		credentialConfig = raw.(map[string]string)
+	} else if req.Operation == logical.CreateOperation {
+		credentialConfig = data.Get("credential_config").(map[string]string)
+	}
+	if err := role.setCredentialConfig(credentialConfig); err != nil {
+		return logical.ErrorResponse("credential_config validation failed: %s", err), nil
+	}
+
 	// lvr represents the roles' LastVaultRotation
 	lvr := role.StaticAccount.LastVaultRotation
 
 	// Only call setStaticAccount if we're creating the role for the
 	// first time
+	var item *queue.Item
 	switch req.Operation {
 	case logical.CreateOperation:
 		// setStaticAccount calls Storage.Put and saves the role to storage
 		resp, err := b.setStaticAccount(ctx, req.Storage, &setStaticAccountInput{
-			RoleName:   name,
-			Role:       role,
-			CreateUser: createRole,
+			RoleName: name,
+			Role:     role,
 		})
 		if err != nil {
+			if resp != nil && resp.WALID != "" {
+				b.Logger().Debug("deleting WAL for failed role creation", "WAL ID", resp.WALID, "role", name)
+				walDeleteErr := framework.DeleteWAL(ctx, req.Storage, resp.WALID)
+				if walDeleteErr != nil {
+					b.Logger().Debug("failed to delete WAL for failed role creation", "WAL ID", resp.WALID, "error", walDeleteErr)
+					var merr *multierror.Error
+					merr = multierror.Append(merr, err)
+					merr = multierror.Append(merr, fmt.Errorf("failed to clean up WAL from failed role creation: %w", walDeleteErr))
+					err = merr.ErrorOrNil()
+				}
+			}
+
 			return nil, err
 		}
 		// guard against RotationTime not being set or zero-value
 		lvr = resp.RotationTime
+		item = &queue.Item{
+			Key: name,
+		}
 	case logical.UpdateOperation:
 		// store updated Role
 		entry, err := logical.StorageEntryJSON(databaseStaticRolePath+name, role)
@@ -504,68 +680,229 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		if err := req.Storage.Put(ctx, entry); err != nil {
 			return nil, err
 		}
+		item, err = b.popFromRotationQueueByKey(name)
+		if err != nil {
+			return nil, err
+		}
+	}
 
-		// In case this is an update, remove any previous version of the item from
-		// the queue
-		b.popFromRotationQueueByKey(name)
+	if rotationPeriodOk {
+		b.logger.Debug("init priority for RotationPeriod", "lvr", lvr, "next", lvr.Add(role.StaticAccount.RotationPeriod))
+		item.Priority = lvr.Add(role.StaticAccount.RotationPeriod).Unix()
+	} else if rotationScheduleOk {
+		next := role.StaticAccount.Schedule.Next(lvr)
+		b.logger.Debug("init priority for Schedule", "lvr", lvr, "next", next)
+		item.Priority = next.Unix()
 	}
 
 	// Add their rotation to the queue
-	if err := b.pushItem(&queue.Item{
-		Key:      name,
-		Priority: lvr.Add(role.StaticAccount.RotationPeriod).Unix(),
-	}); err != nil {
+	if err := b.pushItem(item); err != nil {
 		return nil, err
 	}
-
-	return nil, nil
+	b.dbEvent(ctx, fmt.Sprintf("static-role-%s", req.Operation), req.Path, name, true)
+	return response, nil
 }
 
 type roleEntry struct {
-	DBName        string         `json:"db_name"`
-	Statements    v4.Statements  `json:"statements"`
-	DefaultTTL    time.Duration  `json:"default_ttl"`
-	MaxTTL        time.Duration  `json:"max_ttl"`
-	StaticAccount *staticAccount `json:"static_account" mapstructure:"static_account"`
+	DBName           string                 `json:"db_name"`
+	Statements       v4.Statements          `json:"statements"`
+	DefaultTTL       time.Duration          `json:"default_ttl"`
+	MaxTTL           time.Duration          `json:"max_ttl"`
+	CredentialType   v5.CredentialType      `json:"credential_type"`
+	CredentialConfig map[string]interface{} `json:"credential_config"`
+	StaticAccount    *staticAccount         `json:"static_account" mapstructure:"static_account"`
+}
+
+// setCredentialType sets the credential type for the role given its string form.
+// Returns an error if the given credential type string is unknown.
+func (r *roleEntry) setCredentialType(credentialType string) error {
+	switch credentialType {
+	case v5.CredentialTypePassword.String():
+		r.CredentialType = v5.CredentialTypePassword
+	case v5.CredentialTypeRSAPrivateKey.String():
+		r.CredentialType = v5.CredentialTypeRSAPrivateKey
+	case v5.CredentialTypeClientCertificate.String():
+		r.CredentialType = v5.CredentialTypeClientCertificate
+	default:
+		return fmt.Errorf("invalid credential_type %q", credentialType)
+	}
+
+	return nil
+}
+
+// setCredentialConfig validates and sets the credential configuration
+// for the role using the role's credential type. It will also populate
+// all default values. Returns an error if the configuration is invalid.
+func (r *roleEntry) setCredentialConfig(config map[string]string) error {
+	c := make(map[string]interface{})
+	for k, v := range config {
+		c[k] = v
+	}
+
+	switch r.CredentialType {
+	case v5.CredentialTypePassword:
+		generator, err := newPasswordGenerator(c)
+		if err != nil {
+			return err
+		}
+		cm, err := generator.configMap()
+		if err != nil {
+			return err
+		}
+		if len(cm) > 0 {
+			r.CredentialConfig = cm
+		}
+	case v5.CredentialTypeRSAPrivateKey:
+		generator, err := newRSAKeyGenerator(c)
+		if err != nil {
+			return err
+		}
+		cm, err := generator.configMap()
+		if err != nil {
+			return err
+		}
+		if len(cm) > 0 {
+			r.CredentialConfig = cm
+		}
+	case v5.CredentialTypeClientCertificate:
+		generator, err := newClientCertificateGenerator(c)
+		if err != nil {
+			return err
+		}
+		cm, err := generator.configMap()
+		if err != nil {
+			return err
+		}
+		if len(cm) > 0 {
+			r.CredentialConfig = cm
+		}
+	}
+
+	return nil
 }
 
 type staticAccount struct {
 	// Username to create or assume management for static accounts
 	Username string `json:"username"`
 
-	// Password is the current password for static accounts. As an input, this is
-	// used/required when trying to assume management of an existing static
-	// account. Return this on credential request if it exists.
+	// Password is the current password credential for static accounts. As an input,
+	// this is used/required when trying to assume management of an existing static
+	// account. Returned on credential request if the role's credential type is
+	// CredentialTypePassword.
 	Password string `json:"password"`
+
+	// PrivateKey is the current private key credential for static accounts. As an input,
+	// this is used/required when trying to assume management of an existing static
+	// account. Returned on credential request if the role's credential type is
+	// CredentialTypeRSAPrivateKey.
+	PrivateKey []byte `json:"private_key"`
 
 	// LastVaultRotation represents the last time Vault rotated the password
 	LastVaultRotation time.Time `json:"last_vault_rotation"`
+
+	// NextVaultRotation represents the next time Vault is expected to rotate
+	// the password
+	NextVaultRotation time.Time `json:"next_vault_rotation"`
 
 	// RotationPeriod is number in seconds between each rotation, effectively a
 	// "time to live". This value is compared to the LastVaultRotation to
 	// determine if a password needs to be rotated
 	RotationPeriod time.Duration `json:"rotation_period"`
 
+	// RotationSchedule is a "chron style" string representing the allowed
+	// schedule for each rotation.
+	// e.g. "1 0 * * *" would rotate at one minute past midnight (00:01) every
+	// day.
+	RotationSchedule string `json:"rotation_schedule"`
+
+	// RotationWindow is number in seconds in which rotations are allowed to
+	// occur starting from a given rotation_schedule.
+	RotationWindow time.Duration `json:"rotation_window"`
+
+	// Schedule holds the parsed "chron style" string representing the allowed
+	// schedule for each rotation.
+	Schedule cron.SpecSchedule `json:"schedule"`
+
 	// RevokeUser is a boolean flag to indicate if Vault should revoke the
 	// database user when the role is deleted
 	RevokeUserOnDelete bool `json:"revoke_user_on_delete"`
 }
 
-// NextRotationTime calculates the next rotation by adding the Rotation Period
-// to the last known vault rotation
+// NextRotationTime calculates the next rotation for period and schedule-based
+// rotations.
+//
+// Period-based expiries are calculated by adding the Rotation Period to the
+// last known vault rotation. Schedule-based expiries are calculated by
+// querying for the next schedule expiry since the last known vault rotation.
 func (s *staticAccount) NextRotationTime() time.Time {
-	return s.LastVaultRotation.Add(s.RotationPeriod)
+	if s.UsesRotationPeriod() {
+		return s.LastVaultRotation.Add(s.RotationPeriod)
+	}
+	return s.Schedule.Next(time.Now())
 }
 
-// PasswordTTL calculates the approximate time remaining until the password is
-// no longer valid. This is approximate because the periodic rotation is only
+// NextRotationTimeFromInput calculates the next rotation time for period and
+// schedule-based roles based on the input.
+func (s *staticAccount) NextRotationTimeFromInput(input time.Time) time.Time {
+	if s.UsesRotationPeriod() {
+		return input.Add(s.RotationPeriod)
+	}
+	return s.Schedule.Next(input)
+}
+
+// UsesRotationSchedule returns true if the given static account has been
+// configured to rotate credentials on a schedule (i.e. NOT on a rotation period).
+func (s *staticAccount) UsesRotationSchedule() bool {
+	return s.RotationSchedule != "" && s.RotationPeriod == 0
+}
+
+// UsesRotationPeriod returns true if the given static account has been
+// configured to rotate credentials on a period (i.e. NOT on a rotation schedule).
+func (s *staticAccount) UsesRotationPeriod() bool {
+	return s.RotationPeriod != 0 && s.RotationSchedule == ""
+}
+
+// IsInsideRotationWindow returns true if the current time t is within a given
+// static account's rotation window.
+//
+// Returns true if the rotation window is not set. In this case, the rotation
+// window is effectively the span of time between two consecutive rotation
+// schedules and we should not prevent rotation.
+func (s *staticAccount) IsInsideRotationWindow(t time.Time) bool {
+	if s.UsesRotationSchedule() && s.RotationWindow != 0 {
+		return t.Before(s.NextVaultRotation.Add(s.RotationWindow))
+	}
+	return true
+}
+
+// ShouldRotate returns true if a given static account should have its
+// credentials rotated.
+//
+// This will return true when the priority <= the current Unix time. If this
+// static account is schedule-based with a rotation window, this method will
+// return false if t is outside the rotation window.
+func (s *staticAccount) ShouldRotate(priority int64, t time.Time) bool {
+	return priority <= t.Unix() && s.IsInsideRotationWindow(t)
+}
+
+// SetNextVaultRotation
+func (s *staticAccount) SetNextVaultRotation(t time.Time) {
+	if s.UsesRotationPeriod() {
+		s.NextVaultRotation = t.Add(s.RotationPeriod)
+	} else {
+		s.NextVaultRotation = s.Schedule.Next(t)
+	}
+}
+
+// CredentialTTL calculates the approximate time remaining until the credential is
+// no longer valid. This is approximate because the rotation expiry is only
 // checked approximately every 5 seconds, and each rotation can take a small
 // amount of time to process. This can result in a negative TTL time while the
 // rotation function processes the Static Role and performs the rotation. If the
 // TTL is negative, zero is returned. Users should not trust passwords with a
 // Zero TTL, as they are likely in the process of being rotated and will quickly
 // be invalidated.
-func (s *staticAccount) PasswordTTL() time.Duration {
+func (s *staticAccount) CredentialTTL() time.Duration {
 	next := s.NextRotationTime()
 	ttl := next.Sub(time.Now()).Round(time.Second)
 	if ttl < 0 {
@@ -626,7 +963,7 @@ rollback a change if needed.
 const pathStaticRoleHelpDesc = `
 This path lets you manage the static roles that can be created with this
 backend. Static Roles are associated with a single database user, and manage the
-password based on a rotation period, automatically rotating the password.
+credential based on a rotation period, automatically rotating the credential.
 
 The "db_name" parameter is required and configures the name of the database
 connection to use.
@@ -639,7 +976,11 @@ and "}}" to be replaced.
 
   * "name" - The random username generated for the DB user.
 
-  * "password" - The random password generated for the DB user.
+  * "password" - The random password generated for the DB user. Populated if the
+  static role's credential_type is 'password'.
+  
+  * "public_key" - The public key generated for the DB user. Populated if the
+  static role's credential_type is 'rsa_private_key'.
 
 Example of a decent creation_statements for a postgresql database plugin:
 

@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/gcp: Fixed bug where error was not reported for invalid bindings 
+```

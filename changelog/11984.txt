@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Show day of month instead of day of year in the expiration warning dialog
+```

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package inmem
 
 import (
@@ -327,5 +330,4 @@ func TestCache_Refresh(t *testing.T) {
 	if string(r.Value) != "baz" {
 		t.Fatalf("expected value baz, got %s", string(r.Value))
 	}
-
 }

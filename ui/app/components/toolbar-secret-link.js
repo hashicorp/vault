@@ -1,4 +1,10 @@
 /**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import Component from '@glimmer/component';
+/**
  * @module ToolbarSecretLink
  * `ToolbarSecretLink` styles SecretLink for the Toolbar.
  * It should only be used inside of `Toolbar`.
@@ -7,27 +13,32 @@
  * ```js
  * <Toolbar>
  *   <ToolbarActions>
- *     <ToolbarSecretLink @params={{array 'vault.cluster.policies.create'}} @type="add">
+ *     <ToolbarSecretLink
+ *       @mode="create"
+ *       @type="add"
+ *       @secret="some-secret"
+ *       @backend="mount-path"
+ *       @queryParams={{hash tab="policy"}}
+ *       @replace={{true}}
+ *       @disabled={{false}}
+ *       data-test-custom-tag
+ *     >
  *       Create policy
  *     </ToolbarSecretLink>
  *   </ToolbarActions>
  * </Toolbar>
  * ```
  *
- * @param type="" {String} - Use "add" to change icon
+ * @param {string} type - use "add" to change icon from "chevron-right" to "plus"
+ * @param {string} mode - *required* passed to secret-link, controls route
+ * @param {string} backend - *required* backend path. Passed to secret-link
+ * @param {string} secret - secret path. Passed to secret-link
+ * @param {boolean} replace - passed to secret-link
+ * @param {boolean} disabled - passed to secret-link
+ * @param {object} queryParams - passed to secret-link
  */
-
-import OuterHTML from './outer-html';
-import { computed } from '@ember/object';
-
-export default OuterHTML.extend({
-  glyph: computed('type', function() {
-    if (this.type == 'add') {
-      return 'plus-plain';
-    } else {
-      return 'chevron-right';
-    }
-  }),
-  tagName: '',
-  supportsDataTestProperties: true,
-});
+export default class ToolbarSecretLink extends Component {
+  get glyph() {
+    return this.args.type === 'add' ? 'plus' : 'chevron-right';
+  }
+}

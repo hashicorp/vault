@@ -1,0 +1,222 @@
+---
+layout: api
+page_title: /sys/locked-users - HTTP API
+description: The `/sys/locked-users` endpoint is used to manage locked users in Vault.
+---
+
+# `/sys/locked-users`
+
+The `/sys/locked-users` endpoint is used to list and unlock locked users in Vault.
+
+Refer to the [user lockout](/vault/docs/concepts/user-lockout) overview for more details about how Vault handles lockouts.
+
+## List locked users
+
+The list endpoint returns information on the users currently locked by Vault.
+
+The response will include all child namespaces of the namespace in which the
+request was made. If some namespace has subsequently been deleted, its path will
+be listed as "deleted namespace :ID:." Deleted namespaces are reported only for
+queries in the root namespace because the information about the namespace path
+is unknown. The response will be returned in the decreasing order of locked user
+counts.
+
+This endpoint was added in Vault 1.13.
+
+| Method | Path             |
+| :----- | :--------------- |
+| `GET` | `/sys/locked-users` |
+
+### Parameters
+
+- `mount_accessor` `(string, optional)` -  Specifies the identifier of the auth mount entry to which the user
+belongs in the namespace in which the request was made. If no mount accessor is specified,
+the response includes locked users in all child namespaces of the namespace in which the request was made.
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request GET \
+    http://127.0.0.1:8200/v1/sys/locked-users
+```
+
+### Sample response
+
+```json
+{
+   "request_id":"26be5ab9-dcac-9237-ec12-269a8ca647d5",
+   "lease_id":"",
+   "renewable":false,
+   "lease_duration":0,
+   "data":{
+      "by_namespace":[
+         {
+            "namespace_id":"BzIex",
+            "namespace_path":"ns1/",
+            "counts": 3,
+            "mount_accessors":[
+               {
+                  "mount_accessor":"auth_userpass_79e2fe02",
+                  "counts":3,
+                  "alias_identifiers":[
+                      {"user3"},
+                      {"user4"},
+                      {"user5"},
+                  ]
+               },
+            ]
+         },
+         {
+            "namespace_id":"root",
+            "namespace_path":"",
+            "counts":2,
+            "mount_accessors":[
+               {
+                  "mount_accessor":"auth_userpass_837f35fc",
+                  "counts":2,
+                  "alias_identifiers":[
+                      {"user1"},
+                      {"user2"}
+                  ]
+               },
+            ]
+         },
+          {
+            "namespace_id":"v1lb9",
+            "namespace_path":"ns1/ns2/",
+            "counts":1,
+            "mount_accessors":[
+               {
+                  "mount_accessor":"auth_userpass_af8d1d32",
+                  "counts":1,
+                  "alias_identifiers":[
+                      {"user6"}
+                  ]
+               },
+            ]
+         }
+      ],
+      "total":6
+   },
+   "wrap_info":null,
+   "warnings":null,
+   "auth":null
+}
+```
+
+For deleted namespaces, the response will look like:
+
+```json
+{
+   "request_id":"26be5ab9-dcac-9237-ec12-269a8ca647d5",
+   "lease_id":"",
+   "renewable":false,
+   "lease_duration":0,
+   "data":{
+      "by_namespace":[
+         {
+            "namespace_id":"BzIex",
+            "namespace_path":"ns1/",
+            "counts": 3,
+            "mount_accessors":[
+               {
+                  "mount_accessor":"auth_userpass_79e2fe02",
+                  "counts":3,
+                  "alias_identifiers":[
+                      {"user3"},
+                      {"user4"},
+                      {"user5"},
+                  ]
+               },
+            ]
+         },
+         {
+            "namespace_id":"root",
+            "namespace_path":"",
+            "counts":2,
+            "mount_accessors":[
+               {
+                  "mount_accessor":"auth_userpass_837f35fc",
+                  "counts":2,
+                  "alias_identifiers":[
+                      {"user1"},
+                      {"user2"}
+                  ]
+               },
+            ]
+         },
+          {
+            "namespace_id":"v1lb9",
+            "namespace_path":"deleted namespace v1lb9",
+            "counts":1,
+            "mount_accessors":[
+               {
+                  "mount_accessor":"auth_userpass_af8d1d32",
+                  "counts":1,
+                  "alias_identifiers":[
+                      {"user6"}
+                  ]
+               },
+            ]
+         }
+      ],
+      "total":6
+   },
+   "wrap_info":null,
+   "warnings":null,
+   "auth":null
+}
+```
+
+
+### Sample request with mount accessor
+
+#### Sample payload
+
+```json
+{
+  "mount_accessor": "auth_userpass_af8d1d32"
+}
+```
+
+#### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --data @payload.json \
+    --request GET \
+    http://127.0.0.1:8200/v1/sys/locked-users
+```
+
+## Unlock user
+
+The unlock user endpoint frees a locked user with the provided `mount_accessor` and `alias_identifier` in the given namespace.
+The unlock command is idempotent. Calls to the endpoint succeed even if the user matching the provided `mount_accessor` and `alias_identifier` is not currently locked.
+
+
+This endpoint was added in Vault 1.13.
+
+| Method | Path             |
+| :----- | :--------------- |
+| `POST` | `/sys/locked-users/:mount_accessor/unlock/:alias-identifier` |
+
+### Parameters
+
+- `mount_accessor` `(string, required)` - Specifies the identifier of the auth mount entry to which the user
+belongs
+- `alias_identifier` `(string, required)` - The name of the alias (user). For example, if the alias
+belongs to userpass backend, the name should be a valid username within userpass auth method. If the alias belongs
+to an approle auth method, the name should be a valid RoleID. If the alias belongs to an ldap auth method, the name
+should be a valid username.
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    http://127.0.0.1:8200/v1/sys/locked-users/auth_userpass_af8d1d32/unlock/bsmith
+```

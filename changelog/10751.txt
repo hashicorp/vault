@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/consul: Vault is now able to automatically bootstrap the Consul ACL system.
+```

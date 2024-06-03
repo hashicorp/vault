@@ -1,0 +1,3 @@
+```release-note:improvement
+agent: change auto-auth to preload an existing token on start
+```

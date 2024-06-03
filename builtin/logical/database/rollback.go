@@ -1,9 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package database
 
 import (
 	"context"
 	"errors"
 
+	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
@@ -92,7 +96,8 @@ func (b *databaseBackend) rollbackDatabaseCredentials(ctx context.Context, confi
 	}()
 
 	updateReq := v5.UpdateUserRequest{
-		Username: entry.UserName,
+		Username:       entry.UserName,
+		CredentialType: v5.CredentialTypePassword,
 		Password: &v5.ChangePassword{
 			NewPassword: entry.OldPassword,
 			Statements: v5.Statements{
@@ -104,7 +109,7 @@ func (b *databaseBackend) rollbackDatabaseCredentials(ctx context.Context, confi
 	// It actually is the root user here, but we only want to use SetCredentials since
 	// RotateRootCredentials doesn't give any control over what password is used
 	_, err = dbi.database.UpdateUser(ctx, updateReq, false)
-	if status.Code(err) == codes.Unimplemented {
+	if status.Code(err) == codes.Unimplemented || err == dbplugin.ErrPluginStaticUnsupported {
 		return nil
 	}
 	return err

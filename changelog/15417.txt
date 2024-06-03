@@ -1,0 +1,3 @@
+```release-note:improvement
+command: Support the optional '-detailed' flag to be passed to 'vault list' command to show ListResponseWithInfo data. Also supports the VAULT_DETAILED env var.
+```

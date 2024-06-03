@@ -1,0 +1,86 @@
+---
+layout: docs
+page_title: Mount Migration
+description: Move secrets and auth mounts within and across namespaces
+---
+
+# Mount migration
+
+Vault supports moving secrets and auth mounts, both within and across namespaces. The operation
+is supported by API endpoints and a CLI helper around them.
+
+## Why
+
+There can be several reasons for wanting to migrate mounts. In Vault Community Edition, the use cases could be for 
+renaming mounts to align with org standards. 
+There may be more potential for use cases on Enterprise as namespaces come into the picture. 
+When migrating from a Community binary to an Enterprise binary, organizations may want to divide their 
+mounts across several namespaces. Mounts may also be moved across namespaces when there is a reorganization
+of roles and responsibilities.
+
+## Async behavior
+
+The first thing to note about the `sys/remount` endpoint is that it is an asynchronous endpoint. An invocation
+will start the migration process, and the API will return a migration ID. This ID, in turn, be used to monitor
+the migration status using the `sys/remount/status` endpoint.
+
+## Namespaces
+
+The `sys/remount` endpoint can move mounts across namespaces with the namespaces supplied as prefixes
+on the path arguments. In this case, namespaces, for both the source and destination mounts, must be 
+either the namespace in which the `/sys/remount` endpoint is called or the children of that namespace. Let us assume that 
+we have three namespaces ns1/, ns1/ns2/, and ns1/ns3. We want to move the mount `my-secret` from ns1/ns2/my-secret to ns1/ns3/my-secret. 
+Moving the mount can be accomplished in two ways. The first way is to invoke `/sys/remount` from the root namespace with the `from` argument as ns1/ns2/my-secret 
+and `to` argument as ns1/ns3/my-secret. The second way is to invoke `/sys/remount` from the namespace ns1/, with `from` as ns2/my-secret and `to` 
+as ns3/my-secret.
+
+## Leases
+
+The remount operation will result in existing leases on a mount being revoked. On mounts with a large number of leases, the revocation process and hence remounting as a whole may be a time consuming process.
+Any dynamic secrets for a secrets mount and any tokens associated
+with an auth mount, will be revoked during the remount process.
+
+## Configurations
+
+The remount operation will retain all the configurations of the mount. For example, if you create a read-only role
+on a database mount or a user on a userpass mount, those will be available at the new location after remounting.
+
+## Cleanup operations
+
+There are two primary cleanup operations that Vault operators will need to keep in mind after performing a remount.
+
+### Entities and aliases
+
+Any aliases that refer to users on the auth mount could now point to an invalid mount when an auth mount is moved. Pointing to an invalid mount may not be the case for every instance;
+a remount within a namespace will end in the aliases pointing to a valid mount.
+Still, a remount across namespaces will always result in the aliases pointing to an invalid mount. In the latter case,
+the Vault operator should find and remove those aliases from the source namespace, and create equivalent aliases
+and entities for the new mount in the target namespace. If new entities and aliases aren't created in the target namespace,
+Vault will dynamically generate them upon login operations.
+
+### Policies
+
+Remounting can also result in policies referring to invalid paths. Any policy that refers to a moved secrets engine
+would need to be updated to point to the new location of the engine, assuming that the policy is in the target namespace 
+or a parent of the target namespace, or updated to remove the original mount path if not. 
+Any policies associated with roles on a moved auth mount need to be inspected
+to see if they still refer to valid paths after the remount operation. Say in namespace ns1/, a child of the root namespace, a role on the mount approle/
+has policies granting access to /my-secret. If the mount is moved to another child of the root namespace, say ns2/,
+which does not have a secrets engine called my-secret/, the Vault operator would either create an equivalent my-secret/
+mount in ns2/, or update the policy to refer to paths valid from the ns2/ namespace.
+
+## Quotas
+
+The mount being moved may have rate limit or lease count quotas.. The remount process
+will update these quotas to refer to the new path of the mount.
+
+## Path filters
+
+The remount operation will respect any existing path filters. Three uses cases, in particular, are shown below.
+here. 
+* If a mount is moved into a namespace denylisted on a secondary cluster, it will not be available on that cluster.
+* If a mount is moved from a namespace denylisted on a secondary cluster to one that is not, it will now be available
+on the cluster.
+* If a mount is specifically denylisted on a secondary cluster and is moved, it will now be available on the cluster.
+
+

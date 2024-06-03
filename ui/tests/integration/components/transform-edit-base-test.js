@@ -1,12 +1,17 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
-module('Integration | Component | transform-edit-base', function(hooks) {
+module('Integration | Component | transform-edit-base', function (hooks) {
   setupRenderingTest(hooks);
 
-  test('it renders', async function(assert) {
+  test('it renders', async function (assert) {
     // Set any properties with this.set('myProperty', 'value');
     // Handle any actions with this.set('myAction', function(val) { ... });
 
@@ -16,9 +21,9 @@ module('Integration | Component | transform-edit-base', function(hooks) {
 
     // Template block usage:
     await render(hbs`
-      {{#transform-edit-base}}
+      <TransformEditBase>
         template block text
-      {{/transform-edit-base}}
+      </TransformEditBase>
     `);
 
     assert.dom(this.element).hasText('template block text');

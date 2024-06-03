@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { hash, resolve } from 'rsvp';
 import Base from '../../replication-base';
 
@@ -8,7 +13,7 @@ export default Base.extend({
     const id = params.secondary_id;
     return hash({
       cluster: this.modelFor('application'),
-      config: this.store.findRecord('path-filter-config', id).catch(e => {
+      config: this.store.findRecord('path-filter-config', id).catch((e) => {
         if (e.httpStatus === 404) {
           // return an empty obj to let them nav to create
           return resolve({ id });
@@ -24,9 +29,9 @@ export default Base.extend({
     if (
       !this.version.hasPerfReplication ||
       replicationMode !== 'performance' ||
-      !cluster.get(`${replicationMode}.isPrimary`)
+      !cluster[replicationMode].isPrimary
     ) {
-      return this.transitionTo('mode', cluster.get('name'), replicationMode);
+      return this.router.transitionTo('vault.cluster.replication.mode', cluster.name, replicationMode);
     }
   },
 });

@@ -1,0 +1,38 @@
+---
+layout: api
+page_title: /sys/internal/ui/feature-flags - HTTP API
+description: >-
+  The `/sys/internal/ui/feature-flags` endpoint exposes feature flags to the UI.
+---
+
+# `/sys/internal/ui/feature-flags`
+
+The `/sys/internal/ui/feature-flags` endpoint is used to expose feature flags
+to the UI so that it can change its behavior in response, even before a user logs in.
+
+This is currently only being used internally for the UI and is
+an unauthenticated endpoint. Due to the nature of its intended usage, there is no
+guarantee on backwards compatibility for this endpoint.
+
+## Get enabled feature flags
+
+This endpoint lists the enabled feature flags relevant to the UI.
+
+| Method | Path                             |
+| :----- | :------------------------------- |
+| `GET`  | `/sys/internal/ui/feature-flags` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    http://127.0.0.1:8200/v1/sys/internal/ui/feature-flags
+```
+
+### Sample response
+
+```json
+{
+  "feature-flags": []
+}
+```

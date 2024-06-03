@@ -1,9 +1,13 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import RESTSerializer, { EmbeddedRecordsMixin } from '@ember-data/serializer/rest';
-import { assign } from '@ember/polyfills';
 import { decamelize } from '@ember/string';
 
 export default RESTSerializer.extend(EmbeddedRecordsMixin, {
-  keyForAttribute: function(attr) {
+  keyForAttribute: function (attr) {
     return decamelize(attr);
   },
 
@@ -20,7 +24,7 @@ export default RESTSerializer.extend(EmbeddedRecordsMixin, {
 
   nodeFromObject(name, payload) {
     const nodeObj = payload.nodes[name];
-    return assign(nodeObj, {
+    return Object.assign(nodeObj, {
       name,
       id: name,
     });
@@ -28,8 +32,8 @@ export default RESTSerializer.extend(EmbeddedRecordsMixin, {
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     const nodes = payload.nodes
-      ? Object.keys(payload.nodes).map(name => this.nodeFromObject(name, payload))
-      : [assign(payload, { id: '1' })];
+      ? Object.keys(payload.nodes).map((name) => this.nodeFromObject(name, payload))
+      : [Object.assign(payload, { id: '1' })];
 
     const transformedPayload = { nodes: nodes };
 

@@ -1,0 +1,3 @@
+```release-note:bug
+auth/kubernetes: Properly handle the migration of role storage entries containing an empty `alias_name_source`
+```

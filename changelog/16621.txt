@@ -1,0 +1,2 @@
+```release-note:improvement
+secrets/pki: Allow revocation of issuers within the same mount.

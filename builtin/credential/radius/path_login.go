@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package radius
 
 import (
@@ -8,30 +11,36 @@ import (
 	"strings"
 	"time"
 
-	"layeh.com/radius"
-	. "layeh.com/radius/rfc2865"
-
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"layeh.com/radius"
+	. "layeh.com/radius/rfc2865"
 )
 
 func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "login" + framework.OptionalParamRegex("urlusername"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixRadius,
+			OperationVerb:   "login",
+			OperationSuffix: "|with-username",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
-			"urlusername": &framework.FieldSchema{
+			"urlusername": {
 				Type:        framework.TypeString,
 				Description: "Username to be used for login. (URL parameter)",
 			},
 
-			"username": &framework.FieldSchema{
+			"username": {
 				Type:        framework.TypeString,
 				Description: "Username to be used for login. (POST request body)",
 			},
 
-			"password": &framework.FieldSchema{
+			"password": {
 				Type:        framework.TypeString,
 				Description: "Password for this user.",
 			},

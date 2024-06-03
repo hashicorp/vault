@@ -1,0 +1,7 @@
+```release-note:change
+auth/alicloud: require the `role` field on login
+```
+
+```release-note:bug
+auth/alicloud: fix regression in vault login command that caused login to fail
+```

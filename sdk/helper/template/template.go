@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package template
 
 import (
@@ -6,7 +9,7 @@ import (
 	"text/template"
 
 	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/sdk/helper/base62"
+	"github.com/hashicorp/go-secure-stdlib/base62"
 )
 
 type Opt func(*StringTemplate) error
@@ -36,35 +39,51 @@ func Function(name string, f interface{}) Opt {
 // StringTemplate creates strings based on the provided template.
 // This uses the go templating language, so anything that adheres to that language will function in this struct.
 // There are several custom functions available for use in the template:
-// - random (rand)
+// - random
 //   - Randomly generated characters. This uses the charset specified in RandomCharset. Must include a length.
 //     Example: {{ rand 20 }}
-// - truncate (trunc)
+//
+// - truncate
 //   - Truncates the previous value to the specified length. Must include a maximum length.
 //     Example: {{ .DisplayName | truncate 10 }}
-// - truncate_sha256 (trunc_sha256)
+//
+// - truncate_sha256
 //   - Truncates the previous value to the specified length. If the original length is greater than the length
 //     specified, the remaining characters will be sha256 hashed and appended to the end. The hash will be only the first 8 characters The maximum length will
 //     be no longer than the length specified.
 //     Example: {{ .DisplayName | truncate_sha256 30 }}
-// - uppercase (upper)
+//
+// - uppercase
 //   - Uppercases the previous value.
 //     Example: {{ .RoleName | uppercase }}
-// - lowercase (lower)
+//
+// - lowercase
 //   - Lowercases the previous value.
 //     Example: {{ .DisplayName | lowercase }}
+//
 // - replace
 //   - Performs a string find & replace
 //     Example: {{ .DisplayName | replace - _ }}
+//
 // - sha256
 //   - SHA256 hashes the previous value.
 //     Example: {{ .DisplayName | sha256 }}
-// - timestamp (now_seconds)
+//
+// - base64
+//   - base64 encodes the previous value.
+//     Example: {{ .DisplayName | base64 }}
+//
+// - unix_time
 //   - Provides the current unix time in seconds.
-//     Example: {{ now_seconds}}
-// - now_nano
-//   - Provides the current unix time in nanoseconds.
-//     Example: {{ now_nano}}
+//     Example: {{ unix_time }}
+//
+// - unix_time_millis
+//   - Provides the current unix time in milliseconds.
+//     Example: {{ unix_time_millis }}
+//
+// - timestamp
+//   - Provides the current time. Must include a standard Go format string
+//
 // - uuid
 //   - Generates a UUID
 //     Example: {{ uuid }}
@@ -81,22 +100,18 @@ func NewTemplate(opts ...Opt) (up StringTemplate, err error) {
 	up = StringTemplate{
 		funcMap: map[string]interface{}{
 			"random":          base62.Random,
-			"rand":            base62.Random,
 			"truncate":        truncate,
-			"trunc":           truncate,
 			"truncate_sha256": truncateSHA256,
-			"trunc_sha256":    truncateSHA256,
 			"uppercase":       uppercase,
-			"upper":           uppercase,
 			"lowercase":       lowercase,
-			"lower":           lowercase,
 			"replace":         replace,
 			"sha256":          hashSHA256,
+			"base64":          encodeBase64,
 
-			"timestamp":   nowSeconds,
-			"now_seconds": nowSeconds,
-			"now_nano":    nowNano,
-			"uuid":        uuid,
+			"unix_time":        unixTime,
+			"unix_time_millis": unixTimeMillis,
+			"timestamp":        timestamp,
+			"uuid":             uuid,
 		},
 	}
 
@@ -112,6 +127,10 @@ func NewTemplate(opts ...Opt) (up StringTemplate, err error) {
 
 	if up.rawTemplate == "" {
 		return StringTemplate{}, fmt.Errorf("missing template")
+	}
+
+	if len(up.rawTemplate) >= 100000 {
+		return StringTemplate{}, fmt.Errorf("template too large, length of template must be less than 100,000")
 	}
 
 	tmpl, err := template.New("template").

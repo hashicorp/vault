@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package aws
 
 import (
@@ -12,9 +15,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -35,7 +40,7 @@ type mockIAMClient struct {
 	iamiface.IAMAPI
 }
 
-func (m *mockIAMClient) CreateUser(input *iam.CreateUserInput) (*iam.CreateUserOutput, error) {
+func (m *mockIAMClient) CreateUserWithContext(_ aws.Context, input *iam.CreateUserInput, _ ...request.Option) (*iam.CreateUserOutput, error) {
 	return nil, awserr.New("Throttling", "", nil)
 }
 
@@ -44,7 +49,7 @@ func getBackend(t *testing.T) logical.Backend {
 	return be
 }
 
-func TestBackend_basic(t *testing.T) {
+func TestAcceptanceBackend_basic(t *testing.T) {
 	t.Parallel()
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
@@ -58,7 +63,7 @@ func TestBackend_basic(t *testing.T) {
 	})
 }
 
-func TestBackend_IamUserWithPermissionsBoundary(t *testing.T) {
+func TestAcceptanceBackend_IamUserWithPermissionsBoundary(t *testing.T) {
 	t.Parallel()
 	roleData := map[string]interface{}{
 		"credential_type":          iamUserCred,
@@ -77,15 +82,15 @@ func TestBackend_IamUserWithPermissionsBoundary(t *testing.T) {
 	})
 }
 
-func TestBackend_basicSTS(t *testing.T) {
+func TestAcceptanceBackend_basicSTS(t *testing.T) {
 	t.Parallel()
 	awsAccountID, err := getAccountID()
 	if err != nil {
 		t.Logf("Unable to retrive user via sts:GetCallerIdentity: %#v", err)
 		t.Skip("Could not determine AWS account ID from sts:GetCallerIdentity for acceptance tests, skipping")
 	}
-	roleName := generateUniqueName(t.Name())
-	userName := generateUniqueName(t.Name())
+	roleName := generateUniqueRoleName(t.Name())
+	userName := generateUniqueUserName(t.Name())
 	accessKey := &awsAccessKey{}
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
@@ -126,7 +131,7 @@ func TestBackend_policyCrud(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
+		AcceptanceTest: false,
 		LogicalBackend: getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
@@ -143,7 +148,7 @@ func TestBackend_throttled(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 
-	b := Backend()
+	b := Backend(config)
 	if err := b.Setup(context.Background(), config); err != nil {
 		t.Fatal(err)
 	}
@@ -195,12 +200,33 @@ func TestBackend_throttled(t *testing.T) {
 }
 
 func testAccPreCheck(t *testing.T) {
+	if !hasAWSCredentials() {
+		t.Skip("Skipping because AWS credentials could not be resolved. See https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials for information on how to set up AWS credentials.")
+	}
+
 	initSetup.Do(func() {
 		if v := os.Getenv("AWS_DEFAULT_REGION"); v == "" {
 			log.Println("[INFO] Test: Using us-west-2 as test region")
 			os.Setenv("AWS_DEFAULT_REGION", "us-west-2")
 		}
 	})
+}
+
+func hasAWSCredentials() bool {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	cfg, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		return false
+	}
+
+	creds, err := cfg.Credentials.Retrieve(ctx)
+	if err != nil {
+		return false
+	}
+
+	return creds.HasKeys()
 }
 
 func getAccountID() (string, error) {
@@ -216,7 +242,6 @@ func getAccountID() (string, error) {
 
 	params := &sts.GetCallerIdentityInput{}
 	res, err := svc.GetCallerIdentity(params)
-
 	if err != nil {
 		return "", err
 	}
@@ -236,8 +261,11 @@ func createRole(t *testing.T, roleName, awsAccountID string, policyARNs []string
               "Principal": {
                   "AWS": "arn:aws:iam::%s:root"
               },
-              "Action": "sts:AssumeRole"
-           }
+              "Action": [
+                  "sts:AssumeRole",
+                  "sts:SetSourceIdentity"
+              ]
+          }
       ]
 }
 `
@@ -269,7 +297,6 @@ func createRole(t *testing.T, roleName, awsAccountID string, policyARNs []string
 			RoleName:  aws.String(roleName), // Required
 		}
 		_, err = svc.AttachRolePolicy(attachment)
-
 		if err != nil {
 			t.Fatalf("AWS AttachRolePolicy failed: %v", err)
 		}
@@ -437,7 +464,6 @@ func deleteTestRole(roleName string) error {
 
 	log.Printf("[INFO] AWS DeleteRole: %s", roleName)
 	_, err = svc.DeleteRole(params)
-
 	if err != nil {
 		log.Printf("[WARN] AWS DeleteRole failed: %v", err)
 		return err
@@ -639,7 +665,7 @@ func testAccStepRead(t *testing.T, path, name string, credentialTests []credenti
 			var d struct {
 				AccessKey string `mapstructure:"access_key"`
 				SecretKey string `mapstructure:"secret_key"`
-				STSToken  string `mapstructure:"security_token"`
+				STSToken  string `mapstructure:"session_token"`
 			}
 			if err := mapstructure.Decode(resp.Data, &d); err != nil {
 				return err
@@ -656,7 +682,16 @@ func testAccStepRead(t *testing.T, path, name string, credentialTests []credenti
 	}
 }
 
-func testAccStepReadTTL(name string, maximumTTL time.Duration) logicaltest.TestStep {
+func testAccStepReadWithMFA(t *testing.T, path, name, mfaCode string, credentialTests []credentialTestFunc) logicaltest.TestStep {
+	step := testAccStepRead(t, path, name, credentialTests)
+	step.Data = map[string]interface{}{
+		"mfa_code": mfaCode,
+	}
+
+	return step
+}
+
+func testAccStepReadSTSResponse(name string, maximumTTL time.Duration) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      "creds/" + name,
@@ -872,6 +907,8 @@ func testAccStepReadPolicy(t *testing.T, name string, value string) logicaltest.
 				"user_path":                "",
 				"permissions_boundary_arn": "",
 				"iam_groups":               []string(nil),
+				"iam_tags":                 map[string]string(nil),
+				"mfa_serial_number":        "",
 			}
 			if !reflect.DeepEqual(resp.Data, expected) {
 				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
@@ -912,10 +949,12 @@ const testS3Policy = `{
     ]
 }`
 
-const adminAccessPolicyArn = "arn:aws:iam::aws:policy/AdministratorAccess"
-const ec2PolicyArn = "arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess"
-const iamPolicyArn = "arn:aws:iam::aws:policy/IAMReadOnlyAccess"
-const dynamoPolicyArn = "arn:aws:iam::aws:policy/AmazonDynamoDBReadOnlyAccess"
+const (
+	adminAccessPolicyArn = "arn:aws:iam::aws:policy/AdministratorAccess"
+	ec2PolicyArn         = "arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess"
+	iamPolicyArn         = "arn:aws:iam::aws:policy/IAMReadOnlyAccess"
+	dynamoPolicyArn      = "arn:aws:iam::aws:policy/AmazonDynamoDBReadOnlyAccess"
+)
 
 func testAccStepWriteRole(t *testing.T, name string, data map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
@@ -954,7 +993,7 @@ func testAccStepWriteArnPolicyRef(t *testing.T, name string, arn string) logical
 	}
 }
 
-func TestBackend_basicPolicyArnRef(t *testing.T) {
+func TestAcceptanceBackend_basicPolicyArnRef(t *testing.T) {
 	t.Parallel()
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
@@ -968,13 +1007,13 @@ func TestBackend_basicPolicyArnRef(t *testing.T) {
 	})
 }
 
-func TestBackend_iamUserManagedInlinePoliciesGroups(t *testing.T) {
+func TestAcceptanceBackend_iamUserManagedInlinePoliciesGroups(t *testing.T) {
 	t.Parallel()
 	compacted, err := compactJSON(testDynamoPolicy)
 	if err != nil {
 		t.Fatalf("bad: %#v", err)
 	}
-	groupName := generateUniqueName(t.Name())
+	groupName := generateUniqueGroupName(t.Name())
 	roleData := map[string]interface{}{
 		"policy_document": testDynamoPolicy,
 		"policy_arns":     []string{ec2PolicyArn, iamPolicyArn},
@@ -992,6 +1031,8 @@ func TestBackend_iamUserManagedInlinePoliciesGroups(t *testing.T) {
 		"user_path":                "/path/",
 		"permissions_boundary_arn": "",
 		"iam_groups":               []string{groupName},
+		"iam_tags":                 map[string]string(nil),
+		"mfa_serial_number":        "",
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -1016,10 +1057,10 @@ func TestBackend_iamUserManagedInlinePoliciesGroups(t *testing.T) {
 
 // Similar to TestBackend_iamUserManagedInlinePoliciesGroups() but managing
 // policies only with groups
-func TestBackend_iamUserGroups(t *testing.T) {
+func TestAcceptanceBackend_iamUserGroups(t *testing.T) {
 	t.Parallel()
-	group1Name := generateUniqueName(t.Name())
-	group2Name := generateUniqueName(t.Name())
+	group1Name := generateUniqueGroupName(t.Name())
+	group2Name := generateUniqueGroupName(t.Name())
 	roleData := map[string]interface{}{
 		"iam_groups":      []string{group1Name, group2Name},
 		"credential_type": iamUserCred,
@@ -1035,6 +1076,8 @@ func TestBackend_iamUserGroups(t *testing.T) {
 		"user_path":                "/path/",
 		"permissions_boundary_arn": "",
 		"iam_groups":               []string{group1Name, group2Name},
+		"iam_tags":                 map[string]string(nil),
+		"mfa_serial_number":        "",
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -1061,9 +1104,9 @@ func TestBackend_iamUserGroups(t *testing.T) {
 	})
 }
 
-func TestBackend_AssumedRoleWithPolicyDoc(t *testing.T) {
+func TestAcceptanceBackend_AssumedRoleWithPolicyDoc(t *testing.T) {
 	t.Parallel()
-	roleName := generateUniqueName(t.Name())
+	roleName := generateUniqueRoleName(t.Name())
 	// This looks a bit curious. The policy document and the role document act
 	// as a logical intersection of policies. The role allows ec2:Describe*
 	// (among other permissions). This policy allows everything BUT
@@ -1112,9 +1155,9 @@ func TestBackend_AssumedRoleWithPolicyDoc(t *testing.T) {
 	})
 }
 
-func TestBackend_AssumedRoleWithPolicyARN(t *testing.T) {
+func TestAcceptanceBackend_AssumedRoleWithPolicyARN(t *testing.T) {
 	t.Parallel()
-	roleName := generateUniqueName(t.Name())
+	roleName := generateUniqueRoleName(t.Name())
 
 	awsAccountID, err := getAccountID()
 	if err != nil {
@@ -1147,10 +1190,10 @@ func TestBackend_AssumedRoleWithPolicyARN(t *testing.T) {
 	})
 }
 
-func TestBackend_AssumedRoleWithGroups(t *testing.T) {
+func TestAcceptanceBackend_AssumedRoleWithGroups(t *testing.T) {
 	t.Parallel()
-	roleName := generateUniqueName(t.Name())
-	groupName := generateUniqueName(t.Name())
+	roleName := generateUniqueRoleName(t.Name())
+	groupName := generateUniqueGroupName(t.Name())
 	// This looks a bit curious. The policy document and the role document act
 	// as a logical intersection of policies. The role allows ec2:Describe*
 	// (among other permissions). This policy allows everything BUT
@@ -1204,9 +1247,9 @@ func TestBackend_AssumedRoleWithGroups(t *testing.T) {
 	})
 }
 
-func TestBackend_FederationTokenWithPolicyARN(t *testing.T) {
+func TestAcceptanceBackend_FederationTokenWithPolicyARN(t *testing.T) {
 	t.Parallel()
-	userName := generateUniqueName(t.Name())
+	userName := generateUniqueUserName(t.Name())
 	accessKey := &awsAccessKey{}
 
 	roleData := map[string]interface{}{
@@ -1235,10 +1278,10 @@ func TestBackend_FederationTokenWithPolicyARN(t *testing.T) {
 	})
 }
 
-func TestBackend_FederationTokenWithGroups(t *testing.T) {
+func TestAcceptanceBackend_FederationTokenWithGroups(t *testing.T) {
 	t.Parallel()
-	userName := generateUniqueName(t.Name())
-	groupName := generateUniqueName(t.Name())
+	userName := generateUniqueUserName(t.Name())
+	groupName := generateUniqueGroupName(t.Name())
 	accessKey := &awsAccessKey{}
 
 	// IAM policy where Statement is a single element, not a list
@@ -1285,9 +1328,89 @@ func TestBackend_FederationTokenWithGroups(t *testing.T) {
 	})
 }
 
-func TestBackend_RoleDefaultSTSTTL(t *testing.T) {
+func TestAcceptanceBackend_SessionToken(t *testing.T) {
 	t.Parallel()
-	roleName := generateUniqueName(t.Name())
+	userName := generateUniqueUserName(t.Name())
+	accessKey := &awsAccessKey{}
+
+	roleData := map[string]interface{}{
+		"credential_type": sessionTokenCred,
+	}
+	logicaltest.Test(t, logicaltest.TestCase{
+		AcceptanceTest: true,
+		PreCheck: func() {
+			testAccPreCheck(t)
+			createUser(t, userName, accessKey)
+			// Sleep sometime because AWS is eventually consistent
+			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
+			time.Sleep(10 * time.Second)
+		},
+		LogicalBackend: getBackend(t),
+		Steps: []logicaltest.TestStep{
+			testAccStepConfigWithCreds(t, accessKey),
+			testAccStepWriteRole(t, "test", roleData),
+			testAccStepRead(t, "sts", "test", []credentialTestFunc{listDynamoTablesTest}),
+			testAccStepRead(t, "creds", "test", []credentialTestFunc{listDynamoTablesTest}),
+		},
+		Teardown: func() error {
+			return deleteTestUser(accessKey, userName)
+		},
+	})
+}
+
+// Running this test requires a pre-made IAM user that has the necessary access permissions set
+// and a set MFA device. This device serial number along with the other associated values must
+// be set to the environment variables in the function below.
+// For this reason, the test is currently a manually run-only acceptance test.
+func TestAcceptanceBackend_SessionTokenWithMFA(t *testing.T) {
+	t.Parallel()
+
+	serial, found := os.LookupEnv("AWS_TEST_MFA_SERIAL_NUMBER")
+	if !found {
+		t.Skipf("AWS_TEST_MFA_SERIAL_NUMBER not set, skipping")
+	}
+	code, found := os.LookupEnv("AWS_TEST_MFA_CODE")
+	if !found {
+		t.Skipf("AWS_TEST_MFA_CODE not set, skipping")
+	}
+	accessKeyID, found := os.LookupEnv("AWS_TEST_MFA_USER_ACCESS_KEY")
+	if !found {
+		t.Skipf("AWS_TEST_MFA_USER_ACCESS_KEY not set, skipping")
+	}
+	secretKey, found := os.LookupEnv("AWS_TEST_MFA_USER_SECRET_KEY")
+	if !found {
+		t.Skipf("AWS_TEST_MFA_USER_SECRET_KEY not set, skipping")
+	}
+
+	accessKey := &awsAccessKey{}
+	accessKey.AccessKeyID = accessKeyID
+	accessKey.SecretAccessKey = secretKey
+
+	roleData := map[string]interface{}{
+		"credential_type":   sessionTokenCred,
+		"mfa_serial_number": serial,
+	}
+	logicaltest.Test(t, logicaltest.TestCase{
+		AcceptanceTest: true,
+		PreCheck: func() {
+			testAccPreCheck(t)
+			// Sleep sometime because AWS is eventually consistent
+			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
+			time.Sleep(10 * time.Second)
+		},
+		LogicalBackend: getBackend(t),
+		Steps: []logicaltest.TestStep{
+			testAccStepConfigWithCreds(t, accessKey),
+			testAccStepWriteRole(t, "test", roleData),
+			testAccStepReadWithMFA(t, "sts", "test", code, []credentialTestFunc{listDynamoTablesTest}),
+			testAccStepReadWithMFA(t, "creds", "test", code, []credentialTestFunc{listDynamoTablesTest}),
+		},
+	})
+}
+
+func TestAcceptanceBackend_RoleDefaultSTSTTL(t *testing.T) {
+	t.Parallel()
+	roleName := generateUniqueRoleName(t.Name())
 	minAwsAssumeRoleDuration := 900
 	awsAccountID, err := getAccountID()
 	if err != nil {
@@ -1312,7 +1435,7 @@ func TestBackend_RoleDefaultSTSTTL(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepWriteRole(t, "test", roleData),
-			testAccStepReadTTL("test", time.Duration(minAwsAssumeRoleDuration)*time.Second), // allow a little slack
+			testAccStepReadSTSResponse("test", time.Duration(minAwsAssumeRoleDuration)*time.Second), // allow a little slack
 		},
 		Teardown: func() error {
 			return deleteTestRole(roleName)
@@ -1323,7 +1446,7 @@ func TestBackend_RoleDefaultSTSTTL(t *testing.T) {
 func TestBackend_policyArnCrud(t *testing.T) {
 	t.Parallel()
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
+		AcceptanceTest: false,
 		LogicalBackend: getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
@@ -1358,6 +1481,8 @@ func testAccStepReadArnPolicy(t *testing.T, name string, value string) logicalte
 				"user_path":                "",
 				"permissions_boundary_arn": "",
 				"iam_groups":               []string(nil),
+				"iam_tags":                 map[string]string(nil),
+				"mfa_serial_number":        "",
 			}
 			if !reflect.DeepEqual(resp.Data, expected) {
 				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
@@ -1381,7 +1506,7 @@ func testAccStepWriteArnRoleRef(t *testing.T, vaultRoleName, awsRoleName, awsAcc
 func TestBackend_iamGroupsCrud(t *testing.T) {
 	t.Parallel()
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
+		AcceptanceTest: false,
 		LogicalBackend: getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
@@ -1427,6 +1552,8 @@ func testAccStepReadIamGroups(t *testing.T, name string, groups []string) logica
 				"user_path":                "",
 				"permissions_boundary_arn": "",
 				"iam_groups":               groups,
+				"iam_tags":                 map[string]string(nil),
+				"mfa_serial_number":        "",
 			}
 			if !reflect.DeepEqual(resp.Data, expected) {
 				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
@@ -1437,8 +1564,84 @@ func testAccStepReadIamGroups(t *testing.T, name string, groups []string) logica
 	}
 }
 
-func generateUniqueName(prefix string) string {
-	return testhelpers.RandomWithPrefix(prefix)
+func TestBackend_iamTagsCrud(t *testing.T) {
+	logicaltest.Test(t, logicaltest.TestCase{
+		AcceptanceTest: false,
+		LogicalBackend: getBackend(t),
+		Steps: []logicaltest.TestStep{
+			testAccStepConfig(t),
+			testAccStepWriteIamTags(t, "test", map[string]string{"key1": "value1", "key2": "value2"}),
+			testAccStepReadIamTags(t, "test", map[string]string{"key1": "value1", "key2": "value2"}),
+			testAccStepDeletePolicy(t, "test"),
+			testAccStepReadIamTags(t, "test", map[string]string{}),
+		},
+	})
+}
+
+func testAccStepWriteIamTags(t *testing.T, name string, tags map[string]string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/" + name,
+		Data: map[string]interface{}{
+			"credential_type": iamUserCred,
+			"iam_tags":        tags,
+		},
+	}
+}
+
+func testAccStepReadIamTags(t *testing.T, name string, tags map[string]string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.ReadOperation,
+		Path:      "roles/" + name,
+		Check: func(resp *logical.Response) error {
+			if resp == nil {
+				if len(tags) == 0 {
+					return nil
+				}
+
+				return fmt.Errorf("vault response not received")
+			}
+
+			expected := map[string]interface{}{
+				"policy_arns":              []string(nil),
+				"role_arns":                []string(nil),
+				"policy_document":          "",
+				"credential_type":          iamUserCred,
+				"default_sts_ttl":          int64(0),
+				"max_sts_ttl":              int64(0),
+				"user_path":                "",
+				"permissions_boundary_arn": "",
+				"iam_groups":               []string(nil),
+				"iam_tags":                 tags,
+				"mfa_serial_number":        "",
+			}
+			if !reflect.DeepEqual(resp.Data, expected) {
+				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
+			}
+
+			return nil
+		},
+	}
+}
+
+func generateUniqueRoleName(prefix string) string {
+	return generateUniqueName(prefix, 64)
+}
+
+func generateUniqueUserName(prefix string) string {
+	return generateUniqueName(prefix, 64)
+}
+
+func generateUniqueGroupName(prefix string) string {
+	return generateUniqueName(prefix, 128)
+}
+
+func generateUniqueName(prefix string, maxLength int) string {
+	name := testhelpers.RandomWithPrefix(prefix)
+	if len(name) > maxLength {
+		return name[:maxLength]
+	}
+	return name
 }
 
 type awsAccessKey struct {

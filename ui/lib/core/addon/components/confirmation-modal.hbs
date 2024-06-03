@@ -1,0 +1,47 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{#if @isActive}}
+  <Hds::Modal id="confirmation-modal" @onClose={{@onClose}} @color="critical" as |M|>
+    <M.Header data-test-confirmation-modal-title @icon="alert-triangle">
+      {{@title}}
+    </M.Header>
+    <M.Body>
+      {{yield}}
+      <div class="has-top-padding-m">
+        <p class="has-text-weight-semibold is-size-6">
+          Confirm
+        </p>
+        <label class="sub-text has-top-bottom-margin-xxs" for={{concat "confirm-" (dasherize this.confirmText)}}>Type
+          <strong>{{this.confirmText}}</strong>
+          to confirm
+          {{@toConfirmMsg}}
+        </label>
+        <Input
+          @type="text"
+          @value={{this.confirmationInput}}
+          name="confirmationInput"
+          class="input has-margin-top"
+          autocomplete="off"
+          spellcheck="false"
+          data-test-confirmation-modal-input={{@title}}
+          id={{concat "confirm-" (dasherize this.confirmText)}}
+        />
+      </div>
+    </M.Body>
+    <M.Footer>
+      <Hds::ButtonSet>
+        <Hds::Button
+          @color="critical"
+          disabled={{not-eq this.confirmationInput this.confirmText}}
+          {{on "click" @onConfirm}}
+          data-test-confirm-button={{@title}}
+          @text={{or @buttonText "Confirm"}}
+        />
+        <Hds::Button @text="Cancel" @color="secondary" {{on "click" @onClose}} data-test-cancel-button />
+      </Hds::ButtonSet>
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}

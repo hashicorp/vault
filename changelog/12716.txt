@@ -1,0 +1,3 @@
+```release-note:bug
+pki: Fix regression preventing email addresses being used as a common name within certificates
+```

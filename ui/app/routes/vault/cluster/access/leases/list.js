@@ -1,8 +1,16 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { set } from '@ember/object';
 import { hash } from 'rsvp';
 import Route from '@ember/routing/route';
+import { service } from '@ember/service';
 
 export default Route.extend({
+  store: service(),
+
   queryParams: {
     page: {
       refreshModel: true,
@@ -16,7 +24,7 @@ export default Route.extend({
 
   model(params) {
     const prefix = params.prefix || '';
-    if (this.modelFor('vault.cluster.access.leases').get('canList')) {
+    if (this.modelFor('vault.cluster.access.leases').canList) {
       return hash({
         leases: this.store
           .lazyPaginatedQuery('lease', {
@@ -25,11 +33,11 @@ export default Route.extend({
             page: params.page,
             pageFilter: params.pageFilter,
           })
-          .then(model => {
+          .then((model) => {
             this.set('has404', false);
             return model;
           })
-          .catch(err => {
+          .catch((err) => {
             if (err.httpStatus === 404 && prefix === '') {
               return [];
             } else {
@@ -65,7 +73,7 @@ export default Route.extend({
       }
       controller.setProperties({
         filter: filter || '',
-        page: model.leases.get('meta.currentPage'),
+        page: model.leases?.meta?.currentPage,
       });
     }
   },
@@ -82,7 +90,8 @@ export default Route.extend({
       const { prefix } = this.paramsFor(this.routeName);
 
       set(error, 'keyId', prefix);
-      const hasModel = this.controllerFor(this.routeName).get('hasModel');
+      /* eslint-disable-next-line ember/no-controller-access-in-routes */
+      const hasModel = this.controllerFor(this.routeName).hasModel;
       // only swallow the error if we have a previous model
       if (hasModel && error.httpStatus === 404) {
         this.set('has404', true);

@@ -1,0 +1,31 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
+rules:
+  - id: loopclosure
+    patterns:
+      - pattern-inside: |
+          for $A, $B := range $C {
+            ...
+          }
+      - pattern-inside: |
+          go func() {
+            ...
+          }()
+      - pattern-not-inside: |
+          go func(..., $B, ...) {
+            ...
+          }(..., $B, ...)
+      - pattern-not-inside: |
+          go func() {
+            ...
+            for ... {
+              ...
+            }
+            ...
+          }()
+      - pattern: $B
+    message: Loop variable $B used inside goroutine
+    languages:
+      - go
+    severity: WARNING

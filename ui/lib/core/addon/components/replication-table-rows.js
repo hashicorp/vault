@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { reads } from '@ember/object/computed';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
@@ -24,13 +29,13 @@ export default Component.extend({
   replicationDetails: null,
   clusterMode: null,
   secondaryId: reads('replicationDetails.secondaryId'),
-  primaryClusterAddr: computed('replicationDetails.primaryClusterAddr', function() {
+  primaryClusterAddr: computed('replicationDetails.primaryClusterAddr', function () {
     return this.replicationDetails.primaryClusterAddr || 'None set';
   }),
-  merkleRoot: computed('replicationDetails.merkleRoot', function() {
+  merkleRoot: computed('replicationDetails.merkleRoot', function () {
     return this.replicationDetails.merkleRoot || 'unknown';
   }),
-  clusterId: computed('replicationDetails.clusterId', function() {
+  clusterId: computed('replicationDetails.clusterId', function () {
     return this.replicationDetails.clusterId || 'unknown';
   }),
 });

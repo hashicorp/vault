@@ -1,0 +1,5 @@
+```release-note:feature
+**KV patch**: Add partial update support the for the `/<mount>/data/:path` kv-v2
+endpoint through HTTP `PATCH`.  A new `patch` ACL capability has been added and
+is required to make such requests.
+```

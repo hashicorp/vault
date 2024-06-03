@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -5,12 +8,14 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/cli"
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*PathHelpCommand)(nil)
-var _ cli.CommandAutocomplete = (*PathHelpCommand)(nil)
+var (
+	_ cli.Command             = (*PathHelpCommand)(nil)
+	_ cli.CommandAutocomplete = (*PathHelpCommand)(nil)
+)
 
 var pathHelpVaultSealedMessage = strings.TrimSpace(`
 Error: Vault is sealed.

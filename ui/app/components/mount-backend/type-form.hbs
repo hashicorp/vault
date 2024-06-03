@@ -1,0 +1,38 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{#each (array "generic" "cloud" "infra") as |category|}}
+  <Hds::Text::Display class="has-top-padding-m has-bottom-padding-s" @tag="h2" size="400">
+    {{capitalize category}}
+  </Hds::Text::Display>
+  <div class="flex row-wrap row-gap-8 column-gap-16 has-bottom-padding-m">
+    {{#each (filter-by "category" category this.mountTypes) as |type|}}
+      <SelectableCard
+        id={{type.type}}
+        class="has-top-padding-l has-text-centered small-card"
+        @onClick={{fn @setMountType type.type}}
+        @disabled={{if type.requiredFeature (not (has-feature type.requiredFeature)) false}}
+        data-test-mount-type={{type.type}}
+      >
+        <Icon @name={{type.glyph}} @size="24" class="has-bottom-margin-xs" />
+        <Hds::Text::Body @tag="h3" @size="300">
+          {{type.displayName}}
+        </Hds::Text::Body>
+        {{#if (and type.requiredFeature (not (has-feature type.requiredFeature)))}}
+          <Hds::Badge @text="Enterprise" @icon="enterprise" @size="small" />
+        {{/if}}
+      </SelectableCard>
+    {{/each}}
+  </div>
+{{/each}}
+
+<div class="field is-grouped box is-fullwidth is-bottomless">
+  <Hds::Button
+    @text="Cancel"
+    @color="secondary"
+    @route={{if (eq @mountType "secret") "vault.cluster.secrets.backends" "vault.cluster.access.methods"}}
+    data-test-cancel
+  />
+</div>

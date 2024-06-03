@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fixes long secret key names overlapping masked values
+```

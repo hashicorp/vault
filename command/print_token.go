@@ -1,14 +1,19 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
 	"strings"
 
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/cli"
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*PrintTokenCommand)(nil)
-var _ cli.CommandAutocomplete = (*PrintTokenCommand)(nil)
+var (
+	_ cli.Command             = (*PrintTokenCommand)(nil)
+	_ cli.CommandAutocomplete = (*PrintTokenCommand)(nil)
+)
 
 type PrintTokenCommand struct {
 	*BaseCommand

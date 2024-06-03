@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
 
-if [[ ! -e http/bindata_assetfs.go ]]
+
+if [[ ! -e http/web_ui/index.html ]]
 then
   printf "Compiled UI assets not found. They can be built with: make static-dist\n\n"
+  exit 1
 else
-  if [[ `find http/bindata_assetfs.go -mmin +10080` ]]
+  if [[ `find http/web_ui/index.html -mmin +10080` ]]
   then
     printf "Compiled UI assets are more than one week old. They can be rebuilt with: make static-dist\n\n"
+    exit 1
   fi
 fi

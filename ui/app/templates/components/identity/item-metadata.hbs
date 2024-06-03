@@ -1,4 +1,9 @@
-{{#each-in model.metadata as |key value|}}
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{#each-in @model.metadata as |key value|}}
   <div class="info-table-row is-mobile">
     <div class="is-flex is-fullwidth">
       <div class="column is-one-quarter">
@@ -10,22 +15,24 @@
         {{value}}
       </div>
       <div class="column has-text-right">
-        {{#if model.canEdit}}
-          <Identity::PopupMetadata @params={{array model key}} />
+        {{#if @model.canEdit}}
+          <Identity::PopupMetadata @key={{key}} @model={{@model}} />
         {{/if}}
       </div>
     </div>
   </div>
 {{else}}
   <EmptyState
-    @title="No metadata for {{model.name}}"
-    @message="You can store custom data that you want to associate with a {{lowercase (humanize model.identityType)}}. Edit this {{lowercase (humanize model.identityType)}} to get started."
+    @title="No metadata for {{@model.name}}"
+    @message='You can store custom data that you want to associate with this {{lowercase
+      (humanize @model.identityType)
+    }}. Click "Edit {{lowercase (humanize @model.identityType)}}" to get started.'
   >
-    <LinkTo @route="vault.cluster.access.identity.edit" @model={{model.id}} @tagName="button" class="link">
-      Edit {{lowercase (humanize model.identityType)}}
-    </LinkTo>
-    <LearnLink @path="/vault/identity-access-management/iam-identity">
-      Learn more
-    </LearnLink>
+    <Hds::Link::Standalone
+      @text="Identity: entities and groups tutorial"
+      @href={{doc-link "/vault/tutorials/auth-methods/identity"}}
+      @icon="learn-link"
+      @iconPosition="trailing"
+    />
   </EmptyState>
 {{/each-in}}

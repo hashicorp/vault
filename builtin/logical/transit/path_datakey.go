@@ -1,11 +1,16 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package transit
 
 import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"errors"
 	"fmt"
 
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
@@ -15,36 +20,43 @@ import (
 func (b *backend) pathDatakey() *framework.Path {
 	return &framework.Path{
 		Pattern: "datakey/" + framework.GenericNameRegex("plaintext") + "/" + framework.GenericNameRegex("name"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+			OperationVerb:   "generate",
+			OperationSuffix: "data-key",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "The backend key used for encrypting the data key",
 			},
 
-			"plaintext": &framework.FieldSchema{
+			"plaintext": {
 				Type: framework.TypeString,
 				Description: `"plaintext" will return the key in both plaintext and
 ciphertext; "wrapped" will return the ciphertext only.`,
 			},
 
-			"context": &framework.FieldSchema{
+			"context": {
 				Type:        framework.TypeString,
 				Description: "Context for key derivation. Required for derived keys.",
 			},
 
-			"nonce": &framework.FieldSchema{
+			"nonce": {
 				Type:        framework.TypeString,
 				Description: "Nonce for when convergent encryption v1 is used (only in Vault 0.6.1)",
 			},
 
-			"bits": &framework.FieldSchema{
+			"bits": {
 				Type: framework.TypeInt,
 				Description: `Number of bits for the key; currently 128, 256,
 and 512 bits are supported. Defaults to 256.`,
 				Default: 256,
 			},
 
-			"key_version": &framework.FieldSchema{
+			"key_version": {
 				Type: framework.TypeInt,
 				Description: `The version of the Vault key to use for
 encryption of the data key. Must be 0 (for latest)
@@ -99,7 +111,7 @@ func (b *backend) pathDatakeyWrite(ctx context.Context, req *logical.Request, d 
 	}
 
 	// Get the policy
-	p, _, err := b.lm.GetPolicy(ctx, keysutil.PolicyRequest{
+	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
 		Name:    name,
 	}, b.GetRandomReader())
@@ -130,7 +142,23 @@ func (b *backend) pathDatakeyWrite(ctx context.Context, req *logical.Request, d 
 		return nil, err
 	}
 
-	ciphertext, err := p.Encrypt(ver, context, nonce, base64.StdEncoding.EncodeToString(newKey))
+	var managedKeyFactory ManagedKeyFactory
+	if p.Type == keysutil.KeyType_MANAGED_KEY {
+		managedKeySystemView, ok := b.System().(logical.ManagedKeySystemView)
+		if !ok {
+			return nil, errors.New("unsupported system view")
+		}
+
+		managedKeyFactory = ManagedKeyFactory{
+			managedKeyParams: keysutil.ManagedKeyParameters{
+				ManagedKeySystemView: managedKeySystemView,
+				BackendUUID:          b.backendUUID,
+				Context:              ctx,
+			},
+		}
+	}
+
+	ciphertext, err := p.EncryptWithFactory(ver, context, nonce, base64.StdEncoding.EncodeToString(newKey), nil, managedKeyFactory)
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:
@@ -157,6 +185,14 @@ func (b *backend) pathDatakeyWrite(ctx context.Context, req *logical.Request, d 
 			"ciphertext":  ciphertext,
 			"key_version": keyVersion,
 		},
+	}
+
+	if len(nonce) > 0 && !nonceAllowed(p) {
+		return nil, ErrNonceNotAllowed
+	}
+
+	if constants.IsFIPS() && shouldWarnAboutNonceUsage(p, nonce) {
+		resp.AddWarning("A provided nonce value was used within FIPS mode, this violates FIPS 140 compliance.")
 	}
 
 	if plaintextAllowed {

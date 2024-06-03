@@ -1,0 +1,4 @@
+```release-note:bug
+core: `-output-curl-string` now properly sets cURL options for client and CA
+certificates.
+```

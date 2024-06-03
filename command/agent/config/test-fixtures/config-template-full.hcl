@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 pid_file = "./pidfile"
 
 auto_auth {
@@ -45,5 +48,10 @@ template {
   wait {
     min = "10s"
     max = "40s"
+  }
+
+  exec {
+    command = ["foo"]
+    timeout = "10s"
   }
 }

@@ -1,0 +1,3 @@
+```release-note:feature
+**Aerospike Storage Backend**: Add support for using Aerospike as a storage backend
+```

@@ -1,0 +1,4 @@
+```release-note:bug
+api/seal-status: Fix deadlock on calls to sys/seal-status with a namespace configured
+on the request.
+```

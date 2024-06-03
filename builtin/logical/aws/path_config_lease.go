@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package aws
 
 import (
@@ -5,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -12,21 +16,37 @@ import (
 func pathConfigLease(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/lease",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+		},
+
 		Fields: map[string]*framework.FieldSchema{
-			"lease": &framework.FieldSchema{
+			"lease": {
 				Type:        framework.TypeString,
 				Description: "Default lease for roles.",
 			},
 
-			"lease_max": &framework.FieldSchema{
+			"lease_max": {
 				Type:        framework.TypeString,
 				Description: "Maximum time a credential is valid for.",
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathLeaseRead,
-			logical.UpdateOperation: b.pathLeaseWrite,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathLeaseRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "lease-configuration",
+				},
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathLeaseWrite,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "lease",
+				},
+			},
 		},
 
 		HelpSynopsis:    pathConfigLeaseHelpSyn,
@@ -63,12 +83,12 @@ func (b *backend) pathLeaseWrite(ctx context.Context, req *logical.Request, d *f
 		return logical.ErrorResponse("'lease_max' is a required parameter"), nil
 	}
 
-	lease, err := time.ParseDuration(leaseRaw)
+	lease, err := parseutil.ParseDurationSecond(leaseRaw)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(
 			"Invalid lease: %s", err)), nil
 	}
-	leaseMax, err := time.ParseDuration(leaseMaxRaw)
+	leaseMax, err := parseutil.ParseDurationSecond(leaseMaxRaw)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(
 			"Invalid lease_max: %s", err)), nil
@@ -91,7 +111,6 @@ func (b *backend) pathLeaseWrite(ctx context.Context, req *logical.Request, d *f
 
 func (b *backend) pathLeaseRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	lease, err := b.Lease(ctx, req.Storage)
-
 	if err != nil {
 		return nil, err
 	}

@@ -1,40 +1,39 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div class="box is-fullwidth is-shadowless is-marginless">
   <h4 class="title is-5">
     Revoke a secondary token
   </h4>
 </div>
-{{message-error errors=errors}}
+<MessageError @errors={{this.errors}} />
 <div class="field">
   <label for="activation-token-id" class="is-label">
     Secondary ID
   </label>
   <div class="control">
-    {{input class="input" name="activation-token-id" id="activation-token-id" value=id }}
+    <Input class="input" name="activation-token-id" id="activation-token-id" @value={{this.id}} />
   </div>
   <p class="help has-text-grey">
     The secondary id to revoke; given initially to generate a secondary token.
   </p>
 </div>
-<div class="field is-grouped box is-fullwidth is-bottomless">
-  <div class="control">
-    <ConfirmAction
-      @buttonClasses="button is-primary"
-      @confirmTitle="Revoke token?"
-      @confirmMessage="This will revoke this secondary token."
-      @confirmButtonText="Revoke"
-      @disabled={{not id}}
-      @disabledMessage="A secondary ID is required perform revocation."
-      @horizontalPosition="auto-left"
-      @onConfirmAction={{action "onSubmit" "revoke-secondary" "primary" (hash id=id)}}
-    >
-      Revoke
-    </ConfirmAction>
-  </div>
-  <div class="control">
-    {{#unless isRevoking}}
-      {{#link-to "mode.secondaries" replicationMode class="button"}}
-        Cancel
-      {{/link-to}}
-    {{/unless}}
-  </div>
-</div>
+<hr class="has-background-gray-100" />
+<Hds::ButtonSet>
+  <ConfirmAction
+    @buttonText="Revoke"
+    @confirmTitle="Revoke token?"
+    @confirmMessage="This will revoke this secondary token."
+    @disabledMessage={{unless this.id "A secondary ID is required perform revocation."}}
+    @onConfirmAction={{action "onSubmit" "revoke-secondary" "primary" (hash id=this.id)}}
+  />
+  <Hds::Button
+    @text="Cancel"
+    @color="secondary"
+    @route="mode.secondaries"
+    @model={{this.replicationMode}}
+    @disabled={{this.isRevoking}}
+  />
+</Hds::ButtonSet>

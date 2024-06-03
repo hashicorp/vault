@@ -1,30 +1,35 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render } from '@ember/test-helpers';
+import { click, render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
+import sinon from 'sinon';
 
-const TOTAL = 15;
-const CARD_TITLE = 'Tokens';
-
-module('Integration | Component selectable-card', function(hooks) {
+module('Integration | Component selectable-card', function (hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function() {
-    this.set('total', TOTAL);
-    this.set('cardTitle', CARD_TITLE);
+  hooks.beforeEach(function () {
+    this.onClick = sinon.spy();
   });
 
-  test('it shows the card total', async function(assert) {
-    await render(hbs`<SelectableCard @total={{total}} @cardTitle={{cardTitle}}/>`);
-    let titleNumber = this.element.querySelector('.title-number').innerText;
-
-    assert.equal(titleNumber, 15);
+  test('it renders', async function (assert) {
+    await render(hbs`<SelectableCard @onClick={{this.onClick}}/>`);
+    await click('.selectable-card');
+    assert.ok(this.onClick.calledOnce, 'calls on click');
   });
 
-  test('it returns non-plural version of card title if total is 1, ', async function(assert) {
-    await render(hbs`<SelectableCard @total={{1}} @cardTitle={{cardTitle}}/>`);
-    let titleText = this.element.querySelector('.title').innerText;
+  test('it renders block content', async function (assert) {
+    await render(hbs`<SelectableCard  @onClick={{this.onClick}}>hello</SelectableCard>`);
+    assert.dom('.selectable-card').hasText('hello');
+  });
 
-    assert.equal(titleText, 'Token');
+  test('it does not process click event on disabled card', async function (assert) {
+    await render(hbs`<SelectableCard @onClick={{this.onClick}} @disabled={{true}}>disabled</SelectableCard>`);
+    await click('.selectable-card');
+    assert.notOk(this.onClick.calledOnce, 'does not call the click event');
   });
 });

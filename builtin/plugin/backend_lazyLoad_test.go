@@ -1,21 +1,22 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package plugin
 
 import (
 	"context"
+	"errors"
 	"testing"
-
-	"github.com/hashicorp/vault/sdk/helper/logging"
-
-	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin"
 )
 
 func TestBackend_lazyLoad(t *testing.T) {
-
 	// normal load
 	var invocations int
 	b := testLazyLoad(t, func() error {
@@ -47,7 +48,6 @@ func TestBackend_lazyLoad(t *testing.T) {
 }
 
 func testLazyLoad(t *testing.T, methodWrapper func() error) *PluginBackend {
-
 	sysView := newTestSystemView()
 
 	ctx := context.Background()
@@ -148,12 +148,15 @@ func (b *testBackend) Logger() hclog.Logger {
 func (b *testBackend) HandleRequest(context.Context, *logical.Request) (*logical.Response, error) {
 	panic("not needed")
 }
+
 func (b *testBackend) System() logical.SystemView {
 	panic("not needed")
 }
+
 func (b *testBackend) HandleExistenceCheck(context.Context, *logical.Request) (bool, bool, error) {
 	panic("not needed")
 }
+
 func (b *testBackend) InvalidateKey(context.Context, string) {
 	panic("not needed")
 }
@@ -174,7 +177,6 @@ func newTestSystemView() testSystemView {
 }
 
 func (v testSystemView) LookupPlugin(context.Context, string, consts.PluginType) (*pluginutil.PluginRunner, error) {
-
 	return &pluginutil.PluginRunner{
 		Name:    "test-plugin-runner",
 		Builtin: true,
@@ -182,4 +184,18 @@ func (v testSystemView) LookupPlugin(context.Context, string, consts.PluginType)
 			return v.factory, nil
 		},
 	}, nil
+}
+
+func (v testSystemView) LookupPluginVersion(context.Context, string, consts.PluginType, string) (*pluginutil.PluginRunner, error) {
+	return &pluginutil.PluginRunner{
+		Name:    "test-plugin-runner",
+		Builtin: true,
+		BuiltinFactory: func() (interface{}, error) {
+			return v.factory, nil
+		},
+	}, nil
+}
+
+func (v testSystemView) ListVersionedPlugins(_ context.Context, _ consts.PluginType) ([]pluginutil.VersionedPlugin, error) {
+	return nil, errors.New("ListVersionedPlugins not implemented for testSystemView")
 }

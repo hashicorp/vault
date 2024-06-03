@@ -1,0 +1,3 @@
+```release-note:bug
+plugin: Fix a bug where plugin reload would falsely report success in certain scenarios.
+```

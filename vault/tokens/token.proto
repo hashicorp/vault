@@ -1,0 +1,21 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
+syntax = "proto3";
+
+package tokens;
+
+option go_package = "github.com/hashicorp/vault/vault/tokens";
+
+// SignedToken
+message SignedToken {
+  uint64 token_version = 1; // always 1 for now
+  bytes hmac = 2; // HMAC of token
+  bytes token = 3; // protobuf-marshalled Token message
+}
+
+message Token {
+  string random = 1; // unencoded equiv of former $randbase62
+  uint64 local_index = 2; // required storage state to have this token
+  uint32 index_epoch = 3;
+}

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package mongodb
 
 import (
@@ -5,21 +8,29 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"net/http"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/hashicorp/vault/helper/testhelpers/certhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/mongodb"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
+	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
-const mongoAdminRole = `{ "db": "admin", "roles": [ { "role": "readWrite" } ] }`
+const (
+	mongoAdminRole       = `{ "db": "admin", "roles": [ { "role": "readWrite" } ] }`
+	mongoTestDBAdminRole = `{ "db": "test", "roles": [ { "role": "readWrite" } ] }`
+)
 
 func TestMongoDB_Initialize(t *testing.T) {
 	cleanup, connURL := mongodb.PrepareTestContainer(t, "latest")
@@ -48,6 +59,116 @@ func TestMongoDB_Initialize(t *testing.T) {
 
 	if !db.Initialized {
 		t.Fatal("Database should be initialized")
+	}
+}
+
+func TestNewUser_usernameTemplate(t *testing.T) {
+	type testCase struct {
+		usernameTemplate string
+
+		newUserReq            dbplugin.NewUserRequest
+		expectedUsernameRegex string
+	}
+
+	tests := map[string]testCase{
+		"default username template": {
+			usernameTemplate: "",
+
+			newUserReq: dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
+					DisplayName: "token",
+					RoleName:    "testrolenamewithmanycharacters",
+				},
+				Statements: dbplugin.Statements{
+					Commands: []string{mongoAdminRole},
+				},
+				Password:   "98yq3thgnakjsfhjkl",
+				Expiration: time.Now().Add(time.Minute),
+			},
+
+			expectedUsernameRegex: "^v-token-testrolenamewit-[a-zA-Z0-9]{20}-[0-9]{10}$",
+		},
+		"default username template with invalid chars": {
+			usernameTemplate: "",
+
+			newUserReq: dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
+					DisplayName: "a.bad.account",
+					RoleName:    "a.bad.role",
+				},
+				Statements: dbplugin.Statements{
+					Commands: []string{mongoAdminRole},
+				},
+				Password:   "98yq3thgnakjsfhjkl",
+				Expiration: time.Now().Add(time.Minute),
+			},
+
+			expectedUsernameRegex: "^v-a-bad-account-a-bad-role-[a-zA-Z0-9]{20}-[0-9]{10}$",
+		},
+		"custom username template": {
+			usernameTemplate: "{{random 2 | uppercase}}_{{unix_time}}_{{.RoleName | uppercase}}_{{.DisplayName | uppercase}}",
+
+			newUserReq: dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
+					DisplayName: "token",
+					RoleName:    "testrolenamewithmanycharacters",
+				},
+				Statements: dbplugin.Statements{
+					Commands: []string{mongoAdminRole},
+				},
+				Password:   "98yq3thgnakjsfhjkl",
+				Expiration: time.Now().Add(time.Minute),
+			},
+
+			expectedUsernameRegex: "^[A-Z0-9]{2}_[0-9]{10}_TESTROLENAMEWITHMANYCHARACTERS_TOKEN$",
+		},
+		"admin in test database username template": {
+			usernameTemplate: "",
+
+			newUserReq: dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
+					DisplayName: "token",
+					RoleName:    "testrolenamewithmanycharacters",
+				},
+				Statements: dbplugin.Statements{
+					Commands: []string{mongoTestDBAdminRole},
+				},
+				Password:   "98yq3thgnakjsfhjkl",
+				Expiration: time.Now().Add(time.Minute),
+			},
+
+			expectedUsernameRegex: "^v-token-testrolenamewit-[a-zA-Z0-9]{20}-[0-9]{10}$",
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			cleanup, connURL := mongodb.PrepareTestContainer(t, "latest")
+			defer cleanup()
+
+			if name == "admin in test database username template" {
+				connURL = connURL + "/test?authSource=test"
+			}
+
+			db := new()
+			defer dbtesting.AssertClose(t, db)
+
+			initReq := dbplugin.InitializeRequest{
+				Config: map[string]interface{}{
+					"connection_url":    connURL,
+					"username_template": test.usernameTemplate,
+				},
+				VerifyConnection: true,
+			}
+			dbtesting.AssertInitialize(t, db, initReq)
+
+			ctx := context.Background()
+			newUserResp, err := db.NewUser(ctx, test.newUserReq)
+			require.NoError(t, err)
+			require.Regexp(t, test.expectedUsernameRegex, newUserResp.Username)
+
+			assertCredsExist(t, newUserResp.Username, test.newUserReq.Password, connURL)
+		})
 	}
 }
 
@@ -193,6 +314,39 @@ func TestMongoDB_UpdateUser_Password(t *testing.T) {
 	assertCredsExist(t, dbUser, newPassword, connURL)
 }
 
+func TestMongoDB_RotateRoot_NonAdminDB(t *testing.T) {
+	cleanup, connURL := mongodb.PrepareTestContainer(t, "latest")
+	defer cleanup()
+
+	connURL = connURL + "/test?authSource=test"
+	db := new()
+	defer dbtesting.AssertClose(t, db)
+
+	initReq := dbplugin.InitializeRequest{
+		Config: map[string]interface{}{
+			"connection_url": connURL,
+		},
+		VerifyConnection: true,
+	}
+	dbtesting.AssertInitialize(t, db, initReq)
+
+	dbUser := "testmongouser"
+	startingPassword := "password"
+	createDBUser(t, connURL, "test", dbUser, startingPassword)
+
+	newPassword := "myreallysecurecredentials"
+
+	updateReq := dbplugin.UpdateUserRequest{
+		Username: dbUser,
+		Password: &dbplugin.ChangePassword{
+			NewPassword: newPassword,
+		},
+	}
+	dbtesting.AssertUpdateUser(t, db, updateReq)
+
+	assertCredsExist(t, dbUser, newPassword, connURL)
+}
+
 func TestGetTLSAuth(t *testing.T) {
 	ca := certhelpers.NewCert(t,
 		certhelpers.CommonName("certificate authority"),
@@ -273,9 +427,7 @@ func TestGetTLSAuth(t *testing.T) {
 			if !test.expectErr && err != nil {
 				t.Fatalf("no error expected, got: %s", err)
 			}
-			if !reflect.DeepEqual(actual, test.expectOpts) {
-				t.Fatalf("Actual:\n%#v\nExpected:\n%#v", actual, test.expectOpts)
-			}
+			assertDeepEqual(t, test.expectOpts, actual)
 		})
 	}
 }
@@ -288,6 +440,29 @@ func appendToCertPool(t *testing.T, pool *x509.CertPool, caPem []byte) *x509.Cer
 		t.Fatalf("Unable to append cert to cert pool")
 	}
 	return pool
+}
+
+var cmpClientOptionsOpts = cmp.Options{
+	cmpopts.IgnoreTypes(http.Transport{}),
+
+	cmp.AllowUnexported(options.ClientOptions{}),
+
+	cmp.AllowUnexported(tls.Config{}),
+	cmpopts.IgnoreTypes(sync.Mutex{}, sync.RWMutex{}),
+
+	// 'lazyCerts' has a func field which can't be compared.
+	cmpopts.IgnoreFields(x509.CertPool{}, "lazyCerts"),
+	cmp.AllowUnexported(x509.CertPool{}),
+}
+
+// Need a special comparison for ClientOptions because reflect.DeepEquals won't work in Go 1.16.
+// See: https://github.com/golang/go/issues/45891
+func assertDeepEqual(t *testing.T, a, b *options.ClientOptions) {
+	t.Helper()
+
+	if diff := cmp.Diff(a, b, cmpClientOptionsOpts); diff != "" {
+		t.Fatalf("assertion failed: values are not equal\n--- expected\n+++ actual\n%v", diff)
+	}
 }
 
 func createDBUser(t testing.TB, connURL, db, username, password string) {

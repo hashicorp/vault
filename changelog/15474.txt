@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Default auto-rotation period in transit is 30 days
+```

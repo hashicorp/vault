@@ -2,27 +2,28 @@
 layout: 'docs'
 page_title: 'Highly Available Vault Enterprise Disaster Recovery Clusters with Raft'
 sidebar_current: 'docs-platform-k8s-examples-enterprise-dr-with-raft'
-sidebar_title: 'HA Enterprise DR Clusters with Raft'
 description: |-
   Describes how to set up Diaster Recovery clusters with Integrated Storage (Raft)
 ---
 
-# Highly Available Vault Enterprise Disaster Recovery Clusters with Integrated Storage (Raft)
+# Highly available Vault enterprise disaster recovery clusters with integrated storage (Raft)
 
-~> **Important Note:** This chart is not compatible with Helm 2. Please use Helm 3 with this chart.
+@include 'helm/version.mdx'
 
 The following is an example of creating a disaster recovery cluster using Vault Helm.
 
-For more information on Disaster Recovery, [see the official documentation](/docs/enterprise/replication/).
+For more information on Disaster Recovery, [see the official documentation](/vault/docs/enterprise/replication/).
 
-## Primary Cluster
+-> For license configuration refer to [Running Vault Enterprise](/vault/docs/platform/k8s/helm/enterprise).
+
+## Primary cluster
 
 First, create the primary cluster:
 
 ```shell
 helm install vault-primary hashicorp/vault \
   --set='server.image.repository=hashicorp/vault-enterprise' \
-  --set='server.image.tag=1.5.4_ent' \
+  --set='server.image.tag=1.16.1-ent' \
   --set='server.ha.enabled=true' \
   --set='server.ha.raft.enabled=true'
 ```
@@ -57,7 +58,7 @@ kubectl exec -ti vault-primary-0 -- vault login
 Next, list all the raft peers:
 
 ```shell
-kubectl exec -ti vault-primary-0 -- vault operator raft list-peers
+$ kubectl exec -ti vault-primary-0 -- vault operator raft list-peers
 
 Node                                    Address                        State       Voter
 ----                                    -------                        -----       -----
@@ -66,7 +67,7 @@ e6876c97-aaaa-a92e-b99a-0aafab105745    vault-primary-1.vault-primary-internal:8
 4b5d7383-ff31-44df-e008-6a606828823b    vault-primary-2.vault-primary-internal:8201    follower    true
 ```
 
-## Secondary Cluster
+## Secondary cluster
 
 With the primary cluster created, next create a secondary cluster and enable
 disaster recovery replication.
@@ -74,7 +75,7 @@ disaster recovery replication.
 ```shell
 helm install vault-secondary hashicorp/vault \
   --set='server.image.repository=hashicorp/vault-enterprise' \
-  --set='server.image.tag=1.5.4_ent' \
+  --set='server.image.tag=1.16.1-ent' \
   --set='server.ha.enabled=true' \
   --set='server.ha.raft.enabled=true'
 ```
@@ -109,7 +110,7 @@ kubectl exec -ti vault-secondary-0 -- vault login
 Next, list all the raft peers:
 
 ```shell
-kubectl exec -ti vault-secondary-0 -- vault operator raft list-peers
+$ kubectl exec -ti vault-secondary-0 -- vault operator raft list-peers
 
 Node                                    Address                        State       Voter
 ----                                    -------                        -----       -----
@@ -118,7 +119,7 @@ e6876c97-aaaa-a92e-b99a-0aafab105745    vault-secondary-1.vault-secondary-intern
 4b5d7383-ff31-44df-e008-6a606828823b    vault-secondary-2.vault-secondary-internal:8201    follower    true
 ```
 
-## Enable Disaster Recovery Replication On Primary
+## Enable disaster recovery replication on primary
 
 With the initial clusters setup, we can now configure them for disaster recovery replication.
 
@@ -136,7 +137,7 @@ kubectl exec -ti vault-primary-0 -- vault write sys/replication/dr/primary/secon
 
 The token in the output will be used when configuring the secondary cluster.
 
-## Enable Disaster Recovery Replication On Secondary
+## Enable disaster recovery replication on secondary
 
 Using the token created in the last step, enable disaster recovery replication on the secondary:
 
@@ -153,39 +154,4 @@ kubectl exec -ti vault-secondary-1 -- vault operator unseal <PRIMARY UNSEAL TOKE
 
 kubectl delete pod vault-secondary-2
 kubectl exec -ti vault-secondary-2 -- vault operator unseal <PRIMARY UNSEAL TOKEN>
-```
-
-## Add License to Vault Enterprise
-
-First, setup a port-forward tunnel to the Vault Enterprise cluster:
-
-```shell
-kubectl port-forward vault-primary-0 8200:8200
-```
-
-Next, in a separate terminal, create a `payload.json` file that contains the license key like this example:
-
-```json
-{
-  "text": "01ABCDEFG..."
-}
-```
-
-Finally, using curl, apply the license key to the Vault API:
-
-```bash
-curl \
-  --header "X-Vault-Token: VAULT_LOGIN_TOKEN_HERE" \
-  --request PUT \
-  --data @payload.json \
-  http://127.0.0.1:8200/v1/sys/license
-
-```
-
-To verify that the license installation worked correctly, using `curl`, run the following:
-
-```shell
-curl \
-  --header "X-Vault-Token: VAULT_LOGIN_TOKEN_HERE" \
-  http://127.0.0.1:8200/v1/sys/license
 ```

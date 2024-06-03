@@ -1,0 +1,3 @@
+```release-note:improvement
+auth/azure: Enables Azure roles to be compatible with Vault's role based quotas.
+```

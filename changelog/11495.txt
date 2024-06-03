@@ -1,0 +1,3 @@
+```release-note:feature
+ssh: add support for templated values in SSH CA DefaultExtensions
+```

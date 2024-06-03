@@ -1,0 +1,37 @@
+---
+layout: api
+page_title: /sys/config/reload - HTTP API
+description: The '/sys/config/reload' endpoint is used to reload specific parts of Vault's configuration.
+---
+
+# `/sys/config/reload`
+
+@include 'alerts/restricted-root.mdx'
+
+The `sys/config/reload` endpoint allows reloading specific parts of Vault's configuration.
+Currently, it only supports reloading license information from files on disk.
+
+| Method | Path                          |
+| :----- | :---------------------------- |
+| `POST` | `/sys/config/reload/:subsystem` |
+
+### Parameters
+
+- `subsystem` `(string: <required>)` - Specifies the subsystem for Vault to reload. This is part of the request URL.
+
+## Reload license file <EnterpriseAlert product="vault" inline />
+
+When the `:subsystem` URL parameter is specified as `license`, Vault re-reads
+the license file if the license was provided using the `license_path` configuration
+option or the `VAULT_LICENSE_PATH` environment variable.  The updated license is
+applied to Vault, and Vault will then enable/disable licensed features if the features
+of the given license are different from those of the license Vault is currently using.
+
+### Sample request
+
+```shell-session
+$ curl \
+  -X POST \
+  --header "X-Vault-Token: ..." \
+    'http://127.0.0.1:8200/v1/sys/config/reload/license'
+```

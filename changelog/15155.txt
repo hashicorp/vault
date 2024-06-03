@@ -1,0 +1,5 @@
+```release-note:change
+secrets/pki: The `ca_chain` response field within issuing (/pki/issue/:role)
+and signing APIs will now include the root CA certificate if the mount is
+aware of it.
+```

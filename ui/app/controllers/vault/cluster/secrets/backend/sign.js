@@ -1,6 +1,11 @@
-import { inject as service } from '@ember/service';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { service } from '@ember/service';
 import Controller from '@ember/controller';
-import { set, get } from '@ember/object';
+import { set } from '@ember/object';
 
 export default Controller.extend({
   store: service(),
@@ -25,17 +30,17 @@ export default Controller.extend({
 
     updateTtl(path, val) {
       const model = this.model;
-      let valueToSet = val.enabled === true ? `${val.seconds}s` : undefined;
+      const valueToSet = val.enabled === true ? `${val.seconds}s` : undefined;
       set(model, path, valueToSet);
     },
 
     newModel() {
       const model = this.model;
-      const roleModel = model.get('role');
+      const roleModel = model.role;
       model.unloadRecord();
       const newModel = this.store.createRecord('ssh-sign', {
         role: roleModel,
-        id: `${get(roleModel, 'backend')}-${get(roleModel, 'name')}`,
+        id: `${roleModel.backend}-${roleModel.name}`,
       });
       this.set('model', newModel);
     },

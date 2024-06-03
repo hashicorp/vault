@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package awsauth
 
 import (
@@ -10,14 +13,18 @@ import (
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/hashicorp/go-secure-stdlib/awsutil"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/awsutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	cache "github.com/patrickmn/go-cache"
 )
 
-const amzHeaderPrefix = "X-Amz-"
+const (
+	amzHeaderPrefix    = "X-Amz-"
+	amzSignedHeaders   = "X-Amz-SignedHeaders"
+	operationPrefixAWS = "aws"
+)
 
 var defaultAllowedSTSRequestHeaders = []string{
 	"X-Amz-Algorithm",
@@ -26,7 +33,9 @@ var defaultAllowedSTSRequestHeaders = []string{
 	"X-Amz-Date",
 	"X-Amz-Security-Token",
 	"X-Amz-Signature",
-	"X-Amz-SignedHeaders"}
+	amzSignedHeaders,
+	"X-Amz-User-Agent",
+}
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b, err := Backend(conf)
@@ -48,15 +57,15 @@ type backend struct {
 	// Lock to make changes to role entries
 	roleMutex sync.Mutex
 
-	// Lock to make changes to the blacklist entries
-	blacklistMutex sync.RWMutex
+	// Lock to make changes to the deny list entries
+	denyListMutex sync.RWMutex
 
-	// Guards the blacklist/whitelist tidy functions
-	tidyBlacklistCASGuard *uint32
-	tidyWhitelistCASGuard *uint32
+	// Guards the deny list/access list tidy functions
+	tidyDenyListCASGuard   *uint32
+	tidyAccessListCASGuard *uint32
 
 	// Duration after which the periodic function of the backend needs to
-	// tidy the blacklist and whitelist entries.
+	// tidy the deny list and access list entries.
 	tidyCooldownPeriod time.Duration
 
 	// nextTidyTime holds the time at which the periodic func should initiate
@@ -101,19 +110,31 @@ type backend struct {
 	// upgradeCancelFunc is used to cancel the context used in the upgrade
 	// function
 	upgradeCancelFunc context.CancelFunc
+
+	// deprecatedTerms is used to downgrade preferred terminology (e.g. accesslist)
+	// to the legacy term. This allows for consolidated aliasing of the affected
+	// endpoints until the legacy terms are removed.
+	deprecatedTerms *strings.Replacer
 }
 
 func Backend(_ *logical.BackendConfig) (*backend, error) {
 	b := &backend{
 		// Setting the periodic func to be run once in an hour.
 		// If there is a real need, this can be made configurable.
-		tidyCooldownPeriod:    time.Hour,
-		EC2ClientsMap:         make(map[string]map[string]*ec2.EC2),
-		IAMClientsMap:         make(map[string]map[string]*iam.IAM),
-		iamUserIdToArnCache:   cache.New(7*24*time.Hour, 24*time.Hour),
-		tidyBlacklistCASGuard: new(uint32),
-		tidyWhitelistCASGuard: new(uint32),
-		roleCache:             cache.New(cache.NoExpiration, cache.NoExpiration),
+		tidyCooldownPeriod:     time.Hour,
+		EC2ClientsMap:          make(map[string]map[string]*ec2.EC2),
+		IAMClientsMap:          make(map[string]map[string]*iam.IAM),
+		iamUserIdToArnCache:    cache.New(7*24*time.Hour, 24*time.Hour),
+		tidyDenyListCASGuard:   new(uint32),
+		tidyAccessListCASGuard: new(uint32),
+		roleCache:              cache.New(cache.NoExpiration, cache.NoExpiration),
+
+		deprecatedTerms: strings.NewReplacer(
+			"accesslist", "whitelist",
+			"access-list", "whitelist",
+			"denylist", "blacklist",
+			"deny-list", "blacklist",
+		),
 	}
 
 	b.resolveArnToUniqueIDFunc = b.resolveArnToRealUniqueId
@@ -127,7 +148,7 @@ func Backend(_ *logical.BackendConfig) (*backend, error) {
 				"login",
 			},
 			LocalStorage: []string{
-				"whitelist/identity/",
+				identityAccessListStorage,
 			},
 			SealWrapStorage: []string{
 				"config/client",
@@ -145,15 +166,34 @@ func Backend(_ *logical.BackendConfig) (*backend, error) {
 			b.pathConfigRotateRoot(),
 			b.pathConfigSts(),
 			b.pathListSts(),
-			b.pathConfigTidyRoletagBlacklist(),
-			b.pathConfigTidyIdentityWhitelist(),
 			b.pathListCertificates(),
-			b.pathListRoletagBlacklist(),
-			b.pathRoletagBlacklist(),
-			b.pathTidyRoletagBlacklist(),
-			b.pathListIdentityWhitelist(),
-			b.pathIdentityWhitelist(),
-			b.pathTidyIdentityWhitelist(),
+
+			// The following pairs of functions are path aliases. The first is the
+			// primary endpoint, and the second is version using deprecated language,
+			// for backwards compatibility. The functionality is identical between the two.
+			b.pathConfigTidyRoletagDenyList(),
+			b.genDeprecatedPath(b.pathConfigTidyRoletagDenyList()),
+
+			b.pathConfigTidyIdentityAccessList(),
+			b.genDeprecatedPath(b.pathConfigTidyIdentityAccessList()),
+
+			b.pathListRoletagDenyList(),
+			b.genDeprecatedPath(b.pathListRoletagDenyList()),
+
+			b.pathRoletagDenyList(),
+			b.genDeprecatedPath(b.pathRoletagDenyList()),
+
+			b.pathTidyRoletagDenyList(),
+			b.genDeprecatedPath(b.pathTidyRoletagDenyList()),
+
+			b.pathListIdentityAccessList(),
+			b.genDeprecatedPath(b.pathListIdentityAccessList()),
+
+			b.pathIdentityAccessList(),
+			b.genDeprecatedPath(b.pathIdentityAccessList()),
+
+			b.pathTidyIdentityAccessList(),
+			b.genDeprecatedPath(b.pathTidyIdentityAccessList()),
 		},
 		Invalidate:     b.invalidate,
 		InitializeFunc: b.initialize,
@@ -170,16 +210,16 @@ func Backend(_ *logical.BackendConfig) (*backend, error) {
 // Currently this will be triggered once in a minute by the RollbackManager.
 //
 // The tasks being done currently by this function are to cleanup the expired
-// entries of both blacklist role tags and whitelist identities. Tidying is done
+// entries of both deny list role tags and access list identities. Tidying is done
 // not once in a minute, but once in an hour, controlled by 'tidyCooldownPeriod'.
-// Tidying of blacklist and whitelist are by default enabled. This can be
+// Tidying of deny list and access list are by default enabled. This can be
 // changed using `config/tidy/roletags` and `config/tidy/identities` endpoints.
 func (b *backend) periodicFunc(ctx context.Context, req *logical.Request) error {
 	// Run the tidy operations for the first time. Then run it when current
 	// time matches the nextTidyTime.
 	if b.nextTidyTime.IsZero() || !time.Now().Before(b.nextTidyTime) {
 		if b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby) {
-			// safetyBuffer defaults to 180 days for roletag blacklist
+			// safetyBuffer defaults to 180 days for roletag deny list
 			safetyBuffer := 15552000
 			tidyBlacklistConfigEntry, err := b.lockedConfigTidyRoleTags(ctx, req.Storage)
 			if err != nil {
@@ -197,11 +237,11 @@ func (b *backend) periodicFunc(ctx context.Context, req *logical.Request) error 
 			}
 			// tidy role tags if explicitly not disabled
 			if !skipBlacklistTidy {
-				b.tidyBlacklistRoleTag(ctx, req, safetyBuffer)
+				b.tidyDenyListRoleTag(ctx, req, safetyBuffer)
 			}
 		}
 
-		// We don't check for replication state for whitelist identities as
+		// We don't check for replication state for access list identities as
 		// these are locally stored
 
 		safety_buffer := 259200
@@ -221,7 +261,7 @@ func (b *backend) periodicFunc(ctx context.Context, req *logical.Request) error 
 		}
 		// tidy identities if explicitly not disabled
 		if !skipWhitelistTidy {
-			b.tidyWhitelistIdentity(ctx, req, safety_buffer)
+			b.tidyAccessListIdentity(ctx, req, safety_buffer)
 		}
 
 		// Update the time at which to run the tidy functions again.
@@ -279,7 +319,7 @@ func (b *backend) resolveArnToRealUniqueId(ctx context.Context, s logical.Storag
 
 	switch entity.Type {
 	case "user":
-		userInfo, err := iamClient.GetUser(&iam.GetUserInput{UserName: &entity.FriendlyName})
+		userInfo, err := iamClient.GetUserWithContext(ctx, &iam.GetUserInput{UserName: &entity.FriendlyName})
 		if err != nil {
 			return "", awsutil.AppendAWSError(err)
 		}
@@ -288,7 +328,7 @@ func (b *backend) resolveArnToRealUniqueId(ctx context.Context, s logical.Storag
 		}
 		return *userInfo.User.UserId, nil
 	case "role":
-		roleInfo, err := iamClient.GetRole(&iam.GetRoleInput{RoleName: &entity.FriendlyName})
+		roleInfo, err := iamClient.GetRoleWithContext(ctx, &iam.GetRoleInput{RoleName: &entity.FriendlyName})
 		if err != nil {
 			return "", awsutil.AppendAWSError(err)
 		}
@@ -297,7 +337,7 @@ func (b *backend) resolveArnToRealUniqueId(ctx context.Context, s logical.Storag
 		}
 		return *roleInfo.Role.RoleId, nil
 	case "instance-profile":
-		profileInfo, err := iamClient.GetInstanceProfile(&iam.GetInstanceProfileInput{InstanceProfileName: &entity.FriendlyName})
+		profileInfo, err := iamClient.GetInstanceProfileWithContext(ctx, &iam.GetInstanceProfileInput{InstanceProfileName: &entity.FriendlyName})
 		if err != nil {
 			return "", awsutil.AppendAWSError(err)
 		}
@@ -308,6 +348,36 @@ func (b *backend) resolveArnToRealUniqueId(ctx context.Context, s logical.Storag
 	default:
 		return "", fmt.Errorf("unrecognized error type %#v", entity.Type)
 	}
+}
+
+// genDeprecatedPath will return a deprecated version of a framework.Path. The
+// path pattern and display attributes (if any) will contain deprecated terms,
+// and the path will be marked as deprecated.
+func (b *backend) genDeprecatedPath(path *framework.Path) *framework.Path {
+	pathDeprecated := *path
+	pathDeprecated.Pattern = b.deprecatedTerms.Replace(path.Pattern)
+	pathDeprecated.Deprecated = true
+
+	if path.DisplayAttrs != nil {
+		deprecatedDisplayAttrs := *path.DisplayAttrs
+		deprecatedDisplayAttrs.OperationPrefix = b.deprecatedTerms.Replace(path.DisplayAttrs.OperationPrefix)
+		deprecatedDisplayAttrs.OperationVerb = b.deprecatedTerms.Replace(path.DisplayAttrs.OperationVerb)
+		deprecatedDisplayAttrs.OperationSuffix = b.deprecatedTerms.Replace(path.DisplayAttrs.OperationSuffix)
+		pathDeprecated.DisplayAttrs = &deprecatedDisplayAttrs
+	}
+
+	for i, op := range path.Operations {
+		if op.Properties().DisplayAttrs != nil {
+			deprecatedDisplayAttrs := *op.Properties().DisplayAttrs
+			deprecatedDisplayAttrs.OperationPrefix = b.deprecatedTerms.Replace(op.Properties().DisplayAttrs.OperationPrefix)
+			deprecatedDisplayAttrs.OperationVerb = b.deprecatedTerms.Replace(op.Properties().DisplayAttrs.OperationVerb)
+			deprecatedDisplayAttrs.OperationSuffix = b.deprecatedTerms.Replace(op.Properties().DisplayAttrs.OperationSuffix)
+			deprecatedProperties := pathDeprecated.Operations[i].(*framework.PathOperation)
+			deprecatedProperties.DisplayAttrs = &deprecatedDisplayAttrs
+		}
+	}
+
+	return &pathDeprecated
 }
 
 // Adapted from https://docs.aws.amazon.com/sdk-for-go/api/aws/endpoints/

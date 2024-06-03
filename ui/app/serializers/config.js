@@ -1,15 +1,19 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import RESTSerializer from '@ember-data/serializer/rest';
-import { assign } from '@ember/polyfills';
 import { decamelize } from '@ember/string';
 
 export default RESTSerializer.extend({
-  keyForAttribute: function(attr) {
+  keyForAttribute: function (attr) {
     return decamelize(attr);
   },
 
   normalizeAll(payload) {
     if (payload.data) {
-      const data = assign({}, payload, payload.data);
+      const data = { ...payload, ...payload.data };
       return [data];
     }
     return [payload];

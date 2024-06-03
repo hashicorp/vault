@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -8,16 +11,17 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	math "math"
+	"math"
 	"net/http"
 	"net/url"
 	"sync"
 	"time"
 
+	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/forwarding"
-
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/replication"
 	"golang.org/x/net/http2"
@@ -234,8 +238,8 @@ func (c *Core) stopForwarding() {
 // alive and that the current active address value matches the most
 // recently-known address.
 func (c *Core) refreshRequestForwardingConnection(ctx context.Context, clusterAddr string) error {
-	c.logger.Debug("refreshing forwarding connection")
-	defer c.logger.Debug("done refreshing forwarding connection")
+	c.logger.Debug("refreshing forwarding connection", "clusterAddr", clusterAddr)
+	defer c.logger.Debug("done refreshing forwarding connection", "clusterAddr", clusterAddr)
 
 	c.requestForwardingConnectionLock.Lock()
 	defer c.requestForwardingConnectionLock.Unlock()
@@ -292,10 +296,14 @@ func (c *Core) refreshRequestForwardingConnection(ctx context.Context, clusterAd
 	}
 	c.rpcClientConnContext = dctx
 	c.rpcClientConnCancelFunc = cancelFunc
+	duration := c.clusterHeartbeatInterval
+	if duration <= 0 {
+		duration = time.Second * 5
+	}
 	c.rpcForwardingClient = &forwardingClient{
 		RequestForwardingClient: NewRequestForwardingClient(c.rpcClientConn),
 		core:                    c,
-		echoTicker:              time.NewTicker(c.clusterHeartbeatInterval),
+		echoTicker:              time.NewTicker(duration),
 		echoContext:             dctx,
 	}
 	c.rpcForwardingClient.startHeartbeat()
@@ -329,6 +337,9 @@ func (c *Core) clearForwardingClients() {
 // ForwardRequest forwards a given request to the active node and returns the
 // response.
 func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, error) {
+	// checking if the node is perfStandby here to avoid a deadlock between
+	// Core.stateLock and Core.requestForwardingConnectionLock
+	isPerfStandby := c.PerfStandby()
 	c.requestForwardingConnectionLock.RLock()
 	defer c.requestForwardingConnectionLock.RUnlock()
 
@@ -336,12 +347,19 @@ func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, erro
 		return 0, nil, nil, ErrCannotForward
 	}
 
+	defer metrics.MeasureSince([]string{"ha", "rpc", "client", "forward"}, time.Now())
+
 	origPath := req.URL.Path
 	defer func() {
 		req.URL.Path = origPath
 	}()
 
-	req.URL.Path = req.Context().Value("original_request_path").(string)
+	path, ok := logical.ContextOriginalRequestPathValue(req.Context())
+	if !ok {
+		return 0, nil, nil, errors.New("error extracting request path for forwarding RPC request")
+	}
+
+	req.URL.Path = path
 
 	freq, err := forwarding.GenerateForwardedRequest(req)
 	if err != nil {
@@ -352,8 +370,9 @@ func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, erro
 		c.logger.Error("got nil forwarding RPC request")
 		return 0, nil, nil, fmt.Errorf("got nil forwarding RPC request")
 	}
-	resp, err := c.rpcForwardingClient.ForwardRequest(c.rpcClientConnContext, freq)
+	resp, err := c.rpcForwardingClient.ForwardRequest(req.Context(), freq)
 	if err != nil {
+		metrics.IncrCounter([]string{"ha", "rpc", "client", "forward", "errors"}, 1)
 		c.logger.Error("error during forwarded RPC request", "error", err)
 		return 0, nil, nil, fmt.Errorf("error during forwarding RPC request")
 	}
@@ -369,8 +388,8 @@ func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, erro
 	// If we are a perf standby and the request was forwarded to the active node
 	// we should attempt to wait for the WAL to ship to offer best effort read after
 	// write guarantees
-	if c.PerfStandby() && resp.LastRemoteWal > 0 {
-		WaitUntilWALShipped(req.Context(), c, resp.LastRemoteWal)
+	if isPerfStandby && resp.LastRemoteWal > 0 {
+		c.EntWaitUntilWALShipped(req.Context(), resp.LastRemoteWal)
 	}
 
 	return int(resp.StatusCode), header, resp.Body, nil

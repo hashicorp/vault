@@ -1,0 +1,3 @@
+```release-note:improvement
+api: Implements Login method in Go client libraries for LDAP auth methods
+```

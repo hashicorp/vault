@@ -1,0 +1,43 @@
+---
+layout: api
+page_title: /sys/in-flight-req - HTTP API
+description: The `/sys/in-flight-req` endpoint is used to get information on in-flight requests.
+---
+
+# `/sys/in-flight-req`
+
+@include 'alerts/restricted-root.mdx'
+
+The `/sys/in-flight-req` endpoint is used to get information on in-flight requests.
+The returned information contains the `start_time`, `client_remote_address`, `request_path`,
+`request_method`, and `client_id` of the in-flight requests.
+
+## Collect In-Flight request information
+
+This endpoint returns the information about the in-flight requests.
+
+| Method | Path        |
+| :----- | :---------- |
+| `GET`  | `/sys/in-flight-req` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/in-flight-req
+```
+
+### Sample response
+
+```json
+{
+  "9049326b-ceed-1033-c099-96c5cc97db1f": {
+    "start_time": "2021-11-19T09:13:01.34157-08:00",
+    "client_remote_address": "127.0.0.3:49816",
+    "request_path": "/v1/sys/in-flight-req",
+    "request_method": "GET",
+    "client_id": "",
+  }
+}
+```

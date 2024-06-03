@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/azure: Adds support for using Microsoft Graph API since Azure Active Directory API is being removed in 2022. [#67](https://github.com/hashicorp/vault-plugin-secrets-azure/pull/67)
+```

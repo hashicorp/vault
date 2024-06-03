@@ -1,0 +1,3 @@
+```release-note:improvement
+auth/cert: Add certificate extensions as metadata
+```

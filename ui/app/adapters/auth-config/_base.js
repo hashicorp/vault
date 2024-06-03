@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import ApplicationAdapter from '../application';
 
 export default ApplicationAdapter.extend({
@@ -6,7 +11,7 @@ export default ApplicationAdapter.extend({
   pathForType(modelType) {
     // we want the last part of the path
     const type = modelType.split('/').pop();
-    if (type === 'identity-whitelist' || type === 'roletag-blacklist') {
+    if (type === 'identity-accesslist' || type === 'roletag-denylist') {
       return `tidy/${type}`;
     }
     return type;

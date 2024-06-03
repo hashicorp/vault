@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/pki: Default value for key_bits changed to 0, enabling key_type=ec key generation with default value
+```

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package database
 
 import (
@@ -5,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/vault/helper/versions"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -13,10 +17,17 @@ import (
 
 func pathRotateRootCredentials(b *databaseBackend) []*framework.Path {
 	return []*framework.Path{
-		&framework.Path{
+		{
 			Pattern: "rotate-root/" + framework.GenericNameRegex("name"),
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixDatabase,
+				OperationVerb:   "rotate",
+				OperationSuffix: "root-credentials",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
-				"name": &framework.FieldSchema{
+				"name": {
 					Type:        framework.TypeString,
 					Description: "Name of this database connection",
 				},
@@ -30,13 +41,20 @@ func pathRotateRootCredentials(b *databaseBackend) []*framework.Path {
 				},
 			},
 
-			HelpSynopsis:    pathCredsCreateReadHelpSyn,
-			HelpDescription: pathCredsCreateReadHelpDesc,
+			HelpSynopsis:    pathRotateCredentialsUpdateHelpSyn,
+			HelpDescription: pathRotateCredentialsUpdateHelpDesc,
 		},
-		&framework.Path{
+		{
 			Pattern: "rotate-role/" + framework.GenericNameRegex("name"),
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixDatabase,
+				OperationVerb:   "rotate",
+				OperationSuffix: "static-role-credentials",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
-				"name": &framework.FieldSchema{
+				"name": {
 					Type:        framework.TypeString,
 					Description: "Name of the static role",
 				},
@@ -50,15 +68,24 @@ func pathRotateRootCredentials(b *databaseBackend) []*framework.Path {
 				},
 			},
 
-			HelpSynopsis:    pathCredsCreateReadHelpSyn,
-			HelpDescription: pathCredsCreateReadHelpDesc,
+			HelpSynopsis:    pathRotateRoleCredentialsUpdateHelpSyn,
+			HelpDescription: pathRotateRoleCredentialsUpdateHelpDesc,
 		},
 	}
 }
 
 func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (resp *logical.Response, err error) {
 		name := data.Get("name").(string)
+		modified := false
+		defer func() {
+			if err == nil {
+				b.dbEvent(ctx, "rotate-root", req.Path, name, modified)
+			} else {
+				b.dbEvent(ctx, "rotate-root-fail", req.Path, name, modified)
+			}
+		}()
+
 		if name == "" {
 			return logical.ErrorResponse(respErrEmptyName), nil
 		}
@@ -73,34 +100,43 @@ func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationF
 			return nil, fmt.Errorf("unable to rotate root credentials: no username in configuration")
 		}
 
+		rootPassword, ok := config.ConnectionDetails["password"].(string)
+		if !ok || rootPassword == "" {
+			return nil, fmt.Errorf("unable to rotate root credentials: no password in configuration")
+		}
+
 		dbi, err := b.GetConnection(ctx, req.Storage, name)
 		if err != nil {
 			return nil, err
 		}
 
+		// Take the write lock on the instance
+		dbi.Lock()
+		defer func() {
+			dbi.Unlock()
+			// Even on error, still remove the connection
+			b.ClearConnectionId(name, dbi.id)
+		}()
 		defer func() {
 			// Close the plugin
 			dbi.closed = true
 			if err := dbi.database.Close(); err != nil {
 				b.Logger().Error("error closing the database plugin connection", "err", err)
 			}
-			// Even on error, still remove the connection
-			delete(b.connections, name)
 		}()
 
-		// Take out the backend lock since we are swapping out the connection
-		b.Lock()
-		defer b.Unlock()
-
-		// Take the write lock on the instance
-		dbi.Lock()
-		defer dbi.Unlock()
+		generator, err := newPasswordGenerator(nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to construct credential generator: %s", err)
+		}
+		generator.PasswordPolicy = config.PasswordPolicy
 
 		// Generate new credentials
 		oldPassword := config.ConnectionDetails["password"].(string)
-		newPassword, err := dbi.database.GeneratePassword(ctx, b.System(), config.PasswordPolicy)
+		newPassword, err := generator.generate(ctx, b, dbi.database)
 		if err != nil {
-			return nil, err
+			b.CloseIfShutdown(dbi, err)
+			return nil, fmt.Errorf("failed to generate password: %s", err)
 		}
 		config.ConnectionDetails["password"] = newPassword
 
@@ -116,7 +152,8 @@ func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationF
 		}
 
 		updateReq := v5.UpdateUserRequest{
-			Username: rootUsername,
+			Username:       rootUsername,
+			CredentialType: v5.CredentialTypePassword,
 			Password: &v5.ChangePassword{
 				NewPassword: newPassword,
 				Statements: v5.Statements{
@@ -131,7 +168,13 @@ func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationF
 		if newConfigDetails != nil {
 			config.ConnectionDetails = newConfigDetails
 		}
+		modified = true
 
+		// 1.12.0 and 1.12.1 stored builtin plugins in storage, but 1.12.2 reverted
+		// that, so clean up any pre-existing stored builtin versions on write.
+		if versions.IsBuiltinVersion(config.PluginVersion) {
+			config.PluginVersion = ""
+		}
 		err = storeConfig(ctx, req.Storage, name, config)
 		if err != nil {
 			return nil, err
@@ -146,8 +189,16 @@ func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationF
 }
 
 func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (_ *logical.Response, err error) {
 		name := data.Get("name").(string)
+		modified := false
+		defer func() {
+			if err == nil {
+				b.dbEvent(ctx, "rotate", req.Path, name, modified)
+			} else {
+				b.dbEvent(ctx, "rotate-fail", req.Path, name, modified)
+			}
+		}()
 		if name == "" {
 			return logical.ErrorResponse("empty role name attribute given"), nil
 		}
@@ -169,10 +220,14 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 			}
 		}
 
-		resp, err := b.setStaticAccount(ctx, req.Storage, &setStaticAccountInput{
+		input := &setStaticAccountInput{
 			RoleName: name,
 			Role:     role,
-		})
+		}
+		if walID, ok := item.Value.(string); ok {
+			input.WALID = walID
+		}
+		resp, err := b.setStaticAccount(ctx, req.Storage, input)
 		// if err is not nil, we need to attempt to update the priority and place
 		// this item back on the queue. The err should still be returned at the end
 		// of this method.
@@ -187,7 +242,10 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 				item.Value = resp.WALID
 			}
 		} else {
-			item.Priority = resp.RotationTime.Add(role.StaticAccount.RotationPeriod).Unix()
+			item.Priority = role.StaticAccount.NextRotationTimeFromInput(resp.RotationTime).Unix()
+			// Clear any stored WAL ID as we must have successfully deleted our WAL to get here.
+			item.Value = ""
+			modified = true
 		}
 
 		// Add their rotation to the queue
@@ -195,8 +253,13 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 			return nil, err
 		}
 
+		if err != nil {
+			return nil, fmt.Errorf("unable to finish rotating credentials; retries will "+
+				"continue in the background but it is also safe to retry manually: %w", err)
+		}
+
 		// return any err from the setStaticAccount call
-		return nil, err
+		return nil, nil
 	}
 }
 
@@ -211,6 +274,7 @@ This path attempts to rotate the root credentials for the given database.
 const pathRotateRoleCredentialsUpdateHelpSyn = `
 Request to rotate the credentials for a static user account.
 `
+
 const pathRotateRoleCredentialsUpdateHelpDesc = `
 This path attempts to rotate the credentials for the given static user account.
 `

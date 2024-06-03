@@ -1,0 +1,3 @@
+```release-note:bug
+auth/kerberos: Maintain headers set by the client
+```

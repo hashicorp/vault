@@ -1,15 +1,20 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
 	"fmt"
 	"strings"
 
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/cli"
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*OperatorKeyStatusCommand)(nil)
-var _ cli.CommandAutocomplete = (*OperatorKeyStatusCommand)(nil)
+var (
+	_ cli.Command             = (*OperatorKeyStatusCommand)(nil)
+	_ cli.CommandAutocomplete = (*OperatorKeyStatusCommand)(nil)
+)
 
 type OperatorKeyStatusCommand struct {
 	*BaseCommand

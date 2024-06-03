@@ -1,13 +1,12 @@
 ---
 layout: api
 page_title: /sys/control-group - HTTP API
-sidebar_title: <code>/sys/control-group</code>
 description: The '/sys/control-group' endpoint handles the Control Group workflow.
 ---
 
-## Authorize Control Group Request
+## Authorize control group request
 
-~> **Enterprise Only** – These endpoints require Vault Enterprise.
+@include 'alerts/enterprise-and-hcp.mdx'
 
 This endpoint authorizes a control group request.
 
@@ -19,7 +18,7 @@ This endpoint authorizes a control group request.
 
 - `accessor` `(string: <required>)` – The accessor for the control group wrapping token.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -27,7 +26,7 @@ This endpoint authorizes a control group request.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -37,7 +36,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/control-group/authorize
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -47,7 +46,7 @@ $ curl \
 }
 ```
 
-## Check Control Group Request Status
+## Check control group request status
 
 This endpoint checks the status of a control group request.
 
@@ -59,7 +58,7 @@ This endpoint checks the status of a control group request.
 
 - `accessor` `(string: <required>)` – The accessor for the control group wrapping token.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -67,7 +66,7 @@ This endpoint checks the status of a control group request.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -77,7 +76,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/control-group/request
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {

@@ -1,6 +1,13 @@
-import { inject as service } from '@ember/service';
-import Component from '@ember/component';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { service } from '@ember/service';
+import Component from '@glimmer/component';
+import { action } from '@ember/object';
 import { getOwner } from '@ember/application';
+import { tracked } from '@glimmer/tracking';
 
 /**
  * @module GeneratedItemList
@@ -8,24 +15,24 @@ import { getOwner } from '@ember/application';
  *
  * @example
  * ```js
- * <GeneratedItemList @model={{model}} @itemType={{itemType/>
+ * <GeneratedItemList @model={{model}} @itemType={{itemType}} @paths={{this.paths}} @methodModel={{this.methodModel}}/>
  * ```
  *
- * @property model=null {DS.Model} - The corresponding item model that is being configured.
- * @property itemType {String} - the type of item displayed
- *
+ * @param {class} model=null - The corresponding item model that is being configured.
+ * @param {string} itemType - The type of item displayed.
+ * @param {array} paths - Relevant to the link for the LinkTo element.
+ * @param {class} methodModel - Model for the particular method selected.
  */
 
-export default Component.extend({
-  model: null,
-  itemType: null,
-  router: service(),
-  store: service(),
-  actions: {
-    refreshItemList() {
-      let route = getOwner(this).lookup(`route:${this.router.currentRouteName}`);
-      this.store.clearAllDatasets();
-      route.refresh();
-    },
-  },
-});
+export default class GeneratedItemList extends Component {
+  @service router;
+  @service store;
+  @tracked itemToDelete = null;
+
+  @action
+  refreshItemList() {
+    const route = getOwner(this).lookup(`route:${this.router.currentRouteName}`);
+    this.store.clearAllDatasets();
+    route.refresh();
+  }
+}

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package configutil
 
 func (c *SharedConfig) Merge(c2 *SharedConfig) *SharedConfig {
@@ -12,6 +15,18 @@ func (c *SharedConfig) Merge(c2 *SharedConfig) *SharedConfig {
 	}
 	for _, l := range c2.Listeners {
 		result.Listeners = append(result.Listeners, l)
+	}
+
+	for _, userlockout := range c.UserLockouts {
+		result.UserLockouts = append(result.UserLockouts, userlockout)
+	}
+	for _, userlockout := range c2.UserLockouts {
+		result.UserLockouts = append(result.UserLockouts, userlockout)
+	}
+
+	result.HCPLinkConf = c.HCPLinkConf
+	if c2.HCPLinkConf != nil {
+		result.HCPLinkConf = c2.HCPLinkConf
 	}
 
 	result.Entropy = c.Entropy
@@ -49,6 +64,28 @@ func (c *SharedConfig) Merge(c2 *SharedConfig) *SharedConfig {
 	result.LogFormat = c.LogFormat
 	if c2.LogFormat != "" {
 		result.LogFormat = c2.LogFormat
+	}
+
+	result.LogFile = c.LogFile
+	if c2.LogFile != "" {
+		result.LogFile = c2.LogFile
+	}
+
+	result.LogRotateBytes = c.LogRotateBytes
+	if c2.LogRotateBytesRaw != nil {
+		result.LogRotateBytes = c2.LogRotateBytes
+		result.LogRotateBytesRaw = c2.LogRotateBytesRaw
+	}
+
+	result.LogRotateMaxFiles = c.LogRotateMaxFiles
+	if c2.LogRotateMaxFilesRaw != nil {
+		result.LogRotateMaxFiles = c2.LogRotateMaxFiles
+		result.LogRotateMaxFilesRaw = c2.LogRotateMaxFilesRaw
+	}
+
+	result.LogRotateDuration = c.LogRotateDuration
+	if c2.LogRotateDuration != "" {
+		result.LogRotateDuration = c2.LogRotateDuration
 	}
 
 	result.PidFile = c.PidFile

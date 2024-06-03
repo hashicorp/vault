@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Upgrade dependencies to resolve potential JS vulnerabilities
+```

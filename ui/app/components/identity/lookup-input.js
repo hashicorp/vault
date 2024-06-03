@@ -1,4 +1,9 @@
-import { inject as service } from '@ember/service';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { service } from '@ember/service';
 import Component from '@ember/component';
 import { task } from 'ember-concurrency';
 import { underscore } from 'vault/helpers/underscore';
@@ -20,21 +25,21 @@ export default Component.extend({
 
   init() {
     this._super(...arguments);
-    this.store.findAll('auth-method').then(methods => {
+    this.store.findAll('auth-method').then((methods) => {
       this.set('authMethods', methods);
-      this.set('aliasMountAccessor', methods.get('firstObject.accessor'));
+      this.set('aliasMountAccessor', methods[0].accessor);
     });
   },
 
   adapter() {
-    let type = this.type;
-    let store = this.store;
+    const type = this.type;
+    const store = this.store;
     return store.adapterFor(`identity/${type}`);
   },
 
   data() {
-    let { param, paramValue, aliasMountAccessor } = this;
-    let data = {};
+    const { param, paramValue, aliasMountAccessor } = this;
+    const data = {};
 
     data[underscore([param])] = paramValue;
     if (param === 'alias name') {
@@ -43,11 +48,11 @@ export default Component.extend({
     return data;
   },
 
-  lookup: task(function*() {
-    let flash = this.flashMessages;
-    let type = this.type;
-    let store = this.store;
-    let { param, paramValue } = this;
+  lookup: task(function* () {
+    const flash = this.flashMessages;
+    const type = this.type;
+    const store = this.store;
+    const { param, paramValue } = this;
     let response;
     try {
       response = yield this.adapter().lookup(store, this.data());

@@ -1,5 +1,9 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { EmbeddedRecordsMixin } from '@ember-data/serializer/rest';
-import { get } from '@ember/object';
 import ApplicationSerializer from './application';
 
 export default ApplicationSerializer.extend(EmbeddedRecordsMixin, {
@@ -9,9 +13,9 @@ export default ApplicationSerializer.extend(EmbeddedRecordsMixin, {
   },
 
   normalizeResponse(store, primaryModelClass, payload) {
-    let entity = get(payload, 'data.request_entity');
+    const entity = payload?.data?.request_entity;
     if (Array.isArray(payload.data.authorizations)) {
-      for (let authorization of payload.data.authorizations) {
+      for (const authorization of payload.data.authorizations) {
         authorization.id = authorization.entity_id;
         authorization.name = authorization.entity_name;
       }

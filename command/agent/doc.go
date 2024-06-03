@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 /*
 Package agent implements a daemon mode of Vault designed to provide helper
 features like auto-auth, caching, and templating.

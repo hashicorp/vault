@@ -1,16 +1,21 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
-	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*OperatorRaftJoinCommand)(nil)
-var _ cli.CommandAutocomplete = (*OperatorRaftJoinCommand)(nil)
+var (
+	_ cli.Command             = (*OperatorRaftJoinCommand)(nil)
+	_ cli.CommandAutocomplete = (*OperatorRaftJoinCommand)(nil)
+)
 
 type OperatorRaftJoinCommand struct {
 	flagRetry            bool
@@ -167,7 +172,7 @@ func (c *OperatorRaftJoinCommand) Run(args []string) int {
 	}
 
 	if c.flagAutoJoinScheme != "" && (c.flagAutoJoinScheme != "http" && c.flagAutoJoinScheme != "https") {
-		c.UI.Error(fmt.Sprintf("invalid scheme '%s'; must either be http or https", c.flagAutoJoinScheme))
+		c.UI.Error(fmt.Sprintf("invalid scheme %q; must either be http or https", c.flagAutoJoinScheme))
 		return 1
 	}
 

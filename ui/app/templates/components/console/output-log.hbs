@@ -1,5 +1,10 @@
-{{#each outputLog as |message|}}
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{#each this.outputLog as |message|}}
   {{#unless message.hidden}}
-    {{component (concat 'console/log-' message.type) content=message.content}}
+    {{component (concat "console/log-" message.type) content=message.content}}
   {{/unless}}
 {{/each}}

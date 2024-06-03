@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Prepends "passcode=" if not provided in user input for duo totp mfa method authentication
+```

@@ -1,36 +1,45 @@
 /**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import Component from '@glimmer/component';
+import { assert } from '@ember/debug';
+import flightIconMap from '@hashicorp/flight-icons/catalog.json';
+const flightIconNames = flightIconMap.assets.map((asset) => asset.iconName).uniq();
+
+/**
  * @module Icon
- * `Icon` components are glyphs used to indicate important information.
+ * `Icon` components are used to display an icon.
+ *
+ * Flight icon documentation at https://helios.hashicorp.design/icons/usage-guidelines?tab=code#how-to-use-icons
+ * Flight icon library at https://helios.hashicorp.design/icons/library
  *
  * @example
- * ```js
- * <Icon @glyph="cancel-square-outline" />
- * ```
- * @param glyph=null {String} - The name of the SVG to render inline.
- * @param [size='m'] {String} - The size of the Icon, can be one of 's', 'm', 'l', 'xlm', 'xl', 'xxl'. The default is 'm'.
+ * <Icon @name="heart" @size="24" />
+ *
+ * @param {string} name - The name of the SVG to render inline. Required.
+ * @param {string} [size=16] - size for flight icon, can be 16 or 24
  *
  */
-import Component from '@ember/component';
-import { computed } from '@ember/object';
-import { assert } from '@ember/debug';
-import layout from '../templates/components/icon';
 
-const SIZES = ['s', 'm', 'l', 'xlm', 'xl', 'xxl'];
+export default class IconComponent extends Component {
+  constructor(owner, args) {
+    super(owner, args);
+    assert('Icon component size argument must be either "16" or "24"', ['16', '24'].includes(this.size));
+    assert('Icon name argument must be provided', this.args.name);
+  }
 
-export default Component.extend({
-  tagName: '',
-  layout,
-  glyph: null,
-  size: 'm',
-  sizeClass: computed('size', function() {
-    let { size } = this;
-    assert(
-      `The size property of ${this.toString()} must be one of the following: ${SIZES.join(', ')}`,
-      SIZES.includes(size)
-    );
-    if (size === 'm') {
-      return '';
-    }
-    return `hs-icon-${size}`;
-  }),
-});
+  get size() {
+    return this.args.size || '16';
+  }
+
+  // favor flight icon set and fall back to structure icons if not found
+  get isFlightIcon() {
+    return this.args.name ? flightIconNames.includes(this.args.name) : false;
+  }
+
+  get hsIconClass() {
+    return this.size === '24' ? 'hs-icon-xlm' : 'hs-icon-l';
+  }
+}

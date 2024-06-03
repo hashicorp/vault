@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package metricsutil
 
 import (
@@ -81,12 +84,13 @@ func (m *MetricsHelper) AddGaugeLoopMetric(key []string, val float32, labels []L
 		GaugeMetric{
 			Key:    key,
 			Value:  val,
-			Labels: labels})
+			Labels: labels,
+		})
 }
 
 func (m *MetricsHelper) CreateMetricsCacheKeyName(key []string, val float32, labels []Label) string {
 	var keyJoin string = strings.Join(key, ".")
-	var labelJoinStr = ""
+	labelJoinStr := ""
 	for _, label := range labels {
 		labelJoinStr = labelJoinStr + label.Name + "|" + label.Value + "||"
 	}
@@ -104,7 +108,7 @@ func (m *MetricsHelper) ResponseForFormat(format string) *logical.Response {
 		return &logical.Response{
 			Data: map[string]interface{}{
 				logical.HTTPContentType: ErrorContentType,
-				logical.HTTPRawBody:     fmt.Sprintf("metric response format \"%s\" unknown", format),
+				logical.HTTPRawBody:     fmt.Sprintf("metric response format %q unknown", format),
 				logical.HTTPStatusCode:  http.StatusBadRequest,
 			},
 		}
@@ -133,7 +137,8 @@ func (m *MetricsHelper) PrometheusResponse() *logical.Response {
 	buf := &bytes.Buffer{}
 	defer buf.Reset()
 
-	e := expfmt.NewEncoder(buf, expfmt.FmtText)
+	format := expfmt.NewFormat(expfmt.TypeTextPlain)
+	e := expfmt.NewEncoder(buf, format)
 	for _, mf := range metricsFamilies {
 		err := e.Encode(mf)
 		if err != nil {
@@ -141,7 +146,7 @@ func (m *MetricsHelper) PrometheusResponse() *logical.Response {
 			return resp
 		}
 	}
-	resp.Data[logical.HTTPContentType] = string(expfmt.FmtText)
+	resp.Data[logical.HTTPContentType] = string(format)
 	resp.Data[logical.HTTPRawBody] = buf.Bytes()
 	resp.Data[logical.HTTPStatusCode] = http.StatusOK
 	return resp

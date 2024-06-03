@@ -1,16 +1,21 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
-	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*TokenLookupCommand)(nil)
-var _ cli.CommandAutocomplete = (*TokenLookupCommand)(nil)
+var (
+	_ cli.Command             = (*TokenLookupCommand)(nil)
+	_ cli.CommandAutocomplete = (*TokenLookupCommand)(nil)
+)
 
 type TokenLookupCommand struct {
 	*BaseCommand

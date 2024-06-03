@@ -1,13 +1,17 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Model, { attr } from '@ember-data/model';
 import { alias } from '@ember/object/computed';
 import { computed } from '@ember/object';
-import fieldToAttrs from 'vault/utils/field-to-attrs';
+import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
-import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
 // these arrays define the order in which the fields will be displayed
 // see
-// https://github.com/hashicorp/vault/blob/master/builtin/logical/ssh/path_roles.go#L542 for list of fields for each key type
+// https://github.com/hashicorp/vault/blob/main/builtin/logical/ssh/path_roles.go#L542 for list of fields for each key type
 const OTP_FIELDS = [
   'name',
   'keyType',
@@ -27,6 +31,7 @@ const CA_FIELDS = [
   'allowedUsers',
   'allowedUsersTemplate',
   'allowedDomains',
+  'allowedDomainsTemplate',
   'ttl',
   'maxTtl',
   'allowedCriticalOptions',
@@ -37,11 +42,13 @@ const CA_FIELDS = [
   'allowSubdomains',
   'allowUserKeyIds',
   'keyIdFormat',
+  'notBeforeDuration',
+  'algorithmSigner',
 ];
 
 export default Model.extend({
   useOpenAPI: true,
-  getHelpUrl: function(backend) {
+  getHelpUrl: function (backend) {
     return `/v1/${backend}/roles/example?help=1`;
   },
   zeroAddress: attr('boolean', {
@@ -52,7 +59,7 @@ export default Model.extend({
   }),
   name: attr('string', {
     label: 'Role Name',
-    fieldValue: 'id',
+    fieldValue: 'name',
     readOnly: true,
   }),
   keyType: attr('string', {
@@ -65,15 +72,20 @@ export default Model.extend({
     helpText: "Username to use when one isn't specified",
   }),
   allowedUsers: attr('string', {
-    helpText: 'Create a whitelist of users that can use this key (e.g. `admin, dev`, use `*` to allow all.)',
+    helpText:
+      'Create a list of users who are allowed to use this key (e.g. `admin, dev`, or use `*` to allow all.)',
   }),
   allowedUsersTemplate: attr('boolean', {
     helpText:
-      'Specifies that Allowed users can be templated e.g. {{identity.entity.aliases.mount_accessor_xyz.name}}',
+      'Specifies that Allowed Users can be templated e.g. {{identity.entity.aliases.mount_accessor_xyz.name}}',
   }),
   allowedDomains: attr('string', {
     helpText:
       'List of domains for which a client can request a certificate (e.g. `example.com`, or `*` to allow all)',
+  }),
+  allowedDomainsTemplate: attr('boolean', {
+    helpText:
+      'Specifies that Allowed Domains can be set using identity template policies. Non-templated domains are also permitted.',
   }),
   cidrList: attr('string', {
     helpText: 'List of CIDR blocks for which this role is applicable',
@@ -116,17 +128,21 @@ export default Model.extend({
   keyIdFormat: attr('string', {
     helpText: 'When supplied, this value specifies a custom format for the key id of a signed certificate',
   }),
+  algorithmSigner: attr('string', {
+    helpText: 'When supplied, this value specifies a signing algorithm for the key',
+    possibleValues: ['default', 'ssh-rsa', 'rsa-sha2-256', 'rsa-sha2-512'],
+  }),
 
-  showFields: computed('keyType', function() {
+  showFields: computed('keyType', function () {
     const keyType = this.keyType;
-    let keys = keyType === 'ca' ? CA_FIELDS.slice(0) : OTP_FIELDS.slice(0);
+    const keys = keyType === 'ca' ? CA_FIELDS.slice(0) : OTP_FIELDS.slice(0);
     return expandAttributeMeta(this, keys);
   }),
 
-  fieldGroups: computed('keyType', function() {
-    let numRequired = this.keyType === 'otp' ? 3 : 4;
-    let fields = this.keyType === 'otp' ? [...OTP_FIELDS] : [...CA_FIELDS];
-    let defaultFields = fields.splice(0, numRequired);
+  fieldGroups: computed('keyType', function () {
+    const numRequired = this.keyType === 'otp' ? 3 : 4;
+    const fields = this.keyType === 'otp' ? [...OTP_FIELDS] : [...CA_FIELDS];
+    const defaultFields = fields.splice(0, numRequired);
     const groups = [
       { default: defaultFields },
       {

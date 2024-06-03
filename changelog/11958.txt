@@ -1,0 +1,3 @@
+```release-note:feature
+**Key Management Secrets Engine (Enterprise)**: Adds general availability for distributing and managing keys in AWS KMS.
+```

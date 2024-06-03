@@ -28,6 +28,10 @@ _testmain.go
 /bin/
 /pkg/
 
+# Generated Web UI goes here
+/http/web_ui/*.*
+/http/web_ui/**/*.*
+
 # Vault-specific
 example.hcl
 example.vault.d
@@ -47,13 +51,29 @@ Vagrantfile
 
 # Configs
 *.hcl
-!command/agent/config/test-fixtures/*.hcl
-!command/server/test-fixtures/*.hcl
+!.copywrite.hcl
+!.release/ci.hcl
+!.release/security-scan.hcl
+!.release/linux/package/etc/vault.d/vault.hcl
+!enos/**/*.hcl
+!**/test-fixtures/**/*.hcl
+!**/testdata/*.hcl
 
+# Enos
+.enos
+enos-local.vars.hcl
+enos/**/support
+enos/**/kubeconfig
+.terraform
+.terraform.lock.hcl
+.tfstate.*
 
 .DS_Store
 .idea
 .vscode
+
+# VSCode debugger executable
+__debug_bin*
 
 dist/*
 
@@ -73,7 +93,6 @@ dist/*
 ui/dist
 ui/tmp
 ui/root
-http/bindata_assetfs.go
 
 # dependencies
 ui/node_modules
@@ -109,3 +128,9 @@ website/components/node_modules
 
 .buildcache/
 .releaser/
+*.log
+
+tools/godoctests/.bin
+tools/gonilnilfunctions/.bin
+tools/codechecker/.bin
+.ci-bootstrap

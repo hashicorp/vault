@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package http
 
 import (
@@ -5,7 +8,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -15,6 +18,7 @@ var allowedMethods = []string{
 	http.MethodOptions,
 	http.MethodPost,
 	http.MethodPut,
+	http.MethodPatch,
 	"LIST", // LIST is not an official HTTP method, but Vault supports it.
 }
 

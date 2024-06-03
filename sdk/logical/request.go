@@ -1,7 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package logical
 
 import (
+	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -46,13 +51,39 @@ func (r *RequestWrapInfo) SentinelKeys() []string {
 	}
 }
 
+//go:generate enumer -type=ClientTokenSource -trimprefix=ClientTokenFrom -transform=snake
 type ClientTokenSource uint32
 
 const (
 	NoClientToken ClientTokenSource = iota
 	ClientTokenFromVaultHeader
 	ClientTokenFromAuthzHeader
+	ClientTokenFromInternalAuth
 )
+
+type WALState struct {
+	ClusterID       string
+	LocalIndex      uint64
+	ReplicatedIndex uint64
+}
+
+const indexStateCtxKey = "index_state"
+
+// IndexStateContext returns a context with an added value holding the index
+// state that should be populated on writes.
+func IndexStateContext(ctx context.Context, state *WALState) context.Context {
+	return context.WithValue(ctx, indexStateCtxKey, state)
+}
+
+// IndexStateFromContext is a helper to look up if the provided context contains
+// an index state pointer.
+func IndexStateFromContext(ctx context.Context) *WALState {
+	s, ok := ctx.Value(indexStateCtxKey).(*WALState)
+	if !ok {
+		return nil
+	}
+	return s
+}
 
 // Request is a struct that stores the parameters and context of a request
 // being made to Vault. It is used to abstract the details of the higher level
@@ -128,6 +159,22 @@ type Request struct {
 	// backends can be tied to the mount it belongs to.
 	MountAccessor string `json:"mount_accessor" structs:"mount_accessor" mapstructure:"mount_accessor" sentinel:""`
 
+	// mountRunningVersion is used internally to propagate the semantic version
+	// of the mounted plugin as reported by its vault.MountEntry to audit logging
+	mountRunningVersion string
+
+	// mountRunningSha256 is used internally to propagate the encoded sha256
+	// of the mounted plugin as reported its vault.MountEntry to audit logging
+	mountRunningSha256 string
+
+	// mountIsExternalPlugin is used internally to propagate whether
+	// the backend of the mounted plugin is running externally (i.e., over GRPC)
+	// to audit logging
+	mountIsExternalPlugin bool
+
+	// mountClass is used internally to propagate the mount class of the mounted plugin to audit logging
+	mountClass string
+
 	// WrapInfo contains requested response wrapping parameters
 	WrapInfo *RequestWrapInfo `json:"wrap_info" structs:"wrap_info" mapstructure:"wrap_info" sentinel:""`
 
@@ -147,6 +194,10 @@ type Request struct {
 	// attached. Useful in some situations where the client token is not made
 	// accessible.
 	Unauthenticated bool `json:"unauthenticated" structs:"unauthenticated" mapstructure:"unauthenticated"`
+
+	// PathLimited indicates that the request path is marked for special-case
+	// request limiting.
+	PathLimited bool `json:"path_limited" structs:"path_limited" mapstructure:"path_limited"`
 
 	// MFACreds holds the parsed MFA information supplied over the API as part of
 	// X-Vault-MFA header
@@ -179,15 +230,61 @@ type Request struct {
 	// ResponseWriter if set can be used to stream a response value to the http
 	// request that generated this logical.Request object.
 	ResponseWriter *HTTPResponseWriter `json:"-" sentinel:""`
+
+	// requiredState is used internally to propagate the X-Vault-Index request
+	// header to later levels of request processing that operate only on
+	// logical.Request.
+	requiredState []string
+
+	// responseState is used internally to propagate the state that should appear
+	// in response headers; it's attached to the request rather than the response
+	// because not all requests yields non-nil responses.
+	responseState *WALState
+
+	// ClientID is the identity of the caller. If the token is associated with an
+	// entity, it will be the same as the EntityID . If the token has no entity,
+	// this will be the sha256(sorted policies + namespace) associated with the
+	// client token.
+	ClientID string `json:"client_id" structs:"client_id" mapstructure:"client_id" sentinel:""`
+
+	// InboundSSCToken is the token that arrives on an inbound request, supplied
+	// by the vault user.
+	InboundSSCToken string
+
+	// When a request has been forwarded, contains information of the host the request was forwarded 'from'
+	ForwardedFrom string `json:"forwarded_from,omitempty"`
+
+	// Name of the chroot namespace for the listener that the request was made against
+	ChrootNamespace string `json:"chroot_namespace,omitempty"`
+
+	// RequestLimiterDisabled tells whether the request context has Request Limiter applied.
+	RequestLimiterDisabled bool `json:"request_limiter_disabled,omitempty"`
 }
 
-// Clone returns a deep copy of the request by using copystructure
+// Clone returns a deep copy (almost) of the request.
+// It will set unexported fields which were only previously accessible outside
+// the package via receiver methods.
+// NOTE: Request.Connection is NOT deep-copied, due to issues with the results
+// of copystructure on serial numbers within the x509.Certificate objects.
 func (r *Request) Clone() (*Request, error) {
 	cpy, err := copystructure.Copy(r)
 	if err != nil {
 		return nil, err
 	}
-	return cpy.(*Request), nil
+
+	req := cpy.(*Request)
+
+	// Add the unexported values that were only retrievable via receivers.
+	// copystructure isn't able to do this, which is why we're doing it manually.
+	req.mountClass = r.MountClass()
+	req.mountRunningVersion = r.MountRunningVersion()
+	req.mountRunningSha256 = r.MountRunningSha256()
+	req.mountIsExternalPlugin = r.MountIsExternalPlugin()
+	// This needs to be overwritten as the internal connection state is not cloned properly
+	// mainly the big.Int serial numbers within the x509.Certificate objects get mangled.
+	req.Connection = r.Connection
+
+	return req, nil
 }
 
 // Get returns a data field and guards for nil Data
@@ -235,12 +332,60 @@ func (r *Request) SentinelKeys() []string {
 	}
 }
 
+func (r *Request) MountRunningVersion() string {
+	return r.mountRunningVersion
+}
+
+func (r *Request) SetMountRunningVersion(mountRunningVersion string) {
+	r.mountRunningVersion = mountRunningVersion
+}
+
+func (r *Request) MountRunningSha256() string {
+	return r.mountRunningSha256
+}
+
+func (r *Request) SetMountRunningSha256(mountRunningSha256 string) {
+	r.mountRunningSha256 = mountRunningSha256
+}
+
+func (r *Request) MountIsExternalPlugin() bool {
+	return r.mountIsExternalPlugin
+}
+
+func (r *Request) SetMountIsExternalPlugin(mountIsExternalPlugin bool) {
+	r.mountIsExternalPlugin = mountIsExternalPlugin
+}
+
+func (r *Request) MountClass() string {
+	return r.mountClass
+}
+
+func (r *Request) SetMountClass(mountClass string) {
+	r.mountClass = mountClass
+}
+
 func (r *Request) LastRemoteWAL() uint64 {
 	return r.lastRemoteWAL
 }
 
 func (r *Request) SetLastRemoteWAL(last uint64) {
 	r.lastRemoteWAL = last
+}
+
+func (r *Request) RequiredState() []string {
+	return r.requiredState
+}
+
+func (r *Request) SetRequiredState(state []string) {
+	r.requiredState = state
+}
+
+func (r *Request) ResponseState() *WALState {
+	return r.responseState
+}
+
+func (r *Request) SetResponseState(w *WALState) {
+	r.responseState = w
 }
 
 func (r *Request) TokenEntry() *TokenEntry {
@@ -299,10 +444,13 @@ const (
 	CreateOperation         Operation = "create"
 	ReadOperation                     = "read"
 	UpdateOperation                   = "update"
+	PatchOperation                    = "patch"
 	DeleteOperation                   = "delete"
 	ListOperation                     = "list"
 	HelpOperation                     = "help"
 	AliasLookaheadOperation           = "alias-lookahead"
+	ResolveRoleOperation              = "resolve-role"
+	HeaderOperation                   = "header"
 
 	// The operations below are called globally, the path is less relevant.
 	RevokeOperation   Operation = "revoke"
@@ -315,7 +463,146 @@ type MFACreds map[string][]string
 // InitializationRequest stores the parameters and context of an Initialize()
 // call being made to a logical.Backend.
 type InitializationRequest struct {
-
 	// Storage can be used to durably store and retrieve state.
 	Storage Storage
+}
+
+type CustomHeader struct {
+	Name  string
+	Value string
+}
+
+type CtxKeyInFlightRequestID struct{}
+
+func (c CtxKeyInFlightRequestID) String() string {
+	return "in-flight-request-ID"
+}
+
+type CtxKeyInFlightRequestPriority struct{}
+
+func (c CtxKeyInFlightRequestPriority) String() string {
+	return "in-flight-request-priority"
+}
+
+// CtxKeyInFlightTraceID is used for passing a trace ID through request
+// forwarding. The CtxKeyInFlightRequestID created at the HTTP layer is
+// propagated on through any forwarded requests using this key.
+//
+// Note that this applies to replication service RPCs (including
+// ForwardingRequest from perf standbys or secondaries). The Forwarding RPC
+// service may propagate the context but the handling on the active node runs
+// back through the `http` package handler which builds a new context from HTTP
+// request properties and creates a fresh request ID. Forwarding RPC is used
+// exclusively in Community Edition but also in some special cases in Enterprise
+// such as when forwarding is forced by an HTTP header.
+type CtxKeyInFlightTraceID struct{}
+
+func (c CtxKeyInFlightTraceID) String() string {
+	return "in-flight-trace-ID"
+}
+
+type CtxKeyRequestRole struct{}
+
+func (c CtxKeyRequestRole) String() string {
+	return "request-role"
+}
+
+// ctxKeyDisableReplicationStatusEndpoints is a custom type used as a key in
+// context.Context to store the value `true` when the
+// disable_replication_status_endpoints configuration parameter is set to true
+// for the listener through which a request was received.
+type ctxKeyDisableReplicationStatusEndpoints struct{}
+
+// String returns a string representation of the receiver type.
+func (c ctxKeyDisableReplicationStatusEndpoints) String() string {
+	return "disable-replication-status-endpoints"
+}
+
+// ContextDisableReplicationStatusEndpointsValue examines the provided
+// context.Context for the disable replication status endpoints value and
+// returns it as a bool value if it's found along with the ok return value set
+// to true; otherwise the ok return value is false.
+func ContextDisableReplicationStatusEndpointsValue(ctx context.Context) (value, ok bool) {
+	value, ok = ctx.Value(ctxKeyDisableReplicationStatusEndpoints{}).(bool)
+
+	return
+}
+
+// CreateContextDisableReplicationStatusEndpoints creates a new context.Context
+// based on the provided parent that also includes the provided value for the
+// ctxKeyDisableReplicationStatusEndpoints key.
+func CreateContextDisableReplicationStatusEndpoints(parent context.Context, value bool) context.Context {
+	return context.WithValue(parent, ctxKeyDisableReplicationStatusEndpoints{}, value)
+}
+
+// CtxKeyOriginalRequestPath is a custom type used as a key in context.Context
+// to store the original request path.
+type ctxKeyOriginalRequestPath struct{}
+
+// String returns a string representation of the receiver type.
+func (c ctxKeyOriginalRequestPath) String() string {
+	return "original_request_path"
+}
+
+// ContextOriginalRequestPathValue examines the provided context.Context for the
+// original request path value and returns it as a string value if it's found
+// along with the ok value set to true; otherwise the ok return value is false.
+func ContextOriginalRequestPathValue(ctx context.Context) (value string, ok bool) {
+	value, ok = ctx.Value(ctxKeyOriginalRequestPath{}).(string)
+
+	return
+}
+
+// CreateContextOriginalRequestPath creates a new context.Context based on the
+// provided parent that also includes the provided original request path value
+// for the ctxKeyOriginalRequestPath key.
+func CreateContextOriginalRequestPath(parent context.Context, value string) context.Context {
+	return context.WithValue(parent, ctxKeyOriginalRequestPath{}, value)
+}
+
+type ctxKeyOriginalBody struct{}
+
+func ContextOriginalBodyValue(ctx context.Context) (io.ReadCloser, bool) {
+	value, ok := ctx.Value(ctxKeyOriginalBody{}).(io.ReadCloser)
+	return value, ok
+}
+
+func CreateContextOriginalBody(parent context.Context, body io.ReadCloser) context.Context {
+	return context.WithValue(parent, ctxKeyOriginalBody{}, body)
+}
+
+type CtxKeyDisableRequestLimiter struct{}
+
+func (c CtxKeyDisableRequestLimiter) String() string {
+	return "disable_request_limiter"
+}
+
+// ctxKeyRedactionSettings is a custom type used as a key in context.Context to
+// store the value the redaction settings for the listener that received the
+// request.
+type ctxKeyRedactionSettings struct{}
+
+// String returns a string representation of the receiver type.
+func (c ctxKeyRedactionSettings) String() string {
+	return "redaction-settings"
+}
+
+// CtxRedactionSettingsValue examines the provided context.Context for the
+// redaction settings value and returns them as a tuple of bool values if they
+// are found along with the ok return value set to true; otherwise the ok return
+// value is false.
+func CtxRedactionSettingsValue(ctx context.Context) (redactVersion, redactAddresses, redactClusterName, ok bool) {
+	value, ok := ctx.Value(ctxKeyRedactionSettings{}).([]bool)
+	if !ok {
+		return false, false, false, false
+	}
+
+	return value[0], value[1], value[2], true
+}
+
+// CreatecontextRedactionSettings creates a new context.Context based on the
+// provided parent that also includes the provided redaction settings values for
+// the ctxKeyRedactionSettings key.
+func CreateContextRedactionSettings(parent context.Context, redactVersion, redactAddresses, redactClusterName bool) context.Context {
+	return context.WithValue(parent, ctxKeyRedactionSettings{}, []bool{redactVersion, redactAddresses, redactClusterName})
 }

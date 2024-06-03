@@ -1,21 +1,28 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
 	"fmt"
 	"io"
+	"net/http"
 	"os"
+	"testing"
 	"time"
 
 	"github.com/fatih/color"
+	"github.com/hashicorp/cli"
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/command/config"
-	"github.com/hashicorp/vault/command/token"
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/vault/api/cliconfig"
+	"github.com/hashicorp/vault/api/tokenhelper"
 )
 
 // DefaultTokenHelper returns the token helper that is configured for Vault.
-func DefaultTokenHelper() (token.TokenHelper, error) {
-	return config.DefaultTokenHelper()
+// This helper should only be used for non-server CLI commands.
+func DefaultTokenHelper() (tokenhelper.TokenHelper, error) {
+	return cliconfig.DefaultTokenHelper()
 }
 
 // RawField extracts the raw field from the given data and returns it as a
@@ -90,11 +97,11 @@ func RawField(secret *api.Secret, field string) interface{} {
 // PrintRawField prints raw field from the secret.
 func PrintRawField(ui cli.Ui, data interface{}, field string) int {
 	var val interface{}
-	switch data.(type) {
+	switch data := data.(type) {
 	case *api.Secret:
-		val = RawField(data.(*api.Secret), field)
+		val = RawField(data, field)
 	case map[string]interface{}:
-		val = data.(map[string]interface{})[field]
+		val = data[field]
 	}
 
 	if val == nil {
@@ -103,7 +110,7 @@ func PrintRawField(ui cli.Ui, data interface{}, field string) int {
 	}
 
 	format := Format(ui)
-	if format == "" || format == "table" {
+	if format == "" || format == "table" || format == "raw" {
 		return PrintRaw(ui, fmt.Sprintf("%v", val))
 	}
 
@@ -156,4 +163,41 @@ func getWriterFromUI(ui cli.Ui) io.Writer {
 	default:
 		return os.Stdout
 	}
+}
+
+func mockClient(t *testing.T) (*api.Client, *recordingRoundTripper) {
+	t.Helper()
+
+	config := api.DefaultConfig()
+	httpClient := cleanhttp.DefaultClient()
+	roundTripper := &recordingRoundTripper{}
+	httpClient.Transport = roundTripper
+	config.HttpClient = httpClient
+	client, err := api.NewClient(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return client, roundTripper
+}
+
+var _ http.RoundTripper = (*recordingRoundTripper)(nil)
+
+type recordingRoundTripper struct {
+	path string
+	body []byte
+}
+
+func (r *recordingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	r.path = req.URL.Path
+	defer req.Body.Close()
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	r.body = body
+	return &http.Response{
+		StatusCode: 200,
+	}, nil
 }

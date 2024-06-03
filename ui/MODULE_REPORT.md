@@ -17,42 +17,56 @@ const ERROR_WINDOW_CLOSED =
 
 **Global**: `Ember.testing`
 
-**Location**: `app/components/auth-jwt.js` at line 117
+**Location**: `app/components/auth-form.js` at line 252
 
 ```js
-  exchangeOIDC: task(function*(event, oidcWindow) {
-    // in non-incognito mode we need to use a timeout because it takes time before oidcState is written to local storage.
-    let oidcState = Ember.testing
-      ? event.storageArea.getItem('oidcState')
-      : (yield timeout(1000).then(() => event.storageArea.getItem('oidcState')));
+
+  delayAuthMessageReminder: task(function*() {
+    if (Ember.testing) {
+      this.showLoading = true;
+      yield timeout(0);
 ```
 
 ### Unknown Global
 
 **Global**: `Ember.testing`
 
-**Location**: `app/routes/vault.js` at line 7
+**Location**: `app/routes/vault/cluster/logout.js` at line 30
 
 ```js
-import Ember from 'ember';
-/* eslint-disable ember/no-ember-testing-in-module-scope */
-const SPLASH_DELAY = Ember.testing ? 0 : 300;
-
-export default Route.extend({
+    this.flashMessages.clearMessages();
+    this.permissions.reset();
+    if (Ember.testing) {
+      // Don't redirect on the test
+      this.replaceWith('vault.cluster.auth', { queryParams: { with: authType } });
 ```
 
 ### Unknown Global
 
 **Global**: `Ember.testing`
 
-**Location**: `app/services/auth.js` at line 267
+**Location**: `app/components/mount-backend-form.js` at line 100
 
 ```js
-  checkShouldRenew: task(function*() {
-    while (true) {
+      capabilities = yield this.store.findRecord('capabilities', `${path}/config`);
+    } catch (err) {
       if (Ember.testing) {
-        return;
-      }
+        //captures mount-backend-form component test
+        yield mountModel.save();
+```
+
+### Unknown Global
+
+**Global**: `Ember.testing`
+
+**Location**: `app/components/oidc-consent-block.js` at line 47
+
+```js
+    let { redirect, ...params } = this.args;
+    let redirectUrl = this.buildUrl(redirect, params);
+    if (Ember.testing) {
+      this.args.testRedirect(redirectUrl.toString());
+    } else {
 ```
 
 ### Unknown Global
@@ -67,20 +81,6 @@ export default Route.extend({
     if (Ember.testing) {
       return;
     }
-```
-
-### Unknown Global
-
-**Global**: `Ember.testing`
-
-**Location**: `app/routes/vault/cluster.js` at line 78
-
-```js
-      // when testing, the polling loop causes promises to never settle so acceptance tests hang
-      // to get around that, we just disable the poll in tests
-      if (Ember.testing) {
-        return;
-      }
 ```
 
 ### Unknown Global
@@ -221,4 +221,32 @@ export default function waitForError(opts) {
     Ember.Logger.error = loggerError;
     return logout.visit();
   });
+```
+
+### Unknown Global
+
+**Global**: `Ember.testing`
+
+**Location**: `app/routes/vault.js` at line 7
+
+```js
+import Ember from 'ember';
+/* eslint-disable ember/no-ember-testing-in-module-scope */
+const SPLASH_DELAY = Ember.testing ? 0 : 300;
+
+export default Route.extend({
+```
+
+### Unknown Global
+
+**Global**: `Ember.testing`
+
+**Location**: `app/services/auth.js` at line 268
+
+```js
+  checkShouldRenew: task(function*() {
+    while (true) {
+      if (Ember.testing) {
+        return;
+      }
 ```

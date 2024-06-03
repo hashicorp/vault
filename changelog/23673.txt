@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/aws: fix requeueing of rotation entry in cases where rotation fails
+```

@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fixes issue logging in with OIDC from a listed auth mounts tab
+```

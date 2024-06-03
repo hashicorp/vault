@@ -1,0 +1,3 @@
+```release-note:bug
+auth/approle: fixing dereference of nil pointer
+```

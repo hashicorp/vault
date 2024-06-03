@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package database
 
 import (
@@ -36,11 +39,21 @@ func RunV5() error {
 	return nil
 }
 
+// Run instantiates a MongoDB object, and runs the RPC server for the plugin
+func RunV6Multiplexed() error {
+	v5.ServeMultiplex(New)
+
+	return nil
+}
+
 func (m MockDatabaseV5) Initialize(ctx context.Context, req v5.InitializeRequest) (v5.InitializeResponse, error) {
 	log.Default().Info("Initialize called",
 		"req", req)
 
 	config := req.Config
+	if config == nil {
+		config = map[string]interface{}{}
+	}
 	config["from-plugin"] = "this value is from the plugin itself"
 
 	resp := v5.InitializeResponse{

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
@@ -7,7 +12,7 @@ const CREATE_FIELDS = [
   'validPrincipals',
   'certType',
   'criticalOptions',
-  'extension',
+  'extensions',
   'ttl',
 ];
 
@@ -35,7 +40,7 @@ export default Model.extend({
     label: 'Key ID',
   }),
   criticalOptions: attr('object'),
-  extension: attr('object'),
+  extensions: attr('object'),
 
   leaseId: attr('string', {
     label: 'Lease ID',
@@ -45,8 +50,8 @@ export default Model.extend({
   serialNumber: attr('string'),
   signedKey: attr('string'),
 
-  attrs: computed('signedKey', function() {
-    let keys = this.signedKey ? DISPLAY_FIELDS.slice(0) : CREATE_FIELDS.slice(0);
+  attrs: computed('signedKey', function () {
+    const keys = this.signedKey ? DISPLAY_FIELDS.slice(0) : CREATE_FIELDS.slice(0);
     return expandAttributeMeta(this, keys);
   }),
 });
