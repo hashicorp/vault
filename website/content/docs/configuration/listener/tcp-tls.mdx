@@ -51,8 +51,9 @@ ciphers including 3DES that may allow an attacker to break the encryption of
 long lived connections.
 
 The Go team did not believe this attack was sufficient to remove existing client
-compatibility by deprecating 3DES support (per the researcher’s vulnerability
-disclosure it took a single HTTPS session with 785 GB of traffic to break the
+compatibility by deprecating 3DES support (per the researcher’s [vulnerability
+disclosure](https://sweet32.info/) it took a single HTTPS session with 785 GB of
+traffic to break the
 encryption). Go did deprioritize 3DES in favor of AES-based ciphers.
 
 </Highlight>
