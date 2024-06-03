@@ -27,7 +27,7 @@ import { tracked } from '@glimmer/tracking';
  * @param {string} token=null - returned after user clicks "Wrap data", if there is a token value it displays instead of the JsonEditor
  */
 
-export default class ToolWrap extends Component {
+export default class ToolsWrap extends Component {
   @tracked buttonDisabled = false;
 
   @action

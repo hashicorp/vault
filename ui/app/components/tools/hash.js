@@ -19,7 +19,7 @@ import { action } from '@ember/object';
  * @param {String} format - property returned from parent.
  * @param {Object} errors=null - errors passed from parent as default then from child back to parent.
  */
-export default class ToolHash extends Component {
+export default class ToolsHash extends Component {
   @action
   handleEvent(evt) {
     const { name, value } = evt.target;
