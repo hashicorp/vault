@@ -14,20 +14,15 @@
 {{#if @random_bytes}}
   <div class="box is-sideless is-fullwidth is-marginless">
     <label for="rand" class="is-label">Random bytes</label>
-    <textarea readonly class="textarea" id="rand" data-test-tools-input="random-bytes">{{@random_bytes}}</textarea>
+    <Hds::Copy::Snippet
+      @textToCopy={{@random_bytes}}
+      @color="secondary"
+      data-test-tools-input="random-bytes"
+      @onError={{fn (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")}}
+    />
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
-    <div class="control">
-      <Hds::Copy::Button
-        @text="Copy"
-        @textToCopy={{@random_bytes}}
-        @onError={{(fn (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger"))}}
-        class="primary"
-      />
-    </div>
-    <div class="control">
-      <Hds::Button @text="Back" @color="secondary" {{on "click" this.onClear}} />
-    </div>
+    <Hds::Button @text="Done" @color="secondary" {{on "click" @onClear}} data-test-button="Done" />
   </div>
 {{else}}
   <div class="box is-sideless is-fullwidth is-marginless">
@@ -48,9 +43,9 @@
           </label>
           <div class="control is-expanded">
             <div class="select is-fullwidth">
-              <select name="format" id="format" onchange={{action (mut @format) value="target.value"}}>
+              <select name="format" id="format" {{on "input" this.handleEvent}}>
                 {{#each (array "base64" "hex") as |formatOption|}}
-                  <option selected={{if @format (eq @format formatOption)}} value={{formatOption}}>
+                  <option selected={{eq @format formatOption}} value={{formatOption}}>
                     {{formatOption}}
                   </option>
                 {{/each}}
