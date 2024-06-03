@@ -31,6 +31,7 @@ module('Integration | Component | tools/wrap', function (hooks) {
       @onBack={{this.onBack}}
       @onChange={{this.onChange}}
       @data={{this.data}}
+      @errors={{this.errors}}
     />`);
     };
   });
@@ -45,6 +46,12 @@ module('Integration | Component | tools/wrap', function (hooks) {
     assert.dom(TS.toolsInput('wrapping-token')).doesNotExist();
     assert.dom(TS.button('Back')).doesNotExist();
     assert.dom(TS.button('Done')).doesNotExist();
+  });
+
+  test('it renders errors', async function (assert) {
+    this.errors = ['Something is wrong!'];
+    await this.renderComponent();
+    assert.dom(GENERAL.messageError).hasText('Error Something is wrong!', 'Error renders');
   });
 
   test('it renders token view', async function (assert) {
