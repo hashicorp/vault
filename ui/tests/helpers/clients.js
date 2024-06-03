@@ -120,7 +120,7 @@ export function overrideResponse(httpStatus, data) {
   if (httpStatus === 204) {
     return new Response(204, { 'Content-Type': 'application/json' });
   }
-  return new Response(200, { 'Content-Type': 'application/json' }, JSON.stringify(data));
+  return new Response(httpStatus, { 'Content-Type': 'application/json' }, JSON.stringify(data));
 }
 
 export async function dateDropdownSelect(month, year) {
