@@ -388,10 +388,6 @@
             ]
           },
           {
-            "title": "Configure TLS for TCP listener",
-            "path": "configuration/listener/tcp-tls"
-          },
-          {
             "title": "Unix",
             "path": "configuration/listener/unix"
           }
