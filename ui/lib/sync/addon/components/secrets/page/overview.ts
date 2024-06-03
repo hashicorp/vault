@@ -9,6 +9,7 @@ import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { action } from '@ember/object';
 import Ember from 'ember';
+import { DEBUG } from '@glimmer/env';
 
 import type FlashMessageService from 'vault/services/flash-messages';
 import type StoreService from 'vault/services/store';
@@ -34,7 +35,7 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   @tracked destinationMetrics: SyncDestinationAssociationMetrics[] = [];
   @tracked page = 1;
   @tracked showActivateSecretsSyncModal = false;
-  @tracked activationError: null | string = null;
+  @tracked activationErrors: null | string[] = null;
   // eventually remove when we deal with permissions on activation-features
   @tracked hideOptIn = false;
   @tracked hideError = false;
@@ -62,7 +63,21 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   });
 
   @action
+  clearActivationErrors() {
+    this.activationErrors = null;
+  }
+
+  @action
   onModalError(errorMsg: string) {
-    this.activationError = errorMsg;
+    if (DEBUG) console.error(errorMsg); // eslint-disable-line no-console
+
+    const errors = [errorMsg];
+
+    if (this.args.isHvdManaged) {
+      errors.push(
+        'Secrets Sync is available for Plus tier clusters only. Please check the tier of your cluster to enable Secrets Sync.'
+      );
+    }
+    this.activationErrors = errors;
   }
 }
