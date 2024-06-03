@@ -1,0 +1,19 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<form {{on "submit" @handleSearch}}>
+  <Hds::SegmentedGroup as |S|>
+    <S.TextInput
+      @value={{@query}}
+      placeholder={{@placeholder}}
+      aria-label="Search by path"
+      size="32"
+      {{on "input" @handleInput}}
+      {{on "keydown" @handleKeyDown}}
+      data-test-filter-input-explicit
+    />
+    <S.Button @color="secondary" @text="Search" @icon="search" type="submit" data-test-filter-input-explicit-search />
+  </Hds::SegmentedGroup>
+</form>

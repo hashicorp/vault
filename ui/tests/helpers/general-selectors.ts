@@ -20,6 +20,8 @@ export const GENERAL = {
 
   filter: (name: string) => `[data-test-filter="${name}"]`,
   filterInput: '[data-test-filter-input]',
+  filterInputExplicit: '[data-test-filter-input-explicit]',
+  filterInputExplicitSearch: '[data-test-filter-input-explicit-search]',
   confirmModalInput: '[data-test-confirmation-modal-input]',
   confirmButton: '[data-test-confirm-button]',
   confirmTrigger: '[data-test-confirm-action-trigger]',

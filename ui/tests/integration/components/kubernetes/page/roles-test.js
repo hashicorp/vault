@@ -10,6 +10,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | kubernetes | Page::Roles', function (hooks) {
   setupRenderingTest(hooks);
@@ -58,7 +59,7 @@ module('Integration | Component | kubernetes | Page::Roles', function (hooks) {
       .dom('[data-test-toolbar-roles-action]')
       .doesNotExist('Create role', 'Toolbar action does not render when not configured');
     assert
-      .dom('[data-test-nav-input]')
+      .dom(GENERAL.filterInputExplicit)
       .doesNotExist('Roles filter input does not render when not configured');
     assert.dom('[data-test-config-cta]').exists('Config cta renders');
   });
@@ -70,7 +71,7 @@ module('Integration | Component | kubernetes | Page::Roles', function (hooks) {
     assert
       .dom('[data-test-toolbar-roles-action] svg')
       .hasClass('flight-icon-plus', 'Toolbar action has correct icon');
-    assert.dom('[data-test-nav-input]').exists('Roles filter input renders');
+    assert.dom(GENERAL.filterInputExplicit).exists('Roles filter input renders');
     assert.dom('[data-test-empty-state-title]').hasText('No roles yet', 'Title renders');
     assert
       .dom('[data-test-empty-state-message]')
