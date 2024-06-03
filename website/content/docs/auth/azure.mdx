@@ -170,7 +170,7 @@ tool.
 
    The Vault identity token provider signs the plugin identity token JWT internally.
    If a trust relationship exists between Vault and Azure through WIF, the auth
-   engine can exchange the Vault identity token for a federated access token.
+   method can exchange the Vault identity token for a federated access token.
 
    To configure a trusted relationship between Vault and Azure:
        - You must configure the [identity token issuer backend](/vault/api-docs/secret/identity/tokens#configure-the-identity-tokens-backend)
@@ -268,19 +268,19 @@ AZURE_GO_SDK_LOG_LEVEL=DEBUG
 
 <EnterpriseAlert product="vault" />
 
-The Azure auth engine supports the plugin WIF workflow, and has a source of identity called
+The Azure auth method supports the plugin WIF workflow, and has a source of identity called
 a plugin identity token. A plugin identity token is a JWT that is signed internally by Vault's
 [plugin identity token issuer](/vault/api-docs/secret/identity/tokens#read-plugin-workload-identity-issuer-s-openid-configuration).
 
 If there is a trust relationship configured between Vault and Azure through
 [workload identity federation](https://learn.microsoft.com/en-us/entra/workload-id/workload-identity-federation),
-the auth engine can exchange its identity token for short-lived access tokens needed to
+the auth method can exchange its identity token for short-lived access tokens needed to
 perform its actions.
 
-Exchanging identity tokens for access tokens lets the Azure auth engine
+Exchanging identity tokens for access tokens lets the Azure auth method
 operate without configuring explicit access to sensitive client credentials.
 
-To configure the auth engine to use plugin WIF:
+To configure the auth method to use plugin WIF:
 
 1. Ensure that Vault [openid-configuration](/vault/api-docs/secret/identity/tokens#read-plugin-identity-token-issuer-s-openid-configuration)
    and [public JWKS](/vault/api-docs/secret/identity/tokens#read-plugin-identity-token-issuer-s-public-jwks)
@@ -297,16 +297,16 @@ To configure the auth engine to use plugin WIF:
    The subject identifier should have the form `plugin-identity:<NAMESPACE>:auth:<AZURE_MOUNT_ACCESSOR>`.
    1. The audience should be under 600 characters. The default value in Azure is `api://AzureADTokenExchange`.
 
-1. Configure the Azure auth engine with the client and tenant IDs and the OIDC audience value.
+1. Configure the Azure auth method with the client and tenant IDs and the OIDC audience value.
 
-```shell-session
-$ vault write azure/config \
-    tenant_id=7cd1f227-ca67-4fc6-a1a4-9888ea7f388c \
-    client_id=dd794de4-4c6c-40b3-a930-d84cd32e9699 \
-    identity_token_audience=vault.example/v1/identity/oidc/plugins
-```
+   ```shell-session
+   $ vault write azure/config \
+     tenant_id=7cd1f227-ca67-4fc6-a1a4-9888ea7f388c \
+     client_id=dd794de4-4c6c-40b3-a930-d84cd32e9699 \
+     identity_token_audience=vault.example/v1/identity/oidc/plugins
+   ```
 
-Your auth engine can now use plugin WIF for its configuration credentials.
+Your auth method can now use plugin WIF for its configuration credentials.
 By default, WIF [credentials](https://learn.microsoft.com/en-us/entra/identity-platform/access-tokens#token-lifetime)
 have a time-to-live of 1 hour and automatically refresh when they expire.
 
