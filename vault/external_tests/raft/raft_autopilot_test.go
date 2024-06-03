@@ -41,6 +41,39 @@ func TestRaft_Autopilot_Disable(t *testing.T) {
 	require.Nil(t, nil, state)
 }
 
+// TestRaft_Autopilot_BinaryVersionPlumbing is an apparently trivial test that
+// ensures that the default plumbing in Vault core to configure the binary
+// version of the raft library is working. Hopefully this will trivially pass
+// from now on, however it would have caught a regression in the past!
+func TestRaft_Autopilot_BinaryVersionPlumbing(t *testing.T) {
+	t.Parallel()
+
+	coreCfg, clusterOpts := raftClusterBuilder(t, &RaftClusterOpts{
+		EnableAutopilot: true,
+		// We need 2 nodes because the code path that regressed was different on a
+		// standby vs active node so we'd not detect the problem if we only test on
+		// an active node.
+		NumCores: 2,
+	})
+
+	// Default options should not set EffectiveSDKVersion(Map) which would defeat
+	// the point of this test by plumbing versions via config.
+	require.Nil(t, clusterOpts.EffectiveSDKVersionMap)
+	require.Empty(t, coreCfg.EffectiveSDKVersion)
+
+	c := vault.NewTestCluster(t, coreCfg, &clusterOpts)
+
+	vault.TestWaitActive(t, c.Cores[0].Core)
+
+	client := c.Cores[0].Client
+	state, err := client.Sys().RaftAutopilotState()
+	require.NoError(t, err)
+	require.NotNil(t, state)
+	for _, s := range state.Servers {
+		require.Equal(t, version.GetVersion().Version, s.Version)
+	}
+}
+
 // TestRaft_Autopilot_Stabilization_And_State verifies that nodes get promoted
 // to be voters after the stabilization time has elapsed.  Also checks that
 // the autopilot state is Healthy once all nodes are available.
