@@ -70,12 +70,14 @@ Go packages. Vault uses the `tlsutil` package to parse ciphersuite configuration
 
   In particular, Sweet32 (CVE-2016-2183) is an attack against 64-bit block size
   ciphers including 3DES that may allow an attacker to break the encryption of
-  long lived connections. According to the [vulnerability disclosure](https://sweet32.info/), Sweet32 took a
+  long lived connections. According to the
+  [vulnerability disclosure](https://sweet32.info/), Sweet32 took a
   single HTTPS session with 785 GB of traffic to break the encryption.
 
   As of May 2024, the Go team does not believe the risk of Sweet32 is sufficient
   to remove existing client compatibility by deprecating 3DES support, however,
-  the team did [de-prioritize 3DES](https://github.com/golang/go/issues/45430) in favor of AES-based ciphers.
+  the team did [de-prioritize 3DES](https://github.com/golang/go/issues/45430)
+  in favor of AES-based ciphers.
 
 </Note>
 
