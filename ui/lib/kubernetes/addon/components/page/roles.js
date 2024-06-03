@@ -3,15 +3,13 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Ember from 'ember';
 import Component from '@glimmer/component';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { getOwner } from '@ember/application';
 import errorMessage from 'vault/utils/error-message';
 import { tracked } from '@glimmer/tracking';
 import keys from 'core/utils/key-codes';
-import { task, timeout } from 'ember-concurrency';
 
 /**
  * @module Roles
@@ -40,13 +38,7 @@ export default class RolesPageComponent extends Component {
 
   navigate(pageFilter) {
     const route = `${this.mountPoint}.roles.index`;
-    const args = [route];
-
-    args.push({
-      queryParams: {
-        pageFilter: pageFilter ? pageFilter : null,
-      },
-    });
+    const args = [route, { queryParams: { pageFilter: pageFilter || null } }];
     this.router.transitionTo(...args);
   }
 
@@ -63,11 +55,9 @@ export default class RolesPageComponent extends Component {
     this.query = evt.target.value;
   }
 
-  @task
-  *handleSearch(evt) {
+  @action
+  handleSearch(evt) {
     evt.preventDefault();
-    // shows loader to indicate that the search was executed
-    yield timeout(Ember.testing ? 0 : 250);
     this.navigate(this.query);
   }
 
@@ -76,7 +66,6 @@ export default class RolesPageComponent extends Component {
     try {
       const message = `Successfully deleted role ${model.name}`;
       await model.destroyRecord();
-      this.args.roles.removeObject(model);
       this.flashMessages.success(message);
     } catch (error) {
       const message = errorMessage(error, 'Error deleting role. Please try again or contact support');
