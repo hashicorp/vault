@@ -492,6 +492,66 @@ func TestConsul_serviceTags(t *testing.T) {
 	}
 }
 
+// TestConsul_ServiceMeta tests whether consul service meta registration works
+func TestConsul_ServiceMeta(t *testing.T) {
+	tests := []struct {
+		conf   map[string]string
+		pass   bool
+		expect map[string]string
+	}{
+		{
+			conf:   map[string]string{},
+			pass:   true,
+			expect: map[string]string{"external-source": "vault"},
+		},
+		{
+			conf:   map[string]string{"service_meta": "true"},
+			pass:   false,
+			expect: map[string]string{"external-source": "vault"},
+		},
+		{
+			conf:   map[string]string{"service_meta": "{\"key\":\"value\"}"},
+			pass:   true,
+			expect: map[string]string{"key": "value", "external-source": "vault"},
+		},
+		{
+			conf:   map[string]string{"service_meta": "{\"external-source\":\"something-else\"}"},
+			pass:   true,
+			expect: map[string]string{"external-source": "vault"},
+		},
+	}
+
+	for _, test := range tests {
+		logger := logging.NewVaultLogger(log.Debug)
+
+		shutdownCh := make(chan struct{})
+		defer func() {
+			close(shutdownCh)
+		}()
+		sr, err := NewServiceRegistration(test.conf, logger, sr.State{})
+		if !test.pass {
+			if err == nil {
+				t.Fatal("Expected Consul to fail with error")
+			}
+			continue
+		}
+
+		if err != nil && test.pass {
+			t.Fatalf("Expected Consul to initialize: %v", err)
+		}
+
+		c, ok := sr.(*serviceRegistration)
+		if !ok {
+			t.Fatalf("Expected serviceRegistration")
+		}
+
+		if !reflect.DeepEqual(c.serviceMeta, test.expect) {
+			t.Fatalf("Did not produce expected meta: wanted: %v, got %v", test.expect, c.serviceMeta)
+		}
+
+	}
+}
+
 func TestConsul_setRedirectAddr(t *testing.T) {
 	tests := []struct {
 		addr string

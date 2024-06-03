@@ -57,10 +57,13 @@
         "path": "internals/integrated-storage"
       },
       {
+        "title": "Recommended patterns",
+        "path": "internals/recommended-patterns"
+      },
+      {
         "title": "Security Model",
         "path": "internals/security"
       },
-
       {
         "title": "Telemetry",
         "routes": [
@@ -359,6 +362,10 @@
       {
         "title": "Programmatic best practices",
         "path": "configuration/programmatic-best-practices"
+      },
+      {
+        "title": "Manage resources programmatically",
+        "path": "configuration/programmatic-management"
       },
       {
         "title": "<code>listener</code>",

@@ -10,7 +10,7 @@ go 1.21
 toolchain go1.21.8
 
 require (
-	github.com/cenkalti/backoff/v3 v3.0.0
+	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/go-jose/go-jose/v4 v4.0.1
 	github.com/go-test/deep v1.0.2
 	github.com/hashicorp/errwrap v1.1.0
