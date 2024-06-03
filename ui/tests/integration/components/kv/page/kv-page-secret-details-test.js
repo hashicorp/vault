@@ -79,7 +79,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
       metadata: this.metadata,
     };
     this.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.model.backend, route: 'list' },
       { label: this.model.path },
     ];

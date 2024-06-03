@@ -1,0 +1,3 @@
+```release-note:bug
+auth/cert: Merge error messages returned in login failures and include error when present  
+```
