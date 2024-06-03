@@ -104,20 +104,19 @@ module('Acceptance | tools', function (hooks) {
       JSON.parse(DATA_TO_WRAP),
       'data tab still has unwrapped data'
     );
-    //random
+    // random
     await click(GENERAL.navLink('Random'));
-
     assert.dom(TS.toolsInput('bytes')).hasValue('32', 'defaults to 32 bytes');
     await click(TS.submit);
     const randomBytes = await waitUntil(() => find(TS.toolsInput('random-bytes')));
-    assert.ok(randomBytes.value, 'shows the returned value of random bytes');
+    assert.strictEqual(randomBytes.innerText.length, 44, 'shows the returned value of random bytes');
 
     // hash
     await click(GENERAL.navLink('Hash'));
 
     await fillIn(TS.toolsInput('hash-input'), 'foo');
     await click(TS.toolsInput('b64-toggle'));
-
+    assert.dom(TS.toolsInput('hash-input')).hasValue('Zm9v', 'it base64 encodes input');
     await click(TS.submit);
     let sumInput = await waitUntil(() => find(TS.toolsInput('sum')));
     assert
@@ -125,6 +124,7 @@ module('Acceptance | tools', function (hooks) {
       .hasText('LCa0a2j/xo/5m0U8HTBBNBNCLXBkg7+g+YpeiGJm564=', 'hashes the data, encodes input');
     await click(TS.button('Done'));
 
+    assert.dom(TS.toolsInput('hash-input')).hasText('', 'it clears input on done');
     await fillIn(TS.toolsInput('hash-input'), 'e2RhdGE6ImZvbyJ9');
 
     await click(TS.submit);
