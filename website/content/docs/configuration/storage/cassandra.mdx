@@ -69,6 +69,12 @@ CREATE TABLE "vault"."entries" (
 - `password` `(string: "")` – Password to use when authenticating with the
   Cassandra hosts.
 
+- `disable_initial_host_lookup` `(bool: false)` - If set to true, Vault will not attempt
+  to get host info from the `system.peers` table. It will instead connect to
+  hosts supplied and will not attempt to look up the host information. This will
+  mean that `data_centre`, `rack` and `token` information will not be available and as
+  such host filtering and token aware query routing will not be available.
+
 - `initial_connection_timeout` `(int: 0)` - A timeout in seconds to wait until an initial connection is established
   with the Cassandra hosts. If not set, default value from Cassandra driver(gocql) will be used - 600ms
 
