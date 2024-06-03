@@ -6,7 +6,8 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { click, visit, fillIn, currentRouteName } from '@ember/test-helpers';
-import { PAGE } from 'vault/tests/helpers/config-ui/message-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { CUSTOM_MESSAGES } from 'vault/tests/helpers/config-ui/message-selectors';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 
 import authPage from 'vault/tests/pages/auth';
@@ -68,14 +69,14 @@ module('Acceptance | auth custom messages auth tests', function (hooks) {
       await visit('/vault/auth');
       const modalId = 'some-awesome-id-1';
       const alertId = 'some-awesome-id-2';
-      assert.dom(PAGE.modal(modalId)).exists();
-      assert.dom(PAGE.modalTitle(modalId)).hasText('Modal title');
-      assert.dom(PAGE.modalBody(modalId)).exists();
-      assert.dom(PAGE.modalBody(modalId)).hasText('here is a cool message');
-      await click(PAGE.modalButton(modalId));
-      assert.dom(PAGE.alertTitle(alertId)).hasText('Banner title');
-      assert.dom(PAGE.alertDescription(alertId)).hasText('hello world hello wolrd');
-      assert.dom(PAGE.alertAction('link')).hasText('some alert link');
+      assert.dom(CUSTOM_MESSAGES.modal(modalId)).exists();
+      assert.dom(CUSTOM_MESSAGES.modalTitle(modalId)).hasText('Modal title');
+      assert.dom(CUSTOM_MESSAGES.modalBody(modalId)).exists();
+      assert.dom(CUSTOM_MESSAGES.modalBody(modalId)).hasText('here is a cool message');
+      await click(CUSTOM_MESSAGES.modalButton(modalId));
+      assert.dom(CUSTOM_MESSAGES.alertTitle(alertId)).hasText('Banner title');
+      assert.dom(CUSTOM_MESSAGES.alertDescription(alertId)).hasText('hello world hello wolrd');
+      assert.dom(CUSTOM_MESSAGES.alertAction('link')).hasText('some alert link');
     });
     test('it shows the multiple modal messages', async function (assert) {
       const modalIdOne = 'some-awesome-id-2';
@@ -89,16 +90,16 @@ module('Acceptance | auth custom messages auth tests', function (hooks) {
         return unauthenticatedMessageResponse;
       });
       await visit('/vault/auth');
-      assert.dom(PAGE.modal(modalIdOne)).exists();
-      assert.dom(PAGE.modalTitle(modalIdOne)).hasText('Modal title 1');
-      assert.dom(PAGE.modalBody(modalIdOne)).exists();
-      assert.dom(PAGE.modalBody(modalIdOne)).hasText('hello world hello wolrd some alert link');
-      await click(PAGE.modalButton(modalIdOne));
-      assert.dom(PAGE.modal(modalIdTwo)).exists();
-      assert.dom(PAGE.modalTitle(modalIdTwo)).hasText('Modal title 2');
-      assert.dom(PAGE.modalBody(modalIdTwo)).exists();
-      assert.dom(PAGE.modalBody(modalIdTwo)).hasText('here is a cool message');
-      await click(PAGE.modalButton(modalIdTwo));
+      assert.dom(CUSTOM_MESSAGES.modal(modalIdOne)).exists();
+      assert.dom(CUSTOM_MESSAGES.modalTitle(modalIdOne)).hasText('Modal title 1');
+      assert.dom(CUSTOM_MESSAGES.modalBody(modalIdOne)).exists();
+      assert.dom(CUSTOM_MESSAGES.modalBody(modalIdOne)).hasText('hello world hello wolrd some alert link');
+      await click(CUSTOM_MESSAGES.modalButton(modalIdOne));
+      assert.dom(CUSTOM_MESSAGES.modal(modalIdTwo)).exists();
+      assert.dom(CUSTOM_MESSAGES.modalTitle(modalIdTwo)).hasText('Modal title 2');
+      assert.dom(CUSTOM_MESSAGES.modalBody(modalIdTwo)).exists();
+      assert.dom(CUSTOM_MESSAGES.modalBody(modalIdTwo)).hasText('here is a cool message');
+      await click(CUSTOM_MESSAGES.modalButton(modalIdTwo));
     });
     test('it shows the multiple banner messages', async function (assert) {
       const bannerIdOne = 'some-awesome-id-2';
@@ -112,11 +113,11 @@ module('Acceptance | auth custom messages auth tests', function (hooks) {
         return unauthenticatedMessageResponse;
       });
       await visit('/vault/auth');
-      assert.dom(PAGE.alertTitle(bannerIdOne)).hasText('Banner title 1');
-      assert.dom(PAGE.alertDescription(bannerIdOne)).hasText('hello world hello wolrd');
-      assert.dom(PAGE.alertTitle(bannerIdTwo)).hasText('Banner title 2');
-      assert.dom(PAGE.alertDescription(bannerIdTwo)).hasText('here is a cool message');
-      assert.dom(PAGE.alertAction('link')).hasText('some alert link');
+      assert.dom(CUSTOM_MESSAGES.alertTitle(bannerIdOne)).hasText('Banner title 1');
+      assert.dom(CUSTOM_MESSAGES.alertDescription(bannerIdOne)).hasText('hello world hello wolrd');
+      assert.dom(CUSTOM_MESSAGES.alertTitle(bannerIdTwo)).hasText('Banner title 2');
+      assert.dom(CUSTOM_MESSAGES.alertDescription(bannerIdTwo)).hasText('here is a cool message');
+      assert.dom(CUSTOM_MESSAGES.alertAction('link')).hasText('some alert link');
     });
   });
 
@@ -124,29 +125,29 @@ module('Acceptance | auth custom messages auth tests', function (hooks) {
     assert.expect(4);
     await authPage.login();
     await visit('vault/config-ui/messages');
-    await click(PAGE.button('create message'));
-    await fillIn(PAGE.input('title'), 'Awesome custom message title');
-    await click(PAGE.radio('banner'));
+    await click(CUSTOM_MESSAGES.button('create message'));
+    await fillIn(CUSTOM_MESSAGES.input('title'), 'Awesome custom message title');
+    await click(CUSTOM_MESSAGES.radio('banner'));
     await fillIn(
-      PAGE.input('message'),
+      CUSTOM_MESSAGES.input('message'),
       'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Pulvinar mattis nunc sed blandit libero volutpat sed cras ornare.'
     );
     await fillIn(
-      PAGE.input('startTime'),
+      CUSTOM_MESSAGES.input('startTime'),
       format(addDays(startOfDay(new Date('2023-12-12')), 1), datetimeLocalStringFormat)
     );
     await fillIn('[data-test-kv-key="0"]', 'Learn more');
     await fillIn('[data-test-kv-value="0"]', 'www.learn.com');
 
-    await click(PAGE.button('create-message'));
-    assert.dom(PAGE.title).hasText('Awesome custom message title', 'on the details screen');
+    await click(CUSTOM_MESSAGES.button('create-message'));
+    assert.dom(GENERAL.title).hasText('Awesome custom message title', 'on the details screen');
     assert.dom('.hds-alert').exists('active custom message displays on authenticated.');
     await runCmd(createNS('world'), false);
     await visit('vault/config-ui/messages');
     assert.dom('.hds-alert').exists('active custom message displays on namespace authenticated.');
-    await click(PAGE.listItem('Awesome custom message title'));
-    await click(PAGE.confirmActionButton('Delete message'));
-    await click(PAGE.confirmButton);
+    await click(CUSTOM_MESSAGES.listItem('Awesome custom message title'));
+    await click(CUSTOM_MESSAGES.confirmActionButton('Delete message'));
+    await click(GENERAL.confirmButton);
     assert.strictEqual(
       currentRouteName(),
       'vault.cluster.config-ui.messages.index',

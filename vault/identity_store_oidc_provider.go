@@ -110,23 +110,13 @@ type client struct {
 	ClientSecret string `json:"client_secret"`
 }
 
+//go:generate enumer -type=clientType -trimprefix=clientType -transform=snake
 type clientType int
 
 const (
 	confidential clientType = iota
 	public
 )
-
-func (k clientType) String() string {
-	switch k {
-	case confidential:
-		return "confidential"
-	case public:
-		return "public"
-	default:
-		return "unknown"
-	}
-}
 
 type provider struct {
 	Issuer           string   `json:"issuer"`

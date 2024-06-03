@@ -6,35 +6,17 @@
 import { module, test } from 'qunit';
 import { currentURL, visit, fillIn } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
-import Pretender from 'pretender';
 import { getManagedNamespace } from 'vault/routes/vault/cluster';
-
-const FEATURE_FLAGS_RESPONSE = {
-  feature_flags: ['VAULT_CLOUD_ADMIN_NAMESPACE'],
-};
+import { setupMirage } from 'ember-cli-mirage/test-support';
 
 module('Acceptance | Enterprise | Managed namespace root', function (hooks) {
   setupApplicationTest(hooks);
+  setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    /**
-     * Since the features are fetched on the application load,
-     * we have to populate them on the beforeEach hook because
-     * the fetch won't trigger again within the tests
-     */
-    this.server = new Pretender(function () {
-      this.get('/v1/sys/internal/ui/feature-flags', () => {
-        return [200, { 'Content-Type': 'application/json' }, JSON.stringify(FEATURE_FLAGS_RESPONSE)];
-      });
-      this.get('/v1/sys/health', this.passthrough);
-      this.get('/v1/sys/seal-status', this.passthrough);
-      this.get('/v1/sys/license/features', this.passthrough);
-      this.get('/v1/sys/internal/ui/mounts', this.passthrough);
+    this.server.get('/sys/internal/ui/feature-flags', () => {
+      return { feature_flags: ['VAULT_CLOUD_ADMIN_NAMESPACE'] };
     });
-  });
-
-  hooks.afterEach(function () {
-    this.server.shutdown();
   });
 
   test('it shows the managed namespace toolbar when feature flag exists', async function (assert) {

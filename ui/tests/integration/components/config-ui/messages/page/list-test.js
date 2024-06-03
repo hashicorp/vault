@@ -9,7 +9,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { setupEngine } from 'ember-engines/test-support';
 import { render, click } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import { PAGE } from 'vault/tests/helpers/config-ui/message-selectors';
+import { CUSTOM_MESSAGES } from 'vault/tests/helpers/config-ui/message-selectors';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 
 const META = {
@@ -89,7 +89,7 @@ module('Integration | Component | messages/page/list', function (hooks) {
     });
     assert.dom('[data-test-icon="message-circle"]').exists();
     for (const message of this.messages) {
-      assert.dom(PAGE.listItem('Message title 1')).exists();
+      assert.dom(CUSTOM_MESSAGES.listItem('Message title 1')).exists();
       assert.dom(`[data-linked-block-title="${message.id}"]`).hasText(message.title);
     }
   });
@@ -121,14 +121,16 @@ module('Integration | Component | messages/page/list', function (hooks) {
     await render(hbs`<Messages::Page::List @messages={{this.messages}} />`, {
       owner: this.engine,
     });
-    await click(PAGE.button('create message'));
-    assert.dom(PAGE.modalTitle('maximum-message-modal')).hasText('Maximum number of messages reached');
+    await click(CUSTOM_MESSAGES.button('create message'));
     assert
-      .dom(PAGE.modalBody('maximum-message-modal'))
+      .dom(CUSTOM_MESSAGES.modalTitle('maximum-message-modal'))
+      .hasText('Maximum number of messages reached');
+    assert
+      .dom(CUSTOM_MESSAGES.modalBody('maximum-message-modal'))
       .hasText(
         'Vault can only store up to 100 messages. To create a message, delete one of your messages to clear up space.'
       );
-    await click(PAGE.modalButton('maximum-message-modal'));
+    await click(CUSTOM_MESSAGES.modalButton('maximum-message-modal'));
   });
 
   test('it should show the correct badge colors based on badge status', async function (assert) {
@@ -137,8 +139,8 @@ module('Integration | Component | messages/page/list', function (hooks) {
     await render(hbs`<Messages::Page::List @messages={{this.messages}} />`, {
       owner: this.engine,
     });
-    assert.dom(PAGE.badge('0')).hasClass('hds-badge--color-success');
-    assert.dom(PAGE.badge('1')).hasClass('hds-badge--color-neutral');
-    assert.dom(PAGE.badge('2')).hasClass('hds-badge--color-highlight');
+    assert.dom(CUSTOM_MESSAGES.badge('0')).hasClass('hds-badge--color-success');
+    assert.dom(CUSTOM_MESSAGES.badge('1')).hasClass('hds-badge--color-neutral');
+    assert.dom(CUSTOM_MESSAGES.badge('2')).hasClass('hds-badge--color-highlight');
   });
 });

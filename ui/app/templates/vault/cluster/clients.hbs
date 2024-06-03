@@ -3,47 +3,5 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<PageHeader as |p|>
-  <p.levelLeft>
-    <h1 class="title is-3">
-      Vault Usage Metrics
-    </h1>
-  </p.levelLeft>
-</PageHeader>
-
-<div class="tabs-container box is-bottomless is-marginless is-fullwidth is-paddingless">
-  <nav class="tabs" aria-label="navigation for managing client counts">
-    <ul>
-      <li>
-        <LinkTo @route="vault.cluster.clients.counts.overview" data-test-tab="overview">
-          Overview
-        </LinkTo>
-      </li>
-      <li>
-        <LinkTo @route="vault.cluster.clients.counts.token" data-test-tab="token">
-          Entity/Non-entity clients
-        </LinkTo>
-      </li>
-      {{#if this.hasSecretsSync}}
-        <li>
-          <LinkTo @route="vault.cluster.clients.counts.sync" data-test-tab="sync">
-            Secrets sync clients
-          </LinkTo>
-        </li>
-      {{/if}}
-      {{#if (or @model.config.canRead @model.canRead)}}
-        <li>
-          <LinkTo
-            @route="vault.cluster.clients.config"
-            @current-when="vault.cluster.clients.config vault.cluster.clients.edit"
-            data-test-tab="config"
-          >
-            Configuration
-          </LinkTo>
-        </li>
-      {{/if}}
-    </ul>
-  </nav>
-</div>
-
+<Sidebar::Nav::Clients @canReadConfig={{this.model.config.canRead}} />
 {{outlet}}

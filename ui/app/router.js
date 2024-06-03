@@ -5,7 +5,7 @@
 
 import EmberRouter from '@ember/routing/router';
 import config from 'vault/config/environment';
-
+import { addDocfyRoutes } from '@docfy/ember';
 export default class Router extends EmberRouter {
   location = config.locationType;
   rootURL = config.rootURL;
@@ -29,8 +29,9 @@ Router.map(function () {
       this.route('clients', function () {
         this.route('counts', function () {
           this.route('overview');
-          this.route('sync');
           this.route('token');
+          this.route('sync');
+          this.route('acme');
         });
         this.route('config');
         this.route('edit');
@@ -216,4 +217,7 @@ Router.map(function () {
     });
     this.route('not-found', { path: '/*path' });
   });
+  if (config.environment !== 'production') {
+    addDocfyRoutes(this);
+  }
 });

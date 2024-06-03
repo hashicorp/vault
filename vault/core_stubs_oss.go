@@ -104,3 +104,9 @@ func (c *Core) SecretsSyncLicensedActivated() bool { return false }
 func (c *Core) IsMultisealEnabled() bool { return false }
 
 func (c *Core) SetMultisealEnabled(_ bool) {}
+
+func (c *Core) ReloadReplicationCanaryWriteInterval() {}
+
+func (c *Core) GetReplicationLagMillisIgnoreErrs() int64 { return 0 }
+
+func (c *Core) ReloadOverloadController() {}

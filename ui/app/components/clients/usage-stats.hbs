@@ -3,61 +3,34 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<div class="chart-wrapper" data-test-usage-stats>
-  <div class="chart-header has-header-link has-bottom-margin-m">
-    <div class="header-left">
-      <h2 class="chart-title">{{@title}}</h2>
-      <p class="chart-description"> {{or @description "These totals are within this namespace and all its children."}}</p>
-    </div>
-    <div class="header-right">
-      <DocLink @path="/vault/tutorials/monitoring/usage-metrics">
-        Learn more
-      </DocLink>
-    </div>
+{{! Display only template that renders yielded components in columns, beneath a title and description }}
+<Hds::Card::Container
+  @level="base"
+  @hasBorder={{true}}
+  data-test-usage-stats={{@title}}
+  class="has-padding-m has-bottom-margin-m"
+>
+  <div class="flex row-wrap space-between">
+    <Hds::Text::Display @tag="h3" @weight="semibold" @size="400">
+      {{@title}}
+    </Hds::Text::Display>
+    <Hds::Link::Standalone
+      @href={{doc-link "/vault/tutorials/monitoring/usage-metrics"}}
+      @text="Usage metrics tutorial"
+      @icon="learn-link"
+      @iconPosition="trailing"
+      class="has-bottom-margin-s"
+    />
   </div>
+  {{#if @description}}
+    <Hds::Text::Body @tag="p">
+      {{@description}}
+    </Hds::Text::Body>
+  {{/if}}
+
+  <hr class="has-background-gray-100 has-bottom-margin-m" />
 
   <div class="columns">
-    <div class="column">
-      <StatText
-        class="column"
-        @label="Total clients"
-        @value={{@totalUsageCounts.clients}}
-        @size="l"
-        @subText="The number of clients which interacted with Vault during this month. This is Vault’s primary billing metric."
-        data-test-stat-text="total-clients"
-      />
-    </div>
-    <div class="column">
-      <StatText
-        class="column"
-        @label="Entity clients"
-        @value={{@totalUsageCounts.entity_clients}}
-        @size="l"
-        @subText="Representations of a particular user, client, or application that created a token via login."
-        data-test-stat-text="entity-clients"
-      />
-    </div>
-    <div class="column">
-      <StatText
-        class="column"
-        @label="Non-entity clients"
-        @value={{@totalUsageCounts.non_entity_clients}}
-        @size="l"
-        @subText="Clients created with a shared set of permissions, but not associated with an entity."
-        data-test-stat-text="non-entity-clients"
-      />
-    </div>
-    {{#if @isSecretsSyncActivated}}
-      <div class="column">
-        <StatText
-          class="column"
-          @label="Secrets sync clients"
-          @value={{@totalUsageCounts.secret_syncs}}
-          @size="l"
-          @subText="A secret with a configured sync destination qualifies as a unique and active client."
-          data-test-stat-text="secret-syncs"
-        />
-      </div>
-    {{/if}}
+    {{yield}}
   </div>
-</div>
+</Hds::Card::Container>

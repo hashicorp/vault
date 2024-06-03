@@ -49,10 +49,6 @@ millions of leases in an automated way, it is recommended to space out the creat
   **Note, namespaces are supported in Enterprise only**.
 - `max_leases` `(int: 0)` - Maximum number of leases allowed by the quota rule.
 - `role` `(string: "")` - If set on a quota where `path` is set to an auth mount with a
-- `max_leases` `(int: 0)` - Maximum number of leases allowed by the quota rule.
-- `role` `(string: "")` - If set on a quota where `path` is set to an auth mount with a
-- `max_leases` `(int: 0)` - Maximum number of leases allowed by the quota rule.
-- `role` `(string: "")` - If set on a quota where `path` is set to an auth mount with a
   concept of roles (such as `/auth/approle/`), this will make the quota restrict login
   requests to that mount that are made with the specified role. The request will fail if
   the auth mount does not have a concept of roles, or `path` is not an auth mount.

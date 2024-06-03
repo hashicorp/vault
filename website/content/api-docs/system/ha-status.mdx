@@ -31,36 +31,45 @@ $ curl \
 {
   "Nodes": [
     {
-      "hostname": "node1",
-      "api_address": "http://10.0.0.2:8200",
-      "cluster_address": "https://10.0.0.2:8201",
       "active_node": true,
+      "api_address": "http://10.0.0.2:8200",
+      "clock_skew_ms": 0,
+      "cluster_address": "https://10.0.0.2:8201",
+      "echo_duration_ms": 0,
+      "hostname": "node1",
       "last_echo": null,
-      "version": "1.11.0",
-      "upgrade_version": "1.11.0",
+      "replication_primary_canary_age_ms": 0,
+      "version": "1.17.0",
+      "upgrade_version": "1.17.0",
       "redundancy_zone": "a"
     },
     {
-      "hostname": "node2",
+      "active_node": false,
       "api_address": "http://10.0.0.3:8200",
+      "clock_skew_ms": 0,
       "cluster_address": "https://10.0.0.3:8201",
-      "active_node": false,
-      "last_echo": "2021-11-29T10:29:09.202235-05:00",
-      "version": "1.11.0",
-      "upgrade_version": "1.11.0",
+      "echo_duration_ms": 20,
+      "hostname": "node2",
+      "last_echo": "2024-03-04T08:05:48.403148-05:00",
+      "replication_primary_canary_age_ms": 72,
+      "version": "1.17.0",
+      "upgrade_version": "1.17.0",
       "redundancy_zone": "a"
     },
     {
-      "hostname": "node3",
-      "api_address": "http://10.0.0.4:8200",
-      "cluster_address": "https://10.0.0.4:8201",
       "active_node": false,
-      "last_echo": "2021-11-29T10:29:07.402548-05:00",
-      "version": "1.11.0",
-      "upgrade_version": "1.11.0",
+      "api_address": "http://10.0.0.4:8200",
+      "clock_skew_ms": -1,
+      "cluster_address": "https://10.0.0.4:8201",
+      "echo_duration_ms": 17,
+      "hostname": "node3",
+      "last_echo": "2024-03-04T08:05:48.657318-05:00",
+      "replication_primary_canary_age_ms": 950,
+      "version": "1.17.0",
+      "upgrade_version": "1.17.0",
       "redundancy_zone": "a"
     }
   ]
 }
 ```
-Note that in the above sample response, `upgrade_version` and `redundancy_zone` are Enterprise-only fields.
+Note that in the above sample response, `upgrade_version`, `redundancy_zone`, and `replication_primary_canary_age_ms` are Enterprise-only fields.

@@ -31,6 +31,8 @@ import (
 	"golang.org/x/crypto/ocsp"
 )
 
+//go:generate enumer -type=FailOpenMode -trimprefix=FailOpen
+
 // FailOpenMode is OCSP fail open mode. FailOpenTrue by default and may
 // set to ocspModeFailClosed for fail closed mode
 type FailOpenMode uint32

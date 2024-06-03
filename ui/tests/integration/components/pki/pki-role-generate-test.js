@@ -10,7 +10,8 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { setupEngine } from 'ember-engines/test-support';
 import Sinon from 'sinon';
-import { SELECTORS } from 'vault/tests/helpers/pki/pki-role-generate';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { PKI_ROLE_GENERATE } from 'vault/tests/helpers/pki/pki-selectors';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 
 module('Integration | Component | pki-role-generate', function (hooks) {
@@ -42,10 +43,10 @@ module('Integration | Component | pki-role-generate', function (hooks) {
   `,
       { owner: this.engine }
     );
-    assert.dom(SELECTORS.form).exists('shows the cert generate form');
-    assert.dom(SELECTORS.commonNameField).exists('shows the common name field');
-    assert.dom(SELECTORS.optionsToggle).exists('toggle exists');
-    await fillIn(SELECTORS.commonNameField, 'example.com');
+    assert.dom(PKI_ROLE_GENERATE.form).exists('shows the cert generate form');
+    assert.dom(GENERAL.inputByAttr('commonName')).exists('shows the common name field');
+    assert.dom(PKI_ROLE_GENERATE.optionsToggle).exists('toggle exists');
+    await fillIn(GENERAL.inputByAttr('commonName'), 'example.com');
     assert.strictEqual(this.model.commonName, 'example.com', 'Filling in the form updates the model');
   });
 
@@ -68,10 +69,12 @@ module('Integration | Component | pki-role-generate', function (hooks) {
   `,
       { owner: this.engine }
     );
-    assert.dom(SELECTORS.form).doesNotExist('Does not show the form');
-    assert.dom(SELECTORS.downloadButton).exists('shows the download button');
-    assert.dom(SELECTORS.revokeButton).exists('shows the revoke button');
-    assert.dom(SELECTORS.certificate).exists({ count: 1 }, 'shows certificate info row');
-    assert.dom(SELECTORS.serialNumber).hasText('abcd-efgh-ijkl', 'shows serial number info row');
+    assert.dom(PKI_ROLE_GENERATE.form).doesNotExist('Does not show the form');
+    assert.dom(PKI_ROLE_GENERATE.downloadButton).exists('shows the download button');
+    assert.dom(PKI_ROLE_GENERATE.revokeButton).exists('shows the revoke button');
+    assert.dom(GENERAL.infoRowValue('Certificate')).exists({ count: 1 }, 'shows certificate info row');
+    assert
+      .dom(GENERAL.infoRowValue('Serial number'))
+      .hasText('abcd-efgh-ijkl', 'shows serial number info row');
   });
 });

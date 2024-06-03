@@ -298,6 +298,11 @@ export default Service.extend({
 
     if (resp.renewable) {
       Object.assign(data, this.calculateExpiration(resp));
+    } else if (resp.type === 'batch') {
+      // if it's a batch token, it's not renewable but has an expire time
+      // so manually set tokenExpirationEpoch and allow expiration
+      data.tokenExpirationEpoch = new Date(resp.expire_time).getTime();
+      this.set('allowExpiration', true);
     }
 
     if (!data.displayName) {

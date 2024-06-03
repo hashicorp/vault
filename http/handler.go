@@ -32,6 +32,7 @@ import (
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/http/priority"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/limits"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -251,6 +252,7 @@ func handler(props *vault.HandlerProperties) http.Handler {
 	wrappedHandler = rateLimitQuotaWrapping(wrappedHandler, core)
 	wrappedHandler = entWrapGenericHandler(core, wrappedHandler, props)
 	wrappedHandler = wrapMaxRequestSizeHandler(wrappedHandler, props)
+	wrappedHandler = priority.WrapRequestPriorityHandler(wrappedHandler)
 
 	// Add an extra wrapping handler if the DisablePrintableCheck listener
 	// setting isn't true that checks for non-printable characters in the
@@ -459,7 +461,12 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		// The uuid for the request is going to be generated when a logical
 		// request is generated. But, here we generate one to be able to track
 		// in-flight requests, and use that to update the req data with clientID
-		inFlightReqID, err := uuid.GenerateUUID()
+		reqIDGen := props.RequestIDGenerator
+		if reqIDGen == nil {
+			// By default use a UUID
+			reqIDGen = uuid.GenerateUUID
+		}
+		inFlightReqID, err := reqIDGen()
 		if err != nil {
 			respondError(nw, http.StatusInternalServerError, fmt.Errorf("failed to generate an identifier for the in-flight request"))
 		}
@@ -860,6 +867,7 @@ func forwardBasedOnHeaders(core *vault.Core, r *http.Request) (bool, error) {
 			return false, fmt.Errorf("forwarding via header %s disabled in configuration", VaultForwardHeaderName)
 		}
 		if rawForward == "active-node" {
+			core.Logger().Trace("request will be routed based on the 'active-node' header")
 			return true, nil
 		}
 		return false, nil
@@ -956,6 +964,7 @@ func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 	}
 	path := ns.TrimmedPath(r.URL.Path[len("/v1/"):])
 	if alwaysRedirectPaths.HasPath(path) {
+		core.Logger().Trace("cannot forward request (path included in always redirect paths), falling back to redirection to standby")
 		respondStandby(core, w, r.URL)
 		return
 	}
@@ -966,7 +975,7 @@ func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 	statusCode, header, retBytes, err := core.ForwardRequest(r)
 	if err != nil {
 		if err == vault.ErrCannotForward {
-			core.Logger().Debug("cannot forward request (possibly disabled on active node), falling back")
+			core.Logger().Trace("cannot forward request (possibly disabled on active node), falling back to redirection to standby")
 		} else {
 			core.Logger().Error("forward request error", "error", err)
 		}
@@ -975,6 +984,8 @@ func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 		respondStandby(core, w, r.URL)
 		return
 	}
+
+	core.Logger().Trace("request forwarded", "statusCode", statusCode)
 
 	for k, v := range header {
 		w.Header()[k] = v
@@ -1020,6 +1031,18 @@ func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *l
 			resp = &logical.Response{}
 		}
 		resp.AddWarning("Timeout hit while waiting for local replicated cluster to apply primary's write; this client may encounter stale reads of values written during this operation.")
+	}
+
+	// We need to rely on string comparison here because the error could be
+	// returned from an RPC client call with a non-ReplicatedResponse return
+	// value (see: PersistAlias). In these cases, the error we get back will
+	// contain the non-wrapped error message string we're looking for. We would
+	// love to clean up all error wrapping to be consistent in Vault but we
+	// considered that too high risk for now.
+	if err != nil && strings.Contains(err.Error(), consts.ErrOverloaded.Error()) {
+		logical.RespondWithStatusCode(resp, r, http.StatusServiceUnavailable)
+		respondError(w, http.StatusServiceUnavailable, err)
+		return resp, false, false
 	}
 	if errwrap.Contains(err, consts.ErrStandby.Error()) {
 		respondStandby(core, w, rawReq.URL)

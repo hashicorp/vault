@@ -5,18 +5,20 @@
 
 {{#if (and this.byMonthActivityData this.isDateRange)}}
   <Clients::ChartContainer
-    @title="Entity/Non-entity clients"
-    @description="This data can be used to understand how many entity and non-entity clients are using Vault each month for this date range."
+    @title="Entity/Non-entity clients usage"
+    @description="This data can be used to understand how many entity and non-entity clients are using Vault each month for this date range. Each client is counted once per month."
     @timestamp={{@activity.responseTimestamp}}
     @legend={{this.legend}}
     @hasChartData={{true}}
-    data-test-chart="monthly total"
   >
     <:subTitle>
-      <h2 class="chart-title">Total monthly clients</h2>
-      <p class="chart-subtext">
-        Each client is counted once per month. This can help with capacity planning.
-      </p>
+      <StatText
+        @label="Total clients"
+        @subText="The total number of entity and non-entity clients for this date range."
+        @value={{this.tokenStats.total}}
+        @tooltipText="This number is the total for the queried date range. The chart displays a monthly breakdown of total clients per month."
+        @size="l"
+      />
     </:subTitle>
 
     <:stats>
@@ -25,31 +27,26 @@
         @value={{this.averageTotalClients}}
         @size="m"
         class="data-details-top has-top-padding-l"
-        data-test-chart-stat="monthly total"
-      />
-
-      <StatText
-        @label="Average new clients per month"
-        @value={{this.averageNewClients}}
-        @size="m"
-        class="data-details-bottom has-top-padding-l"
-        data-test-chart-stat="monthly new"
       />
     </:stats>
 
     <:chart>
-      <Clients::VerticalBarChart @dataset={{this.byMonthActivityData}} @chartLegend={{this.legend}} />
+      <Clients::Charts::VerticalBarStacked
+        @chartTitle="Entity/Non-entity clients usage"
+        @data={{this.byMonthActivityData}}
+        @chartLegend={{this.legend}}
+        @chartHeight={{250}}
+      />
     </:chart>
   </Clients::ChartContainer>
 
   <Clients::ChartContainer
     @title="Monthly new"
-    @description="Entity or non-entity clients which interacted with Vault for the first time during this date range, displayed per month."
+    @description="Entity or non-entity clients which interacted with Vault for the first time during this date range. Each bar represents the total new clients for that month."
     @timestamp={{@activity.responseTimestamp}}
     @legend={{this.legend}}
     @hasChartData={{this.averageNewClients}}
     class={{unless this.averageNewClients "no-legend"}}
-    data-test-chart="monthly new"
   >
     <:stats>
       <StatText
@@ -57,7 +54,6 @@
         @value={{this.average this.byMonthNewClients "entity_clients"}}
         @size="m"
         class="chart-subTitle has-top-padding-l"
-        data-test-chart-stat="entity"
       />
 
       <StatText
@@ -65,12 +61,16 @@
         @value={{this.average this.byMonthNewClients "non_entity_clients"}}
         @size="m"
         class="data-details-top has-top-padding-l"
-        data-test-chart-stat="nonentity"
       />
     </:stats>
 
     <:chart>
-      <Clients::VerticalBarChart @dataset={{this.byMonthNewClients}} @chartLegend={{this.legend}} />
+      <Clients::Charts::VerticalBarStacked
+        @chartTitle="Monthly new"
+        @data={{this.byMonthNewClients}}
+        @chartLegend={{this.legend}}
+        @chartHeight={{250}}
+      />
     </:chart>
 
     <:emptyState>
@@ -82,21 +82,41 @@
           'namespace'
         }} in this date range."
         @bottomBorder={{true}}
+        class="is-shadowless"
       />
     </:emptyState>
   </Clients::ChartContainer>
 {{else}}
-  {{! UsageStats render when viewing a single, historical month AND activity data predates new client breakdown (< v1.10.0)
-    or viewing the current month filtered down to auth method }}
+  {{! Renders when viewing a single month or activity log data that predates the monthly breakdown added in 1.11 }}
   <Clients::UsageStats
-    @title="Total usage"
-    @description="These totals are within
-    {{or @mountPath 'this namespace and all its children'}}.
+    @title="Entity/Non-entity usage"
+    @description="Client counts for this
+    {{if @mountPath 'mount' 'namespace and all its children'}}.
     {{if
       this.isCurrentMonth
       "Only totals are available when viewing the current month. To see a breakdown of new and total clients for this month, select the 'Current Billing Period' filter."
     }}"
-    @isSecretsSyncActivated={{@isSecretsSyncActivated}}
-    @totalUsageCounts={{this.tokenUsageCounts}}
-  />
+  >
+    <StatText
+      class="column"
+      @label="Total clients"
+      @value={{this.tokenStats.total}}
+      @size="l"
+      @subText="The number of clients which interacted with Vault during this month. This is Vault’s primary billing metric."
+    />
+    <StatText
+      class="column"
+      @label="Entity"
+      @value={{this.tokenStats.entity_clients}}
+      @size="l"
+      @subText="Representations of a particular user, client, or application that created a token via login."
+    />
+    <StatText
+      class="column"
+      @label="Non-entity"
+      @value={{this.tokenStats.non_entity_clients}}
+      @size="l"
+      @subText="Clients created with a shared set of permissions, but not associated with an entity."
+    />
+  </Clients::UsageStats>
 {{/if}}

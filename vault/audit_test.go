@@ -18,7 +18,6 @@ import (
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -28,16 +27,16 @@ import (
 
 func TestAudit_ReadOnlyViewDuringMount(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
-	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, error) {
-		err := config.SaltView.Put(ctx, &logical.StorageEntry{
+	c.auditBackends["noop"] = func(config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, error) {
+		err := config.SaltView.Put(context.Background(), &logical.StorageEntry{
 			Key:   "bar",
 			Value: []byte("baz"),
 		})
 		if err == nil || !strings.Contains(err.Error(), logical.ErrSetupReadOnly.Error()) {
 			t.Fatalf("expected a read-only error")
 		}
-		factory := corehelpers.NoopAuditFactory(nil)
-		return factory(ctx, config, nil)
+		factory := audit.NoopAuditFactory(nil)
+		return factory(config, nil)
 	}
 
 	me := &MountEntry{
@@ -53,12 +52,14 @@ func TestAudit_ReadOnlyViewDuringMount(t *testing.T) {
 
 func TestCore_EnableAudit(t *testing.T) {
 	c, keys, _ := TestCoreUnsealed(t)
-	c.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
 
 	me := &MountEntry{
 		Table: auditTableType,
 		Path:  "foo",
-		Type:  "noop",
+		Type:  audit.TypeFile,
+		Options: map[string]string{
+			"file_path": "discard",
+		},
 	}
 	err := c.enableAudit(namespace.RootContext(context.Background()), me, true)
 	if err != nil {
@@ -70,11 +71,15 @@ func TestCore_EnableAudit(t *testing.T) {
 	}
 
 	conf := &CoreConfig{
-		Physical:      c.physical,
-		AuditBackends: make(map[string]audit.Factory),
-		DisableMlock:  true,
+		AuditBackends: map[string]audit.Factory{
+			audit.TypeFile:   audit.NewFileBackend,
+			audit.TypeSocket: audit.NewSocketBackend,
+			audit.TypeSyslog: audit.NewSyslogBackend,
+		},
+		DisableMlock: true,
+		Physical:     c.physical,
 	}
-	conf.AuditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
+
 	c2, err := NewCore(conf)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -103,8 +108,9 @@ func TestCore_EnableAudit(t *testing.T) {
 
 func TestCore_EnableAudit_MixedFailures(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
-	c.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
-	c.auditBackends["fail"] = func(ctx context.Context, config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, error) {
+
+	// Additional audit backend type that will fail.
+	c.auditBackends["fail"] = func(config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, error) {
 		return nil, fmt.Errorf("failing enabling")
 	}
 
@@ -114,14 +120,20 @@ func TestCore_EnableAudit_MixedFailures(t *testing.T) {
 			{
 				Table: auditTableType,
 				Path:  "noop/",
-				Type:  "noop",
+				Type:  audit.TypeFile,
 				UUID:  "abcd",
+				Options: map[string]string{
+					"file_path": "discard",
+				},
 			},
 			{
 				Table: auditTableType,
 				Path:  "noop2/",
-				Type:  "noop",
+				Type:  audit.TypeFile,
 				UUID:  "bcde",
+				Options: map[string]string{
+					"file_path": "discard",
+				},
 			},
 		},
 	}
@@ -152,8 +164,9 @@ func TestCore_EnableAudit_MixedFailures(t *testing.T) {
 // correctly
 func TestCore_EnableAudit_Local(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
-	c.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
-	c.auditBackends["fail"] = func(ctx context.Context, config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, error) {
+
+	// Additional audit backend that will always fail.
+	c.auditBackends["fail"] = func(config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, error) {
 		return nil, fmt.Errorf("failing enabling")
 	}
 
@@ -163,20 +176,26 @@ func TestCore_EnableAudit_Local(t *testing.T) {
 			{
 				Table:       auditTableType,
 				Path:        "noop/",
-				Type:        "noop",
+				Type:        audit.TypeFile,
 				UUID:        "abcd",
 				Accessor:    "noop-abcd",
 				NamespaceID: namespace.RootNamespaceID,
 				namespace:   namespace.RootNamespace,
+				Options: map[string]string{
+					"file_path": "discard",
+				},
 			},
 			{
 				Table:       auditTableType,
 				Path:        "noop2/",
-				Type:        "noop",
+				Type:        audit.TypeFile,
 				UUID:        "bcde",
 				Accessor:    "noop-bcde",
 				NamespaceID: namespace.RootNamespaceID,
 				namespace:   namespace.RootNamespace,
+				Options: map[string]string{
+					"file_path": "discard",
+				},
 			},
 		},
 	}
@@ -238,7 +257,6 @@ func TestCore_EnableAudit_Local(t *testing.T) {
 
 func TestCore_DisableAudit(t *testing.T) {
 	c, keys, _ := TestCoreUnsealed(t)
-	c.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
 
 	existed, err := c.disableAudit(namespace.RootContext(context.Background()), "foo", true)
 	if existed && err != nil {
@@ -248,7 +266,10 @@ func TestCore_DisableAudit(t *testing.T) {
 	me := &MountEntry{
 		Table: auditTableType,
 		Path:  "foo",
-		Type:  "noop",
+		Type:  audit.TypeFile,
+		Options: map[string]string{
+			"file_path": "discard",
+		},
 	}
 	err = c.enableAudit(namespace.RootContext(context.Background()), me, true)
 	if err != nil {
@@ -341,16 +362,16 @@ func verifyDefaultAuditTable(t *testing.T, table *MountTable) {
 
 func TestAuditBroker_LogRequest(t *testing.T) {
 	l := logging.NewVaultLogger(log.Trace)
-	b, err := NewAuditBroker(l)
+	b, err := audit.NewBroker(l)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	a1 := corehelpers.TestNoopAudit(t, "foo", nil)
-	a2 := corehelpers.TestNoopAudit(t, "bar", nil)
-	err = b.Register("foo", a1, false)
+	a1 := audit.TestNoopAudit(t, "foo", nil)
+	a2 := audit.TestNoopAudit(t, "bar", nil)
+	err = b.Register(a1, false)
 	require.NoError(t, err)
-	err = b.Register("bar", a2, false)
+	err = b.Register(a2, false)
 	require.NoError(t, err)
 
 	auth := &logical.Auth{
@@ -399,7 +420,7 @@ func TestAuditBroker_LogRequest(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	for _, a := range []*corehelpers.NoopAudit{a1, a2} {
+	for _, a := range []*audit.NoopAudit{a1, a2} {
 		if !reflect.DeepEqual(a.ReqAuth[0], auth) {
 			t.Fatalf("Bad: %#v", a.ReqAuth[0])
 		}
@@ -430,16 +451,16 @@ func TestAuditBroker_LogRequest(t *testing.T) {
 
 func TestAuditBroker_LogResponse(t *testing.T) {
 	l := logging.NewVaultLogger(log.Trace)
-	b, err := NewAuditBroker(l)
+	b, err := audit.NewBroker(l)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	a1 := corehelpers.TestNoopAudit(t, "foo", nil)
-	a2 := corehelpers.TestNoopAudit(t, "bar", nil)
-	err = b.Register("foo", a1, false)
+	a1 := audit.TestNoopAudit(t, "foo", nil)
+	a2 := audit.TestNoopAudit(t, "bar", nil)
+	err = b.Register(a1, false)
 	require.NoError(t, err)
-	err = b.Register("bar", a2, false)
+	err = b.Register(a2, false)
 	require.NoError(t, err)
 
 	auth := &logical.Auth{
@@ -499,7 +520,7 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	for _, a := range []*corehelpers.NoopAudit{a1, a2} {
+	for _, a := range []*audit.NoopAudit{a1, a2} {
 		if !reflect.DeepEqual(a.RespAuth[0], auth) {
 			t.Fatalf("Bad: %#v", a.ReqAuth[0])
 		}
@@ -535,17 +556,17 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 func TestAuditBroker_AuditHeaders(t *testing.T) {
 	logger := logging.NewVaultLogger(log.Trace)
 
-	b, err := NewAuditBroker(logger)
+	b, err := audit.NewBroker(logger)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	a1 := corehelpers.TestNoopAudit(t, "foo", nil)
-	a2 := corehelpers.TestNoopAudit(t, "bar", nil)
+	a1 := audit.TestNoopAudit(t, "foo", nil)
+	a2 := audit.TestNoopAudit(t, "bar", nil)
 
-	err = b.Register("foo", a1, false)
+	err = b.Register(a1, false)
 	require.NoError(t, err)
-	err = b.Register("bar", a2, false)
+	err = b.Register(a2, false)
 	require.NoError(t, err)
 
 	auth := &logical.Auth{
@@ -589,7 +610,7 @@ func TestAuditBroker_AuditHeaders(t *testing.T) {
 		"x-vault-header": {"bar"},
 	}
 
-	for _, a := range []*corehelpers.NoopAudit{a1, a2} {
+	for _, a := range []*audit.NoopAudit{a1, a2} {
 		if !reflect.DeepEqual(a.ReqHeaders[0], expected) {
 			t.Fatalf("Bad audited headers: %#v", a.ReqHeaders[0])
 		}
@@ -615,94 +636,6 @@ func TestAuditBroker_AuditHeaders(t *testing.T) {
 	}
 }
 
-// TestAudit_hasEnterpriseAuditOptions checks that the existence of any Enterprise
-// only options in the options which can be supplied to enable an audit device can
-// be flagged.
-func TestAudit_hasEnterpriseAuditOptions(t *testing.T) {
-	t.Parallel()
-
-	tests := map[string]struct {
-		input    map[string]string
-		expected bool
-	}{
-		"nil": {
-			expected: false,
-		},
-		"empty": {
-			input:    make(map[string]string),
-			expected: false,
-		},
-		"non-ent-opts": {
-			input: map[string]string{
-				"log_raw": "true",
-			},
-			expected: false,
-		},
-		"ent-opt-filter": {
-			input: map[string]string{
-				"filter": "mount_type == kv",
-			},
-			expected: true,
-		},
-		"ent-opt-fallback": {
-			input: map[string]string{
-				"fallback": "true",
-			},
-			expected: true,
-		},
-		"ent-opt-filter-and-fallback": {
-			input: map[string]string{
-				"filter":   "mount_type == kv",
-				"fallback": "true",
-			},
-			expected: true,
-		},
-	}
-
-	for name, tc := range tests {
-		name := name
-		tc := tc
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			require.Equal(t, tc.expected, hasEnterpriseAuditOptions(tc.input))
-		})
-	}
-}
-
-// TestAudit_hasInvalidAuditOptions tests that depending on whether we are running
-// an Enterprise or non-Enterprise version of Vault, the options supplied to enable
-// an audit device may or may not be valid.
-// NOTE: In the non-Enterprise version of Vault supplying audit options such as
-// 'filter' or 'fallback' is not allowed.
-func TestAudit_hasInvalidAuditOptions(t *testing.T) {
-	tests := map[string]struct {
-		input    map[string]string
-		expected bool
-	}{
-		"non-ent-opts": {
-			input: map[string]string{
-				"log_raw": "true",
-			},
-			expected: false,
-		},
-		"ent-opt": {
-			input: map[string]string{
-				"filter": "mount_type == kv",
-			},
-			expected: !constants.IsEnterprise,
-		},
-	}
-
-	for name, tc := range tests {
-		name := name
-		tc := tc
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			require.Equal(t, tc.expected, hasInvalidAuditOptions(tc.input))
-		})
-	}
-}
-
 // TestAudit_enableAudit ensures that we do not enable an audit device with Enterprise
 // only options on a non-Enterprise version of Vault.
 func TestAudit_enableAudit(t *testing.T) {
@@ -710,13 +643,15 @@ func TestAudit_enableAudit(t *testing.T) {
 	defer cluster.Cleanup()
 
 	c := cluster.Cores[0]
-	c.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
 
 	me := &MountEntry{
-		Table:   auditTableType,
-		Path:    "foo",
-		Type:    "noop",
-		Options: map[string]string{"fallback": "true"},
+		Table: auditTableType,
+		Path:  "foo",
+		Type:  audit.TypeFile,
+		Options: map[string]string{
+			"file_path": "discard",
+			"fallback":  "true",
+		},
 	}
 	err := c.enableAudit(namespace.RootContext(context.Background()), me, true)
 
@@ -734,18 +669,18 @@ func TestAudit_newAuditBackend(t *testing.T) {
 	defer cluster.Cleanup()
 
 	c := cluster.Cores[0]
-	c.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
 
 	me := &MountEntry{
-		Table:   auditTableType,
-		Path:    "foo",
-		Type:    "noop",
-		Options: map[string]string{"fallback": "true"},
+		Table: auditTableType,
+		Path:  "foo",
+		Type:  audit.TypeFile,
+		Options: map[string]string{
+			"file_path": "discard",
+			"fallback":  "true",
+		},
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
 
-	_, err := c.newAuditBackend(ctx, me, &logical.InmemStorage{}, me.Options)
+	_, err := c.newAuditBackend(me, &logical.InmemStorage{}, me.Options)
 
 	if constants.IsEnterprise {
 		require.NoError(t, err)

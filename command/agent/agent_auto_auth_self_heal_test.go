@@ -23,25 +23,8 @@ import (
 	"github.com/hashicorp/vault/command/agentproxyshared/sink/file"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
-	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
-	"github.com/hashicorp/vault/vault"
 	"github.com/stretchr/testify/require"
-)
-
-const (
-	lookupSelfTemplateContents = `{{ with secret "auth/token/lookup-self" }}{{ .Data.id }}{{ end }}`
-
-	kvDataTemplateContents = `"{{ with secret "secret/data/otherapp" }}{{ .Data.data.username }}{{ end }}"`
-
-	kvAccessPolicy = `
-path "/kv/*" {
-	capabilities = ["create", "read", "update", "delete", "list"]
-}
-path "/secret/*" {
-	capabilities = ["create", "read", "update", "delete", "list"]
-}`
 )
 
 // TestAutoAuthSelfHealing_TokenFileAuth_SinkOutput tests that
@@ -51,39 +34,24 @@ func TestAutoAuthSelfHealing_TokenFileAuth_SinkOutput(t *testing.T) {
 	// Unset the environment variable so that agent picks up the right test cluster address
 	t.Setenv(api.EnvVaultAddress, "")
 
-	tmpDir := t.TempDir()
-	pathLookupSelf := filepath.Join(tmpDir, "lookup-self")
-	pathVaultToken := filepath.Join(tmpDir, "vault-token")
-	pathTokenFile := filepath.Join(tmpDir, "token-file")
-
-	secretRenderInterval := 1 * time.Second
-	contextTimeout := 30 * time.Second
-
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	logger := corehelpers.NewTestLogger(t)
 	serverClient := cluster.Cores[0].Client
 
 	// Create token
-	secret, err := serverClient.Auth().Token().Create(&api.TokenCreateRequest{
-		Policies: []string{"test-autoauth"},
-	})
+	secret, err := serverClient.Auth().Token().Create(&api.TokenCreateRequest{})
 	require.NoError(t, err)
 	require.NotNil(t, secret)
 	require.NotNil(t, secret.Auth)
 	require.NotEmpty(t, secret.Auth.ClientToken)
 	token := secret.Auth.ClientToken
 
-	// Write token to vault-token file
-	tokenFile, err := os.Create(pathVaultToken)
-	require.NoError(t, err)
-	_, err = tokenFile.WriteString(token)
-	require.NoError(t, err)
-	err = tokenFile.Close()
-	require.NoError(t, err)
+	// Write token to the auto-auth token file
+	pathVaultToken := makeTempFile(t, "token-file", token)
 
 	// Give us some leeway of 3 errors 1 from each of: auth handler, sink server template server.
 	errCh := make(chan error, 3)
-	ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 
 	// Create auth handler
 	am, err := tokenfile.NewTokenFileAuthMethod(&auth.AuthConfig{
@@ -92,6 +60,10 @@ func TestAutoAuthSelfHealing_TokenFileAuth_SinkOutput(t *testing.T) {
 			"token_file_path": pathVaultToken,
 		},
 	})
+	require.NoError(t, err)
+
+	// Create sink file
+	pathSinkFile := makeTempFile(t, "sink-file", "")
 	require.NoError(t, err)
 
 	ahConfig := &auth.AuthHandlerConfig{
@@ -107,20 +79,14 @@ func TestAutoAuthSelfHealing_TokenFileAuth_SinkOutput(t *testing.T) {
 		errCh <- ah.Run(ctx, am)
 	}()
 
-	// Create sink file server
-	_, err = os.Create(pathTokenFile)
-	require.NoError(t, err)
-
 	config := &sink.SinkConfig{
 		Logger: logger.Named("sink.file"),
 		Config: map[string]interface{}{
-			"path": pathTokenFile,
+			"path": pathSinkFile,
 		},
 	}
 	fs, err := file.NewFileSink(config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	config.Sink = fs
 
 	ss := sink.NewSinkServer(&sink.SinkServerConfig{
@@ -140,12 +106,17 @@ func TestAutoAuthSelfHealing_TokenFileAuth_SinkOutput(t *testing.T) {
 				TLSSkipVerify: true,
 			},
 			TemplateConfig: &agentConfig.TemplateConfig{
-				StaticSecretRenderInt: secretRenderInterval,
+				StaticSecretRenderInt: 1 * time.Second,
 			},
 			AutoAuth: &agentConfig.AutoAuth{
-				Sinks: []*agentConfig.Sink{{Type: "file", Config: map[string]interface{}{
-					"path": pathLookupSelf,
-				}}},
+				Sinks: []*agentConfig.Sink{
+					{
+						Type: "file",
+						Config: map[string]interface{}{
+							"path": pathSinkFile,
+						},
+					},
+				},
 			},
 			ExitAfterAuth: false,
 		},
@@ -154,30 +125,24 @@ func TestAutoAuthSelfHealing_TokenFileAuth_SinkOutput(t *testing.T) {
 		ExitAfterAuth: false,
 	}
 
+	pathTemplateOutput := makeTempFile(t, "template-output", "")
+	require.NoError(t, err)
 	templateTest := &ctconfig.TemplateConfig{
-		Contents:    pointerutil.StringPtr(lookupSelfTemplateContents),
-		Destination: pointerutil.StringPtr(pathLookupSelf),
+		Contents:    pointerutil.StringPtr(`{{ with secret "auth/token/lookup-self" }}{{ .Data.id }}{{ end }}`),
+		Destination: pointerutil.StringPtr(pathTemplateOutput),
 	}
 	templatesToRender := []*ctconfig.TemplateConfig{templateTest}
 
-	var server *template.Server
-	server = template.NewServer(sc)
+	server := template.NewServer(sc)
 	go func() {
 		errCh <- server.Run(ctx, ah.TemplateTokenCh, templatesToRender, ah.AuthInProgress, ah.InvalidToken)
 	}()
 
-	// Trigger template render (mark the time as being earlier, based on the render interval)
-	preTriggerTime := time.Now().Add(-secretRenderInterval)
+	// Send token to template channel, and wait for the template to render
 	ah.TemplateTokenCh <- token
-	fileInfo, err := waitForFiles(t, pathTokenFile, preTriggerTime)
-	require.NoError(t, err)
-
-	tokenInSink, err := os.ReadFile(pathTokenFile)
-	require.NoError(t, err)
-	require.Equal(t, token, string(tokenInSink))
+	err = waitForFileContent(t, pathTemplateOutput, token)
 
 	// Revoke Token
-	t.Logf("revoking token")
 	err = serverClient.Auth().Token().RevokeOrphan(token)
 	require.NoError(t, err)
 
@@ -193,23 +158,13 @@ func TestAutoAuthSelfHealing_TokenFileAuth_SinkOutput(t *testing.T) {
 	err = os.WriteFile(pathVaultToken, []byte(newToken), 0o600)
 	require.NoError(t, err)
 
-	// Wait for auto-auth to complete
-	updatedFileInfo, err := waitForFiles(t, pathTokenFile, fileInfo.ModTime())
+	// Wait for auto-auth to complete and verify token has been written to the sink
+	// and the template has been re-rendered
+	err = waitForFileContent(t, pathSinkFile, newToken)
 	require.NoError(t, err)
 
-	// Verify the new token has been written to a file sink after re-authenticating using lookup-self
-	tokenInSink, err = os.ReadFile(pathTokenFile)
+	err = waitForFileContent(t, pathTemplateOutput, newToken)
 	require.NoError(t, err)
-	require.Equal(t, newToken, string(tokenInSink))
-
-	// Wait for the lookup-self file to be updated (again)
-	_, err = waitForFiles(t, pathLookupSelf, updatedFileInfo.ModTime())
-	require.NoError(t, err)
-
-	// Verify the template has now been correctly rendered with the new token
-	templateContents, err := os.ReadFile(pathLookupSelf)
-	require.NoError(t, err)
-	require.Equal(t, newToken, string(templateContents))
 
 	// Calling cancel will stop the 'Run' funcs we started in Goroutines, we should
 	// then check that there were no errors in our channel.
@@ -232,59 +187,53 @@ func TestAutoAuthSelfHealing_TokenFileAuth_SinkOutput(t *testing.T) {
 // is not re-triggered if a token with incorrect policy access
 // is used to render a template
 func Test_NoAutoAuthSelfHealing_BadPolicy(t *testing.T) {
-	logger := logging.NewVaultLogger(hclog.Trace)
-	cluster := vault.NewTestCluster(t,
-		&vault.CoreConfig{},
-		&vault.TestClusterOptions{
-			NumCores:    1,
-			HandlerFunc: vaulthttp.Handler,
-		})
-	cluster.Start()
-	defer cluster.Cleanup()
+	// Unset the environment variable so that agent picks up the right test cluster address
+	t.Setenv(api.EnvVaultAddress, "")
 
-	vault.TestWaitActive(t, cluster.Cores[0].Core)
+	policyName := "kv-access"
+
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	logger := corehelpers.NewTestLogger(t)
 	serverClient := cluster.Cores[0].Client
 
-	// Unset the environment variable so that agent picks up the right test
-	// cluster address
-	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
-	os.Unsetenv(api.EnvVaultAddress)
-
-	// Create temp dir for this test run
-	tmpDir, err := os.MkdirTemp("", "TestAutoAuth_SelfHealing")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
-
 	// Write a policy with correct access to the secrets
-	serverClient.Sys().PutPolicy("kv-access", kvAccessPolicy)
+	err := serverClient.Sys().PutPolicy(policyName, `
+path "/kv/*" {
+	capabilities = ["create", "read", "update", "delete", "list"]
+}
+path "/secret/*" {
+	capabilities = ["create", "read", "update", "delete", "list"]
+}`)
+	require.NoError(t, err)
 
 	// Create a token without enough policy access to the kv secrets
-	secret, err := serverClient.Auth().Token().Create(&api.TokenCreateRequest{})
+	secret, err := serverClient.Auth().Token().Create(&api.TokenCreateRequest{
+		Policies: []string{"default"},
+	})
 	require.NoError(t, err)
+	require.NotNil(t, secret)
+	require.NotNil(t, secret.Auth)
+	require.NotEmpty(t, secret.Auth.ClientToken)
+	require.Len(t, secret.Auth.Policies, 1)
+	require.Contains(t, secret.Auth.Policies, "default")
 	token := secret.Auth.ClientToken
 
 	// Write token to vault-token file
-	tokenFilePath := filepath.Join(tmpDir, "vault-token")
-	tokenFile, err := os.Create(tokenFilePath)
-	require.NoError(t, err)
-	_, err = tokenFile.WriteString(token)
-	require.NoError(t, err)
-	err = tokenFile.Close()
-	require.NoError(t, err)
+	pathVaultToken := makeTempFile(t, "vault-token", token)
 
-	defer os.Remove(tokenFilePath)
-	require.NoError(t, err)
-
-	ctx, cancel := context.WithCancel(context.Background())
+	// Give us some leeway of 3 errors 1 from each of: auth handler, sink server template server.
+	errCh := make(chan error, 3)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 
 	// Create auth handler
 	am, err := tokenfile.NewTokenFileAuthMethod(&auth.AuthConfig{
 		Logger: logger.Named("auth.method"),
 		Config: map[string]interface{}{
-			"token_file_path": filepath.Join(filepath.Join(tmpDir, "vault-token")),
+			"token_file_path": pathVaultToken,
 		},
 	})
 	require.NoError(t, err)
+
 	ahConfig := &auth.AuthHandlerConfig{
 		Logger:                       logger.Named("auth.handler"),
 		Client:                       serverClient,
@@ -293,76 +242,49 @@ func Test_NoAutoAuthSelfHealing_BadPolicy(t *testing.T) {
 		ExitOnError:                  false,
 	}
 	ah := auth.NewAuthHandler(ahConfig)
-	errCh := make(chan error)
-
 	go func() {
 		errCh <- ah.Run(ctx, am)
 	}()
-	defer func() {
-		select {
-		case <-ctx.Done():
-		case err := <-errCh:
-			if err != nil {
-				t.Fatal(err)
-			}
-		}
-	}()
 
-	// Create sink file server
-	sinkFilePath := filepath.Join(tmpDir, "token-file")
-	_, err = os.Create(sinkFilePath)
-	defer os.Remove(sinkFilePath)
-	require.NoError(t, err)
+	// Create sink file
+	pathSinkFile := makeTempFile(t, "sink-file", "")
 
 	config := &sink.SinkConfig{
 		Logger: logger.Named("sink.file"),
 		Config: map[string]interface{}{
-			"path": sinkFilePath,
+			"path": pathSinkFile,
 		},
 	}
-
 	fs, err := file.NewFileSink(config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	config.Sink = fs
 
 	ss := sink.NewSinkServer(&sink.SinkServerConfig{
 		Logger: logger.Named("sink.server"),
 		Client: serverClient,
 	})
-
 	go func() {
 		errCh <- ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config}, ah.AuthInProgress)
-	}()
-	defer func() {
-		select {
-		case <-ctx.Done():
-		case err := <-errCh:
-			if err != nil {
-				t.Fatal(err)
-			}
-		}
 	}()
 
 	// Create template server
 	sc := template.ServerConfig{
-		Logger: logging.NewVaultLogger(hclog.Trace),
+		Logger: logger.Named("template.server"),
 		AgentConfig: &agentConfig.Config{
 			Vault: &agentConfig.Vault{
 				Address:       serverClient.Address(),
 				TLSSkipVerify: true,
 			},
 			TemplateConfig: &agentConfig.TemplateConfig{
-				StaticSecretRenderInt: time.Second * 5,
+				StaticSecretRenderInt: 1 * time.Second,
 			},
-			// Need to crate at least one sink output so that it does not exit after rendering
+			// Need to create at least one sink output so that it does not exit after rendering
 			AutoAuth: &agentConfig.AutoAuth{
 				Sinks: []*agentConfig.Sink{
 					{
 						Type: "file",
 						Config: map[string]interface{}{
-							"path": filepath.Join(filepath.Join(tmpDir, "kvData")),
+							"path": pathSinkFile,
 						},
 					},
 				},
@@ -374,90 +296,118 @@ func Test_NoAutoAuthSelfHealing_BadPolicy(t *testing.T) {
 		ExitAfterAuth: false,
 	}
 
+	pathTemplateDestination := makeTempFile(t, "kv-data", "")
 	templateTest := &ctconfig.TemplateConfig{
-		Contents: pointerutil.StringPtr(kvDataTemplateContents),
+		Contents:    pointerutil.StringPtr(`"{{ with secret "secret/data/otherapp" }}{{ .Data.data.username }}{{ end }}"`),
+		Destination: pointerutil.StringPtr(pathTemplateDestination),
 	}
-	dstFile := fmt.Sprintf("%s/%s", tmpDir, "kvData")
-	templateTest.Destination = pointerutil.StringPtr(dstFile)
 	templatesToRender := []*ctconfig.TemplateConfig{templateTest}
 
-	var server *template.Server
-	server = template.NewServer(&sc)
-
+	server := template.NewServer(&sc)
 	go func() {
 		errCh <- server.Run(ctx, ah.TemplateTokenCh, templatesToRender, ah.AuthInProgress, ah.InvalidToken)
 	}()
-	defer func() {
-		select {
-		case <-ctx.Done():
-		case err := <-errCh:
-			if err != nil {
-				t.Fatal(err)
-			}
-		}
-	}()
 
-	// Must be done at the very end so that nothing is blocking
-	defer cancel()
-
-	// Trigger template render
+	// Send token to the template channel
 	ah.TemplateTokenCh <- token
-	_, err = waitForFiles(t, filepath.Join(tmpDir, "token-file"), time.Time{})
-	require.NoError(t, err)
-
-	tokenInSink, err := os.ReadFile(filepath.Join(tmpDir, "token-file"))
-	require.NoError(t, err)
-	require.Equal(t, string(tokenInSink), token)
 
 	// Create new token with the correct policy access
 	tokenSecret, err := serverClient.Auth().Token().Create(&api.TokenCreateRequest{
-		Policies: []string{"kv-access"},
+		Policies: []string{policyName},
 	})
 	require.NoError(t, err)
+	require.NotNil(t, tokenSecret)
+	require.NotNil(t, tokenSecret.Auth)
+	require.NotEmpty(t, tokenSecret.Auth.ClientToken)
+	require.Len(t, tokenSecret.Auth.Policies, 2)
+	require.Contains(t, tokenSecret.Auth.Policies, "default")
+	require.Contains(t, tokenSecret.Auth.Policies, policyName)
 	newToken := tokenSecret.Auth.ClientToken
 
-	// Write token to file
-	err = os.WriteFile(filepath.Join(tmpDir, "vault-token"), []byte(token), 0o600)
+	// Write new token to token file (where Agent would re-auto-auth from if
+	// it were triggered)
+	err = os.WriteFile(pathVaultToken, []byte(newToken), 0o600)
 	require.NoError(t, err)
 
 	// Wait for any potential *incorrect* re-triggers of auto auth
-	time.Sleep(time.Second * 5)
+	time.Sleep(time.Second * 3)
 
 	// Auto auth should not have been re-triggered because of just a permission denied error
 	// Verify that the new token has NOT been written to the token sink
-	tokenInSink, err = os.ReadFile(filepath.Join(tmpDir, "token-file"))
+	tokenInSink, err := os.ReadFile(pathSinkFile)
 	require.NoError(t, err)
-	require.NotEqual(t, string(tokenInSink), newToken)
-	require.Equal(t, string(tokenInSink), token)
+	require.Equal(t, token, string(tokenInSink))
+
+	// Validate that the template still hasn't been rendered.
+	templateContent, err := os.ReadFile(pathTemplateDestination)
+	require.NoError(t, err)
+	require.Equal(t, "", string(templateContent))
+
+	cancel()
+	wrapUpTimeout := 5 * time.Second
+	for {
+		select {
+		case <-time.After(wrapUpTimeout):
+			t.Fatal("test timed out")
+		case err := <-errCh:
+			require.NoError(t, err)
+		case <-ctx.Done():
+			// We can finish the test ourselves
+			return
+		}
+	}
 }
 
-func waitForFiles(t *testing.T, filePath string, prevModTime time.Time) (os.FileInfo, error) {
+// waitForFileContent waits for the file at filePath to exist and contain fileContent
+// or it will return in an error. Waits for five seconds, with 100ms intervals.
+// Returns nil if content became the same, or non-nil if it didn't.
+func waitForFileContent(t *testing.T, filePath, expectedContent string) error {
 	t.Helper()
 
 	var err error
-	var fileInfo os.FileInfo
 	tick := time.Tick(100 * time.Millisecond)
 	timeout := time.After(5 * time.Second)
-	// We need to wait for the templates to render...
+	// We need to wait for the files to be updated...
 	for {
 		select {
 		case <-timeout:
-			return nil, fmt.Errorf("timed out waiting for templates to render, last error: %w", err)
+			return fmt.Errorf("timed out waiting for file content, last error: %w", err)
 		case <-tick:
 		}
 
-		fileInfo, err = os.Stat(filePath)
+		content, err := os.ReadFile(filePath)
 		if err != nil {
 			if errors.Is(err, os.ErrNotExist) {
 				continue
 			}
-			return nil, err
+			return err
 		}
-		// Keep waiting until the file has been updated since the previous mod time
-		if !fileInfo.ModTime().After(prevModTime) {
+
+		stringContent := string(content)
+		if stringContent != expectedContent {
+			err = fmt.Errorf("content not yet the same, expectedContent=%s, content=%s", expectedContent, stringContent)
 			continue
 		}
 
-		return fileInfo, nil
+		return nil
 	}
+}
+
+// makeTempFile creates a temp file with the specified name, populates it with the
+// supplied contents and closes it. The path to the file is returned, also the file
+// will be automatically removed when the test which created it, finishes.
+func makeTempFile(t *testing.T, name, contents string) string {
+	t.Helper()
+
+	f, err := os.Create(filepath.Join(t.TempDir(), name))
+	require.NoError(t, err)
+	path := f.Name()
+
+	_, err = f.WriteString(contents)
+	require.NoError(t, err)
+
+	err = f.Close()
+	require.NoError(t, err)
+
+	return path
 }

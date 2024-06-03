@@ -311,7 +311,7 @@ func (b *SystemBackend) handleActivityConfigRead(ctx context.Context, req *logic
 		return logical.ErrorResponse("no activity log present"), nil
 	}
 
-	config, err := a.loadConfigOrDefault(ctx, b.Core.ManualLicenseReportingEnabled())
+	config, err := a.loadConfigOrDefault(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -348,10 +348,12 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 
 	warnings := make([]string, 0)
 
-	config, err := a.loadConfigOrDefault(ctx, b.Core.ManualLicenseReportingEnabled())
+	config, err := a.loadConfigOrDefault(ctx)
 	if err != nil {
 		return nil, err
 	}
+
+	prevRetentionMonths := config.RetentionMonths
 
 	{
 		// Parse the default report months
@@ -437,6 +439,13 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 
 	// Set the new config on the activity log
 	a.SetConfig(ctx, config)
+
+	// reload census agent if retention months change during update when reporting is enabled
+	if prevRetentionMonths != config.RetentionMonths {
+		if err := a.core.ReloadCensusActivityLog(); err != nil {
+			return nil, err
+		}
+	}
 
 	if len(warnings) > 0 {
 		return &logical.Response{

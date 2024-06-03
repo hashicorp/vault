@@ -109,7 +109,7 @@ func (c *Core) getHAMembers() ([]HAStatusNode, error) {
 	}
 
 	if rb := c.getRaftBackend(); rb != nil {
-		leader.UpgradeVersion = rb.EffectiveVersion()
+		leader.UpgradeVersion = rb.UpgradeVersion()
 		leader.RedundancyZone = rb.RedundancyZone()
 	}
 
@@ -118,15 +118,16 @@ func (c *Core) getHAMembers() ([]HAStatusNode, error) {
 	for _, peerNode := range c.GetHAPeerNodesCached() {
 		lastEcho := peerNode.LastEcho
 		nodes = append(nodes, HAStatusNode{
-			Hostname:           peerNode.Hostname,
-			APIAddress:         peerNode.APIAddress,
-			ClusterAddress:     peerNode.ClusterAddress,
-			LastEcho:           &lastEcho,
-			Version:            peerNode.Version,
-			UpgradeVersion:     peerNode.UpgradeVersion,
-			RedundancyZone:     peerNode.RedundancyZone,
-			EchoDurationMillis: peerNode.EchoDuration.Milliseconds(),
-			ClockSkewMillis:    peerNode.ClockSkewMillis,
+			Hostname:                    peerNode.Hostname,
+			APIAddress:                  peerNode.APIAddress,
+			ClusterAddress:              peerNode.ClusterAddress,
+			LastEcho:                    &lastEcho,
+			Version:                     peerNode.Version,
+			UpgradeVersion:              peerNode.UpgradeVersion,
+			RedundancyZone:              peerNode.RedundancyZone,
+			EchoDurationMillis:          peerNode.EchoDuration.Milliseconds(),
+			ClockSkewMillis:             peerNode.ClockSkewMillis,
+			ReplicationPrimaryCanaryAge: peerNode.ReplicationPrimaryCanaryAge,
 		})
 	}
 

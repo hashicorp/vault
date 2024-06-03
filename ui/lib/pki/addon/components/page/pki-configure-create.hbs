@@ -8,7 +8,7 @@
     <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
   </p.top>
   <p.levelLeft>
-    <h1 class="title is-3" data-test-pki-engine-page-title>
+    <h1 class="title is-3" data-test-page-title>
       {{this.title}}
     </h1>
   </p.levelLeft>
@@ -85,14 +85,10 @@
     @onComplete={{transition-to "vault.cluster.secrets.backend.pki.overview"}}
   />
 {{else}}
-  <EmptyState
-    @title="Choose an option"
-    @message="To see configuration options, choose your desired output above."
-    data-test-configuration-empty-state
-  />
+  <EmptyState @title="Choose an option" @message="To see configuration options, choose your desired output above." />
   <hr class="has-background-gray-100" />
   <Hds::ButtonSet>
-    <Hds::Button @text="Done" disabled={{true}} data-test-pki-config-save />
-    <Hds::Button @text="Cancel" @color="secondary" {{on "click" @onCancel}} data-test-pki-config-cancel />
+    <Hds::Button @text="Done" disabled={{true}} data-test-save />
+    <Hds::Button @text="Cancel" @color="secondary" {{on "click" @onCancel}} data-test-cancel />
   </Hds::ButtonSet>
 {{/if}}

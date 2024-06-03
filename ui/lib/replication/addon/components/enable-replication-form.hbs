@@ -1,0 +1,178 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<form {{on "submit" (fn this.onSubmit this.data)}} data-test-replication-enable-form>
+  <MessageError @errorMessage={{this.error}} />
+
+  <div class="box is-sideless is-fullwidth is-marginless">
+    <label for="replication-mode" class="is-label">
+      Cluster mode
+    </label>
+    <div class="field is-expanded">
+      <div class="control select is-fullwidth">
+        <select {{on "change" this.inputChange}} id="replication-mode" name="mode" data-test-replication-cluster-mode-select>
+          {{#each (array "primary" "secondary") as |modeOption|}}
+            <option selected={{eq this.data.mode modeOption}} value={{modeOption}}>
+              {{modeOption}}
+            </option>
+          {{/each}}
+        </select>
+      </div>
+      {{#if (eq this.data.mode "secondary")}}
+        <AlertInline
+          class="has-top-margin-xs"
+          @type="warning"
+          @message="This will immediately clear all data in this cluster!"
+        />
+      {{/if}}
+    </div>
+    {{#if (eq this.data.mode "primary")}}
+      {{#if @canEnablePrimary}}
+        <div class="field">
+          <label for="primary_cluster_addr" class="is-label">
+            Primary cluster address
+            <em class="is-optional">(optional)</em>
+          </label>
+          <div class="control">
+            <input
+              class="input"
+              id="primary_cluster_addr"
+              name="primary_cluster_addr"
+              value={{this.data.primary_cluster_addr}}
+              {{on "change" this.inputChange}}
+              data-test-input="primary_cluster_addr"
+            />
+          </div>
+          <p class="help has-text-grey">
+            Overrides the cluster address that the primary gives to secondary nodes.
+          </p>
+        </div>
+      {{else}}
+        <p data-test-not-allowed>
+          The token you are using is not authorized to enable primary replication.
+        </p>
+      {{/if}}
+    {{else}}
+      {{#if @canEnableSecondary}}
+        {{#if (and (eq @replicationMode "dr") this.performanceReplicationEnabled (has-feature "Performance Replication"))}}
+          <div>
+            <ToggleButton
+              @isOpen={{this.showExplanation}}
+              @openLabel="Disable Performance Replication in order to enable this cluster as a DR secondary."
+              @closedLabel="Disable Performance Replication in order to enable this cluster as a DR secondary."
+              @onClick={{fn (mut this.showExplanation)}}
+              class="has-text-danger"
+              data-test-disable-to-continue
+            />
+            {{#if this.showExplanation}}
+              <p data-test-disable-explanation>
+                When running as a DR Secondary Vault is read only. For this reason, we don't allow other Replication modes to
+                operate at the same time. This cluster is also currently operating as a Performance
+                {{capitalize @performanceMode}}.
+              </p>
+            {{/if}}
+          </div>
+        {{else}}
+          <div class="field">
+            <label for="secondary-token" class="is-label">
+              Secondary activation token
+            </label>
+            <div class="control">
+              <Textarea
+                @value={{this.data.token}}
+                id="secondary-token"
+                name="secondary-token"
+                class="textarea"
+                data-test-textarea="secondary-token"
+              />
+            </div>
+          </div>
+          <div class="field">
+            <label for="primary_api_addr" class="is-label">
+              Primary API address
+              {{#if (not (and this.data.token (not this.data.tokenIncludesAPIAddr)))}}
+                <em class="is-optional">(optional)</em>
+              {{/if}}
+            </label>
+            <div class="control">
+              <input
+                id="primary_api_addr"
+                name="primary_api_addr"
+                class="input"
+                value={{this.data.primary_api_addr}}
+                {{on "change" this.inputChange}}
+                data-test-input="primary_api_addr"
+              />
+            </div>
+            <p class="help {{if (and this.data.token (not this.data.tokenIncludesAPIAddr)) 'is-danger' 'has-text-grey'}}">
+              {{#if (and this.data.token (not this.data.tokenIncludesAPIAddr))}}
+                The supplied token does not contain an embedded address for the primary cluster. Please enter the primary
+                cluster's API address (normal Vault address).
+              {{else}}
+                Set this to the API address (normal Vault address) to override the value embedded in the token.
+              {{/if}}
+            </p>
+          </div>
+          <div class="field">
+            <label for="ca_file" class="is-label">
+              CA file
+              <em class="is-optional">(optional)</em>
+            </label>
+            <div class="control">
+              <input
+                id="ca_file"
+                name="ca_file"
+                class="input"
+                value={{this.data.ca_file}}
+                {{on "change" this.inputChange}}
+                data-test-input="ca_file"
+              />
+            </div>
+            <p class="help has-text-grey">
+              Specifies the path to a CA root file (PEM format) that the secondary can use when unwrapping the token from the
+              primary.
+            </p>
+          </div>
+          <div class="field">
+            <label for="ca_path" class="is-label">
+              CA path
+              <em class="is-optional">(optional)</em>
+            </label>
+            <div class="control">
+              <input
+                id="ca_path"
+                name="ca_path"
+                class="input"
+                value={{this.data.ca_path}}
+                {{on "change" this.inputChange}}
+                data-test-input="ca_path"
+              />
+            </div>
+            <p class="help has-text-grey">
+              Specifies the path to a CA root directory containing PEM-format files that the secondary can use when
+              unwrapping the token from the primary.
+            </p>
+          </div>
+          <p>
+            Note: If both
+            <code>CA file</code>
+            and
+            <code>CA path</code>
+            are not given, they default to system CA roots.
+          </p>
+        {{/if}}
+      {{else}}
+        <p data-test-not-allowed>The token you are using is not authorized to enable secondary replication.</p>
+      {{/if}}
+    {{/if}}
+  </div>
+  {{#if
+    (or (and (eq this.data.mode "primary") @canEnablePrimary) (and (eq this.data.mode "secondary") @canEnableSecondary))
+  }}
+    <div class="field is-grouped box is-fullwidth is-bottomless">
+      <Hds::Button @text="Enable Replication" type="submit" disabled={{this.disallowEnable}} data-test-replication-enable />
+    </div>
+  {{/if}}
+</form>

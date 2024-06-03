@@ -166,6 +166,8 @@ type SecurityBarrier interface {
 
 	// SecurityBarrier must provide the encryption APIs
 	BarrierEncryptor
+
+	DetectDeadlocks() bool
 }
 
 // BarrierStorage is the storage only interface required for a Barrier.
