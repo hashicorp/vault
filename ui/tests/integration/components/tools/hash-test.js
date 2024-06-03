@@ -41,6 +41,7 @@ module('Integration | Component | tools/hash', function (hooks) {
     assert.dom('h1').hasText('Hash Data', 'Title renders');
     assert.dom('#algorithm').hasValue('sha2-256');
     assert.dom('#format').hasValue('base64');
+    assert.dom(TS.submit).hasText('Hash');
     assert.dom(TS.toolsInput('sum')).doesNotExist();
     assert.dom(TS.button('Done')).doesNotExist();
   });

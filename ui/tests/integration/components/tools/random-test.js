@@ -39,6 +39,7 @@ module('Integration | Component | tools/random', function (hooks) {
     assert.dom('h1').hasText('Random Bytes', 'Title renders');
     assert.dom('#bytes').hasValue('32');
     assert.dom('#format').hasValue('base64');
+    assert.dom(TS.submit).hasText('Generate');
     assert.dom(TS.toolsInput('random-bytes')).doesNotExist();
     assert.dom(TS.button('Done')).doesNotExist();
   });
