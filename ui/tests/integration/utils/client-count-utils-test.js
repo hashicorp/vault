@@ -187,7 +187,7 @@ module('Integration | Util | client count utils', function (hooks) {
   test('sortMonthsByTimestamp: sorts timestamps chronologically, oldest to most recent', async function (assert) {
     assert.expect(2);
     // API returns them in order so this test is extra extra
-    const unOrdered = [RESPONSE.months[1], RESPONSE.months[0]]; // mixup order
+    const unOrdered = [RESPONSE.months[1], RESPONSE.months[0], RESPONSE.months[3], RESPONSE.months[2]]; // mixup order
     const original = [...RESPONSE.months];
     const expected = RESPONSE.months;
     assert.propEqual(sortMonthsByTimestamp(unOrdered), expected);
