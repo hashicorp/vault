@@ -6,15 +6,17 @@
 import ExternalLink from './external-link';
 
 /**
+ * @deprecated
  * @module DocLink
- * `DocLink` components are used to render anchor links to relevant Vault documentation at developer.hashicorp.com.
+ * DocLink components are used to render anchor links to relevant Vault documentation at developer.hashicorp.com.
  *
  * @example
- * ```js
-    <DocLink @path="/vault/docs/secrets/kv/kv-v2.html">Learn about KV v2</DocLink>
- * ```
+ * <DocLink @path="/vault/docs/secrets/kv/kv-v2.html">Learn about KV v2</DocLink>
  *
- * @param {string} path="/" - The path to documentation on developer.hashicorp.com that the component should link to.
+ *  * Use HDS link components instead with "doc-link" helper for path prefix
+ * <Hds::Link::Standalone @text="Docs" @href={{doc-link "/vault/tutorials"}} @icon="learn-link" @iconPosition="trailing" />
+ *
+ * @param {string} path=/ - The path to documentation on developer.hashicorp.com that the component should link to.
  *
  */
 export default class DocLinkComponent extends ExternalLink {
