@@ -133,9 +133,7 @@ export const formatByMonths = (
 };
 
 export const formatByNamespace = (namespaceArray: NamespaceObject[] | null): ByNamespaceClients[] => {
-  if (!namespaceArray) {
-    return [];
-  }
+  if (!Array.isArray(namespaceArray)) return [];
   return namespaceArray.map((ns) => {
     // i.e. 'namespace_path' is an empty string for 'root', so use namespace_id
     const label = ns.namespace_path === '' ? ns.namespace_id : ns.namespace_path;
