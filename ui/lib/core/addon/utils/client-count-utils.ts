@@ -104,14 +104,14 @@ export const formatByMonths = (
           month,
           timestamp,
           ...destructureClientCounts(m?.new_clients?.counts),
-          namespaces: formatByNamespace(m.new_clients?.namespaces) || [],
+          namespaces: formatByNamespace(m.new_clients?.namespaces),
         };
       }
       return {
         month,
         timestamp,
         ...destructureClientCounts(m.counts),
-        namespaces: formatByNamespace(m.namespaces) || [],
+        namespaces: formatByNamespace(m.namespaces),
         namespaces_by_key: namespaceArrayToObject(
           totalClientsByNamespace,
           newClientsByNamespace,
