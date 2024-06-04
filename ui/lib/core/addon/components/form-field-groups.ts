@@ -6,6 +6,7 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
+import type { ValidationMap } from 'vault/vault/app-types';
 
 /**
  * @module FormFieldGroups
@@ -22,11 +23,20 @@ import { action } from '@ember/object';
  * @param {string} [groupName=fieldGroups] - attribute name where the field groups are
  */
 
-export default class FormFieldGroupsComponent extends Component {
-  @tracked showGroup = null;
+interface Args {
+  model: Record<string, unknown>;
+  renderGroup?: string;
+  onChange?: (value: string) => void;
+  onKeyUp?: (value: string) => void;
+  modelValidations?: ValidationMap;
+  groupName?: string;
+}
+
+export default class FormFieldGroupsComponent extends Component<Args> {
+  @tracked showGroup: string | null = null;
 
   @action
-  toggleGroup(group, isOpen) {
+  toggleGroup(group: string, isOpen: boolean) {
     this.showGroup = isOpen ? group : null;
   }
 
