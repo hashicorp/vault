@@ -86,7 +86,9 @@ export const formatDateObject = (dateObj: { monthIdx: number; year: number }, is
   return getUnixTime(utc);
 };
 
-export const formatByMonths = (monthsArray: ActivityMonthBlock[] | EmptyActivityMonthBlock[]) => {
+export const formatByMonths = (
+  monthsArray: (ActivityMonthBlock | EmptyActivityMonthBlock | NoNewClientsActivityMonthBlock)[]
+) => {
   const sortedPayload = sortMonthsByTimestamp(monthsArray);
   return sortedPayload?.map((m) => {
     const month = parseAPITimestamp(m.timestamp, 'M/yy') as string;
@@ -95,6 +97,16 @@ export const formatByMonths = (monthsArray: ActivityMonthBlock[] | EmptyActivity
     if (m.counts) {
       const totalClientsByNamespace = formatByNamespace(m.namespaces);
       const newClientsByNamespace = formatByNamespace(m.new_clients?.namespaces);
+
+      let newClients: ByMonthNewClients = { month, timestamp, namespaces: [] };
+      if (m.new_clients?.counts) {
+        newClients = {
+          month,
+          timestamp,
+          ...destructureClientCounts(m?.new_clients?.counts),
+          namespaces: formatByNamespace(m.new_clients?.namespaces) || [],
+        };
+      }
       return {
         month,
         timestamp,
@@ -106,12 +118,7 @@ export const formatByMonths = (monthsArray: ActivityMonthBlock[] | EmptyActivity
           month,
           m.timestamp
         ),
-        new_clients: {
-          month,
-          timestamp,
-          ...destructureClientCounts(m?.new_clients?.counts),
-          namespaces: formatByNamespace(m.new_clients?.namespaces) || [],
-        },
+        new_clients: newClients,
       };
     }
     // empty month
@@ -125,7 +132,10 @@ export const formatByMonths = (monthsArray: ActivityMonthBlock[] | EmptyActivity
   });
 };
 
-export const formatByNamespace = (namespaceArray: NamespaceObject[]) => {
+export const formatByNamespace = (namespaceArray: NamespaceObject[] | null): ByNamespaceClients[] => {
+  if (!namespaceArray) {
+    return [];
+  }
   return namespaceArray.map((ns) => {
     // i.e. 'namespace_path' is an empty string for 'root', so use namespace_id
     const label = ns.namespace_path === '' ? ns.namespace_id : ns.namespace_path;
@@ -158,7 +168,9 @@ export const destructureClientCounts = (verboseObject: Counts | ByNamespaceClien
   );
 };
 
-export const sortMonthsByTimestamp = (monthsArray: ActivityMonthBlock[] | EmptyActivityMonthBlock[]) => {
+export const sortMonthsByTimestamp = (
+  monthsArray: (ActivityMonthBlock | EmptyActivityMonthBlock | NoNewClientsActivityMonthBlock)[]
+) => {
   const sortedPayload = [...monthsArray];
   return sortedPayload.sort((a, b) =>
     compareAsc(parseAPITimestamp(a.timestamp) as Date, parseAPITimestamp(b.timestamp) as Date)
@@ -168,7 +180,7 @@ export const sortMonthsByTimestamp = (monthsArray: ActivityMonthBlock[] | EmptyA
 export const namespaceArrayToObject = (
   monthTotals: ByNamespaceClients[],
   // technically this arg (monthNew) is the same type as above, just nested inside monthly new clients
-  monthNew: ByMonthClients['new_clients']['namespaces'],
+  monthNew: ByMonthClients['new_clients']['namespaces'] | null,
   month: string,
   timestamp: string
 ) => {
@@ -255,7 +267,14 @@ export interface ByMonthClients extends TotalClients {
   namespaces_by_key: { [key: string]: NamespaceByKey };
   new_clients: ByMonthNewClients;
 }
-export interface ByMonthNewClients extends TotalClients {
+
+// clients numbers are only returned if month is of type ActivityMonthBlock
+export interface ByMonthNewClients {
+  clients?: number;
+  entity_clients?: number;
+  non_entity_clients?: number;
+  secret_syncs?: number;
+  acme_clients?: number;
   month: string;
   timestamp: string;
   namespaces: ByNamespaceClients[];
@@ -305,6 +324,16 @@ export interface ActivityMonthBlock {
     counts: Counts;
     namespaces: NamespaceObject[];
     timestamp: string;
+  };
+}
+
+export interface NoNewClientsActivityMonthBlock {
+  timestamp: string; // YYYY-MM-01T00:00:00Z (always the first day of the month)
+  counts: Counts;
+  namespaces: NamespaceObject[];
+  new_clients: {
+    counts: null;
+    namespaces: null;
   };
 }
 
