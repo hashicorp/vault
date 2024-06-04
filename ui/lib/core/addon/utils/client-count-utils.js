@@ -46,9 +46,10 @@ export const formatDateObject = (dateObj, isEnd) => {
 };
 
 export const formatByMonths = (monthsArray) => {
-  // the monthsArray will always include a timestamp of the month and either new/total client data or counts = null
+  // the monthsArray will always include objects with a timestamp for each month queried
+  // if { counts: null } then there is no monthly client data available
+  // if there are total counts and { new_clients: { counts: null } } then there are no new clients for that month
   if (!Array.isArray(monthsArray)) return monthsArray;
-
   const sortedPayload = sortMonthsByTimestamp(monthsArray);
   return sortedPayload?.map((m) => {
     const month = parseAPITimestamp(m.timestamp, 'M/yy');
@@ -56,12 +57,12 @@ export const formatByMonths = (monthsArray) => {
     const newClientsByNamespace = formatByNamespace(m.new_clients?.namespaces);
     if (Object.keys(m).includes('counts')) {
       const totalCounts = flattenDataset(m);
-      const newCounts = m.new_clients ? flattenDataset(m.new_clients) : {};
+      const newCounts = m?.new_clients?.counts ? flattenDataset(m.new_clients) : {};
       return {
         month,
         timestamp: m.timestamp,
         ...totalCounts,
-        namespaces: formatByNamespace(m.namespaces) || [],
+        namespaces: formatByNamespace(m.namespaces),
         namespaces_by_key: namespaceArrayToObject(
           totalClientsByNamespace,
           newClientsByNamespace,
@@ -72,7 +73,7 @@ export const formatByMonths = (monthsArray) => {
           month,
           timestamp: m.timestamp,
           ...newCounts,
-          namespaces: formatByNamespace(m.new_clients?.namespaces) || [],
+          namespaces: formatByNamespace(m.new_clients?.namespaces),
         },
       };
     }
@@ -80,7 +81,7 @@ export const formatByMonths = (monthsArray) => {
 };
 
 export const formatByNamespace = (namespaceArray) => {
-  if (!Array.isArray(namespaceArray)) return namespaceArray;
+  if (!Array.isArray(namespaceArray)) return [];
   return namespaceArray?.map((ns) => {
     // 'namespace_path' is an empty string for root
     if (ns['namespace_id'] === 'root') ns['namespace_path'] = 'root';
