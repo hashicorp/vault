@@ -376,11 +376,16 @@
           },
           {
             "title": "TCP",
-            "path": "configuration/listener/tcp"
-          },
-          {
-            "title": "Configure TLS for TCP listener",
-            "path": "configuration/listener/tcp-tls"
+            "routes": [  
+              {
+                "title": "Overview",
+                "path": "configuration/listener/tcp"
+              },
+              {
+                "title": "Configure TLS",
+                "path": "configuration/listener/tcp/tcp-tls"
+              }
+            ]
           },
           {
             "title": "Unix",
