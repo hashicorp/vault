@@ -41,5 +41,13 @@ version_output=$("$binpath" version)
 if [[ "$version_output" == "$version_expected_nosha" ]] || [[ "$version_output" == "$version_expected" ]]; then
   echo "Version verification succeeded!"
 else
-  fail "expected Version=$version_expected or $version_expected_nosha, got: $version_output"
+  msg="$(printf "\nThe Vault cluster did not match the expected version, expected:\n%s\nor\n%s\ngot:\n%s" "$version_expected" "$version_expected_nosha" "$version_output")"
+  if type diff &> /dev/null; then
+    # Diff exits non-zero if we have a diff, which we want, so we'll guard against failing early.
+    if ! version_diff=$(diff  <(echo "$version_expected" ) <(echo "$version_output") -u -L expected -L got); then
+      msg="$(printf "\nThe Vault cluster did not match the expected version:\n%s" "$version_diff")"
+    fi
+  fi
+
+  fail "$msg"
 fi

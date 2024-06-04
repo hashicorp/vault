@@ -332,9 +332,9 @@ scenario "autopilot" {
     }
 
     variables {
+      vault_hosts       = step.upgrade_vault_cluster_with_autopilot.target_hosts
       vault_install_dir = local.vault_install_dir
       vault_root_token  = step.create_vault_cluster.root_token
-      vault_hosts       = step.upgrade_vault_cluster_with_autopilot.target_hosts
     }
   }
 
@@ -502,11 +502,9 @@ scenario "autopilot" {
     }
   }
 
-  step "verify_undo_logs_status" {
-    skip_step = true
-    # NOTE: temporarily disable undo logs checking until it is fixed. See VAULT-20259
-    # skip_step = semverconstraint(var.vault_product_version, "<1.13.0-0")
-    module = module.vault_verify_undo_logs
+  step "verify_undo_logs_enabled_on_primary" {
+    skip_step = semverconstraint(var.vault_product_version, "<1.13.0-0")
+    module    = module.vault_verify_undo_logs
     depends_on = [
       step.create_vault_cluster_upgrade_targets,
       step.remove_old_nodes,
@@ -519,9 +517,34 @@ scenario "autopilot" {
     }
 
     variables {
-      vault_install_dir = local.vault_install_dir
-      vault_instances   = step.upgrade_vault_cluster_with_autopilot.target_hosts
-      vault_root_token  = step.create_vault_cluster.root_token
+      expected_state       = 1 # Enabled
+      vault_hosts          = step.get_updated_vault_cluster_ips.leader_hosts
+      vault_install_dir    = local.vault_install_dir
+      vault_instance_count = 1
+      vault_root_token     = step.create_vault_cluster.root_token
+    }
+  }
+
+  step "verify_undo_logs_disabled_on_followers" {
+    skip_step = semverconstraint(var.vault_product_version, "<1.13.0-0")
+    module    = module.vault_verify_undo_logs
+    depends_on = [
+      step.create_vault_cluster_upgrade_targets,
+      step.remove_old_nodes,
+      step.upgrade_vault_cluster_with_autopilot,
+      step.verify_autopilot_idle_state
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      expected_state       = 0 # Disabled
+      vault_hosts          = step.get_updated_vault_cluster_ips.follower_hosts
+      vault_install_dir    = local.vault_install_dir
+      vault_instance_count = var.vault_instance_count - 1
+      vault_root_token     = step.create_vault_cluster.root_token
     }
   }
 

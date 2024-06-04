@@ -106,6 +106,12 @@ output "leader_host" {
   value = local.leader_host
 }
 
+// While there will only ever be one it's nice to export this in a list to use with modules that
+// take in a list of hosts.
+output "leader_hosts" {
+  value = { 0 : local.leader_host }
+}
+
 output "leader_private_ip" {
   value = local.leader_private_ip
 }
