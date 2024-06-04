@@ -13,12 +13,10 @@ import { methods } from 'vault/helpers/mountable-auth-methods';
 import { isAddonEngine, allEngines } from 'vault/helpers/mountable-secret-engines';
 
 import type FlashMessageService from 'vault/services/flash-messages';
-import StoreService from 'vault/services/store';
+import type Store from '@ember-data/store';
 
-import Model from '@ember-data/model';
-import type AuthMethodModel from 'vault/models/auth-method';
-import type MountConfigModel from 'vault/models/mount-config';
-import type SecretEngineModel from 'vault/models/secret-engine';
+import type { AuthEnableModel } from 'vault/routes/vault/cluster/settings/auth/enable';
+import type { MountSecretBackendModel } from 'vault/routes/vault/cluster/settings/mount-secret-backend';
 
 /**
  * @module MountBackendForm
@@ -32,7 +30,7 @@ import type SecretEngineModel from 'vault/models/secret-engine';
  *
  */
 
-type MountModel = Model & (SecretEngineModel | AuthMethodModel | MountConfigModel);
+type MountModel = MountSecretBackendModel | AuthEnableModel;
 
 interface Args {
   mountModel: MountModel;
@@ -41,7 +39,7 @@ interface Args {
 }
 
 export default class MountBackendForm extends Component<Args> {
-  @service declare readonly store: StoreService;
+  @service declare readonly store: Store;
   @service declare readonly flashMessages: FlashMessageService;
 
   // validation related properties
