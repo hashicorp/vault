@@ -50,6 +50,7 @@ export const formatByMonths = (monthsArray) => {
   // if { counts: null } then there is no monthly client data available
   // if there are total counts and { new_clients: { counts: null } } then there are no new clients for that month
   if (!Array.isArray(monthsArray)) return monthsArray;
+
   const sortedPayload = sortMonthsByTimestamp(monthsArray);
   return sortedPayload?.map((m) => {
     const month = parseAPITimestamp(m.timestamp, 'M/yy');
