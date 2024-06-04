@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 // Package template is responsible for rendering user supplied templates to
 // disk. The Server type accepts configuration to communicate to a Vault server
 // and a Vault token for authentication. Internally, the Server creates a Consul
@@ -10,16 +13,23 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"strings"
-
-	"go.uber.org/atomic"
+	sync "sync/atomic"
+	"time"
 
 	ctconfig "github.com/hashicorp/consul-template/config"
-	ctlogging "github.com/hashicorp/consul-template/logging"
 	"github.com/hashicorp/consul-template/manager"
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/config"
+	"github.com/hashicorp/vault/command/agent/internal/ctmanager"
+	"github.com/hashicorp/vault/helper/useragent"
+	"github.com/hashicorp/vault/sdk/helper/backoff"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
+	"github.com/hashicorp/vault/sdk/logical"
+	"go.uber.org/atomic"
 )
 
 // ServerConfig is a config struct for setting up the basic parts of the
@@ -84,7 +94,7 @@ func NewServer(conf *ServerConfig) *Server {
 // Run kicks off the internal Consul Template runner, and listens for changes to
 // the token from the AuthHandler. If Done() is called on the context, shut down
 // the Runner and return
-func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ctconfig.TemplateConfig) error {
+func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ctconfig.TemplateConfig, tokenRenewalInProgress *sync.Bool, invalidTokenCh chan error) error {
 	if incoming == nil {
 		return errors.New("template server: incoming channel is nil")
 	}
@@ -107,8 +117,14 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 	// configuration
 	var runnerConfig *ctconfig.Config
 	var runnerConfigErr error
-
-	if runnerConfig, runnerConfigErr = newRunnerConfig(ts.config, templates); runnerConfigErr != nil {
+	managerConfig := ctmanager.ManagerConfig{
+		AgentConfig: ts.config.AgentConfig,
+		Namespace:   ts.config.Namespace,
+		LogLevel:    ts.config.LogLevel,
+		LogWriter:   ts.config.LogWriter,
+	}
+	runnerConfig, runnerConfigErr = ctmanager.NewConfig(managerConfig, templates)
+	if runnerConfigErr != nil {
 		return fmt.Errorf("template server failed to runner generate config: %w", runnerConfigErr)
 	}
 
@@ -135,12 +151,15 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 	}
 	ts.lookupMap = lookupMap
 
+	// Create  backoff object to calculate backoff time before restarting a failed
+	// consul template server
+	restartBackoff := backoff.NewBackoff(math.MaxInt, consts.DefaultMinBackoff, consts.DefaultMaxBackoff)
+
 	for {
 		select {
 		case <-ctx.Done():
 			ts.runner.Stop()
 			return nil
-
 		case token := <-incoming:
 			if token != *latestToken {
 				ts.logger.Info("template server received new token")
@@ -157,7 +176,8 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 				*latestToken = token
 				ctv := ctconfig.Config{
 					Vault: &ctconfig.VaultConfig{
-						Token: latestToken,
+						Token:           latestToken,
+						ClientUserAgent: pointerutil.StringPtr(useragent.AgentTemplatingString()),
 					},
 				}
 
@@ -181,6 +201,17 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 			if ts.config.AgentConfig.TemplateConfig != nil && ts.config.AgentConfig.TemplateConfig.ExitOnRetryFailure {
 				return fmt.Errorf("template server: %w", err)
 			}
+
+			// Calculate the amount of time to backoff using exponential backoff
+			sleep, err := restartBackoff.Next()
+			if err != nil {
+				ts.logger.Error("template server: reached maximum number of restart attempts")
+				restartBackoff.Reset()
+			}
+
+			// Sleep for the calculated backoff time then attempt to create a new runner
+			ts.logger.Warn(fmt.Sprintf("template server restart: retry attempt after %s", sleep))
+			time.Sleep(sleep)
 
 			ts.runner, err = manager.NewRunner(runnerConfig, false)
 			if err != nil {
@@ -215,6 +246,31 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 				ts.runner.Stop()
 				return nil
 			}
+		default:
+			// We are using default instead of a new case block to prioritize the case where <-incoming has a new value over
+			// receiving an error message from the consul-template server
+			select {
+			case err := <-ts.runner.ServerErrCh:
+				var responseError *api.ResponseError
+				ok := errors.As(err, &responseError)
+				if !ok {
+					ts.logger.Error("template server: could not extract error response")
+					continue
+				}
+				if responseError.StatusCode == 403 && strings.Contains(responseError.Error(), logical.ErrInvalidToken.Error()) && !tokenRenewalInProgress.Load() {
+					ts.logger.Info("template server: received invalid token error")
+
+					// Drain the error channel before sending a new error
+					select {
+					case <-invalidTokenCh:
+					default:
+					}
+					invalidTokenCh <- err
+				}
+			default:
+				continue
+			}
+
 		}
 	}
 }
@@ -223,132 +279,4 @@ func (ts *Server) Stop() {
 	if ts.stopped.CAS(false, true) {
 		close(ts.DoneCh)
 	}
-}
-
-// newRunnerConfig returns a consul-template runner configuration, setting the
-// Vault and Consul configurations based on the clients configs.
-func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctconfig.Config, error) {
-	conf := ctconfig.DefaultConfig()
-	conf.Templates = templates.Copy()
-
-	// Setup the Vault config
-	// Always set these to ensure nothing is picked up from the environment
-	conf.Vault.RenewToken = pointerutil.BoolPtr(false)
-	conf.Vault.Token = pointerutil.StringPtr("")
-	conf.Vault.Address = &sc.AgentConfig.Vault.Address
-
-	if sc.Namespace != "" {
-		conf.Vault.Namespace = &sc.Namespace
-	}
-
-	if sc.AgentConfig.TemplateConfig != nil && sc.AgentConfig.TemplateConfig.StaticSecretRenderInt != 0 {
-		conf.Vault.DefaultLeaseDuration = &sc.AgentConfig.TemplateConfig.StaticSecretRenderInt
-	}
-
-	if sc.AgentConfig.DisableIdleConnsTemplating {
-		idleConns := -1
-		conf.Vault.Transport.MaxIdleConns = &idleConns
-	}
-
-	if sc.AgentConfig.DisableKeepAlivesTemplating {
-		conf.Vault.Transport.DisableKeepAlives = pointerutil.BoolPtr(true)
-	}
-
-	conf.Vault.SSL = &ctconfig.SSLConfig{
-		Enabled:    pointerutil.BoolPtr(false),
-		Verify:     pointerutil.BoolPtr(false),
-		Cert:       pointerutil.StringPtr(""),
-		Key:        pointerutil.StringPtr(""),
-		CaCert:     pointerutil.StringPtr(""),
-		CaPath:     pointerutil.StringPtr(""),
-		ServerName: pointerutil.StringPtr(""),
-	}
-
-	// We need to assign something to Vault.Retry or it will use its default of 12 retries.
-	// This retry value will be respected regardless of if we use the cache.
-	var attempts int
-	if sc.AgentConfig.Vault != nil && sc.AgentConfig.Vault.Retry != nil {
-		attempts = sc.AgentConfig.Vault.Retry.NumRetries
-	}
-
-	// Use the cache if available or fallback to the Vault server values.
-	if sc.AgentConfig.Cache != nil {
-		if sc.AgentConfig.Cache.InProcDialer == nil {
-			return nil, fmt.Errorf("missing in-process dialer configuration")
-		}
-		if conf.Vault.Transport == nil {
-			conf.Vault.Transport = &ctconfig.TransportConfig{}
-		}
-		conf.Vault.Transport.CustomDialer = sc.AgentConfig.Cache.InProcDialer
-		// The in-process dialer ignores the address passed in, but we're still
-		// setting it here to override the setting at the top of this function,
-		// and to prevent the vault/http client from defaulting to https.
-		conf.Vault.Address = pointerutil.StringPtr("http://127.0.0.1:8200")
-	} else if strings.HasPrefix(sc.AgentConfig.Vault.Address, "https") || sc.AgentConfig.Vault.CACert != "" {
-		skipVerify := sc.AgentConfig.Vault.TLSSkipVerify
-		verify := !skipVerify
-		conf.Vault.SSL = &ctconfig.SSLConfig{
-			Enabled:    pointerutil.BoolPtr(true),
-			Verify:     &verify,
-			Cert:       &sc.AgentConfig.Vault.ClientCert,
-			Key:        &sc.AgentConfig.Vault.ClientKey,
-			CaCert:     &sc.AgentConfig.Vault.CACert,
-			CaPath:     &sc.AgentConfig.Vault.CAPath,
-			ServerName: &sc.AgentConfig.Vault.TLSServerName,
-		}
-	}
-	enabled := attempts > 0
-	conf.Vault.Retry = &ctconfig.RetryConfig{
-		Attempts: &attempts,
-		Enabled:  &enabled,
-	}
-
-	// Sync Consul Template's retry with user set auto-auth initial backoff value.
-	// This is helpful if Auto Auth cannot get a new token and CT is trying to fetch
-	// secrets.
-	if sc.AgentConfig.AutoAuth != nil && sc.AgentConfig.AutoAuth.Method != nil {
-		if sc.AgentConfig.AutoAuth.Method.MinBackoff > 0 {
-			conf.Vault.Retry.Backoff = &sc.AgentConfig.AutoAuth.Method.MinBackoff
-		}
-
-		if sc.AgentConfig.AutoAuth.Method.MaxBackoff > 0 {
-			conf.Vault.Retry.MaxBackoff = &sc.AgentConfig.AutoAuth.Method.MaxBackoff
-		}
-	}
-
-	conf.Finalize()
-
-	// setup log level from TemplateServer config
-	conf.LogLevel = logLevelToStringPtr(sc.LogLevel)
-
-	if err := ctlogging.Setup(&ctlogging.Config{
-		Level:  *conf.LogLevel,
-		Writer: sc.LogWriter,
-	}); err != nil {
-		return nil, err
-	}
-	return conf, nil
-}
-
-// logLevelToString converts a go-hclog level to a matching, uppercase string
-// value. It's used to convert Vault Agent's hclog level to a string version
-// suitable for use in Consul Template's runner configuration input.
-func logLevelToStringPtr(level hclog.Level) *string {
-	// consul template's default level is WARN, but Vault Agent's default is INFO,
-	// so we use that for the Runner's default.
-	var levelStr string
-
-	switch level {
-	case hclog.Trace:
-		levelStr = "TRACE"
-	case hclog.Debug:
-		levelStr = "DEBUG"
-	case hclog.Warn:
-		levelStr = "WARN"
-	case hclog.Error:
-		levelStr = "ERR"
-	default:
-		levelStr = "INFO"
-	}
-	return pointerutil.StringPtr(levelStr)
 }

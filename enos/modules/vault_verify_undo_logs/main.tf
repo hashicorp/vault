@@ -1,7 +1,10 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 terraform {
   required_providers {
     enos = {
-      source = "app.terraform.io/hashicorp-qti/enos"
+      source = "registry.terraform.io/hashicorp-forge/enos"
     }
   }
 }
@@ -29,18 +32,6 @@ variable "vault_root_token" {
   description = "The vault root token"
 }
 
-variable "vault_autopilot_upgrade_version" {
-  type        = string
-  description = "The vault version to which autopilot upgraded Vault"
-  default     = null
-}
-
-variable "vault_undo_logs_status" {
-  type        = string
-  description = "An integer either 0 or 1 which indicates whether undo_logs are disabled or enabled"
-  default     = null
-}
-
 locals {
   public_ips = {
     for idx in range(var.vault_instance_count) : idx => {
@@ -54,10 +45,9 @@ resource "enos_remote_exec" "smoke-verify-undo-logs" {
   for_each = local.public_ips
 
   environment = {
-    VAULT_TOKEN                     = var.vault_root_token
-    VAULT_ADDR                      = "http://localhost:8200"
-    vault_undo_logs_status          = var.vault_undo_logs_status
-    vault_autopilot_upgrade_version = var.vault_autopilot_upgrade_version
+    VAULT_ADDR        = "http://localhost:8200"
+    VAULT_INSTALL_DIR = var.vault_install_dir
+    VAULT_TOKEN       = var.vault_root_token
   }
 
   scripts = [abspath("${path.module}/scripts/smoke-verify-undo-logs.sh")]

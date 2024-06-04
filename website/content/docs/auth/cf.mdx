@@ -4,7 +4,7 @@ page_title: Cloud Foundry - Auth Methods
 description: The cf auth method allows automated authentication of Cloud Foundry instances.
 ---
 
-# Cloud Foundry (CF) Auth Method
+# Cloud Foundry (CF) auth method
 
 @include 'x509-sha1-deprecation.mdx'
 
@@ -19,7 +19,7 @@ At a high level, this works as follows:
 5. Vault validates that the `CF_INSTANCE_CERT` application ID, space ID, and org ID presently exist.
 6. If all checks pass, Vault issues an appropriately-scoped token.
 
-## Known Risks
+## Known risks
 
 This authentication engine uses CF's instance identity service to authenticate users to Vault. Because
 CF makes its CA certificate and private key available to certain users at any time, it's possible for
@@ -35,7 +35,7 @@ system, or through carefully limiting the users who can access CredHub.
 
 ## Usage
 
-### Preparing to Configure the Plugin
+### Preparing to configure the plugin
 
 To configure this plugin, you'll need to gather the CA certificate that CF uses to issue each `CF_INSTANCE_CERT`,
 and you'll need to configure it to access the CF API.
@@ -324,5 +324,5 @@ match the certificates you're checking.
 
 ## API
 
-The CF auth method has a full HTTP API. Please see the [CF Auth API](/api-docs/auth/cf)
+The CF auth method has a full HTTP API. Please see the [CF Auth API](/vault/api-docs/auth/cf)
 for more details.

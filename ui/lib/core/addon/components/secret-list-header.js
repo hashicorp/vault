@@ -1,25 +1,21 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
 
 /**
  * @module SecretListHeader
- * SecretListHeader component is breadcrumb, title with icon and menu with tabs component.
+ * SecretListHeader component is breadcrumb, title with icon and menu with tabs component. Hello
  *
+ * Example is wrapped in back ticks because this component relies on routing and cannot render an isolated sample, so just rendering template sample
  * @example
- * ```js
- * <SecretListHeader
-   @model={{this.model}}
-   @backendCrumb={{hash
-    label=this.model.id
-    text=this.model.id
-    path="vault.cluster.secrets.backend.list-root"
-    model=this.model.id
-   }}
-  />
  * ```
+ * <SecretListHeader @isCertTab={{eq this.tab "cert"}} @model={{this.model}} @baseKey={{this.baseKey}} @backendCrumb={{this.backendCrumb}} @filter={{this.filter}} />
+ * ```
+ *
  * @param {object} model - Model used to pull information about icon and title and backend type for navigation.
- * @param {string} [baseKey] - Provided for navigation on the breadcrumbs.
- * @param {object} [backendCrumb] - Includes label, text, path and model ID.
- * @param {boolean} [isEngine=false] - Changes link type if the component is being used inside an Ember engine.
  */
 
 export default class SecretListHeader extends Component {

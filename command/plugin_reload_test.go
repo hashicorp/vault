@@ -1,13 +1,15 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/vault"
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 )
 
 func testPluginReloadCommand(tb testing.TB) (*cli.MockUi, *PluginReloadCommand) {
@@ -44,13 +46,25 @@ func TestPluginReloadCommand_Run(t *testing.T) {
 		{
 			"not_enough_args",
 			nil,
-			"Not enough arguments",
+			"No plugins specified, must specify exactly one of -plugin or -mounts",
 			1,
 		},
 		{
 			"too_many_args",
 			[]string{"-plugin", "foo", "-mounts", "bar"},
-			"Too many arguments",
+			"Must specify exactly one of -plugin or -mounts",
+			1,
+		},
+		{
+			"type_and_mounts_mutually_exclusive",
+			[]string{"-mounts", "bar", "-type", "secret"},
+			"Cannot specify -type with -mounts",
+			1,
+		},
+		{
+			"invalid_type",
+			[]string{"-plugin", "bar", "-type", "unsupported"},
+			"Error parsing -type as a plugin type",
 			1,
 		},
 	}
@@ -83,21 +97,20 @@ func TestPluginReloadCommand_Run(t *testing.T) {
 	t.Run("integration", func(t *testing.T) {
 		t.Parallel()
 
-		pluginDir, cleanup := vault.MakeTestPluginDir(t)
-		defer cleanup(t)
+		pluginDir := corehelpers.MakeTestPluginDir(t)
 
 		client, _, closer := testVaultServerPluginDir(t, pluginDir)
 		defer closer()
 
 		pluginName := "my-plugin"
-		_, sha256Sum := testPluginCreateAndRegister(t, client, pluginDir, pluginName, consts.PluginTypeCredential, "")
+		_, sha256Sum := testPluginCreateAndRegister(t, client, pluginDir, pluginName, api.PluginTypeCredential, "")
 
 		ui, cmd := testPluginReloadCommand(t)
 		cmd.client = client
 
 		if err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
 			Name:    pluginName,
-			Type:    consts.PluginTypeCredential,
+			Type:    api.PluginTypeCredential,
 			Command: pluginName,
 			SHA256:  sha256Sum,
 		}); err != nil {
@@ -145,7 +158,7 @@ func TestPluginReloadStatusCommand_Run(t *testing.T) {
 			client, closer := testVaultServer(t)
 			defer closer()
 
-			ui, cmd := testPluginReloadCommand(t)
+			ui, cmd := testPluginReloadStatusCommand(t)
 			cmd.client = client
 
 			args := append([]string{}, tc.args...)

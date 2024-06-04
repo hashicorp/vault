@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -8,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/cli"
 	"github.com/posener/complete"
 )
 
@@ -208,7 +211,7 @@ func (c *KVMetadataPatchCommand) Run(args []string) int {
 		return 1
 	}
 
-	fullPath := addPrefixToKVPath(partialPath, mountPath, "metadata")
+	fullPath := addPrefixToKVPath(partialPath, mountPath, "metadata", false)
 
 	data := make(map[string]interface{}, 0)
 

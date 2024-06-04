@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 // Unlinks a record from all its relationships and unloads it from
 // the store.
 export default function removeRecord(store, record) {

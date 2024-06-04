@@ -1,9 +1,13 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { run } from '@ember/runloop';
-import { copy } from 'ember-copy';
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import { TOKEN_SEPARATOR, TOKEN_PREFIX, ROOT_PREFIX } from 'vault/services/auth';
-import Pretender from 'pretender';
+import { setupMirage } from 'ember-cli-mirage/test-support';
 
 function storage() {
   return {
@@ -121,43 +125,28 @@ const GITHUB_RESPONSE = {
 
 module('Integration | Service | auth', function (hooks) {
   setupTest(hooks);
+  setupMirage(hooks);
 
   hooks.beforeEach(function () {
     this.owner.lookup('service:flash-messages').registerTypes(['warning']);
     this.store = storage();
     this.memStore = storage();
-    this.server = new Pretender(function () {
-      this.get('/v1/auth/token/lookup-self', function (request) {
-        const resp = copy(ROOT_TOKEN_RESPONSE, true);
-        resp.id = request.requestHeaders['X-Vault-Token'];
-        resp.data.id = request.requestHeaders['X-Vault-Token'];
-        return [200, {}, resp];
-      });
-      this.post('/v1/auth/userpass/login/:username', function (request) {
-        const { username } = request.params;
-        const resp = copy(USERPASS_RESPONSE, true);
-        resp.auth.metadata.username = username;
-        return [200, {}, resp];
-      });
-
-      this.post('/v1/auth/github/login', function () {
-        const resp = copy(GITHUB_RESPONSE, true);
-        return [200, {}, resp];
-      });
+    this.server.get('/auth/token/lookup-self', function (_, request) {
+      const resp = { ...ROOT_TOKEN_RESPONSE };
+      resp.id = request.requestHeaders['X-Vault-Token'];
+      resp.data.id = request.requestHeaders['X-Vault-Token'];
+      return resp;
+    });
+    this.server.post('/auth/userpass/login/:username', function (_, request) {
+      const { username } = request.params;
+      const resp = { ...USERPASS_RESPONSE };
+      resp.auth.metadata.username = username;
+      return resp;
     });
 
-    this.server.prepareBody = function (body) {
-      return body ? JSON.stringify(body) : '{"error": "not found"}';
-    };
-
-    this.server.prepareHeaders = function (headers) {
-      headers['content-type'] = 'application/javascript';
-      return headers;
-    };
-  });
-
-  hooks.afterEach(function () {
-    this.server.shutdown();
+    this.server.post('/auth/github/login', function () {
+      return { ...GITHUB_RESPONSE };
+    });
   });
 
   test('token authentication: root token', function (assert) {
@@ -178,31 +167,35 @@ module('Integration | Service | auth', function (hooks) {
       },
     });
     run(() => {
-      service.authenticate({ clusterId: '1', backend: 'token', data: { token: 'test' } }).then(() => {
-        const clusterTokenName = service.get('currentTokenName');
-        const clusterToken = service.get('currentToken');
-        const authData = service.get('authData');
+      service
+        .authenticate({ clusterId: '1', backend: 'token', data: { token: 'test' } })
+        .then(() => {
+          const clusterTokenName = service.get('currentTokenName');
+          const clusterToken = service.get('currentToken');
+          const authData = service.get('authData');
 
-        const expectedTokenName = `${TOKEN_PREFIX}${ROOT_PREFIX}${TOKEN_SEPARATOR}1`;
-        assert.strictEqual(clusterToken, 'test', 'token is saved properly');
-        assert.strictEqual(
-          `${TOKEN_PREFIX}${ROOT_PREFIX}${TOKEN_SEPARATOR}1`,
-          clusterTokenName,
-          'token name is saved properly'
-        );
-        assert.strictEqual(authData.backend.type, 'token', 'backend is saved properly');
-        assert.strictEqual(
-          ROOT_TOKEN_RESPONSE.data.display_name,
-          authData.displayName,
-          'displayName is saved properly'
-        );
-        assert.ok(
-          this.memStore.keys().includes(expectedTokenName),
-          'root token is stored in the memory store'
-        );
-        assert.strictEqual(this.store.keys().length, 0, 'normal storage is empty');
-        done();
-      });
+          const expectedTokenName = `${TOKEN_PREFIX}${ROOT_PREFIX}${TOKEN_SEPARATOR}1`;
+          assert.strictEqual(clusterToken, 'test', 'token is saved properly');
+          assert.strictEqual(
+            `${TOKEN_PREFIX}${ROOT_PREFIX}${TOKEN_SEPARATOR}1`,
+            clusterTokenName,
+            'token name is saved properly'
+          );
+          assert.strictEqual(authData.backend.type, 'token', 'backend is saved properly');
+          assert.strictEqual(
+            ROOT_TOKEN_RESPONSE.data.display_name,
+            authData.displayName,
+            'displayName is saved properly'
+          );
+          assert.ok(
+            this.memStore.keys().includes(expectedTokenName),
+            'root token is stored in the memory store'
+          );
+          assert.strictEqual(this.store.keys().length, 0, 'normal storage is empty');
+        })
+        .finally(() => {
+          done();
+        });
     });
   });
 
@@ -309,13 +302,11 @@ module('Integration | Service | auth', function (hooks) {
   test('token auth expiry with non-root token', function (assert) {
     assert.expect(5);
     const tokenResp = TOKEN_NON_ROOT_RESPONSE();
-    this.server.map(function () {
-      this.get('/v1/auth/token/lookup-self', function (request) {
-        const resp = copy(tokenResp, true);
-        resp.id = request.requestHeaders['X-Vault-Token'];
-        resp.data.id = request.requestHeaders['X-Vault-Token'];
-        return [200, {}, resp];
-      });
+    this.server.get('/auth/token/lookup-self', function (_, request) {
+      const resp = { ...tokenResp };
+      resp.id = request.requestHeaders['X-Vault-Token'];
+      resp.data.id = request.requestHeaders['X-Vault-Token'];
+      return resp;
     });
 
     const done = assert.async();

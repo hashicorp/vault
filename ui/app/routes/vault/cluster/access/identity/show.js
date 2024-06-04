@@ -1,12 +1,18 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import AdapterError from '@ember-data/adapter/error';
 import { next } from '@ember/runloop';
 import { hash } from 'rsvp';
 import { set } from '@ember/object';
 import Route from '@ember/routing/route';
 import { TABS } from 'vault/helpers/tabs-for-identity-show';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 
 export default Route.extend({
+  router: service(),
   store: service(),
 
   model(params) {
@@ -24,7 +30,7 @@ export default Route.extend({
     let model = this.store.peekRecord(modelType, params.item_id);
 
     // if we don't have creationTime, we only have a partial model so reload
-    if (model && !model.get('creationTime')) {
+    if (model && !model?.creationTime) {
       model = model.reload();
     }
 
@@ -45,15 +51,15 @@ export default Route.extend({
     if (this.currentModel) {
       next(() => {
         /* eslint-disable-next-line ember/no-controller-access-in-routes */
-        this.controller.get('model').reload();
+        this.controller.model.reload();
       });
     }
   },
 
   afterModel(resolvedModel) {
     const { section, model } = resolvedModel;
-    if (model.get('identityType') === 'group' && model.get('type') === 'internal' && section === 'aliases') {
-      return this.transitionTo('vault.cluster.access.identity.show', model.id, 'details');
+    if (model?.identityType === 'group' && model?.type === 'internal' && section === 'aliases') {
+      return this.router.transitionTo('vault.cluster.access.identity.show', model.id, 'details');
     }
   },
 

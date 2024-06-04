@@ -1,15 +1,17 @@
-import Ember from 'ember';
-import { inject as service } from '@ember/service';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { service } from '@ember/service';
 // ARG NOTE: Once you remove outer-html after glimmerizing you can remove the outer-html component
 import Component from './outer-html';
-import { later } from '@ember/runloop';
 import { task, timeout, waitForEvent } from 'ember-concurrency';
-import { computed } from '@ember/object';
-import { waitFor } from '@ember/test-waiters';
+import { debounce } from '@ember/runloop';
 
 const WAIT_TIME = 500;
 const ERROR_WINDOW_CLOSED =
-  'The provider window was closed before authentication was complete.  Please click Sign In to try again.';
+  'The provider window was closed before authentication was complete. Your web browser may have blocked or closed a pop-up window. Please check your settings and click Sign In to try again.';
 const ERROR_MISSING_PARAMS =
   'The callback from the provider did not supply all of the required parameters.  Please click Sign In to try again. If the problem persists, you may want to contact your administrator.';
 const ERROR_JWT_LOGIN = 'OIDC login is not configured for this mount';
@@ -17,64 +19,68 @@ export { ERROR_WINDOW_CLOSED, ERROR_MISSING_PARAMS, ERROR_JWT_LOGIN };
 
 export default Component.extend({
   store: service(),
-  featureFlagService: service('featureFlag'),
+  flagsService: service('flags'),
 
   selectedAuthPath: null,
   selectedAuthType: null,
   roleName: null,
   role: null,
   errorMessage: null,
+  isOIDC: true,
+
   onRoleName() {},
   onLoading() {},
   onError() {},
   onNamespace() {},
 
   didReceiveAttrs() {
-    this._super();
-    const debounce = !this.oldSelectedAuthPath && !this.selectedAuthPath;
+    this._super(...arguments);
+    // if mount path or type changes we need to check again for JWT configuration
+    const didChangePath = this._authPath !== this.selectedAuthPath;
+    const didChangeType = this._authType !== this.selectedAuthType;
 
-    if (this.oldSelectedAuthPath !== this.selectedAuthPath || debounce) {
-      this.fetchRole.perform(this.roleName, { debounce });
+    if (didChangePath || didChangeType) {
+      // path updates as the user types so we need to debounce that event
+      const wait = didChangePath ? 500 : 0;
+      debounce(this, 'fetchRole', wait);
     }
-
-    this.set('errorMessage', null);
-    this.set('oldSelectedAuthPath', this.selectedAuthPath);
+    this._authPath = this.selectedAuthPath;
+    this._authType = this.selectedAuthType;
   },
-
-  // Assumes authentication using OIDC until it's known that the mount is
-  // configured for JWT authentication via static keys, JWKS, or OIDC discovery.
-  isOIDC: computed('errorMessage', function () {
-    return this.errorMessage !== ERROR_JWT_LOGIN;
-  }),
 
   getWindow() {
     return this.window || window;
   },
 
-  fetchRole: task(
-    waitFor(function* (roleName, options = { debounce: true }) {
-      if (options.debounce) {
-        this.onRoleName(roleName);
-        // debounce
-        yield timeout(Ember.testing ? 0 : WAIT_TIME);
-      }
-      const path = this.selectedAuthPath || this.selectedAuthType;
-      const id = JSON.stringify([path, roleName]);
-      let role = null;
-      try {
-        role = yield this.store.findRecord('role-jwt', id, { adapterOptions: { namespace: this.namespace } });
-      } catch (e) {
-        // throwing here causes failures in tests
-        if ((!e.httpStatus || e.httpStatus !== 400) && !Ember.testing) {
-          throw e;
-        }
-        if (e.errors && e.errors.length > 0) {
-          this.set('errorMessage', e.errors[0]);
-        }
-      }
+  async fetchRole() {
+    const path = this.selectedAuthPath || this.selectedAuthType;
+    const id = JSON.stringify([path, this.roleName]);
+    this.setProperties({ role: null, errorMessage: null, isOIDC: true });
+
+    try {
+      const role = await this.store.findRecord('role-jwt', id, {
+        adapterOptions: { namespace: this.namespace },
+      });
       this.set('role', role);
-    })
-  ).restartable(),
+    } catch (e) {
+      const error = (e.errors || [])[0];
+      const errorMessage =
+        e.httpStatus === 400 ? 'Invalid role. Please try again.' : `Error fetching role: ${error}`;
+      // assume OIDC until it's known that the mount is configured for JWT authentication via static keys, JWKS, or OIDC discovery.
+      this.setProperties({ isOIDC: error !== ERROR_JWT_LOGIN, errorMessage });
+    }
+  },
+
+  cancelLogin(oidcWindow, errorMessage) {
+    this.closeWindow(oidcWindow);
+    this.handleOIDCError(errorMessage);
+  },
+
+  closeWindow(oidcWindow) {
+    this.watchPopup.cancelAll();
+    this.watchCurrent.cancelAll();
+    oidcWindow.close();
+  },
 
   handleOIDCError(err) {
     this.onLoading(false);
@@ -94,10 +100,7 @@ export default Component.extend({
     // ensure that postMessage event is from expected source
     while (true) {
       const event = yield waitForEvent(thisWindow, 'message');
-      if (event.origin !== thisWindow.origin || !event.isTrusted) {
-        return this.handleOIDCError();
-      }
-      if (event.data.source === 'oidc-callback') {
+      if (event.origin === thisWindow.origin && event.isTrusted && event.data.source === 'oidc-callback') {
         return this.exchangeOIDC.perform(event.data, oidcWindow);
       }
       // continue to wait for the correct message
@@ -119,12 +122,6 @@ export default Component.extend({
     oidcWindow.close();
   }),
 
-  closeWindow(oidcWindow) {
-    this.watchPopup.cancelAll();
-    this.watchCurrent.cancelAll();
-    oidcWindow.close();
-  },
-
   exchangeOIDC: task(function* (oidcState, oidcWindow) {
     if (oidcState === null || oidcState === undefined) {
       return;
@@ -133,10 +130,10 @@ export default Component.extend({
 
     let { namespace, path, state, code } = oidcState;
 
-    // The namespace can be either be passed as a query paramter, or be embedded
+    // The namespace can be either be passed as a query parameter, or be embedded
     // in the state param in the format `<state_id>,ns=<namespace>`. So if
     // `namespace` is empty, check for namespace in state as well.
-    if (namespace === '' || this.featureFlagService.managedNamespaceRoot) {
+    if (namespace === '' || this.flagsService.hvdManagedNamespaceRoot) {
       const i = state.indexOf(',ns=');
       if (i >= 0) {
         // ",ns=" is 4 characters
@@ -145,12 +142,8 @@ export default Component.extend({
       }
     }
 
-    // defer closing of the window, but continue executing the task
-    later(() => {
-      this.closeWindow(oidcWindow);
-    }, WAIT_TIME);
     if (!path || !state || !code) {
-      return this.handleOIDCError(ERROR_MISSING_PARAMS);
+      return this.cancelLogin(oidcWindow, ERROR_MISSING_PARAMS);
     }
     const adapter = this.store.adapterFor('auth-method');
     this.onNamespace(namespace);
@@ -159,39 +152,29 @@ export default Component.extend({
     // and submit auth form
     try {
       resp = yield adapter.exchangeOIDC(path, state, code);
+      this.closeWindow(oidcWindow);
     } catch (e) {
-      return this.handleOIDCError(e);
+      // If there was an error on Vault's end, close the popup
+      // and show the error on the login screen
+      return this.cancelLogin(oidcWindow, e);
     }
     yield this.onSubmit(null, null, resp.auth.client_token);
   }),
 
-  actions: {
-    async startOIDCAuth(data, e) {
-      this.onError(null);
-      if (e && e.preventDefault) {
-        e.preventDefault();
-      }
-      if (!this.isOIDC || !this.role || !this.role.authUrl) {
-        let message = this.errorMessage;
-        if (!this.role) {
-          message = 'Invalid role. Please try again.';
-        } else if (!this.role.authUrl) {
-          message =
-            'Missing auth_url. Please check that allowed_redirect_uris for the role include this mount path.';
-        }
-        this.onError(message);
-        return;
-      }
-      try {
-        await this.fetchRole.perform(this.roleName, { debounce: false });
-      } catch (error) {
-        // this task could be cancelled if the instances in didReceiveAttrs resolve after this was started
-        if (error?.name !== 'TaskCancelation') {
-          throw error;
-        }
-      }
-      const win = this.getWindow();
+  async startOIDCAuth() {
+    this.onError(null);
 
+    await this.fetchRole();
+
+    const error =
+      this.role && !this.role.authUrl
+        ? 'Missing auth_url. Please check that allowed_redirect_uris for the role include this mount path.'
+        : this.errorMessage || null;
+
+    if (error) {
+      this.onError(error);
+    } else {
+      const win = this.getWindow();
       const POPUP_WIDTH = 500;
       const POPUP_HEIGHT = 600;
       const left = win.screen.width / 2 - POPUP_WIDTH / 2;
@@ -203,6 +186,23 @@ export default Component.extend({
       );
 
       this.prepareForOIDC.perform(oidcWindow);
+    }
+  },
+
+  actions: {
+    onRoleChange(event) {
+      this.onRoleName(event.target.value);
+      debounce(this, 'fetchRole', 500);
+    },
+    signIn(event) {
+      event.preventDefault();
+
+      if (this.isOIDC) {
+        this.startOIDCAuth();
+      } else {
+        const { jwt, roleName: role } = this;
+        this.onSubmit({ role, jwt });
+      }
     },
   },
 });

@@ -1,0 +1,3 @@
+```release-note:bug
+storage/raft: Fix race where new follower joining can get pruned by dead server cleanup.
+```

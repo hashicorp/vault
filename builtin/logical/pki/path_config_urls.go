@@ -1,11 +1,14 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pki
 
 import (
 	"context"
 	"fmt"
-	"strings"
+	"net/http"
 
-	"github.com/asaskevich/govalidator"
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -13,6 +16,11 @@ import (
 func pathConfigURLs(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/urls",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"issuing_certificates": {
 				Type: framework.TypeCommaStringSlice,
@@ -35,20 +43,94 @@ for the OCSP servers attribute. See also RFC 5280 Section 4.2.2.1.`,
 			"enable_templating": {
 				Type: framework.TypeBool,
 				Description: `Whether or not to enabling templating of the
-above AIA fields. When templating is enabled the special values '{{issuer_id}}'
-and '{{cluster_path}}' are available, but the addresses are not checked for
-URI validity until issuance time. This requires /config/cluster's path to be
-set on all PR Secondary clusters.`,
+above AIA fields. When templating is enabled the special values '{{issuer_id}}',
+'{{cluster_path}}', and '{{cluster_aia_path}}' are available, but the addresses
+are not checked for URI validity until issuance time. Using '{{cluster_path}}'
+requires /config/cluster's 'path' member to be set on all PR Secondary clusters
+and using '{{cluster_aia_path}}' requires /config/cluster's 'aia_path' member
+to be set on all PR secondary clusters.`,
 				Default: false,
 			},
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "urls",
+				},
 				Callback: b.pathWriteURL,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"issuing_certificates": {
+								Type: framework.TypeCommaStringSlice,
+								Description: `Comma-separated list of URLs to be used
+for the issuing certificate attribute. See also RFC 5280 Section 4.2.2.1.`,
+							},
+							"crl_distribution_points": {
+								Type: framework.TypeCommaStringSlice,
+								Description: `Comma-separated list of URLs to be used
+for the CRL distribution points attribute. See also RFC 5280 Section 4.2.1.13.`,
+							},
+							"ocsp_servers": {
+								Type: framework.TypeCommaStringSlice,
+								Description: `Comma-separated list of URLs to be used
+for the OCSP servers attribute. See also RFC 5280 Section 4.2.2.1.`,
+							},
+							"enable_templating": {
+								Type: framework.TypeBool,
+								Description: `Whether or not to enabling templating of the
+above AIA fields. When templating is enabled the special values '{{issuer_id}}'
+and '{{cluster_path}}' are available, but the addresses are not checked for
+URI validity until issuance time. This requires /config/cluster's path to be
+set on all PR Secondary clusters.`,
+								Default: false,
+							},
+						},
+					}},
+				},
 			},
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathReadURL,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "urls-configuration",
+				},
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"issuing_certificates": {
+								Type: framework.TypeCommaStringSlice,
+								Description: `Comma-separated list of URLs to be used
+for the issuing certificate attribute. See also RFC 5280 Section 4.2.2.1.`,
+								Required: true,
+							},
+							"crl_distribution_points": {
+								Type: framework.TypeCommaStringSlice,
+								Description: `Comma-separated list of URLs to be used
+for the CRL distribution points attribute. See also RFC 5280 Section 4.2.1.13.`,
+								Required: true,
+							},
+							"ocsp_servers": {
+								Type: framework.TypeCommaStringSlice,
+								Description: `Comma-separated list of URLs to be used
+for the OCSP servers attribute. See also RFC 5280 Section 4.2.2.1.`,
+								Required: true,
+							},
+							"enable_templating": {
+								Type: framework.TypeBool,
+								Description: `Whether or not to enable templating of the
+above AIA fields. When templating is enabled the special values '{{issuer_id}}'
+and '{{cluster_path}}' are available, but the addresses are not checked for
+URI validity until issuance time. This requires /config/cluster's path to be
+set on all PR Secondary clusters.`,
+								Required: true,
+							},
+						},
+					}},
+				},
 			},
 		},
 
@@ -57,23 +139,13 @@ set on all PR Secondary clusters.`,
 	}
 }
 
-func validateURLs(urls []string) string {
-	for _, curr := range urls {
-		if !govalidator.IsURL(curr) || strings.Contains(curr, "{{issuer_id}}") || strings.Contains(curr, "{{cluster_path}}") {
-			return curr
-		}
-	}
-
-	return ""
-}
-
-func getGlobalAIAURLs(ctx context.Context, storage logical.Storage) (*aiaConfigEntry, error) {
+func getGlobalAIAURLs(ctx context.Context, storage logical.Storage) (*issuing.AiaConfigEntry, error) {
 	entry, err := storage.Get(ctx, "urls")
 	if err != nil {
 		return nil, err
 	}
 
-	entries := &aiaConfigEntry{
+	entries := &issuing.AiaConfigEntry{
 		IssuingCertificates:   []string{},
 		CRLDistributionPoints: []string{},
 		OCSPServers:           []string{},
@@ -91,7 +163,7 @@ func getGlobalAIAURLs(ctx context.Context, storage logical.Storage) (*aiaConfigE
 	return entries, nil
 }
 
-func writeURLs(ctx context.Context, storage logical.Storage, entries *aiaConfigEntry) error {
+func writeURLs(ctx context.Context, storage logical.Storage, entries *issuing.AiaConfigEntry) error {
 	entry, err := logical.StorageEntryJSON("urls", entries)
 	if err != nil {
 		return err
@@ -154,7 +226,7 @@ func (b *backend) pathWriteURL(ctx context.Context, req *logical.Request, data *
 		},
 	}
 
-	if entries.EnableTemplating && !b.useLegacyBundleCaStorage() {
+	if entries.EnableTemplating && !b.UseLegacyBundleCaStorage() {
 		sc := b.makeStorageContext(ctx, req.Storage)
 		issuers, err := sc.listIssuers()
 		if err != nil {
@@ -167,23 +239,23 @@ func (b *backend) pathWriteURL(ctx context.Context, req *logical.Request, data *
 				return nil, fmt.Errorf("unable to read issuer to validate templated URIs: %w", err)
 			}
 
-			_, err = entries.toURLEntries(sc, issuer.ID)
+			_, err = ToURLEntries(sc, issuer.ID, entries)
 			if err != nil {
 				resp.AddWarning(fmt.Sprintf("issuance may fail: %v\n\nConsider setting the cluster-local address if it is not already set.", err))
 			}
 		}
 	} else if !entries.EnableTemplating {
-		if badURL := validateURLs(entries.IssuingCertificates); badURL != "" {
+		if badURL := issuing.ValidateURLs(entries.IssuingCertificates); badURL != "" {
 			return logical.ErrorResponse(fmt.Sprintf(
 				"invalid URL found in Authority Information Access (AIA) parameter issuing_certificates: %s", badURL)), nil
 		}
 
-		if badURL := validateURLs(entries.CRLDistributionPoints); badURL != "" {
+		if badURL := issuing.ValidateURLs(entries.CRLDistributionPoints); badURL != "" {
 			return logical.ErrorResponse(fmt.Sprintf(
 				"invalid URL found in Authority Information Access (AIA) parameter crl_distribution_points: %s", badURL)), nil
 		}
 
-		if badURL := validateURLs(entries.OCSPServers); badURL != "" {
+		if badURL := issuing.ValidateURLs(entries.OCSPServers); badURL != "" {
 			return logical.ErrorResponse(fmt.Sprintf(
 				"invalid URL found in Authority Information Access (AIA) parameter ocsp_servers: %s", badURL)), nil
 		}

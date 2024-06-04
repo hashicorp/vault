@@ -1,14 +1,17 @@
-import { inject as service } from '@ember/service';
-import { next } from '@ember/runloop';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { service } from '@ember/service';
 import Route from '@ember/routing/route';
 import ControlGroupError from 'vault/lib/control-group-error';
 
 export default Route.extend({
   controlGroup: service(),
   routing: service('router'),
-  wizard: service(),
   namespaceService: service('namespace'),
-  featureFlagService: service('featureFlag'),
+  flagsService: service('flags'),
 
   actions: {
     willTransition() {
@@ -55,43 +58,14 @@ export default Route.extend({
       // Assuming we have a URL, push it into browser history and update the
       // location bar for the user
       if (errorURL) {
-        router.get('location').setURL(errorURL);
+        router.location.setURL(errorURL);
       }
 
-      return true;
-    },
-    didTransition() {
-      const wizard = this.wizard;
-
-      if (wizard.get('currentState') !== 'active.feature') {
-        return true;
-      }
-      next(() => {
-        const applicationURL = this.routing.currentURL;
-        const activeRoute = this.routing.currentRouteName;
-
-        if (this.wizard.setURLAfterTransition) {
-          this.set('wizard.setURLAfterTransition', false);
-          this.set('wizard.expectedURL', applicationURL);
-          this.set('wizard.expectedRouteName', activeRoute);
-        }
-        const expectedRouteName = this.wizard.expectedRouteName;
-        if (this.routing.isActive(expectedRouteName) === false) {
-          wizard.transitionTutorialMachine(wizard.get('currentState'), 'PAUSE');
-        }
-      });
       return true;
     },
   },
 
-  async beforeModel() {
-    const result = await fetch('/v1/sys/internal/ui/feature-flags', {
-      method: 'GET',
-    });
-    if (result.status === 200) {
-      const body = await result.json();
-      const flags = body.feature_flags || [];
-      this.featureFlagService.setFeatureFlags(flags);
-    }
+  beforeModel() {
+    return this.flagsService.fetchFeatureFlags();
   },
 });

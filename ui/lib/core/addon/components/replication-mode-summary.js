@@ -1,4 +1,9 @@
-import { inject as service } from '@ember/service';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { service } from '@ember/service';
 import { equal } from '@ember/object/computed';
 import { get, computed } from '@ember/object';
 import Component from '@ember/component';

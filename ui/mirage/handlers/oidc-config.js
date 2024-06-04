@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 export default function (server) {
   // ENTITY SEARCH SELECT
   server.get('/identity/entity/id', () => ({

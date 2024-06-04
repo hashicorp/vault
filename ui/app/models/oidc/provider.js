@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Model, { attr } from '@ember-data/model';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
@@ -20,7 +25,7 @@ export default class OidcProviderModel extends Model {
     subText:
       'The scheme, host, and optional port for your issuer. This will be used to build the URL that validates ID tokens.',
     placeholderText: 'e.g. https://example.com:8200',
-    docLink: '/api-docs/secret/identity/oidc-provider#create-or-update-a-provider',
+    docLink: '/vault/api-docs/secret/identity/oidc-provider#create-or-update-a-provider',
     helpText: `Optional. This defaults to a URL with Vault's api_addr`,
   })
   issuer;
@@ -48,12 +53,12 @@ export default class OidcProviderModel extends Model {
 
   @lazyCapabilities(apiPath`identity/oidc/provider/${'name'}`, 'name') providerPath;
   get canRead() {
-    return this.providerPath.get('canRead');
+    return this.providerPath.get('canRead') !== false;
   }
   get canEdit() {
-    return this.providerPath.get('canUpdate');
+    return this.providerPath.get('canUpdate') !== false;
   }
   get canDelete() {
-    return this.providerPath.get('canDelete');
+    return this.providerPath.get('canDelete') !== false;
   }
 }

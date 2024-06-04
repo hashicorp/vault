@@ -6,11 +6,11 @@ description: |-
   method.
 ---
 
-# Google Cloud Auth Method (API)
+# Google Cloud auth method (API)
 
 This is the API documentation for the Vault Google Cloud auth method. To learn
 more about the usage and operation, see the
-[Vault Google Cloud method documentation](/docs/auth/gcp).
+[Vault Google Cloud method documentation](/vault/docs/auth/gcp).
 
 This documentation assumes the plugin method is mounted at the
 `/auth/gcp` path in Vault. Since it is possible to enable auth methods
@@ -21,7 +21,25 @@ at any location, please update your API calls accordingly.
 Configures the credentials required for the plugin to perform API calls
 to Google Cloud. These credentials will be used to query the status of IAM
 entities and get service account or other Google public certificates
-to confirm signed JWTs passed in during login.
+to confirm signed JWTs passed in during login. You can configure
+credentials either with Application Credentials for a privileged service account,
+or using Plugin Workload Identity Federation (WIF).
+
+### IAM
+Vault uses the official Google Cloud SDK to source credentials from environment variables and shared files.
+
+From the highest precedence to lowest, you can pass root credentials to the Vault server in the following ways:
+
+1. Provide static credentials to the API as a payload.
+
+1. Use [plugin workload identity federation](/vault/docs/auth/gcp#plugin-workload-identity-federation-wif) credentials.
+
+1. Set [application default credentials](https://cloud.google.com/docs/authentication/application-default-credentials)
+as environment variables on the Vault server.
+
+<Warning title="Destructive action">
+  Passing Vault new root credentials overwrites any preexisting root credentials.
+</Warning>
 
 | Method | Path               |
 | :----- | :----------------- |
@@ -31,9 +49,20 @@ to confirm signed JWTs passed in during login.
 
 - `credentials` `(string: "")` - A JSON string containing the contents of a GCP
   service account credentials file. The service account associated with the credentials
-  file must have the following [permissions](/docs/auth/gcp#required-gcp-permissions).
+  file must have the following [permissions](/vault/docs/auth/gcp#required-gcp-permissions).
   If this value is empty, Vault will try to use [Application Default Credentials][gcp-adc]
-  from the machine on which the Vault server is running.
+  from the machine on which the Vault server is running. Mutually exclusive with `identity_token_audience`.
+
+- `service_account_email` `(string: "")` – <EnterpriseAlert product="vault" inline /> Service Account
+  to impersonate for plugin workload identity federation. Required with `identity_token_audience`.
+
+- `identity_token_audience` `(string: "")` - <EnterpriseAlert product="vault" inline /> The
+  audience claim value for plugin identity tokens. Must match an allowed audience configured
+  for the target [Workload Identity Pool](https://cloud.google.com/iam/docs/workload-identity-federation-with-other-providers#prepare).
+  Mutually exclusive with `credentials`.
+
+- `identity_token_ttl` `(string/int: 3600)` - <EnterpriseAlert product="vault" inline /> The
+  TTL of generated tokens. Defaults to 1 hour. Uses [duration format strings](/vault/docs/concepts/duration-format).
 
 - `iam_alias` `(string: "role_id")` - Must be either `unique_id` or `role_id`.
   If `unique_id` is specified, the service account's unique ID will be used for
@@ -81,7 +110,7 @@ to confirm signed JWTs passed in during login.
   The endpoint value provided for a given key has the form of `scheme://host:port`.
   The `scheme://` and `:port` portions of the endpoint value are optional.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -89,7 +118,7 @@ to confirm signed JWTs passed in during login.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -99,7 +128,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/gcp/config
 ```
 
-## Read Config
+## Read config
 
 Returns the configuration, if any, including credentials.
 
@@ -107,7 +136,7 @@ Returns the configuration, if any, including credentials.
 | :----- | :----------------- |
 | `GET`  | `/auth/gcp/config` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -115,7 +144,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/gcp/config
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -128,7 +157,7 @@ $ curl \
 }
 ```
 
-## Create Role
+## Create/Update role
 
 Registers a role in the method. Role types have specific entities
 that can perform login operations against this endpoint. Constraints specific
@@ -164,7 +193,7 @@ entities attempting to login.
 
 @include 'tokenfields.mdx'
 
-#### `iam`-only Parameters
+#### `iam`-only parameters
 
 The following parameters are only valid when the role is of type `"iam"`:
 
@@ -179,7 +208,7 @@ The following parameters are only valid when the role is of type `"iam"`:
   allow GCE instances to authenticate by inferring service accounts from the
   GCE identity metadata token.
 
-#### `gce`-only Parameters
+#### `gce`-only parameters
 
 The following parameters are only valid when the role is of type `"gce"`:
 
@@ -201,7 +230,7 @@ The following parameters are only valid when the role is of type `"gce"`:
   GCP labels are not currently ACL'd, we recommend that this be used in
   conjunction with other restrictions.
 
-### Sample Payload
+### Sample payload
 
 Example `iam` role:
 
@@ -231,7 +260,7 @@ Example `gce` role:
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -241,7 +270,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/gcp/role/my-role
 ```
 
-## Edit Service Accounts on IAM Role
+## Edit service accounts on IAM role
 
 Edit service accounts for an existing IAM role in the method.
 This allows you to add or remove service accounts from the list of
@@ -262,7 +291,7 @@ service accounts on the role.
 - `remove` `(array: [])` - The list of service accounts to remove from the
   role's service accounts.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -271,7 +300,7 @@ service accounts on the role.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -281,7 +310,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/gcp/role/my-role
 ```
 
-## Edit Labels on GCE Role
+## Edit labels on GCE role
 
 Edit labels for an existing GCE role in the backend. This allows you to add or
 remove labels (keys, values, or both) from the list of keys on the role.
@@ -302,7 +331,7 @@ remove labels (keys, values, or both) from the list of keys on the role.
   bound labels. If any of the specified keys do not exist, no error is returned
   (idempotent).
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -311,7 +340,7 @@ remove labels (keys, values, or both) from the list of keys on the role.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -321,7 +350,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/gcp/role/my-role
 ```
 
-## Read Role
+## Read role
 
 Returns the previously registered role configuration.
 
@@ -333,7 +362,7 @@ Returns the previously registered role configuration.
 
 - `name` `(string: <required>)` - The name of the role to read.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -341,7 +370,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/gcp/role/my-role
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -364,7 +393,7 @@ $ curl \
 }
 ```
 
-## List Roles
+## List roles
 
 Lists all the roles that are registered with the plugin.
 
@@ -372,7 +401,7 @@ Lists all the roles that are registered with the plugin.
 | :----- | :---------------- |
 | `LIST` | `/auth/gcp/roles` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -381,7 +410,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/gcp/roles
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -391,7 +420,7 @@ $ curl \
 }
 ```
 
-## Delete Role
+## Delete role
 
 Deletes the previously registered role.
 
@@ -403,7 +432,7 @@ Deletes the previously registered role.
 
 - `role` `(string: <required>)` - The name of the role to delete.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -423,7 +452,7 @@ role.
 | :----- | :---------------- |
 | `POST` | `/auth/gcp/login` |
 
-### Sample Payload
+### Sample payload
 
 - `role` `(string: <required>)` - The name of the role against which the login
   is being attempted.
@@ -435,7 +464,7 @@ role.
 
   - For `gce` type roles, this is an [identity metadata token][instance-token].
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -444,7 +473,7 @@ role.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -453,7 +482,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/gcp/login
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {

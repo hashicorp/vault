@@ -1,43 +1,53 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { capitalize } from 'vault/helpers/capitalize';
 import { humanize } from 'vault/helpers/humanize';
 import { dasherize } from 'vault/helpers/dasherize';
+import { assert } from '@ember/debug';
+import { addToArray } from 'vault/helpers/add-to-array';
+import { removeFromArray } from 'vault/helpers/remove-from-array';
+
 /**
  * @module FormField
- * `FormField` components are field elements associated with a particular model.
+ * FormField components are field elements associated with a particular model.
+ * @description
+ * ```
+ * sample attr shape:
+ * attr = {
+ * name: "foo", // name of attribute -- used to populate various fields and pull value from model
+ * type: "boolean" // type of attribute value -- string, boolean, etc.
+ * options: {
+ *  label: "To do task", // custom label to be shown, otherwise attr.name will be displayed
+ *  defaultValue: "", // default value to display if model value is not present
+ *  fieldValue: "toDo", // used for value lookup on model over attr.name
+ *  editType: "boolean", type of field to use. List of editTypes:boolean, file, json, kv, optionalText, mountAccessor, password, radio, regex, searchSelect, stringArray, textarea, ttl, yield.
+ *  helpText: "This will be in a tooltip",
+ *  readOnly: true
+ *  },
+ * }
+ * ```
  *
  * @example
- * ```js
  * {{#each @model.fields as |attr|}}
- *  <FormField data-test-field @attr={{attr}} @model={{this.model}} />
+ *  <FormField data-test-field @attr={{attr}} @model={{@model}} />
  * {{/each}}
- * ```
- * example attr object:
- * attr = {
- *   name: "foo", // name of attribute -- used to populate various fields and pull value from model
- *   options: {
- *     label: "Foo", // custom label to be shown, otherwise attr.name will be displayed
- *     defaultValue: "", // default value to display if model value is not present
- *     fieldValue: "bar", // used for value lookup on model over attr.name
- *     editType: "ttl", type of field to use. List of editTypes:boolean, file, json, kv, optionalText, mountAccessor, password, radio, regex, searchSelect, stringArray, textarea, ttl, yield.
- *     helpText: "This will be in a tooltip",
- *     readOnly: true
- *   },
- *   type: "boolean" // type of attribute value -- string, boolean, etc.
- * }
+ * <FormField @attr={{hash name="toDo" options=(hash label="To do task" helpText="helpful text" editType="boolean")}} @model={{hash toDo=true}} />
+ *
  * @param {Object} attr - usually derived from ember model `attributes` lookup, and all members of `attr.options` are optional
  * @param {Model} model - Ember Data model that `attr` is defined on
  * @param {boolean} [disabled=false] - whether the field is disabled
  * @param {boolean} [showHelpText=true] - whether to show the tooltip with help text from OpenAPI
  * @param {string} [subText] - text to be displayed below the label
  * @param {string} [mode] - used when editType is 'kv'
- * @param {ModelValidations} [modelValidations] - Object of errors.  If attr.name is in object and has error message display in AlertInline.
- * @callback onChangeCallback
- * @param {onChangeCallback} [onChange] - called whenever a value on the model changes via the component
- * @callback onKeyUpCallback
- * @param {onKeyUpCallback} [onKeyUp] - function passed through into MaskedInput to handle validation. It is also handled for certain form-field types here in the action handleKeyUp.
+ * @param {object} [modelValidations] - Object of errors.  If attr.name is in object and has error message display in AlertInline.
+ * @param {function} [onChange] - called whenever a value on the model changes via the component
+ * @param {function} [onKeyUp] - function passed through into MaskedInput to handle validation. It is also handled for certain form-field types here in the action handleKeyUp.
  *
  */
 
@@ -61,8 +71,17 @@ export default class FormFieldComponent extends Component {
     super(...arguments);
     const { attr, model } = this.args;
     const valuePath = attr.options?.fieldValue || attr.name;
+    assert(
+      'Form is attempting to modify an ID. Ember-data does not allow this.',
+      valuePath.toLowerCase() !== 'id'
+    );
     const modelValue = model[valuePath];
     this.showInput = !!modelValue;
+  }
+
+  get hasRadioSubText() {
+    // for 'radio' editType, check to see if every of the possibleValues has a subText and label
+    return this.args?.attr?.options?.possibleValues?.any((v) => v.subText);
   }
 
   get hideLabel() {
@@ -106,6 +125,11 @@ export default class FormFieldComponent extends Component {
     const validations = this.args.modelValidations || {};
     const state = validations[this.valuePath];
     return state && !state.isValid ? state.errors.join(' ') : null;
+  }
+  get validationWarning() {
+    const validations = this.args.modelValidations || {};
+    const state = validations[this.valuePath];
+    return state?.warnings?.length ? state.warnings.join(' ') : null;
   }
 
   onChange() {
@@ -168,5 +192,16 @@ export default class FormFieldComponent extends Component {
   onChangeWithEvent(event) {
     const prop = event.target.type === 'checkbox' ? 'checked' : 'value';
     this.setAndBroadcast(event.target[prop]);
+  }
+
+  @action
+  handleChecklist(event) {
+    let updatedValue = this.args.model[this.valuePath];
+    if (event.target.checked) {
+      updatedValue = addToArray(updatedValue, event.target.value);
+    } else {
+      updatedValue = removeFromArray(updatedValue, event.target.value);
+    }
+    this.setAndBroadcast(updatedValue);
   }
 }

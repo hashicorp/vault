@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package http
 
 import (
@@ -8,6 +11,7 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/vault"
@@ -27,6 +31,7 @@ func TestSysAuth(t *testing.T) {
 		"renewable":      false,
 		"lease_duration": json.Number("0"),
 		"wrap_info":      nil,
+		"mount_type":     "system",
 		"warnings":       nil,
 		"auth":           nil,
 		"data": map[string]interface{}{
@@ -111,6 +116,7 @@ func TestSysEnableAuth(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"foo/": map[string]interface{}{
 				"description":             "foo",
@@ -232,6 +238,7 @@ func TestSysDisableAuth(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"token/": map[string]interface{}{
 				"config": map[string]interface{}{
@@ -322,6 +329,7 @@ func TestSysTuneAuth_nonHMACKeys(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"description":                  "token based credentials",
 			"default_lease_ttl":            json.Number("2764800"),
@@ -367,6 +375,7 @@ func TestSysTuneAuth_nonHMACKeys(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"description":       "token based credentials",
 			"default_lease_ttl": json.Number("2764800"),
@@ -405,6 +414,7 @@ func TestSysTuneAuth_showUIMount(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"description":       "token based credentials",
 			"default_lease_ttl": json.Number("2764800"),
@@ -443,6 +453,7 @@ func TestSysTuneAuth_showUIMount(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"description":        "token based credentials",
 			"default_lease_ttl":  json.Number("2764800"),
@@ -485,7 +496,7 @@ func TestSysRemountAuth(t *testing.T) {
 	// Poll until the remount succeeds
 	var remountResp map[string]interface{}
 	testResponseBody(t, resp, &remountResp)
-	vault.RetryUntil(t, 5*time.Second, func() error {
+	corehelpers.RetryUntil(t, 5*time.Second, func() error {
 		resp = testHttpGet(t, token, addr+"/v1/sys/remount/status/"+remountResp["migration_id"].(string))
 		testResponseStatus(t, resp, 200)
 
@@ -509,6 +520,7 @@ func TestSysRemountAuth(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"bar/": map[string]interface{}{
 				"description":             "foo",

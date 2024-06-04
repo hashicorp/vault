@@ -1,4 +1,9 @@
 /**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+/**
  * @module TtlPicker
  * TtlPicker components are used to enable and select duration values such as TTL.
  * This component renders a toggle by default, and passes all relevant attributes
@@ -7,30 +12,30 @@
  * - recalculates the time when the unit is changed by the user (eg 60s -> 1m)
  *
  * @example
- * ```js
  * <TtlPicker @onChange={{this.handleChange}} @initialEnabled={{@model.myAttribute}} @initialValue={{@model.myAttribute}}/>
- * ```
- * @param onChange {Function} - This function will be passed a TTL object, which includes enabled{bool}, seconds{number}, timeString{string}, goSafeTimeString{string}.
- * @param initialEnabled=false {Boolean} - Set this value if you want the toggle on when component is mounted
- * @param label="Time to live (TTL)" {String} - Label is the main label that lives next to the toggle. Yielded values will replace the label
- * @param helperTextEnabled="" {String} - This helper text is shown under the label when the toggle is switched on
- * @param helperTextDisabled="" {String} - This helper text is shown under the label when the toggle is switched off
- * @param initialValue=null {string} - InitialValue is the duration value which will be shown when the component is loaded. If it can't be parsed, will default to 0.
- * @param changeOnInit=false {boolean} - if true, calls the onChange hook when component is initialized
- * @param hideToggle=false {Boolean} - set this value if you'd like to hide the toggle and just leverage the input field
+ *
+ * @param {function} onChange - This function will be passed a TTL object, which includes enabled{bool}, seconds{number}, timeString{string}, goSafeTimeString{string}.
+ * @param {boolean} initialEnabled=false - Set this value if you want the toggle on when component is mounted
+ * @param {string} label=Time to live (TTL) - Label is the main label that lives next to the toggle. Yielded values will replace the label
+ * @param {string} labelDisabled=Label to display when TTL is toggled off
+ * @param {string} helperTextEnabled - This helper text is shown under the label when the toggle is switched on
+ * @param {string} helperTextDisabled - This helper text is shown under the label when the toggle is switched off
+ * @param {string} initialValue=null - InitialValue is the duration value which will be shown when the component is loaded. If it can't be parsed, will default to 0.
+ * @param {boolean} changeOnInit=false - if true, calls the onChange hook when component is initialized
+ * @param {boolean} hideToggle=false - set this value if you'd like to hide the toggle and just leverage the input field
  */
 
 import Component from '@glimmer/component';
 import { typeOf } from '@ember/utils';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
-import Duration from '@icholy/duration';
 import { guidFor } from '@ember/object/internals';
 import Ember from 'ember';
 import { restartableTask, timeout } from 'ember-concurrency';
 import {
   convertFromSeconds,
   convertToSeconds,
+  durationToSeconds,
   goSafeConvertFromSeconds,
   largestUnitFromSeconds,
 } from 'core/utils/duration-utils';
@@ -39,7 +44,6 @@ export default class TtlPickerComponent extends Component {
   @tracked recalculateSeconds = false;
   @tracked time = ''; // if defaultValue is NOT set, then do not display a defaultValue.
   @tracked unit = 's';
-  @tracked recalculateSeconds = false;
   @tracked errorMessage = '';
 
   /* Used internally */
@@ -47,6 +51,9 @@ export default class TtlPickerComponent extends Component {
   elementId = 'ttl-' + guidFor(this);
 
   get label() {
+    if (this.args.label && this.args.labelDisabled) {
+      return this.enableTTL ? this.args.label : this.args.labelDisabled;
+    }
     return this.args.label || 'Time to live (TTL)';
   }
   get helperText() {
@@ -71,18 +78,19 @@ export default class TtlPickerComponent extends Component {
 
   initializeTtl() {
     const initialValue = this.args.initialValue;
+
     let seconds = 0;
+
     if (typeof initialValue === 'number') {
       // if the passed value is a number, assume unit is seconds
       seconds = initialValue;
     } else {
-      try {
-        seconds = Duration.parse(initialValue).seconds();
-      } catch (e) {
-        // if parsing fails leave it empty
-        return;
-      }
+      const parseDuration = durationToSeconds(initialValue);
+      // if parsing fails leave it empty
+      if (parseDuration === null) return;
+      seconds = parseDuration;
     }
+
     const unit = largestUnitFromSeconds(seconds);
     this.time = convertFromSeconds(seconds, unit);
     this.unit = unit;

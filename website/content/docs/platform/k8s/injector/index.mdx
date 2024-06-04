@@ -6,11 +6,11 @@ description: >-
   Vault Agent containers to pods for consuming Vault secrets.
 ---
 
-# Agent Sidecar Injector
+# Agent sidecar injector
 
 The Vault Agent Injector alters pod specifications to include Vault Agent
 containers that render Vault secrets to a shared memory volume using
-[Vault Agent Templates](/docs/agent/template).
+[Vault Agent Templates](/vault/docs/agent-and-proxy/agent/template).
 By rendering secrets to a shared volume, containers within the pod can consume
 Vault secrets without being Vault aware.
 
@@ -20,19 +20,7 @@ the request. This functionality is provided by the [vault-k8s](https://github.co
 project and can be automatically installed and configured using the
 [Vault Helm](https://github.com/hashicorp/vault-helm) chart.
 
-## Supported Kubernetes Versions
-
-The following [Kubernetes minor releases][k8s-releases] are currently supported.
-The latest version of the injector is tested against each version. It may work
-with other versions of Kubernetes, but those are not supported.
-
-* 1.25
-* 1.24
-* 1.23
-* 1.22
-* 1.21
-
-[k8s-releases]: https://kubernetes.io/releases/
+@include 'kubernetes-supported-versions.mdx'
 
 ## Overview
 
@@ -73,7 +61,7 @@ A service account must be present to use the Vault Agent Injector with the Kuber
 authentication method. It is _not_ recommended to bind Vault roles to the default service
 account provided to pods if no service account is defined.
 
-### Requesting Secrets
+### Requesting secrets
 
 There are two methods of configuring the Vault Agent containers to render secrets:
 
@@ -82,7 +70,7 @@ There are two methods of configuring the Vault Agent containers to render secret
 
 Only one of these methods may be used at any time.
 
-#### Secrets via Annotations
+#### Secrets via annotations
 
 To configure secret injection using annotations, the user must supply:
 
@@ -118,7 +106,7 @@ vault.hashicorp.com/role: 'app'
 
 The secret unique name must consist of alphanumeric characters, `.`, `_` or `-`.
 
-##### Secret Templates
+##### Secret templates
 
 ~> Vault Agent uses the Consul Template project to render secrets. For more information
 on writing templates, see the [Consul Template documentation](https://github.com/hashicorp/consul-template).
@@ -138,7 +126,7 @@ vault.hashicorp.com/agent-inject-template-<unique-name>: |
 For example, consider the following:
 
 ```yaml
-vault.hashicorp.com/agent-inject-secret-foo: 'database/roles/app'
+vault.hashicorp.com/agent-inject-secret-foo: 'database/creds/db-app'
 vault.hashicorp.com/agent-inject-template-foo: |
   {{- with secret "database/creds/db-app" -}}
   postgres://{{ .Data.username }}:{{ .Data.password }}@postgres:5432/mydb?sslmode=disable
@@ -183,12 +171,12 @@ username: v-kubernet-pg-app-q0Z7WPfVNqqTJuoDqCTY-1576529094
 
 ~> Some secrets such as KV are stored in maps. Their data can be accessed using `.Data.data.<NAME>`
 
-### Renewals and Updating Secrets
+### Renewals and updating secrets
 
 For more information on when Vault Agent fetches and renews secrets, see the
-[Agent documentation](/docs/agent/template#renewals-and-updating-secrets).
+[Agent documentation](/vault/docs/agent-and-proxy/agent/template#renewals-and-updating-secrets).
 
-### Vault Agent Configuration Map
+### Vault agent configuration map
 
 For advanced use cases, it may be required to define Vault Agent configuration
 files to mount instead of using secret and template annotations. The Vault Agent
@@ -200,10 +188,10 @@ The configuration map must contain either one or both of the following files:
 - **config-init.hcl** used by the init container. This must have `exit_after_auth` set to `true`.
 - **config.hcl** used by the sidecar container. This must have `exit_after_auth` set to `false`.
 
-An example of mounting a Vault Agent configmap [can be found here](/docs/platform/k8s/injector/examples#configmap-example).
+An example of mounting a Vault Agent configmap [can be found here](/vault/docs/platform/k8s/injector/examples#configmap-example).
 
 ## Tutorial
 
 Refer to the [Injecting Secrets into Kubernetes Pods via Vault Helm
-Sidecar](https://learn.hashicorp.com/vault/getting-started-k8s/sidecar) guide
+Sidecar](/vault/tutorials/kubernetes/kubernetes-sidecar) guide
 for a step-by-step tutorial.

@@ -17,7 +17,7 @@ auth method.
 An auth method is responsible for authenticating users or machines and assigning
 them policies and a token with which they can access Vault. Authentication is
 usually mapped to policy. Please see the [policies
-concepts](/docs/concepts/policies) page for more information.
+concepts](/vault/docs/concepts/policies) page for more information.
 
 ## Examples
 
@@ -36,17 +36,17 @@ Success! Data written to: auth/userpass/users/sethvargo
 ```
 
 For more information on the specific configuration options and paths, please see
-the [auth method](/docs/auth) documentation.
+the [auth method](/vault/docs/auth) documentation.
 
 ## Usage
 
 The following flags are available in addition to the [standard set of
-flags](/docs/commands) included on all commands.
+flags](/vault/docs/commands) included on all commands.
 
 - `-audit-non-hmac-request-keys` `(string: "")` - Key that will not be HMAC'd
   by audit devices in the request data object. Note that multiple keys may be
   specified by providing this option multiple times, each time with 1 key.
-  An example of this is provided in the [tune section](/docs/commands/auth/tune).
+  An example of this is provided in the [tune section](/vault/docs/commands/auth/tune).
 
 - `-audit-non-hmac-response-keys` `(string: "")` - Key that will not be HMAC'd
   by audit devices in the response data object. Note that multiple keys may be
@@ -55,7 +55,7 @@ flags](/docs/commands) included on all commands.
 - `-default-lease-ttl` `(duration: "")` - The default lease TTL for this auth
   method. If unspecified, this defaults to the Vault server's globally
   configured default lease TTL, or a previously configured value for the auth
-  method. Uses [duration format strings](/docs/concepts/duration-format).
+  method. Uses [duration format strings](/vault/docs/concepts/duration-format).
 
 - `-passthrough-request-headers` `(string: "")` - request header values that will
   be sent to the auth method. Note that multiple keys may be

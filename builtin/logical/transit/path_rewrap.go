@@ -1,8 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package transit
 
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 
 	"github.com/hashicorp/vault/helper/constants"
@@ -13,9 +17,17 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
+var ErrNonceNotAllowed = errors.New("provided nonce not allowed for this key")
+
 func (b *backend) pathRewrap() *framework.Path {
 	return &framework.Path{
 		Pattern: "rewrap/" + framework.GenericNameRegex("name"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+			OperationVerb:   "rewrap",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -42,6 +54,14 @@ func (b *backend) pathRewrap() *framework.Path {
 				Description: `The version of the key to use for encryption.
 Must be 0 (for latest) or a value greater than or equal
 to the min_encryption_version configured on the key.`,
+			},
+
+			"batch_input": {
+				Type: framework.TypeSlice,
+				Description: `
+Specifies a list of items to be re-encrypted in a single batch. When this parameter is set,
+if the parameters 'ciphertext', 'context' and 'nonce' are also set, they will be ignored.
+Any batch output will preserve the order of the batch input.`,
 			},
 		},
 
@@ -128,10 +148,16 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 	if !b.System().CachingDisabled() {
 		p.Lock(false)
 	}
+	defer p.Unlock()
 
 	warnAboutNonceUsage := false
 	for i, item := range batchInputItems {
 		if batchResponseItems[i].Error != "" {
+			continue
+		}
+
+		if item.Nonce != "" && !nonceAllowed(p) {
+			batchResponseItems[i].Error = ErrNonceNotAllowed.Error()
 			continue
 		}
 
@@ -142,7 +168,6 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 				batchResponseItems[i].Error = err.Error()
 				continue
 			default:
-				p.Unlock()
 				return nil, err
 			}
 		}
@@ -158,16 +183,13 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 				batchResponseItems[i].Error = err.Error()
 				continue
 			case errutil.InternalError:
-				p.Unlock()
 				return nil, err
 			default:
-				p.Unlock()
 				return nil, err
 			}
 		}
 
 		if ciphertext == "" {
-			p.Unlock()
 			return nil, fmt.Errorf("empty ciphertext returned for input item %d", i)
 		}
 
@@ -191,7 +213,6 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 		}
 	} else {
 		if batchResponseItems[0].Error != "" {
-			p.Unlock()
 			return logical.ErrorResponse(batchResponseItems[0].Error), logical.ErrInvalidRequest
 		}
 		resp.Data = map[string]interface{}{
@@ -204,7 +225,6 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 		resp.AddWarning("A provided nonce value was used within FIPS mode, this violates FIPS 140 compliance.")
 	}
 
-	p.Unlock()
 	return resp, nil
 }
 

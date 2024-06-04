@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Model, { attr } from '@ember-data/model';
 import { alias } from '@ember/object/computed';
 import { computed } from '@ember/object';
@@ -17,6 +22,10 @@ const CREDENTIAL_TYPES = [
     value: 'federation_token',
     displayName: 'Federation Token',
   },
+  {
+    value: 'session_token',
+    displayName: 'Session Token',
+  },
 ];
 export default Model.extend({
   backend: attr('string', {
@@ -24,10 +33,8 @@ export default Model.extend({
   }),
   name: attr('string', {
     label: 'Role name',
-    fieldValue: 'id',
     readOnly: true,
   }),
-  useOpenAPI: false,
   // credentialTypes are for backwards compatibility.
   // we use this to populate "credentialType" in
   // the serializer. if there is more than one, the
@@ -51,6 +58,7 @@ export default Model.extend({
     editType: 'json',
     helpText:
       'A policy is an object in AWS that, when associated with an identity or resource, defines their permissions.',
+    // Cannot have a default_value on policy_document because in some cases AWS expects this value to be empty.
   }),
   fields: computed('credentialType', function () {
     const credentialType = this.credentialType;
@@ -58,6 +66,7 @@ export default Model.extend({
       iam_user: ['name', 'credentialType', 'policyArns', 'policyDocument'],
       assumed_role: ['name', 'credentialType', 'roleArns', 'policyDocument'],
       federation_token: ['name', 'credentialType', 'policyDocument'],
+      session_token: [],
     };
 
     return expandAttributeMeta(this, keysForType[credentialType]);

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -5,10 +8,9 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/vault"
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 )
 
 func testSecretsTuneCommand(tb testing.TB) (*cli.MockUi, *SecretsTuneCommand) {
@@ -150,8 +152,7 @@ func TestSecretsTuneCommand_Run(t *testing.T) {
 	t.Run("integration", func(t *testing.T) {
 		t.Run("flags_all", func(t *testing.T) {
 			t.Parallel()
-			pluginDir, cleanup := vault.MakeTestPluginDir(t)
-			defer cleanup(t)
+			pluginDir := corehelpers.MakeTestPluginDir(t)
 
 			client, _, closer := testVaultServerPluginDir(t, pluginDir)
 			defer closer()
@@ -179,7 +180,7 @@ func TestSecretsTuneCommand_Run(t *testing.T) {
 				t.Errorf("expected %q to be %q", mountInfo.PluginVersion, exp)
 			}
 
-			_, _, version := testPluginCreateAndRegisterVersioned(t, client, pluginDir, "pki", consts.PluginTypeSecrets)
+			_, _, version := testPluginCreateAndRegisterVersioned(t, client, pluginDir, "pki", api.PluginTypeSecrets)
 
 			code := cmd.Run([]string{
 				"-description", "new description",
@@ -191,8 +192,10 @@ func TestSecretsTuneCommand_Run(t *testing.T) {
 				"-passthrough-request-headers", "www-authentication",
 				"-allowed-response-headers", "authorization,www-authentication",
 				"-allowed-managed-keys", "key1,key2",
+				"-identity-token-key", "default",
 				"-listing-visibility", "unauth",
 				"-plugin-version", version,
+				"-delegated-auth-accessors", "authAcc1,authAcc2",
 				"mount_tune_integration/",
 			})
 			if exp := 0; code != exp {
@@ -243,6 +246,12 @@ func TestSecretsTuneCommand_Run(t *testing.T) {
 			}
 			if diff := deep.Equal([]string{"key1,key2"}, mountInfo.Config.AllowedManagedKeys); len(diff) > 0 {
 				t.Errorf("Failed to find expected values in AllowedManagedKeys. Difference is: %v", diff)
+			}
+			if diff := deep.Equal([]string{"authAcc1,authAcc2"}, mountInfo.Config.DelegatedAuthAccessors); len(diff) > 0 {
+				t.Errorf("Failed to find expected values in DelegatedAuthAccessors. Difference is: %v", diff)
+			}
+			if diff := deep.Equal("default", mountInfo.Config.IdentityTokenKey); len(diff) > 0 {
+				t.Errorf("Failed to find expected values in IdentityTokenKey. Difference is: %v", diff)
 			}
 		})
 

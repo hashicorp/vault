@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pki
 
 import (
@@ -10,14 +13,15 @@ import (
 	"io"
 	"time"
 
-	"golang.org/x/crypto/ed25519"
-
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/managed_key"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"golang.org/x/crypto/ed25519"
 )
 
-func getGenerationParams(sc *storageContext, data *framework.FieldData) (exported bool, format string, role *roleEntry, errorResp *logical.Response) {
+func getGenerationParams(sc *storageContext, data *framework.FieldData) (exported bool, format string, role *issuing.RoleEntry, errorResp *logical.Response) {
 	exportedStr := data.Get("exported").(string)
 	switch exportedStr {
 	case "exported":
@@ -44,7 +48,7 @@ func getGenerationParams(sc *storageContext, data *framework.FieldData) (exporte
 		return
 	}
 
-	role = &roleEntry{
+	role = &issuing.RoleEntry{
 		TTL:                       time.Duration(data.Get("ttl").(int)) * time.Second,
 		KeyType:                   keyType,
 		KeyBits:                   keyBits,
@@ -58,6 +62,7 @@ func getGenerationParams(sc *storageContext, data *framework.FieldData) (exporte
 		AllowedURISANs:            []string{"*"},
 		AllowedOtherSANs:          []string{"*"},
 		AllowedSerialNumbers:      []string{"*"},
+		AllowedUserIDs:            []string{"*"},
 		OU:                        data.Get("ou").([]string),
 		Organization:              data.Get("organization").([]string),
 		Country:                   data.Get("country").([]string),
@@ -86,7 +91,7 @@ func generateCABundle(sc *storageContext, input *inputBundle, data *certutil.Cre
 		if err != nil {
 			return nil, err
 		}
-		return generateManagedKeyCABundle(ctx, b, keyId, data, randomSource)
+		return managed_key.GenerateManagedKeyCABundle(ctx, b, keyId, data, randomSource)
 	}
 
 	if existingKeyRequested(input) {
@@ -100,12 +105,12 @@ func generateCABundle(sc *storageContext, input *inputBundle, data *certutil.Cre
 			return nil, err
 		}
 
-		if keyEntry.isManagedPrivateKey() {
-			keyId, err := keyEntry.getManagedKeyUUID()
+		if keyEntry.IsManagedPrivateKey() {
+			keyId, err := issuing.GetManagedKeyUUID(keyEntry)
 			if err != nil {
 				return nil, err
 			}
-			return generateManagedKeyCABundle(ctx, b, keyId, data, randomSource)
+			return managed_key.GenerateManagedKeyCABundle(ctx, b, keyId, data, randomSource)
 		}
 
 		return certutil.CreateCertificateWithKeyGenerator(data, randomSource, existingKeyGeneratorFromBytes(keyEntry))
@@ -124,7 +129,7 @@ func generateCSRBundle(sc *storageContext, input *inputBundle, data *certutil.Cr
 			return nil, err
 		}
 
-		return generateManagedKeyCSRBundle(ctx, b, keyId, data, addBasicConstraints, randomSource)
+		return managed_key.GenerateManagedKeyCSRBundle(ctx, b, keyId, data, addBasicConstraints, randomSource)
 	}
 
 	if existingKeyRequested(input) {
@@ -138,12 +143,12 @@ func generateCSRBundle(sc *storageContext, input *inputBundle, data *certutil.Cr
 			return nil, err
 		}
 
-		if key.isManagedPrivateKey() {
-			keyId, err := key.getManagedKeyUUID()
+		if key.IsManagedPrivateKey() {
+			keyId, err := issuing.GetManagedKeyUUID(key)
 			if err != nil {
 				return nil, err
 			}
-			return generateManagedKeyCSRBundle(ctx, b, keyId, data, addBasicConstraints, randomSource)
+			return managed_key.GenerateManagedKeyCSRBundle(ctx, b, keyId, data, addBasicConstraints, randomSource)
 		}
 
 		return certutil.CreateCSRWithKeyGenerator(data, addBasicConstraints, randomSource, existingKeyGeneratorFromBytes(key))
@@ -153,10 +158,7 @@ func generateCSRBundle(sc *storageContext, input *inputBundle, data *certutil.Cr
 }
 
 func parseCABundle(ctx context.Context, b *backend, bundle *certutil.CertBundle) (*certutil.ParsedCertBundle, error) {
-	if bundle.PrivateKeyType == certutil.ManagedPrivateKey {
-		return parseManagedKeyCABundle(ctx, b, bundle)
-	}
-	return bundle.ToParsedCertBundle()
+	return issuing.ParseCABundle(ctx, b, bundle)
 }
 
 func (sc *storageContext) getKeyTypeAndBitsForRole(data *framework.FieldData) (string, int, error) {
@@ -185,10 +187,10 @@ func (sc *storageContext) getKeyTypeAndBitsForRole(data *framework.FieldData) (s
 	if kmsRequestedFromFieldData(data) {
 		keyId, err := getManagedKeyId(data)
 		if err != nil {
-			return "", 0, errors.New("unable to determine managed key id" + err.Error())
+			return "", 0, errors.New("unable to determine managed key id: " + err.Error())
 		}
 
-		pubKeyManagedKey, err := getManagedKeyPublicKey(sc.Context, sc.Backend, keyId)
+		pubKeyManagedKey, err := managed_key.GetManagedKeyPublicKey(sc.Context, sc.Backend, keyId)
 		if err != nil {
 			return "", 0, errors.New("failed to lookup public key from managed key: " + err.Error())
 		}
@@ -233,7 +235,7 @@ func getKeyTypeAndBitsFromPublicKeyForRole(pubKey crypto.PublicKey) (certutil.Pr
 		keyBits = certutil.GetPublicKeySize(pubKey)
 	case *ecdsa.PublicKey:
 		keyType = certutil.ECPrivateKey
-	case *ed25519.PublicKey:
+	case ed25519.PublicKey:
 		keyType = certutil.Ed25519PrivateKey
 	default:
 		return certutil.UnknownPrivateKey, 0, fmt.Errorf("unsupported public key: %#v", pubKey)
@@ -241,7 +243,7 @@ func getKeyTypeAndBitsFromPublicKeyForRole(pubKey crypto.PublicKey) (certutil.Pr
 	return keyType, keyBits, nil
 }
 
-func (sc *storageContext) getExistingKeyFromRef(keyRef string) (*keyEntry, error) {
+func (sc *storageContext) getExistingKeyFromRef(keyRef string) (*issuing.KeyEntry, error) {
 	keyId, err := sc.resolveKeyReference(keyRef)
 	if err != nil {
 		return nil, err
@@ -249,7 +251,7 @@ func (sc *storageContext) getExistingKeyFromRef(keyRef string) (*keyEntry, error
 	return sc.fetchKeyById(keyId)
 }
 
-func existingKeyGeneratorFromBytes(key *keyEntry) certutil.KeyGenerator {
+func existingKeyGeneratorFromBytes(key *issuing.KeyEntry) certutil.KeyGenerator {
 	return func(_ string, _ int, container certutil.ParsedPrivateKeyContainer, _ io.Reader) error {
 		signer, _, pemBytes, err := getSignerFromKeyEntryBytes(key)
 		if err != nil {

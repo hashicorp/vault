@@ -1,9 +1,12 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 terraform {
   required_version = ">= 1.0"
 
   required_providers {
     enos = {
-      source = "app.terraform.io/hashicorp-qti/enos"
+      source = "registry.terraform.io/hashicorp-forge/enos"
     }
 
     helm = {
@@ -27,6 +30,7 @@ locals {
     "server.limits.cpu"             = "200m"
     "server.ha.raft.config"         = file("${abspath(path.module)}/raft-config.hcl")
     "server.dataStorage.size"       = "100m"
+    "server.logLevel"               = var.vault_log_level
   }
   all_helm_chart_settings = var.ent_license == null ? local.helm_chart_settings : merge(local.helm_chart_settings, {
     "server.extraEnvironmentVars.VAULT_LICENSE" = var.ent_license

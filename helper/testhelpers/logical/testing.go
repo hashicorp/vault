@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package testing
 
 import (
@@ -9,11 +12,11 @@ import (
 	"sort"
 	"testing"
 
-	log "github.com/hashicorp/go-hclog"
-
 	"github.com/hashicorp/errwrap"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -166,7 +169,7 @@ func Test(tt TestT, c TestCase) {
 	config := &vault.CoreConfig{
 		Physical:        phys,
 		DisableMlock:    true,
-		BuiltinRegistry: vault.NewMockBuiltinRegistry(),
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 	}
 
 	if c.LogicalBackend != nil || c.LogicalFactory != nil {

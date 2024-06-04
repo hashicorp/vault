@@ -6,9 +6,19 @@ description: |-
   mechanism.
 ---
 
-# `awskms` Seal
+# `awskms` seal
 
--> **Note:** The Seal Wrap functionality is enabled by default. For this reason, the KMS service must be available throughout Vault's runtime and not just during the unseal process. Refer to the [Seal Wrap](/docs/enterprise/sealwrap) documenation for more information.
+<Note title="Seal wrapping requires Vault Enterprise">
+
+  All Vault versions support **auto-unseal** for AWS, but **seal wrapping**
+  requires Vault Enterprise.
+  
+  Vault Enterprise enables seal wrapping by default, which means the KMS service
+  must be available at runtime and not just during the unseal process. Refer to
+  the [Seal wrap](/vault/docs/enterprise/sealwrap) overview for more
+  information.
+
+</Note>
 
 The AWS KMS seal configures Vault to use AWS KMS as the seal wrapping mechanism.
 The AWS KMS seal is activated by one of the following:
@@ -20,7 +30,7 @@ The AWS KMS seal is activated by one of the following:
   other AWS-related environment variables that lends to successful
   authentication (i.e. `AWS_ACCESS_KEY_ID`, etc.).
 
-## `awskms` Example
+## `awskms` example
 
 This example shows configuring AWS KMS seal through the Vault configuration file
 by providing all the required values:
@@ -35,7 +45,7 @@ seal "awskms" {
 }
 ```
 
-## `awskms` Parameters
+## `awskms` parameters
 
 These parameters apply to the `seal` stanza in the Vault configuration file:
 
@@ -67,7 +77,7 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   Endpoint](https://docs.aws.amazon.com/kms/latest/developerguide/kms-vpc-endpoint.html).
   If not set, Vault will use the default API endpoint for your region.
 
-Refer to the [Seal Migration](/docs/concepts/seal#seal-migration) documentation for more information about the seal migration process.
+Refer to the [Seal Migration](/vault/docs/concepts/seal#seal-migration) documentation for more information about the seal migration process.
 
 ## Authentication
 
@@ -98,7 +108,7 @@ Vault needs the following permissions on the KMS key:
 These can be granted via IAM permissions on the principal that Vault uses, on
 the KMS key policy for the KMS key, or via KMS Grants on the key.
 
-## `awskms` Environment Variables
+## `awskms` environment variables
 
 Alternatively, the AWS KMS seal can be activated by providing the following
 environment variables.
@@ -108,7 +118,7 @@ Vault Seal specific values:
 - `VAULT_SEAL_TYPE`
 - `VAULT_AWSKMS_SEAL_KEY_ID`
 
-## Key Rotation
+## Key rotation
 
 This seal supports rotating the root keys defined in AWS KMS
 [doc](https://docs.aws.amazon.com/kms/latest/developerguide/rotate-keys.html). Both automatic
@@ -117,11 +127,11 @@ encrypted data. Old keys must not be disabled or deleted and are used to decrypt
 Any new or updated data will be encrypted with the current key defined in the seal configuration
 or set to current under a key alias.
 
-## AWS Instance Metadata Timeout
+## AWS instance metadata timeout
 
 @include 'aws-imds-timeout.mdx'
 
 ## Tutorial
 
-Refer to the [Auto-unseal using AWS KMS](https://learn.hashicorp.com/vault/operations/ops-autounseal-aws-kms)
+Refer to the [Auto-unseal using AWS KMS](/vault/tutorials/auto-unseal/autounseal-aws-kms)
 tutorial to learn how to auto-unseal Vault using AWS KMS.

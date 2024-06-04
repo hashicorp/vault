@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package testhelpers
 
 import (
@@ -8,10 +11,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/rand"
-	"net/url"
 	"os"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	"github.com/armon/go-metrics"
@@ -25,6 +26,7 @@ import (
 	"github.com/mitchellh/go-testing-interface"
 )
 
+//go:generate enumer -type=GenerateRootKind -trimprefix=GenerateRoot
 type GenerateRootKind int
 
 const (
@@ -33,7 +35,7 @@ const (
 	GenerateRecovery
 )
 
-// Generates a root token on the target cluster.
+// GenerateRoot generates a root token on the target cluster.
 func GenerateRoot(t testing.T, cluster *vault.TestCluster, kind GenerateRootKind) string {
 	t.Helper()
 	token, err := GenerateRootWithError(t, cluster, kind)
@@ -53,6 +55,9 @@ func GenerateRootWithError(t testing.T, cluster *vault.TestCluster, kind Generat
 		keys = cluster.BarrierKeys
 	}
 	client := cluster.Cores[0].Client
+	oldNS := client.Namespace()
+	defer client.SetNamespace(oldNS)
+	client.ClearNamespace()
 
 	var err error
 	var status *api.GenerateRootStatusResponse
@@ -174,6 +179,10 @@ func AttemptUnsealCore(c *vault.TestCluster, core *vault.TestClusterCore) error 
 	}
 
 	client := core.Client
+	oldNS := client.Namespace()
+	defer client.SetNamespace(oldNS)
+	client.ClearNamespace()
+
 	client.Sys().ResetUnsealProcess()
 	for j := 0; j < len(c.BarrierKeys); j++ {
 		statusResp, err := client.Sys().Unseal(base64.StdEncoding.EncodeToString(c.BarrierKeys[j]))
@@ -242,7 +251,10 @@ func DeriveActiveCore(t testing.T, cluster *vault.TestCluster) *vault.TestCluste
 	t.Helper()
 	for i := 0; i < 60; i++ {
 		for _, core := range cluster.Cores {
+			oldNS := core.Client.Namespace()
+			core.Client.ClearNamespace()
 			leaderResp, err := core.Client.Sys().Leader()
+			core.Client.SetNamespace(oldNS)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -260,7 +272,10 @@ func DeriveStandbyCores(t testing.T, cluster *vault.TestCluster) []*vault.TestCl
 	t.Helper()
 	cores := make([]*vault.TestClusterCore, 0, 2)
 	for _, core := range cluster.Cores {
+		oldNS := core.Client.Namespace()
+		core.Client.ClearNamespace()
 		leaderResp, err := core.Client.Sys().Leader()
+		core.Client.SetNamespace(oldNS)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -419,68 +434,6 @@ func RekeyCluster(t testing.T, cluster *vault.TestCluster, recovery bool) [][]by
 	return newKeys
 }
 
-// TestRaftServerAddressProvider is a ServerAddressProvider that uses the
-// ClusterAddr() of each node to provide raft addresses.
-//
-// Note that TestRaftServerAddressProvider should only be used in cases where
-// cores that are part of a raft configuration have already had
-// startClusterListener() called (via either unsealing or raft joining).
-type TestRaftServerAddressProvider struct {
-	Cluster *vault.TestCluster
-}
-
-func (p *TestRaftServerAddressProvider) ServerAddr(id raftlib.ServerID) (raftlib.ServerAddress, error) {
-	for _, core := range p.Cluster.Cores {
-		if core.NodeID == string(id) {
-			parsed, err := url.Parse(core.ClusterAddr())
-			if err != nil {
-				return "", err
-			}
-
-			return raftlib.ServerAddress(parsed.Host), nil
-		}
-	}
-
-	return "", errors.New("could not find cluster addr")
-}
-
-func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
-	addressProvider := &TestRaftServerAddressProvider{Cluster: cluster}
-
-	atomic.StoreUint32(&vault.TestingUpdateClusterAddr, 1)
-
-	leader := cluster.Cores[0]
-
-	// Seal the leader so we can install an address provider
-	{
-		EnsureCoreSealed(t, leader)
-		leader.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-		cluster.UnsealCore(t, leader)
-		vault.TestWaitActive(t, leader.Core)
-	}
-
-	leaderInfos := []*raft.LeaderJoinInfo{
-		{
-			LeaderAPIAddr: leader.Client.Address(),
-			TLSConfig:     leader.TLSConfig,
-		},
-	}
-
-	// Join followers
-	for i := 1; i < len(cluster.Cores); i++ {
-		core := cluster.Cores[i]
-		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderInfos, false)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		cluster.UnsealCore(t, core)
-	}
-
-	WaitForNCoresUnsealed(t, cluster, len(cluster.Cores))
-}
-
 // HardcodedServerAddressProvider is a ServerAddressProvider that uses
 // a hardcoded map of raft node addresses.
 //
@@ -596,18 +549,16 @@ func GenerateDebugLogs(t testing.T, client *api.Client) chan struct{} {
 	t.Helper()
 
 	stopCh := make(chan struct{})
-	ticker := time.NewTicker(time.Second)
-	var err error
 
 	go func() {
+		ticker := time.NewTicker(time.Second)
+		defer ticker.Stop()
 		for {
 			select {
 			case <-stopCh:
-				ticker.Stop()
-				stopCh <- struct{}{}
 				return
 			case <-ticker.C:
-				err = client.Sys().Mount("foo", &api.MountInput{
+				err := client.Sys().Mount("foo", &api.MountInput{
 					Type: "kv",
 					Options: map[string]string{
 						"version": "1",
@@ -767,9 +718,19 @@ func SetNonRootToken(client *api.Client) error {
 	return nil
 }
 
-// RetryUntil runs f until it returns a nil result or the timeout is reached.
+// RetryUntilAtCadence runs f until it returns a nil result or the timeout is reached.
 // If a nil result hasn't been obtained by timeout, calls t.Fatal.
-func RetryUntil(t testing.T, timeout time.Duration, f func() error) {
+func RetryUntilAtCadence(t testing.T, timeout, sleepTime time.Duration, f func() error) {
+	t.Helper()
+	fail := func(err error) {
+		t.Fatalf("did not complete before deadline, err: %v", err)
+	}
+	RetryUntilAtCadenceWithHandler(t, timeout, sleepTime, fail, f)
+}
+
+// RetryUntilAtCadenceWithHandler runs f until it returns a nil result or the timeout is reached.
+// If a nil result hasn't been obtained by timeout, onFailure is called.
+func RetryUntilAtCadenceWithHandler(t testing.T, timeout, sleepTime time.Duration, onFailure func(error), f func() error) {
 	t.Helper()
 	deadline := time.Now().Add(timeout)
 	var err error
@@ -777,14 +738,30 @@ func RetryUntil(t testing.T, timeout time.Duration, f func() error) {
 		if err = f(); err == nil {
 			return
 		}
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(sleepTime)
 	}
-	t.Fatalf("did not complete before deadline, err: %v", err)
+	onFailure(err)
 }
 
-// CreateEntityAndAlias clones an existing client and creates an entity/alias.
+// RetryUntil runs f with a 100ms pause between calls, until f returns a nil result
+// or the timeout is reached.
+// If a nil result hasn't been obtained by timeout, calls t.Fatal.
+// NOTE: See RetryUntilAtCadence if you want to specify a different wait/sleep
+// duration between calls.
+func RetryUntil(t testing.T, timeout time.Duration, f func() error) {
+	t.Helper()
+	RetryUntilAtCadence(t, timeout, 100*time.Millisecond, f)
+}
+
+// CreateEntityAndAlias clones an existing client and creates an entity/alias, uses userpass mount path
 // It returns the cloned client, entityID, and aliasID.
 func CreateEntityAndAlias(t testing.T, client *api.Client, mountAccessor, entityName, aliasName string) (*api.Client, string, string) {
+	return CreateEntityAndAliasWithinMount(t, client, mountAccessor, "userpass", entityName, aliasName)
+}
+
+// CreateEntityAndAliasWithinMount clones an existing client and creates an entity/alias, within the specified mountPath
+// It returns the cloned client, entityID, and aliasID.
+func CreateEntityAndAliasWithinMount(t testing.T, client *api.Client, mountAccessor, mountPath, entityName, aliasName string) (*api.Client, string, string) {
 	t.Helper()
 	userClient, err := client.Clone()
 	if err != nil {
@@ -812,7 +789,8 @@ func CreateEntityAndAlias(t testing.T, client *api.Client, mountAccessor, entity
 	if aliasID == "" {
 		t.Fatal("Alias ID not present in response")
 	}
-	_, err = client.Logical().WriteWithContext(context.Background(), fmt.Sprintf("auth/userpass/users/%s", aliasName), map[string]interface{}{
+	path := fmt.Sprintf("auth/%s/users/%s", mountPath, aliasName)
+	_, err = client.Logical().WriteWithContext(context.Background(), path, map[string]interface{}{
 		"password": "testpassword",
 	})
 	if err != nil {
@@ -942,7 +920,7 @@ func GetTOTPCodeFromEngine(t testing.T, client *api.Client, enginePath string) s
 
 // SetupLoginMFATOTP setups up a TOTP MFA using some basic configuration and
 // returns all relevant information to the client.
-func SetupLoginMFATOTP(t testing.T, client *api.Client) (*api.Client, string, string) {
+func SetupLoginMFATOTP(t testing.T, client *api.Client, methodName string, waitPeriod int) (*api.Client, string, string) {
 	t.Helper()
 	// Mount the totp secrets engine
 	SetupTOTPMount(t, client)
@@ -956,13 +934,14 @@ func SetupLoginMFATOTP(t testing.T, client *api.Client) (*api.Client, string, st
 	// Configure a default TOTP method
 	totpConfig := map[string]interface{}{
 		"issuer":                  "yCorp",
-		"period":                  20,
+		"period":                  waitPeriod,
 		"algorithm":               "SHA256",
 		"digits":                  6,
 		"skew":                    1,
 		"key_size":                20,
 		"qr_size":                 200,
 		"max_validation_attempts": 5,
+		"method_name":             methodName,
 	}
 	methodID := SetupTOTPMethod(t, client, totpConfig)
 
@@ -985,4 +964,41 @@ func SkipUnlessEnvVarsSet(t testing.T, envVars []string) {
 			t.Skipf("%s must be set for this test to run", strings.Join(envVars, " "))
 		}
 	}
+}
+
+// WaitForNodesExcludingSelectedStandbys is variation on WaitForActiveNodeAndStandbys.
+// It waits for the active node before waiting for standby nodes, however
+// it will not wait for cores with indexes that match those specified as arguments.
+// Whilst you could specify index 0 which is likely to be the leader node, the function
+// checks for the leader first regardless of the indexes to skip, so it would be redundant to do so.
+// The intention/use case for this function is to allow a cluster to start and become active with one
+// or more nodes not joined, so that we can test scenarios where a node joins later.
+// e.g. 4 nodes in the cluster, only 3 nodes in cluster 'active', 1 node can be joined later in tests.
+func WaitForNodesExcludingSelectedStandbys(t testing.T, cluster *vault.TestCluster, indexesToSkip ...int) {
+	WaitForActiveNode(t, cluster)
+
+	contains := func(elems []int, e int) bool {
+		for _, v := range elems {
+			if v == e {
+				return true
+			}
+		}
+
+		return false
+	}
+	for i, core := range cluster.Cores {
+		if contains(indexesToSkip, i) {
+			continue
+		}
+
+		if standby, _ := core.Core.Standby(); standby {
+			WaitForStandbyNode(t, core)
+		}
+	}
+}
+
+// IsLocalOrRegressionTests returns true when the tests are running locally (not in CI), or when
+// the regression test env var (VAULT_REGRESSION_TESTS) is provided.
+func IsLocalOrRegressionTests() bool {
+	return os.Getenv("CI") == "" || os.Getenv("VAULT_REGRESSION_TESTS") == "true"
 }

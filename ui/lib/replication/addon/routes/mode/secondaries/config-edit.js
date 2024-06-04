@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { hash } from 'rsvp';
 import Base from '../../replication-base';
 
@@ -17,10 +22,10 @@ export default Base.extend({
     if (
       !this.version.hasPerfReplication ||
       replicationMode !== 'performance' ||
-      !cluster.get(`${replicationMode}.isPrimary`) ||
-      !cluster.get('canAddSecondary')
+      !cluster[replicationMode].isPrimary ||
+      !cluster.canAddSecondary
     ) {
-      return this.transitionTo('mode', replicationMode);
+      return this.router.transitionTo('vault.cluster.replication.mode', replicationMode);
     }
   },
 });

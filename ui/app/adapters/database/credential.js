@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { allSettled } from 'rsvp';
 import ApplicationAdapter from '../application';
 import ControlGroupError from 'vault/lib/control-group-error';

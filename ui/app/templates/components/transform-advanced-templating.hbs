@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <ToggleButton
   @isOpen={{this.showForm}}
   @openLabel="Advanced templating"
@@ -12,9 +17,9 @@
     <p>
       Using your template's regex as a starting point, you can specify which parts of your input to encode and decode. For
       example, you may want to handle input formatting or only decode part of an input. For more information, see
-      <LearnLink @path="/tutorials/vault/transform#advanced-handling">
+      <DocLink @path="/vault/tutorials/adp/transform#advanced-handling">
         our documentation.
-      </LearnLink>
+      </DocLink>
     </p>
     <div class="has-top-margin-l">
       <RegexValidator

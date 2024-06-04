@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Model, { attr } from '@ember-data/model';
 import { alias } from '@ember/object/computed';
 import { computed } from '@ember/object';
@@ -26,6 +31,7 @@ const CA_FIELDS = [
   'allowedUsers',
   'allowedUsersTemplate',
   'allowedDomains',
+  'allowedDomainsTemplate',
   'ttl',
   'maxTtl',
   'allowedCriticalOptions',
@@ -53,7 +59,7 @@ export default Model.extend({
   }),
   name: attr('string', {
     label: 'Role Name',
-    fieldValue: 'id',
+    fieldValue: 'name',
     readOnly: true,
   }),
   keyType: attr('string', {
@@ -71,11 +77,15 @@ export default Model.extend({
   }),
   allowedUsersTemplate: attr('boolean', {
     helpText:
-      'Specifies that Allowed users can be templated e.g. {{identity.entity.aliases.mount_accessor_xyz.name}}',
+      'Specifies that Allowed Users can be templated e.g. {{identity.entity.aliases.mount_accessor_xyz.name}}',
   }),
   allowedDomains: attr('string', {
     helpText:
       'List of domains for which a client can request a certificate (e.g. `example.com`, or `*` to allow all)',
+  }),
+  allowedDomainsTemplate: attr('boolean', {
+    helpText:
+      'Specifies that Allowed Domains can be set using identity template policies. Non-templated domains are also permitted.',
   }),
   cidrList: attr('string', {
     helpText: 'List of CIDR blocks for which this role is applicable',
@@ -120,6 +130,7 @@ export default Model.extend({
   }),
   algorithmSigner: attr('string', {
     helpText: 'When supplied, this value specifies a signing algorithm for the key',
+    possibleValues: ['default', 'ssh-rsa', 'rsa-sha2-256', 'rsa-sha2-512'],
   }),
 
   showFields: computed('keyType', function () {

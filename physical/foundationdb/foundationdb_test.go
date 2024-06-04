@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 //go:build foundationdb
 
 package foundationdb
@@ -10,15 +13,12 @@ import (
 	"testing"
 	"time"
 
-	log "github.com/hashicorp/go-hclog"
-	uuid "github.com/hashicorp/go-uuid"
-
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
-
+	log "github.com/hashicorp/go-hclog"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
-
 	dockertest "gopkg.in/ory-am/dockertest.v3"
 )
 

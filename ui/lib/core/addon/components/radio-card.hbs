@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <label
   for={{dasherize (or @title @value)}}
   class="radio-card {{if (eq @value @groupValue) 'is-selected'}} {{if @disabled 'is-disabled'}}"
@@ -13,9 +18,9 @@
             <Icon @name={{@icon}} @size="24" class={{or @iconClass "has-text-grey-light"}} />
           </div>
           <div class="has-left-margin-s">
-            <h5 class="radio-card-message-title">
+            <p class="radio-card-message-title">
               {{@title}}
-            </h5>
+            </p>
             <p class="radio-card-message-body">
               {{@description}}
             </p>

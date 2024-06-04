@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { expandProperties } from '@ember/object/computed';
 /*
  *
@@ -51,7 +56,7 @@ export const expandAttributeMeta = function (modelClass, attributeNames) {
       });
     }
     // lookup attr and return meta
-    return modelAttrs[klass.modelName].findBy('name', attrKey);
+    return modelAttrs[klass.modelName].find((attr) => attr.name === attrKey);
   };
 
   return fields.map((field) => {

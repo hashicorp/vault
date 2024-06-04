@@ -1,38 +1,30 @@
-import Application from '../application';
-import { formatRFC3339 } from 'date-fns';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
 
-export default Application.extend({
-  // Since backend converts the timezone to UTC, sending the first (1) as start or end date can cause the month to change.
-  // To mitigate this impact of timezone conversion, hard coding the dates to avoid month change.
-  formatTimeParams(query) {
-    let { start_time, end_time } = query;
-    // check if it's an array, if it is, it's coming from an action like selecting a new startTime or new EndTime
-    if (Array.isArray(start_time)) {
-      const startYear = Number(start_time[0]);
-      const startMonth = Number(start_time[1]);
-      start_time = formatRFC3339(new Date(startYear, startMonth, 10));
+import ApplicationAdapter from '../application';
+import { formatDateObject } from 'core/utils/client-count-utils';
+
+export default class ActivityAdapter extends ApplicationAdapter {
+  // javascript localizes new Date() objects but all activity log data is stored in UTC
+  // create date object from user's input using Date.UTC() then send to backend as unix
+  // time params from the backend are formatted as a zulu timestamp
+  formatQueryParams(queryParams) {
+    if (queryParams?.current_billing_period) {
+      // { current_billing_period: true } automatically queries the activity log
+      // from the builtin license start timestamp to the current month
+      return queryParams;
     }
-    if (end_time) {
-      if (Array.isArray(end_time)) {
-        const endYear = Number(end_time[0]);
-        const endMonth = Number(end_time[1]);
-        end_time = formatRFC3339(new Date(endYear, endMonth, 20));
-      }
+    let { start_time, end_time } = queryParams;
+    start_time = start_time.timestamp || formatDateObject(start_time);
+    end_time = end_time.timestamp || formatDateObject(end_time, true);
+    return { start_time, end_time };
+  }
 
-      return { start_time, end_time };
-    } else {
-      return { start_time };
-    }
-  },
-
-  // query comes in as either: {start_time: '2021-03-17T00:00:00Z'} or
-  // {start_time: Array(2), end_time: Array(2)}
-  // end_time: (2) ['2022', 0]
-  // start_time: (2) ['2021', 2]
   queryRecord(store, type, query) {
     const url = `${this.buildURL()}/internal/counters/activity`;
-    // check if start and/or end times are in RFC3395 format, if not convert with timezone UTC/zulu.
-    const queryParams = this.formatTimeParams(query);
+    const queryParams = this.formatQueryParams(query);
     if (queryParams) {
       return this.ajax(url, 'GET', { data: queryParams }).then((resp) => {
         const response = resp || {};
@@ -40,5 +32,5 @@ export default Application.extend({
         return response;
       });
     }
-  },
-});
+  }
+}

@@ -1,0 +1,58 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<PageHeader as |p|>
+  {{#if @breadcrumbs}}
+    <p.top>
+      <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
+    </p.top>
+  {{/if}}
+  <p.levelLeft>
+    <Hds::Text::Display @tag="h2" @size="500" class="has-top-margin-m" data-test-page-title>
+      {{@pageTitle}}
+    </Hds::Text::Display>
+  </p.levelLeft>
+</PageHeader>
+
+{{#if @showTabs}}
+  <div class="tabs-container box is-bottomless is-marginless is-paddingless">
+    <nav class="tabs" aria-label="custom-messages">
+      <ul>
+        <li>
+          {{! Explicitly setting page to 1 here since we want to reset the page param on transition}}
+          <LinkTo
+            class={{if @authenticated "active"}}
+            @route="messages"
+            @query={{hash authenticated=true page=1}}
+            data-test-custom-messages-tab="After user logs in"
+          >
+            After user logs in
+          </LinkTo>
+        </li>
+        <li>
+          <LinkTo
+            class={{unless @authenticated "active"}}
+            @route="messages"
+            @query={{hash authenticated=false page=1}}
+            data-test-custom-messages-tab="On login page"
+          >
+            On login page
+          </LinkTo>
+        </li>
+      </ul>
+    </nav>
+  </div>
+
+  {{#if (or (has-block "toolbarFilters") (has-block "toolbarActions"))}}
+    <Toolbar aria-label="Create message">
+      <ToolbarFilters aria-label="Create message">
+        {{yield to="toolbarFilters"}}
+      </ToolbarFilters>
+      <ToolbarActions aria-label="Create message">
+        {{yield to="toolbarActions"}}
+      </ToolbarActions>
+    </Toolbar>
+  {{/if}}
+{{/if}}

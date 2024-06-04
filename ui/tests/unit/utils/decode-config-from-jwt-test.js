@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import decodeConfigFromJWT from 'replication/utils/decode-config-from-jwt';
 import { module, test } from 'qunit';
 

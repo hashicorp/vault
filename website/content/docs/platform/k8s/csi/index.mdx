@@ -5,7 +5,7 @@ description: >-
   The Vault CSI Provider allows pods to consume Vault secrets using CSI volumes.
 ---
 
-# Vault CSI Provider
+# Vault CSI provider
 
 The Vault CSI Provider allows pods to consume Vault secrets using
 [CSI Secrets Store](https://github.com/kubernetes-sigs/secrets-store-csi-driver) volumes.
@@ -19,7 +19,7 @@ At a high level, the CSI Secrets Store driver allows users to create `SecretProv
 This object defines which secret provider to use and what secrets to retrieve. When pods requesting CSI volumes
 are created, the CSI Secrets Store driver will send the request to the Vault CSI Provider if the provider
 is `vault`. The Vault CSI Provider will then use Secret Provider Class specified and the pod's service account to retrieve
-the secrets from Vault, and <span class="x x-first x-last">mount</span> them <span class="x x-first x-last">into</span> the pod<span class="x x-first x-last">'s CSI</span> volume.
+the secrets from Vault, and mount them into the pod's CSI volume.
 
 The secret is retrieved from Vault and populated to the CSI secrets store volume during the `ContainerCreation` phase.
 This means that pods will be blocked from starting until the secrets have been read from Vault and written to the volume.
@@ -32,46 +32,23 @@ The following features are supported by the Vault CSI Provider:
 - Authentication using the requesting pod's service account.
 - TLS/mTLS communications with Vault.
 - Rendering Vault secrets to files.
+- Dynamic lease caching and renewal performed by Agent.
 - Syncing secrets to Kubernetes secrets to be used as environment variables.
-- Installation via [Vault Helm](/docs/platform/k8s/helm)
+- Installation via [Vault Helm](/vault/docs/platform/k8s/helm)
+
+@include 'kubernetes-supported-versions.mdx'
 
 ## Authenticating with Vault
 
-The primary method of authentication with Vault when using the Vault CSI Provider
-is the service account attached to the pod. At this time no other authentication methods
-are supported.
+The Vault CSI Provider will authenticate with Vault as the service account of the
+pod that mounts the CSI volume. [Kubernetes](/vault/docs/auth/kubernetes) and
+[JWT](/vault/docs/auth/jwt) auth methods are supported. The pod's service account
+must be bound to a Vault role and a policy granting access to the secrets desired.
 
-For [Kubernetes authentication](/docs/auth/kubernetes), the service account must be bound to a Vault role and a
-policy granting access to the secrets desired.
+It is highly recommended to run pods with dedicated Kubernetes service accounts to
+ensure applications cannot access more secrets than they require.
 
-A service account must be present to use the Vault CSI Provider with the Kubernetes
-authentication method. It is _not_ recommended to bind Vault roles to the default service
-account provided to pods if no service account is defined.
-
-### Setting `issuer` for Kubernetes authentication
-
--> **Deprecated:** The `issuer` parameter has been deprecated as of Vault 1.9 and will be removed in a future release.
-
-If running Vault prior to version 1.9, you will likely need to set [`issuer`](/api-docs/auth/kubernetes#issuer) when
-configuring Kubernetes authentication for the Vault CSI Provider.
-Vault CSI Provider does not use the default token associated with service accounts.
-Instead, it creates a token with a short TTL whose lifetime is also bound to the
-lifetime of the requesting pod. A key difference between default tokens and
-ephemeral tokens is the JWT issuer. Default tokens use `kubernetes/serviceaccount`,
-which is the default value that Kubernetes auth will try to validate. However,
-ephemeral tokens use the value of `kube-apiserver`'s `--service-account-issuer`
-flag as the issuer, which is normally a URL instead. See the [Kubernetes auth
-docs](/docs/auth/kubernetes#discovering-the-service-account-issuer) for
-ways to check the issuer using the Kubernetes API.
-
-Importantly, this means most common configurations of Vault Agent Injector and
-Vault CSI Provider **cannot share the same Kubernetes auth mount**. Vault
-Agent sidecars will most commonly be configured to authenticate using a
-long-lived default service account token, with an issuer different to the tokens
-Vault CSI Provider will create. But one Kubernetes auth mount can only be
-configured to validate a single issuer value.
-
-## Secret Provider Class Example
+## Secret provider class example
 
 The following is an example of a Secret Provider Class using the `vault` provider:
 
@@ -87,10 +64,12 @@ spec:
   parameters:
     # Vault role name to use during login
     roleName: 'app'
+    # Vault address and TLS connection config is normally best configured by the
+    # helm chart, but can be overridden per SecretProviderClass:
     # Vault's hostname
-    vaultAddress: 'https://vault:8200'
+    #vaultAddress: 'https://vault:8200'
     # TLS CA certification for validation
-    vaultCACertPath: '/vault/tls/ca.crt'
+    #vaultCACertPath: '/vault/tls/ca.crt'
     objects: |
       - objectName: "dbUsername"
         secretPath: "database/creds/db-app"
@@ -106,7 +85,7 @@ spec:
 
 ~> Secret Provider Class is a namespaced object in Kubernetes.
 
-## Using Secret Provider Classes
+## Using secret provider classes
 
 An application pod uses the example Secret Provider Class above by mounting it as a CSI volume:
 
@@ -147,5 +126,5 @@ the Secret Provider Class named `vault-db-creds`.
 
 ## Tutorial
 
-Refer to the [Vault CSI Provider](https://learn.hashicorp.com/tutorials/vault/kubernetes-secret-store-driver?in=vault/kubernetes)
-tutorial to learn how to set up Vault and its depedencies with a Helm chart.
+Refer to the [Vault CSI Provider](/vault/tutorials/kubernetes/kubernetes-secret-store-driver)
+tutorial to learn how to set up Vault and its dependencies with a Helm chart.

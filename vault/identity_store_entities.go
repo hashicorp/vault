@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -6,10 +9,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/go-multierror"
-
 	"github.com/golang/protobuf/ptypes"
 	memdb "github.com/hashicorp/go-memdb"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/identity/mfa"
@@ -18,6 +20,7 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
+	"google.golang.org/protobuf/types/known/anypb"
 )
 
 func entityPathFields() map[string]*framework.FieldSchema {
@@ -58,9 +61,17 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "entity$",
-			Fields:  entityPathFields(),
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.handleEntityUpdateCommon(),
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "entity",
+				OperationVerb:   "create",
+			},
+
+			Fields: entityPathFields(),
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: i.handleEntityUpdateCommon(),
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(entityHelp["entity"][0]),
@@ -68,11 +79,33 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "entity/name/(?P<name>.+)",
-			Fields:  entityPathFields(),
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.handleEntityUpdateCommon(),
-				logical.ReadOperation:   i.pathEntityNameRead(),
-				logical.DeleteOperation: i.pathEntityNameDelete(),
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "entity",
+				OperationSuffix: "by-name",
+			},
+
+			Fields: entityPathFields(),
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: i.handleEntityUpdateCommon(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "update",
+					},
+				},
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: i.pathEntityNameRead(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "read",
+					},
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: i.pathEntityNameDelete(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "delete",
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(entityHelp["entity-name"][0]),
@@ -80,11 +113,33 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "entity/id/" + framework.GenericNameRegex("id"),
-			Fields:  entityPathFields(),
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.handleEntityUpdateCommon(),
-				logical.ReadOperation:   i.pathEntityIDRead(),
-				logical.DeleteOperation: i.pathEntityIDDelete(),
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "entity",
+				OperationSuffix: "by-id",
+			},
+
+			Fields: entityPathFields(),
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: i.handleEntityUpdateCommon(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "update",
+					},
+				},
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: i.pathEntityIDRead(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "read",
+					},
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: i.pathEntityIDDelete(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "delete",
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(entityHelp["entity-id"][0]),
@@ -92,14 +147,23 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "entity/batch-delete",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "entity",
+				OperationVerb:   "batch-delete",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"entity_ids": {
 					Type:        framework.TypeCommaStringSlice,
 					Description: "Entity IDs to delete",
 				},
 			},
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.handleEntityBatchDelete(),
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: i.handleEntityBatchDelete(),
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(entityHelp["batch-delete"][0]),
@@ -107,8 +171,16 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "entity/name/?$",
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ListOperation: i.pathEntityNameList(),
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "entity",
+				OperationSuffix: "by-name",
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ListOperation: &framework.PathOperation{
+					Callback: i.pathEntityNameList(),
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(entityHelp["entity-name-list"][0]),
@@ -116,8 +188,16 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "entity/id/?$",
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ListOperation: i.pathEntityIDList(),
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "entity",
+				OperationSuffix: "by-id",
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ListOperation: &framework.PathOperation{
+					Callback: i.pathEntityIDList(),
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(entityHelp["entity-id-list"][0]),
@@ -125,6 +205,12 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "entity/merge/?$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "entity",
+				OperationVerb:   "merge",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"from_entity_ids": {
 					Type:        framework.TypeCommaStringSlice,
@@ -143,8 +229,11 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 					Description: "Setting this will follow the 'mine' strategy for merging MFA secrets. If there are secrets of the same type both in entities that are merged from and in entity into which all others are getting merged, secrets in the destination will be unaltered. If not set, this API will throw an error containing all the conflicts.",
 				},
 			},
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.pathEntityMergeID(),
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback:                  i.pathEntityMergeID(),
+					ForwardPerformanceStandby: true,
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(entityHelp["entity-merge-id"][0]),
@@ -805,6 +894,15 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 		}
 
 		if fromEntity == nil {
+			// If forceMergeAliases is true, and we didn't find a fromEntity, then something
+			// is wrong with storage. This function was called as part of an automated
+			// merge from CreateOrFetchEntity or Invalidate to repatriate an alias with its 'true'
+			// entity. As a result, the entity _should_ exist, but we can't find it.
+			// MemDb may be in a bad state, because fromEntity should be non-nil in the
+			// automated merge case.
+			if forceMergeAliases {
+				return fmt.Errorf("fromEntity %s was not found in memdb as part of an automated entity merge into %s; storage/memdb may be in a bad state", fromEntityID, toEntity.ID), nil, nil
+			}
 			return errors.New("entity id to merge from is invalid"), nil, nil
 		}
 
@@ -917,6 +1015,15 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 		}
 
 		if fromEntity == nil {
+			// If forceMergeAliases is true, and we didn't find a fromEntity, then something
+			// is wrong with storage. This function was called as part of an automated
+			// merge from CreateOrFetchEntity or Invalidate to repatriate an alias with its 'true'
+			// entity. As a result, the entity _should_ exist, but we can't find it.
+			// MemDb may be in a bad state, because fromEntity should be non-nil in the
+			// automated merge case.
+			if forceMergeAliases {
+				return fmt.Errorf("fromEntity %s was not found in memdb as part of an automated entity merge into %s; storage/memdb may be in a bad state", fromEntityID, toEntity.ID), nil, nil
+			}
 			return errors.New("entity id to merge from is invalid"), nil, nil
 		}
 
@@ -936,13 +1043,13 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 						i.logger.Info("Deleting to_entity alias during entity merge", "to_entity", toEntity.ID, "deleted_alias", toAliasId)
 						err := i.MemDBDeleteAliasByIDInTxn(txn, toAliasId, false)
 						if err != nil {
-							return nil, fmt.Errorf("failed to delete orphaned alias during merge: %w", err), nil
+							return nil, fmt.Errorf("aborting entity merge - failed to delete orphaned alias %q during merge into entity %q: %w", toAliasId, toEntity.ID, err), nil
 						}
 					} else if strutil.StrListContains(conflictingAliasIDsToKeep, toAliasId) {
 						i.logger.Info("Deleting from_entity alias during entity merge", "from_entity", fromEntityID, "deleted_alias", fromAlias.ID)
 						err := i.MemDBDeleteAliasByIDInTxn(txn, fromAlias.ID, false)
 						if err != nil {
-							return nil, fmt.Errorf("failed to delete orphaned alias during merge: %w", err), nil
+							return nil, fmt.Errorf("aborting entity merge - failed to delete orphaned alias %q during merge into entity %q: %w", fromAlias.ID, toEntity.ID, err), nil
 						}
 
 						// Continue to next alias, as there's no alias to merge left in the from_entity
@@ -951,7 +1058,7 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 						i.logger.Info("Deleting to_entity alias during entity merge", "to_entity", toEntity.ID, "deleted_alias", toAliasId)
 						err := i.MemDBDeleteAliasByIDInTxn(txn, toAliasId, false)
 						if err != nil {
-							return nil, fmt.Errorf("failed to delete orphaned alias during merge: %w", err), nil
+							return nil, fmt.Errorf("aborting entity merge - failed to delete orphaned alias %q during merge into entity %q: %w", toAliasId, toEntity.ID, err), nil
 						}
 					} else {
 						return fmt.Errorf("conflicting mount accessors in following alias IDs and neither were present in conflicting_alias_ids_to_keep: %s, %s", fromAlias.ID, toAliasId), nil, nil
@@ -1034,7 +1141,7 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 
 	if persist && !isPerfSecondaryOrStandby {
 		// Persist the entity which we are merging to
-		toEntityAsAny, err := ptypes.MarshalAny(toEntity)
+		toEntityAsAny, err := anypb.New(toEntity)
 		if err != nil {
 			return nil, err, nil
 		}

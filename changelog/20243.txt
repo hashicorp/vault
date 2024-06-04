@@ -1,0 +1,4 @@
+```release-note:improvement
+cli/namespace: Add detailed flag to output additional namespace information 
+such as namespace IDs and custom metadata.
+```

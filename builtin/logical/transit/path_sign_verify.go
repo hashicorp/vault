@@ -1,13 +1,18 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package transit
 
 import (
 	"context"
 	"crypto/rsa"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
@@ -25,12 +30,12 @@ type batchResponseSignItem struct {
 	// request item
 	Signature string `json:"signature,omitempty" mapstructure:"signature"`
 
-	// The key version to be used for encryption
+	// The key version to be used for signing
 	KeyVersion int `json:"key_version" mapstructure:"key_version"`
 
 	PublicKey []byte `json:"publickey,omitempty" mapstructure:"publickey"`
 
-	// Error, if set represents a failure encountered while encrypting a
+	// Error, if set represents a failure encountered while signing a
 	// corresponding batch request item
 	Error string `json:"error,omitempty" mapstructure:"error"`
 
@@ -47,14 +52,14 @@ type batchResponseSignItem struct {
 
 // BatchRequestVerifyItem represents a request item for batch processing.
 // A map type allows us to distinguish between empty and missing values.
-type batchRequestVerifyItem map[string]string
+type batchRequestVerifyItem map[string]interface{}
 
 // BatchResponseVerifyItem represents a response item for batch processing
 type batchResponseVerifyItem struct {
 	// Valid indicates whether signature matches the signature derived from the input string
 	Valid bool `json:"valid" mapstructure:"valid"`
 
-	// Error, if set represents a failure encountered while encrypting a
+	// Error, if set represents a failure encountered while verifying a
 	// corresponding batch request item
 	Error string `json:"error,omitempty" mapstructure:"error"`
 
@@ -74,6 +79,13 @@ const defaultHashAlgorithm = "sha2-256"
 func (b *backend) pathSign() *framework.Path {
 	return &framework.Path{
 		Pattern: "sign/" + framework.GenericNameRegex("name") + framework.OptionalParamRegex("urlalgorithm"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+			OperationVerb:   "sign",
+			OperationSuffix: "|with-algorithm",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -154,6 +166,14 @@ Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'`,
 				Description: `The salt length used to sign. Currently only applies to the RSA PSS signature scheme.
 Options are 'auto' (the default used by Golang, causing the salt to be as large as possible when signing), 'hash' (causes the salt length to equal the length of the hash used in the signature), or an integer between the minimum and the maximum permissible salt lengths for the given RSA key size. Defaults to 'auto'.`,
 			},
+
+			"batch_input": {
+				Type: framework.TypeSlice,
+				Description: `Specifies a list of items for processing. When this parameter is set,
+any supplied 'input' or 'context' parameters will be ignored. Responses are returned in the
+'batch_results' array component of the 'data' element of the response. Any batch output will
+preserve the order of the batch input`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -168,6 +188,13 @@ Options are 'auto' (the default used by Golang, causing the salt to be as large 
 func (b *backend) pathVerify() *framework.Path {
 	return &framework.Path{
 		Pattern: "verify/" + framework.GenericNameRegex("name") + framework.OptionalParamRegex("urlalgorithm"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+			OperationVerb:   "verify",
+			OperationSuffix: "|with-algorithm",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -190,6 +217,11 @@ derivation is enabled; currently only available with ed25519 keys.`,
 				Description: "The HMAC, including vault header/key version",
 			},
 
+			"cmac": {
+				Type:        framework.TypeString,
+				Description: "The CMAC, including vault header/key version",
+			},
+
 			"input": {
 				Type:        framework.TypeString,
 				Description: "The base64-encoded input data to verify",
@@ -198,6 +230,11 @@ derivation is enabled; currently only available with ed25519 keys.`,
 			"urlalgorithm": {
 				Type:        framework.TypeString,
 				Description: `Hash algorithm to use (POST URL parameter)`,
+			},
+
+			"mac_length": {
+				Type:        framework.TypeInt,
+				Description: `MAC length to use (POST body parameter). Valid values are:`,
 			},
 
 			"hash_algorithm": {
@@ -233,7 +270,7 @@ none on signing path.`,
 
 			"signature_algorithm": {
 				Type: framework.TypeString,
-				Description: `The signature algorithm to use for signature verification. Currently only applies to RSA key types. 
+				Description: `The signature algorithm to use for signature verification. Currently only applies to RSA key types.
 Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'`,
 			},
 
@@ -248,6 +285,14 @@ Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'`,
 				Default: "auto",
 				Description: `The salt length used to sign. Currently only applies to the RSA PSS signature scheme.
 Options are 'auto' (the default used by Golang, causing the salt to be as large as possible when signing), 'hash' (causes the salt length to equal the length of the hash used in the signature), or an integer between the minimum and the maximum permissible salt lengths for the given RSA key size. Defaults to 'auto'.`,
+			},
+
+			"batch_input": {
+				Type: framework.TypeSlice,
+				Description: `Specifies a list of items for processing. When this parameter is set,
+any supplied  'input', 'hmac', 'cmac' or 'signature' parameters will be ignored. Responses are returned in the
+'batch_results' array component of the 'data' element of the response. Any batch output will
+preserve the order of the batch input`,
 			},
 		},
 
@@ -319,10 +364,6 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
-	if hashAlgorithm == keysutil.HashTypeNone && (!prehashed || sigAlgorithm != "pkcs1v15") {
-		return logical.ErrorResponse("hash_algorithm=none requires both prehashed=true and signature_algorithm=pkcs1v15"), logical.ErrInvalidRequest
-	}
-
 	// Get the policy
 	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
@@ -332,15 +373,22 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 		return nil, err
 	}
 	if p == nil {
-		return logical.ErrorResponse("encryption key not found"), logical.ErrInvalidRequest
+		return logical.ErrorResponse("signing key not found"), logical.ErrInvalidRequest
 	}
 	if !b.System().CachingDisabled() {
 		p.Lock(false)
 	}
+	defer p.Unlock()
 
 	if !p.Type.SigningSupported() {
-		p.Unlock()
 		return logical.ErrorResponse(fmt.Sprintf("key type %v does not support signing", p.Type)), logical.ErrInvalidRequest
+	}
+
+	// Allow managed keys to specify no hash algo without additional conditions.
+	if hashAlgorithm == keysutil.HashTypeNone && p.Type != keysutil.KeyType_MANAGED_KEY {
+		if !prehashed || sigAlgorithm != "pkcs1v15" {
+			return logical.ErrorResponse("hash_algorithm=none requires both prehashed=true and signature_algorithm=pkcs1v15"), logical.ErrInvalidRequest
+		}
 	}
 
 	batchInputRaw := d.Raw["batch_input"]
@@ -348,12 +396,10 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 	if batchInputRaw != nil {
 		err = mapstructure.Decode(batchInputRaw, &batchInputItems)
 		if err != nil {
-			p.Unlock()
 			return nil, fmt.Errorf("failed to parse batch input: %w", err)
 		}
 
 		if len(batchInputItems) == 0 {
-			p.Unlock()
 			return logical.ErrorResponse("missing batch input to process"), logical.ErrInvalidRequest
 		}
 	} else {
@@ -366,7 +412,6 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 	}
 
 	response := make([]batchResponseSignItem, len(batchInputItems))
-
 	for i, item := range batchInputItems {
 
 		rawInput, ok := item["input"]
@@ -385,8 +430,10 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 
 		if p.Type.HashSignatureInput() && !prehashed {
 			hf := keysutil.HashFuncMap[hashAlgorithm]()
-			hf.Write(input)
-			input = hf.Sum(nil)
+			if hf != nil {
+				hf.Write(input)
+				input = hf.Sum(nil)
+			}
 		}
 
 		contextRaw := item["context"]
@@ -400,11 +447,26 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 			}
 		}
 
+		var managedKeyParameters keysutil.ManagedKeyParameters
+		if p.Type == keysutil.KeyType_MANAGED_KEY {
+			managedKeySystemView, ok := b.System().(logical.ManagedKeySystemView)
+			if !ok {
+				return nil, errors.New("unsupported system view")
+			}
+
+			managedKeyParameters = keysutil.ManagedKeyParameters{
+				ManagedKeySystemView: managedKeySystemView,
+				BackendUUID:          b.backendUUID,
+				Context:              ctx,
+			}
+		}
+
 		sig, err := p.SignWithOptions(ver, context, input, &keysutil.SigningOptions{
-			HashAlgorithm: hashAlgorithm,
-			Marshaling:    marshaling,
-			SaltLength:    saltLength,
-			SigAlgorithm:  sigAlgorithm,
+			HashAlgorithm:    hashAlgorithm,
+			Marshaling:       marshaling,
+			SaltLength:       saltLength,
+			SigAlgorithm:     sigAlgorithm,
+			ManagedKeyParams: managedKeyParameters,
 		})
 		if err != nil {
 			if batchInputRaw != nil {
@@ -437,7 +499,6 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 		}
 	} else {
 		if response[0].Error != "" || response[0].err != nil {
-			p.Unlock()
 			if response[0].Error != "" {
 				return logical.ErrorResponse(response[0].Error), response[0].err
 			}
@@ -455,7 +516,6 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 		}
 	}
 
-	p.Unlock()
 	return resp, nil
 }
 
@@ -485,6 +545,9 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 		if hmac, ok := d.GetOk("hmac"); ok {
 			batchInputItems[0]["hmac"] = hmac.(string)
 		}
+		if cmac, ok := d.GetOk("cmac"); ok {
+			batchInputItems[0]["cmac"] = cmac.(string)
+		}
 		batchInputItems[0]["context"] = d.Get("context").(string)
 	}
 
@@ -493,26 +556,30 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 	// If one batch_input item is 'hmac', they all must be 'hmac'.
 	sigFound := false
 	hmacFound := false
+	cmacFound := false
 	missing := false
 	for _, v := range batchInputItems {
 		if _, ok := v["signature"]; ok {
 			sigFound = true
 		} else if _, ok := v["hmac"]; ok {
 			hmacFound = true
+		} else if _, ok := v["cmac"]; ok {
+			cmacFound = true
 		} else {
 			missing = true
 		}
 	}
+	optionsSet := numBooleansTrue(sigFound, hmacFound, cmacFound)
 
 	switch {
-	case batchInputRaw == nil && sigFound && hmacFound:
-		return logical.ErrorResponse("provide one of 'signature' or 'hmac'"), logical.ErrInvalidRequest
+	case batchInputRaw == nil && optionsSet > 1:
+		return logical.ErrorResponse("provide one of 'signature', 'hmac' or 'cmac'"), logical.ErrInvalidRequest
 
-	case batchInputRaw == nil && !sigFound && !hmacFound:
-		return logical.ErrorResponse("neither a 'signature' nor an 'hmac' were given to verify"), logical.ErrInvalidRequest
+	case batchInputRaw == nil && optionsSet == 0:
+		return logical.ErrorResponse("missing 'signature', 'hmac' or 'cmac' were given to verify"), logical.ErrInvalidRequest
 
-	case sigFound && hmacFound:
-		return logical.ErrorResponse("elements of batch_input must all provide 'signature' or all provide 'hmac'"), logical.ErrInvalidRequest
+	case optionsSet > 1:
+		return logical.ErrorResponse("elements of batch_input must all provide either 'signature', 'hmac' or 'cmac'"), logical.ErrInvalidRequest
 
 	case missing && sigFound:
 		return logical.ErrorResponse("some elements of batch_input are missing 'signature'"), logical.ErrInvalidRequest
@@ -520,11 +587,17 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 	case missing && hmacFound:
 		return logical.ErrorResponse("some elements of batch_input are missing 'hmac'"), logical.ErrInvalidRequest
 
-	case missing:
-		return logical.ErrorResponse("no batch_input elements have 'signature' or 'hmac'"), logical.ErrInvalidRequest
+	case missing && cmacFound:
+		return logical.ErrorResponse("some elements of batch_input are missing 'cmac'"), logical.ErrInvalidRequest
+
+	case optionsSet == 0:
+		return logical.ErrorResponse("no batch_input elements have 'signature', 'hmac' or 'cmac'"), logical.ErrInvalidRequest
 
 	case hmacFound:
 		return b.pathHMACVerify(ctx, req, d)
+
+	case cmacFound:
+		return b.pathCMACVerify(ctx, req, d)
 	}
 
 	name := d.Get("name").(string)
@@ -557,10 +630,6 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
-	if hashAlgorithm == keysutil.HashTypeNone && (!prehashed || sigAlgorithm != "pkcs1v15") {
-		return logical.ErrorResponse("hash_algorithm=none requires both prehashed=true and signature_algorithm=pkcs1v15"), logical.ErrInvalidRequest
-	}
-
 	// Get the policy
 	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
@@ -570,49 +639,74 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 		return nil, err
 	}
 	if p == nil {
-		return logical.ErrorResponse("encryption key not found"), logical.ErrInvalidRequest
+		return logical.ErrorResponse("signature verification key not found"), logical.ErrInvalidRequest
 	}
 	if !b.System().CachingDisabled() {
 		p.Lock(false)
 	}
+	defer p.Unlock()
 
 	if !p.Type.SigningSupported() {
-		p.Unlock()
 		return logical.ErrorResponse(fmt.Sprintf("key type %v does not support verification", p.Type)), logical.ErrInvalidRequest
+	}
+
+	// Allow managed keys to specify no hash algo without additional conditions.
+	if hashAlgorithm == keysutil.HashTypeNone && p.Type != keysutil.KeyType_MANAGED_KEY {
+		if !prehashed || sigAlgorithm != "pkcs1v15" {
+			return logical.ErrorResponse("hash_algorithm=none requires both prehashed=true and signature_algorithm=pkcs1v15"), logical.ErrInvalidRequest
+		}
 	}
 
 	response := make([]batchResponseVerifyItem, len(batchInputItems))
 
 	for i, item := range batchInputItems {
-
 		rawInput, ok := item["input"]
 		if !ok {
 			response[i].Error = "missing input"
 			response[i].err = logical.ErrInvalidRequest
 			continue
 		}
+		strInput, err := parseutil.ParseString(rawInput)
+		if err != nil {
+			response[i].Error = fmt.Sprintf("unable to parse input as string: %s", err)
+			response[i].err = logical.ErrInvalidRequest
+			continue
+		}
 
-		input, err := base64.StdEncoding.DecodeString(rawInput)
+		input, err := base64.StdEncoding.DecodeString(strInput)
 		if err != nil {
 			response[i].Error = fmt.Sprintf("unable to decode input as base64: %s", err)
 			response[i].err = logical.ErrInvalidRequest
 			continue
 		}
 
-		sig, ok := item["signature"]
+		sigRaw, ok := item["signature"].(string)
 		if !ok {
 			response[i].Error = "missing signature"
+			response[i].err = logical.ErrInvalidRequest
+			continue
+		}
+		sig, err := parseutil.ParseString(sigRaw)
+		if err != nil {
+			response[i].Error = fmt.Sprintf("failed to parse signature as a string: %s", err)
 			response[i].err = logical.ErrInvalidRequest
 			continue
 		}
 
 		if p.Type.HashSignatureInput() && !prehashed {
 			hf := keysutil.HashFuncMap[hashAlgorithm]()
-			hf.Write(input)
-			input = hf.Sum(nil)
+			if hf != nil {
+				hf.Write(input)
+				input = hf.Sum(nil)
+			}
 		}
 
-		contextRaw := item["context"]
+		contextRaw, err := parseutil.ParseString(item["context"])
+		if err != nil {
+			response[i].Error = fmt.Sprintf("failed to parse context as a string: %s", err)
+			response[i].err = logical.ErrInvalidRequest
+			continue
+		}
 		var context []byte
 		if len(contextRaw) != 0 {
 			context, err = base64.StdEncoding.DecodeString(contextRaw)
@@ -622,13 +716,29 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 				continue
 			}
 		}
+		var managedKeyParameters keysutil.ManagedKeyParameters
+		if p.Type == keysutil.KeyType_MANAGED_KEY {
+			managedKeySystemView, ok := b.System().(logical.ManagedKeySystemView)
+			if !ok {
+				return nil, errors.New("unsupported system view")
+			}
 
-		valid, err := p.VerifySignatureWithOptions(context, input, sig, &keysutil.SigningOptions{
-			HashAlgorithm: hashAlgorithm,
-			Marshaling:    marshaling,
-			SaltLength:    saltLength,
-			SigAlgorithm:  sigAlgorithm,
-		})
+			managedKeyParameters = keysutil.ManagedKeyParameters{
+				ManagedKeySystemView: managedKeySystemView,
+				BackendUUID:          b.backendUUID,
+				Context:              ctx,
+			}
+		}
+
+		signingOptions := &keysutil.SigningOptions{
+			HashAlgorithm:    hashAlgorithm,
+			Marshaling:       marshaling,
+			SaltLength:       saltLength,
+			SigAlgorithm:     sigAlgorithm,
+			ManagedKeyParams: managedKeyParameters,
+		}
+
+		valid, err := p.VerifySignatureWithOptions(context, input, sig, signingOptions)
 		if err != nil {
 			switch err.(type) {
 			case errutil.UserError:
@@ -650,14 +760,15 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 	if batchInputRaw != nil {
 		// Copy the references
 		for i := range batchInputItems {
-			response[i].Reference = batchInputItems[i]["reference"]
+			if ref, err := parseutil.ParseString(batchInputItems[i]["reference"]); err == nil {
+				response[i].Reference = ref
+			}
 		}
 		resp.Data = map[string]interface{}{
 			"batch_results": response,
 		}
 	} else {
 		if response[0].Error != "" || response[0].err != nil {
-			p.Unlock()
 			if response[0].Error != "" {
 				return logical.ErrorResponse(response[0].Error), response[0].err
 			}
@@ -668,8 +779,54 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 		}
 	}
 
-	p.Unlock()
 	return resp, nil
+}
+
+func numBooleansTrue(bools ...bool) int {
+	numSet := 0
+	for _, value := range bools {
+		if value {
+			numSet++
+		}
+	}
+	return numSet
+}
+
+func decodeTransitSignature(sig string) ([]byte, int, error) {
+	if !strings.HasPrefix(sig, "vault:v") {
+		return nil, 0, fmt.Errorf("prefix is not vault:v")
+	}
+
+	splitVerification := strings.SplitN(strings.TrimPrefix(sig, "vault:v"), ":", 2)
+	if len(splitVerification) != 2 {
+		return nil, 0, fmt.Errorf("wrong number of fields delimited by ':', got %d expected 2", len(splitVerification))
+	}
+
+	ver, err := strconv.Atoi(splitVerification[0])
+	if err != nil {
+		return nil, 0, fmt.Errorf("key version number %s count not be decoded", splitVerification[0])
+	}
+
+	if ver < 1 {
+		return nil, 0, fmt.Errorf("key version less than 1 are invalid got: %d", ver)
+	}
+
+	if len(strings.TrimSpace(splitVerification[1])) == 0 {
+		return nil, 0, fmt.Errorf("missing base64 verification string from vault signature")
+	}
+
+	verBytes, err := base64.StdEncoding.DecodeString(splitVerification[1])
+	if err != nil {
+		return nil, 0, fmt.Errorf("unable to decode verification string as base64: %s", err)
+	}
+
+	return verBytes, ver, nil
+}
+
+func encodeTransitSignature(value []byte, keyVersion int) string {
+	retStr := base64.StdEncoding.EncodeToString(value)
+	retStr = fmt.Sprintf("vault:v%d:%s", keyVersion, retStr)
+	return retStr
 }
 
 const pathSignHelpSyn = `Generate a signature for input data using the named key`

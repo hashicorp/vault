@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pki
 
 import (
@@ -12,29 +15,51 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"net/http"
 	"reflect"
 	"strings"
 	"time"
 
-	"golang.org/x/crypto/ed25519"
-
-	"github.com/hashicorp/vault/sdk/helper/certutil"
-
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"golang.org/x/crypto/ed25519"
 )
 
+const intCaTruncatationWarning = "the signed intermediary CA certificate's notAfter was truncated to the issuer's notAfter"
+
 func pathGenerateRoot(b *backend) *framework.Path {
-	return buildPathGenerateRoot(b, "root/generate/"+framework.GenericNameRegex("exported"))
+	pattern := "root/generate/" + framework.GenericNameRegex("exported")
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKI,
+		OperationVerb:   "generate",
+		OperationSuffix: "root",
+	}
+
+	return buildPathGenerateRoot(b, pattern, displayAttrs)
 }
 
 func pathDeleteRoot(b *backend) *framework.Path {
 	ret := &framework.Path{
 		Pattern: "root",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "root",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback: b.pathCADeleteRoot,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+					}},
+				},
 				// Read more about why these flags are set in backend.go
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
@@ -55,7 +80,7 @@ func (b *backend) pathCADeleteRoot(ctx context.Context, req *logical.Request, _ 
 	defer b.issuersLock.Unlock()
 
 	sc := b.makeStorageContext(ctx, req.Storage)
-	if !b.useLegacyBundleCaStorage() {
+	if !b.UseLegacyBundleCaStorage() {
 		issuers, err := sc.listIssuers()
 		if err != nil {
 			return nil, err
@@ -80,8 +105,12 @@ func (b *backend) pathCADeleteRoot(ctx context.Context, req *logical.Request, _ 
 		}
 	}
 
-	// Delete legacy CA bundle.
+	// Delete legacy CA bundle and its backup, if any.
 	if err := req.Storage.Delete(ctx, legacyCertBundlePath); err != nil {
+		return nil, err
+	}
+
+	if err := req.Storage.Delete(ctx, legacyCertBundleBackupPath); err != nil {
 		return nil, err
 	}
 
@@ -105,7 +134,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 
 	var err error
 
-	if b.useLegacyBundleCaStorage() {
+	if b.UseLegacyBundleCaStorage() {
 		return logical.ErrorResponse("Can not create root CA until migration has completed"), nil
 	}
 
@@ -258,21 +287,18 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 
 	// Also store it as just the certificate identified by serial number, so it
 	// can be revoked
-	key := "certs/" + normalizeSerial(cb.SerialNumber)
-	certsCounted := b.certsCounted.Load()
-	err = req.Storage.Put(ctx, &logical.StorageEntry{
-		Key:   key,
-		Value: parsedBundle.CertificateBytes,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("unable to store certificate locally: %w", err)
-	}
-	b.incrementTotalCertificatesCount(certsCounted, key)
-
-	// Build a fresh CRL
-	err = b.crlBuilder.rebuild(sc, true)
+	err = issuing.StoreCertificate(ctx, req.Storage, b.GetCertificateCounter(), parsedBundle)
 	if err != nil {
 		return nil, err
+	}
+
+	// Build a fresh CRL
+	warnings, err = b.CrlBuilder().rebuild(sc, true)
+	if err != nil {
+		return nil, err
+	}
+	for index, warning := range warnings {
+		resp.AddWarning(fmt.Sprintf("Warning %d during CRL rebuild: %v", index+1, warning))
 	}
 
 	if parsedBundle.Certificate.MaxPathLen == 0 {
@@ -297,19 +323,17 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
 
-	issuerName := getIssuerRef(data)
+	issuerName := GetIssuerRef(data)
 	if len(issuerName) == 0 {
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
 
 	format := getFormat(data)
 	if format == "" {
-		return logical.ErrorResponse(
-			`The "format" path parameter must be "pem" or "der"`,
-		), nil
+		return logical.ErrorResponse(`The "format" path parameter must be "pem", "der" or "pem_bundle"`), nil
 	}
 
-	role := &roleEntry{
+	role := &issuing.RoleEntry{
 		OU:                        data.Get("ou").([]string),
 		Organization:              data.Get("organization").([]string),
 		Country:                   data.Get("country").([]string),
@@ -341,7 +365,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 
 	var caErr error
 	sc := b.makeStorageContext(ctx, req.Storage)
-	signingBundle, caErr := sc.fetchCAInfo(issuerName, IssuanceUsage)
+	signingBundle, caErr := sc.fetchCAInfo(issuerName, issuing.IssuanceUsage)
 	if caErr != nil {
 		switch caErr.(type) {
 		case errutil.UserError:
@@ -353,10 +377,14 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		}
 	}
 
-	// Since we are signing an intermediate, we explicitly want to override
-	// the leaf NotAfterBehavior to permit issuing intermediates longer than
-	// the life of this issuer.
-	signingBundle.LeafNotAfterBehavior = certutil.PermitNotAfterBehavior
+	warnAboutTruncate := false
+	if enforceLeafNotAfter := data.Get("enforce_leaf_not_after_behavior").(bool); !enforceLeafNotAfter {
+		// Since we are signing an intermediate, we will by default truncate the
+		// signed intermediary in order to generate a valid intermediary chain. This
+		// was changed in 1.17.x as the default prior was PermitNotAfterBehavior
+		warnAboutTruncate = true
+		signingBundle.LeafNotAfterBehavior = certutil.TruncateNotAfterBehavior
+	}
 
 	useCSRValues := data.Get("use_csr_values").(bool)
 
@@ -386,6 +414,25 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		return nil, fmt.Errorf("verification of parsed bundle failed: %w", err)
 	}
 
+	resp, err := signIntermediateResponse(signingBundle, parsedBundle, format, warnings)
+	if err != nil {
+		return nil, err
+	}
+
+	err = issuing.StoreCertificate(ctx, req.Storage, b.GetCertificateCounter(), parsedBundle)
+	if err != nil {
+		return nil, err
+	}
+
+	if warnAboutTruncate &&
+		signingBundle.Certificate.NotAfter.Equal(parsedBundle.Certificate.NotAfter) {
+		resp.AddWarning(intCaTruncatationWarning)
+	}
+
+	return resp, nil
+}
+
+func signIntermediateResponse(signingBundle *certutil.CAInfoBundle, parsedBundle *certutil.ParsedCertBundle, format string, warnings []string) (*logical.Response, error) {
 	signingCB, err := signingBundle.ToCertBundle()
 	if err != nil {
 		return nil, fmt.Errorf("error converting raw signing bundle to cert bundle: %w", err)
@@ -455,40 +502,22 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		return nil, fmt.Errorf("unsupported format argument: %s", format)
 	}
 
-	key := "certs/" + normalizeSerial(cb.SerialNumber)
-	certsCounted := b.certsCounted.Load()
-	err = req.Storage.Put(ctx, &logical.StorageEntry{
-		Key:   key,
-		Value: parsedBundle.CertificateBytes,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("unable to store certificate locally: %w", err)
-	}
-	b.incrementTotalCertificatesCount(certsCounted, key)
-
 	if parsedBundle.Certificate.MaxPathLen == 0 {
 		resp.AddWarning("Max path length of the signed certificate is zero. This certificate cannot be used to issue intermediate CA certificates.")
 	}
 
 	resp = addWarnings(resp, warnings)
-
 	return resp, nil
 }
 
 func (b *backend) pathIssuerSignSelfIssued(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	var err error
-
-	issuerName := getIssuerRef(data)
+	issuerName := GetIssuerRef(data)
 	if len(issuerName) == 0 {
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
 
 	certPem := data.Get("certificate").(string)
-	block, _ := pem.Decode([]byte(certPem))
-	if block == nil || len(block.Bytes) == 0 {
-		return logical.ErrorResponse("certificate could not be PEM-decoded"), nil
-	}
-	certs, err := x509.ParseCertificates(block.Bytes)
+	certs, err := parsing.ParseCertificatesFromString(certPem)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("error parsing certificate: %s", err)), nil
 	}
@@ -504,9 +533,8 @@ func (b *backend) pathIssuerSignSelfIssued(ctx context.Context, req *logical.Req
 		return logical.ErrorResponse("given certificate is not self-issued"), nil
 	}
 
-	var caErr error
 	sc := b.makeStorageContext(ctx, req.Storage)
-	signingBundle, caErr := sc.fetchCAInfo(issuerName, IssuanceUsage)
+	signingBundle, caErr := sc.fetchCAInfo(issuerName, issuing.IssuanceUsage)
 	if caErr != nil {
 		switch caErr.(type) {
 		case errutil.UserError:

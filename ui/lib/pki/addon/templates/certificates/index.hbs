@@ -1,62 +1,66 @@
-<SecretListHeader
-  @model={{this.model.parentModel}}
-  @backendCrumb={{hash
-    label=this.model.parentModel.id
-    text=this.model.parentModel.id
-    path="vault.cluster.secrets.backend.list-root"
-    model=this.model.parentModel.id
-  }}
-  @isEngine={{true}}
-/>
-{{outlet}}
-<Toolbar>
-  {{#if this.model.certificateModel.length}}
-    <ToolbarFilters>
-      {{! ARG TODO glimmerize the NavigateInput and refactor so you can use it in an engine }}
-    </ToolbarFilters>
-  {{/if}}
-</Toolbar>
-{{#if this.model.certificateModel.length}}
-  {{#each this.model.certificateModel as |pkiCertificate|}}
-    <LinkedBlock
-      class="list-item-row"
-      @params={{array "certificates.certificate.details" pkiCertificate.id}}
-      @linkPrefix={{this.mountPoint}}
-    >
-      <div class="level is-mobile">
-        <div class="level-left">
-          <div>
-            <Icon @name="certificate" class="has-text-grey-light" />
-            <span class="has-text-weight-semibold is-underline">
-              {{pkiCertificate.id}}
-            </span>
-            <div class="is-flex-row has-left-margin-l has-top-margin-xs">
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<PkiPageHeader @backend={{this.model.parentModel}} />
+
+<PkiPaginatedList
+  @backend={{this.model.parentModel.id}}
+  @listRoute="certificates.index"
+  @list={{this.model.certificates}}
+  @hasConfig={{this.model.hasConfig}}
+>
+  <:list as |certs|>
+    {{#each certs as |pkiCertificate|}}
+      <LinkedBlock
+        class="list-item-row"
+        @params={{array "certificates.certificate.details" this.model.parentModel.id pkiCertificate.id}}
+        @linkPrefix={{this.mountPoint}}
+      >
+        <div class="level is-mobile">
+          <div class="level-left">
+            <div>
+              <Icon @name="certificate" class="has-text-grey-light" />
+              <span class="has-text-weight-semibold is-underline">
+                {{pkiCertificate.id}}
+              </span>
+              <div class="is-flex-row has-left-margin-l has-top-margin-xs">
+              </div>
+            </div>
+          </div>
+          <div class="level-right is-flex is-paddingless is-marginless">
+            <div class="level-item">
+              <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+                <dd.ToggleIcon
+                  @icon="more-horizontal"
+                  @text="Manage certificate"
+                  @hasChevron={{false}}
+                  data-test-popup-menu-trigger
+                />
+                <dd.Interactive @text="Details" @route="certificates.certificate.details" @model={{pkiCertificate.id}} />
+              </Hds::Dropdown>
             </div>
           </div>
         </div>
-        <div class="level-right is-flex is-paddingless is-marginless">
-          <div class="level-item">
-            <PopupMenu>
-              <nav class="menu">
-                <ul class="menu-list">
-                  <li>
-                    <LinkTo @route="certificates.certificate.details" @model={{pkiCertificate.id}}>
-                      Details
-                    </LinkTo>
-                  </li>
-                  {{! ARG TODO ask Ivana if we wnat revoke or maybe download action here? }}
-                </ul>
-              </nav>
-            </PopupMenu>
-          </div>
-        </div>
-      </div>
-    </LinkedBlock>
-  {{/each}}
-{{else}}
-  <EmptyState @title="PKI not configured" @message="This PKI mount hasn't yet been configured with a certificate issuer.">
-    <LinkTo @route="configuration.create">
-      {{! ARG TODO if configuration of engine not setup then direct toward setting that up otherwise replace with new design language }}
-    </LinkTo>
-  </EmptyState>
-{{/if}}
+      </LinkedBlock>
+    {{/each}}
+  </:list>
+  <:empty>
+    <EmptyState
+      @title="No certificates yet"
+      @message="When created, certificates will be listed here. Select a role to start generating certificates"
+    />
+  </:empty>
+  <:configure>
+    <EmptyState @title="PKI not configured" @message={{this.notConfiguredMessage}}>
+      <Hds::Link::Standalone
+        @icon="chevron-right"
+        @iconPosition="trailing"
+        @text="Configure PKI"
+        @route="configuration.create"
+        @model={{this.model.parentModel.id}}
+      />
+    </EmptyState>
+  </:configure>
+</PkiPaginatedList>

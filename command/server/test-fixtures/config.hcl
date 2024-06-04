@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 disable_cache = true
 disable_mlock = true
 
@@ -49,3 +52,5 @@ disable_printable_check = true
 enable_response_header_hostname = true
 enable_response_header_raft_node_id = true
 license_path = "/path/to/license"
+plugin_directory = "/path/to/plugins"
+plugin_tmpdir = "/tmp/plugins"

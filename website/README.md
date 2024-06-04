@@ -40,13 +40,9 @@ The website can be run locally through node.js or [Docker](https://www.docker.co
 
 > **Note:** If you are using a text editor that uses a "safe write" save style such as **vim** or **goland**, this can cause issues with the live reload in development. If you turn off safe write, this should solve the problem. In vim, this can be done by running `:set backupcopy=yes`. In goland, search the settings for "safe write" and turn that setting off.
 
-| :warning: WARNING :warning:                                                                                                                                                                                                                                                                                                                                                     |
-| :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| If you've previously run the website successfully using either the Docker or Node.js approach but are now facing some issue then try `docker rmi $(docker images -aq hashicorp-vault-website-local) && make build-image && make website-local` or `rm -rf node_modules`; failing that consider cloning this repository again and re-attempting the steps anew in a clean clone. |
-
 ### With Docker
 
-Running the site locally is simple. Provided you have the [latest version](https://docs.docker.com/engine/release-notes/) of Docker installed, clone this repo, run `make`, and then visit `http://localhost:3000`.
+Running the site locally is simple. Provided you have Docker installed, clone this repo, run `make`, and then visit `http://localhost:3000`.
 
 The docker image is pre-built with all the website dependencies installed, which is what makes it so quick and simple, but also means if you need to change dependencies and test the changes within Docker, you'll need a new image. If this is something you need to do, you can run `make build-image` to generate a local Docker image with updated dependencies, then `make website-local` to use that image and preview.
 
@@ -90,6 +86,16 @@ The significant keys in the YAML frontmatter are:
 
 > ⚠️ If there is a need for a `/api/*` url on this website, the url will be changed to `/api-docs/*`, as the `api` folder is reserved by next.js.
 
+### Validating Content
+
+Content changes are automatically validated against a set of rules as part of the pull request process. If you want to run these checks locally to validate your content before comitting your changes, you can run the following command:
+
+```
+npm run content-check
+```
+
+If the validation fails, actionable error messages will be displayed to help you address detected issues.
+
 ### Creating New Pages
 
 There is currently a small bug with new page creation - if you create a new page and link it up via subnav data while the server is running, it will report an error saying the page was not found. This can be resolved by restarting the server.
@@ -98,12 +104,12 @@ There is currently a small bug with new page creation - if you create a new page
 
 There are several custom markdown plugins that are available by default that enhance [standard markdown](https://commonmark.org/) to fit our use cases. This set of plugins introduces a couple instances of custom syntax, and a couple specific pitfalls that are not present by default with markdown, detailed below:
 
-- If you see the symbols `~>`, `->`, `=>`, or `!>`, these represent [custom alerts](https://github.com/hashicorp/remark-plugins/tree/master/plugins/paragraph-custom-alerts#paragraph-custom-alerts). These render as colored boxes to draw the user's attention to some type of aside.
+- > **Warning**: We are deprecating the current [paragraph alerts](https://github.com/hashicorp/remark-plugins/tree/master/plugins/paragraph-custom-alerts#paragraph-custom-alerts), in favor of the newer [MDX Inline Alert](#inline-alerts) components. The legacy paragraph alerts are represented by the symbols `~>`, `->`, `=>`, or `!>`.
 - If you see `@include '/some/path.mdx'`, this is a [markdown include](https://github.com/hashicorp/remark-plugins/tree/master/plugins/include-markdown#include-markdown-plugin). It's worth noting as well that all includes resolve from `website/content/partials` by default, and that changes to partials will not live-reload the website.
 - If you see `# Headline ((#slug))`, this is an example of an [anchor link alias](https://github.com/hashicorp/remark-plugins/tree/je.anchor-link-adjustments/plugins/anchor-links#anchor-link-aliases). It adds an extra permalink to a headline for compatibility and is removed from the output.
 - Due to [automatically generated permalinks](https://github.com/hashicorp/remark-plugins/tree/je.anchor-link-adjustments/plugins/anchor-links#anchor-links), any text changes to _headlines_ or _list items that begin with inline code_ can and will break existing permalinks. Be very cautious when changing either of these two text items.
 
-  Headlines are fairly self-explanatory, but here's an example of how list items that begin with inline code look.
+  Headlines are fairly self-explanatory, but here's an example of how to list items that begin with inline code look.
 
   ```markdown
   - this is a normal list item
@@ -122,6 +128,44 @@ There are several custom markdown plugins that are available by default that enh
 ### Custom Components
 
 A number of custom [mdx components](https://mdxjs.com/) are available for use within any `.mdx` file. Each one is documented below:
+
+#### Inline Alerts
+
+There are custom MDX components available to author alert data. [See the full documentation here](https://developer.hashicorp.com/swingset/components/mdxinlinealert). They render as colored boxes to draw the user's attention to some type of aside.
+
+```mdx
+## Alert types
+
+### Tip
+
+<Tip>
+  To provide general information to the user regarding the current context or
+  relevant actions.
+</Tip>
+
+### Highlight
+
+<Highlight>
+  To provide general or promotional information to the user prominently.
+</Highlight>
+
+### Note
+
+<Note>
+  To help users avoid an issue. Provide guidance and actions if possible.
+</Note>
+
+### Warning
+
+<Warning>
+  To indicate critical issues that need immediate action or help users
+  understand something critical.
+</Warning>
+
+## Title override prop
+
+<Note title="Hashiconf 2027">To provide general information.</Note>
+```
 
 #### Tabs
 
@@ -475,9 +519,9 @@ It's also worth noting that it is possible to do glob-based redirects, for examp
 
 We support the following browsers targeting roughly the versions specified.
 
-| ![Chrome](https://raw.githubusercontent.com/alrra/browser-logos/master/src/chrome/chrome_24x24.png) | ![Firefox](https://raw.githubusercontent.com/alrra/browser-logos/master/src/firefox/firefox_24x24.png) | ![Opera](https://raw.githubusercontent.com/alrra/browser-logos/master/src/opera/opera_24x24.png) | ![Safari](https://raw.githubusercontent.com/alrra/browser-logos/master/src/safari/safari_24x24.png) | ![Internet Explorer](https://raw.githubusercontent.com/alrra/browser-logos/master/src/edge/edge_24x24.png) |
-| --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| **Latest**                                                                                          | **Latest**                                                                                             | **Latest**                                                                                       | **Latest**                                                                                          | **11+**                                                                                                    |
+| ![Chrome](https://raw.githubusercontent.com/alrra/browser-logos/main/src/chrome/chrome.svg) | ![Edge](https://raw.githubusercontent.com/alrra/browser-logos/main/src/edge/edge.svg) | ![Opera](https://raw.githubusercontent.com/alrra/browser-logos/main/src/opera/opera.svg) | ![Firefox](https://raw.githubusercontent.com/alrra/browser-logos/main/src/firefox/firefox.svg) | ![Safari](https://raw.githubusercontent.com/alrra/browser-logos/main/src/safari/safari.svg) |
+| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| **Latest**                                                                                  | **Latest**                                                                            | **Latest**                                                                               | **Latest**                                                                                     | **Latest**                                                                                  |
 
 <!-- END: browser-support -->
 

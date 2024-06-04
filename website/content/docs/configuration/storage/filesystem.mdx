@@ -7,7 +7,7 @@ description: |-
   situations, or to develop locally where durability is not critical.
 ---
 
-# Filesystem Storage Backend
+# Filesystem storage backend
 
 The Filesystem storage backend stores Vault's data on the filesystem using a
 standard directory structure. It can be used for durable single server
@@ -28,13 +28,13 @@ storage "file" {
 Even though Vault's data is encrypted at rest, you should still take appropriate
 measures to secure access to the filesystem.
 
-## `file` Parameters
+## `file` parameters
 
 - `path` `(string: <required>)` – The absolute path on disk to the directory
   where the data will be stored. If the directory does not exist, Vault will
   create it.
 
-## `file` Examples
+## `file` examples
 
 This example shows the Filesystem storage backend being mounted at
 `/mnt/vault/data`.

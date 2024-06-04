@@ -1,5 +1,9 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { attr } from '@ember-data/model';
-import { assign } from '@ember/polyfills';
 import { camelize, capitalize } from '@ember/string';
 
 export const expandOpenApiProps = function (props) {
@@ -11,15 +15,26 @@ export const expandOpenApiProps = function (props) {
     if (deprecated === true) {
       continue;
     }
-    let { name, value, group, sensitive, editType } = prop['x-vault-displayAttrs'] || {};
+    let {
+      name,
+      value,
+      group,
+      sensitive,
+      editType,
+      description: displayDescription,
+    } = prop['x-vault-displayAttrs'] || {};
 
     if (type === 'integer') {
       type = 'number';
     }
 
+    if (displayDescription) {
+      description = displayDescription;
+    }
+
     editType = editType || type;
 
-    if (format === 'seconds') {
+    if (format === 'seconds' || format === 'duration') {
       editType = 'ttl';
     } else if (items) {
       editType = items.type + capitalize(type);
@@ -45,8 +60,8 @@ export const expandOpenApiProps = function (props) {
       attrDefn.sensitive = true;
     }
 
-    //only set a label if we have one from OpenAPI
-    //otherwise the propName will be humanized by the form-field component
+    // only set a label if we have one from OpenAPI
+    // otherwise the propName will be humanized by the form-field component
     if (name) {
       attrDefn.label = name;
     }
@@ -74,7 +89,7 @@ export const combineAttributes = function (oldAttrs, newProps) {
   if (oldAttrs) {
     oldAttrs.forEach(function (value, name) {
       if (newProps[name]) {
-        newAttrs[name] = attr(newProps[name].type, assign({}, newProps[name], value.options));
+        newAttrs[name] = attr(newProps[name].type, { ...newProps[name], ...value.options });
       } else {
         newAttrs[name] = attr(value.type, value.options);
       }

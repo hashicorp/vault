@@ -10,21 +10,9 @@
     }
   },
   "paths": {
-    "/foo/{id}": {
+    "/foo/{id}/": {
       "description": "Synopsis",
-      "x-vault-sudo": true,
-      "x-vault-displayAttrs": {
-        "navigation": true
-      },
       "parameters": [
-        {
-          "name": "format",
-          "description": "a query param",
-          "in": "query",
-          "schema": {
-            "type": "string"
-          }
-        },
         {
           "name": "id",
           "description": "id path parameter",
@@ -33,44 +21,69 @@
             "type": "string"
           },
           "required": true
-        },
-        {
-          "name": "secret_mount_path",
-          "description": "Path where the backend was mounted; the endpoint path will be offset by the mount path",
-          "in": "path",
-          "schema": {
-            "type": "string",
-            "default": "secret"
-          }
         }
       ],
+      "x-vault-sudo": true,
+      "x-vault-displayAttrs": {
+        "navigation": true
+      },
       "get": {
-        "operationId": "getFooId",
-        "tags": ["secrets"],
         "summary": "List Summary",
         "description": "List Description",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        },
+        "operationId": "kv-list-foo-id",
+        "tags": [
+          "secrets"
+        ],
         "parameters": [
+          {
+            "name": "format",
+            "description": "a query param",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "list",
             "description": "Must be set to `true`",
-            "required": true,
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": ["true"]
+              "enum": [
+                "true"
+              ]
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardListResponse"
+                }
+              }
             }
           }
-        ]
+        }
       }
     }
   },
   "components": {
     "schemas": {
+      "StandardListResponse": {
+        "type": "object",
+        "properties": {
+          "keys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
     }
   }
 }

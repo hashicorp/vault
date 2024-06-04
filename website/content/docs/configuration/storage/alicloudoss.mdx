@@ -6,7 +6,7 @@ description: |-
   an Alicloud OSS bucket.
 ---
 
-# Alicloud OSS Storage Backend
+# Alicloud OSS storage backend
 
 The Alicloud OSS storage backend is used to persist Vault's data in
 an [Alicloud OSS][alicloudoss] bucket.
@@ -28,7 +28,7 @@ storage "alicloudoss" {
 }
 ```
 
-## `alicloudoss` Parameters
+## `alicloudoss` parameters
 
 - `bucket` `(string: <required>)` – Specifies the name of the OSS bucket. This
   can also be provided via the environment variable `ALICLOUD_OSS_BUCKET`.
@@ -47,9 +47,9 @@ The following settings are used for authenticating to Alicloud.
 - `max_parallel` `(string: "128")` – Specifies the maximum number of concurrent
   requests to Alicloud OSS.
 
-## `alicloudoss` Examples
+## `alicloudoss` examples
 
-### Default Example
+### Default example
 
 This example shows using Alicloud OSS as a storage backend.
 

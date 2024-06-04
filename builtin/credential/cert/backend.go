@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package cert
 
 import (
@@ -13,9 +16,19 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
+	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/ocsp"
 	"github.com/hashicorp/vault/sdk/logical"
+)
+
+const (
+	operationPrefixCert = "cert"
+	trustedCertPath     = "cert/"
+
+	defaultRoleCacheSize  = 200
+	defaultOcspMaxRetries = 4
+	maxRoleCacheSize      = 10000
 )
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
@@ -23,21 +36,15 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 	if err := b.Setup(ctx, conf); err != nil {
 		return nil, err
 	}
-	bConf, err := b.Config(ctx, conf.StorageView)
-	if err != nil {
-		return nil, err
-	}
-	if bConf != nil {
-		b.updatedConfig(bConf)
-	}
-	if err := b.lockThenpopulateCRLs(ctx, conf.StorageView); err != nil {
-		return nil, err
-	}
 	return b, nil
 }
 
 func Backend() *backend {
-	var b backend
+	// ignoring the error as it only can occur with <= 0 size
+	cache, _ := lru.New[string, *trusted](defaultRoleCacheSize)
+	b := backend{
+		trustedCache: cache,
+	}
 	b.Backend = &framework.Backend{
 		Help: backendHelp,
 		PathsSpecial: &logical.Paths{
@@ -53,14 +60,22 @@ func Backend() *backend {
 			pathListCRLs(&b),
 			pathCRLs(&b),
 		},
-		AuthRenew:    b.pathLoginRenew,
-		Invalidate:   b.invalidate,
-		BackendType:  logical.TypeCredential,
-		PeriodicFunc: b.updateCRLs,
+		AuthRenew:      b.loginPathWrapper(b.pathLoginRenew),
+		Invalidate:     b.invalidate,
+		BackendType:    logical.TypeCredential,
+		InitializeFunc: b.initialize,
+		PeriodicFunc:   b.updateCRLs,
 	}
 
 	b.crlUpdateMutex = &sync.RWMutex{}
 	return &b
+}
+
+type trusted struct {
+	pool          *x509.CertPool
+	trusted       []*ParsedCert
+	trustedNonCAs []*ParsedCert
+	ocspConf      *ocsp.VerifyConfig
 }
 
 type backend struct {
@@ -72,6 +87,28 @@ type backend struct {
 	ocspClientMutex sync.RWMutex
 	ocspClient      *ocsp.Client
 	configUpdated   atomic.Bool
+
+	trustedCache         *lru.Cache[string, *trusted]
+	trustedCacheDisabled atomic.Bool
+}
+
+func (b *backend) initialize(ctx context.Context, req *logical.InitializationRequest) error {
+	bConf, err := b.Config(ctx, req.Storage)
+	if err != nil {
+		b.Logger().Error(fmt.Sprintf("failed to load backend configuration: %v", err))
+		return err
+	}
+
+	if bConf != nil {
+		b.updatedConfig(bConf)
+	}
+
+	if err := b.lockThenpopulateCRLs(ctx, req.Storage); err != nil {
+		b.Logger().Error(fmt.Sprintf("failed to populate CRLs: %v", err))
+		return err
+	}
+
+	return nil
 }
 
 func (b *backend) invalidate(_ context.Context, key string) {
@@ -83,6 +120,7 @@ func (b *backend) invalidate(_ context.Context, key string) {
 	case key == "config":
 		b.configUpdated.Store(true)
 	}
+	b.flushTrustedCache()
 }
 
 func (b *backend) initOCSPClient(cacheSize int) {
@@ -91,12 +129,24 @@ func (b *backend) initOCSPClient(cacheSize int) {
 	}, cacheSize)
 }
 
-func (b *backend) updatedConfig(config *config) error {
+func (b *backend) updatedConfig(config *config) {
 	b.ocspClientMutex.Lock()
 	defer b.ocspClientMutex.Unlock()
+
+	switch {
+	case config.RoleCacheSize < 0:
+		// Just to clean up memory
+		b.trustedCacheDisabled.Store(true)
+		b.trustedCache.Purge()
+	case config.RoleCacheSize == 0:
+		config.RoleCacheSize = defaultRoleCacheSize
+		fallthrough
+	default:
+		b.trustedCache.Resize(config.RoleCacheSize)
+		b.trustedCacheDisabled.Store(false)
+	}
 	b.initOCSPClient(config.OcspCacheSize)
 	b.configUpdated.Store(false)
-	return nil
 }
 
 func (b *backend) fetchCRL(ctx context.Context, storage logical.Storage, name string, crl *CRLInfo) error {
@@ -144,6 +194,12 @@ func (b *backend) storeConfig(ctx context.Context, storage logical.Storage, conf
 	}
 	b.updatedConfig(config)
 	return nil
+}
+
+func (b *backend) flushTrustedCache() {
+	if b.trustedCache != nil { // defensive
+		b.trustedCache.Purge()
+	}
 }
 
 const backendHelp = `

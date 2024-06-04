@@ -1,16 +1,22 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/axiomhq/hyperloglog"
 	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/activity"
+	"google.golang.org/protobuf/proto"
 )
 
 type HLLGetter func(ctx context.Context, startTime time.Time) (*hyperloglog.Sketch, error)
@@ -69,7 +75,7 @@ func (a *ActivityLog) StoreHyperlogLog(ctx context.Context, startTime time.Time,
 }
 
 func (a *ActivityLog) computeCurrentMonthForBillingPeriodInternal(ctx context.Context, byMonth map[int64]*processMonth, hllGetFunc HLLGetter, startTime time.Time, endTime time.Time) (*activity.MonthRecord, error) {
-	if timeutil.IsCurrentMonth(startTime, time.Now().UTC()) {
+	if timeutil.IsCurrentMonth(startTime, a.clock.Now().UTC()) {
 		monthlyComputation := a.transformMonthBreakdowns(byMonth)
 		if len(monthlyComputation) > 1 {
 			a.logger.Warn("monthly in-memory activitylog computation returned multiple months of data", "months returned", len(byMonth))
@@ -104,59 +110,62 @@ func (a *ActivityLog) computeCurrentMonthForBillingPeriodInternal(ctx context.Co
 		}
 		hllMonthlyTimestamp = timeutil.StartOfNextMonth(hllMonthlyTimestamp)
 	}
-
-	// Now we will add the clients for the current month to a copy of the billing period's hll to
-	// see how the cardinality grows.
-	billingPeriodHLLWithCurrentMonthEntityClients := billingPeriodHLL.Clone()
-	billingPeriodHLLWithCurrentMonthNonEntityClients := billingPeriodHLL.Clone()
-
 	// There's at most one month of data here. We should validate this assumption explicitly
 	if len(byMonth) > 1 {
 		return nil, errors.New(fmt.Sprintf("multiple months of data found in partial month's client count breakdowns: %+v\n", byMonth))
 	}
 
-	totalEntities := 0
-	totalNonEntities := 0
-	for _, month := range byMonth {
+	// Now we will add the clients for the current month to a copy of the billing period's hll to
+	// see how the cardinality grows.
+	hllByType := make(map[string]*hyperloglog.Sketch, len(ActivityClientTypes))
+	totalByType := make(map[string]int, len(ActivityClientTypes))
+	for _, typ := range ActivityClientTypes {
+		hllByType[typ] = billingPeriodHLL.Clone()
+	}
 
+	for _, month := range byMonth {
 		if month.NewClients == nil || month.NewClients.Counts == nil || month.Counts == nil {
 			return nil, errors.New("malformed current month used to calculate current month's activity")
 		}
 
-		// Note that the following calculations assume that all clients seen are currently in
-		// the NewClients section of byMonth. It is best to explicitly check this, just verify
-		// our assumptions about the passed in byMonth argument.
-		if len(month.Counts.Entities) != len(month.NewClients.Counts.Entities) ||
-			len(month.Counts.NonEntities) != len(month.NewClients.Counts.NonEntities) {
-			return nil, errors.New("current month clients cache assumes billing period")
-		}
-
-		// All the clients for the current month are in the newClients section, initially.
-		// We need to deduplicate these clients across the billing period by adding them
-		// into the billing period hyperloglogs.
-		entities := month.NewClients.Counts.Entities
-		nonEntities := month.NewClients.Counts.NonEntities
-		if entities != nil {
-			for entityID := range entities {
-				billingPeriodHLLWithCurrentMonthEntityClients.Insert([]byte(entityID))
-				totalEntities += 1
+		for _, typ := range ActivityClientTypes {
+			// Note that the following calculations assume that all clients seen are currently in
+			// the NewClients section of byMonth. It is best to explicitly check this, just verify
+			// our assumptions about the passed in byMonth argument.
+			if month.Counts.countByType(typ) != month.NewClients.Counts.countByType(typ) {
+				return nil, errors.New("current month clients cache assumes billing period")
 			}
-		}
-		if nonEntities != nil {
-			for nonEntityID := range nonEntities {
-				billingPeriodHLLWithCurrentMonthNonEntityClients.Insert([]byte(nonEntityID))
-				totalNonEntities += 1
+			for clientID := range month.NewClients.Counts.clientsByType(typ) {
+				// All the clients for the current month are in the newClients section, initially.
+				// We need to deduplicate these clients across the billing period by adding them
+				// into the billing period hyperloglogs.
+				hllByType[typ].Insert([]byte(clientID))
+				totalByType[typ] += 1
 			}
 		}
 	}
-	// The number of new entities for the current month is approximately the size of the hll with
-	// the current month's entities minus the size of the initial billing period hll.
-	currentMonthNewEntities := billingPeriodHLLWithCurrentMonthEntityClients.Estimate() - billingPeriodHLL.Estimate()
-	currentMonthNewNonEntities := billingPeriodHLLWithCurrentMonthNonEntityClients.Estimate() - billingPeriodHLL.Estimate()
+
+	currentMonthNewByType := make(map[string]int, len(ActivityClientTypes))
+	for _, typ := range ActivityClientTypes {
+		// The number of new entities for the current month is approximately the size of the hll with
+		// the current month's entities minus the size of the initial billing period hll.
+		currentMonthNewByType[typ] = int(hllByType[typ].Estimate() - billingPeriodHLL.Estimate())
+	}
+
 	return &activity.MonthRecord{
-		Timestamp:  timeutil.StartOfMonth(endTime).UTC().Unix(),
-		NewClients: &activity.NewClientRecord{Counts: &activity.CountsRecord{EntityClients: int(currentMonthNewEntities), NonEntityClients: int(currentMonthNewNonEntities)}},
-		Counts:     &activity.CountsRecord{EntityClients: totalEntities, NonEntityClients: totalNonEntities},
+		Timestamp: timeutil.StartOfMonth(endTime).UTC().Unix(),
+		NewClients: &activity.NewClientRecord{Counts: &activity.CountsRecord{
+			EntityClients:    currentMonthNewByType[entityActivityType],
+			NonEntityClients: currentMonthNewByType[nonEntityTokenActivityType],
+			SecretSyncs:      currentMonthNewByType[secretSyncActivityType],
+			ACMEClients:      currentMonthNewByType[ACMEActivityType],
+		}},
+		Counts: &activity.CountsRecord{
+			EntityClients:    totalByType[entityActivityType],
+			NonEntityClients: totalByType[nonEntityTokenActivityType],
+			SecretSyncs:      totalByType[secretSyncActivityType],
+			ACMEClients:      totalByType[ACMEActivityType],
+		},
 	}, nil
 }
 
@@ -177,8 +186,10 @@ func (a *ActivityLog) transformALNamespaceBreakdowns(nsData map[string]*processB
 
 		nsRecord := activity.NamespaceRecord{
 			NamespaceID:     nsID,
-			Entities:        uint64(len(ns.Counts.Entities)),
-			NonEntityTokens: uint64(len(ns.Counts.NonEntities) + int(ns.Counts.Tokens)),
+			Entities:        uint64(ns.Counts.countByType(entityActivityType)),
+			NonEntityTokens: uint64(ns.Counts.countByType(nonEntityTokenActivityType)),
+			SecretSyncs:     uint64(ns.Counts.countByType(secretSyncActivityType)),
+			ACMEClients:     uint64(ns.Counts.countByType(ACMEActivityType)),
 			Mounts:          a.transformActivityLogMounts(ns.Mounts),
 		}
 		byNamespace = append(byNamespace, &nsRecord)
@@ -188,32 +199,27 @@ func (a *ActivityLog) transformALNamespaceBreakdowns(nsData map[string]*processB
 
 // limitNamespacesInALResponse will truncate the number of namespaces shown in the activity
 // endpoints to the number specified in limitNamespaces (the API filtering parameter)
-func (a *ActivityLog) limitNamespacesInALResponse(byNamespaceResponse []*ResponseNamespace, limitNamespaces int) (int, int, []*ResponseNamespace) {
+func (a *ActivityLog) limitNamespacesInALResponse(byNamespaceResponse []*ResponseNamespace, limitNamespaces int) (*ResponseCounts, []*ResponseNamespace) {
 	if limitNamespaces > len(byNamespaceResponse) {
 		limitNamespaces = len(byNamespaceResponse)
 	}
 	byNamespaceResponse = byNamespaceResponse[:limitNamespaces]
 	// recalculate total entities and tokens
-	totalEntities := 0
-	totalTokens := 0
+	totalCounts := &ResponseCounts{}
 	for _, namespaceData := range byNamespaceResponse {
-		totalEntities += namespaceData.Counts.DistinctEntities
-		totalTokens += namespaceData.Counts.NonEntityTokens
+		totalCounts.Add(&namespaceData.Counts)
 	}
-	return totalEntities, totalTokens, byNamespaceResponse
+	return totalCounts, byNamespaceResponse
 }
 
 // transformActivityLogMounts is a helper used to reformat data for transformMonthlyNamespaceBreakdowns.
 // For more details, please see the function comment for transformMonthlyNamespaceBreakdowns
 func (a *ActivityLog) transformActivityLogMounts(mts map[string]*processMount) []*activity.MountRecord {
 	mounts := make([]*activity.MountRecord, 0)
-	for mountpath, mountCounts := range mts {
+	for mountAccessor, mountCounts := range mts {
 		mount := activity.MountRecord{
-			MountPath: mountpath,
-			Counts: &activity.CountsRecord{
-				EntityClients:    len(mountCounts.Counts.Entities),
-				NonEntityClients: len(mountCounts.Counts.NonEntities) + int(mountCounts.Counts.Tokens),
-			},
+			MountPath: a.mountAccessorToMountPath(mountAccessor),
+			Counts:    mountCounts.Counts.toCountsRecord(),
 		}
 		mounts = append(mounts, &mount)
 	}
@@ -257,5 +263,157 @@ func (a *ActivityLog) sortActivityLogMonthsResponse(months []*ResponseMonth) {
 				return ns.Mounts[i].Counts.Clients > ns.Mounts[j].Counts.Clients
 			})
 		}
+	}
+}
+
+const (
+	noMountAccessor = "no mount accessor (pre-1.10 upgrade?)"
+	deletedMountFmt = "deleted mount; accessor %q"
+)
+
+// mountAccessorToMountPath transforms the mount accessor to the mount path
+// returns a placeholder string if the mount accessor is empty or deleted
+func (a *ActivityLog) mountAccessorToMountPath(mountAccessor string) string {
+	var displayPath string
+	if mountAccessor == "" {
+		displayPath = noMountAccessor
+	} else {
+		valResp := a.core.router.ValidateMountByAccessor(mountAccessor)
+		if valResp == nil {
+			displayPath = fmt.Sprintf(deletedMountFmt, mountAccessor)
+		} else {
+			displayPath = valResp.MountPath
+			if !strings.HasSuffix(displayPath, "/") {
+				displayPath += "/"
+			}
+		}
+	}
+	return displayPath
+}
+
+type singleTypeSegmentReader struct {
+	basePath         string
+	startTime        time.Time
+	paths            []string
+	currentPathIndex int
+	a                *ActivityLog
+}
+type segmentReader struct {
+	tokens   *singleTypeSegmentReader
+	entities *singleTypeSegmentReader
+}
+
+// SegmentReader is an interface that provides methods to read tokens and entities in order
+type SegmentReader interface {
+	ReadToken(ctx context.Context) (*activity.TokenCount, error)
+	ReadEntity(ctx context.Context) (*activity.EntityActivityLog, error)
+}
+
+func (a *ActivityLog) NewSegmentFileReader(ctx context.Context, startTime time.Time) (SegmentReader, error) {
+	entities, err := a.newSingleTypeSegmentReader(ctx, startTime, activityEntityBasePath)
+	if err != nil {
+		return nil, err
+	}
+	tokens, err := a.newSingleTypeSegmentReader(ctx, startTime, activityTokenBasePath)
+	if err != nil {
+		return nil, err
+	}
+	return &segmentReader{entities: entities, tokens: tokens}, nil
+}
+
+func (a *ActivityLog) newSingleTypeSegmentReader(ctx context.Context, startTime time.Time, prefix string) (*singleTypeSegmentReader, error) {
+	basePath := prefix + fmt.Sprint(startTime.Unix()) + "/"
+	pathList, err := a.view.List(ctx, basePath)
+	if err != nil {
+		return nil, err
+	}
+	return &singleTypeSegmentReader{
+		basePath:         basePath,
+		startTime:        startTime,
+		paths:            pathList,
+		currentPathIndex: 0,
+		a:                a,
+	}, nil
+}
+
+func (s *singleTypeSegmentReader) nextValue(ctx context.Context, out proto.Message) error {
+	var raw *logical.StorageEntry
+	var path string
+	for raw == nil {
+		if s.currentPathIndex >= len(s.paths) {
+			return io.EOF
+		}
+		path = s.paths[s.currentPathIndex]
+		// increment the index to continue iterating for the next read call, even if an error occurs during this call
+		s.currentPathIndex++
+		var err error
+		raw, err = s.a.view.Get(ctx, s.basePath+path)
+		if err != nil {
+			return err
+		}
+		if raw == nil {
+			s.a.logger.Warn("expected log segment file has been deleted", "startTime", s.startTime, "segmentPath", path)
+		}
+	}
+	err := proto.Unmarshal(raw.Value, out)
+	if err != nil {
+		return fmt.Errorf("unable to parse segment file %v%v: %w", s.basePath, path, err)
+	}
+	return nil
+}
+
+// ReadToken reads a token from the segment
+// If there is none available, then the error will be io.EOF
+func (e *segmentReader) ReadToken(ctx context.Context) (*activity.TokenCount, error) {
+	out := &activity.TokenCount{}
+	err := e.tokens.nextValue(ctx, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// ReadEntity reads an entity from the segment
+// If there is none available, then the error will be io.EOF
+func (e *segmentReader) ReadEntity(ctx context.Context) (*activity.EntityActivityLog, error) {
+	out := &activity.EntityActivityLog{}
+	err := e.entities.nextValue(ctx, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// namespaceRecordToCountsResponse converts the record to the ResponseCounts
+// type. The function sums entity, non-entity, and secret sync counts to get the
+// total client count. If includeDeprecated is true, the deprecated fields
+// NonEntityTokens and DistinctEntities are populated
+func (a *ActivityLog) countsRecordToCountsResponse(record *activity.CountsRecord, includeDeprecated bool) *ResponseCounts {
+	response := &ResponseCounts{
+		EntityClients:    record.EntityClients,
+		NonEntityClients: record.NonEntityClients,
+		Clients:          record.EntityClients + record.NonEntityClients + record.SecretSyncs + record.ACMEClients,
+		SecretSyncs:      record.SecretSyncs,
+		ACMEClients:      record.ACMEClients,
+	}
+	if includeDeprecated {
+		response.NonEntityTokens = response.NonEntityClients
+		response.DistinctEntities = response.EntityClients
+	}
+	return response
+}
+
+// namespaceRecordToCountsResponse converts the namespace counts to the
+// ResponseCounts type. The function sums entity, non-entity, and secret sync
+// counts to get the total client count.
+func (a *ActivityLog) namespaceRecordToCountsResponse(record *activity.NamespaceRecord) *ResponseCounts {
+	return &ResponseCounts{
+		DistinctEntities: int(record.Entities),
+		EntityClients:    int(record.Entities),
+		NonEntityTokens:  int(record.NonEntityTokens),
+		NonEntityClients: int(record.NonEntityTokens),
+		Clients:          int(record.Entities + record.NonEntityTokens + record.SecretSyncs + record.ACMEClients),
+		SecretSyncs:      int(record.SecretSyncs),
+		ACMEClients:      int(record.ACMEClients),
 	}
 }

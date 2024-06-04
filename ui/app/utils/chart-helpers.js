@@ -1,37 +1,47 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { format } from 'd3-format';
 import { mean } from 'd3-array';
 
 // COLOR THEME:
-export const LIGHT_AND_DARK_BLUE = ['#BFD4FF', '#1563FF'];
+export const BAR_PALETTE = ['#CCE3FE', '#1060FF', '#C2C5CB', '#656A76'];
 export const UPGRADE_WARNING = '#FDEEBA';
-export const BAR_COLOR_HOVER = ['#1563FF', '#0F4FD1'];
 export const GREY = '#EBEEF2';
 
 // TRANSLATIONS:
 export const TRANSLATE = { left: -11 };
 export const SVG_DIMENSIONS = { height: 190, width: 500 };
 
+export const BAR_WIDTH = 7; // data bar width is 7 pixels
+
 // Reference for tickFormat https://www.youtube.com/watch?v=c3MCROTNN8g
-export function formatNumbers(number) {
+export function numericalAxisLabel(number) {
   if (number < 1000) return number;
+  if (number < 1100) return format('.1s')(number);
+  if (number < 2000) return format('.2s')(number); // between 1k and 2k, show 2 decimals
   if (number < 10000) return format('.1s')(number);
   // replace SI prefix of 'G' for billions to 'B'
   return format('.2s')(number).replace('G', 'B');
 }
 
-export function formatTooltipNumber(value) {
-  if (typeof value !== 'number') {
-    return value;
+export function calculateAverage(dataset, objectKey) {
+  // before mapping for values, check that the objectKey exists at least once in the dataset because
+  // map returns 0 when dataset[objectKey] is undefined in order to calculate average
+  if (!Array.isArray(dataset) || !objectKey || !dataset.some((d) => Object.keys(d).includes(objectKey))) {
+    return null;
   }
-  // formats a number according to the locale
-  return new Intl.NumberFormat().format(value);
+
+  const integers = dataset.map((d) => (d[objectKey] ? d[objectKey] : 0));
+  const checkIntegers = integers.every((n) => Number.isInteger(n)); // decimals will be false
+  return checkIntegers ? Math.round(mean(integers)) : null;
 }
 
-export function calculateAverage(dataset, objectKey) {
-  if (!Array.isArray(dataset) || dataset?.length === 0) return null;
-  // if an array of objects, objectKey of the integer we want to calculate, ex: 'entity_clients'
-  // if d[objectKey] is undefined there is no value, so return 0
-  const getIntegers = objectKey ? dataset?.map((d) => (d[objectKey] ? d[objectKey] : 0)) : dataset;
-  const checkIntegers = getIntegers.every((n) => Number.isInteger(n)); // decimals will be false
-  return checkIntegers ? Math.round(mean(getIntegers)) : null;
+export function calculateSum(integerArray) {
+  if (!Array.isArray(integerArray) || integerArray.some((n) => typeof n !== 'number')) {
+    return null;
+  }
+  return integerArray.reduce((a, b) => a + b, 0);
 }

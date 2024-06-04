@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -11,8 +14,8 @@ import (
 	"time"
 
 	"github.com/ghodss/yaml"
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
-	"github.com/mitchellh/cli"
 	"github.com/ryanuber/columnize"
 )
 
@@ -323,13 +326,14 @@ func (t TableFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) 
 func (t TableFormatter) OutputSealStatusStruct(ui cli.Ui, secret *api.Secret, data interface{}) error {
 	var status SealStatusOutput = data.(SealStatusOutput)
 	var sealPrefix string
-	if status.RecoverySeal {
-		sealPrefix = "Recovery "
-	}
 
 	out := []string{}
 	out = append(out, "Key | Value")
-	out = append(out, fmt.Sprintf("%sSeal Type | %s", sealPrefix, status.Type))
+	out = append(out, fmt.Sprintf("Seal Type | %s", status.Type))
+	if status.RecoverySeal {
+		sealPrefix = "Recovery "
+		out = append(out, fmt.Sprintf("Recovery Seal Type | %s", status.RecoverySealType))
+	}
 	out = append(out, fmt.Sprintf("Initialized | %t", status.Initialized))
 	out = append(out, fmt.Sprintf("Sealed | %t", status.Sealed))
 	out = append(out, fmt.Sprintf("Total %sShares | %d", sealPrefix, status.N))
@@ -557,6 +561,9 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret *api.Secret) error {
 				for _, constraint := range constraintSet.Any {
 					out = append(out, fmt.Sprintf("mfa_constraint_%s_%s_id %s %s", k, constraint.Type, hopeDelim, constraint.ID))
 					out = append(out, fmt.Sprintf("mfa_constraint_%s_%s_uses_passcode %s %t", k, constraint.Type, hopeDelim, constraint.UsesPasscode))
+					if constraint.Name != "" {
+						out = append(out, fmt.Sprintf("mfa_constraint_%s_%s_name %s %s", k, constraint.Type, hopeDelim, constraint.Name))
+					}
 				}
 			}
 		} else { // Token information only makes sense if no further MFA requirement (i.e. if we actually have a token)

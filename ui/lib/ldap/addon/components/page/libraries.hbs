@@ -1,0 +1,88 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<TabPageHeader @model={{@backendModel}} @breadcrumbs={{@breadcrumbs}}>
+  <:toolbarFilters>
+    {{#if (and (not @promptConfig) @libraries)}}
+      <FilterInput
+        aria-label="Filter libraries"
+        placeholder="Filter libraries"
+        value={{this.filterValue}}
+        @wait={{200}}
+        @onInput={{fn (mut this.filterValue)}}
+      />
+    {{/if}}
+  </:toolbarFilters>
+  <:toolbarActions>
+    {{#if @promptConfig}}
+      <ToolbarLink @route="configure" data-test-toolbar-action="config">
+        Configure LDAP
+      </ToolbarLink>
+    {{else}}
+      <ToolbarLink @route="libraries.create" @type="add" data-test-toolbar-action="library">
+        Create library
+      </ToolbarLink>
+    {{/if}}
+  </:toolbarActions>
+</TabPageHeader>
+
+{{#if @promptConfig}}
+  <ConfigCta />
+{{else if (not this.filteredLibraries)}}
+  {{#if this.filterValue}}
+    <EmptyState @title="There are no libraries matching &quot;{{this.filterValue}}&quot;" />
+  {{else}}
+    <EmptyState
+      data-test-config-cta
+      @title="No libraries created yet"
+      @message="Use libraries to manage a set of highly privileged accounts that can be shared among a team."
+    />
+  {{/if}}
+{{else}}
+  <div class="has-bottom-margin-s">
+    {{#each this.filteredLibraries as |library|}}
+      <ListItem @linkPrefix={{this.mountPoint}} @linkParams={{array "libraries.library.details" library.name}} as |Item|>
+        <Item.content>
+          <Icon @name="folder" />
+          <span data-test-library={{library.name}}>{{library.name}}</span>
+        </Item.content>
+        <Item.menu>
+          {{#if (or library.canRead library.canEdit library.canDelete)}}
+            <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+              <dd.ToggleIcon
+                @icon="more-horizontal"
+                @text="More options"
+                @hasChevron={{false}}
+                data-test-popup-menu-trigger
+              />
+              {{#if library.canEdit}}
+                <dd.Interactive @text="Edit" data-test-edit @route="libraries.library.edit" @model={{library}} />
+              {{/if}}
+              {{#if library.canRead}}
+                <dd.Interactive @text="Details" data-test-details @route="libraries.library.details" @model={{library}} />
+              {{/if}}
+              {{#if library.canDelete}}
+                <dd.Interactive
+                  @text="Delete"
+                  data-test-delete
+                  @color="critical"
+                  {{on "click" (fn (mut this.libraryToDelete) library)}}
+                />
+              {{/if}}
+            </Hds::Dropdown>
+          {{/if}}
+        </Item.menu>
+      </ListItem>
+    {{/each}}
+    {{#if this.libraryToDelete}}
+      <ConfirmModal
+        @color="critical"
+        @confirmMessage="This library and associated accounts will be permanently deleted. You will not be able to recover it."
+        @onConfirm={{fn this.onDelete this.libraryToDelete}}
+        @onClose={{fn (mut this.libraryToDelete) false}}
+      />
+    {{/if}}
+  </div>
+{{/if}}

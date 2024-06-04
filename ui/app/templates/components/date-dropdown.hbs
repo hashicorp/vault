@@ -1,61 +1,38 @@
-<BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
-  <D.Trigger
-    data-test-popup-menu-trigger="month"
-    class={{concat "toolbar-link" (if D.isOpen " is-active")}}
-    @htmlTag="button"
-  >
-    {{or this.startMonth "Month"}}
-    <Chevron @direction="down" @isButton={{true}} />
-  </D.Trigger>
-  <D.Content @defaultClass="popup-menu-content is-wide">
-    <nav class="box menu scroll" aria-label="months">
-      <ul data-test-month-list class="menu-list">
-        {{#each this.months as |month index|}}
-          <button
-            type="button"
-            class="button link"
-            disabled={{if (lt index this.allowedMonthMax) false true}}
-            {{on "click" (fn this.selectStartMonth month D.actions)}}
-          >
-            {{month}}
-          </button>
-        {{/each}}
-      </ul>
-    </nav>
-  </D.Content>
-</BasicDropdown>
-<BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
-  <D.Trigger
-    data-test-popup-menu-trigger="year"
-    class={{concat "toolbar-link" (if D.isOpen " is-active")}}
-    @htmlTag="button"
-  >
-    {{or this.startYear "Year"}}
-    <Chevron @direction="down" @isButton={{true}} />
-  </D.Trigger>
-  <D.Content @defaultClass="popup-menu-content is-wide">
-    <nav class="box menu" aria-label="years">
-      <ul data-test-year-list class="menu-list">
-        {{#each this.years as |year|}}
-          <button
-            type="button"
-            class="button link"
-            disabled={{if (eq year this.disabledYear) true false}}
-            {{on "click" (fn this.selectStartYear year D.actions)}}
-          >
-            {{year}}
-          </button>
-        {{/each}}
-      </ul>
-    </nav>
-  </D.Content>
-</BasicDropdown>
-<button
-  data-test-date-dropdown-submit
-  type="button"
-  class="button is-primary"
-  disabled={{if (and this.startMonth this.startYear) false true}}
-  {{on "click" this.saveDateSelection}}
->
-  {{or @submitText "Submit"}}
-</button>
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<Hds::SegmentedGroup ...attributes as |S|>
+  <S.Dropdown @listPosition="bottom-left" @height="200px" as |dd|>
+    <dd.ToggleButton data-test-toggle-month @text={{or this.selectedMonth.name "Month"}} @color="secondary" />
+    {{#each this.dropdownMonths as |month|}}
+      <dd.Interactive
+        data-test-dropdown-month={{month.name}}
+        disabled={{if (gt month.index this.maxMonthIdx) true false}}
+        {{on "click" (fn this.selectMonth month dd)}}
+        @text={{month.name}}
+      />
+    {{/each}}
+  </S.Dropdown>
+  <S.Dropdown data-test-year-list @listPosition="bottom-left" @height="200px" as |dd|>
+    <dd.ToggleButton data-test-toggle-year @text={{or this.selectedYear "Year"}} @color="secondary" />
+    {{#each this.dropdownYears as |year|}}
+      <dd.Interactive
+        data-test-dropdown-year={{year}}
+        disabled={{if (eq year this.disabledYear) true false}}
+        {{on "click" (fn this.selectYear year dd)}}
+        @text={{year}}
+      />
+    {{/each}}
+  </S.Dropdown>
+  <S.Button
+    data-test-date-dropdown-submit
+    disabled={{if (and this.selectedMonth this.selectedYear) false true}}
+    {{on "click" this.handleSubmit}}
+    @text={{or @submitText "Submit"}}
+  />
+</Hds::SegmentedGroup>
+{{#if this.invalidDate}}
+  <AlertInline @type="danger" @message={{this.invalidDate}} class="has-top-padding-s" />
+{{/if}}
