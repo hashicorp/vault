@@ -6,7 +6,7 @@
 <form {{on "submit" (fn @doSubmit (hash ciphertext=@ciphertext context=@context nonce=@nonce))}} ...attributes>
   <div class="box is-sideless is-fullwidth is-marginless">
     <div class="content has-bottom-margin-l">
-      <p>You can decrypt ciphertext using <code>{{@key.name}}</code> as the encryption key.</p>
+      <p>You can decrypt ciphertext using <code>{{@key.name}}</code> as the cryptographic key.</p>
     </div>
     <div class="field">
       <div id="ciphertext-control" class="control">
