@@ -30,7 +30,7 @@
       />
     </div>
     <div class="control">
-      <Hds::Button @text="Back" @color="secondary" {{on "click" this.onClear}} data-test-tools-back={{true}} />
+      <Hds::Button @text="Back" @color="secondary" {{on "click" this.onClear}} data-test-button="Back" />
     </div>
   </div>
 {{else}}
@@ -80,7 +80,7 @@
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <Hds::Button @text="Hash" type="submit" data-test-tools-submit="true" />
+      <Hds::Button @text="Hash" type="submit" data-test-tools-submit />
     </div>
   </div>
 {{/if}}
