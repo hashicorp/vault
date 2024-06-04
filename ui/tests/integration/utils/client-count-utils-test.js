@@ -195,18 +195,16 @@ module('Integration | Util | client count utils', function (hooks) {
   });
 
   test('namespaceArrayToObject: it returns namespaces_by_key and mounts_by_key', async function (assert) {
-    assert.expect(5);
-
-    // month at 0-index has no data so use second month in array, empty month format covered by formatByMonths test above
-    const original = { ...RESPONSE.months[1] };
-    const expectedObject = SERIALIZED_ACTIVITY_RESPONSE.by_month[1].namespaces_by_key;
-    const formattedTotal = formatByNamespace(RESPONSE.months[1].namespaces);
-
+    // namespaceToArrayObject is only called when new clients are present, so only check against month with new clients
+    const i = RESPONSE.months.length - 1;
+    const original = { ...RESPONSE.months[i] };
+    const expectedObject = SERIALIZED_ACTIVITY_RESPONSE.by_month[i].namespaces_by_key;
+    const formattedTotal = formatByNamespace(RESPONSE.months[i].namespaces);
     const testObject = namespaceArrayToObject(
       formattedTotal,
-      formatByNamespace(RESPONSE.months[1].new_clients.namespaces),
-      '9/23',
-      '2023-09-01T00:00:00Z'
+      formatByNamespace(RESPONSE.months[i].new_clients.namespaces),
+      `9/23`,
+      original.timestamp
     );
 
     const { root } = testObject;
@@ -216,11 +214,11 @@ module('Integration | Util | client count utils', function (hooks) {
     assert.propContains(root, expectedRoot, 'namespace has correct keys');
 
     assert.propEqual(
-      namespaceArrayToObject(formattedTotal, formatByNamespace([]), '9/23', '2023-09-01T00:00:00Z'),
+      namespaceArrayToObject(formattedTotal, [], '9/23', '2023-09-01T00:00:00Z'),
       {},
       'returns an empty object when there are no new clients '
     );
-    assert.propEqual(RESPONSE.months[1], original, 'it does not modify original month data');
+    assert.propEqual(RESPONSE.months[i], original, 'it does not modify original month data');
   });
 
   // TESTS FOR COMBINED ACTIVITY DATA - no mount attribution < 1.10
