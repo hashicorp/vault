@@ -131,3 +131,9 @@ verifying functionality after each cluster upgrade.
 3. Finally, upgrade Cluster A. All clusters downstream of A will already be
    upgraded. It should be upgraded last, as it is a Performance Primary and a DR
    Primary.
+
+
+## Activity Log
+
+The field `default_report_months` can no longer be configured. Attempts to write
+a value to the field will not result in any change.

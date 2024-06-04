@@ -109,6 +109,7 @@ func (b *SystemBackend) rootActivityPaths() []*framework.Path {
 					Type:        framework.TypeInt,
 					Default:     12,
 					Description: "Number of months to report if no start date specified.",
+					Deprecated:  true,
 				},
 				"retention_months": {
 					Type:        framework.TypeInt,
@@ -327,7 +328,6 @@ func (b *SystemBackend) handleActivityConfigRead(ctx context.Context, req *logic
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"default_report_months":    config.DefaultReportMonths,
 			"retention_months":         config.RetentionMonths,
 			"enabled":                  config.Enabled,
 			"queries_available":        qa,
@@ -357,8 +357,8 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 
 	{
 		// Parse the default report months
-		if defaultReportMonthsRaw, ok := d.GetOk("default_report_months"); ok {
-			config.DefaultReportMonths = defaultReportMonthsRaw.(int)
+		if _, ok := d.GetOk("default_report_months"); ok {
+			warnings = append(warnings, fmt.Sprintf("default_report_months is deprecated and is no longer used anywhere"))
 		}
 
 		if config.DefaultReportMonths <= 0 {
