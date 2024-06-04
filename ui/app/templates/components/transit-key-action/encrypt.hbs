@@ -10,7 +10,7 @@
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="perform" @noun="encryption" />
     <div class="content has-bottom-margin-l">
-      <p>You can encrypt plaintext data using <code>{{@key.name}}</code> as the encryption key.</p>
+      <p>You can encrypt plaintext data using <code>{{@key.name}}</code> as the cryptographic key.</p>
     </div>
     <KeyVersionSelect @key={{@key}} @onVersionChange={{fn (mut @key_version)}} @key_version={{@key_version}} />
     <div class="field">
