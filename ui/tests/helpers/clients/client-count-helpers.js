@@ -40,7 +40,7 @@ export function assertBarChart(assert, chartName, byMonthData, isStacked = false
 }
 
 export const ACTIVITY_RESPONSE_STUB = {
-  start_time: '2023-08-01T00:00:00Z',
+  start_time: '2023-06-01T00:00:00Z',
   end_time: '2023-09-30T23:59:59Z', // is always the last day and hour of the month queried
   by_namespace: [
     {
@@ -148,10 +148,208 @@ export const ACTIVITY_RESPONSE_STUB = {
   ],
   months: [
     {
-      timestamp: '2023-08-01T00:00:00Z',
+      timestamp: '2023-06-01T00:00:00Z',
       counts: null,
       namespaces: null,
       new_clients: null,
+    },
+    {
+      timestamp: '2023-07-01T00:00:00Z',
+      counts: {
+        acme_clients: 100,
+        clients: 100,
+        entity_clients: 100,
+        non_entity_clients: 100,
+        secret_syncs: 100,
+        distinct_entities: 100,
+        non_entity_tokens: 100,
+      },
+      namespaces: [
+        {
+          namespace_id: 'root',
+          namespace_path: '',
+          counts: {
+            acme_clients: 100,
+            clients: 100,
+            entity_clients: 100,
+            non_entity_clients: 100,
+            secret_syncs: 100,
+            distinct_entities: 100,
+            non_entity_tokens: 100,
+          },
+          mounts: [
+            {
+              mount_path: 'pki-engine-0',
+              counts: {
+                acme_clients: 100,
+                clients: 100,
+                entity_clients: 0,
+                non_entity_clients: 0,
+                secret_syncs: 0,
+                distinct_entities: 0,
+                non_entity_tokens: 0,
+              },
+            },
+            {
+              mount_path: 'auth/authid/0',
+              counts: {
+                acme_clients: 0,
+                clients: 100,
+                entity_clients: 100,
+                non_entity_clients: 100,
+                secret_syncs: 0,
+                distinct_entities: 0,
+                non_entity_tokens: 0,
+              },
+            },
+            {
+              mount_path: 'kvv2-engine-0',
+              counts: {
+                acme_clients: 0,
+                clients: 100,
+                entity_clients: 0,
+                non_entity_clients: 0,
+                secret_syncs: 100,
+                distinct_entities: 0,
+                non_entity_tokens: 0,
+              },
+            },
+          ],
+        },
+      ],
+      new_clients: {
+        counts: {
+          acme_clients: 100,
+          clients: 100,
+          entity_clients: 100,
+          non_entity_clients: 100,
+          secret_syncs: 100,
+          distinct_entities: 100,
+          non_entity_tokens: 100,
+        },
+        namespaces: [
+          {
+            namespace_id: 'root',
+            namespace_path: '',
+            counts: {
+              acme_clients: 100,
+              clients: 100,
+              entity_clients: 100,
+              non_entity_clients: 100,
+              secret_syncs: 100,
+              distinct_entities: 100,
+              non_entity_tokens: 100,
+            },
+            mounts: [
+              {
+                mount_path: 'pki-engine-0',
+                counts: {
+                  acme_clients: 100,
+                  clients: 100,
+                  entity_clients: 0,
+                  non_entity_clients: 0,
+                  secret_syncs: 0,
+                  distinct_entities: 0,
+                  non_entity_tokens: 0,
+                },
+              },
+              {
+                mount_path: 'auth/authid/0',
+                counts: {
+                  acme_clients: 0,
+                  clients: 100,
+                  entity_clients: 100,
+                  non_entity_clients: 100,
+                  secret_syncs: 0,
+                  distinct_entities: 0,
+                  non_entity_tokens: 0,
+                },
+              },
+              {
+                mount_path: 'kvv2-engine-0',
+                counts: {
+                  acme_clients: 0,
+                  clients: 100,
+                  entity_clients: 0,
+                  non_entity_clients: 0,
+                  secret_syncs: 100,
+                  distinct_entities: 0,
+                  non_entity_tokens: 0,
+                },
+              },
+            ],
+          },
+        ],
+      },
+    },
+    {
+      timestamp: '2023-08-01T00:00:00Z',
+      counts: {
+        acme_clients: 100,
+        clients: 100,
+        entity_clients: 100,
+        non_entity_clients: 100,
+        secret_syncs: 100,
+        distinct_entities: 100,
+        non_entity_tokens: 100,
+      },
+      namespaces: [
+        {
+          namespace_id: 'root',
+          namespace_path: '',
+          counts: {
+            acme_clients: 100,
+            clients: 100,
+            entity_clients: 100,
+            non_entity_clients: 100,
+            secret_syncs: 100,
+            distinct_entities: 100,
+            non_entity_tokens: 100,
+          },
+          mounts: [
+            {
+              mount_path: 'pki-engine-0',
+              counts: {
+                acme_clients: 100,
+                clients: 100,
+                entity_clients: 0,
+                non_entity_clients: 0,
+                secret_syncs: 0,
+                distinct_entities: 0,
+                non_entity_tokens: 0,
+              },
+            },
+            {
+              mount_path: 'auth/authid/0',
+              counts: {
+                acme_clients: 0,
+                clients: 100,
+                entity_clients: 100,
+                non_entity_clients: 100,
+                secret_syncs: 0,
+                distinct_entities: 0,
+                non_entity_tokens: 0,
+              },
+            },
+            {
+              mount_path: 'kvv2-engine-0',
+              counts: {
+                acme_clients: 0,
+                clients: 100,
+                entity_clients: 0,
+                non_entity_clients: 0,
+                secret_syncs: 100,
+                distinct_entities: 0,
+                non_entity_tokens: 0,
+              },
+            },
+          ],
+        },
+      ],
+      new_clients: {
+        counts: null,
+        namespaces: null,
+      },
     },
     {
       timestamp: '2023-09-01T00:00:00Z',
