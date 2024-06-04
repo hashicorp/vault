@@ -68,6 +68,15 @@ export default class MountConfigModel extends Model {
   allowedManagedKeys;
 
   @attr('string', {
+    editType: 'searchSelect',
+    fallbackComponent: 'string-list',
+    models: ['oidc/key'],
+    selectLimit: 1,
+    subText: 'A named key to sign tokens. Vault will use a default if left blank.',
+  })
+  identityTokenKey;
+
+  @attr('string', {
     label: 'Plugin version',
     subText:
       'Specifies the semantic version of the plugin to use, e.g. "v1.0.0". If unspecified, the server will select any matching un-versioned plugin that may have been registered, the latest versioned plugin registered, or a built-in plugin in that order of precedence.',

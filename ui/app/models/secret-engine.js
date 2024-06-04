@@ -202,6 +202,10 @@ export default class SecretEngineModel extends Model {
     ];
 
     switch (this.engineType) {
+      case 'aws':
+        defaultFields = ['path', 'config.identityTokenKey'];
+        optionFields = [...CORE_OPTIONS, ...STANDARD_CONFIG];
+        break;
       case 'kv':
         defaultFields = ['path', 'maxVersions', 'casRequired', 'deleteVersionAfter'];
         optionFields = [
