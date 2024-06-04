@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Update language in Transit secret engine to reflect that not all keys are for encyryption
+```
