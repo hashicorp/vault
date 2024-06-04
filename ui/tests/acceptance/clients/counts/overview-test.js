@@ -8,10 +8,10 @@ import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import clientsHandler, { STATIC_NOW, LICENSE_START, UPGRADE_DATE } from 'vault/mirage/handlers/clients';
 import sinon from 'sinon';
-import { visit, click, findAll, settled } from '@ember/test-helpers';
+import { visit, click, findAll, settled, triggerEvent } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
 import { ARRAY_OF_MONTHS } from 'core/utils/date-formatters';
-import { SELECTORS } from 'vault/tests/helpers/clients';
+import { ACTIVITY_RESPONSE_STUB, SELECTORS } from 'vault/tests/helpers/clients';
 import { create } from 'ember-cli-page-object';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import { formatNumber } from 'core/helpers/format-number';
@@ -333,5 +333,64 @@ module('Acceptance | clients | overview | sync not in license', function (hooks)
     assert.dom(SELECTORS.charts.chart('Secrets sync usage')).doesNotExist();
 
     assert.dom('[data-test-stat-text="secret-syncs"]').doesNotExist();
+  });
+});
+
+const { charts: CHARTS, searchSelect: SS } = SELECTORS;
+
+module('Acceptance | clients | overview | edge cases', function (hooks) {
+  setupApplicationTest(hooks);
+  setupMirage(hooks);
+
+  hooks.beforeEach(async function () {
+    this.server.get('/sys/internal/counters/activity', () => {
+      return {
+        request_id: 'some-activity-id',
+        data: ACTIVITY_RESPONSE_STUB,
+      };
+    });
+
+    this.store = this.owner.lookup('service:store');
+    await authPage.login();
+    return visit('/vault/clients/counts/overview');
+  });
+
+  test('it renders with edge case data', async function (assert) {
+    assert.dom(CHARTS.line.plotPoint).exists({ count: 2 }, 'renders 2 plot points');
+
+    ['8/23', '9/23', '10/23'].forEach((month) => {
+      assert.dom(CHARTS.lineChart).exists(`renders x-axis label for: ${month}`);
+    });
+
+    await triggerEvent(CHARTS.line.hoverCircle('10/23'), 'mouseover');
+    assert.dom('[data-test-tooltip]').hasText('October 2023 3,928 total clients 0 new clients');
+  });
+
+  test('it filters with edge case data', async function (assert) {
+    // filter by namespace
+    await clickTrigger();
+    await click(SS.option(SS.optionIndex('root')));
+
+    assert.dom(CHARTS.line.plotPoint).exists({ count: 2 }, 'renders 2 plot points');
+
+    ['9/23', '10/23'].forEach((month) => {
+      assert.dom(CHARTS.lineChart).exists(`renders x-axis label for: ${month}`);
+    });
+
+    await triggerEvent(CHARTS.line.hoverCircle('10/23'), 'mouseover');
+    assert.dom('[data-test-tooltip]').hasText('October 2023 1,947 total clients 0 new clients');
+
+    // filter by auth
+    await clickTrigger();
+    await click(SS.option(SS.optionIndex('auth/authid/0')));
+
+    assert.dom(CHARTS.line.plotPoint).exists({ count: 2 }, 'renders 2 plot points');
+
+    ['9/23', '10/23'].forEach((month) => {
+      assert.dom(CHARTS.lineChart).exists(`renders x-axis label for: ${month}`);
+    });
+
+    await triggerEvent(CHARTS.line.hoverCircle('10/23'), 'mouseover');
+    assert.dom('[data-test-tooltip]').hasText('October 2023 872 total clients 0 new clients');
   });
 });
