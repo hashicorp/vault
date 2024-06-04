@@ -13,8 +13,8 @@
 
 {{#if @unwrap_data}}
   <Hds::Tabs as |T|>
-    <T.Tab data-test-button-data>Data</T.Tab>
-    <T.Tab data-test-button-details>Wrap Details</T.Tab>
+    <T.Tab data-test-tab="data">Data</T.Tab>
+    <T.Tab data-test-tab="details">Wrap Details</T.Tab>
     <T.Panel>
       <JsonEditor
         class="has-top-padding-m"
@@ -75,7 +75,7 @@
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <Hds::Button @text="Unwrap data" type="submit" data-test-tools-submit="true" />
+      <Hds::Button @text="Unwrap data" type="submit" data-test-tools-submit />
     </div>
   </div>
 {{/if}}

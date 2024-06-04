@@ -16,48 +16,41 @@
     <div class="field">
       <label for="wrap-info" class="is-label">Wrapped token</label>
       <div class="control">
-        <Textarea
-          @value={{@token}}
-          readonly={{true}}
-          class="textarea"
-          id="wrap-info"
-          name="wrap-info"
+        <Hds::Copy::Snippet
+          @textToCopy={{@token}}
+          @color="secondary"
           data-test-tools-input="wrapping-token"
+          @onError={{(fn
+            (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")
+          )}}
         />
       </div>
     </div>
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
-    <div class="control">
-      <Hds::Copy::Button
-        @text="Copy"
-        @textToCopy={{@token}}
-        @onError={{(fn (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger"))}}
-        class="primary"
-      />
-    </div>
-    <div class="control">
-      <Hds::Button @text="Back" @color="secondary" {{on "click" this.onClear}} />
-    </div>
+    <Hds::ButtonSet>
+      <Hds::Button @icon="arrow-left" @text="Back" @color="tertiary" {{on "click" @onBack}} data-test-button="Back" />
+      <Hds::Button @text="Done" @color="secondary" {{on "click" @onClear}} data-test-button="Done" />
+    </Hds::ButtonSet>
   </div>
 {{else}}
   <div class="box is-sideless is-fullwidth is-marginless">
-    <NamespaceReminder @mode="perform" @noun={{@selectedAction}} />
+    <NamespaceReminder @mode="perform" @noun="wrap" />
     <MessageError @errors={{@errors}} />
     <div class="field">
       <div class="control">
         <JsonEditor
           @title="Data to wrap"
           @subTitle="json-formatted"
-          @value={{this.data}}
-          @valueUpdated={{action this.codemirrorUpdated}}
+          @value={{@data}}
+          @valueUpdated={{this.codemirrorUpdated}}
         />
       </div>
     </div>
     <TtlPicker
       @label="Wrap TTL"
       @initialValue="30m"
-      @onChange={{action "updateTtl"}}
+      @onChange={{this.updateTtl}}
       @helperTextDisabled="Vault will use the default (30m)"
       @helperTextEnabled="Wrap will expire after"
       @changeOnInit={{true}}
@@ -65,7 +58,7 @@
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <Hds::Button @text="Wrap data" type="submit" data-test-tools-submit="true" disabled={{@buttonDisabled}} />
+      <Hds::Button @text="Wrap data" type="submit" disabled={{this.buttonDisabled}} data-test-tools-submit />
     </div>
   </div>
 {{/if}}

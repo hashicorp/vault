@@ -32,12 +32,12 @@ export default Component.extend(DEFAULTS, {
   flashMessages: service(),
   store: service(),
   // putting these attrs here so they don't get reset when you click back
-  //random
+  // random
   bytes: 32,
-  //hash
+  // hash
   format: 'base64',
   algorithm: 'sha2-256',
-
+  data: '{\n}',
   tagName: '',
 
   didReceiveAttrs() {
@@ -139,15 +139,18 @@ export default Component.extend(DEFAULTS, {
       this.reset();
     },
 
-    updateTtl(ttl) {
-      set(this, 'wrapTTL', ttl);
+    onBack(properties) {
+      // only reset specific properties so user can reuse input data and repeat the action
+      if (this.isDestroyed || this.isDestroying) {
+        return;
+      }
+      properties.forEach((prop) => {
+        set(this, prop, DEFAULTS[prop]);
+      });
     },
 
-    codemirrorUpdated(val, hasErrors) {
-      setProperties(this, {
-        buttonDisabled: hasErrors,
-        data: val,
-      });
+    onChange(param, value) {
+      set(this, param, value);
     },
   },
 });

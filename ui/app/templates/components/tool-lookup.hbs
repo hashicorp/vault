@@ -13,12 +13,12 @@
 
 {{#if (or @creation_time @creation_ttl)}}
   <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
-    <InfoTableRow @label="Creation path" @value={{@creation_path}} data-test-tools="token-lookup-row" />
-    <InfoTableRow @label="Creation time" @value={{@creation_time}} data-test-tools="token-lookup-row" />
-    <InfoTableRow @label="Creation TTL" @value={{@creation_ttl}} data-test-tools="token-lookup-row" />
+    <InfoTableRow @label="Creation path" @value={{@creation_path}} />
+    <InfoTableRow @label="Creation time" @value={{@creation_time}} />
+    <InfoTableRow @label="Creation TTL" @value={{@creation_ttl}} />
     {{#if @expirationDate}}
-      <InfoTableRow @label="Expiration date" @value={{@expirationDate}} data-test-tools="token-lookup-row" />
-      <InfoTableRow @label="Expires in" @value={{date-from-now @expirationDate}} data-test-tools="token-lookup-row" />
+      <InfoTableRow @label="Expiration date" @value={{@expirationDate}} />
+      <InfoTableRow @label="Expires in" @value={{date-from-now @expirationDate}} />
     {{/if}}
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
@@ -42,7 +42,7 @@
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <Hds::Button @text="Lookup token" type="submit" data-test-tools-submit="true" />
+      <Hds::Button @text="Lookup token" type="submit" data-test-tools-submit />
     </div>
   </div>
 {{/if}}
