@@ -86,15 +86,21 @@ export const formatDateObject = (dateObj: { monthIdx: number; year: number }, is
   return getUnixTime(utc);
 };
 
-export const formatByMonths = (monthsArray: ActivityMonthBlock[] | EmptyActivityMonthBlock[]) => {
+export const formatByMonths = (
+  monthsArray: ActivityMonthBlock[] | EmptyActivityMonthBlock[] | NoNewClientsActivityMonthBlock[]
+) => {
   const sortedPayload = sortMonthsByTimestamp(monthsArray);
   return sortedPayload?.map((m) => {
     const month = parseAPITimestamp(m.timestamp, 'M/yy') as string;
     const { timestamp } = m;
     // counts are null if there is no monthly data
     if (m.counts) {
+      console.log('formatting month.namespaces', timestamp);
       const totalClientsByNamespace = formatByNamespace(m.namespaces);
-      const newClientsByNamespace = formatByNamespace(m.new_clients?.namespaces);
+      console.log('formatting month.new_clients.namespaces', timestamp);
+      const newClientsByNamespace = m.new_clients?.namespaces
+        ? formatByNamespace(m.new_clients?.namespaces)
+        : {};
       return {
         month,
         timestamp,
@@ -126,6 +132,11 @@ export const formatByMonths = (monthsArray: ActivityMonthBlock[] | EmptyActivity
 };
 
 export const formatByNamespace = (namespaceArray: NamespaceObject[]) => {
+  if (!namespaceArray) {
+    console.log('UNEXPECTED EMPTY');
+    return null;
+  }
+  // console.log({ namespaceArray });
   return namespaceArray.map((ns) => {
     // i.e. 'namespace_path' is an empty string for 'root', so use namespace_id
     const label = ns.namespace_path === '' ? ns.namespace_id : ns.namespace_path;
@@ -158,7 +169,9 @@ export const destructureClientCounts = (verboseObject: Counts | ByNamespaceClien
   );
 };
 
-export const sortMonthsByTimestamp = (monthsArray: ActivityMonthBlock[] | EmptyActivityMonthBlock[]) => {
+export const sortMonthsByTimestamp = (
+  monthsArray: ActivityMonthBlock[] | EmptyActivityMonthBlock[] | NoNewClientsActivityMonthBlock[]
+) => {
   const sortedPayload = [...monthsArray];
   return sortedPayload.sort((a, b) =>
     compareAsc(parseAPITimestamp(a.timestamp) as Date, parseAPITimestamp(b.timestamp) as Date)
@@ -177,6 +190,7 @@ export const namespaceArrayToObject = (
   // and values include new and total client counts for that namespace in that month
   const namespaces_by_key = monthTotals.reduce((nsObject: { [key: string]: NamespaceByKey }, ns) => {
     const newNsClients = monthNew?.find((n) => n.label === ns.label);
+    console.log({ monthNew, newNsClients });
     if (newNsClients) {
       // mounts_by_key is is used to filter further in a namespace and get monthly activity by mount
       // it's an object inside the namespace block where the keys are mount paths
@@ -305,6 +319,16 @@ export interface ActivityMonthBlock {
     counts: Counts;
     namespaces: NamespaceObject[];
     timestamp: string;
+  };
+}
+
+export interface NoNewClientsActivityMonthBlock {
+  timestamp: string; // YYYY-MM-01T00:00:00Z (always the first day of the month)
+  counts: Counts;
+  namespaces: NamespaceObject[];
+  new_clients: {
+    counts: null;
+    namespaces: null;
   };
 }
 

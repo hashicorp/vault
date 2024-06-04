@@ -131,9 +131,9 @@ module('Integration | Util | client count utils', function (hooks) {
   test('formatByMonths: it formats the months array', async function (assert) {
     assert.expect(5);
     const original = [...RESPONSE.months];
-
+    console.log({ original });
     const [formattedNoData, formattedWithActivity] = formatByMonths(RESPONSE.months);
-
+    console.log(formattedNoData, formattedWithActivity);
     // instead of asserting the whole expected response, broken up so tests are easier to debug
     // but kept whole above to copy/paste updated response expectations in the future
     const [expectedNoData, expectedWithActivity] = SERIALIZED_ACTIVITY_RESPONSE.by_month;
@@ -152,6 +152,337 @@ module('Integration | Util | client count utils', function (hooks) {
     );
     assert.propEqual(RESPONSE.months, original, 'it does not modify original months array');
     assert.propEqual(formatByMonths([]), [], 'it returns an empty array if the months key is empty');
+  });
+
+  test('formatByMonths: it formats the months array with various response shapes', async function (assert) {
+    assert.expect(5);
+
+    const months = [
+      // with counts & new clients
+      {
+        timestamp: '2024-01-01T00:00:00Z',
+        counts: {
+          distinct_entities: 0,
+          entity_clients: 9,
+          non_entity_tokens: 0,
+          non_entity_clients: 6,
+          clients: 15,
+          secret_syncs: 0,
+          acme_clients: 0,
+        },
+        namespaces: [
+          {
+            namespace_id: 'root',
+            namespace_path: '',
+            counts: {
+              distinct_entities: 0,
+              entity_clients: 6,
+              non_entity_tokens: 0,
+              non_entity_clients: 6,
+              clients: 12,
+              secret_syncs: 0,
+              acme_clients: 0,
+            },
+            mounts: [
+              {
+                mount_path: 'auth/token/',
+                counts: {
+                  distinct_entities: 0,
+                  entity_clients: 1,
+                  non_entity_tokens: 0,
+                  non_entity_clients: 6,
+                  clients: 7,
+                  secret_syncs: 0,
+                  acme_clients: 0,
+                },
+              },
+              {
+                mount_path: 'auth/approle/',
+                counts: {
+                  distinct_entities: 0,
+                  entity_clients: 4,
+                  non_entity_tokens: 0,
+                  non_entity_clients: 0,
+                  clients: 4,
+                  secret_syncs: 0,
+                  acme_clients: 0,
+                },
+              },
+              {
+                mount_path: 'auth/okta_oidc/',
+                counts: {
+                  distinct_entities: 0,
+                  entity_clients: 1,
+                  non_entity_tokens: 0,
+                  non_entity_clients: 0,
+                  clients: 1,
+                  secret_syncs: 0,
+                  acme_clients: 0,
+                },
+              },
+            ],
+          },
+          {
+            namespace_id: 'SiU6d',
+            namespace_path: 'demos/control-groups/',
+            counts: {
+              distinct_entities: 0,
+              entity_clients: 2,
+              non_entity_tokens: 0,
+              non_entity_clients: 0,
+              clients: 2,
+              secret_syncs: 0,
+              acme_clients: 0,
+            },
+            mounts: [
+              {
+                mount_path: 'auth/userpass/',
+                counts: {
+                  distinct_entities: 0,
+                  entity_clients: 2,
+                  non_entity_tokens: 0,
+                  non_entity_clients: 0,
+                  clients: 2,
+                  secret_syncs: 0,
+                  acme_clients: 0,
+                },
+              },
+            ],
+          },
+          {
+            namespace_id: 'IjWKE',
+            namespace_path: 'demos/terraform-workload-identity/',
+            counts: {
+              distinct_entities: 0,
+              entity_clients: 1,
+              non_entity_tokens: 0,
+              non_entity_clients: 0,
+              clients: 1,
+              secret_syncs: 0,
+              acme_clients: 0,
+            },
+            mounts: [
+              {
+                mount_path: 'auth/tfc/',
+                counts: {
+                  distinct_entities: 0,
+                  entity_clients: 1,
+                  non_entity_tokens: 0,
+                  non_entity_clients: 0,
+                  clients: 1,
+                  secret_syncs: 0,
+                  acme_clients: 0,
+                },
+              },
+            ],
+          },
+        ],
+        new_clients: {
+          counts: {
+            distinct_entities: 0,
+            entity_clients: 9,
+            non_entity_tokens: 0,
+            non_entity_clients: 6,
+            clients: 15,
+            secret_syncs: 0,
+            acme_clients: 0,
+          },
+          namespaces: [
+            {
+              namespace_id: 'root',
+              namespace_path: '',
+              counts: {
+                distinct_entities: 0,
+                entity_clients: 6,
+                non_entity_tokens: 0,
+                non_entity_clients: 6,
+                clients: 12,
+                secret_syncs: 0,
+                acme_clients: 0,
+              },
+              mounts: [
+                {
+                  mount_path: 'auth/token/',
+                  counts: {
+                    distinct_entities: 0,
+                    entity_clients: 1,
+                    non_entity_tokens: 0,
+                    non_entity_clients: 6,
+                    clients: 7,
+                    secret_syncs: 0,
+                    acme_clients: 0,
+                  },
+                },
+                {
+                  mount_path: 'auth/approle/',
+                  counts: {
+                    distinct_entities: 0,
+                    entity_clients: 4,
+                    non_entity_tokens: 0,
+                    non_entity_clients: 0,
+                    clients: 4,
+                    secret_syncs: 0,
+                    acme_clients: 0,
+                  },
+                },
+                {
+                  mount_path: 'auth/okta_oidc/',
+                  counts: {
+                    distinct_entities: 0,
+                    entity_clients: 1,
+                    non_entity_tokens: 0,
+                    non_entity_clients: 0,
+                    clients: 1,
+                    secret_syncs: 0,
+                    acme_clients: 0,
+                  },
+                },
+              ],
+            },
+            {
+              namespace_id: 'SiU6d',
+              namespace_path: 'demos/control-groups/',
+              counts: {
+                distinct_entities: 0,
+                entity_clients: 2,
+                non_entity_tokens: 0,
+                non_entity_clients: 0,
+                clients: 2,
+                secret_syncs: 0,
+                acme_clients: 0,
+              },
+              mounts: [
+                {
+                  mount_path: 'auth/userpass/',
+                  counts: {
+                    distinct_entities: 0,
+                    entity_clients: 2,
+                    non_entity_tokens: 0,
+                    non_entity_clients: 0,
+                    clients: 2,
+                    secret_syncs: 0,
+                    acme_clients: 0,
+                  },
+                },
+              ],
+            },
+            {
+              namespace_id: 'IjWKE',
+              namespace_path: 'demos/terraform-workload-identity/',
+              counts: {
+                distinct_entities: 0,
+                entity_clients: 1,
+                non_entity_tokens: 0,
+                non_entity_clients: 0,
+                clients: 1,
+                secret_syncs: 0,
+                acme_clients: 0,
+              },
+              mounts: [
+                {
+                  mount_path: 'auth/tfc/',
+                  counts: {
+                    distinct_entities: 0,
+                    entity_clients: 1,
+                    non_entity_tokens: 0,
+                    non_entity_clients: 0,
+                    clients: 1,
+                    secret_syncs: 0,
+                    acme_clients: 0,
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      },
+      // with counts & no new clients
+      {
+        timestamp: '2024-02-01T00:00:00Z',
+        counts: {
+          distinct_entities: 0,
+          entity_clients: 4,
+          non_entity_tokens: 0,
+          non_entity_clients: 0,
+          clients: 4,
+          secret_syncs: 0,
+          acme_clients: 0,
+        },
+        namespaces: [
+          {
+            namespace_id: 'root',
+            namespace_path: '',
+            counts: {
+              distinct_entities: 0,
+              entity_clients: 4,
+              non_entity_tokens: 0,
+              non_entity_clients: 0,
+              clients: 4,
+              secret_syncs: 0,
+              acme_clients: 0,
+            },
+            mounts: [
+              {
+                mount_path: 'auth/approle/',
+                counts: {
+                  distinct_entities: 0,
+                  entity_clients: 3,
+                  non_entity_tokens: 0,
+                  non_entity_clients: 0,
+                  clients: 3,
+                  secret_syncs: 0,
+                  acme_clients: 0,
+                },
+              },
+              {
+                mount_path: 'auth/okta_oidc/',
+                counts: {
+                  distinct_entities: 0,
+                  entity_clients: 1,
+                  non_entity_tokens: 0,
+                  non_entity_clients: 0,
+                  clients: 1,
+                  secret_syncs: 0,
+                  acme_clients: 0,
+                },
+              },
+            ],
+          },
+        ],
+        new_clients: {
+          counts: null,
+          namespaces: null,
+        },
+      },
+      // with no counts or new clients
+      {
+        timestamp: '2024-03-01T00:00:00Z',
+        counts: null,
+        namespaces: null,
+        new_clients: null,
+      },
+    ];
+
+    const [formattedNoData, formattedWithActivity] = formatByMonths(months);
+    console.log(formattedNoData, formattedWithActivity);
+    // instead of asserting the whole expected response, broken up so tests are easier to debug
+    // but kept whole above to copy/paste updated response expectations in the future
+    const [expectedNoData, expectedWithActivity] = SERIALIZED_ACTIVITY_RESPONSE.by_month;
+    const { namespaces, new_clients } = expectedWithActivity;
+    console.log('ORIGINAL EXPECTATIONS', namespaces, new_clients);
+    // assert.propEqual(formattedNoData, expectedNoData, 'it formats months without data');
+    // assert.propEqual(
+    //   formattedWithActivity.namespaces,
+    //   namespaces,
+    //   'it formats namespaces array for months with data'
+    // );
+    // assert.propEqual(
+    //   formattedWithActivity.new_clients,
+    //   new_clients,
+    //   'it formats new_clients block for months with data'
+    // );
+    // assert.propEqual(RESPONSE.months, original, 'it does not modify original months array');
+    // assert.propEqual(formatByMonths([]), [], 'it returns an empty array if the months key is empty');
   });
 
   test('formatByNamespace: it formats namespace array with mounts', async function (assert) {
@@ -201,7 +532,6 @@ module('Integration | Util | client count utils', function (hooks) {
     const original = { ...RESPONSE.months[1] };
     const expectedObject = SERIALIZED_ACTIVITY_RESPONSE.by_month[1].namespaces_by_key;
     const formattedTotal = formatByNamespace(RESPONSE.months[1].namespaces);
-
     const testObject = namespaceArrayToObject(
       formattedTotal,
       formatByNamespace(RESPONSE.months[1].new_clients.namespaces),

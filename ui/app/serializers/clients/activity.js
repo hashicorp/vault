@@ -16,6 +16,7 @@ export default class ActivitySerializer extends ApplicationSerializer {
       return super.normalizeResponse(store, primaryModelClass, payload, id, requestType);
     }
     const response_timestamp = formatISO(timestamp.now());
+    console.log('formatting data.by_namespace');
     const transformedPayload = {
       ...payload,
       response_timestamp,

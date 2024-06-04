@@ -39,6 +39,7 @@ export function assertBarChart(assert, chartName, byMonthData, isStacked = false
   });
 }
 
+// TODO: add months with no new clients or no counts
 export const ACTIVITY_RESPONSE_STUB = {
   start_time: '2023-08-01T00:00:00Z',
   end_time: '2023-09-30T23:59:59Z', // is always the last day and hour of the month queried
