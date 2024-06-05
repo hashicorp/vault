@@ -66,17 +66,4 @@ export default class ConfigureAwsSecretComponent extends Component<Args> {
     event.preventDefault();
     this.args.saveAWSRoot(data);
   }
-
-  @action
-  saveLease(data: LeaseFields, event: Event) {
-    event.preventDefault();
-    this.args.saveAWSLease(data);
-  }
-
-  @action
-  handleTtlChange(name: string, ttlObj: TtlEvent) {
-    // lease values cannot be undefined, set to 0 to use default
-    const valueToSet = ttlObj.enabled ? ttlObj.goSafeTimeString : 0;
-    this.args.model.set(name, valueToSet);
-  }
 }
