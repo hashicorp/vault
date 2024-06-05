@@ -56,7 +56,7 @@ export default class ToolsHash extends Component {
     try {
       const response = await this.store.adapterFor('tools').toolAction('hash', data);
       this.sum = response.data.sum;
-      this.flashMessages.success('Hash was successful');
+      this.flashMessages.success('Hash was successful.');
     } catch (error) {
       this.errorMessage = errorMessage(error);
     }

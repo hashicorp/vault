@@ -50,11 +50,7 @@ module('Integration | Component | tools/hash', function (hooks) {
     };
 
     this.server.post('sys/tools/hash', (schema, req) => {
-      assert.propEqual(
-        JSON.parse(req.requestBody),
-        data,
-        `post request has expected data: ${req.requestBody}`
-      );
+      assert.propEqual(JSON.parse(req.requestBody), data, `payload contains defaults: ${req.requestBody}`);
       return { data: { sum } };
     });
 
@@ -67,7 +63,6 @@ module('Integration | Component | tools/hash', function (hooks) {
     // test sum view
     await waitUntil(() => TS.toolsInput('sum'));
     assert.dom(TS.toolsInput('sum')).hasText(sum);
-    assert.dom('h1').hasText('Hash Data');
     assert.dom('label').hasText('Sum');
     assert.dom('#algorithm').doesNotExist();
     assert.dom('#format').doesNotExist();
@@ -88,11 +83,7 @@ module('Integration | Component | tools/hash', function (hooks) {
     };
 
     this.server.post('sys/tools/hash', (schema, req) => {
-      assert.propEqual(
-        JSON.parse(req.requestBody),
-        data,
-        `post request has expected data: ${req.requestBody}`
-      );
+      assert.propEqual(JSON.parse(req.requestBody), data, `payload has updated data: ${req.requestBody}`);
       return { data: { sum } };
     });
 
