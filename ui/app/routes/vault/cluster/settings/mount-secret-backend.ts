@@ -6,8 +6,13 @@
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 
+import type { ModelFrom } from 'vault/vault/route';
+import type Store from '@ember-data/store';
+
+export type MountSecretBackendModel = ModelFrom<VaultClusterSettingsMountSecretBackendRoute>;
+
 export default class VaultClusterSettingsMountSecretBackendRoute extends Route {
-  @service store;
+  @service declare readonly store: Store;
 
   model() {
     const secretEngine = this.store.createRecord('secret-engine');

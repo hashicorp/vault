@@ -52,7 +52,7 @@
     <ToolbarActions>
       {{#if (and (eq @tab "versions") @key.canRotate)}}
         <ConfirmAction
-          @buttonText="Rotate encryption key"
+          @buttonText="Rotate key"
           class="toolbar-button"
           @buttonColor="secondary"
           @confirmTitle="Rotate this key?"
@@ -65,7 +65,7 @@
       {{#if (eq @mode "show")}}
         {{#if (or @capabilities.canUpdate @capabilities.canDelete)}}
           <ToolbarSecretLink @secret={{@key.id}} @backend={{@key.backend}} @mode="edit" replace={{true}}>
-            Edit encryption key
+            Edit key
           </ToolbarSecretLink>
         {{/if}}
       {{/if}}

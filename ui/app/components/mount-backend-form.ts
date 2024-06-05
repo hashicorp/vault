@@ -12,6 +12,12 @@ import { waitFor } from '@ember/test-waiters';
 import { methods } from 'vault/helpers/mountable-auth-methods';
 import { isAddonEngine, allEngines } from 'vault/helpers/mountable-secret-engines';
 
+import type FlashMessageService from 'vault/services/flash-messages';
+import type Store from '@ember-data/store';
+
+import type { AuthEnableModel } from 'vault/routes/vault/cluster/settings/auth/enable';
+import type { MountSecretBackendModel } from 'vault/routes/vault/cluster/settings/mount-secret-backend';
+
 /**
  * @module MountBackendForm
  * The `MountBackendForm` is used to mount either a secret or auth backend.
@@ -24,9 +30,17 @@ import { isAddonEngine, allEngines } from 'vault/helpers/mountable-secret-engine
  *
  */
 
-export default class MountBackendForm extends Component {
-  @service store;
-  @service flashMessages;
+type MountModel = MountSecretBackendModel | AuthEnableModel;
+
+interface Args {
+  mountModel: MountModel;
+  mountType: 'secret' | 'auth';
+  onMountSuccess: (type: string, path: string, useEngineRoute: boolean) => void;
+}
+
+export default class MountBackendForm extends Component<Args> {
+  @service declare readonly store: Store;
+  @service declare readonly flashMessages: FlashMessageService;
 
   // validation related properties
   @tracked modelValidations = null;
@@ -40,10 +54,10 @@ export default class MountBackendForm extends Component {
     if (noTeardown && this.args?.mountModel?.isNew) {
       this.args.mountModel.unloadRecord();
     }
-    super.willDestroy(...arguments);
+    super.willDestroy();
   }
 
-  checkPathChange(type) {
+  checkPathChange(type: string) {
     if (!type) return;
     const mount = this.args.mountModel;
     const currentPath = mount.path;
@@ -58,8 +72,8 @@ export default class MountBackendForm extends Component {
     }
   }
 
-  typeChangeSideEffect(type) {
-    if (!this.args.mountType === 'secret') return;
+  typeChangeSideEffect(type: string) {
+    if (this.args.mountType !== 'secret') return;
     if (type === 'pki') {
       // If type PKI, set max lease to ~10years
       this.args.mountModel.config.maxLeaseTtl = '3650d';
@@ -69,7 +83,7 @@ export default class MountBackendForm extends Component {
     }
   }
 
-  checkModelValidity(model) {
+  checkModelValidity(model: MountModel) {
     const { isValid, state, invalidFormMessage } = model.validate();
     this.modelValidations = state;
     this.invalidFormAlert = invalidFormMessage;
@@ -113,7 +127,7 @@ export default class MountBackendForm extends Component {
 
   @task
   @waitFor
-  *mountBackend(event) {
+  *mountBackend(event: Event) {
     event.preventDefault();
     const mountModel = this.args.mountModel;
     const { type, path } = mountModel;
@@ -165,13 +179,13 @@ export default class MountBackendForm extends Component {
   }
 
   @action
-  onKeyUp(name, value) {
+  onKeyUp(name: string, value: string) {
     this.args.mountModel[name] = value;
     this.checkModelWarnings();
   }
 
   @action
-  setMountType(value) {
+  setMountType(value: string) {
     this.args.mountModel.type = value;
     this.typeChangeSideEffect(value);
     this.checkPathChange(value);
