@@ -158,7 +158,13 @@ export default class FormFieldComponent extends Component {
   @action
   setAndBroadcastTtl(value) {
     const alwaysSendValue = this.valuePath === 'expiry' || this.valuePath === 'safetyBuffer';
-    const valueToSet = value.enabled === true || alwaysSendValue ? `${value.seconds}s` : 0;
+    const attrOptions = this.args.attr.options || {};
+    let valueToSet = 0;
+    if (value.enabled || alwaysSendValue) {
+      valueToSet = `${value.seconds}s`;
+    } else if (Object.keys(attrOptions).includes('ttlOffValue')) {
+      valueToSet = attrOptions.ttlOffValue;
+    }
     this.setAndBroadcast(`${valueToSet}`);
   }
   @action
