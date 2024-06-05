@@ -1124,12 +1124,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
               new_clients: {
                 month: '8/23',
                 timestamp: '2023-08-01T00:00:00Z',
-                label: 'pki-engine-0',
-                acme_clients: 100,
-                clients: 100,
-                entity_clients: 0,
-                non_entity_clients: 0,
-                secret_syncs: 0,
+                namespaces: [],
               },
             },
             'auth/authid/0': {
@@ -1144,12 +1139,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
               new_clients: {
                 month: '8/23',
                 timestamp: '2023-08-01T00:00:00Z',
-                label: 'auth/authid/0',
-                acme_clients: 0,
-                clients: 100,
-                entity_clients: 100,
-                non_entity_clients: 100,
-                secret_syncs: 0,
+                namespaces: [],
               },
             },
             'kvv2-engine-0': {
@@ -1164,12 +1154,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
               new_clients: {
                 month: '8/23',
                 timestamp: '2023-08-01T00:00:00Z',
-                label: 'kvv2-engine-0',
-                acme_clients: 0,
-                clients: 100,
-                entity_clients: 0,
-                non_entity_clients: 0,
-                secret_syncs: 100,
+                namespaces: [],
               },
             },
           },
