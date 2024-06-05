@@ -34,24 +34,40 @@ scenario "autopilot" {
       seal    = ["pkcs11"]
       edition = ["ce", "ent", "ent.fips1402"]
     }
+
+    # arm64 AMIs are not offered for Leap 15.4
+    exclude {
+      distro = ["leap"]
+      arch   = ["arm64"]
+    }
+
+    # softhsm packages not available for leap/sles; Enos support for softhsm
+    # on amzn2 to be added later.
+    exclude {
+      seal   = ["pkcs11"]
+      distro = ["amzn2", "leap", "sles"]
+    }
   }
 
   terraform_cli = terraform_cli.default
   terraform     = terraform.default
   providers = [
     provider.aws.default,
-    provider.enos.ubuntu,
-    provider.enos.rhel
+    provider.enos.ec2_user,
+    provider.enos.ubuntu
   ]
 
   locals {
     artifact_path = matrix.artifact_source != "artifactory" ? abspath(var.vault_artifact_path) : null
     enos_provider = {
-      rhel   = provider.enos.rhel
+      amzn2  = provider.enos.ec2_user
+      leap   = provider.enos.ec2_user
+      rhel   = provider.enos.ec2_user
+      sles   = provider.enos.ec2_user
       ubuntu = provider.enos.ubuntu
     }
     manage_service                     = matrix.artifact_type == "bundle"
-    vault_install_dir                  = matrix.artifact_type == "bundle" ? var.vault_install_dir : global.vault_install_dir_packages[matrix.distro]
+    vault_install_dir                  = global.vault_install_dir[matrix.artifact_type]
     vault_autopilot_default_max_leases = semverconstraint(matrix.initial_version, ">=1.16.0-0") ? "300000" : ""
   }
 
@@ -159,7 +175,7 @@ scenario "autopilot" {
       cluster_name         = step.create_vault_cluster_targets.cluster_name
       config_mode          = matrix.config_mode
       enable_audit_devices = var.vault_enable_audit_devices
-      install_dir          = local.vault_install_dir
+      install_dir          = global.vault_install_dir[matrix.artifact_type]
       license              = matrix.edition != "ce" ? step.read_license.license : null
       packages             = concat(global.packages, global.distro_packages[matrix.distro])
       release = {
@@ -191,7 +207,7 @@ scenario "autopilot" {
 
     variables {
       vault_hosts       = step.create_vault_cluster.target_hosts
-      vault_install_dir = local.vault_install_dir
+      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
       vault_root_token  = step.create_vault_cluster.root_token
     }
   }
@@ -211,7 +227,7 @@ scenario "autopilot" {
       leader_public_ip  = step.get_vault_cluster_ips.leader_public_ip
       leader_private_ip = step.get_vault_cluster_ips.leader_private_ip
       vault_instances   = step.create_vault_cluster.target_hosts
-      vault_install_dir = local.vault_install_dir
+      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
       vault_root_token  = step.create_vault_cluster.root_token
     }
   }
@@ -245,7 +261,7 @@ scenario "autopilot" {
       log_level                   = var.vault_log_level
       force_unseal                = matrix.seal == "shamir"
       initialize_cluster          = false
-      install_dir                 = local.vault_install_dir
+      install_dir                 = global.vault_install_dir[matrix.artifact_type]
       license                     = matrix.edition != "ce" ? step.read_license.license : null
       local_artifact_path         = local.artifact_path
       manage_service              = local.manage_service
@@ -274,7 +290,7 @@ scenario "autopilot" {
     }
 
     variables {
-      vault_install_dir = local.vault_install_dir
+      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
       vault_instances   = step.upgrade_vault_cluster_with_autopilot.target_hosts
     }
   }
@@ -291,7 +307,7 @@ scenario "autopilot" {
     }
 
     variables {
-      vault_install_dir = local.vault_install_dir
+      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
       vault_instances   = step.upgrade_vault_cluster_with_autopilot.target_hosts
       vault_root_token  = step.upgrade_vault_cluster_with_autopilot.root_token
     }
@@ -312,7 +328,7 @@ scenario "autopilot" {
     variables {
       vault_autopilot_upgrade_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
       vault_autopilot_upgrade_status  = "await-server-removal"
-      vault_install_dir               = local.vault_install_dir
+      vault_install_dir               = global.vault_install_dir[matrix.artifact_type]
       vault_instances                 = step.create_vault_cluster.target_hosts
       vault_root_token                = step.upgrade_vault_cluster_with_autopilot.root_token
     }
@@ -332,7 +348,7 @@ scenario "autopilot" {
     }
 
     variables {
-      vault_install_dir = local.vault_install_dir
+      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
       vault_root_token  = step.create_vault_cluster.root_token
       vault_hosts       = step.upgrade_vault_cluster_with_autopilot.target_hosts
     }
@@ -354,7 +370,7 @@ scenario "autopilot" {
 
     variables {
       vault_hosts       = step.upgrade_vault_cluster_with_autopilot.target_hosts
-      vault_install_dir = local.vault_install_dir
+      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
       vault_root_token  = step.create_vault_cluster.root_token
     }
   }
@@ -375,7 +391,7 @@ scenario "autopilot" {
     variables {
       node_public_ips      = step.get_updated_vault_cluster_ips.follower_public_ips
       vault_instance_count = 6
-      vault_install_dir    = local.vault_install_dir
+      vault_install_dir    = global.vault_install_dir[matrix.artifact_type]
     }
   }
 
@@ -395,7 +411,7 @@ scenario "autopilot" {
     variables {
       operator_instance      = step.get_updated_vault_cluster_ips.leader_public_ip
       remove_vault_instances = step.create_vault_cluster.target_hosts
-      vault_install_dir      = local.vault_install_dir
+      vault_install_dir      = global.vault_install_dir[matrix.artifact_type]
       vault_instance_count   = 3
       vault_root_token       = step.create_vault_cluster.root_token
     }
@@ -434,7 +450,7 @@ scenario "autopilot" {
     variables {
       vault_autopilot_upgrade_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
       vault_autopilot_upgrade_status  = "idle"
-      vault_install_dir               = local.vault_install_dir
+      vault_install_dir               = global.vault_install_dir[matrix.artifact_type]
       vault_instances                 = step.upgrade_vault_cluster_with_autopilot.target_hosts
       vault_root_token                = step.create_vault_cluster.root_token
     }
@@ -455,7 +471,7 @@ scenario "autopilot" {
 
     variables {
       vault_edition     = matrix.edition
-      vault_install_dir = local.vault_install_dir
+      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
       vault_instances   = step.upgrade_vault_cluster_with_autopilot.target_hosts
     }
   }
@@ -476,7 +492,7 @@ scenario "autopilot" {
     variables {
       vault_instances       = step.upgrade_vault_cluster_with_autopilot.target_hosts
       vault_edition         = matrix.edition
-      vault_install_dir     = local.vault_install_dir
+      vault_install_dir     = global.vault_install_dir[matrix.artifact_type]
       vault_product_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
       vault_revision        = matrix.artifact_source == "local" ? step.get_local_metadata.revision : var.vault_revision
       vault_build_date      = matrix.artifact_source == "local" ? step.get_local_metadata.build_date : var.vault_build_date
@@ -519,7 +535,7 @@ scenario "autopilot" {
     }
 
     variables {
-      vault_install_dir = local.vault_install_dir
+      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
       vault_instances   = step.upgrade_vault_cluster_with_autopilot.target_hosts
       vault_root_token  = step.create_vault_cluster.root_token
     }
