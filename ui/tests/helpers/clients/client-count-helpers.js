@@ -1107,9 +1107,10 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
           timestamp: '2023-08-01T00:00:00Z',
           month: '8/23',
           new_clients: {
+            label: 'root',
             month: '8/23',
             timestamp: '2023-08-01T00:00:00Z',
-            namespaces: [],
+            mounts: [],
           },
           mounts_by_key: {
             'pki-engine-0': {
@@ -1122,9 +1123,9 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
               timestamp: '2023-08-01T00:00:00Z',
               month: '8/23',
               new_clients: {
+                label: 'pki-engine-0',
                 month: '8/23',
                 timestamp: '2023-08-01T00:00:00Z',
-                namespaces: [],
               },
             },
             'auth/authid/0': {
@@ -1137,9 +1138,9 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
               timestamp: '2023-08-01T00:00:00Z',
               month: '8/23',
               new_clients: {
+                label: 'auth/authid/0',
                 month: '8/23',
                 timestamp: '2023-08-01T00:00:00Z',
-                namespaces: [],
               },
             },
             'kvv2-engine-0': {
@@ -1152,9 +1153,9 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
               timestamp: '2023-08-01T00:00:00Z',
               month: '8/23',
               new_clients: {
+                label: 'kvv2-engine-0',
                 month: '8/23',
                 timestamp: '2023-08-01T00:00:00Z',
-                namespaces: [],
               },
             },
           },

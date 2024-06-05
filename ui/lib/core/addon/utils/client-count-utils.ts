@@ -186,36 +186,45 @@ export const namespaceArrayToObject = (
   // it's an object in each month data block where the keys are namespace paths
   // and values include new and total client counts for that namespace in that month
   const namespaces_by_key = monthTotals.reduce((nsObject: { [key: string]: NamespaceByKey }, ns) => {
-    const newNsClients = monthNew?.find((n) => n.label === ns.label);
-    if (newNsClients) {
-      // mounts_by_key is is used to filter further in a namespace and get monthly activity by mount
-      // it's an object inside the namespace block where the keys are mount paths
-      // and the values include new and total client counts for that mount in that month
-      const mounts_by_key = ns.mounts.reduce(
-        (mountObj: { [key: string]: MountByKey }, mount) => {
-          const newMountClients = newNsClients.mounts.find((m) => m.label === mount.label);
-
-          if (newMountClients) {
-            mountObj[mount.label] = {
-              ...mount,
-              timestamp,
-              month,
-              new_clients: { month, timestamp, ...newMountClients },
-            };
-          }
-          return mountObj;
-        },
-        {} as { [key: string]: MountByKey }
-      );
-
-      nsObject[ns.label] = {
-        ...destructureClientCounts(ns),
-        timestamp,
+    const keyedNs: NamespaceByKey = {
+      ...destructureClientCounts(ns),
+      timestamp,
+      month,
+      mounts_by_key: {},
+      new_clients: {
         month,
-        new_clients: { month, timestamp, ...newNsClients },
-        mounts_by_key,
-      };
+        timestamp,
+        label: ns.label,
+        mounts: [],
+      },
+    };
+    const newNsClients = monthNew?.find((n) => n.label === ns.label);
+    // mounts_by_key is is used to filter further in a namespace and get monthly activity by mount
+    // it's an object inside the namespace block where the keys are mount paths
+    // and the values include new and total client counts for that mount in that month
+    keyedNs.mounts_by_key = ns.mounts.reduce(
+      (mountObj: { [key: string]: MountByKey }, mount) => {
+        const mountNewClients = newNsClients ? newNsClients.mounts.find((m) => m.label === mount.label) : {};
+        mountObj[mount.label] = {
+          ...mount,
+          timestamp,
+          month,
+          new_clients: {
+            timestamp,
+            month,
+            label: mount.label,
+            ...mountNewClients,
+          },
+        };
+
+        return mountObj;
+      },
+      {} as { [key: string]: MountByKey }
+    );
+    if (newNsClients) {
+      keyedNs.new_clients = { month, timestamp, ...newNsClients };
     }
+    nsObject[ns.label] = keyedNs;
     return nsObject;
   }, {});
 
@@ -249,6 +258,15 @@ export interface TotalClients {
   acme_clients: number;
 }
 
+// extend this type when the counts are optional (eg for new clients)
+interface TotalClientsSometimes {
+  clients?: number;
+  entity_clients?: number;
+  non_entity_clients?: number;
+  secret_syncs?: number;
+  acme_clients?: number;
+}
+
 export interface ByNamespaceClients extends TotalClients {
   label: string;
   mounts: MountClients[];
@@ -267,12 +285,7 @@ export interface ByMonthClients extends TotalClients {
 }
 
 // clients numbers are only returned if month is of type ActivityMonthBlock
-export interface ByMonthNewClients {
-  clients?: number;
-  entity_clients?: number;
-  non_entity_clients?: number;
-  secret_syncs?: number;
-  acme_clients?: number;
+export interface ByMonthNewClients extends TotalClientsSometimes {
   month: string;
   timestamp: string;
   namespaces: ByNamespaceClients[];
@@ -285,7 +298,7 @@ export interface NamespaceByKey extends TotalClients {
   new_clients: NamespaceNewClients;
 }
 
-export interface NamespaceNewClients extends TotalClients {
+export interface NamespaceNewClients extends TotalClientsSometimes {
   month: string;
   timestamp: string;
   label: string;
@@ -299,7 +312,7 @@ export interface MountByKey extends TotalClients {
   new_clients: MountNewClients;
 }
 
-export interface MountNewClients extends TotalClients {
+export interface MountNewClients extends TotalClientsSometimes {
   month: string;
   timestamp: string;
   label: string;

@@ -203,21 +203,20 @@ module('Integration | Util | client count utils', function (hooks) {
       const testObject = namespaceArrayToObject(
         formattedTotal,
         formatByNamespace(RESPONSE.months[i].new_clients.namespaces),
-        `9/23`,
+        `${i + 6}/23`,
         original.timestamp
       );
-
       const { root } = testObject;
       const { root: expectedRoot } = expectedObject;
-      assert.propEqual(root.new_clients, expectedRoot.new_clients, 'it formats namespaces new_clients');
+
+      assert.propEqual(
+        root?.new_clients,
+        expectedRoot?.new_clients,
+        `it formats namespaces new_clients for ${original.timestamp}`
+      );
       assert.propEqual(root.mounts_by_key, expectedRoot.mounts_by_key, 'it formats namespaces mounts_by_key');
       assert.propContains(root, expectedRoot, 'namespace has correct keys');
 
-      assert.propEqual(
-        namespaceArrayToObject(formattedTotal, [], '9/23', '2023-09-01T00:00:00Z'),
-        {},
-        'returns an empty object when there are no new clients '
-      );
       assert.propEqual(RESPONSE.months[i], original, 'it does not modify original month data');
     }
   });
