@@ -64,7 +64,9 @@ func TestRaft_Autopilot_BinaryVersionPlumbing(t *testing.T) {
 	c := vault.NewTestCluster(t, coreCfg, &clusterOpts)
 	defer c.Cleanup()
 
-	// Wait for follower to be perf standby
+	// Wait for follower to be perf standby (in Ent, in CE it will only wait for
+	// active). In either Enterprise or CE case, this should pass if we've plumbed
+	// the version correctly so it's valuable for both.
 	testhelpers.WaitForActiveNodeAndStandbys(t, c)
 	for _, core := range c.Cores {
 		be := core.UnderlyingRawStorage.(*raft.RaftBackend)
