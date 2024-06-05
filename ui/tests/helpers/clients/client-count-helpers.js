@@ -1106,42 +1106,10 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
           secret_syncs: 100,
           timestamp: '2023-08-01T00:00:00Z',
           month: '8/23',
-          // TODO: this isn't right
           new_clients: {
             month: '8/23',
             timestamp: '2023-08-01T00:00:00Z',
-            label: 'root',
-            acme_clients: 100,
-            clients: 100,
-            entity_clients: 100,
-            non_entity_clients: 100,
-            secret_syncs: 100,
-            mounts: [
-              {
-                label: 'pki-engine-0',
-                acme_clients: 100,
-                clients: 100,
-                entity_clients: 0,
-                non_entity_clients: 0,
-                secret_syncs: 0,
-              },
-              {
-                label: 'auth/authid/0',
-                acme_clients: 0,
-                clients: 100,
-                entity_clients: 100,
-                non_entity_clients: 100,
-                secret_syncs: 0,
-              },
-              {
-                label: 'kvv2-engine-0',
-                acme_clients: 0,
-                clients: 100,
-                entity_clients: 0,
-                non_entity_clients: 0,
-                secret_syncs: 100,
-              },
-            ],
+            namespaces: [],
           },
           mounts_by_key: {
             'pki-engine-0': {
