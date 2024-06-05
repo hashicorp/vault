@@ -51,8 +51,13 @@ scenario "replication" {
     # softhsm packages not available for leap/sles; Enos support for softhsm
     # on amzn2 to be added later.
     exclude {
-      seal   = ["pkcs11"]
-      distro = ["amzn2", "leap", "sles"]
+      primary_seal = ["pkcs11"]
+      distro       = ["amzn2", "leap", "sles"]
+    }
+
+    exclude {
+      secondary_seal = ["pkcs11"]
+      distro         = ["amzn2", "leap", "sles"]
     }
   }
 
