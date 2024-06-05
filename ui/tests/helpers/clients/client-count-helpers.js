@@ -1083,7 +1083,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
               acme_clients: 0,
               clients: 100,
               entity_clients: 100,
-              non_entity_clients: 748,
+              non_entity_clients: 100,
               secret_syncs: 0,
             },
             {

@@ -129,27 +129,29 @@ module('Integration | Util | client count utils', function (hooks) {
   });
 
   test('formatByMonths: it formats the months array', async function (assert) {
-    assert.expect(5);
+    assert.expect(9);
     const original = [...RESPONSE.months];
 
-    const [formattedNoData, formattedWithActivity] = formatByMonths(RESPONSE.months);
+    const [formattedNoData, formattedWithActivity, formattedNoNew] = formatByMonths(RESPONSE.months);
 
     // instead of asserting the whole expected response, broken up so tests are easier to debug
     // but kept whole above to copy/paste updated response expectations in the future
-    const [expectedNoData, expectedWithActivity] = SERIALIZED_ACTIVITY_RESPONSE.by_month;
-    const { namespaces, new_clients } = expectedWithActivity;
+    const [expectedNoData, expectedWithActivity, expectedNoNew] = SERIALIZED_ACTIVITY_RESPONSE.by_month;
 
     assert.propEqual(formattedNoData, expectedNoData, 'it formats months without data');
-    assert.propEqual(
-      formattedWithActivity.namespaces,
-      namespaces,
-      'it formats namespaces array for months with data'
-    );
-    assert.propEqual(
-      formattedWithActivity.new_clients,
-      new_clients,
-      'it formats new_clients block for months with data'
-    );
+    ['namespaces', 'new_clients', 'namespaces_by_key'].forEach((key) => {
+      assert.propEqual(
+        formattedWithActivity[key],
+        expectedWithActivity[key],
+        `it formats ${key} array for months with data`
+      );
+      assert.propEqual(
+        formattedNoNew[key],
+        expectedNoNew[key],
+        `it formats the ${key} array for months with no new clients`
+      );
+    });
+
     assert.propEqual(RESPONSE.months, original, 'it does not modify original months array');
     assert.propEqual(formatByMonths([]), [], 'it returns an empty array if the months key is empty');
   });
