@@ -5,28 +5,20 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { click, fillIn, render } from '@ember/test-helpers';
+import { setupMirage } from 'ember-cli-mirage/test-support';
+import { Response } from 'miragejs';
+import { click, fillIn, find, render, waitUntil } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import sinon from 'sinon';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { TOOLS_SELECTORS as TS } from 'vault/tests/helpers/tools-selectors';
 
 module('Integration | Component | tools/rewrap', function (hooks) {
   setupRenderingTest(hooks);
+  setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.onClear = sinon.spy();
-    this.rewrap_token = null;
-    this.token = null;
-    this.errors = null;
     this.renderComponent = async () => {
-      await render(hbs`
-    <Tools::Rewrap
-      @onClear={{this.onClear}}
-      @rewrap_token={{this.rewrap_token}}
-      @errors={{this.errors}}
-      @token={{this.token}}
-    />`);
+      await render(hbs`<Tools::Rewrap />`);
     };
   });
 
@@ -34,33 +26,53 @@ module('Integration | Component | tools/rewrap', function (hooks) {
     await this.renderComponent();
 
     assert.dom('h1').hasText('Rewrap Token', 'title renders');
-    assert.dom(TS.submit).hasText('Rewrap token');
+    assert.dom('label').hasText('Wrapped token');
     assert.dom(TS.toolsInput('wrapping-token')).hasValue('');
     assert.dom(TS.toolsInput('rewrapped-token')).doesNotExist();
     assert.dom(TS.button('Done')).doesNotExist();
   });
 
   test('it renders errors', async function (assert) {
-    this.errors = ['Something is wrong!'];
+    this.server.post('sys/wrapping/rewrap', () => new Response(500, {}, { errors: ['Something is wrong'] }));
     await this.renderComponent();
-    assert.dom(GENERAL.messageError).hasText('Error Something is wrong!', 'Error renders');
+    await click(TS.submit);
+    await waitUntil(() => find(GENERAL.messageError));
+    assert.dom(GENERAL.messageError).hasText('Error Something is wrong', 'Error renders');
   });
 
-  test('it renders random bytes view', async function (assert) {
-    this.rewrap_token = 'blah.CAESIK19SQeLYUZ65lEGSMYYOMZFbUurY0ppT2RTMGpRa0JOSUFqUzJUaGNqdWUQ6ooG';
+  test('it submits', async function (assert) {
+    const original_token = 'original.OMZFbUurY0ppT2RTMGpRa0JOSUFqUzJUaGNqdWUQ6ooG=';
+    const rewrapped_token = 'rewrapped_token.OMZFbUurY0ppT2RTMGpRa0JOSUFqUzJUaGNqdWUQ6ooG=';
+    const data = { token: original_token };
+
+    this.server.post('sys/wrapping/rewrap', (schema, req) => {
+      assert.propEqual(JSON.parse(req.requestBody), data, `payload contains defaults: ${req.requestBody}`);
+      return {
+        wrap_info: {
+          token: rewrapped_token,
+          accessor: 'kfQad1FTIpXtdhWQMgpzcMFm',
+          ttl: 1800,
+          creation_time: '2024-06-05T13:57:28.827283-07:00',
+          creation_path: 'sys/wrapping/wrap',
+        },
+      };
+    });
+
     await this.renderComponent();
 
+    // test submit
+    await fillIn(TS.toolsInput('wrapping-token'), original_token);
+    await click(TS.submit);
+
+    // test rewrapped token view
+    await waitUntil(() => TS.toolsInput('rewrapped-token'));
     assert.dom('label').hasText('Rewrapped token');
+    assert.dom(TS.toolsInput('rewrapped-token')).hasText(rewrapped_token);
     assert.dom(TS.toolsInput('wrapping-token')).doesNotExist();
-    assert.dom(TS.toolsInput('rewrapped-token')).hasText(this.rewrap_token);
 
+    // form resets clicking 'Done'
     await click(TS.button('Done'));
-    assert.true(this.onClear.calledOnce, 'onClear is called');
-  });
-
-  test('it updates arg when input changes', async function (assert) {
-    await this.renderComponent();
-    await fillIn(TS.toolsInput('wrapping-token'), 'my-token');
-    assert.strictEqual(this.token, 'my-token', 'token value updates when input changes');
+    assert.dom('label').hasText('Wrapped token');
+    assert.dom(TS.toolsInput('wrapping-token')).hasValue('', 'token input resets');
   });
 });
