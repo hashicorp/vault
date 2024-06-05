@@ -24,6 +24,12 @@ variable "common_tags" {
   default     = { "Project" : "vault-ci" }
 }
 
+variable "disable_selinux" {
+  description = "Optionally disable SELinux for certain distros/versions"
+  type        = bool
+  default     = true
+}
+
 variable "instance_count" {
   description = "The number of target instances to create"
   type        = number

@@ -47,4 +47,4 @@ export VAULT_ADDR='http://127.0.0.1:8200'
 
 # Retry a few times because it can take some time for things to settle after
 # all the nodes are unsealed
-retry 7 check_voter_status
+retry 10 check_voter_status

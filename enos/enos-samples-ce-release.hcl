@@ -97,7 +97,7 @@ sample "release_ce_linux_arm64_rpm" {
       arch            = ["arm64"]
       artifact_source = ["artifactory"]
       artifact_type   = ["package"]
-      distro          = ["rhel"]
+      distro          = ["amzn2", "rhel", "sles"]
       edition         = ["ce"]
     }
   }
@@ -107,7 +107,7 @@ sample "release_ce_linux_arm64_rpm" {
       arch            = ["arm64"]
       artifact_source = ["artifactory"]
       artifact_type   = ["package"]
-      distro          = ["rhel"]
+      distro          = ["amzn2", "rhel", "sles"]
       edition         = ["ce"]
     }
   }
@@ -117,7 +117,7 @@ sample "release_ce_linux_arm64_rpm" {
       arch            = ["arm64"]
       artifact_source = ["artifactory"]
       artifact_type   = ["package"]
-      distro          = ["rhel"]
+      distro          = ["amzn2", "rhel", "sles"]
       edition         = ["ce"]
     }
   }
@@ -127,7 +127,7 @@ sample "release_ce_linux_arm64_rpm" {
       arch            = ["arm64"]
       artifact_source = ["artifactory"]
       artifact_type   = ["package"]
-      distro          = ["rhel"]
+      distro          = ["amzn2", "rhel", "sles"]
       edition         = ["ce"]
     }
   }
@@ -141,7 +141,7 @@ sample "release_ce_linux_amd64_rpm" {
       arch            = ["amd64"]
       artifact_source = ["artifactory"]
       artifact_type   = ["package"]
-      distro          = ["rhel"]
+      distro          = ["amzn2", "leap", "rhel", "sles"]
       edition         = ["ce"]
     }
   }
@@ -151,7 +151,7 @@ sample "release_ce_linux_amd64_rpm" {
       arch            = ["amd64"]
       artifact_source = ["artifactory"]
       artifact_type   = ["package"]
-      distro          = ["rhel"]
+      distro          = ["amzn2", "leap", "rhel", "sles"]
       edition         = ["ce"]
     }
   }
@@ -161,7 +161,7 @@ sample "release_ce_linux_amd64_rpm" {
       arch            = ["amd64"]
       artifact_source = ["artifactory"]
       artifact_type   = ["package"]
-      distro          = ["rhel"]
+      distro          = ["amzn2", "leap", "rhel", "sles"]
       edition         = ["ce"]
     }
   }
@@ -171,7 +171,7 @@ sample "release_ce_linux_amd64_rpm" {
       arch            = ["amd64"]
       artifact_source = ["artifactory"]
       artifact_type   = ["package"]
-      distro          = ["rhel"]
+      distro          = ["amzn2", "leap", "rhel", "sles"]
       edition         = ["ce"]
     }
   }
@@ -185,6 +185,7 @@ sample "release_ce_linux_amd64_zip" {
       arch            = ["amd64"]
       artifact_type   = ["bundle"]
       artifact_source = ["artifactory"]
+      distro          = ["amzn2", "ubuntu"]
       edition         = ["ce"]
     }
   }
@@ -194,6 +195,7 @@ sample "release_ce_linux_amd64_zip" {
       arch            = ["amd64"]
       artifact_type   = ["bundle"]
       artifact_source = ["artifactory"]
+      distro          = ["amzn2", "ubuntu"]
       edition         = ["ce"]
     }
   }
@@ -203,6 +205,7 @@ sample "release_ce_linux_amd64_zip" {
       arch            = ["amd64"]
       artifact_type   = ["bundle"]
       artifact_source = ["artifactory"]
+      distro          = ["amzn2", "ubuntu"]
       edition         = ["ce"]
     }
   }
@@ -212,6 +215,7 @@ sample "release_ce_linux_amd64_zip" {
       arch            = ["amd64"]
       artifact_type   = ["bundle"]
       artifact_source = ["artifactory"]
+      distro          = ["amzn2", "ubuntu"]
       edition         = ["ce"]
     }
   }
@@ -225,6 +229,7 @@ sample "release_ce_linux_arm64_zip" {
       arch            = ["arm64"]
       artifact_source = ["artifactory"]
       artifact_type   = ["bundle"]
+      distro          = ["amzn2", "ubuntu"]
       edition         = ["ce"]
     }
   }
@@ -234,6 +239,7 @@ sample "release_ce_linux_arm64_zip" {
       arch            = ["arm64"]
       artifact_source = ["artifactory"]
       artifact_type   = ["bundle"]
+      distro          = ["amzn2", "ubuntu"]
       edition         = ["ce"]
     }
   }
@@ -243,6 +249,7 @@ sample "release_ce_linux_arm64_zip" {
       arch            = ["arm64"]
       artifact_source = ["artifactory"]
       artifact_type   = ["bundle"]
+      distro          = ["amzn2", "ubuntu"]
       edition         = ["ce"]
     }
   }
@@ -252,6 +259,7 @@ sample "release_ce_linux_arm64_zip" {
       arch            = ["arm64"]
       artifact_source = ["artifactory"]
       artifact_type   = ["bundle"]
+      distro          = ["amzn2", "ubuntu"]
       edition         = ["ce"]
     }
   }

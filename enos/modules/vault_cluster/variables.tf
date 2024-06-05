@@ -100,6 +100,12 @@ variable "consul_release" {
   }
 }
 
+variable "distro_version" {
+  type        = string
+  description = "The Linux distro version"
+  default     = null
+}
+
 variable "enable_audit_devices" {
   description = "If true every audit device will be enabled"
   type        = bool
@@ -120,7 +126,7 @@ variable "initialize_cluster" {
 
 variable "install_dir" {
   type        = string
-  description = "The directory where the vault binary will be installed"
+  description = "The directory where the Vault binary will be installed"
   default     = "/opt/vault/bin"
 }
 

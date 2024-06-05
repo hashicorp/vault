@@ -52,7 +52,9 @@ locals {
         // keys on a machines that have different shared object locations.
         merge(
           try({ for key, val in var.seal_attributes : key => val if key != "token_base64" && key != "token_dir" }, {}),
-          try({ lib = module.maybe_configure_hsm.lib }, {})
+          # Note: the below reference has to point to a specific instance of the maybe_configure_hsm
+          # module (in this case [0]) due to the maybe_configure_hsm module call using `count` to control whether it runs or not.
+          try({ lib = module.maybe_configure_hsm[0].lib }, {})
         ),
       )
     }
@@ -81,7 +83,9 @@ locals {
         },
         merge(
           try({ for key, val in var.seal_attributes_secondary : key => val if key != "token_base64" && key != "token_dir" }, {}),
-          try({ lib = module.maybe_configure_hsm_secondary.lib }, {})
+          # Note: the below reference has to point to a specific instance of the maybe_configure_hsm_secondary
+          # module (in this case [0]) due to the maybe_configure_hsm_secondary module call using `count` to control whether it runs or not.
+          try({ lib = module.maybe_configure_hsm_secondary[0].lib }, {})
         ),
       )
     }
@@ -135,6 +139,7 @@ locals {
 # the key data that was passed in via seal attributes.
 module "maybe_configure_hsm" {
   source = "../softhsm_distribute_vault_keys"
+  count  = (var.seal_type == "pkcs11" || var.seal_type_secondary == "pkcs11") ? 1 : 0
 
   hosts        = var.target_hosts
   token_base64 = local.token_base64
@@ -143,6 +148,7 @@ module "maybe_configure_hsm" {
 module "maybe_configure_hsm_secondary" {
   source     = "../softhsm_distribute_vault_keys"
   depends_on = [module.maybe_configure_hsm]
+  count      = (var.seal_type == "pkcs11" || var.seal_type_secondary == "pkcs11") ? 1 : 0
 
   hosts        = var.target_hosts
   token_base64 = local.token_base64_secondary

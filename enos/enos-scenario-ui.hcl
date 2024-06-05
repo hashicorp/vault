@@ -3,8 +3,9 @@
 
 scenario "ui" {
   matrix {
-    backend = global.backends
-    edition = ["ce", "ent"]
+    backend        = global.backends
+    consul_edition = global.consul_editions
+    edition        = ["ce", "ent"]
   }
 
   terraform_cli = terraform_cli.default
@@ -23,7 +24,7 @@ scenario "ui" {
       "ce"  = ["ui"]
       "ent" = ["ui", "enterprise", "ent"]
     }
-    bundle_path    = abspath(var.vault_artifact_path)
+    artifact_path  = abspath(var.vault_artifact_path)
     distro         = "ubuntu"
     consul_version = "1.17.0"
     seal           = "awskms"
@@ -32,10 +33,6 @@ scenario "ui" {
       "Project" : "Enos",
       "Environment" : "ci"
     }, var.tags)
-    vault_install_dir_packages = {
-      rhel   = "/bin"
-      ubuntu = "/usr/bin"
-    }
     vault_install_dir  = var.vault_install_dir
     vault_license_path = abspath(var.vault_license_path != null ? var.vault_license_path : joinpath(path.root, "./support/vault.hclic"))
     vault_tag_key      = "Type" // enos_vault_start expects Type as the tag key
@@ -47,7 +44,7 @@ scenario "ui" {
 
     variables {
       build_tags      = var.vault_local_build_tags != null ? var.vault_local_build_tags : local.build_tags[matrix.edition]
-      bundle_path     = local.bundle_path
+      artifact_path   = local.artifact_path
       goarch          = local.arch
       goos            = "linux"
       product_version = var.vault_product_version
@@ -78,9 +75,9 @@ scenario "ui" {
   }
 
   // This step reads the contents of the backend license if we're using a Consul backend and
-  // the edition is "ent".
+  // an "ent" Consul edition.
   step "read_backend_license" {
-    skip_step = matrix.backend == "raft" || var.backend_edition == "ce"
+    skip_step = matrix.backend == "raft" || matrix.consul_edition == "ce"
     module    = module.read_license
 
     variables {
@@ -106,10 +103,10 @@ scenario "ui" {
     }
 
     variables {
-      ami_id          = step.ec2_info.ami_ids[local.arch][local.distro][var.ubuntu_distro_version]
+      ami_id          = step.ec2_info.ami_ids[local.arch][local.distro][var.distro_version_ubuntu]
       cluster_tag_key = local.vault_tag_key
       common_tags     = local.tags
-      seal_names      = step.create_seal_key.resource_names
+      seal_key_names  = step.create_seal_key.resource_names
       vpc_id          = step.create_vpc.id
     }
   }
@@ -126,7 +123,7 @@ scenario "ui" {
       ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"]["22.04"]
       cluster_tag_key = local.backend_tag_key
       common_tags     = local.tags
-      seal_names      = step.create_seal_key.resource_names
+      seal_key_names  = step.create_seal_key.resource_names
       vpc_id          = step.create_vpc.id
     }
   }
@@ -144,9 +141,9 @@ scenario "ui" {
     variables {
       cluster_name    = step.create_vault_cluster_backend_targets.cluster_name
       cluster_tag_key = local.backend_tag_key
-      license         = (matrix.backend == "consul" && var.backend_edition == "ent") ? step.read_backend_license.license : null
+      license         = (matrix.backend == "consul" && matrix.consul_edition == "ent") ? step.read_backend_license.license : null
       release = {
-        edition = var.backend_edition
+        edition = matrix.consul_edition
         version = local.consul_version
       }
       target_hosts = step.create_vault_cluster_backend_targets.hosts
@@ -169,15 +166,15 @@ scenario "ui" {
       backend_cluster_name    = step.create_vault_cluster_backend_targets.cluster_name
       backend_cluster_tag_key = local.backend_tag_key
       cluster_name            = step.create_vault_cluster_targets.cluster_name
-      consul_license          = (matrix.backend == "consul" && var.backend_edition == "ent") ? step.read_backend_license.license : null
+      consul_license          = (matrix.backend == "consul" && matrix.consul_edition == "ent") ? step.read_backend_license.license : null
       consul_release = matrix.backend == "consul" ? {
-        edition = var.backend_edition
+        edition = matrix.consul_edition
         version = local.consul_version
       } : null
       enable_audit_devices = var.vault_enable_audit_devices
       install_dir          = local.vault_install_dir
       license              = matrix.edition != "ce" ? step.read_vault_license.license : null
-      local_artifact_path  = local.bundle_path
+      local_artifact_path  = local.artifact_path
       packages             = global.distro_packages["ubuntu"]
       seal_name            = step.create_seal_key.resource_name
       seal_type            = local.seal
