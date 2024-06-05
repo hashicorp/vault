@@ -358,7 +358,7 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 	{
 		// Parse the default report months
 		if _, ok := d.GetOk("default_report_months"); ok {
-			warnings = append(warnings, fmt.Sprintf("default_report_months is deprecated and is no longer used anywhere"))
+			warnings = append(warnings, fmt.Sprintf("default_report_months is deprecated: defaulting to billing start time"))
 		}
 
 		if config.DefaultReportMonths <= 0 {
