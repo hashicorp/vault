@@ -38,7 +38,7 @@ module('Integration | Component | tools/hash', function (hooks) {
     await this.renderComponent();
     await click(TS.submit);
     await waitUntil(() => find(GENERAL.messageError));
-    assert.dom(GENERAL.messageError).hasText('Error Something is wrong', 'Error renders');
+    assert.dom(GENERAL.messageError).hasText('Error Something is wrong');
   });
 
   test('it submits with default values', async function (assert) {
