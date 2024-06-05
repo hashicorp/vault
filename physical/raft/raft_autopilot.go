@@ -421,7 +421,10 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 			}
 			followerVersion = leaderVersion
 		} else {
-			delete(d.emptyVersionLogs, currentServerID)
+			if _, ok := d.emptyVersionLogs[currentServerID]; ok {
+				d.logger.Trace("received non-empty version in heartbeat state. no longer need to fake it", "id", id, "update_version", followerVersion)
+				delete(d.emptyVersionLogs, currentServerID)
+			}
 		}
 		d.dl.Unlock()
 
