@@ -4,7 +4,10 @@
  */
 
 import Component from '@glimmer/component';
+import { service } from '@ember/service';
 import { action } from '@ember/object';
+import { tracked } from '@glimmer/tracking';
+import errorMessage from 'vault/utils/error-message';
 
 /**
  * @module ToolHash
@@ -15,14 +18,47 @@ import { action } from '@ember/object';
  *
  * @param {Function} onClear - parent action that is passed through. Must be passed as {{action "onClear"}}
  * @param {String} sum=null - property passed from parent to child and then passed back up to parent.
- * @param {String} algorithm - property returned from parent.
- * @param {String} format - property returned from parent.
- * @param {Object} errors=null - errors passed from parent as default then from child back to parent.
  */
 export default class ToolsHash extends Component {
+  @service store;
+  @service flashMessages;
+
+  @tracked algorithm = 'sha2-256';
+  @tracked format = 'base64';
+  @tracked hashData = '';
+  @tracked sum = null;
+  @tracked errorMessage = '';
+
+  @action
+  reset() {
+    this.algorithm = 'sha2-256';
+    this.format = 'base64';
+    this.hashData = '';
+    this.sum = null;
+    this.errorMessage = '';
+  }
+
   @action
   handleEvent(evt) {
     const { name, value } = evt.target;
-    this.args.onChange(name, value);
+    this[name] = value;
+  }
+
+  @action
+  async handleSubmit(evt) {
+    evt.preventDefault();
+    const data = {
+      input: this.hashData,
+      format: this.format,
+      algorithm: this.algorithm,
+    };
+
+    try {
+      const response = await this.store.adapterFor('tools').toolAction('hash', data);
+      this.sum = response.data.sum;
+      this.flashMessages.success('Hash was successful');
+    } catch (error) {
+      this.errorMessage = errorMessage(error);
+    }
   }
 }

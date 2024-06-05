@@ -5,78 +5,103 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { click, fillIn, render } from '@ember/test-helpers';
+import { setupMirage } from 'ember-cli-mirage/test-support';
+import { Response } from 'miragejs';
+import { click, fillIn, find, render, waitUntil } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import sinon from 'sinon';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { TOOLS_SELECTORS as TS } from 'vault/tests/helpers/tools-selectors';
 
 module('Integration | Component | tools/hash', function (hooks) {
   setupRenderingTest(hooks);
+  setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.onClear = sinon.spy();
-    this.onChange = sinon.spy();
-    this.sum = null;
-    this.hashData = '';
-    this.algorithm = 'sha2-256';
-    this.format = 'base64';
     this.renderComponent = async () => {
-      await render(hbs`
-    <Tools::Hash
-      @onClear={{this.onClear}}
-      @onChange={{this.onChange}}
-      @errors={{this.errors}}
-      @sum={{this.sum}}
-      @algorithm={{this.algorithm}}
-      @format={{this.format}}
-      @hashData={{this.hashData}}
-    />`);
+      await render(hbs`<Tools::Hash />`);
     };
   });
 
-  test('it renders defaults', async function (assert) {
+  test('it renders form', async function (assert) {
     await this.renderComponent();
 
-    assert.dom('h1').hasText('Hash Data', 'Title renders');
+    assert.dom('h1').hasText('Hash Data');
+    assert.dom(TS.toolsInput('hash-input')).hasValue('');
     assert.dom('#algorithm').hasValue('sha2-256');
     assert.dom('#format').hasValue('base64');
-    assert.dom(TS.submit).hasText('Hash');
     assert.dom(TS.toolsInput('sum')).doesNotExist();
     assert.dom(TS.button('Done')).doesNotExist();
   });
 
   test('it renders errors', async function (assert) {
-    this.errors = ['Something is wrong!'];
+    this.server.post('sys/tools/hash', () => new Response(500, {}, { errors: ['Something is wrong'] }));
     await this.renderComponent();
-    assert.dom(GENERAL.messageError).hasText('Error Something is wrong!', 'Error renders');
+    await click(TS.submit);
+    await waitUntil(() => find(GENERAL.messageError));
+    assert.dom(GENERAL.messageError).hasText('Error Something is wrong', 'Error renders');
   });
 
-  test('it renders sum view', async function (assert) {
-    this.sum = '2a70350c9a44171d6b1180c6be5cbb2ee3f79d532c8a1dd9ef2e8e08e752a3babb';
+  test('it submits with default values', async function (assert) {
+    const sum = 'GmoKPULUXifIFSGPZx29CGSm8MFnBuk4SGPsmFlduGc=';
+    const data = {
+      algorithm: 'sha2-256',
+      format: 'base64',
+      input: 'blah',
+    };
+
+    this.server.post('sys/tools/hash', (schema, req) => {
+      assert.propEqual(
+        JSON.parse(req.requestBody),
+        data,
+        `post request has expected data: ${req.requestBody}`
+      );
+      return { data: { sum } };
+    });
+
     await this.renderComponent();
 
+    // test submit
+    await fillIn(TS.toolsInput('hash-input'), 'blah');
+    await click(TS.submit);
+
+    // test sum view
+    await waitUntil(() => TS.toolsInput('sum'));
+    assert.dom(TS.toolsInput('sum')).hasText(sum);
     assert.dom('h1').hasText('Hash Data');
     assert.dom('label').hasText('Sum');
     assert.dom('#algorithm').doesNotExist();
     assert.dom('#format').doesNotExist();
-    assert.dom(TS.toolsInput('sum')).hasText(this.sum);
+
+    // test form reset clicking 'Done'
     await click(TS.button('Done'));
-    assert.true(this.onClear.calledOnce, 'onClear is called');
+    assert.dom('#algorithm').hasValue('sha2-256');
+    assert.dom('#format').hasValue('base64');
+    assert.dom(TS.toolsInput('hash-input')).hasValue('', 'inputs reset to default values');
   });
 
-  test('it calls onChange when inputs change', async function (assert) {
-    await this.renderComponent();
-    await fillIn(TS.toolsInput('hash-input'), 'foo');
-    assert.propEqual(this.onChange.lastCall.args, ['hashData', 'foo'], 'onChange is called with hash input');
+  test('it submits with updated values', async function (assert) {
+    const sum = '07a49af6947eaa5ddce0d40aa4584687a95f9c0be0d1d7df009d63da=';
+    const data = {
+      algorithm: 'sha2-224',
+      format: 'hex',
+      input: 'blah',
+    };
 
+    this.server.post('sys/tools/hash', (schema, req) => {
+      assert.propEqual(
+        JSON.parse(req.requestBody),
+        data,
+        `post request has expected data: ${req.requestBody}`
+      );
+      return { data: { sum } };
+    });
+
+    await this.renderComponent();
+
+    // submits updated values
+    await fillIn(TS.toolsInput('hash-input'), 'blah');
     await fillIn('#algorithm', 'sha2-224');
-    assert.propEqual(
-      this.onChange.lastCall.args,
-      ['algorithm', 'sha2-224'],
-      'onChange is called with algorithm'
-    );
     await fillIn('#format', 'hex');
-    assert.propEqual(this.onChange.lastCall.args, ['format', 'hex'], 'onChange is called with format');
+    await click(TS.submit);
   });
 });
