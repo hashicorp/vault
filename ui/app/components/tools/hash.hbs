@@ -27,9 +27,9 @@
     <Hds::Button @text="Done" @color="secondary" {{on "click" this.reset}} data-test-button="Done" />
   </div>
 {{else}}
-  <MessageError @errorMessage={{this.errorMessage}} />
   <form {{on "submit" this.handleSubmit}}>
     <div class="box is-sideless is-fullwidth is-marginless">
+      <MessageError @errorMessage={{this.errorMessage}} />
       <div class="field">
         <label for="hash-input" class="is-label">
           Input

@@ -27,10 +27,10 @@
     <Hds::Button @text="Done" @color="secondary" {{on "click" this.reset}} data-test-button="Done" />
   </div>
 {{else}}
-  <NamespaceReminder @mode="perform" @noun="rewrap" />
-  <MessageError @errorMessage={{this.errorMessage}} />
   <form {{on "submit" this.handleSubmit}}>
     <div class="box is-sideless is-fullwidth is-marginless">
+      <NamespaceReminder @mode="perform" @noun="rewrap" />
+      <MessageError @errorMessage={{this.errorMessage}} />
       <div class="field">
         <label for="token" class="is-label">Wrapped token</label>
         <div class="has-text-grey is-size-8 has-bottom-margin-xs">
