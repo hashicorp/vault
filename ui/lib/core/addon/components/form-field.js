@@ -161,7 +161,7 @@ export default class FormFieldComponent extends Component {
     const attrOptions = this.args.attr.options || {};
     let valueToSet = 0;
     if (value.enabled || alwaysSendValue) {
-      valueToSet = `${value.seconds}s`; // alt goSafeValue
+      valueToSet = `${value.seconds}s`;
     } else if (Object.keys(attrOptions).includes('ttlOffValue')) {
       valueToSet = attrOptions.ttlOffValue;
     }
