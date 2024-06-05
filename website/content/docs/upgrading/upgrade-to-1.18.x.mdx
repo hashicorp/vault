@@ -16,5 +16,15 @@ Vault 1.17. **Please read carefully**.
 
 ### Activity Log Changes
 
-The field `default_report_months` can no longer be configured. Attempts to write
-a value to the field will not result in any change.
+The field `default_report_months` can no longer be configured or read. Any previously set values
+will be ignored by the system.
+
+
+Attempts to modify `default_report_months` through the
+[/sys/internal/counters/config](/vault/api-docs/system/internal-counters#update-the-client-count-configuration)
+endpoint, will result in the following warning from Vault:
+<CodeBlockConfig hideClipboard>
+```shell-session
+default_report_months is deprecated: defaulting to billing start time
+```
+</CodeBlockConfig>
