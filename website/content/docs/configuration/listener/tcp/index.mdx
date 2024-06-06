@@ -1,7 +1,7 @@
 ---
 layout: docs
 page_title: TCP - Listeners - Configuration
-description: |-
+description: >-
   The TCP listener configures Vault to listen on the specified TCP address and
   port.
 ---
@@ -20,6 +20,44 @@ The `listener` stanza may be specified more than once to make Vault listen on
 multiple interfaces. If you configure multiple listeners you also need to
 specify [`api_addr`][api-addr] and [`cluster_addr`][cluster-addr] so Vault will
 advertise the correct address to other nodes.
+
+## Default TLS configuration
+
+By default, Vault TCP listeners only accept TLS 1.2 or 1.3 connections and will
+drop connection requests from clients using TLS 1.0 or 1.1.
+
+Vault uses the following ciphersuites by default:
+
+- **TLS 1.3** - `TLS_AES_128_GCM_SHA256`, `TLS_AES_256_GCM_SHA384`, or `TLS_CHACHA20_POLY1305_SHA256`.
+- **TLS 1.2** - depends on whether you configure Vault with a RSA or ECDSA certificate. 
+
+You can configure Vault with any cipher supported by the
+[`tls`](https://pkg.go.dev/crypto/tls) and
+[`tlsutil`](https://github.com/hashicorp/go-secure-stdlib/blob/main/tlsutil/tlsutil.go#L31-L57)
+Go packages. Vault uses the `tlsutil` package to parse ciphersuite configurations.
+
+<Note title="Sweet32 and 3DES">
+
+  The Go team and HashiCorp believe that the set of cyphers supported by `tls`
+  and `tlsutil` is appropriate for modern, secure usage. However, some
+  vulnerability scanners may flag issues with your configuration.
+
+  In particular, Sweet32 (CVE-2016-2183) is an attack against 64-bit block size
+  ciphers including 3DES that may allow an attacker to break the encryption of
+  long lived connections. According to the
+  [vulnerability disclosure](https://sweet32.info/), Sweet32 took a
+  single HTTPS session with 785 GB of traffic to break the encryption.
+
+  As of May 2024, the Go team does not believe the risk of Sweet32 is sufficient
+  to remove existing client compatibility by deprecating 3DES support, however,
+  the team did [de-prioritize 3DES](https://github.com/golang/go/issues/45430)
+  in favor of AES-based ciphers.
+
+</Note>
+
+Before overriding Vault defaults, we recommend reviewing the recommended Go team
+[approach to TLS configuration](https://go.dev/blog/tls-cipher-suites) with
+particular attention to their ciphersuite selections.
 
 ## Listener's custom response headers
 
@@ -93,7 +131,7 @@ default value in the `"/sys/config/ui"` [API endpoint](/vault/api-docs/system/co
   request size, in bytes. Defaults to 32 MB if not set or set to `0`.
   Specifying a number less than `0` turns off limiting altogether.
 
-- `max_request_duration` `(string: "90s")` – Specifies the maximum
+- `max_request_duration` `(string: "90s")` – Specifies the maximum
   request duration allowed before Vault cancels the request. This overrides
   `default_max_request_duration` for this listener.
 
@@ -243,6 +281,7 @@ This example shows enabling a TLS listener.
 
 ```hcl
 listener "tcp" {
+  address = "127.0.0.1:8200"
   tls_cert_file = "/etc/certs/vault.crt"
   tls_key_file  = "/etc/certs/vault.key"
 }
