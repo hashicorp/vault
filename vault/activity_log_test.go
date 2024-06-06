@@ -1016,7 +1016,6 @@ func TestActivityLog_API_ConfigCRUD_Census(t *testing.T) {
 	}
 
 	expected := map[string]interface{}{
-		"default_report_months":    12,
 		"retention_months":         56,
 		"enabled":                  "enable",
 		"queries_available":        false,
