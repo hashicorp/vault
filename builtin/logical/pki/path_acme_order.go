@@ -546,7 +546,7 @@ func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.
 
 	// We only allow ServerAuth key usage from ACME issued certs
 	// when configuration does not allow usage of ExtKeyusage field.
-	config, err := ac.sc.Backend.GetAcmeState().getConfigWithUpdate(ac.sc)
+	config, err := ac.acmeState.getConfigWithUpdate(ac.sc)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to fetch ACME configuration: %w", err)
 	}
