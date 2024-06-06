@@ -7,7 +7,9 @@ import { click, fillIn, currentURL, find, settled, waitUntil } from '@ember/test
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
+import { spy } from 'sinon';
 
+import { GENERAL } from '../helpers/general-selectors';
 import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { setupMirage } from 'ember-cli-mirage/test-support';
@@ -17,6 +19,10 @@ module('Acceptance | aws secret backend', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
+    const flash = this.owner.lookup('service:flash-messages');
+    this.flashSuccessSpy = spy(flash, 'success');
+    this.flashDangerSpy = spy(flash, 'danger');
+
     this.uid = uuidv4();
     return authPage.login();
   });
@@ -37,33 +43,37 @@ module('Acceptance | aws secret backend', function (hooks) {
     await click('[data-test-secret-backend-configure]');
 
     assert.strictEqual(currentURL(), `/vault/settings/secrets/configure/${path}`);
+
     assert.dom('[data-test-aws-root-creds-form]').exists();
-    assert.dom('[data-test-aws-link="root-creds"]').exists();
-    assert.dom('[data-test-aws-link="leases"]').exists();
+    assert.dom(GENERAL.tab('access-to-aws')).exists('renders the root creds tab');
+    assert.dom(GENERAL.tab('lease')).exists('renders the leases config tab');
 
     await fillIn('[data-test-aws-input="accessKey"]', 'foo');
     await fillIn('[data-test-aws-input="secretKey"]', 'bar');
 
     await click('[data-test-aws-input="root-save"]');
 
-    assert
-      .dom('[data-test-flash-message]:last-of-type [data-test-flash-message-body]')
-      .includesText(`The backend configuration saved successfully!`);
+    assert.true(
+      this.flashSuccessSpy.calledWith('The backend configuration saved successfully!'),
+      'success flash message is rendered'
+    );
 
-    await click('[data-test-aws-link="leases"]');
+    await click(GENERAL.tab('lease'));
 
     await click('[data-test-aws-input="lease-save"]');
-    assert
-      .dom('[data-test-flash-message]:last-of-type [data-test-flash-message-body]')
-      .includesText(`The backend configuration saved successfully!`);
+
+    assert.true(
+      this.flashSuccessSpy.calledTwice,
+      'a new success flash message is rendered upon saving lease'
+    );
 
     await click('[data-test-backend-view-link]');
 
-    assert.strictEqual(currentURL(), `/vault/secrets/${path}/list`, `navigates to the roles list`);
+    assert.strictEqual(currentURL(), `/vault/secrets/${path}/list`, 'navigates to the roles list');
 
     await click('[data-test-secret-create]');
 
-    assert.dom('[data-test-secret-header]').includesText('AWS Role');
+    assert.dom('[data-test-secret-header]').hasText('Create an AWS Role', 'aws: renders the create page');
 
     await fillIn('[data-test-input="name"]', roleName);
 
@@ -73,7 +83,7 @@ module('Acceptance | aws secret backend', function (hooks) {
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${path}/show/${roleName}`,
-      `$aws: navigates to the show page on creation`
+      'aws: navigates to the show page on creation'
     );
     await click(`[data-test-secret-breadcrumb="${path}"] a`);
 
@@ -96,7 +106,7 @@ module('Acceptance | aws secret backend', function (hooks) {
     await click(`[data-test-secret-link="${roleName}"] [data-test-popup-menu-trigger]`);
     await waitUntil(() => find(`[data-test-aws-role-delete="${roleName}"]`)); // flaky without
     await click(`[data-test-aws-role-delete="${roleName}"]`);
-    await click(`[data-test-confirm-button]`);
-    assert.dom(`[data-test-secret-link="${roleName}"]`).doesNotExist(`aws: role is no longer in the list`);
+    await click(GENERAL.confirmButton);
+    assert.dom(`[data-test-secret-link="${roleName}"]`).doesNotExist('aws: role is no longer in the list');
   });
 });
