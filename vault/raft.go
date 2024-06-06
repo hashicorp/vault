@@ -149,9 +149,10 @@ func (c *Core) startRaftBackend(ctx context.Context) (retErr error) {
 		raftBackend.SetRestoreCallback(c.raftSnapshotRestoreCallback(true, true))
 
 		if err := raftBackend.SetupCluster(ctx, raft.SetupOpts{
-			TLSKeyring:      raftTLS,
-			ClusterListener: c.getClusterListener(),
-			StartAsLeader:   creating,
+			TLSKeyring:          raftTLS,
+			ClusterListener:     c.getClusterListener(),
+			StartAsLeader:       creating,
+			EffectiveSDKVersion: c.effectiveSDKVersion,
 		}); err != nil {
 			return err
 		}
@@ -309,7 +310,6 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 	}
 
 	c.logger.Info("starting raft active node")
-	raftBackend.SetEffectiveSDKVersion(c.effectiveSDKVersion)
 
 	c.pendingRaftPeers = &sync.Map{}
 
