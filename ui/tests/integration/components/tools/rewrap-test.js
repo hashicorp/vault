@@ -75,4 +75,18 @@ module('Integration | Component | tools/rewrap', function (hooks) {
     assert.dom('label').hasText('Wrapped token');
     assert.dom(TS.toolsInput('wrapping-token')).hasValue('', 'token input resets');
   });
+
+  test('it trims token whitespace', async function (assert) {
+    const data = { token: 'token.OMZFbUurY0ppT2RTMGpRa0JOSUFqUzJUaGNqdWUQ6ooG' };
+    this.server.post('sys/wrapping/rewrap', (schema, req) => {
+      const payload = JSON.parse(req.requestBody);
+      assert.propEqual(payload, data, `token does not include whitespace: "${req.requestBody}"`);
+      return {};
+    });
+
+    await this.renderComponent();
+
+    await fillIn(TS.toolsInput('wrapping-token'), `${data.token}  `);
+    await click(TS.submit);
+  });
 });

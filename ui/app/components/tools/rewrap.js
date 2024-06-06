@@ -35,7 +35,7 @@ export default class ToolsRewrap extends Component {
   @action
   async handleSubmit(evt) {
     evt.preventDefault();
-    const data = { token: this.originalToken };
+    const data = { token: this.originalToken.trim() };
 
     try {
       const response = await this.store.adapterFor('tools').toolAction('rewrap', data);
