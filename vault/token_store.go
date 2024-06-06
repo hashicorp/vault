@@ -1953,7 +1953,7 @@ func (ts *TokenStore) revokeInternal(ctx context.Context, saltedID string, skipO
 			}
 			lock.Unlock()
 
-			// Delete the the child storage entry after we update the token entry Since
+			// Delete the child storage entry after we update the token entry Since
 			// paths are not deeply nested (i.e. they are simply
 			// parenPrefix/<parentID>/<childID>), we can simply call view.Delete instead
 			// of logical.ClearView
@@ -3435,8 +3435,10 @@ func (ts *TokenStore) handleLookup(ctx context.Context, req *logical.Request, da
 			return nil, err
 		}
 		if len(identityPolicies) != 0 {
-			resp.Data["identity_policies"] = identityPolicies[out.NamespaceID]
-			delete(identityPolicies, out.NamespaceID)
+			if _, ok := identityPolicies[out.NamespaceID]; ok {
+				resp.Data["identity_policies"] = identityPolicies[out.NamespaceID]
+				delete(identityPolicies, out.NamespaceID)
+			}
 			resp.Data["external_namespace_policies"] = identityPolicies
 		}
 	}
@@ -4116,7 +4118,7 @@ func (ts *TokenStore) gaugeCollectorByMethod(ctx context.Context) ([]metricsutil
 
 		// mountEntry.Path lacks the "auth/" prefix; perhaps we should
 		// refactor router to provide a method that returns both the matching
-		// path *and* the the mount entry?
+		// path *and* the mount entry?
 		// Or we could just always add "auth/"?
 		matchingMount := ts.core.router.MatchingMount(ctx, path)
 		if matchingMount == "" {

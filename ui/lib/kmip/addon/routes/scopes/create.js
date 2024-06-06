@@ -4,18 +4,19 @@
  */
 
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 
-export default Route.extend({
-  store: service(),
-  secretMountPath: service(),
+export default class KmipScopesCreate extends Route {
+  @service store;
+  @service secretMountPath;
+
   beforeModel() {
     this.store.unloadAll('kmip/scope');
-  },
+  }
+
   model() {
-    const model = this.store.createRecord('kmip/scope', {
+    return this.store.createRecord('kmip/scope', {
       backend: this.secretMountPath.currentPath,
     });
-    return model;
-  },
-});
+  }
+}

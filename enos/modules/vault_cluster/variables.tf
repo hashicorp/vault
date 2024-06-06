@@ -36,6 +36,16 @@ variable "config_dir" {
   default     = "/etc/vault.d"
 }
 
+variable "config_mode" {
+  description = "The method to use when configuring Vault. When set to 'env' we will configure Vault using VAULT_ style environment variables if possible. When 'file' we'll use the HCL configuration file for all configuration options."
+  default     = "file"
+
+  validation {
+    condition     = contains(["env", "file"], var.config_mode)
+    error_message = "The config_mode must be either 'env' or 'file'. No other configuration modes are supported."
+  }
+}
+
 variable "config_env_vars" {
   description = "Optional Vault configuration environment variables to set starting Vault"
   type        = map(string)
@@ -90,6 +100,12 @@ variable "consul_release" {
   }
 }
 
+variable "distro_version" {
+  type        = string
+  description = "The Linux distro version"
+  default     = null
+}
+
 variable "enable_audit_devices" {
   description = "If true every audit device will be enabled"
   type        = bool
@@ -110,7 +126,7 @@ variable "initialize_cluster" {
 
 variable "install_dir" {
   type        = string
-  description = "The directory where the vault binary will be installed"
+  description = "The directory where the Vault binary will be installed"
   default     = "/opt/vault/bin"
 }
 

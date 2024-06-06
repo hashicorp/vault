@@ -68,12 +68,8 @@ func possiblyForwardAliasCreation(ctx context.Context, c *Core, inErr error, aut
 
 var errCreateEntityUnimplemented = "create entity unimplemented in the server"
 
-func possiblyForwardEntityCreation(ctx context.Context, c *Core, inErr error, auth *logical.Auth, entity *identity.Entity) (*identity.Entity, error) {
-	return entity, inErr
-}
-
-func updateLocalAlias(ctx context.Context, c *Core, auth *logical.Auth, entity *identity.Entity) error {
-	return nil
+func registerLocalAlias(_ context.Context, _ *Core, _ *logical.Alias) (*identity.Entity, error) {
+	return nil, logical.ErrReadOnly
 }
 
 func possiblyForwardSaveCachedAuthResponse(ctx context.Context, c *Core, respAuth *MFACachedAuthResponse) error {

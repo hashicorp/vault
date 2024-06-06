@@ -4,10 +4,10 @@
  */
 
 .global-flash {
-  bottom: 0;
-  left: $spacing-12;
+  bottom: $spacing-32;
+  right: $spacing-24;
   margin: 10px;
-  max-width: $drawer-width;
+  max-width: 360px;
   position: fixed;
   width: 95%;
   z-index: 300;

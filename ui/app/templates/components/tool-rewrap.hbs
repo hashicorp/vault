@@ -29,7 +29,12 @@
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <Hds::Copy::Button @text="Copy" @textToCopy={{@rewrap_token}} class="primary" />
+      <Hds::Copy::Button
+        @text="Copy"
+        @textToCopy={{@rewrap_token}}
+        @onError={{(fn (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger"))}}
+        class="primary"
+      />
     </div>
     <div class="control">
       <Hds::Button @text="Back" @color="secondary" {{on "click" this.onClear}} />
@@ -51,7 +56,7 @@
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <Hds::Button @text="Rewrap token" type="submit" data-test-tools-submit="true" />
+      <Hds::Button @text="Rewrap token" type="submit" data-test-tools-submit />
     </div>
   </div>
 {{/if}}

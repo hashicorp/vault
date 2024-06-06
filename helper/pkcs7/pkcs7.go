@@ -7,14 +7,13 @@ import (
 	"crypto/dsa"
 	"crypto/ecdsa"
 	"crypto/rsa"
+	_ "crypto/sha1" // for crypto.SHA1
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"errors"
 	"fmt"
 	"sort"
-
-	_ "crypto/sha1" // for crypto.SHA1
 )
 
 // PKCS7 Represents a PKCS7 structure

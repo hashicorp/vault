@@ -21,13 +21,126 @@ import (
 	"testing"
 	"time"
 
-	"golang.org/x/crypto/ed25519"
-
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/copystructure"
+	"golang.org/x/crypto/ed25519"
 )
+
+// Ordering of these items needs to match the iota order defined in policy.go. Ordering changes
+// should never occur, as it would lead to a key type change within existing stored policies.
+var allTestKeyTypes = []KeyType{
+	KeyType_AES256_GCM96, KeyType_ECDSA_P256, KeyType_ED25519, KeyType_RSA2048,
+	KeyType_RSA4096, KeyType_ChaCha20_Poly1305, KeyType_ECDSA_P384, KeyType_ECDSA_P521, KeyType_AES128_GCM96,
+	KeyType_RSA3072, KeyType_MANAGED_KEY, KeyType_HMAC, KeyType_AES128_CMAC, KeyType_AES256_CMAC,
+}
+
+func TestPolicy_KeyTypes(t *testing.T) {
+	// Make sure the iota value never change for key types, as existing storage would be affected
+	for i, keyType := range allTestKeyTypes {
+		if int(keyType) != i {
+			t.Fatalf("iota of keytype %s changed, expected %d got %d", keyType.String(), i, keyType)
+		}
+	}
+
+	// Make sure we have a string presentation for all types
+	for _, keyType := range allTestKeyTypes {
+		if strings.Contains(keyType.String(), "unknown") {
+			t.Fatalf("keytype with iota of %d should not contain 'unknown', missing in String() switch statement", keyType)
+		}
+	}
+}
+
+func TestPolicy_HmacCmacSuported(t *testing.T) {
+	// Test HMAC supported feature
+	for _, keyType := range allTestKeyTypes {
+		switch keyType {
+		case KeyType_MANAGED_KEY:
+			if keyType.HMACSupported() {
+				t.Fatalf("hmac should not have been not be supported for keytype %s", keyType.String())
+			}
+			if keyType.CMACSupported() {
+				t.Fatalf("cmac should not have been be supported for keytype %s", keyType.String())
+			}
+		case KeyType_AES128_CMAC, KeyType_AES256_CMAC:
+			if keyType.HMACSupported() {
+				t.Fatalf("hmac should have been not be supported for keytype %s", keyType.String())
+			}
+			if !keyType.CMACSupported() {
+				t.Fatalf("cmac should have been be supported for keytype %s", keyType.String())
+			}
+		default:
+			if !keyType.HMACSupported() {
+				t.Fatalf("hmac should have been supported for keytype %s", keyType.String())
+			}
+			if keyType.CMACSupported() {
+				t.Fatalf("cmac should not have been supported for keytype %s", keyType.String())
+			}
+		}
+	}
+}
+
+func TestPolicy_CMACKeyUpgrade(t *testing.T) {
+	ctx := context.Background()
+	lm, _ := NewLockManager(false, 0)
+	storage := &logical.InmemStorage{}
+	p, upserted, err := lm.GetPolicy(ctx, PolicyRequest{
+		Upsert:  true,
+		Storage: storage,
+		KeyType: KeyType_AES256_CMAC,
+		Name:    "test",
+	}, rand.Reader)
+	if err != nil {
+		t.Fatalf("failed loading policy: %v", err)
+	}
+	if p == nil {
+		t.Fatal("nil policy")
+	}
+	if !upserted {
+		t.Fatal("expected an upsert")
+	}
+
+	// This verifies we don't have a hmac key
+	_, err = p.HMACKey(1)
+	if err == nil {
+		t.Fatal("cmac key should not return an hmac key but did on initial creation")
+	}
+
+	if p.NeedsUpgrade() {
+		t.Fatal("cmac key should not require an upgrade after initial key creation")
+	}
+
+	err = p.Upgrade(ctx, storage, rand.Reader)
+	if err != nil {
+		t.Fatalf("an error was returned from upgrade method: %v", err)
+	}
+	p.Unlock()
+
+	// Now reload our policy from disk and make sure we still don't have a hmac key
+	p, upserted, err = lm.GetPolicy(ctx, PolicyRequest{
+		Upsert:  true,
+		Storage: storage,
+		KeyType: KeyType_AES256_CMAC,
+		Name:    "test",
+	}, rand.Reader)
+	if err != nil {
+		t.Fatalf("failed loading policy: %v", err)
+	}
+	if p == nil {
+		t.Fatal("nil policy")
+	}
+	if upserted {
+		t.Fatal("expected the key to exist but upserted was true")
+	}
+
+	p.Unlock()
+
+	_, err = p.HMACKey(1)
+	if err == nil {
+		t.Fatal("cmac key should not return an hmac key post upgrade")
+	}
+}
 
 func TestPolicy_KeyEntryMapUpgrade(t *testing.T) {
 	now := time.Now()

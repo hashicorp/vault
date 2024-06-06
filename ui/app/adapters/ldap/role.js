@@ -5,8 +5,10 @@
 
 import NamedPathAdapter from 'vault/adapters/named-path';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import AdapterError from '@ember-data/adapter/error';
+import { addManyToArray } from 'vault/helpers/add-to-array';
+import sortObjects from 'vault/utils/sort-objects';
 
 export default class LdapRoleAdapter extends NamedPathAdapter {
   @service flashMessages;
@@ -33,7 +35,7 @@ export default class LdapRoleAdapter extends NamedPathAdapter {
   async query(store, type, query, recordArray, options) {
     const { showPartialError } = options.adapterOptions || {};
     const { backend } = query;
-    const roles = [];
+    let roles = [];
     const errors = [];
 
     for (const roleType of ['static', 'dynamic']) {
@@ -42,7 +44,7 @@ export default class LdapRoleAdapter extends NamedPathAdapter {
         const models = await this.ajax(url, 'GET', { data: { list: true } }).then((resp) => {
           return resp.data.keys.map((name) => ({ id: name, name, backend, type: roleType }));
         });
-        roles.addObjects(models);
+        roles = addManyToArray(roles, models);
       } catch (error) {
         if (error.httpStatus !== 404) {
           errors.push(error);
@@ -71,7 +73,7 @@ export default class LdapRoleAdapter extends NamedPathAdapter {
     }
     // must return an object in this shape for lazyPaginatedQuery to function
     // changing the responsePath or providing the extractLazyPaginatedData serializer method causes normalizeResponse to return data: [undefined]
-    return { data: { keys: roles.sortBy('name') } };
+    return { data: { keys: sortObjects(roles, 'name') } };
   }
   queryRecord(store, type, query) {
     const { backend, name, type: roleType } = query;

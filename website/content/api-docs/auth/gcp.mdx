@@ -21,7 +21,25 @@ at any location, please update your API calls accordingly.
 Configures the credentials required for the plugin to perform API calls
 to Google Cloud. These credentials will be used to query the status of IAM
 entities and get service account or other Google public certificates
-to confirm signed JWTs passed in during login.
+to confirm signed JWTs passed in during login. You can configure
+credentials either with Application Credentials for a privileged service account,
+or using Plugin Workload Identity Federation (WIF).
+
+### IAM
+Vault uses the official Google Cloud SDK to source credentials from environment variables and shared files.
+
+From the highest precedence to lowest, you can pass root credentials to the Vault server in the following ways:
+
+1. Provide static credentials to the API as a payload.
+
+1. Use [plugin workload identity federation](/vault/docs/auth/gcp#plugin-workload-identity-federation-wif) credentials.
+
+1. Set [application default credentials](https://cloud.google.com/docs/authentication/application-default-credentials)
+as environment variables on the Vault server.
+
+<Warning title="Destructive action">
+  Passing Vault new root credentials overwrites any preexisting root credentials.
+</Warning>
 
 | Method | Path               |
 | :----- | :----------------- |
@@ -33,7 +51,18 @@ to confirm signed JWTs passed in during login.
   service account credentials file. The service account associated with the credentials
   file must have the following [permissions](/vault/docs/auth/gcp#required-gcp-permissions).
   If this value is empty, Vault will try to use [Application Default Credentials][gcp-adc]
-  from the machine on which the Vault server is running.
+  from the machine on which the Vault server is running. Mutually exclusive with `identity_token_audience`.
+
+- `service_account_email` `(string: "")` – <EnterpriseAlert product="vault" inline /> Service Account
+  to impersonate for plugin workload identity federation. Required with `identity_token_audience`.
+
+- `identity_token_audience` `(string: "")` - <EnterpriseAlert product="vault" inline /> The
+  audience claim value for plugin identity tokens. Must match an allowed audience configured
+  for the target [Workload Identity Pool](https://cloud.google.com/iam/docs/workload-identity-federation-with-other-providers#prepare).
+  Mutually exclusive with `credentials`.
+
+- `identity_token_ttl` `(string/int: 3600)` - <EnterpriseAlert product="vault" inline /> The
+  TTL of generated tokens. Defaults to 1 hour. Uses [duration format strings](/vault/docs/concepts/duration-format).
 
 - `iam_alias` `(string: "role_id")` - Must be either `unique_id` or `role_id`.
   If `unique_id` is specified, the service account's unique ID will be used for

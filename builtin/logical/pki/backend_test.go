@@ -35,16 +35,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
-	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
-	"golang.org/x/exp/maps"
-
-	"github.com/hashicorp/vault/helper/testhelpers"
-
-	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
-
-	"github.com/stretchr/testify/require"
-
 	"github.com/armon/go-metrics"
 	"github.com/fatih/structs"
 	"github.com/go-test/deep"
@@ -52,15 +42,20 @@ import (
 	"github.com/hashicorp/vault/api"
 	auth "github.com/hashicorp/vault/api/auth/userpass"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
+	"github.com/hashicorp/vault/helper/testhelpers"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/mapstructure"
+	"github.com/stretchr/testify/require"
+	"golang.org/x/exp/maps"
 	"golang.org/x/net/idna"
-
-	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 )
 
 var stepCount = 0
@@ -2108,7 +2103,7 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 	// list certs/
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation:  logical.ListOperation,
-		Path:       "certs/",
+		Path:       issuing.PathCerts,
 		Storage:    storage,
 		MountPoint: "pki/",
 	})
@@ -2544,6 +2539,59 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	}
 }
 
+// TestBackend_SignIntermediate_EnforceLeafFlag verifies if the flag is true
+// that we will leverage the issuer's configured behavior
+func TestBackend_SignIntermediate_EnforceLeafFlag(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"ttl":         "40h",
+		"common_name": "myvault.com",
+	})
+	require.NoError(t, err, "failed generating root cert")
+	rootCert := parseCert(t, resp.Data["certificate"].(string))
+
+	_, err = CBWrite(b, s, "issuer/default", map[string]interface{}{
+		"leaf_not_after_behavior": "err",
+	})
+	require.NoError(t, err, "failed updating root issuer cert behavior")
+
+	resp, err = CBWrite(b, s, "intermediate/generate/internal", map[string]interface{}{
+		"common_name": "myint.com",
+	})
+	require.NoError(t, err, "failed generating intermediary CSR")
+	csr := resp.Data["csr"]
+
+	_, err = CBWrite(b, s, "root/sign-intermediate", map[string]interface{}{
+		"common_name":                     "myint.com",
+		"other_sans":                      "1.3.6.1.4.1.311.20.2.3;utf8:caadmin@example.com",
+		"csr":                             csr,
+		"ttl":                             "60h",
+		"enforce_leaf_not_after_behavior": true,
+	})
+	require.Error(t, err, "sign-intermediate should have failed as root issuer leaf behavior is set to err")
+
+	// Now test with permit, the old default behavior
+	_, err = CBWrite(b, s, "issuer/default", map[string]interface{}{
+		"leaf_not_after_behavior": "permit",
+	})
+	require.NoError(t, err, "failed updating root issuer cert behavior to permit")
+
+	resp, err = CBWrite(b, s, "root/sign-intermediate", map[string]interface{}{
+		"common_name":                     "myint.com",
+		"other_sans":                      "1.3.6.1.4.1.311.20.2.3;utf8:caadmin@example.com",
+		"csr":                             csr,
+		"ttl":                             "60h",
+		"enforce_leaf_not_after_behavior": true,
+	})
+	require.NoError(t, err, "failed to sign intermediary CA with permit as issuer")
+	intCert := parseCert(t, resp.Data["certificate"].(string))
+
+	require.Truef(t, rootCert.NotAfter.Before(intCert.NotAfter),
+		"root cert notAfter %v was not before ca cert's notAfter %v", rootCert.NotAfter, intCert.NotAfter)
+}
+
 func TestBackend_SignIntermediate_AllowedPastCAValidity(t *testing.T) {
 	t.Parallel()
 	b_root, s_root := CreateBackendWithStorage(t)
@@ -2551,13 +2599,15 @@ func TestBackend_SignIntermediate_AllowedPastCAValidity(t *testing.T) {
 	var err error
 
 	// Direct issuing from root
-	_, err = CBWrite(b_root, s_root, "root/generate/internal", map[string]interface{}{
+	resp, err := CBWrite(b_root, s_root, "root/generate/internal", map[string]interface{}{
 		"ttl":         "40h",
 		"common_name": "myvault.com",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	rootCert := parseCert(t, resp.Data["certificate"].(string))
 
 	_, err = CBWrite(b_root, s_root, "roles/test", map[string]interface{}{
 		"allow_bare_domains": true,
@@ -2568,7 +2618,7 @@ func TestBackend_SignIntermediate_AllowedPastCAValidity(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp, err := CBWrite(b_int, s_int, "intermediate/generate/internal", map[string]interface{}{
+	resp, err = CBWrite(b_int, s_int, "intermediate/generate/internal", map[string]interface{}{
 		"common_name": "myint.com",
 	})
 	schema.ValidateResponse(t, schema.GetResponseSchema(t, b_root.Route("intermediate/generate/internal"), logical.UpdateOperation), resp, true)
@@ -2619,6 +2669,9 @@ func TestBackend_SignIntermediate_AllowedPastCAValidity(t *testing.T) {
 	cert := parseCert(t, resp.Data["certificate"].(string))
 	certSkid := certutil.GetHexFormatted(cert.SubjectKeyId, ":")
 	require.Equal(t, intSkid, certSkid)
+
+	require.Equal(t, rootCert.NotAfter, cert.NotAfter, "intermediary cert's NotAfter did not match root cert's NotAfter")
+	require.Contains(t, resp.Warnings, intCaTruncatationWarning, "missing warning about intermediary CA notAfter truncation")
 }
 
 func TestBackend_ConsulSignLeafWithLegacyRole(t *testing.T) {
@@ -3714,6 +3767,10 @@ func TestReadWriteDeleteRoles(t *testing.T) {
 		"allowed_user_ids":                   []interface{}{},
 	}
 
+	if issuing.MetadataPermitted {
+		expectedData["no_store_metadata"] = false
+	}
+
 	if diff := deep.Equal(expectedData, resp.Data); len(diff) > 0 {
 		t.Fatalf("pki role default values have changed, diff: %v", diff)
 	}
@@ -4055,6 +4112,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 			"tidy_move_legacy_ca_bundle":            false,
 			"tidy_revocation_queue":                 false,
 			"tidy_cross_cluster_revoked_certs":      false,
+			"tidy_cert_metadata":                    false,
 			"pause_duration":                        "0s",
 			"state":                                 "Finished",
 			"error":                                 nil,
@@ -4076,6 +4134,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 			"acme_account_revoked_count":            json.Number("0"),
 			"acme_account_deleted_count":            json.Number("0"),
 			"total_acme_account_count":              json.Number("0"),
+			"cert_metadata_deleted_count":           json.Number("0"),
 		}
 		// Let's copy the times from the response so that we can use deep.Equal()
 		timeStarted, ok := tidyStatus.Data["time_started"]
@@ -6785,7 +6844,7 @@ func TestProperAuthing(t *testing.T) {
 		"cert/unified-delta-crl":                 shouldBeUnauthedReadList,
 		"cert/unified-delta-crl/raw":             shouldBeUnauthedReadList,
 		"cert/unified-delta-crl/raw/pem":         shouldBeUnauthedReadList,
-		"certs/":                                 shouldBeAuthed,
+		issuing.PathCerts:                        shouldBeAuthed,
 		"certs/revoked/":                         shouldBeAuthed,
 		"certs/revocation-queue/":                shouldBeAuthed,
 		"certs/unified-revoked/":                 shouldBeAuthed,

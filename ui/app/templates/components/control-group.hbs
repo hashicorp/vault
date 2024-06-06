@@ -53,6 +53,9 @@
             @text="Copy"
             @isIconOnly={{true}}
             @textToCopy={{this.model.id}}
+            @onError={{(fn
+              (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")
+            )}}
             class="transparent top-right-absolute"
           />
           <div class="message-body">
@@ -95,7 +98,14 @@
         We’ve saved your request token, but you may want to copy it just in case:
       </p>
       <div>
-        <Hds::Copy::Snippet data-test-token-value @textToCopy={{this.controlGroupResponse.token}} @color="secondary" />
+        <Hds::Copy::Snippet
+          data-test-token-value
+          @textToCopy={{this.controlGroupResponse.token}}
+          @color="secondary"
+          @onError={{(fn
+            (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")
+          )}}
+        />
       </div>
     </div>
   {{/if}}

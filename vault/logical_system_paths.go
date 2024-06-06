@@ -739,12 +739,12 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 
 func (b *SystemBackend) rekeyPaths() []*framework.Path {
 	respFields := map[string]*framework.FieldSchema{
-		"nounce": {
+		"nonce": {
 			Type:     framework.TypeString,
 			Required: true,
 		},
 		"started": {
-			Type:     framework.TypeString,
+			Type:     framework.TypeBool,
 			Required: true,
 		},
 		"t": {
@@ -984,7 +984,7 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 						http.StatusOK: {{
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
-								"nounce": {
+								"nonce": {
 									Type:     framework.TypeString,
 									Required: true,
 								},
@@ -992,7 +992,7 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 									Type: framework.TypeBool,
 								},
 								"started": {
-									Type: framework.TypeString,
+									Type: framework.TypeBool,
 								},
 								"t": {
 									Type: framework.TypeInt,
@@ -1061,12 +1061,12 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 						http.StatusOK: {{
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
-								"nounce": {
+								"nonce": {
 									Type:     framework.TypeString,
 									Required: true,
 								},
 								"started": {
-									Type:     framework.TypeString,
+									Type:     framework.TypeBool,
 									Required: true,
 								},
 								"t": {
@@ -1094,12 +1094,12 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 						http.StatusOK: {{
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
-								"nounce": {
+								"nonce": {
 									Type:     framework.TypeString,
 									Required: true,
 								},
 								"started": {
-									Type:     framework.TypeString,
+									Type:     framework.TypeBool,
 									Required: true,
 								},
 								"t": {
@@ -1128,7 +1128,7 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 						http.StatusOK: {{
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
-								"nounce": {
+								"nonce": {
 									Type:     framework.TypeString,
 									Required: true,
 								},
@@ -1179,6 +1179,10 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 				"reset": {
 					Type:        framework.TypeBool,
 					Description: "Specifies if previously-provided unseal keys are discarded and the unseal process is reset.",
+				},
+				"migrate": {
+					Type:        framework.TypeBool,
+					Description: "Used to migrate the seal from shamir to autoseal or autoseal to shamir. Must be provided on all unseal key calls.",
 				},
 			},
 
@@ -2887,31 +2891,6 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 								},
 								"key_info": {
 									Type:     framework.TypeMap,
-									Required: true,
-								},
-							},
-						}},
-					},
-				},
-			},
-		},
-		{
-			Pattern: "internal/ui/version",
-			DisplayAttrs: &framework.DisplayAttributes{
-				OperationPrefix: "internal-ui",
-				OperationVerb:   "read",
-				OperationSuffix: "version",
-			},
-			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.ReadOperation: &framework.PathOperation{
-					Callback: b.pathInternalUIVersion,
-					Summary:  "Backwards compatibility is not guaranteed for this API",
-					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
-							Description: "OK",
-							Fields: map[string]*framework.FieldSchema{
-								"version": {
-									Type:     framework.TypeString,
 									Required: true,
 								},
 							},
@@ -5096,42 +5075,44 @@ func (b *SystemBackend) lockedUserPaths() []*framework.Path {
 	}
 }
 
-func (b *SystemBackend) eventPaths() []*framework.Path {
+func (b *SystemBackend) wellKnownPaths() []*framework.Path {
 	return []*framework.Path{
 		{
-			Pattern: "events/subscriptions$",
-
-			DisplayAttrs: &framework.DisplayAttributes{
-				OperationPrefix: "subscriptions",
-				OperationVerb:   "create",
-			},
-
-			Fields: map[string]*framework.FieldSchema{
-				"config": {
-					Type:     framework.TypeMap,
-					Required: true,
-					// Description: strings.TrimSpace(sysHelp["mount_accessor"][0]),
-				},
-				"plugin": {
-					Type:     framework.TypeString,
-					Required: true,
-				},
-				//"alias_identifier": {
-				//	Type: framework.TypeString,
-				//	// Description: strings.TrimSpace(sysHelp["alias_identifier"][0]),
-				//},
-			},
+			Pattern: "well-known/?$",
 
 			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.UpdateOperation: &framework.PathOperation{
-					Callback: b.handleEventsSubscribe,
-					Summary:  "",
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleWellKnownList(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationPrefix: "well-known",
+						OperationVerb:   "list",
+						OperationSuffix: "labels-2",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
-								"id": {
-									Type:     framework.TypeString,
+								"keys": {
+									Type:     framework.TypeStringSlice,
+									Required: true,
+								},
+							},
+						}},
+					},
+				},
+				logical.ListOperation: &framework.PathOperation{
+					Callback: b.handleWellKnownList(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationPrefix: "well-known",
+						OperationVerb:   "list",
+						OperationSuffix: "labels",
+					},
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"keys": {
+									Type:     framework.TypeStringSlice,
 									Required: true,
 								},
 							},
@@ -5139,64 +5120,57 @@ func (b *SystemBackend) eventPaths() []*framework.Path {
 					},
 				},
 			},
-			// HelpSynopsis:    strings.TrimSpace(sysHelp["unlock_user"][0]),
-			// HelpDescription: strings.TrimSpace(sysHelp["unlock_user"][1]),
+
+			HelpSynopsis:    strings.TrimSpace(sysHelp["well-known-list"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["well-known-list"][1]),
 		},
 		{
-			Pattern: "events/subscriptions/(?P<plugin>.+)/(?P<id>.+)",
+			Pattern: "well-known/(?P<label>.+)",
 
 			DisplayAttrs: &framework.DisplayAttributes{
-				OperationPrefix: "subscriptions",
-				OperationVerb:   "create",
+				OperationPrefix: "well-known",
+				OperationSuffix: "label",
 			},
 
 			Fields: map[string]*framework.FieldSchema{
-				"plugin": {
-					Type: framework.TypeString,
+				"label": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["well-known-label"][0]),
 				},
-				"id": {
-					Type: framework.TypeString,
-					// Description: strings.TrimSpace(sysHelp["mount_accessor"][0]),
-				},
-				"list": {
-					Type: framework.TypeBool,
-				},
-				//"alias_identifier": {
-				//	Type: framework.TypeString,
-				//	// Description: strings.TrimSpace(sysHelp["alias_identifier"][0]),
-				//},
 			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.ListOperation: &framework.PathOperation{
-					Callback: b.handleEventsListSubscriptions,
-					Summary:  "",
-					Responses: map[int][]framework.Response{
-						http.StatusNoContent: {{
-							Description: "OK",
-						}},
-					},
-				},
 				logical.ReadOperation: &framework.PathOperation{
-					Callback: b.handleEventsListSubscriptions,
-					Summary:  "",
+					Callback: b.handleWellKnownRead(),
 					Responses: map[int][]framework.Response{
-						http.StatusNoContent: {{
+						http.StatusOK: {{
 							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"label": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"mount_uuid": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"mount_path": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"prefix": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+							},
 						}},
 					},
-				},
-				logical.DeleteOperation: &framework.PathOperation{
-					Callback: b.handleEventsUnsubscribe,
-					Summary:  "",
-					Responses: map[int][]framework.Response{
-						http.StatusNoContent: {{
-							Description: "OK",
-						}},
-					},
+					Summary: "Retrieve the associated mount information for a registered well-known label.",
 				},
 			},
-			// HelpSynopsis:    strings.TrimSpace(sysHelp["unlock_user"][0]),
-			// HelpDescription: strings.TrimSpace(sysHelp["unlock_user"][1]),
+
+			HelpSynopsis:    strings.TrimSpace(sysHelp["well-known"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["well-known"][1]),
 		},
 	}
 }

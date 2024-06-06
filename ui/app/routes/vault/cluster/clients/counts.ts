@@ -4,17 +4,19 @@
  */
 
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import timestamp from 'core/utils/timestamp';
 import { getUnixTime } from 'date-fns';
 
+import type FlagsService from 'vault/services/flags';
 import type StoreService from 'vault/services/store';
-import type { ClientsRouteModel } from '../clients';
-import type ClientsConfigModel from 'vault/models/clients/config';
-import type ClientsVersionHistoryModel from 'vault/models/clients/version-history';
+import type VersionService from 'vault/services/version';
+import type { ModelFrom } from 'vault/vault/route';
+import type ClientsRoute from '../clients';
 import type ClientsActivityModel from 'vault/models/clients/activity';
-import type Controller from '@ember/controller';
-import type AdapterError from 'ember-data/adapter'; // eslint-disable-line ember/use-ember-data-rfc-395-imports
+import type ClientsConfigModel from 'vault/models/clients/config';
+import type ClientsCountsController from 'vault/controllers/vault/cluster/clients/counts';
+import { setStartTimeQuery } from 'core/utils/client-count-utils';
 
 export interface ClientsCountsRouteParams {
   start_time?: string | number | undefined;
@@ -23,24 +25,10 @@ export interface ClientsCountsRouteParams {
   mountPath?: string | undefined;
 }
 
-interface ClientsCountsRouteModel {
-  config: ClientsConfigModel;
-  versionHistory: ClientsVersionHistoryModel;
-  activity?: ClientsActivityModel;
-  activityError?: AdapterError;
-  startTimestamp: number;
-  endTimestamp: number;
-}
-interface ClientsCountsController extends Controller {
-  model: ClientsCountsRouteModel;
-  start_time: number | undefined;
-  end_time: number | undefined;
-  ns: string | undefined;
-  mountPath: string | undefined;
-}
-
 export default class ClientsCountsRoute extends Route {
+  @service declare readonly flags: FlagsService;
   @service declare readonly store: StoreService;
+  @service declare readonly version: VersionService;
 
   queryParams = {
     start_time: { refreshModel: true, replace: true },
@@ -49,9 +37,13 @@ export default class ClientsCountsRoute extends Route {
     mountPath: { refreshModel: false, replace: true },
   };
 
-  async getActivity(start_time: number, end_time: number) {
+  beforeModel() {
+    return this.flags.fetchActivatedFlags();
+  }
+
+  async getActivity(start_time: number | null, end_time: number) {
     let activity, activityError;
-    // if there is no billingStartTimestamp or selected start date initially we allow the user to manually choose a date
+    // if there is no start_time we want the user to manually choose a date
     // in that case bypass the query so that the user isn't stuck viewing the activity error
     if (start_time) {
       try {
@@ -62,24 +54,26 @@ export default class ClientsCountsRoute extends Route {
       } catch (error) {
         activityError = error;
       }
-      return [activity, activityError];
     }
-    return [{}, null];
+    return { activity, activityError };
   }
 
   async model(params: ClientsCountsRouteParams) {
-    const { config, versionHistory } = this.modelFor('vault.cluster.clients') as ClientsRouteModel;
-    // we could potentially make an additional request to fetch the license and get the start date from there if the config request fails
-    const startTimestamp = Number(params.start_time) || getUnixTime(config.billingStartTimestamp);
+    const { config, versionHistory } = this.modelFor('vault.cluster.clients') as ModelFrom<ClientsRoute>;
+    // only enterprise versions will have a relevant billing start date, if null users must select initial start time
+    const startTime = setStartTimeQuery(this.version.isEnterprise, config);
+
+    const startTimestamp = Number(params.start_time) || startTime;
     const endTimestamp = Number(params.end_time) || getUnixTime(timestamp.now());
-    const [activity, activityError] = await this.getActivity(startTimestamp, endTimestamp);
+    const { activity, activityError } = await this.getActivity(startTimestamp, endTimestamp);
+
     return {
-      config,
-      versionHistory,
       activity,
       activityError,
-      startTimestamp,
+      config,
       endTimestamp,
+      startTimestamp,
+      versionHistory,
     };
   }
 

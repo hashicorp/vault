@@ -5,7 +5,7 @@
 
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import parseURL from 'core/utils/parse-url';
@@ -39,7 +39,7 @@ export default class OidcProviderForm extends Component {
   // function passed to search select
   renderInfoTooltip(selection, dropdownOptions) {
     // if a client has been deleted it will not exist in dropdownOptions (response from search select's query)
-    const clientExists = !!dropdownOptions.findBy('clientId', selection);
+    const clientExists = !!dropdownOptions.find((opt) => opt.clientId === selection);
     return !clientExists ? 'The application associated with this client_id no longer exists' : false;
   }
 

@@ -1,3 +1,0 @@
-```release-note:feature
-**Quotas in Privileged Namespaces**: Enable creation/update/deletion of quotas from the privileged namespace
-```

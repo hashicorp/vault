@@ -4,7 +4,7 @@
  */
 
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 
 export default class PkiKeyDetailsRoute extends Route {
   @service secretMountPath;
@@ -15,9 +15,9 @@ export default class PkiKeyDetailsRoute extends Route {
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
     controller.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: this.secretMountPath.currentPath, route: 'overview' },
-      { label: 'keys', route: 'keys.index' },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
+      { label: this.secretMountPath.currentPath, route: 'overview', model: resolvedModel.backend },
+      { label: 'keys', route: 'keys.index', model: resolvedModel.backend },
       { label: resolvedModel.id },
     ];
   }

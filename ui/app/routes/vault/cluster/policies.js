@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import Route from '@ember/routing/route';
 import ClusterRoute from 'vault/mixins/cluster-route';
 
@@ -21,7 +21,7 @@ export default Route.extend(ClusterRoute, {
   model(params) {
     const policyType = params.type;
     if (!ALLOWED_TYPES.includes(policyType)) {
-      return this.transitionTo(this.routeName, ALLOWED_TYPES[0]);
+      return this.router.transitionTo(this.routeName, ALLOWED_TYPES[0]);
     }
     return {};
   },

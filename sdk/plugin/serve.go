@@ -8,12 +8,11 @@ import (
 	"math"
 	"os"
 
-	"google.golang.org/grpc"
-
 	log "github.com/hashicorp/go-hclog"
 	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"google.golang.org/grpc"
 )
 
 // BackendPluginName is the name of the plugin that can be

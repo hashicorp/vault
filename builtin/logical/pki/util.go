@@ -17,7 +17,6 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/pki/managed_key"
 	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
 	"github.com/hashicorp/vault/sdk/framework"
-
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -254,15 +253,16 @@ func parseIfNotModifiedSince(req *logical.Request) (time.Time, error) {
 	return headerTimeValue, nil
 }
 
+//go:generate enumer -type=ifModifiedReqType -trimprefix=ifModified
 type ifModifiedReqType int
 
 const (
-	ifModifiedUnknown         ifModifiedReqType = iota
-	ifModifiedCA                                = iota
-	ifModifiedCRL                               = iota
-	ifModifiedDeltaCRL                          = iota
-	ifModifiedUnifiedCRL                        = iota
-	ifModifiedUnifiedDeltaCRL                   = iota
+	ifModifiedUnknown ifModifiedReqType = iota
+	ifModifiedCA
+	ifModifiedCRL
+	ifModifiedDeltaCRL
+	ifModifiedUnifiedCRL
+	ifModifiedUnifiedDeltaCRL
 )
 
 type IfModifiedSinceHelper struct {

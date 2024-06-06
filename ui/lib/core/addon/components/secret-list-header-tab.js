@@ -11,9 +11,8 @@
  *
  *
  * @example
- * ```js
  * <SecretListHeaderTab @displayName='Database' @id='database-2' @path='roles' @label='Roles' @tab='roles'/>
- * ```
+ *
  * @param {string} [displayName] - set on options-for-backend this sets a conditional to see if capabilities are being checked
  * @param {string} [id] - if fetching capabilities used for making the query url.  It is the name the user has assigned to the instance of the engine.
  * @param {string} [path] - set on options-for-backend this tells us the specifics of the URL the query should hit.
@@ -24,7 +23,7 @@
  */
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 
 export default class SecretListHeaderTab extends Component {
   @service store;

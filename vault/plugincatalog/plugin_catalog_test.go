@@ -25,6 +25,7 @@ import (
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
+	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/pluginhelpers"
 	"github.com/hashicorp/vault/helper/versions"
@@ -36,8 +37,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	backendplugin "github.com/hashicorp/vault/sdk/plugin"
-
-	"github.com/hashicorp/vault/helper/builtinplugins"
 )
 
 func testPluginCatalog(t *testing.T) *PluginCatalog {
@@ -804,6 +803,17 @@ func TestPluginCatalog_ErrDirectoryNotConfigured(t *testing.T) {
 	tempDir := catalog.directory
 	catalog.directory = ""
 
+	const pluginRuntime = "custom-runtime"
+	const ociRuntime = "runc"
+	err := catalog.runtimeCatalog.Set(context.Background(), &pluginruntimeutil.PluginRuntimeConfig{
+		Name:       pluginRuntime,
+		Type:       consts.PluginRuntimeTypeContainer,
+		OCIRuntime: ociRuntime,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	tests := map[string]func(t *testing.T){
 		"set binary plugin": func(t *testing.T) {
 			file, err := os.CreateTemp(tempDir, "temp")
@@ -843,12 +853,19 @@ func TestPluginCatalog_ErrDirectoryNotConfigured(t *testing.T) {
 			}
 		},
 		"set container plugin": func(t *testing.T) {
+			if runtime.GOOS != "linux" {
+				t.Skip("Containerized plugins only supported on Linux")
+			}
+
 			// Should never error.
-			const image = "does-not-exist"
+			plugin := pluginhelpers.CompilePlugin(t, consts.PluginTypeDatabase, "", tempDir)
+			plugin.Image, plugin.ImageSha256 = pluginhelpers.BuildPluginContainerImage(t, plugin, tempDir)
+
 			err := catalog.Set(context.Background(), pluginutil.SetPluginInput{
 				Name:     "container",
 				Type:     consts.PluginTypeDatabase,
-				OCIImage: image,
+				OCIImage: plugin.Image,
+				Runtime:  pluginRuntime,
 			})
 			if err != nil {
 				t.Fatal(err)
@@ -858,8 +875,8 @@ func TestPluginCatalog_ErrDirectoryNotConfigured(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if p.OCIImage != image {
-				t.Fatalf("Expected %s, got %s", image, p.OCIImage)
+			if p.OCIImage != plugin.Image {
+				t.Fatalf("Expected %s, got %s", plugin.Image, p.OCIImage)
 			}
 			// Make sure we can still get builtins too
 			_, err = catalog.Get(context.Background(), "mysql-database-plugin", consts.PluginTypeDatabase, "")
@@ -888,20 +905,27 @@ func TestPluginCatalog_ErrDirectoryNotConfigured(t *testing.T) {
 // are returned with their container runtime config populated if it was
 // specified.
 func TestRuntimeConfigPopulatedIfSpecified(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Containerized plugins only supported on Linux")
+	}
+
 	pluginCatalog := testPluginCatalog(t)
-	const image = "does-not-exist"
+
+	plugin := pluginhelpers.CompilePlugin(t, consts.PluginTypeDatabase, "", pluginCatalog.directory)
+	plugin.Image, plugin.ImageSha256 = pluginhelpers.BuildPluginContainerImage(t, plugin, pluginCatalog.directory)
+
 	const runtime = "custom-runtime"
 	err := pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
 		Name:     "container",
 		Type:     consts.PluginTypeDatabase,
-		OCIImage: image,
+		OCIImage: plugin.Image,
 		Runtime:  runtime,
 	})
 	if err == nil {
 		t.Fatal("specified runtime doesn't exist yet, should have failed")
 	}
 
-	const ociRuntime = "some-other-oci-runtime"
+	const ociRuntime = "runc"
 	err = pluginCatalog.runtimeCatalog.Set(context.Background(), &pluginruntimeutil.PluginRuntimeConfig{
 		Name:       runtime,
 		Type:       consts.PluginRuntimeTypeContainer,
@@ -915,7 +939,7 @@ func TestRuntimeConfigPopulatedIfSpecified(t *testing.T) {
 	err = pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
 		Name:     "container",
 		Type:     consts.PluginTypeDatabase,
-		OCIImage: image,
+		OCIImage: plugin.Image,
 		Runtime:  runtime,
 	})
 	if err != nil {
@@ -1142,12 +1166,17 @@ func TestExternalPlugin_getBackendTypeVersion(t *testing.T) {
 
 func TestExternalPluginInContainer_GetBackendTypeVersion(t *testing.T) {
 	if runtime.GOOS != "linux" {
-		t.Skip("Running plugins in containers is only supported on linux")
+		t.Skip("Containerized plugins only supported on Linux")
 	}
 
 	pluginCatalog := testPluginCatalog(t)
 
-	var plugins []pluginhelpers.TestPlugin
+	type testCase struct {
+		plugin      pluginhelpers.TestPlugin
+		expectedErr error
+	}
+	var testCases []testCase
+
 	for _, pluginType := range []consts.PluginType{
 		consts.PluginTypeCredential,
 		consts.PluginTypeSecrets,
@@ -1155,45 +1184,68 @@ func TestExternalPluginInContainer_GetBackendTypeVersion(t *testing.T) {
 	} {
 		plugin := pluginhelpers.CompilePlugin(t, pluginType, "v1.2.3", pluginCatalog.directory)
 		plugin.Image, plugin.ImageSha256 = pluginhelpers.BuildPluginContainerImage(t, plugin, pluginCatalog.directory)
-		plugins = append(plugins, plugin)
+
+		testCases = append(testCases, testCase{
+			plugin:      plugin,
+			expectedErr: nil,
+		})
+
+		plugin.Image += "-will-not-be-found"
+		testCases = append(testCases, testCase{
+			plugin:      plugin,
+			expectedErr: ErrPluginUnableToRun,
+		})
 	}
 
-	for _, plugin := range plugins {
-		t.Run(plugin.Typ.String(), func(t *testing.T) {
-			for _, ociRuntime := range []string{"runc", "runsc"} {
-				t.Run(ociRuntime, func(t *testing.T) {
-					if _, err := exec.LookPath(ociRuntime); err != nil {
-						t.Skipf("Skipping test as %s not found on path", ociRuntime)
-					}
-
-					shaBytes, _ := hex.DecodeString(plugin.ImageSha256)
-					entry := &pluginutil.PluginRunner{
-						Name:     plugin.Name,
-						OCIImage: plugin.Image,
-						Args:     nil,
-						Sha256:   shaBytes,
-						Builtin:  false,
-						Runtime:  ociRuntime,
-						RuntimeConfig: &pluginruntimeutil.PluginRuntimeConfig{
-							OCIRuntime: ociRuntime,
-						},
-					}
-
-					var version logical.PluginVersion
-					var err error
-					if plugin.Typ == consts.PluginTypeDatabase {
-						version, err = pluginCatalog.getDatabaseRunningVersion(context.Background(), entry)
-					} else {
-						version, err = pluginCatalog.getBackendRunningVersion(context.Background(), entry)
-					}
-					if err != nil {
-						t.Fatal(err)
-					}
-					if version.Version != plugin.Version {
-						t.Errorf("Expected to get version %v but got %v", plugin.Version, version.Version)
-					}
-				})
+	for _, tc := range testCases {
+		t.Run(tc.plugin.Typ.String(), func(t *testing.T) {
+			expectedErrTestName := "nil err"
+			if tc.expectedErr != nil {
+				expectedErrTestName = tc.expectedErr.Error()
 			}
+
+			t.Run(expectedErrTestName, func(t *testing.T) {
+				for _, ociRuntime := range []string{"runc", "runsc"} {
+					t.Run(ociRuntime, func(t *testing.T) {
+						if _, err := exec.LookPath(ociRuntime); err != nil {
+							t.Skipf("Skipping test as %s not found on path", ociRuntime)
+						}
+
+						shaBytes, _ := hex.DecodeString(tc.plugin.ImageSha256)
+						entry := &pluginutil.PluginRunner{
+							Name:     tc.plugin.Name,
+							OCIImage: tc.plugin.Image,
+							Args:     nil,
+							Sha256:   shaBytes,
+							Builtin:  false,
+							Runtime:  ociRuntime,
+							RuntimeConfig: &pluginruntimeutil.PluginRuntimeConfig{
+								OCIRuntime: ociRuntime,
+							},
+						}
+
+						var version logical.PluginVersion
+						var err error
+						if tc.plugin.Typ == consts.PluginTypeDatabase {
+							version, err = pluginCatalog.getDatabaseRunningVersion(context.Background(), entry)
+						} else {
+							version, err = pluginCatalog.getBackendRunningVersion(context.Background(), entry)
+						}
+
+						if tc.expectedErr == nil {
+							if err != nil {
+								t.Fatalf("Expected successful get backend type version but got: %v", err)
+							}
+							if version.Version != tc.plugin.Version {
+								t.Errorf("Expected to get version %v but got %v", tc.plugin.Version, version.Version)
+							}
+
+						} else if !errors.Is(err, tc.expectedErr) {
+							t.Errorf("Expected to get err %s but got %s", tc.expectedErr, err)
+						}
+					})
+				}
+			})
 		})
 	}
 }

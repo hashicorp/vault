@@ -12,10 +12,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/healthcheck"
-
-	"github.com/hashicorp/cli"
 	"github.com/stretchr/testify/require"
 )
 

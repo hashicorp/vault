@@ -282,7 +282,7 @@ type RequestExample struct {
 
 // Response describes and optional demonstrations an operation response.
 type Response struct {
-	Description string                  // summary of the the response and should always be provided
+	Description string                  // summary of the response and should always be provided
 	MediaType   string                  // media type of the response, defaulting to "application/json" if empty
 	Fields      map[string]*FieldSchema // the fields present in this response, used to generate openapi response
 	Example     *logical.Response       // example response data
@@ -383,6 +383,10 @@ func (p *Path) helpCallback(b *Backend) OperationFunc {
 			if env != nil {
 				vaultVersion = env.VaultVersion
 			}
+		}
+		redactVersion, _, _, _ := logical.CtxRedactionSettingsValue(ctx)
+		if redactVersion {
+			vaultVersion = ""
 		}
 		doc := NewOASDocument(vaultVersion)
 		if err := documentPath(p, b, requestResponsePrefix, doc); err != nil {

@@ -49,7 +49,7 @@ jobs:
       sample: ${{ steps.metadata.outputs.sample }}
       vault-version: ${{ steps.metadata.outputs.vault-version }}
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
         with:
           ref: ${{ inputs.vault-revision }}
       - uses: hashicorp/action-setup-enos@v1
@@ -96,10 +96,16 @@ jobs:
       ENOS_VAR_vault_build_date: ${{ needs.metadata.outputs.build-date }}
       ENOS_VAR_vault_product_version: ${{ needs.metadata.outputs.vault-version }}
       ENOS_VAR_vault_revision: ${{ inputs.vault-revision }}
+      ENOS_VAR_consul_license_path: ./support/consul.hclic
       ENOS_VAR_vault_license_path: ./support/vault.hclic
+      ENOS_VAR_distro_version_amzn2: ${{ matrix.attributes.distro_version_amzn2 }}
+      ENOS_VAR_distro_version_leap: ${{ matrix.attributes.distro_version_leap }}
+      ENOS_VAR_distro_version_rhel: ${{ matrix.attributes.distro_version_rhel }}
+      ENOS_VAR_distro_version_sles: ${{ matrix.attributes.distro_version_sles }}
+      ENOS_VAR_distro_version_ubuntu: ${{ matrix.attributes.distro_version_ubuntu }}
       ENOS_DEBUG_DATA_ROOT_DIR: /tmp/enos-debug-data
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
         with:
           ref: ${{ inputs.vault-revision }}
       - uses: hashicorp/setup-terraform@v3
@@ -107,7 +113,8 @@ jobs:
           # the Terraform wrapper will break Terraform execution in Enos because
           # it changes the output to text when we expect it to be JSON.
           terraform_wrapper: false
-      - uses: aws-actions/configure-aws-credentials@010d0da01d0b5a38af31e9c3470dbfdabdecca3a # v4.0.1
+          terraform_version: "1.7.5" # Pin until 1.8.x crash has been resolved
+      - uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CI }}
@@ -126,14 +133,18 @@ jobs:
           chmod 600 "./enos/support/private_key.pem"
           echo "debug_data_artifact_name=enos-debug-data_$(echo "${{ matrix.scenario }}" | sed -e 's/ /_/g' | sed -e 's/:/=/g')" >> "$GITHUB_OUTPUT"
       - if: contains(inputs.sample-name, 'build')
-        # Use actions/download-artifact @3.x until https://hashicorp.atlassian.net/browse/HREL-99 is resolved
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
+        uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e # v4.1.7
         with:
           name: ${{ inputs.build-artifact-name }}
           path: ./enos/support/downloads
       - if: contains(inputs.sample-name, 'ent')
         name: Configure Vault license
         run: echo "${{ secrets.VAULT_LICENSE }}" > ./enos/support/vault.hclic || true
+      - if: contains(matrix.scenario.id.filter, 'consul_edition:ent')
+        name: Configure Consul license
+        run: |
+          echo "matrix.scenario.id.filter: ${{ matrix.scenario.id.filter }}"
+          echo "${{ secrets.CONSUL_LICENSE }}" > ./enos/support/consul.hclic || true
       - id: launch
         name: enos scenario launch ${{ matrix.scenario.id.filter }}
         # Continue once and retry to handle occasional blips when creating infrastructure.
@@ -145,7 +156,7 @@ jobs:
         run: enos scenario launch --timeout 60m0s --chdir ./enos ${{ matrix.scenario.id.filter }}
       - name: Upload Debug Data
         if: failure()
-        uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
         with:
           # The name of the artifact is the same as the matrix scenario name with the spaces replaced with underscores and colons replaced by equals.
           name: ${{ steps.prepare_scenario.outputs.debug_data_artifact_name }}
@@ -175,28 +186,28 @@ jobs:
       # https://api.slack.com/apps/A05E31CH1LG/incoming-webhooks
       - if: ${{ always() && ! cancelled() }}
         name: Notify launch failed
-        uses: hashicorp/actions-slack-status@v1
+        uses: hashicorp/actions-slack-status@v2
         with:
           failure-message: "enos scenario launch ${{ matrix.scenario.id.filter}} failed. \nTriggering event: `${{ github.event_name }}` \nActor: `${{ github.actor }}`"
           status: ${{ steps.launch.outcome }}
           slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
       - if: ${{ always() && ! cancelled() }}
         name: Notify retry launch failed
-        uses: hashicorp/actions-slack-status@v1
+        uses: hashicorp/actions-slack-status@v2
         with:
           failure-message: "retry enos scenario launch ${{ matrix.scenario.id.filter}} failed. \nTriggering event: `${{ github.event_name }}` \nActor: `${{ github.actor }}`"
           status: ${{ steps.launch_retry.outcome }}
           slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
       - if: ${{ always() && ! cancelled() }}
         name: Notify destroy failed
-        uses: hashicorp/actions-slack-status@v1
+        uses: hashicorp/actions-slack-status@v2
         with:
           failure-message: "enos scenario destroy ${{ matrix.scenario.id.filter}} failed. \nTriggering event: `${{ github.event_name }}` \nActor: `${{ github.actor }}`"
           status: ${{ steps.destroy.outcome }}
           slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
       - if: ${{ always() && ! cancelled() }}
         name: Notify retry destroy failed
-        uses: hashicorp/actions-slack-status@v1
+        uses: hashicorp/actions-slack-status@v2
         with:
           failure-message: "retry enos scenario destroy ${{ matrix.scenario.id.filter}} failed. \nTriggering event: `${{ github.event_name }}` \nActor: `${{ github.actor }}`"
           status: ${{ steps.destroy_retry.outcome }}

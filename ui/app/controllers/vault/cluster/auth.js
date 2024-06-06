@@ -2,7 +2,7 @@
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
  */
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { alias } from '@ember/object/computed';
 import Controller, { inject as controller } from '@ember/controller';
 import { task, timeout } from 'ember-concurrency';
@@ -13,7 +13,7 @@ export default Controller.extend({
   clusterController: controller('vault.cluster'),
   flashMessages: service(),
   namespaceService: service('namespace'),
-  featureFlagService: service('featureFlag'),
+  flagsService: service('flags'),
   version: service(),
   auth: service(),
   router: service(),
@@ -22,13 +22,13 @@ export default Controller.extend({
   namespaceQueryParam: alias('clusterController.namespaceQueryParam'),
   wrappedToken: alias('vaultController.wrappedToken'),
   redirectTo: alias('vaultController.redirectTo'),
-  managedNamespaceRoot: alias('featureFlagService.managedNamespaceRoot'),
+  hvdManagedNamespaceRoot: alias('flagsService.hvdManagedNamespaceRoot'),
   authMethod: '',
   oidcProvider: '',
 
   get namespaceInput() {
     const namespaceQP = this.clusterController.namespaceQueryParam;
-    if (this.managedNamespaceRoot) {
+    if (this.hvdManagedNamespaceRoot) {
       // When managed, the user isn't allowed to edit the prefix `admin/` for their nested namespace
       const split = namespaceQP.split('/');
       if (split.length > 1) {
@@ -42,8 +42,8 @@ export default Controller.extend({
 
   fullNamespaceFromInput(value) {
     const strippedNs = sanitizePath(value);
-    if (this.managedNamespaceRoot) {
-      return `${this.managedNamespaceRoot}/${strippedNs}`;
+    if (this.hvdManagedNamespaceRoot) {
+      return `${this.hvdManagedNamespaceRoot}/${strippedNs}`;
     }
     return strippedNs;
   },
@@ -69,7 +69,9 @@ export default Controller.extend({
       transition = this.router.transitionTo('vault.cluster', { queryParams: { namespace } });
     }
     transition.followRedirects().then(() => {
-      this.customMessages.fetchMessages(namespace);
+      if (this.version.isEnterprise) {
+        this.customMessages.fetchMessages(namespace);
+      }
 
       if (isRoot) {
         this.auth.set('isRootToken', true);

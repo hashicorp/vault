@@ -9,6 +9,8 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
+import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | kubernetes | Page::Roles', function (hooks) {
   setupRenderingTest(hooks);
@@ -17,6 +19,7 @@ module('Integration | Component | kubernetes | Page::Roles', function (hooks) {
 
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
+    this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub(['read', 'update', 'delete']));
     this.store.pushPayload('secret-engine', {
       modelName: 'secret-engine',
       data: {
@@ -34,7 +37,7 @@ module('Integration | Component | kubernetes | Page::Roles', function (hooks) {
     this.roles = this.store.peekAll('kubernetes/role');
     this.filterValue = '';
     this.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.backend.id },
     ];
     this.promptConfig = false;
@@ -56,7 +59,7 @@ module('Integration | Component | kubernetes | Page::Roles', function (hooks) {
       .dom('[data-test-toolbar-roles-action]')
       .doesNotExist('Create role', 'Toolbar action does not render when not configured');
     assert
-      .dom('[data-test-nav-input]')
+      .dom(GENERAL.filterInputExplicit)
       .doesNotExist('Roles filter input does not render when not configured');
     assert.dom('[data-test-config-cta]').exists('Config cta renders');
   });
@@ -68,7 +71,7 @@ module('Integration | Component | kubernetes | Page::Roles', function (hooks) {
     assert
       .dom('[data-test-toolbar-roles-action] svg')
       .hasClass('flight-icon-plus', 'Toolbar action has correct icon');
-    assert.dom('[data-test-nav-input]').exists('Roles filter input renders');
+    assert.dom(GENERAL.filterInputExplicit).exists('Roles filter input renders');
     assert.dom('[data-test-empty-state-title]').hasText('No roles yet', 'Title renders');
     assert
       .dom('[data-test-empty-state-message]')
@@ -88,16 +91,9 @@ module('Integration | Component | kubernetes | Page::Roles', function (hooks) {
   });
 
   test('it should render roles list', async function (assert) {
-    this.server.post('/sys/capabilities-self', () => ({
-      data: {
-        'kubernetes/role': ['root'],
-      },
-    }));
     await this.renderComponent();
     assert.dom('[data-test-list-item-content] svg').hasClass('flight-icon-user', 'List item icon renders');
-    assert
-      .dom('[data-test-list-item-content]')
-      .hasText(this.roles.firstObject.name, 'List item name renders');
+    assert.dom('[data-test-list-item-content]').hasText(this.roles[0].name, 'List item name renders');
     await click('[data-test-popup-menu-trigger]');
     assert.dom('[data-test-details]').hasText('Details', 'Details link renders in menu');
     assert.dom('[data-test-edit]').hasText('Edit', 'Edit link renders in menu');

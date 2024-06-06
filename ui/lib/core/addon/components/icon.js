@@ -6,7 +6,7 @@
 import Component from '@glimmer/component';
 import { assert } from '@ember/debug';
 import flightIconMap from '@hashicorp/flight-icons/catalog.json';
-const flightIconNames = flightIconMap.assets.mapBy('iconName').uniq();
+const flightIconNames = flightIconMap.assets.map((asset) => asset.iconName).uniq();
 
 /**
  * @module Icon
@@ -16,15 +16,14 @@ const flightIconNames = flightIconMap.assets.mapBy('iconName').uniq();
  * Flight icon library at https://helios.hashicorp.design/icons/library
  *
  * @example
- * ```js
- * <Icon @name="x-square" @size="24" />
- * ```
+ * <Icon @name="heart" @size="24" />
+ *
  * @param {string} name - The name of the SVG to render inline. Required.
  * @param {string} [size=16] - size for flight icon, can be 16 or 24
  *
  */
 
-export default class Icon extends Component {
+export default class IconComponent extends Component {
   constructor(owner, args) {
     super(owner, args);
     assert('Icon component size argument must be either "16" or "24"', ['16', '24'].includes(this.size));

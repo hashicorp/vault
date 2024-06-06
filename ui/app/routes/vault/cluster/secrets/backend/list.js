@@ -8,12 +8,26 @@ import { hash } from 'rsvp';
 import Route from '@ember/routing/route';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
 import { allEngines, isAddonEngine } from 'vault/helpers/mountable-secret-engines';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { normalizePath } from 'vault/utils/path-encoding-helpers';
 import { assert } from '@ember/debug';
 import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
 
 const SUPPORTED_BACKENDS = supportedSecretBackends();
+
+function getValidPage(pageParam) {
+  if (typeof pageParam === 'number') {
+    return pageParam;
+  }
+  if (typeof pageParam === 'string') {
+    try {
+      return parseInt(pageParam, 10) || 1;
+    } catch (e) {
+      return 1;
+    }
+  }
+  return 1;
+}
 
 export default Route.extend({
   store: service(),
@@ -69,7 +83,7 @@ export default Route.extend({
     const secretEngine = this.store.peekRecord('secret-engine', backend);
     const type = secretEngine?.engineType;
     assert('secretEngine.engineType is not defined', !!type);
-    const engineRoute = allEngines().findBy('type', type)?.engineRoute;
+    const engineRoute = allEngines().find((engine) => engine.type === type)?.engineRoute;
 
     if (!type || !SUPPORTED_BACKENDS.includes(type)) {
       return this.router.transitionTo('vault.cluster.secrets');
@@ -82,6 +96,9 @@ export default Route.extend({
         return this.router.transitionTo('vault.cluster.secrets.backend.kv.list-directory', backend, secret);
       }
       return this.router.transitionTo(`vault.cluster.secrets.backend.${engineRoute}`, backend);
+    } else if (secretEngine.isV2KV) {
+      // if it's KV v2 but not registered as an addon, it's type generic
+      return this.router.transitionTo('vault.cluster.secrets.backend.kv.list', backend);
     }
     const modelType = this.getModelType(backend, tab);
     return this.pathHelp.getNewModel(modelType, backend).then(() => {
@@ -119,7 +136,7 @@ export default Route.extend({
           id: secret,
           backend,
           responsePath: 'data.keys',
-          page: params.page || 1,
+          page: getValidPage(params.page),
           pageFilter: params.pageFilter,
         })
         .then((model) => {
@@ -127,8 +144,7 @@ export default Route.extend({
           return model;
         })
         .catch((err) => {
-          // if we're at the root we don't want to throw
-          if (backendModel && err.httpStatus === 404 && secret === '') {
+          if (backendModel && err.httpStatus === 404) {
             return [];
           } else {
             // else we're throwing and dealing with this in the error action
@@ -146,7 +162,7 @@ export default Route.extend({
     const backendModel = this.store.peekRecord('secret-engine', backend);
     const has404 = this.has404;
     // only clear store cache if this is a new model
-    if (secret !== controller.get('baseKey.id')) {
+    if (secret !== controller?.baseKey?.id) {
       this.store.clearAllDatasets();
     }
     controller.set('hasModel', true);
@@ -156,7 +172,7 @@ export default Route.extend({
       backend,
       backendModel,
       baseKey: { id: secret },
-      backendType: backendModel.get('engineType'),
+      backendType: backendModel.engineType,
     });
     if (!has404) {
       const pageFilter = secretParams.pageFilter;
@@ -187,14 +203,8 @@ export default Route.extend({
       const backend = this.enginePathParam();
       const is404 = error.httpStatus === 404;
       /* eslint-disable-next-line ember/no-controller-access-in-routes */
-      const hasModel = this.controllerFor(this.routeName).get('hasModel');
+      const hasModel = this.controllerFor(this.routeName).hasModel;
 
-      // this will occur if we've deleted something,
-      // and navigate to its parent and the parent doesn't exist -
-      // this if often the case with nested keys in kv-like engines
-      if (transition.data.isDeletion && is404) {
-        throw error;
-      }
       set(error, 'secret', secret);
       set(error, 'isRoot', true);
       set(error, 'backend', backend);

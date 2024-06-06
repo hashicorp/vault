@@ -11,10 +11,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hashicorp/vault/command/healthcheck"
-
 	"github.com/ghodss/yaml"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/command/healthcheck"
 	"github.com/ryanuber/columnize"
 )
 
