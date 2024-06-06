@@ -1071,7 +1071,7 @@ const pki = {
     noStoreMetadata: {
       editType: 'boolean',
       helpText:
-        'If set, if a client attempts to issue or sign a certificate with attached cert2_metadata to store, the issuance / signing instead fails.',
+        'If set, if a client attempts to issue or sign a certificate with attached cert_metadata to store, the issuance / signing instead fails.',
       fieldGroup: 'default',
       type: 'boolean',
     },
