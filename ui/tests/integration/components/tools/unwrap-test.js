@@ -5,27 +5,22 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { click, fillIn, render } from '@ember/test-helpers';
+import { setupMirage } from 'ember-cli-mirage/test-support';
+import { Response } from 'miragejs';
+import { click, fillIn, find, render, waitUntil } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import sinon from 'sinon';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import codemirror from 'vault/tests/helpers/codemirror';
 import { TOOLS_SELECTORS as TS } from 'vault/tests/helpers/tools-selectors';
 
 module('Integration | Component | tools/unwrap', function (hooks) {
   setupRenderingTest(hooks);
+  setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.onClear = sinon.spy();
     this.renderComponent = async () => {
       await render(hbs`
-    <Tools::Unwrap
-      @onClear={{this.onClear}}
-      @unwrap_data={{this.unwrap_data}}
-      @details={{this.details}}
-      @errors={{this.errors}}
-      @token={{this.token}}
-    />`);
+    <Tools::Unwrap />`);
     };
   });
 
@@ -34,7 +29,7 @@ module('Integration | Component | tools/unwrap', function (hooks) {
 
     assert.dom('h1').hasText('Unwrap Data', 'Title renders');
     assert.dom(TS.submit).hasText('Unwrap data');
-    assert.dom(TS.toolsInput('wrapping-token')).hasValue('');
+    assert.dom(TS.toolsInput('unwrap-token')).hasValue('');
     assert.dom(TS.tab('data')).doesNotExist();
     assert.dom(TS.tab('details')).doesNotExist();
     assert.dom('.CodeMirror').doesNotExist();
@@ -42,60 +37,107 @@ module('Integration | Component | tools/unwrap', function (hooks) {
   });
 
   test('it renders errors', async function (assert) {
-    this.errors = ['Something is wrong!'];
+    this.server.post('sys/wrapping/unwrap', () => new Response(500, {}, { errors: ['Something is wrong'] }));
     await this.renderComponent();
-    assert.dom(GENERAL.messageError).hasText('Error Something is wrong!', 'Error renders');
+    await click(TS.submit);
+    await waitUntil(() => find(GENERAL.messageError));
+    assert.dom(GENERAL.messageError).hasText('Error Something is wrong', 'Error renders');
   });
 
-  test('it renders unwrapped data', async function (assert) {
-    this.unwrap_data = { foo: 'bar' };
-    await this.renderComponent();
-
-    assert.dom('label').hasText('Unwrapped Data');
-    assert.strictEqual(codemirror().getValue(' '), '{   "foo": "bar" }', 'it renders unwrapped data');
-    assert.dom(TS.tab('data')).hasAttribute('aria-selected', 'true');
-    await click(TS.button('Done'));
-    assert.true(this.onClear.calledOnce, 'onClear is called');
-  });
-
-  test('it renders falsy unwrapped details', async function (assert) {
-    this.unwrap_data = { foo: 'bar' };
-    this.details = {
-      'Request ID': '5810d40e-ce93-3e99-1c72-9dbb58ed3c67',
+  test('it submits and renders falsy values', async function (assert) {
+    const unwrapData = { foo: 'bar' };
+    const data = { token: 'token.OMZFbUurY0ppT2RTMGpRa0JOSUFqUzJUaGNqdWUQ6ooG' };
+    const expectedDetails = {
+      'Request ID': '291290a6-5602-e49a-389b-5870e6c02976',
       'Lease ID': 'None',
       Renewable: 'No',
       'Lease Duration': 'None',
     };
+    this.server.post('sys/wrapping/unwrap', (schema, req) => {
+      const payload = JSON.parse(req.requestBody);
+      assert.propEqual(payload, data, `payload contains token: ${req.requestBody}`);
+      return {
+        data: unwrapData,
+        lease_duration: 0,
+        lease_id: '',
+        renewable: false,
+        request_id: '291290a6-5602-e49a-389b-5870e6c02976',
+      };
+    });
+
     await this.renderComponent();
+
+    // test submit
+    await fillIn(TS.toolsInput('unwrap-token'), data.token);
+    await click(TS.submit);
+
+    await waitUntil(() => find('.CodeMirror'));
+    assert.dom('label').hasText('Unwrapped Data');
+    assert.strictEqual(codemirror().getValue(' '), '{   "foo": "bar" }', 'it renders unwrapped data');
+    assert.dom(TS.tab('data')).hasAttribute('aria-selected', 'true');
 
     await click(TS.tab('details'));
     assert.dom(TS.tab('details')).hasAttribute('aria-selected', 'true');
-    assert.dom(GENERAL.icon('x-circle')).exists({ count: 3 }, 'renders falsy icon for each row');
-    for (const property in this.details) {
-      assert.dom(GENERAL.infoRowValue(property)).hasText(this.details[property]);
+    assert
+      .dom(`${GENERAL.infoRowValue('Renewable')} ${GENERAL.icon('x-square')}`)
+      .exists('renders falsy icon for renewable');
+    for (const detail in expectedDetails) {
+      assert.dom(GENERAL.infoRowValue(detail)).hasText(expectedDetails[detail]);
     }
+
+    // form resets clicking 'Done'
+    await click(TS.button('Done'));
+    assert.dom('label').hasText('Wrapped token');
+    assert.dom(TS.toolsInput('unwrap-token')).hasValue('', 'token input resets');
   });
 
-  test('it renders truthy unwrapped details', async function (assert) {
-    this.unwrap_data = { foo: 'bar' };
-    this.details = {
-      'Lease ID': 'Yes',
+  test('it submits and renders truthy values', async function (assert) {
+    const unwrapData = { foo: 'bar' };
+    const data = { token: 'token.OMZFbUurY0ppT2RTMGpRa0JOSUFqUzJUaGNqdWUQ6ooG' };
+    const expectedDetails = {
+      'Request ID': '291290a6-5602-e49a-389b-5870e6c02976',
+      'Lease ID': '123',
       Renewable: 'Yes',
-      'Lease Duration': '5h',
+      'Lease Duration': '1800',
     };
+    this.server.post('sys/wrapping/unwrap', (schema, req) => {
+      const payload = JSON.parse(req.requestBody);
+      assert.propEqual(payload, data, `payload contains token: ${req.requestBody}`);
+      return {
+        data: unwrapData,
+        lease_duration: 1800,
+        lease_id: '123',
+        renewable: true,
+        request_id: '291290a6-5602-e49a-389b-5870e6c02976',
+      };
+    });
+
     await this.renderComponent();
 
+    await fillIn(TS.toolsInput('unwrap-token'), data.token);
+    await click(TS.submit);
+
+    await waitUntil(() => find('.CodeMirror'));
     await click(TS.tab('details'));
-    assert.dom(TS.tab('details')).hasAttribute('aria-selected', 'true');
-    assert.dom(GENERAL.icon('check-circle')).exists({ count: 2 }, 'renders truthy icon for each row');
-    for (const property in this.details) {
-      assert.dom(GENERAL.infoRowValue(property)).hasText(this.details[property]);
+    assert
+      .dom(`${GENERAL.infoRowValue('Renewable')} ${GENERAL.icon('check-circle')}`)
+      .exists('renders truthy icon for renewable');
+    for (const detail in expectedDetails) {
+      assert.dom(GENERAL.infoRowValue(detail)).hasText(expectedDetails[detail]);
     }
   });
 
-  test('it calls updates arg when inputs change', async function (assert) {
+  test('it trims token whitespace', async function (assert) {
+    const data = { token: 'token.OMZFbUurY0ppT2RTMGpRa0JOSUFqUzJUaGNqdWUQ6ooG' };
+    this.server.post('sys/wrapping/unwrap', (schema, req) => {
+      const payload = JSON.parse(req.requestBody);
+      assert.propEqual(payload, data, `token does not include whitespace: "${req.requestBody}"`);
+      return {};
+    });
+
     await this.renderComponent();
-    await fillIn(TS.toolsInput('wrapping-token'), 'my-token');
-    assert.strictEqual(this.token, 'my-token', '@token updates when input changes');
+
+    await fillIn(TS.toolsInput('unwrap-token'), `${data.token}  `);
+    await click(TS.submit);
   });
 });
