@@ -1103,7 +1103,7 @@ func revokeCert(sc *storageContext, config *crlConfig, cert *x509.Certificate) (
 		// already rebuilt the full CRL so the Delta WAL will be cleared
 		// afterwards. Writing an entry only to immediately remove it
 		// isn't necessary.
-		warnings, crlErr := sc.Backend.CrlBuilder().rebuild(sc, false)
+		warnings, crlErr := sc.CrlBuilder().rebuild(sc, false)
 		if crlErr != nil {
 			switch crlErr.(type) {
 			case errutil.UserError:
@@ -1243,7 +1243,7 @@ func buildAnyCRLs(sc *storageContext, forceNew bool, isDelta bool) ([]string, er
 	var wasLegacy bool
 
 	// First, fetch an updated copy of the CRL config. We'll pass this into buildCRL.
-	crlBuilder := sc.Backend.CrlBuilder()
+	crlBuilder := sc.CrlBuilder()
 	globalCRLConfig, err := crlBuilder.getConfigWithUpdate(sc)
 	if err != nil {
 		return nil, fmt.Errorf("error building CRL: while updating config: %w", err)
@@ -1439,7 +1439,7 @@ func buildAnyLocalCRLs(
 	// visible now, should also be visible on the complete CRL we're writing.
 	var currDeltaCerts []string
 	if !isDelta {
-		currDeltaCerts, err = sc.Backend.CrlBuilder().getPresentLocalDeltaWALForClearing(sc)
+		currDeltaCerts, err = sc.CrlBuilder().getPresentLocalDeltaWALForClearing(sc)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error building CRLs: unable to get present delta WAL entries for removal: %w", err)
 		}
@@ -1503,7 +1503,7 @@ func buildAnyLocalCRLs(
 	if isDelta {
 		// Update our last build time here so we avoid checking for new certs
 		// for a while.
-		sc.Backend.CrlBuilder().lastDeltaRebuildCheck = time.Now()
+		sc.CrlBuilder().lastDeltaRebuildCheck = time.Now()
 
 		if len(lastDeltaSerial) > 0 {
 			// When we have a last delta serial, write out the relevant info
@@ -1582,7 +1582,7 @@ func buildAnyUnifiedCRLs(
 	// visible now, should also be visible on the complete CRL we're writing.
 	var currDeltaCerts []string
 	if !isDelta {
-		currDeltaCerts, err = sc.Backend.CrlBuilder().getPresentUnifiedDeltaWALForClearing(sc)
+		currDeltaCerts, err = sc.CrlBuilder().getPresentUnifiedDeltaWALForClearing(sc)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error building CRLs: unable to get present delta WAL entries for removal: %w", err)
 		}
@@ -1646,7 +1646,7 @@ func buildAnyUnifiedCRLs(
 	if isDelta {
 		// Update our last build time here so we avoid checking for new certs
 		// for a while.
-		sc.Backend.CrlBuilder().lastDeltaRebuildCheck = time.Now()
+		sc.CrlBuilder().lastDeltaRebuildCheck = time.Now()
 
 		// Persist all of our known last revoked serial numbers here, as the
 		// last seen serial during build. This will allow us to detect if any

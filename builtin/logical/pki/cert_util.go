@@ -190,7 +190,7 @@ func fetchCertBySerial(sc *storageContext, prefix, serial string) (*logical.Stor
 		legacyPath = "revoked/" + colonSerial
 		path = "revoked/" + hyphenSerial
 	case serial == legacyCRLPath || serial == deltaCRLPath || serial == unifiedCRLPath || serial == unifiedDeltaCRLPath:
-		warnings, err := sc.Backend.CrlBuilder().rebuildIfForced(sc)
+		warnings, err := sc.CrlBuilder().rebuildIfForced(sc)
 		if err != nil {
 			return nil, err
 		}

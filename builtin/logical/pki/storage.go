@@ -85,6 +85,10 @@ func (sc *storageContext) System() logical.SystemView {
 	return sc.Backend.System()
 }
 
+func (sc *storageContext) CrlBuilder() *CrlBuilder {
+	return sc.Backend.CrlBuilder()
+}
+
 func (sc *storageContext) listKeys() ([]issuing.KeyID, error) {
 	return issuing.ListKeys(sc.Context, sc.Storage)
 }
