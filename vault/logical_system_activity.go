@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
-	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -182,23 +181,25 @@ func (b *SystemBackend) rootActivityPaths() []*framework.Path {
 	return paths
 }
 
-func parseStartEndTimes(a *ActivityLog, d *framework.FieldData) (time.Time, time.Time, error) {
+func parseStartEndTimes(a *ActivityLog, d *framework.FieldData, billingStartTime time.Time) (time.Time, time.Time, error) {
 	startTime := d.Get("start_time").(time.Time)
 	endTime := d.Get("end_time").(time.Time)
 
 	// If a specific endTime is used, then respect that
-	// otherwise we want to give the latest N months, so go back to the start
-	// of the previous month
+	// otherwise we want to query up until the end of the current month.
 	//
 	// Also convert any user inputs to UTC to avoid
 	// problems later.
 	if endTime.IsZero() {
-		endTime = timeutil.EndOfMonth(timeutil.StartOfPreviousMonth(time.Now().UTC()))
+		endTime = time.Now().UTC()
 	} else {
 		endTime = endTime.UTC()
 	}
+
+	// If startTime is not specified, we would like to query
+	// from the beginning of the billing period
 	if startTime.IsZero() {
-		startTime = a.DefaultStartTime(endTime)
+		startTime = billingStartTime
 	} else {
 		startTime = startTime.UTC()
 	}
@@ -218,7 +219,7 @@ func (b *SystemBackend) handleClientExport(ctx context.Context, req *logical.Req
 		return logical.ErrorResponse("no activity log present"), nil
 	}
 
-	startTime, endTime, err := parseStartEndTimes(a, d)
+	startTime, endTime, err := parseStartEndTimes(a, d, b.Core.BillingStart())
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -257,7 +258,7 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
 		endTime = time.Now().UTC()
 	} else {
 		var err error
-		startTime, endTime, err = parseStartEndTimes(a, d)
+		startTime, endTime, err = parseStartEndTimes(a, d, b.Core.BillingStart())
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
