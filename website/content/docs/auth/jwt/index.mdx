@@ -178,8 +178,13 @@ only needs to validate the provided JWT.
 
 ### JWT verification
 
-JWT signatures will be verified against public keys from the issuer. This process can be done in
-three different ways, though only one method may be configured for a single backend:
+JWT signatures will be verified against public keys from the issuer. You can
+configure JWT signature verifcation in several different ways, though only one
+method may be configured for a single backend. If multiple methods are needed,
+another instance of the backend can be mounted and configured at a different
+path.
+
+You can configure public keys using one of the following methods:
 
 - **Static Keys**. A set of public keys is stored directly in the backend configuration. See the
   [jwt_validation_pubkeys](/vault/api-docs/auth/jwt#jwt_validation_pubkeys) 
@@ -201,8 +206,9 @@ three different ways, though only one method may be configured for a single back
   and [oidc_discovery_ca_pem](/vault/api-docs/auth/jwt#oidc_discovery_ca_pem) configuration 
   options.
 
-If multiple methods are needed, another instance of the backend can be mounted and configured
-at a different path.
+Once the JWT signatures are verified, the role's `bound_audiences` parameter is
+checked. The `bound_audiences` parameter is required and must match at least
+one of the `aud` claims on the JWT.
 
 ### Via the CLI
 
@@ -308,10 +314,12 @@ management tool.
 Once a JWT has been validated as being properly signed and not expired, the
 authorization flow will validate that any configured "bound" parameters match.
 In some cases there are dedicated parameters, for example `bound_subject`,
-which must match the JWT's `sub` parameter. A role may also be configured to
-check arbitrary claims through the `bound_claims` map. The map contains a set
-of claims and their required values. For example, assume `bound_claims` is set
-to:
+which must match the JWT's `sub` claim. For roles of type "jwt", the
+`bound_audiences` parameter is required and must match the JWT's `aud` claim.
+
+A role may also be configured to check arbitrary claims through the
+`bound_claims` map. The map contains a set of claims and their required values.
+For example, assume `bound_claims` is set to:
 
 ```json
 {
