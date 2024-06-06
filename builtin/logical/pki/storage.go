@@ -101,6 +101,10 @@ func (sc *storageContext) GetCertificateCounter() *CertificateCounter {
 	return sc.Backend.GetCertificateCounter()
 }
 
+func (sc *storageContext) UseLegacyBundleCaStorage() bool {
+	return sc.Backend.UseLegacyBundleCaStorage()
+}
+
 func (sc *storageContext) listKeys() ([]issuing.KeyID, error) {
 	return issuing.ListKeys(sc.Context, sc.Storage)
 }

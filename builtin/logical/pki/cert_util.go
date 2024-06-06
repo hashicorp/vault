@@ -139,7 +139,7 @@ func (sc *storageContext) fetchCAInfo(issuerRef string, usage issuing.IssuerUsag
 func (sc *storageContext) fetchCAInfoWithIssuer(issuerRef string, usage issuing.IssuerUsage) (*certutil.CAInfoBundle, issuing.IssuerID, error) {
 	var issuerId issuing.IssuerID
 
-	if sc.Backend.UseLegacyBundleCaStorage() {
+	if sc.UseLegacyBundleCaStorage() {
 		// We have not completed the migration so attempt to load the bundle from the legacy location
 		sc.Logger().Info("Using legacy CA bundle as PKI migration has not completed.")
 		issuerId = legacyBundleShimID
@@ -209,7 +209,7 @@ func fetchCertBySerial(sc *storageContext, prefix, serial string) (*logical.Stor
 		}
 
 		if serial == deltaCRLPath || serial == unifiedDeltaCRLPath {
-			if sc.Backend.UseLegacyBundleCaStorage() {
+			if sc.UseLegacyBundleCaStorage() {
 				return nil, fmt.Errorf("refusing to serve delta CRL with legacy CA bundle")
 			}
 

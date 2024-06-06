@@ -916,7 +916,7 @@ func fetchIssuerMapForRevocationChecking(sc *storageContext) (map[issuing.Issuer
 	var err error
 	var issuers []issuing.IssuerID
 
-	if !sc.Backend.UseLegacyBundleCaStorage() {
+	if !sc.UseLegacyBundleCaStorage() {
 		issuers, err = sc.listIssuers()
 		if err != nil {
 			return nil, fmt.Errorf("could not fetch issuers list: %w", err)
@@ -1261,7 +1261,7 @@ func buildAnyCRLs(sc *storageContext, forceNew bool, isDelta bool) ([]string, er
 		return nil, nil
 	}
 
-	if !sc.Backend.UseLegacyBundleCaStorage() {
+	if !sc.UseLegacyBundleCaStorage() {
 		issuers, err = sc.listIssuers()
 		if err != nil {
 			return nil, fmt.Errorf("error building CRL: while listing issuers: %w", err)

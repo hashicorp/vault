@@ -447,7 +447,7 @@ func lookupIssuerIds(sc *storageContext, optRevokedIssuer issuing.IssuerID) ([]i
 		return []issuing.IssuerID{optRevokedIssuer}, nil
 	}
 
-	if sc.Backend.UseLegacyBundleCaStorage() {
+	if sc.UseLegacyBundleCaStorage() {
 		return []issuing.IssuerID{legacyBundleShimID}, nil
 	}
 
