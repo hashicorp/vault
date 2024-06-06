@@ -8,6 +8,7 @@ import (
 	"encoding/asn1"
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
 	"strings"
 	"testing"
 	"time"
@@ -61,10 +62,10 @@ func TestBackend_CRLConfigUpdate(t *testing.T) {
 
 	require.Equal(t, "24h", resp.Data["expiry"])
 	require.Equal(t, false, resp.Data["disable"])
-	require.Equal(t, DefaultCrlConfig.OcspDisable, resp.Data["ocsp_disable"])
-	require.Equal(t, DefaultCrlConfig.OcspExpiry, resp.Data["ocsp_expiry"])
-	require.Equal(t, DefaultCrlConfig.AutoRebuild, resp.Data["auto_rebuild"])
-	require.Equal(t, DefaultCrlConfig.AutoRebuildGracePeriod, resp.Data["auto_rebuild_grace_period"])
+	require.Equal(t, revocation.DefaultCrlConfig.OcspDisable, resp.Data["ocsp_disable"])
+	require.Equal(t, revocation.DefaultCrlConfig.OcspExpiry, resp.Data["ocsp_expiry"])
+	require.Equal(t, revocation.DefaultCrlConfig.AutoRebuild, resp.Data["auto_rebuild"])
+	require.Equal(t, revocation.DefaultCrlConfig.AutoRebuildGracePeriod, resp.Data["auto_rebuild_grace_period"])
 }
 
 func TestBackend_CRLConfig(t *testing.T) {
@@ -974,13 +975,13 @@ func TestAutoRebuild(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.NotNil(t, resp.Data)
-	require.Equal(t, resp.Data["expiry"], DefaultCrlConfig.Expiry)
-	require.Equal(t, resp.Data["disable"], DefaultCrlConfig.Disable)
-	require.Equal(t, resp.Data["ocsp_disable"], DefaultCrlConfig.OcspDisable)
-	require.Equal(t, resp.Data["auto_rebuild"], DefaultCrlConfig.AutoRebuild)
-	require.Equal(t, resp.Data["auto_rebuild_grace_period"], DefaultCrlConfig.AutoRebuildGracePeriod)
-	require.Equal(t, resp.Data["enable_delta"], DefaultCrlConfig.EnableDelta)
-	require.Equal(t, resp.Data["delta_rebuild_interval"], DefaultCrlConfig.DeltaRebuildInterval)
+	require.Equal(t, resp.Data["expiry"], revocation.DefaultCrlConfig.Expiry)
+	require.Equal(t, resp.Data["disable"], revocation.DefaultCrlConfig.Disable)
+	require.Equal(t, resp.Data["ocsp_disable"], revocation.DefaultCrlConfig.OcspDisable)
+	require.Equal(t, resp.Data["auto_rebuild"], revocation.DefaultCrlConfig.AutoRebuild)
+	require.Equal(t, resp.Data["auto_rebuild_grace_period"], revocation.DefaultCrlConfig.AutoRebuildGracePeriod)
+	require.Equal(t, resp.Data["enable_delta"], revocation.DefaultCrlConfig.EnableDelta)
+	require.Equal(t, resp.Data["delta_rebuild_interval"], revocation.DefaultCrlConfig.DeltaRebuildInterval)
 
 	// Safety guard: we play with rebuild timing below.
 	_, err = client.Logical().Write("pki/config/crl", map[string]interface{}{
