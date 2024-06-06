@@ -680,14 +680,14 @@ func (cb *CrlBuilder) maybeGatherQueueForFirstProcess(sc *storageContext, isNotP
 		return nil
 	}
 
-	sc.Backend.Logger().Debug(fmt.Sprintf("gathering first time existing revocations"))
+	sc.Logger().Debug(fmt.Sprintf("gathering first time existing revocations"))
 
 	clusters, err := sc.Storage.List(sc.Context, crossRevocationPrefix)
 	if err != nil {
 		return fmt.Errorf("failed to list cross-cluster revocation queue participating clusters: %w", err)
 	}
 
-	sc.Backend.Logger().Debug(fmt.Sprintf("found %v clusters: %v", len(clusters), clusters))
+	sc.Logger().Debug(fmt.Sprintf("found %v clusters: %v", len(clusters), clusters))
 
 	for cIndex, cluster := range clusters {
 		cluster = cluster[0 : len(cluster)-1]
@@ -697,7 +697,7 @@ func (cb *CrlBuilder) maybeGatherQueueForFirstProcess(sc *storageContext, isNotP
 			return fmt.Errorf("failed to list cross-cluster revocation queue entries for cluster %v (%v): %w", cluster, cIndex, err)
 		}
 
-		sc.Backend.Logger().Debug(fmt.Sprintf("found %v serials for cluster %v: %v", len(serials), cluster, serials))
+		sc.Logger().Debug(fmt.Sprintf("found %v serials for cluster %v: %v", len(serials), cluster, serials))
 
 		for _, serial := range serials {
 			if serial[len(serial)-1] == '/' {
@@ -731,7 +731,7 @@ func (cb *CrlBuilder) maybeGatherQueueForFirstProcess(sc *storageContext, isNotP
 }
 
 func (cb *CrlBuilder) processRevocationQueue(sc *storageContext) error {
-	sc.Backend.Logger().Debug(fmt.Sprintf("starting to process revocation requests"))
+	sc.Logger().Debug(fmt.Sprintf("starting to process revocation requests"))
 
 	isNotPerfPrimary := sc.Backend.System().ReplicationState().HasState(consts.ReplicationDRSecondary|consts.ReplicationPerformanceStandby) ||
 		(!sc.Backend.System().LocalMount() && sc.Backend.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary))
@@ -743,7 +743,7 @@ func (cb *CrlBuilder) processRevocationQueue(sc *storageContext) error {
 	revQueue := cb.revQueue.Iterate()
 	removalQueue := cb.removalQueue.Iterate()
 
-	sc.Backend.Logger().Debug(fmt.Sprintf("gathered %v revocations and %v confirmation entries", len(revQueue), len(removalQueue)))
+	sc.Logger().Debug(fmt.Sprintf("gathered %v revocations and %v confirmation entries", len(revQueue), len(removalQueue)))
 
 	crlConfig, err := cb.getConfigWithUpdate(sc)
 	if err != nil {
@@ -812,7 +812,7 @@ func (cb *CrlBuilder) processRevocationQueue(sc *storageContext) error {
 	}
 
 	if isNotPerfPrimary {
-		sc.Backend.Logger().Debug(fmt.Sprintf("not on perf primary so ignoring any revocation confirmations"))
+		sc.Logger().Debug(fmt.Sprintf("not on perf primary so ignoring any revocation confirmations"))
 
 		// See note in pki/backend.go; this should be empty.
 		cb.removalQueue.RemoveAll()
@@ -848,7 +848,7 @@ func (cb *CrlBuilder) processRevocationQueue(sc *storageContext) error {
 }
 
 func (cb *CrlBuilder) processCrossClusterRevocations(sc *storageContext) error {
-	sc.Backend.Logger().Debug(fmt.Sprintf("starting to process unified revocations"))
+	sc.Logger().Debug(fmt.Sprintf("starting to process unified revocations"))
 
 	crlConfig, err := cb.getConfigWithUpdate(sc)
 	if err != nil {
@@ -861,7 +861,7 @@ func (cb *CrlBuilder) processCrossClusterRevocations(sc *storageContext) error {
 	}
 
 	crossQueue := cb.crossQueue.Iterate()
-	sc.Backend.Logger().Debug(fmt.Sprintf("gathered %v unified revocations entries", len(crossQueue)))
+	sc.Logger().Debug(fmt.Sprintf("gathered %v unified revocations entries", len(crossQueue)))
 
 	ourClusterId, err := sc.Backend.System().ClusterID(sc.Context)
 	if err != nil {
@@ -1089,7 +1089,7 @@ func revokeCert(sc *storageContext, config *crlConfig, cert *x509.Certificate) (
 		if ignoreErr != nil {
 			// Just log the error if we fail to write across clusters, a separate background
 			// thread will reattempt it later on as we have the local write done.
-			sc.Backend.Logger().Error("Failed to write unified revocation entry, will re-attempt later",
+			sc.Logger().Error("Failed to write unified revocation entry, will re-attempt later",
 				"serial_number", colonSerial, "error", ignoreErr)
 			sc.Backend.GetUnifiedTransferStatus().forceRun()
 
@@ -1146,7 +1146,7 @@ func writeRevocationDeltaWALs(sc *storageContext, config *crlConfig, resp *logic
 		if ignoredErr := writeSpecificRevocationDeltaWALs(sc, hyphenSerial, colonSerial, unifiedDeltaWALPath); ignoredErr != nil {
 			// Just log the error if we fail to write across clusters, a separate background
 			// thread will reattempt it later on as we have the local write done.
-			sc.Backend.Logger().Error("Failed to write cross-cluster delta WAL entry, will re-attempt later",
+			sc.Logger().Error("Failed to write cross-cluster delta WAL entry, will re-attempt later",
 				"serial_number", colonSerial, "error", ignoredErr)
 			sc.Backend.GetUnifiedTransferStatus().forceRun()
 

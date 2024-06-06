@@ -141,7 +141,7 @@ func (sc *storageContext) fetchCAInfoWithIssuer(issuerRef string, usage issuing.
 
 	if sc.Backend.UseLegacyBundleCaStorage() {
 		// We have not completed the migration so attempt to load the bundle from the legacy location
-		sc.Backend.Logger().Info("Using legacy CA bundle as PKI migration has not completed.")
+		sc.Logger().Info("Using legacy CA bundle as PKI migration has not completed.")
 		issuerId = legacyBundleShimID
 	} else {
 		var err error
@@ -199,7 +199,7 @@ func fetchCertBySerial(sc *storageContext, prefix, serial string) (*logical.Stor
 			for index, warning := range warnings {
 				msg = fmt.Sprintf("%v\n %d. %v", msg, index+1, warning)
 			}
-			sc.Backend.Logger().Warn(msg)
+			sc.Logger().Warn(msg)
 		}
 
 		unified := serial == unifiedCRLPath || serial == unifiedDeltaCRLPath

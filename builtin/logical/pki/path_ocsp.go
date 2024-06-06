@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -175,7 +176,7 @@ func (b *backend) ocspHandler(ctx context.Context, request *logical.Request, dat
 
 	ocspStatus, err := getOcspStatus(sc, ocspReq, useUnifiedStorage)
 	if err != nil {
-		return logAndReturnInternalError(b, err), nil
+		return logAndReturnInternalError(b.Logger(), err), nil
 	}
 
 	caBundle, issuer, err := lookupOcspIssuer(sc, ocspReq, ocspStatus.issuerID)
@@ -193,12 +194,12 @@ func (b *backend) ocspHandler(ctx context.Context, request *logical.Request, dat
 			// https://www.rfc-editor.org/rfc/rfc5019#section-2.2.3
 			return OcspUnauthorizedResponse, nil
 		}
-		return logAndReturnInternalError(b, err), nil
+		return logAndReturnInternalError(b.Logger(), err), nil
 	}
 
 	byteResp, err := genResponse(cfg, caBundle, ocspStatus, ocspReq.HashAlgorithm, issuer.RevocationSigAlg)
 	if err != nil {
-		return logAndReturnInternalError(b, err), nil
+		return logAndReturnInternalError(b.Logger(), err), nil
 	}
 
 	return &logical.Response{
@@ -230,7 +231,7 @@ func generateUnknownResponse(cfg *crlConfig, sc *storageContext, ocspReq *ocsp.R
 	// isn't much else we can do at this point.
 	config, err := sc.getIssuersConfig()
 	if err != nil {
-		return logAndReturnInternalError(sc.Backend, err)
+		return logAndReturnInternalError(sc.Logger(), err)
 	}
 
 	if config.DefaultIssuerId == "" {
@@ -245,7 +246,7 @@ func generateUnknownResponse(cfg *crlConfig, sc *storageContext, ocspReq *ocsp.R
 			// no way to sign a response so Unauthorized it is.
 			return OcspUnauthorizedResponse
 		}
-		return logAndReturnInternalError(sc.Backend, err)
+		return logAndReturnInternalError(sc.Logger(), err)
 	}
 
 	if !issuer.Usage.HasUsage(issuing.OCSPSigningUsage) {
@@ -260,7 +261,7 @@ func generateUnknownResponse(cfg *crlConfig, sc *storageContext, ocspReq *ocsp.R
 
 	byteResp, err := genResponse(cfg, caBundle, info, ocspReq.HashAlgorithm, issuer.RevocationSigAlg)
 	if err != nil {
-		return logAndReturnInternalError(sc.Backend, err)
+		return logAndReturnInternalError(sc.Logger(), err)
 	}
 
 	return &logical.Response{
@@ -313,12 +314,12 @@ func fetchDerEncodedRequest(request *logical.Request, data *framework.FieldData)
 	}
 }
 
-func logAndReturnInternalError(b *backend, err error) *logical.Response {
+func logAndReturnInternalError(logger hclog.Logger, err error) *logical.Response {
 	// Since OCSP might be a high traffic endpoint, we will log at debug level only
 	// any internal errors we do get. There is no way for us to return to the end-user
 	// errors, so we rely on the log statement to help in debugging possible
 	// issues in the field.
-	b.Logger().Debug("OCSP internal error", "error", err)
+	logger.Debug("OCSP internal error", "error", err)
 	return OcspInternalErrorResponse
 }
 
