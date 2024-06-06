@@ -6,11 +6,9 @@
 import Controller from '@ember/controller';
 
 export default Controller.extend({
-  queryParams: ['action', 'roleType'],
-  action: '',
+  queryParams: ['roleType'],
   roleType: '',
   reset() {
-    this.set('action', '');
     this.set('roleType', '');
   },
 });
