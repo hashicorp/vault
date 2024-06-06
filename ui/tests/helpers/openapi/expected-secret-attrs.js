@@ -577,248 +577,248 @@ const pki = {
     },
   },
   'pki/certificate/generate': {
-    role: {
-      editType: 'string',
-      helpText: 'The desired role with configuration for this request',
-      fieldValue: 'mutableId',
-      fieldGroup: 'default',
-      readOnly: true,
-      label: 'Role',
-      type: 'string',
-    },
     altNames: {
       editType: 'string',
+      fieldGroup: 'default',
       helpText:
         'The requested Subject Alternative Names, if any, in a comma-delimited list. If email protection is enabled for the role, this may contain email addresses.',
-      fieldGroup: 'default',
       label: 'DNS/Email Subject Alternative Names (SANs)',
       type: 'string',
     },
-    commonName: {
-      editType: 'string',
-      helpText:
-        'The requested common name; if you want more than one, specify the alternative names in the alt_names map. If email protection is enabled in the role, this may be an email address.',
-      fieldGroup: 'default',
-      type: 'string',
-    },
-    excludeCnFromSans: {
-      editType: 'boolean',
-      helpText:
-        'If true, the Common Name will not be included in DNS or Email Subject Alternate Names. Defaults to false (CN is included).',
-      fieldGroup: 'default',
-      label: 'Exclude Common Name from Subject Alternative Names (SANs)',
-      type: 'boolean',
-    },
-    format: {
-      editType: 'string',
-      helpText:
-        'Format for returned data. Can be "pem", "der", or "pem_bundle". If "pem_bundle", any private key and issuing cert will be appended to the certificate pem. If "der", the value will be base64 encoded. Defaults to "pem".',
-      possibleValues: ['pem', 'der', 'pem_bundle'],
-      fieldGroup: 'default',
-      defaultValue: 'pem',
-      type: 'string',
-    },
-    ipSans: {
-      editType: 'stringArray',
-      helpText: 'The requested IP SANs, if any, in a comma-delimited list',
-      fieldGroup: 'default',
-      label: 'IP Subject Alternative Names (SANs)',
-    },
-    issuerRef: {
-      editType: 'string',
-      helpText:
-        'Reference to a existing issuer; either "default" for the configured default issuer, an identifier or the name assigned to the issuer.',
-      fieldGroup: 'default',
-      type: 'string',
-    },
-    metadata: {
+    certMetadata: {
       editType: 'string',
       fieldGroup: 'default',
       helpText:
         "User supplied metadata to store associated with this certificate's serial number, base64 encoded",
-      label: 'Metadata',
+      label: 'Certificate Metadata',
+      type: 'string',
+    },
+    commonName: {
+      editType: 'string',
+      fieldGroup: 'default',
+      helpText:
+        'The requested common name; if you want more than one, specify the alternative names in the alt_names map. If email protection is enabled in the role, this may be an email address.',
+      type: 'string',
+    },
+    excludeCnFromSans: {
+      editType: 'boolean',
+      fieldGroup: 'default',
+      helpText:
+        'If true, the Common Name will not be included in DNS or Email Subject Alternate Names. Defaults to false (CN is included).',
+      label: 'Exclude Common Name from Subject Alternative Names (SANs)',
+      type: 'boolean',
+    },
+    format: {
+      defaultValue: 'pem',
+      editType: 'string',
+      fieldGroup: 'default',
+      helpText:
+        'Format for returned data. Can be "pem", "der", or "pem_bundle". If "pem_bundle", any private key and issuing cert will be appended to the certificate pem. If "der", the value will be base64 encoded. Defaults to "pem".',
+      possibleValues: ['pem', 'der', 'pem_bundle'],
+      type: 'string',
+    },
+    ipSans: {
+      editType: 'stringArray',
+      fieldGroup: 'default',
+      helpText: 'The requested IP SANs, if any, in a comma-delimited list',
+      label: 'IP Subject Alternative Names (SANs)',
+    },
+    issuerRef: {
+      editType: 'string',
+      fieldGroup: 'default',
+      helpText:
+        'Reference to a existing issuer; either "default" for the configured default issuer, an identifier or the name assigned to the issuer.',
       type: 'string',
     },
     notAfter: {
       editType: 'string',
+      fieldGroup: 'default',
       helpText:
         'Set the not after field of the certificate with specified date value. The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ',
-      fieldGroup: 'default',
       type: 'string',
     },
     otherSans: {
       editType: 'stringArray',
+      fieldGroup: 'default',
       helpText:
         'Requested other SANs, in an array with the format <oid>;UTF8:<utf8 string value> for each entry.',
-      fieldGroup: 'default',
       label: 'Other SANs',
     },
     privateKeyFormat: {
+      defaultValue: 'der',
       editType: 'string',
+      fieldGroup: 'default',
       helpText:
         'Format for the returned private key. Generally the default will be controlled by the "format" parameter as either base64-encoded DER or PEM-encoded DER. However, this can be set to "pkcs8" to have the returned private key contain base64-encoded pkcs8 or PEM-encoded pkcs8 instead. Defaults to "der".',
       possibleValues: ['', 'der', 'pem', 'pkcs8'],
-      fieldGroup: 'default',
-      defaultValue: 'der',
       type: 'string',
     },
     removeRootsFromChain: {
       editType: 'boolean',
-      helpText: 'Whether or not to remove self-signed CA certificates in the output of the ca_chain field.',
       fieldGroup: 'default',
+      helpText: 'Whether or not to remove self-signed CA certificates in the output of the ca_chain field.',
       type: 'boolean',
+    },
+    role: {
+      editType: 'string',
+      fieldGroup: 'default',
+      fieldValue: 'mutableId',
+      helpText: 'The desired role with configuration for this request',
+      label: 'Role',
+      readOnly: true,
+      type: 'string',
     },
     serialNumber: {
       editType: 'string',
+      fieldGroup: 'default',
       helpText:
         "The Subject's requested serial number, if any. See RFC 4519 Section 2.31 'serialNumber' for a description of this field. If you want more than one, specify alternative names in the alt_names map using OID 2.5.4.5. This has no impact on the final certificate's Serial Number field.",
-      fieldGroup: 'default',
       type: 'string',
     },
     ttl: {
       editType: 'ttl',
+      fieldGroup: 'default',
       helpText:
         'The requested Time To Live for the certificate; sets the expiration date. If not specified the role default, backend default, or system default TTL is used, in that order. Cannot be larger than the role max TTL.',
-      fieldGroup: 'default',
       label: 'TTL',
     },
     uriSans: {
       editType: 'stringArray',
-      helpText: 'The requested URI SANs, if any, in a comma-delimited list.',
       fieldGroup: 'default',
+      helpText: 'The requested URI SANs, if any, in a comma-delimited list.',
       label: 'URI Subject Alternative Names (SANs)',
     },
     userIds: {
       editType: 'stringArray',
+      fieldGroup: 'default',
       helpText:
         'The requested user_ids value to place in the subject, if any, in a comma-delimited list. Restricted by allowed_user_ids. Any values are added with OID 0.9.2342.19200300.100.1.1.',
-      fieldGroup: 'default',
       label: 'User ID(s)',
     },
   },
   'pki/certificate/sign': {
-    role: {
-      editType: 'string',
-      helpText: 'The desired role with configuration for this request',
-      fieldValue: 'mutableId',
-      fieldGroup: 'default',
-      readOnly: true,
-      label: 'Role',
-      type: 'string',
-    },
     altNames: {
       editType: 'string',
+      fieldGroup: 'default',
       helpText:
         'The requested Subject Alternative Names, if any, in a comma-delimited list. If email protection is enabled for the role, this may contain email addresses.',
-      fieldGroup: 'default',
       label: 'DNS/Email Subject Alternative Names (SANs)',
       type: 'string',
     },
-    commonName: {
-      editType: 'string',
-      helpText:
-        'The requested common name; if you want more than one, specify the alternative names in the alt_names map. If email protection is enabled in the role, this may be an email address.',
-      fieldGroup: 'default',
-      type: 'string',
-    },
-    csr: {
-      editType: 'string',
-      helpText: 'PEM-format CSR to be signed.',
-      fieldGroup: 'default',
-      type: 'string',
-    },
-    excludeCnFromSans: {
-      editType: 'boolean',
-      helpText:
-        'If true, the Common Name will not be included in DNS or Email Subject Alternate Names. Defaults to false (CN is included).',
-      fieldGroup: 'default',
-      label: 'Exclude Common Name from Subject Alternative Names (SANs)',
-      type: 'boolean',
-    },
-    format: {
-      editType: 'string',
-      helpText:
-        'Format for returned data. Can be "pem", "der", or "pem_bundle". If "pem_bundle", any private key and issuing cert will be appended to the certificate pem. If "der", the value will be base64 encoded. Defaults to "pem".',
-      possibleValues: ['pem', 'der', 'pem_bundle'],
-      fieldGroup: 'default',
-      defaultValue: 'pem',
-      type: 'string',
-    },
-    ipSans: {
-      editType: 'stringArray',
-      helpText: 'The requested IP SANs, if any, in a comma-delimited list',
-      fieldGroup: 'default',
-      label: 'IP Subject Alternative Names (SANs)',
-    },
-    issuerRef: {
-      editType: 'string',
-      helpText:
-        'Reference to a existing issuer; either "default" for the configured default issuer, an identifier or the name assigned to the issuer.',
-      fieldGroup: 'default',
-      type: 'string',
-    },
-    metadata: {
+    certMetadata: {
       editType: 'string',
       fieldGroup: 'default',
       helpText:
         "User supplied metadata to store associated with this certificate's serial number, base64 encoded",
-      label: 'Metadata',
+      label: 'Certificate Metadata',
+      type: 'string',
+    },
+    commonName: {
+      editType: 'string',
+      fieldGroup: 'default',
+      helpText:
+        'The requested common name; if you want more than one, specify the alternative names in the alt_names map. If email protection is enabled in the role, this may be an email address.',
+      type: 'string',
+    },
+    csr: {
+      editType: 'string',
+      fieldGroup: 'default',
+      helpText: 'PEM-format CSR to be signed.',
+      type: 'string',
+    },
+    excludeCnFromSans: {
+      editType: 'boolean',
+      fieldGroup: 'default',
+      helpText:
+        'If true, the Common Name will not be included in DNS or Email Subject Alternate Names. Defaults to false (CN is included).',
+      label: 'Exclude Common Name from Subject Alternative Names (SANs)',
+      type: 'boolean',
+    },
+    format: {
+      defaultValue: 'pem',
+      editType: 'string',
+      fieldGroup: 'default',
+      helpText:
+        'Format for returned data. Can be "pem", "der", or "pem_bundle". If "pem_bundle", any private key and issuing cert will be appended to the certificate pem. If "der", the value will be base64 encoded. Defaults to "pem".',
+      possibleValues: ['pem', 'der', 'pem_bundle'],
+      type: 'string',
+    },
+    ipSans: {
+      editType: 'stringArray',
+      fieldGroup: 'default',
+      helpText: 'The requested IP SANs, if any, in a comma-delimited list',
+      label: 'IP Subject Alternative Names (SANs)',
+    },
+    issuerRef: {
+      editType: 'string',
+      fieldGroup: 'default',
+      helpText:
+        'Reference to a existing issuer; either "default" for the configured default issuer, an identifier or the name assigned to the issuer.',
       type: 'string',
     },
     notAfter: {
       editType: 'string',
+      fieldGroup: 'default',
       helpText:
         'Set the not after field of the certificate with specified date value. The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ',
-      fieldGroup: 'default',
       type: 'string',
     },
     otherSans: {
       editType: 'stringArray',
+      fieldGroup: 'default',
       helpText:
         'Requested other SANs, in an array with the format <oid>;UTF8:<utf8 string value> for each entry.',
-      fieldGroup: 'default',
       label: 'Other SANs',
     },
     privateKeyFormat: {
+      defaultValue: 'der',
       editType: 'string',
+      fieldGroup: 'default',
       helpText:
         'Format for the returned private key. Generally the default will be controlled by the "format" parameter as either base64-encoded DER or PEM-encoded DER. However, this can be set to "pkcs8" to have the returned private key contain base64-encoded pkcs8 or PEM-encoded pkcs8 instead. Defaults to "der".',
       possibleValues: ['', 'der', 'pem', 'pkcs8'],
-      fieldGroup: 'default',
-      defaultValue: 'der',
       type: 'string',
     },
     removeRootsFromChain: {
       editType: 'boolean',
-      helpText: 'Whether or not to remove self-signed CA certificates in the output of the ca_chain field.',
       fieldGroup: 'default',
+      helpText: 'Whether or not to remove self-signed CA certificates in the output of the ca_chain field.',
       type: 'boolean',
+    },
+    role: {
+      editType: 'string',
+      fieldGroup: 'default',
+      fieldValue: 'mutableId',
+      helpText: 'The desired role with configuration for this request',
+      label: 'Role',
+      readOnly: true,
+      type: 'string',
     },
     serialNumber: {
       editType: 'string',
+      fieldGroup: 'default',
       helpText:
         "The Subject's requested serial number, if any. See RFC 4519 Section 2.31 'serialNumber' for a description of this field. If you want more than one, specify alternative names in the alt_names map using OID 2.5.4.5. This has no impact on the final certificate's Serial Number field.",
-      fieldGroup: 'default',
       type: 'string',
     },
     ttl: {
       editType: 'ttl',
+      fieldGroup: 'default',
       helpText:
         'The requested Time To Live for the certificate; sets the expiration date. If not specified the role default, backend default, or system default TTL is used, in that order. Cannot be larger than the role max TTL.',
-      fieldGroup: 'default',
       label: 'TTL',
     },
     uriSans: {
       editType: 'stringArray',
-      helpText: 'The requested URI SANs, if any, in a comma-delimited list.',
       fieldGroup: 'default',
+      helpText: 'The requested URI SANs, if any, in a comma-delimited list.',
       label: 'URI Subject Alternative Names (SANs)',
     },
     userIds: {
       editType: 'stringArray',
+      fieldGroup: 'default',
       helpText:
         'The requested user_ids value to place in the subject, if any, in a comma-delimited list. Restricted by allowed_user_ids. Any values are added with OID 0.9.2342.19200300.100.1.1.',
-      fieldGroup: 'default',
       label: 'User ID(s)',
     },
   },
@@ -839,340 +839,340 @@ const pki = {
     },
   },
   'pki/role': {
-    name: {
-      editType: 'string',
-      helpText: 'Name of the role',
-      fieldValue: 'mutableId',
-      fieldGroup: 'default',
-      readOnly: true,
-      label: 'Name',
-      type: 'string',
-    },
     allowAnyName: {
       editType: 'boolean',
+      fieldGroup: 'default',
       helpText:
         'If set, clients can request certificates for any domain, regardless of allowed_domains restrictions. See the documentation for more information.',
-      fieldGroup: 'default',
       type: 'boolean',
     },
     allowBareDomains: {
       editType: 'boolean',
+      fieldGroup: 'default',
       helpText:
         'If set, clients can request certificates for the base domains themselves, e.g. "example.com" of domains listed in allowed_domains. This is a separate option as in some cases this can be considered a security threat. See the documentation for more information.',
-      fieldGroup: 'default',
       type: 'boolean',
     },
     allowGlobDomains: {
       editType: 'boolean',
+      fieldGroup: 'default',
       helpText:
         'If set, domains specified in allowed_domains can include shell-style glob patterns, e.g. "ftp*.example.com". See the documentation for more information.',
-      fieldGroup: 'default',
       type: 'boolean',
     },
     allowIpSans: {
+      defaultValue: true,
       editType: 'boolean',
+      fieldGroup: 'default',
       helpText:
         'If set, IP Subject Alternative Names are allowed. Any valid IP is accepted and No authorization checking is performed.',
-      fieldGroup: 'default',
-      defaultValue: true,
       label: 'Allow IP Subject Alternative Names',
       type: 'boolean',
     },
     allowLocalhost: {
+      defaultValue: true,
       editType: 'boolean',
+      fieldGroup: 'default',
       helpText:
         'Whether to allow "localhost" and "localdomain" as a valid common name in a request, independent of allowed_domains value.',
-      fieldGroup: 'default',
-      defaultValue: true,
       type: 'boolean',
     },
     allowSubdomains: {
       editType: 'boolean',
+      fieldGroup: 'default',
       helpText:
         'If set, clients can request certificates for subdomains of domains listed in allowed_domains, including wildcard subdomains. See the documentation for more information.',
-      fieldGroup: 'default',
       type: 'boolean',
     },
     allowWildcardCertificates: {
       editType: 'boolean',
+      fieldGroup: 'default',
       helpText:
         'If set, allows certificates with wildcards in the common name to be issued, conforming to RFC 6125\'s Section 6.4.3; e.g., "*.example.net" or "b*z.example.net". See the documentation for more information.',
-      fieldGroup: 'default',
       type: 'boolean',
     },
     allowedDomains: {
       editType: 'stringArray',
+      fieldGroup: 'default',
       helpText:
         'Specifies the domains this role is allowed to issue certificates for. This is used with the allow_bare_domains, allow_subdomains, and allow_glob_domains to determine matches for the common name, DNS-typed SAN entries, and Email-typed SAN entries of certificates. See the documentation for more information. This parameter accepts a comma-separated string or list of domains.',
-      fieldGroup: 'default',
     },
     allowedDomainsTemplate: {
       editType: 'boolean',
+      fieldGroup: 'default',
       helpText:
         'If set, Allowed domains can be specified using identity template policies. Non-templated domains are also permitted.',
-      fieldGroup: 'default',
       type: 'boolean',
     },
     allowedOtherSans: {
       editType: 'stringArray',
+      fieldGroup: 'default',
       helpText:
         'If set, an array of allowed other names to put in SANs. These values support globbing and must be in the format <oid>;<type>:<value>. Currently only "utf8" is a valid type. All values, including globbing values, must use this syntax, with the exception being a single "*" which allows any OID and any value (but type must still be utf8).',
-      fieldGroup: 'default',
       label: 'Allowed Other Subject Alternative Names',
     },
     allowedSerialNumbers: {
       editType: 'stringArray',
+      fieldGroup: 'default',
       helpText:
         'If set, an array of allowed serial numbers to put in Subject. These values support globbing.',
-      fieldGroup: 'default',
     },
     allowedUriSans: {
       editType: 'stringArray',
+      fieldGroup: 'default',
       helpText:
         'If set, an array of allowed URIs for URI Subject Alternative Names. Any valid URI is accepted, these values support globbing.',
-      fieldGroup: 'default',
       label: 'Allowed URI Subject Alternative Names',
     },
     allowedUriSansTemplate: {
       editType: 'boolean',
+      fieldGroup: 'default',
       helpText:
         'If set, Allowed URI SANs can be specified using identity template policies. Non-templated URI SANs are also permitted.',
-      fieldGroup: 'default',
       type: 'boolean',
     },
     allowedUserIds: {
       editType: 'stringArray',
+      fieldGroup: 'default',
       helpText:
         'If set, an array of allowed user-ids to put in user system login name specified here: https://www.rfc-editor.org/rfc/rfc1274#section-9.3.1',
-      fieldGroup: 'default',
     },
     backend: {
       editType: 'string',
-      helpText: 'Backend Type',
       fieldGroup: 'default',
+      helpText: 'Backend Type',
       type: 'string',
     },
     basicConstraintsValidForNonCa: {
       editType: 'boolean',
-      helpText: 'Mark Basic Constraints valid when issuing non-CA certificates.',
       fieldGroup: 'default',
+      helpText: 'Mark Basic Constraints valid when issuing non-CA certificates.',
       label: 'Basic Constraints Valid for Non-CA',
       type: 'boolean',
     },
     clientFlag: {
+      defaultValue: true,
       editType: 'boolean',
+      fieldGroup: 'default',
       helpText:
         'If set, certificates are flagged for client auth use. Defaults to true. See also RFC 5280 Section 4.2.1.12.',
-      fieldGroup: 'default',
-      defaultValue: true,
       type: 'boolean',
     },
     cnValidations: {
       editType: 'stringArray',
+      fieldGroup: 'default',
       helpText:
         "List of allowed validations to run against the Common Name field. Values can include 'email' to validate the CN is a email address, 'hostname' to validate the CN is a valid hostname (potentially including wildcards). When multiple validations are specified, these take OR semantics (either email OR hostname are allowed). The special value 'disabled' allows disabling all CN name validations, allowing for arbitrary non-Hostname, non-Email address CNs.",
-      fieldGroup: 'default',
       label: 'Common Name Validations',
     },
     codeSigningFlag: {
       editType: 'boolean',
+      fieldGroup: 'default',
       helpText:
         'If set, certificates are flagged for code signing use. Defaults to false. See also RFC 5280 Section 4.2.1.12.',
-      fieldGroup: 'default',
       type: 'boolean',
     },
     country: {
       editType: 'stringArray',
-      helpText: 'If set, Country will be set to this value in certificates issued by this role.',
       fieldGroup: 'default',
+      helpText: 'If set, Country will be set to this value in certificates issued by this role.',
     },
     emailProtectionFlag: {
       editType: 'boolean',
+      fieldGroup: 'default',
       helpText:
         'If set, certificates are flagged for email protection use. Defaults to false. See also RFC 5280 Section 4.2.1.12.',
-      fieldGroup: 'default',
       type: 'boolean',
     },
     enforceHostnames: {
+      defaultValue: true,
       editType: 'boolean',
+      fieldGroup: 'default',
       helpText:
         'If set, only valid host names are allowed for CN and DNS SANs, and the host part of email addresses. Defaults to true.',
-      fieldGroup: 'default',
-      defaultValue: true,
       type: 'boolean',
     },
     extKeyUsage: {
       editType: 'stringArray',
+      fieldGroup: 'default',
       helpText:
         'A comma-separated string or list of extended key usages. Valid values can be found at https://golang.org/pkg/crypto/x509/#ExtKeyUsage -- simply drop the "ExtKeyUsage" part of the name. To remove all key usages from being set, set this value to an empty list. See also RFC 5280 Section 4.2.1.12.',
-      fieldGroup: 'default',
       label: 'Extended Key Usage',
     },
     extKeyUsageOids: {
       editType: 'stringArray',
-      helpText: 'A comma-separated string or list of extended key usage oids.',
       fieldGroup: 'default',
+      helpText: 'A comma-separated string or list of extended key usage oids.',
       label: 'Extended Key Usage OIDs',
     },
     generateLease: {
       editType: 'boolean',
+      fieldGroup: 'default',
       helpText:
         'If set, certificates issued/signed against this role will have Vault leases attached to them. Defaults to "false". Certificates can be added to the CRL by "vault revoke <lease_id>" when certificates are associated with leases. It can also be done using the "pki/revoke" endpoint. However, when lease generation is disabled, invoking "pki/revoke" would be the only way to add the certificates to the CRL. When large number of certificates are generated with long lifetimes, it is recommended that lease generation be disabled, as large amount of leases adversely affect the startup time of Vault.',
-      fieldGroup: 'default',
       type: 'boolean',
     },
     issuerRef: {
       editType: 'string',
-      helpText: 'Reference to the issuer used to sign requests serviced by this role.',
       fieldGroup: 'default',
+      helpText: 'Reference to the issuer used to sign requests serviced by this role.',
       type: 'string',
     },
     keyBits: {
       editType: 'number',
+      fieldGroup: 'default',
       helpText:
         'The number of bits to use. Allowed values are 0 (universal default); with rsa key_type: 2048 (default), 3072, or 4096; with ec key_type: 224, 256 (default), 384, or 521; ignored with ed25519.',
-      fieldGroup: 'default',
       type: 'number',
     },
     keyType: {
       editType: 'string',
+      fieldGroup: 'default',
       helpText:
         'The type of key to use; defaults to RSA. "rsa" "ec", "ed25519" and "any" are the only valid values.',
       possibleValues: ['rsa', 'ec', 'ed25519', 'any'],
-      fieldGroup: 'default',
       type: 'string',
     },
     keyUsage: {
+      defaultValue: 'DigitalSignature,KeyAgreement,KeyEncipherment',
       editType: 'stringArray',
+      fieldGroup: 'default',
       helpText:
         'A comma-separated string or list of key usages (not extended key usages). Valid values can be found at https://golang.org/pkg/crypto/x509/#KeyUsage -- simply drop the "KeyUsage" part of the name. To remove all key usages from being set, set this value to an empty list. See also RFC 5280 Section 4.2.1.3.',
-      fieldGroup: 'default',
-      defaultValue: 'DigitalSignature,KeyAgreement,KeyEncipherment',
     },
     locality: {
       editType: 'stringArray',
-      helpText: 'If set, Locality will be set to this value in certificates issued by this role.',
       fieldGroup: 'default',
+      helpText: 'If set, Locality will be set to this value in certificates issued by this role.',
       label: 'Locality/City',
     },
     maxTtl: {
       editType: 'ttl',
-      helpText: 'The maximum allowed lease duration. If not set, defaults to the system maximum lease TTL.',
       fieldGroup: 'default',
+      helpText: 'The maximum allowed lease duration. If not set, defaults to the system maximum lease TTL.',
       label: 'Max TTL',
+    },
+    name: {
+      editType: 'string',
+      fieldGroup: 'default',
+      fieldValue: 'mutableId',
+      helpText: 'Name of the role',
+      label: 'Name',
+      readOnly: true,
+      type: 'string',
     },
     noStore: {
       editType: 'boolean',
+      fieldGroup: 'default',
       helpText:
         'If set, certificates issued/signed against this role will not be stored in the storage backend. This can improve performance when issuing large numbers of certificates. However, certificates issued in this way cannot be enumerated or revoked, so this option is recommended only for certificates that are non-sensitive, or extremely short-lived. This option implies a value of "false" for "generate_lease".',
-      fieldGroup: 'default',
       type: 'boolean',
     },
     noStoreMetadata: {
       editType: 'boolean',
-      helpText:
-        'If set, if a client attempts to issue or sign a certificate with attached metadata to store, the issuance / signing instead fails.',
       fieldGroup: 'default',
+      helpText:
+        'If set, if a client attempts to issue or sign a certificate with attached cert_metadata to store, the issuance / signing instead fails.',
       type: 'boolean',
     },
     notAfter: {
       editType: 'string',
+      fieldGroup: 'default',
       helpText:
         'Set the not after field of the certificate with specified date value. The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ.',
-      fieldGroup: 'default',
       type: 'string',
     },
     notBeforeDuration: {
-      editType: 'ttl',
-      helpText: 'The duration before now which the certificate needs to be backdated by.',
-      fieldGroup: 'default',
       defaultValue: 30,
+      editType: 'ttl',
+      fieldGroup: 'default',
+      helpText: 'The duration before now which the certificate needs to be backdated by.',
     },
     organization: {
       editType: 'stringArray',
-      helpText: 'If set, O (Organization) will be set to this value in certificates issued by this role.',
       fieldGroup: 'default',
+      helpText: 'If set, O (Organization) will be set to this value in certificates issued by this role.',
     },
     ou: {
       editType: 'stringArray',
+      fieldGroup: 'default',
       helpText:
         'If set, OU (OrganizationalUnit) will be set to this value in certificates issued by this role.',
-      fieldGroup: 'default',
       label: 'Organizational Unit',
     },
     policyIdentifiers: {
       editType: 'stringArray',
+      fieldGroup: 'default',
       helpText:
         'A comma-separated string or list of policy OIDs, or a JSON list of qualified policy information, which must include an oid, and may include a notice and/or cps url, using the form [{"oid"="1.3.6.1.4.1.7.8","notice"="I am a user Notice"}, {"oid"="1.3.6.1.4.1.44947.1.2.4 ","cps"="https://example.com"}].',
-      fieldGroup: 'default',
     },
     postalCode: {
       editType: 'stringArray',
-      helpText: 'If set, Postal Code will be set to this value in certificates issued by this role.',
       fieldGroup: 'default',
+      helpText: 'If set, Postal Code will be set to this value in certificates issued by this role.',
     },
     province: {
       editType: 'stringArray',
-      helpText: 'If set, Province will be set to this value in certificates issued by this role.',
       fieldGroup: 'default',
+      helpText: 'If set, Province will be set to this value in certificates issued by this role.',
       label: 'Province/State',
     },
     requireCn: {
       editType: 'boolean',
-      helpText: "If set to false, makes the 'common_name' field optional while generating a certificate.",
       fieldGroup: 'default',
+      helpText: "If set to false, makes the 'common_name' field optional while generating a certificate.",
       label: 'Require Common Name',
       type: 'boolean',
     },
     serverFlag: {
+      defaultValue: true,
       editType: 'boolean',
+      fieldGroup: 'default',
       helpText:
         'If set, certificates are flagged for server auth use. Defaults to true. See also RFC 5280 Section 4.2.1.12.',
-      fieldGroup: 'default',
-      defaultValue: true,
       type: 'boolean',
     },
     signatureBits: {
       editType: 'number',
+      fieldGroup: 'default',
       helpText:
         'The number of bits to use in the signature algorithm; accepts 256 for SHA-2-256, 384 for SHA-2-384, and 512 for SHA-2-512. Defaults to 0 to automatically detect based on key length (SHA-2-256 for RSA keys, and matching the curve size for NIST P-Curves).',
-      fieldGroup: 'default',
       type: 'number',
     },
     streetAddress: {
       editType: 'stringArray',
-      helpText: 'If set, Street Address will be set to this value in certificates issued by this role.',
       fieldGroup: 'default',
+      helpText: 'If set, Street Address will be set to this value in certificates issued by this role.',
     },
     ttl: {
       editType: 'ttl',
+      fieldGroup: 'default',
       helpText:
         'The lease duration (validity period of the certificate) if no specific lease duration is requested. The lease duration controls the expiration of certificates issued by this backend. Defaults to the system default value or the value of max_ttl, whichever is shorter.',
-      fieldGroup: 'default',
       label: 'TTL',
     },
     useCsrCommonName: {
+      defaultValue: true,
       editType: 'boolean',
+      fieldGroup: 'default',
       helpText:
         'If set, when used with a signing profile, the common name in the CSR will be used. This does *not* include any requested Subject Alternative Names; use use_csr_sans for that. Defaults to true.',
-      fieldGroup: 'default',
-      defaultValue: true,
       label: 'Use CSR Common Name',
       type: 'boolean',
     },
     useCsrSans: {
+      defaultValue: true,
       editType: 'boolean',
+      fieldGroup: 'default',
       helpText:
         'If set, when used with a signing profile, the SANs in the CSR will be used. This does *not* include the Common Name (cn); use use_csr_common_name for that. Defaults to true.',
-      fieldGroup: 'default',
-      defaultValue: true,
       label: 'Use CSR Subject Alternative Names',
       type: 'boolean',
     },
     usePss: {
       editType: 'boolean',
-      helpText: 'Whether or not to use PSS signatures when using a RSA key-type issuer. Defaults to false.',
       fieldGroup: 'default',
+      helpText: 'Whether or not to use PSS signatures when using a RSA key-type issuer. Defaults to false.',
       type: 'boolean',
     },
   },
