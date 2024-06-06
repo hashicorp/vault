@@ -2902,6 +2902,12 @@ func (c *Core) preSeal() error {
 		c.updateLockedUserEntriesCancel = nil
 	}
 
+  if c.lockoutLoggerCancel.Load() != nil {
+    cf := *c.lockoutLoggerCancel.Load()
+    cf()
+    c.lockoutLoggerCancel.CompareAndSwap(c.lockoutLoggerCancel.Load(), nil)
+  }
+
 	if seal, ok := c.seal.(*autoSeal); ok {
 		seal.StopHealthCheck()
 	}
