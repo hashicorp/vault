@@ -22,6 +22,10 @@ ifneq ($(FDB_ENABLED), )
 	BUILD_TAGS+=foundationdb
 endif
 
+ifneq ($(MINIMAL), )
+	BUILD_TAGS+=minimal
+endif
+
 default: dev
 
 # bin generates the releasable binaries for Vault
