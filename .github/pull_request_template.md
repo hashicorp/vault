@@ -1,7 +1,11 @@
 ### Description
 What does this PR do?
 
-### TODO
+### TODO if you're a community member
+- [ ] Make sure there's a changelog. This is a description of what changed from
+  a user's point of view.
+
+### TODO if you're a HashiCorp employee
 - [ ] Make sure there's a changelog. Brand new features have a differently
   formatted changelog than other changelogs, so pay attention to that. If this
   PR is the CE portion of an ENT PR, put the changelog here, _not_ in your ENT
@@ -19,3 +23,11 @@ What does this PR do?
   applying the patch for this PR to the ENT repo and running tests doesn't
   break any tests. Sometimes ENT only tests rely on public functions in CE
   files.
+- [ ] If this change has an associated Jira, please link it in the description.
+- [ ] If this change has an associated RFC, please link it in the description.
+- [ ] If this change has an associated ENT PR, please link it in the
+  description.
+- [ ] If this is a normal PR, please remember to merge your PRs using the
+  `Squash and merge` button and _NOT_ the `Merge` button that creates a separate
+  merge commit. The button that creates a separate merge commit should only be
+  used for manual CE -> ENT merge PRs (which won't happen in this repo anyway).
