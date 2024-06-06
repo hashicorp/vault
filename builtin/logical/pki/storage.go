@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
@@ -103,6 +104,10 @@ func (sc *storageContext) GetCertificateCounter() *CertificateCounter {
 
 func (sc *storageContext) UseLegacyBundleCaStorage() bool {
 	return sc.Backend.UseLegacyBundleCaStorage()
+}
+
+func (sc *storageContext) GetRevokeStorageLock() *sync.RWMutex {
+	return sc.Backend.GetRevokeStorageLock()
 }
 
 func (sc *storageContext) listKeys() ([]issuing.KeyID, error) {

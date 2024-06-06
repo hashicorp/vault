@@ -957,8 +957,8 @@ func fetchIssuerMapForRevocationChecking(sc *storageContext) (map[issuing.Issuer
 // storage.
 func tryRevokeCertBySerial(sc *storageContext, config *crlConfig, serial string) (*logical.Response, error) {
 	// revokeCert requires us to hold these locks before calling it.
-	sc.Backend.GetRevokeStorageLock().Lock()
-	defer sc.Backend.GetRevokeStorageLock().Unlock()
+	sc.GetRevokeStorageLock().Lock()
+	defer sc.GetRevokeStorageLock().Unlock()
 
 	certEntry, err := fetchCertBySerial(sc, issuing.PathCerts, serial)
 	if err != nil {
