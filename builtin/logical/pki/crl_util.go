@@ -567,9 +567,9 @@ func (cb *CrlBuilder) _shouldRebuildLocalCRLs(sc *storageContext, override bool)
 
 func (cb *CrlBuilder) _shouldRebuildUnifiedCRLs(sc *storageContext, override bool) (bool, error) {
 	// Unified CRL can only be built by the main cluster.
-	b := sc.Backend
-	if b.System().ReplicationState().HasState(consts.ReplicationDRSecondary|consts.ReplicationPerformanceStandby) ||
-		(!b.System().LocalMount() && b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
+	sysView := sc.System()
+	if sysView.ReplicationState().HasState(consts.ReplicationDRSecondary|consts.ReplicationPerformanceStandby) ||
+		(!sysView.LocalMount() && sysView.ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
 		return false, nil
 	}
 
@@ -733,8 +733,8 @@ func (cb *CrlBuilder) maybeGatherQueueForFirstProcess(sc *storageContext, isNotP
 func (cb *CrlBuilder) processRevocationQueue(sc *storageContext) error {
 	sc.Logger().Debug(fmt.Sprintf("starting to process revocation requests"))
 
-	isNotPerfPrimary := sc.Backend.System().ReplicationState().HasState(consts.ReplicationDRSecondary|consts.ReplicationPerformanceStandby) ||
-		(!sc.Backend.System().LocalMount() && sc.Backend.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary))
+	isNotPerfPrimary := sc.System().ReplicationState().HasState(consts.ReplicationDRSecondary|consts.ReplicationPerformanceStandby) ||
+		(!sc.System().LocalMount() && sc.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary))
 
 	if err := cb.maybeGatherQueueForFirstProcess(sc, isNotPerfPrimary); err != nil {
 		return fmt.Errorf("failed to gather first queue: %w", err)
@@ -750,7 +750,7 @@ func (cb *CrlBuilder) processRevocationQueue(sc *storageContext) error {
 		return err
 	}
 
-	ourClusterId, err := sc.Backend.System().ClusterID(sc.Context)
+	ourClusterId, err := sc.System().ClusterID(sc.Context)
 	if err != nil {
 		return fmt.Errorf("unable to fetch clusterID to ignore local revocation entries: %w", err)
 	}
@@ -863,7 +863,7 @@ func (cb *CrlBuilder) processCrossClusterRevocations(sc *storageContext) error {
 	crossQueue := cb.crossQueue.Iterate()
 	sc.Logger().Debug(fmt.Sprintf("gathered %v unified revocations entries", len(crossQueue)))
 
-	ourClusterId, err := sc.Backend.System().ClusterID(sc.Context)
+	ourClusterId, err := sc.System().ClusterID(sc.Context)
 	if err != nil {
 		return fmt.Errorf("unable to fetch clusterID to ignore local unified revocation entries: %w", err)
 	}
@@ -989,7 +989,7 @@ func revokeCert(sc *storageContext, config *crlConfig, cert *x509.Certificate) (
 	// revocation doesn't matter anyways -- the CRL that would be written will
 	// be immediately blown away by the view being cleared. So we can simply
 	// fast path a successful exit.
-	if sc.Backend.System().Tainted() {
+	if sc.System().Tainted() {
 		return nil, nil
 	}
 
@@ -1541,9 +1541,9 @@ func buildAnyUnifiedCRLs(
 	var warnings []string
 
 	// Unified CRL can only be built by the main cluster.
-	b := sc.Backend
-	if b.System().ReplicationState().HasState(consts.ReplicationDRSecondary|consts.ReplicationPerformanceStandby) ||
-		(!b.System().LocalMount() && b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
+	sysView := sc.System()
+	if sysView.ReplicationState().HasState(consts.ReplicationDRSecondary|consts.ReplicationPerformanceStandby) ||
+		(!sysView.LocalMount() && sysView.ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
 		return nil, nil, nil
 	}
 

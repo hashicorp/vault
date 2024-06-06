@@ -39,9 +39,9 @@ func runUnifiedTransfer(sc *storageContext) {
 	b := sc.Backend
 	status := b.GetUnifiedTransferStatus()
 
-	isPerfStandby := b.System().ReplicationState().HasState(consts.ReplicationDRSecondary | consts.ReplicationPerformanceStandby)
+	isPerfStandby := sc.System().ReplicationState().HasState(consts.ReplicationDRSecondary | consts.ReplicationPerformanceStandby)
 
-	if isPerfStandby || b.System().LocalMount() {
+	if isPerfStandby || sc.System().LocalMount() {
 		// We only do this on active enterprise nodes, when we aren't a local mount
 		return
 	}
@@ -58,7 +58,7 @@ func runUnifiedTransfer(sc *storageContext) {
 		return
 	}
 
-	clusterId, err := b.System().ClusterID(sc.Context)
+	clusterId, err := sc.System().ClusterID(sc.Context)
 	if err != nil {
 		sc.Logger().Error("failed to fetch cluster id for unified transfer background process",
 			"error", err)

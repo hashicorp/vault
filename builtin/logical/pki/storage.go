@@ -81,6 +81,10 @@ func (sc *storageContext) Logger() hclog.Logger {
 	return sc.Backend.Logger()
 }
 
+func (sc *storageContext) System() logical.SystemView {
+	return sc.Backend.System()
+}
+
 func (sc *storageContext) listKeys() ([]issuing.KeyID, error) {
 	return issuing.ListKeys(sc.Context, sc.Storage)
 }
@@ -655,7 +659,7 @@ func (sc *storageContext) getRevocationConfig() (*crlConfig, error) {
 		result.Expiry = defaultCrlConfig.Expiry
 	}
 
-	isLocalMount := sc.Backend.System().LocalMount()
+	isLocalMount := sc.System().LocalMount()
 	if (!constants.IsEnterprise || isLocalMount) && (result.UnifiedCRLOnExistingPaths || result.UnifiedCRL || result.UseGlobalQueue) {
 		// An end user must have had Enterprise, enabled the unified config args and then downgraded to OSS.
 		sc.Logger().Warn("Not running Vault Enterprise or using a local mount, " +
