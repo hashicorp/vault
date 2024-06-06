@@ -148,12 +148,19 @@ entities attempting to login.
   cluster. If set with `bound_service_account_namespaces`, the conditions are `OR`ed.
 - `audience` `(string: "")` - Optional Audience claim to verify in the JWT.
 - `alias_name_source` `(string: "serviceaccount_uid")` - Configures how identity aliases are generated.
-  Valid choices are: `serviceaccount_uid`, `serviceaccount_name`
-  When `serviceaccount_uid` is specified, the machine generated UID from the service account will be used as the identity alias name.
-  When `serviceaccount_name` is specified, the service account's namespace and name will be used as the identity alias name e.g `vault/vault-auth`.
-  While it is strongly advised that you use `serviceaccount_uid`, you may also use `serviceaccount_name` in cases where
-  you want to set the alias ahead of time, and the risks are mitigated or otherwise acceptable given your use case.
-  It is very important to limit who is able to delete/create service accounts within a given cluster.
+  Valid choices are: `serviceaccount_uid` and `serviceaccount_name`.
+  
+  When `serviceaccount_uid` is specified, the machine generated UID from the service account
+  will be used as the identity alias name - this is the more secure option, and hence the
+  default and the recommended option.
+
+  When `serviceaccount_name` is specified, the service account's namespace and name will be
+  used as the identity alias name e.g `vault/vault-auth`. If you can ensure strong controls
+  around the creation/deletion/access of your Kubernetes service accounts, and want more
+  control over how your Kubernetes service accounts map to Vault identities or the simplification
+  of setting the entity alias ahead of time of the Kubernetes service account creation you may 
+  use serviceaccount_name where the risks of this are mitigated or acceptable given your use case. 
+
   See the [Create an Entity Alias](/vault/api-docs/secret/identity/entity-alias#create-an-entity-alias) document
   which further expands on the potential security implications mentioned above.
 
