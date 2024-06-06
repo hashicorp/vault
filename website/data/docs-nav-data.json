@@ -2321,6 +2321,10 @@
         "path": "upgrading/upgrade-to-1.17.x"
       },
       {
+        "title": "Upgrade to 1.17.x",
+        "path": "upgrading/upgrade-to-1.18.x"
+      },
+      {
         "title": "Upgrade to 1.16.x",
         "path": "upgrading/upgrade-to-1.16.x"
       },
