@@ -336,7 +336,7 @@ func getOcspStatus(sc *storageContext, ocspReq *ocsp.Request, useUnifiedStorage 
 	}
 
 	if revEntryRaw != nil {
-		var revEntry revocationInfo
+		var revEntry RevocationInfo
 		if err := revEntryRaw.DecodeJSON(&revEntry); err != nil {
 			return nil, err
 		}

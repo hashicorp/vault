@@ -452,7 +452,7 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 		}
 	}
 	if revokedEntry != nil {
-		var revInfo revocationInfo
+		var revInfo RevocationInfo
 		err := revokedEntry.DecodeJSON(&revInfo)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("Error decoding revocation entry for serial %s: %s", serial, err)), nil

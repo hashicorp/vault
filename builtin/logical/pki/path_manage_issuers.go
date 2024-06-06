@@ -677,7 +677,7 @@ func (b *backend) pathRevokeIssuer(ctx context.Context, req *logical.Request, da
 
 	// Now, if the parent issuer exists within this mount, we'd have written
 	// a storage entry for this certificate, making it appear as any other
-	// leaf. We need to add a revocationInfo entry for this into storage,
+	// leaf. We need to add a RevocationInfo entry for this into storage,
 	// so that it appears as if it was revoked.
 	//
 	// This is a _necessary_ but not necessarily _sufficient_ step to
@@ -712,7 +712,7 @@ func (b *backend) pathRevokeIssuer(ctx context.Context, req *logical.Request, da
 			//
 			// We'll let a cleanup pass or CRL build identify the issuer for
 			// us.
-			revInfo := revocationInfo{
+			revInfo := RevocationInfo{
 				CertificateBytes:  issuerCert.Raw,
 				RevocationTime:    issuer.RevocationTime,
 				RevocationTimeUTC: issuer.RevocationTimeUTC,

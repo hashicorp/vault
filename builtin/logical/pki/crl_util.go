@@ -40,7 +40,7 @@ const (
 	unifiedDeltaWALLastRevokedSerial = unifiedDeltaWALPath + deltaWALLastRevokedSerialName
 )
 
-type revocationInfo struct {
+type RevocationInfo struct {
 	CertificateBytes  []byte           `json:"certificate_bytes"`
 	RevocationTime    int64            `json:"revocation_time"`
 	RevocationTimeUTC time.Time        `json:"revocation_time_utc"`
@@ -1042,7 +1042,7 @@ func revokeCert(sc *storageContext, config *revocation.CrlConfig, cert *x509.Cer
 	}
 
 	currTime := time.Now()
-	revInfo := revocationInfo{
+	revInfo := RevocationInfo{
 		CertificateBytes:  cert.Raw,
 		RevocationTime:    currTime.Unix(),
 		RevocationTimeUTC: currTime.UTC(),
@@ -1870,7 +1870,7 @@ func buildAnyCRLsWithCerts(
 	return warnings, nil
 }
 
-func isRevInfoIssuerValid(revInfo *revocationInfo, issuerIDCertMap map[issuing.IssuerID]*x509.Certificate) bool {
+func isRevInfoIssuerValid(revInfo *RevocationInfo, issuerIDCertMap map[issuing.IssuerID]*x509.Certificate) bool {
 	if len(revInfo.CertificateIssuer) > 0 {
 		issuerId := revInfo.CertificateIssuer
 		if _, issuerExists := issuerIDCertMap[issuerId]; issuerExists {
@@ -1881,7 +1881,7 @@ func isRevInfoIssuerValid(revInfo *revocationInfo, issuerIDCertMap map[issuing.I
 	return false
 }
 
-func associateRevokedCertWithIsssuer(revInfo *revocationInfo, revokedCert *x509.Certificate, issuerIDCertMap map[issuing.IssuerID]*x509.Certificate) bool {
+func associateRevokedCertWithIsssuer(revInfo *RevocationInfo, revokedCert *x509.Certificate, issuerIDCertMap map[issuing.IssuerID]*x509.Certificate) bool {
 	for issuerId, issuerCert := range issuerIDCertMap {
 		if bytes.Equal(revokedCert.RawIssuer, issuerCert.RawSubject) {
 			if err := revokedCert.CheckSignatureFrom(issuerCert); err == nil {
@@ -1922,7 +1922,7 @@ func getLocalRevokedCertEntries(sc *storageContext, issuerIDCertMap map[issuing.
 			continue
 		}
 
-		var revInfo revocationInfo
+		var revInfo RevocationInfo
 		revokedEntry, err := sc.Storage.Get(sc.Context, revokedPath+serial)
 		if err != nil {
 			return nil, nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch revoked cert with serial %s: %s", serial, err)}

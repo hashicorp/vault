@@ -164,7 +164,7 @@ func TestOcsp_InvalidIssuerIdInRevocationEntry(t *testing.T) {
 
 	// Twiddle the entry so that the issuer id is no longer valid.
 	storagePath := revokedPath + normalizeSerial(serial)
-	var revInfo revocationInfo
+	var revInfo RevocationInfo
 	revEntry, err := s.Get(ctx, storagePath)
 	require.NoError(t, err, "failed looking up storage path: %s", storagePath)
 	err = revEntry.DecodeJSON(&revInfo)
@@ -208,7 +208,7 @@ func TestOcsp_UnknownIssuerIdWithDefaultHavingOcspUsageRemoved(t *testing.T) {
 
 	// Twiddle the entry so that the issuer id is no longer valid.
 	storagePath := revokedPath + normalizeSerial(serial)
-	var revInfo revocationInfo
+	var revInfo RevocationInfo
 	revEntry, err := s.Get(ctx, storagePath)
 	require.NoError(t, err, "failed looking up storage path: %s", storagePath)
 	err = revEntry.DecodeJSON(&revInfo)

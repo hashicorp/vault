@@ -1089,7 +1089,7 @@ func (b *backend) doTidyRevocationStore(ctx context.Context, req *logical.Reques
 
 	fixedIssuers := 0
 
-	var revInfo revocationInfo
+	var revInfo RevocationInfo
 	for i, serial := range revokedSerials {
 		b.tidyStatusMessage(fmt.Sprintf("Tidying revoked certificates: checking certificate %d of %d", i, len(revokedSerials)))
 		metrics.SetGauge([]string{"secrets", "pki", "tidy", "revoked_cert_current_entry"}, float32(i))

@@ -1060,7 +1060,7 @@ func TestAutoRebuild(t *testing.T) {
 	require.NotNil(t, resp.Data)
 	require.NotEmpty(t, resp.Data["value"])
 	revEntryValue := resp.Data["value"].(string)
-	var revInfo revocationInfo
+	var revInfo RevocationInfo
 	err = json.Unmarshal([]byte(revEntryValue), &revInfo)
 	require.NoError(t, err)
 	require.Equal(t, revInfo.CertificateIssuer, issuing.IssuerID(rootIssuer))
@@ -1233,7 +1233,7 @@ func TestTidyIssuerAssociation(t *testing.T) {
 	require.NotNil(t, entry)
 	require.NotNil(t, entry.Value)
 
-	var leafInfo revocationInfo
+	var leafInfo RevocationInfo
 	err = entry.DecodeJSON(&leafInfo)
 	require.NoError(t, err)
 	require.Equal(t, rootID, leafInfo.CertificateIssuer)
