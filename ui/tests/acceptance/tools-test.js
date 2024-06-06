@@ -80,7 +80,7 @@ module('Acceptance | tools', function (hooks) {
       // unwrap
       await click(GENERAL.navLink('Unwrap'));
 
-      await fillIn(TS.toolsInput('wrapping-token'), tokenStore.get());
+      await fillIn(TS.toolsInput('unwrap-token'), tokenStore.get());
       await click(TS.submit);
       await waitUntil(() => find('.CodeMirror'));
       assert.deepEqual(
@@ -162,7 +162,7 @@ module('Acceptance | tools', function (hooks) {
       // unwrap
       await click(GENERAL.navLink('Unwrap'));
 
-      await fillIn(TS.toolsInput('wrapping-token'), 'sometoken');
+      await fillIn(TS.toolsInput('unwrap-token'), 'sometoken');
       await click(TS.submit);
 
       await waitUntil(() => find('.CodeMirror'));
