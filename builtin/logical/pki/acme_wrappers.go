@@ -145,7 +145,7 @@ func (b *backend) acmeWrapper(opts acmeWrapperOpts, op acmeOperation) framework.
 			return nil, err
 		}
 
-		isCiepsEnabled, ciepsPolicy, err := getCiepsAcmeSettings(sc, opts, config, data)
+		isCiepsEnabled, ciepsPolicy, err := getCiepsAcmeSettings(sc, opts, config, data, b.ciepsState)
 		if err != nil {
 			return nil, err
 		}
