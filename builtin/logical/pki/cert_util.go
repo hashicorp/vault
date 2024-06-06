@@ -250,7 +250,7 @@ func fetchCertBySerial(sc *storageContext, prefix, serial string) (*logical.Stor
 
 	// Update old-style paths to new-style paths
 	certEntry.Key = path
-	certCounter := sc.Backend.GetCertificateCounter()
+	certCounter := sc.GetCertificateCounter()
 	certsCounted := certCounter.IsInitialized()
 	if err = sc.Storage.Put(sc.Context, certEntry); err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("error saving certificate with serial %s to new location: %s", serial, err)}

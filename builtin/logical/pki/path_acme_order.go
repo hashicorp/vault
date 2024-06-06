@@ -271,7 +271,7 @@ func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, r *logical.Request, 
 			return nil, err
 		}
 
-		err = issuing.StoreCertificate(ac.sc.Context, ac.sc.Storage, ac.sc.Backend.GetCertificateCounter(), signedCertBundle)
+		err = issuing.StoreCertificate(ac.sc.Context, ac.sc.Storage, ac.sc.GetCertificateCounter(), signedCertBundle)
 		if err != nil {
 			return nil, err
 		}

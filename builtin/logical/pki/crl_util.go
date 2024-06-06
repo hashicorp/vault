@@ -1055,7 +1055,7 @@ func revokeCert(sc *storageContext, config *crlConfig, cert *x509.Certificate) (
 		return nil, fmt.Errorf("error creating revocation entry: %w", err)
 	}
 
-	certCounter := sc.Backend.GetCertificateCounter()
+	certCounter := sc.GetCertificateCounter()
 	certsCounted := certCounter.IsInitialized()
 	err = sc.Storage.Put(sc.Context, revEntry)
 	if err != nil {
