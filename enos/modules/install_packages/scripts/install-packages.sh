@@ -14,59 +14,81 @@ fail() {
 [[ -z "${PACKAGES}" ]] && fail "PACKAGES env variable has not been set"
 [[ -z "${PACKAGE_MANAGER}" ]] && fail "PACKAGE_MANAGER env variable has not been set"
 
+# Install packages based on the provided packages and package manager. We assume that the repositories
+# have already been synchronized by the repo setup that is a prerequisite for this script.
 install_packages() {
   if [[ "${PACKAGES}" = "__skip" ]]; then
     return 0
-  fi 
+  fi
 
   set -x
   echo "Installing Dependencies: ${PACKAGES}"
 
   # Use the default package manager of the current Linux distro to install packages
   case $PACKAGE_MANAGER in
-
-    "apt")
-      sudo apt update
+    apt)
       for package in ${PACKAGES}; do
         if dpkg -s "${package}"; then
+          echo "Skipping installation of ${package} because it is already installed"
           continue
         else
           echo "Installing ${package}"
-          sudo apt install -y "${package}"
+          local output
+          if ! output=$(sudo apt install -y "${package}" 2>&1); then
+            echo "Failed to install ${package}: ${output}" 1>&2
+            return 1
+          fi
         fi
       done
-      ;;
-
-    "yum")
+    ;;
+    dnf)
       for package in ${PACKAGES}; do
         if rpm -q "${package}"; then
+          echo "Skipping installation of ${package} because it is already installed"
           continue
         else
           echo "Installing ${package}"
-          sudo yum -y install "${package}"
+          local output
+          if ! output=$(sudo dnf -y install "${package}" 2>&1); then
+            echo "Failed to install ${package}: ${output}" 1>&2
+            return 1
+          fi
         fi
       done
-      ;;
-
-    "zypper")
-      cd /tmp
-      sudo zypper --gpg-auto-import-keys ref
+    ;;
+    yum)
       for package in ${PACKAGES}; do
         if rpm -q "${package}"; then
+          echo "Skipping installation of ${package} because it is already installed"
           continue
         else
           echo "Installing ${package}"
-          sudo zypper --non-interactive install "${package}"
-          date
+          local output
+          if ! output=$(sudo yum -y install "${package}" 2>&1); then
+            echo "Failed to install ${package}: ${output}" 1>&2
+            return 1
+          fi
         fi
-        sudo zypper search -i
       done
-      ;;
-
+    ;;
+    zypper)
+      for package in ${PACKAGES}; do
+        if rpm -q "${package}"; then
+          echo "Skipping installation of ${package} because it is already installed"
+          continue
+        else
+          echo "Installing ${package}"
+          local output
+          if ! output=$(sudo zypper --non-interactive install -y -l --force-resolution "${package}" 2>&1); then
+            echo "Failed to install ${package}: ${output}" 1>&2
+            return 1
+          fi
+        fi
+      done
+    ;;
     *)
       fail "No matching package manager provided."
-      ;;
-
+    ;;
   esac
 }
 

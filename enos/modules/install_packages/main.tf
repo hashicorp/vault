@@ -15,16 +15,15 @@ locals {
     "arm64" = "aarch64"
   }
   package_manager = {
-    # Note: though we generally use "amzn2" as our distro name for Amazon Linux 2, 
+    # Note: though we generally use "amzn2" as our distro name for Amazon Linux 2,
     # enos_host_info.hosts[each.key].distro returns "amzn", so that is what we reference here.
     "amzn"          = "yum"
     "opensuse-leap" = "zypper"
-    "rhel"          = "yum"
+    "rhel"          = "dnf"
     "sles"          = "zypper"
     "ubuntu"        = "apt"
   }
   distro_repos = {
-    # Currently sles is the only distro that requires setting up repos before installing packages
     "sles" = {
       "15.5" = "https://download.opensuse.org/repositories/network:utilities/SLE_15_SP5/network:utilities.repo"
     }
@@ -50,7 +49,7 @@ variable "hosts" {
 
 variable "timeout" {
   type        = number
-  description = "The max number of seconds to wait before timing out"
+  description = "The max number of seconds to wait before timing out. This is applied to each step so total timeout will be longer."
   default     = 120
 }
 
@@ -70,19 +69,20 @@ resource "enos_host_info" "hosts" {
   }
 }
 
-# Set up repos for each distro (in order to install some packages, some distros
-# require us to manually add the repo for that package first)
-resource "enos_remote_exec" "distro_repo_setup" {
+# Synchronize repositories on remote machines. This does not update packages but only ensures that
+# the remote hosts are configured with default upstream repositories that have been refreshed to
+# the latest metedata.
+resource "enos_remote_exec" "synchronize_repos" {
   for_each = var.hosts
 
   environment = {
     DISTRO          = enos_host_info.hosts[each.key].distro
-    DISTRO_REPOS    = try(local.distro_repos[enos_host_info.hosts[each.key].distro][enos_host_info.hosts[each.key].distro_version], "__none")
+    PACKAGE_MANAGER = local.package_manager[enos_host_info.hosts[each.key].distro]
     RETRY_INTERVAL  = var.retry_interval
     TIMEOUT_SECONDS = var.timeout
   }
 
-  scripts = [abspath("${path.module}/scripts/distro-repo-setup.sh")]
+  scripts = [abspath("${path.module}/scripts/synchronize-repos.sh")]
 
   transport = {
     ssh = {
@@ -91,9 +91,34 @@ resource "enos_remote_exec" "distro_repo_setup" {
   }
 }
 
-resource "enos_remote_exec" "install_packages" {
+# Add any additional repositories.
+resource "enos_remote_exec" "add_repos" {
   for_each   = var.hosts
-  depends_on = [enos_remote_exec.distro_repo_setup]
+  depends_on = [enos_remote_exec.synchronize_repos]
+
+  environment = {
+    DISTRO_REPOS    = try(local.distro_repos[enos_host_info.hosts[each.key].distro][enos_host_info.hosts[each.key].distro_version], "__none")
+    PACKAGE_MANAGER = local.package_manager[enos_host_info.hosts[each.key].distro]
+    RETRY_INTERVAL  = var.retry_interval
+    TIMEOUT_SECONDS = var.timeout
+  }
+
+  scripts = [abspath("${path.module}/scripts/add-repos.sh")]
+
+  transport = {
+    ssh = {
+      host = each.value.public_ip
+    }
+  }
+}
+
+# Install any required packages.
+resource "enos_remote_exec" "install_packages" {
+  for_each = var.hosts
+  depends_on = [
+    enos_remote_exec.synchronize_repos,
+    enos_remote_exec.add_repos,
+  ]
 
   environment = {
     PACKAGE_MANAGER = local.package_manager[enos_host_info.hosts[each.key].distro]
