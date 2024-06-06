@@ -163,7 +163,7 @@ func (sc *storageContext) fetchCAInfoWithIssuer(issuerRef string, usage issuing.
 // fetchCAInfoByIssuerId will fetch the CA info, will return an error if no ca info exists for the given issuerId.
 // This does support the loading using the legacyBundleShimID
 func (sc *storageContext) fetchCAInfoByIssuerId(issuerId issuing.IssuerID, usage issuing.IssuerUsage) (*certutil.CAInfoBundle, error) {
-	return issuing.FetchCAInfoByIssuerId(sc.Context, sc.Storage, sc.Backend, issuerId, usage)
+	return issuing.FetchCAInfoByIssuerId(sc.Context, sc.Storage, sc.GetPkiManagedView(), issuerId, usage)
 }
 
 func fetchCertBySerialBigInt(sc *storageContext, prefix string, serial *big.Int) (*logical.StorageEntry, error) {

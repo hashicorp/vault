@@ -93,6 +93,10 @@ func (sc *storageContext) GetUnifiedTransferStatus() *UnifiedTransferStatus {
 	return sc.Backend.GetUnifiedTransferStatus()
 }
 
+func (sc *storageContext) GetPkiManagedView() managed_key.PkiManagedKeyView {
+	return sc.Backend
+}
+
 func (sc *storageContext) listKeys() ([]issuing.KeyID, error) {
 	return issuing.ListKeys(sc.Context, sc.Storage)
 }

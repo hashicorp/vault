@@ -938,7 +938,7 @@ func fetchIssuerMapForRevocationChecking(sc *storageContext) (map[issuing.Issuer
 			return nil, fmt.Errorf("faulty reference: %v - CA info not found", issuer)
 		}
 
-		parsedBundle, err := parseCABundle(sc.Context, sc.Backend, bundle)
+		parsedBundle, err := parseCABundle(sc.Context, sc.GetPkiManagedView(), bundle)
 		if err != nil {
 			return nil, errutil.InternalError{Err: err.Error()}
 		}

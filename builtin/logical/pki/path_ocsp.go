@@ -434,7 +434,7 @@ func getOcspIssuerParsedBundle(sc *storageContext, issuerId issuing.IssuerID) (*
 		return nil, nil, ErrIssuerHasNoKey
 	}
 
-	caBundle, err := parseCABundle(sc.Context, sc.Backend, bundle)
+	caBundle, err := parseCABundle(sc.Context, sc.GetPkiManagedView(), bundle)
 	if err != nil {
 		return nil, nil, err
 	}
