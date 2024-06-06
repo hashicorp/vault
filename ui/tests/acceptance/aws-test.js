@@ -3,16 +3,18 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, fillIn, findAll, currentURL, find, settled, waitUntil } from '@ember/test-helpers';
+import { click, fillIn, currentURL, find, settled, waitUntil } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 
 import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
+import { setupMirage } from 'ember-cli-mirage/test-support';
 
 module('Acceptance | aws secret backend', function (hooks) {
   setupApplicationTest(hooks);
+  setupMirage(hooks);
 
   hooks.beforeEach(function () {
     this.uid = uuidv4();
@@ -20,9 +22,13 @@ module('Acceptance | aws secret backend', function (hooks) {
   });
 
   test('aws backend', async function (assert) {
-    assert.expect(12);
     const path = `aws-${this.uid}`;
     const roleName = 'awsrole';
+    this.server.post(`/${path}/creds/${roleName}`, (_, req) => {
+      const payload = JSON.parse(req.requestBody);
+      assert.deepEqual(payload, { role_arn: 'foobar' }, 'does not send TTL when unchecked');
+      return {};
+    });
 
     await enablePage.enable('aws', path);
     await settled();
@@ -31,28 +37,25 @@ module('Acceptance | aws secret backend', function (hooks) {
     await click('[data-test-secret-backend-configure]');
 
     assert.strictEqual(currentURL(), `/vault/settings/secrets/configure/${path}`);
-    assert.ok(findAll('[data-test-aws-root-creds-form]').length, 'renders the empty root creds form');
-    assert.ok(findAll('[data-test-aws-link="root-creds"]').length, 'renders the root creds link');
-    assert.ok(findAll('[data-test-aws-link="leases"]').length, 'renders the leases config link');
+    assert.dom('[data-test-aws-root-creds-form]').exists();
+    assert.dom('[data-test-aws-link="root-creds"]').exists();
+    assert.dom('[data-test-aws-link="leases"]').exists();
 
     await fillIn('[data-test-aws-input="accessKey"]', 'foo');
     await fillIn('[data-test-aws-input="secretKey"]', 'bar');
 
     await click('[data-test-aws-input="root-save"]');
 
-    assert.ok(
-      find('[data-test-flash-message]').textContent.trim(),
-      `The backend configuration saved successfully!`
-    );
+    assert
+      .dom('[data-test-flash-message]:last-of-type [data-test-flash-message-body]')
+      .includesText(`The backend configuration saved successfully!`);
 
     await click('[data-test-aws-link="leases"]');
 
     await click('[data-test-aws-input="lease-save"]');
-
-    assert.ok(
-      find('[data-test-flash-message]').textContent.trim(),
-      `The backend configuration saved successfully!`
-    );
+    assert
+      .dom('[data-test-flash-message]:last-of-type [data-test-flash-message-body]')
+      .includesText(`The backend configuration saved successfully!`);
 
     await click('[data-test-backend-view-link]');
 
@@ -60,10 +63,7 @@ module('Acceptance | aws secret backend', function (hooks) {
 
     await click('[data-test-secret-create]');
 
-    assert.ok(
-      find('[data-test-secret-header]').textContent.includes('AWS Role'),
-      `aws: renders the create page`
-    );
+    assert.dom('[data-test-secret-header]').includesText('AWS Role');
 
     await fillIn('[data-test-input="name"]', roleName);
 
@@ -78,7 +78,19 @@ module('Acceptance | aws secret backend', function (hooks) {
     await click(`[data-test-secret-breadcrumb="${path}"] a`);
 
     assert.strictEqual(currentURL(), `/vault/secrets/${path}/list`);
-    assert.ok(findAll(`[data-test-secret-link="${roleName}"]`).length, `aws: role shows in the list`);
+    assert.dom(`[data-test-secret-link="${roleName}"]`).exists();
+
+    // check that generates credentials flow is correct
+    await click(`[data-test-secret-link="${roleName}"]`);
+    assert.dom('h1').hasText('Generate AWS Credentials');
+    assert.dom('[data-test-input="credentialType"]').hasValue('iam_user');
+    await fillIn('[data-test-input="credentialType"]', 'assumed_role');
+    await click('[data-test-ttl-toggle="TTL"]');
+    assert.dom('[data-test-ttl-toggle="TTL"]').isNotChecked();
+    await fillIn('[data-test-input="roleArn"]', 'foobar');
+    await click('[data-test-secret-generate]');
+    assert.dom('[data-test-warning]').exists('Shows access warning after generation');
+    await click('[data-test-secret-generate-back]');
 
     //and delete
     await click(`[data-test-secret-link="${roleName}"] [data-test-popup-menu-trigger]`);
