@@ -651,15 +651,15 @@ func (sc *storageContext) checkForRolesReferencing(issuerId string) (timeout boo
 	return false, inUseBy, nil
 }
 
-func (sc *storageContext) getRevocationConfig() (*crlConfig, error) {
+func (sc *storageContext) getRevocationConfig() (*CrlConfig, error) {
 	entry, err := sc.Storage.Get(sc.Context, "config/crl")
 	if err != nil {
 		return nil, err
 	}
 
-	var result crlConfig
+	var result CrlConfig
 	if entry == nil {
-		result = defaultCrlConfig
+		result = DefaultCrlConfig
 		return &result, nil
 	}
 
@@ -669,15 +669,15 @@ func (sc *storageContext) getRevocationConfig() (*crlConfig, error) {
 
 	if result.Version == 0 {
 		// Automatically update existing configurations.
-		result.OcspDisable = defaultCrlConfig.OcspDisable
-		result.OcspExpiry = defaultCrlConfig.OcspExpiry
-		result.AutoRebuild = defaultCrlConfig.AutoRebuild
-		result.AutoRebuildGracePeriod = defaultCrlConfig.AutoRebuildGracePeriod
+		result.OcspDisable = DefaultCrlConfig.OcspDisable
+		result.OcspExpiry = DefaultCrlConfig.OcspExpiry
+		result.AutoRebuild = DefaultCrlConfig.AutoRebuild
+		result.AutoRebuildGracePeriod = DefaultCrlConfig.AutoRebuildGracePeriod
 		result.Version = 1
 	}
 	if result.Version == 1 {
 		if result.DeltaRebuildInterval == "" {
-			result.DeltaRebuildInterval = defaultCrlConfig.DeltaRebuildInterval
+			result.DeltaRebuildInterval = DefaultCrlConfig.DeltaRebuildInterval
 		}
 		result.Version = 2
 	}
@@ -685,7 +685,7 @@ func (sc *storageContext) getRevocationConfig() (*crlConfig, error) {
 	// Depending on client version, it's possible that the expiry is unset.
 	// This sets the default value to prevent issues in downstream code.
 	if result.Expiry == "" {
-		result.Expiry = defaultCrlConfig.Expiry
+		result.Expiry = DefaultCrlConfig.Expiry
 	}
 
 	isLocalMount := sc.System().LocalMount()
@@ -701,7 +701,7 @@ func (sc *storageContext) getRevocationConfig() (*crlConfig, error) {
 	return &result, nil
 }
 
-func (sc *storageContext) setRevocationConfig(config *crlConfig) error {
+func (sc *storageContext) setRevocationConfig(config *CrlConfig) error {
 	entry, err := logical.StorageEntryJSON("config/crl", config)
 	if err != nil {
 		return fmt.Errorf("failed building storage entry JSON: %w", err)

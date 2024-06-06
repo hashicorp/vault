@@ -134,7 +134,7 @@ func (b *backend) acmeRevocationHandler(acmeCtx *acmeContext, _ *logical.Request
 	return b.acmeRevocationByAccount(acmeCtx, userCtx, cert, config)
 }
 
-func (b *backend) acmeRevocationByPoP(acmeCtx *acmeContext, userCtx *jwsCtx, cert *x509.Certificate, config *crlConfig) (*logical.Response, error) {
+func (b *backend) acmeRevocationByPoP(acmeCtx *acmeContext, userCtx *jwsCtx, cert *x509.Certificate, config *CrlConfig) (*logical.Response, error) {
 	// Since this account does not exist, ensure we've gotten a private key
 	// matching the certificate's public key. This private key isn't
 	// explicitly provided, but instead provided by proxy (public key,
@@ -160,7 +160,7 @@ func (b *backend) acmeRevocationByPoP(acmeCtx *acmeContext, userCtx *jwsCtx, cer
 	return revokeCert(acmeCtx.sc, config, cert)
 }
 
-func (b *backend) acmeRevocationByAccount(acmeCtx *acmeContext, userCtx *jwsCtx, cert *x509.Certificate, config *crlConfig) (*logical.Response, error) {
+func (b *backend) acmeRevocationByAccount(acmeCtx *acmeContext, userCtx *jwsCtx, cert *x509.Certificate, config *CrlConfig) (*logical.Response, error) {
 	// Fetch the account; disallow revocations from non-valid-status accounts.
 	_, err := requireValidAcmeAccount(acmeCtx, userCtx)
 	if err != nil {

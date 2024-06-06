@@ -211,7 +211,7 @@ func (b *backend) ocspHandler(ctx context.Context, request *logical.Request, dat
 	}, nil
 }
 
-func canUseUnifiedStorage(req *logical.Request, cfg *crlConfig) bool {
+func canUseUnifiedStorage(req *logical.Request, cfg *CrlConfig) bool {
 	if isUnifiedOcspPath(req) {
 		return true
 	}
@@ -225,7 +225,7 @@ func isUnifiedOcspPath(req *logical.Request) bool {
 	return strings.HasPrefix(req.Path, "unified-ocsp")
 }
 
-func generateUnknownResponse(cfg *crlConfig, sc *storageContext, ocspReq *ocsp.Request) *logical.Response {
+func generateUnknownResponse(cfg *CrlConfig, sc *storageContext, ocspReq *ocsp.Request) *logical.Response {
 	// Generate an Unknown OCSP response, signing with the default issuer from the mount as we did
 	// not match the request's issuer. If no default issuer can be used, return with Unauthorized as there
 	// isn't much else we can do at this point.
@@ -475,7 +475,7 @@ func doesRequestMatchIssuer(parsedBundle *certutil.ParsedCertBundle, req *ocsp.R
 	return bytes.Equal(req.IssuerKeyHash, issuerKeyHash) && bytes.Equal(req.IssuerNameHash, issuerNameHash), nil
 }
 
-func genResponse(cfg *crlConfig, caBundle *certutil.ParsedCertBundle, info *ocspRespInfo, reqHash crypto.Hash, revSigAlg x509.SignatureAlgorithm) ([]byte, error) {
+func genResponse(cfg *CrlConfig, caBundle *certutil.ParsedCertBundle, info *ocspRespInfo, reqHash crypto.Hash, revSigAlg x509.SignatureAlgorithm) ([]byte, error) {
 	curTime := time.Now()
 	duration, err := parseutil.ParseDurationSecond(cfg.OcspExpiry)
 	if err != nil {

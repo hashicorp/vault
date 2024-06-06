@@ -73,7 +73,7 @@ to the issuer.`,
 				Type: framework.TypeString,
 				Description: `The amount of time the generated CRL should be
 valid; defaults to 72 hours.`,
-				Default: defaultCrlConfig.Expiry,
+				Default: DefaultCrlConfig.Expiry,
 			},
 			crlsParam: {
 				Type:        framework.TypeStringSlice,
@@ -142,7 +142,7 @@ to the issuer.`,
 				Type: framework.TypeString,
 				Description: `The amount of time the generated CRL should be
 valid; defaults to 72 hours.`,
-				Default: defaultCrlConfig.Expiry,
+				Default: DefaultCrlConfig.Expiry,
 			},
 			formatParam: {
 				Type: framework.TypeString,

@@ -607,7 +607,7 @@ func runOcspRequestTest(t *testing.T, requestType string, caKeyType string,
 		nextUpdateDiff := nextUpdate.Sub(thisUpdate)
 		require.Equal(t, expectedDiff, nextUpdateDiff,
 			fmt.Sprintf("the delta between thisUpdate %s and nextUpdate: %s should have been around: %s but was %s",
-				thisUpdate, nextUpdate, defaultCrlConfig.OcspExpiry, nextUpdateDiff))
+				thisUpdate, nextUpdate, DefaultCrlConfig.OcspExpiry, nextUpdateDiff))
 	} else {
 		// With the config value set to 0, we shouldn't have a NextUpdate field set
 		require.True(t, ocspResp.NextUpdate.IsZero(), "nextUpdate value was not zero as expected was: %v", ocspResp.NextUpdate)

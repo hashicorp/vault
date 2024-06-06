@@ -18,7 +18,7 @@ import (
 const latestCrlConfigVersion = 1
 
 // CRLConfig holds basic CRL configuration information
-type crlConfig struct {
+type CrlConfig struct {
 	Version                   int    `json:"version"`
 	Expiry                    string `json:"expiry"`
 	Disable                   bool   `json:"disable"`
@@ -34,7 +34,7 @@ type crlConfig struct {
 }
 
 // Implicit default values for the config if it does not exist.
-var defaultCrlConfig = crlConfig{
+var DefaultCrlConfig = CrlConfig{
 	Version:                   latestCrlConfigVersion,
 	Expiry:                    "72h",
 	Disable:                   false,
@@ -441,7 +441,7 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 	return resp, nil
 }
 
-func genResponseFromCrlConfig(config *crlConfig) *logical.Response {
+func genResponseFromCrlConfig(config *CrlConfig) *logical.Response {
 	return &logical.Response{
 		Data: map[string]interface{}{
 			"expiry":                        config.Expiry,

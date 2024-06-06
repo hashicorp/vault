@@ -497,7 +497,7 @@ func validatePublicKeyMatchesCert(verifier crypto.PublicKey, certReference *x509
 	return nil
 }
 
-func (b *backend) maybeRevokeCrossCluster(sc *storageContext, config *crlConfig, serial string, havePrivateKey bool) (*logical.Response, error) {
+func (b *backend) maybeRevokeCrossCluster(sc *storageContext, config *CrlConfig, serial string, havePrivateKey bool) (*logical.Response, error) {
 	if !config.UseGlobalQueue {
 		return logical.ErrorResponse(fmt.Sprintf("certificate with serial %s not found.", serial)), nil
 	}

@@ -6084,7 +6084,7 @@ func TestPKI_EmptyCRLConfigUpgraded(t *testing.T) {
 	b, s := CreateBackendWithStorage(t)
 
 	// Write an empty CRLConfig into storage.
-	crlConfigEntry, err := logical.StorageEntryJSON("config/crl", &crlConfig{})
+	crlConfigEntry, err := logical.StorageEntryJSON("config/crl", &CrlConfig{})
 	require.NoError(t, err)
 	err = s.Put(ctx, crlConfigEntry)
 	require.NoError(t, err)
@@ -6093,13 +6093,13 @@ func TestPKI_EmptyCRLConfigUpgraded(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.NotNil(t, resp.Data)
-	require.Equal(t, resp.Data["expiry"], defaultCrlConfig.Expiry)
-	require.Equal(t, resp.Data["disable"], defaultCrlConfig.Disable)
-	require.Equal(t, resp.Data["ocsp_disable"], defaultCrlConfig.OcspDisable)
-	require.Equal(t, resp.Data["auto_rebuild"], defaultCrlConfig.AutoRebuild)
-	require.Equal(t, resp.Data["auto_rebuild_grace_period"], defaultCrlConfig.AutoRebuildGracePeriod)
-	require.Equal(t, resp.Data["enable_delta"], defaultCrlConfig.EnableDelta)
-	require.Equal(t, resp.Data["delta_rebuild_interval"], defaultCrlConfig.DeltaRebuildInterval)
+	require.Equal(t, resp.Data["expiry"], DefaultCrlConfig.Expiry)
+	require.Equal(t, resp.Data["disable"], DefaultCrlConfig.Disable)
+	require.Equal(t, resp.Data["ocsp_disable"], DefaultCrlConfig.OcspDisable)
+	require.Equal(t, resp.Data["auto_rebuild"], DefaultCrlConfig.AutoRebuild)
+	require.Equal(t, resp.Data["auto_rebuild_grace_period"], DefaultCrlConfig.AutoRebuildGracePeriod)
+	require.Equal(t, resp.Data["enable_delta"], DefaultCrlConfig.EnableDelta)
+	require.Equal(t, resp.Data["delta_rebuild_interval"], DefaultCrlConfig.DeltaRebuildInterval)
 }
 
 func TestPKI_ListRevokedCerts(t *testing.T) {
