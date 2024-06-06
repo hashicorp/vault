@@ -36,8 +36,7 @@ func newUnifiedTransferStatus() *UnifiedTransferStatus {
 // send all missing local revocation entries to the unified space if the feature
 // is enabled.
 func runUnifiedTransfer(sc *storageContext) {
-	b := sc.Backend
-	status := b.GetUnifiedTransferStatus()
+	status := sc.GetUnifiedTransferStatus()
 
 	isPerfStandby := sc.System().ReplicationState().HasState(consts.ReplicationDRSecondary | consts.ReplicationPerformanceStandby)
 

@@ -89,6 +89,10 @@ func (sc *storageContext) CrlBuilder() *CrlBuilder {
 	return sc.Backend.CrlBuilder()
 }
 
+func (sc *storageContext) GetUnifiedTransferStatus() *UnifiedTransferStatus {
+	return sc.Backend.GetUnifiedTransferStatus()
+}
+
 func (sc *storageContext) listKeys() ([]issuing.KeyID, error) {
 	return issuing.ListKeys(sc.Context, sc.Storage)
 }

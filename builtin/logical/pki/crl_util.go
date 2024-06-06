@@ -188,7 +188,7 @@ func (cb *CrlBuilder) notifyOnConfigChange(sc *storageContext, priorConfig crlCo
 	// such as primary clusters as well as performance replicas, it is easier to do here than
 	// in two places (API layer and in invalidateFunc)
 	if priorConfig.UnifiedCRL != newConfig.UnifiedCRL && newConfig.UnifiedCRL {
-		sc.Backend.GetUnifiedTransferStatus().forceRun()
+		sc.GetUnifiedTransferStatus().forceRun()
 	}
 
 	if priorConfig.UseGlobalQueue != newConfig.UseGlobalQueue && newConfig.UseGlobalQueue {
@@ -1091,7 +1091,7 @@ func revokeCert(sc *storageContext, config *crlConfig, cert *x509.Certificate) (
 			// thread will reattempt it later on as we have the local write done.
 			sc.Logger().Error("Failed to write unified revocation entry, will re-attempt later",
 				"serial_number", colonSerial, "error", ignoreErr)
-			sc.Backend.GetUnifiedTransferStatus().forceRun()
+			sc.GetUnifiedTransferStatus().forceRun()
 
 			resp.AddWarning(fmt.Sprintf("Failed to write unified revocation entry, will re-attempt later: %v", err))
 			failedWritingUnifiedCRL = true
@@ -1148,7 +1148,7 @@ func writeRevocationDeltaWALs(sc *storageContext, config *crlConfig, resp *logic
 			// thread will reattempt it later on as we have the local write done.
 			sc.Logger().Error("Failed to write cross-cluster delta WAL entry, will re-attempt later",
 				"serial_number", colonSerial, "error", ignoredErr)
-			sc.Backend.GetUnifiedTransferStatus().forceRun()
+			sc.GetUnifiedTransferStatus().forceRun()
 
 			resp.AddWarning(fmt.Sprintf("Failed to write cross-cluster delta WAL entry, will re-attempt later: %v", ignoredErr))
 		}
