@@ -30,6 +30,11 @@ export function obfuscateData(obj) {
   for (const key of Object.keys(obj)) {
     if (Array.isArray(obj[key])) {
       newObj[key] = obj[key].map(() => '********');
+    } else if (obj[key] === null) {
+      // unfortunately in javascript typeof null returns object
+      // this is due to a "historical js bug that will never be fixed"
+      // we handle this situation here
+      newObj[key] = '********';
     } else if (typeof obj[key] === 'object') {
       newObj[key] = obfuscateData(obj[key]);
     } else {

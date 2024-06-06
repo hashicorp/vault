@@ -7,7 +7,7 @@
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="perform" @noun="datakey creation" />
     <div class="content has-bottom-margin-l">
-      <p>Generate a new high-entropy key and value using <code>{{@key.name}}</code> as the encryption key.</p>
+      <p>Generate a new high-entropy key and value using <code>{{@key.name}}</code> as the cryptographic key.</p>
     </div>
     <div class="field">
       <label for="param" class="is-label">Output format</label>
@@ -89,7 +89,7 @@
           @isFullWidth={{true}}
           @isTruncated={{true}}
           @onError={{(fn
-            (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
+            (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")
           )}}
         />
       {{/if}}
@@ -100,9 +100,7 @@
         @container="#transit-datakey-modal"
         @isFullWidth={{true}}
         @isTruncated={{true}}
-        @onError={{(fn
-          (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
-        )}}
+        @onError={{(fn (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger"))}}
       />
     </M.Body>
     <M.Footer as |F|>

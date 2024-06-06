@@ -25,8 +25,6 @@ module('Acceptance | console', function (hooks) {
     assert.expect(6);
     await enginesPage.visit();
     await settled();
-    await consoleComponent.toggle();
-    await settled();
     const ids = [uuidv4(), uuidv4(), uuidv4()];
     for (const id of ids) {
       const inputString = `write sys/mounts/console-route-${id} type=kv`;
@@ -59,7 +57,7 @@ module('Acceptance | console', function (hooks) {
   test('fullscreen command expands the cli panel', async function (assert) {
     await consoleComponent.toggle();
     await settled();
-    await consoleComponent.runCommands('fullscreen');
+    await consoleComponent.runCommands('fullscreen', false);
     await settled();
     const consoleEle = document.querySelector('[data-test-component="console/ui-panel"]');
     // wait for the CSS transition to finish
@@ -74,7 +72,7 @@ module('Acceptance | console', function (hooks) {
   test('array output is correctly formatted', async function (assert) {
     await consoleComponent.toggle();
     await settled();
-    await consoleComponent.runCommands('read -field=policies /auth/token/lookup-self');
+    await consoleComponent.runCommands('read -field=policies /auth/token/lookup-self', false);
     await settled();
     const consoleOut = document.querySelector('.console-ui-output>pre');
     // wait for the CSS transition to finish
@@ -86,7 +84,7 @@ module('Acceptance | console', function (hooks) {
   test('number output is correctly formatted', async function (assert) {
     await consoleComponent.toggle();
     await settled();
-    await consoleComponent.runCommands('read -field=creation_time /auth/token/lookup-self');
+    await consoleComponent.runCommands('read -field=creation_time /auth/token/lookup-self', false);
     await settled();
     const consoleOut = document.querySelector('.console-ui-output>pre');
     // wait for the CSS transition to finish
@@ -97,7 +95,7 @@ module('Acceptance | console', function (hooks) {
   test('boolean output is correctly formatted', async function (assert) {
     await consoleComponent.toggle();
     await settled();
-    await consoleComponent.runCommands('read -field=orphan /auth/token/lookup-self');
+    await consoleComponent.runCommands('read -field=orphan /auth/token/lookup-self', false);
     await settled();
     const consoleOut = document.querySelector('.console-ui-output>pre');
     // have to wrap in a later so that we can wait for the CSS transition to finish

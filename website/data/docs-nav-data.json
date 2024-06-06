@@ -57,10 +57,13 @@
         "path": "internals/integrated-storage"
       },
       {
+        "title": "Recommended patterns",
+        "path": "internals/recommended-patterns"
+      },
+      {
         "title": "Security Model",
         "path": "internals/security"
       },
-
       {
         "title": "Telemetry",
         "routes": [
@@ -71,6 +74,10 @@
           {
             "title": "Enable telemetry gathering",
             "path": "internals/telemetry/enable-telemetry"
+          },
+          {
+            "title": "Key metrics",
+            "path": "internals/telemetry/key-metrics"
           },
           {
             "title": "Metric reference",
@@ -222,6 +229,10 @@
         "path": "concepts/storage"
       },
       {
+        "title": "Cloud access management",
+        "path": "concepts/cloud-access-management"
+      },
+      {
         "title": "Integrated Storage",
         "routes": [
           {
@@ -285,7 +296,7 @@
         "badge": {
           "text": "ENTERPRISE",
           "type": "outlined",
-          "color": "highlight"
+          "color": "neutral"
         }
       },
       {
@@ -300,7 +311,7 @@
       {
         "title": "Request Limiter",
         "badge": {
-          "text": "ENTERPRISE",
+          "text": "ENTERPRISE | DEPRECATED",
           "type": "outlined",
           "color": "neutral"
         },
@@ -313,10 +324,29 @@
               "type": "outlined",
               "color": "highlight"
             }
+          }
+        ]
+      },
+      {
+        "title": "Adaptive overload protection",
+        "badge": {
+          "text": "ENTERPRISE | BETA",
+          "type": "outlined",
+          "color": "neutral"
+        },
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "concepts/adaptive-overload-protection",
+            "badge": {
+              "text": "BETA",
+              "type": "outlined",
+              "color": "highlight"
+            }
           },
           {
             "title": "Vault server temporarily overloaded",
-            "path": "concepts/request-limiter/vault-server-temporarily-overloaded"
+            "path": "concepts/adaptive-overload-protection/vault-server-temporarily-overloaded"
           }
         ]
       }
@@ -330,6 +360,14 @@
         "path": "configuration"
       },
       {
+        "title": "Programmatic best practices",
+        "path": "configuration/programmatic-best-practices"
+      },
+      {
+        "title": "Manage resources programmatically",
+        "path": "configuration/programmatic-management"
+      },
+      {
         "title": "<code>listener</code>",
         "routes": [
           {
@@ -338,7 +376,16 @@
           },
           {
             "title": "TCP",
-            "path": "configuration/listener/tcp"
+            "routes": [  
+              {
+                "title": "Overview",
+                "path": "configuration/listener/tcp"
+              },
+              {
+                "title": "Configure TLS",
+                "path": "configuration/listener/tcp/tcp-tls"
+              }
+            ]
           },
           {
             "title": "Unix",
@@ -365,7 +412,7 @@
           {
             "title": "High Availability",
             "badge": {
-              "text": "ENTERPRISE",
+              "text": "ENTERPRISE | BETA",
               "type": "outlined",
               "color": "highlight"
             },
@@ -535,6 +582,10 @@
       {
         "title": "<code>Request Limiter</code>",
         "path": "configuration/request-limiter"
+      },
+      {
+        "title": "Adaptive overload protection",
+        "path": "configuration/adaptive-overload-protection"
       },
       {
         "title": "<code>ui</code>",
@@ -783,6 +834,10 @@
           {
             "title": "<code>generate-root</code>",
             "path": "commands/operator/generate-root"
+          },
+          {
+            "title": "<code>import</code>",
+            "path": "commands/operator/import"
           },
           {
             "title": "<code>init</code>",
@@ -1639,12 +1694,7 @@
     "routes": [
       {
         "title": "Overview",
-        "path": "sync",
-        "badge": {
-          "text": "BETA",
-          "type": "outlined",
-          "color": "highlight"
-        }
+        "path": "sync"
       },
       {
         "title": "AWS Secrets Manager",
@@ -1665,6 +1715,33 @@
       {
         "title": "Vercel Project",
         "path": "sync/vercelproject"
+      }
+    ]
+  },
+  {
+    "title": "Secrets Import",
+    "badge": {
+      "text": "ENTERPRISE",
+      "type": "outlined",
+      "color": "neutral"
+    },
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "import",
+        "badge": {
+          "text": "ALPHA",
+          "type": "outlined",
+          "color": "highlight"
+        }
+      },
+      {
+        "title": "GCP Secret Manager",
+        "path": "import/gcpsm"
+      },
+      {
+        "title": "Mappings",
+        "path": "import/mappings"
       }
     ]
   },
@@ -1865,6 +1942,15 @@
         "path": "plugins/plugin-development"
       },
       {
+        "title": "Plugin Development — Event Notifications",
+        "path": "plugins/plugin-development-event-notifications",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        }
+      },
+      {
         "title": "Plugin Management",
         "path": "plugins/plugin-management"
       },
@@ -1873,21 +1959,11 @@
         "routes": [
           {
             "title": "Overview",
-            "path": "plugins/containerized-plugins",
-            "badge": {
-              "text": "BETA",
-              "type": "outlined",
-              "color": "highlight"
-            }
+            "path": "plugins/containerized-plugins"
           },
           {
             "title": "Add a containerized plugin",
-            "path": "plugins/containerized-plugins/add-a-containerized-plugin",
-            "badge": {
-              "text": "BETA",
-              "type": "outlined",
-              "color": "highlight"
-            }
+            "path": "plugins/containerized-plugins/add-a-containerized-plugin"
           }
         ]
       },
@@ -2130,6 +2206,10 @@
                             "path": "platform/k8s/vso/sources/vault/auth/gcp"
                           }
                         ]
+                      },
+                      {
+                        "title": "Encrypted client cache",
+                        "path": "platform/k8s/vso/sources/vault/client-cache"
                       }
                     ]
                   },
@@ -2181,6 +2261,10 @@
           {
             "title": "Configuration",
             "path": "platform/mssql/configuration"
+          },
+          {
+            "title": "Key Rotation",
+            "path": "platform/mssql/rotation"
           },
           {
             "title": "Upgrading",
@@ -2236,6 +2320,14 @@
       {
         "title": "Upgrade Plugins",
         "path": "upgrading/plugins"
+      },
+      {
+        "title": "Upgrade to Raft WAL",
+        "path": "upgrading/raft-wal"
+      },
+      {
+        "title": "Upgrade to 1.17.x",
+        "path": "upgrading/upgrade-to-1.17.x"
       },
       {
         "title": "Upgrade to 1.16.x",
@@ -2494,8 +2586,8 @@
         "path": "release-notes"
       },
       {
-        "title": "1.16.0",
-        "path": "release-notes/1.16.0"
+        "title": "1.16.1",
+        "path": "release-notes/1.16.1"
       },
       {
         "title": "1.15.0",
@@ -2547,17 +2639,8 @@
     "divider": true
   },
   {
-    "title": "Deprecation Notices",
-    "routes": [
-      {
-        "title": "Overview",
-        "path": "deprecation"
-      },
-      {
-        "title": "FAQ",
-        "path": "deprecation/faq"
-      }
-    ]
+    "title": "Deprecation notices",
+    "path": "deprecation"
   },
   {
     "divider": true
@@ -2634,16 +2717,24 @@
         ]
       },
       {
+        "title": "Long-term support (LTS)",
+        "path": "enterprise/lts"
+      },
+      {
+        "title": "Design your Vault Enterprise cluster",
+        "path": "enterprise/cluster-design"
+      },
+      {
         "title": "Replication",
         "routes": [
-            {
-                "title": "Overview",
-                "path": "enterprise/replication"
-            },
-            {
-                "title": "Check for Merkle tree corruption",
-                "path": "enterprise/replication/check-merkle-tree-corruption"
-            }
+          {
+            "title": "Overview",
+            "path": "enterprise/replication"
+          },
+          {
+            "title": "Check for Merkle tree corruption",
+            "path": "enterprise/replication/check-merkle-tree-corruption"
+          }
         ]
       },
       {

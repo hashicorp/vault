@@ -52,6 +52,11 @@ const (
 	mountTableType = "mounts"
 )
 
+func init() {
+	// Register the keys we use for mount tables
+	registerMountOrNamespaceTablePaths(coreMountConfigPath, coreLocalMountConfigPath)
+}
+
 // ListingVisibilityType represents the types for listing visibility
 type ListingVisibilityType string
 
@@ -144,25 +149,15 @@ type MountTable struct {
 	Entries []*MountEntry `json:"entries"`
 }
 
+//go:generate enumer -type=MountMigrationStatus -trimprefix=MigrationStatus -transform=kebab
+
 type MountMigrationStatus int
 
 const (
-	MigrationInProgressStatus MountMigrationStatus = iota
-	MigrationSuccessStatus
-	MigrationFailureStatus
+	MigrationStatusInProgress MountMigrationStatus = iota
+	MigrationStatusSuccess
+	MigrationStatusFailure
 )
-
-func (m MountMigrationStatus) String() string {
-	switch m {
-	case MigrationInProgressStatus:
-		return "in-progress"
-	case MigrationSuccessStatus:
-		return "success"
-	case MigrationFailureStatus:
-		return "failure"
-	}
-	return "unknown"
-}
 
 type MountMigrationInfo struct {
 	SourceMount     string `json:"source_mount"`
@@ -1973,7 +1968,7 @@ func (c *Core) createMigrationStatus(from, to namespace.MountPathDetails) (strin
 	migrationInfo := MountMigrationInfo{
 		SourceMount:     from.Namespace.Path + from.MountPath,
 		TargetMount:     to.Namespace.Path + to.MountPath,
-		MigrationStatus: MigrationInProgressStatus.String(),
+		MigrationStatus: MigrationStatusInProgress.String(),
 	}
 	c.mountMigrationTracker.Store(migrationID, migrationInfo)
 	return migrationID, nil

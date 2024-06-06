@@ -6,7 +6,7 @@ terraform {
     # We need to specify the provider source in each module until we publish it
     # to the public registry
     enos = {
-      source  = "app.terraform.io/hashicorp-qti/enos"
+      source  = "registry.terraform.io/hashicorp-forge/enos"
       version = ">= 0.3.24"
     }
   }
@@ -16,6 +16,7 @@ variable "ami_id" { default = null }
 variable "cluster_name" { default = null }
 variable "cluster_tag_key" { default = null }
 variable "common_tags" { default = null }
+variable "disable_selinux" { default = true }
 variable "instance_count" { default = 3 }
 variable "instance_cpu_max" { default = null }
 variable "instance_cpu_min" { default = null }

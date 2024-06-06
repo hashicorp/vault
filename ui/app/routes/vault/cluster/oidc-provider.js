@@ -29,7 +29,7 @@ export default class VaultClusterOidcProviderRoute extends Route {
   }
 
   beforeModel(transition) {
-    const currentToken = this.auth.get('currentTokenName');
+    const currentToken = this.auth.currentTokenName;
     const qp = transition.to.queryParams;
     // remove redirect_to if carried over from auth
     qp.redirect_to = null;

@@ -30,8 +30,10 @@ access the Kubernetes API.
 ### Parameters
 
 - `kubernetes_host` `(string: <required>)` - Host must be a host string, a host:port pair, or a URL to the base of the Kubernetes API server.
-- `kubernetes_ca_cert` `(string: "")` - PEM encoded CA cert for use by the TLS client used to talk with the Kubernetes API. NOTE: Every line must end with a newline: `\n`
-  If not set, the local CA cert will be used if running in a Kubernetes pod.
+- `kubernetes_ca_cert` `(string: "")` - Optional PEM encoded CA cert that the TLS client can use to talk with the Kubernetes API.
+  **Every line must end with a newline `\n`.**
+  If `kubernetes_ca_cert` is unset, the TLS client uses the local CA cert if Vault is running in a Kubernetes pod.
+  If `kubernetes_ca_cert` is unset and `disable_local_ca_jwt` set to true, the TLS client uses the system's trusted CA certificate pool.
 - `token_reviewer_jwt` `(string: "")` - A service account JWT (or other token) used as a bearer
   token to access the TokenReview API to validate other JWTs during login. If not set,
   the local service account token is used if running in a Kubernetes pod, otherwise
@@ -65,11 +67,10 @@ See [these instructions](/vault/docs/auth/kubernetes#discovering-the-service-acc
 If Vault is running in a Kubernetes Pod, the `kubernetes_ca_cert` and
 `token_reviewer_jwt` parameters will automatically default to the local CA cert
 (`/var/run/secrets/kubernetes.io/serviceaccount/ca.crt`) and local service
-account JWT (`/var/run/secrets/kubernetes.io/serviceaccount/token`). This
-behavior may be disabled by setting `disable_local_ca_jwt` to `true`.
+account JWT (`/var/run/secrets/kubernetes.io/serviceaccount/token`).
 
-When Vault is running in a non-Kubernetes environment, either
-`kubernetes_ca_cert` or `pem_keys` must be set by the user.
+If you override the default local CA cert behavior by setting `disable_local_ca_jwt` to `true`,
+the plugin's TLS client will automatically default to using the system's trust store for TLS certificate verification.
 
 ### Sample payload
 

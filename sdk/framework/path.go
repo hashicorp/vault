@@ -384,6 +384,10 @@ func (p *Path) helpCallback(b *Backend) OperationFunc {
 				vaultVersion = env.VaultVersion
 			}
 		}
+		redactVersion, _, _, _ := logical.CtxRedactionSettingsValue(ctx)
+		if redactVersion {
+			vaultVersion = ""
+		}
 		doc := NewOASDocument(vaultVersion)
 		if err := documentPath(p, b, requestResponsePrefix, doc); err != nil {
 			b.Logger().Warn("error generating OpenAPI", "error", err)

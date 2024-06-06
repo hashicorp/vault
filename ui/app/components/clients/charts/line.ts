@@ -4,13 +4,14 @@
  */
 
 import Component from '@glimmer/component';
-import { SVG_DIMENSIONS, formatNumbers } from 'vault/utils/chart-helpers';
+import { SVG_DIMENSIONS, numericalAxisLabel } from 'vault/utils/chart-helpers';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { format, isValid } from 'date-fns';
 import { debug } from '@ember/debug';
 
-import type { Count, MonthlyChartData, Timestamp } from 'vault/vault/charts/client-counts';
 import type ClientsVersionHistoryModel from 'vault/models/clients/version-history';
+import type { MonthlyChartData, Timestamp } from 'vault/vault/charts/client-counts';
+import type { TotalClients } from 'core/utils/client-count-utils';
 
 interface Args {
   dataset: MonthlyChartData[];
@@ -67,7 +68,7 @@ export default class LineChart extends Component<Args> {
         const upgradeMessage = this.getUpgradeMessage(datum);
         return {
           x: timestamp,
-          y: (datum[this.yKey as keyof Count] as number) ?? null,
+          y: (datum[this.yKey as keyof TotalClients] as number) ?? null,
           new: this.getNewClients(datum),
           tooltipUpgrade: upgradeMessage,
           month: datum.month,
@@ -123,15 +124,15 @@ export default class LineChart extends Component<Args> {
   }
   getNewClients(datum: MonthlyChartData) {
     if (!datum?.new_clients) return 0;
-    return (datum?.new_clients[this.yKey as keyof Count] as number) || 0;
+    return (datum?.new_clients[this.yKey as keyof TotalClients] as number) || 0;
   }
 
+  // TEMPLATE HELPERS
   hasValue = (count: number | null) => {
     return typeof count === 'number' ? true : false;
   };
-  // These functions are used by the tooltip
-  formatCount = (count: number) => {
-    return formatNumbers([count]);
+  formatCount = (num: number): string => {
+    return numericalAxisLabel(num) || num.toString();
   };
   formatMonth = (date: Date) => {
     return format(date, 'M/yy');

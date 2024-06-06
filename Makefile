@@ -158,7 +158,7 @@ protolint: prep check-tools-external
 # now run as a pre-commit hook (and there's little value in
 # making every build run the formatter), we've removed that
 # dependency.
-prep: check-go-version
+prep: check-go-version clean
 	@echo "==> Running go generate..."
 	@GOARCH= GOOS= $(GO_CMD) generate $(MAIN_PACKAGES)
 	@GOARCH= GOOS= cd api && $(GO_CMD) generate $(API_PACKAGES)
@@ -174,7 +174,7 @@ hooks:
 
 # bootstrap the build by generating any necessary code and downloading additional tools that may
 # be used by devs.
-bootstrap: prep tools
+bootstrap: tools prep
 
 # Note: if you have plugins in GOPATH you can update all of them via something like:
 # for i in $(ls | grep vault-plugin-); do cd $i; git remote update; git reset --hard origin/master; dep ensure -update; git add .; git commit; git push; cd ..; done
@@ -366,9 +366,13 @@ ci-get-version-package:
 ci-install-external-tools:
 	@$(CURDIR)/scripts/ci-helper.sh install-external-tools
 
-.PHONY: ci-prepare-legal
-ci-prepare-legal:
-	@$(CURDIR)/scripts/ci-helper.sh prepare-legal
+.PHONY: ci-prepare-ent-legal
+ci-prepare-ent-legal:
+	@$(CURDIR)/scripts/ci-helper.sh prepare-ent-legal
+
+.PHONY: ci-prepare-ce-legal
+ci-prepare-ce-legal:
+	@$(CURDIR)/scripts/ci-helper.sh prepare-ce-legal
 
 .PHONY: ci-update-external-tool-modules
 ci-update-external-tool-modules:
@@ -389,3 +393,7 @@ ci-copywriteheaders:
 .PHONY: all-packages
 all-packages:
 	@echo $(ALL_PACKAGES) | tr ' ' '\n'
+
+.PHONY: clean
+clean:
+	@echo "==> Cleaning..."

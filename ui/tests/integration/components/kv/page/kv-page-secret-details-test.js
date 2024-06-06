@@ -13,7 +13,6 @@ import { kvDataPath, kvMetadataPath } from 'vault/utils/kv-path';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import { FORM, PAGE, parseJsonEditor } from 'vault/tests/helpers/kv/kv-selectors';
 import { syncStatusResponse } from 'vault/mirage/handlers/sync';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Integration | Component | kv-v2 | Page::Secret::Details', function (hooks) {
   setupRenderingTest(hooks);
@@ -80,7 +79,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
       metadata: this.metadata,
     };
     this.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.model.backend, route: 'list' },
       { label: this.model.path },
     ];
@@ -90,12 +89,6 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
       secret: this.secretComplex,
       metadata: this.metadata,
     };
-    setRunOptions({
-      rules: {
-        // TODO: Fix JSONEditor component
-        label: { enabled: false },
-      },
-    });
   });
 
   test('it renders secret details and toggles json view', async function (assert) {

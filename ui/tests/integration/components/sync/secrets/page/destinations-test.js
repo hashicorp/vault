@@ -14,17 +14,7 @@ import sinon from 'sinon';
 
 import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
 
-const {
-  breadcrumb,
-  title,
-  tab,
-  filter,
-  searchSelect,
-  emptyStateTitle,
-  destinations,
-  menuTrigger,
-  confirmButton,
-} = PAGE;
+const { title, tab, filter, searchSelect, emptyStateTitle, destinations, menuTrigger, confirmButton } = PAGE;
 
 module('Integration | Component | sync | Page::Destinations', function (hooks) {
   setupRenderingTest(hooks);
@@ -32,8 +22,9 @@ module('Integration | Component | sync | Page::Destinations', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.owner.lookup('service:version').type = 'enterprise';
-
+    this.version = this.owner.lookup('service:version');
+    this.version.type = 'enterprise';
+    this.version.features = ['Secrets Sync'];
     this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
 
     const store = this.owner.lookup('service:store');
@@ -70,7 +61,6 @@ module('Integration | Component | sync | Page::Destinations', function (hooks) {
 
   test('it should render header and tabs', async function (assert) {
     await this.renderComponent();
-    assert.dom(breadcrumb).includesText('Secrets Sync', 'Breadcrumb renders');
     assert.dom(title).hasText('Secrets Sync', 'Page title renders');
     assert.dom(tab('Overview')).exists('Overview tab renders');
     assert.dom(tab('Destinations')).exists('Destinations tab renders');

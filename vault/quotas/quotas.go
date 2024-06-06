@@ -30,28 +30,15 @@ const (
 	TypeLeaseCount Type = "lease-count"
 )
 
+//go:generate enumer -type=LeaseAction -trimprefix=LeaseAction -transform=snake
+
 // LeaseAction is the action taken by the expiration manager on the lease. The
 // quota manager will use this information to update the lease path cache and
 // updating counters for relevant quota rules.
 type LeaseAction uint32
 
-// String converts each lease action into its string equivalent value
-func (la LeaseAction) String() string {
-	switch la {
-	case LeaseActionLoaded:
-		return "loaded"
-	case LeaseActionCreated:
-		return "created"
-	case LeaseActionDeleted:
-		return "deleted"
-	case LeaseActionAllow:
-		return "allow"
-	}
-	return "unknown"
-}
-
 const (
-	_ LeaseAction = iota
+	LeaseActionUnknown LeaseAction = iota
 
 	// LeaseActionLoaded indicates loading of lease in the expiration manager after
 	// unseal.

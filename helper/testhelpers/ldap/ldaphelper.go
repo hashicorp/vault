@@ -4,6 +4,7 @@
 package ldap
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"runtime"
@@ -22,14 +23,16 @@ func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ld
 		t.Skip("Skipping, as this image is not supported on ARM architectures")
 	}
 
+	logsWriter := bytes.NewBuffer([]byte{})
+
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
-		// Currently set to "michelvocks" until https://github.com/rroemhild/docker-test-openldap/pull/14
-		// has been merged.
-		ImageRepo:     "docker.mirror.hashicorp.services/michelvocks/docker-test-openldap",
+		ImageRepo:     "ghcr.io/rroemhild/docker-test-openldap",
 		ImageTag:      version,
 		ContainerName: "ldap",
-		Ports:         []string{"389/tcp"},
+		Ports:         []string{"10389/tcp"},
 		// Env:        []string{"LDAP_DEBUG_LEVEL=384"},
+		LogStderr: logsWriter,
+		LogStdout: logsWriter,
 	})
 	if err != nil {
 		t.Fatalf("could not start local LDAP docker container: %s", err)
@@ -68,5 +71,10 @@ func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ld
 		t.Fatalf("could not start local LDAP docker container: %s", err)
 	}
 
-	return svc.Cleanup, cfg
+	return func() {
+		if t.Failed() {
+			t.Log(logsWriter.String())
+		}
+		svc.Cleanup()
+	}, cfg
 }

@@ -18,10 +18,10 @@ export default Route.extend({
       cluster: this.modelFor('mode'),
       canAddSecondary: this.store
         .findRecord('capabilities', `sys/replication/${replicationMode}/primary/secondary-token`)
-        .then((c) => c.get('canUpdate')),
+        .then((c) => c.canUpdate),
       canRevokeSecondary: this.store
         .findRecord('capabilities', `sys/replication/${replicationMode}/primary/revoke-secondary`)
-        .then((c) => c.get('canUpdate')),
+        .then((c) => c.canUpdate),
     }).then(({ cluster, canAddSecondary, canRevokeSecondary }) => {
       setProperties(cluster, {
         canRevokeSecondary,
@@ -32,11 +32,8 @@ export default Route.extend({
   },
   afterModel(model) {
     const replicationMode = this.paramsFor('mode').replication_mode;
-    if (
-      !model.get(`${replicationMode}.isPrimary`) ||
-      model.get(`${replicationMode}.replicationDisabled`) ||
-      model.get(`${replicationMode}.replicationUnsupported`)
-    ) {
+    const modeModel = model[replicationMode];
+    if (!modeModel.isPrimary || modeModel.replicationDisabled || modeModel.replicationUnsupported) {
       this.router.transitionTo('vault.cluster.replication.mode', replicationMode);
     }
   },

@@ -144,7 +144,7 @@ export default ApplicationAdapter.extend({
   async _updateAllowedRoles(store, { role, backend, db, type = 'add' }) {
     const connection = await store.queryRecord('database/connection', { backend, id: db });
     const roles = [...(connection.allowed_roles || [])];
-    const allowedRoles = type === 'add' ? addToArray([roles, role]) : removeFromArray([roles, role]);
+    const allowedRoles = type === 'add' ? addToArray(roles, role) : removeFromArray(roles, role);
     connection.allowed_roles = allowedRoles;
     return connection.save();
   },

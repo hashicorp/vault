@@ -82,6 +82,12 @@ const API_PATHS_TO_ROUTE_PARAMS = {
     root: boolean;
     chroot_namespace?: string;
   };
+  There are a couple nuances to be aware of about this response. When a
+  chroot_namespace is set, all of the paths in the response will be prefixed
+  with that namespace. Additionally, this endpoint is only added to the default
+  policy in the user's root namespace, so we make the call to the user's root
+  namespace (the namespace where the user's auth method is mounted) no matter
+  what the current namespace is.
 */
 
 export default class PermissionsService extends Service {
@@ -91,10 +97,9 @@ export default class PermissionsService extends Service {
   @tracked permissionsBanner = null;
   @tracked chrootNamespace = null;
   @service store;
-  @service auth;
   @service namespace;
 
-  get baseNs() {
+  get fullCurrentNamespace() {
     const currentNs = this.namespace.path;
     return this.chrootNamespace
       ? `${sanitizePath(this.chrootNamespace)}/${sanitizePath(currentNs)}`
@@ -117,15 +122,53 @@ export default class PermissionsService extends Service {
     }
   }
 
+  /**
+   * hasWildcardNsAccess checks if the user has a wildcard access to target namespace
+   * via full glob path or any ancestors of the target namespace
+   * @param {string} targetNs is the current/target namespace that we are checking access for
+   * @param {object} globPaths key is path, value is object with capabilities
+   * @returns {boolean} whether the user's policy includes wildcard access to NS
+   */
+  hasWildcardNsAccess(targetNs, globPaths = {}) {
+    const nsParts = sanitizePath(targetNs).split('/');
+    let matchKey = null;
+    // For each section of the namespace, check if there is a matching wildcard path
+    while (nsParts.length > 0) {
+      // glob paths always end in a slash
+      const test = `${nsParts.join('/')}/`;
+      if (Object.keys(globPaths).includes(test)) {
+        matchKey = test;
+        break;
+      }
+      nsParts.pop();
+    }
+    // Finally, check if user has wildcard access to the root namespace
+    // which is represented by an empty string
+    if (!matchKey && Object.keys(globPaths).includes('')) {
+      matchKey = '';
+    }
+    if (null === matchKey) {
+      return false;
+    }
+
+    // if there is a match make sure the capabilities do not include deny
+    return !this.isDenied(globPaths[matchKey]);
+  }
+
+  // This method is called to recalculate whether to show the permissionsBanner when the namespace changes
   calcNsAccess() {
     if (this.canViewAll) {
       this.permissionsBanner = null;
       return;
     }
-    const namespace = this.baseNs;
+    const namespace = this.fullCurrentNamespace;
     const allowed =
-      Object.keys(this.globPaths).any((k) => k.startsWith(namespace)) ||
-      Object.keys(this.exactPaths).any((k) => k.startsWith(namespace));
+      // check if the user has wildcard access to the relative root namespace
+      this.hasWildcardNsAccess(namespace, this.globPaths) ||
+      // or if any of their glob paths start with the namespace
+      Object.keys(this.globPaths).any((k) => k.startsWith(namespace) && !this.isDenied(this.globPaths[k])) ||
+      // or if any of their exact paths start with the namespace
+      Object.keys(this.exactPaths).any((k) => k.startsWith(namespace) && !this.isDenied(this.exactPaths[k]));
     this.permissionsBanner = allowed ? null : PERMISSIONS_BANNER_STATES.noAccess;
   }
 
@@ -170,7 +213,7 @@ export default class PermissionsService extends Service {
   }
 
   pathNameWithNamespace(pathName) {
-    const namespace = this.baseNs;
+    const namespace = this.fullCurrentNamespace;
     if (namespace) {
       return `${sanitizePath(namespace)}/${sanitizeStart(pathName)}`;
     } else {

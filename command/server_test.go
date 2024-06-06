@@ -412,14 +412,14 @@ func TestReloadSeals(t *testing.T) {
 	_, testCommand := testServerCommand(t)
 	testConfig := server.Config{SharedConfig: &configutil.SharedConfig{}}
 
-	_, err := testCommand.reloadSeals(context.Background(), testCore, &testConfig)
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
+	testCommand.logger = corehelpers.NewTestLogger(t)
+	ctx := context.Background()
+	reloaded, err := testCommand.reloadSealsOnSigHup(ctx, testCore, &testConfig)
+	require.NoError(t, err)
+	require.False(t, reloaded, "reloadSeals does not support Shamir seals")
 
 	testConfig = server.Config{SharedConfig: &configutil.SharedConfig{Seals: []*configutil.KMS{{Disabled: true}}}}
-	_, err = testCommand.reloadSeals(context.Background(), testCore, &testConfig)
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
+	reloaded, err = testCommand.reloadSealsOnSigHup(ctx, testCore, &testConfig)
+	require.NoError(t, err)
+	require.False(t, reloaded, "reloadSeals does not support Shamir seals")
 }

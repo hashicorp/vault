@@ -22,9 +22,9 @@ export default class RolesRoleDetailsRoute extends Route {
     super.setupController(controller, resolvedModel);
     const { id } = resolvedModel;
     controller.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: this.secretMountPath.currentPath, route: 'overview' },
-      { label: 'roles', route: 'roles.index' },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
+      { label: this.secretMountPath.currentPath, route: 'overview', model: this.secretMountPath.currentPath },
+      { label: 'roles', route: 'roles.index', model: this.secretMountPath.currentPath },
       { label: id },
     ];
   }

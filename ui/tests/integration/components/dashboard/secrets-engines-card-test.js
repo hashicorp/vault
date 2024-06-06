@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import { SELECTORS } from 'vault/tests/helpers/components/dashboard/dashboard-selectors';
+import { DASHBOARD } from 'vault/tests/helpers/components/dashboard/dashboard-selectors';
 
 module('Integration | Component | dashboard/secrets-engines-card', function (hooks) {
   setupRenderingTest(hooks);
@@ -102,8 +102,8 @@ module('Integration | Component | dashboard/secrets-engines-card', function (hoo
 
     test('it should display only five secrets engines and show help text for more than 5 engines', async function (assert) {
       await this.renderComponent();
-      assert.dom(SELECTORS.cardHeader('Secrets engines')).hasText('Secrets engines');
-      assert.dom(SELECTORS.tableRow('Secrets engines')).exists({ count: 5 });
+      assert.dom(DASHBOARD.cardHeader('Secrets engines')).hasText('Secrets engines');
+      assert.dom(DASHBOARD.tableRow('Secrets engines')).exists({ count: 5 });
       assert.dom('[data-test-secrets-engine-total-help-text]').exists();
       assert
         .dom('[data-test-secrets-engine-total-help-text]')
@@ -114,18 +114,18 @@ module('Integration | Component | dashboard/secrets-engines-card', function (hoo
 
     test('it should display the secrets engines accessor and path', async function (assert) {
       await this.renderComponent();
-      assert.dom(SELECTORS.cardHeader('Secrets engines')).hasText('Secrets engines');
-      assert.dom(SELECTORS.tableRow('Secrets engines')).exists({ count: 5 });
+      assert.dom(DASHBOARD.cardHeader('Secrets engines')).hasText('Secrets engines');
+      assert.dom(DASHBOARD.tableRow('Secrets engines')).exists({ count: 5 });
 
       this.secretsEngines.slice(0, 5).forEach((engine) => {
-        assert.dom(SELECTORS.secretsEnginesCard.secretEngineAccessorRow(engine.id)).hasText(engine.accessor);
+        assert.dom(DASHBOARD.secretsEnginesCard.secretEngineAccessorRow(engine.id)).hasText(engine.accessor);
         if (engine.description) {
           assert
-            .dom(SELECTORS.secretsEnginesCard.secretEngineDescription(engine.id))
+            .dom(DASHBOARD.secretsEnginesCard.secretEngineDescription(engine.id))
             .hasText(engine.description);
         } else {
           assert
-            .dom(SELECTORS.secretsEnginesCard.secretEngineDescription(engine.id))
+            .dom(DASHBOARD.secretsEnginesCard.secretEngineDescription(engine.id))
             .doesNotExist(engine.description);
         }
       });

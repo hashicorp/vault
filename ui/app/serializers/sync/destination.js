@@ -50,7 +50,7 @@ export default class SyncDestinationSerializer extends ApplicationSerializer {
         const type = key.replace(/\/$/, '');
         const id = `${type}/${name}`;
         // create object with destination's id and attributes, add to payload
-        transformedPayload.pushObject({ id, name, type });
+        transformedPayload.push({ id, name, type });
       });
     }
     return transformedPayload;

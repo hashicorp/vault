@@ -2,7 +2,7 @@
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
  */
-
+/* eslint-disable no-useless-escape */
 import { module, test } from 'qunit';
 import { v4 as uuidv4 } from 'uuid';
 import { click, currentURL, fillIn, findAll, setupOnerror, typeIn, visit } from '@ember/test-helpers';
@@ -21,7 +21,7 @@ import {
   destroyVersionsPolicy,
   metadataListPolicy,
   metadataPolicy,
-} from 'vault/tests/helpers/policy-generator/kv';
+} from 'vault/tests/helpers/kv/policy-generator';
 import { clearRecords, writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import codemirror from 'vault/tests/helpers/codemirror';
@@ -171,7 +171,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
         .dom(PAGE.error.message)
         .hasText(`Sorry, we were unable to find any content at /v1/${backend}/data/${root}/${subdirectory}.`);
 
-      assert.dom(PAGE.breadcrumbAtIdx(0)).hasText('secrets');
+      assert.dom(PAGE.breadcrumbAtIdx(0)).hasText('Secrets');
       assert.dom(PAGE.breadcrumbAtIdx(1)).hasText(backend);
       assert.dom(PAGE.secretTab('Secrets')).doesNotHaveClass('is-active');
       assert.dom(PAGE.secretTab('Configuration')).doesNotHaveClass('is-active');
@@ -281,7 +281,13 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await fillIn(FORM.inputByAttr('path'), 'complex');
 
     await click(FORM.toggleJson);
-    assert.strictEqual(codemirror().getValue(), '{ "": "" }');
+
+    assert.strictEqual(
+      codemirror().getValue(),
+      `{
+  \"\": \"\"
+}`
+    );
     codemirror().setValue('{ "foo3": { "name": "bar3" } }');
     await click(FORM.saveBtn);
 

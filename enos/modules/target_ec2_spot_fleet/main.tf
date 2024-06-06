@@ -6,7 +6,7 @@ terraform {
     # We need to specify the provider source in each module until we publish it
     # to the public registry
     enos = {
-      source  = "app.terraform.io/hashicorp-qti/enos"
+      source  = "registry.terraform.io/hashicorp-forge/enos"
       version = ">= 0.3.24"
     }
   }
@@ -453,4 +453,14 @@ data "aws_instance" "targets" {
   for_each = local.instances
 
   instance_id = data.aws_instances.targets.ids[each.key]
+}
+
+module "disable_selinux" {
+  source = "../disable_selinux"
+  count  = var.disable_selinux == true ? 1 : 0
+
+  hosts = { for idx in range(var.instance_count) : idx => {
+    public_ip  = aws_instance.targets[idx].public_ip
+    private_ip = aws_instance.targets[idx].private_ip
+  } }
 }

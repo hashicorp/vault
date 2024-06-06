@@ -31,7 +31,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
   auth: service(),
   currentCluster: service(),
   customMessages: service(),
-  featureFlagService: service('featureFlag'),
+  flagsService: service('flags'),
   namespaceService: service('namespace'),
   permissions: service(),
   router: service(),
@@ -51,14 +51,14 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     const { cluster_name } = params;
     const records = this.store.peekAll('cluster');
     const cluster = records.find((record) => record.name === cluster_name);
-    return cluster ? cluster.get('id') : null;
+    return cluster?.id ?? null;
   },
 
   async beforeModel() {
     const params = this.paramsFor(this.routeName);
     let namespace = params.namespaceQueryParam;
-    const currentTokenName = this.auth.get('currentTokenName');
-    const managedRoot = this.featureFlagService.managedNamespaceRoot;
+    const currentTokenName = this.auth.currentTokenName;
+    const managedRoot = this.flagsService.hvdManagedNamespaceRoot;
     assert(
       'Cannot use VAULT_CLOUD_ADMIN_NAMESPACE flag with non-enterprise Vault version',
       !(managedRoot && this.version.isCommunity)
@@ -123,6 +123,10 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
   afterModel(model, transition) {
     this._super(...arguments);
     this.currentCluster.setCluster(model);
+    if (model.needsInit && this.auth.currentToken) {
+      // clear token to prevent infinite load state
+      this.auth.deleteCurrentToken();
+    }
 
     // Check that namespaces is enabled and if not,
     // clear the namespace by transition to this route w/o it

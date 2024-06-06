@@ -298,11 +298,14 @@ func TestUnitValidOCSPResponse(t *testing.T) {
 // OCSP response conditions
 func TestUnitBadOCSPResponses(t *testing.T) {
 	rootCaKey, rootCa, leafCert := createCaLeafCerts(t)
+	rootCaKey2, rootCa2, _ := createCaLeafCerts(t)
 
 	type tests struct {
 		name        string
 		ocspRes     ocsp.Response
 		maxAge      time.Duration
+		ca          *x509.Certificate
+		caKey       *ecdsa.PrivateKey
 		errContains string
 	}
 
@@ -310,6 +313,30 @@ func TestUnitBadOCSPResponses(t *testing.T) {
 	ctx := context.Background()
 
 	tt := []tests{
+		{
+			name: "bad-signing-issuer",
+			ocspRes: ocsp.Response{
+				SerialNumber: leafCert.SerialNumber,
+				ThisUpdate:   now.Add(-1 * time.Hour),
+				NextUpdate:   now.Add(30 * time.Minute),
+				Status:       ocsp.Good,
+			},
+			ca:          rootCa2,
+			caKey:       rootCaKey2,
+			errContains: "error directly verifying signature",
+		},
+		{
+			name: "incorrect-serial-number",
+			ocspRes: ocsp.Response{
+				SerialNumber: big.NewInt(1000),
+				ThisUpdate:   now.Add(-1 * time.Hour),
+				NextUpdate:   now.Add(30 * time.Minute),
+				Status:       ocsp.Good,
+			},
+			ca:          rootCa,
+			caKey:       rootCaKey,
+			errContains: "did not match the leaf certificate serial number",
+		},
 		{
 			name: "expired-next-update",
 			ocspRes: ocsp.Response{
@@ -374,7 +401,15 @@ func TestUnitBadOCSPResponses(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			ocspHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				response := buildOcspResponse(t, rootCa, rootCaKey, tc.ocspRes)
+				useCa := rootCa
+				useCaKey := rootCaKey
+				if tc.ca != nil {
+					useCa = tc.ca
+				}
+				if tc.caKey != nil {
+					useCaKey = tc.caKey
+				}
+				response := buildOcspResponse(t, useCa, useCaKey, tc.ocspRes)
 				_, _ = w.Write(response)
 			})
 			ts := httptest.NewServer(ocspHandler)
@@ -443,6 +478,51 @@ func TestUnitZeroNextUpdateAreNotCached(t *testing.T) {
 	_, err := client.GetRevocationStatus(context.Background(), leafCert, rootCa, config)
 	require.NoError(t, err, "Failed fetching revocation status")
 
+	_, err = client.GetRevocationStatus(context.Background(), leafCert, rootCa, config)
+	require.NoError(t, err, "Failed fetching revocation status second time")
+
+	require.Equal(t, uint32(2), numQueries.Load())
+}
+
+// TestUnitResponsesAreCached verify that the OCSP responses are properly cached when
+// querying for the same leaf certificates
+func TestUnitResponsesAreCached(t *testing.T) {
+	rootCaKey, rootCa, leafCert := createCaLeafCerts(t)
+	numQueries := &atomic.Uint32{}
+	ocspHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		numQueries.Add(1)
+		now := time.Now()
+		ocspRes := ocsp.Response{
+			SerialNumber: leafCert.SerialNumber,
+			ThisUpdate:   now.Add(-1 * time.Hour),
+			NextUpdate:   now.Add(1 * time.Hour),
+			Status:       ocsp.Good,
+		}
+		response := buildOcspResponse(t, rootCa, rootCaKey, ocspRes)
+		_, _ = w.Write(response)
+	})
+	ts1 := httptest.NewServer(ocspHandler)
+	ts2 := httptest.NewServer(ocspHandler)
+	defer ts1.Close()
+	defer ts2.Close()
+
+	logFactory := func() hclog.Logger {
+		return hclog.NewNullLogger()
+	}
+	client := New(logFactory, 100)
+
+	config := &VerifyConfig{
+		OcspEnabled:         true,
+		OcspServersOverride: []string{ts1.URL, ts2.URL},
+		QueryAllServers:     true,
+	}
+
+	_, err := client.GetRevocationStatus(context.Background(), leafCert, rootCa, config)
+	require.NoError(t, err, "Failed fetching revocation status")
+	// Make sure that we queried both servers and not the cache
+	require.Equal(t, uint32(2), numQueries.Load())
+
+	// These query should be cached and not influence our counter
 	_, err = client.GetRevocationStatus(context.Background(), leafCert, rootCa, config)
 	require.NoError(t, err, "Failed fetching revocation status second time")
 
@@ -598,7 +678,7 @@ func TestOCSPRetry(t *testing.T) {
 		context.TODO(),
 		client, fakeRequestFunc,
 		dummyOCSPHost,
-		make(map[string]string), []byte{0}, certs[len(certs)-1])
+		make(map[string]string), []byte{0}, certs[0], certs[len(certs)-1])
 	if err == nil {
 		fmt.Printf("should fail: %v, %v, %v\n", res, b, st)
 	}
@@ -613,7 +693,7 @@ func TestOCSPRetry(t *testing.T) {
 		context.TODO(),
 		client, fakeRequestFunc,
 		dummyOCSPHost,
-		make(map[string]string), []byte{0}, certs[len(certs)-1])
+		make(map[string]string), []byte{0}, certs[0], certs[len(certs)-1])
 	if err == nil {
 		fmt.Printf("should fail: %v, %v, %v\n", res, b, st)
 	}

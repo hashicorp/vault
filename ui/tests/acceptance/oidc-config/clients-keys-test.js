@@ -10,18 +10,19 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import oidcConfigHandlers from 'vault/mirage/handlers/oidc-config';
 import authPage from 'vault/tests/pages/auth';
 import { create } from 'ember-cli-page-object';
-import { clickTrigger, selectChoose } from 'ember-power-select/test-support/helpers';
+import { clickTrigger } from 'ember-power-select/test-support/helpers';
+import { selectChoose } from 'ember-power-select/test-support';
 import ss from 'vault/tests/pages/components/search-select';
 import fm from 'vault/tests/pages/components/flash-message';
 import {
   OIDC_BASE_URL, // -> '/vault/access/oidc'
   SELECTORS,
   clearRecord,
-  overrideCapabilities,
-  overrideMirageResponse,
   CLIENT_LIST_RESPONSE,
   CLIENT_DATA_RESPONSE,
 } from 'vault/tests/helpers/oidc-config';
+import { capabilitiesStub, overrideResponse } from 'vault/tests/helpers/stubs';
+
 const searchSelect = create(ss);
 const flashMessage = create(fm);
 
@@ -177,7 +178,7 @@ module('Acceptance | oidc-config clients and keys', function (hooks) {
   test('it creates, rotates and deletes a key', async function (assert) {
     assert.expect(10);
     // mock client list so OIDC url does not redirect to landing page
-    this.server.get('/identity/oidc/client', () => overrideMirageResponse(null, CLIENT_LIST_RESPONSE));
+    this.server.get('/identity/oidc/client', () => overrideResponse(null, { data: CLIENT_LIST_RESPONSE }));
     this.server.post('/identity/oidc/key/test-key/rotate', (schema, req) => {
       const json = JSON.parse(req.requestBody);
       assert.strictEqual(json.verification_ttl, 86400, 'request made with correct args to accurate endpoint');
@@ -240,9 +241,9 @@ module('Acceptance | oidc-config clients and keys', function (hooks) {
 
   test('it renders client details and providers', async function (assert) {
     assert.expect(8);
-    this.server.get('/identity/oidc/client', () => overrideMirageResponse(null, CLIENT_LIST_RESPONSE));
+    this.server.get('/identity/oidc/client', () => overrideResponse(null, { data: CLIENT_LIST_RESPONSE }));
     this.server.get('/identity/oidc/client/test-app', () =>
-      overrideMirageResponse(null, CLIENT_DATA_RESPONSE)
+      overrideResponse(null, { data: CLIENT_DATA_RESPONSE })
     );
     await visit(OIDC_BASE_URL);
     await click('[data-test-oidc-client-linked-block]');
@@ -264,12 +265,12 @@ module('Acceptance | oidc-config clients and keys', function (hooks) {
 
   test('it hides delete and edit client when no permission', async function (assert) {
     assert.expect(5);
-    this.server.get('/identity/oidc/client', () => overrideMirageResponse(null, CLIENT_LIST_RESPONSE));
+    this.server.get('/identity/oidc/client', () => overrideResponse(null, { data: CLIENT_LIST_RESPONSE }));
     this.server.get('/identity/oidc/client/test-app', () =>
-      overrideMirageResponse(null, CLIENT_DATA_RESPONSE)
+      overrideResponse(null, { data: CLIENT_DATA_RESPONSE })
     );
     this.server.post('/sys/capabilities-self', () =>
-      overrideCapabilities(OIDC_BASE_URL + '/client/test-app', ['read'])
+      capabilitiesStub(OIDC_BASE_URL + '/client/test-app', ['read'])
     );
 
     await visit(OIDC_BASE_URL);
@@ -283,17 +284,19 @@ module('Acceptance | oidc-config clients and keys', function (hooks) {
 
   test('it hides delete and edit key when no permission', async function (assert) {
     assert.expect(4);
-    this.server.get('/identity/oidc/keys', () => overrideMirageResponse(null, { keys: ['test-key'] }));
+    this.server.get('/identity/oidc/keys', () => overrideResponse(null, { data: { keys: ['test-key'] } }));
     this.server.get('/identity/oidc/key/test-key', () =>
-      overrideMirageResponse(null, {
-        algorithm: 'RS256',
-        allowed_client_ids: ['*'],
-        rotation_period: 86400,
-        verification_ttl: 86400,
+      overrideResponse(null, {
+        data: {
+          algorithm: 'RS256',
+          allowed_client_ids: ['*'],
+          rotation_period: 86400,
+          verification_ttl: 86400,
+        },
       })
     );
     this.server.post('/sys/capabilities-self', () =>
-      overrideCapabilities(OIDC_BASE_URL + '/key/test-key', ['read'])
+      capabilitiesStub(OIDC_BASE_URL + '/key/test-key', ['read'])
     );
 
     await visit(OIDC_BASE_URL + '/keys');

@@ -583,6 +583,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		failGetInTxn:                  new(uint32),
 		raftLogVerifierEnabled:        backendConfig.RaftLogVerifierEnabled,
 		raftLogVerificationInterval:   backendConfig.RaftLogVerificationInterval,
+		effectiveSDKVersion:           version.GetVersion().Version,
 	}, nil
 }
 
@@ -599,6 +600,13 @@ func (b *RaftBackend) RegisterMountTablePath(path string) {
 		}
 		b.specialPathLimits[path] = b.maxMountAndNamespaceEntrySize
 	}
+}
+
+// GetSpecialPathLimits returns any paths registered with special entry size
+// limits. It's really only used to make integration testing of the plumbing for
+// these paths simpler.
+func (b *RaftBackend) GetSpecialPathLimits() map[string]uint64 {
+	return b.specialPathLimits
 }
 
 type snapshotStoreDelay struct {
@@ -654,12 +662,6 @@ func (b *RaftBackend) FailGetInTxn(fail bool) {
 	atomic.StoreUint32(b.failGetInTxn, val)
 }
 
-func (b *RaftBackend) SetEffectiveSDKVersion(sdkVersion string) {
-	b.l.Lock()
-	b.effectiveSDKVersion = sdkVersion
-	b.l.Unlock()
-}
-
 func (b *RaftBackend) RedundancyZone() string {
 	b.l.RLock()
 	defer b.l.RUnlock()
@@ -674,7 +676,10 @@ func (b *RaftBackend) NonVoter() bool {
 	return b.nonVoter
 }
 
-func (b *RaftBackend) EffectiveVersion() string {
+// UpgradeVersion returns the string that should be used by autopilot during automated upgrades. We return the
+// specified upgradeVersion if it's present. If it's not, we fall back to effectiveSDKVersion, which is
+// Vault's binary version (though that can be overridden for tests).
+func (b *RaftBackend) UpgradeVersion() string {
 	b.l.RLock()
 	defer b.l.RUnlock()
 
@@ -682,7 +687,7 @@ func (b *RaftBackend) EffectiveVersion() string {
 		return b.upgradeVersion
 	}
 
-	return version.GetVersion().Version
+	return b.effectiveSDKVersion
 }
 
 func (b *RaftBackend) verificationInterval() time.Duration {
@@ -1080,6 +1085,11 @@ type SetupOpts struct {
 	// RecoveryModeConfig is the configuration for the raft cluster in recovery
 	// mode.
 	RecoveryModeConfig *raft.Configuration
+
+	// EffectiveSDKVersion is typically the version string baked into the binary.
+	// We pass it in though because it can be overridden in tests or via ENV in
+	// core.
+	EffectiveSDKVersion string
 }
 
 func (b *RaftBackend) StartRecoveryCluster(ctx context.Context, peer Peer) error {
@@ -1121,6 +1131,11 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 
 	if len(b.localID) == 0 {
 		return errors.New("no local node id configured")
+	}
+
+	if opts.EffectiveSDKVersion != "" {
+		// Override the SDK version
+		b.effectiveSDKVersion = opts.EffectiveSDKVersion
 	}
 
 	// Setup the raft config
