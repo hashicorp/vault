@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
 	"net/http"
 	"sync/atomic"
 	"time"
@@ -1089,7 +1090,7 @@ func (b *backend) doTidyRevocationStore(ctx context.Context, req *logical.Reques
 
 	fixedIssuers := 0
 
-	var revInfo RevocationInfo
+	var revInfo revocation.RevocationInfo
 	for i, serial := range revokedSerials {
 		b.tidyStatusMessage(fmt.Sprintf("Tidying revoked certificates: checking certificate %d of %d", i, len(revokedSerials)))
 		metrics.SetGauge([]string{"secrets", "pki", "tidy", "revoked_cert_current_entry"}, float32(i))

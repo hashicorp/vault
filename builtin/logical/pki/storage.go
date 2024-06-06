@@ -792,8 +792,8 @@ func (sc *storageContext) writeClusterConfig(config *issuing.ClusterConfigEntry)
 	return sc.Storage.Put(sc.Context, entry)
 }
 
-func (sc *storageContext) fetchRevocationInfo(serial string) (*RevocationInfo, error) {
-	var revInfo *RevocationInfo
+func (sc *storageContext) fetchRevocationInfo(serial string) (*revocation.RevocationInfo, error) {
+	var revInfo *revocation.RevocationInfo
 	revEntry, err := fetchCertBySerial(sc, revokedPath, serial)
 	if err != nil {
 		return nil, err

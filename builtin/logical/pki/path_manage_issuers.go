@@ -9,6 +9,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
 	"net/http"
 	"strings"
 	"time"
@@ -712,7 +713,7 @@ func (b *backend) pathRevokeIssuer(ctx context.Context, req *logical.Request, da
 			//
 			// We'll let a cleanup pass or CRL build identify the issuer for
 			// us.
-			revInfo := RevocationInfo{
+			revInfo := revocation.RevocationInfo{
 				CertificateBytes:  issuerCert.Raw,
 				RevocationTime:    issuer.RevocationTime,
 				RevocationTimeUTC: issuer.RevocationTimeUTC,

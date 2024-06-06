@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/pem"
 	"fmt"
+	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
 	"net/http"
 	"strings"
 	"time"
@@ -452,7 +453,7 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 		}
 	}
 	if revokedEntry != nil {
-		var revInfo RevocationInfo
+		var revInfo revocation.RevocationInfo
 		err := revokedEntry.DecodeJSON(&revInfo)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("Error decoding revocation entry for serial %s: %s", serial, err)), nil
