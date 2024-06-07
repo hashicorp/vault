@@ -83,9 +83,12 @@ more details on the configuration.
 
 ### JWT auth login requires bound audiences on the role
 
-JWT auth roles of type "jwt" require the `bound_audiences` claim to match at
-least one of the JWT's `aud` claims. Prior to 1.16.3, the JWT auth method would
-ignore token `aud` claims that were not a list of strings.
+JWT auth roles of type "jwt" require the bound_audiences claim to match at
+least one of the JWT's aud claims. The JWT's aud claim can be a single string
+or a list of strings as per
+[RFC 7519 Section 4.1.3](https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.3).
+Prior to 1.16.3, the JWT auth method would ignore token aud claims that were
+not a list of strings.
 
 The consequence of not configuring this correctly means users may not be able
 to login to Vault. To fix the issue, update the role's `bound_audiences`
