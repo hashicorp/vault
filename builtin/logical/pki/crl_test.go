@@ -417,7 +417,7 @@ func TestCrlRebuilder(t *testing.T) {
 	cb := newCRLBuilder(true /* can rebuild and write CRLs */)
 
 	// Force an initial build
-	warnings, err := cb.rebuild(sc, true)
+	warnings, err := cb.Rebuild(sc, true)
 	require.NoError(t, err, "Failed to rebuild CRL")
 	require.Empty(t, warnings, "unexpectedly got warnings rebuilding CRL")
 
@@ -425,7 +425,7 @@ func TestCrlRebuilder(t *testing.T) {
 	crl1 := parseCrlPemBytes(t, resp.Data["http_raw_body"].([]byte))
 
 	// We shouldn't rebuild within this call.
-	warnings, err = cb.rebuildIfForced(sc)
+	warnings, err = cb.RebuildIfForced(sc)
 	require.NoError(t, err, "Failed to rebuild if forced CRL")
 	require.Empty(t, warnings, "unexpectedly got warnings rebuilding CRL")
 
@@ -444,7 +444,7 @@ func TestCrlRebuilder(t *testing.T) {
 
 	// This should rebuild the CRL
 	cb.requestRebuildIfActiveNode(b)
-	warnings, err = cb.rebuildIfForced(sc)
+	warnings, err = cb.RebuildIfForced(sc)
 	require.NoError(t, err, "Failed to rebuild if forced CRL")
 	require.Empty(t, warnings, "unexpectedly got warnings rebuilding CRL")
 	resp = requestCrlFromBackend(t, s, b)

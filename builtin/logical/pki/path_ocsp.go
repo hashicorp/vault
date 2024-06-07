@@ -158,7 +158,7 @@ func buildOcspPostWithPath(b *backend, pattern string, displayAttrs *framework.D
 
 func (b *backend) ocspHandler(ctx context.Context, request *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	sc := b.makeStorageContext(ctx, request.Storage)
-	cfg, err := b.CrlBuilder().getConfigWithUpdate(sc)
+	cfg, err := b.CrlBuilder().GetConfigWithUpdate(sc)
 	if err != nil || cfg.OcspDisable || (isUnifiedOcspPath(request) && !cfg.UnifiedCRL) {
 		return OcspUnauthorizedResponse, nil
 	}

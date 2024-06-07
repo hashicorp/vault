@@ -564,7 +564,7 @@ func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, dat
 	var cert *x509.Certificate
 	var serial string
 
-	config, err := sc.CrlBuilder().getConfigWithUpdate(sc)
+	config, err := sc.CrlBuilder().GetConfigWithUpdate(sc)
 	if err != nil {
 		return nil, fmt.Errorf("error revoking serial: %s: failed reading config: %w", serial, err)
 	}
@@ -659,7 +659,7 @@ func (b *backend) pathRotateCRLRead(ctx context.Context, req *logical.Request, _
 	defer b.GetRevokeStorageLock().RUnlock()
 
 	sc := b.makeStorageContext(ctx, req.Storage)
-	warnings, crlErr := b.CrlBuilder().rebuild(sc, false)
+	warnings, crlErr := b.CrlBuilder().Rebuild(sc, false)
 	if crlErr != nil {
 		switch crlErr.(type) {
 		case errutil.UserError:
@@ -685,7 +685,7 @@ func (b *backend) pathRotateCRLRead(ctx context.Context, req *logical.Request, _
 func (b *backend) pathRotateDeltaCRLRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	sc := b.makeStorageContext(ctx, req.Storage)
 
-	cfg, err := b.CrlBuilder().getConfigWithUpdate(sc)
+	cfg, err := b.CrlBuilder().GetConfigWithUpdate(sc)
 	if err != nil {
 		return nil, fmt.Errorf("error fetching CRL configuration: %w", err)
 	}

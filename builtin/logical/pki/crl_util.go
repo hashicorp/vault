@@ -10,6 +10,7 @@ import (
 	"crypto/x509/pkix"
 	"fmt"
 	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
+	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
 	"math/big"
 	"strings"
@@ -107,6 +108,8 @@ type CrlBuilder struct {
 	crossQueue           *revocationQueue
 }
 
+var _ pki_backend.CrlBuilderType = (*CrlBuilder)(nil)
+
 const (
 	_ignoreForceFlag  = true
 	_enforceForceFlag = false
@@ -191,10 +194,10 @@ func (cb *CrlBuilder) notifyOnConfigChange(sc *storageContext, priorConfig revoc
 	}
 }
 
-func (cb *CrlBuilder) getConfigWithUpdate(sc *storageContext) (*revocation.CrlConfig, error) {
+func (cb *CrlBuilder) GetConfigWithUpdate(sc pki_backend.StorageContext) (*revocation.CrlConfig, error) {
 	// Config may mutate immediately after accessing, but will be freshly
 	// fetched if necessary.
-	if err := cb.reloadConfigIfRequired(sc); err != nil {
+	if err := cb.reloadConfigIfRequired(sc.(*storageContext)); err != nil {
 		return nil, err
 	}
 
@@ -207,7 +210,7 @@ func (cb *CrlBuilder) getConfigWithUpdate(sc *storageContext) (*revocation.CrlCo
 
 func (cb *CrlBuilder) getConfigWithForcedUpdate(sc *storageContext) (*revocation.CrlConfig, error) {
 	cb.markConfigDirty()
-	return cb.getConfigWithUpdate(sc)
+	return cb.GetConfigWithUpdate(sc)
 }
 
 func (cb *CrlBuilder) writeConfig(sc *storageContext, config *revocation.CrlConfig) (*revocation.CrlConfig, error) {
@@ -241,7 +244,7 @@ func (cb *CrlBuilder) writeConfig(sc *storageContext, config *revocation.CrlConf
 }
 
 func (cb *CrlBuilder) checkForAutoRebuild(sc *storageContext) error {
-	cfg, err := cb.getConfigWithUpdate(sc)
+	cfg, err := cb.GetConfigWithUpdate(sc)
 	if err != nil {
 		return err
 	}
@@ -332,19 +335,19 @@ func (cb *CrlBuilder) flushCRLBuildTimeInvalidation(sc *storageContext) error {
 	return nil
 }
 
-// rebuildIfForced is to be called by readers or periodic functions that might need to trigger
+// RebuildIfForced is to be called by readers or periodic functions that might need to trigger
 // a refresh of the CRL before the read occurs.
-func (cb *CrlBuilder) rebuildIfForced(sc *storageContext) ([]string, error) {
+func (cb *CrlBuilder) RebuildIfForced(sc pki_backend.StorageContext) ([]string, error) {
 	if cb.forceRebuild.Load() {
-		return cb._doRebuild(sc, true, _enforceForceFlag)
+		return cb._doRebuild(sc.(*storageContext), true, _enforceForceFlag)
 	}
 
 	return nil, nil
 }
 
 // rebuild is to be called by various write apis that know the CRL is to be updated and can be now.
-func (cb *CrlBuilder) rebuild(sc *storageContext, forceNew bool) ([]string, error) {
-	return cb._doRebuild(sc, forceNew, _ignoreForceFlag)
+func (cb *CrlBuilder) Rebuild(sc pki_backend.StorageContext, forceNew bool) ([]string, error) {
+	return cb._doRebuild(sc.(*storageContext), forceNew, _ignoreForceFlag)
 }
 
 // requestRebuildIfActiveNode will schedule a rebuild of the CRL from the next read or write api call assuming we are the active node of a cluster
@@ -382,9 +385,9 @@ func (cb *CrlBuilder) _doRebuild(sc *storageContext, forceNew bool, ignoreForceF
 	return nil, nil
 }
 
-func (cb *CrlBuilder) _getPresentDeltaWALForClearing(sc *storageContext, path string) ([]string, error) {
+func (cb *CrlBuilder) _getPresentDeltaWALForClearing(sc pki_backend.StorageContext, path string) ([]string, error) {
 	// Clearing of the delta WAL occurs after a new complete CRL has been built.
-	walSerials, err := sc.Storage.List(sc.Context, path)
+	walSerials, err := sc.GetStorage().List(sc.GetContext(), path)
 	if err != nil {
 		return nil, fmt.Errorf("error fetching list of delta WAL certificates to clear: %w", err)
 	}
@@ -395,12 +398,12 @@ func (cb *CrlBuilder) _getPresentDeltaWALForClearing(sc *storageContext, path st
 	return walSerials, nil
 }
 
-func (cb *CrlBuilder) getPresentLocalDeltaWALForClearing(sc *storageContext) ([]string, error) {
+func (cb *CrlBuilder) GetPresentLocalDeltaWALForClearing(sc pki_backend.StorageContext) ([]string, error) {
 	return cb._getPresentDeltaWALForClearing(sc, localDeltaWALPath)
 }
 
-func (cb *CrlBuilder) getPresentUnifiedDeltaWALForClearing(sc *storageContext) ([]string, error) {
-	walClusters, err := sc.Storage.List(sc.Context, unifiedDeltaWALPrefix)
+func (cb *CrlBuilder) GetPresentUnifiedDeltaWALForClearing(sc pki_backend.StorageContext) ([]string, error) {
+	walClusters, err := sc.GetStorage().List(sc.GetContext(), unifiedDeltaWALPrefix)
 	if err != nil {
 		return nil, fmt.Errorf("error fetching list of clusters with delta WAL entries: %w", err)
 	}
@@ -414,7 +417,7 @@ func (cb *CrlBuilder) getPresentUnifiedDeltaWALForClearing(sc *storageContext) (
 		}
 
 		// Here, we don't want to include the unifiedDeltaWALPrefix because
-		// clearUnifiedDeltaWAL handles that for us. Instead, just include
+		// ClearUnifiedDeltaWAL handles that for us. Instead, just include
 		// the cluster identifier.
 		for _, clusterPath := range clusterPaths {
 			allPaths = append(allPaths, cluster+clusterPath)
@@ -424,7 +427,7 @@ func (cb *CrlBuilder) getPresentUnifiedDeltaWALForClearing(sc *storageContext) (
 	return allPaths, nil
 }
 
-func (cb *CrlBuilder) _clearDeltaWAL(sc *storageContext, walSerials []string, path string) error {
+func (cb *CrlBuilder) _clearDeltaWAL(sc pki_backend.StorageContext, walSerials []string, path string) error {
 	// Clearing of the delta WAL occurs after a new complete CRL has been built.
 	for _, serial := range walSerials {
 		// Don't remove our special entries!
@@ -432,7 +435,7 @@ func (cb *CrlBuilder) _clearDeltaWAL(sc *storageContext, walSerials []string, pa
 			continue
 		}
 
-		if err := sc.Storage.Delete(sc.Context, path+serial); err != nil {
+		if err := sc.GetStorage().Delete(sc.GetContext(), path+serial); err != nil {
 			return fmt.Errorf("error clearing delta WAL certificate: %w", err)
 		}
 	}
@@ -440,11 +443,11 @@ func (cb *CrlBuilder) _clearDeltaWAL(sc *storageContext, walSerials []string, pa
 	return nil
 }
 
-func (cb *CrlBuilder) clearLocalDeltaWAL(sc *storageContext, walSerials []string) error {
+func (cb *CrlBuilder) ClearLocalDeltaWAL(sc pki_backend.StorageContext, walSerials []string) error {
 	return cb._clearDeltaWAL(sc, walSerials, localDeltaWALPath)
 }
 
-func (cb *CrlBuilder) clearUnifiedDeltaWAL(sc *storageContext, walSerials []string) error {
+func (cb *CrlBuilder) ClearUnifiedDeltaWAL(sc pki_backend.StorageContext, walSerials []string) error {
 	return cb._clearDeltaWAL(sc, walSerials, unifiedDeltaWALPrefix)
 }
 
@@ -458,7 +461,7 @@ func (cb *CrlBuilder) rebuildDeltaCRLsIfForced(sc *storageContext, override bool
 	// This guarantee means we can avoid checking delta CRL expiry. Thus,
 	// we only need to rebuild the delta CRL when we have new revocations,
 	// within our time window for updating it.
-	cfg, err := cb.getConfigWithUpdate(sc)
+	cfg, err := cb.GetConfigWithUpdate(sc)
 	if err != nil {
 		return nil, err
 	}
@@ -511,7 +514,7 @@ func (cb *CrlBuilder) rebuildDeltaCRLsIfForced(sc *storageContext, override bool
 	}
 
 	// Finally, we must've needed to do the rebuild. Execute!
-	return cb.rebuildDeltaCRLsHoldingLock(sc, false)
+	return cb.RebuildDeltaCRLsHoldingLock(sc, false)
 }
 
 func (cb *CrlBuilder) _shouldRebuildLocalCRLs(sc *storageContext, override bool) (bool, error) {
@@ -638,11 +641,11 @@ func (cb *CrlBuilder) rebuildDeltaCRLs(sc *storageContext, forceNew bool) ([]str
 	cb._builder.Lock()
 	defer cb._builder.Unlock()
 
-	return cb.rebuildDeltaCRLsHoldingLock(sc, forceNew)
+	return cb.RebuildDeltaCRLsHoldingLock(sc, forceNew)
 }
 
-func (cb *CrlBuilder) rebuildDeltaCRLsHoldingLock(sc *storageContext, forceNew bool) ([]string, error) {
-	return buildAnyCRLs(sc, forceNew, true /* building delta */)
+func (cb *CrlBuilder) RebuildDeltaCRLsHoldingLock(sc pki_backend.StorageContext, forceNew bool) ([]string, error) {
+	return buildAnyCRLs(sc.(*storageContext), forceNew, true /* building delta */)
 }
 
 func (cb *CrlBuilder) addCertForRevocationCheck(cluster, serial string) {
@@ -740,7 +743,7 @@ func (cb *CrlBuilder) processRevocationQueue(sc *storageContext) error {
 
 	sc.Logger().Debug(fmt.Sprintf("gathered %v revocations and %v confirmation entries", len(revQueue), len(removalQueue)))
 
-	crlConfig, err := cb.getConfigWithUpdate(sc)
+	crlConfig, err := cb.GetConfigWithUpdate(sc)
 	if err != nil {
 		return err
 	}
@@ -845,7 +848,7 @@ func (cb *CrlBuilder) processRevocationQueue(sc *storageContext) error {
 func (cb *CrlBuilder) processCrossClusterRevocations(sc *storageContext) error {
 	sc.Logger().Debug(fmt.Sprintf("starting to process unified revocations"))
 
-	crlConfig, err := cb.getConfigWithUpdate(sc)
+	crlConfig, err := cb.GetConfigWithUpdate(sc)
 	if err != nil {
 		return err
 	}
@@ -1098,7 +1101,7 @@ func revokeCert(sc *storageContext, config *revocation.CrlConfig, cert *x509.Cer
 		// already rebuilt the full CRL so the Delta WAL will be cleared
 		// afterwards. Writing an entry only to immediately remove it
 		// isn't necessary.
-		warnings, crlErr := sc.CrlBuilder().rebuild(sc, false)
+		warnings, crlErr := sc.CrlBuilder().Rebuild(sc, false)
 		if crlErr != nil {
 			switch crlErr.(type) {
 			case errutil.UserError:
@@ -1238,8 +1241,7 @@ func buildAnyCRLs(sc *storageContext, forceNew bool, isDelta bool) ([]string, er
 	var wasLegacy bool
 
 	// First, fetch an updated copy of the CRL config. We'll pass this into buildCRL.
-	crlBuilder := sc.CrlBuilder()
-	globalCRLConfig, err := crlBuilder.getConfigWithUpdate(sc)
+	globalCRLConfig, err := sc.CrlBuilder().GetConfigWithUpdate(sc)
 	if err != nil {
 		return nil, fmt.Errorf("error building CRL: while updating config: %w", err)
 	}
@@ -1364,13 +1366,13 @@ func buildAnyCRLs(sc *storageContext, forceNew bool, isDelta bool) ([]string, er
 	if !isDelta {
 		// After we've confirmed the primary CRLs have built OK, go ahead and
 		// clear the delta CRL WAL and rebuild it.
-		if err := crlBuilder.clearLocalDeltaWAL(sc, currLocalDeltaSerials); err != nil {
+		if err := sc.CrlBuilder().ClearLocalDeltaWAL(sc, currLocalDeltaSerials); err != nil {
 			return nil, fmt.Errorf("error building CRLs: unable to clear Delta WAL: %w", err)
 		}
-		if err := crlBuilder.clearUnifiedDeltaWAL(sc, currUnifiedDeltaSerials); err != nil {
+		if err := sc.CrlBuilder().ClearUnifiedDeltaWAL(sc, currUnifiedDeltaSerials); err != nil {
 			return nil, fmt.Errorf("error building CRLs: unable to clear Delta WAL: %w", err)
 		}
-		deltaWarnings, err := crlBuilder.rebuildDeltaCRLsHoldingLock(sc, forceNew)
+		deltaWarnings, err := sc.CrlBuilder().RebuildDeltaCRLsHoldingLock(sc, forceNew)
 		if err != nil {
 			return nil, fmt.Errorf("error building CRLs: unable to rebuild empty Delta WAL: %w", err)
 		}
@@ -1434,7 +1436,7 @@ func buildAnyLocalCRLs(
 	// visible now, should also be visible on the complete CRL we're writing.
 	var currDeltaCerts []string
 	if !isDelta {
-		currDeltaCerts, err = sc.CrlBuilder().getPresentLocalDeltaWALForClearing(sc)
+		currDeltaCerts, err = sc.CrlBuilder().GetPresentLocalDeltaWALForClearing(sc)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error building CRLs: unable to get present delta WAL entries for removal: %w", err)
 		}
@@ -1577,7 +1579,7 @@ func buildAnyUnifiedCRLs(
 	// visible now, should also be visible on the complete CRL we're writing.
 	var currDeltaCerts []string
 	if !isDelta {
-		currDeltaCerts, err = sc.CrlBuilder().getPresentUnifiedDeltaWALForClearing(sc)
+		currDeltaCerts, err = sc.CrlBuilder().GetPresentUnifiedDeltaWALForClearing(sc)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error building CRLs: unable to get present delta WAL entries for removal: %w", err)
 		}

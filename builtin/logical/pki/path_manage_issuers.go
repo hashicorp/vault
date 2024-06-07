@@ -408,7 +408,7 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 	}
 
 	if len(createdIssuers) > 0 {
-		warnings, err := b.CrlBuilder().rebuild(sc, true)
+		warnings, err := b.CrlBuilder().Rebuild(sc, true)
 		if err != nil {
 			// Before returning, check if the error message includes the
 			// string "PSS". If so, it indicates we might've wanted to modify
@@ -732,7 +732,7 @@ func (b *backend) pathRevokeIssuer(ctx context.Context, req *logical.Request, da
 	}
 
 	// Rebuild the CRL to include the newly revoked issuer.
-	warnings, crlErr := b.CrlBuilder().rebuild(sc, false)
+	warnings, crlErr := b.CrlBuilder().Rebuild(sc, false)
 	if crlErr != nil {
 		switch crlErr.(type) {
 		case errutil.UserError:

@@ -391,7 +391,7 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 		// auto-rebuild and we aren't now or equivalently, we changed our
 		// mind about delta CRLs and need a new complete one or equivalently,
 		// we changed our mind about unified CRLs), rotate the CRLs.
-		warnings, crlErr := b.CrlBuilder().rebuild(sc, true)
+		warnings, crlErr := b.CrlBuilder().Rebuild(sc, true)
 		if crlErr != nil {
 			switch crlErr.(type) {
 			case errutil.UserError:

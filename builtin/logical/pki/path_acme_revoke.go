@@ -84,7 +84,7 @@ func (b *backend) acmeRevocationHandler(acmeCtx *acmeContext, _ *logical.Request
 
 	// Fetch the CRL config as we need it to ultimately do the
 	// revocation. This should be cached and thus relatively fast.
-	config, err := b.CrlBuilder().getConfigWithUpdate(acmeCtx.sc)
+	config, err := b.CrlBuilder().GetConfigWithUpdate(acmeCtx.sc)
 	if err != nil {
 		return nil, fmt.Errorf("unable to revoke certificate: failed reading revocation config: %v: %w", err, ErrServerInternal)
 	}
