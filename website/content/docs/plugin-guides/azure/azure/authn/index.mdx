@@ -1,0 +1,20 @@
+---
+layout: docs
+page_title: Azure authentication plugin
+description: >-
+  Blah blah
+---
+
+# Azure authentication plugin
+
+## Summary
+
+Use the `azure` auth method to authenticate against Vault with Azure Active
+Directory credentials.
+
+It treats Azure as a Trusted Third Party and expects a JSON Web Token (JWT) signed by Azure Active Directory for the configured tenant.
+
+This method supports authentication for system-assigned and user-assigned managed identities. See Managed identities for Azure resources for more information about these resources.
+
+This documentation assumes the Azure method is mounted at the /auth/azure path in Vault. Since it is possible to enable auth methods at any location, please update your API calls accordingly.
+

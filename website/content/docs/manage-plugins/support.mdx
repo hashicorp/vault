@@ -1,0 +1,47 @@
+---
+layout: docs
+page_title: Vault plugin support guide
+description: >-
+  Functionality available with Vault plugins
+---
+
+# Vault plugin support guide
+
+Vault supports a number of built-in and third-party plugins for Vault
+authentication and secret data management.
+
+Platform       | Service / Protocol   | Plugin name    | AuthN | Secrets | Notes
+-------------- | -------------------- | -------------- | ----- | ------- | ------
+Alibaba Cloud  | AliCloud             | `alicloud`     | YES   | YES     | 
+Amazon         | AWS                  | `aws`          | YES   | YES     | 
+Azure          | Active Directory     | `ad`           | NO    | YES     | *DEPRECATED*
+Azure          | Azure                | `azure`        | YES   | YES     | 
+Cloud Foundry  | Vault tokens          | `cf`           | YES  | NO     | 
+GitHub         | Personal access token | `github`       | YES  | NO     | 
+Google         | GCP resources        | `gcp`          | YES   | YES     | 
+Google         | Google Cloud KMS     | `gcpkms`       | NO    | YES     | 
+HashiCorp      | Consul               | `consul`       | NO    | YES     | 
+HashiCorp      | Nomad                | `nomad`        | NO    | YES     | 
+HashiCorp      | Terraform Cloud      | `terraform`    | NO    | YES     | 
+Kubernetes     | Kubernetes           | `kubernetes`   | YES   | YES     | 
+MongoDB        | MongoDB Atlas        | `mongodbatlas` | NO    | YES     | 
+Okta           | Okta                 | `okta`         | YES   | NO      | 
+Oracle         | OCI                  | `oci`          | YES   | NO      | 
+Vault internal | Application roles    | `approle`      | YES   | NO      | 
+Vault internal | Cubbyhole            | `cubbyhole`    | NO    | YES     | 
+Vault internal | Database credentials | `database`     | NO    | YES     | 
+Vault internal | JWT/OIDC             | `jwt`          | YES   | NO      | 
+Vault internal | Kerberos             | `kerberos`     | YES   | NO      | 
+Vault internal | Key/Value            | `kv`           | NO    | YES     | 
+Vault internal | KMIP                 | `kmip`         | NO    | YES     | *Enterprise only*
+Vault internal | LDAP                 | `ldap`         | YES   | YES     | 
+Vault internal | PKI (Certificates)   | `pki`          | NO    | YES     | 
+Vault internal | RADIUS PAP           | `radius`       | YES   | NO      | 
+Vault internal | SAML                 | `saml`         | YES   | NO      | *Enterprise only*
+Vault internal | SSH                  | `ssh`          | NO    | YES     | 
+Vault internal | TOTP                 | `totp`         | NO    | YES     | 
+Vault internal | TLS certificates     | `cert`         | YES   | NO      | 
+Vault internal | Transform            | `transform`    | NO    | YES     | *Enterprise only*
+Vault internal | Transit              | `transit`      | NO    | YES     | 
+Vault internal | Username/Password    | `userpass`     | YES   | NO      | 
+VMWare         | RabbitMQ             | `rabbitmq`     | NO    | YES     | 

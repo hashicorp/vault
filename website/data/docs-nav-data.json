@@ -11,8 +11,43 @@
         "href": "#"
       },
       {
-        "title": "Internals",
-        "href": "#"
+        "title": "Key concepts",
+        "routes": [
+          {
+            "title": "Secret engines",
+            "href": "#"
+          },
+          {
+            "title": "Namespaces",
+            "href": "#"
+          },
+          {
+            "title": "Seal wrapping",
+            "href": "#",
+            "badge": {
+              "text": "ENTERPRISE",
+              "type": "outlined",
+              "color": "highlight"
+            }
+          },
+          {
+            "title": "Raft internal storage",
+            "href": "#"
+          },
+          {
+            "title": "Replication",
+            "href": "#"
+          },
+          {
+            "title": "Managed keys",
+            "href": "#",
+            "badge": {
+              "text": "ENTERPRISE",
+              "type": "outlined",
+              "color": "highlight"
+            }
+          }
+        ]
       }
     ]
   },
@@ -38,7 +73,7 @@
       }
     ]
   },
-
+  
   {
     "title": "Compatibility and licensing",
     "routes": [
@@ -65,62 +100,1209 @@
       }
     ]
   },
-
   {
-    "divider": true
-  },
-
-  {
-    "heading": "MANAGE VAULT"
-  },
-
-  {
-    "title": "Get started",
+    "title": "Quickstart",
     "routes": [
+      {
+        "title": "Create a basic Vault configuration",
+        "href": "#"
+      },
       {
         "title": "Start Vault in development mode",
         "href": "#"
-      },
-      {
-        "title": "Create a Vault configuration",
-        "href": "#"
-      },
-      {
-        "title": "Initialize Vault",
-        "href": "#"
-      },
-      {
-        "title": "Install a Vault license",
-        "href": "#"
       }
     ]
   },
+  
+  { "divider": true },
+  { "heading": "DESIGN A VAULT CLUSTER" },
   {
-    "title": "Design your deployment",
+    "title": "Design a robust cluster",
+    "href": "#"
+  },
+  {
+    "title": "Manage Vault programmatically",
+    "href": "#"
+  },
+  {
+    "title": "Namespace planning",
+    "href": "#",
+    "badge": {
+      "text": "ENTERPRISE",
+      "type": "outlined",
+      "color": "highlight"
+    }
+  },
+  {
+    "title": "Determine your quota and lease limits (best practices info)",
+    "href": "#"
+  },
+  
+  { "divider": true },
+  { "heading": "DEPLOY VAULT" },
+  
+  {
+    "title": "Overview",
+    "href": "#"
+  },
+  {
+    "title": "Create a robust Vault configuration",
+    "href": "#"
+  },
+  {
+    "title": "Install a Vault license",
+    "href": "#",
+    "badge": {
+      "text": "ENTERPRISE",
+      "type": "outlined",
+      "color": "highlight"
+    }
+  },
+  {
+    "title": "Start Vault in production mode",
+    "href": "#"
+  },
+  {
+    "title": "Initialize and unseal Vault",
+    "href": "#"
+  },
+  {
+    "title": "Run Vault at scale",
     "routes": [
       {
-        "title": "Design a robust cluster",
+        "title": "Overview",
         "href": "#"
       },
       {
-        "title": "Namespace planning",
+        "title": "Configure redundancy zones",
         "href": "#"
       },
       {
-        "title": "Quotas and leases",
+        "title": "Augment Vault entropy with external cryptography modules",
+        "href": "#",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "highlight"
+        }
+      },
+      {
+        "title": "Enable integrated storage snapshots",
+        "routes":[
+          {
+            "title": "Vault storage snapshots",
+            "href": "#"
+          },
+          {
+            "title": "Use Nomad Enterprise",
+            "href": "#"
+          },
+          {
+          "title": "Use Consul Enterprise",
+          "href": "#"
+          }
+        ]
+      },
+      {
+        "title": "Manage replication",
+        "routes": [
+          {
+            "title": "Check for Merkle tree corruption",
+            "href": "#"
+          },
+          {
+            "title": "Manage performace standbys",
+            "href": "#"
+          }
+        ]
+      }
+    ]
+  },
+
+  { "divider": true },
+  { "heading": "RUN VAULT IN THE CLOUD" },
+  {
+    "title": "Run Vault on AWS",
+    "routes": [
+      {
+        "title": "Deploy to AWS",
+        "routes": [
+          {
+            "title": "Use Amazon AMI",
+            "href": "#"
+          },
+          {
+            "title": "Use AWS Lambda",
+            "href": "#"
+          }
+        ]
+      },
+      {
+        "title": "Sync with AWS Secrets Manager",
+        "href": "#"
+      },
+      {
+        "title": "Sync with AWS KMS",
+        "href": "#"
+      },
+      {
+        "title": "Manage AWS credentials",
+        "href": "#"
+      },
+      {
+        "title": "Enable AWS authentication",
+        "href": "#"
+      },
+      {
+        "title": "Enable S3 backend storage",
+        "href": "#"
+      }
+    ]
+  },
+  {
+    "title": "Run Vault on Google Cloud Platform",
+    "routes": [
+      {
+        "title": "Deploy to Google Cloud Run?",
+        "href": "#"
+      },
+      {
+        "title": "Sync with GCP Secrets Manager",
+        "href": "#"
+      },
+      {
+        "title": "Sync with Google Cloud KMS",
+        "href": "#"
+      },
+      {
+        "title": "Manage service account keys",
+        "href": "#"
+      },
+      {
+        "title": "Manage IAM policies",
+        "href": "#"
+      },
+      {
+        "title": "Manage GCP entities",
+        "href": "#"
+      },
+      {
+        "title": "Enable GCP authentication",
+        "href": "#"
+      },
+      {
+        "title": "Manage backend storage",
+        "href": "#"
+      },
+      {
+        "title": "Enable Google Cloud Spanner",
+        "href": "#"
+      },
+      {
+        "title": "Enable GCP storage",
+        "href": "#"
+      }
+    ]
+  },
+  {
+    "title": "Run Vault on Azure",
+    "routes": [
+      {
+        "title": "Deploy to Azure",
+        "routes": [
+          {
+            "title": "Use Azure VM",
+            "href": "#"
+          },
+          {
+            "title": "Use Azure Container Registry",
+            "href": "#"
+          }
+        ]
+      },
+      {
+        "title": "Sync with Azure Key Vault",
+        "href": "#"
+      },
+      {
+        "title": "Manage Azure credentials",
+        "href": "#"
+      },
+      {
+        "title": "Setup the Active Directory plugin [DEPRECATED]",
+        "href": "#"
+      },
+      {
+        "title": "Enable Azure authentication",
+        "href": "#"
+      },
+      {
+        "title": "Enable Azure backend storage",
+        "href": "#"
+      }
+    ]
+
+  },
+  {
+    "title": "Run Vault on Kubernetes",
+    "routes": [
+      {
+        "title": "Use Helm",
+        "href": "#"
+      },
+      {
+        "title": "Use OpenShift",
+        "href": "#"
+      }
+    ]
+  },
+  
+  { "divider": true },
+  { "heading": "MANAGE VAULT" },
+  
+  {
+    "title": "Manage Vault programmatically",
+    "routes": [
+      {
+        "title": "Overview",
+        "href": "#"
+      },
+      {
+        "title": "Import unmanaged resources",
+        "href": "#"
+      },
+      {
+        "title": "Create new resources",
+        "href": "#"
+      },
+      {
+        "title": "Delete resources",
+        "href": "#"
+      }
+    ]
+  },
+  {
+    "title": "Configure Vault",
+    "routes": [
+      {
+        "title": "Overview",
+        "href": "#"
+      },
+      {
+        "title": "Configure the Vault UI",
+        "href": "#"
+      },
+      {
+        "title": "Configure quotas and leases",
+        "href": "#"
+      },
+      {
+        "title": "Configuration blocks",
+        "routes":[
+          {
+            "title": "<code>api_addr</code>",
+            "href": "#"
+          },
+          {
+            "title": "<code>cluster_addr</code>",
+            "href": "#"
+          },
+          {
+            "title": "<code>disable_mlock</code>",
+            "href": "#"
+          },
+          {
+            "title": "<code>ha_storage</code>",
+            "href": "#"
+          },
+          {
+            "title": "<code>listener</code>",
+            "href": "#"
+          },
+          {
+            "title": "<code>storage</code>",
+            "href": "#"
+          },
+          {
+            "title": "<code>ui</code>",
+            "href": "#"
+          }
+        ]
+      }
+    ]
+  },
+  
+  {
+    "title": "Control Vault access",
+    "routes": [
+      {
+        "title": "Overview",
+        "href": "#"
+      },
+      {
+        "title": "Create access policies",
+        "href": "#"
+      },
+      {
+        "title": "Create application roles",
+        "href": "#"
+      },
+      {
+        "title": "Use Sentinel authentication",
+        "href": "#",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "highlight"
+        }
+      },
+      {
+        "title": "Use native Vault authN",
+        "routes": [
+          {
+            "title": "Identity tokens",
+            "href": "#"
+          },
+          {
+            "title": "LDAP",
+            "href": "#"
+          },
+          {
+            "title": "OIDC authentication",
+            "href": "#"
+          },
+          {
+            "title": "SSL/TLS certificates",
+            "href": "#"
+          },
+          {
+            "title": "Control groups",
+            "href": "#",
+            "badge": {
+              "text": "ENTERPRISE",
+              "type": "outlined",
+              "color": "highlight"
+            }
+          },
+          {
+            "title": "Vault tokens",
+            "href": "#"
+          }
+        ]
+      },
+      {
+        "title": "Use 3rd party authentication",
+        "routes": [
+          {
+            "title": "AliCloud",
+            "href": "#"
+          },
+          {
+            "title": "AWS (duplicates Enable AWS authentication)",
+            "href": "#"
+          },
+          {
+            "title": "Azure (duplicates Enable Azure authentication)",
+            "href": "#"
+          },
+          {
+            "title": "Cloud Foundry (CF)",
+            "href": "#"
+          },
+          {
+            "title": "Google Cloud Platform (duplicates Enable GCP authentication)",
+            "href": "#"
+          },
+          {
+            "title": "GitHub tokens (duplicates Enable GitHub authentication)",
+            "href": "#"
+          },
+          {
+            "title": "JWT/OIDC",
+            "href": "#"
+          },
+          {
+            "title": "Kubernetes ServiceAccount tokens",
+            "href": "#"
+          },
+          {
+            "title": "OCI",
+            "href": "#"
+          },
+          {
+            "title": "Okta",
+            "href": "#"
+          },
+          {
+            "title": "Kerberos",
+            "href": "#"
+          },
+          {
+            "title": "RADIUS PAP",
+            "href": "#"
+          },
+          {
+            "title": "SAML",
+            "href": "#"
+          }
+        ]
+      },
+      {
+        "title": "Enable multi-factor authentication",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "highlight"
+        },
+        "routes": [
+          {
+            "title": "Use Duo",
+            "href": "#"
+          },
+          {
+            "title": "Use a time-based one-time password (TOTP)",
+            "href": "#"
+          },
+          {
+            "title": "Use Okta",
+            "href": "#"
+          },
+          {
+            "title": "Use PingID",
+            "href": "#"
+          },
+          {
+            "title": "Use TOTP",
+            "href": "#"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "title": "Manage Vault storage",
+    "routes": [
+      {
+        "title": "Overview",
+        "href": "#"
+      },
+      {
+        "title": "Use Vault-integrated storage",
+        "href": "#"
+      },
+      {
+        "title": "Use Consul storage",
+        "href": "#"
+      },
+      {
+        "title": "Enable local system storage",
+        "routes": [
+          {
+            "title": "In-memory storage",
+            "href": "#"
+          },
+          {
+            "title": "Local file system",
+            "href": "#"
+          }
+        ]
+      },
+      {
+        "title": "Enable external storage",
+        "routes": [
+          {
+            "title": "Overview",
+            "href": "#"
+          },
+          {
+            "title": "Aerospike",
+            "href": "#"
+          },
+          {
+            "title": "Alicloud OSS",
+            "href": "#"
+          },
+          {
+            "title": "Azure (duplicates Enable Azure backend storage)",
+            "href": "#"
+          },
+          {
+            "title": "Cassandra",
+            "href": "#"
+          },
+          {
+            "title": "CockroachDB",
+            "href": "#"
+          },
+          {
+            "title": "CouchDB",
+            "href": "#"
+          },
+          {
+            "title": "DynamoDB",
+            "href": "#"
+          },
+          {
+            "title": "Etcd",
+            "href": "#"
+          },
+          {
+            "title": "FoundationDB",
+            "href": "#"
+          },
+          {
+            "title": "Google Cloud Spanner (duplicates Enable Google Cloud Spanner)",
+            "href": "#"
+          },
+          {
+            "title": "Google Cloud Storage (duplicates Enable GCP storage)",
+            "href": "#"
+          },
+          {
+            "title": "Manta",
+            "href": "#"
+          },
+          {
+            "title": "MSSQL",
+            "href": "#"
+          },
+          {
+            "title": "MySQL",
+            "href": "#"
+          },
+          {
+            "title": "OCI Object Storage",
+            "href": "#"
+          },
+          {
+            "title": "PostgreSQL",
+            "href": "#"
+          },
+          {
+            "title": "S3 (duplicates Enable S3 backend storage)",
+            "href": "#"
+          },
+          {
+            "title": "Swift",
+            "href": "#"
+          },
+          {
+            "title": "Zookeeper",
+            "href": "#"
+          }
+        ]
+      }
+    ]
+  },
+  
+  {
+    "title": "Upgrade Vault",
+    "routes": [
+      {
+        "title": "Enable automated upgrades",
+        "href": "#"
+      },
+      {
+        "title": "Upgrade your Vault installation",
+        "href": "#"
+      },
+      {
+        "title": "Upgrade a Vault HA installation",
+        "href": "#"
+      },
+      {
+        "title": "Upgrade enabled plugins",
+        "href": "#"
+      },
+      {
+        "title": "Upgrade integrated storage to Raft WAL",
+        "href": "#"
+      }
+    ]
+  },
+  
+  {
+    "title": "Monitor Vault",
+    "routes": [
+      {
+        "title": "Enable auditing",
+        "href": "#"
+      },
+      {
+        "title": "Overview",
+        "href": "#"
+      },
+      {
+        "title": "Write log data to local files",
+        "href": "#"
+      },
+      {
+        "title": "Write log data syslog",
+        "href": "#"
+      },
+      {
+        "title": "Write log data to a socket",
+        "href": "#"
+      },
+      {
+        "title": "Filter audit logs",
+        "href": "#"
+      },
+      {
+        "title": "Capture telemetry",
+        "href": "#"
+      },
+      {
+        "title": "Telemetry metrics",
+        "href": "#"
+      }
+    ]
+  },
+  
+  {
+    "title": "Manage namespaces",
+    "href": "#",
+    "badge": {
+      "text": "ENTERPRISE",
+      "type": "outlined",
+      "color": "highlight"
+    },
+    "routes": [
+      {
+        "title": "Create a namespace",
+        "href": "#"
+      },
+      {
+        "title": "Create an administrative namespace",
+        "href": "#"
+      }
+    ]
+  },
+  
+  {
+    "title": "Manage plugins",
+    "routes": [
+      {
+        "title": "Overview",
+        "href": "#"
+      },
+      {
+        "title": "Plugin support",
+        "path": "manage-plugins/support"
+      },
+      {
+        "title": "Register a plugin",
+        "href": "#"
+      },
+      {
+        "title": "Enable a plugin",
+        "href": "#"
+      }
+    ]
+  },
+  
+  {
+    "title": "Use advanced data protection",
+    "badge": {
+      "text": "ENTERPRISE",
+      "type": "outlined",
+      "color": "highlight"
+    },
+    "routes": [
+      {
+        "title": "Overview",
+        "href": "#"
+      },
+      {
+        "title": "Expected behavior changes",
+        "href": "#"
+      },
+      {
+        "title": "Enforce FIPS compliance",
+        "href": "#"
+      },
+      {
+        "title": "Enforce HSM support",
+        "href": "#"
+      },
+      {
+        "title": "Use a PKCS11 provider",
+        "routes": [
+          {
+            "title": "AWS KMS external key store (XKS)",
+            "href": "#"
+          },
+          {
+            "title": "Oracle TDE",
+            "href": "#"
+          }
+        ]
+      }
+    ]
+  }, 
+  {
+    "title": "Integrate with GitHub",
+    "routes": [
+      {
+        "title": "Use Vault in GitHub actions",
+        "href": "#"
+      },
+      {
+        "title": "Sync data with GitHub",
+        "href": "#"
+      },
+      {
+        "title": "Enable GitHub authentication",
+        "href": "#"
+      }
+    ]
+  },
+  {
+    "title": "Integrate with MSSQL EKM provider",
+    "href": "#"
+  },
+  {
+    "title": "Integrate with ServiceNow MID",
+    "href": "#"
+  },
+
+  { "divider": true },
+  { "heading": "PLUGIN GUIDES" },
+
+  {
+    "title": "3rd party service plugins",
+    "routes": [
+      {
+        "title": "AliCloud",
+        "href": "#"
+      },
+      {
+        "title": "AWS",
+        "href": "#"
+      },
+      {
+        "title": "Azure",
+        "routes": [
+          {
+            "title": "Summary",
+            "path": "plugin-guides/azure"
+          },
+          {
+            "title": "<code>ad</code>",
+            "path": "plugin-guides/azure/ad"
+          },
+          {
+            "title": "<code>azure</code>",
+            "routes":[
+              {
+                "title": "Authenticate",
+                "routes": [
+                  {
+                    "title": "Summary",
+                    "path": "plugin-guides/azure/azure/authn"
+                  },
+                  {
+                    "title": "Setup",
+                    "path": "plugin-guides/azure/azure/authn/setup"
+                  },
+                  {
+                    "title": "Log in with Azure authN",
+                    "path": "plugin-guides/azure/azure/authn/login"
+                  }
+                ] 
+              },
+              {
+                "title": "Manage secrets",
+                "path": "plugin-guides/azure/azure/secrets"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "title": "Cloud Foundry",
+        "href": "#"
+      },
+      {
+        "title": "GitHub",
+        "href": "#"
+      },
+      {
+        "title": "Google",
+        "routes": [
+          {
+            "title": "Google Cloud Platform",
+            "href": "#"
+          },
+          {
+            "title": "GCP KMS",
+            "href": "#"
+          }
+        ]
+      },
+      {
+        "title": "Kubernetes",
+        "href": "#"
+      },
+      {
+        "title": "MongoDB Atlas",
+        "href": "#"
+      },
+      {
+        "title": "Okta",
+        "href": "#"
+      },
+      {
+        "title": "Oracle Cloud Infrastructure",
+        "href": "#"
+      },
+      {
+        "title": "RabbitMQ",
+        "href": "#"
+      }
+    ]
+  },
+  
+  {
+    "title": "Certificate management",
+    "routes": [
+      {
+        "title": "PKI",
+        "href": "#"
+      },
+      {
+        "title": "Cert",
+        "href": "#"
+      },
+      {
+        "title": "Venafi",
+        "href": "#"
+      }
+    ]
+  },
+  
+  {
+    "title": "Database credential management",
+    "routes": [
+      {
+        "title": "Overview",
+        "href": "#"
+      },
+      {
+        "title": "Cassandra",
+        "href": "#"
+      },
+      {
+        "title": "Couchbase",
+        "href": "#"
+      },
+      {
+        "title": "Elasticsearch",
+        "href": "#"
+      },
+      {
+        "title": "HanaDB",
+        "href": "#"
+      },
+      {
+        "title": "IBM Db2",
+        "href": "#"
+      },
+      {
+        "title": "InfluxDB",
+        "href": "#"
+      },
+      {
+        "title": "MongoDB",
+        "href": "#"
+      },
+      {
+        "title": "MongoDB Atlas",
+        "href": "#"
+      },
+      {
+       "title": "MSSQL",
+        "href": "#"
+      },
+      {
+        "title": "MySQL/MariaDB",
+        "href": "#"
+      },
+      {
+        "title": "Oracle",
+        "href": "#"
+      },
+      {
+        "title": "PostgreSQL",
+        "href": "#"
+      },
+      {
+        "title": "Redis",
+        "href": "#"
+      },
+      {
+        "title": "Redis ElastiCache",
+        "href": "#"
+      },
+      {
+        "title": "Redshift",
+        "href": "#"
+      },
+      {
+        "title": "Snowflake",
+        "href": "#"
+      },
+      {
+        "title": "Custom",
+        "href": "#"
+      }
+    ]
+  },
+  
+  {
+    "title": "HashiCorp products",
+    "routes": [
+      {
+        "title": "Consul",
+        "href": "#"
+      },
+      {
+        "title": "Nomad",
+        "href": "#"
+      },
+      {
+        "title": "Terraform",
+        "href": "#"
+      }
+    ]
+  },
+  
+  {
+    "title": "Standard protocols",
+    "routes": [
+      {
+        "title": "JWT/OIDC",
+        "href": "#"
+      },
+      {
+        "title": "Kerberos",
+        "href": "#"
+      },
+      {
+        "title": "KMIP",
+        "href": "#",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "highlight"
+        }
+      },
+      {
+        "title": "LDAP",
+        "href": "#"
+      },
+      {
+        "title": "RADIUS PAP",
+        "href": "#"
+      },
+      {
+        "title": "SAML",
+        "href": "#",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "highlight"
+        }
+      },
+      {
+        "title": "SSH",
+        "href": "#"
+      },
+      {
+        "title": "TOTP",
+        "href": "#"
+      },
+      {
+        "title": "Username/Password",
+        "href": "#"
+      }
+    ]
+  },
+  
+  {
+    "title": "Vault native plugins",
+    "routes": [
+      {
+        "title": "Application roles",
+        "href": "#"
+      },
+      {
+        "title": "Cubbyhole",
+        "href": "#"
+      },
+      {
+        "title": "Key/Value",
+        "href": "#"
+      },
+      {
+        "title": "Key Management",
+        "href": "#",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "highlight"
+        }
+      },
+      {
+        "title": "Transform",
+        "href": "#",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "highlight"
+        }
+      },
+      {
+        "title": "Transit",
+        "href": "#"
+      },
+      {
+        "title": "Identity",
         "href": "#"
       }
     ]
   },
 
-
-
-
-
-
+  { "divider": true },
+  { "heading": "CODE WITH VAULT" },
+  
   {
-    "divider": true
+    "title": "Connect to Vault",
+    "routes": [
+      {
+        "title": "Use application roles",
+        "href": "#"
+      },
+      {
+        "title": "Login with LDAP",
+        "href": "#"
+      },
+      {
+        "title": "Login with multi-factor authentication",
+        "href": "#"
+      },
+      {
+        "title": "Login with a Vault token",
+        "href": "#"
+      },
+      {
+        "title": "Login with a SSL/TLS certificate",
+        "href": "#"
+      },
+      {
+        "title": "Login with an identity tokens",
+        "href": "#"
+      },
+      {
+        "title": "Login with a OIDC",
+        "href": "#"
+      },
+      {
+        "title": "Login with a JWT/OIDC",
+        "href": "#"
+      },
+      {
+        "title": "Login with a Kubernetes ServiceAccount token",
+        "href": "#"
+      },
+      {
+        "title": "Login with RADIUS PAP",
+        "href": "#"
+      },
+      {
+        "title": "Login with SAML",
+        "href": "#"
+      },
+      {
+        "title": "Log in with OKTA",
+        "href": "#"
+      },
+      {
+        "title": "Log in with OCI",
+        "href": "#"
+      },
+      {
+        "title": "Log in with Kerberos",
+        "href": "#"
+      },
+      {
+        "title": "Log in with GCP",
+        "href": "#"
+      },
+      {
+        "title": "Log in with a GitHub personal access token",
+        "href": "#"
+      },
+      {
+        "title": "Log in with Cloud Foundry (CF) credentials",
+        "href": "#"
+      },
+      {
+        "title": "Log in with Azure credentials",
+        "href": "#"
+      },
+      {
+        "title": "Log in with AliCloud credentials",
+        "href": "#"
+      },
+      {
+        "title": "Log in with AWS credentials",
+        "href": "#"
+      }
+    ]
   },
+  {
+    "title": "Request a secret from Vault",
+    "href": "#"
+  },
+  {
+    "title": "Write a secret to Vault",
+    "href": "#"
+  },
+  
+  
+  { "divider": true },
+  { "heading": "BUILD VAULT PLUGINS" },
+  
+  {
+    "title": "Plugin architecture",
+    "href": "#"
+  },
+  {
+    "title": "Send event notifications to plugins",
+    "href": "#"
+  },
+  {
+    "title": "Create a basic plugin",
+    "href": "#"
+  },
+  {
+    "title": "Containerize your plugin",
+    "href": "#"
+  },
+  {
+    "title": "Submit a plugin to the registry",
+    "href": "#"
+  },
+
+
+
+
+
+
+  { "divider": true },
+  { "divider": true },
+  { "divider": true },
   {
     "heading": "OLD NAV"
   },
