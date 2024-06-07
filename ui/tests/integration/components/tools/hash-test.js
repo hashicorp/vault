@@ -18,7 +18,7 @@ module('Integration | Component | tools/hash', function (hooks) {
 
   hooks.beforeEach(function () {
     this.renderComponent = async () => {
-      await render(hbs`<Tools::Hash />`);
+      await render(hbs`<ToolHash />`);
     };
   });
 
