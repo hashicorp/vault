@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pkiext_binary
 
@@ -107,6 +107,11 @@ func (vpc *VaultPkiCluster) GetActiveContainerID() string {
 
 func (vpc *VaultPkiCluster) GetActiveNode() *api.Client {
 	return vpc.GetActiveClusterNode().APIClient()
+}
+
+// GetListenerCACertPEM returns the Vault cluster's PEM-encoded CA certificate.
+func (vpc *VaultPkiCluster) GetListenerCACertPEM() []byte {
+	return vpc.cluster.CACertPEM
 }
 
 func (vpc *VaultPkiCluster) AddHostname(hostname, ip string) error {

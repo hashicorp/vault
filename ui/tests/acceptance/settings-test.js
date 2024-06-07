@@ -1,9 +1,9 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { currentURL, find, visit, settled } from '@ember/test-helpers';
+import { currentURL, find, visit, settled, click } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
@@ -11,9 +11,12 @@ import { v4 as uuidv4 } from 'uuid';
 import backendListPage from 'vault/tests/pages/secrets/backends';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
+import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
-module('Acceptance | settings', function (hooks) {
+const { searchSelect } = GENERAL;
+
+module('Acceptance | secret engine mount settings', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
@@ -21,11 +24,7 @@ module('Acceptance | settings', function (hooks) {
     return authPage.login();
   });
 
-  hooks.afterEach(function () {
-    return logout.visit();
-  });
-
-  test('settings', async function (assert) {
+  test('it allows you to mount a secret engine', async function (assert) {
     const type = 'consul';
     const path = `settings-path-${this.uid}`;
 
@@ -36,7 +35,6 @@ module('Acceptance | settings', function (hooks) {
 
     await mountSecrets.selectType(type);
     await mountSecrets
-      .next()
       .path(path)
       .toggleOptions()
       .enableDefaultTtl()
@@ -50,9 +48,47 @@ module('Acceptance | settings', function (hooks) {
     );
     await settled();
     assert.strictEqual(currentURL(), `/vault/secrets`, 'redirects to secrets page');
-    const row = backendListPage.rows.filterBy('path', path + '/')[0];
-    await row.menu();
+    // cleanup
+    await runCmd(deleteEngineCmd(path));
+  });
+
+  test('it navigates to ember engine configuration page', async function (assert) {
+    const type = 'ldap';
+    const path = `ldap-${this.uid}`;
+
+    await visit('/vault/settings/mount-secret-backend');
+    await runCmd(mountEngineCmd(type, path), false);
+    await visit('/vault/secrets');
+    await click(searchSelect.trigger('filter-by-engine-name'));
+    await click(searchSelect.option(searchSelect.optionIndex(path)));
+    await click(GENERAL.menuTrigger);
     await backendListPage.configLink();
-    assert.strictEqual(currentURL(), `/vault/secrets/${path}/configuration`, 'navigates to the config page');
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${path}/${type}/configuration`,
+      'navigates to the config page for ember engine'
+    );
+    // clean up
+    await runCmd(deleteEngineCmd(path));
+  });
+
+  test('it navigates to non-ember engine configuration page', async function (assert) {
+    const type = 'ssh';
+    const path = `ssh-${this.uid}`;
+
+    await visit('/vault/settings/mount-secret-backend');
+    await runCmd(mountEngineCmd(type, path), false);
+    await visit('/vault/secrets');
+    await click(searchSelect.trigger('filter-by-engine-name'));
+    await click(searchSelect.option(searchSelect.optionIndex(path)));
+    await click(GENERAL.menuTrigger);
+    await backendListPage.configLink();
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${path}/configuration`,
+      'navigates to the config page for non-ember engine'
+    );
+    // clean up
+    await runCmd(deleteEngineCmd(path));
   });
 });

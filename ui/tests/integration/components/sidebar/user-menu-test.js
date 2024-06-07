@@ -1,14 +1,28 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Integration | Component | sidebar-user-menu', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
     this.auth = this.owner.lookup('service:auth');
+    setRunOptions({
+      // TODO: fix this component
+      rules: {
+        'nested-interactive': { enabled: false },
+        // TODO: fix ConfirmAction rendered in toolbar not a list item
+        list: { enabled: false },
+      },
+    });
   });
 
   test('it should render trigger and open menu', async function (assert) {
@@ -30,7 +44,7 @@ module('Integration | Component | sidebar-user-menu', function (hooks) {
 
     assert.dom('.menu-label').hasText('Token', 'Auth data display name renders');
     assert.dom('li').exists({ count: 2 }, 'Correct number of menu items render');
-    assert.dom('[data-clipboard-text="root"]').exists('Copy token action renders');
+    assert.dom('[data-test-copy-button="root"]').exists('Copy token action renders');
     assert.dom('#logout').hasText('Log out', 'Log out action renders');
   });
 

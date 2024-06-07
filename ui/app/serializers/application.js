@@ -1,11 +1,10 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import JSONSerializer from '@ember-data/serializer/json';
 import { isNone, isBlank } from '@ember/utils';
-import { assign } from '@ember/polyfills';
 import { decamelize } from '@ember/string';
 
 export default JSONSerializer.extend({
@@ -30,7 +29,7 @@ export default JSONSerializer.extend({
       });
       return models;
     }
-    assign(payload, payload.data);
+    Object.assign(payload, payload.data);
     delete payload.data;
     return payload;
   },
@@ -64,9 +63,6 @@ export default JSONSerializer.extend({
     const valHasNotChanged = isNone(snapshot.changedAttributes()[key]);
     const valIsBlank = isBlank(val);
     if (attributes.options.readOnly) {
-      return;
-    }
-    if (attributes.type === 'object' && val && Object.keys(val).length > 0 && valHasNotChanged) {
       return;
     }
     if (valIsBlank && valHasNotChanged) {

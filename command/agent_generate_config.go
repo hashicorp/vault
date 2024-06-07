@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package command
 
@@ -13,10 +13,10 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/hashicorp/vault/api"
-	"github.com/mitchellh/cli"
 	"github.com/mitchellh/go-homedir"
 	"github.com/posener/complete"
 )
@@ -61,8 +61,8 @@ Usage: vault agent generate-config [options] [path/to/config.hcl]
   In addition to env_template entries, the command generates an 'auto_auth'
   section with 'token_file' authentication method. While this method is very
   convenient for local testing, it should NOT be used in production. Please
-  see https://developer.hashicorp.com/vault/docs/agentandproxy/autoauth for
-  a list of production-ready auto_auth methods that you can use instead.
+  see https://developer.hashicorp.com/vault/docs/agent-and-proxy/autoauth/methods
+  for a list of production-ready auto_auth methods that you can use instead.
 
   By default, the file will be generated in the local directory as 'agent.hcl'
   unless a path is specified as an argument.
@@ -87,7 +87,8 @@ Usage: vault agent generate-config [options] [path/to/config.hcl]
 }
 
 func (c *AgentGenerateConfigCommand) Flags() *FlagSets {
-	set := NewFlagSets(c.UI)
+	// Include client-modifying flags (-address, -namespace, etc.)
+	set := c.flagSet(FlagSetHTTP)
 
 	// Common Options
 	f := set.NewFlagSet("Command Options")
@@ -223,6 +224,7 @@ func generateConfiguration(ctx context.Context, client *api.Client, flagExec str
 		TemplateConfig: generatedConfigTemplateConfig{
 			StaticSecretRenderInterval: "5m",
 			ExitOnRetryFailure:         true,
+			MaxConnectionsPerHost:      10,
 		},
 		Vault: generatedConfigVault{
 			Address: client.Address(),
@@ -409,6 +411,7 @@ type generatedConfig struct {
 type generatedConfigTemplateConfig struct {
 	StaticSecretRenderInterval string `hcl:"static_secret_render_interval"`
 	ExitOnRetryFailure         bool   `hcl:"exit_on_retry_failure"`
+	MaxConnectionsPerHost      int    `hcl:"max_connections_per_host"`
 }
 
 type generatedConfigExec struct {

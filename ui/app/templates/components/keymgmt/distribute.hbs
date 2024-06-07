@@ -1,4 +1,15 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if @backend}}
+  {{#if this.formErrors}}
+    <Hds::Alert data-test-keymgmt-distribute-error @type="inline" @color="critical" as |A|>
+      <A.Title>Error</A.Title>
+      <A.Description>{{this.formErrors}}</A.Description>
+    </Hds::Alert>
+  {{/if}}
   <form {{on "submit" (perform this.createDistribution)}} class="form-section" data-test-keymgmt-distribution-form>
     {{#unless @key}}
       <div class="field" data-test-keymgmt-dist-key>
@@ -17,11 +28,20 @@
           @disallowNewItems={{false}}
         >
           {{#if (and this.validMatchError.key (not this.isNewKey))}}
-            <AlertInline @paddingTop={{true}} @sizeSmall={{true}} @type="danger" data-test-keymgmt-error="key">
-              {{this.validMatchError.key}}
-              To check compatibility,
-              <DocLink class="doc-link-subtle" @path="/vault/docs/secrets/key-management#compatibility">refer to this table</DocLink>.
-            </AlertInline>
+            <Hds::Alert class="has-top-margin-s" @type="inline" @color="warning" data-test-keymgmt-error="key" as |A|>
+              <A.Description>
+                {{this.validMatchError.key}}
+                To check compatibility,
+                <Hds::Link::Inline
+                  @icon="docs-link"
+                  @iconPosition="trailing"
+                  @isHrefExternal={{true}}
+                  @href={{doc-link "/vault/docs/secrets/key-management#compatibility"}}
+                >
+                  refer to this table
+                </Hds::Link::Inline>.
+              </A.Description>
+            </Hds::Alert>
           {{/if}}
         </SearchSelect>
       </div>
@@ -51,11 +71,20 @@
             </select>
           </div>
           {{#if this.validMatchError.key}}
-            <AlertInline @paddingTop={{true}} @sizeSmall={{true}} @type="danger" data-test-keymgmt-error="new-key">
-              {{this.validMatchError.key}}
-              To check compatibility,
-              <DocLink class="doc-link-subtle" @path="/vault/docs/secrets/key-management#compatibility">refer to this table</DocLink>.
-            </AlertInline>
+            <Hds::Alert class="has-top-margin-s" @type="inline" @color="warning" data-test-keymgmt-error="new-key" as |A|>
+              <A.Description>
+                {{this.validMatchError.key}}
+                To check compatibility,
+                <Hds::Link::Inline
+                  @icon="docs-link"
+                  @iconPosition="trailing"
+                  @isHrefExternal={{true}}
+                  @href={{doc-link "/vault/docs/secrets/key-management#compatibility"}}
+                >
+                  refer to this table
+                </Hds::Link::Inline>.
+              </A.Description>
+            </Hds::Alert>
           {{/if}}
         </div>
       </div>
@@ -78,11 +107,20 @@
           data-test-keymgmt-dist-provider
         >
           {{#if this.validMatchError.provider}}
-            <AlertInline @paddingTop={{true}} @sizeSmall={{true}} @type="danger" data-test-keymgmt-error="provider">
-              {{this.validMatchError.provider}}
-              To check compatibility,
-              <DocLink class="doc-link-subtle" @path="/vault/docs/secrets/key-management#compatibility">refer to this table</DocLink>.
-            </AlertInline>
+            <Hds::Alert class="has-top-margin-s" @type="inline" @color="warning" data-test-keymgmt-error="provider" as |A|>
+              <A.Description>
+                {{this.validMatchError.provider}}
+                To check compatibility,
+                <Hds::Link::Inline
+                  @icon="docs-link"
+                  @iconPosition="trailing"
+                  @isHrefExternal={{true}}
+                  @href={{doc-link "/vault/docs/secrets/key-management#compatibility"}}
+                >
+                  refer to this table
+                </Hds::Link::Inline>.
+              </A.Description>
+            </Hds::Alert>
           {{/if}}
         </SearchSelect>
       </div>
@@ -140,29 +178,16 @@
       </div>
     </fieldset>
 
-    {{#if this.formErrors}}
-      <AlertBanner @type="danger" @message={{this.formErrors}} data-test-keymgmt-distribute-error />
-    {{/if}}
-    <div class="field is-grouped box is-fullwidth is-bottomless">
-      <div class="control">
-        <button
-          type="submit"
-          disabled={{or this.validationErrorCount this.createDistribution.isRunning}}
-          class="button is-primary"
-          data-test-secret-save={{true}}
-        >
-          {{#if this.createDistribution.isRunning}}
-            <span class="loader is-inline-block"></span>
-          {{else}}
-            {{if (or (not @key) this.isNewKey) "Add key" "Distribute key"}}
-          {{/if}}
-        </button>
-      </div>
-      <div class="control">
-        <button type="button" class="button" {{on "click" @onClose}}>
-          Cancel
-        </button>
-      </div>
-    </div>
+    <hr class="has-background-gray-100" />
+    <Hds::ButtonSet>
+      <Hds::Button
+        @text={{if (or (not @key) this.isNewKey) "Add key" "Distribute key"}}
+        @icon={{if this.createDistribution.isRunning "loading"}}
+        type="submit"
+        data-test-secret-save
+        disabled={{this.createDistribution.isRunning}}
+      />
+      <Hds::Button @text="Cancel" @color="secondary" {{on "click" @onClose}} />
+    </Hds::ButtonSet>
   </form>
 {{/if}}

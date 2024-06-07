@@ -1,13 +1,12 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { visit } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
 import Ember from 'ember';
 
 let adapterException;
@@ -23,7 +22,6 @@ module('Acceptance | not-found', function (hooks) {
 
   hooks.afterEach(function () {
     Ember.Test.adapter.exception = adapterException;
-    return logout.visit();
   });
 
   test('top-level not-found', async function (assert) {
@@ -47,7 +45,7 @@ module('Acceptance | not-found', function (hooks) {
   });
 
   test('secret not-found', async function (assert) {
-    await visit('/vault/secrets/secret/show/404');
+    await visit('/vault/secrets/cubbyhole/show/404');
     assert.dom('[data-test-secret-not-found]').exists('renders the message about the secret not being found');
   });
 });

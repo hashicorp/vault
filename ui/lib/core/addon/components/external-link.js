@@ -1,21 +1,22 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
 
 /**
- * @module ExternalLinkComponent
- * `ExternalLink` components are used to render anchor links to non-cluster links. Automatically opens in a new tab with noopener noreferrer.
- *  To link to developer.hashicorp.com, use DocLink .
+ * @deprecated
+ * @module ExternalLink
+ * ExternalLink components are used to render anchor links to non-cluster links. Automatically opens in a new tab with noopener noreferrer.
  *
  * @example
- * ```js
-    <ExternalLink @href="https://hashicorp.com">Arbitrary Link</ExternalLink>
- * ```
+ * <ExternalLink @href="https://hashicorp.com">Arbitrary Link</ExternalLink>
  *
- * @param {string} href="https://example.com/" - The full href with protocol
+ * * Use HDS links with @isHrefExternal={{true}} instead
+ * <Hds::Link::Inline @icon="external-link" @isHrefExternal={{true}} @href="https://hashicorp.com">My link</Hds::Link::Inline>
+ *
+ * @param {string} href - The full href with protocol
  * @param {boolean} [sameTab=false] - by default, these links open in new tab. To override, pass @sameTab={{true}}
  *
  */

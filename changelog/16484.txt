@@ -1,0 +1,3 @@
+```release-note:bug
+auth/appid, auth/cert, auth/github, auth/ldap, auth/okta, auth/radius, auth/userpass: fixed an issue with policy name normalization that would prevent a token associated with a policy containing an uppercase character to be renewed.
+```

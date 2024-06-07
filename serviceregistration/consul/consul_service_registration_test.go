@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package consul
 
@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	sr "github.com/hashicorp/vault/serviceregistration"
 	"github.com/hashicorp/vault/vault"
+	"github.com/stretchr/testify/require"
 )
 
 type consulConf map[string]string
@@ -62,6 +63,17 @@ func TestConsul_ServiceRegistration(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// update the agent's ACL token so that we can successfully deregister the
+	// service later in the test
+	_, err = client.Agent().UpdateAgentACLToken(config.Token, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = client.Agent().UpdateDefaultACLToken(config.Token, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// waitForServices waits for the services in the Consul catalog to
 	// reach an expected value, returning the delta if that doesn't happen in time.
 	waitForServices := func(t *testing.T, expected map[string][]string) map[string][]string {
@@ -91,10 +103,13 @@ func TestConsul_ServiceRegistration(t *testing.T) {
 
 	// Create a ServiceRegistration that points to our consul instance
 	logger := logging.NewVaultLogger(log.Trace)
-	sd, err := NewServiceRegistration(map[string]string{
+	srConfig := map[string]string{
 		"address": config.Address(),
 		"token":   config.Token,
-	}, logger, sr.State{})
+		// decrease reconcile timeout to make test run faster
+		"reconcile_timeout": "1s",
+	}
+	sd, err := NewServiceRegistration(srConfig, logger, sr.State{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -141,6 +156,58 @@ func TestConsul_ServiceRegistration(t *testing.T) {
 
 	// Wait for the core to become active
 	vault.TestWaitActive(t, core)
+
+	waitForServices(t, map[string][]string{
+		"consul": {},
+		"vault":  {"active", "initialized"},
+	})
+
+	// change the token and trigger reload
+	if sd.(*serviceRegistration).config.Token == "" {
+		t.Fatal("expected service registration token to not be '' before configuration reload")
+	}
+
+	srConfigWithoutToken := make(map[string]string)
+	for k, v := range srConfig {
+		srConfigWithoutToken[k] = v
+	}
+	srConfigWithoutToken["token"] = ""
+	err = sd.NotifyConfigurationReload(&srConfigWithoutToken)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if sd.(*serviceRegistration).config.Token != "" {
+		t.Fatal("expected service registration token to be '' after configuration reload")
+	}
+
+	// reconfigure the configuration back to its original state and verify vault is registered
+	err = sd.NotifyConfigurationReload(&srConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	waitForServices(t, map[string][]string{
+		"consul": {},
+		"vault":  {"active", "initialized"},
+	})
+
+	// send 'nil' configuration to verify that the service is deregistered
+	err = sd.NotifyConfigurationReload(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	waitForServices(t, map[string][]string{
+		"consul": {},
+	})
+
+	// reconfigure the configuration back to its original state and verify vault
+	// is re-registered
+	err = sd.NotifyConfigurationReload(&srConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	waitForServices(t, map[string][]string{
 		"consul": {},
@@ -425,6 +492,66 @@ func TestConsul_serviceTags(t *testing.T) {
 	}
 }
 
+// TestConsul_ServiceMeta tests whether consul service meta registration works
+func TestConsul_ServiceMeta(t *testing.T) {
+	tests := []struct {
+		conf   map[string]string
+		pass   bool
+		expect map[string]string
+	}{
+		{
+			conf:   map[string]string{},
+			pass:   true,
+			expect: map[string]string{"external-source": "vault"},
+		},
+		{
+			conf:   map[string]string{"service_meta": "true"},
+			pass:   false,
+			expect: map[string]string{"external-source": "vault"},
+		},
+		{
+			conf:   map[string]string{"service_meta": "{\"key\":\"value\"}"},
+			pass:   true,
+			expect: map[string]string{"key": "value", "external-source": "vault"},
+		},
+		{
+			conf:   map[string]string{"service_meta": "{\"external-source\":\"something-else\"}"},
+			pass:   true,
+			expect: map[string]string{"external-source": "vault"},
+		},
+	}
+
+	for _, test := range tests {
+		logger := logging.NewVaultLogger(log.Debug)
+
+		shutdownCh := make(chan struct{})
+		defer func() {
+			close(shutdownCh)
+		}()
+		sr, err := NewServiceRegistration(test.conf, logger, sr.State{})
+		if !test.pass {
+			if err == nil {
+				t.Fatal("Expected Consul to fail with error")
+			}
+			continue
+		}
+
+		if err != nil && test.pass {
+			t.Fatalf("Expected Consul to initialize: %v", err)
+		}
+
+		c, ok := sr.(*serviceRegistration)
+		if !ok {
+			t.Fatalf("Expected serviceRegistration")
+		}
+
+		if !reflect.DeepEqual(c.serviceMeta, test.expect) {
+			t.Fatalf("Did not produce expected meta: wanted: %v, got %v", test.expect, c.serviceMeta)
+		}
+
+	}
+}
+
 func TestConsul_setRedirectAddr(t *testing.T) {
 	tests := []struct {
 		addr string
@@ -561,5 +688,46 @@ func TestConsul_serviceID(t *testing.T) {
 		if serviceID != test.expected {
 			t.Fatalf("bad: %v != %v", serviceID, test.expected)
 		}
+	}
+}
+
+// TestConsul_NewServiceRegistration_serviceTags ensures that we do not modify
+// the case of any 'service_tags' set by the config.
+// We do expect tags to be sorted in lexicographic order (A-Z).
+func TestConsul_NewServiceRegistration_serviceTags(t *testing.T) {
+	tests := map[string]struct {
+		Tags         string
+		ExpectedTags []string
+	}{
+		"lowercase": {
+			Tags:         "foo,bar",
+			ExpectedTags: []string{"bar", "foo"},
+		},
+		"uppercase": {
+			Tags:         "FOO,BAR",
+			ExpectedTags: []string{"BAR", "FOO"},
+		},
+		"PascalCase": {
+			Tags:         "FooBar, Feedface",
+			ExpectedTags: []string{"Feedface", "FooBar"},
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			cfg := map[string]string{"service_tags": tc.Tags}
+			logger := logging.NewVaultLogger(log.Trace)
+			be, err := NewServiceRegistration(cfg, logger, sr.State{})
+			require.NoError(t, err)
+			require.NotNil(t, be)
+			c, ok := be.(*serviceRegistration)
+			require.True(t, ok)
+			require.NotNil(t, c)
+			require.Equal(t, tc.ExpectedTags, c.serviceTags)
+		})
 	}
 }

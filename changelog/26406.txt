@@ -1,0 +1,3 @@
+```release-note:improvement
+replication (enterprise): Periodically write current time on the primary to storage, use that downstream to measure replication lag in time, expose that in health and replication status endpoints.
+```

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -12,49 +12,28 @@ import { ARRAY_OF_MONTHS } from 'core/utils/date-formatters';
 import timestamp from 'core/utils/timestamp';
 
 const SELECTORS = {
-  monthDropdown: '[data-test-popup-menu-trigger="month"]',
+  monthDropdown: '[data-test-toggle-month]',
   specificMonth: (m) => `[data-test-dropdown-month="${m}"]`,
-  yearDropdown: '[data-test-popup-menu-trigger="year"]',
+  yearDropdown: '[data-test-toggle-year]',
   specificYear: (y) => `[data-test-dropdown-year="${y}"]`,
-
   submitButton: '[data-test-date-dropdown-submit]',
-  cancelButton: '[data-test-date-dropdown-cancel]',
-  monthOptions: '[data-test-month-list] button',
+  monthOptions: '[data-test-dropdown-month]',
 };
 
 module('Integration | Component | date-dropdown', function (hooks) {
   setupRenderingTest(hooks);
 
-  hooks.before(function () {
-    sinon.stub(timestamp, 'now').callsFake(() => new Date('2018-04-03T14:15:30'));
-  });
-  hooks.after(function () {
-    timestamp.now.restore();
+  hooks.beforeEach(function () {
+    sinon.replace(timestamp, 'now', sinon.fake.returns(new Date('2018-04-03T14:15:30')));
   });
 
   test('it renders dropdown', async function (assert) {
     await render(hbs`
-      <div class="is-flex-align-baseline">
+      <div class="has-padding-l">
         <DateDropdown/>
       </div>
     `);
     assert.dom(SELECTORS.submitButton).hasText('Submit', 'button renders default text');
-    assert.dom(SELECTORS.cancelButton).doesNotExist('it does not render cancel button by default');
-  });
-
-  test('it fires off cancel callback', async function (assert) {
-    assert.expect(2);
-    const onCancel = () => {
-      assert.ok('fires onCancel callback');
-    };
-    this.set('onCancel', onCancel);
-    await render(hbs`
-      <div class="is-flex-align-baseline">
-        <DateDropdown @handleCancel={{this.onCancel}} @submitText="Save"/>
-      </div>
-    `);
-    assert.dom(SELECTORS.submitButton).hasText('Save', 'button renders passed in text');
-    await click(SELECTORS.cancelButton);
   });
 
   test('it renders dropdown and selects month and year', async function (assert) {
@@ -74,7 +53,7 @@ module('Integration | Component | date-dropdown', function (hooks) {
     this.set('parentAction', parentAction);
 
     await render(hbs`
-    <div class="is-flex-align-baseline">
+    <div class="has-padding-l">
     <DateDropdown
       @handleSubmit={{this.parentAction}}
       @dateType="start"
@@ -112,7 +91,7 @@ module('Integration | Component | date-dropdown', function (hooks) {
   test('selecting month first: current year enabled when current month selected', async function (assert) {
     assert.expect(5);
     await render(hbs`
-    <div class="is-flex-align-baseline">
+    <div class="has-padding-l">
       <DateDropdown/>
     </div>
     `);
@@ -129,7 +108,7 @@ module('Integration | Component | date-dropdown', function (hooks) {
   test('selecting month first: it disables current year when future months selected', async function (assert) {
     assert.expect(5);
     await render(hbs`
-    <div class="is-flex-align-baseline">
+    <div class="has-padding-l">
       <DateDropdown/>
     </div>
     `);
@@ -149,7 +128,7 @@ module('Integration | Component | date-dropdown', function (hooks) {
   test('selecting year first: it disables future months when current year selected', async function (assert) {
     assert.expect(12);
     await render(hbs`
-    <div class="is-flex-align-baseline">
+    <div class="has-padding-l">
       <DateDropdown/>
     </div>
     `);
@@ -170,7 +149,7 @@ module('Integration | Component | date-dropdown', function (hooks) {
   test('selecting year first: it enables all months when past year is selected', async function (assert) {
     assert.expect(12);
     await render(hbs`
-    <div class="is-flex-align-baseline">
+    <div class="has-padding-l">
       <DateDropdown/>
     </div>
     `);

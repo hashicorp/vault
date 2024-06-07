@@ -5,10 +5,13 @@ description: >-
   The Vault EKM module for Microsoft SQL Server allows Vault to act as a provider for TDE.
 ---
 
-# Vault EKM provider for SQL Server
+# Vault EKM provider for SQL server
 
--> **Note**: This feature requires [Vault Enterprise](https://www.hashicorp.com/products/vault/)
-with the Advanced Data Protection Key Management module.
+<EnterpriseAlert product="vault">
+Requires&nbsp;
+<a href="https://www.hashicorp.com/products/vault/pricing">Vault Enterprise</a>
+&nbsp;with <b>Advanced Data Protection Key Management</b> module.
+</EnterpriseAlert>
 
 Microsoft SQL Server supports [Transparent Data Encryption][tde] (TDE). The
 Database Encryption Keys (DEK) can be protected by asymmetric Key Encryption

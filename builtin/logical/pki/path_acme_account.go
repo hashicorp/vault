@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -20,12 +19,12 @@ func uuidNameRegex(name string) string {
 	return fmt.Sprintf("(?P<%s>[[:alnum:]]{8}-[[:alnum:]]{4}-[[:alnum:]]{4}-[[:alnum:]]{4}-[[:alnum:]]{12}?)", name)
 }
 
-func pathAcmeNewAccount(b *backend) []*framework.Path {
-	return buildAcmeFrameworkPaths(b, patternAcmeNewAccount, "/new-account")
+func pathAcmeNewAccount(b *backend, baseUrl string, opts acmeWrapperOpts) *framework.Path {
+	return patternAcmeNewAccount(b, baseUrl+"/new-account", opts)
 }
 
-func pathAcmeUpdateAccount(b *backend) []*framework.Path {
-	return buildAcmeFrameworkPaths(b, patternAcmeNewAccount, "/account/"+uuidNameRegex("kid"))
+func pathAcmeUpdateAccount(b *backend, baseUrl string, opts acmeWrapperOpts) *framework.Path {
+	return patternAcmeNewAccount(b, baseUrl+"/account/"+uuidNameRegex("kid"), opts)
 }
 
 func addFieldsForACMEPath(fields map[string]*framework.FieldSchema, pattern string) map[string]*framework.FieldSchema {
@@ -40,6 +39,13 @@ func addFieldsForACMEPath(fields map[string]*framework.FieldSchema, pattern stri
 		fields[issuerRefParam] = &framework.FieldSchema{
 			Type:        framework.TypeString,
 			Description: `Reference to an existing issuer name or issuer id`,
+			Required:    true,
+		}
+	}
+	if strings.Contains(pattern, framework.GenericNameRegex("policy")) {
+		fields["policy"] = &framework.FieldSchema{
+			Type:        framework.TypeString,
+			Description: `The policy name to pass through to the CIEPS service`,
 			Required:    true,
 		}
 	}
@@ -81,7 +87,7 @@ func addFieldsForACMEKidRequest(fields map[string]*framework.FieldSchema, patter
 	return fields
 }
 
-func patternAcmeNewAccount(b *backend, pattern string) *framework.Path {
+func patternAcmeNewAccount(b *backend, pattern string, opts acmeWrapperOpts) *framework.Path {
 	fields := map[string]*framework.FieldSchema{}
 	addFieldsForACMEPath(fields, pattern)
 	addFieldsForACMERequest(fields)
@@ -92,7 +98,7 @@ func patternAcmeNewAccount(b *backend, pattern string) *framework.Path {
 		Fields:  fields,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback:                    b.acmeParsedWrapper(b.acmeNewAccountHandler),
+				Callback:                    b.acmeParsedWrapper(opts, b.acmeNewAccountHandler),
 				ForwardPerformanceSecondary: false,
 				ForwardPerformanceStandby:   true,
 			},
@@ -215,7 +221,7 @@ func (b *backend) acmeAccountSearchHandler(acmeCtx *acmeContext, userCtx *jwsCtx
 		return nil, fmt.Errorf("failed generating thumbprint for key: %w", err)
 	}
 
-	account, err := b.acmeState.LoadAccountByKey(acmeCtx, thumbprint)
+	account, err := b.GetAcmeState().LoadAccountByKey(acmeCtx, thumbprint)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load account by thumbprint: %w", err)
 	}
@@ -246,7 +252,7 @@ func (b *backend) acmeNewAccountCreateHandler(acmeCtx *acmeContext, userCtx *jws
 		return nil, fmt.Errorf("failed generating thumbprint for key: %w", err)
 	}
 
-	accountByKey, err := b.acmeState.LoadAccountByKey(acmeCtx, thumbprint)
+	accountByKey, err := b.GetAcmeState().LoadAccountByKey(acmeCtx, thumbprint)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load account by thumbprint: %w", err)
 	}
@@ -260,7 +266,7 @@ func (b *backend) acmeNewAccountCreateHandler(acmeCtx *acmeContext, userCtx *jws
 
 	var eab *eabType
 	if len(eabData) != 0 {
-		eab, err = verifyEabPayload(b.acmeState, acmeCtx, userCtx, r.Path, eabData)
+		eab, err = verifyEabPayload(b.GetAcmeState(), acmeCtx, userCtx, r.Path, eabData)
 		if err != nil {
 			return nil, err
 		}
@@ -281,7 +287,7 @@ func (b *backend) acmeNewAccountCreateHandler(acmeCtx *acmeContext, userCtx *jws
 		// We delete the EAB to prevent future re-use after associating it with an account, worst
 		// case if we fail creating the account we simply nuked the EAB which they can create another
 		// and retry
-		wasDeleted, err := b.acmeState.DeleteEab(acmeCtx.sc, eab.KeyID)
+		wasDeleted, err := b.GetAcmeState().DeleteEab(acmeCtx.sc, eab.KeyID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to delete eab reference: %w", err)
 		}
@@ -295,7 +301,7 @@ func (b *backend) acmeNewAccountCreateHandler(acmeCtx *acmeContext, userCtx *jws
 	b.acmeAccountLock.RLock() // Prevents Account Creation and Tidy Interfering
 	defer b.acmeAccountLock.RUnlock()
 
-	accountByKid, err := b.acmeState.CreateAccount(acmeCtx, userCtx, contact, termsOfServiceAgreed, eab)
+	accountByKid, err := b.GetAcmeState().CreateAccount(acmeCtx, userCtx, contact, termsOfServiceAgreed, eab)
 	if err != nil {
 		if eab != nil {
 			return nil, fmt.Errorf("failed to create account: %w; the EAB key used for this request has been deleted as a result of this operation; fetch a new EAB key before retrying", err)
@@ -322,7 +328,7 @@ func (b *backend) acmeNewAccountUpdateHandler(acmeCtx *acmeContext, userCtx *jws
 		return nil, fmt.Errorf("%w: not allowed to update EAB data in accounts", ErrMalformed)
 	}
 
-	account, err := b.acmeState.LoadAccount(acmeCtx, userCtx.Kid)
+	account, err := b.GetAcmeState().LoadAccount(acmeCtx, userCtx.Kid)
 	if err != nil {
 		return nil, fmt.Errorf("error loading account: %w", err)
 	}
@@ -356,7 +362,7 @@ func (b *backend) acmeNewAccountUpdateHandler(acmeCtx *acmeContext, userCtx *jws
 	}
 
 	if shouldUpdate {
-		err = b.acmeState.UpdateAccount(acmeCtx, account)
+		err = b.GetAcmeState().UpdateAccount(acmeCtx.sc, account)
 		if err != nil {
 			return nil, fmt.Errorf("failed to update account: %w", err)
 		}
@@ -366,8 +372,8 @@ func (b *backend) acmeNewAccountUpdateHandler(acmeCtx *acmeContext, userCtx *jws
 	return resp, nil
 }
 
-func (b *backend) tidyAcmeAccountByThumbprint(as *acmeState, ac *acmeContext, keyThumbprint string, certTidyBuffer, accountTidyBuffer time.Duration) error {
-	thumbprintEntry, err := ac.sc.Storage.Get(ac.sc.Context, path.Join(acmeThumbprintPrefix, keyThumbprint))
+func (b *backend) tidyAcmeAccountByThumbprint(as *acmeState, sc *storageContext, keyThumbprint string, certTidyBuffer, accountTidyBuffer time.Duration) error {
+	thumbprintEntry, err := sc.Storage.Get(sc.Context, path.Join(acmeThumbprintPrefix, keyThumbprint))
 	if err != nil {
 		return fmt.Errorf("error retrieving thumbprint entry %v, unable to find corresponding account entry: %w", keyThumbprint, err)
 	}
@@ -386,13 +392,13 @@ func (b *backend) tidyAcmeAccountByThumbprint(as *acmeState, ac *acmeContext, ke
 	}
 
 	// Now Get the Account:
-	accountEntry, err := ac.sc.Storage.Get(ac.sc.Context, acmeAccountPrefix+thumbprint.Kid)
+	accountEntry, err := sc.Storage.Get(sc.Context, acmeAccountPrefix+thumbprint.Kid)
 	if err != nil {
 		return err
 	}
 	if accountEntry == nil {
 		// We delete the Thumbprint Associated with the Account, and we are done
-		err = ac.sc.Storage.Delete(ac.sc.Context, path.Join(acmeThumbprintPrefix, keyThumbprint))
+		err = sc.Storage.Delete(sc.Context, path.Join(acmeThumbprintPrefix, keyThumbprint))
 		if err != nil {
 			return err
 		}
@@ -405,16 +411,17 @@ func (b *backend) tidyAcmeAccountByThumbprint(as *acmeState, ac *acmeContext, ke
 	if err != nil {
 		return err
 	}
+	account.KeyId = thumbprint.Kid
 
 	// Tidy Orders On the Account
-	orderIds, err := as.ListOrderIds(ac, thumbprint.Kid)
+	orderIds, err := as.ListOrderIds(sc, thumbprint.Kid)
 	if err != nil {
 		return err
 	}
 	allOrdersTidied := true
 	maxCertExpiryUpdated := false
 	for _, orderId := range orderIds {
-		wasTidied, orderExpiry, err := b.acmeTidyOrder(ac, thumbprint.Kid, getOrderPath(thumbprint.Kid, orderId), certTidyBuffer)
+		wasTidied, orderExpiry, err := b.acmeTidyOrder(sc, thumbprint.Kid, getOrderPath(thumbprint.Kid, orderId), certTidyBuffer)
 		if err != nil {
 			return err
 		}
@@ -436,13 +443,13 @@ func (b *backend) tidyAcmeAccountByThumbprint(as *acmeState, ac *acmeContext, ke
 		// If it is Revoked or Deactivated:
 		if (account.Status == AccountStatusRevoked || account.Status == AccountStatusDeactivated) && now.After(account.AccountRevokedDate.Add(accountTidyBuffer)) {
 			// We Delete the Account Associated with this Thumbprint:
-			err = ac.sc.Storage.Delete(ac.sc.Context, path.Join(acmeAccountPrefix, thumbprint.Kid))
+			err = sc.Storage.Delete(sc.Context, path.Join(acmeAccountPrefix, thumbprint.Kid))
 			if err != nil {
 				return err
 			}
 
 			// Now we delete the Thumbprint Associated with the Account:
-			err = ac.sc.Storage.Delete(ac.sc.Context, path.Join(acmeThumbprintPrefix, keyThumbprint))
+			err = sc.Storage.Delete(sc.Context, path.Join(acmeThumbprintPrefix, keyThumbprint))
 			if err != nil {
 				return err
 			}
@@ -451,7 +458,7 @@ func (b *backend) tidyAcmeAccountByThumbprint(as *acmeState, ac *acmeContext, ke
 			// Revoke This Account
 			account.AccountRevokedDate = now
 			account.Status = AccountStatusRevoked
-			err := as.UpdateAccount(ac, &account)
+			err := as.UpdateAccount(sc, &account)
 			if err != nil {
 				return err
 			}
@@ -464,7 +471,7 @@ func (b *backend) tidyAcmeAccountByThumbprint(as *acmeState, ac *acmeContext, ke
 	// already written above.
 	if maxCertExpiryUpdated && account.Status == AccountStatusValid {
 		// Update our expiry time we previously setup.
-		err := as.UpdateAccount(ac, &account)
+		err := as.UpdateAccount(sc, &account)
 		if err != nil {
 			return err
 		}

@@ -1,10 +1,10 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { verifyCertificates } from 'vault/utils/parse-pki-cert';
 import { hash } from 'rsvp';
 
@@ -19,15 +19,16 @@ export default class PkiIssuerDetailsRoute extends Route {
       pem: this.fetchCertByFormat(issuer.id, 'pem'),
       der: this.fetchCertByFormat(issuer.id, 'der'),
       isRotatable: this.isRoot(issuer),
+      backend: this.secretMountPath.currentPath,
     });
   }
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
     controller.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: this.secretMountPath.currentPath, route: 'overview' },
-      { label: 'issuers', route: 'issuers.index' },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
+      { label: this.secretMountPath.currentPath, route: 'overview', model: resolvedModel.backend },
+      { label: 'issuers', route: 'issuers.index', model: resolvedModel.backend },
       { label: resolvedModel.issuer.id },
     ];
   }

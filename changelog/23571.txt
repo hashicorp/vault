@@ -1,0 +1,4 @@
+```release-note:feature
+**Reload seal configuration on SIGHUP**: Seal configuration is reloaded on SIGHUP so that seal configuration can
+be changed without shutting down vault
+```

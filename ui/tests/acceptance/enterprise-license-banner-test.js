@@ -1,16 +1,16 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
 import sinon from 'sinon';
 import { visit } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
-import Pretender from 'pretender';
 import formatRFC3339 from 'date-fns/formatRFC3339';
 import { addDays, subDays } from 'date-fns';
 import timestamp from 'core/utils/timestamp';
+import { setupMirage } from 'ember-cli-mirage/test-support';
 
 const generateHealthResponse = (now, state) => {
   let expiry;
@@ -26,6 +26,7 @@ const generateHealthResponse = (now, state) => {
       break;
   }
   return {
+    enterprise: true,
     initialized: true,
     sealed: false,
     standby: false,
@@ -46,46 +47,24 @@ const generateHealthResponse = (now, state) => {
 
 module('Acceptance | Enterprise | License banner warnings', function (hooks) {
   setupApplicationTest(hooks);
+  setupMirage(hooks);
 
-  hooks.before(function () {
-    sinon.stub(timestamp, 'now').callsFake(() => new Date('2018-04-03T14:15:30'));
-  });
   hooks.beforeEach(function () {
+    sinon.replace(timestamp, 'now', sinon.fake.returns(new Date('2018-04-03T14:15:30')));
     this.now = timestamp.now();
-  });
-  hooks.afterEach(function () {
-    this.server.shutdown();
-  });
-  hooks.after(function () {
-    timestamp.now.restore();
   });
 
   test('it shows no license banner if license expires in > 30 days', async function (assert) {
     const healthResp = generateHealthResponse(this.now);
-    this.server = new Pretender(function () {
-      this.get('/v1/sys/health', (response) => {
-        return [response, { 'Content-Type': 'application/json' }, JSON.stringify(healthResp)];
-      });
-      this.get('/v1/sys/internal/ui/feature-flags', this.passthrough);
-      this.get('/v1/sys/internal/ui/mounts', this.passthrough);
-      this.get('/v1/sys/seal-status', this.passthrough);
-      this.get('/v1/sys/license/features', this.passthrough);
-    });
+    this.server.get('/sys/health', () => healthResp);
     await visit('/vault/auth');
-    assert.dom('[data-test-license-banner]').doesNotExist('license banner does not show');
+    assert.dom('[data-test-license-banner-expired]').doesNotExist('expired banner does not show');
+    assert.dom('[data-test-license-banner-warning]').doesNotExist('warning banner does not show');
     this.server.shutdown();
   });
   test('it shows license banner warning if license expires within 30 days', async function (assert) {
     const healthResp = generateHealthResponse(this.now, 'expiring');
-    this.server = new Pretender(function () {
-      this.get('/v1/sys/health', (response) => {
-        return [response, { 'Content-Type': 'application/json' }, JSON.stringify(healthResp)];
-      });
-      this.get('/v1/sys/internal/ui/feature-flags', this.passthrough);
-      this.get('/v1/sys/internal/ui/mounts', this.passthrough);
-      this.get('/v1/sys/seal-status', this.passthrough);
-      this.get('/v1/sys/license/features', this.passthrough);
-    });
+    this.server.get('/sys/health', () => healthResp);
     await visit('/vault/auth');
     assert.dom('[data-test-license-banner-warning]').exists('license warning shows');
     this.server.shutdown();
@@ -93,15 +72,7 @@ module('Acceptance | Enterprise | License banner warnings', function (hooks) {
 
   test('it shows license banner alert if license has already expired', async function (assert) {
     const healthResp = generateHealthResponse(this.now, 'expired');
-    this.server = new Pretender(function () {
-      this.get('/v1/sys/health', (response) => {
-        return [response, { 'Content-Type': 'application/json' }, JSON.stringify(healthResp)];
-      });
-      this.get('/v1/sys/internal/ui/feature-flags', this.passthrough);
-      this.get('/v1/sys/internal/ui/mounts', this.passthrough);
-      this.get('/v1/sys/seal-status', this.passthrough);
-      this.get('/v1/sys/license/features', this.passthrough);
-    });
+    this.server.get('/sys/health', () => healthResp);
     await visit('/vault/auth');
     assert.dom('[data-test-license-banner-expired]').exists('expired license message shows');
     this.server.shutdown();

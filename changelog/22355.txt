@@ -1,0 +1,3 @@
+```release-note:bug
+core: Fix bug where background thread to update locked user entries runs on DR secondaries. 
+```

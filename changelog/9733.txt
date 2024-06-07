@@ -1,0 +1,3 @@
+```release-note:improvement
+db/cassandra: Add `disable_host_initial_lookup` option to backend, allowing the disabling of initial host lookup.
+```

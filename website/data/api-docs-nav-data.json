@@ -216,18 +216,18 @@
         ]
       },
       {
-        "title": "Key/Value",
+        "title": "Key Value",
         "routes": [
           {
             "title": "Overview",
             "path": "secret/kv"
           },
           {
-            "title": "K/V Version 1",
+            "title": "KV version 1",
             "path": "secret/kv/kv-v1"
           },
           {
-            "title": "K/V Version 2",
+            "title": "KV version 2",
             "path": "secret/kv/kv-v2"
           }
         ]
@@ -356,6 +356,15 @@
         "path": "auth/radius"
       },
       {
+        "title": "SAML",
+        "path": "auth/saml",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        }
+      },
+      {
         "title": "TLS Certificates",
         "path": "auth/cert"
       },
@@ -366,15 +375,6 @@
       {
         "title": "Username & Password",
         "path": "auth/userpass"
-      },
-      {
-        "title": "App ID",
-        "badge": {
-          "text": "DEPRECATED",
-          "type": "outlined",
-          "color": "neutral"
-        },
-        "path": "auth/app-id"
       }
     ]
   },
@@ -439,12 +439,25 @@
         "path": "system/config-state"
       },
       {
-        "title": "<code>/sys/config/ui</code>",
-        "path": "system/config-ui"
+        "title": "<code>/sys/config/ui/custom-messages</code>",
+        "path": "system/config-ui-custom-messages",
+        "badge": {
+          "text": "ENT",
+          "type": "outlined",
+          "color": "neutral"
+        }
+      },
+      {
+        "title": "<code>/sys/config/ui/headers</code>",
+        "path": "system/config-ui-headers"
       },
       {
         "title": "<code>/sys/control-group</code>",
         "path": "system/control-group"
+      },
+      {
+        "title": "<code>/sys/decode-token</code>",
+        "path": "system/decode-token"
       },
       {
         "title": "<code>/sys/experiments</code>",
@@ -457,10 +470,6 @@
       {
         "title": "<code>/sys/generate-root</code>",
         "path": "system/generate-root"
-      },
-      {
-        "title": "<code>/sys/decode-token</code>",
-        "path": "system/decode-token"
       },
       {
         "title": "<code>/sys/health</code>",
@@ -500,6 +509,10 @@
         "path": "system/internal-specs-openapi"
       },
       {
+        "title": "<code>/sys/internal/ui/authenticated-messages</code>",
+        "path": "system/internal-ui-authenticated-messages"
+      },
+      {
         "title": "<code>/sys/internal/ui/feature-flags</code>",
         "path": "system/internal-ui-feature"
       },
@@ -514,6 +527,10 @@
       {
         "title": "<code>/sys/internal/ui/resultant-acl</code>",
         "path": "system/internal-ui-resultant-acl"
+      },
+      {
+        "title": "<code>/sys/internal/ui/unauthenticated-messages</code>",
+        "path": "system/internal-ui-unauthenticated-messages"
       },
       {
         "title": "<code>/sys/key-status</code>",
@@ -598,12 +615,20 @@
         "path": "system/namespaces"
       },
       {
-        "title": "<code>/sys/plugins/reload/backend</code>",
-        "path": "system/plugins-reload-backend"
-      },
-      {
         "title": "<code>/sys/plugins/catalog</code>",
         "path": "system/plugins-catalog"
+      },
+      {
+        "title": "<code>/sys/plugins/pins</code>",
+        "path": "system/plugins-pins"
+      },
+      {
+        "title": "<code>/sys/plugins/reload</code>",
+        "path": "system/plugins-reload"
+      },
+      {
+        "title": "<code>/sys/plugins/runtimes/catalog</code>",
+        "path": "system/plugins-runtimes-catalog"
       },
       {
         "title": "<code>/sys/policy</code>",
@@ -683,6 +708,10 @@
         "path": "system/seal-status"
       },
       {
+        "title": "<code>/sys/seal-backend-status</code>",
+        "path": "system/seal-backend-status"
+      },
+      {
         "title": "<code>/sys/sealwrap/rewrap</code>",
         "path": "system/sealwrap-rewrap"
       },
@@ -712,6 +741,15 @@
         ]
       },
       {
+        "title": "<code>/sys/sync</code>",
+        "path": "system/secrets-sync",
+        "badge": {
+          "text": "ENT",
+          "type": "outlined",
+          "color": "neutral"
+        }
+      },
+      {
         "title": "<code>/sys/tools</code>",
         "path": "system/tools"
       },
@@ -722,6 +760,10 @@
       {
         "title": "<code>/sys/version-history</code>",
         "path": "system/version-history"
+      },
+      {
+        "title": "<code>/sys/well-known</code>",
+        "path": "system/well-known"
       },
       {
         "title": "<code>/sys/wrapping/lookup</code>",

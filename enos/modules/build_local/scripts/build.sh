@@ -1,6 +1,6 @@
 #!/bin/bash
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 set -eux -o pipefail
 
@@ -11,5 +11,14 @@ export CGO_ENABLED=0
 
 root_dir="$(git rev-parse --show-toplevel)"
 pushd "$root_dir" > /dev/null
-make ci-build-ui ci-build ci-bundle
+
+if [ -n "$BUILD_UI" ] && [ "$BUILD_UI" = "true" ]; then
+  make ci-build-ui
+fi
+
+make ci-build
+
 popd > /dev/null
+
+echo "--> Bundling $BIN_PATH/* to $BUNDLE_PATH"
+zip -r -j "$BUNDLE_PATH" "$BIN_PATH/"

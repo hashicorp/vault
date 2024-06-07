@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package command
 
@@ -10,8 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mitchellh/cli"
-
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
 	credToken "github.com/hashicorp/vault/builtin/credential/token"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"

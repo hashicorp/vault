@@ -5,12 +5,12 @@ description: |-
   Vault Enterprise can upgrade itself automatically.
 ---
 
-# Automated Upgrades
+# Automated upgrades
 
-~> **Note**: Automated Upgrades requires [Vault Enterprise](https://www.hashicorp.com/products/vault/) to be
-configured to use Integrated Storage.
+@include 'alerts/enterprise-only.mdx'
 
-Vault Enterprise Automated Upgrades allows operators to upgrade the Vault version currently running in a cluster automatically.
+Operators running Vault Enterprise with integrated storage can use automated
+upgrades to upgrade the Vault version currently running in a cluster automatically.
  There are a few different ways to make this upgrade happen,
 and control which versions are being upgraded to. With no additional configuration,
 Vault will check the version of Vault that each node in the cluster is running. If a blue/green
@@ -40,7 +40,7 @@ Below is a flowchart depicting Autopilot's automated upgrade state machine.
 The status of the automated upgrade can be monitored by consulting the [Autopilot state API endpoint](/vault/api-docs/system/storage/raftautopilot#get-cluster-state).
 
 ## Examples
-### Using Vault's built-in version
+### Using vault's built-in version
 This is the easiest method to perform an automated upgrade; no configuration is needed, and automated upgrades
 are enabled by default.
 

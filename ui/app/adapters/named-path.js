@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 /**
@@ -16,9 +16,13 @@ export default class NamedPathAdapter extends ApplicationAdapter {
   _saveRecord(store, { modelName }, snapshot) {
     // since the response is empty return the serialized data rather than nothing
     const data = store.serializerFor(modelName).serialize(snapshot);
+    const primaryKey = store.serializerFor(modelName).primaryKey;
     return this.ajax(this.urlForUpdateRecord(snapshot.attr('name'), modelName, snapshot), this.saveMethod, {
       data,
-    }).then(() => data);
+    }).then(() => {
+      data[primaryKey] = snapshot.attr(primaryKey);
+      return data;
+    });
   }
 
   // create does not return response similar to PUT request

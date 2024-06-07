@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { Response } from 'miragejs';
@@ -56,7 +56,7 @@ export default function (server) {
   server.get('/:path/roles', (schema) => {
     return {
       data: {
-        keys: schema.db.kubernetesRoles.where({}).mapBy('name'),
+        keys: schema.db.kubernetesRoles.where({}).map((role) => role.name),
       },
     };
   });

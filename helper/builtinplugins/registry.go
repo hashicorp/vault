@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package builtinplugins
 
@@ -8,7 +8,6 @@ import (
 
 	credAliCloud "github.com/hashicorp/vault-plugin-auth-alicloud"
 	credAzure "github.com/hashicorp/vault-plugin-auth-azure"
-	credCentrify "github.com/hashicorp/vault-plugin-auth-centrify"
 	credCF "github.com/hashicorp/vault-plugin-auth-cf"
 	credGcp "github.com/hashicorp/vault-plugin-auth-gcp/plugin"
 	credJWT "github.com/hashicorp/vault-plugin-auth-jwt"
@@ -64,8 +63,6 @@ import (
 // Thus, rather than creating multiple instances of it, we only need one.
 var Registry = newRegistry()
 
-var addExternalPlugins = addExtPluginsImpl
-
 // BuiltinFactory is the func signature that should be returned by
 // the plugin's New() func.
 type BuiltinFactory func() (interface{}, error)
@@ -107,7 +104,6 @@ func newRegistry() *registry {
 			"approle":    {Factory: credAppRole.Factory},
 			"aws":        {Factory: credAws.Factory},
 			"azure":      {Factory: credAzure.Factory},
-			"centrify":   {Factory: credCentrify.Factory},
 			"cert":       {Factory: credCert.Factory},
 			"cf":         {Factory: credCF.Factory},
 			"gcp":        {Factory: credGcp.Factory},
@@ -196,7 +192,7 @@ func newRegistry() *registry {
 		},
 	}
 
-	addExternalPlugins(reg)
+	entAddExtPlugins(reg)
 
 	return reg
 }

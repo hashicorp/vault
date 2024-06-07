@@ -6,16 +6,18 @@ description: The `/sys/rotate/config` endpoint is used to configure automatic ke
 
 # `/sys/rotate/config`
 
+@include 'alerts/restricted-root.mdx'
+
 The `/sys/rotate` endpoint is used to configure automatic key rotation.
 
-## Configure Automatic Key Rotation
+## Configure automatic key rotation
 
 This endpoint configures the automatic rotation of the backend encryption key. By
 default, the key is rotated after just under 4 billion encryptions, to satisfy the
 recommendation of [NIST SP 800-38D](https://csrc.nist.gov/publications/detail/sp/800-38d/final).
 One can configure rotations after fewer encryptions or on a time based schedule.
 
-## Create or Update the Auto Rotation Configuration
+## Create or update the auto rotation configuration
 
 | Method | Path                 |
 | :----- | :------------------- |
@@ -32,7 +34,7 @@ One can configure rotations after fewer encryptions or on a time based schedule.
 - `enabled` `(bool: true)` - If set to false, automatic rotations will not
   be performed. Tracking of encryption counts will continue.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -41,7 +43,7 @@ One can configure rotations after fewer encryptions or on a time based schedule.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -51,13 +53,13 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/rotate/config
 ```
 
-## Get the Auto Rotation Configuration
+## Get the auto rotation configuration
 
 | Method | Path                 |
 | :----- | :------------------- |
 | `GET`  | `/sys/rotate/config` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -66,7 +68,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/rotate/config
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {

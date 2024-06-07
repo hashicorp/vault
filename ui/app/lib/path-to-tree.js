@@ -1,12 +1,11 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
-import flat from 'flat';
+import { unflatten } from 'flat';
 import deepmerge from 'deepmerge';
 
-const { unflatten } = flat;
 const DOT_REPLACEMENT = '☃';
 
 //function that takes a list of path and returns a deeply nested object

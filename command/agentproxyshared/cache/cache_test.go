@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package cache
 
@@ -33,7 +33,7 @@ func tokenRevocationValidation(t *testing.T, sampleSpace map[string]string, expe
 	t.Helper()
 	for val, valType := range sampleSpace {
 		index, err := leaseCache.db.Get(valType, val)
-		if err != nil {
+		if err != nil && err != cachememdb.ErrCacheItemNotFound {
 			t.Fatal(err)
 		}
 		if expected[val] == "" && index != nil {
@@ -81,7 +81,7 @@ func TestCache_AutoAuthTokenStripping(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
 
-	mux.Handle("/", ProxyHandler(ctx, cacheLogger, leaseCache, mock.NewSink("testid"), true))
+	mux.Handle("/", ProxyHandler(ctx, cacheLogger, leaseCache, mock.NewSink("testid"), false, true, nil, nil))
 	server := &http.Server{
 		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,
@@ -168,9 +168,8 @@ func TestCache_AutoAuthClientTokenProxyStripping(t *testing.T) {
 
 	// Create a muxer and add paths relevant for the lease cache layer
 	mux := http.NewServeMux()
-	// mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
 
-	mux.Handle("/", ProxyHandler(ctx, cacheLogger, leaseCache, mock.NewSink(realToken), false))
+	mux.Handle("/", ProxyHandler(ctx, cacheLogger, leaseCache, mock.NewSink(realToken), true, true, nil, nil))
 	server := &http.Server{
 		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,
@@ -202,9 +201,6 @@ func TestCache_AutoAuthClientTokenProxyStripping(t *testing.T) {
 
 func TestCache_ConcurrentRequests(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
-		DisableMlock: true,
-		DisableCache: true,
-		Logger:       hclog.NewNullLogger(),
 		LogicalBackends: map[string]logical.Factory{
 			"kv": vault.LeasedPassthroughBackendFactory,
 		},
@@ -247,9 +243,6 @@ func TestCache_ConcurrentRequests(t *testing.T) {
 
 func TestCache_TokenRevocations_RevokeOrphan(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
-		DisableMlock: true,
-		DisableCache: true,
-		Logger:       hclog.NewNullLogger(),
 		LogicalBackends: map[string]logical.Factory{
 			"kv": vault.LeasedPassthroughBackendFactory,
 		},
@@ -348,9 +341,6 @@ func TestCache_TokenRevocations_RevokeOrphan(t *testing.T) {
 
 func TestCache_TokenRevocations_LeafLevelToken(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
-		DisableMlock: true,
-		DisableCache: true,
-		Logger:       hclog.NewNullLogger(),
 		LogicalBackends: map[string]logical.Factory{
 			"kv": vault.LeasedPassthroughBackendFactory,
 		},
@@ -448,9 +438,6 @@ func TestCache_TokenRevocations_LeafLevelToken(t *testing.T) {
 
 func TestCache_TokenRevocations_IntermediateLevelToken(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
-		DisableMlock: true,
-		DisableCache: true,
-		Logger:       hclog.NewNullLogger(),
 		LogicalBackends: map[string]logical.Factory{
 			"kv": vault.LeasedPassthroughBackendFactory,
 		},
@@ -546,9 +533,6 @@ func TestCache_TokenRevocations_IntermediateLevelToken(t *testing.T) {
 
 func TestCache_TokenRevocations_TopLevelToken(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
-		DisableMlock: true,
-		DisableCache: true,
-		Logger:       hclog.NewNullLogger(),
 		LogicalBackends: map[string]logical.Factory{
 			"kv": vault.LeasedPassthroughBackendFactory,
 		},
@@ -641,9 +625,6 @@ func TestCache_TokenRevocations_TopLevelToken(t *testing.T) {
 
 func TestCache_TokenRevocations_Shutdown(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
-		DisableMlock: true,
-		DisableCache: true,
-		Logger:       hclog.NewNullLogger(),
 		LogicalBackends: map[string]logical.Factory{
 			"kv": vault.LeasedPassthroughBackendFactory,
 		},
@@ -731,9 +712,6 @@ func TestCache_TokenRevocations_Shutdown(t *testing.T) {
 
 func TestCache_TokenRevocations_BaseContextCancellation(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
-		DisableMlock: true,
-		DisableCache: true,
-		Logger:       hclog.NewNullLogger(),
 		LogicalBackends: map[string]logical.Factory{
 			"kv": vault.LeasedPassthroughBackendFactory,
 		},
@@ -822,9 +800,6 @@ func TestCache_TokenRevocations_BaseContextCancellation(t *testing.T) {
 
 func TestCache_NonCacheable(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
-		DisableMlock: true,
-		DisableCache: true,
-		Logger:       hclog.NewNullLogger(),
 		LogicalBackends: map[string]logical.Factory{
 			"kv": kv.Factory,
 		},
@@ -930,9 +905,6 @@ func TestCache_Caching_AuthResponse(t *testing.T) {
 
 func TestCache_Caching_LeaseResponse(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
-		DisableMlock: true,
-		DisableCache: true,
-		Logger:       hclog.NewNullLogger(),
 		LogicalBackends: map[string]logical.Factory{
 			"kv": vault.LeasedPassthroughBackendFactory,
 		},
@@ -1032,9 +1004,6 @@ func TestCache_Caching_CacheClear(t *testing.T) {
 
 func testCachingCacheClearCommon(t *testing.T, clearType string) {
 	coreConfig := &vault.CoreConfig{
-		DisableMlock: true,
-		DisableCache: true,
-		Logger:       hclog.NewNullLogger(),
 		LogicalBackends: map[string]logical.Factory{
 			"kv": vault.LeasedPassthroughBackendFactory,
 		},
@@ -1128,12 +1097,8 @@ func testCachingCacheClearCommon(t *testing.T, clearType string) {
 
 	// Verify the entry is cleared
 	idx, err = leaseCache.db.Get(cachememdb.IndexNameLease, gotLeaseID)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if idx != nil {
-		t.Fatalf("expected entry to be nil, got: %v", idx)
+	if err != cachememdb.ErrCacheItemNotFound {
+		t.Fatal("expected entry to be nil, got", err)
 	}
 }
 

@@ -1,0 +1,35 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
+---
+name: Install external tools for CI
+description: Install external tools CI
+
+# When possible, prefer installing pre-built external tools for speed. This allows us to avoid
+# downloading modules and compiling external tools on CI runners.
+
+runs:
+  using: composite
+  steps:
+    - uses: ./.github/actions/set-up-buf
+      with:
+        version: v1.25.0 # This should match the version in tools/tool.sh
+    - uses: ./.github/actions/set-up-gofumpt
+    - uses: ./.github/actions/set-up-gosimports
+    - uses: ./.github/actions/set-up-gotestsum
+    - uses: ./.github/actions/set-up-misspell
+    - uses: ./.github/actions/set-up-staticcheck
+      # We assume that the Go toolchain will be managed by the caller workflow so we don't set one
+      # up here.
+    - run: go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+      shell: bash
+    - run: go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+      shell: bash
+    - run: go install github.com/favadi/protoc-go-inject-tag@latest
+      shell: bash
+    - run: go install golang.org/x/tools/cmd/goimports@latest
+      shell: bash
+    - run: go install github.com/golangci/revgrep/cmd/revgrep@latest
+      shell: bash
+    - run: go install github.com/loggerhead/enumer@latest
+      shell: bash

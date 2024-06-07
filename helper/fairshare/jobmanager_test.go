@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package fairshare
 
@@ -746,4 +746,24 @@ func TestFairshare_queueWorkersSaturated(t *testing.T) {
 		}
 		j.l.RUnlock()
 	}
+}
+
+func TestJobManager_GetWorkerCounts_RaceCondition(t *testing.T) {
+	j := NewJobManager("test-job-mgr", 20, nil, nil)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for i := 0; i < 10; i++ {
+			j.incrementWorkerCount("a")
+		}
+	}()
+	wcs := j.GetWorkerCounts()
+	wcs["foo"] = 10
+	for worker, count := range wcs {
+		_ = worker
+		_ = count
+	}
+
+	wg.Wait()
 }

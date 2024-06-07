@@ -1,12 +1,11 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package misc
 
 import (
 	"testing"
 
-	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -16,13 +15,11 @@ import (
 // Tests the regression in
 // https://github.com/hashicorp/vault/pull/6920
 func TestRecoverFromPanic(t *testing.T) {
-	logger := hclog.New(nil)
 	coreConfig := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"noop": vault.NoopBackendFactory,
 		},
 		EnableRaw: true,
-		Logger:    logger,
 	}
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,

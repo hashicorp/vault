@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package aws
 
@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -82,12 +83,12 @@ func (b *backend) pathLeaseWrite(ctx context.Context, req *logical.Request, d *f
 		return logical.ErrorResponse("'lease_max' is a required parameter"), nil
 	}
 
-	lease, err := time.ParseDuration(leaseRaw)
+	lease, err := parseutil.ParseDurationSecond(leaseRaw)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(
 			"Invalid lease: %s", err)), nil
 	}
-	leaseMax, err := time.ParseDuration(leaseMaxRaw)
+	leaseMax, err := parseutil.ParseDurationSecond(leaseMaxRaw)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(
 			"Invalid lease_max: %s", err)), nil

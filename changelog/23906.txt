@@ -1,0 +1,3 @@
+```release-note:bug
+core: fix rare panic due to a race condition with metrics collection during seal
+```

@@ -1,22 +1,19 @@
-<nav class="key-value-header breadcrumb" aria-label="breadcrumbs">
-  <ul>
-    {{yield}}
-    {{#each this.secretPath as |path index|}}
-      <li class={{if (is-active-route path.path path.model isExact=true) "is-active"}}>
-        <span class="sep">&#x0002f;</span>
-        {{#if (and this.linkToPaths (not @isEngine))}}
-          <LinkTo
-            @route={{path.path}}
-            @model={{path.model}}
-            data-test-secret-root-link={{if (eq index 0) true false}}
-            data-test-secret-breadcrumb={{path.text}}
-          >
-            {{path.text}}
-          </LinkTo>
-        {{else}}
-          <span>{{path.text}}</span>
-        {{/if}}
-      </li>
-    {{/each}}
-  </ul>
-</nav>
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<Hds::Breadcrumb>
+  {{#each this.secretPath as |path|}}
+    {{#if this.linkToPaths}}
+      <Hds::Breadcrumb::Item
+        @text={{path.text}}
+        @route={{path.path}}
+        @model={{path.model}}
+        data-test-secret-breadcrumb={{path.text}}
+      />
+    {{else}}
+      <Hds::Breadcrumb::Item @text={{path.text}} @current={{true}} />
+    {{/if}}
+  {{/each}}
+</Hds::Breadcrumb>

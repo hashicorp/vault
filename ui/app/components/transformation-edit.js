@@ -1,10 +1,10 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import TransformBase, { addToList, removeFromList } from './transform-edit-base';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 
 export default TransformBase.extend({
   flashMessages: service(),

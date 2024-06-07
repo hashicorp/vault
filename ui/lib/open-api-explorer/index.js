@@ -1,11 +1,11 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 /* eslint-env node */
 /* eslint-disable ember/avoid-leaking-state-in-ember-objects */
-/* eslint-disable node/no-extraneous-require */
+/* eslint-disable n/no-extraneous-require */
 'use strict';
 
 const EngineAddon = require('ember-engines/lib/engine-addon');
@@ -13,9 +13,6 @@ const EngineAddon = require('ember-engines/lib/engine-addon');
 module.exports = EngineAddon.extend({
   name: 'open-api-explorer',
 
-  babel: {
-    plugins: [require.resolve('ember-auto-import/babel-plugin')],
-  },
   included() {
     this._super.included && this._super.included.apply(this, arguments);
     // we want to lazy load the CSS deps, importing them here will result in them being added to the

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package aws
 
@@ -12,7 +12,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
 )
@@ -32,7 +31,7 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 	return b, nil
 }
 
-func Backend(conf *logical.BackendConfig) *backend {
+func Backend(_ *logical.BackendConfig) *backend {
 	var b backend
 	b.credRotationQueue = queue.New()
 	b.Backend = &framework.Backend{
@@ -67,11 +66,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 		WALRollback:       b.walRollback,
 		WALRollbackMinAge: minAwsUserRollbackAge,
 		PeriodicFunc: func(ctx context.Context, req *logical.Request) error {
-			repState := conf.System.ReplicationState()
-			if (conf.System.LocalMount() ||
-				!repState.HasState(consts.ReplicationPerformanceSecondary)) &&
-				!repState.HasState(consts.ReplicationDRSecondary) &&
-				!repState.HasState(consts.ReplicationPerformanceStandby) {
+			if b.WriteSafeReplicationState() {
 				return b.rotateExpiredStaticCreds(ctx, req)
 			}
 			return nil
@@ -146,7 +141,7 @@ func (b *backend) clientIAM(ctx context.Context, s logical.Storage) (iamiface.IA
 		return b.iamClient, nil
 	}
 
-	iamClient, err := nonCachedClientIAM(ctx, s, b.Logger())
+	iamClient, err := b.nonCachedClientIAM(ctx, s, b.Logger())
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +168,7 @@ func (b *backend) clientSTS(ctx context.Context, s logical.Storage) (stsiface.ST
 		return b.stsClient, nil
 	}
 
-	stsClient, err := nonCachedClientSTS(ctx, s, b.Logger())
+	stsClient, err := b.nonCachedClientSTS(ctx, s, b.Logger())
 	if err != nil {
 		return nil, err
 	}

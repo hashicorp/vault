@@ -1,26 +1,27 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { set } from '@ember/object';
 import { hash } from 'rsvp';
+import { set } from '@ember/object';
 import Route from '@ember/routing/route';
+import { service } from '@ember/service';
+import { keyIsFolder, parentKeyForKey } from 'core/utils/key-utils';
 import UnloadModelRoute from 'vault/mixins/unload-model-route';
-import utils from 'vault/lib/key-utils';
-import { inject as service } from '@ember/service';
 
 export default Route.extend(UnloadModelRoute, {
   store: service(),
+  router: service(),
 
   beforeModel() {
     const { lease_id: leaseId } = this.paramsFor(this.routeName);
-    const parentKey = utils.parentKeyForKey(leaseId);
-    if (utils.keyIsFolder(leaseId)) {
+    const parentKey = parentKeyForKey(leaseId);
+    if (keyIsFolder(leaseId)) {
       if (parentKey) {
-        return this.transitionTo('vault.cluster.access.leases.list', parentKey);
+        return this.router.transitionTo('vault.cluster.access.leases.list', parentKey);
       } else {
-        return this.transitionTo('vault.cluster.access.leases.list-root');
+        return this.router.transitionTo('vault.cluster.access.leases.list-root');
       }
     }
   },

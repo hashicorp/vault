@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -15,6 +15,7 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/go-jose/go-jose/v3"
 	"github.com/go-jose/go-jose/v3/jwt"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -218,7 +219,7 @@ DONELISTHANDLING:
 			priClaims.Accessor = resp.Auth.Accessor
 		}
 		sig, err := jose.NewSigner(
-			jose.SigningKey{Algorithm: jose.ES512, Key: c.wrappingJWTKey},
+			jose.SigningKey{Algorithm: jose.SignatureAlgorithm(api.CubbyHoleJWTSignatureAlgorithm), Key: c.wrappingJWTKey},
 			(&jose.SignerOptions{}).WithType("JWT"))
 		if err != nil {
 			c.tokenStore.revokeOrphan(ctx, te.ID)
@@ -327,8 +328,9 @@ DONELISTHANDLING:
 		},
 	}
 
-	// Register the wrapped token with the expiration manager
-	if err := c.expiration.RegisterAuth(ctx, &te, wAuth, c.DetermineRoleFromLoginRequest(req.MountPoint, req.Data, ctx)); err != nil {
+	// Register the wrapped token with the expiration manager. We skip the role
+	// lookup here as we are not logging in, and only logins apply to role based quotas.
+	if err := c.expiration.RegisterAuth(ctx, &te, wAuth, ""); err != nil {
 		// Revoke since it's not yet being tracked for expiration
 		c.tokenStore.revokeOrphan(ctx, te.ID)
 		c.logger.Error("failed to register cubbyhole wrapping token lease", "request_path", req.Path, "error", err)
@@ -375,7 +377,7 @@ func (c *Core) validateWrappingToken(ctx context.Context, req *logical.Request) 
 			if !valid {
 				logInput.OuterErr = consts.ErrInvalidWrappingToken
 			}
-			if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
+			if err := c.auditBroker.LogRequest(ctx, logInput); err != nil {
 				c.logger.Error("failed to audit request", "path", req.Path, "error", err)
 			}
 		}

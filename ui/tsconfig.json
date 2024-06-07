@@ -12,6 +12,7 @@
     "noPropertyAccessFromIndexSignature": true,
     "noEmitOnError": true,
     "skipLibCheck": true,
+    "target": "es2021",
     // The combination of `baseUrl` with `paths` allows Ember's classic package
     // layout, which is not resolvable with the Node resolution algorithm, to
     // work with TypeScript.
@@ -43,6 +44,12 @@
       "kmip/*": ["lib/kmip/addon/*"],
       "kmip/test-support": ["lib/kmip/addon-test-support"],
       "kmip/test-support/*": ["lib/kmip/addon-test-support/*"],
+      "ldap": ["lib/ldap/addon"],
+      "ldap/*": ["lib/ldap/addon/*"],
+      "kv": ["lib/kv/addon"],
+      "kv/*": ["lib/kv/addon/*"],
+      "kv/test-support": ["lib/kv/addon-test-support"],
+      "kv/test-support/*": ["lib/kv/addon-test-support/*"],
       "open-api-explorer": ["lib/open-api-explorer/addon"],
       "open-api-explorer/*": ["lib/open-api-explorer/addon/*"],
       "open-api-explorer/test-support": ["lib/open-api-explorer/addon-test-support"],
@@ -63,6 +70,8 @@
       "service-worker-authenticated-download/test-support/*": [
         "lib/service-worker-authenticated-download/addon-test-support/*"
       ],
+      "sync": ["lib/sync/addon"],
+      "sync/*": ["lib/sync/addon/*"],
       "*": ["types/*"]
     }
   },
@@ -73,10 +82,12 @@
     "lib/core/**/*",
     "lib/css/**/*",
     "lib/kmip/**/*",
+    "lib/ldap/**/*",
     "lib/open-api-explorer/**/*",
     "lib/pki/**/*",
     "lib/replication/**/*",
     "lib/service-worker-authenticated-download/**/*",
+    "lib/sync/**/*",
     "mirage/**/*"
   ],
   "exclude": ["node_modules"]

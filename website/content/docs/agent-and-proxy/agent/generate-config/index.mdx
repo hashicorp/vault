@@ -47,14 +47,23 @@ Generate an agent configuration file which will reference `secret/foo`:
 
 ```shell-session
 $ vault agent generate-config \
-                -type="env-template" \
-                -exec="./my-app arg1 arg2" \
-                -path="secret/foo" \
-                    my-config.hcl
+         -type="env-template" \
+         -exec="./my-app arg1 arg2" \
+         -namespace="my/ns/" \
+         -path="secret/foo" \
+         my-config.hcl
+```
 
+**Expected output:**
+
+<CodeBlockConfig hideClipboard>
+
+```plaintext
 Successfully generated "my-config.hcl" configuration file!
 Warning: the generated file uses 'token_file' authentication method, which is not suitable for production environments.
 ```
+
+</CodeBlockConfig>
 
 This will produce `my-config.hcl` file in the current directory with contents
 similar to the following:
@@ -74,6 +83,7 @@ auto_auth {
 template_config {
   static_secret_render_interval = "5m"
   exit_on_retry_failure         = true
+  max_connections_per_host      = 10
 }
 
 vault {
@@ -110,3 +120,10 @@ flags](/vault/docs/commands) included in all commands.
 
 - `-exec` `(string: "env")` - The command to execute in agent process
   supervisor mode.
+
+
+## Tutorial
+
+Refer to the [Vault Agent - secrets as environment
+variables](/vault/tutorials/vault-agent/agent-env-vars) tutorial for an
+end-to-end example.

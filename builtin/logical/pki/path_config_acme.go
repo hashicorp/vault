@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pki
 
 import (
@@ -5,9 +8,12 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -18,25 +24,38 @@ const (
 	pathConfigAcmeHelpSyn  = "Configuration of ACME Endpoints"
 	pathConfigAcmeHelpDesc = "Here we configure:\n\nenabled=false, whether ACME is enabled, defaults to false meaning that clusters will by default not get ACME support,\nallowed_issuers=\"default\", which issuers are allowed for use with ACME; by default, this will only be the primary (default) issuer,\nallowed_roles=\"*\", which roles are allowed for use with ACME; by default these will be all roles matching our selection criteria,\ndefault_directory_policy=\"\", either \"forbid\", preventing the default directory from being used at all, \"role:<role_name>\" which is the role to be used for non-role-qualified ACME requests; or \"sign-verbatim\", the default meaning ACME issuance will be equivalent to sign-verbatim.,\ndns_resolver=\"\", which specifies a custom DNS resolver to use for all ACME-related DNS lookups"
 	disableAcmeEnvVar      = "VAULT_DISABLE_PUBLIC_ACME"
+	defaultAcmeMaxTTL      = 90 * (24 * time.Hour)
 )
 
 type acmeConfigEntry struct {
 	Enabled                bool          `json:"enabled"`
 	AllowedIssuers         []string      `json:"allowed_issuers="`
 	AllowedRoles           []string      `json:"allowed_roles"`
+	AllowRoleExtKeyUsage   bool          `json:"allow_role_ext_key_usage"`
 	DefaultDirectoryPolicy string        `json:"default_directory_policy"`
 	DNSResolver            string        `json:"dns_resolver"`
 	EabPolicyName          EabPolicyName `json:"eab_policy_name"`
+	MaxTTL                 time.Duration `json:"max_ttl"`
 }
 
 var defaultAcmeConfig = acmeConfigEntry{
 	Enabled:                false,
 	AllowedIssuers:         []string{"*"},
 	AllowedRoles:           []string{"*"},
+	AllowRoleExtKeyUsage:   false,
 	DefaultDirectoryPolicy: "sign-verbatim",
 	DNSResolver:            "",
 	EabPolicyName:          eabPolicyNotRequired,
+	MaxTTL:                 defaultAcmeMaxTTL,
 }
+
+var (
+	extPolicyPrefix       = "external-policy"
+	extPolicyPrefixLength = len(extPolicyPrefix)
+	extPolicyRegex        = regexp.MustCompile(framework.GenericNameRegex("policy"))
+	rolePrefix            = "role:"
+	rolePrefixLength      = len(rolePrefix)
+)
 
 func (sc *storageContext) getAcmeConfig() (*acmeConfigEntry, error) {
 	entry, err := sc.Storage.Get(sc.Context, storageAcmeConfig)
@@ -54,6 +73,11 @@ func (sc *storageContext) getAcmeConfig() (*acmeConfigEntry, error) {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to decode ACME configuration: %v", err)}
 	}
 
+	// Update previous stored configurations to use the default max ttl we used to enforce
+	if mapping.MaxTTL == 0 {
+		mapping.MaxTTL = defaultAcmeMaxTTL
+	}
+
 	return &mapping, nil
 }
 
@@ -67,7 +91,6 @@ func (sc *storageContext) setAcmeConfig(entry *acmeConfigEntry) error {
 		return fmt.Errorf("failed writing storage entry: %w", err)
 	}
 
-	sc.Backend.acmeState.markConfigDirty()
 	return nil
 }
 
@@ -95,6 +118,11 @@ func pathAcmeConfig(b *backend) *framework.Path {
 				Description: `which roles are allowed for use with ACME; by default via '*', these will be all roles including sign-verbatim; when concrete role names are specified, any default_directory_policy role must be included to allow usage of the default acme directories under /pki/acme/directory and /pki/issuer/:issuer_id/acme/directory.`,
 				Default:     []string{"*"},
 			},
+			"allow_role_ext_key_usage": {
+				Type:        framework.TypeBool,
+				Description: `whether the ExtKeyUsage field from a role is used, defaults to false meaning that certificate will be signed with ServerAuth.`,
+				Default:     false,
+			},
 			"default_directory_policy": {
 				Type:        framework.TypeString,
 				Description: `the policy to be used for non-role-qualified ACME requests; by default ACME issuance will be otherwise unrestricted, equivalent to the sign-verbatim endpoint; one may also specify a role to use as this policy, as "role:<role_name>", the specified role must be allowed by allowed_roles`,
@@ -109,6 +137,11 @@ func pathAcmeConfig(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: `Specify the policy to use for external account binding behaviour, 'not-required', 'new-account-required' or 'always-required'`,
 				Default:     "always-required",
+			},
+			"max_ttl": {
+				Type:        framework.TypeDurationSecond,
+				Description: `Specify the maximum TTL for ACME certificates. Role TTL values will be limited to this value`,
+				Default:     defaultAcmeMaxTTL.Seconds(),
 			},
 		},
 
@@ -138,7 +171,7 @@ func pathAcmeConfig(b *backend) *framework.Path {
 
 func (b *backend) pathAcmeRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	sc := b.makeStorageContext(ctx, req.Storage)
-	config, err := sc.getAcmeConfig()
+	config, err := b.GetAcmeState().getConfigWithForcedUpdate(sc)
 	if err != nil {
 		return nil, err
 	}
@@ -158,11 +191,13 @@ func genResponseFromAcmeConfig(config *acmeConfigEntry, warnings []string) *logi
 	response := &logical.Response{
 		Data: map[string]interface{}{
 			"allowed_roles":            config.AllowedRoles,
+			"allow_role_ext_key_usage": config.AllowRoleExtKeyUsage,
 			"allowed_issuers":          config.AllowedIssuers,
 			"default_directory_policy": config.DefaultDirectoryPolicy,
 			"enabled":                  config.Enabled,
 			"dns_resolver":             config.DNSResolver,
 			"eab_policy":               config.EabPolicyName,
+			"max_ttl":                  config.MaxTTL.Seconds(),
 		},
 		Warnings: warnings,
 	}
@@ -175,7 +210,7 @@ func genResponseFromAcmeConfig(config *acmeConfigEntry, warnings []string) *logi
 func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	sc := b.makeStorageContext(ctx, req.Storage)
 
-	config, err := sc.getAcmeConfig()
+	config, err := b.GetAcmeState().getConfigWithForcedUpdate(sc)
 	if err != nil {
 		return nil, err
 	}
@@ -189,6 +224,10 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 		if len(config.AllowedRoles) == 0 {
 			return nil, fmt.Errorf("allowed_roles must take a non-zero length value; specify '*' as the value to allow anything or specify enabled=false to disable ACME entirely")
 		}
+	}
+
+	if allowRoleExtKeyUsageRaw, ok := d.GetOk("allow_role_ext_key_usage"); ok {
+		config.AllowRoleExtKeyUsage = allowRoleExtKeyUsageRaw.(bool)
 	}
 
 	if defaultDirectoryPolicyRaw, ok := d.GetOk("default_directory_policy"); ok {
@@ -227,8 +266,16 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 		config.EabPolicyName = eabPolicy.Name
 	}
 
+	if maxTTLRaw, ok := d.GetOk("max_ttl"); ok {
+		maxTTL := time.Second * time.Duration(maxTTLRaw.(int))
+		if maxTTL <= 0 {
+			return nil, fmt.Errorf("invalid max_ttl value, must be greater than 0")
+		}
+		config.MaxTTL = maxTTL
+	}
+
 	// Validate Default Directory Behavior:
-	defaultDirectoryPolicyType, err := getDefaultDirectoryPolicyType(config.DefaultDirectoryPolicy)
+	defaultDirectoryPolicyType, extraInfo, err := getDefaultDirectoryPolicyType(config.DefaultDirectoryPolicy)
 	if err != nil {
 		return nil, fmt.Errorf("invalid default_directory_policy: %w", err)
 	}
@@ -236,11 +283,12 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 	switch defaultDirectoryPolicyType {
 	case Forbid:
 	case SignVerbatim:
-	case Role:
-		defaultDirectoryRoleName, err = getDefaultDirectoryPolicyRole(config.DefaultDirectoryPolicy)
-		if err != nil {
-			return nil, fmt.Errorf("failed extracting role name from default directory policy %w", err)
+	case ExternalPolicy:
+		if !constants.IsEnterprise {
+			return nil, fmt.Errorf("external-policy is only available in enterprise versions of Vault")
 		}
+	case Role:
+		defaultDirectoryRoleName = extraInfo
 
 		_, err := getAndValidateAcmeRole(sc, defaultDirectoryRoleName)
 		if err != nil {
@@ -312,9 +360,8 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 		}
 	}
 
-	err = sc.setAcmeConfig(config)
-	if err != nil {
-		return nil, err
+	if _, err := b.GetAcmeState().writeConfig(sc, config); err != nil {
+		return nil, fmt.Errorf("failed persisting: %w", err)
 	}
 
 	return genResponseFromAcmeConfig(config, warnings), nil
@@ -336,37 +383,46 @@ func isPublicACMEDisabledByEnv() (bool, error) {
 	return disableAcme, nil
 }
 
-func getDefaultDirectoryPolicyType(defaultDirectoryPolicy string) (DefaultDirectoryPolicyType, error) {
+func getDefaultDirectoryPolicyType(defaultDirectoryPolicy string) (DefaultDirectoryPolicyType, string, error) {
 	switch {
 	case defaultDirectoryPolicy == "forbid":
-		return Forbid, nil
+		return Forbid, "", nil
 	case defaultDirectoryPolicy == "sign-verbatim":
-		return SignVerbatim, nil
-	case strings.HasPrefix(defaultDirectoryPolicy, "role:"):
-		if len(defaultDirectoryPolicy) == 5 {
-			return Forbid, fmt.Errorf("no role specified by policy %v", defaultDirectoryPolicy)
+		return SignVerbatim, "", nil
+	case strings.HasPrefix(defaultDirectoryPolicy, rolePrefix):
+		if len(defaultDirectoryPolicy) == rolePrefixLength {
+			return Forbid, "", fmt.Errorf("no role specified by policy %v", defaultDirectoryPolicy)
 		}
-		return Role, nil
+		roleName := defaultDirectoryPolicy[rolePrefixLength:]
+		return Role, roleName, nil
+	case strings.HasPrefix(defaultDirectoryPolicy, extPolicyPrefix):
+		if len(defaultDirectoryPolicy) == extPolicyPrefixLength {
+			// default external-policy case without a specified policy
+			return ExternalPolicy, "", nil
+		}
+
+		if strings.HasPrefix(defaultDirectoryPolicy, extPolicyPrefix+":") &&
+			len(defaultDirectoryPolicy) == extPolicyPrefixLength+1 {
+			// end user set 'external-policy:', so no policy which is acceptable
+			return ExternalPolicy, "", nil
+		}
+
+		policyName := defaultDirectoryPolicy[extPolicyPrefixLength+1:]
+		if ok := extPolicyRegex.MatchString(policyName); !ok {
+			return Forbid, "", fmt.Errorf("invalid characters within external-policy name: %s", defaultDirectoryPolicy)
+		}
+		return ExternalPolicy, policyName, nil
 	default:
-		return Forbid, fmt.Errorf("string %v not a valid Default Directory Policy", defaultDirectoryPolicy)
+		return Forbid, "", fmt.Errorf("string %v not a valid Default Directory Policy", defaultDirectoryPolicy)
 	}
 }
 
-func getDefaultDirectoryPolicyRole(defaultDirectoryPolicy string) (string, error) {
-	policyType, err := getDefaultDirectoryPolicyType(defaultDirectoryPolicy)
-	if err != nil {
-		return "", err
-	}
-	if policyType != Role {
-		return "", fmt.Errorf("default directory policy %v is not a role-based-policy", defaultDirectoryPolicy)
-	}
-	return defaultDirectoryPolicy[5:], nil
-}
-
+//go:generate enumer -type=DefaultDirectoryPolicyType
 type DefaultDirectoryPolicyType int
 
 const (
 	Forbid DefaultDirectoryPolicyType = iota
 	SignVerbatim
 	Role
+	ExternalPolicy
 )

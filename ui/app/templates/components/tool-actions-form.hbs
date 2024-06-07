@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <form onsubmit={{action "doSubmit"}}>
   {{#if (eq this.selectedAction "hash")}}
     {{! template-lint-disable no-passed-in-event-handlers }}
@@ -31,7 +36,6 @@
     <ToolUnwrap
       @onClear={{action "onClear"}}
       @unwrap_data={{this.unwrap_data}}
-      @unwrapActiveTab={{this.unwrapActiveTab}}
       @details={{this.details}}
       @errors={{this.errors}}
       @token={{this.token}}
@@ -50,12 +54,11 @@
   {{else if (eq this.selectedAction "wrap")}}
     <ToolWrap
       @token={{this.token}}
-      @selectedAction={{this.selectedAction}}
+      @onBack={{action "onBack" (array "token")}}
       @onClear={{action "onClear"}}
-      @codemirrorUpdated={{action "codemirrorUpdated"}}
-      @updateTtl={{action "updateTtl"}}
-      @buttonDisabled={{this.buttonDisabled}}
+      @onChange={{action "onChange"}}
       @errors={{this.errors}}
+      @data={{this.data}}
     />
   {{else}}
     <EmptyState @title="Tool not available" />

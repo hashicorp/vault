@@ -1,12 +1,11 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import AdapterError from '@ember-data/adapter/error';
 import RESTAdapter from '@ember-data/adapter/rest';
-import { inject as service } from '@ember/service';
-import { assign } from '@ember/polyfills';
+import { service } from '@ember/service';
 import { set } from '@ember/object';
 import RSVP from 'rsvp';
 import config from '../config/environment';
@@ -36,7 +35,7 @@ export default RESTAdapter.extend({
     return false;
   },
 
-  addHeaders(url, options) {
+  addHeaders(url, options, method) {
     const token = options.clientToken || this.auth.currentToken;
     const headers = {};
     if (token && !options.unauthenticated) {
@@ -45,16 +44,19 @@ export default RESTAdapter.extend({
     if (options.wrapTTL) {
       headers['X-Vault-Wrap-TTL'] = options.wrapTTL;
     }
+    if (method === 'PATCH') {
+      headers['Content-Type'] = 'application/merge-patch+json';
+    }
     const namespace =
       typeof options.namespace === 'undefined' ? this.namespaceService.path : options.namespace;
     if (namespace && !NAMESPACE_ROOT_URLS.some((str) => url.includes(str))) {
       headers['X-Vault-Namespace'] = namespace;
     }
-    options.headers = assign(options.headers || {}, headers);
+    options.headers = Object.assign(options.headers || {}, headers);
   },
 
-  _preRequest(url, options) {
-    this.addHeaders(url, options);
+  _preRequest(url, options, method) {
+    this.addHeaders(url, options, method);
     const isPolling = POLLING_URLS.some((str) => url.includes(str));
     if (!isPolling) {
       this.auth.setLastFetch(Date.now());
@@ -83,7 +85,7 @@ export default RESTAdapter.extend({
         },
       };
     }
-    const opts = this._preRequest(url, options);
+    const opts = this._preRequest(url, options, method);
 
     return this._super(url, type, opts).then((...args) => {
       if (controlGroupToken) {
@@ -119,10 +121,18 @@ export default RESTAdapter.extend({
 
   handleResponse(status, headers, payload, requestData) {
     const returnVal = this._super(...arguments);
-    // ember data errors don't have the status code, so we add it here
     if (returnVal instanceof AdapterError) {
+      // ember data errors don't have the status code, so we add it here
       set(returnVal, 'httpStatus', status);
       set(returnVal, 'path', requestData.url);
+      // Most of the time when the Vault API returns an error, the payload looks like:
+      // { errors: ['some error message']}
+      // But sometimes (eg RespondWithStatusCode) it looks like this:
+      // { data: { error: 'some error message' } }
+      if (payload?.data?.error && !payload.errors) {
+        // Normalize the errors from RespondWithStatusCode
+        set(returnVal, 'errors', [payload.data.error]);
+      }
     }
     return returnVal;
   },

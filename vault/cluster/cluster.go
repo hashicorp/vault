@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package cluster
 
@@ -18,11 +18,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/helper/certutil"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
-
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"golang.org/x/net/http2"
 )
 
@@ -270,7 +269,8 @@ func (cl *Listener) TLSConfig(ctx context.Context) (*tls.Config, error) {
 }
 
 // Run starts the tcp listeners and will accept connections until stop is
-// called. This function blocks so should be called in a goroutine.
+// called. This function does not block and will start the listeners in
+// separate goroutines.
 func (cl *Listener) Run(ctx context.Context) error {
 	// Get our TLS config
 	tlsConfig, err := cl.TLSConfig(ctx)

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 /**
@@ -11,21 +11,19 @@
  *
  *
  * @example
- * ```js
  * <SecretListHeaderTab @displayName='Database' @id='database-2' @path='roles' @label='Roles' @tab='roles'/>
- * ```
+ *
  * @param {string} [displayName] - set on options-for-backend this sets a conditional to see if capabilities are being checked
  * @param {string} [id] - if fetching capabilities used for making the query url.  It is the name the user has assigned to the instance of the engine.
  * @param {string} [path] - set on options-for-backend this tells us the specifics of the URL the query should hit.
  * @param {string} label - The name displayed on the tab.   Set on the options-for-backend.
  * @param {string} [tab] - The name of the tab.  Set on the options-for-backend.
- * @param {boolean} [isEngine=false] - If used within an Ember engine, will need to modify how the links to routes are defined.
  * @param {string} [link] - If within an engine provide the name of the link that is defined in the routes file fo the engine, example : 'overview'.
  *
  */
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 
 export default class SecretListHeaderTab extends Component {
   @service store;

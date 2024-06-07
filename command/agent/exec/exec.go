@@ -1,9 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package exec
 
 import (
 	"context"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"sort"
 	"sync"
@@ -13,14 +17,16 @@ import (
 	ctconfig "github.com/hashicorp/consul-template/config"
 	"github.com/hashicorp/consul-template/manager"
 	"github.com/hashicorp/go-hclog"
-	"golang.org/x/exp/slices"
-
 	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/command/agent/internal/ctmanager"
 	"github.com/hashicorp/vault/helper/useragent"
+	"github.com/hashicorp/vault/sdk/helper/backoff"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
+	"golang.org/x/exp/slices"
 )
 
+//go:generate enumer -type=childProcessState -trimprefix=childProcessState
 type childProcessState uint8
 
 const (
@@ -62,9 +68,11 @@ type Server struct {
 
 	logger hclog.Logger
 
-	childProcess      *child.Child
-	childProcessState childProcessState
-	childProcessLock  sync.Mutex
+	childProcess       *child.Child
+	childProcessState  childProcessState
+	childProcessLock   sync.Mutex
+	childProcessStdout io.WriteCloser
+	childProcessStderr io.WriteCloser
 
 	// exit channel of the child process
 	childProcessExitCh chan int
@@ -82,15 +90,38 @@ func (e *ProcessExitError) Error() string {
 	return fmt.Sprintf("process exited with %d", e.ExitCode)
 }
 
-func NewServer(cfg *ServerConfig) *Server {
+func NewServer(cfg *ServerConfig) (*Server, error) {
+	var err error
+
+	childProcessStdout := os.Stdout
+	childProcessStderr := os.Stderr
+
+	if cfg.AgentConfig.Exec != nil {
+		if cfg.AgentConfig.Exec.ChildProcessStdout != "" {
+			childProcessStdout, err = os.OpenFile(cfg.AgentConfig.Exec.ChildProcessStdout, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+			if err != nil {
+				return nil, fmt.Errorf("could not open %q, %w", cfg.AgentConfig.Exec.ChildProcessStdout, err)
+			}
+		}
+
+		if cfg.AgentConfig.Exec.ChildProcessStderr != "" {
+			childProcessStderr, err = os.OpenFile(cfg.AgentConfig.Exec.ChildProcessStderr, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+			if err != nil {
+				return nil, fmt.Errorf("could not open %q, %w", cfg.AgentConfig.Exec.ChildProcessStdout, err)
+			}
+		}
+	}
+
 	server := Server{
 		logger:             cfg.Logger,
 		config:             cfg,
 		childProcessState:  childProcessStateNotStarted,
 		childProcessExitCh: make(chan int),
+		childProcessStdout: childProcessStdout,
+		childProcessStderr: childProcessStderr,
 	}
 
-	return &server
+	return &server, nil
 }
 
 func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error {
@@ -140,6 +171,10 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 	// capture the errors related to restarting the child process
 	restartChildProcessErrCh := make(chan error)
 
+	// create exponential backoff object to calculate backoff time before restarting a failed
+	// consul template server
+	restartBackoff := backoff.NewBackoff(math.MaxInt, consts.DefaultMinBackoff, consts.DefaultMaxBackoff)
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -149,6 +184,7 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 				s.childProcess.Stop()
 			}
 			s.childProcessState = childProcessStateStopped
+			s.close()
 			s.childProcessLock.Unlock()
 			return nil
 
@@ -187,6 +223,17 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 			if s.config.AgentConfig.TemplateConfig != nil && s.config.AgentConfig.TemplateConfig.ExitOnRetryFailure {
 				return fmt.Errorf("template server: %w", err)
 			}
+
+			// Calculate the amount of time to backoff using exponential backoff
+			sleep, err := restartBackoff.Next()
+			if err != nil {
+				s.logger.Error("template server: reached maximum number restart attempts")
+				restartBackoff.Reset()
+			}
+
+			// Sleep for the calculated backoff time then attempt to create a new runner
+			s.logger.Warn(fmt.Sprintf("template server restart: retry attempt after %s", sleep))
+			time.Sleep(sleep)
 
 			s.runner, err = manager.NewRunner(runnerConfig, true)
 			if err != nil {
@@ -288,8 +335,8 @@ func (s *Server) restartChildProcess(newEnvVars []string) error {
 
 	childInput := &child.NewInput{
 		Stdin:        os.Stdin,
-		Stdout:       os.Stdout,
-		Stderr:       os.Stderr,
+		Stdout:       s.childProcessStdout,
+		Stderr:       s.childProcessStderr,
 		Command:      args[0],
 		Args:         args[1:],
 		Timeout:      0, // let it run forever
@@ -329,4 +376,19 @@ func (s *Server) restartChildProcess(newEnvVars []string) error {
 	}()
 
 	return nil
+}
+
+func (s *Server) Close() {
+	s.childProcessLock.Lock()
+	defer s.childProcessLock.Unlock()
+	s.close()
+}
+
+func (s *Server) close() {
+	if s.childProcessStdout != os.Stdout {
+		_ = s.childProcessStdout.Close()
+	}
+	if s.childProcessStderr != os.Stderr {
+		_ = s.childProcessStderr.Close()
+	}
 }

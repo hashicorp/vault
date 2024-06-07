@@ -1,14 +1,15 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
+import { removeFromArray } from 'vault/helpers/remove-from-array';
 
 /**
  * @module KeymgmtProviderEdit
@@ -62,7 +63,7 @@ export default class KeymgmtProviderEdit extends Component {
   }
   @task
   @waitFor
-  *fetchKeys(page = 1) {
+  *fetchKeys(page) {
     try {
       yield this.args.model.fetchKeys(page);
     } catch (error) {
@@ -94,8 +95,9 @@ export default class KeymgmtProviderEdit extends Component {
   @action
   async onDeleteKey(model) {
     try {
+      const providerKeys = removeFromArray(this.args.model.keys, model);
       await model.destroyRecord();
-      this.args.model.keys.removeObject(model);
+      this.args.model.keys = providerKeys;
     } catch (error) {
       this.flashMessages.danger(error.errors.join('. '));
     }

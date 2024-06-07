@@ -2,20 +2,20 @@
 layout: docs
 page_title: kv put - Command
 description: |-
-  The "kv put" command writes the data to the given path in the K/V secrets
+  The "kv put" command writes the data to the given path in the KV secrets
   engine. The data can be of any type.
 ---
 
 # kv put
 
-The `kv put` command writes the data to the given path in the K/V secrets
+The `kv put` command writes the data to the given path in the KV secrets
 engine.
 
-If working with K/V v2, this command creates a new version of a secret at the
-specified location. If working with K/V v1, this command stores the given secret
+If working with KV v2, this command creates a new version of a secret at the
+specified location. If working with KV v1, this command stores the given secret
 at the specified location.
 
-Regardless of the K/V version, if the value does not yet exist at the specified
+Regardless of the KV version, if the value does not yet exist at the specified
 path, the calling token must have an ACL policy granting the "create"
 capability. If the value already exists, the calling token must have an ACL
 policy granting the "update" capability.
@@ -46,7 +46,7 @@ $ echo "abcd1234" | vault kv put -mount=secret foo bar=-
 There are no flags beyond the [standard set of flags](/vault/docs/commands)
 included on all commands.
 
-### Output Options
+### Output options
 
 - `-field` `(string: "")` - Print only the field with the given name. Specifying
   this option will take precedence over other formatting directives. The result
@@ -57,7 +57,7 @@ included on all commands.
   formats are "table", "json", or "yaml". This can also be specified via the
   `VAULT_FORMAT` environment variable.
 
-### Command Options
+### Command options
 
 - `-cas` `(int: 0)` - Specifies to use a Check-And-Set operation. If not set the
   write will be allowed. In order for a write to be successful, `cas` must be set to 

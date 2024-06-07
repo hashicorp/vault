@@ -1,10 +1,11 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package transit
 
 import (
 	"context"
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/x509"
@@ -15,16 +16,19 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
-	exportTypeEncryptionKey = "encryption-key"
-	exportTypeSigningKey    = "signing-key"
-	exportTypeHMACKey       = "hmac-key"
-	exportTypePublicKey     = "public-key"
+	exportTypeEncryptionKey    = "encryption-key"
+	exportTypeSigningKey       = "signing-key"
+	exportTypeHMACKey          = "hmac-key"
+	exportTypePublicKey        = "public-key"
+	exportTypeCertificateChain = "certificate-chain"
+	exportTypeCMACKey          = "cmac-key"
 )
 
 func (b *backend) pathExportKeys() *framework.Path {
@@ -40,7 +44,7 @@ func (b *backend) pathExportKeys() *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"type": {
 				Type:        framework.TypeString,
-				Description: "Type of key to export (encryption-key, signing-key, hmac-key, public-key)",
+				Description: "Type of key to export (encryption-key, signing-key, hmac-key, public-key, cmac-key)",
 			},
 			"name": {
 				Type:        framework.TypeString,
@@ -71,6 +75,11 @@ func (b *backend) pathPolicyExportRead(ctx context.Context, req *logical.Request
 	case exportTypeSigningKey:
 	case exportTypeHMACKey:
 	case exportTypePublicKey:
+	case exportTypeCertificateChain:
+	case exportTypeCMACKey:
+		if !constants.IsEnterprise {
+			return logical.ErrorResponse(ErrCmacEntOnly.Error()), logical.ErrInvalidRequest
+		}
 	default:
 		return logical.ErrorResponse(fmt.Sprintf("invalid export type: %s", exportType)), logical.ErrInvalidRequest
 	}
@@ -90,7 +99,7 @@ func (b *backend) pathPolicyExportRead(ctx context.Context, req *logical.Request
 	}
 	defer p.Unlock()
 
-	if !p.Exportable && exportType != exportTypePublicKey {
+	if !p.Exportable && exportType != exportTypePublicKey && exportType != exportTypeCertificateChain {
 		return logical.ErrorResponse("private key material is not exportable"), nil
 	}
 
@@ -102,6 +111,10 @@ func (b *backend) pathPolicyExportRead(ctx context.Context, req *logical.Request
 	case exportTypeSigningKey:
 		if !p.Type.SigningSupported() {
 			return logical.ErrorResponse("signing not supported for the key"), logical.ErrInvalidRequest
+		}
+	case exportTypeCertificateChain:
+		if !p.Type.SigningSupported() {
+			return logical.ErrorResponse("certificate chain not supported for keys that do not support signing"), logical.ErrInvalidRequest
 		}
 	}
 
@@ -241,6 +254,28 @@ func getExportKey(policy *keysutil.Policy, key *keysutil.KeyEntry, exportType st
 			}
 			return rsaKey, nil
 		}
+	case exportTypeCertificateChain:
+		if key.CertificateChain == nil {
+			return "", errors.New("selected key version does not have a certificate chain imported")
+		}
+
+		var pemCerts []string
+		for _, derCertBytes := range key.CertificateChain {
+			pemCert := strings.TrimSpace(string(pem.EncodeToMemory(
+				&pem.Block{
+					Type:  "CERTIFICATE",
+					Bytes: derCertBytes,
+				})))
+			pemCerts = append(pemCerts, pemCert)
+		}
+		certChain := strings.Join(pemCerts, "\n")
+
+		return certChain, nil
+	case exportTypeCMACKey:
+		switch policy.Type {
+		case keysutil.KeyType_AES128_CMAC, keysutil.KeyType_AES256_CMAC:
+			return strings.TrimSpace(base64.StdEncoding.EncodeToString(key.Key)), nil
+		}
 	}
 
 	return "", fmt.Errorf("unknown key type %v for export type %v", policy.Type, exportType)
@@ -273,18 +308,31 @@ func encodeRSAPublicKey(key *keysutil.KeyEntry) (string, error) {
 		return "", errors.New("nil KeyEntry provided")
 	}
 
-	blockType := "RSA PUBLIC KEY"
-	derBytes, err := x509.MarshalPKIXPublicKey(key.RSAPublicKey)
-	if err != nil {
-		return "", err
+	var publicKey crypto.PublicKey
+	publicKey = key.RSAPublicKey
+	if key.RSAKey != nil {
+		// Prefer the private key if it exists
+		publicKey = key.RSAKey.Public()
 	}
 
-	pemBlock := pem.Block{
-		Type:  blockType,
+	if publicKey == nil {
+		return "", errors.New("requested to encode an RSA public key with no RSA key present")
+	}
+
+	// Encode the RSA public key in PEM format to return over the API
+	derBytes, err := x509.MarshalPKIXPublicKey(publicKey)
+	if err != nil {
+		return "", fmt.Errorf("error marshaling RSA public key: %w", err)
+	}
+	pemBlock := &pem.Block{
+		Type:  "PUBLIC KEY",
 		Bytes: derBytes,
 	}
+	pemBytes := pem.EncodeToMemory(pemBlock)
+	if pemBytes == nil || len(pemBytes) == 0 {
+		return "", fmt.Errorf("failed to PEM-encode RSA public key")
+	}
 
-	pemBytes := pem.EncodeToMemory(&pemBlock)
 	return string(pemBytes), nil
 }
 

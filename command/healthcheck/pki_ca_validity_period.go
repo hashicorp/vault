@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package healthcheck
 
@@ -65,9 +65,8 @@ func (h *CAValidityPeriod) LoadConfig(config map[string]interface{}) error {
 		if len(name_split) != 3 || name_split[1] != "expiry" {
 			return fmt.Errorf("bad parameter: %v / %v / %v", parameter, len(name_split), name_split[1])
 		}
-
-		status, present := NameResultStatusMap[name_split[2]]
-		if !present {
+		status, err := ResultStatusString(name_split[2])
+		if err != nil {
 			return fmt.Errorf("bad parameter: %v's type %v isn't in name map", parameter, name_split[2])
 		}
 

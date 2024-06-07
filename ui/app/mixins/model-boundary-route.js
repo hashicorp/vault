@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 // meant for use mixed-in to a Route file
@@ -56,6 +56,11 @@ export default Mixin.create({
       );
       return;
     }
+    if (this.store.isDestroyed || this.store.isDestroying) {
+      // Prevent unload attempt after test teardown, resulting in test failure
+      return;
+    }
+
     if (modelType) {
       this.store.unloadAll(modelType);
     }

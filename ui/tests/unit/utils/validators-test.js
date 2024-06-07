@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -91,5 +91,18 @@ module('Unit | Util | validators', function (hooks) {
     assert.false(isValid, 'Invalid when text has leading whitespace');
     check('trailingSpace ');
     assert.false(isValid, 'Invalid when text has trailing whitespace');
+  });
+
+  test('it should validate value ends in a slash', function (assert) {
+    let isValid;
+    const check = (prop) => (isValid = validators.endsInSlash(prop));
+    check('validText');
+    assert.true(isValid, 'Valid when text does not end in slash');
+    check('valid/Text');
+    assert.true(isValid, 'Valid when text only contains slash');
+    check('invalid/');
+    assert.false(isValid, 'Invalid when text ends in slash');
+    check('also/invalid/');
+    assert.false(isValid, 'Invalid when text contains and ends in slash');
   });
 });

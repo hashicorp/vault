@@ -1,32 +1,53 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { click, currentRouteName, fillIn, visit } from '@ember/test-helpers';
+import { click, currentRouteName, fillIn, visit, waitFor } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import ENV from 'vault/config/environment';
+import mfaConfigHandlers from 'vault/mirage/handlers/mfa-config';
 
 module('Acceptance | mfa-login-enforcement', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.before(function () {
-    ENV['ember-cli-mirage'].handler = 'mfaConfig';
-  });
   hooks.beforeEach(function () {
+    mfaConfigHandlers(this.server);
     return authPage.login();
   });
-  hooks.after(function () {
-    ENV['ember-cli-mirage'].handler = null;
+
+  test('it should send the correct data when creating an enforcement', async function (assert) {
+    assert.expect(2);
+    this.server.post('/identity/mfa/login-enforcement/salad-college-setting', (schema, { requestBody }) => {
+      const data = JSON.parse(requestBody);
+      assert.deepEqual(data.auth_method_types, [], 'correctly passes empty array for auth method types');
+      assert.deepEqual(
+        data.auth_method_accessors,
+        ['auth_userpass_bb95c2b1'],
+        'Passes correct value for auth method accessors'
+      );
+      return { ...data, id: data.name };
+    });
+
+    await visit('/ui/vault/access');
+    await click('[data-test-sidebar-nav-link="Multi-Factor Authentication"]');
+    await click('[data-test-tab="enforcements"]');
+    await click('[data-test-enforcement-create]');
+    // Fill out form
+    await fillIn('[data-test-mlef-input="name"]', 'salad-college-setting');
+    await click('[data-test-component="search-select"] .ember-basic-dropdown-trigger');
+    await click('.ember-power-select-option');
+    await fillIn('[data-test-mount-accessor-select]', 'auth_userpass_bb95c2b1');
+    await click('[data-test-mlef-add-target]');
+    await click('[data-test-mlef-save]');
   });
 
   test('it should create login enforcement', async function (assert) {
     await visit('/ui/vault/access');
-    await click('[data-test-sidebar-nav-link="Multi-factor authentication"]');
+    await click('[data-test-sidebar-nav-link="Multi-Factor Authentication"]');
     await click('[data-test-tab="enforcements"]');
     await click('[data-test-enforcement-create]');
 
@@ -43,7 +64,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
       'Cancel transitions to enforcements list'
     );
     await click('[data-test-enforcement-create]');
-    await click('.breadcrumb a');
+    await click('.hds-breadcrumb a');
     assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.mfa.enforcements.index',
@@ -95,7 +116,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
       'vault.cluster.access.mfa.enforcements.enforcement.index',
       'Details more menu action transitions to enforcement route'
     );
-    await click('.breadcrumb a');
+    await click('.hds-breadcrumb a');
     await click('[data-test-popup-menu-trigger]');
     await click('[data-test-list-item-link="edit"]');
     assert.strictEqual(
@@ -113,6 +134,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
     assert.dom('h1').includesText(enforcement.name, 'Name renders in title');
     assert.dom('h1 svg').hasClass('flight-icon-lock', 'Lock icon renders in title');
     assert.dom('[data-test-tab="targets"]').hasClass('active', 'Targets tab is active by default');
+    await waitFor('[data-test-target]', { timeout: 5000 });
     assert.dom('[data-test-target]').exists({ count: 4 }, 'Targets render in list');
     // targets tab
     const targets = {
@@ -210,6 +232,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
     await click('[data-test-mlef-remove-target="Authentication method"]');
     await click('[data-test-mlef-save]');
 
+    await waitFor('[data-test-target]', { timeout: 5000 });
     assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.mfa.enforcements.enforcement.index',

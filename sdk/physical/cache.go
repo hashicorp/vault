@@ -32,6 +32,16 @@ var cacheExceptionsPaths = []string{
 	"sys/expire/",
 	"core/poison-pill",
 	"core/raft/tls",
+
+	// Add barrierSealConfigPath and recoverySealConfigPlaintextPath to the cache
+	// exceptions to avoid unseal errors. See VAULT-17227
+	"core/seal-config",
+	"core/recovery-config",
+
+	// we need to make sure the persisted license is read from the storage
+	// to ensure the changes to the autoloaded license on the active node
+	// is observed on the perfStandby nodes
+	"core/autoloaded-license",
 }
 
 // CacheRefreshContext returns a context with an added value denoting if the
@@ -76,6 +86,7 @@ var (
 	_ ToggleablePurgemonster = (*TransactionalCache)(nil)
 	_ Backend                = (*Cache)(nil)
 	_ Transactional          = (*TransactionalCache)(nil)
+	_ TransactionalLimits    = (*TransactionalCache)(nil)
 )
 
 // NewCache returns a physical cache of the given size.
@@ -260,4 +271,15 @@ func (c *TransactionalCache) Transaction(ctx context.Context, txns []*TxnEntry) 
 	}
 
 	return nil
+}
+
+// TransactionLimits implements physical.TransactionalLimits
+func (c *TransactionalCache) TransactionLimits() (int, int) {
+	if tl, ok := c.Transactional.(TransactionalLimits); ok {
+		return tl.TransactionLimits()
+	}
+	// We don't have any specific limits of our own so return zeros to signal that
+	// the caller should use whatever reasonable defaults it would if it used a
+	// non-TransactionalLimits backend.
+	return 0, 0
 }
