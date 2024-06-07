@@ -57,10 +57,13 @@
         "path": "internals/integrated-storage"
       },
       {
+        "title": "Recommended patterns",
+        "path": "internals/recommended-patterns"
+      },
+      {
         "title": "Security Model",
         "path": "internals/security"
       },
-
       {
         "title": "Telemetry",
         "routes": [
@@ -342,6 +345,10 @@
         "path": "configuration/programmatic-best-practices"
       },
       {
+        "title": "Manage resources programmatically",
+        "path": "configuration/programmatic-management"
+      },
+      {
         "title": "<code>listener</code>",
         "routes": [
           {
@@ -350,7 +357,16 @@
           },
           {
             "title": "TCP",
-            "path": "configuration/listener/tcp"
+            "routes": [  
+              {
+                "title": "Overview",
+                "path": "configuration/listener/tcp"
+              },
+              {
+                "title": "Configure TLS",
+                "path": "configuration/listener/tcp/tcp-tls"
+              }
+            ]
           },
           {
             "title": "Unix",

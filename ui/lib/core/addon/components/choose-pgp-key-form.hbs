@@ -27,6 +27,7 @@
         @textToCopy={{this.pgpKey}}
         @color="secondary"
         @onError={{(fn (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger"))}}
+        @isTruncated={{true}}
         data-test-pgp-key-copy
         @container="#shamir-flow-modal"
       />
