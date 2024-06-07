@@ -135,7 +135,7 @@ func (b *backend) acmeWrapper(opts acmeWrapperOpts, op acmeOperation) framework.
 			return nil, err
 		}
 
-		role, issuer, err := getAcmeRoleAndIssuer(b, sc, data, config)
+		role, issuer, err := getAcmeRoleAndIssuer(sc, data, config)
 		if err != nil {
 			return nil, err
 		}
@@ -360,7 +360,7 @@ func getAcmeDirectory(r *logical.Request) (string, error) {
 	return strings.TrimLeft(acmePath[0:lastIndex]+"/acme/", "/"), nil
 }
 
-func getAcmeRoleAndIssuer(b *backend, sc *storageContext, data *framework.FieldData, config *acmeConfigEntry) (*issuing.RoleEntry, *issuing.IssuerEntry, error) {
+func getAcmeRoleAndIssuer(sc *storageContext, data *framework.FieldData, config *acmeConfigEntry) (*issuing.RoleEntry, *issuing.IssuerEntry, error) {
 	requestedIssuer := getRequestedAcmeIssuerFromPath(data)
 	requestedRole := getRequestedAcmeRoleFromPath(data)
 	issuerToLoad := requestedIssuer
@@ -381,13 +381,13 @@ func getAcmeRoleAndIssuer(b *backend, sc *storageContext, data *framework.FieldD
 				issuing.WithIssuer(requestedIssuer),
 				issuing.WithNoStore(false))
 		case Role:
-			role, err = getAndValidateAcmeRole(b, sc, extraInfo)
+			role, err = getAndValidateAcmeRole(sc, extraInfo)
 			if err != nil {
 				return nil, nil, err
 			}
 		}
 	} else { // Requested Role
-		role, err = getAndValidateAcmeRole(b, sc, requestedRole)
+		role, err = getAndValidateAcmeRole(sc, requestedRole)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -455,9 +455,9 @@ func getAcmeRoleAndIssuer(b *backend, sc *storageContext, data *framework.FieldD
 	return role, issuer, nil
 }
 
-func getAndValidateAcmeRole(b *backend, sc *storageContext, requestedRole string) (*issuing.RoleEntry, error) {
+func getAndValidateAcmeRole(sc *storageContext, requestedRole string) (*issuing.RoleEntry, error) {
 	var err error
-	role, err := b.GetRole(sc.Context, sc.Storage, requestedRole)
+	role, err := sc.GetRole(requestedRole)
 	if err != nil {
 		return nil, fmt.Errorf("%w: err loading role", ErrServerInternal)
 	}

@@ -110,6 +110,10 @@ func (sc *storageContext) GetRevokeStorageLock() *sync.RWMutex {
 	return sc.Backend.GetRevokeStorageLock()
 }
 
+func (sc *storageContext) GetRole(name string) (*issuing.RoleEntry, error) {
+	return sc.Backend.GetRole(sc.Context, sc.Storage, name)
+}
+
 func (sc *storageContext) listKeys() ([]issuing.KeyID, error) {
 	return issuing.ListKeys(sc.Context, sc.Storage)
 }

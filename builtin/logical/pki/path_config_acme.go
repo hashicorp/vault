@@ -290,7 +290,7 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 	case Role:
 		defaultDirectoryRoleName = extraInfo
 
-		_, err := getAndValidateAcmeRole(b, sc, defaultDirectoryRoleName)
+		_, err := getAndValidateAcmeRole(sc, defaultDirectoryRoleName)
 		if err != nil {
 			return nil, fmt.Errorf("default directory policy role %v is not a valid ACME role: %w", defaultDirectoryRoleName, err)
 		}
@@ -307,7 +307,7 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 				return nil, fmt.Errorf("cannot use '*' as role name at index %d", index)
 			}
 
-			_, err := getAndValidateAcmeRole(b, sc, name)
+			_, err := getAndValidateAcmeRole(sc, name)
 			if err != nil {
 				return nil, fmt.Errorf("allowed_role %v is not a valid acme role: %w", name, err)
 			}
