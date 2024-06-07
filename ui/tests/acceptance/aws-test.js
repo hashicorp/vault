@@ -26,7 +26,7 @@ const AWS_CREDS = {
   ttlToggle: '[data-test-ttl-toggle="TTL"]',
   warning: '[data-test-warning]',
   delete: (role) => `[data-test-aws-role-delete="${role}"]`,
-  backButton: '[data-test-secret-generate-back]',
+  backButton: '[data-test-back-button]',
 };
 module('Acceptance | aws secret backend', function (hooks) {
   setupApplicationTest(hooks);
