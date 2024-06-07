@@ -6764,12 +6764,14 @@ const (
 	shouldBeAuthed pathAuthChecker = iota
 	shouldBeUnauthedReadList
 	shouldBeUnauthedWriteOnly
+	shouldBeUnauthedReadWriteOnly
 )
 
 var pathAuthChckerMap = map[pathAuthChecker]pathAuthCheckerFunc{
-	shouldBeAuthed:            pathShouldBeAuthed,
-	shouldBeUnauthedReadList:  pathShouldBeUnauthedReadList,
-	shouldBeUnauthedWriteOnly: pathShouldBeUnauthedWriteOnly,
+	shouldBeAuthed:                pathShouldBeAuthed,
+	shouldBeUnauthedReadList:      pathShouldBeUnauthedReadList,
+	shouldBeUnauthedWriteOnly:     pathShouldBeUnauthedWriteOnly,
+	shouldBeUnauthedReadWriteOnly: pathShouldBeUnauthedWriteOnly,
 }
 
 func TestProperAuthing(t *testing.T) {
@@ -7062,6 +7064,10 @@ func TestProperAuthing(t *testing.T) {
 		} else if handler == shouldBeUnauthedWriteOnly {
 			if hasGet || hasList {
 				t.Fatalf("Unauthed write-only endpoints should not have GET/LIST capabilities: %v->%v", openapi_path, raw_path)
+			}
+		} else if handler == shouldBeUnauthedReadWriteOnly {
+			if hasDelete || hasList {
+				t.Fatalf("Unauthed read-write-only endpoints should not have DELETE/LIST capabilities: %v->%v", openapi_path, raw_path)
 			}
 		}
 	}
