@@ -6,6 +6,7 @@ package consul_fencing
 import (
 	"context"
 	"fmt"
+	"os"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -39,7 +40,9 @@ func TestConsulFencing_PartitionedLeaderCantWrite(t *testing.T) {
 	logger.SetLevel(hclog.Trace)
 
 	clusterOpts := docker.DefaultOptions(t)
-	clusterOpts.ImageRepo = "hashicorp/vault-enterprise"
+	if clusterOpts.VaultLicense != "" || os.Getenv(testcluster.EnvVaultLicenseCI) != "" {
+		clusterOpts.ImageRepo = "hashicorp/vault-enterprise"
+	}
 	clusterOpts.ClusterOptions.Logger = logger
 
 	clusterOpts.Storage = consulStorage
