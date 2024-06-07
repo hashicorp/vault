@@ -6,6 +6,9 @@
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 
+import type SecretEngineModel from 'vault/models/secret-engine';
+import type { TtlEvent } from 'vault/app-types';
+
 /**
  * @module ConfigureAwsSecretComponent
  *
@@ -34,21 +37,44 @@ import { action } from '@ember/object';
  * @param {Function} saveAWSLease - parent action which updates AWS lease information
  *
  */
-export default class ConfigureAwsSecretComponent extends Component {
+
+type AWSRootCredsFields = {
+  access_key: string | null;
+  iam_endpoint: string | null;
+  sts_endpoint: string | null;
+  secret_key: string | null;
+  region: string | null;
+};
+
+type LeaseFields = { lease: string; lease_max: string };
+
+interface Args {
+  model: SecretEngineModel;
+  tab?: string;
+  accessKey: string;
+  secretKey: string;
+  region: string;
+  iamEndpoint: string;
+  stsEndpoint: string;
+  saveAWSRoot: (data: AWSRootCredsFields) => void;
+  saveAWSLease: (data: LeaseFields) => void;
+}
+
+export default class ConfigureAwsSecretComponent extends Component<Args> {
   @action
-  saveRootCreds(data, event) {
+  saveRootCreds(data: AWSRootCredsFields, event: Event) {
     event.preventDefault();
     this.args.saveAWSRoot(data);
   }
 
   @action
-  saveLease(data, event) {
+  saveLease(data: LeaseFields, event: Event) {
     event.preventDefault();
     this.args.saveAWSLease(data);
   }
 
   @action
-  handleTtlChange(name, ttlObj) {
+  handleTtlChange(name: string, ttlObj: TtlEvent) {
     // lease values cannot be undefined, set to 0 to use default
     const valueToSet = ttlObj.enabled ? ttlObj.goSafeTimeString : 0;
     this.args.model.set(name, valueToSet);
