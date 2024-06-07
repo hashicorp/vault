@@ -42,6 +42,21 @@ export default class GenerateCredentials extends Component {
   @tracked hasGenerated = false;
   emptyData = '{\n}';
 
+  constructor() {
+    super(...arguments);
+    const modelType = this.modelForType();
+    this.model = this.generateNewModel(modelType);
+  }
+
+  willDestroy() {
+    // components are torn down after store is unloaded and will cause an error if attempt to unload record
+    const noTeardown = this.store && !this.store.isDestroying;
+    if (noTeardown && !this.model.isDestroyed && !this.model.isDestroying) {
+      this.model.unloadRecord();
+    }
+    super.willDestroy();
+  }
+
   modelForType() {
     const type = this.options;
     if (type) {
@@ -74,26 +89,11 @@ export default class GenerateCredentials extends Component {
     return this.options.displayFields;
   }
 
-  constructor() {
-    super(...arguments);
-    const modelType = this.modelForType();
-    this.model = this._generateNewModel(modelType);
-  }
-
-  willDestroy() {
-    // components are torn down after store is unloaded and will cause an error if attempt to unload record
-    const noTeardown = this.store && !this.store.isDestroying;
-    if (noTeardown && !this.model.isDestroyed && !this.model.isDestroying) {
-      this.model.unloadRecord();
-    }
-    super.willDestroy();
-  }
-
-  _generateNewModel(modelType) {
+  generateNewModel(modelType) {
     if (!modelType) {
       return;
     }
-    const { roleName, backendPath } = this.args;
+    const { roleName, backendPath, awsRoleType } = this.args;
     const attrs = {
       role: {
         backend: backendPath,
@@ -101,6 +101,10 @@ export default class GenerateCredentials extends Component {
       },
       id: `${backendPath}-${roleName}`,
     };
+    if (awsRoleType) {
+      // this is only set from route if backendType = aws
+      attrs.credentialType = awsRoleType;
+    }
     return this.store.createRecord(modelType, attrs);
   }
 
@@ -112,7 +116,7 @@ export default class GenerateCredentials extends Component {
     if (this.model) {
       this.model.unloadRecord();
     }
-    this.model = this._generateNewModel(modelType);
+    this.model = this.generateNewModel(modelType);
   }
 
   @action

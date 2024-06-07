@@ -68,6 +68,7 @@ export default Route.extend({
       roleName: role,
       roleType,
       dbCred,
+      awsRoleType: backendType === 'aws' ? this.store.peekRecord('role-aws', role)?.credentialType : null,
     });
   },
 
