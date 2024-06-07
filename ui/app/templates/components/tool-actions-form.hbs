@@ -7,13 +7,7 @@
   {{#if (eq this.selectedAction "hash")}}
     <ToolHash />
   {{else if (eq this.selectedAction "random")}}
-    <ToolRandom
-      @onClear={{action "onClear"}}
-      @random_bytes={{this.random_bytes}}
-      @errors={{this.errors}}
-      @format={{this.format}}
-      @bytes={{this.bytes}}
-    />
+    <ToolRandom />
   {{else if (eq this.selectedAction "rewrap")}}
     <ToolRewrap
       @onClear={{action "onClear"}}

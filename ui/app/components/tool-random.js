@@ -4,31 +4,52 @@
  */
 
 import Component from '@glimmer/component';
+import { service } from '@ember/service';
 import { action } from '@ember/object';
+import { tracked } from '@glimmer/tracking';
+import errorMessage from 'vault/utils/error-message';
 
 /**
  * @module ToolRandom
- * ToolRandom components are components that sys/wrapping/random functionality.  Most of the functionality is passed through as actions from the tool-actions-form and then called back with properties.
- *
+ * ToolRandom components are components that perform sys/wrapping/random functionality.
  * @example
- * ```js
- * <ToolRandom
- *  @onClear={{action "onClear"}}
- *  @format={{format}}
- *  @bytes={{bytes}}
- *  @random_bytes={{random_bytes}}
- *  @errors={{errors}}/>
- * ```
- * @param onClear {Function} - parent action that is passed through. Must be passed as {{action "onClear"}}
- * @param format {String} - property returned from parent.
- * @param bytes {String} - property returned from parent.
- * @param random_bytes {String} - property returned from parent.
- * @param error=null {Object} - errors passed from parent as default then from child back to parent.
+ * <ToolRandom />
  */
 
 export default class ToolRandom extends Component {
+  @service store;
+  @service flashMessages;
+
+  @tracked bytes = 32;
+  @tracked format = 'base64';
+  @tracked random_bytes = null;
+  @tracked errorMessage = '';
+
   @action
-  onClear() {
-    this.args.onClear();
+  reset() {
+    this.bytes = 32;
+    this.format = 'base64';
+    this.random_bytes = null;
+    this.errorMessage = '';
+  }
+
+  @action
+  handleEvent(evt) {
+    const { name, value } = evt.target;
+    this[name] = value;
+  }
+
+  @action
+  async handleSubmit(evt) {
+    evt.preventDefault();
+    const data = { bytes: parseInt(this.bytes), format: this.format };
+
+    try {
+      const response = await this.store.adapterFor('tools').toolAction('random', data);
+      this.random_bytes = response.data.random_bytes;
+      this.flashMessages.success('Generated random bytes successfully.');
+    } catch (error) {
+      this.errorMessage = errorMessage(error);
+    }
   }
 }
