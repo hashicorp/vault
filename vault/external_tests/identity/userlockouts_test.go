@@ -25,6 +25,9 @@ const (
 	UserLockoutThresholdDefault = 5
 )
 
+// TestUserLockoutLogger_ConfigTest tests that configuration changes are
+// correctly reflected and applied to the lockout logger with logs being
+// emitted at the configured intervals, and clearing occurring correctly
 func TestUserLockoutLogger_ConfigTest(t *testing.T) {
 	// cluster setup
 	coreConfig := &vault.CoreConfig{
@@ -140,6 +143,9 @@ func TestUserLockoutLogger_ConfigTest(t *testing.T) {
 	}
 }
 
+// TestUserLockoutLogger_ManualUnlockTest verifies that the lockout logger
+// properly emits a lockout clear log and logging stops after a manual
+// lockout clear, and also starts again on subsequent user lockout
 func TestUserLockoutLogger_ManualUnlockTest(t *testing.T) {
 	// cluster setup
 	coreConfig := &vault.CoreConfig{
