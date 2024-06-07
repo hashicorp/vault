@@ -10,14 +10,14 @@ import { tracked } from '@glimmer/tracking';
 import errorMessage from 'vault/utils/error-message';
 
 /**
- * @module ToolsUnwrap
+ * @module ToolUnwrap
  * ToolsUnwrap components are components that sys/wrapping/rewrap functionality
  *
  * @example
- * <ToolsUnwrap />
+ * <ToolUnwrap />
  */
 
-export default class ToolsUnwrap extends Component {
+export default class ToolUnwrap extends Component {
   @service store;
   @service flashMessages;
 
