@@ -3,4 +3,18 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<ToolActionsForm @selectedAction={{this.selectedAction}} />
+{{#if (eq this.selectedAction "hash")}}
+  <ToolHash />
+{{else if (eq this.selectedAction "random")}}
+  <ToolRandom />
+{{else if (eq this.selectedAction "rewrap")}}
+  <ToolRewrap />
+{{else if (eq this.selectedAction "unwrap")}}
+  <ToolUnwrap />
+{{else if (eq this.selectedAction "lookup")}}
+  <ToolLookup />
+{{else if (eq this.selectedAction "wrap")}}
+  <ToolWrap />
+{{else}}
+  <EmptyState @title="Tool not available" />
+{{/if}}
