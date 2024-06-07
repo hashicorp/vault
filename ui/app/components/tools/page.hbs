@@ -14,14 +14,7 @@
 {{else if (eq this.selectedAction "lookup")}}
   <Tools::Lookup />
 {{else if (eq this.selectedAction "wrap")}}
-  <Tools::Wrap
-    @token={{this.token}}
-    @onBack={{action "onBack" (array "token")}}
-    @onClear={{action "onClear"}}
-    @onChange={{action "onChange"}}
-    @errors={{this.errors}}
-    @data={{this.data}}
-  />
+  <Tools::Wrap />
 {{else}}
   <EmptyState @title="Tool not available" />
 {{/if}}

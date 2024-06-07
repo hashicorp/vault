@@ -4,37 +4,41 @@
  */
 
 import Component from '@glimmer/component';
+import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
+import errorMessage from 'vault/utils/error-message';
 
 /**
  * @module <Tools::Wrap
- * <Tools::Wrap components are components that sys/wrapping/wrap functionality.  Most of the functionality is passed through as actions from the tool-actions-form and then called back with properties.
+ * <Tools::Wrap components are components that sys/wrapping/wrap functionality.
  *
  * @example
- * <Tools::Wrap
- *  @errors={{@errors}}
- *  @onBack={{action "onBack" (array "token")}}
- *  @onChange={{action "onChange"}}
- *  @onClear={{action "onClear"}}
- *  @token={{@token}}
- * />
- *
- * @param {object} errors=null - errors returned if wrap fails
- * @param {function} onBack - callback that only clears specific values so the action can be repeated. Must be passed as `{{action "onBack"}}`
- * @param {function} onChange - callback that fires when inputs change and passes value and param name back to the parent
- * @param {function} onClear - callback that resets all of values to defaults. Must be passed as `{{action "onClear"}}`
- * @param {string} token=null - returned after user clicks "Wrap data", if there is a token value it displays instead of the JsonEditor
+ * <Tools::Wrap />
  */
 
 export default class ToolsWrap extends Component {
+  @service store;
+  @service flashMessages;
+
   @tracked buttonDisabled = false;
+  @tracked token = '';
+  @tracked wrapTTL = null;
+  @tracked wrapData = '{\n}';
+  @tracked errorMessage = '';
+
+  @action
+  reset(clearData = true) {
+    this.token = '';
+    this.errorMessage = '';
+    this.wrapTTL = null;
+    if (clearData) this.wrapData = '{\n}';
+  }
 
   @action
   updateTtl(evt) {
     if (!evt) return;
-    const ttl = evt.enabled ? `${evt.seconds}s` : '30m';
-    this.args.onChange('wrapTTL', ttl);
+    this.wrapTTL = evt.enabled ? `${evt.seconds}s` : '30m';
   }
 
   @action
@@ -42,6 +46,21 @@ export default class ToolsWrap extends Component {
     codemirror.performLint();
     const hasErrors = codemirror?.state.lint.marked?.length > 0;
     this.buttonDisabled = hasErrors;
-    this.args.onChange('data', val);
+    if (!hasErrors) this.wrapData = val;
+  }
+
+  @action
+  async handleSubmit(evt) {
+    evt.preventDefault();
+    const data = JSON.parse(this.wrapData);
+    const wrapTTL = this.wrapTTL || null;
+
+    try {
+      const response = await this.store.adapterFor('tools').toolAction('wrap', data, { wrapTTL });
+      this.token = response.wrap_info.token;
+      this.flashMessages.success('Wrap was successful.');
+    } catch (error) {
+      this.errorMessage = errorMessage(error);
+    }
   }
 }
