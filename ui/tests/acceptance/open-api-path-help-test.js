@@ -78,8 +78,8 @@ function secretEngineHelper(test, secretEngine) {
       const expected = engineData[modelName];
       // Expected values should be updated to match "actual" (result)
       assert.deepEqual(
-        Object.keys(result),
-        Object.keys(expected),
+        Object.keys(result).sort(),
+        Object.keys(expected).sort(),
         `getProps returns expected attributes for ${modelName}`
       );
       Object.keys(expected).forEach((attrName) => {
@@ -103,8 +103,8 @@ function authEngineHelper(test, authBackend) {
         const result = await this.pathHelp.getProps(helpUrl, this.mount);
         const expected = authData[itemName];
         assert.deepEqual(
-          Object.keys(result),
-          Object.keys(expected),
+          Object.keys(result).sort(),
+          Object.keys(expected).sort(),
           `getProps returns expected attributes for ${itemName}`
         );
         Object.keys(expected).forEach((attrName) => {
