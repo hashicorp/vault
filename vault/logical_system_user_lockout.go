@@ -61,6 +61,7 @@ func unlockUser(ctx context.Context, core *Core, mountAccessor string, aliasName
 			core.Logger().Info("user lockout(s) cleared")
 			cancelFunc := *core.lockoutLoggerCancel.Load()
 			cancelFunc()
+			core.lockoutLoggerCancel.CompareAndSwap(core.lockoutLoggerCancel.Load(), nil)
 		}
 	}
 
