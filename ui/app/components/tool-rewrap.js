@@ -4,33 +4,45 @@
  */
 
 import Component from '@glimmer/component';
+import { service } from '@ember/service';
 import { action } from '@ember/object';
+import { tracked } from '@glimmer/tracking';
+import errorMessage from 'vault/utils/error-message';
 
 /**
  * @module ToolRewrap
- * ToolRewrap components are components that sys/wrapping/rewrap functionality.  Most of the functionality is passed through as actions from the tool-actions-form and then called back with properties.
+ * ToolRewrap components are components that sys/wrapping/rewrap functionality
  *
  * @example
- * ```js
- * <ToolRewrap
- *  @onClear={{action "onClear"}}
- *  @token={{token}}
- *  @rewrap_token={{rewrap_token}}
- *  @selectedAction={{selectedAction}}
- *  @bytes={{bytes}}
- *  @errors={{errors}}/>
- * ```
- * @param onClear {Function} - parent action that is passed through. Must be passed as {{action "onClear"}}
- * @param token=null {String} - property passed from parent to child and then passed back up to parent
- * @param rewrap_token {String} - property returned from parent.
- * @param selectedAction {String} - property returned from parent.
- * @param bytes {String} - property returned from parent.
- * @param error=null {Object} - errors passed from parent as default then from child back to parent.
+ * <ToolRewrap />
  */
 
 export default class ToolRewrap extends Component {
+  @service store;
+  @service flashMessages;
+
+  @tracked originalToken = '';
+  @tracked rewrappedToken = '';
+  @tracked errorMessage = '';
+
   @action
-  onClear() {
-    this.args.onClear();
+  reset() {
+    this.originalToken = '';
+    this.rewrappedToken = '';
+    this.errorMessage = '';
+  }
+
+  @action
+  async handleSubmit(evt) {
+    evt.preventDefault();
+    const data = { token: this.originalToken.trim() };
+
+    try {
+      const response = await this.store.adapterFor('tools').toolAction('rewrap', data);
+      this.rewrappedToken = response.wrap_info.token;
+      this.flashMessages.success('Rewrap was successful.');
+    } catch (error) {
+      this.errorMessage = errorMessage(error);
+    }
   }
 }

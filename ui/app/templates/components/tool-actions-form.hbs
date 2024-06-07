@@ -9,14 +9,7 @@
   {{else if (eq this.selectedAction "random")}}
     <ToolRandom />
   {{else if (eq this.selectedAction "rewrap")}}
-    <ToolRewrap
-      @onClear={{action "onClear"}}
-      @rewrap_token={{this.rewrap_token}}
-      @selectedAction={{this.selectedAction}}
-      @errors={{this.errors}}
-      @token={{this.token}}
-      @bytes={{this.bytes}}
-    />
+    <ToolRewrap />
   {{else if (eq this.selectedAction "unwrap")}}
     <ToolUnwrap
       @onClear={{action "onClear"}}
