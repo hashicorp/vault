@@ -315,13 +315,13 @@ func (ace *ACMEChallengeEngine) AcceptChallenge(sc *storageContext, account stri
 func (ace *ACMEChallengeEngine) VerifyChallenge(runnerSc *storageContext, id string, validationQueueRetries int, finished chan bool, config *acmeConfigEntry) {
 	sc, cancel := runnerSc.WithFreshTimeout(MaxChallengeTimeout)
 	defer cancel()
-	runnerSc.Backend.Logger().Debug("Starting verification of challenge", "id", id)
+	runnerSc.Logger().Debug("Starting verification of challenge", "id", id)
 
 	if retry, retryAfter, err := ace._verifyChallenge(sc, id, config); err != nil {
 		// Because verification of this challenge failed, we need to retry
 		// it in the future. Log the error and re-add the item to the queue
 		// to try again later.
-		sc.Backend.Logger().Error(fmt.Sprintf("ACME validation failed for %v: %v", id, err))
+		sc.Logger().Error(fmt.Sprintf("ACME validation failed for %v: %v", id, err))
 
 		if retry {
 			validationQueueRetries++
@@ -331,10 +331,10 @@ func (ace *ACMEChallengeEngine) VerifyChallenge(runnerSc *storageContext, id str
 			// we have a secondary check here to see if we are consistently looping within the validation
 			// queue that is larger than the normal retry attempts we would allow.
 			if validationQueueRetries > MaxRetryAttempts*2 {
-				sc.Backend.Logger().Warn("reached max error attempts within challenge queue: %v, giving up", id)
+				sc.Logger().Warn("reached max error attempts within challenge queue: %v, giving up", id)
 				_, _, err = ace._verifyChallengeCleanup(sc, nil, id)
 				if err != nil {
-					sc.Backend.Logger().Warn("Failed cleaning up challenge entry: %v", err)
+					sc.Logger().Warn("Failed cleaning up challenge entry: %v", err)
 				}
 				finished <- true
 				return

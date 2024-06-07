@@ -417,7 +417,7 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 	var parsedBundle *certutil.ParsedCertBundle
 	var warnings []string
 	if useCSR {
-		parsedBundle, warnings, err = signCert(b, input, signingBundle, false, useCSRValues)
+		parsedBundle, warnings, err = signCert(b.System(), input, signingBundle, false, useCSRValues)
 	} else {
 		parsedBundle, warnings, err = generateCert(sc, input, signingBundle, false, rand.Reader)
 	}

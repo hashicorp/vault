@@ -84,14 +84,13 @@ func getGenerationParams(sc *storageContext, data *framework.FieldData) (exporte
 
 func generateCABundle(sc *storageContext, input *inputBundle, data *certutil.CreationBundle, randomSource io.Reader) (*certutil.ParsedCertBundle, error) {
 	ctx := sc.Context
-	b := sc.Backend
 
 	if kmsRequested(input) {
 		keyId, err := getManagedKeyId(input.apiData)
 		if err != nil {
 			return nil, err
 		}
-		return managed_key.GenerateManagedKeyCABundle(ctx, b, keyId, data, randomSource)
+		return managed_key.GenerateManagedKeyCABundle(ctx, sc.GetPkiManagedView(), keyId, data, randomSource)
 	}
 
 	if existingKeyRequested(input) {
@@ -110,7 +109,7 @@ func generateCABundle(sc *storageContext, input *inputBundle, data *certutil.Cre
 			if err != nil {
 				return nil, err
 			}
-			return managed_key.GenerateManagedKeyCABundle(ctx, b, keyId, data, randomSource)
+			return managed_key.GenerateManagedKeyCABundle(ctx, sc.GetPkiManagedView(), keyId, data, randomSource)
 		}
 
 		return certutil.CreateCertificateWithKeyGenerator(data, randomSource, existingKeyGeneratorFromBytes(keyEntry))
@@ -121,7 +120,6 @@ func generateCABundle(sc *storageContext, input *inputBundle, data *certutil.Cre
 
 func generateCSRBundle(sc *storageContext, input *inputBundle, data *certutil.CreationBundle, addBasicConstraints bool, randomSource io.Reader) (*certutil.ParsedCSRBundle, error) {
 	ctx := sc.Context
-	b := sc.Backend
 
 	if kmsRequested(input) {
 		keyId, err := getManagedKeyId(input.apiData)
@@ -129,7 +127,7 @@ func generateCSRBundle(sc *storageContext, input *inputBundle, data *certutil.Cr
 			return nil, err
 		}
 
-		return managed_key.GenerateManagedKeyCSRBundle(ctx, b, keyId, data, addBasicConstraints, randomSource)
+		return managed_key.GenerateManagedKeyCSRBundle(ctx, sc.GetPkiManagedView(), keyId, data, addBasicConstraints, randomSource)
 	}
 
 	if existingKeyRequested(input) {
@@ -148,7 +146,7 @@ func generateCSRBundle(sc *storageContext, input *inputBundle, data *certutil.Cr
 			if err != nil {
 				return nil, err
 			}
-			return managed_key.GenerateManagedKeyCSRBundle(ctx, b, keyId, data, addBasicConstraints, randomSource)
+			return managed_key.GenerateManagedKeyCSRBundle(ctx, sc.GetPkiManagedView(), keyId, data, addBasicConstraints, randomSource)
 		}
 
 		return certutil.CreateCSRWithKeyGenerator(data, addBasicConstraints, randomSource, existingKeyGeneratorFromBytes(key))
@@ -157,8 +155,8 @@ func generateCSRBundle(sc *storageContext, input *inputBundle, data *certutil.Cr
 	return certutil.CreateCSRWithRandomSource(data, addBasicConstraints, randomSource)
 }
 
-func parseCABundle(ctx context.Context, b *backend, bundle *certutil.CertBundle) (*certutil.ParsedCertBundle, error) {
-	return issuing.ParseCABundle(ctx, b, bundle)
+func parseCABundle(ctx context.Context, mkv managed_key.PkiManagedKeyView, bundle *certutil.CertBundle) (*certutil.ParsedCertBundle, error) {
+	return issuing.ParseCABundle(ctx, mkv, bundle)
 }
 
 func (sc *storageContext) getKeyTypeAndBitsForRole(data *framework.FieldData) (string, int, error) {
@@ -190,7 +188,7 @@ func (sc *storageContext) getKeyTypeAndBitsForRole(data *framework.FieldData) (s
 			return "", 0, errors.New("unable to determine managed key id: " + err.Error())
 		}
 
-		pubKeyManagedKey, err := managed_key.GetManagedKeyPublicKey(sc.Context, sc.Backend, keyId)
+		pubKeyManagedKey, err := managed_key.GetManagedKeyPublicKey(sc.Context, sc.GetPkiManagedView(), keyId)
 		if err != nil {
 			return "", 0, errors.New("failed to lookup public key from managed key: " + err.Error())
 		}
@@ -222,7 +220,7 @@ func (sc *storageContext) getExistingPublicKey(data *framework.FieldData) (crypt
 	if err != nil {
 		return nil, err
 	}
-	return getPublicKey(sc.Context, sc.Backend, key)
+	return getPublicKey(sc.Context, sc.GetPkiManagedView(), key)
 }
 
 func getKeyTypeAndBitsFromPublicKeyForRole(pubKey crypto.PublicKey) (certutil.PrivateKeyType, int, error) {

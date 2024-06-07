@@ -119,7 +119,7 @@ func (a *acmeState) reloadConfigIfRequired(sc *storageContext) error {
 		return nil
 	}
 
-	config, err := sc.getAcmeConfig()
+	config, err := getAcmeConfig(sc)
 	if err != nil {
 		return fmt.Errorf("failed reading ACME config: %w", err)
 	}

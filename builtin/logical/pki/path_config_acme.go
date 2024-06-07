@@ -57,7 +57,7 @@ var (
 	rolePrefixLength      = len(rolePrefix)
 )
 
-func (sc *storageContext) getAcmeConfig() (*acmeConfigEntry, error) {
+func getAcmeConfig(sc *storageContext) (*acmeConfigEntry, error) {
 	entry, err := sc.Storage.Get(sc.Context, storageAcmeConfig)
 	if err != nil {
 		return nil, err

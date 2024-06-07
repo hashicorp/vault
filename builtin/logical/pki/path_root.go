@@ -399,7 +399,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		apiData: data,
 		role:    role,
 	}
-	parsedBundle, warnings, err := signCert(b, input, signingBundle, true, useCSRValues)
+	parsedBundle, warnings, err := signCert(b.System(), input, signingBundle, true, useCSRValues)
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:

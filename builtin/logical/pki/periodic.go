@@ -36,19 +36,18 @@ func newUnifiedTransferStatus() *UnifiedTransferStatus {
 // send all missing local revocation entries to the unified space if the feature
 // is enabled.
 func runUnifiedTransfer(sc *storageContext) {
-	b := sc.Backend
-	status := b.GetUnifiedTransferStatus()
+	status := sc.GetUnifiedTransferStatus()
 
-	isPerfStandby := b.System().ReplicationState().HasState(consts.ReplicationDRSecondary | consts.ReplicationPerformanceStandby)
+	isPerfStandby := sc.System().ReplicationState().HasState(consts.ReplicationDRSecondary | consts.ReplicationPerformanceStandby)
 
-	if isPerfStandby || b.System().LocalMount() {
+	if isPerfStandby || sc.System().LocalMount() {
 		// We only do this on active enterprise nodes, when we aren't a local mount
 		return
 	}
 
-	config, err := b.CrlBuilder().getConfigWithUpdate(sc)
+	config, err := sc.CrlBuilder().getConfigWithUpdate(sc)
 	if err != nil {
-		b.Logger().Error("failed to retrieve crl config from storage for unified transfer background process",
+		sc.Logger().Error("failed to retrieve crl config from storage for unified transfer background process",
 			"error", err)
 		return
 	}
@@ -58,15 +57,15 @@ func runUnifiedTransfer(sc *storageContext) {
 		return
 	}
 
-	clusterId, err := b.System().ClusterID(sc.Context)
+	clusterId, err := sc.System().ClusterID(sc.Context)
 	if err != nil {
-		b.Logger().Error("failed to fetch cluster id for unified transfer background process",
+		sc.Logger().Error("failed to fetch cluster id for unified transfer background process",
 			"error", err)
 		return
 	}
 
 	if !status.isRunning.CompareAndSwap(false, true) {
-		b.Logger().Debug("an existing unified transfer process is already running")
+		sc.Logger().Debug("an existing unified transfer process is already running")
 		return
 	}
 	defer status.isRunning.Store(false)
@@ -91,13 +90,13 @@ func runUnifiedTransfer(sc *storageContext) {
 
 	err = doUnifiedTransferMissingLocalSerials(sc, clusterId)
 	if err != nil {
-		b.Logger().Error("an error occurred running unified transfer", "error", err.Error())
+		sc.Logger().Error("an error occurred running unified transfer", "error", err.Error())
 		status.forceRerun.Store(true)
 	} else {
 		if config.EnableDelta {
 			err = doUnifiedTransferMissingDeltaWALSerials(sc, clusterId)
 			if err != nil {
-				b.Logger().Error("an error occurred running unified transfer", "error", err.Error())
+				sc.Logger().Error("an error occurred running unified transfer", "error", err.Error())
 				status.forceRerun.Store(true)
 			}
 		}
@@ -125,7 +124,7 @@ func doUnifiedTransferMissingLocalSerials(sc *storageContext, clusterId string) 
 	errCount := 0
 	for i, serialNum := range localRevokedSerialNums {
 		if i%25 == 0 {
-			config, _ := sc.Backend.CrlBuilder().getConfigWithUpdate(sc)
+			config, _ := sc.CrlBuilder().getConfigWithUpdate(sc)
 			if config != nil && !config.UnifiedCRL {
 				return errors.New("unified crl has been disabled after we started, stopping")
 			}
@@ -134,14 +133,14 @@ func doUnifiedTransferMissingLocalSerials(sc *storageContext, clusterId string) 
 			err := readRevocationEntryAndTransfer(sc, serialNum)
 			if err != nil {
 				errCount++
-				sc.Backend.Logger().Error("Failed transferring local revocation to unified space",
+				sc.Logger().Error("Failed transferring local revocation to unified space",
 					"serial", serialNum, "error", err)
 			}
 		}
 	}
 
 	if errCount > 0 {
-		sc.Backend.Logger().Warn(fmt.Sprintf("Failed transfering %d local serials to unified storage", errCount))
+		sc.Logger().Warn(fmt.Sprintf("Failed transfering %d local serials to unified storage", errCount))
 	}
 
 	return nil
@@ -224,7 +223,7 @@ func doUnifiedTransferMissingDeltaWALSerials(sc *storageContext, clusterId strin
 	errCount := 0
 	for index, serial := range localWALEntries {
 		if index%25 == 0 {
-			config, _ := sc.Backend.CrlBuilder().getConfigWithUpdate(sc)
+			config, _ := sc.CrlBuilder().getConfigWithUpdate(sc)
 			if config != nil && (!config.UnifiedCRL || !config.EnableDelta) {
 				return errors.New("unified or delta CRLs have been disabled after we started, stopping")
 			}
@@ -247,7 +246,7 @@ func doUnifiedTransferMissingDeltaWALSerials(sc *storageContext, clusterId strin
 		if !isRevokedCopied {
 			// We need to wait here to copy over.
 			errCount += 1
-			sc.Backend.Logger().Debug("Delta WAL exists locally, but corresponding cross-cluster full revocation entry is missing; skipping", "serial", serial)
+			sc.Logger().Debug("Delta WAL exists locally, but corresponding cross-cluster full revocation entry is missing; skipping", "serial", serial)
 			continue
 		}
 
@@ -258,7 +257,7 @@ func doUnifiedTransferMissingDeltaWALSerials(sc *storageContext, clusterId strin
 		entry, err := sc.Storage.Get(sc.Context, localPath)
 		if err != nil || entry == nil {
 			errCount += 1
-			sc.Backend.Logger().Error("Failed reading local delta WAL entry to copy to cross-cluster", "serial", serial, "err", err)
+			sc.Logger().Error("Failed reading local delta WAL entry to copy to cross-cluster", "serial", serial, "err", err)
 			continue
 		}
 
@@ -266,14 +265,14 @@ func doUnifiedTransferMissingDeltaWALSerials(sc *storageContext, clusterId strin
 		err = sc.Storage.Put(sc.Context, entry)
 		if err != nil {
 			errCount += 1
-			sc.Backend.Logger().Error("Failed sync local delta WAL entry to cross-cluster unified delta WAL location", "serial", serial, "err", err)
+			sc.Logger().Error("Failed sync local delta WAL entry to cross-cluster unified delta WAL location", "serial", serial, "err", err)
 			continue
 		}
 	}
 
 	if errCount > 0 {
 		// See note above about why we don't fail here.
-		sc.Backend.Logger().Warn(fmt.Sprintf("Failed transfering %d local delta WAL serials to unified storage", errCount))
+		sc.Logger().Warn(fmt.Sprintf("Failed transfering %d local delta WAL serials to unified storage", errCount))
 		return nil
 	}
 
@@ -300,12 +299,12 @@ func readRevocationEntryAndTransfer(sc *storageContext, serial string) error {
 		return fmt.Errorf("failed loading revocation entry for serial: %s: %w", serial, err)
 	}
 	if revInfo == nil {
-		sc.Backend.Logger().Debug("no certificate revocation entry for serial", "serial", serial)
+		sc.Logger().Debug("no certificate revocation entry for serial", "serial", serial)
 		return nil
 	}
 	cert, err := x509.ParseCertificate(revInfo.CertificateBytes)
 	if err != nil {
-		sc.Backend.Logger().Debug("failed parsing certificate stored in revocation entry for serial",
+		sc.Logger().Debug("failed parsing certificate stored in revocation entry for serial",
 			"serial", serial, "error", err)
 		return nil
 	}

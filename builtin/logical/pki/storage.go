@@ -11,8 +11,10 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/builtin/logical/pki/managed_key"
@@ -74,6 +76,42 @@ func (sc *storageContext) WithFreshTimeout(timeout time.Duration) (*storageConte
 		Storage: sc.Storage,
 		Backend: sc.Backend,
 	}, cancel
+}
+
+func (sc *storageContext) Logger() hclog.Logger {
+	return sc.Backend.Logger()
+}
+
+func (sc *storageContext) System() logical.SystemView {
+	return sc.Backend.System()
+}
+
+func (sc *storageContext) CrlBuilder() *CrlBuilder {
+	return sc.Backend.CrlBuilder()
+}
+
+func (sc *storageContext) GetUnifiedTransferStatus() *UnifiedTransferStatus {
+	return sc.Backend.GetUnifiedTransferStatus()
+}
+
+func (sc *storageContext) GetPkiManagedView() managed_key.PkiManagedKeyView {
+	return sc.Backend
+}
+
+func (sc *storageContext) GetCertificateCounter() *CertificateCounter {
+	return sc.Backend.GetCertificateCounter()
+}
+
+func (sc *storageContext) UseLegacyBundleCaStorage() bool {
+	return sc.Backend.UseLegacyBundleCaStorage()
+}
+
+func (sc *storageContext) GetRevokeStorageLock() *sync.RWMutex {
+	return sc.Backend.GetRevokeStorageLock()
+}
+
+func (sc *storageContext) GetRole(name string) (*issuing.RoleEntry, error) {
+	return sc.Backend.GetRole(sc.Context, sc.Storage, name)
 }
 
 func (sc *storageContext) listKeys() ([]issuing.KeyID, error) {
@@ -650,10 +688,10 @@ func (sc *storageContext) getRevocationConfig() (*crlConfig, error) {
 		result.Expiry = defaultCrlConfig.Expiry
 	}
 
-	isLocalMount := sc.Backend.System().LocalMount()
+	isLocalMount := sc.System().LocalMount()
 	if (!constants.IsEnterprise || isLocalMount) && (result.UnifiedCRLOnExistingPaths || result.UnifiedCRL || result.UseGlobalQueue) {
 		// An end user must have had Enterprise, enabled the unified config args and then downgraded to OSS.
-		sc.Backend.Logger().Warn("Not running Vault Enterprise or using a local mount, " +
+		sc.Logger().Warn("Not running Vault Enterprise or using a local mount, " +
 			"disabling unified_crl, unified_crl_on_existing_paths and cross_cluster_revocation config flags.")
 		result.UnifiedCRLOnExistingPaths = false
 		result.UnifiedCRL = false
