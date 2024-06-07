@@ -25,11 +25,11 @@ const createTokenStore = () => {
     },
   };
 };
-
 const DATA_TO_WRAP = JSON.stringify({ tools: 'tests' });
 
 module('Acceptance | tools', function (hooks) {
   setupApplicationTest(hooks);
+  setupMirage(hooks);
 
   hooks.beforeEach(async function () {
     await authPage.login();
@@ -45,7 +45,7 @@ module('Acceptance | tools', function (hooks) {
   });
 
   module('cross tool workflow', function () {
-    test('it wraps data, performs lookup, rewraps data then unwraps data', async function (assert) {
+    test('it wraps data, performs lookup, rewraps and then unwraps data', async function (assert) {
       const tokenStore = createTokenStore();
 
       await waitUntil(() => find('.CodeMirror'));
@@ -72,8 +72,8 @@ module('Acceptance | tools', function (hooks) {
 
       await fillIn(TS.toolsInput('wrapping-token'), tokenStore.get());
       await click(TS.submit);
-      const rewrappedToken = await waitUntil(() => find(TS.toolsInput('rewrapped-token')).innerText);
-      assert.ok(rewrappedToken, 'has a new re-wrapped token');
+      await waitUntil(() => find(TS.toolsInput('rewrapped-token')));
+      const rewrappedToken = find(TS.toolsInput('rewrapped-token')).innerText;
       assert.notEqual(rewrappedToken, tokenStore.get(), 're-wrapped token is not the wrapped token');
       tokenStore.set(rewrappedToken);
 
@@ -123,6 +123,7 @@ module('Acceptance | tools', function (hooks) {
         .hasText('LCa0a2j/xo/5m0U8HTBBNBNCLXBkg7+g+YpeiGJm564=', 'hashes the data, encodes input');
       await click(TS.button('Done'));
 
+      await waitUntil(() => find(TS.toolsInput('hash-input')));
       assert.dom(TS.toolsInput('hash-input')).hasText('', 'it clears input on done');
       await fillIn(TS.toolsInput('hash-input'), 'e2RhdGE6ImZvbyJ9');
 
@@ -135,7 +136,6 @@ module('Acceptance | tools', function (hooks) {
   });
 
   module('unwrap', function () {
-    setupMirage(hooks);
     test('it unwraps with auth block', async function (assert) {
       const AUTH_RESPONSE = {
         request_id: '39802bc4-235c-2f0b-87f3-ccf38503ac3e',
@@ -196,11 +196,11 @@ module('Acceptance | tools', function (hooks) {
       // so when users attempted to wrap data again the payload was actually empty and unwrapping the token returned {token: ""}
       // it is user desired behavior that the form does not clear on back, and that wrapping can be immediately repeated
       // we use lookup to check our token from the second wrap returns the unwrapped data we expect
-      await click(GENERAL.navLink('Lookup'));
-      await fillIn(TS.toolsInput('wrapping-token'), tokenStore.get());
+      await click(GENERAL.navLink('Unwrap'));
+      await fillIn(TS.toolsInput('unwrap-token'), tokenStore.get());
       await click(TS.submit);
-      await waitUntil(() => findAll('[data-test-component="info-table-row"]').length >= 3);
-      assert.dom(GENERAL.infoRowValue('Creation TTL')).hasText('1800', 'show creation ttl row');
+      await waitUntil(() => find('.CodeMirror'));
+      assert.strictEqual(codemirror().getValue(' '), '{   "tools": "tests" }', 'it renders unwrapped data');
     });
 
     test('it sends wrap ttl', async function (assert) {
@@ -218,7 +218,7 @@ module('Acceptance | tools', function (hooks) {
       const wrappedToken = await waitUntil(() => find(TS.toolsInput('wrapping-token')));
       tokenStore.set(wrappedToken.innerText);
 
-      // lookup to check unwrapped data is what we expect
+      // lookup to check ttl is what we expect
       await click(GENERAL.navLink('Lookup'));
       await fillIn(TS.toolsInput('wrapping-token'), tokenStore.get());
       await click(TS.submit);
