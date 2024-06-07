@@ -4,31 +4,53 @@
  */
 
 import Component from '@glimmer/component';
+import { service } from '@ember/service';
 import { action } from '@ember/object';
+import { tracked } from '@glimmer/tracking';
+import errorMessage from 'vault/utils/error-message';
 
 /**
- * @module ToolUnwrap
- * ToolUnwrap components are components that sys/wrapping/unwrap functionality.  Most of the functionality is passed through as actions from the tool-actions-form and then called back with properties.
+ * @module ToolsUnwrap
+ * ToolsUnwrap components are components that sys/wrapping/rewrap functionality
  *
  * @example
- * ```js
- * <ToolUnwrap
- *  @onClear={{action "onClear"}}
- *  @token={{token}}
- *  @unwrap_data={{unwrap_data}}
- *  @details={{details}}
- *  @errors={{errors}}/>
- * ```
- * @param onClear {Function} - parent action that is passed through. Must be passed as {{action "onClear"}}
- * @param token=null {String} - property passed from parent to child and then passed back up to parent
- * @param unwrap_data {String} - property returned from parent.
- * @param details {String} - property returned from parent.
- * @param error=null {Object} - errors passed from parent as default then from child back to parent.
+ * <ToolsUnwrap />
  */
 
-export default class ToolUnwrap extends Component {
+export default class ToolsUnwrap extends Component {
+  @service store;
+  @service flashMessages;
+
+  @tracked token = '';
+  @tracked unwrapData = '';
+  @tracked unwrapDetails = {};
+  @tracked errorMessage = '';
+
   @action
-  onClear() {
-    this.args.onClear();
+  reset() {
+    this.token = '';
+    this.unwrapData = '';
+    this.unwrapDetails = {};
+    this.errorMessage = '';
+  }
+
+  @action
+  async handleSubmit(evt) {
+    evt.preventDefault();
+    const data = { token: this.token.trim() };
+
+    try {
+      const resp = await this.store.adapterFor('tools').toolAction('unwrap', data);
+      this.unwrapData = (resp && resp.data) || resp.auth;
+      this.unwrapDetails = {
+        'Request ID': resp.request_id,
+        'Lease ID': resp.lease_id || 'None',
+        Renewable: resp.renewable,
+        'Lease Duration': resp.lease_duration || 'None',
+      };
+      this.flashMessages.success('Unwrap was successful.');
+    } catch (error) {
+      this.errorMessage = errorMessage(error);
+    }
   }
 }

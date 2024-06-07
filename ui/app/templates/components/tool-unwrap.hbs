@@ -11,7 +11,7 @@
   </p.levelLeft>
 </PageHeader>
 
-{{#if @unwrap_data}}
+{{#if this.unwrapData}}
   <Hds::Tabs as |T|>
     <T.Tab data-test-tab="data">Data</T.Tab>
     <T.Tab data-test-tab="details">Wrap Details</T.Tab>
@@ -19,25 +19,15 @@
       <JsonEditor
         class="has-top-padding-m"
         @title="Unwrapped Data"
-        @value={{stringify @unwrap_data}}
+        @value={{stringify this.unwrapData}}
         @readOnly={{true}}
         @container=".toolbar-actions"
       />
     </T.Panel>
     <T.Panel>
       <div class="has-top-padding-m">
-        {{#each-in @details as |key detail|}}
-          <InfoTableRow @label={{key}} @value={{key}}>
-            {{#if (or (eq detail "No") (eq detail "None"))}}
-              <Icon @name="x-circle" class="has-text-grey" />
-              {{detail}}
-            {{else}}
-              {{#if (eq detail "Yes")}}
-                <Icon @name="check-circle" class="has-text-success" />
-              {{/if}}
-              {{detail}}
-            {{/if}}
-          </InfoTableRow>
+        {{#each-in this.unwrapDetails as |key detail|}}
+          <InfoTableRow @label={{key}} @value={{detail}} />
         {{/each-in}}
       </div>
     </T.Panel>
@@ -45,37 +35,39 @@
   <Hds::ButtonSet class="has-top-padding-m">
     <Hds::Copy::Button
       @text="Copy unwrapped data"
-      @textToCopy={{stringify @unwrap_data}}
-      @onError={{(fn (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger"))}}
+      @textToCopy={{stringify this.unwrapData}}
+      @onError={{fn (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")}}
       class="primary"
     />
-    <Hds::Button {{on "click" this.onClear}} @color="secondary" @text="Back" />
+    <Hds::Button {{on "click" this.reset}} @color="secondary" @text="Done" data-test-button="Done" />
   </Hds::ButtonSet>
 {{else}}
-  <div class="box is-sideless is-fullwidth is-marginless">
-    <NamespaceReminder @mode="perform" @noun={{@selectedAction}} />
-    <MessageError @errors={{@errors}} />
-    <div class="field">
-      <label for="token" class="is-label">Wrapped token</label>
-      <div class="has-text-grey is-size-8 has-bottom-margin-xs">
-        Enter your wrapped token here to unwrap it and return its original value.
+  <form {{on "submit" this.handleSubmit}}>
+    <div class="box is-sideless is-fullwidth is-marginless">
+      <NamespaceReminder @mode="perform" @noun="unwrap" />
+      <MessageError @errorMessage={{this.errorMessage}} />
+      <div class="field">
+        <label for="token" class="is-label">Wrapped token</label>
+        <div class="has-text-grey is-size-8 has-bottom-margin-xs">
+          Enter your wrapped token here to unwrap it and return its original value.
+        </div>
+        <div class="control">
+          <Input
+            @value={{this.token}}
+            class="input"
+            id="token"
+            name="token"
+            autocomplete="off"
+            spellcheck="false"
+            data-test-tools-input="unwrap-token"
+          />
+        </div>
       </div>
+    </div>
+    <div class="field is-grouped box is-fullwidth is-bottomless">
       <div class="control">
-        <Input
-          @value={{@token}}
-          class="input"
-          id="token"
-          name="token"
-          autocomplete="off"
-          spellcheck="false"
-          data-test-tools-input="wrapping-token"
-        />
+        <Hds::Button @text="Unwrap data" type="submit" data-test-tools-submit />
       </div>
     </div>
-  </div>
-  <div class="field is-grouped box is-fullwidth is-bottomless">
-    <div class="control">
-      <Hds::Button @text="Unwrap data" type="submit" data-test-tools-submit />
-    </div>
-  </div>
+  </form>
 {{/if}}

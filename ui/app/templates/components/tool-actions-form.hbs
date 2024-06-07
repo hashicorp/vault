@@ -11,13 +11,7 @@
   {{else if (eq this.selectedAction "rewrap")}}
     <ToolRewrap />
   {{else if (eq this.selectedAction "unwrap")}}
-    <ToolUnwrap
-      @onClear={{action "onClear"}}
-      @unwrap_data={{this.unwrap_data}}
-      @details={{this.details}}
-      @errors={{this.errors}}
-      @token={{this.token}}
-    />
+    <ToolUnwrap />
   {{else if (eq this.selectedAction "lookup")}}
     <ToolLookup
       @creation_time={{this.creation_time}}
