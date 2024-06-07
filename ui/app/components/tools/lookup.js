@@ -4,25 +4,53 @@
  */
 
 import Component from '@glimmer/component';
+import { service } from '@ember/service';
+import { action } from '@ember/object';
+import { tracked } from '@glimmer/tracking';
+import errorMessage from 'vault/utils/error-message';
 import { addSeconds, parseISO } from 'date-fns';
 
 /**
  * @module ToolLookup
- * ToolLookup components are components that sys/wrapping/lookup functionality.  Most of the functionality is passed through as actions from the tool-actions-form and then called back with properties.
+ * ToolLookup components are components that sys/wrapping/lookup functionality.
  *
  * @example
- * <Tools::Lookup @creation_time={{creation_time}} @creation_ttl={{creation_ttl}} @creation_path={{creation_path}} @token={{token}} @onClear={{action "onClear"}} @errors={{errors}}/>
- *
- * @param {string} creation_time - ISO string creation time for token
- * @param {number} creation_ttl - token ttl in seconds
- * @param {string} creation_path - path where token was originally generated
- * @param {string} token=null - token
- * @param {function} onClear - callback that resets all of values to defaults. Must be passed as `{{action "onClear"}}`
- * @param {object} errors=null - errors returned if lookup request fails
+ * <Tools::Lookup />
  */
 export default class ToolLookup extends Component {
+  @service store;
+  @service flashMessages;
+
+  @tracked token = '';
+  @tracked lookupData = null;
+  @tracked errorMessage = '';
+
+  @action
+  reset() {
+    this.token = '';
+    this.lookupData = null;
+    this.errorMessage = '';
+  }
+
   get expirationDate() {
-    // returns new Date with seconds added.
-    return addSeconds(parseISO(this.args.creation_time), this.args.creation_ttl);
+    const { creation_time, creation_ttl } = this.lookupData;
+    if (creation_time && creation_ttl) {
+      // returns new Date with seconds added.
+      return addSeconds(parseISO(creation_time), creation_ttl);
+    }
+    return null;
+  }
+
+  @action
+  async handleSubmit(evt) {
+    evt.preventDefault();
+    const payload = { token: this.token.trim() };
+    try {
+      const resp = await this.store.adapterFor('tools').toolAction('lookup', payload);
+      this.lookupData = resp.data;
+      this.flashMessages.success('Lookup was successful.');
+    } catch (error) {
+      this.errorMessage = errorMessage(error);
+    }
   }
 }
