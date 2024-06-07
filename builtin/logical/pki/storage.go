@@ -10,6 +10,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
 	"strings"
 	"sync"
@@ -62,6 +63,8 @@ type storageContext struct {
 	Backend *backend
 }
 
+var _ pki_backend.StorageContext = (*storageContext)(nil)
+
 func (b *backend) makeStorageContext(ctx context.Context, s logical.Storage) *storageContext {
 	return &storageContext{
 		Context: ctx,
@@ -77,6 +80,14 @@ func (sc *storageContext) WithFreshTimeout(timeout time.Duration) (*storageConte
 		Storage: sc.Storage,
 		Backend: sc.Backend,
 	}, cancel
+}
+
+func (sc *storageContext) GetContext() context.Context {
+	return sc.Context
+}
+
+func (sc *storageContext) GetStorage() logical.Storage {
+	return sc.Storage
 }
 
 func (sc *storageContext) Logger() hclog.Logger {
