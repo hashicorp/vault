@@ -10,6 +10,9 @@ import { service } from '@ember/service';
 import Route from '@ember/routing/route';
 import { encodePath, normalizePath } from 'vault/utils/path-encoding-helpers';
 import { keyIsFolder, parentKeyForKey } from 'core/utils/key-utils';
+import { later } from '@ember/runloop';
+import timestamp from 'core/utils/timestamp';
+import { getUnixTime } from 'date-fns';
 
 export default Route.extend({
   store: service(),
@@ -127,6 +130,7 @@ export default Route.extend({
       kv: 'secret',
       keymgmt: `keymgmt/${options.queryParams?.itemType || 'key'}`,
       generic: 'secret',
+      totp: 'totp',
     };
     return types[engineType];
   },
@@ -184,6 +188,28 @@ export default Route.extend({
       secret: secretModel,
       capabilities,
     };
+  },
+
+  async afterModel(model, transition) {
+    const secret = this.secretParam();
+    const backend = this.enginePathParam();
+    const modelType = this.modelType(backend, secret);
+
+    if (modelType === 'totp' && secret) {
+      try {
+        const codeModel = await this.store.queryRecord('code-totp', { id: secret, backend });
+        model.secret.code = codeModel.code;
+      } catch (err) {
+        console.debug(err);
+      }
+
+      later(
+        () => {
+          this.refresh();
+        },
+        (model.secret.period - (getUnixTime(timestamp.now()) % model.secret.period)) * 1000
+      );
+    }
   },
 
   setupController(controller, model) {

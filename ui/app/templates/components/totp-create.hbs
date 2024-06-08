@@ -1,0 +1,72 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<form class="simple-edit" {{on "submit" this.createAccount}} aria-label="account create form">
+  <div class="field box is-fullwidth is-sideless is-marginless">
+    <NamespaceReminder @noun="account" />
+    <MessageError @model={{@modelForData}} @errorMessage={{this.error}} />
+    <label class="is-label" for="kv-key">Name for this account</label>
+    <p class="control is-expanded">
+      <Input
+        autocomplete="off"
+        spellcheck="false"
+        data-test-secret-path="true"
+        id="kv-key"
+        class="input {{if (get this.validationMessages 'name') 'has-error-border'}}"
+        @value={{get @modelForData "name"}}
+        {{on "keyup" (perform this.waitForKeyUp "name" value="target.value")}}
+      />
+    </p>
+    {{#if (get this.validationMessages "name")}}
+      <AlertInline @type="danger" @message={{capitalize (get this.validationMessages "name")}} class="has-top-padding-s" />
+    {{/if}}
+    {{#if this.nameWhiteSpaceWarning}}
+      <Hds::Alert
+        @type="inline"
+        @color="warning"
+        class="has-top-margin-m has-bottom-margin-s"
+        data-test-whitespace-warning
+        as |A|
+      >
+        <A.Title>Warning</A.Title>
+        <A.Description>
+          Your account name contains whitespace. If this is desired, you'll need to encode it with %20 in API calls.
+        </A.Description>
+      </Hds::Alert>
+    {{/if}}
+  </div>
+
+  <div class="form-section">
+    <label class="title is-5">
+      Configuration
+    </label>
+    <label class="is-label" for="kv-key">otpauth URL</label>
+    <p class="control is-expanded">
+      <Input
+        autocomplete="off"
+        spellcheck="false"
+        data-test-secret-path="true"
+        id="url"
+        class="input {{if (get this.validationMessages 'url') 'has-error-border'}}"
+        @value={{get @modelForData "url"}}
+        {{on "keyup" (perform this.waitForKeyUp "url" value="target.value")}}
+      />
+    </p>
+    {{#if (get this.validationMessages "url")}}
+      <AlertInline @type="danger" @message={{capitalize (get this.validationMessages "url")}} class="has-top-padding-s" />
+    {{/if}}
+  </div>
+
+  <div class="field is-grouped box is-fullwidth is-bottomless">
+    <Hds::ButtonSet>
+      <Hds::Button @text="Save" type="submit" disabled={{@buttonDisabled}} data-test-secret-save={{true}} />
+      {{#if @model.name}}
+        <Hds::Button @text="Cancel" @color="secondary" @route="vault.cluster.secrets.backend.list" @model={{@model.name}} />
+      {{else}}
+        <Hds::Button @text="Cancel" @color="secondary" @route="vault.cluster.secrets.backend.list-root" />
+      {{/if}}
+    </Hds::ButtonSet>
+  </div>
+</form>
