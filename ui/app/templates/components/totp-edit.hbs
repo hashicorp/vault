@@ -1,0 +1,59 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<div {{did-insert this.startTimer}} {{will-destroy this.cancelTimer}}>
+  <PageHeader as |p|>
+    <p.top>
+      <KeyValueHeader
+        @baseKey={{@baseKey}}
+        @path="vault.cluster.secrets.backend.list"
+        @mode={{@mode}}
+        @root={{@root}}
+        @showCurrent={{true}}
+      />
+    </p.top>
+    <p.levelLeft>
+      <h1 class="title is-3">
+        {{#if (eq @mode "create")}}
+          Add account
+        {{else}}
+          {{@key.id}}
+        {{/if}}
+      </h1>
+    </p.levelLeft>
+  </PageHeader>
+  {{! tabs for show only }}
+  {{#if (eq @mode "show")}}
+    <div class="tabs-container box is-bottomless is-marginless is-fullwidth is-paddingless">
+      <nav class="tabs" aria-label="navigation for secret management">
+        <ul>
+          <li>
+            <LinkTo @route="vault.cluster.secrets.backend.show" @model={{@key.id}} data-test-secret-tab>
+              Account
+            </LinkTo>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  {{/if}}
+
+  {{#if (eq @mode "create")}}
+    <TotpCreate
+      @model={{@model}}
+      @modelForData={{this.modelForData}}
+      @error={{this.error}}
+      @buttonDisabled={{this.buttonDisabled}}
+    />
+  {{else if (eq @mode "show")}}
+    <TotpFormShow
+      @modelForData={{this.modelForData}}
+      @elapsedTime={{this.elapsedTime}}
+      @remainingTime={{this.remainingTime}}
+      @isWriteWithoutRead={{this.isWriteWithoutRead}}
+    />
+  {{else}}
+    <EmptyState @title="No secret view was selected" />
+  {{/if}}
+</div>
