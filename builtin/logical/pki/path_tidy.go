@@ -8,7 +8,6 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
 	"net/http"
 	"sync/atomic"
 	"time"
@@ -17,6 +16,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -1073,7 +1073,7 @@ func (b *backend) doTidyRevocationStore(ctx context.Context, req *logical.Reques
 
 	// Fetch and parse our issuers so we can associate them if necessary.
 	sc := b.makeStorageContext(ctx, req.Storage)
-	issuerIDCertMap, err := fetchIssuerMapForRevocationChecking(sc)
+	issuerIDCertMap, err := revocation.FetchIssuerMapForRevocationChecking(sc)
 	if err != nil {
 		return err
 	}
@@ -1244,7 +1244,7 @@ func (b *backend) doTidyExpiredIssuers(ctx context.Context, req *logical.Request
 
 	// Fetch and parse our issuers so we have their expiration date.
 	sc := b.makeStorageContext(ctx, req.Storage)
-	issuerIDCertMap, err := fetchIssuerMapForRevocationChecking(sc)
+	issuerIDCertMap, err := revocation.FetchIssuerMapForRevocationChecking(sc)
 	if err != nil {
 		return err
 	}
