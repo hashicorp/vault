@@ -22,31 +22,30 @@ export default class ToolRandom extends Component {
 
   @tracked bytes = 32;
   @tracked format = 'base64';
-  @tracked random_bytes = null;
+  @tracked randomBytes = null;
   @tracked errorMessage = '';
 
   @action
   reset() {
     this.bytes = 32;
     this.format = 'base64';
-    this.random_bytes = null;
+    this.randomBytes = null;
     this.errorMessage = '';
   }
 
   @action
-  handleEvent(evt) {
-    const { name, value } = evt.target;
-    this[name] = value;
+  handleSelect(evt) {
+    const { value } = evt.target;
+    this.format = value;
   }
 
   @action
   async handleSubmit(evt) {
     evt.preventDefault();
     const data = { bytes: parseInt(this.bytes), format: this.format };
-
     try {
       const response = await this.store.adapterFor('tools').toolAction('random', data);
-      this.random_bytes = response.data.random_bytes;
+      this.randomBytes = response.data.random_bytes;
       this.flashMessages.success('Generated random bytes successfully.');
     } catch (error) {
       this.errorMessage = errorMessage(error);
