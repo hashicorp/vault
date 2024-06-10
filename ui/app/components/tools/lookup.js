@@ -11,13 +11,13 @@ import errorMessage from 'vault/utils/error-message';
 import { addSeconds, parseISO } from 'date-fns';
 
 /**
- * @module ToolLookup
- * ToolLookup components are components that sys/wrapping/lookup functionality.
+ * @module ToolsLookup
+ * ToolsLookup components are components that sys/wrapping/lookup functionality.
  *
  * @example
- * <ToolLookup />
+ * <Tools::Lookup />
  */
-export default class ToolLookup extends Component {
+export default class ToolsLookup extends Component {
   @service store;
   @service flashMessages;
 

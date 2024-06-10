@@ -21,7 +21,7 @@ module('Integration | Component | tools/random', function (hooks) {
     this.bytes = 32;
     this.format = 'base64';
     this.renderComponent = async () => {
-      await render(hbs`<ToolRandom />`);
+      await render(hbs`<Tools::Random />`);
     };
   });
 

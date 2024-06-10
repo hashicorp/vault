@@ -10,13 +10,13 @@ import { tracked } from '@glimmer/tracking';
 import errorMessage from 'vault/utils/error-message';
 
 /**
- * @module ToolRandom
- * ToolRandom components are components that perform sys/wrapping/random functionality.
+ * @module ToolsRandom
+ * ToolsRandom components are components that perform sys/wrapping/random functionality.
  * @example
- * <ToolRandom />
+ * <Tools::Random />
  */
 
-export default class ToolRandom extends Component {
+export default class ToolsRandom extends Component {
   @service store;
   @service flashMessages;
 

@@ -21,7 +21,7 @@ module('Integration | Component | tools/wrap', function (hooks) {
   hooks.beforeEach(function () {
     this.renderComponent = async () => {
       await render(hbs`
-    <ToolWrap />`);
+    <Tools::Wrap />`);
     };
     this.wrapData = `{"foo": "bar"}`;
     this.token = 'blah.jhfel7SmsVeZwihaGiIKHGh2cy5XZWtEeEt5WmRwS1VYSTNDb1BBVUNsVFAQ3JIK';

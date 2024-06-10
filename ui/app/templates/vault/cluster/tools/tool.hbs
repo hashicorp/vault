@@ -4,17 +4,17 @@
 ~}}
 
 {{#if (eq this.selectedAction "hash")}}
-  <ToolHash />
+  <Tools::Hash />
 {{else if (eq this.selectedAction "random")}}
-  <ToolRandom />
+  <Tools::Random />
 {{else if (eq this.selectedAction "rewrap")}}
-  <ToolRewrap />
+  <Tools::Rewrap />
 {{else if (eq this.selectedAction "unwrap")}}
-  <ToolUnwrap />
+  <Tools::Unwrap />
 {{else if (eq this.selectedAction "lookup")}}
-  <ToolLookup />
+  <Tools::Lookup />
 {{else if (eq this.selectedAction "wrap")}}
-  <ToolWrap />
+  <Tools::Wrap />
 {{else}}
   <EmptyState @title="Tool not available" />
 {{/if}}

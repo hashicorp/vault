@@ -20,7 +20,7 @@ module('Integration | Component | tools/lookup', function (hooks) {
   hooks.beforeEach(function () {
     this.renderComponent = async () => {
       await render(hbs`
-    <ToolLookup />`);
+    <Tools::Lookup />`);
     };
   });
 

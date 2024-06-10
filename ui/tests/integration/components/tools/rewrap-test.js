@@ -18,7 +18,7 @@ module('Integration | Component | tools/rewrap', function (hooks) {
 
   hooks.beforeEach(function () {
     this.renderComponent = async () => {
-      await render(hbs`<ToolRewrap />`);
+      await render(hbs`<Tools::Rewrap />`);
     };
   });
 

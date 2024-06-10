@@ -10,14 +10,14 @@ import { tracked } from '@glimmer/tracking';
 import errorMessage from 'vault/utils/error-message';
 
 /**
- * @module <ToolWrap
- * ToolWrap components are components that sys/wrapping/wrap functionality.
+ * @module ToolsWrap
+ * ToolsWrap components are components that sys/wrapping/wrap functionality.
  *
  * @example
- * <ToolWrap />
+ * <Tools::Wrap />
  */
 
-export default class ToolWrap extends Component {
+export default class ToolsWrap extends Component {
   @service store;
   @service flashMessages;
 

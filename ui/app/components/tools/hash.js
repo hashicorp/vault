@@ -10,13 +10,13 @@ import { tracked } from '@glimmer/tracking';
 import errorMessage from 'vault/utils/error-message';
 
 /**
- * @module ToolHash
- * ToolHash components are components that sys/wrapping/hash functionality.
+ * @module ToolsHash
+ * ToolsHash components are components that sys/wrapping/hash functionality.
  *
  * @example
- * <ToolHash />
+ * <Tools::Hash />
  */
-export default class ToolHash extends Component {
+export default class ToolsHash extends Component {
   @service store;
   @service flashMessages;
 

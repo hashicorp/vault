@@ -20,7 +20,7 @@ module('Integration | Component | tools/unwrap', function (hooks) {
   hooks.beforeEach(function () {
     this.renderComponent = async () => {
       await render(hbs`
-    <ToolUnwrap />`);
+    <Tools::Unwrap />`);
     };
   });
 
