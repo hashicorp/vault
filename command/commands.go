@@ -10,12 +10,19 @@ import (
 
 	"github.com/hashicorp/cli"
 	hcpvlib "github.com/hashicorp/vault-hcp-lib"
+	credOIDC "github.com/hashicorp/vault-plugin-auth-jwt"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/audit"
+	credCert "github.com/hashicorp/vault/builtin/credential/cert"
+	credToken "github.com/hashicorp/vault/builtin/credential/token"
+	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	logicalDb "github.com/hashicorp/vault/builtin/logical/database"
 	"github.com/hashicorp/vault/builtin/plugin"
 	_ "github.com/hashicorp/vault/helper/builtinplugins"
+	physRaft "github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
+	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
 	sr "github.com/hashicorp/vault/serviceregistration"
 	csr "github.com/hashicorp/vault/serviceregistration/consul"
 	ksr "github.com/hashicorp/vault/serviceregistration/kubernetes"
@@ -123,6 +130,23 @@ const (
 )
 
 var (
+	physicalBackends = map[string]physical.Factory{
+		"inmem_ha":               physInmem.NewInmemHA,
+		"inmem_transactional_ha": physInmem.NewTransactionalInmemHA,
+		"inmem_transactional":    physInmem.NewTransactionalInmem,
+		"inmem":                  physInmem.NewInmem,
+		"raft":                   physRaft.NewRaftBackend,
+	}
+
+	loginHandlers = map[string]LoginHandler{
+		"cert":  &credCert.CLIHandler{},
+		"oidc":  &credOIDC.CLIHandler{},
+		"token": &credToken.CLIHandler{},
+		"userpass": &credUserpass.CLIHandler{
+			DefaultMount: "userpass",
+		},
+	}
+
 	auditBackends = map[string]audit.Factory{
 		"file":   audit.NewFileBackend,
 		"socket": audit.NewSocketBackend,
@@ -148,6 +172,8 @@ var (
 )
 
 func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.CommandFactory {
+	extendFullAddonCommands()
+
 	getBaseCommand := func() *BaseCommand {
 		return &BaseCommand{
 			UI:             ui,
