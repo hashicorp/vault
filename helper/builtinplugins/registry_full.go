@@ -10,7 +10,6 @@ import (
 	credAzure "github.com/hashicorp/vault-plugin-auth-azure"
 	credCF "github.com/hashicorp/vault-plugin-auth-cf"
 	credGcp "github.com/hashicorp/vault-plugin-auth-gcp/plugin"
-	credJWT "github.com/hashicorp/vault-plugin-auth-jwt"
 	credKerb "github.com/hashicorp/vault-plugin-auth-kerberos"
 	credKube "github.com/hashicorp/vault-plugin-auth-kubernetes"
 	credOCI "github.com/hashicorp/vault-plugin-auth-oci"
@@ -26,26 +25,19 @@ import (
 	logicalGcp "github.com/hashicorp/vault-plugin-secrets-gcp/plugin"
 	logicalGcpKms "github.com/hashicorp/vault-plugin-secrets-gcpkms"
 	logicalKube "github.com/hashicorp/vault-plugin-secrets-kubernetes"
-	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	logicalMongoAtlas "github.com/hashicorp/vault-plugin-secrets-mongodbatlas"
 	logicalLDAP "github.com/hashicorp/vault-plugin-secrets-openldap"
 	logicalTerraform "github.com/hashicorp/vault-plugin-secrets-terraform"
-	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	credAws "github.com/hashicorp/vault/builtin/credential/aws"
-	credCert "github.com/hashicorp/vault/builtin/credential/cert"
 	credGitHub "github.com/hashicorp/vault/builtin/credential/github"
 	credLdap "github.com/hashicorp/vault/builtin/credential/ldap"
 	credOkta "github.com/hashicorp/vault/builtin/credential/okta"
 	credRadius "github.com/hashicorp/vault/builtin/credential/radius"
-	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	logicalAws "github.com/hashicorp/vault/builtin/logical/aws"
 	logicalConsul "github.com/hashicorp/vault/builtin/logical/consul"
 	logicalNomad "github.com/hashicorp/vault/builtin/logical/nomad"
-	logicalPki "github.com/hashicorp/vault/builtin/logical/pki"
 	logicalRabbit "github.com/hashicorp/vault/builtin/logical/rabbitmq"
-	logicalSsh "github.com/hashicorp/vault/builtin/logical/ssh"
 	logicalTotp "github.com/hashicorp/vault/builtin/logical/totp"
-	logicalTransit "github.com/hashicorp/vault/builtin/logical/transit"
 	dbCass "github.com/hashicorp/vault/plugins/database/cassandra"
 	dbHana "github.com/hashicorp/vault/plugins/database/hana"
 	dbInflux "github.com/hashicorp/vault/plugins/database/influxdb"
@@ -57,34 +49,29 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 )
 
-func newRegistry() *registry {
-	reg := &registry{
+func newFullAddonRegistry() *registry {
+	return &registry{
 		credentialBackends: map[string]credentialBackend{
 			"alicloud": {Factory: credAliCloud.Factory},
 			"app-id": {
 				Factory:           removedFactory,
 				DeprecationStatus: consts.Removed,
 			},
-			"approle":    {Factory: credAppRole.Factory},
 			"aws":        {Factory: credAws.Factory},
 			"azure":      {Factory: credAzure.Factory},
-			"cert":       {Factory: credCert.Factory},
 			"cf":         {Factory: credCF.Factory},
 			"gcp":        {Factory: credGcp.Factory},
 			"github":     {Factory: credGitHub.Factory},
-			"jwt":        {Factory: credJWT.Factory},
 			"kerberos":   {Factory: credKerb.Factory},
 			"kubernetes": {Factory: credKube.Factory},
 			"ldap":       {Factory: credLdap.Factory},
 			"oci":        {Factory: credOCI.Factory},
-			"oidc":       {Factory: credJWT.Factory},
 			"okta":       {Factory: credOkta.Factory},
 			"pcf": {
 				Factory:           credCF.Factory,
 				DeprecationStatus: consts.Deprecated,
 			},
-			"radius":   {Factory: credRadius.Factory},
-			"userpass": {Factory: credUserpass.Factory},
+			"radius": {Factory: credRadius.Factory},
 		},
 		databasePlugins: map[string]databasePlugin{
 			// These four plugins all use the same mysql implementation but with
@@ -124,13 +111,10 @@ func newRegistry() *registry {
 			"gcp":        {Factory: logicalGcp.Factory},
 			"gcpkms":     {Factory: logicalGcpKms.Factory},
 			"kubernetes": {Factory: logicalKube.Factory},
-			"kv":         {Factory: logicalKv.Factory},
 			"mongodb": {
 				Factory:           removedFactory,
 				DeprecationStatus: consts.Removed,
 			},
-			// The mongodbatlas secrets engine is not the same as the database plugin equivalent
-			// (`mongodbatlas-database-plugin`), and thus will not be deprecated at this time.
 			"mongodbatlas": {Factory: logicalMongoAtlas.Factory},
 			"mssql": {
 				Factory:           removedFactory,
@@ -143,20 +127,21 @@ func newRegistry() *registry {
 			"nomad":    {Factory: logicalNomad.Factory},
 			"openldap": {Factory: logicalLDAP.Factory},
 			"ldap":     {Factory: logicalLDAP.Factory},
-			"pki":      {Factory: logicalPki.Factory},
 			"postgresql": {
 				Factory:           removedFactory,
 				DeprecationStatus: consts.Removed,
 			},
 			"rabbitmq":  {Factory: logicalRabbit.Factory},
-			"ssh":       {Factory: logicalSsh.Factory},
 			"terraform": {Factory: logicalTerraform.Factory},
 			"totp":      {Factory: logicalTotp.Factory},
-			"transit":   {Factory: logicalTransit.Factory},
 		},
 	}
+}
 
-	entAddExtPlugins(reg)
+func newRegistry() *registry {
+	reg := newFullAddonRegistry()
+
+	reg.Extend(newCommonRegistry())
 
 	return reg
 }

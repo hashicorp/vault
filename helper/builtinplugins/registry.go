@@ -6,6 +6,14 @@ package builtinplugins
 import (
 	"context"
 
+	credJWT "github.com/hashicorp/vault-plugin-auth-jwt"
+	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
+	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
+	credCert "github.com/hashicorp/vault/builtin/credential/cert"
+	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
+	logicalPki "github.com/hashicorp/vault/builtin/logical/pki"
+	logicalSsh "github.com/hashicorp/vault/builtin/logical/ssh"
+	logicalTransit "github.com/hashicorp/vault/builtin/logical/transit"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -43,6 +51,29 @@ func removedFactory(ctx context.Context, config *logical.BackendConfig) (logical
 	removedBackend := &removedBackend{}
 	removedBackend.Backend = &framework.Backend{}
 	return removedBackend, nil
+}
+
+func newCommonRegistry() *registry {
+	reg := &registry{
+		credentialBackends: map[string]credentialBackend{
+			"approle":  {Factory: credAppRole.Factory},
+			"cert":     {Factory: credCert.Factory},
+			"jwt":      {Factory: credJWT.Factory},
+			"oidc":     {Factory: credJWT.Factory},
+			"userpass": {Factory: credUserpass.Factory},
+		},
+		databasePlugins: map[string]databasePlugin{},
+		logicalBackends: map[string]logicalBackend{
+			"kv":      {Factory: logicalKv.Factory},
+			"pki":     {Factory: logicalPki.Factory},
+			"ssh":     {Factory: logicalSsh.Factory},
+			"transit": {Factory: logicalTransit.Factory},
+		},
+	}
+
+	entAddExtPlugins(reg)
+
+	return reg
 }
 
 func addExtPluginsImpl(r *registry) {}
@@ -125,6 +156,18 @@ func (r *registry) DeprecationStatus(name string, pluginType consts.PluginType) 
 	}
 
 	return consts.Unknown, false
+}
+
+func (r *registry) Extend(other *registry) {
+	for k, v := range other.credentialBackends {
+		r.credentialBackends[k] = v
+	}
+	for k, v := range other.databasePlugins {
+		r.databasePlugins[k] = v
+	}
+	for k, v := range other.logicalBackends {
+		r.logicalBackends[k] = v
+	}
 }
 
 func toFunc(ifc interface{}) func() (interface{}, error) {
