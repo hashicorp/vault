@@ -5,6 +5,7 @@ package builtinplugins
 
 import (
 	"context"
+	"maps"
 
 	credJWT "github.com/hashicorp/vault-plugin-auth-jwt"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
@@ -159,15 +160,9 @@ func (r *registry) DeprecationStatus(name string, pluginType consts.PluginType) 
 }
 
 func (r *registry) Extend(other *registry) {
-	for k, v := range other.credentialBackends {
-		r.credentialBackends[k] = v
-	}
-	for k, v := range other.databasePlugins {
-		r.databasePlugins[k] = v
-	}
-	for k, v := range other.logicalBackends {
-		r.logicalBackends[k] = v
-	}
+	maps.Copy(other.credentialBackends, r.credentialBackends)
+	maps.Copy(other.databasePlugins, r.databasePlugins)
+	maps.Copy(other.logicalBackends, r.logicalBackends)
 }
 
 func toFunc(ifc interface{}) func() (interface{}, error) {
