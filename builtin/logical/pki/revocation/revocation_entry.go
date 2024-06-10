@@ -5,10 +5,11 @@ package revocation
 
 import (
 	"context"
+	"time"
+
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
 	"github.com/hashicorp/vault/sdk/logical"
-	"time"
 )
 
 type UnifiedRevocationEntry struct {

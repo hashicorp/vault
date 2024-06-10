@@ -5,8 +5,9 @@ package pki
 
 import (
 	"fmt"
-	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
 	"strings"
+
+	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
 )
 
 const (
