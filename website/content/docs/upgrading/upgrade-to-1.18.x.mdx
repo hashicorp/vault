@@ -16,6 +16,8 @@ Vault 1.17. **Please read carefully**.
 
 ### Activity Log Changes
 
+#### Default Activity Log Querying Period
+
 The field `default_report_months` can no longer be configured or read. Any previously set values
 will be ignored by the system.
 
@@ -31,6 +33,25 @@ endpoint, will result in the following warning from Vault:
 WARNING! The following warnings were returned from Vault:
 
   * default_report_months is deprecated: defaulting to billing start time
+
+
+```
+
+</CodeBlockConfig>
+
+
+The `current_billing_period` toggle for `/sys/internal/counters/activity` is also deprecated, as this will be set
+true by default.
+
+Attempts to set `current_billing_period` will result in the following warning from Vault:
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+
+WARNING! The following warnings were returned from Vault:
+
+  * current_billing_period is deprecated; unless otherwise specified, all requests will default to the current billing period
 
 
 ```
