@@ -23,9 +23,9 @@ func Test_extendFullAddonCommands(t *testing.T) {
 	extendFullAddonCommands()
 
 	require.Equal(t, len(expMinPhysicalBackends)+len(expAddonPhysicalBackends), len(physicalBackends),
-		"extended physical backends mismatch total of minimal and full addon physical backends")
+		"extended total physical backends mismatch total of minimal and full addon physical backends")
 	require.Equal(t, len(expMinLoginHandlers)+len(expAddonLogicalHandlers), len(loginHandlers),
-		"extended logical backends mismatch total of minimal and full addon logical backends")
+		"extended total logical handlers mismatch total of minimal and full addon logical handlers")
 
 	for k := range expMinPhysicalBackends {
 		require.Contains(t, physicalBackends, k, "expected to contain minimal physical backend")
