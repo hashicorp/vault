@@ -21,6 +21,7 @@ type acmeContext struct {
 	baseUrl    *url.URL
 	clusterUrl *url.URL
 	sc         *storageContext
+	acmeState  *acmeState
 	role       *issuing.RoleEntry
 	issuer     *issuing.IssuerEntry
 	// acmeDirectory is a string that can distinguish the various acme directories we have configured
@@ -32,7 +33,7 @@ type acmeContext struct {
 }
 
 func (c acmeContext) getAcmeState() *acmeState {
-	return c.sc.Backend.GetAcmeState()
+	return c.acmeState
 }
 
 type (
@@ -110,7 +111,7 @@ func (b *backend) acmeWrapper(opts acmeWrapperOpts, op acmeOperation) framework.
 	return acmeErrorWrapper(func(ctx context.Context, r *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		sc := b.makeStorageContext(ctx, r.Storage)
 
-		config, err := sc.Backend.GetAcmeState().getConfigWithUpdate(sc)
+		config, err := b.GetAcmeState().getConfigWithUpdate(sc)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch ACME configuration: %w", err)
 		}
@@ -144,7 +145,7 @@ func (b *backend) acmeWrapper(opts acmeWrapperOpts, op acmeOperation) framework.
 			return nil, err
 		}
 
-		isCiepsEnabled, ciepsPolicy, err := getCiepsAcmeSettings(sc, opts, config, data)
+		isCiepsEnabled, ciepsPolicy, err := getCiepsAcmeSettings(b, sc, opts, config, data)
 		if err != nil {
 			return nil, err
 		}
@@ -163,6 +164,7 @@ func (b *backend) acmeWrapper(opts acmeWrapperOpts, op acmeOperation) framework.
 			baseUrl:       acmeBaseUrl,
 			clusterUrl:    clusterBase,
 			sc:            sc,
+			acmeState:     b.acmeState,
 			role:          role,
 			issuer:        issuer,
 			acmeDirectory: acmeDirectory,
@@ -455,7 +457,7 @@ func getAcmeRoleAndIssuer(sc *storageContext, data *framework.FieldData, config 
 
 func getAndValidateAcmeRole(sc *storageContext, requestedRole string) (*issuing.RoleEntry, error) {
 	var err error
-	role, err := sc.Backend.GetRole(sc.Context, sc.Storage, requestedRole)
+	role, err := sc.GetRole(requestedRole)
 	if err != nil {
 		return nil, fmt.Errorf("%w: err loading role", ErrServerInternal)
 	}
@@ -496,7 +498,7 @@ func isAcmeDisabled(sc *storageContext, config *acmeConfigEntry, policy EabPolic
 
 	disableAcme, nonFatalErr := isPublicACMEDisabledByEnv()
 	if nonFatalErr != nil {
-		sc.Backend.Logger().Warn(fmt.Sprintf("could not parse env var '%s'", disableAcmeEnvVar), "error", nonFatalErr)
+		sc.Logger().Warn(fmt.Sprintf("could not parse env var '%s'", disableAcmeEnvVar), "error", nonFatalErr)
 	}
 
 	// The OS environment if true will override any configuration option.

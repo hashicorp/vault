@@ -26,6 +26,12 @@ variable "common_tags" {
   }
 }
 
+variable "disable_selinux" {
+  description = "Optionally disable SELinux for certain distros/versions"
+  type        = bool
+  default     = true
+}
+
 variable "instance_mem_min" {
   description = "The minimum amount of memory in mebibytes for each instance in the fleet. (1 MiB = 1024 bytes)"
   type        = number
