@@ -13,6 +13,10 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 )
 
+const (
+	RevokedPath = "revoked/"
+)
+
 type RevocationInfo struct {
 	CertificateBytes  []byte           `json:"certificate_bytes"`
 	RevocationTime    int64            `json:"revocation_time"`
@@ -62,4 +66,20 @@ func FetchIssuerMapForRevocationChecking(sc pki_backend.StorageContext) (map[iss
 	}
 
 	return issuerIDCertMap, nil
+}
+
+func FetchRevocationInfo(sc pki_backend.StorageContext, serial string) (*RevocationInfo, error) {
+	var revInfo *RevocationInfo
+	revEntry, err := issuing.FetchCertBySerial(sc, RevokedPath, serial)
+	if err != nil {
+		return nil, err
+	}
+	if revEntry != nil {
+		err = revEntry.DecodeJSON(&revInfo)
+		if err != nil {
+			return nil, fmt.Errorf("error decoding existing revocation info: %w", err)
+		}
+	}
+
+	return revInfo, nil
 }

@@ -569,7 +569,7 @@ func FetchCertBySerial(sc pki_backend.StorageContext, prefix, serial string) (*l
 		}
 
 		unified := serial == UnifiedCRLPath || serial == UnifiedDeltaCRLPath
-		path, err = ResolveIssuerCRLPath(sc, DefaultRef, unified)
+		path, err = ResolveIssuerCRLPath(sc.GetContext(), sc.GetStorage(), sc.UseLegacyBundleCaStorage(), DefaultRef, unified)
 		if err != nil {
 			return nil, err
 		}

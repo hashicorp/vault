@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	revokedPath                      = "revoked/"
+	revokedPath                      = revocation.RevokedPath
 	crossRevocationPrefix            = "cross-revocation-queue/"
 	crossRevocationPath              = crossRevocationPrefix + "{{clusterId}}/"
 	deltaWALLastBuildSerialName      = "last-build-serial"
@@ -974,7 +974,7 @@ func revokeCert(sc *storageContext, config *pki_backend.CrlConfig, cert *x509.Ce
 		}
 	}
 
-	curRevInfo, err := sc.fetchRevocationInfo(colonSerial)
+	curRevInfo, err := revocation.FetchRevocationInfo(sc, colonSerial)
 	if err != nil {
 		return nil, err
 	}

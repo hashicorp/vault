@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
 	"sync/atomic"
 	"time"
 
@@ -294,7 +295,7 @@ func doUnifiedTransferMissingDeltaWALSerials(sc *storageContext, clusterId strin
 
 func readRevocationEntryAndTransfer(sc *storageContext, serial string) error {
 	hyphenSerial := normalizeSerial(serial)
-	revInfo, err := sc.fetchRevocationInfo(hyphenSerial)
+	revInfo, err := revocation.FetchRevocationInfo(sc, hyphenSerial)
 	if err != nil {
 		return fmt.Errorf("failed loading revocation entry for serial: %s: %w", serial, err)
 	}
