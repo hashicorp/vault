@@ -41,4 +41,19 @@ WARNING! The following warnings were returned from Vault:
 
 
 The `current_billing_period` toggle for `/sys/internal/counters/activity` is also deprecated, as this will be set
-true by default. 
+true by default.
+
+Attempts to set `current_billing_period` will result in the following warning from Vault:
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+
+WARNING! The following warnings were returned from Vault:
+
+  * current_billing_period is deprecated; unless otherwise specified, all requests will default to the current billing period
+
+
+```
+
+</CodeBlockConfig>
