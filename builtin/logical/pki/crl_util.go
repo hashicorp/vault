@@ -9,6 +9,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"fmt"
+	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
 	"math/big"
 	"strings"
 	"sync"
@@ -954,8 +955,8 @@ func revokeCert(sc *storageContext, config *pki_backend.CrlConfig, cert *x509.Ce
 		return nil, nil
 	}
 
-	colonSerial := serialFromCert(cert)
-	hyphenSerial := normalizeSerial(colonSerial)
+	colonSerial := parsing.SerialFromCert(cert)
+	hyphenSerial := parsing.NormalizeSerialForStorage(colonSerial)
 
 	// Validate that no issuers match the serial number to be revoked. We need
 	// to gracefully degrade to the legacy cert bundle when it is required, as
