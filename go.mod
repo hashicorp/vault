@@ -37,7 +37,7 @@ require (
 	github.com/ProtonMail/go-crypto v0.0.0-20230828082145-3c4c8a2d2371
 	github.com/SAP/go-hdb v0.14.1
 	github.com/Sectorbob/mlab-ns2 v0.0.0-20171030222938-d3aa0c295a8a
-	github.com/absolutelightning/go-memdb v1.0.62
+	github.com/absolutelightning/go-memdb v1.0.63
 	github.com/aerospike/aerospike-client-go/v5 v5.6.0
 	github.com/aliyun/alibaba-cloud-sdk-go v1.62.737
 	github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20190307165228-86c17b95fcd5
@@ -233,7 +233,7 @@ require (
 
 require (
 	cloud.google.com/go/longrunning v0.5.7 // indirect
-	github.com/absolutelightning/go-immutable-adaptive-radix v1.0.79 // indirect
+	github.com/absolutelightning/go-immutable-adaptive-radix v1.0.80 // indirect
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
 	gopkg.in/go-jose/go-jose.v2 v2.6.3 // indirect
 )
