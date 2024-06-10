@@ -32,7 +32,7 @@ scenario "agent" {
       edition = ["ce", "ent", "ent.fips1402"]
     }
 
-    # arm64 AMIs are not offered for Leap 15.4
+    # arm64 AMIs are not offered for Leap
     exclude {
       distro = ["leap"]
       arch   = ["arm64"]
