@@ -335,4 +335,5 @@ data "aws_instance" "targets" {
   for_each = local.instances
 
   instance_id = aws_ec2_fleet.targets.fleet_instance_set[0].instance_ids[each.key]
+
 }

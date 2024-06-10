@@ -654,7 +654,7 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 		}
 
 		// Then attempt to rebuild the CRLs if required.
-		warnings, err := b.CrlBuilder().rebuildIfForced(sc)
+		warnings, err := b.CrlBuilder().RebuildIfForced(sc)
 		if err != nil {
 			return err
 		}
