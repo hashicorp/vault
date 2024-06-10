@@ -756,10 +756,10 @@ github.com/Sectorbob/mlab-ns2 v0.0.0-20171030222938-d3aa0c295a8a h1:KFHLI4QGttB0
 github.com/Sectorbob/mlab-ns2 v0.0.0-20171030222938-d3aa0c295a8a/go.mod h1:D73UAuEPckrDorYZdtlCu2ySOLuPB5W4rhIkmmc/XbI=
 github.com/abdullin/seq v0.0.0-20160510034733-d5467c17e7af h1:DBNMBMuMiWYu0b+8KMJuWmfCkcxl09JwdlqwDZZ6U14=
 github.com/abdullin/seq v0.0.0-20160510034733-d5467c17e7af/go.mod h1:5Jv4cbFiHJMsVxt52+i0Ha45fjshj6wxYr1r19tB9bw=
-github.com/absolutelightning/go-immutable-adaptive-radix v1.0.77 h1:HzRjTEqR9nZBxvKFrH6rQPaIIN+WAT3aGgiaC9/08As=
-github.com/absolutelightning/go-immutable-adaptive-radix v1.0.77/go.mod h1:+/nWgzXP46cOw2W+jLxu2lBmEny3bG1RqFXPKTWTLMU=
-github.com/absolutelightning/go-memdb v1.0.60 h1:LY8huKQFx+38d1zV8IdNgj5VNXdsua6AryGvGHh7vAk=
-github.com/absolutelightning/go-memdb v1.0.60/go.mod h1:apNDC2bWCts9038f0pWWKG3FXxWN2JolpCJ6hTmBxNE=
+github.com/absolutelightning/go-immutable-adaptive-radix v1.0.78 h1:5djMOKyUdH2OPiZmxylIV0rhwqy2/OtZlwP3w9YPNto=
+github.com/absolutelightning/go-immutable-adaptive-radix v1.0.78/go.mod h1:+/nWgzXP46cOw2W+jLxu2lBmEny3bG1RqFXPKTWTLMU=
+github.com/absolutelightning/go-memdb v1.0.61 h1:iJXyI88ON/0BaOQL6PNUh7o2vgobW27CPjf9/JPUdtk=
+github.com/absolutelightning/go-memdb v1.0.61/go.mod h1:schEi1F5O7HpSAiQqBBv3gt98hBjmisSq0ezyOKhnvg=
 github.com/aerospike/aerospike-client-go/v5 v5.6.0 h1:tRxcUq0HY8fFPQEzF3EgrknF+w1xFO0YDfUb9Nm8yRI=
 github.com/aerospike/aerospike-client-go/v5 v5.6.0/go.mod h1:rJ/KpmClE7kiBPfvAPrGw9WuNOiz8v2uKbQaUyYPXtI=
 github.com/agext/levenshtein v1.2.1 h1:QmvMAjj2aEICytGiWzmxoE0x2KZvE0fvmqMOfy2tjT8=
