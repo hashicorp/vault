@@ -1,0 +1,4 @@
+```release-note:improvement
+storage/dynamodb: Speed up list and delete of large directories by only requesting keys from DynamoDB
+```
+
