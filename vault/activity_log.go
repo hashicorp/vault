@@ -1993,6 +1993,7 @@ func (a *ActivityLog) modifyResponseMonths(months []*ResponseMonth, start time.T
 type activityConfig struct {
 	// DefaultReportMonths are the default number of months that are returned on
 	// a report. The zero value uses the system default of 12.
+	// Deprecated: This field was removed in favor of using different default startTime and endTime values
 	DefaultReportMonths int `json:"default_report_months"`
 
 	// RetentionMonths defines the number of months we want to retain data. The
@@ -2047,9 +2048,6 @@ func (a *ActivityLog) setDefaultRetentionMonthsInConfig(ctx context.Context, inp
 	if err := a.view.Put(ctx, entry); err != nil {
 		return inputConfig, err
 	}
-
-	// Set the new config on the activity log
-	a.SetConfig(ctx, inputConfig)
 	return inputConfig, nil
 }
 

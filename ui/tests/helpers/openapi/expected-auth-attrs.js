@@ -622,7 +622,8 @@ const kubernetes = {
     },
     kubernetesCaCert: {
       editType: 'string',
-      helpText: 'PEM encoded CA cert for use by the TLS client used to talk with the API.',
+      helpText:
+        "Optional PEM encoded CA cert for use by the TLS client used to talk with the API. If it is not set and disable_local_ca_jwt is true, the system's trusted CA certificate pool will be used.",
       fieldGroup: 'default',
       label: 'Kubernetes CA Certificate',
       type: 'string',

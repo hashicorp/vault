@@ -9,41 +9,97 @@ fail() {
   exit 1
 }
 
-[[ -z "$RETRY_INTERVAL" ]] && fail "RETRY_INTERVAL env variable has not been set"
-[[ -z "$TIMEOUT_SECONDS" ]] && fail "TIMEOUT_SECONDS env variable has not been set"
-[[ -z "$PACKAGES" ]] && fail "PACKAGES env variable has not been set"
+[[ -z "${RETRY_INTERVAL}" ]] && fail "RETRY_INTERVAL env variable has not been set"
+[[ -z "${TIMEOUT_SECONDS}" ]] && fail "TIMEOUT_SECONDS env variable has not been set"
+[[ -z "${PACKAGES}" ]] && fail "PACKAGES env variable has not been set"
+[[ -z "${PACKAGE_MANAGER}" ]] && fail "PACKAGE_MANAGER env variable has not been set"
 
+# Install packages based on the provided packages and package manager. We assume that the repositories
+# have already been synchronized by the repo setup that is a prerequisite for this script.
 install_packages() {
-  if [ "$PACKAGES" = "__skip" ]; then
+  if [[ "${PACKAGES}" = "__skip" ]]; then
     return 0
   fi
 
-  echo "Installing Dependencies: $PACKAGES"
-  if [ -f /etc/debian_version ]; then
-    # Do our best to make sure that we don't race with cloud-init. Wait a reasonable time until we
-    # see ec2 in the sources list. Very rarely cloud-init will take longer than we wait. In that case
-    # we'll just install our packages.
-    grep ec2 /etc/apt/sources.list || true
+  set -x
+  echo "Installing Dependencies: ${PACKAGES}"
 
-    cd /tmp
-    sudo apt update
-    # shellcheck disable=2068
-    sudo apt install -y ${PACKAGES[@]}
-  else
-    cd /tmp
-    # shellcheck disable=2068
-    sudo yum -y install ${PACKAGES[@]}
-  fi
+  # Use the default package manager of the current Linux distro to install packages
+  case $PACKAGE_MANAGER in
+    apt)
+      for package in ${PACKAGES}; do
+        if dpkg -s "${package}"; then
+          echo "Skipping installation of ${package} because it is already installed"
+          continue
+        else
+          echo "Installing ${package}"
+          local output
+          if ! output=$(sudo apt install -y "${package}" 2>&1); then
+            echo "Failed to install ${package}: ${output}" 1>&2
+            return 1
+          fi
+        fi
+      done
+    ;;
+    dnf)
+      for package in ${PACKAGES}; do
+        if rpm -q "${package}"; then
+          echo "Skipping installation of ${package} because it is already installed"
+          continue
+        else
+          echo "Installing ${package}"
+          local output
+          if ! output=$(sudo dnf -y install "${package}" 2>&1); then
+            echo "Failed to install ${package}: ${output}" 1>&2
+            return 1
+          fi
+        fi
+      done
+    ;;
+    yum)
+      for package in ${PACKAGES}; do
+        if rpm -q "${package}"; then
+          echo "Skipping installation of ${package} because it is already installed"
+          continue
+        else
+          echo "Installing ${package}"
+          local output
+          if ! output=$(sudo yum -y install "${package}" 2>&1); then
+            echo "Failed to install ${package}: ${output}" 1>&2
+            return 1
+          fi
+        fi
+      done
+    ;;
+    zypper)
+      for package in ${PACKAGES}; do
+        if rpm -q "${package}"; then
+          echo "Skipping installation of ${package} because it is already installed"
+          continue
+        else
+          echo "Installing ${package}"
+          local output
+          if ! output=$(sudo zypper --non-interactive install -y -l --force-resolution "${package}" 2>&1); then
+            echo "Failed to install ${package}: ${output}" 1>&2
+            return 1
+          fi
+        fi
+      done
+    ;;
+    *)
+      fail "No matching package manager provided."
+    ;;
+  esac
 }
 
 begin_time=$(date +%s)
 end_time=$((begin_time + TIMEOUT_SECONDS))
-while [ "$(date +%s)" -lt "$end_time" ]; do
+while [[ "$(date +%s)" -lt "${end_time}" ]]; do
   if install_packages; then
     exit 0
   fi
 
-  sleep "$RETRY_INTERVAL"
+  sleep "${RETRY_INTERVAL}"
 done
 
 fail "Timed out waiting for packages to install"

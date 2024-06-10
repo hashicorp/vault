@@ -10,6 +10,7 @@ import kubernetesScenario from 'vault/mirage/scenarios/kubernetes';
 import kubernetesHandlers from 'vault/mirage/handlers/kubernetes';
 import authPage from 'vault/tests/pages/auth';
 import { fillIn, visit, currentURL, click, currentRouteName } from '@ember/test-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Acceptance | kubernetes | roles', function (hooks) {
   setupApplicationTest(hooks);
@@ -30,7 +31,8 @@ module('Acceptance | kubernetes | roles', function (hooks) {
   test('it should filter roles', async function (assert) {
     await this.visitRoles();
     assert.dom('[data-test-list-item-link]').exists({ count: 3 }, 'Roles list renders');
-    await fillIn('[data-test-component="navigate-input"]', '1');
+    await fillIn(GENERAL.filterInputExplicit, '1');
+    await click(GENERAL.filterInputExplicitSearch);
     assert.dom('[data-test-list-item-link]').exists({ count: 1 }, 'Filtered roles list renders');
     assert.ok(currentURL().includes('pageFilter=1'), 'pageFilter query param value is set');
   });

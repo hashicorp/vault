@@ -308,7 +308,7 @@ func (sc *storageContext) isIfModifiedSinceBeforeLastModified(helper *IfModified
 
 	switch helper.reqType {
 	case ifModifiedCRL, ifModifiedDeltaCRL:
-		if sc.Backend.CrlBuilder().invalidate.Load() {
+		if sc.CrlBuilder().invalidate.Load() {
 			// When we see the CRL is invalidated, respond with false
 			// regardless of what the local CRL state says. We've likely
 			// renamed some issuers or are about to rebuild a new CRL....
@@ -328,7 +328,7 @@ func (sc *storageContext) isIfModifiedSinceBeforeLastModified(helper *IfModified
 			lastModified = crlConfig.DeltaLastModified
 		}
 	case ifModifiedUnifiedCRL, ifModifiedUnifiedDeltaCRL:
-		if sc.Backend.CrlBuilder().invalidate.Load() {
+		if sc.CrlBuilder().invalidate.Load() {
 			// When we see the CRL is invalidated, respond with false
 			// regardless of what the local CRL state says. We've likely
 			// renamed some issuers or are about to rebuild a new CRL....
