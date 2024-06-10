@@ -22,6 +22,8 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
+	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
@@ -157,7 +159,7 @@ func buildOcspPostWithPath(b *backend, pattern string, displayAttrs *framework.D
 
 func (b *backend) ocspHandler(ctx context.Context, request *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	sc := b.makeStorageContext(ctx, request.Storage)
-	cfg, err := b.CrlBuilder().getConfigWithUpdate(sc)
+	cfg, err := b.CrlBuilder().GetConfigWithUpdate(sc)
 	if err != nil || cfg.OcspDisable || (isUnifiedOcspPath(request) && !cfg.UnifiedCRL) {
 		return OcspUnauthorizedResponse, nil
 	}
@@ -211,7 +213,7 @@ func (b *backend) ocspHandler(ctx context.Context, request *logical.Request, dat
 	}, nil
 }
 
-func canUseUnifiedStorage(req *logical.Request, cfg *crlConfig) bool {
+func canUseUnifiedStorage(req *logical.Request, cfg *pki_backend.CrlConfig) bool {
 	if isUnifiedOcspPath(req) {
 		return true
 	}
@@ -225,7 +227,7 @@ func isUnifiedOcspPath(req *logical.Request) bool {
 	return strings.HasPrefix(req.Path, "unified-ocsp")
 }
 
-func generateUnknownResponse(cfg *crlConfig, sc *storageContext, ocspReq *ocsp.Request) *logical.Response {
+func generateUnknownResponse(cfg *pki_backend.CrlConfig, sc *storageContext, ocspReq *ocsp.Request) *logical.Response {
 	// Generate an Unknown OCSP response, signing with the default issuer from the mount as we did
 	// not match the request's issuer. If no default issuer can be used, return with Unauthorized as there
 	// isn't much else we can do at this point.
@@ -335,7 +337,7 @@ func getOcspStatus(sc *storageContext, ocspReq *ocsp.Request, useUnifiedStorage 
 	}
 
 	if revEntryRaw != nil {
-		var revEntry revocationInfo
+		var revEntry revocation.RevocationInfo
 		if err := revEntryRaw.DecodeJSON(&revEntry); err != nil {
 			return nil, err
 		}
@@ -475,7 +477,7 @@ func doesRequestMatchIssuer(parsedBundle *certutil.ParsedCertBundle, req *ocsp.R
 	return bytes.Equal(req.IssuerKeyHash, issuerKeyHash) && bytes.Equal(req.IssuerNameHash, issuerNameHash), nil
 }
 
-func genResponse(cfg *crlConfig, caBundle *certutil.ParsedCertBundle, info *ocspRespInfo, reqHash crypto.Hash, revSigAlg x509.SignatureAlgorithm) ([]byte, error) {
+func genResponse(cfg *pki_backend.CrlConfig, caBundle *certutil.ParsedCertBundle, info *ocspRespInfo, reqHash crypto.Hash, revSigAlg x509.SignatureAlgorithm) ([]byte, error) {
 	curTime := time.Now()
 	duration, err := parseutil.ParseDurationSecond(cfg.OcspExpiry)
 	if err != nil {

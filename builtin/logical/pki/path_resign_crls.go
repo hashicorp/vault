@@ -22,6 +22,7 @@ import (
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -73,7 +74,7 @@ to the issuer.`,
 				Type: framework.TypeString,
 				Description: `The amount of time the generated CRL should be
 valid; defaults to 72 hours.`,
-				Default: defaultCrlConfig.Expiry,
+				Default: pki_backend.DefaultCrlConfig.Expiry,
 			},
 			crlsParam: {
 				Type:        framework.TypeStringSlice,
@@ -142,7 +143,7 @@ to the issuer.`,
 				Type: framework.TypeString,
 				Description: `The amount of time the generated CRL should be
 valid; defaults to 72 hours.`,
-				Default: defaultCrlConfig.Expiry,
+				Default: pki_backend.DefaultCrlConfig.Expiry,
 			},
 			formatParam: {
 				Type: framework.TypeString,
