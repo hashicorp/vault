@@ -1149,7 +1149,7 @@ func (b *backend) doTidyRevocationStore(ctx context.Context, req *logical.Reques
 				b.tidyStatusIncMissingIssuerCertCount()
 				revInfo.CertificateIssuer = issuing.IssuerID("")
 				storeCert = true
-				if associateRevokedCertWithIsssuer(&revInfo, revokedCert, issuerIDCertMap) {
+				if revInfo.AssociateRevokedCertWithIsssuer(revokedCert, issuerIDCertMap) {
 					fixedIssuers += 1
 				}
 			}

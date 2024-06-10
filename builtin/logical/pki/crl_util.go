@@ -1009,7 +1009,7 @@ func revokeCert(sc *storageContext, config *pki_backend.CrlConfig, cert *x509.Ce
 
 	// We may not find an issuer with this certificate; that's fine so
 	// ignore the return value.
-	associateRevokedCertWithIsssuer(&revInfo, cert, issuerIDCertMap)
+	revInfo.AssociateRevokedCertWithIsssuer(cert, issuerIDCertMap)
 
 	revEntry, err := logical.StorageEntryJSON(revokedPath+hyphenSerial, revInfo)
 	if err != nil {
@@ -1839,20 +1839,6 @@ func isRevInfoIssuerValid(revInfo *revocation.RevocationInfo, issuerIDCertMap ma
 	return false
 }
 
-func associateRevokedCertWithIsssuer(revInfo *revocation.RevocationInfo, revokedCert *x509.Certificate, issuerIDCertMap map[issuing.IssuerID]*x509.Certificate) bool {
-	for issuerId, issuerCert := range issuerIDCertMap {
-		if bytes.Equal(revokedCert.RawIssuer, issuerCert.RawSubject) {
-			if err := revokedCert.CheckSignatureFrom(issuerCert); err == nil {
-				// Valid mapping. Add it to the specified entry.
-				revInfo.CertificateIssuer = issuerId
-				return true
-			}
-		}
-	}
-
-	return false
-}
-
 func getLocalRevokedCertEntries(sc *storageContext, issuerIDCertMap map[issuing.IssuerID]*x509.Certificate, isDelta bool) ([]pkix.RevokedCertificate, map[issuing.IssuerID][]pkix.RevokedCertificate, error) {
 	var unassignedCerts []pkix.RevokedCertificate
 	revokedCertsMap := make(map[issuing.IssuerID][]pkix.RevokedCertificate)
@@ -1957,7 +1943,7 @@ func getLocalRevokedCertEntries(sc *storageContext, issuerIDCertMap map[issuing.
 		}
 
 		// Now we need to assign the revoked certificate to an issuer.
-		foundParent := associateRevokedCertWithIsssuer(&revInfo, revokedCert, issuerIDCertMap)
+		foundParent := revInfo.AssociateRevokedCertWithIsssuer(revokedCert, issuerIDCertMap)
 		if !foundParent {
 			// If the parent isn't found, add it to the unassigned bucket.
 			unassignedCerts = append(unassignedCerts, newRevCert)
