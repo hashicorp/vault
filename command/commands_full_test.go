@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// Test_extendFullAddonCommands tests the extendFullAddonCommands function.
 func Test_extendFullAddonCommands(t *testing.T) {
 	expMinPhysicalBackends := maps.Clone(physicalBackends)
 	expMinLoginHandlers := maps.Clone(loginHandlers)

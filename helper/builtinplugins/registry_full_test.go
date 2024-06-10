@@ -10,6 +10,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// Test_newRegistry tests that newRegistry() returns a registry with
+// the expected minimal registry extended with full addon registry
 func Test_newRegistry(t *testing.T) {
 	actual := newRegistry()
 	expMinimal := newMinimalRegistry()
