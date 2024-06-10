@@ -5,7 +5,6 @@ package builtinplugins
 
 import (
 	"context"
-	"maps"
 
 	credJWT "github.com/hashicorp/vault-plugin-auth-jwt"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
@@ -54,8 +53,8 @@ func removedFactory(ctx context.Context, config *logical.BackendConfig) (logical
 	return removedBackend, nil
 }
 
-func newCommonRegistry() *registry {
-	reg := &registry{
+func newMinimalRegistry() *registry {
+	return &registry{
 		credentialBackends: map[string]credentialBackend{
 			"approle":  {Factory: credAppRole.Factory},
 			"cert":     {Factory: credCert.Factory},
@@ -71,6 +70,12 @@ func newCommonRegistry() *registry {
 			"transit": {Factory: logicalTransit.Factory},
 		},
 	}
+}
+
+func newRegistry() *registry {
+	reg := newMinimalRegistry()
+
+	extendAddonPlugins(reg)
 
 	entAddExtPlugins(reg)
 
@@ -157,12 +162,6 @@ func (r *registry) DeprecationStatus(name string, pluginType consts.PluginType) 
 	}
 
 	return consts.Unknown, false
-}
-
-func (r *registry) Extend(other *registry) {
-	maps.Copy(other.credentialBackends, r.credentialBackends)
-	maps.Copy(other.databasePlugins, r.databasePlugins)
-	maps.Copy(other.logicalBackends, r.logicalBackends)
 }
 
 func toFunc(ifc interface{}) func() (interface{}, error) {

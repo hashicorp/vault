@@ -6,6 +6,8 @@
 package builtinplugins
 
 import (
+	"maps"
+
 	credAliCloud "github.com/hashicorp/vault-plugin-auth-alicloud"
 	credAzure "github.com/hashicorp/vault-plugin-auth-azure"
 	credCF "github.com/hashicorp/vault-plugin-auth-cf"
@@ -138,10 +140,10 @@ func newFullAddonRegistry() *registry {
 	}
 }
 
-func newRegistry() *registry {
-	reg := newFullAddonRegistry()
+func extendAddonPlugins(reg *registry) {
+	addonReg := newFullAddonRegistry()
 
-	reg.Extend(newCommonRegistry())
-
-	return reg
+	maps.Copy(reg.credentialBackends, addonReg.credentialBackends)
+	maps.Copy(reg.databasePlugins, addonReg.databasePlugins)
+	maps.Copy(reg.logicalBackends, addonReg.logicalBackends)
 }

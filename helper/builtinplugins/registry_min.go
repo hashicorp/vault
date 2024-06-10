@@ -5,6 +5,6 @@
 
 package builtinplugins
 
-func newRegistry() *registry {
-	return newCommonRegistry()
+func extendAddonPlugins(_ *registry) {
+	// No-op
 }
