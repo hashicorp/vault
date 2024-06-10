@@ -36,7 +36,6 @@ locals {
         "2" = data.aws_ami.amzn2["x86_64"].id
       }
       "leap" = {
-        "15.4" = data.aws_ami.leap_154.id
         "15.5" = data.aws_ami.leap_155.id
       }
       "rhel" = {
@@ -47,34 +46,11 @@ locals {
         "v15_sp5_standard" = data.aws_ami.sles_15_sp5_standard["x86_64"].id
       }
       "ubuntu" = {
-        "18.04" = data.aws_ami.ubuntu_1804["x86_64"].id
         "20.04" = data.aws_ami.ubuntu_2004["x86_64"].id
         "22.04" = data.aws_ami.ubuntu_2204["x86_64"].id
       }
     }
   }
-}
-
-data "aws_ami" "ubuntu_1804" {
-  most_recent = true
-  for_each    = local.architectures
-
-  filter {
-    name   = "name"
-    values = ["ubuntu/images/hvm-ssd/ubuntu-*-18.04-*-server-*"]
-  }
-
-  filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
-  }
-
-  filter {
-    name   = "architecture"
-    values = [each.value]
-  }
-
-  owners = [local.canonical_owner_id]
 }
 
 data "aws_ami" "ubuntu_2004" {
@@ -201,25 +177,6 @@ data "aws_ami" "sles_15_sp5_standard" {
   owners = [local.sles_owner_id]
 }
 
-data "aws_ami" "leap_154" {
-  most_recent = true
-
-  filter {
-    name   = "name"
-    values = ["openSUSE-Leap-15.4*"]
-  }
-
-  filter {
-    name = "architecture"
-    # Note: arm64 AMIs are offered for Leap 15.5, but not 15.4. For now we will
-    # only use x86_64 for both in order to not introduce complexity in our matrix
-    # exclusions.
-    values = ["x86_64"]
-  }
-
-  owners = [local.suse_owner_id]
-}
-
 data "aws_ami" "leap_155" {
   most_recent = true
 
@@ -230,9 +187,7 @@ data "aws_ami" "leap_155" {
 
   filter {
     name = "architecture"
-    # Note: arm64 AMIs are offered for Leap 15.5, but not 15.4. For now we will
-    # only use x86_64 for both in order to not introduce complexity in our matrix
-    # exclusions.
+    # Note: arm64 AMIs are not offered for Leap.
     values = ["x86_64"]
   }
 

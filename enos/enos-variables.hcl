@@ -84,7 +84,7 @@ variable "distro_version_amzn2" {
 variable "distro_version_leap" {
   description = "The version of openSUSE leap to use"
   type        = string
-  default     = "15.5" // or "15.4"
+  default     = "15.5"
 }
 
 variable "distro_version_rhel" {

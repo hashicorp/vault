@@ -49,7 +49,7 @@ globals {
   sample_attributes = {
     aws_region            = ["us-east-1", "us-west-2"]
     distro_version_amzn2  = ["2"]
-    distro_version_leap   = ["15.4", "15.5"]
+    distro_version_leap   = ["15.5"]
     distro_version_rhel   = ["8.9", "9.3"]
     distro_version_sles   = ["v15_sp5_standard"]
     distro_version_ubuntu = ["20.04", "22.04"]
