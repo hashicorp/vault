@@ -42,7 +42,7 @@ export default class ToolRandom extends Component {
   @action
   async handleSubmit(evt) {
     evt.preventDefault();
-    const data = { bytes: this.bytes, format: this.format };
+    const data = { bytes: Number(this.bytes), format: this.format };
     try {
       const response = await this.store.adapterFor('tools').toolAction('random', data);
       this.randomBytes = response.data.random_bytes;

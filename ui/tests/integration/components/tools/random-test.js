@@ -18,7 +18,7 @@ module('Integration | Component | tools/random', function (hooks) {
 
   hooks.beforeEach(function () {
     this.random_bytes = null;
-    this.bytes = '32';
+    this.bytes = 32;
     this.format = 'base64';
     this.renderComponent = async () => {
       await render(hbs`<ToolRandom />`);
