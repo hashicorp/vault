@@ -39,12 +39,13 @@ const (
 	legacyMigrationBundleLogKey = "config/legacyMigrationBundleLog"
 	legacyCertBundlePath        = issuing.LegacyCertBundlePath
 	legacyCertBundleBackupPath  = "config/ca_bundle.bak"
-	legacyCRLPath               = "crl"
-	deltaCRLPath                = "delta-crl"
-	deltaCRLPathSuffix          = "-delta"
-	unifiedCRLPath              = "unified-crl"
-	unifiedDeltaCRLPath         = "unified-delta-crl"
-	unifiedCRLPathPrefix        = "unified-"
+
+	legacyCRLPath        = issuing.LegacyCRLPath
+	deltaCRLPath         = issuing.DeltaCRLPath
+	deltaCRLPathSuffix   = issuing.DeltaCRLPathSuffix
+	unifiedCRLPath       = issuing.UnifiedCRLPath
+	unifiedDeltaCRLPath  = issuing.UnifiedDeltaCRLPath
+	unifiedCRLPathPrefix = issuing.UnifiedCRLPathPrefix
 
 	autoTidyConfigPath = "config/auto-tidy"
 	clusterConfigPath  = "config/cluster"
@@ -515,41 +516,6 @@ func (sc *storageContext) getIssuersConfig() (*issuing.IssuerConfigEntry, error)
 // same value.
 func (sc *storageContext) resolveIssuerReference(reference string) (issuing.IssuerID, error) {
 	return issuing.ResolveIssuerReference(sc.Context, sc.Storage, reference)
-}
-
-func (sc *storageContext) resolveIssuerCRLPath(reference string, unified bool) (string, error) {
-	if sc.Backend.UseLegacyBundleCaStorage() {
-		return legacyCRLPath, nil
-	}
-
-	issuer, err := sc.resolveIssuerReference(reference)
-	if err != nil {
-		return legacyCRLPath, err
-	}
-
-	var crlConfig *issuing.InternalCRLConfigEntry
-	if unified {
-		crlConfig, err = issuing.GetUnifiedCRLConfig(sc.Context, sc.Storage)
-		if err != nil {
-			return legacyCRLPath, err
-		}
-	} else {
-		crlConfig, err = issuing.GetLocalCRLConfig(sc.Context, sc.Storage)
-		if err != nil {
-			return legacyCRLPath, err
-		}
-	}
-
-	if crlId, ok := crlConfig.IssuerIDCRLMap[issuer]; ok && len(crlId) > 0 {
-		path := fmt.Sprintf("crls/%v", crlId)
-		if unified {
-			path = unifiedCRLPathPrefix + path
-		}
-
-		return path, nil
-	}
-
-	return legacyCRLPath, fmt.Errorf("unable to find CRL for issuer: id:%v/ref:%v", issuer, reference)
 }
 
 // Builds a certutil.CertBundle from the specified issuer identifier,

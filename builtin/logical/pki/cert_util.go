@@ -203,7 +203,7 @@ func fetchCertBySerial(sc *storageContext, prefix, serial string) (*logical.Stor
 		}
 
 		unified := serial == unifiedCRLPath || serial == unifiedDeltaCRLPath
-		path, err = sc.resolveIssuerCRLPath(defaultRef, unified)
+		path, err = issuing.ResolveIssuerCRLPath(sc.GetContext(), sc.GetStorage(), sc.UseLegacyBundleCaStorage(), defaultRef, unified)
 		if err != nil {
 			return nil, err
 		}

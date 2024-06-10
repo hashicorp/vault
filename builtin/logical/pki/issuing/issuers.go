@@ -13,6 +13,7 @@ import (
 
 	"github.com/hashicorp/vault/builtin/logical/pki/managed_key"
 	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
+	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -43,6 +44,13 @@ const (
 	LegacyCertBundlePath  = "config/ca_bundle"
 	LegacyBundleShimID    = IssuerID("legacy-entry-shim-id")
 	LegacyBundleShimKeyID = KeyID("legacy-entry-shim-key-id")
+
+	LegacyCRLPath        = "crl"
+	DeltaCRLPath         = "delta-crl"
+	DeltaCRLPathSuffix   = "-delta"
+	UnifiedCRLPath       = "unified-crl"
+	UnifiedDeltaCRLPath  = "unified-delta-crl"
+	UnifiedCRLPathPrefix = "unified-"
 )
 
 type IssuerID string
@@ -491,4 +499,39 @@ func GetLegacyCertBundle(ctx context.Context, s logical.Storage) (*IssuerEntry, 
 	issuer.Usage.ToggleUsage(AllIssuerUsages)
 
 	return issuer, cb, nil
+}
+
+func ResolveIssuerCRLPath(ctx context.Context, storage logical.Storage, useLegacyBundleCaStorage bool, reference string, unified bool) (string, error) {
+	if useLegacyBundleCaStorage {
+		return "crl", nil
+	}
+
+	issuer, err := ResolveIssuerReference(ctx, storage, reference)
+	if err != nil {
+		return "crl", err
+	}
+
+	var crlConfig *InternalCRLConfigEntry
+	if unified {
+		crlConfig, err = GetUnifiedCRLConfig(ctx, storage)
+		if err != nil {
+			return "crl", err
+		}
+	} else {
+		crlConfig, err = GetLocalCRLConfig(ctx, storage)
+		if err != nil {
+			return "crl", err
+		}
+	}
+
+	if crlId, ok := crlConfig.IssuerIDCRLMap[issuer]; ok && len(crlId) > 0 {
+		path := fmt.Sprintf("crls/%v", crlId)
+		if unified {
+			path = ("unified-") + path
+		}
+
+		return path, nil
+	}
+
+	return "crl", fmt.Errorf("unable to find CRL for issuer: id:%v/ref:%v", issuer, reference)
 }
