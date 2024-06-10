@@ -11,6 +11,7 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 	"io"
 	"math/big"
 	"net"
@@ -170,103 +171,8 @@ func fetchCertBySerialBigInt(sc *storageContext, prefix string, serial *big.Int)
 	return fetchCertBySerial(sc, prefix, serialFromBigInt(serial))
 }
 
-// Allows fetching certificates from the backend; it handles the slightly
-// separate pathing for CRL, and revoked certificates.
-//
-// Support for fetching CA certificates was removed, due to the new issuers
-// changes.
-func fetchCertBySerial(sc *storageContext, prefix, serial string) (*logical.StorageEntry, error) {
-	var path, legacyPath string
-	var err error
-	var certEntry *logical.StorageEntry
-
-	hyphenSerial := normalizeSerial(serial)
-	colonSerial := strings.ReplaceAll(strings.ToLower(serial), "-", ":")
-
-	switch {
-	// Revoked goes first as otherwise crl get hardcoded paths which fail if
-	// we actually want revocation info
-	case strings.HasPrefix(prefix, "revoked/"):
-		legacyPath = "revoked/" + colonSerial
-		path = "revoked/" + hyphenSerial
-	case serial == legacyCRLPath || serial == deltaCRLPath || serial == unifiedCRLPath || serial == unifiedDeltaCRLPath:
-		warnings, err := sc.CrlBuilder().RebuildIfForced(sc)
-		if err != nil {
-			return nil, err
-		}
-		if len(warnings) > 0 {
-			msg := "During rebuild of CRL for cert fetch, got the following warnings:"
-			for index, warning := range warnings {
-				msg = fmt.Sprintf("%v\n %d. %v", msg, index+1, warning)
-			}
-			sc.Logger().Warn(msg)
-		}
-
-		unified := serial == unifiedCRLPath || serial == unifiedDeltaCRLPath
-		path, err = issuing.ResolveIssuerCRLPath(sc.GetContext(), sc.GetStorage(), sc.UseLegacyBundleCaStorage(), defaultRef, unified)
-		if err != nil {
-			return nil, err
-		}
-
-		if serial == deltaCRLPath || serial == unifiedDeltaCRLPath {
-			if sc.UseLegacyBundleCaStorage() {
-				return nil, fmt.Errorf("refusing to serve delta CRL with legacy CA bundle")
-			}
-
-			path += deltaCRLPathSuffix
-		}
-	default:
-		legacyPath = issuing.PathCerts + colonSerial
-		path = issuing.PathCerts + hyphenSerial
-	}
-
-	certEntry, err = sc.Storage.Get(sc.Context, path)
-	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("error fetching certificate %s: %s", serial, err)}
-	}
-	if certEntry != nil {
-		if certEntry.Value == nil || len(certEntry.Value) == 0 {
-			return nil, errutil.InternalError{Err: fmt.Sprintf("returned certificate bytes for serial %s were empty", serial)}
-		}
-		return certEntry, nil
-	}
-
-	// If legacyPath is unset, it's going to be a CA or CRL; return immediately
-	if legacyPath == "" {
-		return nil, nil
-	}
-
-	// Retrieve the old-style path.  We disregard errors here because they
-	// always manifest on Windows, and thus the initial check for a revoked
-	// cert fails would return an error when the cert isn't revoked, preventing
-	// the happy path from working.
-	certEntry, _ = sc.Storage.Get(sc.Context, legacyPath)
-	if certEntry == nil {
-		return nil, nil
-	}
-	if certEntry.Value == nil || len(certEntry.Value) == 0 {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("returned certificate bytes for serial %s were empty", serial)}
-	}
-
-	// Update old-style paths to new-style paths
-	certEntry.Key = path
-	certCounter := sc.GetCertificateCounter()
-	certsCounted := certCounter.IsInitialized()
-	if err = sc.Storage.Put(sc.Context, certEntry); err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("error saving certificate with serial %s to new location: %s", serial, err)}
-	}
-	if err = sc.Storage.Delete(sc.Context, legacyPath); err != nil {
-		// If we fail here, we have an extra (copy) of a cert in storage, add to metrics:
-		switch {
-		case strings.HasPrefix(prefix, "revoked/"):
-			certCounter.IncrementTotalRevokedCertificatesCount(certsCounted, path)
-		default:
-			certCounter.IncrementTotalCertificatesCount(certsCounted, path)
-		}
-		return nil, errutil.InternalError{Err: fmt.Sprintf("error deleting certificate with serial %s from old location", serial)}
-	}
-
-	return certEntry, nil
+func fetchCertBySerial(sc pki_backend.StorageContext, prefix, serial string) (*logical.StorageEntry, error) {
+	return issuing.FetchCertBySerial(sc, prefix, serial)
 }
 
 // Given a URI SAN, verify that it is allowed.
