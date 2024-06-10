@@ -1,4 +1,4 @@
 ```release-note:feature
-build: Add go build tag `minimal`. Set BUILD_MINIMAL to non-empty to build
-a minimal version of Vault with only core features.
+**Vault Minimal Version**: Add the ability to build a minimal version of Vault
+with only core features using the BUILD_MINIMAL environment variable.
 ```
