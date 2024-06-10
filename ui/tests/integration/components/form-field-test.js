@@ -127,14 +127,41 @@ module('Integration | Component | form field', function (hooks) {
   });
 
   test('it renders: editType ttl', async function (assert) {
-    const [model, spy] = await setup.call(this, createAttr('foo', null, { editType: 'ttl' }));
+    const [model, spy] = await setup.call(
+      this,
+      createAttr('foo', null, {
+        editType: 'ttl',
+        helperTextDisabled: 'TTL is disabled',
+        helperTextEnabled: 'TTL is enabled',
+      })
+    );
     assert.ok(component.hasTTLPicker, 'renders the ttl-picker component');
+    assert.dom('[data-test-ttl-form-subtext]').hasText('TTL is disabled');
+    assert.dom('[data-test-ttl-toggle]').isNotChecked();
     await component.fields.objectAt(0).toggleTtl();
     await component.fields.objectAt(0).select('h').change();
     await component.fields.objectAt(0).ttlTime('3');
     const expectedSeconds = `${3 * 3600}s`;
     assert.strictEqual(model.get('foo'), expectedSeconds);
     assert.ok(spy.calledWith('foo', expectedSeconds), 'onChange called with correct args');
+    await component.fields.objectAt(0).toggleTtl();
+    assert.ok(spy.calledWith('foo', '0'), 'onChange called with 0 when toggle off');
+  });
+
+  test('it renders: editType ttl with special settings', async function (assert) {
+    const [model, spy] = await setup.call(
+      this,
+      createAttr('foo', null, {
+        editType: 'ttl',
+        setDefault: '3600s',
+        ttlOffValue: '',
+      })
+    );
+    assert.ok(component.hasTTLPicker, 'renders the ttl-picker component');
+    assert.dom('[data-test-ttl-toggle]').isChecked();
+    await component.fields.objectAt(0).toggleTtl();
+    assert.strictEqual(model.get('foo'), '');
+    assert.ok(spy.calledWith('foo', ''), 'onChange called with correct args');
   });
 
   test('it renders: editType ttl without toggle', async function (assert) {
