@@ -13,7 +13,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
+	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 	"net/http"
 	"strings"
 	"time"
@@ -498,7 +498,7 @@ func validatePublicKeyMatchesCert(verifier crypto.PublicKey, certReference *x509
 	return nil
 }
 
-func (b *backend) maybeRevokeCrossCluster(sc *storageContext, config *revocation.CrlConfig, serial string, havePrivateKey bool) (*logical.Response, error) {
+func (b *backend) maybeRevokeCrossCluster(sc *storageContext, config *pki_backend.CrlConfig, serial string, havePrivateKey bool) (*logical.Response, error) {
 	if !config.UseGlobalQueue {
 		return logical.ErrorResponse(fmt.Sprintf("certificate with serial %s not found.", serial)), nil
 	}

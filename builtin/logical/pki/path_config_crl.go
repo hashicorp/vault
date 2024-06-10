@@ -6,7 +6,7 @@ package pki
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
+	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 	"net/http"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
@@ -408,7 +408,7 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 	return resp, nil
 }
 
-func genResponseFromCrlConfig(config *revocation.CrlConfig) *logical.Response {
+func genResponseFromCrlConfig(config *pki_backend.CrlConfig) *logical.Response {
 	return &logical.Response{
 		Data: map[string]interface{}{
 			"expiry":                        config.Expiry,

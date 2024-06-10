@@ -14,7 +14,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
+	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 	"math/big"
 	"net/http"
 	"strconv"
@@ -74,7 +74,7 @@ to the issuer.`,
 				Type: framework.TypeString,
 				Description: `The amount of time the generated CRL should be
 valid; defaults to 72 hours.`,
-				Default: revocation.DefaultCrlConfig.Expiry,
+				Default: pki_backend.DefaultCrlConfig.Expiry,
 			},
 			crlsParam: {
 				Type:        framework.TypeStringSlice,
@@ -143,7 +143,7 @@ to the issuer.`,
 				Type: framework.TypeString,
 				Description: `The amount of time the generated CRL should be
 valid; defaults to 72 hours.`,
-				Default: revocation.DefaultCrlConfig.Expiry,
+				Default: pki_backend.DefaultCrlConfig.Expiry,
 			},
 			formatParam: {
 				Type: framework.TypeString,

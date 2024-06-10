@@ -93,7 +93,7 @@ type CrlBuilder struct {
 
 	_config               sync.RWMutex
 	dirty                 *atomic.Bool
-	config                revocation.CrlConfig
+	config                pki_backend.CrlConfig
 	haveInitializedConfig bool
 
 	// Whether to invalidate our LastModifiedTime due to write on the
@@ -124,7 +124,7 @@ func newCRLBuilder(canRebuild bool) *CrlBuilder {
 		// to stabilize.
 		lastDeltaRebuildCheck: time.Now(),
 		dirty:                 &atomic.Bool{},
-		config:                revocation.DefaultCrlConfig,
+		config:                pki_backend.DefaultCrlConfig,
 		invalidate:            &atomic.Bool{},
 		haveInitializedQueue:  &atomic.Bool{},
 		revQueue:              newRevocationQueue(),
@@ -161,7 +161,7 @@ func (cb *CrlBuilder) reloadConfigIfRequired(sc *storageContext) error {
 		if config != nil {
 			cb.config = *config
 		} else {
-			cb.config = revocation.DefaultCrlConfig
+			cb.config = pki_backend.DefaultCrlConfig
 		}
 
 		// Updated the config; unset dirty.
@@ -181,7 +181,7 @@ func (cb *CrlBuilder) reloadConfigIfRequired(sc *storageContext) error {
 	return nil
 }
 
-func (cb *CrlBuilder) notifyOnConfigChange(sc *storageContext, priorConfig revocation.CrlConfig, newConfig revocation.CrlConfig) {
+func (cb *CrlBuilder) notifyOnConfigChange(sc *storageContext, priorConfig pki_backend.CrlConfig, newConfig pki_backend.CrlConfig) {
 	// If you need to hook into a CRL configuration change across different server types
 	// such as primary clusters as well as performance replicas, it is easier to do here than
 	// in two places (API layer and in invalidateFunc)
@@ -194,7 +194,7 @@ func (cb *CrlBuilder) notifyOnConfigChange(sc *storageContext, priorConfig revoc
 	}
 }
 
-func (cb *CrlBuilder) GetConfigWithUpdate(sc pki_backend.StorageContext) (*revocation.CrlConfig, error) {
+func (cb *CrlBuilder) GetConfigWithUpdate(sc pki_backend.StorageContext) (*pki_backend.CrlConfig, error) {
 	// Config may mutate immediately after accessing, but will be freshly
 	// fetched if necessary.
 	if err := cb.reloadConfigIfRequired(sc.(*storageContext)); err != nil {
@@ -208,12 +208,12 @@ func (cb *CrlBuilder) GetConfigWithUpdate(sc pki_backend.StorageContext) (*revoc
 	return &configCopy, nil
 }
 
-func (cb *CrlBuilder) getConfigWithForcedUpdate(sc *storageContext) (*revocation.CrlConfig, error) {
+func (cb *CrlBuilder) getConfigWithForcedUpdate(sc *storageContext) (*pki_backend.CrlConfig, error) {
 	cb.markConfigDirty()
 	return cb.GetConfigWithUpdate(sc)
 }
 
-func (cb *CrlBuilder) writeConfig(sc *storageContext, config *revocation.CrlConfig) (*revocation.CrlConfig, error) {
+func (cb *CrlBuilder) writeConfig(sc *storageContext, config *pki_backend.CrlConfig) (*pki_backend.CrlConfig, error) {
 	cb._config.Lock()
 	defer cb._config.Unlock()
 
@@ -226,7 +226,7 @@ func (cb *CrlBuilder) writeConfig(sc *storageContext, config *revocation.CrlConf
 	if config != nil {
 		cb.config = *config
 	} else {
-		cb.config = revocation.DefaultCrlConfig
+		cb.config = pki_backend.DefaultCrlConfig
 	}
 
 	triggerChangeNotification := true
@@ -289,9 +289,9 @@ func (cb *CrlBuilder) checkForAutoRebuild(sc *storageContext) error {
 		// This may occur if the duration is empty; in that case
 		// assume the default. The default should be valid and shouldn't
 		// error.
-		defaultPeriod, defaultErr := parseutil.ParseDurationSecond(revocation.DefaultCrlConfig.AutoRebuildGracePeriod)
+		defaultPeriod, defaultErr := parseutil.ParseDurationSecond(pki_backend.DefaultCrlConfig.AutoRebuildGracePeriod)
 		if defaultErr != nil {
-			return fmt.Errorf("error checking for auto-rebuild status: unable to parse duration from both config's grace period (%v) and default grace period (%v):\n- config: %v\n- default: %w\n", cfg.AutoRebuildGracePeriod, revocation.DefaultCrlConfig.AutoRebuildGracePeriod, err, defaultErr)
+			return fmt.Errorf("error checking for auto-rebuild status: unable to parse duration from both config's grace period (%v) and default grace period (%v):\n- config: %v\n- default: %w\n", cfg.AutoRebuildGracePeriod, pki_backend.DefaultCrlConfig.AutoRebuildGracePeriod, err, defaultErr)
 		}
 
 		period = defaultPeriod
@@ -953,7 +953,7 @@ func fetchIssuerMapForRevocationChecking(sc *storageContext) (map[issuing.Issuer
 
 // Revoke a certificate from a given serial number if it is present in local
 // storage.
-func tryRevokeCertBySerial(sc *storageContext, config *revocation.CrlConfig, serial string) (*logical.Response, error) {
+func tryRevokeCertBySerial(sc *storageContext, config *pki_backend.CrlConfig, serial string) (*logical.Response, error) {
 	// revokeCert requires us to hold these locks before calling it.
 	sc.GetRevokeStorageLock().Lock()
 	defer sc.GetRevokeStorageLock().Unlock()
@@ -981,7 +981,7 @@ func tryRevokeCertBySerial(sc *storageContext, config *revocation.CrlConfig, ser
 }
 
 // Revokes a cert, and tries to be smart about error recovery
-func revokeCert(sc *storageContext, config *revocation.CrlConfig, cert *x509.Certificate) (*logical.Response, error) {
+func revokeCert(sc *storageContext, config *pki_backend.CrlConfig, cert *x509.Certificate) (*logical.Response, error) {
 	// As this backend is self-contained and this function does not hook into
 	// third parties to manage users or resources, if the mount is tainted,
 	// revocation doesn't matter anyways -- the CRL that would be written will
@@ -1122,7 +1122,7 @@ func revokeCert(sc *storageContext, config *revocation.CrlConfig, cert *x509.Cer
 	return resp, nil
 }
 
-func writeRevocationDeltaWALs(sc *storageContext, config *revocation.CrlConfig, resp *logical.Response, failedWritingUnifiedCRL bool, hyphenSerial string, colonSerial string) error {
+func writeRevocationDeltaWALs(sc *storageContext, config *pki_backend.CrlConfig, resp *logical.Response, failedWritingUnifiedCRL bool, hyphenSerial string, colonSerial string) error {
 	if err := writeSpecificRevocationDeltaWALs(sc, hyphenSerial, colonSerial, localDeltaWALPath); err != nil {
 		return fmt.Errorf("failed to write local delta WAL entry: %w", err)
 	}
@@ -1406,7 +1406,7 @@ func getLastWALSerial(sc *storageContext, path string) (string, error) {
 func buildAnyLocalCRLs(
 	sc *storageContext,
 	issuersConfig *issuing.IssuerConfigEntry,
-	globalCRLConfig *revocation.CrlConfig,
+	globalCRLConfig *pki_backend.CrlConfig,
 	issuers []issuing.IssuerID,
 	issuerIDEntryMap map[issuing.IssuerID]*issuing.IssuerEntry,
 	issuerIDCertMap map[issuing.IssuerID]*x509.Certificate,
@@ -1525,7 +1525,7 @@ func buildAnyLocalCRLs(
 func buildAnyUnifiedCRLs(
 	sc *storageContext,
 	issuersConfig *issuing.IssuerConfigEntry,
-	globalCRLConfig *revocation.CrlConfig,
+	globalCRLConfig *pki_backend.CrlConfig,
 	issuers []issuing.IssuerID,
 	issuerIDEntryMap map[issuing.IssuerID]*issuing.IssuerEntry,
 	issuerIDCertMap map[issuing.IssuerID]*x509.Certificate,
@@ -1676,7 +1676,7 @@ func buildAnyUnifiedCRLs(
 func buildAnyCRLsWithCerts(
 	sc *storageContext,
 	issuersConfig *issuing.IssuerConfigEntry,
-	globalCRLConfig *revocation.CrlConfig,
+	globalCRLConfig *pki_backend.CrlConfig,
 	internalCRLConfig *issuing.InternalCRLConfigEntry,
 	issuers []issuing.IssuerID,
 	issuerIDEntryMap map[issuing.IssuerID]*issuing.IssuerEntry,
@@ -2151,7 +2151,7 @@ func augmentWithRevokedIssuers(issuerIDEntryMap map[issuing.IssuerID]*issuing.Is
 
 // Builds a CRL by going through the list of revoked certificates and building
 // a new CRL with the stored revocation times and serial numbers.
-func buildCRL(sc *storageContext, crlInfo *revocation.CrlConfig, forceNew bool, thisIssuerId issuing.IssuerID, revoked []pkix.RevokedCertificate, identifier issuing.CrlID, crlNumber int64, isUnified bool, isDelta bool, lastCompleteNumber int64) (*time.Time, error) {
+func buildCRL(sc *storageContext, crlInfo *pki_backend.CrlConfig, forceNew bool, thisIssuerId issuing.IssuerID, revoked []pkix.RevokedCertificate, identifier issuing.CrlID, crlNumber int64, isUnified bool, isDelta bool, lastCompleteNumber int64) (*time.Time, error) {
 	var revokedCerts []pkix.RevokedCertificate
 
 	crlLifetime, err := parseutil.ParseDurationSecond(crlInfo.Expiry)
@@ -2243,6 +2243,6 @@ WRITE:
 
 // shouldLocalPathsUseUnified assuming a legacy path for a CRL/OCSP request, does our
 // configuration say we should be returning the unified response or not
-func shouldLocalPathsUseUnified(cfg *revocation.CrlConfig) bool {
+func shouldLocalPathsUseUnified(cfg *pki_backend.CrlConfig) bool {
 	return cfg.UnifiedCRL && cfg.UnifiedCRLOnExistingPaths
 }

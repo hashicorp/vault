@@ -13,6 +13,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
 	"io"
 	"math/big"
@@ -212,7 +213,7 @@ func (b *backend) ocspHandler(ctx context.Context, request *logical.Request, dat
 	}, nil
 }
 
-func canUseUnifiedStorage(req *logical.Request, cfg *revocation.CrlConfig) bool {
+func canUseUnifiedStorage(req *logical.Request, cfg *pki_backend.CrlConfig) bool {
 	if isUnifiedOcspPath(req) {
 		return true
 	}
@@ -226,7 +227,7 @@ func isUnifiedOcspPath(req *logical.Request) bool {
 	return strings.HasPrefix(req.Path, "unified-ocsp")
 }
 
-func generateUnknownResponse(cfg *revocation.CrlConfig, sc *storageContext, ocspReq *ocsp.Request) *logical.Response {
+func generateUnknownResponse(cfg *pki_backend.CrlConfig, sc *storageContext, ocspReq *ocsp.Request) *logical.Response {
 	// Generate an Unknown OCSP response, signing with the default issuer from the mount as we did
 	// not match the request's issuer. If no default issuer can be used, return with Unauthorized as there
 	// isn't much else we can do at this point.
@@ -476,7 +477,7 @@ func doesRequestMatchIssuer(parsedBundle *certutil.ParsedCertBundle, req *ocsp.R
 	return bytes.Equal(req.IssuerKeyHash, issuerKeyHash) && bytes.Equal(req.IssuerNameHash, issuerNameHash), nil
 }
 
-func genResponse(cfg *revocation.CrlConfig, caBundle *certutil.ParsedCertBundle, info *ocspRespInfo, reqHash crypto.Hash, revSigAlg x509.SignatureAlgorithm) ([]byte, error) {
+func genResponse(cfg *pki_backend.CrlConfig, caBundle *certutil.ParsedCertBundle, info *ocspRespInfo, reqHash crypto.Hash, revSigAlg x509.SignatureAlgorithm) ([]byte, error) {
 	curTime := time.Now()
 	duration, err := parseutil.ParseDurationSecond(cfg.OcspExpiry)
 	if err != nil {

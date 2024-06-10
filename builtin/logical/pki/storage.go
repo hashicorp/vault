@@ -663,15 +663,15 @@ func (sc *storageContext) checkForRolesReferencing(issuerId string) (timeout boo
 	return false, inUseBy, nil
 }
 
-func (sc *storageContext) getRevocationConfig() (*revocation.CrlConfig, error) {
+func (sc *storageContext) getRevocationConfig() (*pki_backend.CrlConfig, error) {
 	entry, err := sc.Storage.Get(sc.Context, "config/crl")
 	if err != nil {
 		return nil, err
 	}
 
-	var result revocation.CrlConfig
+	var result pki_backend.CrlConfig
 	if entry == nil {
-		result = revocation.DefaultCrlConfig
+		result = pki_backend.DefaultCrlConfig
 		return &result, nil
 	}
 
@@ -681,15 +681,15 @@ func (sc *storageContext) getRevocationConfig() (*revocation.CrlConfig, error) {
 
 	if result.Version == 0 {
 		// Automatically update existing configurations.
-		result.OcspDisable = revocation.DefaultCrlConfig.OcspDisable
-		result.OcspExpiry = revocation.DefaultCrlConfig.OcspExpiry
-		result.AutoRebuild = revocation.DefaultCrlConfig.AutoRebuild
-		result.AutoRebuildGracePeriod = revocation.DefaultCrlConfig.AutoRebuildGracePeriod
+		result.OcspDisable = pki_backend.DefaultCrlConfig.OcspDisable
+		result.OcspExpiry = pki_backend.DefaultCrlConfig.OcspExpiry
+		result.AutoRebuild = pki_backend.DefaultCrlConfig.AutoRebuild
+		result.AutoRebuildGracePeriod = pki_backend.DefaultCrlConfig.AutoRebuildGracePeriod
 		result.Version = 1
 	}
 	if result.Version == 1 {
 		if result.DeltaRebuildInterval == "" {
-			result.DeltaRebuildInterval = revocation.DefaultCrlConfig.DeltaRebuildInterval
+			result.DeltaRebuildInterval = pki_backend.DefaultCrlConfig.DeltaRebuildInterval
 		}
 		result.Version = 2
 	}
@@ -697,7 +697,7 @@ func (sc *storageContext) getRevocationConfig() (*revocation.CrlConfig, error) {
 	// Depending on client version, it's possible that the expiry is unset.
 	// This sets the default value to prevent issues in downstream code.
 	if result.Expiry == "" {
-		result.Expiry = revocation.DefaultCrlConfig.Expiry
+		result.Expiry = pki_backend.DefaultCrlConfig.Expiry
 	}
 
 	isLocalMount := sc.System().LocalMount()
@@ -713,7 +713,7 @@ func (sc *storageContext) getRevocationConfig() (*revocation.CrlConfig, error) {
 	return &result, nil
 }
 
-func (sc *storageContext) setRevocationConfig(config *revocation.CrlConfig) error {
+func (sc *storageContext) setRevocationConfig(config *pki_backend.CrlConfig) error {
 	entry, err := logical.StorageEntryJSON("config/crl", config)
 	if err != nil {
 		return fmt.Errorf("failed building storage entry JSON: %w", err)
