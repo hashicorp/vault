@@ -36,12 +36,21 @@ module('Acceptance | clients | sync', function (hooks) {
     });
   });
 
-  module('sync not activated', function (hooks) {
+  module('sync not activated and on license', function (hooks) {
     hooks.beforeEach(async function () {
       this.server.get('/sys/internal/counters/config', function () {
         return CONFIG_RESPONSE;
       });
       sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
+      syncHandler(this.server);
+      server.get('/sys/activation-flags', () => {
+        return {
+          data: {
+            activated: [''],
+            unactivated: ['secrets-sync'],
+          },
+        };
+      });
       await authPage.login();
       return visit('/vault/clients/counts/sync');
     });
