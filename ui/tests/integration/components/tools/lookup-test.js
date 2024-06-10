@@ -12,6 +12,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { TOOLS_SELECTORS as TS } from 'vault/tests/helpers/tools-selectors';
 import { format } from 'date-fns';
+import sinon from 'sinon';
 
 module('Integration | Component | tools/lookup', function (hooks) {
   setupRenderingTest(hooks);
@@ -42,6 +43,7 @@ module('Integration | Component | tools/lookup', function (hooks) {
   });
 
   test('it submits', async function (assert) {
+    const flashSuccessSpy = sinon.spy(this.owner.lookup('service:flash-messages'), 'success');
     // not stubbing the timestamp util here because this component uses the date-fns formatDistanceToNow method
     // so we need an actual now date for testing (which is why we don't assert the timestamp below, just the day of the month)
     const now = new Date();
@@ -60,6 +62,7 @@ module('Integration | Component | tools/lookup', function (hooks) {
     await click(TS.submit);
 
     await waitUntil(() => find(GENERAL.infoRowValue('Creation path')));
+    assert.true(flashSuccessSpy.calledWith('Lookup was successful.'), 'it renders success flash');
     assert.dom(GENERAL.infoRowValue('Creation path')).hasText(data.creation_path);
     assert.dom(GENERAL.infoRowValue('Creation time')).hasText(data.creation_time);
     assert.dom(GENERAL.infoRowValue('Creation TTL')).hasText(`${data.creation_ttl}`);

@@ -11,6 +11,7 @@ import { click, fillIn, find, render, waitUntil } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { TOOLS_SELECTORS as TS } from 'vault/tests/helpers/tools-selectors';
+import sinon from 'sinon';
 
 module('Integration | Component | tools/hash', function (hooks) {
   setupRenderingTest(hooks);
@@ -42,6 +43,7 @@ module('Integration | Component | tools/hash', function (hooks) {
   });
 
   test('it submits with default values', async function (assert) {
+    const flashSpy = sinon.spy(this.owner.lookup('service:flash-messages'), 'success');
     const sum = 'GmoKPULUXifIFSGPZx29CGSm8MFnBuk4SGPsmFlduGc=';
     const data = {
       algorithm: 'sha2-256',
@@ -62,6 +64,7 @@ module('Integration | Component | tools/hash', function (hooks) {
 
     // test sum view
     await waitUntil(() => TS.toolsInput('sum'));
+    assert.true(flashSpy.calledWith('Hash was successful.'), 'it renders success flash');
     assert.dom(TS.toolsInput('sum')).hasText(sum);
     assert.dom('label').hasText('Sum');
     assert.dom('#algorithm').doesNotExist();

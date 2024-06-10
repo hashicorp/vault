@@ -11,6 +11,7 @@ import { click, fillIn, find, render, waitUntil } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { TOOLS_SELECTORS as TS } from 'vault/tests/helpers/tools-selectors';
+import sinon from 'sinon';
 
 module('Integration | Component | tools/rewrap', function (hooks) {
   setupRenderingTest(hooks);
@@ -41,6 +42,7 @@ module('Integration | Component | tools/rewrap', function (hooks) {
   });
 
   test('it submits', async function (assert) {
+    const flashSpy = sinon.spy(this.owner.lookup('service:flash-messages'), 'success');
     const original_token = 'original.OMZFbUurY0ppT2RTMGpRa0JOSUFqUzJUaGNqdWUQ6ooG=';
     const rewrapped_token = 'rewrapped_token.OMZFbUurY0ppT2RTMGpRa0JOSUFqUzJUaGNqdWUQ6ooG=';
     const data = { token: original_token };
@@ -66,6 +68,7 @@ module('Integration | Component | tools/rewrap', function (hooks) {
 
     // test rewrapped token view
     await waitUntil(() => TS.toolsInput('rewrapped-token'));
+    assert.true(flashSpy.calledWith('Rewrap was successful.'), 'it renders success flash');
     assert.dom('label').hasText('Rewrapped token');
     assert.dom(TS.toolsInput('rewrapped-token')).hasText(rewrapped_token);
     assert.dom(TS.toolsInput('original-token')).doesNotExist();

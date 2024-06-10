@@ -11,6 +11,7 @@ import { click, fillIn, find, render, waitUntil } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { TOOLS_SELECTORS as TS } from 'vault/tests/helpers/tools-selectors';
+import sinon from 'sinon';
 
 module('Integration | Component | tools/random', function (hooks) {
   setupRenderingTest(hooks);
@@ -45,6 +46,7 @@ module('Integration | Component | tools/random', function (hooks) {
   });
 
   test('it submits with default values', async function (assert) {
+    const flashSpy = sinon.spy(this.owner.lookup('service:flash-messages'), 'success');
     const random_bytes = 'ekZtsOvSOvKEPUmJohRj1nwONQ1XafwcXGZEwy/0nbY==';
     const data = { format: 'base64', bytes: 32 };
 
@@ -60,6 +62,7 @@ module('Integration | Component | tools/random', function (hooks) {
 
     // test random bytes view
     await waitUntil(() => TS.toolsInput('random-bytes'));
+    assert.true(flashSpy.calledWith('Generated random bytes successfully.'), 'it renders success flash');
     assert.dom(TS.toolsInput('random-bytes')).hasText(random_bytes);
     assert.dom('label').hasText('Random bytes');
     assert.dom('#bytes').doesNotExist();

@@ -13,6 +13,7 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { TTL_PICKER as TTL } from 'vault/tests/helpers/components/ttl-picker-selectors';
 import { TOOLS_SELECTORS as TS } from 'vault/tests/helpers/tools-selectors';
 import codemirror from 'vault/tests/helpers/codemirror';
+import sinon from 'sinon';
 
 module('Integration | Component | tools/wrap', function (hooks) {
   setupRenderingTest(hooks);
@@ -58,7 +59,9 @@ module('Integration | Component | tools/wrap', function (hooks) {
   });
 
   test('it submits with defaults', async function (assert) {
-    assert.expect(5);
+    assert.expect(6);
+    const flashSpy = sinon.spy(this.owner.lookup('service:flash-messages'), 'success');
+
     this.server.post('sys/wrapping/wrap', (schema, { requestBody, requestHeaders }) => {
       const payload = JSON.parse(requestBody);
       const expectedHeaders = {
@@ -82,6 +85,7 @@ module('Integration | Component | tools/wrap', function (hooks) {
     await codemirror().setValue(this.wrapData);
     await click(TS.submit);
     await waitUntil(() => find(TS.toolsInput('wrapping-token')));
+    assert.true(flashSpy.calledWith('Wrap was successful.'), 'it renders success flash');
     assert.dom(TS.toolsInput('wrapping-token')).hasText(this.token);
     assert.dom('label').hasText('Wrapped token');
     assert.dom('.CodeMirror').doesNotExist();

@@ -12,6 +12,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import codemirror from 'vault/tests/helpers/codemirror';
 import { TOOLS_SELECTORS as TS } from 'vault/tests/helpers/tools-selectors';
+import sinon from 'sinon';
 
 module('Integration | Component | tools/unwrap', function (hooks) {
   setupRenderingTest(hooks);
@@ -45,6 +46,7 @@ module('Integration | Component | tools/unwrap', function (hooks) {
   });
 
   test('it submits and renders falsy values', async function (assert) {
+    const flashSpy = sinon.spy(this.owner.lookup('service:flash-messages'), 'success');
     const unwrapData = { foo: 'bar' };
     const data = { token: 'token.OMZFbUurY0ppT2RTMGpRa0JOSUFqUzJUaGNqdWUQ6ooG' };
     const expectedDetails = {
@@ -72,6 +74,7 @@ module('Integration | Component | tools/unwrap', function (hooks) {
     await click(TS.submit);
 
     await waitUntil(() => find('.CodeMirror'));
+    assert.true(flashSpy.calledWith('Unwrap was successful.'), 'it renders success flash');
     assert.dom('label').hasText('Unwrapped Data');
     assert.strictEqual(codemirror().getValue(' '), '{   "foo": "bar" }', 'it renders unwrapped data');
     assert.dom(TS.tab('data')).hasAttribute('aria-selected', 'true');
