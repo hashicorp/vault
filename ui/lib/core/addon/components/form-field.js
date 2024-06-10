@@ -15,38 +15,39 @@ import { removeFromArray } from 'vault/helpers/remove-from-array';
 
 /**
  * @module FormField
- * `FormField` components are field elements associated with a particular model.
+ * FormField components are field elements associated with a particular model.
+ * @description
+ * ```
+ * sample attr shape:
+ * attr = {
+ * name: "foo", // name of attribute -- used to populate various fields and pull value from model
+ * type: "boolean" // type of attribute value -- string, boolean, etc.
+ * options: {
+ *  label: "To do task", // custom label to be shown, otherwise attr.name will be displayed
+ *  defaultValue: "", // default value to display if model value is not present
+ *  fieldValue: "toDo", // used for value lookup on model over attr.name
+ *  editType: "boolean", type of field to use. List of editTypes:boolean, file, json, kv, optionalText, mountAccessor, password, radio, regex, searchSelect, stringArray, textarea, ttl, yield.
+ *  helpText: "This will be in a tooltip",
+ *  readOnly: true
+ *  },
+ * }
+ * ```
  *
  * @example
- * ```js
  * {{#each @model.fields as |attr|}}
- *  <FormField data-test-field @attr={{attr}} @model={{this.model}} />
+ *  <FormField data-test-field @attr={{attr}} @model={{@model}} />
  * {{/each}}
- * ```
- * example attr object:
- * attr = {
- *   name: "foo", // name of attribute -- used to populate various fields and pull value from model
- *   options: {
- *     label: "Foo", // custom label to be shown, otherwise attr.name will be displayed
- *     defaultValue: "", // default value to display if model value is not present
- *     fieldValue: "bar", // used for value lookup on model over attr.name
- *     editType: "ttl", type of field to use. List of editTypes:boolean, file, json, kv, optionalText, mountAccessor, password, radio, regex, searchSelect, stringArray, textarea, ttl, yield.
- *     helpText: "This will be in a tooltip",
- *     readOnly: true
- *   },
- *   type: "boolean" // type of attribute value -- string, boolean, etc.
- * }
+ * <FormField @attr={{hash name="toDo" options=(hash label="To do task" helpText="helpful text" editType="boolean")}} @model={{hash toDo=true}} />
+ *
  * @param {Object} attr - usually derived from ember model `attributes` lookup, and all members of `attr.options` are optional
  * @param {Model} model - Ember Data model that `attr` is defined on
  * @param {boolean} [disabled=false] - whether the field is disabled
  * @param {boolean} [showHelpText=true] - whether to show the tooltip with help text from OpenAPI
  * @param {string} [subText] - text to be displayed below the label
  * @param {string} [mode] - used when editType is 'kv'
- * @param {ModelValidations} [modelValidations] - Object of errors.  If attr.name is in object and has error message display in AlertInline.
- * @callback onChangeCallback
- * @param {onChangeCallback} [onChange] - called whenever a value on the model changes via the component
- * @callback onKeyUpCallback
- * @param {onKeyUpCallback} [onKeyUp] - function passed through into MaskedInput to handle validation. It is also handled for certain form-field types here in the action handleKeyUp.
+ * @param {object} [modelValidations] - Object of errors.  If attr.name is in object and has error message display in AlertInline.
+ * @param {function} [onChange] - called whenever a value on the model changes via the component
+ * @param {function} [onKeyUp] - function passed through into MaskedInput to handle validation. It is also handled for certain form-field types here in the action handleKeyUp.
  *
  */
 
@@ -157,7 +158,13 @@ export default class FormFieldComponent extends Component {
   @action
   setAndBroadcastTtl(value) {
     const alwaysSendValue = this.valuePath === 'expiry' || this.valuePath === 'safetyBuffer';
-    const valueToSet = value.enabled === true || alwaysSendValue ? `${value.seconds}s` : 0;
+    const attrOptions = this.args.attr.options || {};
+    let valueToSet = 0;
+    if (value.enabled || alwaysSendValue) {
+      valueToSet = `${value.seconds}s`;
+    } else if (Object.keys(attrOptions).includes('ttlOffValue')) {
+      valueToSet = attrOptions.ttlOffValue;
+    }
     this.setAndBroadcast(`${valueToSet}`);
   }
   @action

@@ -57,10 +57,13 @@
         "path": "internals/integrated-storage"
       },
       {
+        "title": "Recommended patterns",
+        "path": "internals/recommended-patterns"
+      },
+      {
         "title": "Security Model",
         "path": "internals/security"
       },
-
       {
         "title": "Telemetry",
         "routes": [
@@ -373,7 +376,16 @@
           },
           {
             "title": "TCP",
-            "path": "configuration/listener/tcp"
+            "routes": [  
+              {
+                "title": "Overview",
+                "path": "configuration/listener/tcp"
+              },
+              {
+                "title": "Configure TLS",
+                "path": "configuration/listener/tcp/tcp-tls"
+              }
+            ]
           },
           {
             "title": "Unix",
@@ -2312,6 +2324,10 @@
       {
         "title": "Upgrade to Raft WAL",
         "path": "upgrading/raft-wal"
+      },
+      {
+        "title": "Upgrade to 1.18.x",
+        "path": "upgrading/upgrade-to-1.18.x"
       },
       {
         "title": "Upgrade to 1.17.x",
