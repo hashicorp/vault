@@ -27,7 +27,7 @@
       <p>
         Return the cryptographic signature of the given data using
         <code>{{@key.name}}</code>
-        as the encryption key and the specified hash algorithm.
+        as the cryptographic key and the specified hash algorithm.
       </p>
     </div>
     <KeyVersionSelect @key={{@key}} @onVersionChange={{fn (mut @key_version)}} @key_version={{@key_version}} />
@@ -141,9 +141,7 @@
         @container="#transit-sign-modal"
         @isFullWidth={{true}}
         @isTruncated={{true}}
-        @onError={{(fn
-          (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
-        )}}
+        @onError={{(fn (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger"))}}
         data-test-encrypted-value="signature"
       />
     </M.Body>

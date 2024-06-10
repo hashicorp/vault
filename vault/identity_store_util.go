@@ -1269,6 +1269,36 @@ func (i *IdentityStore) MemDBDeleteEntityByID(entityID string) error {
 	return nil
 }
 
+// FetchEntityForLocalAliasInTxn fetches the entity associated with the provided
+// local identity.Alias. MemDB will first be searched for the entity. If it is
+// not found there, the localAliasPacker storagepacker.StoragePacker will be
+// used. If an error occurs, an appropriate error message is logged and nil is
+// returned.
+func (i *IdentityStore) FetchEntityForLocalAliasInTxn(txn *memdb.Txn, alias *identity.Alias) *identity.Entity {
+	entity, err := i.MemDBEntityByIDInTxn(txn, alias.CanonicalID, false)
+	if err != nil {
+		i.logger.Error("failed to fetch entity from local alias", "entity_id", alias.CanonicalID, "error", err)
+		return nil
+	}
+
+	if entity == nil {
+		cachedEntityItem, err := i.localAliasPacker.GetItem(alias.CanonicalID + tmpSuffix)
+		if err != nil {
+			i.logger.Error("failed to fetch cached entity from local alias", "key", alias.CanonicalID+tmpSuffix, "error", err)
+			return nil
+		}
+		if cachedEntityItem != nil {
+			entity, err = i.parseCachedEntity(cachedEntityItem)
+			if err != nil {
+				i.logger.Error("failed to parse cached entity", "key", alias.CanonicalID+tmpSuffix, "error", err)
+				return nil
+			}
+		}
+	}
+
+	return entity
+}
+
 func (i *IdentityStore) MemDBDeleteEntityByIDInTxn(txn *memdb.Txn, entityID string) error {
 	if entityID == "" {
 		return nil
@@ -2467,6 +2497,7 @@ func (i *IdentityStore) handleAliasListCommon(ctx context.Context, groupAlias bo
 			"canonical_id":    alias.CanonicalID,
 			"mount_accessor":  alias.MountAccessor,
 			"custom_metadata": alias.CustomMetadata,
+			"metadata":        alias.Metadata,
 			"local":           alias.Local,
 		}
 

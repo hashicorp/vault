@@ -139,9 +139,9 @@ func (sc *storageContext) fetchCAInfo(issuerRef string, usage issuing.IssuerUsag
 func (sc *storageContext) fetchCAInfoWithIssuer(issuerRef string, usage issuing.IssuerUsage) (*certutil.CAInfoBundle, issuing.IssuerID, error) {
 	var issuerId issuing.IssuerID
 
-	if sc.Backend.UseLegacyBundleCaStorage() {
+	if sc.UseLegacyBundleCaStorage() {
 		// We have not completed the migration so attempt to load the bundle from the legacy location
-		sc.Backend.Logger().Info("Using legacy CA bundle as PKI migration has not completed.")
+		sc.Logger().Info("Using legacy CA bundle as PKI migration has not completed.")
 		issuerId = legacyBundleShimID
 	} else {
 		var err error
@@ -163,7 +163,7 @@ func (sc *storageContext) fetchCAInfoWithIssuer(issuerRef string, usage issuing.
 // fetchCAInfoByIssuerId will fetch the CA info, will return an error if no ca info exists for the given issuerId.
 // This does support the loading using the legacyBundleShimID
 func (sc *storageContext) fetchCAInfoByIssuerId(issuerId issuing.IssuerID, usage issuing.IssuerUsage) (*certutil.CAInfoBundle, error) {
-	return issuing.FetchCAInfoByIssuerId(sc.Context, sc.Storage, sc.Backend, issuerId, usage)
+	return issuing.FetchCAInfoByIssuerId(sc.Context, sc.Storage, sc.GetPkiManagedView(), issuerId, usage)
 }
 
 func fetchCertBySerialBigInt(sc *storageContext, prefix string, serial *big.Int) (*logical.StorageEntry, error) {
@@ -190,7 +190,7 @@ func fetchCertBySerial(sc *storageContext, prefix, serial string) (*logical.Stor
 		legacyPath = "revoked/" + colonSerial
 		path = "revoked/" + hyphenSerial
 	case serial == legacyCRLPath || serial == deltaCRLPath || serial == unifiedCRLPath || serial == unifiedDeltaCRLPath:
-		warnings, err := sc.Backend.CrlBuilder().rebuildIfForced(sc)
+		warnings, err := sc.CrlBuilder().rebuildIfForced(sc)
 		if err != nil {
 			return nil, err
 		}
@@ -199,7 +199,7 @@ func fetchCertBySerial(sc *storageContext, prefix, serial string) (*logical.Stor
 			for index, warning := range warnings {
 				msg = fmt.Sprintf("%v\n %d. %v", msg, index+1, warning)
 			}
-			sc.Backend.Logger().Warn(msg)
+			sc.Logger().Warn(msg)
 		}
 
 		unified := serial == unifiedCRLPath || serial == unifiedDeltaCRLPath
@@ -209,7 +209,7 @@ func fetchCertBySerial(sc *storageContext, prefix, serial string) (*logical.Stor
 		}
 
 		if serial == deltaCRLPath || serial == unifiedDeltaCRLPath {
-			if sc.Backend.UseLegacyBundleCaStorage() {
+			if sc.UseLegacyBundleCaStorage() {
 				return nil, fmt.Errorf("refusing to serve delta CRL with legacy CA bundle")
 			}
 
@@ -250,7 +250,7 @@ func fetchCertBySerial(sc *storageContext, prefix, serial string) (*logical.Stor
 
 	// Update old-style paths to new-style paths
 	certEntry.Key = path
-	certCounter := sc.Backend.GetCertificateCounter()
+	certCounter := sc.GetCertificateCounter()
 	certsCounted := certCounter.IsInitialized()
 	if err = sc.Storage.Put(sc.Context, certEntry); err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("error saving certificate with serial %s to new location: %s", serial, err)}
@@ -327,7 +327,6 @@ func generateCert(sc *storageContext,
 	randomSource io.Reader) (*certutil.ParsedCertBundle, []string, error,
 ) {
 	ctx := sc.Context
-	b := sc.Backend
 
 	if input.role == nil {
 		return nil, nil, errutil.InternalError{Err: "no role found in data bundle"}
@@ -337,7 +336,7 @@ func generateCert(sc *storageContext,
 		return nil, nil, errutil.UserError{Err: "RSA keys < 2048 bits are unsafe and not supported"}
 	}
 
-	data, warnings, err := generateCreationBundle(b, input, caSign, nil)
+	data, warnings, err := generateCreationBundle(sc.System(), input, caSign, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -402,7 +401,7 @@ func generateCert(sc *storageContext,
 // N.B.: This is only meant to be used for generating intermediate CAs.
 // It skips some sanity checks.
 func generateIntermediateCSR(sc *storageContext, input *inputBundle, randomSource io.Reader) (*certutil.ParsedCSRBundle, []string, error) {
-	creation, warnings, err := generateCreationBundle(sc.Backend, input, nil, nil)
+	creation, warnings, err := generateCreationBundle(sc.System(), input, nil, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -468,7 +467,7 @@ func (i SignCertInputFromDataFields) GetPermittedDomains() []string {
 	return i.data.Get("permitted_dns_domains").([]string)
 }
 
-func signCert(b *backend, data *inputBundle, caSign *certutil.CAInfoBundle, isCA bool, useCSRValues bool) (*certutil.ParsedCertBundle, []string, error) {
+func signCert(sysView logical.SystemView, data *inputBundle, caSign *certutil.CAInfoBundle, isCA bool, useCSRValues bool) (*certutil.ParsedCertBundle, []string, error) {
 	if data.role == nil {
 		return nil, nil, errutil.InternalError{Err: "no role found in data bundle"}
 	}
@@ -476,7 +475,7 @@ func signCert(b *backend, data *inputBundle, caSign *certutil.CAInfoBundle, isCA
 	entityInfo := issuing.NewEntityInfoFromReq(data.req)
 	signCertInput := NewSignCertInputFromDataFields(data.apiData, isCA, useCSRValues)
 
-	return issuing.SignCert(b.System(), data.role, entityInfo, caSign, signCertInput)
+	return issuing.SignCert(sysView, data.role, entityInfo, caSign, signCertInput)
 }
 
 func getOtherSANsFromX509Extensions(exts []pkix.Extension) ([]certutil.OtherNameUtf8, error) {
@@ -542,18 +541,18 @@ func (cb CreationBundleInputFromFieldData) GetUserIds() []string {
 // generateCreationBundle is a shared function that reads parameters supplied
 // from the various endpoints and generates a CreationParameters with the
 // parameters that can be used to issue or sign
-func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAInfoBundle, csr *x509.CertificateRequest) (*certutil.CreationBundle, []string, error) {
+func generateCreationBundle(sysView logical.SystemView, data *inputBundle, caSign *certutil.CAInfoBundle, csr *x509.CertificateRequest) (*certutil.CreationBundle, []string, error) {
 	entityInfo := issuing.NewEntityInfoFromReq(data.req)
 	creationBundleInput := NewCreationBundleInputFromFieldData(data.apiData)
 
-	return issuing.GenerateCreationBundle(b.System(), data.role, entityInfo, creationBundleInput, caSign, csr)
+	return issuing.GenerateCreationBundle(sysView, data.role, entityInfo, creationBundleInput, caSign, csr)
 }
 
 // getCertificateNotAfter compute a certificate's NotAfter date based on the mount ttl, role, signing bundle and input
 // api data being sent. Returns a NotAfter time, a set of warnings or an error.
-func getCertificateNotAfter(b *backend, data *inputBundle, caSign *certutil.CAInfoBundle) (time.Time, []string, error) {
+func getCertificateNotAfter(sysView logical.SystemView, data *inputBundle, caSign *certutil.CAInfoBundle) (time.Time, []string, error) {
 	input := NewCertNotAfterInputFromFieldData(data.apiData)
-	return issuing.GetCertificateNotAfter(b.System(), data.role, input, caSign)
+	return issuing.GetCertificateNotAfter(sysView, data.role, input, caSign)
 }
 
 // applyIssuerLeafNotAfterBehavior resets a certificate's notAfter time or errors out based on the

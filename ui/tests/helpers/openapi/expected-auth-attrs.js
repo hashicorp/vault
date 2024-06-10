@@ -150,6 +150,17 @@ const azure = {
       label: 'Tenant ID',
       type: 'string',
     },
+    identityTokenAudience: {
+      editType: 'string',
+      fieldGroup: 'default',
+      helpText: 'Audience of plugin identity tokens',
+      type: 'string',
+    },
+    identityTokenTtl: {
+      editType: 'ttl',
+      fieldGroup: 'default',
+      helpText: 'Time-to-live of plugin identity tokens',
+    },
   },
 };
 
@@ -389,6 +400,23 @@ const gcp = {
       defaultValue: 'field1,field2',
       label: 'iam_metadata',
     },
+    identityTokenAudience: {
+      editType: 'string',
+      fieldGroup: 'default',
+      helpText: 'Audience of plugin identity tokens',
+      type: 'string',
+    },
+    identityTokenTtl: {
+      editType: 'ttl',
+      fieldGroup: 'default',
+      helpText: 'Time-to-live of plugin identity tokens',
+    },
+    serviceAccountEmail: {
+      editType: 'string',
+      fieldGroup: 'default',
+      helpText: 'Email ID for the Service Account to impersonate for Workload Identity Federation.',
+      type: 'string',
+    },
   },
 };
 
@@ -594,7 +622,8 @@ const kubernetes = {
     },
     kubernetesCaCert: {
       editType: 'string',
-      helpText: 'PEM encoded CA cert for use by the TLS client used to talk with the API.',
+      helpText:
+        "Optional PEM encoded CA cert for use by the TLS client used to talk with the API. If it is not set and disable_local_ca_jwt is true, the system's trusted CA certificate pool will be used.",
       fieldGroup: 'default',
       label: 'Kubernetes CA Certificate',
       type: 'string',

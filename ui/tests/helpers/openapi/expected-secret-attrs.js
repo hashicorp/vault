@@ -594,6 +594,14 @@ const pki = {
       label: 'DNS/Email Subject Alternative Names (SANs)',
       type: 'string',
     },
+    certMetadata: {
+      editType: 'string',
+      fieldGroup: 'default',
+      helpText:
+        "User supplied metadata to store associated with this certificate's serial number, base64 encoded",
+      label: 'Certificate Metadata',
+      type: 'string',
+    },
     commonName: {
       editType: 'string',
       helpText:
@@ -629,14 +637,6 @@ const pki = {
       helpText:
         'Reference to a existing issuer; either "default" for the configured default issuer, an identifier or the name assigned to the issuer.',
       fieldGroup: 'default',
-      type: 'string',
-    },
-    metadata: {
-      editType: 'string',
-      fieldGroup: 'default',
-      helpText:
-        "User supplied metadata to store associated with this certificate's serial number, base64 encoded",
-      label: 'Metadata',
       type: 'string',
     },
     notAfter: {
@@ -714,6 +714,14 @@ const pki = {
       label: 'DNS/Email Subject Alternative Names (SANs)',
       type: 'string',
     },
+    certMetadata: {
+      editType: 'string',
+      fieldGroup: 'default',
+      helpText:
+        "User supplied metadata to store associated with this certificate's serial number, base64 encoded",
+      label: 'Certificate Metadata',
+      type: 'string',
+    },
     commonName: {
       editType: 'string',
       helpText:
@@ -755,14 +763,6 @@ const pki = {
       helpText:
         'Reference to a existing issuer; either "default" for the configured default issuer, an identifier or the name assigned to the issuer.',
       fieldGroup: 'default',
-      type: 'string',
-    },
-    metadata: {
-      editType: 'string',
-      fieldGroup: 'default',
-      helpText:
-        "User supplied metadata to store associated with this certificate's serial number, base64 encoded",
-      label: 'Metadata',
       type: 'string',
     },
     notAfter: {
@@ -1065,6 +1065,13 @@ const pki = {
       editType: 'boolean',
       helpText:
         'If set, certificates issued/signed against this role will not be stored in the storage backend. This can improve performance when issuing large numbers of certificates. However, certificates issued in this way cannot be enumerated or revoked, so this option is recommended only for certificates that are non-sensitive, or extremely short-lived. This option implies a value of "false" for "generate_lease".',
+      fieldGroup: 'default',
+      type: 'boolean',
+    },
+    noStoreMetadata: {
+      editType: 'boolean',
+      helpText:
+        'If set, if a client attempts to issue or sign a certificate with attached cert_metadata to store, the issuance / signing instead fails.',
       fieldGroup: 'default',
       type: 'boolean',
     },

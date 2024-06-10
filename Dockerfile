@@ -24,7 +24,8 @@ LABEL name="Vault" \
       summary="Vault is a tool for securely accessing secrets." \
       description="Vault is a tool for securely accessing secrets. A secret is anything that you want to tightly control access to, such as API keys, passwords, certificates, and more. Vault provides a unified interface to any secret, while providing tight access control and recording a detailed audit log."
 
-COPY LICENSE /licenses/mozilla.txt
+# Copy the license file as per Legal requirement
+COPY LICENSE /licenses/LICENSE.txt
 
 # Set ARGs as ENV so that they can be used in ENTRYPOINT/CMD
 ENV NAME=$NAME
@@ -74,7 +75,7 @@ CMD ["server", "-dev"]
 
 
 ## UBI DOCKERFILE ##
-FROM registry.access.redhat.com/ubi8/ubi-minimal:8.9 as ubi
+FROM registry.access.redhat.com/ubi8/ubi-minimal:8.10 as ubi
 
 ARG BIN_NAME
 # PRODUCT_VERSION is the version built dist/$TARGETOS/$TARGETARCH/$BIN_NAME,
@@ -95,7 +96,8 @@ LABEL name="Vault" \
       summary="Vault is a tool for securely accessing secrets." \
       description="Vault is a tool for securely accessing secrets. A secret is anything that you want to tightly control access to, such as API keys, passwords, certificates, and more. Vault provides a unified interface to any secret, while providing tight access control and recording a detailed audit log."
 
-COPY LICENSE /licenses/mozilla.txt
+# Copy the license file as per Legal requirement
+COPY LICENSE /licenses/LICENSE.txt
 
 # Set ARGs as ENV so that they can be used in ENTRYPOINT/CMD
 ENV NAME=$NAME

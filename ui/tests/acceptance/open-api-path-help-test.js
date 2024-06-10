@@ -76,7 +76,15 @@ function secretEngineHelper(test, secretEngine) {
       const helpUrl = model.getHelpUrl(this.backend);
       const result = await this.pathHelp.getProps(helpUrl, this.backend);
       const expected = engineData[modelName];
-      assert.deepEqual(result, expected, `getProps returns expected attributes for ${modelName}`);
+      // Expected values should be updated to match "actual" (result)
+      assert.deepEqual(
+        Object.keys(result).sort(),
+        Object.keys(expected).sort(),
+        `getProps returns expected attributes for ${modelName}`
+      );
+      Object.keys(expected).forEach((attrName) => {
+        assert.deepEqual(result[attrName], expected[attrName], `${attrName} attribute details match`);
+      });
     });
   });
 }
@@ -94,7 +102,14 @@ function authEngineHelper(test, authBackend) {
         const helpUrl = model.getHelpUrl(this.mount);
         const result = await this.pathHelp.getProps(helpUrl, this.mount);
         const expected = authData[itemName];
-        assert.deepEqual(result, expected, `getProps returns expected attributes for ${itemName}`);
+        assert.deepEqual(
+          Object.keys(result).sort(),
+          Object.keys(expected).sort(),
+          `getProps returns expected attributes for ${itemName}`
+        );
+        Object.keys(expected).forEach((attrName) => {
+          assert.propEqual(result[attrName], expected[attrName], `${attrName} attribute details match`);
+        });
       });
     } else {
       test.skip(`generated-${itemName}-${authBackend} model`, async function (assert) {

@@ -21,7 +21,7 @@ module('Integration | Component | page/pki-tidy-auto-settings', function (hooks)
     this.store = this.owner.lookup('service:store');
 
     this.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: backend, route: 'overview', model: backend },
       { label: 'tidy', route: 'tidy.index', model: backend },
       { label: 'auto' },

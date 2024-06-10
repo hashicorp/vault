@@ -5,11 +5,11 @@
 
 {{#if this.showMessage}}
   {{#if (has-block)}}
-    <p class="namespace-reminder">
+    <p class="namespace-reminder" id="namespace-reminder">
       {{yield (hash namespace=this.namespace)}}
     </p>
   {{else}}
-    <p class="namespace-reminder">
+    <p class="namespace-reminder" id="namespace-reminder">
       This
       {{@noun}}
       will be

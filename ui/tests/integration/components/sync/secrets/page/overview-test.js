@@ -8,10 +8,11 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { render, click, settled } from '@ember/test-helpers';
+import { render, click, settled, findAll } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import syncScenario from 'vault/mirage/scenarios/sync';
 import syncHandlers from 'vault/mirage/handlers/sync';
+import sinon from 'sinon';
 import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
 import { Response } from 'miragejs';
 import { dateFormat } from 'core/helpers/date-format';
@@ -117,14 +118,42 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     test('it should show the opt-in banner if feature is not activated', async function (assert) {
       await this.renderComponent();
 
-      assert.dom(overview.optInBanner).exists('Opt-in banner is shown');
+      assert.dom(overview.optInBanner.container).exists('Opt-in banner is shown');
     });
 
     test('it should not show the opt-in banner if feature is activated', async function (assert) {
       this.isActivated = true;
       await this.renderComponent();
 
-      assert.dom(overview.optInBanner).doesNotExist('Opt-in banner is not shown');
+      assert.dom(overview.optInBanner.container).doesNotExist('Opt-in banner is not shown');
+    });
+
+    test('it should show activation error if cluster is not Plus tier', async function (assert) {
+      await this.renderComponent();
+
+      this.server.post(
+        '/sys/activation-flags/secrets-sync/activate',
+        () => new Response(403, {}, { errors: ['Something bad happened'] })
+      );
+
+      await click(overview.optInBanner.enable);
+      await click(overview.activationModal.checkbox);
+      await click(overview.activationModal.confirm);
+
+      assert.dom(overview.optInError).exists({ count: 2 }, 'shows the API and custom tier error banners');
+
+      const errorBanners = findAll(overview.optInError);
+
+      assert.dom(errorBanners[0]).containsText('Something bad happened', 'shows the API error message');
+
+      assert
+        .dom(errorBanners[1])
+        .containsText(
+          'Error Secrets Sync is available for Plus tier clusters only. Please check the tier of your cluster to enable Secrets Sync.',
+          'shows the custom tier-related error message'
+        );
+
+      assert.dom(overview.optInBanner.container).exists('banner is visible so user can try to opt-in again');
     });
   });
 
@@ -139,21 +168,21 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
       await this.renderComponent();
 
       assert
-        .dom(overview.optInBannerDescription)
+        .dom(overview.optInBanner.description)
         .hasText(
           'To use this feature, specific activation is required. Please contact your administrator to activate.'
         );
-      assert.dom(overview.optInBannerEnable).doesNotExist('Opt-in enable button does not show');
+      assert.dom(overview.optInBanner.enable).doesNotExist('Opt-in enable button does not show');
     });
 
     test('it should not show allow the user to dismiss the opt-in banner', async function (assert) {
       await this.renderComponent();
 
-      assert.dom(overview.optInDismiss).doesNotExist('dismiss opt-in banner does not show');
+      assert.dom(overview.optInBanner.dismiss).doesNotExist('dismiss opt-in banner does not show');
     });
   });
 
-  module('secrets sync is not activated and license has secrets sync meep', function (hooks) {
+  module('secrets sync is not activated and license has secrets sync', function (hooks) {
     hooks.beforeEach(async function () {
       this.isActivated = false;
     });
@@ -161,9 +190,9 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     test('it should show the opt-in banner with activate description', async function (assert) {
       await this.renderComponent();
 
-      assert.dom(overview.optInBanner).exists('Opt-in banner is shown');
+      assert.dom(overview.optInBanner.container).exists('Opt-in banner is shown');
       assert
-        .dom(overview.optInBannerDescription)
+        .dom(overview.optInBanner.description)
         .hasText(
           "To use this feature, specific activation is required. Please review the feature documentation and enable it. If you're upgrading from beta, your previous data will be accessible after activation."
         );
@@ -172,49 +201,65 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     test('it should show dismiss banner', async function (assert) {
       await this.renderComponent();
 
-      assert.dom(overview.optInDismiss).exists('dismiss opt-in banner shows');
+      assert.dom(overview.optInBanner.dismiss).exists('dismiss opt-in banner shows');
     });
 
     test('it should navigate to the opt-in modal', async function (assert) {
       await this.renderComponent();
 
-      await click(overview.optInBannerEnable);
+      await click(overview.optInBanner.enable);
 
-      assert.dom(overview.optInModal).exists('Opt-in modal is shown');
-      assert.dom(overview.optInConfirm).isDisabled('Confirm button is disabled when checkbox is unchecked');
-
-      await click(overview.optInCheck);
-      assert.dom(overview.optInConfirm).isNotDisabled('confirm button is enabled once checkbox is checked');
-    });
-
-    test('it should make a POST to activate the feature', async function (assert) {
-      assert.expect(1);
-
-      await this.renderComponent();
-
-      this.server.post('/sys/activation-flags/secrets-sync/activate', () => {
-        assert.true(true, 'POST to secrets-sync/activate is called');
-        return {};
-      });
-
-      await this.renderComponent();
-
-      await click(overview.optInBannerEnable);
-      await click(overview.optInCheck);
-      await click(overview.optInConfirm);
+      assert.dom(overview.activationModal.container).exists('Opt-in modal is shown');
     });
 
     test('it shows an error if activation fails', async function (assert) {
       await this.renderComponent();
 
-      this.server.post('/sys/activation-flags/secrets-sync/activate', () => new Response(403));
+      this.server.post(
+        '/sys/activation-flags/secrets-sync/activate',
+        () => new Response(403, {}, { errors: ['Something bad happened'] })
+      );
 
-      await click(overview.optInBannerEnable);
-      await click(overview.optInCheck);
-      await click(overview.optInConfirm);
+      await click(overview.optInBanner.enable);
+      await click(overview.activationModal.checkbox);
+      await click(overview.activationModal.confirm);
+
+      assert
+        .dom(overview.optInError)
+        .exists({ count: 1 })
+        .containsText('Something bad happened', 'shows an error banner with error message from the API');
+      assert.dom(overview.optInBanner.container).exists('banner is visible so user can try to opt-in again');
+    });
+
+    test('it should clear activation errors when the user tries to opt-in again', async function (assert) {
+      // don't worry about transitioning the route in this test
+      sinon.stub(this.owner.lookup('service:router'), 'refresh');
+
+      await this.renderComponent();
+
+      let callCount = 0;
+
+      // first call fails, second call succeeds
+      this.server.post('/sys/activation-flags/secrets-sync/activate', () => {
+        callCount++;
+        if (callCount === 1) {
+          return new Response(403, {}, { errors: ['Something bad happened'] });
+        } else {
+          return {};
+        }
+      });
+
+      await click(overview.optInBanner.enable);
+      await click(overview.activationModal.checkbox);
+      await click(overview.activationModal.confirm);
 
       assert.dom(overview.optInError).exists('shows an error banner');
-      assert.dom(overview.optInBanner).exists('banner is visible so user can try to opt-in again');
+
+      await click(overview.optInBanner.enable);
+      await click(overview.activationModal.checkbox);
+      await click(overview.activationModal.confirm);
+
+      assert.dom(overview.optInError).doesNotExist('error banner is cleared upon trying to opt-in again');
     });
   });
 
@@ -226,7 +271,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     test('it should hide the opt-in banner', async function (assert) {
       await this.renderComponent();
 
-      assert.dom(overview.optInBanner).doesNotExist();
+      assert.dom(overview.optInBanner.container).doesNotExist();
     });
   });
 
@@ -234,7 +279,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     test('it should hide the opt-in banner', async function (assert) {
       await this.renderComponent();
 
-      assert.dom(overview.optInBanner).doesNotExist();
+      assert.dom(overview.optInBanner.container).doesNotExist();
     });
   });
 
