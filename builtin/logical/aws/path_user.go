@@ -4,7 +4,9 @@
 package aws
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -13,9 +15,10 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/mitchellh/mapstructure"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/mitchellh/mapstructure"
 )
 
 func pathUser(b *backend) *framework.Path {
@@ -113,6 +116,38 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 	roleSessionName := d.Get("role_session_name").(string)
 	mfaCode := d.Get("mfa_code").(string)
 
+	var rolePolicyDocument string
+	if role.EnablePolicyDocumentTemplating && role.PolicyDocument != "" && req.EntityID != "" {
+		// Identity templating doesn't work well with compacted JSON due to the presence of `}}`
+		// characters, indenting the policy is a way to fix that.
+		var indentedPolicy bytes.Buffer
+		err := json.Indent(&indentedPolicy, []byte(role.PolicyDocument), "", "\t")
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("role policy template could not be indented: %s", err)), nil
+		}
+
+		isTemplate, err := framework.ValidateIdentityTemplate(indentedPolicy.String())
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("role policy template could not be validated: %s", err)), nil
+		}
+
+		if isTemplate && req.EntityID != "" {
+			policyTemplated, err := framework.PopulateIdentityTemplate(indentedPolicy.String(), req.EntityID, b.System())
+			if err != nil {
+				return logical.ErrorResponse(fmt.Sprintf("role policy template could not be rendered: %s", err)), nil
+			}
+
+			policyTemplated, err = compactJSON(policyTemplated)
+			if err != nil {
+				return logical.ErrorResponse(fmt.Sprintf("role policy template could not be parsed: %s", err)), nil
+			}
+
+			rolePolicyDocument = policyTemplated
+		}
+	} else {
+		rolePolicyDocument = role.PolicyDocument
+	}
+
 	var credentialType string
 	switch {
 	case len(role.CredentialTypes) == 1:
@@ -146,7 +181,7 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 
 	switch credentialType {
 	case iamUserCred:
-		return b.secretAccessKeysCreate(ctx, req.Storage, req.DisplayName, roleName, role)
+		return b.secretAccessKeysCreate(ctx, req.Storage, req.DisplayName, roleName, role, rolePolicyDocument)
 	case assumedRoleCred:
 		switch {
 		case roleArn == "":
@@ -157,9 +192,9 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 		case !strutil.StrListContains(role.RoleArns, roleArn):
 			return logical.ErrorResponse(fmt.Sprintf("role_arn %q not in allowed role arns for Vault role %q", roleArn, roleName)), nil
 		}
-		return b.assumeRole(ctx, req.Storage, req.DisplayName, roleName, roleArn, role.PolicyDocument, role.PolicyArns, role.IAMGroups, ttl, roleSessionName)
+		return b.assumeRole(ctx, req.Storage, req.DisplayName, roleName, roleArn, rolePolicyDocument, role.PolicyArns, role.IAMGroups, ttl, roleSessionName)
 	case federationTokenCred:
-		return b.getFederationToken(ctx, req.Storage, req.DisplayName, roleName, role.PolicyDocument, role.PolicyArns, role.IAMGroups, ttl)
+		return b.getFederationToken(ctx, req.Storage, req.DisplayName, roleName, rolePolicyDocument, role.PolicyArns, role.IAMGroups, ttl)
 	case sessionTokenCred:
 		return b.getSessionToken(ctx, req.Storage, role.SerialNumber, mfaCode, ttl)
 	default:
