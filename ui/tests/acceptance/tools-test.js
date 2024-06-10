@@ -70,7 +70,7 @@ module('Acceptance | tools', function (hooks) {
       // rewrap
       await click(GENERAL.navLink('Rewrap'));
 
-      await fillIn(TS.toolsInput('wrapping-token'), tokenStore.get());
+      await fillIn(TS.toolsInput('original-token'), tokenStore.get());
       await click(TS.submit);
       await waitUntil(() => find(TS.toolsInput('rewrapped-token')));
       const rewrappedToken = find(TS.toolsInput('rewrapped-token')).innerText;
@@ -187,7 +187,7 @@ module('Acceptance | tools', function (hooks) {
       await waitUntil(() => find(TS.toolsInput('wrapping-token')));
       await click(TS.button('Back'));
 
-      // wrap again
+      // wrap again without re-inputting data
       await click(TS.submit);
       const wrappedToken = await waitUntil(() => find(TS.toolsInput('wrapping-token')));
       tokenStore.set(wrappedToken.innerText);

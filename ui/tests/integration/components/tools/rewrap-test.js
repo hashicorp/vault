@@ -27,7 +27,7 @@ module('Integration | Component | tools/rewrap', function (hooks) {
 
     assert.dom('h1').hasText('Rewrap Token', 'title renders');
     assert.dom('label').hasText('Wrapped token');
-    assert.dom(TS.toolsInput('wrapping-token')).hasValue('');
+    assert.dom(TS.toolsInput('original-token')).hasValue('');
     assert.dom(TS.toolsInput('rewrapped-token')).doesNotExist();
     assert.dom(TS.button('Done')).doesNotExist();
   });
@@ -61,19 +61,19 @@ module('Integration | Component | tools/rewrap', function (hooks) {
     await this.renderComponent();
 
     // test submit
-    await fillIn(TS.toolsInput('wrapping-token'), original_token);
+    await fillIn(TS.toolsInput('original-token'), original_token);
     await click(TS.submit);
 
     // test rewrapped token view
     await waitUntil(() => TS.toolsInput('rewrapped-token'));
     assert.dom('label').hasText('Rewrapped token');
     assert.dom(TS.toolsInput('rewrapped-token')).hasText(rewrapped_token);
-    assert.dom(TS.toolsInput('wrapping-token')).doesNotExist();
+    assert.dom(TS.toolsInput('original-token')).doesNotExist();
 
     // form resets clicking 'Done'
     await click(TS.button('Done'));
     assert.dom('label').hasText('Wrapped token');
-    assert.dom(TS.toolsInput('wrapping-token')).hasValue('', 'token input resets');
+    assert.dom(TS.toolsInput('original-token')).hasValue('', 'token input resets');
   });
 
   test('it trims token whitespace', async function (assert) {
@@ -86,7 +86,7 @@ module('Integration | Component | tools/rewrap', function (hooks) {
 
     await this.renderComponent();
 
-    await fillIn(TS.toolsInput('wrapping-token'), `${data.token}  `);
+    await fillIn(TS.toolsInput('original-token'), `${data.token}  `);
     await click(TS.submit);
   });
 });
