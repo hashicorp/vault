@@ -1459,7 +1459,7 @@ func newDiscover() (*discover.Discover, error) {
 	)
 }
 
-// formatAddr join ip and port if addr does not already contain a port
+// formatDiscoveredAddr joins ip and port if addr does not already contain a port
 func formatDiscoveredAddr(addr string, defaultPort uint) string {
 	// addr is an implicit IPv6 address
 	if !strings.HasPrefix(addr, "[") && strings.Count(addr, ":") > 1 {

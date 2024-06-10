@@ -7,6 +7,7 @@ import (
 	"testing"
 )
 
+// TestFormatDiscoveredAddr validates that the string returned by formatDiscoveredAddr always respect the format `host:port`.
 func TestFormatDiscoveredAddr(t *testing.T) {
 	type TestCase struct {
 		addr string
