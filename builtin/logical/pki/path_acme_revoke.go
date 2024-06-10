@@ -9,10 +9,10 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"fmt"
-	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 	"time"
 
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
