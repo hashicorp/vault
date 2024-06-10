@@ -98,7 +98,7 @@ func (sc *storageContext) System() logical.SystemView {
 	return sc.Backend.System()
 }
 
-func (sc *storageContext) CrlBuilder() *CrlBuilder {
+func (sc *storageContext) CrlBuilder() pki_backend.CrlBuilderType {
 	return sc.Backend.CrlBuilder()
 }
 

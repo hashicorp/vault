@@ -15,4 +15,5 @@ type StorageContext interface {
 
 	UseLegacyBundleCaStorage() bool
 	GetPkiManagedView() managed_key.PkiManagedKeyView
+	CrlBuilder() CrlBuilderType
 }

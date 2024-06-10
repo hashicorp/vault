@@ -135,6 +135,14 @@ func newCRLBuilder(canRebuild bool) *CrlBuilder {
 	return builder
 }
 
+func (cb *CrlBuilder) SetLastDeltaRebuildCheckTime(t time.Time) {
+	cb.lastDeltaRebuildCheck = t
+}
+
+func (cb *CrlBuilder) ShouldInvalidate() bool {
+	return cb.invalidate.Load()
+}
+
 func (cb *CrlBuilder) markConfigDirty() {
 	cb.dirty.Store(true)
 }
@@ -1500,7 +1508,7 @@ func buildAnyLocalCRLs(
 	if isDelta {
 		// Update our last build time here so we avoid checking for new certs
 		// for a while.
-		sc.CrlBuilder().lastDeltaRebuildCheck = time.Now()
+		sc.CrlBuilder().SetLastDeltaRebuildCheckTime(time.Now())
 
 		if len(lastDeltaSerial) > 0 {
 			// When we have a last delta serial, write out the relevant info
@@ -1643,7 +1651,7 @@ func buildAnyUnifiedCRLs(
 	if isDelta {
 		// Update our last build time here so we avoid checking for new certs
 		// for a while.
-		sc.CrlBuilder().lastDeltaRebuildCheck = time.Now()
+		sc.CrlBuilder().SetLastDeltaRebuildCheckTime(time.Now())
 
 		// Persist all of our known last revoked serial numbers here, as the
 		// last seen serial during build. This will allow us to detect if any
