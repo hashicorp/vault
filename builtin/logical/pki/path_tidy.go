@@ -1566,7 +1566,7 @@ func (b *backend) doTidyCrossRevocationStore(ctx context.Context, req *logical.R
 				continue
 			}
 
-			var details unifiedRevocationEntry
+			var details revocation.UnifiedRevocationEntry
 			if err := entry.DecodeJSON(&details); err != nil {
 				return fmt.Errorf("error decoding cross-cluster revocation entry (%v) to tidy: %w", ePath, err)
 			}

@@ -6,6 +6,7 @@ package pki
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -143,7 +144,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 
 			WriteForwardedStorage: []string{
 				crossRevocationPath,
-				unifiedRevocationWritePathPrefix,
+				revocation.UnifiedRevocationWritePathPrefix,
 				unifiedDeltaWALPath,
 			},
 

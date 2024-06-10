@@ -1040,14 +1040,14 @@ func revokeCert(sc *storageContext, config *pki_backend.CrlConfig, cert *x509.Ce
 	// the unified storage space through a periodic function.
 	failedWritingUnifiedCRL := false
 	if config.UnifiedCRL {
-		entry := &unifiedRevocationEntry{
+		entry := &revocation.UnifiedRevocationEntry{
 			SerialNumber:      colonSerial,
 			CertExpiration:    cert.NotAfter,
 			RevocationTimeUTC: revInfo.RevocationTimeUTC,
 			CertificateIssuer: revInfo.CertificateIssuer,
 		}
 
-		ignoreErr := writeUnifiedRevocationEntry(sc, entry)
+		ignoreErr := revocation.WriteUnifiedRevocationEntry(sc.GetContext(), sc.GetStorage(), entry)
 		if ignoreErr != nil {
 			// Just log the error if we fail to write across clusters, a separate background
 			// thread will reattempt it later on as we have the local write done.
@@ -2031,7 +2031,7 @@ func getUnifiedRevokedCertEntries(sc *storageContext, issuerIDCertMap map[issuin
 				continue
 			}
 
-			var xRevEntry unifiedRevocationEntry
+			var xRevEntry revocation.UnifiedRevocationEntry
 			if err := entryRaw.DecodeJSON(&xRevEntry); err != nil {
 				return nil, nil, fmt.Errorf("failed json decoding of unified revocation entry at path %v: %w ", serialPath, err)
 			}

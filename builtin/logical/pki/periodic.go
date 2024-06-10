@@ -326,12 +326,12 @@ func readRevocationEntryAndTransfer(sc *storageContext, serial string) error {
 		return nil
 	}
 
-	entry := &unifiedRevocationEntry{
+	entry := &revocation.UnifiedRevocationEntry{
 		SerialNumber:      hyphenSerial,
 		CertExpiration:    cert.NotAfter,
 		RevocationTimeUTC: revocationTime,
 		CertificateIssuer: revInfo.CertificateIssuer,
 	}
 
-	return writeUnifiedRevocationEntry(sc, entry)
+	return revocation.WriteUnifiedRevocationEntry(sc.GetContext(), sc.GetStorage(), entry)
 }
