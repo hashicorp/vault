@@ -346,11 +346,9 @@ This endpoint was added in Vault 1.6.
 ### Parameters
 
 - `start_time` `(string, optional)` - An RFC3339 timestamp or Unix epoch time. Specifies the start of the
-  period for which client counts will be reported. If no start time is specified, the `default_report_months`
-  prior to the `end_time` will be used.
+  period for which client counts will be reported. If no start time is specified, the billing start date will be used.
 - `end_time` `(string, optional)` - An RFC3339 timestamp or Unix epoch time. Specifies the end of the period
-  for which client counts will be reported. If no end time is specified, the end of the previous calendar
-  month will be used.
+  for which client counts will be reported. If no end time is specified, the end of the current month will be used.
 - `limit_namespaces` `(int, optional)` - Controls the total number of by_namespace data returned. This can
    be used to return the client counts for the specified number of namespaces having highest activity.
    If no `limit_namespaces` parameter is specified, client counts for all namespaces in specified usage period is returned.
@@ -1097,7 +1095,8 @@ The `/sys/internal/counters/config` endpoint is used to configure logging of act
 
 ### Parameters
 
-- `default_report_months` `(integer: 12)` - The number of months to report if no `start_time` is specified in a query.
+- `default_report_months` `(integer: 12)` - **DEPRECATED** The number
+   of months to report if no `start_time` is specified in a query.
 - `enabled` `(string: enable, disable, default)` - Enable or disable counting of client activity. When set to `default`, the client
   counts are enabled on Enterprise builds and disabled on community builds. Disabling the feature during the middle of a month will
   discard any data recorded for that month, but does not delete previous months.
@@ -1110,7 +1109,6 @@ Any missing parameters are left at their existing value.
 ```json
 {
   "enabled": "enable",
-  "default_report_months": 3,
   "retention_months": 54
 }
 ```
@@ -1155,7 +1153,6 @@ $ curl \
   "lease_duration": 0,
   "renewable": false,
   "data": {
-    "default_report_months": 12,
     "enabled": "default-enabled",
     "queries_available": true,
     "retention_months": 48,
@@ -1196,11 +1193,9 @@ This endpoint was added in Vault 1.11.
 ### Parameters
 
 - `start_time` `(string, optional)` - An RFC3339 timestamp or Unix epoch time. Specifies the start of the
-  period for which client counts will be reported. If no start time is specified, the `default_report_months`
-  prior to the `end_time` will be used.
+  period for which client counts will be reported. If no start time is specified, the billing start time will be used.
 - `end_time` `(string, optional)` - An RFC3339 timestamp or Unix epoch time. Specifies the end of the period
-  for which client counts will be reported. If no end time is specified, the end of the previous calendar
-  month will be used.
+  for which client counts will be reported. If no end time is specified, the end of current month will be used.
 - `format` `(string, optional)` - The desired format of the output file. Allowed
     values are `csv` and `json`. If no format is provided a default of `json`
     will be used.

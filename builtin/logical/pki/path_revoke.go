@@ -563,7 +563,7 @@ func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, dat
 	var cert *x509.Certificate
 	var serial string
 
-	config, err := sc.Backend.CrlBuilder().getConfigWithUpdate(sc)
+	config, err := sc.CrlBuilder().getConfigWithUpdate(sc)
 	if err != nil {
 		return nil, fmt.Errorf("error revoking serial: %s: failed reading config: %w", serial, err)
 	}
