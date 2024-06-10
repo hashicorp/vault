@@ -21,9 +21,9 @@ func Test_newRegistry(t *testing.T) {
 	require.Equal(t, len(expMinimal.credentialBackends)+len(expFullAddon.credentialBackends), len(actual.credentialBackends),
 		"newRegistry() total auth backends mismatch total of minimal and full addon registries")
 	require.Equal(t, len(expMinimal.databasePlugins)+len(expFullAddon.databasePlugins), len(actual.databasePlugins),
-		"newRegistry() total database plugins mismatch total of common and full addon registries")
+		"newRegistry() total database plugins mismatch total of minimal and full addon registries")
 	require.Equal(t, len(expMinimal.logicalBackends)+len(expFullAddon.logicalBackends), len(actual.logicalBackends),
-		"newRegistry() total logical backends mismatch total of common and full addon registries")
+		"newRegistry() total logical backends mismatch total of minimal and full addon registries")
 
 	assertRegistrySubset(t, actual, expMinimal, "common")
 	assertRegistrySubset(t, actual, expFullAddon, "full addon")
