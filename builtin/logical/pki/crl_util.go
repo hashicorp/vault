@@ -17,6 +17,7 @@ import (
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
 	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -26,7 +27,7 @@ import (
 )
 
 const (
-	revokedPath                      = "revoked/"
+	revokedPath                      = revocation.RevokedPath
 	crossRevocationPrefix            = "cross-revocation-queue/"
 	crossRevocationPath              = crossRevocationPrefix + "{{clusterId}}/"
 	deltaWALLastBuildSerialName      = "last-build-serial"
@@ -954,8 +955,8 @@ func revokeCert(sc *storageContext, config *pki_backend.CrlConfig, cert *x509.Ce
 		return nil, nil
 	}
 
-	colonSerial := serialFromCert(cert)
-	hyphenSerial := normalizeSerial(colonSerial)
+	colonSerial := parsing.SerialFromCert(cert)
+	hyphenSerial := parsing.NormalizeSerialForStorage(colonSerial)
 
 	// Validate that no issuers match the serial number to be revoked. We need
 	// to gracefully degrade to the legacy cert bundle when it is required, as
@@ -974,7 +975,7 @@ func revokeCert(sc *storageContext, config *pki_backend.CrlConfig, cert *x509.Ce
 		}
 	}
 
-	curRevInfo, err := sc.fetchRevocationInfo(colonSerial)
+	curRevInfo, err := revocation.FetchRevocationInfo(sc, colonSerial)
 	if err != nil {
 		return nil, err
 	}
@@ -1009,7 +1010,7 @@ func revokeCert(sc *storageContext, config *pki_backend.CrlConfig, cert *x509.Ce
 
 	// We may not find an issuer with this certificate; that's fine so
 	// ignore the return value.
-	associateRevokedCertWithIsssuer(&revInfo, cert, issuerIDCertMap)
+	revInfo.AssociateRevokedCertWithIsssuer(cert, issuerIDCertMap)
 
 	revEntry, err := logical.StorageEntryJSON(revokedPath+hyphenSerial, revInfo)
 	if err != nil {
@@ -1039,14 +1040,14 @@ func revokeCert(sc *storageContext, config *pki_backend.CrlConfig, cert *x509.Ce
 	// the unified storage space through a periodic function.
 	failedWritingUnifiedCRL := false
 	if config.UnifiedCRL {
-		entry := &unifiedRevocationEntry{
+		entry := &revocation.UnifiedRevocationEntry{
 			SerialNumber:      colonSerial,
 			CertExpiration:    cert.NotAfter,
 			RevocationTimeUTC: revInfo.RevocationTimeUTC,
 			CertificateIssuer: revInfo.CertificateIssuer,
 		}
 
-		ignoreErr := writeUnifiedRevocationEntry(sc, entry)
+		ignoreErr := revocation.WriteUnifiedRevocationEntry(sc.GetContext(), sc.GetStorage(), entry)
 		if ignoreErr != nil {
 			// Just log the error if we fail to write across clusters, a separate background
 			// thread will reattempt it later on as we have the local write done.
@@ -1839,20 +1840,6 @@ func isRevInfoIssuerValid(revInfo *revocation.RevocationInfo, issuerIDCertMap ma
 	return false
 }
 
-func associateRevokedCertWithIsssuer(revInfo *revocation.RevocationInfo, revokedCert *x509.Certificate, issuerIDCertMap map[issuing.IssuerID]*x509.Certificate) bool {
-	for issuerId, issuerCert := range issuerIDCertMap {
-		if bytes.Equal(revokedCert.RawIssuer, issuerCert.RawSubject) {
-			if err := revokedCert.CheckSignatureFrom(issuerCert); err == nil {
-				// Valid mapping. Add it to the specified entry.
-				revInfo.CertificateIssuer = issuerId
-				return true
-			}
-		}
-	}
-
-	return false
-}
-
 func getLocalRevokedCertEntries(sc *storageContext, issuerIDCertMap map[issuing.IssuerID]*x509.Certificate, isDelta bool) ([]pkix.RevokedCertificate, map[issuing.IssuerID][]pkix.RevokedCertificate, error) {
 	var unassignedCerts []pkix.RevokedCertificate
 	revokedCertsMap := make(map[issuing.IssuerID][]pkix.RevokedCertificate)
@@ -1957,7 +1944,7 @@ func getLocalRevokedCertEntries(sc *storageContext, issuerIDCertMap map[issuing.
 		}
 
 		// Now we need to assign the revoked certificate to an issuer.
-		foundParent := associateRevokedCertWithIsssuer(&revInfo, revokedCert, issuerIDCertMap)
+		foundParent := revInfo.AssociateRevokedCertWithIsssuer(revokedCert, issuerIDCertMap)
 		if !foundParent {
 			// If the parent isn't found, add it to the unassigned bucket.
 			unassignedCerts = append(unassignedCerts, newRevCert)
@@ -2044,7 +2031,7 @@ func getUnifiedRevokedCertEntries(sc *storageContext, issuerIDCertMap map[issuin
 				continue
 			}
 
-			var xRevEntry unifiedRevocationEntry
+			var xRevEntry revocation.UnifiedRevocationEntry
 			if err := entryRaw.DecodeJSON(&xRevEntry); err != nil {
 				return nil, nil, fmt.Errorf("failed json decoding of unified revocation entry at path %v: %w ", serialPath, err)
 			}

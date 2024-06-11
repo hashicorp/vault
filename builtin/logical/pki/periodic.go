@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -294,7 +295,7 @@ func doUnifiedTransferMissingDeltaWALSerials(sc *storageContext, clusterId strin
 
 func readRevocationEntryAndTransfer(sc *storageContext, serial string) error {
 	hyphenSerial := normalizeSerial(serial)
-	revInfo, err := sc.fetchRevocationInfo(hyphenSerial)
+	revInfo, err := revocation.FetchRevocationInfo(sc, hyphenSerial)
 	if err != nil {
 		return fmt.Errorf("failed loading revocation entry for serial: %s: %w", serial, err)
 	}
@@ -325,12 +326,12 @@ func readRevocationEntryAndTransfer(sc *storageContext, serial string) error {
 		return nil
 	}
 
-	entry := &unifiedRevocationEntry{
+	entry := &revocation.UnifiedRevocationEntry{
 		SerialNumber:      hyphenSerial,
 		CertExpiration:    cert.NotAfter,
 		RevocationTimeUTC: revocationTime,
 		CertificateIssuer: revInfo.CertificateIssuer,
 	}
 
-	return writeUnifiedRevocationEntry(sc, entry)
+	return revocation.WriteUnifiedRevocationEntry(sc.GetContext(), sc.GetStorage(), entry)
 }
