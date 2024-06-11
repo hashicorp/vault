@@ -1149,7 +1149,7 @@ func (b *backend) doTidyRevocationStore(ctx context.Context, req *logical.Reques
 				b.tidyStatusIncMissingIssuerCertCount()
 				revInfo.CertificateIssuer = issuing.IssuerID("")
 				storeCert = true
-				if associateRevokedCertWithIsssuer(&revInfo, revokedCert, issuerIDCertMap) {
+				if revInfo.AssociateRevokedCertWithIsssuer(revokedCert, issuerIDCertMap) {
 					fixedIssuers += 1
 				}
 			}
@@ -1566,7 +1566,7 @@ func (b *backend) doTidyCrossRevocationStore(ctx context.Context, req *logical.R
 				continue
 			}
 
-			var details unifiedRevocationEntry
+			var details revocation.UnifiedRevocationEntry
 			if err := entry.DecodeJSON(&details); err != nil {
 				return fmt.Errorf("error decoding cross-cluster revocation entry (%v) to tidy: %w", ePath, err)
 			}
