@@ -215,8 +215,6 @@ versions as well.
 
 ### Migration post Vault 1.16.0 via Seal HA for Auto Seals (Enterprise)
 
-@include 'alerts/beta.mdx'
-
 With Seal HA, migration between auto-unseal types (not including any Shamir
 seals) can be done fully online using Seal High Availability (Seal HA) without
 any downtime.
@@ -345,8 +343,6 @@ all other cluster peers and when the peers eventually become the leader,
 migration will not happen again on the peer nodes.
 
 ## Seal high availability <EnterpriseAlert inline="true" />
-
-@include 'alerts/beta.mdx'
 
 Seal high availability (Seal HA) allows the configuration of more than one auto 
 seal mechanism such that Vault can tolerate the temporary loss of a seal service 
