@@ -16,10 +16,11 @@ import {
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
-import sinon from 'sinon';
+
 import authPage from 'vault/tests/pages/auth';
 import { runCmd } from 'vault/tests/helpers/commands';
 import codemirror from 'vault/tests/helpers/codemirror';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const SELECT = {
   policyByName: (name) => `[data-test-policy-link="${name}"]`,
@@ -33,6 +34,7 @@ const SELECT = {
   policyTitle: '[data-test-policy-name]',
   listBreadcrumb: '[data-test-policy-list-link] a',
 };
+
 module('Acceptance | policies/acl', function (hooks) {
   setupApplicationTest(hooks);
 
@@ -97,7 +99,6 @@ module('Acceptance | policies/acl', function (hooks) {
   });
 
   test('it can create and delete correctly', async function (assert) {
-    const flashSuccessSpy = sinon.spy(this.owner.lookup('service:flash-messages'), 'success');
     const policyString = 'path "*" { capabilities = ["update"]}';
     const policyName = `Policy test ${this.uid}`;
     const policyLower = policyName.toLowerCase();
@@ -121,10 +122,7 @@ module('Acceptance | policies/acl', function (hooks) {
       'navigates to policy show on successful save'
     );
     assert.dom(SELECT.policyTitle).hasText(policyLower, 'displays the policy name on the show page');
-    assert.strictEqual(
-      flashSuccessSpy.lastCall.args[0],
-      `ACL policy "${policyLower}" was successfully created.`
-    );
+    assert.dom(GENERAL.latestFlashContent).hasText(`ACL policy "${policyLower}" was successfully created.`);
     await click(SELECT.listBreadcrumb);
 
     assert.strictEqual(currentURL(), `/vault/policies/acl`, 'navigates to policy list from breadcrumb');
