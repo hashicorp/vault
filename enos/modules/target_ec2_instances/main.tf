@@ -257,3 +257,13 @@ resource "aws_instance" "targets" {
     },
   )
 }
+
+module "disable_selinux" {
+  source = "../disable_selinux"
+  count  = var.disable_selinux == true ? 1 : 0
+
+  hosts = { for idx in range(var.instance_count) : idx => {
+    public_ip  = aws_instance.targets[idx].public_ip
+    private_ip = aws_instance.targets[idx].private_ip
+  } }
+}
