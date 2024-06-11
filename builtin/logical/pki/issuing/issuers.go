@@ -14,7 +14,6 @@ import (
 
 	"github.com/hashicorp/vault/builtin/logical/pki/managed_key"
 	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
-	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -563,103 +562,4 @@ func ResolveIssuerCRLPath(ctx context.Context, storage logical.Storage, useLegac
 	}
 
 	return "crl", fmt.Errorf("unable to find CRL for issuer: id:%v/ref:%v", issuer, reference)
-}
-
-// FetchCertBySerial allows fetching certificates from the backend; it handles the slightly
-// separate pathing for CRL, and revoked certificates.
-//
-// Support for fetching CA certificates was removed, due to the new issuers
-// changes.
-func FetchCertBySerial(sc pki_backend.StorageContext, prefix, serial string) (*logical.StorageEntry, error) {
-	var path, legacyPath string
-	var err error
-	var certEntry *logical.StorageEntry
-
-	hyphenSerial := parsing.NormalizeSerialForStorage(serial)
-	colonSerial := strings.ReplaceAll(strings.ToLower(serial), "-", ":")
-
-	switch {
-	// Revoked goes first as otherwise crl get hardcoded paths which fail if
-	// we actually want revocation info
-	case strings.HasPrefix(prefix, "revoked/"):
-		legacyPath = "revoked/" + colonSerial
-		path = "revoked/" + hyphenSerial
-	case serial == LegacyCRLPath || serial == DeltaCRLPath || serial == UnifiedCRLPath || serial == UnifiedDeltaCRLPath:
-		warnings, err := sc.CrlBuilder().RebuildIfForced(sc)
-		if err != nil {
-			return nil, err
-		}
-		if len(warnings) > 0 {
-			msg := "During rebuild of CRL for cert fetch, got the following warnings:"
-			for index, warning := range warnings {
-				msg = fmt.Sprintf("%v\n %d. %v", msg, index+1, warning)
-			}
-			sc.Logger().Warn(msg)
-		}
-
-		unified := serial == UnifiedCRLPath || serial == UnifiedDeltaCRLPath
-		path, err = ResolveIssuerCRLPath(sc.GetContext(), sc.GetStorage(), sc.UseLegacyBundleCaStorage(), DefaultRef, unified)
-		if err != nil {
-			return nil, err
-		}
-
-		if serial == DeltaCRLPath || serial == UnifiedDeltaCRLPath {
-			if sc.UseLegacyBundleCaStorage() {
-				return nil, fmt.Errorf("refusing to serve delta CRL with legacy CA bundle")
-			}
-
-			path += DeltaCRLPathSuffix
-		}
-	default:
-		legacyPath = PathCerts + colonSerial
-		path = PathCerts + hyphenSerial
-	}
-
-	certEntry, err = sc.GetStorage().Get(sc.GetContext(), path)
-	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("error fetching certificate %s: %s", serial, err)}
-	}
-	if certEntry != nil {
-		if certEntry.Value == nil || len(certEntry.Value) == 0 {
-			return nil, errutil.InternalError{Err: fmt.Sprintf("returned certificate bytes for serial %s were empty", serial)}
-		}
-		return certEntry, nil
-	}
-
-	// If legacyPath is unset, it's going to be a CA or CRL; return immediately
-	if legacyPath == "" {
-		return nil, nil
-	}
-
-	// Retrieve the old-style path.  We disregard errors here because they
-	// always manifest on Windows, and thus the initial check for a revoked
-	// cert fails would return an error when the cert isn't revoked, preventing
-	// the happy path from working.
-	certEntry, _ = sc.GetStorage().Get(sc.GetContext(), legacyPath)
-	if certEntry == nil {
-		return nil, nil
-	}
-	if certEntry.Value == nil || len(certEntry.Value) == 0 {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("returned certificate bytes for serial %s were empty", serial)}
-	}
-
-	// Update old-style paths to new-style paths
-	certEntry.Key = path
-	certCounter := sc.GetCertificateCounter()
-	certsCounted := certCounter.IsInitialized()
-	if err = sc.GetStorage().Put(sc.GetContext(), certEntry); err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("error saving certificate with serial %s to new location: %s", serial, err)}
-	}
-	if err = sc.GetStorage().Delete(sc.GetContext(), legacyPath); err != nil {
-		// If we fail here, we have an extra (copy) of a cert in storage, add to metrics:
-		switch {
-		case strings.HasPrefix(prefix, "revoked/"):
-			certCounter.IncrementTotalRevokedCertificatesCount(certsCounted, path)
-		default:
-			certCounter.IncrementTotalCertificatesCount(certsCounted, path)
-		}
-		return nil, errutil.InternalError{Err: fmt.Sprintf("error deleting certificate with serial %s from old location", serial)}
-	}
-
-	return certEntry, nil
 }

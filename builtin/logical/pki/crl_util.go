@@ -975,7 +975,7 @@ func revokeCert(sc *storageContext, config *pki_backend.CrlConfig, cert *x509.Ce
 		}
 	}
 
-	curRevInfo, err := revocation.FetchRevocationInfo(sc, colonSerial)
+	curRevInfo, err := fetchRevocationInfo(sc, colonSerial)
 	if err != nil {
 		return nil, err
 	}
