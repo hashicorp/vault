@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -45,7 +46,7 @@ func runUnifiedTransfer(sc *storageContext) {
 		return
 	}
 
-	config, err := sc.CrlBuilder().getConfigWithUpdate(sc)
+	config, err := sc.CrlBuilder().GetConfigWithUpdate(sc)
 	if err != nil {
 		sc.Logger().Error("failed to retrieve crl config from storage for unified transfer background process",
 			"error", err)
@@ -124,7 +125,7 @@ func doUnifiedTransferMissingLocalSerials(sc *storageContext, clusterId string) 
 	errCount := 0
 	for i, serialNum := range localRevokedSerialNums {
 		if i%25 == 0 {
-			config, _ := sc.CrlBuilder().getConfigWithUpdate(sc)
+			config, _ := sc.CrlBuilder().GetConfigWithUpdate(sc)
 			if config != nil && !config.UnifiedCRL {
 				return errors.New("unified crl has been disabled after we started, stopping")
 			}
@@ -223,7 +224,7 @@ func doUnifiedTransferMissingDeltaWALSerials(sc *storageContext, clusterId strin
 	errCount := 0
 	for index, serial := range localWALEntries {
 		if index%25 == 0 {
-			config, _ := sc.CrlBuilder().getConfigWithUpdate(sc)
+			config, _ := sc.CrlBuilder().GetConfigWithUpdate(sc)
 			if config != nil && (!config.UnifiedCRL || !config.EnableDelta) {
 				return errors.New("unified or delta CRLs have been disabled after we started, stopping")
 			}
@@ -294,7 +295,7 @@ func doUnifiedTransferMissingDeltaWALSerials(sc *storageContext, clusterId strin
 
 func readRevocationEntryAndTransfer(sc *storageContext, serial string) error {
 	hyphenSerial := normalizeSerial(serial)
-	revInfo, err := sc.fetchRevocationInfo(hyphenSerial)
+	revInfo, err := revocation.FetchRevocationInfo(sc, hyphenSerial)
 	if err != nil {
 		return fmt.Errorf("failed loading revocation entry for serial: %s: %w", serial, err)
 	}
@@ -325,12 +326,12 @@ func readRevocationEntryAndTransfer(sc *storageContext, serial string) error {
 		return nil
 	}
 
-	entry := &unifiedRevocationEntry{
+	entry := &revocation.UnifiedRevocationEntry{
 		SerialNumber:      hyphenSerial,
 		CertExpiration:    cert.NotAfter,
 		RevocationTimeUTC: revocationTime,
 		CertificateIssuer: revInfo.CertificateIssuer,
 	}
 
-	return writeUnifiedRevocationEntry(sc, entry)
+	return revocation.WriteUnifiedRevocationEntry(sc.GetContext(), sc.GetStorage(), entry)
 }
