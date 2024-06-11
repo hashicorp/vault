@@ -42,7 +42,8 @@ export default class ActivityAdapter extends ApplicationAdapter {
       end_time: query?.end_time ?? undefined,
     })}`;
     try {
-      const resp = await this.rawRequest(url, 'GET', {});
+      // This endpoint can only be called from root namespace
+      const resp = await this.rawRequest(url, 'GET', { namespace: undefined });
       return resp.blob();
     } catch (e) {
       const { errors } = await e.json();
