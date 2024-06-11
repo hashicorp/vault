@@ -6,7 +6,6 @@
 import queryParamString from 'vault/utils/query-param-string';
 import ApplicationAdapter from '../application';
 import { formatDateObject } from 'core/utils/client-count-utils';
-import errorMessage from 'vault/utils/error-message';
 
 export default class ActivityAdapter extends ApplicationAdapter {
   // javascript localizes new Date() objects but all activity log data is stored in UTC
@@ -46,8 +45,8 @@ export default class ActivityAdapter extends ApplicationAdapter {
       const resp = await this.rawRequest(url, 'GET', {});
       return resp.blob();
     } catch (e) {
-      const errString = errorMessage(e);
-      this.flashMessages.danger(`There was an error trying to download the CSV: ${errString}`);
+      const { errors } = await e.json();
+      throw new Error(errors?.join('. '));
     }
   }
 }
