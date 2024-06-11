@@ -1,3 +1,0 @@
-```release-note:feature
-**Cool Feature**: I'm correctly formatted :)
-```
