@@ -303,5 +303,26 @@ module('Integration | Component | clients/attribution', function (hooks) {
       const [filename] = this.csvDownloadStub.lastCall.args;
       assert.strictEqual(filename, 'clients_by_namespace');
     });
+
+    test('shows the API error on the modal', async function (assert) {
+      this.server.get('/sys/internal/counters/activity/export', function () {
+        return new Response(
+          403,
+          { 'Content-Type': 'application/json' },
+          { errors: ['this is an error from the API'] }
+        );
+      });
+
+      await render(hbs`
+        <Clients::Attribution
+          @totalClientAttribution={{this.totalClientAttribution}}
+          @responseTimestamp={{this.timestamp}}
+          />
+      `);
+
+      await click('[data-test-attribution-export-button]');
+      await click(GENERAL.confirmButton);
+      assert.dom('[data-test-export-error]').hasText('this is an error from the API');
+    });
   });
 });

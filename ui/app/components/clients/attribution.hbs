@@ -101,7 +101,7 @@
       {{#if this.downloadError}}
         <Hds::Alert @type="inline" @color="critical" as |A|>
           <A.Title>CSV export failed</A.Title>
-          <A.Description>{{this.downloadError}}</A.Description>
+          <A.Description data-test-export-error>{{this.downloadError}}</A.Description>
         </Hds::Alert>
       {{/if}}
     </M.Body>
