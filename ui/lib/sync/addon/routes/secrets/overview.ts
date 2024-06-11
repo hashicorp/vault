@@ -8,10 +8,12 @@ import { service } from '@ember/service';
 import { hash } from 'rsvp';
 
 import type FlagsService from 'vault/services/flags';
+import type RouterService from '@ember/routing/router-service';
 import type StoreService from 'vault/services/store';
 import type VersionService from 'vault/services/version';
 
 export default class SyncSecretsOverviewRoute extends Route {
+  @service declare readonly router: RouterService;
   @service declare readonly store: StoreService;
   @service declare readonly flags: FlagsService;
   @service declare readonly version: VersionService;
@@ -33,5 +35,11 @@ export default class SyncSecretsOverviewRoute extends Route {
             .catch(() => [])
         : [],
     });
+  }
+
+  redirect() {
+    if (!this.flags.showSecretsSync) {
+      this.router.replaceWith('vault.cluster.dashboard');
+    }
   }
 }

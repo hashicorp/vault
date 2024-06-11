@@ -52,7 +52,7 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
 
     assert
       .dom('[data-test-sidebar-nav-link]')
-      .exists({ count: 3 }, 'Nav links are hidden other than secrets, secrets sync and dashboard');
+      .exists({ count: 2 }, 'Nav links are hidden other than secrets and dashboard');
     assert
       .dom('[data-test-sidebar-nav-heading]')
       .exists({ count: 1 }, 'Headings are hidden other than Vault');
@@ -81,31 +81,6 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
       .exists({ count: links.length }, 'Correct number of links render');
     links.forEach((link) => {
       assert.dom(`[data-test-sidebar-nav-link="${link}"]`).hasText(link, `${link} link renders`);
-    });
-  });
-
-  test('it should render badge for promotional links on community version', async function (assert) {
-    const promotionalLinks = ['Secrets Sync'];
-    // if no features passed, it defaults to all features and we need to specifically remove Secrets Sync
-    stubFeaturesAndPermissions(this.owner, false, true, []);
-    await renderComponent();
-
-    promotionalLinks.forEach((link) => {
-      assert
-        .dom(`[data-test-sidebar-nav-link="${link}"]`)
-        .hasText(`${link} Enterprise`, `${link} link renders Enterprise badge`);
-    });
-  });
-
-  test('it should render badge for promotional links on enterprise version', async function (assert) {
-    const promotionalLinks = ['Secrets Sync'];
-    stubFeaturesAndPermissions(this.owner, true, true, ['Namespaces']);
-    await renderComponent();
-
-    promotionalLinks.forEach((link) => {
-      assert
-        .dom(`[data-test-sidebar-nav-link="${link}"]`)
-        .hasText(`${link} Premium`, `${link} link renders Premium badge`);
     });
   });
 

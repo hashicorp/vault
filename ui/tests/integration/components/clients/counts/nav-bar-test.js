@@ -13,10 +13,12 @@ module('Integration | Component | clients/counts/nav-bar', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
-    this.showSecretsSync = false;
+    this.showSecretsSyncClientCounts = false;
 
     this.renderComponent = async () => {
-      await render(hbs`<Clients::Counts::NavBar @showSecretsSync={{this.showSecretsSync}} />`);
+      await render(
+        hbs`<Clients::Counts::NavBar @showSecretsSyncClientCounts={{this.showSecretsSyncClientCounts}} />`
+      );
     };
   });
 
@@ -28,15 +30,15 @@ module('Integration | Component | clients/counts/nav-bar', function (hooks) {
     assert.dom(GENERAL.tab('acme')).hasText('ACME clients');
   });
 
-  test('it shows secrets sync tab if showSecretsSync is true', async function (assert) {
-    this.showSecretsSync = true;
+  test('it shows secrets sync tab if showSecretsSyncClientCounts is true', async function (assert) {
+    this.showSecretsSyncClientCounts = true;
     await this.renderComponent();
 
     assert.dom(GENERAL.tab('sync')).exists();
   });
 
-  test('it should not show secrets sync tab if showSecretsSync is false', async function (assert) {
-    this.showSecretsSync = false;
+  test('it should not show secrets sync tab if showSecretsSyncClientCounts is false', async function (assert) {
+    this.showSecretsSyncClientCounts = false;
     await this.renderComponent();
 
     assert.dom(GENERAL.tab('sync')).doesNotExist();

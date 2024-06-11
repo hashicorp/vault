@@ -22,6 +22,8 @@ module('Acceptance | clients | sync', function (hooks) {
     hooks.beforeEach(async function () {
       sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
       syncHandler(this.server);
+      const version = this.owner.lookup('service:version');
+      version.type = 'enterprise';
       await authPage.login();
       return visit('/vault/clients/counts/sync');
     });
@@ -34,22 +36,31 @@ module('Acceptance | clients | sync', function (hooks) {
     });
   });
 
-  module('sync not activated', function (hooks) {
+  module('sync not activated and on license', function (hooks) {
     hooks.beforeEach(async function () {
       this.server.get('/sys/internal/counters/config', function () {
         return CONFIG_RESPONSE;
       });
       sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
+      syncHandler(this.server);
+      server.get('/sys/activation-flags', () => {
+        return {
+          data: {
+            activated: [''],
+            unactivated: ['secrets-sync'],
+          },
+        };
+      });
       await authPage.login();
       return visit('/vault/clients/counts/sync');
     });
 
     test('it should show an empty state when secrets sync is not activated', async function (assert) {
-      assert.expect(3);
+      assert.expect(2);
 
       this.server.get('/sys/activation-flags', () => {
         assert.true(true, '/sys/activation-flags/ is called to check if secrets-sync is activated');
-
+        // called once from the higher level cluster route
         return {
           data: {
             activated: [],

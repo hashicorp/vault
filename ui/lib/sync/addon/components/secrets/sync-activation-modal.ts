@@ -43,7 +43,7 @@ export default class SyncActivationModal extends Component<Args> {
         .adapterFor('application')
         .ajax('/v1/sys/activation-flags/secrets-sync/activate', 'POST', { namespace });
       // must refresh and not transition because transition does not refresh the model from within a namespace
-      yield this.router.refresh();
+      yield this.router.refresh('vault.cluster');
     } catch (error) {
       this.args.onError(errorMessage(error));
       this.flashMessages.danger(`Error enabling feature \n ${errorMessage(error)}`);

@@ -7,6 +7,7 @@ import { Response } from 'miragejs';
 import { camelize } from '@ember/string';
 import { findDestination } from 'core/helpers/sync-destinations';
 import clientsHandler from './clients';
+import modifyPassthroughResponse from '../helpers/modify-passthrough-response';
 
 export const associationsResponse = (schema, req) => {
   const { type, name } = req.params;
@@ -116,7 +117,9 @@ const createOrUpdateDestination = (schema, req) => {
 };
 
 export default function (server) {
-  // default to activated
+  // default to enterprise with Secrets Sync on the license and activated
+  server.get('sys/health', (schema, req) => modifyPassthroughResponse(req, { enterprise: true }));
+  server.get('/sys/license/features', () => ({ features: ['Secrets Sync'] }));
   server.get('/sys/activation-flags', () => {
     return {
       data: {
