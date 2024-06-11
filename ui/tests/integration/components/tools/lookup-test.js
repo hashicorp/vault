@@ -11,7 +11,7 @@ import { click, fillIn, find, render, waitUntil } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { TOOLS_SELECTORS as TS } from 'vault/tests/helpers/tools-selectors';
-import { format } from 'date-fns';
+import { formatRFC3339, getYear } from 'date-fns';
 import sinon from 'sinon';
 
 module('Integration | Component | tools/lookup', function (hooks) {
@@ -49,8 +49,8 @@ module('Integration | Component | tools/lookup', function (hooks) {
     const now = new Date();
     const data = {
       creation_path: 'sys/wrapping/wrap',
-      creation_time: now.toISOString(),
-      creation_ttl: 1800,
+      creation_time: formatRFC3339(now),
+      creation_ttl: 3.156e7, // one year in seconds
     };
     const token = 'token.OMZFbUurY0ppT2RTMGpRa0JOSUFqUzJUaGNqdWUQ6ooG';
     this.server.post('sys/wrapping/lookup', (schema, req) => {
@@ -66,9 +66,8 @@ module('Integration | Component | tools/lookup', function (hooks) {
     assert.dom(GENERAL.infoRowValue('Creation path')).hasText(data.creation_path);
     assert.dom(GENERAL.infoRowValue('Creation time')).hasText(data.creation_time);
     assert.dom(GENERAL.infoRowValue('Creation TTL')).hasText(`${data.creation_ttl}`);
-    assert.dom(GENERAL.infoRowValue('Expiration date')).hasTextContaining(format(now, 'MMM dd yyyy')); // intentionally exclude time to avoid race conditions
-    // remove below assertion if flaky (but unlikely this test would take longer than a minute..)
-    assert.dom(GENERAL.infoRowValue('Expires in')).hasText('30 minutes'); // from 1800s ttl
+    assert.dom(GENERAL.infoRowValue('Expiration date')).hasTextContaining(`${getYear(now) + 1}`);
+    assert.dom(GENERAL.infoRowValue('Expires in')).hasText('about 1 year');
 
     // clicking done resets form
     await click(TS.button('Done'));
