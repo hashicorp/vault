@@ -17,7 +17,8 @@ What does this PR do?
   applying the patch for this PR to the ENT repo and running tests doesn't
   break any tests. Sometimes ENT only tests rely on public functions in CE
   files.
-- [ ] **Jira:** If this change has an associated Jira, please link it in the description.
+- [ ] **Jira:** If this change has an associated Jira, it's referenced either
+  in the PR description, commit message, or branch name.
 - [ ] **RFC:** If this change has an associated RFC, please link it in the description.
 - [ ] **ENT PR:** If this change has an associated ENT PR, please link it in the
   description.
