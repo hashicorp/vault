@@ -16,4 +16,5 @@ export default class PermissionsService extends Service {
   canViewAll: boolean | null;
   permissionsBanner: string | null;
   chrootNamespace: string | null | undefined;
+  hasNavPermission: (string) => boolean;
 }

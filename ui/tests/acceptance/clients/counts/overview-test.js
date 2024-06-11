@@ -236,7 +236,7 @@ module('Acceptance | clients | overview | sync in license, activated', function 
   });
 
   test('it should render the correct tabs', async function (assert) {
-    assert.dom(GENERAL.tab('sync')).exists();
+    assert.dom(GENERAL.tab('sync')).exists('shows the sync tab');
   });
 
   test('it should show secrets sync stats', async function (assert) {
