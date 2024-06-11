@@ -14,6 +14,8 @@ Vault 1.16. **Please read carefully**.
 
 ## Important changes
 
+<a id="audit-headers" />
+
 ### Allowed audit headers now have unremovable defaults
 
 The [config auditing API endpoint](/vault/api-docs/system/config-auditing#create-update-audit-request-header)
@@ -29,6 +31,8 @@ default headers if required.
 Refer to the
 [audit request headers documentation](/vault/docs/audit#audit-request-headers)
 for more information.
+
+<a id="pki-truncate" />
 
 ### PKI sign-intermediate now truncates notAfter field to signing issuer
 
@@ -49,6 +53,8 @@ API uses the `leaf_not_after_behavior` value configured for the signing issuer
 to control truncation the behavior. Setting the issuer `leaf_not_after_behavior`
 field to `permit` and `enforce_leaf_not_after_behavior` to true restores the
 legacy behavior.
+
+<a id="request-limiter" />
 
 ### Request limiter deprecation
 
