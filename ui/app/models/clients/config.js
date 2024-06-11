@@ -15,6 +15,10 @@ const validations = {
       message: (model) =>
         `Retention period must be greater than or equal to ${model.minimumRetentionMonths}.`,
     },
+    {
+      validator: (model) => parseInt(model.retentionMonths) <= 60,
+      message: 'Retention period must be less than or equal to 60.',
+    },
   ],
 };
 
