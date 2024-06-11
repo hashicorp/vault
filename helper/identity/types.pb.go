@@ -33,55 +33,55 @@ type Group struct {
 
 	// ID is the unique identifier for this group
 	// @inject_tag: sentinel:"-"
-	ID string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty" sentinel:"-"`
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// Name is the unique name for this group
 	// @inject_tag: sentinel:"-"
-	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty" sentinel:"-"`
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	// Policies are the vault policies to be granted to members of this group
 	// @inject_tag: sentinel:"-"
-	Policies []string `protobuf:"bytes,3,rep,name=policies,proto3" json:"policies,omitempty" sentinel:"-"`
+	Policies []string `protobuf:"bytes,3,rep,name=policies,proto3" json:"policies,omitempty"`
 	// ParentGroupIDs are the identifiers of those groups to which this group is a
 	// member of. These will serve as references to the parent group in the
 	// hierarchy.
 	// @inject_tag: sentinel:"-"
-	ParentGroupIDs []string `protobuf:"bytes,4,rep,name=parent_group_ids,json=parentGroupIds,proto3" json:"parent_group_ids,omitempty" sentinel:"-"`
+	ParentGroupIds []string `protobuf:"bytes,4,rep,name=parent_group_ids,json=parentGroupIds,proto3" json:"parent_group_ids,omitempty"`
 	// MemberEntityIDs are the identifiers of entities which are members of this
 	// group
 	// @inject_tag: sentinel:"-"
-	MemberEntityIDs []string `protobuf:"bytes,5,rep,name=member_entity_ids,json=memberEntityIDs,proto3" json:"member_entity_ids,omitempty" sentinel:"-"`
+	MemberEntityIds []string `protobuf:"bytes,5,rep,name=member_entity_ids,json=memberEntityIds,proto3" json:"member_entity_ids,omitempty"`
 	// Metadata represents the custom data tied with this group
 	// @inject_tag: sentinel:"-"
-	Metadata map[string]string `protobuf:"bytes,6,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3" sentinel:"-"`
+	Metadata map[string]string `protobuf:"bytes,6,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	// CreationTime is the time at which this group was created
 	// @inject_tag: sentinel:"-"
-	CreationTime *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=creation_time,json=creationTime,proto3" json:"creation_time,omitempty" sentinel:"-"`
+	CreationTime *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=creation_time,json=creationTime,proto3" json:"creation_time,omitempty"`
 	// LastUpdateTime is the time at which this group was last modified
 	// @inject_tag: sentinel:"-"
-	LastUpdateTime *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=last_update_time,json=lastUpdateTime,proto3" json:"last_update_time,omitempty" sentinel:"-"`
+	LastUpdateTime *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=last_update_time,json=lastUpdateTime,proto3" json:"last_update_time,omitempty"`
 	// ModifyIndex tracks the number of updates to the group. It is useful to detect
 	// updates to the groups.
 	// @inject_tag: sentinel:"-"
-	ModifyIndex uint64 `protobuf:"varint,9,opt,name=modify_index,json=modifyIndex,proto3" json:"modify_index,omitempty" sentinel:"-"`
+	ModifyIndex uint64 `protobuf:"varint,9,opt,name=modify_index,json=modifyIndex,proto3" json:"modify_index,omitempty"`
 	// BucketKey is the path of the storage packer key into which this group is
 	// stored.
 	// @inject_tag: sentinel:"-"
-	BucketKey string `protobuf:"bytes,10,opt,name=bucket_key,json=bucketKey,proto3" json:"bucket_key,omitempty" sentinel:"-"`
+	BucketKey string `protobuf:"bytes,10,opt,name=bucket_key,json=bucketKey,proto3" json:"bucket_key,omitempty"`
 	// Alias is used to mark this group as an internal mapping of a group that
 	// is external to the identity store. Alias can only be set if the 'type'
 	// is set to 'external'.
 	// @inject_tag: sentinel:"-"
-	Alias *Alias `protobuf:"bytes,11,opt,name=alias,proto3" json:"alias,omitempty" sentinel:"-"`
+	Alias *Alias `protobuf:"bytes,11,opt,name=alias,proto3" json:"alias,omitempty"`
 	// Type indicates if this group is an internal group or an external group.
 	// Memberships of the internal groups can be managed over the API whereas
 	// the memberships on the external group --for which a corresponding alias
 	// will be set-- will be managed automatically.
 	// @inject_tag: sentinel:"-"
-	Type string `protobuf:"bytes,12,opt,name=type,proto3" json:"type,omitempty" sentinel:"-"`
+	Type string `protobuf:"bytes,12,opt,name=type,proto3" json:"type,omitempty"`
 	// NamespaceID is the identifier of the namespace to which this group
 	// belongs to. Do not return this value over the API when reading the
 	// group.
 	// @inject_tag: sentinel:"-"
-	NamespaceID string `protobuf:"bytes,13,opt,name=namespace_id,json=namespaceID,proto3" json:"namespace_id,omitempty" sentinel:"-"`
+	NamespaceId string `protobuf:"bytes,13,opt,name=namespace_id,json=namespaceId,proto3" json:"namespace_id,omitempty"`
 }
 
 func (x *Group) Reset() {
@@ -116,9 +116,9 @@ func (*Group) Descriptor() ([]byte, []int) {
 	return file_helper_identity_types_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *Group) GetID() string {
+func (x *Group) GetId() string {
 	if x != nil {
-		return x.ID
+		return x.Id
 	}
 	return ""
 }
@@ -137,16 +137,16 @@ func (x *Group) GetPolicies() []string {
 	return nil
 }
 
-func (x *Group) GetParentGroupIDs() []string {
+func (x *Group) GetParentGroupIds() []string {
 	if x != nil {
-		return x.ParentGroupIDs
+		return x.ParentGroupIds
 	}
 	return nil
 }
 
-func (x *Group) GetMemberEntityIDs() []string {
+func (x *Group) GetMemberEntityIds() []string {
 	if x != nil {
-		return x.MemberEntityIDs
+		return x.MemberEntityIds
 	}
 	return nil
 }
@@ -200,9 +200,9 @@ func (x *Group) GetType() string {
 	return ""
 }
 
-func (x *Group) GetNamespaceID() string {
+func (x *Group) GetNamespaceId() string {
 	if x != nil {
-		return x.NamespaceID
+		return x.NamespaceId
 	}
 	return ""
 }
@@ -267,17 +267,17 @@ type Entity struct {
 	// empty as well to favor being able to create the entity first and then
 	// incrementally adding aliases.
 	// @inject_tag: sentinel:"-"
-	Aliases []*Alias `protobuf:"bytes,1,rep,name=aliases,proto3" json:"aliases,omitempty" sentinel:"-"`
+	Aliases []*Alias `protobuf:"bytes,1,rep,name=aliases,proto3" json:"aliases,omitempty"`
 	// ID is the unique identifier of the entity which always be a UUID. This
 	// should never be allowed to be updated.
 	// @inject_tag: sentinel:"-"
-	ID string `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty" sentinel:"-"`
+	Id string `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
 	// Name is a unique identifier of the entity which is intended to be
 	// human-friendly. The default name might not be human friendly since it
 	// gets suffixed by a UUID, but it can optionally be updated, unlike the ID
 	// field.
 	// @inject_tag: sentinel:"-"
-	Name string `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty" sentinel:"-"`
+	Name string `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
 	// Metadata represents the explicit metadata which is set by the
 	// clients.  This is useful to tie any information pertaining to the
 	// aliases. This is a non-unique field of entity, meaning multiple
@@ -285,42 +285,42 @@ type Entity struct {
 	// on this explicit metadata. This enables virtual groupings of entities
 	// based on its metadata.
 	// @inject_tag: sentinel:"-"
-	Metadata map[string]string `protobuf:"bytes,4,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3" sentinel:"-"`
+	Metadata map[string]string `protobuf:"bytes,4,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	// CreationTime is the time at which this entity is first created.
 	// @inject_tag: sentinel:"-"
-	CreationTime *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=creation_time,json=creationTime,proto3" json:"creation_time,omitempty" sentinel:"-"`
+	CreationTime *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=creation_time,json=creationTime,proto3" json:"creation_time,omitempty"`
 	// LastUpdateTime is the most recent time at which the properties of this
 	// entity got modified. This is helpful in filtering out entities based on
 	// its age and to take action on them, if desired.
 	// @inject_tag: sentinel:"-"
-	LastUpdateTime *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=last_update_time,json=lastUpdateTime,proto3" json:"last_update_time,omitempty" sentinel:"-"`
+	LastUpdateTime *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=last_update_time,json=lastUpdateTime,proto3" json:"last_update_time,omitempty"`
 	// MergedEntityIDs are the entities which got merged to this one. Entities
 	// will be indexed based on all the entities that got merged into it. This
 	// helps to apply the actions on this entity on the tokens that are merged
 	// to the merged entities. Merged entities will be deleted entirely and
 	// this is the only trackable trail of its earlier presence.
 	// @inject_tag: sentinel:"-"
-	MergedEntityIDs []string `protobuf:"bytes,7,rep,name=merged_entity_ids,json=mergedEntityIDs,proto3" json:"merged_entity_ids,omitempty" sentinel:"-"`
+	MergedEntityIds []string `protobuf:"bytes,7,rep,name=merged_entity_ids,json=mergedEntityIds,proto3" json:"merged_entity_ids,omitempty"`
 	// Policies the entity is entitled to
 	// @inject_tag: sentinel:"-"
-	Policies []string `protobuf:"bytes,8,rep,name=policies,proto3" json:"policies,omitempty" sentinel:"-"`
+	Policies []string `protobuf:"bytes,8,rep,name=policies,proto3" json:"policies,omitempty"`
 	// BucketKey is the path of the storage packer key into which this entity is
 	// stored.
 	// @inject_tag: sentinel:"-"
-	BucketKey string `protobuf:"bytes,9,opt,name=bucket_key,json=bucketKey,proto3" json:"bucket_key,omitempty" sentinel:"-"`
+	BucketKey string `protobuf:"bytes,9,opt,name=bucket_key,json=bucketKey,proto3" json:"bucket_key,omitempty"`
 	// MFASecrets holds the MFA secrets indexed by the identifier of the MFA
 	// method configuration.
 	// @inject_tag: sentinel:"-"
-	MFASecrets map[string]*mfa.Secret `protobuf:"bytes,10,rep,name=mfa_secrets,json=mfaSecrets,proto3" json:"mfa_secrets,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3" sentinel:"-"`
+	MfaSecrets map[string]*mfa.Secret `protobuf:"bytes,10,rep,name=mfa_secrets,json=mfaSecrets,proto3" json:"mfa_secrets,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	// Disabled indicates whether tokens associated with the account should not
 	// be able to be used
 	// @inject_tag: sentinel:"-"
-	Disabled bool `protobuf:"varint,11,opt,name=disabled,proto3" json:"disabled,omitempty" sentinel:"-"`
+	Disabled bool `protobuf:"varint,11,opt,name=disabled,proto3" json:"disabled,omitempty"`
 	// NamespaceID is the identifier of the namespace to which this entity
 	// belongs to. Do not return this value over the API when reading the
 	// entity.
 	// @inject_tag: sentinel:"-"
-	NamespaceID string `protobuf:"bytes,12,opt,name=namespace_id,json=namespaceID,proto3" json:"namespace_id,omitempty" sentinel:"-"`
+	NamespaceId string `protobuf:"bytes,12,opt,name=namespace_id,json=namespaceId,proto3" json:"namespace_id,omitempty"`
 }
 
 func (x *Entity) Reset() {
@@ -362,9 +362,9 @@ func (x *Entity) GetAliases() []*Alias {
 	return nil
 }
 
-func (x *Entity) GetID() string {
+func (x *Entity) GetId() string {
 	if x != nil {
-		return x.ID
+		return x.Id
 	}
 	return ""
 }
@@ -397,9 +397,9 @@ func (x *Entity) GetLastUpdateTime() *timestamppb.Timestamp {
 	return nil
 }
 
-func (x *Entity) GetMergedEntityIDs() []string {
+func (x *Entity) GetMergedEntityIds() []string {
 	if x != nil {
-		return x.MergedEntityIDs
+		return x.MergedEntityIds
 	}
 	return nil
 }
@@ -418,9 +418,9 @@ func (x *Entity) GetBucketKey() string {
 	return ""
 }
 
-func (x *Entity) GetMFASecrets() map[string]*mfa.Secret {
+func (x *Entity) GetMfaSecrets() map[string]*mfa.Secret {
 	if x != nil {
-		return x.MFASecrets
+		return x.MfaSecrets
 	}
 	return nil
 }
@@ -432,9 +432,9 @@ func (x *Entity) GetDisabled() bool {
 	return false
 }
 
-func (x *Entity) GetNamespaceID() string {
+func (x *Entity) GetNamespaceId() string {
 	if x != nil {
-		return x.NamespaceID
+		return x.NamespaceId
 	}
 	return ""
 }
@@ -449,63 +449,63 @@ type Alias struct {
 
 	// ID is the unique identifier that represents this alias
 	// @inject_tag: sentinel:"-"
-	ID string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty" sentinel:"-"`
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// CanonicalID is the entity identifier to which this alias belongs to
 	// @inject_tag: sentinel:"-"
-	CanonicalID string `protobuf:"bytes,2,opt,name=canonical_id,json=canonicalId,proto3" json:"canonical_id,omitempty" sentinel:"-"`
+	CanonicalId string `protobuf:"bytes,2,opt,name=canonical_id,json=canonicalId,proto3" json:"canonical_id,omitempty"`
 	// MountType is the backend mount's type to which this alias belongs to.
 	// This enables categorically querying aliases of specific backend types.
 	// @inject_tag: sentinel:"-"
-	MountType string `protobuf:"bytes,3,opt,name=mount_type,json=mountType,proto3" json:"mount_type,omitempty" sentinel:"-"`
+	MountType string `protobuf:"bytes,3,opt,name=mount_type,json=mountType,proto3" json:"mount_type,omitempty"`
 	// MountAccessor is the backend mount's accessor to which this alias
 	// belongs to.
 	// @inject_tag: sentinel:"-"
-	MountAccessor string `protobuf:"bytes,4,opt,name=mount_accessor,json=mountAccessor,proto3" json:"mount_accessor,omitempty" sentinel:"-"`
+	MountAccessor string `protobuf:"bytes,4,opt,name=mount_accessor,json=mountAccessor,proto3" json:"mount_accessor,omitempty"`
 	// MountPath is the backend mount's path to which the Maccessor belongs to. This
 	// field is not used for any operational purposes. This is only returned when
 	// alias is read, only as a nicety.
 	// @inject_tag: sentinel:"-"
-	MountPath string `protobuf:"bytes,5,opt,name=mount_path,json=mountPath,proto3" json:"mount_path,omitempty" sentinel:"-"`
+	MountPath string `protobuf:"bytes,5,opt,name=mount_path,json=mountPath,proto3" json:"mount_path,omitempty"`
 	// Metadata is the explicit metadata that clients set against an entity
 	// which enables virtual grouping of aliases. Aliases will be indexed
 	// against their metadata.
 	// @inject_tag: sentinel:"-"
-	Metadata map[string]string `protobuf:"bytes,6,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3" sentinel:"-"`
+	Metadata map[string]string `protobuf:"bytes,6,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	// Name is the identifier of this alias in its authentication source.
 	// This does not uniquely identify an alias in Vault. This in conjunction
 	// with MountAccessor form to be the factors that represent an alias in a
 	// unique way. Aliases will be indexed based on this combined uniqueness
 	// factor.
 	// @inject_tag: sentinel:"-"
-	Name string `protobuf:"bytes,7,opt,name=name,proto3" json:"name,omitempty" sentinel:"-"`
+	Name string `protobuf:"bytes,7,opt,name=name,proto3" json:"name,omitempty"`
 	// CreationTime is the time at which this alias was first created
 	// @inject_tag: sentinel:"-"
-	CreationTime *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=creation_time,json=creationTime,proto3" json:"creation_time,omitempty" sentinel:"-"`
+	CreationTime *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=creation_time,json=creationTime,proto3" json:"creation_time,omitempty"`
 	// LastUpdateTime is the most recent time at which the properties of this
 	// alias got modified. This is helpful in filtering out aliases based
 	// on its age and to take action on them, if desired.
 	// @inject_tag: sentinel:"-"
-	LastUpdateTime *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=last_update_time,json=lastUpdateTime,proto3" json:"last_update_time,omitempty" sentinel:"-"`
+	LastUpdateTime *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=last_update_time,json=lastUpdateTime,proto3" json:"last_update_time,omitempty"`
 	// MergedFromCanonicalIDs is the FIFO history of merging activity
 	// @inject_tag: sentinel:"-"
-	MergedFromCanonicalIDs []string `protobuf:"bytes,10,rep,name=merged_from_canonical_ids,json=mergedFromCanonicalIds,proto3" json:"merged_from_canonical_ids,omitempty" sentinel:"-"`
+	MergedFromCanonicalIds []string `protobuf:"bytes,10,rep,name=merged_from_canonical_ids,json=mergedFromCanonicalIds,proto3" json:"merged_from_canonical_ids,omitempty"`
 	// NamespaceID is the identifier of the namespace to which this alias
 	// belongs.
 	// @inject_tag: sentinel:"-"
-	NamespaceID string `protobuf:"bytes,11,opt,name=namespace_id,json=namespaceID,proto3" json:"namespace_id,omitempty" sentinel:"-"`
+	NamespaceId string `protobuf:"bytes,11,opt,name=namespace_id,json=namespaceId,proto3" json:"namespace_id,omitempty"`
 	// Custom Metadata represents the custom data tied to this alias
 	// @inject_tag: sentinel:"-"
-	CustomMetadata map[string]string `protobuf:"bytes,12,rep,name=custom_metadata,json=customMetadata,proto3" json:"custom_metadata,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3" sentinel:"-"`
+	CustomMetadata map[string]string `protobuf:"bytes,12,rep,name=custom_metadata,json=customMetadata,proto3" json:"custom_metadata,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	// Local indicates if the alias only belongs to the cluster where it was
 	// created. If true, the alias will be stored in a location that is ignored by
 	// the performance replication subsystem.
 	// @inject_tag: sentinel:"-"
-	Local bool `protobuf:"varint,13,opt,name=local,proto3" json:"local,omitempty" sentinel:"-"`
+	Local bool `protobuf:"varint,13,opt,name=local,proto3" json:"local,omitempty"`
 	// LocalBucketKey is the identifying element of the location where this alias
 	// is stored in the storage packer. This helps in querying local aliases
 	// during invalidation of local aliases in performance standbys.
 	// @inject_tag: sentinel:"-"
-	LocalBucketKey string `protobuf:"bytes,14,opt,name=local_bucket_key,json=localBucketKey,proto3" json:"local_bucket_key,omitempty" sentinel:"-"`
+	LocalBucketKey string `protobuf:"bytes,14,opt,name=local_bucket_key,json=localBucketKey,proto3" json:"local_bucket_key,omitempty"`
 }
 
 func (x *Alias) Reset() {
@@ -540,16 +540,16 @@ func (*Alias) Descriptor() ([]byte, []int) {
 	return file_helper_identity_types_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *Alias) GetID() string {
+func (x *Alias) GetId() string {
 	if x != nil {
-		return x.ID
+		return x.Id
 	}
 	return ""
 }
 
-func (x *Alias) GetCanonicalID() string {
+func (x *Alias) GetCanonicalId() string {
 	if x != nil {
-		return x.CanonicalID
+		return x.CanonicalId
 	}
 	return ""
 }
@@ -603,16 +603,16 @@ func (x *Alias) GetLastUpdateTime() *timestamppb.Timestamp {
 	return nil
 }
 
-func (x *Alias) GetMergedFromCanonicalIDs() []string {
+func (x *Alias) GetMergedFromCanonicalIds() []string {
 	if x != nil {
-		return x.MergedFromCanonicalIDs
+		return x.MergedFromCanonicalIds
 	}
 	return nil
 }
 
-func (x *Alias) GetNamespaceID() string {
+func (x *Alias) GetNamespaceId() string {
 	if x != nil {
-		return x.NamespaceID
+		return x.NamespaceId
 	}
 	return ""
 }
@@ -645,15 +645,15 @@ type EntityStorageEntry struct {
 	unknownFields protoimpl.UnknownFields
 
 	Personas        []*PersonaIndexEntry   `protobuf:"bytes,1,rep,name=personas,proto3" json:"personas,omitempty"`
-	ID              string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
+	Id              string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
 	Name            string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
 	Metadata        map[string]string      `protobuf:"bytes,4,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	CreationTime    *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=creation_time,json=creationTime,proto3" json:"creation_time,omitempty"`
 	LastUpdateTime  *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=last_update_time,json=lastUpdateTime,proto3" json:"last_update_time,omitempty"`
-	MergedEntityIDs []string               `protobuf:"bytes,7,rep,name=merged_entity_ids,json=mergedEntityIDs,proto3" json:"merged_entity_ids,omitempty"`
+	MergedEntityIds []string               `protobuf:"bytes,7,rep,name=merged_entity_ids,json=mergedEntityIds,proto3" json:"merged_entity_ids,omitempty"`
 	Policies        []string               `protobuf:"bytes,8,rep,name=policies,proto3" json:"policies,omitempty"`
 	BucketKeyHash   string                 `protobuf:"bytes,9,opt,name=bucket_key_hash,json=bucketKeyHash,proto3" json:"bucket_key_hash,omitempty"`
-	MFASecrets      map[string]*mfa.Secret `protobuf:"bytes,10,rep,name=mfa_secrets,json=mfaSecrets,proto3" json:"mfa_secrets,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	MfaSecrets      map[string]*mfa.Secret `protobuf:"bytes,10,rep,name=mfa_secrets,json=mfaSecrets,proto3" json:"mfa_secrets,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 }
 
 func (x *EntityStorageEntry) Reset() {
@@ -695,9 +695,9 @@ func (x *EntityStorageEntry) GetPersonas() []*PersonaIndexEntry {
 	return nil
 }
 
-func (x *EntityStorageEntry) GetID() string {
+func (x *EntityStorageEntry) GetId() string {
 	if x != nil {
-		return x.ID
+		return x.Id
 	}
 	return ""
 }
@@ -730,9 +730,9 @@ func (x *EntityStorageEntry) GetLastUpdateTime() *timestamppb.Timestamp {
 	return nil
 }
 
-func (x *EntityStorageEntry) GetMergedEntityIDs() []string {
+func (x *EntityStorageEntry) GetMergedEntityIds() []string {
 	if x != nil {
-		return x.MergedEntityIDs
+		return x.MergedEntityIds
 	}
 	return nil
 }
@@ -751,9 +751,9 @@ func (x *EntityStorageEntry) GetBucketKeyHash() string {
 	return ""
 }
 
-func (x *EntityStorageEntry) GetMFASecrets() map[string]*mfa.Secret {
+func (x *EntityStorageEntry) GetMfaSecrets() map[string]*mfa.Secret {
 	if x != nil {
-		return x.MFASecrets
+		return x.MfaSecrets
 	}
 	return nil
 }
@@ -764,8 +764,8 @@ type PersonaIndexEntry struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	ID                  string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	EntityID            string                 `protobuf:"bytes,2,opt,name=entity_id,json=entityId,proto3" json:"entity_id,omitempty"`
+	Id                  string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	EntityId            string                 `protobuf:"bytes,2,opt,name=entity_id,json=entityId,proto3" json:"entity_id,omitempty"`
 	MountType           string                 `protobuf:"bytes,3,opt,name=mount_type,json=mountType,proto3" json:"mount_type,omitempty"`
 	MountAccessor       string                 `protobuf:"bytes,4,opt,name=mount_accessor,json=mountAccessor,proto3" json:"mount_accessor,omitempty"`
 	MountPath           string                 `protobuf:"bytes,5,opt,name=mount_path,json=mountPath,proto3" json:"mount_path,omitempty"`
@@ -773,7 +773,7 @@ type PersonaIndexEntry struct {
 	Name                string                 `protobuf:"bytes,7,opt,name=name,proto3" json:"name,omitempty"`
 	CreationTime        *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=creation_time,json=creationTime,proto3" json:"creation_time,omitempty"`
 	LastUpdateTime      *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=last_update_time,json=lastUpdateTime,proto3" json:"last_update_time,omitempty"`
-	MergedFromEntityIDs []string               `protobuf:"bytes,10,rep,name=merged_from_entity_ids,json=mergedFromEntityIDs,proto3" json:"merged_from_entity_ids,omitempty"`
+	MergedFromEntityIds []string               `protobuf:"bytes,10,rep,name=merged_from_entity_ids,json=mergedFromEntityIds,proto3" json:"merged_from_entity_ids,omitempty"`
 }
 
 func (x *PersonaIndexEntry) Reset() {
@@ -808,16 +808,16 @@ func (*PersonaIndexEntry) Descriptor() ([]byte, []int) {
 	return file_helper_identity_types_proto_rawDescGZIP(), []int{5}
 }
 
-func (x *PersonaIndexEntry) GetID() string {
+func (x *PersonaIndexEntry) GetId() string {
 	if x != nil {
-		return x.ID
+		return x.Id
 	}
 	return ""
 }
 
-func (x *PersonaIndexEntry) GetEntityID() string {
+func (x *PersonaIndexEntry) GetEntityId() string {
 	if x != nil {
-		return x.EntityID
+		return x.EntityId
 	}
 	return ""
 }
@@ -871,9 +871,9 @@ func (x *PersonaIndexEntry) GetLastUpdateTime() *timestamppb.Timestamp {
 	return nil
 }
 
-func (x *PersonaIndexEntry) GetMergedFromEntityIDs() []string {
+func (x *PersonaIndexEntry) GetMergedFromEntityIds() []string {
 	if x != nil {
-		return x.MergedFromEntityIDs
+		return x.MergedFromEntityIds
 	}
 	return nil
 }
@@ -1115,16 +1115,16 @@ var file_helper_identity_types_proto_goTypes = []interface{}{
 	(*PersonaIndexEntry)(nil),     // 5: identity.PersonaIndexEntry
 	nil,                           // 6: identity.Group.MetadataEntry
 	nil,                           // 7: identity.Entity.MetadataEntry
-	nil,                           // 8: identity.Entity.MFASecretsEntry
+	nil,                           // 8: identity.Entity.MfaSecretsEntry
 	nil,                           // 9: identity.Alias.MetadataEntry
 	nil,                           // 10: identity.Alias.CustomMetadataEntry
 	nil,                           // 11: identity.EntityStorageEntry.MetadataEntry
-	nil,                           // 12: identity.EntityStorageEntry.MFASecretsEntry
+	nil,                           // 12: identity.EntityStorageEntry.MfaSecretsEntry
 	nil,                           // 13: identity.PersonaIndexEntry.MetadataEntry
 	(*timestamppb.Timestamp)(nil), // 14: google.protobuf.Timestamp
 	(*mfa.Secret)(nil),            // 15: mfa.Secret
 }
-var file_helper_identity_types_proto_depIDxs = []int32{
+var file_helper_identity_types_proto_depIdxs = []int32{
 	6,  // 0: identity.Group.metadata:type_name -> identity.Group.MetadataEntry
 	14, // 1: identity.Group.creation_time:type_name -> google.protobuf.Timestamp
 	14, // 2: identity.Group.last_update_time:type_name -> google.protobuf.Timestamp
@@ -1134,7 +1134,7 @@ var file_helper_identity_types_proto_depIDxs = []int32{
 	7,  // 6: identity.Entity.metadata:type_name -> identity.Entity.MetadataEntry
 	14, // 7: identity.Entity.creation_time:type_name -> google.protobuf.Timestamp
 	14, // 8: identity.Entity.last_update_time:type_name -> google.protobuf.Timestamp
-	8,  // 9: identity.Entity.mfa_secrets:type_name -> identity.Entity.MFASecretsEntry
+	8,  // 9: identity.Entity.mfa_secrets:type_name -> identity.Entity.MfaSecretsEntry
 	9,  // 10: identity.Alias.metadata:type_name -> identity.Alias.MetadataEntry
 	14, // 11: identity.Alias.creation_time:type_name -> google.protobuf.Timestamp
 	14, // 12: identity.Alias.last_update_time:type_name -> google.protobuf.Timestamp
@@ -1143,12 +1143,12 @@ var file_helper_identity_types_proto_depIDxs = []int32{
 	11, // 15: identity.EntityStorageEntry.metadata:type_name -> identity.EntityStorageEntry.MetadataEntry
 	14, // 16: identity.EntityStorageEntry.creation_time:type_name -> google.protobuf.Timestamp
 	14, // 17: identity.EntityStorageEntry.last_update_time:type_name -> google.protobuf.Timestamp
-	12, // 18: identity.EntityStorageEntry.mfa_secrets:type_name -> identity.EntityStorageEntry.MFASecretsEntry
+	12, // 18: identity.EntityStorageEntry.mfa_secrets:type_name -> identity.EntityStorageEntry.MfaSecretsEntry
 	13, // 19: identity.PersonaIndexEntry.metadata:type_name -> identity.PersonaIndexEntry.MetadataEntry
 	14, // 20: identity.PersonaIndexEntry.creation_time:type_name -> google.protobuf.Timestamp
 	14, // 21: identity.PersonaIndexEntry.last_update_time:type_name -> google.protobuf.Timestamp
-	15, // 22: identity.Entity.MFASecretsEntry.value:type_name -> mfa.Secret
-	15, // 23: identity.EntityStorageEntry.MFASecretsEntry.value:type_name -> mfa.Secret
+	15, // 22: identity.Entity.MfaSecretsEntry.value:type_name -> mfa.Secret
+	15, // 23: identity.EntityStorageEntry.MfaSecretsEntry.value:type_name -> mfa.Secret
 	24, // [24:24] is the sub-list for method output_type
 	24, // [24:24] is the sub-list for method input_type
 	24, // [24:24] is the sub-list for extension type_name
@@ -1246,11 +1246,11 @@ func file_helper_identity_types_proto_init() {
 			NumServices:   0,
 		},
 		GoTypes:           file_helper_identity_types_proto_goTypes,
-		DependencyIndexes: file_helper_identity_types_proto_depIDxs,
+		DependencyIndexes: file_helper_identity_types_proto_depIdxs,
 		MessageInfos:      file_helper_identity_types_proto_msgTypes,
 	}.Build()
 	File_helper_identity_types_proto = out.File
 	file_helper_identity_types_proto_rawDesc = nil
 	file_helper_identity_types_proto_goTypes = nil
-	file_helper_identity_types_proto_depIDxs = nil
+	file_helper_identity_types_proto_depIdxs = nil
 }

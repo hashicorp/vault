@@ -35,7 +35,7 @@ type Item struct {
 	// this ID will be an internal ID. In other words, outside of the use-case
 	// described above, the caller *must not* rely on this value to be
 	// consistent with what they passed in.
-	ID string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// message is the contents of the item
 	Message *anypb.Any `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
 }
@@ -72,9 +72,9 @@ func (*Item) Descriptor() ([]byte, []int) {
 	return file_helper_storagepacker_types_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *Item) GetID() string {
+func (x *Item) GetId() string {
 	if x != nil {
-		return x.ID
+		return x.Id
 	}
 	return ""
 }
@@ -209,7 +209,7 @@ var file_helper_storagepacker_types_proto_goTypes = []interface{}{
 	nil,               // 2: storagepacker.Bucket.ItemMapEntry
 	(*anypb.Any)(nil), // 3: google.protobuf.Any
 }
-var file_helper_storagepacker_types_proto_depIDxs = []int32{
+var file_helper_storagepacker_types_proto_depIdxs = []int32{
 	3, // 0: storagepacker.Item.message:type_name -> google.protobuf.Any
 	0, // 1: storagepacker.Bucket.items:type_name -> storagepacker.Item
 	2, // 2: storagepacker.Bucket.item_map:type_name -> storagepacker.Bucket.ItemMapEntry
@@ -263,11 +263,11 @@ func file_helper_storagepacker_types_proto_init() {
 			NumServices:   0,
 		},
 		GoTypes:           file_helper_storagepacker_types_proto_goTypes,
-		DependencyIndexes: file_helper_storagepacker_types_proto_depIDxs,
+		DependencyIndexes: file_helper_storagepacker_types_proto_depIdxs,
 		MessageInfos:      file_helper_storagepacker_types_proto_msgTypes,
 	}.Build()
 	File_helper_storagepacker_types_proto = out.File
 	file_helper_storagepacker_types_proto_rawDesc = nil
 	file_helper_storagepacker_types_proto_goTypes = nil
-	file_helper_storagepacker_types_proto_depIDxs = nil
+	file_helper_storagepacker_types_proto_depIdxs = nil
 }

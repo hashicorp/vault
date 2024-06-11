@@ -31,8 +31,8 @@ type EntityRecord struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	ClientID    string `protobuf:"bytes,1,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`
-	NamespaceID string `protobuf:"bytes,2,opt,name=namespace_id,json=namespaceID,proto3" json:"namespace_id,omitempty"`
+	ClientId    string `protobuf:"bytes,1,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`
+	NamespaceId string `protobuf:"bytes,2,opt,name=namespace_id,json=namespaceId,proto3" json:"namespace_id,omitempty"`
 	// using the Timestamp type would cost us an extra
 	// 4 bytes per record to store nanoseconds.
 	Timestamp int64 `protobuf:"varint,3,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
@@ -79,16 +79,16 @@ func (*EntityRecord) Descriptor() ([]byte, []int) {
 	return file_vault_activity_activity_log_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *EntityRecord) GetClientID() string {
+func (x *EntityRecord) GetClientId() string {
 	if x != nil {
-		return x.ClientID
+		return x.ClientId
 	}
 	return ""
 }
 
-func (x *EntityRecord) GetNamespaceID() string {
+func (x *EntityRecord) GetNamespaceId() string {
 	if x != nil {
-		return x.NamespaceID
+		return x.NamespaceId
 	}
 	return ""
 }
@@ -243,7 +243,7 @@ type TokenCount struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	CountByNamespaceID map[string]uint64 `protobuf:"bytes,1,rep,name=count_by_namespace_id,json=countByNamespaceId,proto3" json:"count_by_namespace_id,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3"`
+	CountByNamespaceId map[string]uint64 `protobuf:"bytes,1,rep,name=count_by_namespace_id,json=countByNamespaceId,proto3" json:"count_by_namespace_id,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3"`
 }
 
 func (x *TokenCount) Reset() {
@@ -278,9 +278,9 @@ func (*TokenCount) Descriptor() ([]byte, []int) {
 	return file_vault_activity_activity_log_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *TokenCount) GetCountByNamespaceID() map[string]uint64 {
+func (x *TokenCount) GetCountByNamespaceId() map[string]uint64 {
 	if x != nil {
-		return x.CountByNamespaceID
+		return x.CountByNamespaceId
 	}
 	return nil
 }
@@ -402,13 +402,13 @@ var file_vault_activity_activity_log_proto_goTypes = []interface{}{
 	(*TokenCount)(nil),          // 3: activity.TokenCount
 	(*LogFragmentResponse)(nil), // 4: activity.LogFragmentResponse
 	nil,                         // 5: activity.LogFragment.NonEntityTokensEntry
-	nil,                         // 6: activity.TokenCount.CountByNamespaceIDEntry
+	nil,                         // 6: activity.TokenCount.CountByNamespaceIdEntry
 }
-var file_vault_activity_activity_log_proto_depIDxs = []int32{
+var file_vault_activity_activity_log_proto_depIdxs = []int32{
 	0, // 0: activity.LogFragment.clients:type_name -> activity.EntityRecord
 	5, // 1: activity.LogFragment.non_entity_tokens:type_name -> activity.LogFragment.NonEntityTokensEntry
 	0, // 2: activity.EntityActivityLog.clients:type_name -> activity.EntityRecord
-	6, // 3: activity.TokenCount.count_by_namespace_id:type_name -> activity.TokenCount.CountByNamespaceIDEntry
+	6, // 3: activity.TokenCount.count_by_namespace_id:type_name -> activity.TokenCount.CountByNamespaceIdEntry
 	4, // [4:4] is the sub-list for method output_type
 	4, // [4:4] is the sub-list for method input_type
 	4, // [4:4] is the sub-list for extension type_name
@@ -494,11 +494,11 @@ func file_vault_activity_activity_log_proto_init() {
 			NumServices:   0,
 		},
 		GoTypes:           file_vault_activity_activity_log_proto_goTypes,
-		DependencyIndexes: file_vault_activity_activity_log_proto_depIDxs,
+		DependencyIndexes: file_vault_activity_activity_log_proto_depIdxs,
 		MessageInfos:      file_vault_activity_activity_log_proto_msgTypes,
 	}.Build()
 	File_vault_activity_activity_log_proto = out.File
 	file_vault_activity_activity_log_proto_rawDesc = nil
 	file_vault_activity_activity_log_proto_goTypes = nil
-	file_vault_activity_activity_log_proto_depIDxs = nil
+	file_vault_activity_activity_log_proto_depIdxs = nil
 }

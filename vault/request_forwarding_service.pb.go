@@ -39,7 +39,7 @@ type EchoRequest struct {
 	// primary from a dr secondary
 	ClusterAddrs        []string               `protobuf:"bytes,3,rep,name=cluster_addrs,json=clusterAddrs,proto3" json:"cluster_addrs,omitempty"`
 	RaftAppliedIndex    uint64                 `protobuf:"varint,4,opt,name=raft_applied_index,json=raftAppliedIndex,proto3" json:"raft_applied_index,omitempty"`
-	RaftNodeID          string                 `protobuf:"bytes,5,opt,name=raft_node_id,json=raftNodeId,proto3" json:"raft_node_id,omitempty"`
+	RaftNodeId          string                 `protobuf:"bytes,5,opt,name=raft_node_id,json=raftNodeId,proto3" json:"raft_node_id,omitempty"`
 	NodeInfo            *NodeInformation       `protobuf:"bytes,6,opt,name=node_info,json=nodeInfo,proto3" json:"node_info,omitempty"`
 	RaftTerm            uint64                 `protobuf:"varint,7,opt,name=raft_term,json=raftTerm,proto3" json:"raft_term,omitempty"`
 	RaftDesiredSuffrage string                 `protobuf:"bytes,8,opt,name=raft_desired_suffrage,json=raftDesiredSuffrage,proto3" json:"raft_desired_suffrage,omitempty"`
@@ -114,9 +114,9 @@ func (x *EchoRequest) GetRaftAppliedIndex() uint64 {
 	return 0
 }
 
-func (x *EchoRequest) GetRaftNodeID() string {
+func (x *EchoRequest) GetRaftNodeId() string {
 	if x != nil {
-		return x.RaftNodeID
+		return x.RaftNodeId
 	}
 	return ""
 }
@@ -200,7 +200,7 @@ type EchoReply struct {
 	ClusterAddrs     []string         `protobuf:"bytes,2,rep,name=cluster_addrs,json=clusterAddrs,proto3" json:"cluster_addrs,omitempty"`
 	ReplicationState uint32           `protobuf:"varint,3,opt,name=replication_state,json=replicationState,proto3" json:"replication_state,omitempty"`
 	RaftAppliedIndex uint64           `protobuf:"varint,4,opt,name=raft_applied_index,json=raftAppliedIndex,proto3" json:"raft_applied_index,omitempty"`
-	RaftNodeID       string           `protobuf:"bytes,5,opt,name=raft_node_id,json=raftNodeId,proto3" json:"raft_node_id,omitempty"`
+	RaftNodeId       string           `protobuf:"bytes,5,opt,name=raft_node_id,json=raftNodeId,proto3" json:"raft_node_id,omitempty"`
 	NodeInfo         *NodeInformation `protobuf:"bytes,6,opt,name=node_info,json=nodeInfo,proto3" json:"node_info,omitempty"`
 	// now is the time on the server
 	Now *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=now,proto3" json:"now,omitempty"`
@@ -266,9 +266,9 @@ func (x *EchoReply) GetRaftAppliedIndex() uint64 {
 	return 0
 }
 
-func (x *EchoReply) GetRaftNodeID() string {
+func (x *EchoReply) GetRaftNodeId() string {
 	if x != nil {
-		return x.RaftNodeID
+		return x.RaftNodeId
 	}
 	return ""
 }
@@ -295,7 +295,7 @@ type NodeInformation struct {
 	ClusterAddr      string `protobuf:"bytes,1,opt,name=cluster_addr,json=clusterAddr,proto3" json:"cluster_addr,omitempty"`
 	ApiAddr          string `protobuf:"bytes,2,opt,name=api_addr,json=apiAddr,proto3" json:"api_addr,omitempty"`
 	Mode             string `protobuf:"bytes,3,opt,name=mode,proto3" json:"mode,omitempty"`
-	NodeID           string `protobuf:"bytes,4,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
+	NodeId           string `protobuf:"bytes,4,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
 	ReplicationState uint32 `protobuf:"varint,5,opt,name=replication_state,json=replicationState,proto3" json:"replication_state,omitempty"`
 	Hostname         string `protobuf:"bytes,6,opt,name=hostname,proto3" json:"hostname,omitempty"`
 }
@@ -353,9 +353,9 @@ func (x *NodeInformation) GetMode() string {
 	return ""
 }
 
-func (x *NodeInformation) GetNodeID() string {
+func (x *NodeInformation) GetNodeId() string {
 	if x != nil {
-		return x.NodeID
+		return x.NodeId
 	}
 	return ""
 }
@@ -488,8 +488,8 @@ type PerfStandbyElectionResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	ID                 string     `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	ClusterID          string     `protobuf:"bytes,2,opt,name=cluster_id,json=clusterId,proto3" json:"cluster_id,omitempty"`
+	Id                 string     `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ClusterId          string     `protobuf:"bytes,2,opt,name=cluster_id,json=clusterId,proto3" json:"cluster_id,omitempty"`
 	PrimaryClusterAddr string     `protobuf:"bytes,3,opt,name=primary_cluster_addr,json=primaryClusterAddr,proto3" json:"primary_cluster_addr,omitempty"`
 	CaCert             []byte     `protobuf:"bytes,4,opt,name=ca_cert,json=caCert,proto3" json:"ca_cert,omitempty"`
 	ClientCert         []byte     `protobuf:"bytes,5,opt,name=client_cert,json=clientCert,proto3" json:"client_cert,omitempty"`
@@ -528,16 +528,16 @@ func (*PerfStandbyElectionResponse) Descriptor() ([]byte, []int) {
 	return file_vault_request_forwarding_service_proto_rawDescGZIP(), []int{5}
 }
 
-func (x *PerfStandbyElectionResponse) GetID() string {
+func (x *PerfStandbyElectionResponse) GetId() string {
 	if x != nil {
-		return x.ID
+		return x.Id
 	}
 	return ""
 }
 
-func (x *PerfStandbyElectionResponse) GetClusterID() string {
+func (x *PerfStandbyElectionResponse) GetClusterId() string {
 	if x != nil {
-		return x.ClusterID
+		return x.ClusterId
 	}
 	return ""
 }
@@ -724,7 +724,7 @@ var file_vault_request_forwarding_service_proto_goTypes = []interface{}{
 	(*forwarding.Request)(nil),          // 8: forwarding.Request
 	(*forwarding.Response)(nil),         // 9: forwarding.Response
 }
-var file_vault_request_forwarding_service_proto_depIDxs = []int32{
+var file_vault_request_forwarding_service_proto_depIdxs = []int32{
 	2, // 0: vault.EchoRequest.node_info:type_name -> vault.NodeInformation
 	6, // 1: vault.EchoRequest.now:type_name -> google.protobuf.Timestamp
 	7, // 2: vault.EchoRequest.last_roundtrip_time:type_name -> google.protobuf.Duration
@@ -834,11 +834,11 @@ func file_vault_request_forwarding_service_proto_init() {
 			NumServices:   1,
 		},
 		GoTypes:           file_vault_request_forwarding_service_proto_goTypes,
-		DependencyIndexes: file_vault_request_forwarding_service_proto_depIDxs,
+		DependencyIndexes: file_vault_request_forwarding_service_proto_depIdxs,
 		MessageInfos:      file_vault_request_forwarding_service_proto_msgTypes,
 	}.Build()
 	File_vault_request_forwarding_service_proto = out.File
 	file_vault_request_forwarding_service_proto_rawDesc = nil
 	file_vault_request_forwarding_service_proto_goTypes = nil
-	file_vault_request_forwarding_service_proto_depIDxs = nil
+	file_vault_request_forwarding_service_proto_depIdxs = nil
 }

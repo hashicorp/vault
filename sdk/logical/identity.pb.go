@@ -40,7 +40,7 @@ type Entity struct {
 	Disabled bool `protobuf:"varint,5,opt,name=disabled,proto3" json:"disabled,omitempty"`
 	// NamespaceID is the identifier of the namespace to which this entity
 	// belongs to.
-	NamespaceID string `protobuf:"bytes,6,opt,name=namespace_id,json=namespaceID,proto3" json:"namespace_id,omitempty"`
+	NamespaceId string `protobuf:"bytes,6,opt,name=namespace_id,json=namespaceId,proto3" json:"namespace_id,omitempty"`
 }
 
 func (x *Entity) Reset() {
@@ -110,9 +110,9 @@ func (x *Entity) GetDisabled() bool {
 	return false
 }
 
-func (x *Entity) GetNamespaceID() string {
+func (x *Entity) GetNamespaceId() string {
 	if x != nil {
-		return x.NamespaceID
+		return x.NamespaceId
 	}
 	return ""
 }
@@ -140,7 +140,7 @@ type Alias struct {
 	ID string `protobuf:"bytes,5,opt,name=ID,proto3" json:"ID,omitempty"`
 	// NamespaceID is the identifier of the namespace to which this alias
 	// belongs.
-	NamespaceID string `protobuf:"bytes,6,opt,name=namespace_id,json=namespaceID,proto3" json:"namespace_id,omitempty"`
+	NamespaceId string `protobuf:"bytes,6,opt,name=namespace_id,json=namespaceId,proto3" json:"namespace_id,omitempty"`
 	// Custom Metadata represents the custom data tied to this alias
 	CustomMetadata map[string]string `protobuf:"bytes,7,rep,name=custom_metadata,json=customMetadata,proto3" json:"custom_metadata,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	// Local indicates if the alias only belongs to the cluster where it was
@@ -216,9 +216,9 @@ func (x *Alias) GetID() string {
 	return ""
 }
 
-func (x *Alias) GetNamespaceID() string {
+func (x *Alias) GetNamespaceId() string {
 	if x != nil {
-		return x.NamespaceID
+		return x.NamespaceId
 	}
 	return ""
 }
@@ -250,7 +250,7 @@ type Group struct {
 	Metadata map[string]string `protobuf:"bytes,3,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	// NamespaceID is the identifier of the namespace to which this group
 	// belongs to.
-	NamespaceID string `protobuf:"bytes,4,opt,name=namespace_id,json=namespaceID,proto3" json:"namespace_id,omitempty"`
+	NamespaceId string `protobuf:"bytes,4,opt,name=namespace_id,json=namespaceId,proto3" json:"namespace_id,omitempty"`
 }
 
 func (x *Group) Reset() {
@@ -306,9 +306,9 @@ func (x *Group) GetMetadata() map[string]string {
 	return nil
 }
 
-func (x *Group) GetNamespaceID() string {
+func (x *Group) GetNamespaceId() string {
 	if x != nil {
-		return x.NamespaceID
+		return x.NamespaceId
 	}
 	return ""
 }
@@ -319,7 +319,7 @@ type MFAMethodID struct {
 	unknownFields protoimpl.UnknownFields
 
 	Type         string `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
-	ID           string `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
+	Id           string `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
 	UsesPasscode bool   `protobuf:"varint,3,opt,name=uses_passcode,json=usesPasscode,proto3" json:"uses_passcode,omitempty"`
 	Name         string `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
 }
@@ -363,9 +363,9 @@ func (x *MFAMethodID) GetType() string {
 	return ""
 }
 
-func (x *MFAMethodID) GetID() string {
+func (x *MFAMethodID) GetId() string {
 	if x != nil {
-		return x.ID
+		return x.Id
 	}
 	return ""
 }
@@ -436,8 +436,8 @@ type MFARequirement struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	MFARequestID   string                       `protobuf:"bytes,1,opt,name=mfa_request_id,json=mfaRequestId,proto3" json:"mfa_request_id,omitempty"`
-	MFAConstraints map[string]*MFAConstraintAny `protobuf:"bytes,2,rep,name=mfa_constraints,json=mfaConstraints,proto3" json:"mfa_constraints,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	MfaRequestId   string                       `protobuf:"bytes,1,opt,name=mfa_request_id,json=mfaRequestId,proto3" json:"mfa_request_id,omitempty"`
+	MfaConstraints map[string]*MFAConstraintAny `protobuf:"bytes,2,rep,name=mfa_constraints,json=mfaConstraints,proto3" json:"mfa_constraints,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 }
 
 func (x *MFARequirement) Reset() {
@@ -472,16 +472,16 @@ func (*MFARequirement) Descriptor() ([]byte, []int) {
 	return file_sdk_logical_identity_proto_rawDescGZIP(), []int{5}
 }
 
-func (x *MFARequirement) GetMFARequestID() string {
+func (x *MFARequirement) GetMfaRequestId() string {
 	if x != nil {
-		return x.MFARequestID
+		return x.MfaRequestId
 	}
 	return ""
 }
 
-func (x *MFARequirement) GetMFAConstraints() map[string]*MFAConstraintAny {
+func (x *MFARequirement) GetMfaConstraints() map[string]*MFAConstraintAny {
 	if x != nil {
-		return x.MFAConstraints
+		return x.MfaConstraints
 	}
 	return nil
 }
@@ -603,17 +603,17 @@ var file_sdk_logical_identity_proto_goTypes = []interface{}{
 	nil,                      // 7: logical.Alias.MetadataEntry
 	nil,                      // 8: logical.Alias.CustomMetadataEntry
 	nil,                      // 9: logical.Group.MetadataEntry
-	nil,                      // 10: logical.MFARequirement.MFAConstraintsEntry
+	nil,                      // 10: logical.MFARequirement.MfaConstraintsEntry
 }
-var file_sdk_logical_identity_proto_depIDxs = []int32{
+var file_sdk_logical_identity_proto_depIdxs = []int32{
 	1,  // 0: logical.Entity.aliases:type_name -> logical.Alias
 	6,  // 1: logical.Entity.metadata:type_name -> logical.Entity.MetadataEntry
 	7,  // 2: logical.Alias.metadata:type_name -> logical.Alias.MetadataEntry
 	8,  // 3: logical.Alias.custom_metadata:type_name -> logical.Alias.CustomMetadataEntry
 	9,  // 4: logical.Group.metadata:type_name -> logical.Group.MetadataEntry
 	3,  // 5: logical.MFAConstraintAny.any:type_name -> logical.MFAMethodID
-	10, // 6: logical.MFARequirement.mfa_constraints:type_name -> logical.MFARequirement.MFAConstraintsEntry
-	4,  // 7: logical.MFARequirement.MFAConstraintsEntry.value:type_name -> logical.MFAConstraintAny
+	10, // 6: logical.MFARequirement.mfa_constraints:type_name -> logical.MFARequirement.MfaConstraintsEntry
+	4,  // 7: logical.MFARequirement.MfaConstraintsEntry.value:type_name -> logical.MFAConstraintAny
 	8,  // [8:8] is the sub-list for method output_type
 	8,  // [8:8] is the sub-list for method input_type
 	8,  // [8:8] is the sub-list for extension type_name
@@ -711,11 +711,11 @@ func file_sdk_logical_identity_proto_init() {
 			NumServices:   0,
 		},
 		GoTypes:           file_sdk_logical_identity_proto_goTypes,
-		DependencyIndexes: file_sdk_logical_identity_proto_depIDxs,
+		DependencyIndexes: file_sdk_logical_identity_proto_depIdxs,
 		MessageInfos:      file_sdk_logical_identity_proto_msgTypes,
 	}.Build()
 	File_sdk_logical_identity_proto = out.File
 	file_sdk_logical_identity_proto_rawDesc = nil
 	file_sdk_logical_identity_proto_goTypes = nil
-	file_sdk_logical_identity_proto_depIDxs = nil
+	file_sdk_logical_identity_proto_depIdxs = nil
 }

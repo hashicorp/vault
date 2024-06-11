@@ -304,8 +304,8 @@ type Request struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// ID is the uuid associated with each request
-	ID string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Id is the uuid associated with each request
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// If set, the name given to the replication secondary where this request
 	// originated
 	ReplicationCluster string `protobuf:"bytes,2,opt,name=ReplicationCluster,proto3" json:"ReplicationCluster,omitempty"`
@@ -358,7 +358,7 @@ type Request struct {
 	ClientTokenRemainingUses int64 `protobuf:"varint,16,opt,name=client_token_remaining_uses,json=clientTokenRemainingUses,proto3" json:"client_token_remaining_uses,omitempty"`
 	// EntityID is the identity of the caller extracted out of the token used
 	// to make this request
-	EntityID string `protobuf:"bytes,17,opt,name=entity_id,json=entityId,proto3" json:"entity_id,omitempty"`
+	EntityId string `protobuf:"bytes,17,opt,name=entity_id,json=entityId,proto3" json:"entity_id,omitempty"`
 	// PolicyOverride indicates that the requestor wishes to override
 	// soft-mandatory Sentinel policies
 	PolicyOverride bool `protobuf:"varint,18,opt,name=policy_override,json=policyOverride,proto3" json:"policy_override,omitempty"`
@@ -404,9 +404,9 @@ func (*Request) Descriptor() ([]byte, []int) {
 	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *Request) GetID() string {
+func (x *Request) GetId() string {
 	if x != nil {
-		return x.ID
+		return x.Id
 	}
 	return ""
 }
@@ -516,9 +516,9 @@ func (x *Request) GetClientTokenRemainingUses() int64 {
 	return 0
 }
 
-func (x *Request) GetEntityID() string {
+func (x *Request) GetEntityId() string {
 	if x != nil {
-		return x.EntityID
+		return x.EntityId
 	}
 	return ""
 }
@@ -586,7 +586,7 @@ type Auth struct {
 	NumUses int64 `protobuf:"varint,9,opt,name=num_uses,json=numUses,proto3" json:"num_uses,omitempty"`
 	// EntityID is the identifier of the entity in identity store to which the
 	// identity of the authenticating client belongs to.
-	EntityID string `protobuf:"bytes,10,opt,name=entity_id,json=entityId,proto3" json:"entity_id,omitempty"`
+	EntityId string `protobuf:"bytes,10,opt,name=entity_id,json=entityId,proto3" json:"entity_id,omitempty"`
 	// Alias is the information about the authenticated client returned by
 	// the auth backend
 	Alias *logical.Alias `protobuf:"bytes,11,opt,name=alias,proto3" json:"alias,omitempty"`
@@ -597,14 +597,14 @@ type Auth struct {
 	GroupAliases []*logical.Alias `protobuf:"bytes,12,rep,name=group_aliases,json=groupAliases,proto3" json:"group_aliases,omitempty"`
 	// If set, restricts usage of the certificates to client IPs falling within
 	// the range of the specified CIDR(s).
-	BoundCIDRs []string `protobuf:"bytes,13,rep,name=bound_cidrs,json=boundCidrs,proto3" json:"bound_cidrs,omitempty"`
+	BoundCidrs []string `protobuf:"bytes,13,rep,name=bound_cidrs,json=boundCidrs,proto3" json:"bound_cidrs,omitempty"`
 	// TokenPolicies and IdentityPolicies break down the list in Policies to
 	// help determine where a policy was sourced
 	TokenPolicies    []string `protobuf:"bytes,14,rep,name=token_policies,json=tokenPolicies,proto3" json:"token_policies,omitempty"`
 	IdentityPolicies []string `protobuf:"bytes,15,rep,name=identity_policies,json=identityPolicies,proto3" json:"identity_policies,omitempty"`
 	// Explicit maximum lifetime for the token. Unlike normal TTLs, the maximum
 	// TTL is a hard limit and cannot be exceeded, also counts for periodic tokens.
-	ExplicitMaxTTL int64 `protobuf:"varint,16,opt,name=explicit_max_ttl,json=explicitMaxTtl,proto3" json:"explicit_max_ttl,omitempty"`
+	ExplicitMaxTtl int64 `protobuf:"varint,16,opt,name=explicit_max_ttl,json=explicitMaxTtl,proto3" json:"explicit_max_ttl,omitempty"`
 	// TokenType is the type of token being requested
 	TokenType uint32 `protobuf:"varint,17,opt,name=token_type,json=tokenType,proto3" json:"token_type,omitempty"`
 	// Whether the default policy should be added automatically by core
@@ -706,9 +706,9 @@ func (x *Auth) GetNumUses() int64 {
 	return 0
 }
 
-func (x *Auth) GetEntityID() string {
+func (x *Auth) GetEntityId() string {
 	if x != nil {
-		return x.EntityID
+		return x.EntityId
 	}
 	return ""
 }
@@ -727,9 +727,9 @@ func (x *Auth) GetGroupAliases() []*logical.Alias {
 	return nil
 }
 
-func (x *Auth) GetBoundCIDRs() []string {
+func (x *Auth) GetBoundCidrs() []string {
 	if x != nil {
-		return x.BoundCIDRs
+		return x.BoundCidrs
 	}
 	return nil
 }
@@ -748,9 +748,9 @@ func (x *Auth) GetIdentityPolicies() []string {
 	return nil
 }
 
-func (x *Auth) GetExplicitMaxTTL() int64 {
+func (x *Auth) GetExplicitMaxTtl() int64 {
 	if x != nil {
-		return x.ExplicitMaxTTL
+		return x.ExplicitMaxTtl
 	}
 	return 0
 }
@@ -774,7 +774,7 @@ type TokenEntry struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	ID                 string            `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id                 string            `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Accessor           string            `protobuf:"bytes,2,opt,name=accessor,proto3" json:"accessor,omitempty"`
 	Parent             string            `protobuf:"bytes,3,opt,name=parent,proto3" json:"parent,omitempty"`
 	Policies           []string          `protobuf:"bytes,4,rep,name=policies,proto3" json:"policies,omitempty"`
@@ -783,19 +783,19 @@ type TokenEntry struct {
 	DisplayName        string            `protobuf:"bytes,7,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
 	NumUses            int64             `protobuf:"varint,8,opt,name=num_uses,json=numUses,proto3" json:"num_uses,omitempty"`
 	CreationTime       int64             `protobuf:"varint,9,opt,name=creation_time,json=creationTime,proto3" json:"creation_time,omitempty"`
-	TTL                int64             `protobuf:"varint,10,opt,name=ttl,proto3" json:"ttl,omitempty"`
-	ExplicitMaxTTL     int64             `protobuf:"varint,11,opt,name=explicit_max_ttl,json=explicitMaxTtl,proto3" json:"explicit_max_ttl,omitempty"`
+	Ttl                int64             `protobuf:"varint,10,opt,name=ttl,proto3" json:"ttl,omitempty"`
+	ExplicitMaxTtl     int64             `protobuf:"varint,11,opt,name=explicit_max_ttl,json=explicitMaxTtl,proto3" json:"explicit_max_ttl,omitempty"`
 	Role               string            `protobuf:"bytes,12,opt,name=role,proto3" json:"role,omitempty"`
 	Period             int64             `protobuf:"varint,13,opt,name=period,proto3" json:"period,omitempty"`
-	EntityID           string            `protobuf:"bytes,14,opt,name=entity_id,json=entityId,proto3" json:"entity_id,omitempty"`
-	BoundCIDRs         []string          `protobuf:"bytes,15,rep,name=bound_cidrs,json=boundCidrs,proto3" json:"bound_cidrs,omitempty"`
-	NamespaceID        string            `protobuf:"bytes,16,opt,name=namespace_id,json=namespaceID,proto3" json:"namespace_id,omitempty"`
-	CubbyholeID        string            `protobuf:"bytes,17,opt,name=cubbyhole_id,json=cubbyholeId,proto3" json:"cubbyhole_id,omitempty"`
+	EntityId           string            `protobuf:"bytes,14,opt,name=entity_id,json=entityId,proto3" json:"entity_id,omitempty"`
+	BoundCidrs         []string          `protobuf:"bytes,15,rep,name=bound_cidrs,json=boundCidrs,proto3" json:"bound_cidrs,omitempty"`
+	NamespaceId        string            `protobuf:"bytes,16,opt,name=namespace_id,json=namespaceId,proto3" json:"namespace_id,omitempty"`
+	CubbyholeId        string            `protobuf:"bytes,17,opt,name=cubbyhole_id,json=cubbyholeId,proto3" json:"cubbyhole_id,omitempty"`
 	Type               uint32            `protobuf:"varint,18,opt,name=type,proto3" json:"type,omitempty"`
 	InternalMeta       map[string]string `protobuf:"bytes,19,rep,name=internal_meta,json=internalMeta,proto3" json:"internal_meta,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	InlinePolicy       string            `protobuf:"bytes,20,opt,name=inline_policy,json=inlinePolicy,proto3" json:"inline_policy,omitempty"`
 	NoIdentityPolicies bool              `protobuf:"varint,21,opt,name=no_identity_policies,json=noIdentityPolicies,proto3" json:"no_identity_policies,omitempty"`
-	ExternalID         string            `protobuf:"bytes,22,opt,name=external_id,json=externalId,proto3" json:"external_id,omitempty"`
+	ExternalId         string            `protobuf:"bytes,22,opt,name=external_id,json=externalId,proto3" json:"external_id,omitempty"`
 }
 
 func (x *TokenEntry) Reset() {
@@ -830,9 +830,9 @@ func (*TokenEntry) Descriptor() ([]byte, []int) {
 	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{6}
 }
 
-func (x *TokenEntry) GetID() string {
+func (x *TokenEntry) GetId() string {
 	if x != nil {
-		return x.ID
+		return x.Id
 	}
 	return ""
 }
@@ -893,16 +893,16 @@ func (x *TokenEntry) GetCreationTime() int64 {
 	return 0
 }
 
-func (x *TokenEntry) GetTTL() int64 {
+func (x *TokenEntry) GetTtl() int64 {
 	if x != nil {
-		return x.TTL
+		return x.Ttl
 	}
 	return 0
 }
 
-func (x *TokenEntry) GetExplicitMaxTTL() int64 {
+func (x *TokenEntry) GetExplicitMaxTtl() int64 {
 	if x != nil {
-		return x.ExplicitMaxTTL
+		return x.ExplicitMaxTtl
 	}
 	return 0
 }
@@ -921,30 +921,30 @@ func (x *TokenEntry) GetPeriod() int64 {
 	return 0
 }
 
-func (x *TokenEntry) GetEntityID() string {
+func (x *TokenEntry) GetEntityId() string {
 	if x != nil {
-		return x.EntityID
+		return x.EntityId
 	}
 	return ""
 }
 
-func (x *TokenEntry) GetBoundCIDRs() []string {
+func (x *TokenEntry) GetBoundCidrs() []string {
 	if x != nil {
-		return x.BoundCIDRs
+		return x.BoundCidrs
 	}
 	return nil
 }
 
-func (x *TokenEntry) GetNamespaceID() string {
+func (x *TokenEntry) GetNamespaceId() string {
 	if x != nil {
-		return x.NamespaceID
+		return x.NamespaceId
 	}
 	return ""
 }
 
-func (x *TokenEntry) GetCubbyholeID() string {
+func (x *TokenEntry) GetCubbyholeId() string {
 	if x != nil {
-		return x.CubbyholeID
+		return x.CubbyholeId
 	}
 	return ""
 }
@@ -977,9 +977,9 @@ func (x *TokenEntry) GetNoIdentityPolicies() bool {
 	return false
 }
 
-func (x *TokenEntry) GetExternalID() string {
+func (x *TokenEntry) GetExternalId() string {
 	if x != nil {
-		return x.ExternalID
+		return x.ExternalId
 	}
 	return ""
 }
@@ -1076,7 +1076,7 @@ type Secret struct {
 	// LeaseID is the ID returned to the user to manage this secret.
 	// This is generated by Vault core. Any set value will be ignored.
 	// For requests, this will always be blank.
-	LeaseID string `protobuf:"bytes,3,opt,name=lease_id,json=leaseId,proto3" json:"lease_id,omitempty"`
+	LeaseId string `protobuf:"bytes,3,opt,name=lease_id,json=leaseId,proto3" json:"lease_id,omitempty"`
 }
 
 func (x *Secret) Reset() {
@@ -1125,9 +1125,9 @@ func (x *Secret) GetInternalData() string {
 	return ""
 }
 
-func (x *Secret) GetLeaseID() string {
+func (x *Secret) GetLeaseId() string {
 	if x != nil {
-		return x.LeaseID
+		return x.LeaseId
 	}
 	return ""
 }
@@ -1274,7 +1274,7 @@ type ResponseWrapInfo struct {
 	WrappedAccessor string `protobuf:"bytes,5,opt,name=wrapped_accessor,json=wrappedAccessor,proto3" json:"wrapped_accessor,omitempty"`
 	// WrappedEntityID is the entity identifier of the caller who initiated the
 	// wrapping request
-	WrappedEntityID string `protobuf:"bytes,6,opt,name=wrapped_entity_id,json=wrappedEntityID,proto3" json:"wrapped_entity_id,omitempty"`
+	WrappedEntityId string `protobuf:"bytes,6,opt,name=wrapped_entity_id,json=wrappedEntityId,proto3" json:"wrapped_entity_id,omitempty"`
 	// The format to use. This doesn't get returned, it's only internal.
 	Format string `protobuf:"bytes,7,opt,name=format,proto3" json:"format,omitempty"`
 	// CreationPath is the original request path that was used to create
@@ -1351,9 +1351,9 @@ func (x *ResponseWrapInfo) GetWrappedAccessor() string {
 	return ""
 }
 
-func (x *ResponseWrapInfo) GetWrappedEntityID() string {
+func (x *ResponseWrapInfo) GetWrappedEntityId() string {
 	if x != nil {
-		return x.WrappedEntityID
+		return x.WrappedEntityId
 	}
 	return ""
 }
@@ -1454,7 +1454,7 @@ type HandleRequestArgs struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	StorageID uint32   `protobuf:"varint,1,opt,name=storage_id,json=storageId,proto3" json:"storage_id,omitempty"`
+	StorageId uint32   `protobuf:"varint,1,opt,name=storage_id,json=storageId,proto3" json:"storage_id,omitempty"`
 	Request   *Request `protobuf:"bytes,2,opt,name=request,proto3" json:"request,omitempty"`
 }
 
@@ -1490,9 +1490,9 @@ func (*HandleRequestArgs) Descriptor() ([]byte, []int) {
 	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{12}
 }
 
-func (x *HandleRequestArgs) GetStorageID() uint32 {
+func (x *HandleRequestArgs) GetStorageId() uint32 {
 	if x != nil {
-		return x.StorageID
+		return x.StorageId
 	}
 	return 0
 }
@@ -1701,7 +1701,7 @@ type HandleExistenceCheckArgs struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	StorageID uint32   `protobuf:"varint,1,opt,name=storage_id,json=storageId,proto3" json:"storage_id,omitempty"`
+	StorageId uint32   `protobuf:"varint,1,opt,name=storage_id,json=storageId,proto3" json:"storage_id,omitempty"`
 	Request   *Request `protobuf:"bytes,2,opt,name=request,proto3" json:"request,omitempty"`
 }
 
@@ -1737,9 +1737,9 @@ func (*HandleExistenceCheckArgs) Descriptor() ([]byte, []int) {
 	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{17}
 }
 
-func (x *HandleExistenceCheckArgs) GetStorageID() uint32 {
+func (x *HandleExistenceCheckArgs) GetStorageId() uint32 {
 	if x != nil {
-		return x.StorageID
+		return x.StorageId
 	}
 	return 0
 }
@@ -1821,7 +1821,7 @@ type SetupArgs struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	BrokerID    uint32            `protobuf:"varint,1,opt,name=broker_id,json=brokerId,proto3" json:"broker_id,omitempty"`
+	BrokerId    uint32            `protobuf:"varint,1,opt,name=broker_id,json=brokerId,proto3" json:"broker_id,omitempty"`
 	Config      map[string]string `protobuf:"bytes,2,rep,name=Config,proto3" json:"Config,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	BackendUUID string            `protobuf:"bytes,3,opt,name=backendUUID,proto3" json:"backendUUID,omitempty"`
 }
@@ -1858,9 +1858,9 @@ func (*SetupArgs) Descriptor() ([]byte, []int) {
 	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{19}
 }
 
-func (x *SetupArgs) GetBrokerID() uint32 {
+func (x *SetupArgs) GetBrokerId() uint32 {
 	if x != nil {
-		return x.BrokerID
+		return x.BrokerId
 	}
 	return 0
 }
@@ -2882,7 +2882,7 @@ type EntityInfoArgs struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	EntityID string `protobuf:"bytes,1,opt,name=entity_id,json=entityId,proto3" json:"entity_id,omitempty"`
+	EntityId string `protobuf:"bytes,1,opt,name=entity_id,json=entityId,proto3" json:"entity_id,omitempty"`
 }
 
 func (x *EntityInfoArgs) Reset() {
@@ -2917,9 +2917,9 @@ func (*EntityInfoArgs) Descriptor() ([]byte, []int) {
 	return file_sdk_plugin_pb_backend_proto_rawDescGZIP(), []int{40}
 }
 
-func (x *EntityInfoArgs) GetEntityID() string {
+func (x *EntityInfoArgs) GetEntityId() string {
 	if x != nil {
-		return x.EntityID
+		return x.EntityId
 	}
 	return ""
 }
@@ -3189,7 +3189,7 @@ type ClusterInfoReply struct {
 	unknownFields protoimpl.UnknownFields
 
 	ClusterName string `protobuf:"bytes,1,opt,name=cluster_name,json=clusterName,proto3" json:"cluster_name,omitempty"`
-	ClusterID   string `protobuf:"bytes,2,opt,name=cluster_id,json=clusterId,proto3" json:"cluster_id,omitempty"`
+	ClusterId   string `protobuf:"bytes,2,opt,name=cluster_id,json=clusterId,proto3" json:"cluster_id,omitempty"`
 	Err         string `protobuf:"bytes,3,opt,name=err,proto3" json:"err,omitempty"`
 }
 
@@ -3232,9 +3232,9 @@ func (x *ClusterInfoReply) GetClusterName() string {
 	return ""
 }
 
-func (x *ClusterInfoReply) GetClusterID() string {
+func (x *ClusterInfoReply) GetClusterId() string {
 	if x != nil {
-		return x.ClusterID
+		return x.ClusterId
 	}
 	return ""
 }
@@ -3252,7 +3252,7 @@ type GenerateIdentityTokenRequest struct {
 	unknownFields protoimpl.UnknownFields
 
 	Audience string `protobuf:"bytes,1,opt,name=audience,proto3" json:"audience,omitempty"`
-	TTL      int64  `protobuf:"varint,2,opt,name=ttl,proto3" json:"ttl,omitempty"`
+	Ttl      int64  `protobuf:"varint,2,opt,name=ttl,proto3" json:"ttl,omitempty"`
 }
 
 func (x *GenerateIdentityTokenRequest) Reset() {
@@ -3294,9 +3294,9 @@ func (x *GenerateIdentityTokenRequest) GetAudience() string {
 	return ""
 }
 
-func (x *GenerateIdentityTokenRequest) GetTTL() int64 {
+func (x *GenerateIdentityTokenRequest) GetTtl() int64 {
 	if x != nil {
-		return x.TTL
+		return x.Ttl
 	}
 	return 0
 }
@@ -3307,7 +3307,7 @@ type GenerateIdentityTokenResponse struct {
 	unknownFields protoimpl.UnknownFields
 
 	Token string `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
-	TTL   int64  `protobuf:"varint,2,opt,name=ttl,proto3" json:"ttl,omitempty"`
+	Ttl   int64  `protobuf:"varint,2,opt,name=ttl,proto3" json:"ttl,omitempty"`
 }
 
 func (x *GenerateIdentityTokenResponse) Reset() {
@@ -3349,9 +3349,9 @@ func (x *GenerateIdentityTokenResponse) GetToken() string {
 	return ""
 }
 
-func (x *GenerateIdentityTokenResponse) GetTTL() int64 {
+func (x *GenerateIdentityTokenResponse) GetTtl() int64 {
 	if x != nil {
-		return x.TTL
+		return x.Ttl
 	}
 	return 0
 }
@@ -4356,7 +4356,7 @@ var file_sdk_plugin_pb_backend_proto_goTypes = []interface{}{
 	(*logical.PluginEnvironment)(nil),         // 64: logical.PluginEnvironment
 	(*logical.EventData)(nil),                 // 65: logical.EventData
 }
-var file_sdk_plugin_pb_backend_proto_depIDxs = []int32{
+var file_sdk_plugin_pb_backend_proto_depIdxs = []int32{
 	8,  // 0: pb.Request.secret:type_name -> pb.Secret
 	5,  // 1: pb.Request.auth:type_name -> pb.Auth
 	54, // 2: pb.Request.headers:type_name -> pb.Request.HeadersEntry
@@ -5123,11 +5123,11 @@ func file_sdk_plugin_pb_backend_proto_init() {
 			NumServices:   4,
 		},
 		GoTypes:           file_sdk_plugin_pb_backend_proto_goTypes,
-		DependencyIndexes: file_sdk_plugin_pb_backend_proto_depIDxs,
+		DependencyIndexes: file_sdk_plugin_pb_backend_proto_depIdxs,
 		MessageInfos:      file_sdk_plugin_pb_backend_proto_msgTypes,
 	}.Build()
 	File_sdk_plugin_pb_backend_proto = out.File
 	file_sdk_plugin_pb_backend_proto_rawDesc = nil
 	file_sdk_plugin_pb_backend_proto_goTypes = nil
-	file_sdk_plugin_pb_backend_proto_depIDxs = nil
+	file_sdk_plugin_pb_backend_proto_depIdxs = nil
 }

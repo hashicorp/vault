@@ -33,26 +33,26 @@ type Config struct {
 	unknownFields protoimpl.UnknownFields
 
 	// @inject_tag: sentinel:"-"
-	Type string `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty" sentinel:"-"`
+	Type string `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
 	// @inject_tag: sentinel:"-"
-	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty" sentinel:"-"`
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	// @inject_tag: sentinel:"-"
-	ID string `protobuf:"bytes,3,opt,name=id,proto3" json:"id,omitempty" sentinel:"-"`
+	Id string `protobuf:"bytes,3,opt,name=id,proto3" json:"id,omitempty"`
 	// @inject_tag: sentinel:"-"
-	MountAccessor string `protobuf:"bytes,4,opt,name=mount_accessor,json=mountAccessor,proto3" json:"mount_accessor,omitempty" sentinel:"-"`
+	MountAccessor string `protobuf:"bytes,4,opt,name=mount_accessor,json=mountAccessor,proto3" json:"mount_accessor,omitempty"`
 	// @inject_tag: sentinel:"-"
-	UsernameFormat string `protobuf:"bytes,5,opt,name=username_format,json=usernameFormat,proto3" json:"username_format,omitempty" sentinel:"-"`
+	UsernameFormat string `protobuf:"bytes,5,opt,name=username_format,json=usernameFormat,proto3" json:"username_format,omitempty"`
 	// @inject_tag: sentinel:"-"
 	//
 	// Types that are assignable to Config:
 	//
-	//	*Config_TOTPConfig
+	//	*Config_TotpConfig
 	//	*Config_OktaConfig
 	//	*Config_DuoConfig
-	//	*Config_PingIDConfig
-	Config isConfig_Config `protobuf_oneof:"config" sentinel:"-"`
+	//	*Config_PingidConfig
+	Config isConfig_Config `protobuf_oneof:"config"`
 	// @inject_tag: sentinel:"-"
-	NamespaceID string `protobuf:"bytes,10,opt,name=namespace_id,json=namespaceID,proto3" json:"namespace_id,omitempty" sentinel:"-"`
+	NamespaceId string `protobuf:"bytes,10,opt,name=namespace_id,json=namespaceId,proto3" json:"namespace_id,omitempty"`
 }
 
 func (x *Config) Reset() {
@@ -101,9 +101,9 @@ func (x *Config) GetName() string {
 	return ""
 }
 
-func (x *Config) GetID() string {
+func (x *Config) GetId() string {
 	if x != nil {
-		return x.ID
+		return x.Id
 	}
 	return ""
 }
@@ -129,9 +129,9 @@ func (m *Config) GetConfig() isConfig_Config {
 	return nil
 }
 
-func (x *Config) GetTOTPConfig() *TOTPConfig {
-	if x, ok := x.GetConfig().(*Config_TOTPConfig); ok {
-		return x.TOTPConfig
+func (x *Config) GetTotpConfig() *TOTPConfig {
+	if x, ok := x.GetConfig().(*Config_TotpConfig); ok {
+		return x.TotpConfig
 	}
 	return nil
 }
@@ -150,16 +150,16 @@ func (x *Config) GetDuoConfig() *DuoConfig {
 	return nil
 }
 
-func (x *Config) GetPingIDConfig() *PingIDConfig {
-	if x, ok := x.GetConfig().(*Config_PingIDConfig); ok {
-		return x.PingIDConfig
+func (x *Config) GetPingidConfig() *PingIDConfig {
+	if x, ok := x.GetConfig().(*Config_PingidConfig); ok {
+		return x.PingidConfig
 	}
 	return nil
 }
 
-func (x *Config) GetNamespaceID() string {
+func (x *Config) GetNamespaceId() string {
 	if x != nil {
-		return x.NamespaceID
+		return x.NamespaceId
 	}
 	return ""
 }
@@ -168,8 +168,8 @@ type isConfig_Config interface {
 	isConfig_Config()
 }
 
-type Config_TOTPConfig struct {
-	TOTPConfig *TOTPConfig `protobuf:"bytes,6,opt,name=totp_config,json=totpConfig,proto3,oneof"`
+type Config_TotpConfig struct {
+	TotpConfig *TOTPConfig `protobuf:"bytes,6,opt,name=totp_config,json=totpConfig,proto3,oneof"`
 }
 
 type Config_OktaConfig struct {
@@ -180,17 +180,17 @@ type Config_DuoConfig struct {
 	DuoConfig *DuoConfig `protobuf:"bytes,8,opt,name=duo_config,json=duoConfig,proto3,oneof"`
 }
 
-type Config_PingIDConfig struct {
-	PingIDConfig *PingIDConfig `protobuf:"bytes,9,opt,name=pingid_config,json=pingidConfig,proto3,oneof"`
+type Config_PingidConfig struct {
+	PingidConfig *PingIDConfig `protobuf:"bytes,9,opt,name=pingid_config,json=pingidConfig,proto3,oneof"`
 }
 
-func (*Config_TOTPConfig) isConfig_Config() {}
+func (*Config_TotpConfig) isConfig_Config() {}
 
 func (*Config_OktaConfig) isConfig_Config() {}
 
 func (*Config_DuoConfig) isConfig_Config() {}
 
-func (*Config_PingIDConfig) isConfig_Config() {}
+func (*Config_PingidConfig) isConfig_Config() {}
 
 // TOTPConfig represents the configuration information required to generate
 // a TOTP key. The generated key will be stored in the entity along with these
@@ -203,21 +203,21 @@ type TOTPConfig struct {
 	unknownFields protoimpl.UnknownFields
 
 	// @inject_tag: sentinel:"-"
-	Issuer string `protobuf:"bytes,1,opt,name=issuer,proto3" json:"issuer,omitempty" sentinel:"-"`
+	Issuer string `protobuf:"bytes,1,opt,name=issuer,proto3" json:"issuer,omitempty"`
 	// @inject_tag: sentinel:"-"
-	Period uint32 `protobuf:"varint,2,opt,name=period,proto3" json:"period,omitempty" sentinel:"-"`
+	Period uint32 `protobuf:"varint,2,opt,name=period,proto3" json:"period,omitempty"`
 	// @inject_tag: sentinel:"-"
-	Algorithm int32 `protobuf:"varint,3,opt,name=algorithm,proto3" json:"algorithm,omitempty" sentinel:"-"`
+	Algorithm int32 `protobuf:"varint,3,opt,name=algorithm,proto3" json:"algorithm,omitempty"`
 	// @inject_tag: sentinel:"-"
-	Digits int32 `protobuf:"varint,4,opt,name=digits,proto3" json:"digits,omitempty" sentinel:"-"`
+	Digits int32 `protobuf:"varint,4,opt,name=digits,proto3" json:"digits,omitempty"`
 	// @inject_tag: sentinel:"-"
-	Skew uint32 `protobuf:"varint,5,opt,name=skew,proto3" json:"skew,omitempty" sentinel:"-"`
+	Skew uint32 `protobuf:"varint,5,opt,name=skew,proto3" json:"skew,omitempty"`
 	// @inject_tag: sentinel:"-"
-	KeySize uint32 `protobuf:"varint,6,opt,name=key_size,json=keySize,proto3" json:"key_size,omitempty" sentinel:"-"`
+	KeySize uint32 `protobuf:"varint,6,opt,name=key_size,json=keySize,proto3" json:"key_size,omitempty"`
 	// @inject_tag: sentinel:"-"
-	QRSize int32 `protobuf:"varint,7,opt,name=qr_size,json=qrSize,proto3" json:"qr_size,omitempty" sentinel:"-"`
+	QrSize int32 `protobuf:"varint,7,opt,name=qr_size,json=qrSize,proto3" json:"qr_size,omitempty"`
 	// @inject_tag: sentinel:"-"
-	MaxValidationAttempts uint32 `protobuf:"varint,8,opt,name=max_validation_attempts,json=maxValidationAttempts,proto3" json:"max_validation_attempts,omitempty" sentinel:"-"`
+	MaxValidationAttempts uint32 `protobuf:"varint,8,opt,name=max_validation_attempts,json=maxValidationAttempts,proto3" json:"max_validation_attempts,omitempty"`
 }
 
 func (x *TOTPConfig) Reset() {
@@ -294,9 +294,9 @@ func (x *TOTPConfig) GetKeySize() uint32 {
 	return 0
 }
 
-func (x *TOTPConfig) GetQRSize() int32 {
+func (x *TOTPConfig) GetQrSize() int32 {
 	if x != nil {
-		return x.QRSize
+		return x.QrSize
 	}
 	return 0
 }
@@ -316,15 +316,15 @@ type DuoConfig struct {
 	unknownFields protoimpl.UnknownFields
 
 	// @inject_tag: sentinel:"-"
-	IntegrationKey string `protobuf:"bytes,1,opt,name=integration_key,json=integrationKey,proto3" json:"integration_key,omitempty" sentinel:"-"`
+	IntegrationKey string `protobuf:"bytes,1,opt,name=integration_key,json=integrationKey,proto3" json:"integration_key,omitempty"`
 	// @inject_tag: sentinel:"-"
-	SecretKey string `protobuf:"bytes,2,opt,name=secret_key,json=secretKey,proto3" json:"secret_key,omitempty" sentinel:"-"`
+	SecretKey string `protobuf:"bytes,2,opt,name=secret_key,json=secretKey,proto3" json:"secret_key,omitempty"`
 	// @inject_tag: sentinel:"-"
-	APIHostname string `protobuf:"bytes,3,opt,name=api_hostname,json=apiHostname,proto3" json:"api_hostname,omitempty" sentinel:"-"`
+	ApiHostname string `protobuf:"bytes,3,opt,name=api_hostname,json=apiHostname,proto3" json:"api_hostname,omitempty"`
 	// @inject_tag: sentinel:"-"
-	PushInfo string `protobuf:"bytes,4,opt,name=push_info,json=pushInfo,proto3" json:"push_info,omitempty" sentinel:"-"`
+	PushInfo string `protobuf:"bytes,4,opt,name=push_info,json=pushInfo,proto3" json:"push_info,omitempty"`
 	// @inject_tag: sentinel:"-"
-	UsePasscode bool `protobuf:"varint,5,opt,name=use_passcode,json=usePasscode,proto3" json:"use_passcode,omitempty" sentinel:"-"`
+	UsePasscode bool `protobuf:"varint,5,opt,name=use_passcode,json=usePasscode,proto3" json:"use_passcode,omitempty"`
 }
 
 func (x *DuoConfig) Reset() {
@@ -373,9 +373,9 @@ func (x *DuoConfig) GetSecretKey() string {
 	return ""
 }
 
-func (x *DuoConfig) GetAPIHostname() string {
+func (x *DuoConfig) GetApiHostname() string {
 	if x != nil {
-		return x.APIHostname
+		return x.ApiHostname
 	}
 	return ""
 }
@@ -402,15 +402,15 @@ type OktaConfig struct {
 	unknownFields protoimpl.UnknownFields
 
 	// @inject_tag: sentinel:"-"
-	OrgName string `protobuf:"bytes,1,opt,name=org_name,json=orgName,proto3" json:"org_name,omitempty" sentinel:"-"`
+	OrgName string `protobuf:"bytes,1,opt,name=org_name,json=orgName,proto3" json:"org_name,omitempty"`
 	// @inject_tag: sentinel:"-"
-	APIToken string `protobuf:"bytes,2,opt,name=api_token,json=apiToken,proto3" json:"api_token,omitempty" sentinel:"-"`
+	ApiToken string `protobuf:"bytes,2,opt,name=api_token,json=apiToken,proto3" json:"api_token,omitempty"`
 	// @inject_tag: sentinel:"-"
-	Production bool `protobuf:"varint,3,opt,name=production,proto3" json:"production,omitempty" sentinel:"-"`
+	Production bool `protobuf:"varint,3,opt,name=production,proto3" json:"production,omitempty"`
 	// @inject_tag: sentinel:"-"
-	BaseURL string `protobuf:"bytes,4,opt,name=base_url,json=baseUrl,proto3" json:"base_url,omitempty" sentinel:"-"`
+	BaseUrl string `protobuf:"bytes,4,opt,name=base_url,json=baseUrl,proto3" json:"base_url,omitempty"`
 	// @inject_tag: sentinel:"-"
-	PrimaryEmail bool `protobuf:"varint,5,opt,name=primary_email,json=primaryEmail,proto3" json:"primary_email,omitempty" sentinel:"-"`
+	PrimaryEmail bool `protobuf:"varint,5,opt,name=primary_email,json=primaryEmail,proto3" json:"primary_email,omitempty"`
 }
 
 func (x *OktaConfig) Reset() {
@@ -452,9 +452,9 @@ func (x *OktaConfig) GetOrgName() string {
 	return ""
 }
 
-func (x *OktaConfig) GetAPIToken() string {
+func (x *OktaConfig) GetApiToken() string {
 	if x != nil {
-		return x.APIToken
+		return x.ApiToken
 	}
 	return ""
 }
@@ -466,9 +466,9 @@ func (x *OktaConfig) GetProduction() bool {
 	return false
 }
 
-func (x *OktaConfig) GetBaseURL() string {
+func (x *OktaConfig) GetBaseUrl() string {
 	if x != nil {
-		return x.BaseURL
+		return x.BaseUrl
 	}
 	return ""
 }
@@ -487,19 +487,19 @@ type PingIDConfig struct {
 	unknownFields protoimpl.UnknownFields
 
 	// @inject_tag: sentinel:"-"
-	UseBase64Key string `protobuf:"bytes,1,opt,name=use_base64_key,json=useBase64Key,proto3" json:"use_base64_key,omitempty" sentinel:"-"`
+	UseBase64Key string `protobuf:"bytes,1,opt,name=use_base64_key,json=useBase64Key,proto3" json:"use_base64_key,omitempty"`
 	// @inject_tag: sentinel:"-"
-	UseSignature bool `protobuf:"varint,2,opt,name=use_signature,json=useSignature,proto3" json:"use_signature,omitempty" sentinel:"-"`
+	UseSignature bool `protobuf:"varint,2,opt,name=use_signature,json=useSignature,proto3" json:"use_signature,omitempty"`
 	// @inject_tag: sentinel:"-"
-	Token string `protobuf:"bytes,3,opt,name=token,proto3" json:"token,omitempty" sentinel:"-"`
+	Token string `protobuf:"bytes,3,opt,name=token,proto3" json:"token,omitempty"`
 	// @inject_tag: sentinel:"-"
-	IDPURL string `protobuf:"bytes,4,opt,name=idp_url,json=idpUrl,proto3" json:"idp_url,omitempty" sentinel:"-"`
+	IdpUrl string `protobuf:"bytes,4,opt,name=idp_url,json=idpUrl,proto3" json:"idp_url,omitempty"`
 	// @inject_tag: sentinel:"-"
-	OrgAlias string `protobuf:"bytes,5,opt,name=org_alias,json=orgAlias,proto3" json:"org_alias,omitempty" sentinel:"-"`
+	OrgAlias string `protobuf:"bytes,5,opt,name=org_alias,json=orgAlias,proto3" json:"org_alias,omitempty"`
 	// @inject_tag: sentinel:"-"
-	AdminURL string `protobuf:"bytes,6,opt,name=admin_url,json=adminUrl,proto3" json:"admin_url,omitempty" sentinel:"-"`
+	AdminUrl string `protobuf:"bytes,6,opt,name=admin_url,json=adminUrl,proto3" json:"admin_url,omitempty"`
 	// @inject_tag: sentinel:"-"
-	AuthenticatorURL string `protobuf:"bytes,7,opt,name=authenticator_url,json=authenticatorUrl,proto3" json:"authenticator_url,omitempty" sentinel:"-"`
+	AuthenticatorUrl string `protobuf:"bytes,7,opt,name=authenticator_url,json=authenticatorUrl,proto3" json:"authenticator_url,omitempty"`
 }
 
 func (x *PingIDConfig) Reset() {
@@ -555,9 +555,9 @@ func (x *PingIDConfig) GetToken() string {
 	return ""
 }
 
-func (x *PingIDConfig) GetIDPURL() string {
+func (x *PingIDConfig) GetIdpUrl() string {
 	if x != nil {
-		return x.IDPURL
+		return x.IdpUrl
 	}
 	return ""
 }
@@ -569,16 +569,16 @@ func (x *PingIDConfig) GetOrgAlias() string {
 	return ""
 }
 
-func (x *PingIDConfig) GetAdminURL() string {
+func (x *PingIDConfig) GetAdminUrl() string {
 	if x != nil {
-		return x.AdminURL
+		return x.AdminUrl
 	}
 	return ""
 }
 
-func (x *PingIDConfig) GetAuthenticatorURL() string {
+func (x *PingIDConfig) GetAuthenticatorUrl() string {
 	if x != nil {
-		return x.AuthenticatorURL
+		return x.AuthenticatorUrl
 	}
 	return ""
 }
@@ -591,10 +591,10 @@ type Secret struct {
 	unknownFields protoimpl.UnknownFields
 
 	// @inject_tag: sentinel:"-"
-	MethodName string `protobuf:"bytes,1,opt,name=method_name,json=methodName,proto3" json:"method_name,omitempty" sentinel:"-"`
+	MethodName string `protobuf:"bytes,1,opt,name=method_name,json=methodName,proto3" json:"method_name,omitempty"`
 	// Types that are assignable to Value:
 	//
-	//	*Secret_TOTPSecret
+	//	*Secret_TotpSecret
 	Value isSecret_Value `protobuf_oneof:"value"`
 }
 
@@ -644,9 +644,9 @@ func (m *Secret) GetValue() isSecret_Value {
 	return nil
 }
 
-func (x *Secret) GetTOTPSecret() *TOTPSecret {
-	if x, ok := x.GetValue().(*Secret_TOTPSecret); ok {
-		return x.TOTPSecret
+func (x *Secret) GetTotpSecret() *TOTPSecret {
+	if x, ok := x.GetValue().(*Secret_TotpSecret); ok {
+		return x.TotpSecret
 	}
 	return nil
 }
@@ -655,12 +655,12 @@ type isSecret_Value interface {
 	isSecret_Value()
 }
 
-type Secret_TOTPSecret struct {
+type Secret_TotpSecret struct {
 	// @inject_tag: sentinel:"-"
-	TOTPSecret *TOTPSecret `protobuf:"bytes,2,opt,name=totp_secret,json=totpSecret,proto3,oneof" sentinel:"-"`
+	TotpSecret *TOTPSecret `protobuf:"bytes,2,opt,name=totp_secret,json=totpSecret,proto3,oneof"`
 }
 
-func (*Secret_TOTPSecret) isSecret_Value() {}
+func (*Secret_TotpSecret) isSecret_Value() {}
 
 // TOTPSecret represents the secret that gets stored in the entity about a
 // particular MFA method. This information is used to validate the MFA
@@ -671,22 +671,22 @@ type TOTPSecret struct {
 	unknownFields protoimpl.UnknownFields
 
 	// @inject_tag: sentinel:"-"
-	Issuer string `protobuf:"bytes,1,opt,name=issuer,proto3" json:"issuer,omitempty" sentinel:"-"`
+	Issuer string `protobuf:"bytes,1,opt,name=issuer,proto3" json:"issuer,omitempty"`
 	// @inject_tag: sentinel:"-"
-	Period uint32 `protobuf:"varint,2,opt,name=period,proto3" json:"period,omitempty" sentinel:"-"`
+	Period uint32 `protobuf:"varint,2,opt,name=period,proto3" json:"period,omitempty"`
 	// @inject_tag: sentinel:"-"
-	Algorithm int32 `protobuf:"varint,3,opt,name=algorithm,proto3" json:"algorithm,omitempty" sentinel:"-"`
+	Algorithm int32 `protobuf:"varint,3,opt,name=algorithm,proto3" json:"algorithm,omitempty"`
 	// @inject_tag: sentinel:"-"
-	Digits int32 `protobuf:"varint,4,opt,name=digits,proto3" json:"digits,omitempty" sentinel:"-"`
+	Digits int32 `protobuf:"varint,4,opt,name=digits,proto3" json:"digits,omitempty"`
 	// @inject_tag: sentinel:"-"
-	Skew uint32 `protobuf:"varint,5,opt,name=skew,proto3" json:"skew,omitempty" sentinel:"-"`
+	Skew uint32 `protobuf:"varint,5,opt,name=skew,proto3" json:"skew,omitempty"`
 	// @inject_tag: sentinel:"-"
-	KeySize uint32 `protobuf:"varint,6,opt,name=key_size,json=keySize,proto3" json:"key_size,omitempty" sentinel:"-"`
+	KeySize uint32 `protobuf:"varint,6,opt,name=key_size,json=keySize,proto3" json:"key_size,omitempty"`
 	// reserving 7 here just to keep parity with the config message above
 	// @inject_tag: sentinel:"-"
-	AccountName string `protobuf:"bytes,8,opt,name=account_name,json=accountName,proto3" json:"account_name,omitempty" sentinel:"-"`
+	AccountName string `protobuf:"bytes,8,opt,name=account_name,json=accountName,proto3" json:"account_name,omitempty"`
 	// @inject_tag: sentinel:"-"
-	Key string `protobuf:"bytes,9,opt,name=key,proto3" json:"key,omitempty" sentinel:"-"`
+	Key string `protobuf:"bytes,9,opt,name=key,proto3" json:"key,omitempty"`
 }
 
 func (x *TOTPSecret) Reset() {
@@ -785,13 +785,13 @@ type MFAEnforcementConfig struct {
 	unknownFields protoimpl.UnknownFields
 
 	Name                string   `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	NamespaceID         string   `protobuf:"bytes,2,opt,name=namespace_id,json=namespaceID,proto3" json:"namespace_id,omitempty"`
-	MFAMethodIDs        []string `protobuf:"bytes,3,rep,name=mfa_method_ids,json=mfaMethodIds,proto3" json:"mfa_method_ids,omitempty"`
+	NamespaceId         string   `protobuf:"bytes,2,opt,name=namespace_id,json=namespaceId,proto3" json:"namespace_id,omitempty"`
+	MfaMethodIds        []string `protobuf:"bytes,3,rep,name=mfa_method_ids,json=mfaMethodIds,proto3" json:"mfa_method_ids,omitempty"`
 	AuthMethodAccessors []string `protobuf:"bytes,4,rep,name=auth_method_accessors,json=authMethodAccessors,proto3" json:"auth_method_accessors,omitempty"`
 	AuthMethodTypes     []string `protobuf:"bytes,5,rep,name=auth_method_types,json=authMethodTypes,proto3" json:"auth_method_types,omitempty"`
 	IdentityGroupIds    []string `protobuf:"bytes,6,rep,name=identity_group_ids,json=identityGroupIds,proto3" json:"identity_group_ids,omitempty"`
-	IdentityEntityIDs   []string `protobuf:"bytes,7,rep,name=identity_entity_ids,json=identityEntityIds,proto3" json:"identity_entity_ids,omitempty"`
-	ID                  string   `protobuf:"bytes,8,opt,name=id,proto3" json:"id,omitempty"`
+	IdentityEntityIds   []string `protobuf:"bytes,7,rep,name=identity_entity_ids,json=identityEntityIds,proto3" json:"identity_entity_ids,omitempty"`
+	Id                  string   `protobuf:"bytes,8,opt,name=id,proto3" json:"id,omitempty"`
 }
 
 func (x *MFAEnforcementConfig) Reset() {
@@ -833,16 +833,16 @@ func (x *MFAEnforcementConfig) GetName() string {
 	return ""
 }
 
-func (x *MFAEnforcementConfig) GetNamespaceID() string {
+func (x *MFAEnforcementConfig) GetNamespaceId() string {
 	if x != nil {
-		return x.NamespaceID
+		return x.NamespaceId
 	}
 	return ""
 }
 
-func (x *MFAEnforcementConfig) GetMFAMethodIDs() []string {
+func (x *MFAEnforcementConfig) GetMfaMethodIds() []string {
 	if x != nil {
-		return x.MFAMethodIDs
+		return x.MfaMethodIds
 	}
 	return nil
 }
@@ -868,16 +868,16 @@ func (x *MFAEnforcementConfig) GetIdentityGroupIds() []string {
 	return nil
 }
 
-func (x *MFAEnforcementConfig) GetIdentityEntityIDs() []string {
+func (x *MFAEnforcementConfig) GetIdentityEntityIds() []string {
 	if x != nil {
-		return x.IdentityEntityIDs
+		return x.IdentityEntityIds
 	}
 	return nil
 }
 
-func (x *MFAEnforcementConfig) GetID() string {
+func (x *MFAEnforcementConfig) GetId() string {
 	if x != nil {
-		return x.ID
+		return x.Id
 	}
 	return ""
 }
@@ -1034,7 +1034,7 @@ var file_helper_identity_mfa_types_proto_goTypes = []interface{}{
 	(*TOTPSecret)(nil),           // 6: mfa.TOTPSecret
 	(*MFAEnforcementConfig)(nil), // 7: mfa.MFAEnforcementConfig
 }
-var file_helper_identity_mfa_types_proto_depIDxs = []int32{
+var file_helper_identity_mfa_types_proto_depIdxs = []int32{
 	1, // 0: mfa.Config.totp_config:type_name -> mfa.TOTPConfig
 	3, // 1: mfa.Config.okta_config:type_name -> mfa.OktaConfig
 	2, // 2: mfa.Config.duo_config:type_name -> mfa.DuoConfig
@@ -1151,13 +1151,13 @@ func file_helper_identity_mfa_types_proto_init() {
 		}
 	}
 	file_helper_identity_mfa_types_proto_msgTypes[0].OneofWrappers = []interface{}{
-		(*Config_TOTPConfig)(nil),
+		(*Config_TotpConfig)(nil),
 		(*Config_OktaConfig)(nil),
 		(*Config_DuoConfig)(nil),
-		(*Config_PingIDConfig)(nil),
+		(*Config_PingidConfig)(nil),
 	}
 	file_helper_identity_mfa_types_proto_msgTypes[5].OneofWrappers = []interface{}{
-		(*Secret_TOTPSecret)(nil),
+		(*Secret_TotpSecret)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -1170,11 +1170,11 @@ func file_helper_identity_mfa_types_proto_init() {
 			NumServices:   0,
 		},
 		GoTypes:           file_helper_identity_mfa_types_proto_goTypes,
-		DependencyIndexes: file_helper_identity_mfa_types_proto_depIDxs,
+		DependencyIndexes: file_helper_identity_mfa_types_proto_depIdxs,
 		MessageInfos:      file_helper_identity_mfa_types_proto_msgTypes,
 	}.Build()
 	File_helper_identity_mfa_types_proto = out.File
 	file_helper_identity_mfa_types_proto_rawDesc = nil
 	file_helper_identity_mfa_types_proto_goTypes = nil
-	file_helper_identity_mfa_types_proto_depIDxs = nil
+	file_helper_identity_mfa_types_proto_depIdxs = nil
 }
