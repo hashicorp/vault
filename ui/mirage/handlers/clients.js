@@ -36,7 +36,6 @@ export const CONFIG_RESPONSE = {
   request_id: 'some-config-id',
   data: {
     billing_start_timestamp: formatRFC3339(LICENSE_START),
-    default_report_months: 12,
     enabled: 'default-enabled',
     minimum_retention_months: 48,
     queries_available: false,
