@@ -178,13 +178,9 @@ only needs to validate the provided JWT.
 
 ### JWT verification
 
-JWT signatures will be verified against public keys from the issuer. You can
-configure JWT signature verifcation in several different ways, though only one
-method may be configured for a single backend. If multiple methods are needed,
-another instance of the backend can be mounted and configured at a different
-path.
-
-You can configure public keys using one of the following methods:
+Vault verifies JWT signatures against public keys from the issuer. You can
+only configure one JWT signature verification method per mounted backend from
+the following options:
 
 - **Static Keys**. A set of public keys is stored directly in the backend configuration. See the
   [jwt_validation_pubkeys](/vault/api-docs/auth/jwt#jwt_validation_pubkeys) 
@@ -206,9 +202,14 @@ You can configure public keys using one of the following methods:
   and [oidc_discovery_ca_pem](/vault/api-docs/auth/jwt#oidc_discovery_ca_pem) configuration 
   options.
 
-Once the JWT signatures are verified, the JWT's `aud` claim is checked. If the
-JWT's `aud` claim is set, the role's `bound_audiences` must match at least one
-of the JWT's `aud` claims.
+
+To configure additional verification methods, you must mount and configure one
+backend instance per method at different paths.
+
+After verifying the JWT signatures, Vault checks the corresponding `aud` claim.
+
+If authentication request uses an `aud` claim, the associated `bound_audiences`
+for the role must match at least one of the `aud` claims declared for the JWT.
 
 ### Via the CLI
 
@@ -314,13 +315,13 @@ management tool.
 Once a JWT has been validated as being properly signed and not expired, the
 authorization flow will validate that any configured "bound" parameters match.
 In some cases there are dedicated parameters, for example `bound_subject`,
-which must match the JWT's `sub` claim. For roles of type "jwt", the
-`bound_audiences` parameter is required if the JWT's `aud` claim is set and it
-must match at least one of the JWT's `aud` claims.
+that must match the provided `sub` claim. For roles of type "jwt":
 
-A role may also be configured to check arbitrary claims through the
-`bound_claims` map. The map contains a set of claims and their required values.
-For example, assume `bound_claims` is set to:
+1. the `bound_audiences` parameter is required when an `aud` claim is set.
+1. the `bound_audiences` parameter must match at least one of provided `aud` claims.
+
+You can also configure roles to check an arbitrary set of claims and required
+values with the `bound_claims` map. For example, assume `bound_claims` is set to:
 
 ```json
 {
