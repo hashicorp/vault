@@ -4,6 +4,7 @@
 package issuing
 
 import (
+	"bytes"
 	"context"
 	"crypto/x509"
 	"fmt"
@@ -139,13 +140,41 @@ type IssuerEntry struct {
 	Version              uint                      `json:"version"`
 }
 
+// GetCertificate returns a x509.Certificate of the CA certificate
+// represented by this issuer.
 func (i IssuerEntry) GetCertificate() (*x509.Certificate, error) {
-	cert, err := parsing.ParseCertificateFromBytes([]byte(i.Certificate))
+	cert, err := parsing.ParseCertificateFromString(i.Certificate)
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse certificate from issuer: %s: %v", err.Error(), i.ID)}
 	}
 
 	return cert, nil
+}
+
+// GetFullCaChain returns a slice of x509.Certificate values of this issuer full ca chain,
+// which starts with the CA certificate represented by this issuer followed by the entire CA chain
+func (i IssuerEntry) GetFullCaChain() ([]*x509.Certificate, error) {
+	var chains []*x509.Certificate
+	issuerCert, err := i.GetCertificate()
+	if err != nil {
+		return nil, err
+	}
+
+	chains = append(chains, issuerCert)
+
+	for rangeI, chainVal := range i.CAChain {
+		parsedChainVal, err := parsing.ParseCertificateFromString(chainVal)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing issuer %s ca chain index value [%d]: %w", i.ID, rangeI, err)
+		}
+
+		if bytes.Equal(parsedChainVal.Raw, issuerCert.Raw) {
+			continue
+		}
+		chains = append(chains, parsedChainVal)
+	}
+
+	return chains, nil
 }
 
 func (i IssuerEntry) EnsureUsage(usage IssuerUsage) error {
