@@ -150,4 +150,46 @@ module('Unit | Adapter | clients activity', function (hooks) {
 
     this.store.queryRecord(this.modelName, { current_billing_period: true });
   });
+
+  module('exportData', function (hooks) {
+    hooks.beforeEach(function () {
+      this.adapter = this.store.adapterFor('clients/activity');
+    });
+    test('it requests with correct params when no query', async function (assert) {
+      assert.expect(1);
+
+      this.server.get('sys/internal/counters/activity/export', (schema, req) => {
+        assert.propEqual(req.queryParams, { format: 'csv' });
+      });
+
+      await this.adapter.exportData();
+    });
+
+    test('it requests with correct params when start only', async function (assert) {
+      assert.expect(1);
+
+      this.server.get('sys/internal/counters/activity/export', (schema, req) => {
+        assert.propEqual(req.queryParams, { format: 'csv', start_time: '2024-04-01T00:00:00.000Z' });
+      });
+
+      await this.adapter.exportData({ start_time: '2024-04-01T00:00:00.000Z' });
+    });
+
+    test('it requests with correct params when all params', async function (assert) {
+      assert.expect(1);
+
+      this.server.get('sys/internal/counters/activity/export', (schema, req) => {
+        assert.propEqual(req.queryParams, {
+          format: 'csv',
+          start_time: '2024-04-01T00:00:00.000Z',
+          end_time: '2024-05-31T00:00:00.000Z',
+        });
+      });
+
+      await this.adapter.exportData({
+        start_time: '2024-04-01T00:00:00.000Z',
+        end_time: '2024-05-31T00:00:00.000Z',
+      });
+    });
+  });
 });
