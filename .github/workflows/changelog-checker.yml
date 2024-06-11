@@ -76,7 +76,7 @@ jobs:
           elif grep -q ':fix$' "$changelog_files"; then
             echo "Found invalid type (fix) in changelog - did you mean bug?"
             exit 1
-          elif grep -q ':feature' "$changelog_files"; then
+          elif grep -q ':feature$' "$changelog_files"; then
             if ! grep -q '**' "$changelog_files"; then
               echo "Feature changelogs must be formatted like the following:"
               echo "**Feature Name**: Feature description"
