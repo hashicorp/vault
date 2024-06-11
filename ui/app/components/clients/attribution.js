@@ -44,7 +44,9 @@ import { format, isSameMonth } from 'date-fns';
 
 export default class Attribution extends Component {
   @service download;
+  @service store;
   @tracked showCSVDownloadModal = false;
+  @tracked downloadError = '';
 
   get attributionLegend() {
     const attributionLegend = [
@@ -156,73 +158,13 @@ export default class Attribution extends Component {
     ];
   }
 
-  generateCsvData() {
-    const totalAttribution = this.args.totalClientAttribution;
-    const newAttribution = this.barChartNewClients ? this.args.newClientAttribution : null;
-    const { isSecretsSyncActivated } = this.args;
-    const csvData = [];
-    // added to clarify that the row of namespace totals without an auth method (blank) are not additional clients
-    // but indicate the total clients for that ns, including its auth methods
-    const upgrade = this.args.upgradesDuringActivity?.length
-      ? `\n **data contains an upgrade (mount summation may not equal namespace totals)`
-      : '';
-    const descriptionOfBlanks = this.isSingleNamespace
-      ? ''
-      : `\n *namespace totals, inclusive of mount clients${upgrade}`;
-    // client type order here should match array order returned by destructureCountsToArray
-    let csvHeader = [
-      'Namespace path',
-      `"Mount path${descriptionOfBlanks}"`, // double quotes necessary so description stays inside this cell
-      'Total clients',
-      'Entity clients',
-      'Non-entity clients',
-      'ACME clients',
-      ...(isSecretsSyncActivated ? ['Secrets sync clients'] : []),
-    ];
-
-    if (newAttribution) {
-      csvHeader = [
-        ...csvHeader,
-        'Total new clients',
-        'New entity clients',
-        'New non-entity clients',
-        'New ACME clients',
-        ...(isSecretsSyncActivated ? 'New secrets sync clients' : []),
-      ];
-    }
-
-    totalAttribution.forEach((totalClientsObject) => {
-      const namespace = this.isSingleNamespace ? this.args.selectedNamespace : totalClientsObject;
-      const mount = this.isSingleNamespace ? totalClientsObject : null;
-
-      // find new client data for namespace/mount object we're iterating over
-      const newClientsObject = newAttribution
-        ? newAttribution.find((d) => d.label === totalClientsObject.label)
-        : null;
-
-      const totalClients = this.destructureCountsToArray(totalClientsObject);
-      const newClients = newClientsObject ? this.destructureCountsToArray(newClientsObject) : null;
-
-      csvData.push(this.constructCsvRow(namespace, mount, totalClients, newClients));
-      // constructCsvRow returns an array that corresponds to a row in the csv file:
-      // ['ns label', 'mount label', total client #, entity #, non-entity #, acme #, secrets sync #, ...new client #'s]
-
-      // only iterate through mounts if NOT viewing a single namespace
-      if (!this.isSingleNamespace && namespace.mounts) {
-        namespace.mounts.forEach((mount) => {
-          const newMountData = newAttribution
-            ? newClientsObject?.mounts.find((m) => m.label === mount.label)
-            : null;
-          const mountTotalClients = this.destructureCountsToArray(mount);
-          const mountNewClients = newMountData ? this.destructureCountsToArray(newMountData) : null;
-          csvData.push(this.constructCsvRow(namespace, mount, mountTotalClients, mountNewClients));
-        });
-      }
+  async generateCsvData() {
+    const adapter = this.store.adapterFor('clients/activity');
+    const { startTimestamp, endTimestamp } = this.args;
+    return adapter.exportData({
+      start_time: startTimestamp,
+      end_time: endTimestamp,
     });
-
-    csvData.unshift(csvHeader);
-    // make each nested array a comma separated string, join each array "row" in csvData with line break (\n)
-    return csvData.map((d) => d.join()).join('\n');
   }
 
   get formattedCsvFileName() {
@@ -233,17 +175,19 @@ export default class Attribution extends Component {
       : `clients_by_namespace${csvDateRange}`;
   }
 
-  get modalExportText() {
-    const { isSecretsSyncActivated } = this.args;
-    return `This export will include the namespace path, mount path and associated total entity, non-entity${
-      isSecretsSyncActivated ? ', ACME and secrets sync clients' : ' and ACME clients'
-    } for the ${this.formattedEndDate ? 'date range' : 'month'} below.`;
+  @action
+  async exportChartData(filename) {
+    try {
+      const contents = await this.generateCsvData();
+      this.download.csv(filename, contents);
+      this.showCSVDownloadModal = false;
+    } catch (e) {
+      this.downloadError = e.message;
+    }
   }
 
-  @action
-  exportChartData(filename) {
-    const contents = this.generateCsvData();
-    this.download.csv(filename, contents);
+  @action resetModal() {
     this.showCSVDownloadModal = false;
+    this.downloadError = '';
   }
 }
