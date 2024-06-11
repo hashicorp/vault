@@ -132,32 +132,6 @@ export default class Attribution extends Component {
     }
   }
 
-  destructureCountsToArray(object) {
-    // destructure the namespace object  {label: 'some-namespace', entity_clients: 171, non_entity_clients: 20, acme_clients: 6, secret_syncs: 10, clients: 207}
-    // to get integers for CSV file
-    const { clients, entity_clients, non_entity_clients, acme_clients, secret_syncs } = object;
-    const { isSecretsSyncActivated } = this.args;
-
-    return [
-      clients,
-      entity_clients,
-      non_entity_clients,
-      acme_clients,
-      ...(isSecretsSyncActivated ? [secret_syncs] : []),
-    ];
-  }
-
-  constructCsvRow(namespaceColumn, mountColumn = null, totalColumns, newColumns = null) {
-    // if namespaceColumn is a string, then we're at mount level attribution, otherwise it is an object
-    // if constructing a namespace row, mountColumn=null so the column is blank, otherwise it is an object
-    const otherColumns = newColumns ? [...totalColumns, ...newColumns] : [...totalColumns];
-    return [
-      `${typeof namespaceColumn === 'string' ? namespaceColumn : namespaceColumn.label}`,
-      `${mountColumn ? mountColumn.label : '*'}`,
-      ...otherColumns,
-    ];
-  }
-
   async generateCsvData() {
     const adapter = this.store.adapterFor('clients/activity');
     const { startTimestamp, endTimestamp } = this.args;
