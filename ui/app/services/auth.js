@@ -81,8 +81,10 @@ export default Service.extend({
     if (!tokenName) {
       return;
     }
+
     const { tokenExpirationEpoch } = this.getTokenData(tokenName);
     const expirationDate = new Date(0);
+
     return tokenExpirationEpoch ? expirationDate.setUTCMilliseconds(tokenExpirationEpoch) : null;
   }),
 
@@ -216,9 +218,17 @@ export default Service.extend({
   },
 
   calculateExpiration(resp) {
-    const now = this.now();
+    let tokenExpirationEpoch;
     const ttl = resp.ttl || resp.lease_duration;
-    const tokenExpirationEpoch = now + ttl * 1e3;
+    const now = this.now();
+
+    if (resp.type === 'batch') {
+      const expireTime = resp.expire_time;
+      tokenExpirationEpoch = new Date(expireTime).getTime();
+    } else {
+      tokenExpirationEpoch = now + ttl * 1e3;
+    }
+
     this.set('expirationCalcTS', now);
     return {
       ttl,
@@ -296,21 +306,16 @@ export default Service.extend({
       resp.policies
     );
 
-    if (resp.renewable) {
-      Object.assign(data, this.calculateExpiration(resp));
-    } else if (resp.type === 'batch') {
-      // if it's a batch token, it's not renewable but has an expire time
-      // so manually set tokenExpirationEpoch and allow expiration
-      data.tokenExpirationEpoch = new Date(resp.expire_time).getTime();
-      this.set('allowExpiration', true);
-    }
+    Object.assign(data, this.calculateExpiration(resp));
 
     if (!data.displayName) {
       data.displayName = (this.getTokenData(tokenName) || {}).displayName;
     }
+
     this.set('tokens', addToArray(this.tokens, tokenName));
     this.set('allowExpiration', false);
     this.setTokenData(tokenName, data);
+
     return resolve({
       namespace: currentNamespace || data.userRootNamespace,
       token: tokenName,
