@@ -2,11 +2,6 @@
 What does this PR do?
 
 ### TODO only if you're a HashiCorp employee
-- [ ] **Changelog:** Make sure there is one, or the `pr/no-changelog` label is
-  applied. Brand new features have a differently
-  formatted changelog than other changelogs, so pay attention to that. If this
-  PR is the CE portion of an ENT PR, put the changelog here, _not_ in your ENT
-  PR. Feel free to refer to the [instructions](https://github.com/hashicorp/vault/blob/main/CONTRIBUTING.md#changelog-entries) on changelog formatting if necessary.
 - [ ] **Labels:** If this PR is the CE portion of an ENT change, and that ENT change is
   getting backported to N-2, use the new style `backport/ent/x.x.x+ent` labels
   instead of the old style `backport/x.x.x` labels.
