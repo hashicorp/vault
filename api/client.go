@@ -1310,10 +1310,16 @@ func (c *Client) NewRequest(method, requestPath string) *Request {
 	// if SRV records exist (see https://tools.ietf.org/html/draft-andrews-http-srv-02), lookup the SRV
 	// record and take the highest match; this is not designed for high-availability, just discovery
 	// Internet Draft specifies that the SRV record is ignored if a port is given
+	// According to that draft, if there is not port it should follow
+	// https://datatracker.ietf.org/doc/html/rfc2782
+	// We expect an addr which looks for example like _vault._tcp.example.com
+	// DNS does randomization of the records if there are multiple
 	if addr.Port() == "" && c.config.SRVLookup {
-		_, addrs, err := net.LookupSRV("http", "tcp", addr.Hostname())
+		_, addrs, err := net.LookupSRV("", "", addr.String())
 		if err == nil && len(addrs) > 0 {
 			host = fmt.Sprintf("%s:%d", addrs[0].Target, addrs[0].Port)
+			addr.Path = ""        // url.Parse seems to set this to the hostname if there is no scheme
+			addr.Scheme = "https" // override scheme
 		}
 	}
 
