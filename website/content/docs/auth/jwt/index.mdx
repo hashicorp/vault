@@ -208,8 +208,9 @@ backend instance per method at different paths.
 
 After verifying the JWT signatures, Vault checks the corresponding `aud` claim.
 
-If authentication request uses an `aud` claim, the associated `bound_audiences`
-for the role must match at least one of the `aud` claims declared for the JWT.
+If the JWT in the authentication request contains an `aud` claim, the
+associated `bound_audiences` for the role must match at least one of the `aud`
+claims declared for the JWT.
 
 ### Via the CLI
 
