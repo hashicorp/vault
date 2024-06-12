@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/builtin/logical/pki/managed_key"
 	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
+	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
@@ -766,4 +767,20 @@ func (sc *storageContext) writeClusterConfig(config *issuing.ClusterConfigEntry)
 	}
 
 	return sc.Storage.Put(sc.Context, entry)
+}
+
+func fetchRevocationInfo(sc pki_backend.StorageContext, serial string) (*revocation.RevocationInfo, error) {
+	var revInfo *revocation.RevocationInfo
+	revEntry, err := fetchCertBySerial(sc, revocation.RevokedPath, serial)
+	if err != nil {
+		return nil, err
+	}
+	if revEntry != nil {
+		err = revEntry.DecodeJSON(&revInfo)
+		if err != nil {
+			return nil, fmt.Errorf("error decoding existing revocation info: %w", err)
+		}
+	}
+
+	return revInfo, nil
 }
