@@ -2013,7 +2013,9 @@ func (m *ExpirationManager) renewAuthEntry(ctx context.Context, req *logical.Req
 	return resp, nil
 }
 
-// loadEntry is used to read a lease entry
+// loadEntry is used to read a lease entry.
+// NOTE: loadEntry will return nil for both the pointer to a leaseEntry and the error when
+// the entry is not found, so callers should check the entry before attempting to access its fields.
 func (m *ExpirationManager) loadEntry(ctx context.Context, leaseID string) (*leaseEntry, error) {
 	// Take out the lease locks after we ensure we are in restore mode
 	restoreMode := m.inRestoreMode()

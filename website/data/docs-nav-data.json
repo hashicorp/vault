@@ -2326,6 +2326,10 @@
         "path": "upgrading/raft-wal"
       },
       {
+        "title": "Upgrade to 1.18.x",
+        "path": "upgrading/upgrade-to-1.18.x"
+      },
+      {
         "title": "Upgrade to 1.17.x",
         "path": "upgrading/upgrade-to-1.17.x"
       },
@@ -2584,6 +2588,10 @@
       {
         "title": "Overview",
         "path": "release-notes"
+      },
+      {
+        "title": "1.17.0",
+        "path": "release-notes/1.17.0"
       },
       {
         "title": "1.16.1",
@@ -2845,6 +2853,10 @@
       {
         "title": "Audit",
         "routes": [
+          {
+            "title": "Audit Exclusion",
+            "path": "enterprise/audit/exclusion"
+          },
           {
             "title": "Audit Filtering",
             "path": "enterprise/audit/filtering"

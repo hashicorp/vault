@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { visit, click, fillIn, findAll, currentRouteName } from '@ember/test-helpers';
+import { visit, click, fillIn, findAll, currentRouteName, currentURL } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import oidcConfigHandlers from 'vault/mirage/handlers/oidc-config';
@@ -89,9 +89,11 @@ module('Acceptance | oidc-config clients and keys', function (hooks) {
       'key edit form navigates back to details on cancel'
     );
     await click(SELECTORS.keyClientsTab);
-    assert
-      .dom('[data-test-oidc-client-linked-block="client-with-default-key"]')
-      .exists('lists correct app with default');
+    assert.strictEqual(
+      currentURL(),
+      '/vault/access/oidc/keys/default/clients',
+      'navigates to key applications list '
+    );
 
     // create a new key
     await click('[data-test-breadcrumb-link="oidc-keys"] a');
