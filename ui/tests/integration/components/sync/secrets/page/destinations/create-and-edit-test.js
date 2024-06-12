@@ -210,7 +210,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
         }
       });
 
-      test('it masks obfuscated fields meep', async function (assert) {
+      test('it masks obfuscated fields', async function (assert) {
         const filteredObfuscatedFields = this.model.formFields.filter((field) =>
           obfuscatedFields.includes(field.name)
         );
