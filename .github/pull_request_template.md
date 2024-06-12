@@ -16,4 +16,4 @@ What does this PR do?
   in the PR description, commit message, or branch name.
 - [ ] **RFC:** If this change has an associated RFC, please link it in the description.
 - [ ] **ENT PR:** If this change has an associated ENT PR, please link it in the
-  description.
+  description. Also, make sure the changelog is in this PR, _not_ in your ENT PR.
