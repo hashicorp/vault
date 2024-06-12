@@ -172,7 +172,7 @@ var (
 )
 
 func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.CommandFactory {
-	extendFullAddonCommands()
+	extendAddonCommands()
 
 	getBaseCommand := func() *BaseCommand {
 		return &BaseCommand{
