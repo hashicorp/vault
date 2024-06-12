@@ -3206,7 +3206,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ember/test-waiters@npm:^2.4.3 || ^3.0.0, @ember/test-waiters@npm:^3.0.2, @ember/test-waiters@npm:^3.1.0":
+"@ember/test-waiters@npm:^2.4.3 || ^3.0.0, @ember/test-waiters@npm:^3, @ember/test-waiters@npm:^3.0.2, @ember/test-waiters@npm:^3.1.0":
   version: 3.1.0
   resolution: "@ember/test-waiters@npm:3.1.0"
   dependencies:
@@ -3226,6 +3226,18 @@ __metadata:
     broccoli-funnel: ^3.0.8
     semver: ^7.3.8
   checksum: 2f208adfe1f883a6e7030c2c744c1e8399aaa9423237a87e8d04195f0d2ad947a0d7e37e77232b3021e9c7bdfbc23381606e636183a7953ba952bea78eb15035
+  languageName: node
+  linkType: hard
+
+"@embroider/addon-shim@npm:^1.7.1":
+  version: 1.8.9
+  resolution: "@embroider/addon-shim@npm:1.8.9"
+  dependencies:
+    "@embroider/shared-internals": ^2.6.0
+    broccoli-funnel: ^3.0.8
+    common-ancestor-path: ^1.0.1
+    semver: ^7.3.8
+  checksum: 487bca1e8c7de93427d2c7221cace571ea5d75a5bd6bb838861a2071dc6d06a45e844fe6875cc8fb8c003112df4f7df38ac7f702aa60d79ccf62b2ad73218c28
   languageName: node
   linkType: hard
 
@@ -3266,6 +3278,24 @@ __metadata:
     semver: ^7.3.5
     typescript-memoize: ^1.0.1
   checksum: f268764bd9cb031ab078af677865e8ce08cc2159bb8bce22125b452279a05c054061a3513616231612ce73fcf92c0737d2c9f517b169d5208bf9e36c89e3ccdd
+  languageName: node
+  linkType: hard
+
+"@embroider/shared-internals@npm:^2.6.0":
+  version: 2.6.1
+  resolution: "@embroider/shared-internals@npm:2.6.1"
+  dependencies:
+    babel-import-util: ^2.0.0
+    debug: ^4.3.2
+    ember-rfc176-data: ^0.3.17
+    fs-extra: ^9.1.0
+    js-string-escape: ^1.0.1
+    lodash: ^4.17.21
+    minimatch: ^3.0.4
+    resolve-package-path: ^4.0.1
+    semver: ^7.3.5
+    typescript-memoize: ^1.0.1
+  checksum: c1c43c14c6f9de3b36b0b2c3e17eb09fab8e0711d08e9afa42bd7eafd3cfb883d7b4ec303ab2896efc7fc76056dc9a861f0795504984614f106303c33f9bcaa6
   languageName: node
   linkType: hard
 
@@ -7647,6 +7677,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"common-ancestor-path@npm:^1.0.1":
+  version: 1.0.1
+  resolution: "common-ancestor-path@npm:1.0.1"
+  checksum: 1d2e4186067083d8cc413f00fc2908225f04ae4e19417ded67faa6494fb313c4fcd5b28a52326d1a62b466e2b3a4325e92c31133c5fee628cdf8856b3a57c3d7
+  languageName: node
+  linkType: hard
+
 "common-sequence@npm:^2.0.2":
   version: 2.0.2
   resolution: "common-sequence@npm:2.0.2"
@@ -9523,6 +9560,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"ember-cookies@npm:^1.0.0":
+  version: 1.1.2
+  resolution: "ember-cookies@npm:1.1.2"
+  dependencies:
+    "@embroider/addon-shim": ^1.7.1
+  checksum: 3204afe31889a79e8c3f55b6555b0ab504d5941da3f5e430714e4c0e5a8d99fc725f3bd66f35ea4ee2969abbfb9ba31d958d24c990549eb17a27bd882ecb6ce4
+  languageName: node
+  linkType: hard
+
 "ember-data@npm:~4.12.4":
   version: 4.12.7
   resolution: "ember-data@npm:4.12.7"
@@ -9961,6 +10007,25 @@ __metadata:
     glob: ^7.1.6
     hash-for-dep: ^1.5.1
   checksum: 17e2f2a03cdf0ae9c5f4b0bd25a1b631849392b31e7bc4d376253511d1d6bc7338253fb36a4d7323ceb6b0eb319399a7e964a50ad9df381e64c4ac0d5b07a0b6
+  languageName: node
+  linkType: hard
+
+"ember-simple-auth@npm:^6.0.0":
+  version: 6.0.0
+  resolution: "ember-simple-auth@npm:6.0.0"
+  dependencies:
+    "@ember/test-waiters": ^3
+    "@embroider/addon-shim": ^1.0.0
+    "@embroider/macros": ^1.0.0
+    ember-cli-is-package-missing: ^1.0.0
+    ember-cookies: ^1.0.0
+    silent-error: ^1.0.0
+  peerDependencies:
+    "@ember/test-helpers": ">= 3 || > 2.7"
+  peerDependenciesMeta:
+    "@ember/test-helpers":
+      optional: true
+  checksum: aed3be063c777a2cddc55c2cb4f6471a48c8d87c2648b8efa71b533a7366209c21f12db5df962bc59557b64f30d34d0807010bbe9ac47dc420f25f55a442ef3c
   languageName: node
   linkType: hard
 
@@ -20274,6 +20339,7 @@ __metadata:
     ember-responsive: 5.0.0
     ember-router-helpers: ^0.4.0
     ember-service-worker: "meirish/ember-service-worker#configurable-scope"
+    ember-simple-auth: ^6.0.0
     ember-sinon-qunit: ^7.4.0
     ember-source: ~5.4.0
     ember-style-modifier: ^4.1.0

@@ -76,6 +76,9 @@ const appConfig = {
   'ember-cli-deprecation-workflow': {
     enabled: true,
   },
+  'ember-simple-auth': {
+    useSessionSetupMethod: true,
+  },
 };
 
 module.exports = function (defaults) {
