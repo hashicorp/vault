@@ -110,7 +110,6 @@ var (
 		mountPathCubbyhole,
 		mountPathSystem,
 		"audit/",
-		mountPathIdentity,
 	}
 
 	// singletonMounts can only exist in one location and are
