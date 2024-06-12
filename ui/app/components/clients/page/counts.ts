@@ -167,20 +167,10 @@ export default class ClientsCountsPageComponent extends Component<Args> {
     return activity?.total;
   }
 
-  get showSecretsSync(): boolean {
+  get hasSecretsSyncClients(): boolean {
     const { activity } = this.args;
     // if there is any sync client data, show it
-    if (activity && activity?.total?.secret_syncs > 0) return true;
-
-    // otherwise, show the tab based on the cluster type and license
-    if (this.version.isCommunity) return false;
-
-    const isHvd = this.flags.isHvdManaged;
-    const onLicense = this.version.hasSecretsSync;
-
-    // we can't tell if HVD clusters have the feature or not, so we show it by default
-    // if the cluster is not HVD, show the tab if the feature is on the license
-    return isHvd || onLicense;
+    return activity && activity?.total?.secret_syncs > 0;
   }
 
   @action

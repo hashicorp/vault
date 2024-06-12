@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -1072,7 +1073,7 @@ func (b *backend) doTidyRevocationStore(ctx context.Context, req *logical.Reques
 
 	// Fetch and parse our issuers so we can associate them if necessary.
 	sc := b.makeStorageContext(ctx, req.Storage)
-	issuerIDCertMap, err := fetchIssuerMapForRevocationChecking(sc)
+	issuerIDCertMap, err := revocation.FetchIssuerMapForRevocationChecking(sc)
 	if err != nil {
 		return err
 	}
@@ -1089,7 +1090,7 @@ func (b *backend) doTidyRevocationStore(ctx context.Context, req *logical.Reques
 
 	fixedIssuers := 0
 
-	var revInfo revocationInfo
+	var revInfo revocation.RevocationInfo
 	for i, serial := range revokedSerials {
 		b.tidyStatusMessage(fmt.Sprintf("Tidying revoked certificates: checking certificate %d of %d", i, len(revokedSerials)))
 		metrics.SetGauge([]string{"secrets", "pki", "tidy", "revoked_cert_current_entry"}, float32(i))
@@ -1148,7 +1149,7 @@ func (b *backend) doTidyRevocationStore(ctx context.Context, req *logical.Reques
 				b.tidyStatusIncMissingIssuerCertCount()
 				revInfo.CertificateIssuer = issuing.IssuerID("")
 				storeCert = true
-				if associateRevokedCertWithIsssuer(&revInfo, revokedCert, issuerIDCertMap) {
+				if revInfo.AssociateRevokedCertWithIsssuer(revokedCert, issuerIDCertMap) {
 					fixedIssuers += 1
 				}
 			}
@@ -1204,7 +1205,7 @@ func (b *backend) doTidyRevocationStore(ctx context.Context, req *logical.Reques
 		}
 
 		if !config.AutoRebuild {
-			warnings, err := b.CrlBuilder().rebuild(sc, false)
+			warnings, err := b.CrlBuilder().Rebuild(sc, false)
 			if err != nil {
 				return err
 			}
@@ -1243,7 +1244,7 @@ func (b *backend) doTidyExpiredIssuers(ctx context.Context, req *logical.Request
 
 	// Fetch and parse our issuers so we have their expiration date.
 	sc := b.makeStorageContext(ctx, req.Storage)
-	issuerIDCertMap, err := fetchIssuerMapForRevocationChecking(sc)
+	issuerIDCertMap, err := revocation.FetchIssuerMapForRevocationChecking(sc)
 	if err != nil {
 		return err
 	}
@@ -1316,7 +1317,7 @@ func (b *backend) doTidyExpiredIssuers(ctx context.Context, req *logical.Request
 		b.GetRevokeStorageLock().Lock()
 		defer b.GetRevokeStorageLock().Unlock()
 
-		warnings, err := b.CrlBuilder().rebuild(sc, false)
+		warnings, err := b.CrlBuilder().Rebuild(sc, false)
 		if err != nil {
 			return err
 		}
@@ -1565,7 +1566,7 @@ func (b *backend) doTidyCrossRevocationStore(ctx context.Context, req *logical.R
 				continue
 			}
 
-			var details unifiedRevocationEntry
+			var details revocation.UnifiedRevocationEntry
 			if err := entry.DecodeJSON(&details); err != nil {
 				return fmt.Errorf("error decoding cross-cluster revocation entry (%v) to tidy: %w", ePath, err)
 			}
