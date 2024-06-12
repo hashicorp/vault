@@ -235,22 +235,6 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/approle/role/application1/role-id
 ```
 
-### Sample response
-
-```json
-{
-  "auth": null,
-  "warnings": null,
-  "wrap_info": null,
-  "data": {
-    "role_id": "e5a7b66e-5d08-da9c-7075-71984634b882"
-  },
-  "lease_duration": 0,
-  "renewable": false,
-  "lease_id": ""
-}
-```
-
 ## Generate new secret ID
 
 Generates and issues a new SecretID on an existing AppRole. Similar to

@@ -56,7 +56,7 @@ func (c *OperatorUsageCommand) Flags() *FlagSets {
 
 	f.TimeVar(&TimeVar{
 		Name:       "start-time",
-		Usage:      "Start of report period. Defaults to 'default_reporting_period' before end time.",
+		Usage:      "Start of report period. Defaults to billing start time",
 		Target:     &c.flagStartTime,
 		Completion: complete.PredictNothing,
 		Default:    time.Time{},
@@ -64,7 +64,7 @@ func (c *OperatorUsageCommand) Flags() *FlagSets {
 	})
 	f.TimeVar(&TimeVar{
 		Name:       "end-time",
-		Usage:      "End of report period. Defaults to end of last month.",
+		Usage:      "End of report period. Defaults to end of the current month.",
 		Target:     &c.flagEndTime,
 		Completion: complete.PredictNothing,
 		Default:    time.Time{},

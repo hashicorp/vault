@@ -49,6 +49,12 @@ const API_PATHS = {
   settings: {
     customMessages: 'sys/config/ui/custom-messages',
   },
+  sync: {
+    destinations: 'sys/sync/destinations',
+    associations: 'sys/sync/associations',
+    config: 'sys/sync/config',
+    github: 'sys/sync/github-apps',
+  },
 };
 
 const API_PATHS_TO_ROUTE_PARAMS = {
@@ -99,7 +105,7 @@ export default class PermissionsService extends Service {
   @service store;
   @service namespace;
 
-  get baseNs() {
+  get fullCurrentNamespace() {
     const currentNs = this.namespace.path;
     return this.chrootNamespace
       ? `${sanitizePath(this.chrootNamespace)}/${sanitizePath(currentNs)}`
@@ -122,24 +128,37 @@ export default class PermissionsService extends Service {
     }
   }
 
-  get wildcardPath() {
-    const ns = [sanitizePath(this.chrootNamespace), sanitizePath(this.namespace.userRootNamespace)].join('/');
-    // wildcard path comes back from root namespace as empty string,
-    // but within a namespace it's the namespace itself ending with a slash
-    return ns === '/' ? '' : `${sanitizePath(ns)}/`;
-  }
-
   /**
-   * hasWildcardAccess checks if the user has a wildcard policy
+   * hasWildcardNsAccess checks if the user has a wildcard access to target namespace
+   * via full glob path or any ancestors of the target namespace
+   * @param {string} targetNs is the current/target namespace that we are checking access for
    * @param {object} globPaths key is path, value is object with capabilities
    * @returns {boolean} whether the user's policy includes wildcard access to NS
    */
-  hasWildcardAccess(globPaths = {}) {
-    // First check if the wildcard path is in the globPaths object
-    if (!Object.keys(globPaths).includes(this.wildcardPath)) return false;
+  hasWildcardNsAccess(targetNs, globPaths = {}) {
+    const nsParts = sanitizePath(targetNs).split('/');
+    let matchKey = null;
+    // For each section of the namespace, check if there is a matching wildcard path
+    while (nsParts.length > 0) {
+      // glob paths always end in a slash
+      const test = `${nsParts.join('/')}/`;
+      if (Object.keys(globPaths).includes(test)) {
+        matchKey = test;
+        break;
+      }
+      nsParts.pop();
+    }
+    // Finally, check if user has wildcard access to the root namespace
+    // which is represented by an empty string
+    if (!matchKey && Object.keys(globPaths).includes('')) {
+      matchKey = '';
+    }
+    if (null === matchKey) {
+      return false;
+    }
 
-    // if so, make sure the current namespace is a child of the wildcard path
-    return this.namespace.path.startsWith(this.wildcardPath);
+    // if there is a match make sure the capabilities do not include deny
+    return !this.isDenied(globPaths[matchKey]);
   }
 
   // This method is called to recalculate whether to show the permissionsBanner when the namespace changes
@@ -148,14 +167,14 @@ export default class PermissionsService extends Service {
       this.permissionsBanner = null;
       return;
     }
-    const namespace = this.baseNs;
+    const namespace = this.fullCurrentNamespace;
     const allowed =
       // check if the user has wildcard access to the relative root namespace
-      this.hasWildcardAccess(this.globPaths) ||
+      this.hasWildcardNsAccess(namespace, this.globPaths) ||
       // or if any of their glob paths start with the namespace
-      Object.keys(this.globPaths).any((k) => k.startsWith(namespace)) ||
+      Object.keys(this.globPaths).any((k) => k.startsWith(namespace) && !this.isDenied(this.globPaths[k])) ||
       // or if any of their exact paths start with the namespace
-      Object.keys(this.exactPaths).any((k) => k.startsWith(namespace));
+      Object.keys(this.exactPaths).any((k) => k.startsWith(namespace) && !this.isDenied(this.exactPaths[k]));
     this.permissionsBanner = allowed ? null : PERMISSIONS_BANNER_STATES.noAccess;
   }
 
@@ -200,7 +219,7 @@ export default class PermissionsService extends Service {
   }
 
   pathNameWithNamespace(pathName) {
-    const namespace = this.baseNs;
+    const namespace = this.fullCurrentNamespace;
     if (namespace) {
       return `${sanitizePath(namespace)}/${sanitizeStart(pathName)}`;
     } else {

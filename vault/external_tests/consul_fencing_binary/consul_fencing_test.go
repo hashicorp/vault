@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers/consul"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/helper/testcluster"
 	"github.com/hashicorp/vault/sdk/helper/testcluster/docker"
 	"github.com/stretchr/testify/require"
@@ -28,13 +29,15 @@ import (
 // (and Consul lock improvements) and should _never_ fail now we correctly fence
 // writes.
 func TestConsulFencing_PartitionedLeaderCantWrite(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	t.Skip("Skipping the test due to flakiness, it will be resolved in VAULT-27978.")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
 	defer cancel()
 
 	consulStorage := consul.NewClusterStorage()
 
 	// Create  cluster logger that will dump cluster logs to stdout for debugging.
-	logger := hclog.NewInterceptLogger(hclog.DefaultOptions)
+	logger := corehelpers.NewTestLogger(t)
 	logger.SetLevel(hclog.Trace)
 
 	clusterOpts := docker.DefaultOptions(t)

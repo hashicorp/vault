@@ -75,10 +75,34 @@ variable "project_name" {
   default     = "vault-enos-integration"
 }
 
-variable "rhel_distro_version" {
+variable "distro_version_amzn2" {
+  description = "The version of Amazon Linux 2 to use"
+  type        = string
+  default     = "2"
+}
+
+variable "distro_version_leap" {
+  description = "The version of openSUSE leap to use"
+  type        = string
+  default     = "15.5"
+}
+
+variable "distro_version_rhel" {
   description = "The version of RHEL to use"
   type        = string
-  default     = "9.1" // or "8.8"
+  default     = "9.3" // or "8.9"
+}
+
+variable "distro_version_sles" {
+  description = "The version of SUSE SLES to use"
+  type        = string
+  default     = "v15_sp5_standard"
+}
+
+variable "distro_version_ubuntu" {
+  description = "The version of ubuntu to use"
+  type        = string
+  default     = "22.04" // or "20.04"
 }
 
 variable "tags" {
@@ -91,12 +115,6 @@ variable "terraform_plugin_cache_dir" {
   description = "The directory to cache Terraform modules and providers"
   type        = string
   default     = null
-}
-
-variable "ubuntu_distro_version" {
-  description = "The version of ubuntu to use"
-  type        = string
-  default     = "22.04" // or "20.04", "18.04"
 }
 
 variable "ui_test_filter" {
