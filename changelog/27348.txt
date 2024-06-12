@@ -1,3 +1,3 @@
 ```release-note:improvement
-ui: Mask accessToken field when creating a Secrets sync Github destination.
+ui: Mask obfuscated fields when creating/editing a Secrets sync destination.
 ```
