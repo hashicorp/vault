@@ -1,0 +1,3 @@
+```release-note:improvement
+physical/mysql: Avoid HA leadership lost due to idle connection timeout.
+```
