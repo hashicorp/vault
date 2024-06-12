@@ -1,0 +1,3 @@
+```release-note:improvement
+auth/oidc: Support `s_hash` claim in IDToken.
+```
