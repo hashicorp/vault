@@ -22,6 +22,12 @@ ifneq ($(FDB_ENABLED), )
 	BUILD_TAGS+=foundationdb
 endif
 
+# Set BUILD_MINIMAL to a non-empty value to build a minimal version of Vault with only core features.
+BUILD_MINIMAL ?=
+ifneq ($(strip $(BUILD_MINIMAL)),)
+	BUILD_TAGS+=minimal
+endif
+
 default: dev
 
 # bin generates the releasable binaries for Vault
