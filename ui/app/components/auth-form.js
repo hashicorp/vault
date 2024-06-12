@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Ember from 'ember';
 import { next } from '@ember/runloop';
 import { service } from '@ember/service';
 import { match, or } from '@ember/object/computed';
@@ -11,27 +10,21 @@ import { dasherize } from '@ember/string';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 import { allSupportedAuthBackends, supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
-import { task, timeout } from 'ember-concurrency';
+import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
  * @module AuthForm
- * The `AuthForm` is used to sign users into Vault.
+ * The AuthForm is used to sign users into Vault. All properties are passed in via query params.
  *
- * @example ```js
- * // All properties are passed in via query params.
- * <AuthForm @wrappedToken={{wrappedToken}} @cluster={{model}} @namespace={{namespaceQueryParam}} @selectedAuth={{authMethod}} @onSuccess={{action this.onSuccess}}/>```
+ * @example
+ * <AuthForm @wrappedToken={{wrappedToken}} @cluster={{model}} @namespace="admin" @selectedAuth="token" />
  *
  * @param {string} wrappedToken - The auth method that is currently selected in the dropdown.
  * @param {object} cluster - The auth method that is currently selected in the dropdown. This corresponds to an Ember Model.
  * @param {string} namespace- The currently active namespace.
  * @param {string} selectedAuth - The auth method that is currently selected in the dropdown.
- * @param {function} onSuccess - Fired on auth success.
- * @param {function} [setOktaNumberChallenge] - Sets whether we are waiting for okta number challenge to be used to sign in.
- * @param {boolean} [waitingForOktaNumberChallenge=false] - Determines if we are waiting for the Okta Number Challenge to sign in.
- * @param {function} [setCancellingAuth] - Sets whether we are cancelling or not the login authentication for Okta Number Challenge.
- * @param {boolean} [cancelAuthForOktaNumberChallenge=false] - Determines if we are cancelling the login authentication for the Okta Number Challenge.
  */
 
 const DEFAULTS = {
@@ -58,9 +51,6 @@ export default Component.extend(DEFAULTS, {
   // internal
   oldNamespace: null,
 
-  // number answer for okta number challenge if applicable
-  oktaNumberChallengeAnswer: null,
-
   authMethods: computed('version.isEnterprise', function () {
     return this.version.isEnterprise ? allSupportedAuthBackends() : supportedAuthBackends();
   }),
@@ -74,14 +64,7 @@ export default Component.extend(DEFAULTS, {
       namespace: ns,
       selectedAuth: newMethod,
       oldSelectedAuth: oldMethod,
-      cancelAuthForOktaNumberChallenge: cancelAuth,
     } = this;
-    // if we are cancelling the login then we reset the number challenge answer and cancel the current authenticate and polling tasks
-    if (cancelAuth) {
-      this.set('oktaNumberChallengeAnswer', null);
-      this.authenticate.cancelAll();
-      this.pollForOktaNumberChallenge.cancelAll();
-    }
     next(() => {
       if (!token && (oldNS === null || oldNS !== ns)) {
         this.fetchMethods.perform();
@@ -235,65 +218,7 @@ export default Component.extend(DEFAULTS, {
     })
   ),
 
-  showLoading: or('isLoading', 'authenticate.isRunning', 'fetchMethods.isRunning', 'unwrapToken.isRunning'),
-
-  authenticate: task(
-    waitFor(function* (backendType, data) {
-      const {
-        selectedAuth,
-        cluster: { id: clusterId },
-      } = this;
-      try {
-        if (backendType === 'okta') {
-          this.pollForOktaNumberChallenge.perform(data.nonce, data.path);
-        } else {
-          this.delayAuthMessageReminder.perform();
-        }
-        const authResponse = yield this.auth.authenticate({
-          clusterId,
-          backend: backendType,
-          data,
-          selectedAuth,
-        });
-        this.onSuccess(authResponse, backendType, data);
-      } catch (e) {
-        this.set('isLoading', false);
-        if (!this.auth.mfaError) {
-          this.set('error', `Authentication failed: ${this.auth.handleError(e)}`);
-        }
-      }
-    })
-  ),
-
-  pollForOktaNumberChallenge: task(function* (nonce, mount) {
-    // yield for 1s to wait to see if there is a login error before polling
-    yield timeout(1000);
-    if (this.error) {
-      return;
-    }
-    let response = null;
-    this.setOktaNumberChallenge(true);
-    this.setCancellingAuth(false);
-    // keep polling /auth/okta/verify/:nonce API every 1s until a response is given with the correct number for the Okta Number Challenge
-    while (response === null) {
-      // when testing, the polling loop causes promises to be rejected making acceptance tests fail
-      // so disable the poll in tests
-      if (Ember.testing) {
-        return;
-      }
-      yield timeout(1000);
-      response = yield this.auth.getOktaNumberChallengeAnswer(nonce, mount);
-    }
-    this.set('oktaNumberChallengeAnswer', response);
-  }),
-
-  delayAuthMessageReminder: task(function* () {
-    if (Ember.testing) {
-      yield timeout(0);
-    } else {
-      yield timeout(5000);
-    }
-  }),
+  showLoading: or('isLoading', 'handleAuth.isRunning', 'fetchMethods.isRunning', 'unwrapToken.isRunning'),
 
   actions: {
     doSubmit(passedData, event, token) {
@@ -326,17 +251,13 @@ export default Component.extend(DEFAULTS, {
           data.path = 'okta';
         }
       }
-      return this.authenticate.unlinked().perform(backend.type, data);
+      return this.handleAuth.unlinked().perform(backend.type, data);
     },
     handleError(e) {
       this.setProperties({
         isLoading: false,
         error: e ? this.auth.handleError(e) : null,
       });
-    },
-    returnToLoginFromOktaNumberChallenge() {
-      this.setOktaNumberChallenge(false);
-      this.set('oktaNumberChallengeAnswer', null);
     },
   },
 });
