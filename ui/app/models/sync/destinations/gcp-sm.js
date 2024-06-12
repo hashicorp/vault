@@ -38,6 +38,7 @@ export default class SyncDestinationsGoogleCloudSecretManagerModel extends SyncD
     docLink: '/vault/docs/secrets/gcp#authentication',
   })
   credentials; // obfuscated, never returned by API
+  // ARG TODO DOUBLE CHECK
 
   @attr('object', {
     subText:

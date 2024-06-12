@@ -10,7 +10,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { Response } from 'miragejs';
-import { click, render, typeIn } from '@ember/test-helpers';
+import { click, fillIn, render, typeIn } from '@ember/test-helpers';
 import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
 import { syncDestinations } from 'vault/helpers/sync-destinations';
 import { decamelize, underscore } from '@ember/string';
@@ -192,6 +192,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
   // CREATE FORM ASSERTIONS FOR EACH DESTINATION TYPE
   for (const destination of SYNC_DESTINATIONS) {
     const { name, type } = destination;
+    const obfuscatedFields = ['clientSecret', 'secretAccessKey', 'accessKeyId'];
 
     module(`create destination: ${type}`, function (hooks) {
       hooks.beforeEach(function () {
@@ -207,6 +208,23 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
         for (const attr of this.model.formFields) {
           assert.dom(PAGE.fieldByAttr(attr.name)).exists();
         }
+      });
+
+      test('it masks obfuscated fields meep', async function (assert) {
+        const filteredObfuscatedFields = this.model.formFields.filter((field) =>
+          obfuscatedFields.includes(field.name)
+        );
+        assert.expect(filteredObfuscatedFields.length);
+        await this.renderFormComponent();
+        // iterate over the form fields and filter for those that are obfuscated
+        // fill those in and assert that they are masked
+        filteredObfuscatedFields.forEach(async (field) => {
+          await fillIn(PAGE.maskedInput(field.name), 'blah');
+
+          assert
+            .dom(PAGE.maskedInput(field.name))
+            .hasClass('masked-font', `it renders ${field.name} for ${destination} with masked font`);
+        });
       });
 
       test('it saves destination and transitions to details', async function (assert) {
