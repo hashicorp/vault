@@ -249,40 +249,39 @@ export default Service.extend({
     return userRootNamespace;
   },
 
-  persistAuthData() {
-    const [firstArg, resp] = arguments;
+  getDisplayNameFromResponse(backendType, response) {
+    const { displayNamePath } = BACKENDS.find((b) => b.type === backendType);
+    if (isArray(displayNamePath)) {
+      return displayNamePath.map((name) => get(response, name)).join('/');
+    } else {
+      return get(response, displayNamePath);
+    }
+  },
+  persistAuthData({ tokenString, response, authOpts }) {
     const currentNamespace = this.namespaceService.path || '';
     // dropdown vs tab format
-    const mountPath = firstArg?.data?.path || firstArg?.selectedAuth;
+    const mountPath = authOpts?.data?.path || authOpts?.selectedAuth;
     let tokenName;
-    let options;
-    let backend;
-    if (typeof firstArg === 'string') {
-      tokenName = firstArg;
+    const options = authOpts;
+    let backend = authOpts?.backend;
+    if (tokenString) {
+      tokenName = tokenString;
       backend = this.backendFromTokenName(tokenName);
-    } else {
-      options = firstArg;
-      backend = options.backend;
     }
 
     const currentBackend = {
       mountPath,
       ...BACKENDS.find((b) => b.type === backend),
     };
-    let displayName;
-    if (isArray(currentBackend.displayNamePath)) {
-      displayName = currentBackend.displayNamePath.map((name) => get(resp, name)).join('/');
-    } else {
-      displayName = get(resp, currentBackend.displayNamePath);
-    }
+    const displayName = this.getDisplayNameFromResponse(backend, response);
 
-    const { entity_id, policies, renewable, namespace_path } = resp;
+    const { entity_id, policies, renewable, namespace_path } = response;
     const userRootNamespace = this.calculateRootNamespace(currentNamespace, namespace_path, backend);
     const data = {
       userRootNamespace,
       displayName,
       backend: currentBackend,
-      token: resp.client_token || get(resp, currentBackend.tokenPath),
+      token: response.client_token || get(response, currentBackend.tokenPath),
       policies,
       renewable,
       entity_id,
@@ -293,15 +292,15 @@ export default Service.extend({
         backend,
         clusterId: (options && options.clusterId) || this.activeClusterId,
       },
-      resp.policies
+      response.policies
     );
 
-    if (resp.renewable) {
-      Object.assign(data, this.calculateExpiration(resp));
-    } else if (resp.type === 'batch') {
+    if (response.renewable) {
+      Object.assign(data, this.calculateExpiration(response));
+    } else if (response.type === 'batch') {
       // if it's a batch token, it's not renewable but has an expire time
       // so manually set tokenExpirationEpoch and allow expiration
-      data.tokenExpirationEpoch = new Date(resp.expire_time).getTime();
+      data.tokenExpirationEpoch = new Date(response.expire_time).getTime();
       this.set('allowExpiration', true);
     }
 
@@ -340,7 +339,7 @@ export default Service.extend({
     return this.renewCurrentToken().then(
       (resp) => {
         this.isRenewing = false;
-        return this.persistAuthData(tokenName, resp.data || resp.auth);
+        return this.persistAuthData({ tokenName, response: resp.data || resp.auth });
       },
       (e) => {
         this.isRenewing = false;
@@ -457,7 +456,7 @@ export default Service.extend({
   async authSuccess(options, response) {
     // persist selectedAuth to localStorage to rehydrate auth form on logout
     localStorage.setItem('selectedAuth', options.selectedAuth);
-    const authData = await this.persistAuthData(options, response, this.namespaceService.path);
+    const authData = await this.persistAuthData({ authOpts: options, response });
     await this.permissions.getPaths.perform();
     return authData;
   },
