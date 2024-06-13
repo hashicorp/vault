@@ -1001,8 +1001,8 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		effectiveSDKVersion = version.GetVersion().Version
 	}
 
-	detectDeadlocks := parseDetectDeadlockConfigParameter(conf.DetectDeadlocks)
-	stateLock := createAppropriateRWMutex(detectDeadlocks, "statelock")
+	detectDeadlocks := locking.ParseDetectDeadlockConfigParameter(conf.DetectDeadlocks)
+	stateLock := locking.CreateConfigurableRWMutex(detectDeadlocks, "statelock")
 
 	// Setup the core
 	c := &Core{

@@ -1,12 +1,11 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: BUSL-1.1
 
-package vault
+package locking
 
 import (
 	"testing"
 
-	"github.com/hashicorp/vault/helper/locking"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -44,16 +43,16 @@ func TestParseDetectDeadlockConfigParameter(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			result := parseDetectDeadlockConfigParameter(tc.detectDeadlockConfigParameter)
+			result := ParseDetectDeadlockConfigParameter(tc.detectDeadlockConfigParameter)
 			assert.ElementsMatch(t, tc.expectedResult, result)
 		})
 	}
 }
 
-// TestCreateAppropriateRWMutex verifies the correct behaviour in determining
+// TestCreateConfigurableRWMutex verifies the correct behaviour in determining
 // whether a deadlock detecting RWMutex should be returned or not based on the
-// input arguments for the createAppropriateRWMutex function.
-func TestCreateAppropriateRWMutex(t *testing.T) {
+// input arguments for the CreateConfigurableRWMutex function.
+func TestCreateConfigurableRWMutex(t *testing.T) {
 	mutexTypes := map[bool]string{
 		false: "locking.SyncRWMutex",
 		true:  "locking.DeadlockRWMutex",
@@ -93,9 +92,9 @@ func TestCreateAppropriateRWMutex(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			m := createAppropriateRWMutex(tc.detectDeadlocks, tc.lock)
+			m := CreateConfigurableRWMutex(tc.detectDeadlocks, tc.lock)
 
-			_, ok := m.(*locking.DeadlockRWMutex)
+			_, ok := m.(*DeadlockRWMutex)
 			if tc.expectDeadlockLock != ok {
 				t.Fatalf("unexpected RWMutex type returned, expected: %s got %s", mutexTypes[tc.expectDeadlockLock], mutexTypes[ok])
 			}
