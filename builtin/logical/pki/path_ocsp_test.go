@@ -373,8 +373,8 @@ func TestOcsp_MultipleMatchingIssuersOneWithoutSigningUsage(t *testing.T) {
 	requireOcspResponseSignedBy(t, ocspResp, rotatedCert)
 }
 
-// Test that we do not get 301 redirected by Go's HTTP mux if we send in a request
-// that contains consecutive '/' characters within an OCSP GET request.
+// TestOcsp_GetBypassesGoMux Test that we do not get 301 redirected by Go's HTTP mux
+// if we send in a request that contains consecutive '/' characters within an OCSP GET request.
 func TestOcsp_GetBypassesGoMux(t *testing.T) {
 	t.Parallel()
 	coreConfig := &vault.CoreConfig{
