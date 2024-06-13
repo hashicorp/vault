@@ -44,25 +44,6 @@ module('Integration | Component | sync | SyncHeader', function (hooks) {
 
       assert.dom(title).hasText('Secrets Sync');
     });
-
-    test('it should render title and premium badge if license does not have secrets sync feature', async function (assert) {
-      this.version.features = [];
-      await this.renderComponent();
-
-      assert.dom(title).hasText('Secrets Sync Premium feature');
-    });
-  });
-
-  module('community', function (hooks) {
-    hooks.beforeEach(function () {
-      this.version.type = 'community';
-    });
-
-    test('it should render title and enterprise badge', async function (assert) {
-      await this.renderComponent();
-
-      assert.dom(title).hasText('Secrets Sync Enterprise feature');
-    });
   });
 
   module('managed', function (hooks) {

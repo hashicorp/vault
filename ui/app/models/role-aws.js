@@ -66,7 +66,7 @@ export default Model.extend({
       iam_user: ['name', 'credentialType', 'policyArns', 'policyDocument'],
       assumed_role: ['name', 'credentialType', 'roleArns', 'policyDocument'],
       federation_token: ['name', 'credentialType', 'policyDocument'],
-      session_token: [],
+      session_token: ['name', 'credentialType'],
     };
 
     return expandAttributeMeta(this, keysForType[credentialType]);

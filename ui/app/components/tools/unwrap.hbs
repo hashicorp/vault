@@ -1,0 +1,73 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<PageHeader as |p|>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      Unwrap Data
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+{{#if this.unwrapData}}
+  <Hds::Tabs as |T|>
+    <T.Tab data-test-tab="data">Data</T.Tab>
+    <T.Tab data-test-tab="details">Wrap Details</T.Tab>
+    <T.Panel>
+      <JsonEditor
+        class="has-top-padding-m"
+        @title="Unwrapped Data"
+        @value={{stringify this.unwrapData}}
+        @readOnly={{true}}
+        @container=".toolbar-actions"
+      />
+    </T.Panel>
+    <T.Panel>
+      <div class="has-top-padding-m">
+        {{#each-in this.unwrapDetails as |key detail|}}
+          <InfoTableRow @label={{key}} @value={{detail}} />
+        {{/each-in}}
+      </div>
+    </T.Panel>
+  </Hds::Tabs>
+  <Hds::ButtonSet class="has-top-padding-m">
+    <Hds::Copy::Button
+      @text="Copy unwrapped data"
+      @textToCopy={{stringify this.unwrapData}}
+      @onError={{fn (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")}}
+      class="primary"
+    />
+    <Hds::Button {{on "click" this.reset}} @color="secondary" @text="Done" data-test-button="Done" />
+  </Hds::ButtonSet>
+{{else}}
+  <form {{on "submit" this.handleSubmit}}>
+    <div class="box is-sideless is-fullwidth is-marginless">
+      <NamespaceReminder @mode="perform" @noun="unwrap" />
+      <MessageError @errorMessage={{this.errorMessage}} />
+      <div class="field">
+        <label for="token" class="is-label">Wrapped token</label>
+        <div class="has-text-grey is-size-8 has-bottom-margin-xs">
+          Enter your wrapped token here to unwrap it and return its original value.
+        </div>
+        <div class="control">
+          <Input
+            @value={{this.token}}
+            class="input"
+            id="token"
+            name="token"
+            autocomplete="off"
+            spellcheck="false"
+            data-test-tools-input="unwrap-token"
+          />
+        </div>
+      </div>
+    </div>
+    <div class="field is-grouped box is-fullwidth is-bottomless">
+      <div class="control">
+        <Hds::Button @text="Unwrap data" type="submit" data-test-tools-submit />
+      </div>
+    </div>
+  </form>
+{{/if}}
