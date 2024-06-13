@@ -27,10 +27,7 @@ scenario "autopilot" {
     config_mode     = global.config_modes
     distro          = global.distros
     edition         = global.enterprise_editions
-    // This reads the VERSION file, strips any pre-release metadata, and selects only initial
-    // versions that are less than our current version. E.g. A VERSION file containing 1.17.0-beta2
-    // would render: semverconstraint(v, "<1.17.0-0")
-    initial_version = [for v in global.upgrade_initial_versions : v if semverconstraint(v, "<${join("-", [split("-", chomp(file("../version/VERSION")))[0], "0"])}")]
+    initial_version = global.upgrade_initial_versions_ent
     seal            = global.seals
 
     # Autopilot wasn't available before 1.11.x
