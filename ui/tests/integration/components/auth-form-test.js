@@ -9,16 +9,14 @@ import { resolve } from 'rsvp';
 import Service from '@ember/service';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, settled } from '@ember/test-helpers';
+import { click, fillIn, render, settled } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
-import { create } from 'ember-cli-page-object';
-import authForm from '../../pages/components/auth-form';
 import { validate } from 'uuid';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { Response } from 'miragejs';
-
-const component = create(authForm);
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 
 const workingAuthService = Service.extend({
   authenticate() {
@@ -45,7 +43,36 @@ module('Integration | Component | auth form', function (hooks) {
   hooks.beforeEach(function () {
     this.owner.register('service:router', routerService);
     this.router = this.owner.lookup('service:router');
+    this.handleAuth = {
+      unlinked() {
+        return {
+          perform: () => sinon.spy(),
+        };
+      },
+    };
     this.onSuccess = sinon.spy();
+    this.renderComponent = async () => {
+      return render(hbs`
+        <AuthForm
+          @wrappedToken={{this.wrappedToken}}
+          @cluster={{this.cluster}}
+          @selectedAuth={{this.selectedAuth}}
+          @handleAuth={{this.handleAuth}}
+          @delayIsIdle={{this.delayIsIdle}}
+        />`);
+    };
+
+    this.renderParent = async () => {
+      return render(hbs`
+        <Auth::Page
+          @wrappedToken={{this.wrappedToken}}
+          @cluster={{this.cluster}}
+          @namespace={{this.namespaceQueryParam}}
+          @selectedAuth={{this.authMethod}}
+          @onSuccess={{this.onSuccess}}
+        />
+        `);
+    };
   });
 
   const CSP_ERR_TEXT = `Error This is a standby Vault node but can't communicate with the active node via request forwarding. Sign in at the active node to use the Vault UI.`;
@@ -53,11 +80,11 @@ module('Integration | Component | auth form', function (hooks) {
     assert.expect(2);
     this.set('cluster', EmberObject.create({ standby: true }));
     this.set('selectedAuth', 'token');
-    await render(hbs`<AuthForm @cluster={{this.cluster}} @selectedAuth={{this.selectedAuth}} />`);
-    assert.false(component.errorMessagePresent, false);
+    await this.renderParent();
+    assert.dom(GENERAL.messageError).doesNotExist();
     this.owner.lookup('service:csp-event').handleEvent({ violatedDirective: 'connect-src' });
     await settled();
-    assert.strictEqual(component.errorText, CSP_ERR_TEXT);
+    assert.dom(GENERAL.messageError).hasText(CSP_ERR_TEXT);
   });
 
   test('it renders with vault style errors', async function (assert) {
@@ -68,9 +95,9 @@ module('Integration | Component | auth form', function (hooks) {
 
     this.set('cluster', EmberObject.create({}));
     this.set('selectedAuth', 'token');
-    await render(hbs`<AuthForm @cluster={{this.cluster}} @selectedAuth={{this.selectedAuth}} />`);
-    await component.login();
-    assert.strictEqual(component.errorText, 'Error Authentication failed: Not allowed');
+    await this.renderParent();
+    await click(AUTH_FORM.login);
+    assert.dom(GENERAL.messageError).hasText('Error Authentication failed: Not allowed');
   });
 
   test('it renders AdapterError style errors', async function (assert) {
@@ -81,14 +108,11 @@ module('Integration | Component | auth form', function (hooks) {
 
     this.set('cluster', EmberObject.create({}));
     this.set('selectedAuth', 'token');
-    await render(hbs`<AuthForm @cluster={{this.cluster}} @selectedAuth={{this.selectedAuth}} />`);
-    return component.login().then(() => {
-      assert.strictEqual(
-        component.errorText,
-        'Error Authentication failed: API Error here',
-        'shows the error from the API'
-      );
-    });
+    await this.renderParent();
+    await click(AUTH_FORM.login);
+    assert
+      .dom(GENERAL.messageError)
+      .hasText('Error Authentication failed: API Error here', 'shows the error from the API');
   });
 
   test('it renders no tabs when no methods are passed', async function (assert) {
@@ -100,10 +124,9 @@ module('Integration | Component | auth form', function (hooks) {
     this.server.get('/sys/internal/ui/mounts', () => {
       return { data: { auth: methods } };
     });
-    await render(hbs`<AuthForm @cluster={{this.cluster}} />`);
+    await this.renderComponent();
 
-    assert.strictEqual(component.tabs.length, 0, 'renders a tab for every backend');
-    server.shutdown();
+    assert.dom(AUTH_FORM.tabs()).doesNotExist();
   });
 
   test('it renders all the supported methods and Other tab when methods are present', async function (assert) {
@@ -119,11 +142,11 @@ module('Integration | Component | auth form', function (hooks) {
       return { data: { auth: methods } };
     });
     this.set('cluster', EmberObject.create({}));
-    await render(hbs`<AuthForm @cluster={{this.cluster}} />`);
+    await this.renderComponent();
 
-    assert.strictEqual(component.tabs.length, 2, 'renders a tab for userpass and Other');
-    assert.strictEqual(component.tabs.objectAt(0).name, 'foo', 'uses the path in the label');
-    assert.strictEqual(component.tabs.objectAt(1).name, 'Other', 'second tab is the Other tab');
+    assert.dom(AUTH_FORM.tabs()).exists({ count: 2 });
+    assert.dom(AUTH_FORM.tabs('foo')).exists('tab uses the path in the label');
+    assert.dom(AUTH_FORM.tabs('other')).exists('second tab is the Other tab');
   });
 
   test('it renders the description', async function (assert) {
@@ -137,13 +160,9 @@ module('Integration | Component | auth form', function (hooks) {
       return { data: { auth: methods } };
     });
     this.set('cluster', EmberObject.create({}));
-    await render(hbs`<AuthForm @cluster={{this.cluster}} />`);
+    await this.renderComponent();
 
-    assert.strictEqual(
-      component.descriptionText,
-      'app description',
-      'renders a description for auth methods'
-    );
+    assert.dom(AUTH_FORM.description).hasText('app description');
   });
 
   test('it calls authenticate with the correct path', async function (assert) {
@@ -162,14 +181,11 @@ module('Integration | Component | auth form', function (hooks) {
 
     this.set('cluster', EmberObject.create({}));
     this.set('selectedAuth', 'foo/');
-    await render(hbs`<AuthForm @cluster={{this.cluster}} @selectedAuth={{this.selectedAuth}} />`);
-    await component.login();
-
-    await settled();
+    await this.renderParent();
+    await click(AUTH_FORM.login);
     assert.ok(authSpy.calledOnce, 'a call to authenticate was made');
     const { data } = authSpy.getCall(0).args[0];
     assert.strictEqual(data.path, 'foo', 'uses the id for the path');
-    authSpy.restore();
   });
 
   test('it renders no tabs when no supported methods are present in passed methods', async function (assert) {
@@ -182,10 +198,9 @@ module('Integration | Component | auth form', function (hooks) {
       return { data: { auth: methods } };
     });
     this.set('cluster', EmberObject.create({}));
-    await render(hbs`<AuthForm @cluster={{this.cluster}} />`);
+    await this.renderComponent();
 
-    server.shutdown();
-    assert.strictEqual(component.tabs.length, 0, 'renders a tab for every backend');
+    assert.dom(AUTH_FORM.tabs()).doesNotExist();
   });
 
   test('it makes a request to unwrap if passed a wrappedToken and logs in', async function (assert) {
@@ -210,13 +225,10 @@ module('Integration | Component | auth form', function (hooks) {
     const wrappedToken = '54321';
     this.set('wrappedToken', wrappedToken);
     this.set('cluster', EmberObject.create({}));
-    await render(
-      hbs`<AuthForm @cluster={{this.cluster}} @wrappedToken={{this.wrappedToken}} @onSuccess={{this.onSuccess}} />`
-    );
+    await this.renderParent();
     later(() => cancelTimers(), 50);
     await settled();
     assert.ok(authSpy.calledOnce, 'a call to authenticate was made');
-    authSpy.restore();
   });
 
   test('it shows an error if unwrap errors', async function (assert) {
@@ -229,15 +241,11 @@ module('Integration | Component | auth form', function (hooks) {
     });
 
     this.set('wrappedToken', '54321');
-    await render(hbs`<AuthForm @cluster={{this.cluster}} @wrappedToken={{this.wrappedToken}} />`);
+    await this.renderComponent();
     later(() => cancelTimers(), 50);
 
     await settled();
-    assert.strictEqual(
-      component.errorText,
-      'Error Token unwrap failed: There was an error unwrapping!',
-      'shows the error'
-    );
+    assert.dom(GENERAL.messageError).hasText('Error Token unwrap failed: There was an error unwrapping!');
   });
 
   test('it should retain oidc role when mount path is changed', async function (assert) {
@@ -270,14 +278,15 @@ module('Integration | Component | auth form', function (hooks) {
     });
 
     this.set('cluster', EmberObject.create({}));
-    await render(hbs`<AuthForm @cluster={{this.cluster}} />`);
+    await this.renderComponent();
 
-    await component.selectMethod('oidc');
-    await component.oidcRole('foo');
-    await component.oidcMoreOptions();
-    await component.oidcMountPath('foo-oidc');
-    assert.dom('[data-test-role]').hasValue('foo', 'role is retained when mount path is changed');
-    await component.login();
+    await fillIn(GENERAL.selectByAttr('auth-method'), 'oidc');
+    await fillIn(AUTH_FORM.input('role'), 'foo');
+    await click(AUTH_FORM.moreOptions);
+    await fillIn(AUTH_FORM.input('role'), 'foo');
+    await fillIn(AUTH_FORM.mountPathInput, 'foo-oidc');
+    assert.dom(AUTH_FORM.input('role')).hasValue('foo', 'role is retained when mount path is changed');
+    await click(AUTH_FORM.login);
   });
 
   test('it should set nonce value as uuid for okta method type', async function (assert) {
@@ -294,11 +303,11 @@ module('Integration | Component | auth form', function (hooks) {
     });
 
     this.set('cluster', EmberObject.create({}));
-    await render(hbs`<AuthForm @cluster={{this.cluster}} />`);
+    await this.renderParent();
 
-    await component.selectMethod('okta');
-    await component.username('foo');
-    await component.password('bar');
-    await component.login();
+    await fillIn(GENERAL.selectByAttr('auth-method'), 'okta');
+    await fillIn(AUTH_FORM.input('username'), 'foo');
+    await fillIn(AUTH_FORM.input('password'), 'bar');
+    await click(AUTH_FORM.login);
   });
 });

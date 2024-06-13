@@ -17,7 +17,7 @@ module('Integration | Component | auth | okta-number-challenge', function (hooks
     this.hasError = false;
     this.onCancel = sinon.spy();
     this.renderComponent = async () => {
-      await render(hbs`
+      render(hbs`
   <OktaNumberChallenge
     @correctAnswer={{this.oktaNumberChallengeAnswer}}
     @hasError={{this.hasError}}

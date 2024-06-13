@@ -27,7 +27,7 @@
             </li>
           {{/let}}
         {{/each}}
-        <li class={{unless this.selectedAuthIsPath "is-active" ""}} data-test-auth-method>
+        <li class={{unless this.selectedAuthIsPath "is-active" ""}} data-test-auth-method="other">
           <LinkTo
             @route="vault.cluster.auth"
             @model={{this.cluster.name}}
