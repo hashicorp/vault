@@ -414,7 +414,7 @@
             "badge": {
               "text": "ENTERPRISE",
               "type": "outlined",
-              "color": "highlight"
+              "color": "neutral"
             },
             "path": "configuration/seal/seal-ha"
           },
