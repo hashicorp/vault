@@ -13,6 +13,7 @@ export default class ApplicationRoute extends Route {
   @service('router') routing;
   @service('namespace') namespaceService;
   @service('flags') flagsService;
+  @service session;
 
   @action
   willTransition() {
@@ -66,7 +67,8 @@ export default class ApplicationRoute extends Route {
     return true;
   }
 
-  beforeModel() {
+  async beforeModel() {
+    await this.session.setup();
     return this.flagsService.fetchFeatureFlags();
   }
 }
