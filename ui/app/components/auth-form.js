@@ -69,6 +69,8 @@ export default Component.extend(DEFAULTS, {
       if (!token && (oldNS === null || oldNS !== ns)) {
         this.fetchMethods.perform();
       }
+      // don't set any variables if the component is being torn down
+      if (this.isDestroyed || this.isDestroying) return;
       this.set('oldNamespace', ns);
       // we only want to trigger this once
       if (token && !oldToken) {
