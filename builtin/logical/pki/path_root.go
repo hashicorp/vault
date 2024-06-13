@@ -293,7 +293,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	}
 
 	// Build a fresh CRL
-	warnings, err = b.CrlBuilder().rebuild(sc, true)
+	warnings, err = b.CrlBuilder().Rebuild(sc, true)
 	if err != nil {
 		return nil, err
 	}

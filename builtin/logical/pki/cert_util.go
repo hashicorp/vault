@@ -22,6 +22,7 @@ import (
 
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
+	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
@@ -170,17 +171,17 @@ func fetchCertBySerialBigInt(sc *storageContext, prefix string, serial *big.Int)
 	return fetchCertBySerial(sc, prefix, serialFromBigInt(serial))
 }
 
-// Allows fetching certificates from the backend; it handles the slightly
+// fetchCertBySerial allows fetching certificates from the backend; it handles the slightly
 // separate pathing for CRL, and revoked certificates.
 //
 // Support for fetching CA certificates was removed, due to the new issuers
 // changes.
-func fetchCertBySerial(sc *storageContext, prefix, serial string) (*logical.StorageEntry, error) {
+func fetchCertBySerial(sc pki_backend.StorageContext, prefix, serial string) (*logical.StorageEntry, error) {
 	var path, legacyPath string
 	var err error
 	var certEntry *logical.StorageEntry
 
-	hyphenSerial := normalizeSerial(serial)
+	hyphenSerial := parsing.NormalizeSerialForStorage(serial)
 	colonSerial := strings.ReplaceAll(strings.ToLower(serial), "-", ":")
 
 	switch {
@@ -189,8 +190,8 @@ func fetchCertBySerial(sc *storageContext, prefix, serial string) (*logical.Stor
 	case strings.HasPrefix(prefix, "revoked/"):
 		legacyPath = "revoked/" + colonSerial
 		path = "revoked/" + hyphenSerial
-	case serial == legacyCRLPath || serial == deltaCRLPath || serial == unifiedCRLPath || serial == unifiedDeltaCRLPath:
-		warnings, err := sc.CrlBuilder().rebuildIfForced(sc)
+	case serial == issuing.LegacyCRLPath || serial == issuing.DeltaCRLPath || serial == issuing.UnifiedCRLPath || serial == issuing.UnifiedDeltaCRLPath:
+		warnings, err := sc.CrlBuilder().RebuildIfForced(sc)
 		if err != nil {
 			return nil, err
 		}
@@ -202,25 +203,25 @@ func fetchCertBySerial(sc *storageContext, prefix, serial string) (*logical.Stor
 			sc.Logger().Warn(msg)
 		}
 
-		unified := serial == unifiedCRLPath || serial == unifiedDeltaCRLPath
-		path, err = sc.resolveIssuerCRLPath(defaultRef, unified)
+		unified := serial == issuing.UnifiedCRLPath || serial == issuing.UnifiedDeltaCRLPath
+		path, err = issuing.ResolveIssuerCRLPath(sc.GetContext(), sc.GetStorage(), sc.UseLegacyBundleCaStorage(), issuing.DefaultRef, unified)
 		if err != nil {
 			return nil, err
 		}
 
-		if serial == deltaCRLPath || serial == unifiedDeltaCRLPath {
+		if serial == issuing.DeltaCRLPath || serial == issuing.UnifiedDeltaCRLPath {
 			if sc.UseLegacyBundleCaStorage() {
 				return nil, fmt.Errorf("refusing to serve delta CRL with legacy CA bundle")
 			}
 
-			path += deltaCRLPathSuffix
+			path += issuing.DeltaCRLPathSuffix
 		}
 	default:
 		legacyPath = issuing.PathCerts + colonSerial
 		path = issuing.PathCerts + hyphenSerial
 	}
 
-	certEntry, err = sc.Storage.Get(sc.Context, path)
+	certEntry, err = sc.GetStorage().Get(sc.GetContext(), path)
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("error fetching certificate %s: %s", serial, err)}
 	}
@@ -240,7 +241,7 @@ func fetchCertBySerial(sc *storageContext, prefix, serial string) (*logical.Stor
 	// always manifest on Windows, and thus the initial check for a revoked
 	// cert fails would return an error when the cert isn't revoked, preventing
 	// the happy path from working.
-	certEntry, _ = sc.Storage.Get(sc.Context, legacyPath)
+	certEntry, _ = sc.GetStorage().Get(sc.GetContext(), legacyPath)
 	if certEntry == nil {
 		return nil, nil
 	}
@@ -252,10 +253,10 @@ func fetchCertBySerial(sc *storageContext, prefix, serial string) (*logical.Stor
 	certEntry.Key = path
 	certCounter := sc.GetCertificateCounter()
 	certsCounted := certCounter.IsInitialized()
-	if err = sc.Storage.Put(sc.Context, certEntry); err != nil {
+	if err = sc.GetStorage().Put(sc.GetContext(), certEntry); err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("error saving certificate with serial %s to new location: %s", serial, err)}
 	}
-	if err = sc.Storage.Delete(sc.Context, legacyPath); err != nil {
+	if err = sc.GetStorage().Delete(sc.GetContext(), legacyPath); err != nil {
 		// If we fail here, we have an extra (copy) of a cert in storage, add to metrics:
 		switch {
 		case strings.HasPrefix(prefix, "revoked/"):
