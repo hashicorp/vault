@@ -57,11 +57,12 @@ resource "enos_remote_exec" "smoke_verify_default_lcq" {
   for_each = local.public_ips
 
   environment = {
-    RETRY_INTERVAL  = var.retry_interval
-    TIMEOUT_SECONDS = var.timeout
-    VAULT_ADDR      = "http://localhost:8200"
-    VAULT_TOKEN     = var.vault_root_token
-    DEFAULT_LCQ     = var.vault_autopilot_default_max_leases
+    RETRY_INTERVAL    = var.retry_interval
+    TIMEOUT_SECONDS   = var.timeout
+    VAULT_ADDR        = "http://localhost:8200"
+    VAULT_INSTALL_DIR = var.vault_install_dir
+    VAULT_TOKEN       = var.vault_root_token
+    DEFAULT_LCQ       = var.vault_autopilot_default_max_leases
   }
 
   scripts = [abspath("${path.module}/scripts/smoke-verify-default-lcq.sh")]
