@@ -1,0 +1,56 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<PageHeader as |p|>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      Rewrap Token
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+{{#if this.rewrappedToken}}
+  <div class="box is-sideless is-fullwidth is-marginless">
+    <div class="field">
+      <label class="is-label">Rewrapped token</label>
+      <Hds::Copy::Snippet
+        @textToCopy={{this.rewrappedToken}}
+        @color="secondary"
+        data-test-tools-input="rewrapped-token"
+        @onError={{fn (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")}}
+      />
+    </div>
+  </div>
+  <div class="field is-grouped box is-fullwidth is-bottomless">
+    <Hds::Button @text="Done" @color="secondary" {{on "click" this.reset}} data-test-button="Done" />
+  </div>
+{{else}}
+  <form {{on "submit" this.handleSubmit}}>
+    <div class="box is-sideless is-fullwidth is-marginless">
+      <NamespaceReminder @mode="perform" @noun="rewrap" />
+      <MessageError @errorMessage={{this.errorMessage}} />
+      <div class="field">
+        <label for="token" class="is-label">Wrapped token</label>
+        <div class="has-text-grey is-size-8 has-bottom-margin-xs">
+          Enter your wrapped token here to rewrap it and refresh its TTL.
+        </div>
+        <div class="control">
+          <Input
+            @value={{this.originalToken}}
+            class="input"
+            id="token"
+            name="token"
+            data-test-tools-input="original-token"
+          />
+        </div>
+      </div>
+    </div>
+    <div class="field is-grouped box is-fullwidth is-bottomless">
+      <div class="control">
+        <Hds::Button @text="Rewrap token" type="submit" data-test-tools-submit />
+      </div>
+    </div>
+  </form>
+{{/if}}

@@ -89,6 +89,27 @@ type AutopilotConfig struct {
 	UpgradeVersionTag string `mapstructure:"upgrade_version_tag"`
 }
 
+func (ac *AutopilotConfig) String() string {
+	s := "CleanupDeadServers:%t " +
+		"LastContactThreshold:%s " +
+		"DeadServerLastContactThreshold:%s " +
+		"MaxTrailingLogs:%d " +
+		"MinQuorum:%d " +
+		"ServerStabilizationTime:%s " +
+		"DisableUpgradeMigration:%t " +
+		"RedundancyZoneTag:%s " +
+		"UpgradeVersionTag:%s"
+	return fmt.Sprintf(s, ac.CleanupDeadServers,
+		ac.LastContactThreshold,
+		ac.DeadServerLastContactThreshold,
+		ac.MaxTrailingLogs,
+		ac.MinQuorum,
+		ac.ServerStabilizationTime,
+		ac.DisableUpgradeMigration,
+		ac.RedundancyZoneTag,
+		ac.UpgradeVersionTag)
+}
+
 // Merge combines the supplied config with the receiver. Supplied ones take
 // priority.
 func (to *AutopilotConfig) Merge(from *AutopilotConfig) {
@@ -421,7 +442,10 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 			}
 			followerVersion = leaderVersion
 		} else {
-			delete(d.emptyVersionLogs, currentServerID)
+			if _, ok := d.emptyVersionLogs[currentServerID]; ok {
+				d.logger.Trace("received non-empty version in heartbeat state. no longer need to fake it", "id", id, "update_version", followerVersion)
+				delete(d.emptyVersionLogs, currentServerID)
+			}
 		}
 		d.dl.Unlock()
 
@@ -829,6 +853,8 @@ func (b *RaftBackend) SetupAutopilot(ctx context.Context, storageConfig *Autopil
 	// Merge the setting provided over the API
 	b.autopilotConfig.Merge(storageConfig)
 
+	infoArgs := []interface{}{"config", b.autopilotConfig}
+
 	// Create the autopilot instance
 	options := []autopilot.Option{
 		autopilot.WithLogger(b.logger),
@@ -836,17 +862,18 @@ func (b *RaftBackend) SetupAutopilot(ctx context.Context, storageConfig *Autopil
 	}
 	if b.autopilotReconcileInterval != 0 {
 		options = append(options, autopilot.WithReconcileInterval(b.autopilotReconcileInterval))
+		infoArgs = append(infoArgs, []interface{}{"reconcile_interval", b.autopilotReconcileInterval}...)
 	}
 	if b.autopilotUpdateInterval != 0 {
 		options = append(options, autopilot.WithUpdateInterval(b.autopilotUpdateInterval))
+		infoArgs = append(infoArgs, []interface{}{"update_interval", b.autopilotUpdateInterval}...)
 	}
 	b.autopilot = autopilot.New(b.raft, NewDelegate(b), options...)
 	b.followerStates = followerStates
 	b.followerHeartbeatTicker = time.NewTicker(1 * time.Second)
-
 	b.l.Unlock()
 
-	b.logger.Info("starting autopilot", "config", b.autopilotConfig, "reconcile_interval", b.autopilotReconcileInterval)
+	b.logger.Info("starting autopilot", infoArgs...)
 	b.autopilot.Start(ctx)
 
 	go b.startFollowerHeartbeatTracker()

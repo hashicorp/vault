@@ -1,0 +1,66 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<PageHeader as |p|>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      Random Bytes
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+{{#if this.randomBytes}}
+  <div class="box is-sideless is-fullwidth is-marginless">
+    <label for="rand" class="is-label">Random bytes</label>
+    <Hds::Copy::Snippet
+      @textToCopy={{this.randomBytes}}
+      @color="secondary"
+      data-test-tools-input="random-bytes"
+      @onError={{fn (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")}}
+    />
+  </div>
+  <div class="field is-grouped box is-fullwidth is-bottomless">
+    <Hds::Button @text="Done" @color="secondary" {{on "click" this.reset}} data-test-button="Done" />
+  </div>
+{{else}}
+  <form {{on "submit" this.handleSubmit}}>
+    <div class="box is-sideless is-fullwidth is-marginless">
+      <MessageError @errorMessage={{this.errorMessage}} />
+      <div class="field is-horizontal">
+        <div class="field-body">
+          <div class="field">
+            <label for="bytes" class="is-label">
+              Number of bytes
+            </label>
+            <div class="control">
+              <Input id="bytes" class="input" @value={{this.bytes}} @type="number" data-test-tools-input="bytes" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="format" class="is-label">
+              Output format
+            </label>
+            <div class="control is-expanded">
+              <div class="select is-fullwidth">
+                <select name="format" id="format" {{on "input" this.handleSelect}}>
+                  {{#each (array "base64" "hex") as |formatOption|}}
+                    <option selected={{eq this.format formatOption}} value={{formatOption}}>
+                      {{formatOption}}
+                    </option>
+                  {{/each}}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="field is-grouped box is-fullwidth is-bottomless">
+      <div class="control">
+        <Hds::Button @text="Generate" type="submit" data-test-tools-submit />
+      </div>
+    </div>
+  </form>
+{{/if}}

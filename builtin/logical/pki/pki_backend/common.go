@@ -23,4 +23,5 @@ type Logger interface {
 type CertificateCounter interface {
 	IsInitialized() bool
 	IncrementTotalCertificatesCount(certsCounted bool, newSerial string)
+	IncrementTotalRevokedCertificatesCount(certsCounted bool, newSerial string)
 }

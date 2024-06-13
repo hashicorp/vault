@@ -6,8 +6,11 @@
 <TabPageHeader
   @model={{@backend}}
   @filterRoles={{not @promptConfig}}
-  @rolesFilterValue={{@filterValue}}
+  @query={{this.query}}
   @breadcrumbs={{@breadcrumbs}}
+  @handleSearch={{this.handleSearch}}
+  @handleInput={{this.handleInput}}
+  @handleKeyDown={{this.handleKeyDown}}
 >
   {{#unless @promptConfig}}
     <ToolbarLink @route="roles.create" @type="add" data-test-toolbar-roles-action>

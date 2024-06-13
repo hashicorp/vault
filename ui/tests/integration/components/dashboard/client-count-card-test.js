@@ -43,7 +43,7 @@ module('Integration | Component | dashboard/client-count-card', function (hooks)
     assert
       .dom(CLIENT_COUNT.statText('Total'))
       .hasText(
-        `Total The number of clients in this billing period (Aug 2023 - Sep 2023). ${formatNumber([
+        `Total The number of clients in this billing period (Jun 2023 - Sep 2023). ${formatNumber([
           total.clients,
         ])}`
       );

@@ -1,0 +1,3 @@
+```release-note:bug
+ui: fix issue where a month without new clients breaks the client count dashboard
+```
