@@ -14,11 +14,13 @@ scenario "dev_pr_replication" {
     build and deploy the current branch!
 
     In order to execute this scenario you'll need to install the enos CLI:
-      brew tap hashicorp/tap && brew update && brew install hashicorp/tap/enos
+      - $ brew tap hashicorp/tap && brew update && brew install hashicorp/tap/enos
 
-    You'll also need access to an AWS account with an SSH keypair.
-    Perform the steps here to get AWS access with Doormat https://eng-handbook.hashicorp.services/internal-tools/enos/common-setup-steps/#authenticate-with-doormat
-    Perform the steps here to get an AWS keypair set up: https://eng-handbook.hashicorp.services/internal-tools/enos/common-setup-steps/#set-your-aws-key-pair-name-and-private-key
+    You'll also need access to an AWS account via Doormat, follow the guide here:
+      https://eng-handbook.hashicorp.services/internal-tools/enos/common-setup-steps/#authenticate-with-doormat
+
+    Follow this guide to get an SSH keypair set up in the AWS account:
+      https://eng-handbook.hashicorp.services/internal-tools/enos/common-setup-steps/#set-your-aws-key-pair-name-and-private-key
 
     Please note that this scenario requires several inputs variables to be set in order to function
     properly. While not all variants will require all variables, it's suggested that you look over

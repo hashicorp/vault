@@ -37,7 +37,8 @@ globals {
     "sles"   = var.distro_version_sles
     "ubuntu" = var.distro_version_ubuntu
   }
-  editions = ["ce", "ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
+  editions            = ["ce", "ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
+  enterprise_editions = [for e in global.editions : e if e != "ce"]
   package_manager = {
     "amzn2"  = "yum"
     "leap"   = "zypper"
@@ -64,7 +65,7 @@ globals {
   // release branch's version. Also beware if adding versions below 1.11.x. Some scenarios
   // that use this global might not work as expected with earlier versions. Below 1.8.x is
   // not supported in any way.
-  upgrade_initial_versions = ["1.11.12", "1.12.11", "1.13.11", "1.14.7", "1.15.3"]
+  upgrade_initial_versions = ["1.8.12", "1.9.10", "1.10.11", "1.11.12", "1.12.11", "1.13.13", "1.14.13", "1.15.9", "1.16.3"]
   vault_install_dir = {
     bundle  = "/opt/vault/bin"
     package = "/usr/bin"
