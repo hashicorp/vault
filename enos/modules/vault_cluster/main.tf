@@ -289,6 +289,37 @@ resource "enos_remote_exec" "configure_login_shell_profile" {
   }
 }
 
+# Add a motd to assist people that might be logging in.
+resource "enos_file" "motd" {
+  depends_on = [
+    enos_remote_exec.configure_login_shell_profile
+  ]
+  for_each = var.target_hosts
+
+  destination = "/etc/motd"
+  content     = <<EOF
+ ▄█    █▄     ▄████████ ███    █▄   ▄█           ███
+███    ███   ███    ███ ███    ███ ███       ▀█████████▄
+███    ███   ███    ███ ███    ███ ███          ▀███▀▀██
+███    ███   ███    ███ ███    ███ ███           ███   ▀
+███    ███ ▀███████████ ███    ███ ███           ███
+███    ███   ███    ███ ███    ███ ███           ███
+███    ███   ███    ███ ███    ███ ███▌    ▄     ███
+ ▀██████▀    ███    █▀  ████████▀  █████▄▄██    ▄████▀
+                                   ▀
+We've added `vault` to the PATH for you and configured
+the VAULT_ADDR and VAULT_TOKEN with the root token.
+
+Have fun!
+EOF
+
+  transport = {
+    ssh = {
+      host = each.value.public_ip
+    }
+  }
+}
+
 # We need to ensure that the directory used for audit logs is present and accessible to the vault
 # user on all nodes, since logging will only happen on the leader.
 resource "enos_remote_exec" "create_audit_log_dir" {
