@@ -134,7 +134,7 @@ export default class TotpCreate extends Component {
   waitForKeyUp;
 
   @action
-  createAccount(event) {
+  createKey(event) {
     event.preventDefault();
     if (isBlank(this.args.modelForData.name || this.args.modelForData.id)) {
       this.checkValidation('name', '');

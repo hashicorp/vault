@@ -3,11 +3,11 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<form class="simple-edit" {{on "submit" this.createAccount}} aria-label="account create form">
+<form class="simple-edit" {{on "submit" this.createKey}} aria-label="key create form">
   <div class="field box is-fullwidth is-sideless is-marginless">
-    <NamespaceReminder @noun="account" />
+    <NamespaceReminder @noun="key" />
     <MessageError @model={{@modelForData}} @errorMessage={{this.error}} />
-    <label class="is-label" for="kv-key">Name for this account</label>
+    <label class="is-label" for="kv-key">Name for this key</label>
     <p class="control is-expanded">
       <Input
         autocomplete="off"
@@ -32,7 +32,7 @@
       >
         <A.Title>Warning</A.Title>
         <A.Description>
-          Your account name contains whitespace. If this is desired, you'll need to encode it with %20 in API calls.
+          Your key name contains whitespace. If this is desired, you'll need to encode it with %20 in API calls.
         </A.Description>
       </Hds::Alert>
     {{/if}}

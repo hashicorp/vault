@@ -20,7 +20,6 @@ export default Model.extend({
   digits: attr('number'),
   issuer: attr('string'),
   period: attr('number'),
-  code: attr('string'),
   url: attr('string'),
 
   secretPath: lazyCapabilities(apiPath`${'backend'}/keys/${'id'}`, 'backend', 'id'),
