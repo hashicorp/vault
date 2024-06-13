@@ -19,4 +19,4 @@ func (c *Core) ListNamespaces(includePath bool) []*namespace.Namespace {
 	return []*namespace.Namespace{namespace.RootNamespace}
 }
 
-func (c *Core) ResetNamespaceCache() {}
+func (c *Core) resetNamespaceCache() {}

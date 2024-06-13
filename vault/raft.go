@@ -852,7 +852,7 @@ func (c *Core) raftSnapshotRestoreCallback(grabLock bool, sealNode bool) func(co
 
 		// Reset the namespace cache so that any namespaces cached
 		// before the snapshot restore will no longer be present.
-		c.ResetNamespaceCache()
+		c.resetNamespaceCache()
 
 		return nil
 	}
