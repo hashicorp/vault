@@ -67,4 +67,10 @@ export default ApplicationAdapter.extend({
   queryRecord(store, type, query) {
     return this.fetchByQuery(query, 'queryRecord');
   },
+
+  generateCode(backend, id) {
+    return this.ajax(`${this.buildURL()}/${encodePath(backend)}/code/${id}`, 'GET').then((res) => {
+      return res.data;
+    });
+  },
 });

@@ -148,12 +148,12 @@ const SECRET_BACKENDS = {
   },
   totp: {
     displayName: 'TOTP',
-    searchPlaceholder: 'Filter accounts',
-    item: 'account',
-    create: 'Add account',
+    searchPlaceholder: 'Filter keys',
+    item: 'key',
+    create: 'Add key',
     navigateTree: false,
     editComponent: 'totp-edit',
-    listItemPartial: 'secret-list/item',
+    listItemPartial: 'secret-list/totp-list-item',
   },
 };
 
