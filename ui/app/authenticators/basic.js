@@ -20,7 +20,7 @@ export default class BasicAuthenticator extends Base {
   }
 
   authenticate(payload) {
-    return payload;
+    return Promise.resolve(payload);
   }
 
   invalidate() {
