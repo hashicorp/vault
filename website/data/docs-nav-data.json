@@ -1105,6 +1105,19 @@
         ]
       },
       {
+        "title": "<code>transform</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/transform"
+          },
+          {
+            "title": "<code>import</code> and <code>import-version</code>",
+            "path": "commands/transform/import"
+          }
+        ]
+      },      
+      {
         "title": "<code>unwrap</code>",
         "path": "commands/unwrap"
       },
