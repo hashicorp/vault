@@ -33,7 +33,7 @@ jobs:
       ui-changed: ${{ steps.changed-files.outputs.ui-changed }}
       workflow-trigger: ${{ steps.metadata.outputs.workflow-trigger }}
     steps:
-      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       - uses: ./.github/actions/changed-files
         id: changed-files
       - uses: ./.github/actions/checkout
@@ -146,7 +146,7 @@ jobs:
       contents: read
     runs-on: ${{ fromJSON(needs.setup.outputs.compute-test-ui) }}
     steps:
-      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
         name: status
         with:
           ref: ${{ needs.setup.outputs.checkout-ref }}
@@ -226,7 +226,7 @@ jobs:
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","linux","small"]') }}
     permissions: write-all # Ensure we have id-token:write access for vault-auth.
     steps:
-      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       # Determine the overall status of our required test jobs.
       - name: Determine status
         id: status
