@@ -18,6 +18,11 @@ export default class AuthPageComponent extends Component {
   @tracked oktaNumberChallengeAnswer = '';
   @tracked waitingForOktaNumberChallenge = false;
 
+  @action
+  performAuth(backendType, data) {
+    this.authenticate.unlinked().perform(backendType, data);
+  }
+
   @task
   @waitFor
   *delayAuthMessageReminder() {

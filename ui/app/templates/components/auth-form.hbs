@@ -73,7 +73,7 @@
         @roleName={{this.roleName}}
         @selectedAuthType={{this.selectedAuthBackend.type}}
         @selectedAuthPath={{or this.customPath this.selectedAuthBackend.id}}
-        @disabled={{or this.handleAuth.isRunning this.isLoading}}
+        @disabled={{or this.authIsRunning this.isLoading}}
       >
         <AuthFormOptions
           @customPath={{this.customPath}}
@@ -92,7 +92,7 @@
         @roleName={{this.roleName}}
         @selectedAuthType={{this.selectedAuthBackend.type}}
         @selectedAuthPath={{or this.customPath this.selectedAuthBackend.id}}
-        @disabled={{or this.handleAuth.isRunning this.isLoading}}
+        @disabled={{or this.authIsRunning this.isLoading}}
       >
         <AuthFormOptions
           @customPath={{this.customPath}}
@@ -174,10 +174,10 @@
         {{/if}}
         <Hds::Button
           @text="Sign in"
-          @icon={{if this.handleAuth.isRunning "loading"}}
+          @icon={{if this.authIsRunning "loading"}}
           data-test-auth-submit={{true}}
           type="submit"
-          disabled={{this.handleAuth.isRunning}}
+          disabled={{this.authIsRunning}}
           id="auth-submit"
         />
         {{#if (and this.delayIsIdle this.showLoading)}}

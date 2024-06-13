@@ -16,7 +16,8 @@
     @namespace={{@namespace}}
     @selectedAuth={{@selectedAuth}}
     @error={{this.authError}}
-    @handleAuth={{this.authenticate}}
+    @performAuth={{this.performAuth}}
+    @authIsRunning={{this.authenticate.isRunning}}
     @delayIsIdle={{this.delayAuthMessageReminder.isIdle}}
   />
 {{/if}}

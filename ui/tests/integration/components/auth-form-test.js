@@ -18,14 +18,6 @@ import { Response } from 'miragejs';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 
-const workingAuthService = Service.extend({
-  authenticate() {
-    return resolve({});
-  },
-  handleError() {},
-  setLastFetch() {},
-});
-
 const routerService = Service.extend({
   transitionTo() {
     return {
@@ -43,13 +35,10 @@ module('Integration | Component | auth form', function (hooks) {
   hooks.beforeEach(function () {
     this.owner.register('service:router', routerService);
     this.router = this.owner.lookup('service:router');
-    this.handleAuth = {
-      unlinked() {
-        return {
-          perform: () => sinon.spy(),
-        };
-      },
-    };
+    this.auth = this.owner.lookup('service:auth');
+    this.cluster = EmberObject.create({ id: '1' });
+    this.selectedAuth = 'token';
+    this.performAuth = sinon.spy();
     this.onSuccess = sinon.spy();
     this.renderComponent = async () => {
       return render(hbs`
@@ -57,7 +46,7 @@ module('Integration | Component | auth form', function (hooks) {
           @wrappedToken={{this.wrappedToken}}
           @cluster={{this.cluster}}
           @selectedAuth={{this.selectedAuth}}
-          @handleAuth={{this.handleAuth}}
+          @performAuth={{this.performAuth}}
           @delayIsIdle={{this.delayIsIdle}}
         />`);
     };
@@ -78,8 +67,7 @@ module('Integration | Component | auth form', function (hooks) {
   const CSP_ERR_TEXT = `Error This is a standby Vault node but can't communicate with the active node via request forwarding. Sign in at the active node to use the Vault UI.`;
   test('it renders error on CSP violation', async function (assert) {
     assert.expect(2);
-    this.set('cluster', EmberObject.create({ standby: true }));
-    this.set('selectedAuth', 'token');
+    this.cluster = EmberObject.create({ standby: true });
     await this.renderParent();
     assert.dom(GENERAL.messageError).doesNotExist();
     this.owner.lookup('service:csp-event').handleEvent({ violatedDirective: 'connect-src' });
@@ -93,8 +81,6 @@ module('Integration | Component | auth form', function (hooks) {
       return new Response(400, { 'Content-Type': 'application/json' }, { errors: ['Not allowed'] });
     });
 
-    this.set('cluster', EmberObject.create({}));
-    this.set('selectedAuth', 'token');
     await this.renderParent();
     await click(AUTH_FORM.login);
     assert.dom(GENERAL.messageError).hasText('Error Authentication failed: Not allowed');
@@ -106,8 +92,6 @@ module('Integration | Component | auth form', function (hooks) {
       return new Response(400, { 'Content-Type': 'application/json' }, { errors: ['API Error here'] });
     });
 
-    this.set('cluster', EmberObject.create({}));
-    this.set('selectedAuth', 'token');
     await this.renderParent();
     await click(AUTH_FORM.login);
     assert
@@ -116,13 +100,16 @@ module('Integration | Component | auth form', function (hooks) {
   });
 
   test('it renders no tabs when no methods are passed', async function (assert) {
-    const methods = {
-      'approle/': {
-        type: 'approle',
-      },
-    };
     this.server.get('/sys/internal/ui/mounts', () => {
-      return { data: { auth: methods } };
+      return {
+        data: {
+          auth: {
+            'approle/': {
+              type: 'approle',
+            },
+          },
+        },
+      };
     });
     await this.renderComponent();
 
@@ -130,18 +117,21 @@ module('Integration | Component | auth form', function (hooks) {
   });
 
   test('it renders all the supported methods and Other tab when methods are present', async function (assert) {
-    const methods = {
-      'foo/': {
-        type: 'userpass',
-      },
-      'approle/': {
-        type: 'approle',
-      },
-    };
     this.server.get('/sys/internal/ui/mounts', () => {
-      return { data: { auth: methods } };
+      return {
+        data: {
+          auth: {
+            'foo/': {
+              type: 'userpass',
+            },
+            'approle/': {
+              type: 'approle',
+            },
+          },
+        },
+      };
     });
-    this.set('cluster', EmberObject.create({}));
+
     await this.renderComponent();
 
     assert.dom(AUTH_FORM.tabs()).exists({ count: 2 });
@@ -150,42 +140,57 @@ module('Integration | Component | auth form', function (hooks) {
   });
 
   test('it renders the description', async function (assert) {
-    const methods = {
-      'approle/': {
-        type: 'userpass',
-        description: 'app description',
-      },
-    };
+    this.selectedAuth = null;
     this.server.get('/sys/internal/ui/mounts', () => {
-      return { data: { auth: methods } };
+      return {
+        data: {
+          auth: {
+            'approle/': {
+              type: 'userpass',
+              description: 'app description',
+            },
+          },
+        },
+      };
     });
-    this.set('cluster', EmberObject.create({}));
     await this.renderComponent();
-
     assert.dom(AUTH_FORM.description).hasText('app description');
   });
 
   test('it calls authenticate with the correct path', async function (assert) {
-    this.owner.unregister('service:auth');
-    this.owner.register('service:auth', workingAuthService);
-    this.auth = this.owner.lookup('service:auth');
-    const authSpy = sinon.spy(this.auth, 'authenticate');
-    const methods = {
-      'foo/': {
-        type: 'userpass',
-      },
-    };
+    assert.expect(1);
+    const authenticateStub = sinon.stub(this.auth, 'authenticate');
+    this.selectedAuth = 'foo/';
     this.server.get('/sys/internal/ui/mounts', () => {
-      return { data: { auth: methods } };
+      return {
+        data: {
+          auth: {
+            'foo/': {
+              type: 'userpass',
+            },
+          },
+        },
+      };
     });
 
-    this.set('cluster', EmberObject.create({}));
-    this.set('selectedAuth', 'foo/');
     await this.renderParent();
     await click(AUTH_FORM.login);
-    assert.ok(authSpy.calledOnce, 'a call to authenticate was made');
-    const { data } = authSpy.getCall(0).args[0];
-    assert.strictEqual(data.path, 'foo', 'uses the id for the path');
+    const [actual] = authenticateStub.lastCall.args;
+    const expectedArgs = {
+      backend: 'userpass',
+      clusterId: '1',
+      data: {
+        username: null,
+        password: null,
+        path: 'foo',
+      },
+      selectedAuth: 'foo/',
+    };
+    assert.propEqual(
+      actual,
+      expectedArgs,
+      `it calls auth service authenticate method with correct args: ${JSON.stringify(actual)} `
+    );
   });
 
   test('it renders no tabs when no supported methods are present in passed methods', async function (assert) {
@@ -197,7 +202,6 @@ module('Integration | Component | auth form', function (hooks) {
     this.server.get('/sys/internal/ui/mounts', () => {
       return { data: { auth: methods } };
     });
-    this.set('cluster', EmberObject.create({}));
     await this.renderComponent();
 
     assert.dom(AUTH_FORM.tabs()).doesNotExist();
@@ -205,14 +209,14 @@ module('Integration | Component | auth form', function (hooks) {
 
   test('it makes a request to unwrap if passed a wrappedToken and logs in', async function (assert) {
     assert.expect(3);
-    this.owner.register('service:auth', workingAuthService);
-    this.auth = this.owner.lookup('service:auth');
-    const authSpy = sinon.stub(this.auth, 'authenticate');
+    const authenticateStub = sinon.stub(this.auth, 'authenticate');
+    this.wrappedToken = '54321';
+
     this.server.post('/sys/wrapping/unwrap', (_, req) => {
       assert.strictEqual(req.url, '/v1/sys/wrapping/unwrap', 'makes call to unwrap the token');
       assert.strictEqual(
         req.requestHeaders['X-Vault-Token'],
-        wrappedToken,
+        this.wrappedToken,
         'uses passed wrapped token for the unwrap'
       );
       return {
@@ -222,16 +226,27 @@ module('Integration | Component | auth form', function (hooks) {
       };
     });
 
-    const wrappedToken = '54321';
-    this.set('wrappedToken', wrappedToken);
-    this.set('cluster', EmberObject.create({}));
     await this.renderParent();
     later(() => cancelTimers(), 50);
     await settled();
-    assert.ok(authSpy.calledOnce, 'a call to authenticate was made');
+    const [actual] = authenticateStub.lastCall.args;
+    assert.propEqual(
+      actual,
+      {
+        backend: 'token',
+        clusterId: '1',
+        data: {
+          token: '12345',
+        },
+        selectedAuth: 'token',
+      },
+      `it calls auth service authenticate method with correct args: ${JSON.stringify(actual)} `
+    );
   });
 
   test('it shows an error if unwrap errors', async function (assert) {
+    assert.expect(1);
+    this.wrappedToken = '54321';
     this.server.post('/sys/wrapping/unwrap', () => {
       return new Response(
         400,
@@ -240,7 +255,6 @@ module('Integration | Component | auth form', function (hooks) {
       );
     });
 
-    this.set('wrappedToken', '54321');
     await this.renderComponent();
     later(() => cancelTimers(), 50);
 
@@ -277,7 +291,6 @@ module('Integration | Component | auth form', function (hooks) {
       },
     });
 
-    this.set('cluster', EmberObject.create({}));
     await this.renderComponent();
 
     await fillIn(GENERAL.selectByAttr('auth-method'), 'oidc');
@@ -302,7 +315,6 @@ module('Integration | Component | auth form', function (hooks) {
       };
     });
 
-    this.set('cluster', EmberObject.create({}));
     await this.renderParent();
 
     await fillIn(GENERAL.selectByAttr('auth-method'), 'okta');

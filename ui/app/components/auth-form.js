@@ -220,7 +220,7 @@ export default Component.extend(DEFAULTS, {
     })
   ),
 
-  showLoading: or('isLoading', 'handleAuth.isRunning', 'fetchMethods.isRunning', 'unwrapToken.isRunning'),
+  showLoading: or('isLoading', 'authIsRunning', 'fetchMethods.isRunning', 'unwrapToken.isRunning'),
 
   actions: {
     doSubmit(passedData, event, token) {
@@ -253,7 +253,7 @@ export default Component.extend(DEFAULTS, {
           data.path = 'okta';
         }
       }
-      return this.handleAuth.unlinked().perform(backend.type, data);
+      return this.performAuth(backend.type, data);
     },
     handleError(e) {
       this.setProperties({
