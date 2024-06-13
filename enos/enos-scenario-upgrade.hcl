@@ -29,10 +29,7 @@ scenario "upgrade" {
     consul_version  = global.consul_versions
     distro          = global.distros
     edition         = global.editions
-    // This reads the VERSION file, strips any pre-release metadata, and selects only initial
-    // versions that are less than our current version. E.g. A VERSION file containing 1.17.0-beta2
-    // would render: semverconstraint(v, "<1.17.0-0")
-    initial_version = [for v in global.upgrade_initial_versions : v if semverconstraint(v, "<${join("-", [split("-", chomp(file("../version/VERSION")))[0], "0"])}")]
+    initial_version = global.upgrade_initial_versions_ce
     seal            = global.seals
 
 
@@ -342,9 +339,10 @@ scenario "upgrade" {
     ]
 
     variables {
-      timeout           = 120 # seconds
-      vault_hosts       = step.create_vault_cluster_targets.hosts
-      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
+      timeout     = 120 # seconds
+      vault_hosts = step.create_vault_cluster_targets.hosts
+      // Use the install dir for our initial version, which always comes from a zip bundle
+      vault_install_dir = global.vault_install_dir["bundle"]
       vault_root_token  = step.create_vault_cluster.root_token
     }
   }
@@ -352,7 +350,7 @@ scenario "upgrade" {
   step "get_vault_cluster_ips" {
     description = global.description.get_vault_cluster_ip_addresses
     module      = module.vault_get_cluster_ips
-    depends_on  = [step.create_vault_cluster]
+    depends_on  = [step.wait_for_leader]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -365,8 +363,9 @@ scenario "upgrade" {
     ]
 
     variables {
-      vault_hosts       = step.create_vault_cluster_targets.hosts
-      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
+      vault_hosts = step.create_vault_cluster_targets.hosts
+      // Use the install dir for our initial version, which always comes from a zip bundle
+      vault_install_dir = global.vault_install_dir["bundle"]
       vault_root_token  = step.create_vault_cluster.root_token
     }
   }
@@ -394,7 +393,8 @@ scenario "upgrade" {
       leader_public_ip  = step.get_vault_cluster_ips.leader_public_ip
       leader_private_ip = step.get_vault_cluster_ips.leader_private_ip
       vault_instances   = step.create_vault_cluster_targets.hosts
-      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
+      // Use the install dir for our initial version, which always comes from a zip bundle
+      vault_install_dir = global.vault_install_dir["bundle"]
       vault_root_token  = step.create_vault_cluster.root_token
     }
   }
