@@ -1,0 +1,3 @@
+```release-note:change
+auth/jwt: Revert [GH-295](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/295) which changed the way JWT `aud` claims were validated.
+```
