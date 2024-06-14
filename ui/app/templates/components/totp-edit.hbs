@@ -3,57 +3,98 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<div {{did-insert this.startTimer}} {{will-destroy this.cancelTimer}}>
-  <PageHeader as |p|>
-    <p.top>
-      <KeyValueHeader
-        @baseKey={{@baseKey}}
-        @path="vault.cluster.secrets.backend.list"
-        @mode={{@mode}}
-        @root={{@root}}
-        @showCurrent={{true}}
-      />
-    </p.top>
-    <p.levelLeft>
-      <h1 class="title is-3">
-        {{#if (eq @mode "create")}}
-          Add account
-        {{else}}
-          {{@key.id}}
-        {{/if}}
-      </h1>
-    </p.levelLeft>
-  </PageHeader>
-  {{! tabs for show only }}
-  {{#if (eq @mode "show")}}
-    <div class="tabs-container box is-bottomless is-marginless is-fullwidth is-paddingless">
-      <nav class="tabs" aria-label="navigation for secret management">
-        <ul>
-          <li>
-            <LinkTo @route="vault.cluster.secrets.backend.show" @model={{@key.id}} data-test-secret-tab>
-              Account
-            </LinkTo>
-          </li>
-        </ul>
-      </nav>
-    </div>
-  {{/if}}
+<PageHeader as |p|>
+  <p.top>
+    <KeyValueHeader
+      @baseKey={{this.model}}
+      @path="vault.cluster.secrets.backend.list"
+      @mode={{this.mode}}
+      @root={{this.root}}
+      @showCurrent={{true}}
+    />
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3" data-test-secret-header="true">
+      {{#if (eq this.mode "create")}}
+        Create a TOTP key
+      {{else if (eq this.mode "edit")}}
+        Edit TOTP key
+      {{else}}
+        TOTP key
+        <code>{{this.model.id}}</code>
+      {{/if}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
 
-  {{#if (eq @mode "create")}}
-    <TotpCreate
-      @model={{@model}}
-      @modelForData={{this.modelForData}}
-      @error={{this.error}}
-      @buttonDisabled={{this.buttonDisabled}}
-    />
-  {{else if (eq @mode "show")}}
-    <TotpFormShow
-      @modelForData={{this.modelForData}}
-      @elapsedTime={{this.elapsedTime}}
-      @remainingTime={{this.remainingTime}}
-      @isWriteWithoutRead={{this.isWriteWithoutRead}}
-    />
-  {{else}}
-    <EmptyState @title="No secret view was selected" />
-  {{/if}}
-</div>
+{{#if (eq this.mode "show")}}
+  <Toolbar>
+    <ToolbarActions>
+      {{#if this.model.canDelete}}
+        <ConfirmAction
+          @buttonText="Delete key"
+          class="toolbar-button"
+          @buttonColor="secondary"
+          @onConfirmAction={{action "delete"}}
+        />
+        <div class="toolbar-separator"></div>
+      {{/if}}
+      {{#if this.model.canUpdate}}
+        <ToolbarSecretLink @secret={{this.model.id}} @mode="edit" data-test-edit-link={{true}} @replace={{true}}>
+          Edit key
+        </ToolbarSecretLink>
+      {{/if}}
+    </ToolbarActions>
+  </Toolbar>
+{{/if}}
+
+{{#if (or (eq this.mode "edit") (eq this.mode "create"))}}
+  <form onsubmit={{action "createOrUpdate" "create"}}>
+    <div class="box is-sideless is-fullwidth is-marginless">
+      <MessageError @model={{this.model}} />
+      <NamespaceReminder @mode={{this.mode}} @noun="TOTP key" />
+      {{#if (eq this.mode "create")}}
+        {{#each this.model.createAttrs as |attr|}}
+          <FormField
+            data-test-field={{true}}
+            @attr={{attr}}
+            @model={{this.model}}
+            @modelValidations={{@modelValidations}}
+            @showHelpText={{@showHelpText}}
+          />
+        {{/each}}
+      {{/if}}
+      <FormFieldGroupsLoop @model={{this.model}} @mode={{this.mode}} />
+    </div>
+    <div class="field is-grouped-split box is-fullwidth is-bottomless">
+      <Hds::ButtonSet>
+        <Hds::Button @text={{if (eq this.mode "create") "Create key" "Save"}} type="submit" data-test-totp-create />
+        {{#if (eq this.mode "create")}}
+          <Hds::Button
+            @text="Cancel"
+            @color="secondary"
+            @route="vault.cluster.secrets.backend.list-root"
+            @model={{this.model.backend}}
+            @query={{hash tab="key"}}
+          />
+        {{else}}
+          <Hds::Button
+            @text="Cancel"
+            @color="secondary"
+            @route="vault.cluster.secrets.backend.show"
+            @models={{array this.model.backend this.model.id}}
+          />
+        {{/if}}
+      </Hds::ButtonSet>
+    </div>
+  </form>
+{{else}}
+  <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
+    {{#each this.model.attrs as |attr|}}
+      <InfoTableRow
+        @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+        @value={{get this.model attr.name}}
+      />
+    {{/each}}
+  </div>
+{{/if}}
