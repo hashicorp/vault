@@ -11,15 +11,26 @@ import { encodePath } from 'vault/utils/path-encoding-helpers';
 export default ApplicationAdapter.extend({
   namespace: 'v1',
 
-  createRecord(store, type, snapshot) {
+  createOrUpdate(store, type, snapshot, requestType) {
+    const { name, backend } = snapshot.record;
     const serializer = store.serializerFor(type.modelName);
-    const data = serializer.serialize(snapshot);
-    const { id } = snapshot;
-    const name = snapshot.record.name;
-    return this.ajax(this.urlForKey(snapshot.attr('backend'), name || id), 'POST', { data }).then(() => {
-      data.id = name || id;
-      return data;
+    const data = serializer.serialize(snapshot, requestType);
+    const url = this.urlForKey(backend, name);
+
+    return this.ajax(url, 'POST', { data }).then((resp) => {
+      // Ember data doesn't like 204 responses except for DELETE method
+      const response = resp || { data: {} };
+      response.data.id = name;
+      return response;
     });
+  },
+
+  createRecord() {
+    return this.createOrUpdate(...arguments);
+  },
+
+  updateRecord() {
+    return this.createOrUpdate(...arguments, 'update');
   },
 
   deleteRecord(store, type, snapshot) {

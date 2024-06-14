@@ -12,68 +12,48 @@
   <div class="columns is-mobile">
     <div class="column is-10">
       <LinkTo
-        @route={{concat "vault.cluster.secrets.backend.credentials"}}
-        @model={{if this.keyTypeValue (concat "role/" @item.id) @item.id}}
+        @route="vault.cluster.secrets.backend.credentials"
+        @model={{@item.id}}
         class="has-text-black has-text-weight-semibold"
       >
         <Icon @name="user" class="has-text-grey-light is-pulled-left" />
         <div class="role-item-details">
           <span class="is-underline">{{if (eq @item.id " ") "(self)" (or @item.keyWithoutParent @item.id)}}</span>
-          <span class="tag has-text-grey-dark">{{this.keyTypeValue}}</span>
         </div>
       </LinkTo>
     </div>
-    <!--div class="column has-text-right">
+    <div class="column has-text-right">
       <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
         <dd.ToggleIcon
           @icon="more-horizontal"
-          @text="Manage database {{@item.id}}"
+          @text="Manage key {{@item.id}}"
           @hasChevron={{false}}
           data-test-popup-menu-trigger
         />
-        {{#if @item.canEdit}}
-          <dd.Interactive @text="Edit connection" @route="vault.cluster.secrets.backend.edit" @model={{@item.id}} />
+        {{#if @item.canRead}}
+          <dd.Interactive @text="Details" @route="vault.cluster.secrets.backend.show" @model={{@item.id}} />
         {{/if}}
-        {{#if @item.canEditRole}}
-          <dd.Interactive @text="Edit Role" @route="vault.cluster.secrets.backend.edit" @model={{concat "role/" @item.id}} />
+        {{#if @item.canUpdate}}
+          <dd.Interactive @text="Edit" @route="vault.cluster.secrets.backend.edit" @model={{@item.id}} />
         {{/if}}
-        {{#if @item.canReset}}
+        {{#if @item.canDelete}}
           <dd.Interactive
-            @text="Reset connection"
-            @icon={{if (eq this.actionRunning "reset") "loading"}}
-            {{on "click" (fn this.resetConnection @item.id)}}
-          />
-        {{/if}}
-        {{#if (and (eq @item.type "dynamic") @item.canGenerateCredentials)}}
-          <dd.Interactive
-            @text="Generate credentials"
-            @route="vault.cluster.secrets.backend.credentials"
-            @model={{@item.id}}
-            @query={{hash roleType=this.keyTypeValue}}
-          />
-        {{else if (and (eq @item.type "static") @item.canGetCredentials)}}
-          <dd.Interactive
-            @text="Get credentials"
-            @route="vault.cluster.secrets.backend.credentials"
-            @model={{@item.id}}
-            @query={{hash roleType=this.keyTypeValue}}
-          />
-        {{/if}}
-        {{#if (and @item.canRotateRoleCredentials (eq this.keyTypeValue "static"))}}
-          <dd.Interactive
-            @text="Rotate credentials"
-            @icon={{if (eq this.actionRunning "rotateRole") "loading"}}
-            {{on "click" (fn this.rotateRoleCred @item.id)}}
-          />
-        {{/if}}
-        {{#if @item.canRotateRoot}}
-          <dd.Interactive
-            @text="Rotate root credentials"
-            @icon={{if (eq this.actionRunning "rotateRoot") "loading"}}
-            {{on "click" (fn this.rotateRootCred @item.id)}}
+            @text="Delete"
+            @color="critical"
+            data-test-confirm-action-trigger
+            {{on "click" (fn (mut this.showConfirmModal) true)}}
           />
         {{/if}}
       </Hds::Dropdown>
-    </div-->
+    </div>
   </div>
 </LinkedBlock>
+
+{{#if this.showConfirmModal}}
+  <ConfirmModal
+    @color="critical"
+    @onClose={{fn (mut this.showConfirmModal) false}}
+    @confirmMessage="This will permanently delete this key."
+    @onConfirm={{@delete}}
+  />
+{{/if}}
