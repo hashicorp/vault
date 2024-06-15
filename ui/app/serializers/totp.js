@@ -25,10 +25,4 @@ export default ApplicationSerializer.extend({
     delete payload.data;
     return payload;
   },
-
-  serialize(snapshot) {
-    return {
-      url: snapshot.attr('url'),
-    };
-  },
 });
