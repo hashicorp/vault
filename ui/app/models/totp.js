@@ -12,6 +12,7 @@ import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
 const ALGORITHMS = ['SHA1', 'SHA256', 'SHA512'];
 const DIGITS = [6, 8];
+const SKEW = [0, 1];
 
 const validations = {
   account_name: [
@@ -33,39 +34,93 @@ const validations = {
     { validator: (value) => DIGITS.includes(value), message: 'Digits must be one of ' + DIGITS.join(', ') },
   ],
   period: [{ type: 'number', message: 'Period must be a number.' }],
+
+  skew: [{ validator: (value) => SKEW.includes(value), message: 'Skew must be one of ' + SKEW.join(', ') }],
 };
 
 @withModelValidations(validations)
 export default class TotpModel extends Model {
-  @attr('string') backend;
+  @attr('string', {
+    readOnly: true,
+  })
+  backend;
 
   @alias('account_name') name;
 
   @attr('string', {
     fieldValue: 'name',
-    readOnly: true,
+    editDisabled: true,
   })
   account_name;
   @attr('string', {
-    readOnly: true,
+    editDisabled: true,
     possibleValues: ALGORITHMS,
+    defaultValue: 'SHA1',
   })
   algorithm;
   @attr('number', {
-    readOnly: true,
+    editDisabled: true,
     possibleValues: DIGITS,
+    defaultValue: 6,
   })
   digits;
   @attr('string', {
-    readOnly: true,
+    editDisabled: true,
   })
   issuer;
   @attr('number', {
-    readOnly: true,
+    editDisabled: true,
+    defaultValue: 30,
   })
   period;
 
-  @attr('string') url;
+  @attr('boolean', {
+    defaultValue: false,
+    label: 'Use Vault as provider for this key',
+    editDisabled: true,
+  })
+  generate;
+
+  // Used when generate is true
+  @attr('number', {
+    //defaultValue: 20,
+    editDisabled: true,
+  })
+  key_size;
+  @attr('number', {
+    possibleValues: SKEW,
+    //defaultValue: 1,
+    editDisabled: true,
+  })
+  skew;
+  @attr('boolean', {
+    //defaultValue: true,
+    editDisabled: true,
+  })
+  exported;
+
+  // Doesn't really make sense as we can generate our own QR code from the url
+  @attr('number', {
+    defaultValue: 0,
+    editDisabled: true,
+  })
+  qr_size;
+
+  // Used when generate is false
+  @attr('string', {
+    editDisabled: true,
+  })
+  url;
+  @attr('string', {
+    editDisabled: true,
+  })
+  key;
+
+  // Returned when a key is created as provider
+  @attr('string', {
+    readOnly: true,
+  })
+  barcode;
 
   @computed('account_name', function () {
     const keys = ['account_name', 'algorithm', 'digits', 'issuer', 'period'];
@@ -73,20 +128,38 @@ export default class TotpModel extends Model {
   })
   attrs;
 
-  @computed('url', function () {
+  @computed('url', 'barcode', function () {
     const keys = ['url'];
     return expandAttributeMeta(this, keys);
   })
-  createAttrs;
+  generatedAttrs;
 
-  @computed('account_name', function () {
-    const defaultFields = ['account_name', 'algorithm', 'digits', 'issuer', 'period'];
+  @computed('generate', function () {
+    const defaultFields = ['generate'];
+    const options = ['algorithm', 'digits', 'period'];
+    const providerOptions = [];
+
+    if (this.generate) {
+      providerOptions.push('key_size', 'skew', 'exported', 'qr_size');
+    } else {
+      defaultFields.push('url', 'key');
+    }
+
+    defaultFields.push('account_name', 'issuer');
+
     const groups = [
       { default: defaultFields },
-      //{
-      //  Options: [...fields],
-      //},
+      {
+        Options: [...options],
+      },
     ];
+
+    if (this.generate) {
+      groups.push({
+        'Provider options': [...providerOptions],
+      });
+    }
+
     return fieldToAttrs(this, groups);
   })
   fieldGroups;
