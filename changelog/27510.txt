@@ -1,0 +1,3 @@
+```release-note:improvement
+agent: Add the ability to dump pprof to the filesystem using SIGUSR2
+```
