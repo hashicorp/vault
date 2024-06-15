@@ -13,6 +13,8 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
+	"runtime/pprof"
 	"sort"
 	"strings"
 	"sync"
@@ -74,6 +76,7 @@ type AgentCommand struct {
 
 	ShutdownCh chan struct{}
 	SighupCh   chan struct{}
+	SighUSR2Ch chan struct{}
 
 	tlsReloadFuncsLock sync.RWMutex
 	tlsReloadFuncs     []reloadutil.ReloadFunc
@@ -758,6 +761,47 @@ func (c *AgentCommand) Run(args []string) int {
 				case c.reloadedCh <- struct{}{}:
 				default:
 				}
+			case <-c.SighUSR2Ch:
+				// We can only get pprof outputs via the API but sometimes Vault can get
+				// into a state where it cannot process requests so we can get pprof outputs
+				// via SIGUSR2.
+				pprofPath := filepath.Join(os.TempDir(), "vault-pprof")
+				err := os.MkdirAll(pprofPath, os.ModePerm)
+				if err != nil {
+					c.logger.Error("Could not create temporary directory for pprof", "error", err)
+					continue
+				}
+
+				dumps := []string{"goroutine", "heap", "allocs", "threadcreate", "profile"}
+				for _, dump := range dumps {
+					pFile, err := os.Create(filepath.Join(pprofPath, dump))
+					if err != nil {
+						c.logger.Error("error creating pprof file", "name", dump, "error", err)
+						break
+					}
+
+					if dump != "profile" {
+						err = pprof.Lookup(dump).WriteTo(pFile, 0)
+						if err != nil {
+							c.logger.Error("error generating pprof data", "name", dump, "error", err)
+							pFile.Close()
+							break
+						}
+					} else {
+						// CPU profiles need to run for a duration so we're going to run it
+						// just for one second to avoid blocking here.
+						if err := pprof.StartCPUProfile(pFile); err != nil {
+							c.logger.Error("could not start CPU profile: ", err)
+							pFile.Close()
+							break
+						}
+						time.Sleep(time.Second * 1)
+						pprof.StopCPUProfile()
+					}
+					pFile.Close()
+				}
+
+				c.logger.Info(fmt.Sprintf("Wrote pprof files to: %s", pprofPath))
 			case <-ctx.Done():
 				return nil
 			}
