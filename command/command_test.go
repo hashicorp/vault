@@ -127,6 +127,7 @@ func testVaultServerAllBackends(tb testing.TB) (*api.Client, func()) {
 		CredentialBackends: handlers.credentialBackends,
 		AuditBackends:      handlers.auditBackends,
 		LogicalBackends:    handlers.logicalBackends,
+		BuiltinRegistry:    builtinplugins.Registry,
 	})
 	return client, closer
 }
