@@ -307,13 +307,13 @@ export default Service.extend({
     );
 
     Object.assign(data, this.calculateExpiration(resp));
+    this.set('allowExpiration', !resp.renewable);
 
     if (!data.displayName) {
       data.displayName = (this.getTokenData(tokenName) || {}).displayName;
     }
 
     this.set('tokens', addToArray(this.tokens, tokenName));
-    this.set('allowExpiration', false);
     this.setTokenData(tokenName, data);
 
     return resolve({
