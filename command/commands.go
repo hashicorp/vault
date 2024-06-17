@@ -192,7 +192,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 				},
 				ShutdownCh: MakeShutdownCh(),
 				SighupCh:   MakeSighupCh(),
-				SighUSR2Ch: MakeSigUSR2Ch(),
+				SigUSR2Ch:  MakeSigUSR2Ch(),
 			}, nil
 		},
 		"agent generate-config": func() (cli.Command, error) {
@@ -577,6 +577,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 				},
 				ShutdownCh: MakeShutdownCh(),
 				SighupCh:   MakeSighupCh(),
+				SigUSR2Ch:  MakeSigUSR2Ch(),
 			}, nil
 		},
 		"policy": func() (cli.Command, error) {

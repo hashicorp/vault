@@ -76,7 +76,7 @@ type AgentCommand struct {
 
 	ShutdownCh chan struct{}
 	SighupCh   chan struct{}
-	SighUSR2Ch chan struct{}
+	SigUSR2Ch  chan struct{}
 
 	tlsReloadFuncsLock sync.RWMutex
 	tlsReloadFuncs     []reloadutil.ReloadFunc
@@ -761,7 +761,7 @@ func (c *AgentCommand) Run(args []string) int {
 				case c.reloadedCh <- struct{}{}:
 				default:
 				}
-			case <-c.SighUSR2Ch:
+			case <-c.SigUSR2Ch:
 				pprofPath := filepath.Join(os.TempDir(), "vault-agent-pprof")
 				err := os.MkdirAll(pprofPath, os.ModePerm)
 				if err != nil {
