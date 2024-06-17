@@ -765,7 +765,7 @@ func (c *AgentCommand) Run(args []string) int {
 				// We can only get pprof outputs via the API but sometimes Vault can get
 				// into a state where it cannot process requests so we can get pprof outputs
 				// via SIGUSR2.
-				pprofPath := filepath.Join(os.TempDir(), "vault-pprof")
+				pprofPath := filepath.Join(os.TempDir(), "vault-agent-pprof")
 				err := os.MkdirAll(pprofPath, os.ModePerm)
 				if err != nil {
 					c.logger.Error("Could not create temporary directory for pprof", "error", err)
