@@ -4,7 +4,6 @@
 package proxyutil
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"sync"
@@ -72,7 +71,7 @@ func WrapInProxyProto(listener net.Listener, config *ProxyProtoConfig) (net.List
 					return proxyproto.IGNORE, nil
 				}
 
-				return proxyproto.REJECT, errors.New(`upstream connection not trusted proxy_protocol_behavior is "deny_unauthorized"`)
+				return proxyproto.REJECT, proxyproto.ErrInvalidUpstream
 			},
 		}
 	default:
