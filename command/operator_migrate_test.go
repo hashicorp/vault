@@ -32,10 +32,12 @@ func init() {
 }
 
 func TestMigration(t *testing.T) {
+	handlers := newVaultHandlers()
+
 	t.Run("Default", func(t *testing.T) {
 		data := generateData()
 
-		fromFactory := physicalBackends["file"]
+		fromFactory := handlers.physicalBackends["file"]
 
 		folder := t.TempDir()
 
@@ -51,7 +53,7 @@ func TestMigration(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		toFactory := physicalBackends["inmem"]
+		toFactory := handlers.physicalBackends["inmem"]
 		confTo := map[string]string{}
 		to, err := toFactory(confTo, nil)
 		if err != nil {
@@ -72,7 +74,7 @@ func TestMigration(t *testing.T) {
 	t.Run("Concurrent migration", func(t *testing.T) {
 		data := generateData()
 
-		fromFactory := physicalBackends["file"]
+		fromFactory := handlers.physicalBackends["file"]
 
 		folder := t.TempDir()
 
@@ -88,7 +90,7 @@ func TestMigration(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		toFactory := physicalBackends["inmem"]
+		toFactory := handlers.physicalBackends["inmem"]
 		confTo := map[string]string{}
 		to, err := toFactory(confTo, nil)
 		if err != nil {
@@ -110,7 +112,7 @@ func TestMigration(t *testing.T) {
 	t.Run("Start option", func(t *testing.T) {
 		data := generateData()
 
-		fromFactory := physicalBackends["inmem"]
+		fromFactory := handlers.physicalBackends["inmem"]
 		confFrom := map[string]string{}
 		from, err := fromFactory(confFrom, nil)
 		if err != nil {
@@ -120,7 +122,7 @@ func TestMigration(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		toFactory := physicalBackends["file"]
+		toFactory := handlers.physicalBackends["file"]
 		folder := t.TempDir()
 		confTo := map[string]string{
 			"path": folder,
@@ -149,7 +151,7 @@ func TestMigration(t *testing.T) {
 	t.Run("Start option (parallel)", func(t *testing.T) {
 		data := generateData()
 
-		fromFactory := physicalBackends["inmem"]
+		fromFactory := handlers.physicalBackends["inmem"]
 		confFrom := map[string]string{}
 		from, err := fromFactory(confFrom, nil)
 		if err != nil {
@@ -159,7 +161,7 @@ func TestMigration(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		toFactory := physicalBackends["file"]
+		toFactory := handlers.physicalBackends["file"]
 		folder := t.TempDir()
 		confTo := map[string]string{
 			"path": folder,
@@ -269,7 +271,7 @@ storage_destination "dest_type2" {
 	})
 
 	t.Run("DFS Scan", func(t *testing.T) {
-		s, _ := physicalBackends["inmem"](map[string]string{}, nil)
+		s, _ := handlers.physicalBackends["inmem"](map[string]string{}, nil)
 
 		data := generateData()
 		data["cc"] = []byte{}
