@@ -41,7 +41,6 @@ jobs:
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_wrapper: false
-          terraform_version: "1.7.5" # Pin until 1.8.x crash has been resolved
       - uses: hashicorp/action-setup-enos@v1
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}

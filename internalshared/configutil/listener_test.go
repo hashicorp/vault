@@ -529,7 +529,7 @@ func TestListener_parseProxySettings(t *testing.T) {
 		"behavior-deny": {
 			rawProxyProtocolAuthorizedAddrs: "10.0.0.1,10.0.2.1",
 			expectedNumAddrs:                2,
-			proxyBehavior:                   "deny_authorized",
+			proxyBehavior:                   "deny_unauthorized",
 			isErrorExpected:                 false,
 		},
 	}

@@ -68,7 +68,10 @@ func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ld
 		return docker.NewServiceURLParse(connURL)
 	})
 	if err != nil {
-		t.Fatalf("could not start local LDAP docker container: %s", err)
+		t.Logf("could not start local LDAP docker container: %s", err)
+		t.Log("Docker container logs: ")
+		t.Log(logsWriter.String())
+		t.FailNow()
 	}
 
 	return func() {

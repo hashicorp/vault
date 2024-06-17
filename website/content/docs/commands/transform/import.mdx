@@ -1,0 +1,62 @@
+---
+layout: docs
+page_title: transform import and transform import-version - Command
+description: |-
+  The "transform import" and "transform import-version" commands import the
+  specified key into Transform, via the Transform BYOK mechanism.
+---
+
+# transform import and transform import-version
+
+The `transform import` and `transform import-version` commands import the
+specified key into Transform, via the [Transform BYOK
+mechanism](/vault/docs/secrets/transform#bring-your-own-key-byok). The former
+imports this key as a new key, failing if it already exists, whereas the
+latter will only update an existing key in Transform to a new version of the
+key material.
+
+This needs access to read the transform mount's wrapping key (at
+`transform/wrapping_key`) and the ability to write to either import
+endpoints (either `transform/keys/:name/import` or
+`transform/keys/:name/import_version`).
+
+## Examples
+
+Imports a 2048-bit RSA key as a new key:
+
+```
+$ vault transform import transform/keys/test-key @test-key type=rsa-2048
+Retrieving transform wrapping key.
+Wrapping source key with ephemeral key.
+Encrypting ephemeral key with transform wrapping key.
+Submitting wrapped key to Vault transform.
+Success!
+```
+
+Imports a new version of an existing key:
+
+```
+$ vault transform import-version transform/keys/test-key @test-key-updated
+Retrieving transform wrapping key.
+Wrapping source key with ephemeral key.
+Encrypting ephemeral key with transform wrapping key.
+Submitting wrapped key to Vault transform.
+Success!
+```
+
+## Usage
+
+This command does not have any unique flags and respects core Vault CLI
+commands. See `vault transform import -help` for more information.
+
+This command requires two positional arguments:
+
+ 1. `PATH`, the path to the transform key to import in the format of
+    `<mount>/keys/<key-name>`, where `<mount>` is the path to the mount
+    (using `-namespace=<ns>` to specify any namespaces), and `<key-name>`
+    is the desired name of the key.
+ 2. `KEY`, the key material to import in Standard Base64 encoding (either
+    of a raw key in the case of symmetric keys such as AES, or of the DER
+    encoded format for asymmetric keys such as RSA). If the value for `KEY`
+    begins with an `@`, the CLI argument is assumed to be a path to a file
+    on disk to be read.

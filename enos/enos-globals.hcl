@@ -37,7 +37,8 @@ globals {
     "sles"   = var.distro_version_sles
     "ubuntu" = var.distro_version_ubuntu
   }
-  editions = ["ce", "ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
+  editions            = ["ce", "ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
+  enterprise_editions = [for e in global.editions : e if e != "ce"]
   package_manager = {
     "amzn2"  = "yum"
     "leap"   = "zypper"
@@ -60,11 +61,18 @@ globals {
     "Project" : "Enos",
     "Environment" : "ci"
   }, var.tags)
+  // This reads the VERSION file, strips any pre-release metadata, and selects only initial
+  // versions that are less than our current version. E.g. A VERSION file containing 1.17.0-beta2
+  // would render: semverconstraint(v, "<1.17.0-0")
+  upgrade_version_stripped = join("-", [split("-", chomp(file("../version/VERSION")))[0], "0"])
   // NOTE: when backporting, make sure that our initial versions are less than that
   // release branch's version. Also beware if adding versions below 1.11.x. Some scenarios
   // that use this global might not work as expected with earlier versions. Below 1.8.x is
   // not supported in any way.
-  upgrade_initial_versions = ["1.11.12", "1.12.11", "1.13.11", "1.14.7", "1.15.3"]
+  upgrade_all_initial_versions_ce  = ["1.8.12", "1.9.10", "1.10.11", "1.11.12", "1.12.11", "1.13.13", "1.14.10", "1.15.6", "1.16.3", "1.17.0"]
+  upgrade_all_initial_versions_ent = ["1.8.12", "1.9.10", "1.10.11", "1.11.12", "1.12.11", "1.13.13", "1.14.13", "1.15.10", "1.16.4", "1.17.0"]
+  upgrade_initial_versions_ce      = [for v in global.upgrade_all_initial_versions_ce : v if semverconstraint(v, "<${global.upgrade_version_stripped}")]
+  upgrade_initial_versions_ent     = [for v in global.upgrade_all_initial_versions_ent : v if semverconstraint(v, "<${global.upgrade_version_stripped}")]
   vault_install_dir = {
     bundle  = "/opt/vault/bin"
     package = "/usr/bin"

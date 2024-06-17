@@ -295,7 +295,7 @@ func doUnifiedTransferMissingDeltaWALSerials(sc *storageContext, clusterId strin
 
 func readRevocationEntryAndTransfer(sc *storageContext, serial string) error {
 	hyphenSerial := normalizeSerial(serial)
-	revInfo, err := revocation.FetchRevocationInfo(sc, hyphenSerial)
+	revInfo, err := fetchRevocationInfo(sc, hyphenSerial)
 	if err != nil {
 		return fmt.Errorf("failed loading revocation entry for serial: %s: %w", serial, err)
 	}
