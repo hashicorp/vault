@@ -9,6 +9,8 @@ import Component from '@ember/component';
 import ReplicationActions from 'core/mixins/replication-actions';
 
 export default Component.extend(ReplicationActions, {
+  'data-test-replication-summary': true,
+  attributeBindings: ['data-test-replication-summary'],
   replicationMode: 'dr',
   mode: 'primary',
   version: service(),

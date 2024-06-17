@@ -1,0 +1,56 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{#if @replicationDisabled}}
+  <PageHeader as |p|>
+    <p.levelLeft>
+      <h1 class="title is-3" data-test-replication-title>
+        {{#if (eq @replicationMode "dr")}}
+          Enable Disaster Recovery Replication
+        {{else if (eq @replicationMode "performance")}}
+          Enable Performance Replication
+        {{else}}
+          {{! should never get here, but have safe fallback just in case }}
+          Enable Replication
+        {{/if}}
+      </h1>
+    </p.levelLeft>
+  </PageHeader>
+  <div class="box is-sideless is-fullwidth is-marginless">
+    {{#if (eq @replicationMode "dr")}}
+      <h2 class="title is-flex-center is-5 is-marginless">
+        <Icon @size="24" @name="replication-direct" />
+        Disaster Recovery (DR) Replication
+      </h2>
+      <p class="help has-text-grey-dark">
+        {{replication-mode-description "dr"}}
+      </p>
+    {{else if (eq @replicationMode "performance")}}
+      <h2 class="title is-flex-center is-5 is-marginless">
+        <Icon @size="24" @name="replication-perf" />
+        Performance Replication
+      </h2>
+      {{#if (has-feature "Performance Replication")}}
+        <p class="help has-text-grey-dark">
+          {{replication-mode-description "performance"}}
+        </p>
+      {{else}}
+        <p class="help has-text-grey-dark">
+          Performance Replication is a feature of Vault Enterprise Premium
+        </p>
+      {{/if}}
+    {{/if}}
+  </div>
+  <EnableReplicationForm
+    @replicationMode={{@replicationMode}}
+    @canEnablePrimary={{@cluster.canEnablePrimary}}
+    @canEnableSecondary={{@cluster.canEnableSecondary}}
+    @performanceReplicationDisabled={{@cluster.performance.replicationDisabled}}
+    @performanceMode={{if @cluster.performance.replicationDisabled "disabled" @cluster.performance.modeForUrl}}
+    @onSuccess={{@onEnableSuccess}}
+  />
+{{else}}
+  <ReplicationSummary @cluster={{@cluster}} @initialReplicationMode={{@replicationMode}} />
+{{/if}}
