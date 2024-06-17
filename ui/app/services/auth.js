@@ -221,7 +221,7 @@ export default Service.extend({
     let tokenExpirationEpoch;
     const ttl = resp.ttl || resp.lease_duration;
 
-    if (resp.type === 'batch') {
+    if (resp.expire_time) {
       const expireTime = resp.expire_time;
       tokenExpirationEpoch = new Date(expireTime).getTime();
     } else {
