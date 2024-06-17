@@ -129,6 +129,7 @@ const (
 	flagNameDelegatedAuthAccessors = "delegated-auth-accessors"
 )
 
+// vaultHandlers contains the handlers for creating the various Vault backends.
 type vaultHandlers struct {
 	physicalBackends     map[string]physical.Factory
 	loginHandlers        map[string]LoginHandler
@@ -138,6 +139,7 @@ type vaultHandlers struct {
 	serviceRegistrations map[string]sr.Factory
 }
 
+// newMinimalVaultHandlers returns a new vaultHandlers that a minimal Vault would use.
 func newMinimalVaultHandlers() *vaultHandlers {
 	return &vaultHandlers{
 		physicalBackends: map[string]physical.Factory{
@@ -177,55 +179,15 @@ func newMinimalVaultHandlers() *vaultHandlers {
 	}
 }
 
+// newVaultHandlers returns a new vaultHandlers composed of newMinimalVaultHandlers()
+// and any addon handlers from Vault CE and Vault Enterprise selected by Go build tags.
 func newVaultHandlers() *vaultHandlers {
 	handlers := newMinimalVaultHandlers()
-	extendAddonCommands(handlers)
+	extendAddonHandlers(handlers)
 	entExtendAddonHandlers(handlers)
 
 	return handlers
 }
-
-//var (
-//	physicalBackends = map[string]physical.Factory{
-//		"inmem_ha":               physInmem.NewInmemHA,
-//		"inmem_transactional_ha": physInmem.NewTransactionalInmemHA,
-//		"inmem_transactional":    physInmem.NewTransactionalInmem,
-//		"inmem":                  physInmem.NewInmem,
-//		"raft":                   physRaft.NewRaftBackend,
-//	}
-//
-//	loginHandlers = map[string]LoginHandler{
-//		"cert":  &credCert.CLIHandler{},
-//		"oidc":  &credOIDC.CLIHandler{},
-//		"token": &credToken.CLIHandler{},
-//		"userpass": &credUserpass.CLIHandler{
-//			DefaultMount: "userpass",
-//		},
-//	}
-//
-//	auditBackends = map[string]audit.Factory{
-//		"file":   audit.NewFileBackend,
-//		"socket": audit.NewSocketBackend,
-//		"syslog": audit.NewSyslogBackend,
-//	}
-//
-//	credentialBackends = map[string]logical.Factory{
-//		"plugin": plugin.Factory,
-//	}
-//
-//	logicalBackends = map[string]logical.Factory{
-//		"plugin":   plugin.Factory,
-//		"database": logicalDb.Factory,
-//		// This is also available in the plugin catalog, but is here due to the need to
-//		// automatically mount it.
-//		"kv": logicalKv.Factory,
-//	}
-//
-//	serviceRegistrations = map[string]sr.Factory{
-//		"consul":     csr.NewServiceRegistration,
-//		"kubernetes": ksr.NewServiceRegistration,
-//	}
-//)
 
 func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.CommandFactory {
 	handlers := newVaultHandlers()

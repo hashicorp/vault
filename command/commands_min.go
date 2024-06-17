@@ -9,6 +9,6 @@ import (
 	_ "github.com/hashicorp/vault/helper/builtinplugins"
 )
 
-func extendAddonCommands() {
+func extendAddonHandlers(*vaultHandlers) {
 	// No-op
 }

@@ -88,7 +88,7 @@ func newFullAddonHandlers() (map[string]physical.Factory, map[string]LoginHandle
 	return addonPhysicalBackends, addonLoginHandlers
 }
 
-func extendAddonCommands(handlers *vaultHandlers) {
+func extendAddonHandlers(handlers *vaultHandlers) {
 	addonPhysicalBackends, addonLoginHandlers := newFullAddonHandlers()
 
 	maps.Copy(handlers.physicalBackends, addonPhysicalBackends)
