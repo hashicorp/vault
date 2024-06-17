@@ -14,7 +14,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"runtime/pprof"
 	"sort"
 	"strings"
 	"sync"
@@ -763,39 +762,11 @@ func (c *AgentCommand) Run(args []string) int {
 				}
 			case <-c.SigUSR2Ch:
 				pprofPath := filepath.Join(os.TempDir(), "vault-agent-pprof")
-				err := os.MkdirAll(pprofPath, os.ModePerm)
+				cpuProfileDuration := time.Second * 1
+				err := WritePprofToFile(pprofPath, cpuProfileDuration)
 				if err != nil {
-					c.logger.Error("Could not create temporary directory for pprof", "error", err)
+					c.logger.Error(err.Error())
 					continue
-				}
-
-				dumps := []string{"goroutine", "heap", "allocs", "threadcreate", "profile"}
-				for _, dump := range dumps {
-					pFile, err := os.Create(filepath.Join(pprofPath, dump))
-					if err != nil {
-						c.logger.Error("error creating pprof file", "name", dump, "error", err)
-						break
-					}
-
-					if dump != "profile" {
-						err = pprof.Lookup(dump).WriteTo(pFile, 0)
-						if err != nil {
-							c.logger.Error("error generating pprof data", "name", dump, "error", err)
-							pFile.Close()
-							break
-						}
-					} else {
-						// CPU profiles need to run for a duration so we're going to run it
-						// just for one second to avoid blocking here.
-						if err := pprof.StartCPUProfile(pFile); err != nil {
-							c.logger.Error("could not start CPU profile: ", err)
-							pFile.Close()
-							break
-						}
-						time.Sleep(time.Second * 1)
-						pprof.StopCPUProfile()
-					}
-					pFile.Close()
 				}
 
 				c.logger.Info(fmt.Sprintf("Wrote pprof files to: %s", pprofPath))
