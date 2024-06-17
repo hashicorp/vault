@@ -36,6 +36,34 @@ Read on for a deeper dive into token concepts.  See the
 [tokens tutorial](/vault/tutorials/tokens/tokens)
 for details on how these concepts play out in practice.
 
+## Token formats
+
+Vault tokens are composed of a _prefix_ and a _body_.
+
+- The _prefix_ indicates the token's type:
+
+  Token Type | Vault 1.9.x or earlier | Vault 1.10 and later
+  -- | -- | --
+  Service tokens | s. | hvs.
+  Batch tokens | b. | hvb.
+  Recovery tokens | r. | hvr.
+
+- The _body_ is a randomly-generated 24 characters [Base62](https://en.wikipedia.org/wiki/Base62) string.
+
+Token are expected to match the following regexp: `(hv)?[sbr]\.[a-zA-Z0-9]{24}`
+
+Examples:
+
+```shell
+# Vault 1.9.x or earlier
+b.n6keuKu5Q6pXhaIcfnC9cFNd
+r.MEOkcS6xauDAZkS4bEvQTpbT
+
+# Vault 1.10 and later
+hvs.R0670sAqZnKX3yW40NddrPVk
+hvb.aYnhlZjetM09MRRc11FSLVk1
+```
+
 ## Token types
 
 As of Vault 1.0, there are two types of tokens: `service` tokens and `batch`
