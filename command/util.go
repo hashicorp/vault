@@ -231,7 +231,7 @@ func WritePprofToFile(path string, cpuProfileDuration time.Duration) error {
 			// just for one second to avoid blocking here.
 			if err := pprof.StartCPUProfile(pFile); err != nil {
 				pFile.Close()
-				return fmt.Errorf("could not start CPU profile: ", err)
+				return fmt.Errorf("could not start CPU profile", "error", err)
 			}
 			time.Sleep(cpuProfileDuration)
 			pprof.StopCPUProfile()
