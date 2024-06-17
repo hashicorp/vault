@@ -719,7 +719,7 @@ func (c *ProxyCommand) Run(args []string) int {
 				default:
 				}
 			case <-c.SigUSR2Ch:
-				pprofPath := filepath.Join(os.TempDir(), "vault-agent-pprof")
+				pprofPath := filepath.Join(os.TempDir(), "vault-proxy-pprof")
 				err := os.MkdirAll(pprofPath, os.ModePerm)
 				if err != nil {
 					c.logger.Error("Could not create temporary directory for pprof", "error", err)
