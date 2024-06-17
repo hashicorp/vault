@@ -1,0 +1,7 @@
+```release-note:bug
+agent: Fixed excessive CPU usage issue
+```
+
+```release-note:bug
+proxy: Fixed excessive CPU usage issue
+```
