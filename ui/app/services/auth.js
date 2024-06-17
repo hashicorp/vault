@@ -217,10 +217,9 @@ export default Service.extend({
     return this.ajax(url, 'POST', { namespace });
   },
 
-  calculateExpiration(resp) {
+  calculateExpiration(resp, now) {
     let tokenExpirationEpoch;
     const ttl = resp.ttl || resp.lease_duration;
-    const now = this.now();
 
     if (resp.type === 'batch') {
       const expireTime = resp.expire_time;
@@ -229,7 +228,6 @@ export default Service.extend({
       tokenExpirationEpoch = now + ttl * 1e3;
     }
 
-    this.set('expirationCalcTS', now);
     return {
       ttl,
       tokenExpirationEpoch,
@@ -306,8 +304,15 @@ export default Service.extend({
       resp.policies
     );
 
-    Object.assign(data, this.calculateExpiration(resp));
-    this.set('allowExpiration', !resp.renewable);
+    const now = this.now();
+    Object.assign(data, this.calculateExpiration(resp, now));
+
+    if (resp.renewable) {
+      this.set('expirationCalcTS', now);
+      this.set('allowExpiration', false);
+    } else {
+      this.set('allowExpiration', true);
+    }
 
     if (!data.displayName) {
       data.displayName = (this.getTokenData(tokenName) || {}).displayName;
