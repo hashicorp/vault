@@ -3341,7 +3341,7 @@ func initDevCore(c *ServerCommand, coreConfig *vault.CoreConfig, config *server.
 func startHttpServers(c *ServerCommand, core *vault.Core, config *server.Config, lns []listenerutil.Listener) error {
 	for _, ln := range lns {
 		if ln.Config == nil {
-			return fmt.Errorf("Found nil listener config after parsing")
+			return fmt.Errorf("found nil listener config after parsing")
 		}
 
 		if err := config2.IsValidListener(ln.Config); err != nil {
