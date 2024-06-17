@@ -210,28 +210,28 @@ func (r *recordingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 func WritePprofToFile(path string, cpuProfileDuration time.Duration) error {
 	err := os.MkdirAll(path, os.ModePerm)
 	if err != nil {
-		return fmt.Errorf("could not create temporary directory for pprof", "error", err)
+		return fmt.Errorf("could not create temporary directory for pprof: %v", err)
 	}
 
 	dumps := []string{"goroutine", "heap", "allocs", "threadcreate", "profile"}
 	for _, dump := range dumps {
 		pFile, err := os.Create(filepath.Join(path, dump))
 		if err != nil {
-			return fmt.Errorf("error creating pprof file", "name", dump, "error", err)
+			return fmt.Errorf("error creating pprof file %s: %v", dump, err)
 		}
 
 		if dump != "profile" {
 			err = pprof.Lookup(dump).WriteTo(pFile, 0)
 			if err != nil {
 				pFile.Close()
-				return fmt.Errorf("error generating pprof data", "name", dump, "error", err)
+				return fmt.Errorf("error generating pprof data for %s: %v", dump, err)
 			}
 		} else {
 			// CPU profiles need to run for a duration so we're going to run it
 			// just for one second to avoid blocking here.
 			if err := pprof.StartCPUProfile(pFile); err != nil {
 				pFile.Close()
-				return fmt.Errorf("could not start CPU profile", "error", err)
+				return fmt.Errorf("could not start CPU profile: %v", err)
 			}
 			time.Sleep(cpuProfileDuration)
 			pprof.StopCPUProfile()
