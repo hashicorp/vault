@@ -4,42 +4,25 @@
  */
 
 import { later, _cancelTimers as cancelTimers } from '@ember/runloop';
-import EmberObject from '@ember/object';
-import { resolve } from 'rsvp';
-import Service from '@ember/service';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { click, fillIn, render, settled } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
-import { validate } from 'uuid';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { Response } from 'miragejs';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
-
-const routerService = Service.extend({
-  transitionTo() {
-    return {
-      followRedirects() {
-        return resolve();
-      },
-    };
-  },
-});
 
 module('Integration | Component | auth form', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.owner.register('service:router', routerService);
     this.router = this.owner.lookup('service:router');
-    this.auth = this.owner.lookup('service:auth');
-    this.cluster = EmberObject.create({ id: '1' });
+    // this.auth = this.owner.lookup('service:auth');
     this.selectedAuth = 'token';
     this.performAuth = sinon.spy();
-    this.onSuccess = sinon.spy();
     this.renderComponent = async () => {
       return render(hbs`
         <AuthForm
@@ -47,56 +30,37 @@ module('Integration | Component | auth form', function (hooks) {
           @cluster={{this.cluster}}
           @selectedAuth={{this.selectedAuth}}
           @performAuth={{this.performAuth}}
+          @authIsRunning={{this.authIsRunning}}
           @delayIsIdle={{this.delayIsIdle}}
         />`);
     };
-
-    this.renderParent = async () => {
-      return render(hbs`
-        <Auth::Page
-          @wrappedToken={{this.wrappedToken}}
-          @cluster={{this.cluster}}
-          @namespace={{this.namespaceQueryParam}}
-          @selectedAuth={{this.authMethod}}
-          @onSuccess={{this.onSuccess}}
-        />
-        `);
-    };
   });
 
-  const CSP_ERR_TEXT = `Error This is a standby Vault node but can't communicate with the active node via request forwarding. Sign in at the active node to use the Vault UI.`;
-  test('it renders error on CSP violation', async function (assert) {
-    assert.expect(2);
-    this.cluster = EmberObject.create({ standby: true });
-    await this.renderParent();
-    assert.dom(GENERAL.messageError).doesNotExist();
-    this.owner.lookup('service:csp-event').handleEvent({ violatedDirective: 'connect-src' });
-    await settled();
-    assert.dom(GENERAL.messageError).hasText(CSP_ERR_TEXT);
-  });
-
-  test('it renders with vault style errors', async function (assert) {
-    assert.expect(1);
-    this.server.get('/auth/token/lookup-self', () => {
-      return new Response(400, { 'Content-Type': 'application/json' }, { errors: ['Not allowed'] });
-    });
-
-    await this.renderParent();
+  test('it calls performAuth on submit', async function (assert) {
+    await this.renderComponent();
+    await fillIn(AUTH_FORM.input('token'), '123token');
     await click(AUTH_FORM.login);
-    assert.dom(GENERAL.messageError).hasText('Error Authentication failed: Not allowed');
+    const [type, data] = this.performAuth.lastCall.args;
+    assert.strictEqual(type, 'token', 'performAuth is called with type');
+    assert.propEqual(data, { token: '123token' }, 'performAuth is called with data');
   });
 
-  test('it renders AdapterError style errors', async function (assert) {
-    assert.expect(1);
-    this.server.get('/auth/token/lookup-self', () => {
-      return new Response(400, { 'Content-Type': 'application/json' }, { errors: ['API Error here'] });
-    });
+  test('it disables sign in button when authIsRunning', async function (assert) {
+    this.authIsRunning = true;
+    await this.renderComponent();
+    assert.dom(AUTH_FORM.login).isDisabled('sign in button is disabled');
+    assert.dom(`${AUTH_FORM.login} [data-test-icon="loading"]`).exists('sign in button renders loading icon');
+  });
 
-    await this.renderParent();
-    await click(AUTH_FORM.login);
+  test('it renders alert info message when delayIsIdle', async function (assert) {
+    this.delayIsIdle = true;
+    this.authIsRunning = true;
+    await this.renderComponent();
     assert
-      .dom(GENERAL.messageError)
-      .hasText('Error Authentication failed: API Error here', 'shows the error from the API');
+      .dom(GENERAL.inlineAlert)
+      .hasText(
+        'If login takes longer than usual, you may need to check your device for an MFA notification, or contact your administrator if login times out.'
+      );
   });
 
   test('it renders no tabs when no methods are passed', async function (assert) {
@@ -157,42 +121,6 @@ module('Integration | Component | auth form', function (hooks) {
     assert.dom(AUTH_FORM.description).hasText('app description');
   });
 
-  test('it calls authenticate with the correct path', async function (assert) {
-    assert.expect(1);
-    const authenticateStub = sinon.stub(this.auth, 'authenticate');
-    this.selectedAuth = 'foo/';
-    this.server.get('/sys/internal/ui/mounts', () => {
-      return {
-        data: {
-          auth: {
-            'foo/': {
-              type: 'userpass',
-            },
-          },
-        },
-      };
-    });
-
-    await this.renderParent();
-    await click(AUTH_FORM.login);
-    const [actual] = authenticateStub.lastCall.args;
-    const expectedArgs = {
-      backend: 'userpass',
-      clusterId: '1',
-      data: {
-        username: null,
-        password: null,
-        path: 'foo',
-      },
-      selectedAuth: 'foo/',
-    };
-    assert.propEqual(
-      actual,
-      expectedArgs,
-      `it calls auth service authenticate method with correct args: ${JSON.stringify(actual)} `
-    );
-  });
-
   test('it renders no tabs when no supported methods are present in passed methods', async function (assert) {
     const methods = {
       'approle/': {
@@ -205,43 +133,6 @@ module('Integration | Component | auth form', function (hooks) {
     await this.renderComponent();
 
     assert.dom(AUTH_FORM.tabs()).doesNotExist();
-  });
-
-  test('it makes a request to unwrap if passed a wrappedToken and logs in', async function (assert) {
-    assert.expect(3);
-    const authenticateStub = sinon.stub(this.auth, 'authenticate');
-    this.wrappedToken = '54321';
-
-    this.server.post('/sys/wrapping/unwrap', (_, req) => {
-      assert.strictEqual(req.url, '/v1/sys/wrapping/unwrap', 'makes call to unwrap the token');
-      assert.strictEqual(
-        req.requestHeaders['X-Vault-Token'],
-        this.wrappedToken,
-        'uses passed wrapped token for the unwrap'
-      );
-      return {
-        auth: {
-          client_token: '12345',
-        },
-      };
-    });
-
-    await this.renderParent();
-    later(() => cancelTimers(), 50);
-    await settled();
-    const [actual] = authenticateStub.lastCall.args;
-    assert.propEqual(
-      actual,
-      {
-        backend: 'token',
-        clusterId: '1',
-        data: {
-          token: '12345',
-        },
-        selectedAuth: 'token',
-      },
-      `it calls auth service authenticate method with correct args: ${JSON.stringify(actual)} `
-    );
   });
 
   test('it shows an error if unwrap errors', async function (assert) {
@@ -299,27 +190,6 @@ module('Integration | Component | auth form', function (hooks) {
     await fillIn(AUTH_FORM.input('role'), 'foo');
     await fillIn(AUTH_FORM.mountPathInput, 'foo-oidc');
     assert.dom(AUTH_FORM.input('role')).hasValue('foo', 'role is retained when mount path is changed');
-    await click(AUTH_FORM.login);
-  });
-
-  test('it should set nonce value as uuid for okta method type', async function (assert) {
-    assert.expect(1);
-
-    this.server.post('/auth/okta/login/foo', (_, req) => {
-      const { nonce } = JSON.parse(req.requestBody);
-      assert.true(validate(nonce), 'Nonce value passed as uuid for okta login');
-      return {
-        auth: {
-          client_token: '12345',
-        },
-      };
-    });
-
-    await this.renderParent();
-
-    await fillIn(GENERAL.selectByAttr('auth-method'), 'okta');
-    await fillIn(AUTH_FORM.input('username'), 'foo');
-    await fillIn(AUTH_FORM.input('password'), 'bar');
     await click(AUTH_FORM.login);
   });
 });
