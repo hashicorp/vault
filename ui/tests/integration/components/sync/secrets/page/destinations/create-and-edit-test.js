@@ -131,6 +131,28 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
     await click(PAGE.saveButton);
   });
 
+  test('edit: payload only contains masked inputs when they have changed', async function (assert) {
+    assert.expect(1);
+    this.model = this.generateModel();
+
+    this.server.patch(`sys/sync/destinations/${this.model.type}/${this.model.name}`, (schema, req) => {
+      const payload = JSON.parse(req.requestBody);
+      assert.propEqual(
+        payload,
+        { secret_access_key: 'new-secret' },
+        'payload contains the changed obfuscated field'
+      );
+      return { payload };
+    });
+
+    await this.renderFormComponent();
+    await click(PAGE.enableField('accessKeyId'));
+    await click(PAGE.maskedInput('accessKeyId')); // click on input but do not change value
+    await click(PAGE.enableField('secretAccessKey'));
+    await fillIn(PAGE.maskedInput('secretAccessKey'), 'new-secret');
+    await click(PAGE.saveButton);
+  });
+
   test('it renders API errors', async function (assert) {
     assert.expect(1);
     const name = 'my-failed-dest';
@@ -192,7 +214,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
   // CREATE FORM ASSERTIONS FOR EACH DESTINATION TYPE
   for (const destination of SYNC_DESTINATIONS) {
     const { name, type } = destination;
-    const obfuscatedFields = ['clientSecret', 'secretAccessKey', 'accessKeyId'];
+    const obfuscatedFields = ['accessToken', 'clientSecret', 'secretAccessKey', 'accessKeyId'];
 
     module(`create destination: ${type}`, function (hooks) {
       hooks.beforeEach(function () {
