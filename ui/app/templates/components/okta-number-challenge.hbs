@@ -9,8 +9,7 @@
       To finish signing in, you will need to complete an additional MFA step.
     </p>
     {{#if @hasError}}
-      {{! TODO ? update to display @hasError message from API ex: "Authentication failed: multi-factor authentication denied" }}
-      <MessageError class="has-top-margin-s" @errorMessage="There was a problem" />
+      <MessageError class="has-top-margin-s" @errorMessage={{@hasError}} />
     {{else if @correctAnswer}}
       <p class="has-top-margin-s has-text-black has-text-weight-semibold" data-test-verification-type>
         Okta verification

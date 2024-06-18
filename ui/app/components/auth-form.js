@@ -16,7 +16,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 /**
  * @module AuthForm
- * The AuthForm is used to sign users into Vault. All properties are passed in via query params.
+ * The AuthForm displays the form used to sign users into Vault and passes input data to the Auth::Page component which handles authentication
  *
  * @example
  * <AuthForm @cluster={{model}} @namespace="admin" @selectedAuth="token" @authIsRunning={{this.authenticate.isRunning}}  @performAuth={{this.performAuth}} />

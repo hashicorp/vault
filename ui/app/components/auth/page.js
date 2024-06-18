@@ -82,10 +82,9 @@ export default class AuthPageComponent extends Component {
     yield timeout(1000);
     if (this.authError) return;
 
-    let response = null;
     this.waitingForOktaNumberChallenge = true;
-
-    // keep polling /auth/okta/verify/:nonce API every 1s until a response is given with the correct number for the Okta Number Challenge
+    // keep polling /auth/okta/verify/:nonce API every 1s until response returns with correct_number
+    let response = null;
     while (response === null) {
       // disable polling for tests otherwise promises reject and acceptance tests fail
       if (Ember.testing) return;
@@ -93,12 +92,14 @@ export default class AuthPageComponent extends Component {
       yield timeout(1000);
       response = yield this.auth.getOktaNumberChallengeAnswer(nonce, mount);
     }
+    // display correct number so user can select on personal MFA device
     this.oktaNumberChallengeAnswer = response;
   }
 
   @action
   onCancel() {
-    // if we are cancelling the login then we reset the number challenge answer and cancel the current authenticate and polling tasks
+    // reset variables and stop polling tasks if canceling login
+    this.authError = null;
     this.oktaNumberChallengeAnswer = null;
     this.waitingForOktaNumberChallenge = false;
     this.authenticate.cancelAll();

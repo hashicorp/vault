@@ -61,18 +61,16 @@ module('Integration | Component | auth | okta-number-challenge', function (hooks
   });
 
   test('it should show error screen', async function (assert) {
-    this.hasError = true;
+    this.hasError = 'Authentication failed: multi-factor authentication denied';
     await this.renderComponent();
 
     assert
       .dom('[data-test-okta-number-challenge-description]')
-      .includesText(
+      .hasTextContaining(
         'To finish signing in, you will need to complete an additional MFA step.',
         'Correct description renders'
       );
-    assert
-      .dom('[data-test-message-error]')
-      .includesText('There was a problem', 'Displays error that there was a problem');
+    assert.dom('[data-test-message-error]').hasText(`Error ${this.hasError}`);
     await click('[data-test-back-button]');
     assert.true(this.onCancel.calledOnce, 'onCancel is called');
   });
