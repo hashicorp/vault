@@ -37,8 +37,7 @@ export default class SyncDestinationsGoogleCloudSecretManagerModel extends SyncD
     editType: 'file',
     docLink: '/vault/docs/secrets/gcp#authentication',
   })
-  credentials; // obfuscated, never returned by API
-  // ARG TODO DOUBLE CHECK
+  credentials; // obfuscated, never returned by API. Masking handled by EnableInput component
 
   @attr('object', {
     subText:
