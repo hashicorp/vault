@@ -50,7 +50,7 @@ jobs:
     if: always()
     name: Bench
     needs: setup
-    uses: ./.github/workflows/hack-week-benchmark.yml
+    uses: ./hack-week-benchmark.yml
     secrets: inherit
     with:
       checkout-ref: ${{ needs.setup.outputs.checkout-ref }}
