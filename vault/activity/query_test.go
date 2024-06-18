@@ -294,6 +294,11 @@ func TestQueryStore_TimeRanges(t *testing.T) {
 	}
 }
 
+// TestCombineWithCurrentMonth is a unit test that verifies that an
+// internal join method to combine a precomputed query data structure
+// with the current month data.
+// This will create various repeating mounts, new mounts, and new namespaces and
+// verify that these two structures are properly combined.
 func TestCombineWithCurrentMonth(t *testing.T) {
 	// Create two months worth of records
 	months := []*MonthRecord{
@@ -527,7 +532,6 @@ func TestCombineWithCurrentMonth(t *testing.T) {
 	assert.Equal(t, 2, int(pq.Namespaces[2].ACMEClients))
 	assert.Equal(t, 2, int(pq.Namespaces[2].Entities))
 	assert.Equal(t, 2, int(pq.Namespaces[2].NonEntityTokens))
-	assert.Equal(t, 2, len(pq.Namespaces[2].Mounts))
 	assert.Equal(t, 2, len(pq.Namespaces[2].Mounts))
 	compareCountsRecords(t, &CountsRecord{
 		EntityClients:    1,
