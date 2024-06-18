@@ -10,7 +10,7 @@ on:
         default: ""
 
 jobs:
-  test:
+  bench:
     name: Bench
     runs-on: ubuntu-latest
     steps:
@@ -26,6 +26,7 @@ jobs:
           ref: ${{ inputs.checkout-ref }}
 
       - name: Install cob
+        # I know this isn't great, but it's hack week
         run: curl -sfL https://raw.githubusercontent.com/knqyf263/cob/master/install.sh | sudo sh -s -- -b /usr/local/bin
 
       - name: Run Benchmark

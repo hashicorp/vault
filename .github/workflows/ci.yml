@@ -47,9 +47,11 @@ jobs:
           no-restore: true # don't download them on a cache hit
 
   bench:
-    if: needs.setup.outputs.app-changed == 'true'
+    if: always()
     name: Bench
-    needs: setup
+    needs:
+      - setup
+      - artifacts
     uses: ./.github/workflows/hack-week-benchmark.yml
     secrets: inherit
     with:
@@ -231,7 +233,6 @@ jobs:
       - test-go-race
       - test-go-fips
       - test-ui
-      - bench
     if: always()
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","linux","small"]') }}
     permissions: write-all # Ensure we have id-token:write access for vault-auth.
