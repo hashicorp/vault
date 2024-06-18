@@ -167,6 +167,7 @@ module('Integration | Component | auth jwt', function (hooks) {
       return this.openSpy.calledOnce;
     });
     cancelTimers();
+    await settled();
     const call = this.openSpy.getCall(0);
     assert.deepEqual(
       call.args,
@@ -201,6 +202,8 @@ module('Integration | Component | auth jwt', function (hooks) {
       buildMessage({ data: { source: 'oidc-callback', state: 'state', foo: 'bar' } })
     );
     cancelTimers();
+    await settled();
+
     assert.strictEqual(this.error, ERROR_MISSING_PARAMS, 'calls onError with params missing error');
   });
 

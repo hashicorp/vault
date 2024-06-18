@@ -5,10 +5,9 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render } from '@ember/test-helpers';
+import { render, settled, fillIn, click, waitUntil } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { fillIn, click, waitUntil } from '@ember/test-helpers';
 import { _cancelTimers as cancelTimers, later } from '@ember/runloop';
 import { TOTP_VALIDATION_ERROR } from 'vault/components/mfa/mfa-form';
 
@@ -184,11 +183,15 @@ module('Integration | Component | mfa-form', function (hooks) {
           throw { errors: [messages[code]] };
         },
       });
+
       await render(hbs`<Mfa::MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} />`);
 
       await fillIn('[data-test-mfa-passcode]', code);
-      later(() => cancelTimers(), 50);
+
       await click('[data-test-mfa-validate]');
+      later(() => cancelTimers(), 50);
+      await settled();
+
       const expectedTime = code === 'used' ? '45' : '15';
       assert
         .dom('[data-test-mfa-countdown]')
@@ -209,6 +212,8 @@ module('Integration | Component | mfa-form', function (hooks) {
 
     await fillIn('[data-test-mfa-passcode]', 'test-code');
     later(() => cancelTimers(), 50);
+    await settled();
+
     await click('[data-test-mfa-validate]');
     assert
       .dom('[data-test-message-error]')
