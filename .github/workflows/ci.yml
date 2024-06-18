@@ -46,6 +46,15 @@ jobs:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
           no-restore: true # don't download them on a cache hit
 
+  bench:
+    if: needs.setup.outputs.app-changed == 'true'
+    name: Bench
+    needs: setup
+    uses: ./.github/workflows/hack-week-benchmark.yml
+    secrets: inherit
+    with:
+      checkout-ref: ${{ needs.setup.outputs.checkout-ref }}
+
   test-go:
     # Run Go tests if the vault app changed
     if: needs.setup.outputs.app-changed == 'true'

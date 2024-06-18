@@ -1,5 +1,13 @@
 name: Bench
-on: [push, pull_request]
+
+#on: [push, pull_request]
+
+on:
+  workflow_dispatch:
+    inputs:
+        type: string
+        default: ""
+
 jobs:
   test:
     name: Bench
@@ -13,6 +21,8 @@ jobs:
 
       - name: Check out code into the Go module directory
         uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29@v1
+        with:
+          ref: ${{ inputs.checkout-ref }}
 
       - name: Install cob
         run: curl -sfL https://raw.githubusercontent.com/knqyf263/cob/master/install.sh | sudo sh -s -- -b /usr/local/bin
