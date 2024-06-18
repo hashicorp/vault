@@ -33,7 +33,6 @@ func init() {
 
 func TestMigration(t *testing.T) {
 	handlers := newVaultHandlers()
-
 	t.Run("Default", func(t *testing.T) {
 		data := generateData()
 
