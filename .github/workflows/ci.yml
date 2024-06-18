@@ -51,7 +51,6 @@ jobs:
     name: Bench
     needs:
       - setup
-      - artifacts
     uses: ./.github/workflows/hack-week-benchmark.yml
     secrets: inherit
     with:
