@@ -160,11 +160,14 @@ func BenchmarkAuditBroker_File_Request_DevNull(b *testing.B) {
 }
 
 // TestBroker_isContextViable_basics checks the expected result of isContextViable
-// for basic inputs such as nil and a never-ending context.
+// for basic inputs such as nil, cancelled context and a never-ending context.
 func TestBroker_isContextViable_basics(t *testing.T) {
 	t.Parallel()
 
 	require.False(t, isContextViable(nil))
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	require.False(t, isContextViable(ctx))
 	require.True(t, isContextViable(context.Background()))
 }
 
