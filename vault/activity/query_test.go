@@ -502,7 +502,6 @@ func TestCombineWithCurrentMonth(t *testing.T) {
 	assert.Equal(t, 4, int(pq.Namespaces[1].ACMEClients))
 	assert.Equal(t, 4, int(pq.Namespaces[1].Entities))
 	assert.Equal(t, 4, int(pq.Namespaces[1].NonEntityTokens))
-	assert.Equal(t, 3, len(pq.Namespaces[1].Mounts))
 	assert.Equal(t, 3, len(pq.Namespaces[1].Mounts)) // We added a new mount to this namespace (m3)
 	// Check that the duplicate mount got incremented properly (m1)
 	compareCountsRecords(t, &CountsRecord{
