@@ -78,7 +78,6 @@ const appConfig = {
   },
   'ember-simple-auth': {
     useSessionSetupMethod: true,
-    routeAfterAuthentication: '/vault',
   },
 };
 
