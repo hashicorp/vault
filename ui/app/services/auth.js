@@ -31,6 +31,7 @@ export default Service.extend({
   currentCluster: service(),
   router: service(),
   namespaceService: service('namespace'),
+  session: service(),
 
   IDLE_TIMEOUT: 3 * 60e3,
   expirationCalcTS: null,
@@ -318,15 +319,15 @@ export default Service.extend({
   },
 
   setTokenData(token, data) {
-    this.storage(token).setItem(token, data);
+    this.session.authenticate('authenticator:basic', data);
   },
 
-  getTokenData(token) {
-    return this.storage(token).getItem(token);
+  getTokenData() {
+    return this.session.data.authenticated;
   },
 
-  removeTokenData(token) {
-    return this.storage(token).removeItem(token);
+  removeTokenData() {
+    return this.session.invalidate();
   },
 
   renew() {
