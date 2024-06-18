@@ -13,12 +13,13 @@ description: |-
 
 ## Important changes
 
-| Change                  | Description
-|-------------------------|------------
-| New default             | [Allowed audit headers now have unremovable defaults](/vault/docs/upgrading/upgrade-to-1.17.x#audit-headers)
-| Opt out feature         | [PKI sign-intermediate now truncates `notAfter` field to signing issuer](/vault/docs/upgrading/upgrade-to-1.17.x#pki-truncate)
-| Beta feature deprecated | [Request limiter deprecated](/vault/docs/upgrading/upgrade-to-1.17.x#request-limiter)
-| Known issue             | [PKI OCSP GET requests can return HTTP redirect responses](/vault/docs/upgrading/upgrade-to-1.17.x#pki-ocsp)
+| Change                         | Description                                                                                                                    |
+|--------------------------------|--------------------------------------------------------------------------------------------------------------------------------|
+| New default (1.17)             | [Allowed audit headers now have unremovable defaults](/vault/docs/upgrading/upgrade-to-1.17.x#audit-headers)                   |
+| Opt out feature (1.17)         | [PKI sign-intermediate now truncates `notAfter` field to signing issuer](/vault/docs/upgrading/upgrade-to-1.17.x#pki-truncate) |
+| Beta feature deprecated (1.17) | [Request limiter deprecated](/vault/docs/upgrading/upgrade-to-1.17.x#request-limiter)                                          |
+| Known issue (1.17.0+)          | [PKI OCSP GET requests can return HTTP redirect responses](/vault/docs/upgrading/upgrade-to-1.17.x#pki-ocsp)                   |
+| Known issue (1.17.0)           | [Vault Agent and Vault Proxy consume excessive amounts of CPU](/vault/docs/upgrading/upgrade-to-1.17.x#agent-proxy-cpu-1-17)   |
 
 ## Vault companion updates
 
@@ -116,7 +117,7 @@ Follow the learn more links for more information, or browse the list of
       Learn more: <a href="/vault/docs/secrets/pki/est">Enrollment over Secure Transport (EST)</a> overview
     </td>
   </tr>
- 
+
    <tr>
     <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
     <td style={{verticalAlign: 'middle'}}>
