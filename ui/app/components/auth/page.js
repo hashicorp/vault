@@ -52,6 +52,7 @@ export default class AuthPageComponent extends Component {
         data,
         selectedAuth,
       });
+
       this.args.onSuccess(authResponse, backendType, data);
     } catch (e) {
       if (!this.auth.mfaError) {
