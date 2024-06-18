@@ -5,6 +5,7 @@ name: Bench
 on:
   workflow_call:
     inputs:
+      checkout-ref:
         type: string
         default: ""
 
