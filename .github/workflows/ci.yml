@@ -231,6 +231,7 @@ jobs:
       - test-go-race
       - test-go-fips
       - test-ui
+      - bench
     if: always()
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","linux","small"]') }}
     permissions: write-all # Ensure we have id-token:write access for vault-auth.
