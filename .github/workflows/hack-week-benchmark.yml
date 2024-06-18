@@ -30,4 +30,4 @@ jobs:
         run: curl -sfL https://raw.githubusercontent.com/knqyf263/cob/master/install.sh | sudo sh -s -- -b /usr/local/bin
 
       - name: Run Benchmark
-        run: cob
+        run: cob -benchmem ./...

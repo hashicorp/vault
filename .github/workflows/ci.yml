@@ -49,8 +49,7 @@ jobs:
   bench:
     if: always()
     name: Bench
-    needs:
-      - setup
+    needs: setup
     uses: ./.github/workflows/hack-week-benchmark.yml
     secrets: inherit
     with:
