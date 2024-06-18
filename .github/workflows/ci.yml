@@ -50,10 +50,10 @@ jobs:
     if: always()
     name: Bench
     needs: setup
-    uses: ./hack-week-benchmark.yml
-    secrets: inherit
+    uses: ./.github/workflows/hack-week-benchmark.yml
     with:
       checkout-ref: ${{ needs.setup.outputs.checkout-ref }}
+    secrets: inherit
 
   test-go:
     # Run Go tests if the vault app changed
