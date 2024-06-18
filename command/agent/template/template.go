@@ -256,9 +256,10 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 			if responseError.StatusCode == 403 && strings.Contains(responseError.Error(), logical.ErrInvalidToken.Error()) && !tokenRenewalInProgress.Load() {
 				ts.logger.Info("template server: received invalid token error")
 
-				// Drain the error channel before sending a new error
+				// Drain the error channel and incoming channel before sending a new error
 				select {
 				case <-invalidTokenCh:
+				case <-incoming:
 				default:
 				}
 				invalidTokenCh <- err
