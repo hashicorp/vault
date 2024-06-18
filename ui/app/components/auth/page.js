@@ -11,6 +11,20 @@ import { waitFor } from '@ember/test-waiters';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 
+/**
+ * @module AuthPage
+ * The Auth::Page wraps OktaNumberChallenge and AuthForm to manage the login flow and is responsible for calling the authenticate method
+ *
+ * @example
+ * <Auth::Page @wrappedToken={{this.wrappedToken}} @cluster={{this.model}} @namespace={{this.namespaceQueryParam}} @selectedAuth={{this.authMethod}} @onSuccess={{action "onAuthResponse"}} />
+ *
+ * @param {string} wrappedToken - Query param value of a wrapped token that can be used to login when added directly to the URL via the "wrapped_token" query param
+ * @param {object} cluster - The route model which is the ember data cluster model. contains information such as cluster id, name and boolean for if the cluster is in standby
+ * @param {string} namespace- Namespace query param, passed to AuthForm and set by typing in namespace input or URL
+ * @param {string} selectedAuth - The auth method selected in the dropdown, passed to auth service's authenticate method
+ * @param {function} onSuccess - Callback that fires the "onAuthResponse" action in the auth controller and handles transitioning after success
+ */
+
 export default class AuthPageComponent extends Component {
   @service auth;
 
@@ -70,7 +84,7 @@ export default class AuthPageComponent extends Component {
 
     let response = null;
     this.waitingForOktaNumberChallenge = true;
-    // this.setCancellingAuth(false);
+
     // keep polling /auth/okta/verify/:nonce API every 1s until a response is given with the correct number for the Okta Number Challenge
     while (response === null) {
       // disable polling for tests otherwise promises reject and acceptance tests fail
