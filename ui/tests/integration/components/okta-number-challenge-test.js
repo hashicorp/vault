@@ -17,7 +17,7 @@ module('Integration | Component | auth | okta-number-challenge', function (hooks
     this.hasError = false;
     this.onCancel = sinon.spy();
     this.renderComponent = async () => {
-      render(hbs`
+      return render(hbs`
   <OktaNumberChallenge
     @correctAnswer={{this.oktaNumberChallengeAnswer}}
     @hasError={{this.hasError}}
@@ -29,7 +29,6 @@ module('Integration | Component | auth | okta-number-challenge', function (hooks
 
   test('it should render correct descriptions', async function (assert) {
     await this.renderComponent();
-
     assert
       .dom('[data-test-okta-number-challenge-description]')
       .includesText(
