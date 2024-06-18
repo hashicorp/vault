@@ -1,0 +1,21 @@
+name: Bench
+on: [push, pull_request]
+jobs:
+  test:
+    name: Bench
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
+        with:
+          cache: false # save cache space for vault builds: https://github.com/hashicorp/vault/pull/21764
+          go-version-file: .go-version
+
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29@v1
+
+      - name: Install cob
+        run: curl -sfL https://raw.githubusercontent.com/knqyf263/cob/master/install.sh | sudo sh -s -- -b /usr/local/bin
+
+      - name: Run Benchmark
+        run: cob
