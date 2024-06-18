@@ -32,6 +32,8 @@ export default class SyncDestinationsAwsSecretsManagerModel extends SyncDestinat
     label: 'Access key ID',
     subText:
       'Access key ID to authenticate against the secrets manager. If empty, Vault will use the AWS_ACCESS_KEY_ID environment variable if configured.',
+    sensitive: true,
+    noCopy: true,
   })
   accessKeyId; // obfuscated, never returned by API
 
@@ -39,6 +41,8 @@ export default class SyncDestinationsAwsSecretsManagerModel extends SyncDestinat
     label: 'Secret access key',
     subText:
       'Secret access key to authenticate against the secrets manager. If empty, Vault will use the AWS_SECRET_ACCESS_KEY environment variable if configured.',
+    sensitive: true,
+    noCopy: true,
   })
   secretAccessKey; // obfuscated, never returned by API
 

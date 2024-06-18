@@ -42,6 +42,8 @@ const formFieldGroups = [
 export default class SyncDestinationsVercelProjectModel extends SyncDestinationModel {
   @attr('string', {
     subText: 'Vercel API access token with the permissions to manage environment variables.',
+    sensitive: true,
+    noCopy: true,
   })
   accessToken; // obfuscated, never returned by API
 

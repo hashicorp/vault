@@ -55,6 +55,8 @@ export default class SyncDestinationsAzureKeyVaultModel extends SyncDestinationM
   @attr('string', {
     subText:
       'Client secret of an Azure app registration. If empty, Vault will use the AZURE_CLIENT_SECRET environment variable if configured.',
+    sensitive: true,
+    noCopy: true,
   })
   clientSecret; // obfuscated, never returned by API
 

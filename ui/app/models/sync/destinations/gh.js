@@ -27,6 +27,8 @@ export default class SyncDestinationsGithubModel extends SyncDestinationModel {
   @attr('string', {
     subText:
       'Personal access token to authenticate to the GitHub repository. If empty, Vault will use the GITHUB_ACCESS_TOKEN environment variable if configured.',
+    sensitive: true,
+    noCopy: true,
   })
   accessToken; // obfuscated, never returned by API
 

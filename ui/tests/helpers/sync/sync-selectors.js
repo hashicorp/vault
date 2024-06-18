@@ -97,6 +97,11 @@ export const PAGE = {
         case 'customTags':
           await fillIn('[data-test-kv-key="0"]', 'foo');
           return fillIn('[data-test-kv-value="0"]', value);
+        case 'accessKeyId':
+        case 'secretAccessKey':
+        case 'clientSecret':
+        case 'accessToken':
+          return fillIn(GENERAL.maskedInput(attr), value);
         case 'deploymentEnvironments':
           await click('[data-test-input="deploymentEnvironments"] input#development');
           await click('[data-test-input="deploymentEnvironments"] input#preview');

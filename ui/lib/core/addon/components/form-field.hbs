@@ -247,7 +247,7 @@
     <MaskedInput
       @name={{@attr.name}}
       @value={{or (get @model this.valuePath) @attr.options.defaultValue}}
-      @allowCopy="true"
+      @allowCopy={{if @attr.options.noCopy false true}}
       @onChange={{this.setAndBroadcast}}
       @onKeyUp={{@onKeyUp}}
     />

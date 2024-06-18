@@ -86,7 +86,7 @@ module('Acceptance | sync | destination (singular)', function (hooks) {
 
     await visit('vault/sync/secrets/destinations/vercel-project/destination-vercel/edit');
     await click(ts.enableField('accessToken'));
-    await fillIn(ts.inputByAttr('accessToken'), 'foobar');
+    await fillIn(ts.maskedInput('accessToken'), 'foobar');
     await click(ts.saveButton);
     await click(ts.toolbar('Edit destination'));
     await click(ts.saveButton);

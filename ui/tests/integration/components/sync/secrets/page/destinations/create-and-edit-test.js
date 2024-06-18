@@ -10,7 +10,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { Response } from 'miragejs';
-import { click, render, typeIn } from '@ember/test-helpers';
+import { click, fillIn, render, typeIn } from '@ember/test-helpers';
 import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
 import { syncDestinations } from 'vault/helpers/sync-destinations';
 import { decamelize, underscore } from '@ember/string';
@@ -131,6 +131,28 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
     await click(PAGE.saveButton);
   });
 
+  test('edit: payload only contains masked inputs when they have changed', async function (assert) {
+    assert.expect(1);
+    this.model = this.generateModel();
+
+    this.server.patch(`sys/sync/destinations/${this.model.type}/${this.model.name}`, (schema, req) => {
+      const payload = JSON.parse(req.requestBody);
+      assert.propEqual(
+        payload,
+        { secret_access_key: 'new-secret' },
+        'payload contains the changed obfuscated field'
+      );
+      return { payload };
+    });
+
+    await this.renderFormComponent();
+    await click(PAGE.enableField('accessKeyId'));
+    await click(PAGE.maskedInput('accessKeyId')); // click on input but do not change value
+    await click(PAGE.enableField('secretAccessKey'));
+    await fillIn(PAGE.maskedInput('secretAccessKey'), 'new-secret');
+    await click(PAGE.saveButton);
+  });
+
   test('it renders API errors', async function (assert) {
     assert.expect(1);
     const name = 'my-failed-dest';
@@ -192,6 +214,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
   // CREATE FORM ASSERTIONS FOR EACH DESTINATION TYPE
   for (const destination of SYNC_DESTINATIONS) {
     const { name, type } = destination;
+    const obfuscatedFields = ['accessToken', 'clientSecret', 'secretAccessKey', 'accessKeyId'];
 
     module(`create destination: ${type}`, function (hooks) {
       hooks.beforeEach(function () {
@@ -207,6 +230,23 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
         for (const attr of this.model.formFields) {
           assert.dom(PAGE.fieldByAttr(attr.name)).exists();
         }
+      });
+
+      test('it masks obfuscated fields', async function (assert) {
+        const filteredObfuscatedFields = this.model.formFields.filter((field) =>
+          obfuscatedFields.includes(field.name)
+        );
+        assert.expect(filteredObfuscatedFields.length);
+        await this.renderFormComponent();
+        // iterate over the form fields and filter for those that are obfuscated
+        // fill those in and assert that they are masked
+        filteredObfuscatedFields.forEach(async (field) => {
+          await fillIn(PAGE.maskedInput(field.name), 'blah');
+
+          assert
+            .dom(PAGE.maskedInput(field.name))
+            .hasClass('masked-font', `it renders ${field.name} for ${destination} with masked font`);
+        });
       });
 
       test('it saves destination and transitions to details', async function (assert) {
