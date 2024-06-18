@@ -129,50 +129,68 @@ const (
 	flagNameDelegatedAuthAccessors = "delegated-auth-accessors"
 )
 
-var (
-	physicalBackends = map[string]physical.Factory{
-		"inmem_ha":               physInmem.NewInmemHA,
-		"inmem_transactional_ha": physInmem.NewTransactionalInmemHA,
-		"inmem_transactional":    physInmem.NewTransactionalInmem,
-		"inmem":                  physInmem.NewInmem,
-		"raft":                   physRaft.NewRaftBackend,
-	}
+// vaultHandlers contains the handlers for creating the various Vault backends.
+type vaultHandlers struct {
+	physicalBackends     map[string]physical.Factory
+	loginHandlers        map[string]LoginHandler
+	auditBackends        map[string]audit.Factory
+	credentialBackends   map[string]logical.Factory
+	logicalBackends      map[string]logical.Factory
+	serviceRegistrations map[string]sr.Factory
+}
 
-	loginHandlers = map[string]LoginHandler{
-		"cert":  &credCert.CLIHandler{},
-		"oidc":  &credOIDC.CLIHandler{},
-		"token": &credToken.CLIHandler{},
-		"userpass": &credUserpass.CLIHandler{
-			DefaultMount: "userpass",
+// newMinimalVaultHandlers returns a new vaultHandlers that a minimal Vault would use.
+func newMinimalVaultHandlers() *vaultHandlers {
+	return &vaultHandlers{
+		physicalBackends: map[string]physical.Factory{
+			"inmem_ha":               physInmem.NewInmemHA,
+			"inmem_transactional_ha": physInmem.NewTransactionalInmemHA,
+			"inmem_transactional":    physInmem.NewTransactionalInmem,
+			"inmem":                  physInmem.NewInmem,
+			"raft":                   physRaft.NewRaftBackend,
+		},
+		loginHandlers: map[string]LoginHandler{
+			"cert":  &credCert.CLIHandler{},
+			"oidc":  &credOIDC.CLIHandler{},
+			"token": &credToken.CLIHandler{},
+			"userpass": &credUserpass.CLIHandler{
+				DefaultMount: "userpass",
+			},
+		},
+		auditBackends: map[string]audit.Factory{
+			"file":   audit.NewFileBackend,
+			"socket": audit.NewSocketBackend,
+			"syslog": audit.NewSyslogBackend,
+		},
+		credentialBackends: map[string]logical.Factory{
+			"plugin": plugin.Factory,
+		},
+		logicalBackends: map[string]logical.Factory{
+			"plugin":   plugin.Factory,
+			"database": logicalDb.Factory,
+			// This is also available in the plugin catalog, but is here due to the need to
+			// automatically mount it.
+			"kv": logicalKv.Factory,
+		},
+		serviceRegistrations: map[string]sr.Factory{
+			"consul":     csr.NewServiceRegistration,
+			"kubernetes": ksr.NewServiceRegistration,
 		},
 	}
+}
 
-	auditBackends = map[string]audit.Factory{
-		"file":   audit.NewFileBackend,
-		"socket": audit.NewSocketBackend,
-		"syslog": audit.NewSyslogBackend,
-	}
+// newVaultHandlers returns a new vaultHandlers composed of newMinimalVaultHandlers()
+// and any addon handlers from Vault CE and Vault Enterprise selected by Go build tags.
+func newVaultHandlers() *vaultHandlers {
+	handlers := newMinimalVaultHandlers()
+	extendAddonHandlers(handlers)
+	entExtendAddonHandlers(handlers)
 
-	credentialBackends = map[string]logical.Factory{
-		"plugin": plugin.Factory,
-	}
-
-	logicalBackends = map[string]logical.Factory{
-		"plugin":   plugin.Factory,
-		"database": logicalDb.Factory,
-		// This is also available in the plugin catalog, but is here due to the need to
-		// automatically mount it.
-		"kv": logicalKv.Factory,
-	}
-
-	serviceRegistrations = map[string]sr.Factory{
-		"consul":     csr.NewServiceRegistration,
-		"kubernetes": ksr.NewServiceRegistration,
-	}
-)
+	return handlers
+}
 
 func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.CommandFactory {
-	extendAddonCommands()
+	handlers := newVaultHandlers()
 
 	getBaseCommand := func() *BaseCommand {
 		return &BaseCommand{
@@ -243,7 +261,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 		"auth help": func() (cli.Command, error) {
 			return &AuthHelpCommand{
 				BaseCommand: getBaseCommand(),
-				Handlers:    loginHandlers,
+				Handlers:    handlers.loginHandlers,
 			}, nil
 		},
 		"auth list": func() (cli.Command, error) {
@@ -300,7 +318,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 		"login": func() (cli.Command, error) {
 			return &LoginCommand{
 				BaseCommand: getBaseCommand(),
-				Handlers:    loginHandlers,
+				Handlers:    handlers.loginHandlers,
 			}, nil
 		},
 		"namespace": func() (cli.Command, error) {
@@ -371,7 +389,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 		"operator migrate": func() (cli.Command, error) {
 			return &OperatorMigrateCommand{
 				BaseCommand:      getBaseCommand(),
-				PhysicalBackends: physicalBackends,
+				PhysicalBackends: handlers.physicalBackends,
 				ShutdownCh:       MakeShutdownCh(),
 			}, nil
 		},
@@ -662,12 +680,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 					tokenHelper: runOpts.TokenHelper,
 					flagAddress: runOpts.Address,
 				},
-				AuditBackends:      auditBackends,
-				CredentialBackends: credentialBackends,
-				LogicalBackends:    logicalBackends,
-				PhysicalBackends:   physicalBackends,
-
-				ServiceRegistrations: serviceRegistrations,
+				AuditBackends:        handlers.auditBackends,
+				CredentialBackends:   handlers.credentialBackends,
+				LogicalBackends:      handlers.logicalBackends,
+				PhysicalBackends:     handlers.physicalBackends,
+				ServiceRegistrations: handlers.serviceRegistrations,
 
 				ShutdownCh: MakeShutdownCh(),
 				SighupCh:   MakeSighupCh(),
