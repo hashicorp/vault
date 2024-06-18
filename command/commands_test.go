@@ -25,6 +25,9 @@ func Test_Commands_HCPInit(t *testing.T) {
 	}
 
 	for n, tst := range tests {
+		n := n
+		tst := tst
+
 		t.Run(n, func(t *testing.T) {
 			t.Parallel()
 

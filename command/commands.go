@@ -678,11 +678,10 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 					tokenHelper: runOpts.TokenHelper,
 					flagAddress: runOpts.Address,
 				},
-				AuditBackends:      handlers.auditBackends,
-				CredentialBackends: handlers.credentialBackends,
-				LogicalBackends:    handlers.logicalBackends,
-				PhysicalBackends:   handlers.physicalBackends,
-
+				AuditBackends:        handlers.auditBackends,
+				CredentialBackends:   handlers.credentialBackends,
+				LogicalBackends:      handlers.logicalBackends,
+				PhysicalBackends:     handlers.physicalBackends,
 				ServiceRegistrations: handlers.serviceRegistrations,
 
 				ShutdownCh: MakeShutdownCh(),

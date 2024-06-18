@@ -203,8 +203,8 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 
 func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error {
 	rloadFuncs := make(map[string][]reloadutil.ReloadFunc)
-
 	handlers := newVaultHandlers()
+
 	server := &ServerCommand{
 		// TODO: set up a different one?
 		// In particular, a UI instance that won't output?
