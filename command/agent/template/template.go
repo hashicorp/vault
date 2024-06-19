@@ -246,31 +246,24 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 				ts.runner.Stop()
 				return nil
 			}
-		default:
-			// We are using default instead of a new case block to prioritize the case where <-incoming has a new value over
-			// receiving an error message from the consul-template server
-			select {
-			case err := <-ts.runner.ServerErrCh:
-				var responseError *api.ResponseError
-				ok := errors.As(err, &responseError)
-				if !ok {
-					ts.logger.Error("template server: could not extract error response")
-					continue
-				}
-				if responseError.StatusCode == 403 && strings.Contains(responseError.Error(), logical.ErrInvalidToken.Error()) && !tokenRenewalInProgress.Load() {
-					ts.logger.Info("template server: received invalid token error")
-
-					// Drain the error channel before sending a new error
-					select {
-					case <-invalidTokenCh:
-					default:
-					}
-					invalidTokenCh <- err
-				}
-			default:
+		case err := <-ts.runner.ServerErrCh:
+			var responseError *api.ResponseError
+			ok := errors.As(err, &responseError)
+			if !ok {
+				ts.logger.Error("template server: could not extract error response")
 				continue
 			}
+			if responseError.StatusCode == 403 && strings.Contains(responseError.Error(), logical.ErrInvalidToken.Error()) && !tokenRenewalInProgress.Load() {
+				ts.logger.Info("template server: received invalid token error")
 
+				// Drain the error channel and incoming channel before sending a new error
+				select {
+				case <-invalidTokenCh:
+				case <-incoming:
+				default:
+				}
+				invalidTokenCh <- err
+			}
 		}
 	}
 }
