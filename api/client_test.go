@@ -427,7 +427,6 @@ func TestClientEnvHeaders(t *testing.T) {
 	if !reflect.DeepEqual(cli.Headers().Values("foo"), []string{"bar"}) {
 		t.Error("Environment-supplied headers not set in CLI client")
 	}
-
 }
 
 func TestClientEnvSettings(t *testing.T) {
