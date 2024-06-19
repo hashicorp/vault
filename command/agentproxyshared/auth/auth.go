@@ -526,18 +526,12 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			case <-watcher.RenewCh():
 				metrics.IncrCounter([]string{ah.metricsSignifier, "auth", "success"}, 1)
 				ah.logger.Info("renewed auth token")
-
 			case <-credCh:
 				ah.logger.Info("auth method found new credentials, re-authenticating")
 				break LifetimeWatcherLoop
-			default:
-				select {
-				case <-ah.InvalidToken:
-					ah.logger.Info("invalid token found, re-authenticating")
-					break LifetimeWatcherLoop
-				default:
-					continue
-				}
+			case <-ah.InvalidToken:
+				ah.logger.Info("invalid token found, re-authenticating")
+				break LifetimeWatcherLoop
 			}
 		}
 	}
