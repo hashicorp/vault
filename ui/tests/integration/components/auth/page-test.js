@@ -74,7 +74,7 @@ module('Integration | Component | auth | page ', function (hooks) {
   });
 
   test('it calls auth service authenticate method with expected args', async function (assert) {
-    assert.expect(2);
+    assert.expect(1);
     const authenticateStub = sinon.stub(this.auth, 'authenticate');
     this.selectedAuth = 'foo/'; // set to a non-default path
     this.server.get('/sys/internal/ui/mounts', () => {
@@ -176,7 +176,7 @@ module('Integration | Component | auth | page ', function (hooks) {
   test('it should set nonce value as uuid for okta method type', async function (assert) {
     assert.expect(2);
     this.server.post('/auth/okta/login/foo', (_, req) => {
-      const { nonce } = JSON.parse(req.requestBody).nonce;
+      const { nonce } = JSON.parse(req.requestBody);
       assert.true(validate(nonce), 'Nonce value passed as uuid for okta login');
       return {
         auth: {
