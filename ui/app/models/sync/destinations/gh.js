@@ -6,7 +6,7 @@
 import SyncDestinationModel from '../destination';
 import { attr } from '@ember-data/model';
 import { withFormFields } from 'vault/decorators/model-form-fields';
-
+// displayFields are used on the destination details view
 const displayFields = [
   // connection details
   'name',
@@ -17,10 +17,12 @@ const displayFields = [
   'granularity',
   'secretNameTemplate',
 ];
+
+// formFieldGroups are used on the create-edit destination view
 const formFieldGroups = [
   { default: ['name', 'repositoryOwner', 'repositoryName'] },
   { Credentials: ['accessToken'] },
-  { config: ['granularity', 'secretNameTemplate'] },
+  { config: ['granularity', 'secretNameTemplate', 'customTags'] },
 ];
 
 @withFormFields(displayFields, formFieldGroups)
