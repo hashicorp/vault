@@ -679,7 +679,12 @@ func NewClient(c *Config) (*Client, error) {
 				forbiddenHeaders = append(forbiddenHeaders, key)
 				continue
 			}
-			client.AddHeader(key, value.(string))
+
+			value, ok := value.(string)
+			if !ok {
+				return nil, fmt.Errorf("environment-supplied headers include non-string values")
+			}
+			client.AddHeader(key, value)
 		}
 		if len(forbiddenHeaders) > 0 {
 			return nil, fmt.Errorf("failed to setup Headers[%s]: Header starting by 'X-Vault-' are for internal usage only", strings.Join(forbiddenHeaders, ", "))
