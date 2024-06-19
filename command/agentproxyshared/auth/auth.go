@@ -563,18 +563,12 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 				// Set authenticated when authentication succeeds
 				metrics.SetGauge([]string{ah.metricsSignifier, "authenticated"}, 1)
 				ah.logger.Info("renewed auth token")
-
 			case <-credCh:
 				ah.logger.Info("auth method found new credentials, re-authenticating")
 				break LifetimeWatcherLoop
-			default:
-				select {
-				case <-ah.InvalidToken:
-					ah.logger.Info("invalid token found, re-authenticating")
-					break LifetimeWatcherLoop
-				default:
-					continue
-				}
+			case <-ah.InvalidToken:
+				ah.logger.Info("invalid token found, re-authenticating")
+				break LifetimeWatcherLoop
 			}
 		}
 	}
