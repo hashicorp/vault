@@ -22,7 +22,7 @@ const displayFields = [
 const formFieldGroups = [
   { default: ['name', 'repositoryOwner', 'repositoryName'] },
   { Credentials: ['accessToken'] },
-  { config: ['granularity', 'secretNameTemplate', 'customTags'] },
+  { config: ['granularity', 'secretNameTemplate'] },
 ];
 
 @withFormFields(displayFields, formFieldGroups)
