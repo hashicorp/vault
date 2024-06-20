@@ -33,7 +33,7 @@ To consume Vault credentials from your MID server, you will need to:
 The credential resolver supports reading credentials from the following secret engines:
 
 * [Active Directory](/vault/docs/secrets/ad)
-* [AD/OpenLDAP] (/vault/docs/secrets/ldap)
+* [AD/OpenLDAP](/vault/docs/secrets/ldap)
 * [AWS](/vault/docs/secrets/aws)
 * [KV v1](/vault/docs/secrets/kv/kv-v1)
 * [KV v2](/vault/docs/secrets/kv/kv-v2)
@@ -60,7 +60,7 @@ resolver validates that a username and password are present for:
 * vmware
 * windows
 
-And the credential resolver expects the following types to specify at least
+The credential resolver expects the following types to specify at least
 a username and a private key:
 
 * api_key
@@ -69,6 +69,22 @@ a username and a private key:
 * sn_cfg_ansible
 * sn_disco_certmgmt_certificate_ca
 * ssh_private_key
+
+For SNMPv3 credentials, the credential resolver can accept up to five values:
+
+* username
+* auth-protocol
+* auth-key
+* privacy-protocol
+* privacy-key
+
+Depending on the configuration of the SNMP endpoint, the username at least will always be required. See below for different SNMP endpoint configurations:
+
+Level         | Authentication | Encryption | What Happens
+--------------|----------------|------------|------------------------
+noAuthNoPriv  | Username       | None       | Username match for auth
+authNoPriv    | MD5 or SHA     | None       | Auth based on HMAC-MD5 or HMAC-SHA algorithms
+authPriv      | MD5 or SHA     | DES        | Auth based on HMAC-MD5 or HMAC-SHA algorithms; provides DES 56-bit encryption based on (CBC)-DES (DES-56) 
 
 ### Configuring the resolver to use a secret
 

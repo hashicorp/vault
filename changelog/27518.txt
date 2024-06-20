@@ -1,0 +1,7 @@
+```release-note:bug
+agent: Fixed an issue causing excessive CPU usage during normal operation
+```
+
+```release-note:bug
+proxy: Fixed an issue causing excessive CPU usage during normal operation
+```
