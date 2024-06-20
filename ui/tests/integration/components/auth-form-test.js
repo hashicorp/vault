@@ -20,7 +20,6 @@ module('Integration | Component | auth form', function (hooks) {
 
   hooks.beforeEach(function () {
     this.router = this.owner.lookup('service:router');
-    // this.auth = this.owner.lookup('service:auth');
     this.selectedAuth = 'token';
     this.performAuth = sinon.spy();
     this.renderComponent = async () => {

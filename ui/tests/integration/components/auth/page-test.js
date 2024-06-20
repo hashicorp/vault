@@ -174,7 +174,7 @@ module('Integration | Component | auth | page ', function (hooks) {
   });
 
   test('it should set nonce value as uuid for okta method type', async function (assert) {
-    assert.expect(2);
+    assert.expect(4);
     this.server.post('/auth/okta/login/foo', (_, req) => {
       const { nonce } = JSON.parse(req.requestBody);
       assert.true(validate(nonce), 'Nonce value passed as uuid for okta login');
@@ -195,11 +195,11 @@ module('Integration | Component | auth | page ', function (hooks) {
     assert
       .dom('[data-test-okta-number-challenge]')
       .hasText(
-        'To finish signing in, you will need to complete an additional MFA step. Please wait...',
+        'To finish signing in, you will need to complete an additional MFA step. Please wait... Back to login',
         'renders okta number challenge on submit'
       );
     await click('[data-test-back-button]');
-    assert.dom(AUTH_FORM).exists('renders auth form on return to login');
+    assert.dom(AUTH_FORM.form).exists('renders auth form on return to login');
     assert.dom(GENERAL.selectByAttr('auth-method')).hasValue('okta', 'preserves method type on back');
   });
 });
