@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import queryParamString from 'vault/utils/query-param-string';
 import { module, test } from 'qunit';
 
@@ -19,7 +24,12 @@ module('Unit | Utility | query-param-string', function () {
       expected: '',
     },
     {
-      scenario: 'non-object',
+      scenario: 'array',
+      obj: ['some', 'array'],
+      expected: '',
+    },
+    {
+      scenario: 'string',
       obj: 'foobar',
       expected: '',
     },
