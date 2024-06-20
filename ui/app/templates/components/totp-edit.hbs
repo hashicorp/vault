@@ -14,7 +14,7 @@
     />
   </p.top>
   <p.levelLeft>
-    <h1 class="title is-3" data-test-secret-header="true">
+    <h1 class="title is-3" data-test-secret-header>
       {{#if (eq this.mode "create")}}
         Create a TOTP key
       {{else if (eq this.mode "edit")}}
@@ -40,7 +40,7 @@
         <div class="toolbar-separator"></div>
       {{/if}}
       {{#if this.model.canUpdate}}
-        <ToolbarSecretLink @secret={{this.model.id}} @mode="edit" data-test-edit-link={{true}} @replace={{true}}>
+        <ToolbarSecretLink @secret={{this.model.id}} @mode="edit" data-test-edit-link @replace={{true}}>
           Edit key
         </ToolbarSecretLink>
       {{/if}}
@@ -92,7 +92,6 @@
         {{#if (eq this.mode "create")}}
           {{#each this.model.createAttrs as |attr|}}
             <FormField
-              data-test-field={{true}}
               @attr={{attr}}
               @model={{this.model}}
               @modelValidations={{@modelValidations}}
