@@ -71,6 +71,16 @@ export default Route.extend({
     return this.store.adapterFor('totp').generateCode(backend, keyName);
   },
 
+  async getTOTPKey(backend, keyName) {
+    try {
+      const key = await this.store.queryRecord('totp', { id: keyName, backend });
+      return key;
+    } catch (e) {
+      // swallow error, non-essential data
+      return;
+    }
+  },
+
   async model(params) {
     const role = params.secret;
     const { id: backendPath, type: backendType } = this.modelFor('vault.cluster.secrets.backend');
@@ -82,8 +92,7 @@ export default Route.extend({
       awsRole = await this.getAwsRole(backendPath, role);
     } else if (backendType === 'totp') {
       totpCode = await this.getTOTPCode(backendPath, role);
-      const totpKey = await this.store.queryRecord('totp', { id: role, backend: backendPath });
-      totpCode.period = totpKey.period;
+      totpCode.period = (await this.getTOTPKey(backendPath, role))?.period;
     }
 
     return resolve({
@@ -98,7 +107,7 @@ export default Route.extend({
   },
 
   async afterModel(model, transition) {
-    if (model.backendType === 'totp') {
+    if (model.backendType === 'totp' && model.totpCode.period) {
       later(
         () => {
           this.refresh();

@@ -11,13 +11,18 @@ import timestamp from 'core/utils/timestamp';
 import { getUnixTime } from 'date-fns';
 
 export default class GenerateCredentialsTotp extends Component {
-  title = "Generate TOTP code";
+  title = 'Generate TOTP code';
 
   @tracked elapsedTime = 0;
   nextTick = null;
 
   get remainingTime() {
     const { model } = this.args;
+
+    if (!model.period) {
+      return;
+    }
+
     return model.period - this.elapsedTime;
   }
 
@@ -28,14 +33,17 @@ export default class GenerateCredentialsTotp extends Component {
 
   @action
   startTimer() {
-    this.nextTick = later(
-      this,
-      function () {
-        const { model } = this.args;
-        this.elapsedTime = getUnixTime(timestamp.now()) % model.period;
-        this.startTimer();
-      },
-      1000
-    );
+    const { model } = this.args;
+
+    if (model.period) {
+      this.nextTick = later(
+        this,
+        function () {
+          this.elapsedTime = getUnixTime(timestamp.now()) % model.period;
+          this.startTimer();
+        },
+        1000
+      );
+    }
   }
 }
