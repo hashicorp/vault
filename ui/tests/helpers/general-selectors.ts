@@ -79,4 +79,5 @@ export const GENERAL = {
   navLink: (label: string) => `[data-test-sidebar-nav-link="${label}"]`,
   cancelButton: '[data-test-cancel]',
   saveButton: '[data-test-save]',
+  maskedInput: (name: string) => `[data-test-textarea="${name}"]`,
 };
