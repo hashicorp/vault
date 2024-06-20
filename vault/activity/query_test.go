@@ -388,28 +388,28 @@ func TestCombineWithCurrentMonth(t *testing.T) {
 			{
 				NamespaceID: "ns1",
 				Counts: &CountsRecord{
-					EntityClients:    2,
-					NonEntityClients: 2,
-					SecretSyncs:      2,
-					ACMEClients:      2,
+					EntityClients:    4,
+					NonEntityClients: 4,
+					SecretSyncs:      4,
+					ACMEClients:      4,
 				},
 				Mounts: []*MountRecord{
 					{
 						MountPath: "m1",
 						Counts: &CountsRecord{
-							EntityClients:    1,
-							NonEntityClients: 1,
-							SecretSyncs:      1,
-							ACMEClients:      1,
+							EntityClients:    2,
+							NonEntityClients: 2,
+							SecretSyncs:      2,
+							ACMEClients:      2,
 						},
 					},
 					{
 						MountPath: "m2",
 						Counts: &CountsRecord{
-							EntityClients:    1,
-							NonEntityClients: 1,
-							SecretSyncs:      1,
-							ACMEClients:      1,
+							EntityClients:    2,
+							NonEntityClients: 2,
+							SecretSyncs:      2,
+							ACMEClients:      2,
 						},
 					},
 				},
@@ -417,28 +417,28 @@ func TestCombineWithCurrentMonth(t *testing.T) {
 			{
 				NamespaceID: "ns2",
 				Counts: &CountsRecord{
-					EntityClients:    2,
-					NonEntityClients: 2,
-					SecretSyncs:      2,
-					ACMEClients:      2,
+					EntityClients:    4,
+					NonEntityClients: 4,
+					SecretSyncs:      4,
+					ACMEClients:      4,
 				},
 				Mounts: []*MountRecord{
 					{
 						MountPath: "m1",
 						Counts: &CountsRecord{
-							EntityClients:    1,
-							NonEntityClients: 1,
-							SecretSyncs:      1,
-							ACMEClients:      1,
+							EntityClients:    2,
+							NonEntityClients: 2,
+							SecretSyncs:      2,
+							ACMEClients:      2,
 						},
 					},
 					{
 						MountPath: "m3",
 						Counts: &CountsRecord{
-							EntityClients:    1,
-							NonEntityClients: 1,
-							SecretSyncs:      1,
-							ACMEClients:      1,
+							EntityClients:    2,
+							NonEntityClients: 2,
+							SecretSyncs:      2,
+							ACMEClients:      2,
 						},
 					},
 				},
@@ -446,28 +446,119 @@ func TestCombineWithCurrentMonth(t *testing.T) {
 			{
 				NamespaceID: "ns3",
 				Counts: &CountsRecord{
-					EntityClients:    2,
-					NonEntityClients: 2,
-					SecretSyncs:      2,
-					ACMEClients:      2,
+					EntityClients:    4,
+					NonEntityClients: 4,
+					SecretSyncs:      4,
+					ACMEClients:      4,
 				},
 				Mounts: []*MountRecord{
 					{
 						MountPath: "m1",
 						Counts: &CountsRecord{
-							EntityClients:    1,
-							NonEntityClients: 1,
-							SecretSyncs:      1,
-							ACMEClients:      1,
+							EntityClients:    2,
+							NonEntityClients: 2,
+							SecretSyncs:      2,
+							ACMEClients:      2,
 						},
 					},
 					{
 						MountPath: "m2",
 						Counts: &CountsRecord{
-							EntityClients:    1,
-							NonEntityClients: 1,
-							SecretSyncs:      1,
-							ACMEClients:      1,
+							EntityClients:    2,
+							NonEntityClients: 2,
+							SecretSyncs:      2,
+							ACMEClients:      2,
+						},
+					},
+				},
+			},
+		},
+		NewClients: &NewClientRecord{
+			Namespaces: []*MonthlyNamespaceRecord{
+				{
+					NamespaceID: "ns1",
+					Counts: &CountsRecord{
+						EntityClients:    2,
+						NonEntityClients: 2,
+						SecretSyncs:      2,
+						ACMEClients:      2,
+					},
+					Mounts: []*MountRecord{
+						{
+							MountPath: "m1",
+							Counts: &CountsRecord{
+								EntityClients:    1,
+								NonEntityClients: 1,
+								SecretSyncs:      1,
+								ACMEClients:      1,
+							},
+						},
+						{
+							MountPath: "m2",
+							Counts: &CountsRecord{
+								EntityClients:    1,
+								NonEntityClients: 1,
+								SecretSyncs:      1,
+								ACMEClients:      1,
+							},
+						},
+					},
+				},
+				{
+					NamespaceID: "ns2",
+					Counts: &CountsRecord{
+						EntityClients:    2,
+						NonEntityClients: 2,
+						SecretSyncs:      2,
+						ACMEClients:      2,
+					},
+					Mounts: []*MountRecord{
+						{
+							MountPath: "m1",
+							Counts: &CountsRecord{
+								EntityClients:    1,
+								NonEntityClients: 1,
+								SecretSyncs:      1,
+								ACMEClients:      1,
+							},
+						},
+						{
+							MountPath: "m3",
+							Counts: &CountsRecord{
+								EntityClients:    1,
+								NonEntityClients: 1,
+								SecretSyncs:      1,
+								ACMEClients:      1,
+							},
+						},
+					},
+				},
+				{
+					NamespaceID: "ns3",
+					Counts: &CountsRecord{
+						EntityClients:    2,
+						NonEntityClients: 2,
+						SecretSyncs:      2,
+						ACMEClients:      2,
+					},
+					Mounts: []*MountRecord{
+						{
+							MountPath: "m1",
+							Counts: &CountsRecord{
+								EntityClients:    1,
+								NonEntityClients: 1,
+								SecretSyncs:      1,
+								ACMEClients:      1,
+							},
+						},
+						{
+							MountPath: "m2",
+							Counts: &CountsRecord{
+								EntityClients:    1,
+								NonEntityClients: 1,
+								SecretSyncs:      1,
+								ACMEClients:      1,
+							},
 						},
 					},
 				},
