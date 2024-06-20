@@ -7,7 +7,7 @@ import Model, { attr } from '@ember-data/model';
 import { alias } from '@ember/object/computed';
 import { computed } from '@ember/object';
 import { withModelValidations } from 'vault/decorators/model-validations';
-import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
+import { withExpandedAttributes } from 'vault/decorators/model-expanded-attributes';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
 const ALGORITHMS = ['SHA1', 'SHA256', 'SHA512'];
@@ -39,6 +39,7 @@ const validations = {
 };
 
 @withModelValidations(validations)
+@withExpandedAttributes()
 export default class TotpModel extends Model {
   @attr('string', {
     readOnly: true,
@@ -122,17 +123,15 @@ export default class TotpModel extends Model {
   })
   barcode;
 
-  @computed('account_name', function () {
+  get attrs() {
     const keys = ['account_name', 'algorithm', 'digits', 'issuer', 'period'];
-    return expandAttributeMeta(this, keys);
-  })
-  attrs;
+    return keys.map((k) => this.allByKey[k]);
+  }
 
-  @computed('url', 'barcode', function () {
+  get generatedAttrs() {
     const keys = ['url'];
-    return expandAttributeMeta(this, keys);
-  })
-  generatedAttrs;
+    return keys.map((k) => this.allByKey[k]);
+  }
 
   @computed('generate', function () {
     const defaultFields = ['generate'];
@@ -160,7 +159,7 @@ export default class TotpModel extends Model {
       });
     }
 
-    return fieldToAttrs(this, groups);
+    return this._expandGroups(groups);
   })
   fieldGroups;
 
