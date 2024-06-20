@@ -1,0 +1,27 @@
+
+<a id="autopilot" />
+
+### Autopilot upgrade for Vault Enterprise fails
+
+#### Affected versions
+
+- 1.15.8+
+
+#### Issue
+
+The expected process for voter status management does not occur during the
+autopilot upgrade process. The autopilot upgrade process adds new nodes (new version) as
+`target_version_non_voters` then `target_version_voters` but existing nodes (old
+version) fail to upgrade and maintain their current voter status.
+
+#### Workaround
+
+1. Disable autopilot upgrades and manually upgrade all nodes in the cluster.
+1. Explicitly set the `autopilot_upgrade_version` parameter to the desired
+   version in the raft `storage` stanza on your new nodes:
+
+    ```hcl
+    storage "raft" {
+      autopilot_upgrade_version = "1.15.8"
+    }
+    ```
