@@ -38,17 +38,9 @@
               @color="tertiary"
               {{on "click" (fn (mut this.mfaAuthData) null)}}
             />
-          {{else if this.waitingForOktaNumberChallenge}}
-            <Hds::Button
-              @text="Back to login"
-              @icon="arrow-left"
-              @isIconOnly={{true}}
-              @color="tertiary"
-              {{on "click" (action "cancelAuthentication")}}
-            />
           {{/if}}
           <h1 class="title is-3">
-            {{if (or this.mfaAuthData this.waitingForOktaNumberChallenge) "Authenticate" "Sign in to Vault"}}
+            {{if this.mfaAuthData "Authenticate" "Sign in to Vault"}}
           </h1>
         </div>
       {{/if}}
@@ -101,17 +93,12 @@
           @onError={{fn (mut this.mfaErrors)}}
         />
       {{else}}
-        <AuthForm
+        <Auth::Page
           @wrappedToken={{this.wrappedToken}}
           @cluster={{this.model}}
           @namespace={{this.namespaceQueryParam}}
-          @redirectTo={{this.redirectTo}}
           @selectedAuth={{this.authMethod}}
           @onSuccess={{action "onAuthResponse"}}
-          @setOktaNumberChallenge={{fn (mut this.waitingForOktaNumberChallenge)}}
-          @waitingForOktaNumberChallenge={{this.waitingForOktaNumberChallenge}}
-          @setCancellingAuth={{fn (mut this.cancelAuth)}}
-          @cancelAuthForOktaNumberChallenge={{this.cancelAuth}}
         />
       {{/if}}
     </:content>
