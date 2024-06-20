@@ -15,6 +15,7 @@ import enablePage from 'vault/tests/pages/settings/auth/enable';
 import { visit, settled, currentURL, waitFor, currentRouteName } from '@ember/test-helpers';
 import { clearRecord } from 'vault/tests/helpers/oidc-config';
 import { runCmd } from 'vault/tests/helpers/commands';
+import queryParamString from 'vault/utils/query-param-string';
 
 const authFormComponent = create(authForm);
 
@@ -82,18 +83,13 @@ const getAuthzUrl = (providerName, redirect, clientId, params) => {
   const queryParams = {
     client_id: clientId,
     nonce: 'abc123',
-    redirect_uri: encodeURIComponent(redirect),
+    redirect_uri: redirect,
     response_type: 'code',
     scope: 'openid',
     state: 'foobar',
     ...params,
   };
-  const queryString = Object.keys(queryParams).reduce((prev, key, idx) => {
-    if (idx === 0) {
-      return `${prev}${key}=${queryParams[key]}`;
-    }
-    return `${prev}&${key}=${queryParams[key]}`;
-  }, '?');
+  const queryString = queryParamString(queryParams);
   return `/vault/identity/oidc/provider/${providerName}/authorize${queryString}`;
 };
 
