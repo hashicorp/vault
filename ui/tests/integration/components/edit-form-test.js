@@ -70,7 +70,7 @@ module('Integration | Component | edit form', function (hooks) {
     later(() => cancelTimers(), 50);
     await settled();
 
-    assert.ok(saveSpy.calledOnce, 'calls passed onSave');
+    assert.true(saveSpy.calledOnce, 'calls passed onSave');
     assert.strictEqual(saveSpy.getCall(0).args[0].saveType, 'save');
     assert.deepEqual(saveSpy.getCall(0).args[0].model, this.model, 'passes model to onSave');
     const flash = this.owner.lookup('service:flash-messages');
