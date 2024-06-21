@@ -43,12 +43,6 @@ scenario "replication" {
       artifact_type   = ["package"]
     }
 
-    # HSM and FIPS 140-2 are only supported on amd64
-    exclude {
-      arch    = ["arm64"]
-      edition = ["ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
-    }
-
     # PKCS#11 can only be used on ent.hsm and ent.hsm.fips1402.
     exclude {
       primary_seal = ["pkcs11"]
@@ -66,8 +60,8 @@ scenario "replication" {
       arch   = ["arm64"]
     }
 
-    # softhsm packages not available for leap/sles; Enos support for softhsm
-    # on amzn2 to be added later.
+    # softhsm packages not available for leap/sles. Enos support for softhsm on amzn2 is
+    # not implemented yet.
     exclude {
       primary_seal = ["pkcs11"]
       distro       = ["amzn2", "leap", "sles"]
