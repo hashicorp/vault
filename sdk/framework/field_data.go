@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"reflect"
 	"regexp"
 	"strings"
 
@@ -150,7 +151,7 @@ func (d *FieldData) GetOk(k string) (interface{}, bool) {
 		panic(fmt.Sprintf("error reading %s: %s", k, err))
 	}
 
-	if !ok || result == nil {
+	if !ok || result == nil || reflect.DeepEqual(result, schema.Type.Zero()) {
 		result = schema.DefaultOrZero()
 	}
 
