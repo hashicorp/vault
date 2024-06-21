@@ -13,7 +13,9 @@ Side nav links correspond to the file + directory structure within the `docs/` d
 
 ## generating component docs
 
-The `docs/components` directory is where _generated_ markdown files for components live after running `yarn docs`. **Do not edit component markdown files directly**. Instead, update markdown by making changes to the `jsdoc` and then re-running the generate command. The `docs/components/*` files are included in `.gitignore` so they are not pushed to main. `jsdoc-to-markdown` errors log in the console.
+The `docs/components` directory is where _generated_ component markdown files are located after running `yarn docs`. **Do not edit component markdown files directly**. Instead, update markdown by making changes to the `jsdoc` and then re-running the generate command. The `docs/components/*` files are included in `.gitignore` so they are not pushed to main. `jsdoc-to-markdown` errors log in the console.
+
+> _If you have never run the `yarn docs` command before, you need to create the `docs/components` directory locally before running `yarn docfy-md` so the markdown has a place to go. `mkdir docs/components`_
 
 ```
 yarn docfy-md <component name> <addon or engine> <full filepath>
@@ -24,9 +26,10 @@ yarn docfy-md <component name> <addon or engine> <full filepath>
 | Command                                                                   | Description                                                                                  |
 | ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
 | `yarn docs`                                                               | generate markdown file for every\* component in the `addon/core` directory                   |
-| `yarn docfy-md some-component-name`                                       | generate markdown file for specific component                                                |
+| `yarn docfy-md some-component-name`                                       | generate markdown file for **specific** component                                            |
 | `yarn docfy-md read-more core`                                            | generate markdown for `read-more` component in the `core` addon                              |
 | `yarn docfy-md pki-test null ./lib/pki/addon/components/pki-key-usage.ts` | optional third arg is the full component filepath (first arg will become markdown file name) |
+| `mkdir docs/components`                                                   | create directory where the generated component markdown files will go                        |
 | `rm -f ./docs/components/*`                                               | cleanup and delete generated component markdown files                                        |
 
 > _\*replication and `shamir/*` components are skipped as these are not reused and should eventually be moved outside the `addon/core` directory_

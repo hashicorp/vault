@@ -2,6 +2,9 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: BUSL-1.1
 
+echo "Create components/ directory"
+mkdir docs/components/ 
+
 echo "Generating markdown files for components in core addon..." 
 
 # iterate over every .ts and .js file in core/addon/components (including nested files)
