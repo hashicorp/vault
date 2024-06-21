@@ -40,4 +40,11 @@ export default class SyncDestinationsGoogleCloudSecretManagerModel extends SyncD
     docLink: '/vault/docs/secrets/gcp#authentication',
   })
   credentials; // obfuscated, never returned by API. Masking handled by EnableInput component
+
+  @attr('object', {
+    subText:
+      'An optional set of informational key-value pairs added as additional metadata on secrets synced to this destination. Custom tags are merged with built-in tags.',
+    editType: 'kv',
+  })
+  customTags;
 }

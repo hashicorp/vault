@@ -66,4 +66,11 @@ export default class SyncDestinationsAzureKeyVaultModel extends SyncDestinationM
     editDisabled: true,
   })
   cloud;
+
+  @attr('object', {
+    subText:
+      'An optional set of informational key-value pairs added as additional metadata on secrets synced to this destination. Custom tags are merged with built-in tags.',
+    editType: 'kv',
+  })
+  customTags;
 }
