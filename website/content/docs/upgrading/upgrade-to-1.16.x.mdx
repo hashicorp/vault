@@ -81,6 +81,13 @@ userattr="userprincipalname"
 Refer to the [LDAP auth method (API)](/vault/api-docs/auth/ldap) page for
 more details on the configuration.
 
+### Secrets Sync now requires setting a one-time flag before use
+
+To use the Secrets Sync feature, the feature must be activated with a new one-time
+operation called an activation-flag. The feature is gated until a Vault operator
+decides to trigger the flag. More information can be found in the
+[secrets sync documentation](/vault/docs/sync#activating-the-feature).
+
 ## Known issues and workarounds
 
 @include 'known-issues/1_16-jwt_auth_bound_audiences.mdx'
@@ -104,3 +111,5 @@ more details on the configuration.
 @include 'known-issues/1_13-reload-census-panic-standby.mdx'
 
 @include 'known-issues/autopilot-upgrade-upgrade-version.mdx'
+
+@include 'known-issues/1_16_secrets-sync-chroot-activation.mdx'
