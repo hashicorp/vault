@@ -15,9 +15,9 @@
 {{#if @showJson}}
   <JsonEditor
     @title="{{if (eq @type 'create') 'Secret' 'Version'}} data"
-    @value={{this.stringifiedSecretData}}
+    @value={{this.trackedSecretData}}
     @allowObscure={{true}}
-    @valueUpdated={{this.handleJson}}
+    @valueUpdated={{this.handleUpdate}}
     @readOnly={{eq @type "details"}}
   />
   {{#if (or @modelValidations.secretData.errors this.lintingErrors)}}

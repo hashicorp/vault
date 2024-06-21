@@ -26,7 +26,14 @@ export default class CodeMirrorModifier extends Modifier {
     } else {
       // this hook also fires any time there is a change to tracked state
       this._editor.setOption('readOnly', namedArgs.readOnly);
-      if (namedArgs.content && this._editor.getValue() !== namedArgs.content) {
+      //* Comparing tracked state against the view of what's on the editor *//
+      // 1. remove all white space so that you can compare values and not objects.
+      // this is important because editor.getValue will what is exactly displayed on the editor including new-lines. Whereas nameArg tracked content could have already been modified (e.g. parsed) and may not include new lines.
+      const editorValue = JSON.parse(this._editor.getValue());
+      const namedArgsContent = JSON.parse(namedArgs.content);
+      // 2. in JavaScript two objects are considered equal if they are the same object. So after parsing to remove excess white space, we stringify them.
+      if (JSON.stringify(editorValue) !== JSON.stringify(namedArgsContent)) {
+        // every time setValue is called the cursor jumps to the start of the editor so it's pertinent it's only called when necessary.
         this._editor.setValue(namedArgs.content);
       }
     }
