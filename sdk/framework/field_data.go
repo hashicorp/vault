@@ -150,7 +150,7 @@ func (d *FieldData) GetOk(k string) (interface{}, bool) {
 		panic(fmt.Sprintf("error reading %s: %s", k, err))
 	}
 
-	if ok && result == nil {
+	if !ok || result == nil {
 		result = schema.DefaultOrZero()
 	}
 
