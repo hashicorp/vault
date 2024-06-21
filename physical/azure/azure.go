@@ -68,7 +68,7 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 			return nil, fmt.Errorf("'accountName' must be set")
 		}
 	}
-	if err := validateAccountName(name); err != nil {
+	if err := validateAccountName(accountName); err != nil {
 		return nil, fmt.Errorf("invalid account name %s: %w", name, err)
 	}
 
