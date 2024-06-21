@@ -7,6 +7,7 @@
 'use strict';
 
 const EmberApp = require('ember-cli/lib/broccoli/ember-app');
+// const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 const config = require('./config/environment')();
 
 const environment = EmberApp.env();
@@ -66,6 +67,14 @@ const appConfig = {
   },
   autoImport: {
     forbidEval: true,
+    webpack: {
+      // uncomment to use the bundle analyzer & run yarn run ember server --environment=production
+      // plugins: [new BundleAnalyzerPlugin()],
+      optimization: {
+        realContentHash: true,
+        moduleIds: 'deterministic',
+      },
+    },
   },
   'ember-test-selectors': {
     strip: isProd,
