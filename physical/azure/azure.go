@@ -69,7 +69,7 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		}
 	}
 	if err := validateAccountName(accountName); err != nil {
-		return nil, fmt.Errorf("invalid account name %s: %w", name, err)
+		return nil, fmt.Errorf("invalid account name %s: %w", accountName, err)
 	}
 
 	accountKey := os.Getenv("AZURE_ACCOUNT_KEY")
