@@ -1830,8 +1830,6 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 		pq = storedQuery
 	}
 
-	// If we need to add the current month's client counts into the total, compute the namespace
-	// breakdown for the current month as well.
 	var partialByMonth map[int64]*processMonth
 	if computePartial {
 		// Traverse through current month's activitylog data and group clients
