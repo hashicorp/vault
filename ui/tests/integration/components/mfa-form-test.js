@@ -178,6 +178,8 @@ module('Integration | Component | mfa-form', function (hooks) {
   test('it should show countdown on passcode already used and rate limit errors', async function (assert) {
     const messages = {
       used: 'code already used; new code is available in 30 seconds',
+      // there an intentional typo in the error message (30s seconds)
+      // that is what the backend returns
       limit:
         'maximum TOTP validation attempts 4 exceeded the allowed attempts 3. Please try again in 30s seconds',
     };
@@ -198,7 +200,7 @@ module('Integration | Component | mfa-form', function (hooks) {
 
       assert
         .dom('[data-test-mfa-countdown]')
-        .includesText(expectedTime, 'countdown renders with correct initial value from error response');
+        .includesText('30', 'countdown renders with correct initial value from error response');
       assert.dom('[data-test-mfa-validate]').isDisabled('Button is disabled during countdown');
       assert.dom('[data-test-mfa-passcode]').isDisabled('Input is disabled during countdown');
       assert.dom('[data-test-inline-error-message]').exists('Alert message renders');
