@@ -215,9 +215,9 @@ export default function (server) {
 
   server.get('/sys/internal/counters/activity', (schema, req) => {
     let { start_time, end_time } = req.queryParams;
-    if (req.queryParams.current_billing_period) {
-      // { current_billing_period: true } automatically queries the activity log
-      // from the builtin license start timestamp to the current month
+    if (!start_time && !end_time) {
+      // if there are no date query params, the activity log default behavior
+      // queries from the builtin license start timestamp to the current month
       start_time = LICENSE_START.toISOString();
       end_time = STATIC_NOW.toISOString();
     }

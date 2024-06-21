@@ -402,7 +402,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert.true(version.isEnterprise, 'version is enterprise');
       assert.strictEqual(currentURL(), '/vault/dashboard');
       assert.dom(DASHBOARD.cardName('client-count')).exists();
-      const response = await this.store.peekRecord('clients/activity', 'some-activity-id');
+      const response = await this.store.findRecord('clients/activity', 'clients/activity');
       assert.dom('[data-test-client-count-title]').hasText('Client count');
       assert.dom('[data-test-stat-text="Total"] .stat-label').hasText('Total');
       assert.dom('[data-test-stat-text="Total"] .stat-value').hasText(formatNumber([response.total.clients]));
