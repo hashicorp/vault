@@ -71,25 +71,29 @@ module('Integration | Component | control group success', function (hooks) {
     this.set('model', MODEL);
     this.set('response', response);
     await render(hbs`<ControlGroupSuccess @model={{this.model}} @controlGroupResponse={{this.response}} />`);
-    assert.ok(component.showsNavigateMessage, 'shows unwrap message');
+
+    assert.true(component.showsNavigateMessage, 'shows unwrap message');
+
     await component.navigate();
     later(() => cancelTimers(), 50);
-    return settled().then(() => {
-      assert.ok(this.controlGroup.markTokenForUnwrap.calledOnce, 'marks token for unwrap');
-      assert.ok(this.router.transitionTo.calledOnce, 'calls router transition');
-    });
+    await settled();
+
+    assert.true(this.controlGroup.markTokenForUnwrap.calledOnce, 'marks token for unwrap');
+    assert.true(this.router.transitionTo.calledOnce, 'calls router transition');
   });
 
   test('render without token', async function (assert) {
     assert.expect(2);
     this.set('model', MODEL);
     await render(hbs`<ControlGroupSuccess @model={{this.model}} />`);
-    assert.ok(component.showsUnwrapForm, 'shows unwrap form');
+
+    assert.true(component.showsUnwrapForm, 'shows unwrap form');
+
     await component.token('token');
     component.unwrap();
     later(() => cancelTimers(), 50);
-    return settled().then(() => {
-      assert.ok(component.showsJsonViewer, 'shows unwrapped data');
-    });
+    await settled();
+
+    assert.true(component.showsJsonViewer, 'shows unwrapped data');
   });
 });

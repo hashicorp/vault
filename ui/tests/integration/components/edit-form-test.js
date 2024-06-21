@@ -68,12 +68,12 @@ module('Integration | Component | edit form', function (hooks) {
 
     component.submit();
     later(() => cancelTimers(), 50);
-    return settled().then(() => {
-      assert.ok(saveSpy.calledOnce, 'calls passed onSave');
-      assert.strictEqual(saveSpy.getCall(0).args[0].saveType, 'save');
-      assert.deepEqual(saveSpy.getCall(0).args[0].model, this.model, 'passes model to onSave');
-      const flash = this.owner.lookup('service:flash-messages');
-      assert.strictEqual(flash.success.callCount, 1, 'calls flash message success');
-    });
+    await settled();
+
+    assert.true(saveSpy.calledOnce, 'calls passed onSave');
+    assert.strictEqual(saveSpy.getCall(0).args[0].saveType, 'save');
+    assert.deepEqual(saveSpy.getCall(0).args[0].model, this.model, 'passes model to onSave');
+    const flash = this.owner.lookup('service:flash-messages');
+    assert.strictEqual(flash.success.callCount, 1, 'calls flash message success');
   });
 });

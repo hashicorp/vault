@@ -5,10 +5,9 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render } from '@ember/test-helpers';
+import { render, settled, fillIn, click, waitUntil, waitFor } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { fillIn, click, waitUntil } from '@ember/test-helpers';
 import { _cancelTimers as cancelTimers, later } from '@ember/runloop';
 import { TOTP_VALIDATION_ERROR } from 'vault/components/mfa/mfa-form';
 
@@ -82,6 +81,12 @@ module('Integration | Component | mfa-form', function (hooks) {
         'Two methods are required for successful authentication.',
         'Correct description renders for multiple constraints'
       );
+  });
+
+  test('it should render a submit button', async function (assert) {
+    await render(hbs`<Mfa::MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} />`);
+
+    assert.dom('[data-test-mfa-validate]').isNotDisabled('Button is not disabled by default');
   });
 
   test('it should render method selects and passcode inputs', async function (assert) {
@@ -170,7 +175,6 @@ module('Integration | Component | mfa-form', function (hooks) {
     await click('[data-test-mfa-validate]');
   });
 
-  // TODO JLR: It doesn't appear that cancelTimers is working and tests wait for the full countdown
   test('it should show countdown on passcode already used and rate limit errors', async function (assert) {
     const messages = {
       used: 'code already used; new code is available in 45 seconds',
@@ -184,12 +188,16 @@ module('Integration | Component | mfa-form', function (hooks) {
           throw { errors: [messages[code]] };
         },
       });
+      const expectedTime = code === 'used' ? 45 : 15;
+
       await render(hbs`<Mfa::MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} />`);
 
       await fillIn('[data-test-mfa-passcode]', code);
-      later(() => cancelTimers(), 50);
+
       await click('[data-test-mfa-validate]');
-      const expectedTime = code === 'used' ? '45' : '15';
+
+      await waitFor('[data-test-mfa-countdown]');
+
       assert
         .dom('[data-test-mfa-countdown]')
         .includesText(expectedTime, 'countdown renders with correct initial value from error response');
@@ -209,6 +217,8 @@ module('Integration | Component | mfa-form', function (hooks) {
 
     await fillIn('[data-test-mfa-passcode]', 'test-code');
     later(() => cancelTimers(), 50);
+    await settled();
+
     await click('[data-test-mfa-validate]');
     assert
       .dom('[data-test-message-error]')

@@ -116,8 +116,8 @@ module('Integration | Component | mount backend form', function (hooks) {
       later(() => cancelTimers(), 50);
       await settled();
 
-      assert.ok(spy.calledOnce, 'calls the passed success method');
-      assert.ok(
+      assert.true(spy.calledOnce, 'calls the passed success method');
+      assert.true(
         this.flashSuccessSpy.calledWith('Successfully mounted the approle auth method at foo.'),
         'Renders correct flash message'
       );
@@ -184,8 +184,8 @@ module('Integration | Component | mount backend form', function (hooks) {
       later(() => cancelTimers(), 50);
       await settled();
 
-      assert.ok(spy.calledOnce, 'calls the passed success method');
-      assert.ok(
+      assert.true(spy.calledOnce, 'calls the passed success method');
+      assert.true(
         this.flashSuccessSpy.calledWith('Successfully mounted the ssh secrets engine at foo.'),
         'Renders correct flash message'
       );

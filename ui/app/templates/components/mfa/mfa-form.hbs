@@ -43,7 +43,7 @@
                 placeholder={{if (gt constraint.methods.length 1) "Enter passcode"}}
                 spellcheck="false"
                 autofocus="true"
-                disabled={{or this.validate.isRunning this.newCodeDelay.isRunning}}
+                disabled={{or this.validate.isRunning this.countdown}}
                 @value={{constraint.passcode}}
                 data-test-mfa-passcode={{index}}
               />
@@ -56,7 +56,7 @@
           {{/if}}
         {{/each}}
       </div>
-      {{#if this.newCodeDelay.isRunning}}
+      {{#if this.countdown}}
         <div>
           <AlertInline @type="danger" @message={{this.codeDelayMessage}} />
         </div>
@@ -66,10 +66,10 @@
         @icon={{if this.validate.isRunning "loading"}}
         id="validate"
         type="submit"
-        disabled={{or this.validate.isRunning this.newCodeDelay.isRunning}}
+        disabled={{or this.validate.isRunning this.countdown}}
         data-test-mfa-validate
       />
-      {{#if this.newCodeDelay.isRunning}}
+      {{#if this.countdown}}
         <Icon @name="delay" class="has-text-grey" />
         <span class="has-text-grey is-v-centered" data-test-mfa-countdown>{{this.countdown}}</span>
       {{/if}}

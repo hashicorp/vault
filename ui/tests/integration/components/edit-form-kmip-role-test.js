@@ -224,15 +224,15 @@ module('Integration | Component | edit form kmip role', function (hooks) {
       click('[data-test-edit-form-submit]');
 
       later(() => cancelTimers(), 50);
-      return settled().then(() => {
-        for (const afterStateKey of Object.keys(stateAfterSave)) {
-          assert.strictEqual(
-            model.get(afterStateKey),
-            stateAfterSave[afterStateKey],
-            `sets ${afterStateKey} on save`
-          );
-        }
-      });
+      await settled();
+
+      for (const afterStateKey of Object.keys(stateAfterSave)) {
+        assert.strictEqual(
+          model.get(afterStateKey),
+          stateAfterSave[afterStateKey],
+          `sets ${afterStateKey} on save`
+        );
+      }
     });
   }
 });
