@@ -27,7 +27,7 @@ export default class CodeMirrorModifier extends Modifier {
       // this hook also fires any time there is a change to tracked state
       this._editor.setOption('readOnly', namedArgs.readOnly);
       //* Comparing tracked state against editor.getValue *//
-      // 1. Parse to so that you can compare values.
+      // 1. Parse so that you can compare values.
       // this is important because editor.getValue will return exactly what is displayed on the editor including new-lines. Whereas nameArg tracked content could have already been modified (e.g. parsed) and may not include new lines.
       const editorValue = JSON.parse(this._editor.getValue());
       const namedArgsContent = JSON.parse(namedArgs.content);
