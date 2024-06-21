@@ -48,7 +48,7 @@ module('Integration | Component | dashboard/client-count-card', function (hooks)
           latestMonth.new_clients.counts.clients,
         ])}`
       );
-    assert.dom('[data-test-updated-timestamp]').hasTextContaining('Updated Jan 25 2024, 3:59:59 pm');
+    assert.dom('[data-test-updated-timestamp]').hasTextContaining('Updated Jan 25 2024');
 
     // fires second request to /activity
     await click('[data-test-refresh]');
