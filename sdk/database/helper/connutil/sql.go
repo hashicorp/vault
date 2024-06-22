@@ -40,7 +40,7 @@ type SQLConnectionProducer struct {
 	AuthType                 string      `json:"auth_type" mapstructure:"auth_type" structs:"auth_type"`
 	ServiceAccountJSON       string      `json:"service_account_json" mapstructure:"service_account_json" structs:"service_account_json"`
 	DisableEscaping          bool        `json:"disable_escaping" mapstructure:"disable_escaping" structs:"disable_escaping"`
-	usePrivateIp             bool        `json:"use_private_ip" mapstructure:"use_private_ip" structs:"use_private_ip"`
+	usePrivateIP             bool        `json:"use_private_ip" mapstructure:"use_private_ip" structs:"use_private_ip"`
 
 	// cloud options here - cloudDriverName is globally unique, but only needs to be retained for the lifetime
 	// of driver registration, not across plugin restarts.
