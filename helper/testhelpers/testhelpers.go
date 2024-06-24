@@ -13,6 +13,7 @@ import (
 	"math/rand"
 	"os"
 	"strings"
+	testing2 "testing"
 	"time"
 
 	"github.com/armon/go-metrics"
@@ -36,7 +37,7 @@ const (
 )
 
 // GenerateRoot generates a root token on the target cluster.
-func GenerateRoot(t testing.T, cluster *vault.TestCluster, kind GenerateRootKind) string {
+func GenerateRoot(t testing2.TB, cluster *vault.TestCluster, kind GenerateRootKind) string {
 	t.Helper()
 	token, err := GenerateRootWithError(t, cluster, kind)
 	if err != nil {
@@ -45,7 +46,7 @@ func GenerateRoot(t testing.T, cluster *vault.TestCluster, kind GenerateRootKind
 	return token
 }
 
-func GenerateRootWithError(t testing.T, cluster *vault.TestCluster, kind GenerateRootKind) (string, error) {
+func GenerateRootWithError(t testing2.TB, cluster *vault.TestCluster, kind GenerateRootKind) (string, error) {
 	t.Helper()
 	// If recovery keys supported, use those to perform root token generation instead
 	var keys [][]byte
@@ -118,14 +119,14 @@ func RandomWithPrefix(name string) string {
 	return fmt.Sprintf("%s-%d", name, rand.New(rand.NewSource(time.Now().UnixNano())).Int())
 }
 
-func EnsureCoresSealed(t testing.T, c *vault.TestCluster) {
+func EnsureCoresSealed(t testing2.TB, c *vault.TestCluster) {
 	t.Helper()
 	for _, core := range c.Cores {
 		EnsureCoreSealed(t, core)
 	}
 }
 
-func EnsureCoreSealed(t testing.T, core *vault.TestClusterCore) {
+func EnsureCoreSealed(t testing2.TB, core *vault.TestClusterCore) {
 	t.Helper()
 	core.Seal(t)
 	timeout := time.Now().Add(60 * time.Second)
