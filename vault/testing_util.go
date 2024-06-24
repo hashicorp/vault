@@ -7,8 +7,7 @@ package vault
 
 import (
 	"crypto/ed25519"
-
-	testing "github.com/mitchellh/go-testing-interface"
+	testing "testing"
 )
 
 func GenerateTestLicenseKeys() (ed25519.PublicKey, ed25519.PrivateKey, error) { return nil, nil, nil }
