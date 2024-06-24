@@ -227,7 +227,7 @@ func handler(props *vault.HandlerProperties) http.Handler {
 
 		if props.ListenerConfig != nil && props.ListenerConfig.Profiling.UnauthenticatedPProfAccess {
 			for _, name := range []string{"goroutine", "threadcreate", "heap", "allocs", "block", "mutex"} {
-				mux.Handle("/v1/sys/pprof/"+name, pprof.Handler(name))
+				mux.Handle("/v1/sys/pprof/"+name, handlePprofNamedIndexRequest(core, name))
 			}
 			mux.Handle("/v1/sys/pprof/", http.HandlerFunc(pprof.Index))
 			mux.Handle("/v1/sys/pprof/cmdline", http.HandlerFunc(pprof.Cmdline))

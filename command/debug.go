@@ -773,7 +773,11 @@ func (c *DebugCommand) collectPprof(ctx context.Context) {
 			wg.Add(1)
 			go func(target string) {
 				defer wg.Done()
-				data, err := pprofTarget(ctx, c.cachedClient, target, nil)
+
+				seconds := int(c.flagInterval.Seconds())
+				secStr := strconv.Itoa(seconds)
+
+				data, err := pprofTarget(ctx, c.cachedClient, target, url.Values{"seconds": []string{secStr}})
 				if err != nil {
 					c.captureError("pprof."+target, err)
 					return
