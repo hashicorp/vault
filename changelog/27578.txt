@@ -1,0 +1,3 @@
+```release-note:change
+cli: The `-dev-three-node` and `-dev-four-cluster` CLI options have been removed.
+```
