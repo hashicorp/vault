@@ -231,7 +231,6 @@ module('Integration | Component | auth form', function (hooks) {
     this.set('wrappedToken', '54321');
     await render(hbs`<AuthForm @cluster={{this.cluster}} @wrappedToken={{this.wrappedToken}} />`);
     later(() => cancelTimers(), 50);
-
     await settled();
     assert.strictEqual(
       component.errorText,

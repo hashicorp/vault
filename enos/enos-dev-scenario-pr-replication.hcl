@@ -14,11 +14,13 @@ scenario "dev_pr_replication" {
     build and deploy the current branch!
 
     In order to execute this scenario you'll need to install the enos CLI:
-      brew tap hashicorp/tap && brew update && brew install hashicorp/tap/enos
+      - $ brew tap hashicorp/tap && brew update && brew install hashicorp/tap/enos
 
-    You'll also need access to an AWS account with an SSH keypair.
-    Perform the steps here to get AWS access with Doormat https://eng-handbook.hashicorp.services/internal-tools/enos/common-setup-steps/#authenticate-with-doormat
-    Perform the steps here to get an AWS keypair set up: https://eng-handbook.hashicorp.services/internal-tools/enos/common-setup-steps/#set-your-aws-key-pair-name-and-private-key
+    You'll also need access to an AWS account via Doormat, follow the guide here:
+      https://eng-handbook.hashicorp.services/internal-tools/enos/common-setup-steps/#authenticate-with-doormat
+
+    Follow this guide to get an SSH keypair set up in the AWS account:
+      https://eng-handbook.hashicorp.services/internal-tools/enos/common-setup-steps/#set-your-aws-key-pair-name-and-private-key
 
     Please note that this scenario requires several inputs variables to be set in order to function
     properly. While not all variants will require all variables, it's suggested that you look over
@@ -69,13 +71,13 @@ scenario "dev_pr_replication" {
   EOF
 
   // The matrix is where we define all the baseline combinations that enos can utilize to customize
-  // your scenario. By default enos attempts to perform your command an the entire product! Most
-  // of the time you'll want to reduce that by passing in a filter.
+  // your scenario. By default enos attempts to perform your command on the entire product of these
+  // possible comginations! Most of the time you'll want to reduce that by passing in a filter.
   // Run 'enos scenario list --help' to see more about how filtering scenarios works in enos.
   matrix {
     arch              = ["amd64", "arm64"]
     artifact          = ["local", "deb", "rpm", "zip"]
-    distro            = ["ubuntu", "rhel"]
+    distro            = ["amzn2", "leap", "rhel", "sles", "ubuntu"]
     edition           = ["ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
     primary_backend   = ["consul", "raft"]
     primary_seal      = ["awskms", "pkcs11", "shamir"]
@@ -117,8 +119,8 @@ scenario "dev_pr_replication" {
   // Here we declare all of the providers that we might need for our scenario.
   providers = [
     provider.aws.default,
-    provider.enos.ubuntu,
-    provider.enos.rhel
+    provider.enos.ec2_user,
+    provider.enos.ubuntu
   ]
 
   // These are variable values that are local to our scenario. They are evaluated after external
@@ -127,7 +129,10 @@ scenario "dev_pr_replication" {
     // The enos provider uses different ssh transport configs for different distros (as
     // specified in enos-providers.hcl), and we need to be able to access both of those here.
     enos_provider = {
-      rhel   = provider.enos.rhel
+      amzn2  = provider.enos.ec2_user
+      leap   = provider.enos.ec2_user
+      rhel   = provider.enos.ec2_user
+      sles   = provider.enos.ec2_user
       ubuntu = provider.enos.ubuntu
     }
     // We install vault packages from artifactory. If you wish to use one of these variants you'll
@@ -139,7 +144,7 @@ scenario "dev_pr_replication" {
     // If you are using an ent edition, you will need a Vault license. Common convention
     // is to store it at ./support/vault.hclic, but you may change this path according
     // to your own preference.
-    vault_install_dir = matrix.artifact == "zip" ? var.vault_install_dir : global.vault_install_dir_packages[matrix.distro]
+    vault_install_dir = matrix.artifact == "zip" || matrix.artifact == "local" ? global.vault_install_dir["bundle"] : global.vault_install_dir["package"]
   }
 
   // Begin scenario steps. These are the steps we'll perform to get your cluster up and running.

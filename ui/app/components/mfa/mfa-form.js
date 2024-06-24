@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+import Ember from 'ember';
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
@@ -29,7 +30,7 @@ export const TOTP_VALIDATION_ERROR =
 export default class MfaForm extends Component {
   @service auth;
 
-  @tracked countdown;
+  @tracked countdown = 0;
   @tracked error;
   @tracked codeDelayMessage;
 
@@ -104,7 +105,10 @@ export default class MfaForm extends Component {
   @task *newCodeDelay(message) {
     // parse validity period from error string to initialize countdown
     this.countdown = parseInt(message.match(/(\d\w seconds)/)[0].split(' ')[0]);
-    while (this.countdown) {
+
+    if (Ember.testing) return;
+
+    while (this.countdown > 0) {
       yield timeout(1000);
       this.countdown--;
     }

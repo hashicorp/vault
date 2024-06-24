@@ -14,6 +14,8 @@ Vault 1.16. **Please read carefully**.
 
 ## Important changes
 
+<a id="audit-headers" />
+
 ### Allowed audit headers now have unremovable defaults
 
 The [config auditing API endpoint](/vault/api-docs/system/config-auditing#create-update-audit-request-header)
@@ -29,6 +31,8 @@ default headers if required.
 Refer to the
 [audit request headers documentation](/vault/docs/audit#audit-request-headers)
 for more information.
+
+<a id="pki-truncate" />
 
 ### PKI sign-intermediate now truncates notAfter field to signing issuer
 
@@ -50,6 +54,8 @@ to control truncation the behavior. Setting the issuer `leaf_not_after_behavior`
 field to `permit` and `enforce_leaf_not_after_behavior` to true restores the
 legacy behavior.
 
+<a id="request-limiter" />
+
 ### Request limiter deprecation
 
 Vault 1.16.0 included an experimental request limiter. The limiter was disabled
@@ -62,6 +68,21 @@ protection is a beta feature in 1.17.0 and is disabled by default.
 
 The beta request limiter will be removed from Vault entirely in a later release.
 
+### JWT auth login requires bound audiences on the role
+
+The `bound_audiences` parameter of "jwt" roles is **mandatory** if the JWT contains an audience 
+(which is more often than not the case), and **must** match at least one of
+the JWT's associated `aud` claims. The `aud` claim claim can be a single string
+or a list of strings as per [RFC 7519 Section 4.1.3](https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.3).
+If the JWT's `aud` claim is not set, then the role's `bound_audiences`
+parameter is not required.
+
+Users may not be able to log into Vault if the JWT role is configured
+incorrectly. For additional details, refer to the
+[JWT auth method (API)](/vault/api-docs/auth/jwt) documentation.
+
 ## Known issues and workarounds
 
 @include 'known-issues/ocsp-redirect.mdx'
+
+@include 'known-issues/agent-and-proxy-excessive-cpu-1-17.mdx'

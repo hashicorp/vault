@@ -412,9 +412,9 @@
           {
             "title": "High Availability",
             "badge": {
-              "text": "ENTERPRISE | BETA",
+              "text": "ENTERPRISE",
               "type": "outlined",
-              "color": "highlight"
+              "color": "neutral"
             },
             "path": "configuration/seal/seal-ha"
           },
@@ -1104,6 +1104,19 @@
           }
         ]
       },
+      {
+        "title": "<code>transform</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/transform"
+          },
+          {
+            "title": "<code>import</code> and <code>import-version</code>",
+            "path": "commands/transform/import"
+          }
+        ]
+      },      
       {
         "title": "<code>unwrap</code>",
         "path": "commands/unwrap"
@@ -2584,6 +2597,10 @@
       {
         "title": "Overview",
         "path": "release-notes"
+      },
+      {
+        "title": "1.17.0",
+        "path": "release-notes/1.17.0"
       },
       {
         "title": "1.16.1",

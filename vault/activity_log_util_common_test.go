@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sort"
 	"testing"
 	"time"
 
@@ -18,15 +19,31 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// Test_ActivityLog_ComputeCurrentMonthForBillingPeriodInternal creates 3 months
-// of hyperloglogs and fills them with overlapping clients. The test calls
-// computeCurrentMonthForBillingPeriodInternal with the current month map having
-// some overlap with the previous months. The test then verifies that the
-// results have the correct number of entity, non-entity, and secret sync
-// association clients. The test also calls
-// computeCurrentMonthForBillingPeriodInternal with an empty current month map,
-// and verifies that the results are all 0.
-func Test_ActivityLog_ComputeCurrentMonthForBillingPeriodInternal(t *testing.T) {
+// equalActivityMonthRecords is a helper to sort the namespaces and mounts
+// in activity.MonthRecord's, then compare their equality
+func equalActivityMonthRecords(t *testing.T, expected, got *activity.MonthRecord) {
+	t.Helper()
+	sortNamespaces := func(namespaces []*activity.MonthlyNamespaceRecord) {
+		sort.SliceStable(namespaces, func(i, j int) bool {
+			return namespaces[i].NamespaceID < namespaces[j].NamespaceID
+		})
+		for _, namespace := range namespaces {
+			sort.SliceStable(namespace.Mounts, func(i, j int) bool {
+				return namespace.Mounts[i].MountPath < namespace.Mounts[j].MountPath
+			})
+		}
+	}
+	sortNamespaces(expected.Namespaces)
+	sortNamespaces(expected.NewClients.Namespaces)
+	sortNamespaces(got.Namespaces)
+	sortNamespaces(got.NewClients.Namespaces)
+	require.Equal(t, expected, got)
+}
+
+// mockHLLGetter is a helper that returns an HLL getter function with 3 months
+// of HLLs
+func mockHLLGetter(t *testing.T) func(ctx context.Context, startTime time.Time) (*hyperloglog.Sketch, error) {
+	t.Helper()
 	// populate the first month with clients 1-20
 	monthOneHLL := hyperloglog.New()
 	// populate the second month with clients 10-30
@@ -46,7 +63,7 @@ func Test_ActivityLog_ComputeCurrentMonthForBillingPeriodInternal(t *testing.T) 
 			monthThreeHLL.Insert(clientID)
 		}
 	}
-	mockHLLGetFunc := func(ctx context.Context, startTime time.Time) (*hyperloglog.Sketch, error) {
+	return func(ctx context.Context, startTime time.Time) (*hyperloglog.Sketch, error) {
 		currMonthStart := timeutil.StartOfMonth(time.Now())
 		if startTime.Equal(timeutil.MonthsPreviousTo(3, currMonthStart)) {
 			return monthThreeHLL, nil
@@ -59,7 +76,19 @@ func Test_ActivityLog_ComputeCurrentMonthForBillingPeriodInternal(t *testing.T) 
 		}
 		return nil, fmt.Errorf("bad start time")
 	}
+}
 
+// Test_ActivityLog_ComputeCurrentMonthForBillingPeriodInternal creates 3 months
+// of hyperloglogs and fills them with overlapping clients. The test calls
+// computeCurrentMonthForBillingPeriodInternal with the current month map having
+// some overlap with the previous months. The test then verifies that the
+// results have the correct number of entity, non-entity, and secret sync
+// association clients. The test also calls
+// computeCurrentMonthForBillingPeriodInternal with an empty current month map,
+// and verifies that the results are all 0.
+func Test_ActivityLog_ComputeCurrentMonthForBillingPeriodInternal(t *testing.T) {
+	mockHLLGetFunc := mockHLLGetter(t)
+	month := newProcessMonth()
 	// Below we register the entity, non-entity, and secret sync clients that
 	// are seen in the current month
 
@@ -80,6 +109,9 @@ func Test_ActivityLog_ComputeCurrentMonthForBillingPeriodInternal(t *testing.T) 
 		"client_40": {},
 		"client_41": {},
 		"client_42": {},
+	}
+	for id := range entitiesStruct {
+		month.add(&activity.EntityRecord{ClientID: id, ClientType: entityActivityType})
 	}
 
 	// We will add 3 nonentity clients from month 1 (clients 2,3,4),
@@ -105,6 +137,9 @@ func Test_ActivityLog_ComputeCurrentMonthForBillingPeriodInternal(t *testing.T) 
 		"client_45": {},
 		"client_46": {},
 	}
+	for id := range nonEntitiesStruct {
+		month.add(&activity.EntityRecord{ClientID: id, ClientType: nonEntityTokenActivityType})
+	}
 
 	// secret syncs have 1 client from month 1 (5)
 	// 1 shared by months 1 and 2 (15)
@@ -120,24 +155,16 @@ func Test_ActivityLog_ComputeCurrentMonthForBillingPeriodInternal(t *testing.T) 
 		"client_47": {},
 		"client_48": {},
 	}
-
-	counts := &processCounts{
-		ClientsByType: map[string]clientIDSet{
-			entityActivityType:         entitiesStruct,
-			nonEntityTokenActivityType: nonEntitiesStruct,
-			secretSyncActivityType:     secretSyncStruct,
-		},
+	for id := range secretSyncStruct {
+		month.add(&activity.EntityRecord{ClientID: id, ClientType: secretSyncActivityType})
 	}
 
 	currentMonthClientsMap := make(map[int64]*processMonth, 1)
-	currentMonthClients := &processMonth{
-		Counts:     counts,
-		NewClients: &processNewClients{Counts: counts},
-	}
+
 	// Technially I think currentMonthClientsMap should have the keys as
 	// unix timestamps, but for the purposes of the unit test it doesn't
 	// matter what the values actually are.
-	currentMonthClientsMap[0] = currentMonthClients
+	currentMonthClientsMap[0] = month
 
 	core, _, _ := TestCoreUnsealed(t)
 	a := core.activityLog
@@ -169,6 +196,798 @@ func Test_ActivityLog_ComputeCurrentMonthForBillingPeriodInternal(t *testing.T) 
 
 	require.Equal(t, &activity.CountsRecord{}, monthRecord.Counts)
 	require.Equal(t, &activity.CountsRecord{}, monthRecord.NewClients.Counts)
+}
+
+// Test_ActivityLog_ComputeCurrentMonth_NamespaceMounts checks that current
+// month counts are combined correctly with 3 previous months of data. The test
+// checks a variety of scenarios with different mount and namespace values
+func Test_ActivityLog_ComputeCurrentMonth_NamespaceMounts(t *testing.T) {
+	testCases := []struct {
+		name                string
+		currentMonthClients []*activity.EntityRecord
+		wantErr             bool
+		wantMonth           *activity.MonthRecord
+	}{
+		{
+			name: "no clients",
+			wantMonth: &activity.MonthRecord{
+				Counts:     &activity.CountsRecord{},
+				Namespaces: []*activity.MonthlyNamespaceRecord{},
+				NewClients: &activity.NewClientRecord{
+					Counts:     &activity.CountsRecord{},
+					Namespaces: []*activity.MonthlyNamespaceRecord{},
+				},
+			},
+		},
+
+		{
+			// all the clients have been seen before
+			// they're all on ns1/mount1
+			name: "all repeated",
+			currentMonthClients: []*activity.EntityRecord{
+				{ClientID: "client_1", ClientType: entityActivityType, NamespaceID: "ns1", MountAccessor: "mount1"},
+				{ClientID: "client_2", ClientType: nonEntityTokenActivityType, NamespaceID: "ns1", MountAccessor: "mount1"},
+				{ClientID: "client_3", ClientType: secretSyncActivityType, NamespaceID: "ns1", MountAccessor: "mount1"},
+				{ClientID: "client_4", ClientType: ACMEActivityType, NamespaceID: "ns1", MountAccessor: "mount1"},
+			},
+			wantMonth: &activity.MonthRecord{
+				Counts: &activity.CountsRecord{
+					EntityClients:    1,
+					SecretSyncs:      1,
+					NonEntityClients: 1,
+					ACMEClients:      1,
+				},
+				Namespaces: []*activity.MonthlyNamespaceRecord{
+					{
+						NamespaceID: "ns1",
+						Counts: &activity.CountsRecord{
+							EntityClients:    1,
+							NonEntityClients: 1,
+							SecretSyncs:      1,
+							ACMEClients:      1,
+						},
+						Mounts: []*activity.MountRecord{
+							{
+								MountPath: "mount1",
+								Counts: &activity.CountsRecord{
+									EntityClients:    1,
+									NonEntityClients: 1,
+									SecretSyncs:      1,
+									ACMEClients:      1,
+								},
+							},
+						},
+					},
+				},
+				NewClients: &activity.NewClientRecord{
+					Counts:     &activity.CountsRecord{},
+					Namespaces: []*activity.MonthlyNamespaceRecord{},
+				},
+			},
+		},
+		{
+			// all the clients have been seen before
+			// they're all on ns1, but mounts 1-4
+			name: "all repeated multiple mounts",
+			currentMonthClients: []*activity.EntityRecord{
+				{ClientID: "client_1", ClientType: entityActivityType, NamespaceID: "ns1", MountAccessor: "mount1"},
+				{ClientID: "client_2", ClientType: nonEntityTokenActivityType, NamespaceID: "ns1", MountAccessor: "mount2"},
+				{ClientID: "client_3", ClientType: secretSyncActivityType, NamespaceID: "ns1", MountAccessor: "mount3"},
+				{ClientID: "client_4", ClientType: ACMEActivityType, NamespaceID: "ns1", MountAccessor: "mount4"},
+			},
+			wantMonth: &activity.MonthRecord{
+				Counts: &activity.CountsRecord{
+					EntityClients:    1,
+					SecretSyncs:      1,
+					NonEntityClients: 1,
+					ACMEClients:      1,
+				},
+				Namespaces: []*activity.MonthlyNamespaceRecord{
+					{
+						NamespaceID: "ns1",
+						Counts: &activity.CountsRecord{
+							EntityClients:    1,
+							NonEntityClients: 1,
+							SecretSyncs:      1,
+							ACMEClients:      1,
+						},
+						Mounts: []*activity.MountRecord{
+							{
+								MountPath: "mount1",
+								Counts: &activity.CountsRecord{
+									EntityClients: 1,
+								},
+							},
+							{
+								MountPath: "mount2",
+								Counts: &activity.CountsRecord{
+									NonEntityClients: 1,
+								},
+							},
+							{
+								MountPath: "mount3",
+								Counts: &activity.CountsRecord{
+									SecretSyncs: 1,
+								},
+							},
+							{
+								MountPath: "mount4",
+								Counts: &activity.CountsRecord{
+									ACMEClients: 1,
+								},
+							},
+						},
+					},
+				},
+				NewClients: &activity.NewClientRecord{
+					Counts:     &activity.CountsRecord{},
+					Namespaces: []*activity.MonthlyNamespaceRecord{},
+				},
+			},
+		},
+		{
+			// all the clients have been seen before
+			// they're on namespaces ns1-4
+			name: "all repeated multiple namespaces",
+			currentMonthClients: []*activity.EntityRecord{
+				{ClientID: "client_1", ClientType: entityActivityType, NamespaceID: "ns1", MountAccessor: "mount1"},
+				{ClientID: "client_2", ClientType: nonEntityTokenActivityType, NamespaceID: "ns2", MountAccessor: "mount1"},
+				{ClientID: "client_3", ClientType: secretSyncActivityType, NamespaceID: "ns3", MountAccessor: "mount1"},
+				{ClientID: "client_4", ClientType: ACMEActivityType, NamespaceID: "ns4", MountAccessor: "mount1"},
+			},
+			wantMonth: &activity.MonthRecord{
+				Counts: &activity.CountsRecord{
+					EntityClients:    1,
+					SecretSyncs:      1,
+					NonEntityClients: 1,
+					ACMEClients:      1,
+				},
+				Namespaces: []*activity.MonthlyNamespaceRecord{
+					{
+						NamespaceID: "ns1",
+						Counts: &activity.CountsRecord{
+							EntityClients: 1,
+						},
+						Mounts: []*activity.MountRecord{
+							{
+								MountPath: "mount1",
+								Counts: &activity.CountsRecord{
+									EntityClients: 1,
+								},
+							},
+						},
+					},
+					{
+						NamespaceID: "ns2",
+						Counts: &activity.CountsRecord{
+							NonEntityClients: 1,
+						},
+						Mounts: []*activity.MountRecord{
+							{
+								MountPath: "mount1",
+								Counts: &activity.CountsRecord{
+									NonEntityClients: 1,
+								},
+							},
+						},
+					},
+					{
+						NamespaceID: "ns3",
+						Counts: &activity.CountsRecord{
+							SecretSyncs: 1,
+						},
+						Mounts: []*activity.MountRecord{
+							{
+								MountPath: "mount1",
+								Counts: &activity.CountsRecord{
+									SecretSyncs: 1,
+								},
+							},
+						},
+					},
+					{
+						NamespaceID: "ns4",
+						Counts: &activity.CountsRecord{
+							ACMEClients: 1,
+						},
+						Mounts: []*activity.MountRecord{
+							{
+								MountPath: "mount1",
+								Counts: &activity.CountsRecord{
+									ACMEClients: 1,
+								},
+							},
+						},
+					},
+				},
+				NewClients: &activity.NewClientRecord{
+					Counts:     &activity.CountsRecord{},
+					Namespaces: []*activity.MonthlyNamespaceRecord{},
+				},
+			},
+		},
+		{
+			// 4 clients that have been seen before on namespaces 1-4
+			// 4 new clients on namespaces 1-4
+			name: "new clients multiple namespaces",
+			currentMonthClients: []*activity.EntityRecord{
+				{ClientID: "client_1", ClientType: entityActivityType, NamespaceID: "ns1", MountAccessor: "mount1"},
+				{ClientID: "client_2", ClientType: nonEntityTokenActivityType, NamespaceID: "ns2", MountAccessor: "mount1"},
+				{ClientID: "client_3", ClientType: secretSyncActivityType, NamespaceID: "ns3", MountAccessor: "mount1"},
+				{ClientID: "client_4", ClientType: ACMEActivityType, NamespaceID: "ns4", MountAccessor: "mount1"},
+				{ClientID: "new_1", ClientType: entityActivityType, NamespaceID: "ns1", MountAccessor: "mount1"},
+				{ClientID: "new_2", ClientType: nonEntityTokenActivityType, NamespaceID: "ns2", MountAccessor: "mount1"},
+				{ClientID: "new_3", ClientType: secretSyncActivityType, NamespaceID: "ns3", MountAccessor: "mount1"},
+				{ClientID: "new_4", ClientType: ACMEActivityType, NamespaceID: "ns4", MountAccessor: "mount1"},
+			},
+			wantMonth: &activity.MonthRecord{
+				Counts: &activity.CountsRecord{
+					EntityClients:    2,
+					SecretSyncs:      2,
+					NonEntityClients: 2,
+					ACMEClients:      2,
+				},
+				Namespaces: []*activity.MonthlyNamespaceRecord{
+					{
+						NamespaceID: "ns1",
+						Counts: &activity.CountsRecord{
+							EntityClients: 2,
+						},
+						Mounts: []*activity.MountRecord{
+							{
+								MountPath: "mount1",
+								Counts: &activity.CountsRecord{
+									EntityClients: 2,
+								},
+							},
+						},
+					},
+					{
+						NamespaceID: "ns2",
+						Counts: &activity.CountsRecord{
+							NonEntityClients: 2,
+						},
+						Mounts: []*activity.MountRecord{
+							{
+								MountPath: "mount1",
+								Counts: &activity.CountsRecord{
+									NonEntityClients: 2,
+								},
+							},
+						},
+					},
+					{
+						NamespaceID: "ns3",
+						Counts: &activity.CountsRecord{
+							SecretSyncs: 2,
+						},
+						Mounts: []*activity.MountRecord{
+							{
+								MountPath: "mount1",
+								Counts: &activity.CountsRecord{
+									SecretSyncs: 2,
+								},
+							},
+						},
+					},
+					{
+						NamespaceID: "ns4",
+						Counts: &activity.CountsRecord{
+							ACMEClients: 2,
+						},
+						Mounts: []*activity.MountRecord{
+							{
+								MountPath: "mount1",
+								Counts: &activity.CountsRecord{
+									ACMEClients: 2,
+								},
+							},
+						},
+					},
+				},
+				NewClients: &activity.NewClientRecord{
+					Counts: &activity.CountsRecord{
+						EntityClients:    1,
+						NonEntityClients: 1,
+						SecretSyncs:      1,
+						ACMEClients:      1,
+					},
+					Namespaces: []*activity.MonthlyNamespaceRecord{
+						{
+							NamespaceID: "ns1",
+							Counts: &activity.CountsRecord{
+								EntityClients: 1,
+							},
+							Mounts: []*activity.MountRecord{
+								{
+									MountPath: "mount1",
+									Counts: &activity.CountsRecord{
+										EntityClients: 1,
+									},
+								},
+							},
+						},
+						{
+							NamespaceID: "ns2",
+							Counts: &activity.CountsRecord{
+								NonEntityClients: 1,
+							},
+							Mounts: []*activity.MountRecord{
+								{
+									MountPath: "mount1",
+									Counts: &activity.CountsRecord{
+										NonEntityClients: 1,
+									},
+								},
+							},
+						},
+						{
+							NamespaceID: "ns3",
+							Counts: &activity.CountsRecord{
+								SecretSyncs: 1,
+							},
+							Mounts: []*activity.MountRecord{
+								{
+									MountPath: "mount1",
+									Counts: &activity.CountsRecord{
+										SecretSyncs: 1,
+									},
+								},
+							},
+						},
+						{
+							NamespaceID: "ns4",
+							Counts: &activity.CountsRecord{
+								ACMEClients: 1,
+							},
+							Mounts: []*activity.MountRecord{
+								{
+									MountPath: "mount1",
+									Counts: &activity.CountsRecord{
+										ACMEClients: 1,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			// 4 clients that have been seen before on ns1/mount1-4
+			// 4 new clients on ns1/mount1-4
+			name: "new clients multiple mounts",
+			currentMonthClients: []*activity.EntityRecord{
+				{ClientID: "client_1", ClientType: entityActivityType, NamespaceID: "ns1", MountAccessor: "mount1"},
+				{ClientID: "client_2", ClientType: nonEntityTokenActivityType, NamespaceID: "ns1", MountAccessor: "mount2"},
+				{ClientID: "client_3", ClientType: secretSyncActivityType, NamespaceID: "ns1", MountAccessor: "mount3"},
+				{ClientID: "client_4", ClientType: ACMEActivityType, NamespaceID: "ns1", MountAccessor: "mount4"},
+				{ClientID: "new_1", ClientType: entityActivityType, NamespaceID: "ns1", MountAccessor: "mount1"},
+				{ClientID: "new_2", ClientType: nonEntityTokenActivityType, NamespaceID: "ns1", MountAccessor: "mount2"},
+				{ClientID: "new_3", ClientType: secretSyncActivityType, NamespaceID: "ns1", MountAccessor: "mount3"},
+				{ClientID: "new_4", ClientType: ACMEActivityType, NamespaceID: "ns1", MountAccessor: "mount4"},
+			},
+			wantMonth: &activity.MonthRecord{
+				Counts: &activity.CountsRecord{
+					EntityClients:    2,
+					SecretSyncs:      2,
+					NonEntityClients: 2,
+					ACMEClients:      2,
+				},
+				Namespaces: []*activity.MonthlyNamespaceRecord{
+					{
+						NamespaceID: "ns1",
+						Counts: &activity.CountsRecord{
+							EntityClients:    2,
+							NonEntityClients: 2,
+							SecretSyncs:      2,
+							ACMEClients:      2,
+						},
+						Mounts: []*activity.MountRecord{
+							{
+								MountPath: "mount1",
+								Counts: &activity.CountsRecord{
+									EntityClients: 2,
+								},
+							},
+							{
+								MountPath: "mount2",
+								Counts: &activity.CountsRecord{
+									NonEntityClients: 2,
+								},
+							},
+							{
+								MountPath: "mount3",
+								Counts: &activity.CountsRecord{
+									SecretSyncs: 2,
+								},
+							},
+							{
+								MountPath: "mount4",
+								Counts: &activity.CountsRecord{
+									ACMEClients: 2,
+								},
+							},
+						},
+					},
+				},
+				NewClients: &activity.NewClientRecord{
+					Counts: &activity.CountsRecord{
+						EntityClients:    1,
+						NonEntityClients: 1,
+						SecretSyncs:      1,
+						ACMEClients:      1,
+					},
+					Namespaces: []*activity.MonthlyNamespaceRecord{
+						{
+							NamespaceID: "ns1",
+							Counts: &activity.CountsRecord{
+								EntityClients:    1,
+								NonEntityClients: 1,
+								SecretSyncs:      1,
+								ACMEClients:      1,
+							},
+							Mounts: []*activity.MountRecord{
+								{
+									MountPath: "mount1",
+									Counts: &activity.CountsRecord{
+										EntityClients: 1,
+									},
+								},
+								{
+									MountPath: "mount2",
+									Counts: &activity.CountsRecord{
+										NonEntityClients: 1,
+									},
+								},
+								{
+									MountPath: "mount3",
+									Counts: &activity.CountsRecord{
+										SecretSyncs: 1,
+									},
+								},
+								{
+									MountPath: "mount4",
+									Counts: &activity.CountsRecord{
+										ACMEClients: 1,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			// 4 clients that have been seen before on ns1/mount1-4
+			// 4 new clients on ns1/mount5-6
+			name: "new clients new mounts",
+			currentMonthClients: []*activity.EntityRecord{
+				{ClientID: "client_1", ClientType: entityActivityType, NamespaceID: "ns1", MountAccessor: "mount1"},
+				{ClientID: "client_2", ClientType: nonEntityTokenActivityType, NamespaceID: "ns1", MountAccessor: "mount2"},
+				{ClientID: "client_3", ClientType: secretSyncActivityType, NamespaceID: "ns1", MountAccessor: "mount3"},
+				{ClientID: "client_4", ClientType: ACMEActivityType, NamespaceID: "ns1", MountAccessor: "mount4"},
+				{ClientID: "new_1", ClientType: entityActivityType, NamespaceID: "ns1", MountAccessor: "mount5"},
+				{ClientID: "new_2", ClientType: nonEntityTokenActivityType, NamespaceID: "ns1", MountAccessor: "mount6"},
+				{ClientID: "new_3", ClientType: secretSyncActivityType, NamespaceID: "ns1", MountAccessor: "mount7"},
+				{ClientID: "new_4", ClientType: ACMEActivityType, NamespaceID: "ns1", MountAccessor: "mount8"},
+			},
+			wantMonth: &activity.MonthRecord{
+				Counts: &activity.CountsRecord{
+					EntityClients:    2,
+					SecretSyncs:      2,
+					NonEntityClients: 2,
+					ACMEClients:      2,
+				},
+				Namespaces: []*activity.MonthlyNamespaceRecord{
+					{
+						NamespaceID: "ns1",
+						Counts: &activity.CountsRecord{
+							EntityClients:    2,
+							NonEntityClients: 2,
+							SecretSyncs:      2,
+							ACMEClients:      2,
+						},
+						Mounts: []*activity.MountRecord{
+							{
+								MountPath: "mount1",
+								Counts: &activity.CountsRecord{
+									EntityClients: 1,
+								},
+							},
+							{
+								MountPath: "mount2",
+								Counts: &activity.CountsRecord{
+									NonEntityClients: 1,
+								},
+							},
+							{
+								MountPath: "mount3",
+								Counts: &activity.CountsRecord{
+									SecretSyncs: 1,
+								},
+							},
+							{
+								MountPath: "mount4",
+								Counts: &activity.CountsRecord{
+									ACMEClients: 1,
+								},
+							},
+							{
+								MountPath: "mount5",
+								Counts: &activity.CountsRecord{
+									EntityClients: 1,
+								},
+							},
+							{
+								MountPath: "mount6",
+								Counts: &activity.CountsRecord{
+									NonEntityClients: 1,
+								},
+							},
+							{
+								MountPath: "mount7",
+								Counts: &activity.CountsRecord{
+									SecretSyncs: 1,
+								},
+							},
+							{
+								MountPath: "mount8",
+								Counts: &activity.CountsRecord{
+									ACMEClients: 1,
+								},
+							},
+						},
+					},
+				},
+				NewClients: &activity.NewClientRecord{
+					Counts: &activity.CountsRecord{
+						EntityClients:    1,
+						NonEntityClients: 1,
+						SecretSyncs:      1,
+						ACMEClients:      1,
+					},
+					Namespaces: []*activity.MonthlyNamespaceRecord{
+						{
+							NamespaceID: "ns1",
+							Counts: &activity.CountsRecord{
+								EntityClients:    1,
+								NonEntityClients: 1,
+								SecretSyncs:      1,
+								ACMEClients:      1,
+							},
+							Mounts: []*activity.MountRecord{
+								{
+									MountPath: "mount5",
+									Counts: &activity.CountsRecord{
+										EntityClients: 1,
+									},
+								},
+								{
+									MountPath: "mount6",
+									Counts: &activity.CountsRecord{
+										NonEntityClients: 1,
+									},
+								},
+								{
+									MountPath: "mount7",
+									Counts: &activity.CountsRecord{
+										SecretSyncs: 1,
+									},
+								},
+								{
+									MountPath: "mount8",
+									Counts: &activity.CountsRecord{
+										ACMEClients: 1,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			// 4 clients that have been seen before on ns1
+			// 4 clients that are new on ns2-5
+			name: "new clients new namespaces",
+			currentMonthClients: []*activity.EntityRecord{
+				{ClientID: "client_1", ClientType: entityActivityType, NamespaceID: "ns1", MountAccessor: "mount1"},
+				{ClientID: "client_2", ClientType: nonEntityTokenActivityType, NamespaceID: "ns1", MountAccessor: "mount1"},
+				{ClientID: "client_3", ClientType: secretSyncActivityType, NamespaceID: "ns1", MountAccessor: "mount1"},
+				{ClientID: "client_4", ClientType: ACMEActivityType, NamespaceID: "ns1", MountAccessor: "mount1"},
+				{ClientID: "new_1", ClientType: entityActivityType, NamespaceID: "ns2", MountAccessor: "mount1"},
+				{ClientID: "new_2", ClientType: nonEntityTokenActivityType, NamespaceID: "ns3", MountAccessor: "mount1"},
+				{ClientID: "new_3", ClientType: secretSyncActivityType, NamespaceID: "ns4", MountAccessor: "mount1"},
+				{ClientID: "new_4", ClientType: ACMEActivityType, NamespaceID: "ns5", MountAccessor: "mount1"},
+			},
+			wantMonth: &activity.MonthRecord{
+				Counts: &activity.CountsRecord{
+					EntityClients:    2,
+					SecretSyncs:      2,
+					NonEntityClients: 2,
+					ACMEClients:      2,
+				},
+				Namespaces: []*activity.MonthlyNamespaceRecord{
+					{
+						NamespaceID: "ns1",
+						Counts: &activity.CountsRecord{
+							EntityClients:    1,
+							NonEntityClients: 1,
+							SecretSyncs:      1,
+							ACMEClients:      1,
+						},
+						Mounts: []*activity.MountRecord{
+							{
+								MountPath: "mount1",
+								Counts: &activity.CountsRecord{
+									EntityClients:    1,
+									NonEntityClients: 1,
+									SecretSyncs:      1,
+									ACMEClients:      1,
+								},
+							},
+						},
+					},
+					{
+						NamespaceID: "ns2",
+						Counts: &activity.CountsRecord{
+							EntityClients: 1,
+						},
+						Mounts: []*activity.MountRecord{
+							{
+								MountPath: "mount1",
+								Counts: &activity.CountsRecord{
+									EntityClients: 1,
+								},
+							},
+						},
+					},
+					{
+						NamespaceID: "ns3",
+						Counts: &activity.CountsRecord{
+							NonEntityClients: 1,
+						},
+						Mounts: []*activity.MountRecord{
+							{
+								MountPath: "mount1",
+								Counts: &activity.CountsRecord{
+									NonEntityClients: 1,
+								},
+							},
+						},
+					},
+					{
+						NamespaceID: "ns4",
+						Counts: &activity.CountsRecord{
+							SecretSyncs: 1,
+						},
+						Mounts: []*activity.MountRecord{
+							{
+								MountPath: "mount1",
+								Counts: &activity.CountsRecord{
+									SecretSyncs: 1,
+								},
+							},
+						},
+					},
+
+					{
+						NamespaceID: "ns5",
+						Counts: &activity.CountsRecord{
+							ACMEClients: 1,
+						},
+						Mounts: []*activity.MountRecord{
+							{
+								MountPath: "mount1",
+								Counts: &activity.CountsRecord{
+									ACMEClients: 1,
+								},
+							},
+						},
+					},
+				},
+				NewClients: &activity.NewClientRecord{
+					Counts: &activity.CountsRecord{
+						EntityClients:    1,
+						NonEntityClients: 1,
+						SecretSyncs:      1,
+						ACMEClients:      1,
+					},
+					Namespaces: []*activity.MonthlyNamespaceRecord{
+						{
+							NamespaceID: "ns2",
+							Counts: &activity.CountsRecord{
+								EntityClients: 1,
+							},
+							Mounts: []*activity.MountRecord{
+								{
+									MountPath: "mount1",
+									Counts: &activity.CountsRecord{
+										EntityClients: 1,
+									},
+								},
+							},
+						},
+						{
+							NamespaceID: "ns3",
+							Counts: &activity.CountsRecord{
+								NonEntityClients: 1,
+							},
+							Mounts: []*activity.MountRecord{
+								{
+									MountPath: "mount1",
+									Counts: &activity.CountsRecord{
+										NonEntityClients: 1,
+									},
+								},
+							},
+						},
+						{
+							NamespaceID: "ns4",
+							Counts: &activity.CountsRecord{
+								SecretSyncs: 1,
+							},
+							Mounts: []*activity.MountRecord{
+								{
+									MountPath: "mount1",
+									Counts: &activity.CountsRecord{
+										SecretSyncs: 1,
+									},
+								},
+							},
+						},
+						{
+							NamespaceID: "ns5",
+							Counts: &activity.CountsRecord{
+								ACMEClients: 1,
+							},
+							Mounts: []*activity.MountRecord{
+								{
+									MountPath: "mount1",
+									Counts: &activity.CountsRecord{
+										ACMEClients: 1,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockHLL := mockHLLGetter(t)
+			core, _, _ := TestCoreUnsealed(t)
+			a := core.activityLog
+			month := newProcessMonth()
+			for _, c := range tc.currentMonthClients {
+				month.add(c)
+			}
+			endTime := timeutil.StartOfMonth(time.Now())
+			startTime := timeutil.MonthsPreviousTo(3, endTime)
+			currentMonth := make(map[int64]*processMonth)
+			currentMonth[0] = month
+			monthRecord, err := a.computeCurrentMonthForBillingPeriodInternal(context.Background(), currentMonth, mockHLL, startTime, endTime)
+			if tc.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			correctMountPaths := func(namespaces []*activity.MonthlyNamespaceRecord) {
+				for _, ns := range namespaces {
+					for _, mount := range ns.Mounts {
+						mount.MountPath = fmt.Sprintf(deletedMountFmt, mount.MountPath)
+					}
+				}
+			}
+			tc.wantMonth.Timestamp = timeutil.StartOfMonth(endTime).Unix()
+			correctMountPaths(tc.wantMonth.Namespaces)
+			correctMountPaths(tc.wantMonth.NewClients.Namespaces)
+			equalActivityMonthRecords(t, tc.wantMonth, monthRecord)
+		})
+	}
 }
 
 // writeEntitySegment writes a single segment file with the given time and index for an entity

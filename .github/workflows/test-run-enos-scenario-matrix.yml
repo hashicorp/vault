@@ -58,7 +58,7 @@ jobs:
       - id: metadata
         run: |
           build_date=$(make ci-get-date)
-          sample_seed=$(date +%s%N)
+          sample_seed=$(date +%s)
           sample=$(enos scenario sample observe "${{ inputs.sample-name }}" --chdir ./enos --min 1 --max "${{ inputs.sample-max }}" --seed "${sample_seed}" --format json | jq -c ".observation.elements")
           if [[ "${{ inputs.vault-edition }}" == "ce" ]]; then
             vault_version="${{ inputs.vault-version }}"
@@ -96,7 +96,13 @@ jobs:
       ENOS_VAR_vault_build_date: ${{ needs.metadata.outputs.build-date }}
       ENOS_VAR_vault_product_version: ${{ needs.metadata.outputs.vault-version }}
       ENOS_VAR_vault_revision: ${{ inputs.vault-revision }}
+      ENOS_VAR_consul_license_path: ./support/consul.hclic
       ENOS_VAR_vault_license_path: ./support/vault.hclic
+      ENOS_VAR_distro_version_amzn2: ${{ matrix.attributes.distro_version_amzn2 }}
+      ENOS_VAR_distro_version_leap: ${{ matrix.attributes.distro_version_leap }}
+      ENOS_VAR_distro_version_rhel: ${{ matrix.attributes.distro_version_rhel }}
+      ENOS_VAR_distro_version_sles: ${{ matrix.attributes.distro_version_sles }}
+      ENOS_VAR_distro_version_ubuntu: ${{ matrix.attributes.distro_version_ubuntu }}
       ENOS_DEBUG_DATA_ROOT_DIR: /tmp/enos-debug-data
     steps:
       - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
@@ -107,7 +113,6 @@ jobs:
           # the Terraform wrapper will break Terraform execution in Enos because
           # it changes the output to text when we expect it to be JSON.
           terraform_wrapper: false
-          terraform_version: "1.7.5" # Pin until 1.8.x crash has been resolved
       - uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI }}
@@ -134,6 +139,11 @@ jobs:
       - if: contains(inputs.sample-name, 'ent')
         name: Configure Vault license
         run: echo "${{ secrets.VAULT_LICENSE }}" > ./enos/support/vault.hclic || true
+      - if: contains(matrix.scenario.id.filter, 'consul_edition:ent')
+        name: Configure Consul license
+        run: |
+          echo "matrix.scenario.id.filter: ${{ matrix.scenario.id.filter }}"
+          echo "${{ secrets.CONSUL_LICENSE }}" > ./enos/support/consul.hclic || true
       - id: launch
         name: enos scenario launch ${{ matrix.scenario.id.filter }}
         # Continue once and retry to handle occasional blips when creating infrastructure.
@@ -175,28 +185,28 @@ jobs:
       # https://api.slack.com/apps/A05E31CH1LG/incoming-webhooks
       - if: ${{ always() && ! cancelled() }}
         name: Notify launch failed
-        uses: hashicorp/actions-slack-status@v2
+        uses: hashicorp/actions-slack-status@v2.0.1
         with:
           failure-message: "enos scenario launch ${{ matrix.scenario.id.filter}} failed. \nTriggering event: `${{ github.event_name }}` \nActor: `${{ github.actor }}`"
           status: ${{ steps.launch.outcome }}
           slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
       - if: ${{ always() && ! cancelled() }}
         name: Notify retry launch failed
-        uses: hashicorp/actions-slack-status@v2
+        uses: hashicorp/actions-slack-status@v2.0.1
         with:
           failure-message: "retry enos scenario launch ${{ matrix.scenario.id.filter}} failed. \nTriggering event: `${{ github.event_name }}` \nActor: `${{ github.actor }}`"
           status: ${{ steps.launch_retry.outcome }}
           slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
       - if: ${{ always() && ! cancelled() }}
         name: Notify destroy failed
-        uses: hashicorp/actions-slack-status@v2
+        uses: hashicorp/actions-slack-status@v2.0.1
         with:
           failure-message: "enos scenario destroy ${{ matrix.scenario.id.filter}} failed. \nTriggering event: `${{ github.event_name }}` \nActor: `${{ github.actor }}`"
           status: ${{ steps.destroy.outcome }}
           slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
       - if: ${{ always() && ! cancelled() }}
         name: Notify retry destroy failed
-        uses: hashicorp/actions-slack-status@v2
+        uses: hashicorp/actions-slack-status@v2.0.1
         with:
           failure-message: "retry enos scenario destroy ${{ matrix.scenario.id.filter}} failed. \nTriggering event: `${{ github.event_name }}` \nActor: `${{ github.actor }}`"
           status: ${{ steps.destroy_retry.outcome }}
