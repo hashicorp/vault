@@ -312,6 +312,8 @@ func TestBackend_validateVaultPostRequestValues(t *testing.T) {
 // panics when referencing the potentially-nil config in the login handler. For
 // details see https://github.com/hashicorp/vault/issues/23361.
 func TestBackend_pathLogin_NoClientConfig(t *testing.T) {
+	t.Setenv("AWS_SHARED_CREDENTIALS_FILE", "/dev/null")
+	t.Setenv("AWS_CONFIG_FILE", "/dev/null")
 	storage := new(logical.InmemStorage)
 	config := logical.TestBackendConfig()
 	config.StorageView = storage
