@@ -237,7 +237,7 @@ func getKeyTypeAndBitsFromPublicKeyForRole(pubKey crypto.PublicKey) (certutil.Pr
 		keyBits = certutil.GetPublicKeySize(pubKey)
 	case *ecdsa.PublicKey:
 		keyType = certutil.ECPrivateKey
-	case *ed25519.PublicKey:
+	case ed25519.PublicKey:
 		keyType = certutil.Ed25519PrivateKey
 	default:
 		return certutil.UnknownPrivateKey, 0, fmt.Errorf("unsupported public key: %#v", pubKey)

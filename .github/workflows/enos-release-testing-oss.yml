@@ -15,7 +15,7 @@ jobs:
       vault-version: ${{ github.event.client_payload.payload.version }}
       vault-version-package: ${{ steps.get-metadata.outputs.vault-version-package }}
     steps:
-      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
         with:
           # Check out the repository at the same Git SHA that was used to create
           # the artifacts to get the correct metadata.
@@ -69,4 +69,4 @@ jobs:
     needs: test
     steps:
       - name: Persist metadata
-        uses: hashicorp/actions-persist-metadata@v1
+        uses: hashicorp/actions-persist-metadata@v2

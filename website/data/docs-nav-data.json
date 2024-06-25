@@ -57,10 +57,13 @@
         "path": "internals/integrated-storage"
       },
       {
+        "title": "Recommended patterns",
+        "path": "internals/recommended-patterns"
+      },
+      {
         "title": "Security Model",
         "path": "internals/security"
       },
-
       {
         "title": "Telemetry",
         "routes": [
@@ -338,6 +341,14 @@
         "path": "configuration"
       },
       {
+        "title": "Programmatic best practices",
+        "path": "configuration/programmatic-best-practices"
+      },
+      {
+        "title": "Manage resources programmatically",
+        "path": "configuration/programmatic-management"
+      },
+      {
         "title": "<code>listener</code>",
         "routes": [
           {
@@ -346,7 +357,16 @@
           },
           {
             "title": "TCP",
-            "path": "configuration/listener/tcp"
+            "routes": [  
+              {
+                "title": "Overview",
+                "path": "configuration/listener/tcp"
+              },
+              {
+                "title": "Configure TLS",
+                "path": "configuration/listener/tcp/tcp-tls"
+              }
+            ]
           },
           {
             "title": "Unix",
@@ -373,7 +393,7 @@
           {
             "title": "High Availability",
             "badge": {
-              "text": "ENTERPRISE | BETA",
+              "text": "ENTERPRISE",
               "type": "outlined",
               "color": "highlight"
             },
@@ -1061,6 +1081,19 @@
           }
         ]
       },
+      {
+        "title": "<code>transform</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/transform"
+          },
+          {
+            "title": "<code>import</code> and <code>import-version</code>",
+            "path": "commands/transform/import"
+          }
+        ]
+      },      
       {
         "title": "<code>unwrap</code>",
         "path": "commands/unwrap"
@@ -2672,6 +2705,10 @@
       {
         "title": "Long-term support (LTS)",
         "path": "enterprise/lts"
+      },
+      {
+        "title": "Design your Vault Enterprise cluster",
+        "path": "enterprise/cluster-design"
       },
       {
         "title": "Replication",

@@ -29,8 +29,16 @@ import { stringify } from 'core/helpers/stringify';
 export default class KvDataFields extends Component {
   @tracked lintingErrors;
 
+  get startingValue() {
+    // must pass the third param called "space" in JSON.stringify to structure object with whitespace
+    // otherwise the following codemirror modifier check will pass `this._editor.getValue() !== namedArgs.content` and _setValue will be called.
+    // the method _setValue moves the cursor to the beginning of the text field.
+    // the effect is that the cursor jumps after the first key input.
+    return JSON.stringify({ '': '' }, null, 2);
+  }
+
   get stringifiedSecretData() {
-    return this.args.secret?.secretData ? stringify([this.args.secret.secretData], {}) : '{ "": "" }';
+    return this.args.secret?.secretData ? stringify([this.args.secret.secretData], {}) : this.startingValue;
   }
 
   @action

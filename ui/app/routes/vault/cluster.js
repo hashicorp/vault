@@ -121,6 +121,10 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
   afterModel(model, transition) {
     this._super(...arguments);
     this.currentCluster.setCluster(model);
+    if (model.needsInit && this.auth.currentToken) {
+      // clear token to prevent infinite load state
+      this.auth.deleteCurrentToken();
+    }
 
     // Check that namespaces is enabled and if not,
     // clear the namespace by transition to this route w/o it
