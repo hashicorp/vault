@@ -2,20 +2,22 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: BUSL-1.1
 
-
 set -e
-
-binpath=${VAULT_INSTALL_DIR}/vault
 
 fail() {
   echo "$1" 1>&2
   return 1
 }
 
-test -x "$binpath" || fail "unable to locate vault binary at $binpath"
-
-export VAULT_ADDR='http://127.0.0.1:8200'
+[[ -z "$AGENT_LISTEN_ADDR" ]] && fail "AGENT_LISTEN_ADDR env variable has not been set"
+[[ -z "$VAULT_ADDR" ]] && fail "VAULT_ADDR env variable has not been set"
+[[ -z "$VAULT_INSTALL_DIR" ]] && fail "VAULT_INSTALL_DIR env variable has not been set"
+[[ -z "$VAULT_AGENT_TEMPLATE_CONTENTS" ]] && fail "VAULT_AGENT_TEMPLATE_CONTENTS env variable has not been set"
+[[ -z "$VAULT_AGENT_TEMPLATE_DESTINATION" ]] && fail "VAULT_AGENT_TEMPLATE_DESTINATION env variable has not been set"
 [[ -z "$VAULT_TOKEN" ]] && fail "VAULT_TOKEN env variable has not been set"
+
+binpath=${VAULT_INSTALL_DIR}/vault
+test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 
 # If approle was already enabled, disable it as we're about to re-enable it (the || true is so we don't fail if it doesn't already exist)
 $binpath auth disable approle || true
@@ -43,7 +45,7 @@ cat > /tmp/vault-agent.hcl <<- EOM
 pid_file = "/tmp/pidfile"
 
 vault {
-  address = "http://127.0.0.1:8200"
+  address = "${VAULT_ADDR}"
   tls_skip_verify = true
   retry {
     num_retries = 10
@@ -56,7 +58,7 @@ cache {
 }
 
 listener "tcp" {
-  address = "127.0.0.1:8100"
+  address = "${AGENT_LISTEN_ADDR}"
   tls_disable = true
 }
 
@@ -92,4 +94,6 @@ pkill -F /tmp/pidfile || true
 rm "${VAULT_AGENT_TEMPLATE_DESTINATION}" || true
 
 # Run agent (it will kill itself when it finishes rendering the template)
-$binpath agent -config=/tmp/vault-agent.hcl > /tmp/agent-logs.txt 2>&1
+if ! $binpath agent -config=/tmp/vault-agent.hcl > /tmp/agent-logs.txt 2>&1; then
+  fail "failed to run vault agent: $(cat /tmp/agent-logs.txt)"
+fi

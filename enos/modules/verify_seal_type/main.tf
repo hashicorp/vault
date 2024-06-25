@@ -9,13 +9,9 @@ terraform {
   }
 }
 
-variable "vault_install_dir" {
-  type        = string
-  description = "The directory where the Vault binary will be installed"
-}
-
-variable "vault_hosts" {
+variable "hosts" {
   type = map(object({
+    ipv6       = string
     private_ip = string
     public_ip  = string
   }))
@@ -28,13 +24,24 @@ variable "seal_type" {
   default     = "shamir"
 }
 
+
+variable "vault_addr" {
+  type        = string
+  description = "The local vault API listen address"
+}
+
+variable "vault_install_dir" {
+  type        = string
+  description = "The directory where the Vault binary will be installed"
+}
+
 resource "enos_remote_exec" "verify_seal_type" {
-  for_each = var.vault_hosts
+  for_each = var.hosts
 
   scripts = [abspath("${path.module}/scripts/verify-seal-type.sh")]
 
   environment = {
-    VAULT_ADDR         = "http://127.0.0.1:8200"
+    VAULT_ADDR         = var.vault_addr
     VAULT_INSTALL_DIR  = var.vault_install_dir
     EXPECTED_SEAL_TYPE = var.seal_type
   }
