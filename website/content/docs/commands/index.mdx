@@ -439,6 +439,12 @@ Prevents the Vault client from following redirects. By default, the Vault client
 
 ~> **Note:** Disabling redirect following behavior could cause issues with commands such as 'vault operator raft snapshot' as this command redirects the request to the cluster's primary node.
 
+### `VAULT_HEADERS`
+
+JSON-encoded headers to include in Vault HTTP requests performed by the CLI. For example: `{"FOO": "BAR"}`.
+
+Like the `-header` CLI parameter, headers starting with `X-Vault-` are forbidden.
+
 ## Flags
 
 There are different CLI flags that are available depending on subcommands. Some

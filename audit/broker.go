@@ -462,6 +462,8 @@ func (b *Broker) IsRegistered(name string) bool {
 
 // isContextViable examines the supplied context to see if its own deadline would
 // occur later than a newly created context with a specific timeout.
+// Additionally, whether the supplied context is already cancelled, thus making it
+// unviable.
 // If the existing context is viable it can be used 'as-is', if not, the caller
 // should consider creating a new context with the relevant deadline and associated
 // context values (e.g. namespace) in order to reduce the likelihood that the
@@ -470,6 +472,12 @@ func (b *Broker) IsRegistered(name string) bool {
 func isContextViable(ctx context.Context) bool {
 	if ctx == nil {
 		return false
+	}
+
+	select {
+	case <-ctx.Done():
+		return false
+	default:
 	}
 
 	deadline, hasDeadline := ctx.Deadline()

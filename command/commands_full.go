@@ -43,7 +43,7 @@ import (
 	physFile "github.com/hashicorp/vault/sdk/physical/file"
 )
 
-func newFullAddonCommands() (map[string]physical.Factory, map[string]LoginHandler) {
+func newFullAddonHandlers() (map[string]physical.Factory, map[string]LoginHandler) {
 	addonPhysicalBackends := map[string]physical.Factory{
 		"aerospike":             physAerospike.NewAerospikeBackend,
 		"alicloudoss":           physAliCloudOSS.NewAliCloudOSSBackend,
@@ -88,9 +88,9 @@ func newFullAddonCommands() (map[string]physical.Factory, map[string]LoginHandle
 	return addonPhysicalBackends, addonLoginHandlers
 }
 
-func extendAddonCommands() {
-	addonPhysicalBackends, addonLoginHandlers := newFullAddonCommands()
+func extendAddonHandlers(handlers *vaultHandlers) {
+	addonPhysicalBackends, addonLoginHandlers := newFullAddonHandlers()
 
-	maps.Copy(physicalBackends, addonPhysicalBackends)
-	maps.Copy(loginHandlers, addonLoginHandlers)
+	maps.Copy(handlers.physicalBackends, addonPhysicalBackends)
+	maps.Copy(handlers.loginHandlers, addonLoginHandlers)
 }
