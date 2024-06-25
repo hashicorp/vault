@@ -102,10 +102,11 @@ runs:
         if [ '${{ github.event_name }}' = 'pull_request' ]; then
           is_draft='${{ github.event.pull_request.draft }}'
 
-          # Determine our labels. If our event type is pull_request this is rather straight forward. If
-          # our even_type is push (merge) we'll need to look up the pull request associated with the
-          # commit and get the labels. This will return the label names as an array.
-          labels=$(jq -rc <<< '${{ toJSON(github.event.pull_request.labels.*.name) }}')
+          # Determine our pull request labels. We specifically look them up via the pulls API
+          # because at some point they stopped being reliable in the
+          # github.event.pull_request.labels.*.name context.
+
+          labels=$(gh api "/repos/${{ github.repository }}/issues/${{ github.event.number }}/labels" | jq -erc '. | map(.name)')
         else
           is_draft='false'
 
