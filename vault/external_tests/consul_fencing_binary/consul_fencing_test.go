@@ -118,7 +118,7 @@ func TestConsulFencing_PartitionedLeaderCantWrite(t *testing.T) {
 	require.NoError(t, err)
 
 	const interval = 500 * time.Millisecond
-	const timeout = 4 * time.Second
+	const timeout = 3 * time.Second
 	runWriter := func(i int, targetServer testcluster.VaultClusterNode, ctr *uint64) {
 		wg.Add(1)
 		defer wg.Done()
