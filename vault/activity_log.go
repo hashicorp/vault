@@ -1016,7 +1016,8 @@ func (a *ActivityLog) SetConfigInit(config activityConfig) {
 	a.defaultReportMonths = config.DefaultReportMonths
 	a.retentionMonths = config.RetentionMonths
 
-	if a.retentionMonths < a.configOverrides.MinimumRetentionMonths {
+	// Let tests override the minimum if they want to.
+	if a.configOverrides.MinimumRetentionMonths > 0 {
 		a.retentionMonths = a.configOverrides.MinimumRetentionMonths
 	}
 
