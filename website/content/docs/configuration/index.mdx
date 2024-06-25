@@ -75,6 +75,7 @@ to specify where the configuration is.
 - `cluster_name` `(string: <generated>)` – Specifies a human-readable
   identifier for the Vault cluster. If omitted, Vault will generate a value.
   The cluster name is included as a label in some [telemetry metrics](/vault/docs/internals/telemetry/metrics/).
+  The cluster name is safe to update on an existing Vault cluster.
 
 - `cache_size` `(string: "131072")` – Specifies the size of the read cache used
   by the physical storage subsystem. The value is in number of entries, so the
