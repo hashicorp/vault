@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
-	sockaddr "github.com/hashicorp/go-sockaddr"
-	proxyproto "github.com/pires/go-proxyproto"
+	"github.com/hashicorp/go-sockaddr"
+	"github.com/pires/go-proxyproto"
 )
 
 // ProxyProtoConfig contains configuration for the PROXY protocol
