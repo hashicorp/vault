@@ -178,8 +178,7 @@ module('Integration | Component | mfa-form', function (hooks) {
   test('it should show countdown on passcode already used and rate limit errors', async function (assert) {
     const messages = {
       used: 'code already used; new code is available in 30 seconds',
-      // there an intentional typo in the error message (30s seconds)
-      // that is what the backend returns
+      // note: the backend returns a duplicate "s" in "30s seconds" in the limit message below. we have intentionally left it as is to ensure our regex for parsing the delay time can handle it
       limit:
         'maximum TOTP validation attempts 4 exceeded the allowed attempts 3. Please try again in 30s seconds',
     };
