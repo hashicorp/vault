@@ -21,7 +21,7 @@ export default create({
   mountPath: fillable('[data-test-auth-form-mount-path]'),
   authType: fillable('[data-test-select="auth-method"]'),
 
-  login: async function (token = rootToken) {
+  login: async function (token = 'root') {
     // make sure we're always logged out and logged back in
     await this.logout();
     await settled();
@@ -29,7 +29,7 @@ export default create({
     window.localStorage.clear();
     await this.visit({ with: 'token' });
     await settled();
-    // await this.tokenInput(token).submit();
+    await this.tokenInput(token).submit();
     await settled();
     return;
   },
