@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/pires/go-proxyproto"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTCPListener(t *testing.T) {
@@ -462,5 +463,75 @@ func TestTCPListener_proxyProtocol(t *testing.T) {
 
 			testListenerImpl(t, ln, connFn, "", 0, tc.ExpectedAddr, tc.ExpectError)
 		})
+	}
+}
+
+// TestTCPListener_proxyProtocol_keepAcceptingOnInvalidUpstream ensures that the server side listener
+// never returns an error from the listener.Accept method if the error is that the
+// upstream proxy isn't trusted. If an error is returned, underlying Go HTTP native
+// libraries may close down a server and stop listening.
+func TestTCPListener_proxyProtocol_keepAcceptingOnInvalidUpstream(t *testing.T) {
+	timeout := 3 * time.Second
+
+	// Configure proxy so we hit the deny unauthorized behavior.
+	header := &proxyproto.Header{
+		Version:           1,
+		Command:           proxyproto.PROXY,
+		TransportProtocol: proxyproto.TCPv4,
+		SourceAddr: &net.TCPAddr{
+			IP:   net.ParseIP("10.1.1.1"),
+			Port: 1000,
+		},
+		DestinationAddr: &net.TCPAddr{
+			IP:   net.ParseIP("20.2.2.2"),
+			Port: 2000,
+		},
+	}
+
+	var authAddrs []*sockaddr.SockAddrMarshaler
+	sockAddr, err := sockaddr.NewSockAddr("10.0.0.1/32")
+	require.NoError(t, err)
+	authAddrs = append(authAddrs, &sockaddr.SockAddrMarshaler{SockAddr: sockAddr})
+
+	ln, _, _, err := tcpListenerFactory(&configutil.Listener{
+		Address:                      "127.0.0.1:0",
+		TLSDisable:                   true,
+		ProxyProtocolBehavior:        "deny_unauthorized",
+		ProxyProtocolAuthorizedAddrs: authAddrs,
+	}, nil, cli.NewMockUi())
+	require.NoError(t, err)
+
+	// Kick off setting up server side, if we ever accept a connection send it out
+	// via a channel.
+	serverConnCh := make(chan net.Conn, 1)
+	go func() {
+		serverConn, err := ln.Accept()
+		// We shouldn't ever have an error if the problem was only that the upstream
+		// proxy wasn't trusted.
+		// An error would lead to the http.Serve closing the listener and giving up.
+		require.NoError(t, err, "server side listener errored")
+		serverConnCh <- serverConn
+	}()
+
+	// Now try to connect as the client.
+	d := net.Dialer{Timeout: timeout}
+	clientConn, err := d.Dial("tcp", ln.Addr().String())
+	require.NoError(t, err)
+	defer clientConn.Close()
+	_, err = header.WriteTo(clientConn)
+	require.NoError(t, err)
+
+	// Wait for the server to have accepted a connection, or we time out.
+	select {
+	case <-time.After(timeout):
+		// The server still hasn't accepted any valid client connection.
+		// Try to write another header using the same connection which should have
+		// been closed by the server, we expect that this client side connection was
+		// closed as it us untrusted,
+		_, err = header.WriteTo(clientConn)
+		require.Error(t, err, "reused a rejected connection without error")
+	case serverConn := <-serverConnCh:
+		require.NotNil(t, serverConn)
+		defer serverConn.Close()
 	}
 }
