@@ -433,7 +433,7 @@ func TestTCPListener_proxyProtocol(t *testing.T) {
 	}
 }
 
-// TestTCPListener_proxyProtocol_keepAccepting ensures that the server side listener
+// TestTCPListener_proxyProtocol_keepAcceptingOnInvalidUpstream ensures that the server side listener
 // never returns an error from the listener.Accept method if the error is that the
 // upstream proxy isn't trusted. If an error is returned, underlying Go HTTP native
 // libraries may close down a server and stop listening.
