@@ -56,12 +56,15 @@ export default class DestinationsCreateForm extends Component<Args> {
         };
   }
 
-  groupSubtext(group: string) {
+  groupSubtext(group: string, isNew: boolean) {
+    const dynamicText = isNew
+      ? 'used to authenticate with the destination'
+      : 'and the value cannot be read. Enable the input to update';
     switch (group) {
       case 'Advanced configuration':
         return 'Configuration options for the destination.';
       case 'Credentials':
-        return 'Connection credentials are sensitive information used to authenticate with the destination.';
+        return `Connection credentials are sensitive information ${dynamicText}.`;
       default:
         return '';
     }
