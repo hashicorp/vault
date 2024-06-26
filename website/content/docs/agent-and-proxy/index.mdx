@@ -92,12 +92,12 @@ available when connected to a Vault Enterprise server.
 | Capability                                                                               |    Vault Agent     | Vault Proxy |
 |------------------------------------------------------------------------------------------|:------------------:|:-----------:|
 | [Auto-Auth][autoauth] to authenticate with Vault                                         |         x          |      x      |
-| [Caching][caching] the newly created tokens and leases                                   |         x          |      x      |
 | Run as a [Windows Service][winsvc]                                                       |         x          |      x      |
+| [Caching][caching] the newly created tokens and leases                                   |         x          |      x      |
 | [Templating][template] to render user-supplied templates                                 |         x          |             |
+| [Process Supervisor][exec] for injecting secrets as environment variables into a process |         x          |             |
 | [API Proxy][apiproxy] to act as a proxy for Vault API                                    | Will be deprecated |      x      |
 | [Static secret caching][static-secret-caching] for KV secrets                            |                    |      x      |
-| [Process Supervisor][exec] for injecting secrets as environment variables into a process |         x          |             |
 
 To learn more, refer to the [Vault Agent][vaultagent] or [Vault
 Proxy][vaultproxy] documentation page.
