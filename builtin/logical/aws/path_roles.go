@@ -128,7 +128,7 @@ delimited key pairs.`, assumedRoleCred),
 			},
 			"external_id": {
 				Type:        framework.TypeString,
-				Description: "External ID to set when assuming the role; only valid when credential_type is" + assumedRoleCred,
+				Description: "External ID to set when assuming the role; only valid when credential_type is " + assumedRoleCred,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "External ID",
 				},
