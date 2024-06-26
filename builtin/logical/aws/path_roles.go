@@ -16,6 +16,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -642,10 +643,6 @@ func (r *awsRoleEntry) validate() error {
 
 	if len(r.SessionTags) > 0 && !strutil.StrListContains(r.CredentialTypes, assumedRoleCred) {
 		errors = multierror.Append(errors, fmt.Errorf("cannot supply session_tags when credential_type isn't %s", assumedRoleCred))
-		// https://docs.aws.amazon.com/IAM/latest/UserGuide/id_session-tags.html#id_session-tags_know
-		if len(r.SessionTags) > 50 {
-			errors = multierror.Append(errors, fmt.Errorf("cannot supply more than %d session_tags", 50))
-		}
 	}
 
 	if r.ExternalID != "" && !strutil.StrListContains(r.CredentialTypes, assumedRoleCred) {
