@@ -29,7 +29,7 @@ export default create({
     window.localStorage.clear();
     await this.visit({ with: 'token' });
     await settled();
-    await this.tokenInput(token).submit();
+    // await this.tokenInput(token).submit();
     await settled();
     return;
   },
