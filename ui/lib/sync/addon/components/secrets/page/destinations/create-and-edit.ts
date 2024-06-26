@@ -56,6 +56,17 @@ export default class DestinationsCreateForm extends Component<Args> {
         };
   }
 
+  groupSubtext(group: string) {
+    switch (group) {
+      case 'Advanced configuration':
+        return 'Configuration options for the destination.';
+      case 'Credentials':
+        return 'Connection credentials are sensitive information used to authenticate with the destination.';
+      default:
+        return '';
+    }
+  }
+
   @task
   @waitFor
   *save(event: Event) {

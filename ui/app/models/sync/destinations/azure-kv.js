@@ -26,7 +26,7 @@ const formFieldGroups = [
     default: ['name', 'keyVaultUri', 'tenantId', 'cloud', 'clientId'],
   },
   { Credentials: ['clientSecret'] },
-  { config: ['granularity', 'secretNameTemplate', 'customTags'] },
+  { 'Advanced configuration': ['granularity', 'secretNameTemplate', 'customTags'] },
 ];
 @withFormFields(displayFields, formFieldGroups)
 export default class SyncDestinationsAzureKeyVaultModel extends SyncDestinationModel {

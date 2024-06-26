@@ -37,7 +37,7 @@ const displayFields = [
 const formFieldGroups = [
   { default: ['name', 'projectId', 'teamId', 'deploymentEnvironments'] },
   { Credentials: ['accessToken'] },
-  { config: ['granularity', 'secretNameTemplate'] },
+  { 'Advanced configuration': ['granularity', 'secretNameTemplate'] },
 ];
 @withModelValidations(validations)
 @withFormFields(displayFields, formFieldGroups)

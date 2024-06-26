@@ -21,7 +21,7 @@ const displayFields = [
 const formFieldGroups = [
   { default: ['name', 'projectId'] },
   { Credentials: ['credentials'] },
-  { config: ['granularity', 'secretNameTemplate', 'customTags'] },
+  { 'Advanced configuration': ['granularity', 'secretNameTemplate', 'customTags'] },
 ];
 @withFormFields(displayFields, formFieldGroups)
 export default class SyncDestinationsGoogleCloudSecretManagerModel extends SyncDestinationModel {

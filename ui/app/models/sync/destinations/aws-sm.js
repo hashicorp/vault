@@ -27,7 +27,7 @@ const formFieldGroups = [
     default: ['name', 'region', 'roleArn', 'externalId'],
   },
   { Credentials: ['accessKeyId', 'secretAccessKey'] },
-  { config: ['granularity', 'secretNameTemplate', 'customTags'] },
+  { 'Advanced configuration': ['granularity', 'secretNameTemplate', 'customTags'] },
 ];
 @withFormFields(displayFields, formFieldGroups)
 export default class SyncDestinationsAwsSecretsManagerModel extends SyncDestinationModel {
