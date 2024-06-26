@@ -314,6 +314,10 @@ export default Service.extend({
       this.set('allowExpiration', true);
     }
 
+    // don't allow token expiration in testing
+    // this ensures we don't try to call renew-self within tests
+    if (Ember.testing) this.set('allowExpiration', false);
+
     if (!data.displayName) {
       data.displayName = (this.getTokenData(tokenName) || {}).displayName;
     }
@@ -343,9 +347,9 @@ export default Service.extend({
   renew() {
     const tokenName = this.currentTokenName;
     const currentlyRenewing = this.isRenewing;
-    if (currentlyRenewing) {
-      return;
-    }
+
+    if (currentlyRenewing) return;
+
     this.isRenewing = true;
     return this.renewCurrentToken().then(
       (resp) => {
