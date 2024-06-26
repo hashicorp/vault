@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/template"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -298,13 +299,16 @@ func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 	if externalID != "" {
 		assumeRoleInput.SetExternalId(externalID)
 	}
-	if len(sessionTags) > 0 {
-		var tags []*sts.Tag
-		for k, v := range sessionTags {
-			tags = append(tags, &sts.Tag{Key: aws.String(k), Value: aws.String(v)})
-		}
-		assumeRoleInput.SetTags(tags)
+	var tags []*sts.Tag
+	for k, v := range sessionTags {
+		tags = append(tags,
+			&sts.Tag{
+				Key:   aws.String(k),
+				Value: aws.String(v),
+			},
+		)
 	}
+	assumeRoleInput.SetTags(tags)
 	tokenResp, err := stsClient.AssumeRoleWithContext(ctx, assumeRoleInput)
 	if err != nil {
 		return logical.ErrorResponse("Error assuming role: %s", err), awsutil.CheckAWSError(err)
