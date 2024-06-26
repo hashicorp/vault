@@ -1,40 +1,37 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Ember from 'ember';
 import { debounce, later } from '@ember/runloop';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { guidFor } from '@ember/object/internals';
 import Component from '@glimmer/component';
 
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { keyIsFolder, parentKeyForKey } from 'core/utils/key-utils';
-// TODO MOVE THESE TO THE ADDON
-import keys from 'vault/lib/keycodes';
+import keys from 'core/utils/key-codes';
 
 /**
  * @module NavigateInput
  * `NavigateInput` components are used to filter list data.
  *
  * @example
- * ```js
- * <NavigateInput @filter={@roleFiltered} @placeholder="placeholder text" urls="{{hash list="vault.cluster.secrets.backend.kubernetes.roles"}}"/>
- * ```
+ * <NavigateInput @filter={{@roleFiltered}} urls={{hash list="vault.cluster.secrets.backend.kubernetes.roles"}}/>
  *
  * @param {String} filter=null  - The filtered string.
- * @param {String} [placeholder="Filter items"] - The message inside the input to indicate what the user should enter into the space.
+ * @param {String} [placeholder=Filter items] - The message inside the input to indicate what the user should enter into the space.
  * @param {Object} [urls=null] - An object containing list=route url.
  * @param {Function} [filterFocusDidChange=null] - A function called when the focus changes.
  * @param {Function} [filterDidChange=null] - A function called when the filter string changes.
  * @param {Function} [filterMatchesKey=null] - A function used to match to a specific key, such as an Id.
  * @param {Function} [filterPartialMatch=null] - A function used to filter through a partial match. Such as "oo" of "root".
- * @param {String} [baseKey=""] - A string to transition by Id.
+ * @param {String} [baseKey] - A string to transition by Id.
  * @param {Boolean} [shouldNavigateTree=false] - If true, navigate a larger tree, such as when you're navigating leases under access.
- * @param {String} [mode="secrets"] - Mode which plays into navigation type.
- * @param {String} [extraNavParams=""] - A string used in route transition when necessary.
+ * @param {String} [mode=secrets] - Mode which plays into navigation type.
+ * @param {String} [extraNavParams] - A string used in route transition when necessary.
  */
 
 const routeFor = function (type, mode, urls) {

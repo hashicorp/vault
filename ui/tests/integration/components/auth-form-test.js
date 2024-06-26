@@ -1,196 +1,123 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { later, _cancelTimers as cancelTimers } from '@ember/runloop';
-import EmberObject from '@ember/object';
-import { resolve } from 'rsvp';
-import Service from '@ember/service';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, settled } from '@ember/test-helpers';
+import { click, fillIn, render, settled } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
-import Pretender from 'pretender';
-import { create } from 'ember-cli-page-object';
-import authForm from '../../pages/components/auth-form';
-import { validate } from 'uuid';
-
-const component = create(authForm);
-
-const workingAuthService = Service.extend({
-  authenticate() {
-    return resolve({});
-  },
-  handleError() {},
-  setLastFetch() {},
-});
-
-const routerService = Service.extend({
-  transitionTo() {
-    return {
-      followRedirects() {
-        return resolve();
-      },
-    };
-  },
-});
+import { setupMirage } from 'ember-cli-mirage/test-support';
+import { Response } from 'miragejs';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 
 module('Integration | Component | auth form', function (hooks) {
   setupRenderingTest(hooks);
+  setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.owner.register('service:router', routerService);
     this.router = this.owner.lookup('service:router');
+    this.selectedAuth = 'token';
+    this.performAuth = sinon.spy();
+    this.renderComponent = async () => {
+      return render(hbs`
+        <AuthForm
+          @wrappedToken={{this.wrappedToken}}
+          @cluster={{this.cluster}}
+          @selectedAuth={{this.selectedAuth}}
+          @performAuth={{this.performAuth}}
+          @authIsRunning={{this.authIsRunning}}
+          @delayIsIdle={{this.delayIsIdle}}
+        />`);
+    };
   });
 
-  const CSP_ERR_TEXT = `Error This is a standby Vault node but can't communicate with the active node via request forwarding. Sign in at the active node to use the Vault UI.`;
-  test('it renders error on CSP violation', async function (assert) {
-    assert.expect(2);
-    this.set('cluster', EmberObject.create({ standby: true }));
-    this.set('selectedAuth', 'token');
-    await render(hbs`{{auth-form cluster=this.cluster selectedAuth=this.selectedAuth}}`);
-    assert.false(component.errorMessagePresent, false);
-    this.owner.lookup('service:csp-event').events.addObject({ violatedDirective: 'connect-src' });
-    await settled();
-    assert.strictEqual(component.errorText, CSP_ERR_TEXT);
+  test('it calls performAuth on submit', async function (assert) {
+    await this.renderComponent();
+    await fillIn(AUTH_FORM.input('token'), '123token');
+    await click(AUTH_FORM.login);
+    const [type, data] = this.performAuth.lastCall.args;
+    assert.strictEqual(type, 'token', 'performAuth is called with type');
+    assert.propEqual(data, { token: '123token' }, 'performAuth is called with data');
   });
 
-  test('it renders with vault style errors', async function (assert) {
-    assert.expect(1);
-    const server = new Pretender(function () {
-      this.get('/v1/auth/**', () => {
-        return [
-          400,
-          { 'Content-Type': 'application/json' },
-          JSON.stringify({
-            errors: ['Not allowed'],
-          }),
-        ];
-      });
-      this.get('/v1/sys/internal/ui/mounts', this.passthrough);
-    });
-
-    this.set('cluster', EmberObject.create({}));
-    this.set('selectedAuth', 'token');
-    await render(hbs`{{auth-form cluster=this.cluster selectedAuth=this.selectedAuth}}`);
-    return component.login().then(() => {
-      assert.strictEqual(component.errorText, 'Error Authentication failed: Not allowed');
-      server.shutdown();
-    });
+  test('it disables sign in button when authIsRunning', async function (assert) {
+    this.authIsRunning = true;
+    await this.renderComponent();
+    assert.dom(AUTH_FORM.login).isDisabled('sign in button is disabled');
+    assert.dom(`${AUTH_FORM.login} [data-test-icon="loading"]`).exists('sign in button renders loading icon');
   });
 
-  test('it renders AdapterError style errors', async function (assert) {
-    assert.expect(1);
-    const server = new Pretender(function () {
-      this.get('/v1/auth/**', () => {
-        return [400, { 'Content-Type': 'application/json' }];
-      });
-      this.get('/v1/sys/internal/ui/mounts', this.passthrough);
-    });
-
-    this.set('cluster', EmberObject.create({}));
-    this.set('selectedAuth', 'token');
-    await render(hbs`{{auth-form cluster=this.cluster selectedAuth=this.selectedAuth}}`);
-    // returns null because test does not return details of failed network request. On the app it will return the details of the error instead of null.
-    return component.login().then(() => {
-      assert.strictEqual(component.errorText, 'Error Authentication failed: null');
-      server.shutdown();
-    });
+  test('it renders alert info message when delayIsIdle', async function (assert) {
+    this.delayIsIdle = true;
+    this.authIsRunning = true;
+    await this.renderComponent();
+    assert
+      .dom(GENERAL.inlineAlert)
+      .hasText(
+        'If login takes longer than usual, you may need to check your device for an MFA notification, or contact your administrator if login times out.'
+      );
   });
 
   test('it renders no tabs when no methods are passed', async function (assert) {
-    const methods = {
-      'approle/': {
-        type: 'approle',
-      },
-    };
-    const server = new Pretender(function () {
-      this.get('/v1/sys/internal/ui/mounts', () => {
-        return [200, { 'Content-Type': 'application/json' }, JSON.stringify({ data: { auth: methods } })];
-      });
+    this.server.get('/sys/internal/ui/mounts', () => {
+      return {
+        data: {
+          auth: {
+            'approle/': {
+              type: 'approle',
+            },
+          },
+        },
+      };
     });
-    await render(hbs`<AuthForm @cluster={{this.cluster}} />`);
+    await this.renderComponent();
 
-    assert.strictEqual(component.tabs.length, 0, 'renders a tab for every backend');
-    server.shutdown();
+    assert.dom(AUTH_FORM.tabs()).doesNotExist();
   });
 
   test('it renders all the supported methods and Other tab when methods are present', async function (assert) {
-    const methods = {
-      'foo/': {
-        type: 'userpass',
-      },
-      'approle/': {
-        type: 'approle',
-      },
-    };
-    const server = new Pretender(function () {
-      this.get('/v1/sys/internal/ui/mounts', () => {
-        return [200, { 'Content-Type': 'application/json' }, JSON.stringify({ data: { auth: methods } })];
-      });
+    this.server.get('/sys/internal/ui/mounts', () => {
+      return {
+        data: {
+          auth: {
+            'foo/': {
+              type: 'userpass',
+            },
+            'approle/': {
+              type: 'approle',
+            },
+          },
+        },
+      };
     });
 
-    this.set('cluster', EmberObject.create({}));
-    await render(hbs`{{auth-form cluster=this.cluster }}`);
+    await this.renderComponent();
 
-    assert.strictEqual(component.tabs.length, 2, 'renders a tab for userpass and Other');
-    assert.strictEqual(component.tabs.objectAt(0).name, 'foo', 'uses the path in the label');
-    assert.strictEqual(component.tabs.objectAt(1).name, 'Other', 'second tab is the Other tab');
-    server.shutdown();
+    assert.dom(AUTH_FORM.tabs()).exists({ count: 2 });
+    assert.dom(AUTH_FORM.tabs('foo')).exists('tab uses the path in the label');
+    assert.dom(AUTH_FORM.tabs('other')).exists('second tab is the Other tab');
   });
 
   test('it renders the description', async function (assert) {
-    const methods = {
-      'approle/': {
-        type: 'userpass',
-        description: 'app description',
-      },
-    };
-    const server = new Pretender(function () {
-      this.get('/v1/sys/internal/ui/mounts', () => {
-        return [200, { 'Content-Type': 'application/json' }, JSON.stringify({ data: { auth: methods } })];
-      });
+    this.selectedAuth = null;
+    this.server.get('/sys/internal/ui/mounts', () => {
+      return {
+        data: {
+          auth: {
+            'approle/': {
+              type: 'userpass',
+              description: 'app description',
+            },
+          },
+        },
+      };
     });
-    this.set('cluster', EmberObject.create({}));
-    await render(hbs`{{auth-form cluster=this.cluster }}`);
-
-    assert.strictEqual(
-      component.descriptionText,
-      'app description',
-      'renders a description for auth methods'
-    );
-    server.shutdown();
-  });
-
-  test('it calls authenticate with the correct path', async function (assert) {
-    this.owner.unregister('service:auth');
-    this.owner.register('service:auth', workingAuthService);
-    this.auth = this.owner.lookup('service:auth');
-    const authSpy = sinon.spy(this.auth, 'authenticate');
-    const methods = {
-      'foo/': {
-        type: 'userpass',
-      },
-    };
-    const server = new Pretender(function () {
-      this.get('/v1/sys/internal/ui/mounts', () => {
-        return [200, { 'Content-Type': 'application/json' }, JSON.stringify({ data: { auth: methods } })];
-      });
-    });
-
-    this.set('cluster', EmberObject.create({}));
-    this.set('selectedAuth', 'foo/');
-    await render(hbs`{{auth-form cluster=this.cluster selectedAuth=this.selectedAuth}}`);
-    await component.login();
-
-    await settled();
-    assert.ok(authSpy.calledOnce, 'a call to authenticate was made');
-    const { data } = authSpy.getCall(0).args[0];
-    assert.strictEqual(data.path, 'foo', 'uses the id for the path');
-    authSpy.restore();
-    server.shutdown();
+    await this.renderComponent();
+    assert.dom(AUTH_FORM.description).hasText('app description');
   });
 
   test('it renders no tabs when no supported methods are present in passed methods', async function (assert) {
@@ -199,106 +126,50 @@ module('Integration | Component | auth form', function (hooks) {
         type: 'approle',
       },
     };
-    const server = new Pretender(function () {
-      this.get('/v1/sys/internal/ui/mounts', () => {
-        return [200, { 'Content-Type': 'application/json' }, JSON.stringify({ data: { auth: methods } })];
-      });
+    this.server.get('/sys/internal/ui/mounts', () => {
+      return { data: { auth: methods } };
     });
-    this.set('cluster', EmberObject.create({}));
-    await render(hbs`<AuthForm @cluster={{this.cluster}} />`);
+    await this.renderComponent();
 
-    server.shutdown();
-    assert.strictEqual(component.tabs.length, 0, 'renders a tab for every backend');
-  });
-
-  test('it makes a request to unwrap if passed a wrappedToken and logs in', async function (assert) {
-    this.owner.register('service:auth', workingAuthService);
-    this.auth = this.owner.lookup('service:auth');
-    const authSpy = sinon.spy(this.auth, 'authenticate');
-    const server = new Pretender(function () {
-      this.post('/v1/sys/wrapping/unwrap', () => {
-        return [
-          200,
-          { 'content-type': 'application/json' },
-          JSON.stringify({
-            auth: {
-              client_token: '12345',
-            },
-          }),
-        ];
-      });
-    });
-
-    const wrappedToken = '54321';
-    this.set('wrappedToken', wrappedToken);
-    this.set('cluster', EmberObject.create({}));
-    await render(hbs`<AuthForm @cluster={{this.cluster}} @wrappedToken={{this.wrappedToken}} />`);
-    later(() => cancelTimers(), 50);
-    await settled();
-    assert.strictEqual(
-      server.handledRequests[0].url,
-      '/v1/sys/wrapping/unwrap',
-      'makes call to unwrap the token'
-    );
-    assert.strictEqual(
-      server.handledRequests[0].requestHeaders['X-Vault-Token'],
-      wrappedToken,
-      'uses passed wrapped token for the unwrap'
-    );
-    assert.ok(authSpy.calledOnce, 'a call to authenticate was made');
-    server.shutdown();
-    authSpy.restore();
+    assert.dom(AUTH_FORM.tabs()).doesNotExist();
   });
 
   test('it shows an error if unwrap errors', async function (assert) {
-    const server = new Pretender(function () {
-      this.post('/v1/sys/wrapping/unwrap', () => {
-        return [
-          400,
-          { 'Content-Type': 'application/json' },
-          JSON.stringify({
-            errors: ['There was an error unwrapping!'],
-          }),
-        ];
-      });
+    assert.expect(1);
+    this.wrappedToken = '54321';
+    this.server.post('/sys/wrapping/unwrap', () => {
+      return new Response(
+        400,
+        { 'Content-Type': 'application/json' },
+        { errors: ['There was an error unwrapping!'] }
+      );
     });
 
-    this.set('wrappedToken', '54321');
-    await render(hbs`{{auth-form cluster=this.cluster wrappedToken=this.wrappedToken}}`);
+    await this.renderComponent();
     later(() => cancelTimers(), 50);
-
     await settled();
-    assert.strictEqual(
-      component.errorText,
-      'Error Token unwrap failed: There was an error unwrapping!',
-      'shows the error'
-    );
-    server.shutdown();
+    assert.dom(GENERAL.messageError).hasText('Error Token unwrap failed: There was an error unwrapping!');
   });
 
   test('it should retain oidc role when mount path is changed', async function (assert) {
-    assert.expect(1);
+    assert.expect(2);
 
     const auth_url = 'http://dev-foo-bar.com';
-    const server = new Pretender(function () {
-      this.post('/v1/auth/:path/oidc/auth_url', (req) => {
-        const { role, redirect_uri } = JSON.parse(req.requestBody);
-        const goodRequest =
-          req.params.path === 'foo-oidc' &&
-          role === 'foo' &&
-          redirect_uri.includes('/auth/foo-oidc/oidc/callback');
+    this.server.post('/auth/:path/oidc/auth_url', (_, req) => {
+      const { role, redirect_uri } = JSON.parse(req.requestBody);
+      const goodRequest =
+        req.params.path === 'foo-oidc' &&
+        role === 'foo' &&
+        redirect_uri.includes('/auth/foo-oidc/oidc/callback');
 
-        return [
-          goodRequest ? 200 : 400,
-          { 'Content-Type': 'application/json' },
-          JSON.stringify(
-            goodRequest ? { data: { auth_url } } : { errors: [`role "${role}" could not be found`] }
-          ),
-        ];
-      });
-      this.get('/v1/sys/internal/ui/mounts', this.passthrough);
+      return new Response(
+        goodRequest ? 200 : 400,
+        { 'Content-Type': 'application/json' },
+        JSON.stringify(
+          goodRequest ? { data: { auth_url } } : { errors: [`role "${role}" could not be found`] }
+        )
+      );
     });
-
     window.open = (url) => {
       assert.strictEqual(url, auth_url, 'auth_url is returned when required params are passed');
     };
@@ -309,46 +180,14 @@ module('Integration | Component | auth form', function (hooks) {
       },
     });
 
-    this.set('cluster', EmberObject.create({}));
-    await render(hbs`<AuthForm @cluster={{this.cluster}} />`);
+    await this.renderComponent();
 
-    await component.selectMethod('oidc');
-    await component.oidcRole('foo');
-    await component.oidcMoreOptions();
-    await component.oidcMountPath('foo-oidc');
-    await component.login();
-
-    server.shutdown();
-  });
-
-  test('it should set nonce value as uuid for okta method type', async function (assert) {
-    assert.expect(1);
-
-    const server = new Pretender(function () {
-      this.post('/v1/auth/okta/login/foo', (req) => {
-        const { nonce } = JSON.parse(req.requestBody);
-        assert.true(validate(nonce), 'Nonce value passed as uuid for okta login');
-        return [
-          200,
-          { 'content-type': 'application/json' },
-          JSON.stringify({
-            auth: {
-              client_token: '12345',
-            },
-          }),
-        ];
-      });
-      this.get('/v1/sys/internal/ui/mounts', this.passthrough);
-    });
-
-    this.set('cluster', EmberObject.create({}));
-    await render(hbs`<AuthForm @cluster={{this.cluster}} />`);
-
-    await component.selectMethod('okta');
-    await component.username('foo');
-    await component.password('bar');
-    await component.login();
-
-    server.shutdown();
+    await fillIn(GENERAL.selectByAttr('auth-method'), 'oidc');
+    await fillIn(AUTH_FORM.input('role'), 'foo');
+    await click(AUTH_FORM.moreOptions);
+    await fillIn(AUTH_FORM.input('role'), 'foo');
+    await fillIn(AUTH_FORM.mountPathInput, 'foo-oidc');
+    assert.dom(AUTH_FORM.input('role')).hasValue('foo', 'role is retained when mount path is changed');
+    await click(AUTH_FORM.login);
   });
 });

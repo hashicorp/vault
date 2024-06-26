@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package mysql
 
@@ -20,11 +20,10 @@ import (
 	"time"
 	"unicode"
 
-	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-multierror"
-
 	metrics "github.com/armon/go-metrics"
 	mysql "github.com/go-sql-driver/mysql"
+	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
 )

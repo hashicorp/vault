@@ -10,6 +10,7 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -41,6 +42,7 @@ const (
 	EnvVaultClientCert       = "VAULT_CLIENT_CERT"
 	EnvVaultClientKey        = "VAULT_CLIENT_KEY"
 	EnvVaultClientTimeout    = "VAULT_CLIENT_TIMEOUT"
+	EnvVaultHeaders          = "VAULT_HEADERS"
 	EnvVaultSRVLookup        = "VAULT_SRV_LOOKUP"
 	EnvVaultSkipVerify       = "VAULT_SKIP_VERIFY"
 	EnvVaultNamespace        = "VAULT_NAMESPACE"
@@ -82,6 +84,8 @@ const (
 const (
 	EnvVaultAgentAddress = "VAULT_AGENT_ADDR"
 	EnvVaultInsecure     = "VAULT_SKIP_VERIFY"
+
+	DefaultAddress = "https://127.0.0.1:8200"
 )
 
 // WrappingLookupFunc is a function that, given an HTTP verb and a path,
@@ -248,7 +252,7 @@ type TLSConfig struct {
 // If an error is encountered, the Error field on the returned *Config will be populated with the specific error.
 func DefaultConfig() *Config {
 	config := &Config{
-		Address:      "https://127.0.0.1:8200",
+		Address:      DefaultAddress,
 		HttpClient:   cleanhttp.DefaultPooledClient(),
 		Timeout:      time.Second * 60,
 		MinRetryWait: time.Millisecond * 1000,
@@ -528,6 +532,7 @@ func (c *Config) ParseAddress(address string) (*url.URL, error) {
 		return nil, err
 	}
 
+	previousAddress := c.Address
 	c.Address = address
 
 	if strings.HasPrefix(address, "unix://") {
@@ -545,12 +550,12 @@ func (c *Config) ParseAddress(address string) (*url.URL, error) {
 			// be pointing to the protocol used in the application layer and not to
 			// the transport layer. Hence, setting the fields accordingly.
 			u.Scheme = "http"
-			u.Host = socket
+			u.Host = "localhost"
 			u.Path = ""
 		} else {
 			return nil, fmt.Errorf("attempting to specify unix:// address with non-transport transport")
 		}
-	} else if strings.HasPrefix(c.Address, "unix://") {
+	} else if strings.HasPrefix(previousAddress, "unix://") {
 		// When the address being set does not begin with unix:// but the previous
 		// address in the Config did, change the transport's DialContext back to
 		// use the default configuration that cleanhttp uses.
@@ -589,6 +594,7 @@ type Client struct {
 	requestCallbacks      []RequestCallback
 	responseCallbacks     []ResponseCallback
 	replicationStateStore *replicationStateStore
+	hcpCookie             *http.Cookie
 }
 
 // NewClient returns a new client for the given configuration.
@@ -661,6 +667,30 @@ func NewClient(c *Config) (*Client, error) {
 		client.setNamespace(namespace)
 	}
 
+	if envHeaders := os.Getenv(EnvVaultHeaders); envHeaders != "" {
+		var result map[string]any
+		err := json.Unmarshal([]byte(envHeaders), &result)
+		if err != nil {
+			return nil, fmt.Errorf("could not unmarshal environment-supplied headers")
+		}
+		var forbiddenHeaders []string
+		for key, value := range result {
+			if strings.HasPrefix(key, "X-Vault-") {
+				forbiddenHeaders = append(forbiddenHeaders, key)
+				continue
+			}
+
+			value, ok := value.(string)
+			if !ok {
+				return nil, fmt.Errorf("environment-supplied headers include non-string values")
+			}
+			client.AddHeader(key, value)
+		}
+		if len(forbiddenHeaders) > 0 {
+			return nil, fmt.Errorf("failed to setup Headers[%s]: Header starting by 'X-Vault-' are for internal usage only", strings.Join(forbiddenHeaders, ", "))
+		}
+	}
+
 	return client, nil
 }
 
@@ -701,7 +731,7 @@ func (c *Client) SetAddress(addr string) error {
 
 	parsedAddr, err := c.config.ParseAddress(addr)
 	if err != nil {
-		return errwrap.Wrapf("failed to set address: {{err}}", err)
+		return fmt.Errorf("failed to set address: %w", err)
 	}
 
 	c.addr = parsedAddr
@@ -998,7 +1028,9 @@ func (c *Client) Namespace() string {
 func (c *Client) WithNamespace(namespace string) *Client {
 	c2 := *c
 	c2.modifyLock = sync.RWMutex{}
-	c2.headers = c.Headers()
+	c.modifyLock.RLock()
+	c2.headers = c.headersInternal()
+	c.modifyLock.RUnlock()
 	if namespace == "" {
 		c2.ClearNamespace()
 	} else {
@@ -1023,6 +1055,33 @@ func (c *Client) SetToken(v string) {
 	c.token = v
 }
 
+// HCPCookie returns the HCP cookie being used by this client. It will
+// return an empty cookie when no cookie is set.
+func (c *Client) HCPCookie() string {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+
+	if c.hcpCookie == nil {
+		return ""
+	}
+	return c.hcpCookie.String()
+}
+
+// SetHCPCookie sets the hcp cookie directly. This won't perform any auth
+// verification, it simply sets the token properly for future requests.
+func (c *Client) SetHCPCookie(v *http.Cookie) error {
+	c.modifyLock.Lock()
+	defer c.modifyLock.Unlock()
+
+	if err := v.Valid(); err != nil {
+		return err
+	}
+
+	c.hcpCookie = v
+
+	return nil
+}
+
 // ClearToken deletes the token if it is set or does nothing otherwise.
 func (c *Client) ClearToken() {
 	c.modifyLock.Lock()
@@ -1035,7 +1094,12 @@ func (c *Client) ClearToken() {
 func (c *Client) Headers() http.Header {
 	c.modifyLock.RLock()
 	defer c.modifyLock.RUnlock()
+	return c.headersInternal()
+}
 
+// headersInternal gets the current set of headers used for requests. Must be called
+// with the read modifyLock held.
+func (c *Client) headersInternal() http.Header {
 	if c.headers == nil {
 		return nil
 	}
@@ -1183,24 +1247,28 @@ func (c *Client) CloneTLSConfig() bool {
 // the api.Config struct, such as policy override and wrapping function
 // behavior, must currently then be set as desired on the new client.
 func (c *Client) Clone() (*Client, error) {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.RLock()
+	defer c.config.modifyLock.RUnlock()
 	return c.clone(c.config.CloneHeaders)
 }
 
 // CloneWithHeaders creates a new client similar to Clone, with the difference
-// being that the  headers are always cloned
+// being that the headers are always cloned
 func (c *Client) CloneWithHeaders() (*Client, error) {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.RLock()
+	defer c.config.modifyLock.RUnlock()
 	return c.clone(true)
 }
 
 // clone creates a new client, with the headers being cloned based on the
-// passed in cloneheaders boolean
+// passed in cloneheaders boolean.
+// Must be called with the read lock and config read lock held.
 func (c *Client) clone(cloneHeaders bool) (*Client, error) {
-	c.modifyLock.RLock()
-	defer c.modifyLock.RUnlock()
-
 	config := c.config
-	config.modifyLock.RLock()
-	defer config.modifyLock.RUnlock()
 
 	newConfig := &Config{
 		Address:        config.Address,
@@ -1230,7 +1298,7 @@ func (c *Client) clone(cloneHeaders bool) (*Client, error) {
 	}
 
 	if cloneHeaders {
-		client.SetHeaders(c.Headers().Clone())
+		client.SetHeaders(c.headersInternal().Clone())
 	}
 
 	if config.CloneToken {
@@ -1261,6 +1329,7 @@ func (c *Client) NewRequest(method, requestPath string) *Request {
 	mfaCreds := c.mfaCreds
 	wrappingLookupFunc := c.wrappingLookupFunc
 	policyOverride := c.policyOverride
+	headers := c.headersInternal()
 	c.modifyLock.RUnlock()
 
 	host := addr.Host
@@ -1287,6 +1356,8 @@ func (c *Client) NewRequest(method, requestPath string) *Request {
 		Params:      make(map[string][]string),
 	}
 
+	req.HCPCookie = c.hcpCookie
+
 	var lookupPath string
 	switch {
 	case strings.HasPrefix(requestPath, "/v1/"):
@@ -1305,7 +1376,7 @@ func (c *Client) NewRequest(method, requestPath string) *Request {
 		req.WrapTTL = DefaultWrappingLookupFunc(method, lookupPath)
 	}
 
-	req.Headers = c.Headers()
+	req.Headers = headers
 	req.PolicyOverride = policyOverride
 
 	return req

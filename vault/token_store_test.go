@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -136,8 +136,8 @@ func TestTokenStore_CubbyholeTidy(t *testing.T) {
 func testTokenStore_CubbyholeTidy(t *testing.T, c *Core, root string, nsCtx context.Context) {
 	ts := c.tokenStore
 
-	backend := c.router.MatchingBackend(nsCtx, cubbyholeMountPath)
-	view := c.router.MatchingStorageByAPIPath(nsCtx, cubbyholeMountPath)
+	backend := c.router.MatchingBackend(nsCtx, mountPathCubbyhole)
+	view := c.router.MatchingStorageByAPIPath(nsCtx, mountPathCubbyhole)
 
 	for i := 1; i <= 20; i++ {
 		// Create 20 tokens

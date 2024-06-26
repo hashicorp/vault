@@ -212,6 +212,17 @@ func (c *Logical) WriteWithContext(ctx context.Context, path string, data map[st
 	return c.write(ctx, path, r)
 }
 
+func (c *Logical) WriteRaw(path string, data []byte) (*Response, error) {
+	return c.WriteRawWithContext(context.Background(), path, data)
+}
+
+func (c *Logical) WriteRawWithContext(ctx context.Context, path string, data []byte) (*Response, error) {
+	r := c.c.NewRequest(http.MethodPut, "/v1/"+path)
+	r.BodyBytes = data
+
+	return c.writeRaw(ctx, r)
+}
+
 func (c *Logical) JSONMergePatch(ctx context.Context, path string, data map[string]interface{}) (*Secret, error) {
 	r := c.c.NewRequest(http.MethodPatch, "/v1/"+path)
 	r.Headers.Set("Content-Type", "application/merge-patch+json")
@@ -259,6 +270,14 @@ func (c *Logical) write(ctx context.Context, path string, request *Request) (*Se
 	}
 
 	return ParseSecret(resp.Body)
+}
+
+func (c *Logical) writeRaw(ctx context.Context, request *Request) (*Response, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
+	resp, err := c.c.rawRequestWithContext(ctx, request)
+	return resp, err
 }
 
 func (c *Logical) Delete(path string) (*Secret, error) {

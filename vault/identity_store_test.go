@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -9,11 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/armon/go-metrics"
 	"github.com/go-test/deep"
-	"github.com/golang/protobuf/ptypes"
 	uuid "github.com/hashicorp/go-uuid"
 	credGithub "github.com/hashicorp/vault/builtin/credential/github"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
@@ -21,6 +18,9 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/types/known/anypb"
 )
 
 func TestIdentityStore_DeleteEntityAlias(t *testing.T) {
@@ -143,7 +143,7 @@ func TestIdentityStore_UnsealingWhenConflictingAliasNames(t *testing.T) {
 
 	// Persist the second entity directly without the regular flow. This will skip
 	// merging of these enties.
-	entity2Any, err := ptypes.MarshalAny(entity2)
+	entity2Any, err := anypb.New(entity2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -912,4 +912,218 @@ func TestIdentityStore_DeleteCaseSensitivityKey(t *testing.T) {
 	if storageEntry != nil {
 		t.Fatalf("bad: expected no entry for casesensitivity key")
 	}
+}
+
+// TestIdentityStoreInvalidate_Entities verifies the proper handling of
+// entities in the Invalidate method.
+func TestIdentityStoreInvalidate_Entities(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+
+	// Create an entity in storage then call the Invalidate function
+	//
+	id, err := uuid.GenerateUUID()
+	require.NoError(t, err)
+
+	entity := &identity.Entity{
+		Name:        "test",
+		NamespaceID: namespace.RootNamespaceID,
+		ID:          id,
+		Aliases:     []*identity.Alias{},
+		BucketKey:   c.identityStore.entityPacker.BucketKey(id),
+	}
+
+	p := c.identityStore.entityPacker
+
+	// Persist the entity which we are merging to
+	entityAsAny, err := anypb.New(entity)
+	require.NoError(t, err)
+
+	item := &storagepacker.Item{
+		ID:      id,
+		Message: entityAsAny,
+	}
+
+	err = p.PutItem(context.Background(), item)
+	require.NoError(t, err)
+
+	c.identityStore.Invalidate(context.Background(), p.BucketKey(id))
+
+	txn := c.identityStore.db.Txn(true)
+
+	memEntity, err := c.identityStore.MemDBEntityByIDInTxn(txn, id, true)
+	assert.NoError(t, err)
+	assert.NotNil(t, memEntity)
+
+	txn.Commit()
+
+	// Modify the entity in storage then call the Invalidate function
+	entity.Metadata = make(map[string]string)
+	entity.Metadata["foo"] = "bar"
+
+	entityAsAny, err = anypb.New(entity)
+	require.NoError(t, err)
+
+	item.Message = entityAsAny
+
+	p.PutItem(context.Background(), item)
+
+	c.identityStore.Invalidate(context.Background(), p.BucketKey(id))
+
+	txn = c.identityStore.db.Txn(true)
+
+	memEntity, err = c.identityStore.MemDBEntityByIDInTxn(txn, id, true)
+	assert.NoError(t, err)
+	assert.Contains(t, memEntity.Metadata, "foo")
+
+	txn.Commit()
+
+	// Delete the entity in storage then call the Invalidate function
+	err = p.DeleteItem(context.Background(), id)
+	require.NoError(t, err)
+
+	c.identityStore.Invalidate(context.Background(), p.BucketKey(id))
+
+	txn = c.identityStore.db.Txn(true)
+
+	memEntity, err = c.identityStore.MemDBEntityByIDInTxn(txn, id, true)
+	assert.NoError(t, err)
+	assert.Nil(t, memEntity)
+
+	txn.Commit()
+}
+
+// TestIdentityStoreInvalidate_LocalAliasesWithEntity verifies the correct
+// handling of local aliases in the Invalidate method.
+func TestIdentityStoreInvalidate_LocalAliasesWithEntity(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+
+	// Create an entity in storage then call the Invalidate function
+	//
+	entityID, err := uuid.GenerateUUID()
+	require.NoError(t, err)
+
+	entity := &identity.Entity{
+		Name:        "test",
+		NamespaceID: namespace.RootNamespaceID,
+		ID:          entityID,
+		Aliases:     []*identity.Alias{},
+		BucketKey:   c.identityStore.entityPacker.BucketKey(entityID),
+	}
+
+	aliasID, err := uuid.GenerateUUID()
+	require.NoError(t, err)
+
+	localAliases := &identity.LocalAliases{
+		Aliases: []*identity.Alias{
+			{
+				ID:            aliasID,
+				Name:          "test",
+				NamespaceID:   namespace.RootNamespaceID,
+				CanonicalID:   entityID,
+				MountAccessor: "userpass-000000",
+			},
+		},
+	}
+
+	ep := c.identityStore.entityPacker
+
+	// Persist the entity which we are merging to
+	entityAsAny, err := anypb.New(entity)
+	require.NoError(t, err)
+
+	entityItem := &storagepacker.Item{
+		ID:      entityID,
+		Message: entityAsAny,
+	}
+
+	err = ep.PutItem(context.Background(), entityItem)
+	require.NoError(t, err)
+
+	c.identityStore.Invalidate(context.Background(), ep.BucketKey(entityID))
+
+	lap := c.identityStore.localAliasPacker
+
+	localAliasesAsAny, err := anypb.New(localAliases)
+	require.NoError(t, err)
+
+	localAliasesItem := &storagepacker.Item{
+		ID:      entityID,
+		Message: localAliasesAsAny,
+	}
+
+	err = lap.PutItem(context.Background(), localAliasesItem)
+	require.NoError(t, err)
+
+	c.identityStore.Invalidate(context.Background(), lap.BucketKey(entityID))
+
+	txn := c.identityStore.db.Txn(true)
+
+	memDBEntity, err := c.identityStore.MemDBEntityByIDInTxn(txn, entityID, true)
+	assert.NoError(t, err)
+	assert.NotNil(t, memDBEntity)
+
+	memDBLocalAlias, err := c.identityStore.MemDBAliasByIDInTxn(txn, aliasID, true, false)
+	assert.NoError(t, err)
+	assert.NotNil(t, memDBLocalAlias)
+	assert.Equal(t, 1, len(memDBEntity.Aliases))
+	assert.NotNil(t, memDBEntity.Aliases[0])
+	assert.Equal(t, memDBEntity.Aliases[0].ID, memDBLocalAlias.ID)
+
+	txn.Commit()
+}
+
+// TestIdentityStoreInvalidate_TemporaryEntity verifies the proper handling of
+// temporary entities in the Invalidate method.
+func TestIdentityStoreInvalidate_TemporaryEntity(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+
+	// Create an entity in storage then call the Invalidate function
+	//
+	entityID, err := uuid.GenerateUUID()
+	require.NoError(t, err)
+
+	tempEntity := &identity.Entity{
+		Name:        "test",
+		NamespaceID: namespace.RootNamespaceID,
+		ID:          entityID,
+		Aliases:     []*identity.Alias{},
+		BucketKey:   c.identityStore.entityPacker.BucketKey(entityID),
+	}
+
+	lap := c.identityStore.localAliasPacker
+	ep := c.identityStore.entityPacker
+
+	// Persist the entity which we are merging to
+	tempEntityAsAny, err := anypb.New(tempEntity)
+	require.NoError(t, err)
+
+	tempEntityItem := &storagepacker.Item{
+		ID:      entityID + tmpSuffix,
+		Message: tempEntityAsAny,
+	}
+
+	err = lap.PutItem(context.Background(), tempEntityItem)
+	require.NoError(t, err)
+
+	entityAsAny := tempEntityAsAny
+
+	entityItem := &storagepacker.Item{
+		ID:      entityID,
+		Message: entityAsAny,
+	}
+
+	err = ep.PutItem(context.Background(), entityItem)
+	require.NoError(t, err)
+
+	c.identityStore.Invalidate(context.Background(), ep.BucketKey(entityID))
+
+	txn := c.identityStore.db.Txn(true)
+
+	memDBEntity, err := c.identityStore.MemDBEntityByIDInTxn(txn, entityID, true)
+	assert.NoError(t, err)
+	assert.NotNil(t, memDBEntity)
+
+	item, err := lap.GetItem(lap.BucketKey(entityID) + tmpSuffix)
+	assert.NoError(t, err)
+	assert.Nil(t, item)
 }

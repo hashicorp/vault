@@ -1,22 +1,25 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 /* eslint ember/no-computed-properties-in-native-classes: 'warn' */
 import Controller from '@ember/controller';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-import { filterBy } from '@ember/object/computed';
 import { dropTask } from 'ember-concurrency';
 
 export default class VaultClusterSecretsBackendController extends Controller {
   @service flashMessages;
-  @filterBy('model', 'shouldIncludeInList') displayableBackends;
 
   @tracked secretEngineOptions = [];
   @tracked selectedEngineType = null;
   @tracked selectedEngineName = null;
+  @tracked engineToDisable = null;
+
+  get displayableBackends() {
+    return this.model.filter((backend) => backend.shouldIncludeInList);
+  }
 
   get sortedDisplayableBackends() {
     // show supported secret engines first and then organize those by id.
@@ -80,6 +83,8 @@ export default class VaultClusterSecretsBackendController extends Controller {
       this.flashMessages.danger(
         `There was an error disabling the ${engineType} Secrets Engine at ${path}: ${err.errors.join(' ')}.`
       );
+    } finally {
+      this.engineToDisable = null;
     }
   }
 }

@@ -1,5 +1,10 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { waitFor } from '@ember/test-waiters';
@@ -103,14 +108,14 @@ export default class PagePkiIssuerRotateRootComponent extends Component<Args> {
     const endpoint = `/v1/${this.secretMountPath.currentPath}/issuer/${this.args.newRootModel.issuerId}/${format}`;
     const adapter = this.store.adapterFor('application');
     try {
-      return adapter
-        .rawRequest(endpoint, 'GET', { unauthenticated: true })
-        .then(function (response: Response) {
-          if (format === 'der') {
-            return response.blob();
-          }
-          return response.text();
-        });
+      return adapter.rawRequest(endpoint, 'GET', { unauthenticated: true }).then(function (
+        response: Response
+      ) {
+        if (format === 'der') {
+          return response.blob();
+        }
+        return response.text();
+      });
     } catch (e) {
       return null;
     }

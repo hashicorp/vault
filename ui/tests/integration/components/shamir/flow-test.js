@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import sinon from 'sinon';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
@@ -6,7 +11,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import Service from '@ember/service';
 import { run } from '@ember/runloop';
 import { reject, resolve } from 'rsvp';
-import { SHAMIR_FORM } from 'vault/tests/helpers/components/shamir';
+import { SHAMIR_FORM } from 'vault/tests/helpers/components/shamir-selectors';
 
 const licenseError = { httpStatus: 500, errors: ['failed because licensing is in an invalid state'] };
 const response = {

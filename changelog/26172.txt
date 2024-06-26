@@ -1,0 +1,3 @@
+```release-note:improvement
+agent: Agent will re-trigger auto auth if token used for rendering templates has been revoked, has exceeded the number of uses, or is a bogus value.
+```

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 .selectable-card-container {
@@ -25,13 +25,6 @@
 
   @include until($mobile) {
     grid-template-columns: 2fr;
-  }
-
-  .selectable-card.is-grid-container {
-    display: grid;
-    grid-template-columns: 2fr 0.5fr;
-    grid-template-rows: 1fr 2fr 0.5fr;
-    padding: $spacing-l 0 14px $spacing-l; // modify bottom spacing to better align with other cards
   }
 }
 

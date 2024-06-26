@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package event
 
@@ -18,13 +18,12 @@ const (
 )
 
 // Validate ensures that EventType is one of the set of allowed event types.
-func (et EventType) Validate() error {
-	const op = "event.(EventType).Validate"
-	switch et {
+func (t EventType) Validate() error {
+	switch t {
 	case AuditType:
 		return nil
 	default:
-		return fmt.Errorf("%s: '%s' is not a valid event type: %w", op, et, ErrInvalidParameter)
+		return fmt.Errorf("invalid event type %q: %w", t, ErrInvalidParameter)
 	}
 }
 
@@ -34,4 +33,14 @@ func GenerateNodeID() (eventlogger.NodeID, error) {
 	id, err := uuid.GenerateUUID()
 
 	return eventlogger.NodeID(id), err
+}
+
+// String returns the string version of an EventType.
+func (t EventType) String() string {
+	return string(t)
+}
+
+// AsEventType returns the EventType in a format for eventlogger.
+func (t EventType) AsEventType() eventlogger.EventType {
+	return eventlogger.EventType(t.String())
 }

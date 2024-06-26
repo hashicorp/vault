@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package command
 
@@ -12,24 +12,22 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/cli"
 	log "github.com/hashicorp/go-hclog"
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
+	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/builtin/logical/pki"
 	"github.com/hashicorp/vault/builtin/logical/ssh"
 	"github.com/hashicorp/vault/builtin/logical/transit"
 	"github.com/hashicorp/vault/helper/benchhelpers"
 	"github.com/hashicorp/vault/helper/builtinplugins"
+	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/seal"
-	"github.com/mitchellh/cli"
-
-	auditFile "github.com/hashicorp/vault/builtin/audit/file"
-	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
-	vaulthttp "github.com/hashicorp/vault/http"
 )
 
 var (
@@ -40,7 +38,7 @@ var (
 	}
 
 	defaultVaultAuditBackends = map[string]audit.Factory{
-		"file": auditFile.Factory,
+		"file": audit.NewFileBackend,
 	}
 
 	defaultVaultLogicalBackends = map[string]logical.Factory{
@@ -124,10 +122,11 @@ func testVaultServerWithKVVersion(tb testing.TB, kvVersion string) (*api.Client,
 func testVaultServerAllBackends(tb testing.TB) (*api.Client, func()) {
 	tb.Helper()
 
+	handlers := newVaultHandlers()
 	client, _, closer := testVaultServerCoreConfig(tb, &vault.CoreConfig{
-		CredentialBackends: credentialBackends,
-		AuditBackends:      auditBackends,
-		LogicalBackends:    logicalBackends,
+		CredentialBackends: handlers.credentialBackends,
+		AuditBackends:      handlers.auditBackends,
+		LogicalBackends:    handlers.logicalBackends,
 		BuiltinRegistry:    builtinplugins.Registry,
 	})
 	return client, closer
@@ -137,10 +136,7 @@ func testVaultServerAllBackends(tb testing.TB) (*api.Client, func()) {
 // the function returns a client, the recovery keys, and a closer function
 func testVaultServerAutoUnseal(tb testing.TB) (*api.Client, []string, func()) {
 	testSeal, _ := seal.NewTestSeal(nil)
-	autoSeal, err := vault.NewAutoSeal(testSeal)
-	if err != nil {
-		tb.Fatal("unable to create autoseal", err)
-	}
+	autoSeal := vault.NewAutoSeal(testSeal)
 	return testVaultServerUnsealWithKVVersionWithSeal(tb, "1", autoSeal)
 }
 

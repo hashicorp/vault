@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import * as asn1js from 'asn1js';
@@ -16,16 +16,16 @@ import {
   SUBJECT_OIDs,
 } from './parse-pki-cert-oids';
 
-/* 
+/*
  It may be helpful to visualize a certificate's SEQUENCE structure alongside this parsing file.
  You can do so by decoding a certificate here: https://lapo.it/asn1js/#
 
  A certificate is encoded in ASN.1 data - a SEQUENCE is how you define structures in ASN.1.
- GeneralNames, Extension, AlgorithmIdentifier are all examples of SEQUENCEs 
+ GeneralNames, Extension, AlgorithmIdentifier are all examples of SEQUENCEs
 
- * Error handling: 
-{ can_parse: false } -> returned if the external library cannot convert the certificate 
-{ parsing_errors: [] } -> returned if the certificate was converted, but there's ANY problem parsing certificate details. 
+ * Error handling:
+{ can_parse: false } -> returned if the external library cannot convert the certificate
+{ parsing_errors: [] } -> returned if the certificate was converted, but there's ANY problem parsing certificate details.
  This means we cannot cross-sign in the UI and prompt the user to do so manually using the CLI.
  */
 
@@ -104,18 +104,18 @@ export function formatValues(subject, extension) {
 }
 
 /*
-Explanation of cross-signing and how to use the verify function: 
+Explanation of cross-signing and how to use the verify function:
 (See setup script here: https://github.com/hashicorp/vault-tools/blob/main/vault-ui/pki/pki-cross-sign-config.sh)
 1. A trust chain exists between "old-parent-issuer-name" -> "old-intermediate"
 2. We create a new root, "my-parent-issuer-name" to phase out the old one
 
-* cross-signing step performed in the UI * 
-3. Cross-sign "old-intermediate" against new root "my-parent-issuer-name" which generates a new intermediate issuer, 
+* cross-signing step performed in the UI *
+3. Cross-sign "old-intermediate" against new root "my-parent-issuer-name" which generates a new intermediate issuer,
 "newly-cross-signed-int-name", to phase out the old intermediate
 
 * validate cross-signing accurately copied the old intermediate issuer *
 4. Generate a leaf certificate from "newly-cross-signed-int-name", let's call it "baby-leaf"
-5. Verify that "baby-leaf" validates against both chains: 
+5. Verify that "baby-leaf" validates against both chains:
 "old-parent-issuer-name" -> "old-intermediate" -> "baby-leaf"
 "my-parent-issuer-name" -> "newly-cross-signed-int-name" -> "baby-leaf"
 
@@ -163,12 +163,12 @@ export async function verifySignature(parent, child) {
 
 //* PARSING HELPERS
 /*
-  We wish to get each SUBJECT_OIDs (see utils/parse-pki-cert-oids.js) out of this certificate's subject. 
+  We wish to get each SUBJECT_OIDs (see utils/parse-pki-cert-oids.js) out of this certificate's subject.
   A subject is a list of RDNs, where each RDN is a (type, value) tuple
   and where a type is an OID. The OID for CN can be found here:
-     
+
      https://datatracker.ietf.org/doc/html/rfc5280#page-112
-  
+
   Each value is then encoded as another ASN.1 object; in the case of a
   CommonName field, this is usually a PrintableString, BMPString, or a
   UTF8String. Regardless of encoding, it should be present in the

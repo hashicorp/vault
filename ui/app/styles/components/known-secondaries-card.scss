@@ -1,9 +1,9 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
-.selectable-card.secondaries {
+.known-secondaries-card {
   grid-column: 2/3;
   grid-row: 1/3;
 
@@ -13,7 +13,7 @@
   }
 
   .secondaries-table {
-    margin-bottom: $spacing-s;
+    margin-bottom: $spacing-12;
   }
 
   .link {

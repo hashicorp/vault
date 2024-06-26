@@ -1,9 +1,11 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { format, parseISO } from 'date-fns';
+
+export const datetimeLocalStringFormat = "yyyy-MM-dd'T'HH:mm";
 
 export const ARRAY_OF_MONTHS = [
   'January',

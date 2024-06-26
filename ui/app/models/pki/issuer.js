@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Model, { attr } from '@ember-data/model';
@@ -42,8 +42,8 @@ export default class PkiIssuerModel extends Model {
   @attr isDefault;
   @attr('string', { label: 'Issuer ID', detailLinkTo: 'issuers.issuer.details' }) issuerId;
   @attr('string', { label: 'Default key ID', detailLinkTo: 'keys.key.details' }) keyId;
-  @attr({ label: 'CA Chain', masked: true }) caChain;
-  @attr({ masked: true }) certificate;
+  @attr({ label: 'CA Chain', isCertificate: true }) caChain;
+  @attr({ isCertificate: true }) certificate;
   @attr('string') serialNumber;
 
   // parsed from certificate contents in serializer (see parse-pki-cert.js)
@@ -135,13 +135,14 @@ export default class PkiIssuerModel extends Model {
   @attr importedKeys;
   @attr mapping;
 
-  @lazyCapabilities(apiPath`${'backend'}/issuer/${'issuerId'}`) issuerPath;
-  @lazyCapabilities(apiPath`${'backend'}/root/rotate/exported`) rotateExported;
-  @lazyCapabilities(apiPath`${'backend'}/root/rotate/internal`) rotateInternal;
-  @lazyCapabilities(apiPath`${'backend'}/root/rotate/existing`) rotateExisting;
+  @lazyCapabilities(apiPath`${'backend'}/issuer/${'issuerId'}`, 'backend', 'issuerId') issuerPath;
+  @lazyCapabilities(apiPath`${'backend'}/root/rotate/exported`, 'backend') rotateExported;
+  @lazyCapabilities(apiPath`${'backend'}/root/rotate/internal`, 'backend') rotateInternal;
+  @lazyCapabilities(apiPath`${'backend'}/root/rotate/existing`, 'backend') rotateExisting;
   @lazyCapabilities(apiPath`${'backend'}/root`, 'backend') deletePath;
-  @lazyCapabilities(apiPath`${'backend'}/intermediate/cross-sign`) crossSignPath;
-  @lazyCapabilities(apiPath`${'backend'}/issuer/${'issuerId'}/sign-intermediate`) signIntermediate;
+  @lazyCapabilities(apiPath`${'backend'}/intermediate/cross-sign`, 'backend') crossSignPath;
+  @lazyCapabilities(apiPath`${'backend'}/issuer/${'issuerId'}/sign-intermediate`, 'backend', 'issuerId')
+  signIntermediate;
   get canRotateIssuer() {
     return (
       this.rotateExported.get('canUpdate') !== false ||

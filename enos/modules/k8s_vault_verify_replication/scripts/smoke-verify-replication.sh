@@ -1,6 +1,6 @@
-#!/usr/bin/env bash 
+#!/usr/bin/env bash
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 
 # The Vault replication smoke test, documented in
@@ -9,14 +9,14 @@
 set -e
 
 fail() {
-	echo "$1" 1>&2
-	exit 1
+  echo "$1" 1>&2
+  exit 1
 }
 
-# Replication STATUS endpoint should have data.mode disabled for OSS release
-if [ "$VAULT_EDITION" == "oss" ]; then
+# Replication STATUS endpoint should have data.mode disabled for CE release
+if [ "$VAULT_EDITION" == "ce" ]; then
   if [ "$(echo "${STATUS}" | jq -r '.data.mode')" != "disabled" ]; then
-    fail "replication data mode is not disabled for OSS release!"
+    fail "replication data mode is not disabled for CE release!"
   fi
 else
   if [ "$(echo "${STATUS}" | jq -r '.data.dr')" == "" ]; then

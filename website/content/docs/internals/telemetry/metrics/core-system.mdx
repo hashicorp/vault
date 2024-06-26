@@ -42,10 +42,6 @@ Vault instance.
 
 @include 'telemetry-metrics/vault/core/performance_standby.mdx'
 
-@include 'telemetry-metrics/vault/core/post_unseal.mdx'
-
-@include 'telemetry-metrics/vault/core/pre_seal.mdx'
-
 @include 'telemetry-metrics/vault/core/replication/dr/primary.mdx'
 
 @include 'telemetry-metrics/vault/core/replication/dr/secondary.mdx'
@@ -56,15 +52,7 @@ Vault instance.
 
 @include 'telemetry-metrics/vault/core/replication/write_undo_logs.mdx'
 
-@include 'telemetry-metrics/vault/core/seal_internal.mdx'
-
-@include 'telemetry-metrics/vault/core/seal_with_request.mdx'
-
 @include 'telemetry-metrics/vault/core/step_down.mdx'
-
-@include 'telemetry-metrics/vault/core/unseal.mdx'
-
-@include 'telemetry-metrics/vault/core/unsealed.mdx'
 
 ## Barrier metrics
 
@@ -106,11 +94,35 @@ Vault instance.
 
 @include 'telemetry-metrics/vault/quota/rate_limit/violation.mdx'
 
+## Request limiter metrics
+
+@include 'telemetry-metrics/request-limiter-intro.mdx'
+
+@include 'telemetry-metrics/vault/core/request-limiter/write.mdx'
+
+@include 'telemetry-metrics/vault/core/request-limiter/special_path.mdx'
+
+@include 'telemetry-metrics/vault/core/request-limiter/service_unavailable.mdx'
+
+@include 'telemetry-metrics/vault/core/request-limiter/success.mdx'
+
+@include 'telemetry-metrics/vault/core/request-limiter/dropped.mdx'
+
+@include 'telemetry-metrics/vault/core/request-limiter/ignored.mdx'
+
 ## Rollback metrics
 
 @include 'telemetry-metrics/rollback-intro.mdx'
 
 @include 'telemetry-metrics/vault/rollback/attempt/mountpoint.mdx'
+
+@include 'telemetry-metrics/vault/rollback/attempt.mdx'
+
+@include 'telemetry-metrics/vault/rollback/inflight.mdx'
+
+@include 'telemetry-metrics/vault/rollback/queued.mdx'
+
+@include 'telemetry-metrics/vault/rollback/waiting.mdx'
 
 ## Route metrics
 
@@ -125,6 +137,8 @@ Vault instance.
 @include 'telemetry-metrics/vault/route/read/mountpoint.mdx'
 
 @include 'telemetry-metrics/vault/route/rollback/mountpoint.mdx'
+
+@include 'telemetry-metrics/vault/route/rollback.mdx'
 
 ## Runtime metrics
 
@@ -147,3 +161,23 @@ Vault instance.
 @include 'telemetry-metrics/vault/runtime/total_gc_pause_ns.mdx'
 
 @include 'telemetry-metrics/vault/runtime/total_gc_runs.mdx'
+
+## Seal metrics
+
+@include 'telemetry-metrics/vault/core/post_unseal.mdx'
+
+@include 'telemetry-metrics/vault/core/pre_seal.mdx'
+
+@include 'telemetry-metrics/vault/core/seal_encrypt.mdx'
+
+@include 'telemetry-metrics/vault/core/seal_decrypt.mdx'
+
+@include 'telemetry-metrics/vault/core/seal_internal.mdx'
+
+@include 'telemetry-metrics/vault/core/seal_unreachable.mdx'
+
+@include 'telemetry-metrics/vault/core/seal_with_request.mdx'
+
+@include 'telemetry-metrics/vault/core/unseal.mdx'
+
+@include 'telemetry-metrics/vault/core/unsealed.mdx'

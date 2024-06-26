@@ -1,0 +1,16 @@
+### AWS static roles ignore changes to rotation period ((#aws-static-role-rotation))
+
+#### Affected versions
+
+- 1.14.0+
+
+#### Issue
+
+AWS static roles currently ignore configuration changes made to the key rotation
+period. As a result, Vault will continue to use whatever rotation period was set
+when the roles were originally created.
+
+#### Workaround
+
+Delete and recreate any static role objects that should use the new rotation
+period.

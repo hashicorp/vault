@@ -1,22 +1,32 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const SELECTORS = {
   policyText: '[data-test-modal-title]',
   policyDescription: (type) => `[data-test-example-modal-text=${type}]`,
-  jsonText: '[data-test-example-modal-json-text]',
+  jsonText: '[data-test-component="code-mirror-modifier"]',
   informationLink: '[data-test-example-modal-information-link]',
 };
 
 module('Integration | Component | policy-example', function (hooks) {
   setupRenderingTest(hooks);
+
+  hooks.beforeEach(function () {
+    setRunOptions({
+      rules: {
+        // failing on .CodeMirror-scroll
+        'scrollable-region-focusable': { enabled: false },
+      },
+    });
+  });
 
   test('it renders the correct paragraph for ACL policy', async function (assert) {
     await render(hbs`
@@ -83,6 +93,6 @@ module('Integration | Component | policy-example', function (hooks) {
       @policyType="egp"
     />
     `);
-    assert.dom(SELECTORS.jsonText).includesText(`# Expect requests to only happen during work days (Monday `);
+    assert.dom(SELECTORS.jsonText).includesText(`# Expect requests to only happen during work days (Monday`);
   });
 });

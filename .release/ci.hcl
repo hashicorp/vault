@@ -1,5 +1,5 @@
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 schema = "1"
 
@@ -153,8 +153,17 @@ event "post-publish-website" {
   }
 }
 
-event "update-ironbank" {
+event "bump-version" {
   depends = ["post-publish-website"]
+  action "bump-version" {
+    organization = "hashicorp"
+    repository = "crt-workflows-common"
+    workflow = "bump-version"
+  }
+}
+
+event "update-ironbank" {
+  depends = ["bump-version"]
   action "update-ironbank" {
     organization = "hashicorp"
     repository = "crt-workflows-common"
@@ -163,5 +172,17 @@ event "update-ironbank" {
 
   notification {
     on = "fail"
+  }
+}
+
+event "crt-generate-sbom" {
+  depends = ["promote-production"]
+  action "crt-generate-sbom" {
+	organization = "hashicorp"
+	repository = "security-generate-release-sbom"
+	workflow = "crt-generate-sbom"
+  }
+  notification {
+	on = "fail"
   }
 }

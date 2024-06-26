@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -791,12 +791,17 @@ func (c *Core) LoginMFACreateToken(ctx context.Context, reqPath string, cachedAu
 		return nil, fmt.Errorf("namespace not found: %w", err)
 	}
 
+	var role string
+	if reqRole := ctx.Value(logical.CtxKeyRequestRole{}); reqRole != nil {
+		role = reqRole.(string)
+	}
+
 	// The request successfully authenticated itself. Run the quota checks on
 	// the original login request path before creating the token.
 	quotaResp, quotaErr := c.applyLeaseCountQuota(ctx, &quotas.Request{
 		Path:          reqPath,
 		MountPath:     strings.TrimPrefix(mountPoint, ns.Path),
-		Role:          c.DetermineRoleFromLoginRequest(mountPoint, loginRequestData, ctx),
+		Role:          role,
 		NamespacePath: ns.Path,
 	})
 
@@ -816,7 +821,7 @@ func (c *Core) LoginMFACreateToken(ctx context.Context, reqPath string, cachedAu
 	// note that we don't need to handle the error for the following function right away.
 	// The function takes the response as in input variable and modify it. So, the returned
 	// arguments are resp and err.
-	leaseGenerated, resp, err := c.LoginCreateToken(ctx, ns, reqPath, mountPoint, resp, loginRequestData)
+	leaseGenerated, resp, err := c.LoginCreateToken(ctx, ns, reqPath, mountPoint, role, resp)
 
 	if quotaResp.Access != nil {
 		quotaAckErr := c.ackLeaseQuota(quotaResp.Access, leaseGenerated)
@@ -1735,7 +1740,7 @@ ECONFIG_LOOP:
 		// i.e. is it the req's ns or an ancestor of req's ns?
 		eConfigNS, err := c.NamespaceByID(ctx, eConfig.NamespaceID)
 		if err != nil {
-			return nil, fmt.Errorf("failed to find the MFAEnforcementConfig namespace")
+			return nil, fmt.Errorf("failed to find the MFAEnforcementConfig namespace: %w", err)
 		}
 
 		if eConfig == nil || eConfigNS == nil || (eConfigNS.ID != ns.ID && !ns.HasParent(eConfigNS)) {
@@ -2648,6 +2653,31 @@ func (b *LoginMFABackend) MemDBMFALoginEnforcementConfigByNameAndNamespace(name,
 	return eConfig.Clone()
 }
 
+func (b *LoginMFABackend) MemDBMFALoginEnforcementConfigByID(id string) (*mfa.MFAEnforcementConfig, error) {
+	if id == "" {
+		return nil, fmt.Errorf("missing config id")
+	}
+
+	txn := b.db.Txn(false)
+	defer txn.Abort()
+
+	eConfigRaw, err := txn.First(memDBMFALoginEnforcementsTable, "id", id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch MFA login enforcement config from memdb using id: %w", err)
+	}
+
+	if eConfigRaw == nil {
+		return nil, nil
+	}
+
+	eConfig, ok := eConfigRaw.(*mfa.MFAEnforcementConfig)
+	if !ok {
+		return nil, fmt.Errorf("invalid type for MFA login enforcement config in memdb")
+	}
+
+	return eConfig.Clone()
+}
+
 func (b *LoginMFABackend) MemDBMFALoginEnforcementConfigIterator() (memdb.ResultIterator, error) {
 	txn := b.db.Txn(false)
 	defer txn.Abort()
@@ -2699,6 +2729,32 @@ func (b *LoginMFABackend) deleteMFALoginEnforcementConfigByNameAndNamespace(ctx 
 	err = txn.Delete(memDBMFALoginEnforcementsTable, eConfig)
 	if err != nil {
 		return fmt.Errorf("failed to delete MFA login enforcement config from memdb: %w", err)
+	}
+
+	txn.Commit()
+	return nil
+}
+
+func (b *LoginMFABackend) MemDBDeleteMFALoginEnforcementConfigByID(id string) error {
+	if id == "" {
+		return nil
+	}
+
+	txn := b.db.Txn(true)
+	defer txn.Abort()
+
+	eConfig, err := b.MemDBMFALoginEnforcementConfigByID(id)
+	if err != nil {
+		return err
+	}
+
+	if eConfig == nil {
+		return nil
+	}
+
+	err = txn.Delete(memDBMFALoginEnforcementsTable, eConfig)
+	if err != nil {
+		return err
 	}
 
 	txn.Commit()

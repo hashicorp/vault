@@ -1,6 +1,6 @@
 #!/bin/bash
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 
 set -e
@@ -54,7 +54,6 @@ vault auth enable "alicloud"
 vault auth enable "approle"
 vault auth enable "aws"
 vault auth enable "azure"
-vault auth enable "centrify"
 vault auth enable "cert"
 vault auth enable "cf"
 vault auth enable "gcp"
@@ -94,6 +93,7 @@ if [[ -n "${VAULT_LICENSE:-}" ]]; then
     vault secrets enable "keymgmt"
     vault secrets enable "kmip"
     vault secrets enable "transform"
+    vault auth enable "saml"
 fi
 
 # Output OpenAPI, optionally formatted

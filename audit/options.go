@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package audit
 
@@ -9,11 +9,28 @@ import (
 	"time"
 )
 
+// Option is how options are passed as arguments.
+type Option func(*options) error
+
+// options are used to represent configuration for a audit related nodes.
+type options struct {
+	withID           string
+	withNow          time.Time
+	withSubtype      subtype
+	withFormat       format
+	withPrefix       string
+	withRaw          bool
+	withElision      bool
+	withOmitTime     bool
+	withHMACAccessor bool
+}
+
 // getDefaultOptions returns options with their default values.
 func getDefaultOptions() options {
 	return options{
-		withNow:    time.Now(),
-		withFormat: JSONFormat,
+		withNow:          time.Now(),
+		withFormat:       JSONFormat,
+		withHMACAccessor: true,
 	}
 }
 
@@ -87,7 +104,7 @@ func WithSubtype(s string) Option {
 // WithFormat provides an Option to represent event format.
 func WithFormat(f string) Option {
 	return func(o *options) error {
-		f := strings.TrimSpace(f)
+		f := strings.TrimSpace(strings.ToLower(f))
 		if f == "" {
 			// Return early, we won't attempt to apply this option if its empty.
 			return nil
@@ -107,11 +124,7 @@ func WithFormat(f string) Option {
 // WithPrefix provides an Option to represent a prefix for a file sink.
 func WithPrefix(prefix string) Option {
 	return func(o *options) error {
-		prefix = strings.TrimSpace(prefix)
-
-		if prefix != "" {
-			o.withPrefix = prefix
-		}
+		o.withPrefix = prefix
 
 		return nil
 	}
@@ -145,14 +158,6 @@ func WithOmitTime(t bool) Option {
 func WithHMACAccessor(h bool) Option {
 	return func(o *options) error {
 		o.withHMACAccessor = h
-		return nil
-	}
-}
-
-// WithHeaderFormatter provides an Option to supply a HeaderFormatter.
-func WithHeaderFormatter(f HeaderFormatter) Option {
-	return func(o *options) error {
-		o.withHeaderFormatter = f
 		return nil
 	}
 }

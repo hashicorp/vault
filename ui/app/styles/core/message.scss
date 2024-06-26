@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 .alert-title {
@@ -11,17 +11,17 @@
 .message {
   background: $blue-010;
   border: 1px solid $blue-100;
-  margin-bottom: $spacing-s;
-  padding: $spacing-s $spacing-m $spacing-m $spacing-s;
+  margin-bottom: $spacing-12;
+  padding: $spacing-12 $spacing-16 $spacing-16 $spacing-12;
   position: relative;
 
   &:not(:last-child) {
-    margin-bottom: $size-4;
+    margin-bottom: $spacing-20;
   }
 
   .message-icon {
     color: $blue;
-    margin-right: $spacing-xs;
+    margin-right: $spacing-8;
   }
 
   .message-title {
@@ -34,7 +34,7 @@
   .message-body {
     border: 0;
     padding: 1em 1.25em;
-    margin-top: $spacing-xxs;
+    margin-top: $spacing-4;
   }
 
   // message types, see message-types.js

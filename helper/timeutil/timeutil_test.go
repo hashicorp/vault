@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package timeutil
 
@@ -217,6 +217,47 @@ func TestTimeutil_IsCurrentMonth(t *testing.T) {
 
 	for _, tc := range testCases {
 		result := IsCurrentMonth(tc.input, now)
+		if result != tc.expected {
+			t.Errorf("invalid result. expected %t for %v", tc.expected, tc.input)
+		}
+	}
+}
+
+// TestTimeutil_IsCurrentDay checks if the test times equals the current day or not.
+func TestTimeutil_IsCurrentDay(t *testing.T) {
+	now := time.Now()
+	testCases := []struct {
+		input    time.Time
+		expected bool
+	}{
+		{
+			input:    now,
+			expected: true,
+		},
+		{
+			input:    StartOfDay(now).AddDate(0, 0, -1),
+			expected: false,
+		},
+		{
+			input:    StartOfDay(now).AddDate(-1, 0, 0),
+			expected: false,
+		},
+		{
+			input:    StartOfDay(now).Add(1 * time.Second),
+			expected: true,
+		},
+		{
+			input:    StartOfDay(now).Add(-1 * time.Second),
+			expected: false,
+		},
+		{
+			input:    StartOfDay(now).Add(86400), // a day is 86400 seconds
+			expected: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		result := IsCurrentDay(tc.input, now)
 		if result != tc.expected {
 			t.Errorf("invalid result. expected %t for %v", tc.expected, tc.input)
 		}

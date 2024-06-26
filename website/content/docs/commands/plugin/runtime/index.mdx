@@ -1,0 +1,83 @@
+---
+layout: docs
+page_title: plugin runtime - Command
+description: |-
+  The "plugin runtime" command groups subcommands for interacting with
+  Vault's plugin runtimes, configuring the context within which external
+  plugins can be run.
+---
+
+# plugin runtime
+
+The `plugin runtime` command groups subcommands for interacting with
+and configuring the context within which your external plugins run.
+
+<Note title="Limited type support">
+  Support for runtime types is currently limited to `container`.
+</Note>
+
+<Note title="Limited OS support">
+  Support for the 'container` runtime is currently limited to Linux.
+</Note>
+
+If you register a container plugin without referencing a plugin runtime, it will
+use [gVisor's](https://gvisor.dev/) OCI runtime `runsc` by default, with no
+resource limits. You can use plugin runtimes to configure other OCI-compliant
+runtimes such as `runc`. Vault does not come packaged with any supporting
+container runtimes, and you must separately install whichever you want to use.
+
+To use a registered plugin runtime, use the `-runtime` option with the
+[plugin registration command](/vault/docs/commands/plugin/register).
+
+See [containerized plugins](/vault/docs/plugins/containerized-plugins) for more
+details on running external plugins in containers.
+
+## Examples
+
+Register a new plugin runtime to the catalog:
+
+```shell-session
+$ vault plugin runtime register -type=container -oci_runtime=runc runc
+Success! Registered plugin runtime: runc
+```
+
+List all available plugin runtimes in the catalog:
+
+```shell-session
+$ vault plugin runtime list
+
+Name    Type         OCI Runtime    Parent Cgroup    CPU Nanos    Memory Bytes
+----    ----         -----------    -------------    ---------    ------------
+runc    container    runc           n/a              0            0
+```
+
+Get information about a plugin runtime in the catalog:
+
+```shell-session
+$ vault plugin runtime info -type=container runc
+Key              Value
+---              -----
+cgroup_parent    n/a
+cpu_nanos        0
+memory_bytes     0
+name             runc
+oci_runtime      runc
+type             container
+```
+
+## Usage
+
+```text
+Usage: vault plugin runtime <subcommand> [options] [args]
+
+  # ...
+
+Subcommands:
+    deregister    Deregister an existing plugin runtime in the catalog
+    info          Read information about a plugin runtime in the catalog
+    list          Lists available plugin runtimes
+    register      Registers a new plugin runtime in the catalog
+```
+
+For more information, examples, and usage about a subcommand, click on the name
+of the subcommand in the sidebar.

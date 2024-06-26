@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package identity
 
@@ -153,7 +153,7 @@ func TestIdentityStore_ExternalGroupMembershipsAcrossMounts(t *testing.T) {
 	}
 	ldapMountAccessor1 := auths["ldap/"].Accessor
 
-	cleanup, cfg := ldaphelper.PrepareTestContainer(t, "latest")
+	cleanup, cfg := ldaphelper.PrepareTestContainer(t, "master")
 	defer cleanup()
 
 	// Configure LDAP auth
@@ -255,7 +255,7 @@ func TestIdentityStore_ExternalGroupMembershipsAcrossMounts(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup2, cfg2 := ldaphelper.PrepareTestContainer(t, "latest")
+	cleanup2, cfg2 := ldaphelper.PrepareTestContainer(t, "master")
 	defer cleanup2()
 
 	// Configure LDAP auth

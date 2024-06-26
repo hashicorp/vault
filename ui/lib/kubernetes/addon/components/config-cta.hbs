@@ -1,9 +1,12 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <EmptyState
   data-test-config-cta
   @title="Kubernetes not configured"
   @message="Get started by establishing the URL of the Kubernetes API to connect to, along with some additional options."
 >
-  <LinkTo class="has-top-margin-xs" @route="configure">
-    Configure Kubernetes
-  </LinkTo>
+  <Hds::Link::Standalone @icon="chevron-right" @iconPosition="trailing" @text="Configure Kubernetes" @route="configure" />
 </EmptyState>

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 //go:build !enterprise
 
@@ -18,3 +18,5 @@ func (c *Core) NamespaceByID(ctx context.Context, nsID string) (*namespace.Names
 func (c *Core) ListNamespaces(includePath bool) []*namespace.Namespace {
 	return []*namespace.Namespace{namespace.RootNamespace}
 }
+
+func (c *Core) resetNamespaceCache() {}

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 module.exports = [
@@ -61,7 +61,7 @@ module.exports = [
     permanent: true,
   },
   {
-    source: '/vault/docs/:version(v1\.(?:4|5|6|7|8|9|10|11|12|13)\.x)/agent-and-proxy/agent/',
+    source: '/vault/docs/:version(v1\.(?:4|5|6|7|8|9|10|11|12|13)\.x)/agent-and-proxy/agent',
     destination: '/vault/docs/:version/agent/',
     permanent: true,
   },
@@ -103,6 +103,16 @@ module.exports = [
   {
     source: '/vault/docs/v1.13.x/agent-and-proxy/agent/apiproxy',
     destination: '/vault/docs/v1.13.x/agent/apiproxy',
+    permanent: true,
+  },
+  {
+    source: '/vault/api-docs/system/plugins-reload-backend',
+    destination: '/vault/api-docs/system/plugins-reload',
+    permanent: true,
+  },
+  {
+    source: '/vault/docs/deprecation/faq',
+    destination: '/vault/docs/deprecation',
     permanent: true,
   }
 ]

@@ -1,5 +1,10 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if this.label}}
-  <label for="select-{{this.elementId}}" class="is-label" data-test-select-label>
+  <label for="select-{{this.name}}" class="is-label" data-test-select-label>
     {{this.label}}
   </label>
 {{/if}}
@@ -7,9 +12,10 @@
   <div class="select {{if this.isFullwidth 'is-fullwidth'}}">
     <select
       class="select"
-      id="select-{{this.elementId}}"
+      id="select-{{this.name}}"
       onchange={{action this.onChange value="target.value"}}
       data-test-select={{this.name}}
+      aria-label={{this.ariaLabel}}
     >
       {{#if this.noDefault}}
         <option value="">

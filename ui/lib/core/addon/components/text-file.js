@@ -1,40 +1,38 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { guidFor } from '@ember/object/internals';
+import { buildWaiter } from '@ember/test-waiters';
 /**
  * @module TextFile
  * `TextFile` components render a file upload input with the option to toggle a "Enter as text" button
  *  that changes the input into a textarea
  *
  * @example
- * <TextFile
- *  @uploadOnly={{true}}
- *  @helpText="help text"
- *  @onChange={{this.handleChange}}
- *  @label="PEM Bundle"
- * />
+ * <TextFile @uploadOnly={{true}} @helpText="help text" @onChange={{this.handleChange}} @label="PEM Bundle" />
  *
  * @param {function} onChange - Callback function to call when the value of the input changes, returns an object in the shape of { value: fileContents, filename: 'some-file.txt' }
  * @param {bool} [uploadOnly=false] - When true, renders a static file upload input and removes the option to toggle and input plain text
  * @param {string} [helpText] - Text underneath label.
- * @param {string} [label='File']  - Text to use as the label for the file input. If none, default of 'File' is rendered
+ * @param {string} [label=File]  - Text to use as the label for the file input. If none, default of 'File' is rendered
  */
+
+const waiter = buildWaiter('text-file');
 
 export default class TextFileComponent extends Component {
   @tracked content = '';
   @tracked filename = '';
   @tracked uploadError = '';
-  @tracked showValue = false;
   @tracked showTextArea = false;
   elementId = guidFor(this);
 
   async readFile(file) {
+    const waiterToken = waiter.beginAsync();
     try {
       this.content = await file.text();
       this.filename = file.name;
@@ -42,6 +40,8 @@ export default class TextFileComponent extends Component {
     } catch (error) {
       this.clearFile();
       this.uploadError = 'There was a problem uploading. Please try again.';
+    } finally {
+      waiter.endAsync(waiterToken);
     }
   }
 

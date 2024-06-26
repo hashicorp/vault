@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div class="has-bottom-margin-s">
   {{#if (eq @policyType "acl")}}
     <p data-test-example-modal-text="acl">
@@ -37,7 +42,14 @@
     </p>
   {{/if}}
 </div>
-<JsonEditor @value={{get this.policyTemplates @policyType}} @mode="ruby" @readOnly={{true}} @showToolbar={{true}} />
+<JsonEditor
+  @value={{get this.policyTemplates @policyType}}
+  @mode="ruby"
+  @readOnly={{true}}
+  @showToolbar={{true}}
+  {{! Passed to copy button }}
+  @container={{@container}}
+/>
 <div class="has-bottom-margin-m has-top-padding-s">
   <p>
     More information about

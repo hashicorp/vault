@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <TabPageHeader @model={{@backend}} @breadcrumbs={{@breadcrumbs}}>
   <ToolbarLink @route="configure" data-test-toolbar-config-action>
     {{if @config "Edit configuration" "Configure Kubernetes"}}
@@ -9,7 +14,7 @@
     <InfoTableRow @label="Kubernetes host" @value={{@config.kubernetesHost}} />
     {{#if @config.kubernetesCaCert}}
       <InfoTableRow @label="Certificate">
-        <CertificateCard @certificateValue={{@config.kubernetesCaCert}} />
+        <CertificateCard @data={{@config.kubernetesCaCert}} @isPem={{true}} />
       </InfoTableRow>
     {{/if}}
   {{else}}
@@ -24,3 +29,5 @@
 {{else}}
   <ConfigCta />
 {{/if}}
+
+<SecretsEngineMountConfig @model={{@backend}} class="has-top-margin-xl has-bottom-margin-xl" data-test-mount-config />

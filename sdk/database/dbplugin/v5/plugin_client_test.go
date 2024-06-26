@@ -156,3 +156,7 @@ func (m *mockRunnerUtil) MlockEnabled() bool {
 	args := m.Called()
 	return args.Bool(0)
 }
+
+func (m *mockRunnerUtil) ClusterID(ctx context.Context) (string, error) {
+	return "clusterid", nil
+}

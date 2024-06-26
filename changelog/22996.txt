@@ -1,0 +1,3 @@
+```release-note:improvement
+auto-auth/azure: Support setting the `authenticate_from_environment` variable to "true" and "false" string literals, too.
+```

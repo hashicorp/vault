@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package server
 
@@ -9,20 +9,17 @@ import (
 	"io"
 	"net"
 
-	// We must import sha512 so that it registers with the runtime so that
-	// certificates that use it can be parsed.
-
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
 	"github.com/hashicorp/vault/helper/proxyutil"
 	"github.com/hashicorp/vault/internalshared/configutil"
-	"github.com/mitchellh/cli"
 )
 
 // ListenerFactory is the factory function to create a listener.
 type ListenerFactory func(*configutil.Listener, io.Writer, cli.Ui) (net.Listener, map[string]string, reloadutil.ReloadFunc, error)
 
 // BuiltinListeners is the list of built-in listener types.
-var BuiltinListeners = map[string]ListenerFactory{
+var BuiltinListeners = map[configutil.ListenerType]ListenerFactory{
 	"tcp":  tcpListenerFactory,
 	"unix": unixListenerFactory,
 }

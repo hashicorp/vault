@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -127,7 +127,7 @@ module('Integration | Component | pki | Page::PkiIssuerEditPage::PkiIssuerEdit',
         'http://localhost:8200',
         'Updated issuing certificates sent in POST request'
       );
-      return { data };
+      return { issuer_id: 'test', data };
     });
     await render(hbs`<Page::PkiIssuerEdit @model={{this.model}} />`, { owner: this.engine });
 

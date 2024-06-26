@@ -1,0 +1,4 @@
+```release-note:change
+activity log: Deprecates the current_billing_period field for /sys/internal/counters/activity. The default start time
+will automatically be set the billing period start date.
+```

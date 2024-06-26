@@ -1,11 +1,11 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Route from '@ember/routing/route';
 import ListRoute from 'core/mixins/list-route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 
 export default Route.extend(ListRoute, {
   store: service(),
@@ -18,6 +18,7 @@ export default Route.extend(ListRoute, {
         responsePath: 'data.keys',
         page: params.page,
         pageFilter: params.pageFilter,
+        sortBy: 'name',
       })
       .catch((err) => {
         if (err.httpStatus === 404) {

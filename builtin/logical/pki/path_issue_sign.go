@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -285,7 +286,7 @@ See the API documentation for more information about required parameters.
 
 // pathIssue issues a certificate and private key from given parameters,
 // subject to role restrictions
-func (b *backend) pathIssue(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry) (*logical.Response, error) {
+func (b *backend) pathIssue(ctx context.Context, req *logical.Request, data *framework.FieldData, role *issuing.RoleEntry) (*logical.Response, error) {
 	if role.KeyType == "any" {
 		return logical.ErrorResponse("role key type \"any\" not allowed for issuing certificates, only signing"), nil
 	}
@@ -295,22 +296,64 @@ func (b *backend) pathIssue(ctx context.Context, req *logical.Request, data *fra
 
 // pathSign issues a certificate from a submitted CSR, subject to role
 // restrictions
-func (b *backend) pathSign(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry) (*logical.Response, error) {
+func (b *backend) pathSign(ctx context.Context, req *logical.Request, data *framework.FieldData, role *issuing.RoleEntry) (*logical.Response, error) {
 	return b.pathIssueSignCert(ctx, req, data, role, true, false)
 }
 
 // pathSignVerbatim issues a certificate from a submitted CSR, *not* subject to
 // role restrictions
-func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry) (*logical.Response, error) {
-	entry := buildSignVerbatimRole(data, role)
+func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, data *framework.FieldData, role *issuing.RoleEntry) (*logical.Response, error) {
+	opts := []issuing.RoleModifier{
+		issuing.WithKeyUsage(data.Get("key_usage").([]string)),
+		issuing.WithExtKeyUsage(data.Get("ext_key_usage").([]string)),
+		issuing.WithExtKeyUsageOIDs(data.Get("ext_key_usage_oids").([]string)),
+		issuing.WithSignatureBits(data.Get("signature_bits").(int)),
+		issuing.WithUsePSS(data.Get("use_pss").(bool)),
+	}
 
+	// if we did receive a role parameter value with a valid role, use some of its values
+	// to populate and influence the sign-verbatim behavior.
+	if role != nil {
+		opts = append(opts, issuing.WithNoStore(role.NoStore))
+		opts = append(opts, issuing.WithNoStoreMetadata(role.NoStoreMetadata))
+		opts = append(opts, issuing.WithIssuer(role.Issuer))
+
+		if role.TTL > 0 {
+			opts = append(opts, issuing.WithTTL(role.TTL))
+		}
+
+		if role.MaxTTL > 0 {
+			opts = append(opts, issuing.WithMaxTTL(role.MaxTTL))
+		}
+
+		if role.GenerateLease != nil {
+			opts = append(opts, issuing.WithGenerateLease(*role.GenerateLease))
+		}
+
+		if role.NotBeforeDuration > 0 {
+			opts = append(opts, issuing.WithNotBeforeDuration(role.NotBeforeDuration))
+		}
+	}
+
+	entry := issuing.SignVerbatimRoleWithOpts(opts...)
 	return b.pathIssueSignCert(ctx, req, data, entry, true, true)
 }
 
-func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry, useCSR, useCSRValues bool) (*logical.Response, error) {
-	// If storing the certificate and on a performance standby, forward this request on to the primary
-	// Allow performance secondaries to generate and store certificates locally to them.
-	if !role.NoStore && b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) {
+func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, data *framework.FieldData, role *issuing.RoleEntry, useCSR, useCSRValues bool) (*logical.Response, error) {
+	// Error out early if incompatible fields set:
+	certMetadata, metadataInRequest := data.GetOk("cert_metadata")
+	if metadataInRequest {
+		err := validateCertMetadataConfiguration(role)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// If storing the certificate or certMetadata about this certificate and on a performance standby, forward this request
+	// on to the primary
+	// Allow performance secondaries to generate and store certificates and certMetadata locally to them.
+	needsStorage := !role.NoStore || (metadataInRequest && !role.NoStoreMetadata && issuing.MetadataPermitted)
+	if needsStorage && b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) {
 		return nil, logical.ErrReadOnly
 	}
 
@@ -333,7 +376,7 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 	} else {
 		// Otherwise, we must have a newer API which requires an issuer
 		// reference. Fetch it in this case
-		issuerName = getIssuerRef(data)
+		issuerName = GetIssuerRef(data)
 		if len(issuerName) == 0 {
 			return logical.ErrorResponse("missing issuer reference"), nil
 		}
@@ -347,7 +390,7 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 
 	var caErr error
 	sc := b.makeStorageContext(ctx, req.Storage)
-	signingBundle, caErr := sc.fetchCAInfo(issuerName, IssuanceUsage)
+	signingBundle, caErr := sc.fetchCAInfo(issuerName, issuing.IssuanceUsage)
 	if caErr != nil {
 		switch caErr.(type) {
 		case errutil.UserError:
@@ -358,17 +401,23 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 				"error fetching CA certificate: %s", caErr)}
 		}
 	}
-
+	issuerId, err := issuing.ResolveIssuerReference(ctx, req.Storage, role.Issuer)
+	if err != nil {
+		if issuerId == issuing.IssuerRefNotFound {
+			b.Logger().Warn("could not resolve issuer reference, may be using a legacy CA bundle")
+		} else {
+			return nil, err
+		}
+	}
 	input := &inputBundle{
 		req:     req,
 		apiData: data,
 		role:    role,
 	}
 	var parsedBundle *certutil.ParsedCertBundle
-	var err error
 	var warnings []string
 	if useCSR {
-		parsedBundle, warnings, err = signCert(b, input, signingBundle, false, useCSRValues)
+		parsedBundle, warnings, err = signCert(b.System(), input, signingBundle, false, useCSRValues)
 	} else {
 		parsedBundle, warnings, err = generateCert(sc, input, signingBundle, false, rand.Reader)
 	}
@@ -383,42 +432,34 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		}
 	}
 
-	cb, err := parsedBundle.ToCertBundle()
-	if err != nil {
-		return nil, fmt.Errorf("error converting raw cert bundle to cert bundle: %w", err)
+	generateLease := false
+	if role.GenerateLease != nil && *role.GenerateLease {
+		generateLease = true
 	}
 
-	resp, err := signIssueApiResponse(data, parsedBundle, signingBundle, warnings)
+	resp, err := signIssueApiResponse(b, data, parsedBundle, signingBundle, generateLease, warnings)
 	if err != nil {
 		return nil, err
 	}
 
-	switch {
-	case role.GenerateLease == nil:
-		return nil, fmt.Errorf("generate lease in role is nil")
-	case !*role.GenerateLease:
-		// Use resp from above
-	default:
-		respData := resp.Data
-		resp = b.Secret(SecretCertsType).Response(
-			respData,
-			map[string]interface{}{
-				"serial_number": cb.SerialNumber,
-			})
-		resp.Secret.TTL = parsedBundle.Certificate.NotAfter.Sub(time.Now())
+	if !role.NoStore {
+		err = issuing.StoreCertificate(ctx, req.Storage, b.GetCertificateCounter(), parsedBundle)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	if !role.NoStore {
-		key := "certs/" + normalizeSerial(cb.SerialNumber)
-		certsCounted := b.certsCounted.Load()
-		err = req.Storage.Put(ctx, &logical.StorageEntry{
-			Key:   key,
-			Value: parsedBundle.CertificateBytes,
-		})
+	if metadataInRequest {
+		metadataBytes, err := base64.StdEncoding.DecodeString(certMetadata.(string))
 		if err != nil {
-			return nil, fmt.Errorf("unable to store certificate locally: %w", err)
+			// TODO: Should we clean up the original cert here?
+			return nil, err
 		}
-		b.ifCountEnabledIncrementTotalCertificatesCount(certsCounted, key)
+		err = storeCertMetadata(ctx, req.Storage, issuerId, role.Name, parsedBundle.Certificate, metadataBytes)
+		if err != nil {
+			// TODO: Should we clean up the original cert here?
+			return nil, err
+		}
 	}
 
 	if useCSR {
@@ -479,7 +520,7 @@ func (cac *caChainOutput) derEncodedChain() []string {
 	return derCaChain
 }
 
-func signIssueApiResponse(data *framework.FieldData, parsedBundle *certutil.ParsedCertBundle, signingBundle *certutil.CAInfoBundle, warnings []string) (*logical.Response, error) {
+func signIssueApiResponse(b *backend, data *framework.FieldData, parsedBundle *certutil.ParsedCertBundle, signingBundle *certutil.CAInfoBundle, generateLease bool, warnings []string) (*logical.Response, error) {
 	cb, err := parsedBundle.ToCertBundle()
 	if err != nil {
 		return nil, fmt.Errorf("error converting raw cert bundle to cert bundle: %w", err)
@@ -538,8 +579,18 @@ func signIssueApiResponse(data *framework.FieldData, parsedBundle *certutil.Pars
 		return nil, fmt.Errorf("unsupported format: %s", format)
 	}
 
-	resp := &logical.Response{
-		Data: respData,
+	var resp *logical.Response
+	if generateLease {
+		resp = b.Secret(SecretCertsType).Response(
+			respData,
+			map[string]interface{}{
+				"serial_number": cb.SerialNumber,
+			})
+		resp.Secret.TTL = parsedBundle.Certificate.NotAfter.Sub(time.Now())
+	} else {
+		resp = &logical.Response{
+			Data: respData,
+		}
 	}
 
 	if includeKey {

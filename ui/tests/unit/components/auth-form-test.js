@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -16,24 +16,23 @@ module('Unit | Component | auth-form', function (hooks) {
     const component = this.owner.lookup('component:auth-form');
     component.reopen({
       methods: [], // eslint-disable-line
+      // performAuth is a callback passed from the parent component
+      // that is called in the return of the doSubmit method
+      // this component is not glimmerized and testing this functionality
+      // in an integration test requires additional role setup so
+      // stubbing here to test it is called with the correct args
       // eslint-disable-next-line
-      authenticate: {
-        unlinked() {
-          return {
-            perform(type, data) {
-              assert.deepEqual(
-                type,
-                'token',
-                `Token type correctly passed to authenticate method for ${component.providerName}`
-              );
-              assert.deepEqual(
-                data,
-                { token: component.token },
-                `Token passed to authenticate method for ${component.providerName}`
-              );
-            },
-          };
-        },
+      performAuth(type, data) {
+        assert.deepEqual(
+          type,
+          'token',
+          `Token type correctly passed to authenticate method for ${component.providerName}`
+        );
+        assert.deepEqual(
+          data,
+          { token: component.token },
+          `Token passed to authenticate method for ${component.providerName}`
+        );
       },
     });
 

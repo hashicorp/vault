@@ -1,11 +1,10 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import RESTSerializer from '@ember-data/serializer/rest';
 import { isNone, isBlank } from '@ember/utils';
-import { assign } from '@ember/polyfills';
 import { decamelize } from '@ember/string';
 
 export default RESTSerializer.extend({
@@ -25,7 +24,7 @@ export default RESTSerializer.extend({
   },
 
   normalizeItems(payload) {
-    assign(payload, payload.data);
+    Object.assign(payload, payload.data);
     delete payload.data;
     return payload;
   },

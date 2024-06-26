@@ -6,6 +6,8 @@ description: The `/sys/in-flight-req` endpoint is used to get information on in-
 
 # `/sys/in-flight-req`
 
+@include 'alerts/restricted-root.mdx'
+
 The `/sys/in-flight-req` endpoint is used to get information on in-flight requests.
 The returned information contains the `start_time`, `client_remote_address`, `request_path`,
 `request_method`, and `client_id` of the in-flight requests.

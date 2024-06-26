@@ -13,8 +13,8 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/go-jose/go-jose/v3/jwt"
-
+	jose "github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/hashicorp/errwrap"
 )
 
@@ -41,6 +41,11 @@ const (
 	// PluginUnwrapTokenEnv is the ENV name used to pass unwrap tokens to the
 	// plugin.
 	PluginUnwrapTokenEnv = "VAULT_UNWRAP_TOKEN"
+
+	// CubbyHoleJWTSignatureAlgorithm is the signature algorithm used for
+	// the unwrap token that Vault passes to a plugin when auto-mTLS is
+	// not enabled.
+	CubbyHoleJWTSignatureAlgorithm = jose.ES512
 )
 
 // PluginAPIClientMeta is a helper that plugins can use to configure TLS connections
@@ -51,6 +56,7 @@ type PluginAPIClientMeta struct {
 	flagCAPath     string
 	flagClientCert string
 	flagClientKey  string
+	flagServerName string
 	flagInsecure   bool
 }
 
@@ -62,6 +68,7 @@ func (f *PluginAPIClientMeta) FlagSet() *flag.FlagSet {
 	fs.StringVar(&f.flagCAPath, "ca-path", "", "")
 	fs.StringVar(&f.flagClientCert, "client-cert", "", "")
 	fs.StringVar(&f.flagClientKey, "client-key", "", "")
+	fs.StringVar(&f.flagServerName, "tls-server-name", "", "")
 	fs.BoolVar(&f.flagInsecure, "tls-skip-verify", false, "")
 
 	return fs
@@ -70,13 +77,13 @@ func (f *PluginAPIClientMeta) FlagSet() *flag.FlagSet {
 // GetTLSConfig will return a TLSConfig based off the values from the flags
 func (f *PluginAPIClientMeta) GetTLSConfig() *TLSConfig {
 	// If we need custom TLS configuration, then set it
-	if f.flagCACert != "" || f.flagCAPath != "" || f.flagClientCert != "" || f.flagClientKey != "" || f.flagInsecure {
+	if f.flagCACert != "" || f.flagCAPath != "" || f.flagClientCert != "" || f.flagClientKey != "" || f.flagInsecure || f.flagServerName != "" {
 		t := &TLSConfig{
 			CACert:        f.flagCACert,
 			CAPath:        f.flagCAPath,
 			ClientCert:    f.flagClientCert,
 			ClientKey:     f.flagClientKey,
-			TLSServerName: "",
+			TLSServerName: f.flagServerName,
 			Insecure:      f.flagInsecure,
 		}
 
@@ -101,7 +108,7 @@ func VaultPluginTLSProviderContext(ctx context.Context, apiTLSConfig *TLSConfig)
 	return func() (*tls.Config, error) {
 		unwrapToken := os.Getenv(PluginUnwrapTokenEnv)
 
-		parsedJWT, err := jwt.ParseSigned(unwrapToken)
+		parsedJWT, err := jwt.ParseSigned(unwrapToken, []jose.SignatureAlgorithm{CubbyHoleJWTSignatureAlgorithm})
 		if err != nil {
 			return nil, errwrap.Wrapf("error parsing wrapping token: {{err}}", err)
 		}

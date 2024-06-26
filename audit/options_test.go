@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package audit
 
@@ -12,6 +12,8 @@ import (
 
 // TestOptions_WithFormat exercises WithFormat Option to ensure it performs as expected.
 func TestOptions_WithFormat(t *testing.T) {
+	t.Parallel()
+
 	tests := map[string]struct {
 		Value                string
 		IsErrorExpected      bool
@@ -31,7 +33,7 @@ func TestOptions_WithFormat(t *testing.T) {
 		"invalid-test": {
 			Value:                "test",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(format).validate: 'test' is not a valid format: invalid parameter",
+			ExpectedErrorMessage: "invalid format \"test\": invalid internal parameter",
 		},
 		"valid-json": {
 			Value:           "json",
@@ -50,16 +52,16 @@ func TestOptions_WithFormat(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			options := &options{}
+			opts := &options{}
 			applyOption := WithFormat(tc.Value)
-			err := applyOption(options)
+			err := applyOption(opts)
 			switch {
 			case tc.IsErrorExpected:
 				require.Error(t, err)
 				require.EqualError(t, err, tc.ExpectedErrorMessage)
 			default:
 				require.NoError(t, err)
-				require.Equal(t, tc.ExpectedValue, options.withFormat)
+				require.Equal(t, tc.ExpectedValue, opts.withFormat)
 			}
 		})
 	}
@@ -67,6 +69,8 @@ func TestOptions_WithFormat(t *testing.T) {
 
 // TestOptions_WithSubtype exercises WithSubtype Option to ensure it performs as expected.
 func TestOptions_WithSubtype(t *testing.T) {
+	t.Parallel()
+
 	tests := map[string]struct {
 		Value                string
 		IsErrorExpected      bool
@@ -95,16 +99,16 @@ func TestOptions_WithSubtype(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			options := &options{}
+			opts := &options{}
 			applyOption := WithSubtype(tc.Value)
-			err := applyOption(options)
+			err := applyOption(opts)
 			switch {
 			case tc.IsErrorExpected:
 				require.Error(t, err)
 				require.EqualError(t, err, tc.ExpectedErrorMessage)
 			default:
 				require.NoError(t, err)
-				require.Equal(t, tc.ExpectedValue, options.withSubtype)
+				require.Equal(t, tc.ExpectedValue, opts.withSubtype)
 			}
 		})
 	}
@@ -112,6 +116,8 @@ func TestOptions_WithSubtype(t *testing.T) {
 
 // TestOptions_WithNow exercises WithNow Option to ensure it performs as expected.
 func TestOptions_WithNow(t *testing.T) {
+	t.Parallel()
+
 	tests := map[string]struct {
 		Value                time.Time
 		IsErrorExpected      bool
@@ -136,16 +142,16 @@ func TestOptions_WithNow(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			options := &options{}
+			opts := &options{}
 			applyOption := WithNow(tc.Value)
-			err := applyOption(options)
+			err := applyOption(opts)
 			switch {
 			case tc.IsErrorExpected:
 				require.Error(t, err)
 				require.EqualError(t, err, tc.ExpectedErrorMessage)
 			default:
 				require.NoError(t, err)
-				require.Equal(t, tc.ExpectedValue, options.withNow)
+				require.Equal(t, tc.ExpectedValue, opts.withNow)
 			}
 		})
 	}
@@ -153,6 +159,8 @@ func TestOptions_WithNow(t *testing.T) {
 
 // TestOptions_WithID exercises WithID Option to ensure it performs as expected.
 func TestOptions_WithID(t *testing.T) {
+	t.Parallel()
+
 	tests := map[string]struct {
 		Value                string
 		IsErrorExpected      bool
@@ -181,16 +189,16 @@ func TestOptions_WithID(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			options := &options{}
+			opts := &options{}
 			applyOption := WithID(tc.Value)
-			err := applyOption(options)
+			err := applyOption(opts)
 			switch {
 			case tc.IsErrorExpected:
 				require.Error(t, err)
 				require.EqualError(t, err, tc.ExpectedErrorMessage)
 			default:
 				require.NoError(t, err)
-				require.Equal(t, tc.ExpectedValue, options.withID)
+				require.Equal(t, tc.ExpectedValue, opts.withID)
 			}
 		})
 	}
@@ -198,6 +206,8 @@ func TestOptions_WithID(t *testing.T) {
 
 // TestOptions_WithPrefix exercises WithPrefix Option to ensure it performs as expected.
 func TestOptions_WithPrefix(t *testing.T) {
+	t.Parallel()
+
 	tests := map[string]struct {
 		Value                string
 		IsErrorExpected      bool
@@ -210,9 +220,9 @@ func TestOptions_WithPrefix(t *testing.T) {
 			ExpectedValue:   "",
 		},
 		"whitespace": {
-			Value:                "     ",
-			IsErrorExpected:      false,
-			ExpectedErrorMessage: "",
+			Value:           "     ",
+			IsErrorExpected: false,
+			ExpectedValue:   "     ",
 		},
 		"valid": {
 			Value:           "test",
@@ -226,16 +236,16 @@ func TestOptions_WithPrefix(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			options := &options{}
+			opts := &options{}
 			applyOption := WithPrefix(tc.Value)
-			err := applyOption(options)
+			err := applyOption(opts)
 			switch {
 			case tc.IsErrorExpected:
 				require.Error(t, err)
 				require.EqualError(t, err, tc.ExpectedErrorMessage)
 			default:
 				require.NoError(t, err)
-				require.Equal(t, tc.ExpectedValue, options.withPrefix)
+				require.Equal(t, tc.ExpectedValue, opts.withPrefix)
 			}
 		})
 	}
@@ -243,6 +253,8 @@ func TestOptions_WithPrefix(t *testing.T) {
 
 // TestOptions_WithRaw exercises WithRaw Option to ensure it performs as expected.
 func TestOptions_WithRaw(t *testing.T) {
+	t.Parallel()
+
 	tests := map[string]struct {
 		Value         bool
 		ExpectedValue bool
@@ -262,17 +274,19 @@ func TestOptions_WithRaw(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			options := &options{}
+			opts := &options{}
 			applyOption := WithRaw(tc.Value)
-			err := applyOption(options)
+			err := applyOption(opts)
 			require.NoError(t, err)
-			require.Equal(t, tc.ExpectedValue, options.withRaw)
+			require.Equal(t, tc.ExpectedValue, opts.withRaw)
 		})
 	}
 }
 
 // TestOptions_WithElision exercises WithElision Option to ensure it performs as expected.
 func TestOptions_WithElision(t *testing.T) {
+	t.Parallel()
+
 	tests := map[string]struct {
 		Value         bool
 		ExpectedValue bool
@@ -292,17 +306,19 @@ func TestOptions_WithElision(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			options := &options{}
+			opts := &options{}
 			applyOption := WithElision(tc.Value)
-			err := applyOption(options)
+			err := applyOption(opts)
 			require.NoError(t, err)
-			require.Equal(t, tc.ExpectedValue, options.withElision)
+			require.Equal(t, tc.ExpectedValue, opts.withElision)
 		})
 	}
 }
 
 // TestOptions_WithHMACAccessor exercises WithHMACAccessor Option to ensure it performs as expected.
 func TestOptions_WithHMACAccessor(t *testing.T) {
+	t.Parallel()
+
 	tests := map[string]struct {
 		Value         bool
 		ExpectedValue bool
@@ -322,17 +338,19 @@ func TestOptions_WithHMACAccessor(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			options := &options{}
+			opts := &options{}
 			applyOption := WithHMACAccessor(tc.Value)
-			err := applyOption(options)
+			err := applyOption(opts)
 			require.NoError(t, err)
-			require.Equal(t, tc.ExpectedValue, options.withHMACAccessor)
+			require.Equal(t, tc.ExpectedValue, opts.withHMACAccessor)
 		})
 	}
 }
 
 // TestOptions_WithOmitTime exercises WithOmitTime Option to ensure it performs as expected.
 func TestOptions_WithOmitTime(t *testing.T) {
+	t.Parallel()
+
 	tests := map[string]struct {
 		Value         bool
 		ExpectedValue bool
@@ -352,17 +370,19 @@ func TestOptions_WithOmitTime(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			options := &options{}
+			opts := &options{}
 			applyOption := WithOmitTime(tc.Value)
-			err := applyOption(options)
+			err := applyOption(opts)
 			require.NoError(t, err)
-			require.Equal(t, tc.ExpectedValue, options.withOmitTime)
+			require.Equal(t, tc.ExpectedValue, opts.withOmitTime)
 		})
 	}
 }
 
 // TestOptions_Default exercises getDefaultOptions to assert the default values.
 func TestOptions_Default(t *testing.T) {
+	t.Parallel()
+
 	opts := getDefaultOptions()
 	require.NotNil(t, opts)
 	require.True(t, time.Now().After(opts.withNow))
@@ -371,6 +391,8 @@ func TestOptions_Default(t *testing.T) {
 
 // TestOptions_Opts exercises GetOpts with various Option values.
 func TestOptions_Opts(t *testing.T) {
+	t.Parallel()
+
 	tests := map[string]struct {
 		opts                 []Option
 		IsErrorExpected      bool

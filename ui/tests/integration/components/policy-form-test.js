@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -8,7 +8,8 @@ import { setupRenderingTest } from 'ember-qunit';
 import { click, fillIn, render, triggerEvent } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
-import Pretender from 'pretender';
+import { setupMirage } from 'ember-cli-mirage/test-support';
+import { overrideResponse } from 'vault/tests/helpers/stubs';
 
 const SELECTORS = {
   nameInput: '[data-test-policy-input="name"]',
@@ -30,33 +31,21 @@ const SELECTORS = {
 
 module('Integration | Component | policy-form', function (hooks) {
   setupRenderingTest(hooks);
+  setupMirage(hooks);
 
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
     this.model = this.store.createRecord('policy/acl');
     this.onSave = sinon.spy();
     this.onCancel = sinon.spy();
-    this.server = new Pretender(function () {
-      this.put('/v1/sys/policies/acl/bad-policy', () => {
-        return [
-          400,
-          { 'Content-Type': 'application/json' },
-          JSON.stringify({ errors: ['An error occurred'] }),
-        ];
-      });
-      this.put('/v1/sys/policies/acl/**', () => {
-        return [204, { 'Content-Type': 'application/json' }];
-      });
-      this.put('/v1/sys/policies/rgp/**', () => {
-        return [204, { 'Content-Type': 'application/json' }];
-      });
-      this.put('/v1/sys/policies/egp/**', () => {
-        return [204, { 'Content-Type': 'application/json' }];
-      });
+    this.server.put('/sys/policies/acl/:name', (_, req) => {
+      if (req.params.name === 'bad-policy') {
+        return overrideResponse(400, { errors: ['An error occurred'] });
+      }
+      return overrideResponse(204);
     });
-  });
-  hooks.afterEach(function () {
-    this.server.shutdown();
+    this.server.put('/sys/policies/rgp/:name', () => overrideResponse(204));
+    this.server.put('/sys/policies/egp/:name', () => overrideResponse(204));
   });
 
   test('it renders the form for new ACL policy', async function (assert) {
@@ -366,8 +355,7 @@ module('Integration | Component | policy-form', function (hooks) {
       @onSave={{this.onSave}}
       @renderPolicyExampleModal={{true}}
     />
-    <div id="modal-wormhole"></div>
-    `);
+        `);
     assert.dom(SELECTORS.exampleButton).exists({ count: 1 }, 'Modal for the policy example exists');
     assert.dom(SELECTORS.exampleButton).exists({ count: 1 }, 'Button for the policy example modal exists');
   });
@@ -380,8 +368,7 @@ module('Integration | Component | policy-form', function (hooks) {
       @onSave={{this.onSave}}
       @renderPolicyExampleModal={{true}}
     />
-    <div id="modal-wormhole"></div>
-    `);
+        `);
     await click(SELECTORS.exampleButton);
     assert.dom(SELECTORS.exampleModalTitle).hasText('Example ACL Policy');
   });
@@ -396,8 +383,7 @@ module('Integration | Component | policy-form', function (hooks) {
       @onSave={{this.onSave}}
       @renderPolicyExampleModal={{true}}
     />
-    <div id="modal-wormhole"></div>
-    `);
+        `);
     await click(SELECTORS.exampleButton);
     assert.dom(SELECTORS.exampleModalTitle).hasText('Example RGP Policy');
   });
@@ -412,8 +398,7 @@ module('Integration | Component | policy-form', function (hooks) {
       @onSave={{this.onSave}}
       @renderPolicyExampleModal={{true}}
     />
-    <div id="modal-wormhole"></div>
-    `);
+        `);
     await click(SELECTORS.exampleButton);
     assert.dom(SELECTORS.exampleModalTitle).hasText('Example EGP Policy');
   });

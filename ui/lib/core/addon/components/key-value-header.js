@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
@@ -12,9 +12,8 @@ import { encodePath } from 'vault/utils/path-encoding-helpers';
  * KeyValueHeader components show breadcrumbs for secret engines.
  *
  * @example
- * ```js
- <KeyValueHeader @path="vault.cluster.secrets.backend.show" @mode={{this.mode}} @root={{@root}}/>
- * ```
+ * <KeyValueHeader @path="vault.cluster.secrets.backend.show" @mode={{this.mode}}/>
+ *
  * @param {string} [mode=null] - Used to set the currentPath.
  * @param {string} [baseKey=null] - Used to generate the path backward.
  * @param {string} [path=null] - The fallback path.

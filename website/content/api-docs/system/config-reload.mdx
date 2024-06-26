@@ -6,6 +6,8 @@ description: The '/sys/config/reload' endpoint is used to reload specific parts 
 
 # `/sys/config/reload`
 
+@include 'alerts/restricted-root.mdx'
+
 The `sys/config/reload` endpoint allows reloading specific parts of Vault's configuration.
 Currently, it only supports reloading license information from files on disk.
 

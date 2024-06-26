@@ -1,13 +1,15 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package token
 
 import (
 	"sync"
+
+	"github.com/hashicorp/vault/api/tokenhelper"
 )
 
-var _ TokenHelper = (*TestingTokenHelper)(nil)
+var _ tokenhelper.TokenHelper = (*TestingTokenHelper)(nil)
 
 // TestingTokenHelper implements token.TokenHelper which runs entirely
 // in-memory. This should not be used outside of testing.

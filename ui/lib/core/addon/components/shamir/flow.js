@@ -1,4 +1,8 @@
-import { A } from '@ember/array';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { action } from '@ember/object';
 import { service } from '@ember/service';
 import { camelize } from '@ember/string';
@@ -39,7 +43,7 @@ import { tracked } from '@glimmer/tracking';
  */
 export default class ShamirFlowComponent extends Component {
   @service store;
-  @tracked errors = A();
+  @tracked errors = null;
   @tracked attemptResponse = null;
 
   get action() {

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package agent
 
@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	vaultcert "github.com/hashicorp/vault/builtin/credential/cert"
 	"github.com/hashicorp/vault/builtin/logical/pki"
@@ -198,7 +198,7 @@ func testCertEndToEnd(t *testing.T, withCertRoleName, ahWrapping bool) {
 		Client: client,
 	})
 	go func() {
-		errCh <- ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config})
+		errCh <- ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config}, ah.AuthInProgress)
 	}()
 	defer func() {
 		select {
@@ -424,7 +424,7 @@ func TestCertEndToEnd_CertsInConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.Remove(leafCertFile.Name())
-	if _, err := leafCertFile.Write([]byte(leafCertPEM)); err != nil {
+	if _, err := leafCertFile.WriteString(leafCertPEM); err != nil {
 		t.Fatal(err)
 	}
 	if err := leafCertFile.Close(); err != nil {
@@ -436,7 +436,7 @@ func TestCertEndToEnd_CertsInConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.Remove(leafCertKeyFile.Name())
-	if _, err := leafCertKeyFile.Write([]byte(leafCertKeyPEM)); err != nil {
+	if _, err := leafCertKeyFile.WriteString(leafCertKeyPEM); err != nil {
 		t.Fatal(err)
 	}
 	if err := leafCertKeyFile.Close(); err != nil {
@@ -536,7 +536,7 @@ func TestCertEndToEnd_CertsInConfig(t *testing.T) {
 		Client: client,
 	})
 	go func() {
-		errCh <- ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config})
+		errCh <- ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config}, ah.AuthInProgress)
 	}()
 	defer func() {
 		select {

@@ -1,0 +1,6 @@
+```release-note:bug
+agent: Fixed incorrect parsing of boolean environment variables for configuration.
+```
+```release-note:bug
+proxy: Fixed incorrect parsing of boolean environment variables for configuration.
+```

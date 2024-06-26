@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package event
 
@@ -22,6 +22,8 @@ const (
 	devnull         = "/dev/null"
 )
 
+var _ eventlogger.Node = (*FileSink)(nil)
+
 // FileSink is a sink node which handles writing events to file.
 type FileSink struct {
 	file           *os.File
@@ -34,17 +36,15 @@ type FileSink struct {
 // NewFileSink should be used to create a new FileSink.
 // Accepted options: WithFileMode.
 func NewFileSink(path string, format string, opt ...Option) (*FileSink, error) {
-	const op = "event.NewFileSink"
-
 	// Parse and check path
 	p := strings.TrimSpace(path)
 	if p == "" {
-		return nil, fmt.Errorf("%s: path is required", op)
+		return nil, fmt.Errorf("path is required: %w", ErrInvalidParameter)
 	}
 
 	opts, err := getOpts(opt...)
 	if err != nil {
-		return nil, fmt.Errorf("%s: error applying options: %w", op, err)
+		return nil, err
 	}
 
 	mode := os.FileMode(defaultFileMode)
@@ -56,7 +56,7 @@ func NewFileSink(path string, format string, opt ...Option) (*FileSink, error) {
 	case *opts.withFileMode == 0: // Maintain the existing file's mode when set to "0000".
 		fileInfo, err := os.Stat(path)
 		if err != nil {
-			return nil, fmt.Errorf("%s: unable to determine existing file mode: %w", op, err)
+			return nil, fmt.Errorf("unable to determine existing file mode: %w", err)
 		}
 		mode = fileInfo.Mode()
 	default:
@@ -75,16 +75,14 @@ func NewFileSink(path string, format string, opt ...Option) (*FileSink, error) {
 	// otherwise it will be too late to catch later without problems
 	// (ref: https://github.com/hashicorp/vault/issues/550)
 	if err := sink.open(); err != nil {
-		return nil, fmt.Errorf("%s: sanity check failed; unable to open %q for writing: %w", op, path, err)
+		return nil, fmt.Errorf("sanity check failed; unable to open %q for writing: %w", sink.path, err)
 	}
 
 	return sink, nil
 }
 
 // Process handles writing the event to the file sink.
-func (f *FileSink) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
-	const op = "event.(FileSink).Process"
-
+func (s *FileSink) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -92,22 +90,22 @@ func (f *FileSink) Process(ctx context.Context, e *eventlogger.Event) (*eventlog
 	}
 
 	if e == nil {
-		return nil, fmt.Errorf("%s: event is nil: %w", op, ErrInvalidParameter)
+		return nil, fmt.Errorf("event is nil: %w", ErrInvalidParameter)
 	}
 
 	// '/dev/null' path means we just do nothing and pretend we're done.
-	if f.path == devnull {
+	if s.path == devnull {
 		return nil, nil
 	}
 
-	formatted, found := e.Format(f.requiredFormat)
+	formatted, found := e.Format(s.requiredFormat)
 	if !found {
-		return nil, fmt.Errorf("%s: unable to retrieve event formatted as %q", op, f.requiredFormat)
+		return nil, fmt.Errorf("unable to retrieve event formatted as %q: %w", s.requiredFormat, ErrInvalidParameter)
 	}
 
-	err := f.log(formatted)
+	err := s.log(formatted)
 	if err != nil {
-		return nil, fmt.Errorf("%s: error writing file for sink: %w", op, err)
+		return nil, fmt.Errorf("error writing file for sink %q: %w", s.path, err)
 	}
 
 	// return nil for the event to indicate the pipeline is complete.
@@ -115,33 +113,31 @@ func (f *FileSink) Process(ctx context.Context, e *eventlogger.Event) (*eventlog
 }
 
 // Reopen handles closing and reopening the file.
-func (f *FileSink) Reopen() error {
-	const op = "event.(FileSink).Reopen"
-
+func (s *FileSink) Reopen() error {
 	// '/dev/null' path means we just do nothing and pretend we're done.
-	if f.path == devnull {
+	if s.path == devnull {
 		return nil
 	}
 
-	f.fileLock.Lock()
-	defer f.fileLock.Unlock()
+	s.fileLock.Lock()
+	defer s.fileLock.Unlock()
 
-	if f.file == nil {
-		return f.open()
+	if s.file == nil {
+		return s.open()
 	}
 
-	err := f.file.Close()
+	err := s.file.Close()
 	// Set to nil here so that even if we error out, on the next access open() will be tried.
-	f.file = nil
+	s.file = nil
 	if err != nil {
-		return fmt.Errorf("%s: unable to close file for re-opening on sink: %w", op, err)
+		return fmt.Errorf("unable to close file for re-opening on sink %q: %w", s.path, err)
 	}
 
-	return f.open()
+	return s.open()
 }
 
 // Type describes the type of this node (sink).
-func (_ *FileSink) Type() eventlogger.NodeType {
+func (s *FileSink) Type() eventlogger.NodeType {
 	return eventlogger.NodeTypeSink
 }
 
@@ -149,32 +145,30 @@ func (_ *FileSink) Type() eventlogger.NodeType {
 // if one is not already open.
 // It doesn't have any locking and relies on calling functions of FileSink to
 // handle this (e.g. log and Reopen methods).
-func (f *FileSink) open() error {
-	const op = "event.(FileSink).open"
-
-	if f.file != nil {
+func (s *FileSink) open() error {
+	if s.file != nil {
 		return nil
 	}
 
-	if err := os.MkdirAll(filepath.Dir(f.path), f.fileMode); err != nil {
-		return fmt.Errorf("%s: unable to create file %q: %w", op, f.path, err)
+	if err := os.MkdirAll(filepath.Dir(s.path), s.fileMode); err != nil {
+		return fmt.Errorf("unable to create file %q: %w", s.path, err)
 	}
 
 	var err error
-	f.file, err = os.OpenFile(f.path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, f.fileMode)
+	s.file, err = os.OpenFile(s.path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, s.fileMode)
 	if err != nil {
-		return fmt.Errorf("%s: unable to open file for sink: %w", op, err)
+		return fmt.Errorf("unable to open file for sink %q: %w", s.path, err)
 	}
 
 	// Change the file mode in case the log file already existed.
 	// We special case '/dev/null' since we can't chmod it, and bypass if the mode is zero.
-	switch f.path {
+	switch s.path {
 	case devnull:
 	default:
-		if f.fileMode != 0 {
-			err = os.Chmod(f.path, f.fileMode)
+		if s.fileMode != 0 {
+			err = os.Chmod(s.path, s.fileMode)
 			if err != nil {
-				return fmt.Errorf("%s: unable to change file %q permissions '%v' for sink: %w", op, f.path, f.fileMode, err)
+				return fmt.Errorf("unable to change file permissions '%v' for sink %q: %w", s.fileMode, s.path, err)
 			}
 		}
 	}
@@ -184,42 +178,40 @@ func (f *FileSink) open() error {
 
 // log writes the buffer to the file.
 // It acquires a lock on the file to do this.
-func (f *FileSink) log(data []byte) error {
-	const op = "event.(FileSink).log"
-
-	f.fileLock.Lock()
-	defer f.fileLock.Unlock()
+func (s *FileSink) log(data []byte) error {
+	s.fileLock.Lock()
+	defer s.fileLock.Unlock()
 
 	reader := bytes.NewReader(data)
 
-	if err := f.open(); err != nil {
-		return fmt.Errorf("%s: unable to open file for sink: %w", op, err)
+	if err := s.open(); err != nil {
+		return fmt.Errorf("unable to open file for sink %q: %w", s.path, err)
 	}
 
-	if _, err := reader.WriteTo(f.file); err == nil {
+	if _, err := reader.WriteTo(s.file); err == nil {
 		return nil
 	}
 
 	// Otherwise, opportunistically try to re-open the FD, once per call (1 retry attempt).
-	err := f.file.Close()
+	err := s.file.Close()
 	if err != nil {
-		return fmt.Errorf("%s: unable to close file for sink: %w", op, err)
+		return fmt.Errorf("unable to close file for sink %q: %w", s.path, err)
 	}
 
-	f.file = nil
+	s.file = nil
 
-	if err := f.open(); err != nil {
-		return fmt.Errorf("%s: unable to re-open file for sink: %w", op, err)
+	if err := s.open(); err != nil {
+		return fmt.Errorf("unable to re-open file for sink %q: %w", s.path, err)
 	}
 
 	_, err = reader.Seek(0, io.SeekStart)
 	if err != nil {
-		return fmt.Errorf("%s: unable to seek to start of file for sink: %w", op, err)
+		return fmt.Errorf("unable to seek to start of file for sink %q: %w", s.path, err)
 	}
 
-	_, err = reader.WriteTo(f.file)
+	_, err = reader.WriteTo(s.file)
 	if err != nil {
-		return fmt.Errorf("%s: unable to re-write to file for sink: %w", op, err)
+		return fmt.Errorf("unable to re-write to file for sink %q: %w", s.path, err)
 	}
 
 	return nil

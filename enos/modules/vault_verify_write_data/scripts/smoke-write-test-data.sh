@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 
 set -e
 
-function retry {
+retry() {
   local retries=$1
   shift
   local count=0
@@ -24,15 +24,19 @@ function retry {
   return 0
 }
 
-function fail {
-	echo "$1" 1>&2
-	exit 1
+fail() {
+  echo "$1" 1>&2
+  exit 1
 }
 
+[[ -z "$TEST_KEY" ]] && fail "TEST_KEY env variable has not been set"
+[[ -z "$TEST_VALUE" ]] && fail "TEST_VALUE env variable has not been set"
+[[ -z "$VAULT_ADDR" ]] && fail "VAULT_ADDR env variable has not been set"
+[[ -z "$VAULT_INSTALL_DIR" ]] && fail "VAULT_INSTALL_DIR env variable has not been set"
+[[ -z "$VAULT_TOKEN" ]] && fail "VAULT_TOKEN env variable has not been set"
+
 binpath=${VAULT_INSTALL_DIR}/vault
-testkey=${TEST_KEY}
-testvalue=${TEST_VALUE}
 
 test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 
-retry 5 $binpath kv put secret/test $testkey=$testvalue
+retry 5 "$binpath" kv put secret/test "$TEST_KEY=$TEST_VALUE"

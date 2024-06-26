@@ -1,0 +1,3 @@
+```release-note:bug
+cli: Fixed an erroneous warning appearing about `-address` not being set when it is.
+```

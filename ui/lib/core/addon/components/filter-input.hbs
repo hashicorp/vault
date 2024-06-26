@@ -1,0 +1,11 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<div class="control {{unless @hideIcon 'has-icons-left'}}" data-test-filter-input-container>
+  <input class="filter input" ...attributes {{on "input" this.onInput}} {{did-insert this.focus}} data-test-filter-input />
+  {{#unless @hideIcon}}
+    <Icon @name="search" class="search-icon has-text-grey-light" data-test-filter-input-icon />
+  {{/unless}}
+</div>

@@ -1,29 +1,23 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 // Package corehelpers contains testhelpers that don't depend on package vault,
 // and thus can be used within vault (as well as elsewhere.)
 package corehelpers
 
 import (
-	"bytes"
 	"context"
-	"crypto/sha256"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
-	"sync"
+	"strings"
 	"time"
 
-	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/builtin/credential/approle"
 	"github.com/hashicorp/vault/plugins/database/mysql"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/go-testing-interface"
 )
@@ -47,36 +41,27 @@ func RetryUntil(t testing.T, timeout time.Duration, f func() error) {
 
 // MakeTestPluginDir creates a temporary directory suitable for holding plugins.
 // This helper also resolves symlinks to make tests happy on OS X.
-func MakeTestPluginDir(t testing.T) (string, func(t testing.T)) {
-	if t != nil {
-		t.Helper()
-	}
+func MakeTestPluginDir(t testing.T) string {
+	t.Helper()
 
 	dir, err := os.MkdirTemp("", "")
 	if err != nil {
-		if t == nil {
-			panic(err)
-		}
 		t.Fatal(err)
 	}
 
 	// OSX tempdir are /var, but actually symlinked to /private/var
 	dir, err = filepath.EvalSymlinks(dir)
 	if err != nil {
-		if t == nil {
-			panic(err)
-		}
 		t.Fatal(err)
 	}
 
-	return dir, func(t testing.T) {
+	t.Cleanup(func() {
 		if err := os.RemoveAll(dir); err != nil {
-			if t == nil {
-				panic(err)
-			}
 			t.Fatal(err)
 		}
-	}
+	})
+
+	return dir
 }
 
 func NewMockBuiltinRegistry() *mockBuiltinRegistry {
@@ -218,201 +203,6 @@ func (m *mockBuiltinRegistry) DeprecationStatus(name string, pluginType consts.P
 	return consts.Unknown, false
 }
 
-func TestNoopAudit(t testing.T, config map[string]string) *NoopAudit {
-	n, err := NewNoopAudit(config)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return n
-}
-
-func NewNoopAudit(config map[string]string) (*NoopAudit, error) {
-	view := &logical.InmemStorage{}
-	err := view.Put(context.Background(), &logical.StorageEntry{
-		Key:   "salt",
-		Value: []byte("foo"),
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	n := &NoopAudit{
-		Config: &audit.BackendConfig{
-			SaltView: view,
-			SaltConfig: &salt.Config{
-				HMAC:     sha256.New,
-				HMACType: "hmac-sha256",
-			},
-			Config: config,
-		},
-	}
-
-	cfg, err := audit.NewFormatterConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	f, err := audit.NewEntryFormatter(cfg, n)
-	if err != nil {
-		return nil, fmt.Errorf("error creating formatter: %w", err)
-	}
-
-	fw, err := audit.NewEntryFormatterWriter(cfg, f, &audit.JSONWriter{})
-	if err != nil {
-		return nil, fmt.Errorf("error creating formatter writer: %w", err)
-	}
-
-	n.formatter = fw
-
-	return n, nil
-}
-
-func NoopAuditFactory(records **[][]byte) audit.Factory {
-	return func(_ context.Context, config *audit.BackendConfig, _ bool, _ audit.HeaderFormatter) (audit.Backend, error) {
-		n, err := NewNoopAudit(config.Config)
-		if err != nil {
-			return nil, err
-		}
-		if records != nil {
-			*records = &n.records
-		}
-		return n, nil
-	}
-}
-
-type NoopAudit struct {
-	Config         *audit.BackendConfig
-	ReqErr         error
-	ReqAuth        []*logical.Auth
-	Req            []*logical.Request
-	ReqHeaders     []map[string][]string
-	ReqNonHMACKeys []string
-	ReqErrs        []error
-
-	RespErr            error
-	RespAuth           []*logical.Auth
-	RespReq            []*logical.Request
-	Resp               []*logical.Response
-	RespNonHMACKeys    [][]string
-	RespReqNonHMACKeys [][]string
-	RespErrs           []error
-
-	formatter *audit.EntryFormatterWriter
-	records   [][]byte
-	l         sync.RWMutex
-	salt      *salt.Salt
-	saltMutex sync.RWMutex
-}
-
-func (n *NoopAudit) LogRequest(ctx context.Context, in *logical.LogInput) error {
-	n.l.Lock()
-	defer n.l.Unlock()
-	if n.formatter != nil {
-		var w bytes.Buffer
-		err := n.formatter.FormatAndWriteRequest(ctx, &w, in)
-		if err != nil {
-			return err
-		}
-		n.records = append(n.records, w.Bytes())
-	}
-
-	n.ReqAuth = append(n.ReqAuth, in.Auth)
-	n.Req = append(n.Req, in.Request)
-	n.ReqHeaders = append(n.ReqHeaders, in.Request.Headers)
-	n.ReqNonHMACKeys = in.NonHMACReqDataKeys
-	n.ReqErrs = append(n.ReqErrs, in.OuterErr)
-
-	return n.ReqErr
-}
-
-func (n *NoopAudit) LogResponse(ctx context.Context, in *logical.LogInput) error {
-	n.l.Lock()
-	defer n.l.Unlock()
-
-	if n.formatter != nil {
-		var w bytes.Buffer
-		err := n.formatter.FormatAndWriteResponse(ctx, &w, in)
-		if err != nil {
-			return err
-		}
-		n.records = append(n.records, w.Bytes())
-	}
-
-	n.RespAuth = append(n.RespAuth, in.Auth)
-	n.RespReq = append(n.RespReq, in.Request)
-	n.Resp = append(n.Resp, in.Response)
-	n.RespErrs = append(n.RespErrs, in.OuterErr)
-
-	if in.Response != nil {
-		n.RespNonHMACKeys = append(n.RespNonHMACKeys, in.NonHMACRespDataKeys)
-		n.RespReqNonHMACKeys = append(n.RespReqNonHMACKeys, in.NonHMACReqDataKeys)
-	}
-
-	return n.RespErr
-}
-
-func (n *NoopAudit) LogTestMessage(ctx context.Context, in *logical.LogInput, config map[string]string) error {
-	n.l.Lock()
-	defer n.l.Unlock()
-	var w bytes.Buffer
-
-	tempFormatter, err := audit.NewTemporaryFormatter(config["format"], config["prefix"])
-	if err != nil {
-		return err
-	}
-
-	err = tempFormatter.FormatAndWriteResponse(ctx, &w, in)
-	if err != nil {
-		return err
-	}
-
-	n.records = append(n.records, w.Bytes())
-
-	return nil
-}
-
-func (n *NoopAudit) Salt(ctx context.Context) (*salt.Salt, error) {
-	n.saltMutex.RLock()
-	if n.salt != nil {
-		defer n.saltMutex.RUnlock()
-		return n.salt, nil
-	}
-	n.saltMutex.RUnlock()
-	n.saltMutex.Lock()
-	defer n.saltMutex.Unlock()
-	if n.salt != nil {
-		return n.salt, nil
-	}
-	s, err := salt.NewSalt(ctx, n.Config.SaltView, n.Config.SaltConfig)
-	if err != nil {
-		return nil, err
-	}
-	n.salt = s
-	return s, nil
-}
-
-func (n *NoopAudit) GetHash(ctx context.Context, data string) (string, error) {
-	s, err := n.Salt(ctx)
-	if err != nil {
-		return "", err
-	}
-	return s.GetIdentifiedHMAC(data), nil
-}
-
-func (n *NoopAudit) Reload(_ context.Context) error {
-	return nil
-}
-
-func (n *NoopAudit) Invalidate(_ context.Context) {
-	n.saltMutex.Lock()
-	defer n.saltMutex.Unlock()
-	n.salt = nil
-}
-
-func (n *NoopAudit) RegisterNodesAndPipeline(broker *eventlogger.Broker, _ string) error {
-	return nil
-}
-
 type TestLogger struct {
 	hclog.InterceptLogger
 	Path string
@@ -421,13 +211,20 @@ type TestLogger struct {
 }
 
 func NewTestLogger(t testing.T) *TestLogger {
+	return NewTestLoggerWithSuffix(t, "")
+}
+
+func NewTestLoggerWithSuffix(t testing.T, logFileSuffix string) *TestLogger {
 	var logFile *os.File
 	var logPath string
 	output := os.Stderr
 
 	logDir := os.Getenv("VAULT_TEST_LOG_DIR")
 	if logDir != "" {
-		logPath = filepath.Join(logDir, t.Name()+".log")
+		if logFileSuffix != "" && !strings.HasPrefix(logFileSuffix, "_") {
+			logFileSuffix = "_" + logFileSuffix
+		}
+		logPath = filepath.Join(logDir, t.Name()+logFileSuffix+".log")
 		// t.Name may include slashes.
 		dir, _ := filepath.Split(logPath)
 		err := os.MkdirAll(dir, 0o755)
@@ -454,12 +251,23 @@ func NewTestLogger(t testing.T) *TestLogger {
 		IndependentLevels: true,
 	})
 	logger.RegisterSink(sink)
-	return &TestLogger{
+
+	testLogger := &TestLogger{
 		Path:            logPath,
 		File:            logFile,
 		InterceptLogger: logger,
 		sink:            sink,
 	}
+
+	t.Cleanup(func() {
+		testLogger.StopLogging()
+		if t.Failed() {
+			_ = testLogger.File.Close()
+		} else {
+			_ = os.Remove(testLogger.Path)
+		}
+	})
+	return testLogger
 }
 
 func (tl *TestLogger) StopLogging() {

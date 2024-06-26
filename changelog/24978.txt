@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Added new `plugin_tmpdir` config option for containerized plugins, in addition to the existing `VAULT_PLUGIN_TMPDIR` environment variable.
+```

@@ -1,0 +1,153 @@
+---
+layout: docs
+page_title: Secrets import
+description: Secrets import allows you to safely onboard secrets from external sources into Vault KV for management.
+---
+
+
+# Secrets import
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/alpha.mdx'
+
+Distributing sensitive information across multiple external systems creates
+several challenges, including:
+
+- Increased operational overhead.
+- Increased exposure risk from data sprawl.
+- Increased risk of outdated and out-of-sync information.
+
+Using Vault as a single source of truth (SSOT) for sensitive data increases
+security and reduces management overhead, but migrating preexisting data from multiple
+and/or varied sources can be complex and costly. 
+
+The secrets import process helps you automate and streamline your sensitive data
+migration with codified import plans as HCL files. Import plans tell Vault which KVv2 secrets
+engine instance to store the expected secret data in, the source system for which data will be
+read from, and how to filter this data. Three HCL blocks make this possible:
+
+- The `destination` block defines target KVv2 mounts.
+- The `source` block provides credentials for connecting to the external system.
+- The `mapping` block defines how Vault should decide which data gets imported before
+  writing the information to KVv2.
+
+## Destinations
+
+Vault stores imported secrets in a Vault KVv2 secrets engine mount. Destination
+blocks start with `destination_vault` and define the desired KVv2 mount path and
+an optional namespace. The combination of these represent the exact location in your
+Vault instance you want the information stored.
+
+### HCL syntax
+
+
+```hcl
+destination_vault {
+  name      = "my-dest-1"
+  namespace = "ns-1"
+  mount     = "mount-1"
+}
+```
+
+- `name` `(string: <required>)` - A unique name for the destination block that can
+  be referenced in subsequent mapping blocks.
+
+- `mount` `(string: <required>)` - The mount path for the target KVv2 instance.
+
+- `address` `(string)` - Optional network address of the Vault server with the
+  KVv2 secrets engine enabled. By default, the Vault client's address will be used.
+
+- `token` `(string)` - Optional authentication token for the Vault server at the
+  specified address. By default, the Vault client's token will be used.
+
+- `namespace` `(string)` - Optional namespace path containing the specified KVv2
+  mount. By default, Vault looks for the KVv2 mount under the root namespace.
+
+
+
+## Sources
+
+Vault can import secrets from the following sources:
+- [GCP Secret Manager](/vault/docs/import/gcpsm)
+
+To pull data from a source during import, Vault needs read credentials for the
+external system. You can provide credentials directly as part of the import
+plan, or use Vault to automatically generate dynamic credentials if you already
+have the corresponding secrets engine configured.
+
+### HCL syntax
+
+Source blocks start with `source_<external_system>` and include any connection
+information required by the target system or the secrets engine to leverage. For example:
+
+```hcl
+source_gcp {
+  name        = "my-gcp-source-1"
+  credentials = "@/path/to/service-account-key.json"
+}
+```
+
+- `name` `(string: <required>)` - A unique name for the source block that can be
+  referenced in subsequent mapping blocks.
+
+- `credentials` `(string: <required>)` - Path to a credential file or token with
+  read permissions for the target system.
+
+Depending on the source system, additional information may be required. Refer to
+the connection documentation for your source system to determine the full set of
+required fields for that system type.
+
+
+
+## Mappings
+
+Mappings glue the source and destination together and filter the migrated data,
+to determine what is imported and what is ignored. Vault currently supports the
+following mapping methods:
+
+- [mapping_passthrough](/vault/docs/import/mappings#passthrough)
+- [mapping_metadata](/vault/docs/import/mappings#metadata)
+- [mapping_regex](/vault/docs/import/mappings#regex)
+
+### HCL syntax
+
+Mapping blocks start with `mapping_<filter_type>` and require a source name,
+destination name, an execution priority, and any corresponding transformations
+or filters that apply for each mapping type. For example:
+
+```hcl
+mapping_regex {
+  name        = "my-map-1"
+  source      = "my-gcp-source-1"
+  destination = "my-dest-1"
+  priority    = 1
+  expression  = "^database/.*$"
+}
+```
+
+- `name` `(string: <required>)` - A unique name for the mapping block.
+
+- `source` `(string: <required>)` - The name of a previously-defined source block
+  **from** which the data should be read.
+
+- `destination` `(string: <required>)` - The name of a previously defined
+  destination block **to** which the data should be written.
+
+- `priority` `(integer: <required>)` - The order in which Vault should apply the
+  mapping block during the import process. The lower the number, the higher the
+  priority. For example, a mapping with priority 1 executes before a mapping
+  with priority 2.
+
+Depending on the filter type, additional fields may be required or possible. Refer
+to the [import mappings documentation](/vault/docs/import/mappings) for the available
+supported options and for a list of each mapping's specific fields.
+
+<Tip title="Priority matters">
+
+  Vault applies mapping definitions in priority order and a given secret only
+  matches to the first mapping that applies. Once Vault imports a secret with a
+  particular mapping, subsequent reads from the same source will ignore that
+  secret. See the [priority section](/vault/docs/import/mappings#priority) for an example.
+
+</Tip>

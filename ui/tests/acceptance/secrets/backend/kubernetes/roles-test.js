@@ -1,24 +1,23 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import kubernetesScenario from 'vault/mirage/scenarios/kubernetes';
-import ENV from 'vault/config/environment';
+import kubernetesHandlers from 'vault/mirage/handlers/kubernetes';
 import authPage from 'vault/tests/pages/auth';
 import { fillIn, visit, currentURL, click, currentRouteName } from '@ember/test-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Acceptance | kubernetes | roles', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.before(function () {
-    ENV['ember-cli-mirage'].handler = 'kubernetes';
-  });
   hooks.beforeEach(function () {
+    kubernetesHandlers(this.server);
     kubernetesScenario(this.server);
     this.visitRoles = () => {
       return visit('/vault/secrets/kubernetes/kubernetes/roles');
@@ -28,14 +27,12 @@ module('Acceptance | kubernetes | roles', function (hooks) {
     };
     return authPage.login();
   });
-  hooks.after(function () {
-    ENV['ember-cli-mirage'].handler = null;
-  });
 
   test('it should filter roles', async function (assert) {
     await this.visitRoles();
     assert.dom('[data-test-list-item-link]').exists({ count: 3 }, 'Roles list renders');
-    await fillIn('[data-test-component="navigate-input"]', '1');
+    await fillIn(GENERAL.filterInputExplicit, '1');
+    await click(GENERAL.filterInputExplicitSearch);
     assert.dom('[data-test-list-item-link]').exists({ count: 1 }, 'Filtered roles list renders');
     assert.ok(currentURL().includes('pageFilter=1'), 'pageFilter query param value is set');
   });
@@ -105,7 +102,7 @@ module('Acceptance | kubernetes | roles', function (hooks) {
     this.validateRoute(assert, 'roles.role.edit', 'Transitions to edit route');
     await click('[data-test-cancel]');
     await click('[data-test-list-item-link]');
-    await click('[data-test-delete] button');
+    await click('[data-test-delete]');
     await click('[data-test-confirm-button]');
     assert
       .dom('[data-test-list-item-link]')

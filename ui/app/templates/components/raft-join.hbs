@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <Hds::Alert @type="inline" @color="warning" as |A|>
   <A.Title class="alert-title">Vault is sealed</A.Title>
 </Hds::Alert>
@@ -47,9 +52,7 @@
       </div>
     </div>
     <div class="box is-marginless is-shadowless">
-      <button type="submit" class="button is-primary" data-test-next>
-        Next
-      </button>
+      <Hds::Button @text="Next" type="submit" data-test-next />
     </div>
   </form>
 {{/if}}

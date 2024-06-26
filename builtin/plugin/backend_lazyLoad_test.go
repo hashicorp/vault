@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package plugin
 
@@ -8,12 +8,10 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/hashicorp/vault/sdk/helper/logging"
-
-	"github.com/hashicorp/vault/sdk/helper/pluginutil"
-
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin"
 )

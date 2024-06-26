@@ -1,29 +1,20 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
 import (
 	"fmt"
 	"strings"
-	"time"
 
-	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
 )
 
 const (
-	unifiedRevocationReadPathPrefix  = "unified-revocation/"
-	unifiedRevocationWritePathPrefix = unifiedRevocationReadPathPrefix + "{{clusterId}}/"
+	unifiedRevocationReadPathPrefix = revocation.UnifiedRevocationReadPathPrefix
 )
 
-type unifiedRevocationEntry struct {
-	SerialNumber      string    `json:"-"`
-	CertExpiration    time.Time `json:"certificate_expiration_utc"`
-	RevocationTimeUTC time.Time `json:"revocation_time_utc"`
-	CertificateIssuer issuerID  `json:"issuer_id"`
-}
-
-func getUnifiedRevocationBySerial(sc *storageContext, serial string) (*unifiedRevocationEntry, error) {
+func getUnifiedRevocationBySerial(sc *storageContext, serial string) (*revocation.UnifiedRevocationEntry, error) {
 	clusterPaths, err := lookupUnifiedClusterPaths(sc)
 	if err != nil {
 		return nil, err
@@ -37,7 +28,7 @@ func getUnifiedRevocationBySerial(sc *storageContext, serial string) (*unifiedRe
 		}
 
 		if entryRaw != nil {
-			var revEntry unifiedRevocationEntry
+			var revEntry revocation.UnifiedRevocationEntry
 			if err := entryRaw.DecodeJSON(&revEntry); err != nil {
 				return nil, fmt.Errorf("failed json decoding of unified entry at path %s: %w", serialPath, err)
 			}
@@ -47,15 +38,6 @@ func getUnifiedRevocationBySerial(sc *storageContext, serial string) (*unifiedRe
 	}
 
 	return nil, nil
-}
-
-func writeUnifiedRevocationEntry(sc *storageContext, ure *unifiedRevocationEntry) error {
-	json, err := logical.StorageEntryJSON(unifiedRevocationWritePathPrefix+normalizeSerial(ure.SerialNumber), ure)
-	if err != nil {
-		return err
-	}
-
-	return sc.Storage.Put(sc.Context, json)
 }
 
 // listClusterSpecificUnifiedRevokedCerts returns a list of revoked certificates from a given cluster

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package postgresql
 
@@ -159,7 +159,7 @@ func TestConnectionURL(t *testing.T) {
 	for name, tt := range cases {
 		t.Run(name, func(t *testing.T) {
 			// This is necessary to avoid always testing the branch where the env is set.
-			// As long the the env is set --- even if the value is "" --- `ok` returns true.
+			// As long the env is set --- even if the value is "" --- `ok` returns true.
 			if tt.input.envar != "" {
 				os.Setenv("VAULT_PG_CONNECTION_URL", tt.input.envar)
 				defer os.Unsetenv("VAULT_PG_CONNECTION_URL")

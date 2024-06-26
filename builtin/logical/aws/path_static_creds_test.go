@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package aws
 
 import (
@@ -6,9 +9,7 @@ import (
 	"testing"
 
 	"github.com/fatih/structs"
-
 	"github.com/hashicorp/vault/sdk/framework"
-
 	"github.com/hashicorp/vault/sdk/logical"
 )
 

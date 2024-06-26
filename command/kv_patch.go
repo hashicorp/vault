@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package command
 
@@ -11,8 +11,8 @@ import (
 	"path"
 	"strings"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
-	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
 
@@ -216,7 +216,7 @@ func (c *KVPatchCommand) Run(args []string) int {
 	}
 
 	if !v2 {
-		c.UI.Error("K/V engine mount must be version 2 for patch support")
+		c.UI.Error("KV engine mount must be version 2 for patch support")
 		return 2
 	}
 
@@ -262,6 +262,11 @@ func (c *KVPatchCommand) Run(args []string) int {
 
 	if c.flagField != "" {
 		return PrintRawField(c.UI, secret, c.flagField)
+	}
+
+	// If the secret is wrapped, return the wrapped response.
+	if secret.WrapInfo != nil && secret.WrapInfo.TTL != 0 {
+		return OutputSecret(c.UI, secret)
 	}
 
 	if Format(c.UI) == "table" {

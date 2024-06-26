@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/hashicorp/vault/builtin/logical/pki/managed_key"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -44,9 +45,8 @@ func pathGenerateKey(b *backend) *framework.Path {
 				Type:    framework.TypeInt,
 				Default: 0,
 				Description: `The number of bits to use. Allowed values are
-0 (universal default); with rsa key_type: 2048 (default), 3072, or
-4096; with ec key_type: 224, 256 (default), 384, or 521; ignored with
-ed25519.`,
+0 (universal default); with rsa key_type: 2048 (default), 3072, 4096 or 8192;
+with ec key_type: 224, 256 (default), 384, or 521; ignored with ed25519.`,
 			},
 			"managed_key_name": {
 				Type: framework.TypeString,
@@ -115,7 +115,7 @@ func (b *backend) pathGenerateKeyHandler(ctx context.Context, req *logical.Reque
 	b.issuersLock.Lock()
 	defer b.issuersLock.Unlock()
 
-	if b.useLegacyBundleCaStorage() {
+	if b.UseLegacyBundleCaStorage() {
 		return logical.ErrorResponse("Can not generate keys until migration has completed"), nil
 	}
 
@@ -154,7 +154,7 @@ func (b *backend) pathGenerateKeyHandler(ctx context.Context, req *logical.Reque
 			return nil, err
 		}
 
-		keyBundle, actualPrivateKeyType, err = createKmsKeyBundle(ctx, b, keyId)
+		keyBundle, actualPrivateKeyType, err = managed_key.CreateKmsKeyBundle(ctx, b, keyId)
 		if err != nil {
 			return nil, err
 		}
@@ -253,7 +253,7 @@ func (b *backend) pathImportKeyHandler(ctx context.Context, req *logical.Request
 	b.issuersLock.Lock()
 	defer b.issuersLock.Unlock()
 
-	if b.useLegacyBundleCaStorage() {
+	if b.UseLegacyBundleCaStorage() {
 		return logical.ErrorResponse("Cannot import keys until migration has completed"), nil
 	}
 

@@ -30,21 +30,13 @@ $ go get github.com/hashicorp/vault/api
 
 ### Ruby
 
+@include 'alerts/deprecated.mdx'
+
 - [Vault Ruby Client](https://github.com/hashicorp/vault-ruby)
 
 ```shell-session
 $ gem install vault
 ```
-
-## C#
-
-- [Vault DotNet Client](https://github.com/hashicorp/vault-client-dotnet) - Note that this is currently in early development, and is not yet production-ready. 
-
-```shell-session
-# Install-Package HashiCorp.Vault
-```
-
-[Example application](https://github.com/hashicorp/vault-client-dotnet#getting-started)
 
 ## Community
 
@@ -61,7 +53,8 @@ $ pip install ansible-modules-hashivault
 
 ### C&#35;
 
-- [VaultSharp](https://github.com/rajanadar/VaultSharp) (.NET Standard 2.0 & 1.3, .NET Core >= 1.0.0, .NET 4.5, .NET 4.6, Mono, iOS, Android, Mac, UWP etc.)
+- [VaultSharp](https://github.com/rajanadar/VaultSharp)
+  - Supports .NET 4.6.x, 4.7.x, 4.8.x, .NET Standard 2.x, .NET 6.0 and 7.0.
 
 ```shell-session
 $ Install-Package VaultSharp
@@ -94,12 +87,6 @@ $ Install-Package Vault
 
 ### Go
 
-- [vc](https://github.com/adfinis-sygroup/vault-client)
-
-```shell-session
-$ go get github.com/adfinis-sygroup/vault-client
-```
-
 - [vaultgo](https://github.com/mittwald/vaultgo)
 
 ```shell-session
@@ -122,11 +109,13 @@ $ stack install gothic
 
 ### Java
 
+- [Quarkus Vault](https://github.com/quarkiverse/quarkus-vault)
 - [Spring Vault](https://github.com/spring-projects/spring-vault)
 - [vault-java-driver](https://github.com/jopenlibs/vault-java-driver)
 
 ### Kotlin
 
+- [kault](https://github.com/Hansanto/kault)
 - [vault-kotlin](https://github.com/kunickiaj/vault-kotlin)
 
 ### Node.js
@@ -135,6 +124,12 @@ $ stack install gothic
 
 ```shell-session
 $ npm install node-vault
+```
+
+- [node-vault](https://github.com/shahradelahi/node-vault) (Typescript)
+
+```shell-session
+$ npm install @litehex/node-vault
 ```
 
 - [vaulTS](https://github.com/mittwald/vaulTS) (Github NPM Registry)
@@ -209,3 +204,19 @@ $ pip install hvac
 ### Scala
 
 - [scala-vault](https://github.com/janstenpickle/scala-vault)
+
+## Experimental
+
+### C#
+
+- [Vault DotNet Client](https://github.com/hashicorp/vault-client-dotnet) - 
+Note that this is an experimental approach to auto-generating libraries from
+OpenAPI content and is not production-ready. We do not have plans to make
+this production-ready at this time.
+
+```shell-session
+# Install-Package HashiCorp.Vault
+```
+
+[Example application](https://github.com/hashicorp/vault-client-dotnet#getting-started)
+

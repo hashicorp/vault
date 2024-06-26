@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Model from '@ember-data/model';
 import { FormField, FormFieldGroups } from 'vault/vault/app-types';
 
@@ -11,6 +16,7 @@ export default class PkiTidyModel extends Model {
   pauseDuration: string;
   revocationQueueSafetyBuffer: string;
   safetyBuffer: string;
+  tidyCertMetadata: boolean;
   tidyCertStore: boolean;
   tidyCrossClusterRevokedCerts: boolean;
   tidyExpiredIssuers: boolean;

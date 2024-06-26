@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
@@ -11,20 +11,18 @@ import { action } from '@ember/object';
  * AutocompleteInput components are used as standard string inputs or optionally select options to append to input value
  *
  * @example
- * ```js
- * <AutocompleteInput @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}}/>
- * ```
- * @callback inputChangeCallback
+ * <AutocompleteInput @label="Label here" @subText="subtext here" @value="foo" @onChange={{log "on change called"}} />
+ *
  * @param {string} value - input value
- * @param {inputChangeCallback} onChange - fires when input value changes to mutate value param by caller
+ * @param {function} onChange - fires when input value changes to mutate value param by caller
  * @param {string} [optionsTrigger] - display options dropdown when trigger character is input
- * @param {Object[]} [options] - array of { label, value } objects where label is displayed in options dropdown and value is appended to input value
+ * @param {array} [options] - array of `{ label, value }` objects where label is displayed in options dropdown and value is appended to input value
  * @param {string} [label] - label to display above input
  * @param {string} [subText] - text to display below label
  * @param {string} [placeholder] - input placeholder
  */
 
-export default class AutocompleteInput extends Component {
+export default class AutocompleteInputComponent extends Component {
   dropdownAPI;
   inputElement;
 

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package command
 
@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
-	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
 
@@ -40,6 +40,7 @@ type AuthEnableCommand struct {
 	flagTokenType                 string
 	flagVersion                   int
 	flagPluginVersion             string
+	flagIdentityTokenKey          string
 }
 
 func (c *AuthEnableCommand) Synopsis() string {
@@ -209,6 +210,13 @@ func (c *AuthEnableCommand) Flags() *FlagSets {
 		Usage:   "Select the semantic version of the plugin to enable.",
 	})
 
+	f.StringVar(&StringVar{
+		Name:    flagNameIdentityTokenKey,
+		Target:  &c.flagIdentityTokenKey,
+		Default: "default",
+		Usage:   "Select the key used to sign plugin identity tokens.",
+	})
+
 	return set
 }
 
@@ -311,6 +319,10 @@ func (c *AuthEnableCommand) Run(args []string) int {
 
 		if fl.Name == flagNamePluginVersion {
 			authOpts.Config.PluginVersion = c.flagPluginVersion
+		}
+
+		if fl.Name == flagNameIdentityTokenKey {
+			authOpts.Config.IdentityTokenKey = c.flagIdentityTokenKey
 		}
 	})
 

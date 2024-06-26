@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package cert
 
@@ -190,6 +190,7 @@ func (b *backend) pathCRLDelete(ctx context.Context, req *logical.Request, d *fr
 
 	b.crlUpdateMutex.Lock()
 	defer b.crlUpdateMutex.Unlock()
+	defer b.flushTrustedCache()
 
 	_, ok := b.crls[name]
 	if !ok {
@@ -313,6 +314,8 @@ func (b *backend) setCRL(ctx context.Context, storage logical.Storage, certList 
 	}
 
 	b.crls[name] = crlInfo
+	b.flushTrustedCache()
+
 	return err
 }
 

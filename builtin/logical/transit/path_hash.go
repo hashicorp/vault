@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package transit
 
@@ -12,10 +12,9 @@ import (
 	"fmt"
 	"hash"
 
-	"golang.org/x/crypto/sha3"
-
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+	"golang.org/x/crypto/sha3"
 )
 
 func (b *backend) pathHash() *framework.Path {

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package approle
 
@@ -354,7 +354,7 @@ func TestAppRole_RoleDoesNotExist(t *testing.T) {
 		t.Fatal("Error not part of response.")
 	}
 
-	if !strings.Contains(errString, "invalid role ID") {
+	if !strings.Contains(errString, "invalid role or secret ID") {
 		t.Fatalf("Error was not due to invalid role ID. Error: %s", errString)
 	}
 }

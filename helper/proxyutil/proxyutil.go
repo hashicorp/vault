@@ -1,18 +1,17 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package proxyutil
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"sync"
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
-	sockaddr "github.com/hashicorp/go-sockaddr"
-	proxyproto "github.com/pires/go-proxyproto"
+	"github.com/hashicorp/go-sockaddr"
+	"github.com/pires/go-proxyproto"
 )
 
 // ProxyProtoConfig contains configuration for the PROXY protocol
@@ -72,7 +71,7 @@ func WrapInProxyProto(listener net.Listener, config *ProxyProtoConfig) (net.List
 					return proxyproto.IGNORE, nil
 				}
 
-				return proxyproto.REJECT, errors.New(`upstream connection not trusted proxy_protocol_behavior is "deny_unauthorized"`)
+				return proxyproto.REJECT, proxyproto.ErrInvalidUpstream
 			},
 		}
 	default:
