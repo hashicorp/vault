@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/pires/go-proxyproto"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTCPListener(t *testing.T) {
