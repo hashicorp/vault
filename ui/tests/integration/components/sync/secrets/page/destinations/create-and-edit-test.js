@@ -261,7 +261,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
         const filteredObfuscatedFields = this.model.formFields.filter((field) =>
           obfuscatedFields.includes(field.name)
         );
-        assert.expect(filteredObfuscatedFields.length);
+        assert.expect(filteredObfuscatedFields.length * 2);
         await this.renderFormComponent();
         // iterate over the form fields and filter for those that are obfuscated
         // fill those in and assert that they are masked
@@ -271,6 +271,9 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
           assert
             .dom(PAGE.maskedInput(field.name))
             .hasClass('masked-font', `it renders ${field.name} for ${destination} with masked font`);
+          assert
+            .dom(PAGE.form.enableInput(field.name))
+            .doesNotExist(`it does not render enable input for ${field.name}`);
         });
       });
 
