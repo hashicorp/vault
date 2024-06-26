@@ -97,7 +97,7 @@ func TestAcceptanceBackend_basicSTS(t *testing.T) {
 		PreCheck: func() {
 			testAccPreCheck(t)
 			createUser(t, userName, accessKey)
-			createRole(t, roleName, awsAccountID, []string{ec2PolicyArn})
+			createRole(t, roleName, awsAccountID, []string{ec2PolicyArn}, nil)
 			// Sleep sometime because AWS is eventually consistent
 			// Both the createUser and createRole depend on this
 			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
@@ -252,23 +252,32 @@ func getAccountID() (string, error) {
 	return *res.Account, nil
 }
 
-func createRole(t *testing.T, roleName, awsAccountID string, policyARNs []string) {
-	const testRoleAssumePolicy = `{
+func createRole(t *testing.T, roleName, awsAccountID string, policyARNs, extraTrustPolicies []string) {
+	t.Helper()
+
+	trustPolicyStmts := append([]string{
+		fmt.Sprintf(`
+		{
+		  "Effect":"Allow",
+		  "Principal": {
+			  "AWS": "arn:aws:iam::%s:root"
+		  },
+		  "Action": [
+			  "sts:AssumeRole",
+			  "sts:SetSourceIdentity"
+		  ]
+		}`, awsAccountID),
+	},
+		extraTrustPolicies...)
+
+	testRoleAssumePolicy := fmt.Sprintf(`{
       "Version": "2012-10-17",
       "Statement": [
-          {
-              "Effect":"Allow",
-              "Principal": {
-                  "AWS": "arn:aws:iam::%s:root"
-              },
-              "Action": [
-                  "sts:AssumeRole",
-                  "sts:SetSourceIdentity"
-              ]
-          }
+%s
       ]
 }
-`
+`, strings.Join(trustPolicyStmts, ","))
+
 	awsConfig := &aws.Config{
 		Region:     aws.String("us-east-1"),
 		HTTPClient: cleanhttp.DefaultClient(),
@@ -278,23 +287,23 @@ func createRole(t *testing.T, roleName, awsAccountID string, policyARNs []string
 		t.Fatal(err)
 	}
 	svc := iam.New(sess)
-	trustPolicy := fmt.Sprintf(testRoleAssumePolicy, awsAccountID)
 
 	params := &iam.CreateRoleInput{
-		AssumeRolePolicyDocument: aws.String(trustPolicy),
+		AssumeRolePolicyDocument: aws.String(testRoleAssumePolicy),
 		RoleName:                 aws.String(roleName),
 		Path:                     aws.String("/"),
 	}
 
 	log.Printf("[INFO] AWS CreateRole: %s", roleName)
-	if _, err := svc.CreateRole(params); err != nil {
+	output, err := svc.CreateRole(params)
+	if err != nil {
 		t.Fatalf("AWS CreateRole failed: %v", err)
 	}
 
 	for _, policyARN := range policyARNs {
 		attachment := &iam.AttachRolePolicyInput{
 			PolicyArn: aws.String(policyARN),
-			RoleName:  aws.String(roleName), // Required
+			RoleName:  output.Role.RoleName,
 		}
 		_, err = svc.AttachRolePolicy(attachment)
 		if err != nil {
@@ -657,7 +666,7 @@ func testAccStepRotateRoot(oldAccessKey *awsAccessKey) logicaltest.TestStep {
 	}
 }
 
-func testAccStepRead(t *testing.T, path, name string, credentialTests []credentialTestFunc) logicaltest.TestStep {
+func testAccStepRead(_ *testing.T, path, name string, credentialTests []credentialTestFunc) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      path + "/" + name,
@@ -1137,7 +1146,7 @@ func TestAcceptanceBackend_AssumedRoleWithPolicyDoc(t *testing.T) {
 		AcceptanceTest: true,
 		PreCheck: func() {
 			testAccPreCheck(t)
-			createRole(t, roleName, awsAccountID, []string{ec2PolicyArn})
+			createRole(t, roleName, awsAccountID, []string{ec2PolicyArn}, nil)
 			// Sleep sometime because AWS is eventually consistent
 			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
 			time.Sleep(10 * time.Second)
@@ -1173,7 +1182,7 @@ func TestAcceptanceBackend_AssumedRoleWithPolicyARN(t *testing.T) {
 		AcceptanceTest: true,
 		PreCheck: func() {
 			testAccPreCheck(t)
-			createRole(t, roleName, awsAccountID, []string{ec2PolicyArn, iamPolicyArn})
+			createRole(t, roleName, awsAccountID, []string{ec2PolicyArn, iamPolicyArn}, nil)
 			log.Printf("[WARN] Sleeping for 10 seconds waiting for AWS...")
 			time.Sleep(10 * time.Second)
 		},
@@ -1225,7 +1234,7 @@ func TestAcceptanceBackend_AssumedRoleWithGroups(t *testing.T) {
 		AcceptanceTest: true,
 		PreCheck: func() {
 			testAccPreCheck(t)
-			createRole(t, roleName, awsAccountID, []string{ec2PolicyArn})
+			createRole(t, roleName, awsAccountID, []string{ec2PolicyArn}, nil)
 			createGroup(t, groupName, allowAllButDescribeAzs, []string{})
 			// Sleep sometime because AWS is eventually consistent
 			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
@@ -1242,6 +1251,77 @@ func TestAcceptanceBackend_AssumedRoleWithGroups(t *testing.T) {
 			if err := deleteTestGroup(groupName); err != nil {
 				return err
 			}
+			return deleteTestRole(roleName)
+		},
+	})
+}
+
+func TestAcceptanceBackend_AssumedRoleWithSessionTags(t *testing.T) {
+	t.Parallel()
+	roleName := generateUniqueRoleName(t.Name())
+	awsAccountID, err := getAccountID()
+	if err != nil {
+		t.Logf("Unable to retrive user via sts:GetCallerIdentity: %#v", err)
+		t.Skip("Could not determine AWS account ID from sts:GetCallerIdentity for acceptance tests, skipping")
+	}
+
+	// This looks a bit curious. The policy document and the role document act
+	// as a logical intersection of policies. The role allows ec2:Describe*
+	// (among other permissions). This policy allows everything BUT
+	// ec2:DescribeAvailabilityZones. Thus, the logical intersection of the two
+	// is all ec2:Describe* EXCEPT ec2:DescribeAvailabilityZones, and so the
+	// describeAZs call should fail
+	allowAllButDescribeAzs := `{
+	"Version": "2012-10-17",
+	"Statement": [
+		{
+			"Effect": "Allow",
+			"NotAction": "ec2:DescribeAvailabilityZones",
+			"Resource": "*"
+		}
+	]
+}`
+
+	roleARN := fmt.Sprintf("arn:aws:iam::%s:role/%s", awsAccountID, roleName)
+	roleData := map[string]interface{}{
+		"policy_document": allowAllButDescribeAzs,
+		"role_arns":       []string{roleARN},
+		"credential_type": assumedRoleCred,
+		"session_tags": map[string]string{
+			"foo": "bar",
+			"baz": "qux",
+		},
+	}
+
+	// allowSessionTagsPolicy allows the role to tag the session, it needs to be
+	// included in the trust policy.
+	allowSessionTagsPolicy := fmt.Sprintf(`
+		{
+			"Sid": "AllowPassSessionTagsAndTransitive",
+			"Effect": "Allow",
+			"Action": "sts:TagSession",
+			"Principal": {
+				  "AWS": "arn:aws:iam::%s:root"
+			}
+		}
+`, awsAccountID)
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		AcceptanceTest: true,
+		PreCheck: func() {
+			testAccPreCheck(t)
+			createRole(t, roleName, awsAccountID, []string{ec2PolicyArn}, []string{allowSessionTagsPolicy})
+			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
+			time.Sleep(10 * time.Second)
+		},
+		LogicalBackend: getBackend(t),
+		Steps: []logicaltest.TestStep{
+			testAccStepConfig(t),
+			testAccStepWriteRole(t, "test", roleData),
+			testAccStepRead(t, "sts", "test", []credentialTestFunc{describeInstancesTest, describeAzsTestUnauthorized}),
+			testAccStepRead(t, "creds", "test", []credentialTestFunc{describeInstancesTest, describeAzsTestUnauthorized}),
+		},
+		Teardown: func() error {
 			return deleteTestRole(roleName)
 		},
 	})
@@ -1427,7 +1507,7 @@ func TestAcceptanceBackend_RoleDefaultSTSTTL(t *testing.T) {
 		AcceptanceTest: true,
 		PreCheck: func() {
 			testAccPreCheck(t)
-			createRole(t, roleName, awsAccountID, []string{ec2PolicyArn})
+			createRole(t, roleName, awsAccountID, []string{ec2PolicyArn}, nil)
 			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
 			time.Sleep(10 * time.Second)
 		},
