@@ -2,6 +2,36 @@
 - [v1.0.0 - v1.9.10](CHANGELOG-pre-v1.10.md)
 - [v0.11.6 and earlier](CHANGELOG-v0.md)
 
+## 1.17.1
+### June 26, 2024
+
+CHANGES:
+
+* auth/jwt: Update plugin to v0.21.0 [[GH-27498](https://github.com/hashicorp/vault/pull/27498)]
+
+IMPROVEMENTS:
+
+* storage/raft: Improve autopilot logging on startup to show config values clearly and avoid spurious logs [[GH-27464](https://github.com/hashicorp/vault/pull/27464)]
+* ui/secrets-sync: Hide Secrets Sync from the sidebar nav if user does not have access to the feature. [[GH-27262](https://github.com/hashicorp/vault/pull/27262)]
+
+BUG FIXES:
+
+* agent: Fixed an issue causing excessive CPU usage during normal operation [[GH-27518](https://github.com/hashicorp/vault/pull/27518)]
+* config: Vault TCP listener config now correctly supports the documented proxy_protocol_behavior 
+setting of 'deny_unauthorized' [[GH-27459](https://github.com/hashicorp/vault/pull/27459)]
+* core/audit: Audit logging a Vault request/response checks if the existing context 
+is cancelled and will now use a new context with a 5 second timeout.
+If the existing context is cancelled a new context, will be used. [[GH-27531](https://github.com/hashicorp/vault/pull/27531)]
+* helper/pkcs7: Fix parsing certain messages containing only certificates [[GH-27435](https://github.com/hashicorp/vault/pull/27435)]
+* proxy: Fixed an issue causing excessive CPU usage during normal operation [[GH-27518](https://github.com/hashicorp/vault/pull/27518)]
+* replication (enterprise): fix cache invalidation issue leading to namespace custom metadata not being shown correctly on performance secondaries
+* secrets-sync (enterprise): Properly remove tags from secrets in AWS when they are removed from the source association
+* secrets-sync (enterprise): Return more accurate error code for invalid connection details
+* secrets-sync (enterprise): Skip invalid GitHub repository names when creating destinations
+* storage/azure: Fix invalid account name initialization bug [[GH-27563](https://github.com/hashicorp/vault/pull/27563)]
+* storage/raft (enterprise): Fix issue with namespace cache not getting cleared on snapshot restore, resulting in namespaces not found in the snapshot being inaccurately represented by API responses. [[GH-27474](https://github.com/hashicorp/vault/pull/27474)]
+* ui: Allow creation of session_token type roles for AWS secret backend [[GH-27424](https://github.com/hashicorp/vault/pull/27424)]
+
 ## 1.17.0
 ### June 12, 2024
 
@@ -196,6 +226,31 @@ autopilot to fail to discover new server versions and so not trigger an upgrade.
 * ui: fix issue where a month without new clients breaks the client count dashboard [[GH-27352](https://github.com/hashicorp/vault/pull/27352)]
 * ui: fixed a bug where the replication pages did not update display when navigating between DR and performance [[GH-26325](https://github.com/hashicorp/vault/pull/26325)]
 * ui: fixes undefined start time in filename for downloaded client count attribution csv [[GH-26485](https://github.com/hashicorp/vault/pull/26485)]
+
+## 1.16.5 Enterprise
+### June 26, 2024
+
+**Enterprise LTS:** Vault Enterprise 1.16 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
+
+CHANGES:
+
+* auth/jwt: Revert [GH-295](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/295) which changed the way JWT `aud` claims were validated.
+
+BUG FIXES:
+
+* cli/debug: Fix resource leak in CLI debug command. [[GH-26167](https://github.com/hashicorp/vault/pull/26167)]
+* config: Vault TCP listener config now correctly supports the documented proxy_protocol_behavior 
+setting of 'deny_unauthorized' [[GH-27459](https://github.com/hashicorp/vault/pull/27459)]
+* core/audit: Audit logging a Vault request/response checks if the existing context 
+is cancelled and will now use a new context with a 5 second timeout.
+If the existing context is cancelled a new context, will be used. [[GH-27531](https://github.com/hashicorp/vault/pull/27531)]
+* helper/pkcs7: Fix parsing certain messages containing only certificates [[GH-27435](https://github.com/hashicorp/vault/pull/27435)]
+* replication (enterprise): fix cache invalidation issue leading to namespace custom metadata not being shown correctly on performance secondaries
+* secrets-sync (enterprise): Properly remove tags from secrets in AWS when they are removed from the source association
+* secrets-sync (enterprise): Return more accurate error code for invalid connection details
+* secrets-sync (enterprise): Skip invalid GitHub repository names when creating destinations
+* storage/raft (enterprise): Fix issue with namespace cache not getting cleared on snapshot restore, resulting in namespaces not found in the snapshot being inaccurately represented by API responses. [[GH-27474](https://github.com/hashicorp/vault/pull/27474)]
+* ui: Allow creation of session_token type roles for AWS secret backend [[GH-27424](https://github.com/hashicorp/vault/pull/27424)]
 
 ## 1.16.4 Enterprise 
 ### June 12, 2024
@@ -676,6 +731,20 @@ leading to failure to complete merkle sync without a full re-index. [[GH-23013](
 * ui: fix navigation items shown to user when chroot_namespace configured [[GH-24492](https://github.com/hashicorp/vault/pull/24492)]
 * ui: remove user_lockout_config settings for unsupported methods [[GH-25867](https://github.com/hashicorp/vault/pull/25867)]
 * ui: show error from API when seal fails [[GH-23921](https://github.com/hashicorp/vault/pull/23921)]
+
+## 1.15.11 Enterprise
+### June 26, 2024
+
+CHANGES:
+
+* auth/jwt: Revert [GH-295](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/295) which changed the way JWT `aud` claims were validated.
+
+BUG FIXES:
+
+* cli/debug: Fix resource leak in CLI debug command. [[GH-26167](https://github.com/hashicorp/vault/pull/26167)]
+* helper/pkcs7: Fix parsing certain messages containing only certificates [[GH-27435](https://github.com/hashicorp/vault/pull/27435)]
+* replication (enterprise): fix cache invalidation issue leading to namespace custom metadata not being shown correctly on performance secondaries
+* storage/raft (enterprise): Fix issue with namespace cache not getting cleared on snapshot restore, resulting in namespaces not found in the snapshot being inaccurately represented by API responses. [[GH-27474](https://github.com/hashicorp/vault/pull/27474)]
 
 ## 1.15.10 Enterprise
 ### June 12, 2024
