@@ -322,7 +322,7 @@ func (c *mySQLConnectionProducer) rewriteProtocolForGCP(inDSN string) (string, e
 }
 
 func registerDriverMySQL(driverName, credentials string) (cleanup func() error, err error) {
-	opts, err := connutil.GetCloudSQLAuthOptions(credentials)
+	opts, err := connutil.GetCloudSQLAuthOptions(credentials, false)
 	if err != nil {
 		return nil, err
 	}
