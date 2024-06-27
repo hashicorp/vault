@@ -1,0 +1,6 @@
+```release-note:improvement
+agent: Add the ability to dump pprof to the filesystem using SIGUSR2
+```
+```release-note:improvement
+proxy: Add the ability to dump pprof to the filesystem using SIGUSR2
+```

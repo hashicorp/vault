@@ -14,7 +14,6 @@ func (c *Core) setupCensusManager() error                        { return nil }
 func (c *Core) BillingStart() time.Time                          { return time.Time{} }
 func (c *Core) AutomatedLicenseReportingEnabled() bool           { return false }
 func (c *Core) CensusAgent() CensusReporter                      { return nil }
-func (c *Core) ReloadCensus() error                              { return nil }
 func (c *Core) teardownCensusManager() error                     { return nil }
 func (c *Core) StartManualCensusSnapshots()                      {}
 func (c *Core) ManualLicenseReportingEnabled() bool              { return false }

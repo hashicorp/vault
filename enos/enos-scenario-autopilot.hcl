@@ -27,10 +27,7 @@ scenario "autopilot" {
     config_mode     = global.config_modes
     distro          = global.distros
     edition         = global.enterprise_editions
-    // This reads the VERSION file, strips any pre-release metadata, and selects only initial
-    // versions that are less than our current version. E.g. A VERSION file containing 1.17.0-beta2
-    // would render: semverconstraint(v, "<1.17.0-0")
-    initial_version = [for v in global.upgrade_initial_versions : v if semverconstraint(v, "<${join("-", [split("-", chomp(file("../version/VERSION")))[0], "0"])}")]
+    initial_version = global.upgrade_initial_versions_ent
     seal            = global.seals
 
     # Autopilot wasn't available before 1.11.x
@@ -44,7 +41,8 @@ scenario "autopilot" {
       artifact_type   = ["package"]
     }
 
-    # HSM and FIPS 140-2 are only supported on amd64
+    # There are no published versions of these artifacts yet. We'll update this to exclude older
+    # versions after our initial publication of these editions for arm64.
     exclude {
       arch    = ["arm64"]
       edition = ["ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
@@ -62,8 +60,8 @@ scenario "autopilot" {
       arch   = ["arm64"]
     }
 
-    # softhsm packages not available for leap/sles; Enos support for softhsm
-    # on amzn2 to be added later.
+    # softhsm packages not available for leap/sles. Enos support for softhsm on amzn2 is
+    # not implemented yet.
     exclude {
       seal   = ["pkcs11"]
       distro = ["amzn2", "leap", "sles"]
