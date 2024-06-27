@@ -422,9 +422,6 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 		}
 	}
 
-	a.core.activityLogLock.RLock()
-	minimumRetentionMonths := a.configOverrides.MinimumRetentionMonths
-	a.core.activityLogLock.RUnlock()
 	enabled := config.Enabled == "enable"
 	if !enabled && config.Enabled == "default" {
 		enabled = activityLogEnabledDefault
@@ -435,8 +432,8 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 	}
 
 	// if manual license reporting is enabled, retention months must at least be 48 months
-	if a.core.ManualLicenseReportingEnabled() && config.RetentionMonths < minimumRetentionMonths {
-		return logical.ErrorResponse("retention_months must be at least %d while Reporting is enabled", minimumRetentionMonths), logical.ErrInvalidRequest
+	if a.core.ManualLicenseReportingEnabled() && config.RetentionMonths < ActivityLogMinimumRetentionMonths {
+		return logical.ErrorResponse("retention_months must be at least %d while Reporting is enabled", ActivityLogMinimumRetentionMonths), logical.ErrInvalidRequest
 	}
 
 	// Store the config
@@ -451,9 +448,9 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 	// Set the new config on the activity log
 	a.SetConfig(ctx, config)
 
-	// reload census agent if retention months change during update when reporting is enabled
+	// Update Census agent's metadata if retention months change
 	if prevRetentionMonths != config.RetentionMonths {
-		if err := a.core.ReloadCensusActivityLog(); err != nil {
+		if err := b.Core.SetRetentionMonths(config.RetentionMonths); err != nil {
 			return nil, err
 		}
 	}
