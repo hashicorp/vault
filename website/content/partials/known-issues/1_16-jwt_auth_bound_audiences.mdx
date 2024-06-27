@@ -4,13 +4,15 @@
 
 - 1.15.9
 - 1.15.10
+- 1.15.11
 - 1.16.3
 - 1.16.4
+- 1.16.5
 
 #### Issue
 A behavior change was made in the jwt auth plugin to address CVE-2024-5798.
 Since the behavior change was a breaking change, we reverted the change in
-the versions 1.15.11 and 1.16.5 and later. However, the behavior change will go
+the versions 1.15.12 and 1.16.6 and later. However, the behavior change will go
 into effect in 1.17.
 
 The new behavior requires that the `bound_audiences` parameter of "jwt" roles
