@@ -1703,9 +1703,10 @@ func TestBackend_stsSessionTagsCRUD(t *testing.T) {
 	tagParamsList1Expect := map[string]string{"key1": "value2", "key3": "value4"}
 
 	type testCase struct {
-		name       string
-		expectTags []map[string]string
-		tagsParams []any
+		name        string
+		expectTags  []map[string]string
+		tagsParams  []any
+		externalIDs []string
 	}
 
 	for _, tt := range []testCase{
@@ -1713,12 +1714,15 @@ func TestBackend_stsSessionTagsCRUD(t *testing.T) {
 			name: "mapped-only",
 			tagsParams: []any{
 				tagParams0,
+				map[string]string{},
 				tagParams1,
 			},
 			expectTags: []map[string]string{
 				tagParams0,
+				{},
 				tagParams1,
 			},
+			externalIDs: []string{"foo", "", "bar"},
 		},
 		{
 			name: "string-list-only",
@@ -1730,6 +1734,7 @@ func TestBackend_stsSessionTagsCRUD(t *testing.T) {
 				tagParamsList0Expect,
 				tagParamsList1Expect,
 			},
+			externalIDs: []string{"foo"},
 		},
 		{
 			name: "mixed-param-types",
@@ -1745,6 +1750,7 @@ func TestBackend_stsSessionTagsCRUD(t *testing.T) {
 				tagParams1,
 				tagParamsList1Expect,
 			},
+			externalIDs: []string{"foo", "bar"},
 		},
 		{
 			name: "unset-tags",
@@ -1767,14 +1773,25 @@ func TestBackend_stsSessionTagsCRUD(t *testing.T) {
 				t.Fatalf("invalid test case: test case params and expect must have the same length")
 			}
 
+			// lastNonEmptyExternalID is used to store the last non-empty external ID for the
+			// test case. The value will is expected to be set on the role. Setting the value
+			// to an empty string has no effect on update operations.
+			var lastNonEmptyExternalID string
 			for idx, params := range tt.tagsParams {
-				steps = append(steps, testAccStepWriteSTSSessionTags(t, tt.name, params))
-				steps = append(steps, testAccStepReadSTSSessionTags(t, tt.name, tt.expectTags[idx], false))
+				var externalID string
+				if len(tt.externalIDs) > idx {
+					externalID = tt.externalIDs[idx]
+				}
+				if externalID != "" {
+					lastNonEmptyExternalID = externalID
+				}
+				steps = append(steps, testAccStepWriteSTSSessionTags(t, tt.name, params, externalID))
+				steps = append(steps, testAccStepReadSTSSessionTags(t, tt.name, tt.expectTags[idx], lastNonEmptyExternalID, false))
 			}
 			steps = append(
 				steps,
 				testAccStepDeletePolicy(t, tt.name),
-				testAccStepReadSTSSessionTags(t, tt.name, nil, true),
+				testAccStepReadSTSSessionTags(t, tt.name, nil, "", true),
 			)
 			logicaltest.Test(t, logicaltest.TestCase{
 				AcceptanceTest: false,
@@ -1785,20 +1802,24 @@ func TestBackend_stsSessionTagsCRUD(t *testing.T) {
 	}
 }
 
-func testAccStepWriteSTSSessionTags(t *testing.T, name string, tags any) logicaltest.TestStep {
+func testAccStepWriteSTSSessionTags(t *testing.T, name string, tags any, externalID string) logicaltest.TestStep {
 	t.Helper()
 
+	data := map[string]interface{}{
+		"credential_type": assumedRoleCred,
+		"session_tags":    tags,
+	}
+	if externalID != "" {
+		data["external_id"] = externalID
+	}
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/" + name,
-		Data: map[string]interface{}{
-			"credential_type": assumedRoleCred,
-			"session_tags":    tags,
-		},
+		Data:      data,
 	}
 }
 
-func testAccStepReadSTSSessionTags(t *testing.T, name string, tags any, expectNilResp bool) logicaltest.TestStep {
+func testAccStepReadSTSSessionTags(t *testing.T, name string, tags any, externalID string, expectNilResp bool) logicaltest.TestStep {
 	t.Helper()
 
 	return logicaltest.TestStep{
@@ -1825,7 +1846,7 @@ func testAccStepReadSTSSessionTags(t *testing.T, name string, tags any, expectNi
 				"iam_tags":                 map[string]string(nil),
 				"mfa_serial_number":        "",
 				"session_tags":             tags,
-				"external_id":              "",
+				"external_id":              externalID,
 			}
 			if !reflect.DeepEqual(resp.Data, expected) {
 				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
