@@ -7,6 +7,7 @@ import SyncDestinationModel from '../destination';
 import { attr } from '@ember-data/model';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 
+// displayFields are used on the destination details view
 const displayFields = [
   // connection details
   'name',
@@ -20,11 +21,13 @@ const displayFields = [
   'secretNameTemplate',
   'customTags',
 ];
+// formFieldGroups are used on the create-edit destination view
 const formFieldGroups = [
   {
-    default: ['name', 'region', 'roleArn', 'externalId', 'granularity', 'secretNameTemplate', 'customTags'],
+    default: ['name', 'region', 'roleArn', 'externalId'],
   },
   { Credentials: ['accessKeyId', 'secretAccessKey'] },
+  { 'Advanced configuration': ['granularity', 'secretNameTemplate', 'customTags'] },
 ];
 @withFormFields(displayFields, formFieldGroups)
 export default class SyncDestinationsAwsSecretsManagerModel extends SyncDestinationModel {
