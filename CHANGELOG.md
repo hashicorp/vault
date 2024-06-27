@@ -232,10 +232,6 @@ autopilot to fail to discover new server versions and so not trigger an upgrade.
 
 **Enterprise LTS:** Vault Enterprise 1.16 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
 
-CHANGES:
-
-* auth/jwt: Revert [GH-295](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/295) which changed the way JWT `aud` claims were validated.
-
 BUG FIXES:
 
 * cli/debug: Fix resource leak in CLI debug command. [[GH-26167](https://github.com/hashicorp/vault/pull/26167)]
@@ -734,10 +730,6 @@ leading to failure to complete merkle sync without a full re-index. [[GH-23013](
 
 ## 1.15.11 Enterprise
 ### June 26, 2024
-
-CHANGES:
-
-* auth/jwt: Revert [GH-295](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/295) which changed the way JWT `aud` claims were validated.
 
 BUG FIXES:
 
