@@ -44,7 +44,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
     };
   });
 
-  test('create: it renders and navigates back to create on cancel', async function (assert) {
+  test('create: it renders breadcrumbs and navigates back to create on cancel', async function (assert) {
     assert.expect(2);
     const { type } = SYNC_DESTINATIONS[0];
     this.model = this.store.createRecord(`sync/destinations/${type}`, { type });
@@ -56,13 +56,18 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
     assert.true(transition, 'transitions to vault.cluster.sync.secrets.destinations.create on cancel');
   });
 
-  test('create: it renders fieldGroups subtext', async function (assert) {
-    assert.expect(2);
+  test('create: it renders headers and fieldGroups subtext', async function (assert) {
+    assert.expect(4);
     const { type } = SYNC_DESTINATIONS[0];
     this.model = this.store.createRecord(`sync/destinations/${type}`, { type });
 
     await this.renderFormComponent();
-
+    assert
+      .dom(PAGE.form.fieldGroupHeader('Credentials'))
+      .hasText('Credentials', 'renders credentials section on create');
+    assert
+      .dom(PAGE.form.fieldGroupHeader('Advanced configuration'))
+      .hasText('Advanced configuration', 'renders advanced configuration section on create');
     assert
       .dom(PAGE.form.fieldGroupSubtext('Credentials'))
       .hasText('Connection credentials are sensitive information used to authenticate with the destination.');
@@ -71,28 +76,34 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
       .hasText('Configuration options for the destination.');
   });
 
-  test('edit: it renders and navigates back to details on cancel', async function (assert) {
-    assert.expect(3);
+  test('edit: it renders breadcrumbs and navigates back to details on cancel', async function (assert) {
+    assert.expect(2);
     this.model = this.generateModel();
 
     await this.renderFormComponent();
     assert.dom(PAGE.breadcrumbs).hasText('Secrets Sync Destinations Destination Edit Destination');
-    assert.dom('h2').hasText('Credentials', 'renders credentials section on edit');
+
     await click(PAGE.cancelButton);
     const transition = this.transitionStub.calledWith('vault.cluster.sync.secrets.destinations.destination');
     assert.true(transition, 'transitions to vault.cluster.sync.secrets.destinations.destination on cancel');
   });
 
-  test('edit: it renders fieldGroup subtext', async function (assert) {
-    assert.expect(2);
-    const { type } = SYNC_DESTINATIONS[0];
-    this.model = this.store.createRecord(`sync/destinations/${type}`, { type });
+  test('edit: it renders headers and fieldGroup subtext', async function (assert) {
+    assert.expect(4);
+    this.model = this.generateModel();
 
     await this.renderFormComponent();
-
+    assert
+      .dom(PAGE.form.fieldGroupHeader('Credentials'))
+      .hasText('Credentials', 'renders credentials section on edit');
+    assert
+      .dom(PAGE.form.fieldGroupHeader('Advanced configuration'))
+      .hasText('Advanced configuration', 'renders advanced configuration section on edit');
     assert
       .dom(PAGE.form.fieldGroupSubtext('Credentials'))
-      .hasText('Connection credentials are sensitive information used to authenticate with the destination.');
+      .hasText(
+        'Connection credentials are sensitive information and the value cannot be read. Enable the input to update.'
+      );
     assert
       .dom(PAGE.form.fieldGroupSubtext('Advanced configuration'))
       .hasText('Configuration options for the destination.');
