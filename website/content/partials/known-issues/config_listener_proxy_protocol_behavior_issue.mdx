@@ -17,7 +17,7 @@
 
 #### Issue
 
-When a Vault TCP listener is configured with the `deny_unauthorized` [proxy_protocol_behavior](https://developer.hashicorp.com/vault/docs/configuration/listener/tcp#proxy_protocol_behavior)
+When a Vault TCP listener is configured with the `deny_unauthorized` [proxy_protocol_behavior](/vault/docs/configuration/listener/tcp#proxy_protocol_behavior)
 and receives a request from an untrusted upstream connection, Vault will no longer
 respond to requests via that listener.
 
@@ -29,5 +29,5 @@ This issue is addressed in Vault 1.15.12+ent, 1.16.6+ent, 1.17.2, 1.17.2+ent and
 
 #### Workaround
 
-Do not configure a [proxy_protocol_behavior](https://developer.hashicorp.com/vault/docs/configuration/listener/tcp#proxy_protocol_behavior)
+Do not configure a [proxy_protocol_behavior](/vault/docs/configuration/listener/tcp#proxy_protocol_behavior)
 with the `deny_unauthorized` value.
