@@ -140,6 +140,7 @@ func TestAcceptanceBackend_basicSTS(t *testing.T) {
 	})
 }
 
+// TestBackend_policyCRUD tests the CRUD operations for a policy.
 func TestBackend_policyCRUD(t *testing.T) {
 	t.Parallel()
 	compacted, err := compactJSON(testDynamoPolicy)
@@ -1245,6 +1246,8 @@ func TestAcceptanceBackend_AssumedRoleWithGroups(t *testing.T) {
 	})
 }
 
+// TestAcceptanceBackend_AssumedRoleWithSessionTags tests that session tags are
+// passed to the assumed role.
 func TestAcceptanceBackend_AssumedRoleWithSessionTags(t *testing.T) {
 	t.Parallel()
 	roleName := generateUniqueRoleName(t.Name())
@@ -1380,6 +1383,7 @@ func TestAcceptanceBackend_FederationTokenWithGroups(t *testing.T) {
 	})
 }
 
+// TestAcceptanceBackend_SessionToken
 func TestAcceptanceBackend_SessionToken(t *testing.T) {
 	t.Parallel()
 	userName := generateUniqueUserName(t.Name())
@@ -1495,6 +1499,7 @@ func TestAcceptanceBackend_RoleDefaultSTSTTL(t *testing.T) {
 	})
 }
 
+// TestBackend_policyArnCRUD test the CRUD operations for policy ARNs.
 func TestBackend_policyArnCRUD(t *testing.T) {
 	t.Parallel()
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -1557,6 +1562,7 @@ func testAccStepWriteArnRoleRef(t *testing.T, vaultRoleName, awsRoleName, awsAcc
 	}
 }
 
+// TestBackend_iamGroupsCRUD tests CRUD operations for IAM groups.
 func TestBackend_iamGroupsCRUD(t *testing.T) {
 	t.Parallel()
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -1620,6 +1626,7 @@ func testAccStepReadIamGroups(t *testing.T, name string, groups []string) logica
 	}
 }
 
+// TestBackend_iamTagsCRUD tests the CRUD operations for IAM tags.
 func TestBackend_iamTagsCRUD(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: false,
@@ -1682,6 +1689,7 @@ func testAccStepReadIamTags(t *testing.T, name string, tags map[string]string) l
 	}
 }
 
+// TestBackend_stsSessionTagsCRUD tests the CRUD operations for STS session tags.
 func TestBackend_stsSessionTagsCRUD(t *testing.T) {
 	t.Parallel()
 
