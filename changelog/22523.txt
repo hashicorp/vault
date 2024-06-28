@@ -1,0 +1,3 @@
+```release-note:bug
+api: Fix breakage with UNIX domain socket addresses introduced by newest Go versions as a security fix.
+```

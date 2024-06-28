@@ -1,0 +1,3 @@
+```release-note: bug
+secrets/pki: Ensure cross-cluster delta WAL write failure only logs to avoid unattended forwarding.
+```

@@ -1,16 +1,25 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import ApplicationAdapter from '../application';
-import { getUnixTime } from 'date-fns';
+import { formatDateObject } from 'core/utils/client-count-utils';
+import { debug } from '@ember/debug';
 
 export default class ActivityAdapter extends ApplicationAdapter {
   // javascript localizes new Date() objects but all activity log data is stored in UTC
   // create date object from user's input using Date.UTC() then send to backend as unix
   // time params from the backend are formatted as a zulu timestamp
   formatQueryParams(queryParams) {
+    if (queryParams?.current_billing_period) {
+      // { current_billing_period: true } automatically queries the activity log
+      // from the builtin license start timestamp to the current month
+      return queryParams;
+    }
     let { start_time, end_time } = queryParams;
-    start_time = start_time.timestamp || getUnixTime(Date.UTC(start_time.year, start_time.monthIdx, 1));
-    // day=0 for Date.UTC() returns the last day of the month before
-    // increase monthIdx by one to get last day of queried month
-    end_time = end_time.timestamp || getUnixTime(Date.UTC(end_time.year, end_time.monthIdx + 1, 0));
+    start_time = start_time.timestamp || formatDateObject(start_time);
+    end_time = end_time.timestamp || formatDateObject(end_time, true);
     return { start_time, end_time };
   }
 
@@ -24,5 +33,13 @@ export default class ActivityAdapter extends ApplicationAdapter {
         return response;
       });
     }
+  }
+
+  urlForFindRecord(id) {
+    // debug reminder so model is stored in Ember data with the same id for consistency
+    if (id !== 'clients/activity') {
+      debug(`findRecord('clients/activity') should pass 'clients/activity' as the id, you passed: '${id}'`);
+    }
+    return `${this.buildURL()}/internal/counters/activity`;
   }
 }

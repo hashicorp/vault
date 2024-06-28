@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { computed } from '@ember/object';
 import Mixin from '@ember/object/mixin';
 import escapeStringRegexp from 'escape-string-regexp';
@@ -18,7 +23,7 @@ export default Mixin.create({
 
   filterMatchesKey: computed('filter', 'model', 'model.[]', function () {
     const { filter, model: content } = this;
-    return !!(content.length && content.findBy('id', filter));
+    return !!(content.length && content.find((c) => c.id === filter));
   }),
 
   firstPartialMatch: computed('filter', 'model', 'model.[]', 'filterMatchesKey', function () {

@@ -1,10 +1,16 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+// Popup menu no longer exists, but these styles are still used in some places
 .popup-menu-content,
 .ember-power-select-options {
-  border-radius: 2px;
+  border-radius: $radius;
   margin: -2px 0 0 0;
 
   & > .box {
-    border-radius: 2px;
+    border-radius: $radius;
     box-shadow: $box-shadow, $box-shadow-middle;
     padding: 0;
     position: relative;
@@ -22,7 +28,7 @@
   }
 
   .menu {
-    padding: $size-11 0;
+    padding: $spacing-4 0;
   }
 
   button.link,
@@ -37,10 +43,23 @@
     height: auto;
     font-size: $size-7;
     font-weight: $font-weight-semibold;
-    padding: $size-9 $size-8;
+    padding: $spacing-10 $spacing-12;
     text-align: left;
     text-decoration: none;
     width: 100%;
+  }
+
+  // TODO HDS polish - temp styling fix for ConfirmAction dropdown buttons
+  // so they match other dropdown elements until we replace popup-menu with Hds::Dropdown
+  .hds-confirm-action-critical {
+    &:hover {
+      background-color: $ui-gray-050;
+    }
+    div {
+      margin-left: -$spacing-4;
+      font-size: $size-7;
+      font-weight: $font-weight-semibold;
+    }
   }
 
   button.link,
@@ -48,17 +67,17 @@
   .ember-power-select-option[aria-current='true'],
   a {
     background-color: $white;
-    color: $menu-item-color;
+    color: $grey-darkest;
 
     &:hover {
-      background-color: $menu-item-hover-background-color;
-      color: $menu-item-hover-color;
+      background-color: $ui-gray-050;
+      color: $ui-gray-900;
     }
 
     &.active,
-    .is-active {
-      background-color: $menu-item-active-background-color;
-      color: $menu-item-active-color;
+    &.is-active {
+      background-color: transparent;
+      color: $blue;
     }
 
     &.is-destroy {
@@ -78,6 +97,10 @@
         cursor: default;
       }
     }
+    &.loading-dropdown {
+      display: flex;
+      align-items: center;
+    }
   }
 
   .menu-label {
@@ -86,12 +109,12 @@
     font-weight: $font-weight-normal;
     letter-spacing: 0;
     margin: 0;
-    padding: $size-10 $size-8 0;
+    padding: $spacing-8 $spacing-12 0;
     text-transform: uppercase;
   }
 
   .menu-content {
-    padding: $size-10 $size-8;
+    padding: $spacing-8 $spacing-12;
   }
 
   hr {
@@ -102,7 +125,7 @@
 
 .popup-menu-content p {
   box-shadow: none;
-  padding-top: $size-10;
+  padding-top: $spacing-8;
   font-weight: $font-weight-semibold;
 }
 
@@ -117,23 +140,12 @@
 }
 
 .list-item-row,
-.info-table-row,
-.wizard-dismiss-menu {
+.info-table-row {
   .popup-menu-trigger {
     height: 2.5rem;
     min-width: 0;
     padding: 0;
     width: 2.5rem;
-  }
-}
-
-.status-menu-content {
-  margin-top: 8px;
-
-  .box {
-    @include until($mobile) {
-      width: $drawer-width - ($spacing-xs * 2);
-    }
   }
 }
 
@@ -162,5 +174,20 @@
     &.ember-basic-dropdown--transitioning-out {
       animation: drop-fade-below 0.15s reverse;
     }
+  }
+}
+
+// Match HDS styling for namespace ink
+a.ns-dropdown-item {
+  color: var(--token-color-foreground-primary);
+  display: flex;
+  align-items: flex-start;
+  padding: 7px 9px 7px 0px;
+  border: 1px solid transparent;
+  outline-style: solid;
+  outline-color: transparent;
+  text-decoration: none;
+  &:hover {
+    color: var(--token-color-foreground-action-hover);
   }
 }

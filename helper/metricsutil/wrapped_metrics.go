@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package metricsutil
 
 import (
@@ -34,12 +37,14 @@ type ClusterMetricSink struct {
 }
 
 type TelemetryConstConfig struct {
-	LeaseMetricsEpsilon         time.Duration
-	NumLeaseMetricsTimeBuckets  int
-	LeaseMetricsNameSpaceLabels bool
+	LeaseMetricsEpsilon              time.Duration
+	NumLeaseMetricsTimeBuckets       int
+	LeaseMetricsNameSpaceLabels      bool
+	RollbackMetricsIncludeMountPoint bool
 }
 
 type Metrics interface {
+	SetGauge(key []string, val float32)
 	SetGaugeWithLabels(key []string, val float32, labels []Label)
 	IncrCounterWithLabels(key []string, val float32, labels []Label)
 	AddSampleWithLabels(key []string, val float32, labels []Label)

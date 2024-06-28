@@ -1,5 +1,10 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { next } from '@ember/runloop';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { computed } from '@ember/object';
 import Controller, { inject as controller } from '@ember/controller';
 
@@ -9,18 +14,19 @@ export default Controller.extend({
   backendCrumb: computed('clusterController.model.name', function () {
     return {
       label: 'leases',
-      text: 'leases',
+      text: 'Leases',
       path: 'vault.cluster.access.leases.list-root',
       model: this.clusterController.model.name,
     };
   }),
 
   flashMessages: service(),
+  router: service(),
 
   actions: {
     revokeLease(model) {
       return model.destroyRecord().then(() => {
-        return this.transitionToRoute('vault.cluster.access.leases.list-root');
+        return this.router.transitionTo('vault.cluster.access.leases.list-root');
       });
     },
 

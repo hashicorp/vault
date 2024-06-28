@@ -1,26 +1,31 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { resolve } from 'rsvp';
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import ControlGroupError from 'vault/lib/control-group-error';
 
-const SUPPORTED_DYNAMIC_BACKENDS = ['database', 'ssh', 'aws', 'pki'];
+const SUPPORTED_DYNAMIC_BACKENDS = ['database', 'ssh', 'aws'];
 
 export default Route.extend({
   templateName: 'vault/cluster/secrets/backend/credentials',
   pathHelp: service('path-help'),
+  router: service(),
   store: service(),
 
-  backendModel() {
-    return this.modelFor('vault.cluster.secrets.backend');
-  },
-
   beforeModel() {
-    const { backend } = this.paramsFor('vault.cluster.secrets.backend');
-    if (backend != 'ssh') {
-      return;
+    const { id: backendPath, type: backendType } = this.modelFor('vault.cluster.secrets.backend');
+    // redirect if the backend type does not support credentials
+    if (!SUPPORTED_DYNAMIC_BACKENDS.includes(backendType)) {
+      return this.router.transitionTo('vault.cluster.secrets.backend.list-root', backendPath);
     }
-    const modelType = 'ssh-otp-credential';
-    return this.pathHelp.getNewModel(modelType, backend);
+    // hydrate model if backend type is ssh
+    if (backendType === 'ssh') {
+      this.pathHelp.getNewModel('ssh-otp-credential', backendPath);
+    }
   },
 
   getDatabaseCredential(backend, secret, roleType = '') {
@@ -49,25 +54,34 @@ export default Route.extend({
     });
   },
 
+  async getAwsRole(backend, id) {
+    try {
+      const role = await this.store.queryRecord('role-aws', { backend, id });
+      return role;
+    } catch (e) {
+      // swallow error, non-essential data
+      return;
+    }
+  },
+
   async model(params) {
     const role = params.secret;
-    const backendModel = this.backendModel();
-    const backendPath = backendModel.get('id');
-    const backendType = backendModel.get('type');
+    const { id: backendPath, type: backendType } = this.modelFor('vault.cluster.secrets.backend');
     const roleType = params.roleType;
-    let dbCred;
+    let dbCred, awsRole;
     if (backendType === 'database') {
       dbCred = await this.getDatabaseCredential(backendPath, role, roleType);
+    } else if (backendType === 'aws') {
+      awsRole = await this.getAwsRole(backendPath, role);
     }
-    if (!SUPPORTED_DYNAMIC_BACKENDS.includes(backendModel.get('type'))) {
-      return this.transitionTo('vault.cluster.secrets.backend.list-root', backendPath);
-    }
+
     return resolve({
       backendPath,
       backendType,
       roleName: role,
       roleType,
       dbCred,
+      awsRoleType: awsRole?.credentialType,
     });
   },
 

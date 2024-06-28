@@ -1,0 +1,3 @@
+```release-note:improvement
+agent: Added a new config option, `lease_renewal_threshold`, that controls the refresh rate of non-renewable leases in Agent's template engine.
+```

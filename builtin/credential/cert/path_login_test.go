@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package cert
 
 import (
@@ -17,13 +20,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/helper/certutil"
-
-	"golang.org/x/crypto/ocsp"
-
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
-
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"golang.org/x/crypto/ocsp"
 )
 
 var ocspPort int
@@ -91,6 +91,10 @@ func TestCert_RoleResolve(t *testing.T) {
 			testAccStepCert(t, "web", ca, "foo", allowed{dns: "example.com"}, false),
 			testAccStepLoginWithName(t, connState, "web"),
 			testAccStepResolveRoleWithName(t, connState, "web"),
+			// Test with caching disabled
+			testAccStepSetRoleCacheSize(t, -1),
+			testAccStepLoginWithName(t, connState, "web"),
+			testAccStepResolveRoleWithName(t, connState, "web"),
 		},
 	})
 }
@@ -148,8 +152,21 @@ func TestCert_RoleResolveWithoutProvidingCertName(t *testing.T) {
 			testAccStepCert(t, "web", ca, "foo", allowed{dns: "example.com"}, false),
 			testAccStepLoginWithName(t, connState, "web"),
 			testAccStepResolveRoleWithEmptyDataMap(t, connState, "web"),
+			testAccStepSetRoleCacheSize(t, -1),
+			testAccStepLoginWithName(t, connState, "web"),
+			testAccStepResolveRoleWithEmptyDataMap(t, connState, "web"),
 		},
 	})
+}
+
+func testAccStepSetRoleCacheSize(t *testing.T, size int) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "config",
+		Data: map[string]interface{}{
+			"role_cache_size": size,
+		},
+	}
 }
 
 func testAccStepResolveRoleWithEmptyDataMap(t *testing.T, connState tls.ConnectionState, certName string) logicaltest.TestStep {
@@ -185,7 +202,7 @@ func testAccStepResolveRoleExpectRoleResolutionToFail(t *testing.T, connState tl
 				t.Fatal("Error not part of response.")
 			}
 
-			if !strings.Contains(errString, "invalid certificate") {
+			if !strings.Contains(errString, certAuthFailMsg) {
 				t.Fatalf("Error was not due to invalid role name. Error: %s", errString)
 			}
 			return nil
@@ -213,7 +230,7 @@ func testAccStepResolveRoleOCSPFail(t *testing.T, connState tls.ConnectionState,
 				t.Fatal("Error not part of response.")
 			}
 
-			if !strings.Contains(errString, "no chain matching") {
+			if !strings.Contains(errString, certAuthFailMsg) {
 				t.Fatalf("Error was not due to OCSP failure. Error: %s", errString)
 			}
 			return nil
@@ -345,6 +362,7 @@ func TestCert_RoleResolveOCSP(t *testing.T) {
 				Steps: []logicaltest.TestStep{
 					testAccStepCertWithExtraParams(t, "web", ca, "foo", allowed{dns: "example.com"}, false,
 						map[string]interface{}{"ocsp_enabled": true, "ocsp_fail_open": c.failOpen}),
+					testAccStepReadCertPolicy(t, "web", false, map[string]interface{}{"ocsp_enabled": true, "ocsp_fail_open": c.failOpen}),
 					loginStep,
 					resolveStep,
 				},

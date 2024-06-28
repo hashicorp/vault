@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import FlashMessage from 'ember-cli-flash/components/flash-message';
 
 export default class FlashMessageComponent extends FlashMessage {

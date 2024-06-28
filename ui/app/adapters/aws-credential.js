@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import ApplicationAdapter from './application';
 
 export default ApplicationAdapter.extend({
@@ -11,7 +16,7 @@ export default ApplicationAdapter.extend({
     if (roleType === 'iam_user') {
       method = 'GET';
     } else {
-      if (ttl !== undefined) {
+      if (ttl) {
         data.ttl = ttl;
       }
       if (roleType === 'assumed_role' && roleArn) {

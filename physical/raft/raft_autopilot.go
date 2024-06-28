@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package raft
 
 import (
@@ -84,6 +87,27 @@ type AutopilotConfig struct {
 	// (Enterprise-only) UpgradeVersionTag is the node tag to use for version info when
 	// performing upgrade migrations. If left blank, the Consul version will be used.
 	UpgradeVersionTag string `mapstructure:"upgrade_version_tag"`
+}
+
+func (ac *AutopilotConfig) String() string {
+	s := "CleanupDeadServers:%t " +
+		"LastContactThreshold:%s " +
+		"DeadServerLastContactThreshold:%s " +
+		"MaxTrailingLogs:%d " +
+		"MinQuorum:%d " +
+		"ServerStabilizationTime:%s " +
+		"DisableUpgradeMigration:%t " +
+		"RedundancyZoneTag:%s " +
+		"UpgradeVersionTag:%s"
+	return fmt.Sprintf(s, ac.CleanupDeadServers,
+		ac.LastContactThreshold,
+		ac.DeadServerLastContactThreshold,
+		ac.MaxTrailingLogs,
+		ac.MinQuorum,
+		ac.ServerStabilizationTime,
+		ac.DisableUpgradeMigration,
+		ac.RedundancyZoneTag,
+		ac.UpgradeVersionTag)
 }
 
 // Merge combines the supplied config with the receiver. Supplied ones take
@@ -212,13 +236,15 @@ func NewFollowerStates() *FollowerStates {
 	}
 }
 
-// Update the peer information in the follower states. Note that this function runs on the active node.
-func (s *FollowerStates) Update(req *EchoRequestUpdate) {
+// Update the peer information in the follower states. Note that this function
+// runs on the active node. Returns true if a new entry was added, as opposed
+// to modifying one already present.
+func (s *FollowerStates) Update(req *EchoRequestUpdate) bool {
 	s.l.Lock()
 	defer s.l.Unlock()
 
-	state, ok := s.followers[req.NodeID]
-	if !ok {
+	state, present := s.followers[req.NodeID]
+	if !present {
 		state = &FollowerState{
 			IsDead: atomic.NewBool(false),
 		}
@@ -233,6 +259,8 @@ func (s *FollowerStates) Update(req *EchoRequestUpdate) {
 	state.Version = req.SDKVersion
 	state.UpgradeVersion = req.UpgradeVersion
 	state.RedundancyZone = req.RedundancyZone
+
+	return !present
 }
 
 // Clear wipes all the information regarding peers in the follower states.
@@ -289,7 +317,7 @@ type Delegate struct {
 	emptyVersionLogs map[raft.ServerID]struct{}
 }
 
-func newDelegate(b *RaftBackend) *Delegate {
+func NewDelegate(b *RaftBackend) *Delegate {
 	return &Delegate{
 		RaftBackend:      b,
 		inflightRemovals: make(map[raft.ServerID]bool),
@@ -382,6 +410,7 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 		return nil
 	}
 
+	apServerStates := d.autopilot.GetState().Servers
 	servers := future.Configuration().Servers
 	serverIDs := make([]string, 0, len(servers))
 	for _, server := range servers {
@@ -400,7 +429,8 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 		}
 
 		// If version isn't found in the state, fake it using the version from the leader so that autopilot
-		// doesn't demote the node to a non-voter, just because of a missed heartbeat.
+		// doesn't demote the node to a non-voter, just because of a missed heartbeat. Note that this should
+		// be the SDK version, not the upgrade version.
 		currentServerID := raft.ServerID(id)
 		followerVersion := state.Version
 		leaderVersion := d.effectiveSDKVersion
@@ -412,7 +442,10 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 			}
 			followerVersion = leaderVersion
 		} else {
-			delete(d.emptyVersionLogs, currentServerID)
+			if _, ok := d.emptyVersionLogs[currentServerID]; ok {
+				d.logger.Trace("received non-empty version in heartbeat state. no longer need to fake it", "id", id, "update_version", followerVersion)
+				delete(d.emptyVersionLogs, currentServerID)
+			}
 		}
 		d.dl.Unlock()
 
@@ -423,6 +456,19 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 			Meta:        d.meta(state),
 			Version:     followerVersion,
 			Ext:         d.autopilotServerExt(state),
+		}
+
+		// As KnownServers is a delegate called by autopilot let's check if we already
+		// had this data in the correct format and use it. If we don't (which sounds a
+		// bit sad, unless this ISN'T a voter) then as a fail-safe, let's try what we've
+		// done elsewhere in code to check the desired suffrage and manually set NodeType
+		// based on whether that's a voter or not. If we don't  do either of these
+		// things, NodeType isn't set which means technically it's not a voter.
+		// It shouldn't be a voter and end up in this state.
+		if apServerState, found := apServerStates[raft.ServerID(id)]; found && apServerState.Server.NodeType != "" {
+			server.NodeType = apServerState.Server.NodeType
+		} else if state.DesiredSuffrage == "voter" {
+			server.NodeType = autopilot.NodeVoter
 		}
 
 		switch state.IsDead.Load() {
@@ -442,8 +488,9 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 		Name:        d.localID,
 		RaftVersion: raft.ProtocolVersionMax,
 		NodeStatus:  autopilot.NodeAlive,
+		NodeType:    autopilot.NodeVoter, // The leader must be a voter
 		Meta: d.meta(&FollowerState{
-			UpgradeVersion: d.EffectiveVersion(),
+			UpgradeVersion: d.UpgradeVersion(),
 			RedundancyZone: d.RedundancyZone(),
 		}),
 		Version:  d.effectiveSDKVersion,
@@ -684,7 +731,7 @@ func (d *ReadableDuration) UnmarshalJSON(raw []byte) (err error) {
 	str := string(raw)
 	if len(str) >= 2 && str[0] == '"' && str[len(str)-1] == '"' {
 		// quoted string
-		dur, err = time.ParseDuration(str[1 : len(str)-1])
+		dur, err = parseutil.ParseDurationSecond(str[1 : len(str)-1])
 		if err != nil {
 			return err
 		}
@@ -806,6 +853,8 @@ func (b *RaftBackend) SetupAutopilot(ctx context.Context, storageConfig *Autopil
 	// Merge the setting provided over the API
 	b.autopilotConfig.Merge(storageConfig)
 
+	infoArgs := []interface{}{"config", b.autopilotConfig}
+
 	// Create the autopilot instance
 	options := []autopilot.Option{
 		autopilot.WithLogger(b.logger),
@@ -813,17 +862,18 @@ func (b *RaftBackend) SetupAutopilot(ctx context.Context, storageConfig *Autopil
 	}
 	if b.autopilotReconcileInterval != 0 {
 		options = append(options, autopilot.WithReconcileInterval(b.autopilotReconcileInterval))
+		infoArgs = append(infoArgs, []interface{}{"reconcile_interval", b.autopilotReconcileInterval}...)
 	}
 	if b.autopilotUpdateInterval != 0 {
 		options = append(options, autopilot.WithUpdateInterval(b.autopilotUpdateInterval))
+		infoArgs = append(infoArgs, []interface{}{"update_interval", b.autopilotUpdateInterval}...)
 	}
-	b.autopilot = autopilot.New(b.raft, newDelegate(b), options...)
+	b.autopilot = autopilot.New(b.raft, NewDelegate(b), options...)
 	b.followerStates = followerStates
 	b.followerHeartbeatTicker = time.NewTicker(1 * time.Second)
-
 	b.l.Unlock()
 
-	b.logger.Info("starting autopilot", "config", b.autopilotConfig, "reconcile_interval", b.autopilotReconcileInterval)
+	b.logger.Info("starting autopilot", infoArgs...)
 	b.autopilot.Start(ctx)
 
 	go b.startFollowerHeartbeatTracker()

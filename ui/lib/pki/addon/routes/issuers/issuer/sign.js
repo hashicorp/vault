@@ -1,15 +1,16 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
+import { withConfirmLeave } from 'core/decorators/confirm-leave';
 
+@withConfirmLeave()
 export default class PkiIssuerSignRoute extends Route {
   @service store;
   @service secretMountPath;
-  @service pathHelp;
-
-  beforeModel() {
-    // Must call this promise before the model hook otherwise it doesn't add OpenApi to record.
-    return this.pathHelp.getNewModel('pki/sign-intermediate', this.secretMountPath.currentPath);
-  }
 
   model() {
     const { issuer_ref } = this.paramsFor('issuers/issuer');
@@ -18,10 +19,14 @@ export default class PkiIssuerSignRoute extends Route {
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
     controller.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: this.secretMountPath.currentPath, route: 'overview' },
-      { label: 'issuers', route: 'issuers.index' },
-      { label: resolvedModel.issuerRef, route: 'issuers.issuer.details' },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
+      { label: this.secretMountPath.currentPath, route: 'overview', model: this.secretMountPath.currentPath },
+      { label: 'issuers', route: 'issuers.index', model: this.secretMountPath.currentPath },
+      {
+        label: resolvedModel.issuerRef,
+        route: 'issuers.issuer.details',
+        models: [this.secretMountPath.currentPath, resolvedModel.issuerRef],
+      },
       { label: 'sign intermediate' },
     ];
   }

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -6,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/cli"
 )
 
 func testMonitorCommand(tb testing.TB) (*cli.MockUi, *MonitorCommand) {

@@ -1,0 +1,3 @@
+```release-note:improvement
+agent: Added `reload` option to cert auth configuration in case of external renewals of local x509 key-pairs.
+```

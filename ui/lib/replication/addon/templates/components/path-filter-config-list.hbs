@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <h4 class="title is-5">
   Filtered paths
 </h4>
@@ -84,6 +89,7 @@
     @label="Paths in this {{this.config.mode}}"
     @options={{this.autoCompleteOptions}}
     @search={{perform this.setAutoCompleteOptions}}
+    @renderInPlace={{true}}
   />
 {{/if}}
 {{#if (and (not this.config.mode) this.startedWithMode)}}

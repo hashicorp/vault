@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -5,6 +8,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -47,9 +51,6 @@ var (
 
 	raftAutopilotConfigurationStoragePath = "core/raft/autopilot/configuration"
 
-	// TestingUpdateClusterAddr is used in tests to override the cluster address
-	TestingUpdateClusterAddr uint32
-
 	ErrJoinWithoutAutoloading = errors.New("attempt to join a cluster using autoloaded licenses while not using autoloading ourself")
 )
 
@@ -67,7 +68,10 @@ func (c *Core) GetRaftNodeID() string {
 func (c *Core) GetRaftIndexes() (committed uint64, applied uint64) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
+	return c.GetRaftIndexesLocked()
+}
 
+func (c *Core) GetRaftIndexesLocked() (committed uint64, applied uint64) {
 	raftStorage, ok := c.underlyingPhysical.(*raft.RaftBackend)
 	if !ok {
 		return 0, 0
@@ -146,9 +150,10 @@ func (c *Core) startRaftBackend(ctx context.Context) (retErr error) {
 		raftBackend.SetRestoreCallback(c.raftSnapshotRestoreCallback(true, true))
 
 		if err := raftBackend.SetupCluster(ctx, raft.SetupOpts{
-			TLSKeyring:      raftTLS,
-			ClusterListener: c.getClusterListener(),
-			StartAsLeader:   creating,
+			TLSKeyring:          raftTLS,
+			ClusterListener:     c.getClusterListener(),
+			StartAsLeader:       creating,
+			EffectiveSDKVersion: c.effectiveSDKVersion,
 		}); err != nil {
 			return err
 		}
@@ -195,6 +200,7 @@ func (c *Core) monitorUndoLogs() error {
 	}
 
 	if persisted {
+		c.EnableUndoLogs()
 		logger.Debug("undo logs are safe, no need to check any more")
 		return nil
 	}
@@ -305,15 +311,6 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 	}
 
 	c.logger.Info("starting raft active node")
-	raftBackend.SetEffectiveSDKVersion(c.effectiveSDKVersion)
-
-	autopilotConfig, err := c.loadAutopilotConfiguration(ctx)
-	if err != nil {
-		c.logger.Error("failed to load autopilot config from storage when setting up cluster; continuing since autopilot falls back to default config", "error", err)
-	}
-	disableAutopilot := c.disableAutopilot
-
-	raftBackend.SetupAutopilot(c.activeContext, autopilotConfig, c.raftFollowerStates, disableAutopilot)
 
 	c.pendingRaftPeers = &sync.Map{}
 
@@ -327,7 +324,23 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 	if err := c.monitorUndoLogs(); err != nil {
 		return err
 	}
-	return c.startPeriodicRaftTLSRotate(ctx)
+
+	// Run the verifier if we're configured to do so
+	raftBackend.StartRaftWalVerifier(ctx)
+
+	// Starting this here will prepopulate the raft follower states with our current raft configuration, but that
+	// doesn't include information like upgrade versions or redundancy zones.
+	if err := c.startPeriodicRaftTLSRotate(ctx); err != nil {
+		return err
+	}
+
+	autopilotConfig, err := c.loadAutopilotConfiguration(ctx)
+	if err != nil {
+		c.logger.Error("failed to load autopilot config from storage when setting up cluster; continuing since autopilot falls back to default config", "error", err)
+	}
+	disableAutopilot := c.disableAutopilot
+	raftBackend.SetupAutopilot(c.activeContext, autopilotConfig, c.raftFollowerStates, disableAutopilot)
+	return nil
 }
 
 func (c *Core) stopRaftActiveNode() {
@@ -484,6 +497,7 @@ func (c *Core) raftTLSRotatePhased(ctx context.Context, logger hclog.Logger, raf
 	if err != nil {
 		return err
 	}
+
 	for _, server := range raftConfig.Servers {
 		if server.NodeID != raftBackend.NodeID() {
 			followerStates.Update(&raft.EchoRequestUpdate{
@@ -799,8 +813,8 @@ func (c *Core) raftSnapshotRestoreCallback(grabLock bool, sealNode bool) func(co
 		if err != nil {
 			// The snapshot contained a root key or keyring we couldn't
 			// recover
-			switch c.seal.BarrierType() {
-			case wrapping.WrapperTypeShamir:
+			switch c.seal.BarrierSealConfigType() {
+			case SealConfigTypeShamir:
 				// If we are a shamir seal we can't do anything. Just
 				// seal all nodes.
 
@@ -835,6 +849,10 @@ func (c *Core) raftSnapshotRestoreCallback(grabLock bool, sealNode bool) func(co
 			c.logger.Info("failed to perform TLS key upgrades, sealing", "error", err)
 			return err
 		}
+
+		// Reset the namespace cache so that any namespaces cached
+		// before the snapshot restore will no longer be present.
+		c.resetNamespaceCache()
 
 		return nil
 	}
@@ -944,8 +962,8 @@ func (c *Core) getRaftChallenge(leaderInfo *raft.LeaderJoinInfo) (*raftInformati
 		return nil, err
 	}
 
-	if sealConfig.Type != c.seal.BarrierType().String() {
-		return nil, fmt.Errorf("mismatching seal types between raft leader (%s) and follower (%s)", sealConfig.Type, c.seal.BarrierType())
+	if !CompatibleSealTypes(sealConfig.Type, c.seal.BarrierSealConfigType().String()) {
+		return nil, fmt.Errorf("incompatible seal types between raft leader (%s) and follower (%s)", sealConfig.Type, c.seal.BarrierSealConfigType())
 	}
 
 	challengeB64, ok := secret.Data["challenge"]
@@ -1053,7 +1071,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 		// If we're using Shamir and using raft for both physical and HA, we
 		// need to block until the node is unsealed, unless retry is set to
 		// false.
-		if c.seal.BarrierType() == wrapping.WrapperTypeShamir && !c.isRaftHAOnly() {
+		if c.seal.BarrierSealConfigType() == SealConfigTypeShamir && !c.isRaftHAOnly() {
 			c.raftInfo.Store(raftInfo)
 			if err := c.seal.SetBarrierConfig(ctx, raftInfo.leaderBarrierConfig); err != nil {
 				return err
@@ -1076,7 +1094,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 			return fmt.Errorf("failed to send answer to raft leader node: %w", err)
 		}
 
-		if c.seal.BarrierType() == wrapping.WrapperTypeShamir && !isRaftHAOnly {
+		if c.seal.BarrierSealConfigType() == SealConfigTypeShamir && !isRaftHAOnly {
 			// Reset the state
 			c.raftInfo.Store((*raftInformation)(nil))
 
@@ -1214,17 +1232,15 @@ func (c *Core) raftLeaderInfo(leaderInfo *raft.LeaderJoinInfo, disco *discover.D
 			// default to 8200 when no port is provided
 			port = 8200
 		}
-		// Addrs returns either IPv4 or IPv6 address, without scheme or port
+		// Addrs returns either IPv4 or IPv6 address, without scheme and most of them without port
+		// IPv6 can be explicit such as "[::1]" or implicit "::1"
 		clusterIPs, err := disco.Addrs(leaderInfo.AutoJoin, c.logger.StandardLogger(nil))
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse addresses from auto-join metadata: %w", err)
 		}
 		for _, ip := range clusterIPs {
-			if strings.Count(ip, ":") >= 2 && !strings.HasPrefix(ip, "[") {
-				// An IPv6 address in implicit form, however we need it in explicit form to use in a URL.
-				ip = fmt.Sprintf("[%s]", ip)
-			}
-			u := fmt.Sprintf("%s://%s:%d", scheme, ip, port)
+			addr := formatDiscoveredAddr(ip, port)
+			u := fmt.Sprintf("%s://%s", scheme, addr)
 			info := *leaderInfo
 			info.LeaderAPIAddr = u
 			ret = append(ret, &info)
@@ -1234,6 +1250,11 @@ func (c *Core) raftLeaderInfo(leaderInfo *raft.LeaderJoinInfo, disco *discover.D
 		return nil, errors.New("must provide leader address or auto-join metadata")
 	}
 	return ret, nil
+}
+
+// NewDelegateForCore creates a raft.Delegate for the specified core using its backend.
+func NewDelegateForCore(c *Core) *raft.Delegate {
+	return raft.NewDelegate(c.getRaftBackend())
 }
 
 // getRaftBackend returns the RaftBackend from the HA or physical backend,
@@ -1260,7 +1281,7 @@ func (c *Core) isRaftHAOnly() bool {
 	return isRaftHA && !isRaftStorage
 }
 
-func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess *seal.Access, raftInfo *raftInformation) error {
+func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess seal.Access, raftInfo *raftInformation) error {
 	if raftInfo.challenge == nil {
 		return errors.New("raft challenge is nil")
 	}
@@ -1274,7 +1295,11 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess *seal.Access, 
 		return errors.New("raft is already initialized")
 	}
 
-	plaintext, err := sealAccess.Decrypt(ctx, raftInfo.challenge, nil)
+	multiWrapValue := &seal.MultiWrapValue{
+		Generation: sealAccess.Generation(),
+		Slots:      []*wrapping.BlobInfo{raftInfo.challenge},
+	}
+	plaintext, _, err := sealAccess.Decrypt(ctx, multiWrapValue, nil)
 	if err != nil {
 		return fmt.Errorf("error decrypting challenge: %w", err)
 	}
@@ -1284,7 +1309,7 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess *seal.Access, 
 		return fmt.Errorf("error parsing cluster address: %w", err)
 	}
 	clusterAddr := parsedClusterAddr.Host
-	if atomic.LoadUint32(&TestingUpdateClusterAddr) == 1 && strings.HasSuffix(clusterAddr, ":0") {
+	if c.clusterAddrBridge != nil && strings.HasSuffix(clusterAddr, ":0") {
 		// We are testing and have an address provider, so just create a random
 		// addr, it will be overwritten later.
 		var err error
@@ -1317,7 +1342,7 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess *seal.Access, 
 		return err
 	}
 
-	if answerResp.Data.AutoloadedLicense && !LicenseAutoloaded(c) {
+	if answerResp.Data.AutoloadedLicense && !c.entIsLicenseAutoloaded() {
 		return ErrJoinWithoutAutoloading
 	}
 	if err := raftBackend.Bootstrap(answerResp.Data.Peers); err != nil {
@@ -1436,4 +1461,20 @@ func newDiscover() (*discover.Discover, error) {
 	return discover.New(
 		discover.WithProviders(providers),
 	)
+}
+
+// formatDiscoveredAddr joins ip and port if addr does not already contain a port
+func formatDiscoveredAddr(addr string, defaultPort uint) string {
+	// addr is an implicit IPv6 address
+	if !strings.HasPrefix(addr, "[") && strings.Count(addr, ":") > 1 {
+		return fmt.Sprintf("[%s]:%d", addr, defaultPort)
+	}
+	ip, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return fmt.Sprintf("%s:%d", addr, defaultPort)
+	}
+	if strings.ContainsRune(ip, ':') {
+		ip = fmt.Sprintf("[%s]", ip)
+	}
+	return fmt.Sprintf("%s:%s", ip, port)
 }

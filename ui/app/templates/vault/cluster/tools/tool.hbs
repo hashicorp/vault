@@ -1,21 +1,20 @@
-<div class="columns">
-  <MenuSidebar @title="Tools" @class="is-3">
-    {{#each (tools-actions) as |supportedAction|}}
-      {{#if (has-permission "tools" routeParams=supportedAction)}}
-        <li>
-          <LinkTo
-            @route="vault.cluster.tools.tool"
-            @model={{supportedAction}}
-            class={{if (eq supportedAction this.selectedAction) "is-active"}}
-            data-test-tools-action-link={{supportedAction}}
-          >
-            {{capitalize supportedAction}}
-          </LinkTo>
-        </li>
-      {{/if}}
-    {{/each}}
-  </MenuSidebar>
-  <div class="column is-9">
-    <ToolActionsForm @selectedAction={{this.selectedAction}} />
-  </div>
-</div>
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{#if (eq this.selectedAction "hash")}}
+  <Tools::Hash />
+{{else if (eq this.selectedAction "random")}}
+  <Tools::Random />
+{{else if (eq this.selectedAction "rewrap")}}
+  <Tools::Rewrap />
+{{else if (eq this.selectedAction "unwrap")}}
+  <Tools::Unwrap />
+{{else if (eq this.selectedAction "lookup")}}
+  <Tools::Lookup />
+{{else if (eq this.selectedAction "wrap")}}
+  <Tools::Wrap />
+{{else}}
+  <EmptyState @title="Tool not available" />
+{{/if}}

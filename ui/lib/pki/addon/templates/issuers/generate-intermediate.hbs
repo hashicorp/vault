@@ -1,16 +1,6 @@
-<PageHeader as |p|>
-  <p.top>
-    <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
-  </p.top>
-  <p.levelLeft>
-    <h1 class="title is-3">
-      Generate intermediate CSR
-    </h1>
-  </p.levelLeft>
-</PageHeader>
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
 
-<PkiGenerateCsr
-  @model={{this.model}}
-  @onCancel={{transition-to "vault.cluster.secrets.backend.pki.issuers.index"}}
-  @onSave={{transition-to "vault.cluster.secrets.backend.pki.issuers.index"}}
-/>
+<Page::PkiIssuerGenerateIntermediate @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />

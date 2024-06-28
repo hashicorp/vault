@@ -1,11 +1,17 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import errorMessage from 'vault/utils/error-message';
 import { waitFor } from '@ember/test-waiters';
 import { parseCertificate } from 'vault/utils/parse-pki-cert';
+import { addToArray } from 'vault/helpers/add-to-array';
 /**
  * @module PkiIssuerCrossSign
  * PkiIssuerCrossSign components render from a parent issuer's details page to cross-sign an intermediate issuer (from a different mount).
@@ -87,7 +93,7 @@ export default class PkiIssuerCrossSign extends Component {
 
       // for cross-signing error handling we want to record the list of issuers before the process starts
       this.intermediateIssuers[intermediateMount] = issuers;
-      this.validationErrors.addObject({
+      this.validationErrors = addToArray(this.validationErrors, {
         newCrossSignedIssuer: this.nameValidation(newCrossSignedIssuer, issuers),
       });
     }
@@ -104,9 +110,9 @@ export default class PkiIssuerCrossSign extends Component {
           intermediateIssuer,
           newCrossSignedIssuer
         );
-        this.signedIssuers.addObject({ ...data, hasError: false });
+        this.signedIssuers = addToArray(this.signedIssuers, { ...data, hasError: false });
       } catch (error) {
-        this.signedIssuers.addObject({
+        this.signedIssuers = addToArray(this.signedIssuers, {
           ...this.formData[row],
           hasError: errorMessage(error),
           hasUnsupportedParams: error.cause ? error.cause.map((e) => e.message).join(', ') : null,
@@ -123,6 +129,11 @@ export default class PkiIssuerCrossSign extends Component {
       backend: intMount,
       id: intName,
     });
+
+    // Return if user is attempting to self-sign issuer
+    if (existingIssuer.issuerId === this.args.parentIssuer.issuerId) {
+      throw new Error('Cross-signing a root issuer with itself must be performed manually using the CLI.');
+    }
 
     // Translate certificate values to API parameters to pass along: CSR -> Signed CSR -> Cross-Signed issuer
     // some of these values do not apply to a CSR, but pass anyway. If there is any issue parsing the certificate,
@@ -195,8 +206,8 @@ export default class PkiIssuerCrossSign extends Component {
     //       the newly issued intermediate CA, so that they can do recovery
     //       as they'd like.
     const issuerId = await this.store
-      .createRecord('pki/issuer', { pemBundle: signedCaChain })
-      .save({ adapterOptions: { import: true, mount: intMount } })
+      .createRecord('pki/action', { pemBundle: signedCaChain })
+      .save({ adapterOptions: { actionType: 'import', mount: intMount, useIssuer: true } })
       .then((importedIssuer) => {
         return Object.keys(importedIssuer.mapping).find(
           // matching key is the issuer_id

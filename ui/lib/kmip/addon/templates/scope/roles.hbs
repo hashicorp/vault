@@ -1,6 +1,11 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
-    <KmipBreadcrumb @showPath={{true}} />
+    <KmipBreadcrumb @showPath={{true}} @currentRoute={{this.scope}} />
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3">
@@ -56,52 +61,52 @@
       @title="No roles in this scope yet"
       @message="Roles let you generate credentials with a specified set of KMIP operations permissions that clients are allowed to perform."
     >
-      <LinkTo @route="scope.roles.create">
-        Create a role
-      </LinkTo>
+      <Hds::Link::Standalone @icon="plus" @text="Create a role" @route="scope.roles.create" />
     </list.empty>
   {{else if list.item}}
     <ListItem @linkPrefix={{this.mountPoint}} @linkParams={{array "credentials" this.scope list.item.id}} as |Item|>
       <Item.content>
         <Icon @name="user" class="has-text-grey-light" />{{list.item.id}}
       </Item.content>
-      <Item.menu as |m|>
-        <li class="action">
-          <LinkTo @route="credentials" @models={{array this.scope list.item.id}} class="is-block">
-            View credentials
-          </LinkTo>
-        </li>
-        <li class="action">
-          <LinkTo @route="role" @models={{array this.scope list.item.id}} class="is-block">
-            View role
-          </LinkTo>
-        </li>
-        {{#if list.item.updatePath.canUpdate}}
-          <MenuLoader @loadingParam={{list.item.updatePath.isPending}}>
-            <LinkTo @route="role.edit" @models={{array this.scope list.item.id}} class="is-block">
-              Edit role
-            </LinkTo>
-          </MenuLoader>
-        {{/if}}
-        {{#if list.item.updatePath.canDelete}}
-          <MenuLoader @loadingParam={{list.item.updatePath.isPending}}>
-            <m.Message
-              @id={{list.item.id}}
-              @triggerText="Delete role"
-              @message={{concat "Are you sure you want to delete " list.item.id "?"}}
-              @onConfirm={{action
-                (perform
-                  Item.callMethod
-                  "destroyRecord"
-                  list.item
-                  (concat "Successfully deleted role " list.item.id)
-                  (concat "There was an error deleting the role " list.item.id)
-                  (action "refresh")
-                )
-              }}
-              data-test-scope-delete="true"
-            />
-          </MenuLoader>
+      <Item.menu>
+        <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+          <dd.ToggleIcon @icon="more-horizontal" @text="More options" @hasChevron={{false}} data-test-popup-menu-trigger />
+          <dd.Interactive @text="View credentials" @route="credentials" @models={{array this.scope list.item.id}} />
+          <dd.Interactive @text="View role" @route="role" @models={{array this.scope list.item.id}} />
+          {{#if list.item.updatePath.isPending}}
+            <dd.Generic>
+              <LoadingDropdownOption />
+            </dd.Generic>
+          {{else}}
+            {{#if list.item.updatePath.canUpdate}}
+              <dd.Interactive @text="Edit role" @route="role.edit" @models={{array this.scope list.item.id}} />
+            {{/if}}
+            {{#if list.item.updatePath.canDelete}}
+              <dd.Interactive
+                @text="Delete role"
+                @color="critical"
+                {{on "click" (fn (mut this.roleToDelete) list.item)}}
+                data-test-confirm-action-trigger
+              />
+            {{/if}}
+          {{/if}}
+        </Hds::Dropdown>
+        {{#if (eq this.roleToDelete list.item)}}
+          <ConfirmModal
+            @color="critical"
+            @confirmMessage="Are you sure you want to delete {{this.roleToDelete.id}}?"
+            @onConfirm={{action
+              (perform
+                Item.callMethod
+                "destroyRecord"
+                this.roleToDelete
+                (concat "Successfully deleted role " this.roleToDelete.id)
+                (concat "There was an error deleting the role " this.roleToDelete.id)
+                (action "refresh")
+              )
+            }}
+            @onClose={{fn (mut this.roleToDelete) null}}
+          />
         {{/if}}
       </Item.menu>
     </ListItem>

@@ -6,7 +6,9 @@ description: >-
   Vault Enterprise.
 ---
 
-## Configure Okta MFA Method
+## Configure okta MFA method
+
+@include 'alerts/restricted-root.mdx'
 
 This endpoint defines a MFA method of type Okta.
 
@@ -35,7 +37,7 @@ This endpoint defines a MFA method of type Okta.
 
 - `primary_email` `(bool: false)` - If set, the username will only match the primary email for the account.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -45,7 +47,7 @@ This endpoint defines a MFA method of type Okta.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -55,7 +57,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/mfa/method/okta/my_okta
 ```
 
-## Read Okta MFA Method
+## Read okta MFA method
 
 This endpoint queries the MFA configuration of Okta type for a given method
 name.
@@ -68,7 +70,7 @@ name.
 
 - `name` `(string: <required>)` – Name of the MFA method.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -78,7 +80,7 @@ $ curl \
 
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -95,7 +97,7 @@ $ curl \
 }
 ```
 
-## Delete Okta MFA Method
+## Delete okta MFA method
 
 This endpoint deletes a Okta MFA method.
 
@@ -107,7 +109,7 @@ This endpoint deletes a Okta MFA method.
 
 - `name` `(string: <required>)` - Name of the MFA method.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \

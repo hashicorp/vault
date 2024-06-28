@@ -1,5 +1,10 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 const example = `# The below is an example that you can use as a starting point.
-# 
+#
 # rules:
 #   - apiGroups: [""]
 #     resources: ["serviceaccounts", "serviceaccounts/token"]

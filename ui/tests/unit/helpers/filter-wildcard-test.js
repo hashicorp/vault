@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { filterWildcard } from 'vault/helpers/filter-wildcard';
 import { module, test } from 'qunit';
 

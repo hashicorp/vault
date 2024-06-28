@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package http
 
 import (
@@ -29,6 +32,7 @@ func TestSysAudit(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"noop/": map[string]interface{}{
 				"path":        "noop/",
@@ -80,6 +84,7 @@ func TestSysDisableAudit(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data":           map[string]interface{}{},
 	}
 
@@ -114,6 +119,7 @@ func TestSysAuditHash(t *testing.T) {
 		"renewable":      false,
 		"lease_duration": json.Number("0"),
 		"wrap_info":      nil,
+		"mount_type":     "system",
 		"warnings":       nil,
 		"auth":           nil,
 		"data": map[string]interface{}{

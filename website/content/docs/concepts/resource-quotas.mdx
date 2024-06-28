@@ -4,7 +4,7 @@ page_title: Resource Quotas
 description: Providing measures against misbehaving applications and users overdrawing resources in Vault.
 ---
 
-# Resource Quotas
+# Resource quotas
 
 Every single interaction with Vault, whether to put secrets into the key/value
 store or to generate new pairs of database credentials for the MySQL database,
@@ -24,7 +24,7 @@ and configure API rate limits. Users of Vault Enterprise have a second option, a
 rate limits, [lease-count quotas](/vault/docs/enterprise/lease-count-quotas), which can
 limit the number of leases that can be in use at one time.
 
-## Rate Limit Quotas
+## Rate limit quotas
 
 Vault allows operators to create rate limit quotas which enforce API rate
 limiting using a [token bucket](https://en.wikipedia.org/wiki/Token_bucket) algorithm.
@@ -49,10 +49,10 @@ to a non-zero value, any client that hits a rate limit threshold will be blocked
 from all subsequent requests for a duration of `block_interval` seconds.
 
 Vault also allows the inspection of the state of rate limiting in a Vault node
-through various [metrics](/vault/docs/internals/telemetry#Resource-Quota-Metrics) exposed
+through various [metrics](/vault/docs/internals/telemetry/metrics/core-system#quota-metrics) exposed
 and through enabling optional audit logging.
 
-## Exempt Routes
+## Exempt routes
 
 By default, the following paths are exempt from rate limiting. However, Vault
 operators can override the set of paths that are exempt from all rate limit

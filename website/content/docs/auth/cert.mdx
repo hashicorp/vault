@@ -6,12 +6,14 @@ description: >-
   client certificates.
 ---
 
-# TLS Certificates Auth Method
+# TLS certificates auth method
 
 @include 'x509-sha1-deprecation.mdx'
 
 The `cert` auth method allows authentication using SSL/TLS client certificates
-which are either signed by a CA or self-signed.
+which are either signed by a CA or self-signed. SSL/TLS client certificates
+are defined as having an `ExtKeyUsage` extension with the usage set to either
+`ClientAuth` or `Any`.
 
 The trusted certificates and CAs are configured directly to the auth method
 using the `certs/` path. This method cannot read trusted certificates from an
@@ -20,10 +22,10 @@ external source.
 CA certificates are associated with a role; role names and CRL names are normalized to
 lower-case.
 
-Please note that to use this auth method, `tls_disable` must be false in the Vault
+Please note that to use this auth method, `tls_disable` and `tls_disable_client_certs` must be false in the Vault
 configuration. This is because the certificates are sent through TLS communication itself.
 
-## Revocation Checking
+## Revocation checking
 
 Since Vault 0.4, the method supports revocation checking.
 
@@ -55,9 +57,15 @@ mount of the method. The workaround here is to mount multiple copies of the
 `cert` method, configure each with one CA/CRL, and have clients connect to the
 appropriate mount.
 
-In addition, since the method does not fetch the CRLs itself, the CRL's
-designated time to next update is not considered. If a CRL is no longer in use,
-it is up to the administrator to remove it from the method.
+In addition, if a CRL distribution point is not set the method will not
+fetch the CRLs itself, the CRL's designated time to next update is not
+considered. If a CRL is no longer in use, it is up to the administrator to
+remove it from the method.
+
+In addition to automatic or manual CRL management, OCSP may be enabled for
+a configured certificate, in which case Vault will query the OCSP server either
+specified in the presented certificate or configured in the auth method to
+check revocation.
 
 ## Authentication
 

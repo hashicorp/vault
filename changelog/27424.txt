@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Allow creation of session_token type roles for AWS secret backend
+```

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import BaseAdapter from './base';
 import { decamelize } from '@ember/string';
 import { getProperties } from '@ember/object';

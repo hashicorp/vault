@@ -1,4 +1,9 @@
-import { Factory, trait } from 'ember-cli-mirage';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { Factory, trait } from 'miragejs';
 
 const generated_role_rules = `rules:
 - apiGroups: [""]

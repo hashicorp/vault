@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package hcp_link
 
 import (
@@ -8,7 +11,6 @@ import (
 )
 
 func TestHCPLinkConnected(t *testing.T) {
-	t.Parallel()
 	cluster := getTestCluster(t, 2)
 	defer cluster.Cleanup()
 

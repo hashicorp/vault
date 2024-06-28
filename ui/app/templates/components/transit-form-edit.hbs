@@ -1,4 +1,9 @@
-<form onsubmit={{@createOrUpdateKey}}>
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<form data-test-transit-edit-form onsubmit={{@createOrUpdateKey}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <MessageError @model={{@key}} />
     <NamespaceReminder @mode="edit" @noun="transit key" />
@@ -19,7 +24,7 @@
     <div class="field">
       <TtlPicker
         @initialValue={{or @key.autoRotatePeriod "30d"}}
-        @initialEnabled={{not (eq @key.autoRotatePeriod "0s")}}
+        @initialEnabled={{not (eq @key.autoRotatePeriod 0)}}
         @label="Auto-rotation period"
         @helperTextDisabled="Key will never be automatically rotated"
         @helperTextEnabled="Key will be automatically rotated every"
@@ -45,7 +50,7 @@
         </div>
       </div>
       <p class="help">
-        The minimum decryption version required to reverse transformations performed with the encryption key. Results from
+        The minimum decryption version required to reverse transformations performed with the cryptographic key. Results from
         lower key versions may be rewrapped with the new key version using the
         <code>rewrap</code>
         action.
@@ -86,21 +91,26 @@
     <div class="field is-grouped">
       {{#if @capabilities.canUpdate}}
         <div class="control">
-          <button type="submit" disabled={{@requestInFlight}} class="button is-primary {{if @requestInFlight 'is-loading'}}">
-            Update transit key
-          </button>
+          <Hds::Button
+            @text="Update transit key"
+            @icon={{if @requestInFlight "loading"}}
+            type="submit"
+            disabled={{@requestInFlight}}
+          />
         </div>
       {{/if}}
       <div class="control">
-        <SecretLink @mode="show" @secret={{@key.id}} class="button">
-          Cancel
-        </SecretLink>
+        <Hds::Button
+          @text="Cancel"
+          @color="secondary"
+          @route="vault.cluster.secrets.backend.show"
+          @models={{array @key.backend @key.id}}
+          @query={{hash tab="details"}}
+        />
       </div>
     </div>
     {{#if (and @key.canDelete @capabilities.canDelete)}}
-      <ConfirmAction @buttonClasses="button" @onConfirmAction={{@deleteKey}}>
-        Delete transit key
-      </ConfirmAction>
+      <ConfirmAction @buttonText="Delete transit key" @onConfirmAction={{@deleteKey}} />
     {{/if}}
   </div>
 </form>

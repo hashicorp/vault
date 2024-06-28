@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package plugin
 
 import (
@@ -52,10 +55,7 @@ func (b *BackendPluginClientV5) PluginVersion() logical.PluginVersion {
 	return logical.EmptyPluginVersion
 }
 
-var (
-	_ logical.PluginVersioner = (*BackendPluginClientV5)(nil)
-	_ logical.Externaler      = (*BackendPluginClientV5)(nil)
-)
+var _ logical.PluginVersioner = (*BackendPluginClientV5)(nil)
 
 // NewBackendV5 will return an instance of an RPC-based client implementation of
 // the backend for external plugins, or a concrete implementation of the

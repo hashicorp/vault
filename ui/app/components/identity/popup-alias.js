@@ -1,22 +1,40 @@
-import Base from './_popup-base';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
 
-export default Base.extend({
-  messageArgs(model) {
-    const type = model.get('identityType');
-    const id = model.id;
-    return [type, id];
-  },
+import Component from '@glimmer/component';
+import { service } from '@ember/service';
+import { tracked } from '@glimmer/tracking';
+import { action } from '@ember/object';
+import errorMessage from 'vault/utils/error-message';
 
-  successMessage(type, id) {
-    return `Successfully deleted ${type}: ${id}`;
-  },
+export default class IdentityPopupAlias extends Component {
+  @service flashMessages;
+  @tracked showConfirmModal = false;
 
-  errorMessage(e, type, id) {
-    const error = e.errors ? e.errors.join(' ') : e.message;
-    return `There was a problem deleting ${type}: ${id} - ${error}`;
-  },
+  onSuccess(type, id) {
+    if (this.args.onSuccess) {
+      this.args.onSuccess();
+    }
+    this.flashMessages.success(`Successfully deleted ${type}: ${id}`);
+  }
+  onError(err, type, id) {
+    if (this.args.onError) {
+      this.args.onError();
+    }
+    const error = errorMessage(err);
+    this.flashMessages.danger(`There was a problem deleting ${type}: ${id} - ${error}`);
+  }
 
-  transaction(model) {
-    return model.destroyRecord();
-  },
-});
+  @action
+  async deleteAlias() {
+    const { identityType, id } = this.args.item;
+    try {
+      await this.args.item.destroyRecord();
+      this.onSuccess(identityType, id);
+    } catch (e) {
+      this.onError(e, identityType, id);
+    }
+  }
+}

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 import { alias, or } from '@ember/object/computed';
@@ -44,9 +49,7 @@ export default Model.extend({
     label: 'Connection will be verified',
     defaultValue: true,
   }),
-  allowed_roles: attr('array', {
-    readOnly: true,
-  }),
+  allowed_roles: attr('array'),
   password_policy: attr('string', {
     label: 'Use custom password policy',
     editType: 'optionalText',

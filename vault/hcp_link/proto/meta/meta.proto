@@ -1,8 +1,11 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 syntax = "proto3";
 
-option go_package = "github.com/hashicorp/vault/vault/hcp_link/proto/meta";
-
 package meta;
+
+option go_package = "github.com/hashicorp/vault/vault/hcp_link/proto/meta";
 
 message ListNamespacesRequest {}
 

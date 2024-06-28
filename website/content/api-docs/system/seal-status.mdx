@@ -8,7 +8,7 @@ description: The `/sys/seal-status` endpoint is used to check the seal status of
 
 The `/sys/seal-status` endpoint is used to check the seal status of a Vault.
 
-## Seal Status
+## Seal status
 
 This endpoint returns the seal status of the Vault. This is an unauthenticated
 endpoint.
@@ -17,14 +17,14 @@ endpoint.
 | :----- | :----------------- |
 | `GET`  | `/sys/seal-status` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
     http://127.0.0.1:8200/v1/sys/seal-status
 ```
 
-### Sample Response
+### Sample response
 
 The "t" parameter is the threshold, and "n" is the number of shares.
 

@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: show banner when resultant-acl check fails due to permissions or wrong namespace.
+```

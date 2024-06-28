@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package awsauth
 
 import (
@@ -5,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
@@ -12,9 +16,23 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+type mockIAMClient awsutil.MockIAM
+
+func (m *mockIAMClient) GetUserWithContext(_ aws.Context, input *iam.GetUserInput, _ ...request.Option) (*iam.GetUserOutput, error) {
+	return (*awsutil.MockIAM)(m).GetUser(input)
+}
+
+func (m *mockIAMClient) CreateAccessKeyWithContext(_ aws.Context, input *iam.CreateAccessKeyInput, _ ...request.Option) (*iam.CreateAccessKeyOutput, error) {
+	return (*awsutil.MockIAM)(m).CreateAccessKey(input)
+}
+
+func (m *mockIAMClient) DeleteAccessKeyWithContext(_ aws.Context, input *iam.DeleteAccessKeyInput, _ ...request.Option) (*iam.DeleteAccessKeyOutput, error) {
+	return (*awsutil.MockIAM)(m).DeleteAccessKey(input)
+}
+
 func TestPathConfigRotateRoot(t *testing.T) {
 	getIAMClient = func(sess *session.Session) iamiface.IAMAPI {
-		return &awsutil.MockIAM{
+		return &mockIAMClient{
 			CreateAccessKeyOutput: &iam.CreateAccessKeyOutput{
 				AccessKey: &iam.AccessKey{
 					AccessKeyId:     aws.String("fizz2"),

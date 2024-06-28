@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 //go:build (!fips && (fips_140_2 || fips_140_3)) || (fips && !fips_140_2 && !fips_140_3) || (fips_140_2 && fips_140_3)
 
 package constants
