@@ -10,7 +10,7 @@ description: |-
 The Vault server process collects various runtime metrics about the performance
 of different libraries and subsystems. These metrics are aggregated on a
 10-second interval and retained for one minute in memory. High-cardinality
-metrics, like `vault.kv.secret.count`, report every 10 minutes or at an interval
+metrics, like `vault.secret.kv.count`, report every 10 minutes or at an interval
 configured with in the `telemetry` stanza.
 
 Telemetry from Vault must be streamed and stored in metrics aggregation
