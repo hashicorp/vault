@@ -218,20 +218,19 @@ export default Service.extend({
   },
 
   calculateExpiration(resp, now) {
-    let tokenExpirationEpoch;
     const ttl = resp.ttl || resp.lease_duration;
+    const tokenExpirationEpoch = resp.expire_time ? new Date(resp.expire_time).getTime() : now + ttl * 1e3;
 
-    if (resp.expire_time) {
-      const expireTime = resp.expire_time;
-      tokenExpirationEpoch = new Date(expireTime).getTime();
+    return { ttl, tokenExpirationEpoch };
+  },
+
+  setExpirationSettings(resp, now) {
+    if (resp.renewable) {
+      this.set('expirationCalcTS', now);
+      this.set('allowExpiration', false);
     } else {
-      tokenExpirationEpoch = now + ttl * 1e3;
+      this.set('allowExpiration', true);
     }
-
-    return {
-      ttl,
-      tokenExpirationEpoch,
-    };
   },
 
   calculateRootNamespace(currentNamespace, namespace_path, backend) {
@@ -305,17 +304,12 @@ export default Service.extend({
     );
 
     const now = this.now();
+
     Object.assign(data, this.calculateExpiration(resp, now));
+    this.setExpirationSettings(resp, now);
 
-    if (resp.renewable) {
-      this.set('expirationCalcTS', now);
-      this.set('allowExpiration', false);
-    } else {
-      this.set('allowExpiration', true);
-    }
-
-    // don't allow token expiration in testing
-    // this ensures we don't try to call renew-self within tests
+    // ensure we don't call renew-self within tests
+    // this is intentionally not included in setExpirationSettings so we can unit test that method
     if (Ember.testing) this.set('allowExpiration', false);
 
     if (!data.displayName) {

@@ -50,4 +50,28 @@ module('Unit | Service | auth', function (hooks) {
       );
     });
   });
+
+  module('#setExpirationSettings', function () {
+    test('#setExpirationSettings for a renewable token', function (assert) {
+      const now = Date.now();
+      const ttl = 30;
+      const response = { ttl, renewable: true };
+
+      this.service.setExpirationSettings(response, now);
+
+      assert.false(this.service.allowExpiration, 'sets allowExpiration to false');
+      assert.strictEqual(this.service.expirationCalcTS, now, 'sets expirationCalcTS to now');
+    });
+
+    test('#setExpirationSettings for a non-renewable token', function (assert) {
+      const now = Date.now();
+      const ttl = 30;
+      const response = { ttl, renewable: false };
+
+      this.service.setExpirationSettings(response, now);
+
+      assert.true(this.service.allowExpiration, 'sets allowExpiration to true');
+      assert.strictEqual(this.service.expirationCalcTS, null, 'keeps expirationCalcTS as null');
+    });
+  });
 });
