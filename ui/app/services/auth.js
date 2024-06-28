@@ -81,8 +81,10 @@ export default Service.extend({
     if (!tokenName) {
       return;
     }
+
     const { tokenExpirationEpoch } = this.getTokenData(tokenName);
     const expirationDate = new Date(0);
+
     return tokenExpirationEpoch ? expirationDate.setUTCMilliseconds(tokenExpirationEpoch) : null;
   }),
 
@@ -215,15 +217,20 @@ export default Service.extend({
     return this.ajax(url, 'POST', { namespace });
   },
 
-  calculateExpiration(resp) {
-    const now = this.now();
+  calculateExpiration(resp, now) {
     const ttl = resp.ttl || resp.lease_duration;
-    const tokenExpirationEpoch = now + ttl * 1e3;
-    this.set('expirationCalcTS', now);
-    return {
-      ttl,
-      tokenExpirationEpoch,
-    };
+    const tokenExpirationEpoch = resp.expire_time ? new Date(resp.expire_time).getTime() : now + ttl * 1e3;
+
+    return { ttl, tokenExpirationEpoch };
+  },
+
+  setExpirationSettings(resp, now) {
+    if (resp.renewable) {
+      this.set('expirationCalcTS', now);
+      this.set('allowExpiration', false);
+    } else {
+      this.set('allowExpiration', true);
+    }
   },
 
   calculateRootNamespace(currentNamespace, namespace_path, backend) {
@@ -296,21 +303,22 @@ export default Service.extend({
       resp.policies
     );
 
-    if (resp.renewable) {
-      Object.assign(data, this.calculateExpiration(resp));
-    } else if (resp.type === 'batch') {
-      // if it's a batch token, it's not renewable but has an expire time
-      // so manually set tokenExpirationEpoch and allow expiration
-      data.tokenExpirationEpoch = new Date(resp.expire_time).getTime();
-      this.set('allowExpiration', true);
-    }
+    const now = this.now();
+
+    Object.assign(data, this.calculateExpiration(resp, now));
+    this.setExpirationSettings(resp, now);
+
+    // ensure we don't call renew-self within tests
+    // this is intentionally not included in setExpirationSettings so we can unit test that method
+    if (Ember.testing) this.set('allowExpiration', false);
 
     if (!data.displayName) {
       data.displayName = (this.getTokenData(tokenName) || {}).displayName;
     }
+
     this.set('tokens', addToArray(this.tokens, tokenName));
-    this.set('allowExpiration', false);
     this.setTokenData(tokenName, data);
+
     return resolve({
       namespace: currentNamespace || data.userRootNamespace,
       token: tokenName,
@@ -333,9 +341,9 @@ export default Service.extend({
   renew() {
     const tokenName = this.currentTokenName;
     const currentlyRenewing = this.isRenewing;
-    if (currentlyRenewing) {
-      return;
-    }
+
+    if (currentlyRenewing) return;
+
     this.isRenewing = true;
     return this.renewCurrentToken().then(
       (resp) => {
