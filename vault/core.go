@@ -1001,21 +1001,8 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		effectiveSDKVersion = version.GetVersion().Version
 	}
 
-	var detectDeadlocks []string
-	if conf.DetectDeadlocks != "" {
-		detectDeadlocks = strings.Split(conf.DetectDeadlocks, ",")
-		for k, v := range detectDeadlocks {
-			detectDeadlocks[k] = strings.ToLower(strings.TrimSpace(v))
-		}
-	}
-
-	// Use imported logging deadlock if requested
-	var stateLock locking.RWMutex
-	stateLock = &locking.SyncRWMutex{}
-
-	if slices.Contains(detectDeadlocks, "statelock") {
-		stateLock = &locking.DeadlockRWMutex{}
-	}
+	detectDeadlocks := locking.ParseDetectDeadlockConfigParameter(conf.DetectDeadlocks)
+	stateLock := locking.CreateConfigurableRWMutex(detectDeadlocks, "statelock")
 
 	// Setup the core
 	c := &Core{
@@ -2458,15 +2445,12 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 			return err
 		}
 
-		if !c.perfStandby {
-			if err := c.setupCensusManager(); err != nil {
-				logger.Error("failed to instantiate the license reporting agent", "error", err)
-			}
-
-			c.StartCensusReports(ctx)
-
-			c.StartManualCensusSnapshots()
+		if err := c.setupCensusManager(); err != nil {
+			logger.Error("failed to instantiate the license reporting agent", "error", err)
 		}
+
+		c.StartCensusReports(ctx)
+		c.StartManualCensusSnapshots()
 
 	} else {
 		broker, err := audit.NewBroker(logger)
@@ -2860,7 +2844,6 @@ func (c *Core) preSeal() error {
 	if err := c.teardownCensusManager(); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down reporting agent: %w", err))
 	}
-
 	if err := c.teardownCredentials(context.Background()); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down credentials: %w", err))
 	}

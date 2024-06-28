@@ -3,13 +3,13 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-{{#if (eq @config.enabled "On")}}
+{{#if (or @config.reportingEnabled (eq @config.enabled "On"))}}
   <EmptyState
     @title="No data received {{if @dateRangeMessage @dateRangeMessage}}"
     @message="Tracking is turned on and Vault is gathering data. It should appear here within 30 minutes."
     class="is-shadowless"
   />
-{{else}}
+{{else if @config}}
   <EmptyState
     @title="Data tracking is disabled"
     @message="Tracking is disabled, and no data is being collected. To turn it on, edit the configuration."
@@ -24,4 +24,10 @@
       />
     {{/if}}
   </EmptyState>
+{{else}}
+  <EmptyState
+    @title="Activity configuration data is unavailable"
+    @message="Reporting status is unknown and could be enabled or disabled. Check the Vault logs for more information."
+    class="is-shadowless"
+  />
 {{/if}}

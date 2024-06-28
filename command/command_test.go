@@ -122,10 +122,11 @@ func testVaultServerWithKVVersion(tb testing.TB, kvVersion string) (*api.Client,
 func testVaultServerAllBackends(tb testing.TB) (*api.Client, func()) {
 	tb.Helper()
 
+	handlers := newVaultHandlers()
 	client, _, closer := testVaultServerCoreConfig(tb, &vault.CoreConfig{
-		CredentialBackends: credentialBackends,
-		AuditBackends:      auditBackends,
-		LogicalBackends:    logicalBackends,
+		CredentialBackends: handlers.credentialBackends,
+		AuditBackends:      handlers.auditBackends,
+		LogicalBackends:    handlers.logicalBackends,
 		BuiltinRegistry:    builtinplugins.Registry,
 	})
 	return client, closer
