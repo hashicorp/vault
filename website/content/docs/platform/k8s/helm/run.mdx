@@ -436,7 +436,26 @@ running:
 $ kubectl delete pod <name of Vault pod>
 ```
 
-If Vault is deployed using `ha` mode, the standby pods must be upgraded first.
+
+If you deployed Vault in high availability (`ha`) mode, you must upgrade your
+standby pods before upgrading the active pod. 
+
+Before deleting the standby pod, remove the associated node from the raft with
+`vault operator raft remove-peer <server_id>`.
+
+To confirm that the node was successfully removed from Raft, run
+`vault operator raft list-peers`.
+
+Once you confirm the removal succeeded, you can delete the pod.
+
+<Warning title="Delete nodes to avoid unnecessary leader elections">
+
+Removing a pod without deleting the node from its cluster first means that the
+number of nodes Raft
+will be unaware of the correct number of nodes in the cluster. This can trigger a leader election, potentially causing downtime.
+
+</Warning>
+
 Vault has K8s service discovery built in (when enabled in the server configuration) and
 will automatically change the labels of the pod with its current leader status. These labels
 can be used to filter the pods.
