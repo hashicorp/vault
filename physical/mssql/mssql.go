@@ -6,6 +6,7 @@ package mssql
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"regexp"
 	"sort"
@@ -14,16 +15,15 @@ import (
 	"time"
 
 	metrics "github.com/armon/go-metrics"
-	_ "github.com/denisenkom/go-mssqldb"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
+	mssql "github.com/microsoft/go-mssqldb"
 )
 
 // Verify MSSQLBackend satisfies the correct interfaces
 var (
-	_               physical.Backend = (*MSSQLBackend)(nil)
-	identifierRegex                  = regexp.MustCompile(`^[\p{L}_][\p{L}\p{Nd}@#$_]*$`)
+	_ physical.Backend = (*MSSQLBackend)(nil)
 )
 
 type MSSQLBackend struct {
@@ -34,38 +34,32 @@ type MSSQLBackend struct {
 	permitPool *physical.PermitPool
 }
 
-func isInvalidIdentifier(name string) bool {
-	if !identifierRegex.MatchString(name) {
-		return true
-	}
-	return false
-}
-
 func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
-	username, ok := conf["username"]
-	if !ok {
-		username = ""
-	}
+	var err error
+	validIdentifierRE := regexp.MustCompile(`^[\p{L}_][\p{L}\p{Nd}@#$_]*$`)
 
-	password, ok := conf["password"]
-	if !ok {
-		password = ""
-	}
+	// <-- CLOSURE FUNCTION: get config value with defaults
+	getConfValue := func(confKey string, defaultValue string) string {
+		confVal, ok := conf[confKey]
+		if ok || confVal != "" {
+			return confVal
+		}
+		return defaultValue
+	} // --> END
 
-	server, ok := conf["server"]
-	if !ok || server == "" {
+	username := getConfValue("username", "")
+	password := getConfValue("password", "")
+
+	server := getConfValue("server", "")
+	if server == "" {
 		return nil, fmt.Errorf("missing server")
 	}
 
-	port, ok := conf["port"]
-	if !ok {
-		port = ""
-	}
+	port := getConfValue("port", "")
 
-	maxParStr, ok := conf["max_parallel"]
-	var maxParInt int
-	var err error
-	if ok {
+	maxParInt := physical.DefaultParallelOperations
+	maxParStr := getConfValue("max_parallel", "")
+	if maxParStr != "" {
 		maxParInt, err = strconv.Atoi(maxParStr)
 		if err != nil {
 			return nil, fmt.Errorf("failed parsing max_parallel parameter: %w", err)
@@ -73,49 +67,32 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		if logger.IsDebug() {
 			logger.Debug("max_parallel set", "max_parallel", maxParInt)
 		}
-	} else {
-		maxParInt = physical.DefaultParallelOperations
 	}
 
-	database, ok := conf["database"]
-	if !ok {
-		database = "Vault"
-	}
-
-	if isInvalidIdentifier(database) {
+	database := getConfValue("database", "Vault")
+	if !validIdentifierRE.MatchString(database) {
 		return nil, fmt.Errorf("invalid database name")
 	}
 
-	table, ok := conf["table"]
-	if !ok {
-		table = "Vault"
-	}
+	databaseCollation := getConfValue("databaseCollation", "")
 
-	if isInvalidIdentifier(table) {
+	table := getConfValue("table", "Vault")
+	if !validIdentifierRE.MatchString(table) {
 		return nil, fmt.Errorf("invalid table name")
 	}
 
-	appname, ok := conf["appname"]
-	if !ok {
-		appname = "Vault"
+	appname := getConfValue("appname", "Vault")
+
+	connectionTimeout := getConfValue("connectiontimeout", "30")
+
+	logLevel := getConfValue("logLevel", "0")
+	// SetLogger only if needed
+	if logLevel != "0" {
+		mssql.SetLogger(logger.StandardLogger(nil))
 	}
 
-	connectionTimeout, ok := conf["connectiontimeout"]
-	if !ok {
-		connectionTimeout = "30"
-	}
-
-	logLevel, ok := conf["loglevel"]
-	if !ok {
-		logLevel = "0"
-	}
-
-	schema, ok := conf["schema"]
-	if !ok || schema == "" {
-		schema = "dbo"
-	}
-
-	if isInvalidIdentifier(schema) {
+	schema := getConfValue("schema", "dbo")
+	if !validIdentifierRE.MatchString(schema) {
 		return nil, fmt.Errorf("invalid schema name")
 	}
 
@@ -132,37 +109,105 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		connectionString += ";port=" + port
 	}
 
-	db, err := sql.Open("mssql", connectionString)
+	connectionDatabase := ";database=" + database
+
+	// <-- CLOSURE FUNCTION: openConnection
+	openConnection := func(connectionStringEx string) (*sql.DB, error) {
+		db, err := sql.Open("mssql", connectionString+connectionStringEx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to connect to mssql: %w", err)
+		}
+		return db, nil
+	} // --> END
+
+	// <-- CLOSURE FUNCTION: createDatabase
+	errNoDefaultDb := errors.New("mssql: Cannot open requested database")
+	createDatabase := func(db *sql.DB, database string, collation string) error {
+		exQuery := database
+		if collation != "" {
+			exQuery += " COLLATE " + collation
+		}
+		_, err := db.Exec("IF NOT EXISTS(SELECT * FROM sys.databases WHERE name = ?) CREATE DATABASE "+exQuery, database)
+		if err != nil {
+			var sqlErr mssql.Error
+			if errors.As(err, &sqlErr) && sqlErr.SQLErrorNumber() == 4063 {
+				return errNoDefaultDb
+			}
+			err = fmt.Errorf("failed to create mssql database: %w", err)
+		}
+		return err
+	} // --> END
+
+	// Open connection with database parameter
+	var db *sql.DB
+	db, err = openConnection(connectionDatabase)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to mssql: %w", err)
+		return nil, err
+	}
+
+	// Create database if exist and empty
+	err = createDatabase(db, database, databaseCollation)
+	if err != nil {
+		if err == errNoDefaultDb {
+			// Database not exist
+			// 4063: Cannot open database that was requested by the login. Using the user default database instead.
+			err = db.Close()
+			if err == nil {
+				// if ok, Reopen connection without database parameter
+				db, err = openConnection("")
+				if err == nil {
+					// if ok, Create database
+					err = createDatabase(db, database, databaseCollation)
+					if err == nil {
+						err = db.Close()
+						if err == nil {
+							// if ok, Reopen connection with database parameter
+							db, err = openConnection(connectionDatabase)
+						}
+					}
+				}
+			}
+		}
+		// Fail if there are errors
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Mismatched data types on table and parameter may cause long running queries
+	// README.md: https://github.com/microsoft/go-mssqldb
+	if databaseCollation != "" {
+		dbCollation := ""
+		err = db.QueryRow("SELECT DATABASEPROPERTYEX('" + database + "', 'Collation')").Scan(&dbCollation)
+		if err != nil || dbCollation == "" {
+			logger.Warn("Cannot get database collation", err)
+		} else if dbCollation != databaseCollation {
+			logger.Warn("Database and vault config collation mismatch. This may cause long running queries!", dbCollation, databaseCollation)
+		}
 	}
 
 	db.SetMaxOpenConns(maxParInt)
 
-	if _, err := db.Exec("IF NOT EXISTS(SELECT * FROM sys.databases WHERE name = ?) CREATE DATABASE "+database, database); err != nil {
-		return nil, fmt.Errorf("failed to create mssql database: %w", err)
-	}
-
-	dbTable := database + "." + schema + "." + table
+	dbTable := schema + "." + table
 	createQuery := "IF NOT EXISTS(SELECT 1 FROM " + database + ".INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_NAME=? AND TABLE_SCHEMA=?) CREATE TABLE " + dbTable + " (Path VARCHAR(512) PRIMARY KEY, Value VARBINARY(MAX))"
 
 	if schema != "dbo" {
-
+		var errFmt string = "failed to check if mssql schema exists: %w"
 		var num int
 		err = db.QueryRow("SELECT 1 FROM "+database+".sys.schemas WHERE name = ?", schema).Scan(&num)
-
-		switch {
-		case err == sql.ErrNoRows:
-			if _, err := db.Exec("USE " + database + "; EXEC ('CREATE SCHEMA " + schema + "')"); err != nil {
-				return nil, fmt.Errorf("failed to create mssql schema: %w", err)
-			}
-
-		case err != nil:
-			return nil, fmt.Errorf("failed to check if mssql schema exists: %w", err)
+		if err != nil && err == sql.ErrNoRows {
+			// CREATE SCHEMA
+			errFmt = "failed to create mssql schema: %w"
+			_, err = db.Exec("USE " + database + "; EXEC ('CREATE SCHEMA " + schema + "')")
+		}
+		// Fail if there are errors
+		if err != nil {
+			return nil, fmt.Errorf(errFmt, err)
 		}
 	}
 
-	if _, err := db.Exec(createQuery, table, schema); err != nil {
+	_, err = db.Exec(createQuery, table, schema)
+	if err != nil {
 		return nil, fmt.Errorf("failed to create mssql table: %w", err)
 	}
 
@@ -175,15 +220,17 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	}
 
 	statements := map[string]string{
-		"put": "IF EXISTS(SELECT 1 FROM " + dbTable + " WHERE Path = ?) UPDATE " + dbTable + " SET Value = ? WHERE Path = ?" +
-			" ELSE INSERT INTO " + dbTable + " VALUES(?, ?)",
-		"get":    "SELECT Value FROM " + dbTable + " WHERE Path = ?",
-		"delete": "DELETE FROM " + dbTable + " WHERE Path = ?",
-		"list":   "SELECT Path FROM " + dbTable + " WHERE Path LIKE ?",
+		"put": "DECLARE @qP VARCHAR(512) = CAST(:1 AS VARCHAR(512));" +
+			" IF EXISTS(SELECT 1 FROM " + dbTable + " WHERE Path = @qP) UPDATE " + dbTable + " SET Value = :2 WHERE Path = @qP" +
+			" ELSE INSERT INTO " + dbTable + " VALUES(@qP, :2)",
+		"get":    "SELECT Value FROM " + dbTable + " WHERE Path = CAST(? AS VARCHAR(512))",
+		"delete": "DELETE FROM " + dbTable + " WHERE Path = CAST(? AS VARCHAR(512))",
+		"list":   "SELECT Path FROM " + dbTable + " WHERE Path LIKE CAST(? AS VARCHAR(512))",
 	}
 
 	for name, query := range statements {
-		if err := m.prepare(name, query); err != nil {
+		err = m.prepare(name, query)
+		if err != nil {
 			return nil, err
 		}
 	}
@@ -208,7 +255,7 @@ func (m *MSSQLBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	m.permitPool.Acquire()
 	defer m.permitPool.Release()
 
-	_, err := m.statements["put"].Exec(entry.Key, entry.Value, entry.Key, entry.Key, entry.Value)
+	_, err := m.statements["put"].Exec(entry.Key, entry.Value)
 	if err != nil {
 		return err
 	}

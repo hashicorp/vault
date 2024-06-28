@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"strings"
 
-	_ "github.com/denisenkom/go-mssqldb"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
@@ -19,6 +18,7 @@ import (
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
 	"github.com/hashicorp/vault/sdk/helper/template"
+	_ "github.com/microsoft/go-mssqldb"
 )
 
 const (
