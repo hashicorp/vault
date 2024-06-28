@@ -35,7 +35,6 @@ import (
 )
 
 // TestActivityLog_Creation calls AddEntityToFragment and verifies that it appears correctly in a.fragment.
-// test comment
 func TestActivityLog_Creation(t *testing.T) {
 	core, _, _ := TestCoreUnsealed(t)
 
