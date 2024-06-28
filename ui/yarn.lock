@@ -4840,7 +4840,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"braces@npm:3.0.3":
+"braces@npm:^3.0.3":
   version: 3.0.3
   resolution: "braces@npm:3.0.3"
   dependencies:
