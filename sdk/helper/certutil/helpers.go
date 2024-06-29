@@ -923,6 +923,7 @@ func createCertificate(data *CreationBundle, randReader io.Reader, privateKeyGen
 		IPAddresses:    data.Params.IPAddresses,
 		URIs:           data.Params.URIs,
 	}
+
 	if data.Params.NotBeforeDuration > 0 {
 		certTemplate.NotBefore = time.Now().Add(-1 * data.Params.NotBeforeDuration)
 	}
@@ -1008,6 +1009,19 @@ func createCertificate(data *CreationBundle, randReader io.Reader, privateKeyGen
 	}
 
 	if data.SigningBundle != nil {
+		permittedDnsNames := data.SigningBundle.Certificate.PermittedDNSDomains
+		if permittedDnsNames != nil && len(permittedDnsNames) > 0 {
+		NameLoop:
+			for _, name := range certTemplate.DNSNames {
+				for _, permittedName := range permittedDnsNames {
+					if name == permittedName || strings.HasSuffix(name, permittedName) {
+						break NameLoop
+					}
+				}
+				return nil, errutil.InternalError{Err: fmt.Errorf("error matching DNS Name %s to permitted names %v", name, permittedDnsNames).Error()}
+			}
+		}
+
 		if (len(data.SigningBundle.Certificate.AuthorityKeyId) > 0 &&
 			!bytes.Equal(data.SigningBundle.Certificate.AuthorityKeyId, data.SigningBundle.Certificate.SubjectKeyId)) ||
 			data.Params.ForceAppendCaChain {
