@@ -8,8 +8,8 @@
   class="selectable-card {{if @disabled 'disabled'}}"
   @level={{if @disabled "base" "mid"}}
   @hasBorder={{true}}
-  {{on "click" @onClick}}
-  {{on "keypress" @onClick}}
+  {{on "click" (if @disabled (noop) @onClick)}}
+  {{on "keypress" (if @disabled (noop) @onClick)}}
   ...attributes
 >
   {{yield}}
