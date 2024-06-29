@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-sockaddr"
+	"github.com/hashicorp/vault/builtin/logical/transit"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -638,6 +639,62 @@ func TestEntryFormatter_FormatResponse(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestEntryFormatter_FormatResponse_DefaultValueHMACIgnored tests that we ignore
+// 'default' ("") string values for fields when formatting a response using HMAC.
+// The reason for the test is, so we can allow the JSON struct tags to operate on
+// types as expected and be omitted if they were empty rather than HMAC'd in the
+// audit log with the same value over and over again.
+// We also want the behavior of the output to be consistent whether using 'raw'
+// output or HMAC.
+func TestEntryFormatter_FormatResponse_DefaultValueHMACIgnored(t *testing.T) {
+	const hmacPrefix = "hmac-sha256:"
+	ss := newStaticSalt(t)
+	cfg, err := NewFormatterConfig()
+	require.NoError(t, err)
+	l := hclog.NewNullLogger()
+	f, err := NewEntryFormatter("test", cfg, ss, l)
+	require.NoError(t, err)
+
+	input := &logical.LogInput{
+		Request: &logical.Request{ID: "123"},
+		Response: &logical.Response{
+			Data: map[string]any{
+				"batch_results": []transit.EncryptBatchResponseItem{
+					{
+						Ciphertext: "juan1",
+						KeyVersion: 1,
+						Error:      "",
+						Reference:  "qwerty1",
+					},
+					{
+						Ciphertext: "juan2",
+						KeyVersion: 2,
+						Error:      "this is an error",
+						Reference:  "qwerty2",
+					},
+				},
+			},
+		},
+	}
+
+	ctx := namespace.RootContext(context.Background())
+
+	entry, err := f.FormatResponse(ctx, input)
+	require.NoError(t, err)
+	require.NotNil(t, entry)
+	d := entry.Response.Data["batch_results"]
+	results, ok := d.([]transit.EncryptBatchResponseItem)
+	require.True(t, ok)
+	require.Len(t, results, 2)
+
+	juan1 := results[0]
+	juan2 := results[1]
+	require.Equal(t, "", juan1.Error)
+	require.NotEqual(t, "", juan2.Error)
+	require.Contains(t, juan2.Error, hmacPrefix)
+	require.Greater(t, len(juan2.Error), len(hmacPrefix))
 }
 
 // TestEntryFormatter_Process_JSON ensures that the JSON output we get matches what

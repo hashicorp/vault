@@ -13,7 +13,7 @@ import (
 	"hash"
 
 	"github.com/hashicorp/errwrap"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -150,8 +150,14 @@ func (s *Salt) GetHMAC(data string) string {
 }
 
 // GetIdentifiedHMAC is used to apply a salt and hash function to data to make
-// sure it is not reversible, with an additional HMAC, and ID prepended
+// sure it is not reversible, with an additional HMAC, and ID prepended.
+// Default value ("") string input will be ignored and returned as-is.
 func (s *Salt) GetIdentifiedHMAC(data string) string {
+	// Do not HMAC an empty value.
+	if data == "" {
+		return data
+	}
+
 	return s.config.HMACType + ":" + s.GetHMAC(data)
 }
 
