@@ -16,8 +16,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/absolutelightning/go-memdb"
 	"github.com/go-jose/go-jose/v3"
-	"github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/identity"
