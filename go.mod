@@ -135,7 +135,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-cf v0.17.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.18.0
 	github.com/hashicorp/vault-plugin-auth-jwt v0.21.0
-	github.com/hashicorp/vault-plugin-auth-kerberos v0.12.0
+	github.com/hashicorp/vault-plugin-auth-kerberos v0.12.1-0.20240701002254-c0d51f9f3306
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.19.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.16.0
 	github.com/hashicorp/vault-plugin-database-couchbase v0.11.0
