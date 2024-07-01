@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -25,6 +26,7 @@ import (
 	"github.com/go-test/deep"
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/timeutil"
@@ -5083,4 +5085,194 @@ func TestActivityLog_reportPrecomputedQueryMetrics(t *testing.T) {
 		hasMetric(t, data, "identity.secret_sync.active.reporting_period", 3, nil)
 		hasMetric(t, data, "identity.pki_acme.active.reporting_period", 3, nil)
 	})
+}
+
+// TestHandleQuery_MultipleMounts creates a cluster with
+// two userpass mounts. It then tests verifies that
+// the total new counts are calculated within a reasonably level of accuracy for
+// various numbers of clients in each mount.
+func TestHandleQuery_MultipleMounts(t *testing.T) {
+	tests := map[string]struct {
+		twoMonthsAgo          [][]int
+		oneMonthAgo           [][]int
+		currentMonth          [][]int
+		expectedNewClients    int
+		repeatPreviousMonth   bool
+		expectedTotalAccuracy float64
+	}{
+		"low volume, all mounts": {
+			twoMonthsAgo: [][]int{
+				{20, 20},
+			},
+			oneMonthAgo: [][]int{
+				{30, 30},
+			},
+			currentMonth: [][]int{
+				{40, 40},
+			},
+			repeatPreviousMonth:   true,
+			expectedNewClients:    80,
+			expectedTotalAccuracy: 1,
+		},
+		"medium volume, all mounts": {
+			twoMonthsAgo: [][]int{
+				{200, 200},
+			},
+			oneMonthAgo: [][]int{
+				{300, 300},
+			},
+			currentMonth: [][]int{
+				{400, 400},
+			},
+			repeatPreviousMonth:   true,
+			expectedNewClients:    800,
+			expectedTotalAccuracy: 0.98,
+		},
+		"higher volume, all mounts": {
+			twoMonthsAgo: [][]int{
+				{200, 200},
+			},
+			oneMonthAgo: [][]int{
+				{300, 300},
+			},
+			currentMonth: [][]int{
+				{2000, 5000},
+			},
+			repeatPreviousMonth:   true,
+			expectedNewClients:    7000,
+			expectedTotalAccuracy: 0.95,
+		},
+		"higher volume, no repeats": {
+			twoMonthsAgo: [][]int{
+				{200, 200},
+			},
+			oneMonthAgo: [][]int{
+				{300, 300},
+			},
+			currentMonth: [][]int{
+				{4000, 6000},
+			},
+			repeatPreviousMonth:   false,
+			expectedNewClients:    10000,
+			expectedTotalAccuracy: 0.98,
+		},
+	}
+
+	for i, tt := range tests {
+		testname := fmt.Sprintf("%s", i)
+		t.Run(testname, func(t *testing.T) {
+			// Normalize to start of month to prevent end of month weirdness
+			startOfMonth := timeutil.StartOfMonth(time.Now().UTC())
+
+			storage := &logical.InmemStorage{}
+			coreConfig := &CoreConfig{
+				CredentialBackends: map[string]logical.Factory{
+					"userpass": userpass.Factory,
+				},
+				Physical: storage.Underlying(),
+			}
+
+			cluster := NewTestCluster(t, coreConfig, nil)
+			cluster.Start()
+			defer cluster.Cleanup()
+			core := cluster.Cores[0].Core
+			TestWaitActive(t, core)
+
+			a := core.activityLog
+			ctx := namespace.RootContext(nil)
+			var err error
+
+			namespaces := make([]*namespace.Namespace, 0, 6)
+			mounts := make(map[string][]*MountEntry)
+			ns := namespace.RootNamespace
+			namespaces = append(namespaces, ns)
+
+			// Add two userpass mounts to the root namespace
+			for i := 0; i < 1; i++ {
+				me1 := &MountEntry{
+					Table: credentialTableType,
+					Path:  "up1/",
+					Type:  "userpass",
+				}
+				err = core.enableCredential(namespace.ContextWithNamespace(ctx, namespaces[i]), me1)
+				require.NoError(t, err)
+
+				me2 := &MountEntry{
+					Table: credentialTableType,
+					Path:  "up2/",
+					Type:  "userpass",
+				}
+				err = core.enableCredential(namespace.ContextWithNamespace(ctx, namespaces[i]), me2)
+				require.NoError(t, err)
+				mounts[namespaces[i].ID] = []*MountEntry{me1, me2}
+			}
+
+			// Generate data for two months ago
+			clientPrefix := 1
+			var entityRecordsMonth2 []*activity.EntityRecord
+			for namespaceId, mountSlice := range mounts {
+				for mountIndex, mount := range mountSlice {
+					entityRecordsMonth2 = append(entityRecordsMonth2, generateClientData(0, tt.twoMonthsAgo[0][mountIndex], mount.Accessor, namespaceId, fmt.Sprintf("%d", clientPrefix))...)
+				}
+			}
+
+			// Generate data for a month ago
+			clientPrefix += 1
+			var entityRecordsMonth1 []*activity.EntityRecord
+			for namespaceId, mountSlice := range mounts {
+				for mountIndex, mount := range mountSlice {
+					entityRecordsMonth2 = append(entityRecordsMonth1, generateClientData(0, tt.oneMonthAgo[0][mountIndex], mount.Accessor, namespaceId, fmt.Sprintf("%d", clientPrefix))...)
+				}
+			}
+
+			startOfTwoMonthsAgo := timeutil.StartOfMonth(startOfMonth.AddDate(0, -2, 0)).UTC()
+			startOfOneMonthAgo := timeutil.StartOfMonth(startOfMonth.AddDate(0, -1, 0)).UTC()
+			generatePreviousMonthClientData(t, core, startOfTwoMonthsAgo, entityRecordsMonth2)
+			generatePreviousMonthClientData(t, core, startOfOneMonthAgo, entityRecordsMonth1)
+
+			// Generate the current months data
+			clientPrefix += 1
+			var currentMonthData []*activity.EntityRecord
+			for namespaceId, mountSlice := range mounts {
+				for mountIndex, mount := range mountSlice {
+					currentMonthData = append(currentMonthData, generateClientData(0, tt.currentMonth[0][mountIndex], mount.Accessor, namespaceId, fmt.Sprintf("%d", clientPrefix))...)
+					clientPrefix += 1
+					mountIndex++
+				}
+			}
+			generateCurrentMonthClientData(t, core, entityRecordsMonth2, currentMonthData)
+
+			endOfCurrentMonth := timeutil.EndOfMonth(time.Now().UTC())
+			actual, err := a.handleQuery(ctx, startOfTwoMonthsAgo, endOfCurrentMonth, 0)
+
+			// Ensure that the month response is the same as the totals, because all clients
+			// are new clients and there will be no approximation in the single month partial
+			// case
+			monthsRaw, ok := actual["months"]
+			if !ok {
+				t.Fatalf("malformed results. got %v", actual)
+			}
+			monthsResponse := make([]ResponseMonth, 0)
+			err = mapstructure.Decode(monthsRaw, &monthsResponse)
+
+			currentMonthClients := monthsResponse[len(monthsResponse)-1]
+
+			// New verify that the new client totals for ALL namespaces are approximately accurate
+			newClientsError := math.Abs((float64)(currentMonthClients.NewClients.Counts.Clients - tt.expectedNewClients))
+			newClientsErrorMargin := newClientsError / (float64)(tt.expectedNewClients)
+			expectedAccuracyCalc := (1 - tt.expectedTotalAccuracy) * 100 / 100
+			if newClientsErrorMargin > expectedAccuracyCalc {
+				t.Fatalf("bad accuracy: expected %+v, found %+v", expectedAccuracyCalc, newClientsErrorMargin)
+			}
+
+			// Verify that the totals for the clients are visibly sensible (that is the total of all the individual new clients per namespace)
+			total := 0
+			for _, newClientCounts := range currentMonthClients.NewClients.Namespaces {
+				total += newClientCounts.Counts.Clients
+			}
+			if diff := math.Abs(float64(currentMonthClients.NewClients.Counts.Clients - total)); diff >= 1 {
+				t.Fatalf("total expected was %d but got %d", currentMonthClients.NewClients.Counts.Clients, total)
+			}
+		})
+	}
 }
