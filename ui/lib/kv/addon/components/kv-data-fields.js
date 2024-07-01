@@ -45,10 +45,16 @@ export default class KvDataFields extends Component {
     codemirror.performLint();
     this.lintingErrors = codemirror.state.lint.marked.length > 0;
     if (!this.lintingErrors) {
-      // parse on save not on onChange to avoid problems with json comparisons within the codemirror modifier.
-      // update the codemirror value so the modifier correct parses and updates values
       this.codeMirrorSecretData = value;
-      this.args.secret.secretData = value;
     }
+  }
+
+  @action
+  onBlur() {
+    // only parse the secret data when the editor looses focus
+    // do not parse on just save because you need the parsed value for toggle between kv data fields and the json editor
+    // do not parse on keypress because the codemirror modifier will compare the parsed value to the non parsed value of whats displayed on the editor cause bugs like cursor jumps
+    if (!this.args.secret) return;
+    this.args.secret.secretData = JSON.parse(this.codeMirrorSecretData);
   }
 }

@@ -77,14 +77,11 @@ export default class KvSecretEdit extends Component {
   *save(event) {
     event.preventDefault();
     try {
-      // before validating, set the secretData to the parsed value otherwise you'll hit validation errors
-      // and only parse the value right before saving, otherwise the value will be parsed on every change and run into issues with the codemirror modifier comparison checks
-      const { secret } = this.args;
-      secret.secretData = JSON.parse(secret.secretData);
       const { isValid, state, invalidFormMessage } = this.args.secret.validate();
       this.modelValidations = isValid ? null : state;
       this.invalidFormAlert = invalidFormMessage;
       if (isValid) {
+        const { secret } = this.args;
         yield secret.save();
         this.flashMessages.success(`Successfully created new version of ${secret.path}.`);
         this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.details', {

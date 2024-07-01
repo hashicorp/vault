@@ -18,6 +18,7 @@
     @value={{this.codeMirrorSecretData}}
     @allowObscure={{true}}
     @valueUpdated={{this.handleJson}}
+    @onBlur={{this.onBlur}}
     @readOnly={{eq @type "details"}}
   />
   {{#if (or @modelValidations.secretData.errors this.lintingErrors)}}

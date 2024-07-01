@@ -46,6 +46,11 @@ export default class CodeMirrorModifier extends Modifier {
     namedArgs.onFocus(editor.getValue());
   }
 
+  @action
+  _onBlur(namedArgs, editor) {
+    namedArgs.onBlur(editor.getValue());
+  }
+
   _setup(element, namedArgs) {
     const editor = codemirror(element, {
       // IMPORTANT: `gutters` must come before `lint` since the presence of
@@ -69,6 +74,7 @@ export default class CodeMirrorModifier extends Modifier {
     });
 
     editor.on('change', bind(this, this._onChange, namedArgs));
+    editor.on('blur', bind(this, this._onBlur, namedArgs));
     editor.on('focus', bind(this, this._onFocus, namedArgs));
 
     this._editor = editor;
