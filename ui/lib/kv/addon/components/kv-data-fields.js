@@ -31,10 +31,9 @@ export default class KvDataFields extends Component {
   @tracked codeMirrorSecretData;
 
   get startingValue() {
-    // must pass the third param called "space" in JSON.stringify to structure object with whitespace
-    // otherwise the following codemirror modifier check will pass `this._editor.getValue() !== namedArgs.content` and _setValue will be called.
-    // the method _setValue moves the cursor to the beginning of the text field.
-    // the effect is that the cursor jumps after the first key input.
+    // the value tracked by codemirror is always a JSON string.
+    // The API will return a json blob which is stringified and passed to the codemirror editor.
+    // Otherwise the default is a stringified object with an empty key value pair.
     return this.args.secret?.secretData
       ? stringify([this.args.secret.secretData], {})
       : JSON.stringify({ '': '' }, null, 2);
@@ -51,9 +50,7 @@ export default class KvDataFields extends Component {
 
   @action
   onBlur() {
-    // only parse the secret data when the editor looses focus
-    // do not parse on just save because you need the parsed value for toggle between kv data fields and the json editor
-    // do not parse on keypress because the codemirror modifier will compare the parsed value to the non parsed value of whats displayed on the editor cause bugs like cursor jumps
+    // we parse the secretData and save it to the model only after the codemirror editor looses focus. To prevent issues caused by parsing differences between the codemirror editor and the namedArgs param, we do not parse the value on a keyPress, but only when the model.secretData needs to be saved. Examples: toggling between json editor and kv data fields, comparing a diff in create view, or saving the secretData.
     if (!this.args.secret) return;
     this.args.secret.secretData = JSON.parse(this.codeMirrorSecretData);
   }

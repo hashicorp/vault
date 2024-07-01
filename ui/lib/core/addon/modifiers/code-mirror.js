@@ -27,7 +27,7 @@ export default class CodeMirrorModifier extends Modifier {
       // this hook also fires any time there is a change to tracked state
       this._editor.setOption('readOnly', namedArgs.readOnly);
       if (namedArgs.content && this._editor.getValue() !== namedArgs.content) {
-        // when setValue is called if there is a change in the value, the cursor will jump to the beginning of the text field. Heads up if you've found yourself debugging this behavior. It's likely due to the parsing the namedArgs value before it hits the codeMirrorModifier.
+        // when setValue is called if there is a change in the value, the cursor will jump to the beginning of the text field. If you've found yourself debugging this behavior, it could be caused by parsing the namedArgs value before it hits the codeMirrorModifier.
         this._editor.setValue(namedArgs.content);
       }
     }
