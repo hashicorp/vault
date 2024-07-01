@@ -1580,8 +1580,8 @@ github.com/hashicorp/vault-plugin-database-couchbase v0.11.0 h1:SH+/CQUZayrmgqgo
 github.com/hashicorp/vault-plugin-database-couchbase v0.11.0/go.mod h1:R4KHWLLyQhHUACZuFJqlNFasbm3hoDyF/kruiUvTEmM=
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.15.0 h1:RGH87sxehWL74/JsEV8BacmErLeNRfxg6Pv1tudjGFU=
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.15.0/go.mod h1:LYqjVkcdXvGCPDdYNeOM0j3MqWSkMAWeZ4r++Xn+tS8=
-github.com/hashicorp/vault-plugin-database-mongodbatlas v0.12.0 h1:SQLOOQcF/BuKXh/6AnVYTbCrwyK9MlqzP6AVaqZBAMA=
-github.com/hashicorp/vault-plugin-database-mongodbatlas v0.12.0/go.mod h1:++CfUO0B7GQk2dy6nawWVMcNHKdA1nhxoZx6dbMbudI=
+github.com/hashicorp/vault-plugin-database-mongodbatlas v0.12.1-0.20240701001829-08f3aff1bc53 h1:iFTfpko+DoU/w4dUxzS5szUBkYi/CofxoPFZwv3WAvI=
+github.com/hashicorp/vault-plugin-database-mongodbatlas v0.12.1-0.20240701001829-08f3aff1bc53/go.mod h1:YuVkNUmp+RaeBI8GH7UOHill+p7nyJ+FH4VMh52ktsA=
 github.com/hashicorp/vault-plugin-database-redis v0.3.0 h1:chSbAsc7cYkn5ajQ/528nKoCm9ExGpJaDjTDos2IUa4=
 github.com/hashicorp/vault-plugin-database-redis v0.3.0/go.mod h1:Tr6VELF9q/VAslIO7+ROykrzrvEONVaONrcsthX9qcY=
 github.com/hashicorp/vault-plugin-database-redis-elasticache v0.4.0 h1:kU6zic2/iIo40kUKzRvTIj1TozcC1T0sqkWimV5e290=
@@ -1903,8 +1903,8 @@ github.com/modocache/gover v0.0.0-20171022184752-b58185e213c5/go.mod h1:caMODM3P
 github.com/mongodb-forks/digest v1.1.0 h1:7eUdsR1BtqLv0mdNm4OXs6ddWvR4X2/OsLwdKksrOoc=
 github.com/mongodb-forks/digest v1.1.0/go.mod h1:rb+EX8zotClD5Dj4NdgxnJXG9nwrlx3NWKJ8xttz1Dg=
 github.com/montanaflynn/stats v0.0.0-20171201202039-1bf9dbcd8cbe/go.mod h1:wL8QJuTMNUDYhXwkmfOly8iTdp5TEcJFWZD2D7SIkUc=
-github.com/montanaflynn/stats v0.7.0 h1:r3y12KyNxj/Sb/iOE46ws+3mS1+MZca1wlHQFPsY/JU=
-github.com/montanaflynn/stats v0.7.0/go.mod h1:etXPPgVO6n31NxCd9KQUMvCM+ve0ruNzt6R8Bnaayow=
+github.com/montanaflynn/stats v0.7.1 h1:etflOAAHORrCC44V+aR6Ftzort912ZU+YLiSTuV8eaE=
+github.com/montanaflynn/stats v0.7.1/go.mod h1:etXPPgVO6n31NxCd9KQUMvCM+ve0ruNzt6R8Bnaayow=
 github.com/morikuni/aec v1.0.0 h1:nP9CBfwrvYnBRgY6qfDQkygYDmYwOilePFkwzv4dU8A=
 github.com/morikuni/aec v1.0.0/go.mod h1:BbKIizmSmc5MMPqRYbxO4ZU0S0+P200+tUnFx7PXmsc=
 github.com/mtibben/percent v0.2.1 h1:5gssi8Nqo8QU/r2pynCm+hBQHpkB/uNK7BJCFogWdzs=
@@ -2236,8 +2236,8 @@ go.etcd.io/etcd/client/v3 v3.5.13/go.mod h1:cqiAeY8b5DEEcpxvgWKsbLIWNM/8Wy2xJSDM
 go.mongodb.org/atlas v0.36.0 h1:m05S3AO7zkl+bcG1qaNsEKBnAqnKx2FDwLooHpIG3j4=
 go.mongodb.org/atlas v0.36.0/go.mod h1:nfPldE9dSama6G2IbIzmEza02Ly7yFZjMMVscaM0uEc=
 go.mongodb.org/mongo-driver v1.10.0/go.mod h1:wsihk0Kdgv8Kqu1Anit4sfK+22vSFbUrAVEYRhCXrA8=
-go.mongodb.org/mongo-driver v1.14.0 h1:P98w8egYRjYe3XDjxhYJagTokP/H6HzlsnojRgZRd80=
-go.mongodb.org/mongo-driver v1.14.0/go.mod h1:Vzb0Mk/pa7e6cWw85R4F/endUC3u0U9jGcNU603k65c=
+go.mongodb.org/mongo-driver v1.16.0 h1:tpRsfBJMROVHKpdGyc1BBEzzjDUWjItxbVSZ8Ls4BQ4=
+go.mongodb.org/mongo-driver v1.16.0/go.mod h1:oB6AhJQvFQL4LEHyXi6aJzQJtBiTQHiAd83l0GdFaiw=
 go.opencensus.io v0.21.0/go.mod h1:mSImk1erAIZhrmZN+AvHh14ztQfjbGwt4TtuofqLduU=
 go.opencensus.io v0.22.0/go.mod h1:+kGneAE2xo2IficOXnaByMWTGM9T73dGwxeWcUqIpI8=
 go.opencensus.io v0.22.2/go.mod h1:yxeiOL68Rb0Xd1ddK5vPZ/oVn4vY4Ynel7k9FzqtOIw=
