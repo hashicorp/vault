@@ -50,12 +50,14 @@ export default class KvSecretCreate extends Component {
   *save(event) {
     event.preventDefault();
     this.resetErrors();
-
+    // before validating, set the secretData to the parsed value otherwise you'll hit validation errors
+    // and only parse the value right before saving, otherwise the value will be parsed on every change and run into issues with the codemirror modifier comparison checks
+    const { secret, metadata } = this.args;
+    secret.secretData = JSON.parse(secret.secretData);
     const { isValid, state } = this.validate();
     this.modelValidations = isValid ? null : state;
     this.invalidFormAlert = isValid ? '' : 'There is an error with this form.';
 
-    const { secret, metadata } = this.args;
     if (isValid) {
       try {
         // try saving secret data first

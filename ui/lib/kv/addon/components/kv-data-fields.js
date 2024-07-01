@@ -28,6 +28,9 @@ import { stringify } from 'core/helpers/stringify';
 
 export default class KvDataFields extends Component {
   @tracked lintingErrors;
+  @tracked codeMirrorSecretData = this.args.secret?.secretData
+    ? stringify([this.args.secret.secretData], {})
+    : this.startingValue;
 
   get startingValue() {
     // must pass the third param called "space" in JSON.stringify to structure object with whitespace
@@ -37,16 +40,15 @@ export default class KvDataFields extends Component {
     return JSON.stringify({ '': '' }, null, 2);
   }
 
-  get stringifiedSecretData() {
-    return this.args.secret?.secretData ? stringify([this.args.secret.secretData], {}) : this.startingValue;
-  }
-
   @action
   handleJson(value, codemirror) {
     codemirror.performLint();
     this.lintingErrors = codemirror.state.lint.marked.length > 0;
     if (!this.lintingErrors) {
-      this.args.secret.secretData = JSON.parse(value);
+      // parse on save not on onChange to avoid problems with json comparisons within the codemirror modifier.
+      // update the codemirror value so the modifier correct parses and updates values
+      this.codeMirrorSecretData = value;
+      this.args.secret.secretData = value;
     }
   }
 }
