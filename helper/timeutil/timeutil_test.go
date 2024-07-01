@@ -370,8 +370,8 @@ func TestTimeUtil_ParseTimeFromPath(t *testing.T) {
 	}
 }
 
-// TestNormalizeToYear tests NormalizeToYear function which returns the normalized input date wrt to the normal.
-func TestNormalizeToYear(t *testing.T) {
+// TestTimeUtil_NormalizeToYear tests NormalizeToYear function which returns the normalized input date wrt to the normal.
+func TestTimeUtil_NormalizeToYear(t *testing.T) {
 	testCases := []struct {
 		inputDate              time.Time
 		normalDate             time.Time
