@@ -961,7 +961,22 @@ func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	path := trimPath(ns, r.URL.Path)
-	if alwaysRedirectPaths.HasPath(path) {
+	redirect := alwaysRedirectPaths.HasPath(path)
+	// websocket paths are special, because they can contain a namespace
+	// in front of them. This isn't an issue on perf standbys where the
+	// namespace manager will know all the namespaces, so we will have
+	// already extracted it from the path. But regular standbys don't have
+	// knowledge of the namespaces, so we need
+	// to add an extra check
+	if !redirect && !core.PerfStandby() {
+		for _, websocketPath := range websocketRawPaths {
+			if strings.Contains(path, websocketPath) {
+				redirect = true
+				break
+			}
+		}
+	}
+	if redirect {
 		core.Logger().Trace("cannot forward request (path included in always redirect paths), falling back to redirection to standby")
 		respondStandby(core, w, r)
 		return
