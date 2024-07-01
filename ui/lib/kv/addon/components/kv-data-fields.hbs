@@ -15,7 +15,7 @@
 {{#if @showJson}}
   <JsonEditor
     @title="{{if (eq @type 'create') 'Secret' 'Version'}} data"
-    @value={{this.codeMirrorSecretData}}
+    @value={{this.startingValue}}
     @allowObscure={{true}}
     @valueUpdated={{this.handleJson}}
     @onBlur={{this.onBlur}}
