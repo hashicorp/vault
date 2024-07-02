@@ -18,8 +18,8 @@
 #### Issue
 
 Vault TCP listeners configured with the `deny_unauthorized` [proxy_protocol_behavior](/vault/docs/configuration/listener/tcp#proxy_protocol_behavior)
-which receive a request from an untrusted upstream connection will close, causing
-Vault to no longer respond to requests via that listener.
+close if they receive a request from an untrusted upstream connection. As a result,
+Vault no longer responds to *any* request received through that listener.
 
 This leaves the Vault API vulnerable to a denial-of-service (DoS) attack by requests
 which are intentionally made by untrusted upstream connections, causing it to become
