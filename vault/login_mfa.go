@@ -10,7 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"image/png"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -2159,7 +2159,7 @@ func (c *Core) validatePingID(ctx context.Context, mConfig *mfa.Config, username
 		req = req.WithContext(ctx)
 		req.Method = "POST"
 		req.URL = reqURL
-		req.Body = ioutil.NopCloser(bytes.NewBufferString(signedToken))
+		req.Body = io.NopCloser(bytes.NewBufferString(signedToken))
 		if req.Header == nil {
 			req.Header = make(http.Header)
 		}

@@ -495,7 +495,7 @@ func TestRaft_Snapshot_Take_Restore(t *testing.T) {
 		}
 	}
 
-	snapFile, cleanup, metadata, err := raft1.WriteSnapshotToTemp(ioutil.NopCloser(recorder.Body), nil)
+	snapFile, cleanup, metadata, err := raft1.WriteSnapshotToTemp(io.NopCloser(recorder.Body), nil)
 	if err != nil {
 		t.Fatal(err)
 	}

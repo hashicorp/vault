@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"sync"
@@ -487,7 +488,7 @@ func (l *Lock) writeLock() (bool, error) {
 		BucketName:         &l.backend.lockBucketName,
 		ObjectName:         &l.key,
 		ContentLength:      &size,
-		PutObjectBody:      ioutil.NopCloser(bytes.NewReader(newLockRecordJson)),
+		PutObjectBody:      io.NopCloser(bytes.NewReader(newLockRecordJson)),
 		OpcMeta:            nil,
 		OpcClientRequestId: &opcClientRequestId,
 	}
