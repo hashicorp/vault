@@ -5,7 +5,16 @@
 /* eslint-disable no-useless-escape */
 import { module, test } from 'qunit';
 import { v4 as uuidv4 } from 'uuid';
-import { click, currentURL, fillIn, findAll, setupOnerror, typeIn, visit } from '@ember/test-helpers';
+import {
+  click,
+  currentURL,
+  fillIn,
+  findAll,
+  setupOnerror,
+  typeIn,
+  visit,
+  triggerKeyEvent,
+} from '@ember/test-helpers';
 import { setupApplicationTest } from 'vault/tests/helpers';
 import authPage from 'vault/tests/pages/auth';
 import {
@@ -24,6 +33,7 @@ import {
 } from 'vault/tests/helpers/kv/policy-generator';
 import { clearRecords, writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import codemirror from 'vault/tests/helpers/codemirror';
 
 /**
@@ -307,6 +317,20 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     assert.dom(FORM.toggleJson).isNotDisabled();
     assert.dom(FORM.toggleJson).isChecked();
     assert.false(codemirror().getValue().includes('*'), 'Values are not obscured on edit view');
+  });
+
+  test('on enter the JSON editor cursor goes to the next line', async function (assert) {
+    // see issue here: https://github.com/hashicorp/vault/issues/27524
+    const predictedCursorPosition = JSON.stringify({ line: 0, ch: 9, sticky: null });
+    await visit(`/vault/secrets/${this.backend}/kv/create`);
+    await fillIn(FORM.inputByAttr('path'), 'json jump');
+
+    await click(FORM.toggleJson);
+    await fillIn(GENERAL.codemirror, '{ "json":');
+    await triggerKeyEvent(GENERAL.codemirror, 'keyup', 'Enter');
+
+    const actualCursorPosition = JSON.stringify(codemirror().getCursor());
+    assert.strictEqual(actualCursorPosition, predictedCursorPosition, 'Version one data is displayed');
   });
 
   test('viewing advanced secret data versions displays the correct version data', async function (assert) {
