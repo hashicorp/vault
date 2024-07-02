@@ -21,7 +21,6 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/pki"
 	"github.com/hashicorp/vault/builtin/logical/ssh"
 	"github.com/hashicorp/vault/builtin/logical/transit"
-	"github.com/hashicorp/vault/helper/benchhelpers"
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -190,12 +189,12 @@ func testVaultServerCoreConfig(tb testing.TB, coreConfig *vault.CoreConfig) (*ap
 func testVaultServerCoreConfigWithOpts(tb testing.TB, coreConfig *vault.CoreConfig, opts *vault.TestClusterOptions) (*api.Client, []string, func()) {
 	tb.Helper()
 
-	cluster := vault.NewTestCluster(benchhelpers.TBtoT(tb), coreConfig, opts)
+	cluster := vault.NewTestCluster(tb, coreConfig, opts)
 	cluster.Start()
 
 	// Make it easy to get access to the active
 	core := cluster.Cores[0].Core
-	vault.TestWaitActive(benchhelpers.TBtoT(tb), core)
+	vault.TestWaitActive(tb, core)
 
 	// Get the client already setup for us!
 	client := cluster.Cores[0].Client

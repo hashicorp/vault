@@ -5,16 +5,16 @@ package consul
 
 import (
 	"sync"
+	"testing"
 	realtesting "testing"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/testhelpers/consul"
 	physConsul "github.com/hashicorp/vault/physical/consul"
 	"github.com/hashicorp/vault/vault"
-	"github.com/mitchellh/go-testing-interface"
 )
 
-func MakeConsulBackend(t testing.T, logger hclog.Logger) *vault.PhysicalBackendBundle {
+func MakeConsulBackend(t testing.TB, logger hclog.Logger) *vault.PhysicalBackendBundle {
 	cleanup, config := consul.PrepareTestContainer(t.(*realtesting.T), "", false, true)
 
 	consulConf := map[string]string{
@@ -56,7 +56,7 @@ type consulContainerManager struct {
 	current *consulContainerBackendFactory
 }
 
-func (m *consulContainerManager) Backend(t testing.T, coreIdx int,
+func (m *consulContainerManager) Backend(t testing.TB, coreIdx int,
 	logger hclog.Logger, conf map[string]interface{},
 ) *vault.PhysicalBackendBundle {
 	m.mu.Lock()
@@ -77,7 +77,7 @@ type consulContainerBackendFactory struct {
 	config    map[string]string
 }
 
-func (f *consulContainerBackendFactory) Backend(t testing.T, coreIdx int,
+func (f *consulContainerBackendFactory) Backend(t testing.TB, coreIdx int,
 	logger hclog.Logger, conf map[string]interface{},
 ) *vault.PhysicalBackendBundle {
 	f.mu.Lock()
@@ -100,7 +100,7 @@ func (f *consulContainerBackendFactory) Backend(t testing.T, coreIdx int,
 	}
 }
 
-func (f *consulContainerBackendFactory) startContainerLocked(t testing.T) {
+func (f *consulContainerBackendFactory) startContainerLocked(t testing.TB) {
 	cleanup, config := consul.PrepareTestContainer(t.(*realtesting.T), "", false, true)
 	f.config = map[string]string{
 		"address":      config.Address(),

@@ -14,9 +14,9 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"testing"
 
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/mitchellh/go-testing-interface"
 )
 
 var (
@@ -34,7 +34,7 @@ type TestPlugin struct {
 	ImageSha256 string
 }
 
-func GetPlugin(t testing.T, typ consts.PluginType) (string, string, string, string) {
+func GetPlugin(t testing.TB, typ consts.PluginType) (string, string, string, string) {
 	t.Helper()
 	var pluginName string
 	var pluginType string
@@ -65,7 +65,7 @@ func GetPlugin(t testing.T, typ consts.PluginType) (string, string, string, stri
 
 // to mount a plugin, we need a working binary plugin, so we compile one here.
 // pluginVersion is used to override the plugin's self-reported version
-func CompilePlugin(t testing.T, typ consts.PluginType, pluginVersion string, pluginDir string) TestPlugin {
+func CompilePlugin(t testing.TB, typ consts.PluginType, pluginVersion string, pluginDir string) TestPlugin {
 	t.Helper()
 
 	pluginName, pluginType, pluginMain, pluginVersionLocation := GetPlugin(t, typ)
@@ -149,7 +149,7 @@ func CompilePlugin(t testing.T, typ consts.PluginType, pluginVersion string, plu
 	}
 }
 
-func BuildPluginContainerImage(t testing.T, plugin TestPlugin, pluginDir string) (image string, sha256 string) {
+func BuildPluginContainerImage(t testing.TB, plugin TestPlugin, pluginDir string) (image string, sha256 string) {
 	t.Helper()
 	ref := plugin.Name
 	if plugin.Version != "" {

@@ -53,7 +53,7 @@ type ExecDevClusterOptions struct {
 	BaseListenAddress string
 }
 
-func NewTestExecDevCluster(t *testing.T, opts *ExecDevClusterOptions) *ExecDevCluster {
+func NewTestExecDevServer(t *testing.T, opts *ExecDevClusterOptions) *ExecDevCluster {
 	if opts == nil {
 		opts = &ExecDevClusterOptions{}
 	}
@@ -141,12 +141,10 @@ func (dc *ExecDevCluster) setupExecDevCluster(ctx context.Context, opts *ExecDev
 	clusterJsonPath := filepath.Join(dc.tmpDir, "cluster.json")
 	args := []string{"server", "-dev", "-dev-cluster-json", clusterJsonPath}
 	switch {
-	case opts.NumCores == 3:
-		args = append(args, "-dev-three-node")
 	case opts.NumCores == 1:
 		args = append(args, "-dev-tls")
 	default:
-		return fmt.Errorf("NumCores=1 and NumCores=3 are the only supported options right now")
+		return fmt.Errorf("NumCores=1 is the only supported option right now")
 	}
 	if opts.BaseListenAddress != "" {
 		args = append(args, "-dev-listen-address", opts.BaseListenAddress)
@@ -223,6 +221,7 @@ func (dc *ExecDevCluster) setupExecDevCluster(ctx context.Context, opts *ExecDev
 		}
 		time.Sleep(500 * time.Millisecond)
 	}
+
 	return ctx.Err()
 }
 
