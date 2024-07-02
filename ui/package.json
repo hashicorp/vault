@@ -10,6 +10,7 @@
   },
   "scripts": {
     "build": "ember build --environment=production && cp metadata.json ../http/web_ui/metadata.json",
+    "build_windows": "ember build --environment=production && copy metadata.json ../http/web_ui/metadata.json",
     "build:dev": "ember build",
     "docs": "sh scripts/generate-docs.sh",
     "docfy-md": "node scripts/docfy-md.js",
