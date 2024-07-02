@@ -50,8 +50,7 @@ func buildLogicalRequestNoAuth(perfStandby bool, ra *vault.RouterAccess, w http.
 	if err != nil {
 		return nil, nil, http.StatusBadRequest, nil
 	}
-	path := ns.TrimmedPath(r.URL.Path[len("/v1/"):])
-
+	path := trimPath(ns, r.URL.Path)
 	var data map[string]interface{}
 	var origBody io.ReadCloser
 	var passHTTPReq bool
@@ -361,11 +360,13 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForw
 			respondError(w, http.StatusInternalServerError, err)
 			return
 		}
+		trimmedPath := trimPath(ns, r.URL.Path)
+
 		nsPath := ns.Path
 		if ns.ID == namespace.RootNamespaceID {
 			nsPath = ""
 		}
-		if strings.HasPrefix(r.URL.Path, fmt.Sprintf("/v1/%ssys/events/subscribe/", nsPath)) {
+		if websocketPaths.HasPath(trimmedPath) {
 			handler := entHandleEventsSubscribe(core, req)
 			if handler != nil {
 				handler.ServeHTTP(w, r)
