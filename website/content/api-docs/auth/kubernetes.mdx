@@ -148,12 +148,23 @@ entities attempting to login.
   cluster. If set with `bound_service_account_namespaces`, the conditions are `OR`ed.
 - `audience` `(string: "")` - Optional Audience claim to verify in the JWT.
 - `alias_name_source` `(string: "serviceaccount_uid")` - Configures how identity aliases are generated.
-  Valid choices are: `serviceaccount_uid`, `serviceaccount_name`
-  When `serviceaccount_uid` is specified, the machine generated UID from the service account will be used as the identity alias name.
-  When `serviceaccount_name` is specified, the service account's namespace and name will be used as the identity alias name e.g `vault/vault-auth`.
-  While it is strongly advised that you use `serviceaccount_uid`, you may also use `serviceaccount_name` in cases where
-  you want to set the alias ahead of time, and the risks are mitigated or otherwise acceptable given your use case.
-  It is very important to limit who is able to delete/create service accounts within a given cluster.
+  Valid choices are: `serviceaccount_uid` and `serviceaccount_name`.
+  
+  When you specify `serviceaccount_uid`, Vault uses a machine generated UID from
+  the service account as the identity alias name. Using a service account UID is
+  both the default and the recommended method as it the more secure option.
+
+  When you specify `serviceaccount_name`, Vault uses the name and namespace from
+  the service account as the identity alias name (e.g., `vault/vault-auth`). You
+  should only use `serviceaccount_name` if you consider the risk acceptable or
+  can mitigate the risk with strong controls around the creation/deletion/access
+  of your Kubernetes service accounts and need one of the following capabilities:
+
+    1. fine-grained control over the mapping between Kubernetes service accounts
+      and Vault identities.
+    1. a simpler process for setting entity aliases before creating Kubernetes
+      service account creation.
+
   See the [Create an Entity Alias](/vault/api-docs/secret/identity/entity-alias#create-an-entity-alias) document
   which further expands on the potential security implications mentioned above.
 
