@@ -4,15 +4,16 @@
 package vault
 
 import (
+	testing2 "testing"
+
 	"github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/vault/seal"
-	testing "github.com/mitchellh/go-testing-interface"
 )
 
 // NewTestSeal creates a new seal for testing. If you want to use the same seal multiple times, such as for
 // a cluster, use NewTestSealFunc instead.
-func NewTestSeal(t testing.T, opts *seal.TestSealOpts) Seal {
+func NewTestSeal(t testing2.TB, opts *seal.TestSealOpts) Seal {
 	t.Helper()
 	opts = seal.NewTestSealOpts(opts)
 	logger := corehelpers.NewTestLogger(t).Named("sealAccess")
@@ -55,7 +56,7 @@ func NewTestSeal(t testing.T, opts *seal.TestSealOpts) Seal {
 
 // NewTestSealFunc returns a function that creates seals. All such seals will have TestWrappers that
 // share the same secret, thus making them equivalent.
-func NewTestSealFunc(t testing.T, opts *seal.TestSealOpts) func() Seal {
+func NewTestSealFunc(t testing2.TB, opts *seal.TestSealOpts) func() Seal {
 	testSeal := NewTestSeal(t, opts)
 
 	return func() Seal {
@@ -64,7 +65,7 @@ func NewTestSealFunc(t testing.T, opts *seal.TestSealOpts) func() Seal {
 }
 
 // CloneTestSeal creates a new test seal that shares the same seal wrappers as `testSeal`.
-func cloneTestSeal(t testing.T, testSeal Seal) Seal {
+func cloneTestSeal(t testing2.TB, testSeal Seal) Seal {
 	logger := corehelpers.NewTestLogger(t).Named("sealAccess")
 
 	access, err := seal.NewAccessFromSealWrappers(logger, testSeal.GetAccess().Generation(), testSeal.GetAccess().GetSealGenerationInfo().IsRewrapped(), testSeal.GetAccess().GetAllSealWrappersByPriority())
