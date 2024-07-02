@@ -19,7 +19,6 @@ import { obfuscateData } from 'core/utils/advanced-secret';
  * @param {string} value - a specific string the comes from codemirror. It's the value inside the codemirror display
  * @param {Function} [valueUpdated] - action to preform when you edit the codemirror value.
  * @param {Function} [onFocusOut] - action to preform when you focus out of codemirror.
- * @param {Function} [onBlur] - action to preform when codemirror looses focus. Unlike onFocusOut this event does not bubble.
  * @param {string} [helpText] - helper text.
  * @param {Object} [extraKeys] - Provides keyboard shortcut methods for things like saving on shift + enter.
  * @param {Array} [gutters] - An array of CSS class names or class name / CSS string pairs, each of which defines a width (and optionally a background), and which will be used to draw the background of the gutters.
@@ -65,13 +64,6 @@ export default class JsonEditorComponent extends Component {
   onFocus(...args) {
     if (this.args.onFocusOut) {
       this.args.onFocusOut(...args);
-    }
-  }
-
-  @action
-  onBlur(...args) {
-    if (!this.args.readOnly && this.args.onBlur) {
-      this.args.onBlur(...args);
     }
   }
 
