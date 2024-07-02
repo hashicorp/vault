@@ -179,3 +179,13 @@ func (_ DefaultClock) NewTicker(d time.Duration) *time.Ticker {
 func (_ DefaultClock) NewTimer(d time.Duration) *time.Timer {
 	return time.NewTimer(d)
 }
+
+// NormalizeToYear returns date normalized to the latest date
+// within one year of normal. Assumes the date argument is
+// some date before normal.
+func NormalizeToYear(date, normal time.Time) time.Time {
+	for date.AddDate(1, 0, 0).Compare(normal) <= 0 {
+		date = date.AddDate(1, 0, 0)
+	}
+	return date
+}
