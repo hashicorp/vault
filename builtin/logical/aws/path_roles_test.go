@@ -5,11 +5,13 @@ package aws
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -366,22 +368,74 @@ func TestRoleEntryValidationIamUserCred(t *testing.T) {
 		CredentialTypes: []string{iamUserCred},
 		RoleArns:        []string{"arn:aws:iam::123456789012:role/SomeRole"},
 	}
-	if roleEntry.validate() == nil {
-		t.Errorf("bad: invalid roleEntry with invalid RoleArns parameter %#v passed validation", roleEntry)
-	}
+	assertMultiError(t, roleEntry.validate(),
+		[]error{
+			errors.New(
+				"cannot supply role_arns when credential_type isn't assumed_role",
+			),
+		})
 
 	roleEntry = awsRoleEntry{
 		CredentialTypes: []string{iamUserCred},
 		PolicyArns:      []string{adminAccessPolicyARN},
 		DefaultSTSTTL:   1,
 	}
-	if roleEntry.validate() == nil {
-		t.Errorf("bad: invalid roleEntry with unrecognized DefaultSTSTTL %#v passed validation", roleEntry)
-	}
+	assertMultiError(t, roleEntry.validate(),
+		[]error{
+			errors.New(
+				"default_sts_ttl parameter only valid for assumed_role, federation_token, and session_token credential types",
+			),
+		})
 	roleEntry.DefaultSTSTTL = 0
+
 	roleEntry.MaxSTSTTL = 1
-	if roleEntry.validate() == nil {
-		t.Errorf("bad: invalid roleEntry with unrecognized MaxSTSTTL %#v passed validation", roleEntry)
+	assertMultiError(t, roleEntry.validate(),
+		[]error{
+			errors.New(
+				"max_sts_ttl parameter only valid for assumed_role, federation_token, and session_token credential types",
+			),
+		})
+	roleEntry.MaxSTSTTL = 0
+
+	roleEntry.SessionTags = map[string]string{
+		"Key1": "Value1",
+		"Key2": "Value2",
+	}
+	assertMultiError(t, roleEntry.validate(),
+		[]error{
+			errors.New(
+				"cannot supply session_tags when credential_type isn't assumed_role",
+			),
+		})
+	roleEntry.SessionTags = nil
+
+	roleEntry.ExternalID = "my-ext-id"
+	assertMultiError(t, roleEntry.validate(),
+		[]error{
+			errors.New(
+				"cannot supply external_id when credential_type isn't assumed_role"),
+		})
+}
+
+func assertMultiError(t *testing.T, err error, expected []error) {
+	t.Helper()
+
+	if err == nil {
+		t.Errorf("expected error, got nil")
+		return
+	}
+
+	var multiErr *multierror.Error
+	if errors.As(err, &multiErr) {
+		if multiErr.Len() != len(expected) {
+			t.Errorf("expected %d error, got %d", len(expected), multiErr.Len())
+		} else {
+			if !reflect.DeepEqual(expected, multiErr.Errors) {
+				t.Errorf("expected error %q, actual %q", expected, multiErr.Errors)
+			}
+		}
+	} else {
+		t.Errorf("expected multierror, got %T", err)
 	}
 }
 
@@ -392,8 +446,13 @@ func TestRoleEntryValidationAssumedRoleCred(t *testing.T) {
 		RoleArns:        []string{"arn:aws:iam::123456789012:role/SomeRole"},
 		PolicyArns:      []string{adminAccessPolicyARN},
 		PolicyDocument:  allowAllPolicyDocument,
-		DefaultSTSTTL:   2,
-		MaxSTSTTL:       3,
+		ExternalID:      "my-ext-id",
+		SessionTags: map[string]string{
+			"Key1": "Value1",
+			"Key2": "Value2",
+		},
+		DefaultSTSTTL: 2,
+		MaxSTSTTL:     3,
 	}
 	if err := roleEntry.validate(); err != nil {
 		t.Errorf("bad: valid roleEntry %#v failed validation: %v", roleEntry, err)

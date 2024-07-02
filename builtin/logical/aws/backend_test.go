@@ -36,6 +36,23 @@ import (
 
 var initSetup sync.Once
 
+// This looks a bit curious. The policy document and the role document act
+// as a logical intersection of policies. The role allows ec2:Describe*
+// (among other permissions). This policy allows everything BUT
+// ec2:DescribeAvailabilityZones. Thus, the logical intersection of the two
+// is all ec2:Describe* EXCEPT ec2:DescribeAvailabilityZones, and so the
+// describeAZs call should fail
+const allowAllButDescribeAzs = `{
+	"Version": "2012-10-17",
+	"Statement": [
+		{
+			"Effect": "Allow",
+			"NotAction": "ec2:DescribeAvailabilityZones",
+			"Resource": "*"
+		}
+	]
+}`
+
 type mockIAMClient struct {
 	iamiface.IAMAPI
 }
@@ -97,7 +114,7 @@ func TestAcceptanceBackend_basicSTS(t *testing.T) {
 		PreCheck: func() {
 			testAccPreCheck(t)
 			createUser(t, userName, accessKey)
-			createRole(t, roleName, awsAccountID, []string{ec2PolicyArn})
+			createRole(t, roleName, awsAccountID, []string{ec2PolicyArn}, nil)
 			// Sleep sometime because AWS is eventually consistent
 			// Both the createUser and createRole depend on this
 			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
@@ -123,7 +140,8 @@ func TestAcceptanceBackend_basicSTS(t *testing.T) {
 	})
 }
 
-func TestBackend_policyCrud(t *testing.T) {
+// TestBackend_policyCRUD tests the CRUD operations for a policy.
+func TestBackend_policyCRUD(t *testing.T) {
 	t.Parallel()
 	compacted, err := compactJSON(testDynamoPolicy)
 	if err != nil {
@@ -252,23 +270,32 @@ func getAccountID() (string, error) {
 	return *res.Account, nil
 }
 
-func createRole(t *testing.T, roleName, awsAccountID string, policyARNs []string) {
-	const testRoleAssumePolicy = `{
+func createRole(t *testing.T, roleName, awsAccountID string, policyARNs, extraTrustPolicies []string) {
+	t.Helper()
+
+	trustPolicyStmts := append([]string{
+		fmt.Sprintf(`
+		{
+		  "Effect":"Allow",
+		  "Principal": {
+			  "AWS": "arn:aws:iam::%s:root"
+		  },
+		  "Action": [
+			  "sts:AssumeRole",
+			  "sts:SetSourceIdentity"
+		  ]
+		}`, awsAccountID),
+	},
+		extraTrustPolicies...)
+
+	testRoleAssumePolicy := fmt.Sprintf(`{
       "Version": "2012-10-17",
       "Statement": [
-          {
-              "Effect":"Allow",
-              "Principal": {
-                  "AWS": "arn:aws:iam::%s:root"
-              },
-              "Action": [
-                  "sts:AssumeRole",
-                  "sts:SetSourceIdentity"
-              ]
-          }
+%s
       ]
 }
-`
+`, strings.Join(trustPolicyStmts, ","))
+
 	awsConfig := &aws.Config{
 		Region:     aws.String("us-east-1"),
 		HTTPClient: cleanhttp.DefaultClient(),
@@ -278,23 +305,23 @@ func createRole(t *testing.T, roleName, awsAccountID string, policyARNs []string
 		t.Fatal(err)
 	}
 	svc := iam.New(sess)
-	trustPolicy := fmt.Sprintf(testRoleAssumePolicy, awsAccountID)
 
 	params := &iam.CreateRoleInput{
-		AssumeRolePolicyDocument: aws.String(trustPolicy),
+		AssumeRolePolicyDocument: aws.String(testRoleAssumePolicy),
 		RoleName:                 aws.String(roleName),
 		Path:                     aws.String("/"),
 	}
 
 	log.Printf("[INFO] AWS CreateRole: %s", roleName)
-	if _, err := svc.CreateRole(params); err != nil {
+	output, err := svc.CreateRole(params)
+	if err != nil {
 		t.Fatalf("AWS CreateRole failed: %v", err)
 	}
 
 	for _, policyARN := range policyARNs {
 		attachment := &iam.AttachRolePolicyInput{
 			PolicyArn: aws.String(policyARN),
-			RoleName:  aws.String(roleName), // Required
+			RoleName:  output.Role.RoleName,
 		}
 		_, err = svc.AttachRolePolicy(attachment)
 		if err != nil {
@@ -315,21 +342,21 @@ func createUser(t *testing.T, userName string, accessKey *awsAccessKey) {
 	//	  do anything
 	// 4. Generate API creds to get an actual access key and secret key
 	timebombPolicyTemplate := `{
-		"Version": "2012-10-17",
-		"Statement": [
-			{
-				"Effect": "Deny",
-				"Action": "*",
-				"Resource": "*",
-				"Condition": {
-					"DateGreaterThan": {
-						"aws:CurrentTime": "%s"
-					}
+	"Version": "2012-10-17",
+	"Statement": [
+		{
+			"Effect": "Deny",
+			"Action": "*",
+			"Resource": "*",
+			"Condition": {
+				"DateGreaterThan": {
+					"aws:CurrentTime": "%s"
 				}
 			}
-		]
-	}
-	`
+		}
+	]
+}
+`
 	validity := time.Duration(2 * time.Hour)
 	expiry := time.Now().Add(validity)
 	timebombPolicy := fmt.Sprintf(timebombPolicyTemplate, expiry.Format(time.RFC3339))
@@ -657,7 +684,7 @@ func testAccStepRotateRoot(oldAccessKey *awsAccessKey) logicaltest.TestStep {
 	}
 }
 
-func testAccStepRead(t *testing.T, path, name string, credentialTests []credentialTestFunc) logicaltest.TestStep {
+func testAccStepRead(_ *testing.T, path, name string, credentialTests []credentialTestFunc) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      path + "/" + name,
@@ -909,6 +936,8 @@ func testAccStepReadPolicy(t *testing.T, name string, value string) logicaltest.
 				"iam_groups":               []string(nil),
 				"iam_tags":                 map[string]string(nil),
 				"mfa_serial_number":        "",
+				"session_tags":             map[string]string(nil),
+				"external_id":              "",
 			}
 			if !reflect.DeepEqual(resp.Data, expected) {
 				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
@@ -1107,22 +1136,7 @@ func TestAcceptanceBackend_iamUserGroups(t *testing.T) {
 func TestAcceptanceBackend_AssumedRoleWithPolicyDoc(t *testing.T) {
 	t.Parallel()
 	roleName := generateUniqueRoleName(t.Name())
-	// This looks a bit curious. The policy document and the role document act
-	// as a logical intersection of policies. The role allows ec2:Describe*
-	// (among other permissions). This policy allows everything BUT
-	// ec2:DescribeAvailabilityZones. Thus, the logical intersection of the two
-	// is all ec2:Describe* EXCEPT ec2:DescribeAvailabilityZones, and so the
-	// describeAZs call should fail
-	allowAllButDescribeAzs := `
-{
-	"Version": "2012-10-17",
-	"Statement": [{
-			"Effect": "Allow",
-			"NotAction": "ec2:DescribeAvailabilityZones",
-			"Resource": "*"
-	}]
-}
-`
+
 	awsAccountID, err := getAccountID()
 	if err != nil {
 		t.Logf("Unable to retrive user via sts:GetCallerIdentity: %#v", err)
@@ -1137,7 +1151,7 @@ func TestAcceptanceBackend_AssumedRoleWithPolicyDoc(t *testing.T) {
 		AcceptanceTest: true,
 		PreCheck: func() {
 			testAccPreCheck(t)
-			createRole(t, roleName, awsAccountID, []string{ec2PolicyArn})
+			createRole(t, roleName, awsAccountID, []string{ec2PolicyArn}, nil)
 			// Sleep sometime because AWS is eventually consistent
 			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
 			time.Sleep(10 * time.Second)
@@ -1173,7 +1187,7 @@ func TestAcceptanceBackend_AssumedRoleWithPolicyARN(t *testing.T) {
 		AcceptanceTest: true,
 		PreCheck: func() {
 			testAccPreCheck(t)
-			createRole(t, roleName, awsAccountID, []string{ec2PolicyArn, iamPolicyArn})
+			createRole(t, roleName, awsAccountID, []string{ec2PolicyArn, iamPolicyArn}, nil)
 			log.Printf("[WARN] Sleeping for 10 seconds waiting for AWS...")
 			time.Sleep(10 * time.Second)
 		},
@@ -1194,22 +1208,7 @@ func TestAcceptanceBackend_AssumedRoleWithGroups(t *testing.T) {
 	t.Parallel()
 	roleName := generateUniqueRoleName(t.Name())
 	groupName := generateUniqueGroupName(t.Name())
-	// This looks a bit curious. The policy document and the role document act
-	// as a logical intersection of policies. The role allows ec2:Describe*
-	// (among other permissions). This policy allows everything BUT
-	// ec2:DescribeAvailabilityZones. Thus, the logical intersection of the two
-	// is all ec2:Describe* EXCEPT ec2:DescribeAvailabilityZones, and so the
-	// describeAZs call should fail
-	allowAllButDescribeAzs := `{
-	"Version": "2012-10-17",
-	"Statement": [
-		{
-			"Effect": "Allow",
-			"NotAction": "ec2:DescribeAvailabilityZones",
-			"Resource": "*"
-		}
-	]
-}`
+
 	awsAccountID, err := getAccountID()
 	if err != nil {
 		t.Logf("Unable to retrive user via sts:GetCallerIdentity: %#v", err)
@@ -1225,7 +1224,7 @@ func TestAcceptanceBackend_AssumedRoleWithGroups(t *testing.T) {
 		AcceptanceTest: true,
 		PreCheck: func() {
 			testAccPreCheck(t)
-			createRole(t, roleName, awsAccountID, []string{ec2PolicyArn})
+			createRole(t, roleName, awsAccountID, []string{ec2PolicyArn}, nil)
 			createGroup(t, groupName, allowAllButDescribeAzs, []string{})
 			// Sleep sometime because AWS is eventually consistent
 			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
@@ -1242,6 +1241,62 @@ func TestAcceptanceBackend_AssumedRoleWithGroups(t *testing.T) {
 			if err := deleteTestGroup(groupName); err != nil {
 				return err
 			}
+			return deleteTestRole(roleName)
+		},
+	})
+}
+
+// TestAcceptanceBackend_AssumedRoleWithSessionTags tests that session tags are
+// passed to the assumed role.
+func TestAcceptanceBackend_AssumedRoleWithSessionTags(t *testing.T) {
+	t.Parallel()
+	roleName := generateUniqueRoleName(t.Name())
+	awsAccountID, err := getAccountID()
+	if err != nil {
+		t.Logf("Unable to retrive user via sts:GetCallerIdentity: %#v", err)
+		t.Skip("Could not determine AWS account ID from sts:GetCallerIdentity for acceptance tests, skipping")
+	}
+
+	roleARN := fmt.Sprintf("arn:aws:iam::%s:role/%s", awsAccountID, roleName)
+	roleData := map[string]interface{}{
+		"policy_document": allowAllButDescribeAzs,
+		"role_arns":       []string{roleARN},
+		"credential_type": assumedRoleCred,
+		"session_tags": map[string]string{
+			"foo": "bar",
+			"baz": "qux",
+		},
+	}
+
+	// allowSessionTagsPolicy allows the role to tag the session, it needs to be
+	// included in the trust policy.
+	allowSessionTagsPolicy := fmt.Sprintf(`
+		{
+			"Sid": "AllowPassSessionTagsAndTransitive",
+			"Effect": "Allow",
+			"Action": "sts:TagSession",
+			"Principal": {
+				  "AWS": "arn:aws:iam::%s:root"
+			}
+		}
+`, awsAccountID)
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		AcceptanceTest: true,
+		PreCheck: func() {
+			testAccPreCheck(t)
+			createRole(t, roleName, awsAccountID, []string{ec2PolicyArn}, []string{allowSessionTagsPolicy})
+			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
+			time.Sleep(10 * time.Second)
+		},
+		LogicalBackend: getBackend(t),
+		Steps: []logicaltest.TestStep{
+			testAccStepConfig(t),
+			testAccStepWriteRole(t, "test", roleData),
+			testAccStepRead(t, "sts", "test", []credentialTestFunc{describeInstancesTest, describeAzsTestUnauthorized}),
+			testAccStepRead(t, "creds", "test", []credentialTestFunc{describeInstancesTest, describeAzsTestUnauthorized}),
+		},
+		Teardown: func() error {
 			return deleteTestRole(roleName)
 		},
 	})
@@ -1328,6 +1383,7 @@ func TestAcceptanceBackend_FederationTokenWithGroups(t *testing.T) {
 	})
 }
 
+// TestAcceptanceBackend_SessionToken
 func TestAcceptanceBackend_SessionToken(t *testing.T) {
 	t.Parallel()
 	userName := generateUniqueUserName(t.Name())
@@ -1427,7 +1483,7 @@ func TestAcceptanceBackend_RoleDefaultSTSTTL(t *testing.T) {
 		AcceptanceTest: true,
 		PreCheck: func() {
 			testAccPreCheck(t)
-			createRole(t, roleName, awsAccountID, []string{ec2PolicyArn})
+			createRole(t, roleName, awsAccountID, []string{ec2PolicyArn}, nil)
 			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
 			time.Sleep(10 * time.Second)
 		},
@@ -1443,7 +1499,8 @@ func TestAcceptanceBackend_RoleDefaultSTSTTL(t *testing.T) {
 	})
 }
 
-func TestBackend_policyArnCrud(t *testing.T) {
+// TestBackend_policyArnCRUD test the CRUD operations for policy ARNs.
+func TestBackend_policyArnCRUD(t *testing.T) {
 	t.Parallel()
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: false,
@@ -1483,6 +1540,8 @@ func testAccStepReadArnPolicy(t *testing.T, name string, value string) logicalte
 				"iam_groups":               []string(nil),
 				"iam_tags":                 map[string]string(nil),
 				"mfa_serial_number":        "",
+				"session_tags":             map[string]string(nil),
+				"external_id":              "",
 			}
 			if !reflect.DeepEqual(resp.Data, expected) {
 				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
@@ -1503,7 +1562,8 @@ func testAccStepWriteArnRoleRef(t *testing.T, vaultRoleName, awsRoleName, awsAcc
 	}
 }
 
-func TestBackend_iamGroupsCrud(t *testing.T) {
+// TestBackend_iamGroupsCRUD tests CRUD operations for IAM groups.
+func TestBackend_iamGroupsCRUD(t *testing.T) {
 	t.Parallel()
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: false,
@@ -1554,6 +1614,8 @@ func testAccStepReadIamGroups(t *testing.T, name string, groups []string) logica
 				"iam_groups":               groups,
 				"iam_tags":                 map[string]string(nil),
 				"mfa_serial_number":        "",
+				"session_tags":             map[string]string(nil),
+				"external_id":              "",
 			}
 			if !reflect.DeepEqual(resp.Data, expected) {
 				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
@@ -1564,7 +1626,8 @@ func testAccStepReadIamGroups(t *testing.T, name string, groups []string) logica
 	}
 }
 
-func TestBackend_iamTagsCrud(t *testing.T) {
+// TestBackend_iamTagsCRUD tests the CRUD operations for IAM tags.
+func TestBackend_iamTagsCRUD(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: false,
 		LogicalBackend: getBackend(t),
@@ -1614,6 +1677,176 @@ func testAccStepReadIamTags(t *testing.T, name string, tags map[string]string) l
 				"iam_groups":               []string(nil),
 				"iam_tags":                 tags,
 				"mfa_serial_number":        "",
+				"session_tags":             map[string]string(nil),
+				"external_id":              "",
+			}
+			if !reflect.DeepEqual(resp.Data, expected) {
+				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
+			}
+
+			return nil
+		},
+	}
+}
+
+// TestBackend_stsSessionTagsCRUD tests the CRUD operations for STS session tags.
+func TestBackend_stsSessionTagsCRUD(t *testing.T) {
+	t.Parallel()
+
+	tagParams0 := map[string]string{"tag1": "value1", "tag2": "value2"}
+	tagParams1 := map[string]string{"tag1": "value1", "tag2": "value4", "tag3": "value3"}
+
+	// list of tags in the form of "key=value"
+	tagParamsList0 := []string{"key1=value1", "key2=value2"}
+	tagParamsList0Expect := map[string]string{"key1": "value1", "key2": "value2"}
+	tagParamsList1 := []string{"key1=value2", "key3=value4"}
+	tagParamsList1Expect := map[string]string{"key1": "value2", "key3": "value4"}
+
+	type testCase struct {
+		name        string
+		expectTags  []map[string]string
+		tagsParams  []any
+		externalIDs []string
+	}
+
+	for _, tt := range []testCase{
+		{
+			name: "mapped-only",
+			tagsParams: []any{
+				tagParams0,
+				map[string]string{},
+				tagParams1,
+			},
+			expectTags: []map[string]string{
+				tagParams0,
+				{},
+				tagParams1,
+			},
+			externalIDs: []string{"foo", "", "bar"},
+		},
+		{
+			name: "string-list-only",
+			tagsParams: []any{
+				tagParamsList0,
+				tagParamsList1,
+			},
+			expectTags: []map[string]string{
+				tagParamsList0Expect,
+				tagParamsList1Expect,
+			},
+			externalIDs: []string{"foo"},
+		},
+		{
+			name: "mixed-param-types",
+			tagsParams: []any{
+				tagParams0,
+				tagParamsList0,
+				tagParams1,
+				tagParamsList1,
+			},
+			expectTags: []map[string]string{
+				tagParams0,
+				tagParamsList0Expect,
+				tagParams1,
+				tagParamsList1Expect,
+			},
+			externalIDs: []string{"foo", "bar"},
+		},
+		{
+			name: "unset-tags",
+			tagsParams: []any{
+				tagParams0,
+				map[string]string{},
+			},
+			expectTags: []map[string]string{
+				tagParams0,
+				{},
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			steps := []logicaltest.TestStep{
+				testAccStepConfig(t),
+			}
+
+			if len(tt.tagsParams) != len(tt.expectTags) {
+				t.Fatalf("invalid test case: test case params and expect must have the same length")
+			}
+
+			// lastNonEmptyExternalID is used to store the last non-empty external ID for the
+			// test case. The value will is expected to be set on the role. Setting the value
+			// to an empty string has no effect on update operations.
+			var lastNonEmptyExternalID string
+			for idx, params := range tt.tagsParams {
+				var externalID string
+				if len(tt.externalIDs) > idx {
+					externalID = tt.externalIDs[idx]
+				}
+				if externalID != "" {
+					lastNonEmptyExternalID = externalID
+				}
+				steps = append(steps, testAccStepWriteSTSSessionTags(t, tt.name, params, externalID))
+				steps = append(steps, testAccStepReadSTSSessionTags(t, tt.name, tt.expectTags[idx], lastNonEmptyExternalID, false))
+			}
+			steps = append(
+				steps,
+				testAccStepDeletePolicy(t, tt.name),
+				testAccStepReadSTSSessionTags(t, tt.name, nil, "", true),
+			)
+			logicaltest.Test(t, logicaltest.TestCase{
+				AcceptanceTest: false,
+				LogicalBackend: getBackend(t),
+				Steps:          steps,
+			})
+		})
+	}
+}
+
+func testAccStepWriteSTSSessionTags(t *testing.T, name string, tags any, externalID string) logicaltest.TestStep {
+	t.Helper()
+
+	data := map[string]interface{}{
+		"credential_type": assumedRoleCred,
+		"session_tags":    tags,
+	}
+	if externalID != "" {
+		data["external_id"] = externalID
+	}
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/" + name,
+		Data:      data,
+	}
+}
+
+func testAccStepReadSTSSessionTags(t *testing.T, name string, tags any, externalID string, expectNilResp bool) logicaltest.TestStep {
+	t.Helper()
+
+	return logicaltest.TestStep{
+		Operation: logical.ReadOperation,
+		Path:      "roles/" + name,
+		Check: func(resp *logical.Response) error {
+			if resp == nil {
+				if expectNilResp {
+					return nil
+				}
+				return fmt.Errorf("vault response not received")
+			}
+
+			expected := map[string]interface{}{
+				"policy_arns":              []string(nil),
+				"role_arns":                []string(nil),
+				"policy_document":          "",
+				"credential_type":          assumedRoleCred,
+				"default_sts_ttl":          int64(0),
+				"max_sts_ttl":              int64(0),
+				"user_path":                "",
+				"permissions_boundary_arn": "",
+				"iam_groups":               []string(nil),
+				"iam_tags":                 map[string]string(nil),
+				"mfa_serial_number":        "",
+				"session_tags":             tags,
+				"external_id":              externalID,
 			}
 			if !reflect.DeepEqual(resp.Data, expected) {
 				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
