@@ -47,11 +47,4 @@ export default class KvDataFields extends Component {
       this.codeMirrorSecretData = value;
     }
   }
-
-  @action
-  onBlur() {
-    // we parse the secretData and save it to the model only after the codemirror editor looses focus. To prevent issues caused by parsing differences between the codemirror editor and the namedArgs param, we do not parse the value on a keyPress, but only when the model.secretData needs to be saved. Examples: toggling between json editor and kv data fields, comparing a diff in create view, or saving the secretData.
-    if (!this.args.secret) return;
-    this.args.secret.secretData = JSON.parse(this.codeMirrorSecretData);
-  }
 }

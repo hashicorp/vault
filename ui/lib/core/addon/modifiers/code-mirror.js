@@ -57,11 +57,6 @@ export default class CodeMirrorModifier extends Modifier {
     namedArgs.onFocus(editor.getValue());
   }
 
-  @action
-  _onBlur(namedArgs, editor) {
-    namedArgs.onBlur(editor.getValue());
-  }
-
   _setup(element, namedArgs) {
     const editor = codemirror(element, {
       // IMPORTANT: `gutters` must come before `lint` since the presence of
