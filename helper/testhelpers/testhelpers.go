@@ -762,6 +762,14 @@ func CreateEntityAndAlias(t testing.T, client *api.Client, mountAccessor, entity
 // CreateEntityAndAliasWithinMount clones an existing client and creates an entity/alias, within the specified mountPath
 // It returns the cloned client, entityID, and aliasID.
 func CreateEntityAndAliasWithinMount(t testing.T, client *api.Client, mountAccessor, mountPath, entityName, aliasName string) (*api.Client, string, string) {
+	return CreateCustomEntityAndAliasWithinMount(t, client, mountAccessor, mountPath, aliasName, map[string]interface{}{
+		"name": entityName,
+	})
+}
+
+// CreateCustomEntityAndAliasWithinMount clones an existing client and creates an entity/alias, using the custom entity, within the specified mountPath
+// It returns the cloned client, entityID, and aliasID.
+func CreateCustomEntityAndAliasWithinMount(t testing.T, client *api.Client, mountAccessor, mountPath, aliasName string, entity map[string]interface{}) (*api.Client, string, string) {
 	t.Helper()
 	userClient, err := client.Clone()
 	if err != nil {
@@ -769,9 +777,7 @@ func CreateEntityAndAliasWithinMount(t testing.T, client *api.Client, mountAcces
 	}
 	userClient.SetToken(client.Token())
 
-	resp, err := client.Logical().WriteWithContext(context.Background(), "identity/entity", map[string]interface{}{
-		"name": entityName,
-	})
+	resp, err := client.Logical().WriteWithContext(context.Background(), "identity/entity", entity)
 	if err != nil {
 		t.Fatalf("failed to create an entity:%v", err)
 	}
