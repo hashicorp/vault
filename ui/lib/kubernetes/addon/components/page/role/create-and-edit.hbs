@@ -115,6 +115,7 @@
             @mode="ruby"
             @valueUpdated={{fn (mut template.rules)}}
             @helpText={{sanitized-html this.roleRulesHelpText}}
+            @editorId="kubernetes-editor"
           >
             <Hds::Button
               @icon="reload"

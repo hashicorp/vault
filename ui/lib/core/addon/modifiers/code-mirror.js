@@ -26,9 +26,20 @@ export default class CodeMirrorModifier extends Modifier {
     } else {
       // this hook also fires any time there is a change to tracked state
       this._editor.setOption('readOnly', namedArgs.readOnly);
-      if (namedArgs.content && this._editor.getValue() !== namedArgs.content) {
-        // when setValue is called if there is a change in the value, the cursor will jump to the beginning of the text field. If you've found yourself debugging this behavior, it could be caused by parsing the namedArgs value before it hits the codeMirrorModifier.
-        this._editor.setValue(namedArgs.content);
+      const value = this._editor.getValue();
+      const content = namedArgs.content;
+      if (!content) return;
+      if (element.id === 'KVv2-editor') {
+        // KVv2 updates the namedArgs.content on every key press and then parses the object so that it can keep the model in-sync the same way the key value form fields do.
+        // However, because the parse on namedArgs happens in KVv2 before we've reached this modifier, we need to compare stringified objects to avoid unnecessary updates.
+        // This check ensures that the editor is only updated when the content has changed.
+        if (JSON.stringify(JSON.parse(content)) !== JSON.stringify(JSON.parse(value))) {
+          this._editor.setValue(content);
+        }
+      } else {
+        if (value !== content) {
+          this._editor.setValue(content);
+        }
       }
     }
   }

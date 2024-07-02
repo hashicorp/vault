@@ -20,6 +20,7 @@
     @valueUpdated={{this.handleJson}}
     @onBlur={{this.onBlur}}
     @readOnly={{eq @type "details"}}
+    @editorId="KVv2-editor"
   />
   {{#if (or @modelValidations.secretData.errors this.lintingErrors)}}
     <AlertInline
