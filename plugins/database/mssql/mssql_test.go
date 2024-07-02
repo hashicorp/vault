@@ -294,7 +294,7 @@ func TestUpdateUser_password(t *testing.T) {
 				Username: dbUser,
 			}
 
-			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+			ctx, cancel = context.WithTimeout(context.Background(), 20*time.Second)
 			defer cancel()
 			deleteResp, err := db.DeleteUser(ctx, deleteReq)
 			if err != nil {
