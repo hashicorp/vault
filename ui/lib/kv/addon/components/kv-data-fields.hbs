@@ -15,10 +15,11 @@
 {{#if @showJson}}
   <JsonEditor
     @title="{{if (eq @type 'create') 'Secret' 'Version'}} data"
-    @value={{this.stringifiedSecretData}}
+    @value={{this.startingValue}}
     @allowObscure={{true}}
     @valueUpdated={{this.handleJson}}
     @readOnly={{eq @type "details"}}
+    @editorId="KVv2-editor"
   />
   {{#if (or @modelValidations.secretData.errors this.lintingErrors)}}
     <AlertInline

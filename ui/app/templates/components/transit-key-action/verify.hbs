@@ -34,6 +34,7 @@
           @valueUpdated={{fn (mut @trackedInput)}}
           @mode="ruby"
           @data-test-transit-input="input"
+          @editorId="verify-editor"
         />
       </div>
     </div>
@@ -155,13 +156,25 @@
           {{#if (or (and @verification (eq @verification "HMAC")) @hmac)}}
             <div class="field is-flex-column is-flex-grow-1">
               <div class="control is-flex-column is-flex-grow-1">
-                <JsonEditor @title="HMAC" @value={{@hmac}} @valueUpdated={{fn (mut @hmac)}} @mode="ruby" />
+                <JsonEditor
+                  @title="HMAC"
+                  @value={{@hmac}}
+                  @valueUpdated={{fn (mut @hmac)}}
+                  @mode="ruby"
+                  @editorId="verify-hmac-editor"
+                />
               </div>
             </div>
           {{else}}
             <div class="field is-flex-column is-flex-grow-1">
               <div class="control is-flex-column is-flex-grow-1">
-                <JsonEditor @title="Signature" @value={{@signature}} @valueUpdated={{fn (mut @signature)}} @mode="ruby" />
+                <JsonEditor
+                  @title="Signature"
+                  @value={{@signature}}
+                  @valueUpdated={{fn (mut @signature)}}
+                  @mode="ruby"
+                  @editorId="verify-signature-editor"
+                />
               </div>
             </div>
           {{/if}}
@@ -170,7 +183,13 @@
     {{else}}
       <div class="field">
         <div class="control">
-          <JsonEditor @title="HMAC" @value={{@hmac}} @valueUpdated={{fn (mut @hmac)}} @mode="ruby" />
+          <JsonEditor
+            @title="HMAC"
+            @value={{@hmac}}
+            @valueUpdated={{fn (mut @hmac)}}
+            @mode="ruby"
+            @editorId="verify-hmac-two-editor"
+          />
         </div>
       </div>
       <div class="field">

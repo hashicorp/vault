@@ -289,6 +289,7 @@
             @helpText={{@attr.options.helpText}}
             @mode={{@attr.options.mode}}
             @example={{@attr.options.example}}
+            @editorId={{@attr.name}}
           >
             {{#if @attr.options.allowReset}}
               <Hds::Button
@@ -366,6 +367,7 @@
       @valueUpdated={{fn this.codemirrorUpdated false}}
       @helpText={{@attr.options.helpText}}
       @example={{@attr.options.example}}
+      @editorId={{@attr.name}}
     />
   {{else if (eq @attr.options.editType "yield")}}
     {{yield}}

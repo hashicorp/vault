@@ -78,6 +78,7 @@
           @valueUpdated={{action (mut @model.policy)}}
           @mode="ruby"
           @extraKeys={{hash Shift-Enter=(perform this.save)}}
+          @editorId="policy-editor"
           data-test-policy-editor
         />
       {{/if}}
