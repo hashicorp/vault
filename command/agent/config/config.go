@@ -50,6 +50,7 @@ type Config struct {
 	DisableKeepAlivesAutoAuth   bool                       `hcl:"-"`
 	Exec                        *ExecConfig                `hcl:"exec,optional"`
 	EnvTemplates                []*ctconfig.TemplateConfig `hcl:"env_template,optional"`
+	TemplatesDoneCommand        []string                   `hcl:"templates_done_command,optional"`
 }
 
 const (
@@ -288,6 +289,12 @@ func (c *Config) Merge(c2 *Config) *Config {
 
 	for _, envTmpl := range c2.EnvTemplates {
 		result.EnvTemplates = append(result.EnvTemplates, envTmpl)
+	}
+
+	result.TemplatesDoneCommand = append(result.TemplatesDoneCommand, c.TemplatesDoneCommand...)
+	if len(c2.TemplatesDoneCommand) > 0 {
+		result.TemplatesDoneCommand = nil
+		result.TemplatesDoneCommand = append(result.TemplatesDoneCommand, c2.TemplatesDoneCommand...)
 	}
 
 	return result
