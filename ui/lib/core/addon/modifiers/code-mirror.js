@@ -80,7 +80,6 @@ export default class CodeMirrorModifier extends Modifier {
     });
 
     editor.on('change', bind(this, this._onChange, namedArgs));
-    editor.on('blur', bind(this, this._onBlur, namedArgs));
     editor.on('focus', bind(this, this._onFocus, namedArgs));
 
     this._editor = editor;

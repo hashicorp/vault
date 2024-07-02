@@ -28,15 +28,17 @@ import { stringify } from 'core/helpers/stringify';
 
 export default class KvDataFields extends Component {
   @tracked lintingErrors;
-  @tracked codeMirrorSecretData;
 
   get startingValue() {
-    // the value tracked by codemirror is always a JSON string.
-    // The API will return a json blob which is stringified and passed to the codemirror editor.
-    // Otherwise the default is a stringified object with an empty key value pair.
-    return this.args.secret?.secretData
-      ? stringify([this.args.secret.secretData], {})
-      : JSON.stringify({ '': '' }, null, 2);
+    // must pass the third param called "space" in JSON.stringify to structure object with whitespace
+    // otherwise the following codemirror modifier check will pass `this._editor.getValue() !== namedArgs.content` and _setValue will be called.
+    // the method _setValue moves the cursor to the beginning of the text field.
+    // the effect is that the cursor jumps after the first key input.
+    return JSON.stringify({ '': '' }, null, 2);
+  }
+
+  get stringifiedSecretData() {
+    return this.args.secret?.secretData ? stringify([this.args.secret.secretData], {}) : this.startingValue;
   }
 
   @action
@@ -44,7 +46,7 @@ export default class KvDataFields extends Component {
     codemirror.performLint();
     this.lintingErrors = codemirror.state.lint.marked.length > 0;
     if (!this.lintingErrors) {
-      this.codeMirrorSecretData = value;
+      this.args.secret.secretData = JSON.parse(value);
     }
   }
 }
