@@ -83,6 +83,10 @@ $ make bootstrap
 ...
 ```
 
+> [!WARNING]
+> 📝 **`git config --global --add url."git@github.com:".insteadOf "https://github.com/"`**
+> may be required if you encounter *`could not read Username for 'https://github.com'`* 
+
 To compile a development version of Vault, run `make` or `make dev`. This will
 put the Vault binary in the `bin` and `$GOPATH/bin` folders:
 
