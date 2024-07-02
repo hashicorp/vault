@@ -70,7 +70,7 @@ The beta request limiter will be removed from Vault entirely in a later release.
 
 ### JWT auth login requires bound audiences on the role
 
-The `bound_audiences` parameter of "jwt" roles is **mandatory** if the JWT contains an audience 
+The `bound_audiences` parameter of "jwt" roles is **mandatory** if the JWT contains an audience
 (which is more often than not the case), and **must** match at least one of
 the JWT's associated `aud` claims. The `aud` claim claim can be a single string
 or a list of strings as per [RFC 7519 Section 4.1.3](https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.3).
@@ -86,3 +86,5 @@ incorrectly. For additional details, refer to the
 @include 'known-issues/ocsp-redirect.mdx'
 
 @include 'known-issues/agent-and-proxy-excessive-cpu-1-17.mdx'
+
+@include 'known-issues/config_listener_proxy_protocol_behavior_issue.mdx'
