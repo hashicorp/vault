@@ -7,6 +7,7 @@ import { action } from '@ember/object';
 import { bind } from '@ember/runloop';
 import codemirror from 'codemirror';
 import Modifier from 'ember-modifier';
+import { stringify } from 'core/helpers/stringify';
 
 import 'codemirror/addon/edit/matchbrackets';
 import 'codemirror/addon/selection/active-line';
@@ -30,8 +31,9 @@ export default class CodeMirrorModifier extends Modifier {
       let content = namedArgs.content;
       if (!content) return; // if there is no content added to the editor, don't do anything.
       try {
-        value = JSON.stringify(JSON.parse(value));
-        content = JSON.stringify(JSON.parse(content));
+        // we use the stringify helper so we do not flatten the json object
+        value = stringify([JSON.parse(value)], {});
+        content = stringify([JSON.parse(content)], {});
       } catch {
         // this catch will occur for non-json content when the mode is not javascript (e.g. ruby).
       }

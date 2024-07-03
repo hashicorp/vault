@@ -326,17 +326,25 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await fillIn(FORM.inputByAttr('path'), 'json jump');
 
     await click(FORM.toggleJson);
-    await fillIn(GENERAL.codemirror, '{ "json":');
-    await triggerKeyEvent(GENERAL.codemirror, 'keyup', 'Enter');
+    await fillIn(GENERAL.codemirrorTextarea, '{ "json":');
+    await triggerKeyEvent(GENERAL.codemirrorTextarea, 'keyup', 'Enter');
 
     const actualCursorPosition = JSON.stringify(codemirror().getCursor());
-    assert.strictEqual(actualCursorPosition, predictedCursorPosition, 'Version one data is displayed');
+    assert.strictEqual(actualCursorPosition, predictedCursorPosition, 'the cursor stayed on the next line');
   });
 
   test('viewing advanced secret data versions displays the correct version data', async function (assert) {
     assert.expect(2);
-    const obscuredDataV1 = '{"foo1":{"name":"********"}}';
-    const obscuredDataV2 = '{"foo2":{"name":"********"}}';
+    const obscuredDataV1 = `{
+  "foo1": {
+    "name": "********"
+  }
+}`;
+    const obscuredDataV2 = `{
+  "foo2": {
+    "name": "********"
+  }
+}`;
 
     await visit(`/vault/secrets/${this.backend}/kv/create`);
     await fillIn(FORM.inputByAttr('path'), 'complex_version_test');
