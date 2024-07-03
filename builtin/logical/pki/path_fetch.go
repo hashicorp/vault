@@ -55,7 +55,7 @@ var pathFetchReadSchema = map[int][]framework.Response{
 // Returns the CA in raw format
 func pathFetchCA(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: `ca(/pem)?/?`,
+		Pattern: `ca(/pem)?`,
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixPKI,
