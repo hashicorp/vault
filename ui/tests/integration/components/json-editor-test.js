@@ -122,12 +122,12 @@ module('Integration | Component | json-editor', function (hooks) {
     assert.dom('.CodeMirror-code').hasText(`{ "test": "********"}`, 'shows data with obscured values');
     assert.dom('[data-test-toggle-input="revealValues"]').isNotChecked('reveal values toggle is unchecked');
     await click('[data-test-toggle-input="revealValues"]');
-    assert.dom('.CodeMirror-code').hasText(JSON_BLOB, 'shows data with real values');
+    assert.dom('.CodeMirror-code').hasText('{ "test": "test"}', 'shows data with real values');
     assert.dom('[data-test-toggle-input="revealValues"]').isChecked('reveal values toggle is checked');
     // turn obscure back on to ensure readonly overrides reveal setting
     await click('[data-test-toggle-input="revealValues"]');
     this.set('readOnly', false);
     assert.dom('[data-test-toggle-input="revealValues"]').doesNotExist('reveal values toggle is hidden');
-    assert.dom('.CodeMirror-code').hasText(JSON_BLOB, 'shows data with real values on edit mode');
+    assert.dom('.CodeMirror-code').hasText('{ "test": "test"}', 'shows data with real values on edit mode');
   });
 });
