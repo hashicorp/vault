@@ -14,7 +14,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"io/ioutil"
 	"mime"
 	"net"
 	"net/http"
@@ -313,7 +312,7 @@ func (w *copyResponseWriter) WriteHeader(code int) {
 func handleAuditNonLogical(core *vault.Core, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origBody := new(bytes.Buffer)
-		reader := ioutil.NopCloser(io.TeeReader(r.Body, origBody))
+		reader := io.NopCloser(io.TeeReader(r.Body, origBody))
 		r.Body = reader
 		req, _, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), core.RouterAccess(), w, r)
 		if err != nil || status != 0 {
@@ -815,14 +814,14 @@ func parseJSONRequest(perfStandby bool, r *http.Request, w http.ResponseWriter, 
 		// Since we're checking PerfStandby here we key on origBody being nil
 		// or not later, so we need to always allocate so it's non-nil
 		origBody = new(bytes.Buffer)
-		reader = ioutil.NopCloser(io.TeeReader(reader, origBody))
+		reader = io.NopCloser(io.TeeReader(reader, origBody))
 	}
 	err := jsonutil.DecodeJSONFromReader(reader, out)
 	if err != nil && err != io.EOF {
 		return nil, fmt.Errorf("failed to parse JSON input: %w", err)
 	}
 	if origBody != nil {
-		return ioutil.NopCloser(origBody), err
+		return io.NopCloser(origBody), err
 	}
 	return nil, err
 }

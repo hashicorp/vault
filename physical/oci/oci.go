@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"sort"
@@ -172,7 +173,7 @@ func (o *Backend) Put(ctx context.Context, entry *physical.Entry) error {
 		BucketName:         &o.bucketName,
 		ObjectName:         &entry.Key,
 		ContentLength:      &size,
-		PutObjectBody:      ioutil.NopCloser(bytes.NewReader(entry.Value)),
+		PutObjectBody:      io.NopCloser(bytes.NewReader(entry.Value)),
 		OpcMeta:            nil,
 		OpcClientRequestId: &opcClientRequestId,
 	}
