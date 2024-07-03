@@ -29,7 +29,7 @@ export default class CodeMirrorModifier extends Modifier {
       this._editor.setOption('readOnly', namedArgs.readOnly);
       let value = this._editor.getValue();
       let content = namedArgs.content;
-      if (!content) return; // if there is no content added to the editor, don't do anything.
+      if (!content) return;
       try {
         // we use the stringify helper so we do not flatten the json object
         value = stringify([JSON.parse(value)], {});
