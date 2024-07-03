@@ -31,7 +31,9 @@ export default class CodeMirrorModifier extends Modifier {
       let content = namedArgs.content;
       if (!content) return;
       try {
-        // we use the stringify helper so we do not flatten the json object
+        // First parse json to make white space and line breaks consistent between the two items,
+        // then stringify so they can be compared.
+        // We use the stringify helper so we do not flatten the json object
         value = stringify([JSON.parse(value)], {});
         content = stringify([JSON.parse(content)], {});
       } catch {

@@ -11,6 +11,7 @@ import hbs from 'htmlbars-inline-precompile';
 import jsonEditor from '../../pages/components/json-editor';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
+import codemirror from 'vault/tests/helpers/codemirror';
 
 const component = create(jsonEditor);
 
@@ -18,11 +19,11 @@ module('Integration | Component | json-editor', function (hooks) {
   setupRenderingTest(hooks);
 
   const JSON_BLOB = `{
-    "test": "test"
-  }`;
+  "test": "test"
+}`;
   const BAD_JSON_BLOB = `{
-    "test": test
-  }`;
+  "test": test
+}`;
 
   hooks.beforeEach(function () {
     this.set('valueUpdated', sinon.spy());
@@ -122,12 +123,27 @@ module('Integration | Component | json-editor', function (hooks) {
     assert.dom('.CodeMirror-code').hasText(`{ "test": "********"}`, 'shows data with obscured values');
     assert.dom('[data-test-toggle-input="revealValues"]').isNotChecked('reveal values toggle is unchecked');
     await click('[data-test-toggle-input="revealValues"]');
-    assert.dom('.CodeMirror-code').hasText('{ "test": "test"}', 'shows data with real values');
+    assert.strictEqual(codemirror().getValue(), JSON_BLOB, 'shows data with real values');
     assert.dom('[data-test-toggle-input="revealValues"]').isChecked('reveal values toggle is checked');
     // turn obscure back on to ensure readonly overrides reveal setting
     await click('[data-test-toggle-input="revealValues"]');
     this.set('readOnly', false);
     assert.dom('[data-test-toggle-input="revealValues"]').doesNotExist('reveal values toggle is hidden');
-    assert.dom('.CodeMirror-code').hasText('{ "test": "test"}', 'shows data with real values on edit mode');
+    assert.strictEqual(codemirror().getValue(), JSON_BLOB, 'shows data with real values on edit mode');
+  });
+
+  test('code-mirror modifier sets value correctly on non json object', async function (assert) {
+    this.value = '#A comment';
+    await render(hbs`
+      <JsonEditor
+        @value={{this.value}}
+        @example={{this.example}}
+        @mode="ruby"
+        @valueUpdated={{fn (mut this.value)}}
+      />
+    `);
+    assert.strictEqual(codemirror().getValue(), `#A comment`, 'shows initial non json value');
+    codemirror().setValue('#Another comment');
+    assert.strictEqual(codemirror().getValue(), `#Another comment`, 'shows updated non json value');
   });
 });
