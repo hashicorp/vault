@@ -12,7 +12,7 @@ description: >-
 @include 'alerts/enterprise-and-hcp.mdx'
 
 ## Overview
- 
+
 Many organizations have infrastructure that spans multiple datacenters. Vault
 provides the critical services of identity management, secrets storage, and
 policy management. This functionality is expected to be highly available and
@@ -101,7 +101,7 @@ in the past.
 <Note title="Performance replication does not include automated integrated storage snapshots">
 
 Vault does not replicate automated integrated storage snapshots as a part of
-performance replication. 
+performance replication.
 
 You must explicitly configure each of the primary and secondary performance
 clusters to create individual automated snapshots replicas.
@@ -144,7 +144,7 @@ $ vault secrets enable -local -path=us_west_data kv-v2
 ```
 
 -> **Learn:** Refer to the [Performance Replication with Paths
-Filter](/vault/tutorials/enterprise/paths-filter) tutorial for
+Filter](/vault/tutorials/enterprise/performance-replication) tutorial for
 step-by-step instructions.
 
 
@@ -270,7 +270,7 @@ Refer to the following tutorials replication setup and best practices:
 
 - [Setting up Performance Replication](/vault/tutorials/enterprise/performance-replication)
 - [Disaster Recovery Replication Setup](/vault/tutorials/enterprise/disaster-recovery)
-- [Performance Replication with Paths Filters](/vault/tutorials/enterprise/paths-filter)
+- [Performance Replication with Paths Filters](/vault/tutorials/enterprise/performance-replication)
 - [Monitoring Vault Replication](/vault/tutorials/monitoring/monitor-replication)
 
 ## API
