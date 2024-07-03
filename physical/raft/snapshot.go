@@ -267,7 +267,7 @@ func (f *BoltSnapshotStore) openFromFile(id string) (*raft.SnapshotMeta, io.Read
 	filename := filepath.Join(f.path, id, databaseFilename)
 	installer := &boltSnapshotInstaller{
 		meta:       meta,
-		ReadCloser: ioutil.NopCloser(strings.NewReader(filename)),
+		ReadCloser: io.NopCloser(strings.NewReader(filename)),
 		filename:   filename,
 	}
 
