@@ -196,6 +196,7 @@
     "https-proxy-agent": "^2.2.3",
     "ini": "^1.3.6",
     "kind-of": "^6.0.3",
+    "micromatch": "^4.0.7",
     "node-notifier": "^8.0.1",
     "nth-check": "^2.0.1",
     "prismjs": "^1.21.0",
