@@ -81,6 +81,12 @@ Users may not be able to log into Vault if the JWT role is configured
 incorrectly. For additional details, refer to the
 [JWT auth method (API)](/vault/api-docs/auth/jwt) documentation.
 
+### Auto-roll billing start date
+
+ As of 1.17.3 and later, the billing start date (license start date if not configured) is the auto-rolled to the most recent year.
+
+@include 'auto-roll-billing-start-example.mdx'
+
 ## Known issues and workarounds
 
 @include 'known-issues/ocsp-redirect.mdx'

@@ -263,6 +263,10 @@ not have namespace attribution for the `new_clients` stanza. Furthermore, the
 `new_clients` counts returned for the current month will be an approximation.
 That is to say, the response will appear as follows.
 
+- As of 1.15.13, 1.16.7, 1.17.3, 1.18 and later, the billing start date (license start date if not configured) is the auto-rolled to the most recent year.
+
+  @include 'auto-roll-billing-start-example.mdx'
+
 ```json
 {
    "months":[
@@ -347,6 +351,7 @@ This endpoint was added in Vault 1.6.
 
 - `start_time` `(string, optional)` - An RFC3339 timestamp or Unix epoch time. Specifies the start of the
   period for which client counts will be reported. If no start time is specified, the billing start date will be used.
+  The billing start date is the auto-rolled start date to the most recent year. 
 - `end_time` `(string, optional)` - An RFC3339 timestamp or Unix epoch time. Specifies the end of the period
   for which client counts will be reported. If no end time is specified, the end of the current month will be used.
 - `limit_namespaces` `(int, optional)` - Controls the total number of by_namespace data returned. This can

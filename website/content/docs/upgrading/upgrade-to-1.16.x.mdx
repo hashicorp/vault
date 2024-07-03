@@ -88,6 +88,12 @@ operation called an activation-flag. The feature is gated until a Vault operator
 decides to trigger the flag. More information can be found in the
 [secrets sync documentation](/vault/docs/sync#activating-the-feature).
 
+### Auto-roll billing start date
+
+ As of 1.16.7 and later, the billing start date (license start date if not configured) is the auto-rolled to the most recent year.
+
+@include 'auto-roll-billing-start-example.mdx'
+
 ## Known issues and workarounds
 
 @include 'known-issues/1_16-jwt_auth_bound_audiences.mdx'
