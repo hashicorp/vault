@@ -1,0 +1,101 @@
+---
+layout: docs
+page_title: Azure authentication plugin setup
+description: >-
+  Blah blah
+---
+
+# Azure authentication plugin setup
+
+Vault requires valid client credentials to access Azure APIs to complete the
+Azure authentication workflow.
+
+## Before you start
+
+- **You must have an [Azure AD application]** that will generate MSI access
+  tokens.
+- **Vault must have read access to the relevant Azure Resource Manager resources**.
+  - If you **do** host your Vault cluster on Azure, you can enable a
+    [managed service identity] on the resource that acquires the access token.
+  - If you **do not** your Vault cluster on Azure, Vault must have a valid
+    [Azure OAuth 2.0 client credential].
+
+## Step 1: Create Azure role assignments
+
+If you plan to use the `vm_name`, `vmss_name`, or `resource_id` parameters
+during Vault login, you must grant the following [Azure role assignments] to
+your Azure AD application so Vault can use Azure APIs during authentication.
+
+<Tabs>
+<Tab heading="Virtual machines">
+
+Vault login parameter | Azure API Permission
+--------------------- | --------------------
+`vm_name`             | `Microsoft.Compute/virtualMachines/*/read`
+
+</Tab>
+<Tab heading="VM Scale Sets">
+
+
+Scaling  | Vault login parameter | Azure API Permission
+-------- | --------------------- | --------------------
+Uniform  | `vmss_name`           | `Microsoft.Compute/virtualMachineScaleSets/*/read`
+Flexible | `vmss_name`           | `Microsoft.Compute/virtualMachineScaleSets/*/read` `Microsoft.ManagedIdentity/userAssignedIdentities/*/read` |
+
+</Tab>
+<Tab heading="Managed Identity Services">
+
+Vault login parameter | Azure API Permission
+--------------------- | --------------------
+`resource_id`         | `read` on the resource used to obtain the JWT
+
+</Tab>
+</Tabs>
+
+## Step 2: Set Azure API permission
+
+Grant [Azure API permissions] to the service principal so Vault can manage the
+root rotation in Azure.
+
+Permission Name             | Type       
+--------------------------- | -----------
+`Application.ReadWrite.All` | Application
+
+
+## Step 3: Configure Vault
+
+<Tabs>
+<Tab heading="CLI">
+
+Hello
+
+</Tab>
+
+<Tab heading="API">
+
+Hello
+
+</Tab>
+
+<Tab heading="Vault UI">
+
+Hello
+
+</Tab>
+</Tabs>
+
+
+
+
+
+<!-- External link definitions -->
+
+[Azure AD application]: https://learn.microsoft.com/entra/identity-platform/quickstart-register-app
+[Azure OAuth 2.0 client credential]: https://learn.microsoft.com/entra/identity-platform/v2-oauth2-client-creds-grant-flow
+[managed service identity]: https://learn.microsoft.com/entra/identity/managed-identities-azure-resources/
+[Azure role assignments]: https://learn.microsoft.com/azure/role-based-access-control/overview#role-assignments
+[Azure API permissions]: https://learn.microsoft.com/entra/identity-platform/permissions-consent-overview#types-of-permissions
+
+[vmss-uniform]: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-orchestration-modes#scale-sets-with-uniform-orchestration
+[vmss-flex]: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-orchestration-modes#scale-sets-with-flexible-orchestration
+[managed-identities]: https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/managed-identities-status

@@ -1,0 +1,30 @@
+---
+layout: docs
+page_title: Azure secret management plugin
+description: >-
+  Blah blah
+---
+
+# Azure secret management plugin
+
+<Highlight title="Default mount path">
+
+  The default mount path for the `azure` secrets plugin is `/auth/azure`.
+
+</Highlight>
+
+The `azure` secrets plugin provides a simple, flexible way to manage permissions
+for service principals.
+
+Use the plugin to generate Azure service principals along with the relevant roles
+and group assignments. Then map Vault roles to one or more of the generated
+Azure roles and the associated group assignments. 
+
+Associating each of the generated service principals with a Vault lease means that
+when the Vault lease expires, the service principal is automatically deleted.
+
+If you specify a pre-existing service principal as part of the role
+configuration, Vault automatically creates a new password instead of a new
+service principal and then deletes the password when the lease expires.
+
+<!-- External link definitions -->

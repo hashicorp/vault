@@ -1,0 +1,412 @@
+[
+{ "divider": true },
+{ "heading": "OFFICIAL PLUGIN GUIDES" },
+{
+  "title": "Plugin support",
+  "path": "support"
+},
+{
+  "title": "Plugin system overview",
+  "path": "system"
+},
+{
+  "title": "3rd party service plugins",
+  "routes": [
+    {
+      "title": "AliCloud",
+      "href": "#"
+    },
+    {
+      "title": "AWS",
+      "href": "#"
+    },
+    {
+      "title": "Active Directory",
+      "badge": {
+        "text": "DEPRECATED",
+        "type": "outlined",
+        "color": "neutral"
+      },
+      "routes": [
+        {
+          "title": "<code>ad</code>",
+          "path": "plugins/ad"
+        }
+      ]
+    },
+    {
+      "title": "Azure (authN)",
+      "routes": [
+        {
+          "title": "Summary",
+          "path": "plugins/azure-authn"
+        },
+        {
+          "title": "Setup",
+          "path": "plugins/azure-authn/setup"
+        },
+        {
+          "title": "Authenticate to Vault",
+          "path": "plugins/azure-authn/login"
+        },
+        {
+          "title": "API",
+          "routes":[
+            {
+              "title": "Overview",
+              "path": "plugins/azure-authn/api"
+            },
+            {
+              "title": "CreateConfiguration",
+              "path": "plugins/azure-authn/api/create-config"
+            },
+            {
+              "title": "DeleteConfiguration",
+              "path": "plugins/azure-authn/api/delete-config"
+            },
+            {
+              "title": "ReadConfiguration",
+              "path": "plugins/azure-authn/api/read-config"
+            },
+            {
+              "title": "RotateRoot",
+              "path": "plugins/azure-authn/api/rotate-root"
+            },
+            {
+              "title": "UpsertRole",
+              "path": "plugins/azure-authn/api/upsert-role"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Azure (secrets)",
+      "routes": [
+        {
+          "title": "Summary",
+          "path": "plugins/azure-secrets"
+        },
+        {
+          "title": "Setup",
+          "path": "plugins/azure-secrets/setup"
+        }
+      ]
+    },
+    {
+      "title": "Cloud Foundry",
+      "href": "#"
+    },
+    {
+      "title": "GitHub",
+      "href": "#"
+    },
+    {
+      "title": "Google",
+      "routes": [
+        {
+          "title": "Google Cloud Platform",
+          "href": "#"
+        },
+        {
+          "title": "GCP KMS",
+          "href": "#"
+        }
+      ]
+    },
+    {
+      "title": "Kubernetes",
+      "href": "#"
+    },
+    {
+      "title": "MongoDB Atlas",
+      "href": "#"
+    },
+    {
+      "title": "Okta",
+      "href": "#"
+    },
+    {
+      "title": "Oracle Cloud Infrastructure",
+      "href": "#"
+    },
+    {
+      "title": "RabbitMQ",
+      "href": "#"
+    }
+  ]
+},
+
+{
+  "title": "Certificate management",
+  "routes": [
+    {
+      "title": "PKI",
+      "href": "#"
+    },
+    {
+      "title": "Cert",
+      "href": "#"
+    },
+    {
+      "title": "Venafi",
+      "href": "#"
+    }
+  ]
+},
+
+{
+  "title": "Database credential management",
+  "routes": [
+    {
+      "title": "Overview",
+      "href": "#"
+    },
+    {
+      "title": "Cassandra",
+      "href": "#"
+    },
+    {
+      "title": "Couchbase",
+      "href": "#"
+    },
+    {
+      "title": "Elasticsearch",
+      "href": "#"
+    },
+    {
+      "title": "HanaDB",
+      "href": "#"
+    },
+    {
+      "title": "IBM Db2",
+      "href": "#"
+    },
+    {
+      "title": "InfluxDB",
+      "href": "#"
+    },
+    {
+      "title": "MongoDB",
+      "href": "#"
+    },
+    {
+      "title": "MongoDB Atlas",
+      "href": "#"
+    },
+    {
+     "title": "MSSQL",
+      "href": "#"
+    },
+    {
+      "title": "MySQL/MariaDB",
+      "href": "#"
+    },
+    {
+      "title": "Oracle",
+      "href": "#"
+    },
+    {
+      "title": "PostgreSQL",
+      "href": "#"
+    },
+    {
+      "title": "Redis",
+      "href": "#"
+    },
+    {
+      "title": "Redis ElastiCache",
+      "href": "#"
+    },
+    {
+      "title": "Redshift",
+      "href": "#"
+    },
+    {
+      "title": "Snowflake",
+      "href": "#"
+    },
+    {
+      "title": "Custom",
+      "href": "#"
+    }
+  ]
+},
+
+{
+  "title": "HashiCorp products",
+  "routes": [
+    {
+      "title": "Consul",
+      "href": "#"
+    },
+    {
+      "title": "Nomad",
+      "href": "#"
+    },
+    {
+      "title": "Terraform",
+      "href": "#"
+    }
+  ]
+},
+
+{
+  "title": "Standard protocols",
+  "routes": [
+    {
+      "title": "JWT/OIDC",
+      "href": "#"
+    },
+    {
+      "title": "Kerberos",
+      "href": "#"
+    },
+    {
+      "title": "KMIP",
+      "href": "#",
+      "badge": {
+        "text": "ENTERPRISE",
+        "type": "outlined",
+        "color": "highlight"
+      }
+    },
+    {
+      "title": "LDAP",
+      "href": "#"
+    },
+    {
+      "title": "RADIUS PAP",
+      "href": "#"
+    },
+    {
+      "title": "SAML",
+      "href": "#",
+      "badge": {
+        "text": "ENTERPRISE",
+        "type": "outlined",
+        "color": "highlight"
+      }
+    },
+    {
+      "title": "SSH",
+      "href": "#"
+    },
+    {
+      "title": "TOTP",
+      "href": "#"
+    },
+    {
+      "title": "Username/Password",
+      "href": "#"
+    }
+  ]
+},
+
+{
+  "title": "Vault native plugins",
+  "routes": [
+    {
+      "title": "Application roles",
+      "href": "#"
+    },
+    {
+      "title": "Cubbyhole",
+      "href": "#"
+    },
+    {
+      "title": "Key/Value",
+      "href": "#"
+    },
+    {
+      "title": "Key Management",
+      "href": "#",
+      "badge": {
+        "text": "ENTERPRISE",
+        "type": "outlined",
+        "color": "highlight"
+      }
+    },
+    {
+      "title": "Transform",
+      "href": "#",
+      "badge": {
+        "text": "ENTERPRISE",
+        "type": "outlined",
+        "color": "highlight"
+      }
+    },
+    {
+      "title": "Transit",
+      "href": "#"
+    },
+    {
+      "title": "Identity",
+      "href": "#"
+    }
+  ]
+},
+
+{ "divider": true },
+{ "heading": "BUILD VAULT PLUGINS" },
+
+{
+  "title": "Plugin architecture",
+  "href": "#"
+},
+{
+  "title": "Send event notifications to plugins",
+  "href": "#"
+},
+{
+  "title": "Create a basic plugin",
+  "href": "#"
+},
+{
+  "title": "Containerize your plugin",
+  "href": "#"
+},
+{
+  "title": "Submit a plugin to the registry",
+  "href": "#"
+},
+
+{
+  "title": "Plugin Architecture",
+  "path": "plugin-architecture"
+},
+{
+  "title": "Plugin Development",
+  "path": "plugin-development"
+},
+{
+  "title": "Plugin Development — Event Notifications",
+  "path": "plugin-development-event-notifications",
+  "badge": {
+    "text": "ENTERPRISE",
+    "type": "outlined",
+    "color": "neutral"
+  }
+},
+{
+  "title": "Plugin Management",
+  "path": "plugin-management"
+},
+{
+  "title": "Containerized plugins",
+  "routes": [
+    {
+      "title": "Overview",
+      "path": "containerized-plugins"
+    },
+    {
+      "title": "Add a containerized plugin",
+      "path": "containerized-plugins/add-a-containerized-plugin"
+    }
+  ]
+},
+{
+  "title": "Integrations Library",
+  "href": "/vault/integrations"
+}
+]

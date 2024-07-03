@@ -1,0 +1,21 @@
+<a id="resource-request" />
+
+**`resource`** `<string>` <b style={{color: 'var(--vault-link)'}}>required</b>
+
+<sup>Optional Vault environment variable: <code>AZURE_AD_RESOURCE</code></sup>
+
+Resource URL for the application registered in Azure Active Directory.
+The `resource` field must match the audience (`aud` claim) of the `jwt` field
+provided to the login API.
+
+<Tip title="External reference">
+
+  Refer to the Azure guide, [Get a token using HTTP] for managed identities for
+  more details about setting the audience when requesting a JWT access token
+  from the Azure Instance Metadata Service (IMDS) endpoint.
+
+</Tip>
+
+<!-- External link definitions -->
+
+[Get a token using HTTP]: (https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/how-to-use-vm-token#get-a-token-using-http)

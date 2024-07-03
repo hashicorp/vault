@@ -1,0 +1,25 @@
+---
+layout: docs
+page_title: Azure authentication plugin
+description: >-
+  Blah blah
+---
+
+# Azure authentication plugin
+
+<Highlight title="Default mount path">
+
+  The default mount path for the `azure` authentication plugin is `/auth/azure`.
+
+</Highlight>
+
+The `azure` authentication plugin lets Vault work with Azure as a trusted third
+party. Clients can authenticate to Vault with a JSON web token (JWT) signed by
+Azure Active Directory for the configured tenant.
+
+The `azure` plugin supports authentication with system-assigned and
+user-assigned [managed identities] in Azure.
+
+<!-- External link definitions -->
+
+[managed-identities]: https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/managed-identities-status

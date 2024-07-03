@@ -1,0 +1,59 @@
+---
+layout: api
+page_title: Azure plugin API - Configure plugin
+description: >-
+  BLAH
+---
+
+# RotateRoot endpoint
+
+Generate a new, Vault-internal client secret for the root account defined in the
+plugin config.
+
+
+| Method | Path                                      |
+| ------ | ----------------------------------------- |
+| `POST` | `/{mount_path}/{plugin_name}/rotate-root` |
+
+Required permissions: **TBD**
+
+## Path parameters
+
+<br />
+
+@include 'plugin-api-fields/general/path/mount_path.mdx'
+
+<br /><hr /><br />
+
+@include 'plugin-api-fields/general/path/plugin_name.mdx'
+
+Default name: `azure`.
+
+## Request object
+
+### Request fields
+
+The endpoint does not expect request data.
+
+### Example request
+
+<CodeTabs>
+
+```shell-session
+$ curl                                          \
+    --header "X-Vault-Token: ..."               \
+    --request POST                              \
+    https://${VAULT_ADDR}/v1/${MOUNT_PATH}/azure/rotate-root
+    
+```
+
+```go
+TBD
+```
+
+</CodeTabs>
+
+## Response object
+
+The plugin returns `200 OK` on success and `500 Internal Server Error` on
+failure.

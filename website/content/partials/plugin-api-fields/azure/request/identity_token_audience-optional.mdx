@@ -1,0 +1,11 @@
+<a id="identity_token_audience-request" />
+
+**`identity_token_audience`** `<string>: ""` <b style={{color: 'var(--gray-3)'}}>optional</b> <EnterpriseAlert inline />
+
+Audience claim value for Azure plugin identity tokens. The audience must match
+the allowed audiences configured for the target [Federated Identity Credential].
+Mutually exclusive with `client_secret`.
+
+<!-- External link definitions -->
+
+[Federated Identity Credential]: (https://learn.microsoft.com/en-us/entra/workload-id/workload-identity-federation-create-trust?pivots=identity-wif-apps-methods-azp#configure-a-federated-identity-credential-on-an-app)
