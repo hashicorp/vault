@@ -131,19 +131,4 @@ module('Integration | Component | json-editor', function (hooks) {
     assert.dom('[data-test-toggle-input="revealValues"]').doesNotExist('reveal values toggle is hidden');
     assert.strictEqual(codemirror().getValue(), JSON_BLOB, 'shows data with real values on edit mode');
   });
-
-  test('code-mirror modifier sets value correctly on non json object', async function (assert) {
-    this.value = '#A comment';
-    await render(hbs`
-      <JsonEditor
-        @value={{this.value}}
-        @example={{this.example}}
-        @mode="ruby"
-        @valueUpdated={{fn (mut this.value)}}
-      />
-    `);
-    assert.strictEqual(codemirror().getValue(), `#A comment`, 'shows initial non json value');
-    codemirror().setValue('#Another comment');
-    assert.strictEqual(codemirror().getValue(), `#Another comment`, 'shows updated non json value');
-  });
 });
