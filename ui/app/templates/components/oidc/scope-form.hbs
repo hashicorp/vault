@@ -82,13 +82,7 @@
       <p data-test-scope-modal="text">
         Example of a JSON template for scopes:
       </p>
-      <JsonEditor
-        @value={{this.exampleTemplate}}
-        @mode="ruby"
-        @readOnly={{true}}
-        @container=".hds-modal"
-        @editorId="scope-editor"
-      />
+      <JsonEditor @value={{this.exampleTemplate}} @mode="ruby" @readOnly={{true}} @container=".hds-modal" />
       <p class="has-top-margin-m">
         The full list of template parameters can be found
         <DocLink @path="/vault/docs/concepts/oidc-provider#scopes">

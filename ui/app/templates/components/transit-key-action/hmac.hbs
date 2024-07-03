@@ -16,13 +16,7 @@
     <KeyVersionSelect @key={{@key}} @onVersionChange={{fn (mut @key_version)}} @key_version={{@key_version}} />
     <div class="field">
       <div id="input-control" class="control is-relative">
-        <JsonEditor
-          @title="Input"
-          @valueUpdated={{fn (mut @trackedInput)}}
-          @mode="ruby"
-          @data-test-transit-input="input"
-          @editorId="hmac-editor"
-        />
+        <JsonEditor @title="Input" @valueUpdated={{fn (mut @trackedInput)}} @mode="ruby" @data-test-transit-input="input" />
       </div>
     </div>
     <div class="field">

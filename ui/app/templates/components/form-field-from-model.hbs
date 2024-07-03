@@ -81,7 +81,6 @@
       @helpText={{@attr.options.helpText}}
       @value={{if (get @model @attr.name) (stringify (get @model @attr.name)) @emptyData}}
       @valueUpdated={{@codemirrorUpdated}}
-      @editorId={{@attr.name}}
     />
   {{/if}}
 </div>

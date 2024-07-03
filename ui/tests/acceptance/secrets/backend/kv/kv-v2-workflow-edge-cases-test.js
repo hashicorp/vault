@@ -335,16 +335,8 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 
   test('viewing advanced secret data versions displays the correct version data', async function (assert) {
     assert.expect(2);
-    const obscuredDataV1 = `{
-  "foo1": {
-    "name": "********"
-  }
-}`;
-    const obscuredDataV2 = `{
-  "foo2": {
-    "name": "********"
-  }
-}`;
+    const obscuredDataV1 = '{"foo1":{"name":"********"}}';
+    const obscuredDataV2 = '{"foo2":{"name":"********"}}';
 
     await visit(`/vault/secrets/${this.backend}/kv/create`);
     await fillIn(FORM.inputByAttr('path'), 'complex_version_test');

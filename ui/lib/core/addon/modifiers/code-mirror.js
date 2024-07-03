@@ -26,20 +26,17 @@ export default class CodeMirrorModifier extends Modifier {
     } else {
       // this hook also fires any time there is a change to tracked state
       this._editor.setOption('readOnly', namedArgs.readOnly);
-      const value = this._editor.getValue();
-      const content = namedArgs.content;
-      if (!content) return;
-      if (element.id === 'KVv2-editor') {
-        // KVv2 updates the namedArgs.content on every key press and then parses the object so that it can keep the model in-sync the same way the key value form fields do.
-        // However, because the parse on namedArgs happens in KVv2 before we've reached this modifier, we need to compare stringified objects to avoid unnecessary updates.
-        // This check ensures that the editor is only updated when the content has changed.
-        if (JSON.stringify(JSON.parse(content)) !== JSON.stringify(JSON.parse(value))) {
-          this._editor.setValue(content);
-        }
-      } else {
-        if (value !== content) {
-          this._editor.setValue(content);
-        }
+      let value = this._editor.getValue();
+      let content = namedArgs.content;
+      if (!content) return; // if there is no content added to the editor, don't do anything.
+      try {
+        value = JSON.stringify(JSON.parse(value));
+        content = JSON.stringify(JSON.parse(content));
+      } catch {
+        // this catch will occur for non-json content when the mode is not javascript (e.g. ruby).
+      }
+      if (value !== content) {
+        this._editor.setValue(content);
       }
     }
   }
