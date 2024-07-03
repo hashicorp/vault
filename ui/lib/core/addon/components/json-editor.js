@@ -30,6 +30,7 @@ import { obfuscateData } from 'core/utils/advanced-secret';
  * @param {string} [example] - Example to show when value is null -- when example is provided a restore action will render in the toolbar to clear the current value and show the example after input
  * @param {string} [screenReaderLabel] - This label is read by the screen readers when CodeMirror text area is focused. This is helpful for accessibility.
  * @param {string} [container] - **REQUIRED if rendering within a modal** Selector string or element object of containing element, set the focused element as the container value. This is for the Hds::Copy::Button and to set `autoRefresh=true` so content renders https://hds-website-hashicorp.vercel.app/components/copy/button?tab=code
+ * 
  */
 
 export default class JsonEditorComponent extends Component {
