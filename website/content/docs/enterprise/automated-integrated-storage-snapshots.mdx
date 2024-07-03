@@ -37,10 +37,11 @@ object store.
 
 <Note>
 
-Vault does not allow the use of AWS IAM Roles for EKS Service Accounts to 
-authenticate to Amazon S3 buckets for the Automated Integrated Storage Snapshots. 
-The parameters: [`aws_access_key_id` & `aws_secret_access_key`](/vault/api-docs/system/storage/raftautosnapshots#aws_access_key_id) 
-must be set in the context of AWS EKS & S3 configuration.
+Vault cannot use AWS IAM roles with EKS service accounts for authentication to
+save automated integrated storage snapshots to Amazon S3 buckets. You must set
+the [`aws_access_key_id`](/vault/api-docs/system/storage/raftautosnapshots#aws_access_key_id)
+and  [`aws_secret_access_key`](/vault/api-docs/system/storage/raftautosnapshots#aws_secret_access_key)
+parameters in the context of AWS EKS & S3 configuration.
 
 </Note>
 
