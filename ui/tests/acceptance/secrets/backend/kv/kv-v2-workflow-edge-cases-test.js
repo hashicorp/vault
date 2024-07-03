@@ -321,12 +321,17 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 
   test('on enter the JSON editor cursor goes to the next line', async function (assert) {
     // see issue here: https://github.com/hashicorp/vault/issues/27524
-    const predictedCursorPosition = JSON.stringify({ line: 0, ch: 9, sticky: null });
+    const predictedCursorPosition = JSON.stringify({ line: 2, ch: 1, sticky: null });
     await visit(`/vault/secrets/${this.backend}/kv/create`);
     await fillIn(FORM.inputByAttr('path'), 'json jump');
 
     await click(FORM.toggleJson);
-    await fillIn(GENERAL.codemirrorTextarea, '{ "json":');
+    await fillIn(
+      GENERAL.codemirrorTextarea,
+      `{
+      json: '',
+    }`
+    );
     await triggerKeyEvent(GENERAL.codemirrorTextarea, 'keyup', 'Enter');
 
     const actualCursorPosition = JSON.stringify(codemirror().getCursor());
