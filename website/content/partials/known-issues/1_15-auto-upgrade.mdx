@@ -5,7 +5,8 @@
 
 #### Affected versions
 
-- 1.15.8+
+- 1.15.8
+- 1.15.9
 
 #### Issue
 
@@ -15,6 +16,10 @@ autopilot upgrade process. The autopilot upgrade process adds new nodes (new ver
 version) fail to upgrade and maintain their current voter status.
 
 #### Workaround
+
+This issue was fixed in 1.15.10. If possible, upgrade to 1.15.10 or higher to avoid impact.
+
+If for some reason it is absolutley necessary to proceed with an upgrade to one of the affected versions, the following workaround is possible.
 
 1. Disable autopilot upgrades and manually upgrade all nodes in the cluster.
 1. Explicitly set the `autopilot_upgrade_version` parameter to the desired
