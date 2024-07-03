@@ -55,7 +55,7 @@ var pathFetchReadSchema = map[int][]framework.Response{
 // Returns the CA in raw format
 func pathFetchCA(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: `ca(/pem)?`,
+		Pattern: `ca(/pem)?/?`,
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixPKI,
@@ -361,7 +361,9 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 			contentType = "application/pem-certificate-chain"
 		}
 	default:
-		serial = data.Get("serial").(string)
+		if ser, ok := data.GetOk("serial"); ok {
+			serial = ser.(string)
+		}
 		pemType = "CERTIFICATE"
 	}
 	if len(serial) == 0 {
