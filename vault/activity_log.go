@@ -1830,54 +1830,29 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 		pq = storedQuery
 	}
 
-	// Calculate the namespace response breakdowns and totals for entities and tokens from the initial
-	// namespace data.
-	totalCounts, byNamespaceResponse, err := a.calculateByNamespaceResponseForQuery(ctx, pq.Namespaces)
-	if err != nil {
-		return nil, err
-	}
-
-	// If we need to add the current month's client counts into the total, compute the namespace
-	// breakdown for the current month as well.
 	var partialByMonth map[int64]*processMonth
-	var partialByNamespace map[string]*processByNamespace
-	var byNamespaceResponseCurrent []*ResponseNamespace
-	var totalCurrentCounts *ResponseCounts
 	if computePartial {
 		// Traverse through current month's activitylog data and group clients
 		// into months and namespaces
 		a.fragmentLock.RLock()
-		partialByMonth, partialByNamespace = a.populateNamespaceAndMonthlyBreakdowns()
+		partialByMonth, _ = a.populateNamespaceAndMonthlyBreakdowns()
 		a.fragmentLock.RUnlock()
 
-		// Convert the byNamespace breakdowns into structs that are
-		// consumable by the /activity endpoint, so as to reuse code between these two
-		// endpoints.
-		byNamespaceComputation := a.transformALNamespaceBreakdowns(partialByNamespace)
-
-		// Calculate the namespace response breakdowns and totals for entities
-		// and tokens from current month namespace data.
-		totalCurrentCounts, byNamespaceResponseCurrent, err = a.calculateByNamespaceResponseForQuery(ctx, byNamespaceComputation)
+		// Estimate the current month totals. These record contains is complete with all the
+		// current month data, grouped by namespace and mounts
+		currentMonth, err := a.computeCurrentMonthForBillingPeriod(ctx, partialByMonth, startTime, endTime)
 		if err != nil {
 			return nil, err
 		}
 
-		// Create a mapping of namespace id to slice index, so that we can efficiently update our results without
-		// having to traverse the entire namespace response slice every time.
-		nsrMap := make(map[string]int)
-		for i, nr := range byNamespaceResponse {
-			nsrMap[nr.NamespaceID] = i
-		}
+		// Combine the existing months precomputed query with the current month data
+		pq.CombineWithCurrentMonth(currentMonth)
+	}
 
-		// Rather than blindly appending, which will create duplicates, check our existing counts against the current
-		// month counts, and append or update as necessary. We also want to account for mounts and their counts.
-		for _, nrc := range byNamespaceResponseCurrent {
-			if ndx, ok := nsrMap[nrc.NamespaceID]; ok {
-				byNamespaceResponse[ndx].Add(nrc)
-			} else {
-				byNamespaceResponse = append(byNamespaceResponse, nrc)
-			}
-		}
+	// Convert the namespace data into a protobuf format that can be returned in the response
+	totalCounts, byNamespaceResponse, err := a.calculateByNamespaceResponseForQuery(ctx, pq.Namespaces)
+	if err != nil {
+		return nil, err
 	}
 
 	// Sort clients within each namespace
@@ -1885,34 +1860,6 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 
 	if limitNamespaces > 0 {
 		totalCounts, byNamespaceResponse = a.limitNamespacesInALResponse(byNamespaceResponse, limitNamespaces)
-	}
-
-	distinctEntitiesResponse := totalCounts.EntityClients
-	if computePartial {
-		currentMonth, err := a.computeCurrentMonthForBillingPeriod(ctx, partialByMonth, startTime, endTime)
-		if err != nil {
-			return nil, err
-		}
-
-		// Add the namespace attribution for the current month to the newly computed current month value. Note
-		// that transformMonthBreakdowns calculates a superstruct of the required namespace struct due to its
-		// primary use-case being for precomputedQueryWorker, but we will reuse this code for brevity and extract
-		// the namespaces from it.
-		currentMonthNamespaceAttribution := a.transformMonthBreakdowns(partialByMonth)
-
-		// Ensure that there is only one element in this list -- if not, warn.
-		if len(currentMonthNamespaceAttribution) > 1 {
-			a.logger.Warn("more than one month worth of namespace and mount attribution calculated for "+
-				"current month values", "number of months", len(currentMonthNamespaceAttribution))
-		}
-		if len(currentMonthNamespaceAttribution) == 0 {
-			a.logger.Warn("no month data found, returning query with no namespace attribution for current month")
-		} else {
-			currentMonth.Namespaces = currentMonthNamespaceAttribution[0].Namespaces
-			currentMonth.NewClients.Namespaces = currentMonthNamespaceAttribution[0].NewClients.Namespaces
-		}
-		pq.Months = append(pq.Months, currentMonth)
-		distinctEntitiesResponse += pq.Months[len(pq.Months)-1].NewClients.Counts.EntityClients
 	}
 
 	// Now populate the response based on breakdowns.
@@ -1931,8 +1878,6 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 	}
 
 	responseData["by_namespace"] = byNamespaceResponse
-	totalCounts.Add(totalCurrentCounts)
-	totalCounts.DistinctEntities = distinctEntitiesResponse
 	responseData["total"] = totalCounts
 
 	// Create and populate the month response structs based on the monthly breakdown.
