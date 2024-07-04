@@ -707,7 +707,7 @@ func (c *Client) VerifyLeafCertificate(ctx context.Context, subject, issuer *x50
 		if results.code == ocspStatusRevoked {
 			return fmt.Errorf("certificate with serial number %s has been revoked", serialHex)
 		} else if conf.OcspFailureMode == FailOpenFalse {
-			return fmt.Errorf("unknown OCSP status for cert with serial number %s", strings.TrimSpace(certutil.GetHexFormatted(serial.Bytes(), ":")))
+			return fmt.Errorf("unknown OCSP status for cert with serial number %s", serialHex)
 		} else {
 			c.Logger().Warn("could not validate OCSP status for cert, but continuing in fail open mode", "serial", serialHex)
 		}
