@@ -702,7 +702,7 @@ func (c *Client) VerifyLeafCertificate(ctx context.Context, subject, issuer *x50
 	if results.code == ocspStatusGood {
 		return nil
 	} else {
-		serial := issuer.SerialNumber
+		serial := subject.SerialNumber
 		serialHex := strings.TrimSpace(certutil.GetHexFormatted(serial.Bytes(), ":"))
 		if results.code == ocspStatusRevoked {
 			return fmt.Errorf("certificate with serial number %s has been revoked", serialHex)
