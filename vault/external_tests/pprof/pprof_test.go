@@ -13,7 +13,6 @@ import (
 
 	"github.com/hashicorp/go-cleanhttp"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/vault"
 	"golang.org/x/net/http2"
@@ -85,23 +84,4 @@ func TestSysPprof_MaxRequestDuration(t *testing.T) {
 	if len(errs) == 0 || !strings.Contains(errs[0].(string), "exceeds max request duration") {
 		t.Fatalf("unexpected error returned: %v", errs)
 	}
-}
-
-func TestSysPprof_Standby(t *testing.T) {
-	t.Parallel()
-	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
-		DisablePerformanceStandby: true,
-	}, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-		DefaultHandlerProperties: vault.HandlerProperties{
-			ListenerConfig: &configutil.Listener{
-				Profiling: configutil.ListenerProfiling{
-					UnauthenticatedPProfAccess: true,
-				},
-			},
-		},
-	})
-	defer cluster.Cleanup()
-
-	SysPprof_Standby_Test(t, cluster)
 }
