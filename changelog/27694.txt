@@ -1,0 +1,3 @@
+```release-note:bug
+cli: Fixed issue with `vault hcp connect` where HCP resources with uppercase letters were inaccessible when entering the correct project name.
+```
