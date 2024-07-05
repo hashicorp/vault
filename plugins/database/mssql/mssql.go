@@ -285,7 +285,7 @@ func (m *MSSQL) revokeUserDefault(ctx context.Context, username string) error {
 
 	rows, err := stmt.QueryContext(ctx, username)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to query users: %w", err)
 	}
 	defer rows.Close()
 
