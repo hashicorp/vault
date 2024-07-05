@@ -11,7 +11,6 @@ import hbs from 'htmlbars-inline-precompile';
 import jsonEditor from '../../pages/components/json-editor';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
-import codemirror from 'vault/tests/helpers/codemirror';
 
 const component = create(jsonEditor);
 
@@ -123,13 +122,14 @@ module('Integration | Component | json-editor', function (hooks) {
     assert.dom('.CodeMirror-code').hasText(`{ "test": "********"}`, 'shows data with obscured values');
     assert.dom('[data-test-toggle-input="revealValues"]').isNotChecked('reveal values toggle is unchecked');
     await click('[data-test-toggle-input="revealValues"]');
-    assert.strictEqual(codemirror().getValue(), JSON_BLOB, 'shows data with real values');
+    // we are hardcoding the hasText comparison instead of using the JSON_BLOB because we no longer match passed content (ex: @value) to the tracked codemirror instance (ex: this._editor.getVale()) if there are line-breaks or whitespace differences.
+    assert.dom('.CodeMirror-code').hasText(`{ "test": "test"}`, 'shows data with real values');
     assert.dom('[data-test-toggle-input="revealValues"]').isChecked('reveal values toggle is checked');
     // turn obscure back on to ensure readonly overrides reveal setting
     await click('[data-test-toggle-input="revealValues"]');
     this.set('readOnly', false);
     assert.dom('[data-test-toggle-input="revealValues"]').doesNotExist('reveal values toggle is hidden');
-    assert.strictEqual(codemirror().getValue(), JSON_BLOB, 'shows data with real values on edit mode');
+    assert.dom('.CodeMirror-code').hasText(`{ "test": "test"}`, 'shows data with real values on edit mode');
   });
 
   test('code-mirror modifier sets value correctly on non json object', async function (assert) {
