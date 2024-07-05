@@ -40,7 +40,7 @@ export default class CodeMirrorModifier extends Modifier {
         // this catch will occur for non-json content when the mode is not javascript (e.g. ruby).
       }
       if (value !== content) {
-        this._editor.setValue(content);
+        this._editor.setValue(namedArgs.content);
       }
     }
   }
