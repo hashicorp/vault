@@ -1,0 +1,3 @@
+```release-note:improvement
+license utilization reporting (enterprise): Auto-roll billing start date.
+```
