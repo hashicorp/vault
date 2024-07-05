@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"slices"
 	"strings"
 	"time"
 
@@ -721,34 +722,65 @@ func (i *IdentityStore) invalidateEntityBucket(ctx context.Context, key string) 
 				}
 			}
 
-			// If the entity is not in MemDB or if it is but differs from the
-			// state that's in the bucket storage entry, upsert it into MemDB.
-
 			// We've considered the use of github.com/google/go-cmp here,
 			// but opted for sticking with reflect.DeepEqual because go-cmp
 			// is intended for testing and is able to panic in some
 			// situations.
-			if memDBEntity == nil || !reflect.DeepEqual(memDBEntity, bucketEntity) {
-				// The entity is not in MemDB, it's a new entity. Add it to MemDB.
-				err = i.upsertEntityInTxn(ctx, txn, bucketEntity, nil, false)
-				if err != nil {
-					i.logger.Error("failed to update entity in MemDB", "entity_id", bucketEntity.ID, "error", err)
-					return
+			if memDBEntity != nil && reflect.DeepEqual(memDBEntity, bucketEntity) {
+				// No changes on this entity, move on to the next one.
+				continue
+			}
+
+			// If the entity exists in MemDB it must differ from the entity in
+			// the storage bucket because of above test. Go through all of the
+			// aliases currently set in the memDB entity and check if any of
+			// those are not in the bucket entity. Those aliases that are only
+			// found in the memDB entity, need to be deleted from MemDB because
+			// the upsertEntityInTxn function does not delete those aliases.
+			if memDBEntity != nil {
+				aliasesToDelete := make([]*identity.Alias, 0)
+				bucketEntityAliases := bucketEntity.Aliases
+
+				slices.SortFunc(bucketEntityAliases, func(a, b *identity.Alias) int {
+					return strings.Compare(a.ID, b.ID)
+				})
+
+				for _, a := range memDBEntity.Aliases {
+					_, found := slices.BinarySearchFunc(bucketEntityAliases, a.ID, func(a *identity.Alias, b string) int {
+						return strings.Compare(a.ID, b)
+					})
+					if !found {
+						aliasesToDelete = append(aliasesToDelete, a)
+					}
 				}
 
-				// If this is a performance secondary, the entity created on
-				// this node would have been cached in a local cache based on
-				// the result of the CreateEntity RPC call to the primary
-				// cluster. Since this invalidation is signaling that the
-				// entity is now in the primary cluster's storage, the locally
-				// cached entry can be removed.
-				if i.localNode.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) && i.localNode.HAState() == consts.Active {
-					if err := i.localAliasPacker.DeleteItem(ctx, bucketEntity.ID+tmpSuffix); err != nil {
-						i.logger.Error("failed to clear local alias entity cache", "error", err, "entity_id", bucketEntity.ID)
-						return
+				if len(aliasesToDelete) > 0 {
+					err := i.deleteAliasesInEntityInTxn(txn, memDBEntity, aliasesToDelete)
+					if err != nil {
+						i.logger.Error("failed to remove entity alias from MemDB", "entity_id", memDBEntity.ID, "error", err)
 					}
 				}
 			}
+
+			err = i.upsertEntityInTxn(ctx, txn, bucketEntity, nil, false)
+			if err != nil {
+				i.logger.Error("failed to update entity in MemDB", "entity_id", bucketEntity.ID, "error", err)
+				return
+			}
+
+			// If this is a performance secondary, the entity created on
+			// this node would have been cached in a local cache based on
+			// the result of the CreateEntity RPC call to the primary
+			// cluster. Since this invalidation is signaling that the
+			// entity is now in the primary cluster's storage, the locally
+			// cached entry can be removed.
+			if i.localNode.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) && i.localNode.HAState() == consts.Active {
+				if err := i.localAliasPacker.DeleteItem(ctx, bucketEntity.ID+tmpSuffix); err != nil {
+					i.logger.Error("failed to clear local alias entity cache", "error", err, "entity_id", bucketEntity.ID)
+					return
+				}
+			}
+
 		}
 	}
 
