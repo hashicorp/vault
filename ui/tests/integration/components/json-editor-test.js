@@ -18,11 +18,11 @@ module('Integration | Component | json-editor', function (hooks) {
   setupRenderingTest(hooks);
 
   const JSON_BLOB = `{
-  "test": "test"
-}`;
+    "test": test
+  }`;
   const BAD_JSON_BLOB = `{
-  "test": test
-}`;
+    "test": test
+  }`;
 
   hooks.beforeEach(function () {
     this.set('valueUpdated', sinon.spy());
