@@ -1271,7 +1271,7 @@ func (b *backend) pathGetIssuerCRL(ctx context.Context, req *logical.Request, da
 		return response, nil
 	}
 
-	crlPath, err := sc.resolveIssuerCRLPath(issuerName, isUnified)
+	crlPath, err := issuing.ResolveIssuerCRLPath(sc.GetContext(), sc.GetStorage(), sc.UseLegacyBundleCaStorage(), issuerName, isUnified)
 	if err != nil {
 		return nil, err
 	}

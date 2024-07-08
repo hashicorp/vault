@@ -17,6 +17,7 @@ export const GENERAL = {
   secretTab: (name: string) => `[data-test-secret-list-tab="${name}"]`,
   flashMessage: '[data-test-flash-message]',
   latestFlashContent: '[data-test-flash-message]:last-of-type [data-test-flash-message-body]',
+  inlineAlert: '[data-test-inline-alert]',
 
   filter: (name: string) => `[data-test-filter="${name}"]`,
   filterInput: '[data-test-filter-input]',
@@ -79,4 +80,5 @@ export const GENERAL = {
   navLink: (label: string) => `[data-test-sidebar-nav-link="${label}"]`,
   cancelButton: '[data-test-cancel]',
   saveButton: '[data-test-save]',
+  maskedInput: (name: string) => `[data-test-textarea="${name}"]`,
 };

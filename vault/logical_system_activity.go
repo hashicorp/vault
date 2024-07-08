@@ -20,6 +20,11 @@ import (
 // defaultToRetentionMonthsMaxWarning is a warning message for setting the max retention_months value when retention_months value is more than activityLogMaximumRetentionMonths
 var defaultToRetentionMonthsMaxWarning = fmt.Sprintf("retention_months cannot be greater than %d; capped to %d.", activityLogMaximumRetentionMonths, activityLogMaximumRetentionMonths)
 
+const (
+	// WarningCurrentBillingPeriodDeprecated is a warning string that is used to indicate that the current_billing_period field, as the default start time will automatically be the billing period start date
+	WarningCurrentBillingPeriodDeprecated = "current_billing_period is deprecated; unless otherwise specified, all requests will default to the current billing period"
+)
+
 // activityQueryPath is available in every namespace
 func (b *SystemBackend) activityQueryPath() *framework.Path {
 	return &framework.Path{
@@ -33,6 +38,7 @@ func (b *SystemBackend) activityQueryPath() *framework.Path {
 
 		Fields: map[string]*framework.FieldSchema{
 			"current_billing_period": {
+				Deprecated:  true,
 				Type:        framework.TypeBool,
 				Description: "Query utilization for configured billing period",
 			},
@@ -254,15 +260,16 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
 		return logical.ErrorResponse("no activity log present"), nil
 	}
 
-	if d.Get("current_billing_period").(bool) {
-		startTime = b.Core.BillingStart()
-		endTime = time.Now().UTC()
-	} else {
-		var err error
-		startTime, endTime, err = parseStartEndTimes(a, d, b.Core.BillingStart())
-		if err != nil {
-			return logical.ErrorResponse(err.Error()), nil
-		}
+	warnings := make([]string, 0)
+
+	if _, ok := d.GetOk("current_billing_period"); ok {
+		warnings = append(warnings, WarningCurrentBillingPeriodDeprecated)
+	}
+
+	var err error
+	startTime, endTime, err = parseStartEndTimes(a, d, b.Core.BillingStart())
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
 	}
 
 	var limitNamespaces int
@@ -275,12 +282,15 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
 		return nil, err
 	}
 	if results == nil {
-		resp204, err := logical.RespondWithStatusCode(nil, req, http.StatusNoContent)
+		resp204, err := logical.RespondWithStatusCode(&logical.Response{
+			Warnings: warnings,
+		}, req, http.StatusNoContent)
 		return resp204, err
 	}
 
 	return &logical.Response{
-		Data: results,
+		Warnings: warnings,
+		Data:     results,
 	}, nil
 }
 
@@ -412,9 +422,6 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 		}
 	}
 
-	a.core.activityLogLock.RLock()
-	minimumRetentionMonths := a.configOverrides.MinimumRetentionMonths
-	a.core.activityLogLock.RUnlock()
 	enabled := config.Enabled == "enable"
 	if !enabled && config.Enabled == "default" {
 		enabled = activityLogEnabledDefault
@@ -425,8 +432,8 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 	}
 
 	// if manual license reporting is enabled, retention months must at least be 48 months
-	if a.core.ManualLicenseReportingEnabled() && config.RetentionMonths < minimumRetentionMonths {
-		return logical.ErrorResponse("retention_months must be at least %d while Reporting is enabled", minimumRetentionMonths), logical.ErrInvalidRequest
+	if a.core.ManualLicenseReportingEnabled() && config.RetentionMonths < ActivityLogMinimumRetentionMonths {
+		return logical.ErrorResponse("retention_months must be at least %d while Reporting is enabled", ActivityLogMinimumRetentionMonths), logical.ErrInvalidRequest
 	}
 
 	// Store the config
@@ -441,9 +448,9 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 	// Set the new config on the activity log
 	a.SetConfig(ctx, config)
 
-	// reload census agent if retention months change during update when reporting is enabled
+	// Update Census agent's metadata if retention months change
 	if prevRetentionMonths != config.RetentionMonths {
-		if err := a.core.ReloadCensusActivityLog(); err != nil {
+		if err := b.Core.SetRetentionMonths(config.RetentionMonths); err != nil {
 			return nil, err
 		}
 	}

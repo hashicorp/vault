@@ -10,48 +10,18 @@ import (
 
 	"github.com/hashicorp/cli"
 	hcpvlib "github.com/hashicorp/vault-hcp-lib"
-	credAliCloud "github.com/hashicorp/vault-plugin-auth-alicloud"
-	credCF "github.com/hashicorp/vault-plugin-auth-cf"
-	credGcp "github.com/hashicorp/vault-plugin-auth-gcp/plugin"
 	credOIDC "github.com/hashicorp/vault-plugin-auth-jwt"
-	credKerb "github.com/hashicorp/vault-plugin-auth-kerberos"
-	credOCI "github.com/hashicorp/vault-plugin-auth-oci"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/audit"
-	credAws "github.com/hashicorp/vault/builtin/credential/aws"
 	credCert "github.com/hashicorp/vault/builtin/credential/cert"
-	credGitHub "github.com/hashicorp/vault/builtin/credential/github"
-	credLdap "github.com/hashicorp/vault/builtin/credential/ldap"
-	credOkta "github.com/hashicorp/vault/builtin/credential/okta"
 	credToken "github.com/hashicorp/vault/builtin/credential/token"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	logicalDb "github.com/hashicorp/vault/builtin/logical/database"
 	"github.com/hashicorp/vault/builtin/plugin"
 	_ "github.com/hashicorp/vault/helper/builtinplugins"
-	physAerospike "github.com/hashicorp/vault/physical/aerospike"
-	physAliCloudOSS "github.com/hashicorp/vault/physical/alicloudoss"
-	physAzure "github.com/hashicorp/vault/physical/azure"
-	physCassandra "github.com/hashicorp/vault/physical/cassandra"
-	physCockroachDB "github.com/hashicorp/vault/physical/cockroachdb"
-	physConsul "github.com/hashicorp/vault/physical/consul"
-	physCouchDB "github.com/hashicorp/vault/physical/couchdb"
-	physDynamoDB "github.com/hashicorp/vault/physical/dynamodb"
-	physEtcd "github.com/hashicorp/vault/physical/etcd"
-	physFoundationDB "github.com/hashicorp/vault/physical/foundationdb"
-	physGCS "github.com/hashicorp/vault/physical/gcs"
-	physManta "github.com/hashicorp/vault/physical/manta"
-	physMSSQL "github.com/hashicorp/vault/physical/mssql"
-	physMySQL "github.com/hashicorp/vault/physical/mysql"
-	physOCI "github.com/hashicorp/vault/physical/oci"
-	physPostgreSQL "github.com/hashicorp/vault/physical/postgresql"
 	physRaft "github.com/hashicorp/vault/physical/raft"
-	physS3 "github.com/hashicorp/vault/physical/s3"
-	physSpanner "github.com/hashicorp/vault/physical/spanner"
-	physSwift "github.com/hashicorp/vault/physical/swift"
-	physZooKeeper "github.com/hashicorp/vault/physical/zookeeper"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
-	physFile "github.com/hashicorp/vault/sdk/physical/file"
 	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
 	sr "github.com/hashicorp/vault/serviceregistration"
 	csr "github.com/hashicorp/vault/serviceregistration/consul"
@@ -159,85 +129,69 @@ const (
 	flagNameDelegatedAuthAccessors = "delegated-auth-accessors"
 )
 
-var (
-	auditBackends = map[string]audit.Factory{
-		"file":   audit.NewFileBackend,
-		"socket": audit.NewSocketBackend,
-		"syslog": audit.NewSyslogBackend,
-	}
+// vaultHandlers contains the handlers for creating the various Vault backends.
+type vaultHandlers struct {
+	physicalBackends     map[string]physical.Factory
+	loginHandlers        map[string]LoginHandler
+	auditBackends        map[string]audit.Factory
+	credentialBackends   map[string]logical.Factory
+	logicalBackends      map[string]logical.Factory
+	serviceRegistrations map[string]sr.Factory
+}
 
-	credentialBackends = map[string]logical.Factory{
-		"plugin": plugin.Factory,
-	}
-
-	logicalBackends = map[string]logical.Factory{
-		"plugin":   plugin.Factory,
-		"database": logicalDb.Factory,
-		// This is also available in the plugin catalog, but is here due to the need to
-		// automatically mount it.
-		"kv": logicalKv.Factory,
-	}
-
-	physicalBackends = map[string]physical.Factory{
-		"aerospike":              physAerospike.NewAerospikeBackend,
-		"alicloudoss":            physAliCloudOSS.NewAliCloudOSSBackend,
-		"azure":                  physAzure.NewAzureBackend,
-		"cassandra":              physCassandra.NewCassandraBackend,
-		"cockroachdb":            physCockroachDB.NewCockroachDBBackend,
-		"consul":                 physConsul.NewConsulBackend,
-		"couchdb_transactional":  physCouchDB.NewTransactionalCouchDBBackend,
-		"couchdb":                physCouchDB.NewCouchDBBackend,
-		"dynamodb":               physDynamoDB.NewDynamoDBBackend,
-		"etcd":                   physEtcd.NewEtcdBackend,
-		"file_transactional":     physFile.NewTransactionalFileBackend,
-		"file":                   physFile.NewFileBackend,
-		"foundationdb":           physFoundationDB.NewFDBBackend,
-		"gcs":                    physGCS.NewBackend,
-		"inmem_ha":               physInmem.NewInmemHA,
-		"inmem_transactional_ha": physInmem.NewTransactionalInmemHA,
-		"inmem_transactional":    physInmem.NewTransactionalInmem,
-		"inmem":                  physInmem.NewInmem,
-		"manta":                  physManta.NewMantaBackend,
-		"mssql":                  physMSSQL.NewMSSQLBackend,
-		"mysql":                  physMySQL.NewMySQLBackend,
-		"oci":                    physOCI.NewBackend,
-		"postgresql":             physPostgreSQL.NewPostgreSQLBackend,
-		"s3":                     physS3.NewS3Backend,
-		"spanner":                physSpanner.NewBackend,
-		"swift":                  physSwift.NewSwiftBackend,
-		"raft":                   physRaft.NewRaftBackend,
-		"zookeeper":              physZooKeeper.NewZooKeeperBackend,
-	}
-
-	serviceRegistrations = map[string]sr.Factory{
-		"consul":     csr.NewServiceRegistration,
-		"kubernetes": ksr.NewServiceRegistration,
-	}
-
-	loginHandlers = map[string]LoginHandler{
-		"alicloud": &credAliCloud.CLIHandler{},
-		"aws":      &credAws.CLIHandler{},
-		"cert":     &credCert.CLIHandler{},
-		"cf":       &credCF.CLIHandler{},
-		"gcp":      &credGcp.CLIHandler{},
-		"github":   &credGitHub.CLIHandler{},
-		"kerberos": &credKerb.CLIHandler{},
-		"ldap":     &credLdap.CLIHandler{},
-		"oci":      &credOCI.CLIHandler{},
-		"oidc":     &credOIDC.CLIHandler{},
-		"okta":     &credOkta.CLIHandler{},
-		"pcf":      &credCF.CLIHandler{}, // Deprecated.
-		"radius": &credUserpass.CLIHandler{
-			DefaultMount: "radius",
+// newMinimalVaultHandlers returns a new vaultHandlers that a minimal Vault would use.
+func newMinimalVaultHandlers() *vaultHandlers {
+	return &vaultHandlers{
+		physicalBackends: map[string]physical.Factory{
+			"inmem_ha":               physInmem.NewInmemHA,
+			"inmem_transactional_ha": physInmem.NewTransactionalInmemHA,
+			"inmem_transactional":    physInmem.NewTransactionalInmem,
+			"inmem":                  physInmem.NewInmem,
+			"raft":                   physRaft.NewRaftBackend,
 		},
-		"token": &credToken.CLIHandler{},
-		"userpass": &credUserpass.CLIHandler{
-			DefaultMount: "userpass",
+		loginHandlers: map[string]LoginHandler{
+			"cert":  &credCert.CLIHandler{},
+			"oidc":  &credOIDC.CLIHandler{},
+			"token": &credToken.CLIHandler{},
+			"userpass": &credUserpass.CLIHandler{
+				DefaultMount: "userpass",
+			},
+		},
+		auditBackends: map[string]audit.Factory{
+			"file":   audit.NewFileBackend,
+			"socket": audit.NewSocketBackend,
+			"syslog": audit.NewSyslogBackend,
+		},
+		credentialBackends: map[string]logical.Factory{
+			"plugin": plugin.Factory,
+		},
+		logicalBackends: map[string]logical.Factory{
+			"plugin":   plugin.Factory,
+			"database": logicalDb.Factory,
+			// This is also available in the plugin catalog, but is here due to the need to
+			// automatically mount it.
+			"kv": logicalKv.Factory,
+		},
+		serviceRegistrations: map[string]sr.Factory{
+			"consul":     csr.NewServiceRegistration,
+			"kubernetes": ksr.NewServiceRegistration,
 		},
 	}
-)
+}
+
+// newVaultHandlers returns a new vaultHandlers composed of newMinimalVaultHandlers()
+// and any addon handlers from Vault CE and Vault Enterprise selected by Go build tags.
+func newVaultHandlers() *vaultHandlers {
+	handlers := newMinimalVaultHandlers()
+	extendAddonHandlers(handlers)
+	entExtendAddonHandlers(handlers)
+
+	return handlers
+}
 
 func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.CommandFactory {
+	handlers := newVaultHandlers()
+
 	getBaseCommand := func() *BaseCommand {
 		return &BaseCommand{
 			UI:             ui,
@@ -256,6 +210,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 				},
 				ShutdownCh: MakeShutdownCh(),
 				SighupCh:   MakeSighupCh(),
+				SigUSR2Ch:  MakeSigUSR2Ch(),
 			}, nil
 		},
 		"agent generate-config": func() (cli.Command, error) {
@@ -306,7 +261,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 		"auth help": func() (cli.Command, error) {
 			return &AuthHelpCommand{
 				BaseCommand: getBaseCommand(),
-				Handlers:    loginHandlers,
+				Handlers:    handlers.loginHandlers,
 			}, nil
 		},
 		"auth list": func() (cli.Command, error) {
@@ -363,7 +318,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 		"login": func() (cli.Command, error) {
 			return &LoginCommand{
 				BaseCommand: getBaseCommand(),
-				Handlers:    loginHandlers,
+				Handlers:    handlers.loginHandlers,
 			}, nil
 		},
 		"namespace": func() (cli.Command, error) {
@@ -434,7 +389,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 		"operator migrate": func() (cli.Command, error) {
 			return &OperatorMigrateCommand{
 				BaseCommand:      getBaseCommand(),
-				PhysicalBackends: physicalBackends,
+				PhysicalBackends: handlers.physicalBackends,
 				ShutdownCh:       MakeShutdownCh(),
 			}, nil
 		},
@@ -640,6 +595,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 				},
 				ShutdownCh: MakeShutdownCh(),
 				SighupCh:   MakeSighupCh(),
+				SigUSR2Ch:  MakeSigUSR2Ch(),
 			}, nil
 		},
 		"policy": func() (cli.Command, error) {
@@ -724,12 +680,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 					tokenHelper: runOpts.TokenHelper,
 					flagAddress: runOpts.Address,
 				},
-				AuditBackends:      auditBackends,
-				CredentialBackends: credentialBackends,
-				LogicalBackends:    logicalBackends,
-				PhysicalBackends:   physicalBackends,
-
-				ServiceRegistrations: serviceRegistrations,
+				AuditBackends:        handlers.auditBackends,
+				CredentialBackends:   handlers.credentialBackends,
+				LogicalBackends:      handlers.logicalBackends,
+				PhysicalBackends:     handlers.physicalBackends,
+				ServiceRegistrations: handlers.serviceRegistrations,
 
 				ShutdownCh: MakeShutdownCh(),
 				SighupCh:   MakeSighupCh(),

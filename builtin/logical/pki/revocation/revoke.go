@@ -4,6 +4,7 @@
 package revocation
 
 import (
+	"bytes"
 	"crypto/x509"
 	"fmt"
 	"time"
@@ -13,11 +14,29 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 )
 
+const (
+	RevokedPath = "revoked/"
+)
+
 type RevocationInfo struct {
 	CertificateBytes  []byte           `json:"certificate_bytes"`
 	RevocationTime    int64            `json:"revocation_time"`
 	RevocationTimeUTC time.Time        `json:"revocation_time_utc"`
 	CertificateIssuer issuing.IssuerID `json:"issuer_id"`
+}
+
+func (ri *RevocationInfo) AssociateRevokedCertWithIsssuer(revokedCert *x509.Certificate, issuerIDCertMap map[issuing.IssuerID]*x509.Certificate) bool {
+	for issuerId, issuerCert := range issuerIDCertMap {
+		if bytes.Equal(revokedCert.RawIssuer, issuerCert.RawSubject) {
+			if err := revokedCert.CheckSignatureFrom(issuerCert); err == nil {
+				// Valid mapping. Add it to the specified entry.
+				ri.CertificateIssuer = issuerId
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 // FetchIssuerMapForRevocationChecking fetches a map of IssuerID->parsed cert for revocation
