@@ -20,7 +20,6 @@ export default Controller.extend({
   customMessages: service(),
   queryParams: [{ authMethod: 'with', oidcProvider: 'o' }],
   namespaceQueryParam: alias('clusterController.namespaceQueryParam'),
-  wrappedToken: alias('vaultController.wrappedToken'),
   redirectTo: alias('vaultController.redirectTo'),
   hvdManagedNamespaceRoot: alias('flagsService.hvdManagedNamespaceRoot'),
   authMethod: '',
@@ -80,26 +79,5 @@ export default Controller.extend({
         );
       }
     });
-  },
-
-  actions: {
-    onAuthResponse(authResponse, backend, data) {
-      const { mfa_requirement } = authResponse;
-      // if an mfa requirement exists further action is required
-      if (mfa_requirement) {
-        this.set('mfaAuthData', { mfa_requirement, backend, data });
-      } else {
-        this.authSuccess(authResponse);
-      }
-    },
-    onMfaSuccess(authResponse) {
-      this.authSuccess(authResponse);
-    },
-    onMfaErrorDismiss() {
-      this.setProperties({
-        mfaAuthData: null,
-        mfaErrors: null,
-      });
-    },
   },
 });
