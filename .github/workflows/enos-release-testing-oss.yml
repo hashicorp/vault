@@ -64,7 +64,7 @@ jobs:
     secrets: inherit
 
   save-metadata:
-    runs-on: linux
+    runs-on: ubuntu-latest
     if: always()
     needs: test
     steps:
