@@ -5,8 +5,8 @@
 
 <Auth::RoutePage
   @namespaceQueryParam={{this.namespaceQueryParam}}
-  @wrappedToken={{this.vaultController.wrappedToken}}
-  @onAuthSuccess={{this.authSuccess}}
+  @wrappedToken={{this.wrappedToken}}
+  @onAuthSuccess={{action "authSuccess"}}
   @oidcProviderQueryParam={{this.oidcProvider}}
   @authMethodQueryParam={{this.authMethod}}
   @cluster={{this.model}}

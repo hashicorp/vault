@@ -13,7 +13,7 @@ import { action } from '@ember/object';
  * The Auth::RoutePage wraps OktaNumberChallenge and AuthForm to manage the login flow and is responsible for calling the authenticate method
  *
  * @example
- * <Auth::RoutePag @namespaceQueryParam={{this.namespaceQueryParam} @onAuthSuccess={{this.authSuccess} @oidcProviderQueryParam={{this.oidcProvider} @cluster={{this.model} @onNamespaceUpdate={{perform this.updateNamespace}} />
+ * <Auth::RoutePag @namespaceQueryParam={{this.namespaceQueryParam} @onAuthSuccess={{action "authSuccess"}} @oidcProviderQueryParam={{this.oidcProvider} @cluster={{this.model} @onNamespaceUpdate={{perform this.updateNamespace}} />
  *
  * @param {string} param - info about the param
  * */
