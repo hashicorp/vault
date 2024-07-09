@@ -26,20 +26,6 @@ export default Controller.extend({
   authMethod: '',
   oidcProvider: '',
 
-  get namespaceInput() {
-    const namespaceQP = this.clusterController.namespaceQueryParam;
-    if (this.hvdManagedNamespaceRoot) {
-      // When managed, the user isn't allowed to edit the prefix `admin/` for their nested namespace
-      const split = namespaceQP.split('/');
-      if (split.length > 1) {
-        split.shift();
-        return `/${split.join('/')}`;
-      }
-      return '';
-    }
-    return namespaceQP;
-  },
-
   fullNamespaceFromInput(value) {
     const strippedNs = sanitizePath(value);
     if (this.hvdManagedNamespaceRoot) {

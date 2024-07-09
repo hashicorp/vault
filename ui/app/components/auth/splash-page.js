@@ -10,18 +10,16 @@ import { action } from '@ember/object';
 
 /**
  * @module AuthRoutePage
- * The Auth::RoutePage wraps OktaNumberChallenge and AuthForm to manage the login flow and is responsible for calling the authenticate method
+ * The Auth::SplashPage wraps OktaNumberChallenge and AuthForm to manage the login flow and is responsible for calling the authenticate method
  *
  * @example
- * <Auth::RoutePag @namespaceQueryParam={{this.namespaceQueryParam} @onAuthSuccess={{action "authSuccess"}} @oidcProviderQueryParam={{this.oidcProvider} @cluster={{this.model} @onNamespaceUpdate={{perform this.updateNamespace}} />
+ * <Auth::SplashPage @namespaceQueryParam={{this.namespaceQueryParam}} @onAuthSuccess={{action "authSuccess"}} @oidcProviderQueryParam={{this.oidcProvider}} @cluster={{this.model}} @onNamespaceUpdate={{perform this.updateNamespace}} />
  *
  * @param {string} param - info about the param
  * */
 
-export default class AuthRoutePage extends Component {
-  @service auth;
+export default class AuthSplashPage extends Component {
   @service flags;
-  @service namespaceService;
 
   @tracked mfaErrors;
   @tracked mfaAuthData;

@@ -93,7 +93,7 @@
           @onError={{fn (mut this.mfaErrors)}}
         />
       {{else}}
-        <Auth::Page
+        <Auth::FormPage
           @wrappedToken={{@wrappedToken}}
           @cluster={{@cluster}}
           @namespace={{@namespaceQueryParam}}
