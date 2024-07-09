@@ -6,7 +6,7 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { click, currentURL, visit, waitUntil, find, fillIn } from '@ember/test-helpers';
-import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
+import { allSupportedAuthBackends, supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import authForm from '../pages/components/auth-form';
 import jwtForm from '../pages/components/auth-jwt';
 import { create } from 'ember-cli-page-object';
@@ -14,6 +14,8 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 
 const component = create(authForm);
 const jwtComponent = create(jwtForm);
+
+const ENT_AUTH_METHODS = ['saml'];
 
 module('Acceptance | auth', function (hooks) {
   setupApplicationTest(hooks);
@@ -131,7 +133,7 @@ module('Acceptance | auth', function (hooks) {
         req.passthrough();
       });
       this.server.post('/auth/:mount/login', (schema, req) => {
-        // This one is for github only
+        // github only
         this.assertReq(req);
         req.passthrough();
       });
@@ -141,6 +143,11 @@ module('Acceptance | auth', function (hooks) {
         req.passthrough();
       });
       this.server.post('/auth/:mount/login/:username', (schema, req) => {
+        this.assertReq(req);
+        req.passthrough();
+      });
+      this.server.put('/auth/:mount/sso_service_url', (schema, req) => {
+        // SAML only (enterprise)
         this.assertReq(req);
         req.passthrough();
       });
@@ -195,11 +202,19 @@ module('Acceptance | auth', function (hooks) {
             token: 'some-token',
           },
         },
+        saml: {
+          url: '/v1/auth/custom-saml/sso_service_url',
+          payload: {
+            role: 'some-role',
+          },
+        },
       };
     });
 
-    for (const backend of supportedAuthBackends().reverse()) {
-      test(`for ${backend.type}`, async function (assert) {
+    for (const backend of allSupportedAuthBackends().reverse()) {
+      test(`for ${backend.type} ${
+        ENT_AUTH_METHODS.includes(backend.type) ? '(enterprise)' : ''
+      }`, async function (assert) {
         const { type } = backend;
         const expected = this.expected[type];
         const isOidc = ['oidc', 'jwt'].includes(type);
