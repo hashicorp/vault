@@ -132,7 +132,7 @@ require (
 	github.com/hashicorp/vault-hcp-lib v0.0.0-20240704151836-a5c058ac604c
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.18.0
 	github.com/hashicorp/vault-plugin-auth-azure v0.18.0
-	github.com/hashicorp/vault-plugin-auth-cf v0.17.0
+	github.com/hashicorp/vault-plugin-auth-cf v0.18.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.18.0
 	github.com/hashicorp/vault-plugin-auth-jwt v0.21.0
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.12.0
@@ -176,7 +176,6 @@ require (
 	github.com/mikesmitty/edkey v0.0.0-20170222072505-3356ea4e686a
 	github.com/mitchellh/copystructure v1.2.0
 	github.com/mitchellh/go-homedir v1.1.0
-	github.com/mitchellh/go-testing-interface v1.14.1
 	github.com/mitchellh/go-wordwrap v1.0.1
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/mitchellh/reflectwalk v1.0.2
@@ -233,6 +232,7 @@ require (
 
 require (
 	cloud.google.com/go/longrunning v0.5.7 // indirect
+	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
 	gopkg.in/go-jose/go-jose.v2 v2.6.3 // indirect
 )
