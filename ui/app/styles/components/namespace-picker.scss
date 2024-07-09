@@ -6,7 +6,6 @@
 .namespace-picker {
   position: relative;
   color: var(--token-color-palette-neutral-300);
-  display: flex;
   padding: $spacing-4 $spacing-8;
   width: 100%;
 }
@@ -23,12 +22,14 @@
   height: 2rem;
   justify-content: space-between;
   margin-right: $spacing-4;
+  width: 100%;
 }
 
 .namespace-picker-content {
   width: 250px;
   max-height: 300px;
   overflow: auto;
+  color: var(--token-color-foreground-primary);
   border-radius: $radius;
   box-shadow: $box-shadow, $box-shadow-high;
 
