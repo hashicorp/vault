@@ -56,7 +56,7 @@ export default class AuthSplashPage extends Component {
 
   @action
   onMfaSuccess(authResponse) {
-    this.arg.onAuthSuccess(authResponse);
+    this.args.onAuthSuccess(authResponse);
   }
 
   @action
