@@ -25,7 +25,7 @@ import { action } from '@ember/object';
  * @param {function} onSuccess - Callback that fires the "onAuthResponse" action in the auth controller and handles transitioning after success
  */
 
-export default class AuthPageComponent extends Component {
+export default class AuthFormPageComponent extends Component {
   @service auth;
 
   @tracked authError = null;
