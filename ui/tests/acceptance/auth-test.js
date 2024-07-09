@@ -8,12 +8,10 @@ import { setupApplicationTest } from 'ember-qunit';
 import { click, currentURL, visit, waitUntil, find, fillIn } from '@ember/test-helpers';
 import { allSupportedAuthBackends, supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import authForm from '../pages/components/auth-form';
-import jwtForm from '../pages/components/auth-jwt';
 import { create } from 'ember-cli-page-object';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 
 const component = create(authForm);
-const jwtComponent = create(jwtForm);
 
 const ENT_AUTH_METHODS = ['saml'];
 
@@ -41,88 +39,6 @@ module('Acceptance | auth', function (hooks) {
     await component.token('token').selectMethod('github');
     await component.selectMethod('token');
     assert.strictEqual(component.tokenValue, '', 'it clears the token value when toggling methods');
-  });
-
-  module('it sends the right attributes when authenticating', function (hooks) {
-    hooks.beforeEach(function () {
-      this.assertReq = () => {};
-      this.server.get('/auth/token/lookup-self', (schema, req) => {
-        this.assertReq(req);
-        req.passthrough();
-      });
-      this.server.post('/auth/github/login', (schema, req) => {
-        // This one is for github only
-        this.assertReq(req);
-        req.passthrough();
-      });
-      this.server.post('/auth/:mount/oidc/auth_url', (schema, req) => {
-        // For JWT and OIDC
-        this.assertReq(req);
-        req.passthrough();
-      });
-      this.server.post('/auth/:mount/login/:username', (schema, req) => {
-        this.assertReq(req);
-        req.passthrough();
-      });
-      this.expected = {
-        token: {
-          included: 'X-Vault-Token',
-          url: '/v1/auth/token/lookup-self',
-        },
-        userpass: {
-          included: 'password',
-          url: '/v1/auth/userpass/login/null',
-        },
-        ldap: {
-          included: 'password',
-          url: '/v1/auth/ldap/login/null',
-        },
-        okta: {
-          included: 'password',
-          url: '/v1/auth/okta/login/null',
-        },
-        jwt: {
-          included: 'role',
-          url: '/v1/auth/jwt/oidc/auth_url',
-        },
-        oidc: {
-          included: 'role',
-          url: '/v1/auth/oidc/oidc/auth_url',
-        },
-        radius: {
-          included: 'password',
-          url: '/v1/auth/radius/login/null',
-        },
-        github: {
-          included: 'token',
-          url: '/v1/auth/github/login',
-        },
-      };
-    });
-
-    for (const backend of supportedAuthBackends().reverse()) {
-      test(`for ${backend.type}`, async function (assert) {
-        const { type } = backend;
-        const isOidc = ['jwt', 'oidc'].includes(type);
-        // OIDC types make 3 requests, each time the role changes
-        assert.expect(isOidc ? 6 : 2);
-        this.assertReq = (req) => {
-          const body = type === 'token' ? req.requestHeaders : JSON.parse(req.requestBody);
-          const { included, url } = this.expected[type];
-          assert.true(Object.keys(body).includes(included), `${type} includes ${included}`);
-          assert.strictEqual(req.url, url, `${type} calls the correct URL`);
-        };
-        await visit('/vault/auth');
-        await component.selectMethod(type);
-        if (type === 'github') {
-          await component.token('token');
-        }
-        if (isOidc) {
-          await jwtComponent.role('test');
-        }
-        await component.login();
-      });
-    }
   });
 
   module('it sends the right payload when authenticating', function (hooks) {
