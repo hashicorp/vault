@@ -258,6 +258,10 @@
         "path": "concepts/resource-quotas"
       },
       {
+        "title": "Billing Start Date",
+        "path": "concepts/billing-start-date"
+      },
+      {
         "title": "Client count",
         "routes": [
           {
