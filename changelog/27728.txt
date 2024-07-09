@@ -1,0 +1,3 @@
+```release-note:bug
+ui: fix namespace picker not working when in small screen where the sidebar is collapsed by default.
+```
