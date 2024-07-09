@@ -4,13 +4,9 @@
  */
 
 import Component from '@glimmer/component';
-import Ember from 'ember';
 import { service } from '@ember/service';
-import { restartableTask, timeout } from 'ember-concurrency';
-import { waitFor } from '@ember/test-waiters';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
-import customMessages from 'vault/mirage/handlers/custom-messages';
 
 /**
  * @module AuthRoutePage
@@ -25,7 +21,6 @@ import customMessages from 'vault/mirage/handlers/custom-messages';
 export default class AuthRoutePage extends Component {
   @service auth;
   @service flags;
-  @service customMessages;
   @service namespaceService;
 
   @tracked mfaErrors;
