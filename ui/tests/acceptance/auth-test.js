@@ -7,12 +7,13 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { click, currentURL, visit, waitUntil, find, fillIn } from '@ember/test-helpers';
 import { allSupportedAuthBackends, supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
-import authForm from '../pages/components/auth-form';
-import { create } from 'ember-cli-page-object';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 
-const component = create(authForm);
-
+const AUTH_FORM = {
+  method: '[data-test-select=auth-method]',
+  token: '[data-test-token]',
+  login: '[data-test-auth-submit]',
+};
 const ENT_AUTH_METHODS = ['saml'];
 
 module('Acceptance | auth', function (hooks) {
@@ -25,7 +26,7 @@ module('Acceptance | auth', function (hooks) {
     await visit('/vault/auth');
     assert.strictEqual(currentURL(), '/vault/auth?with=token');
     for (const backend of backends.reverse()) {
-      await component.selectMethod(backend.type);
+      await fillIn(AUTH_FORM.method, backend.type);
       assert.strictEqual(
         currentURL(),
         `/vault/auth?with=${backend.type}`,
@@ -36,9 +37,10 @@ module('Acceptance | auth', function (hooks) {
 
   test('it clears token when changing selected auth method', async function (assert) {
     await visit('/vault/auth');
-    await component.token('token').selectMethod('github');
-    await component.selectMethod('token');
-    assert.strictEqual(component.tokenValue, '', 'it clears the token value when toggling methods');
+    await fillIn(AUTH_FORM.token, 'token');
+    await fillIn(AUTH_FORM.method, 'github');
+    await fillIn(AUTH_FORM.method, 'token');
+    assert.dom(AUTH_FORM.token).hasNoValue('it clears the token value when toggling methods');
   });
 
   module('it sends the right payload when authenticating', function (hooks) {
@@ -155,7 +157,7 @@ module('Acceptance | auth', function (hooks) {
           });
         };
         await visit('/vault/auth');
-        await component.selectMethod(type);
+        await fillIn(AUTH_FORM.method, type);
 
         if (type !== 'token') {
           // set custom mount
@@ -168,7 +170,7 @@ module('Acceptance | auth', function (hooks) {
           await fillIn(`[data-test-${key}]`, `some-${key}`);
         });
 
-        await component.login();
+        await click(AUTH_FORM.login);
       });
     }
   });
@@ -188,7 +190,7 @@ module('Acceptance | auth', function (hooks) {
       { timing: 1000 }
     );
     await visit('/vault/auth');
-    await component.selectMethod('token');
+    await fillIn(AUTH_FORM.method, 'token');
     await click('[data-test-auth-submit]');
   });
 });
