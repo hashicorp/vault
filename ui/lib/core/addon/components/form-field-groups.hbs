@@ -62,12 +62,12 @@
                   @modelValidations={{@modelValidations}}
                   @showHelpText={{@showHelpText}}
                 >
-                  {{#if (eq attr.name "identityTokenKey")}}
+                  {{! while this field can be set for OSS users, it's only used for the enterprise WIF feature }}
+                  {{#if (and this.version.isEnterprise (eq attr.name "identityTokenKey"))}}
                     {{! identityTokenKey attr has editType yield, which will render the following component }}
                     <SearchSelectWithModal
                       @id={{attr.name}}
                       @fallbackComponent={{attr.options.fallbackComponent}}
-                      {{!-- @inputValue={{@model.policies}} --}}
                       @onChange={{action (mut @model.config.identityTokenKey)}}
                       @models={{attr.options.models}}
                       @selectLimit={{attr.options.selectLimit}}
