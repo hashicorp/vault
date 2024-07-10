@@ -180,7 +180,7 @@ module('Integration | Component | pki tidy form', function (hooks) {
       assert.propEqual(
         JSON.parse(req.requestBody),
         {
-          acme_account_safety_buffer: '60s',
+          acme_account_safety_buffer: '72h',
           enabled: true,
           interval_duration: '10s',
           issuer_safety_buffer: '20s',
@@ -230,7 +230,7 @@ module('Integration | Component | pki tidy form', function (hooks) {
     assert.false(this.autoTidy.tidyAcme, 'tidyAcme is false on model');
 
     await click(PKI_TIDY_FORM.toggleInput('acmeAccountSafetyBuffer'));
-    await fillIn(PKI_TIDY_FORM.acmeAccountSafetyBuffer, 60);
+    await fillIn(PKI_TIDY_FORM.acmeAccountSafetyBuffer, 3); // units are days based on defaultValue
     assert.true(this.autoTidy.tidyAcme, 'tidyAcme toggles to true');
 
     const fillInValues = {
@@ -262,6 +262,7 @@ module('Integration | Component | pki tidy form', function (hooks) {
       assert.propEqual(
         JSON.parse(req.requestBody),
         {
+          acme_account_safety_buffer: '720h',
           enabled: false,
           tidy_acme: false,
         },
@@ -294,7 +295,7 @@ module('Integration | Component | pki tidy form', function (hooks) {
       assert.ok(true, 'Request made to perform manual tidy');
       assert.propEqual(
         JSON.parse(req.requestBody),
-        { tidy_acme: false },
+        { acme_account_safety_buffer: '720h', tidy_acme: false },
         'response contains manual tidy params'
       );
       return { id: 'pki-manual-tidy' };

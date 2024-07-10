@@ -21,6 +21,7 @@ export default class PkiTidyModel extends Model {
       'The amount of time that must pass after creation that an account with no orders is marked revoked, and the amount of time after being marked revoked or deactivated.',
     detailsLabel: 'ACME account safety buffer',
     formatTtl: true,
+    defaultValue: '720h',
   })
   acmeAccountSafetyBuffer;
 
