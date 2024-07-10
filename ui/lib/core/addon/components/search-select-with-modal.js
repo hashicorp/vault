@@ -123,7 +123,9 @@ export default class SearchSelectWithModal extends Component {
   @action
   handleChange() {
     if (this.selectedOptions.length && typeof this.selectedOptions[0] === 'object') {
-      this.args.onChange(Array.from(this.selectedOptions, (option) => option.id));
+      const onChangeValue = Array.from(this.selectedOptions, (option) => option.id);
+      this.args.returnString ? this.args.onChange(onChangeValue[0]) : this.args.onChange(onChangeValue);
+      // this.args.onChange(Array.from(this.selectedOptions, (option) => option.id));
     } else {
       this.args.onChange(this.selectedOptions);
     }

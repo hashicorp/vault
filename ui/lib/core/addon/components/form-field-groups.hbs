@@ -61,7 +61,21 @@
                   @onKeyUp={{@onKeyUp}}
                   @modelValidations={{@modelValidations}}
                   @showHelpText={{@showHelpText}}
-                />
+                >
+                  {{#if (eq attr.name "identityTokenKey")}}
+                    {{! identityTokenKey attr has editType yield, which will render the following component }}
+                    <SearchSelectWithModal
+                      @id={{attr.name}}
+                      @fallbackComponent={{attr.options.fallbackComponent}}
+                      {{!-- @inputValue={{@model.policies}} --}}
+                      @onChange={{action (mut @model.config.identityTokenKey)}}
+                      @models={{attr.options.models}}
+                      @selectLimit={{attr.options.selectLimit}}
+                      @returnString={{attr.options.returnString}}
+                    />
+                  {{/if}}
+                </FormField>
+
               {{else}}
                 {{! OTHERWISE WE'RE EDITING }}
                 {{#if (or (eq attr.name "name") (eq attr.options.editDisabled true))}}
