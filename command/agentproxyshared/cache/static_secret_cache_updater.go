@@ -163,6 +163,10 @@ func (updater *StaticSecretCacheUpdater) streamStaticSecretEvents(ctx context.Co
 				if !ok {
 					return fmt.Errorf("unexpected event format when decoding 'path' element, message: %s\nerror: %w", string(message), err)
 				}
+				namespace, ok := data["namespace"].(string)
+				if ok {
+					path = namespace + path
+				}
 				err := updater.updateStaticSecret(ctx, path)
 				if err != nil {
 					// While we are kind of 'missing' an event this way, re-calling this function will
@@ -218,6 +222,10 @@ func (updater *StaticSecretCacheUpdater) updateStaticSecret(ctx context.Context,
 		return err
 	}
 
+	// Clear the client's header namespace since we'll be including the
+	// namespace as part of the path.
+	client.ClearNamespace()
+
 	indexId := hashStaticSecretIndex(path)
 
 	updater.logger.Debug("received update static secret request", "path", path, "indexId", indexId)
@@ -248,7 +256,7 @@ func (updater *StaticSecretCacheUpdater) updateStaticSecret(ctx context.Context,
 		request.Headers.Set(api.AuthHeaderName, token)
 		resp, err = client.RawRequestWithContext(ctx, request)
 		if err != nil {
-			updater.logger.Trace("received error when trying to update cache", "path", path, "err", err, "token", token)
+			updater.logger.Trace("received error when trying to update cache", "path", path, "err", err, "token", token, "namespace", index.Namespace)
 			// We cannot access this secret with this token for whatever reason,
 			// so token for removal.
 			tokensToRemove = append(tokensToRemove, token)
@@ -329,6 +337,7 @@ func (updater *StaticSecretCacheUpdater) openWebSocketConnection(ctx context.Con
 	}
 	query := webSocketURL.Query()
 	query.Set("json", "true")
+	query.Set("namespaces", "*")
 	webSocketURL.RawQuery = query.Encode()
 
 	updater.client.AddHeader(api.AuthHeaderName, updater.client.Token())

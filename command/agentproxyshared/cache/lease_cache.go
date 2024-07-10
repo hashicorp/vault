@@ -411,7 +411,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 			return nil, err
 		}
 		if cachedResp != nil {
-			c.logger.Debug("returning cached static secret response", "id", staticSecretCacheId, "path", req.Request.URL.Path)
+			c.logger.Debug("returning cached static secret response", "id", staticSecretCacheId, "path", getStaticSecretPathFromRequest(req))
 			return cachedResp, nil
 		}
 	}
@@ -482,6 +482,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		// included in the request path.
 		index.RequestPath = getStaticSecretPathFromRequest(req)
 
+		c.logger.Trace("attempting to cache static secret with following request path", "request path", index.RequestPath)
 		err := c.cacheStaticSecret(ctx, req, resp, index)
 		if err != nil {
 			return nil, err
@@ -665,7 +666,7 @@ func (c *LeaseCache) cacheStaticSecret(ctx context.Context, req *SendRequest, re
 
 func (c *LeaseCache) storeStaticSecretIndex(ctx context.Context, req *SendRequest, index *cachememdb.Index) error {
 	// Store the index in the cache
-	c.logger.Debug("storing static secret response into the cache", "method", req.Request.Method, "path", req.Request.URL.Path, "id", index.ID)
+	c.logger.Debug("storing static secret response into the cache", "method", req.Request.Method, "path", index.RequestPath, "id", index.ID)
 	err := c.Set(ctx, index)
 	if err != nil {
 		c.logger.Error("failed to cache the proxied response", "error", err)
