@@ -9,6 +9,7 @@ import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { format, isSameMonth } from 'date-fns';
+import { task } from 'ember-concurrency';
 
 /**
  * @module Attribution
@@ -151,8 +152,7 @@ export default class Attribution extends Component {
       : `clients_by_namespace${csvDateRange}`;
   }
 
-  @action
-  async exportChartData(filename) {
+  exportChartData = task({ drop: true }, async (filename) => {
     try {
       const contents = await this.generateCsvData();
       this.download.csv(filename, contents);
@@ -160,7 +160,7 @@ export default class Attribution extends Component {
     } catch (e) {
       this.downloadError = e.message;
     }
-  }
+  });
 
   @action setExportFormat(evt) {
     const { value } = evt.target;

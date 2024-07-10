@@ -88,24 +88,33 @@
       Export activity data
     </M.Header>
     <M.Body>
-      <p class="has-bottom-margin-s">
-        This file will include an export of the clients that had activity within the date range below. See the
-        <DocLink @path="/vault/api-docs/system/internal-counters#activity-export">activity export documentation</DocLink>
-        for more details.
-      </p>
-      <p class="has-bottom-margin-s is-subtitle-gray">SELECTED DATE {{if this.formattedEndDate " RANGE"}}</p>
-      <p class="has-bottom-margin-s" data-test-export-date-range>
-        {{this.formattedStartDate}}
-        {{if this.formattedEndDate "-"}}
-        {{this.formattedEndDate}}</p>
+      {{#if this.exportChartData.isRunning}}
+        <p class="has-bottom-margin-s">
+          Your export request is being processed. This may take some time; please do not navigate away from this page.
+        </p>
+        <p class="has-bottom-margin-s has-text-centered">
+          <Icon @name="loading" @size="24" />
+        </p>
+      {{else}}
+        <p class="has-bottom-margin-s">
+          This file will include an export of the clients that had activity within the date range below. See the
+          <DocLink @path="/vault/api-docs/system/internal-counters#activity-export">activity export documentation</DocLink>
+          for more details.
+        </p>
+        <p class="has-bottom-margin-s is-subtitle-gray">SELECTED DATE {{if this.formattedEndDate " RANGE"}}</p>
+        <p class="has-bottom-margin-s" data-test-export-date-range>
+          {{this.formattedStartDate}}
+          {{if this.formattedEndDate "-"}}
+          {{this.formattedEndDate}}</p>
 
-      <Hds::Form::Select::Field class="has-bottom-margin-s" {{on "change" this.setExportFormat}} as |F|>
-        <F.Label>Export format</F.Label>
-        <F.Options>
-          <option value="csv" selected={{eq this.exportFormat "csv"}}>CSV</option>
-          <option value="json" selected={{eq this.exportFormat "json"}}>JSON</option>
-        </F.Options>
-      </Hds::Form::Select::Field>
+        <Hds::Form::Select::Field class="has-bottom-margin-s" {{on "change" this.setExportFormat}} as |F|>
+          <F.Label>Export format</F.Label>
+          <F.Options>
+            <option value="csv" selected={{eq this.exportFormat "csv"}}>CSV</option>
+            <option value="json" selected={{eq this.exportFormat "json"}}>JSON</option>
+          </F.Options>
+        </Hds::Form::Select::Field>
+      {{/if}}
 
       {{#if this.downloadError}}
         <Hds::Alert @type="inline" @color="critical" as |A|>
@@ -118,7 +127,7 @@
       <Hds::ButtonSet>
         <Hds::Button
           @text="Export"
-          {{on "click" (fn this.exportChartData this.formattedCsvFileName)}}
+          {{on "click" (perform this.exportChartData this.formattedCsvFileName)}}
           data-test-confirm-button
         />
         <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} />
