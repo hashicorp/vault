@@ -19,6 +19,7 @@ import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import { formatNumber } from 'core/helpers/format-number';
 import timestamp from 'core/utils/timestamp';
 import ss from 'vault/tests/pages/components/search-select';
+import { capabilitiesStub } from 'vault/tests/helpers/stubs';
 
 const searchSelect = create(ss);
 
@@ -219,6 +220,31 @@ module('Acceptance | clients | overview', function (hooks) {
         .dom(CLIENT_COUNT.statTextValue(label))
         .includesText(`${expectedStats[label]}`, `label: ${label} is back to unfiltered value`);
     }
+  });
+
+  test('it updates export button visibility as namespace is filtered', async function (assert) {
+    const response = await this.store.peekRecord('clients/activity', 'some-activity-id');
+    const topNamespace = response.byNamespace[0];
+
+    // stub export abilities for top namespace only
+    this.server.post('/sys/capabilities-self', (_, req) => {
+      const [path] = JSON.parse(req.requestBody);
+      assert.true('capabilities called');
+      if (path.startsWith(topNamespace.label)) {
+        return capabilitiesStub(path, ['sudo']);
+      } else {
+        return capabilitiesStub(path, ['read']);
+      }
+    });
+
+    assert.dom(CLIENT_COUNT.exportButton).doesNotExist();
+
+    // FILTER BY TOP NAMESPACE
+    await clickTrigger();
+    await searchSelect.options.objectAt(0).click();
+    await settled();
+
+    assert.dom(CLIENT_COUNT.exportButton).exists();
   });
 });
 

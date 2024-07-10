@@ -14,7 +14,7 @@
       <p class="chart-description" data-test-attribution-description>{{this.chartText.description}}</p>
     </div>
     <div class="header-right">
-      {{#if this.hasCsvData}}
+      {{#if this.showExportButton}}
         <Hds::Button
           data-test-attribution-export-button
           @text="Export activity data"

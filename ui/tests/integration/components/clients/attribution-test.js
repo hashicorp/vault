@@ -16,6 +16,7 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SERIALIZED_ACTIVITY_RESPONSE } from 'vault/tests/helpers/clients/client-count-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { Response } from 'miragejs';
+import { capabilitiesStub, overrideResponse } from 'vault/tests/helpers/stubs';
 
 module('Integration | Component | clients/attribution', function (hooks) {
   setupRenderingTest(hooks);
@@ -323,6 +324,46 @@ module('Integration | Component | clients/attribution', function (hooks) {
       await click('[data-test-attribution-export-button]');
       await click(GENERAL.confirmButton);
       assert.dom('[data-test-export-error]').hasText('this is an error from the API');
+    });
+
+    test('hides the export button if user does not have SUDO capabilities', async function (assert) {
+      this.server.post('/sys/capabilities-self', () =>
+        capabilitiesStub('sys/internal/counters/activity/export', ['read'])
+      );
+
+      await render(hbs`
+        <Clients::Attribution
+          @totalClientAttribution={{this.totalClientAttribution}}
+          @responseTimestamp={{this.timestamp}}
+          />
+      `);
+      assert.dom('[data-test-attribution-export-button]').doesNotExist();
+    });
+
+    test('shows the export button if user has SUDO capabilities', async function (assert) {
+      this.server.post('/sys/capabilities-self', () =>
+        capabilitiesStub('sys/internal/counters/activity/export', ['sudo'])
+      );
+
+      await render(hbs`
+        <Clients::Attribution
+          @totalClientAttribution={{this.totalClientAttribution}}
+          @responseTimestamp={{this.timestamp}}
+          />
+      `);
+      assert.dom('[data-test-attribution-export-button]').exists();
+    });
+
+    test('defaults to show the export button if capabilities cannot be read', async function (assert) {
+      this.server.post('/sys/capabilities-self', () => overrideResponse(403));
+
+      await render(hbs`
+        <Clients::Attribution
+          @totalClientAttribution={{this.totalClientAttribution}}
+          @responseTimestamp={{this.timestamp}}
+          />
+      `);
+      assert.dom('[data-test-attribution-export-button]').exists();
     });
   });
 });

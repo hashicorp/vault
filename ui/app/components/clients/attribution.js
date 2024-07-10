@@ -46,9 +46,27 @@ import { task } from 'ember-concurrency';
 export default class Attribution extends Component {
   @service download;
   @service store;
+  @service namespace;
+
+  @tracked canDownload = false;
   @tracked showExportModal = false;
   @tracked exportFormat = 'csv';
   @tracked downloadError = '';
+
+  constructor() {
+    super(...arguments);
+    this.getExportCapabilities(this.args.selectedNamespace);
+  }
+
+  async getExportCapabilities(ns = '') {
+    try {
+      const cap = await this.store.findRecord('capabilities', `${ns}sys/internal/counters/activity/export`);
+      this.canDownload = cap.canSudo;
+    } catch (e) {
+      // if we can't read capabilities, default to show
+      this.canDownload = true;
+    }
+  }
 
   get attributionLegend() {
     const attributionLegend = [
@@ -76,8 +94,9 @@ export default class Attribution extends Component {
     return isSameMonth(startDateObject, endDateObject) ? null : format(endDateObject, 'MMMM yyyy');
   }
 
-  get hasCsvData() {
-    return this.args.totalClientAttribution ? this.args.totalClientAttribution.length > 0 : false;
+  get showExportButton() {
+    const hasData = this.args.totalClientAttribution ? this.args.totalClientAttribution.length > 0 : false;
+    return hasData && this.canDownload;
   }
 
   get isSingleNamespace() {
