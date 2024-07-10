@@ -10,7 +10,7 @@
  * @returns string like ?key=val1&key2=val2
  */
 export default function queryParamString(queryObject) {
-  if (queryObject.constructor !== 'object') return '';
+  if (!queryObject || typeof queryObject !== 'object' || Array.isArray(queryObject)) return '';
   return Object.keys(queryObject).reduce((prev, key) => {
     const value = queryObject[key];
     if (!value) return prev;
