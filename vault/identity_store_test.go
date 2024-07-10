@@ -992,7 +992,11 @@ func TestIdentityStoreInvalidate_Entities(t *testing.T) {
 	txn.Commit()
 }
 
-func TestIdentityStoreInvalidate_EntityAliasUpdate(t *testing.T) {
+// TestIdentityStoreInvalidate_EntityAliasDelete verifies that the
+// invalidateEntityBucket method properly cleans up aliases from
+// MemDB that are no longer associated with the entity in the
+// storage bucket.
+func TestIdentityStoreInvalidate_EntityAliasDelete(t *testing.T) {
 	ctx := namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace)
 	c, _, root := TestCoreUnsealed(t)
 
@@ -1004,29 +1008,28 @@ func TestIdentityStoreInvalidate_EntityAliasUpdate(t *testing.T) {
 	}
 	mountAccessor1 := "noop-accessor1"
 	mountAccessor2 := "noop-accessor2"
+	mountAccessor3 := "noon-accessor3"
+
+	createMountEntry := func(path, uuid, mountAccessor string, local bool) *MountEntry {
+		return &MountEntry{
+			Table:            credentialTableType,
+			Path:             path,
+			Type:             "noop",
+			UUID:             uuid,
+			Accessor:         mountAccessor,
+			BackendAwareUUID: uuid + "backend",
+			NamespaceID:      namespace.RootNamespaceID,
+			namespace:        namespace.RootNamespace,
+			Local:            local,
+		}
+	}
+
 	c.auth = &MountTable{
 		Type: credentialTableType,
 		Entries: []*MountEntry{
-			{
-				Table:            credentialTableType,
-				Path:             "/noop1",
-				Type:             "noop",
-				UUID:             "abcd",
-				Accessor:         mountAccessor1,
-				BackendAwareUUID: "abcde",
-				NamespaceID:      namespace.RootNamespaceID,
-				namespace:        namespace.RootNamespace,
-			},
-			{
-				Table:            credentialTableType,
-				Path:             "/noop2",
-				Type:             "noop",
-				UUID:             "wxyz",
-				Accessor:         mountAccessor2,
-				BackendAwareUUID: "vwxyz",
-				NamespaceID:      namespace.RootNamespaceID,
-				namespace:        namespace.RootNamespace,
-			},
+			createMountEntry("/noop1", "abcd", mountAccessor1, false),
+			createMountEntry("/noop2", "ghij", mountAccessor2, false),
+			createMountEntry("/noop3", "mnop", mountAccessor3, true),
 		},
 	}
 
@@ -1070,8 +1073,9 @@ func TestIdentityStoreInvalidate_EntityAliasUpdate(t *testing.T) {
 		return resp.Data["id"].(string)
 	}
 
-	createEntityAlias("alias1", mountAccessor1)
+	alias1ID := createEntityAlias("alias1", mountAccessor1)
 	alias2ID := createEntityAlias("alias2", mountAccessor2)
+	alias3ID := createEntityAlias("alias3", mountAccessor3)
 
 	// Update the entity in storage only to remove alias2 then call invalidate
 	bucketKey := c.identityStore.entityPacker.BucketKey(entityID)
@@ -1101,9 +1105,17 @@ func TestIdentityStoreInvalidate_EntityAliasUpdate(t *testing.T) {
 
 	c.identityStore.Invalidate(context.Background(), bucketKey)
 
+	alias1, err := c.identityStore.MemDBAliasByID(alias1ID, false, false)
+	assert.NoError(t, err)
+	assert.NotNil(t, alias1)
+
 	alias2, err := c.identityStore.MemDBAliasByID(alias2ID, false, false)
 	assert.NoError(t, err)
 	assert.Nil(t, alias2)
+
+	alias3, err := c.identityStore.MemDBAliasByID(alias3ID, false, false)
+	assert.NoError(t, err)
+	assert.NotNil(t, alias3)
 }
 
 // TestIdentityStoreInvalidate_LocalAliasesWithEntity verifies the correct
