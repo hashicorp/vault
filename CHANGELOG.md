@@ -254,6 +254,7 @@ autopilot to fail to discover new server versions and so not trigger an upgrade.
 
 ## 1.16.6 Enterprise
 ### July 10, 2024
+**Enterprise LTS:** Vault Enterprise 1.16 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
 
 CHANGES:
 
