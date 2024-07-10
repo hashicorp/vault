@@ -45,7 +45,7 @@ import { format, isSameMonth } from 'date-fns';
 export default class Attribution extends Component {
   @service download;
   @service store;
-  @tracked showCSVDownloadModal = false;
+  @tracked showExportModal = false;
   @tracked downloadError = '';
 
   get attributionLegend() {
@@ -154,14 +154,14 @@ export default class Attribution extends Component {
     try {
       const contents = await this.generateCsvData();
       this.download.csv(filename, contents);
-      this.showCSVDownloadModal = false;
+      this.showExportModal = false;
     } catch (e) {
       this.downloadError = e.message;
     }
   }
 
   @action resetModal() {
-    this.showCSVDownloadModal = false;
+    this.showExportModal = false;
     this.downloadError = '';
   }
 }

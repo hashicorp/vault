@@ -19,7 +19,7 @@
           data-test-attribution-export-button
           @text="Export activity data"
           @color="secondary"
-          {{on "click" (fn (mut this.showCSVDownloadModal) true)}}
+          {{on "click" (fn (mut this.showExportModal) true)}}
         />
       {{/if}}
     </div>
@@ -82,7 +82,7 @@
 </div>
 
 {{! MODAL FOR CSV DOWNLOAD }}
-{{#if this.showCSVDownloadModal}}
+{{#if this.showExportModal}}
   <Hds::Modal id="attribution-csv-download-modal" @onClose={{this.resetModal}} as |M|>
     <M.Header @icon="info" data-test-export-modal-title>
       Export activity data
