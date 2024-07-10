@@ -46,6 +46,7 @@ export default class Attribution extends Component {
   @service download;
   @service store;
   @tracked showExportModal = false;
+  @tracked exportFormat = 'csv';
   @tracked downloadError = '';
 
   get attributionLegend() {
@@ -136,6 +137,7 @@ export default class Attribution extends Component {
     const adapter = this.store.adapterFor('clients/activity');
     const { startTimestamp, endTimestamp } = this.args;
     return adapter.exportData({
+      format: this.exportFormat,
       start_time: startTimestamp,
       end_time: endTimestamp,
     });
@@ -158,6 +160,11 @@ export default class Attribution extends Component {
     } catch (e) {
       this.downloadError = e.message;
     }
+  }
+
+  @action setExportFormat(evt) {
+    const { value } = evt.target;
+    this.exportFormat = value;
   }
 
   @action resetModal() {

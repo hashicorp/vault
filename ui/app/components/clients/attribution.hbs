@@ -98,6 +98,15 @@
         {{this.formattedStartDate}}
         {{if this.formattedEndDate "-"}}
         {{this.formattedEndDate}}</p>
+
+      <Hds::Form::Select::Field class="has-bottom-margin-s" {{on "change" this.setExportFormat}} as |F|>
+        <F.Label>Export format</F.Label>
+        <F.Options>
+          <option value="csv" selected={{eq this.exportFormat "csv"}}>CSV</option>
+          <option value="json" selected={{eq this.exportFormat "json"}}>JSON</option>
+        </F.Options>
+      </Hds::Form::Select::Field>
+
       {{#if this.downloadError}}
         <Hds::Alert @type="inline" @color="critical" as |A|>
           <A.Title>CSV export failed</A.Title>

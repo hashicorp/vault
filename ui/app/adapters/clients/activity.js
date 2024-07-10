@@ -38,7 +38,7 @@ export default class ActivityAdapter extends ApplicationAdapter {
 
   async exportData(query) {
     const url = `${this.buildURL()}/internal/counters/activity/export${queryParamString({
-      format: 'csv',
+      format: query.format || 'csv',
       start_time: query?.start_time ?? undefined,
       end_time: query?.end_time ?? undefined,
     })}`;
