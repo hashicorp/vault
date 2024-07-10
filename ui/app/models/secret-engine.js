@@ -242,7 +242,14 @@ export default class SecretEngineModel extends Model {
         break;
       case 'aws':
         defaultFields = ['path'];
-        optionFields = ['config.identityTokenKey', ...CORE_OPTIONS, ...STANDARD_CONFIG];
+        optionFields = [
+          ...CORE_OPTIONS,
+          'config.defaultLeaseTtl',
+          'config.maxLeaseTtl',
+          'config.identityTokenKey',
+          'config.allowedManagedKeys',
+          ...STANDARD_CONFIG,
+        ];
         break;
       default:
         defaultFields = ['path'];
