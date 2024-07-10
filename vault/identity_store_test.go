@@ -992,6 +992,120 @@ func TestIdentityStoreInvalidate_Entities(t *testing.T) {
 	txn.Commit()
 }
 
+func TestIdentityStoreInvalidate_EntityAliasUpdate(t *testing.T) {
+	ctx := namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace)
+	c, _, root := TestCoreUnsealed(t)
+
+	// Enable a No-Op auth method
+	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
+		return &NoopBackend{
+			BackendType: logical.TypeCredential,
+		}, nil
+	}
+	mountAccessor1 := "noop-accessor1"
+	mountAccessor2 := "noop-accessor2"
+	c.auth = &MountTable{
+		Type: credentialTableType,
+		Entries: []*MountEntry{
+			{
+				Table:            credentialTableType,
+				Path:             "/noop1",
+				Type:             "noop",
+				UUID:             "abcd",
+				Accessor:         mountAccessor1,
+				BackendAwareUUID: "abcde",
+				NamespaceID:      namespace.RootNamespaceID,
+				namespace:        namespace.RootNamespace,
+			},
+			{
+				Table:            credentialTableType,
+				Path:             "/noop2",
+				Type:             "noop",
+				UUID:             "wxyz",
+				Accessor:         mountAccessor2,
+				BackendAwareUUID: "vwxyz",
+				NamespaceID:      namespace.RootNamespaceID,
+				namespace:        namespace.RootNamespace,
+			},
+		},
+	}
+
+	require.NoError(t, c.setupCredentials(context.Background()))
+
+	// Create an entity
+	req := &logical.Request{
+		ClientToken: root,
+		Operation:   logical.UpdateOperation,
+		Path:        "entity",
+		Data: map[string]interface{}{
+			"name": "alice",
+		},
+	}
+
+	resp, err := c.identityStore.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.Contains(t, resp.Data, "id")
+
+	entityID := resp.Data["id"].(string)
+
+	// Create two entity-aliases
+	createEntityAlias := func(name, mountAccessor string) string {
+		req = &logical.Request{
+			ClientToken: root,
+			Operation:   logical.UpdateOperation,
+			Path:        "entity-alias",
+			Data: map[string]interface{}{
+				"name":           name,
+				"canonical_id":   entityID,
+				"mount_accessor": mountAccessor,
+			},
+		}
+
+		resp, err = c.identityStore.HandleRequest(ctx, req)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.Contains(t, resp.Data, "id")
+
+		return resp.Data["id"].(string)
+	}
+
+	createEntityAlias("alias1", mountAccessor1)
+	alias2ID := createEntityAlias("alias2", mountAccessor2)
+
+	// Update the entity in storage only to remove alias2 then call invalidate
+	bucketKey := c.identityStore.entityPacker.BucketKey(entityID)
+	bucket, err := c.identityStore.entityPacker.GetBucket(context.Background(), bucketKey)
+	require.NoError(t, err)
+	require.NotNil(t, bucket)
+
+	bucketEntityItem := bucket.Items[0] // since there's only 1 entity
+	bucketEntity, err := c.identityStore.parseEntityFromBucketItem(context.Background(), bucketEntityItem)
+	require.NoError(t, err)
+	require.NotNil(t, bucketEntity)
+
+	replacementAliases := make([]*identity.Alias, 1)
+	for _, a := range bucketEntity.Aliases {
+		if a.ID != alias2ID {
+			replacementAliases[0] = a
+			break
+		}
+	}
+
+	bucketEntity.Aliases = replacementAliases
+
+	bucketEntityItem.Message, err = anypb.New(bucketEntity)
+	require.NoError(t, err)
+
+	require.NoError(t, c.identityStore.entityPacker.PutItem(context.Background(), bucketEntityItem))
+
+	c.identityStore.Invalidate(context.Background(), bucketKey)
+
+	alias2, err := c.identityStore.MemDBAliasByID(alias2ID, false, false)
+	assert.NoError(t, err)
+	assert.Nil(t, alias2)
+}
+
 // TestIdentityStoreInvalidate_LocalAliasesWithEntity verifies the correct
 // handling of local aliases in the Invalidate method.
 func TestIdentityStoreInvalidate_LocalAliasesWithEntity(t *testing.T) {
