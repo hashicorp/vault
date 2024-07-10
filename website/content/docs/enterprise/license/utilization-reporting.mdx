@@ -15,7 +15,7 @@ lets you review your license usage with the monitoring solution you already use
 (for example Splunk, Datadog, or others) so you can optimize and manage your
 deployments. Use these reports to understand how much more you can deploy under
 your current contract, protect against overutilization, and budget for predicted
-consumption.  
+consumption.
 
 Automated reporting shares the minimum data required to validate license
 utilization as defined in our contracts. They consist of mostly computed metrics
@@ -30,20 +30,20 @@ reports roughly once every 24 hours.
 To enable automated reporting, you need to make sure that outbound network
 traffic is configured correctly and upgrade your enterprise product to a version
 that supports it. If your installation is air-gapped or network settings are not
-in place, automated reporting will not work. 
+in place, automated reporting will not work.
 
-### 1. allow outbound HTTPS traffic on port 443
+### 1. Allow outbound HTTPS traffic on port 443
 
 Make sure that your network allows HTTPS egress on port 443 to
 https://reporting.hashicorp.services by allow-listing the following IP
-addresses: 
+addresses:
 
 - 100.20.70.12
 - 35.166.5.222
 - 23.95.85.111
 - 44.215.244.1
 
-### 2. upgrade
+### 2. Upgrade
 
 Upgrade to a release that supports license utilization reporting. These
 releases include:
@@ -53,7 +53,7 @@ releases include:
 - [Vault Enterprise 1.12.8](https://releases.hashicorp.com/vault/) and later 1.12.x versions
 - [Vault Enterprise 1.11.12](https://releases.hashicorp.com/vault/)
 
-### 3. check logs
+### 3. Check logs
 
 Automatic license utilization reporting will start sending data within roughly 24 hours.
 Check the server logs for records that the data sent successfully.
@@ -79,7 +79,7 @@ You will find log entries similar to the following:
 </CodeBlockConfig>
 
 If your installation is air-gapped or your network doesn’t allow the correct
-egress, logs will show an error. 
+egress, logs will show an error.
 
 <CodeBlockConfig hideClipboard>
 
@@ -97,26 +97,26 @@ egress, logs will show an error.
 </CodeBlockConfig>
 
 In this case, reconfigure your network to allow egress and check back in 24
-hours. 
+hours.
 
 ## Opt out
 
 If your installation is air-gapped or you want to manually collect and report on
-the same license utilization metrics, you can opt-out of automated reporting. 
+the same license utilization metrics, you can opt-out of automated reporting.
 
 Manually reporting these metrics can be time consuming. Opting out of automated
 reporting does not mean that you also opt out from sending license utilization
 metrics. Customers who opt out of automated reporting will still be required to
-manually collect and send license utilization metrics to HashiCorp. 
+manually collect and send license utilization metrics to HashiCorp.
 
 If you are considering opting out because you’re worried about the data, we
 strongly recommend that you review the [example payloads](#example-payloads)
 before opting out. If you have concerns with any of the automatically-reported
-data please bring them to your account manager. 
+data please bring them to your account manager.
 
-You have two options to opt out of automated reporting: 
+You have two options to opt out of automated reporting:
 
-- HCL configuration (recommended) 
+- HCL configuration (recommended)
 - Environment variable (requires restart)
 
 
@@ -161,7 +161,7 @@ You will find the following entries in the server log.
 
 If you need to, you can also opt out using an environment variable, which will
 provide a startup message confirming that you have disabled automated reporting.
-This option requires a system restart. 
+This option requires a system restart.
 
 <Note>
 
@@ -193,7 +193,7 @@ You will find the following entries in the server log.
 
 
 Check your product logs roughly 24 hours after opting out to make sure that the system
-isn’t trying to send reports. 
+isn’t trying to send reports.
 
 If your configuration file and environment variable differ, the environment
 variable setting will take precedence.
@@ -230,7 +230,7 @@ HashiCorp collects the following utilization data as JSON payloads:
    - `billing_start` - The billing start date associated with the reporting cluster (license start date if not configured)
    - `cluster_id` - The cluster UUID as shown by `vault status` on the reporting
      cluster
-   
+
 <CodeBlockConfig hideClipboard>
 
 ```json
