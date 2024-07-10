@@ -6,6 +6,7 @@
 import queryParamString from 'vault/utils/query-param-string';
 import ApplicationAdapter from '../application';
 import { formatDateObject } from 'core/utils/client-count-utils';
+import { debug } from '@ember/debug';
 
 export default class ActivityAdapter extends ApplicationAdapter {
   // javascript localizes new Date() objects but all activity log data is stored in UTC
@@ -49,5 +50,13 @@ export default class ActivityAdapter extends ApplicationAdapter {
       const { errors } = await e.json();
       throw new Error(errors?.join('. '));
     }
+  }
+
+  urlForFindRecord(id) {
+    // debug reminder so model is stored in Ember data with the same id for consistency
+    if (id !== 'clients/activity') {
+      debug(`findRecord('clients/activity') should pass 'clients/activity' as the id, you passed: '${id}'`);
+    }
+    return `${this.buildURL()}/internal/counters/activity`;
   }
 }

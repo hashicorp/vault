@@ -40,7 +40,7 @@ jobs:
       runs-on: ${{ steps.get-metadata.outputs.runs-on }}
       vault_edition: ${{ steps.get-metadata.outputs.vault_edition }}
     steps:
-      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       - id: get-metadata
         env:
           IS_ENT: ${{ startsWith(github.event.repository.name, 'vault-enterprise' ) }}
@@ -72,7 +72,7 @@ jobs:
       GOPRIVATE: github.com/hashicorp
     steps:
       - name: Checkout
-        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
@@ -90,7 +90,6 @@ jobs:
         with:
           cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
           terraform_wrapper: false
-          terraform_version: "1.7.5" # Pin until 1.8.x crash has been resolved
       - name: Prepare scenario dependencies
         run: |
           mkdir -p ./enos/support/terraform-plugin-cache
@@ -109,7 +108,7 @@ jobs:
           sudo apt install -y libnss3-dev libgdk-pixbuf2.0-dev libgtk-3-dev libxss-dev libasound2
       - name: Install Chrome
         if: steps.chrome-check.outputs.chrome-version == 'not-installed'
-        uses: browser-actions/setup-chrome@9683066f53b47e92c4104e1bd5535aff208c3530 # v1.6.2
+        uses: browser-actions/setup-chrome@db1b524c26f20a8d1a10f7fc385c92387e2d0477 # v1.7.1
       - name: Installed Chrome Version
         run: |
           echo "Installed Chrome Version = [$(chrome --version 2> /dev/null || google-chrome --version 2> /dev/null || google-chrome-stable --version 2> /dev/null)]"

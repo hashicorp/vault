@@ -1,0 +1,5 @@
+```release-note:feature
+**AWS secrets engine STS session tags support**: Adds support for setting STS
+session tags when generating temporary credentials using the AWS secrets
+engine.
+```

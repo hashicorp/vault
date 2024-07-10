@@ -1,0 +1,224 @@
+---
+layout: docs
+page_title: "1.17.0 release notes"
+description: |-
+  Key updates for  Vault 1.17.0
+---
+
+# Vault 1.17.0 release notes
+
+**GA date:** 2024-06-12
+
+@include 'release-notes/intro.mdx'
+
+## Important changes
+
+| Change                         | Description                                                                                                                                                         |
+|--------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| New default (1.17)             | [Allowed audit headers now have unremovable defaults](/vault/docs/upgrading/upgrade-to-1.17.x#audit-headers)                                                        |
+| Opt out feature (1.17)         | [PKI sign-intermediate now truncates `notAfter` field to signing issuer](/vault/docs/upgrading/upgrade-to-1.17.x#pki-truncate)                                      |
+| Beta feature deprecated (1.17) | [Request limiter deprecated](/vault/docs/upgrading/upgrade-to-1.17.x#request-limiter)                                                                               |
+| Known issue (1.17.0+)          | [PKI OCSP GET requests can return HTTP redirect responses](/vault/docs/upgrading/upgrade-to-1.17.x#pki-ocsp)                                                        |
+| Known issue (1.17.0)           | [Vault Agent and Vault Proxy consume excessive amounts of CPU](/vault/docs/upgrading/upgrade-to-1.17.x#agent-proxy-cpu-1-17)                                        |
+| Known issue (1.15.8+)          | [Autopilot upgrade for Vault Enterprise fails](/vault/docs/upgrading/upgrade-to-1.15.x#autopilot)                                                                   |
+| Known issue (1.17.1)           | [Listener stops listening on untrusted upstream connection with particular config settings](/vault/docs/upgrading/upgrade-to-1.17.x#listener-proxy-protocol-config) |
+
+## Vault companion updates
+
+Companion updates are Vault updates that live outside the main Vault binary.
+
+**None**.
+
+## Core updates
+
+Follow the learn more links for more information, or browse the list of
+[Vault tutorials updated to highlight changes for the most recent GA release](/vault/tutorials/new-release).
+
+<table>
+  <thead>
+    <tr>
+      <th style={{verticalAlign: 'middle'}}>Release</th>
+      <th style={{verticalAlign: 'middle'}}>Update</th>
+      <th style={{verticalAlign: 'middle'}}>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Security patches
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>ENHANCED</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Various security improvements to remediate varying severity and
+      informational findings from a 3rd party security audit.
+    </td>
+  </tr>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Vault Agent and Vault Proxy self-healing tokens
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>ENHANCED</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Auto-authentication avoids agent/proxy restarts and config changes by
+      automatically re-authenticating authN tokens to Vault.
+      <br /><br />
+      Learn more: <a href="/vault/docs/agent-and-proxy/autoauth">Vault Agent and Vault Proxy auto-auth</a>
+    </td>
+  </tr>
+
+  </tbody>
+</table>
+
+## Enterprise updates
+
+<table>
+  <thead>
+    <tr>
+      <th style={{verticalAlign: 'middle'}}>Release</th>
+      <th style={{verticalAlign: 'middle'}}>Update</th>
+      <th style={{verticalAlign: 'middle'}}>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Adaptive overload protection
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>BETA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Prevent client requests from overwhelming a variety of server resources
+      that could lead to poor server availability.
+      <br /><br />
+      Learn more: <a href="/vault/docs/concepts/adaptive-overload-protection">Adaptive overload protection overview</a>
+    </td>
+  </tr>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      ACME Client Count
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>ENHANCED</td>
+    <td style={{verticalAlign: 'middle'}}>
+      To improve clarity around client counts, Vault now separates ACME clients
+      from non-entity clients.
+    </td>
+  </tr>
+
+  <tr>
+    <td rowSpan={2} style={{verticalAlign: 'middle'}}>
+      Public Key Infrastructure (PKI)
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Automate certificate lifecycle management for IoT/EST enabled devices with
+      native EST protocol support.
+      <br /><br />
+      Learn more: <a href="/vault/docs/secrets/pki/est">Enrollment over Secure Transport (EST)</a> overview
+    </td>
+  </tr>
+
+   <tr>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Submit custom metadata with certificate requests and store the additional
+      information in Vault for further analysis.
+      <br /><br />
+      Learn more: <a href="/vault/api-docs/secret/pki#metadata">PKI secrets engine API</a>
+    </td>
+  </tr>
+  <tr>
+    <td rowSpan={3} style={{verticalAlign: 'middle'}}>
+      Resource management
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>ENHANCED</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Vault now supports a greater number of namespaces and mounts for
+      large-scale Vault installations.
+    </td>
+  </tr>
+
+  <tr>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Use hierarchical mount paths to organize, manage, and control access to
+      secret engine objects.
+    </td>
+  </tr>
+
+  <tr>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Safely override the max entry size to set different limits for specific
+      storage entries that contain mount tables, auth tables and namespace
+      configuration data.
+      <br /><br />
+      Learn more: <a href="/vault/docs/configuration/storage/raft#max_mount_and_namespace_table_entry_size"><code>max_mount_and_namespace_table_entry_size</code> parameter</a>
+    </td>
+  </tr>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Transit
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Use cipher-based message authentication code (CMAC) with AES symmetric
+      keys in the Vault Transit plugin.
+      <br /><br />
+      Learn more: <a href="/docs/secrets/transit#aes256-cmac">CMAC support</a>
+    </td>
+  </tr>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Plugin identity tokens
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Enable AWS, Azure, and GCP authentication flows with workload identity
+      federation (WIF) tokens from the associated secrets plugins without
+      explicitly configuring sensitive security credentials.
+      <br /><br />
+      Learn more: <a href="/vault/docs/secrets/aws#plugin-workload-identity-federation-wif">Plugin WIF overview</a>
+    </td>
+  </tr>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      LDAP Secrets Engine
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Use hierarchical paths with roles and set names to define policies that
+      map 1-1 to LDAP secrets engine roles.
+      <br /><br />
+      Learn more: <a href="/vault/docs/secrets/ldap#hierarchical-paths">Hierarchical paths</a> overview
+    </td>
+  </tr>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Clock skew and lag detection
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Use the <code>sys/health</code> and <code>sys/ha-status</code> endpoints
+      to display lags in performance secondaries and performance standby nodes.
+      <br /><br />
+      Learn more: <a href="/vault/docs/enterprise/consistency#clock-skew-and-replication-lag">Clock skew and replication lag</a> overview
+    </td>
+  </tr>
+
+  </tbody>
+</table>
+
+## Feature deprecations and EOL
+
+Deprecated in 1.17 | Retired in 1.17
+------------------ | ---------------
+None               | Centrify Auth plugin
+
+@include 'release-notes/deprecation-note.mdx'

@@ -1832,6 +1832,7 @@ func (b *SystemBackend) sealPaths() []*framework.Path {
 							Description: "OK",
 						}},
 					},
+					ForwardPerformanceStandby: true,
 				},
 			},
 

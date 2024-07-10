@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 
@@ -77,13 +76,13 @@ func (r *Request) ToHTTP() (*http.Request, error) {
 		// No body
 
 	case r.BodyBytes != nil:
-		req.Request.Body = ioutil.NopCloser(bytes.NewReader(r.BodyBytes))
+		req.Request.Body = io.NopCloser(bytes.NewReader(r.BodyBytes))
 
 	default:
 		if c, ok := r.Body.(io.ReadCloser); ok {
 			req.Request.Body = c
 		} else {
-			req.Request.Body = ioutil.NopCloser(r.Body)
+			req.Request.Body = io.NopCloser(r.Body)
 		}
 	}
 

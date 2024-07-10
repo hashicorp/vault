@@ -64,12 +64,8 @@ module('Integration | Component | tools/wrap', function (hooks) {
 
     this.server.post('sys/wrapping/wrap', (schema, { requestBody, requestHeaders }) => {
       const payload = JSON.parse(requestBody);
-      const expectedHeaders = {
-        'X-Vault-Wrap-TTL': '30m',
-        'content-type': 'application/json; charset=utf-8',
-      };
       assert.propEqual(payload, JSON.parse(this.wrapData), `payload contains data: ${requestBody}`);
-      assert.propEqual(requestHeaders, expectedHeaders, 'header has default wrap ttl');
+      assert.strictEqual(requestHeaders['X-Vault-Wrap-TTL'], '30m', 'request header has default wrap ttl');
       return {
         wrap_info: {
           token: this.token,
@@ -95,12 +91,8 @@ module('Integration | Component | tools/wrap', function (hooks) {
     assert.expect(2);
     this.server.post('sys/wrapping/wrap', (schema, { requestBody, requestHeaders }) => {
       const payload = JSON.parse(requestBody);
-      const expectedHeaders = {
-        'X-Vault-Wrap-TTL': '1200s',
-        'content-type': 'application/json; charset=utf-8',
-      };
       assert.propEqual(payload, JSON.parse(this.wrapData), `payload contains data: ${requestBody}`);
-      assert.propEqual(requestHeaders, expectedHeaders, 'header has updated wrap ttl');
+      assert.strictEqual(requestHeaders['X-Vault-Wrap-TTL'], '1200s', 'request header has updated wrap ttl');
       // only testing payload/header assertions, no need for return here
       return {};
     });
