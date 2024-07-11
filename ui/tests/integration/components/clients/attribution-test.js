@@ -366,6 +366,27 @@ module('Integration | Component | clients/attribution', function (hooks) {
       assert.dom('[data-test-attribution-export-button]').exists();
     });
 
+    test('it sends the current namespace in export request', async function (assert) {
+      assert.expect(2);
+      const namespaceSvc = this.owner.lookup('service:namespace');
+      namespaceSvc.path = 'foo';
+      this.server.get('/sys/internal/counters/activity/export', function (_, req) {
+        assert.deepEqual(req.requestHeaders, {
+          'X-Vault-Namespace': 'foo',
+        });
+        return new Response(200, { 'Content-Type': 'text/csv' }, '');
+      });
+
+      await render(hbs`
+        <Clients::Attribution
+          @totalClientAttribution={{this.totalClientAttribution}}
+          @responseTimestamp={{this.timestamp}}
+          />
+      `);
+      assert.dom('[data-test-attribution-export-button]').exists();
+      await click('[data-test-attribution-export-button]');
+      await click(GENERAL.confirmButton);
+    });
     test('it sends the selected namespace in export request', async function (assert) {
       assert.expect(2);
       this.server.get('/sys/internal/counters/activity/export', function (_, req) {
@@ -375,6 +396,30 @@ module('Integration | Component | clients/attribution', function (hooks) {
         return new Response(200, { 'Content-Type': 'text/csv' }, '');
       });
       this.selectedNamespace = 'foobar/';
+
+      await render(hbs`
+        <Clients::Attribution
+          @totalClientAttribution={{this.totalClientAttribution}}
+          @responseTimestamp={{this.timestamp}}
+          @selectedNamespace={{this.selectedNamespace}}
+          />
+      `);
+      assert.dom('[data-test-attribution-export-button]').exists();
+      await click('[data-test-attribution-export-button]');
+      await click(GENERAL.confirmButton);
+    });
+
+    test('it sends the current + selected namespace in export request', async function (assert) {
+      assert.expect(2);
+      const namespaceSvc = this.owner.lookup('service:namespace');
+      namespaceSvc.path = 'foo';
+      this.server.get('/sys/internal/counters/activity/export', function (_, req) {
+        assert.deepEqual(req.requestHeaders, {
+          'X-Vault-Namespace': 'foo/bar',
+        });
+        return new Response(200, { 'Content-Type': 'text/csv' }, '');
+      });
+      this.selectedNamespace = 'bar/';
 
       await render(hbs`
         <Clients::Attribution
