@@ -241,7 +241,6 @@ module('Integration | Component | clients/attribution', function (hooks) {
 
       await render(hbs`
         <Clients::Attribution
-          @isSecretsSyncActivated={{true}}
           @totalClientAttribution={{this.totalClientAttribution}}
           @responseTimestamp={{this.timestamp}}
           @startTimestamp="2022-06-01T23:00:11.050Z"
@@ -270,7 +269,6 @@ module('Integration | Component | clients/attribution', function (hooks) {
       });
       await render(hbs`
         <Clients::Attribution
-          @isSecretsSyncActivated={{true}}
           @totalClientAttribution={{this.totalClientAttribution}}
           @responseTimestamp={{this.timestamp}}
           @startTimestamp="2022-06-01T23:00:11.050Z"

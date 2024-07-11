@@ -42,7 +42,6 @@ import { waitFor } from '@ember/test-waiters';
  * @param {string} responseTimestamp -  ISO timestamp created in serializer to timestamp the response, renders in bottom left corner below attribution chart
  * @param {boolean} isHistoricalMonth - when true data is from a single, historical month so side-by-side charts should display for attribution data
  * @param {array} upgradesDuringActivity - array of objects containing version history upgrade data
- * @param {boolean} isSecretsSyncActivated - boolean to determine if secrets sync is activated
  */
 
 export default class Attribution extends Component {
@@ -73,19 +72,6 @@ export default class Attribution extends Component {
       // if we can't read capabilities, default to show
       this.canDownload = true;
     }
-  }
-
-  get attributionLegend() {
-    const attributionLegend = [
-      { key: 'entity_clients', label: 'entity clients' },
-      { key: 'non_entity_clients', label: 'non-entity clients' },
-      { key: 'acme_clients', label: 'ACME clients' },
-    ];
-
-    if (this.args.isSecretsSyncActivated) {
-      attributionLegend.push({ key: 'secret_syncs', label: 'secrets sync clients' });
-    }
-    return attributionLegend;
   }
 
   get formattedStartDate() {
