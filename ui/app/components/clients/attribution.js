@@ -10,6 +10,8 @@ import { service } from '@ember/service';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { format, isSameMonth } from 'date-fns';
 import { task } from 'ember-concurrency';
+import { sanitizePath } from 'core/utils/sanitize-path';
+import { waitFor } from '@ember/test-waiters';
 
 /**
  * @module Attribution
@@ -58,9 +60,14 @@ export default class Attribution extends Component {
     this.getExportCapabilities(this.args.selectedNamespace);
   }
 
+  @waitFor
   async getExportCapabilities(ns = '') {
     try {
-      const cap = await this.store.findRecord('capabilities', `${ns}sys/internal/counters/activity/export`);
+      // selected namespace usually ends in /
+      const url = ns
+        ? `${sanitizePath(ns)}/sys/internal/counters/activity/export`
+        : 'sys/internal/counters/activity/export';
+      const cap = await this.store.findRecord('capabilities', url);
       this.canDownload = cap.canSudo;
     } catch (e) {
       // if we can't read capabilities, default to show
@@ -155,11 +162,16 @@ export default class Attribution extends Component {
 
   async generateCsvData() {
     const adapter = this.store.adapterFor('clients/activity');
-    const { startTimestamp, endTimestamp } = this.args;
+    const currentNs = this.namespace.path;
+    const { startTimestamp, endTimestamp, selectedNamespace } = this.args;
+    const namespace = selectedNamespace
+      ? sanitizePath(`${currentNs}/${selectedNamespace}`)
+      : sanitizePath(selectedNamespace);
     return adapter.exportData({
       format: this.exportFormat,
       start_time: startTimestamp,
       end_time: endTimestamp,
+      namespace,
     });
   }
 

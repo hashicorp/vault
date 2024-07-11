@@ -19,7 +19,8 @@ import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import { formatNumber } from 'core/helpers/format-number';
 import timestamp from 'core/utils/timestamp';
 import ss from 'vault/tests/pages/components/search-select';
-import { capabilitiesStub } from 'vault/tests/helpers/stubs';
+import { runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
+import { selectChoose } from 'ember-power-select/test-support';
 
 const searchSelect = create(ss);
 
@@ -223,26 +224,24 @@ module('Acceptance | clients | overview', function (hooks) {
   });
 
   test('it updates export button visibility as namespace is filtered', async function (assert) {
-    const response = await this.store.peekRecord('clients/activity', 'some-activity-id');
-    const topNamespace = response.byNamespace[0];
-
-    // stub export abilities for top namespace only
-    this.server.post('/sys/capabilities-self', (_, req) => {
-      const [path] = JSON.parse(req.requestBody);
-      assert.true('capabilities called');
-      if (path.startsWith(topNamespace.label)) {
-        return capabilitiesStub(path, ['sudo']);
-      } else {
-        return capabilitiesStub(path, ['read']);
-      }
-    });
-
+    const ns = 'ns7';
+    // create a user that only has export access for specific namespace
+    const userToken = await runCmd(
+      tokenWithPolicyCmd(
+        'cc-export',
+        `
+    path "${ns}/sys/internal/counters/activity/export" {
+        capabilities = ["sudo"]
+    }
+  `
+      )
+    );
+    await authPage.login(userToken);
+    await visit('/vault/clients/counts/overview');
     assert.dom(CLIENT_COUNT.exportButton).doesNotExist();
 
-    // FILTER BY TOP NAMESPACE
-    await clickTrigger();
-    await searchSelect.options.objectAt(0).click();
-    await settled();
+    // FILTER BY ALLOWED NAMESPACE
+    await selectChoose('#namespace-search-select', ns);
 
     assert.dom(CLIENT_COUNT.exportButton).exists();
   });

@@ -38,13 +38,13 @@ export default class ActivityAdapter extends ApplicationAdapter {
 
   async exportData(query) {
     const url = `${this.buildURL()}/internal/counters/activity/export${queryParamString({
-      format: query.format || 'csv',
+      format: query?.format || 'csv',
       start_time: query?.start_time ?? undefined,
       end_time: query?.end_time ?? undefined,
     })}`;
     try {
-      // This endpoint can only be called from root namespace
-      const resp = await this.rawRequest(url, 'GET', { namespace: undefined });
+      const options = query?.namespace ? { namespace: query.namespace } : {};
+      const resp = await this.rawRequest(url, 'GET', options);
       return resp.blob();
     } catch (e) {
       const { errors } = await e.json();

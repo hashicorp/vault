@@ -224,7 +224,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
       await click('[data-test-attribution-export-button]');
       assert
         .dom('[data-test-export-modal-title]')
-        .hasText('Export activity data', 'modal appears to export csv');
+        .hasText('Export activity data', 'modal appears to export data');
       assert.dom('[data-test-export-date-range]').includesText('June 2022 - December 2022');
     });
 
@@ -236,7 +236,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
           start_time: '2022-06-01T23:00:11.050Z',
           end_time: '2022-12-01T23:00:11.050Z',
         });
-        return new Response(200, { 'Content-Type': 'application/csv' }, '');
+        return new Response(200, { 'Content-Type': 'text/csv' }, '');
       });
 
       await render(hbs`
@@ -266,7 +266,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
           start_time: '2022-06-01T23:00:11.050Z',
           end_time: '2022-06-21T23:00:11.050Z',
         });
-        return new Response(200, { 'Content-Type': 'application/csv' }, '');
+        return new Response(200, { 'Content-Type': 'text/csv' }, '');
       });
       await render(hbs`
         <Clients::Attribution
@@ -289,7 +289,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
         assert.deepEqual(req.queryParams, {
           format: 'csv',
         });
-        return new Response(200, { 'Content-Type': 'application/csv' }, '');
+        return new Response(200, { 'Content-Type': 'text/csv' }, '');
       });
 
       await render(hbs`
@@ -364,6 +364,28 @@ module('Integration | Component | clients/attribution', function (hooks) {
           />
       `);
       assert.dom('[data-test-attribution-export-button]').exists();
+    });
+
+    test('it sends the selected namespace in export request', async function (assert) {
+      assert.expect(2);
+      this.server.get('/sys/internal/counters/activity/export', function (_, req) {
+        assert.deepEqual(req.requestHeaders, {
+          'X-Vault-Namespace': 'foobar',
+        });
+        return new Response(200, { 'Content-Type': 'text/csv' }, '');
+      });
+      this.selectedNamespace = 'foobar/';
+
+      await render(hbs`
+        <Clients::Attribution
+          @totalClientAttribution={{this.totalClientAttribution}}
+          @responseTimestamp={{this.timestamp}}
+          @selectedNamespace={{this.selectedNamespace}}
+          />
+      `);
+      assert.dom('[data-test-attribution-export-button]').exists();
+      await click('[data-test-attribution-export-button]');
+      await click(GENERAL.confirmButton);
     });
   });
 });
