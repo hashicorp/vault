@@ -139,6 +139,7 @@ export function filterPathsByItemType(pathInfo: PathsInfo, itemType: string): Pa
 const OPENAPI_POWERED_MODELS = {
   'role-ssh': (backend: string) => `/v1/${backend}/roles/example?help=1`,
   'auth-config/azure': (backend: string) => `/v1/auth/${backend}/config?help=1`,
+  'auth-config/cert': (backend: string) => `/v1/auth/${backend}/config?help=1`,
   'auth-config/gcp': (backend: string) => `/v1/auth/${backend}/config?help=1`,
   'auth-config/github': (backend: string) => `/v1/auth/${backend}/config?help=1`,
   'auth-config/jwt': (backend: string) => `/v1/auth/${backend}/config?help=1`,
