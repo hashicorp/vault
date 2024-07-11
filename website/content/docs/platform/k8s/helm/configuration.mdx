@@ -1258,7 +1258,9 @@ and consider if they're appropriate for your deployment.
   the `telemetry {}` stanza in the Vault configuration. See the [telemetry](/vault/docs/configuration/telemetry)
   [docs](/vault/docs/internals/telemetry) for more on the Vault configuration.
 
-  Currently, this chart does not support authenticating to Vault's metrics endpoint, so the following `telemetry {}` block must be included in the `listener "tcp" {}` stanza of the Vault configuration:
+  If authorization is not set for authenticating to Vault's metrics endpoint,
+  the following Vault server `telemetry{}` config must be included in the
+  `listener "tcp"{}` stanza of the Vault configuration:
 
   ```yaml
   listener "tcp" {
@@ -1298,6 +1300,31 @@ and consider if they're appropriate for your deployment.
     - `interval` (`string: "30s"`) - Interval at which Prometheus scrapes metrics.
 
     - `scrapeTimeout` (`string: "10s"`) - Timeout for Prometheus scrapes.
+
+    - `tlsConfig` (`dictionary: {}`) - tlsConfig used for scraping the Vault metrics API. See the
+      prometheus [API
+      reference](https://prometheus-operator.dev/docs/operator/api/#monitoring.coreos.com/v1.TLSConfig)
+      for more details.
+
+      ```yaml
+      tlsConfig:
+        ca:
+          secret:
+            name: vault-metrics-client
+            key: ca.crt
+      ```
+
+    - `authorization` (`dictionary: {}`) - Authorization used for scraping the Vault metrics API.
+      See the prometheus [API
+      reference](https://prometheus-operator.dev/docs/operator/api/#monitoring.coreos.com/v1.SafeAuthorization)
+      for more details.
+
+      ```yaml
+      authorization:
+        secret:
+          name: vault-metrics-client
+          key: token
+      ```
 
   - `prometheusRules` - Values that configure Prometheus rules.
 
