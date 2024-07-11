@@ -35,7 +35,21 @@
         @modelValidations={{this.modelValidations}}
         @onKeyUp={{this.onKeyUp}}
       />
-      <FormFieldGroups @model={{@mountModel}} @renderGroup="Method Options" />
+
+      <FormFieldGroups @model={{@mountModel}} @renderGroup="Method Options">
+        {{! while identityTokenKey can be set by OSS users, it's only used for the enterprise WIF feature }}
+        {{#if (and this.version.isEnterprise)}}
+          {{! identityTokenKey attr has editType yield, which will render the following component }}
+          <SearchSelectWithModal
+            @id="identityTokenKey"
+            @fallbackComponent="input-search"
+            @onChange={{this.handleIdentityTokenKeyChange}}
+            @models={{array "oidc/key"}}
+            @selectLimit="1"
+            @returnString={{true}}
+          />
+        {{/if}}
+      </FormFieldGroups>
 
       <div class="field is-grouped box is-fullwidth is-bottomless">
         <div class="control">

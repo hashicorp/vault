@@ -14,6 +14,7 @@ import { isAddonEngine, allEngines } from 'vault/helpers/mountable-secret-engine
 
 import type FlashMessageService from 'vault/services/flash-messages';
 import type Store from '@ember-data/store';
+import type VersionService from 'vault/services/version';
 
 import type { AuthEnableModel } from 'vault/routes/vault/cluster/settings/auth/enable';
 import type { MountSecretBackendModel } from 'vault/routes/vault/cluster/settings/mount-secret-backend';
@@ -41,6 +42,7 @@ interface Args {
 export default class MountBackendForm extends Component<Args> {
   @service declare readonly store: Store;
   @service declare readonly flashMessages: FlashMessageService;
+  @service declare readonly version: VersionService;
 
   // validation related properties
   @tracked modelValidations = null;
@@ -189,5 +191,10 @@ export default class MountBackendForm extends Component<Args> {
     this.args.mountModel.type = value;
     this.typeChangeSideEffect(value);
     this.checkPathChange(value);
+  }
+
+  @action
+  handleIdentityTokenKeyChange(value: string[]): void {
+    this.args.mountModel.config.identityTokenKey = value[0];
   }
 }

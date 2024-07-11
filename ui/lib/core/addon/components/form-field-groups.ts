@@ -6,10 +6,8 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
-import { service } from '@ember/service';
 
 import type { ValidationMap } from 'vault/vault/app-types';
-import type VersionService from 'vault/services/version';
 
 /**
  * @module FormFieldGroups
@@ -36,7 +34,6 @@ interface Args {
 }
 
 export default class FormFieldGroupsComponent extends Component<Args> {
-  @service declare readonly version: VersionService;
   @tracked showGroup: string | null = null;
 
   @action
