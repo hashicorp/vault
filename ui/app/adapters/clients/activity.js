@@ -45,7 +45,11 @@ export default class ActivityAdapter extends ApplicationAdapter {
     try {
       const options = query?.namespace ? { namespace: query.namespace } : {};
       const resp = await this.rawRequest(url, 'GET', options);
-      return resp.blob();
+      if (resp.status === 200) {
+        return resp.blob();
+      }
+      // If it's an empty response (eg 204), there's no data so return an error
+      throw new Error('no data to export in provided time range.');
     } catch (e) {
       const { errors } = await e.json();
       throw new Error(errors?.join('. '));
