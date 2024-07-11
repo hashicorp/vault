@@ -88,8 +88,8 @@ association object returned by the endpoint and, upon failure, includes an error
 ## Name template
 
 By default, the name of synced secrets follows this format: `vault/<accessor>/<secret-path>`. The casing and delimiters
-may change according to the valid character set of each destination type. This pattern was chosen to prevent accidental
-name collisions and to clearly identify where the secret is coming from.
+may change as they are normalized according to the valid character set of each destination type. This pattern was chosen to
+prevent accidental name collisions and to clearly identify where the secret is coming from.
 
 Every destination allows you to customize this name pattern by configuring a `secret_name_template` field to best suit
 individual use cases. The templates use a subset of the go-template syntax for extra flexibility.
@@ -141,6 +141,12 @@ Let's look at some name template examples and the resulting secret name at the s
 Name templates can be updated. The new template is only effective for new secrets associated with the destination and does
 not affect the secrets synced with the previous template. It is possible to update an association to force a recreate operation.
 The secret synced with the old template will be deleted and a new secret using the new template version will be synced.
+
+## Custom tags
+
+A destination can also have custom tags so that every secret associated to it that is synced will share that same set of tags.
+Additionally, a default tag value of `hashicorp:vault` is used to denote any secret that is synced via Vault Enterprise. Similar
+to secret names, tag keys and values are normalized according to the valid character set of each destination type.
 
 ## Granularity
 
