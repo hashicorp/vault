@@ -176,11 +176,12 @@ module('Unit | Adapter | clients activity', function (hooks) {
     });
 
     test('it requests with correct params when all params', async function (assert) {
-      assert.expect(1);
+      assert.expect(2);
 
       this.server.get('sys/internal/counters/activity/export', (schema, req) => {
+        assert.propEqual(req.requestHeaders, { 'X-Vault-Namespace': 'foo/bar' });
         assert.propEqual(req.queryParams, {
-          format: 'csv',
+          format: 'json',
           start_time: '2024-04-01T00:00:00.000Z',
           end_time: '2024-05-31T00:00:00.000Z',
         });
@@ -189,6 +190,8 @@ module('Unit | Adapter | clients activity', function (hooks) {
       await this.adapter.exportData({
         start_time: '2024-04-01T00:00:00.000Z',
         end_time: '2024-05-31T00:00:00.000Z',
+        format: 'json',
+        namespace: 'foo/bar',
       });
     });
   });
