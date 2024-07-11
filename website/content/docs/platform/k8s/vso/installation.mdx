@@ -54,24 +54,21 @@ Hang tight while we grab the latest from your chart repositories...
 Update Complete. ⎈Happy Helming!⎈
 ```
 
+<Note title="VSO 0.8.0+ automatically updates CRDs">
+  As of VSO 0.8.0, VSO will automatically update its CRDs.
+  The manual upgrade step <a href="#updating-crds">Updating CRDs</a> below is no longer required when
+  upgrading to VSO 0.8.0+.
+</Note>
+
+
+## Updating CRDs when using Helm prior to 0.8.0
+
+This step can be skipped if you are upgrading to VSO 0.8.0 or later.
+
 <Note title="Helm does not automatically update CRDs">
   You must update all CRDs manually before upgrading VSO.
   Refer to <a href="#updating-crds">Updating CRDs</a>.
 </Note>
-
-To upgrade your VSO release, replace `<TARGET_VSO_VERSION>` with the VSO version you are upgrading to:
-```shell-session
-$ helm show crds --version <TARGET_VSO_VERSION> hashicorp/vault-secrets-operator | kubectl apply -f -
-$ helm upgrade --version <TARGET_VSO_VERSION> --namespace vault-secrets-operator vault-secrets-operator hashicorp/vault-secrets-operator
-```
-
-For example, if you are upgrading to VSO 0.7.1:
-```shell-session
-$ helm show crds --version 0.7.1 hashicorp/vault-secrets-operator | kubectl apply -f -
-$ helm upgrade --version 0.7.1 --namespace vault-secrets-operator vault-secrets-operator hashicorp/vault-secrets-operator
-```
-
-## Updating CRDs when using Helm
 
 You must update the CRDs for VSO manually **before** you upgrade the
  operator when the operator is managed by Helm.
