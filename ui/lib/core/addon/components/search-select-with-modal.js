@@ -124,8 +124,8 @@ export default class SearchSelectWithModal extends Component {
   handleChange() {
     if (this.selectedOptions.length && typeof this.selectedOptions[0] === 'object') {
       const onChangeValue = Array.from(this.selectedOptions, (option) => option.id);
+      // if returnString is true, the api expects the value to be a string (ex: identityTokenKey) otherwise set the value to an array of strings.
       this.args.returnString ? this.args.onChange(onChangeValue[0]) : this.args.onChange(onChangeValue);
-      // this.args.onChange(Array.from(this.selectedOptions, (option) => option.id));
     } else {
       this.args.onChange(this.selectedOptions);
     }

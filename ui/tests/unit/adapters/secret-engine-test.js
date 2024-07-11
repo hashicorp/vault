@@ -81,7 +81,7 @@ module('Unit | Adapter | secret engine', function (hooks) {
             generate_signing_key: true,
             config: { id: 'aws-wif', identity_token_key: 'test-key', listing_visibility: 'hidden' },
           },
-          'Correct payload is sent when adding aws secret engine with identity token key set'
+          'Correct payload is sent when adding aws secret engine with identity_token_key set'
         );
         return {};
       });
@@ -91,6 +91,34 @@ module('Unit | Adapter | secret engine', function (hooks) {
         type: 'aws',
         config: this.store.createRecord('mount-config', {
           identityTokenKey: 'test-key',
+        }),
+        uuid: 'f1739f9d-dfc0-83c8-011f-ec17103a06c2',
+      };
+      const record = this.store.createRecord('secret-engine', mountData);
+      await record.save();
+    });
+
+    test('it should not send identity_token_key if not set', async function (assert) {
+      assert.expect(1);
+      this.server.post('/sys/mounts/aws-wif', (schema, req) => {
+        assert.deepEqual(
+          JSON.parse(req.requestBody),
+          {
+            path: 'aws-wif',
+            type: 'aws',
+            generate_signing_key: true,
+            config: { id: 'aws-wif', max_lease_ttl: '125h', listing_visibility: 'hidden' },
+          },
+          'Correct payload is sent when adding aws secret engine with no identity_token_key set'
+        );
+        return {};
+      });
+      const mountData = {
+        id: 'aws-wif',
+        path: 'aws-wif',
+        type: 'aws',
+        config: this.store.createRecord('mount-config', {
+          maxLeaseTtl: '125h',
         }),
         uuid: 'f1739f9d-dfc0-83c8-011f-ec17103a06c2',
       };

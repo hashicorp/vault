@@ -308,7 +308,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       this.store = this.owner.lookup('service:store');
     });
 
-    test('identity_token_key form field does not show even when oidc key set', async function (assert) {
+    test('identity_token_key form field does not show even when an oidc key exists', async function (assert) {
       // create an oidc/key
       await runCmd(`write identity/oidc/key/some-key allowed_client_ids="*"`);
       await page.visit();
