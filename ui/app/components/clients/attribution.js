@@ -166,7 +166,7 @@ export default class Attribution extends Component {
     const { startTimestamp, endTimestamp, selectedNamespace } = this.args;
     const namespace = selectedNamespace
       ? sanitizePath(`${currentNs}/${selectedNamespace}`)
-      : sanitizePath(selectedNamespace);
+      : sanitizePath(currentNs);
     return adapter.exportData({
       format: this.exportFormat,
       start_time: startTimestamp,
