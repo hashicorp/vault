@@ -214,6 +214,7 @@ export default function (server) {
   });
 
   server.get('/sys/internal/counters/activity', (schema, req) => {
+    const activities = schema['clients/activities'];
     let { start_time, end_time } = req.queryParams;
     if (!start_time && !end_time) {
       // if there are no date query params, the activity log default behavior
@@ -224,12 +225,28 @@ export default function (server) {
     // backend returns a timestamp if given unix time, so first convert to timestamp string here
     if (!start_time.includes('T')) start_time = fromUnixTime(start_time).toISOString();
     if (!end_time.includes('T')) end_time = fromUnixTime(end_time).toISOString();
+
+    const record = activities.findBy({ start_time, end_time });
+    let data;
+    if (record) {
+      // if we already have data for the given start/end time, use that
+      data = {
+        start_time: record.start_time,
+        end_time: record.end_time,
+        by_namespace: record.by_namespace,
+        months: record.months,
+        total: record.total,
+      };
+    } else {
+      data = generateActivityResponse(start_time, end_time);
+      activities.create(data);
+    }
     return {
       request_id: 'some-activity-id',
       lease_id: '',
       renewable: false,
       lease_duration: 0,
-      data: generateActivityResponse(start_time, end_time),
+      data,
       wrap_info: null,
       warnings: null,
       auth: null,
