@@ -17,7 +17,6 @@ import (
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
-	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
@@ -62,6 +61,12 @@ var (
 type EntityInfo struct {
 	DisplayName string
 	EntityID    string
+}
+
+type CertificateCounter interface {
+	IsInitialized() bool
+	IncrementTotalCertificatesCount(certsCounted bool, newSerial string)
+	IncrementTotalRevokedCertificatesCount(certsCounted bool, newSerial string)
 }
 
 func NewEntityInfoFromReq(req *logical.Request) EntityInfo {
@@ -1012,7 +1017,7 @@ func ApplyIssuerLeafNotAfterBehavior(caSign *certutil.CAInfoBundle, notAfter tim
 }
 
 // StoreCertificate given a certificate bundle that was signed, persist the certificate to storage
-func StoreCertificate(ctx context.Context, s logical.Storage, certCounter pki_backend.CertificateCounter, certBundle *certutil.ParsedCertBundle) error {
+func StoreCertificate(ctx context.Context, s logical.Storage, certCounter CertificateCounter, certBundle *certutil.ParsedCertBundle) error {
 	hyphenSerialNumber := parsing.NormalizeSerialForStorageFromBigInt(certBundle.Certificate.SerialNumber)
 	key := PathCerts + hyphenSerialNumber
 	certsCounted := certCounter.IsInitialized()
