@@ -6,7 +6,6 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
-
 import type { ValidationMap } from 'vault/vault/app-types';
 
 /**
