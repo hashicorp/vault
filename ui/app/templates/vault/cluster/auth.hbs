@@ -4,11 +4,11 @@
 ~}}
 
 <Auth::SplashPage
-  @namespaceQueryParam={{this.namespaceQueryParam}}
-  @wrappedToken={{this.wrappedToken}}
-  @onAuthSuccess={{action "authSuccess"}}
-  @oidcProviderQueryParam={{this.oidcProvider}}
   @authMethodQueryParam={{this.authMethod}}
   @cluster={{this.model}}
+  @namespaceQueryParam={{this.namespaceQueryParam}}
+  @oidcProviderQueryParam={{this.oidcProvider}}
+  @onAuthSuccess={{action "authSuccess"}}
   @onNamespaceUpdate={{perform this.updateNamespace}}
+  @wrappedToken={{this.wrappedToken}}
 />
