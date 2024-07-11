@@ -39,6 +39,7 @@ import { addToArray } from 'vault/helpers/add-to-array';
  * @param {string} fallbackComponent - name of component to be rendered if the API call 403s
  * @param {string} [placeholder] - placeholder text to override the default text of "Search"
  * @param {boolean} [displayInherit=false] - if you need the search select component to display inherit instead of box.
+ * @param {number} [selectLimit=1] - if you only want the user to select a limited number of options, add number to this param.
  */
 export default class SearchSelectWithModal extends Component {
   @service store;

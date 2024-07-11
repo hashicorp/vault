@@ -65,9 +65,7 @@ module('Unit | Adapter | secret engine', function (hooks) {
 
   module('WIF secret engines', function (hooks) {
     hooks.beforeEach(function () {
-      this.version = this.owner.lookup('service:version');
       this.store = this.owner.lookup('service:store');
-      this.version.type = 'enterprise';
     });
 
     test('it should make request to correct endpoint when creating new record', async function (assert) {
