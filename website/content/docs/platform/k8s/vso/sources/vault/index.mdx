@@ -309,10 +309,16 @@ The [Encrypted client cache](/vault/docs/platform/k8s/vso/sources/vault/client-c
 
 ## Instant updates <EnterpriseAlert inline="true" />
 
-The Vault Secrets Operator can instantly update Kubernetes Secrets when changes are made in Vault, instead of waiting for the next refresh interval. Requires Vault Enterprise 1.16.3+ due to the use of [Vault Event Notifications][vault-events].
+The Vault Secrets Operator can instantly update Kubernetes Secrets when changes are made in Vault, instead of waiting for the next refresh interval.
 
 **Supported secret types:**
 - VaultStaticSecret (kv-v1, kv-v2)
+
+<Note title="Requires Vault Enterprise 1.16.3+">
+
+The instant updates option requires Vault Enterprise 1.16.3+ due to the use of [Vault Event Notifications][vault-events].
+
+</Note>
 
 ### Enable instant updates for a VaultStaticSecret
 
