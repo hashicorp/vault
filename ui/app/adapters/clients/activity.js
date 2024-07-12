@@ -42,6 +42,7 @@ export default class ActivityAdapter extends ApplicationAdapter {
       start_time: query?.start_time ?? undefined,
       end_time: query?.end_time ?? undefined,
     })}`;
+    let errorMsg;
     try {
       const options = query?.namespace ? { namespace: query.namespace } : {};
       const resp = await this.rawRequest(url, 'GET', options);
@@ -49,10 +50,13 @@ export default class ActivityAdapter extends ApplicationAdapter {
         return resp.blob();
       }
       // If it's an empty response (eg 204), there's no data so return an error
-      throw new Error('no data to export in provided time range.');
+      errorMsg = 'no data to export in provided time range.';
     } catch (e) {
       const { errors } = await e.json();
-      throw new Error(errors?.join('. '));
+      errorMsg = errors?.join('. ');
+    }
+    if (errorMsg) {
+      throw new Error(errorMsg);
     }
   }
 
