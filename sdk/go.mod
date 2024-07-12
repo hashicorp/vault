@@ -1,6 +1,6 @@
 module github.com/hashicorp/vault/sdk
 
-go 1.21
+go 1.22
 
 require (
 	cloud.google.com/go/cloudsqlconn v1.4.3
@@ -40,7 +40,6 @@ require (
 	github.com/hashicorp/hcl v1.0.1-vault-5
 	github.com/hashicorp/vault/api v1.9.1
 	github.com/mitchellh/copystructure v1.2.0
-	github.com/mitchellh/go-testing-interface v1.14.1
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/pierrec/lz4 v2.6.1+incompatible
 	github.com/ryanuber/go-glob v1.0.0
@@ -52,6 +51,8 @@ require (
 	google.golang.org/grpc v1.64.0
 	google.golang.org/protobuf v1.34.1
 )
+
+require github.com/mitchellh/go-testing-interface v1.14.1 // indirect
 
 require (
 	cloud.google.com/go/compute v1.25.1 // indirect
