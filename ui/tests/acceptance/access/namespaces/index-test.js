@@ -13,8 +13,8 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.beforeEach(async function () {
-    return await login();
+  hooks.beforeEach(function () {
+    return login();
   });
 
   test('it navigates to namespaces page', async function (assert) {
