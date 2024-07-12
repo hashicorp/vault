@@ -15,7 +15,12 @@ import { action } from '@ember/object';
  * @example
  * <Auth::Page @namespaceQueryParam={{this.namespaceQueryParam}} @onAuthSuccess={{action "authSuccess"}} @oidcProviderQueryParam={{this.oidcProvider}} @cluster={{this.model}} @onNamespaceUpdate={{perform this.updateNamespace}} />
  *
- * @param {string} param - info about the param
+ * @param {string} authMethodQueryParam - auth method type to login with, updated by selecting an auth method from the dropdown
+ * @param {string} namespaceQueryParam - namespace to login with, updated by typing in to the namespace input
+ * @param {string} oidcProviderQueryParam - oidc provider query param, set in url as "?o=someprovider"
+ * @param {function} onAuthSuccess - callback task in controller that receives the auth response (after MFA, if enabled) when login is successful
+ * @param {function} onNamespaceUpdate - callback task that passes user input to the controller to update the login namespace in the url query params
+ * @param {string} wrappedToken - passed down to the AuthForm component and can be used to login if added directly to the URL via the "wrapped_token" query param
  * */
 
 export default class AuthPage extends Component {
