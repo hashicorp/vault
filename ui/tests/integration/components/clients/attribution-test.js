@@ -9,13 +9,10 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { endOfMonth, formatRFC3339 } from 'date-fns';
-import { click } from '@ember/test-helpers';
 import subMonths from 'date-fns/subMonths';
 import timestamp from 'core/utils/timestamp';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SERIALIZED_ACTIVITY_RESPONSE } from 'vault/tests/helpers/clients/client-count-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { Response } from 'miragejs';
 import { capabilitiesStub, overrideResponse } from 'vault/tests/helpers/stubs';
 
 module('Integration | Component | clients/attribution', function (hooks) {
@@ -205,159 +202,8 @@ module('Integration | Component | clients/attribution', function (hooks) {
     assert.dom('[data-test-top-attribution]').includesText('auth method').includesText('auth/authid/0');
     assert.dom('[data-test-attribution-clients]').includesText('auth method').includesText('8,394');
   });
-});
 
-// Nesting the export modal module in the main module caused `this.timestampStub` to
-// not exist when invoked in the `beforeEach` block for the nested tests, so they are
-// separated into their own separate module with similar setup
-module('Integration | Component | clients/attribution export modal', function (hooks) {
-  setupRenderingTest(hooks);
-  setupMirage(hooks);
-
-  hooks.before(function () {
-    this.timestampStub = sinon.replace(timestamp, 'now', sinon.fake.returns(new Date('2018-04-03T14:15:30')));
-  });
-
-  hooks.beforeEach(function () {
-    const { total, by_namespace } = SERIALIZED_ACTIVITY_RESPONSE;
-    this.csvDownloadStub = sinon.stub(this.owner.lookup('service:download'), 'csv');
-    const mockNow = this.timestampStub();
-    this.mockNow = mockNow;
-    this.timestamp = formatRFC3339(mockNow);
-    this.selectedNamespace = null;
-    this.totalUsageCounts = total;
-    this.totalClientAttribution = [...by_namespace];
-    this.namespaceMountsData = by_namespace.find((ns) => ns.label === 'ns1').mounts;
-  });
-
-  hooks.after(function () {
-    this.csvDownloadStub.restore();
-  });
-  test('it renders modal', async function (assert) {
-    await render(hbs`
-      <Clients::Attribution
-        @totalClientAttribution={{this.namespaceMountsData}}
-        @responseTimestamp={{this.timestamp}}
-        @startTimestamp="2022-06-01T23:00:11.050Z"
-        @endTimestamp="2022-12-01T23:00:11.050Z"
-        />
-    `);
-    await click('[data-test-attribution-export-button]');
-    assert
-      .dom('[data-test-export-modal-title]')
-      .hasText('Export activity data', 'modal appears to export data');
-    assert.dom('[data-test-export-date-range]').includesText('June 2022 - December 2022');
-  });
-
-  test('it downloads csv data for date range', async function (assert) {
-    assert.expect(2);
-    this.server.get('/sys/internal/counters/activity/export', function (_, req) {
-      assert.deepEqual(req.queryParams, {
-        format: 'csv',
-        start_time: '2022-06-01T23:00:11.050Z',
-        end_time: '2022-12-01T23:00:11.050Z',
-      });
-      return new Response(200, { 'Content-Type': 'text/csv' }, '');
-    });
-
-    await render(hbs`
-      <Clients::Attribution
-        @isSecretsSyncActivated={{true}}
-        @totalClientAttribution={{this.totalClientAttribution}}
-        @responseTimestamp={{this.timestamp}}
-        @startTimestamp="2022-06-01T23:00:11.050Z"
-        @endTimestamp="2022-12-01T23:00:11.050Z"
-        />
-    `);
-    await click('[data-test-attribution-export-button]');
-    await click(GENERAL.confirmButton);
-    const [filename] = this.csvDownloadStub.lastCall.args;
-    assert.strictEqual(filename, 'clients_by_namespace_June 2022-December 2022', 'csv has expected filename');
-  });
-
-  test('it downloads csv data for a single month', async function (assert) {
-    assert.expect(2);
-    this.server.get('/sys/internal/counters/activity/export', function (_, req) {
-      assert.deepEqual(req.queryParams, {
-        format: 'csv',
-        start_time: '2022-06-01T23:00:11.050Z',
-        end_time: '2022-06-21T23:00:11.050Z',
-      });
-      return new Response(200, { 'Content-Type': 'text/csv' }, '');
-    });
-    await render(hbs`
-      <Clients::Attribution
-        @isSecretsSyncActivated={{true}}
-        @totalClientAttribution={{this.totalClientAttribution}}
-        @responseTimestamp={{this.timestamp}}
-        @startTimestamp="2022-06-01T23:00:11.050Z"
-        @endTimestamp="2022-06-21T23:00:11.050Z"
-        />
-    `);
-    await click('[data-test-attribution-export-button]');
-    await click(GENERAL.confirmButton);
-    const [filename] = this.csvDownloadStub.lastCall.args;
-    assert.strictEqual(filename, 'clients_by_namespace_June 2022', 'csv has single month in filename');
-  });
-  test('csv filename omits date if no start/end timestamp', async function (assert) {
-    assert.expect(2);
-
-    this.server.get('/sys/internal/counters/activity/export', function (_, req) {
-      assert.deepEqual(req.queryParams, {
-        format: 'csv',
-      });
-      return new Response(200, { 'Content-Type': 'text/csv' }, '');
-    });
-
-    await render(hbs`
-      <Clients::Attribution
-        @totalClientAttribution={{this.totalClientAttribution}}
-        @responseTimestamp={{this.timestamp}}
-        />
-    `);
-
-    await click('[data-test-attribution-export-button]');
-    await click(GENERAL.confirmButton);
-    const [filename] = this.csvDownloadStub.lastCall.args;
-    assert.strictEqual(filename, 'clients_by_namespace');
-  });
-
-  test('shows the API error on the modal', async function (assert) {
-    this.server.get('/sys/internal/counters/activity/export', function () {
-      return new Response(
-        403,
-        { 'Content-Type': 'application/json' },
-        { errors: ['this is an error from the API'] }
-      );
-    });
-
-    await render(hbs`
-      <Clients::Attribution
-        @totalClientAttribution={{this.totalClientAttribution}}
-        @responseTimestamp={{this.timestamp}}
-        />
-    `);
-
-    await click('[data-test-attribution-export-button]');
-    await click(GENERAL.confirmButton);
-    assert.dom('[data-test-export-error]').hasText('this is an error from the API');
-  });
-
-  test('hides the export button if user does not have SUDO capabilities', async function (assert) {
-    this.server.post('/sys/capabilities-self', () =>
-      capabilitiesStub('sys/internal/counters/activity/export', ['read'])
-    );
-
-    await render(hbs`
-      <Clients::Attribution
-        @totalClientAttribution={{this.totalClientAttribution}}
-        @responseTimestamp={{this.timestamp}}
-        />
-    `);
-    assert.dom('[data-test-attribution-export-button]').doesNotExist();
-  });
-
-  test('shows the export button if user has SUDO capabilities', async function (assert) {
+  test('it shows the export button if user does has SUDO capabilities', async function (assert) {
     this.server.post('/sys/capabilities-self', () =>
       capabilitiesStub('sys/internal/counters/activity/export', ['sudo'])
     );
@@ -371,96 +217,29 @@ module('Integration | Component | clients/attribution export modal', function (h
     assert.dom('[data-test-attribution-export-button]').exists();
   });
 
+  test('it hides the export button if user does not have SUDO capabilities', async function (assert) {
+    this.server.post('/sys/capabilities-self', () =>
+      capabilitiesStub('sys/internal/counters/activity/export', ['read'])
+    );
+
+    await render(hbs`
+      <Clients::Attribution
+        @totalClientAttribution={{this.totalClientAttribution}}
+        @responseTimestamp={{this.timestamp}}
+        />
+    `);
+    assert.dom('[data-test-attribution-export-button]').doesNotExist();
+  });
+
   test('defaults to show the export button if capabilities cannot be read', async function (assert) {
     this.server.post('/sys/capabilities-self', () => overrideResponse(403));
 
     await render(hbs`
-      <Clients::Attribution
+      <Clients::ExportButton
         @totalClientAttribution={{this.totalClientAttribution}}
         @responseTimestamp={{this.timestamp}}
         />
     `);
     assert.dom('[data-test-attribution-export-button]').exists();
-  });
-
-  test('it sends the current namespace in export request', async function (assert) {
-    assert.expect(2);
-    const namespaceSvc = this.owner.lookup('service:namespace');
-    namespaceSvc.path = 'foo';
-    this.server.get('/sys/internal/counters/activity/export', function (_, req) {
-      assert.deepEqual(req.requestHeaders, {
-        'X-Vault-Namespace': 'foo',
-      });
-      return new Response(200, { 'Content-Type': 'text/csv' }, '');
-    });
-
-    await render(hbs`
-      <Clients::Attribution
-        @totalClientAttribution={{this.totalClientAttribution}}
-        @responseTimestamp={{this.timestamp}}
-        />
-    `);
-    assert.dom('[data-test-attribution-export-button]').exists();
-    await click('[data-test-attribution-export-button]');
-    await click(GENERAL.confirmButton);
-  });
-  test('it sends the selected namespace in export request', async function (assert) {
-    assert.expect(2);
-    this.server.get('/sys/internal/counters/activity/export', function (_, req) {
-      assert.deepEqual(req.requestHeaders, {
-        'X-Vault-Namespace': 'foobar',
-      });
-      return new Response(200, { 'Content-Type': 'text/csv' }, '');
-    });
-    this.selectedNamespace = 'foobar/';
-
-    await render(hbs`
-      <Clients::Attribution
-        @totalClientAttribution={{this.totalClientAttribution}}
-        @responseTimestamp={{this.timestamp}}
-        @selectedNamespace={{this.selectedNamespace}}
-        />
-    `);
-    assert.dom('[data-test-attribution-export-button]').exists();
-    await click('[data-test-attribution-export-button]');
-    await click(GENERAL.confirmButton);
-  });
-
-  test('it sends the current + selected namespace in export request', async function (assert) {
-    assert.expect(2);
-    const namespaceSvc = this.owner.lookup('service:namespace');
-    namespaceSvc.path = 'foo';
-    this.server.get('/sys/internal/counters/activity/export', function (_, req) {
-      assert.deepEqual(req.requestHeaders, {
-        'X-Vault-Namespace': 'foo/bar',
-      });
-      return new Response(200, { 'Content-Type': 'text/csv' }, '');
-    });
-    this.selectedNamespace = 'bar/';
-
-    await render(hbs`
-      <Clients::Attribution
-        @totalClientAttribution={{this.totalClientAttribution}}
-        @responseTimestamp={{this.timestamp}}
-        @selectedNamespace={{this.selectedNamespace}}
-        />
-    `);
-    assert.dom('[data-test-attribution-export-button]').exists();
-    await click('[data-test-attribution-export-button]');
-    await click(GENERAL.confirmButton);
-  });
-
-  test('it shows a no data message if endpoint returns 204', async function (assert) {
-    this.server.get('/sys/internal/counters/activity/export', () => overrideResponse(204));
-
-    await render(hbs`
-      <Clients::Attribution
-        @totalClientAttribution={{this.totalClientAttribution}}
-        @responseTimestamp={{this.timestamp}}
-        />
-    `);
-    await click('[data-test-attribution-export-button]');
-    await click(GENERAL.confirmButton);
-    assert.dom('[data-test-export-error]').hasText('no data to export in provided time range.');
   });
 });
