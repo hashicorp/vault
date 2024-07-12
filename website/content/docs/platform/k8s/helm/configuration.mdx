@@ -1303,7 +1303,7 @@ and consider if they're appropriate for your deployment.
 
     - `tlsConfig` (`dictionary: {}`) - tlsConfig used for scraping the Vault metrics API. See the
       prometheus [API
-      reference](https://prometheus-operator.dev/docs/operator/api/#monitoring.coreos.com/v1.TLSConfig)
+      reference](https://prometheus-operator.dev/docs/api-reference/api/#monitoring.coreos.com/v1.TLSConfig)
       for more details.
 
       ```yaml
@@ -1316,12 +1316,12 @@ and consider if they're appropriate for your deployment.
 
     - `authorization` (`dictionary: {}`) - Authorization used for scraping the Vault metrics API.
       See the prometheus [API
-      reference](https://prometheus-operator.dev/docs/operator/api/#monitoring.coreos.com/v1.SafeAuthorization)
+      reference](https://prometheus-operator.dev/docs/api-reference/api/#monitoring.coreos.com/v1.SafeAuthorization)
       for more details.
 
       ```yaml
       authorization:
-        secret:
+        credentials:
           name: vault-metrics-client
           key: token
       ```
