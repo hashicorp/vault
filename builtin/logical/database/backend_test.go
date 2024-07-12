@@ -35,7 +35,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
-	_ "github.com/jackc/pgx/v4"
+	_ "github.com/jackc/pgx/v5"
 	"github.com/mitchellh/mapstructure"
 	"github.com/stretchr/testify/assert"
 )
