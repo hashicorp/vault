@@ -28,7 +28,7 @@ module('Integration | Component | auth | page ', function (hooks) {
 
     this.renderComponent = async () => {
       return render(hbs`
-        <Auth::FormPage
+        <Auth::LoginForm
           @wrappedToken={{this.wrappedToken}}
           @cluster={{this.cluster}}
           @namespace={{this.namespaceQueryParam}}

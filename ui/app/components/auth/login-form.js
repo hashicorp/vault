@@ -12,11 +12,11 @@ import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 
 /**
- * @module AuthFormPage
- * The Auth::FormPage wraps OktaNumberChallenge and AuthForm to manage the login flow and is responsible for calling the authenticate method
+ * @module AuthLoginForm
+ * The Auth::LoginForm wraps OktaNumberChallenge and AuthForm to manage the login flow and is responsible for calling the authenticate method
  *
  * @example
- * <Auth::FormPage @wrappedToken={{this.wrappedToken}} @cluster={{this.model}} @namespace={{this.namespaceQueryParam}} @selectedAuth={{this.authMethod}} @onSuccess={{action "onAuthResponse"}} />
+ * <Auth::LoginForm @wrappedToken={{this.wrappedToken}} @cluster={{this.model}} @namespace={{this.namespaceQueryParam}} @selectedAuth={{this.authMethod}} @onSuccess={{action "onAuthResponse"}} />
  *
  * @param {string} wrappedToken - Query param value of a wrapped token that can be used to login when added directly to the URL via the "wrapped_token" query param
  * @param {object} cluster - The route model which is the ember data cluster model. contains information such as cluster id, name and boolean for if the cluster is in standby
@@ -25,7 +25,7 @@ import { action } from '@ember/object';
  * @param {function} onSuccess - Callback that fires the "onAuthResponse" action in the auth controller and handles transitioning after success
  */
 
-export default class AuthFormPageComponent extends Component {
+export default class AuthLoginFormComponent extends Component {
   @service auth;
 
   @tracked authError = null;

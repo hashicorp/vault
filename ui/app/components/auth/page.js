@@ -9,16 +9,16 @@ import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 
 /**
- * @module AuthRoutePage
- * The Auth::SplashPage wraps OktaNumberChallenge and AuthForm to manage the login flow and is responsible for calling the authenticate method
+ * @module AuthPage
+ * The Auth::Page wraps OktaNumberChallenge and AuthForm to manage the login flow and is responsible for calling the authenticate method
  *
  * @example
- * <Auth::SplashPage @namespaceQueryParam={{this.namespaceQueryParam}} @onAuthSuccess={{action "authSuccess"}} @oidcProviderQueryParam={{this.oidcProvider}} @cluster={{this.model}} @onNamespaceUpdate={{perform this.updateNamespace}} />
+ * <Auth::Page @namespaceQueryParam={{this.namespaceQueryParam}} @onAuthSuccess={{action "authSuccess"}} @oidcProviderQueryParam={{this.oidcProvider}} @cluster={{this.model}} @onNamespaceUpdate={{perform this.updateNamespace}} />
  *
  * @param {string} param - info about the param
  * */
 
-export default class AuthSplashPage extends Component {
+export default class AuthPage extends Component {
   @service flags;
 
   @tracked mfaErrors;
