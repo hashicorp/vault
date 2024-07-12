@@ -13,6 +13,7 @@ import (
 	"math/rand"
 	"os"
 	"strings"
+	"testing"
 	"time"
 
 	"github.com/armon/go-metrics"
@@ -23,7 +24,6 @@ import (
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/xor"
 	"github.com/hashicorp/vault/vault"
-	"github.com/mitchellh/go-testing-interface"
 )
 
 //go:generate enumer -type=GenerateRootKind -trimprefix=GenerateRoot
@@ -36,7 +36,7 @@ const (
 )
 
 // GenerateRoot generates a root token on the target cluster.
-func GenerateRoot(t testing.T, cluster *vault.TestCluster, kind GenerateRootKind) string {
+func GenerateRoot(t testing.TB, cluster *vault.TestCluster, kind GenerateRootKind) string {
 	t.Helper()
 	token, err := GenerateRootWithError(t, cluster, kind)
 	if err != nil {
@@ -45,7 +45,7 @@ func GenerateRoot(t testing.T, cluster *vault.TestCluster, kind GenerateRootKind
 	return token
 }
 
-func GenerateRootWithError(t testing.T, cluster *vault.TestCluster, kind GenerateRootKind) (string, error) {
+func GenerateRootWithError(t testing.TB, cluster *vault.TestCluster, kind GenerateRootKind) (string, error) {
 	t.Helper()
 	// If recovery keys supported, use those to perform root token generation instead
 	var keys [][]byte
@@ -118,14 +118,14 @@ func RandomWithPrefix(name string) string {
 	return fmt.Sprintf("%s-%d", name, rand.New(rand.NewSource(time.Now().UnixNano())).Int())
 }
 
-func EnsureCoresSealed(t testing.T, c *vault.TestCluster) {
+func EnsureCoresSealed(t testing.TB, c *vault.TestCluster) {
 	t.Helper()
 	for _, core := range c.Cores {
 		EnsureCoreSealed(t, core)
 	}
 }
 
-func EnsureCoreSealed(t testing.T, core *vault.TestClusterCore) {
+func EnsureCoreSealed(t testing.TB, core *vault.TestClusterCore) {
 	t.Helper()
 	core.Seal(t)
 	timeout := time.Now().Add(60 * time.Second)
@@ -140,7 +140,7 @@ func EnsureCoreSealed(t testing.T, core *vault.TestClusterCore) {
 	}
 }
 
-func EnsureCoresUnsealed(t testing.T, c *vault.TestCluster) {
+func EnsureCoresUnsealed(t testing.TB, c *vault.TestCluster) {
 	t.Helper()
 	for i, core := range c.Cores {
 		err := AttemptUnsealCore(c, core)
@@ -150,7 +150,7 @@ func EnsureCoresUnsealed(t testing.T, c *vault.TestCluster) {
 	}
 }
 
-func EnsureCoreUnsealed(t testing.T, c *vault.TestCluster, core *vault.TestClusterCore) {
+func EnsureCoreUnsealed(t testing.TB, c *vault.TestCluster, core *vault.TestClusterCore) {
 	t.Helper()
 	err := AttemptUnsealCore(c, core)
 	if err != nil {
@@ -208,17 +208,17 @@ func AttemptUnsealCore(c *vault.TestCluster, core *vault.TestClusterCore) error 
 	return nil
 }
 
-func EnsureStableActiveNode(t testing.T, cluster *vault.TestCluster) {
+func EnsureStableActiveNode(t testing.TB, cluster *vault.TestCluster) {
 	t.Helper()
 	deriveStableActiveCore(t, cluster)
 }
 
-func DeriveStableActiveCore(t testing.T, cluster *vault.TestCluster) *vault.TestClusterCore {
+func DeriveStableActiveCore(t testing.TB, cluster *vault.TestCluster) *vault.TestClusterCore {
 	t.Helper()
 	return deriveStableActiveCore(t, cluster)
 }
 
-func deriveStableActiveCore(t testing.T, cluster *vault.TestCluster) *vault.TestClusterCore {
+func deriveStableActiveCore(t testing.TB, cluster *vault.TestCluster) *vault.TestClusterCore {
 	t.Helper()
 	activeCore := DeriveActiveCore(t, cluster)
 	minDuration := time.NewTimer(3 * time.Second)
@@ -247,7 +247,7 @@ func deriveStableActiveCore(t testing.T, cluster *vault.TestCluster) *vault.Test
 	return activeCore
 }
 
-func DeriveActiveCore(t testing.T, cluster *vault.TestCluster) *vault.TestClusterCore {
+func DeriveActiveCore(t testing.TB, cluster *vault.TestCluster) *vault.TestClusterCore {
 	t.Helper()
 	for i := 0; i < 60; i++ {
 		for _, core := range cluster.Cores {
@@ -268,7 +268,7 @@ func DeriveActiveCore(t testing.T, cluster *vault.TestCluster) *vault.TestCluste
 	return nil
 }
 
-func DeriveStandbyCores(t testing.T, cluster *vault.TestCluster) []*vault.TestClusterCore {
+func DeriveStandbyCores(t testing.TB, cluster *vault.TestCluster) []*vault.TestClusterCore {
 	t.Helper()
 	cores := make([]*vault.TestClusterCore, 0, 2)
 	for _, core := range cluster.Cores {
@@ -287,7 +287,7 @@ func DeriveStandbyCores(t testing.T, cluster *vault.TestCluster) []*vault.TestCl
 	return cores
 }
 
-func WaitForNCoresUnsealed(t testing.T, cluster *vault.TestCluster, n int) {
+func WaitForNCoresUnsealed(t testing.TB, cluster *vault.TestCluster, n int) {
 	t.Helper()
 	for i := 0; i < 30; i++ {
 		unsealed := 0
@@ -306,7 +306,7 @@ func WaitForNCoresUnsealed(t testing.T, cluster *vault.TestCluster, n int) {
 	t.Fatalf("%d cores were not unsealed", n)
 }
 
-func SealCores(t testing.T, cluster *vault.TestCluster) {
+func SealCores(t testing.TB, cluster *vault.TestCluster) {
 	t.Helper()
 	for _, core := range cluster.Cores {
 		if err := core.Shutdown(); err != nil {
@@ -325,7 +325,7 @@ func SealCores(t testing.T, cluster *vault.TestCluster) {
 	}
 }
 
-func WaitForNCoresSealed(t testing.T, cluster *vault.TestCluster, n int) {
+func WaitForNCoresSealed(t testing.TB, cluster *vault.TestCluster, n int) {
 	t.Helper()
 	for i := 0; i < 60; i++ {
 		sealed := 0
@@ -344,7 +344,7 @@ func WaitForNCoresSealed(t testing.T, cluster *vault.TestCluster, n int) {
 	t.Fatalf("%d cores were not sealed", n)
 }
 
-func WaitForActiveNode(t testing.T, cluster *vault.TestCluster) *vault.TestClusterCore {
+func WaitForActiveNode(t testing.TB, cluster *vault.TestCluster) *vault.TestClusterCore {
 	t.Helper()
 	for i := 0; i < 60; i++ {
 		for _, core := range cluster.Cores {
@@ -360,7 +360,7 @@ func WaitForActiveNode(t testing.T, cluster *vault.TestCluster) *vault.TestClust
 	return nil
 }
 
-func WaitForStandbyNode(t testing.T, core *vault.TestClusterCore) {
+func WaitForStandbyNode(t testing.TB, core *vault.TestClusterCore) {
 	t.Helper()
 	for i := 0; i < 30; i++ {
 		if isLeader, _, clusterAddr, _ := core.Core.Leader(); isLeader != true && clusterAddr != "" {
@@ -376,7 +376,7 @@ func WaitForStandbyNode(t testing.T, core *vault.TestClusterCore) {
 	t.Fatalf("node did not become standby")
 }
 
-func RekeyCluster(t testing.T, cluster *vault.TestCluster, recovery bool) [][]byte {
+func RekeyCluster(t testing.TB, cluster *vault.TestCluster, recovery bool) [][]byte {
 	t.Helper()
 	cluster.Logger.Info("rekeying cluster", "recovery", recovery)
 	client := cluster.Cores[0].Client
@@ -505,7 +505,7 @@ func RaftAppliedIndex(core *vault.TestClusterCore) uint64 {
 	return core.UnderlyingRawStorage.(*raft.RaftBackend).AppliedIndex()
 }
 
-func WaitForRaftApply(t testing.T, core *vault.TestClusterCore, index uint64) {
+func WaitForRaftApply(t testing.TB, core *vault.TestClusterCore, index uint64) {
 	t.Helper()
 
 	backend := core.UnderlyingRawStorage.(*raft.RaftBackend)
@@ -521,7 +521,7 @@ func WaitForRaftApply(t testing.T, core *vault.TestClusterCore, index uint64) {
 }
 
 // AwaitLeader waits for one of the cluster's nodes to become leader.
-func AwaitLeader(t testing.T, cluster *vault.TestCluster) (int, error) {
+func AwaitLeader(t testing.TB, cluster *vault.TestCluster) (int, error) {
 	timeout := time.Now().Add(60 * time.Second)
 	for {
 		if time.Now().After(timeout) {
@@ -545,7 +545,7 @@ func AwaitLeader(t testing.T, cluster *vault.TestCluster) (int, error) {
 	return 0, fmt.Errorf("timeout waiting leader")
 }
 
-func GenerateDebugLogs(t testing.T, client *api.Client) chan struct{} {
+func GenerateDebugLogs(t testing.TB, client *api.Client) chan struct{} {
 	t.Helper()
 
 	stopCh := make(chan struct{})
@@ -584,7 +584,7 @@ func GenerateDebugLogs(t testing.T, client *api.Client) chan struct{} {
 // from the map by removing entries whose keys are in the raft configuration.
 // Remaining entries result in an error return so that the caller can poll for
 // an expected configuration.
-func VerifyRaftPeers(t testing.T, client *api.Client, expected map[string]bool) error {
+func VerifyRaftPeers(t testing.TB, client *api.Client, expected map[string]bool) error {
 	t.Helper()
 
 	resp, err := client.Logical().Read("sys/storage/raft/configuration")
@@ -720,7 +720,7 @@ func SetNonRootToken(client *api.Client) error {
 
 // RetryUntilAtCadence runs f until it returns a nil result or the timeout is reached.
 // If a nil result hasn't been obtained by timeout, calls t.Fatal.
-func RetryUntilAtCadence(t testing.T, timeout, sleepTime time.Duration, f func() error) {
+func RetryUntilAtCadence(t testing.TB, timeout, sleepTime time.Duration, f func() error) {
 	t.Helper()
 	fail := func(err error) {
 		t.Fatalf("did not complete before deadline, err: %v", err)
@@ -730,7 +730,7 @@ func RetryUntilAtCadence(t testing.T, timeout, sleepTime time.Duration, f func()
 
 // RetryUntilAtCadenceWithHandler runs f until it returns a nil result or the timeout is reached.
 // If a nil result hasn't been obtained by timeout, onFailure is called.
-func RetryUntilAtCadenceWithHandler(t testing.T, timeout, sleepTime time.Duration, onFailure func(error), f func() error) {
+func RetryUntilAtCadenceWithHandler(t testing.TB, timeout, sleepTime time.Duration, onFailure func(error), f func() error) {
 	t.Helper()
 	deadline := time.Now().Add(timeout)
 	var err error
@@ -748,20 +748,20 @@ func RetryUntilAtCadenceWithHandler(t testing.T, timeout, sleepTime time.Duratio
 // If a nil result hasn't been obtained by timeout, calls t.Fatal.
 // NOTE: See RetryUntilAtCadence if you want to specify a different wait/sleep
 // duration between calls.
-func RetryUntil(t testing.T, timeout time.Duration, f func() error) {
+func RetryUntil(t testing.TB, timeout time.Duration, f func() error) {
 	t.Helper()
 	RetryUntilAtCadence(t, timeout, 100*time.Millisecond, f)
 }
 
 // CreateEntityAndAlias clones an existing client and creates an entity/alias, uses userpass mount path
 // It returns the cloned client, entityID, and aliasID.
-func CreateEntityAndAlias(t testing.T, client *api.Client, mountAccessor, entityName, aliasName string) (*api.Client, string, string) {
+func CreateEntityAndAlias(t testing.TB, client *api.Client, mountAccessor, entityName, aliasName string) (*api.Client, string, string) {
 	return CreateEntityAndAliasWithinMount(t, client, mountAccessor, "userpass", entityName, aliasName)
 }
 
 // CreateEntityAndAliasWithinMount clones an existing client and creates an entity/alias, within the specified mountPath
 // It returns the cloned client, entityID, and aliasID.
-func CreateEntityAndAliasWithinMount(t testing.T, client *api.Client, mountAccessor, mountPath, entityName, aliasName string) (*api.Client, string, string) {
+func CreateEntityAndAliasWithinMount(t testing.TB, client *api.Client, mountAccessor, mountPath, entityName, aliasName string) (*api.Client, string, string) {
 	t.Helper()
 	userClient, err := client.Clone()
 	if err != nil {
@@ -802,7 +802,7 @@ func CreateEntityAndAliasWithinMount(t testing.T, client *api.Client, mountAcces
 
 // SetupTOTPMount enables the totp secrets engine by mounting it. This requires
 // that the test cluster has a totp backend available.
-func SetupTOTPMount(t testing.T, client *api.Client) {
+func SetupTOTPMount(t testing.TB, client *api.Client) {
 	t.Helper()
 	// Mount the TOTP backend
 	mountInfo := &api.MountInput{
@@ -814,7 +814,7 @@ func SetupTOTPMount(t testing.T, client *api.Client) {
 }
 
 // SetupTOTPMethod configures the TOTP secrets engine with a provided config map.
-func SetupTOTPMethod(t testing.T, client *api.Client, config map[string]interface{}) string {
+func SetupTOTPMethod(t testing.TB, client *api.Client, config map[string]interface{}) string {
 	t.Helper()
 
 	resp1, err := client.Logical().Write("identity/mfa/method/totp", config)
@@ -833,7 +833,7 @@ func SetupTOTPMethod(t testing.T, client *api.Client, config map[string]interfac
 
 // SetupMFALoginEnforcement configures a single enforcement method using the
 // provided config map. "name" field is required in the config map.
-func SetupMFALoginEnforcement(t testing.T, client *api.Client, config map[string]interface{}) {
+func SetupMFALoginEnforcement(t testing.TB, client *api.Client, config map[string]interface{}) {
 	t.Helper()
 	enfName, ok := config["name"]
 	if !ok {
@@ -848,7 +848,7 @@ func SetupMFALoginEnforcement(t testing.T, client *api.Client, config map[string
 // SetupUserpassMountAccessor sets up userpass auth and returns its mount
 // accessor. This requires that the test cluster has a "userpass" auth method
 // available.
-func SetupUserpassMountAccessor(t testing.T, client *api.Client) string {
+func SetupUserpassMountAccessor(t testing.TB, client *api.Client) string {
 	t.Helper()
 	// Enable Userpass authentication
 	err := client.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
@@ -871,7 +871,7 @@ func SetupUserpassMountAccessor(t testing.T, client *api.Client) string {
 
 // RegisterEntityInTOTPEngine registers an entity with a methodID and returns
 // the generated name.
-func RegisterEntityInTOTPEngine(t testing.T, client *api.Client, entityID, methodID string) string {
+func RegisterEntityInTOTPEngine(t testing.TB, client *api.Client, entityID, methodID string) string {
 	t.Helper()
 	totpGenName := fmt.Sprintf("%s-%s", entityID, methodID)
 	secret, err := client.Logical().WriteWithContext(context.Background(), "identity/mfa/method/totp/admin-generate", map[string]interface{}{
@@ -905,7 +905,7 @@ func RegisterEntityInTOTPEngine(t testing.T, client *api.Client, entityID, metho
 }
 
 // GetTOTPCodeFromEngine requests a TOTP code from the specified enginePath.
-func GetTOTPCodeFromEngine(t testing.T, client *api.Client, enginePath string) string {
+func GetTOTPCodeFromEngine(t testing.TB, client *api.Client, enginePath string) string {
 	t.Helper()
 	totpPath := fmt.Sprintf("totp/code/%s", enginePath)
 	secret, err := client.Logical().ReadWithContext(context.Background(), totpPath)
@@ -920,7 +920,7 @@ func GetTOTPCodeFromEngine(t testing.T, client *api.Client, enginePath string) s
 
 // SetupLoginMFATOTP setups up a TOTP MFA using some basic configuration and
 // returns all relevant information to the client.
-func SetupLoginMFATOTP(t testing.T, client *api.Client, methodName string, waitPeriod int) (*api.Client, string, string) {
+func SetupLoginMFATOTP(t testing.TB, client *api.Client, methodName string, waitPeriod int) (*api.Client, string, string) {
 	t.Helper()
 	// Mount the totp secrets engine
 	SetupTOTPMount(t, client)
@@ -956,7 +956,7 @@ func SetupLoginMFATOTP(t testing.T, client *api.Client, methodName string, waitP
 	return entityClient, entityID, methodID
 }
 
-func SkipUnlessEnvVarsSet(t testing.T, envVars []string) {
+func SkipUnlessEnvVarsSet(t testing.TB, envVars []string) {
 	t.Helper()
 
 	for _, i := range envVars {
@@ -974,7 +974,7 @@ func SkipUnlessEnvVarsSet(t testing.T, envVars []string) {
 // The intention/use case for this function is to allow a cluster to start and become active with one
 // or more nodes not joined, so that we can test scenarios where a node joins later.
 // e.g. 4 nodes in the cluster, only 3 nodes in cluster 'active', 1 node can be joined later in tests.
-func WaitForNodesExcludingSelectedStandbys(t testing.T, cluster *vault.TestCluster, indexesToSkip ...int) {
+func WaitForNodesExcludingSelectedStandbys(t testing.TB, cluster *vault.TestCluster, indexesToSkip ...int) {
 	WaitForActiveNode(t, cluster)
 
 	contains := func(elems []int, e int) bool {

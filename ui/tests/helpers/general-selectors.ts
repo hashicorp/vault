@@ -81,4 +81,6 @@ export const GENERAL = {
   cancelButton: '[data-test-cancel]',
   saveButton: '[data-test-save]',
   maskedInput: (name: string) => `[data-test-textarea="${name}"]`,
+  codemirror: `[data-test-component="code-mirror-modifier"]`,
+  codemirrorTextarea: `[data-test-component="code-mirror-modifier"] textarea`,
 };
