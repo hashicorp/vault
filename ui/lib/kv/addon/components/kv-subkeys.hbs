@@ -1,0 +1,23 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<OverviewCard
+  @cardTitle="Connections"
+  @subText="The total number of connections to external databases that you have access to."
+  @actionText="Configure new"
+  @actionTo="vault.cluster.secrets.backend.create-root"
+  @actionQuery={{hash itemType="connection"}}
+>
+  {{#if @showJsonView}}
+    <Hds::CodeBlock @value={{stringify @subkeys.subkeys}} @hasLineNumbers={{false}} />
+  {{else}}
+    {{#each-in @subkeys.subkeys as |key|}}
+      <Hds::Text::Display @size="200" @weight="semibold" class="has-top-margin-s has-bottom-margin-s">
+        {{key}}
+      </Hds::Text::Display>
+      <hr class="has-background-gray-100 is-marginless" />
+    {{/each-in}}
+  {{/if}}
+</OverviewCard>
