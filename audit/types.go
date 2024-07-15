@@ -7,6 +7,12 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+// NOTE: Any exported changes made to RequestEntry, ResponseEntry or the structs
+// used to compose them, must be reflected in the public facing documentation.
+// See: /vault/docs/audit (website/content/docs/audit/index.mdx), which at the time
+// of writing contains JSON examples and JSON schemas intended for use in audit
+// exclusion.
+
 // RequestEntry is the structure of a request audit log entry.
 type RequestEntry struct {
 	Auth          *Auth    `json:"auth,omitempty"`

@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers/consul"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/helper/testcluster"
 	"github.com/hashicorp/vault/sdk/helper/testcluster/docker"
 	"github.com/stretchr/testify/require"
@@ -33,11 +34,12 @@ func TestConsulFencing_PartitionedLeaderCantWrite(t *testing.T) {
 
 	consulStorage := consul.NewClusterStorage()
 
-	// Create  cluster logger that will dump cluster logs to stdout for debugging.
-	logger := hclog.NewInterceptLogger(hclog.DefaultOptions)
+	// Create  cluster logger that will write cluster logs to a file in CI.
+	logger := corehelpers.NewTestLogger(t)
 	logger.SetLevel(hclog.Trace)
 
 	clusterOpts := docker.DefaultOptions(t)
+	// We can use an enterprise image here because we are swapping out the binary anyway.
 	clusterOpts.ImageRepo = "hashicorp/vault-enterprise"
 	clusterOpts.ClusterOptions.Logger = logger
 
@@ -116,7 +118,7 @@ func TestConsulFencing_PartitionedLeaderCantWrite(t *testing.T) {
 	require.NoError(t, err)
 
 	const interval = 500 * time.Millisecond
-
+	const timeout = 3 * time.Second
 	runWriter := func(i int, targetServer testcluster.VaultClusterNode, ctr *uint64) {
 		wg.Add(1)
 		defer wg.Done()
@@ -125,10 +127,13 @@ func TestConsulFencing_PartitionedLeaderCantWrite(t *testing.T) {
 		for {
 			key := fmt.Sprintf("c%d-%08d", i, atomic.LoadUint64(ctr))
 
-			// Use a short timeout. If we don't then the one goroutine writing to the
-			// partitioned active node can get stuck here until the 60 second request
-			// timeout kicks in without issuing another request.
-			reqCtx, cancel := context.WithTimeout(ctx, interval)
+			// Use a short timeout. If we don't then the one goroutine writing
+			// to the partitioned active node can get stuck here until the 60
+			// second request timeout kicks in without issuing another request.
+			// However, this timeout being too short can cause issues too.
+			// Having it set to 500 milliseconds caused the test to
+			// intermittently fail in CI before.
+			reqCtx, cancel := context.WithTimeout(ctx, timeout)
 			logger.Debug("sending patch", "client", i, "key", key)
 			_, err = kv.Patch(reqCtx, "data", map[string]interface{}{
 				key: 1,
@@ -214,7 +219,7 @@ func TestConsulFencing_PartitionedLeaderCantWrite(t *testing.T) {
 			logger.Info("failed write", "write_count", writesAfterPartition, "err", err)
 		default:
 		}
-		require.NoError(t, ctx.Err())
+		require.NoError(t, ctx.Err(), "context error while waiting for writes to new leader")
 	}
 
 	// Heal partition

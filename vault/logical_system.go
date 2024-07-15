@@ -2225,12 +2225,12 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		return nil, logical.ErrReadOnly
 	}
 
-	var lock *locking.DeadlockRWMutex
+	var lock locking.RWMutex
 	switch {
 	case strings.HasPrefix(path, credentialRoutePrefix):
-		lock = &b.Core.authLock
+		lock = b.Core.authLock
 	default:
-		lock = &b.Core.mountsLock
+		lock = b.Core.mountsLock
 	}
 
 	lock.Lock()

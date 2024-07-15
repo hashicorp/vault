@@ -68,8 +68,8 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 			return nil, fmt.Errorf("'accountName' must be set")
 		}
 	}
-	if err := validateAccountName(name); err != nil {
-		return nil, fmt.Errorf("invalid account name %s: %w", name, err)
+	if err := validateAccountName(accountName); err != nil {
+		return nil, fmt.Errorf("invalid account name %s: %w", accountName, err)
 	}
 
 	accountKey := os.Getenv("AZURE_ACCOUNT_KEY")
@@ -344,7 +344,7 @@ func (a *AzureBackend) List(ctx context.Context, prefix string) ([]string, error
 // getAuthTokenFromIMDS uses the Azure Instance Metadata Service to retrieve a short-lived credential using OAuth
 // more info on this https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview
 func getAuthTokenFromIMDS(resource string) (*adal.ServicePrincipalToken, error) {
-	msiEndpoint, err := adal.GetMSIVMEndpoint()
+	msiEndpoint, err := adal.GetMSIEndpoint()
 	if err != nil {
 		return nil, err
 	}

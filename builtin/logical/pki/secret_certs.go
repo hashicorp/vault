@@ -78,7 +78,7 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, _
 		return nil, nil
 	}
 
-	config, err := sc.Backend.CrlBuilder().getConfigWithUpdate(sc)
+	config, err := sc.CrlBuilder().GetConfigWithUpdate(sc)
 	if err != nil {
 		return nil, fmt.Errorf("error revoking serial: %s: failed reading config: %w", serial, err)
 	}

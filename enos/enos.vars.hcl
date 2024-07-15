@@ -23,9 +23,6 @@
 # aws_ssh_private_key_path is the path to the AWS keypair private key
 # aws_ssh_private_key_path = "./support/private_key.pem"
 
-# backend_edition is the backend (consul) release edition if applicable to the scenario.
-# backend_edition = "ce"
-
 # backend_license_path is the license for the backend if applicable (Consul Enterprise)".
 # backend_license_path = "./support/consul.hclic"
 
@@ -40,8 +37,20 @@
 # resources.
 # project_name = "vault-enos-integration"
 
-# rhel_distro_version is the version of RHEL to use for "distro:rhel" variants.
-# rhel_distro_version = "9.1" // or "8.8"
+# distro_version_amzn2 is the version of Amazon Linux 2 to use for "distro:amzn2" variants
+# distro_version_amzn2 = "2"
+
+# distro_version_leap is the version of openSUSE Leap to use for "distro:leap" variants
+# distro_version_leap = "15.5"
+
+# distro_version_rhel is the version of RHEL to use for "distro:rhel" variants.
+# distro_version_rhel = "9.3" // or "8.9"
+
+# distro_version_sles is the version of SUSE SLES to use for "distro:sles" variants.
+# distro_version_sles = "v15_sp5_standard"
+
+# distro_version_ubuntu is the version of ubuntu to use for "distro:ubuntu" variants
+# distro_version_ubuntu = "22.04" // or "20.04"
 
 # tags are a map of tags that will be applied to infrastructure resources that
 # support tagging.
@@ -58,9 +67,6 @@
 # ui_run_tests sets whether to run the UI tests or not for the ui scenario. If set to false a
 # cluster will be created but no tests will be run.
 # ui_run_tests = true
-
-# ubuntu_distro_version is the version of ubuntu to use for "distro:ubuntu" variants
-# ubuntu_distro_version = "22.04" // or "20.04", "18.04"
 
 # vault_artifact_path is the path to CRT generated or local vault.zip bundle. When
 # using the "builder:local" variant a bundle will be built from the current branch.

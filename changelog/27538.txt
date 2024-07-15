@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Creates separate section for updating sensitive creds for Secrets sync create/edit view.
+```

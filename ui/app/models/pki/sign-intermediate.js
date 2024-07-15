@@ -25,10 +25,6 @@ const validations = {
   'maxPathLength',
 ])
 export default class PkiSignIntermediateModel extends PkiCertificateBaseModel {
-  getHelpUrl(backend) {
-    return `/v1/${backend}/issuer/example/sign-intermediate?help=1`;
-  }
-
   @attr issuerRef;
 
   @attr('string', {

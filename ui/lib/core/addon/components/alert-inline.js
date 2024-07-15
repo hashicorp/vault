@@ -10,18 +10,22 @@ import { tracked } from '@glimmer/tracking';
 import { assert } from '@ember/debug';
 
 /**
+ * @deprecated
  * @module AlertInline
- * * Use Hds::Alert @type="compact" for displaying alert messages.
  * This component renders a compact Hds::Alert that displays a loading icon if the
- * @message arg changes and then re-renders the updated @message text.
+ * `@message` arg changes and then re-renders the updated `@message` text.
  * (Example: submitting a form and displaying the number of errors because on re-submit the number may change)
  *
  * @example
- * ```
  * <AlertInline @type="danger" @message="There are 2 errors with this form."/>
- * ```
  *
- * @deprecated {string} type - color getter maps type to the Hds::Alert @color
+ * * use Hds::Alert @type="compact" for displaying alert messages instead
+ * <Hds::Alert @type="compact" @color="critical" as |A|>
+ * <A.Title>Error</A.Title>
+ * <A.Description>Something is not right</A.Description>
+ * </Hds::Alert>
+ *
+ * @param {string} type - color getter maps type to the Hds::Alert @color
  * @param {string} color - Styles alert color and icon, can be one of: critical, warning, success, highlight, neutral
  * @param {string} message - The message to display within the alert.
  */

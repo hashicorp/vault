@@ -1,0 +1,21 @@
+### Sending SIGHUP to vault standby node causes panic
+
+#### Affected versions
+
+- 1.13.4+
+- 1.14.0+
+- 1.15.0+
+- 1.16.0+
+
+#### Issue
+
+Sending a SIGHUP to a vault standby node running an enterprise build can cause a panic
+if there is a change to the license, or reporting configuration.
+Active and performance standby nodes will perform fine. It is recommended that operators
+stop and restart vault nodes individually if configuration changes are required.
+
+
+#### Workaround
+
+Instead of issuing a SIGHUP, users should stop individual vault nodes, update the configuration 
+or license and then restart the node. 

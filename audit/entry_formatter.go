@@ -162,6 +162,17 @@ func (f *entryFormatter) Process(ctx context.Context, e *eventlogger.Event) (_ *
 		return nil, fmt.Errorf("unable to parse %s from audit event: %w", a.Subtype, err)
 	}
 
+	// If this pipeline has been configured with (Enterprise-only) exclusions then
+	// attempt to exclude the fields from the audit entry.
+	if f.shouldExclude() {
+		m, err := f.excludeFields(entry)
+		if err != nil {
+			return nil, fmt.Errorf("unable to exclude %s audit data from %q: %w", a.Subtype, f.name, err)
+		}
+
+		entry = m
+	}
+
 	result, err := jsonutil.EncodeJSON(entry)
 	if err != nil {
 		return nil, fmt.Errorf("unable to format %s: %w", a.Subtype, err)

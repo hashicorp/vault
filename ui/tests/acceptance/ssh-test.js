@@ -3,14 +3,23 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, fillIn, findAll, currentURL, find, settled, waitUntil } from '@ember/test-helpers';
+import {
+  click,
+  fillIn,
+  currentURL,
+  find,
+  settled,
+  waitUntil,
+  currentRouteName,
+  waitFor,
+} from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 
 import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Acceptance | ssh secret backend', function (hooks) {
   setupApplicationTest(hooks);
@@ -26,6 +35,7 @@ module('Acceptance | ssh secret backend', function (hooks) {
     {
       type: 'ca',
       name: 'carole',
+      credsRoute: 'vault.cluster.secrets.backend.sign',
       async fillInCreate() {
         await click('[data-test-input="allowUserCertificates"]');
       },
@@ -61,6 +71,7 @@ module('Acceptance | ssh secret backend', function (hooks) {
     {
       type: 'otp',
       name: 'otprole',
+      credsRoute: 'vault.cluster.secrets.backend.credentials',
       async fillInCreate() {
         await fillIn('[data-test-input="defaultUser"]', 'admin');
         await click('[data-test-toggle-group="Options"]');
@@ -84,13 +95,7 @@ module('Acceptance | ssh secret backend', function (hooks) {
     },
   ];
   test('ssh backend', async function (assert) {
-    // Popup menu causes flakiness
-    setRunOptions({
-      rules: {
-        'color-contrast': { enabled: false },
-      },
-    });
-    assert.expect(28);
+    assert.expect(30);
     const sshPath = `ssh-${this.uid}`;
 
     await enablePage.enable('ssh', sshPath);
@@ -100,27 +105,24 @@ module('Acceptance | ssh secret backend', function (hooks) {
     await click('[data-test-secret-backend-configure]');
 
     assert.strictEqual(currentURL(), `/vault/settings/secrets/configure/${sshPath}`);
-    assert.ok(findAll('[data-test-ssh-configure-form]').length, 'renders the empty configuration form');
+    assert.dom('[data-test-ssh-configure-form]').exists('renders the empty configuration form');
 
     // default has generate CA checked so we just submit the form
     await click('[data-test-ssh-input="configure-submit"]');
 
-    assert.ok(
-      await waitUntil(() => findAll('[data-test-ssh-input="public-key"]').length),
-      'a public key is fetched'
-    );
+    await waitFor('[data-test-ssh-input="public-key"]');
+    assert.dom('[data-test-ssh-input="public-key"]').exists();
     await click('[data-test-backend-view-link]');
 
     assert.strictEqual(currentURL(), `/vault/secrets/${sshPath}/list`, `redirects to ssh index`);
 
     for (const role of ROLES) {
       // create a role
-      await click('[ data-test-secret-create]');
+      await click('[data-test-secret-create]');
 
-      assert.ok(
-        find('[data-test-secret-header]').textContent.includes('SSH Role'),
-        `${role.type}: renders the create page`
-      );
+      assert
+        .dom('[data-test-secret-header]')
+        .includesText('SSH Role', `${role.type}: renders the create page`);
 
       await fillIn('[data-test-input="name"]', role.name);
       await fillIn('[data-test-input="keyType"]', role.type);
@@ -138,7 +140,7 @@ module('Acceptance | ssh secret backend', function (hooks) {
 
       // sign a key with this role
       await click('[data-test-backend-credentials]');
-
+      assert.strictEqual(currentRouteName(), role.credsRoute);
       await role.fillInGenerate();
       if (role.type === 'ca') {
         await settled();
@@ -146,29 +148,23 @@ module('Acceptance | ssh secret backend', function (hooks) {
       }
 
       // generate creds
-      await click('[data-test-secret-generate]');
+      await click(GENERAL.saveButton);
       await settled(); // eslint-disable-line
       role.assertAfterGenerate(assert, sshPath);
 
       // click the "Back" button
-      await click('[data-test-secret-generate-back]');
+      await click('[data-test-back-button]');
 
-      assert.ok(
-        findAll('[data-test-secret-generate-form]').length,
-        `${role.type}: back takes you back to the form`
-      );
+      assert.dom('[data-test-secret-generate-form]').exists(`${role.type}: back takes you back to the form`);
 
-      await click('[data-test-secret-generate-cancel]');
+      await click(GENERAL.cancelButton);
 
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${sshPath}/list`,
         `${role.type}: cancel takes you to ssh index`
       );
-      assert.ok(
-        findAll(`[data-test-secret-link="${role.name}"]`).length,
-        `${role.type}: role shows in the list`
-      );
+      assert.dom(`[data-test-secret-link="${role.name}"]`).exists(`${role.type}: role shows in the list`);
 
       //and delete
       await click(`[data-test-secret-link="${role.name}"] [data-test-popup-menu-trigger]`);

@@ -59,23 +59,23 @@ module('Integration | Util | client count utils', function (hooks) {
       const expected = [
         {
           previousVersion: '1.9.0',
-          timestampInstalled: '2023-08-02T00:00:00.000Z',
+          timestampInstalled: '2023-08-02T00:00:00Z',
           version: '1.9.1',
         },
         {
           previousVersion: '1.9.1',
-          timestampInstalled: '2023-09-02T00:00:00.000Z',
+          timestampInstalled: '2023-09-02T00:00:00Z',
           version: '1.10.1',
         },
         {
           previousVersion: '1.16.0',
-          timestampInstalled: '2023-12-02T00:00:00.000Z',
+          timestampInstalled: '2023-12-02T00:00:00Z',
           version: '1.17.0',
         },
       ];
       // set start/end times longer than version history to test all relevant upgrades return
       const startTime = '2023-06-02T00:00:00Z'; // first upgrade installed '2023-07-02T00:00:00Z'
-      const endTime = '2024-03-04T16:14:21.000Z'; // latest upgrade installed '2023-12-02T01:00:00.000Z'
+      const endTime = '2024-03-04T16:14:21Z'; // latest upgrade installed '2023-12-02T00:00:00Z'
       const filteredHistory = filterVersionHistory(this.versionHistory, startTime, endTime);
       assert.deepEqual(
         JSON.stringify(filteredHistory),
@@ -99,17 +99,17 @@ module('Integration | Util | client count utils', function (hooks) {
       const expected = [
         {
           previousVersion: '1.9.0',
-          timestampInstalled: '2023-08-02T00:00:00.000Z',
+          timestampInstalled: '2023-08-02T00:00:00Z',
           version: '1.9.1',
         },
         {
           previousVersion: '1.9.1',
-          timestampInstalled: '2023-09-02T00:00:00.000Z',
+          timestampInstalled: '2023-09-02T00:00:00Z',
           version: '1.10.1',
         },
       ];
-      const startTime = '2023-08-02T00:00:00.000Z'; // same date as 1.9.1 install date to catch same day edge cases
-      const endTime = '2023-11-02T00:00:00.000Z';
+      const startTime = '2023-08-02T00:00:00Z'; // same date as 1.9.1 install date to catch same day edge cases
+      const endTime = '2023-11-02T00:00:00Z';
       const filteredHistory = filterVersionHistory(this.versionHistory, startTime, endTime);
       assert.deepEqual(
         JSON.stringify(filteredHistory),
@@ -121,7 +121,7 @@ module('Integration | Util | client count utils', function (hooks) {
         {
           version: '1.10.3',
           previousVersion: '1.10.1',
-          timestampInstalled: '2023-09-23T00:00:00.000Z',
+          timestampInstalled: '2023-09-23T00:00:00Z',
         },
         'it does not return subsequent patch versions of the same notable upgrade version'
       );
@@ -129,27 +129,29 @@ module('Integration | Util | client count utils', function (hooks) {
   });
 
   test('formatByMonths: it formats the months array', async function (assert) {
-    assert.expect(5);
+    assert.expect(9);
     const original = [...RESPONSE.months];
 
-    const [formattedNoData, formattedWithActivity] = formatByMonths(RESPONSE.months);
+    const [formattedNoData, formattedWithActivity, formattedNoNew] = formatByMonths(RESPONSE.months);
 
     // instead of asserting the whole expected response, broken up so tests are easier to debug
     // but kept whole above to copy/paste updated response expectations in the future
-    const [expectedNoData, expectedWithActivity] = SERIALIZED_ACTIVITY_RESPONSE.by_month;
-    const { namespaces, new_clients } = expectedWithActivity;
+    const [expectedNoData, expectedWithActivity, expectedNoNew] = SERIALIZED_ACTIVITY_RESPONSE.by_month;
 
     assert.propEqual(formattedNoData, expectedNoData, 'it formats months without data');
-    assert.propEqual(
-      formattedWithActivity.namespaces,
-      namespaces,
-      'it formats namespaces array for months with data'
-    );
-    assert.propEqual(
-      formattedWithActivity.new_clients,
-      new_clients,
-      'it formats new_clients block for months with data'
-    );
+    ['namespaces', 'new_clients', 'namespaces_by_key'].forEach((key) => {
+      assert.propEqual(
+        formattedWithActivity[key],
+        expectedWithActivity[key],
+        `it formats ${key} array for months with data`
+      );
+      assert.propEqual(
+        formattedNoNew[key],
+        expectedNoNew[key],
+        `it formats the ${key} array for months with no new clients`
+      );
+    });
+
     assert.propEqual(RESPONSE.months, original, 'it does not modify original months array');
     assert.propEqual(formatByMonths([]), [], 'it returns an empty array if the months key is empty');
   });
@@ -187,7 +189,7 @@ module('Integration | Util | client count utils', function (hooks) {
   test('sortMonthsByTimestamp: sorts timestamps chronologically, oldest to most recent', async function (assert) {
     assert.expect(2);
     // API returns them in order so this test is extra extra
-    const unOrdered = [RESPONSE.months[1], RESPONSE.months[0]]; // mixup order
+    const unOrdered = [RESPONSE.months[1], RESPONSE.months[0], RESPONSE.months[3], RESPONSE.months[2]]; // mixup order
     const original = [...RESPONSE.months];
     const expected = RESPONSE.months;
     assert.propEqual(sortMonthsByTimestamp(unOrdered), expected);
@@ -195,32 +197,30 @@ module('Integration | Util | client count utils', function (hooks) {
   });
 
   test('namespaceArrayToObject: it returns namespaces_by_key and mounts_by_key', async function (assert) {
-    assert.expect(5);
+    // namespaceArrayToObject only called when there are counts, so skip month 0 which has no counts
+    for (let i = 1; i < RESPONSE.months.length; i++) {
+      const original = { ...RESPONSE.months[i] };
+      const expectedObject = SERIALIZED_ACTIVITY_RESPONSE.by_month[i].namespaces_by_key;
+      const formattedTotal = formatByNamespace(RESPONSE.months[i].namespaces);
+      const testObject = namespaceArrayToObject(
+        formattedTotal,
+        formatByNamespace(RESPONSE.months[i].new_clients.namespaces),
+        `${i + 6}/23`,
+        original.timestamp
+      );
+      const { root } = testObject;
+      const { root: expectedRoot } = expectedObject;
 
-    // month at 0-index has no data so use second month in array, empty month format covered by formatByMonths test above
-    const original = { ...RESPONSE.months[1] };
-    const expectedObject = SERIALIZED_ACTIVITY_RESPONSE.by_month[1].namespaces_by_key;
-    const formattedTotal = formatByNamespace(RESPONSE.months[1].namespaces);
+      assert.propEqual(
+        root?.new_clients,
+        expectedRoot?.new_clients,
+        `it formats namespaces new_clients for ${original.timestamp}`
+      );
+      assert.propEqual(root.mounts_by_key, expectedRoot.mounts_by_key, 'it formats namespaces mounts_by_key');
+      assert.propContains(root, expectedRoot, 'namespace has correct keys');
 
-    const testObject = namespaceArrayToObject(
-      formattedTotal,
-      formatByNamespace(RESPONSE.months[1].new_clients.namespaces),
-      '9/23',
-      '2023-09-01T00:00:00Z'
-    );
-
-    const { root } = testObject;
-    const { root: expectedRoot } = expectedObject;
-    assert.propEqual(root.new_clients, expectedRoot.new_clients, 'it formats namespaces new_clients');
-    assert.propEqual(root.mounts_by_key, expectedRoot.mounts_by_key, 'it formats namespaces mounts_by_key');
-    assert.propContains(root, expectedRoot, 'namespace has correct keys');
-
-    assert.propEqual(
-      namespaceArrayToObject(formattedTotal, formatByNamespace([]), '9/23', '2023-09-01T00:00:00Z'),
-      {},
-      'returns an empty object when there are no new clients '
-    );
-    assert.propEqual(RESPONSE.months[1], original, 'it does not modify original month data');
+      assert.propEqual(RESPONSE.months[i], original, 'it does not modify original month data');
+    }
   });
 
   // TESTS FOR COMBINED ACTIVITY DATA - no mount attribution < 1.10

@@ -14,7 +14,7 @@ import { settled, click, visit, currentURL, fillIn, currentRouteName } from '@em
 import { PAGE as ts } from 'vault/tests/helpers/sync/sync-selectors';
 
 // sync is an enterprise feature but since mirage is used the enterprise label has been intentionally omitted from the module name
-module('Acceptance | sync | destination', function (hooks) {
+module('Acceptance | sync | destination (singular)', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
@@ -86,7 +86,7 @@ module('Acceptance | sync | destination', function (hooks) {
 
     await visit('vault/sync/secrets/destinations/vercel-project/destination-vercel/edit');
     await click(ts.enableField('accessToken'));
-    await fillIn(ts.inputByAttr('accessToken'), 'foobar');
+    await fillIn(ts.maskedInput('accessToken'), 'foobar');
     await click(ts.saveButton);
     await click(ts.toolbar('Edit destination'));
     await click(ts.saveButton);

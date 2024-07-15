@@ -95,7 +95,7 @@ jobs:
       matrix: ${{ steps.build.outputs.matrix }}
       matrix_ids: ${{ steps.build.outputs.matrix_ids }}
     steps:
-      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
         with:
           ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/set-up-go
@@ -230,7 +230,7 @@ jobs:
       go-test-results-download-pattern: ${{ steps.metadata.outputs.go-test-results-download-pattern }}
       data-race-log-download-pattern: ${{ steps.metadata.outputs.data-race-log-download-pattern }}
     steps:
-      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
         with:
           ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/set-up-go
@@ -421,8 +421,9 @@ jobs:
             package_parallelism="-p 2"
           fi
 
-          # If running Go Test 32bit nightly tests, add a flag to rerun failed tests
-          if [[  "${{inputs.name}}" == 'i386' ]]; then
+          # If running Go tests on the enterprise repo, add a flag to rerun failed tests.
+          # This is to address the issues with flaky tests affecting the reliability of CI.
+          if [[  "${{github.repository}}" == 'hashicorp/vault-enterprise' ]]; then
               RERUN_FAILS="--rerun-fails"
           fi
 

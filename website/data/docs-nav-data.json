@@ -57,10 +57,13 @@
         "path": "internals/integrated-storage"
       },
       {
+        "title": "Recommended patterns",
+        "path": "internals/recommended-patterns"
+      },
+      {
         "title": "Security Model",
         "path": "internals/security"
       },
-
       {
         "title": "Telemetry",
         "routes": [
@@ -361,6 +364,10 @@
         "path": "configuration/programmatic-best-practices"
       },
       {
+        "title": "Manage resources programmatically",
+        "path": "configuration/programmatic-management"
+      },
+      {
         "title": "<code>listener</code>",
         "routes": [
           {
@@ -369,7 +376,16 @@
           },
           {
             "title": "TCP",
-            "path": "configuration/listener/tcp"
+            "routes": [  
+              {
+                "title": "Overview",
+                "path": "configuration/listener/tcp"
+              },
+              {
+                "title": "Configure TLS",
+                "path": "configuration/listener/tcp/tcp-tls"
+              }
+            ]
           },
           {
             "title": "Unix",
@@ -396,9 +412,9 @@
           {
             "title": "High Availability",
             "badge": {
-              "text": "ENTERPRISE | BETA",
+              "text": "ENTERPRISE",
               "type": "outlined",
-              "color": "highlight"
+              "color": "neutral"
             },
             "path": "configuration/seal/seal-ha"
           },
@@ -1088,6 +1104,19 @@
           }
         ]
       },
+      {
+        "title": "<code>transform</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/transform"
+          },
+          {
+            "title": "<code>import</code> and <code>import-version</code>",
+            "path": "commands/transform/import"
+          }
+        ]
+      },      
       {
         "title": "<code>unwrap</code>",
         "path": "commands/unwrap"
@@ -2310,6 +2339,10 @@
         "path": "upgrading/raft-wal"
       },
       {
+        "title": "Upgrade to 1.18.x",
+        "path": "upgrading/upgrade-to-1.18.x"
+      },
+      {
         "title": "Upgrade to 1.17.x",
         "path": "upgrading/upgrade-to-1.17.x"
       },
@@ -2568,6 +2601,10 @@
       {
         "title": "Overview",
         "path": "release-notes"
+      },
+      {
+        "title": "1.17.0",
+        "path": "release-notes/1.17.0"
       },
       {
         "title": "1.16.1",
@@ -2829,6 +2866,10 @@
       {
         "title": "Audit",
         "routes": [
+          {
+            "title": "Audit Exclusion",
+            "path": "enterprise/audit/exclusion"
+          },
           {
             "title": "Audit Filtering",
             "path": "enterprise/audit/filtering"

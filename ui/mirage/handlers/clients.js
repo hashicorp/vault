@@ -4,7 +4,6 @@
  */
 
 import {
-  add,
   addMonths,
   differenceInCalendarMonths,
   endOfMonth,
@@ -37,7 +36,6 @@ export const CONFIG_RESPONSE = {
   request_id: 'some-config-id',
   data: {
     billing_start_timestamp: formatRFC3339(LICENSE_START),
-    default_report_months: 12,
     enabled: 'default-enabled',
     minimum_retention_months: 48,
     queries_available: false,
@@ -216,22 +214,39 @@ export default function (server) {
   });
 
   server.get('/sys/internal/counters/activity', (schema, req) => {
+    const activities = schema['clients/activities'];
     let { start_time, end_time } = req.queryParams;
-    if (req.queryParams.current_billing_period) {
-      // { current_billing_period: true } automatically queries the activity log
-      // from the builtin license start timestamp to the current month
+    if (!start_time && !end_time) {
+      // if there are no date query params, the activity log default behavior
+      // queries from the builtin license start timestamp to the current month
       start_time = LICENSE_START.toISOString();
       end_time = STATIC_NOW.toISOString();
     }
     // backend returns a timestamp if given unix time, so first convert to timestamp string here
     if (!start_time.includes('T')) start_time = fromUnixTime(start_time).toISOString();
     if (!end_time.includes('T')) end_time = fromUnixTime(end_time).toISOString();
+
+    const record = activities.findBy({ start_time, end_time });
+    let data;
+    if (record) {
+      // if we already have data for the given start/end time, use that
+      data = {
+        start_time: record.start_time,
+        end_time: record.end_time,
+        by_namespace: record.by_namespace,
+        months: record.months,
+        total: record.total,
+      };
+    } else {
+      data = generateActivityResponse(start_time, end_time);
+      activities.create(data);
+    }
     return {
       request_id: 'some-activity-id',
       lease_id: '',
       renewable: false,
       lease_duration: 0,
-      data: generateActivityResponse(start_time, end_time),
+      data,
       wrap_info: null,
       warnings: null,
       auth: null,
@@ -251,41 +266,41 @@ export default function (server) {
             // we don't currently use build_date, including for accuracy. it's only tracked in versions >= 1.11.0
             build_date: null,
             previous_version: null,
-            timestamp_installed: LICENSE_START.toISOString(),
+            timestamp_installed: '2023-07-02T00:00:00Z',
           },
           '1.9.1': {
             build_date: null,
             previous_version: '1.9.0',
-            timestamp_installed: addMonths(LICENSE_START, 1).toISOString(),
+            timestamp_installed: '2023-08-02T00:00:00Z',
           },
           // auth mount attribution added in 1.10.0
           '1.10.1': {
             build_date: null,
             previous_version: '1.9.1',
-            timestamp_installed: addMonths(LICENSE_START, 2).toISOString(), // same as UPGRADE_DATE
+            timestamp_installed: '2023-09-02T00:00:00Z', // same as UPGRADE_DATE
           },
           '1.10.3': {
             build_date: null,
             previous_version: '1.10.1',
-            timestamp_installed: add(LICENSE_START, { months: 2, weeks: 3 }).toISOString(),
+            timestamp_installed: '2023-10-23T00:00:00Z',
           },
           // no notable UI changes
           '1.14.4': {
-            build_date: addMonths(LICENSE_START, 3).toISOString(),
+            build_date: '2023-11-02T00:00:00Z',
             previous_version: '1.10.3',
-            timestamp_installed: addMonths(LICENSE_START, 3).toISOString(),
+            timestamp_installed: '2023-11-02T00:00:00Z',
           },
           // sync clients added
           '1.16.0': {
-            build_date: addMonths(LICENSE_START, 4).toISOString(),
+            build_date: '2023-11-23T00:00:00Z',
             previous_version: '1.14.4',
-            timestamp_installed: addMonths(LICENSE_START, 4).toISOString(),
+            timestamp_installed: '2023-11-23T00:00:00Z',
           },
           // acme_clients separated from non-entity clients
           '1.17.0': {
-            build_date: addMonths(LICENSE_START, 5).toISOString(),
+            build_date: '2023-12-02T00:00:00Z',
             previous_version: '1.16.0',
-            timestamp_installed: addMonths(LICENSE_START, 5).toISOString(),
+            timestamp_installed: '2023-12-02T00:00:00Z',
           },
         },
       },

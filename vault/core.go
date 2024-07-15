@@ -375,7 +375,7 @@ type Core struct {
 
 	// mountsLock is used to ensure that the mounts table does not
 	// change underneath a calling function
-	mountsLock locking.DeadlockRWMutex
+	mountsLock locking.RWMutex
 
 	// mountMigrationTracker tracks past and ongoing remount operations
 	// against their migration ids
@@ -387,7 +387,7 @@ type Core struct {
 
 	// authLock is used to ensure that the auth table does not
 	// change underneath a calling function
-	authLock locking.DeadlockRWMutex
+	authLock locking.RWMutex
 
 	// audit is loaded after unseal since it is a protected
 	// configuration
@@ -1001,21 +1001,10 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		effectiveSDKVersion = version.GetVersion().Version
 	}
 
-	var detectDeadlocks []string
-	if conf.DetectDeadlocks != "" {
-		detectDeadlocks = strings.Split(conf.DetectDeadlocks, ",")
-		for k, v := range detectDeadlocks {
-			detectDeadlocks[k] = strings.ToLower(strings.TrimSpace(v))
-		}
-	}
-
-	// Use imported logging deadlock if requested
-	var stateLock locking.RWMutex
-	stateLock = &locking.SyncRWMutex{}
-
-	if slices.Contains(detectDeadlocks, "statelock") {
-		stateLock = &locking.DeadlockRWMutex{}
-	}
+	detectDeadlocks := locking.ParseDetectDeadlockConfigParameter(conf.DetectDeadlocks)
+	stateLock := locking.CreateConfigurableRWMutex(detectDeadlocks, "statelock")
+	mountsLock := locking.CreateConfigurableRWMutex(detectDeadlocks, "mountsLock")
+	authLock := locking.CreateConfigurableRWMutex(detectDeadlocks, "authLock")
 
 	// Setup the core
 	c := &Core{
@@ -1031,6 +1020,8 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		customListenerHeader: new(atomic.Value),
 		seal:                 conf.Seal,
 		stateLock:            stateLock,
+		mountsLock:           mountsLock,
+		authLock:             authLock,
 		router:               NewRouter(),
 		sealed:               new(uint32),
 		sealMigrationDone:    new(uint32),
@@ -2458,15 +2449,12 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 			return err
 		}
 
-		if !c.perfStandby {
-			if err := c.setupCensusManager(); err != nil {
-				logger.Error("failed to instantiate the license reporting agent", "error", err)
-			}
-
-			c.StartCensusReports(ctx)
-
-			c.StartManualCensusSnapshots()
+		if err := c.setupCensusManager(); err != nil {
+			logger.Error("failed to instantiate the license reporting agent", "error", err)
 		}
+
+		c.StartCensusReports(ctx)
+		c.StartManualCensusSnapshots()
 
 	} else {
 		broker, err := audit.NewBroker(logger)
@@ -2860,7 +2848,6 @@ func (c *Core) preSeal() error {
 	if err := c.teardownCensusManager(); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down reporting agent: %w", err))
 	}
-
 	if err := c.teardownCredentials(context.Background()); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down credentials: %w", err))
 	}

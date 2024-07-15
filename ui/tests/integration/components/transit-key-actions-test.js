@@ -142,6 +142,7 @@ module('Integration | Component | transit key actions', function (hooks) {
       },
       'passes expected args to the adapter'
     );
+    await click('dialog button');
   }
 
   test('it encrypts', doEncrypt);

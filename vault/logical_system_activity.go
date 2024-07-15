@@ -13,13 +13,17 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
-	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // defaultToRetentionMonthsMaxWarning is a warning message for setting the max retention_months value when retention_months value is more than activityLogMaximumRetentionMonths
 var defaultToRetentionMonthsMaxWarning = fmt.Sprintf("retention_months cannot be greater than %d; capped to %d.", activityLogMaximumRetentionMonths, activityLogMaximumRetentionMonths)
+
+const (
+	// WarningCurrentBillingPeriodDeprecated is a warning string that is used to indicate that the current_billing_period field, as the default start time will automatically be the billing period start date
+	WarningCurrentBillingPeriodDeprecated = "current_billing_period is deprecated; unless otherwise specified, all requests will default to the current billing period"
+)
 
 // activityQueryPath is available in every namespace
 func (b *SystemBackend) activityQueryPath() *framework.Path {
@@ -34,6 +38,7 @@ func (b *SystemBackend) activityQueryPath() *framework.Path {
 
 		Fields: map[string]*framework.FieldSchema{
 			"current_billing_period": {
+				Deprecated:  true,
 				Type:        framework.TypeBool,
 				Description: "Query utilization for configured billing period",
 			},
@@ -109,6 +114,7 @@ func (b *SystemBackend) rootActivityPaths() []*framework.Path {
 					Type:        framework.TypeInt,
 					Default:     12,
 					Description: "Number of months to report if no start date specified.",
+					Deprecated:  true,
 				},
 				"retention_months": {
 					Type:        framework.TypeInt,
@@ -182,23 +188,25 @@ func (b *SystemBackend) rootActivityPaths() []*framework.Path {
 	return paths
 }
 
-func parseStartEndTimes(a *ActivityLog, d *framework.FieldData) (time.Time, time.Time, error) {
+func parseStartEndTimes(a *ActivityLog, d *framework.FieldData, billingStartTime time.Time) (time.Time, time.Time, error) {
 	startTime := d.Get("start_time").(time.Time)
 	endTime := d.Get("end_time").(time.Time)
 
 	// If a specific endTime is used, then respect that
-	// otherwise we want to give the latest N months, so go back to the start
-	// of the previous month
+	// otherwise we want to query up until the end of the current month.
 	//
 	// Also convert any user inputs to UTC to avoid
 	// problems later.
 	if endTime.IsZero() {
-		endTime = timeutil.EndOfMonth(timeutil.StartOfPreviousMonth(time.Now().UTC()))
+		endTime = time.Now().UTC()
 	} else {
 		endTime = endTime.UTC()
 	}
+
+	// If startTime is not specified, we would like to query
+	// from the beginning of the billing period
 	if startTime.IsZero() {
-		startTime = a.DefaultStartTime(endTime)
+		startTime = billingStartTime
 	} else {
 		startTime = startTime.UTC()
 	}
@@ -218,7 +226,7 @@ func (b *SystemBackend) handleClientExport(ctx context.Context, req *logical.Req
 		return logical.ErrorResponse("no activity log present"), nil
 	}
 
-	startTime, endTime, err := parseStartEndTimes(a, d)
+	startTime, endTime, err := parseStartEndTimes(a, d, b.Core.BillingStart())
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -252,15 +260,16 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
 		return logical.ErrorResponse("no activity log present"), nil
 	}
 
-	if d.Get("current_billing_period").(bool) {
-		startTime = b.Core.BillingStart()
-		endTime = time.Now().UTC()
-	} else {
-		var err error
-		startTime, endTime, err = parseStartEndTimes(a, d)
-		if err != nil {
-			return logical.ErrorResponse(err.Error()), nil
-		}
+	warnings := make([]string, 0)
+
+	if _, ok := d.GetOk("current_billing_period"); ok {
+		warnings = append(warnings, WarningCurrentBillingPeriodDeprecated)
+	}
+
+	var err error
+	startTime, endTime, err = parseStartEndTimes(a, d, b.Core.BillingStart())
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
 	}
 
 	var limitNamespaces int
@@ -273,12 +282,15 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
 		return nil, err
 	}
 	if results == nil {
-		resp204, err := logical.RespondWithStatusCode(nil, req, http.StatusNoContent)
+		resp204, err := logical.RespondWithStatusCode(&logical.Response{
+			Warnings: warnings,
+		}, req, http.StatusNoContent)
 		return resp204, err
 	}
 
 	return &logical.Response{
-		Data: results,
+		Warnings: warnings,
+		Data:     results,
 	}, nil
 }
 
@@ -327,7 +339,6 @@ func (b *SystemBackend) handleActivityConfigRead(ctx context.Context, req *logic
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"default_report_months":    config.DefaultReportMonths,
 			"retention_months":         config.RetentionMonths,
 			"enabled":                  config.Enabled,
 			"queries_available":        qa,
@@ -357,8 +368,8 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 
 	{
 		// Parse the default report months
-		if defaultReportMonthsRaw, ok := d.GetOk("default_report_months"); ok {
-			config.DefaultReportMonths = defaultReportMonthsRaw.(int)
+		if _, ok := d.GetOk("default_report_months"); ok {
+			warnings = append(warnings, fmt.Sprintf("default_report_months is deprecated: defaulting to billing start time"))
 		}
 
 		if config.DefaultReportMonths <= 0 {
@@ -411,9 +422,6 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 		}
 	}
 
-	a.core.activityLogLock.RLock()
-	minimumRetentionMonths := a.configOverrides.MinimumRetentionMonths
-	a.core.activityLogLock.RUnlock()
 	enabled := config.Enabled == "enable"
 	if !enabled && config.Enabled == "default" {
 		enabled = activityLogEnabledDefault
@@ -424,8 +432,8 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 	}
 
 	// if manual license reporting is enabled, retention months must at least be 48 months
-	if a.core.ManualLicenseReportingEnabled() && config.RetentionMonths < minimumRetentionMonths {
-		return logical.ErrorResponse("retention_months must be at least %d while Reporting is enabled", minimumRetentionMonths), logical.ErrInvalidRequest
+	if a.core.ManualLicenseReportingEnabled() && config.RetentionMonths < ActivityLogMinimumRetentionMonths {
+		return logical.ErrorResponse("retention_months must be at least %d while Reporting is enabled", ActivityLogMinimumRetentionMonths), logical.ErrInvalidRequest
 	}
 
 	// Store the config
@@ -440,9 +448,9 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 	// Set the new config on the activity log
 	a.SetConfig(ctx, config)
 
-	// reload census agent if retention months change during update when reporting is enabled
+	// Update Census agent's metadata if retention months change
 	if prevRetentionMonths != config.RetentionMonths {
-		if err := a.core.ReloadCensusActivityLog(); err != nil {
+		if err := b.Core.SetRetentionMonths(config.RetentionMonths); err != nil {
 			return nil, err
 		}
 	}

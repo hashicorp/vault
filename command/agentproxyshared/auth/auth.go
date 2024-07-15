@@ -145,12 +145,18 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 	backoffCfg := newAutoAuthBackoff(ah.minBackoff, ah.maxBackoff, ah.exitOnError)
 
 	ah.logger.Info("starting auth handler")
+
+	// Set unauthenticated when starting up
+	metrics.SetGauge([]string{ah.metricsSignifier, "authenticated"}, 0)
+
 	defer func() {
 		am.Shutdown()
 		close(ah.OutputCh)
 		close(ah.TemplateTokenCh)
 		close(ah.ExecTokenCh)
 		ah.logger.Info("auth handler stopped")
+		// Set unauthenticated when shutting down
+		metrics.SetGauge([]string{ah.metricsSignifier, "authenticated"}, 0)
 	}()
 
 	credCh := am.NewCreds()
@@ -217,6 +223,8 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			if err != nil {
 				ah.logger.Error("error creating client for authentication call", "error", err, "backoff", backoffCfg)
 				metrics.IncrCounter([]string{ah.metricsSignifier, "auth", "failure"}, 1)
+				// Set unauthenticated when authentication fails
+				metrics.SetGauge([]string{ah.metricsSignifier, "authenticated"}, 0)
 
 				if backoffSleep(ctx, backoffCfg) {
 					continue
@@ -244,6 +252,8 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			if err != nil {
 				ah.logger.Error("could not look up token", "err", err, "backoff", backoffCfg)
 				metrics.IncrCounter([]string{ah.metricsSignifier, "auth", "failure"}, 1)
+				// Set unauthenticated when authentication fails
+				metrics.SetGauge([]string{ah.metricsSignifier, "authenticated"}, 0)
 
 				if backoffSleep(ctx, backoffCfg) {
 					continue
@@ -264,6 +274,8 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			if err != nil {
 				ah.logger.Error("error getting path or data from method", "error", err, "backoff", backoffCfg)
 				metrics.IncrCounter([]string{ah.metricsSignifier, "auth", "failure"}, 1)
+				// Set unauthenticated when authentication fails
+				metrics.SetGauge([]string{ah.metricsSignifier, "authenticated"}, 0)
 
 				if backoffSleep(ctx, backoffCfg) {
 					continue
@@ -277,6 +289,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			if err != nil {
 				ah.logger.Error("error creating client for wrapped call", "error", err, "backoff", backoffCfg)
 				metrics.IncrCounter([]string{ah.metricsSignifier, "auth", "failure"}, 1)
+				metrics.SetGauge([]string{ah.metricsSignifier, "authenticated"}, 0)
 
 				if backoffSleep(ctx, backoffCfg) {
 					continue
@@ -315,6 +328,8 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			if err != nil {
 				ah.logger.Error("error authenticating", "error", err, "backoff", backoffCfg)
 				metrics.IncrCounter([]string{ah.metricsSignifier, "auth", "failure"}, 1)
+				// Set unauthenticated when authentication fails
+				metrics.SetGauge([]string{ah.metricsSignifier, "authenticated"}, 0)
 
 				if backoffSleep(ctx, backoffCfg) {
 					continue
@@ -330,6 +345,8 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			if secret.WrapInfo == nil {
 				ah.logger.Error("authentication returned nil wrap info", "backoff", backoffCfg)
 				metrics.IncrCounter([]string{ah.metricsSignifier, "auth", "failure"}, 1)
+				// Set unauthenticated when authentication fails
+				metrics.SetGauge([]string{ah.metricsSignifier, "authenticated"}, 0)
 
 				if backoffSleep(ctx, backoffCfg) {
 					continue
@@ -339,6 +356,8 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			if secret.WrapInfo.Token == "" {
 				ah.logger.Error("authentication returned empty wrapped client token", "backoff", backoffCfg)
 				metrics.IncrCounter([]string{ah.metricsSignifier, "auth", "failure"}, 1)
+				// Set unauthenticated when authentication fails
+				metrics.SetGauge([]string{ah.metricsSignifier, "authenticated"}, 0)
 
 				if backoffSleep(ctx, backoffCfg) {
 					continue
@@ -349,6 +368,8 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			if err != nil {
 				ah.logger.Error("failed to encode wrapinfo", "error", err, "backoff", backoffCfg)
 				metrics.IncrCounter([]string{ah.metricsSignifier, "auth", "failure"}, 1)
+				// Set unauthenticated when authentication fails
+				metrics.SetGauge([]string{ah.metricsSignifier, "authenticated"}, 0)
 
 				if backoffSleep(ctx, backoffCfg) {
 					continue
@@ -388,6 +409,8 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 				if secret == nil || secret.Data == nil {
 					ah.logger.Error("token file validation failed, token may be invalid", "backoff", backoffCfg)
 					metrics.IncrCounter([]string{ah.metricsSignifier, "auth", "failure"}, 1)
+					// Set unauthenticated when authentication fails
+					metrics.SetGauge([]string{ah.metricsSignifier, "authenticated"}, 0)
 
 					if backoffSleep(ctx, backoffCfg) {
 						continue
@@ -398,6 +421,8 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 				if !ok || token == "" {
 					ah.logger.Error("token file validation returned empty client token", "backoff", backoffCfg)
 					metrics.IncrCounter([]string{ah.metricsSignifier, "auth", "failure"}, 1)
+					// Set unauthenticated when authentication fails
+					metrics.SetGauge([]string{ah.metricsSignifier, "authenticated"}, 0)
 
 					if backoffSleep(ctx, backoffCfg) {
 						continue
@@ -414,6 +439,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 					Renewable:     renewable,
 				}
 				ah.logger.Info("authentication successful, sending token to sinks")
+
 				ah.OutputCh <- token
 				if ah.enableTemplateTokenCh {
 					ah.TemplateTokenCh <- token
@@ -430,6 +456,8 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 				if secret == nil || secret.Auth == nil {
 					ah.logger.Error("authentication returned nil auth info", "backoff", backoffCfg)
 					metrics.IncrCounter([]string{ah.metricsSignifier, "auth", "failure"}, 1)
+					// Set unauthenticated when authentication fails
+					metrics.SetGauge([]string{ah.metricsSignifier, "authenticated"}, 0)
 
 					if backoffSleep(ctx, backoffCfg) {
 						continue
@@ -439,6 +467,8 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 				if secret.Auth.ClientToken == "" {
 					ah.logger.Error("authentication returned empty client token", "backoff", backoffCfg)
 					metrics.IncrCounter([]string{ah.metricsSignifier, "auth", "failure"}, 1)
+					// Set unauthenticated when authentication fails
+					metrics.SetGauge([]string{ah.metricsSignifier, "authenticated"}, 0)
 
 					if backoffSleep(ctx, backoffCfg) {
 						continue
@@ -471,6 +501,8 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 		if err != nil {
 			ah.logger.Error("error creating lifetime watcher", "error", err, "backoff", backoffCfg)
 			metrics.IncrCounter([]string{ah.metricsSignifier, "auth", "failure"}, 1)
+			// Set unauthenticated when authentication fails
+			metrics.SetGauge([]string{ah.metricsSignifier, "authenticated"}, 0)
 
 			if backoffSleep(ctx, backoffCfg) {
 				continue
@@ -479,6 +511,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 		}
 
 		metrics.IncrCounter([]string{ah.metricsSignifier, "auth", "success"}, 1)
+		metrics.SetGauge([]string{ah.metricsSignifier, "authenticated"}, 1)
 		// We don't want to trigger the renewal process for the root token
 		if isRootToken(leaseDuration, isTokenFileMethod, secret) {
 			ah.logger.Info("not starting token renewal process, as token is root token")
@@ -500,6 +533,8 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 				if err != nil {
 					ah.logger.Error("error renewing token", "error", err, "backoff", backoffCfg)
 					metrics.IncrCounter([]string{ah.metricsSignifier, "auth", "failure"}, 1)
+					// Set unauthenticated when authentication fails
+					metrics.SetGauge([]string{ah.metricsSignifier, "authenticated"}, 0)
 
 					// Add some exponential backoff so that if auth is successful
 					// but the watcher errors, we won't go into an immediate
@@ -525,19 +560,15 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 
 			case <-watcher.RenewCh():
 				metrics.IncrCounter([]string{ah.metricsSignifier, "auth", "success"}, 1)
+				// Set authenticated when authentication succeeds
+				metrics.SetGauge([]string{ah.metricsSignifier, "authenticated"}, 1)
 				ah.logger.Info("renewed auth token")
-
 			case <-credCh:
 				ah.logger.Info("auth method found new credentials, re-authenticating")
 				break LifetimeWatcherLoop
-			default:
-				select {
-				case <-ah.InvalidToken:
-					ah.logger.Info("invalid token found, re-authenticating")
-					break LifetimeWatcherLoop
-				default:
-					continue
-				}
+			case <-ah.InvalidToken:
+				ah.logger.Info("invalid token found, re-authenticating")
+				break LifetimeWatcherLoop
 			}
 		}
 	}
