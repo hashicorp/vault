@@ -8,8 +8,8 @@ package quotas
 import (
 	"context"
 
+	"github.com/absolutelightning/go-memdb"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/metricsutil"
 )
 

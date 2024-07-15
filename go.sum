@@ -1350,6 +1350,10 @@ github.com/Sectorbob/mlab-ns2 v0.0.0-20171030222938-d3aa0c295a8a/go.mod h1:D73UA
 github.com/Shopify/logrus-bugsnag v0.0.0-20171204204709-577dee27f20d/go.mod h1:HI8ITrYtUY+O+ZhtlqUnD8+KwNPOyugEhfP9fdUIaEQ=
 github.com/abdullin/seq v0.0.0-20160510034733-d5467c17e7af h1:DBNMBMuMiWYu0b+8KMJuWmfCkcxl09JwdlqwDZZ6U14=
 github.com/abdullin/seq v0.0.0-20160510034733-d5467c17e7af/go.mod h1:5Jv4cbFiHJMsVxt52+i0Ha45fjshj6wxYr1r19tB9bw=
+github.com/absolutelightning/go-immutable-radix v1.0.6 h1:SnFhf4+TYzlgpql4mG0tbl9/dMiF9IoQpp08uIg/HYA=
+github.com/absolutelightning/go-immutable-radix v1.0.6/go.mod h1:d1zae/VqcWHxzHWfS3slhyNQ4ecJeQSZE1j5J6ywEIU=
+github.com/absolutelightning/go-memdb v1.0.76 h1:tBSxABihEniwOTSrBrExR1WBI4EAXTsgchiZvNll8Sw=
+github.com/absolutelightning/go-memdb v1.0.76/go.mod h1:SfTJQHTxuBGk5JoW6U1DT6zbf26wBw1jKeUJZiHyDBw=
 github.com/aerospike/aerospike-client-go/v5 v5.6.0 h1:tRxcUq0HY8fFPQEzF3EgrknF+w1xFO0YDfUb9Nm8yRI=
 github.com/aerospike/aerospike-client-go/v5 v5.6.0/go.mod h1:rJ/KpmClE7kiBPfvAPrGw9WuNOiz8v2uKbQaUyYPXtI=
 github.com/agext/levenshtein v1.2.1 h1:QmvMAjj2aEICytGiWzmxoE0x2KZvE0fvmqMOfy2tjT8=
@@ -2366,7 +2370,6 @@ github.com/hashicorp/go-hclog v1.6.2/go.mod h1:W4Qnvbt70Wk/zYJryRzDRU/4r0kIg0PVH
 github.com/hashicorp/go-hclog v1.6.3 h1:Qr2kF+eVWjTiYmU7Y31tYlP1h0q/X3Nl3tPGdaB11/k=
 github.com/hashicorp/go-hclog v1.6.3/go.mod h1:W4Qnvbt70Wk/zYJryRzDRU/4r0kIg0PVHBcfoyhpF5M=
 github.com/hashicorp/go-immutable-radix v1.0.0/go.mod h1:0y9vanUI8NX6FsYoO3zeMjhV/C5i9g4Q3DwcSNZ4P60=
-github.com/hashicorp/go-immutable-radix v1.3.0/go.mod h1:0y9vanUI8NX6FsYoO3zeMjhV/C5i9g4Q3DwcSNZ4P60=
 github.com/hashicorp/go-immutable-radix v1.3.1 h1:DKHmCUm2hRBK510BaiZlwvpD40f8bJFeZnpfm2KLowc=
 github.com/hashicorp/go-immutable-radix v1.3.1/go.mod h1:0y9vanUI8NX6FsYoO3zeMjhV/C5i9g4Q3DwcSNZ4P60=
 github.com/hashicorp/go-kms-wrapping/entropy/v2 v2.0.0/go.mod h1:xvb32K2keAc+R8DSFG2IwDcydK9DBQE+fGA5fsw6hSk=
@@ -2389,8 +2392,6 @@ github.com/hashicorp/go-kms-wrapping/wrappers/ocikms/v2 v2.0.7 h1:KeG3QGrbxbr2qA
 github.com/hashicorp/go-kms-wrapping/wrappers/ocikms/v2 v2.0.7/go.mod h1:rXxYzjjGw4HltEwxPp9zYSRIo6R+rBf1MSPk01bvodc=
 github.com/hashicorp/go-kms-wrapping/wrappers/transit/v2 v2.0.11 h1:hdzSrDJ0CgHgGFx+1toaf7Z5bmQ2EYaFQ/dtWNXxu1I=
 github.com/hashicorp/go-kms-wrapping/wrappers/transit/v2 v2.0.11/go.mod h1:ywjP17x2t88pT3GA8gCc2vEH1vhvU1R9d5XwRQ0d7PQ=
-github.com/hashicorp/go-memdb v1.3.4 h1:XSL3NR682X/cVk2IeV0d70N4DZ9ljI885xAEU8IoK3c=
-github.com/hashicorp/go-memdb v1.3.4/go.mod h1:uBTr1oQbtuMgd1SSGoR8YV27eT3sBHbYiNm53bMpgSg=
 github.com/hashicorp/go-msgpack v0.5.3/go.mod h1:ahLV/dePpqEmjfWmKiqvPkv/twdG7iPBM1vqhUKIvfM=
 github.com/hashicorp/go-msgpack v0.5.5/go.mod h1:ahLV/dePpqEmjfWmKiqvPkv/twdG7iPBM1vqhUKIvfM=
 github.com/hashicorp/go-msgpack v1.1.5 h1:9byZdVjKTe5mce63pRVNP1L7UAmdHOTEMGehn6KvJWs=
