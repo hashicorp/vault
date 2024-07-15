@@ -37,9 +37,8 @@
       />
 
       <FormFieldGroups @model={{@mountModel}} @renderGroup="Method Options">
-        {{! while identityTokenKey can be set by OSS users, it's only used for the enterprise WIF feature }}
-        {{#if this.version.isEnterprise}}
-          {{! identityTokenKey attr has editType yield, which will render the following component }}
+        <:identityTokenKey>
+          {{! while identityTokenKey can be set by OSS users, it's only used for the enterprise WIF feature }}
           <SearchSelectWithModal
             @id="identityTokenKey"
             @fallbackComponent="input-search"
@@ -48,7 +47,7 @@
             @selectLimit="1"
             @returnString={{true}}
           />
-        {{/if}}
+        </:identityTokenKey>
       </FormFieldGroups>
 
       <div class="field is-grouped box is-fullwidth is-bottomless">

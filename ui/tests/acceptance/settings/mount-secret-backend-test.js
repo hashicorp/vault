@@ -301,56 +301,30 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     );
   });
 
-  module('Community', function (hooks) {
-    hooks.beforeEach(function () {
-      this.version = this.owner.lookup('service:version');
-      this.version.type = 'community';
-      this.store = this.owner.lookup('service:store');
-    });
+  test('it sets identity_token_key when aws is chosen, resets after', async function (assert) {
+    // create an oidc/key
+    await runCmd(`write identity/oidc/key/some-key allowed_client_ids="*"`);
+    await page.visit();
+    await page.selectType('aws');
+    await click('[data-test-toggle-group="Method Options"]');
 
-    test('identity_token_key form field does not show', async function (assert) {
-      await page.visit();
-      await page.selectType('aws');
-      await click('[data-test-toggle-group="Method Options"]');
+    assert.dom('[data-test-search-select-with-modal]').exists('Search select with modal component renders');
 
-      assert
-        .dom('[data-test-search-select-with-modal]')
-        .doesNotExist('Search select with modal component does not show');
-    });
-  });
-
-  module('Enterprise', function (hooks) {
-    hooks.beforeEach(function () {
-      this.version = this.owner.lookup('service:version');
-      this.version.type = 'enterprise';
-      this.store = this.owner.lookup('service:store');
-    });
-
-    test('it sets identity_token_key when aws is chosen, resets after', async function (assert) {
-      // create an oidc/key
-      await runCmd(`write identity/oidc/key/some-key allowed_client_ids="*"`);
-      await page.visit();
-      await page.selectType('aws');
-      await click('[data-test-toggle-group="Method Options"]');
-
-      assert.dom('[data-test-search-select-with-modal]').exists('Search select with modal component renders');
-
-      await clickTrigger();
-      const dropdownOptions = findAll('[data-option-index]').map((o) => o.innerText);
-      assert.deepEqual(
-        ['default', 'some-key'],
-        dropdownOptions,
-        'search select options show default and oidc/keys'
-      );
-      // Go back and choose a non-wif engine type
-      await page.back();
-      await page.selectType('ssh');
-      await click('[data-test-toggle-group="Method Options"]');
-      assert
-        .dom('[data-test-search-select-with-modal]')
-        .doesNotExist('for type ssh, the modal field does not render.');
-      // clean up
-      await runCmd(`delete identity/oidc/key/some-key`);
-    });
+    await clickTrigger();
+    const dropdownOptions = findAll('[data-option-index]').map((o) => o.innerText);
+    assert.deepEqual(
+      ['default', 'some-key'],
+      dropdownOptions,
+      'search select options show default and oidc/keys'
+    );
+    // Go back and choose a non-wif engine type
+    await page.back();
+    await page.selectType('ssh');
+    await click('[data-test-toggle-group="Method Options"]');
+    assert
+      .dom('[data-test-search-select-with-modal]')
+      .doesNotExist('for type ssh, the modal field does not render.');
+    // clean up
+    await runCmd(`delete identity/oidc/key/some-key`);
   });
 });

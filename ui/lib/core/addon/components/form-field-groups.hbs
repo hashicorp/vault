@@ -62,8 +62,8 @@
                   @modelValidations={{@modelValidations}}
                   @showHelpText={{@showHelpText}}
                 >
-                  {{#if (and (has-block) (eq attr.options.editType "yield"))}}
-                    {{yield}}
+                  {{#if (has-block "identityTokenKey")}}
+                    {{yield to="identityTokenKey"}}
                   {{/if}}
                 </FormField>
 
