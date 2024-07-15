@@ -5,6 +5,7 @@ package connutil
 
 import (
 	"context"
+	"crypto/tls"
 	"database/sql"
 	"fmt"
 	"net/url"
@@ -19,6 +20,8 @@ import (
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
+	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v4/stdlib"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -43,6 +46,8 @@ type SQLConnectionProducer struct {
 	ServiceAccountJSON       string      `json:"service_account_json" mapstructure:"service_account_json" structs:"service_account_json"`
 	DisableEscaping          bool        `json:"disable_escaping" mapstructure:"disable_escaping" structs:"disable_escaping"`
 	usePrivateIP             bool        `json:"use_private_ip" mapstructure:"use_private_ip" structs:"use_private_ip"`
+
+	TLSConfig *tls.Config
 
 	// cloud options here - cloudDriverName is globally unique, but only needs to be retained for the lifetime
 	// of driver registration, not across plugin restarts.
@@ -157,11 +162,11 @@ func (c *SQLConnectionProducer) Init(ctx context.Context, conf map[string]interf
 
 	if verifyConnection {
 		if _, err := c.Connection(ctx); err != nil {
-			return nil, errwrap.Wrapf("error verifying connection: {{err}}", err)
+			return nil, errwrap.Wrapf("error verifying Connection: {{err}}", err)
 		}
 
 		if err := c.db.PingContext(ctx); err != nil {
-			return nil, errwrap.Wrapf("error verifying connection: {{err}}", err)
+			return nil, errwrap.Wrapf("error verifying PingContext: {{err}}", err)
 		}
 	}
 
@@ -219,16 +224,34 @@ func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, er
 		}
 	}
 
-	var err error
-	if driverName == "pgx" && os.Getenv(pluginutil.PluginUsePostgresSSLInline) != "" {
-		// TODO: remove this deprecated function call in a future SDK version
-		c.db, err = OpenPostgres(driverName, conn)
-	} else {
-		c.db, err = sql.Open(driverName, conn)
-	}
+	if c.TLSConfig != nil {
+		config, err := pgx.ParseConfig(conn)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse config %s", err)
+		}
 
-	if err != nil {
-		return nil, err
+		config.TLSConfig.RootCAs = c.TLSConfig.RootCAs
+		config.TLSConfig.ClientCAs = c.TLSConfig.ClientCAs
+		config.TLSConfig.Certificates = c.TLSConfig.Certificates
+		// TODO(JM): loop through fallback hosts and update TLSConfig for each
+
+		c.db = stdlib.OpenDB(*config)
+		if err != nil {
+			return nil, fmt.Errorf("failed to Open conn for driver %s", err)
+		}
+	} else if driverName == "pgx" && os.Getenv(pluginutil.PluginUsePostgresSSLInline) != "" {
+		// TODO: remove this deprecated function call in a future SDK version
+		var err error
+		c.db, err = OpenPostgres(driverName, conn)
+		if err != nil {
+			return nil, fmt.Errorf("failed to Open conn for driver %s", err)
+		}
+	} else {
+		var err error
+		c.db, err = sql.Open(driverName, conn)
+		if err != nil {
+			return nil, fmt.Errorf("failed to Open conn for driver %s", err)
+		}
 	}
 
 	// Set some connection pool settings. We don't need much of this,

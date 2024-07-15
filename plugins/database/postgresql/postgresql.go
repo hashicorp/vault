@@ -5,7 +5,11 @@ package postgresql
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"database/sql"
+	"encoding/pem"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -79,11 +83,57 @@ func new() *PostgreSQL {
 type PostgreSQL struct {
 	*connutil.SQLConnectionProducer
 
+	TLSCertificateData []byte `json:"tls_certificate" structs:"-" mapstructure:"tls_certificate"`
+	TLSPrivateKey      []byte `json:"tls_private_key" structs:"-" mapstructure:"tls_private_key"`
+	TLSCAData          []byte `json:"tls_ca" structs:"-" mapstructure:"tls_ca"`
+
 	usernameProducer       template.StringTemplate
 	passwordAuthentication passwordAuthentication
 }
 
 func (p *PostgreSQL) Initialize(ctx context.Context, req dbplugin.InitializeRequest) (dbplugin.InitializeResponse, error) {
+	sslcert, err := strutil.GetString(req.Config, "tls_certificate")
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to retrieve tls_certificate: %w", err)
+	}
+
+	sslkey, err := strutil.GetString(req.Config, "tls_private_key")
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to retrieve tls_private_key: %w", err)
+	}
+
+	sslrootcert, err := strutil.GetString(req.Config, "tls_ca")
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to retrieve tls_ca: %w", err)
+	}
+
+	tlsConfig := &tls.Config{}
+	if sslrootcert != "" {
+		caCertPool := x509.NewCertPool()
+		if !caCertPool.AppendCertsFromPEM([]byte(sslrootcert)) {
+			return dbplugin.InitializeResponse{}, errors.New("unable to add CA to cert pool")
+		}
+
+		tlsConfig.RootCAs = caCertPool
+		tlsConfig.ClientCAs = caCertPool
+	}
+
+	if (sslcert != "" && sslkey == "") || (sslcert == "" && sslkey != "") {
+		return dbplugin.InitializeResponse{}, errors.New(`both "sslcert" and "sslkey" are required`)
+	}
+
+	if sslcert != "" && sslkey != "" {
+		block, _ := pem.Decode([]byte(sslkey))
+
+		cert, err := tls.X509KeyPair([]byte(sslcert), pem.EncodeToMemory(block))
+		if err != nil {
+			return dbplugin.InitializeResponse{}, fmt.Errorf("unable to load cert: %w", err)
+		}
+		tlsConfig.Certificates = []tls.Certificate{cert}
+	}
+
+	p.TLSConfig = tlsConfig
+
 	newConf, err := p.SQLConnectionProducer.Init(ctx, req.Config, req.VerifyConnection)
 	if err != nil {
 		return dbplugin.InitializeResponse{}, err
