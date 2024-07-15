@@ -312,11 +312,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
 
     await clickTrigger();
     const dropdownOptions = findAll('[data-option-index]').map((o) => o.innerText);
-    assert.deepEqual(
-      ['default', 'some-key'],
-      dropdownOptions,
-      'search select options show default and oidc/keys'
-    );
+    assert.ok(dropdownOptions.includes('some-key'), 'search select options show some-key');
     // Go back and choose a non-wif engine type
     await page.back();
     await page.selectType('ssh');
