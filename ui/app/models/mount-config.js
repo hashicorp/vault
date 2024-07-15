@@ -77,10 +77,6 @@ export default class MountConfigModel extends Model {
   @attr({
     label: 'Identity token key',
     subText: `A named key to sign tokens. If not provided, this will default to Vault's OIDC default key.`,
-    selectLimit: 1,
-    models: ['oidc/key'],
-    fallbackComponent: 'input-search',
-    returnString: true,
     editType: 'yield',
   })
   identityTokenKey;

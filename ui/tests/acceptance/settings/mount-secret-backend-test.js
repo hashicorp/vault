@@ -308,9 +308,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       this.store = this.owner.lookup('service:store');
     });
 
-    test('identity_token_key form field does not show even when an oidc key exists', async function (assert) {
-      // create an oidc/key
-      await runCmd(`write identity/oidc/key/some-key allowed_client_ids="*"`);
+    test('identity_token_key form field does not show', async function (assert) {
       await page.visit();
       await page.selectType('aws');
       await click('[data-test-toggle-group="Method Options"]');
@@ -318,8 +316,6 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       assert
         .dom('[data-test-search-select-with-modal]')
         .doesNotExist('Search select with modal component does not show');
-      // clean up
-      await runCmd(`delete identity/oidc/key/some-key`);
     });
   });
 
