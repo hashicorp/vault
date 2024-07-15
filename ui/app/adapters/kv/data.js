@@ -31,6 +31,16 @@ export default class KvDataAdapter extends ApplicationAdapter {
     });
   }
 
+  fetchSubkeys(query) {
+    const { backend, path, version, depth } = query;
+    // TODO use query-param-string util when https://github.com/hashicorp/vault/pull/27455 is merged
+    // if no version, defaults to latest
+    const versionParam = version ? `&version=${version}` : '';
+    // depth=1 returns just top-level keys, depth=0 returns all subkeys
+    const url = `${backend}/subkeys/${path}?depth=${depth || '0'}${versionParam}`;
+    return this.ajax(this._url(url), 'GET').then((resp) => resp.data);
+  }
+
   fetchWrapInfo(query) {
     const { backend, path, version, wrapTTL } = query;
     const id = kvDataPath(backend, path, version);
