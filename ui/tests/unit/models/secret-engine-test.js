@@ -111,8 +111,6 @@ module('Unit | Model | secret-engine', function (hooks) {
     });
 
     test('it returns correct fields for aws', function (assert) {
-      // config.identityTokenKey will only render on mount-secret-backend the if version is enterprise
-      // however, similar to other enterprise only attr (ex: sealWrap), we set the attr on the model regardless of version
       assert.expect(1);
       const model = this.store.createRecord('secret-engine', {
         type: 'aws',

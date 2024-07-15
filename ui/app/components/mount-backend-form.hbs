@@ -38,7 +38,6 @@
 
       <FormFieldGroups @model={{@mountModel}} @renderGroup="Method Options">
         <:identityTokenKey>
-          {{! while identityTokenKey can be set by OSS users, it's only used for the enterprise WIF feature }}
           <SearchSelectWithModal
             @id="identityTokenKey"
             @fallbackComponent="input-search"
