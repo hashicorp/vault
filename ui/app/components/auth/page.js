@@ -4,10 +4,7 @@
  */
 
 import Component from '@glimmer/component';
-import Ember from 'ember';
 import { service } from '@ember/service';
-import { task, timeout } from 'ember-concurrency';
-import { waitFor } from '@ember/test-waiters';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 
@@ -16,93 +13,60 @@ import { action } from '@ember/object';
  * The Auth::Page wraps OktaNumberChallenge and AuthForm to manage the login flow and is responsible for calling the authenticate method
  *
  * @example
- * <Auth::Page @wrappedToken={{this.wrappedToken}} @cluster={{this.model}} @namespace={{this.namespaceQueryParam}} @selectedAuth={{this.authMethod}} @onSuccess={{action "onAuthResponse"}} />
+ * <Auth::Page @namespaceQueryParam={{this.namespaceQueryParam}} @onAuthSuccess={{action "authSuccess"}} @oidcProviderQueryParam={{this.oidcProvider}} @cluster={{this.model}} @onNamespaceUpdate={{perform this.updateNamespace}} />
  *
- * @param {string} wrappedToken - Query param value of a wrapped token that can be used to login when added directly to the URL via the "wrapped_token" query param
- * @param {object} cluster - The route model which is the ember data cluster model. contains information such as cluster id, name and boolean for if the cluster is in standby
- * @param {string} namespace- Namespace query param, passed to AuthForm and set by typing in namespace input or URL
- * @param {string} selectedAuth - The auth method selected in the dropdown, passed to auth service's authenticate method
- * @param {function} onSuccess - Callback that fires the "onAuthResponse" action in the auth controller and handles transitioning after success
- */
+ * @param {string} authMethodQueryParam - auth method type to login with, updated by selecting an auth method from the dropdown
+ * @param {string} namespaceQueryParam - namespace to login with, updated by typing in to the namespace input
+ * @param {string} oidcProviderQueryParam - oidc provider query param, set in url as "?o=someprovider"
+ * @param {function} onAuthSuccess - callback task in controller that receives the auth response (after MFA, if enabled) when login is successful
+ * @param {function} onNamespaceUpdate - callback task that passes user input to the controller to update the login namespace in the url query params
+ * @param {string} wrappedToken - passed down to the AuthForm component and can be used to login if added directly to the URL via the "wrapped_token" query param
+ * */
 
-export default class AuthPageComponent extends Component {
-  @service auth;
+export default class AuthPage extends Component {
+  @service flags;
 
-  @tracked authError = null;
-  @tracked oktaNumberChallengeAnswer = '';
-  @tracked waitingForOktaNumberChallenge = false;
+  @tracked mfaErrors;
+  @tracked mfaAuthData;
 
-  @action
-  performAuth(backendType, data) {
-    this.authenticate.unlinked().perform(backendType, data);
+  get namespaceInput() {
+    const namespaceQP = this.args.namespaceQueryParam;
+    if (this.flags.hvdManagedNamespaceRoot) {
+      // When managed, the user isn't allowed to edit the prefix `admin/` for their nested namespace
+      const split = namespaceQP.split('/');
+      if (split.length > 1) {
+        split.shift();
+        return `/${split.join('/')}`;
+      }
+      return '';
+    }
+    return namespaceQP;
   }
 
-  @task
-  @waitFor
-  *delayAuthMessageReminder() {
-    if (Ember.testing) {
-      yield timeout(0);
+  @action
+  handleNamespaceUpdate(event) {
+    this.args.onNamespaceUpdate(event.target.value);
+  }
+
+  @action
+  onAuthResponse(authResponse, backend, data) {
+    const { mfa_requirement } = authResponse;
+    // if an mfa requirement exists further action is required
+    if (mfa_requirement) {
+      this.mfaAuthData = { mfa_requirement, backend, data };
     } else {
-      yield timeout(5000);
+      this.args.onAuthSuccess(authResponse);
     }
-  }
-
-  @task
-  @waitFor
-  *authenticate(backendType, data) {
-    const {
-      selectedAuth,
-      cluster: { id: clusterId },
-    } = this.args;
-    try {
-      if (backendType === 'okta') {
-        this.pollForOktaNumberChallenge.perform(data.nonce, data.path);
-      } else {
-        this.delayAuthMessageReminder.perform();
-      }
-      const authResponse = yield this.auth.authenticate({
-        clusterId,
-        backend: backendType,
-        data,
-        selectedAuth,
-      });
-
-      this.args.onSuccess(authResponse, backendType, data);
-    } catch (e) {
-      if (!this.auth.mfaError) {
-        this.authError = `Authentication failed: ${this.auth.handleError(e)}`;
-      }
-    }
-  }
-
-  @task
-  @waitFor
-  *pollForOktaNumberChallenge(nonce, mount) {
-    // yield for 1s to wait to see if there is a login error before polling
-    yield timeout(1000);
-    if (this.authError) return;
-
-    this.waitingForOktaNumberChallenge = true;
-    // keep polling /auth/okta/verify/:nonce API every 1s until response returns with correct_number
-    let response = null;
-    while (response === null) {
-      // disable polling for tests otherwise promises reject and acceptance tests fail
-      if (Ember.testing) return;
-
-      yield timeout(1000);
-      response = yield this.auth.getOktaNumberChallengeAnswer(nonce, mount);
-    }
-    // display correct number so user can select on personal MFA device
-    this.oktaNumberChallengeAnswer = response;
   }
 
   @action
-  onCancel() {
-    // reset variables and stop polling tasks if canceling login
-    this.authError = null;
-    this.oktaNumberChallengeAnswer = null;
-    this.waitingForOktaNumberChallenge = false;
-    this.authenticate.cancelAll();
-    this.pollForOktaNumberChallenge.cancelAll();
+  onMfaSuccess(authResponse) {
+    this.args.onAuthSuccess(authResponse);
+  }
+
+  @action
+  onMfaErrorDismiss() {
+    this.mfaAuthData = null;
+    this.mfaErrors = null;
   }
 }

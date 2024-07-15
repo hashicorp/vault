@@ -57,9 +57,7 @@
         {{/each}}
       </div>
       {{#if this.countdown}}
-        <div>
-          <AlertInline @type="danger" @message={{this.codeDelayMessage}} />
-        </div>
+        <AlertInline @type="danger" class="has-bottom-padding-m" @message={{this.codeDelayMessage}} />
       {{/if}}
       <Hds::Button
         @text="Verify"
