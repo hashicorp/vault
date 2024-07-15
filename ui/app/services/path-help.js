@@ -26,6 +26,7 @@ import {
   filterPathsByItemType,
   pathToHelpUrlSegment,
   reducePathsByPathName,
+  getHelpUrlForModel,
 } from 'vault/utils/openapi-helpers';
 import { isPresent } from '@ember/utils';
 
@@ -53,17 +54,17 @@ export default Service.extend({
     const modelName = `model:${modelType}`;
 
     const modelFactory = owner.factoryFor(modelName);
-    let newModel, helpUrl;
+    let helpUrl = getHelpUrlForModel(modelType, backend);
+
+    let newModel;
     // if we have a factory, we need to take the existing model into account
     if (modelFactory) {
       debug(`Model factory found for ${modelType}`);
       newModel = modelFactory.class;
-      const modelProto = newModel.proto();
-      if (newModel.merged || modelProto.useOpenAPI !== true) {
+      if (newModel.merged || !helpUrl) {
         return resolve();
       }
 
-      helpUrl = modelProto.getHelpUrl(backend);
       return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
     } else {
       debug(`Creating new Model for ${modelType}`);
@@ -73,7 +74,6 @@ export default Service.extend({
     // we don't have an apiPath for dynamic secrets
     // and we don't need paths for them yet
     if (!apiPath) {
-      helpUrl = newModel.proto().getHelpUrl(backend);
       return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
     }
 
@@ -98,7 +98,7 @@ export default Service.extend({
           return reject();
         }
 
-        helpUrl = `/v1/${apiPath}${path.slice(1)}?help=true` || newModel.proto().getHelpUrl(backend);
+        helpUrl = `/v1/${apiPath}${path.slice(1)}?help=true`;
         pathInfo.paths = paths;
         newModel = newModel.extend({ paths: pathInfo });
         return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);

@@ -125,14 +125,6 @@ export default class PkiTidyModel extends Model {
   })
   tidyRevokedCerts;
 
-  get useOpenAPI() {
-    return true;
-  }
-
-  getHelpUrl(backend) {
-    return `/v1/${backend}/config/auto-tidy?help=1`;
-  }
-
   get allGroups() {
     const groups = [{ autoTidy: ['enabled', 'intervalDuration'] }, ...this.sharedFields];
     return this._expandGroups(groups);

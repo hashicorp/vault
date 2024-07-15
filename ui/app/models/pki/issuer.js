@@ -27,10 +27,7 @@ const displayFields = [
 @withFormFields(inputFields, displayFields)
 export default class PkiIssuerModel extends Model {
   @service secretMountPath;
-  // TODO use openAPI after removing route extension (see pki/roles route for example)
-  get useOpenAPI() {
-    return false;
-  }
+
   get backend() {
     return this.secretMountPath.currentPath;
   }
