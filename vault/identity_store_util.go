@@ -171,7 +171,16 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 			}
 
 			err = i.UpsertGroupInTxn(ctx, txn, group, persist)
-			if err != nil {
+
+			if errors.Is(err, logical.ErrReadOnly) {
+				// This is an imperfect solution to unblock customers who are running into
+				// a readonly error during a DR failover (jira #28191). More specifically, there
+				// are duplicate aliases in storage that are merged during loadEntities. Vault
+				// attempts to remove these deleted entities from the group, but fails in the case
+				// where the node is a PR secondary because the RPC client is not yet initialized
+				// and the storage is read-only.
+				i.logger.Warn("received a read only error while trying to upsert group to storage")
+			} else if err != nil {
 				txn.Abort()
 				return fmt.Errorf("failed to update group in memdb: %w", err)
 			}
