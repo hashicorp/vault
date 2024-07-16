@@ -57,7 +57,11 @@ runs:
         fi
 
         mkdir -p tmp
+<<<<<<< HEAD
         ./.github/scripts/retry-command.sh gh release download "$VERSION" --clobber -p "gosimports_*_${OS}_${ARCH}.tar.gz" -O tmp/gosimports.tgz -R rinchsan/gosimports
+=======
+        ./.github/scripts/retry-command.sh gh release download "$VERSION" -p "gosimports_*_${OS}_${ARCH}.tar.gz" -O tmp/gosimports.tgz -R rinchsan/gosimports
+>>>>>>> 9bec192d44 ([VAULT-28666] Retry tool download from GitHub releases on failure in GitHub Actions (GHA) (#27786))
         pushd tmp && tar -xvf gosimports.tgz && popd
         mv tmp/gosimports "$DESTINATION"
         rm -rf tmp
