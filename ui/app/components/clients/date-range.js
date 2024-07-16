@@ -81,16 +81,20 @@ export default class ClientsDateRangeComponent extends Component {
 
   @action handleSave() {
     if (this.validationError) return;
-    const returnObj = {};
+    const params = {
+      start_time: undefined,
+      end_time: undefined,
+    };
     if (this.startDate) {
       const [year, month] = this.startDate.split('-');
-      returnObj.start_time = formatDateObject({ monthIdx: parseInt(month) - 1, year: parseInt(year) }, false);
+      params.start_time = formatDateObject({ monthIdx: parseInt(month) - 1, year: parseInt(year) }, false);
     }
     if (this.endDate) {
       const [year, month] = this.endDate.split('-');
-      returnObj.end_time = formatDateObject({ monthIdx: parseInt(month) - 1, year: parseInt(year) }, true);
+      params.end_time = formatDateObject({ monthIdx: parseInt(month) - 1, year: parseInt(year) }, true);
     }
-    this.args.onChange(returnObj);
+
+    this.args.onChange(params);
     this.showEditModal = false;
   }
 }

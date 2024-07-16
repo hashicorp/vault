@@ -16,6 +16,15 @@ export const CLIENT_COUNT = {
     mountPaths: '[data-test-counts-auth-mounts]',
     startDiscrepancy: '[data-test-counts-start-discrepancy]',
   },
+  dateRange: {
+    dateDisplay: (name: string) => (name ? `[data-test-date-range="${name}"]` : '[data-test-date-range]'),
+    edit: '[data-test-date-range-edit]',
+    editModal: '[data-test-date-range-edit-modal]',
+    editDate: (name: string) => `[data-test-date-edit="${name}"]`,
+    reset: '[data-test-date-edit="reset"]',
+    defaultRangeAlert: '[data-test-range-default-alert]',
+    validation: '[data-test-date-range-validation]',
+  },
   statText: (label: string) => `[data-test-stat-text="${label}"]`,
   statTextValue: (label: string) =>
     label ? `[data-test-stat-text="${label}"] .stat-value` : '[data-test-stat-text]',

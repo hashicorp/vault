@@ -10,15 +10,9 @@ import { hbs } from 'ember-cli-htmlbars';
 import Sinon from 'sinon';
 import timestamp from 'core/utils/timestamp';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
 
-const DATE_RANGE = {
-  dateDisplay: (name) => (name ? `[data-test-date-range="${name}"]` : '[data-test-date-range]'),
-  edit: '[data-test-date-range-edit]',
-  editModal: '[data-test-date-range-edit-modal]',
-  editDate: (name) => `[data-test-date-edit="${name}"]`,
-  defaultRangeAlert: '[data-test-range-default-alert]',
-  validation: '[data-test-date-range-validation]',
-};
+const DATE_RANGE = CLIENT_COUNT.dateRange;
 module('Integration | Component | clients/date-range', function (hooks) {
   setupRenderingTest(hooks);
 
@@ -78,7 +72,7 @@ module('Integration | Component | clients/date-range', function (hooks) {
     assert.dom(DATE_RANGE.editDate('end')).hasValue('');
     assert.dom(DATE_RANGE.defaultRangeAlert).exists();
     await click(GENERAL.saveButton);
-    assert.deepEqual(this.onChange.args[0], [{}]);
+    assert.deepEqual(this.onChange.args[0], [{ start_time: undefined, end_time: undefined }]);
   });
 
   test('it does not trigger onChange if date range invalid', async function (assert) {
