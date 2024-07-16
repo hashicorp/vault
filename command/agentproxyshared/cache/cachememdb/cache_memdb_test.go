@@ -5,6 +5,7 @@ package cachememdb
 
 import (
 	"context"
+	"strconv"
 	"testing"
 
 	"github.com/go-test/deep"
@@ -106,6 +107,35 @@ func TestCacheMemDB_Get(t *testing.T) {
 				t.Fatal(diff)
 			}
 		})
+	}
+}
+
+func BenchmarkCacheMemDB_GetByPrefix(b *testing.B) {
+	cache, err := New()
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	getIndx := func(suf string) *Index {
+		return &Index{
+			ID:            "test_id" + suf,
+			Namespace:     "test_ns/",
+			RequestPath:   "/v1/request/path/" + suf,
+			Token:         "test_token",
+			TokenParent:   "test_token_parent",
+			TokenAccessor: "test_accessor",
+			Lease:         "path/to/test_lease/" + suf,
+			LeaseToken:    "test_lease_token",
+			Response:      []byte("hello world"),
+		}
+	}
+
+	for i := 0; i < b.N; i++ {
+		if err := cache.Set(getIndx(strconv.Itoa(i))); err != nil {
+			b.Fatal(err)
+		}
+		res, _ := cache.GetByPrefix(IndexNameLease, "path/to/test_lease")
+		require.Equal(b, len(res), i+1)
 	}
 }
 
