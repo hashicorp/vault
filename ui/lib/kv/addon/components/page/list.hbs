@@ -44,25 +44,30 @@
         @cardTitle="View secret"
         @subText="Type the path of the secret you want to view. Include a trailing slash to navigate to the list view."
       >
-        <form {{on "submit" this.transitionToSecretDetail}} class="has-top-margin-m">
-          <InputSearch
-            @id="search-input-kv-secret"
-            @initialValue={{@pathToSecret}}
-            @onChange={{this.handleSecretPathInput}}
-            @placeholder="secret/"
-            data-test-view-secret
-          />
-          <Hds::Button
-            @text={{this.buttonText}}
-            @color="secondary"
-            type="submit"
-            disabled={{not this.secretPath}}
-            data-test-get-secret-detail
-          />
-        </form>
-        {{#if @failedDirectoryQuery}}
-          <AlertInline @type="danger" @message="You do not have the required permissions or the directory does not exist." />
-        {{/if}}
+        <:content>
+          <form {{on "submit" this.transitionToSecretDetail}} class="has-top-margin-m">
+            <InputSearch
+              @id="search-input-kv-secret"
+              @initialValue={{@pathToSecret}}
+              @onChange={{this.handleSecretPathInput}}
+              @placeholder="secret/"
+              data-test-view-secret
+            />
+            <Hds::Button
+              @text={{this.buttonText}}
+              @color="secondary"
+              type="submit"
+              disabled={{not this.secretPath}}
+              data-test-get-secret-detail
+            />
+          </form>
+          {{#if @failedDirectoryQuery}}
+            <AlertInline
+              @type="danger"
+              @message="You do not have the required permissions or the directory does not exist."
+            />
+          {{/if}}
+        </:content>
       </OverviewCard>
     </div>
   </div>

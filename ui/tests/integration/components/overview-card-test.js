@@ -37,7 +37,15 @@ module('Integration | Component overview-card', function (hooks) {
   });
   test('it returns card action text', async function (assert) {
     await render(
-      hbs`<OverviewCard @cardTitle={{this.cardTitle}} @actionText={{this.actionText}} @actionTo="route"/>`
+      hbs`
+      <OverviewCard @cardTitle={{this.cardTitle}}>
+        <:action>
+        <div data-test-action-text>
+        {{this.actionText}}
+        </div>
+        </:action>
+      </OverviewCard>
+      `
     );
     assert.dom(SELECTORS.action).hasText('View card');
   });
