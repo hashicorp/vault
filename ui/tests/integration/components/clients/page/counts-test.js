@@ -103,16 +103,16 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
     const expected = { start_time: START_TIME, end_time: END_TIME };
     this.onFilterChange = (params) => {
       assert.deepEqual(params, expected, 'Correct values sent on filter change');
-      this.startTimestamp = params.start_time || START_TIME;
-      this.endTimestamp = params.end_time || END_TIME;
+      this.set('startTimestamp', params.start_time || START_TIME);
+      this.set('endTimestamp', params.end_time || END_TIME);
     };
     // page starts with default billing dates, which are july 23 - jan 24
     await this.renderComponent();
 
     // First, change only the start date
     expected.start_time = jan23start;
-    // the end date which is first set to STATIC_NOW gets reset
-    // to the calculated month/year on date range change
+    // the end date which is first set to STATIC_NOW gets recalculated
+    // to the end of given month/year on date range change
     expected.end_time = jan24end;
     await click(CLIENT_COUNT.dateRange.edit);
     await fillIn(CLIENT_COUNT.dateRange.editDate('start'), '2023-01');
