@@ -20,11 +20,7 @@
     {{/if}}
   </div>
 
-  <Hds::Text::Body
-    @color="faint"
-    class="{{unless (has-block 'action') 'has-top-margin-s'}}"
-    data-test-overview-card-subtitle={{@cardTitle}}
-  >
+  <Hds::Text::Body @color="faint" data-test-overview-card-subtitle={{@cardTitle}}>
     {{@subText}}
   </Hds::Text::Body>
 
