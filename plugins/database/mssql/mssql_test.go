@@ -261,7 +261,7 @@ func TestUpdateUser_password(t *testing.T) {
 			dbtesting.AssertInitializeCircleCiTest(t, db, initReq)
 			defer dbtesting.AssertClose(t, db)
 
-			dbUser := fmt.Sprintf("vaultuser%d", i)
+			dbUser := fmt.Sprintf("vault-user%d", i)
 			test.req.Username = dbUser
 			i++
 			err := createTestMSSQLUser(connURL, dbUser, initPassword, testMSSQLLogin)
