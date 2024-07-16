@@ -62,7 +62,7 @@ jobs:
 
         # CodeQL
         LATEST=$(gh release list --repo https://github.com/github/codeql-action | cut -f 3 | sort --version-sort | tail -n1)
-        gh release download --repo https://github.com/github/codeql-action --pattern codeql-bundle-linux64.tar.gz "$LATEST"
+        ./.github/scripts/retry-command.sh gh release download --repo https://github.com/github/codeql-action --pattern codeql-bundle-linux64.tar.gz "$LATEST"
         tar xf codeql-bundle-linux64.tar.gz -C "$HOME/.bin"
 
         # Add to PATH
