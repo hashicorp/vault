@@ -53,11 +53,6 @@
       </Hds::Text::Body>
       <Toolbar aria-label="toolbar for filtering client count data" class="has-bottom-margin-m" data-test-clients-filter-bar>
         <ToolbarFilters>
-          {{!-- <CalendarWidget
-            @startTimestamp={{this.startTimestampISO}}
-            @endTimestamp={{this.endTimestampISO}}
-            @selectMonth={{this.onDateChange}}
-          /> --}}
           {{#if (or @namespace this.namespaces)}}
             <SearchSelect
               @id="namespace-search-select"
