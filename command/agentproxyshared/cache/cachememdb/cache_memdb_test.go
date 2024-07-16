@@ -130,7 +130,7 @@ func BenchmarkCacheMemDB_GetByPrefix(b *testing.B) {
 		}
 	}
 
-	for i := 0; i < 100000; i++ {
+	for i := 0; i < b.N; i++ {
 		if err := cache.Set(getIndx(strconv.Itoa(i))); err != nil {
 			b.Fatal(err)
 		}
