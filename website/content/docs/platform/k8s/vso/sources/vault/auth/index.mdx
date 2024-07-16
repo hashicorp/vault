@@ -242,13 +242,6 @@ There are few sources for tracking down issues with VaultAuthGlobal resources:
 
 Below are examples of errors from each source and how to resolve them:
 
-  Sample error from Kubernetes events:
-  ```
-  apps     2s          Warning   VaultClientConfigError   vaultstaticsecret/app1-secret
-  Failed to get Vault auth login: failed getting demo-ns/vso-auth-global-2, err=VaultAuthGlobal.secrets.hashicorp.com
-  "vso-auth-global-2" not found
-  ```
-
   Sample output sync failures from the Vault Secrets Operator logs:
   ```json
   {
