@@ -130,14 +130,14 @@ func BenchmarkCacheMemDB_GetByPrefix(b *testing.B) {
 		}
 	}
 
-	for i := 0; i < 10000; i++ {
+	for i := 0; i < 100000; i++ {
 		if err := cache.Set(getIndx(strconv.Itoa(i))); err != nil {
 			b.Fatal(err)
 		}
 	}
 
 	b.ResetTimer()
-	for i := 0; i < 10000; i++ {
+	for i := 0; i < b.N; i++ {
 		_, err := cache.GetByPrefix(IndexNameLease, "path/to/test_lease")
 		require.NoError(b, err)
 	}
