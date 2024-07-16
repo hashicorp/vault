@@ -39,12 +39,17 @@
       <FormFieldGroups @model={{@mountModel}} @renderGroup="Method Options">
         <:identityTokenKey>
           <SearchSelectWithModal
-            @id="identityTokenKey"
+            @id="key"
             @fallbackComponent="input-search"
+            @inputValue={{@mountModel.config.identityTokenKey}}
             @onChange={{this.handleIdentityTokenKeyChange}}
             @models={{array "oidc/key"}}
             @selectLimit="1"
             @returnString={{true}}
+            @modalFormTemplate="modal-form/oidc-key-template"
+            @placeholder="Search for an existing oidc/key, or type a new key name to create it."
+            @fallbackComponentPlaceholder="key name"
+            @modalSubtext="This key will be created in the oidc/key path."
           />
         </:identityTokenKey>
       </FormFieldGroups>

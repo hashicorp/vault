@@ -22,6 +22,7 @@ import { task } from 'ember-concurrency';
  * @param {Object} model - oidc client model
  * @param {onCancel} onCancel - callback triggered when cancel button is clicked
  * @param {onSave} onSave - callback triggered on save success
+ * @param {boolean} [limitOptions=null] - boolean to determine if form should render a limited set of options. Used when rendered outside of OIDC provider workflow (ex: SearchSelectWithModal when mounting a WIF secret engine).
  */
 
 export default class OidcKeyForm extends Component {
@@ -83,7 +84,9 @@ export default class OidcKeyForm extends Component {
           `Successfully ${isNew ? 'created' : 'updated'} the key
           ${name}.`
         );
-        this.args.onSave();
+        // this form is sometimes used in a modal, passing the model notifies
+        // the parent if the save was successful
+        this.args.onSave(this.args.model);
       }
     } catch (error) {
       const message = error.errors ? error.errors.join('. ') : error.message;
