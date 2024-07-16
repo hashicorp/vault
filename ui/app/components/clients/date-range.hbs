@@ -28,7 +28,7 @@
   </div>
 
   {{#if this.showEditModal}}
-    <Hds::Modal data-test-date-range-edit-modal @onClose={{fn (mut this.showEditModal) false}} as |M|>
+    <Hds::Modal data-test-date-range-edit-modal @onClose={{this.onClose}} as |M|>
       <M.Header>
         Edit date range
       </M.Header>

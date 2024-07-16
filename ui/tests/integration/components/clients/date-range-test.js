@@ -94,4 +94,18 @@ module('Integration | Component | clients/date-range', function (hooks) {
     assert.false(this.onChange.called);
     assert.dom(DATE_RANGE.editModal).doesNotExist();
   });
+
+  test('it resets the tracked values on close', async function (assert) {
+    await this.renderComponent();
+
+    await click(DATE_RANGE.edit);
+    await click(DATE_RANGE.editDate('reset'));
+    assert.dom(DATE_RANGE.editDate('start')).hasValue('');
+    assert.dom(DATE_RANGE.editDate('end')).hasValue('');
+    await click(GENERAL.cancelButton);
+
+    await click(DATE_RANGE.edit);
+    assert.dom(DATE_RANGE.editDate('start')).hasValue('2018-01');
+    assert.dom(DATE_RANGE.editDate('end')).hasValue('2019-01');
+  });
 });

@@ -35,6 +35,10 @@ export default class ClientsDateRangeComponent extends Component {
 
   constructor() {
     super(...arguments);
+    this.setTrackedFromArgs();
+  }
+
+  setTrackedFromArgs() {
     if (this.args.startTime) {
       this.startDate = format(parseISO(this.args.startTime.toString()), 'yyyy-MM');
     }
@@ -63,6 +67,12 @@ export default class ClientsDateRangeComponent extends Component {
       return 'Start date must be before end date.';
     }
     return null;
+  }
+
+  @action onClose() {
+    // since the component never gets torn down, we have to manually re-set this on close
+    this.setTrackedFromArgs();
+    this.showEditModal = false;
   }
 
   @action resetDates() {
@@ -95,6 +105,6 @@ export default class ClientsDateRangeComponent extends Component {
     }
 
     this.args.onChange(params);
-    this.showEditModal = false;
+    this.onClose();
   }
 }
