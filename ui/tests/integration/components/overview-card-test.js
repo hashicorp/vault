@@ -44,6 +44,7 @@ module('Integration | Component overview-card', function (hooks) {
         {{this.actionText}}
         </div>
         </:action>
+      </OverviewCard
       `
     );
     assert.dom(SELECTORS.action).hasText('View card');
