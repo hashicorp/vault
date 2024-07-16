@@ -10,7 +10,7 @@ import { tracked } from '@glimmer/tracking';
 import { formatDateObject } from 'core/utils/client-count-utils';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import timestamp from 'core/utils/timestamp';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 
 /**
  * @module ClientsDateRange
@@ -40,10 +40,10 @@ export default class ClientsDateRangeComponent extends Component {
 
   setTrackedFromArgs() {
     if (this.args.startTime) {
-      this.startDate = format(parseISO(this.args.startTime.toString()), 'yyyy-MM');
+      this.startDate = parseAPITimestamp(this.args.startTime, 'yyyy-MM');
     }
     if (this.args.endTime) {
-      this.endDate = format(parseISO(this.args.endTime.toString()), 'yyyy-MM');
+      this.endDate = parseAPITimestamp(this.args.endTime, 'yyyy-MM');
     }
   }
 
