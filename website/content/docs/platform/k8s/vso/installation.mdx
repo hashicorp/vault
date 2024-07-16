@@ -4,6 +4,7 @@ page_title: Vault Secrets Operator Installation
 description: >-
   The Vault Secrets Operator can be installed using Helm.
 ---
+@include 'vso/common-links.mdx'
 
 # Installing and upgrading the Vault Secrets Operator
 
@@ -17,7 +18,7 @@ description: >-
 
 [Install Helm](https://helm.sh/docs/intro/install) before beginning.
 
-The [Vault Secrets Operator Helm chart](/vault/docs/platform/k8s/vso/helm) is the recommended way of
+The [Helm chart][helm] is the recommended way of
 installing and configuring the Vault Secrets Operator.
 
 To install a new instance of the Vault Secrets Operator, first add the
@@ -103,8 +104,7 @@ customresourcedefinition.apiextensions.k8s.io/vaultstaticsecrets.secrets.hashico
 
 ## Chart values
 
-Refer to the [VSO Helm chart](/vault/docs/platform/k8s/vso/helm)
- overview for a full list of supported chart values.
+Refer to the [Helm chart][helm] overview for a full list of supported chart values.
 
 ## Installation using Kustomize
 
