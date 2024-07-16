@@ -3,10 +3,12 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { currentRouteName, currentURL, settled } from '@ember/test-helpers';
+import { currentRouteName, currentURL, settled, click, findAll } from '@ember/test-helpers';
+import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
+import { runCmd } from 'vault/tests/helpers/commands';
 
 import { create } from 'ember-cli-page-object';
 import page from 'vault/tests/pages/settings/mount-secret-backend';
@@ -297,5 +299,28 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       `vault.cluster.secrets.backend.list-root`,
       `${v1} navigates to list route`
     );
+  });
+
+  test('it sets identity_token_key when aws is chosen, resets after', async function (assert) {
+    // create an oidc/key
+    await runCmd(`write identity/oidc/key/some-key allowed_client_ids="*"`);
+    await page.visit();
+    await page.selectType('aws');
+    await click('[data-test-toggle-group="Method Options"]');
+
+    assert.dom('[data-test-search-select-with-modal]').exists('Search select with modal component renders');
+
+    await clickTrigger();
+    const dropdownOptions = findAll('[data-option-index]').map((o) => o.innerText);
+    assert.ok(dropdownOptions.includes('some-key'), 'search select options show some-key');
+    // Go back and choose a non-wif engine type
+    await page.back();
+    await page.selectType('ssh');
+    await click('[data-test-toggle-group="Method Options"]');
+    assert
+      .dom('[data-test-search-select-with-modal]')
+      .doesNotExist('for type ssh, the modal field does not render.');
+    // clean up
+    await runCmd(`delete identity/oidc/key/some-key`);
   });
 });

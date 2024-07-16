@@ -6,9 +6,10 @@
 import { later, _cancelTimers as cancelTimers } from '@ember/runloop';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, settled } from '@ember/test-helpers';
+import { render, settled, click } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { allowAllCapabilitiesStub, noopStub } from 'vault/tests/helpers/stubs';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import hbs from 'htmlbars-inline-precompile';
 
 import { create } from 'ember-cli-page-object';
@@ -189,6 +190,25 @@ module('Integration | Component | mount backend form', function (hooks) {
         this.flashSuccessSpy.calledWith('Successfully mounted the ssh secrets engine at foo.'),
         'Renders correct flash message'
       );
+    });
+
+    test('it shows identityTokenKey when type is aws and hides when its not', async function (assert) {
+      await render(
+        hbs`<MountBackendForm @mountType="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
+      );
+      await component.selectType('ldap');
+
+      await click('[data-test-toggle-group="Method Options"]');
+      assert
+        .dom(GENERAL.fieldByAttr('identityTokenKey'))
+        .doesNotExist(`Identity token key field hidden when type=${this.model.type}`);
+
+      await component.back();
+      await component.selectType('aws');
+      await click('[data-test-toggle-group="Method Options"]');
+      assert
+        .dom(GENERAL.fieldByAttr('identityTokenKey'))
+        .exists(`Identity token key field shows when type=${this.model.type}`);
     });
   });
 });
