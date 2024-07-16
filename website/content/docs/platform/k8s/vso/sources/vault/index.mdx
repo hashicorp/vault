@@ -123,26 +123,26 @@ VSO v0.8.0
 
 Provides shared Vault authentication configuration that can be inherited by multiple `VaultAuth` custom resources.
 It supports multiple authentication methods and allows you to define a default authentication method that can be
-overridden by individual `VaultAuth` custom resources. See `vaultAuthGlobalRef` in [VaultAuth spec][va-spec] for more
+overridden by individual VaultAuth custom resources. See `vaultAuthGlobalRef` in [VaultAuth spec][va-spec] for more
 details. The `VaultAuthGlobal` custom resource is optional and can be used to simplify the configuration of multiple
-`VaultAuth` custom resources by reducing config duplication. See [VaultAuthGlobal spec][vag-spec] for the complete list
+VaultAuth custom resources by reducing config duplication. See [VaultAuthGlobal spec][vag-spec] for the complete list
 of available fields.
 
-For more details on how to integrate `VaultAuthGlobal`s into your workflow, see the detailed [Authentication][auth]
-documentation.
+For more details on how to integrate VaultAuthGlobals into your workflow, see the detailed [Authentication][auth]
+docs.
 
 ```yaml
 
 <Tip>
 
-  The `VaultAuthGlobal` resources shares many of the same fields as the `VaultAuth` custom resource, but cannot be used
+  The VaultAuthGlobal resources shares many of the same fields as the VaultAuth custom resource, but cannot be used
   for authentication directly. It is only used to define shared Vault authentication configuration across a Kubernetes
   cluster.
 
 </Tip>
 
-The example below demonstrates how to define a `VaultAuthGlobal` custom resource with a default authentication method of
-`kubernetes`, along with a `VaultAuth` custom resource that inherits its global configuration.
+The example below demonstrates how to define a VaultAuthGlobal custom resource with a default authentication method of
+`kubernetes`, along with a VaultAuth custom resource that inherits its global configuration.
 
 ```yaml
 ---
