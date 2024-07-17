@@ -82,10 +82,13 @@
           />
         </div>
         {{#if this.validationError}}
-          <Hds::Form::Error data-test-date-range-validation>{{this.validationError}}</Hds::Form::Error>
+          <Hds::Form::Error
+            class="has-top-margin-xs"
+            data-test-date-range-validation
+          >{{this.validationError}}</Hds::Form::Error>
         {{/if}}
         {{#if this.useDefaultDates}}
-          <Hds::Alert @type="compact" @color="highlight" data-test-range-default-alert as |A|>
+          <Hds::Alert @type="compact" @color="highlight" class="has-top-margin-xs" data-test-range-default-alert as |A|>
             <A.Description>Dashboard will use the default date range from the API.</A.Description>
           </Hds::Alert>
         {{/if}}
