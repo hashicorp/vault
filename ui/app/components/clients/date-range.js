@@ -17,9 +17,9 @@ import { format } from 'date-fns';
  * ClientsDateRange components are used to display the current date range and provide a modal interface for editing the date range.
  *
  * @example
- * ```js
- * <Clients::DateRange @startTime={{this.startTimeISO}} @endTime={{@endTimeISO}} @onChange={{this.handleDateChange}} />
- * ```
+ *
+ * <Clients::DateRange @startTime="2018-01-01T14:15:30Z" @endTime="2019-01-31T14:15:30Z" @onChange={{this.handleDateChange}} />
+ *
  * @param {function} onChange - callback when a new range is saved.
  * @param {string} [startTime] - ISO string timestamp of the current start date
  * @param {string} [endTime] - ISO string timestamp of the current end date
