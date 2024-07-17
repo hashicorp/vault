@@ -236,7 +236,7 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
     await this.renderComponent();
 
     assert.dom(GENERAL.emptyStateTitle).hasText('No start date found', 'Empty state renders');
-    assert.dom(CLIENT_COUNT.dateRange.edit).exists();
+    assert.dom(CLIENT_COUNT.dateRange.set).exists();
   });
 
   test('it should render catch all empty state', async function (assert) {
