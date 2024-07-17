@@ -3,18 +3,8 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, findAll } from '@ember/test-helpers';
-import { CLIENT_COUNT, CHARTS } from './client-count-selectors';
-
-export async function dateDropdownSelect(month, year) {
-  const { dateDropdown, counts } = CLIENT_COUNT;
-  await click(counts.startEdit);
-  await click(dateDropdown.toggleMonth);
-  await click(dateDropdown.selectMonth(month));
-  await click(dateDropdown.toggleYear);
-  await click(dateDropdown.selectYear(year));
-  await click(dateDropdown.submit);
-}
+import { findAll } from '@ember/test-helpers';
+import { CHARTS } from './client-count-selectors';
 
 export function assertBarChart(assert, chartName, byMonthData, isStacked = false) {
   // assertion count is byMonthData.length, plus 2

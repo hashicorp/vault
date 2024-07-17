@@ -6,13 +6,12 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { render, click, settled, findAll } from '@ember/test-helpers';
+import { render, click, findAll, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import clientsHandler, { LICENSE_START, STATIC_NOW } from 'vault/mirage/handlers/clients';
 import { getUnixTime } from 'date-fns';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
-import { dateDropdownSelect } from 'vault/tests/helpers/clients/client-count-helpers';
 import { selectChoose } from 'ember-power-select/test-support';
 import timestamp from 'core/utils/timestamp';
 import sinon from 'sinon';
@@ -57,38 +56,11 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
     `);
   });
 
-  test('it should render start date label and description based on version', async function (assert) {
-    const versionService = this.owner.lookup('service:version');
-
-    await this.renderComponent();
-
-    assert.dom(CLIENT_COUNT.counts.startLabel).hasText('Client counting start date', 'Label renders for OSS');
-    assert
-      .dom(CLIENT_COUNT.counts.description)
-      .hasText(
-        'This date is when client counting starts. Without this starting point, the data shown is not reliable.',
-        'Description renders for OSS'
-      );
-
-    versionService.set('type', 'enterprise');
-    await settled();
-
-    assert.dom(CLIENT_COUNT.counts.startLabel).hasText('Billing start month', 'Label renders for Enterprise');
-    assert
-      .dom(CLIENT_COUNT.counts.description)
-      .hasText(
-        'This date comes from your license, and defines when client counting starts. Without this starting point, the data shown is not reliable.',
-        'Description renders for Enterprise'
-      );
-  });
-
   test('it should populate start and end month displays', async function (assert) {
     await this.renderComponent();
 
-    assert.dom(CLIENT_COUNT.counts.startMonth).hasText('July 2023', 'Start month renders');
-    assert
-      .dom(CLIENT_COUNT.calendarWidget.trigger)
-      .hasText('Jul 2023 - Jan 2024', 'Start and end months render in filter bar');
+    assert.dom(CLIENT_COUNT.dateRange.dateDisplay('start')).hasText('July 2023', 'Start month renders');
+    assert.dom(CLIENT_COUNT.dateRange.dateDisplay('end')).hasText('January 2024', 'End month renders');
   });
 
   test('it should render no data empty state', async function (assert) {
@@ -123,31 +95,41 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
   });
 
   test('it should send correct values on start and end date change', async function (assert) {
-    assert.expect(4);
+    assert.expect(3);
+    const jan23start = getUnixTime(new Date('2023-01-01T00:00:00Z'));
+    const dec23end = getUnixTime(new Date('2023-12-31T00:00:00Z'));
+    const jan24end = getUnixTime(new Date('2024-01-31T00:00:00Z'));
 
-    let expected = { start_time: getUnixTime(new Date('2023-01-01T00:00:00Z')), end_time: END_TIME };
+    const expected = { start_time: START_TIME, end_time: END_TIME };
     this.onFilterChange = (params) => {
       assert.deepEqual(params, expected, 'Correct values sent on filter change');
-      this.startTimestamp = params.start_time || START_TIME;
-      this.endTimestamp = params.end_time || END_TIME;
+      this.set('startTimestamp', params.start_time || START_TIME);
+      this.set('endTimestamp', params.end_time || END_TIME);
     };
-
+    // page starts with default billing dates, which are july 23 - jan 24
     await this.renderComponent();
-    await dateDropdownSelect('January', '2023');
 
-    expected.start_time = END_TIME;
-    await click(CLIENT_COUNT.calendarWidget.trigger);
-    await click(CLIENT_COUNT.calendarWidget.currentMonth);
+    // First, change only the start date
+    expected.start_time = jan23start;
+    // the end date which is first set to STATIC_NOW gets recalculated
+    // to the end of given month/year on date range change
+    expected.end_time = jan24end;
+    await click(CLIENT_COUNT.dateRange.edit);
+    await fillIn(CLIENT_COUNT.dateRange.editDate('start'), '2023-01');
+    await click(GENERAL.saveButton);
 
-    expected.start_time = getUnixTime(this.config.billingStartTimestamp);
-    await click(CLIENT_COUNT.calendarWidget.trigger);
-    await click(CLIENT_COUNT.calendarWidget.currentBillingPeriod);
+    // Then change only the end date
+    expected.end_time = dec23end;
+    await click(CLIENT_COUNT.dateRange.edit);
+    await fillIn(CLIENT_COUNT.dateRange.editDate('end'), '2023-12');
+    await click(GENERAL.saveButton);
 
-    expected = { end_time: getUnixTime(new Date('2023-12-31T00:00:00Z')) };
-    await click(CLIENT_COUNT.calendarWidget.trigger);
-    await click(CLIENT_COUNT.calendarWidget.customEndMonth);
-    await click(CLIENT_COUNT.calendarWidget.previousYear);
-    await click(CLIENT_COUNT.calendarWidget.calendarMonth('December'));
+    // Then reset to billing which should reset the params
+    expected.start_time = undefined;
+    expected.end_time = undefined;
+    await click(CLIENT_COUNT.dateRange.edit);
+    await click(CLIENT_COUNT.dateRange.reset);
+    await click(GENERAL.saveButton);
   });
 
   test('it should render namespace and auth mount filters', async function (assert) {
@@ -254,9 +236,7 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
     await this.renderComponent();
 
     assert.dom(GENERAL.emptyStateTitle).hasText('No start date found', 'Empty state renders');
-    assert
-      .dom(CLIENT_COUNT.counts.startDropdown)
-      .exists('Date dropdown renders when start time is not provided');
+    assert.dom(CLIENT_COUNT.dateRange.set).exists();
   });
 
   test('it should render catch all empty state', async function (assert) {
