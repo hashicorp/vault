@@ -190,7 +190,6 @@ export default class KvSecretDetails extends Component {
 
   get emptyState() {
     if (!this.args.secret.canReadData) {
-      if (this.args.secret.canReadSubkeys) return false;
       return {
         title: 'You do not have permission to read this secret',
         message:

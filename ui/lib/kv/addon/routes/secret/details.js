@@ -26,7 +26,7 @@ export default class KvSecretDetailsRoute extends Route {
       !parentModel.secret.failReadErrorCode
     ) {
       // query params have changed by selecting a different version from the dropdown
-      // fire off new request for that version's secret and subkey data
+      // fire off new request for that version's secret data
       const { backend, path } = parentModel;
       return hash({
         ...parentModel,
