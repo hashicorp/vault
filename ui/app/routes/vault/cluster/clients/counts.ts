@@ -13,8 +13,6 @@ import type StoreService from 'vault/services/store';
 import type VersionService from 'vault/services/version';
 import type { ModelFrom } from 'vault/vault/route';
 import type ClientsRoute from '../clients';
-import type ClientsActivityModel from 'vault/models/clients/activity';
-import type ClientsConfigModel from 'vault/models/clients/config';
 import type ClientsCountsController from 'vault/controllers/vault/cluster/clients/counts';
 import { setStartTimeQuery } from 'core/utils/client-count-utils';
 
