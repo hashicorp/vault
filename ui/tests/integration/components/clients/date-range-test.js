@@ -29,21 +29,16 @@ module('Integration | Component | clients/date-range', function (hooks) {
     };
   });
 
-  test('it renders with defaults', async function (assert) {
+  test('it renders prompt to set dates if no start time', async function (assert) {
     this.startTime = undefined;
-    this.endTime = undefined;
     await this.renderComponent();
 
-    // This scenario shouldn't happen in practice, but here to make sure there's a sane default.
-    assert.dom(DATE_RANGE.dateDisplay()).hasText('Using default date range');
+    assert.dom(DATE_RANGE.set).exists();
 
-    await click(DATE_RANGE.edit);
+    await click(DATE_RANGE.set);
     assert.dom(DATE_RANGE.editModal).exists();
-    assert.dom(DATE_RANGE.defaultRangeAlert).exists();
     assert.dom(DATE_RANGE.editDate('start')).hasValue('');
     await fillIn(DATE_RANGE.editDate('start'), '2018-01');
-    assert.dom(DATE_RANGE.defaultRangeAlert).doesNotExist();
-    assert.dom(DATE_RANGE.editDate('end')).hasValue('');
     await fillIn(DATE_RANGE.editDate('end'), '2019-01');
     await click(GENERAL.saveButton);
     assert.deepEqual(this.onChange.args[0], [

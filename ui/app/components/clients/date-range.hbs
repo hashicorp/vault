@@ -9,22 +9,27 @@
   </Hds::Text::Display>
 
   <div class="is-flex-align-baseline">
-    {{#if (or @startTime @endTime)}}
+    {{#if (and @startTime @endTime)}}
       <p class="is-size-6" data-test-date-range="start">{{this.formattedDate @startTime}}</p>
       <p class="has-left-margin-xs"> — </p>
       <p class="is-size-6 has-left-margin-xs" data-test-date-range="end">{{this.formattedDate @endTime}}</p>
+      <Hds::Button
+        class="has-left-margin-xs"
+        @text="Edit"
+        @color="tertiary"
+        @icon="edit"
+        @iconPosition="trailing"
+        data-test-date-range-edit
+        {{on "click" (fn (mut this.showEditModal) true)}}
+      />
     {{else}}
-      <p class="is-size-6" data-test-date-range="default">Using default date range</p>
+      <Hds::Button
+        @text="Set date range"
+        @icon="edit"
+        {{on "click" (fn (mut this.showEditModal) true)}}
+        data-test-set-date-range
+      />
     {{/if}}
-    <Hds::Button
-      class="has-left-margin-xs"
-      @text="Edit"
-      @color="tertiary"
-      @icon="edit"
-      @iconPosition="trailing"
-      data-test-date-range-edit
-      {{on "click" (fn (mut this.showEditModal) true)}}
-    />
   </div>
 
   {{#if this.showEditModal}}
@@ -60,6 +65,7 @@
               class="hds-form-text-input"
               type="month"
               value={{this.endDate}}
+              max={{this.currentMonth}}
               id="end-month"
               name="end"
               {{on "change" this.updateDate}}
@@ -79,7 +85,7 @@
         {{/if}}
         {{#if this.useDefaultDates}}
           <Hds::Alert @type="compact" @color="highlight" data-test-range-default-alert as |A|>
-            <A.Description>Will use the default date range from the API.</A.Description>
+            <A.Description>Dashboard will use the default date range from the API.</A.Description>
           </Hds::Alert>
         {{/if}}
       </M.Body>
