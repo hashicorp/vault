@@ -90,12 +90,17 @@
   margin: 0 !important;
 }
 
+// spacing-18 is between medium + large
 .has-top-bottom-margin {
   margin: $spacing-18 0rem;
 }
 
 .has-top-bottom-margin-xxs {
   margin: $spacing-4 0;
+}
+
+.has-top-bottom-margin-s {
+  margin: $spacing-12 0;
 }
 
 .has-top-margin-negative-m {

@@ -4,20 +4,32 @@
 ~}}
 
 <OverviewCard
-  @cardTitle="Connections"
-  @subText="The total number of connections to external databases that you have access to."
-  @actionText="Configure new"
-  @actionTo="vault.cluster.secrets.backend.create-root"
-  @actionQuery={{hash itemType="connection"}}
+  @cardTitle="Subkeys"
+  @subText="The table is displaying the top level subkeys. Toggle on the JSON view to see the full depth."
 >
-  {{#if @showJsonView}}
-    <Hds::CodeBlock @value={{stringify @subkeys.subkeys}} @hasLineNumbers={{false}} />
-  {{else}}
-    {{#each-in @subkeys.subkeys as |key|}}
-      <Hds::Text::Display @size="200" @weight="semibold" class="has-top-margin-s has-bottom-margin-s">
-        {{key}}
-      </Hds::Text::Display>
-      <hr class="has-background-gray-100 is-marginless" />
-    {{/each-in}}
-  {{/if}}
+  <:action>
+    <div>
+      <Toggle @name="json-subkeys" @checked={{this.showJson}} @onChange={{fn (mut this.showJson)}}>
+        <p class="has-text-grey">JSON</p>
+      </Toggle>
+    </div>
+  </:action>
+  <:content>
+    <div>
+      {{#if this.showJson}}
+        <Hds::CodeBlock @value={{stringify @subkeys.subkeys}} @hasLineNumbers={{false}} />
+      {{else}}
+        <Hds::Text::Display @tag="p" @size="200" @weight="semibold" @color="faint" class="has-top-bottom-margin-s">
+          Keys
+        </Hds::Text::Display>
+        <hr class="has-background-gray-100 is-marginless" />
+        {{#each-in @subkeys as |key|}}
+          <Hds::Text::Display @tag="p" @size="200" @weight="semibold" class="has-top-bottom-margin-s">
+            {{key}}
+          </Hds::Text::Display>
+          <hr class="has-background-gray-100 is-marginless" />
+        {{/each-in}}
+      {{/if}}
+    </div>
+  </:content>
 </OverviewCard>
