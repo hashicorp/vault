@@ -38,13 +38,12 @@ VaultAuth instance, since they are more specific to the application that require
 - The configuration in the VaultAuth resource takes precedence over the configuration in the VaultAuthGlobal resource.
 - The VaultAuthGlobal can reside in any namespace, but must allow the namespace of the VaultAuth resource to reference it.
 - Default VaultAuthGlobal resources are denoted by the name `default` and are automatically referenced by all VaultAuth resources
-when `spec.vaultAuthGlobalRef.allowDefault` is set to `true` and VSO is running with the `allow-default-globals`
-option set in the `-global-vault-auth-options` flag (the default).
-- The default VaultAuthGlobal search order is:
-When a `spec.vaultAuthGlobalRef.namespace` is set, the search is constrained to that namespace. Otherwise, the
-search follows the order:
-1. The default VaultAuthGlobal resource in the referring VaultAuth resource's namespace.
-2. The default VaultAuthGlobal resource in the Operator's namespace.
+  when `spec.vaultAuthGlobalRef.allowDefault` is set to `true` and VSO is running with the `allow-default-globals`
+  option set in the `-global-vault-auth-options` flag (the default).
+- When a `spec.vaultAuthGlobalRef.namespace` is set, the search for the default VaultAuthGlobal resource is
+  constrained to that namespace. Otherwise, the search order is:
+  1. The default VaultAuthGlobal resource in the referring VaultAuth resource's namespace.
+  2. The default VaultAuthGlobal resource in the Operator's namespace.
 
 
 ## Sample use cases and configurations
