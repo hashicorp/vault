@@ -28,11 +28,9 @@ export default class KvSecretDetailsRoute extends Route {
       // query params have changed by selecting a different version from the dropdown
       // fire off new request for that version's secret and subkey data
       const { backend, path } = parentModel;
-      const adapter = this.store.adapterFor('kv/data');
       return hash({
         ...parentModel,
         secret: this.store.queryRecord('kv/data', { backend, path, version: params.version }),
-        subkeys: adapter.fetchSubkeys({ backend, path, version: params.version }),
       });
     }
     return parentModel;

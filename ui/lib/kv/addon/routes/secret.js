@@ -22,11 +22,6 @@ export default class KvSecretRoute extends Route {
     return this.store.queryRecord('kv/metadata', { backend, path }).catch(() => {});
   }
 
-  fetchSubkeys(backend, path) {
-    const adapter = this.store.adapterFor('kv/data');
-    return adapter.fetchSubkeys({ backend, path });
-  }
-
   model() {
     const backend = this.secretMountPath.currentPath;
     const { name: path } = this.paramsFor('secret');
@@ -36,7 +31,6 @@ export default class KvSecretRoute extends Route {
       backend,
       secret: this.fetchSecretData(backend, path),
       metadata: this.fetchSecretMetadata(backend, path),
-      subkeys: this.fetchSubkeys(backend, path),
     });
   }
 
