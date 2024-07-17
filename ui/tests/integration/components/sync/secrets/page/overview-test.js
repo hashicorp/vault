@@ -362,7 +362,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
       const cardData = [
         {
           cardTitle: 'Total destinations',
-          subText: 'The total number of connected destinations',
+          subText: 'The total number of connected destinations.',
           actionText: 'Create new',
           count: '6',
         },
