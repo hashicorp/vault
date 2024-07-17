@@ -309,77 +309,27 @@ The [Encrypted client cache](/vault/docs/platform/k8s/vso/sources/vault/client-c
 
 ## Instant updates <EnterpriseAlert inline="true" />
 
-The Vault Secrets Operator can instantly update Kubernetes Secrets when changes are made in Vault, instead of waiting for the next refresh interval.
+The Vault Secrets Operator can instantly update Kubernetes Secrets when changes
+are made in Vault, by subscribing to [Vault Events][vault-events] for change
+notification. Setting a refresh interval (e.g. [refreshAfter][vss-spec]) is
+still recommended since event message delivery is not guaranteed.
 
 **Supported secret types:**
-- VaultStaticSecret (kv-v1, kv-v2)
+- [VaultStaticSecret](#vaultstaticsecret-custom-resource) ([kv-v1](/vault/docs/secrets/kv/kv-v2),
+  [kv-v2](/vault/docs/secrets/kv/kv-v1))
 
 <Note title="Requires Vault Enterprise 1.16.3+">
 
-The instant updates option requires Vault Enterprise 1.16.3+ due to the use of [Vault Event Notifications][vault-events].
+The instant updates option requires [Vault Enterprise](/vault/docs/enterprise)
+1.16.3+ due to the use of [Vault Event Notifications][vault-events].
 
 </Note>
 
-### Enable instant updates for a VaultStaticSecret
-
-1. Grant these permissions to the associated VaultAuth role:
-
-  ```hcl
-  path "<kv secret path>" {
-    capabilities = ["read", "list", "subscribe"]
-    subscribe_event_types = ["*"]
-  }
-
-  path "sys/events/subscribe/kv*" {
-    capabilities = ["read"]
-  }
-  ```
-
-1. Set `syncConfig.instantUpdates=true` in the [VaultStaticSecret spec][vss-spec]
-
-<Tip>
-
-See [Event Notifications Policies][events-policies] for more information on Vault event notification permissions.
-
-</Tip>
-
-### Debugging
-
-Check Kubernetes events on the VaultStaticSecret resource to see if VSO is receiving Vault event notifications.
-
-* Example where VSO is subscribed to Vault event notifications for the secret:
-
-```shell-session
-$ kubectl describe vaultstaticsecret vault-static-secret
-...
-Events:
-  Type    Reason               Age              From               Message
-  ----    ------               ----             ----               -------
-  Normal  SecretSynced         2s               VaultStaticSecret  Secret synced
-  Normal  EventWatcherStarted  2s (x2 over 2s)  VaultStaticSecret  Started watching events
-  Normal  SecretRotated        2s               VaultStaticSecret  Secret synced
-```
-
-* Example where the VaultAuth role policy lacks the required permissions:
-
-```shell-session
-$ kubectl describe vaultstaticsecret vault-static-secret-with-errors
-...
-Events:
-  Type     Reason             Age   From               Message
-  ----     ------             ----  ----               -------
-  Normal   SecretSynced       2s    VaultStaticSecret  Secret synced
-  Warning  EventWatcherError  2s    VaultStaticSecret  Error while watching events: 
-   failed to connect to vault websocket: error returned when opening event stream
-   web socket to wss://vault.vault.svc.cluster.local:8200/v1/sys/events/subscribe/kv%2A?json=true, 
-   ensure VaultAuth role has correct permissions and Vault is Enterprise version 
-   1.16 or above: {"errors":["1 error occurred:\n\t* permission denied\n\n"]}
-  Normal   SecretRotated      2s    VaultStaticSecret  Secret synced
-```
+The [Instant updates](/vault/docs/platform/k8s/vso/sources/vault/instant-updates) guide
+will walk you through the steps to enable instant updates for a VaultStaticSecret.
 
 [vss-spec]: /vault/docs/platform/k8s/vso/api-reference#vaultstaticsecretspec
 [vault-events]: /vault/docs/concepts/events
-[events-policies]: /vault/docs/concepts/events#policies
 
 ## Tutorial
 
