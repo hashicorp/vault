@@ -11,12 +11,12 @@ description: >-
 
 ## Auth configuration
 
-The Vault Secrets Operator (VSO) relies on VaultAuth resources to authenticate with Vault. It relies on credential
+The Vault Secrets Operator (VSO) relies on `VaultAuth` resources to authenticate with Vault. It relies on credential
 providers to generate the credentials necessary for authentication. For example, when VSO authenticates to a kubernetes
-auth backend, it generates a token using the service account configured in the VaultAuth resource' defined
+auth backend, it generates a token using the Kubernetes service account configured in the VaultAuth resource's defined
 kubernetes auth method. The service account must be configured in the Kubernetes namespace of the requesting resource.
-Meaning, if a resource like a `VaultStaticSecret` is created in the `default` namespace, the service account must be in
-the `default` namespace. The rationale behind this approach is to ensure that cross namespace access is not possible.
+Meaning, if a resource like a `VaultStaticSecret` is created in the `apps` namespace, the service account must be in
+the apps namespace. The rationale behind this approach is to ensure that cross namespace access is not possible.
 
 ## Vault authentication globals
 
@@ -32,7 +32,27 @@ VaultAuth instance, since they are more specific to the application that require
 
 *See [VaultAuthGlobal spec][vag-spec]  and [VaultAuth spec][va-spec] for the complete list of available fields.*
 
+
+## VaultAuthGlobal configuration inheritance
+
+- The configuration in the VaultAuth resource takes precedence over the configuration in the VaultAuthGlobal resource.
+- The VaultAuthGlobal can reside in any namespace, but must allow the namespace of the VaultAuth resource to reference it.
+- Default VaultAuthGlobal resources are denoted by the name `default` and are automatically referenced by all VaultAuth resources
+when `spec.vaultAuthGlobalRef.allowDefault` is set to `true` and VSO is running with the `allow-default-globals`
+option set in the `-global-vault-auth-options` flag (the default).
+- The default VaultAuthGlobal search order is:
+When a `spec.vaultAuthGlobalRef.namespace` is set, the search is constrained to that namespace. Otherwise, the
+search follows the order:
+1. The default VaultAuthGlobal resource in the referring VaultAuth resource's namespace.
+2. The default VaultAuthGlobal resource in the Operator's namespace.
+
+
 ## Sample use cases and configurations
+
+The following sections provide some sample use cases and configurations for the VaultAuthGlobal resource. These
+examples demonstrate how to use the VaultAuthGlobal resource to share a common authentication configuration across a
+set of VaultAuth resources. Like other namespaced VSO custom resource definitions, there can be many VaultAuthGlobal
+resources configured in a single Kubernetes cluster.
 
 ### Multi-tenant application with shared authentication backend
 
@@ -56,15 +76,16 @@ spec:
   kubernetes:
     audiences:
     - vault
-    mount: auth-mount
+    mount: kubernetes
     role: default
     serviceAccount: default
     tokenExpirationSeconds: 600
 ```
 
 A developer creates a `VaultAuth` and VaultStaticSecret resource in their application's namespace with the following
-configuration:
+configurations:
 
+Application 1 would have a configuration like this:
 ```yaml
 ---
 apiVersion: secrets.hashicorp.com/v1beta1
@@ -136,7 +157,9 @@ spec:
   namespace can reference this VaultAuthGlobal resource.
 - The VaultAuth resources in the `apps` namespace reference the VaultAuthGlobal resource. This allows the VaultAuth
   resources to inherit the configuration from the VaultAuthGlobal resource. The `role` and serviceAccount fields are
-  specific to the application and are not inherited from the VaultAuthGlobal resource.
+  specific to the application and are not inherited from the VaultAuthGlobal resource. Since the
+  `.spec.vaultAuthGlobalRef.allowDefault` is set to `true`, the VaultAuth resources will automatically reference the
+  `default` VaultAuthGlobal in defined namespace.
 - The VaultStaticSecret resources in the `apps` namespace reference the VaultAuth resources. This allows the
   VaultStaticSecret resources to authenticate to Vault in order to sync the KV secrets to the destination Kubernetes
   Secret.
@@ -147,7 +170,8 @@ A Vault admin has configured a Kubernetes auth backend in Vault mounted at `kube
 two applications authenticate using a single role, and service account. The admin creates the necessary role in
 Vault bound to the same service account and namespace of the applications.
 
-The admin or developer creates a default VaultAuthGlobal in applications namespace with the following configuration:
+The admin or developer creates a default VaultAuthGlobal in the application's namespace with the following
+configuration:
 
 ```yaml
 ---
@@ -161,7 +185,7 @@ spec:
   kubernetes:
     audiences:
     - vault
-    mount: auth-mount
+    mount: kubernetes
     role: apps
     serviceAccount: apps
     tokenExpirationSeconds: 600
@@ -221,17 +245,113 @@ spec:
 - The VaultStaticSecret resources in the `apps` namespace reference the VaultAuth resource. This allows the VaultStaticSecret
   resources to authenticate to Vault in order to sync the KV secrets to the destination Kubernetes Secret.
 
-## VaultAuthGlobal configuration inheritance
+### Multi-tenant application with multiple authentication backends and roles
 
-- The configuration in the VaultAuth resource takes precedence over the configuration in the VaultAuthGlobal resource.
-- The VaultAuthGlobal can reside in any namespace, but must allow the namespace of the VaultAuth resource to reference it.
-- Default VaultAuthGlobal resources are denoted by the name `default` and are automatically referenced by all VaultAuth resources
-  when `spec.vaultAuthGlobalRef.allowDefault` is set to `true` and VSO is running with the `allow-default-globals`
-  option set in the `-global-vault-auth-options` flag (the default).
-- The default VaultAuthGlobal search order is:
-  1. The VaultAuth resource's `spec.vaultAuthGlobalRef.namespace` (terminates search if defined).
-  2. The VaultAuth resource's namespace.
-  3. The `default` VaultAuthGlobal resource in the Operator's namespace.
+A Vault admin has configured a Kubernetes auth backend in Vault mounted at `kubernetes`. In addition, the Vault
+admin has configured a JWT auth backend mounted at `jwt`. The admin creates the necessary roles in Vault for each
+auth method. The admin expects to have two applications authenticate using each auth method and role.
+
+The admin or developer creates a default VaultAuthGlobal in the application's namespace with the following
+configuration:
+
+```yaml
+---
+apiVersion: secrets.hashicorp.com/v1beta1
+kind: VaultAuthGlobal
+metadata:
+  name: default
+  namespace: apps
+spec:
+  defaultAuthMethod: kubernetes
+  kubernetes:
+    audiences:
+    - vault
+    mount: kubernetes
+    role: apps
+    serviceAccount: apps-k8s
+    tokenExpirationSeconds: 600
+  jwt:
+    audiences:
+    - vault
+    mount: jwt
+    role: apps
+    serviceAccount: apps-jwt
+```
+
+A developer creates a VaultAuth and VaultStaticSecret resource in their application's namespace with the following
+configurations:
+
+Application 1 would have a configuration like this which will be using the kubernetes auth method:
+```yaml
+---
+apiVersion: secrets.hashicorp.com/v1beta1
+kind: VaultAuth
+metadata:
+  name: apps-default
+  namespace: apps
+spec:
+  # uses the default kubernetes auth method as defined in
+  # the VaultAuthGlobal .spec.defaultAuthMethod
+  vaultAuthGlobalRef:
+    allowDefault: true
+---
+apiVersion: secrets.hashicorp.com/v1beta1
+kind: VaultStaticSecret
+metadata:
+  name: app1-secret
+  namespace: apps
+spec:
+  destination:
+    create: true
+    name: app1-secret
+  hmacSecretData: true
+  mount: apps
+  path: app1
+  type: kv-v2
+  vaultAuthRef: apps-default
+```
+
+Application 2 would have a similar configuration, except it will be using the JWT auth method:
+```yaml
+---
+apiVersion: secrets.hashicorp.com/v1beta1
+kind: VaultAuth
+metadata:
+  name: apps-jwt
+  namespace: apps
+spec:
+  method: jwt
+  vaultAuthGlobalRef:
+    allowDefault: true
+---
+apiVersion: secrets.hashicorp.com/v1beta1
+kind: VaultStaticSecret
+metadata:
+  name: app2-secret
+  namespace: apps
+spec:
+  destination:
+    create: true
+    name: app2-secret
+  hmacSecretData: true
+  mount: apps
+  path: app2
+  type: kv-v2
+  vaultAuthRef: apps-jwt
+```
+
+#### Explanation
+
+- The default VaultAuthGlobal resource is created in the `apps` namespace. It provides all the necessary configuration
+  for the VaultAuth resources that reference it. The `defaultAuthMethod` field defines the default auth method to use
+  when authenticating to Vault. The `kubernetes` and `jwt` fields define the configuration for the respective auth
+  method.
+- Application 1 uses the default kubernetes auth method defined in the VaultAuthGlobal resource. The VaultAuth resource
+  references the VaultAuthGlobal resource and inherits the configuration from it.
+- Application 2 uses the JWT auth method defined in the VaultAuthGlobal resource. The VaultAuth resource references the
+  VaultAuthGlobal resource and inherits the configuration from it.
+- Neither VaultAuth resource has a `role` or `serviceAccount` field set. This is because the `role` and `serviceAccount`
+  fields are defined in the VaultAuthGlobal resource and are inherited by the VaultAuth resources.
 
 ## VaultAuthGlobal common errors and troubleshooting
 
@@ -329,8 +449,6 @@ Sample output of the VaultAuth's status (prettified). The `valid` field will be 
     "valid": false
   }
   ```
-
-
 - Situation: The VaultAuthGlobal resource is not found or is invalid for some reason, denoted by error messages like
 `not found...`.
 
@@ -349,6 +467,33 @@ messages like `target namespace "apps" is not allowed...`.
 
   Resolution: Ensure all required fields are set either on the VaultAuth resource or on the inherited
   VaultAuthGlobal.
+
+A successfully merged VaultAuth resource will have the `valid` field set to `true` and the `conditions` will look
+something like:
+  ```json
+  {
+    "conditions": [
+      {
+        "lastTransitionTime": "2024-07-17T13:46:43Z",
+        "message": "VaultAuthGlobal successfully merged, key=admin/default, uid=6aeb3559-8f42-48bf-b16a-2305bc9a9bed, generation=7",
+        "observedGeneration": 1,
+        "reason": "VaultAuthGlobalRef",
+        "status": "True",
+        "type": "Available"
+      }
+    ],
+    "specHash": "5cbe5544d0557926e00002514871b95c49903a9d4496ef9b794c84f1e54db1a0",
+    "valid": true
+  }
+  ```
+
+<Tip>
+
+  The value for the key in the message field is the key to the VaultAuthGlobal object that was successfully merged.
+  This is useful if you want to know which VaultAuthGlobal object was used to merge the VaultAuth object.
+
+</Tip>
+
 
 ### Some authentication engines in detail
 

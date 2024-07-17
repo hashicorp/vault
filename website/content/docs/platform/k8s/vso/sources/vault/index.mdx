@@ -121,12 +121,12 @@ VSO v0.8.0
 
 </Tip>
 
-Provides shared Vault authentication configuration that can be inherited by multiple `VaultAuth` custom resources.
-It supports multiple authentication methods and allows you to define a default authentication method that can be
-overridden by individual VaultAuth custom resources. See `vaultAuthGlobalRef` in [VaultAuth spec][va-spec] for more
-details. The `VaultAuthGlobal` custom resource is optional and can be used to simplify the configuration of multiple
-VaultAuth custom resources by reducing config duplication. See [VaultAuthGlobal spec][vag-spec] for the complete list
-of available fields.
+Namespaced resource that provides shared Vault authentication configuration that can be inherited by multiple
+`VaultAuth` custom resources. It supports multiple authentication methods and allows you to define a default
+authentication method that can be overridden by individual VaultAuth custom resources. See `vaultAuthGlobalRef` in
+the [VaultAuth spec][va-spec] for more details. The `VaultAuthGlobal` custom resource is optional and can be used to
+simplify the configuration of multiple VaultAuth custom resources by reducing config duplication. Like other
+namespaced VSO custom resources, there can be many VaultAuthGlobal resources configured in a single Kubernetes cluster.
 
 For more details on how to integrate VaultAuthGlobals into your workflow, see the detailed [Authentication][auth]
 docs.
@@ -170,6 +170,14 @@ spec:
     name: vault-auth-global
     role: local-role
 ```
+
+### Explanation
+
+- The VaultAuthGlobal custom resource defines a default authentication method of kubernetes with the kubernetes
+  field.
+- The VaultAuth custom resource inherits the global configuration by referencing the VaultAuthGlobal custom
+  resource with the `vaultAuthGlobalRef` field.
+- The `role` field in the VaultAuth custom resource overrides the role field in the VaultAuthGlobal custom resource.
 
 ## Vault secret custom resource definitions
 
