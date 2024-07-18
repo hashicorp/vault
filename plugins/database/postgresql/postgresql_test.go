@@ -1365,7 +1365,7 @@ func testPostgreSQL_Repmgr_Container(t *testing.T, name string) (*PostgreSQL, *d
 		"REPMGR_NODE_NETWORK_NAME=" + name,
 	}
 
-	runner, cleanup, connURL, containerID := postgresql.PrepareTestContainerRepmgr(t, name, "13.4.0", envVars)
+	runner, cleanup, connURL, containerID := postgresql.PrepareTestContainerRepmgr(t, name, envVars)
 	t.Cleanup(cleanup)
 
 	connectionDetails := map[string]interface{}{
