@@ -2469,7 +2469,8 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		}
 
 	} else {
-		broker, err := audit.NewBroker(logger)
+		brokerLogger := logger.Named("audit")
+		broker, err := audit.NewBroker(brokerLogger)
 		if err != nil {
 			return err
 		}
