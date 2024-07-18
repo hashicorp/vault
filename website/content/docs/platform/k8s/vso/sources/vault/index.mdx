@@ -168,16 +168,20 @@ metadata:
 spec:
   vaultAuthGlobalRef:
     name: vault-auth-global
+  kubernetes:
     role: local-role
 ```
 
-### Explanation
+#### Explanation
 
 - The VaultAuthGlobal custom resource defines a default authentication method of kubernetes with the `defaultAuthMethod`
   field.
 - The VaultAuth custom resource inherits the global configuration by referencing the VaultAuthGlobal custom
   resource with the `vaultAuthGlobalRef` field.
-- The `role` field in the VaultAuth custom resource overrides the role field in the VaultAuthGlobal custom resource.
+- The `kubernetes.role` field in the VaultAuth custom resource spec overrides the value of the corresponding field in
+  the VaultAuthGlobal custom resource. All other fields are inherited from the VaultAuthGlobal custom resource `spec.
+  kubernetes` field, e.g., `audiences`, `mount`, `serviceAccount`, `namespace`, etc.
+
 
 ## Vault secret custom resource definitions
 
