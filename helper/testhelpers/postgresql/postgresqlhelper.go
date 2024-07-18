@@ -44,7 +44,7 @@ func PrepareTestContainer(t *testing.T) (func(), string) {
 // PrepareTestContainerWithVaultUser will setup a test container with a Vault
 // admin user configured so that we can safely call rotate-root without
 // rotating the root DB credentials
-func PrepareTestContainerWithVaultUser(t *testing.T, ctx context.Context, version string) (func(), string) {
+func PrepareTestContainerWithVaultUser(t *testing.T, ctx context.Context) (func(), string) {
 	runner, cleanup, url, id := prepareTestContainer(t, defaultRunOpts(t), "secret", true, false)
 
 	cmd := []string{"psql", "-U", "postgres", "-c", "CREATE USER vaultadmin WITH LOGIN PASSWORD 'vaultpass' SUPERUSER"}
