@@ -448,22 +448,23 @@ Sample output of the VaultAuth's status (prettified). The `valid` field will be 
     "valid": false
   }
   ```
-- Situation: The VaultAuthGlobal resource is not found or is invalid for some reason, denoted by error messages like
+- **Situation**: The VaultAuthGlobal resource is not found or is invalid for some reason, denoted by error messages like
 `not found...`.
 
-  Resolution: Ensure that the VaultAuthGlobal resource exists in the referring VaultAuth's namespace or a default
-VaultAuthGlobal resource exists per [VaultAuthGlobal configuration inheritance](#vaultauthglobal-configuration-inheritance)
+  **Resolution**: Ensure that the VaultAuthGlobal resource exists in the referring VaultAuth's namespace or a default
+  VaultAuthGlobal resource exists per [VaultAuthGlobal configuration inheritance]
+  (#vaultauthglobal-configuration-inheritance)
 
 - **Situation**: The VaultAuthGlobal is not allowed to be referenced by the VaultAuth resource, denoted by error
-messages like `target namespace "apps" is not allowed...`.
+  messages like `target namespace "apps" is not allowed...`.
 
   **Resolution**: Ensure that the VaultAuthGlobal resource's `spec.allowedNamespaces` field includes the namespace of the
   VaultAuth resource.
 
-- Situation: The VaultAuth resource is not valid due to missing required fields, denoted by error messages like
-`invalid merge: empty role`.
+- **Situation**: The VaultAuth resource is not valid due to missing required fields, denoted by error messages like
+ `invalid merge: empty role`.
 
-  Resolution: Ensure all required fields are set either on the VaultAuth resource or on the inherited
+  **Resolution**: Ensure all required fields are set either on the VaultAuth resource or on the inherited
   VaultAuthGlobal.
 
   A successfully merged VaultAuth resource will have the `valid` field set to `true` and the `conditions` will look
