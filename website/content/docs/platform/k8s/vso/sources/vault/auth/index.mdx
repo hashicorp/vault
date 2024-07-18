@@ -2,7 +2,7 @@
 layout: docs
 page_title: 'Vault Secrets Operator: Vault authentication details'
 description: >-
-  The Vault Secrets Operator allows Pods to consume Vault secrets natively from Kubernetes Secrets.
+  Authenticate to Vault with the Vault Secrets Operator.
 ---
 
 @include 'vso/common-links.mdx'
@@ -155,9 +155,9 @@ spec:
   VaultAuth resources that can reference this VaultAuthGlobal resource. In this case, only resources in the `apps`
   namespace can reference this VaultAuthGlobal resource.
 - The VaultAuth resources in the `apps` namespace reference the VaultAuthGlobal resource. This allows the VaultAuth
-  resources to inherit the configuration from the VaultAuthGlobal resource. The `role` and serviceAccount fields are
+  resources to inherit the configuration from the VaultAuthGlobal resource. The `role` and `serviceAccount` fields are
   specific to the application and are not inherited from the VaultAuthGlobal resource. Since the
-  `.spec.vaultAuthGlobalRef.allowDefault` is set to `true`, the VaultAuth resources will automatically reference the
+  `.spec.vaultAuthGlobalRef.allowDefault` field is set to `true`, the VaultAuth resources will automatically reference the
   `default` VaultAuthGlobal in defined namespace.
 - The VaultStaticSecret resources in the `apps` namespace reference the VaultAuth resources. This allows the
   VaultStaticSecret resources to authenticate to Vault in order to sync the KV secrets to the destination Kubernetes
@@ -248,7 +248,7 @@ spec:
 
 A Vault admin has configured a Kubernetes auth backend in Vault mounted at `kubernetes`. In addition, the Vault
 admin has configured a JWT auth backend mounted at `jwt`. The admin creates the necessary roles in Vault for each
-auth method. The admin expects to have two applications authenticate using each auth method and role.
+auth method. The admin expects to have two applications authenticate, one using `kubernetes` auth and the other using `jwt` auth.
 
 The admin or developer creates a default VaultAuthGlobal in the application's namespace with the following
 configuration:
@@ -346,9 +346,9 @@ spec:
   when authenticating to Vault. The `kubernetes` and `jwt` fields define the configuration for the respective auth
   method.
 - Application 1 uses the default kubernetes auth method defined in the VaultAuthGlobal resource. The VaultAuth resource
-  references the VaultAuthGlobal resource and inherits the configuration from it.
+  references the VaultAuthGlobal resource and inherits the kubernetes auth configuration from it.
 - Application 2 uses the JWT auth method defined in the VaultAuthGlobal resource. The VaultAuth resource references the
-  VaultAuthGlobal resource and inherits the configuration from it.
+  VaultAuthGlobal resource and inherits the JWT auth configuration from it.
 - Neither VaultAuth resource has a `role` or `serviceAccount` field set. This is because the `role` and `serviceAccount`
   fields are defined in the VaultAuthGlobal resource and are inherited by the VaultAuth resources.
 
@@ -388,7 +388,7 @@ Below are examples of errors from each source and how to resolve them:
   $ kubectl events --types=Warning -n admin --for vaultauths.secrets.hashicorp.com/default -o json
   ```
 
-  Sample out from the Kubernetes event for the VaultAuth resource:
+  Sample output from the Kubernetes event for the VaultAuth resource:
 
   ```json
   {
@@ -451,14 +451,13 @@ Sample output of the VaultAuth's status (prettified). The `valid` field will be 
 - Situation: The VaultAuthGlobal resource is not found or is invalid for some reason, denoted by error messages like
 `not found...`.
 
-  Resolution: Ensure that the VaultAuthGlobal resource exists in the namespace specified in the VaultAuth
-resource's or a default VaultAuthGlobal resource exists per
-[VaultAuthGlobal configuration inheritance](#vaultauthglobal-configuration-inheritance)
+  Resolution: Ensure that the VaultAuthGlobal resource exists in the referring VaultAuth's namespace or a default
+VaultAuthGlobal resource exists per [VaultAuthGlobal configuration inheritance](#vaultauthglobal-configuration-inheritance)
 
-- Situation: The VaultAuthGlobal is not allowed to be referenced by the VaultAuth resource, denoted by error
+- **Situation**: The VaultAuthGlobal is not allowed to be referenced by the VaultAuth resource, denoted by error
 messages like `target namespace "apps" is not allowed...`.
 
-  Resolution: Ensure that the VaultAuthGlobal resource's `spec.allowedNamespaces` field includes the namespace of the
+  **Resolution**: Ensure that the VaultAuthGlobal resource's `spec.allowedNamespaces` field includes the namespace of the
   VaultAuth resource.
 
 - Situation: The VaultAuth resource is not valid due to missing required fields, denoted by error messages like
@@ -467,8 +466,9 @@ messages like `target namespace "apps" is not allowed...`.
   Resolution: Ensure all required fields are set either on the VaultAuth resource or on the inherited
   VaultAuthGlobal.
 
-A successfully merged VaultAuth resource will have the `valid` field set to `true` and the `conditions` will look
-something like:
+  A successfully merged VaultAuth resource will have the `valid` field set to `true` and the `conditions` will look
+  something like:
+
   ```json
   {
     "conditions": [
@@ -488,14 +488,14 @@ something like:
 
 <Tip>
 
-  The value for the key in the message field is the key to the VaultAuthGlobal object that was successfully merged.
+  The value for the key in the message field is the namespace/name of the VaultAuthGlobal object that was successfully merged.
   This is useful if you want to know which VaultAuthGlobal object was used to merge the VaultAuth object.
 
 </Tip>
 
 
-### Some authentication engines in detail
-
-- [GCP](/vault/docs/auth/gcp)
+## Some authentication engines in detail
 
 - [AWS](/vault/docs/auth/aws)
+
+- [GCP](/vault/docs/auth/gcp)
