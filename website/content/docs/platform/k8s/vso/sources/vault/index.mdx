@@ -115,7 +115,7 @@ spec:
 
 ### VaultAuthGlobal custom resource
 
-<Tip title={"Feature availability"}>
+<Tip title="Feature availability">
 
 VSO v0.8.0
 
@@ -134,7 +134,7 @@ docs.
 <Tip>
 
   The VaultAuthGlobal resources shares many of the same fields as the VaultAuth custom resource, but cannot be used
-  for authentication directly. It is only used to define shared Vault authentication configuration across a Kubernetes
+  for authentication directly. It is only used to define shared Vault authentication configuration within a Kubernetes
   cluster.
 
 </Tip>
@@ -173,7 +173,7 @@ spec:
 
 ### Explanation
 
-- The VaultAuthGlobal custom resource defines a default authentication method of kubernetes with the kubernetes
+- The VaultAuthGlobal custom resource defines a default authentication method of kubernetes with the `defaultAuthMethod`
   field.
 - The VaultAuth custom resource inherits the global configuration by referencing the VaultAuthGlobal custom
   resource with the `vaultAuthGlobalRef` field.
