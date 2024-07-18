@@ -21,6 +21,7 @@ export const GENERAL = {
 
   filter: (name: string) => `[data-test-filter="${name}"]`,
   filterInput: '[data-test-filter-input]',
+  filterInputSearch: (attr: string) => `[data-test-input-search="${attr}"]`,
   filterInputExplicit: '[data-test-filter-input-explicit]',
   filterInputExplicitSearch: '[data-test-filter-input-explicit-search]',
   confirmModalInput: '[data-test-confirmation-modal-input]',

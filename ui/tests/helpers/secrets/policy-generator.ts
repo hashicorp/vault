@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-// This is a policy can both mount and list and create oidc keys
-export const adminPolicy = (mountPath: string) => {
+// This is a policy can both mount a secret engine
+// and list and create oidc keys, relevant for setting identity_key_token for WIF
+export const adminPolicy = () => {
   return `
     path "sys/mounts/*" {
       capabilities = ["create", "read", "update", "delete", "list"]
@@ -16,8 +17,8 @@ export const adminPolicy = (mountPath: string) => {
 };
 
 // user can mount the engine
-// but user does not have access to oidc/key list or create
-export const noOidcAdminPolicy = (mountPath: string) => {
+// but does not have access to oidc/key list or create
+export const noOidcAdminPolicy = () => {
   return `
     path "sys/mounts/*" {
       capabilities = ["create", "read", "update", "delete", "list"]

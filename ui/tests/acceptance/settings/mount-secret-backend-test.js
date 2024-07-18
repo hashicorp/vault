@@ -394,7 +394,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
         await page.path(path);
         await click(GENERAL.toggleGroup('Method Options'));
         // type-in fallback component to create new key
-        await fillIn('[data-test-input-search="key"]', 'manual-key');
+        await fillIn(GENERAL.filterInputSearch('key'), 'manual-key');
         await page.submit();
         assert
           .dom(GENERAL.latestFlashContent)
