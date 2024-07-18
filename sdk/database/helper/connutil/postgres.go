@@ -111,7 +111,10 @@ func openPostgres(driverName, connString string) (*sql.DB, error) {
 		}
 	}
 
+	config.Host = fallbacks[0].Host
+	config.Port = fallbacks[0].Port
 	config.TLSConfig = fallbacks[0].TLSConfig
+	config.Fallbacks = fallbacks[1:]
 
 	return sql.Open(driverName, stdlib.RegisterConnConfig(config))
 }
