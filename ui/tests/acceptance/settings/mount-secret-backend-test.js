@@ -359,7 +359,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
         assert.dom('[data-test-modal-title]').hasText('Create new key', 'Create key modal renders');
 
         await click(OIDC.keySaveButton);
-        assert.dom('#search-select-modal').doesNotExist('modal disappears onCancel');
+        assert.dom('#search-select-modal').doesNotExist('modal disappears onSave');
         assert.dom(GENERAL.searchSelect.selectedOption()).hasText('new-key', 'new-key is now selected');
         await page.submit();
         assert
