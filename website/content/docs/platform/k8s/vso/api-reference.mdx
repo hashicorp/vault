@@ -7,7 +7,7 @@ description: >-
 
 <!--
   copied from docs/api/api-reference.md in the vault-secrets-operator repo.
-  commit SHA=c30a82b68399a94b053f98b134f310305936dc27
+  commit SHA=5797542c8e5a476f0985525fbc2368abbde6f3e8
 -->
 # API Reference
 
@@ -740,7 +740,7 @@ _Appears in:_
 | `name` _string_ | Name of the VaultAuthGlobal resource. |  | Pattern: `^([a-z0-9.-]{1,253})$` <br /> |
 | `namespace` _string_ | Namespace of the VaultAuthGlobal resource. If not provided, the namespace of<br />the referring VaultAuth resource is used. |  | Pattern: `^([a-z0-9.-]{1,253})$` <br /> |
 | `mergeStrategy` _[MergeStrategy](#mergestrategy)_ | MergeStrategy configures the merge strategy for HTTP headers and parameters<br />that are included in all Vault authentication requests. |  |  |
-| `allowDefault` _boolean_ | AllowDefault when set to true will use the default VaultAuthGlobal resource<br />as the default if Name is not set. The 'allow-default-globals' option must be<br />set on the operator's '-global-vault-auth-options' flag<br /><br />The default VaultAuthGlobal search is conditional.<br />When a ref Namespace is not set, the search follows the order:<br /> 1. The referring VaultAuth Namespace.<br /> 2. The Operator's namespace.<br />Otherwise, the search follows the order:<br /> 1. The VaultAuthGlobal ref Namespace. |  |  |
+| `allowDefault` _boolean_ | AllowDefault when set to true will use the default VaultAuthGlobal resource<br />as the default if Name is not set. The 'allow-default-globals' option must be<br />set on the operator's '-global-vault-auth-options' flag<br /><br />The default VaultAuthGlobal search is conditional.<br />When a ref Namespace is set, the search for the default<br />VaultAuthGlobal resource is constrained to that namespace.<br />Otherwise, the search order is:<br />1. The default VaultAuthGlobal resource in the referring VaultAuth resource's<br />namespace.<br />2. The default VaultAuthGlobal resource in the Operator's namespace. |  |  |
 
 
 #### VaultAuthGlobalSpec
@@ -1138,7 +1138,3 @@ _Appears in:_
 | `rolloutRestartTargets` _[RolloutRestartTarget](#rolloutrestarttarget) array_ | RolloutRestartTargets should be configured whenever the application(s) consuming the Vault secret does<br />not support dynamically reloading a rotated secret.<br />In that case one, or more RolloutRestartTarget(s) can be configured here. The Operator will<br />trigger a "rollout-restart" for each target whenever the Vault secret changes between reconciliation events.<br />All configured targets wil be ignored if HMACSecretData is set to false.<br />See RolloutRestartTarget for more details. |  |  |
 | `destination` _[Destination](#destination)_ | Destination provides configuration necessary for syncing the Vault secret to Kubernetes. |  |  |
 | `syncConfig` _[SyncConfig](#syncconfig)_ | SyncConfig configures sync behavior from Vault to VSO |  |  |
-
-
-
-
