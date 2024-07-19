@@ -1170,8 +1170,19 @@ $ curl \
 ```
 
 <Note>
-    As of 1.15.13, 1.16.7, 1.17.3, 1.18 and later, the billing start date (license start date if not configured) will automatically rollover to the latest billing year. 
-    Refer to <a href="/vault/docs/upgrading/upgrade-to-1.15.x#auto-roll-billing-start-date">Upgrade to 1.15.x</a>, <a href="/vault/docs/upgrading/upgrade-to-1.16.x#auto-roll-billing-start-date">Upgrade to 1.16.x</a>, <a href="/vault/docs/upgrading/upgrade-to-1.17.x#auto-roll-billing-start-date">Upgrade to 1.17.x</a>, <a href="/vault/docs/upgrading/upgrade-to-1.18.x#auto-roll-billing-start-date">Upgrade to 1.18.x</a>, for additional information on auto-roll billing start date.
+<Note title="Important change to supported versions">
+
+    Billing start date, or license start date if you do not have an explicit
+    billing start date configured, automatically rolls over to the latest
+    billing year at the end of the last cycle.
+
+    For more information, refer to the upgrade guide for your Vault version:
+    
+    - [Vault v1.16.x](/vault/docs/upgrading/upgrade-to-1.16.x#auto-roll-billing-start-date)
+    - [Vault v1.17.x](/vault/docs/upgrading/upgrade-to-1.17.x#auto-roll-billing-start-date)
+    - [Vault v1.18.x](/vault/docs/upgrading/upgrade-to-1.18.x#auto-roll-billing-start-date)
+
+</Note>
 </Note> 
 
 ## Activity export
