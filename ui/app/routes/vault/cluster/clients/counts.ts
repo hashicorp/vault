@@ -89,13 +89,12 @@ export default class ClientsCountsRoute extends Route {
   async model(params: ClientsCountsRouteParams) {
     const { config, versionHistory } = this.modelFor('vault.cluster.clients') as ModelFrom<ClientsRoute>;
     const { activity, activityError } = await this.getActivity(params);
-
     return {
       activity,
       activityError,
       config,
-      startTimestamp: this.paramOrResponseTimestamp(params?.start_time, activity.startDate),
-      endTimestamp: this.paramOrResponseTimestamp(params?.end_time, activity.endDate),
+      startTimestamp: this.paramOrResponseTimestamp(params?.start_time, activity?.startTime),
+      endTimestamp: this.paramOrResponseTimestamp(params?.end_time, activity?.endTime),
       versionHistory,
     };
   }

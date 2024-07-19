@@ -9,7 +9,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click, findAll, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import clientsHandler, { LICENSE_START, STATIC_NOW } from 'vault/mirage/handlers/clients';
-import { getUnixTime } from 'date-fns';
+import { fromUnixTime, getUnixTime } from 'date-fns';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
 import { selectChoose } from 'ember-power-select/test-support';
@@ -19,6 +19,8 @@ import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 
 const START_TIME = getUnixTime(LICENSE_START);
 const END_TIME = getUnixTime(STATIC_NOW);
+const START_ISO = LICENSE_START.toISOString();
+const END_ISO = STATIC_NOW.toISOString();
 
 module('Integration | Component | clients | Page::Counts', function (hooks) {
   setupRenderingTest(hooks);
@@ -35,8 +37,8 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
     };
     this.activity = await this.store.queryRecord('clients/activity', activityQuery);
     this.config = await this.store.queryRecord('clients/config', {});
-    this.startTimestamp = START_TIME;
-    this.endTimestamp = END_TIME;
+    this.startTimestamp = START_ISO;
+    this.endTimestamp = END_ISO;
     this.versionHistory = [];
     this.renderComponent = () =>
       render(hbs`
@@ -103,8 +105,14 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
     const expected = { start_time: START_TIME, end_time: END_TIME };
     this.onFilterChange = (params) => {
       assert.deepEqual(params, expected, 'Correct values sent on filter change');
-      this.set('startTimestamp', params.start_time || START_TIME);
-      this.set('endTimestamp', params.end_time || END_TIME);
+      // in the app, the timestamp choices trigger a qp refresh as millis from epoch,
+      // but in the model they are translated from millis to ISO timestamps before being
+      // passed to this component. Mock that behavior here.
+      this.set(
+        'startTimestamp',
+        params?.start_time ? fromUnixTime(params.start_time).toISOString() : START_ISO
+      );
+      this.set('endTimestamp', params?.end_time ? fromUnixTime(params.end_time).toISOString() : END_ISO);
     };
     // page starts with default billing dates, which are july 23 - jan 24
     await this.renderComponent();
@@ -168,7 +176,7 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
   });
 
   test('it should render start time discrepancy alert', async function (assert) {
-    this.startTimestamp = getUnixTime(new Date('2022-06-01T00:00:00Z'));
+    this.startTimestamp = new Date('2022-06-01T00:00:00Z').toISOString();
 
     await this.renderComponent();
 

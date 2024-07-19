@@ -43,19 +43,19 @@ module('Acceptance | clients | counts', function (hooks) {
   test('it should persist filter query params between child routes', async function (assert) {
     await visit('/vault/clients/counts/overview');
     await click(CLIENT_COUNT.dateRange.edit);
-    await fillIn(CLIENT_COUNT.dateRange.editDate('start'), '2020-03');
-    await fillIn(CLIENT_COUNT.dateRange.editDate('start'), '2022-02');
+    await fillIn(CLIENT_COUNT.dateRange.editDate('start'), '2023-03');
+    await fillIn(CLIENT_COUNT.dateRange.editDate('end'), '2023-10');
     await click(GENERAL.saveButton);
     assert.strictEqual(
       currentURL(),
-      '/vault/clients/counts/overview?end_time=1706659200&start_time=1643673600',
+      '/vault/clients/counts/overview?end_time=1698710400&start_time=1677628800',
       'Start and end times added as query params'
     );
 
     await click(GENERAL.tab('token'));
     assert.strictEqual(
       currentURL(),
-      '/vault/clients/counts/token?end_time=1706659200&start_time=1643673600',
+      '/vault/clients/counts/token?end_time=1698710400&start_time=1677628800',
       'Start and end times persist through child route change'
     );
 
