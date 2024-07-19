@@ -314,7 +314,6 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     );
   });
 
-  // ARG TODO when identity_token_key is added to the internal mounts endpoint will make sure the key is set and visible on the mount config page.
   module('WIF secret engines', function () {
     test('it sets identity_token_key on mount config using search select list, resets after', async function (assert) {
       // create an oidc/key
@@ -338,8 +337,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       // Go back and choose a non-wif engine type
       await page.back();
       await page.selectType('ssh');
-      await click(GENERAL.toggleGroup('Method Options'));
-      assert
+      +assert
         .dom('[data-test-search-select-with-modal]')
         .doesNotExist('for type ssh, the modal field does not render.');
       // cleanup

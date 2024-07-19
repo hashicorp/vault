@@ -123,5 +123,34 @@ module('Unit | Adapter | secret engine', function (hooks) {
       const record = this.store.createRecord('secret-engine', mountData);
       await record.save();
     });
+
+    test('it should not send identity_token_key if set on a non-WIF secret engine', async function (assert) {
+      assert.expect(1);
+      this.server.post('/sys/mounts/cubbyhole-test', (schema, req) => {
+        assert.deepEqual(
+          JSON.parse(req.requestBody),
+          {
+            path: 'cubbyhole-test',
+            type: 'aws',
+            generate_signing_key: true,
+            config: { id: 'cubbyhole-test', max_lease_ttl: '125h', listing_visibility: 'hidden' },
+          },
+          'Correct payload is sent when sending a non-wif secret engine with identity_token_key accidentally set'
+        );
+        return {};
+      });
+      const mountData = {
+        id: 'cubbyhole-test',
+        path: 'cubbyhole-test',
+        type: 'aws',
+        config: this.store.createRecord('mount-config', {
+          maxLeaseTtl: '125h',
+          identity_token_key: 'test-key',
+        }),
+        uuid: 'f1739f9d-dfc0-83c8-011f-ec17103a06c4',
+      };
+      const record = this.store.createRecord('secret-engine', mountData);
+      await record.save();
+    });
   });
 });

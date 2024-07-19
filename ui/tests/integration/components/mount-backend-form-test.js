@@ -6,7 +6,7 @@
 import { later, _cancelTimers as cancelTimers } from '@ember/runloop';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, settled, click } from '@ember/test-helpers';
+import { render, settled, click, typeIn } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { allowAllCapabilitiesStub, noopStub } from 'vault/tests/helpers/stubs';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -192,23 +192,45 @@ module('Integration | Component | mount backend form', function (hooks) {
       );
     });
 
-    test('it shows identityTokenKey when type is aws and hides when its not', async function (assert) {
-      await render(
-        hbs`<MountBackendForm @mountType="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
-      );
-      await component.selectType('ldap');
+    module('WIF secret engines', function () {
+      test('it shows identityTokenKey when type is aws and hides when its not', async function (assert) {
+        await render(
+          hbs`<MountBackendForm @mountType="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
+        );
+        await component.selectType('ldap');
 
-      await click('[data-test-toggle-group="Method Options"]');
-      assert
-        .dom(GENERAL.fieldByAttr('identityTokenKey'))
-        .doesNotExist(`Identity token key field hidden when type=${this.model.type}`);
+        await click(GENERAL.toggleGroup('Method Options'));
+        assert
+          .dom(GENERAL.fieldByAttr('identityTokenKey'))
+          .doesNotExist(`Identity token key field hidden when type=${this.model.type}`);
 
-      await component.back();
-      await component.selectType('aws');
-      await click('[data-test-toggle-group="Method Options"]');
-      assert
-        .dom(GENERAL.fieldByAttr('identityTokenKey'))
-        .exists(`Identity token key field shows when type=${this.model.type}`);
+        await component.back();
+        await component.selectType('aws');
+        await click(GENERAL.toggleGroup('Method Options'));
+        assert
+          .dom(GENERAL.fieldByAttr('identityTokenKey'))
+          .exists(`Identity token key field shows when type=${this.model.type}`);
+      });
+
+      test('it updates identityTokeKey if user has changed it', async function (assert) {
+        await render(
+          hbs`<MountBackendForm @mountType="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
+        );
+        await component.selectType('aws');
+        assert.strictEqual(
+          this.model.config.identityTokenKey,
+          undefined,
+          'On init identityTokenKey is not set on the model'
+        );
+
+        await click(GENERAL.toggleGroup('Method Options'));
+        await typeIn(GENERAL.filterInputSearch('key'), 'default');
+        assert.strictEqual(
+          this.model.config.identityTokenKey,
+          'default',
+          'updates model with default identityTokenKey'
+        );
+      });
     });
   });
 });
