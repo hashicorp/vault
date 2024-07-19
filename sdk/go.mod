@@ -1,6 +1,6 @@
 module github.com/hashicorp/vault/sdk
 
-go 1.21
+go 1.22
 
 require (
 	cloud.google.com/go/cloudsqlconn v1.4.3
@@ -40,7 +40,6 @@ require (
 	github.com/hashicorp/hcl v1.0.1-vault-5
 	github.com/hashicorp/vault/api v1.9.1
 	github.com/mitchellh/copystructure v1.2.0
-	github.com/mitchellh/go-testing-interface v1.14.1
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/pierrec/lz4 v2.6.1+incompatible
 	github.com/ryanuber/go-glob v1.0.0
@@ -91,6 +90,7 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
+	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/moby/patternmatcher v0.5.0 // indirect
 	github.com/moby/sys/sequential v0.5.0 // indirect

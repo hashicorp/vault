@@ -277,7 +277,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/metadata`,
         `goes to metadata page`
       );
-      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'metadata']);
+      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'Metadata']);
       assert.dom(PAGE.title).hasText(secretPath);
       assert
         .dom(`${PAGE.metadata.customMetadataSection} ${PAGE.emptyStateTitle}`)
@@ -293,7 +293,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/metadata/edit`,
         `goes to metadata edit page`
       );
-      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'metadata', 'edit']);
+      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'Metadata', 'Edit']);
       await click(FORM.cancelBtn);
       assert.strictEqual(
         currentURL(),
@@ -306,7 +306,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       const backend = this.backend;
       await navToBackend(backend);
       await click(PAGE.secretTab('Configuration'));
-      assertCorrectBreadcrumbs(assert, ['Secrets', backend, 'configuration']);
+      assertCorrectBreadcrumbs(assert, ['Secrets', backend, 'Configuration']);
       assert.dom(PAGE.title).hasText(`${backend} version 2`, 'correct page title for configuration');
 
       await click(PAGE.secretTab('Secrets'));
@@ -318,25 +318,25 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.title).hasText(secretPath, 'correct page title for secret detail');
 
       await click(PAGE.detail.createNewVersion);
-      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'edit']);
+      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'Edit']);
       assert.dom(PAGE.title).hasText('Create New Version', 'correct page title for secret edit');
 
       await click(PAGE.breadcrumbAtIdx(2));
       await click(PAGE.secretTab('Metadata'));
-      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'metadata']);
+      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'Metadata']);
       assert.dom(PAGE.title).hasText(secretPath, 'correct page title for metadata');
 
       await click(PAGE.metadata.editBtn);
-      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'metadata', 'edit']);
+      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'Metadata', 'Edit']);
       assert.dom(PAGE.title).hasText('Edit Secret Metadata', 'correct page title for metadata edit');
 
       await click(PAGE.breadcrumbAtIdx(3));
       await click(PAGE.secretTab('Paths'));
-      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'paths']);
+      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'Paths']);
       assert.dom(PAGE.title).hasText(secretPath, 'correct page title for paths');
 
       await click(PAGE.secretTab('Version History'));
-      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'version history']);
+      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'Version History']);
       assert.dom(PAGE.title).hasText(secretPath, 'correct page title for version history');
     });
   });
@@ -477,7 +477,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/metadata`,
         `goes to metadata page`
       );
-      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'metadata']);
+      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'Metadata']);
       assert.dom(PAGE.title).hasText(secretPath);
       assert.dom(PAGE.toolbarAction).doesNotExist('no toolbar actions available on metadata');
       assert
@@ -493,7 +493,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       const backend = this.backend;
       await navToBackend(backend);
       await click(PAGE.secretTab('Configuration'));
-      assertCorrectBreadcrumbs(assert, ['Secrets', backend, 'configuration']);
+      assertCorrectBreadcrumbs(assert, ['Secrets', backend, 'Configuration']);
       assert.dom(PAGE.title).hasText(`${backend} version 2`, 'title correct on config page');
 
       await click(PAGE.secretTab('Secrets'));
@@ -508,13 +508,13 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.detail.createNewVersion).doesNotExist('cannot create new version');
 
       await click(PAGE.secretTab('Metadata'));
-      assertCorrectBreadcrumbs(assert, ['Secrets', backend, 'app', 'nested', 'secret', 'metadata']);
+      assertCorrectBreadcrumbs(assert, ['Secrets', backend, 'app', 'nested', 'secret', 'Metadata']);
       assert.dom(PAGE.title).hasText('app/nested/secret', 'title correct on metadata');
 
       assert.dom(PAGE.metadata.editBtn).doesNotExist('cannot edit metadata');
 
       await click(PAGE.secretTab('Paths'));
-      assertCorrectBreadcrumbs(assert, ['Secrets', backend, 'app', 'nested', 'secret', 'paths']);
+      assertCorrectBreadcrumbs(assert, ['Secrets', backend, 'app', 'nested', 'secret', 'Paths']);
       assert.dom(PAGE.title).hasText('app/nested/secret', 'correct page title for paths');
 
       assert.dom(PAGE.secretTab('Version History')).doesNotExist('Version History tab not shown');
@@ -650,7 +650,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/metadata`,
         `goes to metadata page`
       );
-      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'metadata']);
+      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'Metadata']);
       assert.dom(PAGE.title).hasText(secretPath);
       assert
         .dom(`${PAGE.metadata.customMetadataSection} ${PAGE.emptyStateTitle}`)
@@ -666,7 +666,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       await navToBackend(backend);
 
       await click(PAGE.secretTab('Configuration'));
-      assertCorrectBreadcrumbs(assert, ['Secrets', backend, 'configuration']);
+      assertCorrectBreadcrumbs(assert, ['Secrets', backend, 'Configuration']);
       assert.dom(PAGE.title).hasText(`${backend} version 2`, 'correct page title for configuration');
 
       await click(PAGE.secretTab('Secrets'));
@@ -680,13 +680,13 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.detail.createNewVersion).doesNotExist('cannot create new version');
 
       await click(PAGE.secretTab('Metadata'));
-      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'metadata']);
+      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'Metadata']);
       assert.dom(PAGE.title).hasText(secretPath, 'correct page title for metadata');
 
       assert.dom(PAGE.metadata.editBtn).doesNotExist('cannot edit metadata');
 
       await click(PAGE.secretTab('Paths'));
-      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'paths']);
+      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'Paths']);
       assert.dom(PAGE.title).hasText(secretPath, 'correct page title for paths');
 
       assert.dom(PAGE.secretTab('Version History')).doesNotExist('Version History tab not shown');
@@ -837,7 +837,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/metadata`,
         `goes to metadata page`
       );
-      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'metadata']);
+      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'Metadata']);
       assert.dom(PAGE.title).hasText(secretPath);
       assert
         .dom(`${PAGE.metadata.customMetadataSection} ${PAGE.emptyStateTitle}`)
@@ -853,7 +853,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/metadata/edit`,
         `goes to metadata edit page`
       );
-      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'metadata', 'edit']);
+      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'Metadata', 'Edit']);
       await click(FORM.cancelBtn);
       assert.strictEqual(
         currentURL(),
@@ -866,7 +866,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       const backend = this.backend;
       await navToBackend(backend);
       await click(PAGE.secretTab('Configuration'));
-      assertCorrectBreadcrumbs(assert, ['Secrets', backend, 'configuration']);
+      assertCorrectBreadcrumbs(assert, ['Secrets', backend, 'Configuration']);
       assert.dom(PAGE.title).hasText(`${backend} version 2`, 'correct page title for configuration');
 
       await click(PAGE.secretTab('Secrets'));
@@ -878,20 +878,20 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.title).hasText(secretPath, 'correct page title for secret detail');
 
       await click(PAGE.secretTab('Metadata'));
-      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'metadata']);
+      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'Metadata']);
       assert.dom(PAGE.title).hasText(secretPath, 'correct page title for metadata');
 
       await click(PAGE.metadata.editBtn);
-      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'metadata', 'edit']);
+      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'Metadata', 'Edit']);
       assert.dom(PAGE.title).hasText('Edit Secret Metadata', 'correct page title for metadata edit');
 
       await click(PAGE.breadcrumbAtIdx(3));
       await click(PAGE.secretTab('Paths'));
-      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'paths']);
+      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'Paths']);
       assert.dom(PAGE.title).hasText(secretPath, 'correct page title for paths');
 
       await click(PAGE.secretTab('Version History'));
-      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'version history']);
+      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'Version History']);
       assert.dom(PAGE.title).hasText(secretPath, 'correct page title for version history');
     });
   });
@@ -1052,7 +1052,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/metadata`,
         `goes to metadata page`
       );
-      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'metadata']);
+      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'Metadata']);
       assert.dom(PAGE.title).hasText(secretPath);
       assert
         .dom(`${PAGE.metadata.customMetadataSection} ${PAGE.emptyStateTitle}`)
@@ -1064,7 +1064,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       const backend = this.backend;
       await navToBackend(backend);
       await click(PAGE.secretTab('Configuration'));
-      assertCorrectBreadcrumbs(assert, ['Secrets', backend, 'configuration']);
+      assertCorrectBreadcrumbs(assert, ['Secrets', backend, 'Configuration']);
       assert.dom(PAGE.title).hasText(`${backend} version 2`, 'correct page title for configuration');
 
       await click(PAGE.secretTab('Secrets'));
@@ -1077,19 +1077,19 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.title).hasText(secretPath, 'correct page title for secret detail');
 
       await click(PAGE.detail.createNewVersion);
-      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'edit']);
+      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'Edit']);
       assert.dom(PAGE.title).hasText('Create New Version', 'correct page title for secret edit');
 
       await click(PAGE.breadcrumbAtIdx(2));
       await click(PAGE.secretTab('Metadata'));
-      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'metadata']);
+      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'Metadata']);
       assert.dom(PAGE.title).hasText(secretPath, 'correct page title for metadata');
 
       assert.dom(PAGE.metadata.editBtn).doesNotExist('cannot edit metadata');
 
       await click(PAGE.breadcrumbAtIdx(2));
       await click(PAGE.secretTab('Paths'));
-      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'paths']);
+      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'Paths']);
       assert.dom(PAGE.title).hasText(secretPath, 'correct page title for paths');
 
       assert.dom(PAGE.secretTab('Version History')).doesNotExist('Version History tab not shown');
@@ -1197,7 +1197,7 @@ path "${this.backend}/*" {
       const backend = this.backend;
       await navToBackend(backend);
       await click(PAGE.secretTab('Configuration'));
-      assertCorrectBreadcrumbs(assert, ['Secrets', backend, 'configuration']);
+      assertCorrectBreadcrumbs(assert, ['Secrets', backend, 'Configuration']);
       assert.dom(PAGE.title).hasText(`${backend} version 2`, 'correct page title for configuration');
 
       await click(PAGE.secretTab('Secrets'));
@@ -1228,21 +1228,21 @@ path "${this.backend}/*" {
       assert.dom(PAGE.title).hasText(secretPath, 'correct page title for secret detail');
 
       await click(PAGE.secretTab('Metadata'));
-      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'metadata']);
+      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'Metadata']);
       assert.dom(PAGE.title).hasText(secretPath, 'correct page title for metadata');
 
       assert.dom(PAGE.metadata.editBtn).doesNotExist('cannot edit metadata');
 
       await click(PAGE.breadcrumbAtIdx(2));
       await click(PAGE.secretTab('Paths'));
-      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'paths']);
+      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'Paths']);
       assert.dom(PAGE.title).hasText(secretPath, 'correct page title for paths');
 
       assert.dom(PAGE.secretTab('Version History')).doesNotExist('Version History tab not shown');
 
       await click(PAGE.secretTab('Secret'));
       await click(PAGE.detail.createNewVersion);
-      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'edit']);
+      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'Edit']);
       assert.dom(PAGE.title).hasText('Create New Version', 'correct page title for secret edit');
     });
   });

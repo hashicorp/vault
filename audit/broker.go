@@ -315,6 +315,12 @@ func (b *Broker) LogRequest(ctx context.Context, in *logical.LogInput) (ret erro
 
 	// Audit event ended up in at least 1 sink.
 	if len(status.CompleteSinks()) > 0 {
+		// We should log warnings to the operational logs regardless of whether
+		// we consider the overall auditing attempt to be successful.
+		if len(status.Warnings) > 0 {
+			b.logger.Error("log request underlying pipeline error(s)", "error", &multierror.Error{Errors: status.Warnings})
+		}
+
 		return retErr.ErrorOrNil()
 	}
 
@@ -397,6 +403,12 @@ func (b *Broker) LogResponse(ctx context.Context, in *logical.LogInput) (ret err
 
 	// Audit event ended up in at least 1 sink.
 	if len(status.CompleteSinks()) > 0 {
+		// We should log warnings to the operational logs regardless of whether
+		// we consider the overall auditing attempt to be successful.
+		if len(status.Warnings) > 0 {
+			b.logger.Error("log response underlying pipeline error(s)", "error", &multierror.Error{Errors: status.Warnings})
+		}
+
 		return retErr.ErrorOrNil()
 	}
 

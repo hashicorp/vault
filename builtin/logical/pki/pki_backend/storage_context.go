@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/builtin/logical/pki/managed_key"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -18,7 +19,7 @@ type StorageContext interface {
 	UseLegacyBundleCaStorage() bool
 	GetPkiManagedView() managed_key.PkiManagedKeyView
 	CrlBuilder() CrlBuilderType
-	GetCertificateCounter() CertificateCounter
+	GetCertificateCounter() issuing.CertificateCounter
 
 	Logger() hclog.Logger
 }
