@@ -3,7 +3,16 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { currentRouteName, currentURL, settled, click, findAll, fillIn } from '@ember/test-helpers';
+import {
+  currentRouteName,
+  currentURL,
+  settled,
+  click,
+  findAll,
+  fillIn,
+  visit,
+  typeIn,
+} from '@ember/test-helpers';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
@@ -21,7 +30,7 @@ import { mountableEngines } from 'vault/helpers/mountable-secret-engines'; // al
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SELECTORS as OIDC } from 'vault/tests/helpers/oidc-config';
-import { adminPolicy, noOidcAdminPolicy } from 'vault/tests/helpers/secrets/policy-generator';
+import { adminOidcCreateRead, adminOidcCreate } from 'vault/tests/helpers/secrets/policy-generator';
 
 const consoleComponent = create(consoleClass);
 
@@ -320,7 +329,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
           .exists('Search select with modal component renders');
         await clickTrigger('#key');
         const dropdownOptions = findAll('[data-option-index]').map((o) => o.innerText);
-        assert.ok(dropdownOptions.includes(`some-key`), `search select options show some-key`);
+        assert.ok(dropdownOptions.includes('some-key'), 'search select options show some-key');
         await click(GENERAL.searchSelect.option(GENERAL.searchSelect.optionIndex('some-key')));
         assert
           .dom(GENERAL.searchSelect.selectedOption())
@@ -340,7 +349,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     test('it allows a user with permissions to oidc/key to create an identity_token_key', async function (assert) {
       for (const engine of WIF_SECRET_ENGINES) {
         const path = `secrets-adminPolicy-${engine}`;
-        const secrets_admin_policy = adminPolicy();
+        const secrets_admin_policy = adminOidcCreateRead(path);
         const secretsAdminToken = await runCmd(
           tokenWithPolicyCmd(`secrets-admin-${path}`, secrets_admin_policy)
         );
@@ -361,10 +370,17 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
         await click(OIDC.keySaveButton);
         assert.dom('#search-select-modal').doesNotExist('modal disappears onSave');
         assert.dom(GENERAL.searchSelect.selectedOption()).hasText('new-key', 'new-key is now selected');
+
         await page.submit();
         assert
           .dom(GENERAL.latestFlashContent)
           .hasText(`Successfully mounted the aws secrets engine at ${path}.`);
+
+        await visit(`/vault/secrets/${path}/configuration`);
+        assert
+          .dom(GENERAL.infoRowValue('Identity token key'))
+          .hasText('new-key', 'shows identity token key on configuration page');
+
         // ARG TODO should redirect to the mount config page. Later PR to address this.
         // assert.strictEqual(
         //   currentURL(),
@@ -382,10 +398,12 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     test('it allows user with NO access to oidc/key to manually input an identity_token_key', async function (assert) {
       for (const engine of WIF_SECRET_ENGINES) {
         const path = `secrets-noOidcAdmin-${engine}`;
-        const secrets_noOidcAdmin_policy = noOidcAdminPolicy();
+        const secrets_noOidcAdmin_policy = adminOidcCreate(path);
         const secretsNoOidcAdminToken = await runCmd(
           tokenWithPolicyCmd(`secrets-noOidcAdmin-${path}`, secrets_noOidcAdmin_policy)
         );
+        // create an oidc/key that they can then use even if they can't read it.
+        await runCmd(`write identity/oidc/key/general-key allowed_client_ids="*"`);
 
         await logout.visit();
         await authPage.login(secretsNoOidcAdminToken);
@@ -394,11 +412,17 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
         await page.path(path);
         await click(GENERAL.toggleGroup('Method Options'));
         // type-in fallback component to create new key
-        await fillIn(GENERAL.filterInputSearch('key'), 'manual-key');
+        await typeIn(GENERAL.filterInputSearch('key'), 'general-key');
         await page.submit();
         assert
           .dom(GENERAL.latestFlashContent)
           .hasText(`Successfully mounted the aws secrets engine at ${path}.`);
+
+        await visit(`/vault/secrets/${path}/configuration`);
+
+        assert
+          .dom(GENERAL.infoRowValue('Identity token key'))
+          .hasText('general-key', 'shows identity token key on configuration page');
         // ARG TODO should redirect to the mount config page. Later PR to address this.
         // assert.strictEqual(
         //   currentURL(),
