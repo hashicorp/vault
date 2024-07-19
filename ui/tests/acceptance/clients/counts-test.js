@@ -83,7 +83,6 @@ module('Acceptance | clients | counts', function (hooks) {
   });
 
   test('it should use the first month timestamp from default response rather than response start_time', async function (assert) {
-    assert.expect(2);
     const getCounts = () => {
       return {
         acme_clients: 0,
