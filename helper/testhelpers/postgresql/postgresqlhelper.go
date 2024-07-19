@@ -14,15 +14,17 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/docker"
 )
 
-const postgresVersion = "13.4-buster"
+const defaultPostgresVersion = "13.4-buster"
+
+const defaultPostgresPassword = "secret"
 
 func defaultRunOpts(t *testing.T) docker.RunOptions {
 	return docker.RunOptions{
 		ContainerName: "postgres",
 		ImageRepo:     "docker.mirror.hashicorp.services/postgres",
-		ImageTag:      postgresVersion,
+		ImageTag:      defaultPostgresVersion,
 		Env: []string{
-			"POSTGRES_PASSWORD=secret",
+			"POSTGRES_PASSWORD=" + defaultPostgresPassword,
 			"POSTGRES_DB=database",
 		},
 		Ports:           []string{"5432/tcp"},
@@ -36,7 +38,7 @@ func defaultRunOpts(t *testing.T) docker.RunOptions {
 }
 
 func PrepareTestContainer(t *testing.T) (func(), string) {
-	_, cleanup, url, _ := prepareTestContainer(t, defaultRunOpts(t), "secret", true, false)
+	_, cleanup, url, _ := prepareTestContainer(t, defaultRunOpts(t), defaultPostgresPassword, true, false)
 
 	return cleanup, url
 }
@@ -45,7 +47,7 @@ func PrepareTestContainer(t *testing.T) (func(), string) {
 // admin user configured so that we can safely call rotate-root without
 // rotating the root DB credentials
 func PrepareTestContainerWithVaultUser(t *testing.T, ctx context.Context) (func(), string) {
-	runner, cleanup, url, id := prepareTestContainer(t, defaultRunOpts(t), "secret", true, false)
+	runner, cleanup, url, id := prepareTestContainer(t, defaultRunOpts(t), defaultPostgresPassword, true, false)
 
 	cmd := []string{"psql", "-U", "postgres", "-c", "CREATE USER vaultadmin WITH LOGIN PASSWORD 'vaultpass' SUPERUSER"}
 	_, err := runner.RunCmdInBackground(ctx, id, cmd)
@@ -56,15 +58,15 @@ func PrepareTestContainerWithVaultUser(t *testing.T, ctx context.Context) (func(
 	return cleanup, url
 }
 
-func PrepareTestContainerWithSSL(t *testing.T, ctx context.Context, version string) (func(), string) {
+func PrepareTestContainerWithSSL(t *testing.T, ctx context.Context) (func(), string) {
 	runOpts := defaultRunOpts(t)
 	runOpts.Cmd = []string{"-c", "log_statement=all"}
-	runner, cleanup, url, id := prepareTestContainer(t, runOpts, "secret", true, false)
+	runner, cleanup, url, id := prepareTestContainer(t, runOpts, defaultPostgresPassword, true, false)
 
 	content := "echo 'hostssl all all all cert clientcert=verify-ca' > /var/lib/postgresql/data/pg_hba.conf"
 	// Copy the ssl init script into the newly running container.
 	buildCtx := docker.NewBuildContext()
-	buildCtx["ssl-conf.sh"] = docker.PathContentsFromBytes([]byte(content))
+	buildCtx["ssl-conf.sh"] = docker.PathContentsFromString(content)
 	if err := runner.CopyTo(id, "/usr/local/bin", buildCtx); err != nil {
 		t.Fatalf("Could not copy ssl init script into container: %v", err)
 	}
@@ -87,7 +89,7 @@ func PrepareTestContainerWithSSL(t *testing.T, ctx context.Context, version stri
 	return cleanup, url
 }
 
-func PrepareTestContainerWithPassword(t *testing.T, version, password string) (func(), string) {
+func PrepareTestContainerWithPassword(t *testing.T, password string) (func(), string) {
 	runOpts := defaultRunOpts(t)
 	runOpts.Env = []string{
 		"POSTGRES_PASSWORD=" + password,
@@ -99,28 +101,10 @@ func PrepareTestContainerWithPassword(t *testing.T, version, password string) (f
 	return cleanup, url
 }
 
-func PrepareTestContainerRepmgr(t *testing.T, name, version string, envVars []string) (*docker.Runner, func(), string, string) {
-	runOpts := defaultRunOpts(t)
-	runOpts.ImageRepo = "docker.mirror.hashicorp.services/bitnami/postgresql-repmgr"
-	runOpts.ImageTag = version
-	runOpts.Env = append(envVars,
-		"REPMGR_PARTNER_NODES=psql-repl-node-0,psql-repl-node-1",
-		"REPMGR_PRIMARY_HOST=psql-repl-node-0",
-		"REPMGR_PASSWORD=repmgrpass",
-		"POSTGRESQL_PASSWORD=secret")
-	runOpts.DoNotAutoRemove = true
-
-	return prepareTestContainer(t, runOpts, "secret", false, true)
-}
-
 func prepareTestContainer(t *testing.T, runOpts docker.RunOptions, password string, addSuffix, forceLocalAddr bool,
 ) (*docker.Runner, func(), string, string) {
 	if os.Getenv("PG_URL") != "" {
 		return nil, func() {}, "", os.Getenv("PG_URL")
-	}
-
-	if runOpts.ImageRepo == "bitnami/postgresql-repmgr" {
-		runOpts.NetworkID = os.Getenv("POSTGRES_MULTIHOST_NET")
 	}
 
 	runner, err := docker.NewServiceRunner(runOpts)
