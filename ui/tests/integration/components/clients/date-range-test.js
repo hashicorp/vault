@@ -53,7 +53,7 @@ module('Integration | Component | clients/date-range', function (hooks) {
   });
 
   test('it renders the date range passed and can reset it (ent)', async function (assert) {
-    this.owner('service:version').version = 'enterprise';
+    this.owner.lookup('service:version').version = 'enterprise';
     await this.renderComponent();
 
     assert.dom(DATE_RANGE.dateDisplay('start')).hasText('January 2018');
@@ -75,7 +75,7 @@ module('Integration | Component | clients/date-range', function (hooks) {
   });
 
   test('it renders the date range passed and cannot reset it when community', async function (assert) {
-    this.owner('service:version').version = 'community';
+    this.owner.lookup('service:version').version = 'community';
     await this.renderComponent();
 
     assert.dom(DATE_RANGE.dateDisplay('start')).hasText('January 2018');
@@ -97,7 +97,7 @@ module('Integration | Component | clients/date-range', function (hooks) {
   });
 
   test('it does not trigger onChange if date range invalid', async function (assert) {
-    this.owner('service:version').version = 'enterprise';
+    this.owner.lookup('service:version').version = 'enterprise';
     await this.renderComponent();
 
     await click(DATE_RANGE.edit);
@@ -118,7 +118,7 @@ module('Integration | Component | clients/date-range', function (hooks) {
   });
 
   test('it does not trigger onChange when reset and CE', async function (assert) {
-    this.owner('service:version').version = 'community';
+    this.owner.lookup('service:version').version = 'community';
     await this.renderComponent();
 
     await click(DATE_RANGE.edit);
