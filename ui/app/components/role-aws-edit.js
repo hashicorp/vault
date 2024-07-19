@@ -9,6 +9,15 @@ import RoleEdit from './role-edit';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 
 export default RoleEdit.extend({
+  get breadcrumbs() {
+    const routeStub = 'vault.cluster.secrets.backend';
+    const crumbs = [
+      { label: 'Secrets', route: routeStub },
+      { label: this.model.backend, route: `${routeStub}.list-root`, model: this.model.backend },
+      { label: this.mode === 'create' ? 'Create' : 'Edit' },
+    ];
+    return crumbs;
+  },
   actions: {
     createOrUpdate(type, event) {
       event.preventDefault();
