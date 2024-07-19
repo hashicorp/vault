@@ -724,7 +724,7 @@ and consider if they're appropriate for your deployment.
     "sample/annotation2": "bar"
   ```
 
-  - `configAnnotation` (`boolean: false`) - Add an annotation to the server configmap and the statefulset pods, `vaultproject.io/config-checksum`, that is a hash of the Vault configuration. This can be used together with an OnDelete deployment strategy to help identify which pods still need to be deleted during a deployment to pick up any configuration changes.
+  - `includeConfigAnnotation` (`boolean: false`) - Add an annotation to the server configmap and the statefulset pods, `vaultproject.io/config-checksum`, that is a hash of the Vault configuration. This can be used together with an OnDelete deployment strategy to help identify which pods still need to be deleted during a deployment to pick up any configuration changes.
 
   - `service` - Values that configure the Kubernetes service created for Vault. These options are also used for the `active` and `standby` services when [`ha`](#ha) is enabled.
 
