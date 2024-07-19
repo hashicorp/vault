@@ -94,14 +94,15 @@ func PrepareTestContainerWithPassword(t *testing.T, version, password string) (f
 		"POSTGRES_DB=database",
 	}
 
-	_, cleanup, url, _ := prepareTestContainer(t, runOpts, "secret", true, false)
+	_, cleanup, url, _ := prepareTestContainer(t, runOpts, password, true, false)
 
 	return cleanup, url
 }
 
-func PrepareTestContainerRepmgr(t *testing.T, name string, envVars []string) (*docker.Runner, func(), string, string) {
+func PrepareTestContainerRepmgr(t *testing.T, name, version string, envVars []string) (*docker.Runner, func(), string, string) {
 	runOpts := defaultRunOpts(t)
 	runOpts.ImageRepo = "docker.mirror.hashicorp.services/bitnami/postgresql-repmgr"
+	runOpts.ImageTag = version
 	runOpts.Env = append(envVars,
 		"REPMGR_PARTNER_NODES=psql-repl-node-0,psql-repl-node-1",
 		"REPMGR_PRIMARY_HOST=psql-repl-node-0",
