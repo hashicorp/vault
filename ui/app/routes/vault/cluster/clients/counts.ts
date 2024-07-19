@@ -93,7 +93,7 @@ export default class ClientsCountsRoute extends Route {
       activity,
       activityError,
       config,
-      startTimestamp: this.paramOrResponseTimestamp(params?.start_time, activity?.byMonth[0].timestamp),
+      startTimestamp: this.paramOrResponseTimestamp(params?.start_time, activity?.byMonth[0]?.timestamp),
       endTimestamp: this.paramOrResponseTimestamp(params?.end_time, activity?.endTime),
       versionHistory,
     };
