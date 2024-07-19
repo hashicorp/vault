@@ -33,9 +33,9 @@ module('Integration | Component | clients/date-range', function (hooks) {
     this.startTime = undefined;
     await this.renderComponent();
 
-    assert.dom(DATE_RANGE.set).exists();
+    assert.dom(DATE_RANGE.edit).hasText('Set date range');
 
-    await click(DATE_RANGE.set);
+    await click(DATE_RANGE.edit);
     assert.dom(DATE_RANGE.editModal).exists();
     assert.dom(DATE_RANGE.editDate('start')).hasValue('');
     await fillIn(DATE_RANGE.editDate('start'), '2018-01');
