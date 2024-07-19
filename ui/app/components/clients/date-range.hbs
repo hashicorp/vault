@@ -87,7 +87,7 @@
             data-test-date-range-validation
           >{{this.validationError}}</Hds::Form::Error>
         {{/if}}
-        {{#if this.useDefaultDates}}
+        {{#if (and this.version.isEnterprise this.useDefaultDates)}}
           <Hds::Alert @type="compact" @color="highlight" class="has-top-margin-xs" data-test-range-default-alert as |A|>
             <A.Description>Dashboard will use the default date range from the API.</A.Description>
           </Hds::Alert>

@@ -33,6 +33,8 @@ module('Integration | Component | clients/date-range', function (hooks) {
     this.startTime = undefined;
     await this.renderComponent();
 
+    assert.dom(DATE_RANGE.dateDisplay('start')).doesNotExist();
+    assert.dom(DATE_RANGE.dateDisplay('end')).doesNotExist();
     assert.dom(DATE_RANGE.edit).hasText('Set date range');
 
     await click(DATE_RANGE.edit);
@@ -50,11 +52,13 @@ module('Integration | Component | clients/date-range', function (hooks) {
     assert.dom(DATE_RANGE.editModal).doesNotExist('closes modal');
   });
 
-  test('it renders the date range passed and can reset it', async function (assert) {
+  test('it renders the date range passed and can reset it (ent)', async function (assert) {
+    this.owner('service:version').version = 'enterprise';
     await this.renderComponent();
 
     assert.dom(DATE_RANGE.dateDisplay('start')).hasText('January 2018');
     assert.dom(DATE_RANGE.dateDisplay('end')).hasText('January 2019');
+    assert.dom(DATE_RANGE.edit).hasText('Edit');
 
     await click(DATE_RANGE.edit);
     assert.dom(DATE_RANGE.editModal).exists();
@@ -70,7 +74,30 @@ module('Integration | Component | clients/date-range', function (hooks) {
     assert.deepEqual(this.onChange.args[0], [{ start_time: undefined, end_time: undefined }]);
   });
 
+  test('it renders the date range passed and cannot reset it when community', async function (assert) {
+    this.owner('service:version').version = 'community';
+    await this.renderComponent();
+
+    assert.dom(DATE_RANGE.dateDisplay('start')).hasText('January 2018');
+    assert.dom(DATE_RANGE.dateDisplay('end')).hasText('January 2019');
+    assert.dom(DATE_RANGE.edit).hasText('Edit');
+
+    await click(DATE_RANGE.edit);
+    assert.dom(DATE_RANGE.editModal).exists();
+    assert.dom(DATE_RANGE.editDate('start')).hasValue('2018-01');
+    assert.dom(DATE_RANGE.editDate('end')).hasValue('2019-01');
+    assert.dom(DATE_RANGE.defaultRangeAlert).doesNotExist();
+
+    await click(DATE_RANGE.editDate('reset'));
+    assert.dom(DATE_RANGE.editDate('start')).hasValue('');
+    assert.dom(DATE_RANGE.editDate('end')).hasValue('');
+    assert.dom(DATE_RANGE.validation).hasText('You must supply both start and end dates.');
+    await click(GENERAL.saveButton);
+    assert.false(this.onChange.called);
+  });
+
   test('it does not trigger onChange if date range invalid', async function (assert) {
+    this.owner('service:version').version = 'enterprise';
     await this.renderComponent();
 
     await click(DATE_RANGE.edit);
@@ -88,6 +115,18 @@ module('Integration | Component | clients/date-range', function (hooks) {
     await click(GENERAL.cancelButton);
     assert.false(this.onChange.called);
     assert.dom(DATE_RANGE.editModal).doesNotExist();
+  });
+
+  test('it does not trigger onChange when reset and CE', async function (assert) {
+    this.owner('service:version').version = 'community';
+    await this.renderComponent();
+
+    await click(DATE_RANGE.edit);
+
+    await click(DATE_RANGE.reset);
+    assert.dom(DATE_RANGE.validation).hasText('You must supply both start and end dates.');
+    await click(GENERAL.saveButton);
+    assert.false(this.onChange.called);
   });
 
   test('it resets the tracked values on close', async function (assert) {
