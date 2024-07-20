@@ -62,7 +62,9 @@ behavior. Autopilot gets initialized with the following default values. If these
 - `dead_server_last_contact_threshold` - `24h`
   - Limit on the amount of time
     a server can go without leader contact before being considered failed. This
-    takes effect only when `cleanup_dead_servers` is set.
+    takes effect only when `cleanup_dead_servers` is set. **We strongly recommend
+    that this is kept at a high duration, such as a day, as it being too low could
+    result in removal of nodes that aren't actually dead.**
 
 - `min_quorum` - This doesn't default to anything and should be set to the expected
   number of voters in your cluster when `cleanup_dead_servers` is set as `true`.
