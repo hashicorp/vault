@@ -376,7 +376,7 @@
           },
           {
             "title": "TCP",
-            "routes": [  
+            "routes": [
               {
                 "title": "Overview",
                 "path": "configuration/listener/tcp"
@@ -1116,7 +1116,7 @@
             "path": "commands/transform/import"
           }
         ]
-      },      
+      },
       {
         "title": "<code>unwrap</code>",
         "path": "commands/unwrap"
@@ -2208,8 +2208,12 @@
                         "path": "platform/k8s/vso/sources/vault"
                       },
                       {
-                        "title": "Auth Methods",
+                        "title": "Authentication",
                         "routes": [
+                          {
+                            "title": "Overview",
+                            "path": "platform/k8s/vso/sources/vault/auth"
+                          },
                           {
                             "title": "AWS",
                             "path": "platform/k8s/vso/sources/vault/auth/aws"

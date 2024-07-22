@@ -4,6 +4,7 @@ page_title: Vault Secrets Operator
 description: >-
   The Vault Secrets Operator allows Pods to consume Vault secrets natively from Kubernetes Secrets.
 ---
+@include 'vso/common-links.mdx'
 
 # Vault Secrets Operator
 
@@ -111,6 +112,76 @@ spec:
   # HTTP headers to be included in all Vault authentication requests.
   # headers: []
 ```
+
+### VaultAuthGlobal custom resource
+
+<Tip title="Feature availability">
+
+VSO v0.8.0
+
+</Tip>
+
+Namespaced resource that provides shared Vault authentication configuration that can be inherited by multiple
+`VaultAuth` custom resources. It supports multiple authentication methods and allows you to define a default
+authentication method that can be overridden by individual VaultAuth custom resources. See `vaultAuthGlobalRef` in
+the [VaultAuth spec][va-spec] for more details. The `VaultAuthGlobal` custom resource is optional and can be used to
+simplify the configuration of multiple VaultAuth custom resources by reducing config duplication. Like other
+namespaced VSO custom resources, there can be many VaultAuthGlobal resources configured in a single Kubernetes cluster.
+
+For more details on how to integrate VaultAuthGlobals into your workflow, see the detailed [Authentication][auth]
+docs.
+
+<Tip>
+
+  The VaultAuthGlobal resources shares many of the same fields as the VaultAuth custom resource, but cannot be used
+  for authentication directly. It is only used to define shared Vault authentication configuration within a Kubernetes
+  cluster.
+
+</Tip>
+
+The example below demonstrates how to define a VaultAuthGlobal custom resource with a default authentication method of
+`kubernetes`, along with a VaultAuth custom resource that inherits its global configuration.
+
+```yaml
+---
+apiVersion: secrets.hashicorp.com/v1beta1
+kind: VaultAuthGlobal
+metadata:
+  namespace: vso-example
+  name: vault-auth-global
+spec:
+  defaultAuthMethod: kubernetes
+  kubernetes:
+    audiences:
+    - vault
+    mount: kubernetes
+    namespace: example-ns
+    role: auth-role
+    serviceAccount: default
+    tokenExpirationSeconds: 600
+---
+apiVersion: secrets.hashicorp.com/v1beta1
+kind: VaultAuth
+metadata:
+  namespace: vso-example
+  name: vault-auth
+spec:
+  vaultAuthGlobalRef:
+    name: vault-auth-global
+  kubernetes:
+    role: local-role
+```
+
+#### Explanation
+
+- The VaultAuthGlobal custom resource defines a default authentication method of kubernetes with the `defaultAuthMethod`
+  field.
+- The VaultAuth custom resource inherits the global configuration by referencing the VaultAuthGlobal custom
+  resource with the `vaultAuthGlobalRef` field.
+- The `kubernetes.role` field in the VaultAuth custom resource spec overrides the value of the corresponding field in
+  the VaultAuthGlobal custom resource. All other fields are inherited from the VaultAuthGlobal custom resource
+  `spec.kubernetes` field, e.g., `audiences`, `mount`, `serviceAccount`, `namespace`, etc.
+
 
 ## Vault secret custom resource definitions
 
