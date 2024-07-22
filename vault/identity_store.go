@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"slices"
 	"strings"
 	"time"
 
@@ -738,27 +737,9 @@ func (i *IdentityStore) invalidateEntityBucket(ctx context.Context, key string) 
 			// found in the memDB entity, need to be deleted from MemDB because
 			// the upsertEntityInTxn function does not delete those aliases.
 			if memDBEntity != nil {
-				aliasesToDelete := make([]*identity.Alias, 0)
-				bucketEntityAliases := bucketEntity.Aliases
-
-				slices.SortFunc(bucketEntityAliases, func(a, b *identity.Alias) int {
-					return strings.Compare(a.ID, b.ID)
-				})
-
-				for _, a := range memDBEntity.Aliases {
-					_, found := slices.BinarySearchFunc(bucketEntityAliases, a.ID, func(a *identity.Alias, b string) int {
-						return strings.Compare(a.ID, b)
-					})
-					if !found {
-						aliasesToDelete = append(aliasesToDelete, a)
-					}
-				}
-
-				if len(aliasesToDelete) > 0 {
-					err := i.deleteAliasesInEntityInTxn(txn, memDBEntity, aliasesToDelete)
-					if err != nil {
-						i.logger.Error("failed to remove entity alias from MemDB", "entity_id", memDBEntity.ID, "error", err)
-					}
+				if err := i.deleteAliasesInEntityInTxn(txn, memDBEntity, memDBEntity.Aliases); err != nil {
+					i.logger.Error("failed to remove entity aliases from changed entity", "entity_id", memDBEntity.ID, "error", err)
+					return
 				}
 			}
 
