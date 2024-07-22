@@ -2779,11 +2779,11 @@ func (a *ActivityLog) prepareMonthsResponseForQuery(ctx context.Context, byMonth
 	for _, monthsRecord := range byMonth {
 		newClientsResponse := &ResponseNewClients{}
 		if monthsRecord.NewClients.Counts.HasCounts() {
-			newClientsNSResponse, err := a.prepareNamespaceResponse(ctx, monthsRecord.NewClients.Namespaces)
+			newClientsTotal, newClientsNSResponse, err := a.prepareNamespaceResponse(ctx, monthsRecord.NewClients.Namespaces)
 			if err != nil {
 				return nil, err
 			}
-			newClientsResponse.Counts = a.countsRecordToCountsResponse(monthsRecord.NewClients.Counts, false)
+			newClientsResponse.Counts = newClientsTotal
 			newClientsResponse.Namespaces = newClientsNSResponse
 		}
 
@@ -2791,11 +2791,11 @@ func (a *ActivityLog) prepareMonthsResponseForQuery(ctx context.Context, byMonth
 			Timestamp: time.Unix(monthsRecord.Timestamp, 0).UTC().Format(time.RFC3339),
 		}
 		if monthsRecord.Counts.HasCounts() {
-			nsResponse, err := a.prepareNamespaceResponse(ctx, monthsRecord.Namespaces)
+			monthTotal, nsResponse, err := a.prepareNamespaceResponse(ctx, monthsRecord.Namespaces)
 			if err != nil {
 				return nil, err
 			}
-			monthResponse.Counts = a.countsRecordToCountsResponse(monthsRecord.Counts, false)
+			monthResponse.Counts = monthTotal
 			monthResponse.Namespaces = nsResponse
 			monthResponse.NewClients = newClientsResponse
 			months = append(months, monthResponse)
@@ -2804,14 +2804,16 @@ func (a *ActivityLog) prepareMonthsResponseForQuery(ctx context.Context, byMonth
 	return months, nil
 }
 
-// prepareNamespaceResponse populates the namespace portion of the activity log response struct
-// from
-func (a *ActivityLog) prepareNamespaceResponse(ctx context.Context, nsRecords []*activity.MonthlyNamespaceRecord) ([]*ResponseNamespace, error) {
+// prepareNamespaceResponse takes monthly namespace records and converts them
+// into the response namespace format. The function also returns counts for the
+// total number of clients per type seen that month.
+func (a *ActivityLog) prepareNamespaceResponse(ctx context.Context, nsRecords []*activity.MonthlyNamespaceRecord) (*ResponseCounts, []*ResponseNamespace, error) {
 	queryNS, err := namespace.FromContext(ctx)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	nsResponse := make([]*ResponseNamespace, 0, len(nsRecords))
+	totalCounts := &ResponseCounts{}
+	nsResponses := make([]*ResponseNamespace, 0, len(nsRecords))
 	for _, nsRecord := range nsRecords {
 		if !nsRecord.Counts.HasCounts() {
 			continue
@@ -2819,7 +2821,7 @@ func (a *ActivityLog) prepareNamespaceResponse(ctx context.Context, nsRecords []
 
 		ns, err := NamespaceByID(ctx, nsRecord.NamespaceID, a.core)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		if a.includeInResponse(queryNS, ns) {
 			mountResponse := make([]*ResponseMount, 0, len(nsRecord.Mounts))
@@ -2840,15 +2842,18 @@ func (a *ActivityLog) prepareNamespaceResponse(ctx context.Context, nsRecords []
 			} else {
 				displayPath = ns.Path
 			}
-			nsResponse = append(nsResponse, &ResponseNamespace{
+			nsResponse := &ResponseNamespace{
 				NamespaceID:   nsRecord.NamespaceID,
 				NamespacePath: displayPath,
 				Counts:        *a.countsRecordToCountsResponse(nsRecord.Counts, false),
 				Mounts:        mountResponse,
-			})
+			}
+			nsResponses = append(nsResponses, nsResponse)
+
+			totalCounts.Add(&nsResponse.Counts)
 		}
 	}
-	return nsResponse, nil
+	return totalCounts, nsResponses, nil
 }
 
 // partialMonthClientCount returns the number of clients used so far this month.
