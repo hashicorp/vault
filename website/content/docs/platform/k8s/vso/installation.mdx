@@ -55,52 +55,18 @@ Hang tight while we grab the latest from your chart repositories...
 Update Complete. ⎈Happy Helming!⎈
 ```
 
-<Note title="Helm does not automatically update CRDs">
-  You must update all CRDs manually before upgrading VSO.
-  Refer to <a href="#updating-crds">Updating CRDs</a>.
-</Note>
-
-To upgrade your VSO release, replace `<TARGET_VSO_VERSION>` with the VSO version you are upgrading to:
-```shell-session
-$ helm show crds --version <TARGET_VSO_VERSION> hashicorp/vault-secrets-operator | kubectl apply -f -
-$ helm upgrade --version <TARGET_VSO_VERSION> --namespace vault-secrets-operator vault-secrets-operator hashicorp/vault-secrets-operator
-```
-
-For example, if you are upgrading to VSO 0.7.1:
-```shell-session
-$ helm show crds --version 0.7.1 hashicorp/vault-secrets-operator | kubectl apply -f -
-$ helm upgrade --version 0.7.1 --namespace vault-secrets-operator vault-secrets-operator hashicorp/vault-secrets-operator
-```
-
 ## Updating CRDs when using Helm
 
-You must update the CRDs for VSO manually **before** you upgrade the
- operator when the operator is managed by Helm.
+<Note title="Important">
 
-**Any `kubectl` warnings related to `last-applied-configuration` should be safe to ignore.**
+  As of VSO 0.8.0, VSO will automatically update its CRDs.
+  The manual upgrade step [Updating CRDs](#updating-crds-when-using-helm-prior-to-vso-0-8-0) below is no longer required when
+  upgrading to VSO 0.8.0+.
 
-To update the VSO CRDs, replace `<TARGET_VSO_VERSION>` with the VSO version you are upgrading to:
-```shell-session
-$ helm show crds --version <TARGET_VSO_VERSION> hashicorp/vault-secrets-operator | kubectl apply -f -
-```
+</Note>
 
-For example, if you are upgrading to VSO 0.7.1:
-```shell-session
-$ helm show crds --version 0.7.1 hashicorp/vault-secrets-operator | kubectl apply -f -
-
-customresourcedefinition.apiextensions.k8s.io/hcpauths.secrets.hashicorp.com created
-customresourcedefinition.apiextensions.k8s.io/hcpvaultsecretsapps.secrets.hashicorp.com created
-Warning: resource customresourcedefinitions/vaultauths.secrets.hashicorp.com is missing the kubectl.kubernetes.io/last-applied-configuration annotation which is required by kubectl apply. kubectl apply should only be used on resources created declaratively by either kubectl create --save-config or kubectl apply. The missing annotation will be patched automatically.
-customresourcedefinition.apiextensions.k8s.io/vaultauths.secrets.hashicorp.com configured
-Warning: resource customresourcedefinitions/vaultconnections.secrets.hashicorp.com is missing the kubectl.kubernetes.io/last-applied-configuration annotation which is required by kubectl apply. kubectl apply should only be used on resources created declaratively by either kubectl create --save-config or kubectl apply. The missing annotation will be patched automatically.
-customresourcedefinition.apiextensions.k8s.io/vaultconnections.secrets.hashicorp.com configured
-Warning: resource customresourcedefinitions/vaultdynamicsecrets.secrets.hashicorp.com is missing the kubectl.kubernetes.io/last-applied-configuration annotation which is required by kubectl apply. kubectl apply should only be used on resources created declaratively by either kubectl create --save-config or kubectl apply. The missing annotation will be patched automatically.
-customresourcedefinition.apiextensions.k8s.io/vaultdynamicsecrets.secrets.hashicorp.com configured
-Warning: resource customresourcedefinitions/vaultpkisecrets.secrets.hashicorp.com is missing the kubectl.kubernetes.io/last-applied-configuration annotation which is required by kubectl apply. kubectl apply should only be used on resources created declaratively by either kubectl create --save-config or kubectl apply. The missing annotation will be patched automatically.
-customresourcedefinition.apiextensions.k8s.io/vaultpkisecrets.secrets.hashicorp.com configured
-Warning: resource customresourcedefinitions/vaultstaticsecrets.secrets.hashicorp.com is missing the kubectl.kubernetes.io/last-applied-configuration annotation which is required by kubectl apply. kubectl apply should only be used on resources created declaratively by either kubectl create --save-config or kubectl apply. The missing annotation will be patched automatically.
-customresourcedefinition.apiextensions.k8s.io/vaultstaticsecrets.secrets.hashicorp.com configured
-```
+The VSO Helm chart will automatically upgrade the CRDs to match the VSO version being deployed.
+There should be no need to manually update the CRDs prior to upgrading VSO using Helm.
 
 ## Chart values
 
@@ -162,3 +128,43 @@ vault-secrets-operator-system   vault-secrets-operator-controller-manager-56754d
 Upgrading using Kustomize is similar to installation: simply download the new release from github and follow
 the same steps as outlined in [Installation using Kustomize](#installation-using-kustomize).
 No additional steps are required to update the CRDs.
+
+## Legacy notes
+
+The following notes provide guidance for installing/upgrading older versions of VSO.
+
+### Updating CRDs when using Helm prior to VSO 0.8.0
+
+This step can be skipped if you are upgrading to VSO 0.8.0 or later.
+
+<Note title="Helm does not automatically update CRDs">
+  You must update all CRDs manually before upgrading VSO to a version prior to 0.8.0.
+</Note>
+
+You must update the CRDs for VSO manually **before** you upgrade the
+operator when the operator is managed by Helm.
+
+**Any `kubectl` warnings related to `last-applied-configuration` should be safe to ignore.**
+
+To update the VSO CRDs, replace `<TARGET_VSO_VERSION>` with the VSO version you are upgrading to:
+```shell-session
+$ helm show crds --version <TARGET_VSO_VERSION> hashicorp/vault-secrets-operator | kubectl apply -f -
+```
+
+For example, if you are upgrading to VSO 0.7.1:
+```shell-session
+$ helm show crds --version 0.7.1 hashicorp/vault-secrets-operator | kubectl apply -f -
+
+customresourcedefinition.apiextensions.k8s.io/hcpauths.secrets.hashicorp.com created
+customresourcedefinition.apiextensions.k8s.io/hcpvaultsecretsapps.secrets.hashicorp.com created
+Warning: resource customresourcedefinitions/vaultauths.secrets.hashicorp.com is missing the kubectl.kubernetes.io/last-applied-configuration annotation which is required by kubectl apply. kubectl apply should only be used on resources created declaratively by either kubectl create --save-config or kubectl apply. The missing annotation will be patched automatically.
+customresourcedefinition.apiextensions.k8s.io/vaultauths.secrets.hashicorp.com configured
+Warning: resource customresourcedefinitions/vaultconnections.secrets.hashicorp.com is missing the kubectl.kubernetes.io/last-applied-configuration annotation which is required by kubectl apply. kubectl apply should only be used on resources created declaratively by either kubectl create --save-config or kubectl apply. The missing annotation will be patched automatically.
+customresourcedefinition.apiextensions.k8s.io/vaultconnections.secrets.hashicorp.com configured
+Warning: resource customresourcedefinitions/vaultdynamicsecrets.secrets.hashicorp.com is missing the kubectl.kubernetes.io/last-applied-configuration annotation which is required by kubectl apply. kubectl apply should only be used on resources created declaratively by either kubectl create --save-config or kubectl apply. The missing annotation will be patched automatically.
+customresourcedefinition.apiextensions.k8s.io/vaultdynamicsecrets.secrets.hashicorp.com configured
+Warning: resource customresourcedefinitions/vaultpkisecrets.secrets.hashicorp.com is missing the kubectl.kubernetes.io/last-applied-configuration annotation which is required by kubectl apply. kubectl apply should only be used on resources created declaratively by either kubectl create --save-config or kubectl apply. The missing annotation will be patched automatically.
+customresourcedefinition.apiextensions.k8s.io/vaultpkisecrets.secrets.hashicorp.com configured
+Warning: resource customresourcedefinitions/vaultstaticsecrets.secrets.hashicorp.com is missing the kubectl.kubernetes.io/last-applied-configuration annotation which is required by kubectl apply. kubectl apply should only be used on resources created declaratively by either kubectl create --save-config or kubectl apply. The missing annotation will be patched automatically.
+customresourcedefinition.apiextensions.k8s.io/vaultstaticsecrets.secrets.hashicorp.com configured
+```
