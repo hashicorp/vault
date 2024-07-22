@@ -1,0 +1,3 @@
+```release-note:improvement
+audit: Ensure that any underyling errors from audit devices are logged even if we consider auditing to be a success.
+```

@@ -18,14 +18,6 @@ const validations = {
 export default class PkiRoleModel extends Model {
   @service version; // noStoreMetadata is enterprise-only, so we need this available
 
-  get useOpenAPI() {
-    // must be a getter so it can be accessed in path-help.js
-    return true;
-  }
-  getHelpUrl(backend) {
-    return `/v1/${backend}/roles/example?help=1`;
-  }
-
   @attr('string', { readOnly: true }) backend;
 
   get formFieldGroups() {
