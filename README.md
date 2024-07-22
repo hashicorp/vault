@@ -83,10 +83,6 @@ $ make bootstrap
 ...
 ```
 
-> [!WARNING]
-> 📝 **`git config --global --add url."git@github.com:".insteadOf "https://github.com/"`**
-> may be required if you encounter *`could not read Username for 'https://github.com'`* 
-
 To compile a development version of Vault, run `make` or `make dev`. This will
 put the Vault binary in the `bin` and `$GOPATH/bin` folders:
 
@@ -123,6 +119,15 @@ package by specifying the `TEST` variable. For example below, only
 $ make test TEST=./vault
 ...
 ```
+
+### Troubleshooting
+
+If you encounter an error like `could not read Username for 'https://github.com'` you may need to adjust your git config like so:
+
+```sh
+$ git config --global --add url."git@github.com:".insteadOf "https://github.com/"
+```
+
 
 ### Importing Vault
 
