@@ -21,13 +21,13 @@ export default class PkiIssuerSignRoute extends Route {
     controller.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.secretMountPath.currentPath, route: 'overview', model: this.secretMountPath.currentPath },
-      { label: 'issuers', route: 'issuers.index', model: this.secretMountPath.currentPath },
+      { label: 'Issuers', route: 'issuers.index', model: this.secretMountPath.currentPath },
       {
         label: resolvedModel.issuerRef,
         route: 'issuers.issuer.details',
         models: [this.secretMountPath.currentPath, resolvedModel.issuerRef],
       },
-      { label: 'sign intermediate' },
+      { label: 'Sign Intermediate' },
     ];
   }
 }

@@ -245,6 +245,29 @@ func (i IssuerEntry) CanMaybeSignWithAlgo(algo x509.SignatureAlgorithm) error {
 	return fmt.Errorf("unable to use issuer of type %v to sign with %v key type", cert.PublicKeyAlgorithm.String(), algo.String())
 }
 
+// ResolveAndFetchIssuerForIssuance takes a name or uuid referencing an issuer, loads the issuer
+// and validates that we have the associated private key and is allowed to perform issuance operations.
+func ResolveAndFetchIssuerForIssuance(ctx context.Context, s logical.Storage, issuerName string) (*IssuerEntry, error) {
+	if len(issuerName) == 0 {
+		return nil, fmt.Errorf("unable to fetch pki issuer: empty issuer name")
+	}
+	issuerId, err := ResolveIssuerReference(ctx, s, issuerName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve issuer %s: %w", issuerName, err)
+	}
+
+	issuer, err := FetchIssuerById(ctx, s, issuerId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load issuer %s: %w", issuerName, err)
+	}
+
+	if issuer.Usage.HasUsage(IssuanceUsage) && len(issuer.KeyID) > 0 {
+		return issuer, nil
+	}
+
+	return nil, fmt.Errorf("issuer %s missing proper issuance usage or doesn't have associated key", issuerName)
+}
+
 func ResolveIssuerReference(ctx context.Context, s logical.Storage, reference string) (IssuerID, error) {
 	if reference == DefaultRef {
 		// Handle fetching the default issuer.
