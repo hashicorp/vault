@@ -1,0 +1,3 @@
+```release-note:bug
+ui: New version of ember-a11y-refocus to solve issue #27768
+```
