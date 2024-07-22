@@ -5,16 +5,38 @@
 
 import { service } from '@ember/service';
 import Route from '@ember/routing/route';
-import { withConfig } from 'core/decorators/fetch-secrets-engine-config';
 
-@withConfig('aws/root-config')
-// ARG TODO problem, this is going to be called for all secret engine configurations?
 export default class SecretsBackendConfigurationRoute extends Route {
   @service store;
   @service secretMountPath;
 
-  model() {
+  async fetchAwsRootConfig(backend) {
+    return await this.store.queryRecord('aws/root-config', { backend });
+  }
+
+  async fetchSshCaConfig(backend) {
+    return await this.store.queryRecord('ssh/ca-config', { backend });
+  }
+
+  async model() {
     const backend = this.modelFor('vault.cluster.secrets.backend');
+    backend.configModel = null; // reset the config model
+    backend.configError = null; // reset the config error
+    // Currently two secret engines that return configuration data and that can be configured by the user on the ui: aws, and ssh.
+    if (backend.type === 'aws') {
+      try {
+        backend.configModel = await this.fetchAwsRootConfig(backend.id);
+      } catch (e) {
+        backend.configError = e;
+      }
+    }
+    if (backend.type === 'ssh') {
+      try {
+        backend.configModel = await this.fetchSshCaConfig(backend.id);
+      } catch (e) {
+        backend.configError = e;
+      }
+    }
     if (backend.isV2KV) {
       const canRead = this.store.findRecord('capabilities', `${backend.id}/config`).canRead;
       // only set these config params if they can read the config endpoint.
@@ -31,12 +53,6 @@ export default class SecretsBackendConfigurationRoute extends Route {
         backend.set('deleteVersionAfter', null);
         backend.set('maxVersions', null);
       }
-    }
-
-    backend.configError = this.configError;
-
-    if (this.configModel) {
-      backend.configModel = this.configModel;
     }
     return backend;
   }

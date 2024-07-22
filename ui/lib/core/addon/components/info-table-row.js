@@ -33,6 +33,7 @@ import { action } from '@ember/object';
  * @param {string} [queryParam] - Passed through to InfoTableItemArray. If you want to specific a tab for the View All XX to display to.  Ex= role
  * @param {string} [backend] - Passed through to InfoTableItemArray. To specify secrets backend to point link to  Ex= transformation
  * @param {string} [viewAll] - Passed through to InfoTableItemArray. Specify the word at the end of the link View all.
+ * @param {boolean} [maskInput] - If the value should be rendered in a maskedInput set to true.
  */
 
 export default class InfoTableRowComponent extends Component {
