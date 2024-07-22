@@ -5,15 +5,18 @@
 
 import { service } from '@ember/service';
 import Route from '@ember/routing/route';
+import { withConfig } from 'core/decorators/fetch-secrets-engine-config';
 
-export default Route.extend({
-  store: service(),
-  async model() {
+@withConfig('aws/root-config')
+// ARG TODO problem, this is going to be called for all secret engine configurations?
+export default class SecretsBackendConfigurationRoute extends Route {
+  @service store;
+  @service secretMountPath;
+
+  model() {
     const backend = this.modelFor('vault.cluster.secrets.backend');
     if (backend.isV2KV) {
-      const canRead = await this.store
-        .findRecord('capabilities', `${backend.id}/config`)
-        .then((response) => response.canRead);
+      const canRead = this.store.findRecord('capabilities', `${backend.id}/config`).canRead;
       // only set these config params if they can read the config endpoint.
       if (canRead) {
         // design wants specific default to show that can't be set in the model
@@ -29,6 +32,12 @@ export default Route.extend({
         backend.set('maxVersions', null);
       }
     }
+
+    backend.configError = this.configError;
+
+    if (this.configModel) {
+      backend.configModel = this.configModel;
+    }
     return backend;
-  },
-});
+  }
+}
