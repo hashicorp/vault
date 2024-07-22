@@ -1701,9 +1701,7 @@ func (r *ResponseCounts) Add(newRecord *ResponseCounts) {
 	}
 	r.EntityClients += newRecord.EntityClients
 	r.Clients += newRecord.Clients
-	r.DistinctEntities += newRecord.DistinctEntities
 	r.NonEntityClients += newRecord.NonEntityClients
-	r.NonEntityTokens += newRecord.NonEntityTokens
 	r.ACMEClients += newRecord.ACMEClients
 	r.SecretSyncs += newRecord.SecretSyncs
 }
