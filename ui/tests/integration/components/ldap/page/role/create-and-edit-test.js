@@ -40,8 +40,8 @@ module('Integration | Component | ldap | Page::Role::CreateAndEdit', function (h
 
     this.breadcrumbs = [
       { label: 'ldap', route: 'overview' },
-      { label: 'roles', route: 'roles' },
-      { label: 'create' },
+      { label: 'Roles', route: 'roles' },
+      { label: 'Create' },
     ];
 
     this.renderComponent = () => {

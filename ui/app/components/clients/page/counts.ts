@@ -6,10 +6,9 @@
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
-import { fromUnixTime, getUnixTime, isSameMonth, isAfter } from 'date-fns';
+import { fromUnixTime, isSameMonth, isAfter } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
-import { filterVersionHistory, formatDateObject } from 'core/utils/client-count-utils';
-import timestamp from 'core/utils/timestamp';
+import { filterVersionHistory } from 'core/utils/client-count-utils';
 
 import type AdapterError from '@ember-data/adapter';
 import type FlagsService from 'vault/services/flags';
@@ -94,17 +93,11 @@ export default class ClientsCountsPageComponent extends Component<Args> {
   get versionText() {
     return this.version.isEnterprise
       ? {
-          label: 'Billing start month',
-          description:
-            'This date comes from your license, and defines when client counting starts. Without this starting point, the data shown is not reliable.',
           title: 'No billing start date found',
           message:
             'In order to get the most from this data, please enter your billing period start month. This will ensure that the resulting data is accurate.',
         }
       : {
-          label: 'Client counting start date',
-          description:
-            'This date is when client counting starts. Without this starting point, the data shown is not reliable.',
           title: 'No start date found',
           message:
             'In order to get the most from this data, please enter a start month above. Vault will calculate new clients starting from that month.',
@@ -174,25 +167,8 @@ export default class ClientsCountsPageComponent extends Component<Args> {
   }
 
   @action
-  onDateChange(dateObject: { dateType: string; monthIdx: number; year: number }) {
-    const { dateType, monthIdx, year } = dateObject;
-    const { config } = this.args;
-    const currentTimestamp = getUnixTime(timestamp.now());
-
-    // converts the selectedDate to unix timestamp for activity query
-    const selectedDate = formatDateObject({ monthIdx, year }, dateType === 'endDate');
-
-    if (dateType !== 'cancel') {
-      const start_time = {
-        reset: getUnixTime(config?.billingStartTimestamp) || null, // clicked 'Current billing period' in calendar widget -> resets to billing start date
-        currentMonth: currentTimestamp, // clicked 'Current month' from calendar widget -> defaults to currentTimestamp
-        startDate: selectedDate, // from "Edit billing start" modal
-      }[dateType];
-      // endDate type is selection from calendar widget
-      const end_time = dateType === 'endDate' ? selectedDate : currentTimestamp; // defaults to currentTimestamp
-      const params = start_time !== undefined ? { start_time, end_time } : { end_time };
-      this.args.onFilterChange(params);
-    }
+  onDateChange(params: { start_time: number | undefined; end_time: number | undefined }) {
+    this.args.onFilterChange(params);
   }
 
   @action

@@ -567,9 +567,6 @@ func TestExternalPlugin_SecretsEngine(t *testing.T) {
 					t.Fatal(err)
 				}
 
-				// Reset root token
-				client.SetToken(cluster.RootToken)
-
 				// Lookup - expect FAILURE
 				_, err = client.Sys().Lookup(revokeLease)
 				if err == nil {
@@ -697,10 +694,9 @@ func TestExternalPlugin_Database(t *testing.T) {
 		go func() {
 			defer pluginTest.Done()
 			t.Run(dbName, func(t *testing.T) {
-				client.SetToken(cluster.RootToken)
 				roleName := "test-role-" + dbName
 
-				cleanupContainer, connURL := postgreshelper.PrepareTestContainerWithVaultUser(t, context.Background(), "13.4-buster")
+				cleanupContainer, connURL := postgreshelper.PrepareTestContainerWithVaultUser(t, context.Background())
 				t.Cleanup(cleanupContainer)
 
 				_, err := client.Logical().Write("database/config/"+dbName, map[string]interface{}{
@@ -823,7 +819,7 @@ func TestExternalPlugin_DatabaseReload(t *testing.T) {
 	dbName := fmt.Sprintf("%s-%d", plugin.Name, 0)
 	roleName := "test-role-" + dbName
 
-	cleanupContainer, connURL := postgreshelper.PrepareTestContainerWithVaultUser(t, context.Background(), "13.4-buster")
+	cleanupContainer, connURL := postgreshelper.PrepareTestContainerWithVaultUser(t, context.Background())
 	t.Cleanup(cleanupContainer)
 
 	_, err := client.Logical().Write("database/config/"+dbName, map[string]interface{}{
@@ -1208,7 +1204,7 @@ func TestCore_UpgradePluginUsingPinnedVersion_Database(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanupPG, connURL := postgreshelper.PrepareTestContainerWithVaultUser(t, context.Background(), "13.4-buster")
+	cleanupPG, connURL := postgreshelper.PrepareTestContainerWithVaultUser(t, context.Background())
 	t.Cleanup(cleanupPG)
 
 	// Mount 1.0.0 then pin to 1.0.1
