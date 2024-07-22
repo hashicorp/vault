@@ -2227,6 +2227,10 @@
                       {
                         "title": "Encrypted client cache",
                         "path": "platform/k8s/vso/sources/vault/client-cache"
+                      },
+                      {
+                        "title": "Instant updates",
+                        "path": "platform/k8s/vso/sources/vault/instant-updates"
                       }
                     ]
                   },
