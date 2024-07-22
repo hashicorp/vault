@@ -5,6 +5,7 @@
 
 import { service } from '@ember/service';
 import Route from '@ember/routing/route';
+import errorMessage from 'vault/utils/error-message';
 
 export default class SecretsBackendConfigurationRoute extends Route {
   @service store;
@@ -27,14 +28,14 @@ export default class SecretsBackendConfigurationRoute extends Route {
       try {
         backend.configModel = await this.fetchAwsRootConfig(backend.id);
       } catch (e) {
-        backend.configError = e;
+        backend.configError = errorMessage(e);
       }
     }
     if (backend.type === 'ssh') {
       try {
         backend.configModel = await this.fetchSshCaConfig(backend.id);
       } catch (e) {
-        backend.configError = e;
+        backend.configError = backend.configError = errorMessage(e);
       }
     }
     if (backend.isV2KV) {
