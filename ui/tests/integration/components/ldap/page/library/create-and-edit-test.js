@@ -37,8 +37,8 @@ module('Integration | Component | ldap | Page::Library::CreateAndEdit', function
 
     this.breadcrumbs = [
       { label: 'ldap', route: 'overview' },
-      { label: 'libraries', route: 'libraries' },
-      { label: 'create' },
+      { label: 'Libraries', route: 'libraries' },
+      { label: 'Create' },
     ];
 
     this.renderComponent = () => {

@@ -21,9 +21,9 @@ export default class KubernetesRoleEditRoute extends Route {
 
     controller.breadcrumbs = [
       { label: resolvedModel.backend, route: 'overview' },
-      { label: 'roles', route: 'roles' },
+      { label: 'Roles', route: 'roles', model: resolvedModel.backend },
       { label: resolvedModel.name, route: 'roles.role' },
-      { label: 'edit' },
+      { label: 'Edit' },
     ];
   }
 }
