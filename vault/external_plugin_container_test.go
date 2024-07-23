@@ -53,6 +53,9 @@ func testClusterWithContainerPlugins(t *testing.T, types []consts.PluginType) (*
 }
 
 func TestExternalPluginInContainer_MountAndUnmount(t *testing.T) {
+	if os.Getenv("SKIP_DIDN_TEST") == "true" {
+		t.Skip("DIDN is going to be skip")
+	}
 	t.Run("rootful docker runtimes", func(t *testing.T) {
 		t.Setenv("DOCKER_HOST", "unix:///var/run/docker.sock")
 		c, plugins := testClusterWithContainerPlugins(t, []consts.PluginType{

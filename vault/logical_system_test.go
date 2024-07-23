@@ -3902,6 +3902,9 @@ func TestSystemBackend_PluginCatalogPins_CRUD(t *testing.T) {
 // TestSystemBackend_PluginCatalog_ContainerCRUD tests that plugins registered
 // with oci_image set get recorded properly in the catalog.
 func TestSystemBackend_PluginCatalog_ContainerCRUD(t *testing.T) {
+	if os.Getenv("SKIP_DIDN_TEST") == "true" {
+		t.Skip("DIDN test not suported")
+	}
 	if runtime.GOOS != "linux" {
 		t.Skip("Containerized plugins only supported on Linux")
 	}
