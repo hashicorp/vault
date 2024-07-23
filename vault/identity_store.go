@@ -731,11 +731,12 @@ func (i *IdentityStore) invalidateEntityBucket(ctx context.Context, key string) 
 			}
 
 			// If the entity exists in MemDB it must differ from the entity in
-			// the storage bucket because of above test. Go through all of the
-			// aliases currently set in the memDB entity and check if any of
-			// those are not in the bucket entity. Those aliases that are only
-			// found in the memDB entity, need to be deleted from MemDB because
-			// the upsertEntityInTxn function does not delete those aliases.
+			// the storage bucket because of above test. Blindly delete the
+			// current aliases associated with the MemDB entity. The correct set
+			// of aliases will be created in MemDB by the upsertEntityInTxn
+			// function. We need to do this because the upsertEntityInTxn
+			// function does not delete those aliases, it only creates missing
+			// ones.
 			if memDBEntity != nil {
 				if err := i.deleteAliasesInEntityInTxn(txn, memDBEntity, memDBEntity.Aliases); err != nil {
 					i.logger.Error("failed to remove entity aliases from changed entity", "entity_id", memDBEntity.ID, "error", err)
