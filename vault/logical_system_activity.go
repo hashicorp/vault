@@ -96,6 +96,40 @@ func (b *SystemBackend) activityPaths() []*framework.Path {
 	return []*framework.Path{
 		b.monthlyActivityCountPath(),
 		b.activityQueryPath(),
+		{
+			Pattern: "internal/counters/activity/export$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "internal-client-activity",
+				OperationVerb:   "export",
+			},
+
+			Fields: map[string]*framework.FieldSchema{
+				"start_time": {
+					Type:        framework.TypeTime,
+					Description: "Start of query interval",
+				},
+				"end_time": {
+					Type:        framework.TypeTime,
+					Description: "End of query interval",
+				},
+				"format": {
+					Type:        framework.TypeString,
+					Description: "Format of the file. Either a CSV or a JSON file with an object per line.",
+					Default:     "json",
+				},
+			},
+
+			HelpSynopsis:    strings.TrimSpace(sysHelp["activity-export"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["activity-export"][1]),
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleClientExport,
+					Summary:  "Returns a deduplicated export of all clients that had activity within the provided start and end times for this namespace and all child namespaces.",
+				},
+			},
+		},
 	}
 }
 
