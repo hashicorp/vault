@@ -5,6 +5,7 @@ package vault
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -240,12 +242,22 @@ func (b *SystemBackend) handleClientExport(ctx context.Context, req *logical.Req
 		}
 	}
 
-	runCtx, cancelFunc := context.WithTimeout(b.Core.activeContext, timeout)
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	nsActiveContext := namespace.ContextWithNamespace(b.Core.activeContext, ns)
+	runCtx, cancelFunc := context.WithTimeout(nsActiveContext, timeout)
 	defer cancelFunc()
 
 	err = a.writeExport(runCtx, req.ResponseWriter, d.Get("format").(string), startTime, endTime)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, ErrActivityExportNoDataInRange) || errors.Is(err, ErrActivityExportInProgress) || strings.HasPrefix(err.Error(), ActivityExportInvalidFormatPrefix) {
+			return logical.ErrorResponse(err.Error()), nil
+		} else {
+			return nil, err
+		}
 	}
 
 	return nil, nil

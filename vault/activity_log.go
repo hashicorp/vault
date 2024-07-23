@@ -96,9 +96,23 @@ const (
 	// activityLogMaximumRetentionMonths sets the default maximum retention_months
 	// to enforce when reporting is enabled.
 	activityLogMaximumRetentionMonths = 60
+
+	// ActivityExportInvalidFormatPrefix is used to check validation errors for the
+	// activity log export API handler
+	ActivityExportInvalidFormatPrefix = "invalid format"
 )
 
-var ActivityClientTypes = []string{nonEntityTokenActivityType, entityActivityType, secretSyncActivityType, ACMEActivityType}
+var (
+	ActivityClientTypes = []string{nonEntityTokenActivityType, entityActivityType, secretSyncActivityType, ACMEActivityType}
+
+	// ErrActivityExportInProgress is used to check validation errors for the
+	// activity log export API handler
+	ErrActivityExportInProgress = errors.New("existing export in progress")
+
+	// ErrActivityExportNoDataInRange is used to check validation errors for the
+	// activity log export API handler
+	ErrActivityExportNoDataInRange = errors.New("no data to export in provided time range")
+)
 
 type segmentInfo struct {
 	startTimestamp       int64
@@ -2928,10 +2942,9 @@ func (a *ActivityLog) partialMonthClientCount(ctx context.Context) (map[string]i
 }
 
 func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, format string, startTime, endTime time.Time) error {
-	// For capacity reasons only allow a single in-process export at a time.
-	// TODO do we really need to do this?
+	// Only allow a single in-process export at a time as they can be resource-intensive
 	if !a.inprocessExport.CAS(false, true) {
-		return fmt.Errorf("existing export in progress")
+		return ErrActivityExportInProgress
 	}
 	defer a.inprocessExport.Store(false)
 
@@ -2958,7 +2971,7 @@ func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, f
 	}
 	if len(filteredList) == 0 {
 		a.logger.Info("no data to export", "start_time", startTime, "end_time", endTime)
-		return fmt.Errorf("no data to export in provided time range")
+		return ErrActivityExportNoDataInRange
 	}
 
 	actualStartTime := filteredList[len(filteredList)-1]
