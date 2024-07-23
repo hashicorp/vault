@@ -41,13 +41,13 @@ export default class PkiIssuerRotateRootRoute extends Route {
     controller.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.secretMountPath.currentPath, route: 'overview', model: resolvedModel.oldRoot.backend },
-      { label: 'issuers', route: 'issuers.index', model: resolvedModel.oldRoot.backend },
+      { label: 'Issuers', route: 'issuers.index', model: resolvedModel.oldRoot.backend },
       {
         label: resolvedModel.oldRoot.id,
         route: 'issuers.issuer.details',
         models: [resolvedModel.oldRoot.backend, resolvedModel.oldRoot.id],
       },
-      { label: 'rotate root' },
+      { label: 'Rotate Root' },
     ];
   }
 }

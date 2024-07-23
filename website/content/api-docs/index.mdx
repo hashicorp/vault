@@ -54,6 +54,8 @@ in periods. Otherwise, Vault will return a 404 unsupported path error.
 
 ## Namespaces
 
+@include 'alerts/enterprise-and-hcp.mdx'
+
 When using [Namespaces](/vault/docs/enterprise/namespaces) the final path of the API
 request is relative to the `X-Vault-Namespace` header. For instance, if a
 request URI is `secret/foo` with the `X-Vault-Namespace` header set as `ns1/ns2/`,
@@ -82,6 +84,19 @@ $ curl \
     -X GET \
     http://127.0.0.1:8200/v1/ns1/ns2/secret/foo
 ```
+
+<Warning title="HCP Vault Dedicated">
+
+When you are working with HCP Vault Dedicated, your request must specify the
+target namespace. In absence of an explicit namespace, Vault tries to send
+the request to `root` namespace which results in an error. 
+
+The top-level namespace for HCP Vault Dedicated clusters is `admin`, so the
+requests must include `-H "X-Vault-Namespace: admin"` header or `admin` in the
+API endpoint path.
+
+</Warning>
+
 
 ## API operations
 

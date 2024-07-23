@@ -39,7 +39,7 @@ module('Integration | Component | kv | Page::Secret::Metadata::Version-History',
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.metadata.backend, route: 'list' },
       { label: this.metadata.path, route: 'secret.details', model: this.metadata.path },
-      { label: 'version history' },
+      { label: 'Version History' },
     ];
   });
 

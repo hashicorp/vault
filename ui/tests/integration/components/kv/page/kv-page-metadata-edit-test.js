@@ -44,7 +44,7 @@ module('Integration | Component | kv | Page::Secret::Metadata::Edit', function (
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.metadataModelCreate.backend, route: 'list' },
       { label: this.metadataModelCreate.path, route: 'secret.details', model: this.metadataModelCreate.path },
-      { label: 'metadata' },
+      { label: 'Metadata' },
     ];
     await render(
       hbs`
@@ -74,7 +74,7 @@ module('Integration | Component | kv | Page::Secret::Metadata::Edit', function (
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.metadataModelEdit.backend, route: 'list' },
       { label: this.metadataModelEdit.path, route: 'secret.details', model: this.metadataModelEdit.path },
-      { label: 'metadata' },
+      { label: 'Metadata' },
     ];
     await render(
       hbs`
@@ -131,7 +131,7 @@ module('Integration | Component | kv | Page::Secret::Metadata::Edit', function (
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.metadataModelEdit.backend, route: 'list' },
       { label: this.metadataModelEdit.path, route: 'secret.details', model: this.metadataModelEdit.path },
-      { label: 'metadata' },
+      { label: 'Metadata' },
     ];
     await render(
       hbs`
@@ -162,7 +162,7 @@ module('Integration | Component | kv | Page::Secret::Metadata::Edit', function (
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.metadataModelEdit.backend, route: 'list' },
       { label: this.metadataModelEdit.path, route: 'secret.details', model: this.metadataModelEdit.path },
-      { label: 'metadata' },
+      { label: 'Metadata' },
     ];
     await render(
       hbs`

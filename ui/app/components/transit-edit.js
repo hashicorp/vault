@@ -60,10 +60,10 @@ export default Component.extend(FocusOnInsertMixin, {
           models: [this.key.backend, this.key.id],
           query: { tab: 'details' },
         },
-        { label: 'edit' },
+        { label: 'Edit' },
       ];
     } else if (this.mode === 'create') {
-      return [...baseCrumbs, { label: 'create' }];
+      return [...baseCrumbs, { label: 'Create' }];
     }
     return baseCrumbs;
   },
