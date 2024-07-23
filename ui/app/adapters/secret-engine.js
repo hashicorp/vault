@@ -117,14 +117,12 @@ export default ApplicationAdapter.extend({
     }
   },
 
-  // ARG Todo moving to own adapter/model/serializer
   saveAWSRoot(store, type, snapshot) {
     const { data } = snapshot.adapterOptions;
     const path = encodePath(snapshot.id);
     return this.ajax(`/v1/${path}/config/root`, 'POST', { data });
   },
 
-  // ARG Todo moving to own adapter/model/serializer
   saveAWSLease(store, type, snapshot) {
     const { data } = snapshot.adapterOptions;
     const path = encodePath(snapshot.id);
