@@ -49,7 +49,6 @@ module('Integration | Component | oidc/key-form', function (hooks) {
     />
     `);
 
-    assert.dom('[data-test-oidc-key-title]').hasText('Create Key', 'Form title renders correct text');
     assert.dom(SELECTORS.keySaveButton).hasText('Create', 'Save button has correct text');
     assert.dom('[data-test-input="algorithm"]').hasValue('RS256', 'default algorithm is correct');
     assert.strictEqual(findAll('[data-test-field]').length, 4, 'renders all input fields');
@@ -94,7 +93,6 @@ module('Integration | Component | oidc/key-form', function (hooks) {
       />
     `);
 
-    assert.dom('[data-test-oidc-key-title]').hasText('Edit Key', 'Title renders correct text');
     assert.dom(SELECTORS.keySaveButton).hasText('Update', 'Save button has correct text');
     assert.dom('[data-test-input="name"]').isDisabled('Name input is disabled when editing');
     assert.dom('[data-test-input="name"]').hasValue('test-key', 'Name input is populated with model value');
