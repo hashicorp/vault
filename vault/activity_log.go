@@ -143,7 +143,8 @@ type ActivityLog struct {
 
 	// nodeID is the ID to use for all fragments that
 	// are generated.
-	// TODO: use secondary ID when available?
+	// This uses the primary ID as of right now, but
+	// could be adapted to use a secondary in the future.
 	nodeID string
 
 	// current log fragment (may be nil)
@@ -187,14 +188,6 @@ type ActivityLog struct {
 
 	inprocessExport *atomic.Bool
 
-	// CensusReportDone is a channel used to signal tests upon successful calls
-	// to (CensusReporter).Write() in CensusReport.
-	CensusReportDone chan bool
-
-	// CensusReportInterval is the testing configuration for time between
-	// Write() calls initiated in CensusReport.
-	CensusReportInterval time.Duration
-
 	// clock is used to support manipulating time in unit and integration tests
 	clock timeutil.Clock
 	// precomputedQueryWritten receives an element whenever a precomputed query
@@ -213,9 +206,6 @@ type ActivityLogCoreConfig struct {
 
 	// Do not start timers to send or persist fragments.
 	DisableTimers bool
-
-	// CensusReportInterval is the testing configuration for time
-	CensusReportInterval time.Duration
 
 	// MinimumRetentionMonths defines the minimum value for retention
 	MinimumRetentionMonths int
@@ -249,7 +239,6 @@ func NewActivityLog(core *Core, logger log.Logger, view *BarrierView, metrics me
 		sendCh:                    make(chan struct{}, 1), // buffered so it can be triggered by fragment size
 		doneCh:                    make(chan struct{}, 1),
 		partialMonthClientTracker: make(map[string]*activity.EntityRecord),
-		CensusReportInterval:      time.Hour * 1,
 		clock:                     clock,
 		currentSegment: segmentInfo{
 			startTimestamp: 0,
@@ -998,7 +987,7 @@ func (a *ActivityLog) refreshFromStoredLog(ctx context.Context, wg *sync.WaitGro
 	return nil
 }
 
-// This version is used during construction
+// SetConfigInit is used during construction
 func (a *ActivityLog) SetConfigInit(config activityConfig) {
 	switch config.Enabled {
 	case "enable":
@@ -1020,13 +1009,9 @@ func (a *ActivityLog) SetConfigInit(config activityConfig) {
 	if a.configOverrides.MinimumRetentionMonths > 0 {
 		a.retentionMonths = a.configOverrides.MinimumRetentionMonths
 	}
-
-	if a.configOverrides.CensusReportInterval > 0 {
-		a.CensusReportInterval = a.configOverrides.CensusReportInterval
-	}
 }
 
-// This version reacts to user changes
+// SetConfig reacts to user changes
 func (a *ActivityLog) SetConfig(ctx context.Context, config activityConfig) {
 	a.l.Lock()
 	defer a.l.Unlock()
@@ -1948,8 +1933,6 @@ type activityConfig struct {
 
 	// Enabled is one of enable, disable, default.
 	Enabled string `json:"enabled"`
-
-	CensusReportInterval time.Duration `json:"census_report_interval"`
 }
 
 func defaultActivityConfig() activityConfig {
