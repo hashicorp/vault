@@ -1701,9 +1701,7 @@ func (r *ResponseCounts) Add(newRecord *ResponseCounts) {
 	}
 	r.EntityClients += newRecord.EntityClients
 	r.Clients += newRecord.Clients
-	r.DistinctEntities += newRecord.DistinctEntities
 	r.NonEntityClients += newRecord.NonEntityClients
-	r.NonEntityTokens += newRecord.NonEntityTokens
 	r.ACMEClients += newRecord.ACMEClients
 	r.SecretSyncs += newRecord.SecretSyncs
 }
@@ -2747,7 +2745,7 @@ func (a *ActivityLog) calculateByNamespaceResponseForQuery(ctx context.Context, 
 			for _, mountRecord := range nsRecord.Mounts {
 				mountResponse = append(mountResponse, &ResponseMount{
 					MountPath: mountRecord.MountPath,
-					Counts:    a.countsRecordToCountsResponse(mountRecord.Counts, true),
+					Counts:    a.countsRecordToCountsResponse(mountRecord.Counts),
 				})
 			}
 			// Sort the mounts in descending order of usage
@@ -2832,7 +2830,7 @@ func (a *ActivityLog) prepareNamespaceResponse(ctx context.Context, nsRecords []
 
 				mountResponse = append(mountResponse, &ResponseMount{
 					MountPath: mountRecord.MountPath,
-					Counts:    a.countsRecordToCountsResponse(mountRecord.Counts, false),
+					Counts:    a.countsRecordToCountsResponse(mountRecord.Counts),
 				})
 			}
 
@@ -2845,7 +2843,7 @@ func (a *ActivityLog) prepareNamespaceResponse(ctx context.Context, nsRecords []
 			nsResponse := &ResponseNamespace{
 				NamespaceID:   nsRecord.NamespaceID,
 				NamespacePath: displayPath,
-				Counts:        *a.countsRecordToCountsResponse(nsRecord.Counts, false),
+				Counts:        *a.countsRecordToCountsResponse(nsRecord.Counts),
 				Mounts:        mountResponse,
 			}
 			nsResponses = append(nsResponses, nsResponse)
