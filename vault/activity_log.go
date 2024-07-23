@@ -2967,14 +2967,16 @@ func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, f
 	// Add headers here because we start to immediately write in the csv encoder
 	// constructor.
 	rw.Header().Add("Content-Disposition", fmt.Sprintf("attachment; filename=\"activity_export_%d_to_%d.%s\"", actualStartTime.Unix(), endTime.Unix(), format))
-	rw.Header().Add("Content-Type", fmt.Sprintf("application/%s", format))
 
 	var encoder encoder
 	switch format {
 	case "json":
+		rw.Header().Add("Content-Type", fmt.Sprintf("application/json"))
 		encoder = newJSONEncoder(rw)
 	case "csv":
 		var err error
+		rw.Header().Add("Content-Type", fmt.Sprintf("text/csv"))
+
 		encoder, err = newCSVEncoder(rw)
 		if err != nil {
 			return fmt.Errorf("failed to create csv encoder: %w", err)
