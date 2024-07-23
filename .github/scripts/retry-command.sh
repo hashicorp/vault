@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: BUSL-1.1
-set -euo pipefail
+set -uo pipefail
 
 tries=5
 count=0
@@ -14,5 +14,5 @@ do
   fi
   ((count++))
   echo "trying again, attempt $count"
-  sleep 2
+  sleep $count
 done
