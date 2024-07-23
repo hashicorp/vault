@@ -260,7 +260,9 @@ func (b *SystemBackend) handleClientExport(ctx context.Context, req *logical.Req
 		}
 	}
 
-	return nil, nil
+	// default status to 204, this will get rewritten to 200 later if the export writes data to req.ResponseWriter
+	respNoContent, err := logical.RespondWithStatusCode(&logical.Response{}, req, http.StatusNoContent)
+	return respNoContent, err
 }
 
 func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
