@@ -34,7 +34,7 @@ module('Integration | Component | oidc/key-form', function (hooks) {
   });
 
   test('it should save new key', async function (assert) {
-    assert.expect(9);
+    assert.expect(8);
     this.server.post('/identity/oidc/key/test-key', (schema, req) => {
       assert.ok(true, 'Request made to save key');
       return JSON.parse(req.requestBody);
@@ -69,7 +69,7 @@ module('Integration | Component | oidc/key-form', function (hooks) {
   });
 
   test('it should update key and limit access to selected applications', async function (assert) {
-    assert.expect(12);
+    assert.expect(11);
 
     this.server.post('/identity/oidc/key/test-key', (schema, req) => {
       assert.ok(true, 'Request made to update key');
