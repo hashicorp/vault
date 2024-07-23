@@ -2350,7 +2350,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@hashicorp/design-system-components@npm:^4.1.0":
+"@hashicorp/design-system-components@npm:^4.6.0":
   version: 4.6.0
   resolution: "@hashicorp/design-system-components@npm:4.6.0"
   dependencies:
@@ -18003,7 +18003,7 @@ __metadata:
     "@ember/test-waiters": ^3.1.0
     "@glimmer/component": ^1.1.2
     "@glimmer/tracking": ^1.1.2
-    "@hashicorp/design-system-components": ^4.1.0
+    "@hashicorp/design-system-components": ^4.6.0
     "@hashicorp/ember-flight-icons": ^5.0.1
     "@icholy/duration": ^5.1.0
     "@lineal-viz/lineal": ^0.5.1
