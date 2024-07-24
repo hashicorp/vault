@@ -190,4 +190,9 @@ export default class MountBackendForm extends Component<Args> {
     this.typeChangeSideEffect(value);
     this.checkPathChange(value);
   }
+
+  @action
+  handleIdentityTokenKeyChange(value: string[]): void {
+    this.args.mountModel.config.identityTokenKey = value[0];
+  }
 }

@@ -35,8 +35,18 @@
         @modelValidations={{this.modelValidations}}
         @onKeyUp={{this.onKeyUp}}
       />
-      <FormFieldGroups @model={{@mountModel}} @renderGroup="Method Options" />
-
+      <FormFieldGroups @model={{@mountModel}} @renderGroup="Method Options">
+        <:identityTokenKey>
+          <SearchSelectWithModal
+            @id="identityTokenKey"
+            @fallbackComponent="input-search"
+            @onChange={{this.handleIdentityTokenKeyChange}}
+            @models={{array "oidc/key"}}
+            @selectLimit="1"
+            @returnString={{true}}
+          />
+        </:identityTokenKey>
+      </FormFieldGroups>
       <div class="field is-grouped box is-fullwidth is-bottomless">
         <div class="control">
           <Hds::Button
