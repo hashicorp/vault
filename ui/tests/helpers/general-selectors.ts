@@ -21,6 +21,7 @@ export const GENERAL = {
 
   filter: (name: string) => `[data-test-filter="${name}"]`,
   filterInput: '[data-test-filter-input]',
+  inputSearch: (attr: string) => `[data-test-input-search="${attr}"]`,
   filterInputExplicit: '[data-test-filter-input-explicit]',
   filterInputExplicitSearch: '[data-test-filter-input-explicit-search]',
   confirmModalInput: '[data-test-confirmation-modal-input]',
@@ -41,6 +42,7 @@ export const GENERAL = {
   inputByAttr: (attr: string) => `[data-test-input="${attr}"]`,
   selectByAttr: (attr: string) => `[data-test-select="${attr}"]`,
   toggleInput: (attr: string) => `[data-test-toggle-input="${attr}"]`,
+  toggleGroup: (attr: string) => `[data-test-toggle-group="${attr}"]`,
   ttl: {
     toggle: (attr: string) => `[data-test-toggle-label="${attr}"]`,
     input: (attr: string) => `[data-test-ttl-value="${attr}"]`,
@@ -61,6 +63,7 @@ export const GENERAL = {
     selectedOption: (index = 0) => `[data-test-selected-option="${index}"]`,
     noMatch: '.ember-power-select-option--no-matches-message',
     removeSelected: '[data-test-selected-list-button="delete"]',
+    searchInput: '.ember-power-select-search-input',
   },
   overviewCard: {
     title: (title: string) => `[data-test-overview-card-title="${title}"]`,
