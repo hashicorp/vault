@@ -84,7 +84,9 @@ export default class OidcKeyForm extends Component {
           `Successfully ${isNew ? 'created' : 'updated'} the key
           ${name}.`
         );
-        this.args.onSave();
+        // this form is sometimes used in a modal, passing the model notifies
+        // the parent if the save was successful
+        this.args.onSave(this.args.model);
       }
     } catch (error) {
       const message = error.errors ? error.errors.join('. ') : error.message;
