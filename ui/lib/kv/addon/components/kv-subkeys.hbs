@@ -22,22 +22,22 @@
   </:subtext>
   <:action>
     <div>
-      <Toggle @name="json-subkeys" @checked={{this.showJson}} @onChange={{fn (mut this.showJson)}}>
+      <Toggle @name="kv-subkeys" @checked={{this.showJson}} @onChange={{fn (mut this.showJson)}}>
         <p class="has-text-grey">JSON</p>
       </Toggle>
     </div>
   </:action>
   <:content>
-    <div>
+    <div class="has-top-margin-s" data-test-overview-card-content="Subkeys">
       {{#if this.showJson}}
         <Hds::CodeBlock @value={{stringify @subkeys}} @hasLineNumbers={{false}} />
       {{else}}
-        <Hds::Text::Display @tag="p" @size="200" @weight="semibold" @color="faint" class="has-top-bottom-margin-s">
+        <Hds::Text::Display @tag="p" @size="200" @weight="semibold" @color="faint" class="has-bottom-margin-s">
           Keys
         </Hds::Text::Display>
         <hr class="has-background-gray-100 is-marginless" />
         {{#each-in @subkeys as |key|}}
-          <Hds::Text::Display @tag="p" @size="200" @weight="semibold" class="has-top-bottom-margin-s">
+          <Hds::Text::Display @tag="p" @size="200" @weight="semibold" class="has-top-bottom-margin-12">
             {{key}}
           </Hds::Text::Display>
           <hr class="has-background-gray-100 is-marginless" />
