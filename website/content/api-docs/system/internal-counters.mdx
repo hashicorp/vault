@@ -234,7 +234,7 @@ information will be returned for all months in the queried period, except for th
 current month. The last element in the `months` response stanza, will signify the current month. Furthermore, the
 `new_clients` counts returned for the current month will be an estimate.
 
-The following is another example of the `months` breakdown with just the current month information.
+The following is an example of the `months` breakdown with just the current month information.
 
 
 ```json
@@ -282,7 +282,35 @@ The following is another example of the `months` breakdown with just the current
                "acme_clients":"approx int value",
                "clients":"approx int value"
             },
-            "namespaces":[]
+            "namespaces":[
+               {
+                  "namespace_id":"root",
+                  "namespace_path":"",
+                  "counts":{},
+                  "mounts":[
+                     {
+                        "path":"auth/up2/",
+                        "counts":{
+                          "entity_clients":"approx int value",
+                          "non_entity_clients":"approx int value",
+                          "secret_syncs":"approx int value",
+                          "acme_clients":"approx int value",
+                          "clients":"approx int value"
+                         },
+                     },
+                     {
+                        "path":"auth/up1/",
+                        "counts":{
+                          "entity_clients":"approx int value",
+                          "non_entity_clients":"approx int value",
+                          "secret_syncs":"approx int value",
+                          "acme_clients":"approx int value",
+                          "clients":"approx int value"
+                        }
+                     }
+                  ]
+               }
+            ]
          }
       }
    ],
