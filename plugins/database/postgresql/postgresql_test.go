@@ -58,10 +58,77 @@ func TestPostgreSQL_Initialize(t *testing.T) {
 	}
 }
 
+// TestPostgreSQL_InitializeSSLFeatureFlag tests that the
+// VAULT_PLUGIN_USE_POSTGRES_SSLINLINE flag guards against unwanted usage of
+// the deprecated SSL client authentication path.
+// TODO: remove this when we remove the underlying feature in a future SDK version
 func TestPostgreSQL_InitializeSSLFeatureFlag(t *testing.T) {
-	// TODO
+	// set the flag to true so we can call PrepareTestContainerWithSSL
+	// which does a validation check on the connection
+	t.Setenv(pluginutil.PluginUsePostgresSSLInline, "true")
+
+	cleanup, connURL := postgresql.PrepareTestContainerWithSSL(t, context.Background())
+	t.Cleanup(cleanup)
+
+	type testCase struct {
+		env           string
+		wantErr       bool
+		expectedError string
+	}
+
+	tests := map[string]testCase{
+		"feature flag is true": {
+			env:           "true",
+			wantErr:       false,
+			expectedError: "",
+		},
+		"feature flag is unset or empty": {
+			env:           "",
+			wantErr:       true,
+			expectedError: "error verifying connection",
+		},
+		"feature flag is false": {
+			env:           "false",
+			wantErr:       true,
+			expectedError: "failed to open postgres connection with deprecated funtion",
+		},
+		"feature flag is invalid": {
+			env:           "foo",
+			wantErr:       true,
+			expectedError: "failed to open postgres connection with deprecated funtion",
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Setenv(pluginutil.PluginUsePostgresSSLInline, test.env)
+
+			connectionDetails := map[string]interface{}{
+				"connection_url":       connURL,
+				"max_open_connections": 5,
+			}
+
+			req := dbplugin.InitializeRequest{
+				Config:           connectionDetails,
+				VerifyConnection: true,
+			}
+
+			db := new()
+			_, err := dbtesting.VerifyInitialize(t, db, req)
+			if test.wantErr && err == nil {
+				t.Fatal("expected error, got nil")
+			} else if test.wantErr && !strings.Contains(err.Error(), test.expectedError) {
+				t.Fatalf("got: %s, want: %s", err.Error(), test.expectedError)
+			}
+			// unset for the next test case
+			os.Unsetenv(pluginutil.PluginUsePostgresSSLInline)
+		})
+	}
 }
 
+// TestPostgreSQL_InitializeSSL tests that we can successfully use authenticate
+// with a postgres server via ssl with a URL connection string.
+// TODO: remove this when we remove the underlying feature in a future SDK version
 func TestPostgreSQL_InitializeSSL(t *testing.T) {
 	t.Setenv(pluginutil.PluginUsePostgresSSLInline, "true")
 
@@ -71,6 +138,41 @@ func TestPostgreSQL_InitializeSSL(t *testing.T) {
 	connectionDetails := map[string]interface{}{
 		"connection_url":       connURL,
 		"max_open_connections": 5,
+	}
+
+	req := dbplugin.InitializeRequest{
+		Config:           connectionDetails,
+		VerifyConnection: true,
+	}
+
+	db := new()
+	dbtesting.AssertInitialize(t, db, req)
+
+	if !db.Initialized {
+		t.Fatal("Database should be initialized")
+	}
+
+	if err := db.Close(); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+}
+
+// TestPostgreSQL_InitializeSSL tests that we can successfully use authenticate
+// with a postgres server via ssl with a DSN (key/value) connection string.
+// TODO: remove this when we remove the underlying feature in a future SDK version
+func TestPostgreSQL_InitializeSSLWithDSN(t *testing.T) {
+	t.Setenv(pluginutil.PluginUsePostgresSSLInline, "true")
+
+	cleanup, connURL := postgresql.PrepareTestContainerWithSSL(t, context.Background())
+	t.Cleanup(cleanup)
+
+	dsnConnURL, err := dbutil.ParseURL(connURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	connectionDetails := map[string]interface{}{
+		"connection_url": dsnConnURL,
 	}
 
 	req := dbplugin.InitializeRequest{

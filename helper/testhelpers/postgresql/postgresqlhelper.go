@@ -193,13 +193,11 @@ func connectPostgresSSL(t *testing.T, connURL *url.URL, caCert, clientCert, clie
 
 	db, err := connutil.OpenPostgres("pgx", u.String())
 	if err != nil {
-		t.Fatalf("open err %s", err)
 		return nil, err
 	}
 	defer db.Close()
 
 	if err = db.Ping(); err != nil {
-		t.Fatalf("ping err %s", err)
 		return nil, err
 	}
 	return docker.NewServiceURL(u), nil
