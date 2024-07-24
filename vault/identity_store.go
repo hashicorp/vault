@@ -742,6 +742,11 @@ func (i *IdentityStore) invalidateEntityBucket(ctx context.Context, key string) 
 					i.logger.Error("failed to remove entity aliases from changed entity", "entity_id", memDBEntity.ID, "error", err)
 					return
 				}
+
+				if err := i.MemDBDeleteEntityByIDInTxn(txn, memDBEntity.ID); err != nil {
+					i.logger.Error("failed to delete changed entity", "entity_id", memDBEntity.ID, "error", err)
+					return
+				}
 			}
 
 			err = i.upsertEntityInTxn(ctx, txn, bucketEntity, nil, false)
