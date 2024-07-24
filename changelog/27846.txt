@@ -1,0 +1,7 @@
+```release-note:change
+activity: The [activity export API](https://developer.hashicorp.com/vault/api-docs/system/internal-counters#activity-export) now requires the `sudo` ACL capability.
+```
+
+```release-note:improvement
+activity: The [activity export API](https://developer.hashicorp.com/vault/api-docs/system/internal-counters#activity-export) can now be called in non-root namespaces. Resulting records will be filtered to include the requested namespace (via `X-Vault-Namespace` header or within the path) and all child namespaces.
+```
