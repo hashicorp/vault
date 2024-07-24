@@ -2467,10 +2467,6 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err := c.setupCensusManager(ctx); err != nil {
 			return err
 		}
-
-		c.StartCensusReports(ctx)
-		c.StartManualCensusSnapshots()
-
 	} else {
 		brokerLogger := logger.Named("audit")
 		broker, err := audit.NewBroker(brokerLogger)

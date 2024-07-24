@@ -40,3 +40,6 @@ func (c *Core) setupCensusManager(ctx context.Context) error {
 func (cm *CensusManager) BillingStart() time.Time {
 	return time.Time{}
 }
+
+// StartManualReportingSnapshots is a stub for CE.
+func (cm *CensusManager) StartManualReportingSnapshots() {}
