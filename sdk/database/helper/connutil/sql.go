@@ -219,7 +219,7 @@ func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, er
 
 	var err error
 	if driverName == "pgx" {
-		c.db, err = openPostgres(driverName, conn)
+		c.db, err = OpenPostgres(driverName, conn)
 	} else {
 		c.db, err = sql.Open(driverName, conn)
 	}

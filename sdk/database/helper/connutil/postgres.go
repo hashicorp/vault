@@ -25,7 +25,7 @@ import (
 // function to create a new connection. This is necessary because the pgx driver does not
 // support the sslinline parameter and instead expects to source ssl material from the
 // file system
-func openPostgres(driverName, connString string) (*sql.DB, error) {
+func OpenPostgres(driverName, connString string) (*sql.DB, error) {
 	var options pgconn.ParseConfigOptions
 
 	settings := make(map[string]string)
