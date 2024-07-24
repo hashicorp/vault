@@ -3990,8 +3990,8 @@ func TestActivityLog_partialMonthClientCount(t *testing.T) {
 	}
 
 	for _, clientCount := range clientCountResponse {
-		if int(clientCounts[clientCount.NamespaceID]) != clientCount.Counts.DistinctEntities {
-			t.Errorf("bad entity count for namespace %s . expected %d, got %d", clientCount.NamespaceID, int(clientCounts[clientCount.NamespaceID]), clientCount.Counts.DistinctEntities)
+		if int(clientCounts[clientCount.NamespaceID]) != clientCount.Counts.EntityClients {
+			t.Errorf("bad entity count for namespace %s . expected %d, got %d", clientCount.NamespaceID, int(clientCounts[clientCount.NamespaceID]), clientCount.Counts.EntityClients)
 		}
 		totalCount := int(clientCounts[clientCount.NamespaceID])
 		if totalCount != clientCount.Counts.Clients {
@@ -3999,12 +3999,12 @@ func TestActivityLog_partialMonthClientCount(t *testing.T) {
 		}
 	}
 
-	distinctEntities, ok := results["distinct_entities"]
+	entityClients, ok := results["entity_clients"]
 	if !ok {
 		t.Fatalf("malformed results. got %v", results)
 	}
-	if distinctEntities != len(clients) {
-		t.Errorf("bad entity count. expected %d, got %d", len(clients), distinctEntities)
+	if entityClients != len(clients) {
+		t.Errorf("bad entity count. expected %d, got %d", len(clients), entityClients)
 	}
 
 	clientCount, ok := results["clients"]
@@ -4067,8 +4067,8 @@ func TestActivityLog_partialMonthClientCountUsingHandleQuery(t *testing.T) {
 	}
 
 	for _, clientCount := range clientCountResponse {
-		if int(clientCounts[clientCount.NamespaceID]) != clientCount.Counts.DistinctEntities {
-			t.Errorf("bad entity count for namespace %s . expected %d, got %d", clientCount.NamespaceID, int(clientCounts[clientCount.NamespaceID]), clientCount.Counts.DistinctEntities)
+		if int(clientCounts[clientCount.NamespaceID]) != clientCount.Counts.EntityClients {
+			t.Errorf("bad entity count for namespace %s . expected %d, got %d", clientCount.NamespaceID, int(clientCounts[clientCount.NamespaceID]), clientCount.Counts.EntityClients)
 		}
 		totalCount := int(clientCounts[clientCount.NamespaceID])
 		if totalCount != clientCount.Counts.Clients {
@@ -4082,9 +4082,9 @@ func TestActivityLog_partialMonthClientCountUsingHandleQuery(t *testing.T) {
 	}
 	totalCounts := ResponseCounts{}
 	err = mapstructure.Decode(totals, &totalCounts)
-	distinctEntities := totalCounts.DistinctEntities
-	if distinctEntities != len(clients) {
-		t.Errorf("bad entity count. expected %d, got %d", len(clients), distinctEntities)
+	entityClients := totalCounts.EntityClients
+	if entityClients != len(clients) {
+		t.Errorf("bad entity count. expected %d, got %d", len(clients), entityClients)
 	}
 
 	clientCount := totalCounts.Clients
@@ -4112,14 +4112,8 @@ func TestActivityLog_partialMonthClientCountUsingHandleQuery(t *testing.T) {
 	if monthsResponse[0].Counts.NonEntityClients != totalCounts.NonEntityClients {
 		t.Fatalf("wrong non-entity client count. got %v, expected %v", monthsResponse[0].Counts.NonEntityClients, totalCounts.NonEntityClients)
 	}
-	if monthsResponse[0].Counts.NonEntityTokens != totalCounts.NonEntityTokens {
-		t.Fatalf("wrong non-entity client count. got %v, expected %v", monthsResponse[0].Counts.NonEntityTokens, totalCounts.NonEntityTokens)
-	}
 	if monthsResponse[0].Counts.Clients != monthsResponse[0].NewClients.Counts.Clients {
 		t.Fatalf("wrong client count. got %v, expected %v", monthsResponse[0].Counts.Clients, monthsResponse[0].NewClients.Counts.Clients)
-	}
-	if monthsResponse[0].Counts.DistinctEntities != monthsResponse[0].NewClients.Counts.DistinctEntities {
-		t.Fatalf("wrong distinct entities count. got %v, expected %v", monthsResponse[0].Counts.DistinctEntities, monthsResponse[0].NewClients.Counts.DistinctEntities)
 	}
 	if monthsResponse[0].Counts.EntityClients != monthsResponse[0].NewClients.Counts.EntityClients {
 		t.Fatalf("wrong entity client count. got %v, expected %v", monthsResponse[0].Counts.EntityClients, monthsResponse[0].NewClients.Counts.EntityClients)
@@ -4127,15 +4121,11 @@ func TestActivityLog_partialMonthClientCountUsingHandleQuery(t *testing.T) {
 	if monthsResponse[0].Counts.NonEntityClients != monthsResponse[0].NewClients.Counts.NonEntityClients {
 		t.Fatalf("wrong non-entity client count. got %v, expected %v", monthsResponse[0].Counts.NonEntityClients, monthsResponse[0].NewClients.Counts.NonEntityClients)
 	}
-	if monthsResponse[0].Counts.NonEntityTokens != monthsResponse[0].NewClients.Counts.NonEntityTokens {
-		t.Fatalf("wrong non-entity token count. got %v, expected %v", monthsResponse[0].Counts.NonEntityTokens, monthsResponse[0].NewClients.Counts.NonEntityTokens)
-	}
-
 	namespaceResponseMonth := monthsResponse[0].Namespaces
 
 	for _, clientCount := range namespaceResponseMonth {
 		if int(clientCounts[clientCount.NamespaceID]) != clientCount.Counts.EntityClients {
-			t.Errorf("bad entity count for namespace %s . expected %d, got %d", clientCount.NamespaceID, int(clientCounts[clientCount.NamespaceID]), clientCount.Counts.DistinctEntities)
+			t.Errorf("bad entity count for namespace %s . expected %d, got %d", clientCount.NamespaceID, int(clientCounts[clientCount.NamespaceID]), clientCount.Counts.EntityClients)
 		}
 		totalCount := int(clientCounts[clientCount.NamespaceID])
 		if totalCount != clientCount.Counts.Clients {

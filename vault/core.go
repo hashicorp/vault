@@ -727,6 +727,8 @@ type Core struct {
 	periodicLeaderRefreshInterval time.Duration
 
 	clusterAddrBridge *raft.ClusterAddrBridge
+
+	censusManager *CensusManager
 }
 
 func (c *Core) ActiveNodeClockSkewMillis() int64 {
@@ -1314,6 +1316,19 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	if c.versionHistory == nil {
 		c.logger.Info("Initializing version history cache for core")
 		c.versionHistory = make(map[string]VaultVersion)
+	}
+
+	// Setup the Census Manager
+	cmConfig, err := c.parseCensusManagerConfig(conf)
+	if err != nil {
+		return nil, err
+	}
+
+	cmLogger := conf.Logger.Named("reporting")
+	c.allLoggers = append(c.allLoggers, cmLogger)
+	c.censusManager, err = NewCensusManager(cmLogger, cmConfig, NewBarrierView(c.barrier, utilizationBasePath))
+	if err != nil {
+		return nil, err
 	}
 
 	// Events
@@ -2449,15 +2464,16 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 			return err
 		}
 
-		if err := c.setupCensusManager(); err != nil {
-			logger.Error("failed to instantiate the license reporting agent", "error", err)
+		if err := c.setupCensusManager(ctx); err != nil {
+			return err
 		}
 
 		c.StartCensusReports(ctx)
 		c.StartManualCensusSnapshots()
 
 	} else {
-		broker, err := audit.NewBroker(logger)
+		brokerLogger := logger.Named("audit")
+		broker, err := audit.NewBroker(brokerLogger)
 		if err != nil {
 			return err
 		}
