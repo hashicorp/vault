@@ -3,8 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-// import { visit, currentURL } from '@ember/test-helpers';
-
 export const createSecretsEngine = (store, type, path) => {
   store.pushPayload('secret-engine', {
     modelName: 'secret-engine',
