@@ -31,8 +31,9 @@ func defaultRunOpts(t *testing.T) docker.RunOptions {
 			"POSTGRES_PASSWORD=" + defaultPostgresPassword,
 			"POSTGRES_DB=database",
 		},
-		Ports:           []string{"5432/tcp"},
-		DoNotAutoRemove: false,
+		Ports:             []string{"5432/tcp"},
+		DoNotAutoRemove:   false,
+		OmitLogTimestamps: true,
 		LogConsumer: func(s string) {
 			if t.Failed() {
 				t.Logf("container logs: %s", s)
@@ -59,7 +60,7 @@ func PrepareTestContainerWithVaultUser(t *testing.T, ctx context.Context) (func(
 	return cleanup, url
 }
 
-func PrepareTestContainerWithSSL(t *testing.T, ctx context.Context) (func(), string, certhelpers.Certificate) {
+func PrepareTestContainerWithSSL(t *testing.T, ctx context.Context) (func(), string) {
 	runOpts := defaultRunOpts(t)
 	runner, err := docker.NewServiceRunner(runOpts)
 	if err != nil {
@@ -74,17 +75,17 @@ func PrepareTestContainerWithSSL(t *testing.T, ctx context.Context) (func(), str
 
 	// Create certificates for postgres authentication
 	caCert := certhelpers.NewCert(t,
-		certhelpers.CommonName("test certificate authority"),
+		certhelpers.CommonName("ca"),
 		certhelpers.IsCA(true),
 		certhelpers.SelfSign(),
 	)
 	serverCert := certhelpers.NewCert(t,
-		certhelpers.CommonName("postgres"),
+		certhelpers.CommonName("server"),
 		certhelpers.DNS("localhost"),
 		certhelpers.Parent(caCert),
 	)
 	clientCert := certhelpers.NewCert(t,
-		certhelpers.CommonName("client"),
+		certhelpers.CommonName("postgres"),
 		certhelpers.DNS("localhost"),
 		certhelpers.Parent(caCert),
 	)
@@ -92,33 +93,56 @@ func PrepareTestContainerWithSSL(t *testing.T, ctx context.Context) (func(), str
 	bCtx := docker.NewBuildContext()
 	bCtx["ca.crt"] = docker.PathContentsFromBytes(caCert.CombinedPEM())
 	bCtx["server.crt"] = docker.PathContentsFromBytes(serverCert.CombinedPEM())
-	bCtx["server.key"] = docker.PathContentsFromBytes(serverCert.PrivateKeyPEM())
+	bCtx["server.key"] = &docker.FileContents{
+		Data: serverCert.PrivateKeyPEM(),
+		Mode: 0o600,
+		// postgres uid
+		UID: 999,
+	}
+
 	// https://www.postgresql.org/docs/current/auth-pg-hba-conf.html
 	clientAuthConfig := "echo 'hostssl all all all cert clientcert=verify-ca' > /var/lib/postgresql/data/pg_hba.conf"
 	bCtx["ssl-conf.sh"] = docker.PathContentsFromString(clientAuthConfig)
+	pgConfig := `
+cat << EOF > /var/lib/postgresql/data/postgresql.conf
+# PostgreSQL configuration file
+listen_addresses = '*'
+max_connections = 100
+shared_buffers = 128MB
+dynamic_shared_memory_type = posix
+max_wal_size = 1GB
+min_wal_size = 80MB
+ssl = on
+ssl_ca_file = '/var/lib/postgresql/ca.crt'
+ssl_cert_file = '/var/lib/postgresql/server.crt'
+ssl_key_file= '/var/lib/postgresql/server.key'
+EOF
+`
+	bCtx["pg-conf.sh"] = docker.PathContentsFromString(pgConfig)
 
 	err = runner.CopyTo(id, "/var/lib/postgresql/", bCtx)
 	if err != nil {
 		t.Fatalf("failed to copy to container: %v", err)
 	}
 
-	// run the ssl init script to overwrite the pg_hba.conf file and set it to
-	// require SSL for each connection
+	// overwrite the postgresql.conf config file with our ssl settings
+	mustRunCommand(t, ctx, runner, id,
+		[]string{"bash", "/var/lib/postgresql/pg-conf.sh"})
+
+	// overwrite the pg_hba.conf file and set it to require SSL for each connection
 	mustRunCommand(t, ctx, runner, id,
 		[]string{"bash", "/var/lib/postgresql/ssl-conf.sh"})
 
 	// reload so the config changes take effect and ssl is enabled
 	mustRunCommand(t, ctx, runner, id,
 		[]string{"psql", "-U", "postgres", "-c", "SELECT pg_reload_conf()"})
-	mustRunCommand(t, ctx, runner, id,
-		[]string{"cat", "/var/lib/postgresql/data/pg_hba.conf"})
 
 	svcConfig, err := connectPostgresSSL(t, svc.Config.URL(), string(caCert.CombinedPEM()), string(clientCert.CombinedPEM()), string(clientCert.PrivateKeyPEM()))
 	if err != nil {
-		// svc.Cleanup()
+		svc.Cleanup()
 		t.Fatalf("failed to connect to postgres container via SSL: %v", err)
 	}
-	return svc.Cleanup, svcConfig.URL().String(), clientCert
+	return svc.Cleanup, svcConfig.URL().String()
 }
 
 func PrepareTestContainerWithPassword(t *testing.T, password string) (func(), string) {
@@ -153,16 +177,20 @@ func prepareTestContainer(t *testing.T, runOpts docker.RunOptions, password stri
 }
 
 func connectPostgresSSL(t *testing.T, connURL *url.URL, caCert, clientCert, clientKey string) (docker.ServiceConfig, error) {
-	caCert = "foo"
 	u := url.URL{
-		Scheme:   "postgres",
-		User:     url.User("client"),
-		Host:     connURL.Host,
-		Path:     "postgres",
-		RawQuery: url.QueryEscape("sslmode=verify-full&sslinline=true&sslrootcert=" + caCert + "&sslcert=" + clientCert + "&sslkey=" + clientKey),
+		Scheme: "postgres",
+		User:   url.User("postgres"),
+		Host:   connURL.Host,
+		Path:   "postgres",
+		RawQuery: url.Values{
+			"sslmode":     {"verify-ca"},
+			"sslinline":   {"true"},
+			"sslrootcert": {caCert},
+			"sslcert":     {clientCert},
+			"sslkey":      {clientKey},
+		}.Encode(),
 	}
 
-	t.Logf("\nurl: %s\n", u.String())
 	db, err := connutil.OpenPostgres("pgx", u.String())
 	if err != nil {
 		t.Fatalf("open err %s", err)
@@ -214,12 +242,11 @@ func RestartContainer(t *testing.T, ctx context.Context, runner *docker.Runner, 
 
 func mustRunCommand(t *testing.T, ctx context.Context, runner *docker.Runner, containerID string, cmd []string) {
 	t.Helper()
-	stdout, stderr, retcode, err := runner.RunCmdWithOutput(ctx, containerID, cmd)
+	_, stderr, retcode, err := runner.RunCmdWithOutput(ctx, containerID, cmd)
 	if err != nil {
 		t.Fatalf("Could not run command (%v) in container: %v", cmd, err)
 	}
 	if retcode != 0 || len(stderr) != 0 {
 		t.Fatalf("exit code: %v, stderr: %v", retcode, string(stderr))
 	}
-	t.Logf("stdout: %v", string(stdout))
 }

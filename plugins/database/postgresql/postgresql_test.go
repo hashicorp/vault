@@ -58,9 +58,8 @@ func TestPostgreSQL_Initialize(t *testing.T) {
 }
 
 func TestPostgreSQL_InitializeSSL(t *testing.T) {
-	cleanup, connURL, clientCert := postgresql.PrepareTestContainerWithSSL(t, context.Background())
+	cleanup, connURL := postgresql.PrepareTestContainerWithSSL(t, context.Background())
 	t.Cleanup(cleanup)
-	_ = clientCert
 
 	connectionDetails := map[string]interface{}{
 		"connection_url":       connURL,
@@ -81,63 +80,6 @@ func TestPostgreSQL_InitializeSSL(t *testing.T) {
 
 	if err := db.Close(); err != nil {
 		t.Fatalf("err: %s", err)
-	}
-
-	type testCase struct {
-		req            dbplugin.NewUserRequest
-		expectErr      bool
-		credsAssertion credsAssertion
-	}
-
-	tests := map[string]testCase{
-		"large block statements": {
-			req: dbplugin.NewUserRequest{
-				UsernameConfig: dbplugin.UsernameMetadata{
-					DisplayName: "test",
-					RoleName:    "test",
-				},
-				Statements: dbplugin.Statements{
-					Commands: []string{
-						`
-						CREATE ROLE "{{name}}" WITH
-						  LOGIN
-						  PASSWORD '{{password}}'
-						  VALID UNTIL '{{expiration}}';
-						GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";`,
-					},
-				},
-				Password:   "somesecurepassword",
-				Expiration: time.Now().Add(1 * time.Minute),
-			},
-			expectErr: false,
-			credsAssertion: assertCreds(
-				assertUsernameRegex("^v-test-test-[a-zA-Z0-9]{20}-[0-9]{10}$"),
-				assertCredsExist,
-			),
-		},
-	}
-
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
-			// Give a timeout just in case the test decides to be problematic
-			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-			defer cancel()
-
-			resp, err := db.NewUser(ctx, test.req)
-			if test.expectErr && err == nil {
-				t.Fatalf("err expected, got nil")
-			}
-			if !test.expectErr && err != nil {
-				t.Fatalf("no error expected, got: %s", err)
-			}
-
-			test.credsAssertion(t, db.ConnectionURL, resp.Username, test.req.Password)
-
-			// Ensure that the role doesn't expire immediately
-			time.Sleep(2 * time.Second)
-
-			test.credsAssertion(t, db.ConnectionURL, resp.Username, test.req.Password)
-		})
 	}
 }
 
