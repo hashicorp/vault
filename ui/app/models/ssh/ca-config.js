@@ -6,7 +6,7 @@
 import Model, { attr } from '@ember-data/model';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
-export default class AwsRootConfig extends Model {
+export default class SshCaConfig extends Model {
   @attr('string') backend; // dynamic path of secret -- set on response from value passed to queryRecord
   @attr('string', { sensitive: true }) privateKey;
   @attr('string', { sensitive: true }) publicKey;

@@ -6,7 +6,7 @@
 import ApplicationAdapter from '../application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 
-export default class AwsRootConfig extends ApplicationAdapter {
+export default class SshCaConfig extends ApplicationAdapter {
   namespace = 'v1';
 
   queryRecord(store, type, query) {
