@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws/credentials"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -130,11 +132,12 @@ func (b *backend) getClientConfig(ctx context.Context, s logical.Storage, region
 		if err != nil {
 			return nil, err
 		}
-		var extIDFunc func(provider *stscreds.AssumeRoleProvider)
+		var assumedCredentials *credentials.Credentials
 		if externalID != "" {
-			extIDFunc = func(p *stscreds.AssumeRoleProvider) { p.ExternalID = aws.String(externalID) }
+			assumedCredentials = stscreds.NewCredentials(sess, externalID, func(p *stscreds.AssumeRoleProvider) { p.ExternalID = aws.String(externalID) })
+		} else {
+			assumedCredentials = stscreds.NewCredentials(sess, externalID)
 		}
-		assumedCredentials := stscreds.NewCredentials(sess, stsRole, extIDFunc)
 		// Test that we actually have permissions to assume the role
 		if _, err = assumedCredentials.Get(); err != nil {
 			return nil, err
