@@ -1,0 +1,45 @@
+---
+layout: api
+page_title: /sys/leader - HTTP API
+description: |-
+  The `/sys/leader` endpoint is used to check the high availability status and
+  current leader of Vault.
+---
+
+# `/sys/leader`
+
+The `/sys/leader` endpoint is used to check the high availability status and
+current leader of Vault.
+
+## Read leader status
+
+This endpoint returns the high availability status and current leader instance
+of Vault.
+
+| Method | Path          |
+| :----- | :------------ |
+| `GET`  | `/sys/leader` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    http://127.0.0.1:8200/v1/sys/leader
+```
+
+### Sample response
+
+```json
+{
+  "ha_enabled": true,
+  "is_self": false,
+  "active_time": "2024-01-09T00:11:46.439409062Z",
+  "leader_address": "https://127.0.0.1:8200/",
+  "leader_cluster_address": "https://127.0.0.1:8201/",
+  "performance_standby": false,
+  "performance_standby_last_remote_wal": 0,
+  "last_wal": 0,
+  "raft_committed_index": 0,
+  "raft_applied_index": 0
+}
+```

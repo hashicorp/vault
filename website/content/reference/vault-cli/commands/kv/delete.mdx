@@ -1,0 +1,48 @@
+---
+layout: docs
+page_title: kv delete - Command
+description: |-
+  The "kv delete" command deletes the data for the provided path in the key/value secrets engine.
+---
+
+# kv delete
+
+The `kv delete` command deletes the data for the provided path in
+the key/value secrets engine. If using KV version 2, its versioned data will
+not be fully removed, but marked as deleted and will no longer be returned in
+normal get requests.
+
+## Examples
+
+Delete the latest version of the key "creds":
+
+```shell-session
+$ vault kv delete -mount=secret creds
+Success! Data deleted (if it existed) at: secret/creds
+```
+
+**[KV version 2]** Delete version 11 of key "creds":
+
+```shell-session
+$ vault kv delete -mount=secret -versions=11 creds
+Success! Data deleted (if it existed) at: secret/data/creds
+```
+
+## Usage
+
+There are no flags beyond the [standard set of flags](/vault/docs/commands)
+included on all commands.
+
+### Command options
+
+- `-mount` `(string: "")` - Specifies the path where the KV backend is mounted.
+  If specified, the next argument will be interpreted as the secret path. If
+  this flag is not specified, the next argument will be interpreted as the
+  combined mount path and secret path, with /data/ automatically inserted for
+  KV v2 secrets.
+
+- `-versions` `([]int: <required>)` - The versions to be deleted. The versioned
+  data will not be deleted, but it will no longer be returned in normal get
+  requests.
+
+~> **NOTE:** The `-versions` command option is only for KV v2.

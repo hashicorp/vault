@@ -1,0 +1,72 @@
+---
+layout: api
+page_title: /sys/sealwrap/rewrap - HTTP API
+description: >-
+  The `/sys/sealwrap/rewrap` endpoint is used to rewrap all seal wrapped
+  entries.
+---
+
+# `/sys/sealwrap/rewrap`
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
+The `/sys/sealwrap/rewrap` endpoint is used to rewrap all seal wrapped entries.
+This is useful when you want to upgrade seal wrapped entries to use the latest
+key, for example, after a seal migration or after rotating the remote keyring.
+
+## Read rewrap status
+
+This endpoint reports whether a seal rewrap process is currently running.
+
+| Method | Path                   |
+| :----- | :--------------------- |
+| `GET`  | `/sys/sealwrap/rewrap` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/sealwrap/rewrap
+```
+
+### Sample response
+
+```json
+{
+  "data": {
+    "entries": {
+      "failed": 0,
+      "processed": 30,
+      "succeeded": 30
+    },
+    "is_running": false
+  }
+}
+```
+
+## Start a seal rewrap process
+
+This endpoint starts a seal rewrap process if one is not currently running.
+The process will run in the background. Check the vault server logs for status
+and progress updates.
+
+| Method | Path                   |
+| :----- | :--------------------- |
+| `POST` | `/sys/sealwrap/rewrap` |
+
+The default status codes are:
+
+- `200` if a seal rewrap process is already running
+- `204` if a seal rewrap process was started
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    http://127.0.0.1:8200/v1/sys/sealwrap/rewrap
+```

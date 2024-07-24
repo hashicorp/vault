@@ -1,0 +1,9 @@
+<a id="env-vault_cacert" />
+
+- **`VAULT_CACERT`** - Path to a PEM-encoded CA certificate file on the local
+  disk. Used to verify SSL certificates for the server. **Takes precedence over
+  `VAULT_CAPATH`**.
+  
+  ```shell-session
+  $ export VAULT_CACERT="/path/to/certs/mycert.pem"
+  ```

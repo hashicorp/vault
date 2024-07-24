@@ -1,0 +1,13 @@
+---
+
+<a id="flag-path" />
+
+**`-path <string: "{device-type}/">`**
+
+Path to the audit device. Device paths must be unique across all audit devices.
+
+```shell-session
+$ vault audit enable file \
+    -path="temp-file/"    \
+    file_path=/tmp/my-file.txt
+```

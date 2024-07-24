@@ -1,0 +1,1227 @@
+[
+  {
+    "title": "Vault API",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "vault-api"
+      },
+      {
+        "title": "Client libraries",
+        "path": "vault-api/libraries"
+      },
+      {
+        "title": "Related tools",
+        "path": "vault-api/relatedtools"
+      },
+
+      { "divider": true },
+      { "heading": "ENDPOINTS" },
+
+      {
+        "title": "<code>/auth</code>",
+        "routes": [
+          {
+            "title": "<code>/auth/token/</code>",
+            "routes": [
+              {
+                "title": "<code>/auth/token/accessors</code>",
+                "path": "vault-api/auth/token/accessors"
+              },
+              {
+                "title": "<code>/auth/token/create</code>",
+                "routes": [
+                  {
+                    "title": "Create token",
+                    "path": "vault-api/auth/token/create"
+                  },
+                  {
+                    "title": "Create token with role",
+                    "path": "vault-api/auth/token/create/create-with-role"
+                  }
+                ]
+              },
+              {
+                "title": "<code>/auth/token/create-orphan</code>",
+                "path": "vault-api/auth/token/create-orphan"
+              },
+              {
+                "title": "<code>/auth/token/lookup</code>",
+                "path": "vault-api/auth/token/lookup"
+              },
+              {
+                "title": "<code>/auth/token/lookup-accessor</code>",
+                "path": "vault-api/auth/token/lookup-accessor"
+              },
+              {
+                "title": "<code>/auth/token/lookup-self</code>",
+                "path": "vault-api/auth/token/lookup-self"
+              },
+              {
+                "title": "<code>/auth/token/renew</code>",
+                "path": "vault-api/auth/token/renew"
+              },
+              {
+                "title": "<code>/auth/token/renew-accessors</code>",
+                "path": "vault-api/auth/token/renew-accessor"
+              },
+              {
+                "title": "<code>/auth/token/renew-self</code>",
+                "path": "vault-api/auth/token/renew-self"
+              },
+              {
+                "title": "<code>/auth/token/revoke</code>",
+                "path": "vault-api/auth/token/revoke"
+              },
+              {
+                "title": "<code>/auth/token/revoke-accessor</code>",
+                "path": "vault-api/auth/token/revoke-accessor"
+              },
+              {
+                "title": "<code>/auth/token/revoke-orphan</code>",
+                "path": "vault-api/auth/token/revoke-orphan"
+              },
+              {
+                "title": "<code>/auth/token/revoke-self</code>",
+                "path": "vault-api/auth/token/revoke-self"
+              },
+              {
+                "title": "<code>/auth/token/roles</code>",
+                "routes": [
+                  {
+                    "title": "Delete role",
+                    "path": "vault-api/auth/token/roles/delete"
+                  },
+                  {
+                    "title": "List role",
+                    "path": "vault-api/auth/token/roles/list"
+                  },
+                  {
+                    "title": "Read role",
+                    "path": "vault-api/auth/token/roles/read"
+                  },
+                  {
+                    "title": "Upsert role",
+                    "path": "vault-api/auth/token/roles/upsert"
+                  }
+                ]
+              },
+              {
+                "title": "<code>/auth/token/tidy</code>",
+                "path": "vault-api/auth/token/tidy"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "title": "<code>/cubbyhole</code>",
+        "routes": [
+          {
+            "title": "Delete cubbyhole secret",
+            "path": "vault-api/cubbyhole/delete"
+          },
+          {
+            "title": "List cubbyhole secrets",
+            "path": "vault-api/cubbyhole/list"
+          },
+          {
+            "title": "Read cubbyhole secret",
+            "path": "vault-api/cubbyhole/read"
+          },
+          {
+            "title": "Upsert cubbyhole secret",
+            "path": "vault-api/cubbyhole/upsert"
+          }
+        ]
+      },
+      {
+        "title": "<code>/database</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "vault-api/database"
+          },
+          {
+            "title": "Cassandra",
+            "path": "vault-api/database/cassandra"
+          },
+          {
+            "title": "Couchbase",
+            "path": "vault-api/database/couchbase"
+          },
+          {
+            "title": "Elasticsearch",
+            "path": "vault-api/database/elasticdb"
+          },
+          {
+            "title": "Influxdb",
+            "path": "vault-api/database/influxdb"
+          },
+          {
+            "title": "HanaDB",
+            "path": "vault-api/database/hanadb"
+          },
+          {
+            "title": "MongoDB",
+            "path": "vault-api/database/mongodb"
+          },
+          {
+            "title": "MongoDB Atlas",
+            "path": "vault-api/database/mongodbatlas"
+          },
+          {
+            "title": "MSSQL",
+            "path": "vault-api/database/mssql"
+          },
+          {
+            "title": "MySQL/MariaDB",
+            "path": "vault-api/database/mysql-maria"
+          },
+          {
+            "title": "Oracle",
+            "path": "vault-api/database/oracle"
+          },
+          {
+            "title": "PostgreSQL",
+            "path": "vault-api/database/postgresql"
+          },
+          {
+            "title": "Redis",
+            "path": "vault-api/database/redis"
+          },
+          {
+            "title": "Redis ElastiCache",
+            "path": "vault-api/database/rediselasticache"
+          },
+          {
+            "title": "Redshift",
+            "path": "vault-api/database/redshift"
+          },
+          {
+            "title": "Snowflake",
+            "path": "vault-api/database/snowflake"
+          }
+        ]
+      },
+      {
+        "title": "<code>/identity</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "vault-api/identity"
+          },
+          {
+            "title": "Entity",
+            "path": "vault-api/identity/entity"
+          },
+          {
+            "title": "Entity Alias",
+            "path": "vault-api/identity/entity-alias"
+          },
+          {
+            "title": "Group",
+            "path": "vault-api/identity/group"
+          },
+          {
+            "title": "Group Alias",
+            "path": "vault-api/identity/group-alias"
+          },
+          {
+            "title": "Identity Tokens",
+            "path": "vault-api/identity/tokens"
+          },
+          {
+            "title": "Lookup",
+            "path": "vault-api/identity/lookup"
+          },
+          {
+            "title": "OIDC Provider",
+            "path": "vault-api/identity/oidc-provider"
+          },
+          {
+            "title": "MFA",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "vault-api/identity/mfa"
+              },
+              {
+                "title": "Duo",
+                "path": "vault-api/identity/mfa/duo"
+              },
+              {
+                "title": "Okta",
+                "path": "vault-api/identity/mfa/okta"
+              },
+              {
+                "title": "PingID",
+                "path": "vault-api/identity/mfa/pingid"
+              },
+              {
+                "title": "TOTP",
+                "path": "vault-api/identity/mfa/totp"
+              },
+              {
+                "title": "Login Enforcement",
+                "path": "vault-api/identity/mfa/login-enforcement"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "title": "<code>/keymgmt</code>",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        },
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "vault-api/keymgmt"
+          },
+          {
+            "title": "Azure Key Vault",
+            "path": "vault-api/keymgmt/azurekeyvault"
+          },
+          {
+            "title": "AWS KMS",
+            "path": "vault-api/keymgmt/awskms"
+          },
+          {
+            "title": "GCP Cloud KMS",
+            "path": "vault-api/keymgmt/gcpkms"
+          }
+        ]
+      },
+      {
+        "title": "<code>/sys</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "vault-api/sys"
+          },
+          {
+            "title": "<code>/sys/audit</code>",
+            "path": "vault-api/sys/audit"
+          },
+          {
+            "title": "<code>/sys/audit-hash</code>",
+            "path": "vault-api/sys/audit-hash"
+          },
+          {
+            "title": "<code>/sys/auth</code>",
+            "path": "vault-api/sys/auth"
+          },
+          {
+            "title": "<code>/sys/capabilities</code>",
+            "path": "vault-api/sys/capabilities"
+          },
+          {
+            "title": "<code>/sys/capabilities-accessor</code>",
+            "path": "vault-api/sys/capabilities-accessor"
+          },
+          {
+            "title": "<code>/sys/capabilities-self</code>",
+            "path": "vault-api/sys/capabilities-self"
+          },
+          {
+            "title": "<code>/sys/config/auditing</code>",
+            "path": "vault-api/sys/config-auditing"
+          },
+          {
+            "title": "<code>/sys/config/control-group</code>",
+            "path": "vault-api/sys/config-control-group"
+          },
+          {
+            "title": "<code>/sys/config/cors</code>",
+            "path": "vault-api/sys/config-cors"
+          },
+          {
+            "title": "<code>/sys/config/group-policy-application</code>",
+            "path": "vault-api/sys/config-group-policy-application",
+            "badge": {
+              "text": "ENT",
+              "type": "outlined",
+              "color": "neutral"
+            }
+          },
+          {
+            "title": "<code>/sys/config/reload</code>",
+            "path": "vault-api/sys/config-reload"
+          },
+          {
+            "title": "<code>/sys/config/state</code>",
+            "path": "vault-api/sys/config-state"
+          },
+          {
+            "title": "<code>/sys/config/ui/custom-messages</code>",
+            "path": "vault-api/sys/config-ui-custom-messages",
+            "badge": {
+              "text": "ENT",
+              "type": "outlined",
+              "color": "neutral"
+            }
+          },
+          {
+            "title": "<code>/sys/config/ui/headers</code>",
+            "path": "vault-api/sys/config-ui-headers"
+          },
+          {
+            "title": "<code>/sys/control-group</code>",
+            "path": "vault-api/sys/control-group"
+          },
+          {
+            "title": "<code>/sys/decode-token</code>",
+            "path": "vault-api/sys/decode-token"
+          },
+          {
+            "title": "<code>/sys/experiments</code>",
+            "path": "vault-api/sys/experiments"
+          },
+          {
+            "title": "<code>/sys/generate-recovery-token</code>",
+            "path": "vault-api/sys/generate-recovery-token"
+          },
+          {
+            "title": "<code>/sys/generate-root</code>",
+            "path": "vault-api/sys/generate-root"
+          },
+          {
+            "title": "<code>/sys/health</code>",
+            "path": "vault-api/sys/health"
+          },
+          {
+            "title": "<code>/sys/host-info</code>",
+            "path": "vault-api/sys/host-info"
+          },
+          {
+            "title": "<code>/sys/in-flight-req</code>",
+            "path": "vault-api/sys/in-flight-req"
+          },
+          {
+            "title": "<code>/sys/init</code>",
+            "path": "vault-api/sys/init"
+          },
+          {
+            "title": "<code>/sys/internal/counters</code>",
+            "path": "vault-api/sys/internal-counters"
+          },
+          {
+            "title": "<code>/sys/internal/inspect</code>",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "vault-api/sys/inspect"
+              },
+              {
+                "title": "<code>/sys/internal/inspect/router</code>",
+                "path": "vault-api/sys/inspect/router"
+              }
+            ]
+          },
+          {
+            "title": "<code>/sys/internal/specs/openapi</code>",
+            "path": "vault-api/sys/internal-specs-openapi"
+          },
+          {
+            "title": "<code>/sys/internal/ui/authenticated-messages</code>",
+            "path": "vault-api/sys/internal-ui-authenticated-messages"
+          },
+          {
+            "title": "<code>/sys/internal/ui/feature-flags</code>",
+            "path": "vault-api/sys/internal-ui-feature"
+          },
+          {
+            "title": "<code>/sys/internal/ui/mounts</code>",
+            "path": "vault-api/sys/internal-ui-mounts"
+          },
+          {
+            "title": "<code>/sys/internal/ui/namespaces</code>",
+            "path": "vault-api/sys/internal-ui-namespaces"
+          },
+          {
+            "title": "<code>/sys/internal/ui/resultant-acl</code>",
+            "path": "vault-api/sys/internal-ui-resultant-acl"
+          },
+          {
+            "title": "<code>/sys/internal/ui/unauthenticated-messages</code>",
+            "path": "vault-api/sys/internal-ui-unauthenticated-messages"
+          },
+          {
+            "title": "<code>/sys/key-status</code>",
+            "path": "vault-api/sys/key-status"
+          },
+          {
+            "title": "<code>/sys/ha-status</code>",
+            "path": "vault-api/sys/ha-status"
+          },
+          {
+            "title": "<code>/sys/leader</code>",
+            "path": "vault-api/sys/leader"
+          },
+          {
+            "title": "<code>/sys/leases</code>",
+            "path": "vault-api/sys/leases"
+          },
+          {
+            "title": "<code>/sys/license/status</code>",
+            "path": "vault-api/sys/license"
+          },
+          {
+            "title": "<code>/sys/locked-users</code>",
+            "path": "vault-api/sys/user-lockout"
+          },
+          {
+            "title": "<code>/sys/loggers</code>",
+            "path": "vault-api/sys/loggers"
+          },
+          {
+            "title": "<code>/sys/managed-keys</code>",
+            "path": "vault-api/sys/managed-keys",
+            "badge": {
+              "text": "ENT",
+              "type": "outlined",
+              "color": "neutral"
+            }
+          },
+          {
+            "title": "<code>/sys/metrics</code>",
+            "path": "vault-api/sys/metrics"
+          },
+          {
+            "title": "<code>/sys/mfa</code>",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "vault-api/sys/mfa"
+              },
+              {
+                "title": "<code>/sys/mfa/method/duo</code>",
+                "path": "vault-api/sys/mfa/duo"
+              },
+              {
+                "title": "<code>/sys/mfa/method/okta</code>",
+                "path": "vault-api/sys/mfa/okta"
+              },
+              {
+                "title": "<code>/sys/mfa/method/pingid</code>",
+                "path": "vault-api/sys/mfa/pingid"
+              },
+              {
+                "title": "<code>/sys/mfa/method/totp</code>",
+                "path": "vault-api/sys/mfa/totp"
+              },
+              {
+                "title": "<code>/sys/mfa/validate</code>",
+                "path": "vault-api/sys/mfa/validate"
+              }
+            ]
+          },
+          {
+            "title": "<code>/sys/monitor</code>",
+            "path": "vault-api/sys/monitor"
+          },
+          {
+            "title": "<code>/sys/mounts</code>",
+            "path": "vault-api/sys/mounts"
+          },
+          {
+            "title": "<code>/sys/namespaces</code>",
+            "path": "vault-api/sys/namespaces"
+          },
+          {
+            "title": "<code>/sys/plugins/catalog</code>",
+            "path": "vault-api/sys/plugins-catalog"
+          },
+          {
+            "title": "<code>/sys/plugins/pins</code>",
+            "path": "vault-api/sys/plugins-pins"
+          },
+          {
+            "title": "<code>/sys/plugins/reload</code>",
+            "path": "vault-api/sys/plugins-reload"
+          },
+          {
+            "title": "<code>/sys/plugins/runtimes/catalog</code>",
+            "path": "vault-api/sys/plugins-runtimes-catalog"
+          },
+          {
+            "title": "<code>/sys/policy</code>",
+            "path": "vault-api/sys/policy"
+          },
+          {
+            "title": "<code>/sys/policies</code>",
+            "path": "vault-api/sys/policies"
+          },
+          {
+            "title": "<code>/sys/policies/password</code>",
+            "path": "vault-api/sys/policies-password"
+          },
+          {
+            "title": "<code>/sys/pprof</code>",
+            "path": "vault-api/sys/pprof"
+          },
+          {
+            "title": "<code>/sys/quotas/config</code>",
+            "path": "vault-api/sys/quotas-config"
+          },
+          {
+            "title": "<code>/sys/quotas/rate-limit</code>",
+            "path": "vault-api/sys/rate-limit-quotas"
+          },
+          {
+            "title": "<code>/sys/quotas/lease-count</code>",
+            "path": "vault-api/sys/lease-count-quotas"
+          },
+          {
+            "title": "<code>/sys/raw</code>",
+            "path": "vault-api/sys/raw"
+          },
+          {
+            "title": "<code>/sys/rekey</code>",
+            "path": "vault-api/sys/rekey"
+          },
+          {
+            "title": "<code>/sys/rekey-recovery-key</code>",
+            "path": "vault-api/sys/rekey-recovery-key"
+          },
+          {
+            "title": "<code>/sys/remount</code>",
+            "path": "vault-api/sys/remount"
+          },
+          {
+            "title": "<code>/sys/replication</code>",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "vault-api/sys/replication"
+              },
+              {
+                "title": "<code>/sys/replication/performance</code>",
+                "path": "vault-api/sys/replication/replication-performance"
+              },
+              {
+                "title": "<code>/sys/replication/dr</code>",
+                "path": "vault-api/sys/replication/replication-dr"
+              }
+            ]
+          },
+          {
+            "title": "<code>/sys/rotate</code>",
+            "path": "vault-api/sys/rotate"
+          },
+          {
+            "title": "<code>/sys/rotate/config</code>",
+            "path": "vault-api/sys/rotate-config"
+          },
+          {
+            "title": "<code>/sys/seal</code>",
+            "path": "vault-api/sys/seal"
+          },
+          {
+            "title": "<code>/sys/seal-status</code>",
+            "path": "vault-api/sys/seal-status"
+          },
+          {
+            "title": "<code>/sys/seal-backend-status</code>",
+            "path": "vault-api/sys/seal-backend-status"
+          },
+          {
+            "title": "<code>/sys/sealwrap/rewrap</code>",
+            "path": "vault-api/sys/sealwrap-rewrap"
+          },
+          {
+            "title": "<code>/sys/step-down</code>",
+            "path": "vault-api/sys/step-down"
+          },
+          {
+            "title": "<code>/sys/storage </code>",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "vault-api/sys/storage"
+              },
+              {
+                "title": "<code>/sys/storage/raft</code>",
+                "path": "vault-api/sys/storage/raft"
+              },
+              {
+                "title": "<code>/sys/storage/raft/autopilot</code>",
+                "path": "vault-api/sys/storage/raftautopilot"
+              },
+              {
+                "title": "<code>/sys/storage/raft/snapshot-auto</code>",
+                "path": "vault-api/sys/storage/raftautosnapshots"
+              }
+            ]
+          },
+          {
+            "title": "<code>/sys/sync</code>",
+            "path": "vault-api/sys/secrets-sync",
+            "badge": {
+              "text": "ENT",
+              "type": "outlined",
+              "color": "neutral"
+            }
+          },
+          {
+            "title": "<code>/sys/tools</code>",
+            "path": "vault-api/sys/tools"
+          },
+          {
+            "title": "<code>/sys/unseal</code>",
+            "path": "vault-api/sys/unseal"
+          },
+          {
+            "title": "<code>/sys/version-history</code>",
+            "path": "vault-api/sys/version-history"
+          },
+          {
+            "title": "<code>/sys/well-known</code>",
+            "path": "vault-api/sys/well-known"
+          },
+          {
+            "title": "<code>/sys/wrapping/lookup</code>",
+            "path": "vault-api/sys/wrapping-lookup"
+          },
+          {
+            "title": "<code>/sys/wrapping/rewrap</code>",
+            "path": "vault-api/sys/wrapping-rewrap"
+          },
+          {
+            "title": "<code>/sys/wrapping/unwrap</code>",
+            "path": "vault-api/sys/wrapping-unwrap"
+          },
+          {
+            "title": "<code>/sys/wrapping/wrap</code>",
+            "path": "vault-api/sys/wrapping-wrap"
+          }
+        ]
+      }
+    ]
+  },
+
+  { "divider": true },
+
+  {
+    "title": "Vault CLI",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "vault-cli"
+      },
+      {
+        "title": "Token helpers",
+        "path": "vault-cli/token-helper"
+      },
+
+      { "divider": true },
+      { "heading": "COMMANDS" },
+      
+      {
+        "title": "<code>vault</code>",
+        "routes": [  
+          {
+            "title": "<code>agent</code>",
+            "path": "vault-cli/commands/agent"
+          },
+          {
+            "title": "<code>audit</code>",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "vault-cli/commands/audit"
+              },
+              {
+                "title": "<code>disable</code>",
+                "path": "vault-cli/commands/audit/disable"
+              },
+              {
+                "title": "<code>enable</code>",
+                "path": "vault-cli/commands/audit/enable"
+              },
+              {
+                "title": "<code>list</code>",
+                "path": "vault-cli/commands/audit/list"
+              }
+            ]
+          },
+          {
+            "title": "<code>auth</code>",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "vault-cli/commands/auth"
+              },
+              {
+                "title": "<code>disable</code>",
+                "path": "vault-cli/commands/auth/disable"
+              },
+              {
+                "title": "<code>enable</code>",
+                "path": "vault-cli/commands/auth/enable"
+              },
+              {
+                "title": "<code>help</code>",
+                "path": "vault-cli/commands/auth/help"
+              },
+              {
+                "title": "<code>list</code>",
+                "path": "vault-cli/commands/auth/list"
+              },
+              {
+                "title": "<code>move</code>",
+                "path": "vault-cli/commands/auth/move"
+              },
+              {
+                "title": "<code>tune</code>",
+                "path": "vault-cli/commands/auth/tune"
+              }
+            ]
+          },
+          {
+            "title": "<code>debug</code>",
+            "path": "vault-cli/commands/debug"
+          },
+          {
+            "title": "<code>delete</code>",
+            "path": "vault-cli/commands/delete"
+          },
+          {
+            "title": "<code>events</code>",
+            "path": "vault-cli/commands/events"
+          },
+          {
+            "title": "<code>hcp</code>",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "vault-cli/commands/hcp"
+              },
+              {
+                "title": "<code>connect</code>",
+                "path": "vault-cli/commands/hcp/connect"
+              },
+              {
+                "title": "<code>disconnect</code>",
+                "path": "vault-cli/commands/hcp/disconnect"
+              }
+            ]
+          },
+          {
+            "title": "<code>kv</code>",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "vault-cli/commands/kv"
+              },
+              {
+                "title": "<code>delete</code>",
+                "path": "vault-cli/commands/kv/delete"
+              },
+              {
+                "title": "<code>destroy</code>",
+                "path": "vault-cli/commands/kv/destroy"
+              },
+              {
+                "title": "<code>enable-versioning</code>",
+                "path": "vault-cli/commands/kv/enable-versioning"
+              },
+              {
+                "title": "<code>get</code>",
+                "path": "vault-cli/commands/kv/get"
+              },
+              {
+                "title": "<code>list</code>",
+                "path": "vault-cli/commands/kv/list"
+              },
+              {
+                "title": "<code>metadata</code>",
+                "path": "vault-cli/commands/kv/metadata"
+              },
+              {
+                "title": "<code>patch</code>",
+                "path": "vault-cli/commands/kv/patch"
+              },
+              {
+                "title": "<code>put</code>",
+                "path": "vault-cli/commands/kv/put"
+              },
+              {
+                "title": "<code>rollback</code>",
+                "path": "vault-cli/commands/kv/rollback"
+              },
+              {
+                "title": "<code>undelete</code>",
+                "path": "vault-cli/commands/kv/undelete"
+              }
+            ]
+          },
+          {
+            "title": "<code>lease</code>",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "vault-cli/commands/lease"
+              },
+              {
+                "title": "<code>lookup</code>",
+                "path": "vault-cli/commands/lease/lookup"
+              },
+              {
+                "title": "<code>renew</code>",
+                "path": "vault-cli/commands/lease/renew"
+              },
+              {
+                "title": "<code>revoke</code>",
+                "path": "vault-cli/commands/lease/revoke"
+              }
+            ]
+          },
+          {
+            "title": "<code>license</code>",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "vault-cli/commands/license"
+              },
+              {
+                "title": "<code>get</code>",
+                "path": "vault-cli/commands/license/get"
+              },
+              {
+                "title": "<code>inspect</code>",
+                "path": "vault-cli/commands/license/inspect"
+              }
+            ]
+          },
+          {
+            "title": "<code>list</code>",
+            "path": "vault-cli/commands/list"
+          },
+          {
+            "title": "<code>login</code>",
+            "path": "vault-cli/commands/login"
+          },
+          {
+            "title": "<code>monitor</code>",
+            "path": "vault-cli/commands/monitor"
+          },
+          {
+            "title": "<code>namespace</code>",
+            "path": "vault-cli/commands/namespace"
+          },
+          {
+            "title": "<code>operator</code>",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "vault-cli/commands/operator"
+              },
+              {
+                "title": "<code>diagnose</code>",
+                "path": "vault-cli/commands/operator/diagnose"
+              },
+              {
+                "title": "<code>generate-root</code>",
+                "path": "vault-cli/commands/operator/generate-root"
+              },
+              {
+                "title": "<code>import</code>",
+                "path": "vault-cli/commands/operator/import"
+              },
+              {
+                "title": "<code>init</code>",
+                "path": "vault-cli/commands/operator/init"
+              },
+              {
+                "title": "<code>key-status</code>",
+                "path": "vault-cli/commands/operator/key-status"
+              },
+              {
+                "title": "<code>members</code>",
+                "path": "vault-cli/commands/operator/members"
+              },
+              {
+                "title": "<code>migrate</code>",
+                "path": "vault-cli/commands/operator/migrate"
+              },
+              {
+                "title": "<code>raft</code>",
+                "path": "vault-cli/commands/operator/raft"
+              },
+              {
+                "title": "<code>rekey</code>",
+                "path": "vault-cli/commands/operator/rekey"
+              },
+              {
+                "title": "<code>rotate</code>",
+                "path": "vault-cli/commands/operator/rotate"
+              },
+              {
+                "title": "<code>seal</code>",
+                "path": "vault-cli/commands/operator/seal"
+              },
+              {
+                "title": "<code>step-down</code>",
+                "path": "vault-cli/commands/operator/step-down"
+              },
+              {
+                "title": "<code>unseal</code>",
+                "path": "vault-cli/commands/operator/unseal"
+              },
+              {
+                "title": "<code>usage</code>",
+                "path": "vault-cli/commands/operator/usage"
+              },
+              {
+                "title": "<code>utilization</code>",
+                "path": "vault-cli/commands/operator/utilization"
+              }
+            ]
+          },
+          {
+            "title": "<code>patch</code>",
+            "path": "vault-cli/commands/patch"
+          },
+          {
+            "title": "<code>path-help</code>",
+            "path": "vault-cli/commands/path-help"
+          },
+          {
+            "title": "<code>pki</code>",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "vault-cli/commands/pki"
+              },
+              {
+                "title": "<code>health-check</code>",
+                "path": "vault-cli/commands/pki/health-check"
+              },
+              {
+                "title": "<code>verify-sign</code>",
+                "path": "vault-cli/commands/pki/verify-sign"
+              },
+              {
+                "title": "<code>list-intermediates</code>",
+                "path": "vault-cli/commands/pki/list-intermediates"
+              },
+              {
+                "title": "<code>issue</code>",
+                "path": "vault-cli/commands/pki/issue"
+              },
+              {
+                "title": "<code>reissue</code>",
+                "path": "vault-cli/commands/pki/reissue"
+              }
+            ]
+          },
+          {
+            "title": "<code>plugin</code>",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "vault-cli/commands/plugin"
+              },
+              {
+                "title": "<code>deregister</code>",
+                "path": "vault-cli/commands/plugin/deregister"
+              },
+              {
+                "title": "<code>info</code>",
+                "path": "vault-cli/commands/plugin/info"
+              },
+              {
+                "title": "<code>list</code>",
+                "path": "vault-cli/commands/plugin/list"
+              },
+              {
+                "title": "<code>register</code>",
+                "path": "vault-cli/commands/plugin/register"
+              },
+              {
+                "title": "<code>reload</code>",
+                "path": "vault-cli/commands/plugin/reload"
+              },
+              {
+                "title": "<code>runtime</code>",
+                "routes": [
+                  {
+                    "title": "Overview",
+                    "path": "vault-cli/commands/plugin/runtime"
+                  },
+                  {
+                    "title": "<code>deregister</code>",
+                    "path": "vault-cli/commands/plugin/runtime/deregister"
+                  },
+                  {
+                    "title": "<code>info</code>",
+                    "path": "vault-cli/commands/plugin/runtime/info"
+                  },
+                  {
+                    "title": "<code>list</code>",
+                    "path": "vault-cli/commands/plugin/runtime/list"
+                  },
+                  {
+                    "title": "<code>register</code>",
+                    "path": "vault-cli/commands/plugin/runtime/register"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "title": "<code>policy</code>",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "vault-cli/commands/policy"
+              },
+              {
+                "title": "<code>delete</code>",
+                "path": "vault-cli/commands/policy/delete"
+              },
+              {
+                "title": "<code>fmt</code>",
+                "path": "vault-cli/commands/policy/fmt"
+              },
+              {
+                "title": "<code>list</code>",
+                "path": "vault-cli/commands/policy/list"
+              },
+              {
+                "title": "<code>read</code>",
+                "path": "vault-cli/commands/policy/read"
+              },
+              {
+                "title": "<code>write</code>",
+                "path": "vault-cli/commands/policy/write"
+              }
+            ]
+          },
+          {
+            "title": "<code>print</code>",
+            "path": "vault-cli/commands/print"
+          },
+          {
+            "title": "<code>proxy</code>",
+            "path": "vault-cli/commands/proxy"
+          },
+          {
+            "title": "<code>read</code>",
+            "path": "vault-cli/commands/read"
+          },
+          {
+            "title": "<code>secrets</code>",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "vault-cli/commands/secrets"
+              },
+              {
+                "title": "<code>disable</code>",
+                "path": "vault-cli/commands/secrets/disable"
+              },
+              {
+                "title": "<code>enable</code>",
+                "path": "vault-cli/commands/secrets/enable"
+              },
+              {
+                "title": "<code>list</code>",
+                "path": "vault-cli/commands/secrets/list"
+              },
+              {
+                "title": "<code>move</code>",
+                "path": "vault-cli/commands/secrets/move"
+              },
+              {
+                "title": "<code>tune</code>",
+                "path": "vault-cli/commands/secrets/tune"
+              }
+            ]
+          },
+          {
+            "title": "<code>server</code>",
+            "path": "vault-cli/commands/server"
+          },
+          {
+            "title": "<code>ssh</code>",
+            "path": "vault-cli/commands/ssh"
+          },
+          {
+            "title": "<code>status</code>",
+            "path": "vault-cli/commands/status"
+          },
+          {
+            "title": "<code>token</code>",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "vault-cli/commands/token"
+              },
+              {
+                "title": "<code>capabilities</code>",
+                "path": "vault-cli/commands/token/capabilities"
+              },
+              {
+                "title": "<code>create</code>",
+                "path": "vault-cli/commands/token/create"
+              },
+              {
+                "title": "<code>lookup</code>",
+                "path": "vault-cli/commands/token/lookup"
+              },
+              {
+                "title": "<code>renew</code>",
+                "path": "vault-cli/commands/token/renew"
+              },
+              {
+                "title": "<code>revoke</code>",
+                "path": "vault-cli/commands/token/revoke"
+              }
+            ]
+          },
+          {
+            "title": "<code>transit</code>",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "vault-cli/commands/transit"
+              },
+              {
+                "title": "<code>import</code> and <code>import-version</code>",
+                "path": "vault-cli/commands/transit/import"
+              }
+            ]
+          },
+          {
+            "title": "<code>unwrap</code>",
+            "path": "vault-cli/commands/unwrap"
+          },
+          {
+            "title": "<code>version</code>",
+            "path": "vault-cli/commands/version"
+          },
+          {
+            "title": "<code>version-history</code>",
+            "path": "vault-cli/commands/version-history"
+          },
+          {
+            "title": "<code>write</code>",
+            "path": "vault-cli/commands/write"
+          }
+        ]
+      }
+    ]
+  },
+
+  { "divider": true },
+  {
+    "title": "Telemetry metrics",
+    "path": "telemetry"
+  }
+]

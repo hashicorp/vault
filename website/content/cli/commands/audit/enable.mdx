@@ -1,47 +1,80 @@
 ---
 layout: docs
-page_title: audit enable - Command
-description: The "audit enable" command enables an audit device at a given path.
+page_title: "Vault CLI - audit enable"
+description: >-
+  Use the "audit enable" command to enable an audit device at the given path.
 ---
 
-# audit enable
+# `audit enable`
 
-The `audit enable` command enables an audit device at a given path. If an audit
-device already exists at the given path, an error is returned. Additional
-options for configuring the audit device are provided as `KEY=VALUE`. Each audit
-device declares its own set of configuration options.
+Enable an audit device at the given path or return an error if a device already
+exists.
 
-Once an audit device is enabled, almost every request and response will be
-logged to the device.
+## Syntax and usage
+
+<CodeBlockConfig hideClipboard>
+
+```text
+vault audit enable <type> [flags] [args]
+```
+
+</CodeBlockConfig>
+
+Supported audit device types:
+
+- `file` - write and append audit logs to a local file.
+- `syslog` - stream audit logs to the local syslog agent.
+- `socket` - stream audit logs to a TCP, UDP, or UNIX socket.
+
+## Flags
+
+@include 'cli/audit/flags/local.mdx'
+
+@include 'cli/audit/flags/path.mdx'
+
+## Arguments
+
+The `vault audit enable` command accepts different arguments depending on the
+device type.
+
+### Common audit device arguments
+
+@include 'cli/audit/args/elide_list_responses-optional.mdx'
+
+@include 'cli/audit/args/fallback-optional.mdx'
+
+@include 'cli/audit/args/filter-optional.mdx'
+
+@include 'cli/audit/args/log_raw-optional.mdx'
+
+@include 'cli/audit/args/prefix-optional.mdx'
+
+### File device arguments
+
+TBD
+
+### Syslog device arguments
+
+TBD
+
+### Socket device arguments
+
+TBD
+
+### Common CLI arguments 
+
+@include 'cli/common/args/format.mdx'
+
+@include 'cli/common/args/hmac_accessor.mdx'
+
+For device specific options, refer to the relevant audit device type under the [Audit Devices](/vault/docs/audit)
+overview.
 
 ## Examples
 
-Enable the audit device "file" enabled at "file/":
+Enable the audit device "file" at the path "/tmp/my-file.txt":
 
 ```shell-session
 $ vault audit enable file file_path=/tmp/my-file.txt
 Success! Enabled the file audit device at: file/
 ```
-
-## Usage
-
-The following flags are available in addition to the [standard set of
-flags](/vault/docs/commands) included on all commands.
-
-- `-description` `(string: "")` - Human-friendly description for the purpose of
-  this audit device.
-
-- `-local` `(bool: false)` - Mark the audit device as a local-only device.
-  Local devices are not replicated or removed by replication.
-
-- `-path` `(string: "")` - Place where the audit device will be accessible. This
-  must be unique across all audit devices. This defaults to the "type" of the
-  audit device.
-
-All audit devices support the following common options which can be supplied after
-the flags documented above:
-
-@include 'audit-options-common.mdx'
-
-For device specific options, refer to the relevant audit device type under the [Audit Devices](/vault/docs/audit)
-overview.

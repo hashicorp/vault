@@ -1,0 +1,15 @@
+---
+
+<a id="flag-description" />
+
+**`-description <string: "">`**
+
+Human-friendly description of the object created or updated by the CLI command.
+
+```shell-session
+$ vault audit enable socket \
+    address=127.0.0.1:9090  \
+    socket_type=tcp         \
+    -description "TCP audit stream"
+```
+

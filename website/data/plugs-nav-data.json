@@ -53,28 +53,34 @@
           "title": "API",
           "routes":[
             {
-              "title": "Overview",
-              "path": "plugins/azure-authn/api"
+              "title": "<code>/config</code>",
+              "routes": [
+                {
+                  "title": "CreateConfiguration",
+                  "path": "plugins/azure-authn/api/config/create-config"
+                },
+                {
+                  "title": "DeleteConfiguration",
+                  "path": "plugins/azure-authn/api/config/delete-config"
+                },
+                {
+                  "title": "ReadConfiguration",
+                  "path": "plugins/azure-authn/api/config/read-config"
+                }
+              ]
             },
             {
-              "title": "CreateConfiguration",
-              "path": "plugins/azure-authn/api/create-config"
-            },
-            {
-              "title": "DeleteConfiguration",
-              "path": "plugins/azure-authn/api/delete-config"
-            },
-            {
-              "title": "ReadConfiguration",
-              "path": "plugins/azure-authn/api/read-config"
-            },
-            {
-              "title": "RotateRoot",
+              "title": "<code>/rotate-root</code>",
               "path": "plugins/azure-authn/api/rotate-root"
             },
             {
-              "title": "UpsertRole",
-              "path": "plugins/azure-authn/api/upsert-role"
+              "title": "<code>/role</code>",
+              "routes": [
+                {
+                  "title": "UpsertRole",
+                  "path": "plugins/azure-authn/api/role/upsert-role"
+                }
+              ]
             }
           ]
         }

@@ -1,0 +1,158 @@
+---
+layout: api
+page_title: /identity/mfa/method/pingid - HTTP API
+description: >-
+  The '/identity/mfa/method/pingid' endpoint focuses on managing PingID MFA behaviors in Vault.
+---
+
+## Create PingID MFA method
+
+This endpoint creates an MFA method of type PingID.
+
+| Method | Path                          |
+|:-------|:------------------------------|
+| `POST` | `/identity/mfa/method/pingid` |
+
+### Parameters
+
+- `method_name` `(string)` - The unique name identifier for this MFA method. Supported from Vault 1.13.0.
+
+- `username_format` `(string)` - A template string for mapping Identity names to MFA method names. Values to substitute should be placed in `{{}}`. For example, `"{{identity.entity.name}}@example.com"`. If blank, the Entity's Name field is used as-is.
+
+- `settings_file_base64` `(string: <required>)` - A base64-encoded third-party settings file retrieved from PingID's configuration page.
+
+### Sample payload
+
+```json
+{
+  "username_format": "{{identity.entity.aliases.auth_userpass_1793464a.name}}",
+  "settings_file_base64": "AA8owj3..."
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/identity/mfa/method/pingid
+```
+
+## Update PingID MFA method
+
+This endpoint updates the configuration of an MFA method of type PingID.
+
+| Method | Path                                     |
+|:-------|:-----------------------------------------|
+| `POST` | `/identity/mfa/method/pingid/:method_id` |
+
+### Parameters
+
+- `method_id` `(string: <required>)` - UUID of the MFA method.
+
+- and all of the parameters documented under the preceding "Create" endpoint.
+
+### Sample payload
+
+Identical to the preceding "Create" endpoint.
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/identity/mfa/method/pingid/f8381105-67f0-4105-8662-4b07ae5c1233
+```
+
+## Read PingID MFA method
+
+This endpoint queries the MFA configuration of PingID type for a given method
+name.
+
+| Method | Path                              |
+|:-------|:----------------------------------|
+| `GET`  | `/identity/mfa/method/pingid/:id` |
+
+### Parameters
+
+- `id` `(string: <required>)` – UUID of the MFA method.
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request GET \
+    http://127.0.0.1:8200/v1/identity/mfa/method/pingid/f8381105-67f0-4105-8662-4b07ae5c1233
+```
+
+### Sample response
+
+```json
+{
+  "data": {
+    "use_signature": true,
+    "idp_url": "https://idpxnyl3m.pingidentity.com/pingid",
+    "admin_url": "https://idpxnyl3m.pingidentity.com/pingid",
+    "authenticator_url": "https://authenticator.pingone.com/pingid/ppm",
+    "id": "f8381105-67f0-4105-8662-4b07ae5c1233",
+    "org_alias": "181459b0-9fb1-4938-8c86...",
+    "type": "pingid",
+  }
+}
+```
+
+## Delete PingID MFA method
+
+This endpoint deletes a PingID MFA method. MFA methods can only be deleted if they're not currently in use
+by a [login enforcement](/vault/api-docs/secret/identity/mfa/login-enforcement).
+
+| Method   | Path                              |
+|:---------|:----------------------------------|
+| `DELETE` | `/identity/mfa/method/pingid/:id` |
+
+### Parameters
+
+- `id` `(string: <required>)` - UUID of the MFA method.
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request DELETE \
+    http://127.0.0.1:8200/v1/identity/mfa/method/pingid/f8381105-67f0-4105-8662-4b07ae5c1233
+```
+
+## List PingID MFA methods
+
+This endpoint lists PingID MFA methods that are visible in the current namespace or in parent namespaces.
+
+| Method | Path                          |
+|:-------|:------------------------------|
+| `LIST` | `/identity/mfa/method/pingid` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request LIST \
+    http://127.0.0.1:8200/v1/identity/mfa/method/pingid
+```
+
+### Sample response
+
+```json
+{
+  "data": {
+    "keys": [
+      "f8381105-67f0-4105-8662-4b07ae5c1233"
+    ]
+  }
+}
+```

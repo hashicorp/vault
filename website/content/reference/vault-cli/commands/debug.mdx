@@ -1,0 +1,182 @@
+---
+layout: docs
+page_title: debug - Command
+description: |-
+  The "debug" command monitors a Vault server, probing information about
+  it for a certain duration.
+---
+
+# debug
+
+The `debug` command starts a process that monitors a Vault server, probing
+information about it for a certain duration.
+
+Gathering information about the state of the Vault cluster often requires the
+operator to access all necessary information via various API calls and terminal
+commands. The `debug` command aims to provide a simple workflow that produces a
+consistent output to help operators retrieve and share information about the
+server in question.
+
+The `debug` command honors the same variables that the base command
+accepts, such as the token stored via a previous login or the environment
+variables `VAULT_TOKEN` and `VAULT_ADDR`. The token used determines the
+permissions and, in turn, the information that `debug` may be able to collect.
+The address specified determines the target server that will be probed against.
+
+If the command is interrupted, the information collected up until that
+point gets persisted to an output directory.
+
+## Permissions
+
+Regardless of whether a particular target is provided, the ability for `debug`
+to fetch data for the target depends on the token provided. Some targets, such
+as `server-status`, queries unauthenticated endpoints which means that it can be
+queried all the time. Other targets require the token to have ACL permissions to
+query the matching endpoint in order to get a proper response. Any errors
+encountered during capture due to permissions or otherwise will be logged in the
+index file.
+
+The following policy can be used for generating debug packages with all targets:
+
+```hcl
+path "auth/token/lookup-self" {
+  capabilities = ["read"]
+}
+
+path "sys/pprof/*" {
+  capabilities = ["read"]
+}
+
+path "sys/config/state/sanitized" {
+  capabilities = ["read"]
+}
+
+path "sys/monitor" {
+  capabilities = ["read"]
+}
+
+path "sys/host-info" {
+  capabilities = ["read"]
+}
+
+path "sys/in-flight-req" {
+  capabilities = ["read"]
+}
+```
+
+## Capture targets
+
+The `-target` flag can be specified multiple times to capture specific
+information when debug is running. By default, it captures all information.
+
+| Target               | Description                                                                       |
+| :------------------- | :-------------------------------------------------------------------------------- |
+| `config`             | Sanitized version of the configuration state.                                     |
+| `host`               | Information about the instance running the server, such as CPU, memory, and disk. |
+| `metrics`            | Telemetry information.                                                            |
+| `pprof`              | Runtime profiling data, including heap, CPU, goroutine, and trace profiling.      |
+| `replication-status` | Replication status.                                                               |
+| `server-status`      | Health and seal status.                                                           |
+
+Note that the `config`, `host`,`metrics`, and `pprof` targets are only queried
+on active and performance standby nodes due to the the fact that the information
+pertains to the local node and the request should not be forwarded.
+
+Additionally, host information is not available on the OpenBSD platform due to
+library limitations in fetching the data without enabling `cgo`.
+
+[Enterprise] Telemetry can be gathered from a DR Secondary active node via the
+`metrics` target if [unauthenticated_metrics_access](/vault/docs/configuration/listener/tcp#unauthenticated_metrics_access) is enabled.
+
+## Output layout
+
+The output of the bundled information, once decompressed, is contained within a
+single directory. Each target, with the exception of profiling data, is captured
+in a single file. For each of those targets collection is represented as a JSON
+array object, with each entry captured at each interval as a JSON object.
+
+```shell-session
+$ tree vault-debug-2019-10-15T21-44-49Z/
+vault-debug-2019-10-15T21-44-49Z/
+├── 2019-10-15T21-44-49Z
+│   ├── goroutine.prof
+│   ├── heap.prof
+│   ├── profile.prof
+│   └── trace.out
+├── 2019-10-15T21-45-19Z
+│   ├── goroutine.prof
+│   ├── heap.prof
+│   ├── profile.prof
+│   └── trace.out
+├── 2019-10-15T21-45-49Z
+│   ├── goroutine.prof
+│   ├── heap.prof
+│   ├── profile.prof
+│   └── trace.out
+├── 2019-10-15T21-46-19Z
+│   ├── goroutine.prof
+│   ├── heap.prof
+│   ├── profile.prof
+│   └── trace.out
+├── 2019-10-15T21-46-49Z
+│   ├── goroutine.prof
+│   └── heap.prof
+├── config.json
+├── host_info.json
+├── index.json
+├── metrics.json
+├── replication_status.json
+└── server_status.json
+```
+
+## Examples
+
+Start debug using reasonable defaults:
+
+```shell-session
+$ vault debug
+```
+
+Start debug with different duration, intervals, and metrics interval values, and
+skip compression:
+
+```shell-session
+$ vault debug -duration=1m -interval=10s -metrics-interval=5s -compress=false
+```
+
+Start debug with specific targets:
+
+```shell-session
+$ vault debug -target=host -target=metrics
+```
+
+## Usage
+
+The following flags are available in addition to the [standard set of
+flags](/vault/docs/commands) included on all commands.
+
+### Command options
+
+- `-compress` `(bool: true)` - Toggles whether to compress output package The
+  default is true.
+
+- `-duration` `(int or time string: "2m")` - Duration to run the command. The
+  default is 2m0s.
+
+- `-interval` `(int or time string: "30s")` - The polling interval at which to
+  collect profiling data and server state. The default is 30s.
+
+- `-log-format` `(string: "standard")` - Log format to be captured if "log"
+  target specified. Supported values are "standard" and "json". The default is
+  "standard".
+
+- `-metrics-interval` `(int or time string: "10s")` - The polling interval at
+  which to collect metrics data. The default is 10s.
+
+- `-output` `(string)` - Specifies the output path for the debug package. Defaults
+  to a time-based generated file name.
+
+- `-target` `(string: all targets)` - Target to capture, defaulting to all if
+  none specified. This can be specified multiple times to capture multiple
+  targets. Available targets are: config, host, metrics, pprof,
+  replication-status, server-status.

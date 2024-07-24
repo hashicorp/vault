@@ -121,10 +121,6 @@
     "href": "#"
   },
   {
-    "title": "Manage Vault programmatically",
-    "href": "#"
-  },
-  {
     "title": "Namespace planning",
     "href": "#",
     "badge": {
@@ -134,7 +130,7 @@
     }
   },
   {
-    "title": "Determine your quota and lease limits (best practices info)",
+    "title": "Determine your quota and lease limits",
     "href": "#"
   },
   
@@ -147,6 +143,10 @@
   },
   {
     "title": "Create a robust Vault configuration",
+    "href": "#"
+  },
+  {
+    "title": "Deploy with Terraform",
     "href": "#"
   },
   {
@@ -211,7 +211,7 @@
             "href": "#"
           },
           {
-            "title": "Manage performace standbys",
+            "title": "Manage performance standbys",
             "href": "#"
           }
         ]
@@ -361,7 +361,7 @@
   { "heading": "MANAGE VAULT" },
   
   {
-    "title": "Manage Vault programmatically",
+    "title": "Manage Vault with Terraform",
     "routes": [
       {
         "title": "Overview",
@@ -2100,6 +2100,10 @@
           "type": "outlined",
           "color": "neutral"
         }
+      },
+      {
+        "title": "Web REPL",
+        "path": "ui/web"
       }
     ]
   },

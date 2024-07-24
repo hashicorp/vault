@@ -1,0 +1,178 @@
+---
+layout: api
+page_title: MySQL/MariaDB - Database - Secrets Engines - HTTP API
+description: >-
+  The MySQL/MariaDB plugin for Vault's database secrets engine generates
+  database credentials to access MySQL and MariaDB servers.
+---
+
+# MySQL/MariaDB database plugin HTTP API
+
+@include 'x509-sha1-deprecation.mdx'
+
+The MySQL database plugin is one of the supported plugins for the database
+secrets engine. This plugin generates database credentials dynamically based on
+configured roles for the MySQL database.
+
+## Configure connection
+
+In addition to the parameters defined by the [Database
+Backend](/vault/api-docs/secret/databases#configure-connection), this plugin
+has a number of parameters to further configure a connection.
+
+| Method | Path                     |
+| :----- | :----------------------- |
+| `POST` | `/database/config/:name` |
+
+### Parameters
+
+- `connection_url` `(string: <required>)` - Specifies the MySQL DSN. This field
+  can be templated and supports passing the username and password
+  parameters in the following format `{{field_name}}`. A templated connection URL is
+  required when using root credential rotation.
+
+- `max_open_connections` `(int: 4)` - Specifies the maximum number of open
+  connections to the database.
+
+- `max_idle_connections` `(int: 0)` - Specifies the maximum number of idle
+  connections to the database. A zero uses the value of `max_open_connections`
+  and a negative value disables idle connections. If larger than
+  `max_open_connections` it will be reduced to be equal.
+
+- `max_connection_lifetime` `(string: "0s")` - Specifies the maximum amount of
+  time a connection may be reused. If &le; 0s connections are reused forever.
+
+- `username` `(string: "")` - The root credential username used in the connection URL.
+
+- `password` `(string: "")` - The root credential password used in the connection URL.
+
+- `auth_type` `(string: "")` - If set to `gcp_iam`, will enable IAM authentication to a Google
+  CloudSQL instance. For more information on authenticating to CloudSQL via IAM, please refer to
+  Google's official documentation [here.](https://cloud.google.com/sql/docs/postgres/authentication).
+
+- `service_account_json` `(string: "")` - JSON encoded credentials for a GCP Service Account to use
+  for IAM authentication. Requires `auth_type` to be `gcp_iam`.
+
+- `tls_certificate_key` `(string: "")` - x509 certificate for connecting to the database.
+  This must be a PEM encoded version of the private key and the certificate combined.
+
+- `tls_ca` `(string: "")` - x509 CA file for validating the certificate presented by the
+  MySQL server. Must be PEM encoded.
+
+- `tls_server_name` `(string: "")` - Specifies the subject alternative name should be present in the
+  server's certificate.
+
+- `tls_skip_verify` `(boolean: false)` - When set to true, disables the server certificate verification.
+  Setting this to true is not recommended for production.
+
+- `username_template` `(string)` - [Template](/vault/docs/concepts/username-templating) describing how
+  dynamic usernames are generated.
+
+- `disable_escaping` `(boolean: false)` - Turns off the escaping of special characters inside of the username
+  and password fields. See the [databases secrets engine docs](/vault/docs/secrets/databases#disable-character-escaping)
+  for more information. Defaults to `false`.
+
+**Default Username Templates:**
+
+<details>
+<summary><b><code>mysql-database-plugin</code></b></summary>
+
+```
+{{ printf "v-%s-%s-%s-%s" (.DisplayName | truncate 10) (.RoleName | truncate 10) (random 20) (unix_time) | truncate 32 }}
+```
+
+<details>
+<summary><b>Example Usernames:</b></summary>
+
+| Example       |                                    |
+| ------------- | ---------------------------------- |
+| `DisplayName` | `token`                            |
+| `RoleName`    | `myrolename`                       |
+| Username      | `v-token-myrolename-jNFRlKsZZMxJE` |
+
+| Example       |                                    |
+| ------------- | ---------------------------------- |
+| `DisplayName` | `amuchlonger_dispname`             |
+| `RoleName`    | `role-name-with-dashes`            |
+| Username      | `v-amuchlonge-role-name--LUHU9xqm` |
+
+</details>
+</details>
+
+<p></p>
+
+<details>
+<summary>
+  <code>mysql-aurora-database-plugin</code>, <code>mysql-rds-database-plugin</code>, <code>mysql-legacy-database-plugin</code>
+</summary>
+
+```
+{{ printf "v-%s-%s-%s" (.RoleName | truncate 4) (random 20) | truncate 16 }}
+```
+
+<details>
+  <summary><b>Example Usernames:</b></summary>
+
+| Example       |                    |
+| ------------- | ------------------ |
+| `DisplayName` | `token`            |
+| `RoleName`    | `myrolename`       |
+| Username      | `v-myro-jNFRlKsZZ` |
+
+| Example       |                         |
+| ------------- | ----------------------- |
+| `DisplayName` | `amuchlonger_dispname`  |
+| `RoleName`    | `role-name-with-dashes` |
+| Username      | `v-role-b9ODeKsfl`      |
+
+</details>
+</details>
+
+### Sample payload
+
+```json
+{
+  "plugin_name": "mysql-database-plugin",
+  "allowed_roles": "readonly",
+  "connection_url": "{{username}}:{{password}}@tcp(127.0.0.1:3306)/",
+  "max_open_connections": 5,
+  "max_connection_lifetime": "5s",
+  "username": "root",
+  "password": "mysql"
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/database/config/mysql
+```
+
+## Statements
+
+Statements are configured during role creation and are used by the plugin to
+determine what is sent to the database on user creation, renewing, and
+revocation. For more information on configuring roles see the [Role
+API](/vault/api-docs/secret/databases#create-role) in the database secrets engine docs.
+
+### Parameters
+
+The following are the statements used by this plugin. If not mentioned in this
+list the plugin does not support that statement type.
+
+- `creation_statements` `(list: <required>)` – Specifies the database
+  statements executed to create and configure a user. Must be a
+  semicolon-separated string, a base64-encoded semicolon-separated string, a
+  serialized JSON string array, or a base64-encoded serialized JSON string
+  array. The `{{name}}` and `{{password}}` values will be substituted. The
+  generated password will be a random alphanumeric 20 character string.
+
+- `revocation_statements` `(list: [])` – Specifies the database statements to
+  be executed to revoke a user. Must be a semicolon-separated string, a
+  base64-encoded semicolon-separated string, a serialized JSON string array, or
+  a base64-encoded serialized JSON string array. The `{{name}}` value will be
+  substituted. If not provided defaults to a generic drop user statement.

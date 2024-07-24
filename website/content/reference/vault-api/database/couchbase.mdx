@@ -1,0 +1,115 @@
+---
+layout: api
+page_title: Couchbase - Database - Secrets Engines - HTTP API
+description: >-
+  The Couchbase plugin for Vault's database secrets engine generates database
+  credentials to access Couchbase servers.
+---
+
+# Couchbase database plugin HTTP API
+
+@include 'x509-sha1-deprecation.mdx'
+
+The Couchbase database plugin is one of the supported plugins for the database
+secrets engine. This plugin generates database credentials dynamically based on
+configured roles for the Couchbase database.
+
+## Configure connection
+
+In addition to the parameters defined by the [Database
+Secrets Engine](/vault/api-docs/secret/databases#configure-connection), this plugin
+has a number of parameters to further configure a connection.
+
+| Method | Path                     |
+| :----- | :----------------------- |
+| `POST` | `/database/config/:name` |
+
+### Parameters
+
+- `hosts` `(string: <required>)` – Specifies a set of comma-delimited Couchbase
+  hosts to connect to. Must use `couchbase://` scheme if `tls` is `true`.
+
+- `username` `(string: <required>)` – Specifies the username for Vault to use.
+
+- `password` `(string: <required>)` – Specifies the password corresponding to
+  the given username.
+
+- `tls` `(bool: false)` – Specifies whether to use TLS when connecting to
+  Couchbase.
+
+- `insecure_tls` `(bool: false)` – Specifies whether to skip verification of the
+  server certificate when using TLS.
+
+- `base64pem` `(string: "")` – Required if `tls` is `true`. Specifies the
+  certificate authority of the Couchbase server, as a PEM certificate that has
+  been base64 encoded.
+
+- `bucket_name` `(string: "")` - Required for Couchbase versions prior to 6.5.0. This
+  is only used to verify vault's connection to the server.
+
+- `username_template` `(string)` - [Template](/vault/docs/concepts/username-templating) describing how
+  dynamic usernames are generated.
+
+<details>
+<summary><b>Default Username Template</b></summary>
+
+```
+V_{{.DisplayName | uppercase | truncate 64}}_{{.RoleName | uppercase | truncate 64}}_{{random 20 | uppercase}}_{{unix_time}}
+```
+
+<details>
+  <summary><b>Example Usernames:</b></summary>
+
+| Example       |                                                      |
+| ------------- | ---------------------------------------------------- |
+| `DisplayName` | `token`                                              |
+| `RoleName`    | `myrolename`                                         |
+| Username      | `V_TOKEN_MYROLENAME_USZT1N4CYHAL4M0XTGX3_1614294836` |
+
+| Example       |                                                                                |
+| ------------- | ------------------------------------------------------------------------------ |
+| `DisplayName` | `amuchlonger_dispname`                                                         |
+| `RoleName`    | `role-name-with-dashes`                                                        |
+| Username      | `V_AMUCHLONGER_DISPNAME_ROLE-NAME-WITH-DASHES_S0T9XB0JSAB9NQZ7YJ40_1614294836` |
+
+</details>
+</details>
+
+### Sample payload
+
+```json
+{
+  "plugin_name": "couchbase-database-plugin",
+  "hosts": "couchbase://127.0.0.1",
+  "username": "user",
+  "password": "pass",
+  "allowed-roles": "my-*-role"
+}
+```
+
+### Sample request
+
+```bash
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/database/config/couchbase
+```
+
+## Statements
+
+Statements are configured during role creation and are used by the plugin to
+determine what is sent to the database on user creation, renewing, and
+revocation. For more information on configuring roles see the [Role
+API](/vault/api-docs/secret/databases#create-role) in the database secrets engine docs.
+
+### Parameters
+
+The following are the statements used by this plugin. If not mentioned in this
+list the plugin does not support that statement type.
+
+- `creation_statements` `(list: [])` – Specifies a JSON string containing
+  Couchbase RBAC roles to assign to created users. Any groups specified must
+  already exist. Must be a single JSON string. If not provided, defaults to
+  read-only admin.

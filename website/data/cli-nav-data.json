@@ -1,15 +1,15 @@
 [
   {
-    "title": "Commands (CLI)",
-    "routes": [
-      {
-        "title": "Overview",
-        "path": "commands"
-      },
-      {
-        "title": "Web REPL",
-        "path": "commands/web"
-      },
+    "title": "Token helpers",
+    "path": "token-helper"
+  },
+
+  { "divider": true },
+  { "heading": "COMMANDS" },
+      
+  {
+    "title": "<code>vault</code>",
+    "routes": [  
       {
         "title": "<code>agent</code>",
         "path": "commands/agent"
@@ -17,10 +17,6 @@
       {
         "title": "<code>audit</code>",
         "routes": [
-          {
-            "title": "Overview",
-            "path": "commands/audit"
-          },
           {
             "title": "<code>disable</code>",
             "path": "commands/audit/disable"
@@ -33,7 +29,7 @@
             "title": "<code>list</code>",
             "path": "commands/audit/list"
           }
-        ]
+            ]
       },
       {
         "title": "<code>auth</code>",
@@ -66,7 +62,7 @@
             "title": "<code>tune</code>",
             "path": "commands/auth/tune"
           }
-        ]
+            ]
       },
       {
         "title": "<code>debug</code>",
@@ -95,7 +91,7 @@
             "title": "<code>disconnect</code>",
             "path": "commands/hcp/disconnect"
           }
-        ]
+            ]
       },
       {
         "title": "<code>kv</code>",
@@ -144,7 +140,7 @@
             "title": "<code>undelete</code>",
             "path": "commands/kv/undelete"
           }
-        ]
+            ]
       },
       {
         "title": "<code>lease</code>",
@@ -165,7 +161,7 @@
             "title": "<code>revoke</code>",
             "path": "commands/lease/revoke"
           }
-        ]
+            ]
       },
       {
         "title": "<code>license</code>",
@@ -182,7 +178,7 @@
             "title": "<code>inspect</code>",
             "path": "commands/license/inspect"
           }
-        ]
+            ]
       },
       {
         "title": "<code>list</code>",
@@ -267,7 +263,7 @@
             "title": "<code>utilization</code>",
             "path": "commands/operator/utilization"
           }
-        ]
+            ]
       },
       {
         "title": "<code>patch</code>",
@@ -304,7 +300,7 @@
             "title": "<code>reissue</code>",
             "path": "commands/pki/reissue"
           }
-        ]
+            ]
       },
       {
         "title": "<code>plugin</code>",
@@ -356,9 +352,9 @@
                 "title": "<code>register</code>",
                 "path": "commands/plugin/runtime/register"
               }
-            ]
+                ]
           }
-        ]
+            ]
       },
       {
         "title": "<code>policy</code>",
@@ -387,7 +383,7 @@
             "title": "<code>write</code>",
             "path": "commands/policy/write"
           }
-        ]
+            ]
       },
       {
         "title": "<code>print</code>",
@@ -428,7 +424,7 @@
             "title": "<code>tune</code>",
             "path": "commands/secrets/tune"
           }
-        ]
+            ]
       },
       {
         "title": "<code>server</code>",
@@ -469,7 +465,7 @@
             "title": "<code>revoke</code>",
             "path": "commands/token/revoke"
           }
-        ]
+            ]
       },
       {
         "title": "<code>transit</code>",
@@ -482,7 +478,7 @@
             "title": "<code>import</code> and <code>import-version</code>",
             "path": "commands/transit/import"
           }
-        ]
+            ]
       },
       {
         "title": "<code>unwrap</code>",
@@ -499,11 +495,7 @@
       {
         "title": "<code>write</code>",
         "path": "commands/write"
-      },
-      {
-        "title": "Token Helpers",
-        "path": "commands/token-helper"
       }
-    ]
+        ]
   }
 ]

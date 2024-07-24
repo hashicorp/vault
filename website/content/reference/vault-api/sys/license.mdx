@@ -1,0 +1,100 @@
+---
+layout: api
+page_title: /sys/license/status - HTTP API
+description: |-
+  The `/sys/license/status` endpoint is used to view the license used in
+  Vault.
+---
+
+# `/sys/license/status`
+
+@include 'alerts/enterprise-only.mdx'
+
+The `/sys/license/status` endpoint is used to view update the license used in
+Vault.
+
+## License status
+
+This endpoint returns information about licensing. See [license autoloading](/vault/docs/enterprise/license/autoloading) for additional background.
+
+In the response:
+
+- `autoloading_used` will be true if an autoloaded license was provided to the
+  node, false otherwise. This should always be true from Vault 1.11.0 onward.
+- `autoloaded` is the autoloaded license if autoloading_used is true.
+- `persisted_autoload` is the autoloaded license the active node last wrote to
+  storage; this is only used to detect inconsistently licensed nodes in the
+  cluster. It cannot be used as a license itself.
+- `stored` was used for the stored license prior to Vault 1.11.0. Stored licenses are no longer supported.
+
+`autoloaded`, and `persisted_autoload` will both have the same structure.
+
+| Method | Path                  |
+| :----- | :-------------------- |
+| `GET`  | `/sys/license/status` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/license/status
+```
+
+### Sample response
+
+```json
+{
+  "data": {
+    "autoloading_used": true,
+    "autoloaded": {
+      "expiration_time": "2022-05-17T23:59:59Z",
+      "features": [
+        "HSM",
+        "Performance Replication",
+        "DR Replication",
+        "MFA",
+        "Sentinel",
+        "Seal Wrapping",
+        "Control Groups",
+        "Performance Standby",
+        "Namespaces",
+        "KMIP",
+        "Entropy Augmentation",
+        "Transform Secrets Engine",
+        "Lease Count Quotas",
+        "Key Management Secrets Engine",
+        "Automated Snapshots"
+      ],
+      "license_id": "060d7820-fa59-f95c-832b-395db0aeb9ba",
+      "performance_standby_count": 9999,
+      "start_time": "2021-05-17T00:00:00Z",
+      "termination_time": "2031-05-17T23:59:59Z"
+    },
+    "persisted_autoload": {
+      "expiration_time": "2022-05-17T23:59:59Z",
+      "features": [
+        "HSM",
+        "Performance Replication",
+        "DR Replication",
+        "MFA",
+        "Sentinel",
+        "Seal Wrapping",
+        "Control Groups",
+        "Performance Standby",
+        "Namespaces",
+        "KMIP",
+        "Entropy Augmentation",
+        "Transform Secrets Engine",
+        "Lease Count Quotas",
+        "Key Management Secrets Engine",
+        "Automated Snapshots"
+      ],
+      "license_id": "060d7820-fa59-f95c-832b-395db0aeb9ba",
+      "performance_standby_count": 9999,
+      "start_time": "2021-05-17T00:00:00Z",
+      "termination_time": "2031-05-17T23:59:59Z"
+    }
+  }
+}
+```

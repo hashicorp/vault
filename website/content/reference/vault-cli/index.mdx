@@ -1,0 +1,485 @@
+---
+layout: docs
+page_title: Vault CLI usage
+description: >-
+  Technical reference for the Vault CLI
+---
+
+# Vault CLI usage
+
+The Vault CLI is a thin wrapper around the HTTP API. Every CLI command maps
+directly to the HTTP API internally.
+
+## Syntax 
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault <command> [args]
+```
+
+</CodeBlockConfig>
+
+## Commands
+
+Supported commands:
+
+- `audit` - Create and manage audit devices
+- `agent` - Start a Vault agent instance
+- `auth` - Create and manage Vault authentication methods
+- `debug` - Collect debugging data from a specific server node
+- `delete` - Delete secrets and configuration data
+- `events` - TBD
+- `hcp` - Run CLI commands against a HCP Vault Dedicated instance
+- `kv` - Manage data in the Key-Value plugin
+- `lease` - Create and manage leases
+- `license` - Install and update Vault licenses
+- `list` - List internal data and secrets
+- `login` - Authenticate locally to a Vault server
+- `monitor` - Stream log messages from a Vault server
+- `namespace` - Display and subscribe to Vault event notifications
+- `operator` - Manage Vault servers, clusters, and root tokens
+- `patch` - Patch data, configuration, and secrets
+- `path-help` - Retrieve API help for paths
+- `pki` - Manage data in PKI plugin
+- `plugin` - Manage Vault plugins and the plugin catalog
+- `policy` - Create and manage Vault policies
+- `print` - Print the runtime server configuration
+- `proxy` - Start a Vault Proxy instance
+- `read` - Read internal data and retrieves secrets
+- `server` - Start a Vault server
+- `ssh` - Initiate an SSH session with Vault
+- `status` - Print seal and HA status
+- `secrets` - Configure and use enabled secrets plugins
+- `token` - Configure and use Vault tokens
+- `transit` - Manage data in the Transit plugin
+- `transform` - Manage data in the Transform plugin       
+- `unwrap` - Unwrap a wrapped secret
+- `version` - Print the current version of the target Vault server
+- `version-history` - Print the version history of the target Vault server
+- `write` - Write data, configuration, and secrets to Vault
+
+To see the in-tool help menu for a given command, use the `--help` flag with the
+command. For example:
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$  vault print --help
+
+Usage: vault print <subcommand>
+
+  Group subcommands that interact with Vault runtime values.
+
+Subcommands:
+
+  token    Print the current Vault token
+```
+
+</CodeBlockConfig>
+
+## Environment variables
+
+Use the following environment variables to configure the CLI globally and use
+the corresponding CLI flag to override the configured value for a specific
+command.
+
+@include 'env-variables/vault_addr.mdx'
+
+## Common flags
+
+The following flags apply to all CLI commands and subcommands.
+
+@include 'cli/common-flags/address.mdx'
+@include 'cli/common-flags/output-curl-string.mdx'
+
+
+## Examples
+
+Create a new user (`bob`) that uses the user/password method for authentication
+under the `my-organization` namespace, and override the default Vault server
+address:
+
+```shell-session
+$ vault write                  \
+  auth/userpass/users/bob      \
+  password="long-password"     \
+  -namespace="my-organization" \
+  -address="http://127.0.10.1:8200"
+```
+
+## Print cURL command
+
+To print the API call associated with a CLI command use the
+`-output-curl-string` flag after the subcommand.
+
+```shell-session
+$ vault write -output-curl-string  auth/userpass/users/bob password="long-password"
+
+curl -X PUT -H "X-Vault-Request: true" -H "X-Vault-Token: $(vault print token)" -d '{"password":"long-password"}' http://127.0.0.1:8200/v1/auth/userpass/users/bob
+```
+
+#### Print policy requirements
+
+To view the policy requirements to perform an operation, use the `-output-policy` flag after the subcommand.
+
+```
+$ vault kv put -output-policy kv/secret value=itsasecret
+
+path "kv/data/secret" {
+  capabilities = ["create", "update"]
+}
+```
+
+## Command help
+
+There are two primary ways to get help in Vault: [CLI help (`help`)](#cli-help)
+and [API help (`path-help`)](#api-help).
+
+### CLI help
+
+Use `help` (or `-h` for shorthand) to see the CLI help output which corresponds
+to your Vault version.
+
+To get CLI help:
+
+```shell-session
+$ vault help
+```
+
+**Example:** To get help on the `kv` command.
+
+```shell-session
+$ vault kv help
+```
+
+The help output displays available subcommands, parameters, and command flags.
+
+### API help
+
+To invoke the Vault API paths, you can use the [read](/vault/docs/commands/read) (for
+HTTP GET), [write](/vault/docs/commands/write) (for HTTP PUT or POST),
+[delete](/vault/docs/commands/delete) (for HTTP DELETE), and
+[list](/vault/docs/commands/list) (for HTTP LIST) commands.
+
+Use `path-help` to get Vault API help:
+
+```shell-session
+$ vault path-help -h
+```
+
+The `path-help` retrieves API help on any API paths. Vault API paths provide
+built-in help in markdown format. This includes system paths, secret engines,
+and auth methods.
+
+**Example:** API help on the [`sys/mounts/`](/vault/api-docs/system/mounts) path.
+
+```shell-session
+$ vault path-help sys/mounts
+Request:        mounts
+Matching Route: ^mounts$
+
+List the currently mounted backends.
+
+## DESCRIPTION
+
+This path responds to the following HTTP methods.
+
+    GET /
+        Lists all the mounted secret backends.
+
+    GET /<mount point>
+        Get information about the mount at the specified path.
+
+    POST /<mount point>
+        Mount a new secret backend to the mount point in the URL.
+
+    POST /<mount point>/tune
+        Tune configuration parameters for the given mount point.
+
+    DELETE /<mount point>
+        Unmount the specified mount point.
+```
+
+The help output displays supported child-paths and available parameters if there
+are any.
+
+## Command input
+
+To write data to Vault, the input can be a part of the command in key-value
+format.
+
+```shell-session
+$ vault kv put secret/password value=itsasecret
+```
+
+However, some Vault API require more advanced structures such as maps. You can
+use stdin or file input instead.
+
+### stdin
+
+Some commands in Vault can read data from stdin using `-` as the value. If `-`
+is the entire argument, Vault expects to read a JSON object from stdin:
+
+```shell-session
+$ echo -n '{"value":"itsasecret"}' | vault kv put secret/password -
+```
+
+In addition to reading full JSON objects, Vault can read just a value from
+stdin:
+
+```shell-session
+$ echo -n "itsasecret" | vault kv put secret/password value=-
+```
+
+### Files
+
+Some commands can also read data from a file on disk. The usage is similar to
+stdin as documented above. If an argument starts with `@`, Vault will read it as
+a file:
+
+```shell-session
+$ vault kv put secret/password @data.json
+```
+
+Or specify the contents of a file as a value:
+
+```shell-session
+$ vault kv put secret/password value=@data.txt
+```
+
+To use values that begin with an `@` character, escape the character with a
+backslash (`\`) to keep Vault from parsing the value as a file location:
+
+```shell-session
+$ vault login -method userpass username="mitchellh" password="\@foo"
+```
+
+Note that if an argument is supplied in a @key=value format, Vault will treat that as a
+kv pair with the key being `@key`, not a file called `key=value`. This also means that Vault
+does not support filenames with `=` in them.
+
+## Mount flag syntax (KV)
+
+All `kv` commands can alternatively refer to the path to the KV secrets engine using a flag-based syntax like `$ vault kv get -mount=secret password`
+instead of `$ vault kv get secret/password`. The mount flag syntax was created to mitigate confusion caused by the fact that for KV v2 secrets,
+their full path (used in policies and raw API calls) actually contains a nested `/data/` element (e.g. `secret/data/password`) which can be easily overlooked when using
+the above KV v1-like syntax `secret/password`. To avoid this confusion, all KV-specific docs pages will use the `-mount` flag.
+
+## Exit codes
+
+The Vault CLI aims to be consistent and well-behaved unless documented
+otherwise.
+
+- Local errors such as incorrect flags, failed validations, or wrong numbers
+  of arguments return an exit code of 1.
+
+- Any remote errors such as API failures, bad TLS, or incorrect API parameters
+  return an exit status of 2
+
+Some commands override this default where it makes sense. These commands
+document this anomaly.
+
+## Autocompletion
+
+The `vault` command features opt-in autocompletion for flags, subcommands, and
+arguments (where supported).
+
+Enable autocompletion by running:
+
+```shell-session
+$ vault -autocomplete-install
+```
+
+~> Be sure to **restart your shell** after installing autocompletion!
+
+When you start typing a Vault command, press the `<tab>` character to show a
+list of available completions. Type `-<tab>` to show available flag completions.
+
+If the `VAULT_*` environment variables are set, the autocompletion will
+automatically query the Vault server and return helpful argument suggestions.
+
+## Token helper
+
+By default, the Vault CLI uses a "token helper" to cache the token after
+authentication. This is conceptually similar to how a website securely stores
+your session information as a cookie in the browser. Token helpers are
+customizable, and you can even build your own.
+
+The default token helper stores the token in `~/.vault-token`. You can delete
+this file at any time to "logout" of Vault.
+
+## Environment variables
+
+The CLI reads the following environment variables to set behavioral defaults.
+This can alleviate the need to repetitively type a flag. Flags always take
+precedence over the environment variables. Each of the following environment
+variables must be set on the Vault process.  In Vault 1.13+, all environment
+variables available to the Vault process will be logged during startup.
+
+### `VAULT_TOKEN`
+
+Vault authentication token. Conceptually similar to a session token on a
+website, the `VAULT_TOKEN` environment variable holds the contents of the token.
+For more information, please see the [token
+concepts](/vault/docs/concepts/tokens) page.
+
+### `VAULT_ADDR`
+
+Address of the Vault server expressed as a URL and port, for example:
+`https://127.0.0.1:8200/`.
+
+### `VAULT_CACERT`
+
+Path to a PEM-encoded CA certificate _file_ on the local disk. This file is used
+to verify the Vault server's SSL certificate. This environment variable takes
+precedence over `VAULT_CAPATH`.
+
+### `VAULT_CAPATH`
+
+Path to a _directory_ of PEM-encoded CA certificate files on the local disk.
+These certificates are used to verify the Vault server's SSL certificate.
+
+### `VAULT_CLIENT_CERT`
+
+Path to a PEM-encoded client certificate on the local disk. This file is used
+for TLS communication with the Vault server.
+
+### `VAULT_CLIENT_KEY`
+
+Path to an unencrypted, PEM-encoded private key on disk which corresponds to the
+matching client certificate.
+
+### `VAULT_CLIENT_TIMEOUT`
+
+Timeout variable. The default value is 60s.
+
+### `VAULT_CLUSTER_ADDR`
+
+Address that should be used for other cluster members to connect to this node
+when in High Availability mode.
+
+### `VAULT_FORMAT`
+
+Provide Vault output (read/status/write) in the specified format. Valid formats are "table", "json", or "yaml".
+
+### `VAULT_LICENSE`
+
+[Enterprise, Server only] Specify a license to use for this node. This takes
+precedence over [#VAULT_LICENSE_PATH](#vault_license_path) and
+[license_path in config](/vault/docs/configuration#license_path).
+
+### `VAULT_LICENSE_PATH`
+
+[Enterprise, Server only] Specify a path to a license on disk to use for this node.
+This takes precedence over [license_path in config](/vault/docs/configuration#license_path).
+
+### `VAULT_LOG_LEVEL`
+
+Set the Vault server's log level. The supported values are `trace`, `debug`,
+`info`, `warn`, and `err`. The default log leve is `info`.
+
+### `VAULT_MAX_RETRIES`
+
+Maximum number of retries when certain error codes are encountered. The default
+is `2`, for three total attempts. Set this to `0` or less to disable retrying.
+
+Error codes that are retried are 412 (client consistency requirement not
+satisfied) and all 5xx except for 501 (not implemented).
+
+### `VAULT_REDIRECT_ADDR`
+
+Address that should be used when clients are redirected to this node when in
+High Availability mode.
+
+### `VAULT_SKIP_VERIFY`
+
+Do not verify Vault's presented certificate before communicating with it.
+Setting this variable is not recommended and voids Vault's [security
+model](/vault/docs/internals/security).
+
+### `VAULT_TLS_SERVER_NAME`
+
+Name to use as the SNI host when connecting via TLS.
+
+### `VAULT_CLI_NO_COLOR`
+
+If provided, Vault output will not include ANSI color escape sequence characters.
+
+### `VAULT_RATE_LIMIT`
+
+This environment variable will limit the rate at which the `vault` command
+sends requests to Vault.
+
+This environment variable has the format `rate[:burst]` (where items in `[]` are
+optional). If not specified, the burst value defaults to rate. Both rate and
+burst are specified in "operations per second". If the environment variable is
+not specified, then the rate and burst will be unlimited _i.e._ rate
+limiting is off by default.
+
+_Note:_ The rate is limited for each invocation of the `vault` CLI. Since
+each invocation of the `vault` CLI typically only makes a few requests,
+this environment variable is most useful when using the Go
+[Vault client API](/vault/api-docs/libraries#go).
+
+### `VAULT_NAMESPACE`
+
+The namespace to use for the command. Setting this is not necessary
+but allows using relative paths.
+
+### `VAULT_SRV_LOOKUP`
+
+Enables the client to lookup the host through DNS SRV look up as described in this
+[draft](https://tools.ietf.org/html/draft-andrews-http-srv-02).
+This is not designed for high-availability, just discovery.
+The draft specifies that the SRV record lookup is ignored if a port is given.
+
+### `VAULT_MFA`
+
+**ENTERPRISE ONLY**
+
+MFA credentials in the format `mfa_method_name[:key[=value]]` (items in `[]` are
+optional). Note that when using the environment variable, only one credential
+can be supplied. If a MFA method expects multiple credential values, or if there
+are multiple MFA methods specified on a path, then the CLI flag `-mfa` should be
+used.
+
+### `VAULT_HTTP_PROXY`
+
+HTTP or HTTPS proxy location which should be used by all requests to access Vault.
+ When present, this overrides the default proxy resolution behavior.
+Format should be `http://server:port` or `https://server:port`.
+
+(See `VAULT_PROXY_ADDR` below).
+
+### `VAULT_PROXY_ADDR`
+
+HTTP or HTTPS proxy location which should be used by all requests to access Vault.
+ When present, this overrides the default proxy resolution behavior.
+Format should be `http://server:port` or `https://server:port`.
+
+~> Note: When using `VAULT_HTTP_PROXY` or `VAULT_PROXY_ADDR` any of the standard
+ proxy variables found in the environment will be ignored.
+Specifically `HTTP_PROXY`, `HTTPS_PROXY` and `NO_PROXY`.
+All requests will resolve the specified proxy; there is no way to exclude
+ domains from consulting the proxy server.
+
+~> Note: If both `VAULT_HTTP_PROXY` and `VAULT_PROXY_ADDR` environment
+variables are supplied, `VAULT_PROXY_ADDR` will be prioritized and preferred.
+
+### `VAULT_DISABLE_REDIRECTS`
+
+Prevents the Vault client from following redirects. By default, the Vault client will automatically follow a single redirect.
+
+~> **Note:** Disabling redirect following behavior could cause issues with commands such as 'vault operator raft snapshot' as this command redirects the request to the cluster's primary node.
+
+## Flags
+
+There are different CLI flags that are available depending on subcommands. Some
+flags, such as those used for setting HTTP and output options, are available
+globally, while others are specific to a particular subcommand. For a complete
+list of available flags, run:
+
+```shell-session
+$ vault <subcommand> -h
+```

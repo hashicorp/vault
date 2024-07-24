@@ -1,0 +1,53 @@
+---
+layout: api
+page_title: /sys/key-status - HTTP API
+description: |-
+  The `/sys/key-status` endpoint is used to query info about the current
+  encryption key of Vault.
+---
+
+# `/sys/key-status`
+
+@include 'alerts/restricted-root.mdx'
+
+The `/sys/key-status` endpoint is used to query info about the current
+encryption key of Vault.
+
+## Get encryption key status
+
+This endpoint returns information about the current encryption key used by
+Vault.
+
+| Method | Path              |
+| :----- | :---------------- |
+| `GET`  | `/sys/key-status` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request GET \
+    http://127.0.0.1:8200/v1/sys/key-status
+
+```
+
+### Sample response
+
+```json
+{
+  "term": 3,
+  "install_time": "2015-05-29T14:50:46.223692553-07:00",
+  "encryptions": 74718331
+}
+```
+
+The `term` parameter is the sequential key number. `install_time` is the
+time that encryption key was installed. `encryptions` is the estimated
+number of encryptions made by the key including those on other cluster
+nodes.  
+
+Note that the estimated encryption count is aggregated from secondary 
+Vault nodes to the primary but not in the other direction.  Thus the
+count only accurately reflects the cluster-wide estimate when queried
+on the primary.

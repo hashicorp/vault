@@ -1,0 +1,228 @@
+---
+layout: docs
+page_title: operator diagnose - Command
+description: |-
+  "vault operator diagnose" is a new operator-centric command, focused on providing a clear description 
+  of what is working in Vault, and what is not working. The command focuses on why Vault cannot serve requests,
+  but will also warn on configurations or statuses that it deems to be unsafe in some way. 
+
+---
+
+# operator diagnose
+
+The operator diagnose command should be used primarily when vault is down or 
+partially inoperational. The command can be used safely regardless of the state 
+vault is in, but may return meaningless results for some of the test cases if the 
+vault server is already running. 
+
+Note: if you run the diagnose command proactively, either before a server 
+starts or while a server is operational, please consult the documentation 
+on the individual checks below to see which checks are returning false error 
+messages or warnings.
+
+## Usage
+
+The following flags are available in addition to the [standard set of
+flags](/vault/docs/commands) included on all commands.
+
+### Output options
+
+- `-format` `(string: "table")` - Print the output in the given format. Valid
+  formats are "table", "json", or "yaml". This can also be specified via the
+  `VAULT_FORMAT` environment variable.
+
+#### Output layout
+
+The operator diagnose command will output a set of lines in the CLI. 
+Each line will begin with a prefix in parenthesis. These are:. 
+
+- `[ success ]` - Denotes that the check was successful.
+- `[ warning ]` - Denotes that the check has passed, but that there may be potential
+issues to look into that may relate to the issues vault is experiencing. Diagnose warns 
+frequently. These warnings are meant to serve as starting points in the debugging process. 
+- `[ failure ]` - Denotes that the check has failed. Failures are critical issues in the eyes 
+of the diagnose command.
+
+In addition to these prefixed lines, there may be output lines that are not prefixed, but are 
+color-coded purple. These are advice lines from Diagnose, and are meant to offer general guidance 
+on how to go about fixing potential warnings or failures that may arise.
+
+Warn or fail prefixes in nested checks will bubble up to the parent if the prefix superceeds the 
+parent prefix. Fail superceeds warn, and warn superceeds ok. For example, if the TLS checks under
+the Storage check fails, the `[ failure ]` prefix will bubble up to the Storage check. 
+
+### Command options
+
+- `-config` `(string; "")` - The path to the vault configuration file used by 
+the vault server on startup. 
+
+### Diagnose checks
+
+The following section details the various checks that Diagnose runs. Check names in documentation
+will be separated by slashes to denote that they are nested, when applicable. For example, a check 
+documented as `A / B` will show up as `B` in the `operator diagnose` output, and will be nested
+(indented) under `A`. 
+
+#### Vault diagnose
+
+`Vault Diagnose` is the top level check that contains the rest of the checks. It will report the status
+of the check 
+
+#### Check operating system / check open file limit
+
+`Check Open File Limit` verifies that the open file limit value is set high enough for vault 
+to run effectively. We recommend setting these limits to at least 1024768. 
+
+This check will be skipped on openbsd, arm, and windows. 
+
+#### Check operating system / check disk usage
+
+`Check Disk Usage` will report disk usage for each partition. For each partition on a prod host,
+we recommend having at least 5% of the partition free to use, and at least 1 GB of space. 
+
+This check will be skipped on openbsd and arm.
+
+#### Parse configuration
+
+`Parse Configuration` will check the vault server config file for syntax errors. It will check
+for extra values in the configuration file, repeated stanzas, and stanzas that do not belong 
+in the configuration file (for example a "tcpp" listener as opposed to a tcp listener). 
+
+Currently, the `storage` stanza is not checked. 
+
+#### Check storage / create storage backend
+
+`Create Storage Backend` ensures that the storage stanza configured in the vault server config
+has enough information to create a storage object internally. Common errors will have to do
+with misconfigured fields in the storage stanza. 
+
+#### Check storage / check consul TLS
+
+`Check Consul TLS` verifies TLS information included in the storage stanza if the storage type 
+is consul. If a certificate chain is provided, Diagnose parses the root, intermediate, and leaf
+certificates, and checks each one for correctness. 
+
+#### Check storage / check consul direct storage access
+
+`Check Consul Direct Storage Access` is a consul-specific check that ensures Vault is not accessing
+the consul server directly, but rather through a local agent. 
+
+#### Check storage / check raft folder permissions
+
+`Check Raft Folder Permissions` computes the permissions on the raft folder, checks that a boltDB file 
+has been initialized within the folder previously, and ensures that the folder is not too permissive, but 
+at the same time has enough permissions to be used. The raft folder should not have `other` permissions, but 
+should have `group rw` or `owner rw`, depending on different setups. This check also warns if it detects a
+symlink being used. 
+
+Note that this check will warn that a raft file has not been created if diagnose is run without any
+pre-existing server runs.
+
+This check will be skipped on windows. 
+
+#### Check storage / check raft folder ownership
+
+`Check Raft Folder Ownership` ensures that vault does not need to run as root to access the boltDB folder. 
+
+Note that this check will warn that a raft file has not been created if diagnose is run without any
+pre-existing server runs. 
+
+This check will be skipped on windows. 
+
+#### Check storage / check for raft quorum
+
+`Check For Raft Quorum` uses the FSM to ensure that there were an odd number of voters in the raft quorum when 
+vault was last running. 
+
+Note that this check will warn that there are 0 voters if diagnose is run without any pre-existing server runs. 
+
+#### Check storage / check storage access
+
+`Check Storage Access` will try to write a dud value, named `diagnose/latency/<uuid>`, to storage. 
+Ensure that there is no important data at this location before running diagnose, as this check 
+will overwrite that data. This check will then try to list and read the value it wrote to ensure 
+the name and value is as expected. 
+
+`Check Storage Access` will warn if any operation takes longer than 100ms, and error out if the 
+entire check takes longer than 30s. 
+
+#### Check service discovery / check consul service discovery TLS
+
+`Check Consul Service Discovery TLS` verifies TLS information included in the service discovery
+ stanza if the storage type is consul. If a certificate chain is provided, Diagnose parses 
+ the root, intermediate, and leaf certificates, and checks each one for correctness. 
+
+#### Check service discovery / check consul direct service discovery
+
+`Check Consul Direct Service Discovery` is a consul-specific check that ensures Vault
+is not accessing the consul server directly, but rather through a local agent. 
+
+#### Create Vault server configuration seals
+
+`Create Vault Server Configuration Seals` creates seals from the vault configuration 
+stanza and verifies they can be initialized and finalized. 
+
+#### Check transit seal TLS
+
+`Check Transit Seal TLS` checks the TLS client certificate, key, and CA certificate
+provided in a transit seal stanza (if one exists) for correctness. 
+
+#### Create core configuration / initialize randomness for core
+
+`Initialize Randomness for Core` ensures that vault has access to the randReader that 
+the vault core uses. 
+
+#### HA storage
+
+This check and any nested checks will be the same as the `Check Storage` checks.
+The only difference is that the checks here will be run on whatever is specified in the 
+`ha_storage` section of the vault configuration, as opposed to the `storage` section. 
+
+#### Determine redirect address
+
+Ensures that one of the `VAULT_API_ADDR`, `VAULT_REDIRECT_ADDR`, or `VAULT_ADVERTISE_ADDR` 
+environment variables are set, or that the redirect address is specified in the vault 
+configuration.
+
+#### Check cluster address
+
+Parses the cluster address from the `VAULT_CLUSTER_ADDR` environment variable, or from the 
+redirect address or cluster address specified in the vault configuration, and checks that 
+the address is of the form `host:port`. 
+
+#### Check core creation
+
+`Check Core Creation` verifies the logical configuration checks that vault does when it 
+creates a core object. These are runtime checks, meaning any errors thrown by this diagnose
+test will also be thrown by the vault server itself when it is run. 
+
+#### Check for autoloaded license
+
+`Check For Autoloaded License` is an enterprise diagnose check, which verifies that vault 
+has access to a valid autoloaded license that will not expire in the next 30 days.
+
+#### Start listeners / check listener TLS
+
+`Check Listener TLS` verifies the server certificate file and key are valid and matching. 
+It also checks the client CA file, if one is provided, for a valid certificate, and performs
+the standard runtime listener checks on the listener configuration stanza, such as verifying 
+that the minimum and maximum TLS versions are within the bounds of what vault supports. 
+
+Like all the other Diagnose TLS checks, it will warn if any of the certificates provided are 
+set to expire within the next month. 
+
+#### Start listeners / create listeners
+
+`Create Listeners` uses the listener configuration to initialize the listeners, erroring with 
+a server error if anything goes wrong. 
+
+#### Check autounseal encryption
+
+`Check Autounseal Encryption` will initialize the barrier using the seal stanza, if the seal
+type is not a shamir seal, and use it to encrypt and decrypt a dud value. 
+
+#### Check server before runtime
+
+`Check Server Before Runtime` achieves parity with the server run command, running through 
+the runtime code checks before the server is initialized to ensure that nothing fails. 
+This check will never fail without another diagnose check failing. 

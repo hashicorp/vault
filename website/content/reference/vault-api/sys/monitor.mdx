@@ -1,0 +1,49 @@
+---
+layout: api
+page_title: /sys/monitor - HTTP API
+description: The `/sys/monitor` endpoint is used to receive streaming logs from the Vault server.
+---
+
+# `/sys/monitor`
+
+@include 'alerts/restricted-admin.mdx'
+
+The `/sys/monitor` endpoint is used to receive streaming logs from the Vault server.
+
+If Vault is emitting log messages faster than a receiver can process them, then
+some log lines will be dropped.
+
+## Monitor system logs
+
+This endpoint streams logs back to the client from Vault. Note that unlike most API endpoints in Vault, this one
+does not return JSON by default. This will send back data in whatever log format Vault has been configured with. By
+default, this is text.
+
+| Method | Path           |
+| :----- | :------------- |
+| `GET`  | `/sys/monitor` |
+
+### Parameters
+
+- `log_level` `(string: "info")` – Specifies the log level to use when streaming logs. This defaults to `info`
+  if not specified.
+
+- `log_format` `(string: "standard")` – Specifies the log format to emit when streaming logs. Supported values are "standard" and "json". The default is `standard`,
+if not specified.
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    'http://127.0.0.1:8200/v1/sys/monitor?log_level=debug'
+```
+
+### Sample response
+
+```
+2020-09-15T11:28:09.188-0700 [INFO]  core: successful mount: namespace= path=foo/ type=kv
+2020-09-15T11:28:18.265-0700 [DEBUG] core.secrets.deletion: clearing view: namespace=root path=foo/ total_keys=0
+2020-09-15T11:28:18.265-0700 [DEBUG] core.secrets.deletion: view cleared: namespace=root path=foo/
+2020-09-15T11:28:18.265-0700 [INFO]  core: successfully unmounted: path=foo/ namespace=
+```

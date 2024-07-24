@@ -1,0 +1,255 @@
+---
+layout: api
+page_title: 'Identity Secret Backend: Entity Alias - HTTP API'
+description: >-
+  This is the API documentation for managing entity aliases in the identity
+  store.
+---
+
+~> **NOTE:** Be careful in granting permissions to non-readonly identity endpoints.
+If a user can modify an entity, they can grant it additional privileges through
+policies.  If a user can modify an alias they can login with, they can bind it to
+an entity with higher privileges.
+
+## Create an entity alias
+
+~> **IMPORTANT NOTE:** Prior to creating any alias it is important to consider the cardinality of the alias' name,
+since there are potential security issues to be aware of. The main one revolves around alias reuse. It is possible
+for multiple authenticated entities to be bound to the same alias, and therefore gain access to all of its privileges.
+It is recommended, whenever possible, to create a unique alias for each entity. This is especially true in the case
+of machine generated entities.
+
+This endpoint creates a new alias for an entity.
+
+| Method | Path                     |
+| :----- | :----------------------- |
+| `POST` | `/identity/entity-alias` |
+
+### Parameters
+
+- `name` `(string: <required>)` - Name of the alias. Name should be the identifier
+  of the client in the authentication source. For example, if the alias belongs
+  to userpass backend, the name should be a valid username within userpass
+  auth method. If the alias belongs to GitHub, it should be the GitHub username. If the alias 
+  belongs to an approle auth method, the name should be a valid RoleID.
+
+- `id` `(string: <optional>)` - ID of the entity alias. If set, updates the
+  corresponding entity alias.
+
+- `canonical_id` `(string: <required>)` - Entity ID to which this alias belongs to.
+
+- `mount_accessor` `(string: <required>)` - Accessor of the mount to which the
+  alias should belong to.
+
+- `custom_metadata` `(map<string|string>: <optional>)` - A map of arbitrary string to string valued 
+  user-provided metadata meant to describe the alias.
+
+### Sample payload
+
+```json
+{
+  "name": "testuser",
+  "canonical_id": "404e57bc-a0b1-a80f-0a73-b6e92e8a52d3",
+  "mount_accessor": "auth_userpass_e50b1a44",
+  "custom_metadata": {
+    "contact_email": "james_updated@example.com"
+  }
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/identity/entity-alias
+```
+
+### Sample response
+
+```json
+{
+  "data": {
+    "canonical_id": "404e57bc-a0b1-a80f-0a73-b6e92e8a52d3",
+    "id": "34982d3d-e3ce-5d8b-6e5f-b9bb34246c31"
+  }
+}
+```
+
+## Read entity alias by ID
+
+This endpoint queries the entity alias by its identifier.
+
+| Method | Path                            |
+| :----- | :------------------------------ |
+| `GET`  | `/identity/entity-alias/id/:id` |
+
+### Parameters
+
+- `id` `(string: <required>)` – Identifier of entity alias.
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/identity/entity-alias/id/34982d3d-e3ce-5d8b-6e5f-b9bb34246c31
+```
+
+### Sample response
+
+```json
+{
+  "data": {
+    "creation_time": "2017-07-25T21:41:09.820717636Z",
+    "canonical_id": "404e57bc-a0b1-a80f-0a73-b6e92e8a52d3",
+    "custom_metadata": {
+      "contact_email":"james@example.com"
+    },
+    "id": "34982d3d-e3ce-5d8b-6e5f-b9bb34246c31",
+    "last_update_time": "2017-07-25T21:41:09.820717636Z",
+    "local": false,
+    "metadata": {
+      "group": "san_francisco",
+      "region": "west"
+    },
+    "mount_accessor": "auth_userpass_e50b1a44",
+    "mount_path": "userpass/",
+    "mount_type": "userpass",
+    "name": "testuser"
+  }
+}
+```
+
+## Update entity alias by ID
+
+This endpoint is used to update an existing entity alias.
+
+| Method | Path                            |
+| :----- | :------------------------------ |
+| `POST` | `/identity/entity-alias/id/:id` |
+
+### Parameters
+
+- `id` `(string: <required>)` – Identifier of the entity alias.
+
+- `name` `(string: "")` - Name of the alias. Name should be the identifier
+  of the client in the authentication source. For example, if the alias belongs
+  to userpass backend, the name should be a valid username within userpass
+  backend. If alias belongs to GitHub, it should be the GitHub username.
+
+- `canonical_id` `(string: "")` - Entity ID to which this alias belongs to.
+
+- `mount_accessor` `(string: "")` - Accessor of the mount to which the
+  alias should belong to.
+
+- `custom_metadata` `(map<string|string>: <optional>)` - A map of arbitrary string to string valued 
+  user-provided metadata meant to describe the alias.
+
+### Sample payload
+
+```json
+{
+  "name": "testuser",
+  "canonical_id": "404e57bc-a0b1-a80f-0a73-b6e92e8a52d3",
+  "mount_accessor": "auth_userpass_e50b1a44"
+   "custom_metadata": {
+    "contact_email": "james@example.com"
+  }
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/identity/entity-alias/id/34982d3d-e3ce-5d8b-6e5f-b9bb34246c31
+```
+
+### Sample response
+
+```json
+{
+  "data": {
+    "canonical_id": "404e57bc-a0b1-a80f-0a73-b6e92e8a52d3",
+    "id": "34982d3d-e3ce-5d8b-6e5f-b9bb34246c31"
+  }
+}
+```
+
+## Delete entity alias by ID
+
+This endpoint deletes an alias from its corresponding entity.
+
+| Method   | Path                            |
+| :------- | :------------------------------ |
+| `DELETE` | `/identity/entity-alias/id/:id` |
+
+### Parameters
+
+- `id` `(string: <required>)` – Identifier of the entity alias.
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request DELETE \
+    http://127.0.0.1:8200/v1/identity/entity-alias/id/34982d3d-e3ce-5d8b-6e5f-b9bb34246c31
+```
+
+## List entity aliases by ID
+
+The list by ID endpoint returns the available entity aliases and key data by their identifiers.
+
+| Method | Path                                  |
+| :----- | :------------------------------------ |
+| `LIST` | `/identity/entity-alias/id`           |
+| `GET`  | `/identity/entity-alias/id?list=true` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request LIST \
+    http://127.0.0.1:8200/v1/identity/entity-alias/id
+```
+
+### Sample response
+
+```json
+{
+    "data": {
+        "key_info": {
+            "35405f3c-884a-a3ff-4176-bac57f220811": {
+                "canonical_id": "0c34f097-6313-9597-3b22-91e34072ad28",
+                "custom_metadata": null,
+                "local": false,
+                "mount_accessor": "auth_jwt_e47c5220",
+                "mount_path": "auth/tfc_jwt/",
+                "mount_type": "jwt",
+                "name": "app-alias-1"
+            },
+            "4065d8c7-4fa6-db9d-e190-f9644c09638a": {
+                "canonical_id": "21c6f2bf-b9b0-db44-242f-18bf76cb9ff0",
+                "custom_metadata": null,
+                "local": false,
+                "mount_accessor": "auth_ns_token_79c4d932",
+                "mount_path": "auth/token/",
+                "mount_type": "ns_token",
+                "name": "app-alias-2"
+            }
+        },
+        "keys": [
+            "35405f3c-884a-a3ff-4176-bac57f220811",
+            "4065d8c7-4fa6-db9d-e190-f9644c09638a"
+        ]
+    }
+}
+```

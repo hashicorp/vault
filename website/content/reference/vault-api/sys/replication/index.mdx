@@ -1,0 +1,318 @@
+---
+layout: api
+page_title: /sys/replication - HTTP API
+description: >-
+  The '/sys/replication' endpoint focuses on managing general operations in
+  Vault Enterprise replication
+---
+
+# `/sys/replication`
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
+## Attempt recovery
+
+This endpoint attempts recovery if replication is in an adverse state. For
+example: an error has caused replication to stop syncing.
+
+| Method | Path                       |
+| :----- | :------------------------- |
+| `POST` | `/sys/replication/recover` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    http://127.0.0.1:8200/v1/sys/replication/recover
+```
+
+### Sample response
+
+```json
+{
+  "warnings": ["..."]
+}
+```
+
+## Reindex replication
+
+This endpoint reindexes the local data storage. This can cause a very long delay
+depending on the number and size of objects in the data store.
+
+**This endpoint requires 'sudo' capability.**
+
+| Method | Path                       |
+| :----- | :------------------------- |
+| `POST` | `/sys/replication/reindex` |
+
+### Parameters
+
+- `diff` `(bool: false)` – Enables a slower re-indexing which will perform a key
+  level check to diagnose issues. Defaults false.
+
+- `force` `(bool: false)` – Forces a complete re-indexing which only scans data
+  available in the storage. Defaults false.
+
+- `skip_flush` `(bool: false)` – Skips the tree flushing stage of the reindex
+  process. This setting can be used to reduce the amount of time the tree is locked
+  during a reindex process. If this node is killed before the full tree has been
+  asynchronously flushed the reindex may not have applied fully and a new reindex
+  may need to be done. Defaults false.
+
+### Sample payload
+
+```json
+{}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    http://127.0.0.1:8200/v1/sys/replication/reindex
+```
+
+### Sample response
+
+```json
+{
+  "warnings": ["..."]
+}
+```
+
+## Check status
+
+This endpoint print information about the status of replication (mode,
+sync progress, etc).
+
+This is an unauthenticated endpoint.
+
+| Method | Path                      |
+| :----- | :------------------------ |
+| `GET`  | `/sys/replication/status` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    http://127.0.0.1:8200/v1/sys/replication/status
+```
+
+### Sample response
+
+The printed status of the replication environment. As an example, for a
+performance primary and DR primary node, it will look something like:
+
+```json
+{
+  "data": {
+    "dr": {
+      "cluster_id": "eef2a5ab-51e2-1c05-407c-8b4dc8d09ebf",
+      "corrupted_merkle_tree": false,
+      "known_secondaries": [
+        "4ca6b639-046b-5bb1-8043-6788ddf09121"
+      ],
+      "last_corruption_check_epoch": "-62135596800",
+      "last_dr_wal": 223,
+      "last_reindex_epoch": "0",
+      "last_wal": 223,
+      "merkle_root": "2494830f1a1c304829b5742a232d39b5457bce9a",
+      "mode": "primary",
+      "primary_cluster_addr": "",
+      "secondaries": [
+        {
+          "api_address": "https://127.0.0.1:65531",
+          "clock_skew_ms": "0",
+          "cluster_address": "https://127.0.0.1:65534",
+          "connection_status": "connected",
+          "last_heartbeat": "2024-03-04T10:05:56-05:00",
+          "last_heartbeat_duration_ms": "0",
+          "node_id": "4ca6b639-046b-5bb1-8043-6788ddf09121",
+          "replication_primary_canary_age_ms": "696"
+        }
+      ],
+      "ssct_generation_counter": 0,
+      "state": "running"
+    },
+    "performance": {
+      "cluster_id": "00616ea0-3094-5017-29f9-644f3633f0da",
+      "corrupted_merkle_tree": false,
+      "known_secondaries": [
+        "cd0463e0-a37f-7421-345e-aad53007479f"
+      ],
+      "last_corruption_check_epoch": "-62135596800",
+      "last_performance_wal": 223,
+      "last_reindex_epoch": "0",
+      "last_wal": 223,
+      "merkle_root": "7b75cf69bb9a862913b0de2478164e046d242e0f",
+      "mode": "primary",
+      "primary_cluster_addr": "",
+      "secondaries": [
+        {
+          "api_address": "https://127.0.0.1:49155",
+          "clock_skew_ms": "0",
+          "cluster_address": "https://127.0.0.1:49160",
+          "connection_status": "connected",
+          "last_heartbeat": "2024-03-04T10:05:56-05:00",
+          "last_heartbeat_duration_ms": "0",
+          "node_id": "cd0463e0-a37f-7421-345e-aad53007479f",
+          "replication_primary_canary_age_ms": "660"
+        }
+      ],
+      "ssct_generation_counter": 0,
+      "state": "running"
+    }
+  }
+}
+```
+
+Possible values for `connection_status` are `connected` or `disconnected`. `last_heartbeat` is the timestamp of the
+last time this node exchanged heartbeats with another node.
+
+### Sample response from performance secondary & DR primary
+
+The printed status of the replication environment. As an example, for a
+performance secondary and DR primary node, it will look something like:
+
+```json
+{
+  "data": {
+    "dr": {
+      "cluster_id": "8cfe8fd1-c7b7-c301-5aa8-3131d66d53ea",
+      "corrupted_merkle_tree": false,
+      "known_secondaries": [
+        "79f5e0b2-6420-fdcd-5f53-3a1745f3d979"
+      ],
+      "last_corruption_check_epoch": "-62135596800",
+      "last_dr_wal": 145,
+      "last_reindex_epoch": "0",
+      "last_wal": 145,
+      "merkle_root": "29a9794b2e7f1d39cb4ef3976566c02e740b72c2",
+      "mode": "primary",
+      "primary_cluster_addr": "",
+      "secondaries": [
+        {
+          "api_address": "https://127.0.0.1:49167",
+          "clock_skew_ms": "-1",
+          "cluster_address": "https://127.0.0.1:49170",
+          "connection_status": "connected",
+          "last_heartbeat": "2024-03-04T10:05:56-05:00",
+          "last_heartbeat_duration_ms": "2",
+          "node_id": "79f5e0b2-6420-fdcd-5f53-3a1745f3d979",
+          "replication_primary_canary_age_ms": "454"
+        }
+      ],
+      "ssct_generation_counter": 0,
+      "state": "running"
+    },
+    "performance": {
+      "cluster_id": "00616ea0-3094-5017-29f9-644f3633f0da",
+      "connection_state": "ready",
+      "corrupted_merkle_tree": false,
+      "known_primary_cluster_addrs": [
+        "https://127.0.0.1:65524",
+        "https://127.0.0.1:65525",
+        "https://127.0.0.1:65526"
+      ],
+      "last_corruption_check_epoch": "-62135596800",
+      "last_reindex_epoch": "1709564740",
+      "last_remote_wal": 223,
+      "last_start": "2024-03-04T10:05:48-05:00",
+      "merkle_root": "7b75cf69bb9a862913b0de2478164e046d242e0f",
+      "mode": "secondary",
+      "primaries": [
+        {
+          "api_address": "https://127.0.0.1:65521",
+          "clock_skew_ms": "0",
+          "cluster_address": "https://127.0.0.1:65524",
+          "connection_status": "connected",
+          "last_heartbeat": "2024-03-04T10:05:56-05:00",
+          "last_heartbeat_duration_ms": "0",
+          "replication_primary_canary_age_ms": "660"
+        }
+      ],
+      "primary_cluster_addr": "https://127.0.0.1:65524",
+      "secondary_id": "cd0463e0-a37f-7421-345e-aad53007479f",
+      "ssct_generation_counter": 0,
+      "state": "stream-wals"
+    }
+  }
+}
+```
+
+## `/sys/replication/merkle-check`
+
+The Merkle check endpoint prints information about the corruption
+status of the Merkle tree. The corruption information provides insight
+about whether any current replication issues can be resolved by
+reindexing the tree. We recommend consulting the Merkle check endpoint
+**before** reindexing to ensure the process will be useful as  reindexing
+can be time-consuming and lead to downtime.
+
+You must provide an authentication token when calling `replication/merkle-check`.
+
+| Method  | Path                            |
+| :------ | :------------------------------ |
+| `POST`  | `/sys/replication/merkle-check` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    http://127.0.0.1:8200/v1/sys/replication/merkle-check
+```
+
+### Sample response
+
+The response provides information about the health of the Merkle composite tree.
+The `merkle_corruption_report` stanza provides information about merkle tree
+corruption.  The `corrupted_root` field indicates whether the root of the tree
+is corrupted. The `corrupted_tree_map` field identifies any corruption in the
+roots of its subtrees, including replicated and local subtrees. In the event of
+corruption within a page or subpage of the tree, `corrupted_tree_map` includes
+the page number along with a list of corrupted subpage numbers. The status details
+indicate the extent of corruption within the merkle tree.
+
+```json
+{
+  "request_id": "d4b2ad1a-6e5f-7f9e-edfe-558eb89a40e6",
+  "lease_id": "",
+  "lease_duration": 0,
+  "renewable": false,
+  "data": {
+    "merkle_corruption_report": {
+      "corrupted_root": false,
+      "corrupted_tree_map": {
+        "1": {
+          "corrupted_index_tuples_map": {
+            "5": {
+              "corrupted": false,
+              "subpages": [
+                28
+              ]
+            }
+          },
+          "corrupted_subtree_root": false,
+          "root_hash": "DyGc6rQTV9XgyNSff3zimhi3FJM=",
+          "tree_type": "replicated"
+        },
+        "2": {
+          "corrupted_index_tuples_map": null,
+          "corrupted_subtree_root": false,
+          "root_hash": "EXmRTdfYCZTm5i9wLef9RQqyLCw=",
+          "tree_type": "local"
+        }
+      },
+      "last_corruption_check_epoch": "2023-09-11T11:25:59.44956-07:00"
+    }
+  }
+}
+```

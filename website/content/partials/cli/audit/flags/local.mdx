@@ -1,0 +1,15 @@
+---
+
+<a id="flag-local" />
+
+**`-local <bool: false>`**
+
+Mark the audit device as local-only so the device is not replicated or removed
+by replication.
+
+```shell-session
+$ vault audit enable socket \
+    -local true             \
+    address=127.0.0.1:9090  \
+    socket_type=tcp
+```

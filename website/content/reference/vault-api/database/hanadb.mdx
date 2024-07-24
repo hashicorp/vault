@@ -1,0 +1,104 @@
+---
+layout: api
+page_title: HANA - Database - Secrets Engines - HTTP API
+description: >-
+  The HANA plugin for Vault's database secrets engine generates database
+  credentials to access HANA servers.
+---
+
+# HANA database plugin HTTP API
+
+The HANA database plugin is one of the supported plugins for the database
+secrets engine. This plugin generates database credentials dynamically based on
+configured roles for the HANA database.
+
+## Configure connection
+
+In addition to the parameters defined by the [database
+secrets engine](/vault/api-docs/secret/databases#configure-connection), this plugin
+has a number of parameters to further configure a connection.
+
+| Method | Path                     | Produces |
+| :----- | :----------------------- | -------- |
+| `POST` | `/database/config/:name` |
+
+### Parameters
+
+- `connection_url` `(string: <required>)` - Specifies the HANA DSN. This field
+  can be templated and supports passing the username and password
+  parameters in the following format `{{field_name}}`. A templated connection URL is
+  required when using root credential rotation.
+
+- `max_open_connections` `(int: 4)` - Specifies the maximum number of open
+  connections to the database.
+
+- `max_idle_connections` `(int: 0)` - Specifies the maximum number of idle
+  connections to the database. A zero uses the value of `max_open_connections`
+  and a negative value disables idle connections. If larger than
+  `max_open_connections` it will be reduced to be equal.
+
+- `max_connection_lifetime` `(string: "0s")` - Specifies the maximum amount of
+  time a connection may be reused. If &le; `0s`, connections are reused forever.
+
+- `username` `(string: "")` - The root credential username used in the connection URL.
+
+- `password` `(string: "")` - The root credential password used in the connection URL.
+
+- `username_template` `(string)` - [Template](/vault/docs/concepts/username-templating) describing how dynamic usernames are generated.
+
+- `disable_escaping` `(boolean: false)` - Turns off the escaping of special characters inside of the username
+  and password fields. See the [databases secrets engine docs](/vault/docs/secrets/databases#disable-character-escaping)
+  for more information. Defaults to `false`.
+
+### Sample payload
+
+```json
+{
+  "plugin_name": "hana-database-plugin",
+  "allowed_roles": "readonly",
+  "connection_url": "hdb://{{username}}:{{password}}@localhost:1433",
+  "max_open_connections": 5,
+  "max_connection_lifetime": "5s",
+  "username": "username",
+  "password": "password"
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/database/config/hana
+```
+
+## Statements
+
+Statements are configured during role creation and are used by the plugin to
+determine what is sent to the database on user creation, renewing, and
+revocation. For more information on configuring roles see the [Role
+API](/vault/api-docs/secret/databases#create-role) in the database secrets engine docs.
+
+### Parameters
+
+The following are the statements used by this plugin. If not mentioned in this
+list the plugin does not support that statement type.
+
+- `creation_statements` `(list: <required>)` – Specifies the database
+  statements executed to create and configure a user. Must be a
+  semicolon-separated string, a base64-encoded semicolon-separated string, a
+  serialized JSON string array, or a base64-encoded serialized JSON string
+  array. The `{{name}}`, `{{password}}`, and `{{expiration}}` values will be
+  substituted.
+
+  - The expiration time will be HANA server time plus the role's `default_ttl`.
+    If `default_ttl` is 0 or not set, a SQL HdbError 438 will be returned.
+
+- `revocation_statements` `(list: [])` – Specifies the database statements to
+  be executed to revoke a user. Must be a semicolon-separated string, a
+  base64-encoded semicolon-separated string, a serialized JSON string array, or
+  a base64-encoded serialized JSON string array. The `{{name}}` value will be
+  substituted. If not provided, defaults to dropping the user only if they have
+  no dependent objects.

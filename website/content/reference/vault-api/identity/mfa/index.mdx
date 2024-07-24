@@ -1,0 +1,27 @@
+---
+layout: api
+page_title: /identity/mfa - HTTP API
+description: >-
+  The '/identity/mfa' endpoint focuses on managing login MFA behaviors in Vault.
+---
+
+# `/identity/mfa`
+
+## Supported MFA types.
+
+- [TOTP](/vault/api-docs/secret/identity/mfa/totp)
+
+- [Okta](/vault/api-docs/secret/identity/mfa/okta)
+
+- [Duo](/vault/api-docs/secret/identity/mfa/duo)
+
+- [PingID](/vault/api-docs/secret/identity/mfa/pingid)
+
+## Other
+
+- [Login Enforcement](/vault/api-docs/secret/identity/mfa/login-enforcement)
+- [MFA Validate](/vault/api-docs/system/mfa/validate)
+
+While the above endpoints are available in all editions of Vault,
+they are namespace aware. MFA methods and login enforcements created in one namespace are separate from other
+namespaces. In the community version of Vault, everything operates in the root namespace.

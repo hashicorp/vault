@@ -1,0 +1,80 @@
+---
+layout: api
+page_title: Azure plugin API - UpsertRole
+description: >-
+  BLAH
+---
+
+# UpsertRole endpoint
+
+Update or register a role with the plugin. Role types have specific entities
+that can perform login operations against the plugin and the specified
+constraints apply to those authenticated entities.
+
+| Method | Path                                      |
+| ------ | ----------------------------------------- |
+| `POST` | `/{mount_path}/{plugin_name}/role/{name}` |
+
+Required permissions: **TBD**
+
+## Path parameters
+
+<br />
+
+@include 'plugin-api-fields/general/path/mount_path.mdx'
+
+<br /><hr /><br />
+
+@include 'plugin-api-fields/general/path/plugin_name.mdx'
+
+Default name: `azure`.
+
+<br /><hr /><br />
+
+@include 'plugin-api-fields/azure/path/name.mdx'
+
+## Request object
+
+### Request body
+
+TBD
+
+### Example request
+
+<CodeTabs>
+
+```json
+{
+  "token_policies": ["default", "dev", "prod"],
+  "max_ttl": 1800000,
+  "max_jwt_exp": 10000,
+  "bound_resource_groups": ["vault-dev", "vault-staging", "vault-prod"]
+}
+```
+
+```shell-session
+$ curl                                          \
+    --header "X-Vault-Token: ..."               \
+    --request POST                              \
+    --data "@path/to/request/payload/file.json" \
+    https://${VAULT_ADDR}/v1/${MOUNT_PATH}/${PLUGIN_NAME}/role/${ROLE_NAME}
+    
+```
+
+```go
+TBD
+```
+
+</CodeTabs>
+
+## Response object
+
+### Response fields
+
+TBD
+
+### Example response
+
+```json
+TBD
+```

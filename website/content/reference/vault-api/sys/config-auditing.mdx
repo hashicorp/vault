@@ -1,0 +1,130 @@
+---
+layout: api
+page_title: /sys/config/auditing - HTTP API
+description: The `/sys/config/auditing` endpoint is used to configure auditing settings.
+---
+
+# `/sys/config/auditing/request-headers`
+
+@include 'alerts/restricted-root.mdx'
+
+The `/sys/config/auditing` endpoint is used to configure auditing settings.
+
+## Read all audited request headers
+
+This endpoint lists the request headers that are configured to be audited.
+
+- **`sudo` required** – This endpoint requires `sudo` capability in addition to
+  any path-specific capabilities.
+
+| Method | Path                                   |
+| :----- | :------------------------------------- |
+| `GET`  | `/sys/config/auditing/request-headers` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/config/auditing/request-headers
+```
+
+### Sample response
+
+```json
+{
+  "headers": {
+    "X-Forwarded-For": {
+      "hmac": true
+    }
+  }
+}
+```
+
+## Read single audit request header
+
+This endpoint lists the information for the given request header.
+
+- **`sudo` required** – This endpoint requires `sudo` capability in addition to
+  any path-specific capabilities.
+
+| Method | Path                                         |
+| :----- | :------------------------------------------- |
+| `GET`  | `/sys/config/auditing/request-headers/:name` |
+
+### Parameters
+
+- `name` `(string: <required>)` – Specifies the name of the request header to
+  query. This is specified as part of the URL.
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/config/auditing/request-headers/my-header
+```
+
+### Sample response
+
+```json
+{
+  "X-Forwarded-For": {
+    "hmac": true
+  }
+}
+```
+
+## Create/Update audit request header
+
+This endpoint enables auditing of a header.
+
+- **`sudo` required** – This endpoint requires `sudo` capability in addition to
+  any path-specific capabilities.
+
+| Method | Path                                         |
+| :----- | :------------------------------------------- |
+| `POST` | `/sys/config/auditing/request-headers/:name` |
+
+### Parameters
+
+- `hmac` `(bool: false)` – Specifies if this header's value should be HMAC'd in
+  the audit logs.
+
+### Sample payload
+
+```json
+{
+  "hmac": true
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/config/auditing/request-headers/my-header
+```
+
+## Delete audit request header
+
+This endpoint disables auditing of the given request header.
+
+- **`sudo` required** – This endpoint requires `sudo` capability in addition to
+  any path-specific capabilities.
+
+| Method   | Path                                         |
+| :------- | :------------------------------------------- |
+| `DELETE` | `/sys/config/auditing/request-headers/:name` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request DELETE \
+    http://127.0.0.1:8200/v1/sys/config/auditing/request-headers/my-header
+```

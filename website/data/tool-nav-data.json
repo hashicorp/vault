@@ -1,198 +1,334 @@
 [
+  { "divider": true },
+  { "heading": "KUBERNETES INTEGRATION" },
+  
   {
-    "title": "Vault Agent and Vault Proxy",
+    "title": "Vault Secrets Operator",
     "routes": [
       {
         "title": "Overview",
-        "path": "agent-and-proxy"
+        "path": "vso"
       },
       {
-        "title": "Auto-Auth",
+        "title": "Installation",
+        "path": "vso/installation"
+      },
+      {
+        "title": "Secret Sources",
         "routes": [
           {
             "title": "Overview",
-            "path": "agent-and-proxy/autoauth"
+            "path": "vso/sources"
           },
           {
-            "title": "Methods",
+            "title": "Vault",
             "routes": [
               {
                 "title": "Overview",
-                "path": "agent-and-proxy/autoauth/methods"
+                "path": "vso/sources/vault"
               },
               {
-                "title": "AliCloud",
-                "path": "agent-and-proxy/autoauth/methods/alicloud"
+                "title": "Auth Methods",
+                "routes": [
+                  {
+                    "title": "AWS",
+                    "path": "vso/sources/vault/auth/aws"
+                  },
+                  {
+                    "title": "GCP",
+                    "path": "vso/sources/vault/auth/gcp"
+                  }
+                ]
               },
               {
-                "title": "AppRole",
-                "path": "agent-and-proxy/autoauth/methods/approle"
-              },
-              {
-                "title": "AWS",
-                "path": "agent-and-proxy/autoauth/methods/aws"
-              },
-              {
-                "title": "Azure",
-                "path": "agent-and-proxy/autoauth/methods/azure"
-              },
-              {
-                "title": "Cert",
-                "path": "agent-and-proxy/autoauth/methods/cert"
-              },
-              {
-                "title": "CF",
-                "path": "agent-and-proxy/autoauth/methods/cf"
-              },
-              {
-                "title": "GCP",
-                "path": "agent-and-proxy/autoauth/methods/gcp"
-              },
-              {
-                "title": "JWT",
-                "path": "agent-and-proxy/autoauth/methods/jwt"
-              },
-              {
-                "title": "LDAP",
-                "path": "agent-and-proxy/autoauth/methods/ldap"
-              },
-              {
-                "title": "Kerberos",
-                "path": "agent-and-proxy/autoauth/methods/kerberos"
-              },
-              {
-                "title": "Kubernetes",
-                "path": "agent-and-proxy/autoauth/methods/kubernetes"
-              },
-              {
-                "title": "Oracle Cloud Infrastructure",
-                "path": "agent-and-proxy/autoauth/methods/oci"
-              },
-              {
-                "title": "Token File",
-                "path": "agent-and-proxy/autoauth/methods/token_file"
+                "title": "Encrypted client cache",
+                "path": "vso/sources/vault/client-cache"
               }
             ]
           },
           {
-            "title": "Sinks",
-            "routes": [
-              {
-                "title": "Overview",
-                "path": "agent-and-proxy/autoauth/sinks"
-              },
-              {
-                "title": "File",
-                "path": "agent-and-proxy/autoauth/sinks/file"
-              }
-            ]
+            "title": "HCP Vault Secrets",
+            "path": "vso/sources/hvs"
           }
         ]
       },
       {
-        "title": "Vault Proxy",
+        "title": "Secret Data Transformation",
+        "path": "vso/secret-transformation"
+      },
+      {
+        "title": "Helm Chart",
+        "path": "vso/helm"
+      },
+      {
+        "title": "Examples",
+        "path": "vso/examples"
+      },
+      {
+        "title": "Telemetry",
+        "path": "vso/telemetry"
+      },
+      {
+        "title": "API Reference",
+        "path": "vso/api-reference"
+      },
+      {
+        "title": "OpenShift",
+        "path": "vso/openshift"
+      }
+    ]
+  },
+
+  {
+    "title": "Agent Injector",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "agent-injector"
+      },
+      {
+        "title": "Annotations",
+        "path": "agent-injector/annotations"
+      },
+      {
+        "title": "Installation",
+        "path": "agent-injector/installation"
+      },
+      {
+        "title": "Examples",
+        "path": "agent-injector/examples"
+      }
+    ]
+  },
+  {
+    "title": "Vault CSI Provider",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "csi-provider"
+      },
+      {
+        "title": "Installation",
+        "path": "csi-provider/installation"
+      },
+      {
+        "title": "Configurations",
+        "path": "csi-provider/configurations"
+      },
+      {
+        "title": "Examples",
+        "path": "csi-provider/examples"
+      }
+    ]
+  },
+
+  { "divider": true },
+  { "heading": "AWS INTEGRATION" },
+  
+  {
+    "title": "Vault lambda",
+    "path": "lambda-extension"
+  },
+
+  { "divider": true },
+  { "heading": "VAULT MANAGEMENT" },
+  
+  {
+    "title": "Terraform Vault Provider",
+    "href": "#"
+  },
+  {
+    "title": "Splunk app for Vault",
+    "href": "#"
+  },
+
+  { "divider": true },
+  { "heading": "INFRASTRUCTURE" },
+
+  {
+    "title": "Vault Agent",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "vault-agent"
+      },
+      {
+        "title": "API Proxy",
+        "path": "vault-agent/apiproxy"
+      },
+      {
+        "title": "Caching",
+        "routes": [
+          {
+        "title": "Overview",
+        "path": "vault-agent/caching"
+          },
+          {
+        "title": "Persistent Caching",
         "routes": [
           {
             "title": "Overview",
-            "path": "agent-and-proxy/proxy"
+            "path": "vault-agent/caching/persistent-caches"
           },
           {
-            "title": "API Proxy",
-            "path": "agent-and-proxy/proxy/apiproxy"
-          },
-          {
-            "title": "Caching",
-            "routes": [
-              {
-                "title": "Overview",
-                "path": "agent-and-proxy/proxy/caching"
-              },
-              {
-                "title": "Static Secret Caching",
-                "path": "agent-and-proxy/proxy/caching/static-secret-caching",
-                "badge": {
-                  "text": "ENTERPRISE",
-                  "type": "outlined",
-                  "color": "neutral"
-                }
-              },
-              {
-                "title": "Persistent Caching",
-                "routes": [
-                  {
-                    "title": "Overview",
-                    "path": "agent-and-proxy/proxy/caching/persistent-caches"
-                  },
-                  {
-                    "title": "Kubernetes",
-                    "path": "agent-and-proxy/proxy/caching/persistent-caches/kubernetes"
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "title": "Version compatibility",
-            "path": "agent-and-proxy/proxy/versions"
+            "title": "Kubernetes",
+            "path": "vault-agent/caching/persistent-caches/kubernetes"
+          }
+        ]
           }
         ]
       },
       {
-        "title": "Vault Agent",
+        "title": "generate-config",
+        "path": "vault-agent/generate-config"
+      },
+      {
+        "title": "Process Supervisor Mode",
+        "path": "vault-agent/process-supervisor"
+      },
+      {
+        "title": "Templates",
+        "path": "vault-agent/template"
+      },
+      {
+        "title": "Windows service",
+        "path": "vault-agent/winsvc"
+      },
+      {
+        "title": "Version compatibility",
+        "path": "vault-agent/versions"
+      }
+    ]
+  },
+  {
+    "title": "Vault Proxy",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "vault-proxy"
+      },
+      {
+        "title": "API Proxy",
+        "path": "vault-proxy/apiproxy"
+      },
+      {
+        "title": "Caching",
+        "routes": [
+          {
+        "title": "Overview",
+        "path": "vault-proxy/caching"
+          },
+          {
+        "title": "Static Secret Caching",
+        "path": "vault-proxy/caching/static-secret-caching",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        }
+          },
+          {
+        "title": "Persistent Caching",
         "routes": [
           {
             "title": "Overview",
-            "path": "agent-and-proxy/agent"
+            "path": "vault-proxy/caching/persistent-caches"
           },
           {
-            "title": "API Proxy",
-            "path": "agent-and-proxy/agent/apiproxy"
+            "title": "Kubernetes",
+            "path": "vault-proxy/caching/persistent-caches/kubernetes"
+          }
+        ]
+          }
+        ]
+      },
+      {
+        "title": "Version compatibility",
+        "path": "vault-proxy/versions"
+      }
+    ]
+  },
+  {
+    "title": "Auto authentication",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "auto-auth"
+      },
+      {
+        "title": "Methods",
+        "routes": [
+          {
+        "title": "Overview",
+        "path": "auto-auth/methods"
           },
           {
-            "title": "Caching",
-            "routes": [
-              {
-                "title": "Overview",
-                "path": "agent-and-proxy/agent/caching"
-              },
-              {
-                "title": "Persistent Caching",
-                "routes": [
-                  {
-                    "title": "Overview",
-                    "path": "agent-and-proxy/agent/caching/persistent-caches"
-                  },
-                  {
-                    "title": "Kubernetes",
-                    "path": "agent-and-proxy/agent/caching/persistent-caches/kubernetes"
-                  }
-                ]
-              }
-            ]
+        "title": "AliCloud",
+        "path": "auto-auth/methods/alicloud"
           },
           {
-            "title": "generate-config",
-            "path": "agent-and-proxy/agent/generate-config"
+        "title": "AppRole",
+        "path": "auto-auth/methods/approle"
           },
           {
-            "title": "Process Supervisor Mode",
-            "path": "agent-and-proxy/agent/process-supervisor"
+        "title": "AWS",
+        "path": "auto-auth/methods/aws"
           },
           {
-            "title": "Templates",
-            "path": "agent-and-proxy/agent/template"
+        "title": "Azure",
+        "path": "auto-auth/methods/azure"
           },
           {
-            "title": "Windows service",
-            "path": "agent-and-proxy/agent/winsvc"
+        "title": "Cert",
+        "path": "auto-auth/methods/cert"
           },
           {
-            "title": "Version compatibility",
-            "path": "agent-and-proxy/agent/versions"
+        "title": "CF",
+        "path": "auto-auth/methods/cf"
+          },
+          {
+        "title": "GCP",
+        "path": "auto-auth/methods/gcp"
+          },
+          {
+        "title": "JWT",
+        "path": "auto-auth/methods/jwt"
+          },
+          {
+        "title": "LDAP",
+        "path": "auto-auth/methods/ldap"
+          },
+          {
+        "title": "Kerberos",
+        "path": "auto-auth/methods/kerberos"
+          },
+          {
+        "title": "Kubernetes",
+        "path": "auto-auth/methods/kubernetes"
+          },
+          {
+        "title": "Oracle Cloud Infrastructure",
+        "path": "auto-auth/methods/oci"
+          },
+          {
+        "title": "Token File",
+        "path": "auto-auth/methods/token_file"
+          }
+        ]
+      },
+      {
+        "title": "Sinks",
+        "routes": [
+          {
+        "title": "Overview",
+        "path": "auto-auth/sinks"
+          },
+          {
+        "title": "File",
+        "path": "auto-auth/sinks/file"
           }
         ]
       }
     ]
   }
-
 ]

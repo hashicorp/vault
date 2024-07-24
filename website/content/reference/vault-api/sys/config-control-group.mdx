@@ -1,0 +1,83 @@
+---
+layout: api
+page_title: /sys/config/control-group - HTTP API
+description: The '/sys/config/control-group' endpoint configures control groups.
+---
+
+# `/sys/config/control-group`
+
+@include 'alerts/enterprise-only.mdx'
+
+The `/sys/config/control-group` endpoint is used to configure Control Group
+settings.
+
+## Read control group settings
+
+This endpoint returns the current Control Group configuration.
+
+| Method | Path                        |
+| :----- | :-------------------------- |
+| `GET`  | `/sys/config/control-group` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/config/control-group
+```
+
+### Sample response
+
+```json
+{
+  "max_ttl": "4h"
+}
+```
+
+## Configure control group settings
+
+This endpoint allows configuring control groups.
+
+| Method | Path                        |
+| :----- | :-------------------------- |
+| `POST` | `/sys/config/control-group` |
+
+### Parameters
+
+- `max_ttl` `int` – The maximum ttl for a control group wrapping token. This can be provided in seconds or duration (2h).
+
+### Sample payload
+
+```json
+{
+  "max_ttl": "4h"
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/config/control-group
+```
+
+## Delete control group settings
+
+This endpoint removes any control group configuration.
+
+| Method   | Path                        |
+| :------- | :-------------------------- |
+| `DELETE` | `/sys/config/control-group` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request DELETE \
+    http://127.0.0.1:8200/v1/sys/config/control-group
+```

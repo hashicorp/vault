@@ -1,0 +1,37 @@
+---
+layout: api
+page_title: /sys/step-down - HTTP API
+description: The `/sys/step-down` endpoint causes the node to give up active status.
+---
+
+# `/sys/step-down`
+
+@include 'alerts/restricted-root.mdx'
+
+The `/sys/step-down` endpoint causes the node to give up active status.
+
+## Step down leader
+
+The step-down endpoint forces nodes to give up "active" status. If you
+call the endpoint against a non-active node, for example, a DR or
+ performance standby node, Vault forwards the request to the active
+  node.
+  
+    Note that the node will sleep
+for ten seconds before attempting to grab the active lock again, but if no
+standby nodes grab the active lock in the interim, the same node may become the
+active node again. Requires a token with `root` policy or `sudo` capability on
+the path.
+
+| Method | Path             |
+| :----- | :--------------- |
+| `POST` | `/sys/step-down` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    http://127.0.0.1:8200/v1/sys/step-down
+```

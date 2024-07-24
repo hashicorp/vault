@@ -1,0 +1,33 @@
+---
+layout: api
+page_title: /sys/rotate - HTTP API
+description: The `/sys/rotate` endpoint is used to rotate the encryption key.
+---
+
+# `/sys/rotate`
+
+@include 'alerts/restricted-root.mdx'
+
+The `/sys/rotate` endpoint is used to rotate the encryption key.
+
+## Rotate encryption key
+
+This endpoint triggers a rotation of the backend encryption key. This is the key
+that is used to encrypt data written to the storage backend, and is not provided
+to operators. This operation is done online. Future values are encrypted with
+the new key, while old values are decrypted with previous encryption keys.
+
+This path requires `sudo` capability in addition to `update`.
+
+| Method | Path          |
+| :----- | :------------ |
+| `POST` | `/sys/rotate` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    http://127.0.0.1:8200/v1/sys/rotate
+```

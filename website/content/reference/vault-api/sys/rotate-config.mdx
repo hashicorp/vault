@@ -1,0 +1,86 @@
+---
+layout: api
+page_title: /sys/rotate/config - HTTP API
+description: The `/sys/rotate/config` endpoint is used to configure automatic key rotation.
+---
+
+# `/sys/rotate/config`
+
+@include 'alerts/restricted-root.mdx'
+
+The `/sys/rotate` endpoint is used to configure automatic key rotation.
+
+## Configure automatic key rotation
+
+This endpoint configures the automatic rotation of the backend encryption key. By
+default, the key is rotated after just under 4 billion encryptions, to satisfy the
+recommendation of [NIST SP 800-38D](https://csrc.nist.gov/publications/detail/sp/800-38d/final).
+One can configure rotations after fewer encryptions or on a time based schedule.
+
+## Create or update the auto rotation configuration
+
+| Method | Path                 |
+| :----- | :------------------- |
+| `POST` | `/sys/rotate/config` |
+
+### Parameters
+
+- `max_operations` `(int: 3865470566)` - Specify the limit of encryptions after which
+  the key will be automatically rotated. The number must be between 1,000,000 and the
+  default.
+- `interval` `(string: "") - If set, the age of the active key at which an
+  automatic rotation is triggered. Specified as a Go duration string (e.g.
+  4320h), the value must be at least 24 hours.
+- `enabled` `(bool: true)` - If set to false, automatic rotations will not
+  be performed. Tracking of encryption counts will continue.
+
+### Sample payload
+
+```json
+{
+  "max_operations": 2000000000,
+  "interval": "4320h"
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --request POST \
+    --header "X-Vault-Token: ..." \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/rotate/config
+```
+
+## Get the auto rotation configuration
+
+| Method | Path                 |
+| :----- | :------------------- |
+| `GET`  | `/sys/rotate/config` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --request GET \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/rotate/config
+```
+
+### Sample response
+
+```json
+{
+  "request_id": "f3d91b4a-69bf-4aaf-b928-df7a5486c130",
+  "lease_id": "",
+  "lease_duration": 0,
+  "renewable": false,
+  "data": {
+    "max_operations": 2000000000,
+    "interval": "4320h",
+    "enabled": true
+  },
+  "warnings": null
+}
+```

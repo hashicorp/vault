@@ -1,0 +1,120 @@
+---
+layout: api
+page_title: /sys/policy - HTTP API
+description: The `/sys/policy` endpoint is used to manage ACL policies in Vault.
+---
+
+# `/sys/policy`
+
+The `/sys/policy` endpoint is used to manage ACL policies in Vault.
+
+## List policies
+
+This endpoint lists all configured policies.
+
+| Method | Path          |
+| :----- | :------------ |
+| `GET`  | `/sys/policy` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/policy
+```
+
+### Sample response
+
+```json
+{
+  "policies": ["root", "deploy"]
+}
+```
+
+## Read policy
+
+This endpoint retrieve the policy body for the named policy.
+
+| Method | Path                |
+| :----- | :------------------ |
+| `GET`  | `/sys/policy/:name` |
+
+### Parameters
+
+- `name` `(string: <required>)` – Specifies the name of the policy to retrieve.
+  This is specified as part of the request URL.
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/policy/my-policy
+```
+
+### Sample response
+
+```json
+{
+  "name": "my-policy",
+  "rules": "path \"secret/*\"...
+}
+```
+
+## Create/Update policy
+
+This endpoint adds a new or updates an existing policy. Once a policy is
+updated, it takes effect immediately to all associated users.
+
+| Method | Path                |
+| :----- | :------------------ |
+| `POST` | `/sys/policy/:name` |
+
+### Parameters
+
+- `name` `(string: <required>)` – Specifies the name of the policy to create.
+  This is specified as part of the request URL.
+
+- `policy` `(string: <required>)` - Specifies the policy document.
+
+### Sample payload
+
+```json
+{
+  "policy": "path \"secret/foo\" {..."
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/policy/my-policy
+```
+
+## Delete policy
+
+This endpoint deletes the policy with the given name. This will immediately
+affect all users associated with this policy.
+
+| Method   | Path                |
+| :------- | :------------------ |
+| `DELETE` | `/sys/policy/:name` |
+
+### Parameters
+
+- `name` `(string: <required>)` – Specifies the name of the policy to delete.
+  This is specified as part of the request URL.
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request DELETE \
+    http://127.0.0.1:8200/v1/sys/policy/my-policy
+```
