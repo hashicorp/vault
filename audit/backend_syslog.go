@@ -60,6 +60,7 @@ func newSyslogBackend(conf *BackendConfig, headersConfig HeaderFormatter) (*Sysl
 	sinkOpts := []event.Option{
 		event.WithFacility(facility),
 		event.WithTag(tag),
+		event.WithLogger(conf.Logger),
 	}
 
 	err = event.ValidateOptions(sinkOpts...)
