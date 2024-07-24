@@ -41,8 +41,14 @@ func (cm *CensusManager) BillingStart() time.Time {
 	return time.Time{}
 }
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 // StartManualReportingSnapshots is a stub for CE.
 func (cm *CensusManager) StartManualReportingSnapshots() {}
 =======
 >>>>>>> e9415a07a9 (CE no-op CensusManager (#27827))
+=======
+
+// StartManualReportingSnapshots is a stub for CE.
+func (cm *CensusManager) StartManualReportingSnapshots() {}
+>>>>>>> d1f97ba341 (VAULT-27563 CE changes (#27847))
