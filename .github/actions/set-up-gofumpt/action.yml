@@ -57,9 +57,13 @@ runs:
         fi
 
 <<<<<<< HEAD
+<<<<<<< HEAD
         ./.github/scripts/retry-command.sh gh release download "$VERSION" --clobber -p "gofumpt_*_${OS}_${ARCH}" -O gofumpt -R mvdan/gofumpt
 =======
         ./.github/scripts/retry-command.sh gh release download "$VERSION" -p "gofumpt_*_${OS}_${ARCH}" -O gofumpt -R mvdan/gofumpt
 >>>>>>> 9bec192d44 ([VAULT-28666] Retry tool download from GitHub releases on failure in GitHub Actions (GHA) (#27786))
+=======
+        ./.github/scripts/retry-command.sh gh release download "$VERSION" --clobber -p "gofumpt_*_${OS}_${ARCH}" -O gofumpt -R mvdan/gofumpt
+>>>>>>> e5712feed8 ([VAULT-28666] Enable the --clobber flag on GitHub CLI release downloads in CI to avoid errors when retrying (#27852))
         chmod +x gofumpt
         mv gofumpt "$DESTINATION"
