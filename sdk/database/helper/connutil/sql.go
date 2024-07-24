@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/url"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -17,6 +18,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -218,7 +220,7 @@ func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, er
 	}
 
 	var err error
-	if driverName == "pgx" {
+	if driverName == "pgx" && os.Getenv(pluginutil.PluginUsePostgresSSLInline) != "" {
 		c.db, err = OpenPostgres(driverName, conn)
 	} else {
 		c.db, err = sql.Open(driverName, conn)

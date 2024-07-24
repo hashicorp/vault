@@ -11,21 +11,30 @@ import (
 	"math"
 	"net"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/stdlib"
 )
 
-// parses the connection string and opens a connection to the database
-// if sslinline is set, strips the connection string of all ssl settings and
-// creates a TLS config based on the settings provided, then uses the RegisterConnConfig
-// function to create a new connection. This is necessary because the pgx driver does not
-// support the sslinline parameter and instead expects to source ssl material from the
-// file system
+// OpenPostgres parses the connection string and opens a connection to the database.
+//
+// If sslinline is set, strips the connection string of all ssl settings and
+// creates a TLS config based on the settings provided, then uses the
+// RegisterConnConfig function to create a new connection. This is necessary
+// because the pgx driver does not support the sslinline parameter and instead
+// expects to source ssl material from the file system.
+//
+// Deprecated: OpenPostgres will be removed in a future version of the Vault SDK.
 func OpenPostgres(driverName, connString string) (*sql.DB, error) {
+	if ok, _ := strconv.ParseBool(os.Getenv(pluginutil.PluginUsePostgresSSLInline)); !ok {
+		return nil, fmt.Errorf("failed to open postgres connection with deprecated funtion, set feature flag to enable")
+	}
+
 	var options pgconn.ParseConfigOptions
 
 	settings := make(map[string]string)

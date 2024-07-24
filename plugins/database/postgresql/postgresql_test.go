@@ -17,6 +17,7 @@ import (
 	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/helper/template"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -57,7 +58,13 @@ func TestPostgreSQL_Initialize(t *testing.T) {
 	}
 }
 
+func TestPostgreSQL_InitializeSSLFeatureFlag(t *testing.T) {
+	// TODO
+}
+
 func TestPostgreSQL_InitializeSSL(t *testing.T) {
+	t.Setenv(pluginutil.PluginUsePostgresSSLInline, "true")
+
 	cleanup, connURL := postgresql.PrepareTestContainerWithSSL(t, context.Background())
 	t.Cleanup(cleanup)
 

@@ -44,6 +44,9 @@ const (
 	// colliding plugin-specific environment variables. Otherwise, plugin-specific
 	// environment variables take precedence over Vault process environment variables.
 	PluginUseLegacyEnvLayering = "VAULT_PLUGIN_USE_LEGACY_ENV_LAYERING"
+
+	// PluginUsePostgresSSLInline
+	PluginUsePostgresSSLInline = "VAULT_PLUGIN_USE_POSTGRES_SSLINLINE"
 )
 
 // OptionallyEnableMlock determines if mlock should be called, and if so enables
