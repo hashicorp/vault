@@ -134,9 +134,9 @@ func (b *backend) getClientConfig(ctx context.Context, s logical.Storage, region
 		}
 		var assumedCredentials *credentials.Credentials
 		if externalID != "" {
-			assumedCredentials = stscreds.NewCredentials(sess, externalID, func(p *stscreds.AssumeRoleProvider) { p.ExternalID = aws.String(externalID) })
+			assumedCredentials = stscreds.NewCredentials(sess, stsRole, func(p *stscreds.AssumeRoleProvider) { p.ExternalID = aws.String(externalID) })
 		} else {
-			assumedCredentials = stscreds.NewCredentials(sess, externalID)
+			assumedCredentials = stscreds.NewCredentials(sess, stsRole)
 		}
 		// Test that we actually have permissions to assume the role
 		if _, err = assumedCredentials.Get(); err != nil {
