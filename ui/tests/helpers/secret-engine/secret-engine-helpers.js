@@ -18,27 +18,29 @@ export const createSecretsEngine = (store, type, path) => {
   return store.peekRecord('secret-engine', path);
 };
 
-export const createAwsRootConfig = (store, backend) => {
+const createAwsRootConfig = (store, backend) => {
   store.pushPayload('aws/root-config', {
+    id: backend,
     modelName: 'aws/root-config',
     data: {
       backend: backend,
       region: 'us-west-2',
-      accessKey: '123-key',
-      iamEndpoint: 'iam-endpoint',
-      stsEndpoint: 'sts-endpoint',
+      access_key: '123-key',
+      iam_endpoint: 'iam-endpoint',
+      sts_endpoint: 'sts-endpoint',
     },
   });
   return store.peekRecord('aws/root-config', backend);
 };
 
-export const createSshCaConfig = (store, backend) => {
-  store.pushPayload('aws/root-config', {
-    modelName: 'aws/root-config',
+const createSshCaConfig = (store, backend) => {
+  store.pushPayload('ssh/ca-config', {
+    id: backend,
+    modelName: 'ssh/ca-config',
     data: {
       backend: backend,
-      publicKey: 'public-key',
-      generateSigningKey: true,
+      public_key: 'public-key',
+      generate_signing_key: true,
     },
   });
   return store.peekRecord('ssh/ca-config', backend);
@@ -54,3 +56,54 @@ export function configUrl(type, backend) {
       return `/${backend}/config`;
   }
 }
+// send the type of config you want and the name of the backend path to push the config to the store.
+export const createConfig = (store, backend, type) => {
+  switch (type) {
+    case 'aws':
+      return createAwsRootConfig(store, backend);
+    case 'ssh':
+      return createSshCaConfig(store, backend);
+  }
+};
+
+export const expectedConfigKeys = (type) => {
+  switch (type) {
+    case 'aws':
+      return ['Access key', 'Region', 'IAM endpoint', 'STS endpoint', 'Maximum retries'];
+    case 'ssh':
+      return ['Public key', 'Generate signing key'];
+  }
+};
+
+const valueOfAwsKeys = (string) => {
+  switch (string) {
+    case 'Access key':
+      return '123-key';
+    case 'Region':
+      return 'us-west-2';
+    case 'IAM endpoint':
+      return 'iam-endpoint';
+    case 'STS endpoint':
+      return 'sts-endpoint';
+    case 'Maximum retries':
+      return '-1';
+  }
+};
+
+const valueOfSshKeys = (string) => {
+  switch (string) {
+    case 'Public key':
+      return '***********';
+    case 'Generate signing key':
+      return 'Yes';
+  }
+};
+
+export const expectedValueOfConfigKeys = (type, string) => {
+  switch (type) {
+    case 'aws':
+      return valueOfAwsKeys(string);
+    case 'ssh':
+      return valueOfSshKeys(string);
+  }
+};

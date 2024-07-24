@@ -134,6 +134,10 @@ const MOUNTABLE_SECRET_ENGINES = [
   },
 ];
 
+// these are Secret engines that are not in a separate ember engine
+// and can be configured by the user
+export const configurableSecretEngines = ['aws', 'ssh'];
+
 export function mountableEngines() {
   return MOUNTABLE_SECRET_ENGINES.slice();
 }

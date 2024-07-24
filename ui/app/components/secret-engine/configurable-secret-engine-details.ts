@@ -10,7 +10,7 @@ import { tracked } from '@glimmer/tracking';
 
 import type Store from '@ember-data/store';
 import type SecretEngineModel from 'vault/models/secret-engine';
-import type AdapterError from 'ember-data/adapter'; // eslint-disable-line ember/use-ember-data-rfc-395-imports
+import type AdapterError from '@ember-data/adapter';
 
 /**
  * @module ConfigurableSecretEngineDetails
@@ -66,18 +66,10 @@ export default class ConfigurableSecretEngineDetails extends Component<Args> {
     try {
       this.configModel = await this.store.queryRecord('ssh/ca-config', { backend });
     } catch (e: AdapterError) {
-      // SSH Api will return a 400 Bad request when GET /v1/ssh/ca-config is called.
-      // Unlike the AWS Api, the SSH Api does not return a 404 not found but an error after first mounting the engine.
-      // Thus to show a prompt instead of an error when first configuring the backend, we need to catch the error,
-      // and transform it into a semi-prompt. This way, in case there is a true error we show it, but we also don't immediately show an error after mounting the engine.
-      if (e.httpStatus === 400) {
-        // ARG TODO extra check for matches keys piece.
-        this.configError = `${backend} has not been configured yet. Please configure it to use this feature. ${errorMessage(
-          e
-        )}`;
-        return;
-      }
-      if (e.httpStatus !== 404) {
+      // The SSH Api does not return a 404 not found but a 400 error after first mounting the engine with the
+      // message that keys have not been configured yet.
+      // To show a prompt instead of an error when first configuring the backend, we need to catch that specific 400 error and continue to set a prompt message instead.
+      if (e.httpStatus !== 404 && errorMessage(e) !== `keys haven't been configured yet`) {
         this.configError = errorMessage(e);
       }
       return;
