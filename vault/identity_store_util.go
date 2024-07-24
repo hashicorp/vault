@@ -176,12 +176,15 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 				// This is an imperfect solution to unblock customers who are running into
 				// a readonly error during a DR failover (jira #28191). More specifically, if there
 				// are duplicate aliases in storage then they are merged during loadEntities. Vault
-				// attempts to remove the deleted duplicate entities from their groups to clean up. 
-				// If the node is a PR secondary though it will fail because the RPC client 
-				// is not yet initialized and the storage is read-only. This prevents the cluster from 
+				// attempts to remove the deleted duplicate entities from their groups to clean up.
+				// If the node is a PR secondary though it will fail because the RPC client
+				// is not yet initialized and the storage is read-only. This prevents the cluster from
 				// unsealing entirely and can potentially block a DR failover from succeeding.
 				i.logger.Warn("received a read only error while trying to upsert group to storage")
-			} else if err != nil {
+				err = nil
+			}
+
+			if err != nil {
 				txn.Abort()
 				return fmt.Errorf("failed to update group in memdb: %w", err)
 			}
