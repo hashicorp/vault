@@ -223,20 +223,17 @@ Vault lead to the new clients for each month.
 }
 ```
 
-- If the `end_date` supplied to the API is for the current month, the activity
-information returned by this API will only be till the previous month. The
-activity system is designed to process the accumulated activity only at the end
-of the month. Since the system does not fully process the current month's
-information, it will not be added to the API response.
-
 - The response includes the actual time period covered, which may not exactly
 match the query parameters due to the month granularity of data or missing
 months in the requested time range.
 
-- Note that if the `end_date` specified is the current month,
-the last element in the `months` response stanza, will signify the current month. Furthermore, the
-`new_clients` counts returned for the current month will be an approximation.
-That is to say, the response will appear as follows.
+- If the `end_date` supplied to the API is the current month, exact activity
+information will be returned for all months in the queried period, except for the
+current month. The last element in the `months` response stanza, will signify the current month. Furthermore, the
+`new_clients` counts returned for the current month will be an estimate.
+
+The following is another example of the `months` breakdown.
+
 
 ```json
 {
@@ -302,7 +299,6 @@ be listed as "deleted namespace :ID:." Deleted namespaces are reported only for
 queries in the root namespace because the information about the namespace path
 is unknown.
 
-This endpoint was added in Vault 1.6.
 
 @include 'alerts/restricted-root.mdx'
 
@@ -817,8 +813,6 @@ this request was made.
 Note: the client count may be inaccurate in the moments following a Vault
 reboot, or leadership change. The estimate will stabilize when background
 loading of client data has completed.
-
-This endpoint was added in Vault 1.7.
 
 @include 'alerts/restricted-root.mdx'
 
