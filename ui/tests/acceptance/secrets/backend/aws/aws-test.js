@@ -9,7 +9,7 @@ import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 import { spy } from 'sinon';
 
-import { GENERAL } from '../helpers/general-selectors';
+import { GENERAL } from '../../../../helpers/general-selectors';
 import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { setupMirage } from 'ember-cli-mirage/test-support';
