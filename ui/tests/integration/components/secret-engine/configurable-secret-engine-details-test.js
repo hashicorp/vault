@@ -34,7 +34,9 @@ module('Integration | Component | SecretEngine::configurable-secret-engine-detai
 
     assert
       .dom(GENERAL.emptyStateMessage)
-      .hasText('You may not have permissions to configure this engine. Reach out to an admin for help.');
+      .hasText(
+        'We are unable to access the mount information for this engine. Ask you administrator if you think you should have access to this secret engine.'
+      );
   });
 
   test('it shows prompt message if no config is returned', async function (assert) {

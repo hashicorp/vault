@@ -38,7 +38,7 @@ export default class ConfigurableSecretEngineDetails extends Component<Args> {
     const { model } = this.args;
     if (!model) {
       this.configError =
-        'You may not have permissions to configure this engine. Reach out to an admin for help.';
+        'We are unable to access the mount information for this engine. Ask you administrator if you think you should have access to this secret engine.';
       return;
     }
     // Fetch the config for the engine. Will eventually include GCP and Azure.
