@@ -224,7 +224,7 @@ module('Integration | Component | mount backend form', function (hooks) {
         );
 
         await click(GENERAL.toggleGroup('Method Options'));
-        await typeIn(GENERAL.filterInputSearch('key'), 'default');
+        await typeIn(GENERAL.inputSearch('key'), 'default');
         assert.strictEqual(
           this.model.config.identityTokenKey,
           'default',

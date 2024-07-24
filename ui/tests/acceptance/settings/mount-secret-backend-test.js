@@ -31,12 +31,12 @@ import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SELECTORS as OIDC } from 'vault/tests/helpers/oidc-config';
 import { adminOidcCreateRead, adminOidcCreate } from 'vault/tests/helpers/secrets/policy-generator';
+import { wifEngines } from 'vault/helpers/mountable-secret-engines';
 
 const consoleComponent = create(consoleClass);
 
 // enterprise backends are tested separately
 const BACKENDS_WITH_ENGINES = ['kv', 'pki', 'ldap', 'kubernetes'];
-const WIF_SECRET_ENGINES = ['aws']; // eventually this will include Azure and GCP.
 module('Acceptance | settings/mount-secret-backend', function (hooks) {
   setupApplicationTest(hooks);
 
@@ -319,7 +319,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       // create an oidc/key
       await runCmd(`write identity/oidc/key/some-key allowed_client_ids="*"`);
 
-      for (const engine of WIF_SECRET_ENGINES) {
+      for (const engine of wifEngines) {
         await page.visit();
         await page.selectType(engine);
         await click(GENERAL.toggleGroup('Method Options'));
@@ -337,7 +337,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       // Go back and choose a non-wif engine type
       await page.back();
       await page.selectType('ssh');
-      +assert
+      assert
         .dom('[data-test-search-select-with-modal]')
         .doesNotExist('for type ssh, the modal field does not render.');
       // cleanup
@@ -345,7 +345,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     });
 
     test('it allows a user with permissions to oidc/key to create an identity_token_key', async function (assert) {
-      for (const engine of WIF_SECRET_ENGINES) {
+      for (const engine of wifEngines) {
         const path = `secrets-adminPolicy-${engine}`;
         const secrets_admin_policy = adminOidcCreateRead(path);
         const secretsAdminToken = await runCmd(
@@ -394,11 +394,11 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     });
 
     test('it allows user with NO access to oidc/key to manually input an identity_token_key', async function (assert) {
-      for (const engine of WIF_SECRET_ENGINES) {
+      for (const engine of wifEngines) {
         const path = `secrets-noOidcAdmin-${engine}`;
-        const secrets_noOidcAdmin_policy = adminOidcCreate(path);
+        const secretsNoOidcAdminPolicy = adminOidcCreate(path);
         const secretsNoOidcAdminToken = await runCmd(
-          tokenWithPolicyCmd(`secrets-noOidcAdmin-${path}`, secrets_noOidcAdmin_policy)
+          tokenWithPolicyCmd(`secrets-noOidcAdmin-${path}`, secretsNoOidcAdminPolicy)
         );
         // create an oidc/key that they can then use even if they can't read it.
         await runCmd(`write identity/oidc/key/general-key allowed_client_ids="*"`);
@@ -410,7 +410,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
         await page.path(path);
         await click(GENERAL.toggleGroup('Method Options'));
         // type-in fallback component to create new key
-        await typeIn(GENERAL.filterInputSearch('key'), 'general-key');
+        await typeIn(GENERAL.inputSearch('key'), 'general-key');
         await page.submit();
         assert
           .dom(GENERAL.latestFlashContent)

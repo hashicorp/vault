@@ -5,6 +5,7 @@
 
 import ApplicationSerializer from './application';
 import { EmbeddedRecordsMixin } from '@ember-data/serializer/rest';
+import { wifEngines } from 'vault/helpers/mountable-secret-engines';
 
 export default ApplicationSerializer.extend(EmbeddedRecordsMixin, {
   attrs: {
@@ -80,12 +81,11 @@ export default ApplicationSerializer.extend(EmbeddedRecordsMixin, {
   serialize(snapshot) {
     const type = snapshot.record.engineType;
     const data = this._super(...arguments);
-    const WIF_SECRET_ENGINES = ['aws'];
     // move version back to options
     data.options = data.version ? { version: data.version } : {};
     delete data.version;
 
-    if (!WIF_SECRET_ENGINES.includes(type)) {
+    if (!wifEngines.includes(type)) {
       // only send identity_token_key if it's set on a WIF secret engine.
       // because of issues with the model unloading with a belongsTo relationships
       // identity_token_key can accidentally carry over if a user backs out of the form and changes the type from WIF to non-WIF.

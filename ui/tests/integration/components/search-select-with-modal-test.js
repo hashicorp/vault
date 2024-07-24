@@ -324,7 +324,7 @@ module('Integration | Component | search select with modal', function (hooks) {
     />
       `);
       assert
-        .dom(GENERAL.filterInputSearch('key'))
+        .dom(GENERAL.inputSearch('key'))
         .hasAttribute('placeholder', 'Input key name', 'Fallback placeholder was passed to input search');
     });
 
@@ -345,7 +345,7 @@ module('Integration | Component | search select with modal', function (hooks) {
     />
       `);
       assert
-        .dom(GENERAL.filterInputSearch('key'))
+        .dom(GENERAL.inputSearch('key'))
         .hasAttribute(
           'placeholder',
           'Search or type to create a key item',
