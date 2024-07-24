@@ -6,9 +6,12 @@
 package activity_testonly
 
 import (
+	"bytes"
 	"context"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"testing"
 	"time"
@@ -449,6 +452,163 @@ func Test_ActivityLog_MountDeduplication(t *testing.T) {
 		"cubbyhole/": 2,
 		"secret/":    1,
 	}, mountSet)
+}
+
+// getJSONExport is used to fetch activity export records using json format.
+// The records will returned as a map keyed by client ID.
+func getJSONExport(t *testing.T, client *api.Client, monthsPreviousTo int, now time.Time) (map[string]vault.ActivityLogExportRecord, error) {
+	t.Helper()
+
+	resp, err := client.Logical().ReadRawWithData("sys/internal/counters/activity/export", map[string][]string{
+		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(monthsPreviousTo, now)).Format(time.RFC3339)},
+		"end_time":   {timeutil.EndOfMonth(now).Format(time.RFC3339)},
+		"format":     {"json"},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	contents, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	buf := bytes.NewBuffer(contents)
+	decoder := json.NewDecoder(buf)
+	clients := make(map[string]vault.ActivityLogExportRecord)
+
+	for {
+
+		var record vault.ActivityLogExportRecord
+		err := decoder.Decode(&record)
+		if err != nil {
+			return nil, err
+		}
+
+		clients[record.ClientID] = record
+
+		if !decoder.More() {
+			break
+		}
+	}
+
+	return clients, nil
+}
+
+// getCSVExport is used to fetch activity export records using csv format.
+// The records will returned as a map keyed by client ID.
+func getCSVExport(t *testing.T, client *api.Client, monthsPreviousTo int, now time.Time) (map[string]vault.ActivityLogExportRecord, error) {
+	t.Helper()
+
+	resp, err := client.Logical().ReadRawWithData("sys/internal/counters/activity/export", map[string][]string{
+		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(monthsPreviousTo, now)).Format(time.RFC3339)},
+		"end_time":   {timeutil.EndOfMonth(now).Format(time.RFC3339)},
+		"format":     {"csv"},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	csvRdr := csv.NewReader(resp.Body)
+	clients := make(map[string]vault.ActivityLogExportRecord)
+
+	csvRecords, err := csvRdr.ReadAll()
+	if err != nil {
+		return nil, err
+	}
+
+	csvColumns := csvRecords[0]
+
+	for i := 1; i < len(csvRecords); i++ {
+		recordMap := make(map[string]interface{})
+
+		for j, k := range csvColumns {
+			recordMap[k] = csvRecords[i][j]
+		}
+
+		var record vault.ActivityLogExportRecord
+		err = mapstructure.Decode(recordMap, &record)
+		if err != nil {
+			return nil, err
+		}
+
+		clients[record.ClientID] = record
+	}
+
+	return clients, nil
+}
+
+// Test_ActivityLog_Export_Sudo ensures that the export API is only accessible via
+// a root token or a token with a sudo policy.
+func Test_ActivityLog_Export_Sudo(t *testing.T) {
+	timeutil.SkipAtEndOfMonth(t)
+	t.Parallel()
+
+	now := time.Now().UTC()
+	var err error
+
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+	_, err = client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
+		"enabled": "enable",
+	})
+	require.NoError(t, err)
+
+	rootToken := client.Token()
+
+	_, err = clientcountutil.NewActivityLogData(client).
+		NewCurrentMonthData().
+		NewClientsSeen(10).
+		Write(context.Background(), generation.WriteOptions_WRITE_ENTITIES)
+
+	require.NoError(t, err)
+
+	// Ensure access via root token
+	clients, err := getJSONExport(t, client, 1, now)
+	require.NoError(t, err)
+	require.Len(t, clients, 10)
+
+	client.Sys().PutPolicy("non-sudo-export", `
+path "sys/internal/counters/activity/export" {
+	capabilities = ["read"]
+}
+	`)
+
+	secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+		Policies: []string{"non-sudo-export"},
+	})
+	require.NoError(t, err)
+
+	nonSudoToken := secret.Auth.ClientToken
+	client.SetToken(nonSudoToken)
+
+	// Ensure no access via token without sudo access
+	clients, err = getJSONExport(t, client, 1, now)
+	require.ErrorContains(t, err, "permission denied")
+
+	client.SetToken(rootToken)
+	client.Sys().PutPolicy("sudo-export", `
+path "sys/internal/counters/activity/export" {
+	capabilities = ["read", "sudo"]
+}
+	`)
+
+	secret, err = client.Auth().Token().Create(&api.TokenCreateRequest{
+		Policies: []string{"sudo-export"},
+	})
+	require.NoError(t, err)
+
+	sudoToken := secret.Auth.ClientToken
+	client.SetToken(sudoToken)
+
+	// Ensure access via token with sudo access
+	clients, err = getJSONExport(t, client, 1, now)
+	require.NoError(t, err)
+	require.Len(t, clients, 10)
 }
 
 // TestHandleQuery_MultipleMounts creates a cluster with
