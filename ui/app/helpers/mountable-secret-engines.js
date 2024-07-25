@@ -134,9 +134,14 @@ const MOUNTABLE_SECRET_ENGINES = [
   },
 ];
 
-// these are Secret engines that are not in a separate ember engine
-// and can be configured by the user
-export const configurableSecretEngines = ['aws', 'ssh'];
+// Secret Engines that have their own configuration page and actions
+// These engines do not exists in their own Ember engine.
+// Ex: AWS vs. LDAP which is configurable but is handled inside the routing of its own Ember engine.
+export const CONFIGURABLE_SECRET_ENGINES = ['aws', 'ssh'];
+
+export function configurableSecretEngines() {
+  return MOUNTABLE_SECRET_ENGINES.slice();
+}
 
 export function mountableEngines() {
   return MOUNTABLE_SECRET_ENGINES.slice();

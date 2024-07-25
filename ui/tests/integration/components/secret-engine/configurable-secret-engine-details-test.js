@@ -11,7 +11,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
-import { configurableSecretEngines } from 'vault/helpers/mountable-secret-engines';
+import { CONFIGURABLE_SECRET_ENGINES } from 'vault/helpers/mountable-secret-engines';
 import {
   createSecretsEngine,
   createConfig,
@@ -40,8 +40,8 @@ module('Integration | Component | SecretEngine::configurable-secret-engine-detai
   });
 
   test('it shows prompt message if no config is returned', async function (assert) {
-    assert.expect(configurableSecretEngines.length * 2);
-    for (const type of configurableSecretEngines) {
+    assert.expect(CONFIGURABLE_SECRET_ENGINES.length * 2);
+    for (const type of CONFIGURABLE_SECRET_ENGINES) {
       const title = type.toUpperCase();
       const backend = `test-404-${type}`;
       this.model = createSecretsEngine(this.store, type, backend);
@@ -55,9 +55,9 @@ module('Integration | Component | SecretEngine::configurable-secret-engine-detai
     }
   });
 
-  test('it shows error message if error is returned', async function (assert) {
-    assert.expect(configurableSecretEngines.length * 2);
-    for (const type of configurableSecretEngines) {
+  test('it surfaces API error', async function (assert) {
+    assert.expect(CONFIGURABLE_SECRET_ENGINES.length * 2);
+    for (const type of CONFIGURABLE_SECRET_ENGINES) {
       const backend = `test-400-${type}`;
       this.model = createSecretsEngine(this.store, type, backend);
       this.server.get(configUrl(type, backend), () => {
@@ -72,7 +72,7 @@ module('Integration | Component | SecretEngine::configurable-secret-engine-detai
 
   test('it shows config details if config data is returned', async function (assert) {
     assert.expect(14);
-    for (const type of configurableSecretEngines) {
+    for (const type of CONFIGURABLE_SECRET_ENGINES) {
       const backend = `test-${type}`;
       this.model = createSecretsEngine(this.store, type, backend);
       createConfig(this.store, backend, type);
