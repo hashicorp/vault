@@ -63,7 +63,7 @@ export const createConfig = (store, backend, type) => {
       return createSshCaConfig(store, backend);
   }
 };
-
+// Used in tests to assert the expected keys in the config details of configurable secret engines
 export const expectedConfigKeys = (type) => {
   switch (type) {
     case 'aws':
@@ -96,7 +96,7 @@ const valueOfSshKeys = (string) => {
       return 'Yes';
   }
 };
-
+// Used in tests to assert the expected values in the config details of configurable secret engines
 export const expectedValueOfConfigKeys = (type, string) => {
   switch (type) {
     case 'aws':

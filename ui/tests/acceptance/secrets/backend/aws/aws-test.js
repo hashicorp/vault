@@ -3,34 +3,20 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, fillIn, currentURL, find, settled, waitUntil, visit } from '@ember/test-helpers';
+import { click, fillIn, currentURL, find, waitUntil, visit } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 import { spy } from 'sinon';
 
-import { GENERAL } from '../../../../helpers/general-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
 
-const AWS_CREDS = {
-  configTab: '[data-test-configuration-tab]',
-  configure: '[data-test-secret-backend-configure]',
-  awsForm: '[data-test-aws-root-creds-form]',
-  viewBackend: '[data-test-backend-view-link]',
-  createSecret: '[data-test-secret-create]',
-  secretHeader: '[data-test-secret-header]',
-  secretLink: (name) => (name ? `[data-test-secret-link="${name}"]` : '[data-test-secret-link]'),
-  crumb: (path) => `[data-test-secret-breadcrumb="${path}"] a`,
-  ttlToggle: '[data-test-ttl-toggle="TTL"]',
-  warning: '[data-test-warning]',
-  delete: (role) => `[data-test-aws-role-delete="${role}"]`,
-  backButton: '[data-test-back-button]',
-  generateLink: '[data-test-backend-credentials]',
-};
 const ROLE_TYPES = [
   {
     credentialType: 'iam_user',
@@ -83,52 +69,20 @@ module('Acceptance | aws secret backend', function (hooks) {
     return authPage.login();
   });
 
-  test('aws backend', async function (assert) {
+  test('it creates role and deletes role', async function (assert) {
     const path = `aws-${this.uid}`;
     const roleName = 'awsrole';
-
     await enablePage.enable('aws', path);
-    await settled();
-    await click(AWS_CREDS.configTab);
-
-    await click(AWS_CREDS.configure);
-
-    assert.strictEqual(currentURL(), `/vault/settings/secrets/configure/${path}`);
-
-    assert.dom(AWS_CREDS.awsForm).exists();
-    assert.dom(GENERAL.tab('access-to-aws')).exists('renders the root creds tab');
-    assert.dom(GENERAL.tab('lease')).exists('renders the leases config tab');
-
-    await fillIn(GENERAL.inputByAttr('accessKey'), 'foo');
-    await fillIn(GENERAL.inputByAttr('secretKey'), 'bar');
-
-    await click(GENERAL.saveButton);
-
-    assert.true(
-      this.flashSuccessSpy.calledWith('The backend configuration saved successfully!'),
-      'success flash message is rendered'
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${path}/list`,
+      'After enabling aws secrets engine it navigates to roles list'
     );
 
-    await click(GENERAL.tab('lease'));
-
-    await click(GENERAL.saveButton);
-
-    assert.true(
-      this.flashSuccessSpy.calledTwice,
-      'a new success flash message is rendered upon saving lease'
-    );
-
-    await click(AWS_CREDS.viewBackend);
-
-    assert.strictEqual(currentURL(), `/vault/secrets/${path}/list`, 'navigates to the roles list');
-
-    await click(AWS_CREDS.createSecret);
-
-    assert.dom(AWS_CREDS.secretHeader).hasText('Create an AWS Role', 'aws: renders the create page');
+    await click(SES.createSecret);
+    assert.dom(SES.secretHeader).hasText('Create an AWS Role', 'It renders the create role page');
 
     await fillIn(GENERAL.inputByAttr('name'), roleName);
-
-    // save the role
     await click(GENERAL.saveButton);
     await waitUntil(() => currentURL() === `/vault/secrets/${path}/show/${roleName}`); // flaky without this
     assert.strictEqual(
@@ -136,17 +90,17 @@ module('Acceptance | aws secret backend', function (hooks) {
       `/vault/secrets/${path}/show/${roleName}`,
       'aws: navigates to the show page on creation'
     );
-    await click(AWS_CREDS.crumb(path));
 
+    await click(SES.crumb(path));
     assert.strictEqual(currentURL(), `/vault/secrets/${path}/list`);
-    assert.dom(AWS_CREDS.secretLink(roleName)).exists();
+    assert.dom(SES.secretLink(roleName)).exists();
 
-    //and delete
-    await click(`${AWS_CREDS.secretLink(roleName)} [data-test-popup-menu-trigger]`);
-    await waitUntil(() => find(AWS_CREDS.delete(roleName))); // flaky without
-    await click(AWS_CREDS.delete(roleName));
+    // delete role
+    await click(`${SES.secretLink(roleName)} [data-test-popup-menu-trigger]`);
+    await waitUntil(() => find(SES.aws.delete(roleName))); // flaky without
+    await click(SES.aws.delete(roleName));
     await click(GENERAL.confirmButton);
-    assert.dom(AWS_CREDS.secretLink(roleName)).doesNotExist('aws: role is no longer in the list');
+    assert.dom(SES.secretLink(roleName)).doesNotExist('aws: role is no longer in the list');
   });
 
   ROLE_TYPES.forEach((scenario) => {
@@ -184,7 +138,7 @@ module('Acceptance | aws secret backend', function (hooks) {
       await click(GENERAL.saveButton);
       await waitUntil(() => currentURL() === `/vault/secrets/${path}/show/${roleName}`); // flaky without this
       assert.strictEqual(currentURL(), `/vault/secrets/${path}/show/${roleName}`);
-      await click(AWS_CREDS.generateLink);
+      await click(SES.generateLink);
       assert
         .dom(GENERAL.inputByAttr('credentialType'))
         .hasValue(scenario.credentialType, 'credentialType matches backing role');
@@ -193,7 +147,7 @@ module('Acceptance | aws secret backend', function (hooks) {
       await scenario.fillOutForm(assert);
 
       await click(GENERAL.saveButton);
-      assert.dom(AWS_CREDS.warning).exists('Shows access warning after generation');
+      assert.dom(SES.warning).exists('Shows access warning after generation');
       assert.dom(GENERAL.infoRowValue('Access key')).exists();
       assert.dom(GENERAL.infoRowValue('Secret key')).exists();
       assert.dom(GENERAL.infoRowValue('Security token')).exists();
@@ -221,8 +175,8 @@ module('Acceptance | aws secret backend', function (hooks) {
     await runCmd(`write ${path}/roles/${roleName} credential_type=assumed_role`);
 
     await visit(`/vault/secrets/${path}/list`);
-    assert.dom(AWS_CREDS.secretLink(roleName)).exists();
-    await click(AWS_CREDS.secretLink(roleName));
+    assert.dom(SES.secretLink(roleName)).exists();
+    await click(SES.secretLink(roleName));
 
     assert.strictEqual(currentURL(), `/vault/secrets/${path}/credentials/${roleName}`);
     assert
@@ -232,7 +186,7 @@ module('Acceptance | aws secret backend', function (hooks) {
     await fillIn(GENERAL.inputByAttr('credentialType'), 'assumed_role');
 
     await click(GENERAL.saveButton);
-    assert.dom(AWS_CREDS.warning).exists('Shows access warning after generation');
+    assert.dom(SES.warning).exists('Shows access warning after generation');
     assert.dom(GENERAL.infoRowValue('Access key')).exists();
     assert.dom(GENERAL.infoRowValue('Secret key')).exists();
     assert.dom(GENERAL.infoRowValue('Security token')).exists();

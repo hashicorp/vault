@@ -55,7 +55,7 @@ module('Integration | Component | SecretEngine::configurable-secret-engine-detai
     }
   });
 
-  test('it surfaces API error', async function (assert) {
+  test('it shows API error', async function (assert) {
     assert.expect(CONFIGURABLE_SECRET_ENGINES.length * 2);
     for (const type of CONFIGURABLE_SECRET_ENGINES) {
       const backend = `test-400-${type}`;
