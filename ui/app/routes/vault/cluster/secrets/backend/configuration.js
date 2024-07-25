@@ -6,14 +6,13 @@
 import { service } from '@ember/service';
 import Route from '@ember/routing/route';
 
-export default Route.extend({
-  store: service(),
+export default class SecretsBackendConfigurationRoute extends Route {
+  @service store;
+
   async model() {
     const backend = this.modelFor('vault.cluster.secrets.backend');
     if (backend.isV2KV) {
-      const canRead = await this.store
-        .findRecord('capabilities', `${backend.id}/config`)
-        .then((response) => response.canRead);
+      const canRead = this.store.findRecord('capabilities', `${backend.id}/config`).canRead;
       // only set these config params if they can read the config endpoint.
       if (canRead) {
         // design wants specific default to show that can't be set in the model
@@ -30,5 +29,5 @@ export default Route.extend({
       }
     }
     return backend;
-  },
-});
+  }
+}
