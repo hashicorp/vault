@@ -3,13 +3,44 @@
 
 scenario "agent" {
   description = <<-EOF
-    The agent scenario verifies Vault when running in Agent mode. The build can be a local branch,
+    The agent scenario verifies Vault when running in Agent mode. The scenario creates a new Vault Cluster
+    using the candidate build and then runs the same Vault build in Agent mode and verifies behavior
+    against the Vault cluster. The scenario also performs standard baseline verification that is not
+    specific to the Agent mode deployment.
+
+    # How to run this scenario
+
+    1. Install Enos
+    $ brew tap hashicorp/tap && brew update && brew install hashicorp/tap/enos
+
+    2. Authenticate to AWS with Doormat (see details here: https://eng-handbook.hashicorp.services/internal-tools/enos/getting-started/#authenticate-to-aws-with-doormat)
+    $ doormat login && eval $(doormat aws -a <your_aws_account_name> export)
+    
+    3. Decide how you will get a Vault artifact:
+      - 
+    Set the following variables either as environment variables (`export ENOS_VAR_var_name=value`)
+    or in your 'enos-local.vars' file:
+      Required variables
+        - aws_ssh_private_key_path
+        - aws_ssh_keypair_name
+        - vault_build_date
+        - vault_product_version
+        - vault_revision
+    
+      Optional variables
+        - artifactory_username (if using 'artifact_source:artifactory')
+        - artifactory_token (if using 'artifact_source:artifactory')
+        - aws_region (if different from the default value in enos-variables.hcl)
+        - consul_license_path (if using an ENT edition of Consul)
+        - distro_version_<distro> (if different from the default version for your target
+        distro; see list of supported distros and versions in enos-globals.hcl)
+        - vault_license_path (if using an ENT edition of Vault)
+        - vault_artifact_path (if using `artifact_source:crt`, set to the path to your
+        downloaded .zip, .deb, or .rpm artifact)
+        
+    The build can be a local branch,
     any CRT built Vault artifact saved to the local machine, or any CRT built Vault artifact in the
     stable channel in Artifactory.
-
-    The scenario creates a new Vault Cluster using the candidate build and then runs the same Vault
-    build in Agent mode and verifies behavior against the Vault cluster. The scenario also performs
-    standard baseline verification that is not specific to the Agent mode deployment.
 
     If you want to use the 'distro:leap' variant you must first accept SUSE's terms for the AWS
     account. To verify that your account has agreed, sign-in to your AWS through Doormat,
