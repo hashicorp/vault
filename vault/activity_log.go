@@ -1702,9 +1702,7 @@ func (a *ActivityLog) receivedFragment(fragment *activity.LogFragment) {
 }
 
 type ResponseCounts struct {
-	DistinctEntities int `json:"distinct_entities" mapstructure:"distinct_entities"`
 	EntityClients    int `json:"entity_clients" mapstructure:"entity_clients"`
-	NonEntityTokens  int `json:"non_entity_tokens" mapstructure:"non_entity_tokens"`
 	NonEntityClients int `json:"non_entity_clients" mapstructure:"non_entity_clients"`
 	Clients          int `json:"clients"`
 	SecretSyncs      int `json:"secret_syncs" mapstructure:"secret_syncs"`
@@ -2878,9 +2876,7 @@ func (a *ActivityLog) partialMonthClientCount(ctx context.Context) (map[string]i
 	// Now populate the response based on breakdowns.
 	responseData := make(map[string]interface{})
 	responseData["by_namespace"] = byNamespaceResponse
-	responseData["distinct_entities"] = totalCounts.EntityClients
 	responseData["entity_clients"] = totalCounts.EntityClients
-	responseData["non_entity_tokens"] = totalCounts.NonEntityClients
 	responseData["non_entity_clients"] = totalCounts.NonEntityClients
 	responseData["clients"] = totalCounts.Clients
 	responseData["secret_syncs"] = totalCounts.SecretSyncs
