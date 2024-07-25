@@ -12,7 +12,9 @@ export default class SecretsBackendConfigurationRoute extends Route {
   async model() {
     const backend = this.modelFor('vault.cluster.secrets.backend');
     if (backend.isV2KV) {
-      const canRead = this.store.findRecord('capabilities', `${backend.id}/config`).canRead;
+      const canRead = await this.store
+        .findRecord('capabilities', `${backend.id}/config`)
+        .then((response) => response.canRead);
       // only set these config params if they can read the config endpoint.
       if (canRead) {
         // design wants specific default to show that can't be set in the model
