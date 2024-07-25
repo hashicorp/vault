@@ -1715,30 +1715,6 @@ type ResponseNamespace struct {
 	Mounts        []*ResponseMount `json:"mounts"`
 }
 
-// Add adds the namespace counts to the existing record, then either adds the
-// mount counts to the existing mount (if it exists) or appends the mount to the
-// list of mounts
-func (r *ResponseNamespace) Add(newRecord *ResponseNamespace) {
-	// Create a map of the existing mounts, so we don't duplicate them
-	mountMap := make(map[string]*ResponseCounts)
-	for _, erm := range r.Mounts {
-		mountMap[erm.MountPath] = erm.Counts
-	}
-
-	r.Counts.Add(&newRecord.Counts)
-
-	// Check the current month mounts against the existing mounts and if there are matches, update counts
-	// accordingly. If there is no match, append the new mount to the existing mounts, so it will be counted
-	// later.
-	for _, newRecordMount := range newRecord.Mounts {
-		if existingRecordMountCounts, ok := mountMap[newRecordMount.MountPath]; ok {
-			existingRecordMountCounts.Add(newRecordMount.Counts)
-		} else {
-			r.Mounts = append(r.Mounts, newRecordMount)
-		}
-	}
-}
-
 type ResponseMonth struct {
 	Timestamp  string               `json:"timestamp"`
 	Counts     *ResponseCounts      `json:"counts"`
