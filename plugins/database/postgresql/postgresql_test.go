@@ -66,7 +66,7 @@ func TestPostgreSQL_InitializeSSLFeatureFlag(t *testing.T) {
 	// which does a validation check on the connection
 	t.Setenv(pluginutil.PluginUsePostgresSSLInline, "true")
 
-	cleanup, connURL := postgresql.PrepareTestContainerWithSSL(t, context.Background(), "verify-ca")
+	cleanup, connURL := postgresql.PrepareTestContainerWithSSL(t, context.Background(), "verify-ca", false)
 	t.Cleanup(cleanup)
 
 	type testCase struct {
@@ -100,6 +100,7 @@ func TestPostgreSQL_InitializeSSLFeatureFlag(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
+			// update the env var with the value we are testing
 			t.Setenv(pluginutil.PluginUsePostgresSSLInline, test.env)
 
 			connectionDetails := map[string]interface{}{
@@ -138,11 +139,13 @@ func TestPostgreSQL_InitializeSSLFeatureFlag(t *testing.T) {
 // for each ssl mode.
 // TODO: remove this when we remove the underlying feature in a future SDK version
 func TestPostgreSQL_InitializeSSL(t *testing.T) {
+	// required to enable the sslinline custom parsing
 	t.Setenv(pluginutil.PluginUsePostgresSSLInline, "true")
 
 	type testCase struct {
 		sslMode       string
 		useDSN        bool
+		useFallback   bool
 		wantErr       bool
 		expectedError string
 	}
@@ -195,10 +198,64 @@ func TestPostgreSQL_InitializeSSL(t *testing.T) {
 			useDSN:  true,
 			wantErr: false,
 		},
+		"disable sslmode with fallback": {
+			sslMode:       "disable",
+			useFallback:   true,
+			wantErr:       true,
+			expectedError: "error verifying connection",
+		},
+		"allow sslmode with fallback": {
+			sslMode:     "allow",
+			useFallback: true,
+		},
+		"prefer sslmode with fallback": {
+			sslMode:     "prefer",
+			useFallback: true,
+		},
+		"require sslmode with fallback": {
+			sslMode:     "require",
+			useFallback: true,
+		},
+		"verify-ca sslmode with fallback": {
+			sslMode:     "verify-ca",
+			useFallback: true,
+		},
+		"disable sslmode with DSN with fallback": {
+			sslMode:       "disable",
+			useDSN:        true,
+			useFallback:   true,
+			wantErr:       true,
+			expectedError: "error verifying connection",
+		},
+		"allow sslmode with DSN with fallback": {
+			sslMode:     "allow",
+			useDSN:      true,
+			useFallback: true,
+			wantErr:     false,
+		},
+		"prefer sslmode with DSN with fallback": {
+			sslMode:     "prefer",
+			useDSN:      true,
+			useFallback: true,
+			wantErr:     false,
+		},
+		"require sslmode with DSN with fallback": {
+			sslMode:     "require",
+			useDSN:      true,
+			useFallback: true,
+			wantErr:     false,
+		},
+		"verify-ca sslmode with DSN with fallback": {
+			sslMode:     "verify-ca",
+			useDSN:      true,
+			useFallback: true,
+			wantErr:     false,
+		},
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			cleanup, connURL := postgresql.PrepareTestContainerWithSSL(t, context.Background(), test.sslMode)
+			t.Parallel()
+			cleanup, connURL := postgresql.PrepareTestContainerWithSSL(t, context.Background(), test.sslMode, test.useFallback)
 			t.Cleanup(cleanup)
 
 			if test.useDSN {

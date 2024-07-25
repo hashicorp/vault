@@ -60,7 +60,11 @@ func PrepareTestContainerWithVaultUser(t *testing.T, ctx context.Context) (func(
 	return cleanup, url
 }
 
-func PrepareTestContainerWithSSL(t *testing.T, ctx context.Context, sslMode string) (func(), string) {
+// PrepareTestContainerWithSSL will setup a test container with SSL enabled so
+// that we can test client certificate authentication.
+// It returns a cleanup func, the connection string in URL format, and the host
+// in the "host:port" format.
+func PrepareTestContainerWithSSL(t *testing.T, ctx context.Context, sslMode string, useFallback bool) (func(), string) {
 	runOpts := defaultRunOpts(t)
 	runner, err := docker.NewServiceRunner(runOpts)
 	if err != nil {
@@ -68,7 +72,7 @@ func PrepareTestContainerWithSSL(t *testing.T, ctx context.Context, sslMode stri
 	}
 
 	// first we connect with username/password because ssl is not enabled yet
-	svc, id, err := runner.StartNewService(context.Background(), false, false, connectPostgres(defaultPostgresPassword, runOpts.ImageRepo))
+	svc, id, err := runner.StartNewService(context.Background(), true, false, connectPostgres(defaultPostgresPassword, runOpts.ImageRepo))
 	if err != nil {
 		t.Fatalf("Could not start docker Postgres: %s", err)
 	}
@@ -149,6 +153,7 @@ EOF
 		string(caCert.CombinedPEM()),
 		string(clientCert.CombinedPEM()),
 		string(clientCert.PrivateKeyPEM()),
+		useFallback,
 	)
 	if err != nil {
 		svc.Cleanup()
@@ -188,7 +193,11 @@ func prepareTestContainer(t *testing.T, runOpts docker.RunOptions, password stri
 	return runner, svc.Cleanup, svc.Config.URL().String(), containerID
 }
 
-func connectPostgresSSL(t *testing.T, host, sslMode, caCert, clientCert, clientKey string) (docker.ServiceConfig, error) {
+func connectPostgresSSL(t *testing.T, host, sslMode, caCert, clientCert, clientKey string, useFallback bool) (docker.ServiceConfig, error) {
+	if useFallback {
+		// set the first host to a bad address so we can test the fallback logic
+		host = "localhost:55," + host
+	}
 	u := url.URL{
 		Scheme: "postgres",
 		User:   url.User("postgres"),
