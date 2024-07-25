@@ -31,7 +31,7 @@ import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SELECTORS as OIDC } from 'vault/tests/helpers/oidc-config';
 import { adminOidcCreateRead, adminOidcCreate } from 'vault/tests/helpers/secrets/policy-generator';
-import { wifEngines } from 'vault/helpers/mountable-secret-engines';
+import { WIF_ENGINES } from 'vault/helpers/mountable-secret-engines';
 
 const consoleComponent = create(consoleClass);
 
@@ -319,7 +319,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       // create an oidc/key
       await runCmd(`write identity/oidc/key/some-key allowed_client_ids="*"`);
 
-      for (const engine of wifEngines) {
+      for (const engine of WIF_ENGINES) {
         await page.visit();
         await page.selectType(engine);
         await click(GENERAL.toggleGroup('Method Options'));
@@ -345,7 +345,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     });
 
     test('it allows a user with permissions to oidc/key to create an identity_token_key', async function (assert) {
-      for (const engine of wifEngines) {
+      for (const engine of WIF_ENGINES) {
         const path = `secrets-adminPolicy-${engine}`;
         const secrets_admin_policy = adminOidcCreateRead(path);
         const secretsAdminToken = await runCmd(
@@ -394,7 +394,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     });
 
     test('it allows user with NO access to oidc/key to manually input an identity_token_key', async function (assert) {
-      for (const engine of wifEngines) {
+      for (const engine of WIF_ENGINES) {
         const path = `secrets-noOidcAdmin-${engine}`;
         const secretsNoOidcAdminPolicy = adminOidcCreate(path);
         const secretsNoOidcAdminToken = await runCmd(

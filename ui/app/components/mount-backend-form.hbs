@@ -45,11 +45,10 @@
             @onChange={{this.handleIdentityTokenKeyChange}}
             @models={{array "oidc/key"}}
             @selectLimit="1"
-            @returnString={{true}}
             @modalFormTemplate="modal-form/oidc-key-template"
-            @placeholder="Search for an existing oidc/key, or type a new key name to create it."
+            @placeholder="Search for an existing OIDC key, or type a new key name to create it."
             @fallbackComponentPlaceholder="Input a key name"
-            @modalSubtext="This key will be created in the oidc/key path."
+            @modalSubtext="This key will be created in the OIDC key path."
           />
         </:identityTokenKey>
       </FormFieldGroups>
