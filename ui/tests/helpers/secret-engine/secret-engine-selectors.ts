@@ -23,4 +23,8 @@ export const SECRET_ENGINE_SELECTORS = {
     rootForm: '[data-test-aws-root-creds-form]',
     delete: (role: string) => `[data-test-aws-role-delete="${role}"]`,
   },
+  ssh: {
+    configureForm: '[data-test-ssh-configure-form]',
+    sshInput: (name: string) => `[data-test-ssh-input="${name}"]`, // TODO: this is used in several files, replace with this selector.},
+  },
 };

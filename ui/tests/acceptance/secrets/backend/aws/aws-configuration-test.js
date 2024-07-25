@@ -35,7 +35,7 @@ module('Acceptance | aws | configuration', function (hooks) {
     return authPage.login();
   });
 
-  test('it should prompt configuration after mounting the engine', async function (assert) {
+  test('it should prompt configuration after mounting the aws engine', async function (assert) {
     const path = `aws-${this.uid}`;
     // in this test go through the full mount process. Bypass this step in later tests.
     await visit('/vault/settings/mount-secret-backend');
@@ -43,7 +43,6 @@ module('Acceptance | aws | configuration', function (hooks) {
     await fillIn(GENERAL.inputByAttr('path'), path);
     await click(SES.mountSubmit);
     await click(SES.configTab);
-
     assert.dom(GENERAL.emptyStateTitle).hasText('AWS not configured');
     assert.dom(GENERAL.emptyStateActions).hasText('Configure AWS');
     // cleanup
@@ -55,7 +54,6 @@ module('Acceptance | aws | configuration', function (hooks) {
     await enablePage.enable('aws', path);
     await click(SES.configTab);
     await click(SES.configure);
-
     assert.strictEqual(currentURL(), `/vault/settings/secrets/configure/${path}`);
     assert.dom(SES.configureTitle('aws')).hasText('Configure AWS');
     assert.dom(SES.aws.rootForm).exists('it lands on the root configuration form.');
