@@ -221,6 +221,7 @@ func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, er
 
 	var err error
 	if driverName == "pgx" && os.Getenv(pluginutil.PluginUsePostgresSSLInline) != "" {
+		// TODO: remove this deprecated function call in a future SDK version
 		c.db, err = OpenPostgres(driverName, conn)
 	} else {
 		c.db, err = sql.Open(driverName, conn)

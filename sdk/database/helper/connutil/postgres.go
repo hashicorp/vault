@@ -1,3 +1,28 @@
+// Copyright (c) 2019-2021 Jack Christensen
+
+// MIT License
+
+// Permission is hereby granted, free of charge, to any person obtaining
+// a copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to
+// the following conditions:
+
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+// LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+// OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+// Copied from https://github.com/jackc/pgconn/blob/1860f4e57204614f40d05a5c76a43e8d80fde9da/config.go
+
 package connutil
 
 import (
@@ -128,12 +153,12 @@ func OpenPostgres(driverName, connString string) (*sql.DB, error) {
 	return sql.Open(driverName, stdlib.RegisterConnConfig(config))
 }
 
-// forked from https://github.com/jackc/pgconn/blob/1860f4e57204614f40d05a5c76a43e8d80fde9da/config.go
-// and modified to read ssl material by value instead of file location
-//
-// configTLS uses libpq's TLS parameters to construct  []*tls.Config. It is
+// configPostgresTLS uses libpq's TLS parameters to construct  []*tls.Config. It is
 // necessary to allow returning multiple TLS configs as sslmode "allow" and
 // "prefer" allow fallback.
+//
+// Copied from https://github.com/jackc/pgconn/blob/1860f4e57204614f40d05a5c76a43e8d80fde9da/config.go
+// and modified to read ssl material by value instead of file location.
 func configPostgresTLS(settings map[string]string, thisHost string, parseConfigOptions pgconn.ParseConfigOptions) ([]*tls.Config, error) {
 	host := thisHost
 	sslmode := settings["sslmode"]
