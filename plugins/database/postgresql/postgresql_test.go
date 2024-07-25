@@ -67,7 +67,7 @@ func TestPostgreSQL_InitializeSSLFeatureFlag(t *testing.T) {
 	// which does a validation check on the connection
 	t.Setenv(pluginutil.PluginUsePostgresSSLInline, "true")
 
-	cleanup, connURL := postgresql.PrepareTestContainerWithSSL(t, context.Background())
+	cleanup, connURL := postgresql.PrepareTestContainerWithSSL(t, context.Background(), "verify-ca")
 	t.Cleanup(cleanup)
 
 	type testCase struct {
@@ -120,6 +120,14 @@ func TestPostgreSQL_InitializeSSLFeatureFlag(t *testing.T) {
 			} else if test.wantErr && !strings.Contains(err.Error(), test.expectedError) {
 				t.Fatalf("got: %s, want: %s", err.Error(), test.expectedError)
 			}
+
+			if !test.wantErr && !db.Initialized {
+				t.Fatal("Database should be initialized")
+			}
+
+			if err := db.Close(); err != nil {
+				t.Fatalf("err: %s", err)
+			}
 			// unset for the next test case
 			os.Unsetenv(pluginutil.PluginUsePostgresSSLInline)
 		})
@@ -127,43 +135,81 @@ func TestPostgreSQL_InitializeSSLFeatureFlag(t *testing.T) {
 }
 
 // TestPostgreSQL_InitializeSSL tests that we can successfully use authenticate
-// with a postgres server via ssl with a URL connection string.
+// with a postgres server via ssl with a URL connection string for each ssl mode.
 // TODO: remove this when we remove the underlying feature in a future SDK version
 func TestPostgreSQL_InitializeSSL(t *testing.T) {
 	t.Setenv(pluginutil.PluginUsePostgresSSLInline, "true")
 
-	cleanup, connURL := postgresql.PrepareTestContainerWithSSL(t, context.Background())
-	t.Cleanup(cleanup)
-
-	connectionDetails := map[string]interface{}{
-		"connection_url":       connURL,
-		"max_open_connections": 5,
+	type testCase struct {
+		sslMode       string
+		wantErr       bool
+		expectedError string
 	}
 
-	req := dbplugin.InitializeRequest{
-		Config:           connectionDetails,
-		VerifyConnection: true,
+	tests := map[string]testCase{
+		"disable sslmode": {
+			sslMode:       "disable",
+			wantErr:       true,
+			expectedError: "error verifying connection",
+		},
+		"allow sslmode": {
+			sslMode: "allow",
+			wantErr: false,
+		},
+		"prefer sslmode": {
+			sslMode: "prefer",
+			wantErr: false,
+		},
+		"require sslmode": {
+			sslMode: "require",
+			wantErr: false,
+		},
+		"verify-ca sslmode": {
+			sslMode: "verify-ca",
+			wantErr: false,
+		},
 	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			cleanup, connURL := postgresql.PrepareTestContainerWithSSL(t, context.Background(), test.sslMode)
+			t.Cleanup(cleanup)
 
-	db := new()
-	dbtesting.AssertInitialize(t, db, req)
+			connectionDetails := map[string]interface{}{
+				"connection_url":       connURL,
+				"max_open_connections": 5,
+			}
 
-	if !db.Initialized {
-		t.Fatal("Database should be initialized")
-	}
+			req := dbplugin.InitializeRequest{
+				Config:           connectionDetails,
+				VerifyConnection: true,
+			}
 
-	if err := db.Close(); err != nil {
-		t.Fatalf("err: %s", err)
+			db := new()
+			_, err := dbtesting.VerifyInitialize(t, db, req)
+			if test.wantErr && err == nil {
+				t.Fatal("expected error, got nil")
+			} else if test.wantErr && !strings.Contains(err.Error(), test.expectedError) {
+				t.Fatalf("got: %s, want: %s", err.Error(), test.expectedError)
+			}
+
+			if !test.wantErr && !db.Initialized {
+				t.Fatal("Database should be initialized")
+			}
+
+			if err := db.Close(); err != nil {
+				t.Fatalf("err: %s", err)
+			}
+		})
 	}
 }
 
-// TestPostgreSQL_InitializeSSL tests that we can successfully use authenticate
+// TestPostgreSQL_InitializeSSLWithDSN tests that we can successfully use authenticate
 // with a postgres server via ssl with a DSN (key/value) connection string.
 // TODO: remove this when we remove the underlying feature in a future SDK version
 func TestPostgreSQL_InitializeSSLWithDSN(t *testing.T) {
 	t.Setenv(pluginutil.PluginUsePostgresSSLInline, "true")
 
-	cleanup, connURL := postgresql.PrepareTestContainerWithSSL(t, context.Background())
+	cleanup, connURL := postgresql.PrepareTestContainerWithSSL(t, context.Background(), "verify-ca")
 	t.Cleanup(cleanup)
 
 	dsnConnURL, err := dbutil.ParseURL(connURL)

@@ -60,7 +60,7 @@ func PrepareTestContainerWithVaultUser(t *testing.T, ctx context.Context) (func(
 	return cleanup, url
 }
 
-func PrepareTestContainerWithSSL(t *testing.T, ctx context.Context) (func(), string) {
+func PrepareTestContainerWithSSL(t *testing.T, ctx context.Context, sslMode string) (func(), string) {
 	runOpts := defaultRunOpts(t)
 	runner, err := docker.NewServiceRunner(runOpts)
 	if err != nil {
@@ -137,12 +137,24 @@ EOF
 	mustRunCommand(t, ctx, runner, id,
 		[]string{"psql", "-U", "postgres", "-c", "SELECT pg_reload_conf()"})
 
-	svcConfig, err := connectPostgresSSL(t, svc.Config.URL(), string(caCert.CombinedPEM()), string(clientCert.CombinedPEM()), string(clientCert.PrivateKeyPEM()))
+	if sslMode == "disable" {
+		// return non-tls connection url
+		return svc.Cleanup, svc.Config.URL().String()
+	}
+
+	sslConfig, err := connectPostgresSSL(
+		t,
+		svc.Config.URL().Host,
+		sslMode,
+		string(caCert.CombinedPEM()),
+		string(clientCert.CombinedPEM()),
+		string(clientCert.PrivateKeyPEM()),
+	)
 	if err != nil {
 		svc.Cleanup()
 		t.Fatalf("failed to connect to postgres container via SSL: %v", err)
 	}
-	return svc.Cleanup, svcConfig.URL().String()
+	return svc.Cleanup, sslConfig.URL().String()
 }
 
 func PrepareTestContainerWithPassword(t *testing.T, password string) (func(), string) {
@@ -176,14 +188,14 @@ func prepareTestContainer(t *testing.T, runOpts docker.RunOptions, password stri
 	return runner, svc.Cleanup, svc.Config.URL().String(), containerID
 }
 
-func connectPostgresSSL(t *testing.T, connURL *url.URL, caCert, clientCert, clientKey string) (docker.ServiceConfig, error) {
+func connectPostgresSSL(t *testing.T, host, sslMode, caCert, clientCert, clientKey string) (docker.ServiceConfig, error) {
 	u := url.URL{
 		Scheme: "postgres",
 		User:   url.User("postgres"),
-		Host:   connURL.Host,
+		Host:   host,
 		Path:   "postgres",
 		RawQuery: url.Values{
-			"sslmode":     {"verify-ca"},
+			"sslmode":     {sslMode},
 			"sslinline":   {"true"},
 			"sslrootcert": {caCert},
 			"sslcert":     {clientCert},
