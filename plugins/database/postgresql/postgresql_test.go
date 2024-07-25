@@ -58,9 +58,8 @@ func TestPostgreSQL_Initialize(t *testing.T) {
 	}
 }
 
-// TestPostgreSQL_InitializeSSLFeatureFlag tests that the
-// VAULT_PLUGIN_USE_POSTGRES_SSLINLINE flag guards against unwanted usage of
-// the deprecated SSL client authentication path.
+// TestPostgreSQL_InitializeSSLFeatureFlag tests that the VAULT_PLUGIN_USE_POSTGRES_SSLINLINE
+// flag guards against unwanted usage of the deprecated SSL client authentication path.
 // TODO: remove this when we remove the underlying feature in a future SDK version
 func TestPostgreSQL_InitializeSSLFeatureFlag(t *testing.T) {
 	// set the flag to true so we can call PrepareTestContainerWithSSL
@@ -134,14 +133,16 @@ func TestPostgreSQL_InitializeSSLFeatureFlag(t *testing.T) {
 	}
 }
 
-// TestPostgreSQL_InitializeSSL tests that we can successfully use authenticate
-// with a postgres server via ssl with a URL connection string for each ssl mode.
+// TestPostgreSQL_InitializeSSL tests that we can successfully authenticate
+// with a postgres server via ssl with a URL connection string or DSN (key/value)
+// for each ssl mode.
 // TODO: remove this when we remove the underlying feature in a future SDK version
 func TestPostgreSQL_InitializeSSL(t *testing.T) {
 	t.Setenv(pluginutil.PluginUsePostgresSSLInline, "true")
 
 	type testCase struct {
 		sslMode       string
+		useDSN        bool
 		wantErr       bool
 		expectedError string
 	}
@@ -168,12 +169,45 @@ func TestPostgreSQL_InitializeSSL(t *testing.T) {
 			sslMode: "verify-ca",
 			wantErr: false,
 		},
+		"disable sslmode with DSN": {
+			sslMode:       "disable",
+			useDSN:        true,
+			wantErr:       true,
+			expectedError: "error verifying connection",
+		},
+		"allow sslmode with DSN": {
+			sslMode: "allow",
+			useDSN:  true,
+			wantErr: false,
+		},
+		"prefer sslmode with DSN": {
+			sslMode: "prefer",
+			useDSN:  true,
+			wantErr: false,
+		},
+		"require sslmode with DSN": {
+			sslMode: "require",
+			useDSN:  true,
+			wantErr: false,
+		},
+		"verify-ca sslmode with DSN": {
+			sslMode: "verify-ca",
+			useDSN:  true,
+			wantErr: false,
+		},
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			cleanup, connURL := postgresql.PrepareTestContainerWithSSL(t, context.Background(), test.sslMode)
 			t.Cleanup(cleanup)
 
+			if test.useDSN {
+				var err error
+				connURL, err = dbutil.ParseURL(connURL)
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
 			connectionDetails := map[string]interface{}{
 				"connection_url":       connURL,
 				"max_open_connections": 5,
@@ -200,41 +234,6 @@ func TestPostgreSQL_InitializeSSL(t *testing.T) {
 				t.Fatalf("err: %s", err)
 			}
 		})
-	}
-}
-
-// TestPostgreSQL_InitializeSSLWithDSN tests that we can successfully use authenticate
-// with a postgres server via ssl with a DSN (key/value) connection string.
-// TODO: remove this when we remove the underlying feature in a future SDK version
-func TestPostgreSQL_InitializeSSLWithDSN(t *testing.T) {
-	t.Setenv(pluginutil.PluginUsePostgresSSLInline, "true")
-
-	cleanup, connURL := postgresql.PrepareTestContainerWithSSL(t, context.Background(), "verify-ca")
-	t.Cleanup(cleanup)
-
-	dsnConnURL, err := dbutil.ParseURL(connURL)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	connectionDetails := map[string]interface{}{
-		"connection_url": dsnConnURL,
-	}
-
-	req := dbplugin.InitializeRequest{
-		Config:           connectionDetails,
-		VerifyConnection: true,
-	}
-
-	db := new()
-	dbtesting.AssertInitialize(t, db, req)
-
-	if !db.Initialized {
-		t.Fatal("Database should be initialized")
-	}
-
-	if err := db.Close(); err != nil {
-		t.Fatalf("err: %s", err)
 	}
 }
 
