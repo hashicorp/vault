@@ -58,6 +58,34 @@ func TestPostgreSQL_Initialize(t *testing.T) {
 	}
 }
 
+// TestPostgreSQL_InitializeMultiHost tests the functionality of Postgres's
+// multi-host connection strings.
+func TestPostgreSQL_InitializeMultiHost(t *testing.T) {
+	cleanup, connURL := postgresql.PrepareTestContainerMultiHost(t)
+	defer cleanup()
+
+	connectionDetails := map[string]interface{}{
+		"connection_url":       connURL,
+		"max_open_connections": 5,
+	}
+
+	req := dbplugin.InitializeRequest{
+		Config:           connectionDetails,
+		VerifyConnection: true,
+	}
+
+	db := new()
+	dbtesting.AssertInitialize(t, db, req)
+
+	if !db.Initialized {
+		t.Fatal("Database should be initialized")
+	}
+
+	if err := db.Close(); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+}
+
 // TestPostgreSQL_InitializeSSLFeatureFlag tests that the VAULT_PLUGIN_USE_POSTGRES_SSLINLINE
 // flag guards against unwanted usage of the deprecated SSL client authentication path.
 // TODO: remove this when we remove the underlying feature in a future SDK version
@@ -82,8 +110,12 @@ func TestPostgreSQL_InitializeSSLFeatureFlag(t *testing.T) {
 			expectedError: "",
 		},
 		"feature flag is unset or empty": {
-			env:           "",
-			wantErr:       true,
+			env:     "",
+			wantErr: true,
+			// this error is expected because the env var unset means we are
+			// using pgx's native connection string parsing which does not
+			// support inlining of the certificate material in the sslrootcert,
+			// sslcert, and sslkey fields
 			expectedError: "error verifying connection",
 		},
 		"feature flag is false": {

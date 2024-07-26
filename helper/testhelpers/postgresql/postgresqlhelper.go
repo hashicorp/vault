@@ -16,19 +16,19 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/docker"
 )
 
-const defaultPostgresImage = "docker.mirror.hashicorp.services/postgres"
-
-const defaultPostgresVersion = "13.4-buster"
-
-const defaultPostgresPassword = "secret"
+const (
+	defaultPGImage   = "docker.mirror.hashicorp.services/postgres"
+	defaultPGVersion = "13.4-buster"
+	defaultPGPass    = "secret"
+)
 
 func defaultRunOpts(t *testing.T) docker.RunOptions {
 	return docker.RunOptions{
 		ContainerName: "postgres",
-		ImageRepo:     defaultPostgresImage,
-		ImageTag:      defaultPostgresVersion,
+		ImageRepo:     defaultPGImage,
+		ImageTag:      defaultPGVersion,
 		Env: []string{
-			"POSTGRES_PASSWORD=" + defaultPostgresPassword,
+			"POSTGRES_PASSWORD=" + defaultPGPass,
 			"POSTGRES_DB=database",
 		},
 		Ports:             []string{"5432/tcp"},
@@ -43,7 +43,13 @@ func defaultRunOpts(t *testing.T) docker.RunOptions {
 }
 
 func PrepareTestContainer(t *testing.T) (func(), string) {
-	_, cleanup, url, _ := prepareTestContainer(t, defaultRunOpts(t), defaultPostgresPassword, true, false)
+	_, cleanup, url, _ := prepareTestContainer(t, defaultRunOpts(t), defaultPGPass, true, false, false)
+
+	return cleanup, url
+}
+
+func PrepareTestContainerMultiHost(t *testing.T) (func(), string) {
+	_, cleanup, url, _ := prepareTestContainer(t, defaultRunOpts(t), defaultPGPass, true, false, true)
 
 	return cleanup, url
 }
@@ -52,7 +58,7 @@ func PrepareTestContainer(t *testing.T) (func(), string) {
 // admin user configured so that we can safely call rotate-root without
 // rotating the root DB credentials
 func PrepareTestContainerWithVaultUser(t *testing.T, ctx context.Context) (func(), string) {
-	runner, cleanup, url, id := prepareTestContainer(t, defaultRunOpts(t), defaultPostgresPassword, true, false)
+	runner, cleanup, url, id := prepareTestContainer(t, defaultRunOpts(t), defaultPGPass, true, false, false)
 
 	cmd := []string{"psql", "-U", "postgres", "-c", "CREATE USER vaultadmin WITH LOGIN PASSWORD 'vaultpass' SUPERUSER"}
 	mustRunCommand(t, ctx, runner, id, cmd)
@@ -70,7 +76,7 @@ func PrepareTestContainerWithSSL(t *testing.T, ctx context.Context, sslMode stri
 	}
 
 	// first we connect with username/password because ssl is not enabled yet
-	svc, id, err := runner.StartNewService(context.Background(), true, false, connectPostgres(defaultPostgresPassword, runOpts.ImageRepo))
+	svc, id, err := runner.StartNewService(context.Background(), true, false, connectPostgres(defaultPGPass, runOpts.ImageRepo, false))
 	if err != nil {
 		t.Fatalf("Could not start docker Postgres: %s", err)
 	}
@@ -167,12 +173,12 @@ func PrepareTestContainerWithPassword(t *testing.T, password string) (func(), st
 		"POSTGRES_DB=database",
 	}
 
-	_, cleanup, url, _ := prepareTestContainer(t, runOpts, password, true, false)
+	_, cleanup, url, _ := prepareTestContainer(t, runOpts, password, true, false, false)
 
 	return cleanup, url
 }
 
-func prepareTestContainer(t *testing.T, runOpts docker.RunOptions, password string, addSuffix, forceLocalAddr bool,
+func prepareTestContainer(t *testing.T, runOpts docker.RunOptions, password string, addSuffix, forceLocalAddr, useFallback bool,
 ) (*docker.Runner, func(), string, string) {
 	if os.Getenv("PG_URL") != "" {
 		return nil, func() {}, "", os.Getenv("PG_URL")
@@ -183,7 +189,7 @@ func prepareTestContainer(t *testing.T, runOpts docker.RunOptions, password stri
 		t.Fatalf("Could not start docker Postgres: %s", err)
 	}
 
-	svc, containerID, err := runner.StartNewService(context.Background(), addSuffix, forceLocalAddr, connectPostgres(password, runOpts.ImageRepo))
+	svc, containerID, err := runner.StartNewService(context.Background(), addSuffix, forceLocalAddr, connectPostgres(password, runOpts.ImageRepo, useFallback))
 	if err != nil {
 		t.Fatalf("Could not start docker Postgres: %s", err)
 	}
@@ -191,6 +197,12 @@ func prepareTestContainer(t *testing.T, runOpts docker.RunOptions, password stri
 	return runner, svc.Cleanup, svc.Config.URL().String(), containerID
 }
 
+// connectPostgresSSL is used to verify the connection of our test container
+// and construct the connection string that is used in tests.
+//
+// NOTE: The RawQuery component of the url sets the custom sslinline field and
+// inlines the certificate material in the sslrootcert, sslcert, and sslkey
+// fields. This feature will be removed in a future version of the SDK.
 func connectPostgresSSL(t *testing.T, host, sslMode, caCert, clientCert, clientKey string, useFallback bool) (docker.ServiceConfig, error) {
 	if useFallback {
 		// set the first host to a bad address so we can test the fallback logic
@@ -210,6 +222,7 @@ func connectPostgresSSL(t *testing.T, host, sslMode, caCert, clientCert, clientK
 		}.Encode(),
 	}
 
+	// TODO: remove this deprecated function call in a future SDK version
 	db, err := connutil.OpenPostgres("pgx", u.String())
 	if err != nil {
 		return nil, err
@@ -222,12 +235,17 @@ func connectPostgresSSL(t *testing.T, host, sslMode, caCert, clientCert, clientK
 	return docker.NewServiceURL(u), nil
 }
 
-func connectPostgres(password, repo string) docker.ServiceAdapter {
+func connectPostgres(password, repo string, useFallback bool) docker.ServiceAdapter {
 	return func(ctx context.Context, host string, port int) (docker.ServiceConfig, error) {
+		hostAddr := fmt.Sprintf("%s:%d", host, port)
+		if useFallback {
+			// set the first host to a bad address so we can test the fallback logic
+			hostAddr = "localhost:55," + hostAddr
+		}
 		u := url.URL{
 			Scheme:   "postgres",
 			User:     url.UserPassword("postgres", password),
-			Host:     fmt.Sprintf("%s:%d", host, port),
+			Host:     hostAddr,
 			Path:     "postgres",
 			RawQuery: "sslmode=disable",
 		}
