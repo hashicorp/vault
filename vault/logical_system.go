@@ -133,6 +133,7 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 				"storage/raft/snapshot-auto/config/*",
 				"leases",
 				"internal/inspect/*",
+				"internal/counters/activity/export",
 				// sys/seal and sys/step-down actually have their sudo requirement enforced through hardcoding
 				// PolicyCheckOpts.RootPrivsRequired in dedicated calls to Core.performPolicyChecks, but we still need
 				// to declare them here so that the generated OpenAPI spec gets their sudo status correct.
@@ -3913,7 +3914,7 @@ func (b *SystemBackend) handleEnableAudit(ctx context.Context, _ *logical.Reques
 
 	// Attempt enabling
 	if err := b.Core.enableAudit(ctx, me, true); err != nil {
-		b.Backend.Logger().Error("enable audit mount failed", "path", me.Path, "error", err)
+		b.Core.logger.Error("enable audit mount failed", "path", me.Path, "error", err)
 
 		return handleError(audit.ConvertToExternalError(err))
 	}

@@ -76,12 +76,12 @@ func newFileBackend(conf *BackendConfig, headersConfig HeaderFormatter) (*FileBa
 		return nil, err
 	}
 
-	var opt []event.Option
+	sinkOpts := []event.Option{event.WithLogger(conf.Logger)}
 	if mode, ok := conf.Config[optionMode]; ok {
-		opt = append(opt, event.WithFileMode(mode))
+		sinkOpts = append(sinkOpts, event.WithFileMode(mode))
 	}
 
-	err = b.configureSinkNode(conf.MountPath, filePath, cfg.requiredFormat, opt...)
+	err = b.configureSinkNode(conf.MountPath, filePath, cfg.requiredFormat, sinkOpts...)
 	if err != nil {
 		return nil, err
 	}
