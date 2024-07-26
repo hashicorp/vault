@@ -16,7 +16,6 @@ export const SECRET_ENGINE_SELECTORS = {
   mountSubmit: '[data-test-mount-submit]',
   secretHeader: '[data-test-secret-header]',
   secretLink: (name: string) => (name ? `[data-test-secret-link="${name}"]` : '[data-test-secret-link]'),
-  ttlToggle: '[data-test-ttl-toggle="TTL"]',
   viewBackend: '[data-test-backend-view-link]',
   warning: '[data-test-warning]',
   aws: {

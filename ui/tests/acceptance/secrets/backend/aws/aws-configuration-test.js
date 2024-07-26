@@ -71,6 +71,12 @@ module('Acceptance | aws | configuration', function (hooks) {
   test('it should save lease AWS configuration', async function (assert) {
     assert.expect(3);
     const path = `aws-${this.uid}`;
+    this.server.post(`${path}/config/lease`, (schema, req) => {
+      const payload = JSON.parse(req.requestBody);
+      assert.deepEqual(payload.lease, '55s', 'lease is set to 55s');
+      assert.deepEqual(payload.lease_max, '65s', 'maximum_lease is set to 65s');
+      return { data: { id: path, type: 'aws', attributes: payload } };
+    });
     await enablePage.enable('aws', path);
     await click(SES.configTab);
     await click(SES.configure);
@@ -79,13 +85,6 @@ module('Acceptance | aws | configuration', function (hooks) {
     await fillIn(GENERAL.ttl.input('Lease'), '55');
     await click(GENERAL.toggleInput('Maximum Lease'));
     await fillIn(GENERAL.ttl.input('Maximum Lease'), '65');
-    this.server.post(`${path}/config/lease`, (schema, req) => {
-      const payload = JSON.parse(req.requestBody);
-      assert.deepEqual(payload.lease, '55s', 'lease is set to 55s');
-      assert.deepEqual(payload.lease_max, '65s', 'maximum_lease is set to 65s');
-      return { data: { id: path, type: 'aws', attributes: payload } };
-    });
-
     await click(GENERAL.saveButtonId('lease'));
     assert.true(
       this.flashSuccessSpy.calledWith('The backend configuration saved successfully!'),

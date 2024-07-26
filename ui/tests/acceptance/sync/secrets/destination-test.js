@@ -12,6 +12,7 @@ import syncHandlers from 'vault/mirage/handlers/sync';
 import authPage from 'vault/tests/pages/auth';
 import { settled, click, visit, currentURL, fillIn, currentRouteName } from '@ember/test-helpers';
 import { PAGE as ts } from 'vault/tests/helpers/sync/sync-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 // sync is an enterprise feature but since mirage is used the enterprise label has been intentionally omitted from the module name
 module('Acceptance | sync | destination (singular)', function (hooks) {
@@ -36,11 +37,11 @@ module('Acceptance | sync | destination (singular)', function (hooks) {
 
   test('it should transition to correct routes when performing actions', async function (assert) {
     await click(ts.navLink('Secrets Sync'));
-    await click(ts.tab('Destinations'));
+    await click(GENERAL.hdsTab('Destinations'));
     await click(ts.listItem);
-    assert.dom(ts.tab('Secrets')).hasClass('active', 'Secrets tab is active');
+    assert.dom(GENERAL.hdsTab('Secrets')).hasClass('active', 'Secrets hdsTab is active');
 
-    await click(ts.tab('Details'));
+    await click(GENERAL.hdsTab('Details'));
     assert.dom(ts.infoRowLabel('Name')).exists('Destination details display');
 
     await click(ts.toolbar('Sync secrets'));
@@ -49,7 +50,7 @@ module('Acceptance | sync | destination (singular)', function (hooks) {
     await click(ts.toolbar('Edit destination'));
     assert.dom(ts.inputByAttr('name')).isDisabled('Edit view renders with disabled name field');
     await click(ts.cancelButton);
-    assert.dom(ts.tab('Details')).hasClass('active', 'Details view is active');
+    assert.dom(GENERAL.hdsTab('Details')).hasClass('active', 'Details view is active');
   });
 
   test('it should delete destination', async function (assert) {
