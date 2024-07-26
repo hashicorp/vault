@@ -381,7 +381,7 @@ module('Unit | Adapter | kv/data', function (hooks) {
   module('fetchSubkeys', function (hooks) {
     hooks.beforeEach(function () {
       this.adapter = this.store.adapterFor('kv/data');
-      this.subkeysUrl = `${this.backend}/subkeys/${this.path}`;
+      this.subkeysUrl = `${encodePath(this.backend)}/subkeys/${encodePath(this.path)}`;
     });
 
     test('it should make request with default query', async function (assert) {
