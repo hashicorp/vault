@@ -11,7 +11,6 @@
 import { sanitizeStart } from 'core/utils/sanitize-path';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 
-// only exported for testing
 export function buildKvPath(backend: string, path: string, type: string, version?: number | string) {
   const sanitizedPath = sanitizeStart(path); // removing leading slashes
   const url = `${encodePath(backend)}/${type}/${encodePath(sanitizedPath)}`;

@@ -35,6 +35,14 @@ const EXAMPLE_KV_DATA_GET_RESPONSE = {
   },
 };
 
+const EXAMPLE_KV_SUBKEYS_RESPONSE = {
+  request_id: 'foobar',
+  data: {
+    ...EXAMPLE_KV_DATA_GET_RESPONSE,
+    data: { foo: null },
+  },
+};
+
 const EXAMPLE_CONTROL_GROUP_RESPONSE = {
   data: null,
   wrap_info: {
@@ -78,8 +86,6 @@ module('Unit | Adapter | kv/data', function (hooks) {
 
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
-    this.version = this.owner.lookup('service:version');
-    this.version.type = 'enterprise'; // Required for testing control-group flow
     this.secretMountPath = this.owner.lookup('service:secret-mount-path');
     this.backend = 'my/kv-back&end';
     this.secretMountPath.currentPath = this.backend;
@@ -271,6 +277,7 @@ module('Unit | Adapter | kv/data', function (hooks) {
 
     test('it should handle a control group response properly', async function (assert) {
       assert.expect(1);
+      this.owner.lookup('service:version').type = 'enterprise'; // Required for testing control-group flow
       this.server.get(this.endpoint('data'), () => {
         return EXAMPLE_CONTROL_GROUP_RESPONSE;
       });
@@ -368,6 +375,48 @@ module('Unit | Adapter | kv/data', function (hooks) {
       assert.true(record.isDeleted, 'record is deleted');
       record = await this.store.peekRecord('kv/data', this.id);
       assert.strictEqual(record, null, 'record is no longer in store');
+    });
+  });
+
+  module('fetchSubkeys', function (hooks) {
+    hooks.before(function () {
+      this.adapter = this.store.adapterFor('kv/data');
+      this.subkeysUrl = `${this.backend}/subkeys/${this.path}`;
+    });
+
+    test('it should make request with default query', async function (assert) {
+      assert.expect(2);
+      const expectedQuery = { depth: '0' };
+
+      this.server.get(this.subkeysUrl, (schema, { queryParams }) => {
+        assert.true(true, `GET request made to ${this.subkeysUrl}`);
+        assert.propEqual(queryParams, expectedQuery, `queryParams contain: ${JSON.stringify(queryParams)}`);
+        return EXAMPLE_KV_SUBKEYS_RESPONSE;
+      });
+
+      this.adapter.fetchSubkeys({ backend: this.backend, path: this.path });
+    });
+
+    test('it should make request with version query', async function (assert) {
+      assert.expect(1);
+      const expectedQuery = { depth: '0', version: '2' };
+      this.server.get(this.subkeysUrl, (schema, { queryParams }) => {
+        assert.propEqual(queryParams, expectedQuery, `queryParams contain: ${JSON.stringify(queryParams)}`);
+        return EXAMPLE_KV_SUBKEYS_RESPONSE;
+      });
+
+      this.adapter.fetchSubkeys({ backend: this.backend, path: this.path, version: '2' });
+    });
+
+    test('it should make request with just depth query', async function (assert) {
+      assert.expect(1);
+      const expectedQuery = { depth: '1' };
+      this.server.get(this.subkeysUrl, (schema, { queryParams }) => {
+        assert.propEqual(queryParams, expectedQuery, `queryParams contain: ${JSON.stringify(queryParams)}`);
+        return EXAMPLE_KV_SUBKEYS_RESPONSE;
+      });
+
+      this.adapter.fetchSubkeys({ backend: this.backend, path: this.path, depth: '1' });
     });
   });
 });

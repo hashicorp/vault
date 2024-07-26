@@ -4,7 +4,14 @@
  */
 
 import ApplicationAdapter from '../application';
-import { kvDataPath, kvDeletePath, kvDestroyPath, kvMetadataPath, kvUndeletePath } from 'vault/utils/kv-path';
+import {
+  buildKvPath,
+  kvDataPath,
+  kvDeletePath,
+  kvDestroyPath,
+  kvMetadataPath,
+  kvUndeletePath,
+} from 'vault/utils/kv-path';
 import { assert } from '@ember/debug';
 import ControlGroupError from 'vault/lib/control-group-error';
 
@@ -31,14 +38,17 @@ export default class KvDataAdapter extends ApplicationAdapter {
     });
   }
 
+  // TODO use query-param-string util when https://github.com/hashicorp/vault/pull/27455 is merged
   fetchSubkeys(query) {
     const { backend, path, version, depth } = query;
-    // TODO use query-param-string util when https://github.com/hashicorp/vault/pull/27455 is merged
+    const apiPath = buildKvPath(backend, path, 'subkeys'); // encodes mount and secret paths
     // if no version, defaults to latest
     const versionParam = version ? `&version=${version}` : '';
     // depth=1 returns just top-level keys, depth=0 returns all subkeys
-    const url = `${backend}/subkeys/${path}?depth=${depth || '0'}${versionParam}`;
-    return this.ajax(this._url(url), 'GET').then((resp) => resp.data);
+    const queryParams = `?depth=${depth || '0'}${versionParam}`;
+    // TODO subkeys response handles deleted records the same as queryRecord and returns a 404
+    // extrapolate error handling logic from queryRecord and share between these two methods
+    return this.ajax(this._url(`${apiPath}${queryParams}`), 'GET').then((resp) => resp.data);
   }
 
   fetchWrapInfo(query) {
