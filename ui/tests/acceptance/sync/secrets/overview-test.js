@@ -75,7 +75,7 @@ module('Acceptance | sync | overview', function (hooks) {
             await click(ts.overview.table.actionToggle(0));
             await click(ts.overview.table.action('details'));
             assert
-              .dom(GENERAL.hdsTab('Secrets'))
+              .dom(GENERAL.tab('Secrets'))
               .hasClass('active', 'Navigates to secrets view for destination');
           });
         });
