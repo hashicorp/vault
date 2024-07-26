@@ -62,8 +62,6 @@ func PrepareTestContainerWithVaultUser(t *testing.T, ctx context.Context) (func(
 
 // PrepareTestContainerWithSSL will setup a test container with SSL enabled so
 // that we can test client certificate authentication.
-// It returns a cleanup func, the connection string in URL format, and the host
-// in the "host:port" format.
 func PrepareTestContainerWithSSL(t *testing.T, ctx context.Context, sslMode string, useFallback bool) (func(), string) {
 	runOpts := defaultRunOpts(t)
 	runner, err := docker.NewServiceRunner(runOpts)

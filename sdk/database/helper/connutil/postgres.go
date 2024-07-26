@@ -69,12 +69,12 @@ func OpenPostgres(driverName, connString string) (*sql.DB, error) {
 		if strings.HasPrefix(connString, "postgres://") || strings.HasPrefix(connString, "postgresql://") {
 			settings, err = parsePostgresURLSettings(connString)
 			if err != nil {
-				return nil, fmt.Errorf("failed to parse as URL", err)
+				return nil, fmt.Errorf("failed to parse as URL: %w", err)
 			}
 		} else {
 			settings, err = parsePostgresDSNSettings(connString)
 			if err != nil {
-				return nil, fmt.Errorf("failed to parse as DSN", err)
+				return nil, fmt.Errorf("failed to parse as DSN: %w", err)
 			}
 		}
 	}
@@ -120,7 +120,7 @@ func OpenPostgres(driverName, connString string) (*sql.DB, error) {
 
 		port, err := parsePort(portStr)
 		if err != nil {
-			return nil, fmt.Errorf("invalid port", err)
+			return nil, fmt.Errorf("invalid port: %w", err)
 		}
 
 		var tlsConfigs []*tls.Config
@@ -132,7 +132,7 @@ func OpenPostgres(driverName, connString string) (*sql.DB, error) {
 			var err error
 			tlsConfigs, err = configPostgresTLS(settings, host, options)
 			if err != nil {
-				return nil, fmt.Errorf("failed to configure TLS", err)
+				return nil, fmt.Errorf("failed to configure TLS: %w", err)
 			}
 		}
 
