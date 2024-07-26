@@ -37,11 +37,11 @@ module('Acceptance | sync | destination (singular)', function (hooks) {
 
   test('it should transition to correct routes when performing actions', async function (assert) {
     await click(ts.navLink('Secrets Sync'));
-    await click(GENERAL.hdsTab('Destinations'));
+    await click(GENERAL.tab('Destinations'));
     await click(ts.listItem);
-    assert.dom(GENERAL.hdsTab('Secrets')).hasClass('active', 'Secrets hdsTab is active');
+    assert.dom(GENERAL.tab('Secrets')).hasClass('active', 'Secrets hdsTab is active');
 
-    await click(GENERAL.hdsTab('Details'));
+    await click(GENERAL.tab('Details'));
     assert.dom(ts.infoRowLabel('Name')).exists('Destination details display');
 
     await click(ts.toolbar('Sync secrets'));
@@ -50,7 +50,7 @@ module('Acceptance | sync | destination (singular)', function (hooks) {
     await click(ts.toolbar('Edit destination'));
     assert.dom(ts.inputByAttr('name')).isDisabled('Edit view renders with disabled name field');
     await click(ts.cancelButton);
-    assert.dom(GENERAL.hdsTab('Details')).hasClass('active', 'Details view is active');
+    assert.dom(GENERAL.tab('Details')).hasClass('active', 'Details view is active');
   });
 
   test('it should delete destination', async function (assert) {

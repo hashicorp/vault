@@ -10,7 +10,6 @@ import type SecretMountPath from 'vault/services/secret-mount-path';
 import type Transition from '@ember/routing/transition';
 import type Model from '@ember-data/model';
 import type AdapterError from 'ember-data/adapter'; // eslint-disable-line ember/use-ember-data-rfc-395-imports
-import { assert } from '@ember/debug';
 
 /**
  * for use in routes that need to be aware of the config for a secrets engine
@@ -27,7 +26,8 @@ export function withConfig(modelName: string) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return function <RouteClass extends new (...args: any[]) => BaseRoute>(SuperClass: RouteClass) {
     if (!Object.prototype.isPrototypeOf.call(Route, SuperClass)) {
-      assert(
+      // eslint-disable-next-line
+      console.debug(
         'withConfig decorator must be used on an instance of Ember Route class. Decorator not applied to returned class'
       );
       return SuperClass;
@@ -41,7 +41,8 @@ export function withConfig(modelName: string) {
       async beforeModel(transition: Transition) {
         super.beforeModel(transition);
         if (!this.secretMountPath) {
-          assert('secretMountPath service is required for withConfig decorator. Add it to the route');
+          // eslint-disable-next-line
+          console.error('secretMountPath service is required for withConfig decorator. Add it to the route');
         }
         const backend = this.secretMountPath.currentPath;
         // check the store for record first
