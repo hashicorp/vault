@@ -27,7 +27,7 @@ export function withConfig(modelName: string) {
   return function <RouteClass extends new (...args: any[]) => BaseRoute>(SuperClass: RouteClass) {
     if (!Object.prototype.isPrototypeOf.call(Route, SuperClass)) {
       // eslint-disable-next-line
-      console.error(
+      console.debug(
         'withConfig decorator must be used on an instance of Ember Route class. Decorator not applied to returned class'
       );
       return SuperClass;
@@ -42,9 +42,8 @@ export function withConfig(modelName: string) {
         super.beforeModel(transition);
         if (!this.secretMountPath) {
           // eslint-disable-next-line
-          console.error('secretMountPath service is required for withConfig decorator. Add it to the route');
+          console.debug('secretMountPath service is required for withConfig decorator. Add it to the route');
         }
-
         const backend = this.secretMountPath.currentPath;
         // check the store for record first
         this.configModel = this.store.peekRecord(modelName, backend);

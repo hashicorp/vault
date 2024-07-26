@@ -11,7 +11,7 @@ import type SecretEngineModel from 'vault/models/secret-engine';
 
 /**
  * @module SecretsEngineMountConfig
- * SecretsEngineMountConfig component is used to display a "Show mount configuration" toggle section. It is generally used alongside the fetch-secret-engine-config decorator which displays the engine configuration above this component. Mount configuration is always available for display but is hidden by default behind a toggle.*
+ * SecretsEngineMountConfig component is used to display a "Show mount configuration" toggle section. It is generally used alongside the fetch-secret-engine-config decorator which displays the engine configuration above this component. Mount configuration is always available for display but is hidden by default behind a toggle.
  *
  * @example
  * <SecretsEngineMountConfig @model={{model}} />

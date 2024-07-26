@@ -21,6 +21,7 @@ import {
   expectedValueOfConfigKeys,
 } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
 
+
 module('Acceptance | aws | configuration', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
@@ -90,6 +91,12 @@ module('Acceptance | aws | configuration', function (hooks) {
   test('it should save lease AWS configuration', async function (assert) {
     assert.expect(3);
     const path = `aws-${this.uid}`;
+    this.server.post(`${path}/config/lease`, (schema, req) => {
+      const payload = JSON.parse(req.requestBody);
+      assert.deepEqual(payload.lease, '55s', 'lease is set to 55s');
+      assert.deepEqual(payload.lease_max, '65s', 'maximum_lease is set to 65s');
+      return { data: { id: path, type: 'aws', attributes: payload } };
+    });
     await enablePage.enable('aws', path);
     await click(SES.configTab);
     await click(SES.configure);
@@ -98,13 +105,6 @@ module('Acceptance | aws | configuration', function (hooks) {
     await fillIn(GENERAL.ttl.input('Lease'), '55');
     await click(GENERAL.toggleInput('Maximum Lease'));
     await fillIn(GENERAL.ttl.input('Maximum Lease'), '65');
-    this.server.post(`${path}/config/lease`, (schema, req) => {
-      const payload = JSON.parse(req.requestBody);
-      assert.deepEqual(payload.lease, '55s', 'lease is set to 55s');
-      assert.deepEqual(payload.lease_max, '65s', 'maximum_lease is set to 65s');
-      return { data: { id: path, type: 'aws', attributes: payload } };
-    });
-
     await click(GENERAL.saveButtonId('lease'));
     assert.true(
       this.flashSuccessSpy.calledWith('The backend configuration saved successfully!'),
@@ -115,17 +115,16 @@ module('Acceptance | aws | configuration', function (hooks) {
   });
 
   test('it show AWS configuration details', async function (assert) {
-    // TODO: with WIF project will show Lease details as well.
     assert.expect(12);
     const path = `aws-${this.uid}`;
     const type = 'aws';
-    await enablePage.enable(type, path);
-    createConfig(this.store, path, type); // create the aws root config in the store
     this.server.get(`${path}/config/root`, (schema, req) => {
       const payload = JSON.parse(req.requestBody);
       assert.ok(true, 'request made to config/root when navigating to the configuration page.');
       return { data: { id: path, type, attributes: payload } };
     });
+    await enablePage.enable(type, path);
+    createConfig(this.store, path, type); // create the aws root config in the store
     await click(SES.configTab);
     for (const key of expectedConfigKeys(type)) {
       assert.dom(GENERAL.infoRowLabel(key)).exists(`key for ${key} on the ${type} config details exists.`);
@@ -144,7 +143,6 @@ module('Acceptance | aws | configuration', function (hooks) {
   });
 
   test('it should update AWS configuration details after editing', async function (assert) {
-    // TODO: with WIF project will show Lease details as well.
     assert.expect(4);
     const path = `aws-${this.uid}`;
     const type = 'aws';
@@ -172,6 +170,4 @@ module('Acceptance | aws | configuration', function (hooks) {
     assert.dom(GENERAL.infoRowValue('Region')).hasText('ca-central-1', 'Region has been added');
     // cleanup
   });
-
-  // TODO once AWS configuration forms have been fixed, assert: transitions to configuration details page on cancel and on save, as well as breadcrumbs.
 });

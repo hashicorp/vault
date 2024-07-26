@@ -82,6 +82,7 @@ export const GENERAL = {
   cancelButton: '[data-test-cancel]',
   saveButtonId: (id: string) => `[data-test-save=${id}]`, // there are many uses of save button, but very few with an id. Instead of making all instances of saveButton a function with an empty string, we can just use this selector. TODO: should be removed after refactor of AWS.
   saveButton: '[data-test-save]',
+  saveButtonId: (id: string) => `[data-test-save="${id}"]`, // there are many uses of save button, but very few with an id. Instead of making all instances of saveButton a function with an empty string, we can just use this selector. TODO: should be removed after refactor of AWS.
   maskedInput: (name: string) => `[data-test-textarea="${name}"]`,
   codemirror: `[data-test-component="code-mirror-modifier"]`,
   codemirrorTextarea: `[data-test-component="code-mirror-modifier"] textarea`,

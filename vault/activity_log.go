@@ -1702,9 +1702,7 @@ func (a *ActivityLog) receivedFragment(fragment *activity.LogFragment) {
 }
 
 type ResponseCounts struct {
-	DistinctEntities int `json:"distinct_entities" mapstructure:"distinct_entities"`
 	EntityClients    int `json:"entity_clients" mapstructure:"entity_clients"`
-	NonEntityTokens  int `json:"non_entity_tokens" mapstructure:"non_entity_tokens"`
 	NonEntityClients int `json:"non_entity_clients" mapstructure:"non_entity_clients"`
 	Clients          int `json:"clients"`
 	SecretSyncs      int `json:"secret_syncs" mapstructure:"secret_syncs"`
@@ -1728,30 +1726,6 @@ type ResponseNamespace struct {
 	NamespacePath string           `json:"namespace_path" mapstructure:"namespace_path"`
 	Counts        ResponseCounts   `json:"counts"`
 	Mounts        []*ResponseMount `json:"mounts"`
-}
-
-// Add adds the namespace counts to the existing record, then either adds the
-// mount counts to the existing mount (if it exists) or appends the mount to the
-// list of mounts
-func (r *ResponseNamespace) Add(newRecord *ResponseNamespace) {
-	// Create a map of the existing mounts, so we don't duplicate them
-	mountMap := make(map[string]*ResponseCounts)
-	for _, erm := range r.Mounts {
-		mountMap[erm.MountPath] = erm.Counts
-	}
-
-	r.Counts.Add(&newRecord.Counts)
-
-	// Check the current month mounts against the existing mounts and if there are matches, update counts
-	// accordingly. If there is no match, append the new mount to the existing mounts, so it will be counted
-	// later.
-	for _, newRecordMount := range newRecord.Mounts {
-		if existingRecordMountCounts, ok := mountMap[newRecordMount.MountPath]; ok {
-			existingRecordMountCounts.Add(newRecordMount.Counts)
-		} else {
-			r.Mounts = append(r.Mounts, newRecordMount)
-		}
-	}
 }
 
 type ResponseMonth struct {
@@ -2902,9 +2876,7 @@ func (a *ActivityLog) partialMonthClientCount(ctx context.Context) (map[string]i
 	// Now populate the response based on breakdowns.
 	responseData := make(map[string]interface{})
 	responseData["by_namespace"] = byNamespaceResponse
-	responseData["distinct_entities"] = totalCounts.EntityClients
 	responseData["entity_clients"] = totalCounts.EntityClients
-	responseData["non_entity_tokens"] = totalCounts.NonEntityClients
 	responseData["non_entity_clients"] = totalCounts.NonEntityClients
 	responseData["clients"] = totalCounts.Clients
 	responseData["secret_syncs"] = totalCounts.SecretSyncs
