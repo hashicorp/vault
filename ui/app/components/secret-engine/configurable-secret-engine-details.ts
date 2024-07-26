@@ -37,13 +37,13 @@ export default class ConfigurableSecretEngineDetails extends Component<Args> {
   constructor(owner: unknown, args: Args) {
     super(owner, args);
     const { model } = this.args;
-    const { id, type } = model;
     // Should not be able to get here without a model, but in case an upstream change allows it, catching the failure.
     if (!model) {
       this.configError =
         'We are unable to access the mount information for this engine. Ask you administrator if you think you should have access to this secret engine.';
       return;
     }
+    const { id, type } = model;
     // Fetch the config for the engine type.
     switch (type) {
       case 'aws':
