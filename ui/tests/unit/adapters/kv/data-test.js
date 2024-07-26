@@ -379,7 +379,7 @@ module('Unit | Adapter | kv/data', function (hooks) {
   });
 
   module('fetchSubkeys', function (hooks) {
-    hooks.before(function () {
+    hooks.beforeEach(function () {
       this.adapter = this.store.adapterFor('kv/data');
       this.subkeysUrl = `${this.backend}/subkeys/${this.path}`;
     });
