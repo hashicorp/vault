@@ -72,9 +72,9 @@ If you wish to work on Vault itself or any of its built-in systems, you'll
 first need [Go](https://www.golang.org) installed on your machine.
 
 For local dev first make sure Go is properly installed, including setting up a
-[GOPATH](https://golang.org/doc/code.html#GOPATH). You must also set the 
-[GOBIN](https://pkg.go.dev/cmd/go#hdr-Environment_variables) variable. Ensure that 
-`$GOPATH/bin` is in your path as some distributions bundle the old version 
+[GOPATH](https://golang.org/doc/code.html#GOPATH), then setting the 
+[GOBIN](https://pkg.go.dev/cmd/go#hdr-Environment_variables) variable to `$GOPATH/bin`. 
+Ensure that `$GOPATH/bin` is in your path as some distributions bundle the old version 
 of build tools. 
 
 Next, clone this repository. Vault uses [Go Modules](https://github.com/golang/go/wiki/Modules),
