@@ -42,7 +42,7 @@ export function withConfig(modelName: string) {
         super.beforeModel(transition);
         if (!this.secretMountPath) {
           // eslint-disable-next-line
-          console.error('secretMountPath service is required for withConfig decorator. Add it to the route');
+          console.debug('secretMountPath service is required for withConfig decorator. Add it to the route');
         }
         const backend = this.secretMountPath.currentPath;
         // check the store for record first
