@@ -7,7 +7,7 @@ import AdapterError from '@ember-data/adapter/error';
 import { set } from '@ember/object';
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-const CONFIGURABLE_BACKEND_TYPES = ['aws', 'ssh'];
+import { CONFIGURABLE_SECRET_ENGINES } from 'vault/helpers/mountable-secret-engines';
 
 export default Route.extend({
   store: service(),
@@ -16,7 +16,7 @@ export default Route.extend({
     const { backend } = this.paramsFor(this.routeName);
     return this.store.query('secret-engine', { path: backend }).then((modelList) => {
       const model = modelList && modelList[0];
-      if (!model || !CONFIGURABLE_BACKEND_TYPES.includes(model.type)) {
+      if (!model || !CONFIGURABLE_SECRET_ENGINES.includes(model.type)) {
         const error = new AdapterError();
         set(error, 'httpStatus', 404);
         throw error;

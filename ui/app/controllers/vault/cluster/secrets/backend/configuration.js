@@ -5,10 +5,10 @@
 
 import { computed } from '@ember/object';
 import Controller from '@ember/controller';
+import { CONFIGURABLE_SECRET_ENGINES } from 'vault/helpers/mountable-secret-engines';
 
 export default Controller.extend({
   isConfigurable: computed('model.type', function () {
-    const configurableEngines = ['aws', 'ssh'];
-    return configurableEngines.includes(this.model.type);
+    return CONFIGURABLE_SECRET_ENGINES.includes(this.model.type);
   }),
 });
