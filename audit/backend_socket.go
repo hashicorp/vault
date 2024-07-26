@@ -70,6 +70,7 @@ func newSocketBackend(conf *BackendConfig, headersConfig HeaderFormatter) (*Sock
 	sinkOpts := []event.Option{
 		event.WithSocketType(socketType),
 		event.WithMaxDuration(writeDeadline),
+		event.WithLogger(conf.Logger),
 	}
 
 	err = event.ValidateOptions(sinkOpts...)

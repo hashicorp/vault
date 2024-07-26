@@ -8,7 +8,7 @@ import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import clientsHandler, { STATIC_NOW } from 'vault/mirage/handlers/clients';
 import sinon from 'sinon';
-import { visit, click, currentURL } from '@ember/test-helpers';
+import { visit, click, currentURL, fillIn } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
@@ -42,14 +42,20 @@ module('Acceptance | clients | counts', function (hooks) {
 
   test('it should persist filter query params between child routes', async function (assert) {
     await visit('/vault/clients/counts/overview');
-    await click(CLIENT_COUNT.rangeDropdown);
-    await click(CLIENT_COUNT.currentBillingPeriod);
-    const timeQueryRegex = /end_time=\d+&start_time=\d+/g;
-    assert.ok(currentURL().match(timeQueryRegex).length, 'Start and end times added as query params');
+    await click(CLIENT_COUNT.dateRange.edit);
+    await fillIn(CLIENT_COUNT.dateRange.editDate('start'), '2020-03');
+    await fillIn(CLIENT_COUNT.dateRange.editDate('start'), '2022-02');
+    await click(GENERAL.saveButton);
+    assert.strictEqual(
+      currentURL(),
+      '/vault/clients/counts/overview?end_time=1706659200&start_time=1643673600',
+      'Start and end times added as query params'
+    );
 
     await click(GENERAL.tab('token'));
-    assert.ok(
-      currentURL().match(timeQueryRegex).length,
+    assert.strictEqual(
+      currentURL(),
+      '/vault/clients/counts/token?end_time=1706659200&start_time=1643673600',
       'Start and end times persist through child route change'
     );
 
