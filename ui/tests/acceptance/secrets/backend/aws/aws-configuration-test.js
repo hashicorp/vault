@@ -21,7 +21,6 @@ import {
   expectedValueOfConfigKeys,
 } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
 
-
 module('Acceptance | aws | configuration', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
@@ -127,13 +126,13 @@ module('Acceptance | aws | configuration', function (hooks) {
     createConfig(this.store, path, type); // create the aws root config in the store
     await click(SES.configTab);
     for (const key of expectedConfigKeys(type)) {
-      assert.dom(GENERAL.infoRowLabel(key)).exists(`key for ${key} on the ${type} config details exists.`);
+      assert.dom(GENERAL.infoRowLabel(key)).exists(`${key} on the ${type} config details exists.`);
       const responseKeyAndValue = expectedValueOfConfigKeys(type, key);
       assert
         .dom(GENERAL.infoRowValue(key))
         .hasText(responseKeyAndValue, `value for ${key} on the ${type} config details exists.`);
     }
-    // check mount configuration details is present and accurate.
+    // check mount configuration details are present and accurate.
     await click(SES.configurationToggle);
     assert
       .dom(GENERAL.infoRowValue('Path'))
@@ -169,5 +168,6 @@ module('Acceptance | aws | configuration', function (hooks) {
     assert.dom(GENERAL.infoRowValue('Access key')).hasText('hello', 'Access key has been updated to hello');
     assert.dom(GENERAL.infoRowValue('Region')).hasText('ca-central-1', 'Region has been added');
     // cleanup
+    await runCmd(`delete sys/mounts/${path}`);
   });
 });

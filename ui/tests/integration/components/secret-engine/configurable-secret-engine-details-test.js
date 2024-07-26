@@ -82,11 +82,11 @@ module('Integration | Component | SecretEngine::configurable-secret-engine-detai
 
       await render(hbs`<SecretEngine::ConfigurableSecretEngineDetails @model={{this.model}}/>`);
       for (const key of expectedConfigKeys(type)) {
-        assert.dom(GENERAL.infoRowLabel(key)).exists(`key for ${key} on the ${type} config details exists.`);
+        assert.dom(GENERAL.infoRowLabel(key)).exists(`${key} on the ${type} config details exists.`);
         const responseKeyAndValue = expectedValueOfConfigKeys(type, key);
         assert
           .dom(GENERAL.infoRowValue(key))
-          .hasText(responseKeyAndValue, `value for ${key} on the ${type} config details exists.`);
+          .hasText(responseKeyAndValue, `${key} value for the ${type} config details exists.`);
       }
     }
   });

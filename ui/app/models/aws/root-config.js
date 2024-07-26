@@ -24,7 +24,7 @@ export default class AwsRootConfig extends Model {
     subText: 'Number of max retries the client should use for recoverable errors. Default is -1.',
   })
   maxRetries;
-  // TODO: there are more options available on the API, but the UI does not support them yet.
+  // there are more options available on the API, but the UI does not support them yet.
   get attrs() {
     const keys = ['accessKey', 'region', 'iamEndpoint', 'stsEndpoint', 'maxRetries'];
     return expandAttributeMeta(this, keys);

@@ -8,15 +8,14 @@ import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
 export default class SshCaConfig extends Model {
   @attr('string') backend; // dynamic path of secret -- set on response from value passed to queryRecord
-  @attr('string', { sensitive: true }) privateKey;
+  @attr('string', { sensitive: true }) privateKey; // obfuscated, never returned by API
   @attr('string', { sensitive: true }) publicKey;
   @attr('boolean', {
     defaultValue: true,
   })
   generateSigningKey;
-  // TODO: there are more options available on the API, but the UI does not support them yet.
+  // there are more options available on the API, but the UI does not support them yet.
   get attrs() {
-    // do not show private key, not returned by the API
     const keys = ['publicKey', 'generateSigningKey'];
     return expandAttributeMeta(this, keys);
   }
