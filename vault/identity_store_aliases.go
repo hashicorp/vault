@@ -247,7 +247,7 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 		if mountEntry.NamespaceID != ns.ID {
 			return logical.ErrorResponse("matching mount is in a different namespace than request"), logical.ErrPermissionDenied
 		}
-		alias, err := i.MemDBAliasByFactors(mountAccessor, name, false, false)
+		alias, err := i.MemDBAliasByFactors(mountAccessor, name, true, false)
 		if err != nil {
 			return nil, err
 		}
