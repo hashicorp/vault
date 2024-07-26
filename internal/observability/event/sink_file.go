@@ -14,6 +14,7 @@ import (
 	"sync"
 
 	"github.com/hashicorp/eventlogger"
+	"github.com/hashicorp/go-hclog"
 )
 
 // defaultFileMode is the default file permissions (read/write for everyone).
@@ -31,6 +32,7 @@ type FileSink struct {
 	fileMode       os.FileMode
 	path           string
 	requiredFormat string
+	logger         hclog.Logger
 }
 
 // NewFileSink should be used to create a new FileSink.
@@ -69,6 +71,7 @@ func NewFileSink(path string, format string, opt ...Option) (*FileSink, error) {
 		fileMode:       mode,
 		requiredFormat: format,
 		path:           p,
+		logger:         opts.withLogger,
 	}
 
 	// Ensure that the file can be successfully opened for writing;
@@ -82,12 +85,21 @@ func NewFileSink(path string, format string, opt ...Option) (*FileSink, error) {
 }
 
 // Process handles writing the event to the file sink.
-func (s *FileSink) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
+func (s *FileSink) Process(ctx context.Context, e *eventlogger.Event) (_ *eventlogger.Event, retErr error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	default:
 	}
+
+	defer func() {
+		// If the context is errored (cancelled), and we were planning to return
+		// an error, let's also log (if we have a logger) in case the eventlogger's
+		// status channel and errors propagated.
+		if err := ctx.Err(); err != nil && retErr != nil && s.logger != nil {
+			s.logger.Error("file sink error", "context", err, "error", retErr)
+		}
+	}()
 
 	if e == nil {
 		return nil, fmt.Errorf("event is nil: %w", ErrInvalidParameter)

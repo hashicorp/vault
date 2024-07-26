@@ -11,26 +11,32 @@ description: |-
 The `token capabilities` command fetches the capabilities of a token for a given
 path.
 
-If a TOKEN is provided as an argument, this command uses the "/sys/capabilities"
-endpoint and permission. If no TOKEN is provided, this command uses the
-"/sys/capabilities-self" endpoint and permission with the locally authenticated
-token.
+If you pass a token value as an argument, this command uses the
+`/sys/capabilities` endpoint and permission. In the absence of an explicit token
+value, this command uses the `/sys/capabilities-self` endpoint and permission
+with the locally authenticated token.
 
 ## Examples
 
-List capabilities for the local token on the "secret/foo" path:
+List capabilities for the local token on the `secret/foo` path:
 
 ```shell-session
 $ vault token capabilities secret/foo
 read
 ```
 
-List capabilities for a token on the "cubbyhole/foo" path:
+The output shows the local token has read permission on the `secret/foo` path.
+
+List capabilities for a token (`hvs.CAESI...WtiSW5mWUY`) on the `cubbyhole/foo`
+path:
 
 ```shell-session
-$ vault token capabilities 96ddf4bc-d217-f3ba-f9bd-017055595017 database/creds/readonly
+$ vault token capabilities hvs.CAESI...WtiSW5mWUY database/creds/readonly
 deny
 ```
+
+The output shows the token (`hvs.CAESI...WtiSW5mWUY`) has no permission to
+operate on the `cubbyhole/foo` path.
 
 ## Usage
 

@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
@@ -38,8 +39,10 @@ import (
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/constants"
+	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/pluginhelpers"
 	"github.com/hashicorp/vault/internalshared/configutil"
@@ -57,6 +60,7 @@ import (
 	"github.com/mitchellh/go-testing-interface"
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/net/http2"
+	"google.golang.org/protobuf/types/known/anypb"
 )
 
 // This file contains a number of methods that are useful for unit
@@ -2193,3 +2197,85 @@ var (
 	_ testcluster.VaultCluster     = &TestCluster{}
 	_ testcluster.VaultClusterNode = &TestClusterCore{}
 )
+
+// TestCreateDuplicateEntityAliasesInStorage creates n entities with a duplicate alias in storage
+// This should only be used in testing
+func TestCreateDuplicateEntityAliasesInStorage(ctx context.Context, c *Core, n int) ([]string, error) {
+	userpassMe := &MountEntry{
+		Table:       credentialTableType,
+		Path:        "userpass/",
+		Type:        "userpass",
+		Description: "userpass",
+		Accessor:    "userpass1",
+	}
+	err := c.enableCredential(namespace.RootContext(nil), userpassMe)
+	if err != nil {
+		return nil, err
+	}
+
+	var entityIDs []string
+	for i := 0; i < n; i++ {
+		entityID := fmt.Sprintf("e%d", i)
+		entityIDs = append(entityIDs, entityID)
+		a := &identity.Alias{
+			ID:            entityID,
+			CanonicalID:   entityID,
+			MountType:     "userpass",
+			MountAccessor: userpassMe.Accessor,
+			Name:          "alias-dup",
+		}
+		e := &identity.Entity{
+			ID:   entityID,
+			Name: "entity-dup",
+			Aliases: []*identity.Alias{
+				a,
+			},
+			NamespaceID: namespace.RootNamespaceID,
+			BucketKey:   c.identityStore.entityPacker.BucketKey(entityID),
+		}
+
+		entity, err := ptypes.MarshalAny(e)
+		if err != nil {
+			return nil, err
+		}
+		item := &storagepacker.Item{
+			ID:      e.ID,
+			Message: entity,
+		}
+		if err = c.identityStore.entityPacker.PutItem(ctx, item); err != nil {
+			return nil, err
+		}
+	}
+
+	return entityIDs, nil
+}
+
+// TestCreateStorageGroup creates a group in storage only to bypass checks that the entities exist in memdb
+// Should only be used in testing
+func TestCreateStorageGroup(ctx context.Context, c *Core, entityIDs []string) error {
+	// generate random int
+	i := mathrand.Intn(100)
+
+	key := fmt.Sprintf("testgroupid-%d", i)
+
+	group := &identity.Group{
+		ID:              key,
+		Name:            "testgroupname",
+		Policies:        []string{"testgrouppolicy"},
+		MemberEntityIDs: entityIDs,
+		BucketKey:       c.identityStore.groupPacker.BucketKey(key),
+	}
+	groupAsAny, err := anypb.New(group)
+	if err != nil {
+		return err
+	}
+	item := &storagepacker.Item{
+		ID:      group.ID,
+		Message: groupAsAny,
+	}
+	err = c.identityStore.groupPacker.PutItem(ctx, item)
+	if err != nil {
+		return err
+	}
+	return nil
+}
