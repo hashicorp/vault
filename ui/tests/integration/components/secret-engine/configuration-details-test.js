@@ -20,7 +20,7 @@ import {
   expectedValueOfConfigKeys,
 } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
 
-module('Integration | Component | SecretEngine::configurable-secret-engine-details', function (hooks) {
+module('Integration | Component | SecretEngine::configuration-details', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
@@ -30,10 +30,9 @@ module('Integration | Component | SecretEngine::configurable-secret-engine-detai
   });
 
   test('it shows error message if no model is passed in', async function (assert) {
-    await render(hbs`<SecretEngine::ConfigurableSecretEngineDetails @model={{this.model}}/>`);
-
+    await render(hbs`<SecretEngine::ConfigurationDetails @model={{this.model}}/>`);
     assert
-      .dom(GENERAL.emptyStateMessage)
+      .dom(GENERAL.pageError.errorMessage)
       .hasText(
         'We are unable to access the mount information for this engine. Ask you administrator if you think you should have access to this secret engine.'
       );
@@ -49,24 +48,23 @@ module('Integration | Component | SecretEngine::configurable-secret-engine-detai
         return overrideResponse(404);
       });
 
-      await render(hbs`<SecretEngine::ConfigurableSecretEngineDetails @model={{this.model}}/>`);
+      await render(hbs`<SecretEngine::ConfigurationDetails @model={{this.model}}/>`);
       assert.dom(GENERAL.emptyStateTitle).hasText(`${title} not configured`);
       assert.dom(GENERAL.emptyStateMessage).hasText(`Get started by configuring your ${title} engine.`);
     }
   });
 
   test('it shows API error', async function (assert) {
-    assert.expect(CONFIGURABLE_SECRET_ENGINES.length * 2);
+    assert.expect(CONFIGURABLE_SECRET_ENGINES.length);
     for (const type of CONFIGURABLE_SECRET_ENGINES) {
       const backend = `test-400-${type}`;
       this.model = createSecretsEngine(this.store, type, backend);
       this.server.get(configUrl(type, backend), () => {
-        return overrideResponse(400, { errors: ['error'] });
+        return overrideResponse(400);
       });
 
-      await render(hbs`<SecretEngine::ConfigurableSecretEngineDetails @model={{this.model}}/>`);
-      assert.dom(GENERAL.emptyStateTitle).hasText(`Something went wrong`);
-      assert.dom(GENERAL.emptyStateMessage).hasText(`error`);
+      await render(hbs`<SecretEngine::ConfigurationDetails @model={{this.model}}/>`);
+      assert.dom(GENERAL.pageError.errorTitle(400)).hasText('Error');
     }
   });
 
@@ -80,7 +78,7 @@ module('Integration | Component | SecretEngine::configurable-secret-engine-detai
         return overrideResponse(200);
       });
 
-      await render(hbs`<SecretEngine::ConfigurableSecretEngineDetails @model={{this.model}}/>`);
+      await render(hbs`<SecretEngine::ConfigurationDetails @model={{this.model}}/>`);
       for (const key of expectedConfigKeys(type)) {
         assert.dom(GENERAL.infoRowLabel(key)).exists(`${key} on the ${type} config details exists.`);
         const responseKeyAndValue = expectedValueOfConfigKeys(type, key);

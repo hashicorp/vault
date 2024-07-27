@@ -5,20 +5,22 @@
 
 {{#if this.configError}}
   {{! Surface API errors not associated with empty configuration details }}
-  <EmptyState data-test-config-error={{@model.id}} @title="Something went wrong" @message={{this.configError}} />
+  <Page::Error @error={{this.configError}} />
 {{else if this.configModel}}
   {{#each this.configModel.attrs as |attr|}}
     {{#if attr.options.sensitive}}
       <InfoTableRow
-        alwaysRender={{(not (is-empty-value (get @model attr.name)))}}
+        alwaysRender={{not (is-empty-value (get @model attr.name))}}
         @label={{or attr.options.label (to-label attr.name)}}
         @value={{get this.configModel (or attr.options.fieldValue attr.name)}}
       >
-        <MaskedInput @value={{get @model attr.name}} @name={{attr.name}} @displayOnly={{true}} @allowCopy={{true}} />
+        {{#if attr.options.sensitive}}
+          <MaskedInput @value={{get @model attr.name}} @name={{attr.name}} @displayOnly={{true}} @allowCopy={{true}} />
+        {{/if}}
       </InfoTableRow>
     {{else}}
       <InfoTableRow
-        @alwaysRender={{(not (is-empty-value (get @model attr.name)))}}
+        @alwaysRender={{not (is-empty-value (get @model attr.name))}}
         @label={{or attr.options.label (to-label attr.name)}}
         @value={{get this.configModel (or attr.options.fieldValue attr.name)}}
       />
