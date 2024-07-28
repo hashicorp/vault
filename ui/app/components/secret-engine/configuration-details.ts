@@ -84,7 +84,7 @@ export default class ConfigurationDetails extends Component<Args> {
       // The SSH api does not return a 404 not found but a 400 error after first mounting the engine with the
       // message that keys have not been configured yet.
       // We need to check the message of the 400 error and if it's the keys message, return a prompt instead of a configError.
-      if (e.httpStatus !== 404 && e.message !== `keys haven't been configured yet`) {
+      if (e.httpStatus !== 404 && e.errors[0] !== `keys haven't been configured yet`) {
         this.configError = e;
       }
       return;
