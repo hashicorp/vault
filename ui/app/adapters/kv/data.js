@@ -5,11 +5,11 @@
 
 import ApplicationAdapter from '../application';
 import {
-  buildKvPath,
   kvDataPath,
   kvDeletePath,
   kvDestroyPath,
   kvMetadataPath,
+  kvSubkeysPath,
   kvUndeletePath,
 } from 'vault/utils/kv-path';
 import { assert } from '@ember/debug';
@@ -38,17 +38,12 @@ export default class KvDataAdapter extends ApplicationAdapter {
     });
   }
 
-  // TODO use query-param-string util when https://github.com/hashicorp/vault/pull/27455 is merged
   fetchSubkeys(query) {
     const { backend, path, version, depth } = query;
-    const apiPath = buildKvPath(backend, path, 'subkeys'); // encodes mount and secret paths
-    // if no version, defaults to latest
-    const versionParam = version ? `&version=${version}` : '';
-    // depth=1 returns just top-level keys, depth=0 returns all subkeys
-    const queryParams = `?depth=${depth || '0'}${versionParam}`;
+    const url = this._url(kvSubkeysPath(backend, path, depth, version));
     // TODO subkeys response handles deleted records the same as queryRecord and returns a 404
     // extrapolate error handling logic from queryRecord and share between these two methods
-    return this.ajax(this._url(`${apiPath}${queryParams}`), 'GET').then((resp) => resp.data);
+    return this.ajax(url, 'GET').then((resp) => resp.data);
   }
 
   fetchWrapInfo(query) {
