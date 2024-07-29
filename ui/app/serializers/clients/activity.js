@@ -5,7 +5,7 @@
 
 import ApplicationSerializer from '../application';
 import { formatISO } from 'date-fns';
-import { formatByMonths, formatByNamespace, destructureClientCounts } from 'core/utils/client-count-utils';
+import { formatByMonths, formatByNamespace } from 'core/utils/client-count-utils';
 import timestamp from 'core/utils/timestamp';
 
 // see tests/helpers/clients/client-count-helpers for sample API response (ACTIVITY_RESPONSE_STUB)
@@ -21,7 +21,7 @@ export default class ActivitySerializer extends ApplicationSerializer {
       response_timestamp,
       by_namespace: formatByNamespace(payload.data.by_namespace),
       by_month: formatByMonths(payload.data.months),
-      total: destructureClientCounts(payload.data.total),
+      total: payload.data.total,
     };
     delete payload.data.by_namespace;
     delete payload.data.months;
