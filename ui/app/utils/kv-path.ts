@@ -33,3 +33,18 @@ export function kvDestroyPath(backend: string, path: string) {
 export function kvUndeletePath(backend: string, path: string) {
   return buildKvPath(backend, path, 'undelete');
 }
+// TODO use query-param-string util when https://github.com/hashicorp/vault/pull/27455 is merged
+export function kvSubkeysPath(
+  backend: string,
+  path: string,
+  depth?: number | string,
+  version?: number | string
+) {
+  const apiPath = buildKvPath(backend, path, 'subkeys');
+  // if no version, defaults to latest
+  const versionParam = version ? `&version=${version}` : '';
+  // depth specifies the deepest nesting level the API should return
+  // depth=0 returns all subkeys (no limit), depth=1 returns only top-level keys
+  const queryParams = `?depth=${depth || '0'}${versionParam}`;
+  return `${apiPath}${queryParams}`;
+}

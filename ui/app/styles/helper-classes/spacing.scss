@@ -3,7 +3,11 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-/* Helpers that define margin and padding in pixels */
+/* 
+ Helpers that define margin and padding in pixels 
+ *New pattern* Use the numerical value in the name for class selectors
+ i.e. "has-padding-24" instead of "has-padding-l"
+ */
 
 .is-paddingless {
   padding: 0 !important;
@@ -32,9 +36,6 @@
 
 .has-padding-m {
   padding: $spacing-16;
-}
-.has-padding-l {
-  padding: $spacing-24;
 }
 
 .has-padding-l {
@@ -90,12 +91,18 @@
   margin: 0 !important;
 }
 
+// spacing-18 is between medium + large
 .has-top-bottom-margin {
   margin: $spacing-18 0rem;
 }
 
 .has-top-bottom-margin-xxs {
   margin: $spacing-4 0;
+}
+
+// moving towards numerical class names (i.e. -12) and away from s/m/l etc.
+.has-top-bottom-margin-12 {
+  margin: $spacing-12 0;
 }
 
 .has-top-margin-negative-m {

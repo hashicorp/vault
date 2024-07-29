@@ -4,7 +4,14 @@
  */
 
 import ApplicationAdapter from '../application';
-import { kvDataPath, kvDeletePath, kvDestroyPath, kvMetadataPath, kvUndeletePath } from 'vault/utils/kv-path';
+import {
+  kvDataPath,
+  kvDeletePath,
+  kvDestroyPath,
+  kvMetadataPath,
+  kvSubkeysPath,
+  kvUndeletePath,
+} from 'vault/utils/kv-path';
 import { assert } from '@ember/debug';
 import ControlGroupError from 'vault/lib/control-group-error';
 
@@ -29,6 +36,14 @@ export default class KvDataAdapter extends ApplicationAdapter {
         },
       };
     });
+  }
+
+  fetchSubkeys(query) {
+    const { backend, path, version, depth } = query;
+    const url = this._url(kvSubkeysPath(backend, path, depth, version));
+    // TODO subkeys response handles deleted records the same as queryRecord and returns a 404
+    // extrapolate error handling logic from queryRecord and share between these two methods
+    return this.ajax(url, 'GET').then((resp) => resp.data);
   }
 
   fetchWrapInfo(query) {
