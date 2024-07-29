@@ -14,6 +14,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
+
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	lru "github.com/hashicorp/golang-lru/v2"
@@ -43,7 +45,8 @@ func Backend() *backend {
 	// ignoring the error as it only can occur with <= 0 size
 	cache, _ := lru.New[string, *trusted](defaultRoleCacheSize)
 	b := backend{
-		trustedCache: cache,
+		trustedCache:      cache,
+		trustedCacheLocks: locksutil.CreateLocks(),
 	}
 	b.Backend = &framework.Backend{
 		Help: backendHelp,
@@ -90,6 +93,8 @@ type backend struct {
 
 	trustedCache         *lru.Cache[string, *trusted]
 	trustedCacheDisabled atomic.Bool
+	trustedCacheLocks    []*locksutil.LockEntry
+	trustedCacheFull     atomic.Pointer[trusted]
 }
 
 func (b *backend) initialize(ctx context.Context, req *logical.InitializationRequest) error {
@@ -137,7 +142,7 @@ func (b *backend) updatedConfig(config *config) {
 	case config.RoleCacheSize < 0:
 		// Just to clean up memory
 		b.trustedCacheDisabled.Store(true)
-		b.trustedCache.Purge()
+		b.flushTrustedCache()
 	case config.RoleCacheSize == 0:
 		config.RoleCacheSize = defaultRoleCacheSize
 		fallthrough
@@ -200,6 +205,7 @@ func (b *backend) flushTrustedCache() {
 	if b.trustedCache != nil { // defensive
 		b.trustedCache.Purge()
 	}
+	b.trustedCacheFull.Store(nil)
 }
 
 const backendHelp = `

@@ -17,6 +17,8 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
+
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -596,7 +598,12 @@ func (b *backend) certificateExtensionsMetadata(clientCert *x509.Certificate, co
 
 func (b *backend) getTrustedCerts(ctx context.Context, storage logical.Storage, certName string) (pool *x509.CertPool, trusted []*ParsedCert, trustedNonCAs []*ParsedCert, conf *ocsp.VerifyConfig) {
 	if !b.trustedCacheDisabled.Load() {
-		if trusted, found := b.trustedCache.Get(certName); found {
+		if certName == "" {
+			trusted := b.trustedCacheFull.Load()
+			if trusted != nil {
+				return trusted.pool, trusted.trusted, trusted.trustedNonCAs, trusted.ocspConf
+			}
+		} else if trusted, found := b.trustedCache.Get(certName); found {
 			return trusted.pool, trusted.trusted, trusted.trustedNonCAs, trusted.ocspConf
 		}
 	}
@@ -608,6 +615,10 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 	pool = x509.NewCertPool()
 	trustedCerts = make([]*ParsedCert, 0)
 	trustedNonCAs = make([]*ParsedCert, 0)
+
+	lock := locksutil.LockForKey(b.trustedCacheLocks, certName)
+	lock.Lock()
+	defer lock.Unlock()
 
 	var names []string
 	if certName != "" {
@@ -672,12 +683,17 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 	}
 
 	if !b.trustedCacheDisabled.Load() {
-		b.trustedCache.Add(certName, &trusted{
+		entry := &trusted{
 			pool:          pool,
 			trusted:       trustedCerts,
 			trustedNonCAs: trustedNonCAs,
 			ocspConf:      conf,
-		})
+		}
+		if certName == "" {
+			b.trustedCacheFull.Store(entry)
+		} else {
+			b.trustedCache.Add(certName, entry)
+		}
 	}
 	return
 }
