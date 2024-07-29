@@ -41,6 +41,7 @@ type SQLConnectionProducer struct {
 	ServiceAccountJSON       string      `json:"service_account_json" mapstructure:"service_account_json" structs:"service_account_json"`
 	DisableEscaping          bool        `json:"disable_escaping" mapstructure:"disable_escaping" structs:"disable_escaping"`
 	usePrivateIP             bool        `json:"use_private_ip" mapstructure:"use_private_ip" structs:"use_private_ip"`
+	usePSC                   bool        `json:"use_psc" mapstructure:"use_psc" structs:"use_psc"`
 
 	// cloud options here - cloudDriverName is globally unique, but only needs to be retained for the lifetime
 	// of driver registration, not across plugin restarts.
@@ -141,7 +142,7 @@ func (c *SQLConnectionProducer) Init(ctx context.Context, conf map[string]interf
 		// however, the driver might store a credentials file, in which case the state stored by the driver is in
 		// fact critical to the proper function of the connection. So it needs to be registered here inside the
 		// ConnectionProducer init.
-		dialerCleanup, err := c.registerDrivers(c.cloudDriverName, c.ServiceAccountJSON, c.usePrivateIP)
+		dialerCleanup, err := c.registerDrivers(c.cloudDriverName, c.ServiceAccountJSON, c.usePrivateIP, c.usePSC)
 		if err != nil {
 			return nil, err
 		}
