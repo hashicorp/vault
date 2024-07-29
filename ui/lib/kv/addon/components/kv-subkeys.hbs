@@ -4,7 +4,7 @@
 ~}}
 
 <OverviewCard @cardTitle="Subkeys">
-  <:subtext>
+  <:customSubtext>
     <Hds::Text::Body @color="faint" data-test-overview-card-subtitle="Subkeys">
       {{#if this.showJson}}
         These are the subkeys within this secret. All underlying values of leaf keys are not retrieved and are replaced with
@@ -19,7 +19,7 @@
         The table is displaying the top level subkeys. Toggle on the JSON view to see the full depth.
       {{/if}}
     </Hds::Text::Body>
-  </:subtext>
+  </:customSubtext>
   <:action>
     <div>
       <Toggle @name="kv-subkeys" @checked={{this.showJson}} @onChange={{fn (mut this.showJson)}}>

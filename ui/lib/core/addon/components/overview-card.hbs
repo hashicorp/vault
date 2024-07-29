@@ -27,9 +27,9 @@
     </Hds::Text::Body>
   {{/if}}
 
-  {{! Use the "subtext" yield for stylized subtext or including elements like doc links. }}
-  {{#if (has-block "subtext")}}
-    {{yield to="subtext"}}
+  {{! Use the "customSubtext" yield for stylized subtext or including elements like doc links. }}
+  {{#if (has-block "customSubtext")}}
+    {{yield to="customSubtext"}}
   {{/if}}
 
   {{#if (has-block "content")}}
