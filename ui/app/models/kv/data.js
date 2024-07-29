@@ -88,6 +88,7 @@ export default class KvSecretDataModel extends Model {
   @lazyCapabilities(apiPath`${'backend'}/delete/${'path'}`, 'backend', 'path') deletePath;
   @lazyCapabilities(apiPath`${'backend'}/destroy/${'path'}`, 'backend', 'path') destroyPath;
   @lazyCapabilities(apiPath`${'backend'}/undelete/${'path'}`, 'backend', 'path') undeletePath;
+  @lazyCapabilities(apiPath`${'backend'}/subkeys/${'path'}`, 'backend', 'path') subkeysPath;
 
   get canDeleteLatestVersion() {
     return this.dataPath.get('canDelete') !== false;
@@ -118,5 +119,8 @@ export default class KvSecretDataModel extends Model {
   }
   get canDeleteMetadata() {
     return this.metadataPath.get('canDelete') !== false;
+  }
+  get canReadSubkeys() {
+    return this.subkeysPath.get('canRead') !== false;
   }
 }
