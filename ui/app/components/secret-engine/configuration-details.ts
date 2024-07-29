@@ -26,7 +26,7 @@ import type Model from '@ember-data/model';
  */
 
 interface Args {
-  model: SecretEngineModel;
+  model: SecretEngineModel | null;
 }
 
 interface ConfigError {
@@ -43,12 +43,8 @@ export default class ConfigurationDetails extends Component<Args> {
   constructor(owner: unknown, args: Args) {
     super(owner, args);
     const { model } = this.args;
-    // Should not be able to get here without a model, but in case an upstream change allows it, catching the failure.
+    // Should not be able to get here without a model, but in case an upstream change allows it, handle the error higher up.
     if (!model) {
-      this.configError = {
-        message:
-          'We are unable to access the mount information for this engine. Ask you administrator if you think you should have access to this secret engine.',
-      };
       return;
     }
     const { id, type } = model;
@@ -91,6 +87,7 @@ export default class ConfigurationDetails extends Component<Args> {
   }
 
   get typeDisplay() {
+    if (!this.args.model) return;
     const { type } = this.args.model;
     return allEngines().find((engine) => engine.type === type)?.displayName;
   }

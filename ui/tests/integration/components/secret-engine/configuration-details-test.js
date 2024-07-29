@@ -28,15 +28,6 @@ module('Integration | Component | SecretEngine::configuration-details', function
     this.store = this.owner.lookup('service:store');
   });
 
-  test('it shows error message if no model is passed in', async function (assert) {
-    await render(hbs`<SecretEngine::ConfigurationDetails @model={{this.model}}/>`);
-    assert
-      .dom(GENERAL.pageError.errorMessage)
-      .hasText(
-        'We are unable to access the mount information for this engine. Ask you administrator if you think you should have access to this secret engine.'
-      );
-  });
-
   test('it shows prompt message if no config is returned', async function (assert) {
     assert.expect(CONFIGURABLE_SECRET_ENGINES.length * 2);
     for (const type of CONFIGURABLE_SECRET_ENGINES) {

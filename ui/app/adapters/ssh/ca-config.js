@@ -12,7 +12,7 @@ export default class SshCaConfig extends ApplicationAdapter {
   // Eventually, this will be used to create the ca config for the SSH secret backend, replacing the requests located on the secret-engine adapter.
   queryRecord(store, type, query) {
     const { backend } = query;
-    return this.ajax(`/v1/${encodePath(backend)}/config/ca`, 'GET').then((resp) => {
+    return this.ajax(`${this.buildURL()}/${encodePath(backend)}/config/ca`, 'GET').then((resp) => {
       resp.id = backend;
       return resp;
     });

@@ -12,7 +12,7 @@ export default class AwsRootConfig extends ApplicationAdapter {
   // Eventually, this will be used to create the root config for the AWS secret backend, replacing the requests located on the secret-engine adapter.
   queryRecord(store, type, query) {
     const { backend } = query;
-    return this.ajax(`/v1/${encodePath(backend)}/config/root`, 'GET').then((resp) => {
+    return this.ajax(`${this.buildURL()}/${encodePath(backend)}/config/root`, 'GET').then((resp) => {
       resp.id = backend;
       return resp;
     });
