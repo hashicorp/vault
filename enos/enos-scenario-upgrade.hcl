@@ -317,7 +317,7 @@ scenario "upgrade" {
       hosts                = step.create_vault_cluster_targets.hosts
       ip_version           = matrix.ip_version
       license              = matrix.edition != "ce" ? step.read_vault_license.license : null
-      manage_service       = matrix.artifact_type == "bundle"
+      manage_service       = true # always handle systemd for released bundles
       packages             = concat(global.packages, global.distro_packages[matrix.distro])
       release = {
         edition = matrix.edition
