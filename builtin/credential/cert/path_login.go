@@ -598,16 +598,27 @@ func (b *backend) certificateExtensionsMetadata(clientCert *x509.Certificate, co
 
 func (b *backend) getTrustedCerts(ctx context.Context, storage logical.Storage, certName string) (pool *x509.CertPool, trusted []*ParsedCert, trustedNonCAs []*ParsedCert, conf *ocsp.VerifyConfig) {
 	if !b.trustedCacheDisabled.Load() {
-		if certName == "" {
-			trusted := b.trustedCacheFull.Load()
-			if trusted != nil {
-				return trusted.pool, trusted.trusted, trusted.trustedNonCAs, trusted.ocspConf
-			}
-		} else if trusted, found := b.trustedCache.Get(certName); found {
+		trusted, found := b.getTrustedCertsFromCache(certName)
+		if found {
 			return trusted.pool, trusted.trusted, trusted.trustedNonCAs, trusted.ocspConf
 		}
 	}
 	return b.loadTrustedCerts(ctx, storage, certName)
+}
+
+func (b *backend) getTrustedCertsFromCache(certName string) (*trusted, bool) {
+	lock := locksutil.LockForKey(b.trustedCacheLocks, certName)
+	lock.RLock()
+	defer lock.RUnlock()
+	if certName == "" {
+		trusted := b.trustedCacheFull.Load()
+		if trusted != nil {
+			return trusted, true
+		}
+	} else if trusted, found := b.trustedCache.Get(certName); found {
+		return trusted, true
+	}
+	return nil, false
 }
 
 // loadTrustedCerts is used to load all the trusted certificates from the backend
@@ -619,6 +630,13 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 	lock := locksutil.LockForKey(b.trustedCacheLocks, certName)
 	lock.Lock()
 	defer lock.Unlock()
+
+	if !b.trustedCacheDisabled.Load() {
+		trusted, found := b.getTrustedCertsFromCache(certName)
+		if found {
+			return trusted.pool, trusted.trusted, trusted.trustedNonCAs, trusted.ocspConf
+		}
+	}
 
 	var names []string
 	if certName != "" {
