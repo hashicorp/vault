@@ -44,7 +44,7 @@ install_external() {
     github.com/rinchsan/gosimports/cmd/gosimports@latest
     golang.org/x/tools/cmd/goimports@latest
     google.golang.org/protobuf/cmd/protoc-gen-go@latest
-    google.golang.org/grpc/cmd/protoc-gen-go-grpc@1.4.0
+    google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.4.0
     gotest.tools/gotestsum@latest
     honnef.co/go/tools/cmd/staticcheck@latest
     mvdan.cc/gofumpt@latest
