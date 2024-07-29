@@ -50,7 +50,7 @@ module('Integration | Component | kv | kv-subkeys', function (hooks) {
     await click(GENERAL.toggleInput('kv-subkeys'));
     assert.dom(GENERAL.toggleInput('kv-subkeys')).isChecked('JSON toggle is checked');
     assert.dom(overviewCard.description('Subkeys')).hasText(
-      'These are the subkeys within this secret. All underlying values of leaf keys are not retrieved and instead are replaced with null. Subkey API documentation .' // space is intentional because a trailing icon renders after the inline link
+      'These are the subkeys within this secret. All underlying values of leaf keys are not retrieved and are replaced with null instead. Subkey API documentation .' // space is intentional because a trailing icon renders after the inline link
     );
     assert.dom(overviewCard.content('Subkeys')).hasText(JSON.stringify(this.subkeys, null, 2));
   });
