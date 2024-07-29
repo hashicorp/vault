@@ -7,7 +7,7 @@ description: >-
 
 <!--
   copied from docs/api/api-reference.md in the vault-secrets-operator repo.
-  commit SHA=5797542c8e5a476f0985525fbc2368abbde6f3e8
+  commit SHA=98556e448df1eec4edec6d3f43e403f87fff313a
 -->
 # API Reference
 
@@ -894,6 +894,7 @@ _Appears in:_
 | `tlsServerName` _string_ | TLSServerName to use as the SNI host for TLS connections. |  |  |
 | `caCertSecretRef` _string_ | CACertSecretRef is the name of a Kubernetes secret containing the trusted PEM encoded CA certificate chain as `ca.crt`. |  |  |
 | `skipTLSVerify` _boolean_ | SkipTLSVerify for TLS connections. | false |  |
+| `timeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#duration-v1-meta)_ | Timeout applied to all Vault requests for this connection. If not set, the<br />default timeout from the Vault API client config is used. |  | Pattern: `^([0-9]+(\.[0-9]+)?(s|m|h))$` <br />Type: string <br /> |
 
 
 
