@@ -5,7 +5,6 @@
 
 import { service } from '@ember/service';
 import Component from '@glimmer/component';
-import errorMessage from 'vault/utils/error-message';
 import { tracked } from '@glimmer/tracking';
 import { allEngines } from 'vault/helpers/mountable-secret-engines';
 

@@ -5,12 +5,11 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import { overrideResponse } from 'vault/tests/helpers/stubs';
+import { overrideResponse, allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import { CONFIGURABLE_SECRET_ENGINES } from 'vault/helpers/mountable-secret-engines';
 import {
   createSecretsEngine,
@@ -55,16 +54,17 @@ module('Integration | Component | SecretEngine::configuration-details', function
   });
 
   test('it shows API error', async function (assert) {
-    assert.expect(CONFIGURABLE_SECRET_ENGINES.length);
+    assert.expect(CONFIGURABLE_SECRET_ENGINES.length * 2);
     for (const type of CONFIGURABLE_SECRET_ENGINES) {
       const backend = `test-400-${type}`;
       this.model = createSecretsEngine(this.store, type, backend);
       this.server.get(configUrl(type, backend), () => {
-        return overrideResponse(400);
+        return overrideResponse(400, { errors: ['bad request'] });
       });
 
       await render(hbs`<SecretEngine::ConfigurationDetails @model={{this.model}}/>`);
       assert.dom(GENERAL.pageError.errorTitle(400)).hasText('Error');
+      assert.dom(GENERAL.pageError.errorDetails).hasText('bad request');
     }
   });
 
