@@ -623,10 +623,6 @@ func (b *backend) getTrustedCertsFromCache(certName string) (*trusted, bool) {
 
 // loadTrustedCerts is used to load all the trusted certificates from the backend
 func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage, certName string) (pool *x509.CertPool, trustedCerts []*ParsedCert, trustedNonCAs []*ParsedCert, conf *ocsp.VerifyConfig) {
-	pool = x509.NewCertPool()
-	trustedCerts = make([]*ParsedCert, 0)
-	trustedNonCAs = make([]*ParsedCert, 0)
-
 	lock := locksutil.LockForKey(b.trustedCacheLocks, certName)
 	lock.Lock()
 	defer lock.Unlock()
@@ -637,6 +633,10 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 			return trusted.pool, trusted.trusted, trusted.trustedNonCAs, trusted.ocspConf
 		}
 	}
+
+	pool = x509.NewCertPool()
+	trustedCerts = make([]*ParsedCert, 0)
+	trustedNonCAs = make([]*ParsedCert, 0)
 
 	var names []string
 	if certName != "" {
