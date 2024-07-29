@@ -2521,6 +2521,146 @@ func TestSystemBackend_tuneAuth(t *testing.T) {
 	}
 }
 
+// TestSystemBackend_tune_updatePreV1MountEntryType tests once Vault is migrated post-v1.0.0,
+// the secret/auth mount was enabled in Vault pre-v1.0.0 has its MountEntry.Type updated
+// to the plugin name when tuned with plugin_version
+func TestSystemBackend_tune_updatePreV1MountEntryType(t *testing.T) {
+	tempDir, err := filepath.EvalSymlinks(os.TempDir())
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+
+	c, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{
+		PluginDirectory: tempDir,
+	})
+
+	ctx := namespace.RootContext(nil)
+	testCases := []struct {
+		pluginName string
+		pluginType consts.PluginType
+		mountTable string
+	}{
+		{"consul", consts.PluginTypeSecrets, "mounts"},
+		{"approle", consts.PluginTypeCredential, "auth"},
+	}
+
+	readMountConfig := func(pluginName, mountTable string) map[string]interface{} {
+		t.Helper()
+		req := logical.TestRequest(t, logical.ReadOperation, mountTable+"/"+pluginName)
+		resp, err := c.systemBackend.HandleRequest(ctx, req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		return resp.Data
+	}
+
+	for _, tc := range testCases {
+		// Enable the mount
+		{
+			req := logical.TestRequest(t, logical.UpdateOperation, tc.mountTable+"/"+tc.pluginName)
+			req.Data["type"] = tc.pluginName
+
+			resp, err := c.systemBackend.HandleRequest(ctx, req)
+			if err != nil {
+				t.Fatalf("err: %v, resp: %#v", err, resp)
+			}
+			if resp != nil {
+				t.Fatalf("bad: %v", resp)
+			}
+
+			config := readMountConfig(tc.pluginName, tc.mountTable)
+			pluginVersion, ok := config["plugin_version"]
+			if !ok || pluginVersion != "" {
+				t.Fatalf("expected empty plugin version in config: %#v", config)
+			}
+		}
+
+		// Directly set MountEntry's Type to "plugin" and Config.PluginName like Vault pre-v1.0.0 does
+		const mountEntryTypeExternalPlugin = "plugin"
+		{
+			var mountEntry *MountEntry
+			if tc.mountTable == "mounts" {
+				mountEntry, err = c.mounts.find(ctx, tc.pluginName+"/")
+			} else {
+				mountEntry, err = c.auth.find(ctx, tc.pluginName+"/")
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if mountEntry == nil {
+				t.Fatal()
+			}
+			mountEntry.Type = mountEntryTypeExternalPlugin
+			mountEntry.Config.PluginName = tc.pluginName
+			err := c.persistMounts(ctx, c.mounts, &mountEntry.Local)
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+
+		// Verify MountEntry.Type is still "plugin" (Vault pre-v1.0.0)
+		config := readMountConfig(tc.pluginName, tc.mountTable)
+		mountEntryType, ok := config["type"]
+		if !ok || mountEntryType != mountEntryTypeExternalPlugin {
+			t.Fatalf("expected mount type %s but was %s, config: %#v", mountEntryTypeExternalPlugin, mountEntryType, config)
+		}
+
+		// Register the plugin in the catalog, and then try the same request again.
+		const externalPluginVersion string = "v0.0.7"
+		{
+			file, err := os.Create(filepath.Join(tempDir, tc.pluginName))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := file.Close(); err != nil {
+				t.Fatal(err)
+			}
+			err = c.pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
+				Name:    tc.pluginName,
+				Type:    tc.pluginType,
+				Version: externalPluginVersion,
+				Command: tc.pluginName,
+				Args:    []string{},
+				Env:     []string{},
+				Sha256:  []byte{},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+
+		// Tune mount with plugin_version
+		{
+			req := logical.TestRequest(t, logical.UpdateOperation, tc.mountTable+"/"+tc.pluginName+"/tune")
+			req.Data["plugin_version"] = externalPluginVersion
+
+			resp, err := c.systemBackend.HandleRequest(ctx, req)
+			if err != nil {
+				t.Fatalf("err: %v, resp: %#v", err, resp)
+			}
+			if resp != nil {
+				t.Fatalf("bad: %v", resp)
+			}
+		}
+
+		// Verify that plugin_version and MountEntry.Type were updated properly
+		config = readMountConfig(tc.pluginName, tc.mountTable)
+		pluginVersion, ok := config["plugin_version"]
+		if !ok || pluginVersion == "" {
+			t.Fatalf("expected non-empty plugin version in config: %#v", config)
+		}
+		if pluginVersion != externalPluginVersion {
+			t.Fatalf("expected plugin version %#v, got %v", externalPluginVersion, pluginVersion)
+		}
+
+		mountEntryType, ok = config["type"]
+		if !ok || mountEntryType != tc.pluginName {
+			t.Fatalf("expected mount type %s, got %s, config: %#v", tc.pluginName, mountEntryType, config)
+		}
+	}
+}
+
 func TestSystemBackend_policyList(t *testing.T) {
 	b := testSystemBackend(t)
 	req := logical.TestRequest(t, logical.ReadOperation, "policy")
