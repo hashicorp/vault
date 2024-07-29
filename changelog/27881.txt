@@ -1,4 +1,4 @@
 ```release-note:bug
-sys: On mount tune with `plugin_version`, set MountEntry.Type to the plugin name, Vault post-v1.0.0's scheme,
-if the mount was created in Vault pre-v1.0.0, which sets "plugin" to MountEntry.Type.
+sys: Fix a bug where mounts of external plugins that were registered before Vault v1.0.0 could not be tuned to
+use versioned plugins.
 ```
