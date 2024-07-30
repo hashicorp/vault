@@ -231,12 +231,12 @@ func (f *entryFormatter) formatRequest(ctx context.Context, in *logical.LogInput
 
 	if !f.config.raw {
 		var err error
-		auth, err = HashAuth(ctx, f.salter, auth, f.config.hmacAccessor)
+		auth, err = hashAuth(ctx, f.salter, auth, f.config.hmacAccessor)
 		if err != nil {
 			return nil, err
 		}
 
-		req, err = HashRequest(ctx, f.salter, req, f.config.hmacAccessor, in.NonHMACReqDataKeys)
+		req, err = hashRequest(ctx, f.salter, req, f.config.hmacAccessor, in.NonHMACReqDataKeys)
 		if err != nil {
 			return nil, err
 		}
@@ -368,7 +368,7 @@ func (f *entryFormatter) formatResponse(ctx context.Context, in *logical.LogInpu
 
 	var respData map[string]interface{}
 	if f.config.raw {
-		// In the non-raw case, elision of list response data occurs inside HashResponse, to avoid redundant deep
+		// In the non-raw case, elision of list response data occurs inside hashResponse, to avoid redundant deep
 		// copies and hashing of data only to elide it later. In the raw case, we need to do it here.
 		if elideListResponseData && resp.Data != nil {
 			// Copy the data map before making changes, but we only need to go one level deep in this case
@@ -383,17 +383,17 @@ func (f *entryFormatter) formatResponse(ctx context.Context, in *logical.LogInpu
 		}
 	} else {
 		var err error
-		auth, err = HashAuth(ctx, f.salter, auth, f.config.hmacAccessor)
+		auth, err = hashAuth(ctx, f.salter, auth, f.config.hmacAccessor)
 		if err != nil {
 			return nil, err
 		}
 
-		req, err = HashRequest(ctx, f.salter, req, f.config.hmacAccessor, in.NonHMACReqDataKeys)
+		req, err = hashRequest(ctx, f.salter, req, f.config.hmacAccessor, in.NonHMACReqDataKeys)
 		if err != nil {
 			return nil, err
 		}
 
-		resp, err = HashResponse(ctx, f.salter, resp, f.config.hmacAccessor, in.NonHMACRespDataKeys, elideListResponseData)
+		resp, err = hashResponse(ctx, f.salter, resp, f.config.hmacAccessor, in.NonHMACRespDataKeys, elideListResponseData)
 		if err != nil {
 			return nil, err
 		}
