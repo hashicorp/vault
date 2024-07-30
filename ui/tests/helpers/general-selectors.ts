@@ -50,6 +50,12 @@ export const GENERAL = {
   validation: (attr: string) => `[data-test-field-validation=${attr}]`,
   validationWarning: (attr: string) => `[data-test-validation-warning=${attr}]`,
   messageError: '[data-test-message-error]',
+  pageError: {
+    error: '[data-test-page-error]',
+    errorTitle: (httpStatus: number) => `[data-test-page-error-title="${httpStatus}"]`,
+    errorMessage: '[data-test-page-error-message]',
+    errorDetails: '[data-test-page-error-details]',
+  },
   kvObjectEditor: {
     deleteRow: (idx = 0) => `[data-test-kv-delete-row="${idx}"]`,
   },
