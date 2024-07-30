@@ -17,7 +17,7 @@ locals {
 }
 
 resource "enos_bundle_install" "consul" {
-  for_each = var.target_hosts
+  for_each = var.hosts
 
   destination = var.install_dir
   release     = merge(var.release, { product = "consul" })
@@ -40,7 +40,7 @@ resource "enos_consul_start" "consul" {
     datacenter       = "dc1"
     retry_join       = ["provider=aws tag_key=${var.cluster_tag_key} tag_value=${var.cluster_name}"]
     server           = true
-    bootstrap_expect = length(var.target_hosts)
+    bootstrap_expect = length(var.hosts)
     log_level        = var.log_level
     log_file         = var.log_dir
   }
@@ -50,7 +50,7 @@ resource "enos_consul_start" "consul" {
 
   transport = {
     ssh = {
-      host = var.target_hosts[each.key].public_ip
+      host = var.hosts[each.key].public_ip
     }
   }
 }
