@@ -1186,9 +1186,10 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 		return nil, errutil.UserError{Err: "nil csr given to signCertificate"}
 	}
 
-	err := data.CSR.CheckSignature()
-	if err != nil {
-		return nil, errutil.UserError{Err: "request signature invalid"}
+	if !data.Params.IgnoreCSRSignature {
+		if err := data.CSR.CheckSignature(); err != nil {
+			return nil, errutil.UserError{Err: "request signature invalid"}
+		}
 	}
 
 	result := &ParsedCertBundle{}
