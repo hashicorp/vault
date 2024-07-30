@@ -1,0 +1,80 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<form {{on "submit" this.submit}} ...attributes>
+  {{#each-in @value as |key value|}}
+    <div class="flex column-gap-16 has-top-padding-s">
+      <Hds::Form::TextInput::Base
+        @type="text"
+        @value={{key}}
+        aria-label="{{key}} object key"
+        placeholder="key"
+        name="disabled-key-{{key}}"
+        disabled={{true}}
+      />
+
+      {{#if (eq (this.getState key) "deleted")}}
+        <Hds::Form::MaskedInput::Base
+          @value="null"
+          @isContentMasked={{false}}
+          aria-label="{{key}} object value"
+          name={{key}}
+          readonly={{true}}
+        />
+      {{else}}
+        <Hds::Form::MaskedInput::Base
+          @value={{value}}
+          aria-label="{{key}} value"
+          name={{key}}
+          disabled={{eq (this.getState key) "disabled"}}
+        />
+      {{/if}}
+      <Hds::ButtonSet {{style width="15rem"}}>
+        {{#if (eq (this.getState key) "disabled")}}
+          <Hds::Button
+            @text="Edit"
+            @icon="edit"
+            @color="secondary"
+            @isIconOnly={{true}}
+            {{on "click" (fn this.setState key "readonly")}}
+          />
+          <Hds::Button
+            @text="Delete"
+            @icon="trash"
+            @color="critical"
+            @isIconOnly={{true}}
+            {{on "click" (fn this.setState key "deleted")}}
+          />
+        {{else}}
+          <Hds::Button @text="Cancel" @color="secondary" {{on "click" (fn this.setState key "disabled")}} />
+        {{/if}}
+      </Hds::ButtonSet>
+    </div>
+    {{#if (eq (this.getState key) "deleted")}}
+      <Hds::Alert @type="compact" @color="critical" @icon="alert-diamond-fill" as |A|>
+        <A.Description>This key value pair is marked for deletion.</A.Description>
+      </Hds::Alert>
+    {{/if}}
+  {{/each-in}}
+
+  <hr class="has-background-gray-200" />
+
+  <Hds::ButtonSet>
+    <Hds::Button
+      @text="Save"
+      @icon={{if @onSubmit.isRunning "loading"}}
+      type="submit"
+      disabled={{@onSubmit.isRunning}}
+      data-test-kv-save
+    />
+    <Hds::Button
+      @text="Cancel"
+      @color="secondary"
+      disabled={{@onSubmit.isRunning}}
+      {{on "click" @onCancel}}
+      data-test-kv-cancel
+    />
+  </Hds::ButtonSet>
+</form>
