@@ -349,10 +349,7 @@ This endpoint was added in Vault 1.6.
 
 - `start_time` `(string, optional)` - An RFC3339 timestamp or Unix epoch time. Specifies the start of the
   period for which client counts will be reported. If no start time is specified, the billing start date will be used.
-  
-  The [billing start date](/docs/concepts/billing-start-date) automatically rolls over to the latest billing year at the end of the last cycle i.e; billing start dates from 
-  earlier years will get updated to current calendar year, unless the date has not yet occured this year, in which case
-  it will remain in the last calendar year. The billing start date will adjust accordingly for leap years.
+  The [billing start date](/docs/concepts/billing-start-date) automatically rolls over to the latest billing year at the end of the last cycle.
 - `end_time` `(string, optional)` - An RFC3339 timestamp or Unix epoch time. Specifies the end of the period
   for which client counts will be reported. If no end time is specified, the end of the current month will be used.
 - `limit_namespaces` `(int, optional)` - Controls the total number of by_namespace data returned. This can
