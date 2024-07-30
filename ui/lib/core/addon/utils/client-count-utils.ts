@@ -344,9 +344,7 @@ export interface EmptyActivityMonthBlock {
 export interface Counts {
   acme_clients: number;
   clients: number;
-  distinct_entities: number;
   entity_clients: number;
   non_entity_clients: number;
-  non_entity_tokens: number;
   secret_syncs: number;
 }
