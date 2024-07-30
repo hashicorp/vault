@@ -8,7 +8,7 @@ import { set } from '@ember/object';
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { CONFIGURABLE_SECRET_ENGINES } from 'vault/helpers/mountable-secret-engines';
-// ARG TODO glimmerize and make as typescript
+
 export default Route.extend({
   store: service(),
 
