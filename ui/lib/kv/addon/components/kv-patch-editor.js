@@ -13,6 +13,7 @@ class StateManager {
   possibleStates = ['disabled', 'readonly', 'deleted'];
 
   constructor(keys) {
+    // initially disable all inputs
     this._state = Object.keys(keys).reduce((obj, key) => {
       obj[key] = 'disabled';
       return obj;
