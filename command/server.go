@@ -2870,6 +2870,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		DisableSSCTokens:               config.DisableSSCTokens,
 		Experiments:                    config.Experiments,
 		AdministrativeNamespacePath:    config.AdministrativeNamespacePath,
+		UserLockoutLogInterval:         config.UserLockoutLogInterval,
 	}
 
 	if c.flagDev {
