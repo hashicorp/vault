@@ -2422,6 +2422,17 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 			pluginType = consts.PluginTypeCredential
 		}
 
+		// Update MountEntry.Type of external plugins registered in Vault pre-v1.0.0 to the plugin binary name
+		// stored in MountEntry.Config.PluginName
+		// Previously, when upgrading Vault from pre-v1.0.0 to post-v1.0.0, MountEntry.Type of external plugins
+		// remained "plugin" where it should follow the new scheme and be updated to the plugin binary name.
+		// https://hashicorp.atlassian.net/browse/VAULT-21999
+		if mountEntry.Config.PluginName != "" {
+			if mountEntry.Config.PluginName != mountEntry.Type && mountEntry.Type == "plugin" {
+				mountEntry.Type = mountEntry.Config.PluginName
+			}
+		}
+
 		pinnedVersion, err := b.Core.pluginCatalog.GetPinnedVersion(ctx, pluginType, mountEntry.Type)
 		if err != nil && !errors.Is(err, pluginutil.ErrPinnedVersionNotFound) {
 			return nil, err
