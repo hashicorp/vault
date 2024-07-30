@@ -468,6 +468,10 @@ func (i SignCertInputFromDataFields) GetPermittedDomains() []string {
 	return i.data.Get("permitted_dns_domains").([]string)
 }
 
+func (i SignCertInputFromDataFields) IgnoreCSRSignature() bool {
+	return false
+}
+
 func signCert(sysView logical.SystemView, data *inputBundle, caSign *certutil.CAInfoBundle, isCA bool, useCSRValues bool) (*certutil.ParsedCertBundle, []string, error) {
 	if data.role == nil {
 		return nil, nil, errutil.InternalError{Err: "no role found in data bundle"}
@@ -496,6 +500,10 @@ func NewCreationBundleInputFromFieldData(data *framework.FieldData) CreationBund
 type CreationBundleInputFromFieldData struct {
 	CertNotAfterInputFromFieldData
 	data *framework.FieldData
+}
+
+func (cb CreationBundleInputFromFieldData) IgnoreCSRSignature() bool {
+	return false
 }
 
 func (cb CreationBundleInputFromFieldData) GetCommonName() string {

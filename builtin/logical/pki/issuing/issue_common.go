@@ -91,6 +91,7 @@ type CreationBundleInput interface {
 	GetOptionalSkid() (interface{}, bool)
 	IsUserIdInSchema() (interface{}, bool)
 	GetUserIds() []string
+	IgnoreCSRSignature() bool
 }
 
 // GenerateCreationBundle is a shared function that reads parameters supplied
@@ -428,6 +429,7 @@ func GenerateCreationBundle(b logical.SystemView, role *RoleEntry, entityInfo En
 			NotBeforeDuration:             role.NotBeforeDuration,
 			ForceAppendCaChain:            caSign != nil,
 			SKID:                          skid,
+			IgnoreCSRSignature:            cb.IgnoreCSRSignature(),
 		},
 		SigningBundle: caSign,
 		CSR:           csr,
