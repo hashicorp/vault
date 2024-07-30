@@ -9,6 +9,7 @@ import type { ModelValidations, FormField, FormFieldGroups } from 'vault/app-typ
 import type MountConfigModel from 'vault/models/mount-config';
 
 export default class SecretEngineModel extends Model {
+  id: string;
   path: string;
   type: string;
   description: string;

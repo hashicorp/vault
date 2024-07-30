@@ -139,7 +139,14 @@ export const WIF_ENGINES = ['aws'];
 
 export function wifEngines() {
   return WIF_ENGINES.slice();
-}
+
+// Secret Engines that have their own configuration page and actions
+// These engines do not exist in their own Ember engine.
+// Ex: AWS vs. LDAP which is configurable but is handled inside the routing of its own Ember engine.
+export const CONFIGURABLE_SECRET_ENGINES = ['aws', 'ssh'];
+
+export function configurableSecretEngines() {
+  return MOUNTABLE_SECRET_ENGINES.slice();
 
 export function mountableEngines() {
   return MOUNTABLE_SECRET_ENGINES.slice();
