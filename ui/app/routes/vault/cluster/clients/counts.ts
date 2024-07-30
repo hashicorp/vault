@@ -37,6 +37,9 @@ export default class ClientsCountsRoute extends Route {
     return this.flags.fetchActivatedFlags();
   }
 
+  /**
+   * This method returns the query param timestamp if it exists. If not, it returns the activity timestamp value instead.
+   */
   paramOrResponseTimestamp(
     qpMillisString: string | number | undefined,
     activityTimeStamp: string | undefined
@@ -55,14 +58,14 @@ export default class ClientsCountsRoute extends Route {
 
   async getActivity(params: ClientsCountsRouteParams) {
     let activity, activityError;
-    const query = {
-      // start and end params are optional -- if not provided, will fallback to API default
-      start_time: this.formatTimeQuery(params?.start_time),
-      end_time: this.formatTimeQuery(params?.end_time),
-    };
     // if CE without start time we want to skip the activity call
     // so that the user is forced to choose a date range
     if (this.version.isEnterprise || params.start_time) {
+      const query = {
+        // start and end params are optional -- if not provided, will fallback to API default
+        start_time: this.formatTimeQuery(params?.start_time),
+        end_time: this.formatTimeQuery(params?.end_time),
+      };
       try {
         activity = await this.store.queryRecord('clients/activity', query);
       } catch (error) {
@@ -93,6 +96,7 @@ export default class ClientsCountsRoute extends Route {
       activity,
       activityError,
       config,
+      // activity.startTime corresponds to first month with data, but we want first month returned or requested
       startTimestamp: this.paramOrResponseTimestamp(params?.start_time, activity?.byMonth[0]?.timestamp),
       endTimestamp: this.paramOrResponseTimestamp(params?.end_time, activity?.endTime),
       versionHistory,
