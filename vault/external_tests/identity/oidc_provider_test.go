@@ -247,7 +247,7 @@ func TestOIDC_Auth_Code_Flow_Default_Resources(t *testing.T) {
 
 			// Assert that claims computed during the flow (i.e., not known
 			// ahead of time in this test) are present as top-level keys
-			for _, claim := range []string{"iat", "exp", "nonce", "at_hash", "c_hash"} {
+			for _, claim := range []string{"iat", "exp", "nonce", "at_hash", "c_hash", "s_hash"} {
 				_, ok := allClaims[claim]
 				require.True(t, ok)
 			}
@@ -586,7 +586,7 @@ func TestOIDC_Auth_Code_Flow_Confidential_CAP_Client(t *testing.T) {
 
 			// Assert that claims computed during the flow (i.e., not known
 			// ahead of time in this test) are present as top-level keys
-			for _, claim := range []string{"iat", "exp", "nonce", "at_hash", "c_hash"} {
+			for _, claim := range []string{"iat", "exp", "nonce", "at_hash", "c_hash", "s_hash"} {
 				_, ok := allClaims[claim]
 				require.True(t, ok)
 			}
@@ -922,7 +922,7 @@ func TestOIDC_Auth_Code_Flow_Public_CAP_Client(t *testing.T) {
 
 			// Assert that claims computed during the flow (i.e., not known
 			// ahead of time in this test) are present as top-level keys
-			for _, claim := range []string{"iat", "exp", "nonce", "at_hash", "c_hash"} {
+			for _, claim := range []string{"iat", "exp", "nonce", "at_hash", "c_hash", "s_hash"} {
 				_, ok := allClaims[claim]
 				require.True(t, ok)
 			}
