@@ -1,5 +1,5 @@
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: BUSL-1.1
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
 
 scenario "agent" {
   description = <<-EOF
@@ -28,31 +28,38 @@ scenario "agent" {
     consul_version  = global.consul_versions
     distro          = global.distros
     edition         = global.editions
+    ip_version      = global.ip_versions
     seal            = global.seals
 
-    # Our local builder always creates bundles
+    // Our local builder always creates bundles
     exclude {
       artifact_source = ["local"]
       artifact_type   = ["package"]
     }
 
-    # PKCS#11 can only be used on ent.hsm and ent.hsm.fips1402.
+    // PKCS#11 can only be used on ent.hsm and ent.hsm.fips1402.
     exclude {
       seal    = ["pkcs11"]
       edition = [for e in matrix.edition : e if !strcontains(e, "hsm")]
     }
 
-    # arm64 AMIs are not offered for Leap
+    // arm64 AMIs are not offered for Leap
     exclude {
       distro = ["leap"]
       arch   = ["arm64"]
     }
 
-    # softhsm packages not available for leap/sles. Enos support for softhsm on amzn2 is
-    # not implemented yet.
+    // softhsm packages not available for leap/sles. Enos support for softhsm on amzn2 is
+    // not implemented yet.
     exclude {
       seal   = ["pkcs11"]
       distro = ["amzn2", "leap", "sles"]
+    }
+
+    // Testing in IPV6 mode is currently implemented for integrated Raft storage only
+    exclude {
+      ip_version = ["6"]
+      backend    = ["consul"]
     }
   }
 
@@ -109,6 +116,7 @@ scenario "agent" {
 
     variables {
       common_tags = global.tags
+      ip_version  = matrix.ip_version
     }
   }
 
@@ -216,12 +224,12 @@ scenario "agent" {
     variables {
       cluster_name    = step.create_vault_cluster_backend_targets.cluster_name
       cluster_tag_key = global.backend_tag_key
+      hosts           = step.create_vault_cluster_backend_targets.hosts
       license         = (matrix.backend == "consul" && matrix.consul_edition == "ent") ? step.read_backend_license.license : null
       release = {
         edition = matrix.consul_edition
         version = matrix.consul_version
       }
-      target_hosts = step.create_vault_cluster_backend_targets.hosts
     }
   }
 
@@ -252,6 +260,8 @@ scenario "agent" {
       quality.vault_config_log_level,
       quality.vault_config_file,
       quality.vault_license_required_ent,
+      quality.vault_listener_ipv4,
+      quality.vault_listener_ipv6,
       quality.vault_service_start,
       quality.vault_init,
       quality.vault_storage_backend_consul,
@@ -283,7 +293,9 @@ scenario "agent" {
         version = matrix.consul_version
       } : null
       enable_audit_devices = var.vault_enable_audit_devices
+      hosts                = step.create_vault_cluster_targets.hosts
       install_dir          = global.vault_install_dir[matrix.artifact_type]
+      ip_version           = matrix.ip_version
       license              = matrix.edition != "ce" ? step.read_vault_license.license : null
       local_artifact_path  = local.artifact_path
       manage_service       = local.manage_service
@@ -291,7 +303,6 @@ scenario "agent" {
       seal_attributes      = step.create_seal_key.attributes
       seal_type            = matrix.seal
       storage_backend      = matrix.backend
-      target_hosts         = step.create_vault_cluster_targets.hosts
     }
   }
 
@@ -317,8 +328,10 @@ scenario "agent" {
     ]
 
     variables {
-      timeout           = 120 # seconds
-      vault_hosts       = step.create_vault_cluster_targets.hosts
+      hosts             = step.create_vault_cluster_targets.hosts
+      ip_version        = matrix.ip_version
+      timeout           = 120 // seconds
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
       vault_root_token  = step.create_vault_cluster.root_token
     }
@@ -326,7 +339,7 @@ scenario "agent" {
 
   step "start_vault_agent" {
     description = global.description.start_vault_agent
-    module      = "vault_agent"
+    module      = module.vault_agent
     depends_on = [
       step.build_vault,
       step.create_vault_cluster,
@@ -343,8 +356,10 @@ scenario "agent" {
     }
 
     variables {
+      hosts                            = step.create_vault_cluster_targets.hosts
+      ip_version                       = matrix.ip_version
+      vault_addr                       = step.create_vault_cluster.api_addr_localhost
       vault_install_dir                = global.vault_install_dir[matrix.artifact_type]
-      vault_instances                  = step.create_vault_cluster_targets.hosts
       vault_root_token                 = step.create_vault_cluster.root_token
       vault_agent_template_destination = "/tmp/agent_output.txt"
       vault_agent_template_contents    = "{{ with secret \\\"auth/token/lookup-self\\\" }}orphan={{ .Data.orphan }} display_name={{ .Data.display_name }}{{ end }}"
@@ -366,7 +381,7 @@ scenario "agent" {
     }
 
     variables {
-      vault_instances                  = step.create_vault_cluster_targets.hosts
+      hosts                            = step.create_vault_cluster_targets.hosts
       vault_agent_template_destination = "/tmp/agent_output.txt"
       vault_agent_expected_output      = "orphan=true display_name=approle"
     }
@@ -388,7 +403,9 @@ scenario "agent" {
     ]
 
     variables {
-      vault_hosts       = step.create_vault_cluster_targets.hosts
+      hosts             = step.create_vault_cluster_targets.hosts
+      ip_version        = matrix.ip_version
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
       vault_root_token  = step.create_vault_cluster.root_token
     }
@@ -410,7 +427,8 @@ scenario "agent" {
     ]
 
     variables {
-      vault_instances       = step.create_vault_cluster_targets.hosts
+      hosts                 = step.create_vault_cluster_targets.hosts
+      vault_addr            = step.create_vault_cluster.api_addr_localhost
       vault_edition         = matrix.edition
       vault_install_dir     = global.vault_install_dir[matrix.artifact_type]
       vault_product_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
@@ -436,8 +454,9 @@ scenario "agent" {
     ]
 
     variables {
+      hosts             = step.create_vault_cluster_targets.hosts
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
-      vault_instances   = step.create_vault_cluster_targets.hosts
     }
   }
 
@@ -461,9 +480,9 @@ scenario "agent" {
     ]
 
     variables {
-      leader_public_ip  = step.get_vault_cluster_ips.leader_public_ip
-      leader_private_ip = step.get_vault_cluster_ips.leader_private_ip
-      vault_instances   = step.create_vault_cluster_targets.hosts
+      hosts             = step.create_vault_cluster_targets.hosts
+      leader_host       = step.get_vault_cluster_ips.leader_host
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
       vault_root_token  = step.create_vault_cluster.root_token
     }
@@ -485,8 +504,10 @@ scenario "agent" {
     verifies = quality.vault_raft_voters
 
     variables {
+      hosts             = step.create_vault_cluster_targets.hosts
+      ip_version        = matrix.ip_version
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
-      vault_instances   = step.create_vault_cluster_targets.hosts
       vault_root_token  = step.create_vault_cluster.root_token
     }
   }
@@ -510,9 +531,9 @@ scenario "agent" {
     ]
 
     variables {
-      vault_edition     = matrix.edition
-      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
-      vault_instances   = step.create_vault_cluster_targets.hosts
+      hosts         = step.create_vault_cluster_targets.hosts
+      vault_addr    = step.create_vault_cluster.api_addr_localhost
+      vault_edition = matrix.edition
     }
   }
 
@@ -531,7 +552,8 @@ scenario "agent" {
     verifies = quality.vault_secrets_kv_read
 
     variables {
-      node_public_ips   = step.get_vault_cluster_ips.follower_public_ips
+      hosts             = step.get_vault_cluster_ips.follower_hosts
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
     }
   }
@@ -548,7 +570,8 @@ scenario "agent" {
     verifies = quality.vault_ui_assets
 
     variables {
-      vault_instances = step.create_vault_cluster_targets.hosts
+      hosts      = step.create_vault_cluster_targets.hosts
+      vault_addr = step.create_vault_cluster.api_addr_localhost
     }
   }
 
@@ -564,7 +587,7 @@ scenario "agent" {
 
   output "hosts" {
     description = "The Vault cluster target hosts"
-    value       = step.create_vault_cluster.target_hosts
+    value       = step.create_vault_cluster.hosts
   }
 
   output "private_ips" {
