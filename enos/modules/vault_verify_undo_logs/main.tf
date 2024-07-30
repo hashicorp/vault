@@ -9,22 +9,23 @@ terraform {
   }
 }
 
-variable "vault_install_dir" {
-  type        = string
-  description = "The directory where the Vault binary will be installed"
-}
-
-variable "vault_instance_count" {
-  type        = number
-  description = "How many vault instances are in the cluster"
-}
-
-variable "vault_instances" {
+variable "hosts" {
   type = map(object({
+    ipv6       = string
     private_ip = string
     public_ip  = string
   }))
   description = "The vault cluster instances that were created"
+}
+
+variable "vault_addr" {
+  type        = string
+  description = "The local vault API listen address"
+}
+
+variable "vault_install_dir" {
+  type        = string
+  description = "The directory where the Vault binary will be installed"
 }
 
 variable "vault_root_token" {
@@ -32,20 +33,11 @@ variable "vault_root_token" {
   description = "The vault root token"
 }
 
-locals {
-  public_ips = {
-    for idx in range(var.vault_instance_count) : idx => {
-      public_ip  = values(var.vault_instances)[idx].public_ip
-      private_ip = values(var.vault_instances)[idx].private_ip
-    }
-  }
-}
-
 resource "enos_remote_exec" "smoke-verify-undo-logs" {
-  for_each = local.public_ips
+  for_each = var.hosts
 
   environment = {
-    VAULT_ADDR        = "http://localhost:8200"
+    VAULT_ADDR        = var.vault_addr
     VAULT_INSTALL_DIR = var.vault_install_dir
     VAULT_TOKEN       = var.vault_root_token
   }
