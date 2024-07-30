@@ -16,6 +16,7 @@ export default class AwsRootConfig extends ApplicationAdapter {
       return resp;
     });
   }
+
   createOrUpdate(store, type, snapshot) {
     const { data } = snapshot.adapterOptions;
     const path = encodePath(snapshot.id);

@@ -11,10 +11,8 @@ export default class AwsRootConfig extends Model {
   @attr('string') accessKey;
   @attr('string', { sensitive: true }) secretKey;
   @attr('string') region;
-  @attr('string', { label: 'IAM endpoint' })
-  iamEndpoint;
-  @attr('string', { label: 'STS endpoint' })
-  stsEndpoint;
+  @attr('string', { label: 'IAM endpoint' }) iamEndpoint;
+  @attr('string', { label: 'STS endpoint' }) stsEndpoint;
   @attr('number', {
     defaultValue: -1,
     label: 'Maximum retries',
