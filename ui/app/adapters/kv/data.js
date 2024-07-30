@@ -38,6 +38,13 @@ export default class KvDataAdapter extends ApplicationAdapter {
     });
   }
 
+  // patching a secret happens without retrieving a secret
+  // so we use a custom method instead of updateRecord
+  patchSecret(backend, path, data) {
+    const url = this._url(kvDataPath(backend, path));
+    return this.ajax(url, 'PATCH', { data });
+  }
+
   fetchSubkeys(query) {
     const { backend, path, version, depth } = query;
     const url = this._url(kvSubkeysPath(backend, path, depth, version));
