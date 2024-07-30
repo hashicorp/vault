@@ -7,7 +7,9 @@
 
 // box-shadow helpers
 .has-only-top-shadow {
-  box-shadow: 0 -1px 0 -1px $grey-light, 0 -2px 0 -1px $grey-light;
+  box-shadow:
+    0 -1px 0 -1px $grey-light,
+    0 -2px 0 -1px $grey-light;
 }
 
 .is-shadowless {
@@ -15,7 +17,9 @@
 }
 
 .is-sideless {
-  box-shadow: 0 2px 0 -1px $grey-light, 0 -2px 0 -1px $grey-light;
+  box-shadow:
+    0 2px 0 -1px $grey-light,
+    0 -2px 0 -1px $grey-light;
 }
 
 // this helper needs to go after is-sideless as they are often used together and is-bottomless needs to override is-sideless (no this is not ideal).
@@ -101,6 +105,10 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.white-space-nowrap {
+  white-space: nowrap;
 }
 
 // screen reader only
