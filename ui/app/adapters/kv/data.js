@@ -38,10 +38,12 @@ export default class KvDataAdapter extends ApplicationAdapter {
     });
   }
 
-  // patching a secret happens without retrieving a secret
+  // patching a secret happens without retrieving the ember data model
   // so we use a custom method instead of updateRecord
-  patchSecret(backend, path, data) {
+  patchSecret(backend, path, patchData, version) {
     const url = this._url(kvDataPath(backend, path));
+    const serializer = this.store.serializerFor('kv/data');
+    const data = serializer.serializePatch(patchData, version);
     return this.ajax(url, 'PATCH', { data });
   }
 

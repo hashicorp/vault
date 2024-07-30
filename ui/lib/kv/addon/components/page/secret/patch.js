@@ -78,18 +78,13 @@ export default class KvSecretPatch extends Component {
 
   @task
   @waitFor
-  *submit(event) {
-    event.preventDefault();
+  *save(patchData) {
     const { backend, path, metadata, subkeysMeta } = this.args;
-    const adapter = this.store.adapterFor('kv/data');
     // we can't guarantee the subkeys meta will be the latest version, so it's backup
     const version = metadata.currentVersion || subkeysMeta.version;
-    const data = {
-      options: { cas: version },
-      data: this.formData,
-    };
+    const adapter = this.store.adapterFor('kv/data');
     try {
-      yield adapter.patchSecret(backend, path, data);
+      yield adapter.patchSecret(backend, path, patchData, version);
       this.flashMessages.success(`Successfully patched new version of ${path}.`);
       this.router.transitionTo('vault.cluster.secrets.backend.kv.secret');
     } catch (error) {
