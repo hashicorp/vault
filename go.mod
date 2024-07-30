@@ -77,8 +77,8 @@ require (
 	github.com/hashicorp/cap v0.6.0
 	github.com/hashicorp/cap/ldap v0.0.0-20240403125925-c0418810d10e
 	github.com/hashicorp/cli v1.1.6
-	github.com/hashicorp/consul-template v0.37.6
-	github.com/hashicorp/consul/api v1.28.3
+	github.com/hashicorp/consul-template v0.39.1
+	github.com/hashicorp/consul/api v1.29.1
 	github.com/hashicorp/errwrap v1.1.0
 	github.com/hashicorp/eventlogger v0.2.9
 	github.com/hashicorp/go-bexpr v0.1.12
@@ -212,7 +212,7 @@ require (
 	go.uber.org/atomic v1.11.0
 	go.uber.org/goleak v1.3.0
 	golang.org/x/crypto v0.24.0
-	golang.org/x/exp v0.0.0-20240222234643-814bf88cf225
+	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842
 	golang.org/x/net v0.26.0
 	golang.org/x/oauth2 v0.21.0
 	golang.org/x/sync v0.7.0
@@ -221,7 +221,7 @@ require (
 	golang.org/x/text v0.16.0
 	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d
 	google.golang.org/api v0.181.0
-	google.golang.org/grpc v1.64.0
+	google.golang.org/grpc v1.64.1
 	google.golang.org/protobuf v1.34.1
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
 	k8s.io/apimachinery v0.29.3
@@ -391,7 +391,6 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0 // indirect
 	github.com/gsterjov/go-libsecret v0.0.0-20161001094733-a6f4afe4910c // indirect
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
-	github.com/hashicorp/consul/proto-public v0.6.1 // indirect
 	github.com/hashicorp/cronexpr v1.1.2 // indirect
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
 	github.com/hashicorp/go-msgpack/v2 v2.1.2 // indirect

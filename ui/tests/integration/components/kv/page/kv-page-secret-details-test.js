@@ -13,6 +13,7 @@ import { kvDataPath, kvMetadataPath } from 'vault/utils/kv-path';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import { FORM, PAGE, parseJsonEditor } from 'vault/tests/helpers/kv/kv-selectors';
 import { syncStatusResponse } from 'vault/mirage/handlers/sync';
+import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 module('Integration | Component | kv-v2 | Page::Secret::Details', function (hooks) {
   setupRenderingTest(hooks);
@@ -284,6 +285,39 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
       );
     // sync status refresh button
     await click(`${PAGE.detail.syncAlert()} button`);
+  });
+
+  test('it makes request to wrap a secret', async function (assert) {
+    assert.expect(2);
+    const url = `${encodePath(this.backend)}/data/${encodePath(this.path)}`;
+
+    this.server.get(url, (schema, { requestHeaders }) => {
+      assert.true(true, `GET request made to url: ${url}`);
+      assert.strictEqual(requestHeaders['X-Vault-Wrap-TTL'], '1800', 'request header includes wrap ttl');
+      return {
+        data: null,
+        token: 'hvs.token',
+        accessor: 'nTgqnw3S4GMz8NKHsOhTBhlk',
+        ttl: 1800,
+        creation_time: '2024-07-26T10:20:32.359107-07:00',
+        creation_path: `${this.backend}/data/${this.path}}`,
+      };
+    });
+
+    await render(
+      hbs`
+       <Page::Secret::Details
+        @path={{this.model.path}}
+        @secret={{this.model.secret}}
+        @metadata={{this.model.metadata}}
+        @breadcrumbs={{this.breadcrumbs}}
+      />
+      `,
+      { owner: this.engine }
+    );
+
+    await click(PAGE.detail.copy);
+    await click(PAGE.detail.wrap);
   });
 
   test('it renders sync status page alert for multiple destinations', async function (assert) {

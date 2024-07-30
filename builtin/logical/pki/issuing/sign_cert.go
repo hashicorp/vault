@@ -23,20 +23,26 @@ type SignCertInput interface {
 	GetPermittedDomains() []string
 }
 
-func NewBasicSignCertInput(csr *x509.CertificateRequest, isCA bool, useCSRValues bool) BasicSignCertInput {
+func NewBasicSignCertInput(csr *x509.CertificateRequest, isCA, useCSRValues bool) BasicSignCertInput {
+	return NewBasicSignCertInputWithIgnore(csr, isCA, useCSRValues, false)
+}
+
+func NewBasicSignCertInputWithIgnore(csr *x509.CertificateRequest, isCA, useCSRValues, ignoreCsrSignature bool) BasicSignCertInput {
 	return BasicSignCertInput{
-		isCA:         isCA,
-		useCSRValues: useCSRValues,
-		csr:          csr,
+		isCA:               isCA,
+		useCSRValues:       useCSRValues,
+		csr:                csr,
+		ignoreCsrSignature: ignoreCsrSignature,
 	}
 }
 
 var _ SignCertInput = BasicSignCertInput{}
 
 type BasicSignCertInput struct {
-	isCA         bool
-	useCSRValues bool
-	csr          *x509.CertificateRequest
+	isCA               bool
+	useCSRValues       bool
+	csr                *x509.CertificateRequest
+	ignoreCsrSignature bool
 }
 
 func (b BasicSignCertInput) GetTTL() int {
@@ -89,6 +95,10 @@ func (b BasicSignCertInput) GetUserIds() []string {
 
 func (b BasicSignCertInput) GetCSR() (*x509.CertificateRequest, error) {
 	return b.csr, nil
+}
+
+func (b BasicSignCertInput) IgnoreCSRSignature() bool {
+	return b.ignoreCsrSignature
 }
 
 func (b BasicSignCertInput) IsCA() bool {

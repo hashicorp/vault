@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"sync"
 	"sync/atomic"
@@ -399,7 +398,7 @@ func (l *Lock) get(ctx context.Context) (*LockRecord, string, error) {
 
 	defer response.RawResponse.Body.Close()
 
-	body, err := ioutil.ReadAll(response.Content)
+	body, err := io.ReadAll(response.Content)
 	if err != nil {
 		metrics.IncrCounter(metricGetFailed, 1)
 		l.backend.logger.Error("Error reading content", "err", err)

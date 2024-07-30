@@ -141,8 +141,7 @@ export const formatByNamespace = (namespaceArray: NamespaceObject[] | null): ByN
   });
 };
 
-// In 1.10 'distinct_entities' changed to 'entity_clients' and 'non_entity_tokens' to 'non_entity_clients'
-// these deprecated keys still exist on the response, so only return relevant keys here
+// This method returns only client types from the passed object, excluding other keys such as "label".
 // when querying historical data the response will always contain the latest client type keys because the activity log is
 // constructed based on the version of Vault the user is on (key values will be 0)
 export const destructureClientCounts = (verboseObject: Counts | ByNamespaceClients) => {
@@ -347,9 +346,7 @@ export interface EmptyActivityMonthBlock {
 export interface Counts {
   acme_clients: number;
   clients: number;
-  distinct_entities: number;
   entity_clients: number;
   non_entity_clients: number;
-  non_entity_tokens: number;
   secret_syncs: number;
 }

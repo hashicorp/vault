@@ -28,7 +28,7 @@ them, optional commands to run, etc.
 
 - `vault.hashicorp.com/agent-image` - name of the Vault docker image to use. This
   value overrides the default image configured in the injector and is usually
-  not needed. Defaults to `hashicorp/vault:1.16.1`.
+  not needed. Defaults to `hashicorp/vault:1.17.2`.
 
 - `vault.hashicorp.com/agent-init-first` - configures the pod to run the Vault Agent
   init container first if `true` (last if `false`). This is useful when other init
@@ -171,7 +171,8 @@ them, optional commands to run, etc.
 
 - `vault.hashicorp.com/agent-pre-populate` - configures whether an init container
   is included to pre-populate the shared memory volume with secrets prior to the
-  containers starting.
+  containers starting. This should be set to a `true` or `false` value. Defaults
+  to `true`.
 
 - `vault.hashicorp.com/agent-pre-populate-only` - configures whether an init container
   is the only injected container. If true, no sidecar container will be injected

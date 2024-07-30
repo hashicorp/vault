@@ -1,5 +1,5 @@
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: BUSL-1.1
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
 
 variable "artifactory_username" {
   type        = string
@@ -130,7 +130,7 @@ variable "ui_run_tests" {
 }
 
 variable "vault_artifact_type" {
-  description = "The type of Vault artifact to use when installing Vault from artifactory. It should be 'package' for .deb or # .rpm package and 'bundle' for .zip bundles"
+  description = "The type of Vault artifact to use when installing Vault from artifactory. It should be 'package' for .deb or .rpm package and 'bundle' for .zip bundles"
   default     = "bundle"
 }
 

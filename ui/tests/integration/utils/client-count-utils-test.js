@@ -227,9 +227,7 @@ module('Integration | Util | client count utils', function (hooks) {
         namespace_id: 'root',
         namespace_path: '',
         counts: {
-          distinct_entities: 10,
           entity_clients: 10,
-          non_entity_tokens: 20,
           non_entity_clients: 20,
           secret_syncs: 0,
           acme_clients: 0,
@@ -238,9 +236,7 @@ module('Integration | Util | client count utils', function (hooks) {
         mounts: [
           {
             counts: {
-              distinct_entities: 10,
               entity_clients: 10,
-              non_entity_tokens: 20,
               non_entity_clients: 20,
               secret_syncs: 0,
               acme_clients: 0,
