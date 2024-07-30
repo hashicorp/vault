@@ -49,17 +49,10 @@ function getSum(array, key) {
 }
 
 function getTotalCounts(array) {
-  const counts = CLIENT_TYPES.reduce((obj, key) => {
+  return CLIENT_TYPES.reduce((obj, key) => {
     obj[key] = getSum(array, key);
     return obj;
   }, {});
-
-  // add deprecated keys
-  return {
-    ...counts,
-    distinct_entities: counts.entity_clients,
-    non_entity_tokens: counts.non_entity_clients,
-  };
 }
 
 function randomBetween(min, max) {
@@ -75,8 +68,6 @@ function generateMountBlock(path, counts) {
     mount_path: path,
     counts: {
       ...baseObject,
-      distinct_entities: 0,
-      non_entity_tokens: 0,
       // object contains keys for which 0-values of base object to overwrite
       ...counts,
     },
