@@ -248,7 +248,7 @@ func (a *HeadersConfig) ApplyConfig(ctx context.Context, headers map[string][]st
 			// Optionally hmac the values
 			if settings.HMAC {
 				for i, el := range hVals {
-					hVal, err := HashString(ctx, salter, el)
+					hVal, err := hashString(ctx, salter, el)
 					if err != nil {
 						return nil, err
 					}

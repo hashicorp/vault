@@ -364,7 +364,7 @@ func (s *FailingSalter) Salt(context.Context) (*salt.Salt, error) {
 }
 
 // TestAuditedHeadersConfig_ApplyConfig_HashStringError tests the case where
-// an error is returned from HashString instead of a map of headers.
+// an error is returned from hashString instead of a map of headers.
 func TestAuditedHeadersConfig_ApplyConfig_HashStringError(t *testing.T) {
 	t.Parallel()
 

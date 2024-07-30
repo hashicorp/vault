@@ -17,8 +17,8 @@ import (
 	"github.com/mitchellh/reflectwalk"
 )
 
-// HashString hashes the given opaque string and returns it
-func HashString(ctx context.Context, salter Salter, data string) (string, error) {
+// hashString hashes the given opaque string and returns it
+func hashString(ctx context.Context, salter Salter, data string) (string, error) {
 	salt, err := salter.Salt(ctx)
 	if err != nil {
 		return "", err
@@ -27,8 +27,8 @@ func HashString(ctx context.Context, salter Salter, data string) (string, error)
 	return salt.GetIdentifiedHMAC(data), nil
 }
 
-// HashAuth returns a hashed copy of the logical.Auth input.
-func HashAuth(ctx context.Context, salter Salter, in *logical.Auth, HMACAccessor bool) (*logical.Auth, error) {
+// hashAuth returns a hashed copy of the logical.Auth input.
+func hashAuth(ctx context.Context, salter Salter, in *logical.Auth, HMACAccessor bool) (*logical.Auth, error) {
 	if in == nil {
 		return nil, nil
 	}
@@ -50,8 +50,8 @@ func HashAuth(ctx context.Context, salter Salter, in *logical.Auth, HMACAccessor
 	return &auth, nil
 }
 
-// HashRequest returns a hashed copy of the logical.Request input.
-func HashRequest(ctx context.Context, salter Salter, in *logical.Request, HMACAccessor bool, nonHMACDataKeys []string) (*logical.Request, error) {
+// hashRequest returns a hashed copy of the logical.Request input.
+func hashRequest(ctx context.Context, salter Salter, in *logical.Request, HMACAccessor bool, nonHMACDataKeys []string) (*logical.Request, error) {
 	if in == nil {
 		return nil, nil
 	}
@@ -70,7 +70,7 @@ func HashRequest(ctx context.Context, salter Salter, in *logical.Request, HMACAc
 			return nil, err
 		}
 
-		req.Auth, err = HashAuth(ctx, salter, cp.(*logical.Auth), HMACAccessor)
+		req.Auth, err = hashAuth(ctx, salter, cp.(*logical.Auth), HMACAccessor)
 		if err != nil {
 			return nil, err
 		}
@@ -99,7 +99,7 @@ func HashRequest(ctx context.Context, salter Salter, in *logical.Request, HMACAc
 	return &req, nil
 }
 
-func hashMap(hashFunc HashCallback, data map[string]interface{}, nonHMACDataKeys []string) error {
+func hashMap(hashFunc hashCallback, data map[string]interface{}, nonHMACDataKeys []string) error {
 	for k, v := range data {
 		if o, ok := v.(logical.OptMarshaler); ok {
 			marshaled, err := o.MarshalJSONWithOptions(&logical.MarshalOptions{
@@ -115,8 +115,8 @@ func hashMap(hashFunc HashCallback, data map[string]interface{}, nonHMACDataKeys
 	return HashStructure(data, hashFunc, nonHMACDataKeys)
 }
 
-// HashResponse returns a hashed copy of the logical.Request input.
-func HashResponse(ctx context.Context, salter Salter, in *logical.Response, HMACAccessor bool, nonHMACDataKeys []string, elideListResponseData bool) (*logical.Response, error) {
+// hashResponse returns a hashed copy of the logical.Request input.
+func hashResponse(ctx context.Context, salter Salter, in *logical.Response, HMACAccessor bool, nonHMACDataKeys []string, elideListResponseData bool) (*logical.Response, error) {
 	if in == nil {
 		return nil, nil
 	}
@@ -135,7 +135,7 @@ func HashResponse(ctx context.Context, salter Salter, in *logical.Response, HMAC
 			return nil, err
 		}
 
-		resp.Auth, err = HashAuth(ctx, salter, cp.(*logical.Auth), HMACAccessor)
+		resp.Auth, err = hashAuth(ctx, salter, cp.(*logical.Auth), HMACAccessor)
 		if err != nil {
 			return nil, err
 		}
@@ -178,7 +178,7 @@ func HashResponse(ctx context.Context, salter Salter, in *logical.Response, HMAC
 }
 
 // hashWrapInfo returns a hashed copy of the wrapping.ResponseWrapInfo input.
-func hashWrapInfo(hashFunc HashCallback, in *wrapping.ResponseWrapInfo, HMACAccessor bool) (*wrapping.ResponseWrapInfo, error) {
+func hashWrapInfo(hashFunc hashCallback, in *wrapping.ResponseWrapInfo, HMACAccessor bool) (*wrapping.ResponseWrapInfo, error) {
 	if in == nil {
 		return nil, nil
 	}
@@ -201,15 +201,15 @@ func hashWrapInfo(hashFunc HashCallback, in *wrapping.ResponseWrapInfo, HMACAcce
 // HashStructure takes an interface and hashes all the values within
 // the structure. Only _values_ are hashed: keys of objects are not.
 //
-// For the HashCallback, see the built-in HashCallbacks below.
-func HashStructure(s interface{}, cb HashCallback, ignoredKeys []string) error {
+// For the hashCallback, see the built-in HashCallbacks below.
+func HashStructure(s interface{}, cb hashCallback, ignoredKeys []string) error {
 	walker := &hashWalker{Callback: cb, IgnoredKeys: ignoredKeys}
 	return reflectwalk.Walk(s, walker)
 }
 
-// HashCallback is the callback called for HashStructure to hash
+// hashCallback is the callback called for HashStructure to hash
 // a value.
-type HashCallback func(string) string
+type hashCallback func(string) string
 
 // hashWalker implements interfaces for the reflectwalk package
 // (github.com/mitchellh/reflectwalk) that can be used to automatically
@@ -218,8 +218,8 @@ type hashWalker struct {
 	// Callback is the function to call with the primitive that is
 	// to be hashed. If there is an error, walking will be halted
 	// immediately and the error returned.
-	Callback HashCallback
-	// IgnoreKeys are the keys that wont have the HashCallback applied
+	Callback hashCallback
+	// IgnoreKeys are the keys that wont have the hashCallback applied
 	IgnoredKeys []string
 	// MapElem appends the key itself (not the reflect.Value) to key.
 	// The last element in key is the most recently entered map key.

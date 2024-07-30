@@ -448,7 +448,7 @@ func (b *Broker) GetHash(ctx context.Context, name string, input string) (string
 		return "", fmt.Errorf("unknown audit backend %q", name)
 	}
 
-	return HashString(ctx, be.backend, input)
+	return hashString(ctx, be.backend, input)
 }
 
 // IsRegistered is used to check if a given audit backend is registered.
