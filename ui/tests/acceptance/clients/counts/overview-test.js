@@ -9,9 +9,8 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import clientsHandler, { STATIC_NOW, LICENSE_START, UPGRADE_DATE } from 'vault/mirage/handlers/clients';
 import syncHandler from 'vault/mirage/handlers/sync';
 import sinon from 'sinon';
-import { visit, click, findAll, settled } from '@ember/test-helpers';
+import { visit, click, findAll, settled, fillIn } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
-import { ARRAY_OF_MONTHS } from 'core/utils/date-formatters';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CHARTS, CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
 import { create } from 'ember-cli-page-object';
@@ -21,6 +20,7 @@ import timestamp from 'core/utils/timestamp';
 import ss from 'vault/tests/pages/components/search-select';
 import { runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 import { selectChoose } from 'ember-power-select/test-support';
+import { format } from 'date-fns';
 
 const searchSelect = create(ss);
 
@@ -38,11 +38,11 @@ module('Acceptance | clients | overview', function (hooks) {
 
   test('it should render charts', async function (assert) {
     assert
-      .dom(CLIENT_COUNT.counts.startMonth)
+      .dom(CLIENT_COUNT.dateRange.dateDisplay('start'))
       .hasText('July 2023', 'billing start month is correctly parsed from license');
     assert
-      .dom(CLIENT_COUNT.rangeDropdown)
-      .hasText('Jul 2023 - Jan 2024', 'Date range shows dates correctly parsed activity response');
+      .dom(CLIENT_COUNT.dateRange.dateDisplay('end'))
+      .hasText('January 2024', 'billing start month is correctly parsed from license');
     assert.dom(CLIENT_COUNT.attributionBlock).exists('Shows attribution area');
     assert
       .dom(CHARTS.container('Vault client counts'))
@@ -55,12 +55,13 @@ module('Acceptance | clients | overview', function (hooks) {
 
   test('it should update charts when querying date ranges', async function (assert) {
     // query for single, historical month with no new counts (July 2023)
-    await click(CLIENT_COUNT.rangeDropdown);
-    await click(CLIENT_COUNT.calendarWidget.customEndMonth);
-    await click(CLIENT_COUNT.calendarWidget.previousYear);
+    const licenseStartMonth = format(LICENSE_START, 'yyyy-MM');
+    const upgradeMonth = format(UPGRADE_DATE, 'yyyy-MM');
+    await click(CLIENT_COUNT.dateRange.edit);
+    await fillIn(CLIENT_COUNT.dateRange.editDate('start'), licenseStartMonth);
+    await fillIn(CLIENT_COUNT.dateRange.editDate('end'), licenseStartMonth);
 
-    const month = ARRAY_OF_MONTHS[LICENSE_START.getMonth()];
-    await click(CLIENT_COUNT.calendarWidget.calendarMonth(month));
+    await click(GENERAL.saveButton);
     assert
       .dom(CLIENT_COUNT.usageStats('Vault client counts'))
       .doesNotExist('running total single month stat boxes do not show');
@@ -77,16 +78,15 @@ module('Acceptance | clients | overview', function (hooks) {
     assert.dom(CHARTS.container('total-clients')).exists('total client attribution chart shows');
 
     // reset to billing period
-    await click(CLIENT_COUNT.rangeDropdown);
-    await click(CLIENT_COUNT.currentBillingPeriod);
+    await click(CLIENT_COUNT.dateRange.edit);
+    await click(CLIENT_COUNT.dateRange.reset);
+    await click(GENERAL.saveButton);
 
-    // change billing start to month/year of upgrade to 1.10
-    await click(CLIENT_COUNT.counts.startEdit);
-    await click(CLIENT_COUNT.monthDropdown);
-    await click(CLIENT_COUNT.dateDropdown.selectMonth(ARRAY_OF_MONTHS[UPGRADE_DATE.getMonth()]));
-    await click(CLIENT_COUNT.yearDropdown);
-    await click(CLIENT_COUNT.dateDropdown.selectYear(UPGRADE_DATE.getFullYear()));
-    await click(CLIENT_COUNT.dateDropdown.submit);
+    // change to start on month/year of upgrade to 1.10
+    await click(CLIENT_COUNT.dateRange.edit);
+    await fillIn(CLIENT_COUNT.dateRange.editDate('start'), upgradeMonth);
+    await click(GENERAL.saveButton);
+
     assert.dom(CLIENT_COUNT.attributionBlock).exists('Shows attribution area');
     assert
       .dom(CHARTS.container('Vault client counts'))
@@ -97,11 +97,11 @@ module('Acceptance | clients | overview', function (hooks) {
     assert.strictEqual(findAll(CHARTS.plotPoint).length, 5, 'line chart plots 5 points to match query');
 
     // query for single, historical month (upgrade month)
-    await click(CLIENT_COUNT.rangeDropdown);
-    await click(CLIENT_COUNT.calendarWidget.customEndMonth);
-    assert.dom(CLIENT_COUNT.calendarWidget.displayYear).hasText('2024');
-    await click(CLIENT_COUNT.calendarWidget.previousYear);
-    await click(CLIENT_COUNT.calendarWidget.calendarMonth('September'));
+    await click(CLIENT_COUNT.dateRange.edit);
+    await fillIn(CLIENT_COUNT.dateRange.editDate('start'), upgradeMonth);
+    await fillIn(CLIENT_COUNT.dateRange.editDate('end'), upgradeMonth);
+    await click(GENERAL.saveButton);
+
     assert
       .dom(CLIENT_COUNT.usageStats('Vault client counts'))
       .exists('running total single month usage stats show');
@@ -113,9 +113,10 @@ module('Acceptance | clients | overview', function (hooks) {
     assert.dom(CHARTS.container('total-clients')).exists('total client attribution chart shows');
 
     // query historical date range (from September 2023 to December 2023)
-    await click(CLIENT_COUNT.rangeDropdown);
-    await click(CLIENT_COUNT.calendarWidget.customEndMonth);
-    await click(CLIENT_COUNT.calendarWidget.calendarMonth('December'));
+    await click(CLIENT_COUNT.dateRange.edit);
+    await fillIn(CLIENT_COUNT.dateRange.editDate('start'), '2023-09');
+    await fillIn(CLIENT_COUNT.dateRange.editDate('end'), '2023-12');
+    await click(GENERAL.saveButton);
 
     assert.dom(CLIENT_COUNT.attributionBlock).exists('Shows attribution area');
     assert
@@ -128,15 +129,15 @@ module('Acceptance | clients | overview', function (hooks) {
       .hasText('12/23', 'x-axis labels end with queried end month');
 
     // reset to billing period
-    await click(CLIENT_COUNT.rangeDropdown);
-    await click(CLIENT_COUNT.currentBillingPeriod);
+    await click(CLIENT_COUNT.dateRange.edit);
+    await click(CLIENT_COUNT.dateRange.reset);
+    await click(GENERAL.saveButton);
+
     // query month older than count start date
-    await click(CLIENT_COUNT.counts.startEdit);
-    await click(CLIENT_COUNT.monthDropdown);
-    await click(CLIENT_COUNT.dateDropdown.selectMonth(ARRAY_OF_MONTHS[LICENSE_START.getMonth()]));
-    await click(CLIENT_COUNT.yearDropdown);
-    await click(CLIENT_COUNT.dateDropdown.selectYear(LICENSE_START.getFullYear() - 3));
-    await click(CLIENT_COUNT.dateDropdown.submit);
+    await click(CLIENT_COUNT.dateRange.edit);
+    await fillIn(CLIENT_COUNT.dateRange.editDate('start'), '2020-07');
+    await click(GENERAL.saveButton);
+
     assert
       .dom(CLIENT_COUNT.counts.startDiscrepancy)
       .hasTextContaining(

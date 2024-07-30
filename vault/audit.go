@@ -160,7 +160,6 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 		if err != nil {
 			c.logger.Error("new audit backend failed test", "path", entry.Path, "type", entry.Type, "error", err)
 			return fmt.Errorf("audit backend failed test message: %w", err)
-
 		}
 	}
 

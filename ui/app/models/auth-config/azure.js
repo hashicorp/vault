@@ -10,7 +10,6 @@ import { combineFieldGroups } from 'vault/utils/openapi-to-attrs';
 import fieldToAttrs from 'vault/utils/field-to-attrs';
 
 export default AuthConfig.extend({
-  useOpenAPI: true,
   tenantId: attr('string', {
     label: 'Tenant ID',
     helpText: 'The tenant ID for the Azure Active Directory organization',

@@ -4,11 +4,10 @@
  */
 
 import { module, test } from 'qunit';
-import { _getPathParam, pathToHelpUrlSegment } from 'vault/utils/openapi-helpers';
+import { _getPathParam, getHelpUrlForModel, pathToHelpUrlSegment } from 'vault/utils/openapi-helpers';
 
 module('Unit | Utility | OpenAPI helper utils', function () {
   test(`pathToHelpUrlSegment`, function (assert) {
-    assert.expect(5);
     [
       { path: '/auth/{username}', result: '/auth/example' },
       { path: '{username}/foo', result: 'example/foo' },
@@ -21,7 +20,6 @@ module('Unit | Utility | OpenAPI helper utils', function () {
   });
 
   test(`_getPathParam`, function (assert) {
-    assert.expect(7);
     [
       { path: '/auth/{username}', result: 'username' },
       { path: '{unicorn}/foo', result: 'unicorn' },
@@ -32,6 +30,22 @@ module('Unit | Utility | OpenAPI helper utils', function () {
       { path: undefined, result: false },
     ].forEach((test) => {
       assert.strictEqual(_getPathParam(test.path), test.result, `returns first param for ${test.path}`);
+    });
+  });
+
+  test(`getHelpUrlForModel`, function (assert) {
+    [
+      { modelType: 'kmip/config', result: '/v1/foobar/config?help=1' },
+      { modelType: 'does-not-exist', result: null },
+      { modelType: 4, result: null },
+      { modelType: '', result: null },
+      { modelType: undefined, result: null },
+    ].forEach((test) => {
+      assert.strictEqual(
+        getHelpUrlForModel(test.modelType, 'foobar'),
+        test.result,
+        `returns first param for ${test.path}`
+      );
     });
   });
 });

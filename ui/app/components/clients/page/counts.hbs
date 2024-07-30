@@ -18,35 +18,12 @@
     Date queries are sent in UTC.
   </p>
 
-  <Hds::Text::Display @tag="p" class="has-bottom-margin-xs" data-test-counts-start-label>
-    {{this.versionText.label}}
-  </Hds::Text::Display>
-
-  <div class="is-flex-align-baseline">
-    {{#if this.formattedStartDate}}
-      <p class="is-size-6" data-test-counts-start-month>{{this.formattedStartDate}}</p>
-      <Hds::Button
-        class="has-left-margin-xs"
-        @text="Edit"
-        @color="tertiary"
-        @icon="edit"
-        @iconPosition="trailing"
-        data-test-counts-start-edit
-        {{on "click" (fn (mut this.showBillingStartModal) true)}}
-      />
-    {{else}}
-      <DateDropdown
-        @handleSubmit={{this.onDateChange}}
-        @dateType="startDate"
-        @submitText="Save"
-        data-test-counts-start-dropdown
-      />
-    {{/if}}
-  </div>
-
-  <Hds::Text::Body @tag="p" @color="faint" @size="300" class="has-bottom-margin-l" data-test-counts-description>
-    {{this.versionText.description}}
-  </Hds::Text::Body>
+  <Clients::DateRange
+    @startTime={{this.startTimestampISO}}
+    @endTime={{this.endTimestampISO}}
+    @onChange={{this.onDateChange}}
+    class="has-bottom-margin-l"
+  />
 
   {{#if (eq @activity.id "no-data")}}
     <Clients::NoData @config={{@config}} @dateRangeMessage={{this.dateRangeMessage}} />
@@ -76,11 +53,6 @@
       </Hds::Text::Body>
       <Toolbar aria-label="toolbar for filtering client count data" class="has-bottom-margin-m" data-test-clients-filter-bar>
         <ToolbarFilters>
-          <CalendarWidget
-            @startTimestamp={{this.startTimestampISO}}
-            @endTimestamp={{this.endTimestampISO}}
-            @selectMonth={{this.onDateChange}}
-          />
           {{#if (or @namespace this.namespaces)}}
             <SearchSelect
               @id="namespace-search-select"
@@ -173,21 +145,3 @@
     {{/if}}
   {{/if}}
 </div>
-
-{{#if this.showBillingStartModal}}
-  <Hds::Modal id="clients-edit-date-modal" @onClose={{fn (mut this.showBillingStartModal) false}} as |M|>
-    <M.Header>
-      Edit start month
-    </M.Header>
-    <M.Body>
-      <p class="has-bottom-margin-s">
-        {{this.versionText.description}}
-      </p>
-      <p><strong>{{this.versionText.label}}</strong></p>
-      <DateDropdown class="has-top-padding-s" @handleSubmit={{this.onDateChange}} @dateType="startDate" @submitText="Save" />
-    </M.Body>
-    <M.Footer as |F|>
-      <Hds::Button data-test-date-dropdown-cancel @text="Cancel" @color="secondary" {{on "click" F.close}} />
-    </M.Footer>
-  </Hds::Modal>
-{{/if}}

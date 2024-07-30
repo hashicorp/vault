@@ -24,7 +24,7 @@ import (
 )
 
 func getPostgreSQL(t *testing.T, options map[string]interface{}) (*PostgreSQL, func()) {
-	cleanup, connURL := postgresql.PrepareTestContainer(t, "13.4-buster")
+	cleanup, connURL := postgresql.PrepareTestContainer(t)
 
 	connectionDetails := map[string]interface{}{
 		"connection_url": connURL,
@@ -70,7 +70,7 @@ func TestPostgreSQL_InitializeWithStringVals(t *testing.T) {
 }
 
 func TestPostgreSQL_Initialize_ConnURLWithDSNFormat(t *testing.T) {
-	cleanup, connURL := postgresql.PrepareTestContainer(t, "13.4-buster")
+	cleanup, connURL := postgresql.PrepareTestContainer(t)
 	defer cleanup()
 
 	dsnConnURL, err := dbutil.ParseURL(connURL)
@@ -185,7 +185,7 @@ func TestPostgreSQL_Initialize_CloudGCP(t *testing.T) {
 // TestPostgreSQL_PasswordAuthentication tests that the default "password_authentication" is "none", and that
 // an error is returned if an invalid "password_authentication" is provided.
 func TestPostgreSQL_PasswordAuthentication(t *testing.T) {
-	cleanup, connURL := postgresql.PrepareTestContainer(t, "13.4-buster")
+	cleanup, connURL := postgresql.PrepareTestContainer(t)
 	defer cleanup()
 
 	dsnConnURL, err := dbutil.ParseURL(connURL)
@@ -227,7 +227,7 @@ func TestPostgreSQL_PasswordAuthentication(t *testing.T) {
 // TestPostgreSQL_PasswordAuthentication_SCRAMSHA256 tests that password_authentication works when set to scram-sha-256.
 // When sending an encrypted password, the raw password should still successfully authenticate the user.
 func TestPostgreSQL_PasswordAuthentication_SCRAMSHA256(t *testing.T) {
-	cleanup, connURL := postgresql.PrepareTestContainer(t, "13.4-buster")
+	cleanup, connURL := postgresql.PrepareTestContainer(t)
 	defer cleanup()
 
 	dsnConnURL, err := dbutil.ParseURL(connURL)
@@ -1092,7 +1092,7 @@ func TestUsernameGeneration(t *testing.T) {
 }
 
 func TestNewUser_CustomUsername(t *testing.T) {
-	cleanup, connURL := postgresql.PrepareTestContainer(t, "13.4-buster")
+	cleanup, connURL := postgresql.PrepareTestContainer(t)
 	defer cleanup()
 
 	type testCase struct {

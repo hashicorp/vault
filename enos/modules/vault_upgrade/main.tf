@@ -12,33 +12,29 @@ terraform {
   }
 }
 
-variable "vault_api_addr" {
-  type        = string
-  description = "The API address of the Vault cluster"
-}
-
-variable "vault_install_dir" {
-  type        = string
-  description = "The directory where the Vault binary will be installed"
-}
-
-variable "vault_instance_count" {
-  type        = number
-  description = "How many vault instances are in the cluster"
-}
-
-variable "vault_instances" {
+variable "hosts" {
   type = map(object({
+    ipv6       = string
     private_ip = string
     public_ip  = string
   }))
   description = "The vault cluster instances that were created"
 }
 
-variable "vault_local_artifact_path" {
+
+variable "ip_version" {
+  type        = number
+  description = "The IP version used for the Vault TCP listener"
+
+  validation {
+    condition     = contains([4, 6], var.ip_version)
+    error_message = "The ip_version must be either 4 or 6"
+  }
+}
+
+variable "vault_addr" {
   type        = string
-  description = "The path to a locally built vault artifact to install"
-  default     = null
+  description = "The local vault API listen address"
 }
 
 variable "vault_artifactory_release" {
@@ -50,6 +46,22 @@ variable "vault_artifactory_release" {
   })
   description = "Vault release version and edition to install from artifactory.hashicorp.engineering"
   default     = null
+}
+
+variable "vault_install_dir" {
+  type        = string
+  description = "The directory where the Vault binary will be installed"
+}
+
+variable "vault_local_artifact_path" {
+  type        = string
+  description = "The path to a locally built vault artifact to install"
+  default     = null
+}
+
+variable "vault_root_token" {
+  type        = string
+  description = "The vault root token"
 }
 
 variable "vault_seal_type" {
@@ -64,19 +76,11 @@ variable "vault_unseal_keys" {
 }
 
 locals {
-  instances = {
-    for idx in range(var.vault_instance_count) : idx => {
-      public_ip  = values(var.vault_instances)[idx].public_ip
-      private_ip = values(var.vault_instances)[idx].private_ip
-    }
-  }
-  followers      = toset([for idx in range(var.vault_instance_count - 1) : tostring(idx)])
-  follower_ips   = compact(split(" ", enos_remote_exec.get_follower_public_ips.stdout))
   vault_bin_path = "${var.vault_install_dir}/vault"
 }
 
 resource "enos_bundle_install" "upgrade_vault_binary" {
-  for_each = local.instances
+  for_each = var.hosts
 
   destination = var.vault_install_dir
   artifactory = var.vault_artifactory_release
@@ -89,79 +93,79 @@ resource "enos_bundle_install" "upgrade_vault_binary" {
   }
 }
 
-resource "enos_remote_exec" "get_leader_public_ip" {
+module "get_ip_addresses" {
+  source = "../vault_get_cluster_ips"
+
   depends_on = [enos_bundle_install.upgrade_vault_binary]
 
-  scripts = [abspath("${path.module}/scripts/get-leader-public-ip.sh")]
-
-  environment = {
-    VAULT_INSTALL_DIR = var.vault_install_dir,
-    VAULT_INSTANCES   = jsonencode(local.instances)
-  }
-
-  transport = {
-    ssh = {
-      host = local.instances[0].public_ip
-    }
-  }
-}
-
-resource "enos_remote_exec" "get_follower_public_ips" {
-  depends_on = [enos_bundle_install.upgrade_vault_binary]
-
-  environment = {
-    VAULT_INSTALL_DIR = var.vault_install_dir,
-    VAULT_INSTANCES   = jsonencode(local.instances)
-  }
-
-  scripts = [abspath("${path.module}/scripts/get-follower-public-ips.sh")]
-
-  transport = {
-    ssh = {
-      host = local.instances[0].public_ip
-    }
-  }
+  hosts             = var.hosts
+  ip_version        = var.ip_version
+  vault_addr        = var.vault_addr
+  vault_install_dir = var.vault_install_dir
+  vault_root_token  = var.vault_root_token
 }
 
 resource "enos_remote_exec" "restart_followers" {
-  for_each   = local.followers
-  depends_on = [enos_remote_exec.get_follower_public_ips]
+  for_each = module.get_ip_addresses.follower_hosts
+
+  environment = {
+    VAULT_ADDR        = var.vault_addr
+    VAULT_INSTALL_DIR = var.vault_install_dir
+  }
 
   scripts = [abspath("${path.module}/scripts/restart-vault.sh")]
 
   transport = {
     ssh = {
-      host = trimspace(local.follower_ips[tonumber(each.key)])
+      host = each.value.public_ip
     }
   }
 }
 
 resource "enos_vault_unseal" "followers" {
-  depends_on = [enos_remote_exec.restart_followers]
   for_each = {
-    for idx, follower in local.followers : idx => follower
+    for idx, host in module.get_ip_addresses.follower_hosts : idx => host
     if var.vault_seal_type == "shamir"
   }
+  depends_on = [enos_remote_exec.restart_followers]
+
   bin_path    = local.vault_bin_path
-  vault_addr  = var.vault_api_addr
+  vault_addr  = var.vault_addr
   seal_type   = var.vault_seal_type
   unseal_keys = var.vault_unseal_keys
 
   transport = {
     ssh = {
-      host = trimspace(local.follower_ips[each.key])
+      host = each.value.public_ip
     }
   }
 }
 
+module "wait_for_followers_unsealed" {
+  source = "../vault_verify_unsealed"
+  depends_on = [
+    enos_remote_exec.restart_followers,
+    enos_vault_unseal.followers,
+  ]
+
+  hosts             = module.get_ip_addresses.follower_hosts
+  vault_addr        = var.vault_addr
+  vault_install_dir = var.vault_install_dir
+}
+
 resource "enos_remote_exec" "restart_leader" {
-  depends_on = [enos_vault_unseal.followers]
+  depends_on = [module.wait_for_followers_unsealed]
+
+  environment = {
+    VAULT_ADDR        = var.vault_addr
+    VAULT_INSTALL_DIR = var.vault_install_dir
+  }
 
   scripts = [abspath("${path.module}/scripts/restart-vault.sh")]
 
   transport = {
     ssh = {
-      host = trimspace(enos_remote_exec.get_leader_public_ip.stdout)
+      host = module.get_ip_addresses.leader_public_ip
     }
   }
 }
@@ -171,13 +175,13 @@ resource "enos_vault_unseal" "leader" {
   depends_on = [enos_remote_exec.restart_leader]
 
   bin_path    = local.vault_bin_path
-  vault_addr  = var.vault_api_addr
+  vault_addr  = var.vault_addr
   seal_type   = var.vault_seal_type
   unseal_keys = var.vault_unseal_keys
 
   transport = {
     ssh = {
-      host = trimspace(enos_remote_exec.get_leader_public_ip.stdout)
+      host = module.get_ip_addresses.leader_public_ip
     }
   }
 }
