@@ -234,7 +234,7 @@ type hashWalker struct {
 // hashTimeType stores a pre-computed reflect.Type for a time.Time so
 // we can quickly compare in hashWalker.Struct. We create an empty/invalid
 // time.Time{} so we don't need to incur any additional startup cost vs.
-// Now() or Unix()
+// Now() or Unix().
 var hashTimeType = reflect.TypeOf(time.Time{})
 
 func (w *hashWalker) Enter(loc reflectwalk.Location) error {
