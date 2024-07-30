@@ -5,9 +5,17 @@
 
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
+import { task } from 'ember-concurrency';
+import { service } from '@ember/service';
+import { tracked } from '@glimmer/tracking';
+import errorMessage from 'vault/utils/error-message';
 
-import type SecretEngineModel from 'vault/models/secret-engine';
-import type { TtlEvent } from 'vault/app-types';
+import type LeaseConfigModel from 'vault/models/aws/lease-config';
+import type RootConfigModel from 'vault/models/aws/root-config';
+import type { TtlEvent, ValidationMap } from 'vault/app-types';
+import type Router from '@ember/routing/router';
+import type Store from '@ember-data/store';
+import type FlashMessageService from 'vault/services/flash-messages';
 
 /**
  * @module ConfigureAwsSecretComponent
@@ -15,68 +23,79 @@ import type { TtlEvent } from 'vault/app-types';
  * @example
  * ```js
  * <ConfigureAwsSecret
-    @model={{model}}
-    @tab={{tab}}
-    @accessKey={{accessKey}}
-    @secretKey={{secretKey}}
-    @region={{region}}
-    @iamEndpoint={{iamEndpoint}}
-    @stsEndpoint={{stsEndpoint}}
-    @saveAWSRoot={{action "save" "saveAWSRoot"}}
-    @saveAWSLease={{action "save" "saveAWSLease"}} />
+    @rootConfig={{this.model.rootConfig}}
+    @leaseConfig={{this.model.leaseConfig}}
+    @tab={{tab}} />
  * ```
  *
- * @param {object} model - aws secret engine model
- * @param {string} tab - current tab selection
- * @param {string} accessKey - AWS access key
- * @param {string} secretKey - AWS secret key
- * @param {string} region - AWS region
- * @param {string} iamEndpoint - IAM endpoint
- * @param {string} stsEndpoint - Sts endpoint
- * @param {Function} saveAWSRoot - parent action which saves AWS root credentials
- * @param {Function} saveAWSLease - parent action which updates AWS lease information
+ * @param {object} rootConfig - aws secret engine config/root model
+ * @param {object} leaseConfig - aws secret engine config/lease model
+ * @param {string} tab - current tab selection // ARG TODO remove
  *
  */
 
-type AWSRootCredsFields = {
-  access_key: string | null;
-  iam_endpoint: string | null;
-  sts_endpoint: string | null;
-  secret_key: string | null;
-  region: string | null;
-};
-
-type LeaseFields = { lease: string; lease_max: string };
-
 interface Args {
-  model: SecretEngineModel;
+  leaseConfig: LeaseConfigModel;
+  rootConfig: RootConfigModel;
+  path: string;
   tab?: string;
-  accessKey: string;
-  secretKey: string;
-  region: string;
-  iamEndpoint: string;
-  stsEndpoint: string;
-  saveAWSRoot: (data: AWSRootCredsFields) => void;
-  saveAWSLease: (data: LeaseFields) => void;
 }
 
 export default class ConfigureAwsSecretComponent extends Component<Args> {
-  @action
-  saveRootCreds(data: AWSRootCredsFields, event: Event) {
-    event.preventDefault();
-    this.args.saveAWSRoot(data);
-  }
+  @service declare readonly router: Router;
+  @service declare readonly store: Store;
+  @service declare readonly flashMessages: FlashMessageService;
 
-  @action
-  saveLease(data: LeaseFields, event: Event) {
+  @tracked modelValidations: ValidationMap | null = null;
+  @tracked invalidFormMessage = '';
+  @tracked error = '';
+
+  // ARG TODO issues with waitFor revisit
+  @task
+  *save(event: Event) {
     event.preventDefault();
-    this.args.saveAWSLease(data);
+    const { path, leaseConfig, rootConfig } = this.args;
+    //  ARG TODO no validations currently on the models so no model validation checks
+    try {
+      // try saving root config first
+      const action = rootConfig.isNew ? 'created' : 'updated';
+      yield rootConfig.save();
+      // ARG TODO might need to clear out store.
+      this.flashMessages.success(`Successfully saved ${path} root configure.`); // arg todo work on message.
+    } catch (error) {
+      let message = errorMessage(error);
+      debugger;
+      this.errorMessage = message;
+    }
+
+    // even if root config fails, try saving lease config
+
+    try {
+      const action = leaseConfig.isNew ? 'created' : 'updated';
+      yield leaseConfig.save();
+      // ARG TODO might need to clear out store.
+      this.flashMessages.success(`Successfully saved ${path} lease configure.`); // arg todo work on message.
+    } catch (error) {
+      let message = errorMessage(error);
+      debugger;
+      this.errorMessage = message;
+    }
+
+    // allow transition even if both requests fail.
+    this.router.transitionTo('vault.cluster.secrets.backend.configuration', path);
+  }
+  resetErrors() {
+    this.flashMessages.clearMessages();
+    this.errorMessage = null;
+    this.modelValidations = null;
+    this.invalidFormAlert = null;
   }
 
   @action
   handleTtlChange(name: string, ttlObj: TtlEvent) {
     // lease values cannot be undefined, set to 0 to use default
     const valueToSet = ttlObj.enabled ? ttlObj.goSafeTimeString : 0;
-    this.args.model.set(name, valueToSet);
+    // ARG TODO need to set the value on the model
+    // this.args.model.set(name, valueToSet);
   }
 }
