@@ -4570,3 +4570,13 @@ func (c *Core) setupAuditedHeadersConfig(ctx context.Context) error {
 
 	return nil
 }
+
+// GetMountTypeByAPIPath provide a quick way to get the plugin type from a mount table for an incoming request.
+func (c *Core) GetMountTypeByAPIPath(ctx context.Context, apiPath string) (string, string, bool) {
+	mountEntry, _, found := c.router.matchingMountEntryByPath(apiPath, true)
+	if !found || mountEntry == nil {
+		return "", "", false
+	}
+
+	return mountEntry.Type, mountEntry.Path, true
+}

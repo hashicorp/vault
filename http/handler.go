@@ -247,6 +247,7 @@ func handler(props *vault.HandlerProperties) http.Handler {
 	wrappedHandler := wrapHelpHandler(mux, core)
 	wrappedHandler = wrapCORSHandler(wrappedHandler, core)
 	wrappedHandler = rateLimitQuotaWrapping(wrappedHandler, core)
+	wrappedHandler = ocspGetWrappedHandler(wrappedHandler, core)
 	wrappedHandler = entWrapGenericHandler(core, wrappedHandler, props)
 	wrappedHandler = wrapMaxRequestSizeHandler(wrappedHandler, props)
 	wrappedHandler = priority.WrapRequestPriorityHandler(wrappedHandler)
