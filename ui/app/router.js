@@ -52,7 +52,7 @@ Router.map(function () {
         this.route('mount-secret-backend');
         this.route('configure-secret-backend', { path: '/secrets/configure/:backend' }, function () {
           this.route('index', { path: '/' });
-          this.route('section', { path: '/:section_name' });
+          this.route('section', { path: '/:section_name' }); // ARG TODO might be able to remove this?
         });
       });
       this.route('unseal');

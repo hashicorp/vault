@@ -55,6 +55,10 @@ export default Controller.extend(CONFIG_ATTRS, {
     },
 
     save(method, data) {
+      if (this.model.type === 'aws') {
+        // saving for the aws configurations are done in the configure aws secret component
+        return;
+      }
       this.set('loading', true);
       const hasData = Object.keys(data).some((key) => {
         return isPresent(data[key]);

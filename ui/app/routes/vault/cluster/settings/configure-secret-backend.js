@@ -10,6 +10,9 @@ import { service } from '@ember/service';
 import { hash } from 'rsvp';
 import { CONFIGURABLE_SECRET_ENGINES } from 'vault/helpers/mountable-secret-engines';
 
+// This route file is reused for all configurable secret engines. Which as of now, is aws and ssh.
+// It's scoped to generating the model only. The saving and updating of those models are done within the engine specific components. // ARG TODO this is not yet true.
+
 export default Route.extend({
   store: service(),
 
@@ -55,7 +58,7 @@ export default Route.extend({
         return hash({
           leaseConfig,
           rootConfig,
-          path: backend,
+          id: backend,
           type,
         });
       }
@@ -80,6 +83,11 @@ export default Route.extend({
 
   resetController(controller, isExiting) {
     if (isExiting) {
+      if (controller.model.type === 'aws') {
+        // ARG TODO figure out.
+        // maybe handle reset within the component?
+        return;
+      }
       controller.reset();
     }
   },
