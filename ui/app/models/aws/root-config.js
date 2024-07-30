@@ -5,13 +5,20 @@
 
 import Model, { attr } from '@ember-data/model';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
+import { regions } from 'vault/helpers/aws-regions';
 
 export default class AwsRootConfig extends Model {
   @attr('string') backend; // dynamic path of secret -- set on response from value passed to queryRecord
   @attr('string') accessKey;
   @attr('string', { sensitive: true }) secretKey;
-  @attr('string') region;
-  @attr('string', { label: 'IAM endpoint' }) iamEndpoint;
+  @attr('string', {
+    possibleValues: regions(),
+    subText:
+      'Specifies the AWS region. If not set it will use the AWS_REGION env var, AWS_DEFAULT_REGION env var, or us-east-1 in that order.',
+  })
+  region;
+  @attr('string', { label: 'IAM endpoint' })
+  iamEndpoint;
   @attr('string', { label: 'STS endpoint' }) stsEndpoint;
   @attr('number', {
     defaultValue: -1,
@@ -29,7 +36,7 @@ export default class AwsRootConfig extends Model {
     return [
       { default: ['accessKey', 'secretKey'] },
       {
-        'Method Options': ['iamEndpoint', 'stsEndpoint', 'maxRetries'],
+        'Method Options': ['region', 'iamEndpoint', 'stsEndpoint', 'maxRetries'],
       },
     ];
   }
