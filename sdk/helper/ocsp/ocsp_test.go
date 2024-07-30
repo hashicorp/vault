@@ -15,7 +15,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/big"
 	"net"
 	"net/http"
@@ -64,7 +63,7 @@ func TestOCSP(t *testing.T) {
 				t.Fatalf("failed to GET contents. err: %v", err)
 			}
 			defer res.Body.Close()
-			_, err = ioutil.ReadAll(res.Body)
+			_, err = io.ReadAll(res.Body)
 			if err != nil {
 				t.Fatalf("failed to read content body for %v", tgt)
 			}
@@ -113,7 +112,7 @@ func TestMultiOCSP(t *testing.T) {
 			t.Fatalf("failed to GET contents. err: %v", err)
 		}
 		defer res.Body.Close()
-		_, err = ioutil.ReadAll(res.Body)
+		_, err = io.ReadAll(res.Body)
 		if err != nil {
 			t.Fatalf("failed to read content body for %v", tgt)
 		}

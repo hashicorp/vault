@@ -264,7 +264,7 @@ func (c *Sys) RaftSnapshotWithContext(ctx context.Context, snapWriter io.Writer)
 				continue
 			}
 			var b []byte
-			b, err = ioutil.ReadAll(t)
+			b, err = io.ReadAll(t)
 			if err != nil || len(b) == 0 {
 				return
 			}

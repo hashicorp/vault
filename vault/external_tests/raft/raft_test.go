@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"strings"
 	"sync"
@@ -517,7 +516,7 @@ func TestRaft_SnapshotAPI_MidstreamFailure(t *testing.T) {
 
 	var readErr error
 	go func() {
-		snap, readErr = ioutil.ReadAll(r)
+		snap, readErr = io.ReadAll(r)
 		wg.Done()
 	}()
 
@@ -634,7 +633,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Backward(t *testing.T) {
 			}
 			defer resp.Body.Close()
 
-			snap, err := ioutil.ReadAll(resp.Body)
+			snap, err := io.ReadAll(resp.Body)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -837,7 +836,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			snap, err := ioutil.ReadAll(resp.Body)
+			snap, err := io.ReadAll(resp.Body)
 			resp.Body.Close()
 			if err != nil {
 				t.Fatal(err)
@@ -894,7 +893,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			snap2, err := ioutil.ReadAll(resp.Body)
+			snap2, err := io.ReadAll(resp.Body)
 			resp.Body.Close()
 			if err != nil {
 				t.Fatal(err)
@@ -1024,7 +1023,7 @@ func TestRaft_SnapshotAPI_DifferentCluster(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	snap, err := ioutil.ReadAll(resp.Body)
+	snap, err := io.ReadAll(resp.Body)
 	resp.Body.Close()
 	if err != nil {
 		t.Fatal(err)

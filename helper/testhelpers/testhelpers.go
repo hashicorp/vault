@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math/rand"
 	"os"
 	"strings"
@@ -641,7 +641,7 @@ func SysMetricsReq(client *api.Client, cluster *vault.TestCluster, unauth bool) 
 	if err != nil {
 		return nil, err
 	}
-	bodyBytes, err := ioutil.ReadAll(resp.Response.Body)
+	bodyBytes, err := io.ReadAll(resp.Response.Body)
 	if err != nil {
 		return nil, err
 	}
