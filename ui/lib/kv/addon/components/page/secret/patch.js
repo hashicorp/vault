@@ -62,8 +62,8 @@ export default class KvSecretPatch extends Component {
   }
 
   @action
-  selectPatchMethod(value) {
-    this.patchMethod = value;
+  selectPatchMethod(event) {
+    this.patchMethod = event.target.value;
     this.resetForm();
   }
 
