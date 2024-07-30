@@ -1,5 +1,5 @@
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: BUSL-1.1
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
 
 quality "consul_api_agent_host_read" {
   description = "The /v1/agent/host Consul API returns host info for each node in the cluster"
@@ -353,6 +353,14 @@ quality "vault_init" {
 
 quality "vault_license_required_ent" {
   description = "Vault Enterprise requires a license in order to start"
+}
+
+quality "vault_listener_ipv4" {
+  description = "Vault operates on ipv4 TCP listeners"
+}
+
+quality "vault_listener_ipv6" {
+  description = "Vault operates on ipv6 TCP listeners"
 }
 
 quality "vault_mount_auth" {

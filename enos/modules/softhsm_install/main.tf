@@ -11,6 +11,7 @@ terraform {
 
 variable "hosts" {
   type = map(object({
+    ipv6       = string
     private_ip = string
     public_ip  = string
   }))

@@ -9,6 +9,30 @@ terraform {
   }
 }
 
+variable "hosts" {
+  type = map(object({
+    ipv6       = string
+    private_ip = string
+    public_ip  = string
+  }))
+  description = "The vault cluster hosts that can be expected as a leader"
+}
+
+variable "ip_version" {
+  type        = number
+  description = "The IP version used for the Vault TCP listener"
+
+  validation {
+    condition     = contains([4, 6], var.ip_version)
+    error_message = "The ip_version must be either 4 or 6"
+  }
+}
+
+variable "vault_addr" {
+  type        = string
+  description = "The local vault API listen address"
+}
+
 variable "vault_install_dir" {
   type        = string
   description = "The directory where the Vault binary will be installed"
@@ -17,14 +41,6 @@ variable "vault_install_dir" {
 variable "vault_root_token" {
   type        = string
   description = "The vault root token"
-}
-
-variable "vault_hosts" {
-  type = map(object({
-    private_ip = string
-    public_ip  = string
-  }))
-  description = "The vault cluster hosts that can be expected as a leader"
 }
 
 variable "timeout" {
@@ -40,15 +56,18 @@ variable "retry_interval" {
 }
 
 locals {
-  private_ips = [for k, v in values(tomap(var.vault_hosts)) : tostring(v["private_ip"])]
+  ipv6s       = [for k, v in values(tomap(var.hosts)) : tostring(v["ipv6"])]
+  private_ips = [for k, v in values(tomap(var.hosts)) : tostring(v["private_ip"])]
 }
 
-resource "enos_remote_exec" "wait_for_leader_in_vault_hosts" {
+resource "enos_remote_exec" "wait_for_leader_in_hosts" {
   environment = {
-    RETRY_INTERVAL             = var.retry_interval
+    IP_VERSION                 = var.ip_version
     TIMEOUT_SECONDS            = var.timeout
-    VAULT_ADDR                 = "http://127.0.0.1:8200"
+    RETRY_INTERVAL             = var.retry_interval
+    VAULT_ADDR                 = var.vault_addr
     VAULT_TOKEN                = var.vault_root_token
+    VAULT_INSTANCE_IPV6S       = jsonencode(local.ipv6s)
     VAULT_INSTANCE_PRIVATE_IPS = jsonencode(local.private_ips)
     VAULT_INSTALL_DIR          = var.vault_install_dir
   }
@@ -57,7 +76,7 @@ resource "enos_remote_exec" "wait_for_leader_in_vault_hosts" {
 
   transport = {
     ssh = {
-      host = var.vault_hosts[0].public_ip
+      host = var.hosts[0].public_ip
     }
   }
 }

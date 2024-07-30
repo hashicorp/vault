@@ -9,25 +9,19 @@ terraform {
   }
 }
 
-variable "vault_cluster_addr_port" {
-  description = "The Raft cluster address port"
-  type        = string
-  default     = "8201"
-}
-
-variable "vault_install_dir" {
-  type        = string
-  description = "The directory where the Vault binary will be installed"
-}
-
 variable "primary_leader_public_ip" {
   type        = string
   description = "Vault primary cluster leader Public IP address"
 }
 
-variable "primary_leader_private_ip" {
+variable "vault_addr" {
   type        = string
-  description = "Vault primary cluster leader Private IP address"
+  description = "The local vault API listen address"
+}
+
+variable "vault_install_dir" {
+  type        = string
+  description = "The directory where the Vault binary will be installed"
 }
 
 variable "vault_root_token" {
@@ -37,7 +31,7 @@ variable "vault_root_token" {
 
 resource "enos_remote_exec" "configure_pr_primary" {
   environment = {
-    VAULT_ADDR        = "http://127.0.0.1:8200"
+    VAULT_ADDR        = var.vault_addr
     VAULT_TOKEN       = var.vault_root_token
     VAULT_INSTALL_DIR = var.vault_install_dir
   }

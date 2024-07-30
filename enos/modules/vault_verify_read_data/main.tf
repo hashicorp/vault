@@ -9,32 +9,34 @@ terraform {
   }
 }
 
+variable "hosts" {
+  type = map(object({
+    ipv6       = string
+    private_ip = string
+    public_ip  = string
+  }))
+  description = "The Vault cluster instances that were created"
+}
+
+variable "vault_addr" {
+  type        = string
+  description = "The local vault API listen address"
+}
+
 variable "vault_install_dir" {
   type        = string
   description = "The directory where the Vault binary will be installed"
 }
 
-variable "vault_instance_count" {
-  type        = number
-  description = "How many vault instances are in the cluster"
-}
-
-variable "node_public_ips" {
-  type        = list(string)
-  description = "Vault cluster node Public IP address"
-}
-
 locals {
-  followers      = toset([for idx in range(var.vault_instance_count - 1) : tostring(idx)])
   vault_bin_path = "${var.vault_install_dir}/vault"
 }
 
 resource "enos_remote_exec" "verify_kv_on_node" {
-  for_each = {
-    for idx, follower in local.followers : idx => follower
-  }
+  for_each = var.hosts
+
   environment = {
-    VAULT_ADDR        = "http://127.0.0.1:8200"
+    VAULT_ADDR        = var.vault_addr
     VAULT_INSTALL_DIR = var.vault_install_dir
   }
 
@@ -42,7 +44,7 @@ resource "enos_remote_exec" "verify_kv_on_node" {
 
   transport = {
     ssh = {
-      host = element(var.node_public_ips, each.key)
+      host = each.value.public_ip
     }
   }
 }

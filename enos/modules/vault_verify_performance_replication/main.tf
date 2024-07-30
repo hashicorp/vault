@@ -9,35 +9,42 @@ terraform {
   }
 }
 
-variable "vault_cluster_addr_port" {
-  description = "The Raft cluster address port"
+variable "ip_version" {
+  type        = number
+  description = "The IP version used for the Vault TCP listener"
+
+  validation {
+    condition     = contains([4, 6], var.ip_version)
+    error_message = "The ip_version must be either 4 or 6"
+  }
+}
+
+variable "primary_leader_host" {
+  type = object({
+    ipv6       = string
+    private_ip = string
+    public_ip  = string
+  })
+  description = "The primary cluster leader host"
+}
+
+variable "secondary_leader_host" {
+  type = object({
+    ipv6       = string
+    private_ip = string
+    public_ip  = string
+  })
+  description = "The secondary cluster leader host"
+}
+
+variable "vault_addr" {
   type        = string
-  default     = "8201"
+  description = "The local vault API listen address"
 }
 
 variable "vault_install_dir" {
   type        = string
   description = "The directory where the Vault binary will be installed"
-}
-
-variable "primary_leader_public_ip" {
-  type        = string
-  description = "Vault primary cluster leader Public IP address"
-}
-
-variable "primary_leader_private_ip" {
-  type        = string
-  description = "Vault primary cluster leader Private IP address"
-}
-
-variable "secondary_leader_public_ip" {
-  type        = string
-  description = "Vault secondary cluster leader Public IP address"
-}
-
-variable "secondary_leader_private_ip" {
-  type        = string
-  description = "Vault secondary cluster leader Private IP address"
 }
 
 variable "wrapping_token" {
@@ -47,40 +54,44 @@ variable "wrapping_token" {
 }
 
 locals {
+  primary_leader_addr          = var.ip_version == 6 ? var.primary_leader_host.ipv6 : var.primary_leader_host.private_ip
+  secondary_leader_addr        = var.ip_version == 6 ? var.secondary_leader_host.ipv6 : var.secondary_leader_host.private_ip
   primary_replication_status   = jsondecode(enos_remote_exec.verify_replication_status_on_primary.stdout)
   secondary_replication_status = jsondecode(enos_remote_exec.verify_replication_status_on_secondary.stdout)
 }
 
 resource "enos_remote_exec" "verify_replication_status_on_primary" {
   environment = {
-    VAULT_ADDR               = "http://127.0.0.1:8200"
-    VAULT_INSTALL_DIR        = var.vault_install_dir
-    PRIMARY_LEADER_PRIV_IP   = var.primary_leader_private_ip
-    SECONDARY_LEADER_PRIV_IP = var.secondary_leader_private_ip
+    IP_VERSION            = var.ip_version
+    PRIMARY_LEADER_ADDR   = local.primary_leader_addr
+    SECONDARY_LEADER_ADDR = local.secondary_leader_addr
+    VAULT_ADDR            = var.vault_addr
+    VAULT_INSTALL_DIR     = var.vault_install_dir
   }
 
   scripts = [abspath("${path.module}/scripts/verify-replication-status.sh")]
 
   transport = {
     ssh = {
-      host = var.primary_leader_public_ip
+      host = var.primary_leader_host.public_ip
     }
   }
 }
 
 resource "enos_remote_exec" "verify_replication_status_on_secondary" {
   environment = {
-    VAULT_ADDR               = "http://127.0.0.1:8200"
-    VAULT_INSTALL_DIR        = var.vault_install_dir
-    PRIMARY_LEADER_PRIV_IP   = var.primary_leader_private_ip
-    SECONDARY_LEADER_PRIV_IP = var.secondary_leader_private_ip
+    IP_VERSION            = var.ip_version
+    PRIMARY_LEADER_ADDR   = local.primary_leader_addr
+    SECONDARY_LEADER_ADDR = local.secondary_leader_addr
+    VAULT_ADDR            = var.vault_addr
+    VAULT_INSTALL_DIR     = var.vault_install_dir
   }
 
   scripts = [abspath("${path.module}/scripts/verify-replication-status.sh")]
 
   transport = {
     ssh = {
-      host = var.secondary_leader_public_ip
+      host = var.secondary_leader_host.public_ip
     }
   }
 }
