@@ -1594,10 +1594,9 @@
             "path": "secrets/pki/considerations"
           },
           {
-            "title": "Troubleshooting ACME integration",
-            "path": "secrets/pki/troubleshooting-acme"
+            "title": "Certificate Issuance Protocols",
+            "path": "secrets/pki/issuance"
           },
-
           {
             "title": "Rotation Primitives",
             "path": "secrets/pki/rotation-primitives"

@@ -1,4 +1,4 @@
-[
+j[
   {
     "title": "Client Libraries",
     "path": "libraries"
@@ -259,7 +259,17 @@
       },
       {
         "title": "PKI",
-        "path": "secret/pki"
+        "path": "secret/pki",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "secret/pki"
+          },
+          {
+            "title": "Issuance Protocols",
+            "path": "secret/pki/issuance"
+          }
+        ]
       },
       {
         "title": "RabbitMQ",
