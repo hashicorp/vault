@@ -10,6 +10,7 @@ import {
   filterVersionHistory,
   formatByMonths,
   formatByNamespace,
+  destructureClientCounts,
   namespaceArrayToObject,
   sortMonthsByTimestamp,
   setStartTimeQuery,
@@ -22,7 +23,7 @@ import {
 } from 'vault/tests/helpers/clients/client-count-helpers';
 
 /*
-formatByNamespace, formatByMonths are utils
+formatByNamespace, formatByMonths, destructureClientCounts are utils
 used to normalize the sys/counters/activity response in the clients/activity
 serializer. these functions are tested individually here, instead of all at once
 in a serializer test for easier debugging
@@ -169,6 +170,20 @@ module('Integration | Util | client count utils', function (hooks) {
       assert.propEqual(Object.keys(mount), Object.keys(expectedMount), `${mount} as expected keys`);
       assert.propEqual(Object.values(mount), Object.values(expectedMount), `${mount} as expected values`);
     });
+  });
+
+  test('destructureClientCounts: it returns relevant key names when both old and new keys exist', async function (assert) {
+    assert.expect(2);
+    const original = { ...RESPONSE.total };
+    const expected = {
+      acme_clients: 9702,
+      clients: 35287,
+      entity_clients: 8258,
+      non_entity_clients: 8227,
+      secret_syncs: 9100,
+    };
+    assert.propEqual(destructureClientCounts(RESPONSE.total), expected);
+    assert.propEqual(RESPONSE.total, original, 'it does not modify original object');
   });
 
   test('sortMonthsByTimestamp: sorts timestamps chronologically, oldest to most recent', async function (assert) {

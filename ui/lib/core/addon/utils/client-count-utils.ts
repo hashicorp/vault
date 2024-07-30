@@ -103,14 +103,14 @@ export const formatByMonths = (
         newClients = {
           month,
           timestamp,
-          ...(m?.new_clients?.counts || {}),
+          ...destructureClientCounts(m?.new_clients?.counts),
           namespaces: formatByNamespace(m.new_clients?.namespaces),
         };
       }
       return {
         month,
         timestamp,
-        ...m.counts,
+        ...destructureClientCounts(m.counts),
         namespaces: formatByNamespace(m.namespaces),
         namespaces_by_key: namespaceArrayToObject(
           totalClientsByNamespace,
@@ -142,14 +142,27 @@ export const formatByNamespace = (namespaceArray: NamespaceObject[] | null): ByN
     // transform to an empty array for type consistency
     let mounts: MountClients[] | [] = [];
     if (Array.isArray(ns.mounts)) {
-      mounts = ns.mounts.map((m) => ({ label: m.mount_path, ...m.counts }));
+      mounts = ns.mounts.map((m) => ({ label: m.mount_path, ...destructureClientCounts(m.counts) }));
     }
     return {
       label,
-      ...ns.counts,
+      ...destructureClientCounts(ns.counts),
       mounts,
     };
   });
+};
+
+// This method returns only client types from the passed object, excluding other keys such as "label".
+// when querying historical data the response will always contain the latest client type keys because the activity log is
+// constructed based on the version of Vault the user is on (key values will be 0)
+export const destructureClientCounts = (verboseObject: Counts | ByNamespaceClients) => {
+  return CLIENT_TYPES.reduce(
+    (newObj: Record<ClientTypes, Counts[ClientTypes]>, clientType: ClientTypes) => {
+      newObj[clientType] = verboseObject[clientType];
+      return newObj;
+    },
+    {} as Record<ClientTypes, Counts[ClientTypes]>
+  );
 };
 
 export const sortMonthsByTimestamp = (
@@ -173,7 +186,7 @@ export const namespaceArrayToObject = (
   // and values include new and total client counts for that namespace in that month
   const namespaces_by_key = monthTotals.reduce((nsObject: { [key: string]: NamespaceByKey }, ns) => {
     const keyedNs: NamespaceByKey = {
-      ...ns, // counts
+      ...destructureClientCounts(ns),
       timestamp,
       month,
       mounts_by_key: {},
