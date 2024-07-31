@@ -1321,10 +1321,12 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess seal.Access, r
 
 	answerReq := raftInfo.leaderClient.NewRequest("PUT", "/v1/sys/storage/raft/bootstrap/answer")
 	if err := answerReq.SetJSONBody(map[string]interface{}{
-		"answer":       base64.StdEncoding.EncodeToString(plaintext),
-		"cluster_addr": clusterAddr,
-		"server_id":    raftBackend.NodeID(),
-		"non_voter":    raftInfo.nonVoter,
+		"answer":          base64.StdEncoding.EncodeToString(plaintext),
+		"cluster_addr":    clusterAddr,
+		"server_id":       raftBackend.NodeID(),
+		"non_voter":       raftInfo.nonVoter,
+		"sdk_version":     raftBackend.SDKVersion(),
+		"upgrade_version": raftBackend.UpgradeVersion(),
 	}); err != nil {
 		return err
 	}
