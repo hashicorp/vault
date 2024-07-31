@@ -67,8 +67,8 @@ export default class ClientsDateRangeComponent extends Component<Args> {
   }
 
   get validationError() {
-    if (this.useDefaultDates) {
-      // this means we want to reset, which is fine
+    if (this.useDefaultDates && this.version.isEnterprise) {
+      // this means we want to reset, which is fine for ent only
       return null;
     }
     if (!this.startDate || !this.endDate) {
