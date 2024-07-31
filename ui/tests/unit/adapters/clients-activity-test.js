@@ -21,8 +21,9 @@ module('Unit | Adapter | clients activity', function (hooks) {
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
     this.modelName = 'clients/activity';
-    this.startDate = subMonths(this.timestampStub(), 6);
-    this.endDate = this.timestampStub();
+    const mockNow = timestamp.now();
+    this.startDate = subMonths(mockNow, 6);
+    this.endDate = mockNow;
     this.readableUnix = (unix) => parseAPITimestamp(fromUnixTime(unix).toISOString(), 'MMMM dd yyyy');
   });
 

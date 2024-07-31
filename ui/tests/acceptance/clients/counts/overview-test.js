@@ -148,7 +148,14 @@ module('Acceptance | clients | overview', function (hooks) {
 
   test('totals filter correctly with full data', async function (assert) {
     // stub secrets sync being activated
-    this.owner.lookup('service:flags').activatedFlags = ['secrets-sync'];
+    this.server.get('/sys/activation-flags', function () {
+      return {
+        data: {
+          activated: ['secrets-sync'],
+          unactivated: [],
+        },
+      };
+    });
 
     assert
       .dom(CHARTS.container('Vault client counts'))
