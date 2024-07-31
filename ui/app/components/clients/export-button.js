@@ -59,7 +59,7 @@ export default class ClientsExportButtonComponent extends Component {
     return selectedNamespace ? sanitizePath(`${currentNs}/${selectedNamespace}`) : sanitizePath(currentNs);
   }
 
-  async generateCsvData() {
+  async getExportData() {
     const adapter = this.store.adapterFor('clients/activity');
     const { startTimestamp, endTimestamp } = this.args;
     return adapter.exportData({
@@ -72,7 +72,7 @@ export default class ClientsExportButtonComponent extends Component {
 
   exportChartData = task({ drop: true }, async (filename) => {
     try {
-      const contents = await this.generateCsvData();
+      const contents = await this.getExportData();
       const method = this.exportFormat;
       this.download[method](filename, contents);
       this.showExportModal = false;
