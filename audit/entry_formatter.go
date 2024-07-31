@@ -231,12 +231,12 @@ func (f *entryFormatter) formatRequest(ctx context.Context, in *logical.LogInput
 
 	if !f.config.raw {
 		var err error
-		auth, err = hashAuth(ctx, f.salter, auth, f.config.hmacAccessor)
+		err = hashAuth(ctx, f.salter, auth, f.config.hmacAccessor)
 		if err != nil {
 			return nil, err
 		}
 
-		req, err = hashRequest(ctx, f.salter, req, f.config.hmacAccessor, in.NonHMACReqDataKeys)
+		err = hashRequest(ctx, f.salter, req, f.config.hmacAccessor, in.NonHMACReqDataKeys)
 		if err != nil {
 			return nil, err
 		}
@@ -383,17 +383,17 @@ func (f *entryFormatter) formatResponse(ctx context.Context, in *logical.LogInpu
 		}
 	} else {
 		var err error
-		auth, err = hashAuth(ctx, f.salter, auth, f.config.hmacAccessor)
+		err = hashAuth(ctx, f.salter, auth, f.config.hmacAccessor)
 		if err != nil {
 			return nil, err
 		}
 
-		req, err = hashRequest(ctx, f.salter, req, f.config.hmacAccessor, in.NonHMACReqDataKeys)
+		err = hashRequest(ctx, f.salter, req, f.config.hmacAccessor, in.NonHMACReqDataKeys)
 		if err != nil {
 			return nil, err
 		}
 
-		resp, err = hashResponse(ctx, f.salter, resp, f.config.hmacAccessor, in.NonHMACRespDataKeys, elideListResponseData)
+		err = hashResponse(ctx, f.salter, resp, f.config.hmacAccessor, in.NonHMACRespDataKeys, elideListResponseData)
 		if err != nil {
 			return nil, err
 		}
