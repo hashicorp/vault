@@ -6,7 +6,7 @@
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
-import { fromUnixTime, isSameMonth, isAfter } from 'date-fns';
+import { isSameMonth, isAfter } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { filterVersionHistory } from 'core/utils/client-count-utils';
 
@@ -21,11 +21,11 @@ interface Args {
   activity: ClientsActivityModel;
   activityError?: AdapterError;
   config: ClientsConfigModel;
-  endTimestamp: number;
+  endTimestamp: string; // ISO format
   mountPath: string;
   namespace: string;
   onFilterChange: CallableFunction;
-  startTimestamp: number;
+  startTimestamp: string; // ISO format
   versionHistory: ClientsVersionHistoryModel[];
 }
 
@@ -34,29 +34,21 @@ export default class ClientsCountsPageComponent extends Component<Args> {
   @service declare readonly version: VersionService;
   @service declare readonly store: StoreService;
 
-  get startTimestampISO() {
-    return this.args.startTimestamp ? fromUnixTime(this.args.startTimestamp).toISOString() : null;
-  }
-
-  get endTimestampISO() {
-    return this.args.endTimestamp ? fromUnixTime(this.args.endTimestamp).toISOString() : null;
-  }
-
   get formattedStartDate() {
-    return this.startTimestampISO ? parseAPITimestamp(this.startTimestampISO, 'MMMM yyyy') : null;
+    return this.args.startTimestamp ? parseAPITimestamp(this.args.startTimestamp, 'MMMM yyyy') : null;
   }
 
   // returns text for empty state message if noActivityData
   get dateRangeMessage() {
-    if (this.startTimestampISO && this.endTimestampISO) {
+    if (this.args.startTimestamp && this.args.endTimestamp) {
       const endMonth = isSameMonth(
-        parseAPITimestamp(this.startTimestampISO) as Date,
-        parseAPITimestamp(this.endTimestampISO) as Date
+        parseAPITimestamp(this.args.startTimestamp) as Date,
+        parseAPITimestamp(this.args.endTimestamp) as Date
       )
         ? ''
-        : `to ${parseAPITimestamp(this.endTimestampISO, 'MMMM yyyy')}`;
+        : `to ${parseAPITimestamp(this.args.endTimestamp, 'MMMM yyyy')}`;
       // completes the message 'No data received from { dateRangeMessage }'
-      return `from ${parseAPITimestamp(this.startTimestampISO, 'MMMM yyyy')} ${endMonth}`;
+      return `from ${parseAPITimestamp(this.args.startTimestamp, 'MMMM yyyy')} ${endMonth}`;
     }
     return null;
   }
@@ -127,9 +119,9 @@ export default class ClientsCountsPageComponent extends Component<Args> {
     // show banner if startTime returned from activity log (response) is after the queried startTime
     const { activity, config } = this.args;
     const activityStartDateObject = parseAPITimestamp(activity.startTime) as Date;
-    const queryStartDateObject = parseAPITimestamp(this.startTimestampISO) as Date;
+    const queryStartDateObject = parseAPITimestamp(this.args.startTimestamp) as Date;
     const isEnterprise =
-      this.startTimestampISO === config.billingStartTimestamp?.toISOString() && this.version.isEnterprise;
+      this.args.startTimestamp === config.billingStartTimestamp?.toISOString() && this.version.isEnterprise;
     const message = isEnterprise ? 'Your license start date is' : 'You requested data from';
 
     if (
