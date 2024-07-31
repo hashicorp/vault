@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import isEmptyValue from 'core/helpers/is-empty-value';
+import { isEmptyValue } from 'core/helpers/is-empty-value';
 
 /**
  * queryParamString converts an object to a query param string with URL encoded keys and values.
