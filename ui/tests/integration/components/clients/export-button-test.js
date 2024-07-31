@@ -19,7 +19,7 @@ module('Integration | Component | clients/export-button', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.csvDownloadStub = Sinon.stub(this.owner.lookup('service:download'), 'csv');
+    this.downloadStub = Sinon.stub(this.owner.lookup('service:download'), 'download');
     this.startTimestamp = '2022-06-01T23:00:11.050Z';
     this.endTimestamp = '2022-12-01T23:00:11.050Z';
     this.selectedNamespace = undefined;
@@ -69,14 +69,14 @@ module('Integration | Component | clients/export-button', function (hooks) {
   });
 
   test('it works for json format', async function (assert) {
-    assert.expect(1);
+    assert.expect(2);
     this.server.get('/sys/internal/counters/activity/export', function (_, req) {
       assert.deepEqual(req.queryParams, {
         format: 'json',
         start_time: '2022-06-01T23:00:11.050Z',
         end_time: '2022-12-01T23:00:11.050Z',
       });
-      return new Response(200, { 'Content-Type': 'application/json' }, {});
+      return new Response(200, { 'Content-Type': 'application/json' }, { example: 'data' });
     });
 
     await this.renderComponent();
@@ -84,6 +84,29 @@ module('Integration | Component | clients/export-button', function (hooks) {
     await click('[data-test-attribution-export-button]');
     await fillIn('[data-test-download-format]', 'json');
     await click(GENERAL.confirmButton);
+    const extension = this.downloadStub.lastCall.args[2];
+    assert.strictEqual(extension, 'json');
+  });
+
+  test('it works for csv format', async function (assert) {
+    assert.expect(2);
+
+    this.server.get('/sys/internal/counters/activity/export', function (_, req) {
+      assert.deepEqual(req.queryParams, {
+        format: 'csv',
+        start_time: '2022-06-01T23:00:11.050Z',
+        end_time: '2022-12-01T23:00:11.050Z',
+      });
+      return new Response(200, { 'Content-Type': 'text/csv' }, 'example,data');
+    });
+
+    await this.renderComponent();
+
+    await click('[data-test-attribution-export-button]');
+    await fillIn('[data-test-download-format]', 'csv');
+    await click(GENERAL.confirmButton);
+    const extension = this.downloadStub.lastCall.args[2];
+    assert.strictEqual(extension, 'csv');
   });
 
   test('it sends the current namespace in export request', async function (assert) {
@@ -182,7 +205,7 @@ module('Integration | Component | clients/export-button', function (hooks) {
       await this.renderComponent();
       await click('[data-test-attribution-export-button]');
       await click(GENERAL.confirmButton);
-      const args = this.csvDownloadStub.lastCall.args;
+      const args = this.downloadStub.lastCall.args;
       const [filename] = args;
       assert.strictEqual(filename, 'clients_export_June 2022-December 2022', 'csv has expected filename');
     });
@@ -202,7 +225,7 @@ module('Integration | Component | clients/export-button', function (hooks) {
 
       await click('[data-test-attribution-export-button]');
       await click(GENERAL.confirmButton);
-      const [filename] = this.csvDownloadStub.lastCall.args;
+      const [filename] = this.downloadStub.lastCall.args;
       assert.strictEqual(filename, 'clients_export_June 2022', 'csv has single month in filename');
     });
     test('omits date if no start/end timestamp', async function (assert) {
@@ -221,7 +244,7 @@ module('Integration | Component | clients/export-button', function (hooks) {
 
       await click('[data-test-attribution-export-button]');
       await click(GENERAL.confirmButton);
-      const [filename] = this.csvDownloadStub.lastCall.args;
+      const [filename] = this.downloadStub.lastCall.args;
       assert.strictEqual(filename, 'clients_export');
     });
 
@@ -243,7 +266,7 @@ module('Integration | Component | clients/export-button', function (hooks) {
 
       await click('[data-test-attribution-export-button]');
       await click(GENERAL.confirmButton);
-      const [filename] = this.csvDownloadStub.lastCall.args;
+      const [filename] = this.downloadStub.lastCall.args;
       assert.strictEqual(filename, 'clients_export_bar');
     });
 
@@ -264,7 +287,7 @@ module('Integration | Component | clients/export-button', function (hooks) {
 
       await click('[data-test-attribution-export-button]');
       await click(GENERAL.confirmButton);
-      const [filename] = this.csvDownloadStub.lastCall.args;
+      const [filename] = this.downloadStub.lastCall.args;
       assert.strictEqual(filename, 'clients_export_foo');
     });
   });

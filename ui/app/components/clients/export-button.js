@@ -73,8 +73,7 @@ export default class ClientsExportButtonComponent extends Component {
   exportChartData = task({ drop: true }, async (filename) => {
     try {
       const contents = await this.getExportData();
-      const method = this.exportFormat;
-      this.download[method](filename, contents);
+      this.download.download(filename, contents, this.exportFormat);
       this.showExportModal = false;
     } catch (e) {
       this.downloadError = e.message;
