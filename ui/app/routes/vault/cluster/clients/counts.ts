@@ -5,9 +5,7 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import timestamp from 'core/utils/timestamp';
-import { getUnixTime } from 'date-fns';
-import { setStartTimeQuery } from 'core/utils/client-count-utils';
+import { fromUnixTime } from 'date-fns';
 
 import type FlagsService from 'vault/services/flags';
 import type StoreService from 'vault/services/store';
