@@ -1,5 +1,5 @@
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: BUSL-1.1
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
 
 scenario "dev_pr_replication" {
   description = <<-EOF
@@ -138,6 +138,8 @@ scenario "dev_pr_replication" {
     // We install vault packages from artifactory. If you wish to use one of these variants you'll
     // need to configure your artifactory credentials.
     use_artifactory = matrix.artifact == "deb" || matrix.artifact == "rpm"
+    // The IP version to use for the Vault listener and associated things.
+    ip_version = 4
     // Zip bundles and local builds don't come with systemd units or any associated configuration.
     // When this is true we'll let enos handle this for us.
     manage_service = matrix.artifact == "zip" || matrix.artifact == "local"
@@ -341,6 +343,7 @@ scenario "dev_pr_replication" {
       ami_id          = step.ec2_info.ami_ids[matrix.arch][matrix.distro][global.distro_version[matrix.distro]]
       cluster_tag_key = global.vault_tag_key
       common_tags     = global.tags
+      instance_count  = try(var.vault_instance_count, 3)
       seal_key_names  = step.create_primary_seal_key.resource_names
       vpc_id          = step.create_vpc.id
     }
@@ -450,12 +453,12 @@ scenario "dev_pr_replication" {
     variables {
       cluster_name    = step.create_primary_cluster_backend_targets.cluster_name
       cluster_tag_key = global.backend_tag_key
+      hosts           = step.create_primary_cluster_backend_targets.hosts
       license         = matrix.primary_backend == "consul" ? step.read_backend_license.license : null
       release = {
         edition = var.backend_edition
         version = var.dev_consul_version
       }
-      target_hosts = step.create_primary_cluster_backend_targets.hosts
     }
   }
 
@@ -514,7 +517,9 @@ scenario "dev_pr_replication" {
         version = var.dev_consul_version
       } : null
       enable_audit_devices = var.vault_enable_audit_devices
+      hosts                = step.create_primary_cluster_targets.hosts
       install_dir          = local.vault_install_dir
+      ip_version           = local.ip_version
       license              = step.read_vault_license.license
       local_artifact_path  = matrix.artifact == "local" ? abspath(var.vault_artifact_path) : null
       manage_service       = local.manage_service
@@ -523,7 +528,6 @@ scenario "dev_pr_replication" {
       seal_attributes      = step.create_primary_seal_key.attributes
       seal_type            = matrix.primary_seal
       storage_backend      = matrix.primary_backend
-      target_hosts         = step.create_primary_cluster_targets.hosts
     }
   }
 
@@ -553,12 +557,12 @@ scenario "dev_pr_replication" {
     variables {
       cluster_name    = step.create_secondary_cluster_backend_targets.cluster_name
       cluster_tag_key = global.backend_tag_key
+      hosts           = step.create_secondary_cluster_backend_targets.hosts
       license         = matrix.secondary_backend == "consul" ? step.read_backend_license.license : null
       release = {
         edition = var.backend_edition
         version = var.dev_consul_version
       }
-      target_hosts = step.create_secondary_cluster_backend_targets.hosts
     }
   }
 
@@ -616,7 +620,9 @@ scenario "dev_pr_replication" {
         version = var.dev_consul_version
       } : null
       enable_audit_devices = var.vault_enable_audit_devices
+      hosts                = step.create_secondary_cluster_targets.hosts
       install_dir          = local.vault_install_dir
+      ip_version           = local.ip_version
       license              = step.read_vault_license.license
       local_artifact_path  = matrix.artifact == "local" ? abspath(var.vault_artifact_path) : null
       manage_service       = local.manage_service
@@ -625,7 +631,6 @@ scenario "dev_pr_replication" {
       seal_attributes      = step.create_secondary_seal_key.attributes
       seal_type            = matrix.secondary_seal
       storage_backend      = matrix.secondary_backend
-      target_hosts         = step.create_secondary_cluster_targets.hosts
     }
   }
 
@@ -643,7 +648,8 @@ scenario "dev_pr_replication" {
     }
 
     variables {
-      vault_instances   = step.create_primary_cluster_targets.hosts
+      hosts             = step.create_primary_cluster_targets.hosts
+      vault_addr        = step.create_primary_cluster.api_addr_localhost
       vault_install_dir = local.vault_install_dir
     }
   }
@@ -662,7 +668,8 @@ scenario "dev_pr_replication" {
     }
 
     variables {
-      vault_instances   = step.create_secondary_cluster_targets.hosts
+      hosts             = step.create_secondary_cluster_targets.hosts
+      vault_addr        = step.create_secondary_cluster.api_addr_localhost
       vault_install_dir = local.vault_install_dir
     }
   }
@@ -681,7 +688,9 @@ scenario "dev_pr_replication" {
     }
 
     variables {
-      vault_hosts       = step.create_primary_cluster_targets.hosts
+      hosts             = step.create_primary_cluster_targets.hosts
+      ip_version        = local.ip_version
+      vault_addr        = step.create_primary_cluster.api_addr_localhost
       vault_install_dir = local.vault_install_dir
       vault_root_token  = step.create_primary_cluster.root_token
     }
@@ -701,7 +710,9 @@ scenario "dev_pr_replication" {
     }
 
     variables {
-      vault_hosts       = step.create_secondary_cluster_targets.hosts
+      hosts             = step.create_secondary_cluster_targets.hosts
+      ip_version        = local.ip_version
+      vault_addr        = step.create_secondary_cluster.api_addr_localhost
       vault_install_dir = local.vault_install_dir
       vault_root_token  = step.create_secondary_cluster.root_token
     }
@@ -720,9 +731,9 @@ scenario "dev_pr_replication" {
     }
 
     variables {
-      leader_public_ip  = step.get_primary_cluster_ips.leader_public_ip
-      leader_private_ip = step.get_primary_cluster_ips.leader_private_ip
-      vault_instances   = step.create_primary_cluster_targets.hosts
+      hosts             = step.create_primary_cluster_targets.hosts
+      leader_host       = step.get_primary_cluster_ips.leader_host
+      vault_addr        = step.create_primary_cluster.api_addr_localhost
       vault_install_dir = local.vault_install_dir
       vault_root_token  = step.create_primary_cluster.root_token
     }
@@ -745,10 +756,10 @@ scenario "dev_pr_replication" {
     }
 
     variables {
-      primary_leader_public_ip  = step.get_primary_cluster_ips.leader_public_ip
-      primary_leader_private_ip = step.get_primary_cluster_ips.leader_private_ip
-      vault_install_dir         = local.vault_install_dir
-      vault_root_token          = step.create_primary_cluster.root_token
+      primary_leader_public_ip = step.get_primary_cluster_ips.leader_public_ip
+      vault_addr               = step.create_primary_cluster.api_addr_localhost
+      vault_install_dir        = local.vault_install_dir
+      vault_root_token         = step.create_primary_cluster.root_token
     }
   }
 
@@ -766,6 +777,7 @@ scenario "dev_pr_replication" {
 
     variables {
       primary_leader_public_ip = step.get_primary_cluster_ips.leader_public_ip
+      vault_addr               = step.create_primary_cluster.api_addr_localhost
       vault_install_dir        = local.vault_install_dir
       vault_root_token         = step.create_primary_cluster.root_token
     }
@@ -783,11 +795,11 @@ scenario "dev_pr_replication" {
     }
 
     variables {
-      secondary_leader_public_ip  = step.get_secondary_cluster_ips.leader_public_ip
-      secondary_leader_private_ip = step.get_secondary_cluster_ips.leader_private_ip
-      vault_install_dir           = local.vault_install_dir
-      vault_root_token            = step.create_secondary_cluster.root_token
-      wrapping_token              = step.generate_secondary_token.secondary_token
+      secondary_leader_public_ip = step.get_secondary_cluster_ips.leader_public_ip
+      vault_addr                 = step.create_secondary_cluster.api_addr_localhost
+      vault_install_dir          = local.vault_install_dir
+      vault_root_token           = step.create_secondary_cluster.root_token
+      wrapping_token             = step.generate_secondary_token.secondary_token
     }
   }
 
@@ -810,10 +822,11 @@ scenario "dev_pr_replication" {
     }
 
     variables {
-      follower_public_ips = step.get_secondary_cluster_ips.follower_public_ips
-      vault_install_dir   = local.vault_install_dir
-      vault_unseal_keys   = matrix.primary_seal == "shamir" ? step.create_primary_cluster.unseal_keys_hex : step.create_primary_cluster.recovery_keys_hex
-      vault_seal_type     = matrix.primary_seal == "shamir" ? matrix.primary_seal : matrix.secondary_seal
+      hosts             = step.get_secondary_cluster_ips.follower_hosts
+      vault_addr        = step.create_secondary_cluster.api_addr_localhost
+      vault_install_dir = local.vault_install_dir
+      vault_unseal_keys = matrix.primary_seal == "shamir" ? step.create_primary_cluster.unseal_keys_hex : step.create_primary_cluster.recovery_keys_hex
+      vault_seal_type   = matrix.primary_seal == "shamir" ? matrix.primary_seal : matrix.secondary_seal
     }
   }
 
@@ -831,7 +844,8 @@ scenario "dev_pr_replication" {
     }
 
     variables {
-      vault_instances   = step.create_secondary_cluster_targets.hosts
+      hosts             = step.create_secondary_cluster_targets.hosts
+      vault_addr        = step.create_primary_cluster.api_addr_localhost
       vault_install_dir = local.vault_install_dir
     }
   }
@@ -849,11 +863,11 @@ scenario "dev_pr_replication" {
     }
 
     variables {
-      primary_leader_public_ip    = step.get_primary_cluster_ips.leader_public_ip
-      primary_leader_private_ip   = step.get_primary_cluster_ips.leader_private_ip
-      secondary_leader_public_ip  = step.get_secondary_cluster_ips.leader_public_ip
-      secondary_leader_private_ip = step.get_secondary_cluster_ips.leader_private_ip
-      vault_install_dir           = local.vault_install_dir
+      ip_version            = local.ip_version
+      primary_leader_host   = step.get_primary_cluster_ips.leader_host
+      secondary_leader_host = step.get_secondary_cluster_ips.leader_host
+      vault_addr            = step.create_primary_cluster.api_addr_localhost
+      vault_install_dir     = local.vault_install_dir
     }
   }
 

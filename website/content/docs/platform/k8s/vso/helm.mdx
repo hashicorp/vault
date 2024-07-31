@@ -4,14 +4,18 @@ page_title: Vault Secrets Operator Helm Chart Configuration
 description: >-
   Configuration for the Vault Secrets Operator Helm chart.
 ---
+<!-- DO NOT EDIT.
+Generated from chart/values.yaml in the vault-secrets-operator repo.
+commit SHA=c97a61487462dfc2ded7e7d80bb2061624cedc2a
+
+To update run 'make gen-helm-docs' from the vault-secrets-operator repo.
+-->
 
 # Vault Secrets Operator helm chart
 
 The chart is customizable using
 [Helm configuration values](https://helm.sh/docs/intro/using_helm/#customizing-the-chart-before-installing).
 
-<!-- DO NOT EDIT. The docs below are generated automatically. To change, edit
-                  the vault-secrets-operator repo's values.yaml: file commit=bf1746f1937f25b4cb28f15d4b818303f3a78dd9 -->
 <!-- codegen: start -->
 
 ## Top-Level Stanzas
@@ -117,6 +121,15 @@ Use these links to navigate to a particular top-level stanza.
         - "VaultAuth"
         - "HCPAuth"
 
+      - `userFacingRoles` ((#v-controller-rbac-clusterroleaggregation-userfacingroles)) (`object: ""`) - userFacingRoles is a map of roles that will be aggregated into the viewer and editor ClusterRoles.
+        See https://kubernetes.io/docs/reference/access-authn-authz/rbac/#user-facing-roles for more information.
+
+        - `view` ((#v-controller-rbac-clusterroleaggregation-userfacingroles-view)) (`boolean: false`) - view controls whether the aggregated viewer ClusterRole will be made available to the user-facing
+          'view' ClusterRole. Requires the viewerRoles to be set.
+
+        - `edit` ((#v-controller-rbac-clusterroleaggregation-userfacingroles-edit)) (`boolean: false`) - view controls whether the aggregated editor ClusterRole will be made available to the user-facing
+          'edit' ClusterRole. Requires the editorRoles to be set.
+
   - `kubeRbacProxy` ((#v-controller-kuberbacproxy)) - Settings related to the kubeRbacProxy container. This container is an HTTP proxy for the
     controller manager which performs RBAC authorization against the Kubernetes API using SubjectAccessReviews.
 
@@ -166,7 +179,7 @@ Use these links to navigate to a particular top-level stanza.
 
       - `repository` ((#v-controller-manager-image-repository)) (`string: hashicorp/vault-secrets-operator`)
 
-      - `tag` ((#v-controller-manager-image-tag)) (`string: 0.7.1`)
+      - `tag` ((#v-controller-manager-image-tag)) (`string: 0.8.1`)
 
     - `logging` ((#v-controller-manager-logging)) - logging
 
@@ -190,8 +203,25 @@ Use these links to navigate to a particular top-level stanza.
       - `excludeRaw` ((#v-controller-manager-globaltransformationoptions-excluderaw)) (`boolean: false`) - excludeRaw directs the operator to prevent _raw secret data being stored
         in the destination K8s Secret.
 
-    - `backoffOnSecretSourceError` ((#v-controller-manager-backoffonsecretsourceerror)) - Backoff settings for the controller manager. These settings control the backoff behavior
+    - `globalVaultAuthOptions` ((#v-controller-manager-globalvaultauthoptions)) - Global Vault auth options. In addition to the boolean options
+      below, these options may be set via the
+      `VSO_GLOBAL_VAULT_OPTION_OPTIONS` environment variable as a
+      comma-separated list. Valid values are: `allow-default-globals`
+
+      - `allowDefaultGlobals` ((#v-controller-manager-globalvaultauthoptions-allowdefaultglobals)) (`boolean: true`) - allowDefaultGlobals directs the operator search for a "default"
+        VaultAuthGlobal if none is specified on the referring VaultAuth CR.
+        Default: true
+
+    - `backoffOnSecretSourceError` ((#v-controller-manager-backoffonsecretsourceerror)) (`object: ""`) - Backoff settings for the controller manager. These settings control the backoff behavior
       when the controller encounters an error while fetching secrets from the SecretSource.
+      For example given the following settings:
+        initialInterval: 5s
+        maxInterval: 60s
+        randomizationFactor: 0.5
+        multiplier: 1.5
+
+      The backoff retry sequence might be something like:
+       5.5s, 7.5s, 11.25s, 16.87s, 25.3125s, 37.96s, 56.95, 60.95s...
 
       - `initialInterval` ((#v-controller-manager-backoffonsecretsourceerror-initialinterval)) (`duration: 5s`) - Initial interval between retries.
 

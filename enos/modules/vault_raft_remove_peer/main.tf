@@ -9,20 +9,23 @@ terraform {
   }
 }
 
-variable "vault_cluster_addr_port" {
-  description = "The Raft cluster address port"
-  type        = string
-  default     = "8201"
+variable "hosts" {
+  type = map(object({
+    ipv6       = string
+    private_ip = string
+    public_ip  = string
+  }))
+  description = "The old vault nodes to be removed"
 }
 
-variable "vault_install_dir" {
-  type        = string
-  description = "The directory where the Vault binary will be installed"
-}
-
-variable "vault_instance_count" {
+variable "ip_version" {
   type        = number
-  description = "How many vault instances are in the cluster"
+  description = "The IP version used for the Vault TCP listener"
+
+  validation {
+    condition     = contains([4, 6], var.ip_version)
+    error_message = "The ip_version must be either 4 or 6"
+  }
 }
 
 variable "operator_instance" {
@@ -30,12 +33,19 @@ variable "operator_instance" {
   description = "The ip address of the operator (Voter) node"
 }
 
-variable "remove_vault_instances" {
-  type = map(object({
-    private_ip = string
-    public_ip  = string
-  }))
-  description = "The old vault nodes to be removed"
+variable "vault_addr" {
+  type        = string
+  description = "The local vault API listen address"
+}
+
+variable "vault_cluster_addr_port" {
+  description = "The Raft cluster address port"
+  type        = string
+}
+
+variable "vault_install_dir" {
+  type        = string
+  description = "The directory where the Vault binary will be installed"
 }
 
 variable "vault_root_token" {
@@ -43,22 +53,13 @@ variable "vault_root_token" {
   description = "The vault root token"
 }
 
-locals {
-  instances = {
-    for idx in range(var.vault_instance_count) : idx => {
-      public_ip  = values(var.remove_vault_instances)[idx].public_ip
-      private_ip = values(var.remove_vault_instances)[idx].private_ip
-    }
-  }
-}
-
 resource "enos_remote_exec" "vault_raft_remove_peer" {
-  for_each = local.instances
+  for_each = var.hosts
 
   environment = {
-    REMOVE_VAULT_CLUSTER_ADDR = "${each.value.private_ip}:${var.vault_cluster_addr_port}"
+    REMOVE_VAULT_CLUSTER_ADDR = "${var.ip_version == 4 ? "${each.value.private_ip}" : "[${each.value.ipv6}]"}:${var.vault_cluster_addr_port}"
     VAULT_TOKEN               = var.vault_root_token
-    VAULT_ADDR                = "http://localhost:8200"
+    VAULT_ADDR                = var.vault_addr
     VAULT_INSTALL_DIR         = var.vault_install_dir
   }
 
