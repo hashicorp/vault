@@ -137,17 +137,33 @@ module('Unit | Adapter | clients activity', function (hooks) {
     this.store.queryRecord(this.modelName, queryParams);
   });
 
-  test('it sends current billing period boolean if provided', async function (assert) {
+  test('it sends without query if no dates provided', async function (assert) {
     assert.expect(1);
 
     this.server.get('sys/internal/counters/activity', (schema, req) => {
-      assert.propEqual(
-        req.queryParams,
-        { current_billing_period: 'true' },
-        'it passes current_billing_period to query record'
-      );
+      assert.propEqual(req.queryParams, {});
     });
 
-    this.store.queryRecord(this.modelName, { current_billing_period: true });
+    this.store.queryRecord(this.modelName, { foo: 'bar' });
+  });
+
+  test('it sends without query if no valid dates provided', async function (assert) {
+    assert.expect(1);
+
+    this.server.get('sys/internal/counters/activity', (schema, req) => {
+      assert.propEqual(req.queryParams, {});
+    });
+
+    this.store.queryRecord(this.modelName, { start_time: 'bar' });
+  });
+
+  test('it handles empty query gracefully', async function (assert) {
+    assert.expect(1);
+
+    this.server.get('sys/internal/counters/activity', (schema, req) => {
+      assert.propEqual(req.queryParams, {});
+    });
+
+    this.store.queryRecord(this.modelName, {});
   });
 });
