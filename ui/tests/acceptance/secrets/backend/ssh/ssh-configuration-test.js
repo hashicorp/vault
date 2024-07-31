@@ -36,6 +36,21 @@ module('Acceptance | ssh | configuration', function (hooks) {
     await runCmd(`delete sys/mounts/${sshPath}`);
   });
 
+  test('it should redirect if old url is entered', async function (assert) {
+    const sshPath = `ssh-${this.uid}`;
+    await enablePage.enable('ssh', sshPath);
+    await click(SES.configTab);
+    await visit(`/vault/settings/secrets/configure/${sshPath}`);
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${sshPath}/configuration/edit`,
+      'redirected to the new route.'
+    );
+    assert.dom(SES.configureTitle('ssh')).hasText('Configure SSH', 'shows title and not page-error');
+    // cleanup
+    await runCmd(`delete sys/mounts/${sshPath}`);
+  });
+
   test('it should show a public key after saving default configuration', async function (assert) {
     const sshPath = `ssh-${this.uid}`;
     await enablePage.enable('ssh', sshPath);
