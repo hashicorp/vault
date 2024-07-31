@@ -13,15 +13,15 @@ export default Route.extend({
   store: service(),
 
   model() {
-    const secretEngineModel = this.modelFor('vault.cluster.secrets.backend');
-    return this.store.query('secret-engine', { path: secretEngineModel.id }).then((modelList) => {
+    const { backend } = this.paramsFor('vault.cluster.secrets.backend');
+    return this.store.query('secret-engine', { path: backend }).then((modelList) => {
       const model = modelList && modelList[0];
       if (!model || !CONFIGURABLE_SECRET_ENGINES.includes(model.type)) {
         const error = new AdapterError();
         set(error, 'httpStatus', 404);
         throw error;
       }
-      return this.store.findRecord('secret-engine', secretEngineModel.id).then(
+      return this.store.findRecord('secret-engine', backend).then(
         () => {
           return model;
         },
