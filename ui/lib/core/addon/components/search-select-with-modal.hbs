@@ -18,8 +18,9 @@
       onChange=@onChange
       inputValue=@inputValue
       helpText=@helpText
-      placeholder=@placeholder
+      placeholder=(or @fallbackComponentPlaceholder @placeholder)
       id=@id
+      selectLimit=@selectLimit
     }}
   {{else}}
     {{#if @label}}
