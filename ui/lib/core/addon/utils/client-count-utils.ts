@@ -66,17 +66,6 @@ export const filterVersionHistory = (
   return [];
 };
 
-export const setStartTimeQuery = (
-  isEnterprise: boolean,
-  config: ClientsConfigModel | Record<string, never>
-) => {
-  // CE versions have no license and so the start time defaults to "0001-01-01T00:00:00Z"
-  if (isEnterprise && _hasConfig(config)) {
-    return getUnixTime(config.billingStartTimestamp);
-  }
-  return null;
-};
-
 // METHODS FOR SERIALIZING ACTIVITY RESPONSE
 export const formatDateObject = (dateObj: { monthIdx: number; year: number }, isEnd: boolean) => {
   const { year, monthIdx } = dateObj;

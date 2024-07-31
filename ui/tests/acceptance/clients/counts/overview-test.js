@@ -72,7 +72,7 @@ module('Acceptance | clients | overview', function (hooks) {
       .exists('new client attribution has empty state');
     assert
       .dom(GENERAL.emptyStateSubtitle)
-      .hasText('There are no new clients for this namespace during this time period.    ');
+      .hasText('There are no new clients for this namespace during this time period.');
     assert.dom(CHARTS.container('total-clients')).exists('total client attribution chart shows');
 
     // reset to billing period
