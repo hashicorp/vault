@@ -111,7 +111,7 @@ func (sc *storageContext) GetPkiManagedView() managed_key.PkiManagedKeyView {
 	return sc.Backend
 }
 
-func (sc *storageContext) GetCertificateCounter() pki_backend.CertificateCounter {
+func (sc *storageContext) GetCertificateCounter() issuing.CertificateCounter {
 	return sc.Backend.GetCertificateCounter()
 }
 

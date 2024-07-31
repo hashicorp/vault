@@ -407,7 +407,7 @@ func TestOpenWebSocketConnectionReceivesEventsKVV1(t *testing.T) {
 	}
 }
 
-// TestOpenWebSocketConnectionReceivesEvents tests that the openWebSocketConnection function
+// TestOpenWebSocketConnectionReceivesEventsKVV2 tests that the openWebSocketConnection function
 // works as expected with KVV2, and then the connection can be used to receive an event.
 // This acts as more of an event system sanity check than a test of the updater
 // logic. It's still important coverage, though.

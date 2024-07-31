@@ -239,14 +239,6 @@ Vault lead to the new clients for each month.
 }
 ```
 
-- The `distinct_entities` field name has been deprecated since Vault 1.10. Refer to
-`entity_clients` field instead. The `distinct_entities` field is currently
-returned by the API for backward compatibility and it may be removed in the future.
-
-- The `non_entity_tokens` field name has been deprecated since Vault 1.10. Refer to
-`non_entity_clients` field instead. The `non_entity_tokens` field is currently
-returned by the API for backward compatibility, and it may be removed in the future.
-
 - If the `end_date` supplied to the API is for the current month, the activity
 information returned by this API will only be till the previous month. The
 activity system is designed to process the accumulated activity only at the end
@@ -271,9 +263,7 @@ That is to say, the response will appear as follows.
       {
          "timestamp":"current_month_timestamp",
          "counts":{
-            "distinct_entities":"exact int value",
             "entity_clients":"exact int value",
-            "non_entity_tokens":"exact int value",
             "non_entity_clients":"exact int value",
             "secret_syncs":"exact int value",
             "acme_clients":"exact int value",
@@ -284,9 +274,7 @@ That is to say, the response will appear as follows.
                   "namespace_id":"root",
                   "namespace_path":"path",
                   "counts":{
-                     "distinct_entities":"exact int value",
                      "entity_clients":"exact int value",
-                     "non_entity_tokens":"exact int value",
                      "non_entity_clients":"exact int value",
                      "secret_syncs":"exact int value",
                      "acme_clients":"exact int value",
@@ -296,9 +284,7 @@ That is to say, the response will appear as follows.
                      {
                         "path":"auth/up2/",
                         "counts":{
-                           "distinct_entities":"exact int value",
                            "entity_clients":"exact int value",
-                           "non_entity_tokens":"exact int value",
                            "non_entity_clients":"exact int value",
                            "secret_syncs":"exact int value",
                            "acme_clients":"exact int value",
@@ -310,9 +296,7 @@ That is to say, the response will appear as follows.
          ],
          "new_clients":{
             "counts":{
-               "distinct_entities":"approx int value",
                "entity_clients":"approx int value",
-               "non_entity_tokens":"approx int value",
                "non_entity_clients":"approx int value",
                "secret_syncs":"approx int value",
                "acme_clients":"approx int value",
@@ -384,9 +368,7 @@ $ curl \
             "namespace_id":"root",
             "namespace_path":"",
             "counts":{
-               "distinct_entities":20,
                "entity_clients":20,
-               "non_entity_tokens":10,
                "non_entity_clients":10,
                "secret_syncs": 5,
                "acme_clients": 3,
@@ -396,9 +378,7 @@ $ curl \
                {
                   "path":"auth/up1/",
                   "counts":{
-                     "distinct_entities":10,
                      "entity_clients":10,
-                     "non_entity_tokens":10,
                      "non_entity_clients":10,
                      "secret_syncs": 0,
                      "acme_clients": 0,
@@ -408,9 +388,7 @@ $ curl \
                {
                   "path":"auth/up2/",
                   "counts":{
-                     "distinct_entities":5,
                      "entity_clients":5,
-                     "non_entity_tokens":5,
                      "non_entity_clients":5,
                      "secret_syncs": 0,
                      "acme_clients": 0,
@@ -420,9 +398,7 @@ $ curl \
                {
                   "path":"secrets/kv1/",
                   "counts":{
-                     "distinct_entities":0,
                      "entity_clients":0,
-                     "non_entity_tokens":0,
                      "non_entity_clients":0,
                      "secret_syncs":3,
                      "acme_clients": 0,
@@ -432,9 +408,7 @@ $ curl \
                {
                   "path":"secrets/kv2/",
                   "counts":{
-                     "distinct_entities":0,
                      "entity_clients":0,
-                     "non_entity_tokens":0,
                      "non_entity_clients":0,
                      "secret_syncs":0,
                      "acme_clients": 0,
@@ -444,9 +418,7 @@ $ curl \
                {
                   "path":"secrets/pki/",
                   "counts":{
-                     "distinct_entities":0,
                      "entity_clients":0,
-                     "non_entity_tokens":0,
                      "non_entity_clients":0,
                      "secret_syncs":0,
                      "acme_clients": 3,
@@ -459,9 +431,7 @@ $ curl \
             "namespace_id":"s07UR",
             "namespace_path":"ns1/",
             "counts":{
-               "distinct_entities":5,
                "entity_clients":5,
-               "non_entity_tokens":5,
                "non_entity_clients":5,
                "secret_syncs":0,
                "acme_clients":0,
@@ -471,9 +441,7 @@ $ curl \
                {
                   "path":"auth/up1/",
                   "counts":{
-                     "distinct_entities":0,
                      "entity_clients":0,
-                     "non_entity_tokens":5,
                      "non_entity_clients":5,
                      "secret_syncs":0,
                      "acme_clients":0,
@@ -483,9 +451,7 @@ $ curl \
                {
                   "path":"auth/up2/",
                   "counts":{
-                     "distinct_entities":5,
                      "entity_clients":5,
-                     "non_entity_tokens":0,
                      "non_entity_clients":0,
                      "secret_syncs":0,
                      "acme_clients":0,
@@ -500,9 +466,7 @@ $ curl \
          {
             "timestamp":"2021-05-01T00:00:00Z",
             "counts":{
-               "distinct_entities":20,
                "entity_clients":20,
-               "non_entity_tokens":10,
                "non_entity_clients":10,
                "secret_syncs":5,
                "acme_clients":3,
@@ -513,9 +477,7 @@ $ curl \
                   "namespace_id":"root",
                   "namespace_path":"",
                   "counts":{
-                     "distinct_entities":15,
                      "entity_clients":15,
-                     "non_entity_tokens":5,
                      "non_entity_clients":5,
                      "secret_syncs":5,
                      "acme_clients":3,
@@ -525,9 +487,7 @@ $ curl \
                      {
                         "path":"auth/up2/",
                         "counts":{
-                           "distinct_entities":10,
                            "entity_clients":10,
-                           "non_entity_tokens":5,
                            "non_entity_clients":5,
                            "secret_syncs":0,
                            "acme_clients":0,
@@ -537,9 +497,7 @@ $ curl \
                      {
                         "path":"auth/up1/",
                         "counts":{
-                           "distinct_entities":3,
                            "entity_clients":3,
-                           "non_entity_tokens":2,
                            "non_entity_clients":2,
                            "secret_syncs":0,
                            "acme_clients":0,
@@ -549,9 +507,7 @@ $ curl \
                      {
                         "path":"secrets/kv1/",
                         "counts":{
-                           "distinct_entities":0,
                            "entity_clients":0,
-                           "non_entity_tokens":0,
                            "non_entity_clients":0,
                            "secret_syncs":3,
                            "acme_clients":0,
@@ -561,9 +517,7 @@ $ curl \
                      {
                         "path":"secrets/kv2/",
                         "counts":{
-                           "distinct_entities":0,
                            "entity_clients":0,
-                           "non_entity_tokens":0,
                            "non_entity_clients":0,
                            "secret_syncs":2,
                            "acme_clients":0,
@@ -573,9 +527,7 @@ $ curl \
                      {
                         "path":"secrets/pki/",
                         "counts":{
-                           "distinct_entities":0,
                            "entity_clients":0,
-                           "non_entity_tokens":0,
                            "non_entity_clients":0,
                            "secret_syncs":0,
                            "acme_clients":3,
@@ -588,9 +540,7 @@ $ curl \
                   "namespace_id":"s07UR",
                   "namespace_path":"ns1/",
                   "counts":{
-                     "distinct_entities":5,
                      "entity_clients":5,
-                     "non_entity_tokens":5,
                      "non_entity_clients":5,
                      "secret_syncs":0,
                      "acme_clients":0,
@@ -600,9 +550,7 @@ $ curl \
                      {
                         "path":"auth/up1/",
                         "counts":{
-                           "distinct_entities":0,
                            "entity_clients":0,
-                           "non_entity_tokens":5,
                            "non_entity_clients":5,
                            "secret_syncs":0,
                            "acme_clients":0,
@@ -612,9 +560,7 @@ $ curl \
                      {
                         "path":"auth/up2/",
                         "counts":{
-                           "distinct_entities":5,
                            "entity_clients":5,
-                           "non_entity_tokens":0,
                            "non_entity_clients":0,
                            "secret_syncs":0,
                            "acme_clients":0,
@@ -626,9 +572,7 @@ $ curl \
             ],
             "new_clients":{
                "counts":{
-                  "distinct_entities":10,
                   "entity_clients":10,
-                  "non_entity_tokens":10,
                   "non_entity_clients":10,
                   "secret_syncs":2,
                   "acme_clients":1,
@@ -639,9 +583,7 @@ $ curl \
                      "namespace_id":"root",
                      "namespace_path":"",
                      "counts":{
-                        "distinct_entities":5,
                         "entity_clients":5,
-                        "non_entity_tokens":5,
                         "non_entity_clients":5,
                         "secret_syncs":2,
                         "acme_clients":1,
@@ -651,9 +593,7 @@ $ curl \
                         {
                            "path":"auth/up2/",
                            "counts":{
-                              "distinct_entities":0,
                               "entity_clients":0,
-                              "non_entity_tokens":5,
                               "non_entity_clients":5,
                               "clients":5
                            }
@@ -661,9 +601,7 @@ $ curl \
                         {
                            "path":"auth/up1/",
                            "counts":{
-                              "distinct_entities":5,
                               "entity_clients":5,
-                              "non_entity_tokens":0,
                               "non_entity_clients":0,
                               "clients":5
                            }
@@ -671,9 +609,7 @@ $ curl \
                         {
                            "path":"secrets/kv1/",
                            "counts":{
-                              "distinct_entities":0,
                               "entity_clients":0,
-                              "non_entity_tokens":0,
                               "non_entity_clients":0,
                               "secret_syncs":1,
                               "clients":1
@@ -682,9 +618,7 @@ $ curl \
                         {
                            "path":"secrets/kv2/",
                            "counts":{
-                              "distinct_entities":0,
                               "entity_clients":0,
-                              "non_entity_tokens":0,
                               "non_entity_clients":0,
                               "secret_syncs":1,
                               "clients":1
@@ -693,9 +627,7 @@ $ curl \
                         {
                            "path":"secrets/pki/",
                            "counts":{
-                              "distinct_entities":0,
                               "entity_clients":0,
-                              "non_entity_tokens":0,
                               "non_entity_clients":0,
                               "secret_syncs":0,
                               "acme_clients":1,
@@ -708,9 +640,7 @@ $ curl \
                      "namespace_id":"s07UR",
                      "namespace_path":"ns1/",
                      "counts":{
-                        "distinct_entities":5,
                         "entity_clients":5,
-                        "non_entity_tokens":5,
                         "non_entity_clients":5,
                         "secret_syncs":0,
                         "acme_clients":0,
@@ -720,9 +650,7 @@ $ curl \
                         {
                            "path":"auth/up1/",
                            "counts":{
-                              "distinct_entities":0,
                               "entity_clients":0,
-                              "non_entity_tokens":5,
                               "non_entity_clients":5,
                               "secret_syncs":0,
                               "acme_clients":0,
@@ -732,9 +660,7 @@ $ curl \
                         {
                            "path":"auth/up2/",
                            "counts":{
-                              "distinct_entities":5,
                               "entity_clients":5,
-                              "non_entity_tokens":0,
                               "non_entity_clients":0,
                               "secret_syncs":0,
                               "acme_clients":0,
@@ -749,9 +675,7 @@ $ curl \
          {
             "timestamp":"2021-04-01T00:00:00Z",
             "counts":{
-               "distinct_entities":5,
                "entity_clients":5,
-               "non_entity_tokens":5,
                "non_entity_clients":5,
                "secret_syncs":3,
                "acme_clients":1,
@@ -762,9 +686,7 @@ $ curl \
                   "namespace_id":"root",
                   "namespace_path":"",
                   "counts":{
-                     "distinct_entities":5,
                      "entity_clients":5,
-                     "non_entity_tokens":5,
                      "non_entity_clients":5,
                      "secret_syncs":0,
                      "acme_clients":0,
@@ -774,9 +696,7 @@ $ curl \
                      {
                         "path":"auth/up1/",
                         "counts":{
-                           "distinct_entities":0,
                            "entity_clients":0,
-                           "non_entity_tokens":5,
                            "non_entity_clients":5,
                            "secret_syncs":0,
                            "acme_clients":0,
@@ -786,9 +706,7 @@ $ curl \
                      {
                         "path":"auth/up2/",
                         "counts":{
-                           "distinct_entities":5,
                            "entity_clients":5,
-                           "non_entity_tokens":0,
                            "non_entity_clients":0,
                            "secret_syncs":0,
                            "acme_clients":0,
@@ -800,9 +718,7 @@ $ curl \
             ],
             "new_clients":{
                "counts":{
-                  "distinct_entities":5,
                   "entity_clients":5,
-                  "non_entity_tokens":5,
                   "non_entity_clients":5,
                   "secret_syncs":3,
                   "acme_clients":1,
@@ -813,9 +729,7 @@ $ curl \
                      "namespace_id":"root",
                      "namespace_path":"",
                      "counts":{
-                        "distinct_entities":5,
                         "entity_clients":5,
-                        "non_entity_tokens":5,
                         "non_entity_clients":5,
                         "secret_syncs":3,
                         "acme_clients":1,
@@ -825,9 +739,7 @@ $ curl \
                         {
                            "path":"auth/up1/",
                            "counts":{
-                              "distinct_entities":0,
                               "entity_clients":0,
-                              "non_entity_tokens":5,
                               "non_entity_clients":5,
                               "secret_syncs":0,
                               "acme_clients":0,
@@ -837,9 +749,7 @@ $ curl \
                         {
                            "path":"auth/up2/",
                            "counts":{
-                              "distinct_entities":5,
                               "entity_clients":5,
-                              "non_entity_tokens":0,
                               "non_entity_clients":0,
                               "secret_syncs":0,
                               "acme_clients":0,
@@ -849,9 +759,7 @@ $ curl \
                         {
                            "path":"secrets/kv1/",
                            "counts":{
-                              "distinct_entities":0,
                               "entity_clients":0,
-                              "non_entity_tokens":0,
                               "non_entity_clients":0,
                               "secret_syncs":2,
                               "acme_clients":0,
@@ -861,9 +769,7 @@ $ curl \
                         {
                            "path":"secrets/kv2/",
                            "counts":{
-                              "distinct_entities":0,
                               "entity_clients":0,
-                              "non_entity_tokens":0,
                               "non_entity_clients":0,
                               "secret_syncs":1,
                               "acme_clients":0,
@@ -873,9 +779,7 @@ $ curl \
                         {
                            "path":"secrets/pki/",
                            "counts":{
-                              "distinct_entities":0,
                               "entity_clients":0,
-                              "non_entity_tokens":0,
                               "non_entity_clients":0,
                               "secret_syncs":0,
                               "acme_clients":1,
@@ -890,9 +794,7 @@ $ curl \
       ],
       "start_time":"2021-01-01T00:00:00Z",
       "total":{
-         "distinct_entities":20,
          "entity_clients":20,
-         "non_entity_tokens":20,
          "non_entity_clients":20,
          "secret_syncs":5,
          "acme_clients":3,
@@ -968,10 +870,8 @@ $ curl \
         "counts": {
           "acme_clients": 0,
           "clients": 1,
-          "distinct_entities": 0,
           "entity_clients": 0,
           "non_entity_clients": 1,
-          "non_entity_tokens": 1,
           "secret_syncs": 0
         },
         "mounts": [
@@ -979,10 +879,8 @@ $ curl \
             "counts": {
               "acme_clients": 0,
               "clients": 1,
-              "distinct_entities": 0,
               "entity_clients": 0,
               "non_entity_clients": 1,
-              "non_entity_tokens": 0,
               "secret_syncs": 0
             },
             "mount_path": "auth_token_0747d59c"
@@ -993,17 +891,14 @@ $ curl \
       }
     ],
     "clients": 1,
-    "distinct_entities": 0,
     "entity_clients": 0,
     "months": [
       {
         "counts": {
           "acme_clients": 0,
           "clients": 1,
-          "distinct_entities": 0,
           "entity_clients": 0,
           "non_entity_clients": 1,
-          "non_entity_tokens": 0,
           "secret_syncs": 0
         },
         "namespaces": [
@@ -1011,10 +906,8 @@ $ curl \
             "counts": {
               "acme_clients": 0,
               "clients": 1,
-              "distinct_entities": 0,
               "entity_clients": 0,
               "non_entity_clients": 1,
-              "non_entity_tokens": 0,
               "secret_syncs": 0
             },
             "mounts": [
@@ -1022,10 +915,8 @@ $ curl \
                 "counts": {
                   "acme_clients": 0,
                   "clients": 1,
-                  "distinct_entities": 0,
                   "entity_clients": 0,
                   "non_entity_clients": 1,
-                  "non_entity_tokens": 0,
                   "secret_syncs": 0
                 },
                 "mount_path": "auth_token_0747d59c"
@@ -1039,10 +930,8 @@ $ curl \
           "counts": {
             "acme_clients": 0,
             "clients": 1,
-            "distinct_entities": 0,
             "entity_clients": 0,
             "non_entity_clients": 1,
-            "non_entity_tokens": 0,
             "secret_syncs": 0
           },
           "namespaces": [
@@ -1050,10 +939,8 @@ $ curl \
               "counts": {
                 "acme_clients": 0,
                 "clients": 1,
-                "distinct_entities": 0,
                 "entity_clients": 0,
                 "non_entity_clients": 1,
-                "non_entity_tokens": 0,
                 "secret_syncs": 0
               },
               "mounts": [
@@ -1061,10 +948,8 @@ $ curl \
                   "counts": {
                     "acme_clients": 0,
                     "clients": 1,
-                    "distinct_entities": 0,
                     "entity_clients": 0,
                     "non_entity_clients": 1,
-                    "non_entity_tokens": 0,
                     "secret_syncs": 0
                   },
                   "mount_path": "auth_token_0747d59c"
@@ -1079,7 +964,6 @@ $ curl \
       }
     ],
     "non_entity_clients": 1,
-    "non_entity_tokens": 1,
     "secret_syncs": 0
   },
   "warnings": null
