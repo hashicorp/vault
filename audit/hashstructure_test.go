@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/copystructure"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCopy_auth(t *testing.T) {
@@ -105,10 +106,13 @@ type TestSalter struct{}
 // storage instance.
 func (*TestSalter) Salt(ctx context.Context) (*salt.Salt, error) {
 	inmemStorage := &logical.InmemStorage{}
-	inmemStorage.Put(context.Background(), &logical.StorageEntry{
+	err := inmemStorage.Put(context.Background(), &logical.StorageEntry{
 		Key:   "salt",
 		Value: []byte("foo"),
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	return salt.NewSalt(context.Background(), inmemStorage, &salt.Config{
 		HMAC:     sha256.New,
@@ -159,19 +163,20 @@ func TestHashAuth(t *testing.T) {
 	}
 
 	inmemStorage := &logical.InmemStorage{}
-	inmemStorage.Put(context.Background(), &logical.StorageEntry{
+	err := inmemStorage.Put(context.Background(), &logical.StorageEntry{
 		Key:   "salt",
 		Value: []byte("foo"),
 	})
+	require.NoError(t, err)
 	salter := &TestSalter{}
 	for _, tc := range cases {
 		input := fmt.Sprintf("%#v", tc.Input)
-		out, err := hashAuth(context.Background(), salter, tc.Input, tc.HMACAccessor)
+		err := hashAuth(context.Background(), salter, tc.Input, tc.HMACAccessor)
 		if err != nil {
 			t.Fatalf("err: %s\n\n%s", err, input)
 		}
-		if !reflect.DeepEqual(out, tc.Output) {
-			t.Fatalf("bad:\nInput:\n%s\nOutput:\n%#v\nExpected output:\n%#v", input, out, tc.Output)
+		if !reflect.DeepEqual(tc.Input, tc.Output) {
+			t.Fatalf("bad:\nInput:\n%s\nOutput:\n%#v\nExpected output:\n%#v", input, tc.Input, tc.Output)
 		}
 	}
 }
@@ -217,18 +222,19 @@ func TestHashRequest(t *testing.T) {
 	}
 
 	inmemStorage := &logical.InmemStorage{}
-	inmemStorage.Put(context.Background(), &logical.StorageEntry{
+	err := inmemStorage.Put(context.Background(), &logical.StorageEntry{
 		Key:   "salt",
 		Value: []byte("foo"),
 	})
+	require.NoError(t, err)
 	salter := &TestSalter{}
 	for _, tc := range cases {
 		input := fmt.Sprintf("%#v", tc.Input)
-		out, err := hashRequest(context.Background(), salter, tc.Input, tc.HMACAccessor, tc.NonHMACDataKeys)
+		err := hashRequest(context.Background(), salter, tc.Input, tc.HMACAccessor, tc.NonHMACDataKeys)
 		if err != nil {
 			t.Fatalf("err: %s\n\n%s", err, input)
 		}
-		if diff := deep.Equal(out, tc.Output); len(diff) > 0 {
+		if diff := deep.Equal(tc.Input, tc.Output); len(diff) > 0 {
 			t.Fatalf("bad:\nInput:\n%s\nDiff:\n%#v", input, diff)
 		}
 	}
@@ -282,20 +288,19 @@ func TestHashResponse(t *testing.T) {
 	}
 
 	inmemStorage := &logical.InmemStorage{}
-	inmemStorage.Put(context.Background(), &logical.StorageEntry{
+	err := inmemStorage.Put(context.Background(), &logical.StorageEntry{
 		Key:   "salt",
 		Value: []byte("foo"),
 	})
+	require.NoError(t, err)
 	salter := &TestSalter{}
 	for _, tc := range cases {
 		input := fmt.Sprintf("%#v", tc.Input)
-		out, err := hashResponse(context.Background(), salter, tc.Input, tc.HMACAccessor, tc.NonHMACDataKeys, false)
+		err := hashResponse(context.Background(), salter, tc.Input, tc.HMACAccessor, tc.NonHMACDataKeys, false)
 		if err != nil {
 			t.Fatalf("err: %s\n\n%s", err, input)
 		}
-		if diff := deep.Equal(out, tc.Output); len(diff) > 0 {
-			t.Fatalf("bad:\nInput:\n%s\nDiff:\n%#v", input, diff)
-		}
+		require.Equal(t, tc.Output, tc.Input)
 	}
 }
 
@@ -326,7 +331,7 @@ func TestHashWalker(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		err := HashStructure(tc.Input, func(string) string {
+		err := hashStructure(tc.Input, func(string) string {
 			return replaceText
 		}, nil)
 		if err != nil {
@@ -380,7 +385,7 @@ func TestHashWalker_TimeStructs(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		err := HashStructure(tc.Input, func(s string) string {
+		err := hashStructure(tc.Input, func(s string) string {
 			return s + replaceText
 		}, nil)
 		if err != nil {
