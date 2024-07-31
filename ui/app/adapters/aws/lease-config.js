@@ -23,7 +23,10 @@ export default class AwsLeaseConfig extends ApplicationAdapter {
     const data = serializer.serialize(snapshot);
     const backend = snapshot.record.backend;
     data.id = backend;
-    return this.ajax(`${this.buildURL()}/${backend}/config/lease`, 'POST', { data });
+    return this.ajax(`${this.buildURL()}/${backend}/config/lease`, 'POST', { data }).then(() => {
+      // required to set id on response for ember data
+      return data;
+    });
   }
 
   createRecord() {

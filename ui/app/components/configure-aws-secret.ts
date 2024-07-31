@@ -66,12 +66,9 @@ export default class ConfigureAwsSecretComponent extends Component<Args> {
     } catch (error) {
       // if lease config fails, notify with a flash message but still allow users to save the root config.
       if (!this.errorMessageRoot) {
-        this.flashMessages.danger(
-          `Root configuration data was saved but lease configuration was not: ${errorMessage(error)}`,
-          {
-            sticky: true,
-          }
-        );
+        this.flashMessages.danger(`Lease configuration was not saved: ${errorMessage(error)}`, {
+          sticky: true,
+        });
       } else {
         this.flashMessages.danger(
           `Configuration not saved: ${errorMessage(error)}. ${this.errorMessageRoot}`,

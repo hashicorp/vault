@@ -23,7 +23,10 @@ export default class AwsRootConfig extends ApplicationAdapter {
     const data = serializer.serialize(snapshot);
     const backend = snapshot.record.backend;
     data.id = backend;
-    return this.ajax(`${this.buildURL()}/${backend}/config/root`, 'POST', { data });
+    return this.ajax(`${this.buildURL()}/${backend}/config/root`, 'POST', { data }).then(() => {
+      // required to set id on response for ember data
+      return data;
+    });
   }
 
   createRecord() {
