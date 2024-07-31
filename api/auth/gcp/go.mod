@@ -2,7 +2,7 @@ module github.com/hashicorp/vault/api/auth/gcp
 
 go 1.21
 
-toolchain go1.22.2
+toolchain go1.22.5
 
 require (
 	cloud.google.com/go/compute/metadata v0.3.0

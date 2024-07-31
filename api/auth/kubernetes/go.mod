@@ -2,7 +2,7 @@ module github.com/hashicorp/vault/api/auth/kubernetes
 
 go 1.21
 
-toolchain go1.22.2
+toolchain go1.22.5
 
 require github.com/hashicorp/vault/api v1.14.0
 

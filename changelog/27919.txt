@@ -1,0 +1,3 @@
+```release-note:bug
+new version of go compiler  in  "api/auth/approle/go.mod" "api/auth/aws/go.mod" "api/auth/azure/go.mod" "api/auth/gcp/go.mod" "api/auth/kubernetes/go.mod" "api/auth/ldap/go.mod" "api/auth/userpass/go.mod" "go.mod"
+```
