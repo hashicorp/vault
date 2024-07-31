@@ -97,7 +97,7 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
   });
 
   const jan23start = getUnixTime(new Date('2023-01-01T00:00:00Z'));
-  // license start is July 2, 2024 but the component defaults to beginning of the month
+  // license start is July 2, 2024 on date change it recalculates start to beginning of the month
   const july23start = getUnixTime(new Date('2023-07-01T00:00:00Z'));
   const dec23end = getUnixTime(new Date('2023-12-31T00:00:00Z'));
   const jan24end = getUnixTime(new Date('2024-01-31T00:00:00Z'));
