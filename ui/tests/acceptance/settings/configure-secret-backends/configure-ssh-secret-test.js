@@ -31,7 +31,7 @@ module('Acceptance | settings/configure/secrets/ssh', function (hooks) {
     const path = `ssh-configure-${this.uid}`;
     await enablePage.enable('ssh', path);
     await settled();
-    visit(`/vault/settings/secrets/configure/${path}`);
+    visit(`/vault/secrets/${path}/configuration/edit`);
     await settled();
     assert.dom(SELECTORS.generateSigningKey).isChecked('generate_signing_key defaults to true');
     await click(SELECTORS.generateSigningKey);

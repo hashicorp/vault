@@ -54,7 +54,7 @@ module('Acceptance | aws | configuration', function (hooks) {
     await enablePage.enable('aws', path);
     await click(SES.configTab);
     await click(SES.configure);
-    assert.strictEqual(currentURL(), `/vault/settings/secrets/configure/${path}`);
+    assert.strictEqual(currentURL(), `/vault/secrets/${path}/configuration/edit`);
     assert.dom(SES.configureTitle('aws')).hasText('Configure AWS');
     assert.dom(SES.aws.rootForm).exists('it lands on the root configuration form.');
     assert.dom(GENERAL.tab('access-to-aws')).exists('renders the root creds tab');

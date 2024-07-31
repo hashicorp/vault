@@ -43,7 +43,7 @@ module('Acceptance | ssh | configuration', function (hooks) {
     await click(SES.configure);
     assert.strictEqual(
       currentURL(),
-      `/vault/settings/secrets/configure/${sshPath}`,
+      `/vault/secrets/${sshPath}/configuration/edit`,
       'transitions to the configuration page'
     );
     assert.dom(SES.ssh.configureForm).exists('renders ssh configuration form');
@@ -52,7 +52,7 @@ module('Acceptance | ssh | configuration', function (hooks) {
     await click(SES.ssh.sshInput('configure-submit'));
     assert.strictEqual(
       currentURL(),
-      `/vault/settings/secrets/configure/${sshPath}`,
+      `/vault/secrets/${sshPath}/configuration/edit`,
       'stays on configuration form page.'
     );
 
