@@ -148,7 +148,7 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 			}
 
 			if i.logger.IsDebug() {
-				i.logger.Debug("loading group", "name", group.Name, "id", group.ID)
+				i.logger.Debug("loading group", "namespace", ns.ID, "name", group.Name, "id", group.ID)
 			}
 
 			txn := i.db.Txn(true)
