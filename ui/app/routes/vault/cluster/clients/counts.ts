@@ -8,6 +8,7 @@ import { service } from '@ember/service';
 import { fromUnixTime } from 'date-fns';
 
 import type FlagsService from 'vault/services/flags';
+import type NamespaceService from 'vault/services/namespace';
 import type StoreService from 'vault/services/store';
 import type VersionService from 'vault/services/version';
 import type { ModelFrom } from 'vault/vault/route';
@@ -21,8 +22,15 @@ export interface ClientsCountsRouteParams {
   mountPath?: string | undefined;
 }
 
+interface ActivityAdapterQuery {
+  start_time: { timestamp: number } | undefined;
+  end_time: { timestamp: number } | undefined;
+  namespace?: string;
+}
+
 export default class ClientsCountsRoute extends Route {
   @service declare readonly flags: FlagsService;
+  @service declare readonly namespace: NamespaceService;
   @service declare readonly store: StoreService;
   @service declare readonly version: VersionService;
 
@@ -61,11 +69,15 @@ export default class ClientsCountsRoute extends Route {
     // if CE without start time we want to skip the activity call
     // so that the user is forced to choose a date range
     if (this.version.isEnterprise || params.start_time) {
-      const query = {
+      const query: ActivityAdapterQuery = {
         // start and end params are optional -- if not provided, will fallback to API default
         start_time: this.formatTimeQuery(params?.start_time),
         end_time: this.formatTimeQuery(params?.end_time),
       };
+      if (params?.ns) {
+        // only set explicit namespace if it's a query param
+        query.namespace = this.namespace.calcFullNamespacePath(params.ns);
+      }
       try {
         activity = await this.store.queryRecord('clients/activity', query);
       } catch (error) {
