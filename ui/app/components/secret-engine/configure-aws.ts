@@ -18,20 +18,22 @@ import type Store from '@ember-data/store';
 import type FlashMessageService from 'vault/services/flash-messages';
 
 /**
- * @module ConfigureAwsSecretComponent is used to configure the AWS secret engine
+ * @module ConfigureAwsComponent is used to configure the AWS secret engine
  * A user can configure the endpoint root/config and/or lease/config. 
  * The fields for these endpoints are on one form.
  *
  * @example
  * ```js
- * <ConfigureAwsSecret
-    @rootConfig={{this.model.rootConfig}}
-    @leaseConfig={{this.model.leaseConfig}} />
+ * <SecretEngine::ConfigureAws
+    @rootConfig={{this.model.aws-root-config}}
+    @leaseConfig={{this.model.aws-lease-config}} 
+    @id={{this.model.id}} 
+    />
  * ```
  *
- * @param {object} awsRootConfig - AWS secret engine config/root model
- * @param {object} awsLeaseConfig - AWS secret engine config/lease model
- * @param {string} id - name of the secret engine, ex: 'aws-123'
+ * @param {object} rootConfig - AWS secret engine config/root model
+ * @param {object} leaseConfig - AWS secret engine config/lease model
+ * @param {string} id - name of the AWS secret engine, ex: 'aws-123'
  */
 
 interface Args {
@@ -40,7 +42,7 @@ interface Args {
   id: string;
 }
 
-export default class ConfigureAwsSecretComponent extends Component<Args> {
+export default class ConfigureAwsComponent extends Component<Args> {
   @service declare readonly router: Router;
   @service declare readonly store: Store;
   @service declare readonly flashMessages: FlashMessageService;
@@ -133,6 +135,8 @@ export default class ConfigureAwsSecretComponent extends Component<Args> {
 
   @action
   onCancel() {
+    // clear errors because they're canceling out of the workflow.
+    this.resetErrors();
     this.transition(this.args.id);
   }
 }

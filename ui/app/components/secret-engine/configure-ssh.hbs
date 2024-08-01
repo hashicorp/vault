@@ -1,0 +1,45 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<form {{on "submit" (perform this.save)}} aria-label="save ssh creds">
+  <div class="box is-fullwidth is-shadowless is-marginless">
+    <NamespaceReminder @mode="save" @noun="configuration" />
+    <MessageError @errorMessage={{this.errorMessage}} />
+  </div>
+
+  <div class="box is-fullwidth is-sideless">
+    {{#each @model.formFields as |attr|}}
+      <FormField @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} />
+    {{/each}}
+  </div>
+
+  <div class="box is-fullwidth is-bottomless">
+    <div class="control">
+      <Hds::Button
+        @text="Save"
+        @icon={{if this.save.isRunning "loading"}}
+        type="submit"
+        disabled={{this.save.isRunning}}
+        data-test-ssh-save
+      />
+      <Hds::Button
+        @text="Cancel"
+        @color="secondary"
+        class="has-left-margin-s"
+        disabled={{this.save.isRunning}}
+        {{on "click" this.onCancel}}
+        data-test-ssh-cancel
+      />
+    </div>
+    {{#if this.invalidFormAlert}}
+      <AlertInline
+        data-test-invalid-form-alert
+        class="has-top-padding-s"
+        @type="danger"
+        @message={{this.invalidFormAlert}}
+      />
+    {{/if}}
+  </div>
+</form>

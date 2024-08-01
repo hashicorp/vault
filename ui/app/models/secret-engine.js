@@ -68,6 +68,7 @@ export default class SecretEngineModel extends Model {
   })
   version;
 
+  // ARG TODO: remove these?
   // SSH specific attributes
   @attr('string') privateKey;
   @attr('string') publicKey;
@@ -257,24 +258,6 @@ export default class SecretEngineModel extends Model {
   }
 
   /* ACTIONS */
-  saveCA(options) {
-    if (this.type !== 'ssh') {
-      return;
-    }
-    if (options.isDelete) {
-      this.privateKey = null;
-      this.publicKey = null;
-      this.generateSigningKey = false;
-    }
-    return this.save({
-      adapterOptions: {
-        options: options,
-        apiPath: 'config/ca',
-        attrsToSend: ['privateKey', 'publicKey', 'generateSigningKey'],
-      },
-    });
-  }
-
   saveZeroAddressConfig() {
     return this.save({
       adapterOptions: {

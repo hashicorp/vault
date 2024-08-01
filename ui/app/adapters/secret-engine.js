@@ -117,18 +117,6 @@ export default ApplicationAdapter.extend({
     }
   },
 
-  saveAWSRoot(store, type, snapshot) {
-    const { data } = snapshot.adapterOptions;
-    const path = encodePath(snapshot.id);
-    return this.ajax(`/v1/${path}/config/root`, 'POST', { data });
-  },
-
-  saveAWSLease(store, type, snapshot) {
-    const { data } = snapshot.adapterOptions;
-    const path = encodePath(snapshot.id);
-    return this.ajax(`/v1/${path}/config/lease`, 'POST', { data });
-  },
-
   saveZeroAddressConfig(store, type, snapshot) {
     const path = encodePath(snapshot.id);
     const roles = store
