@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, currentURL, waitFor } from '@ember/test-helpers';
+import { click, fillIn, currentURL, waitFor, visit } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
@@ -11,6 +11,7 @@ import { v4 as uuidv4 } from 'uuid';
 import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { runCmd } from 'vault/tests/helpers/commands';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 
 module('Acceptance | ssh | configuration', function (hooks) {
@@ -19,6 +20,20 @@ module('Acceptance | ssh | configuration', function (hooks) {
   hooks.beforeEach(function () {
     this.uid = uuidv4();
     return authPage.login();
+  });
+
+  test('it should prompt configuration after mounting ssh engine', async function (assert) {
+    const sshPath = `ssh-${this.uid}`;
+    // in this test go through the full mount process. Bypass this step in later tests.
+    await visit('/vault/settings/mount-secret-backend');
+    await click(SES.mountType('ssh'));
+    await fillIn(GENERAL.inputByAttr('path'), sshPath);
+    await click(SES.mountSubmit);
+    await click(SES.configTab);
+    assert.dom(GENERAL.emptyStateTitle).hasText('SSH not configured');
+    assert.dom(GENERAL.emptyStateActions).hasText('Configure SSH');
+    // cleanup
+    await runCmd(`delete sys/mounts/${sshPath}`);
   });
 
   test('it should show a public key after saving default configuration', async function (assert) {
@@ -44,6 +59,15 @@ module('Acceptance | ssh | configuration', function (hooks) {
     await waitFor(SES.ssh.sshInput('public-key'));
     assert.dom(SES.ssh.sshInput('public-key')).exists('renders the public key input on form page');
     assert.dom(SES.ssh.sshInput('public-key')).hasClass('masked-input', 'public key is masked');
+
+    await click(SES.viewBackend);
+    await click(SES.configTab);
+    assert
+      .dom(`[data-test-value-div="Public key"] [data-test-masked-input]`)
+      .hasText('***********', 'value for Public key is on config details and is masked');
+    assert
+      .dom(GENERAL.infoRowValue('Generate signing key'))
+      .hasText('Yes', 'value for Generate signing key displays default of true/yes.');
     // cleanup
     await runCmd(`delete sys/mounts/${sshPath}`);
   });

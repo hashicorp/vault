@@ -24,6 +24,15 @@ variable "common_tags" {
   default     = { "Project" : "vault-ci" }
 }
 
+variable "ports_ingress" {
+  description = "Ports mappings to allow for ingress"
+  type = list(object({
+    description = string
+    port        = number
+    protocol    = string
+  }))
+}
+
 variable "disable_selinux" {
   description = "Optionally disable SELinux for certain distros/versions"
   type        = bool
