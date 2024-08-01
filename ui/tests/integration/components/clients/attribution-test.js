@@ -9,14 +9,15 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { endOfMonth, formatRFC3339 } from 'date-fns';
-import { click } from '@ember/test-helpers';
 import subMonths from 'date-fns/subMonths';
 import timestamp from 'core/utils/timestamp';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SERIALIZED_ACTIVITY_RESPONSE } from 'vault/tests/helpers/clients/client-count-helpers';
+import { setupMirage } from 'ember-cli-mirage/test-support';
+import { capabilitiesStub, overrideResponse } from 'vault/tests/helpers/stubs';
 
 module('Integration | Component | clients/attribution', function (hooks) {
   setupRenderingTest(hooks);
+  setupMirage(hooks);
 
   hooks.before(function () {
     this.timestampStub = sinon.replace(timestamp, 'now', sinon.fake.returns(new Date('2018-04-03T14:15:30')));
@@ -24,7 +25,6 @@ module('Integration | Component | clients/attribution', function (hooks) {
 
   hooks.beforeEach(function () {
     const { total, by_namespace } = SERIALIZED_ACTIVITY_RESPONSE;
-    this.csvDownloadStub = sinon.stub(this.owner.lookup('service:download'), 'csv');
     const mockNow = this.timestampStub();
     this.mockNow = mockNow;
     this.startTimestamp = formatRFC3339(subMonths(mockNow, 6));
@@ -33,10 +33,6 @@ module('Integration | Component | clients/attribution', function (hooks) {
     this.totalUsageCounts = total;
     this.totalClientAttribution = [...by_namespace];
     this.namespaceMountsData = by_namespace.find((ns) => ns.label === 'ns1').mounts;
-  });
-
-  hooks.after(function () {
-    this.csvDownloadStub.restore();
   });
 
   test('it renders empty state with no data', async function (assert) {
@@ -207,120 +203,10 @@ module('Integration | Component | clients/attribution', function (hooks) {
     assert.dom('[data-test-attribution-clients]').includesText('auth method').includesText('8,394');
   });
 
-  test('it renders modal', async function (assert) {
-    await render(hbs`
-      <Clients::Attribution
-        @totalClientAttribution={{this.namespaceMountsData}}
-        @responseTimestamp={{this.timestamp}}
-        @startTimestamp="2022-06-01T23:00:11.050Z"
-        @endTimestamp="2022-12-01T23:00:11.050Z"
-        />
-    `);
-    await click('[data-test-attribution-export-button]');
-    assert
-      .dom('[data-test-export-modal-title]')
-      .hasText('Export attribution data', 'modal appears to export csv');
-    assert.dom('[ data-test-export-date-range]').includesText('June 2022 - December 2022');
-  });
-
-  test('it downloads csv data for date range', async function (assert) {
-    assert.expect(2);
-
-    await render(hbs`
-      <Clients::Attribution
-        @isSecretsSyncActivated={{true}}
-        @totalClientAttribution={{this.totalClientAttribution}}
-        @responseTimestamp={{this.timestamp}}
-        @startTimestamp="2022-06-01T23:00:11.050Z"
-        @endTimestamp="2022-12-01T23:00:11.050Z"
-        />
-    `);
-    await click('[data-test-attribution-export-button]');
-    await click(GENERAL.confirmButton);
-    const [filename, content] = this.csvDownloadStub.lastCall.args;
-    assert.strictEqual(filename, 'clients_by_namespace_June 2022-December 2022', 'csv has expected filename');
-    assert.strictEqual(
-      content,
-      `Namespace path,"Mount path
- *namespace totals, inclusive of mount clients",Total clients,Entity clients,Non-entity clients,ACME clients,Secrets sync clients
-ns1,*,18903,4256,4138,5699,4810
-ns1,auth/authid/0,8394,4256,4138,0,0
-ns1,kvv2-engine-0,4810,0,0,0,4810
-ns1,pki-engine-0,5699,0,0,5699,0
-root,*,16384,4002,4089,4003,4290
-root,auth/authid/0,8091,4002,4089,0,0
-root,kvv2-engine-0,4290,0,0,0,4290
-root,pki-engine-0,4003,0,0,4003,0`,
-      'csv has expected content'
+  test('it shows the export button if user does has SUDO capabilities', async function (assert) {
+    this.server.post('/sys/capabilities-self', () =>
+      capabilitiesStub('sys/internal/counters/activity/export', ['sudo'])
     );
-  });
-
-  test('it downloads csv data for a single month', async function (assert) {
-    assert.expect(2);
-    await render(hbs`
-      <Clients::Attribution
-        @isSecretsSyncActivated={{true}}
-        @totalClientAttribution={{this.totalClientAttribution}}
-        @responseTimestamp={{this.timestamp}}
-        @startTimestamp="2022-06-01T23:00:11.050Z"
-        @endTimestamp="2022-06-21T23:00:11.050Z"
-        />
-    `);
-    await click('[data-test-attribution-export-button]');
-    await click(GENERAL.confirmButton);
-    const [filename, content] = this.csvDownloadStub.lastCall.args;
-    assert.strictEqual(filename, 'clients_by_namespace_June 2022', 'csv has single month in filename');
-    assert.strictEqual(
-      content,
-      `Namespace path,"Mount path
- *namespace totals, inclusive of mount clients",Total clients,Entity clients,Non-entity clients,ACME clients,Secrets sync clients
-ns1,*,18903,4256,4138,5699,4810
-ns1,auth/authid/0,8394,4256,4138,0,0
-ns1,kvv2-engine-0,4810,0,0,0,4810
-ns1,pki-engine-0,5699,0,0,5699,0
-root,*,16384,4002,4089,4003,4290
-root,auth/authid/0,8091,4002,4089,0,0
-root,kvv2-engine-0,4290,0,0,0,4290
-root,pki-engine-0,4003,0,0,4003,0`,
-      'csv has expected content'
-    );
-  });
-
-  test('it downloads csv data when a namespace is selected', async function (assert) {
-    assert.expect(2);
-    this.selectedNamespace = 'ns1';
-
-    await render(hbs`
-      <Clients::Attribution
-        @isSecretsSyncActivated={{true}}
-        @totalClientAttribution={{this.namespaceMountsData}}
-        @selectedNamespace={{this.selectedNamespace}}
-        @responseTimestamp={{this.timestamp}}
-        @startTimestamp="2022-06-01T23:00:11.050Z"
-        @endTimestamp="2022-12-21T23:00:11.050Z"
-        />
-    `);
-
-    await click('[data-test-attribution-export-button]');
-    await click(GENERAL.confirmButton);
-    const [filename, content] = this.csvDownloadStub.lastCall.args;
-    assert.strictEqual(
-      filename,
-      'clients_by_mount_path_June 2022-December 2022',
-      'csv has expected filename for a selected namespace'
-    );
-    assert.strictEqual(
-      content,
-      `Namespace path,"Mount path",Total clients,Entity clients,Non-entity clients,ACME clients,Secrets sync clients
-ns1,auth/authid/0,8394,4256,4138,0,0
-ns1,kvv2-engine-0,4810,0,0,0,4810
-ns1,pki-engine-0,5699,0,0,5699,0`,
-      'csv has expected content for a selected namespace'
-    );
-  });
-
-  test('csv filename omits date if no start/end timestamp', async function (assert) {
-    assert.expect(1);
 
     await render(hbs`
       <Clients::Attribution
@@ -328,85 +214,32 @@ ns1,pki-engine-0,5699,0,0,5699,0`,
         @responseTimestamp={{this.timestamp}}
         />
     `);
-
-    await click('[data-test-attribution-export-button]');
-    await click(GENERAL.confirmButton);
-    const [filename, ,] = this.csvDownloadStub.lastCall.args;
-    assert.strictEqual(filename, 'clients_by_namespace');
+    assert.dom('[data-test-attribution-export-button]').exists();
   });
 
-  test('csv filename omits sync clients if not activated', async function (assert) {
-    assert.expect(1);
-    this.totalClientAttribution = this.totalClientAttribution.map((ns) => {
-      const namespace = { ...ns };
-      delete namespace.secret_syncs;
-      return namespace;
-    });
+  test('it hides the export button if user does not have SUDO capabilities', async function (assert) {
+    this.server.post('/sys/capabilities-self', () =>
+      capabilitiesStub('sys/internal/counters/activity/export', ['read'])
+    );
+
     await render(hbs`
       <Clients::Attribution
-        @isSecretsSyncActivated={{false}}
         @totalClientAttribution={{this.totalClientAttribution}}
         @responseTimestamp={{this.timestamp}}
         />
     `);
-
-    await click('[data-test-attribution-export-button]');
-    await click(GENERAL.confirmButton);
-    const [, content] = this.csvDownloadStub.lastCall.args;
-    assert.strictEqual(
-      content,
-      `Namespace path,"Mount path
- *namespace totals, inclusive of mount clients",Total clients,Entity clients,Non-entity clients,ACME clients
-ns1,*,18903,4256,4138,5699
-ns1,auth/authid/0,8394,4256,4138,0
-ns1,kvv2-engine-0,4810,0,0,0
-ns1,pki-engine-0,5699,0,0,5699
-root,*,16384,4002,4089,4003
-root,auth/authid/0,8091,4002,4089,0
-root,kvv2-engine-0,4290,0,0,0
-root,pki-engine-0,4003,0,0,4003`
-    );
+    assert.dom('[data-test-attribution-export-button]').doesNotExist();
   });
 
-  test('csv filename includes upgrade mention if there is upgrade activity', async function (assert) {
-    assert.expect(1);
-    this.totalClientAttribution = this.totalClientAttribution.map((ns) => {
-      const namespace = { ...ns };
-      delete namespace.secret_syncs;
-      return namespace;
-    });
-    this.upgradeActivity = [
-      {
-        previousVersion: '1.9.0',
-        timestampInstalled: '2023-08-02T00:00:00.000Z',
-        version: '1.9.1',
-      },
-    ];
+  test('defaults to show the export button if capabilities cannot be read', async function (assert) {
+    this.server.post('/sys/capabilities-self', () => overrideResponse(403));
+
     await render(hbs`
-      <Clients::Attribution
-        @isSecretsSyncActivated={{false}}
+      <Clients::ExportButton
         @totalClientAttribution={{this.totalClientAttribution}}
         @responseTimestamp={{this.timestamp}}
-        @upgradesDuringActivity={{this.upgradeActivity}}
         />
     `);
-
-    await click('[data-test-attribution-export-button]');
-    await click(GENERAL.confirmButton);
-    const [, content] = this.csvDownloadStub.lastCall.args;
-    assert.strictEqual(
-      content,
-      `Namespace path,"Mount path
- *namespace totals, inclusive of mount clients
- **data contains an upgrade (mount summation may not equal namespace totals)",Total clients,Entity clients,Non-entity clients,ACME clients
-ns1,*,18903,4256,4138,5699
-ns1,auth/authid/0,8394,4256,4138,0
-ns1,kvv2-engine-0,4810,0,0,0
-ns1,pki-engine-0,5699,0,0,5699
-root,*,16384,4002,4089,4003
-root,auth/authid/0,8091,4002,4089,0
-root,kvv2-engine-0,4290,0,0,0
-root,pki-engine-0,4003,0,0,4003`
-    );
+    assert.dom('[data-test-attribution-export-button]').exists();
   });
 });

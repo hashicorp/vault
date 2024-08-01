@@ -14,13 +14,44 @@
       <p class="chart-description" data-test-attribution-description>{{this.chartText.description}}</p>
     </div>
     <div class="header-right">
-      {{#if this.hasCsvData}}
-        <Hds::Button
-          data-test-attribution-export-button
-          @text="Export attribution data"
-          @color="secondary"
-          {{on "click" (fn (mut this.showCSVDownloadModal) true)}}
-        />
+      {{#if this.showExportButton}}
+        <Clients::ExportButton
+          @startTimestamp={{@startTimestamp}}
+          @endTimestamp={{@endTimestamp}}
+          @selectedNamespace={{@selectedNamespace}}
+        >
+          <:alert>
+            {{#if @upgradesDuringActivity}}
+              <Hds::Alert class="has-top-padding-m" @type="compact" @color="warning" as |A|>
+                <A.Description>
+                  <strong>Data contains {{pluralize @upgradesDuringActivity.length "upgrade"}}:</strong>
+                </A.Description>
+                <A.Description>
+                  <ul class="bullet">
+                    {{#each @upgradesDuringActivity as |upgrade|}}
+                      <li>
+                        {{upgrade.version}}
+                        {{this.parseAPITimestamp upgrade.timestampInstalled "(MMM d, yyyy)"}}
+                      </li>
+                    {{/each}}
+                  </ul>
+                </A.Description>
+                <A.Description>
+                  Visit our
+                  <Hds::Link::Inline
+                    @isHrefExternal={{true}}
+                    @href={{doc-link
+                      "/vault/docs/concepts/client-count/faq#q-which-vault-version-reflects-the-most-accurate-client-counts"
+                    }}
+                  >
+                    Client count FAQ
+                  </Hds::Link::Inline>
+                  for more information.
+                </A.Description>
+              </Hds::Alert>
+            {{/if}}
+          </:alert>
+        </Clients::ExportButton>
       {{/if}}
     </div>
   </div>
@@ -80,67 +111,3 @@
     {{/if}}
   </div>
 </div>
-
-{{! MODAL FOR CSV DOWNLOAD }}
-{{#if this.showCSVDownloadModal}}
-  <Hds::Modal id="attribution-csv-download-modal" @onClose={{fn (mut this.showCSVDownloadModal) false}} as |M|>
-    <M.Header @icon="info" data-test-export-modal-title>
-      Export attribution data
-    </M.Header>
-    <M.Body>
-      <p class="has-bottom-margin-s">
-        {{this.modalExportText}}
-      </p>
-      <p class="has-bottom-margin-s">
-        The
-        <code>mount_path</code>
-        for entity/non-entity clients is the corresponding authentication method path
-        {{if @isSecretsSyncActivated "and for secrets sync clients is the KV v2 engine path"}}.
-      </p>
-      <p class="has-bottom-margin-s is-subtitle-gray">SELECTED DATE {{if this.formattedEndDate " RANGE"}}</p>
-      <p class="has-bottom-margin-s" data-test-export-date-range>
-        {{this.formattedStartDate}}
-        {{if this.formattedEndDate "-"}}
-        {{this.formattedEndDate}}</p>
-    </M.Body>
-    <M.Footer as |F|>
-      <Hds::ButtonSet>
-        <Hds::Button
-          @text="Export"
-          {{on "click" (fn this.exportChartData this.formattedCsvFileName)}}
-          data-test-confirm-button
-        />
-        <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} />
-      </Hds::ButtonSet>
-      {{#if @upgradesDuringActivity}}
-        <Hds::Alert class="has-top-padding-m" @type="compact" @color="warning" as |A|>
-          <A.Description>
-            <strong>Data contains {{pluralize @upgradesDuringActivity.length "upgrade"}}:</strong>
-          </A.Description>
-          <A.Description>
-            <ul class="bullet">
-              {{#each @upgradesDuringActivity as |upgrade|}}
-                <li>
-                  {{upgrade.version}}
-                  {{this.parseAPITimestamp upgrade.timestampInstalled "(MMM d, yyyy)"}}
-                </li>
-              {{/each}}
-            </ul>
-          </A.Description>
-          <A.Description>
-            Visit our
-            <Hds::Link::Inline
-              @isHrefExternal={{true}}
-              @href={{doc-link
-                "/vault/docs/concepts/client-count/faq#q-which-vault-version-reflects-the-most-accurate-client-counts"
-              }}
-            >
-              Client count FAQ
-            </Hds::Link::Inline>
-            for more information.
-          </A.Description>
-        </Hds::Alert>
-      {{/if}}
-    </M.Footer>
-  </Hds::Modal>
-{{/if}}
