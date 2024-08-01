@@ -8,8 +8,10 @@ import { set } from '@ember/object';
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { CONFIGURABLE_SECRET_ENGINES } from 'vault/helpers/mountable-secret-engines';
+import errorMessage from 'vault/utils/error-message';
 
 import type Store from '@ember-data/store';
+import type SecretEngineModel from 'vault/models/secret-engine';
 
 // This route file is reused for all configurable secret engines.
 // It's generates models the various models based on the engine type.
@@ -25,15 +27,18 @@ export default class SecretsBackendConfigurationEdit extends Route {
 
   async model() {
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
-    const record = await this.store.findRecord('secret-engine', backend); // ARG TODO: might be able to do modelFor
-    const type = record.type;
+    const record = this.modelFor('vault.cluster.secrets.backend') as { type: SecretEngineModel };
+    const type = record.type as string;
+
     // if the engine type is not configurable, return a 404.
     if (!record || !CONFIGURABLE_SECRET_ENGINES.includes(type)) {
       const error = new AdapterError();
       set(error, 'httpStatus', 404);
       throw error;
     }
+
     // generate the model based on the engine type.
+    // and pre-set with the type and backend (e.g. type: aws, id: aws-123)
     const model: Record<string, unknown> = { type, id: backend };
     for (const adapterPath of CONFIG_ADAPTERS_PATHS[type] as string[]) {
       try {
@@ -42,13 +47,18 @@ export default class SecretsBackendConfigurationEdit extends Route {
           type,
         });
       } catch (e: AdapterError) {
-        if (e.httpStatus === 404) {
+        // For most models if the adapter returns a 404, we want to create a new record.
+        // The ssh secret engine however returns a 400 if the CA is not configured.
+        // In ssh's case, we want to create the CA config model.
+        if (
+          e.httpStatus === 404 ||
+          (type === 'ssh' && e.httpStatus === 400 && errorMessage(e) === `keys haven't been configured yet`)
+        ) {
           model[adapterPath] = await this.store.createRecord(adapterPath, {
             backend,
             type,
           });
         } else {
-          // ARG TODO figure out error handling, likely in components
           throw e;
         }
       }
