@@ -30,6 +30,7 @@ export const CLIENT_COUNT = {
   selectedAuthMount: 'div#mounts-search-select [data-test-selected-option] div',
   selectedNs: 'div#namespace-search-select [data-test-selected-option] div',
   upgradeWarning: '[data-test-clients-upgrade-warning]',
+  exportButton: '[data-test-attribution-export-button]',
 };
 
 export const CHARTS = {
