@@ -44,6 +44,11 @@ const (
 	// colliding plugin-specific environment variables. Otherwise, plugin-specific
 	// environment variables take precedence over Vault process environment variables.
 	PluginUseLegacyEnvLayering = "VAULT_PLUGIN_USE_LEGACY_ENV_LAYERING"
+
+	// PluginUsePostgresSSLInline enables the usage of a custom sslinline
+	// configuration as a shim to the pgx posgtres library.
+	// Deprecated: VAULT_PLUGIN_USE_POSTGRES_SSLINLINE will be removed in a future version of the Vault SDK.
+	PluginUsePostgresSSLInline = "VAULT_PLUGIN_USE_POSTGRES_SSLINLINE"
 )
 
 // OptionallyEnableMlock determines if mlock should be called, and if so enables
