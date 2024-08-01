@@ -1022,9 +1022,11 @@ func TestExternalPlugin_AuditEnabled_ShouldLogPluginMetadata_Secret(t *testing.T
 		"address": consulConfig.Address(),
 		"token":   consulConfig.Token,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+
+	// Disable audit now we're done performing operations
+	err = client.Sys().DisableAudit("file")
+	require.NoError(t, err)
 
 	// Check the audit trail on request and response
 	decoder := json.NewDecoder(auditLogFile)
@@ -1033,23 +1035,26 @@ func TestExternalPlugin_AuditEnabled_ShouldLogPluginMetadata_Secret(t *testing.T
 		err := decoder.Decode(&auditRecord)
 		require.NoError(t, err)
 
-		auditRequest := map[string]interface{}{}
 		if req, ok := auditRecord["request"]; ok {
-			auditRequest = req.(map[string]interface{})
-			if auditRequest["path"] != plugin.Name+"/config/access" {
-				continue
-			}
-		}
-		testExternalPluginMetadataAuditLog(t, auditRequest, consts.PluginTypeSecrets.String())
+			auditRequest, ok := req.(map[string]interface{})
+			require.True(t, ok)
 
-		auditResponse := map[string]interface{}{}
-		if resp, ok := auditRecord["response"]; ok {
-			auditRequest = resp.(map[string]interface{})
-			if auditResponse["path"] != plugin.Name+"/config/access" {
+			path, ok := auditRequest["path"].(string)
+			require.True(t, ok)
+
+			if path != plugin.Name+"/config/access" {
 				continue
 			}
+
+			testExternalPluginMetadataAuditLog(t, auditRequest, consts.PluginTypeSecrets.String())
 		}
-		testExternalPluginMetadataAuditLog(t, auditResponse, consts.PluginTypeSecrets.String())
+
+		if resp, ok := auditRecord["response"]; ok {
+			auditResponse, ok := resp.(map[string]interface{})
+			require.True(t, ok)
+
+			testExternalPluginMetadataAuditLog(t, auditResponse, consts.PluginTypeSecrets.String())
+		}
 	}
 
 	// Deregister
