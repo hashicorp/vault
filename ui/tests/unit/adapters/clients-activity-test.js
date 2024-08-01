@@ -194,7 +194,7 @@ module('Unit | Adapter | clients activity', function (hooks) {
       assert.expect(2);
 
       this.server.get('sys/internal/counters/activity/export', (schema, req) => {
-        assert.propEqual(req.requestHeaders, { 'X-Vault-Namespace': 'foo/bar' });
+        assert.strictEqual(req.requestHeaders['X-Vault-Namespace'], 'foo/bar');
         assert.propEqual(req.queryParams, {
           format: 'json',
           start_time: '2024-04-01T00:00:00.000Z',
