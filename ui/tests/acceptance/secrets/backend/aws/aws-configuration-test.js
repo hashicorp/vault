@@ -54,11 +54,22 @@ module('Acceptance | aws | configuration', function (hooks) {
     await enablePage.enable('aws', path);
     await click(SES.configTab);
     await click(SES.configure);
-    assert.strictEqual(currentURL(), `/vault/settings/secrets/configure/${path}`);
+    assert.strictEqual(currentURL(), `/vault/secrets/${path}/configuration/edit`);
     assert.dom(SES.configureTitle('aws')).hasText('Configure AWS');
     assert.dom(SES.aws.rootForm).exists('it lands on the root configuration form.');
     assert.dom(GENERAL.tab('access-to-aws')).exists('renders the root creds tab');
     assert.dom(GENERAL.tab('lease')).exists('renders the leases config tab');
+    // cleanup
+    await runCmd(`delete sys/mounts/${path}`);
+  });
+
+  test('it should show error if old url is entered', async function (assert) {
+    // we are intentionally not redirecting from the old url to the new one.
+    const path = `aws-${this.uid}`;
+    await enablePage.enable('aws', path);
+    await click(SES.configTab);
+    await visit(`/vault/settings/secrets/configure/${path}`);
+    assert.dom('[data-test-not-found]').exists('shows page-error');
     // cleanup
     await runCmd(`delete sys/mounts/${path}`);
   });
