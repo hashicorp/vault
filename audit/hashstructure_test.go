@@ -133,32 +133,38 @@ func TestHashString(t *testing.T) {
 }
 
 func TestHashAuth(t *testing.T) {
-	cases := []struct {
+	cases := map[string]struct {
 		Input        *logical.Auth
 		Output       *logical.Auth
 		HMACAccessor bool
 	}{
-		{
-			&logical.Auth{ClientToken: "foo"},
-			&logical.Auth{ClientToken: "hmac-sha256:08ba357e274f528065766c770a639abf6809b39ccfd37c2a3157c7f51954da0a"},
+		"no-accessor-hmac": {
+			&logical.Auth{
+				ClientToken: "foo",
+				Accessor:    "very-accessible",
+			},
+			&logical.Auth{
+				ClientToken: "hmac-sha256:08ba357e274f528065766c770a639abf6809b39ccfd37c2a3157c7f51954da0a",
+				Accessor:    "very-accessible",
+			},
 			false,
 		},
-		{
+		"accessor-hmac": {
 			&logical.Auth{
 				LeaseOptions: logical.LeaseOptions{
 					TTL: 1 * time.Hour,
 				},
-
+				Accessor:    "very-accessible",
 				ClientToken: "foo",
 			},
 			&logical.Auth{
 				LeaseOptions: logical.LeaseOptions{
 					TTL: 1 * time.Hour,
 				},
-
+				Accessor:    "hmac-sha256:5d6d7c8da5b699ace193ea453bbf77082a8aaca42a474436509487d646a7c0af",
 				ClientToken: "hmac-sha256:08ba357e274f528065766c770a639abf6809b39ccfd37c2a3157c7f51954da0a",
 			},
-			false,
+			true,
 		},
 	}
 
@@ -170,14 +176,9 @@ func TestHashAuth(t *testing.T) {
 	require.NoError(t, err)
 	salter := &TestSalter{}
 	for _, tc := range cases {
-		input := fmt.Sprintf("%#v", tc.Input)
 		err := hashAuth(context.Background(), salter, tc.Input, tc.HMACAccessor)
-		if err != nil {
-			t.Fatalf("err: %s\n\n%s", err, input)
-		}
-		if !reflect.DeepEqual(tc.Input, tc.Output) {
-			t.Fatalf("bad:\nInput:\n%s\nOutput:\n%#v\nExpected output:\n%#v", input, tc.Input, tc.Output)
-		}
+		require.NoError(t, err)
+		require.Equal(t, tc.Output, tc.Input)
 	}
 }
 
