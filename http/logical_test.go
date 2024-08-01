@@ -745,9 +745,9 @@ func TestLogical_AuditPort(t *testing.T) {
 
 	decoder := json.NewDecoder(auditLogFile)
 
-	var auditRecord map[string]interface{}
 	count := 0
 	for decoder.More() {
+		var auditRecord map[string]interface{}
 		err := decoder.Decode(&auditRecord)
 		require.NoError(t, err)
 
