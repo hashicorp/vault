@@ -29,7 +29,7 @@ const (
 
 	defaultRoleCacheSize  = 200
 	defaultOcspMaxRetries = 4
-	maxRoleCacheSize      = 10000
+	maxRoleCacheSize      = 100000
 )
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
