@@ -855,6 +855,8 @@ func TestLogical_ErrRelativePath(t *testing.T) {
 }
 
 func testBuiltinPluginMetadataAuditLog(t *testing.T, log map[string]interface{}, expectedMountClass string) {
+	t.Helper()
+
 	if mountClass, ok := log["mount_class"].(string); !ok {
 		t.Fatalf("mount_class should be a string, not %T", log["mount_class"])
 	} else if mountClass != expectedMountClass {
@@ -918,21 +920,21 @@ func TestLogical_AuditEnabled_ShouldLogPluginMetadata_Auth(t *testing.T) {
 			"file_path": auditLogFile.Name(),
 		},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	_, err = c.Logical().Write("auth/token/create", map[string]interface{}{
 		"ttl": "10s",
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+
+	// Disable audit now we're done performing operations
+	err = c.Sys().DisableAudit("file")
+	require.NoError(t, err)
 
 	// Check the audit trail on request and response
 	decoder := json.NewDecoder(auditLogFile)
-	var auditRecord map[string]interface{}
 	for decoder.More() {
+		var auditRecord map[string]interface{}
 		err := decoder.Decode(&auditRecord)
 		require.NoError(t, err)
 
@@ -994,9 +996,7 @@ func TestLogical_AuditEnabled_ShouldLogPluginMetadata_Secret(t *testing.T) {
 	// Enable the audit backend
 	tempDir := t.TempDir()
 	auditLogFile, err := os.CreateTemp(tempDir, "")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	err = c.Sys().EnableAuditWithOptions("file", &api.EnableAuditOptions{
 		Type: "file",
@@ -1004,9 +1004,7 @@ func TestLogical_AuditEnabled_ShouldLogPluginMetadata_Secret(t *testing.T) {
 			"file_path": auditLogFile.Name(),
 		},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	{
 		writeData := map[string]interface{}{
@@ -1023,10 +1021,17 @@ func TestLogical_AuditEnabled_ShouldLogPluginMetadata_Secret(t *testing.T) {
 		})
 	}
 
+	// Disable audit now we're done performing operations
+	err = c.Sys().DisableAudit("file")
+	require.NoError(t, err)
+
 	// Check the audit trail on request and response
 	decoder := json.NewDecoder(auditLogFile)
-	var auditRecord map[string]interface{}
-	for decoder.Decode(&auditRecord) == nil {
+	for decoder.More() {
+		var auditRecord map[string]interface{}
+		err := decoder.Decode(&auditRecord)
+		require.NoError(t, err)
+
 		if req, ok := auditRecord["request"]; ok {
 			auditRequest, ok := req.(map[string]interface{})
 			require.True(t, ok)
