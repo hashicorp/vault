@@ -966,8 +966,8 @@ func TestExternalPlugin_AuditEnabled_ShouldLogPluginMetadata_Auth(t *testing.T) 
 			testExternalPluginMetadataAuditLog(t, auditRequest, consts.PluginTypeCredential.String())
 		}
 
-		if req, ok := auditRecord["response"]; ok {
-			auditResponse, ok := req.(map[string]interface{})
+		if resp, ok := auditRecord["response"]; ok {
+			auditResponse, ok := resp.(map[string]interface{})
 			require.True(t, ok)
 
 			testExternalPluginMetadataAuditLog(t, auditResponse, consts.PluginTypeCredential.String())
@@ -1043,8 +1043,8 @@ func TestExternalPlugin_AuditEnabled_ShouldLogPluginMetadata_Secret(t *testing.T
 		testExternalPluginMetadataAuditLog(t, auditRequest, consts.PluginTypeSecrets.String())
 
 		auditResponse := map[string]interface{}{}
-		if req, ok := auditRecord["response"]; ok {
-			auditRequest = req.(map[string]interface{})
+		if resp, ok := auditRecord["response"]; ok {
+			auditRequest = resp.(map[string]interface{})
 			if auditResponse["path"] != plugin.Name+"/config/access" {
 				continue
 			}
