@@ -36,17 +36,13 @@ module('Acceptance | ssh | configuration', function (hooks) {
     await runCmd(`delete sys/mounts/${sshPath}`);
   });
 
-  test('it should redirect if old url is entered', async function (assert) {
+  test('it should show error if old url is entered', async function (assert) {
+    // we are intentionally not redirecting from the old url to the new one
     const sshPath = `ssh-${this.uid}`;
     await enablePage.enable('ssh', sshPath);
     await click(SES.configTab);
     await visit(`/vault/settings/secrets/configure/${sshPath}`);
-    assert.strictEqual(
-      currentURL(),
-      `/vault/secrets/${sshPath}/configuration/edit`,
-      'redirected to the new route.'
-    );
-    assert.dom(SES.configureTitle('ssh')).hasText('Configure SSH', 'shows title and not page-error');
+    assert.dom('[data-test-not-found]').exists('shows page-error');
     // cleanup
     await runCmd(`delete sys/mounts/${sshPath}`);
   });
