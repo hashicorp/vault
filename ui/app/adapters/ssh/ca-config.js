@@ -36,4 +36,9 @@ export default class SshCaConfig extends ApplicationAdapter {
   updateRecord() {
     return this.createOrUpdate(...arguments);
   }
+
+  deleteRecord(store, type, snapshot) {
+    const backend = snapshot.record.backend;
+    return this.ajax(`${this.buildURL()}/${backend}/config/ca`, 'DELETE');
+  }
 }

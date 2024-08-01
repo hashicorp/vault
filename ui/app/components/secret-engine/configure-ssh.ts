@@ -103,4 +103,17 @@ export default class ConfigureSshComponent extends Component<Args> {
     this.resetErrors();
     this.transition(this.args.id);
   }
+
+  @action
+  async deleteCaConfig() {
+    const { model } = this.args;
+    try {
+      await model.destroyRecord();
+      this.flashMessages.success('Ca certificate deleted successfully.');
+      this.transition(this.args.id);
+    } catch (error) {
+      model.rollbackAttributes();
+      this.flashMessages.danger(errorMessage(error));
+    }
+  }
 }

@@ -35,7 +35,7 @@ const validations = {
 export default class SshCaConfig extends Model {
   @attr('string') backend; // dynamic path of secret -- set on response from value passed to queryRecord
   @attr('string', { sensitive: true }) privateKey; // obfuscated, never returned by API
-  @attr('string') publicKey;
+  @attr('string', { sensitive: true }) publicKey;
   @attr('boolean', { defaultValue: true })
   generateSigningKey;
 
