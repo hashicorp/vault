@@ -12,7 +12,7 @@
 
 {{! MODAL FOR CSV DOWNLOAD }}
 {{#if this.showExportModal}}
-  <Hds::Modal id="attribution-csv-download-modal" @onClose={{this.resetModal}} as |M|>
+  <Hds::Modal id="attribution-csv-download-modal" class="has-text-left" @onClose={{this.resetModal}} as |M|>
     <M.Header @icon="info" data-test-export-modal-title>
       Export activity data
     </M.Header>
