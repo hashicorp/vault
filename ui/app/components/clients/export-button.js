@@ -63,7 +63,8 @@ export default class ClientsExportButtonComponent extends Component {
     const adapter = this.store.adapterFor('clients/activity');
     const { startTimestamp, endTimestamp } = this.args;
     return adapter.exportData({
-      format: this.exportFormat,
+      // the API only accepts json or csv
+      format: this.exportFormat === 'jsonl' ? 'json' : 'csv',
       start_time: startTimestamp,
       end_time: endTimestamp,
       namespace: this.namespaceFilter,

@@ -82,10 +82,10 @@ module('Integration | Component | clients/export-button', function (hooks) {
     await this.renderComponent();
 
     await click('[data-test-attribution-export-button]');
-    await fillIn('[data-test-download-format]', 'json');
+    await fillIn('[data-test-download-format]', 'jsonl');
     await click(GENERAL.confirmButton);
     const extension = this.downloadStub.lastCall.args[2];
-    assert.strictEqual(extension, 'json');
+    assert.strictEqual(extension, 'jsonl');
   });
 
   test('it works for csv format', async function (assert) {
