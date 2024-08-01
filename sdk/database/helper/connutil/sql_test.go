@@ -8,8 +8,6 @@ import (
 	"net/url"
 	"strings"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestSQLPasswordChars(t *testing.T) {
@@ -22,6 +20,9 @@ func TestSQLPasswordChars(t *testing.T) {
 		{"postgres", "pass/word"},
 		{"postgres", "p@ssword"},
 		{"postgres", "pass\"word\""},
+		// Much to my surprise, CREATE USER "{{password}}" PASSWORD 'foo' worked.
+		{"{{password}}", "foo"},
+		{"user", "{{username}}"},
 	}
 	for _, tc := range testCases {
 		t.Logf("username %q password %q", tc.Username, tc.Password)
@@ -73,7 +74,7 @@ func TestSQLDisableEscaping(t *testing.T) {
 		{"ms'sq;l", "pass'wor;d", false},
 	}
 	for _, tc := range testCases {
-		t.Logf("username %q password %q disable_escaling %t", tc.Username, tc.Password, tc.DisableEscaping)
+		t.Logf("username %q password %q disable_escaping %t", tc.Username, tc.Password, tc.DisableEscaping)
 
 		sql := &SQLConnectionProducer{}
 		ctx := context.Background()
@@ -94,46 +95,6 @@ func TestSQLDisableEscaping(t *testing.T) {
 			} else {
 				if strings.Contains(sql.ConnectionURL, tc.Username) || strings.Contains(sql.ConnectionURL, tc.Password) {
 					t.Errorf("Raw username and/or password was present in ConnectionURL")
-				}
-			}
-		}
-	}
-}
-
-func TestSQLDisallowTemplates(t *testing.T) {
-	testCases := []struct {
-		Username string
-		Password string
-	}{
-		{"{{username}}", "pass"},
-		{"{{password}}", "pass"},
-		{"user", "{{username}}"},
-		{"user", "{{password}}"},
-		{"{{username}}", "{{password}}"},
-		{"abc{username}xyz", "123{password}789"},
-		{"abc{{username}}xyz", "123{{password}}789"},
-		{"abc{{{username}}}xyz", "123{{{password}}}789"},
-	}
-	for _, disableEscaping := range []bool{true, false} {
-		for _, tc := range testCases {
-			t.Logf("username %q password %q disable_escaping %t", tc.Username, tc.Password, disableEscaping)
-
-			sql := &SQLConnectionProducer{}
-			ctx := context.Background()
-			conf := map[string]interface{}{
-				"connection_url":   "server=localhost;port=1433;user id={{username}};password={{password}};database=mydb;",
-				"username":         tc.Username,
-				"password":         tc.Password,
-				"disable_escaping": disableEscaping,
-			}
-			_, err := sql.Init(ctx, conf, false)
-			if disableEscaping {
-				if err != nil {
-					if !assert.EqualError(t, err, "username and/or password cannot contain the template variables") {
-						t.Errorf("Init error on %q %q: %+v", tc.Username, tc.Password, err)
-					}
-				} else {
-					assert.Equal(t, sql.ConnectionURL, "server=localhost;port=1433;user id=abc{username}xyz;password=123{password}789;database=mydb;")
 				}
 			}
 		}

@@ -5,7 +5,7 @@ package dbutil
 
 import (
 	"errors"
-	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
@@ -18,13 +18,24 @@ var (
 	ErrEmptyRotationStatement = errors.New("empty rotation statements")
 )
 
-// Query templates a query for us.
-func QueryHelper(tpl string, data map[string]string) string {
-	for k, v := range data {
-		tpl = strings.ReplaceAll(tpl, fmt.Sprintf("{{%s}}", k), v)
-	}
+var queryHelperRegex = regexp.MustCompile(`{{[^{}]+}}`)
 
-	return tpl
+// QueryHelper evaluates a simple string template syntax by replacing {{value}}
+// placeholders with the values from the supplied data map. Despite the name,
+// it is NOT only used to template queries - it is also used for connection
+// URIs or DSNs. Since it has no idea of the specific syntax into which it is
+// templating, it does not perform any escaping. Unbalanced opening and closing
+// brace sequences are passed through as is, as are any placeholders for which
+// there is no key found in the map.
+func QueryHelper(tpl string, data map[string]string) string {
+	return queryHelperRegex.ReplaceAllStringFunc(tpl, func(s string) string {
+		replacement, ok := data[s[2:len(s)-2]]
+		if ok {
+			return replacement
+		} else {
+			return s
+		}
+	})
 }
 
 // StatementCompatibilityHelper will populate the statements fields to support
