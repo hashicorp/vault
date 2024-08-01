@@ -63,17 +63,13 @@ module('Acceptance | aws | configuration', function (hooks) {
     await runCmd(`delete sys/mounts/${path}`);
   });
 
-  test('it should redirect if old url is entered', async function (assert) {
+  test('it should show error if old url is entered', async function (assert) {
+    // we are intentionally not redirecting from the old url to the new one.
     const path = `aws-${this.uid}`;
     await enablePage.enable('aws', path);
     await click(SES.configTab);
     await visit(`/vault/settings/secrets/configure/${path}`);
-    assert.strictEqual(
-      currentURL(),
-      `/vault/secrets/${path}/configuration/edit`,
-      'redirected to the new route.'
-    );
-    assert.dom(SES.configureTitle('aws')).hasText('Configure AWS', 'shows title and not page-error');
+    assert.dom('[data-test-not-found]').exists('shows page-error');
     // cleanup
     await runCmd(`delete sys/mounts/${path}`);
   });
