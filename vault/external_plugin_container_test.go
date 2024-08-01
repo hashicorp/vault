@@ -84,7 +84,6 @@ func TestExternalPluginInContainer_MountAndUnmount(t *testing.T) {
 	})
 
 	t.Run("rootless runsc", func(t *testing.T) {
-		t.Skip("Temporarily skipping due to environment breakage")
 		if _, err := exec.LookPath("runsc"); err != nil {
 			t.Skip("Skipping test as runsc not found on path")
 		}
