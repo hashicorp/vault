@@ -6,8 +6,20 @@
 import Model, { attr } from '@ember-data/model';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { regions } from 'vault/helpers/aws-regions';
-// ARG TODO, validations: if secret_key then there must be an accec_key.
+import { withModelValidations } from 'vault/decorators/model-validations';
 
+const validations = {
+  accessKey: [
+    {
+      validator(model) {
+        const { accessKey, secretKey } = model;
+        return (accessKey && secretKey) || (!accessKey && !secretKey) ? true : false;
+      },
+      message: 'Access Key and Secret Key are both required if one of them is set.',
+    },
+  ],
+};
+@withModelValidations(validations)
 export default class AwsRootConfig extends Model {
   @attr('string') backend; // dynamic path of secret -- set on response from value passed to queryRecord
   @attr('string') accessKey;
@@ -37,7 +49,7 @@ export default class AwsRootConfig extends Model {
     return [
       { default: ['accessKey', 'secretKey'] },
       {
-        'Method Options': ['region', 'iamEndpoint', 'stsEndpoint', 'maxRetries'],
+        'Root config options': ['region', 'iamEndpoint', 'stsEndpoint', 'maxRetries'],
       },
     ];
   }

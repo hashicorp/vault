@@ -51,7 +51,7 @@ export default class ConfigurationDetails extends Component<Args> {
     // Fetch the config for the engine type.
     switch (type) {
       case 'aws':
-        this.fetchAwsRootConfig(id);
+        this.fetchAwsRootConfig(id); // TODO also fetch the lease config. Move these fetches to parent route.
         break;
       case 'ssh':
         this.fetchSshCaConfig(id);

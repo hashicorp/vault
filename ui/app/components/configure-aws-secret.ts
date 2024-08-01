@@ -8,6 +8,7 @@ import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
+import { ValidationMap } from 'vault/vault/app-types';
 import errorMessage from 'vault/utils/error-message';
 
 import type LeaseConfigModel from 'vault/models/aws/lease-config';
@@ -46,38 +47,63 @@ export default class ConfigureAwsSecretComponent extends Component<Args> {
 
   @tracked errorMessageRoot: string | null = null;
   @tracked invalidFormAlert: string | null = null;
+  @tracked modelValidationsLease: ValidationMap | null = null;
+  @tracked modelValidationsRoot: ValidationMap | null = null;
 
   @task
   *save(event: Event) {
     event.preventDefault();
     this.resetErrors();
     const { id, leaseConfig, rootConfig } = this.args;
+    const isValidRoot = this.validate(rootConfig, 'rootConfig');
+    const isValidLease = this.validate(leaseConfig, 'leaseConfig');
 
-    try {
-      yield rootConfig.save();
-      this.flashMessages.success(`Successfully saved ${id}'s root configuration.`);
-    } catch (error) {
-      this.errorMessageRoot = errorMessage(error);
+    if (!isValidRoot || !isValidLease) {
+      this.flashMessages.danger('Please correct the errors in the form before submitting.');
+      return;
     }
-
-    try {
-      yield leaseConfig.save();
-      this.flashMessages.success(`Successfully saved ${id}'s lease configuration.`);
-    } catch (error) {
-      // if lease config fails, notify with a flash message but still allow users to save the root config.
-      if (!this.errorMessageRoot) {
-        this.flashMessages.danger(`Lease configuration was not saved: ${errorMessage(error)}`, {
-          sticky: true,
-        });
-      } else {
-        this.flashMessages.danger(
-          `Configuration not saved: ${errorMessage(error)}. ${this.errorMessageRoot}`,
-          {
-            sticky: true,
-          }
-        );
+    // Check if any of the models attributes have changed.
+    // If no changes to either model, transition and notify user.
+    // If changes to one model, save the one that changed and notify user.
+    // Otherwise save both models.
+    const leaseAttrChanged = Object.keys(leaseConfig.changedAttributes()).length > 0;
+    const rootAttrChanged = Object.keys(leaseConfig.changedAttributes()).length > 0;
+    if (!leaseAttrChanged && !rootAttrChanged) {
+      this.flashMessages.danger('No changes detected.');
+      this.transition(id);
+    }
+    if (rootAttrChanged) {
+      try {
+        yield rootConfig.save();
+        this.flashMessages.success(`Successfully saved ${id}'s root configuration.`);
+      } catch (error) {
+        this.errorMessageRoot = errorMessage(error);
       }
     }
+    if (leaseAttrChanged) {
+      try {
+        yield leaseConfig.save();
+        this.flashMessages.success(`Successfully saved ${id}'s lease configuration.`);
+      } catch (error) {
+        // if lease config fails, notify with a flash message but still allow users to save the root config.
+        if (!this.errorMessageRoot) {
+          this.flashMessages.danger(`Lease configuration was not saved: ${errorMessage(error)}`, {
+            sticky: true,
+          });
+        } else {
+          this.flashMessages.danger(
+            `Configuration not saved: ${errorMessage(error)}. ${this.errorMessageRoot}`,
+            {
+              sticky: true,
+            }
+          );
+        }
+      }
+    }
+    this.transition(id);
+  }
+
+  transition(id: string) {
     // prevent transition if there are errors with root configuration
     if (this.errorMessageRoot) {
       this.invalidFormAlert = 'There was an error submitting this form.';
@@ -86,14 +112,27 @@ export default class ConfigureAwsSecretComponent extends Component<Args> {
     }
   }
 
-  @action
-  onCancel() {
-    this.router.transitionTo('vault.cluster.secrets.backend.configuration', this.args.id);
+  validate(model: RootConfigModel | LeaseConfigModel, modelName: string) {
+    const { isValid, state, invalidFormMessage } = model.validate();
+    // cannot use a tracked object for modelValidations because it will not update the form.
+    if (modelName === 'rootConfig') {
+      this.modelValidationsRoot = isValid ? null : state;
+    }
+    if (modelName === 'leaseConfig') {
+      this.modelValidationsLease = isValid ? null : state;
+    }
+    this.invalidFormAlert = isValid ? '' : invalidFormMessage;
+    return isValid;
   }
 
   resetErrors() {
     this.flashMessages.clearMessages();
     this.errorMessageRoot = null;
     this.invalidFormAlert = null;
+  }
+
+  @action
+  onCancel() {
+    this.transition(this.args.id);
   }
 }
