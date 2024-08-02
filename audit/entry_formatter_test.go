@@ -312,10 +312,8 @@ func TestEntryFormatter_Process(t *testing.T) {
 			Subtype:         ResponseType,
 			RequiredFormat:  JSONFormat,
 			Data: &logical.LogInput{
-				Request: &logical.Request{ID: "123"},
-				Response: &logical.Response{
-					Auth: &logical.Auth{},
-				},
+				Request:  &logical.Request{ID: "123"},
+				Response: &logical.Response{},
 			},
 			RootNamespace: true,
 		},
