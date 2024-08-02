@@ -11,39 +11,46 @@
   <ConfigCta />
 {{else}}
   <div class="is-grid has-top-margin-l grid-2-columns grid-gap-2">
-    <OverviewCard
-      @cardTitle="Roles"
-      @subText="The number of Vault roles being used to generate Kubernetes credentials."
-      @actionText={{if @roles.length "View Roles" "Create Role"}}
-      @actionTo={{if @roles.length "roles" "roles.create"}}
-    >
-      <h2 class="title is-2 has-font-weight-normal has-top-margin-m" data-test-roles-card-overview-num>{{or
-          @roles.length
-          "None"
-        }}</h2>
+    <OverviewCard @cardTitle="Roles" @subText="The number of Vault roles being used to generate Kubernetes credentials.">
+      <:action>
+        <Hds::Link::Standalone
+          @text={{if @roles.length "View Roles" "Create Role"}}
+          @route={{if @roles.length "roles" "roles.create"}}
+          @icon={{if @roles.length "chevron-right" "plus"}}
+          @iconPosition="trailing"
+        />
+      </:action>
+      <:content>
+        <h2 class="title is-2 has-font-weight-normal has-top-margin-m" data-test-roles-card-overview-num>{{or
+            @roles.length
+            "None"
+          }}</h2>
+      </:content>
     </OverviewCard>
     <OverviewCard @cardTitle="Generate credentials" @subText="Quickly generate credentials by typing the role name.">
-      <div class="has-top-margin-m is-flex">
-        <SearchSelect
-          class="is-flex-grow-1"
-          @ariaLabel="Role"
-          @placeholder="Type to find a role..."
-          @disallowNewItems={{true}}
-          @options={{this.roleOptions}}
-          @selectLimit="1"
-          @fallbackComponent="input-search"
-          @onChange={{this.selectRole}}
-          @renderInPlace={{true}}
-        />
-        <Hds::Button
-          @text="Generate"
-          @color="secondary"
-          class="has-left-margin-s"
-          disabled={{not this.selectedRole}}
-          {{on "click" this.generateCredential}}
-          data-test-generate-credential-button
-        />
-      </div>
+      <:content>
+        <div class="has-top-margin-m is-flex">
+          <SearchSelect
+            class="is-flex-grow-1"
+            @ariaLabel="Role"
+            @placeholder="Type to find a role..."
+            @disallowNewItems={{true}}
+            @options={{this.roleOptions}}
+            @selectLimit="1"
+            @fallbackComponent="input-search"
+            @onChange={{this.selectRole}}
+            @renderInPlace={{true}}
+          />
+          <Hds::Button
+            @text="Generate"
+            @color="secondary"
+            class="has-left-margin-s"
+            disabled={{not this.selectedRole}}
+            {{on "click" this.generateCredential}}
+            data-test-generate-credential-button
+          />
+        </div>
+      </:content>
     </OverviewCard>
   </div>
 {{/if}}

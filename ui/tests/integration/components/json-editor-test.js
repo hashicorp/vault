@@ -6,7 +6,7 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
-import { render, fillIn, find, waitUntil, click } from '@ember/test-helpers';
+import { render, fillIn, find, waitUntil, click, triggerKeyEvent } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import jsonEditor from '../../pages/components/json-editor';
 import sinon from 'sinon';
@@ -122,12 +122,33 @@ module('Integration | Component | json-editor', function (hooks) {
     assert.dom('.CodeMirror-code').hasText(`{ "test": "********"}`, 'shows data with obscured values');
     assert.dom('[data-test-toggle-input="revealValues"]').isNotChecked('reveal values toggle is unchecked');
     await click('[data-test-toggle-input="revealValues"]');
-    assert.dom('.CodeMirror-code').hasText(JSON_BLOB, 'shows data with real values');
+    // we are hardcoding the hasText comparison instead of using the JSON_BLOB because we no longer match passed content (ex: @value) to the tracked codemirror instance (ex: this._editor.getVale()) if there are line-breaks or whitespace differences.
+    assert.dom('.CodeMirror-code').hasText(`{ "test": "test" }`, 'shows data with real values');
     assert.dom('[data-test-toggle-input="revealValues"]').isChecked('reveal values toggle is checked');
     // turn obscure back on to ensure readonly overrides reveal setting
     await click('[data-test-toggle-input="revealValues"]');
     this.set('readOnly', false);
     assert.dom('[data-test-toggle-input="revealValues"]').doesNotExist('reveal values toggle is hidden');
-    assert.dom('.CodeMirror-code').hasText(JSON_BLOB, 'shows data with real values on edit mode');
+    assert.dom('.CodeMirror-code').hasText(`{ "test": "test" }`, 'shows data with real values on edit mode');
+  });
+
+  test('code-mirror modifier sets value correctly on non json object', async function (assert) {
+    // this.value is a tracked property, so anytime it changes the modifier is called. We're testing non-json content by setting the mode to ruby and adding a comment
+    this.value = null;
+    await render(hbs`
+      <JsonEditor
+        @value={{this.value}}
+        @mode="ruby"
+        @valueUpdated={{fn (mut this.value)}}
+      />
+    `);
+    await fillIn('textarea', '#A comment');
+    assert.strictEqual(this.value, '#A comment', 'value is set correctly');
+    await triggerKeyEvent('textarea', 'keydown', 'Enter');
+    assert.strictEqual(
+      this.value,
+      `#A comment\n`,
+      'even after hitting enter the value is still set correctly'
+    );
   });
 });

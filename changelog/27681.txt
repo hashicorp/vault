@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/pki: fix lack of serial number to a certificate read resulting in a server side error.
+```

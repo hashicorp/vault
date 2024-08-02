@@ -213,7 +213,8 @@ This endpoint is used to modify the configuration of the autopilot subsystem of 
 - `dead_server_last_contact_threshold` `(string: "24h")` - Limit on the amount of time
   a server can go without leader contact before being considered failed. This
   takes effect only when `cleanup_dead_servers` is `true`. This can not be set to a value
-  smaller than 1m.
+  smaller than 1m. **We strongly recommend that this is kept at a high duration, such as a day,
+  as it being too low could result in removal of nodes that aren't actually dead.**
 
 - `max_trailing_logs` `(int: 1000)` - Amount of entries in the Raft Log that a server
   can be behind before being considered unhealthy.

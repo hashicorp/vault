@@ -7,6 +7,7 @@ import SyncDestinationModel from '../destination';
 import { attr } from '@ember-data/model';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 
+// displayFields are used on the destination details view
 const displayFields = [
   // connection details
   'name',
@@ -20,11 +21,13 @@ const displayFields = [
   'secretNameTemplate',
   'customTags',
 ];
+// formFieldGroups are used on the create-edit destination view
 const formFieldGroups = [
   {
-    default: ['name', 'region', 'roleArn', 'externalId', 'granularity', 'secretNameTemplate', 'customTags'],
+    default: ['name', 'region', 'roleArn', 'externalId'],
   },
   { Credentials: ['accessKeyId', 'secretAccessKey'] },
+  { 'Advanced configuration': ['granularity', 'secretNameTemplate', 'customTags'] },
 ];
 @withFormFields(displayFields, formFieldGroups)
 export default class SyncDestinationsAwsSecretsManagerModel extends SyncDestinationModel {
@@ -32,6 +35,8 @@ export default class SyncDestinationsAwsSecretsManagerModel extends SyncDestinat
     label: 'Access key ID',
     subText:
       'Access key ID to authenticate against the secrets manager. If empty, Vault will use the AWS_ACCESS_KEY_ID environment variable if configured.',
+    sensitive: true,
+    noCopy: true,
   })
   accessKeyId; // obfuscated, never returned by API
 
@@ -39,6 +44,8 @@ export default class SyncDestinationsAwsSecretsManagerModel extends SyncDestinat
     label: 'Secret access key',
     subText:
       'Secret access key to authenticate against the secrets manager. If empty, Vault will use the AWS_SECRET_ACCESS_KEY environment variable if configured.',
+    sensitive: true,
+    noCopy: true,
   })
   secretAccessKey; // obfuscated, never returned by API
 

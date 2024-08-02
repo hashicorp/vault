@@ -49,17 +49,10 @@ function getSum(array, key) {
 }
 
 function getTotalCounts(array) {
-  const counts = CLIENT_TYPES.reduce((obj, key) => {
+  return CLIENT_TYPES.reduce((obj, key) => {
     obj[key] = getSum(array, key);
     return obj;
   }, {});
-
-  // add deprecated keys
-  return {
-    ...counts,
-    distinct_entities: counts.entity_clients,
-    non_entity_tokens: counts.non_entity_clients,
-  };
 }
 
 function randomBetween(min, max) {
@@ -75,8 +68,6 @@ function generateMountBlock(path, counts) {
     mount_path: path,
     counts: {
       ...baseObject,
-      distinct_entities: 0,
-      non_entity_tokens: 0,
       // object contains keys for which 0-values of base object to overwrite
       ...counts,
     },
@@ -214,22 +205,39 @@ export default function (server) {
   });
 
   server.get('/sys/internal/counters/activity', (schema, req) => {
+    const activities = schema['clients/activities'];
     let { start_time, end_time } = req.queryParams;
-    if (req.queryParams.current_billing_period) {
-      // { current_billing_period: true } automatically queries the activity log
-      // from the builtin license start timestamp to the current month
+    if (!start_time && !end_time) {
+      // if there are no date query params, the activity log default behavior
+      // queries from the builtin license start timestamp to the current month
       start_time = LICENSE_START.toISOString();
       end_time = STATIC_NOW.toISOString();
     }
     // backend returns a timestamp if given unix time, so first convert to timestamp string here
     if (!start_time.includes('T')) start_time = fromUnixTime(start_time).toISOString();
     if (!end_time.includes('T')) end_time = fromUnixTime(end_time).toISOString();
+
+    const record = activities.findBy({ start_time, end_time });
+    let data;
+    if (record) {
+      // if we already have data for the given start/end time, use that
+      data = {
+        start_time: record.start_time,
+        end_time: record.end_time,
+        by_namespace: record.by_namespace,
+        months: record.months,
+        total: record.total,
+      };
+    } else {
+      data = generateActivityResponse(start_time, end_time);
+      activities.create(data);
+    }
     return {
       request_id: 'some-activity-id',
       lease_id: '',
       renewable: false,
       lease_duration: 0,
-      data: generateActivityResponse(start_time, end_time),
+      data,
       wrap_info: null,
       warnings: null,
       auth: null,

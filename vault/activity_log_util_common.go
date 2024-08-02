@@ -114,59 +114,131 @@ func (a *ActivityLog) computeCurrentMonthForBillingPeriodInternal(ctx context.Co
 	if len(byMonth) > 1 {
 		return nil, errors.New(fmt.Sprintf("multiple months of data found in partial month's client count breakdowns: %+v\n", byMonth))
 	}
+	totalCounts := &activity.CountsRecord{}
+	newCounts := &activity.CountsRecord{}
+	newNamespaces := make([]*activity.MonthlyNamespaceRecord, 0)
+	totalNamespaces := make([]*activity.MonthlyNamespaceRecord, 0)
 
-	// Now we will add the clients for the current month to a copy of the billing period's hll to
-	// see how the cardinality grows.
+	monthRecord := &activity.MonthRecord{
+		Timestamp:  timeutil.StartOfMonth(endTime).UTC().Unix(),
+		Counts:     totalCounts,
+		Namespaces: totalNamespaces,
+		NewClients: &activity.NewClientRecord{
+			Counts:     newCounts,
+			Namespaces: newNamespaces,
+		},
+	}
+	if len(byMonth) == 0 {
+		return monthRecord, nil
+	}
+
+	// Create a copy of the previous month's HLL per client type
+	// We'll add all of the new clients seen this month to these typed HLLs
 	hllByType := make(map[string]*hyperloglog.Sketch, len(ActivityClientTypes))
-	totalByType := make(map[string]int, len(ActivityClientTypes))
 	for _, typ := range ActivityClientTypes {
 		hllByType[typ] = billingPeriodHLL.Clone()
 	}
 
-	for _, month := range byMonth {
-		if month.NewClients == nil || month.NewClients.Counts == nil || month.Counts == nil {
-			return nil, errors.New("malformed current month used to calculate current month's activity")
+	// This is the estimated number of clients seen in the previous months
+	seenPreviousMonthsEstimate := billingPeriodHLL.Estimate()
+
+	runningMountEstimatesByType := make(map[string]uint64)
+	runningNSEstimatesByType := make(map[string]uint64)
+
+	// we've already checked that byMonth has length of 1, so this will get the
+	// value of the only entry in the map
+	var month *processMonth
+	for _, month = range byMonth {
+	}
+
+	// This month should have clients
+	if month.NewClients == nil || month.NewClients.Counts == nil || month.Counts == nil {
+		return nil, errors.New("malformed current month used to calculate current month's activity")
+	}
+
+	for nsID, namespace := range month.Namespaces {
+		namespaceActivity := &activity.MonthlyNamespaceRecord{NamespaceID: nsID, Counts: &activity.CountsRecord{}}
+		newNamespaceActivity := &activity.MonthlyNamespaceRecord{NamespaceID: nsID, Counts: &activity.CountsRecord{}}
+		mountsActivity := make([]*activity.MountRecord, 0)
+		newMountsActivity := make([]*activity.MountRecord, 0)
+
+		for mountAccessor, mount := range namespace.Mounts {
+			mountPath := a.mountAccessorToMountPath(mountAccessor)
+
+			mountCounts := &activity.CountsRecord{}
+			newMountCounts := &activity.CountsRecord{}
+
+			for _, typ := range ActivityClientTypes {
+				for clientID := range mount.Counts.clientsByType(typ) {
+					hllByType[typ].Insert([]byte(clientID))
+
+					// increment the per mount, per namespace, and total counts
+					// for each client
+					a.incrementCount(totalCounts, 1, typ)
+					a.incrementCount(mountCounts, 1, typ)
+					a.incrementCount(namespaceActivity.Counts, 1, typ)
+				}
+
+				// get an estimated number of new clients on this mount and
+				// increment the new mount counts
+				mountEstimate := hllByType[typ].Estimate() - seenPreviousMonthsEstimate - runningMountEstimatesByType[typ]
+				runningMountEstimatesByType[typ] += mountEstimate
+				a.incrementCount(newMountCounts, int(mountEstimate), typ)
+			}
+
+			// if there are any new clients on this mount, add it to the
+			// list of new mounts
+			if newMountCounts.HasCounts() {
+				newMountsActivity = append(newMountsActivity, &activity.MountRecord{MountPath: mountPath, Counts: newMountCounts})
+			}
+			mountsActivity = append(mountsActivity, &activity.MountRecord{MountPath: mountPath, Counts: mountCounts})
 		}
+
+		namespaceActivity.Mounts = mountsActivity
+		totalNamespaces = append(totalNamespaces, namespaceActivity)
 
 		for _, typ := range ActivityClientTypes {
-			// Note that the following calculations assume that all clients seen are currently in
-			// the NewClients section of byMonth. It is best to explicitly check this, just verify
-			// our assumptions about the passed in byMonth argument.
-			if month.Counts.countByType(typ) != month.NewClients.Counts.countByType(typ) {
-				return nil, errors.New("current month clients cache assumes billing period")
-			}
-			for clientID := range month.NewClients.Counts.clientsByType(typ) {
-				// All the clients for the current month are in the newClients section, initially.
-				// We need to deduplicate these clients across the billing period by adding them
-				// into the billing period hyperloglogs.
-				hllByType[typ].Insert([]byte(clientID))
-				totalByType[typ] += 1
-			}
+			// now that we've added all the clients from the namespace, get an
+			// estimated number of new clients on the namespace and increment
+			// the new namespace counts
+			nsEstimate := hllByType[typ].Estimate() - seenPreviousMonthsEstimate - runningNSEstimatesByType[typ]
+			runningNSEstimatesByType[typ] += nsEstimate
+			a.incrementCount(newNamespaceActivity.Counts, int(nsEstimate), typ)
+		}
+
+		// if there are any new clients on this namespace, add it to the
+		// list of new namespaces
+		if newNamespaceActivity.Counts.HasCounts() {
+			newNamespaceActivity.Mounts = newMountsActivity
+			newNamespaces = append(newNamespaces, newNamespaceActivity)
 		}
 	}
 
-	currentMonthNewByType := make(map[string]int, len(ActivityClientTypes))
+	// get the overall estimated number of new clients and increment the
+	// total new counts
 	for _, typ := range ActivityClientTypes {
-		// The number of new entities for the current month is approximately the size of the hll with
-		// the current month's entities minus the size of the initial billing period hll.
-		currentMonthNewByType[typ] = int(hllByType[typ].Estimate() - billingPeriodHLL.Estimate())
+		totalEstimate := int(hllByType[typ].Estimate() - seenPreviousMonthsEstimate)
+		a.incrementCount(newCounts, totalEstimate, typ)
 	}
 
-	return &activity.MonthRecord{
-		Timestamp: timeutil.StartOfMonth(endTime).UTC().Unix(),
-		NewClients: &activity.NewClientRecord{Counts: &activity.CountsRecord{
-			EntityClients:    currentMonthNewByType[entityActivityType],
-			NonEntityClients: currentMonthNewByType[nonEntityTokenActivityType],
-			SecretSyncs:      currentMonthNewByType[secretSyncActivityType],
-			ACMEClients:      currentMonthNewByType[ACMEActivityType],
-		}},
-		Counts: &activity.CountsRecord{
-			EntityClients:    totalByType[entityActivityType],
-			NonEntityClients: totalByType[nonEntityTokenActivityType],
-			SecretSyncs:      totalByType[secretSyncActivityType],
-			ACMEClients:      totalByType[ACMEActivityType],
-		},
-	}, nil
+	monthRecord.Namespaces = totalNamespaces
+	monthRecord.NewClients.Namespaces = newNamespaces
+	return monthRecord, nil
+}
+
+// incrementCount modifies the passed-in counts record by incrementing the
+// client type's field by num
+func (a *ActivityLog) incrementCount(c *activity.CountsRecord, num int, typ string) {
+	switch typ {
+	case entityActivityType:
+		c.EntityClients += num
+	case nonEntityTokenActivityType:
+		c.NonEntityClients += num
+	case secretSyncActivityType:
+		c.SecretSyncs += num
+	case ACMEActivityType:
+		c.ACMEClients += num
+	}
 }
 
 // sortALResponseNamespaces sorts the namespaces for activity log responses.
@@ -386,19 +458,14 @@ func (e *segmentReader) ReadEntity(ctx context.Context) (*activity.EntityActivit
 
 // namespaceRecordToCountsResponse converts the record to the ResponseCounts
 // type. The function sums entity, non-entity, and secret sync counts to get the
-// total client count. If includeDeprecated is true, the deprecated fields
-// NonEntityTokens and DistinctEntities are populated
-func (a *ActivityLog) countsRecordToCountsResponse(record *activity.CountsRecord, includeDeprecated bool) *ResponseCounts {
+// total client count.
+func (a *ActivityLog) countsRecordToCountsResponse(record *activity.CountsRecord) *ResponseCounts {
 	response := &ResponseCounts{
 		EntityClients:    record.EntityClients,
 		NonEntityClients: record.NonEntityClients,
 		Clients:          record.EntityClients + record.NonEntityClients + record.SecretSyncs + record.ACMEClients,
 		SecretSyncs:      record.SecretSyncs,
 		ACMEClients:      record.ACMEClients,
-	}
-	if includeDeprecated {
-		response.NonEntityTokens = response.NonEntityClients
-		response.DistinctEntities = response.EntityClients
 	}
 	return response
 }
@@ -408,9 +475,7 @@ func (a *ActivityLog) countsRecordToCountsResponse(record *activity.CountsRecord
 // counts to get the total client count.
 func (a *ActivityLog) namespaceRecordToCountsResponse(record *activity.NamespaceRecord) *ResponseCounts {
 	return &ResponseCounts{
-		DistinctEntities: int(record.Entities),
 		EntityClients:    int(record.Entities),
-		NonEntityTokens:  int(record.NonEntityTokens),
 		NonEntityClients: int(record.NonEntityTokens),
 		Clients:          int(record.Entities + record.NonEntityTokens + record.SecretSyncs + record.ACMEClients),
 		SecretSyncs:      int(record.SecretSyncs),

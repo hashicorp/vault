@@ -166,7 +166,10 @@ module('Integration | Component | auth jwt', function (hooks) {
     await waitUntil(() => {
       return this.openSpy.calledOnce;
     });
+
     cancelTimers();
+    await settled();
+
     const call = this.openSpy.getCall(0);
     assert.deepEqual(
       call.args,
@@ -201,6 +204,8 @@ module('Integration | Component | auth jwt', function (hooks) {
       buildMessage({ data: { source: 'oidc-callback', state: 'state', foo: 'bar' } })
     );
     cancelTimers();
+    await settled();
+
     assert.strictEqual(this.error, ERROR_MISSING_PARAMS, 'calls onError with params missing error');
   });
 
@@ -226,9 +231,11 @@ module('Integration | Component | auth jwt', function (hooks) {
       return this.openSpy.calledOnce;
     });
     this.window.trigger('message', buildMessage({ origin: 'http://hackerz.com' }));
+
     cancelTimers();
     await settled();
-    assert.notOk(this.handler.called, 'should not call the submit handler');
+
+    assert.false(this.handler.called, 'should not call the submit handler');
   });
 
   test('oidc: fails silently when event is not trusted', async function (assert) {
@@ -242,7 +249,8 @@ module('Integration | Component | auth jwt', function (hooks) {
     this.window.trigger('message', buildMessage({ isTrusted: false }));
     cancelTimers();
     await settled();
-    assert.notOk(this.handler.called, 'should not call the submit handler');
+
+    assert.false(this.handler.called, 'should not call the submit handler');
   });
 
   test('oidc: it should trigger error callback when role is not found', async function (assert) {
