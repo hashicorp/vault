@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -156,13 +157,42 @@ func (a *ActivityLog) computeCurrentMonthForBillingPeriodInternal(ctx context.Co
 		return nil, errors.New("malformed current month used to calculate current month's activity")
 	}
 
+	type processByNamespaceID struct {
+		id string
+		*processByNamespace
+	}
+
+	namespaces := make([]*processByNamespaceID, 0, len(month.Namespaces))
 	for nsID, namespace := range month.Namespaces {
+		namespaces = append(namespaces, &processByNamespaceID{id: nsID, processByNamespace: namespace})
+	}
+	slices.SortStableFunc(namespaces, func(a, b *processByNamespaceID) int {
+		return strings.Compare(a.id, b.id)
+	})
+
+	for _, n := range namespaces {
+		nsID := n.id
+		namespace := n.processByNamespace
 		namespaceActivity := &activity.MonthlyNamespaceRecord{NamespaceID: nsID, Counts: &activity.CountsRecord{}}
 		newNamespaceActivity := &activity.MonthlyNamespaceRecord{NamespaceID: nsID, Counts: &activity.CountsRecord{}}
 		mountsActivity := make([]*activity.MountRecord, 0)
 		newMountsActivity := make([]*activity.MountRecord, 0)
 
+		type summaryByMountAccessor struct {
+			accessor string
+			*processMount
+		}
+		mounts := make([]*summaryByMountAccessor, 0, len(namespace.Mounts))
+
 		for mountAccessor, mount := range namespace.Mounts {
+			mounts = append(mounts, &summaryByMountAccessor{accessor: mountAccessor, processMount: mount})
+		}
+		slices.SortStableFunc(mounts, func(a, b *summaryByMountAccessor) int {
+			return strings.Compare(a.accessor, b.accessor)
+		})
+		for _, m := range mounts {
+			mountAccessor := m.accessor
+			mount := m.processMount
 			mountPath := a.mountAccessorToMountPath(mountAccessor)
 
 			mountCounts := &activity.CountsRecord{}
