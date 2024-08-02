@@ -49,7 +49,7 @@ export default class SecretsBackendConfigurationRoute extends Route {
         ...configModels,
       });
     }
-    return secretEngineModel;
+    return hash({ secretEngineModel });
   }
 
   standardizeConfigModels(configModels) {
@@ -125,7 +125,7 @@ export default class SecretsBackendConfigurationRoute extends Route {
     super.setupController(controller, resolvedModel);
     controller.typeDisplay = allEngines().find(
       (engine) => engine.type === resolvedModel.secretEngineModel.type
-    ).displayName;
+    )?.displayName;
     controller.isConfigurable = CONFIGURABLE_SECRET_ENGINES.includes(resolvedModel.secretEngineModel.type);
     controller.modelId = resolvedModel.secretEngineModel.id;
     // from the resolvedModel remove the secretEngineModel as it's not needed in the configuration details component
