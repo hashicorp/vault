@@ -8,7 +8,7 @@ import Controller from '@ember/controller';
 import { CONFIGURABLE_SECRET_ENGINES } from 'vault/helpers/mountable-secret-engines';
 
 export default Controller.extend({
-  isConfigurable: computed('model.type', function () {
-    return CONFIGURABLE_SECRET_ENGINES.includes(this.model.type);
+  isConfigurable: computed('model.backend.type', function () {
+    return CONFIGURABLE_SECRET_ENGINES.includes(this.model.backend.type);
   }),
 });

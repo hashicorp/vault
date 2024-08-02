@@ -10,8 +10,11 @@ import { allEngines } from 'vault/helpers/mountable-secret-engines';
 
 import type Store from '@ember-data/store';
 import type SecretEngineModel from 'vault/models/secret-engine';
-import type AdapterError from '@ember-data/adapter';
+import type AwsRootConfig from 'vault/models/aws/root-config';
+import type AwsLeaseConfig from 'vault/models/aws/lease-config';
+import type SshCaConfig from 'vault/models/ssh/ca-config';
 import type Model from '@ember-data/model';
+import AdapterError from '@ember-data/adapter';
 
 /**
  * @module ConfigurationDetails
@@ -27,6 +30,7 @@ import type Model from '@ember-data/model';
 
 interface Args {
   model: SecretEngineModel | null;
+  configModel: AwsLeaseConfig | AwsRootConfig | SshCaConfig | null;
 }
 
 interface ConfigError {
@@ -47,43 +51,20 @@ export default class ConfigurationDetails extends Component<Args> {
     if (!model) {
       return;
     }
-    const { id, type } = model;
-    // Fetch the config for the engine type.
-    switch (type) {
-      case 'aws':
-        this.fetchAwsRootConfig(id);
-        break;
-      case 'ssh':
-        this.fetchSshCaConfig(id);
-        break;
-    }
-  }
+    // check if the configModel is an Error and what kind.
+    const { configModel } = this.args;
+    if (!configModel) return;
 
-  async fetchAwsRootConfig(backend: string) {
-    try {
-      this.configModel = await this.store.queryRecord('aws/root-config', { backend });
-    } catch (e: AdapterError) {
-      // If the error is something other than 404 "not found" then an API error has come back and this will be displayed to the user as an error.
-      // If it's 404 then configError is not set nor is the configModel and a prompt to configure will be shown.
-      if (e.httpStatus !== 404) {
-        this.configError = e;
+    if (configModel instanceof AdapterError) {
+      if (configModel.httpStatus === 404 && configModel.errors[0] !== `keys haven't been configured yet`) {
+        // If the error is 404, the user has not configured the engine yet.
+        // SSH engines return a 400 error if the keys have not been configured yet. So check specifically for that message before assigning the error.
+        this.configError = configModel;
+        return;
       }
       return;
     }
-  }
-
-  async fetchSshCaConfig(backend: string) {
-    try {
-      this.configModel = await this.store.queryRecord('ssh/ca-config', { backend });
-    } catch (e: AdapterError) {
-      // The SSH api does not return a 404 not found but a 400 error after first mounting the engine with the
-      // message that keys have not been configured yet.
-      // We need to check the message of the 400 error and if it's the keys message, return a prompt instead of a configError.
-      if (e.httpStatus !== 404 && e.errors[0] !== `keys haven't been configured yet`) {
-        this.configError = e;
-      }
-      return;
-    }
+    this.configModel = configModel;
   }
 
   get typeDisplay() {
