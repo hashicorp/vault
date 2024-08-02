@@ -41,13 +41,28 @@ export default class SecretsBackendConfigurationRoute extends Route {
     }
     // If the engine is configurable fetch the config model(s) for the engine and return it alongside the model
     if (CONFIGURABLE_SECRET_ENGINES.includes(secretEngineModel.type)) {
-      const configModels = await this.fetchConfig(secretEngineModel.type, secretEngineModel.id);
+      let configModels = await this.fetchConfig(secretEngineModel.type, secretEngineModel.id);
+      configModels = this.standardizeConfigModels(configModels);
+
       return hash({
         secretEngineModel,
         ...configModels,
       });
     }
     return secretEngineModel;
+  }
+
+  standardizeConfigModels(configModels) {
+    // standardize the configModels to an array so that the component can handle it correctly
+    Array.isArray(configModels) ? configModels : (configModels = [configModels]);
+    // make sure no items in the array are null or undefined
+    configModels.forEach((configModel) => {
+      if (!configModel) {
+        configModels.splice(configModels.indexOf(configModel), 1);
+      }
+    });
+
+    return configModels;
   }
 
   async fetchConfig(type, id) {
@@ -74,7 +89,7 @@ export default class SecretsBackendConfigurationRoute extends Route {
     } catch (e) {
       if (e.httpStatus === 404) {
         // a 404 error is thrown when the lease config hasn't been set yet.
-        return e;
+        return;
       }
       throw e;
     }

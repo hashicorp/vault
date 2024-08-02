@@ -10,7 +10,7 @@ import type SecretEngineModel from 'vault/models/secret-engine';
 import type { TtlEvent } from 'vault/app-types';
 
 /**
- * @module configureAwsComponent
+ * @module ConfigureAwsComponent
  *
  * @example
  * ```js
@@ -60,7 +60,7 @@ interface Args {
   saveAWSLease: (data: LeaseFields) => void;
 }
 
-export default class configureAwsComponent extends Component<Args> {
+export default class ConfigureAwsComponent extends Component<Args> {
   @action
   saveRootCreds(data: AWSRootCredsFields, event: Event) {
     event.preventDefault();
