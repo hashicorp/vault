@@ -393,26 +393,6 @@ func TestEntryFormatter_Process(t *testing.T) {
 			},
 			RootNamespace: true,
 		},
-		"no-auth": {
-			IsErrorExpected:      true,
-			ExpectedErrorMessage: "cannot convert auth: auth cannot be nil",
-			Subtype:              RequestType,
-			RequiredFormat:       JSONxFormat,
-			Data: &logical.LogInput{
-				Request: &logical.Request{ID: "123"},
-			},
-			RootNamespace: true,
-		},
-		"no-response-auth": {
-			IsErrorExpected:      true,
-			ExpectedErrorMessage: "cannot convert auth: auth cannot be nil",
-			Subtype:              ResponseType,
-			RequiredFormat:       JSONxFormat,
-			Data: &logical.LogInput{
-				Request: &logical.Request{ID: "123"},
-			},
-			RootNamespace: true,
-		},
 		"no-request": {
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "unable to parse request from 'response' audit event: request cannot be nil",

@@ -261,9 +261,11 @@ func clone[V any](s V) (V, error) {
 // an audit Auth.
 // tokenRemainingUses should be the client token remaining uses to include in auth.
 // This usually can be found in logical.Request.ClientTokenRemainingUses.
+// NOTE: supplying a nil value for auth will result in a nil return value and error.
+// The caller should check the return value before attempting to use it.
 func newAuth(auth *logical.Auth, tokenRemainingUses int) (*Auth, error) {
 	if auth == nil {
-		return nil, fmt.Errorf("auth cannot be nil")
+		return nil, nil
 	}
 
 	extNSPolicies, err := clone(auth.ExternalNamespacePolicies)
