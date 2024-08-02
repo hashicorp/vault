@@ -5075,6 +5075,14 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 		routerPrefix = credentialRoutePrefix
 	}
 
+	// the mount's namespace is (at least partially) in the request path and not
+	// in the request's context, so we need to add the namespace from the
+	// request path to the router prefix
+	if me.NamespaceID != ns.ID {
+		namespaceRouterPrefix := strings.TrimPrefix(me.Namespace().Path, ns.Path)
+		routerPrefix = namespaceRouterPrefix + routerPrefix
+	}
+
 	filtered, err := b.Core.checkReplicatedFiltering(ctx, me, routerPrefix)
 	if err != nil {
 		return nil, err
