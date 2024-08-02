@@ -3,14 +3,53 @@
 
 scenario "ui" {
   description = <<-EOF
-    The UI scenario is designed to create a new cluster and run the existing Ember test suite
+    The UI scenario creates a new cluster and runs the existing Ember test suite
     against a live Vault cluster instead of a binary in dev mode.
 
-    The UI scenario verifies the Vault ember test suite against a Vault cluster. The build can be a
-    local branch, any CRT built Vault artifact saved to the local machine, or any CRT built Vault
-    artifact in the stable channel in Artifactory.
+    # How to run this scenario
 
-    The scenario deploys a Vault cluster with the candidate build and executes the ember test suite.
+    1. Install Enos (more info: https://eng-handbook.hashicorp.services/internal-tools/enos/getting-started/)
+    
+    $ brew tap hashicorp/tap && brew update && brew install hashicorp/tap/enos
+
+    2. Authenticate to AWS with Doormat (more info: https://eng-handbook.hashicorp.services/internal-tools/enos/getting-started/#authenticate-to-aws-with-doormat)
+    
+    $ doormat login && eval $(doormat aws -a <your_aws_account_name> export)
+
+    3. Set the following variables either as environment variables (`export ENOS_VAR_var_name=value`)
+    or in your 'enos-local.vars' file:
+
+    Required variables
+      - aws_ssh_private_key_path (more info about AWS SSH keypairs: https://eng-handbook.hashicorp.services/internal-tools/enos/getting-started/#set-your-aws-key-pair-name-and-private-key)
+      - aws_ssh_keypair_name
+      - vault_build_date
+      - vault_product_version
+      - vault_revision
+
+    Optional variables
+      - aws_region (if different from the default value in enos-variables.hcl)
+      - consul_license_path (if using an ENT edition of Consul)
+      - distro_version_<distro> (if different from the default version for your target
+      distro; see list of supported distros and versions in enos-globals.hcl)
+      - vault_license_path (if using an ENT edition of Vault)
+    
+    4. Choose the matrix variants you want to use, and launch the scenario with the appropriate
+    filter for those variants, e.g.:
+
+    $ enos scenario launch ui backend:raft consul_edition:ent edition:ce
+
+    Notes:
+    - Enos will run all matrix variant combinations that match your filter. If you specify one
+      variant for each matrix item, the filter will produce and run only one scenario.
+
+    5. If necessary, get the public IPs of your cluster from the Enos scenario output and SSH in,
+    using 'ubuntu' for the SSH user with 'distro:ubuntu', or 'ec2-user' with all other supported Linux distros:
+
+    $ enos scenario output <filter>
+    $ ssh -i /path/to/your/ssh-private-key.pem <ssh-user>@<public-ip>
+
+    For Enos troubleshooting tips, see https://eng-handbook.hashicorp.services/internal-tools/enos/troubleshooting/.
+
   EOF
   matrix {
     backend        = global.backends
@@ -246,7 +285,6 @@ scenario "ui" {
       license              = matrix.edition != "ce" ? step.read_vault_license.license : null
       local_artifact_path  = local.artifact_path
       packages             = global.distro_packages["ubuntu"]
-      seal_name            = step.create_seal_key.resource_name
       seal_type            = local.seal
       storage_backend      = matrix.backend
       target_hosts         = step.create_vault_cluster_targets.hosts

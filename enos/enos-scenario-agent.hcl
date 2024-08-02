@@ -3,50 +3,83 @@
 
 scenario "agent" {
   description = <<-EOF
-    The agent scenario verifies Vault when running in Agent mode. The scenario creates a new Vault Cluster
-    using the candidate build and then runs the same Vault build in Agent mode and verifies behavior
-    against the Vault cluster. The scenario also performs standard baseline verification that is not
-    specific to the Agent mode deployment.
+    The agent scenario verifies Vault when running in Agent mode.
+    
+    The scenario creates a new Vault Cluster using the candidate build and then runs the same Vault
+    build in Agent mode and verifies behavior against the Vault cluster. The scenario also performs
+    standard baseline verification that is not specific to the Agent mode deployment.
 
     # How to run this scenario
 
-    1. Install Enos
+    1. Install Enos (more info: https://eng-handbook.hashicorp.services/internal-tools/enos/getting-started/)
+    
     $ brew tap hashicorp/tap && brew update && brew install hashicorp/tap/enos
 
-    2. Authenticate to AWS with Doormat (see details here: https://eng-handbook.hashicorp.services/internal-tools/enos/getting-started/#authenticate-to-aws-with-doormat)
+    2. Authenticate to AWS with Doormat (more info: https://eng-handbook.hashicorp.services/internal-tools/enos/getting-started/#authenticate-to-aws-with-doormat)
+    
     $ doormat login && eval $(doormat aws -a <your_aws_account_name> export)
-    
-    3. Decide how you will get a Vault artifact:
-      - 
-    Set the following variables either as environment variables (`export ENOS_VAR_var_name=value`)
-    or in your 'enos-local.vars' file:
-      Required variables
-        - aws_ssh_private_key_path
-        - aws_ssh_keypair_name
-        - vault_build_date
-        - vault_product_version
-        - vault_revision
-    
-      Optional variables
-        - artifactory_username (if using 'artifact_source:artifactory')
-        - artifactory_token (if using 'artifact_source:artifactory')
-        - aws_region (if different from the default value in enos-variables.hcl)
-        - consul_license_path (if using an ENT edition of Consul)
-        - distro_version_<distro> (if different from the default version for your target
-        distro; see list of supported distros and versions in enos-globals.hcl)
-        - vault_license_path (if using an ENT edition of Vault)
-        - vault_artifact_path (if using `artifact_source:crt`, set to the path to your
-        downloaded .zip, .deb, or .rpm artifact)
-        
-    The build can be a local branch,
-    any CRT built Vault artifact saved to the local machine, or any CRT built Vault artifact in the
-    stable channel in Artifactory.
 
-    If you want to use the 'distro:leap' variant you must first accept SUSE's terms for the AWS
-    account. To verify that your account has agreed, sign-in to your AWS through Doormat,
-    and visit the following links to verify your subscription or subscribe:
-      arm64 AMI: https://aws.amazon.com/marketplace/server/procurement?productId=a516e959-df54-4035-bb1a-63599b7a6df9
-      amd64 AMI: https://aws.amazon.com/marketplace/server/procurement?productId=5535c495-72d4-4355-b169-54ffa874f849
+    3. Set the following variables either as environment variables (`export ENOS_VAR_var_name=value`)
+    or in your 'enos-local.vars' file:
+
+    Required variables
+      - aws_ssh_private_key_path (more info about AWS SSH keypairs: https://eng-handbook.hashicorp.services/internal-tools/enos/getting-started/#set-your-aws-key-pair-name-and-private-key)
+      - aws_ssh_keypair_name
+      - vault_build_date
+      - vault_product_version
+      - vault_revision
+
+    Optional variables
+      - aws_region (if different from the default value in enos-variables.hcl)
+      - consul_license_path (if using an ENT edition of Consul)
+      - distro_version_<distro> (if different from the default version for your target
+      distro; see list of supported distros and versions in enos-globals.hcl)
+      - vault_license_path (if using an ENT edition of Vault)
+    
+    4. Choose one of the following ways to get a Vault artifact and set the appropriate variables:
+
+      a. 'artifact_source:crt'
+      This will use a Vault artifact that you have already downloaded. Set the following variable:
+
+      ENOS_VAR_vault_artifact_path=path/to/existing-vault-artifact.[zip | rpm | deb]
+
+      b. 'artifact_source:local'
+      This will build a Vault .zip bundle from your local branch. Set the following variable:
+
+      ENOS_VAR_vault_artifact_path=path/to/where/vault-should-be-built.zip
+
+      c. 'artifact_source:artifactory'
+      This will download a Vault artifact of the specified version, edition, and revision SHA
+      from the 'stable' repo in Artifactory. Set the following variables:
+
+      export ENOS_VAR_artifactory_username=your-user
+      export ENOS_VAR_artifactory_token=your-token
+    
+    5. Choose the matrix variants you want to use, and launch the scenario with the appropriate
+    filter for those variants, e.g.:
+
+    $ enos scenario launch agent arch:amd64 artifact_source:crt artifact_type:bundle backend:consul config_mode:env consul_edition:ent consul_version:1.16.3 distro:ubuntu edition:ent.hsm.fips1402 seal:pkcs11
+
+    Notes:
+    - Enos will run all matrix variant combinations that match your filter. If you specify one
+      variant for each matrix item, the filter will produce and run only one scenario. Even if you are
+      using a Raft backend, you may want to specify a consul_version (though it functionally will not
+      do anything since you're not using Consul) so that Enos does not run multiple scenarios (one for
+      each Consul version in the matrix).
+
+    - If you want to use the 'distro:leap' variant you must first accept SUSE's terms for the AWS
+      account. To verify that your account has agreed, sign-in to your AWS through Doormat,
+      and visit the following links to verify your subscription or subscribe:
+        arm64 AMI: https://aws.amazon.com/marketplace/server/procurement?productId=a516e959-df54-4035-bb1a-63599b7a6df9
+        amd64 AMI: https://aws.amazon.com/marketplace/server/procurement?productId=5535c495-72d4-4355-b169-54ffa874f849
+
+    6. If necessary, get the public IPs of your cluster from the Enos scenario output and SSH in,
+    using 'ubuntu' for the SSH user with 'distro:ubuntu', or 'ec2-user' with all other supported Linux distros:
+
+    $ enos scenario output <filter>
+    $ ssh -i /path/to/your/ssh-private-key.pem <ssh-user>@<public-ip>
+
+    For Enos troubleshooting tips, see https://eng-handbook.hashicorp.services/internal-tools/enos/troubleshooting/.
   EOF
 
   matrix {
