@@ -11,7 +11,7 @@
 import Model from '@ember-data/model';
 import Service from '@ember/service';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
-import { getOwner } from '@ember/application';
+import { getOwner } from '@ember/owner';
 import { expandOpenApiProps, combineAttributes } from 'vault/utils/openapi-to-attrs';
 import fieldToAttrs from 'vault/utils/field-to-attrs';
 import { resolve, reject } from 'rsvp';
@@ -39,6 +39,24 @@ export default Service.extend({
     return appAdapter.ajax(url, 'GET', {
       data,
     });
+  },
+
+  hydrateModel(modelType, backend) {
+    const owner = getOwner(this);
+    const modelName = `model:${modelType}`;
+    const modelFactory = owner.factoryFor(modelName);
+    const helpUrl = getHelpUrlForModel(modelType, backend);
+
+    if (!modelFactory) {
+      throw new Error(`modelFactory for ${modelType} not found -- use getNewModel instead.`);
+    }
+
+    debug(`Model factory found for ${modelType}`);
+    const newModel = modelFactory.class;
+    if (newModel.merged || !helpUrl) {
+      return resolve();
+    }
+    return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
   },
 
   /**
