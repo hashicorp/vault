@@ -35,7 +35,7 @@ export default class SecretsBackendConfigurationRoute extends Route {
       const configModel = await this.fetchConfig(backend.type, backend.id);
       return hash({
         backend,
-        configModel,
+        ...configModel,
       });
     }
     return backend;
@@ -45,14 +45,31 @@ export default class SecretsBackendConfigurationRoute extends Route {
     // Fetch the config for the engine type.
     switch (type) {
       case 'aws':
-        return await this.fetchAwsRootConfig(backend);
+        return await this.fetchAwsConfigs(backend);
       // ARG TODO add fetchAwsLeaseConfig
       case 'ssh':
         return await this.fetchSshCaConfig(backend);
     }
   }
 
-  async fetchAwsRootConfig(backend) {
+  async fetchAwsConfigs(backend) {
+    // AWS has two configuration endpoints root and lease, return an array of these responses.
+    const configArray = [];
+    const configRoot = await this.fetchAwsRoot(backend);
+    const configLease = await this.fetchAwsLease(backend);
+    configArray.push(configRoot, configLease);
+    return configArray;
+  }
+
+  async fetchAwsLease(backend) {
+    try {
+      return await this.store.queryRecord('aws/lease-config', { backend });
+    } catch (e) {
+      return e;
+    }
+  }
+
+  async fetchAwsRoot(backend) {
     try {
       return await this.store.queryRecord('aws/root-config', { backend });
     } catch (e) {

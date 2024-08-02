@@ -14,7 +14,6 @@ import type AwsRootConfig from 'vault/models/aws/root-config';
 import type AwsLeaseConfig from 'vault/models/aws/lease-config';
 import type SshCaConfig from 'vault/models/ssh/ca-config';
 import type Model from '@ember-data/model';
-import AdapterError from '@ember-data/adapter';
 
 /**
  * @module ConfigurationDetails
@@ -22,15 +21,15 @@ import AdapterError from '@ember-data/adapter';
  *
  * @example
  * ```js
- * <SecretEngine::ConfigurationDetails @model={{this.model}} />
+ * <SecretEngine::ConfigurationDetails @model={{this.model.backedn}} @configModel={{this.model.configModel}} />
  * ```
  *
- * @param {object} model - The secret-engine model to be configured.
+ * @param {object} model s- The secret-engine model as this.model.backend and the configuration models with their name.
+ * @param {object} configModel - The config model to be configured.
  */
 
 interface Args {
-  model: SecretEngineModel | null;
-  configModel: AwsLeaseConfig | AwsRootConfig | SshCaConfig | null;
+  models: [SecretEngineModel | AwsLeaseConfig | AwsRootConfig | SshCaConfig];
 }
 
 interface ConfigError {
@@ -38,38 +37,49 @@ interface ConfigError {
   message: string | null;
   errors: object | null;
 }
-
+// ARG TODO work on naming use plurals for arrays.
 export default class ConfigurationDetails extends Component<Args> {
   @service declare readonly store: Store;
-  @tracked configError: ConfigError | null = null;
-  @tracked configModel: Model | null = null;
+  @tracked configError: [ConfigError] | [] = [];
+  @tracked configModel: [Model] | [] = [];
+  @tracked engineType: string | '' = '';
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
-    const { model } = this.args;
-    // Should not be able to get here without a model, but in case an upstream change allows it, handle the error higher up.
-    if (!model) {
-      return;
-    }
-    // check if the configModel is an Error and what kind.
-    const { configModel } = this.args;
-    if (!configModel) return;
+    const { models } = this.args;
+    // Should not be able to get here without the secret-engine model, but in case an upstream change allows it, handle the error higher up.
+    if (!models.backend) return;
+    this.engineType = models.backend.type; // save this now because modifying the models object later will remove the backend model.
+    delete models.backend;
+    // for each configModel check if error, or not configured, or configured.
+    Object.values(models).forEach((configModel) => {
+      // ARG STOPPED HERE. Remember you just need to check if the configModel is an AdapterError and if so, assign it to the configError property.
+      // Otherwise show one or two of the configModels.
+      this.configModelAssignment(configModel);
+    });
+  }
 
-    if (configModel instanceof AdapterError) {
-      if (configModel.httpStatus === 404 && configModel.errors[0] !== `keys haven't been configured yet`) {
-        // If the error is 404, the user has not configured the engine yet.
-        // SSH engines return a 400 error if the keys have not been configured yet. So check specifically for that message before assigning the error.
-        this.configError = configModel;
+  configModelAssignment(configModel: Model) {
+    if (configModel.isAdapterError) {
+      // Check for errors that indicate the engine has not been configured yet. If they haven't return nothing so that the form displays the configuration prompt.
+      // Most engines return a 404 if they have not been configured, but SSH returns a 400 and a specific error message that we check for here.
+      if (
+        (this.engineType === 'ssh' &&
+          configModel.httpStatus === 400 &&
+          configModel.errors[0] === `keys haven't been configured yet`) ||
+        configModel.httpStatus === 404
+      ) {
         return;
       }
+      this.configError.push(configModel);
       return;
     }
-    this.configModel = configModel;
+    this.configModel.push(configModel);
+    return;
   }
 
   get typeDisplay() {
-    if (!this.args.model) return;
-    const { type } = this.args.model;
-    return allEngines().find((engine) => engine.type === type)?.displayName;
+    if (!this.engineType) return;
+    return allEngines().find((engine) => engine.type === this.engineType)?.displayName;
   }
 }

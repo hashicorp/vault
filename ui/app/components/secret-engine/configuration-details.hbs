@@ -3,28 +3,37 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-{{#if this.configError}}
+{{#if this.configError.length}}
   {{! Surface API errors not associated with empty configuration details }}
-  <Page::Error @error={{this.configError}} />
-{{else if this.configModel}}
-  {{#each this.configModel.attrs as |attr|}}
-    {{#if attr.options.sensitive}}
-      <InfoTableRow
-        alwaysRender={{not (is-empty-value (get @model attr.name))}}
-        @label={{or attr.options.label (to-label attr.name)}}
-        @value={{get this.configModel (or attr.options.fieldValue attr.name)}}
-      >
-        {{#if attr.options.sensitive}}
-          <MaskedInput @value={{get @model attr.name}} @name={{attr.name}} @displayOnly={{true}} @allowCopy={{true}} />
-        {{/if}}
-      </InfoTableRow>
-    {{else}}
-      <InfoTableRow
-        @alwaysRender={{not (is-empty-value (get @model attr.name))}}
-        @label={{or attr.options.label (to-label attr.name)}}
-        @value={{get this.configModel (or attr.options.fieldValue attr.name)}}
-      />
-    {{/if}}
+  {{#each this.configError as |error|}}
+    <Page::Error @error={{error}} />
+  {{/each}}
+{{else if this.configModel.length}}
+  {{#each this.configModel as |configModel|}}
+    {{#each configModel.attrs as |attr|}}
+      {{#if attr.options.sensitive}}
+        <InfoTableRow
+          alwaysRender={{not (is-empty-value (get configModel attr.name))}}
+          @label={{or attr.options.label (to-label attr.name)}}
+          @value={{get configModel (or attr.options.fieldValue attr.name)}}
+        >
+          {{#if attr.options.sensitive}}
+            <MaskedInput
+              @value={{get configModel attr.name}}
+              @name={{attr.name}}
+              @displayOnly={{true}}
+              @allowCopy={{true}}
+            />
+          {{/if}}
+        </InfoTableRow>
+      {{else}}
+        <InfoTableRow
+          @alwaysRender={{not (is-empty-value (get @model attr.name))}}
+          @label={{or attr.options.label (to-label attr.name)}}
+          @value={{get configModel (or attr.options.fieldValue attr.name)}}
+        />
+      {{/if}}
+    {{/each}}
   {{/each}}
 {{else}}
   {{! Prompt for a user to configure the secret engine }}
