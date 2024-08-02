@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/copystructure"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCopy_auth(t *testing.T) {
@@ -105,10 +106,13 @@ type TestSalter struct{}
 // storage instance.
 func (*TestSalter) Salt(ctx context.Context) (*salt.Salt, error) {
 	inmemStorage := &logical.InmemStorage{}
-	inmemStorage.Put(context.Background(), &logical.StorageEntry{
+	err := inmemStorage.Put(context.Background(), &logical.StorageEntry{
 		Key:   "salt",
 		Value: []byte("foo"),
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	return salt.NewSalt(context.Background(), inmemStorage, &salt.Config{
 		HMAC:     sha256.New,
@@ -119,60 +123,62 @@ func (*TestSalter) Salt(ctx context.Context) (*salt.Salt, error) {
 func TestHashString(t *testing.T) {
 	salter := &TestSalter{}
 
-	out, err := HashString(context.Background(), salter, "foo")
+	out, err := hashString(context.Background(), salter, "foo")
 	if err != nil {
 		t.Fatalf("Error instantiating salt: %s", err)
 	}
 	if out != "hmac-sha256:08ba357e274f528065766c770a639abf6809b39ccfd37c2a3157c7f51954da0a" {
-		t.Fatalf("err: HashString output did not match expected")
+		t.Fatalf("err: hashString output did not match expected")
 	}
 }
 
 func TestHashAuth(t *testing.T) {
-	cases := []struct {
+	cases := map[string]struct {
 		Input        *logical.Auth
 		Output       *logical.Auth
 		HMACAccessor bool
 	}{
-		{
-			&logical.Auth{ClientToken: "foo"},
-			&logical.Auth{ClientToken: "hmac-sha256:08ba357e274f528065766c770a639abf6809b39ccfd37c2a3157c7f51954da0a"},
+		"no-accessor-hmac": {
+			&logical.Auth{
+				ClientToken: "foo",
+				Accessor:    "very-accessible",
+			},
+			&logical.Auth{
+				ClientToken: "hmac-sha256:08ba357e274f528065766c770a639abf6809b39ccfd37c2a3157c7f51954da0a",
+				Accessor:    "very-accessible",
+			},
 			false,
 		},
-		{
+		"accessor-hmac": {
 			&logical.Auth{
 				LeaseOptions: logical.LeaseOptions{
 					TTL: 1 * time.Hour,
 				},
-
+				Accessor:    "very-accessible",
 				ClientToken: "foo",
 			},
 			&logical.Auth{
 				LeaseOptions: logical.LeaseOptions{
 					TTL: 1 * time.Hour,
 				},
-
+				Accessor:    "hmac-sha256:5d6d7c8da5b699ace193ea453bbf77082a8aaca42a474436509487d646a7c0af",
 				ClientToken: "hmac-sha256:08ba357e274f528065766c770a639abf6809b39ccfd37c2a3157c7f51954da0a",
 			},
-			false,
+			true,
 		},
 	}
 
 	inmemStorage := &logical.InmemStorage{}
-	inmemStorage.Put(context.Background(), &logical.StorageEntry{
+	err := inmemStorage.Put(context.Background(), &logical.StorageEntry{
 		Key:   "salt",
 		Value: []byte("foo"),
 	})
+	require.NoError(t, err)
 	salter := &TestSalter{}
 	for _, tc := range cases {
-		input := fmt.Sprintf("%#v", tc.Input)
-		out, err := HashAuth(context.Background(), salter, tc.Input, tc.HMACAccessor)
-		if err != nil {
-			t.Fatalf("err: %s\n\n%s", err, input)
-		}
-		if !reflect.DeepEqual(out, tc.Output) {
-			t.Fatalf("bad:\nInput:\n%s\nOutput:\n%#v\nExpected output:\n%#v", input, out, tc.Output)
-		}
+		err := hashAuth(context.Background(), salter, tc.Input, tc.HMACAccessor)
+		require.NoError(t, err)
+		require.Equal(t, tc.Output, tc.Input)
 	}
 }
 
@@ -217,18 +223,19 @@ func TestHashRequest(t *testing.T) {
 	}
 
 	inmemStorage := &logical.InmemStorage{}
-	inmemStorage.Put(context.Background(), &logical.StorageEntry{
+	err := inmemStorage.Put(context.Background(), &logical.StorageEntry{
 		Key:   "salt",
 		Value: []byte("foo"),
 	})
+	require.NoError(t, err)
 	salter := &TestSalter{}
 	for _, tc := range cases {
 		input := fmt.Sprintf("%#v", tc.Input)
-		out, err := HashRequest(context.Background(), salter, tc.Input, tc.HMACAccessor, tc.NonHMACDataKeys)
+		err := hashRequest(context.Background(), salter, tc.Input, tc.HMACAccessor, tc.NonHMACDataKeys)
 		if err != nil {
 			t.Fatalf("err: %s\n\n%s", err, input)
 		}
-		if diff := deep.Equal(out, tc.Output); len(diff) > 0 {
+		if diff := deep.Equal(tc.Input, tc.Output); len(diff) > 0 {
 			t.Fatalf("bad:\nInput:\n%s\nDiff:\n%#v", input, diff)
 		}
 	}
@@ -282,20 +289,19 @@ func TestHashResponse(t *testing.T) {
 	}
 
 	inmemStorage := &logical.InmemStorage{}
-	inmemStorage.Put(context.Background(), &logical.StorageEntry{
+	err := inmemStorage.Put(context.Background(), &logical.StorageEntry{
 		Key:   "salt",
 		Value: []byte("foo"),
 	})
+	require.NoError(t, err)
 	salter := &TestSalter{}
 	for _, tc := range cases {
 		input := fmt.Sprintf("%#v", tc.Input)
-		out, err := HashResponse(context.Background(), salter, tc.Input, tc.HMACAccessor, tc.NonHMACDataKeys, false)
+		err := hashResponse(context.Background(), salter, tc.Input, tc.HMACAccessor, tc.NonHMACDataKeys, false)
 		if err != nil {
 			t.Fatalf("err: %s\n\n%s", err, input)
 		}
-		if diff := deep.Equal(out, tc.Output); len(diff) > 0 {
-			t.Fatalf("bad:\nInput:\n%s\nDiff:\n%#v", input, diff)
-		}
+		require.Equal(t, tc.Output, tc.Input)
 	}
 }
 
@@ -326,7 +332,7 @@ func TestHashWalker(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		err := HashStructure(tc.Input, func(string) string {
+		err := hashStructure(tc.Input, func(string) string {
 			return replaceText
 		}, nil)
 		if err != nil {
@@ -380,7 +386,7 @@ func TestHashWalker_TimeStructs(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		err := HashStructure(tc.Input, func(s string) string {
+		err := hashStructure(tc.Input, func(s string) string {
 			return s + replaceText
 		}, nil)
 		if err != nil {
