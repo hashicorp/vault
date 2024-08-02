@@ -140,7 +140,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-oci v0.16.0
 	github.com/hashicorp/vault-plugin-database-couchbase v0.11.0
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.15.0
-	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.12.0
+	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.12.1-0.20240801001848-8384100a04c0
 	github.com/hashicorp/vault-plugin-database-redis v0.3.0
 	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.4.0
 	github.com/hashicorp/vault-plugin-database-snowflake v0.11.0
@@ -207,7 +207,7 @@ require (
 	go.mongodb.org/atlas v0.36.0
 	go.mongodb.org/mongo-driver v1.16.0
 	go.opentelemetry.io/otel v1.28.0
-	go.opentelemetry.io/otel/sdk v1.27.0
+	go.opentelemetry.io/otel/sdk v1.28.0
 	go.opentelemetry.io/otel/trace v1.28.0
 	go.uber.org/atomic v1.11.0
 	go.uber.org/goleak v1.3.0
@@ -222,7 +222,7 @@ require (
 	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d
 	google.golang.org/api v0.181.0
 	google.golang.org/grpc v1.64.1
-	google.golang.org/protobuf v1.34.1
+	google.golang.org/protobuf v1.34.2
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
 	k8s.io/apimachinery v0.29.3
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
@@ -521,8 +521,8 @@ require (
 	golang.org/x/mod v0.17.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	google.golang.org/genproto v0.0.0-20240520151616-dc85e6b867a5 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20240520151616-dc85e6b867a5 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240515191416-fc5f0ca64291 // indirect; indirect\
+	google.golang.org/genproto/googleapis/api v0.0.0-20240701130421-f6361c86f094 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240701130421-f6361c86f094 // indirect; indirect\
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/jcmturner/goidentity.v3 v3.0.0 // indirect
