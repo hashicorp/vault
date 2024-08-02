@@ -298,27 +298,20 @@ func TestEntryFormatter_Process(t *testing.T) {
 			ExpectedErrorMessage: "unable to retrieve namespace from context: no namespace",
 			Subtype:              ResponseType,
 			RequiredFormat:       JSONFormat,
-			Data: &logical.LogInput{
-				Auth:    &logical.Auth{},
-				Request: &logical.Request{ID: "123"},
-			},
+			Data:                 &logical.LogInput{Request: &logical.Request{ID: "123"}},
 		},
 		"json-request-basic-input-and-request-with-ns": {
 			IsErrorExpected: false,
 			Subtype:         RequestType,
 			RequiredFormat:  JSONFormat,
-			Data: &logical.LogInput{
-				Auth:    &logical.Auth{},
-				Request: &logical.Request{ID: "123"},
-			},
-			RootNamespace: true,
+			Data:            &logical.LogInput{Request: &logical.Request{ID: "123"}},
+			RootNamespace:   true,
 		},
 		"json-response-basic-input-and-request-with-ns": {
 			IsErrorExpected: false,
 			Subtype:         ResponseType,
 			RequiredFormat:  JSONFormat,
 			Data: &logical.LogInput{
-				Auth:    &logical.Auth{},
 				Request: &logical.Request{ID: "123"},
 				Response: &logical.Response{
 					Auth: &logical.Auth{},
@@ -374,22 +367,16 @@ func TestEntryFormatter_Process(t *testing.T) {
 			IsErrorExpected: false,
 			Subtype:         RequestType,
 			RequiredFormat:  JSONxFormat,
-			Data: &logical.LogInput{
-				Auth:    &logical.Auth{},
-				Request: &logical.Request{ID: "123"},
-			},
-			RootNamespace: true,
+			Data:            &logical.LogInput{Request: &logical.Request{ID: "123"}},
+			RootNamespace:   true,
 		},
 		"jsonx-response-basic-input-and-request-with-ns": {
 			IsErrorExpected: false,
 			Subtype:         ResponseType,
 			RequiredFormat:  JSONxFormat,
 			Data: &logical.LogInput{
-				Auth:    &logical.Auth{},
-				Request: &logical.Request{ID: "123"},
-				Response: &logical.Response{
-					Auth: &logical.Auth{},
-				},
+				Request:  &logical.Request{ID: "123"},
+				Response: &logical.Response{},
 			},
 			RootNamespace: true,
 		},
@@ -408,11 +395,8 @@ func TestEntryFormatter_Process(t *testing.T) {
 			ExpectedErrorMessage: "cannot convert response: response cannot be nil",
 			Subtype:              ResponseType,
 			RequiredFormat:       JSONxFormat,
-			Data: &logical.LogInput{
-				Auth:    &logical.Auth{},
-				Request: &logical.Request{ID: "123"},
-			},
-			RootNamespace: true,
+			Data:                 &logical.LogInput{Request: &logical.Request{ID: "123"}},
+			RootNamespace:        true,
 		},
 	}
 
@@ -550,18 +534,12 @@ func TestEntryFormatter_Process_Request(t *testing.T) {
 			RootNamespace:        false,
 		},
 		"input-and-request-with-ns": {
-			Input: &logical.LogInput{
-				Auth:    &logical.Auth{},
-				Request: &logical.Request{ID: "123"},
-			},
+			Input:           &logical.LogInput{Request: &logical.Request{ID: "123"}},
 			IsErrorExpected: false,
 			RootNamespace:   true,
 		},
 		"omit-time": {
-			Input: &logical.LogInput{
-				Auth:    &logical.Auth{},
-				Request: &logical.Request{ID: "123"},
-			},
+			Input:          &logical.LogInput{Request: &logical.Request{ID: "123"}},
 			ShouldOmitTime: true,
 			RootNamespace:  true,
 		},
@@ -660,22 +638,16 @@ func TestEntryFormatter_Process_ResponseType(t *testing.T) {
 		},
 		"input-and-request-with-ns": {
 			Input: &logical.LogInput{
-				Auth:    &logical.Auth{},
-				Request: &logical.Request{ID: "123"},
-				Response: &logical.Response{
-					Auth: &logical.Auth{},
-				},
+				Request:  &logical.Request{ID: "123"},
+				Response: &logical.Response{},
 			},
 			IsErrorExpected: false,
 			RootNamespace:   true,
 		},
 		"omit-time": {
 			Input: &logical.LogInput{
-				Auth:    &logical.Auth{},
-				Request: &logical.Request{ID: "123"},
-				Response: &logical.Response{
-					Auth: &logical.Auth{},
-				},
+				Request:  &logical.Request{ID: "123"},
+				Response: &logical.Response{},
 			},
 			ShouldOmitTime:  true,
 			IsErrorExpected: false,
@@ -1119,12 +1091,8 @@ func TestEntryFormatter_ElideListResponses(t *testing.T) {
 		require.NotNil(t, formatter)
 
 		in := &logical.LogInput{
-			Auth:    &logical.Auth{},
-			Request: &logical.Request{Operation: operation},
-			Response: &logical.Response{
-				Auth: &logical.Auth{},
-				Data: inputData,
-			},
+			Request:  &logical.Request{Operation: operation},
+			Response: &logical.Response{Data: inputData},
 		}
 
 		auditEvent, err := NewEvent(ResponseType)
