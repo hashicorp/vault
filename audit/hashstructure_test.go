@@ -7,12 +7,11 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/json"
-	"fmt"
 	"reflect"
 	"testing"
 	"time"
 
-	"github.com/go-test/deep"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
@@ -135,34 +134,42 @@ func TestHashString(t *testing.T) {
 func TestHashAuth(t *testing.T) {
 	cases := map[string]struct {
 		Input        *logical.Auth
-		Output       *logical.Auth
+		Output       *Auth
 		HMACAccessor bool
 	}{
 		"no-accessor-hmac": {
 			&logical.Auth{
 				ClientToken: "foo",
 				Accessor:    "very-accessible",
+				LeaseOptions: logical.LeaseOptions{
+					TTL: 1 * time.Hour,
+				},
+				TokenType: logical.TokenTypeService,
 			},
-			&logical.Auth{
-				ClientToken: "hmac-sha256:08ba357e274f528065766c770a639abf6809b39ccfd37c2a3157c7f51954da0a",
-				Accessor:    "very-accessible",
+			&Auth{
+				ClientToken:   "hmac-sha256:08ba357e274f528065766c770a639abf6809b39ccfd37c2a3157c7f51954da0a",
+				Accessor:      "very-accessible",
+				TokenTTL:      3600,
+				TokenType:     "service",
+				RemainingUses: 5,
 			},
 			false,
 		},
 		"accessor-hmac": {
 			&logical.Auth{
-				LeaseOptions: logical.LeaseOptions{
-					TTL: 1 * time.Hour,
-				},
 				Accessor:    "very-accessible",
 				ClientToken: "foo",
-			},
-			&logical.Auth{
 				LeaseOptions: logical.LeaseOptions{
 					TTL: 1 * time.Hour,
 				},
-				Accessor:    "hmac-sha256:5d6d7c8da5b699ace193ea453bbf77082a8aaca42a474436509487d646a7c0af",
-				ClientToken: "hmac-sha256:08ba357e274f528065766c770a639abf6809b39ccfd37c2a3157c7f51954da0a",
+				TokenType: logical.TokenTypeBatch,
+			},
+			&Auth{
+				ClientToken:   "hmac-sha256:08ba357e274f528065766c770a639abf6809b39ccfd37c2a3157c7f51954da0a",
+				Accessor:      "hmac-sha256:5d6d7c8da5b699ace193ea453bbf77082a8aaca42a474436509487d646a7c0af",
+				TokenTTL:      3600,
+				TokenType:     "batch",
+				RemainingUses: 5,
 			},
 			true,
 		},
@@ -176,9 +183,11 @@ func TestHashAuth(t *testing.T) {
 	require.NoError(t, err)
 	salter := &TestSalter{}
 	for _, tc := range cases {
-		err := hashAuth(context.Background(), salter, tc.Input, tc.HMACAccessor)
+		auditAuth, err := newAuth(tc.Input, 5)
 		require.NoError(t, err)
-		require.Equal(t, tc.Output, tc.Input)
+		err = hashAuth(context.Background(), salter, auditAuth, tc.HMACAccessor)
+		require.NoError(t, err)
+		require.Equal(t, tc.Output, auditAuth)
 	}
 }
 
@@ -196,7 +205,7 @@ var _ logical.OptMarshaler = &testOptMarshaler{}
 func TestHashRequest(t *testing.T) {
 	cases := []struct {
 		Input           *logical.Request
-		Output          *logical.Request
+		Output          *Request
 		NonHMACDataKeys []string
 		HMACAccessor    bool
 	}{
@@ -209,12 +218,16 @@ func TestHashRequest(t *testing.T) {
 					"om":               &testOptMarshaler{S: "bar", I: 1},
 				},
 			},
-			&logical.Request{
+			&Request{
 				Data: map[string]interface{}{
 					"foo":              "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317",
 					"baz":              "foobar",
 					"private_key_type": "hmac-sha256:995230dca56fffd310ff591aa404aab52b2abb41703c787cfa829eceb4595bf1",
 					"om":               json.RawMessage(`{"S":"hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317","I":1}`),
+				},
+				Namespace: &Namespace{
+					ID:   namespace.RootNamespace.ID,
+					Path: namespace.RootNamespace.Path,
 				},
 			},
 			[]string{"baz"},
@@ -230,62 +243,61 @@ func TestHashRequest(t *testing.T) {
 	require.NoError(t, err)
 	salter := &TestSalter{}
 	for _, tc := range cases {
-		input := fmt.Sprintf("%#v", tc.Input)
-		err := hashRequest(context.Background(), salter, tc.Input, tc.HMACAccessor, tc.NonHMACDataKeys)
-		if err != nil {
-			t.Fatalf("err: %s\n\n%s", err, input)
-		}
-		if diff := deep.Equal(tc.Input, tc.Output); len(diff) > 0 {
-			t.Fatalf("bad:\nInput:\n%s\nDiff:\n%#v", input, diff)
-		}
+		auditReq, err := newRequest(tc.Input, namespace.RootNamespace)
+		require.NoError(t, err)
+		err = hashRequest(context.Background(), salter, auditReq, tc.HMACAccessor, tc.NonHMACDataKeys)
+		require.NoError(t, err)
+		require.Equal(t, tc.Output, auditReq)
 	}
 }
 
 func TestHashResponse(t *testing.T) {
 	now := time.Now()
 
-	cases := []struct {
-		Input           *logical.Response
-		Output          *logical.Response
-		NonHMACDataKeys []string
-		HMACAccessor    bool
-	}{
-		{
-			&logical.Response{
-				Data: map[string]interface{}{
-					"foo": "bar",
-					"baz": "foobar",
-					// Responses can contain time values, so test that with
-					// a known fixed value.
-					"bar": now,
-					"om":  &testOptMarshaler{S: "bar", I: 1},
-				},
-				WrapInfo: &wrapping.ResponseWrapInfo{
-					TTL:             60,
-					Token:           "bar",
-					Accessor:        "flimflam",
-					CreationTime:    now,
-					WrappedAccessor: "bar",
-				},
-			},
-			&logical.Response{
-				Data: map[string]interface{}{
-					"foo": "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317",
-					"baz": "foobar",
-					"bar": now.Format(time.RFC3339Nano),
-					"om":  json.RawMessage(`{"S":"hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317","I":1}`),
-				},
-				WrapInfo: &wrapping.ResponseWrapInfo{
-					TTL:             60,
-					Token:           "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317",
-					Accessor:        "hmac-sha256:7c9c6fe666d0af73b3ebcfbfabe6885015558213208e6635ba104047b22f6390",
-					CreationTime:    now,
-					WrappedAccessor: "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317",
-				},
-			},
-			[]string{"baz"},
-			true,
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"foo": "bar",
+			"baz": "foobar",
+			// Responses can contain time values, so test that with a known fixed value.
+			"bar": now,
+			"om":  &testOptMarshaler{S: "bar", I: 1},
 		},
+		WrapInfo: &wrapping.ResponseWrapInfo{
+			TTL:             1 * time.Minute,
+			Token:           "bar",
+			Accessor:        "flimflam",
+			CreationTime:    now,
+			WrappedAccessor: "bar",
+		},
+	}
+
+	req := &logical.Request{MountPoint: "/foo/bar"}
+	req.SetMountClass("kv")
+	req.SetMountIsExternalPlugin(true)
+	req.SetMountRunningVersion("123")
+	req.SetMountRunningSha256("256-256!")
+
+	nonHMACDataKeys := []string{"baz"}
+
+	expected := &Response{
+		Data: map[string]interface{}{
+			"foo": "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317",
+			"baz": "foobar",
+			"bar": now.Format(time.RFC3339Nano),
+			"om":  json.RawMessage(`{"S":"hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317","I":1}`),
+		},
+		WrapInfo: &ResponseWrapInfo{
+			TTL:             60,
+			Token:           "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317",
+			Accessor:        "hmac-sha256:7c9c6fe666d0af73b3ebcfbfabe6885015558213208e6635ba104047b22f6390",
+			CreationTime:    now.UTC().Format(time.RFC3339Nano),
+			WrappedAccessor: "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317",
+		},
+		MountClass:            "kv",
+		MountIsExternalPlugin: true,
+		MountPoint:            "/foo/bar",
+		MountRunningVersion:   "123",
+		MountRunningSha256:    "256-256!",
 	}
 
 	inmemStorage := &logical.InmemStorage{}
@@ -295,14 +307,11 @@ func TestHashResponse(t *testing.T) {
 	})
 	require.NoError(t, err)
 	salter := &TestSalter{}
-	for _, tc := range cases {
-		input := fmt.Sprintf("%#v", tc.Input)
-		err := hashResponse(context.Background(), salter, tc.Input, tc.HMACAccessor, tc.NonHMACDataKeys, false)
-		if err != nil {
-			t.Fatalf("err: %s\n\n%s", err, input)
-		}
-		require.Equal(t, tc.Output, tc.Input)
-	}
+	auditResp, err := newResponse(resp, req, false)
+	require.NoError(t, err)
+	err = hashResponse(context.Background(), salter, auditResp, true, nonHMACDataKeys)
+	require.NoError(t, err)
+	require.Equal(t, expected, auditResp)
 }
 
 func TestHashWalker(t *testing.T) {
