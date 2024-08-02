@@ -388,14 +388,6 @@ func TestEntryFormatter_Process(t *testing.T) {
 			},
 			RootNamespace: true,
 		},
-		"no-response": {
-			IsErrorExpected:      true,
-			ExpectedErrorMessage: "cannot convert response: response cannot be nil",
-			Subtype:              ResponseType,
-			RequiredFormat:       JSONxFormat,
-			Data:                 &logical.LogInput{Request: &logical.Request{ID: "123"}},
-			RootNamespace:        true,
-		},
 	}
 
 	for name, tc := range tests {

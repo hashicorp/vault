@@ -401,7 +401,7 @@ func newRequest(req *logical.Request, ns *namespace.Namespace) (*Request, error)
 // isElisionRequired is used to indicate that response 'Data' should be elided.
 func newResponse(resp *logical.Response, req *logical.Request, isElisionRequired bool) (*Response, error) {
 	if resp == nil {
-		return nil, fmt.Errorf("response cannot be nil")
+		return nil, nil
 	}
 
 	if req == nil {
