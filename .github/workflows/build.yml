@@ -387,7 +387,7 @@ jobs:
         with:
           version: ${{ needs.setup.outputs.vault-version-metadata }}
           product: ${{ needs.setup.outputs.vault-binary-name }}
-      - uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+      - uses: actions/upload-artifact@89ef406dd8d7e03cfd12d9e0a4a378f454709029 # v4.3.5
         if: steps.generate-metadata-file.outcome == 'success' # upload our metadata if we created it
         with:
           name: metadata.json
