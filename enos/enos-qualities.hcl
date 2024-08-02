@@ -250,6 +250,21 @@ quality "vault_api_sys_storage_raft_remove_peer_write_removes_peer" {
   EOF
 }
 
+quality "vault_api_sys_version_history_keys" {
+  description = <<-EOF
+    The v1/sys/version-history Vault API returns the cluster version history and the 'keys' data
+    includes our target version
+  EOF
+}
+
+quality "vault_api_sys_version_history_key_info" {
+  description = <<-EOF
+    The v1/sys/version-history Vault API returns the cluster version history and the
+    'key_info["$expected_version]' data is present for the expected version and the 'build_date'
+    matches the expected build_date.
+  EOF
+}
+
 quality "vault_artifact_bundle" {
   description = "The candidate binary packaged as a zip bundle is used for testing"
 }
