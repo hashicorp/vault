@@ -7,25 +7,17 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-// RequestEntry is the structure of a request audit log entry.
-type RequestEntry struct {
-	Auth          *Auth    `json:"auth,omitempty"`
-	Error         string   `json:"error,omitempty"`
-	ForwardedFrom string   `json:"forwarded_from,omitempty"` // Populated in Enterprise when a request is forwarded
-	Request       *Request `json:"request,omitempty"`
-	Time          string   `json:"time,omitempty"`
-	Type          string   `json:"type,omitempty"`
-}
-
-// ResponseEntry is the structure of a response audit log entry.
-type ResponseEntry struct {
-	Auth      *Auth     `json:"auth,omitempty"`
-	Error     string    `json:"error,omitempty"`
-	Forwarded bool      `json:"forwarded,omitempty"`
-	Request   *Request  `json:"request,omitempty"`
-	Response  *Response `json:"response,omitempty"`
-	Time      string    `json:"time,omitempty"`
-	Type      string    `json:"type,omitempty"`
+// Entry represents an audit entry.
+// It could be an entry for a request or response.
+type Entry struct {
+	Auth          *Auth     `json:"auth,omitempty"`
+	Error         string    `json:"error,omitempty"`
+	Forwarded     bool      `json:"forwarded,omitempty"`
+	ForwardedFrom string    `json:"forwarded_from,omitempty"` // Populated in Enterprise when a request is forwarded
+	Request       *Request  `json:"request,omitempty"`
+	Response      *Response `json:"response,omitempty"`
+	Time          string    `json:"time,omitempty"`
+	Type          string    `json:"type,omitempty"`
 }
 
 type Request struct {
