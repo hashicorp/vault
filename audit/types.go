@@ -7,31 +7,17 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-// NOTE: Any exported changes made to RequestEntry, ResponseEntry or the structs
-// used to compose them, must be reflected in the public facing documentation.
-// See: /vault/docs/audit (website/content/docs/audit/index.mdx), which at the time
-// of writing contains JSON examples and JSON schemas intended for use in audit
-// exclusion.
-
-// RequestEntry is the structure of a request audit log entry.
-type RequestEntry struct {
-	Auth          *Auth    `json:"auth,omitempty"`
-	Error         string   `json:"error,omitempty"`
-	ForwardedFrom string   `json:"forwarded_from,omitempty"` // Populated in Enterprise when a request is forwarded
-	Request       *Request `json:"request,omitempty"`
-	Time          string   `json:"time,omitempty"`
-	Type          string   `json:"type,omitempty"`
-}
-
-// ResponseEntry is the structure of a response audit log entry.
-type ResponseEntry struct {
-	Auth      *Auth     `json:"auth,omitempty"`
-	Error     string    `json:"error,omitempty"`
-	Forwarded bool      `json:"forwarded,omitempty"`
-	Request   *Request  `json:"request,omitempty"`
-	Response  *Response `json:"response,omitempty"`
-	Time      string    `json:"time,omitempty"`
-	Type      string    `json:"type,omitempty"`
+// Entry represents an audit entry.
+// It could be an entry for a request or response.
+type Entry struct {
+	Auth          *Auth     `json:"auth,omitempty"`
+	Error         string    `json:"error,omitempty"`
+	Forwarded     bool      `json:"forwarded,omitempty"`
+	ForwardedFrom string    `json:"forwarded_from,omitempty"` // Populated in Enterprise when a request is forwarded
+	Request       *Request  `json:"request,omitempty"`
+	Response      *Response `json:"response,omitempty"`
+	Time          string    `json:"time,omitempty"`
+	Type          string    `json:"type,omitempty"`
 }
 
 type Request struct {
