@@ -263,7 +263,7 @@ func clone[V any](s V) (V, error) {
 // This usually can be found in logical.Request.ClientTokenRemainingUses.
 func newAuth(auth *logical.Auth, tokenRemainingUses int) (*Auth, error) {
 	if auth == nil {
-		return nil, nil
+		return nil, fmt.Errorf("auth cannot be nil")
 	}
 
 	extNSPolicies, err := clone(auth.ExternalNamespacePolicies)
@@ -338,7 +338,7 @@ func newAuth(auth *logical.Auth, tokenRemainingUses int) (*Auth, error) {
 // aggregates them into an audit Request.
 func newRequest(req *logical.Request, ns *namespace.Namespace) (*Request, error) {
 	if req == nil {
-		return nil, nil
+		return nil, fmt.Errorf("request cannot be nil")
 	}
 
 	remoteAddr := remoteAddr(req)
@@ -399,12 +399,12 @@ func newRequest(req *logical.Request, ns *namespace.Namespace) (*Request, error)
 // isElisionRequired is used to indicate that response 'Data' should be elided.
 func newResponse(resp *logical.Response, req *logical.Request, isElisionRequired bool) (*Response, error) {
 	if resp == nil {
-		return nil, nil
+		return nil, fmt.Errorf("response cannot be nil")
 	}
 
 	if req == nil {
 		// Request should never be nil, even for a response.
-		return nil, fmt.Errorf("request is nil")
+		return nil, fmt.Errorf("request cannot be nil")
 	}
 
 	auth, err := newAuth(resp.Auth, req.ClientTokenRemainingUses)
