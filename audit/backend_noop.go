@@ -244,7 +244,7 @@ func (n *noopWrapper) Process(ctx context.Context, e *eventlogger.Event) (*event
 	// formatted headers that would have made it to the logs via the sink node.
 	// They only appear in requests.
 	if a.Subtype == RequestType {
-		reqEntry := &RequestEntry{}
+		reqEntry := &Entry{}
 		err = json.Unmarshal(b, &reqEntry)
 		if err != nil {
 			return nil, fmt.Errorf("unable to parse formatted audit entry data: %w", err)
