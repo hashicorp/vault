@@ -245,7 +245,7 @@ func TestEntryFormatter_Type(t *testing.T) {
 }
 
 // TestEntryFormatter_Process attempts to run the Process method to convert the
-// logical.LogInput within an audit event to JSON and JSONx (RequestEntry or ResponseEntry).
+// logical.LogInput within an audit event to JSON and JSONx (Entry),
 func TestEntryFormatter_Process(t *testing.T) {
 	t.Parallel()
 
@@ -541,8 +541,8 @@ func BenchmarkAuditFileSink_Process(b *testing.B) {
 	})
 }
 
-// TestEntryFormatter_FormatRequest exercises entryFormatter.formatRequest with
-// varying inputs.
+// TestEntryFormatter_Process_Request exercises entryFormatter process an event
+// with varying inputs.
 func TestEntryFormatter_Process_Request(t *testing.T) {
 	t.Parallel()
 
@@ -570,12 +570,18 @@ func TestEntryFormatter_Process_Request(t *testing.T) {
 			RootNamespace:        false,
 		},
 		"input-and-request-with-ns": {
-			Input:           &logical.LogInput{Request: &logical.Request{ID: "123"}},
+			Input: &logical.LogInput{
+				Auth:    &logical.Auth{},
+				Request: &logical.Request{ID: "123"},
+			},
 			IsErrorExpected: false,
 			RootNamespace:   true,
 		},
 		"omit-time": {
-			Input:          &logical.LogInput{Request: &logical.Request{ID: "123"}},
+			Input: &logical.LogInput{
+				Auth:    &logical.Auth{},
+				Request: &logical.Request{ID: "123"},
+			},
 			ShouldOmitTime: true,
 			RootNamespace:  true,
 		},
@@ -644,9 +650,9 @@ func TestEntryFormatter_Process_Request(t *testing.T) {
 	}
 }
 
-// TestEntryFormatter_FormatResponse exercises entryFormatter.formatResponse with
-// varying inputs.
-func TestEntryFormatter_FormatResponse(t *testing.T) {
+// TestEntryFormatter_Process_ResponseType exercises entryFormatter
+// with varying inputs also checking if the time can be omitted.
+func TestEntryFormatter_Process_ResponseType(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
@@ -673,12 +679,24 @@ func TestEntryFormatter_FormatResponse(t *testing.T) {
 			RootNamespace:        false,
 		},
 		"input-and-request-with-ns": {
-			Input:           &logical.LogInput{Request: &logical.Request{ID: "123"}},
+			Input: &logical.LogInput{
+				Auth:    &logical.Auth{},
+				Request: &logical.Request{ID: "123"},
+				Response: &logical.Response{
+					Auth: &logical.Auth{},
+				},
+			},
 			IsErrorExpected: false,
 			RootNamespace:   true,
 		},
 		"omit-time": {
-			Input:           &logical.LogInput{Request: &logical.Request{ID: "123"}},
+			Input: &logical.LogInput{
+				Auth:    &logical.Auth{},
+				Request: &logical.Request{ID: "123"},
+				Response: &logical.Response{
+					Auth: &logical.Auth{},
+				},
+			},
 			ShouldOmitTime:  true,
 			IsErrorExpected: false,
 			RootNamespace:   true,
@@ -1042,9 +1060,9 @@ func TestEntryFormatter_Process_JSONx(t *testing.T) {
 	}
 }
 
-// TestEntryFormatter_FormatResponse_ElideListResponses ensures that we correctly
-// elide data in responses to LIST operations.
-func TestEntryFormatter_FormatResponse_ElideListResponses(t *testing.T) {
+// TestEntryFormatter_ElideListResponses ensures that we correctly elide data in
+// responses to LIST operations.
+func TestEntryFormatter_ElideListResponses(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
@@ -1121,8 +1139,12 @@ func TestEntryFormatter_FormatResponse_ElideListResponses(t *testing.T) {
 		require.NotNil(t, formatter)
 
 		in := &logical.LogInput{
-			Request:  &logical.Request{Operation: operation},
-			Response: &logical.Response{Data: inputData},
+			Auth:    &logical.Auth{},
+			Request: &logical.Request{Operation: operation},
+			Response: &logical.Response{
+				Auth: &logical.Auth{},
+				Data: inputData,
+			},
 		}
 
 		auditEvent, err := NewEvent(ResponseType)
@@ -1274,6 +1296,7 @@ func TestEntryFormatter_Process_Panic(t *testing.T) {
 			Data: map[string]interface{}{},
 		},
 		Response: &logical.Response{
+			Auth: &logical.Auth{},
 			Data: map[string]any{
 				"token_bound_cidrs": []*sockaddr.SockAddrMarshaler{
 					{SockAddr: badAddr},
@@ -1379,6 +1402,7 @@ func fakeEvent(tb testing.TB, subtype subtype, input *logical.LogInput) *eventlo
 	require.Equal(tb, date, auditEvent.Timestamp)
 
 	auditEvent.Data = input
+	auditEvent.setTimeProvider(&testTimeProvider{})
 
 	e := &eventlogger.Event{
 		Type:      eventlogger.EventType(event.AuditType),

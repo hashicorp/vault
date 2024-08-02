@@ -255,6 +255,7 @@ func TestHashResponse(t *testing.T) {
 	now := time.Now()
 
 	resp := &logical.Response{
+		Auth: &logical.Auth{},
 		Data: map[string]interface{}{
 			"foo": "bar",
 			"baz": "foobar",
@@ -280,6 +281,9 @@ func TestHashResponse(t *testing.T) {
 	nonHMACDataKeys := []string{"baz"}
 
 	expected := &Response{
+		Auth: &Auth{
+			TokenType: logical.TokenTypeDefault.String(),
+		},
 		Data: map[string]interface{}{
 			"foo": "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317",
 			"baz": "foobar",
