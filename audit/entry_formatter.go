@@ -541,7 +541,7 @@ func (f *entryFormatter) createEntry(ctx context.Context, a *AuditEvent) (*Entry
 		shouldElide := f.config.elideListResponses && req.Operation == logical.ListOperation
 		resp, err = newResponse(data.Response, data.Request, shouldElide)
 		if err != nil {
-			return nil, fmt.Errorf("cannot convert request: %w", err)
+			return nil, fmt.Errorf("cannot convert response: %w", err)
 		}
 	}
 

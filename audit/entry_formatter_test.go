@@ -298,21 +298,33 @@ func TestEntryFormatter_Process(t *testing.T) {
 			ExpectedErrorMessage: "unable to retrieve namespace from context: no namespace",
 			Subtype:              ResponseType,
 			RequiredFormat:       JSONFormat,
-			Data:                 &logical.LogInput{Request: &logical.Request{ID: "123"}},
+			Data: &logical.LogInput{
+				Auth:    &logical.Auth{},
+				Request: &logical.Request{ID: "123"},
+			},
 		},
 		"json-request-basic-input-and-request-with-ns": {
 			IsErrorExpected: false,
 			Subtype:         RequestType,
 			RequiredFormat:  JSONFormat,
-			Data:            &logical.LogInput{Request: &logical.Request{ID: "123"}},
-			RootNamespace:   true,
+			Data: &logical.LogInput{
+				Auth:    &logical.Auth{},
+				Request: &logical.Request{ID: "123"},
+			},
+			RootNamespace: true,
 		},
 		"json-response-basic-input-and-request-with-ns": {
 			IsErrorExpected: false,
 			Subtype:         ResponseType,
 			RequiredFormat:  JSONFormat,
-			Data:            &logical.LogInput{Request: &logical.Request{ID: "123"}},
-			RootNamespace:   true,
+			Data: &logical.LogInput{
+				Auth:    &logical.Auth{},
+				Request: &logical.Request{ID: "123"},
+				Response: &logical.Response{
+					Auth: &logical.Auth{},
+				},
+			},
+			RootNamespace: true,
 		},
 		"jsonx-request-no-data": {
 			IsErrorExpected:      true,
@@ -362,15 +374,65 @@ func TestEntryFormatter_Process(t *testing.T) {
 			IsErrorExpected: false,
 			Subtype:         RequestType,
 			RequiredFormat:  JSONxFormat,
-			Data:            &logical.LogInput{Request: &logical.Request{ID: "123"}},
-			RootNamespace:   true,
+			Data: &logical.LogInput{
+				Auth:    &logical.Auth{},
+				Request: &logical.Request{ID: "123"},
+			},
+			RootNamespace: true,
 		},
 		"jsonx-response-basic-input-and-request-with-ns": {
 			IsErrorExpected: false,
 			Subtype:         ResponseType,
 			RequiredFormat:  JSONxFormat,
-			Data:            &logical.LogInput{Request: &logical.Request{ID: "123"}},
-			RootNamespace:   true,
+			Data: &logical.LogInput{
+				Auth:    &logical.Auth{},
+				Request: &logical.Request{ID: "123"},
+				Response: &logical.Response{
+					Auth: &logical.Auth{},
+				},
+			},
+			RootNamespace: true,
+		},
+		"no-auth": {
+			IsErrorExpected:      true,
+			ExpectedErrorMessage: "cannot convert auth: auth cannot be nil",
+			Subtype:              RequestType,
+			RequiredFormat:       JSONxFormat,
+			Data: &logical.LogInput{
+				Request: &logical.Request{ID: "123"},
+			},
+			RootNamespace: true,
+		},
+		"no-response-auth": {
+			IsErrorExpected:      true,
+			ExpectedErrorMessage: "cannot convert auth: auth cannot be nil",
+			Subtype:              ResponseType,
+			RequiredFormat:       JSONxFormat,
+			Data: &logical.LogInput{
+				Request: &logical.Request{ID: "123"},
+			},
+			RootNamespace: true,
+		},
+		"no-request": {
+			IsErrorExpected:      true,
+			ExpectedErrorMessage: "unable to parse request from 'response' audit event: request cannot be nil",
+			Subtype:              ResponseType,
+			RequiredFormat:       JSONxFormat,
+			Data: &logical.LogInput{
+				Auth: &logical.Auth{},
+			},
+			RootNamespace: true,
+		},
+		"no-response": {
+			IsErrorExpected:      true,
+			ExpectedErrorMessage: "cannot convert response: response cannot be nil",
+			Subtype:              ResponseType,
+			RequiredFormat:       JSONxFormat,
+			Data: &logical.LogInput{
+				Auth:    &logical.Auth{},
+				Request: &logical.Request{ID: "123"},
+			},
+			RootNamespace: true,
 		},
 	}
 
