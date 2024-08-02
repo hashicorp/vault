@@ -75,7 +75,7 @@ module('Acceptance | aws | configuration', function (hooks) {
   });
 
   test('it should save root AWS configuration', async function (assert) {
-    assert.expect(3);
+    assert.expect(5);
     const path = `aws-${this.uid}`;
     await enablePage.enable('aws', path);
     await click(SES.configTab);
@@ -94,12 +94,21 @@ module('Acceptance | aws | configuration', function (hooks) {
       this.flashSuccessSpy.calledWith('The backend configuration saved successfully!'),
       'Success flash message is rendered'
     );
+    // server.get here because we want it after they have pressed saved.
+    this.server.get(`${path}/config/root`, () => {
+      return { data: { id: path, type: 'aws', access_key: 'foo' } };
+    });
+    await visit(`/vault/secrets/${path}/configuration`);
+    assert.dom(GENERAL.infoRowValue('Access key')).hasText('foo', `Access Key has been set.`);
+    assert
+      .dom(GENERAL.infoRowValue('Secret key'))
+      .doesNotExist(`Secret key is not shown because it does not get returned by the api.`);
     // cleanup
     await runCmd(`delete sys/mounts/${path}`);
   });
 
   test('it should save lease AWS configuration', async function (assert) {
-    assert.expect(3);
+    assert.expect(5);
     const path = `aws-${this.uid}`;
     this.server.post(`${path}/config/lease`, (schema, req) => {
       const payload = JSON.parse(req.requestBody);
@@ -120,11 +129,19 @@ module('Acceptance | aws | configuration', function (hooks) {
       this.flashSuccessSpy.calledWith('The backend configuration saved successfully!'),
       'Success flash message is rendered'
     );
+    // server.get here because we want it after they have pressed saved.
+    this.server.get(`${path}/config/lease`, () => {
+      return { data: { id: path, type: 'aws', lease: '55s', lease_max: '65s' } };
+    });
+    await visit(`/vault/secrets/${path}/configuration`);
+    assert.dom(GENERAL.infoRowValue('Default Lease TTL')).hasText('55s', `Default TTL has been set.`);
+    assert.dom(GENERAL.infoRowValue('Max Lease TTL')).hasText('65s', `Default TTL has been set.`);
+
     // cleanup
     await runCmd(`delete sys/mounts/${path}`);
   });
 
-  test('it show AWS configuration details', async function (assert) {
+  test('it shows AWS mount configuration details', async function (assert) {
     assert.expect(12);
     const path = `aws-${this.uid}`;
     const type = 'aws';
@@ -153,7 +170,7 @@ module('Acceptance | aws | configuration', function (hooks) {
   });
 
   test('it should update AWS configuration details after editing', async function (assert) {
-    assert.expect(4);
+    assert.expect(6);
     const path = `aws-${this.uid}`;
     const type = 'aws';
     await enablePage.enable(type, path);
@@ -168,16 +185,26 @@ module('Acceptance | aws | configuration', function (hooks) {
     assert
       .dom(GENERAL.infoRowValue('Region'))
       .doesNotExist('Region has not been added therefor it does not show up on the details view.');
-    // edit accessKey and another field and confirm the details page is updated.
+    // edit root config details and lease config details and confirm the configuration.index page is updated.
     await click(SES.configure);
     await fillIn(GENERAL.inputByAttr('accessKey'), 'hello');
     await click(GENERAL.menuTrigger);
     await fillIn(GENERAL.selectByAttr('region'), 'ca-central-1');
     await click(GENERAL.saveButtonId('root'));
+    // add lease config details
+    await click(GENERAL.hdsTab('lease'));
+    await click(GENERAL.toggleInput('Lease'));
+    await fillIn(GENERAL.ttl.input('Lease'), '33');
+    await click(GENERAL.toggleInput('Maximum Lease'));
+    await fillIn(GENERAL.ttl.input('Maximum Lease'), '43');
+    await click(GENERAL.saveButtonId('lease'));
+
     await click(SES.viewBackend);
     await click(SES.configTab);
     assert.dom(GENERAL.infoRowValue('Access key')).hasText('hello', 'Access key has been updated to hello');
     assert.dom(GENERAL.infoRowValue('Region')).hasText('ca-central-1', 'Region has been added');
+    assert.dom(GENERAL.infoRowValue('Default Lease TTL')).hasText('33s', 'Default Lease TTL has been added');
+    assert.dom(GENERAL.infoRowValue('Max Lease TTL')).hasText('43s', 'Max Lease TTL has been added');
     // cleanup
     await runCmd(`delete sys/mounts/${path}`);
   });
