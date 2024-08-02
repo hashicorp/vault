@@ -21,15 +21,15 @@ import type Model from '@ember-data/model';
  *
  * @example
  * ```js
- * <SecretEngine::ConfigurationDetails @model={{this.model.backedn}} @configModel={{this.model.configModel}} />
+ * <SecretEngine::ConfigurationDetails @configModels={{this.configModels}} />
  * ```
- *
- * @param {object} model s- The secret-engine model as this.model.backend and the configuration models with their name.
- * @param {object} configModel - The config model to be configured.
+ * @param {string} typeDisplay - String of how we want to display the engine name (ex: SSH or Azure).
+ * @param {string} id - Backend/path/name/id of the secret engine. Example: 'aws-123'.
+ * @param {object} configModels - An object of config model(s).
  */
 
 interface Args {
-  models: [SecretEngineModel | AwsLeaseConfig | AwsRootConfig | SshCaConfig];
+  models: Array<Model>;
 }
 
 interface ConfigError {
@@ -37,49 +37,5 @@ interface ConfigError {
   message: string | null;
   errors: object | null;
 }
-// ARG TODO work on naming use plurals for arrays.
-export default class ConfigurationDetails extends Component<Args> {
-  @service declare readonly store: Store;
-  @tracked configError: [ConfigError] | [] = [];
-  @tracked configModel: [Model] | [] = [];
-  @tracked engineType: string | '' = '';
 
-  constructor(owner: unknown, args: Args) {
-    super(owner, args);
-    const { models } = this.args;
-    // Should not be able to get here without the secret-engine model, but in case an upstream change allows it, handle the error higher up.
-    if (!models.backend) return;
-    this.engineType = models.backend.type; // save this now because modifying the models object later will remove the backend model.
-    delete models.backend;
-    // for each configModel check if error, or not configured, or configured.
-    Object.values(models).forEach((configModel) => {
-      // ARG STOPPED HERE. Remember you just need to check if the configModel is an AdapterError and if so, assign it to the configError property.
-      // Otherwise show one or two of the configModels.
-      this.configModelAssignment(configModel);
-    });
-  }
-
-  configModelAssignment(configModel: Model) {
-    if (configModel.isAdapterError) {
-      // Check for errors that indicate the engine has not been configured yet. If they haven't return nothing so that the form displays the configuration prompt.
-      // Most engines return a 404 if they have not been configured, but SSH returns a 400 and a specific error message that we check for here.
-      if (
-        (this.engineType === 'ssh' &&
-          configModel.httpStatus === 400 &&
-          configModel.errors[0] === `keys haven't been configured yet`) ||
-        configModel.httpStatus === 404
-      ) {
-        return;
-      }
-      this.configError.push(configModel);
-      return;
-    }
-    this.configModel.push(configModel);
-    return;
-  }
-
-  get typeDisplay() {
-    if (!this.engineType) return;
-    return allEngines().find((engine) => engine.type === this.engineType)?.displayName;
-  }
-}
+export default class ConfigurationDetails extends Component<Args> {}
