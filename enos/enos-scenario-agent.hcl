@@ -411,33 +411,6 @@ scenario "agent" {
     }
   }
 
-  step "verify_vault_version" {
-    description = global.description.verify_vault_version
-    module      = module.vault_verify_version
-    depends_on  = [step.wait_for_leader]
-
-    providers = {
-      enos = local.enos_provider[matrix.distro]
-    }
-
-    verifies = [
-      quality.vault_version_build_date,
-      quality.vault_version_edition,
-      quality.vault_version_release,
-    ]
-
-    variables {
-      hosts                 = step.create_vault_cluster_targets.hosts
-      vault_addr            = step.create_vault_cluster.api_addr_localhost
-      vault_edition         = matrix.edition
-      vault_install_dir     = global.vault_install_dir[matrix.artifact_type]
-      vault_product_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
-      vault_revision        = matrix.artifact_source == "local" ? step.get_local_metadata.revision : var.vault_revision
-      vault_build_date      = matrix.artifact_source == "local" ? step.get_local_metadata.build_date : var.vault_build_date
-      vault_root_token      = step.create_vault_cluster.root_token
-    }
-  }
-
   step "verify_vault_unsealed" {
     description = global.description.verify_vault_unsealed
     module      = module.vault_verify_unsealed
@@ -460,13 +433,39 @@ scenario "agent" {
     }
   }
 
+  step "verify_vault_version" {
+    description = global.description.verify_vault_version
+    module      = module.vault_verify_version
+    depends_on  = [step.verify_vault_unsealed]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    verifies = [
+      quality.vault_api_sys_version_history_keys,
+      quality.vault_api_sys_version_history_key_info,
+      quality.vault_version_build_date,
+      quality.vault_version_edition,
+      quality.vault_version_release,
+    ]
+
+    variables {
+      hosts                 = step.create_vault_cluster_targets.hosts
+      vault_addr            = step.create_vault_cluster.api_addr_localhost
+      vault_edition         = matrix.edition
+      vault_install_dir     = global.vault_install_dir[matrix.artifact_type]
+      vault_product_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
+      vault_revision        = matrix.artifact_source == "local" ? step.get_local_metadata.revision : var.vault_revision
+      vault_build_date      = matrix.artifact_source == "local" ? step.get_local_metadata.build_date : var.vault_build_date
+      vault_root_token      = step.create_vault_cluster.root_token
+    }
+  }
+
   step "verify_write_test_data" {
     description = global.description.verify_write_test_data
     module      = module.vault_verify_write_data
-    depends_on = [
-      step.create_vault_cluster,
-      step.get_vault_cluster_ips
-    ]
+    depends_on  = [step.verify_vault_unsealed]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -492,10 +491,7 @@ scenario "agent" {
     description = global.description.verify_raft_cluster_all_nodes_are_voters
     skip_step   = matrix.backend != "raft"
     module      = module.vault_verify_raft_auto_join_voter
-    depends_on = [
-      step.create_vault_cluster,
-      step.get_vault_cluster_ips
-    ]
+    depends_on  = [step.verify_vault_unsealed]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -515,10 +511,7 @@ scenario "agent" {
   step "verify_replication" {
     description = global.description.verify_replication_status
     module      = module.vault_verify_replication
-    depends_on = [
-      step.create_vault_cluster,
-      step.get_vault_cluster_ips
-    ]
+    depends_on  = [step.verify_vault_unsealed]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -561,7 +554,7 @@ scenario "agent" {
   step "verify_ui" {
     description = global.description.verify_ui
     module      = module.vault_verify_ui
-    depends_on  = [step.create_vault_cluster]
+    depends_on  = [step.verify_vault_unsealed]
 
     providers = {
       enos = local.enos_provider[matrix.distro]

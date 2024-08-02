@@ -58,7 +58,7 @@ variable "vault_root_token" {
   default     = null
 }
 
-resource "enos_remote_exec" "verify_all_nodes_have_updated_version" {
+resource "enos_remote_exec" "verify_cli_version" {
   for_each = var.hosts
 
   environment = {
@@ -69,6 +69,25 @@ resource "enos_remote_exec" "verify_all_nodes_have_updated_version" {
     VAULT_REVISION    = var.vault_revision,
     VAULT_TOKEN       = var.vault_root_token,
     VAULT_VERSION     = var.vault_product_version,
+  }
+
+  scripts = [abspath("${path.module}/scripts/verify-cli-version.sh")]
+
+  transport = {
+    ssh = {
+      host = each.value.public_ip
+    }
+  }
+}
+
+resource "enos_remote_exec" "verify_cluster_version" {
+  for_each = var.hosts
+
+  environment = {
+    VAULT_ADDR       = var.vault_addr,
+    VAULT_BUILD_DATE = var.vault_build_date,
+    VAULT_TOKEN      = var.vault_root_token,
+    VAULT_VERSION    = var.vault_product_version,
   }
 
   scripts = [abspath("${path.module}/scripts/verify-cluster-version.sh")]

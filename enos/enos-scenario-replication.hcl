@@ -603,6 +603,8 @@ scenario "replication" {
     }
 
     verifies = [
+      quality.vault_api_sys_version_history_keys,
+      quality.vault_api_sys_version_history_key_info,
       quality.vault_version_build_date,
       quality.vault_version_edition,
       quality.vault_version_release,
