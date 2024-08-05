@@ -77,12 +77,10 @@ module('Unit | Service | path-help', function (hooks) {
   });
 
   test('it should hydrate an existing model', async function (assert) {
-    assert.expect(2);
-
-    this.server.get(`/v1/pki2/roles/example?help=1`, () => openapiStub);
+    this.server.get(`/pki2/roles/example`, () => openapiStub);
 
     const modelType = 'pki/role';
-    await this.pathHelp.getNewModel(modelType, 'pki2', 'auth/userpass/', 'user');
+    await this.pathHelp.hydrateModel(modelType, 'pki2');
     const model = this.store.createRecord(modelType);
     model.set('username', 'foobar');
     assert.strictEqual(model.username, 'foobar');
