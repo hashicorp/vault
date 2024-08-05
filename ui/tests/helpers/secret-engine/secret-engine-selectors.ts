@@ -22,7 +22,9 @@ export const SECRET_ENGINE_SELECTORS = {
   viewBackend: '[data-test-backend-view-link]',
   warning: '[data-test-warning]',
   aws: {
-    rootForm: '[data-test-aws-root-creds-form]',
+    configForm: '[data-test-aws-config-form]',
+    accessTitle: '[data-test-aws-access-title]',
+    leaseTitle: '[data-test-aws-lease-title]',
     delete: (role: string) => `[data-test-aws-role-delete="${role}"]`,
     save: '[data-test-aws-save]',
   },

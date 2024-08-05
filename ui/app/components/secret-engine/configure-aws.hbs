@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<form {{on "submit" (perform this.save)}} aria-label="save aws creds">
+<form {{on "submit" (perform this.save)}} aria-label="save aws creds" data-test-aws-config-form>
   <div class="box is-fullwidth is-shadowless is-marginless">
     <NamespaceReminder @mode="save" @noun="configuration" />
     <MessageError @errorMessage={{this.errorMessageRoot}} />
@@ -13,7 +13,7 @@
     </p>
   </div>
   {{! Root configuration details }}
-  <h2 class="title is-5 has-bottom-padding-s has-top-margin-l">
+  <h2 class="title is-5 has-bottom-padding-s has-top-margin-l" data-test-aws-access-title>
     Access to AWS
   </h2>
   <div class="box is-fullwidth is-sideless">
@@ -25,7 +25,7 @@
   </div>
 
   {{! Lease configuration details }}
-  <h2 class="title is-5 has-bottom-padding-s has-top-margin-l">
+  <h2 class="title is-5 has-bottom-padding-s has-top-margin-l" data-test-aws-lease-title>
     Leases
   </h2>
   <div class="box is-fullwidth is-sideless is-bottomless">

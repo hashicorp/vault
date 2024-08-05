@@ -70,6 +70,8 @@ export const expectedConfigKeys = (type) => {
   switch (type) {
     case 'aws':
       return ['Access key', 'Region', 'IAM endpoint', 'STS endpoint', 'Maximum retries'];
+    case 'aws-lease':
+      return ['Default Lease TTL', 'Max Lease TTL'];
     case 'ssh':
       return ['Public key', 'Generate signing key'];
   }
