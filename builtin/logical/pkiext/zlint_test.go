@@ -23,7 +23,7 @@ func buildZLintContainer(t *testing.T) {
 	containerfile := `
 FROM docker.mirror.hashicorp.services/library/golang:latest
 
-RUN go install github.com/zmap/zlint/v3/cmd/zlint@latest
+RUN go install github.com/zmap/zlint/v3/cmd/zlint@v3.6.2
 `
 
 	bCtx := docker.NewBuildContext()
