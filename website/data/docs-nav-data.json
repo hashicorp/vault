@@ -2856,6 +2856,15 @@
               "type": "outlined",
               "color": "neutral"
             }
+          },
+          {
+            "title": "Configure cross namespace access",
+            "path": "enterprise/namespaces/configure-cross-namespace-access",
+            "badge": {
+              "text": "ENTERPRISE",
+              "type": "outlined",
+              "color": "neutral"
+            }
           }
         ]
       },
