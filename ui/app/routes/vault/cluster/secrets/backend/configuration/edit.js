@@ -13,7 +13,7 @@ export default Route.extend({
   store: service(),
 
   model() {
-    const { backend } = this.paramsFor(this.routeName);
+    const { backend } = this.paramsFor('vault.cluster.secrets.backend');
     return this.store.query('secret-engine', { path: backend }).then((modelList) => {
       const model = modelList && modelList[0];
       if (!model || !CONFIGURABLE_SECRET_ENGINES.includes(model.type)) {
