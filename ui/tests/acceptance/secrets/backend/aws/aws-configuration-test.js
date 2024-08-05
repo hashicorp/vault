@@ -14,11 +14,13 @@ import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { runCmd } from 'vault/tests/helpers/commands';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { overrideResponse } from 'vault/tests/helpers/stubs';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 import {
   createConfig,
   expectedConfigKeys,
   expectedValueOfConfigKeys,
+  configUrl,
 } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
 
 module('Acceptance | aws | configuration', function (hooks) {
@@ -189,5 +191,18 @@ module('Acceptance | aws | configuration', function (hooks) {
     assert.dom(GENERAL.infoRowValue('Max Lease TTL')).hasText('43s', 'Max Lease TTL has been added');
     // cleanup
     await runCmd(`delete sys/mounts/${path}`);
+  });
+
+  test('it should show API error when AWS configuration read fails', async function (assert) {
+    assert.expect(1);
+    const path = `aws-${this.uid}`;
+    const type = 'aws';
+    await enablePage.enable(type, path);
+    // interrupt get and return API error
+    this.server.get(configUrl(type, path), () => {
+      return overrideResponse(400, { errors: ['bad request'] });
+    });
+    await click(SES.configTab);
+    assert.dom(SES.error.title).hasText('Error', 'shows the secrets backend error route');
   });
 });
