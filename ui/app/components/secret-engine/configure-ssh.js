@@ -7,11 +7,11 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 
 /**
- * @module ConfigureSshSecretComponent
+ * @module ConfigureSshSComponent
  *
  * @example
  * ```js
- * <ConfigureSshSecret
+ * <SecretEngine::ConfigureSsh
  *    @model={{this.model}}
  *    @configured={{this.configured}}
  *    @saveConfig={{action "saveConfig"}}
@@ -24,7 +24,7 @@ import { action } from '@ember/object';
  * @param {boolean} loading - property in parent that updates depending on status of parent's action
  *
  */
-export default class ConfigureSshSecretComponent extends Component {
+export default class ConfigureSshComponent extends Component {
   @action
   delete() {
     this.args.saveConfig({ delete: true });

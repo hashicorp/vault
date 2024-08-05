@@ -10,12 +10,16 @@ import { v4 as uuidv4 } from 'uuid';
 
 import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
+import { setupMirage } from 'ember-cli-mirage/test-support';
 import { runCmd } from 'vault/tests/helpers/commands';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
+import { configUrl } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
+import { overrideResponse } from 'vault/tests/helpers/stubs';
 
 module('Acceptance | ssh | configuration', function (hooks) {
   setupApplicationTest(hooks);
+  setupMirage(hooks);
 
   hooks.beforeEach(function () {
     this.uid = uuidv4();
@@ -81,5 +85,18 @@ module('Acceptance | ssh | configuration', function (hooks) {
       .hasText('Yes', 'value for Generate signing key displays default of true/yes.');
     // cleanup
     await runCmd(`delete sys/mounts/${sshPath}`);
+  });
+
+  test('it should show API error when SSH configuration read fails', async function (assert) {
+    assert.expect(1);
+    const path = `ssh-${this.uid}`;
+    const type = 'ssh';
+    await enablePage.enable(type, path);
+    // interrupt get and return API error
+    this.server.get(configUrl(type, path), () => {
+      return overrideResponse(400, { errors: ['bad request'] });
+    });
+    await click(SES.configTab);
+    assert.dom(SES.error.title).hasText('Error', 'shows the secrets backend error route');
   });
 });
