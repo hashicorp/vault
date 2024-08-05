@@ -9,29 +9,33 @@
       <Hds::Form::TextInput::Base
         @type="text"
         @value={{key}}
-        aria-label="{{key}} object key"
+        aria-label="Key {{key}}"
         placeholder="key"
-        name="existingKey-{{key}}"
+        name="key-{{key}}"
         {{! existing keys are not editable, only their values can be updated }}
         disabled={{this.isExistingKey key}}
       />
 
-      {{#if (eq (this.getState key) "deleted")}}
-        <Hds::Form::MaskedInput::Base
-          @value="null"
-          @isContentMasked={{false}}
-          aria-label="{{key}} object value"
-          name={{key}}
-          disabled={{true}}
-        />
-      {{else}}
-        <Hds::Form::MaskedInput::Base
-          @value={{value}}
-          aria-label="{{key}} value"
-          name="existingKeyValue-{{key}}"
-          disabled={{eq (this.getState key) "disabled"}}
-        />
-      {{/if}}
+      {{#let (concat "value-" key) as |name|}}
+        {{#if (eq (this.getState key) "deleted")}}
+          {{! Unmask values marked for deletion to show users the payload sends "null" (which removes a key/value pair) }}
+          {{! @isContentMasked does not update after the component has been instantiated so we have to use separate inputs}}
+          <Hds::Form::MaskedInput::Base
+            @value="null"
+            @isContentMasked={{false}}
+            aria-label={{humanize name}}
+            name={{name}}
+            disabled={{true}}
+          />
+        {{else}}
+          <Hds::Form::MaskedInput::Base
+            @value={{value}}
+            aria-label={{humanize name}}
+            name={{name}}
+            disabled={{eq (this.getState key) "disabled"}}
+          />
+        {{/if}}
+      {{/let}}
 
       <Hds::ButtonSet {{style width="15rem"}}>
         {{#if (eq (this.getState key) "disabled")}}
@@ -50,7 +54,11 @@
             {{on "click" (fn this.setState key "deleted")}}
           />
         {{else}}
-          <Hds::Button @text="Cancel" @color="secondary" {{on "click" (fn this.handleCancel key)}} />
+          <Hds::Button
+            @text={{if (this.isExistingKey key) "Cancel" "Remove"}}
+            @color="secondary"
+            {{on "click" (fn this.handleCancel key)}}
+          />
         {{/if}}
       </Hds::ButtonSet>
     </div>
@@ -62,7 +70,7 @@
     {{/if}}
   {{/each-in}}
 
-  {{! empty inputs for adding new key value pairs }}
+  {{! Empty inputs for adding new key/value pairs }}
   <div class="flex column-gap-16 has-top-padding-s">
     <Hds::Form::TextInput::Base
       @type="text"

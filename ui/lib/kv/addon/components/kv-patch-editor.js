@@ -11,9 +11,9 @@ class StateManager {
   @tracked _state;
   possibleStates = ['enabled', 'disabled', 'deleted'];
 
-  constructor(kvObject) {
+  constructor(kvData) {
     // initially disable all inputs
-    this._state = Object.keys(kvObject).reduce((obj, key) => {
+    this._state = Object.keys(kvData).reduce((obj, key) => {
       obj[key] = 'disabled';
       return obj;
     }, {});
@@ -33,8 +33,8 @@ class StateManager {
 class KvData {
   @tracked _kvData;
 
-  constructor(kvObject) {
-    this._kvData = kvObject;
+  constructor(kvData) {
+    this._kvData = kvData;
   }
 
   set(key, value) {
@@ -53,21 +53,21 @@ class KvData {
 
 export default class KvPatchEditor extends Component {
   @tracked state;
-  @tracked formData;
+  @tracked patchData;
   @tracked newKey = '';
   @tracked newValue = '';
 
   getState = (key) => this.state.get(key);
-  isExistingKey = (key) => Object.keys(this.args.kvObject).includes(key);
+  isExistingKey = (key) => Object.keys(this.args.kvData).includes(key);
 
   constructor() {
     super(...arguments);
-    this.state = new StateManager(this.args.kvObject);
-    this.formData = new KvData(this.args.kvObject);
+    this.state = new StateManager(this.args.kvData);
+    this.patchData = new KvData(this.args.kvData);
   }
 
   get inputData() {
-    return this.formData._kvData;
+    return this.patchData._kvData;
   }
 
   @action
@@ -80,7 +80,7 @@ export default class KvPatchEditor extends Component {
     if (this.isExistingKey(key)) {
       this.state.set(key, 'disabled');
     } else {
-      this.formData.deleteKey(key);
+      this.patchData.deleteKey(key);
     }
   }
 
@@ -92,7 +92,7 @@ export default class KvPatchEditor extends Component {
 
   @action
   addData(key, value) {
-    this.formData.set(key, value);
+    this.patchData.set(key, value);
     this.newKey = '';
     this.newValue = '';
     this.state.set(key, 'enabled');
@@ -100,9 +100,12 @@ export default class KvPatchEditor extends Component {
 
   @action
   submit(event) {
+    // if a user doesn't click add make sure we include the final row of key/values
+    // if there are matching keys, show the validation warning and disable the add
+    // and prevent it overriding the existing key/value onBlur
     event.preventDefault();
-    const formData = new FormData(event.target);
-    const data = Object.fromEntries(formData.entries());
+    const patchData = new FormData(event.target);
+    const data = Object.fromEntries(patchData.entries());
     this.args.onSubmit(data);
   }
 }
