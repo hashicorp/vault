@@ -199,7 +199,13 @@ func (a *ActivityLog) computeCurrentMonthForBillingPeriodInternal(ctx context.Co
 			newMountCounts := &activity.CountsRecord{}
 
 			for _, typ := range ActivityClientTypes {
-				for clientID := range mount.Counts.clientsByType(typ) {
+				clients := mount.Counts.clientsByType(typ)
+				clientIDs := make([]string, 0, len(clients))
+				for clientID := range clients {
+					clientIDs = append(clientIDs, clientID)
+				}
+				sort.Strings(clientIDs)
+				for _, clientID := range clientIDs {
 					hllByType[typ].Insert([]byte(clientID))
 
 					// increment the per mount, per namespace, and total counts
