@@ -188,11 +188,7 @@ func remotePort(req *logical.Request) int {
 // clientCertSerialNumber attempts the retrieve the serial number of the peer
 // certificate from the specified tls.ConnectionState.
 func clientCertSerialNumber(req *logical.Request) string {
-	if req == nil {
-		return ""
-	}
-
-	if req.Connection == nil {
+	if req == nil || req.Connection == nil {
 		return ""
 	}
 
@@ -250,8 +246,8 @@ func clone[V any](s V) (V, error) {
 // an audit Auth.
 // tokenRemainingUses should be the client token remaining uses to include in auth.
 // This usually can be found in logical.Request.ClientTokenRemainingUses.
-// NOTE: supplying a nil value for auth will result in a nil return value and error.
-// The caller should check the return value before attempting to use it.
+// NOTE: supplying a nil value for auth will result in a nil return value and
+// (nil) error. The caller should check the return value before attempting to use it.
 func newAuth(auth *logical.Auth, tokenRemainingUses int) (*Auth, error) {
 	if auth == nil {
 		return nil, nil
@@ -388,6 +384,8 @@ func newRequest(req *logical.Request, ns *namespace.Namespace) (*Request, error)
 // newResponse takes a logical.Response and logical.Request, transforms and
 // aggregates them into an audit Response.
 // isElisionRequired is used to indicate that response 'Data' should be elided.
+// NOTE: supplying a nil value for response will result in a nil return value and
+// (nil) error. The caller should check the return value before attempting to use it.
 func newResponse(resp *logical.Response, req *logical.Request, isElisionRequired bool) (*Response, error) {
 	if resp == nil {
 		return nil, nil
