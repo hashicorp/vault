@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: BUSL-1.1
+// SPDX-License-Identifier: MPL-2.0
 
 // Package metricregistry is a helper that allows Vault code or plugins that are
 // compiled into Vault to pre-define any metrics they will emit to go-metrics at
