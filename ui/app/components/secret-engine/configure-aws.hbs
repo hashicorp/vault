@@ -28,7 +28,7 @@
   <h2 class="title is-5 has-bottom-padding-s has-top-margin-l">
     Leases
   </h2>
-  <div class="box is-fullwidth is-sideless">
+  <div class="box is-fullwidth is-sideless is-bottomless">
     {{#each @leaseConfig.attrs as |attr|}}
       <FormField @attr={{attr}} @model={{@leaseConfig}} @modelValidations={{this.modelValidationsLease}} />
     {{/each}}

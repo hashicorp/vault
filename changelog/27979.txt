@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Make AWS secret engine configuration one form.
+```
