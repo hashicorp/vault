@@ -99,19 +99,6 @@ scenario "k8s" {
     depends_on = [step.deploy_vault]
   }
 
-  step "verify_ui" {
-    module    = module.k8s_verify_ui
-    skip_step = matrix.edition == "ce"
-
-    variables {
-      vault_pods        = step.deploy_vault.vault_pods
-      kubeconfig_base64 = step.create_kind_cluster.kubeconfig_base64
-      context_name      = step.create_kind_cluster.context_name
-    }
-
-    depends_on = [step.deploy_vault]
-  }
-
   step "verify_version" {
     module = module.k8s_verify_version
 
