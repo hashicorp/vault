@@ -44,6 +44,7 @@ export default Service.extend({
   hydrateModel(modelType, backend) {
     const owner = getOwner(this);
     const modelName = `model:${modelType}`;
+
     const modelFactory = owner.factoryFor(modelName);
     const helpUrl = getHelpUrlForModel(modelType, backend);
 
@@ -71,29 +72,13 @@ export default Service.extend({
     const owner = getOwner(this);
     const modelName = `model:${modelType}`;
 
-    const modelFactory = owner.factoryFor(modelName);
-    let helpUrl = getHelpUrlForModel(modelType, backend);
-
-    let newModel;
-    // if we have a factory, we need to take the existing model into account
-    if (modelFactory) {
-      debug(`Model factory found for ${modelType}`);
-      newModel = modelFactory.class;
-      if (newModel.merged || !helpUrl) {
-        return resolve();
-      }
-
-      return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
-    } else {
-      debug(`Creating new Model for ${modelType}`);
-      newModel = Model.extend({});
+    // if there's an existing factory, throw an error
+    if (owner.factoryFor(modelName)) {
+      throw new Error(`Model factory found for ${modelType} - use hydrateModel instead`);
     }
 
-    // we don't have an apiPath for dynamic secrets
-    // and we don't need paths for them yet
-    if (!apiPath) {
-      return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
-    }
+    debug(`Creating new Model for ${modelType}`);
+    let newModel = Model.extend({});
 
     // use paths to dynamically create our openapi help url
     // if we have a brand new model
@@ -116,7 +101,7 @@ export default Service.extend({
           return reject();
         }
 
-        helpUrl = `/v1/${apiPath}${path.slice(1)}?help=true`;
+        const helpUrl = `/v1/${apiPath}${path.slice(1)}?help=true`;
         pathInfo.paths = paths;
         newModel = newModel.extend({ paths: pathInfo });
         return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
