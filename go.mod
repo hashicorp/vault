@@ -10,9 +10,7 @@ module github.com/hashicorp/vault
 // semantic related to Go module handling), this comment should be updated to explain that.
 //
 // Whenever this value gets updated, sdk/go.mod should be updated to the same value.
-go 1.22
-
-toolchain go1.22.2
+go 1.22.5
 
 replace github.com/hashicorp/vault/api => ./api
 
@@ -74,7 +72,7 @@ require (
 	github.com/google/go-metrics-stackdriver v0.2.0
 	github.com/google/tink/go v1.7.0
 	github.com/hashicorp-forge/bbolt v1.3.8-hc3
-	github.com/hashicorp/cap v0.6.0
+	github.com/hashicorp/cap v0.7.0
 	github.com/hashicorp/cap/ldap v0.0.0-20240403125925-c0418810d10e
 	github.com/hashicorp/cli v1.1.6
 	github.com/hashicorp/consul-template v0.39.1
@@ -134,7 +132,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-azure v0.18.0
 	github.com/hashicorp/vault-plugin-auth-cf v0.18.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.18.0
-	github.com/hashicorp/vault-plugin-auth-jwt v0.21.0
+	github.com/hashicorp/vault-plugin-auth-jwt v0.21.1-0.20240805153800-91ad11cdb197
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.12.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.19.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.16.0
@@ -211,13 +209,13 @@ require (
 	go.opentelemetry.io/otel/trace v1.28.0
 	go.uber.org/atomic v1.11.0
 	go.uber.org/goleak v1.3.0
-	golang.org/x/crypto v0.24.0
+	golang.org/x/crypto v0.25.0
 	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842
-	golang.org/x/net v0.26.0
+	golang.org/x/net v0.27.0
 	golang.org/x/oauth2 v0.21.0
 	golang.org/x/sync v0.7.0
 	golang.org/x/sys v0.22.0
-	golang.org/x/term v0.21.0
+	golang.org/x/term v0.22.0
 	golang.org/x/text v0.16.0
 	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d
 	google.golang.org/api v0.181.0
@@ -232,6 +230,7 @@ require (
 
 require (
 	cloud.google.com/go/longrunning v0.5.7 // indirect
+	github.com/hashicorp/go-secure-stdlib v0.1.1-0.20240801184542-be66c7f88420 // indirect
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
 	gopkg.in/go-jose/go-jose.v2 v2.6.3 // indirect
@@ -320,7 +319,7 @@ require (
 	github.com/containerd/continuity v0.4.2 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/coreos/etcd v3.3.27+incompatible // indirect
-	github.com/coreos/go-oidc/v3 v3.10.0 // indirect
+	github.com/coreos/go-oidc/v3 v3.11.0 // indirect
 	github.com/coreos/go-semver v0.3.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/coreos/pkg v0.0.0-20220810130054-c7d1c02cb6cf // indirect
@@ -352,7 +351,7 @@ require (
 	github.com/go-asn1-ber/asn1-ber v1.5.5 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.5.0 // indirect
-	github.com/go-jose/go-jose/v4 v4.0.2 // indirect
+	github.com/go-jose/go-jose/v4 v4.0.4 // indirect
 	github.com/go-ldap/ldif v0.0.0-20200320164324-fd88d9b715b3 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
