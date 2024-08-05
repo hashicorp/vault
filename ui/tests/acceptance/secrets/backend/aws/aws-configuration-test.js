@@ -75,29 +75,20 @@ module('Acceptance | aws | configuration', function (hooks) {
   });
 
   test('it should save root AWS configuration', async function (assert) {
-    assert.expect(5);
+    assert.expect(3);
     const path = `aws-${this.uid}`;
     await enablePage.enable('aws', path);
     await click(SES.configTab);
     await click(SES.configure);
     await fillIn(GENERAL.inputByAttr('accessKey'), 'foo');
     await fillIn(GENERAL.inputByAttr('secretKey'), 'bar');
-    this.server.post(`${path}/config/root`, (schema, req) => {
-      const payload = JSON.parse(req.requestBody);
-      assert.deepEqual(payload.access_key, 'foo', 'access_key is foo');
-      assert.deepEqual(payload.secret_key, 'bar', 'secret_key is foo');
-      return { data: { id: path, type: 'aws', attributes: payload } };
-    });
 
     await click(GENERAL.saveButtonId('root'));
     assert.true(
       this.flashSuccessSpy.calledWith('The backend configuration saved successfully!'),
       'Success flash message is rendered'
     );
-    // server.get here because we want it after they have pressed saved.
-    this.server.get(`${path}/config/root`, () => {
-      return { data: { id: path, type: 'aws', access_key: 'foo' } };
-    });
+
     await visit(`/vault/secrets/${path}/configuration`);
     assert.dom(GENERAL.infoRowValue('Access key')).hasText('foo', `Access Key has been set.`);
     assert
@@ -108,14 +99,8 @@ module('Acceptance | aws | configuration', function (hooks) {
   });
 
   test('it should save lease AWS configuration', async function (assert) {
-    assert.expect(5);
+    assert.expect(3);
     const path = `aws-${this.uid}`;
-    this.server.post(`${path}/config/lease`, (schema, req) => {
-      const payload = JSON.parse(req.requestBody);
-      assert.deepEqual(payload.lease, '55s', 'lease is set to 55s');
-      assert.deepEqual(payload.lease_max, '65s', 'maximum_lease is set to 65s');
-      return { data: { id: path, type: 'aws', attributes: payload } };
-    });
     await enablePage.enable('aws', path);
     await click(SES.configTab);
     await click(SES.configure);
@@ -129,13 +114,10 @@ module('Acceptance | aws | configuration', function (hooks) {
       this.flashSuccessSpy.calledWith('The backend configuration saved successfully!'),
       'Success flash message is rendered'
     );
-    // server.get here because we want it after they have pressed saved.
-    this.server.get(`${path}/config/lease`, () => {
-      return { data: { id: path, type: 'aws', lease: '55s', lease_max: '65s' } };
-    });
+
     await visit(`/vault/secrets/${path}/configuration`);
     assert.dom(GENERAL.infoRowValue('Default Lease TTL')).hasText('55s', `Default TTL has been set.`);
-    assert.dom(GENERAL.infoRowValue('Max Lease TTL')).hasText('65s', `Default TTL has been set.`);
+    assert.dom(GENERAL.infoRowValue('Max Lease TTL')).hasText('1m5s', `Default TTL has been set.`);
 
     // cleanup
     await runCmd(`delete sys/mounts/${path}`);
