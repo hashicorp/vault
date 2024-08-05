@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: BUSL-1.1
 
 ## DOCKERHUB DOCKERFILE ##
-FROM alpine:3.18 as default
+FROM alpine:3 as default
 
 ARG BIN_NAME
 # NAME and PRODUCT_VERSION are the name of the software in releases.hashicorp.com
@@ -75,7 +75,7 @@ CMD ["server", "-dev"]
 
 
 ## UBI DOCKERFILE ##
-FROM registry.access.redhat.com/ubi8/ubi-minimal:8.10 as ubi
+FROM registry.access.redhat.com/ubi8/ubi-minimal as ubi
 
 ARG BIN_NAME
 # PRODUCT_VERSION is the version built dist/$TARGETOS/$TARGETARCH/$BIN_NAME,
