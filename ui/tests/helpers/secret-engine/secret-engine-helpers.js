@@ -48,6 +48,8 @@ export function configUrl(type, backend) {
   switch (type) {
     case 'aws':
       return `${backend}/config/root`;
+    case 'aws-lease':
+      return `${backend}/config/lease`;
     case 'ssh':
       return `/${backend}/config/ca`;
     default:
