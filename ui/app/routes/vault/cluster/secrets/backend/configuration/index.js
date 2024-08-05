@@ -7,7 +7,8 @@ import { service } from '@ember/service';
 import Route from '@ember/routing/route';
 import { CONFIGURABLE_SECRET_ENGINES } from 'vault/helpers/mountable-secret-engines';
 import { allEngines } from 'vault/helpers/mountable-secret-engines';
-import { hash } from 'rsvp';
+import { reject } from 'rsvp';
+
 /**
  * This route is responsible for fetching all configuration model(s).
  * This includes the mount-configuration model attached to the secret-engine model via a belongsTo relationship.
@@ -44,64 +45,49 @@ export default class SecretsBackendConfigurationRoute extends Route {
       let configModels = await this.fetchConfig(secretEngineModel.type, secretEngineModel.id);
       configModels = this.standardizeConfigModels(configModels);
 
-      return hash({
+      return {
         secretEngineModel,
-        ...configModels,
-      });
+        configModels,
+      };
     }
-    return hash({ secretEngineModel });
+    return { secretEngineModel };
   }
 
   standardizeConfigModels(configModels) {
     // standardize the configModels to an array so that the component can handle it correctly
     Array.isArray(configModels) ? configModels : (configModels = [configModels]);
     // make sure no items in the array are null or undefined
-    configModels.forEach((configModel) => {
-      if (!configModel) {
-        configModels.splice(configModels.indexOf(configModel), 1);
-      }
+    return configModels.filter((configModel) => {
+      return !!configModel;
     });
-
-    return configModels;
   }
 
-  async fetchConfig(type, id) {
+  fetchConfig(type, id) {
     switch (type) {
       case 'aws':
-        return await this.fetchAwsConfigs(id);
+        return this.fetchAwsConfigs(id);
       case 'ssh':
-        return await this.fetchSshCaConfig(id);
+        return this.fetchSshCaConfig(id);
+      default:
+        return reject({ httpStatus: 404, message: 'not found', path: id });
     }
   }
 
   async fetchAwsConfigs(id) {
     // AWS has two configuration endpoints root and lease, return an array of these responses.
     const configArray = [];
-    const configRoot = await this.fetchAwsRoot(id);
-    const configLease = await this.fetchAwsLease(id);
+    const configRoot = await this.fetchAwsConfig(id, 'aws/root-config');
+    const configLease = await this.fetchAwsConfig(id, 'aws/lease-config');
     configArray.push(configRoot, configLease);
     return configArray;
   }
 
-  async fetchAwsLease(id) {
+  async fetchAwsConfig(id, modelPath) {
     try {
-      return await this.store.queryRecord('aws/lease-config', { backend: id });
+      return await this.store.queryRecord(modelPath, { backend: id });
     } catch (e) {
       if (e.httpStatus === 404) {
         // a 404 error is thrown when the lease config hasn't been set yet.
-        return;
-      }
-      throw e;
-    }
-  }
-
-  async fetchAwsRoot(id) {
-    try {
-      return await this.store.queryRecord('aws/root-config', { backend: id });
-    } catch (e) {
-      if (e.httpStatus === 404) {
-        // a 404 error is thrown when the root config hasn't been set yet.
-        // return and let the component handle the empty config.
         return;
       }
       throw e;
@@ -128,9 +114,5 @@ export default class SecretsBackendConfigurationRoute extends Route {
     )?.displayName;
     controller.isConfigurable = CONFIGURABLE_SECRET_ENGINES.includes(resolvedModel.secretEngineModel.type);
     controller.modelId = resolvedModel.secretEngineModel.id;
-    // from the resolvedModel remove the secretEngineModel as it's not needed in the configuration details component
-    const configModels = { ...resolvedModel };
-    delete configModels.secretEngineModel;
-    controller.configModels = Object.values(configModels);
   }
 }
