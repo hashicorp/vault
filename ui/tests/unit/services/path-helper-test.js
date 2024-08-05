@@ -83,6 +83,6 @@ module('Unit | Service | path-help', function (hooks) {
     await this.pathHelp.hydrateModel(modelType, 'pki2');
     const model = this.store.createRecord(modelType);
     model.set('username', 'foobar');
-    assert.strictEqual(model.username, 'foobar');
+    assert.strictEqual(model.username, 'foobar', 'sets value of key that only exists in openAPI response');
   });
 });
