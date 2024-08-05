@@ -4,15 +4,16 @@
 ~}}
 
 <form {{on "submit" this.submit}} ...attributes>
-  {{#each-in @value as |key value|}}
+  {{#each-in this.inputData as |key value|}}
     <div class="flex column-gap-16 has-top-padding-s">
       <Hds::Form::TextInput::Base
         @type="text"
         @value={{key}}
         aria-label="{{key}} object key"
         placeholder="key"
-        name="disabled-key-{{key}}"
-        disabled={{true}}
+        name="existingKey-{{key}}"
+        {{! existing keys are not editable, only their values can be updated }}
+        disabled={{this.isExistingKey key}}
       />
 
       {{#if (eq (this.getState key) "deleted")}}
@@ -21,16 +22,17 @@
           @isContentMasked={{false}}
           aria-label="{{key}} object value"
           name={{key}}
-          readonly={{true}}
+          disabled={{true}}
         />
       {{else}}
         <Hds::Form::MaskedInput::Base
           @value={{value}}
           aria-label="{{key}} value"
-          name={{key}}
+          name="existingKeyValue-{{key}}"
           disabled={{eq (this.getState key) "disabled"}}
         />
       {{/if}}
+
       <Hds::ButtonSet {{style width="15rem"}}>
         {{#if (eq (this.getState key) "disabled")}}
           <Hds::Button
@@ -38,7 +40,7 @@
             @icon="edit"
             @color="secondary"
             @isIconOnly={{true}}
-            {{on "click" (fn this.setState key "readonly")}}
+            {{on "click" (fn this.setState key "enabled")}}
           />
           <Hds::Button
             @text="Delete"
@@ -48,16 +50,45 @@
             {{on "click" (fn this.setState key "deleted")}}
           />
         {{else}}
-          <Hds::Button @text="Cancel" @color="secondary" {{on "click" (fn this.setState key "disabled")}} />
+          <Hds::Button @text="Cancel" @color="secondary" {{on "click" (fn this.handleCancel key)}} />
         {{/if}}
       </Hds::ButtonSet>
     </div>
+
     {{#if (eq (this.getState key) "deleted")}}
       <Hds::Alert @type="compact" @color="critical" @icon="alert-diamond-fill" as |A|>
         <A.Description>This key value pair is marked for deletion.</A.Description>
       </Hds::Alert>
     {{/if}}
   {{/each-in}}
+
+  {{! empty inputs for adding new key value pairs }}
+  <div class="flex column-gap-16 has-top-padding-s">
+    <Hds::Form::TextInput::Base
+      @type="text"
+      @value={{this.newKey}}
+      aria-label="new key"
+      placeholder="key"
+      name="newKey"
+      {{on "blur" this.onBlur}}
+    />
+
+    <Hds::Form::MaskedInput::Base
+      @value={{this.newValue}}
+      aria-label="new value"
+      name="newValue"
+      {{on "blur" this.onBlur}}
+    />
+
+    <Hds::ButtonSet {{style width="15rem"}}>
+      <Hds::Button
+        @text="Add"
+        @color="secondary"
+        disabled={{and (not this.newKey) (not this.newValue)}}
+        {{on "click" (fn this.addData this.newKey this.newValue)}}
+      />
+    </Hds::ButtonSet>
+  </div>
 
   <hr class="has-background-gray-200" />
 

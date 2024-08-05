@@ -6,27 +6,20 @@
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-import { assert } from '@ember/debug';
 
 class StateManager {
   @tracked _state;
-  possibleStates = ['disabled', 'readonly', 'deleted'];
+  possibleStates = ['enabled', 'disabled', 'deleted'];
 
-  constructor(keys) {
+  constructor(kvObject) {
     // initially disable all inputs
-    this._state = Object.keys(keys).reduce((obj, key) => {
+    this._state = Object.keys(kvObject).reduce((obj, key) => {
       obj[key] = 'disabled';
       return obj;
     }, {});
   }
 
   set(key, status) {
-    assert(
-      `state must be one of the following: ${this.possibleStates.join(
-        ', '
-      )}, you attempted to set "${status}"`,
-      this.possibleStates.includes(status)
-    );
     const newState = { ...this._state };
     newState[key] = status;
     this._state = newState;
@@ -37,21 +30,72 @@ class StateManager {
   }
 }
 
+class KvData {
+  @tracked _kvData;
+
+  constructor(kvObject) {
+    this._kvData = kvObject;
+  }
+
+  set(key, value) {
+    const newObject = { ...this._kvData, [key]: value };
+    // trigger an update
+    this._kvData = newObject;
+  }
+
+  deleteKey(key) {
+    const newObject = { ...this._kvData };
+    delete newObject[key];
+    // trigger an update
+    this._kvData = newObject;
+  }
+}
+
 export default class KvPatchEditor extends Component {
   @tracked state;
-  @tracked patchData = {};
+  @tracked formData;
+  @tracked newKey = '';
+  @tracked newValue = '';
 
   getState = (key) => this.state.get(key);
+  isExistingKey = (key) => Object.keys(this.args.kvObject).includes(key);
 
   constructor() {
     super(...arguments);
-    this.args.value;
-    this.state = new StateManager(this.args.value);
+    this.state = new StateManager(this.args.kvObject);
+    this.formData = new KvData(this.args.kvObject);
+  }
+
+  get inputData() {
+    return this.formData._kvData;
   }
 
   @action
   setState(key, status) {
     this.state.set(key, status);
+  }
+
+  @action
+  handleCancel(key) {
+    if (this.isExistingKey(key)) {
+      this.state.set(key, 'disabled');
+    } else {
+      this.formData.deleteKey(key);
+    }
+  }
+
+  @action
+  onBlur(event) {
+    const { name, value } = event.target;
+    this[name] = value;
+  }
+
+  @action
+  addData(key, value) {
+    this.formData.set(key, value);
+    this.newKey = '';
+    this.newValue = '';
+    this.state.set(key, 'enabled');
   }
 
   @action
