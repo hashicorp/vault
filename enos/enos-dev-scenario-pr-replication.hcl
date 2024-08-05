@@ -6,12 +6,89 @@ scenario "dev_pr_replication" {
     This scenario spins up a two Vault clusters with either an external Consul cluster or
     integrated Raft for storage. The secondary cluster is configured with performance replication
     from the primary cluster. None of our test verification is included in this scenario in order
-    to improve end-to-end speed. If you wish to perform such verification you'll need to a non-dev
-    scenario.
+    to improve end-to-end speed. If you wish to perform such verification you'll need to use a
+    non-dev scenario.
 
     The scenario supports finding and installing any released 'linux/amd64' or 'linux/arm64' Vault
     artifact as long as its version is >= 1.8. You can also use the 'artifact:local' variant to
     build and deploy the current branch!
+
+    You can use the following command to get a textual outline of the entire
+    scenario:
+
+    $ enos scenario outline dev_pr_replication
+
+    You can also create an HTML version that is suitable for viewing in web browsers:
+      enos scenario outline dev_pr_replication --format html > index.html
+      open index.html
+
+    # How to run this scenario
+
+    1. Install Enos (more info: https://eng-handbook.hashicorp.services/internal-tools/enos/getting-started/)
+    
+    $ brew tap hashicorp/tap && brew update && brew install hashicorp/tap/enos
+
+    2. Authenticate to AWS with Doormat (more info: https://eng-handbook.hashicorp.services/internal-tools/enos/getting-started/#authenticate-to-aws-with-doormat)
+    
+    $ doormat login && eval $(doormat aws -a <your_aws_account_name> export)
+
+    3. Set the following variables either as environment variables (`export ENOS_VAR_var_name=value`)
+    or in your 'enos-local.vars' file:
+
+    Required variables
+      - aws_ssh_private_key_path (more info about AWS SSH keypairs: https://eng-handbook.hashicorp.services/internal-tools/enos/getting-started/#set-your-aws-key-pair-name-and-private-key)
+      - aws_ssh_keypair_name
+
+    Optional variables
+      - aws_region (if different from the default value in enos-variables.hcl)
+      - distro_version_<distro> (if different from the default version for your target
+      distro; see list of supported distros and versions in enos-globals.hcl)
+      - vault_license_path (if using an ENT edition of Vault)
+    
+    4. Choose what type of Vault artifact you want to use, and set the appropriate variables.
+    artifact          = ["local", "deb", "rpm", "zip"]
+
+      a. 'artifact:local'
+      This will build a Vault .zip bundle from your local branch. Set the following variable:
+
+      ENOS_VAR_vault_artifact_path=path/to/where/vault-should-be-built.zip
+
+      b. 'artifact:deb' or 'artifact:rpm'
+      This will download a Vault .deb or .rpm package from Artifactory with the version and
+      edition you specify. To do this, you will need to set your Artifactory credentials:
+
+      export ENOS_VAR_artifactory_username=your-user
+      export ENOS_VAR_artifactory_token=your-token
+
+      c. 'artifact:zip'
+      This will download a Vault .zip bundle from releases.hashicorp.com with the version and
+      edition you specify.
+    
+    5. Choose the matrix variants you want to use, and launch the scenario with the appropriate
+    filter for those variants, e.g.:
+
+    $  enos scenario launch dev_pr_replication arch:amd64 artifact:zip distro:ubuntu edition:ent primary_backend:consul primary_seal:awskms secondary_backend:consul secondary_seal:awskms
+
+    Notes:
+    - Note: Enos will run all matrix variant combinations that match your filter. If you specify one
+      variant for each matrix item, the filter will produce and run only one scenario.
+
+    - If you want to use the 'distro:leap' variant you must first accept SUSE's terms for the AWS
+      account. To verify that your account has agreed, sign-in to your AWS through Doormat,
+      and visit the following links to verify your subscription or subscribe:
+        arm64 AMI: https://aws.amazon.com/marketplace/server/procurement?productId=a516e959-df54-4035-bb1a-63599b7a6df9
+        amd64 AMI: https://aws.amazon.com/marketplace/server/procurement?productId=5535c495-72d4-4355-b169-54ffa874f849
+
+    6. If necessary, get the public IPs of your cluster from the Enos scenario output and SSH in,
+    using 'ubuntu' for the SSH user with 'distro:ubuntu', or 'ec2-user' with all other supported Linux distros:
+
+    $ enos scenario output <filter>
+    $ ssh -i /path/to/your/ssh-private-key.pem <ssh-user>@<public-ip>
+
+    For Enos troubleshooting tips, see https://eng-handbook.hashicorp.services/internal-tools/enos/troubleshooting/.
+
+
+
 
     PREREQUISITES
     
@@ -30,7 +107,7 @@ scenario "dev_pr_replication" {
 
     1. Set input variables
 
-    Next, this scenario requires several input variables to be set in order to function
+    This scenario requires several input variables to be set in order to function
     properly. While not all variants will require all variables, it's suggested that you look over
     the scenario outline to determine which variables affect which steps and which have inputs that
     you should set. You can use the following command to get a textual outline of the entire

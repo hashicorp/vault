@@ -6,18 +6,23 @@ scenario "ui" {
     The UI scenario creates a new cluster and runs the existing Ember test suite
     against a live Vault cluster instead of a binary in dev mode.
 
+    You can use the following command to get a textual outline of the entire
+    scenario:
+  
+      $ enos scenario outline ui
+
     # How to run this scenario
 
     1. Install Enos (more info: https://eng-handbook.hashicorp.services/internal-tools/enos/getting-started/)
     
-    $ brew tap hashicorp/tap && brew update && brew install hashicorp/tap/enos
+      $ brew tap hashicorp/tap && brew update && brew install hashicorp/tap/enos
 
     2. Authenticate to AWS with Doormat (more info: https://eng-handbook.hashicorp.services/internal-tools/enos/getting-started/#authenticate-to-aws-with-doormat)
     
-    $ doormat login && eval $(doormat aws -a <your_aws_account_name> export)
+      $ doormat login && eval $(doormat aws -a <your_aws_account_name> export)
 
     3. Set the following variables either as environment variables (`export ENOS_VAR_var_name=value`)
-    or in your 'enos-local.vars' file:
+    or by creating a 'enos-local.vars' file and setting it there (see enos.vars.hcl for examples):
 
     Required variables
       - aws_ssh_private_key_path (more info about AWS SSH keypairs: https://eng-handbook.hashicorp.services/internal-tools/enos/getting-started/#set-your-aws-key-pair-name-and-private-key)
@@ -36,7 +41,7 @@ scenario "ui" {
     4. Choose the matrix variants you want to use, and launch the scenario with the appropriate
     filter for those variants, e.g.:
 
-    $ enos scenario launch ui backend:raft consul_edition:ent edition:ce
+      $ enos scenario launch ui backend:raft consul_edition:ent edition:ce
 
     Notes:
     - Enos will run all matrix variant combinations that match your filter. If you specify one
@@ -45,8 +50,8 @@ scenario "ui" {
     5. If necessary, get the public IPs of your cluster from the Enos scenario output and SSH in,
     using 'ubuntu' for the SSH user with 'distro:ubuntu', or 'ec2-user' with all other supported Linux distros:
 
-    $ enos scenario output <filter>
-    $ ssh -i /path/to/your/ssh-private-key.pem <ssh-user>@<public-ip>
+      $ enos scenario output <filter>
+      $ ssh -i /path/to/your/ssh-private-key.pem <ssh-user>@<public-ip>
 
     For Enos troubleshooting tips, see https://eng-handbook.hashicorp.services/internal-tools/enos/troubleshooting/.
 

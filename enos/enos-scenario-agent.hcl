@@ -9,18 +9,23 @@ scenario "agent" {
     build in Agent mode and verifies behavior against the Vault cluster. The scenario also performs
     standard baseline verification that is not specific to the Agent mode deployment.
 
+    You can use the following command to get a textual outline of the entire
+    scenario:
+    
+      $ enos scenario outline agent
+
     # How to run this scenario
 
     1. Install Enos (more info: https://eng-handbook.hashicorp.services/internal-tools/enos/getting-started/)
     
-    $ brew tap hashicorp/tap && brew update && brew install hashicorp/tap/enos
+      $ brew tap hashicorp/tap && brew update && brew install hashicorp/tap/enos
 
     2. Authenticate to AWS with Doormat (more info: https://eng-handbook.hashicorp.services/internal-tools/enos/getting-started/#authenticate-to-aws-with-doormat)
     
-    $ doormat login && eval $(doormat aws -a <your_aws_account_name> export)
+      $ doormat login && eval $(doormat aws -a <your_aws_account_name> export)
 
     3. Set the following variables either as environment variables (`export ENOS_VAR_var_name=value`)
-    or in your 'enos-local.vars' file:
+    or by creating a 'enos-local.vars' file and setting it there (see enos.vars.hcl for examples):
 
     Required variables
       - aws_ssh_private_key_path (more info about AWS SSH keypairs: https://eng-handbook.hashicorp.services/internal-tools/enos/getting-started/#set-your-aws-key-pair-name-and-private-key)
@@ -41,24 +46,24 @@ scenario "agent" {
       a. 'artifact_source:crt'
       This will use a Vault artifact that you have already downloaded. Set the following variable:
 
-      ENOS_VAR_vault_artifact_path=path/to/existing-vault-artifact.[zip | rpm | deb]
+        vault_artifact_path = path/to/existing-vault-artifact.[zip | rpm | deb]
 
       b. 'artifact_source:local'
       This will build a Vault .zip bundle from your local branch. Set the following variable:
 
-      ENOS_VAR_vault_artifact_path=path/to/where/vault-should-be-built.zip
+        vault_artifact_path = path/to/where/vault-should-be-built.zip
 
       c. 'artifact_source:artifactory'
       This will download a Vault artifact of the specified version, edition, and revision SHA
       from the 'stable' repo in Artifactory. Set the following variables:
 
-      export ENOS_VAR_artifactory_username=your-user
-      export ENOS_VAR_artifactory_token=your-token
+        artifactory_username = your-user
+        artifactory_token = your-token
     
     5. Choose the matrix variants you want to use, and launch the scenario with the appropriate
     filter for those variants, e.g.:
 
-    $ enos scenario launch agent arch:amd64 artifact_source:crt artifact_type:bundle backend:consul config_mode:env consul_edition:ent consul_version:1.16.3 distro:ubuntu edition:ent.hsm.fips1402 seal:pkcs11
+      $ enos scenario launch agent arch:amd64 artifact_source:crt artifact_type:bundle backend:consul config_mode:env consul_edition:ent consul_version:1.16.3 distro:ubuntu edition:ent.hsm.fips1402 seal:pkcs11
 
     Notes:
     - Enos will run all matrix variant combinations that match your filter. If you specify one
@@ -76,8 +81,8 @@ scenario "agent" {
     6. If necessary, get the public IPs of your cluster from the Enos scenario output and SSH in,
     using 'ubuntu' for the SSH user with 'distro:ubuntu', or 'ec2-user' with all other supported Linux distros:
 
-    $ enos scenario output <filter>
-    $ ssh -i /path/to/your/ssh-private-key.pem <ssh-user>@<public-ip>
+      $ enos scenario output <filter>
+      $ ssh -i /path/to/your/ssh-private-key.pem <ssh-user>@<public-ip>
 
     For Enos troubleshooting tips, see https://eng-handbook.hashicorp.services/internal-tools/enos/troubleshooting/.
   EOF
