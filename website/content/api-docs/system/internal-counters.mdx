@@ -344,13 +344,8 @@ This endpoint was added in Vault 1.6.
 ### Parameters
 
 - `start_time` `(string, optional)` - An RFC3339 timestamp or Unix epoch time. Specifies the start of the
-<<<<<<< HEAD
-  period for which client counts will be reported. If no start time is specified, the `default_report_months`
-  prior to the `end_time` will be used.
-=======
   period for which client counts will be reported. If no start time is specified, the billing start date will be used.
   The [billing start date](/vault/docs/concepts/billing-start-date) automatically rolls over to the latest billing year at the end of the last cycle.
->>>>>>> e1d3c322e7 (Auto-rolling billing start docs PR  (#27926))
 - `end_time` `(string, optional)` - An RFC3339 timestamp or Unix epoch time. Specifies the end of the period
   for which client counts will be reported. If no end time is specified, the end of the previous calendar
   month will be used.
