@@ -4,17 +4,16 @@
 ~}}
 
 <form {{on "submit" this.submit}} ...attributes>
-  {{#each-in this.inputData as |key value|}}
+  {{#each-in this.formData as |key value|}}
     <div class="flex column-gap-16 has-top-padding-s">
       <Hds::Form::TextInput::Base
         @type="text"
         @value={{key}}
         aria-label="Key {{key}}"
-        placeholder="key"
         name="key-{{key}}"
-        {{! original keys (from subkeys endpoint) are not editable, only their values can be updated }}
+        {{! Original keys (from subkeys endpoint) are not editable, only their values can be updated }}
         disabled={{this.isOriginalKey key}}
-        {{on "blur" (fn this.onBlur key "key")}}
+        {{on "blur" (fn this.onBlurExisting key "key")}}
       />
 
       <Hds::Form::MaskedInput::Base
@@ -22,7 +21,7 @@
         aria-label="Value for key {{key}}"
         name="value-{{key}}"
         disabled={{includes (this.getState key) (array "disabled" "deleted")}}
-        {{on "blur" (fn this.onBlur key "value")}}
+        {{on "blur" (fn this.onBlurExisting key "value")}}
       />
 
       <Hds::ButtonSet {{style width="15rem"}}>

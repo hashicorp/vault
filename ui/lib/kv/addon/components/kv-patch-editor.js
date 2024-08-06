@@ -7,13 +7,19 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 
-class StateManager {
+// TODO validations
+/*
+  - show warning for matching keys, disable add
+  - show warning that numbers will be submitted as strings
+  - show warning for whitespace 
+  */
+class InputStateManager {
   @tracked _state;
   possibleStates = ['enabled', 'disabled', 'deleted'];
 
-  constructor(kvData) {
-    // initially disable all inputs
-    this._state = Object.keys(kvData).reduce((obj, key) => {
+  constructor(emptySubkeys) {
+    // initially set all inputs to disabled
+    this._state = Object.keys(emptySubkeys).reduce((obj, key) => {
       obj[key] = 'disabled';
       return obj;
     }, {});
@@ -22,6 +28,7 @@ class StateManager {
   set(key, status) {
     const newState = { ...this._state };
     newState[key] = status;
+    // trigger update
     this._state = newState;
   }
 
@@ -56,29 +63,32 @@ class KvData {
 }
 
 export default class KvPatchEditor extends Component {
-  @tracked state;
-  @tracked patchData;
+  @tracked state; // disabled, enabled or deleted input states
+  @tracked patchData; // key value pairs in form
+
+  // tracked variables for new row of inputs after user clicks "add"
   @tracked newKey = '';
   @tracked newValue = '';
 
   getState = (key) => this.state.get(key);
   getValue = (key) => this.patchData.get(key);
 
-  isOriginalKey = (key) => Object.keys(this.args.kvData).includes(key);
+  isOriginalKey = (key) => Object.keys(this.args.emptySubkeys).includes(key);
 
   constructor() {
     super(...arguments);
-    this.state = new StateManager(this.args.kvData);
-    this.patchData = new KvData(this.args.kvData);
+    this.state = new InputStateManager(this.args.emptySubkeys);
+    this.patchData = new KvData(this.args.emptySubkeys);
   }
 
-  get inputData() {
+  get formData() {
     return this.patchData._kvData;
   }
 
   @action
   setState(key, status) {
     this.state.set(key, status);
+
     if (status === 'deleted') {
       this.patchData.set(key, null);
     }
@@ -88,8 +98,10 @@ export default class KvPatchEditor extends Component {
   handleCancel(key) {
     if (this.isOriginalKey(key)) {
       this.setState(key, 'disabled');
+      // reset value to empty string
       this.patchData.set(key, '');
     } else {
+      // remove row all together
       this.patchData.deleteKey(key);
     }
   }
@@ -101,7 +113,7 @@ export default class KvPatchEditor extends Component {
   }
 
   @action
-  onBlur(key, type, event) {
+  onBlurExisting(key, type, event) {
     if (type === 'key') {
       // store value of original key
       const value = this.patchData.get(key);
@@ -129,21 +141,19 @@ export default class KvPatchEditor extends Component {
   @action
   submit(event) {
     event.preventDefault();
-    // check the last row for data, add it the payload if there are values
+    // patchData will not include the last row if a user has not clicked "add"
+    // manually check for for data and add it the payload
     if (this.newKey && this.newValue) {
-      this.patchData.set(this.newKey, this.newValue);
+      this.handleAddClick();
     }
 
-    const data = this.patchData._kvData;
-    for (const [key, value] of Object.entries(this.patchData._kvData)) {
+    const data = this.formData;
+    // remove any empty strings from the payload
+    for (const [key, value] of Object.entries(data)) {
       if (value === '') {
         delete data[key];
       }
     }
-    // if a user doesn't click add make sure we include the final row of key/values
-    // if there are matching keys, show the validation warning and disable the add
-    // and prevent it overriding the existing key/value onBlur
-    // console.log(data, 'tracked patch data!!');
-    this.args.onSubmit(this.patchData);
+    this.args.onSubmit(data);
   }
 }
