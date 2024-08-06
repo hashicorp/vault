@@ -1,5 +1,5 @@
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: BUSL-1.1
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
 
 quality "consul_api_agent_host_read" {
   description = "The /v1/agent/host Consul API returns host info for each node in the cluster"
@@ -250,6 +250,21 @@ quality "vault_api_sys_storage_raft_remove_peer_write_removes_peer" {
   EOF
 }
 
+quality "vault_api_sys_version_history_keys" {
+  description = <<-EOF
+    The v1/sys/version-history Vault API returns the cluster version history and the 'keys' data
+    includes our target version
+  EOF
+}
+
+quality "vault_api_sys_version_history_key_info" {
+  description = <<-EOF
+    The v1/sys/version-history Vault API returns the cluster version history and the
+    'key_info["$expected_version]' data is present for the expected version and the 'build_date'
+    matches the expected build_date.
+  EOF
+}
+
 quality "vault_artifact_bundle" {
   description = "The candidate binary packaged as a zip bundle is used for testing"
 }
@@ -353,6 +368,14 @@ quality "vault_init" {
 
 quality "vault_license_required_ent" {
   description = "Vault Enterprise requires a license in order to start"
+}
+
+quality "vault_listener_ipv4" {
+  description = "Vault operates on ipv4 TCP listeners"
+}
+
+quality "vault_listener_ipv6" {
+  description = "Vault operates on ipv6 TCP listeners"
 }
 
 quality "vault_mount_auth" {

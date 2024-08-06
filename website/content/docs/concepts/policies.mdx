@@ -193,6 +193,11 @@ wildcard appears in the same place, both end in `*` and the latter has two wildc
 segments while the former has zero. So we end at rule (3), and give `"secret/+/+/foo/*"`
 _lower_ priority.
 
+Another example utilizing Vault [namespaces](/vault/docs/enterprise/namespaces), given [nested](/vault/tutorials/enterprise/namespace-structure) namespaces `ns1/ns2/ns3` and two paths, 
+`"secret/*"` and `"ns1/ns2/ns3/secret/apps/*"` where `secret` is a mountpoint in namespace `ns3`. The first path is
+defined in a policy inside/relative to namespace `ns3` while the second path is defined in a policy in the `root` namespace. 
+Both paths end in `*` but the first is shorter. So we end at rule (4), and give `"secret/*"` _lower_ priority.
+
 !> **Informational:**The glob character referred to in this documentation is the asterisk (`*`).
 It _is not a regular expression_ and is only supported **as the last character of the path**!
 

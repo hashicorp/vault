@@ -65,6 +65,12 @@ type StaticSecretCacheUpdater struct {
 	leaseCache *LeaseCache
 	logger     hclog.Logger
 	tokenSink  sink.Sink
+
+	// allowForwardingViaHeaderDisabled is a bool that tracks if
+	// allow_forwarding_via_header is disabled on the cluster we're talking to.
+	// If we get an error back saying that it's disabled, we'll set this to true
+	// and never try to forward again.
+	allowForwardingViaHeaderDisabled bool
 }
 
 // StaticSecretCacheUpdaterConfig is the configuration for initializing a new
@@ -163,6 +169,10 @@ func (updater *StaticSecretCacheUpdater) streamStaticSecretEvents(ctx context.Co
 				if !ok {
 					return fmt.Errorf("unexpected event format when decoding 'path' element, message: %s\nerror: %w", string(message), err)
 				}
+				namespace, ok := data["namespace"].(string)
+				if ok {
+					path = namespace + path
+				}
 				err := updater.updateStaticSecret(ctx, path)
 				if err != nil {
 					// While we are kind of 'missing' an event this way, re-calling this function will
@@ -218,6 +228,10 @@ func (updater *StaticSecretCacheUpdater) updateStaticSecret(ctx context.Context,
 		return err
 	}
 
+	// Clear the client's header namespace since we'll be including the
+	// namespace as part of the path.
+	client.ClearNamespace()
+
 	indexId := hashStaticSecretIndex(path)
 
 	updater.logger.Debug("received update static secret request", "path", path, "indexId", indexId)
@@ -246,9 +260,34 @@ func (updater *StaticSecretCacheUpdater) updateStaticSecret(ctx context.Context,
 	for _, token := range maps.Keys(index.Tokens) {
 		client.SetToken(token)
 		request.Headers.Set(api.AuthHeaderName, token)
+
+		if !updater.allowForwardingViaHeaderDisabled {
+			// Set this to always forward to active, since events could come before
+			// replication, and if we're connected to the standby, then we will be
+			// receiving events from the primary but otherwise getting old values from
+			// the standby here. This makes sure that Proxy functions properly
+			// even when its Vault address is set to a standby, since we cannot
+			// currently receive events from a standby.
+			// We only try this if updater.allowForwardingViaHeaderDisabled is false
+			// and if we receive an error indicating that the config is set to false,
+			// we will never set this header again.
+			request.Headers.Set(api.HeaderForward, "active-node")
+		}
+
 		resp, err = client.RawRequestWithContext(ctx, request)
 		if err != nil {
-			updater.logger.Trace("received error when trying to update cache", "path", path, "err", err, "token", token)
+			if strings.Contains(err.Error(), "forwarding via header X-Vault-Forward disabled") {
+				updater.logger.Info("allow_forwarding_via_header disabled, re-attempting update and no longer attempting to forward")
+				updater.allowForwardingViaHeaderDisabled = true
+
+				// Try again without the header
+				request.Headers.Del(api.HeaderForward)
+				resp, err = client.RawRequestWithContext(ctx, request)
+			}
+		}
+
+		if err != nil {
+			updater.logger.Trace("received error when trying to update cache", "path", path, "err", err, "token", token, "namespace", index.Namespace)
 			// We cannot access this secret with this token for whatever reason,
 			// so token for removal.
 			tokensToRemove = append(tokensToRemove, token)
@@ -329,6 +368,7 @@ func (updater *StaticSecretCacheUpdater) openWebSocketConnection(ctx context.Con
 	}
 	query := webSocketURL.Query()
 	query.Set("json", "true")
+	query.Set("namespaces", "*")
 	webSocketURL.RawQuery = query.Encode()
 
 	updater.client.AddHeader(api.AuthHeaderName, updater.client.Token())

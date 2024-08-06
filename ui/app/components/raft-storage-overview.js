@@ -4,7 +4,7 @@
  */
 
 import Component from '@ember/component';
-import { getOwner } from '@ember/application';
+import { getOwner } from '@ember/owner';
 import config from '../config/environment';
 import { service } from '@ember/service';
 

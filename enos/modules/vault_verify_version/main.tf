@@ -9,9 +9,29 @@ terraform {
   }
 }
 
+variable "hosts" {
+  type = map(object({
+    ipv6       = string
+    private_ip = string
+    public_ip  = string
+  }))
+  description = "The Vault cluster instances that were created"
+}
+
+variable "vault_addr" {
+  type        = string
+  description = "The local vault API listen address"
+}
+
 variable "vault_build_date" {
   type        = string
   description = "The Vault artifact build date"
+  default     = null
+}
+
+variable "vault_edition" {
+  type        = string
+  description = "The Vault product edition"
   default     = null
 }
 
@@ -20,28 +40,9 @@ variable "vault_install_dir" {
   description = "The directory where the Vault binary will be installed"
 }
 
-variable "vault_instance_count" {
-  type        = number
-  description = "How many Vault instances are in the cluster"
-}
-
-variable "vault_instances" {
-  type = map(object({
-    private_ip = string
-    public_ip  = string
-  }))
-  description = "The Vault cluster instances that were created"
-}
-
 variable "vault_product_version" {
   type        = string
   description = "The Vault product version"
-  default     = null
-}
-
-variable "vault_edition" {
-  type        = string
-  description = "The Vault product edition"
   default     = null
 }
 
@@ -57,25 +58,36 @@ variable "vault_root_token" {
   default     = null
 }
 
-locals {
-  instances = {
-    for idx in range(var.vault_instance_count) : idx => {
-      public_ip  = values(var.vault_instances)[idx].public_ip
-      private_ip = values(var.vault_instances)[idx].private_ip
+resource "enos_remote_exec" "verify_cli_version" {
+  for_each = var.hosts
+
+  environment = {
+    VAULT_ADDR        = var.vault_addr,
+    VAULT_BUILD_DATE  = var.vault_build_date,
+    VAULT_EDITION     = var.vault_edition,
+    VAULT_INSTALL_DIR = var.vault_install_dir,
+    VAULT_REVISION    = var.vault_revision,
+    VAULT_TOKEN       = var.vault_root_token,
+    VAULT_VERSION     = var.vault_product_version,
+  }
+
+  scripts = [abspath("${path.module}/scripts/verify-cli-version.sh")]
+
+  transport = {
+    ssh = {
+      host = each.value.public_ip
     }
   }
 }
 
-resource "enos_remote_exec" "verify_all_nodes_have_updated_version" {
-  for_each = local.instances
+resource "enos_remote_exec" "verify_cluster_version" {
+  for_each = var.hosts
 
   environment = {
-    VAULT_INSTALL_DIR = var.vault_install_dir,
-    VAULT_BUILD_DATE  = var.vault_build_date,
-    VAULT_VERSION     = var.vault_product_version,
-    VAULT_EDITION     = var.vault_edition,
-    VAULT_REVISION    = var.vault_revision,
-    VAULT_TOKEN       = var.vault_root_token,
+    VAULT_ADDR       = var.vault_addr,
+    VAULT_BUILD_DATE = var.vault_build_date,
+    VAULT_TOKEN      = var.vault_root_token,
+    VAULT_VERSION    = var.vault_product_version,
   }
 
   scripts = [abspath("${path.module}/scripts/verify-cluster-version.sh")]

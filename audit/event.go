@@ -37,6 +37,23 @@ type AuditEvent struct {
 	Subtype   subtype           `json:"subtype"` // the subtype of the audit event.
 	Timestamp time.Time         `json:"timestamp"`
 	Data      *logical.LogInput `json:"data"`
+	prov      timeProvider
+}
+
+// setTimeProvider can be used to set a specific time provider which is used when
+// creating an Entry.
+// NOTE: This is primarily used for testing to supply a known time value.
+func (a *AuditEvent) setTimeProvider(t timeProvider) {
+	a.prov = t
+}
+
+// timeProvider returns a configured time provider, or the default if not set.
+func (a *AuditEvent) timeProvider() timeProvider {
+	if a.prov == nil {
+		return a
+	}
+
+	return a.prov
 }
 
 // format defines types of format audit events support.
