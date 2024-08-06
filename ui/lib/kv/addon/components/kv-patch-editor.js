@@ -41,12 +41,13 @@ class KvData {
   @tracked _kvData;
 
   constructor(kvData) {
-    this._kvData = kvData;
+    this._kvData = { ...kvData };
   }
 
   set(key, value) {
-    const newObject = { ...this._kvData, [key]: value };
-    // trigger an update
+    const newObject = this._kvData;
+    newObject[key] = value;
+    // trigger update
     this._kvData = newObject;
   }
 
