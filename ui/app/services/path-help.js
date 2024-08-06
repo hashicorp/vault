@@ -67,7 +67,7 @@ export default Service.extend({
   },
 
   /**
-   * getNewModel instantiates models which use OpenAPI fully
+   * getNewModel instantiates models which use OpenAPI to generate the model fully
    * @param {string} modelType
    * @param {string} backend
    * @param {string} apiPath this method will call getPaths and build submodels for item types
@@ -80,20 +80,18 @@ export default Service.extend({
 
     const modelFactory = owner.factoryFor(modelName);
 
-    let newModel;
-    // if we have a factory, we need to take the existing model into account
     if (modelFactory) {
-      debug(`Model factory found for ${modelType}`);
-      newModel = modelFactory.class;
-      if (newModel.merged) {
-        return resolve();
+      // if the modelFactory already exists, it means either this model was already
+      // generated or the model exists in the code already. In either case resolve
+
+      if (!modelFactory.class.merged) {
+        // no merged flag means this model was not previously generated
+        debug(`Model exists for ${modelType} -- use hydrateModel instead`);
       }
-      // if we get here, that means an existing non-generated model exists
-      throw new Error(`Model exists for ${modelType} -- use hydrateModel instead`);
-    } else {
-      debug(`Creating new Model for ${modelType}`);
-      newModel = Model.extend({});
+      return resolve();
     }
+    debug(`Creating new Model for ${modelType}`);
+    let newModel = Model.extend({});
 
     // use paths to dynamically create our openapi help url
     // if we have a brand new model
