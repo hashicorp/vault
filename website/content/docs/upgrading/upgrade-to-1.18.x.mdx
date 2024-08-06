@@ -1,0 +1,59 @@
+---
+layout: docs
+page_title: Upgrade to Vault 1.18.x - Guides
+description: |-
+  Deprecations, important or breaking changes, and remediation recommendations
+  for anyone upgrading to 1.18.x from Vault 1.17.x.
+---
+
+# Overview
+
+The Vault 1.18.x upgrade guide contains information on deprecations, important
+or breaking changes, and remediation recommendations for anyone upgrading from
+Vault 1.17. **Please read carefully**.
+
+## Important changes
+
+### Activity Log Changes
+
+#### Default Activity Log Querying Period
+
+The field `default_report_months` can no longer be configured or read. Any previously set values
+will be ignored by the system.
+
+
+Attempts to modify `default_report_months` through the
+[/sys/internal/counters/config](/vault/api-docs/system/internal-counters#update-the-client-count-configuration)
+endpoint, will result in the following warning from Vault:
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+
+WARNING! The following warnings were returned from Vault:
+
+  * default_report_months is deprecated: defaulting to billing start time
+
+
+```
+
+</CodeBlockConfig>
+
+
+The `current_billing_period` toggle for `/sys/internal/counters/activity` is also deprecated, as this will be set
+true by default.
+
+Attempts to set `current_billing_period` will result in the following warning from Vault:
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+
+WARNING! The following warnings were returned from Vault:
+
+  * current_billing_period is deprecated; unless otherwise specified, all requests will default to the current billing period
+
+
+```
+
+</CodeBlockConfig>
