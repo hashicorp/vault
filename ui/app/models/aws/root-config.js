@@ -23,7 +23,7 @@ const validations = {
 export default class AwsRootConfig extends Model {
   @attr('string') backend; // dynamic path of secret -- set on response from value passed to queryRecord
   @attr('string') accessKey;
-  @attr('string', { sensitive: true }) secretKey;
+  @attr('string', { sensitive: true }) secretKey; // obfuscated, never returned by API
   @attr('string', {
     possibleValues: regions(),
     subText:

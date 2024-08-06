@@ -114,8 +114,15 @@ export default class ConfigureAwsComponent extends Component<Args> {
     if (this.errorMessageRoot) {
       this.invalidFormAlert = 'There was an error submitting this form.';
     } else {
+      this.unloadModels();
       this.router.transitionTo('vault.cluster.secrets.backend.configuration', id);
     }
+  }
+
+  resetErrors() {
+    this.flashMessages.clearMessages();
+    this.errorMessageRoot = null;
+    this.invalidFormAlert = null;
   }
 
   validate(model: RootConfigModel | LeaseConfigModel, modelName: string) {
@@ -131,10 +138,9 @@ export default class ConfigureAwsComponent extends Component<Args> {
     return isValid;
   }
 
-  resetErrors() {
-    this.flashMessages.clearMessages();
-    this.errorMessageRoot = null;
-    this.invalidFormAlert = null;
+  unloadModels() {
+    this.args.rootConfig.unloadRecord();
+    this.args.leaseConfig.unloadRecord();
   }
 
   @action
