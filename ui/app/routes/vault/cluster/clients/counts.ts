@@ -29,7 +29,7 @@ export default class ClientsCountsRoute extends Route {
   queryParams = {
     start_time: { refreshModel: true, replace: true },
     end_time: { refreshModel: true, replace: true },
-    ns: { refreshModel: false, replace: true },
+    ns: { refreshModel: true, replace: true },
     mountPath: { refreshModel: false, replace: true },
   };
 

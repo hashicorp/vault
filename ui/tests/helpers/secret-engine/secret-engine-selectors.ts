@@ -11,6 +11,9 @@ export const SECRET_ENGINE_SELECTORS = {
   configurationToggle: '[data-test-mount-config-toggle]',
   createSecret: '[data-test-secret-create]',
   crumb: (path: string) => `[data-test-secret-breadcrumb="${path}"] a`,
+  error: {
+    title: '[data-test-backend-error-title]',
+  },
   generateLink: '[data-test-backend-credentials]',
   mountType: (name: string) => `[data-test-mount-type="${name}"]`,
   mountSubmit: '[data-test-mount-submit]',
