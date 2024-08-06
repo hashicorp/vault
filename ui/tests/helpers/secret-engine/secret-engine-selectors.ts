@@ -27,6 +27,7 @@ export const SECRET_ENGINE_SELECTORS = {
     leaseTitle: '[data-test-aws-lease-title]',
     delete: (role: string) => `[data-test-aws-role-delete="${role}"]`,
     save: '[data-test-aws-save]',
+    cancel: '[data-test-aws-cancel]',
   },
   ssh: {
     configureForm: '[data-test-ssh-configure-form]',

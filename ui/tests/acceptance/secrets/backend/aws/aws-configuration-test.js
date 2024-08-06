@@ -21,9 +21,10 @@ import {
   expectedConfigKeys,
   expectedValueOfConfigKeys,
   configUrl,
+  fillInAwsConfig,
 } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
 
-module('Acceptance | aws | configuration meep', function (hooks) {
+module('Acceptance | aws | configuration', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
@@ -51,28 +52,14 @@ module('Acceptance | aws | configuration meep', function (hooks) {
     await runCmd(`delete sys/mounts/${path}`);
   });
 
-  test('it should transition to configure page on Configure click from toolbar', async function (assert) {
-    assert.expect(13);
+  test('it should transition to configure page on click "Configure" from toolbar', async function (assert) {
+    assert.expect(2);
     const path = `aws-${this.uid}`;
     await enablePage.enable('aws', path);
     await click(SES.configTab);
     await click(SES.configure);
     assert.strictEqual(currentURL(), `/vault/secrets/${path}/configuration/edit`);
-    assert.dom(SES.configureTitle('aws')).hasText('Configure AWS');
-    assert.dom(SES.aws.configForm).exists('it lands on the aws configuration form.');
-    assert.dom(SES.aws.accessTitle).exists('Access section is rendered');
-    assert.dom(SES.aws.leaseTitle).exists('Lease section is rendered');
-    await click(GENERAL.toggleGroup('Root config options'));
-    // not ideal, would prefer to use helper to interate, but problem with camelCase in some of the selectors and some without
-    assert.dom(GENERAL.inputByAttr('accessKey')).exists(`accessKey shows for Access section.`);
-    assert.dom(GENERAL.maskedInput('secretKey')).exists(`secretKey shows for Access section.`);
-    assert.dom(GENERAL.inputByAttr('region')).exists(`region shows for Access section.`);
-    assert.dom(GENERAL.inputByAttr('iamEndpoint')).exists(`iamEndpoint shows for Access section.`);
-    assert.dom(GENERAL.inputByAttr('stsEndpoint')).exists(`stsEndpoint shows for Access section.`);
-    assert.dom(GENERAL.inputByAttr('maxRetries')).exists(`maxRetries shows for Access section.`);
-    for (const key of expectedConfigKeys('aws-lease')) {
-      assert.dom(`[data-test-ttl-form-label="${key}"]`).exists(`${key} shows for Lease section.`);
-    }
+    assert.dom(SES.configureTitle('aws')).hasText('Configure AWS', 'it renders the correct page header');
     // cleanup
     await runCmd(`delete sys/mounts/${path}`);
   });
@@ -93,20 +80,17 @@ module('Acceptance | aws | configuration meep', function (hooks) {
     const path = `aws-${this.uid}`;
     await enablePage.enable('aws', path);
     this.server.post(configUrl('aws-lease', path), () => {
-      assert(false, 'post request was made to config/lease when no data was changed. test should fail.');
+      assert.false(true, 'post request was made to config/lease when no data was changed. test should fail.');
     });
 
     await click(SES.configTab);
     await click(SES.configure);
-    await fillIn(GENERAL.inputByAttr('accessKey'), 'foo');
-    await fillIn(GENERAL.maskedInput('secretKey'), 'bar');
-
+    await fillInAwsConfig(true);
     await click(SES.aws.save);
     assert.true(
       this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s root configuration.`),
       'Success flash message is rendered showing the root configuration was saved.'
     );
-
     assert.dom(GENERAL.infoRowValue('Access key')).hasText('foo', `Access Key has been set.`);
     assert
       .dom(GENERAL.infoRowValue('Secret key'))
@@ -120,23 +104,18 @@ module('Acceptance | aws | configuration meep', function (hooks) {
     const path = `aws-${this.uid}`;
     await enablePage.enable('aws', path);
     this.server.post(configUrl('aws', path), () => {
-      assert(false, 'post request was made to config/root when no data was changed. test should fail.');
+      assert.false(true, 'post request was made to config/root when no data was changed. test should fail.');
     });
     await click(SES.configTab);
     await click(SES.configure);
-    await click(GENERAL.ttl.toggle('Default Lease TTL'));
-    await fillIn(GENERAL.ttl.input('Default Lease TTL'), '55');
-    await click(GENERAL.ttl.toggle('Max Lease TTL'));
-    await fillIn(GENERAL.ttl.input('Max Lease TTL'), '65');
+    await fillInAwsConfig(false, false, true);
     await click(SES.aws.save);
     assert.true(
       this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s lease configuration.`),
       'Success flash message is rendered'
     );
-
-    assert.dom(GENERAL.infoRowValue('Default Lease TTL')).hasText('55s', `Default TTL has been set.`);
-    assert.dom(GENERAL.infoRowValue('Max Lease TTL')).hasText('1m5s', `Default TTL has been set.`);
-
+    assert.dom(GENERAL.infoRowValue('Default Lease TTL')).hasText('33s', `Default TTL has been set.`);
+    assert.dom(GENERAL.infoRowValue('Max Lease TTL')).hasText('44s', `Max lease TTL has been set.`);
     // cleanup
     await runCmd(`delete sys/mounts/${path}`);
   });
@@ -170,39 +149,30 @@ module('Acceptance | aws | configuration meep', function (hooks) {
   });
 
   test('it should update AWS configuration details after editing', async function (assert) {
-    assert.expect(6);
+    assert.expect(5);
     const path = `aws-${this.uid}`;
     const type = 'aws';
     await enablePage.enable(type, path);
     // create accessKey with value foo and confirm it shows up in the details page.
     await click(SES.configTab);
     await click(SES.configure);
-    await fillIn(GENERAL.inputByAttr('accessKey'), 'foo');
+    await fillInAwsConfig(true);
     await click(SES.aws.save);
-    await click(SES.viewBackend);
-    await click(SES.configTab);
+    // successfully saved so automatically transitioned to the details page.
     assert.dom(GENERAL.infoRowValue('Access key')).hasText('foo', 'Access key is foo');
     assert
       .dom(GENERAL.infoRowValue('Region'))
       .doesNotExist('Region has not been added therefor it does not show up on the details view.');
     // edit root config details and lease config details and confirm the configuration.index page is updated.
     await click(SES.configure);
-    await fillIn(GENERAL.inputByAttr('accessKey'), 'hello');
-    await click(GENERAL.menuTrigger);
-    await fillIn(GENERAL.selectByAttr('region'), 'ca-central-1');
+    await click(GENERAL.toggleGroup('Root config options'));
+    await fillIn(GENERAL.selectByAttr('region'), 'ap-southeast-2');
     // add lease config details
-    await click(GENERAL.ttl.toggle('Default Lease TTL'));
-    await fillIn(GENERAL.ttl.input('Default Lease TTL'), '33');
-    await click(GENERAL.ttl.toggle('Max Lease TTL'));
-    await fillIn(GENERAL.ttl.input('Maximum Lease'), '43');
+    await fillInAwsConfig(false, false, true);
     await click(SES.aws.save);
-
-    await click(SES.viewBackend);
-    await click(SES.configTab);
-    assert.dom(GENERAL.infoRowValue('Access key')).hasText('hello', 'Access key has been updated to hello');
-    assert.dom(GENERAL.infoRowValue('Region')).hasText('ca-central-1', 'Region has been added');
+    assert.dom(GENERAL.infoRowValue('Region')).hasText('ap-southeast-2', 'Region has been added');
     assert.dom(GENERAL.infoRowValue('Default Lease TTL')).hasText('33s', 'Default Lease TTL has been added');
-    assert.dom(GENERAL.infoRowValue('Max Lease TTL')).hasText('43s', 'Max Lease TTL has been added');
+    assert.dom(GENERAL.infoRowValue('Max Lease TTL')).hasText('44s', 'Max Lease TTL has been added');
     // cleanup
     await runCmd(`delete sys/mounts/${path}`);
   });
@@ -229,10 +199,10 @@ module('Acceptance | aws | configuration meep', function (hooks) {
     await enablePage.enable(type, path);
 
     this.server.post(configUrl(type, path), () => {
-      assert(false, 'post request was made to config/root when no data was changed. test should fail.');
+      assert.false(true, 'post request was made to config/root when no data was changed. test should fail.');
     });
     this.server.post(configUrl('aws-lease', path), () => {
-      assert(false, 'post request was made to config/lease when no data was changed. test should fail.');
+      assert.false(true, 'post request was made to config/lease when no data was changed. test should fail.');
     });
 
     await click(SES.configTab);

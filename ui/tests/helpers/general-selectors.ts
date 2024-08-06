@@ -57,6 +57,7 @@ export const GENERAL = {
     errorMessage: '[data-test-page-error-message]',
     errorDetails: '[data-test-page-error-details]',
   },
+  inlineError: '[data-test-inline-error-message]',
   kvObjectEditor: {
     deleteRow: (idx = 0) => `[data-test-kv-delete-row="${idx}"]`,
   },
