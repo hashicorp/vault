@@ -166,7 +166,7 @@ module('Acceptance | aws | configuration', function (hooks) {
     // edit root config details and lease config details and confirm the configuration.index page is updated.
     await click(SES.configure);
     await click(GENERAL.toggleGroup('Root config options'));
-    await fillIn(GENERAL.selectByAttr('region'), 'ap-southeast-2');
+    await fillIn(GENERAL.inputByAttr('region'), 'ap-southeast-2');
     // add lease config details
     await fillInAwsConfig(false, false, true);
     await click(SES.aws.save);
@@ -219,6 +219,29 @@ module('Acceptance | aws | configuration', function (hooks) {
       'navigates back to the configuration index view'
     );
     assert.dom(GENERAL.emptyStateTitle).hasText('AWS not configured');
+    // cleanup
+    await runCmd(`delete sys/mounts/${path}`);
+  });
+
+  test('it should reset models after saving', async function (assert) {
+    assert.expect(2);
+    const path = `aws-${this.uid}`;
+    const type = 'aws';
+    await enablePage.enable(type, path);
+    await click(SES.configTab);
+    await click(SES.configure);
+    await fillInAwsConfig(true);
+    //  the way to tell if a record has been unloaded is if the private key is not saved in the store (the API does not return it, but if the record was not unloaded it would have stayed.)
+    await click(SES.aws.save); // save the configuration
+    await click(SES.configure);
+    const privateKeyExists = this.store.peekRecord('aws/root-config', path).privateKey ? true : false;
+    assert.false(
+      privateKeyExists,
+      'private key is not on the store record, meaning it was unloaded after save. This new record without the key comes from the API.'
+    );
+    assert
+      .dom(GENERAL.enableField('secretKey'))
+      .exists('secret key field is wrapped inside an enableInput component');
     // cleanup
     await runCmd(`delete sys/mounts/${path}`);
   });

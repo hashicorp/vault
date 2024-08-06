@@ -57,10 +57,10 @@ export default class ConfigureAwsComponent extends Component<Args> {
     event.preventDefault();
     this.resetErrors();
     const { id, leaseConfig, rootConfig } = this.args;
-    const isValidRoot = this.validate(rootConfig, 'rootConfig');
+    // root does not have any validations, yet, but it could in the future so designing flow to accommodate to model validations.
     const isValidLease = this.validate(leaseConfig, 'leaseConfig');
 
-    if (!isValidRoot || !isValidLease) {
+    if (!isValidLease) {
       this.flashMessages.danger('Please correct the errors in the form before submitting.');
       return;
     }
@@ -125,12 +125,9 @@ export default class ConfigureAwsComponent extends Component<Args> {
     this.invalidFormAlert = null;
   }
 
-  validate(model: RootConfigModel | LeaseConfigModel, modelName: string) {
+  validate(model: LeaseConfigModel, modelName: string) {
     const { isValid, state, invalidFormMessage } = model.validate();
     // cannot use a tracked object for modelValidations because it will not update the form.
-    if (modelName === 'rootConfig') {
-      this.modelValidationsRoot = isValid ? null : state;
-    }
     if (modelName === 'leaseConfig') {
       this.modelValidationsLease = isValid ? null : state;
     }

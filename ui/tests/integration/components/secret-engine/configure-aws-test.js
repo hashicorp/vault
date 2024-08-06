@@ -89,29 +89,6 @@ module('Integration | Component | SecretEngine/configure-aws', function (hooks) 
       assert.dom(SES.aws.configForm).exists('remains on the configuration form');
     });
 
-    test('it shows validation error if access key is entered but secret key is not', async function (assert) {
-      assert.expect(2);
-      await this.renderComponent();
-      this.server.post(configUrl('aws-lease', this.id), () => {
-        assert.false(
-          true,
-          'post request was made to config/lease when no data was changed. test should fail.'
-        );
-      });
-      this.server.post(configUrl('aws', this.id), () => {
-        assert.false(
-          true,
-          'post request was made to config/root when no data was changed. test should fail.'
-        );
-      });
-      await fillIn(GENERAL.inputByAttr('accessKey'), 'foo');
-      await click(SES.aws.save);
-      assert
-        .dom(GENERAL.inlineError)
-        .hasText('Access Key and Secret Key are both required if one of them is set.');
-      assert.dom(SES.aws.configForm).exists('remains on the configuration form');
-    });
-
     test('it surfaces the API error if one occurs on root/config, preventing user from transitioning', async function (assert) {
       assert.expect(3);
       await this.renderComponent();
