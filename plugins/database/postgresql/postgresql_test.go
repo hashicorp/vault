@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/testhelpers/certhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
@@ -86,15 +87,32 @@ func TestPostgreSQL_InitializeMultiHost(t *testing.T) {
 	}
 }
 
-// TestPostgreSQL_InitializeSSLFeatureFlag tests that the VAULT_PLUGIN_USE_POSTGRES_SSLINLINE
+// TestPostgreSQL_InitializeSSLInlineFeatureFlag tests that the VAULT_PLUGIN_USE_POSTGRES_SSLINLINE
 // flag guards against unwanted usage of the deprecated SSL client authentication path.
 // TODO: remove this when we remove the underlying feature in a future SDK version
-func TestPostgreSQL_InitializeSSLFeatureFlag(t *testing.T) {
+func TestPostgreSQL_InitializeSSLInlineFeatureFlag(t *testing.T) {
 	// set the flag to true so we can call PrepareTestContainerWithSSL
 	// which does a validation check on the connection
 	t.Setenv(pluginutil.PluginUsePostgresSSLInline, "true")
 
-	cleanup, connURL := postgresql.PrepareTestContainerWithSSL(t, context.Background(), "verify-ca", false)
+	// Create certificates for postgres authentication
+	caCert := certhelpers.NewCert(t,
+		certhelpers.CommonName("ca"),
+		certhelpers.IsCA(true),
+		certhelpers.SelfSign(),
+	)
+	clientCert := certhelpers.NewCert(t,
+		certhelpers.CommonName("postgres"),
+		certhelpers.DNS("localhost"),
+		certhelpers.Parent(caCert),
+	)
+	cleanup, connURL := postgresql.PrepareTestContainerWithSSL(
+		t,
+		"verify-ca",
+		caCert,
+		clientCert,
+		false,
+	)
 	t.Cleanup(cleanup)
 
 	type testCase struct {
@@ -166,11 +184,11 @@ func TestPostgreSQL_InitializeSSLFeatureFlag(t *testing.T) {
 	}
 }
 
-// TestPostgreSQL_InitializeSSL tests that we can successfully authenticate
+// TestPostgreSQL_InitializeSSLInline tests that we can successfully authenticate
 // with a postgres server via ssl with a URL connection string or DSN (key/value)
 // for each ssl mode.
 // TODO: remove this when we remove the underlying feature in a future SDK version
-func TestPostgreSQL_InitializeSSL(t *testing.T) {
+func TestPostgreSQL_InitializeSSLInline(t *testing.T) {
 	// required to enable the sslinline custom parsing
 	t.Setenv(pluginutil.PluginUsePostgresSSLInline, "true")
 
@@ -287,7 +305,25 @@ func TestPostgreSQL_InitializeSSL(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			cleanup, connURL := postgresql.PrepareTestContainerWithSSL(t, context.Background(), test.sslMode, test.useFallback)
+
+			// Create certificates for postgres authentication
+			caCert := certhelpers.NewCert(t,
+				certhelpers.CommonName("ca"),
+				certhelpers.IsCA(true),
+				certhelpers.SelfSign(),
+			)
+			clientCert := certhelpers.NewCert(t,
+				certhelpers.CommonName("postgres"),
+				certhelpers.DNS("localhost"),
+				certhelpers.Parent(caCert),
+			)
+			cleanup, connURL := postgresql.PrepareTestContainerWithSSL(
+				t,
+				test.sslMode,
+				caCert,
+				clientCert,
+				test.useFallback,
+			)
 			t.Cleanup(cleanup)
 
 			if test.useDSN {
