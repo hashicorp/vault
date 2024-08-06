@@ -83,11 +83,17 @@ incorrectly. For additional details, refer to the
 
 ### Auto-rolled billing start date
 
-As of 1.17.3 and later, the billing start date (license start date if not configured) rolls over to the latest billing year at the end of the last cycle. 
+As of 1.17.3 and later, the billing start date (license start date if not configured) rolls over to the latest billing year at the end of the last cycle.
 
 @include 'auto-roll-billing-start.mdx'
 
 @include 'auto-roll-billing-start-example.mdx'
+
+### Docker image no longer contains `curl`
+
+As of 1.17.3 and later, the `curl` binary is no longer included in the published Docker container images
+for Vault and Vault Enterprise. If your workflow depends on `curl` in the image you can dynamically
+install it using `apk`, e.g.: `docker exec <CONTAINER-ID> apk add curl` or `kubectl exec -ti <NAME> -- apk add curl`.
 
 ## Known issues and workarounds
 
