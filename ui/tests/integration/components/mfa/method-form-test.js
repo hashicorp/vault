@@ -8,6 +8,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, fillIn, click } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | mfa-method-form', function (hooks) {
   setupRenderingTest(hooks);
@@ -33,7 +34,7 @@ module('Integration | Component | mfa-method-form', function (hooks) {
     assert.dom('[data-test-input="period"]').exists('Period field ttl renders');
     assert.dom('[data-test-input="key_size"]').exists('Key size field input renders');
     assert.dom('[data-test-input="qr_size"]').exists('QR size field input renders');
-    assert.dom('[data-test-input="algorithm"]').exists(`Algorithm field radio input renders`);
+    assert.dom(GENERAL.selectByAttr('algorithm')).exists(`Algorithm field radio input renders`);
     assert
       .dom('[data-test-input="max_validation_attempts"]')
       .exists(`Max validation attempts field input renders`);

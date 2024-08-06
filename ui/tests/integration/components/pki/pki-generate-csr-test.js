@@ -10,6 +10,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | pki-generate-csr', function (hooks) {
   setupRenderingTest(hooks);
@@ -68,7 +69,7 @@ module('Integration | Component | pki-generate-csr', function (hooks) {
 
     assert.dom('[data-test-toggle-group]').exists({ count: 3 }, 'Toggle groups render');
 
-    await fillIn('[data-test-input="type"]', 'exported');
+    await fillIn(GENERAL.selectByAttr('type'), 'exported');
     await fillIn('[data-test-input="commonName"]', 'foo');
     await click('[data-test-save]');
 

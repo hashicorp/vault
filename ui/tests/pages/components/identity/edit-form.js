@@ -15,7 +15,7 @@ export default {
   disabled: clickable('[data-test-input="disabled"]'),
   metadataKey: fillable('[data-test-kv-key]'),
   metadataValue: fillable('[data-test-kv-value]'),
-  type: fillable('[data-test-input="type"]'),
+  type: fillable('[data-test-select="type"]'),
   submit: clickable('[data-test-identity-submit]'),
   delete: clickable('[data-test-confirm-action-trigger]'),
   confirmDelete: clickable('[data-test-confirm-button]'),

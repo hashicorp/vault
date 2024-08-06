@@ -10,6 +10,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import timestamp from 'core/utils/timestamp';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | keymgmt/key-edit', function (hooks) {
   setupRenderingTest(hooks);
@@ -92,6 +93,6 @@ module('Integration | Component | keymgmt/key-edit', function (hooks) {
     this.model = store.createRecord('keymgmt/key');
     this.set('mode', 'create');
     await render(hbs`<Keymgmt::KeyEdit @model={{this.model}} @mode={{this.mode}} />`);
-    assert.dom('[data-test-input="type"]').hasValue('rsa-2048', 'Has type rsa-2048 by default');
+    assert.dom(GENERAL.selectByAttr('type')).hasValue('rsa-2048', 'Has type rsa-2048 by default');
   });
 });

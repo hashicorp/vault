@@ -10,6 +10,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { click, settled, fillIn } from '@ember/test-helpers';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const ts = 'data-test-kms-provider';
 const root = {
@@ -200,17 +201,17 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
     await click(`[${ts}-submit]`);
     assert.dom('[data-test-inline-error-message]').exists('Validation error messages shown');
 
-    await fillIn('[data-test-input="provider"]', 'azurekeyvault');
+    await fillIn(GENERAL.selectByAttr('provider'), 'azurekeyvault');
     ['client_id', 'client_secret', 'tenant_id'].forEach((prop) => {
       assert.dom(`[data-test-input="credentials.${prop}"]`).exists(`Azure - ${prop} field renders`);
     });
 
-    await fillIn('[data-test-input="provider"]', 'awskms');
+    await fillIn(GENERAL.selectByAttr('provider'), 'awskms');
     ['access_key', 'secret_key'].forEach((prop) => {
       assert.dom(`[data-test-input="credentials.${prop}"]`).exists(`AWS - ${prop} field renders`);
     });
 
-    await fillIn('[data-test-input="provider"]', 'gcpckms');
+    await fillIn(GENERAL.selectByAttr('provider'), 'gcpckms');
     assert.dom(`[data-test-input="credentials.service_account_file"]`).exists(`GCP - cred field renders`);
 
     await fillIn('[data-test-input="name"]', 'foo');

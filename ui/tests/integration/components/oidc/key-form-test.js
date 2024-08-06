@@ -12,6 +12,7 @@ import oidcConfigHandlers from 'vault/mirage/handlers/oidc-config';
 import { OIDC_BASE_URL, CLIENT_LIST_RESPONSE, SELECTORS } from 'vault/tests/helpers/oidc-config';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { capabilitiesStub, overrideResponse } from 'vault/tests/helpers/stubs';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | oidc/key-form', function (hooks) {
   setupRenderingTest(hooks);
@@ -50,7 +51,7 @@ module('Integration | Component | oidc/key-form', function (hooks) {
     `);
 
     assert.dom(SELECTORS.keySaveButton).hasText('Create', 'Save button has correct text');
-    assert.dom('[data-test-input="algorithm"]').hasValue('RS256', 'default algorithm is correct');
+    assert.dom(GENERAL.selectByAttr('algorithm')).hasValue('RS256', 'default algorithm is correct');
     assert.strictEqual(findAll('[data-test-field]').length, 4, 'renders all input fields');
 
     // check validation errors

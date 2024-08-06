@@ -45,9 +45,9 @@ module('Acceptance | settings/auth/configure/section', function (hooks) {
     await page.visit({ path, section });
     await fillIn('[data-test-input="description"]', 'This is Approle!');
     assert
-      .dom('[data-test-input="config.tokenType"]')
+      .dom('[data-test-select="config.tokenType"]')
       .hasValue('default-service', 'as default the token type selected is default-service.');
-    await fillIn('[data-test-input="config.tokenType"]', 'batch');
+    await fillIn('[data-test-select="config.tokenType"]', 'batch');
     await page.save();
     assert.strictEqual(
       page.flash.latestMessage,
