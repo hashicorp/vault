@@ -12,30 +12,18 @@
         aria-label="Key {{key}}"
         placeholder="key"
         name="key-{{key}}"
-        {{! existing keys are not editable, only their values can be updated }}
-        disabled={{this.isExistingKey key}}
+        {{! original keys (from subkeys endpoint) are not editable, only their values can be updated }}
+        disabled={{this.isOriginalKey key}}
+        {{on "blur" (fn this.onBlur key "key")}}
       />
 
-      {{#let (concat "value-" key) as |name|}}
-        {{#if (eq (this.getState key) "deleted")}}
-          {{! Unmask values marked for deletion to show users the payload sends "null" (which removes a key/value pair) }}
-          {{! @isContentMasked does not update after the component has been instantiated so we have to use separate inputs}}
-          <Hds::Form::MaskedInput::Base
-            @value="null"
-            @isContentMasked={{false}}
-            aria-label={{humanize name}}
-            name={{name}}
-            disabled={{true}}
-          />
-        {{else}}
-          <Hds::Form::MaskedInput::Base
-            @value={{value}}
-            aria-label={{humanize name}}
-            name={{name}}
-            disabled={{eq (this.getState key) "disabled"}}
-          />
-        {{/if}}
-      {{/let}}
+      <Hds::Form::MaskedInput::Base
+        @value={{value}}
+        aria-label="Value for key {{key}}"
+        name="value-{{key}}"
+        disabled={{includes (this.getState key) (array "disabled" "deleted")}}
+        {{on "blur" (fn this.onBlur key "value")}}
+      />
 
       <Hds::ButtonSet {{style width="15rem"}}>
         {{#if (eq (this.getState key) "disabled")}}
@@ -55,7 +43,7 @@
           />
         {{else}}
           <Hds::Button
-            @text={{if (this.isExistingKey key) "Cancel" "Remove"}}
+            @text={{if (this.isOriginalKey key) "Cancel" "Remove"}}
             @color="secondary"
             {{on "click" (fn this.handleCancel key)}}
           />
@@ -78,14 +66,14 @@
       aria-label="new key"
       placeholder="key"
       name="newKey"
-      {{on "blur" this.onBlur}}
+      {{on "blur" this.onBlurNew}}
     />
 
     <Hds::Form::MaskedInput::Base
       @value={{this.newValue}}
       aria-label="new value"
       name="newValue"
-      {{on "blur" this.onBlur}}
+      {{on "blur" this.onBlurNew}}
     />
 
     <Hds::ButtonSet {{style width="15rem"}}>
@@ -93,7 +81,7 @@
         @text="Add"
         @color="secondary"
         disabled={{and (not this.newKey) (not this.newValue)}}
-        {{on "click" (fn this.addData this.newKey this.newValue)}}
+        {{on "click" this.handleAddClick}}
       />
     </Hds::ButtonSet>
   </div>
