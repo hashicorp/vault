@@ -227,7 +227,21 @@ HashiCorp collects the following utilization data as JSON payloads:
          - `entity` - The sum of tokens generated for a unique client identifier
          - `nonentity` - The sum of tokens without an entity attached
 - `metadata` - Optional product-specific metadata
-   - `billing_start` - The billing start date associated with the reporting cluster (license start date if not configured)
+   - `billing_start` - The billing start date associated with the reporting cluster (license start date if not configured).
+   
+   <Note title="Important change to supported versions">
+      
+      As of 1.16.7, 1.17.3 and later, 
+      the <a href="/vault/docs/concepts/billing-start-date">billing start date</a> automatically 
+      rolls over to the latest billing year at the end of the last cycle.
+        
+      For more information, refer to the upgrade guide for your Vault version:
+
+      [Vault v1.16.x](/vault/docs/upgrading/upgrade-to-1.16.x#auto-rolled-billing-start-date),
+      [Vault v1.17.x](/vault/docs/upgrading/upgrade-to-1.17.x#auto-rolled-billing-start-date)
+
+    </Note> 
+    
    - `cluster_id` - The cluster UUID as shown by `vault status` on the reporting
      cluster
 
