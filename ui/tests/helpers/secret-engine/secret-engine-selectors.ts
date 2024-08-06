@@ -27,6 +27,9 @@ export const SECRET_ENGINE_SELECTORS = {
   },
   ssh: {
     configureForm: '[data-test-ssh-configure-form]',
-    sshInput: (name: string) => `[data-test-ssh-input="${name}"]`,
+    editConfigSection: '[data-test-ssh-edit-config-section]',
+    deletePublicKey: '[data-test-ssh-delete-public-key]',
+    save: '[data-test-ssh-save]',
+    cancel: '[data-test-ssh-cancel]',
   },
 };
