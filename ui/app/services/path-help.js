@@ -41,6 +41,12 @@ export default Service.extend({
     });
   },
 
+  /**
+   * hydrateModel instantiates models which use OpenAPI partially
+   * @param {string} modelType path for model, eg pki/role
+   * @param {string} backend path, which will be used for the generated helpUrl
+   * @returns void - as side effect, registers model via registerNewModelWithProps
+   */
   hydrateModel(modelType, backend) {
     const owner = getOwner(this);
     const modelName = `model:${modelType}`;
@@ -61,10 +67,10 @@ export default Service.extend({
   },
 
   /**
-   * getNewModel instantiates models which use OpenAPI fully or partially
+   * getNewModel instantiates models which use OpenAPI fully
    * @param {string} modelType
    * @param {string} backend
-   * @param {string} apiPath (optional) if passed, this method will call getPaths and build submodels for item types
+   * @param {string} apiPath this method will call getPaths and build submodels for item types
    * @param {*} itemType (optional) used in getPaths for additional models
    * @returns void - as side effect, registers model via registerNewModelWithProps
    */
@@ -72,13 +78,22 @@ export default Service.extend({
     const owner = getOwner(this);
     const modelName = `model:${modelType}`;
 
-    // if there's an existing factory, throw an error
-    if (owner.factoryFor(modelName)) {
-      throw new Error(`Model factory found for ${modelType} - use hydrateModel instead`);
-    }
+    const modelFactory = owner.factoryFor(modelName);
 
-    debug(`Creating new Model for ${modelType}`);
-    let newModel = Model.extend({});
+    let newModel;
+    // if we have a factory, we need to take the existing model into account
+    if (modelFactory) {
+      debug(`Model factory found for ${modelType}`);
+      newModel = modelFactory.class;
+      if (newModel.merged) {
+        return resolve();
+      }
+      // if we get here, that means an existing non-generated model exists
+      throw new Error(`Model exists for ${modelType} -- use hydrateModel instead`);
+    } else {
+      debug(`Creating new Model for ${modelType}`);
+      newModel = Model.extend({});
+    }
 
     // use paths to dynamically create our openapi help url
     // if we have a brand new model
@@ -310,7 +325,7 @@ export default Service.extend({
           },
         }),
       });
-      newModel.reopenClass({ merged: true });
+      newModel.merged = true;
       owner.unregister(modelName);
       owner.register(modelName, newModel);
     });
