@@ -65,9 +65,9 @@ export default class ConfigureAwsComponent extends Component<Args> {
       return;
     }
     // Check if any of the models attributes have changed.
-    // (note: backend dirty's model state so explicity ignore it here.)
+    // (note: "backend" dirties model state so explicity ignore it here.)
     // If no changes to either model, transition and notify user.
-    // If changes to one model, save the one that changed and notify user.
+    // If changes to one model, save the model that changed and notify user.
     // Otherwise save both models.
     const leaseAttrChanged =
       Object.keys(leaseConfig.changedAttributes()).filter((item) => item !== 'backend').length > 0;

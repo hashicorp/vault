@@ -3,16 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import {
-  click,
-  fillIn,
-  currentURL,
-  find,
-  settled,
-  waitUntil,
-  currentRouteName,
-  waitFor,
-} from '@ember/test-helpers';
+import { click, fillIn, currentURL, find, settled, waitUntil, currentRouteName } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
@@ -20,6 +11,7 @@ import { v4 as uuidv4 } from 'uuid';
 import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 
 module('Acceptance | ssh secret backend', function (hooks) {
   setupApplicationTest(hooks);
@@ -95,7 +87,7 @@ module('Acceptance | ssh secret backend', function (hooks) {
     },
   ];
   test('ssh backend', async function (assert) {
-    assert.expect(30);
+    assert.expect(31);
     const sshPath = `ssh-${this.uid}`;
 
     await enablePage.enable('ssh', sshPath);
@@ -112,13 +104,17 @@ module('Acceptance | ssh secret backend', function (hooks) {
     assert.dom('[data-test-ssh-configure-form]').exists('renders the empty configuration form');
 
     // default has generate CA checked so we just submit the form
-    await click('[data-test-ssh-input="configure-submit"]');
-
-    await waitFor('[data-test-ssh-input="public-key"]');
-    assert.dom('[data-test-ssh-input="public-key"]').exists();
-    await click('[data-test-backend-view-link]');
-
-    assert.strictEqual(currentURL(), `/vault/secrets/${sshPath}/list`, `redirects to ssh index`);
+    await click(SES.ssh.save);
+    // There is a delay in the backend for the public key to be generated, wait for it to complete and transition to configuration index route
+    await waitUntil(() => currentURL() === `/vault/secrets/${sshPath}/configuration`, { timeout: 5000 });
+    assert.dom(GENERAL.infoRowLabel('Public key')).exists('Public Key label exists');
+    assert.dom(GENERAL.infoRowValue('Public key')).hasText('***********');
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${sshPath}/configuration`,
+      `redirects to configuration details`
+    );
+    await click(GENERAL.tab(sshPath));
 
     for (const role of ROLES) {
       // create a role

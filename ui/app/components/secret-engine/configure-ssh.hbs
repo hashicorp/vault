@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<form {{on "submit" (perform this.save)}} aria-label="save ssh creds">
+<form {{on "submit" (perform this.save)}} aria-label="save ssh creds" data-test-ssh-configure-form>
   <div class="box is-fullwidth is-shadowless is-marginless">
     <NamespaceReminder @mode="save" @noun="configuration" />
     <MessageError @errorMessage={{this.errorMessage}} />
@@ -48,7 +48,7 @@
     </div>
   {{else}}
     {{! Model is not new and keys have already been created. Require user deletes the keys before creating new ones }}
-    <div class="box is-fullwidth is-sideless is-marginless">
+    <div class="box is-fullwidth is-sideless is-marginless" data-test-ssh-edit-config-section>
       <div class="field">
         <label for="publicKey" class="is-label">
           Public key
@@ -60,7 +60,6 @@
             @value={{@model.publicKey}}
             @displayOnly={{true}}
             @allowCopy={{true}}
-            data-test-ssh-input="public-key"
           />
         </div>
       </div>
@@ -80,6 +79,7 @@
           @buttonColor="secondary"
           @confirmMessage="This will remove the CA certificate information."
           @onConfirmAction={{this.deleteCaConfig}}
+          data-test-ssh-delete-public-key
         />
       </Hds::ButtonSet>
     </div>

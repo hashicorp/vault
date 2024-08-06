@@ -6,6 +6,7 @@
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
+import { waitFor } from '@ember/test-waiters';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { ValidationMap } from 'vault/vault/app-types';
@@ -46,6 +47,7 @@ export default class ConfigureSshComponent extends Component<Args> {
   @tracked modelValidations: ValidationMap | null = null;
 
   @task
+  @waitFor
   *save(event: Event) {
     event.preventDefault();
     this.resetErrors();
