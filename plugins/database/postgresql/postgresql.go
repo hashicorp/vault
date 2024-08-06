@@ -116,6 +116,7 @@ func (p *PostgreSQL) Initialize(ctx context.Context, req dbplugin.InitializeRequ
 
 		tlsConfig.RootCAs = caCertPool
 		tlsConfig.ClientCAs = caCertPool
+		p.TLSConfig = tlsConfig
 	}
 
 	if (sslcert != "" && sslkey == "") || (sslcert == "" && sslkey != "") {
@@ -130,9 +131,11 @@ func (p *PostgreSQL) Initialize(ctx context.Context, req dbplugin.InitializeRequ
 			return dbplugin.InitializeResponse{}, fmt.Errorf("unable to load cert: %w", err)
 		}
 		tlsConfig.Certificates = []tls.Certificate{cert}
+		p.TLSConfig = tlsConfig
+	} else {
+		// set to nil to flag that this connection does not use a custom TLS config
+		p.TLSConfig = nil
 	}
-
-	p.TLSConfig = tlsConfig
 
 	newConf, err := p.SQLConnectionProducer.Init(ctx, req.Config, req.VerifyConnection)
 	if err != nil {

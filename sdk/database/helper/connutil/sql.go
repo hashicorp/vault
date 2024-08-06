@@ -26,8 +26,12 @@ import (
 )
 
 const (
-	AuthTypeGCPIAM = "gcp_iam"
+	AuthTypeGCPIAM           = "gcp_iam"
+	AuthTypeCert             = "cert"
+	AuthTypeUsernamePassword = ""
+)
 
+const (
 	dbTypePostgres   = "pgx"
 	cloudSQLPostgres = "cloudsql-postgres"
 )
@@ -40,16 +44,19 @@ type SQLConnectionProducer struct {
 	MaxOpenConnections       int         `json:"max_open_connections" mapstructure:"max_open_connections" structs:"max_open_connections"`
 	MaxIdleConnections       int         `json:"max_idle_connections" mapstructure:"max_idle_connections" structs:"max_idle_connections"`
 	MaxConnectionLifetimeRaw interface{} `json:"max_connection_lifetime" mapstructure:"max_connection_lifetime" structs:"max_connection_lifetime"`
-	Username                 string      `json:"username" mapstructure:"username" structs:"username"`
-	Password                 string      `json:"password" mapstructure:"password" structs:"password"`
-	AuthType                 string      `json:"auth_type" mapstructure:"auth_type" structs:"auth_type"`
-	ServiceAccountJSON       string      `json:"service_account_json" mapstructure:"service_account_json" structs:"service_account_json"`
 	DisableEscaping          bool        `json:"disable_escaping" mapstructure:"disable_escaping" structs:"disable_escaping"`
 	usePrivateIP             bool        `json:"use_private_ip" mapstructure:"use_private_ip" structs:"use_private_ip"`
 
-	TLSConfig *tls.Config
+	// Username/Password is the default auth type when AuthType is not set
+	Username string `json:"username" mapstructure:"username" structs:"username"`
+	Password string `json:"password" mapstructure:"password" structs:"password"`
 
-	// cloud options here - cloudDriverName is globally unique, but only needs to be retained for the lifetime
+	// AuthType defines the type of client authenticate used for this connection
+	AuthType           string `json:"auth_type" mapstructure:"auth_type" structs:"auth_type"`
+	ServiceAccountJSON string `json:"service_account_json" mapstructure:"service_account_json" structs:"service_account_json"`
+	TLSConfig          *tls.Config
+
+	// cloudDriverName is globally unique, but only needs to be retained for the lifetime
 	// of driver registration, not across plugin restarts.
 	cloudDriverName    string
 	cloudDialerCleanup func() error
@@ -130,15 +137,11 @@ func (c *SQLConnectionProducer) Init(ctx context.Context, conf map[string]interf
 		return nil, errwrap.Wrapf("invalid max_connection_lifetime: {{err}}", err)
 	}
 
-	// validate auth_type if provided
-	authType := c.AuthType
-	if authType != "" {
-		if ok := ValidateAuthType(authType); !ok {
-			return nil, fmt.Errorf("invalid auth_type %s provided", authType)
-		}
+	if ok := ValidateAuthType(c.AuthType); !ok {
+		return nil, fmt.Errorf("invalid auth_type: %s", c.AuthType)
 	}
 
-	if authType == AuthTypeGCPIAM {
+	if c.AuthType == AuthTypeGCPIAM {
 		c.cloudDriverName, err = uuid.GenerateUUID()
 		if err != nil {
 			return nil, fmt.Errorf("unable to generate UUID for IAM configuration: %w", err)
@@ -162,11 +165,11 @@ func (c *SQLConnectionProducer) Init(ctx context.Context, conf map[string]interf
 
 	if verifyConnection {
 		if _, err := c.Connection(ctx); err != nil {
-			return nil, errwrap.Wrapf("error verifying Connection: {{err}}", err)
+			return nil, fmt.Errorf("error verifying connection: %w", err)
 		}
 
 		if err := c.db.PingContext(ctx); err != nil {
-			return nil, errwrap.Wrapf("error verifying PingContext: {{err}}", err)
+			return nil, fmt.Errorf("error verifying connection: ping failed: %s", err)
 		}
 	}
 
@@ -224,33 +227,37 @@ func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, er
 		}
 	}
 
-	if c.TLSConfig != nil {
+	if driverName == dbTypePostgres && c.TLSConfig != nil {
 		config, err := pgx.ParseConfig(conn)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse config %s", err)
+			return nil, fmt.Errorf("failed to parse config: %w", err)
 		}
 
 		config.TLSConfig.RootCAs = c.TLSConfig.RootCAs
 		config.TLSConfig.ClientCAs = c.TLSConfig.ClientCAs
 		config.TLSConfig.Certificates = c.TLSConfig.Certificates
-		// TODO(JM): loop through fallback hosts and update TLSConfig for each
+
+		// Ensure there are no stale fallbacks when manually setting TLSConfig
+		for _, fallback := range config.Fallbacks {
+			fallback.TLSConfig = config.TLSConfig
+		}
 
 		c.db = stdlib.OpenDB(*config)
 		if err != nil {
-			return nil, fmt.Errorf("failed to Open conn for driver %s", err)
+			return nil, fmt.Errorf("failed to open connection: %w", err)
 		}
-	} else if driverName == "pgx" && os.Getenv(pluginutil.PluginUsePostgresSSLInline) != "" {
-		// TODO: remove this deprecated function call in a future SDK version
+	} else if driverName == dbTypePostgres && os.Getenv(pluginutil.PluginUsePostgresSSLInline) != "" {
 		var err error
+		// TODO: remove this deprecated function call in a future SDK version
 		c.db, err = OpenPostgres(driverName, conn)
 		if err != nil {
-			return nil, fmt.Errorf("failed to Open conn for driver %s", err)
+			return nil, fmt.Errorf("failed to open connection: %w", err)
 		}
 	} else {
 		var err error
 		c.db, err = sql.Open(driverName, conn)
 		if err != nil {
-			return nil, fmt.Errorf("failed to Open conn for driver %s", err)
+			return nil, fmt.Errorf("failed to open connection: %w", err)
 		}
 	}
 
@@ -299,4 +306,14 @@ func (c *SQLConnectionProducer) Close() error {
 // Vault's storage.
 func (c *SQLConnectionProducer) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticUser dbplugin.StaticUserConfig) (username, password string, err error) {
 	return "", "", dbutil.Unimplemented()
+}
+
+var configurableAuthTypes = map[string]bool{
+	AuthTypeUsernamePassword: true,
+	AuthTypeCert:             true,
+	AuthTypeGCPIAM:           true,
+}
+
+func ValidateAuthType(authType string) bool {
+	return configurableAuthTypes[authType]
 }
