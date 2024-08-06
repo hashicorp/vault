@@ -8,9 +8,10 @@ description: |-
 
 # operator generate-root
 
-The `operator generate-root` command generates a new root token by combining a
-quorum of share holders. With the `-dr-token` or `-recovery-token` options,
-it can generate a DR operation token or a recovery token in the same way.
+The `operator generate-root` command generates a new Vault root token by
+combining a quorum of share holders. With the `-dr-token` or `-recovery-token`
+options, it can generate a DR operation token or a recovery token in the same
+way.
 
 One of the following must be provided to start the root token generation:
 
@@ -27,28 +28,155 @@ An unseal key may be provided directly on the command line as an argument to the
 command. If key is specified as "-", the command will read from stdin. If a TTY
 is available, the command will prompt for text.
 
-Please see the [generate root guide](/vault/tutorials/operations/generate-root) for
-step-by-step instructions.
 
-## Examples
+## Generate a root token with one-time password (OTP)
 
-Generate an OTP code for the final token:
+1. Initialize a root token generation.
 
-```shell-session
-$ vault operator generate-root -generate-otp
-```
+   ```shell-session
+   $ vault operator generate-root -init
 
-Start a root token generation:
+   A One-Time-Password has been generated for you and is shown in the OTP field.
+   You will need this value to decode the resulting root token, so keep it safe.
+   Nonce         15565c79-cc9e-5e64-b986-8506e7bd1918
+   Started       true
+   Progress      0/1
+   Complete      false
+   OTP           5JFQaH76Ky2TIuSt4SPvO1CGkx
+   OTP Length    26
+   ```
 
-```shell-session
-$ vault operator generate-root -init
-```
+   Nonce and one-time password (OTP) are generated. The nonce value should be
+   distributed to all unseal key (recovery key if auto-unseal is used) holders.
 
-Enter an unseal key to progress root token generation:
+   <Note title="Copy the OTP value">
 
-```shell-session
-$ vault operator generate-root
-```
+   You will need the OTP value later to decode the generated root token.
+
+   </Note>
+
+1. Each unseal key holder provides their unseal key. If your Vault is using
+   auto-unseal, enter the recovery key instead.
+
+   ```shell-session
+   $ vault operator generate-root
+
+   Root generation operation nonce: f67f4da3-4ae4-68fb-4716-91da6b609c3e
+   Unseal Key (will be hidden):
+   ```
+
+   If there is a tty, Vault will prompt for the key and automatically
+   complete the nonce value. If there is no tty, or if the value is piped
+   from stdin, the user must specify the nonce value from the `-init`
+   operation.
+
+   ```shell-session
+   $ echo $UNSEAL_KEY | vault operator generate-root -nonce=f67f4da3... -
+   ```
+
+1. When the quorum of unseal keys (or recovery keys) are supplied, the final
+   user will also get the encoded root token.
+
+   ```shell-session
+   $ vault operator generate-root
+
+   Root generation operation nonce: f67f4da3-4ae4-68fb-4716-91da6b609c3e
+   Unseal Key (will be hidden):
+
+   Nonce            f67f4da3-4ae4-68fb-4716-91da6b609c3e
+   Started          true
+   Progress         5/5
+   Complete         true
+   Encoded Token    IxJpyqxn3YafOGhqhvP6cQ==
+   ```
+
+1. Decode the encoded token using the OTP generated during the initialization.
+
+   ```shell-session
+   $ vault operator generate-root \
+     -decode=IxJpyqxn3YafOGhqhvP6cQ== \
+     -otp=5JFQaH76Ky2TIuSt4SPvO1CGkx
+   ```
+
+   **Example output:**
+
+   <CodeBlockConfig hideClipboard>
+
+   ```plaintext
+   hvs.gZcA2a9cECYY77bDviO9SEuu
+   ```
+
+   </CodeBlockConfig>
+
+   The returned vaule (`hvs.gZcA2a9cECYY77bDviO9SEuu`) is your new root token.
+
+## Generate a root token using PGP
+
+1. Initialize a root token generation, providing the path to a GPG public key or
+   keybase username of a user to encrypted the resulting token.
+
+   ```shell-session
+   $ vault operator generate-root -init -pgp-key=keybase:sethvargo
+
+   Nonce              e24dec5e-f1ea-2dfe-ecce-604022006976
+   Started            true
+   Progress           0/5
+   Complete           false
+   PGP Fingerprint    e2f8e2974623ba2a0e933a59c921994f9c27e0ff
+   ```
+
+   The nonce value should be distributed to all unseal key holders.
+
+1. Each unseal key holder providers their unseal key.
+
+   ```shell-session
+   $ vault operator generate-root
+
+   Root generation operation nonce: e24dec5e-f1ea-2dfe-ecce-604022006976
+   Unseal Key (will be hidden): ...
+   ```
+
+   If there is a tty, Vault will prompt for the key and automatically
+   complete the nonce value. If there is no tty, or if the value is piped
+   from stdin, the user must specify the nonce value from the `-init`
+   operation.
+
+   ```shell-session
+   $ echo $UNSEAL_KEY | vault operator generate-root -nonce=f67f4da3... -
+   ```
+
+1. When the quorum of unseal keys are supplied, the final user will also get the
+   encoded root token.
+
+   ```shell-session
+   $ vault operator generate-root
+
+   Root generation operation nonce: e24dec5e-f1ea-2dfe-ecce-604022006976
+   Unseal Key (will be hidden):
+
+   Nonce                 e24dec5e-f1ea-2dfe-ecce-604022006976
+   Started               true
+   Progress              1/1
+   Complete              true
+   PGP Fingerprint       e2f8e2974623ba2a0e933a59c921994f9c27e0ff
+   Encoded Token         wcFMA0RVkFtoqzRlARAAI3Ux8kdSpfgXdF9mg...
+   ```
+
+1. Decrypt the encrypted token using associated private key.
+
+   ```shell-session
+   $ echo "wcFMA0RVkFtoqzRlARAAI3Ux8kdSpfgXdF9mg..." | base64 --decode | gpg --decrypt
+
+   d0f71e9b-ebff-6d8a-50ae-b8859f2e5671
+   ```
+
+   or via keybase:
+
+   ```shell-session
+   $ echo "wcFMA0RVkFtoqzRlARAAI3Ux8kdSpfgXdF9mg..." | base64 --decode | keybase pgp decrypt
+
+   d0f71e9b-ebff-6d8a-50ae-b8859f2e5671
+   ```
 
 ## Usage
 
