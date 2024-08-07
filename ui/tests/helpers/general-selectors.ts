@@ -42,6 +42,7 @@ export const GENERAL = {
   inputByAttr: (attr: string) => `[data-test-input="${attr}"]`,
   selectByAttr: (attr: string) => `[data-test-select="${attr}"]`,
   toggleInput: (attr: string) => `[data-test-toggle-input="${attr}"]`,
+  toggleGroup: (attr: string) => `[data-test-toggle-group="${attr}"]`,
   ttl: {
     toggle: (attr: string) => `[data-test-toggle-label="${attr}"]`,
     input: (attr: string) => `[data-test-ttl-value="${attr}"]`,
@@ -56,6 +57,7 @@ export const GENERAL = {
     errorMessage: '[data-test-page-error-message]',
     errorDetails: '[data-test-page-error-details]',
   },
+  inlineError: '[data-test-inline-error-message]',
   kvObjectEditor: {
     deleteRow: (idx = 0) => `[data-test-kv-delete-row="${idx}"]`,
   },

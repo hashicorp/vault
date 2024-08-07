@@ -22,11 +22,18 @@ export const SECRET_ENGINE_SELECTORS = {
   viewBackend: '[data-test-backend-view-link]',
   warning: '[data-test-warning]',
   aws: {
-    rootForm: '[data-test-aws-root-creds-form]',
+    configForm: '[data-test-aws-config-form]',
+    accessTitle: '[data-test-aws-access-title]',
+    leaseTitle: '[data-test-aws-lease-title]',
     delete: (role: string) => `[data-test-aws-role-delete="${role}"]`,
+    save: '[data-test-aws-save]',
+    cancel: '[data-test-aws-cancel]',
   },
   ssh: {
     configureForm: '[data-test-ssh-configure-form]',
-    sshInput: (name: string) => `[data-test-ssh-input="${name}"]`,
+    editConfigSection: '[data-test-ssh-edit-config-section]',
+    deletePublicKey: '[data-test-ssh-delete-public-key]',
+    save: '[data-test-ssh-save]',
+    cancel: '[data-test-ssh-cancel]',
   },
 };
