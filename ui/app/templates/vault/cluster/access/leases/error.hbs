@@ -25,18 +25,14 @@
     @title="No leases with that ID"
     @message="Unable to find lease for the ID &quot;{{this.model.keyId}}&quot;. Try going back to the lookup and re-entering the ID."
   >
-    <LinkTo @route="vault.cluster.access.leases" class="link">
-      Back to lookup
-    </LinkTo>
+    <Hds::Link::Standalone @icon="chevron-left" @text="Back to lookup" @route="vault.cluster.access.leases" />
   </EmptyState>
 {{else if (eq this.model.httpStatus 403)}}
   <EmptyState
     @title="You don't have access to a lease with that ID"
     @message="If you think you've reached this page in error, please contact your administrator."
   >
-    <LinkTo @route="vault.cluster.access.leases" class="link">
-      Back to lookup
-    </LinkTo>
+    <Hds::Link::Standalone @icon="chevron-left" @text="Back to lookup" @route="vault.cluster.access.leases" />
   </EmptyState>
 {{else}}
   {{#each this.model.errors as |error|}}

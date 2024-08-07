@@ -163,6 +163,21 @@ func GetPrivateKeyTypeFromSigner(signer crypto.Signer) PrivateKeyType {
 	return UnknownPrivateKey
 }
 
+// GetPrivateKeyTypeFromPublicKey based on the public key, return the PrivateKeyType
+// that would be associated with it, returning UnknownPrivateKey for unsupported types
+func GetPrivateKeyTypeFromPublicKey(pubKey crypto.PublicKey) PrivateKeyType {
+	switch pubKey.(type) {
+	case *rsa.PublicKey:
+		return RSAPrivateKey
+	case *ecdsa.PublicKey:
+		return ECPrivateKey
+	case ed25519.PublicKey:
+		return Ed25519PrivateKey
+	default:
+		return UnknownPrivateKey
+	}
+}
+
 // ToPEMBundle converts a string-based certificate bundle
 // to a PEM-based string certificate bundle in trust path
 // order, leaf certificate first
@@ -804,6 +819,11 @@ type CreationParameters struct {
 
 	// The explicit SKID to use; especially useful for cross-signing.
 	SKID []byte
+
+	// Ignore validating the CSR's signature. This should only be enabled if the
+	// sender of the CSR has proven proof of possession of the associated
+	// private key by some other means, otherwise keep this set to false.
+	IgnoreCSRSignature bool
 }
 
 type CreationBundle struct {

@@ -17,10 +17,15 @@
     {{#if this.replicationAttrs.secondaries}}
       <KnownSecondariesTable @secondaries={{this.replicationAttrs.secondaries}} />
     {{else}}
-      <EmptyState
-        @title="No known {{this.cluster.replicationMode}} secondary clusters associated with this cluster"
-        @message="Associated secondary clusters will be listed here. Add your first secondary cluster to get started."
-      />
+      <Hds::ApplicationState as |A|>
+        <A.Header
+          @title="No known {{this.cluster.replicationMode}} secondary clusters associated with this cluster"
+          data-test-empty-state-title
+        />
+        <A.Body
+          @text="Associated secondary clusters will be listed here. Add your first secondary cluster to get started."
+        />
+      </Hds::ApplicationState>
     {{/if}}
   </div>
   {{#if this.cluster.canAddSecondary}}

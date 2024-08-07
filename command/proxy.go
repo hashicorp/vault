@@ -12,12 +12,15 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	systemd "github.com/coreos/go-systemd/daemon"
+	"github.com/hashicorp/cli"
 	ctconfig "github.com/hashicorp/consul-template/config"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
@@ -27,7 +30,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agentproxyshared"
 	"github.com/hashicorp/vault/command/agentproxyshared/auth"
-	cache "github.com/hashicorp/vault/command/agentproxyshared/cache"
+	"github.com/hashicorp/vault/command/agentproxyshared/cache"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink/file"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink/inmem"
@@ -42,7 +45,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/version"
 	"github.com/kr/pretty"
-	"github.com/mitchellh/cli"
 	"github.com/oklog/run"
 	"github.com/posener/complete"
 	"golang.org/x/text/cases"
@@ -59,6 +61,7 @@ const (
 	// flagNameProxyExitAfterAuth is used as a Proxy specific flag to indicate
 	// that proxy should exit after a single successful auth
 	flagNameProxyExitAfterAuth = "exit-after-auth"
+	nameProxy                  = "proxy"
 )
 
 type ProxyCommand struct {
@@ -69,6 +72,7 @@ type ProxyCommand struct {
 
 	ShutdownCh chan struct{}
 	SighupCh   chan struct{}
+	SigUSR2Ch  chan struct{}
 
 	tlsReloadFuncsLock sync.RWMutex
 	tlsReloadFuncs     []reloadutil.ReloadFunc
@@ -209,6 +213,11 @@ func (c *ProxyCommand) Run(args []string) int {
 	}
 	c.logger = l
 
+	// release log gate if the disable-gated-logs flag is set
+	if c.logFlags.flagDisableGatedLogs {
+		c.logGate.Flush()
+	}
+
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
 	info["log level"] = config.LogLevel
@@ -278,10 +287,21 @@ func (c *ProxyCommand) Run(args []string) int {
 	}
 	c.metricsHelper = metricsutil.NewMetricsHelper(inmemMetrics, prometheusEnabled)
 
+	// This indicates whether the namespace for the client has been set by environment variable.
+	// If it has, we don't touch it
+	namespaceSetByEnvironmentVariable := client.Namespace() != ""
+
+	if !namespaceSetByEnvironmentVariable && config.Vault != nil && config.Vault.Namespace != "" {
+		client.SetNamespace(config.Vault.Namespace)
+	}
+
 	var method auth.AuthMethod
 	var sinks []*sink.SinkConfig
 	if config.AutoAuth != nil {
-		if client.Headers().Get(consts.NamespaceHeaderName) == "" && config.AutoAuth.Method.Namespace != "" {
+		// Note: This will only set namespace header to the value in config.AutoAuth.Method.Namespace
+		// only if it hasn't been set by config.Vault.Namespace above. In that case, the config value
+		// present at config.AutoAuth.Method.Namespace will still be used for auto-auth.
+		if !namespaceSetByEnvironmentVariable && config.AutoAuth.Method.Namespace != "" {
 			client.SetNamespace(config.AutoAuth.Method.Namespace)
 		}
 
@@ -415,12 +435,13 @@ func (c *ProxyCommand) Run(args []string) int {
 
 	// The API proxy to be used, if listeners are configured
 	apiProxy, err := cache.NewAPIProxy(&cache.APIProxyConfig{
-		Client:                  proxyClient,
-		Logger:                  apiProxyLogger,
-		EnforceConsistency:      enforceConsistency,
-		WhenInconsistentAction:  whenInconsistent,
-		UserAgentStringFunction: useragent.ProxyStringWithProxiedUserAgent,
-		UserAgentString:         useragent.ProxyAPIProxyString(),
+		Client:                     proxyClient,
+		Logger:                     apiProxyLogger,
+		EnforceConsistency:         enforceConsistency,
+		WhenInconsistentAction:     whenInconsistent,
+		UserAgentStringFunction:    useragent.ProxyStringWithProxiedUserAgent,
+		UserAgentString:            useragent.ProxyAPIProxyString(),
+		PrependConfiguredNamespace: config.APIProxy != nil && config.APIProxy.PrependConfiguredNamespace,
 	})
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error creating API proxy: %v", err))
@@ -447,12 +468,16 @@ func (c *ProxyCommand) Run(args []string) int {
 			Proxier:            apiProxy,
 			Logger:             cacheLogger.Named("leasecache"),
 			CacheStaticSecrets: config.Cache.CacheStaticSecrets,
-			UserAgentToUse:     useragent.AgentProxyString(),
+			// dynamic secrets are configured as default-on to preserve backwards compatibility
+			CacheDynamicSecrets: !config.Cache.DisableCachingDynamicSecrets,
+			UserAgentToUse:      useragent.AgentProxyString(),
 		})
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error creating lease cache: %v", err))
 			return 1
 		}
+
+		cacheLogger.Info("cache configured", "cache_static_secrets", config.Cache.CacheStaticSecrets, "disable_caching_dynamic_secrets", config.Cache.DisableCachingDynamicSecrets)
 
 		// Configure persistent storage and add to LeaseCache
 		if config.Cache.Persist != nil {
@@ -497,7 +522,8 @@ func (c *ProxyCommand) Run(args []string) int {
 				LeaseCache: leaseCache,
 				Logger:     c.logger.Named("cache.staticsecretcapabilitymanager"),
 				Client:     client,
-				StaticSecretTokenCapabilityRefreshInterval: config.Cache.StaticSecretTokenCapabilityRefreshInterval,
+				StaticSecretTokenCapabilityRefreshInterval:  config.Cache.StaticSecretTokenCapabilityRefreshInterval,
+				StaticSecretTokenCapabilityRefreshBehaviour: config.Cache.StaticSecretTokenCapabilityRefreshBehaviour,
 			})
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("Error creating static secret capability manager: %v", err))
@@ -505,6 +531,58 @@ func (c *ProxyCommand) Run(args []string) int {
 			}
 			leaseCache.SetCapabilityManager(capabilityManager)
 		}
+	}
+
+	// Create the AuthHandler and the Sink Server so that we can pass AuthHandler struct
+	// values into the Proxy http.Handler. We will wait to actually start these servers
+	// once we have configured handlers for each listener below
+	authInProgress := &atomic.Bool{}
+	invalidTokenErrCh := make(chan error)
+	var ah *auth.AuthHandler
+	var ss *sink.SinkServer
+	if method != nil {
+		// Auth Handler is going to set its own retry values, so we want to
+		// work on a copy of the client to not affect other subsystems.
+		ahClient, err := c.client.CloneWithHeaders()
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error cloning client for auth handler: %v", err))
+			return 1
+		}
+
+		// Override the set namespace with the auto-auth specific namespace
+		if !namespaceSetByEnvironmentVariable && config.AutoAuth.Method.Namespace != "" {
+			ahClient.SetNamespace(config.AutoAuth.Method.Namespace)
+		}
+
+		if config.DisableIdleConnsAutoAuth {
+			ahClient.SetMaxIdleConnections(-1)
+		}
+
+		if config.DisableKeepAlivesAutoAuth {
+			ahClient.SetDisableKeepAlives(true)
+		}
+
+		ah = auth.NewAuthHandler(&auth.AuthHandlerConfig{
+			Logger:                       c.logger.Named("auth.handler"),
+			Client:                       ahClient,
+			WrapTTL:                      config.AutoAuth.Method.WrapTTL,
+			MinBackoff:                   config.AutoAuth.Method.MinBackoff,
+			MaxBackoff:                   config.AutoAuth.Method.MaxBackoff,
+			EnableReauthOnNewCredentials: config.AutoAuth.EnableReauthOnNewCredentials,
+			Token:                        previousToken,
+			ExitOnError:                  config.AutoAuth.Method.ExitOnError,
+			UserAgent:                    useragent.ProxyAutoAuthString(),
+			MetricsSignifier:             "proxy",
+		})
+
+		authInProgress = ah.AuthInProgress
+		invalidTokenErrCh = ah.InvalidToken
+
+		ss = sink.NewSinkServer(&sink.SinkServerConfig{
+			Logger:        c.logger.Named("sink.server"),
+			Client:        ahClient,
+			ExitAfterAuth: config.ExitAfterAuth,
+		})
 	}
 
 	var listeners []net.Listener
@@ -526,6 +604,7 @@ func (c *ProxyCommand) Run(args []string) int {
 			lnBundle, err := cache.StartListener(lnConfig)
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("Error starting listener: %v", err))
+				c.tlsReloadFuncsLock.Unlock()
 				return 1
 			}
 
@@ -538,31 +617,31 @@ func (c *ProxyCommand) Run(args []string) int {
 
 		listeners = append(listeners, ln)
 
-		proxyVaultToken := true
-		var inmemSink sink.Sink
+		apiProxyLogger.Debug("configuring inmem auto-auth sink")
+		inmemSink, err := inmem.New(&sink.SinkConfig{
+			Logger: apiProxyLogger,
+		}, leaseCache)
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error creating inmem sink for cache: %v", err))
+			c.tlsReloadFuncsLock.Unlock()
+			return 1
+		}
+		sinks = append(sinks, &sink.SinkConfig{
+			Logger: apiProxyLogger,
+			Sink:   inmemSink,
+		})
+		useAutoAuthToken := false
+		forceAutoAuthToken := false
 		if config.APIProxy != nil {
-			if config.APIProxy.UseAutoAuthToken {
-				apiProxyLogger.Debug("configuring inmem auto-auth sink")
-				inmemSink, err = inmem.New(&sink.SinkConfig{
-					Logger: apiProxyLogger,
-				}, leaseCache)
-				if err != nil {
-					c.UI.Error(fmt.Sprintf("Error creating inmem sink for cache: %v", err))
-					return 1
-				}
-				sinks = append(sinks, &sink.SinkConfig{
-					Logger: apiProxyLogger,
-					Sink:   inmemSink,
-				})
-			}
-			proxyVaultToken = !config.APIProxy.ForceAutoAuthToken
+			useAutoAuthToken = config.APIProxy.UseAutoAuthToken
+			forceAutoAuthToken = config.APIProxy.ForceAutoAuthToken
 		}
 
 		var muxHandler http.Handler
 		if leaseCache != nil {
-			muxHandler = cache.ProxyHandler(ctx, apiProxyLogger, leaseCache, inmemSink, proxyVaultToken)
+			muxHandler = cache.ProxyHandler(ctx, apiProxyLogger, leaseCache, inmemSink, forceAutoAuthToken, useAutoAuthToken, authInProgress, invalidTokenErrCh)
 		} else {
-			muxHandler = cache.ProxyHandler(ctx, apiProxyLogger, apiProxy, inmemSink, proxyVaultToken)
+			muxHandler = cache.ProxyHandler(ctx, apiProxyLogger, apiProxy, inmemSink, forceAutoAuthToken, useAutoAuthToken, authInProgress, invalidTokenErrCh)
 		}
 
 		// Parse 'require_request_header' listener config option, and wrap
@@ -638,6 +717,16 @@ func (c *ProxyCommand) Run(args []string) int {
 				case c.reloadedCh <- struct{}{}:
 				default:
 				}
+			case <-c.SigUSR2Ch:
+				pprofPath := filepath.Join(os.TempDir(), "vault-proxy-pprof")
+				cpuProfileDuration := time.Second * 1
+				err := WritePprofToFile(pprofPath, cpuProfileDuration)
+				if err != nil {
+					c.logger.Error(err.Error())
+					continue
+				}
+
+				c.logger.Info(fmt.Sprintf("Wrote pprof files to: %s", pprofPath))
 			case <-ctx.Done():
 				return nil
 			}
@@ -668,41 +757,6 @@ func (c *ProxyCommand) Run(args []string) int {
 
 	// Start auto-auth and sink servers
 	if method != nil {
-		// Auth Handler is going to set its own retry values, so we want to
-		// work on a copy of the client to not affect other subsystems.
-		ahClient, err := c.client.CloneWithHeaders()
-		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error cloning client for auth handler: %v", err))
-			return 1
-		}
-
-		if config.DisableIdleConnsAutoAuth {
-			ahClient.SetMaxIdleConnections(-1)
-		}
-
-		if config.DisableKeepAlivesAutoAuth {
-			ahClient.SetDisableKeepAlives(true)
-		}
-
-		ah := auth.NewAuthHandler(&auth.AuthHandlerConfig{
-			Logger:                       c.logger.Named("auth.handler"),
-			Client:                       ahClient,
-			WrapTTL:                      config.AutoAuth.Method.WrapTTL,
-			MinBackoff:                   config.AutoAuth.Method.MinBackoff,
-			MaxBackoff:                   config.AutoAuth.Method.MaxBackoff,
-			EnableReauthOnNewCredentials: config.AutoAuth.EnableReauthOnNewCredentials,
-			Token:                        previousToken,
-			ExitOnError:                  config.AutoAuth.Method.ExitOnError,
-			UserAgent:                    useragent.ProxyAutoAuthString(),
-			MetricsSignifier:             "proxy",
-		})
-
-		ss := sink.NewSinkServer(&sink.SinkServerConfig{
-			Logger:        c.logger.Named("sink.server"),
-			Client:        ahClient,
-			ExitAfterAuth: config.ExitAfterAuth,
-		})
-
 		g.Add(func() error {
 			return ah.Run(ctx, method)
 		}, func(error) {
@@ -715,7 +769,7 @@ func (c *ProxyCommand) Run(args []string) int {
 		})
 
 		g.Add(func() error {
-			err := ss.Run(ctx, ah.OutputCh, sinks)
+			err := ss.Run(ctx, ah.OutputCh, sinks, ah.AuthInProgress)
 			c.logger.Info("sinks finished, exiting")
 
 			// Start goroutine to drain from ah.OutputCh from this point onward
@@ -744,7 +798,7 @@ func (c *ProxyCommand) Run(args []string) int {
 	// Add the static secret cache updater, if appropriate
 	if updater != nil {
 		g.Add(func() error {
-			err := updater.Run(ctx)
+			err := updater.Run(ctx, authInProgress, invalidTokenErrCh)
 			return err
 		}, func(error) {
 			cancelFunc()
@@ -912,7 +966,12 @@ func (c *ProxyCommand) setBoolFlag(f *FlagSets, configVal bool, fVar *BoolVar) {
 		// Don't do anything as the flag is already set from the command line
 	case flagEnvSet:
 		// Use value from env var
-		*fVar.Target = flagEnvValue != ""
+		val, err := parseutil.ParseBool(flagEnvValue)
+		if err != nil {
+			c.logger.Error("error parsing bool from environment variable, using default instead", "environment variable", fVar.EnvVar, "provided value", flagEnvValue, "default", fVar.Default, "err", err)
+			val = fVar.Default
+		}
+		*fVar.Target = val
 	case configVal:
 		// Use value from config
 		*fVar.Target = configVal
@@ -1036,15 +1095,17 @@ func (c *ProxyCommand) newLogger() (log.InterceptLogger, error) {
 		return nil, errors
 	}
 
-	logCfg := &logging.LogConfig{
-		Name:              "proxy",
-		LogLevel:          logLevel,
-		LogFormat:         logFormat,
-		LogFilePath:       c.config.LogFile,
-		LogRotateDuration: logRotateDuration,
-		LogRotateBytes:    c.config.LogRotateBytes,
-		LogRotateMaxFiles: c.config.LogRotateMaxFiles,
+	logCfg, err := logging.NewLogConfig(nameProxy)
+	if err != nil {
+		return nil, err
 	}
+	logCfg.Name = nameProxy
+	logCfg.LogLevel = logLevel
+	logCfg.LogFormat = logFormat
+	logCfg.LogFilePath = c.config.LogFile
+	logCfg.LogRotateDuration = logRotateDuration
+	logCfg.LogRotateBytes = c.config.LogRotateBytes
+	logCfg.LogRotateMaxFiles = c.config.LogRotateMaxFiles
 
 	l, err := logging.Setup(logCfg, c.logWriter)
 	if err != nil {

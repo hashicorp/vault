@@ -12,7 +12,7 @@
       <div>
         {{#each fieldsInGroup as |field|}}
           <Icon
-            aria-hidden="true"
+            aria-label={{compute (action "operationEnabled") this.model field}}
             class={{compute (action "iconClass") this.model field}}
             @name={{compute (action "iconGlyph") this.model field}}
           />

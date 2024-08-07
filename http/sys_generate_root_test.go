@@ -231,7 +231,7 @@ func testCoreUnsealedWithAudit(t *testing.T, records **[][]byte) (*vault.Core, [
 	conf := &vault.CoreConfig{
 		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		AuditBackends: map[string]audit.Factory{
-			"noop": corehelpers.NoopAuditFactory(records),
+			"noop": audit.NoopAuditFactory(records),
 		},
 	}
 	core, keys, token := vault.TestCoreUnsealedWithConfig(t, conf)
@@ -247,8 +247,6 @@ func testServerWithAudit(t *testing.T, records **[][]byte) (net.Listener, string
 }
 
 func TestSysGenerateRoot_badKey(t *testing.T) {
-	t.Setenv("VAULT_AUDIT_DISABLE_EVENTLOGGER", "true")
-
 	var records *[][]byte
 	ln, addr, token, _ := testServerWithAudit(t, &records)
 	defer ln.Close()

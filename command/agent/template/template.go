@@ -13,17 +13,23 @@ import (
 	"errors"
 	"fmt"
 	"io"
-
-	"go.uber.org/atomic"
+	"math"
+	"strings"
+	sync "sync/atomic"
+	"time"
 
 	ctconfig "github.com/hashicorp/consul-template/config"
 	"github.com/hashicorp/consul-template/manager"
 	"github.com/hashicorp/go-hclog"
-
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/command/agent/internal/ctmanager"
 	"github.com/hashicorp/vault/helper/useragent"
+	"github.com/hashicorp/vault/sdk/helper/backoff"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
+	"github.com/hashicorp/vault/sdk/logical"
+	"go.uber.org/atomic"
 )
 
 // ServerConfig is a config struct for setting up the basic parts of the
@@ -88,7 +94,7 @@ func NewServer(conf *ServerConfig) *Server {
 // Run kicks off the internal Consul Template runner, and listens for changes to
 // the token from the AuthHandler. If Done() is called on the context, shut down
 // the Runner and return
-func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ctconfig.TemplateConfig) error {
+func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ctconfig.TemplateConfig, tokenRenewalInProgress *sync.Bool, invalidTokenCh chan error) error {
 	if incoming == nil {
 		return errors.New("template server: incoming channel is nil")
 	}
@@ -145,12 +151,15 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 	}
 	ts.lookupMap = lookupMap
 
+	// Create  backoff object to calculate backoff time before restarting a failed
+	// consul template server
+	restartBackoff := backoff.NewBackoff(math.MaxInt, consts.DefaultMinBackoff, consts.DefaultMaxBackoff)
+
 	for {
 		select {
 		case <-ctx.Done():
 			ts.runner.Stop()
 			return nil
-
 		case token := <-incoming:
 			if token != *latestToken {
 				ts.logger.Info("template server received new token")
@@ -193,6 +202,17 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 				return fmt.Errorf("template server: %w", err)
 			}
 
+			// Calculate the amount of time to backoff using exponential backoff
+			sleep, err := restartBackoff.Next()
+			if err != nil {
+				ts.logger.Error("template server: reached maximum number of restart attempts")
+				restartBackoff.Reset()
+			}
+
+			// Sleep for the calculated backoff time then attempt to create a new runner
+			ts.logger.Warn(fmt.Sprintf("template server restart: retry attempt after %s", sleep))
+			time.Sleep(sleep)
+
 			ts.runner, err = manager.NewRunner(runnerConfig, false)
 			if err != nil {
 				return fmt.Errorf("template server failed to create: %w", err)
@@ -225,6 +245,24 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 				// continue with closing down
 				ts.runner.Stop()
 				return nil
+			}
+		case err := <-ts.runner.ServerErrCh:
+			var responseError *api.ResponseError
+			ok := errors.As(err, &responseError)
+			if !ok {
+				ts.logger.Error("template server: could not extract error response")
+				continue
+			}
+			if responseError.StatusCode == 403 && strings.Contains(responseError.Error(), logical.ErrInvalidToken.Error()) && !tokenRenewalInProgress.Load() {
+				ts.logger.Info("template server: received invalid token error")
+
+				// Drain the error channel and incoming channel before sending a new error
+				select {
+				case <-invalidTokenCh:
+				case <-incoming:
+				default:
+				}
+				invalidTokenCh <- err
 			}
 		}
 	}

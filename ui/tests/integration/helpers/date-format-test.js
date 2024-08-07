@@ -7,6 +7,7 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { find, render, settled } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
+import { formatTimeZone } from 'core/helpers/date-format';
 
 const TEST_DATE = new Date('2018-04-03T14:15:30');
 
@@ -41,6 +42,7 @@ module('Integration | Helper | date-format', function (hooks) {
   });
 
   test('displays time zone if withTimeZone=true', async function (assert) {
+    // this test may fail locally if you're in a non-US timezone
     this.set('withTimezone', true);
     this.set('timestampDate', TEST_DATE);
 
@@ -67,5 +69,15 @@ module('Integration | Helper | date-format', function (hooks) {
     this.set('value', undefined);
     await settled();
     assert.dom(this.element).hasText('', 'renders empty string when falsey');
+  });
+
+  test('it formats timezone', async function (assert) {
+    // compute expected because otherwise this fails locally because of differing timezones
+    const expected = ` ${TEST_DATE.toLocaleTimeString(undefined, { timeZoneName: 'short' }).split(' ')[2]}`;
+    const actual = formatTimeZone(TEST_DATE);
+
+    assert.notStrictEqual(actual, undefined, 'formatted timezone is not undefined');
+    assert.strictEqual(formatTimeZone('not a date'), '', 'returns an empty string for a non-date value');
+    assert.strictEqual(actual, expected, `formatted timezone: "${actual}" equals expected: "${expected}"`);
   });
 });

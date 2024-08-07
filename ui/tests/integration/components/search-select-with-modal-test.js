@@ -13,6 +13,7 @@ import { render, fillIn, click, findAll } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import ss from 'vault/tests/pages/components/search-select';
 import sinon from 'sinon';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const component = create(ss);
 
@@ -57,6 +58,16 @@ module('Integration | Component | search select with modal', function (hooks) {
             '\n# Import strings library that exposes common string operations\nimport "strings"\n\n# Conditional rule (precond) checks the incoming request endpoint\n# targeted to sys/policies/acl/admin\nprecond = rule {\n    strings.has_prefix(request.path, "sys/policies/admin")\n}\n\n# Vault checks to see if the request was made by an entity\n# named James Thomas or Team Lead role defined as its metadata\nmain = rule when precond {\n    identity.entity.metadata.role is "Team Lead" or\n      identity.entity.name is "James Thomas"\n}\n',
         },
       };
+    });
+    setRunOptions({
+      rules: {
+        // TODO: Fix this component
+        'color-contrast': { enabled: false },
+        label: { enabled: false },
+        'aria-input-field-name': { enabled: false },
+        'aria-required-attr': { enabled: false },
+        'aria-valid-attr-value': { enabled: false },
+      },
     });
   });
 

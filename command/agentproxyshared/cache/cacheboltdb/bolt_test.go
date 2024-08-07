@@ -14,11 +14,11 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
+	bolt "github.com/hashicorp-forge/bbolt"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/command/agentproxyshared/cache/keymanager"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	bolt "go.etcd.io/bbolt"
 )
 
 func getTestKeyManager(t *testing.T) keymanager.KeyManager {

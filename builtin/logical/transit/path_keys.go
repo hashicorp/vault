@@ -5,9 +5,7 @@ package transit
 
 import (
 	"context"
-	"crypto"
 	"crypto/elliptic"
-	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
@@ -15,12 +13,12 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/crypto/ed25519"
-
 	"github.com/fatih/structs"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"golang.org/x/crypto/ed25519"
 )
 
 func (b *backend) pathListKeys() *framework.Path {
@@ -225,6 +223,10 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 		polReq.KeyType = keysutil.KeyType_HMAC
 	case "managed_key":
 		polReq.KeyType = keysutil.KeyType_MANAGED_KEY
+	case "aes128-cmac":
+		polReq.KeyType = keysutil.KeyType_AES128_CMAC
+	case "aes256-cmac":
+		polReq.KeyType = keysutil.KeyType_AES256_CMAC
 	default:
 		return logical.ErrorResponse(fmt.Sprintf("unknown key type %v", keyType)), logical.ErrInvalidRequest
 	}
@@ -245,6 +247,10 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 		}
 
 		polReq.ManagedKeyUUID = keyId
+	}
+
+	if polReq.KeyType.CMACSupported() && !constants.IsEnterprise {
+		return logical.ErrorResponse(ErrCmacEntOnly.Error()), logical.ErrInvalidRequest
 	}
 
 	p, upserted, err := b.GetPolicy(ctx, polReq, b.GetRandomReader())
@@ -429,27 +435,11 @@ func (b *backend) formatKeyPolicy(p *keysutil.Policy, context []byte) (*logical.
 					key.Name = "rsa-4096"
 				}
 
-				var publicKey crypto.PublicKey
-				publicKey = v.RSAPublicKey
-				if !v.IsPrivateKeyMissing() {
-					publicKey = v.RSAKey.Public()
-				}
-
-				// Encode the RSA public key in PEM format to return over the
-				// API
-				derBytes, err := x509.MarshalPKIXPublicKey(publicKey)
+				pubKey, err := encodeRSAPublicKey(&v)
 				if err != nil {
-					return nil, fmt.Errorf("error marshaling RSA public key: %w", err)
+					return nil, err
 				}
-				pemBlock := &pem.Block{
-					Type:  "PUBLIC KEY",
-					Bytes: derBytes,
-				}
-				pemBytes := pem.EncodeToMemory(pemBlock)
-				if pemBytes == nil || len(pemBytes) == 0 {
-					return nil, fmt.Errorf("failed to PEM-encode RSA public key")
-				}
-				key.PublicKey = string(pemBytes)
+				key.PublicKey = pubKey
 			}
 
 			retKeys[k] = structs.New(key).Map()

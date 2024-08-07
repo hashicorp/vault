@@ -22,8 +22,9 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
-	auditFile "github.com/hashicorp/vault/builtin/audit/file"
+	"github.com/hashicorp/vault/audit"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -32,10 +33,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
-
-	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/vault"
+	"github.com/stretchr/testify/require"
 )
 
 func TestLogical(t *testing.T) {
@@ -323,7 +322,7 @@ func TestLogical_ListSuffix(t *testing.T) {
 	req = req.WithContext(namespace.RootContext(nil))
 	req.Header.Add(consts.AuthHeaderName, rootToken)
 
-	lreq, _, status, err := buildLogicalRequest(core, nil, req)
+	lreq, _, status, err := buildLogicalRequest(core, nil, req, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -338,7 +337,7 @@ func TestLogical_ListSuffix(t *testing.T) {
 	req = req.WithContext(namespace.RootContext(nil))
 	req.Header.Add(consts.AuthHeaderName, rootToken)
 
-	lreq, _, status, err = buildLogicalRequest(core, nil, req)
+	lreq, _, status, err = buildLogicalRequest(core, nil, req, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -358,7 +357,7 @@ func TestLogical_ListSuffix(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	lreq, _, status, err = buildLogicalRequest(core, nil, req)
+	lreq, _, status, err = buildLogicalRequest(core, nil, req, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -517,7 +516,7 @@ func TestLogical_ListWithQueryParameters(t *testing.T) {
 			req = req.WithContext(namespace.RootContext(nil))
 			req.Header.Add(consts.AuthHeaderName, rootToken)
 
-			lreq, _, status, err := buildLogicalRequest(core, nil, req)
+			lreq, _, status, err := buildLogicalRequest(core, nil, req, "")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -569,13 +568,11 @@ func TestLogical_RespondWithStatusCode(t *testing.T) {
 }
 
 func TestLogical_Audit_invalidWrappingToken(t *testing.T) {
-	t.Setenv("VAULT_AUDIT_DISABLE_EVENTLOGGER", "true")
-
 	// Create a noop audit backend
-	noop := corehelpers.TestNoopAudit(t, nil)
+	noop := audit.TestNoopAudit(t, "noop/", nil)
 	c, _, root := vault.TestCoreUnsealedWithConfig(t, &vault.CoreConfig{
 		AuditBackends: map[string]audit.Factory{
-			"noop": func(ctx context.Context, config *audit.BackendConfig, _ bool, _ audit.HeaderFormatter) (audit.Backend, error) {
+			"noop": func(config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, error) {
 				return noop, nil
 			},
 		},
@@ -584,7 +581,6 @@ func TestLogical_Audit_invalidWrappingToken(t *testing.T) {
 	defer ln.Close()
 
 	// Enable the audit backend
-
 	resp := testHttpPost(t, root, addr+"/v1/sys/audit/noop", map[string]interface{}{
 		"type": "noop",
 	})
@@ -685,7 +681,7 @@ func TestLogical_AuditPort(t *testing.T) {
 			"kv": kv.VersionedKVFactory,
 		},
 		AuditBackends: map[string]audit.Factory{
-			"file": auditFile.Factory,
+			"file": audit.NewFileBackend,
 		},
 	}
 
@@ -749,9 +745,12 @@ func TestLogical_AuditPort(t *testing.T) {
 
 	decoder := json.NewDecoder(auditLogFile)
 
-	var auditRecord map[string]interface{}
 	count := 0
-	for decoder.Decode(&auditRecord) == nil {
+	for decoder.More() {
+		var auditRecord map[string]interface{}
+		err := decoder.Decode(&auditRecord)
+		require.NoError(t, err)
+
 		count += 1
 
 		// Skip the first line
@@ -856,14 +855,25 @@ func TestLogical_ErrRelativePath(t *testing.T) {
 }
 
 func testBuiltinPluginMetadataAuditLog(t *testing.T, log map[string]interface{}, expectedMountClass string) {
+	t.Helper()
+
 	if mountClass, ok := log["mount_class"].(string); !ok {
 		t.Fatalf("mount_class should be a string, not %T", log["mount_class"])
 	} else if mountClass != expectedMountClass {
 		t.Fatalf("bad: mount_class should be %s, not %s", expectedMountClass, mountClass)
 	}
 
-	if _, ok := log["mount_running_version"].(string); !ok {
-		t.Fatalf("mount_running_version should be a string, not %T", log["mount_running_version"])
+	// Requests have 'mount_running_version' but Responses have 'mount_running_plugin_version'
+	runningVersionRaw, runningVersionRawOK := log["mount_running_version"]
+	runningPluginVersionRaw, runningPluginVersionRawOK := log["mount_running_plugin_version"]
+	if !runningVersionRawOK && !runningPluginVersionRawOK {
+		t.Fatalf("mount_running_version/mount_running_plugin_version should be present")
+	} else if runningVersionRawOK {
+		if _, ok := runningVersionRaw.(string); !ok {
+			t.Fatalf("mount_running_version should be string, not %T", runningVersionRaw)
+		}
+	} else if _, ok := runningPluginVersionRaw.(string); !ok {
+		t.Fatalf("mount_running_plugin_version should be string, not %T", runningPluginVersionRaw)
 	}
 
 	if _, ok := log["mount_running_sha256"].(string); ok {
@@ -880,7 +890,7 @@ func testBuiltinPluginMetadataAuditLog(t *testing.T, log map[string]interface{},
 func TestLogical_AuditEnabled_ShouldLogPluginMetadata_Auth(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
 		AuditBackends: map[string]audit.Factory{
-			"file": auditFile.Factory,
+			"file": audit.NewFileBackend,
 		},
 	}
 
@@ -910,38 +920,45 @@ func TestLogical_AuditEnabled_ShouldLogPluginMetadata_Auth(t *testing.T) {
 			"file_path": auditLogFile.Name(),
 		},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	_, err = c.Logical().Write("auth/token/create", map[string]interface{}{
 		"ttl": "10s",
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+
+	// Disable audit now we're done performing operations
+	err = c.Sys().DisableAudit("file")
+	require.NoError(t, err)
 
 	// Check the audit trail on request and response
 	decoder := json.NewDecoder(auditLogFile)
-	var auditRecord map[string]interface{}
-	for decoder.Decode(&auditRecord) == nil {
-		auditRequest := map[string]interface{}{}
-		if req, ok := auditRecord["request"]; ok {
-			auditRequest = req.(map[string]interface{})
-			if auditRequest["path"] != "auth/token/create" {
-				continue
-			}
-		}
-		testBuiltinPluginMetadataAuditLog(t, auditRequest, consts.PluginTypeCredential.String())
+	for decoder.More() {
+		var auditRecord map[string]interface{}
+		err := decoder.Decode(&auditRecord)
+		require.NoError(t, err)
 
-		auditResponse := map[string]interface{}{}
-		if req, ok := auditRecord["response"]; ok {
-			auditRequest = req.(map[string]interface{})
-			if auditResponse["path"] != "auth/token/create" {
+		if req, ok := auditRecord["request"]; ok {
+			auditRequest, ok := req.(map[string]interface{})
+			require.True(t, ok)
+
+			path, ok := auditRequest["path"].(string)
+			require.True(t, ok)
+
+			if path != "auth/token/create" {
 				continue
 			}
+
+			testBuiltinPluginMetadataAuditLog(t, auditRequest, consts.PluginTypeCredential.String())
 		}
-		testBuiltinPluginMetadataAuditLog(t, auditResponse, consts.PluginTypeCredential.String())
+
+		// Should never have a response without a corresponding request.
+		if resp, ok := auditRecord["response"]; ok {
+			auditResponse, ok := resp.(map[string]interface{})
+			require.True(t, ok)
+
+			testBuiltinPluginMetadataAuditLog(t, auditResponse, consts.PluginTypeCredential.String())
+		}
 	}
 }
 
@@ -953,7 +970,7 @@ func TestLogical_AuditEnabled_ShouldLogPluginMetadata_Secret(t *testing.T) {
 			"kv": kv.VersionedKVFactory,
 		},
 		AuditBackends: map[string]audit.Factory{
-			"file": auditFile.Factory,
+			"file": audit.NewFileBackend,
 		},
 	}
 
@@ -979,9 +996,7 @@ func TestLogical_AuditEnabled_ShouldLogPluginMetadata_Secret(t *testing.T) {
 	// Enable the audit backend
 	tempDir := t.TempDir()
 	auditLogFile, err := os.CreateTemp(tempDir, "")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	err = c.Sys().EnableAuditWithOptions("file", &api.EnableAuditOptions{
 		Type: "file",
@@ -989,9 +1004,7 @@ func TestLogical_AuditEnabled_ShouldLogPluginMetadata_Secret(t *testing.T) {
 			"file_path": auditLogFile.Name(),
 		},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	{
 		writeData := map[string]interface{}{
@@ -1008,26 +1021,36 @@ func TestLogical_AuditEnabled_ShouldLogPluginMetadata_Secret(t *testing.T) {
 		})
 	}
 
+	// Disable audit now we're done performing operations
+	err = c.Sys().DisableAudit("file")
+	require.NoError(t, err)
+
 	// Check the audit trail on request and response
 	decoder := json.NewDecoder(auditLogFile)
-	var auditRecord map[string]interface{}
-	for decoder.Decode(&auditRecord) == nil {
-		auditRequest := map[string]interface{}{}
-		if req, ok := auditRecord["request"]; ok {
-			auditRequest = req.(map[string]interface{})
-			if auditRequest["path"] != "kv/data/foo" {
-				continue
-			}
-		}
-		testBuiltinPluginMetadataAuditLog(t, auditRequest, consts.PluginTypeSecrets.String())
+	for decoder.More() {
+		var auditRecord map[string]interface{}
+		err := decoder.Decode(&auditRecord)
+		require.NoError(t, err)
 
-		auditResponse := map[string]interface{}{}
-		if req, ok := auditRecord["response"]; ok {
-			auditRequest = req.(map[string]interface{})
-			if auditResponse["path"] != "kv/data/foo" {
+		if req, ok := auditRecord["request"]; ok {
+			auditRequest, ok := req.(map[string]interface{})
+			require.True(t, ok)
+
+			path, ok := auditRequest["path"]
+			require.True(t, ok)
+
+			if path != "kv/data/foo" {
 				continue
 			}
+
+			testBuiltinPluginMetadataAuditLog(t, auditRequest, consts.PluginTypeSecrets.String())
 		}
-		testBuiltinPluginMetadataAuditLog(t, auditResponse, consts.PluginTypeSecrets.String())
+
+		if resp, ok := auditRecord["response"]; ok {
+			auditResponse, ok := resp.(map[string]interface{})
+			require.True(t, ok)
+
+			testBuiltinPluginMetadataAuditLog(t, auditResponse, consts.PluginTypeSecrets.String())
+		}
 	}
 }

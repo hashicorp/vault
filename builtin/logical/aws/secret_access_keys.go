@@ -9,15 +9,14 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/hashicorp/go-secure-stdlib/awsutil"
-	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/template"
-	"github.com/hashicorp/vault/sdk/logical"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-secure-stdlib/awsutil"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/template"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
@@ -239,7 +238,7 @@ func (b *backend) getSessionToken(ctx context.Context, s logical.Storage, serial
 
 func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 	displayName, roleName, roleArn, policy string, policyARNs []string,
-	iamGroups []string, lifeTimeInSeconds int64, roleSessionName string) (*logical.Response, error,
+	iamGroups []string, lifeTimeInSeconds int64, roleSessionName string, sessionTags map[string]string, externalID string) (*logical.Response, error,
 ) {
 	// grab any IAM group policies associated with the vault role, both inline
 	// and managed
@@ -296,6 +295,19 @@ func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 	if len(policyARNs) > 0 {
 		assumeRoleInput.SetPolicyArns(convertPolicyARNs(policyARNs))
 	}
+	if externalID != "" {
+		assumeRoleInput.SetExternalId(externalID)
+	}
+	var tags []*sts.Tag
+	for k, v := range sessionTags {
+		tags = append(tags,
+			&sts.Tag{
+				Key:   aws.String(k),
+				Value: aws.String(v),
+			},
+		)
+	}
+	assumeRoleInput.SetTags(tags)
 	tokenResp, err := stsClient.AssumeRoleWithContext(ctx, assumeRoleInput)
 	if err != nil {
 		return logical.ErrorResponse("Error assuming role: %s", err), awsutil.CheckAWSError(err)
@@ -453,7 +465,6 @@ func (b *backend) secretAccessKeysCreate(
 			Tags:     tags,
 			UserName: &username,
 		})
-
 		if err != nil {
 			return logical.ErrorResponse("Error adding tags to user: %s", err), awsutil.CheckAWSError(err)
 		}

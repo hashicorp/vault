@@ -19,6 +19,7 @@ const ENTERPRISE_SECRET_ENGINES = [
     type: 'transform',
     category: 'generic',
     requiredFeature: 'Transform Secrets Engine',
+    glyph: 'transform-data',
   },
   {
     displayName: 'Key Management',
@@ -59,6 +60,7 @@ const MOUNTABLE_SECRET_ENGINES = [
     displayName: 'Databases',
     type: 'database',
     category: 'infra',
+    glyph: 'database',
   },
   {
     displayName: 'Google Cloud',
@@ -95,6 +97,7 @@ const MOUNTABLE_SECRET_ENGINES = [
   {
     displayName: 'RabbitMQ',
     type: 'rabbitmq',
+    glyph: 'rabbitmq-color',
     category: 'infra',
   },
   {
@@ -131,6 +134,15 @@ const MOUNTABLE_SECRET_ENGINES = [
   },
 ];
 
+// Secret Engines that have their own configuration page and actions
+// These engines do not exist in their own Ember engine.
+// Ex: AWS vs. LDAP which is configurable but is handled inside the routing of its own Ember engine.
+export const CONFIGURABLE_SECRET_ENGINES = ['aws', 'ssh'];
+
+export function configurableSecretEngines() {
+  return MOUNTABLE_SECRET_ENGINES.slice();
+}
+
 export function mountableEngines() {
   return MOUNTABLE_SECRET_ENGINES.slice();
 }
@@ -141,7 +153,7 @@ export function allEngines() {
 
 export function isAddonEngine(type, version) {
   if (type === 'kv' && version === 1) return false;
-  const engineRoute = allEngines().findBy('type', type)?.engineRoute;
+  const engineRoute = allEngines().find((engine) => engine.type === type)?.engineRoute;
   return !!engineRoute;
 }
 

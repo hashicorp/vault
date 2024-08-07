@@ -10,16 +10,8 @@ import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 @withFormFields()
 export default class PkiConfigAcmeModel extends Model {
   // This model uses the backend value as the model ID
-  get useOpenAPI() {
-    return true;
-  }
-
-  getHelpUrl(backendPath) {
-    return `/v1/${backendPath}/config/acme?help=1`;
-  }
 
   // attrs order in the form is determined by order here
-
   @attr('boolean', {
     label: 'ACME enabled',
     subText: 'When ACME is disabled, all requests to ACME directory URLs will return 404.',
@@ -65,6 +57,15 @@ export default class PkiConfigAcmeModel extends Model {
       'An optional overriding DNS resolver to use for challenge verification lookups. When not specified, the default system resolver will be used. This allows domains on peered networks with an accessible DNS resolver to be validated.',
   })
   dnsResolver;
+
+  @attr({
+    label: 'Max TTL',
+    editType: 'ttl',
+    hideToggle: true,
+    helperTextEnabled:
+      'Specify the maximum TTL for ACME certificates. Role TTL values will be limited to this value.',
+  })
+  maxTtl;
 
   @lazyCapabilities(apiPath`${'id'}/config/acme`, 'id')
   acmePath;

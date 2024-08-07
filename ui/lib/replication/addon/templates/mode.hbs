@@ -11,25 +11,15 @@
       {{#if this.model.replicationAttrs.replicationEnabled}}
         <PageHeader as |p|>
           <p.top>
-            <nav class="key-value-header breadcrumb" aria-label="breadcrumbs">
-              <ul>
-                <li>
-                  <LinkTo @route="index">
-                    <span class="sep" data-test-replication-breadcrumb></span>
-                    Replication
-                  </LinkTo>
-                </li>
-                <li>
-                  <span class="sep"></span>
-                  {{this.model.replicationModeForDisplay}}
-                </li>
-              </ul>
-            </nav>
+            <Hds::Breadcrumb>
+              <Hds::Breadcrumb::Item @text="Replication" @route="index" data-test-replication-breadcrumb />
+              <Hds::Breadcrumb::Item @text={{this.model.replicationModeForDisplay}} @current={{true}} />
+            </Hds::Breadcrumb>
           </p.top>
           <p.levelLeft>
-            <h1 class="has-top-margin-m title is-3" data-test-replication-title={{true}}>
+            <h1 class="has-top-margin-m title is-3" data-test-replication-title>
               {{this.model.replicationModeForDisplay}}
-              <span class="tag is-light has-text-grey-dark" data-test-replication-mode-display={{true}}>
+              <span class="tag is-light has-text-grey-dark" data-test-replication-mode-display>
                 {{this.model.replicationAttrs.modeForHeader}}
               </span>
             </h1>

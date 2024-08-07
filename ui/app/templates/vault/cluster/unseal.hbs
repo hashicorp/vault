@@ -14,22 +14,24 @@
         @bottomBorder={{true}}
         @message="Your Vault license has terminated and Vault is sealed. To unseal, add a current license to your configuration and restart Vault."
       >
-        <p class="align-right">
-          <DocLink @path="/vault/tutorials/enterprise/hashicorp-enterprise-license">
-            License documentation
-          </DocLink>
-        </p>
+        <Hds::Link::Standalone
+          @icon="learn-link"
+          @iconPosition="trailing"
+          @text="Install an enterprise license tutorial"
+          @href={{doc-link "/vault/tutorials/enterprise/hashicorp-enterprise-license"}}
+        />
       </EmptyState>
     </div>
   </div>
 {{else}}
-  <SplashPage as |Page|>
-    <Page.header>
+  <SplashPage>
+    <:header>
       <h1 class="title is-3">
         Unseal Vault
       </h1>
-    </Page.header>
-    <Page.content>
+    </:header>
+
+    <:content>
       <div class="box is-borderless is-shadowless is-marginless">
         <p class="title is-5">
           {{capitalize this.model.name}}
@@ -38,6 +40,12 @@
         </p>
         {{#if this.model.unsealed}}
           <p>Please wait while we redirect you.</p>
+          <Hds::Link::Standalone
+            @route="vault.cluster.auth"
+            @model={{this.model.id}}
+            @text="Continue to log in"
+            @icon="sign-in"
+          />
         {{else}}
           <p>
             Unseal Vault by entering portions of the unseal key. This can be done via multiple mechanisms on multiple
@@ -52,13 +60,14 @@
             @buttonText="Unseal"
             @onLicenseError={{action "handleLicenseError"}}
             @checkComplete={{action "isUnsealed"}}
-            @onShamirSuccess={{action "transitionToCluster"}}
+            @onShamirSuccess={{transition-to "vault.cluster" this.model.name}}
             class="has-top-margin-m"
           />
         {{/if}}
       </div>
-    </Page.content>
-    <Page.footer>
+    </:content>
+
+    <:footer>
       <div class="box is-borderless is-shadowless">
         <p>
           <ExternalLink @href="https://developer.hashicorp.com/vault/docs/concepts/seal">
@@ -66,6 +75,6 @@
           </ExternalLink>
         </p>
       </div>
-    </Page.footer>
+    </:footer>
   </SplashPage>
 {{/if}}

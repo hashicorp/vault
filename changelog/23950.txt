@@ -1,3 +1,0 @@
-```release-note:improvement
-fairshare/jobmanager: Add 'stopped' method
-```

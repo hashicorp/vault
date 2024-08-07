@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/cli"
 )
 
 func testPluginRuntimeDeregisterCommand(tb testing.TB) (*cli.MockUi, *PluginRuntimeDeregisterCommand) {

@@ -38,11 +38,27 @@ for details on how these concepts play out in practice.
 
 ## Token types
 
-As of Vault 1.0, there are two types of tokens: `service` tokens and `batch`
-tokens. A section near the bottom of this page contains detailed information
-about their differences, but it is useful to understand other token concepts
-first. The features in the following sections all apply to service tokens, and
-their applicability to batch tokens is discussed later.
+There are three types of tokens. On this page `service` tokens and `batch` tokens are outlined,
+while `recovery` tokens are covered separately in their [own page](/vault/docs/concepts/recovery-mode#recovery-tokens).
+A section near the bottom of this page contains detailed information about their differences,
+but it is useful to understand other token concepts first. The features in the following
+sections all apply to service tokens, and their applicability to batch tokens is discussed
+later.
+
+### Token prefixes
+
+Tokens have a specific prefix that indicates their type. As of Vault 1.10, this token
+format was updated. The following table lists the prefix differences. This format
+pattern and its change also apply for recovery tokens. After the prefix, a string of
+24 or more randomly-generated characters is appended.
+
+| Token Type      | Vault 1.9.x or earlier | Vault 1.10 and later |
+|-----------------|------------------------|----------------------|
+| Service tokens  | `s.<random>`           | `hvs.<random>`       |
+| Batch tokens    | `b.<random>`           | `hvb.<random>`       |
+| Recovery tokens | `r.<random>`           | `hvr.<random>`       |
+
+For example, a service token may look like `hvs.CvmS4c0DPTvHv5eJgXWMJg9r`.
 
 ## The token store
 
@@ -287,3 +303,13 @@ to Vault).
 As a corollary, batch tokens can be used across performance replication
 clusters, but only if they are orphan, since non-orphan tokens will not be able
 to ensure the validity of the parent token.
+
+## Error Responses
+
+When using a token that has been revoked, exceeded its TTL, or is an otherwise invalid value, Vault will respond
+with a `403` response code error containing the following error messages: `invalid token` and `permission denied`.
+
+When using a token with incorrect policy access, Vault will respond with a `403` response code error containing the error message
+`permission denied`.
+
+

@@ -18,7 +18,7 @@ module('Acceptance | raft storage', function (hooks) {
     this.server.get('/sys/internal/ui/resultant-acl', () =>
       this.server.create('configuration', { data: { root: true } })
     );
-    this.server.get('/sys/license/features', () => ({}));
+    this.server.get('/sys/license/features', () => ({ features: [] }));
     await authPage.login();
   });
 
@@ -66,7 +66,7 @@ module('Acceptance | raft storage', function (hooks) {
 
     await visit('/vault/storage/raft');
     assert.dom('[data-raft-row]').exists({ count: 2 }, '2 raft peers render in table');
-    await click('[data-raft-row]:nth-child(2) [data-test-popup-menu-trigger]');
+    await click('[data-raft-row]:nth-child(2) [data-test-raft-actions] button');
     await click('[data-test-confirm-action-trigger]');
     await click('[data-test-confirm-button]');
     assert.dom('[data-raft-row]').exists({ count: 1 }, 'Raft peer successfully removed');

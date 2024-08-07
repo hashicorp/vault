@@ -9,44 +9,35 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { endOfMonth, formatRFC3339 } from 'date-fns';
-import { click } from '@ember/test-helpers';
 import subMonths from 'date-fns/subMonths';
 import timestamp from 'core/utils/timestamp';
+import { SERIALIZED_ACTIVITY_RESPONSE } from 'vault/tests/helpers/clients/client-count-helpers';
+import { setupMirage } from 'ember-cli-mirage/test-support';
+import { capabilitiesStub, overrideResponse } from 'vault/tests/helpers/stubs';
 
 module('Integration | Component | clients/attribution', function (hooks) {
   setupRenderingTest(hooks);
+  setupMirage(hooks);
 
   hooks.before(function () {
-    sinon.stub(timestamp, 'now').callsFake(() => new Date('2018-04-03T14:15:30'));
+    this.timestampStub = sinon.replace(timestamp, 'now', sinon.fake.returns(new Date('2018-04-03T14:15:30')));
   });
+
   hooks.beforeEach(function () {
-    const mockNow = timestamp.now();
+    const { total, by_namespace } = SERIALIZED_ACTIVITY_RESPONSE;
+    const mockNow = this.timestampStub();
     this.mockNow = mockNow;
-    this.set('startTimestamp', formatRFC3339(subMonths(mockNow, 6)));
-    this.set('timestamp', formatRFC3339(mockNow));
-    this.set('selectedNamespace', null);
-    this.set('chartLegend', [
-      { label: 'entity clients', key: 'entity_clients' },
-      { label: 'non-entity clients', key: 'non_entity_clients' },
-    ]);
-    this.set('totalUsageCounts', { clients: 15, entity_clients: 10, non_entity_clients: 5 });
-    this.set('totalClientAttribution', [
-      { label: 'second', clients: 10, entity_clients: 7, non_entity_clients: 3 },
-      { label: 'first', clients: 5, entity_clients: 3, non_entity_clients: 2 },
-    ]);
-    this.set('totalMountsData', { clients: 5, entity_clients: 3, non_entity_clients: 2 });
-    this.set('namespaceMountsData', [
-      { label: 'auth1/', clients: 3, entity_clients: 2, non_entity_clients: 1 },
-      { label: 'auth2/', clients: 2, entity_clients: 1, non_entity_clients: 1 },
-    ]);
-  });
-  hooks.after(function () {
-    timestamp.now.restore();
+    this.startTimestamp = formatRFC3339(subMonths(mockNow, 6));
+    this.timestamp = formatRFC3339(mockNow);
+    this.selectedNamespace = null;
+    this.totalUsageCounts = total;
+    this.totalClientAttribution = [...by_namespace];
+    this.namespaceMountsData = by_namespace.find((ns) => ns.label === 'ns1').mounts;
   });
 
   test('it renders empty state with no data', async function (assert) {
     await render(hbs`
-      <Clients::Attribution @chartLegend={{this.chartLegend}} />
+      <Clients::Attribution />
     `);
 
     assert.dom('[data-test-component="empty-state"]').exists();
@@ -59,7 +50,6 @@ module('Integration | Component | clients/attribution', function (hooks) {
   test('it renders with data for namespaces', async function (assert) {
     await render(hbs`
       <Clients::Attribution
-        @chartLegend={{this.chartLegend}}
         @totalClientAttribution={{this.totalClientAttribution}}
         @totalUsageCounts={{this.totalUsageCounts}}
         @responseTimestamp={{this.timestamp}}
@@ -83,8 +73,8 @@ module('Integration | Component | clients/attribution', function (hooks) {
       .hasText(
         'The total clients in the namespace for this date range. This number is useful for identifying overall usage volume.'
       );
-    assert.dom('[data-test-top-attribution]').includesText('namespace').includesText('second');
-    assert.dom('[data-test-attribution-clients]').includesText('namespace').includesText('10');
+    assert.dom('[data-test-top-attribution]').includesText('namespace').includesText('ns1');
+    assert.dom('[data-test-attribution-clients]').includesText('namespace').includesText('18,903');
   });
 
   test('it renders two charts and correct text for single, historical month', async function (assert) {
@@ -92,7 +82,6 @@ module('Integration | Component | clients/attribution', function (hooks) {
     this.end = formatRFC3339(subMonths(endOfMonth(this.mockNow), 1));
     await render(hbs`
       <Clients::Attribution
-        @chartLegend={{this.chartLegend}}
         @totalClientAttribution={{this.totalClientAttribution}}
         @totalUsageCounts={{this.totalUsageCounts}}
         @responseTimestamp={{this.timestamp}}
@@ -120,7 +109,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
         'The new clients in the namespace for this month. This aids in understanding which namespaces create and use new clients.',
         'renders new monthly namespace text'
       );
-    this.set('selectedNamespace', 'second');
+    this.set('selectedNamespace', 'ns1');
 
     assert
       .dom('[data-test-attribution-description]')
@@ -145,7 +134,6 @@ module('Integration | Component | clients/attribution', function (hooks) {
   test('it renders single chart for current month', async function (assert) {
     await render(hbs`
       <Clients::Attribution
-        @chartLegend={{this.chartLegend}}
         @totalClientAttribution={{this.totalClientAttribution}}
         @totalUsageCounts={{this.totalUsageCounts}}
         @responseTimestamp={{this.timestamp}}
@@ -166,7 +154,6 @@ module('Integration | Component | clients/attribution', function (hooks) {
   test('it renders single chart and correct text for for date range', async function (assert) {
     await render(hbs`
       <Clients::Attribution
-        @chartLegend={{this.chartLegend}}
         @totalClientAttribution={{this.totalClientAttribution}}
         @totalUsageCounts={{this.totalUsageCounts}}
         @responseTimestamp={{this.timestamp}}
@@ -186,10 +173,9 @@ module('Integration | Component | clients/attribution', function (hooks) {
   });
 
   test('it renders with data for selected namespace auth methods for a date range', async function (assert) {
-    this.set('selectedNamespace', 'second');
+    this.set('selectedNamespace', 'ns1');
     await render(hbs`
       <Clients::Attribution
-        @chartLegend={{this.chartLegend}}
         @totalClientAttribution={{this.namespaceMountsData}}
         @totalUsageCounts={{this.totalUsageCounts}}
         @responseTimestamp={{this.timestamp}}
@@ -213,24 +199,47 @@ module('Integration | Component | clients/attribution', function (hooks) {
       .hasText(
         'The total clients used by the auth method for this date range. This number is useful for identifying overall usage volume.'
       );
-    assert.dom('[data-test-top-attribution]').includesText('auth method').includesText('auth1/');
-    assert.dom('[data-test-attribution-clients]').includesText('auth method').includesText('3');
+    assert.dom('[data-test-top-attribution]').includesText('auth method').includesText('auth/authid/0');
+    assert.dom('[data-test-attribution-clients]').includesText('auth method').includesText('8,394');
   });
 
-  test('it renders modal', async function (assert) {
+  test('it shows the export button if user does has SUDO capabilities', async function (assert) {
+    this.server.post('/sys/capabilities-self', () =>
+      capabilitiesStub('sys/internal/counters/activity/export', ['sudo'])
+    );
+
     await render(hbs`
       <Clients::Attribution
-        @chartLegend={{this.chartLegend}}
-        @totalClientAttribution={{this.namespaceMountsData}}
+        @totalClientAttribution={{this.totalClientAttribution}}
         @responseTimestamp={{this.timestamp}}
-        @startTimestamp="2022-06-01T23:00:11.050Z"
-        @endTimestamp="2022-12-01T23:00:11.050Z"
         />
     `);
-    await click('[data-test-attribution-export-button]');
-    assert
-      .dom('[data-test-export-modal-title]')
-      .hasText('Export attribution data', 'modal appears to export csv');
-    assert.dom('[ data-test-export-date-range]').includesText('June 2022 - December 2022');
+    assert.dom('[data-test-attribution-export-button]').exists();
+  });
+
+  test('it hides the export button if user does not have SUDO capabilities', async function (assert) {
+    this.server.post('/sys/capabilities-self', () =>
+      capabilitiesStub('sys/internal/counters/activity/export', ['read'])
+    );
+
+    await render(hbs`
+      <Clients::Attribution
+        @totalClientAttribution={{this.totalClientAttribution}}
+        @responseTimestamp={{this.timestamp}}
+        />
+    `);
+    assert.dom('[data-test-attribution-export-button]').doesNotExist();
+  });
+
+  test('defaults to show the export button if capabilities cannot be read', async function (assert) {
+    this.server.post('/sys/capabilities-self', () => overrideResponse(403));
+
+    await render(hbs`
+      <Clients::ExportButton
+        @totalClientAttribution={{this.totalClientAttribution}}
+        @responseTimestamp={{this.timestamp}}
+        />
+    `);
+    assert.dom('[data-test-attribution-export-button]').exists();
   });
 });

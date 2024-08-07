@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { Response } from 'miragejs';
+import { debug } from '@ember/debug';
 
 export const OIDC_BASE_URL = `/vault/access/oidc`;
 
@@ -12,12 +12,12 @@ export const SELECTORS = {
   oidcClientCreateButton: '[data-test-oidc-configure]',
   oidcRouteTabs: '[data-test-oidc-tabs]',
   oidcLandingImg: '[data-test-oidc-img]',
-  confirmActionButton: '[data-test-confirm-button="true"]',
+  confirmActionButton: '[data-test-confirm-button]',
   inlineAlert: '[data-test-inline-alert]',
   // client route
   clientSaveButton: '[data-test-oidc-client-save]',
   clientCancelButton: '[data-test-oidc-client-cancel]',
-  clientDeleteButton: '[data-test-oidc-client-delete] button',
+  clientDeleteButton: '[data-test-oidc-client-delete]',
   clientEditButton: '[data-test-oidc-client-edit]',
   clientDetailsTab: '[data-test-oidc-client-details]',
   clientProvidersTab: '[data-test-oidc-client-providers]',
@@ -26,80 +26,36 @@ export const SELECTORS = {
   assignmentSaveButton: '[data-test-oidc-assignment-save]',
   assignmentCreateButton: '[data-test-oidc-assignment-create]',
   assignmentEditButton: '[data-test-oidc-assignment-edit]',
-  assignmentDeleteButton: '[data-test-oidc-assignment-delete] button',
+  assignmentDeleteButton: '[data-test-oidc-assignment-delete]',
   assignmentCancelButton: '[data-test-oidc-assignment-cancel]',
   assignmentDetailsTab: '[data-test-oidc-assignment-details]',
 
   // scope routes
   scopeSaveButton: '[data-test-oidc-scope-save]',
   scopeCancelButton: '[data-test-oidc-scope-cancel]',
-  scopeDeleteButton: '[data-test-oidc-scope-delete] button',
+  scopeDeleteButton: '[data-test-oidc-scope-delete]',
   scopeEditButton: '[data-test-oidc-scope-edit]',
   scopeDetailsTab: '[data-test-oidc-scope-details]',
   scopeEmptyState: '[data-test-oidc-scope-empty-state]',
-  scopeCreateButtonEmptyState: '[data-test-oidc-scope-create-empty-state]',
   scopeCreateButton: '[data-test-oidc-scope-create]',
 
   // key route
   keySaveButton: '[data-test-oidc-key-save]',
   keyCancelButton: '[data-test-oidc-key-cancel]',
-  keyDeleteButton: '[data-test-oidc-key-delete] button',
+  keyDeleteButton: '[data-test-oidc-key-delete]',
   keyEditButton: '[data-test-oidc-key-edit]',
-  keyRotateButton: '[data-test-oidc-key-rotate] button',
+  keyRotateButton: '[data-test-oidc-key-rotate]',
   keyDetailsTab: '[data-test-oidc-key-details]',
   keyClientsTab: '[data-test-oidc-key-clients]',
 
   // provider route
   providerSaveButton: '[data-test-oidc-provider-save]',
   providerCancelButton: '[data-test-oidc-provider-cancel]',
-  providerDeleteButton: '[data-test-oidc-provider-delete] button',
+  providerDeleteButton: '[data-test-oidc-provider-delete]',
   providerEditButton: '[data-test-oidc-provider-edit]',
   providerDetailsTab: '[data-test-oidc-provider-details]',
   providerClientsTab: '[data-test-oidc-provider-clients]',
 };
-
-export function overrideMirageResponse(httpStatus, data) {
-  if (httpStatus === 403) {
-    return new Response(
-      403,
-      { 'Content-Type': 'application/json' },
-      JSON.stringify({ errors: ['permission denied'] })
-    );
-  }
-  if (httpStatus === 404) {
-    return new Response(404, { 'Content-Type': 'application/json' });
-  }
-  if (httpStatus === 200) {
-    return new Response(200, { 'Content-Type': 'application/json' }, JSON.stringify(data));
-  }
-  return {
-    request_id: crypto.randomUUID(),
-    lease_id: '',
-    renewable: false,
-    lease_duration: 0,
-    wrap_info: null,
-    warnings: null,
-    auth: null,
-    data: { ...data },
-  };
-}
-
-export function overrideCapabilities(requestPath, capabilitiesArray) {
-  // sample of capabilitiesArray: ['read', 'update']
-  return {
-    request_id: '40f7e44d-af5c-9b60-bd20-df72eb17e294',
-    lease_id: '',
-    renewable: false,
-    lease_duration: 0,
-    data: {
-      capabilities: capabilitiesArray,
-      [requestPath]: capabilitiesArray,
-    },
-    wrap_info: null,
-    warnings: null,
-    auth: null,
-  };
-}
 
 export async function clearRecord(store, modelType, id) {
   await store
@@ -108,6 +64,7 @@ export async function clearRecord(store, modelType, id) {
       deleteModelRecord(model);
     })
     .catch(() => {
+      debug(`Clearing record failed for ${modelType} with id: ${id}`);
       // swallow error
     });
 }

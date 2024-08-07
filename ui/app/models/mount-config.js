@@ -54,7 +54,7 @@ export default class MountConfigModel extends Model {
   allowedResponseHeaders;
 
   @attr('string', {
-    label: 'Token Type',
+    label: 'Token type',
     helpText:
       'The type of token that should be generated via this role. For `default-service` and `default-batch` service and batch tokens will be issued respectively, unless the auth method explicitly requests a different type.',
     possibleValues: ['default-service', 'default-batch', 'batch', 'service'],
@@ -66,4 +66,42 @@ export default class MountConfigModel extends Model {
     editType: 'stringArray',
   })
   allowedManagedKeys;
+
+  @attr('string', {
+    label: 'Plugin version',
+    subText:
+      'Specifies the semantic version of the plugin to use, e.g. "v1.0.0". If unspecified, the server will select any matching un-versioned plugin that may have been registered, the latest versioned plugin registered, or a built-in plugin in that order of precedence.',
+  })
+  pluginVersion;
+
+  // Auth mount userLockoutConfig params, added to user_lockout_config object in saveModel method
+  @attr('string', {
+    label: 'Lockout threshold',
+    subText: 'Specifies the number of failed login attempts after which the user is locked out, e.g. 15.',
+  })
+  lockoutThreshold;
+
+  @attr({
+    label: 'Lockout duration',
+    helperTextEnabled: 'The duration for which a user will be locked out, e.g. "5s" or "30m".',
+    editType: 'ttl',
+    helperTextDisabled: 'No lockout duration configured.',
+  })
+  lockoutDuration;
+
+  @attr({
+    label: 'Lockout counter reset',
+    helperTextEnabled:
+      'The duration after which the lockout counter is reset with no failed login attempts, e.g. "5s" or "30m".',
+    editType: 'ttl',
+    helperTextDisabled: 'No reset duration configured.',
+  })
+  lockoutCounterReset;
+
+  @attr('boolean', {
+    label: 'Disable lockout for this mount',
+    subText: 'If checked, disables the user lockout feature for this mount.',
+  })
+  lockoutDisable;
+  // end of user_lockout_config params
 }

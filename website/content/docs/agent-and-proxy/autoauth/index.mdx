@@ -22,7 +22,8 @@ When Vault Agent or Vault Proxy are started with Auto-Auth enabled, it will atte
 Vault token using the configured Method. On failure, it will exponentially back
 off and then retry. On success, unless the auth method is configured to wrap
 the tokens, it will keep the resulting token renewed until renewal is no longer
-allowed or fails, at which point it will attempt to reauthenticate.
+allowed. If renewal fails, the token has been revoked, the token has exceeded the maximum number of uses,
+or the token is an otherwise invalid value, it will attempt to reauthenticate.
 
 Every time an authentication is successful, the token is written to the
 configured Sinks, subject to their configuration.
@@ -128,6 +129,10 @@ These are common configuration values that live within the `method` block:
   If none of these are specified, defaults to the root namespace.
   Note that because sink response wrapping and templating are also based
   on the client created by auto-auth, they use the same namespace.
+  If specified alongside the `namespace` option in the Vault Stanza of
+  [Vault Agent](/vault/docs/agent-and-proxy/agent#vault-stanza) or
+  [Vault Proxy](/vault/docs/agent-and-proxy/proxy#vault-stanza), that
+  configuration will take precedence on everything except auto-auth.
 
 - `wrap_ttl` `(string or integer: optional)` - If specified, the written token
   will be response-wrapped by auto-auth. This is more secure than wrapping by

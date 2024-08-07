@@ -8,71 +8,84 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, settled, find, waitUntil } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
+const SHARED_STYLES = {
+  success: {
+    icon: 'check-circle-fill',
+    class: 'hds-alert--color-success',
+  },
+  warning: {
+    icon: 'alert-triangle-fill',
+    class: 'hds-alert--color-warning',
+  },
+};
 module('Integration | Component | alert-inline', function (hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function () {
-    this.set('message', 'some very important alert');
-    this.set('type', 'warning');
-  });
+  test('it renders alert message for each @color arg', async function (assert) {
+    const COLORS = {
+      ...SHARED_STYLES,
+      neutral: {
+        icon: 'info-fill',
+        class: 'hds-alert--color-neutral',
+      },
+      highlight: {
+        icon: 'info-fill',
+        class: 'hds-alert--color-highlight',
+      },
+      critical: {
+        icon: 'alert-diamond-fill',
+        class: 'hds-alert--color-critical',
+      },
+    };
 
-  test('it renders alert message with correct class args', async function (assert) {
-    await render(hbs`
-    <AlertInline
-      @paddingTop={{true}}
-      @isMarginless={{true}}
-      @sizeSmall={{true}}
-      @message={{this.message}}
-      @type={{this.type}}
-    />
-    `);
+    const { neutral } = COLORS; // default color
+    await render(hbs`<AlertInline @message="some very important alert" />`);
     assert.dom('[data-test-inline-error-message]').hasText('some very important alert');
-    assert
-      .dom('[data-test-inline-alert]')
-      .hasAttribute('class', 'is-flex-center padding-top is-marginless size-small');
+    assert.dom(`[data-test-icon="${neutral.icon}"]`).exists('renders default icon');
+    assert.dom('[data-test-inline-alert]').hasClass(neutral.class, 'renders default class');
+
+    // assert deprecated @type arg values map to expected color
+    for (const type in COLORS) {
+      this.color = type;
+      const color = COLORS[type];
+      await render(hbs`<AlertInline @color={{this.color}}  @message="some very important alert" />`);
+      assert.dom(`[data-test-icon="${color.icon}"]`).exists(`@color="${type}" renders icon: ${color.icon}`);
+      assert
+        .dom('[data-test-inline-alert]')
+        .hasClass(color.class, `@color="${type}" renders class: ${color.class}`);
+    }
   });
 
-  test('it yields to block text', async function (assert) {
-    await render(hbs`
-    <AlertInline @message={{this.message}} @type={{this.type}}>
-      A much more important alert
-    </AlertInline>
-    `);
-    assert.dom('[data-test-inline-error-message]').hasText('A much more important alert');
-  });
-
-  test('it renders correctly for type=danger', async function (assert) {
-    this.set('type', 'danger');
-    await render(hbs`
-    <AlertInline
-      @type={{this.type}}
-      @message={{this.message}}
-    />
-    `);
-    assert
-      .dom('[data-test-inline-error-message]')
-      .hasAttribute('class', 'has-text-danger', 'has danger text');
-    assert.dom('[data-test-icon="x-square-fill"]').exists('danger icon exists');
-  });
-
-  test('it renders correctly for type=warning', async function (assert) {
-    await render(hbs`
-    <AlertInline
-      @type={{this.type}}
-      @message={{this.message}}
-    />
-    `);
-    assert.dom('[data-test-inline-error-message]').doesNotHaveAttribute('class', 'does not have styled text');
-    assert.dom('[data-test-icon="alert-triangle-fill"]').exists('warning icon exists');
+  test('it renders alert color for each deprecated @type arg', async function (assert) {
+    const OLD_TYPES = {
+      ...SHARED_STYLES,
+      info: {
+        icon: 'info-fill',
+        class: 'hds-alert--color-highlight',
+      },
+      danger: {
+        icon: 'alert-diamond-fill',
+        class: 'hds-alert--color-critical',
+      },
+    };
+    // assert deprecated @type arg values map to expected color
+    for (const type in OLD_TYPES) {
+      this.type = type;
+      const color = OLD_TYPES[type];
+      await render(hbs`<AlertInline @type={{this.type}}  @message="some very important alert" />`);
+      assert
+        .dom(`[data-test-icon="${color.icon}"]`)
+        .exists(`deprecated @type="${type}" renders icon: ${color.icon}`);
+      assert
+        .dom('[data-test-inline-alert]')
+        .hasClass(color.class, `deprecated @type="${type}" renders class: ${color.class}`);
+    }
   });
 
   test('it mimics loading when message changes', async function (assert) {
+    this.message = 'some very important alert';
     await render(hbs`
-    <AlertInline
-      @message={{this.message}}
-      @mimicRefresh={{true}}
-      @type={{this.type}}
-    />
+    <AlertInline @message={{this.message}}/>
     `);
     assert
       .dom('[data-test-inline-error-message]')

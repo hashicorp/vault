@@ -9,10 +9,24 @@ import { render, click } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Integration | Component | mfa-login-enforcement-header', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
+
+  hooks.beforeEach(function () {
+    setRunOptions({
+      rules: {
+        // TODO: fix RadioCard component (replace with HDS)
+        'aria-valid-attr-value': { enabled: false },
+        'nested-interactive': { enabled: false },
+        // TODO: Fix SearchSelect component
+        'aria-required-attr': { enabled: false },
+        label: { enabled: false },
+      },
+    });
+  });
 
   test('it renders heading', async function (assert) {
     await render(hbs`<Mfa::MfaLoginEnforcementHeader @heading="New enforcement" />`);

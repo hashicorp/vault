@@ -3,4 +3,9 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<ReplicationSummary @cluster={{this.model}} @initialReplicationMode={{this.replicationMode}} />
+<Page::ModeIndex
+  @replicationDisabled={{this.replicationForMode.replicationDisabled}}
+  @replicationMode={{this.replicationMode}}
+  @cluster={{this.model}}
+  @onEnableSuccess={{this.onEnableSuccess}}
+/>

@@ -4,7 +4,7 @@
  */
 
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { withConfirmLeave } from 'core/decorators/confirm-leave';
 import { hash } from 'rsvp';
 
@@ -38,10 +38,10 @@ export default class PkiRoleEditRoute extends Route {
       role: { id },
     } = resolvedModel;
     controller.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: this.secretMountPath.currentPath, route: 'overview' },
-      { label: 'roles', route: 'roles.index' },
-      { label: id, route: 'roles.role.details' },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
+      { label: this.secretMountPath.currentPath, route: 'overview', model: this.secretMountPath.currentPath },
+      { label: 'roles', route: 'roles.index', model: this.secretMountPath.currentPath },
+      { label: id, route: 'roles.role.details', models: [this.secretMountPath.currentPath, id] },
       { label: 'edit' },
     ];
   }

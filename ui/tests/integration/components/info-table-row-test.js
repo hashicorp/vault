@@ -96,7 +96,7 @@ module('Integration | Component | InfoTableRow', function (hooks) {
     assert.dom('[data-test-tooltip-copy]').exists('Tooltip has copy button');
     assert
       .dom('[data-test-tooltip-copy]')
-      .hasAttribute('data-clipboard-text', 'Foo bar', 'Copy button will copy the tooltip text');
+      .hasAttribute('data-test-tooltip-copy', 'Foo bar', 'Copy button will copy the tooltip text');
   });
 
   test('it renders a string with no link if isLink is true and the item type is not an array.', async function (assert) {
@@ -197,10 +197,12 @@ module('Integration | Component | InfoTableRow', function (hooks) {
   });
   test('Truncates the label if too long', async function (assert) {
     this.set('label', 'abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz');
-    await render(hbs`<InfoTableRow
+    await render(hbs`<div style="width: 100px;">
+      <InfoTableRow
         @label={{this.label}}
         @value={{this.value}}
-      />`);
+      />
+    </div>`);
     assert.dom('[data-test-component="info-table-row"]').exists('Row renders');
     assert.dom('[data-test-label-div].label-overflow').exists('Label has class label-overflow');
     await triggerEvent('[data-test-row-label]', 'mouseenter');

@@ -106,6 +106,10 @@ type LeaseCache struct {
 	// cache static secrets, as well as dynamic secrets.
 	cacheStaticSecrets bool
 
+	// cacheDynamicSecrets is used to determine if the cache should
+	// cache dynamic secrets
+	cacheDynamicSecrets bool
+
 	// capabilityManager is used when static secrets are enabled to
 	// manage the capabilities of cached tokens.
 	capabilityManager *StaticSecretCapabilityManager
@@ -114,13 +118,14 @@ type LeaseCache struct {
 // LeaseCacheConfig is the configuration for initializing a new
 // LeaseCache.
 type LeaseCacheConfig struct {
-	Client             *api.Client
-	BaseContext        context.Context
-	Proxier            Proxier
-	Logger             hclog.Logger
-	UserAgentToUse     string
-	Storage            *cacheboltdb.BoltStorage
-	CacheStaticSecrets bool
+	Client              *api.Client
+	BaseContext         context.Context
+	Proxier             Proxier
+	Logger              hclog.Logger
+	UserAgentToUse      string
+	Storage             *cacheboltdb.BoltStorage
+	CacheStaticSecrets  bool
+	CacheDynamicSecrets bool
 }
 
 type inflightRequest struct {
@@ -167,17 +172,18 @@ func NewLeaseCache(conf *LeaseCacheConfig) (*LeaseCache, error) {
 	baseCtxInfo := cachememdb.NewContextInfo(conf.BaseContext)
 
 	return &LeaseCache{
-		client:             conf.Client,
-		proxier:            conf.Proxier,
-		logger:             conf.Logger,
-		userAgentToUse:     conf.UserAgentToUse,
-		db:                 db,
-		baseCtxInfo:        baseCtxInfo,
-		l:                  &sync.RWMutex{},
-		idLocks:            locksutil.CreateLocks(),
-		inflightCache:      gocache.New(gocache.NoExpiration, gocache.NoExpiration),
-		ps:                 conf.Storage,
-		cacheStaticSecrets: conf.CacheStaticSecrets,
+		client:              conf.Client,
+		proxier:             conf.Proxier,
+		logger:              conf.Logger,
+		userAgentToUse:      conf.UserAgentToUse,
+		db:                  db,
+		baseCtxInfo:         baseCtxInfo,
+		l:                   &sync.RWMutex{},
+		idLocks:             locksutil.CreateLocks(),
+		inflightCache:       gocache.New(gocache.NoExpiration, gocache.NoExpiration),
+		ps:                  conf.Storage,
+		cacheStaticSecrets:  conf.CacheStaticSecrets,
+		cacheDynamicSecrets: conf.CacheDynamicSecrets,
 	}, nil
 }
 
@@ -394,18 +400,18 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		return nil, err
 	}
 	if cachedResp != nil {
-		c.logger.Debug("returning cached response", "path", req.Request.URL.Path)
+		c.logger.Debug("returning cached dynamic secret response", "path", req.Request.URL.Path)
 		return cachedResp, nil
 	}
 
 	// Check if the response for this request is already in the static secret cache
-	if staticSecretCacheId != "" && req.Request.Method == http.MethodGet {
+	if staticSecretCacheId != "" && req.Request.Method == http.MethodGet && req.Token != "" {
 		cachedResp, err = c.checkCacheForStaticSecretRequest(staticSecretCacheId, req)
 		if err != nil {
 			return nil, err
 		}
 		if cachedResp != nil {
-			c.logger.Debug("returning cached response", "id", staticSecretCacheId, "path", req.Request.URL.Path)
+			c.logger.Debug("returning cached static secret response", "id", staticSecretCacheId, "path", getStaticSecretPathFromRequest(req))
 			return cachedResp, nil
 		}
 	}
@@ -476,6 +482,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		// included in the request path.
 		index.RequestPath = getStaticSecretPathFromRequest(req)
 
+		c.logger.Trace("attempting to cache static secret with following request path", "request path", index.RequestPath)
 		err := c.cacheStaticSecret(ctx, req, resp, index)
 		if err != nil {
 			return nil, err
@@ -484,6 +491,11 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 	} else {
 		// Since it's not a static secret, set the ID to be the dynamic id
 		index.ID = dynamicSecretCacheId
+	}
+
+	// Short-circuit if we've been configured to not cache dynamic secrets
+	if !c.cacheDynamicSecrets {
+		return resp, nil
 	}
 
 	// Short-circuit if the secret is not renewable
@@ -654,7 +666,7 @@ func (c *LeaseCache) cacheStaticSecret(ctx context.Context, req *SendRequest, re
 
 func (c *LeaseCache) storeStaticSecretIndex(ctx context.Context, req *SendRequest, index *cachememdb.Index) error {
 	// Store the index in the cache
-	c.logger.Debug("storing static secret response into the cache", "method", req.Request.Method, "path", req.Request.URL.Path, "id", index.ID)
+	c.logger.Debug("storing static secret response into the cache", "method", req.Request.Method, "path", index.RequestPath, "id", index.ID)
 	err := c.Set(ctx, index)
 	if err != nil {
 		c.logger.Error("failed to cache the proxied response", "error", err)

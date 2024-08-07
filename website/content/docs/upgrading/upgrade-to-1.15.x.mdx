@@ -45,7 +45,15 @@ option.
 
 @include 'application-of-sentinel-rgps-via-identity-groups.mdx'
 
+### Docker image no longer contains `curl`
+
+As of 1.15.13 and later, the `curl` binary is no longer included in the published Docker container images
+for Vault and Vault Enterprise. If your workflow depends on `curl` in the image you can dynamically
+install it using `apk`, e.g.: `docker exec <CONTAINER-ID> apk add curl` or `kubectl exec -ti <NAME> -- apk add curl`.
+
 ## Known issues and workarounds
+
+@include 'known-issues/1_15-auto-upgrade.mdx'
 
 @include 'known-issues/transit-managed-keys-panics.mdx'
 
@@ -63,4 +71,29 @@ option.
 
 @include 'known-issues/sublogger-levels-unchanged-on-reload.mdx'
 
+@include 'known-issues/kv2-url-change.mdx'
+
 @include 'known-issues/expiration-metrics-fatal-error.mdx'
+
+@include 'known-issues/1_15_audit-use-of-log-raw-applies-to-all-devices.mdx'
+
+@include 'known-issues/1_15_openldap-rotate-credentials.mdx'
+
+@include 'known-issues/perf-secondary-many-mounts-deadlock.mdx'
+
+@include 'known-issues/1_15-audit-panic-handling-with-eventlogger.mdx'
+
+@include 'known-issues/ocsp-redirect.mdx'
+
+@include 'known-issues/1_15-audit-vault-enterprise-perf-standby-logs-all-headers.mdx'
+
+@include 'known-issues/perf-standbys-revert-to-standby.mdx'
+
+@include 'known-issues/1_13-reload-census-panic-standby.mdx'
+
+@include 'known-issues/autopilot-upgrade-upgrade-version.mdx'
+
+@include 'known-issues/config_listener_proxy_protocol_behavior_issue.mdx'
+
+@include 'known-issues/duplicate-identity-groups.mdx'
+

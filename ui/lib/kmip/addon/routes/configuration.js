@@ -4,7 +4,7 @@
  */
 
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import UnloadModel from 'vault/mixins/unload-model-route';
 
 export default Route.extend(UnloadModel, {
@@ -12,7 +12,7 @@ export default Route.extend(UnloadModel, {
   secretMountPath: service(),
   pathHelp: service(),
   beforeModel() {
-    return this.pathHelp.getNewModel('kmip/config', this.secretMountPath.currentPath);
+    return this.pathHelp.hydrateModel('kmip/config', this.secretMountPath.currentPath);
   },
   model() {
     return this.store.findRecord('kmip/config', this.secretMountPath.currentPath).catch((err) => {

@@ -56,6 +56,7 @@ type runConfig struct {
 	runtimeConfig *pluginruntimeutil.PluginRuntimeConfig
 
 	PluginClientConfig
+	tmpdir string
 }
 
 func (rc runConfig) mlockEnabled() bool {
@@ -64,26 +65,26 @@ func (rc runConfig) mlockEnabled() bool {
 
 func (rc runConfig) generateCmd(ctx context.Context) (cmd *exec.Cmd, clientTLSConfig *tls.Config, err error) {
 	cmd = exec.Command(rc.command, rc.args...)
-	cmd.Env = append(cmd.Env, rc.env...)
+	env := rc.env
 
 	// Add the mlock setting to the ENV of the plugin
 	if rc.mlockEnabled() {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginMlockEnabled, "true"))
+		env = append(env, fmt.Sprintf("%s=%s", PluginMlockEnabled, "true"))
 	}
 	version, err := rc.Wrapper.VaultVersion(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
-	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginVaultVersionEnv, version))
+	env = append(env, fmt.Sprintf("%s=%s", PluginVaultVersionEnv, version))
 
 	if rc.IsMetadataMode {
 		rc.Logger = rc.Logger.With("metadata", "true")
 	}
 	metadataEnv := fmt.Sprintf("%s=%t", PluginMetadataModeEnv, rc.IsMetadataMode)
-	cmd.Env = append(cmd.Env, metadataEnv)
+	env = append(env, metadataEnv)
 
 	automtlsEnv := fmt.Sprintf("%s=%t", PluginAutoMTLSEnv, rc.AutoMTLS)
-	cmd.Env = append(cmd.Env, automtlsEnv)
+	env = append(env, automtlsEnv)
 
 	if !rc.AutoMTLS && !rc.IsMetadataMode {
 		// Get a CA TLS Certificate
@@ -106,7 +107,35 @@ func (rc runConfig) generateCmd(ctx context.Context) (cmd *exec.Cmd, clientTLSCo
 		}
 
 		// Add the response wrap token to the ENV of the plugin
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginUnwrapTokenEnv, wrapToken))
+		env = append(env, fmt.Sprintf("%s=%s", PluginUnwrapTokenEnv, wrapToken))
+	}
+
+	if rc.image == "" {
+		// go-plugin has always overridden user-provided env vars with the OS
+		// (Vault process) env vars, but we want plugins to be able to override
+		// the Vault process env. We don't want to make a breaking change in
+		// go-plugin so always set SkipHostEnv and replicate the legacy behavior
+		// ourselves if user opts in.
+		if legacy, _ := strconv.ParseBool(os.Getenv(PluginUseLegacyEnvLayering)); legacy {
+			// Env vars are layered as follows, with later entries overriding
+			// earlier entries if there are duplicate keys:
+			// 1. Env specified at plugin registration
+			// 2. Env from Vault SDK
+			// 3. Env from Vault process (OS)
+			// 4. Env from go-plugin
+			cmd.Env = append(env, os.Environ()...)
+		} else {
+			// Env vars are layered as follows, with later entries overriding
+			// earlier entries if there are duplicate keys:
+			// 1. Env from Vault process (OS)
+			// 2. Env specified at plugin registration
+			// 3. Env from Vault SDK
+			// 4. Env from go-plugin
+			cmd.Env = append(os.Environ(), env...)
+		}
+	} else {
+		// Containerized plugins do not inherit any env vars from Vault.
+		cmd.Env = env
 	}
 
 	return cmd, clientTLSConfig, nil
@@ -127,7 +156,8 @@ func (rc runConfig) makeConfig(ctx context.Context) (*plugin.ClientConfig, error
 			plugin.ProtocolNetRPC,
 			plugin.ProtocolGRPC,
 		},
-		AutoMTLS: rc.AutoMTLS,
+		AutoMTLS:    rc.AutoMTLS,
+		SkipHostEnv: true,
 	}
 	if rc.image == "" {
 		clientConfig.Cmd = cmd
@@ -140,12 +170,12 @@ func (rc runConfig) makeConfig(ctx context.Context) (*plugin.ClientConfig, error
 		if err != nil {
 			return nil, err
 		}
-		clientConfig.SkipHostEnv = true
 		clientConfig.RunnerFunc = containerCfg.NewContainerRunner
 		clientConfig.UnixSocketConfig = &plugin.UnixSocketConfig{
 			Group:   strconv.Itoa(containerCfg.GroupAdd),
-			TempDir: os.Getenv("VAULT_PLUGIN_TMPDIR"),
+			TempDir: rc.tmpdir,
 		}
+		clientConfig.GRPCBrokerMultiplex = true
 	}
 	return clientConfig, nil
 }
@@ -161,7 +191,7 @@ func (rc runConfig) containerConfig(ctx context.Context, env []string) (*pluginc
 		SHA256: fmt.Sprintf("%x", rc.sha256),
 
 		Env:        env,
-		GroupAdd:   os.Getgid(),
+		GroupAdd:   os.Getegid(),
 		Runtime:    consts.DefaultContainerPluginOCIRuntime,
 		CapIPCLock: rc.mlockEnabled(),
 		Labels: map[string]string{
@@ -187,6 +217,9 @@ func (rc runConfig) containerConfig(ctx context.Context, env []string) (*pluginc
 		cfg.Memory = rc.runtimeConfig.Memory
 		if rc.runtimeConfig.OCIRuntime != "" {
 			cfg.Runtime = rc.runtimeConfig.OCIRuntime
+		}
+		if rc.runtimeConfig.Rootless {
+			cfg.Rootless = true
 		}
 	}
 
@@ -267,6 +300,7 @@ func (r *PluginRunner) RunConfig(ctx context.Context, opts ...RunOpt) (*plugin.C
 		sha256:        r.Sha256,
 		env:           r.Env,
 		runtimeConfig: r.RuntimeConfig,
+		tmpdir:        r.Tmpdir,
 		PluginClientConfig: PluginClientConfig{
 			Name:       r.Name,
 			PluginType: r.Type,

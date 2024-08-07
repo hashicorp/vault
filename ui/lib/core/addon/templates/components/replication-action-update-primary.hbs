@@ -14,14 +14,12 @@
   </div>
 
   <div class="action-block-action">
-    <button
-      type="button"
-      class="button is-secondary"
-      onclick={{action (mut this.isModalActive) true}}
+    <Hds::Button
+      @text="Update"
+      @color="secondary"
+      {{on "click" (action (mut this.isModalActive) true)}}
       data-test-replication-action-trigger="update-primary"
-    >
-      Update
-    </button>
+    />
   </div>
 </div>
 

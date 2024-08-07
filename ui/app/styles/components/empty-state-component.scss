@@ -5,21 +5,21 @@
 
 .empty-state {
   align-items: center;
-  color: $grey;
-  background: $ui-gray-010;
+  color: var(--token-color-foreground-faint);
+  background: var(--token-color-surface-faint);
   display: flex;
   justify-content: center;
-  padding: $spacing-xxl $spacing-s;
+  padding: $spacing-48 $spacing-12;
   box-shadow: 0 -2px 0 -1px $ui-gray-300;
 }
 
 .empty-state-transparent {
   align-items: center;
-  color: $grey;
+  color: var(--token-color-foreground-faint);
   background: transparent;
   display: flex;
   justify-content: center;
-  padding: $spacing-xxl 0;
+  padding: $spacing-48 0;
   box-shadow: none;
 }
 
@@ -32,41 +32,32 @@
   font-size: $size-4;
   font-weight: $font-weight-semibold;
   line-height: 1.2;
-  margin-bottom: $spacing-xs;
+  margin-bottom: $spacing-8;
 }
 
 .empty-state-subTitle {
   font-size: $size-7;
   margin-top: -10px;
-  padding-bottom: $spacing-s;
+  padding-bottom: $spacing-12;
 }
 
 .empty-state-message.has-border-bottom-light {
-  padding-bottom: $spacing-s;
+  padding-bottom: $spacing-12;
 }
 
 .empty-state-actions {
-  margin-top: $spacing-xs;
+  margin-top: $spacing-8;
   display: flex;
   justify-content: space-between;
 
-  a,
-  .link,
-  a:not(.button):not(.file-delete-button):not(.tag) {
-    color: $blue;
-    font-size: $size-8;
-    font-weight: $font-weight-semibold;
-    text-decoration: none;
-  }
-
   > * + * {
-    margin-left: $spacing-s;
-    margin-right: $spacing-s;
+    margin-left: $spacing-12;
+    margin-right: $spacing-12;
   }
 }
 
 .empty-state-icon > .hs-icon,
 .empty-state-icon > .flight-icon {
   float: left;
-  margin-right: $spacing-xs;
+  margin-right: $spacing-8;
 }

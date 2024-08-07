@@ -1,0 +1,5 @@
+```release-note:feature
+**Request Limiter (enterprise)**: Add adaptive concurrency limits to
+write-based HTTP methods and special-case `pki/issue` requests to prevent
+overloading the Vault server.
+```

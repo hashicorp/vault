@@ -10,7 +10,7 @@ export default ApplicationAdapter.extend({
     return 'control-group';
   },
 
-  findRecord(store, type, id) {
+  async findRecord(store, type, id) {
     const baseUrl = this.buildURL(type.modelName);
     return this.ajax(`${baseUrl}/request`, 'POST', {
       data: {

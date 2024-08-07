@@ -14,7 +14,7 @@ import (
 
 type entConfig struct{}
 
-func (ec *entConfig) parseConfig(list *ast.ObjectList) error {
+func (ec *entConfig) parseConfig(list *ast.ObjectList, source string) error {
 	return nil
 }
 

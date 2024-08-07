@@ -17,16 +17,17 @@ export default Component.extend({
   actions: {
     handleKeyUp(event) {
       const keyCode = event.keyCode;
+      const val = event.target.value;
       switch (keyCode) {
         case keys.ENTER:
-          this.onExecuteCommand(event.target.value);
+          this.onExecuteCommand(val);
           break;
         case keys.UP:
         case keys.DOWN:
           this.onShiftCommand(keyCode);
           break;
         default:
-          this.onValueUpdate(event.target.value);
+          this.onValueUpdate(val);
       }
     },
     fullscreen() {

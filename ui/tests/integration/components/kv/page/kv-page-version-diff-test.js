@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -21,7 +21,7 @@ module('Integration | Component | kv | Page::Secret::Metadata::VersionDiff', fun
   hooks.beforeEach(async function () {
     this.backend = 'kv-engine';
     this.path = 'my-secret';
-    this.breadcrumbs = [{ label: 'version history', route: 'secret.metadata.versions' }, { label: 'diff' }];
+    this.breadcrumbs = [{ label: 'Version History', route: 'secret.metadata.versions' }, { label: 'Diff' }];
 
     this.store = this.owner.lookup('service:store');
     this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());

@@ -5,7 +5,7 @@
 
 import Ember from 'ember';
 import { task, timeout } from 'ember-concurrency';
-import { getOwner } from '@ember/application';
+import { getOwner } from '@ember/owner';
 import { isArray } from '@ember/array';
 import { computed, get } from '@ember/object';
 import { alias } from '@ember/object/computed';
@@ -17,6 +17,7 @@ import { resolve, reject } from 'rsvp';
 import getStorage from 'vault/lib/token-storage';
 import ENV from 'vault/config/environment';
 import { allSupportedAuthBackends } from 'vault/helpers/supported-auth-backends';
+import { addToArray } from 'vault/helpers/add-to-array';
 
 const TOKEN_SEPARATOR = '☃';
 const TOKEN_PREFIX = 'vault-';
@@ -80,8 +81,10 @@ export default Service.extend({
     if (!tokenName) {
       return;
     }
+
     const { tokenExpirationEpoch } = this.getTokenData(tokenName);
     const expirationDate = new Date(0);
+
     return tokenExpirationEpoch ? expirationDate.setUTCMilliseconds(tokenExpirationEpoch) : null;
   }),
 
@@ -121,7 +124,7 @@ export default Service.extend({
       backend: {
         // add mount path for password reset
         mountPath: stored.backend.mountPath,
-        ...BACKENDS.findBy('type', backend),
+        ...BACKENDS.find((b) => b.type === backend),
       },
     });
   }),
@@ -214,15 +217,20 @@ export default Service.extend({
     return this.ajax(url, 'POST', { namespace });
   },
 
-  calculateExpiration(resp) {
-    const now = this.now();
+  calculateExpiration(resp, now) {
     const ttl = resp.ttl || resp.lease_duration;
-    const tokenExpirationEpoch = now + ttl * 1e3;
-    this.set('expirationCalcTS', now);
-    return {
-      ttl,
-      tokenExpirationEpoch,
-    };
+    const tokenExpirationEpoch = resp.expire_time ? new Date(resp.expire_time).getTime() : now + ttl * 1e3;
+
+    return { ttl, tokenExpirationEpoch };
+  },
+
+  setExpirationSettings(resp, now) {
+    if (resp.renewable) {
+      this.set('expirationCalcTS', now);
+      this.set('allowExpiration', false);
+    } else {
+      this.set('allowExpiration', true);
+    }
   },
 
   calculateRootNamespace(currentNamespace, namespace_path, backend) {
@@ -250,10 +258,9 @@ export default Service.extend({
 
   persistAuthData() {
     const [firstArg, resp] = arguments;
-    const tokens = this.tokens;
     const currentNamespace = this.namespaceService.path || '';
-    // Tab vs dropdown format
-    const mountPath = firstArg?.selectedAuth || firstArg?.data?.path;
+    // dropdown vs tab format
+    const mountPath = firstArg?.data?.path || firstArg?.selectedAuth;
     let tokenName;
     let options;
     let backend;
@@ -267,7 +274,7 @@ export default Service.extend({
 
     const currentBackend = {
       mountPath,
-      ...BACKENDS.findBy('type', backend),
+      ...BACKENDS.find((b) => b.type === backend),
     };
     let displayName;
     if (isArray(currentBackend.displayNamePath)) {
@@ -296,17 +303,22 @@ export default Service.extend({
       resp.policies
     );
 
-    if (resp.renewable) {
-      Object.assign(data, this.calculateExpiration(resp));
-    }
+    const now = this.now();
+
+    Object.assign(data, this.calculateExpiration(resp, now));
+    this.setExpirationSettings(resp, now);
+
+    // ensure we don't call renew-self within tests
+    // this is intentionally not included in setExpirationSettings so we can unit test that method
+    if (Ember.testing) this.set('allowExpiration', false);
 
     if (!data.displayName) {
       data.displayName = (this.getTokenData(tokenName) || {}).displayName;
     }
-    tokens.addObject(tokenName);
-    this.set('tokens', tokens);
-    this.set('allowExpiration', false);
+
+    this.set('tokens', addToArray(this.tokens, tokenName));
     this.setTokenData(tokenName, data);
+
     return resolve({
       namespace: currentNamespace || data.userRootNamespace,
       token: tokenName,
@@ -329,9 +341,9 @@ export default Service.extend({
   renew() {
     const tokenName = this.currentTokenName;
     const currentlyRenewing = this.isRenewing;
-    if (currentlyRenewing) {
-      return;
-    }
+
+    if (currentlyRenewing) return;
+
     this.isRenewing = true;
     return this.renewCurrentToken().then(
       (resp) => {
@@ -359,6 +371,7 @@ export default Service.extend({
   shouldRenew() {
     const now = this.now();
     const lastFetch = this.lastFetch;
+    // renewAfterEpoch is a unix timestamp of login time + half of ttl
     const renewTime = this.renewAfterEpoch;
     if (!this.currentTokenName || this.tokenExpired || this.allowExpiration || !renewTime) {
       return false;

@@ -66,6 +66,7 @@ type RegisterPluginRuntimeInput struct {
 	CgroupParent string `json:"cgroup_parent,omitempty"`
 	CPU          int64  `json:"cpu_nanos,omitempty"`
 	Memory       int64  `json:"memory_bytes,omitempty"`
+	Rootless     bool   `json:"rootless,omitempty"`
 }
 
 // RegisterPluginRuntime registers the plugin with the given information.

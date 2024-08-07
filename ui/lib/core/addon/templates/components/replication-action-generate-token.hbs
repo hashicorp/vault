@@ -14,14 +14,12 @@
   </div>
 
   <div class="action-block-action">
-    <button
-      type="button"
-      class="button is-tertiary"
-      onclick={{action (mut this.isModalActive) true}}
+    <Hds::Button
+      @text="Generate token"
+      @color="secondary"
+      {{on "click" (action (mut this.isModalActive) true)}}
       data-test-replication-action-trigger
-    >
-      Generate token
-    </button>
+    />
   </div>
 </div>
 

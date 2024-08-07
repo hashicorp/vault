@@ -72,6 +72,58 @@ func TestVersionStore_GetOldestVersion(t *testing.T) {
 	}
 }
 
+// TestVersionStore_IsNewInstall consults the version store to see if version
+// history is empty. This property should hold during early unseal of a new
+// Vault installation.
+func TestVersionStore_IsNewInstall(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	now := time.Now().UTC()
+
+	// Remove version history to simulate early unseal
+	vaultVersionPath := "core/versions/"
+	key := vaultVersionPath + version.Version
+	if err := c.barrier.Delete(context.Background(), key); err != nil {
+		t.Fatal(err)
+	}
+
+	// delete the version from the map as well
+	delete(c.versionHistory, version.Version)
+
+	if newInstall := c.IsNewInstall(c.activeContext); !newInstall {
+		t.Fatal("expected IsNewInstall to return 'true', but got 'false'")
+	}
+
+	firstEntry := &VaultVersion{Version: "1.16.0", TimestampInstalled: now}
+	if _, err := c.storeVersionEntry(context.Background(), firstEntry, false); err != nil {
+		t.Fatalf("failed to write version entry %#v, err: %s", firstEntry, err.Error())
+	}
+
+	if err := c.loadVersionHistory(c.activeContext); err != nil {
+		t.Fatalf("failed to populate version history cache, err: %s", err.Error())
+	}
+
+	if len(c.versionHistory) != 1 {
+		t.Fatalf("expected 1 entry in timestamps map after refresh, found: %d", len(c.versionHistory))
+	}
+	secondEntry := &VaultVersion{Version: "1.13.0", TimestampInstalled: now}
+	_, err := c.storeVersionEntry(context.Background(), secondEntry, false)
+	if err != nil {
+		t.Fatalf("failed to write version entry %#v, err: %s", secondEntry, err.Error())
+	}
+
+	err = c.loadVersionHistory(c.activeContext)
+	if err != nil {
+		t.Fatalf("failed to populate version history cache, err: %s", err.Error())
+	}
+
+	if len(c.versionHistory) != 2 {
+		t.Fatalf("expected 2 entry in timestamps map after refresh, found: %d", len(c.versionHistory))
+	}
+	if newInstall := c.IsNewInstall(c.activeContext); newInstall {
+		t.Fatal("expected IsNewInstall to return 'false', but got 'true'")
+	}
+}
+
 // TestVersionStore_GetNewestVersion verifies that FindNewestVersionTimestamp finds the newest
 // (in time) vault version stored.
 func TestVersionStore_GetNewestVersion(t *testing.T) {

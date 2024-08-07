@@ -14,11 +14,11 @@
         <p class="has-text-weight-semibold is-size-6">
           Confirm
         </p>
-        <p class="sub-text has-top-bottom-margin-xxs">Type
+        <label class="sub-text has-top-bottom-margin-xxs" for={{concat "confirm-" (dasherize this.confirmText)}}>Type
           <strong>{{this.confirmText}}</strong>
           to confirm
           {{@toConfirmMsg}}
-        </p>
+        </label>
         <Input
           @type="text"
           @value={{this.confirmationInput}}
@@ -27,6 +27,7 @@
           autocomplete="off"
           spellcheck="false"
           data-test-confirmation-modal-input={{@title}}
+          id={{concat "confirm-" (dasherize this.confirmText)}}
         />
       </div>
     </M.Body>
@@ -34,7 +35,6 @@
       <Hds::ButtonSet>
         <Hds::Button
           @color="critical"
-          type="button"
           disabled={{not-eq this.confirmationInput this.confirmText}}
           {{on "click" @onConfirm}}
           data-test-confirm-button={{@title}}

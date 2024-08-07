@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 
@@ -39,6 +38,9 @@ type Request struct {
 	// EGPs). If set, the override flag will take effect for all policies
 	// evaluated during the request.
 	PolicyOverride bool
+
+	// HCPCookie is used to set a http cookie when client is connected to HCP
+	HCPCookie *http.Cookie
 }
 
 // SetJSONBody is used to set a request body that is a JSON-encoded value.
@@ -74,13 +76,13 @@ func (r *Request) ToHTTP() (*http.Request, error) {
 		// No body
 
 	case r.BodyBytes != nil:
-		req.Request.Body = ioutil.NopCloser(bytes.NewReader(r.BodyBytes))
+		req.Request.Body = io.NopCloser(bytes.NewReader(r.BodyBytes))
 
 	default:
 		if c, ok := r.Body.(io.ReadCloser); ok {
 			req.Request.Body = c
 		} else {
-			req.Request.Body = ioutil.NopCloser(r.Body)
+			req.Request.Body = io.NopCloser(r.Body)
 		}
 	}
 
@@ -143,6 +145,10 @@ func (r *Request) toRetryableHTTP() (*retryablehttp.Request, error) {
 
 	if r.PolicyOverride {
 		req.Header.Set("X-Vault-Policy-Override", "true")
+	}
+
+	if r.HCPCookie != nil {
+		req.AddCookie(r.HCPCookie)
 	}
 
 	return req, nil

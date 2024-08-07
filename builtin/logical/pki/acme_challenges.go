@@ -138,6 +138,7 @@ func ValidateHTTP01Challenge(domain string, token string, thumbprint string, con
 		MaxIdleConnsPerHost: 1,
 		MaxConnsPerHost:     1,
 		IdleConnTimeout:     1 * time.Second,
+		TLSClientConfig:     &tls.Config{InsecureSkipVerify: true},
 
 		// We'd rather timeout and re-attempt validation later than hang
 		// too many validators waiting for slow hosts.
@@ -310,7 +311,7 @@ func ValidateTLSALPN01Challenge(domain string, token string, thumbprint string, 
 			//       checks for the parent certificate having the IsCA basic constraint set.
 			err := cert.CheckSignature(cert.SignatureAlgorithm, cert.RawTBSCertificate, cert.Signature)
 			if err != nil {
-				return fmt.Errorf("server under test returned a non-self-signed certificate: %v", err)
+				return fmt.Errorf("server under test returned a non-self-signed certificate: %w", err)
 			}
 
 			if !bytes.Equal(cert.RawSubject, cert.RawIssuer) {

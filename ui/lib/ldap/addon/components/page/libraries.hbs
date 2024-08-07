@@ -6,7 +6,13 @@
 <TabPageHeader @model={{@backendModel}} @breadcrumbs={{@breadcrumbs}}>
   <:toolbarFilters>
     {{#if (and (not @promptConfig) @libraries)}}
-      <FilterInput @placeholder="Filter libraries" @onInput={{fn (mut this.filterValue)}} />
+      <FilterInput
+        aria-label="Filter libraries"
+        placeholder="Filter libraries"
+        value={{this.filterValue}}
+        @wait={{200}}
+        @onInput={{fn (mut this.filterValue)}}
+      />
     {{/if}}
   </:toolbarFilters>
   <:toolbarActions>
@@ -32,11 +38,7 @@
       data-test-config-cta
       @title="No libraries created yet"
       @message="Use libraries to manage a set of highly privileged accounts that can be shared among a team."
-    >
-      <LinkTo class="has-top-margin-xs" @route="libraries.create">
-        Create library
-      </LinkTo>
-    </EmptyState>
+    />
   {{/if}}
 {{else}}
   <div class="has-bottom-margin-s">
@@ -46,49 +48,41 @@
           <Icon @name="folder" />
           <span data-test-library={{library.name}}>{{library.name}}</span>
         </Item.content>
-        <Item.menu as |Menu|>
-          {{#if library.libraryPath.isLoading}}
-            <li class="action">
-              <Hds::Button disabled @color="tertiary" @icon="loading" @text="loading" @isIconOnly={{true}} />
-            </li>
-          {{else}}
-            <li class="action">
-              <LinkTo
-                class="has-text-black has-text-weight-semibold"
-                data-test-edit
-                @route="libraries.library.edit"
-                @model={{library}}
-                @disabled={{not library.canEdit}}
-              >
-                Edit
-              </LinkTo>
-            </li>
-            <li class="action">
-              <LinkTo
-                class="has-text-black has-text-weight-semibold"
-                data-test-details
-                @route="libraries.library.details"
-                @model={{library}}
-                @disabled={{not library.canRead}}
-              >
-                Details
-              </LinkTo>
-            </li>
-            {{#if library.canDelete}}
-              <li class="action">
-                <Menu.Message
+        <Item.menu>
+          {{#if (or library.canRead library.canEdit library.canDelete)}}
+            <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+              <dd.ToggleIcon
+                @icon="more-horizontal"
+                @text="More options"
+                @hasChevron={{false}}
+                data-test-popup-menu-trigger
+              />
+              {{#if library.canEdit}}
+                <dd.Interactive @text="Edit" data-test-edit @route="libraries.library.edit" @model={{library}} />
+              {{/if}}
+              {{#if library.canRead}}
+                <dd.Interactive @text="Details" data-test-details @route="libraries.library.details" @model={{library}} />
+              {{/if}}
+              {{#if library.canDelete}}
+                <dd.Interactive
+                  @text="Delete"
                   data-test-delete
-                  @id={{library.id}}
-                  @triggerText="Delete"
-                  @title="Are you sure?"
-                  @message="This library and associated accounts will be permanently deleted. You will not be able to recover it."
-                  @onConfirm={{fn this.onDelete library}}
+                  @color="critical"
+                  {{on "click" (fn (mut this.libraryToDelete) library)}}
                 />
-              </li>
-            {{/if}}
+              {{/if}}
+            </Hds::Dropdown>
           {{/if}}
         </Item.menu>
       </ListItem>
     {{/each}}
+    {{#if this.libraryToDelete}}
+      <ConfirmModal
+        @color="critical"
+        @confirmMessage="This library and associated accounts will be permanently deleted. You will not be able to recover it."
+        @onConfirm={{fn this.onDelete this.libraryToDelete}}
+        @onClose={{fn (mut this.libraryToDelete) false}}
+      />
+    {{/if}}
   </div>
 {{/if}}

@@ -6,6 +6,7 @@ package raft
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -20,15 +21,16 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/golang/protobuf/proto"
+	bolt "github.com/hashicorp-forge/bbolt"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-raftchunking"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/raft"
+	"github.com/hashicorp/raft-wal/verifier"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
-	bolt "go.etcd.io/bbolt"
 )
 
 const (
@@ -36,6 +38,7 @@ const (
 	putOp
 	restoreCallbackOp
 	getOp
+	verifierCheckpointOp
 
 	chunkingPrefix   = "raftchunking/"
 	databaseFilename = "vault.db"
@@ -58,6 +61,12 @@ var (
 	_ raft.BatchingFSM       = (*FSM)(nil)
 )
 
+var logVerifierMagicBytes [8]byte
+
+func init() {
+	binary.LittleEndian.PutUint64(logVerifierMagicBytes[:], verifier.ExtensionMagicPrefix)
+}
+
 type restoreCallback func(context.Context) error
 
 type FSMEntry struct {
@@ -74,6 +83,69 @@ func (f *FSMEntry) String() string {
 type FSMApplyResponse struct {
 	Success    bool
 	EntrySlice []*FSMEntry
+}
+
+type logVerificationChunkingShim struct {
+	chunker *raftchunking.ChunkingBatchingFSM
+}
+
+// Apply implements raft.BatchingFSM.
+func (s *logVerificationChunkingShim) Apply(l *raft.Log) interface{} {
+	return s.ApplyBatch([]*raft.Log{l})[0]
+}
+
+// ApplyBatch implements raft.BatchingFSM
+func (s *logVerificationChunkingShim) ApplyBatch(logs []*raft.Log) []interface{} {
+	// This is a hack because raftchunking doesn't play nicely with lower-level
+	// usage of Extensions field like we need for LogStore verification.
+
+	// When we write a verifier log, we write a single byte that consists of the verifierCheckpointOp,
+	// and then we encode the verifier.ExtensionMagicPrefix into the raft log
+	// Extensions field. Both of those together should ensure that verifier
+	// raft logs can never be mistaken for chunked protobufs. See the docs on
+	// verifier.ExtensionMagicPrefix for the reasoning behind the specific value
+	// that was chosen, and how it ensures this property.
+
+	// So here, we need to check for the exact conditions that we encoded when we wrote the
+	// verifier log out. If they match, we're going to insert a dummy raft log. We do this because 1) we
+	// don't want the chunking FSM to blow up on our verifier op that it won't understand and
+	// 2) we need to preserve the length of the incoming slice of raft logs because raft expects
+	// the length of the return value to match 1:1 to the length of the input operations.
+	newBatch := make([]*raft.Log, 0, len(logs))
+
+	for _, l := range logs {
+		if s.isVerifierLog(l) {
+			// Replace checkpoint with an empty op, but keep the index and term so
+			// downstream FSMs don't get confused about having a 0 index suddenly.
+			newBatch = append(newBatch, &raft.Log{
+				Index:      l.Index,
+				Term:       l.Term,
+				AppendedAt: l.AppendedAt,
+			})
+		} else {
+			newBatch = append(newBatch, l)
+		}
+	}
+
+	return s.chunker.ApplyBatch(newBatch)
+}
+
+// Snapshot implements raft.BatchingFSM
+func (s *logVerificationChunkingShim) Snapshot() (raft.FSMSnapshot, error) {
+	return s.chunker.Snapshot()
+}
+
+// Restore implements raft.BatchingFSM
+func (s *logVerificationChunkingShim) Restore(snapshot io.ReadCloser) error {
+	return s.chunker.Restore(snapshot)
+}
+
+func (s *logVerificationChunkingShim) RestoreState(state *raftchunking.State) error {
+	return s.chunker.RestoreState(state)
+}
+
+func (s *logVerificationChunkingShim) isVerifierLog(l *raft.Log) bool {
+	return isRaftLogVerifyCheckpoint(l)
 }
 
 // FSM is Vault's primary state storage. It writes updates to a bolt db file
@@ -103,11 +175,10 @@ type FSM struct {
 	// retoreCb is called after we've restored a snapshot
 	restoreCb restoreCallback
 
-	chunker *raftchunking.ChunkingBatchingFSM
+	chunker *logVerificationChunkingShim
 
 	localID         string
 	desiredSuffrage string
-	unknownOpTypes  sync.Map
 }
 
 // NewFSM constructs a FSM using the given directory
@@ -134,10 +205,12 @@ func NewFSM(path string, localID string, logger log.Logger) (*FSM, error) {
 		localID:         localID,
 	}
 
-	f.chunker = raftchunking.NewChunkingBatchingFSM(f, &FSMChunkStorage{
-		f:   f,
-		ctx: context.Background(),
-	})
+	f.chunker = &logVerificationChunkingShim{
+		chunker: raftchunking.NewChunkingBatchingFSM(f, &FSMChunkStorage{
+			f:   f,
+			ctx: context.Background(),
+		}),
+	}
 
 	dbPath := filepath.Join(path, databaseFilename)
 	f.l.Lock()
@@ -608,11 +681,16 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 		switch l.Type {
 		case raft.LogCommand:
 			command := &LogData{}
-			err := proto.Unmarshal(l.Data, command)
-			if err != nil {
-				f.logger.Error("error proto unmarshaling log data", "error", err)
-				panic("error proto unmarshaling log data")
+
+			// explicitly check for zero length Data, which will be the case for verifier no-ops
+			if len(l.Data) > 0 {
+				err := proto.Unmarshal(l.Data, command)
+				if err != nil {
+					f.logger.Error("error proto unmarshaling log data", "error", err, "data", l.Data)
+					panic("error proto unmarshaling log data")
+				}
 			}
+
 			commands = append(commands, command)
 		case raft.LogConfiguration:
 			configuration := raft.DecodeConfiguration(l.Data)
@@ -659,6 +737,7 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 			entrySlice := make([]*FSMEntry, 0)
 			switch command := commandRaw.(type) {
 			case *LogData:
+				// empty logs will have a zero length slice of Operations, so this loop will be a no-op
 				for _, op := range command.Operations {
 					var err error
 					switch op.OpType {
@@ -683,10 +762,7 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 							go f.restoreCb(context.Background())
 						}
 					default:
-						if _, ok := f.unknownOpTypes.Load(op.OpType); !ok {
-							f.logger.Error("unsupported transaction operation", "op", op.OpType)
-							f.unknownOpTypes.Store(op.OpType, struct{}{})
-						}
+						return fmt.Errorf("%q is not a supported transaction operation", op.OpType)
 					}
 					if err != nil {
 						return err

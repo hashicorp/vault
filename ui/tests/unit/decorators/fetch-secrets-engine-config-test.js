@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -9,7 +9,7 @@ import sinon from 'sinon';
 import Route from '@ember/routing/route';
 import { withConfig } from 'core/decorators/fetch-secrets-engine-config';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { Response } from 'miragejs';
 
 module('Unit | Decorators | fetch-secrets-engine-config', function (hooks) {
@@ -17,7 +17,7 @@ module('Unit | Decorators | fetch-secrets-engine-config', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.spy = sinon.spy(console, 'error');
+    this.spy = sinon.spy(console, 'debug');
     this.store = this.owner.lookup('service:store');
     this.backend = 'test-path';
     this.owner.lookup('service:secretMountPath').update(this.backend);

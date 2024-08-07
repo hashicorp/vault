@@ -10,19 +10,29 @@
   data-test-overview-card-container={{@cardTitle}}
   ...attributes
 >
-  <div class="flex row-wrap space-between has-bottom-margin-m" data-test-overview-card={{@cardTitle}}>
-    <h3 class="has-text-weight-bold is-size-5">{{@cardTitle}}</h3>
-    {{#if @actionText}}
-      <Hds::Link::Standalone
-        @icon={{or @actionIcon "chevron-right"}}
-        @iconPosition="trailing"
-        @text={{@actionText}}
-        @route={{@actionTo}}
-        @query={{@actionQuery}}
-        data-test-action-text={{@actionText}}
-      />
+  <div class="flex row-wrap space-between has-bottom-margin-s" data-test-overview-card={{@cardTitle}}>
+    <Hds::Text::Display @weight="bold" @size="300" data-test-overview-card-title={{@cardTitle}}>
+      {{@cardTitle}}
+    </Hds::Text::Display>
+
+    {{#if (has-block "action")}}
+      {{yield to="action"}}
     {{/if}}
   </div>
-  <p class="has-text-grey is-size-8 {{unless @actionText 'has-top-margin-s'}}">{{@subText}}</p>
-  {{yield}}
+
+  {{! Pass @subText for text only content to use default styling. }}
+  {{#if @subText}}
+    <Hds::Text::Body @color="faint" data-test-overview-card-subtitle={{@cardTitle}}>
+      {{@subText}}
+    </Hds::Text::Body>
+  {{/if}}
+
+  {{! Use the "customSubtext" yield for stylized subtext or including elements like doc links. }}
+  {{#if (has-block "customSubtext")}}
+    {{yield to="customSubtext"}}
+  {{/if}}
+
+  {{#if (has-block "content")}}
+    {{yield to="content"}}
+  {{/if}}
 </Hds::Card::Container>

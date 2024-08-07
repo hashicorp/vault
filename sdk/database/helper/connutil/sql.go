@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/url"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -17,6 +18,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -40,6 +42,7 @@ type SQLConnectionProducer struct {
 	AuthType                 string      `json:"auth_type" mapstructure:"auth_type" structs:"auth_type"`
 	ServiceAccountJSON       string      `json:"service_account_json" mapstructure:"service_account_json" structs:"service_account_json"`
 	DisableEscaping          bool        `json:"disable_escaping" mapstructure:"disable_escaping" structs:"disable_escaping"`
+	usePrivateIP             bool        `json:"use_private_ip" mapstructure:"use_private_ip" structs:"use_private_ip"`
 
 	// cloud options here - cloudDriverName is globally unique, but only needs to be retained for the lifetime
 	// of driver registration, not across plugin restarts.
@@ -140,7 +143,7 @@ func (c *SQLConnectionProducer) Init(ctx context.Context, conf map[string]interf
 		// however, the driver might store a credentials file, in which case the state stored by the driver is in
 		// fact critical to the proper function of the connection. So it needs to be registered here inside the
 		// ConnectionProducer init.
-		dialerCleanup, err := c.registerDrivers(c.cloudDriverName, c.ServiceAccountJSON)
+		dialerCleanup, err := c.registerDrivers(c.cloudDriverName, c.ServiceAccountJSON, c.usePrivateIP)
 		if err != nil {
 			return nil, err
 		}
@@ -217,7 +220,13 @@ func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, er
 	}
 
 	var err error
-	c.db, err = sql.Open(driverName, conn)
+	if driverName == "pgx" && os.Getenv(pluginutil.PluginUsePostgresSSLInline) != "" {
+		// TODO: remove this deprecated function call in a future SDK version
+		c.db, err = OpenPostgres(driverName, conn)
+	} else {
+		c.db, err = sql.Open(driverName, conn)
+	}
+
 	if err != nil {
 		return nil, err
 	}

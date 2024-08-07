@@ -45,6 +45,10 @@ flags](/vault/docs/commands) included on all commands.
 - `-type` `(string: <required>)` - Plugin runtime type. Vault currently only
   supports `container` as a runtime type.
 
+- `-rootless` `(bool: false)` - Whether the container runtime is running as a
+  non-privileged user. Must be set if plugin container images are also configured
+  to run as a non-root user.
+
 - `-cgroup_parent` `(string: "")` - Parent cgroup to set for each container.
   Use `cgroup_parent` to control the total resource usage for a group of plugins.
 

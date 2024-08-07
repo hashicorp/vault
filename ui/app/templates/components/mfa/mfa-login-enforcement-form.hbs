@@ -17,6 +17,7 @@
     disabled={{not @model.isNew}}
     class="input field {{if this.errors.name.errors 'has-error-border'}}"
     data-test-mlef-input="name"
+    id="name"
     {{on "input" (pipe (pick "target.value") (fn (mut @model.name)))}}
   />
   {{#if this.errors.name.errors}}
@@ -34,6 +35,7 @@
       {{! component only computes inputValue on init -- ensure Ember Data hasMany promise has resolved }}
       {{#if @model.mfa_methods.isFulfilled}}
         <SearchSelect
+          @id="methods"
           @placeholder="Type to search for existing MFA methods"
           @inputValue={{map-by "id" @model.mfa_methods}}
           @shouldRenderName={{true}}
@@ -78,12 +80,15 @@
     {{/each}}
     <div class="is-flex-row {{if this.targets 'has-top-padding-s has-border-top-light'}}">
       <Select
+        class="is-marginless"
         @options={{this.targetTypes}}
         @labelAttribute="label"
         @valueAttribute="type"
         @selectedValue={{this.selectedTargetType}}
         @onChange={{this.onTargetSelect}}
+        @name="target-type"
         data-test-mlef-select="target-type"
+        aria-label="Target type"
       />
       <div class="has-left-margin-s is-flex-grow-1">
         {{#if (eq this.selectedTargetType "accessor")}}
@@ -104,10 +109,13 @@
             @noDefault={{true}}
             @selectedValue={{this.selectedTargetValue}}
             @onChange={{this.setTargetValue}}
+            @name="Auth method"
             data-test-mlef-select="auth-method"
+            aria-label="Auth method"
           />
         {{else}}
           <SearchSelect
+            @id="existing-targets"
             @placeholder="Search for an existing target"
             @options={{this.searchSelect.options}}
             @parentManageSelected={{this.searchSelect.selected}}
@@ -128,7 +136,7 @@
       />
     </div>
     {{#if this.errors.targets.errors}}
-      <AlertInline @type="danger" @message={{join ", " this.errors.targets.errors}} />
+      <AlertInline class="has-top-padding-s" @type="danger" @message={{join ", " this.errors.targets.errors}} />
     {{/if}}
   </div>
   {{#unless @isInline}}

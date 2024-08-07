@@ -13,4 +13,5 @@ type PluginRuntimeConfig struct {
 	CgroupParent string                   `json:"cgroup_parent" structs:"cgroup_parent"`
 	CPU          int64                    `json:"cpu" structs:"cpu"`
 	Memory       int64                    `json:"memory" structs:"memory"`
+	Rootless     bool                     `json:"rootless" structs:"rootlesss"`
 }

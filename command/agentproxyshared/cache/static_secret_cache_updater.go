@@ -9,8 +9,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
+	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
@@ -20,6 +23,7 @@ import (
 	"github.com/hashicorp/vault/command/agentproxyshared/cache/cachememdb"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink"
 	"github.com/hashicorp/vault/helper/useragent"
+	"github.com/hashicorp/vault/sdk/logical"
 	"golang.org/x/exp/maps"
 	"nhooyr.io/websocket"
 )
@@ -61,6 +65,12 @@ type StaticSecretCacheUpdater struct {
 	leaseCache *LeaseCache
 	logger     hclog.Logger
 	tokenSink  sink.Sink
+
+	// allowForwardingViaHeaderDisabled is a bool that tracks if
+	// allow_forwarding_via_header is disabled on the cluster we're talking to.
+	// If we get an error back saying that it's disabled, we'll set this to true
+	// and never try to forward again.
+	allowForwardingViaHeaderDisabled bool
 }
 
 // StaticSecretCacheUpdaterConfig is the configuration for initializing a new
@@ -115,7 +125,7 @@ func (updater *StaticSecretCacheUpdater) streamStaticSecretEvents(ctx context.Co
 	updater.client.SetToken(updater.tokenSink.(sink.SinkReader).Token())
 	conn, err := updater.openWebSocketConnection(ctx)
 	if err != nil {
-		return fmt.Errorf("error when opening event stream: %w", err)
+		return err
 	}
 	defer conn.Close(websocket.StatusNormalClosure, "")
 
@@ -159,6 +169,10 @@ func (updater *StaticSecretCacheUpdater) streamStaticSecretEvents(ctx context.Co
 				if !ok {
 					return fmt.Errorf("unexpected event format when decoding 'path' element, message: %s\nerror: %w", string(message), err)
 				}
+				namespace, ok := data["namespace"].(string)
+				if ok {
+					path = namespace + path
+				}
 				err := updater.updateStaticSecret(ctx, path)
 				if err != nil {
 					// While we are kind of 'missing' an event this way, re-calling this function will
@@ -176,7 +190,7 @@ func (updater *StaticSecretCacheUpdater) streamStaticSecretEvents(ctx context.Co
 	return nil
 }
 
-// preEventStreamUpdate is called after successful connection to the event system but before
+// preEventStreamUpdate is called after successful connection to the event system, but before
 // we process any events, to ensure we don't miss any updates.
 // In some cases, this will result in multiple processing of the same updates, but
 // this ensures that we don't lose any updates to secrets that might have been sent
@@ -214,6 +228,10 @@ func (updater *StaticSecretCacheUpdater) updateStaticSecret(ctx context.Context,
 		return err
 	}
 
+	// Clear the client's header namespace since we'll be including the
+	// namespace as part of the path.
+	client.ClearNamespace()
+
 	indexId := hashStaticSecretIndex(path)
 
 	updater.logger.Debug("received update static secret request", "path", path, "indexId", indexId)
@@ -242,9 +260,34 @@ func (updater *StaticSecretCacheUpdater) updateStaticSecret(ctx context.Context,
 	for _, token := range maps.Keys(index.Tokens) {
 		client.SetToken(token)
 		request.Headers.Set(api.AuthHeaderName, token)
+
+		if !updater.allowForwardingViaHeaderDisabled {
+			// Set this to always forward to active, since events could come before
+			// replication, and if we're connected to the standby, then we will be
+			// receiving events from the primary but otherwise getting old values from
+			// the standby here. This makes sure that Proxy functions properly
+			// even when its Vault address is set to a standby, since we cannot
+			// currently receive events from a standby.
+			// We only try this if updater.allowForwardingViaHeaderDisabled is false
+			// and if we receive an error indicating that the config is set to false,
+			// we will never set this header again.
+			request.Headers.Set(api.HeaderForward, "active-node")
+		}
+
 		resp, err = client.RawRequestWithContext(ctx, request)
 		if err != nil {
-			updater.logger.Trace("received error when trying to update cache", "path", path, "err", err, "token", token)
+			if strings.Contains(err.Error(), "forwarding via header X-Vault-Forward disabled") {
+				updater.logger.Info("allow_forwarding_via_header disabled, re-attempting update and no longer attempting to forward")
+				updater.allowForwardingViaHeaderDisabled = true
+
+				// Try again without the header
+				request.Headers.Del(api.HeaderForward)
+				resp, err = client.RawRequestWithContext(ctx, request)
+			}
+		}
+
+		if err != nil {
+			updater.logger.Trace("received error when trying to update cache", "path", path, "err", err, "token", token, "namespace", index.Namespace)
 			// We cannot access this secret with this token for whatever reason,
 			// so token for removal.
 			tokensToRemove = append(tokensToRemove, token)
@@ -325,6 +368,7 @@ func (updater *StaticSecretCacheUpdater) openWebSocketConnection(ctx context.Con
 	}
 	query := webSocketURL.Query()
 	query.Set("json", "true")
+	query.Set("namespaces", "*")
 	webSocketURL.RawQuery = query.Encode()
 
 	updater.client.AddHeader(api.AuthHeaderName, updater.client.Token())
@@ -337,8 +381,8 @@ func (updater *StaticSecretCacheUpdater) openWebSocketConnection(ctx context.Con
 
 	// We do ten attempts, to ensure we follow forwarding to the leader.
 	var conn *websocket.Conn
+	var resp *http.Response
 	for attempt := 0; attempt < 10; attempt++ {
-		var resp *http.Response
 		conn, resp, err = websocket.Dial(ctx, wsURL, &websocket.DialOptions{
 			HTTPClient: httpClient,
 			HTTPHeader: headers,
@@ -359,8 +403,23 @@ func (updater *StaticSecretCacheUpdater) openWebSocketConnection(ctx context.Con
 	}
 
 	if err != nil {
+		errMessage := err.Error()
+		if resp != nil {
+			if resp.StatusCode == http.StatusNotFound {
+				return nil, fmt.Errorf("received 404 when opening web socket to %s, ensure Vault is Enterprise version 1.16 or above", wsURL)
+			}
+			if resp.StatusCode == http.StatusForbidden {
+				var errBytes []byte
+				errBytes, err = io.ReadAll(resp.Body)
+				resp.Body.Close()
+				if err != nil {
+					return nil, fmt.Errorf("error occured when attempting to read error response from Vault server")
+				}
+				errMessage = string(errBytes)
+			}
+		}
 		return nil, fmt.Errorf("error returned when opening event stream web socket to %s, ensure auto-auth token"+
-			" has correct permissions and Vault is version 1.16 or above: %w", wsURL, err)
+			" has correct permissions and Vault is Enterprise version 1.16 or above: %s", wsURL, errMessage)
 	}
 
 	if conn == nil {
@@ -374,7 +433,7 @@ func (updater *StaticSecretCacheUpdater) openWebSocketConnection(ctx context.Con
 // Once a token is provided to the sink, we will start the websocket and start consuming
 // events and updating secrets.
 // Run will shut down gracefully when the context is cancelled.
-func (updater *StaticSecretCacheUpdater) Run(ctx context.Context) error {
+func (updater *StaticSecretCacheUpdater) Run(ctx context.Context, authRenewalInProgress *atomic.Bool, invalidTokenErrCh chan error) error {
 	updater.logger.Info("starting static secret cache updater subsystem")
 	defer func() {
 		updater.logger.Info("static secret cache updater subsystem stopped")
@@ -408,8 +467,17 @@ tokenLoop:
 			}
 			err := updater.streamStaticSecretEvents(ctx)
 			if err != nil {
-				updater.logger.Warn("error occurred during streaming static secret cache update events:", err)
+				updater.logger.Error("error occurred during streaming static secret cache update events", "err", err)
 				shouldBackoff = true
+				if strings.Contains(err.Error(), logical.ErrInvalidToken.Error()) && !authRenewalInProgress.Load() {
+					// Drain the channel in case there is an error that has already been sent but not received
+					select {
+					case <-invalidTokenErrCh:
+					default:
+					}
+					updater.logger.Error("received invalid token error while opening websocket")
+					invalidTokenErrCh <- err
+				}
 				continue
 			}
 		}

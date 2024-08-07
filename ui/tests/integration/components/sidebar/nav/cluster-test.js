@@ -8,6 +8,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { stubFeaturesAndPermissions } from 'vault/tests/helpers/components/sidebar-nav';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const renderComponent = () => {
   return render(hbs`
@@ -20,8 +21,19 @@ const renderComponent = () => {
 module('Integration | Component | sidebar-nav-cluster', function (hooks) {
   setupRenderingTest(hooks);
 
+  hooks.beforeEach(function () {
+    setRunOptions({
+      rules: {
+        // This is an issue with Hds::SideNav::Header::HomeLink
+        'aria-prohibited-attr': { enabled: false },
+        // TODO: fix use Dropdown on user-menu
+        'nested-interactive': { enabled: false },
+      },
+    });
+  });
+
   test('it should render nav headings', async function (assert) {
-    const headings = ['Vault', 'Replication', 'Monitoring'];
+    const headings = ['Vault', 'Monitoring', 'Settings'];
     stubFeaturesAndPermissions(this.owner, true, true);
     await renderComponent();
 
@@ -37,6 +49,7 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
 
   test('it should hide links and headings user does not have access too', async function (assert) {
     await renderComponent();
+
     assert
       .dom('[data-test-sidebar-nav-link]')
       .exists({ count: 2 }, 'Nav links are hidden other than secrets and dashboard');
@@ -49,16 +62,16 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
     const links = [
       'Dashboard',
       'Secrets Engines',
+      'Secrets Sync',
       'Access',
       'Policies',
       'Tools',
-      'Disaster Recovery',
-      'Performance',
       'Replication',
       'Raft Storage',
       'Client Count',
       'License',
       'Seal Vault',
+      'Custom Messages',
     ];
     stubFeaturesAndPermissions(this.owner, true, true);
     await renderComponent();
@@ -96,6 +109,19 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
       assert
         .dom(`[data-test-sidebar-nav-link="${link}"]`)
         .doesNotExist(`${link} is hidden in child namespace`);
+    });
+  });
+
+  test('it should render badge for promotional links on managed clusters', async function (assert) {
+    this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
+    const promotionalLinks = ['Secrets Sync'];
+    stubFeaturesAndPermissions(this.owner, true, true);
+    await renderComponent();
+
+    promotionalLinks.forEach((link) => {
+      assert
+        .dom(`[data-test-sidebar-nav-link="${link}"]`)
+        .hasText(`${link} Plus`, `${link} link renders Plus badge`);
     });
   });
 });

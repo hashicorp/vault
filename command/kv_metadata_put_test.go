@@ -9,8 +9,8 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
-	"github.com/mitchellh/cli"
 )
 
 func testKVMetadataPutCommand(tb testing.TB) (*cli.MockUi, *KVMetadataPutCommand) {
@@ -145,7 +145,6 @@ func TestKvMetadataPutCommand_CustomMetadata(t *testing.T) {
 	}
 
 	metadata, err = client.Logical().Read(metaFullPath)
-
 	if err != nil {
 		t.Fatalf("Metadata read error: %#v", err)
 	}

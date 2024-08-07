@@ -66,15 +66,21 @@ export function dateFormat([value, style], { withTimeZone = false }) {
     return value || '';
   }
 
+  const zone = withTimeZone ? formatTimeZone(date) : '';
+  return format(date, style) + zone;
+}
+
+// separate function for testing
+export function formatTimeZone(date) {
   let zone; // local timezone ex: 'PST'
   try {
     // passing undefined means default to the browser's locale
-    zone = ' ' + date.toLocaleTimeString(undefined, { timeZoneName: 'short' }).split(' ')[2];
+    zone = date.toLocaleTimeString(undefined, { timeZoneName: 'short' }).split(' ')[2];
   } catch (e) {
     zone = '';
   }
-  zone = withTimeZone ? zone : '';
-  return format(date, style) + zone;
+
+  return zone ? ` ${zone}` : '';
 }
 
 export default helper(dateFormat);

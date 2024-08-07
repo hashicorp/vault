@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -40,8 +40,8 @@ module('Integration | Component | ldap | Page::Role::CreateAndEdit', function (h
 
     this.breadcrumbs = [
       { label: 'ldap', route: 'overview' },
-      { label: 'roles', route: 'roles' },
-      { label: 'create' },
+      { label: 'Roles', route: 'roles' },
+      { label: 'Create' },
     ];
 
     this.renderComponent = () => {

@@ -9,11 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/armon/go-metrics"
 	"github.com/go-test/deep"
-	"github.com/golang/protobuf/ptypes"
 	uuid "github.com/hashicorp/go-uuid"
 	credGithub "github.com/hashicorp/vault/builtin/credential/github"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
@@ -21,6 +18,10 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/anypb"
 )
 
 func TestIdentityStore_DeleteEntityAlias(t *testing.T) {
@@ -143,7 +144,7 @@ func TestIdentityStore_UnsealingWhenConflictingAliasNames(t *testing.T) {
 
 	// Persist the second entity directly without the regular flow. This will skip
 	// merging of these enties.
-	entity2Any, err := ptypes.MarshalAny(entity2)
+	entity2Any, err := anypb.New(entity2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -912,4 +913,490 @@ func TestIdentityStore_DeleteCaseSensitivityKey(t *testing.T) {
 	if storageEntry != nil {
 		t.Fatalf("bad: expected no entry for casesensitivity key")
 	}
+}
+
+// TestIdentityStoreInvalidate_Entities verifies the proper handling of
+// entities in the Invalidate method.
+func TestIdentityStoreInvalidate_Entities(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+
+	// Create an entity in storage then call the Invalidate function
+	//
+	id, err := uuid.GenerateUUID()
+	require.NoError(t, err)
+
+	entity := &identity.Entity{
+		Name:        "test",
+		NamespaceID: namespace.RootNamespaceID,
+		ID:          id,
+		Aliases:     []*identity.Alias{},
+		BucketKey:   c.identityStore.entityPacker.BucketKey(id),
+	}
+
+	p := c.identityStore.entityPacker
+
+	// Persist the entity which we are merging to
+	entityAsAny, err := anypb.New(entity)
+	require.NoError(t, err)
+
+	item := &storagepacker.Item{
+		ID:      id,
+		Message: entityAsAny,
+	}
+
+	err = p.PutItem(context.Background(), item)
+	require.NoError(t, err)
+
+	c.identityStore.Invalidate(context.Background(), p.BucketKey(id))
+
+	txn := c.identityStore.db.Txn(true)
+
+	memEntity, err := c.identityStore.MemDBEntityByIDInTxn(txn, id, true)
+	assert.NoError(t, err)
+	assert.NotNil(t, memEntity)
+
+	txn.Commit()
+
+	// Modify the entity in storage then call the Invalidate function
+	entity.Metadata = make(map[string]string)
+	entity.Metadata["foo"] = "bar"
+
+	entityAsAny, err = anypb.New(entity)
+	require.NoError(t, err)
+
+	item.Message = entityAsAny
+
+	p.PutItem(context.Background(), item)
+
+	c.identityStore.Invalidate(context.Background(), p.BucketKey(id))
+
+	txn = c.identityStore.db.Txn(true)
+
+	memEntity, err = c.identityStore.MemDBEntityByIDInTxn(txn, id, true)
+	assert.NoError(t, err)
+	assert.Contains(t, memEntity.Metadata, "foo")
+
+	txn.Commit()
+
+	// Delete the entity in storage then call the Invalidate function
+	err = p.DeleteItem(context.Background(), id)
+	require.NoError(t, err)
+
+	c.identityStore.Invalidate(context.Background(), p.BucketKey(id))
+
+	txn = c.identityStore.db.Txn(true)
+
+	memEntity, err = c.identityStore.MemDBEntityByIDInTxn(txn, id, true)
+	assert.NoError(t, err)
+	assert.Nil(t, memEntity)
+
+	txn.Commit()
+}
+
+// TestIdentityStoreInvalidate_EntityAliasDelete verifies that the
+// invalidateEntityBucket method properly cleans up aliases from
+// MemDB that are no longer associated with the entity in the
+// storage bucket.
+func TestIdentityStoreInvalidate_EntityAliasDelete(t *testing.T) {
+	ctx := namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace)
+	c, _, root := TestCoreUnsealed(t)
+
+	// Enable a No-Op auth method
+	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
+		return &NoopBackend{
+			BackendType: logical.TypeCredential,
+		}, nil
+	}
+	mountAccessor1 := "noop-accessor1"
+	mountAccessor2 := "noop-accessor2"
+	mountAccessor3 := "noon-accessor3"
+
+	createMountEntry := func(path, uuid, mountAccessor string, local bool) *MountEntry {
+		return &MountEntry{
+			Table:            credentialTableType,
+			Path:             path,
+			Type:             "noop",
+			UUID:             uuid,
+			Accessor:         mountAccessor,
+			BackendAwareUUID: uuid + "backend",
+			NamespaceID:      namespace.RootNamespaceID,
+			namespace:        namespace.RootNamespace,
+			Local:            local,
+		}
+	}
+
+	c.auth = &MountTable{
+		Type: credentialTableType,
+		Entries: []*MountEntry{
+			createMountEntry("/noop1", "abcd", mountAccessor1, false),
+			createMountEntry("/noop2", "ghij", mountAccessor2, false),
+			createMountEntry("/noop3", "mnop", mountAccessor3, true),
+		},
+	}
+
+	require.NoError(t, c.setupCredentials(context.Background()))
+
+	// Create an entity
+	req := &logical.Request{
+		ClientToken: root,
+		Operation:   logical.UpdateOperation,
+		Path:        "entity",
+		Data: map[string]interface{}{
+			"name": "alice",
+		},
+	}
+
+	resp, err := c.identityStore.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.Contains(t, resp.Data, "id")
+
+	entityID := resp.Data["id"].(string)
+
+	createEntityAlias := func(name, mountAccessor string) string {
+		req = &logical.Request{
+			ClientToken: root,
+			Operation:   logical.UpdateOperation,
+			Path:        "entity-alias",
+			Data: map[string]interface{}{
+				"name":           name,
+				"canonical_id":   entityID,
+				"mount_accessor": mountAccessor,
+			},
+		}
+
+		resp, err = c.identityStore.HandleRequest(ctx, req)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.Contains(t, resp.Data, "id")
+
+		return resp.Data["id"].(string)
+	}
+
+	alias1ID := createEntityAlias("alias1", mountAccessor1)
+	alias2ID := createEntityAlias("alias2", mountAccessor2)
+	alias3ID := createEntityAlias("alias3", mountAccessor3)
+
+	// Update the entity in storage only to remove alias2 then call invalidate
+	bucketKey := c.identityStore.entityPacker.BucketKey(entityID)
+	bucket, err := c.identityStore.entityPacker.GetBucket(context.Background(), bucketKey)
+	require.NoError(t, err)
+	require.NotNil(t, bucket)
+
+	bucketEntityItem := bucket.Items[0] // since there's only 1 entity
+	bucketEntity, err := c.identityStore.parseEntityFromBucketItem(context.Background(), bucketEntityItem)
+	require.NoError(t, err)
+	require.NotNil(t, bucketEntity)
+
+	replacementAliases := make([]*identity.Alias, 1)
+	for _, a := range bucketEntity.Aliases {
+		if a.ID != alias2ID {
+			replacementAliases[0] = a
+			break
+		}
+	}
+
+	bucketEntity.Aliases = replacementAliases
+
+	bucketEntityItem.Message, err = anypb.New(bucketEntity)
+	require.NoError(t, err)
+
+	require.NoError(t, c.identityStore.entityPacker.PutItem(context.Background(), bucketEntityItem))
+
+	c.identityStore.Invalidate(context.Background(), bucketKey)
+
+	alias1, err := c.identityStore.MemDBAliasByID(alias1ID, false, false)
+	assert.NoError(t, err)
+	assert.NotNil(t, alias1)
+
+	alias2, err := c.identityStore.MemDBAliasByID(alias2ID, false, false)
+	assert.NoError(t, err)
+	assert.Nil(t, alias2)
+
+	alias3, err := c.identityStore.MemDBAliasByID(alias3ID, false, false)
+	assert.NoError(t, err)
+	assert.NotNil(t, alias3)
+}
+
+// TestIdentityStoreInvalidate_EntityLocalAliasDelete verifies that the
+// invalidateLocalAliasesBucket method properly cleans up aliases from
+// MemDB that are no longer associated with the entity in the
+// storage bucket.
+func TestIdentityStoreInvalidate_EntityLocalAliasDelete(t *testing.T) {
+	ctx := namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace)
+	c, _, root := TestCoreUnsealed(t)
+
+	// Enable a No-Op auth method
+	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
+		return &NoopBackend{
+			BackendType: logical.TypeCredential,
+		}, nil
+	}
+	mountAccessor1 := "noop-accessor1"
+	mountAccessor2 := "noop-accessor2"
+	mountAccessor3 := "noon-accessor3"
+
+	createMountEntry := func(path, uuid, mountAccessor string, local bool) *MountEntry {
+		return &MountEntry{
+			Table:            credentialTableType,
+			Path:             path,
+			Type:             "noop",
+			UUID:             uuid,
+			Accessor:         mountAccessor,
+			BackendAwareUUID: uuid + "backend",
+			NamespaceID:      namespace.RootNamespaceID,
+			namespace:        namespace.RootNamespace,
+			Local:            local,
+		}
+	}
+
+	c.auth = &MountTable{
+		Type: credentialTableType,
+		Entries: []*MountEntry{
+			createMountEntry("/noop1", "abcd", mountAccessor1, true),
+			createMountEntry("/noop2", "ghij", mountAccessor2, true),
+			createMountEntry("/noop3", "mnop", mountAccessor3, true),
+		},
+	}
+
+	require.NoError(t, c.setupCredentials(context.Background()))
+
+	// Create an entity
+	req := &logical.Request{
+		ClientToken: root,
+		Operation:   logical.UpdateOperation,
+		Path:        "entity",
+		Data: map[string]interface{}{
+			"name": "alice",
+		},
+	}
+
+	resp, err := c.identityStore.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.Contains(t, resp.Data, "id")
+
+	entityID := resp.Data["id"].(string)
+
+	createEntityAlias := func(name, mountAccessor string) string {
+		req = &logical.Request{
+			ClientToken: root,
+			Operation:   logical.UpdateOperation,
+			Path:        "entity-alias",
+			Data: map[string]interface{}{
+				"name":           name,
+				"canonical_id":   entityID,
+				"mount_accessor": mountAccessor,
+			},
+		}
+
+		resp, err = c.identityStore.HandleRequest(ctx, req)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.Contains(t, resp.Data, "id")
+
+		return resp.Data["id"].(string)
+	}
+
+	alias1ID := createEntityAlias("alias1", mountAccessor1)
+	alias2ID := createEntityAlias("alias2", mountAccessor2)
+	alias3ID := createEntityAlias("alias3", mountAccessor3)
+
+	for i, aliasID := range []string{alias1ID, alias2ID, alias3ID} {
+		alias, err := c.identityStore.MemDBAliasByID(aliasID, false, false)
+		require.NoError(t, err, i)
+		require.NotNil(t, alias, i)
+	}
+
+	// // Update the entity in storage only to remove alias2 then call invalidate
+	bucketKey := c.identityStore.entityPacker.BucketKey(entityID)
+	bucket, err := c.identityStore.entityPacker.GetBucket(context.Background(), bucketKey)
+	require.NoError(t, err)
+	require.NotNil(t, bucket)
+
+	bucketEntityItem := bucket.Items[0] // since there's only 1 entity
+	bucketEntity, err := c.identityStore.parseEntityFromBucketItem(context.Background(), bucketEntityItem)
+	require.NoError(t, err)
+	require.NotNil(t, bucketEntity)
+
+	bucketKey = c.identityStore.localAliasPacker.BucketKey(entityID)
+	bucketLocalAlias, err := c.identityStore.localAliasPacker.GetBucket(context.Background(), bucketKey)
+	require.NoError(t, err)
+	require.NotNil(t, bucketLocalAlias)
+
+	bucketLocalAliasItem := bucketLocalAlias.Items[0]
+	require.Equal(t, entityID, bucketLocalAliasItem.ID)
+
+	var localAliases identity.LocalAliases
+
+	err = anypb.UnmarshalTo(bucketLocalAliasItem.Message, &localAliases, proto.UnmarshalOptions{})
+	require.NoError(t, err)
+
+	memDBEntity, err := c.identityStore.MemDBEntityByID(entityID, false)
+	require.NoError(t, err)
+	require.NotNil(t, memDBEntity)
+
+	replacementAliases := make([]*identity.Alias, 0)
+	for _, a := range memDBEntity.Aliases {
+		if a.ID != alias2ID {
+			replacementAliases = append(replacementAliases, a)
+		}
+	}
+
+	localAliases.Aliases = replacementAliases
+
+	bucketLocalAliasItem.Message, err = anypb.New(&localAliases)
+	require.NoError(t, err)
+
+	require.NoError(t, c.identityStore.localAliasPacker.PutItem(context.Background(), bucketLocalAliasItem))
+
+	c.identityStore.Invalidate(context.Background(), bucketKey)
+
+	alias1, err := c.identityStore.MemDBAliasByID(alias1ID, false, false)
+	assert.NoError(t, err)
+	assert.NotNil(t, alias1)
+
+	alias2, err := c.identityStore.MemDBAliasByID(alias2ID, false, false)
+	assert.NoError(t, err)
+	assert.Nil(t, alias2)
+
+	alias3, err := c.identityStore.MemDBAliasByID(alias3ID, false, false)
+	assert.NoError(t, err)
+	assert.NotNil(t, alias3)
+}
+
+// TestIdentityStoreInvalidate_LocalAliasesWithEntity verifies the correct
+// handling of local aliases in the Invalidate method.
+func TestIdentityStoreInvalidate_LocalAliasesWithEntity(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+
+	// Create an entity in storage then call the Invalidate function
+	//
+	entityID, err := uuid.GenerateUUID()
+	require.NoError(t, err)
+
+	entity := &identity.Entity{
+		Name:        "test",
+		NamespaceID: namespace.RootNamespaceID,
+		ID:          entityID,
+		Aliases:     []*identity.Alias{},
+		BucketKey:   c.identityStore.entityPacker.BucketKey(entityID),
+	}
+
+	aliasID, err := uuid.GenerateUUID()
+	require.NoError(t, err)
+
+	localAliases := &identity.LocalAliases{
+		Aliases: []*identity.Alias{
+			{
+				ID:            aliasID,
+				Name:          "test",
+				NamespaceID:   namespace.RootNamespaceID,
+				CanonicalID:   entityID,
+				MountAccessor: "userpass-000000",
+			},
+		},
+	}
+
+	ep := c.identityStore.entityPacker
+
+	// Persist the entity which we are merging to
+	entityAsAny, err := anypb.New(entity)
+	require.NoError(t, err)
+
+	entityItem := &storagepacker.Item{
+		ID:      entityID,
+		Message: entityAsAny,
+	}
+
+	err = ep.PutItem(context.Background(), entityItem)
+	require.NoError(t, err)
+
+	c.identityStore.Invalidate(context.Background(), ep.BucketKey(entityID))
+
+	lap := c.identityStore.localAliasPacker
+
+	localAliasesAsAny, err := anypb.New(localAliases)
+	require.NoError(t, err)
+
+	localAliasesItem := &storagepacker.Item{
+		ID:      entityID,
+		Message: localAliasesAsAny,
+	}
+
+	err = lap.PutItem(context.Background(), localAliasesItem)
+	require.NoError(t, err)
+
+	c.identityStore.Invalidate(context.Background(), lap.BucketKey(entityID))
+
+	txn := c.identityStore.db.Txn(true)
+
+	memDBEntity, err := c.identityStore.MemDBEntityByIDInTxn(txn, entityID, true)
+	assert.NoError(t, err)
+	assert.NotNil(t, memDBEntity)
+
+	memDBLocalAlias, err := c.identityStore.MemDBAliasByIDInTxn(txn, aliasID, true, false)
+	assert.NoError(t, err)
+	assert.NotNil(t, memDBLocalAlias)
+	assert.Equal(t, 1, len(memDBEntity.Aliases))
+	assert.NotNil(t, memDBEntity.Aliases[0])
+	assert.Equal(t, memDBEntity.Aliases[0].ID, memDBLocalAlias.ID)
+
+	txn.Commit()
+}
+
+// TestIdentityStoreInvalidate_TemporaryEntity verifies the proper handling of
+// temporary entities in the Invalidate method.
+func TestIdentityStoreInvalidate_TemporaryEntity(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+
+	// Create an entity in storage then call the Invalidate function
+	//
+	entityID, err := uuid.GenerateUUID()
+	require.NoError(t, err)
+
+	tempEntity := &identity.Entity{
+		Name:        "test",
+		NamespaceID: namespace.RootNamespaceID,
+		ID:          entityID,
+		Aliases:     []*identity.Alias{},
+		BucketKey:   c.identityStore.entityPacker.BucketKey(entityID),
+	}
+
+	lap := c.identityStore.localAliasPacker
+	ep := c.identityStore.entityPacker
+
+	// Persist the entity which we are merging to
+	tempEntityAsAny, err := anypb.New(tempEntity)
+	require.NoError(t, err)
+
+	tempEntityItem := &storagepacker.Item{
+		ID:      entityID + tmpSuffix,
+		Message: tempEntityAsAny,
+	}
+
+	err = lap.PutItem(context.Background(), tempEntityItem)
+	require.NoError(t, err)
+
+	entityAsAny := tempEntityAsAny
+
+	entityItem := &storagepacker.Item{
+		ID:      entityID,
+		Message: entityAsAny,
+	}
+
+	err = ep.PutItem(context.Background(), entityItem)
+	require.NoError(t, err)
+
+	c.identityStore.Invalidate(context.Background(), ep.BucketKey(entityID))
+
+	txn := c.identityStore.db.Txn(true)
+
+	memDBEntity, err := c.identityStore.MemDBEntityByIDInTxn(txn, entityID, true)
+	assert.NoError(t, err)
+	assert.NotNil(t, memDBEntity)
+
+	item, err := lap.GetItem(lap.BucketKey(entityID) + tmpSuffix)
+	assert.NoError(t, err)
+	assert.Nil(t, item)
 }

@@ -1,0 +1,3 @@
+```release-note:bug
+cassandra: Update Cassandra to set consistency prior to calling CreateSession, ensuring consistency setting is correct when opening connection.
+```

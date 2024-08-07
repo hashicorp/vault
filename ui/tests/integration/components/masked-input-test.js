@@ -46,7 +46,8 @@ module('Integration | Component | masked input', function (hooks) {
   });
 
   test('it renders a copy button when allowCopy is true', async function (assert) {
-    await render(hbs`<MaskedInput @allowCopy={{true}} />`);
+    this.set('value', { some: 'object' });
+    await render(hbs`<MaskedInput @allowCopy={{true}} @value={{this.value}} />`);
     assert.ok(component.copyButtonIsPresent);
   });
 
@@ -56,8 +57,6 @@ module('Integration | Component | masked input', function (hooks) {
 
     await click('[data-test-download-icon]');
     assert.ok(component.downloadButtonIsPresent, 'clicking download icon opens modal with download button');
-
-    assert;
   });
 
   test('it shortens all outputs when displayOnly and masked', async function (assert) {

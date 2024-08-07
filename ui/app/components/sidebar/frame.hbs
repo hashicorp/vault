@@ -13,7 +13,7 @@
               @icon="vault"
               @route="vault.cluster.dashboard"
               @model={{this.currentCluster.cluster.name}}
-              @ariaLabel="home link"
+              @ariaLabel="Vault home"
               data-test-sidebar-logo
             />
           </:logo>
@@ -31,7 +31,7 @@
 
       {{! this block is where the Hds::SideNav::Portal components render into }}
       <:body>
-        <Hds::SideNav::Portal::Target aria-label="sidebar navigation links" />
+        <Hds::SideNav::Portal::Target />
       </:body>
 
       <:footer>
@@ -49,7 +49,14 @@
     <LinkStatus @status={{this.currentCluster.cluster.hcpLinkStatus}} />
     {{yield}}
     <div data-test-console-panel class={{if this.console.isOpen "panel-open"}}>
-      <Console::UiPanel @isFullscreen={{this.consoleFullscreen}} />
+      {{#if this.console.isOpen}}
+        <Console::UiPanel
+          @isFullscreen={{this.consoleFullscreen}}
+          {{focus-trap
+            focusTrapOptions=(hash initialFocus="#console-input" clickOutsideDeactivates=true onDeactivate=this.closeConsole)
+          }}
+        />
+      {{/if}}
     </div>
   </Frame.Main>
 </Hds::AppFrame>

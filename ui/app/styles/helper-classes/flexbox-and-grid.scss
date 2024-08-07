@@ -6,6 +6,32 @@
 /* Helpers that define anything with the CSS flexbox or CSS grid. */
 
 /* Flexbox helpers */
+
+// FLEX CONTAINER (child helpers at end of file)
+// new flex classes, these do not use !important
+.flex {
+  display: flex;
+
+  // direction
+  &.row-wrap {
+    flex-flow: row wrap;
+  }
+
+  // alignment
+  &.space-between {
+    justify-content: space-between;
+  }
+
+  &.row-gap-8 {
+    row-gap: $spacing-8;
+  }
+
+  &.column-gap-16 {
+    column-gap: $spacing-16;
+  }
+}
+
+// avoid !important flex classes below
 .is-flex {
   display: flex !important;
 }
@@ -20,12 +46,16 @@
   flex-direction: row;
 }
 
-.has-gap-m {
-  gap: $spacing-m;
+.gap-16 {
+  gap: $spacing-16;
 }
 
-.has-gap-l {
-  gap: $spacing-l;
+.gap-24 {
+  gap: $spacing-24;
+}
+
+.gap-36 {
+  gap: $spacing-36;
 }
 
 // Alignment of the items
@@ -66,7 +96,7 @@
   justify-content: flex-start;
 
   &.has-gap {
-    gap: $spacing-m;
+    gap: $spacing-16;
   }
 }
 
@@ -102,28 +132,6 @@
 
 .is-flex-half {
   flex: 50%;
-}
-
-// moving away from !important, fresh flex styles below
-.flex {
-  display: flex;
-  // direction
-  &.row-wrap {
-    flex-flow: row wrap;
-  }
-
-  // alignment
-  &.space-between {
-    justify-content: space-between;
-  }
-
-  &.row-gap-8 {
-    row-gap: $spacing-xs;
-  }
-
-  &.column-gap-16 {
-    column-gap: $spacing-m;
-  }
 }
 
 /* Flex Responsive */
@@ -163,10 +171,6 @@
   grid-template-columns: repeat(3, 1fr);
 }
 
-.align-self-center {
-  align-self: center;
-}
-
 .is-medium-height {
   height: 125px;
 }
@@ -177,4 +181,14 @@
 
 .grid-align-items-start {
   align-items: start;
+}
+
+// CHILD ELEMENT HELPERS
+
+.align-self-center {
+  align-self: center;
+}
+
+.align-self-end {
+  align-self: end;
 }

@@ -8,9 +8,7 @@
     <A.Title data-test-link-status>
       {{#if (eq this.state "connected")}}
         This self-managed Vault is linked to
-        <ExternalLink @href="https://portal.cloud.hashicorp.com/sign-in">
-          HCP.
-        </ExternalLink>
+        <Hds::Link::Inline @href="https://portal.cloud.hashicorp.com/sign-in">HCP.</Hds::Link::Inline>
       {{else}}
         Error connecting to HCP
       {{/if}}

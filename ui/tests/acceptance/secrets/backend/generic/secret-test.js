@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { currentRouteName, visit } from '@ember/test-helpers';
+import { click, currentRouteName, settled, visit } from '@ember/test-helpers';
+import { selectChoose } from 'ember-power-select/test-support';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
@@ -17,8 +18,7 @@ import { writeSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 
 import { create } from 'ember-cli-page-object';
-
-import apiStub from 'vault/tests/helpers/noop-all-api-requests';
+import { deleteEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 
 const cli = create(consolePanel);
 
@@ -27,12 +27,7 @@ module('Acceptance | secrets/generic/create', function (hooks) {
 
   hooks.beforeEach(function () {
     this.uid = uuidv4();
-    this.server = apiStub({ usePassthrough: true });
     return authPage.login();
-  });
-
-  hooks.afterEach(function () {
-    this.server.shutdown();
   });
 
   test('it creates and can view a secret with the generic backend', async function (assert) {
@@ -55,6 +50,10 @@ module('Acceptance | secrets/generic/create', function (hooks) {
       'redirects to the show page'
     );
     assert.ok(showPage.editIsPresent, 'shows the edit button');
+
+    // Clean up
+    await runCmd(deleteEngineCmd(path));
+    await runCmd(deleteEngineCmd(kvPath));
   });
 
   test('upgrading generic to version 2 lists all existing secrets, and CRUD continues to work', async function (assert) {
@@ -65,7 +64,15 @@ module('Acceptance | secrets/generic/create', function (hooks) {
       // upgrade to version 2 generic mount
       `write sys/mounts/${path}/tune options=version=2`,
     ]);
-    await visit(`/vault/secrets/${path}/kv/list`);
+    await visit('/vault/secrets');
+    await selectChoose('[data-test-component="search-select"]#filter-by-engine-name', path);
+    await settled();
+    await click(`[data-test-secrets-backend-link="${path}"]`);
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.kv.list',
+      'navigates to the KV engine list page'
+    );
 
     assert
       .dom(PAGE.list.item('foo'))
@@ -78,5 +85,15 @@ module('Acceptance | secrets/generic/create', function (hooks) {
       assert.dom(PAGE.list.item(secret.path)).exists('lists both records');
     });
     assert.dom(PAGE.list.item()).exists({ count: 2 }, 'lists only the two secrets');
+
+    await visit(`/vault/secrets/${path}/list`);
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.kv.list',
+      'redirects to the KV engine list page from generic list'
+    );
+
+    // Clean up
+    await runCmd(deleteEngineCmd(path));
   });
 });

@@ -175,7 +175,7 @@ func TestCluster_ListenForRequests(t *testing.T) {
 
 func TestCluster_ForwardRequests(t *testing.T) {
 	// Make this nicer for tests
-	manualStepDownSleepPeriod = 5 * time.Second
+	manualStepDownSleepPeriod = 2 * time.Second
 
 	t.Run("tcpLayer", func(t *testing.T) {
 		testCluster_ForwardRequestsCommon(t, nil)
@@ -252,7 +252,7 @@ func testCluster_ForwardRequestsCommon(t *testing.T, clusterOpts *TestClusterOpt
 }
 
 func testCluster_Forwarding(t *testing.T, cluster *TestCluster, oldLeaderCoreIdx, newLeaderCoreIdx int, rootToken, remoteCoreID string) {
-	t.Logf("new leaderidx will be %d, stepping down other cores to make it so", newLeaderCoreIdx)
+	cluster.Logger.Info("stepping down cores to make new_idx the leader", "old_idx", oldLeaderCoreIdx, "new_idx", newLeaderCoreIdx)
 	err := cluster.Cores[oldLeaderCoreIdx].StepDown(context.Background(), &logical.Request{
 		Operation:   logical.UpdateOperation,
 		Path:        "sys/step-down",
@@ -261,19 +261,51 @@ func testCluster_Forwarding(t *testing.T, cluster *TestCluster, oldLeaderCoreIdx
 	if err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(clusterTestPausePeriod)
+
+	waitNewLeader := func(oldIdx int) {
+		t.Helper()
+		corehelpers.RetryUntil(t, 2*clusterTestPausePeriod, func() error {
+			found := false
+			for i, core := range cluster.Cores {
+				if core.Core.Sealed() {
+					continue
+				}
+
+				isLeader, _, _, _ := core.Leader()
+				if isLeader {
+					if i == oldLeaderCoreIdx {
+						return fmt.Errorf("old leader still reigns")
+					}
+					found = true
+				}
+			}
+
+			if !found {
+				return fmt.Errorf("no leader found")
+			}
+
+			return nil
+		})
+	}
+
+	waitNewLeader(oldLeaderCoreIdx)
+
+	// We've stepped down oldLeaderCoreIdx.  Wait for a new node to become leader,
+	// then step down all the other nodes that aren't the new or old leader.
 
 	for i := 0; i < 3; i++ {
 		if i != oldLeaderCoreIdx && i != newLeaderCoreIdx {
+			cluster.Logger.Info("stepping down core", "idx", i)
 			_ = cluster.Cores[i].StepDown(context.Background(), &logical.Request{
 				Operation:   logical.UpdateOperation,
 				Path:        "sys/step-down",
 				ClientToken: rootToken,
 			})
-			time.Sleep(clusterTestPausePeriod)
+			waitNewLeader(i)
 		}
 	}
 
+	cluster.Logger.Info("new leader should be ready, waiting", "idx", newLeaderCoreIdx)
 	TestWaitActiveForwardingReady(t, cluster.Cores[newLeaderCoreIdx].Core)
 
 	deadline := time.Now().Add(5 * time.Second)

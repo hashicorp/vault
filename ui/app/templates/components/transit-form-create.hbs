@@ -126,13 +126,18 @@
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <Hds::ButtonSet>
       <Hds::Button
-        @text="Create encryption key"
+        @text="Create key"
         @icon={{if @requestInFlight "loading"}}
         data-test-transit-key="create"
         type="submit"
         disabled={{@requestInFlight}}
       />
-      <Hds::Button @text="Cancel" @color="secondary" @route="vault.cluster.secrets.backend.list-root" />
+      <Hds::Button
+        @text="Cancel"
+        @color="secondary"
+        @model={{@key.backend}}
+        @route="vault.cluster.secrets.backend.list-root"
+      />
     </Hds::ButtonSet>
   </div>
 </form>

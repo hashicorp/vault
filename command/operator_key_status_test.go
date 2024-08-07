@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/cli"
 )
 
 func testOperatorKeyStatusCommand(tb testing.TB) (*cli.MockUi, *OperatorKeyStatusCommand) {

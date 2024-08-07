@@ -1,0 +1,3 @@
+```release-note:improvement
+core: make the best effort timeout for encryption count tracking persistence configurable via an environment variable.
+```

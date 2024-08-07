@@ -44,7 +44,13 @@
 .has-error-border,
 select.has-error-border,
 .ttl-picker-form-field-error input,
-.string-list-form-field-error .field:first-of-type textarea {
+.string-list-form-field-error .field:first-of-type textarea,
+.hds-form-checkbox.has-error-border {
+  border: 1px solid $red-500;
+}
+
+.error-border-child-inputs input,
+.error-border-child-inputs textarea {
   border: 1px solid $red-500;
 }
 
@@ -59,15 +65,11 @@ select.has-error-border,
 }
 
 .has-text-grey-light {
-  color: $ui-gray-300 !important;
-}
-
-.has-text-grey-400 {
-  color: $ui-gray-400;
+  color: var(--token-color-foreground-faint) !important;
 }
 
 .has-text-grey {
-  color: $ui-gray-500 !important;
+  color: var(--token-color-foreground-faint) !important;
 }
 
 .has-text-grey-dark {
@@ -91,7 +93,7 @@ select.has-error-border,
 }
 
 .has-text-success {
-  color: $green-500 !important;
+  color: var(--token-color-foreground-success) !important;
 }
 
 .has-text-highlight {

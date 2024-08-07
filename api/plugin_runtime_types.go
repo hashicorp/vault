@@ -9,11 +9,9 @@ package api
 
 import "fmt"
 
-var PluginRuntimeTypes = []PluginRuntimeType{
-	PluginRuntimeTypeUnsupported,
-	PluginRuntimeTypeContainer,
-}
+var PluginRuntimeTypes = _PluginRuntimeTypeValues
 
+//go:generate enumer -type=PluginRuntimeType -trimprefix=PluginRuntimeType -transform=snake
 type PluginRuntimeType uint32
 
 // This is a list of PluginRuntimeTypes used by Vault.
@@ -22,20 +20,11 @@ const (
 	PluginRuntimeTypeContainer
 )
 
-func (r PluginRuntimeType) String() string {
-	switch r {
-	case PluginRuntimeTypeContainer:
-		return "container"
-	default:
-		return "unsupported"
-	}
-}
-
+// ParsePluginRuntimeType is a wrapper around PluginRuntimeTypeString kept for backwards compatibility.
 func ParsePluginRuntimeType(PluginRuntimeType string) (PluginRuntimeType, error) {
-	switch PluginRuntimeType {
-	case "container":
-		return PluginRuntimeTypeContainer, nil
-	default:
+	t, err := PluginRuntimeTypeString(PluginRuntimeType)
+	if err != nil {
 		return PluginRuntimeTypeUnsupported, fmt.Errorf("%q is not a supported plugin runtime type", PluginRuntimeType)
 	}
+	return t, nil
 }

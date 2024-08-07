@@ -1,11 +1,14 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import NamedPathAdapter from 'vault/adapters/named-path';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
+import AdapterError from '@ember-data/adapter/error';
+import { addManyToArray } from 'vault/helpers/add-to-array';
+import sortObjects from 'vault/utils/sort-objects';
 
 export default class LdapRoleAdapter extends NamedPathAdapter {
   @service flashMessages;
@@ -32,7 +35,7 @@ export default class LdapRoleAdapter extends NamedPathAdapter {
   async query(store, type, query, recordArray, options) {
     const { showPartialError } = options.adapterOptions || {};
     const { backend } = query;
-    const roles = [];
+    let roles = [];
     const errors = [];
 
     for (const roleType of ['static', 'dynamic']) {
@@ -41,7 +44,7 @@ export default class LdapRoleAdapter extends NamedPathAdapter {
         const models = await this.ajax(url, 'GET', { data: { list: true } }).then((resp) => {
           return resp.data.keys.map((name) => ({ id: name, name, backend, type: roleType }));
         });
-        roles.addObjects(models);
+        roles = addManyToArray(roles, models);
       } catch (error) {
         if (error.httpStatus !== 404) {
           errors.push(error);
@@ -59,7 +62,9 @@ export default class LdapRoleAdapter extends NamedPathAdapter {
       if (errors.length === 2) {
         // throw error as normal if both requests fail
         // ignore status code and concat errors to be displayed in Page::Error component with generic message
-        throw { message: 'Error fetching roles:', errors: errorMessages };
+        const errorObject = new AdapterError(errorMessages);
+        errorObject.message = 'Error fetching roles:';
+        throw errorObject;
       } else if (showPartialError) {
         // if only one request fails, surface the error to the user an info level flash message
         // this may help for permissions errors where a users policy may be incorrect
@@ -68,7 +73,7 @@ export default class LdapRoleAdapter extends NamedPathAdapter {
     }
     // must return an object in this shape for lazyPaginatedQuery to function
     // changing the responsePath or providing the extractLazyPaginatedData serializer method causes normalizeResponse to return data: [undefined]
-    return { data: { keys: roles.sortBy('name') } };
+    return { data: { keys: sortObjects(roles, 'name') } };
   }
   queryRecord(store, type, query) {
     const { backend, name, type: roleType } = query;

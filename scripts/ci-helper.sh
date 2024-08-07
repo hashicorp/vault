@@ -34,6 +34,7 @@ function artifact_basename() {
   : "${PKG_NAME:="vault"}"
   : "${GOOS:=$(go env GOOS)}"
   : "${GOARCH:=$(go env GOARCH)}"
+  : "${VERSION_METADATA:="ce"}"
 
   : "${VERSION:=""}"
   if [ -z "$VERSION" ]; then
@@ -41,13 +42,19 @@ function artifact_basename() {
     exit 1
   fi
 
-  echo "${PKG_NAME}_${VERSION}_${GOOS}_${GOARCH}"
+  local version
+  version="$VERSION"
+  if [ "$VERSION_METADATA" != "ce" ]; then
+    version="${VERSION}+${VERSION_METADATA}"
+  fi
+
+  echo "${PKG_NAME}_${version}_${GOOS}_${GOARCH}"
 }
 
 # Bundle the dist directory into a zip
 function bundle() {
   : "${BUNDLE_PATH:=$(repo_root)/vault.zip}"
-  echo "--> Bundling dist/* to $BUNDLE_PATH"
+  echo "--> Bundling dist/* to $BUNDLE_PATH..."
   zip -r -j "$BUNDLE_PATH" dist/
 }
 
@@ -88,7 +95,7 @@ function build() {
   (unset GOOS; unset GOARCH; go generate ./...)
 
   # Build our ldflags
-  msg="--> Building Vault revision $revision, built $build_date"
+  msg="--> Building Vault revision $revision, built $build_date..."
 
   # Keep the symbol and dwarf information by default
   if [ -n "$REMOVE_SYMBOLS" ]; then
@@ -110,13 +117,14 @@ function build() {
   mkdir -p dist
   mkdir -p out
   set -x
+  go env
   go build -v -tags "$GO_TAGS" -ldflags "$ldflags" -o dist/
   set +x
   popd
 }
 
-# Prepare legal requirements for packaging
-function prepare_legal() {
+# ENT: Prepare legal requirements for packaging
+function prepare_ent_legal() {
   : "${PKG_NAME:="vault"}"
 
   pushd "$(repo_root)"
@@ -126,6 +134,21 @@ function prepare_legal() {
   mkdir -p ".release/linux/package/usr/share/doc/$PKG_NAME"
   cp dist/EULA.txt ".release/linux/package/usr/share/doc/$PKG_NAME/EULA.txt"
   cp dist/TermsOfEvaluation.txt ".release/linux/package/usr/share/doc/$PKG_NAME/TermsOfEvaluation.txt"
+  popd
+}
+
+# CE: Prepare legal requirements for packaging
+function prepare_ce_legal() {
+  : "${PKG_NAME:="vault"}"
+
+  pushd "$(repo_root)"
+
+  mkdir -p dist
+  cp LICENSE dist/LICENSE.txt
+
+  mkdir -p ".release/linux/package/usr/share/doc/$PKG_NAME"
+  cp LICENSE ".release/linux/package/usr/share/doc/$PKG_NAME/LICENSE.txt"
+
   popd
 }
 
@@ -153,8 +176,11 @@ function main() {
   date)
     build_date
   ;;
-  prepare-legal)
-    prepare_legal
+  prepare-ent-legal)
+    prepare_ent_legal
+  ;;
+  prepare-ce-legal)
+    prepare_ce_legal
   ;;
   revision)
     build_revision

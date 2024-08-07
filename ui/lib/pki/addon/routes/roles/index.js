@@ -4,7 +4,7 @@
  */
 
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { withConfig } from 'pki/decorators/check-issuers';
 import { hash } from 'rsvp';
 import { getCliMessage } from 'pki/routes/overview';
@@ -38,7 +38,7 @@ export default class PkiRolesIndexRoute extends Route {
 
   model(params) {
     return hash({
-      hasConfig: this.shouldPromptConfig,
+      hasConfig: this.pkiMountHasConfig,
       roles: this.fetchRoles(params),
       parentModel: this.modelFor('roles'),
       pageFilter: params.pageFilter,

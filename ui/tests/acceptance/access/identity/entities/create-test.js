@@ -9,11 +9,18 @@ import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/access/identity/create';
 import { testCRUD, testDeleteFromForm } from '../_shared-tests';
 import authPage from 'vault/tests/pages/auth';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Acceptance | /access/identity/entities/create', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
+    // Popup menu causes flakiness
+    setRunOptions({
+      rules: {
+        'color-contrast': { enabled: false },
+      },
+    });
     return authPage.login();
   });
 

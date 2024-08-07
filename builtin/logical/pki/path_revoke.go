@@ -17,10 +17,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/helper/consts"
-
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -306,7 +307,7 @@ func (b *backend) pathRevokeWriteHandleCertificate(ctx context.Context, req *log
 	//
 	// We return the parsed serial number, an optionally-nil byte array to
 	// write out to disk, and an error if one occurred.
-	if b.useLegacyBundleCaStorage() {
+	if b.UseLegacyBundleCaStorage() {
 		// We require listing all issuers from the 1.11 method. If we're
 		// still using the legacy CA bundle but with the newer certificate
 		// attribute, we err and require the operator to upgrade and migrate
@@ -346,7 +347,7 @@ func (b *backend) pathRevokeWriteHandleCertificate(ctx context.Context, req *log
 	// Start with the latter since its cheaper. Fetch the cert (by serial)
 	// and if it exists, compare the contents.
 	sc := b.makeStorageContext(ctx, req.Storage)
-	certEntry, err := fetchCertBySerial(sc, "certs/", serial)
+	certEntry, err := fetchCertBySerial(sc, issuing.PathCerts, serial)
 	if err != nil {
 		return serial, false, nil, err
 	}
@@ -497,7 +498,7 @@ func validatePublicKeyMatchesCert(verifier crypto.PublicKey, certReference *x509
 	return nil
 }
 
-func (b *backend) maybeRevokeCrossCluster(sc *storageContext, config *crlConfig, serial string, havePrivateKey bool) (*logical.Response, error) {
+func (b *backend) maybeRevokeCrossCluster(sc *storageContext, config *pki_backend.CrlConfig, serial string, havePrivateKey bool) (*logical.Response, error) {
 	if !config.UseGlobalQueue {
 		return logical.ErrorResponse(fmt.Sprintf("certificate with serial %s not found.", serial)), nil
 	}
@@ -534,7 +535,7 @@ func (b *backend) maybeRevokeCrossCluster(sc *storageContext, config *crlConfig,
 	return resp, nil
 }
 
-func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, data *framework.FieldData, _ *roleEntry) (*logical.Response, error) {
+func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, data *framework.FieldData, _ *issuing.RoleEntry) (*logical.Response, error) {
 	rawSerial, haveSerial := data.GetOk("serial_number")
 	rawCertificate, haveCert := data.GetOk("certificate")
 	sc := b.makeStorageContext(ctx, req.Storage)
@@ -563,7 +564,7 @@ func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, dat
 	var cert *x509.Certificate
 	var serial string
 
-	config, err := sc.Backend.crlBuilder.getConfigWithUpdate(sc)
+	config, err := sc.CrlBuilder().GetConfigWithUpdate(sc)
 	if err != nil {
 		return nil, fmt.Errorf("error revoking serial: %s: failed reading config: %w", serial, err)
 	}
@@ -580,7 +581,7 @@ func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, dat
 			return logical.ErrorResponse("The serial number must be provided"), nil
 		}
 
-		certEntry, err := fetchCertBySerial(sc, "certs/", serial)
+		certEntry, err := fetchCertBySerial(sc, issuing.PathCerts, serial)
 		if err != nil {
 			switch err.(type) {
 			case errutil.UserError:
@@ -632,7 +633,7 @@ func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, dat
 	// disk.
 	if writeCert {
 		err := req.Storage.Put(ctx, &logical.StorageEntry{
-			Key:   "certs/" + normalizeSerial(serial),
+			Key:   issuing.PathCerts + normalizeSerial(serial),
 			Value: cert.Raw,
 		})
 		if err != nil {
@@ -647,18 +648,18 @@ func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, dat
 		return nil, logical.ErrReadOnly
 	}
 
-	b.revokeStorageLock.Lock()
-	defer b.revokeStorageLock.Unlock()
+	b.GetRevokeStorageLock().Lock()
+	defer b.GetRevokeStorageLock().Unlock()
 
 	return revokeCert(sc, config, cert)
 }
 
 func (b *backend) pathRotateCRLRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
-	b.revokeStorageLock.RLock()
-	defer b.revokeStorageLock.RUnlock()
+	b.GetRevokeStorageLock().RLock()
+	defer b.GetRevokeStorageLock().RUnlock()
 
 	sc := b.makeStorageContext(ctx, req.Storage)
-	warnings, crlErr := b.crlBuilder.rebuild(sc, false)
+	warnings, crlErr := b.CrlBuilder().Rebuild(sc, false)
 	if crlErr != nil {
 		switch crlErr.(type) {
 		case errutil.UserError:
@@ -684,14 +685,14 @@ func (b *backend) pathRotateCRLRead(ctx context.Context, req *logical.Request, _
 func (b *backend) pathRotateDeltaCRLRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	sc := b.makeStorageContext(ctx, req.Storage)
 
-	cfg, err := b.crlBuilder.getConfigWithUpdate(sc)
+	cfg, err := b.CrlBuilder().GetConfigWithUpdate(sc)
 	if err != nil {
 		return nil, fmt.Errorf("error fetching CRL configuration: %w", err)
 	}
 
 	isEnabled := cfg.EnableDelta
 
-	warnings, crlErr := b.crlBuilder.rebuildDeltaCRLsIfForced(sc, true)
+	warnings, crlErr := b.CrlBuilder().rebuildDeltaCRLsIfForced(sc, true)
 	if crlErr != nil {
 		switch crlErr.(type) {
 		case errutil.UserError:

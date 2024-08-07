@@ -183,7 +183,8 @@ type eabType struct {
 func (b *backend) pathAcmeListEab(ctx context.Context, r *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	sc := b.makeStorageContext(ctx, r.Storage)
 
-	eabIds, err := b.acmeState.ListEabIds(sc)
+	acmeState := b.GetAcmeState()
+	eabIds, err := acmeState.ListEabIds(sc)
 	if err != nil {
 		return nil, err
 	}
@@ -193,7 +194,7 @@ func (b *backend) pathAcmeListEab(ctx context.Context, r *logical.Request, _ *fr
 	keyInfos := map[string]interface{}{}
 
 	for _, eabKey := range eabIds {
-		eab, err := b.acmeState.LoadEab(sc, eabKey)
+		eab, err := acmeState.LoadEab(sc, eabKey)
 		if err != nil {
 			warnings = append(warnings, fmt.Sprintf("failed loading eab entry %s: %v", eabKey, err))
 			continue
@@ -236,7 +237,7 @@ func (b *backend) pathAcmeCreateEab(ctx context.Context, r *logical.Request, dat
 	}
 
 	sc := b.makeStorageContext(ctx, r.Storage)
-	err = b.acmeState.SaveEab(sc, eab)
+	err = b.GetAcmeState().SaveEab(sc, eab)
 	if err != nil {
 		return nil, fmt.Errorf("failed saving generated eab: %w", err)
 	}
@@ -263,7 +264,7 @@ func (b *backend) pathAcmeDeleteEab(ctx context.Context, r *logical.Request, d *
 		return nil, fmt.Errorf("badly formatted key_id field")
 	}
 
-	deleted, err := b.acmeState.DeleteEab(sc, keyId)
+	deleted, err := b.GetAcmeState().DeleteEab(sc, keyId)
 	if err != nil {
 		return nil, fmt.Errorf("failed deleting key id: %w", err)
 	}

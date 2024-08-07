@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 /**
@@ -42,7 +42,11 @@ export default class SecretsEnginePathAdapter extends ApplicationAdapter {
   }
   _saveRecord(store, { modelName }, snapshot) {
     const data = store.serializerFor(modelName).serialize(snapshot);
+    const primaryKey = store.serializerFor(modelName).primaryKey;
     const url = this._getURL(snapshot.attr('backend'));
-    return this.ajax(url, 'POST', { data }).then(() => data);
+    return this.ajax(url, 'POST', { data }).then(() => {
+      data[primaryKey] = snapshot.attr(primaryKey);
+      return data;
+    });
   }
 }

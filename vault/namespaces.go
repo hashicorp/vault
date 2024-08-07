@@ -17,3 +17,9 @@ func namespaceByID(ctx context.Context, nsID string, c *Core) (*namespace.Namesp
 	}
 	return nil, namespace.ErrNoNamespace
 }
+
+var NamespaceRegister func(context.Context, *namespace.Namespace, *Core) error = namespaceRegister
+
+func namespaceRegister(ctx context.Context, ns *namespace.Namespace, c *Core) error {
+	return nil
+}

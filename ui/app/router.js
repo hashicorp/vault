@@ -5,7 +5,7 @@
 
 import EmberRouter from '@ember/routing/router';
 import config from 'vault/config/environment';
-
+import { addDocfyRoutes } from '@docfy/ember';
 export default class Router extends EmberRouter {
   location = config.locationType;
   rootURL = config.rootURL;
@@ -15,6 +15,8 @@ Router.map(function () {
   this.route('vault', { path: '/' }, function () {
     this.route('cluster', { path: '/:cluster_name' }, function () {
       this.route('dashboard');
+      this.mount('config-ui');
+      this.mount('sync');
       this.route('oidc-provider-ns', { path: '/*namespace/identity/oidc/provider/:provider_name/authorize' });
       this.route('oidc-provider', { path: '/identity/oidc/provider/:provider_name/authorize' });
       this.route('oidc-callback', { path: '/auth/*auth_path/oidc/callback' });
@@ -25,7 +27,12 @@ Router.map(function () {
       this.route('license');
       this.route('mfa-setup');
       this.route('clients', function () {
-        this.route('dashboard');
+        this.route('counts', function () {
+          this.route('overview');
+          this.route('token');
+          this.route('sync');
+          this.route('acme');
+        });
         this.route('config');
         this.route('edit');
       });
@@ -43,10 +50,6 @@ Router.map(function () {
           });
         });
         this.route('mount-secret-backend');
-        this.route('configure-secret-backend', { path: '/secrets/configure/:backend' }, function () {
-          this.route('index', { path: '/' });
-          this.route('section', { path: '/:section_name' });
-        });
       });
       this.route('unseal');
       this.route('tools', function () {
@@ -165,7 +168,10 @@ Router.map(function () {
           this.mount('ldap');
           this.mount('pki');
           this.route('index', { path: '/' });
-          this.route('configuration');
+          this.route('configuration', function () {
+            // only CONFIGURABLE_SECRET_ENGINES can be configured and access the edit route
+            this.route('edit');
+          });
           // because globs / params can't be empty,
           // we have to special-case ids of '' with their own routes
           this.route('list-root', { path: '/list/' });
@@ -210,4 +216,7 @@ Router.map(function () {
     });
     this.route('not-found', { path: '/*path' });
   });
+  if (config.environment !== 'production') {
+    addDocfyRoutes(this);
+  }
 });

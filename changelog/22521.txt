@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki: do not check TLS validity on ACME requests redirected to https
+```

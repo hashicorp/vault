@@ -13,12 +13,14 @@
       as |replicationAction|
     }}
       <div class="replication-actions-grid-item">
-        {{component
-          (concat "replication-action-" replicationAction)
-          onSubmit=(action "onSubmit")
-          replicationMode=this.replicationMode
-          model=this.model
-        }}
+        <Hds::Card::Container class="action-block-width" @hasBorder={{true}}>
+          {{component
+            (concat "replication-action-" replicationAction)
+            onSubmit=(action "onSubmit")
+            replicationMode=this.replicationMode
+            model=this.model
+          }}
+        </Hds::Card::Container>
       </div>
     {{/each}}
   </div>

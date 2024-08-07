@@ -13,14 +13,12 @@
     </p>
   </div>
   <div class="action-block-action">
-    <button
-      type="button"
-      class="button is-secondary"
-      onclick={{action (mut this.isModalActive) true}}
+    <Hds::Button
+      @text="Reindex"
+      @color="secondary"
+      {{on "click" (action (mut this.isModalActive) true)}}
       data-test-replication-action-trigger="reindex"
-    >
-      Reindex
-    </button>
+    />
   </div>
 </div>
 {{#if this.isModalActive}}

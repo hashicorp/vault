@@ -17,6 +17,7 @@ module('Integration | Component | mfa-method-form', function (hooks) {
     this.store = this.owner.lookup('service:store');
     this.model = this.store.createRecord('mfa-method');
     this.model.type = 'totp';
+    this.model.id = 'some-id';
   });
 
   test('it should render correct fields', async function (assert) {
@@ -37,12 +38,12 @@ module('Integration | Component | mfa-method-form', function (hooks) {
       .dom('[data-test-input="max_validation_attempts"]')
       .exists(`Max validation attempts field input renders`);
   });
-
-  test('it should create new mfa method', async function (assert) {
+  // You can only edit a mfa method from this form. To create you need to go to the parent create route.
+  test('it should edit a mfa method', async function (assert) {
     assert.expect(3);
 
-    this.server.post('/identity/mfa/method/totp', () => {
-      assert.ok(true, 'create request sent to server');
+    this.server.post('/identity/mfa/method/totp/some-id', () => {
+      assert.ok(true, 'edit request sent to server');
       return {};
     });
 

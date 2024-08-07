@@ -5,13 +5,19 @@ package mock
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"testing"
 
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-const MockPluginVersionEnv = "TESTING_MOCK_VAULT_PLUGIN_VERSION"
+const (
+	MockPluginVersionEnv           = "TESTING_MOCK_VAULT_PLUGIN_VERSION"
+	MockPluginDefaultInternalValue = "bar"
+)
 
 // New returns a new backend as an interface. This func
 // is only necessary for builtin backend plugins.
@@ -53,6 +59,7 @@ func Backend() *backend {
 				pathInternal(&b),
 				pathSpecial(&b),
 				pathRaw(&b),
+				pathEnv(&b),
 			},
 		),
 		PathsSpecial: &logical.Paths{
@@ -64,7 +71,7 @@ func Backend() *backend {
 		Invalidate:  b.invalidate,
 		BackendType: logical.TypeLogical,
 	}
-	b.internal = "bar"
+	b.internal = MockPluginDefaultInternalValue
 	b.RunningVersion = "v0.0.0+mock"
 	if version := os.Getenv(MockPluginVersionEnv); version != "" {
 		b.RunningVersion = version
@@ -75,7 +82,7 @@ func Backend() *backend {
 type backend struct {
 	*framework.Backend
 
-	// internal is used to test invalidate
+	// internal is used to test invalidate and reloads.
 	internal string
 }
 
@@ -83,5 +90,41 @@ func (b *backend) invalidate(ctx context.Context, key string) {
 	switch key {
 	case "internal":
 		b.internal = ""
+	}
+}
+
+// WriteInternalValue is a helper to set an in-memory value in the plugin,
+// allowing tests to later assert that the plugin either has or hasn't been
+// restarted.
+func WriteInternalValue(t *testing.T, client *api.Client, mountPath, value string) {
+	t.Helper()
+	resp, err := client.Logical().Write(fmt.Sprintf("%s/internal", mountPath), map[string]interface{}{
+		"value": value,
+	})
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %v", resp)
+	}
+}
+
+// ExpectInternalValue checks the internal in-memory value.
+func ExpectInternalValue(t *testing.T, client *api.Client, mountPath, expected string) {
+	t.Helper()
+	expectInternalValue(t, client, mountPath, expected)
+}
+
+func expectInternalValue(t *testing.T, client *api.Client, mountPath, expected string) {
+	t.Helper()
+	resp, err := client.Logical().Read(fmt.Sprintf("%s/internal", mountPath))
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil {
+		t.Fatalf("bad: response should not be nil")
+	}
+	if resp.Data["value"].(string) != expected {
+		t.Fatalf("expected %q but got %q", expected, resp.Data["value"].(string))
 	}
 }

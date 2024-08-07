@@ -13,7 +13,7 @@
   }
 
   &:not(:last-child) {
-    margin-bottom: $size-4;
+    margin-bottom: $spacing-20;
   }
 }
 // must come after field due to overriding the margin-bottom of not last-child
@@ -110,7 +110,7 @@ fieldset.form-fieldset {
     flex-shrink: 1;
 
     > .field:not(:last-child) {
-      margin-right: $size-9;
+      margin-right: $spacing-10;
     }
     .field:not(.is-narrow) {
       flex-grow: 1;

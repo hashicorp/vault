@@ -52,7 +52,16 @@
       @subText="Use the CLI command below:"
       class="has-padding-l has-top-margin-l"
     >
-      <CodeSnippet @codeBlock={{this.cliCommand}} class="has-top-margin-s" />
+      <:content>
+        <Hds::CodeBlock
+          class="has-top-margin-s"
+          data-test-accounts-code-block
+          @language="bash"
+          @hasLineNumbers={{false}}
+          @hasCopyButton={{true}}
+          @value={{this.cliCommand}}
+        />
+      </:content>
     </OverviewCard>
   </div>
 </div>

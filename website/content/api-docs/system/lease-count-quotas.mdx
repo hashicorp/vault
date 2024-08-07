@@ -8,7 +8,7 @@ description: The `/sys/quotas/lease-count` endpoint is used to create, edit and 
 
 @include 'alerts/enterprise-only.mdx'
 
-@include 'alerts/restricted-root.mdx'
+@include 'alerts/restricted-admin.mdx'
 
 The `/sys/quotas/lease-count` endpoint is used to create, edit and delete lease count quotas.
 
@@ -38,14 +38,15 @@ millions of leases in an automated way, it is recommended to space out the creat
   A blank path configures a global lease count quota. For example `namespace1/`
   adds a quota to a full namespace, `namespace1/auth/userpass` adds a quota to
   `userpass` in `namespace1`, and `namespace1/kv-v2/data/foo/bar` adds a quota to
-  a specific secret on a K/V v2 mount in `namespace1`. A trailing glob (`*`) can also
+  a specific secret on a KV v2 mount in `namespace1`. A trailing glob (`*`) can also
   be added as part of the path after the mount to match paths that share the same prefix
   prior to the glob. `namespace1/kv-v2/data/foo/*` would match both `namespace1/kv-v2/data/foo/bar`
   and `namespace1/kv-v2/data/foo/baz`. Updating this field on an existing
   quota can have "moving" effects. For example, updating `namespace1` to
   `namespace1/auth/userpass` moves this quota from being a namespace quota to a
   namespace-specific mount quota. Non-global quotas are not inherited by child
-  namespaces.
+  namespaces. Quotas cannot be created or modified in parent or sibling namespaces.
+  **Note, namespaces are supported in Enterprise only**.
 - `max_leases` `(int: 0)` - Maximum number of leases allowed by the quota rule.
 - `role` `(string: "")` - If set on a quota where `path` is set to an auth mount with a
   concept of roles (such as `/auth/approle/`), this will make the quota restrict login
@@ -79,6 +80,7 @@ $ curl \
 ## Delete a lease count quota
 
 A lease count quota can be deleted by `name`.
+Quotas that exist in a parent or a sibling namespace cannot be deleted.
 
 | Method   | Path                            |
 | :------- | :------------------------------ |
@@ -131,8 +133,10 @@ $ curl \
 
 ## List lease count quotas
 
-This endpoint returns a list of all the lease count quotas. A 404 response will
-be returned if no lease count quota has been created.
+This endpoint returns a list of all the lease count quotas across all namespaces.
+Note that this level of access differs from creating, updating, and deleting
+quotas which restricts access to parent and sibling namespaces. A 404 response
+will be returned if no lease count quota has been created.
 
 | Method | Path                      |
 | :----- | :------------------------ |

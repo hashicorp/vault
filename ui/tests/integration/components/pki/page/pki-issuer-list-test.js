@@ -9,7 +9,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { STANDARD_META } from 'vault/tests/helpers/pki';
+import { STANDARD_META } from 'vault/tests/helpers/pagination';
 
 /**
  * this test is for the page component only. A separate test is written for the form rendered
@@ -47,9 +47,12 @@ module('Integration | Component | page/pki-issuer-list', function (hooks) {
     issuers.meta = STANDARD_META;
     this.issuers = issuers;
 
-    await render(hbs`<Page::PkiIssuerList @issuers={{this.issuers}} @mountPoint={{this.engineId}} />`, {
-      owner: this.engine,
-    });
+    await render(
+      hbs`<Page::PkiIssuerList @backend="pki-mount" @issuers={{this.issuers}} @mountPoint={{this.engineId}} />`,
+      {
+        owner: this.engine,
+      }
+    );
 
     this.issuers.forEach(async (issuer, idx) => {
       assert
@@ -76,9 +79,12 @@ module('Integration | Component | page/pki-issuer-list', function (hooks) {
     const issuers = this.store.peekAll('pki/issuer');
     issuers.meta = STANDARD_META;
     this.issuers = issuers;
-    await render(hbs`<Page::PkiIssuerList @issuers={{this.issuers}} @mountPoint={{this.engineId}} />`, {
-      owner: this.engine,
-    });
+    await render(
+      hbs`<Page::PkiIssuerList @backend="pki-mount" @issuers={{this.issuers}} @mountPoint={{this.engineId}} />`,
+      {
+        owner: this.engine,
+      }
+    );
     assert.dom(`[data-test-is-default="1"]`).hasText('default issuer');
   });
 });

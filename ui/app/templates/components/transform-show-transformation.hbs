@@ -42,7 +42,13 @@
     </div>
     <div class="copy-text level">
       {{#let (concat "vault write " this.model.backend "/encode/" this.cliCommand) as |copyEncodeCommand|}}
-        <CodeSnippet @codeBlock={{copyEncodeCommand}} @isIconOnly={{true}} />
+        <Hds::CodeBlock
+          @language="bash"
+          @hasLineNumbers={{false}}
+          @hasLineWrapping={{true}}
+          @hasCopyButton={{true}}
+          @value={{copyEncodeCommand}}
+        />
       {{/let}}
     </div>
   </div>
@@ -56,7 +62,13 @@
     </div>
     <div class="copy-text level">
       {{#let (concat "vault write " this.model.backend "/decode/" this.cliCommand) as |copyDecodeCommand|}}
-        <CodeSnippet @codeBlock={{copyDecodeCommand}} @isIconOnly={{true}} />
+        <Hds::CodeBlock
+          @language="bash"
+          @hasLineNumbers={{false}}
+          @hasLineWrapping={{true}}
+          @hasCopyButton={{true}}
+          @value={{copyDecodeCommand}}
+        />
       {{/let}}
     </div>
   </div>

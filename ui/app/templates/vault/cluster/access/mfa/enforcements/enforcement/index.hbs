@@ -5,16 +5,10 @@
 
 <PageHeader as |p|>
   <p.top>
-    <nav class="breadcrumb" aria-label="breadcrumb">
-      <ul>
-        <li>
-          <span class="sep">&#x0002f;</span>
-          <LinkTo @route="vault.cluster.access.mfa.enforcements.index">
-            Enforcements
-          </LinkTo>
-        </li>
-      </ul>
-    </nav>
+    <Hds::Breadcrumb>
+      <Hds::Breadcrumb::Item @text="Enforcements" @route="vault.cluster.access.mfa.enforcements.index" />
+      <Hds::Breadcrumb::Item @text={{this.model.name}} @current={{true}} />
+    </Hds::Breadcrumb>
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3">
@@ -89,17 +83,20 @@
           {{#if target.link}}
             <div class="level-right is-flex is-paddingless is-marginless">
               <div class="level-item">
-                <PopupMenu>
-                  <nav class="menu" aria-label="Enforcement target more menu">
-                    <ul class="menu-list">
-                      <li>
-                        <LinkTo @route={{target.link}} @models={{target.linkModels}} data-test-target-link={{target.title}}>
-                          Details
-                        </LinkTo>
-                      </li>
-                    </ul>
-                  </nav>
-                </PopupMenu>
+                <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+                  <dd.ToggleIcon
+                    @icon="more-horizontal"
+                    @text="Manage enforcement target"
+                    @hasChevron={{false}}
+                    data-test-popup-menu-trigger
+                  />
+                  <dd.Interactive
+                    @text="Details"
+                    @route={{target.link}}
+                    @models={{target.linkModels}}
+                    data-test-target-link={{target.title}}
+                  />
+                </Hds::Dropdown>
               </div>
             </div>
           {{/if}}

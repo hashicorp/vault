@@ -9,8 +9,10 @@ import { render, click, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { issuerPemBundle } from 'vault/tests/helpers/pki/values';
+import { CERTIFICATES } from 'vault/tests/helpers/pki/pki-helpers';
+import { PKI_CONFIGURE_CREATE } from 'vault/tests/helpers/pki/pki-selectors';
 
+const { issuerPemBundle } = CERTIFICATES;
 module('Integration | Component | PkiImportPemBundle', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
@@ -60,6 +62,7 @@ module('Integration | Component | PkiImportPemBundle', function (hooks) {
         'sends params in correct type'
       );
       return {
+        request_id: 'test',
         data: {
           mapping: { 'issuer-id': 'key-id' },
         },
@@ -84,7 +87,7 @@ module('Integration | Component | PkiImportPemBundle', function (hooks) {
     await click('[data-test-text-toggle]');
     await fillIn('[data-test-text-file-textarea]', this.pemBundle);
     assert.strictEqual(this.model.pemBundle, this.pemBundle, 'PEM bundle updated on model');
-    await click('[data-test-pki-import-pem-bundle]');
+    await click(PKI_CONFIGURE_CREATE.importSubmit);
   });
 
   test('it hits correct endpoint when userIssuer=false', async function (assert) {
@@ -100,6 +103,7 @@ module('Integration | Component | PkiImportPemBundle', function (hooks) {
         'sends params in correct type'
       );
       return {
+        request_id: 'test',
         data: {
           mapping: {},
         },
@@ -124,13 +128,14 @@ module('Integration | Component | PkiImportPemBundle', function (hooks) {
     await click('[data-test-text-toggle]');
     await fillIn('[data-test-text-file-textarea]', this.pemBundle);
     assert.strictEqual(this.model.pemBundle, this.pemBundle);
-    await click('[data-test-pki-import-pem-bundle]');
+    await click(PKI_CONFIGURE_CREATE.importSubmit);
   });
 
   test('it shows the bundle mapping on success', async function (assert) {
     assert.expect(9);
     this.server.post(`/${this.backend}/issuers/import/bundle`, () => {
       return {
+        request_id: 'test',
         data: {
           imported_issuers: ['issuer-id', 'another-issuer'],
           imported_keys: ['key-id', 'another-key'],
@@ -157,7 +162,7 @@ module('Integration | Component | PkiImportPemBundle', function (hooks) {
 
     await click('[data-test-text-toggle]');
     await fillIn('[data-test-text-file-textarea]', this.pemBundle);
-    await click('[data-test-pki-import-pem-bundle]');
+    await click(PKI_CONFIGURE_CREATE.importSubmit);
 
     assert
       .dom('[data-test-import-pair]')

@@ -7,14 +7,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"io"
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
-
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/vault"
 )
@@ -140,7 +139,7 @@ func TestLeaderReElectionMetrics(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	bodyBytes, err := ioutil.ReadAll(respo.Response.Body)
+	bodyBytes, err := io.ReadAll(respo.Response.Body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -184,7 +183,7 @@ func TestLeaderReElectionMetrics(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	bodyBytes, err = ioutil.ReadAll(respo.Response.Body)
+	bodyBytes, err = io.ReadAll(respo.Response.Body)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -7,11 +7,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/mitchellh/cli"
 )
 
 func testPluginInfoCommand(tb testing.TB) (*cli.MockUi, *PluginInfoCommand) {
@@ -34,6 +34,12 @@ func TestPluginInfoCommand_Run(t *testing.T) {
 		out  string
 		code int
 	}{
+		{
+			"not_enough_args",
+			[]string{"foo"},
+			"Not enough arguments",
+			1,
+		},
 		{
 			"too_many_args",
 			[]string{"foo", "bar", "fizz"},
@@ -79,8 +85,7 @@ func TestPluginInfoCommand_Run(t *testing.T) {
 	t.Run("default", func(t *testing.T) {
 		t.Parallel()
 
-		pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
-		defer cleanup(t)
+		pluginDir := corehelpers.MakeTestPluginDir(t)
 
 		client, _, closer := testVaultServerPluginDir(t, pluginDir)
 		defer closer()
@@ -110,8 +115,7 @@ func TestPluginInfoCommand_Run(t *testing.T) {
 	t.Run("version flag", func(t *testing.T) {
 		t.Parallel()
 
-		pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
-		defer cleanup(t)
+		pluginDir := corehelpers.MakeTestPluginDir(t)
 
 		client, _, closer := testVaultServerPluginDir(t, pluginDir)
 		defer closer()
@@ -156,8 +160,7 @@ func TestPluginInfoCommand_Run(t *testing.T) {
 	t.Run("field", func(t *testing.T) {
 		t.Parallel()
 
-		pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
-		defer cleanup(t)
+		pluginDir := corehelpers.MakeTestPluginDir(t)
 
 		client, _, closer := testVaultServerPluginDir(t, pluginDir)
 		defer closer()

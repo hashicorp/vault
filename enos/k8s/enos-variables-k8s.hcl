@@ -43,11 +43,6 @@ variable "terraform_plugin_cache_dir" {
   default     = null
 }
 
-variable "tfc_api_token" {
-  description = "The Terraform Cloud QTI Organization API token."
-  type        = string
-}
-
 variable "vault_build_date" {
   description = "The build date for the vault docker image"
   type        = string

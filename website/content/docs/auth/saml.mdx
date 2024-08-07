@@ -75,8 +75,8 @@ management tool.
 
    ```shell-session
    $ vault write auth/saml/config \
-      default_role=admin \
-      idp_metadata_url=https://company.okta.com/app/abc123eb9xnIfzlaf697/sso/saml/metadata \
+      default_role="admin" \
+      idp_metadata_url="https://company.okta.com/app/abc123eb9xnIfzlaf697/sso/saml/metadata" \
       entity_id="https://my.vault/v1/auth/saml" \
       acs_urls="https://my.vault/v1/auth/saml/callback"
    ```
@@ -85,10 +85,10 @@ management tool.
 
    ```shell-session
    $ vault write auth/saml/config \
-      default_role=admin \
-      idp_sso_url=https://company.okta.com/app/abc123eb9xnIfzlaf697/sso/saml \
-      idp_entity_id=https://www.okta.com/abc123eb9xnIfzlaf697 \
-      idp_cert=@path/to/cert.pem \
+      default_role="admin" \
+      idp_sso_url="https://company.okta.com/app/abc123eb9xnIfzlaf697/sso/saml" \
+      idp_entity_id="https://www.okta.com/abc123eb9xnIfzlaf697" \
+      idp_cert="@path/to/cert.pem" \
       entity_id="https://my.vault/v1/auth/saml" \
       acs_urls="https://my.vault/v1/auth/saml/callback"
    ```
@@ -96,12 +96,12 @@ management tool.
 1. Create a named role:
 
    ```shell-session
-    $ vault write auth/saml/role/admin \
+   $ vault write auth/saml/role/admin \
        bound_subjects="*@hashicorp.com" \
        bound_subjects_type="glob" \
        token_policies="writer" \
        bound_attributes=group="admin" \
-       ttl=1h
+       ttl="1h"
    ```
 
    This role authorizes users that have a subject with an `@hashicorp.com` suffix and
@@ -174,6 +174,18 @@ an `@hashicorp.com` suffix and that are in either the `support` or `engineering`
 Whether it should be an exact match or interpret `*` as a wildcard can be
 controlled by the [`bound_subjects_type`](/vault/api-docs/auth/saml#bound_subjects_type) and
 [`bound_attributes_type`](/vault/api-docs/auth/saml#bound_attributes_type) parameters.
+
+### Bound attributes for the Microsoft identity platform
+
+The bound attributes for the Microsoft identity platform requires
+`http://schemas.microsoft.com/ws/2008/06/identity/claims/groups` as the
+attribute name along with your group membership values. For example, a role with
+`bound_attributes=http://schemas.microsoft.com/ws/2008/06/identity/claims/groups="GROUP1_OBJECT_ID,GROUP2_OBJECT_ID"`
+will only authorize users that are in either the `GROUP1_OBJECT_ID` or
+`GROUP2_OBJECT_ID` group.
+
+You can read more at the Microsoft identity platform's
+[SAML token claims reference](https://learn.microsoft.com/en-us/entra/identity-platform/reference-saml-tokens).
 
 ## API
 

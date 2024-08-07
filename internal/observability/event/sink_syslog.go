@@ -6,10 +6,11 @@ package event
 import (
 	"context"
 	"fmt"
-
-	gsyslog "github.com/hashicorp/go-syslog"
+	"strings"
 
 	"github.com/hashicorp/eventlogger"
+	"github.com/hashicorp/go-hclog"
+	gsyslog "github.com/hashicorp/go-syslog"
 )
 
 var _ eventlogger.Node = (*SyslogSink)(nil)
@@ -17,49 +18,66 @@ var _ eventlogger.Node = (*SyslogSink)(nil)
 // SyslogSink is a sink node which handles writing events to syslog.
 type SyslogSink struct {
 	requiredFormat string
-	logger         gsyslog.Syslogger
+	syslogger      gsyslog.Syslogger
+	logger         hclog.Logger
 }
 
 // NewSyslogSink should be used to create a new SyslogSink.
 // Accepted options: WithFacility and WithTag.
 func NewSyslogSink(format string, opt ...Option) (*SyslogSink, error) {
-	const op = "event.NewSyslogSink"
+	format = strings.TrimSpace(format)
+	if format == "" {
+		return nil, fmt.Errorf("format is required: %w", ErrInvalidParameter)
+	}
 
 	opts, err := getOpts(opt...)
 	if err != nil {
-		return nil, fmt.Errorf("%s: error applying options: %w", op, err)
+		return nil, err
 	}
 
 	logger, err := gsyslog.NewLogger(gsyslog.LOG_INFO, opts.withFacility, opts.withTag)
 	if err != nil {
-		return nil, fmt.Errorf("%s: error creating syslogger: %w", op, err)
+		return nil, fmt.Errorf("error creating syslogger: %w", err)
 	}
 
-	return &SyslogSink{requiredFormat: format, logger: logger}, nil
+	syslog := &SyslogSink{
+		requiredFormat: format,
+		syslogger:      logger,
+		logger:         opts.withLogger,
+	}
+
+	return syslog, nil
 }
 
 // Process handles writing the event to the syslog.
-func (s *SyslogSink) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
-	const op = "event.(SyslogSink).Process"
-
+func (s *SyslogSink) Process(ctx context.Context, e *eventlogger.Event) (_ *eventlogger.Event, retErr error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	default:
 	}
 
+	defer func() {
+		// If the context is errored (cancelled), and we were planning to return
+		// an error, let's also log (if we have a logger) in case the eventlogger's
+		// status channel and errors propagated.
+		if err := ctx.Err(); err != nil && retErr != nil && s.logger != nil {
+			s.logger.Error("syslog sink error", "context", err, "error", retErr)
+		}
+	}()
+
 	if e == nil {
-		return nil, fmt.Errorf("%s: event is nil: %w", op, ErrInvalidParameter)
+		return nil, fmt.Errorf("event is nil: %w", ErrInvalidParameter)
 	}
 
 	formatted, found := e.Format(s.requiredFormat)
 	if !found {
-		return nil, fmt.Errorf("%s: unable to retrieve event formatted as %q", op, s.requiredFormat)
+		return nil, fmt.Errorf("unable to retrieve event formatted as %q: %w", s.requiredFormat, ErrInvalidParameter)
 	}
 
-	_, err := s.logger.Write(formatted)
+	_, err := s.syslogger.Write(formatted)
 	if err != nil {
-		return nil, fmt.Errorf("%s: error writing to syslog: %w", op, err)
+		return nil, fmt.Errorf("error writing to syslog: %w", err)
 	}
 
 	// return nil for the event to indicate the pipeline is complete.
