@@ -67,7 +67,7 @@ export const createConfig = (store, backend, type) => {
 export const expectedConfigKeys = (type) => {
   switch (type) {
     case 'aws':
-      return ['Access key', 'Region', 'IAM endpoint', 'STS endpoint', 'Maximum retries'];
+      return ['Access key', 'Region', 'IAM endpoint', 'STS endpoint'];
     case 'ssh':
       return ['Public key', 'Generate signing key'];
   }
@@ -83,8 +83,6 @@ const valueOfAwsKeys = (string) => {
       return 'iam-endpoint';
     case 'STS endpoint':
       return 'sts-endpoint';
-    case 'Maximum retries':
-      return '-1';
   }
 };
 

@@ -77,6 +77,11 @@ export default class SecretsBackendConfigurationRoute extends Route {
     // AWS has two configuration endpoints root and lease, return an array of these responses.
     const configArray = [];
     const configRoot = await this.fetchAwsConfig(id, 'aws/root-config');
+    // maxRetries on configRoot has a default of -1, which would show on the configuration details page regardless of whether it's been set.
+    // check if it's been set and if it hasn't, set to null so it does not show.
+    if (configRoot?.maxRetries === -1) {
+      configRoot.maxRetries = null;
+    }
     const configLease = await this.fetchAwsConfig(id, 'aws/lease-config');
     configArray.push(configRoot, configLease);
     return configArray;

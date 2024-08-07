@@ -126,13 +126,12 @@ module('Acceptance | aws | configuration', function (hooks) {
   });
 
   test('it shows AWS mount configuration details', async function (assert) {
-    assert.expect(12);
+    assert.expect(10);
     const path = `aws-${this.uid}`;
     const type = 'aws';
-    this.server.get(`${path}/config/root`, (schema, req) => {
-      const payload = JSON.parse(req.requestBody);
+    this.server.get(`${path}/config/root`, () => {
       assert.ok(true, 'request made to config/root when navigating to the configuration page.');
-      return { data: { id: path, type, attributes: payload } };
+      return { data: { id: path, type } };
     });
     await enablePage.enable(type, path);
     createConfig(this.store, path, type); // create the aws root config in the store
@@ -204,5 +203,38 @@ module('Acceptance | aws | configuration', function (hooks) {
     });
     await click(SES.configTab);
     assert.dom(SES.error.title).hasText('Error', 'shows the secrets backend error route');
+  });
+
+  test('it hides Maximum retries if value is default', async function (assert) {
+    assert.expect(1);
+    const path = `aws-${this.uid}`;
+    await enablePage.enable('aws', path);
+    await click(SES.configTab);
+    await click(SES.configure);
+    await fillIn(GENERAL.inputByAttr('accessKey'), 'foo');
+    await fillIn(GENERAL.inputByAttr('secretKey'), 'bar');
+    await click(GENERAL.saveButtonId('root'));
+    await visit(`/vault/secrets/${path}/configuration`);
+    assert
+      .dom(GENERAL.infoRowValue('Maximum retries'))
+      .doesNotExist(`Maximum retries was not set and so should not show.`);
+    // cleanup
+    await runCmd(`delete sys/mounts/${path}`);
+  });
+
+  test('it shows Maximum retries if value is not default', async function (assert) {
+    assert.expect(1);
+    const path = `aws-${this.uid}`;
+    await enablePage.enable('aws', path);
+    // TODO when the UI supports editing this field, update this test to reflect that.
+    // For now we will just update the value using mirage.
+    // interrupt get and return API error
+    this.server.get(configUrl('aws', path), () => {
+      return { data: { max_retries: 5 } };
+    });
+    await click(SES.configTab);
+    assert.dom(GENERAL.infoRowValue('Maximum retries')).hasText('5', "shows the value of 'Maximum retries'");
+    // cleanup
+    await runCmd(`delete sys/mounts/${path}`);
   });
 });
