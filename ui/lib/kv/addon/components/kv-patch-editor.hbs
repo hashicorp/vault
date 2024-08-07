@@ -4,7 +4,7 @@
 ~}}
 
 <form {{on "submit" this.submit}} ...attributes>
-  {{#each-in this.formData as |key value|}}
+  {{#each-in this.formData as |key|}}
     <div class="flex column-gap-16 has-top-padding-s">
       <Hds::Form::TextInput::Base
         @type="text"
@@ -14,14 +14,16 @@
         {{! Original keys (from subkeys endpoint) are not editable, only their values can be updated }}
         disabled={{this.isOriginalKey key}}
         {{on "blur" (fn this.onBlurExisting key "key")}}
+        data-test-kv-key={{key}}
       />
 
       <Hds::Form::MaskedInput::Base
-        @value={{value}}
+        @value={{this.getValue key}}
         aria-label="Value for key {{key}}"
         name="value-{{key}}"
         disabled={{includes (this.getState key) (array "disabled" "deleted")}}
         {{on "blur" (fn this.onBlurExisting key "value")}}
+        data-test-kv-value={{key}}
       />
 
       <Hds::ButtonSet {{style width="15rem"}}>
@@ -32,6 +34,7 @@
             @color="secondary"
             @isIconOnly={{true}}
             {{on "click" (fn this.setState key "enabled")}}
+            data-test-edit={{key}}
           />
           <Hds::Button
             @text="Delete"
@@ -39,19 +42,21 @@
             @color="critical"
             @isIconOnly={{true}}
             {{on "click" (fn this.setState key "deleted")}}
+            data-test-delete={{key}}
           />
         {{else}}
           <Hds::Button
             @text={{if (this.isOriginalKey key) "Cancel" "Remove"}}
             @color="secondary"
             {{on "click" (fn this.handleCancel key)}}
+            data-test-undo={{key}}
           />
         {{/if}}
       </Hds::ButtonSet>
     </div>
 
     {{#if (eq (this.getState key) "deleted")}}
-      <Hds::Alert @type="compact" @color="critical" @icon="alert-diamond-fill" as |A|>
+      <Hds::Alert @type="compact" @color="critical" @icon="alert-diamond-fill" data-test-alert-delete={{key}} as |A|>
         <A.Description>This key value pair is marked for deletion.</A.Description>
       </Hds::Alert>
     {{/if}}
@@ -66,6 +71,7 @@
       placeholder="key"
       name="newKey"
       {{on "blur" this.onBlurNew}}
+      data-test-kv-key="new"
     />
 
     <Hds::Form::MaskedInput::Base
@@ -73,6 +79,7 @@
       aria-label="new value"
       name="newValue"
       {{on "blur" this.onBlurNew}}
+      data-test-kv-value="new"
     />
 
     <Hds::ButtonSet {{style width="15rem"}}>
@@ -81,6 +88,7 @@
         @color="secondary"
         disabled={{and (not this.newKey) (not this.newValue)}}
         {{on "click" this.handleAddClick}}
+        data-test-add
       />
     </Hds::ButtonSet>
   </div>
@@ -88,19 +96,7 @@
   <hr class="has-background-gray-200" />
 
   <Hds::ButtonSet>
-    <Hds::Button
-      @text="Save"
-      @icon={{if @onSubmit.isRunning "loading"}}
-      type="submit"
-      disabled={{@onSubmit.isRunning}}
-      data-test-kv-save
-    />
-    <Hds::Button
-      @text="Cancel"
-      @color="secondary"
-      disabled={{@onSubmit.isRunning}}
-      {{on "click" @onCancel}}
-      data-test-kv-cancel
-    />
+    <Hds::Button @text="Save" type="submit" @icon={{if @isSaving "loading"}} disabled={{@isSaving}} data-test-kv-save />
+    <Hds::Button @text="Cancel" {{on "click" @onCancel}} @color="secondary" disabled={{@isSaving}} data-test-kv-cancel />
   </Hds::ButtonSet>
 </form>
