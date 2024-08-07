@@ -28,11 +28,11 @@ export default class SecretsBackendConfigurationEdit extends Route {
 
   async model() {
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
-    const record = this.modelFor('vault.cluster.secrets.backend') as { type: SecretEngineModel };
-    const type = record.type as string;
+    const secretEngineRecord = this.modelFor('vault.cluster.secrets.backend') as { type: SecretEngineModel };
+    const type = secretEngineRecord.type as string;
 
     // if the engine type is not configurable, return a 404.
-    if (!record || !CONFIGURABLE_SECRET_ENGINES.includes(type)) {
+    if (!secretEngineRecord || !CONFIGURABLE_SECRET_ENGINES.includes(type)) {
       const error = new AdapterError();
       set(error, 'httpStatus', 404);
       throw error;
@@ -65,13 +65,10 @@ export default class SecretsBackendConfigurationEdit extends Route {
           }
         }
       }
-      // replace the adapterPath with a model name that can be passed to the components (ex: ssh/ca-config -> ssh-ca-config)
+      // convert the adapterPath with a name that can be passed to the components
+      // ex: adapterPath = ssh/ca-config, convert to: ssh-ca-config so that you can pass to component @model={{this.model.ssh-ca-config}}
       for (const key in model) {
-        if (key !== 'type' && key !== 'id') {
-          const newKey = key.replace(/\//g, '-');
-          model[newKey] = model[key] as object | null;
-          delete model[key];
-        }
+        this.standardizeModelName(key, model);
       }
       return model;
     } else {
@@ -79,7 +76,16 @@ export default class SecretsBackendConfigurationEdit extends Route {
       return await this.store.findRecord('secret-engine', backend);
     }
   }
-  // TODO everything below line will be removed once we handle AWS. This is the old code wrapped in AWS conditionals where appropriate
+
+  standardizeModelName(key: string, model: Record<string, unknown>) {
+    if (key !== 'type' && key !== 'id') {
+      // type and id are properties on the model that do not need to be standardized
+      const newKey = key.replace(/\//g, '-');
+      model[newKey] = model[key] as object | null;
+      delete model[key];
+    }
+  }
+  // TODO everything below line will be removed once we handle AWS. This is the old code wrapped in AWS conditionals when appropriate.
   afterModel(model: Record<string, unknown>) {
     const type = model.type;
 
