@@ -433,21 +433,6 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 		// be the SDK version, not the upgrade version.
 		currentServerID := raft.ServerID(id)
 		followerVersion := state.Version
-		leaderVersion := d.effectiveSDKVersion
-		d.dl.Lock()
-		if followerVersion == "" {
-			if _, ok := d.emptyVersionLogs[currentServerID]; !ok {
-				d.logger.Trace("received empty Vault version in heartbeat state. faking it with the leader version for now", "id", id, "leader version", leaderVersion)
-				d.emptyVersionLogs[currentServerID] = struct{}{}
-			}
-			followerVersion = leaderVersion
-		} else {
-			if _, ok := d.emptyVersionLogs[currentServerID]; ok {
-				d.logger.Trace("received non-empty version in heartbeat state. no longer need to fake it", "id", id, "update_version", followerVersion)
-				delete(d.emptyVersionLogs, currentServerID)
-			}
-		}
-		d.dl.Unlock()
 
 		server := &autopilot.Server{
 			ID:          currentServerID,
