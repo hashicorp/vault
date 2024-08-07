@@ -96,23 +96,9 @@ func TestPostgreSQL_InitializeSSLInlineFeatureFlag(t *testing.T) {
 	t.Setenv(pluginutil.PluginUsePostgresSSLInline, "true")
 
 	// Create certificates for postgres authentication
-	caCert := certhelpers.NewCert(t,
-		certhelpers.CommonName("ca"),
-		certhelpers.IsCA(true),
-		certhelpers.SelfSign(),
-	)
-	clientCert := certhelpers.NewCert(t,
-		certhelpers.CommonName("postgres"),
-		certhelpers.DNS("localhost"),
-		certhelpers.Parent(caCert),
-	)
-	cleanup, connURL := postgresql.PrepareTestContainerWithSSL(
-		t,
-		"verify-ca",
-		caCert,
-		clientCert,
-		false,
-	)
+	caCert := certhelpers.NewCert(t, certhelpers.CommonName("ca"), certhelpers.IsCA(true), certhelpers.SelfSign())
+	clientCert := certhelpers.NewCert(t, certhelpers.CommonName("postgres"), certhelpers.DNS("localhost"), certhelpers.Parent(caCert))
+	cleanup, connURL := postgresql.PrepareTestContainerWithSSL(t, "verify-ca", caCert, clientCert, false)
 	t.Cleanup(cleanup)
 
 	type testCase struct {
@@ -307,23 +293,9 @@ func TestPostgreSQL_InitializeSSLInline(t *testing.T) {
 			t.Parallel()
 
 			// Create certificates for postgres authentication
-			caCert := certhelpers.NewCert(t,
-				certhelpers.CommonName("ca"),
-				certhelpers.IsCA(true),
-				certhelpers.SelfSign(),
-			)
-			clientCert := certhelpers.NewCert(t,
-				certhelpers.CommonName("postgres"),
-				certhelpers.DNS("localhost"),
-				certhelpers.Parent(caCert),
-			)
-			cleanup, connURL := postgresql.PrepareTestContainerWithSSL(
-				t,
-				test.sslMode,
-				caCert,
-				clientCert,
-				test.useFallback,
-			)
+			caCert := certhelpers.NewCert(t, certhelpers.CommonName("ca"), certhelpers.IsCA(true), certhelpers.SelfSign())
+			clientCert := certhelpers.NewCert(t, certhelpers.CommonName("postgres"), certhelpers.DNS("localhost"), certhelpers.Parent(caCert))
+			cleanup, connURL := postgresql.PrepareTestContainerWithSSL(t, test.sslMode, caCert, clientCert, test.useFallback)
 			t.Cleanup(cleanup)
 
 			if test.useDSN {
@@ -336,6 +308,188 @@ func TestPostgreSQL_InitializeSSLInline(t *testing.T) {
 			connectionDetails := map[string]interface{}{
 				"connection_url":       connURL,
 				"max_open_connections": 5,
+			}
+
+			req := dbplugin.InitializeRequest{
+				Config:           connectionDetails,
+				VerifyConnection: true,
+			}
+
+			db := new()
+			_, err := dbtesting.VerifyInitialize(t, db, req)
+			if test.wantErr && err == nil {
+				t.Fatal("expected error, got nil")
+			} else if test.wantErr && !strings.Contains(err.Error(), test.expectedError) {
+				t.Fatalf("got: %s, want: %s", err.Error(), test.expectedError)
+			}
+
+			if !test.wantErr && !db.Initialized {
+				t.Fatal("Database should be initialized")
+			}
+
+			if err := db.Close(); err != nil {
+				t.Fatalf("err: %s", err)
+			}
+		})
+	}
+}
+
+// TestPostgreSQL_InitializeSSL tests that we can successfully authenticate
+// with a postgres server via ssl with a URL connection string or DSN (key/value)
+// for each ssl mode.
+func TestPostgreSQL_InitializeSSL(t *testing.T) {
+	type testCase struct {
+		sslMode       string
+		useDSN        bool
+		useFallback   bool
+		wantErr       bool
+		expectedError string
+	}
+
+	tests := map[string]testCase{
+		"disable sslmode": {
+			sslMode:       "disable",
+			wantErr:       true,
+			expectedError: "error verifying connection",
+		},
+		"allow sslmode": {
+			sslMode: "allow",
+			wantErr: false,
+		},
+		"prefer sslmode": {
+			sslMode: "prefer",
+			wantErr: false,
+		},
+		"require sslmode": {
+			sslMode: "require",
+			wantErr: false,
+		},
+		"verify-ca sslmode": {
+			sslMode: "verify-ca",
+			wantErr: false,
+		},
+		"verify-full sslmode": {
+			sslMode: "verify-full",
+			wantErr: false,
+		},
+		"disable sslmode with DSN": {
+			sslMode:       "disable",
+			useDSN:        true,
+			wantErr:       true,
+			expectedError: "error verifying connection",
+		},
+		"allow sslmode with DSN": {
+			sslMode: "allow",
+			useDSN:  true,
+			wantErr: false,
+		},
+		"prefer sslmode with DSN": {
+			sslMode: "prefer",
+			useDSN:  true,
+			wantErr: false,
+		},
+		"require sslmode with DSN": {
+			sslMode: "require",
+			useDSN:  true,
+			wantErr: false,
+		},
+		"verify-ca sslmode with DSN": {
+			sslMode: "verify-ca",
+			useDSN:  true,
+			wantErr: false,
+		},
+		"verify-full sslmode with DSN": {
+			sslMode: "verify-full",
+			useDSN:  true,
+			wantErr: false,
+		},
+		"disable sslmode with fallback": {
+			sslMode:       "disable",
+			useFallback:   true,
+			wantErr:       true,
+			expectedError: "error verifying connection",
+		},
+		"allow sslmode with fallback": {
+			sslMode:     "allow",
+			useFallback: true,
+		},
+		"prefer sslmode with fallback": {
+			sslMode:     "prefer",
+			useFallback: true,
+		},
+		"require sslmode with fallback": {
+			sslMode:     "require",
+			useFallback: true,
+		},
+		"verify-ca sslmode with fallback": {
+			sslMode:     "verify-ca",
+			useFallback: true,
+		},
+		"verify-full sslmode with fallback": {
+			sslMode:     "verify-full",
+			useFallback: true,
+		},
+		"disable sslmode with DSN with fallback": {
+			sslMode:       "disable",
+			useDSN:        true,
+			useFallback:   true,
+			wantErr:       true,
+			expectedError: "error verifying connection",
+		},
+		"allow sslmode with DSN with fallback": {
+			sslMode:     "allow",
+			useDSN:      true,
+			useFallback: true,
+			wantErr:     false,
+		},
+		"prefer sslmode with DSN with fallback": {
+			sslMode:     "prefer",
+			useDSN:      true,
+			useFallback: true,
+			wantErr:     false,
+		},
+		"require sslmode with DSN with fallback": {
+			sslMode:     "require",
+			useDSN:      true,
+			useFallback: true,
+			wantErr:     false,
+		},
+		"verify-ca sslmode with DSN with fallback": {
+			sslMode:     "verify-ca",
+			useDSN:      true,
+			useFallback: true,
+			wantErr:     false,
+		},
+		"verify-full sslmode with DSN with fallback": {
+			sslMode:     "verify-full",
+			useDSN:      true,
+			useFallback: true,
+			wantErr:     false,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// Create certificates for postgres authentication
+			caCert := certhelpers.NewCert(t, certhelpers.CommonName("ca"), certhelpers.IsCA(true), certhelpers.SelfSign())
+			clientCert := certhelpers.NewCert(t, certhelpers.CommonName("postgres"), certhelpers.DNS("localhost"), certhelpers.Parent(caCert))
+			cleanup, connURL := postgresql.PrepareTestContainerWithSSL(t, test.sslMode, caCert, clientCert, test.useFallback)
+			t.Cleanup(cleanup)
+
+			if test.useDSN {
+				var err error
+				connURL, err = dbutil.ParseURL(connURL)
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+			connectionDetails := map[string]interface{}{
+				"connection_url":       connURL,
+				"max_open_connections": 5,
+				"tls_certificate":      string(clientCert.CombinedPEM()),
+				"tls_private_key":      string(clientCert.PrivateKeyPEM()),
+				"tls_ca":               string(caCert.CombinedPEM()),
 			}
 
 			req := dbplugin.InitializeRequest{

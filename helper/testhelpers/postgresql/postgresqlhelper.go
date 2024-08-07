@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/testhelpers/certhelpers"
-	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 )
@@ -152,7 +151,7 @@ EOF
 		return svc.Cleanup, svc.Config.URL().String()
 	}
 
-	sslConfig, err := connectPostgresSSL(
+	sslConfig := getPostgresSSLConfig(
 		t,
 		svc.Config.URL().Host,
 		sslMode,
@@ -199,20 +198,13 @@ func prepareTestContainer(t *testing.T, runOpts docker.RunOptions, password stri
 	return runner, svc.Cleanup, svc.Config.URL().String(), containerID
 }
 
-// connectPostgresSSL is used to verify the connection of our test container
-// and construct the connection string that is used in tests.
-//
-// NOTE: The RawQuery component of the url sets the custom sslinline field and
-// inlines the certificate material in the sslrootcert, sslcert, and sslkey
-// fields. This feature will be removed in a future version of the SDK.
-func connectPostgresSSL(t *testing.T, host, sslMode, caCert, clientCert, clientKey string, useFallback bool) (docker.ServiceConfig, error) {
+func getPostgresSSLConfig(t *testing.T, host, sslMode, caCert, clientCert, clientKey string, useFallback bool) docker.ServiceConfig {
 	if useFallback {
 		// set the first host to a bad address so we can test the fallback logic
 		host = "localhost:55," + host
 	}
 
 	u := url.URL{}
-	db := &sql.DB{}
 
 	if ok, _ := strconv.ParseBool(os.Getenv(pluginutil.PluginUsePostgresSSLInline)); ok {
 		// TODO: remove this when we remove the underlying feature in a future SDK version
@@ -229,12 +221,6 @@ func connectPostgresSSL(t *testing.T, host, sslMode, caCert, clientCert, clientK
 				"sslkey":      {clientKey},
 			}.Encode(),
 		}
-		var err error
-		db, err = connutil.OpenPostgres("pgx", u.String())
-		if err != nil {
-			return nil, err
-		}
-		defer db.Close()
 	} else {
 		u = url.URL{
 			Scheme:   "postgres",
@@ -243,18 +229,9 @@ func connectPostgresSSL(t *testing.T, host, sslMode, caCert, clientCert, clientK
 			Path:     "postgres",
 			RawQuery: url.Values{"sslmode": {sslMode}}.Encode(),
 		}
-		var err error
-		db, err = sql.Open("pgx", u.String())
-		if err != nil {
-			return nil, err
-		}
-		defer db.Close()
 	}
 
-	if err := db.Ping(); err != nil {
-		return nil, err
-	}
-	return docker.NewServiceURL(u), nil
+	return docker.NewServiceURL(u)
 }
 
 func connectPostgres(password, repo string, useFallback bool) docker.ServiceAdapter {

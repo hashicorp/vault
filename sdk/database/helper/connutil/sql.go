@@ -232,6 +232,10 @@ func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, er
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse config: %w", err)
 		}
+		if config.TLSConfig == nil {
+			// handle sslmode=disable
+			config.TLSConfig = &tls.Config{}
+		}
 
 		config.TLSConfig.RootCAs = c.TLSConfig.RootCAs
 		config.TLSConfig.ClientCAs = c.TLSConfig.ClientCAs
@@ -249,7 +253,7 @@ func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, er
 	} else if driverName == dbTypePostgres && os.Getenv(pluginutil.PluginUsePostgresSSLInline) != "" {
 		var err error
 		// TODO: remove this deprecated function call in a future SDK version
-		c.db, err = OpenPostgres(driverName, conn)
+		c.db, err = openPostgres(driverName, conn)
 		if err != nil {
 			return nil, fmt.Errorf("failed to open connection: %w", err)
 		}
