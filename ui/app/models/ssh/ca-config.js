@@ -26,7 +26,7 @@ const validations = {
         }
         return true;
       },
-      message: 'Public key and Private Key are both required if Generate Signing Key is false.',
+      message: 'Public Key and Private Key are both required if Generate Signing Key is false.',
     },
   ],
 };

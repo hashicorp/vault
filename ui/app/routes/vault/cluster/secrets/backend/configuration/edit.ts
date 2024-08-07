@@ -15,11 +15,11 @@ import type Store from '@ember-data/store';
 import type SecretEngineModel from 'vault/models/secret-engine';
 
 // This route file is reused for all configurable secret engines.
-// It's generates models the various models based on the engine type.
+// It generates config models based on the engine type.
 // Saving and updating of those models are done within the engine specific components.
 
 const CONFIG_ADAPTERS_PATHS: Record<string, string[]> = {
-  // aws: ['aws/lease-config', 'aws/root-config'],
+  // aws: ['aws/lease-config', 'aws/root-config'], TODO will be uncommented when AWS refactor occurs
   ssh: ['ssh/ca-config'],
 };
 
@@ -37,7 +37,7 @@ export default class SecretsBackendConfigurationEdit extends Route {
       set(error, 'httpStatus', 404);
       throw error;
     }
-
+    // TODO this conditional will be removed when we handle AWS
     if (type !== 'aws') {
       // generate the model based on the engine type.
       // and pre-set with the type and backend (e.g. type: ssh, id: ssh-123)
@@ -65,9 +65,7 @@ export default class SecretsBackendConfigurationEdit extends Route {
           }
         }
       }
-      // TODO this conditional will be removed when we handle AWS
-
-      // replace the adapterPath with a useable model name to pass to the components (ssh/ca-config -> ssh-ca-config)
+      // replace the adapterPath with a model name that can be passed to the components (ex: ssh/ca-config -> ssh-ca-config)
       for (const key in model) {
         if (key !== 'type' && key !== 'id') {
           const newKey = key.replace(/\//g, '-');
@@ -77,10 +75,11 @@ export default class SecretsBackendConfigurationEdit extends Route {
       }
       return model;
     } else {
+      // TODO for now AWS configs rely on the secret-engine model and adapter. This will be refactored.
       return await this.store.findRecord('secret-engine', backend);
     }
   }
-  // TODO everything below line will be removed once we handle AWS
+  // TODO everything below line will be removed once we handle AWS. This is the old code wrapped in AWS conditionals where appropriate
   afterModel(model: Record<string, unknown>) {
     const type = model.type;
 

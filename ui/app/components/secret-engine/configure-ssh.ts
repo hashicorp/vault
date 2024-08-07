@@ -58,7 +58,7 @@ export default class ConfigureSshComponent extends Component<Args> {
       this.flashMessages.danger('Please correct the errors in the form before submitting.');
       return;
     }
-    // Check if any of the models attributes have changed.
+    // Check if any of the model's attributes have changed.
     // If no changes to the model, transition and notify user.
     // Otherwise, save the model.
     const attributesChanged = Object.keys(model.changedAttributes()).length > 0;
@@ -78,7 +78,7 @@ export default class ConfigureSshComponent extends Component<Args> {
   }
 
   transition(id: string) {
-    // prevent transition if there are errors with root configuration
+    // prevent transition if there are errors with ca configuration
     if (this.errorMessage) {
       this.invalidFormAlert = 'There was an error submitting this form.';
     } else {
@@ -111,7 +111,7 @@ export default class ConfigureSshComponent extends Component<Args> {
     const { model } = this.args;
     try {
       await model.destroyRecord();
-      this.flashMessages.success('Ca certificate deleted successfully.');
+      this.flashMessages.success('CA information deleted successfully.');
       this.transition(this.args.id);
     } catch (error) {
       model.rollbackAttributes();

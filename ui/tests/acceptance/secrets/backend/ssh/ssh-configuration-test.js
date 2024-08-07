@@ -112,7 +112,7 @@ module('Acceptance | ssh | configuration', function (hooks) {
     await click(SES.ssh.save);
     assert
       .dom(GENERAL.inlineError)
-      .hasText('Public key and Private Key are both required if Generate Signing Key is false.');
+      .hasText('Public Key and Private Key are both required if Generate Signing Key is false.');
     assert.true(
       this.flashDangerSpy.calledWith('Please correct the errors in the form before submitting.'),
       'Flash message shows validation errors encountered.'
