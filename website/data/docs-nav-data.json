@@ -258,6 +258,10 @@
         "path": "concepts/resource-quotas"
       },
       {
+        "title": "Billing Start Date",
+        "path": "concepts/billing-start-date"
+      },
+      {
         "title": "Client count",
         "routes": [
           {
@@ -376,7 +380,7 @@
           },
           {
             "title": "TCP",
-            "routes": [  
+            "routes": [
               {
                 "title": "Overview",
                 "path": "configuration/listener/tcp"
@@ -1116,7 +1120,7 @@
             "path": "commands/transform/import"
           }
         ]
-      },      
+      },
       {
         "title": "<code>unwrap</code>",
         "path": "commands/unwrap"
@@ -2208,8 +2212,12 @@
                         "path": "platform/k8s/vso/sources/vault"
                       },
                       {
-                        "title": "Auth Methods",
+                        "title": "Authentication",
                         "routes": [
+                          {
+                            "title": "Overview",
+                            "path": "platform/k8s/vso/sources/vault/auth"
+                          },
                           {
                             "title": "AWS",
                             "path": "platform/k8s/vso/sources/vault/auth/aws"
@@ -2223,6 +2231,10 @@
                       {
                         "title": "Encrypted client cache",
                         "path": "platform/k8s/vso/sources/vault/client-cache"
+                      },
+                      {
+                        "title": "Instant updates",
+                        "path": "platform/k8s/vso/sources/vault/instant-updates"
                       }
                     ]
                   },
@@ -2847,6 +2859,15 @@
           {
             "title": "Run Vault with many namespaces",
             "path": "enterprise/namespaces/namespace-limits",
+            "badge": {
+              "text": "ENTERPRISE",
+              "type": "outlined",
+              "color": "neutral"
+            }
+          },
+          {
+            "title": "Configure cross namespace access",
+            "path": "enterprise/namespaces/configure-cross-namespace-access",
             "badge": {
               "text": "ENTERPRISE",
               "type": "outlined",

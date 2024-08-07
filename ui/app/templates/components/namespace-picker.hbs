@@ -4,7 +4,7 @@
 ~}}
 
 <div class="namespace-picker" ...attributes>
-  <BasicDropdown @horizontalPosition="left" @verticalPosition="above" as |D|>
+  <BasicDropdown @horizontalPosition="left" @verticalPosition="above" @renderInPlace={{true}} as |D|>
     <D.Trigger
       @htmlTag="button"
       class="button is-transparent namespace-picker-trigger has-current-color"

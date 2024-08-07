@@ -31,8 +31,8 @@ module('Integration | Component | tools/unwrap', function (hooks) {
     assert.dom('h1').hasText('Unwrap Data', 'Title renders');
     assert.dom(TS.submit).hasText('Unwrap data');
     assert.dom(TS.toolsInput('unwrap-token')).hasValue('');
-    assert.dom(TS.tab('data')).doesNotExist();
-    assert.dom(TS.tab('details')).doesNotExist();
+    assert.dom(GENERAL.hdsTab('data')).doesNotExist();
+    assert.dom(GENERAL.hdsTab('details')).doesNotExist();
     assert.dom('.CodeMirror').doesNotExist();
     assert.dom(TS.button('Done')).doesNotExist();
   });
@@ -77,10 +77,10 @@ module('Integration | Component | tools/unwrap', function (hooks) {
     assert.true(flashSpy.calledWith('Unwrap was successful.'), 'it renders success flash');
     assert.dom('label').hasText('Unwrapped Data');
     assert.strictEqual(codemirror().getValue(' '), '{   "foo": "bar" }', 'it renders unwrapped data');
-    assert.dom(TS.tab('data')).hasAttribute('aria-selected', 'true');
+    assert.dom(GENERAL.hdsTab('data')).hasAttribute('aria-selected', 'true');
 
-    await click(TS.tab('details'));
-    assert.dom(TS.tab('details')).hasAttribute('aria-selected', 'true');
+    await click(GENERAL.hdsTab('details'));
+    assert.dom(GENERAL.hdsTab('details')).hasAttribute('aria-selected', 'true');
     assert
       .dom(`${GENERAL.infoRowValue('Renewable')} ${GENERAL.icon('x-square')}`)
       .exists('renders falsy icon for renewable');
@@ -121,7 +121,7 @@ module('Integration | Component | tools/unwrap', function (hooks) {
     await click(TS.submit);
 
     await waitUntil(() => find('.CodeMirror'));
-    await click(TS.tab('details'));
+    await click(GENERAL.hdsTab('details'));
     assert
       .dom(`${GENERAL.infoRowValue('Renewable')} ${GENERAL.icon('check-circle')}`)
       .exists('renders truthy icon for renewable');

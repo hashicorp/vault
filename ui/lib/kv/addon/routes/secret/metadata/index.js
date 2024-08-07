@@ -16,7 +16,7 @@ export default class KvSecretMetadataIndexRoute extends Route {
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: resolvedModel.backend, route: 'list', model: resolvedModel.backend },
       ...breadcrumbsForSecret(resolvedModel.backend, resolvedModel.path),
-      { label: 'metadata' },
+      { label: 'Metadata' },
     ];
 
     controller.set('breadcrumbs', breadcrumbsArray);

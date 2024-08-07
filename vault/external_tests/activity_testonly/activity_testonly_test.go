@@ -6,12 +6,18 @@
 package activity_testonly
 
 import (
+	"bytes"
 	"context"
+	"encoding/csv"
 	"encoding/json"
+	"fmt"
+	"io"
+	"math"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 	"github.com/hashicorp/vault/helper/timeutil"
@@ -446,4 +452,330 @@ func Test_ActivityLog_MountDeduplication(t *testing.T) {
 		"cubbyhole/": 2,
 		"secret/":    1,
 	}, mountSet)
+}
+
+// getJSONExport is used to fetch activity export records using json format.
+// The records will returned as a map keyed by client ID.
+func getJSONExport(t *testing.T, client *api.Client, monthsPreviousTo int, now time.Time) (map[string]vault.ActivityLogExportRecord, error) {
+	t.Helper()
+
+	resp, err := client.Logical().ReadRawWithData("sys/internal/counters/activity/export", map[string][]string{
+		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(monthsPreviousTo, now)).Format(time.RFC3339)},
+		"end_time":   {timeutil.EndOfMonth(now).Format(time.RFC3339)},
+		"format":     {"json"},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	contents, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	buf := bytes.NewBuffer(contents)
+	decoder := json.NewDecoder(buf)
+	clients := make(map[string]vault.ActivityLogExportRecord)
+
+	for {
+
+		var record vault.ActivityLogExportRecord
+		err := decoder.Decode(&record)
+		if err != nil {
+			return nil, err
+		}
+
+		clients[record.ClientID] = record
+
+		if !decoder.More() {
+			break
+		}
+	}
+
+	return clients, nil
+}
+
+// getCSVExport is used to fetch activity export records using csv format.
+// The records will returned as a map keyed by client ID.
+func getCSVExport(t *testing.T, client *api.Client, monthsPreviousTo int, now time.Time) (map[string]vault.ActivityLogExportRecord, error) {
+	t.Helper()
+
+	resp, err := client.Logical().ReadRawWithData("sys/internal/counters/activity/export", map[string][]string{
+		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(monthsPreviousTo, now)).Format(time.RFC3339)},
+		"end_time":   {timeutil.EndOfMonth(now).Format(time.RFC3339)},
+		"format":     {"csv"},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	csvRdr := csv.NewReader(resp.Body)
+	clients := make(map[string]vault.ActivityLogExportRecord)
+
+	csvRecords, err := csvRdr.ReadAll()
+	if err != nil {
+		return nil, err
+	}
+
+	csvColumns := csvRecords[0]
+
+	for i := 1; i < len(csvRecords); i++ {
+		recordMap := make(map[string]interface{})
+
+		for j, k := range csvColumns {
+			recordMap[k] = csvRecords[i][j]
+		}
+
+		var record vault.ActivityLogExportRecord
+		err = mapstructure.Decode(recordMap, &record)
+		if err != nil {
+			return nil, err
+		}
+
+		clients[record.ClientID] = record
+	}
+
+	return clients, nil
+}
+
+// Test_ActivityLog_Export_Sudo ensures that the export API is only accessible via
+// a root token or a token with a sudo policy.
+func Test_ActivityLog_Export_Sudo(t *testing.T) {
+	timeutil.SkipAtEndOfMonth(t)
+	t.Parallel()
+
+	now := time.Now().UTC()
+	var err error
+
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+	_, err = client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
+		"enabled": "enable",
+	})
+	require.NoError(t, err)
+
+	rootToken := client.Token()
+
+	_, err = clientcountutil.NewActivityLogData(client).
+		NewCurrentMonthData().
+		NewClientsSeen(10).
+		Write(context.Background(), generation.WriteOptions_WRITE_ENTITIES)
+
+	require.NoError(t, err)
+
+	// Ensure access via root token
+	clients, err := getJSONExport(t, client, 1, now)
+	require.NoError(t, err)
+	require.Len(t, clients, 10)
+
+	client.Sys().PutPolicy("non-sudo-export", `
+path "sys/internal/counters/activity/export" {
+	capabilities = ["read"]
+}
+	`)
+
+	secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+		Policies: []string{"non-sudo-export"},
+	})
+	require.NoError(t, err)
+
+	nonSudoToken := secret.Auth.ClientToken
+	client.SetToken(nonSudoToken)
+
+	// Ensure no access via token without sudo access
+	clients, err = getJSONExport(t, client, 1, now)
+	require.ErrorContains(t, err, "permission denied")
+
+	client.SetToken(rootToken)
+	client.Sys().PutPolicy("sudo-export", `
+path "sys/internal/counters/activity/export" {
+	capabilities = ["read", "sudo"]
+}
+	`)
+
+	secret, err = client.Auth().Token().Create(&api.TokenCreateRequest{
+		Policies: []string{"sudo-export"},
+	})
+	require.NoError(t, err)
+
+	sudoToken := secret.Auth.ClientToken
+	client.SetToken(sudoToken)
+
+	// Ensure access via token with sudo access
+	clients, err = getJSONExport(t, client, 1, now)
+	require.NoError(t, err)
+	require.Len(t, clients, 10)
+}
+
+// TestHandleQuery_MultipleMounts creates a cluster with
+// two userpass mounts. It then tests verifies that
+// the total new counts are calculated within a reasonably level of accuracy for
+// various numbers of clients in each mount.
+func TestHandleQuery_MultipleMounts(t *testing.T) {
+	tests := map[string]struct {
+		twoMonthsAgo          [][]int
+		oneMonthAgo           [][]int
+		currentMonth          [][]int
+		expectedNewClients    int
+		expectedTotalAccuracy float64
+	}{
+		"low volume, all mounts": {
+			twoMonthsAgo: [][]int{
+				{20, 20},
+			},
+			oneMonthAgo: [][]int{
+				{30, 30},
+			},
+			currentMonth: [][]int{
+				{40, 40},
+			},
+			expectedNewClients:    80,
+			expectedTotalAccuracy: 1,
+		},
+		"medium volume, all mounts": {
+			twoMonthsAgo: [][]int{
+				{200, 200},
+			},
+			oneMonthAgo: [][]int{
+				{300, 300},
+			},
+			currentMonth: [][]int{
+				{400, 400},
+			},
+			expectedNewClients:    800,
+			expectedTotalAccuracy: 0.98,
+		},
+		"higher volume, all mounts": {
+			twoMonthsAgo: [][]int{
+				{200, 200},
+			},
+			oneMonthAgo: [][]int{
+				{300, 300},
+			},
+			currentMonth: [][]int{
+				{2000, 5000},
+			},
+			expectedNewClients:    7000,
+			expectedTotalAccuracy: 0.95,
+		},
+		"higher volume, no repeats": {
+			twoMonthsAgo: [][]int{
+				{200, 200},
+			},
+			oneMonthAgo: [][]int{
+				{300, 300},
+			},
+			currentMonth: [][]int{
+				{4000, 6000},
+			},
+			expectedNewClients:    10000,
+			expectedTotalAccuracy: 0.98,
+		},
+	}
+
+	for i, tt := range tests {
+		testname := fmt.Sprintf("%s", i)
+		t.Run(testname, func(t *testing.T) {
+			var err error
+			cluster := minimal.NewTestSoloCluster(t, nil)
+			client := cluster.Cores[0].Client
+			_, err = client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
+				"enabled": "enable",
+			})
+			require.NoError(t, err)
+
+			// Create two namespaces
+			namespaces := []string{namespace.RootNamespaceID}
+			mounts := make(map[string][]string)
+
+			// Add two userpass mounts to each namespace
+			for _, ns := range namespaces {
+				err = client.WithNamespace(ns).Sys().EnableAuthWithOptions("userpass1", &api.EnableAuthOptions{
+					Type: "userpass",
+				})
+				require.NoError(t, err)
+				err = client.WithNamespace(ns).Sys().EnableAuthWithOptions("userpass2", &api.EnableAuthOptions{
+					Type: "userpass",
+				})
+				require.NoError(t, err)
+				mounts[ns] = []string{"auth/userpass1", "auth/userpass2"}
+			}
+
+			activityLogGenerator := clientcountutil.NewActivityLogData(client)
+
+			// Write two months ago data
+			activityLogGenerator = activityLogGenerator.NewPreviousMonthData(2)
+			for nsIndex, nsId := range namespaces {
+				for mountIndex, mount := range mounts[nsId] {
+					activityLogGenerator = activityLogGenerator.
+						NewClientsSeen(tt.twoMonthsAgo[nsIndex][mountIndex], clientcountutil.WithClientNamespace(nsId), clientcountutil.WithClientMount(mount))
+				}
+			}
+
+			// Write previous months data
+			activityLogGenerator = activityLogGenerator.NewPreviousMonthData(1)
+			for nsIndex, nsId := range namespaces {
+				for mountIndex, mount := range mounts[nsId] {
+					activityLogGenerator = activityLogGenerator.
+						NewClientsSeen(tt.oneMonthAgo[nsIndex][mountIndex], clientcountutil.WithClientNamespace(nsId), clientcountutil.WithClientMount(mount))
+				}
+			}
+
+			// Write current month data
+			activityLogGenerator = activityLogGenerator.NewCurrentMonthData()
+			for nsIndex, nsPath := range namespaces {
+				for mountIndex, mount := range mounts[nsPath] {
+					activityLogGenerator = activityLogGenerator.
+						RepeatedClientSeen(clientcountutil.WithClientNamespace(nsPath), clientcountutil.WithClientMount(mount)).
+						NewClientsSeen(tt.currentMonth[nsIndex][mountIndex], clientcountutil.WithClientNamespace(nsPath), clientcountutil.WithClientMount(mount))
+				}
+			}
+
+			// Write all the client count data
+			_, err = activityLogGenerator.Write(context.Background(), generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES, generation.WriteOptions_WRITE_ENTITIES)
+			require.NoError(t, err)
+
+			endOfCurrentMonth := timeutil.EndOfMonth(time.Now().UTC())
+
+			// query activity log
+			resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
+				"end_time":   {endOfCurrentMonth.Format(time.RFC3339)},
+				"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(2, time.Now().UTC())).Format(time.RFC3339)},
+			})
+			require.NoError(t, err)
+
+			// Ensure that the month response is the same as the totals, because all clients
+			// are new clients and there will be no approximation in the single month partial
+			// case
+			monthsRaw, ok := resp.Data["months"]
+			if !ok {
+				t.Fatalf("malformed results. got %v", resp.Data)
+			}
+			monthsResponse := make([]*vault.ResponseMonth, 0)
+			err = mapstructure.Decode(monthsRaw, &monthsResponse)
+
+			currentMonthClients := monthsResponse[len(monthsResponse)-1]
+
+			// Now verify that the new client totals for ALL namespaces are approximately accurate (there are no namespaces in CE)
+			newClientsError := math.Abs((float64)(currentMonthClients.NewClients.Counts.Clients - tt.expectedNewClients))
+			newClientsErrorMargin := newClientsError / (float64)(tt.expectedNewClients)
+			expectedAccuracyCalc := (1 - tt.expectedTotalAccuracy) * 100 / 100
+			if newClientsErrorMargin > expectedAccuracyCalc {
+				t.Fatalf("bad accuracy: expected %+v, found %+v", expectedAccuracyCalc, newClientsErrorMargin)
+			}
+
+			// Verify that the totals for the clients are visibly sensible (that is the total of all the individual new clients per namespace)
+			total := 0
+			for _, newClientCounts := range currentMonthClients.NewClients.Namespaces {
+				total += newClientCounts.Counts.Clients
+			}
+			if diff := math.Abs(float64(currentMonthClients.NewClients.Counts.Clients - total)); diff >= 1 {
+				t.Fatalf("total expected was %d but got %d", currentMonthClients.NewClients.Counts.Clients, total)
+			}
+		})
+	}
 }

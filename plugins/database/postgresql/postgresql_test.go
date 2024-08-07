@@ -17,14 +17,14 @@ import (
 	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
-	"github.com/hashicorp/vault/sdk/helper/docker"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/helper/template"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func getPostgreSQL(t *testing.T, options map[string]interface{}) (*PostgreSQL, func()) {
-	cleanup, connURL := postgresql.PrepareTestContainer(t, "13.4-buster")
+	cleanup, connURL := postgresql.PrepareTestContainer(t)
 
 	connectionDetails := map[string]interface{}{
 		"connection_url": connURL,
@@ -58,6 +58,274 @@ func TestPostgreSQL_Initialize(t *testing.T) {
 	}
 }
 
+// TestPostgreSQL_InitializeMultiHost tests the functionality of Postgres's
+// multi-host connection strings.
+func TestPostgreSQL_InitializeMultiHost(t *testing.T) {
+	cleanup, connURL := postgresql.PrepareTestContainerMultiHost(t)
+	defer cleanup()
+
+	connectionDetails := map[string]interface{}{
+		"connection_url":       connURL,
+		"max_open_connections": 5,
+	}
+
+	req := dbplugin.InitializeRequest{
+		Config:           connectionDetails,
+		VerifyConnection: true,
+	}
+
+	db := new()
+	dbtesting.AssertInitialize(t, db, req)
+
+	if !db.Initialized {
+		t.Fatal("Database should be initialized")
+	}
+
+	if err := db.Close(); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+}
+
+// TestPostgreSQL_InitializeSSLFeatureFlag tests that the VAULT_PLUGIN_USE_POSTGRES_SSLINLINE
+// flag guards against unwanted usage of the deprecated SSL client authentication path.
+// TODO: remove this when we remove the underlying feature in a future SDK version
+func TestPostgreSQL_InitializeSSLFeatureFlag(t *testing.T) {
+	// set the flag to true so we can call PrepareTestContainerWithSSL
+	// which does a validation check on the connection
+	t.Setenv(pluginutil.PluginUsePostgresSSLInline, "true")
+
+	cleanup, connURL := postgresql.PrepareTestContainerWithSSL(t, context.Background(), "verify-ca", false)
+	t.Cleanup(cleanup)
+
+	type testCase struct {
+		env           string
+		wantErr       bool
+		expectedError string
+	}
+
+	tests := map[string]testCase{
+		"feature flag is true": {
+			env:           "true",
+			wantErr:       false,
+			expectedError: "",
+		},
+		"feature flag is unset or empty": {
+			env:     "",
+			wantErr: true,
+			// this error is expected because the env var unset means we are
+			// using pgx's native connection string parsing which does not
+			// support inlining of the certificate material in the sslrootcert,
+			// sslcert, and sslkey fields
+			expectedError: "error verifying connection",
+		},
+		"feature flag is false": {
+			env:           "false",
+			wantErr:       true,
+			expectedError: "failed to open postgres connection with deprecated funtion",
+		},
+		"feature flag is invalid": {
+			env:           "foo",
+			wantErr:       true,
+			expectedError: "failed to open postgres connection with deprecated funtion",
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			// update the env var with the value we are testing
+			t.Setenv(pluginutil.PluginUsePostgresSSLInline, test.env)
+
+			connectionDetails := map[string]interface{}{
+				"connection_url":       connURL,
+				"max_open_connections": 5,
+			}
+
+			req := dbplugin.InitializeRequest{
+				Config:           connectionDetails,
+				VerifyConnection: true,
+			}
+
+			db := new()
+			_, err := dbtesting.VerifyInitialize(t, db, req)
+			if test.wantErr && err == nil {
+				t.Fatal("expected error, got nil")
+			} else if test.wantErr && !strings.Contains(err.Error(), test.expectedError) {
+				t.Fatalf("got: %s, want: %s", err.Error(), test.expectedError)
+			}
+
+			if !test.wantErr && !db.Initialized {
+				t.Fatal("Database should be initialized")
+			}
+
+			if err := db.Close(); err != nil {
+				t.Fatalf("err: %s", err)
+			}
+			// unset for the next test case
+			os.Unsetenv(pluginutil.PluginUsePostgresSSLInline)
+		})
+	}
+}
+
+// TestPostgreSQL_InitializeSSL tests that we can successfully authenticate
+// with a postgres server via ssl with a URL connection string or DSN (key/value)
+// for each ssl mode.
+// TODO: remove this when we remove the underlying feature in a future SDK version
+func TestPostgreSQL_InitializeSSL(t *testing.T) {
+	// required to enable the sslinline custom parsing
+	t.Setenv(pluginutil.PluginUsePostgresSSLInline, "true")
+
+	type testCase struct {
+		sslMode       string
+		useDSN        bool
+		useFallback   bool
+		wantErr       bool
+		expectedError string
+	}
+
+	tests := map[string]testCase{
+		"disable sslmode": {
+			sslMode:       "disable",
+			wantErr:       true,
+			expectedError: "error verifying connection",
+		},
+		"allow sslmode": {
+			sslMode: "allow",
+			wantErr: false,
+		},
+		"prefer sslmode": {
+			sslMode: "prefer",
+			wantErr: false,
+		},
+		"require sslmode": {
+			sslMode: "require",
+			wantErr: false,
+		},
+		"verify-ca sslmode": {
+			sslMode: "verify-ca",
+			wantErr: false,
+		},
+		"disable sslmode with DSN": {
+			sslMode:       "disable",
+			useDSN:        true,
+			wantErr:       true,
+			expectedError: "error verifying connection",
+		},
+		"allow sslmode with DSN": {
+			sslMode: "allow",
+			useDSN:  true,
+			wantErr: false,
+		},
+		"prefer sslmode with DSN": {
+			sslMode: "prefer",
+			useDSN:  true,
+			wantErr: false,
+		},
+		"require sslmode with DSN": {
+			sslMode: "require",
+			useDSN:  true,
+			wantErr: false,
+		},
+		"verify-ca sslmode with DSN": {
+			sslMode: "verify-ca",
+			useDSN:  true,
+			wantErr: false,
+		},
+		"disable sslmode with fallback": {
+			sslMode:       "disable",
+			useFallback:   true,
+			wantErr:       true,
+			expectedError: "error verifying connection",
+		},
+		"allow sslmode with fallback": {
+			sslMode:     "allow",
+			useFallback: true,
+		},
+		"prefer sslmode with fallback": {
+			sslMode:     "prefer",
+			useFallback: true,
+		},
+		"require sslmode with fallback": {
+			sslMode:     "require",
+			useFallback: true,
+		},
+		"verify-ca sslmode with fallback": {
+			sslMode:     "verify-ca",
+			useFallback: true,
+		},
+		"disable sslmode with DSN with fallback": {
+			sslMode:       "disable",
+			useDSN:        true,
+			useFallback:   true,
+			wantErr:       true,
+			expectedError: "error verifying connection",
+		},
+		"allow sslmode with DSN with fallback": {
+			sslMode:     "allow",
+			useDSN:      true,
+			useFallback: true,
+			wantErr:     false,
+		},
+		"prefer sslmode with DSN with fallback": {
+			sslMode:     "prefer",
+			useDSN:      true,
+			useFallback: true,
+			wantErr:     false,
+		},
+		"require sslmode with DSN with fallback": {
+			sslMode:     "require",
+			useDSN:      true,
+			useFallback: true,
+			wantErr:     false,
+		},
+		"verify-ca sslmode with DSN with fallback": {
+			sslMode:     "verify-ca",
+			useDSN:      true,
+			useFallback: true,
+			wantErr:     false,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			cleanup, connURL := postgresql.PrepareTestContainerWithSSL(t, context.Background(), test.sslMode, test.useFallback)
+			t.Cleanup(cleanup)
+
+			if test.useDSN {
+				var err error
+				connURL, err = dbutil.ParseURL(connURL)
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+			connectionDetails := map[string]interface{}{
+				"connection_url":       connURL,
+				"max_open_connections": 5,
+			}
+
+			req := dbplugin.InitializeRequest{
+				Config:           connectionDetails,
+				VerifyConnection: true,
+			}
+
+			db := new()
+			_, err := dbtesting.VerifyInitialize(t, db, req)
+			if test.wantErr && err == nil {
+				t.Fatal("expected error, got nil")
+			} else if test.wantErr && !strings.Contains(err.Error(), test.expectedError) {
+				t.Fatalf("got: %s, want: %s", err.Error(), test.expectedError)
+			}
+
+			if !test.wantErr && !db.Initialized {
+				t.Fatal("Database should be initialized")
+			}
+
+			if err := db.Close(); err != nil {
+				t.Fatalf("err: %s", err)
+			}
+		})
+	}
+}
+
 func TestPostgreSQL_InitializeWithStringVals(t *testing.T) {
 	db, cleanup := getPostgreSQL(t, map[string]interface{}{
 		"max_open_connections": "5",
@@ -70,7 +338,7 @@ func TestPostgreSQL_InitializeWithStringVals(t *testing.T) {
 }
 
 func TestPostgreSQL_Initialize_ConnURLWithDSNFormat(t *testing.T) {
-	cleanup, connURL := postgresql.PrepareTestContainer(t, "13.4-buster")
+	cleanup, connURL := postgresql.PrepareTestContainer(t)
 	defer cleanup()
 
 	dsnConnURL, err := dbutil.ParseURL(connURL)
@@ -185,7 +453,7 @@ func TestPostgreSQL_Initialize_CloudGCP(t *testing.T) {
 // TestPostgreSQL_PasswordAuthentication tests that the default "password_authentication" is "none", and that
 // an error is returned if an invalid "password_authentication" is provided.
 func TestPostgreSQL_PasswordAuthentication(t *testing.T) {
-	cleanup, connURL := postgresql.PrepareTestContainer(t, "13.4-buster")
+	cleanup, connURL := postgresql.PrepareTestContainer(t)
 	defer cleanup()
 
 	dsnConnURL, err := dbutil.ParseURL(connURL)
@@ -227,7 +495,7 @@ func TestPostgreSQL_PasswordAuthentication(t *testing.T) {
 // TestPostgreSQL_PasswordAuthentication_SCRAMSHA256 tests that password_authentication works when set to scram-sha-256.
 // When sending an encrypted password, the raw password should still successfully authenticate the user.
 func TestPostgreSQL_PasswordAuthentication_SCRAMSHA256(t *testing.T) {
-	cleanup, connURL := postgresql.PrepareTestContainer(t, "13.4-buster")
+	cleanup, connURL := postgresql.PrepareTestContainer(t)
 	defer cleanup()
 
 	dsnConnURL, err := dbutil.ParseURL(connURL)
@@ -1092,7 +1360,7 @@ func TestUsernameGeneration(t *testing.T) {
 }
 
 func TestNewUser_CustomUsername(t *testing.T) {
-	cleanup, connURL := postgresql.PrepareTestContainer(t, "13.4-buster")
+	cleanup, connURL := postgresql.PrepareTestContainer(t)
 	defer cleanup()
 
 	type testCase struct {
@@ -1266,139 +1534,6 @@ func TestNewUser_CloudGCP(t *testing.T) {
 			require.Regexp(t, test.expectedRegex, newUserResp.Username)
 		})
 	}
-}
-
-// This is a long-running integration test which tests the functionality of Postgres's multi-host
-// connection strings. It uses two Postgres containers preconfigured with Replication Manager
-// provided by Bitnami. This test currently does not run in CI and must be run manually. This is
-// due to the test length, as it requires multiple sleep calls to ensure cluster setup and
-// primary node failover occurs before the test steps continue.
-//
-// To run the test, set the environment variable POSTGRES_MULTIHOST_NET to the value of
-// a docker network you've preconfigured, e.g.
-// 'docker network create -d bridge postgres-repmgr'
-// 'export POSTGRES_MULTIHOST_NET=postgres-repmgr'
-func TestPostgreSQL_Repmgr(t *testing.T) {
-	_, exists := os.LookupEnv("POSTGRES_MULTIHOST_NET")
-	if !exists {
-		t.Skipf("POSTGRES_MULTIHOST_NET not set, skipping test")
-	}
-
-	// Run two postgres-repmgr containers in a replication cluster
-	db0, runner0, url0, container0 := testPostgreSQL_Repmgr_Container(t, "psql-repl-node-0")
-	_, _, url1, _ := testPostgreSQL_Repmgr_Container(t, "psql-repl-node-1")
-
-	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
-	defer cancel()
-
-	time.Sleep(10 * time.Second)
-
-	// Write a read role to the cluster
-	_, err := db0.NewUser(ctx, dbplugin.NewUserRequest{
-		Statements: dbplugin.Statements{
-			Commands: []string{
-				`CREATE ROLE "ro" NOINHERIT;
-				GRANT SELECT ON ALL TABLES IN SCHEMA public TO "ro";`,
-			},
-		},
-	})
-	if err != nil {
-		t.Fatalf("no error expected, got: %s", err)
-	}
-
-	// Open a connection to both databases using the multihost connection string
-	connectionDetails := map[string]interface{}{
-		"connection_url": fmt.Sprintf("postgresql://{{username}}:{{password}}@%s,%s/postgres?target_session_attrs=read-write", getHost(url0), getHost(url1)),
-		"username":       "postgres",
-		"password":       "secret",
-	}
-	req := dbplugin.InitializeRequest{
-		Config:           connectionDetails,
-		VerifyConnection: true,
-	}
-
-	db := new()
-	dbtesting.AssertInitialize(t, db, req)
-	if !db.Initialized {
-		t.Fatal("Database should be initialized")
-	}
-	defer db.Close()
-
-	// Add a user to the cluster, then stop the primary container
-	if err = testPostgreSQL_Repmgr_AddUser(ctx, db); err != nil {
-		t.Fatalf("no error expected, got: %s", err)
-	}
-	postgresql.StopContainer(t, ctx, runner0, container0)
-
-	// Try adding a new user immediately - expect failure as the database
-	// cluster is still switching primaries
-	err = testPostgreSQL_Repmgr_AddUser(ctx, db)
-	if !strings.HasSuffix(err.Error(), "ValidateConnect failed (read only connection)") {
-		t.Fatalf("expected error was not received, got: %s", err)
-	}
-
-	time.Sleep(20 * time.Second)
-
-	// Try adding a new user again which should succeed after the sleep
-	// as the primary failover should have finished. Then, restart
-	// the first container which should become a secondary DB.
-	if err = testPostgreSQL_Repmgr_AddUser(ctx, db); err != nil {
-		t.Fatalf("no error expected, got: %s", err)
-	}
-	postgresql.RestartContainer(t, ctx, runner0, container0)
-
-	time.Sleep(10 * time.Second)
-
-	// A final new user to add, which should succeed after the secondary joins.
-	if err = testPostgreSQL_Repmgr_AddUser(ctx, db); err != nil {
-		t.Fatalf("no error expected, got: %s", err)
-	}
-
-	if err := db.Close(); err != nil {
-		t.Fatalf("err: %s", err)
-	}
-}
-
-func testPostgreSQL_Repmgr_Container(t *testing.T, name string) (*PostgreSQL, *docker.Runner, string, string) {
-	envVars := []string{
-		"REPMGR_NODE_NAME=" + name,
-		"REPMGR_NODE_NETWORK_NAME=" + name,
-	}
-
-	runner, cleanup, connURL, containerID := postgresql.PrepareTestContainerRepmgr(t, name, "13.4.0", envVars)
-	t.Cleanup(cleanup)
-
-	connectionDetails := map[string]interface{}{
-		"connection_url": connURL,
-	}
-	req := dbplugin.InitializeRequest{
-		Config:           connectionDetails,
-		VerifyConnection: true,
-	}
-	db := new()
-	dbtesting.AssertInitialize(t, db, req)
-	if !db.Initialized {
-		t.Fatal("Database should be initialized")
-	}
-
-	if err := db.Close(); err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	return db, runner, connURL, containerID
-}
-
-func testPostgreSQL_Repmgr_AddUser(ctx context.Context, db *PostgreSQL) error {
-	_, err := db.NewUser(ctx, dbplugin.NewUserRequest{
-		Statements: dbplugin.Statements{
-			Commands: []string{
-				`CREATE ROLE "{{name}}" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}' INHERIT;
-				GRANT ro TO "{{name}}";`,
-			},
-		},
-	})
-
-	return err
 }
 
 func getHost(url string) string {

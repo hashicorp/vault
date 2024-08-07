@@ -34,7 +34,7 @@ runs:
       env:
         GH_TOKEN: ${{ github.token }}
       run: |
-        VERSION=$(gh release list -R bufbuild/buf --exclude-drafts --exclude-pre-releases | grep ${{ inputs.version }} | cut -f1)
+        VERSION=$(./.github/scripts/retry-command.sh gh release list -R bufbuild/buf --exclude-drafts --exclude-pre-releases | grep ${{ inputs.version }} | cut -f1)
 
         mkdir -p $(dirname ${{ inputs.destination }})
         DESTINATION="$(readlink -f "${{ inputs.destination }}")"
@@ -60,7 +60,7 @@ runs:
         fi
 
         mkdir -p tmp
-        gh release download "$VERSION" -p "buf-${OS}-${ARCH}.tar.gz" -O tmp/buf.tgz -R bufbuild/buf
+        ./.github/scripts/retry-command.sh gh release download "$VERSION" --clobber -p "buf-${OS}-${ARCH}.tar.gz" -O tmp/buf.tgz -R bufbuild/buf
         pushd tmp && tar -xvf buf.tgz && popd
         mv tmp/buf/bin/buf "$DESTINATION"
         rm -rf tmp

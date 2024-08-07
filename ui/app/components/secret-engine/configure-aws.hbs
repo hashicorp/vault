@@ -1,0 +1,141 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<Hds::Tabs class="has-top-margin-l" as |T|>
+  <T.Tab data-test-tab="access-to-aws">
+    Dynamic IAM root credentials
+  </T.Tab>
+  <T.Tab data-test-tab="lease">
+    Leases
+  </T.Tab>
+  <T.Panel>
+    <form
+      onsubmit={{action
+        "saveRootCreds"
+        (hash access_key=@accessKey iam_endpoint=@iamEndpoint sts_endpoint=@stsEndpoint secret_key=@secretKey region=@region)
+      }}
+      data-test-aws-root-creds-form="true"
+      aria-label="save root creds form"
+    >
+      <div class="box is-fullwidth is-shadowless is-marginless">
+        <NamespaceReminder @mode="save" @noun="configuration" />
+        <p class="has-text-grey-dark">
+          Note: the client uses the official AWS SDK and will use the specified credentials, environment credentials, shared
+          file credentials, or IAM role/ECS task credentials in that order.
+        </p>
+      </div>
+
+      <div class="field">
+        <label for="access" class="is-label">
+          Access key
+        </label>
+        <div class="control">
+          <Input
+            @type="text"
+            id="access"
+            name="access"
+            class="input"
+            autocomplete="off"
+            spellcheck="false"
+            @value={{@accessKey}}
+            data-test-input="accessKey"
+          />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="secret" class="is-label">
+          Secret key
+        </label>
+        <div class="control">
+          <Input
+            @type="password"
+            id="secret"
+            name="secret"
+            class="input"
+            @value={{@secretKey}}
+            data-test-input="secretKey"
+          />
+        </div>
+      </div>
+
+      <ToggleButton @isOpen={{this.showOptions}} @onClick={{fn (mut this.showOptions)}} data-test-popup-menu-trigger />
+      {{#if this.showOptions}}
+        <div class="box is-marginless">
+          <div class="field">
+            <label for="region" class="is-label">
+              Region
+            </label>
+            <div class="control is-expanded">
+              <div class="select is-fullwidth">
+                <select
+                  name="region"
+                  id="region"
+                  onchange={{action (mut @region) value="target.value"}}
+                  data-test-select="region"
+                >
+                  <option value=""></option>
+                  {{#each (aws-regions) as |val|}}
+                    <option>{{val}}</option>
+                  {{/each}}
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="field">
+            <label for="iam" class="is-label">
+              IAM endpoint
+            </label>
+            <div class="control">
+              <Input @type="text" id="iam" name="iam" class="input" @value={{@iamEndpoint}} />
+            </div>
+          </div>
+          <div class="field">
+            <label for="sts" class="is-label">
+              STS endpoint
+            </label>
+            <div class="control">
+              <Input @type="text" id="sts" name="sts" class="input" @value={{@stsEndpoint}} />
+            </div>
+          </div>
+        </div>
+      {{/if}}
+
+      <div class="box is-bottomless is-fullwidth">
+        <Hds::Button @text="Save" data-test-save="root" type="submit" />
+      </div>
+    </form>
+  </T.Panel>
+  <T.Panel>
+    <form
+      onsubmit={{action "saveLease" (hash lease=@model.lease lease_max=@model.leaseMax)}}
+      aria-label="save lease form"
+      data-test-aws-leases-form="true"
+    >
+      <div class="box is-fullwidth is-shadowless is-marginless">
+        <NamespaceReminder @mode="saved" @noun="configuration" />
+        <MessageError @model={{@model}} />
+        <p class="has-text-grey-dark">
+          If you do not supply lease settings, we will use the default values in AWS.
+        </p>
+      </div>
+      <TtlPicker
+        @label="Lease"
+        @initialValue={{@model.lease}}
+        @initialEnabled={{@model.lease}}
+        @onChange={{fn this.handleTtlChange "lease"}}
+      />
+      <TtlPicker
+        @label="Maximum Lease"
+        @initialValue={{@model.leaseMax}}
+        @initialEnabled={{@model.leaseMax}}
+        @onChange={{fn this.handleTtlChange "leaseMax"}}
+      />
+      <div class="box is-bottomless is-fullwidth">
+        <Hds::Button @text="Save" data-test-save="lease" type="submit" />
+      </div>
+    </form>
+  </T.Panel>
+</Hds::Tabs>

@@ -5,7 +5,7 @@
 
 import Ember from 'ember';
 import { task, timeout } from 'ember-concurrency';
-import { getOwner } from '@ember/application';
+import { getOwner } from '@ember/owner';
 import { isArray } from '@ember/array';
 import { computed, get } from '@ember/object';
 import { alias } from '@ember/object/computed';
@@ -371,6 +371,7 @@ export default Service.extend({
   shouldRenew() {
     const now = this.now();
     const lastFetch = this.lastFetch;
+    // renewAfterEpoch is a unix timestamp of login time + half of ttl
     const renewTime = this.renewAfterEpoch;
     if (!this.currentTokenName || this.tokenExpired || this.allowExpiration || !renewTime) {
       return false;

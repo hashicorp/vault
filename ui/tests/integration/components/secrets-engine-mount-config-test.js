@@ -63,7 +63,9 @@ module('Integration | Component | secrets-engine-mount-config', function (hooks)
     assert.dom(selectors.rowValue('Local')).includesText('No', 'Local renders');
     assert.dom(selectors.rowValue('Seal Wrap')).includesText('Yes', 'Seal wrap renders');
     assert.dom(selectors.rowValue('Default Lease TTL')).includesText('0', 'Default Lease TTL renders');
-    assert.dom(selectors.rowValue('Max Lease TTL')).includesText('10000', 'Max Lease TTL renders');
+    assert
+      .dom(selectors.rowValue('Max Lease TTL'))
+      .includesText('2 hours 46 minutes 40 seconds', 'Max Lease TTL renders');
   });
 
   test('it should yield block for additional fields', async function (assert) {
