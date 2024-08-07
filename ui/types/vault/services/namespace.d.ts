@@ -17,5 +17,6 @@ export default class NamespaceService extends Service {
   relativeNamespace: string;
   setNamespace: () => void;
   findNamespacesForUser: () => void;
+  calcFullNamespacePath: (path: string) => string;
   reset: () => void;
 }

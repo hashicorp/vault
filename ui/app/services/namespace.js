@@ -5,7 +5,7 @@
 
 import Service, { service } from '@ember/service';
 import { task } from 'ember-concurrency';
-import { getRelativePath } from 'core/utils/sanitize-path';
+import { getRelativePath, sanitizePath } from 'core/utils/sanitize-path';
 import { tracked } from '@glimmer/tracking';
 import { buildWaiter } from '@ember/test-waiters';
 
@@ -49,6 +49,16 @@ export default class NamespaceService extends Service {
       return;
     }
     this.path = path;
+  }
+
+  /**
+   * fullNamespacePath is a helper method that returns the current namespace prefixed to the given namespace path
+   * @param {string} relativeNamespace
+   * @returns {string} sanitized full namespace path
+   */
+  calcFullNamespacePath(relativeNamespace) {
+    const currentNs = this.path;
+    return relativeNamespace ? sanitizePath(`${currentNs}/${relativeNamespace}`) : sanitizePath(currentNs);
   }
 
   @task({ drop: true })
