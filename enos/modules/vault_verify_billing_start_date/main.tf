@@ -25,7 +25,7 @@ variable "vault_instance_count" {
   description = "How many vault instances are in the cluster"
 }
 
-variable "vault_instances" {
+variable "hosts" {
   type = map(object({
     private_ip = string
     public_ip  = string
@@ -41,8 +41,8 @@ variable "vault_root_token" {
 locals {
   instances = {
     for idx in range(var.vault_instance_count) : idx => {
-      public_ip  = values(var.vault_instances)[idx].public_ip
-      private_ip = values(var.vault_instances)[idx].private_ip
+      public_ip  = values(var.hosts)[idx].public_ip
+      private_ip = values(var.hosts)[idx].private_ip
     }
   }
 }

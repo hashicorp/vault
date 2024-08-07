@@ -718,7 +718,7 @@ scenario "upgrade" {
 
     variables {
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
-      vault_instances   = step.create_vault_cluster_targets.hosts
+      hosts             = step.create_vault_cluster_targets.hosts
       vault_root_token  = step.create_vault_cluster.root_token
     }
   }
