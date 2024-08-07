@@ -311,6 +311,7 @@ module "verify_seal_type" {
 module "vault_verify_billing_start_date" {
   source = "./modules/vault_verify_billing_start_date"
 
-  vault_install_dir    = var.vault_install_dir
-  vault_instance_count = var.vault_instance_count
+  vault_install_dir       = var.vault_install_dir
+  vault_instance_count    = var.vault_instance_count
+  vault_cluster_addr_port = global.ports["vault_cluster"]["port"]
 }
