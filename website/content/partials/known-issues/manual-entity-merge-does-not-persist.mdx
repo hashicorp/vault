@@ -1,0 +1,11 @@
+### Manual entity merges sent to a PR secondary cluster are not persisted to storage
+
+#### Affected versions
+- All Enterprise versions from 0.7.0 up
+
+#### Issue
+If a manual entity merge is sent to a PR secondary cluster, the change is not persisted to storage, 
+and will be reflected only temporarily on the PR secondary's active node. 
+
+#### Workaround
+All manual entity merge requests should be sent to the primary cluster.
