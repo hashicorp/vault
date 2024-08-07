@@ -13,7 +13,7 @@
         name="key-{{key}}"
         {{! Original keys (from subkeys endpoint) are not editable, only their values can be updated }}
         disabled={{this.isOriginalKey key}}
-        {{on "blur" (fn this.onBlurExisting key "key")}}
+        {{on "blur" (fn this.handlePatchKey key)}}
         data-test-kv-key={{key}}
       />
 
@@ -22,7 +22,7 @@
         aria-label="Value for key {{key}}"
         name="value-{{key}}"
         disabled={{includes (this.getState key) (array "disabled" "deleted")}}
-        {{on "blur" (fn this.onBlurExisting key "value")}}
+        {{on "blur" (fn this.handlePatchValue key)}}
         data-test-kv-value={{key}}
       />
 

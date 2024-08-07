@@ -71,8 +71,8 @@ export default class KvPatchEditor extends Component {
   @tracked patchData; // key value pairs in form
 
   // tracked variables for new row of inputs after user clicks "add"
-  @tracked newKey = undefined;
-  @tracked newValue = undefined;
+  @tracked newKey;
+  @tracked newValue;
 
   getState = (key) => this.state.get(key);
   getValue = (key) => this.patchData.get(key);
@@ -83,10 +83,16 @@ export default class KvPatchEditor extends Component {
     super(...arguments);
     this.state = new InputStateManager(this.args.subkeyArray);
     this.patchData = new KvData(this.args.subkeyArray);
+    this.resetNewRow();
   }
 
   get formData() {
     return this.patchData._kvData;
+  }
+
+  resetNewRow() {
+    this.newKey = undefined;
+    this.newValue = undefined;
   }
 
   @action
@@ -94,6 +100,7 @@ export default class KvPatchEditor extends Component {
     this.state.set(key, status);
 
     if (status === 'deleted') {
+      // for a JSON merge patch sending null deletes a key/value pair https://datatracker.ietf.org/doc/html/rfc7386
       this.patchData.set(key, null);
     }
   }
@@ -117,20 +124,20 @@ export default class KvPatchEditor extends Component {
   }
 
   @action
-  onBlurExisting(key, type, event) {
-    if (type === 'key') {
-      // store value of original key
-      const value = this.patchData.get(key);
-      const newKey = event.target.value;
-      // delete old key
-      this.patchData.deleteKey(key);
-      // add new one
-      this.patchData.set(newKey, value);
-    }
-    if (type === 'value') {
-      const value = event.target.value;
-      this.patchData.set(key, value);
-    }
+  handlePatchKey(key, event) {
+    // store value of original key
+    const value = this.patchData.get(key);
+    const newKey = event.target.value;
+    // delete old key
+    this.patchData.deleteKey(key);
+    // add new one
+    this.patchData.set(newKey, value);
+  }
+
+  @action
+  handlePatchValue(key, event) {
+    const { value } = event.target;
+    this.patchData.set(key, value);
   }
 
   @action
@@ -138,8 +145,7 @@ export default class KvPatchEditor extends Component {
     this.patchData.set(this.newKey, this.newValue);
     this.setState(this.newKey, 'enabled');
     // reset tracked values after adding them to patchData
-    this.newKey = '';
-    this.newValue = '';
+    this.resetNewRow();
   }
 
   @action
