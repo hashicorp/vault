@@ -5,6 +5,8 @@ package issuing
 
 import (
 	"context"
+	"crypto"
+	"encoding/pem"
 	"fmt"
 
 	"github.com/hashicorp/vault/builtin/logical/pki/managed_key"
@@ -149,4 +151,35 @@ func GetManagedKeyUUID(key *KeyEntry) (managed_key.UUIDKey, error) {
 		return "", errutil.InternalError{Err: "getManagedKeyUUID called on a key id %s (%s) "}
 	}
 	return managed_key.ExtractManagedKeyId([]byte(key.PrivateKey))
+}
+
+func GetSignerFromKeyEntry(ctx context.Context, mkv managed_key.PkiManagedKeyView, keyEntry *KeyEntry) (crypto.Signer, certutil.PrivateKeyType, error) {
+	if keyEntry.PrivateKeyType == certutil.UnknownPrivateKey {
+		return nil, certutil.UnknownPrivateKey, fmt.Errorf("unsupported unknown private key type for key: %s (%s)", keyEntry.ID, keyEntry.Name)
+	}
+
+	if keyEntry.IsManagedPrivateKey() {
+		managedKeyId, err := GetManagedKeyUUID(keyEntry)
+		if err != nil {
+			return nil, certutil.UnknownPrivateKey, fmt.Errorf("unable to get managed key uuid: %w", err)
+		}
+		bundle, actualKeyType, err := managed_key.CreateKmsKeyBundle(ctx, mkv, managedKeyId)
+		if err != nil {
+			return nil, certutil.UnknownPrivateKey, fmt.Errorf("failed to create kms key bundle from managed key uuid %s: %w", managedKeyId, err)
+		}
+
+		// The bundle's PrivateKeyType value is set to a ManagedKeyType so use the actual key type value
+		return bundle.PrivateKey, actualKeyType, nil
+	}
+
+	pemBlock, _ := pem.Decode([]byte(keyEntry.PrivateKey))
+	if pemBlock == nil {
+		return nil, certutil.UnknownPrivateKey, fmt.Errorf("no data found in PEM block")
+	}
+
+	signer, _, err := certutil.ParseDERKey(pemBlock.Bytes)
+	if err != nil {
+		return nil, certutil.UnknownPrivateKey, fmt.Errorf("failed to parse PEM block: %w", err)
+	}
+	return signer, keyEntry.PrivateKeyType, nil
 }

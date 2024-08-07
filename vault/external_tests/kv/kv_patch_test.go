@@ -14,6 +14,7 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
+	"github.com/stretchr/testify/require"
 )
 
 func TestKV_Patch_BadContentTypeHeader(t *testing.T) {
@@ -158,7 +159,10 @@ func TestKV_Patch_Audit(t *testing.T) {
 	decoder := json.NewDecoder(auditLogFile)
 
 	var auditRecord map[string]interface{}
-	for decoder.Decode(&auditRecord) == nil {
+	for decoder.More() {
+		err := decoder.Decode(&auditRecord)
+		require.NoError(t, err)
+
 		auditRequest := map[string]interface{}{}
 
 		if req, ok := auditRecord["request"]; ok {

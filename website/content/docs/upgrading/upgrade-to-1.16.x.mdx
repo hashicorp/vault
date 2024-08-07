@@ -88,6 +88,20 @@ operation called an activation-flag. The feature is gated until a Vault operator
 decides to trigger the flag. More information can be found in the
 [secrets sync documentation](/vault/docs/sync#activating-the-feature).
 
+### Auto-rolled billing start date
+
+As of 1.16.7 and later, the billing start date (license start date if not configured) automatically rolls over to the latest billing year at the end of the last cycle.
+
+@include 'auto-roll-billing-start.mdx'
+
+@include 'auto-roll-billing-start-example.mdx'
+
+### Docker image no longer contains `curl`
+
+As of 1.16.7 and later, the `curl` binary is no longer included in the published Docker container images
+for Vault and Vault Enterprise. If your workflow depends on `curl` in the image you can dynamically
+install it using `apk`, e.g.: `docker exec <CONTAINER-ID> apk add curl` or `kubectl exec -ti <NAME> -- apk add curl`.
+
 ## Known issues and workarounds
 
 @include 'known-issues/1_16-jwt_auth_bound_audiences.mdx'
@@ -117,3 +131,6 @@ decides to trigger the flag. More information can be found in the
 @include 'known-issues/config_listener_proxy_protocol_behavior_issue.mdx'
 
 @include 'known-issues/dangling-entity-aliases-in-memory.mdx'
+
+@include 'known-issues/duplicate-identity-groups.mdx'
+

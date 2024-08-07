@@ -104,7 +104,11 @@ module('Acceptance | ssh secret backend', function (hooks) {
 
     await click('[data-test-secret-backend-configure]');
 
-    assert.strictEqual(currentURL(), `/vault/settings/secrets/configure/${sshPath}`);
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${sshPath}/configuration/edit`,
+      'transitions to the configuration page'
+    );
     assert.dom('[data-test-ssh-configure-form]').exists('renders the empty configuration form');
 
     // default has generate CA checked so we just submit the form

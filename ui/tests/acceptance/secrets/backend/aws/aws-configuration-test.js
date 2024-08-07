@@ -14,11 +14,13 @@ import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { runCmd } from 'vault/tests/helpers/commands';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { overrideResponse } from 'vault/tests/helpers/stubs';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 import {
   createConfig,
   expectedConfigKeys,
   expectedValueOfConfigKeys,
+  configUrl,
 } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
 
 module('Acceptance | aws | configuration', function (hooks) {
@@ -54,11 +56,22 @@ module('Acceptance | aws | configuration', function (hooks) {
     await enablePage.enable('aws', path);
     await click(SES.configTab);
     await click(SES.configure);
-    assert.strictEqual(currentURL(), `/vault/settings/secrets/configure/${path}`);
+    assert.strictEqual(currentURL(), `/vault/secrets/${path}/configuration/edit`);
     assert.dom(SES.configureTitle('aws')).hasText('Configure AWS');
     assert.dom(SES.aws.rootForm).exists('it lands on the root configuration form.');
     assert.dom(GENERAL.tab('access-to-aws')).exists('renders the root creds tab');
     assert.dom(GENERAL.tab('lease')).exists('renders the leases config tab');
+    // cleanup
+    await runCmd(`delete sys/mounts/${path}`);
+  });
+
+  test('it should show error if old url is entered', async function (assert) {
+    // we are intentionally not redirecting from the old url to the new one.
+    const path = `aws-${this.uid}`;
+    await enablePage.enable('aws', path);
+    await click(SES.configTab);
+    await visit(`/vault/settings/secrets/configure/${path}`);
+    assert.dom('[data-test-not-found]').exists('shows page-error');
     // cleanup
     await runCmd(`delete sys/mounts/${path}`);
   });
@@ -71,18 +84,18 @@ module('Acceptance | aws | configuration', function (hooks) {
     await click(SES.configure);
     await fillIn(GENERAL.inputByAttr('accessKey'), 'foo');
     await fillIn(GENERAL.inputByAttr('secretKey'), 'bar');
-    this.server.post(`${path}/config/root`, (schema, req) => {
-      const payload = JSON.parse(req.requestBody);
-      assert.deepEqual(payload.access_key, 'foo', 'access_key is foo');
-      assert.deepEqual(payload.secret_key, 'bar', 'secret_key is foo');
-      return { data: { id: path, type: 'aws', attributes: payload } };
-    });
 
     await click(GENERAL.saveButtonId('root'));
     assert.true(
       this.flashSuccessSpy.calledWith('The backend configuration saved successfully!'),
       'Success flash message is rendered'
     );
+
+    await visit(`/vault/secrets/${path}/configuration`);
+    assert.dom(GENERAL.infoRowValue('Access key')).hasText('foo', `Access Key has been set.`);
+    assert
+      .dom(GENERAL.infoRowValue('Secret key'))
+      .doesNotExist(`Secret key is not shown because it does not get returned by the api.`);
     // cleanup
     await runCmd(`delete sys/mounts/${path}`);
   });
@@ -90,12 +103,6 @@ module('Acceptance | aws | configuration', function (hooks) {
   test('it should save lease AWS configuration', async function (assert) {
     assert.expect(3);
     const path = `aws-${this.uid}`;
-    this.server.post(`${path}/config/lease`, (schema, req) => {
-      const payload = JSON.parse(req.requestBody);
-      assert.deepEqual(payload.lease, '55s', 'lease is set to 55s');
-      assert.deepEqual(payload.lease_max, '65s', 'maximum_lease is set to 65s');
-      return { data: { id: path, type: 'aws', attributes: payload } };
-    });
     await enablePage.enable('aws', path);
     await click(SES.configTab);
     await click(SES.configure);
@@ -109,11 +116,16 @@ module('Acceptance | aws | configuration', function (hooks) {
       this.flashSuccessSpy.calledWith('The backend configuration saved successfully!'),
       'Success flash message is rendered'
     );
+
+    await visit(`/vault/secrets/${path}/configuration`);
+    assert.dom(GENERAL.infoRowValue('Default Lease TTL')).hasText('55s', `Default TTL has been set.`);
+    assert.dom(GENERAL.infoRowValue('Max Lease TTL')).hasText('1m5s', `Default TTL has been set.`);
+
     // cleanup
     await runCmd(`delete sys/mounts/${path}`);
   });
 
-  test('it show AWS configuration details', async function (assert) {
+  test('it shows AWS mount configuration details', async function (assert) {
     assert.expect(12);
     const path = `aws-${this.uid}`;
     const type = 'aws';
@@ -142,7 +154,7 @@ module('Acceptance | aws | configuration', function (hooks) {
   });
 
   test('it should update AWS configuration details after editing', async function (assert) {
-    assert.expect(4);
+    assert.expect(6);
     const path = `aws-${this.uid}`;
     const type = 'aws';
     await enablePage.enable(type, path);
@@ -157,17 +169,40 @@ module('Acceptance | aws | configuration', function (hooks) {
     assert
       .dom(GENERAL.infoRowValue('Region'))
       .doesNotExist('Region has not been added therefor it does not show up on the details view.');
-    // edit accessKey and another field and confirm the details page is updated.
+    // edit root config details and lease config details and confirm the configuration.index page is updated.
     await click(SES.configure);
     await fillIn(GENERAL.inputByAttr('accessKey'), 'hello');
     await click(GENERAL.menuTrigger);
     await fillIn(GENERAL.selectByAttr('region'), 'ca-central-1');
     await click(GENERAL.saveButtonId('root'));
+    // add lease config details
+    await click(GENERAL.hdsTab('lease'));
+    await click(GENERAL.toggleInput('Lease'));
+    await fillIn(GENERAL.ttl.input('Lease'), '33');
+    await click(GENERAL.toggleInput('Maximum Lease'));
+    await fillIn(GENERAL.ttl.input('Maximum Lease'), '43');
+    await click(GENERAL.saveButtonId('lease'));
+
     await click(SES.viewBackend);
     await click(SES.configTab);
     assert.dom(GENERAL.infoRowValue('Access key')).hasText('hello', 'Access key has been updated to hello');
     assert.dom(GENERAL.infoRowValue('Region')).hasText('ca-central-1', 'Region has been added');
+    assert.dom(GENERAL.infoRowValue('Default Lease TTL')).hasText('33s', 'Default Lease TTL has been added');
+    assert.dom(GENERAL.infoRowValue('Max Lease TTL')).hasText('43s', 'Max Lease TTL has been added');
     // cleanup
     await runCmd(`delete sys/mounts/${path}`);
+  });
+
+  test('it should show API error when AWS configuration read fails', async function (assert) {
+    assert.expect(1);
+    const path = `aws-${this.uid}`;
+    const type = 'aws';
+    await enablePage.enable(type, path);
+    // interrupt get and return API error
+    this.server.get(configUrl(type, path), () => {
+      return overrideResponse(400, { errors: ['bad request'] });
+    });
+    await click(SES.configTab);
+    assert.dom(SES.error.title).hasText('Error', 'shows the secrets backend error route');
   });
 });

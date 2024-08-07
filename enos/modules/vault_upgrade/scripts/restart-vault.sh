@@ -12,11 +12,15 @@ binpath=${VAULT_INSTALL_DIR}/vault
 test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 
 if ! out=$(sudo systemctl stop vault 2>&1); then
-  echo "failed to stop vault: $out: $(sudo systemctl status vault)" 1>&2
+  fail "failed to stop vault: $out: $(sudo systemctl status vault)"
+fi
+
+if ! out=$(sudo systemctl daemon-reload 2>&1); then
+  fail "failed to daemon-reload systemd: $out" 1>&2
 fi
 
 if ! out=$(sudo systemctl start vault 2>&1); then
-  echo "failed to start vault: $out: $(sudo systemctl status vault)" 1>&2
+  fail "failed to start vault: $out: $(sudo systemctl status vault)"
 fi
 
 count=0
