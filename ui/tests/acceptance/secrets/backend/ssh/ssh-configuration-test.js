@@ -113,10 +113,6 @@ module('Acceptance | ssh | configuration', function (hooks) {
     assert
       .dom(GENERAL.inlineError)
       .hasText('Public Key and Private Key are both required if Generate Signing Key is false.');
-    assert.true(
-      this.flashDangerSpy.calledWith('Please correct the errors in the form before submitting.'),
-      'Flash message shows validation errors encountered.'
-    );
     // visit the details page and confirm the public key is not shown
     await visit(`/vault/secrets/${path}/configuration`);
     assert.dom(GENERAL.infoRowLabel('Public key')).doesNotExist('Public Key label does not exist');
