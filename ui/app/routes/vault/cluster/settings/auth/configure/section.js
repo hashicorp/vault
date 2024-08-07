@@ -9,6 +9,7 @@ import { set } from '@ember/object';
 import Route from '@ember/routing/route';
 import RSVP from 'rsvp';
 import UnloadModelRoute from 'vault/mixins/unload-model-route';
+import { getHelpUrlForModel } from 'vault/utils/openapi-helpers';
 
 export default Route.extend(UnloadModelRoute, {
   modelPath: 'model.model',
@@ -41,6 +42,11 @@ export default Route.extend(UnloadModelRoute, {
     const { method } = this.paramsFor('vault.cluster.settings.auth.configure');
     const backend = this.modelFor('vault.cluster.settings.auth.configure');
     const modelType = this.modelType(backend.type, section_name);
+    // If this method returns a string it means we expect to hydrate it with OpenAPI
+    if (getHelpUrlForModel(modelType)) {
+      return this.pathHelp.hydrateModel(modelType, method);
+    }
+    // if no helpUrl is defined, this is a fully generated model
     return this.pathHelp.getNewModel(modelType, method, backend.apiPath);
   },
 
