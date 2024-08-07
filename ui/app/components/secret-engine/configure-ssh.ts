@@ -54,16 +54,13 @@ export default class ConfigureSshComponent extends Component<Args> {
     const { id, model } = this.args;
     const isValid = this.validate(model);
 
-    if (!isValid) {
-      this.flashMessages.danger('Please correct the errors in the form before submitting.');
-      return;
-    }
+    if (!isValid) return;
     // Check if any of the model's attributes have changed.
     // If no changes to the model, transition and notify user.
     // Otherwise, save the model.
     const attributesChanged = Object.keys(model.changedAttributes()).length > 0;
     if (!attributesChanged) {
-      this.flashMessages.danger('No changes detected.');
+      this.flashMessages.info('No changes detected.');
       this.transition(id);
     }
 
@@ -72,18 +69,14 @@ export default class ConfigureSshComponent extends Component<Args> {
       this.flashMessages.success(`Successfully saved ${id}'s root configuration.`);
     } catch (error) {
       this.errorMessage = errorMessage(error);
+      this.invalidFormAlert = 'There was an error submitting this form.';
     }
 
     this.transition(id);
   }
 
   transition(id: string) {
-    // prevent transition if there are errors with ca configuration
-    if (this.errorMessage) {
-      this.invalidFormAlert = 'There was an error submitting this form.';
-    } else {
-      this.router.transitionTo('vault.cluster.secrets.backend.configuration', id);
-    }
+    this.router.transitionTo('vault.cluster.secrets.backend.configuration', id);
   }
 
   validate(model: CaConfigModel) {
