@@ -106,7 +106,7 @@ module('Acceptance | ssh secret backend', function (hooks) {
     // default has generate CA checked so we just submit the form
     await click(SES.ssh.save);
     // There is a delay in the backend for the public key to be generated, wait for it to complete and transition to configuration index route
-    await waitUntil(() => currentURL() === `/vault/secrets/${sshPath}/configuration`, { timeout: 5000 });
+    await waitUntil(() => currentURL() === `/vault/secrets/${sshPath}/configuration`, { timeout: 2000 });
     assert.dom(GENERAL.infoRowLabel('Public key')).exists('Public Key label exists');
     assert.dom(GENERAL.infoRowValue('Public key')).hasText('***********');
     assert.strictEqual(
