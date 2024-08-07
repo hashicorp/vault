@@ -7,6 +7,7 @@ import { click, fillIn, currentURL, waitFor, visit } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
+import { spy } from 'sinon';
 
 import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
@@ -22,6 +23,11 @@ module('Acceptance | ssh | configuration', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
+    const flash = this.owner.lookup('service:flash-messages');
+    this.store = this.owner.lookup('service:store');
+    this.flashSuccessSpy = spy(flash, 'success');
+    this.flashDangerSpy = spy(flash, 'danger');
+
     this.uid = uuidv4();
     return authPage.login();
   });
@@ -51,7 +57,7 @@ module('Acceptance | ssh | configuration', function (hooks) {
     await runCmd(`delete sys/mounts/${sshPath}`);
   });
 
-  test('it should show a public key after saving default configuration', async function (assert) {
+  test('it should show a public key after saving default configuration and allows you to delete public key', async function (assert) {
     const sshPath = `ssh-${this.uid}`;
     await enablePage.enable('ssh', sshPath);
     await click(SES.configTab);
@@ -61,30 +67,58 @@ module('Acceptance | ssh | configuration', function (hooks) {
       `/vault/secrets/${sshPath}/configuration/edit`,
       'transitions to the configuration page'
     );
-    assert.dom(SES.ssh.configureForm).exists('renders ssh configuration form');
-
     // default has generate CA checked so we just submit the form
-    await click(SES.ssh.sshInput('configure-submit'));
+    await click(SES.ssh.save);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${sshPath}/configuration/edit`,
-      'stays on configuration form page.'
+      'after configuring it stays on the edit page displaying the public key'
     );
-
-    await waitFor(SES.ssh.sshInput('public-key'));
-    assert.dom(SES.ssh.sshInput('public-key')).exists('renders the public key input on form page');
-    assert.dom(SES.ssh.sshInput('public-key')).hasClass('masked-input', 'public key is masked');
-
+    // There is a delay in the backend for the public key to be generated, wait for it to complete by checking that the public key is displayed
+    await waitFor(GENERAL.inputByAttr('public-key'));
+    assert.dom(GENERAL.inputByAttr('public-key')).hasText('***********', 'public key is masked');
+    assert.dom(SES.ssh.editConfigSection).exists('renders the edit section');
+    // delete Public key
+    await click(SES.ssh.deletePublicKey);
+    assert
+      .dom('[data-test-confirm-action-message]')
+      .hasText('This will remove the CA certificate information.');
+    await click(GENERAL.confirmButton);
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${sshPath}/configuration/edit`,
+      'after deleting public key stays on edit page'
+    );
+    assert.dom(GENERAL.maskedInput('privateKey')).hasNoText('Private key is empty and reset');
+    assert.dom(GENERAL.inputByAttr('publicKey')).hasNoText('Public key is empty and reset');
+    assert
+      .dom(GENERAL.inputByAttr('generate-signing-key-checkbox'))
+      .isNotChecked('Generate signing key is unchecked');
     await click(SES.viewBackend);
     await click(SES.configTab);
     assert
-      .dom(`[data-test-value-div="Public key"] [data-test-masked-input]`)
-      .hasText('***********', 'value for Public key is on config details and is masked');
-    assert
-      .dom(GENERAL.infoRowValue('Generate signing key'))
-      .hasText('Yes', 'value for Generate signing key displays default of true/yes.');
+      .dom(GENERAL.emptyStateTitle)
+      .hasText('SSH not configured', 'after deleting public key SSH is no longer configured');
     // cleanup
     await runCmd(`delete sys/mounts/${sshPath}`);
+  });
+
+  test('it should throw validation errors if generate Signing key is not checked and no public and private keys', async function (assert) {
+    const path = `ssh-configure-${this.uid}`;
+    await enablePage.enable('ssh', path);
+    await click(SES.configTab);
+    await click(SES.configure);
+    assert
+      .dom(GENERAL.inputByAttr('generate-signing-key-checkbox'))
+      .isChecked('generate_signing_key defaults to true');
+    await click(GENERAL.inputByAttr('generate-signing-key-checkbox'));
+    await click(SES.ssh.save);
+    // visit the details page and confirm the public key is not shown
+    await visit(`/vault/secrets/${path}/configuration`);
+    assert.dom(GENERAL.infoRowLabel('Public key')).doesNotExist('Public Key label does not exist');
+    assert.dom(GENERAL.emptyStateTitle).hasText('SSH not configured', 'SSH not configured');
+    // cleanup
+    await runCmd(`delete sys/mounts/${path}`);
   });
 
   test('it should show API error when SSH configuration read fails', async function (assert) {

@@ -3,16 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import {
-  click,
-  fillIn,
-  currentURL,
-  find,
-  settled,
-  waitUntil,
-  currentRouteName,
-  waitFor,
-} from '@ember/test-helpers';
+import { click, fillIn, currentURL, find, settled, waitUntil, currentRouteName } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
@@ -20,6 +11,7 @@ import { v4 as uuidv4 } from 'uuid';
 import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 
 module('Acceptance | ssh secret backend', function (hooks) {
   setupApplicationTest(hooks);
@@ -94,31 +86,25 @@ module('Acceptance | ssh secret backend', function (hooks) {
       },
     },
   ];
-  test('ssh backend', async function (assert) {
-    assert.expect(30);
+  test('ssh create, edit and delete role', async function (assert) {
+    assert.expect(28);
     const sshPath = `ssh-${this.uid}`;
 
     await enablePage.enable('ssh', sshPath);
     await settled();
-    await click('[data-test-configuration-tab]');
-
-    await click('[data-test-secret-backend-configure]');
+    await click(SES.configTab);
+    await click(SES.configure);
 
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${sshPath}/configuration/edit`,
       'transitions to the configuration page'
     );
-    assert.dom('[data-test-ssh-configure-form]').exists('renders the empty configuration form');
+    assert.dom(SES.ssh.configureForm).exists('renders the empty configuration form');
 
     // default has generate CA checked so we just submit the form
-    await click('[data-test-ssh-input="configure-submit"]');
-
-    await waitFor('[data-test-ssh-input="public-key"]');
-    assert.dom('[data-test-ssh-input="public-key"]').exists();
-    await click('[data-test-backend-view-link]');
-
-    assert.strictEqual(currentURL(), `/vault/secrets/${sshPath}/list`, `redirects to ssh index`);
+    await click(SES.ssh.save);
+    await click(SES.viewBackend);
 
     for (const role of ROLES) {
       // create a role
