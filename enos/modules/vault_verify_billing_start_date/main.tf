@@ -48,7 +48,7 @@ locals {
 }
 
 resource "enos_remote_exec" "vault_verify_billing_start_date" {
-  for_each = local.instances
+  for_each = var.hosts
 
   environment = {
     VAULT_CLUSTER_ADDR      = "${each.value.private_ip}:${var.vault_cluster_addr_port}"
