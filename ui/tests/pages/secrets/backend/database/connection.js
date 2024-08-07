@@ -12,7 +12,7 @@ export default create({
   visitShow: visitable('/vault/secrets/:backend/show/:id'),
   visitCreate: visitable('/vault/secrets/:backend/create'),
   createLink: clickable('[data-test-secret-create]'),
-  dbPlugin: selectable('[data-test-input="plugin_name"]'),
+  dbPlugin: selectable('[data-test-select="plugin_name"]'),
   name: fillable('[data-test-input="name"]'),
   toggleVerify: clickable('[data-test-input="verify_connection"]'),
   connectionUrl: fillable('[data-test-input="connection_url"]'),

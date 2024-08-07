@@ -47,7 +47,7 @@ module('Acceptance | Enterprise | keymgmt', function (hooks) {
 
     await mountSecrets.enable('keymgmt', path);
     await click('[data-test-secret-create]');
-    await fillIn('[data-test-input="provider"]', 'azurekeyvault');
+    await fillIn('[data-test-select="provider"]', 'azurekeyvault');
     await fillIn('[data-test-input="name"]', 'test-keyvault');
     await fillIn('[data-test-input="keyCollection"]', 'test-keycollection');
     await fillIn('[data-test-input="credentials.client_id"]', '123');

@@ -9,6 +9,7 @@ import { currentURL, click, settled, currentRouteName } from '@ember/test-helper
 import { create } from 'ember-cli-page-object';
 import { selectChoose } from 'ember-power-select/test-support';
 import { typeInSearch, clickTrigger } from 'ember-power-select/test-support/helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 import authPage from 'vault/tests/pages/auth';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
@@ -121,14 +122,14 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     );
     await transformationsPage.name(transformationName);
     await settled();
-    assert.dom('[data-test-input="type"]').hasValue('fpe', 'Has type FPE by default');
-    assert.dom('[data-test-input="tweak_source"]').exists('Shows tweak source when FPE');
+    assert.dom(GENERAL.selectByAttr('type')).hasValue('fpe', 'Has type FPE by default');
+    assert.dom(GENERAL.selectByAttr('tweak_source')).exists('Shows tweak source when FPE');
     await transformationsPage.type('masking');
     await settled();
     assert
-      .dom('[data-test-input="masking_character"]')
-      .exists('Shows masking character input when changed to masking type');
-    assert.dom('[data-test-input="tweak_source"]').doesNotExist('Does not show tweak source when masking');
+      .dom(GENERAL.selectByAttr('type'))
+      .hasValue('masking', 'Shows masking character input when changed to masking type');
+    assert.dom(GENERAL.selectByAttr('tweak_source')).doesNotExist('Does not show tweak source when masking');
     await clickTrigger('#template');
     await settled();
     assert.strictEqual(searchSelectComponent.options.length, 2, 'list shows two builtin options by default');
@@ -281,7 +282,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
       'Links to template edit page'
     );
     await settled();
-    assert.dom('[data-test-input="name"]').hasAttribute('readonly');
+    assert.dom(GENERAL.inputByAttr('name')).hasAttribute('readonly');
   });
 
   test('it allows creation and edit of an alphabet', async function (assert) {
@@ -319,6 +320,6 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
       `/vault/secrets/${backend}/edit/alphabet/${alphabetName}`,
       'Links to alphabet edit page'
     );
-    assert.dom('[data-test-input="name"]').hasAttribute('readonly');
+    assert.dom(GENERAL.inputByAttr('name')).hasAttribute('readonly');
   });
 });

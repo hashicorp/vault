@@ -67,7 +67,7 @@ module('Integration | Component | auth-config-form options', function (hooks) {
       assert.dom('[data-test-user-lockout-section]').hasText('User lockout configuration');
 
       await click(GENERAL.inputByAttr('config.listingVisibility'));
-      await fillIn(GENERAL.inputByAttr('config.tokenType'), 'default-batch');
+      await fillIn(GENERAL.selectByAttr('config.tokenType'), 'default-batch');
 
       await click(GENERAL.ttl.toggle('Default Lease TTL'));
       await fillIn(GENERAL.ttl.input('Default Lease TTL'), '30');
@@ -125,7 +125,7 @@ module('Integration | Component | auth-config-form options', function (hooks) {
         .doesNotExist(`${type} method does not render user lockout section`);
 
       await click(GENERAL.inputByAttr('config.listingVisibility'));
-      await fillIn(GENERAL.inputByAttr('config.tokenType'), 'default-batch');
+      await fillIn(GENERAL.selectByAttr('config.tokenType'), 'default-batch');
 
       await click(GENERAL.ttl.toggle('Default Lease TTL'));
       await fillIn(GENERAL.ttl.input('Default Lease TTL'), '30');
@@ -175,7 +175,7 @@ module('Integration | Component | auth-config-form options', function (hooks) {
     await render(hbs`<AuthConfigForm::Options @model={{this.model}} />`);
 
     assert
-      .dom(GENERAL.inputByAttr('config.tokenType'))
+      .dom(GENERAL.selectByAttr('config.tokenType'))
       .doesNotExist('does not render tokenType for token auth method');
 
     await click(GENERAL.inputByAttr('config.listingVisibility'));
