@@ -6,10 +6,17 @@ scenario "ui" {
     The UI scenario creates a new cluster and runs the existing Ember test suite
     against a live Vault cluster instead of a binary in dev mode.
 
+    # How to view an outline of this scenario
+
     You can use the following command to get a textual outline of the entire
     scenario:
-  
+    
       $ enos scenario outline ui
+
+    You can also create an HTML version that is suitable for viewing in web browsers:
+
+      $ enos scenario outline ui --format html > index.html
+      $ open index.html
 
     # How to run this scenario
 
@@ -38,12 +45,21 @@ scenario "ui" {
       distro; see list of supported distros and versions in enos-globals.hcl)
       - vault_license_path (if using an ENT edition of Vault)
     
-    4. Choose the matrix variants you want to use, and launch the scenario with the appropriate
-    filter for those variants, e.g.:
+    4. If you don't know yet what combination of matrix variants you want to use for your scenario, you 
+    can view all the possible combinations through the `list` command:
+
+      $ enos scenario list ui
+    
+    Once you know what filter you want to use to obtain your desired combination of matrix variants,
+    use the `launch` command with that filter to launch your scenario.
 
       $ enos scenario launch ui backend:raft consul_edition:ent edition:ce
 
     Notes:
+    - To learn more about any Enos command, use the `--help` flag, e.g.:
+    
+        $ enos scenario launch --help
+
     - Enos will run all matrix variant combinations that match your filter. If you specify one
       variant for each matrix item, the filter will produce and run only one scenario.
 
@@ -54,6 +70,10 @@ scenario "ui" {
       $ ssh -i /path/to/your/ssh-private-key.pem <ssh-user>@<public-ip>
 
     For Enos troubleshooting tips, see https://eng-handbook.hashicorp.services/internal-tools/enos/troubleshooting/.
+
+    6. When you're done, destroy the scenario and associated infrastructure:
+
+      $ enos scenario destroy ui <filter>
 
   EOF
   matrix {

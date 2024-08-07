@@ -12,6 +12,11 @@ scenario "smoke" {
     scenario:
   
       $ enos scenario outline smoke
+    
+    You can also create an HTML version that is suitable for viewing in web browsers:
+
+      $ enos scenario outline smoke --format html > index.html
+      $ open index.html
 
     # How to run this scenario
 
@@ -59,13 +64,22 @@ scenario "smoke" {
         artifactory_username = your-user
         artifactory_token = your-token
     
-    5. Choose the matrix variants you want to use, and launch the scenario with the appropriate
-    filter for those variants, e.g.:
+    5. If you don't know yet what combination of matrix variants you want to use for your scenario, you 
+    can view all the possible combinations through the `list` command:
+
+      $ enos scenario list smoke
+    
+    Once you know what filter you want to use to obtain your desired combination of matrix variants,
+    use the `launch` command with that filter to launch your scenario.
 
       $ enos scenario launch smoke arch:amd64 artifact_source:artifactory artifact_type:package distro:rhel edition:ent backend:raft config_mode:file consul_edition:ce consul_version:1.17.0 seal:awskms
 
     Notes:
-    - Note: Enos will run all matrix variant combinations that match your filter. If you specify one
+    - To learn more about any Enos command, use the `--help` flag, e.g.:
+    
+        $ enos scenario launch --help
+
+    - Enos will run all matrix variant combinations that match your filter. If you specify one
       variant for each matrix item, the filter will produce and run only one scenario. Even if you are
       using a Raft backend, you may want to specify a consul_version (though it functionally will not
       do anything since you're not using Consul) so that Enos does not run multiple scenarios (one for
@@ -74,8 +88,8 @@ scenario "smoke" {
     - If you want to use the 'distro:leap' variant you must first accept SUSE's terms for the AWS
       account. To verify that your account has agreed, sign-in to your AWS through Doormat,
       and visit the following links to verify your subscription or subscribe:
-        arm64 AMI: https://aws.amazon.com/marketplace/server/procurement?productId=a516e959-df54-4035-bb1a-63599b7a6df9
-        amd64 AMI: https://aws.amazon.com/marketplace/server/procurement?productId=5535c495-72d4-4355-b169-54ffa874f849
+        - arm64 AMI: https://aws.amazon.com/marketplace/server/procurement?productId=a516e959-df54-4035-bb1a-63599b7a6df9
+        - amd64 AMI: https://aws.amazon.com/marketplace/server/procurement?productId=5535c495-72d4-4355-b169-54ffa874f849
 
     6. If necessary, get the public IPs of your cluster from the Enos scenario output and SSH in,
     using 'ubuntu' for the SSH user with 'distro:ubuntu', or 'ec2-user' with all other supported Linux distros:
@@ -84,6 +98,10 @@ scenario "smoke" {
     $ ssh -i /path/to/your/ssh-private-key.pem <ssh-user>@<public-ip>
 
     For Enos troubleshooting tips, see https://eng-handbook.hashicorp.services/internal-tools/enos/troubleshooting/.
+
+    7. When you're done, destroy the scenario and associated infrastructure:
+
+      $ enos scenario destroy smoke <filter>
   EOF
 
   matrix {

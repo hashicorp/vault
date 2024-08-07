@@ -9,10 +9,17 @@ scenario "agent" {
     build in Agent mode and verifies behavior against the Vault cluster. The scenario also performs
     standard baseline verification that is not specific to the Agent mode deployment.
 
+    # How to view an outline of this scenario
+
     You can use the following command to get a textual outline of the entire
     scenario:
     
       $ enos scenario outline agent
+
+    You can also create an HTML version that is suitable for viewing in web browsers:
+
+      $ enos scenario outline agent --format html > index.html
+      $ open index.html
 
     # How to run this scenario
 
@@ -60,12 +67,21 @@ scenario "agent" {
         artifactory_username = your-user
         artifactory_token = your-token
     
-    5. Choose the matrix variants you want to use, and launch the scenario with the appropriate
-    filter for those variants, e.g.:
+    5. If you don't know yet what combination of matrix variants you want to use for your scenario, you 
+    can view all the possible combinations through the `list` command:
+
+      $ enos scenario list agent
+    
+    Once you know what filter you want to use to obtain your desired combination of matrix variants,
+    use the `launch` command with that filter to launch your scenario.
 
       $ enos scenario launch agent arch:amd64 artifact_source:crt artifact_type:bundle backend:consul config_mode:env consul_edition:ent consul_version:1.16.3 distro:ubuntu edition:ent.hsm.fips1402 seal:pkcs11
 
     Notes:
+    - To learn more about any Enos command, use the `--help` flag, e.g.:
+    
+        $ enos scenario launch --help
+        
     - Enos will run all matrix variant combinations that match your filter. If you specify one
       variant for each matrix item, the filter will produce and run only one scenario. Even if you are
       using a Raft backend, you may want to specify a consul_version (though it functionally will not
@@ -85,6 +101,10 @@ scenario "agent" {
       $ ssh -i /path/to/your/ssh-private-key.pem <ssh-user>@<public-ip>
 
     For Enos troubleshooting tips, see https://eng-handbook.hashicorp.services/internal-tools/enos/troubleshooting/.
+
+    7. When you're done, destroy the scenario and associated infrastructure:
+
+      $ enos scenario destroy agent <filter>
   EOF
 
   matrix {
