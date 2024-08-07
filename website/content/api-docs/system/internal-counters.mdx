@@ -263,6 +263,8 @@ not have namespace attribution for the `new_clients` stanza. Furthermore, the
 `new_clients` counts returned for the current month will be an approximation.
 That is to say, the response will appear as follows.
 
+  @include 'auto-roll-billing-start-example.mdx'
+
 ```json
 {
    "months":[
@@ -346,8 +348,8 @@ This endpoint was added in Vault 1.6.
 ### Parameters
 
 - `start_time` `(string, optional)` - An RFC3339 timestamp or Unix epoch time. Specifies the start of the
-  period for which client counts will be reported. If no start time is specified, the `default_report_months`
-  prior to the `end_time` will be used.
+  period for which client counts will be reported. If no start time is specified, the billing start date will be used.
+  The [billing start date](/vault/docs/concepts/billing-start-date) automatically rolls over to the latest billing year at the end of the last cycle.
 - `end_time` `(string, optional)` - An RFC3339 timestamp or Unix epoch time. Specifies the end of the period
   for which client counts will be reported. If no end time is specified, the end of the previous calendar
   month will be used.
@@ -1165,6 +1167,18 @@ $ curl \
   "warnings": null
 }
 ```
+
+<Note title="Important change to supported versions">
+   As of 1.16.7, 1.17.3 and later, 
+   the <a href="/vault/docs/concepts/billing-start-date">billing start date</a> automatically 
+   rolls over to the latest billing year at the end of the last cycle.
+        
+   For more information, refer to the upgrade guide for your Vault version:
+
+   [Vault v1.16.x](/vault/docs/upgrading/upgrade-to-1.16.x#auto-rolled-billing-start-date),
+   [Vault v1.17.x](/vault/docs/upgrading/upgrade-to-1.17.x#auto-rolled-billing-start-date)
+
+</Note>
 
 ## Activity export
 

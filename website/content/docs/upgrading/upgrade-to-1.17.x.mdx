@@ -81,6 +81,14 @@ Users may not be able to log into Vault if the JWT role is configured
 incorrectly. For additional details, refer to the
 [JWT auth method (API)](/vault/api-docs/auth/jwt) documentation.
 
+### Auto-rolled billing start date
+
+As of 1.17.3 and later, the billing start date (license start date if not configured) rolls over to the latest billing year at the end of the last cycle. 
+
+@include 'auto-roll-billing-start.mdx'
+
+@include 'auto-roll-billing-start-example.mdx'
+
 ### Docker image no longer contains `curl`
 
 As of 1.17.3 and later, the `curl` binary is no longer included in the published Docker container images
