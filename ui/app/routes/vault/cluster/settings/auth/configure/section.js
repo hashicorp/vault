@@ -42,7 +42,8 @@ export default Route.extend(UnloadModelRoute, {
     const { method } = this.paramsFor('vault.cluster.settings.auth.configure');
     const backend = this.modelFor('vault.cluster.settings.auth.configure');
     const modelType = this.modelType(backend.type, section_name);
-    if (getHelpUrlForModel(modelType, 'test')) {
+    // If this method returns a string it means we expect to hydrate it with OpenAPI
+    if (getHelpUrlForModel(modelType)) {
       return this.pathHelp.hydrateModel(modelType, method);
     }
     // if no helpUrl is defined, this is a fully generated model
