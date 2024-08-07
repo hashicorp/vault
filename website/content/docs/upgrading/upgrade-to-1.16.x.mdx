@@ -63,10 +63,9 @@ plugin process starts with `SOURCE=parent` and Vault reports a conflict for
 
 ### LDAP auth login changes
 
-The LDAP auth method requires the `userdn` value to be scoped to a path which
-includes the OU in which users reside.
-
-The consequence of not configuring this correctly means users will be unable to login.
+Users cannot log in using LDAP unless the LDAP plugin is configured
+with an `userdn` value scoped to an organization unit (OU) where the
+user resides.
 
 ### LDAP auth entity alias names no longer include upndomain
 
