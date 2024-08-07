@@ -71,8 +71,8 @@ export default class KvPatchEditor extends Component {
   @tracked patchData; // key value pairs in form
 
   // tracked variables for new row of inputs after user clicks "add"
-  @tracked newKey = '';
-  @tracked newValue = '';
+  @tracked newKey = undefined;
+  @tracked newValue = undefined;
 
   getState = (key) => this.state.get(key);
   getValue = (key) => this.patchData.get(key);
@@ -102,8 +102,8 @@ export default class KvPatchEditor extends Component {
   handleCancel(key) {
     if (this.isOriginalKey(key)) {
       this.setState(key, 'disabled');
-      // reset value to empty string
-      this.patchData.set(key, '');
+      // reset value to undefined
+      this.patchData.set(key, undefined);
     } else {
       // remove row all together
       this.patchData.deleteKey(key);
@@ -152,9 +152,10 @@ export default class KvPatchEditor extends Component {
     }
 
     const data = this.formData;
-    // remove any empty strings from the payload
+
+    // remove disabled values from payload
     for (const [key, value] of Object.entries(data)) {
-      if (value === '') {
+      if (this.getState(key) === 'disabled' && value === undefined) {
         delete data[key];
       }
     }
