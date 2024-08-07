@@ -17,9 +17,9 @@ class InputStateManager {
   @tracked _state;
   possibleStates = ['enabled', 'disabled', 'deleted'];
 
-  constructor(emptySubkeys) {
+  constructor(subkeyArray) {
     // initially set all inputs to disabled
-    this._state = Object.keys(emptySubkeys).reduce((obj, key) => {
+    this._state = subkeyArray.reduce((obj, key) => {
       obj[key] = 'disabled';
       return obj;
     }, {});
@@ -40,8 +40,11 @@ class InputStateManager {
 class KvData {
   @tracked _kvData;
 
-  constructor(kvData) {
-    this._kvData = { ...kvData };
+  constructor(subkeys) {
+    this._kvData = subkeys.reduce((obj, key) => {
+      obj[key] = undefined;
+      return obj;
+    }, {});
   }
 
   set(key, value) {
@@ -74,12 +77,12 @@ export default class KvPatchEditor extends Component {
   getState = (key) => this.state.get(key);
   getValue = (key) => this.patchData.get(key);
 
-  isOriginalKey = (key) => Object.keys(this.args.emptySubkeys).includes(key);
+  isOriginalKey = (key) => this.args.subkeyArray.includes(key);
 
   constructor() {
     super(...arguments);
-    this.state = new InputStateManager(this.args.emptySubkeys);
-    this.patchData = new KvData(this.args.emptySubkeys);
+    this.state = new InputStateManager(this.args.subkeyArray);
+    this.patchData = new KvData(this.args.subkeyArray);
   }
 
   get formData() {

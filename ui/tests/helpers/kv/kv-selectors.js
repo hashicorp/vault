@@ -113,6 +113,12 @@ export const FORM = {
   maskedValueInput: (idx = 0) => `[data-test-kv-value="${idx}"] [data-test-textarea]`,
   addRow: (idx = 0) => `[data-test-kv-add-row="${idx}"]`,
   deleteRow: (idx = 0) => `[data-test-kv-delete-row="${idx}"]`,
+  // <KvPatchEditor>
+  patchEdit: (key) => `[data-test-edit="${key}"]`,
+  patchDelete: (key) => `[data-test-delete="${key}"]`,
+  patchUndo: (key) => `[data-test-undo="${key}"]`,
+  patchAdd: '[data-test-add]',
+  patchAlert: (type, key) => `[data-test-alert-${type}="${key}"]`,
   // Alerts & validation
   inlineAlert: '[data-test-inline-alert]',
   validation: (attr) => `[data-test-field="${attr}"] [data-test-inline-alert]`,

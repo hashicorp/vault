@@ -17,10 +17,7 @@ module('Integration | Component | kv | kv-patch-editor', function (hooks) {
   setupEngine(hooks, 'kv');
 
   hooks.beforeEach(function () {
-    this.subkeyObject = {
-      foo: '',
-      baz: '',
-    };
+    this.subkeyArray = ['foo', 'baz'];
     this.onSubmit = sinon.spy();
     this.onCancel = sinon.spy();
     this.isSaving = false;
@@ -29,7 +26,7 @@ module('Integration | Component | kv | kv-patch-editor', function (hooks) {
       return render(
         hbs`
     <KvPatchEditor
-      @emptySubkeys={{this.subkeyObject}}
+      @subkeyArray={{this.subkeyArray}}
       @onSubmit={{this.onSubmit}}
       @onCancel={{this.onCancel}}
       @isSaving={{this.isSaving}}
