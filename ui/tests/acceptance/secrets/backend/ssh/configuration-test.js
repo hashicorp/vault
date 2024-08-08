@@ -71,12 +71,14 @@ module('Acceptance | ssh | configuration', function (hooks) {
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${sshPath}/configuration/edit`,
-      'after configuring it stays on the edit page displaying the public key'
+      'stays on configuration form page.'
     );
     // There is a delay in the backend for the public key to be generated, wait for it to complete by checking that the public key is displayed
     await waitFor(GENERAL.inputByAttr('public-key'));
     assert.dom(GENERAL.inputByAttr('public-key')).hasText('***********', 'public key is masked');
-    assert.dom(SES.ssh.editConfigSection).exists('renders the edit section');
+    assert
+      .dom(SES.ssh.editConfigSection)
+      .exists('renders the edit configuration section of the form and not the create part');
     // delete Public key
     await click(SES.ssh.deletePublicKey);
     assert.dom(GENERAL.confirmMessage).hasText('This will remove the CA certificate information.');
