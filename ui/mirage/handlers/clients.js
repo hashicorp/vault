@@ -214,6 +214,16 @@ function calcCounts(arr) {
 }
 
 /**
+ * Helper fn to filter namespaces to include the namespace itself, and any children
+ */
+function filterByNamespace(namespaces, namespacePath) {
+  // if we simply do a check for startsWith, filtering for `ns1` will include `ns11` as well as the desired `ns1/child`
+  return namespaces.filter(
+    (ns) => ns.namespace_path === namespacePath || ns.namespace_path.startsWith(`${namespacePath}/`)
+  );
+}
+
+/**
  * Helper fn to filter months data from activity response
  */
 function filterMonths(months, namespacePath) {
@@ -223,13 +233,11 @@ function filterMonths(months, namespacePath) {
     const newMonth = {
       ...month,
     };
-    const filteredNs = month.namespaces.filter((ns) => ns.namespace_path.startsWith(namespacePath));
+    const filteredNs = filterByNamespace(month.namespaces, namespacePath);
     const monthsCount = calcCounts(filteredNs);
 
     if (month.new_clients?.namespaces) {
-      const filteredNewNs = month.new_clients.namespaces.filter((ns) =>
-        ns.namespace_path.startsWith(namespacePath)
-      );
+      const filteredNewNs = filterByNamespace(month.new_clients.namespaces, namespacePath);
       const newCount = calcCounts(filteredNewNs);
 
       newMonth.new_clients.namespaces = filteredNewNs;
@@ -250,7 +258,7 @@ export function filterActivityResponse(data, namespacePath) {
   const { by_namespace, months } = data;
 
   const filteredMonths = filterMonths(months, namespacePath);
-  const filteredNs = by_namespace.filter((ns) => ns.namespace_path.startsWith(namespacePath));
+  const filteredNs = filterByNamespace(by_namespace, namespacePath);
   const filteredTotals = calcCounts(filteredNs);
   return {
     ...data,
