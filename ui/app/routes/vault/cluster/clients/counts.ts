@@ -7,6 +7,7 @@ import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { fromUnixTime } from 'date-fns';
 
+import type AdapterError from '@ember-data/adapter';
 import type FlagsService from 'vault/services/flags';
 import type NamespaceService from 'vault/services/namespace';
 import type StoreService from 'vault/services/store';
@@ -14,6 +15,7 @@ import type VersionService from 'vault/services/version';
 import type { ModelFrom } from 'vault/vault/route';
 import type ClientsRoute from '../clients';
 import type ClientsCountsController from 'vault/controllers/vault/cluster/clients/counts';
+import type ClientsActivityModel from 'vault/vault/models/clients/activity';
 
 export interface ClientsCountsRouteParams {
   start_time?: string | number | undefined;
@@ -27,6 +29,8 @@ interface ActivityAdapterQuery {
   end_time: { timestamp: number } | undefined;
   namespace?: string;
 }
+
+export type ClientsCountsRouteModel = ModelFrom<ClientsCountsRoute>;
 
 export default class ClientsCountsRoute extends Route {
   @service declare readonly flags: FlagsService;
@@ -64,7 +68,10 @@ export default class ClientsCountsRoute extends Route {
     return timestamp;
   }
 
-  async getActivity(params: ClientsCountsRouteParams) {
+  async getActivity(params: ClientsCountsRouteParams): Promise<{
+    activity: ClientsActivityModel;
+    activityError: AdapterError;
+  }> {
     let activity, activityError;
     // if CE without start time we want to skip the activity call
     // so that the user is forced to choose a date range
@@ -76,7 +83,7 @@ export default class ClientsCountsRoute extends Route {
       };
       if (params?.ns) {
         // only set explicit namespace if it's a query param
-        query.namespace = this.namespace.calcFullNamespacePath(params.ns);
+        query.namespace = params.ns;
       }
       try {
         activity = await this.store.queryRecord('clients/activity', query);
