@@ -124,5 +124,5 @@ module.exports = [
     source: '/vault/docs/concepts/lease-count-quota-exceeded',
     destination: '/vault/docs/troubleshoot/lease-count-quota-exceeded',
     permanent: true,
-  },
+  }
 ]
