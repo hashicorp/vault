@@ -61,37 +61,44 @@ module.exports = [
     permanent: true,
   },
   {
-    source: '/vault/docs/:version(v1\.(?:4|5|6|7|8|9|10|11|12|13)\.x)/agent-and-proxy/agent',
+    source:
+      '/vault/docs/:version(v1.(?:4|5|6|7|8|9|10|11|12|13).x)/agent-and-proxy/agent',
     destination: '/vault/docs/:version/agent/',
     permanent: true,
   },
   {
-    source: '/vault/docs/:version(v1\.(?:4|5|6|7|8|9|10|11|12|13)\.x)/agent-and-proxy/agent/template',
+    source:
+      '/vault/docs/:version(v1.(?:4|5|6|7|8|9|10|11|12|13).x)/agent-and-proxy/agent/template',
     destination: '/vault/docs/:version/agent/template',
     permanent: true,
   },
   {
-    source: '/vault/docs/:version(v1\.(?:4|5|6|7|8|9|10|11|12|13)\.x)/agent-and-proxy/agent/caching',
+    source:
+      '/vault/docs/:version(v1.(?:4|5|6|7|8|9|10|11|12|13).x)/agent-and-proxy/agent/caching',
     destination: '/vault/docs/:version/agent/caching',
     permanent: true,
   },
   {
-    source: '/vault/docs/:version(v1\.(?:4|5|6|7|8|9|10|11|12|13)\.x)/agent-and-proxy/autoauth/:slug*',
+    source:
+      '/vault/docs/:version(v1.(?:4|5|6|7|8|9|10|11|12|13).x)/agent-and-proxy/autoauth/:slug*',
     destination: '/vault/docs/:version/agent/autoauth/:slug',
     permanent: true,
   },
   {
-    source: '/vault/docs/:version(v1\.(?:8|9|10|11|12|13)\.x)/agent-and-proxy/agent/caching/:slug*',
+    source:
+      '/vault/docs/:version(v1.(?:8|9|10|11|12|13).x)/agent-and-proxy/agent/caching/:slug*',
     destination: '/vault/docs/:version/agent/caching/:slug',
     permanent: true,
   },
   {
-    source: '/vault/docs/:version(v1\.(?:7|8|9|10|11|12|13)\.x)/agent-and-proxy/agent/winsvc',
+    source:
+      '/vault/docs/:version(v1.(?:7|8|9|10|11|12|13).x)/agent-and-proxy/agent/winsvc',
     destination: '/vault/docs/:version/agent/winsvc',
     permanent: true,
   },
   {
-    source: '/vault/docs/:version(v1\.(?:8|9)\.x)/agent-and-proxy/agent/generate-config',
+    source:
+      '/vault/docs/:version(v1.(?:8|9).x)/agent-and-proxy/agent/generate-config',
     destination: '/vault/docs/:version/agent/template-config',
     permanent: true,
   },
@@ -114,5 +121,15 @@ module.exports = [
     source: '/vault/docs/deprecation/faq',
     destination: '/vault/docs/deprecation',
     permanent: true,
-  }
+  },
+  {
+    source: '/vault/docs/concepts/lease-explosions',
+    destination: '/vault/docs/troubleshoot/lease-explosions',
+    permanent: true,
+  },
+  {
+    source: '/vault/docs/concepts/lease-count-quota-exceeded',
+    destination: '/vault/docs/troubleshoot/lease-count-quota-exceeded',
+    permanent: true,
+  },
 ]
