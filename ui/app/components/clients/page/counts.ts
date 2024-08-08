@@ -29,6 +29,11 @@ interface Args {
   versionHistory: ClientsVersionHistoryModel[];
 }
 
+/**
+ * This component is the parent page for all the client count dashboard views.
+ * it is responsible for rendering the title, filters, warnings, and tabs that
+ * are shared across views.
+ */
 export default class ClientsCountsPageComponent extends Component<Args> {
   @service declare readonly flags: FlagsService;
   @service declare readonly version: VersionService;

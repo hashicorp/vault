@@ -18,19 +18,16 @@ module('Integration | Component | clients/horizontal-bar-chart', function (hooks
   });
 
   test('it renders chart and tooltip', async function (assert) {
-    const totalObject = { clients: 5, entity_clients: 2, non_entity_clients: 3 };
     const dataArray = [
       { label: 'second', clients: 3, entity_clients: 1, non_entity_clients: 2 },
       { label: 'first', clients: 2, entity_clients: 1, non_entity_clients: 1 },
     ];
-    this.set('totalCounts', totalObject);
     this.set('totalClientAttribution', dataArray);
 
     await render(hbs`
     <Clients::HorizontalBarChart
       @dataset={{this.totalClientAttribution}}
       @chartLegend={{this.chartLegend}}
-      @totalCounts={{this.totalCounts}}
     />`);
 
     assert.dom('[data-test-horizontal-bar-chart]').exists();
@@ -59,19 +56,16 @@ module('Integration | Component | clients/horizontal-bar-chart', function (hooks
   });
 
   test('it renders data with a large range', async function (assert) {
-    const totalObject = { clients: 5929393, entity_clients: 1391997, non_entity_clients: 4537396 };
     const dataArray = [
       { label: 'second', clients: 5929093, entity_clients: 1391896, non_entity_clients: 4537100 },
       { label: 'first', clients: 300, entity_clients: 101, non_entity_clients: 296 },
     ];
-    this.set('totalCounts', totalObject);
     this.set('totalClientAttribution', dataArray);
 
     await render(hbs`
     <Clients::HorizontalBarChart
       @dataset={{this.totalClientAttribution}}
       @chartLegend={{this.chartLegend}}
-      @totalCounts={{this.totalCounts}}
     />`);
 
     assert.dom('[data-test-horizontal-bar-chart]').exists();
