@@ -226,6 +226,18 @@ func (s *gRPCSystemViewClient) GenerateIdentityToken(ctx context.Context, req *p
 	}, nil
 }
 
+func (s *gRPCSystemViewClient) HasLicense() (bool, error) {
+	reply, err := s.client.HasLicense(context.Background(), &pb.Empty{})
+	if err != nil {
+		return false, err
+	}
+	if reply.Err != "" {
+		return false, errors.New(reply.Err)
+	}
+
+	return reply.HasLicense, nil
+}
+
 type gRPCSystemViewServer struct {
 	pb.UnimplementedSystemViewServer
 
@@ -427,5 +439,23 @@ func (s *gRPCSystemViewServer) GenerateIdentityToken(ctx context.Context, req *p
 	return &pb.GenerateIdentityTokenResponse{
 		Token: res.Token.Token(),
 		TTL:   int64(res.TTL.Seconds()),
+	}, nil
+}
+
+func (s *gRPCSystemViewServer) HasLicense(ctx context.Context, _ *pb.Empty) (*pb.HasLicenseReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
+
+	hasLicense, err := s.impl.HasLicense()
+	if err != nil {
+		return &pb.HasLicenseReply{
+			HasLicense: hasLicense,
+			Err:        pb.ErrToString(err),
+		}, nil
+	}
+
+	return &pb.HasLicenseReply{
+		HasLicense: hasLicense,
 	}, nil
 }

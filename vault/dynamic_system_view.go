@@ -479,3 +479,12 @@ func (d dynamicSystemView) GenerateIdentityToken(ctx context.Context, req *plugi
 		TTL:   ttl,
 	}, nil
 }
+
+func (d dynamicSystemView) HasLicense() (bool, error) {
+	licenseState, err := d.core.EntGetLicenseState()
+	if err != nil {
+		return false, err
+	}
+
+	return licenseState != nil && !licenseState.Terminated, nil
+}

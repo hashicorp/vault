@@ -100,6 +100,9 @@ type SystemView interface {
 
 	// GenerateIdentityToken returns an identity token for the requesting plugin.
 	GenerateIdentityToken(ctx context.Context, req *pluginutil.IdentityTokenRequest) (*pluginutil.IdentityTokenResponse, error)
+
+	// HasLicense returns true if the license exists and is not terminated
+	HasLicense() (bool, error)
 }
 
 type PasswordPolicy interface {
@@ -284,4 +287,8 @@ func (d StaticSystemView) GenerateIdentityToken(_ context.Context, _ *pluginutil
 
 func (d StaticSystemView) APILockShouldBlockRequest() (bool, error) {
 	return d.APILockShouldBlockRequestVal, nil
+}
+
+func (d StaticSystemView) HasLicense() (bool, error) {
+	return false, errors.New("HasLicense is not implemented in StaticSystemView")
 }
