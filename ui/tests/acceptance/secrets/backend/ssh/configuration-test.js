@@ -24,9 +24,8 @@ module('Acceptance | ssh | configuration', function (hooks) {
 
   hooks.beforeEach(function () {
     const flash = this.owner.lookup('service:flash-messages');
-    this.store = this.owner.lookup('service:store');
-    this.flashSuccessSpy = spy(flash, 'success');
     this.flashDangerSpy = spy(flash, 'danger');
+    this.store = this.owner.lookup('service:store');
 
     this.uid = uuidv4();
     return authPage.login();
@@ -101,7 +100,7 @@ module('Acceptance | ssh | configuration', function (hooks) {
     await runCmd(`delete sys/mounts/${sshPath}`);
   });
 
-  test('it should throw validation errors if generate Signing key is not checked and no public and private keys', async function (assert) {
+  test('it displays error if generate Signing key is not checked and no public and private keys', async function (assert) {
     const path = `ssh-configure-${this.uid}`;
     await enablePage.enable('ssh', path);
     await click(SES.configTab);
@@ -111,6 +110,7 @@ module('Acceptance | ssh | configuration', function (hooks) {
       .isChecked('generate_signing_key defaults to true');
     await click(GENERAL.inputByAttr('generate-signing-key-checkbox'));
     await click(SES.ssh.save);
+    assert.true(this.flashDangerSpy.calledWith('missing public_key'), 'Danger flash message is displayed');
     // visit the details page and confirm the public key is not shown
     await visit(`/vault/secrets/${path}/configuration`);
     assert.dom(GENERAL.infoRowLabel('Public key')).doesNotExist('Public Key label does not exist');
