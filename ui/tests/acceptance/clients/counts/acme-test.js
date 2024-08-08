@@ -15,7 +15,7 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CHARTS, CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
 import { ACTIVITY_RESPONSE_STUB, assertBarChart } from 'vault/tests/helpers/clients/client-count-helpers';
 import { formatNumber } from 'core/helpers/format-number';
-import { LICENSE_START, STATIC_NOW } from 'vault/mirage/handlers/clients';
+import { filterActivityResponse, LICENSE_START, STATIC_NOW } from 'vault/mirage/handlers/clients';
 import { selectChoose } from 'ember-power-select/test-support';
 
 const { searchSelect } = GENERAL;
@@ -27,10 +27,11 @@ module('Acceptance | clients | counts | acme', function (hooks) {
 
   hooks.beforeEach(async function () {
     sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
-    this.server.get('sys/internal/counters/activity', () => {
+    this.server.get('sys/internal/counters/activity', (_, req) => {
+      const namespace = req.requestHeaders['X-Vault-Namespace'];
       return {
         request_id: 'some-activity-id',
-        data: ACTIVITY_RESPONSE_STUB,
+        data: filterActivityResponse(ACTIVITY_RESPONSE_STUB, namespace),
       };
     });
     // store serialized activity data for value comparison
@@ -103,15 +104,16 @@ module('Acceptance | clients | counts | acme', function (hooks) {
     let activityCount = 0;
     const expectedNSHeader = [undefined, this.nsPath, undefined];
     this.server.get('sys/internal/counters/activity', (_, req) => {
+      const namespace = req.requestHeaders['X-Vault-Namespace'];
       assert.strictEqual(
-        req.requestHeaders['X-Vault-Namespace'],
+        namespace,
         expectedNSHeader[activityCount],
         `queries activity with correct namespace header ${activityCount}`
       );
       activityCount++;
       return {
         request_id: 'some-activity-id',
-        data: ACTIVITY_RESPONSE_STUB,
+        data: filterActivityResponse(ACTIVITY_RESPONSE_STUB, namespace),
       };
     });
 
