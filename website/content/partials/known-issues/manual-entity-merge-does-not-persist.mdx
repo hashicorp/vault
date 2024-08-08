@@ -5,8 +5,9 @@
 - Vault Enterprise v0.7.0+
 
 #### Issue
-If a manual entity merge is sent to a PR secondary cluster, the change is not persisted to storage, 
-and will be reflected only temporarily on the PR secondary's active node. 
+If you send a manual entity merge to a PR secondary cluster, the change is
+temporarily reflected on the active node of the PR secondary cluster, but Vault
+does not save the change to persistent storage. 
 
 #### Workaround
 All manual entity merge requests should be sent to the primary cluster.
