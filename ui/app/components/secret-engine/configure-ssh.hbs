@@ -4,7 +4,7 @@
 ~}}
 
 {{#if @configured}}
-  <div class="box is-fullwidth is-sideless is-marginless" data-test-ssh-edit-config-section>
+  <div class="box is-fullwidth is-sideless is-marginless" data-test-edit-config-section>
     <div class="field">
       <label for="publicKey" class="is-label">
         Public key
@@ -34,12 +34,12 @@
         @buttonColor="secondary"
         @confirmMessage="This will remove the CA certificate information."
         @onConfirmAction={{this.delete}}
-        data-test-ssh-delete-public-key
+        data-test-delete-public-key
       />
     </Hds::ButtonSet>
   </div>
 {{else}}
-  <form {{on "submit" this.saveConfig}} data-test-ssh-configure-form="true">
+  <form {{on "submit" this.saveConfig}} data-test-configure-form="true">
     <div class="box is-fullwidth is-sideless is-marginless">
       <NamespaceReminder @mode="save" @noun="configuration" />
       <div class="field">
@@ -77,7 +77,13 @@
     </div>
     <div class="field box is-fullwidth is-bottomless is-marginless">
       <div class="control">
-        <Hds::Button @text="Save" @icon={{if @loading "loading"}} type="submit" disabled={{@loading}} data-test-ssh-save />
+        <Hds::Button
+          @text="Save"
+          @icon={{if @loading "loading"}}
+          type="submit"
+          disabled={{@loading}}
+          data-test-configure-save-button
+        />
       </div>
     </div>
   </form>
