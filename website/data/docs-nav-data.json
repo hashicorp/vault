@@ -2006,7 +2006,7 @@
         "path": "troubleshoot/lease-count-quota-exceeded"
       },
       {
-        "title": "Troubleshooting tutorial",
+        "title": "Tutorial",
         "href": "https://learn.hashicorp.com/tutorials/vault/troubleshooting-vault"
       }
     ]
