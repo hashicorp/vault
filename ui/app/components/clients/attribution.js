@@ -18,7 +18,6 @@ import { waitFor } from '@ember/test-waiters';
  *
  * @example
  *  <Clients::Attribution
- *    @newUsageCounts={{this.newUsageCounts}}
  *    @totalClientAttribution={{this.totalClientAttribution}}
  *    @newClientAttribution={{this.newClientAttribution}}
  *    @selectedNamespace={{this.selectedNamespace}}
@@ -29,7 +28,6 @@ import { waitFor } from '@ember/test-waiters';
  *    @upgradesDuringActivity={{array (hash version="1.10.1" previousVersion="1.9.1" timestampInstalled= "2021-11-18T10:23:16Z") }}
  *  />
  *
- * @param {object} newUsageCounts - object with new client counts for chart tooltip text
  * @param {array} totalClientAttribution - array of objects containing a label and breakdown of client counts for total clients
  * @param {array} newClientAttribution - array of objects containing a label and breakdown of client counts for new clients
  * @param {string} selectedNamespace - namespace selected from filter bar
