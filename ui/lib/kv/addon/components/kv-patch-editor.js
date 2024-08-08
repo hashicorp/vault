@@ -6,6 +6,7 @@
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
+import { A } from '@ember/array';
 
 // TODO validations
 /*
@@ -13,81 +14,60 @@ import { tracked } from '@glimmer/tracking';
   - show warning that numbers will be submitted as strings
   - show warning for whitespace 
   */
-class InputStateManager {
-  @tracked _state;
-  possibleStates = ['enabled', 'disabled', 'deleted'];
 
-  constructor(subkeyArray) {
-    // initially set all inputs to disabled
-    this._state = subkeyArray.reduce((obj, key) => {
-      obj[key] = 'disabled';
-      return obj;
-    }, {});
+class Kv {
+  @tracked key;
+  @tracked value;
+  @tracked state;
+
+  constructor({ key, value = undefined, state = 'disabled' }) {
+    this.key = key;
+    this.value = value;
+    this.state = state;
   }
 
-  set(key, status) {
-    const newState = { ...this._state };
-    newState[key] = status;
-    // trigger update
-    this._state = newState;
+  get isPatchable() {
+    // only include edited inputs in payload
+    return this.state === 'enabled' || this.state === 'deleted';
   }
 
-  get(key) {
-    return this._state[key];
-  }
-}
-
-class KvData {
-  @tracked _kvData;
-
-  constructor(subkeys) {
-    this._kvData = subkeys.reduce((obj, key) => {
-      obj[key] = undefined;
-      return obj;
-    }, {});
+  reset() {
+    this.value = undefined;
+    this.state = 'disabled';
   }
 
-  set(key, value) {
-    const newObject = this._kvData;
-    newObject[key] = value;
-    // trigger update
-    this._kvData = newObject;
+  @action
+  onBlur(input, evt) {
+    this[input] = evt.target.value;
   }
 
-  get(key) {
-    return this._kvData[key];
-  }
+  @action
+  onClick(state) {
+    this.state = state;
 
-  deleteKey(key) {
-    const newObject = { ...this._kvData };
-    delete newObject[key];
-    // trigger an update
-    this._kvData = newObject;
+    if (state === 'deleted') {
+      this.value = null;
+    }
   }
 }
 
 export default class KvPatchEditor extends Component {
-  @tracked state; // disabled, enabled or deleted input states
   @tracked patchData; // key value pairs in form
-
   // tracked variables for new row of inputs after user clicks "add"
   @tracked newKey;
   @tracked newValue;
 
-  getState = (key) => this.state.get(key);
-  getValue = (key) => this.patchData.get(key);
-
-  isOriginalKey = (key) => this.args.subkeyArray.includes(key);
+  isOriginalSubkey = (key) => this.args.subkeyArray.includes(key);
 
   constructor() {
     super(...arguments);
-    this.state = new InputStateManager(this.args.subkeyArray);
-    this.patchData = new KvData(this.args.subkeyArray);
+    const subkeys = this.args.subkeyArray.map((key) => this.generateData(key));
+    this.patchData = A(subkeys);
     this.resetNewRow();
   }
 
-  get formData() {
-    return this.patchData._kvData;
+  generateData(key, value, state) {
+    return new Kv({ key, value, state });
   }
 
   resetNewRow() {
@@ -96,24 +76,21 @@ export default class KvPatchEditor extends Component {
   }
 
   @action
-  setState(key, status) {
-    this.state.set(key, status);
-
-    if (status === 'deleted') {
-      // for a JSON merge patch sending null deletes a key/value pair https://datatracker.ietf.org/doc/html/rfc7386
-      this.patchData.set(key, null);
-    }
+  addRow() {
+    const data = this.generateData(this.newKey, this.newValue, 'enabled');
+    this.patchData.pushObject(data);
+    // reset tracked values after adding them to patchData
+    this.resetNewRow();
   }
 
   @action
-  handleCancel(key) {
-    if (this.isOriginalKey(key)) {
-      this.setState(key, 'disabled');
-      // reset value to undefined
-      this.patchData.set(key, undefined);
+  undo(KV) {
+    if (this.isOriginalSubkey(KV.key)) {
+      // reset state to disabled and value to undefined
+      KV.reset();
     } else {
       // remove row all together
-      this.patchData.deleteKey(key);
+      this.patchData.removeObject(KV);
     }
   }
 
@@ -124,47 +101,22 @@ export default class KvPatchEditor extends Component {
   }
 
   @action
-  handlePatchKey(key, event) {
-    // store value of original key
-    const value = this.patchData.get(key);
-    const newKey = event.target.value;
-    // delete old key
-    this.patchData.deleteKey(key);
-    // add new one
-    this.patchData.set(newKey, value);
-  }
-
-  @action
-  handlePatchValue(key, event) {
-    const { value } = event.target;
-    this.patchData.set(key, value);
-  }
-
-  @action
-  handleAddClick() {
-    this.patchData.set(this.newKey, this.newValue);
-    this.setState(this.newKey, 'enabled');
-    // reset tracked values after adding them to patchData
-    this.resetNewRow();
-  }
-
-  @action
   submit(event) {
     event.preventDefault();
     // patchData will not include the last row if a user has not clicked "add"
     // manually check for for data and add it the payload
     if (this.newKey && this.newValue) {
-      this.handleAddClick();
+      this.addRow();
     }
 
-    const data = this.formData;
-
-    // remove disabled values from payload
-    for (const [key, value] of Object.entries(data)) {
-      if (this.getState(key) === 'disabled' && value === undefined) {
-        delete data[key];
+    // collect only relevant inputs
+    const data = this.patchData.reduce((obj, KV) => {
+      if (KV.isPatchable) {
+        obj[KV.key] = KV.value;
       }
-    }
+      return obj;
+    }, {});
+
     this.args.onSubmit(data);
   }
 }
