@@ -258,6 +258,10 @@
         "path": "concepts/resource-quotas"
       },
       {
+        "title": "Billing Start Date",
+        "path": "concepts/billing-start-date"
+      },
+      {
         "title": "Client count",
         "routes": [
           {
@@ -2855,6 +2859,15 @@
           {
             "title": "Run Vault with many namespaces",
             "path": "enterprise/namespaces/namespace-limits",
+            "badge": {
+              "text": "ENTERPRISE",
+              "type": "outlined",
+              "color": "neutral"
+            }
+          },
+          {
+            "title": "Configure cross namespace access",
+            "path": "enterprise/namespaces/configure-cross-namespace-access",
             "badge": {
               "text": "ENTERPRISE",
               "type": "outlined",

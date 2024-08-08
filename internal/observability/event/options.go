@@ -6,10 +6,12 @@ package event
 import (
 	"fmt"
 	"os"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-uuid"
 )
@@ -26,6 +28,7 @@ type options struct {
 	withSocketType  string
 	withMaxDuration time.Duration
 	withFileMode    *os.FileMode
+	withLogger      hclog.Logger
 }
 
 // getDefaultOptions returns Options with their default values.
@@ -196,6 +199,18 @@ func WithFileMode(mode string) Option {
 		default:
 			m := os.FileMode(raw)
 			o.withFileMode = &m
+		}
+
+		return nil
+	}
+}
+
+// WithLogger provides an Option to supply a logger which will be used to write logs.
+// NOTE: If no logger is supplied then logging may not be possible.
+func WithLogger(l hclog.Logger) Option {
+	return func(o *options) error {
+		if l != nil && !reflect.ValueOf(l).IsNil() {
+			o.withLogger = l
 		}
 
 		return nil

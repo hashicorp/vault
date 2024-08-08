@@ -3,7 +3,14 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { buildKvPath, kvDataPath, kvDestroyPath, kvMetadataPath, kvUndeletePath } from 'vault/utils/kv-path';
+import {
+  buildKvPath,
+  kvDataPath,
+  kvDestroyPath,
+  kvMetadataPath,
+  kvUndeletePath,
+  kvSubkeysPath,
+} from 'vault/utils/kv-path';
 import { module, test } from 'qunit';
 
 module('Unit | Utility | kv-path utils', function () {
@@ -106,6 +113,40 @@ module('Unit | Utility | kv-path utils', function () {
     ].forEach((t, idx) => {
       test(`kvUndeletePath ${idx}`, function (assert) {
         const result = kvUndeletePath(t.backend, t.path);
+        assert.strictEqual(result, t.expected);
+      });
+    });
+  });
+
+  module('kvSubkeysPath', function () {
+    [
+      {
+        backend: 'some/back end',
+        path: 'my/secret/path',
+        expected: 'some/back%20end/subkeys/my/secret/path?depth=0',
+      },
+      {
+        backend: 'some/back end',
+        path: 'my/secret/path',
+        version: 3,
+        expected: 'some/back%20end/subkeys/my/secret/path?depth=0&version=3',
+      },
+      {
+        backend: 'some/back end',
+        path: 'my/secret/path',
+        depth: 4,
+        version: 3,
+        expected: 'some/back%20end/subkeys/my/secret/path?depth=4&version=3',
+      },
+      {
+        backend: 'some/back end',
+        path: 'my/secret/path',
+        depth: 4,
+        expected: 'some/back%20end/subkeys/my/secret/path?depth=4',
+      },
+    ].forEach((t, idx) => {
+      test(`kvSubkeysPath ${idx}`, function (assert) {
+        const result = kvSubkeysPath(t.backend, t.path, t.depth, t.version);
         assert.strictEqual(result, t.expected);
       });
     });

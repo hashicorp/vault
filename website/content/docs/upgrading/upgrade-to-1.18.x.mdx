@@ -57,3 +57,9 @@ WARNING! The following warnings were returned from Vault:
 ```
 
 </CodeBlockConfig>
+
+### Docker image no longer contains `curl`
+
+The `curl` binary is no longer included in the published Docker container images for Vault and Vault
+Enterprise. If your workflow depends on `curl` in the image you can dynamically install it using
+`apk`, e.g.: `docker exec <CONTAINER-ID> apk add curl` or `kubectl exec -ti <NAME> -- apk add curl`.

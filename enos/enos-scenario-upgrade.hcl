@@ -1,5 +1,5 @@
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: BUSL-1.1
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
 
 scenario "upgrade" {
   description = <<-EOF
@@ -30,52 +30,58 @@ scenario "upgrade" {
     distro          = global.distros
     edition         = global.editions
     initial_version = global.upgrade_initial_versions_ce
+    ip_version      = global.ip_versions
     seal            = global.seals
 
-
-    # Our local builder always creates bundles
+    // Our local builder always creates bundles
     exclude {
       artifact_source = ["local"]
       artifact_type   = ["package"]
     }
 
-    # Don't upgrade from super-ancient versions in CI because there are known reliability issues
-    # in those versions that have already been fixed.
+    // Don't upgrade from super-ancient versions in CI because there are known reliability issues
+    // in those versions that have already been fixed.
     exclude {
       initial_version = [for e in matrix.initial_version : e if semverconstraint(e, "<1.11.0-0")]
     }
 
-    # FIPS 140-2 editions were not supported until 1.11.x, even though there are 1.10.x binaries
-    # published.
+    // FIPS 140-2 editions were not supported until 1.11.x, even though there are 1.10.x binaries
+    // published.
     exclude {
       edition         = ["ent.fips1402", "ent.hsm.fips1402"]
       initial_version = [for e in matrix.initial_version : e if semverconstraint(e, "<1.11.0-0")]
     }
 
-    # There are no published versions of these artifacts yet. We'll update this to exclude older
-    # versions after our initial publication of these editions for arm64.
+    // There are no published versions of these artifacts yet. We'll update this to exclude older
+    // versions after our initial publication of these editions for arm64.
     exclude {
       arch    = ["arm64"]
       edition = ["ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
     }
 
-    # PKCS#11 can only be used with hsm editions
+    // PKCS#11 can only be used with hsm editions
     exclude {
       seal    = ["pkcs11"]
       edition = [for e in matrix.edition : e if !strcontains(e, "hsm")]
     }
 
-    # arm64 AMIs are not offered for Leap
+    // arm64 AMIs are not offered for Leap
     exclude {
       distro = ["leap"]
       arch   = ["arm64"]
     }
 
-    # softhsm packages not available for leap/sles. Enos support for softhsm on amzn2 is
-    # not implemented yet.
+    // softhsm packages not available for leap/sles. Enos support for softhsm on amzn2 is
+    // not implemented yet.
     exclude {
       seal   = ["pkcs11"]
       distro = ["amzn2", "leap", "sles"]
+    }
+
+    // Testing in IPV6 mode is currently implemented for integrated Raft storage only
+    exclude {
+      ip_version = ["6"]
+      backend    = ["consul"]
     }
   }
 
@@ -132,6 +138,7 @@ scenario "upgrade" {
 
     variables {
       common_tags = global.tags
+      ip_version  = matrix.ip_version
     }
   }
 
@@ -239,12 +246,12 @@ scenario "upgrade" {
     variables {
       cluster_name    = step.create_vault_cluster_backend_targets.cluster_name
       cluster_tag_key = global.backend_tag_key
+      hosts           = step.create_vault_cluster_backend_targets.hosts
       license         = (matrix.backend == "consul" && matrix.consul_edition == "ent") ? step.read_backend_license.license : null
       release = {
         edition = matrix.consul_edition
         version = matrix.consul_version
       }
-      target_hosts = step.create_vault_cluster_backend_targets.hosts
     }
   }
 
@@ -277,6 +284,8 @@ scenario "upgrade" {
       quality.vault_config_log_level,
       quality.vault_init,
       quality.vault_license_required_ent,
+      quality.vault_listener_ipv4,
+      quality.vault_listener_ipv6,
       quality.vault_service_start,
       quality.vault_storage_backend_raft,
       // verified in enos_vault_start resource
@@ -305,7 +314,10 @@ scenario "upgrade" {
         version = matrix.consul_version
       } : null
       enable_audit_devices = var.vault_enable_audit_devices
+      hosts                = step.create_vault_cluster_targets.hosts
+      ip_version           = matrix.ip_version
       license              = matrix.edition != "ce" ? step.read_vault_license.license : null
+      manage_service       = true # always handle systemd for released bundles
       packages             = concat(global.packages, global.distro_packages[matrix.distro])
       release = {
         edition = matrix.edition
@@ -314,7 +326,6 @@ scenario "upgrade" {
       seal_attributes = step.create_seal_key.attributes
       seal_type       = matrix.seal
       storage_backend = matrix.backend
-      target_hosts    = step.create_vault_cluster_targets.hosts
     }
   }
 
@@ -340,8 +351,10 @@ scenario "upgrade" {
     ]
 
     variables {
-      timeout     = 120 # seconds
-      vault_hosts = step.create_vault_cluster_targets.hosts
+      hosts      = step.create_vault_cluster_targets.hosts
+      ip_version = matrix.ip_version
+      timeout    = 120 // seconds
+      vault_addr = step.create_vault_cluster.api_addr_localhost
       // Use the install dir for our initial version, which always comes from a zip bundle
       vault_install_dir = global.vault_install_dir["bundle"]
       vault_root_token  = step.create_vault_cluster.root_token
@@ -364,7 +377,9 @@ scenario "upgrade" {
     ]
 
     variables {
-      vault_hosts = step.create_vault_cluster_targets.hosts
+      hosts      = step.create_vault_cluster_targets.hosts
+      ip_version = matrix.ip_version
+      vault_addr = step.create_vault_cluster.api_addr_localhost
       // Use the install dir for our initial version, which always comes from a zip bundle
       vault_install_dir = global.vault_install_dir["bundle"]
       vault_root_token  = step.create_vault_cluster.root_token
@@ -391,17 +406,17 @@ scenario "upgrade" {
     ]
 
     variables {
-      leader_public_ip  = step.get_vault_cluster_ips.leader_public_ip
-      leader_private_ip = step.get_vault_cluster_ips.leader_private_ip
-      vault_instances   = step.create_vault_cluster_targets.hosts
+      hosts       = step.create_vault_cluster_targets.hosts
+      leader_host = step.get_vault_cluster_ips.leader_host
+      vault_addr  = step.create_vault_cluster.api_addr_localhost
       // Use the install dir for our initial version, which always comes from a zip bundle
       vault_install_dir = global.vault_install_dir["bundle"]
       vault_root_token  = step.create_vault_cluster.root_token
     }
   }
 
-  # This step upgrades the Vault cluster to the var.vault_product_version
-  # by getting a bundle or package of that version from the matrix.artifact_source
+  // This step upgrades the Vault cluster to the var.vault_product_version
+  // by getting a bundle or package of that version from the matrix.artifact_source
   step "upgrade_vault" {
     description = <<-EOF
       Perform an in-place upgrade of the Vault Cluster nodes by first installing a new version
@@ -423,13 +438,15 @@ scenario "upgrade" {
     ]
 
     variables {
-      vault_api_addr            = "http://localhost:8200"
-      vault_instances           = step.create_vault_cluster_targets.hosts
-      vault_local_artifact_path = local.artifact_path
+      hosts                     = step.create_vault_cluster_targets.hosts
+      ip_version                = matrix.ip_version
+      vault_addr                = step.create_vault_cluster.api_addr_localhost
       vault_artifactory_release = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
       vault_install_dir         = global.vault_install_dir[matrix.artifact_type]
-      vault_unseal_keys         = matrix.seal == "shamir" ? step.create_vault_cluster.unseal_keys_hex : null
+      vault_local_artifact_path = local.artifact_path
+      vault_root_token          = step.create_vault_cluster.root_token
       vault_seal_type           = matrix.seal
+      vault_unseal_keys         = matrix.seal == "shamir" ? step.create_vault_cluster.unseal_keys_hex : null
     }
   }
 
@@ -452,8 +469,10 @@ scenario "upgrade" {
     ]
 
     variables {
-      timeout           = 120 # seconds
-      vault_hosts       = step.create_vault_cluster_targets.hosts
+      hosts             = step.create_vault_cluster_targets.hosts
+      ip_version        = matrix.ip_version
+      timeout           = 120 // seconds
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
       vault_root_token  = step.create_vault_cluster.root_token
     }
@@ -475,7 +494,9 @@ scenario "upgrade" {
     ]
 
     variables {
-      vault_hosts       = step.create_vault_cluster_targets.hosts
+      hosts             = step.create_vault_cluster_targets.hosts
+      ip_version        = matrix.ip_version
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
       vault_root_token  = step.create_vault_cluster.root_token
     }
@@ -497,8 +518,9 @@ scenario "upgrade" {
     ]
 
     variables {
-      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
       leader_host       = step.get_leader_ip_for_step_down.leader_host
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
+      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
       vault_root_token  = step.create_vault_cluster.root_token
     }
   }
@@ -519,8 +541,10 @@ scenario "upgrade" {
     ]
 
     variables {
-      timeout           = 120 # seconds
-      vault_hosts       = step.create_vault_cluster_targets.hosts
+      hosts             = step.create_vault_cluster_targets.hosts
+      ip_version        = matrix.ip_version
+      timeout           = 120 // seconds
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
       vault_root_token  = step.create_vault_cluster.root_token
     }
@@ -544,37 +568,11 @@ scenario "upgrade" {
     ]
 
     variables {
-      vault_hosts       = step.create_vault_cluster_targets.hosts
+      hosts             = step.create_vault_cluster_targets.hosts
+      ip_version        = matrix.ip_version
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
       vault_root_token  = step.create_vault_cluster.root_token
-    }
-  }
-
-  step "verify_vault_version" {
-    description = global.description.verify_vault_version
-    module      = module.vault_verify_version
-    depends_on = [
-      step.get_updated_vault_cluster_ips,
-    ]
-
-    providers = {
-      enos = local.enos_provider[matrix.distro]
-    }
-
-    verifies = [
-      quality.vault_version_build_date,
-      quality.vault_version_edition,
-      quality.vault_version_release,
-    ]
-
-    variables {
-      vault_instances       = step.create_vault_cluster_targets.hosts
-      vault_edition         = matrix.edition
-      vault_install_dir     = global.vault_install_dir[matrix.artifact_type]
-      vault_product_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
-      vault_revision        = matrix.artifact_source == "local" ? step.get_local_metadata.revision : var.vault_revision
-      vault_build_date      = matrix.artifact_source == "local" ? step.get_local_metadata.build_date : var.vault_build_date
-      vault_root_token      = step.create_vault_cluster.root_token
     }
   }
 
@@ -596,8 +594,38 @@ scenario "upgrade" {
     ]
 
     variables {
-      vault_instances   = step.create_vault_cluster_targets.hosts
+      hosts             = step.create_vault_cluster_targets.hosts
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
+    }
+  }
+
+  step "verify_vault_version" {
+    description = global.description.verify_vault_version
+    module      = module.vault_verify_version
+    depends_on  = [step.verify_vault_unsealed]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    verifies = [
+      quality.vault_api_sys_version_history_keys,
+      quality.vault_api_sys_version_history_key_info,
+      quality.vault_version_build_date,
+      quality.vault_version_edition,
+      quality.vault_version_release,
+    ]
+
+    variables {
+      hosts                 = step.create_vault_cluster_targets.hosts
+      vault_addr            = step.create_vault_cluster.api_addr_localhost
+      vault_edition         = matrix.edition
+      vault_install_dir     = global.vault_install_dir[matrix.artifact_type]
+      vault_product_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
+      vault_revision        = matrix.artifact_source == "local" ? step.get_local_metadata.revision : var.vault_revision
+      vault_build_date      = matrix.artifact_source == "local" ? step.get_local_metadata.build_date : var.vault_build_date
+      vault_root_token      = step.create_vault_cluster.root_token
     }
   }
 
@@ -605,7 +633,6 @@ scenario "upgrade" {
     description = global.description.verify_write_test_data
     module      = module.vault_verify_read_data
     depends_on = [
-      step.get_updated_vault_cluster_ips,
       step.verify_write_test_data,
       step.verify_vault_unsealed
     ]
@@ -622,7 +649,8 @@ scenario "upgrade" {
     ]
 
     variables {
-      node_public_ips   = step.get_updated_vault_cluster_ips.follower_public_ips
+      hosts             = step.get_updated_vault_cluster_ips.follower_hosts
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
     }
   }
@@ -631,9 +659,7 @@ scenario "upgrade" {
     description = global.description.verify_raft_cluster_all_nodes_are_voters
     skip_step   = matrix.backend != "raft"
     module      = module.vault_verify_raft_auto_join_voter
-    depends_on = [
-      step.get_updated_vault_cluster_ips,
-    ]
+    depends_on  = [step.verify_vault_unsealed]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -642,8 +668,10 @@ scenario "upgrade" {
     verifies = quality.vault_raft_voters
 
     variables {
+      hosts             = step.create_vault_cluster_targets.hosts
+      ip_version        = matrix.ip_version
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
-      vault_instances   = step.create_vault_cluster_targets.hosts
       vault_root_token  = step.create_vault_cluster.root_token
     }
   }
@@ -651,9 +679,7 @@ scenario "upgrade" {
   step "verify_replication" {
     description = global.description.verify_replication_status
     module      = module.vault_verify_replication
-    depends_on = [
-      step.get_updated_vault_cluster_ips,
-    ]
+    depends_on  = [step.verify_vault_unsealed]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -666,18 +692,16 @@ scenario "upgrade" {
     ]
 
     variables {
-      vault_edition     = matrix.edition
-      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
-      vault_instances   = step.create_vault_cluster_targets.hosts
+      hosts         = step.create_vault_cluster_targets.hosts
+      vault_addr    = step.create_vault_cluster.api_addr_localhost
+      vault_edition = matrix.edition
     }
   }
 
   step "verify_ui" {
     description = global.description.verify_ui
     module      = module.vault_verify_ui
-    depends_on = [
-      step.get_updated_vault_cluster_ips,
-    ]
+    depends_on  = [step.verify_vault_unsealed]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -686,7 +710,8 @@ scenario "upgrade" {
     verifies = quality.vault_ui_assets
 
     variables {
-      vault_instances = step.create_vault_cluster_targets.hosts
+      hosts      = step.create_vault_cluster_targets.hosts
+      vault_addr = step.create_vault_cluster.api_addr_localhost
     }
   }
 
@@ -702,7 +727,7 @@ scenario "upgrade" {
 
   output "hosts" {
     description = "The Vault cluster target hosts"
-    value       = step.create_vault_cluster.target_hosts
+    value       = step.create_vault_cluster.hosts
   }
 
   output "private_ips" {

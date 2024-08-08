@@ -42,8 +42,6 @@ export const ACTIVITY_RESPONSE_STUB = {
         entity_clients: 4256,
         non_entity_clients: 4138,
         secret_syncs: 4810,
-        distinct_entities: 4256,
-        non_entity_tokens: 4138,
       },
       mounts: [
         {
@@ -54,8 +52,6 @@ export const ACTIVITY_RESPONSE_STUB = {
             entity_clients: 4256,
             non_entity_clients: 4138,
             secret_syncs: 0,
-            distinct_entities: 4256,
-            non_entity_tokens: 4138,
           },
         },
         {
@@ -66,8 +62,6 @@ export const ACTIVITY_RESPONSE_STUB = {
             entity_clients: 0,
             non_entity_clients: 0,
             secret_syncs: 4810,
-            distinct_entities: 0,
-            non_entity_tokens: 0,
           },
         },
         {
@@ -78,8 +72,6 @@ export const ACTIVITY_RESPONSE_STUB = {
             entity_clients: 0,
             non_entity_clients: 0,
             secret_syncs: 0,
-            distinct_entities: 0,
-            non_entity_tokens: 0,
           },
         },
       ],
@@ -93,8 +85,6 @@ export const ACTIVITY_RESPONSE_STUB = {
         entity_clients: 4002,
         non_entity_clients: 4089,
         secret_syncs: 4290,
-        distinct_entities: 4002,
-        non_entity_tokens: 4089,
       },
       mounts: [
         {
@@ -105,8 +95,6 @@ export const ACTIVITY_RESPONSE_STUB = {
             entity_clients: 4002,
             non_entity_clients: 4089,
             secret_syncs: 0,
-            distinct_entities: 4002,
-            non_entity_tokens: 4089,
           },
         },
         {
@@ -117,8 +105,6 @@ export const ACTIVITY_RESPONSE_STUB = {
             entity_clients: 0,
             non_entity_clients: 0,
             secret_syncs: 4290,
-            distinct_entities: 0,
-            non_entity_tokens: 0,
           },
         },
         {
@@ -129,8 +115,6 @@ export const ACTIVITY_RESPONSE_STUB = {
             entity_clients: 0,
             non_entity_clients: 0,
             secret_syncs: 0,
-            distinct_entities: 0,
-            non_entity_tokens: 0,
           },
         },
       ],
@@ -151,8 +135,6 @@ export const ACTIVITY_RESPONSE_STUB = {
         entity_clients: 100,
         non_entity_clients: 100,
         secret_syncs: 100,
-        distinct_entities: 100,
-        non_entity_tokens: 100,
       },
       namespaces: [
         {
@@ -164,8 +146,6 @@ export const ACTIVITY_RESPONSE_STUB = {
             entity_clients: 100,
             non_entity_clients: 100,
             secret_syncs: 100,
-            distinct_entities: 100,
-            non_entity_tokens: 100,
           },
           mounts: [
             {
@@ -176,8 +156,6 @@ export const ACTIVITY_RESPONSE_STUB = {
                 entity_clients: 0,
                 non_entity_clients: 0,
                 secret_syncs: 0,
-                distinct_entities: 0,
-                non_entity_tokens: 0,
               },
             },
             {
@@ -188,8 +166,6 @@ export const ACTIVITY_RESPONSE_STUB = {
                 entity_clients: 100,
                 non_entity_clients: 100,
                 secret_syncs: 0,
-                distinct_entities: 0,
-                non_entity_tokens: 0,
               },
             },
             {
@@ -200,8 +176,6 @@ export const ACTIVITY_RESPONSE_STUB = {
                 entity_clients: 0,
                 non_entity_clients: 0,
                 secret_syncs: 100,
-                distinct_entities: 0,
-                non_entity_tokens: 0,
               },
             },
           ],
@@ -214,8 +188,6 @@ export const ACTIVITY_RESPONSE_STUB = {
           entity_clients: 100,
           non_entity_clients: 100,
           secret_syncs: 100,
-          distinct_entities: 100,
-          non_entity_tokens: 100,
         },
         namespaces: [
           {
@@ -227,8 +199,6 @@ export const ACTIVITY_RESPONSE_STUB = {
               entity_clients: 100,
               non_entity_clients: 100,
               secret_syncs: 100,
-              distinct_entities: 100,
-              non_entity_tokens: 100,
             },
             mounts: [
               {
@@ -239,8 +209,6 @@ export const ACTIVITY_RESPONSE_STUB = {
                   entity_clients: 0,
                   non_entity_clients: 0,
                   secret_syncs: 0,
-                  distinct_entities: 0,
-                  non_entity_tokens: 0,
                 },
               },
               {
@@ -251,8 +219,6 @@ export const ACTIVITY_RESPONSE_STUB = {
                   entity_clients: 100,
                   non_entity_clients: 100,
                   secret_syncs: 0,
-                  distinct_entities: 0,
-                  non_entity_tokens: 0,
                 },
               },
               {
@@ -263,8 +229,6 @@ export const ACTIVITY_RESPONSE_STUB = {
                   entity_clients: 0,
                   non_entity_clients: 0,
                   secret_syncs: 100,
-                  distinct_entities: 0,
-                  non_entity_tokens: 0,
                 },
               },
             ],
@@ -280,8 +244,6 @@ export const ACTIVITY_RESPONSE_STUB = {
         entity_clients: 100,
         non_entity_clients: 100,
         secret_syncs: 100,
-        distinct_entities: 100,
-        non_entity_tokens: 100,
       },
       namespaces: [
         {
@@ -293,8 +255,6 @@ export const ACTIVITY_RESPONSE_STUB = {
             entity_clients: 100,
             non_entity_clients: 100,
             secret_syncs: 100,
-            distinct_entities: 100,
-            non_entity_tokens: 100,
           },
           mounts: [
             {
@@ -305,8 +265,6 @@ export const ACTIVITY_RESPONSE_STUB = {
                 entity_clients: 0,
                 non_entity_clients: 0,
                 secret_syncs: 0,
-                distinct_entities: 0,
-                non_entity_tokens: 0,
               },
             },
             {
@@ -317,8 +275,6 @@ export const ACTIVITY_RESPONSE_STUB = {
                 entity_clients: 100,
                 non_entity_clients: 100,
                 secret_syncs: 0,
-                distinct_entities: 0,
-                non_entity_tokens: 0,
               },
             },
             {
@@ -329,8 +285,6 @@ export const ACTIVITY_RESPONSE_STUB = {
                 entity_clients: 0,
                 non_entity_clients: 0,
                 secret_syncs: 100,
-                distinct_entities: 0,
-                non_entity_tokens: 0,
               },
             },
           ],
@@ -349,8 +303,6 @@ export const ACTIVITY_RESPONSE_STUB = {
         entity_clients: 832,
         non_entity_clients: 930,
         secret_syncs: 238,
-        distinct_entities: 832,
-        non_entity_tokens: 930,
       },
       namespaces: [
         {
@@ -362,8 +314,6 @@ export const ACTIVITY_RESPONSE_STUB = {
             entity_clients: 708,
             non_entity_clients: 182,
             secret_syncs: 157,
-            distinct_entities: 708,
-            non_entity_tokens: 182,
           },
           mounts: [
             {
@@ -374,8 +324,6 @@ export const ACTIVITY_RESPONSE_STUB = {
                 entity_clients: 0,
                 non_entity_clients: 0,
                 secret_syncs: 0,
-                distinct_entities: 0,
-                non_entity_tokens: 0,
               },
             },
             {
@@ -386,8 +334,6 @@ export const ACTIVITY_RESPONSE_STUB = {
                 entity_clients: 708,
                 non_entity_clients: 182,
                 secret_syncs: 0,
-                distinct_entities: 0,
-                non_entity_tokens: 0,
               },
             },
             {
@@ -398,8 +344,6 @@ export const ACTIVITY_RESPONSE_STUB = {
                 entity_clients: 0,
                 non_entity_clients: 0,
                 secret_syncs: 157,
-                distinct_entities: 0,
-                non_entity_tokens: 0,
               },
             },
           ],
@@ -413,8 +357,6 @@ export const ACTIVITY_RESPONSE_STUB = {
             entity_clients: 124,
             non_entity_clients: 748,
             secret_syncs: 81,
-            distinct_entities: 124,
-            non_entity_tokens: 748,
           },
           mounts: [
             {
@@ -425,8 +367,6 @@ export const ACTIVITY_RESPONSE_STUB = {
                 entity_clients: 0,
                 non_entity_clients: 0,
                 secret_syncs: 0,
-                distinct_entities: 0,
-                non_entity_tokens: 0,
               },
             },
             {
@@ -437,8 +377,6 @@ export const ACTIVITY_RESPONSE_STUB = {
                 entity_clients: 124,
                 non_entity_clients: 748,
                 secret_syncs: 0,
-                distinct_entities: 0,
-                non_entity_tokens: 0,
               },
             },
             {
@@ -449,8 +387,6 @@ export const ACTIVITY_RESPONSE_STUB = {
                 entity_clients: 0,
                 non_entity_clients: 0,
                 secret_syncs: 81,
-                distinct_entities: 0,
-                non_entity_tokens: 0,
               },
             },
           ],
@@ -463,8 +399,6 @@ export const ACTIVITY_RESPONSE_STUB = {
           entity_clients: 59,
           non_entity_clients: 112,
           secret_syncs: 49,
-          distinct_entities: 59,
-          non_entity_tokens: 112,
         },
         namespaces: [
           {
@@ -476,8 +410,6 @@ export const ACTIVITY_RESPONSE_STUB = {
               entity_clients: 25,
               non_entity_clients: 50,
               secret_syncs: 25,
-              distinct_entities: 25,
-              non_entity_tokens: 50,
             },
             mounts: [
               {
@@ -488,8 +420,6 @@ export const ACTIVITY_RESPONSE_STUB = {
                   entity_clients: 0,
                   non_entity_clients: 0,
                   secret_syncs: 0,
-                  distinct_entities: 0,
-                  non_entity_tokens: 0,
                 },
               },
               {
@@ -500,8 +430,6 @@ export const ACTIVITY_RESPONSE_STUB = {
                   entity_clients: 25,
                   non_entity_clients: 50,
                   secret_syncs: 0,
-                  distinct_entities: 0,
-                  non_entity_tokens: 0,
                 },
               },
               {
@@ -512,8 +440,6 @@ export const ACTIVITY_RESPONSE_STUB = {
                   entity_clients: 0,
                   non_entity_clients: 0,
                   secret_syncs: 25,
-                  distinct_entities: 0,
-                  non_entity_tokens: 0,
                 },
               },
             ],
@@ -527,8 +453,6 @@ export const ACTIVITY_RESPONSE_STUB = {
               entity_clients: 34,
               non_entity_clients: 62,
               secret_syncs: 24,
-              distinct_entities: 34,
-              non_entity_tokens: 62,
             },
             mounts: [
               {
@@ -539,8 +463,6 @@ export const ACTIVITY_RESPONSE_STUB = {
                   entity_clients: 34,
                   non_entity_clients: 62,
                   secret_syncs: 0,
-                  distinct_entities: 0,
-                  non_entity_tokens: 0,
                 },
               },
               {
@@ -551,8 +473,6 @@ export const ACTIVITY_RESPONSE_STUB = {
                   entity_clients: 0,
                   non_entity_clients: 0,
                   secret_syncs: 0,
-                  distinct_entities: 0,
-                  non_entity_tokens: 0,
                 },
               },
               {
@@ -563,8 +483,6 @@ export const ACTIVITY_RESPONSE_STUB = {
                   entity_clients: 0,
                   non_entity_clients: 0,
                   secret_syncs: 24,
-                  distinct_entities: 0,
-                  non_entity_tokens: 0,
                 },
               },
             ],
@@ -579,8 +497,6 @@ export const ACTIVITY_RESPONSE_STUB = {
     entity_clients: 8258,
     non_entity_clients: 8227,
     secret_syncs: 9100,
-    distinct_entities: 8258,
-    non_entity_tokens: 8227,
   },
 };
 
@@ -591,10 +507,8 @@ export const MIXED_ACTIVITY_RESPONSE_STUB = {
   total: {
     acme_clients: 0,
     clients: 3,
-    distinct_entities: 3,
     entity_clients: 3,
     non_entity_clients: 0,
-    non_entity_tokens: 0,
     secret_syncs: 0,
   },
   by_namespace: [
@@ -602,10 +516,8 @@ export const MIXED_ACTIVITY_RESPONSE_STUB = {
       counts: {
         acme_clients: 0,
         clients: 3,
-        distinct_entities: 3,
         entity_clients: 3,
         non_entity_clients: 0,
-        non_entity_tokens: 0,
         secret_syncs: 0,
       },
       mounts: [
@@ -613,10 +525,8 @@ export const MIXED_ACTIVITY_RESPONSE_STUB = {
           counts: {
             acme_clients: 0,
             clients: 2,
-            distinct_entities: 2,
             entity_clients: 2,
             non_entity_clients: 0,
-            non_entity_tokens: 0,
             secret_syncs: 0,
           },
           mount_path: 'no mount accessor (pre-1.10 upgrade?)',
@@ -625,10 +535,8 @@ export const MIXED_ACTIVITY_RESPONSE_STUB = {
           counts: {
             acme_clients: 0,
             clients: 1,
-            distinct_entities: 1,
             entity_clients: 1,
             non_entity_clients: 0,
-            non_entity_tokens: 0,
             secret_syncs: 0,
           },
           mount_path: 'auth/u/',
@@ -649,10 +557,8 @@ export const MIXED_ACTIVITY_RESPONSE_STUB = {
       counts: {
         acme_clients: 0,
         clients: 3,
-        distinct_entities: 0,
         entity_clients: 3,
         non_entity_clients: 0,
-        non_entity_tokens: 0,
         secret_syncs: 0,
       },
       namespaces: [
@@ -660,10 +566,8 @@ export const MIXED_ACTIVITY_RESPONSE_STUB = {
           counts: {
             acme_clients: 0,
             clients: 3,
-            distinct_entities: 0,
             entity_clients: 3,
             non_entity_clients: 0,
-            non_entity_tokens: 0,
             secret_syncs: 0,
           },
           mounts: [
@@ -671,10 +575,8 @@ export const MIXED_ACTIVITY_RESPONSE_STUB = {
               counts: {
                 acme_clients: 0,
                 clients: 2,
-                distinct_entities: 0,
                 entity_clients: 2,
                 non_entity_clients: 0,
-                non_entity_tokens: 0,
                 secret_syncs: 0,
               },
               mount_path: 'no mount accessor (pre-1.10 upgrade?)',
@@ -683,10 +585,8 @@ export const MIXED_ACTIVITY_RESPONSE_STUB = {
               counts: {
                 acme_clients: 0,
                 clients: 1,
-                distinct_entities: 0,
                 entity_clients: 1,
                 non_entity_clients: 0,
-                non_entity_tokens: 0,
                 secret_syncs: 0,
               },
               mount_path: 'auth/u/',
@@ -700,10 +600,8 @@ export const MIXED_ACTIVITY_RESPONSE_STUB = {
         counts: {
           acme_clients: 0,
           clients: 3,
-          distinct_entities: 0,
           entity_clients: 3,
           non_entity_clients: 0,
-          non_entity_tokens: 0,
           secret_syncs: 0,
         },
         namespaces: [
@@ -711,10 +609,8 @@ export const MIXED_ACTIVITY_RESPONSE_STUB = {
             counts: {
               acme_clients: 0,
               clients: 3,
-              distinct_entities: 0,
               entity_clients: 3,
               non_entity_clients: 0,
-              non_entity_tokens: 0,
               secret_syncs: 0,
             },
             mounts: [
@@ -722,10 +618,8 @@ export const MIXED_ACTIVITY_RESPONSE_STUB = {
                 counts: {
                   acme_clients: 0,
                   clients: 2,
-                  distinct_entities: 0,
                   entity_clients: 2,
                   non_entity_clients: 0,
-                  non_entity_tokens: 0,
                   secret_syncs: 0,
                 },
                 mount_path: 'no mount accessor (pre-1.10 upgrade?)',
@@ -734,10 +628,8 @@ export const MIXED_ACTIVITY_RESPONSE_STUB = {
                 counts: {
                   acme_clients: 0,
                   clients: 1,
-                  distinct_entities: 0,
                   entity_clients: 1,
                   non_entity_clients: 0,
-                  non_entity_tokens: 0,
                   secret_syncs: 0,
                 },
                 mount_path: 'auth/u/',
