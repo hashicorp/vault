@@ -31,5 +31,7 @@ export const SECRET_ENGINE_SELECTORS = {
     deletePublicKey: '[data-test-ssh-delete-public-key]',
     save: '[data-test-ssh-save]',
     cancel: '[data-test-ssh-cancel]',
+    createRole: '[data-test-role-ssh-create]',
+    deleteRole: '[data-test-ssh-role-delete]',
   },
 };

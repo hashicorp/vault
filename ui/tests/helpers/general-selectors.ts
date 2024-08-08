@@ -26,6 +26,7 @@ export const GENERAL = {
   filterInputExplicitSearch: '[data-test-filter-input-explicit-search]',
   confirmModalInput: '[data-test-confirmation-modal-input]',
   confirmButton: '[data-test-confirm-button]',
+  confirmMessage: '[data-test-confirm-action-message]',
   confirmTrigger: '[data-test-confirm-action-trigger]',
   emptyStateTitle: '[data-test-empty-state-title]',
   emptyStateSubtitle: '[data-test-empty-state-subtitle]',
@@ -51,6 +52,7 @@ export const GENERAL = {
   validation: (attr: string) => `[data-test-field-validation=${attr}]`,
   validationWarning: (attr: string) => `[data-test-validation-warning=${attr}]`,
   messageError: '[data-test-message-error]',
+  notFound: '[data-test-not-found]',
   pageError: {
     error: '[data-test-page-error]',
     errorTitle: (httpStatus: number) => `[data-test-page-error-title="${httpStatus}"]`,

@@ -52,7 +52,7 @@ module('Acceptance | ssh | configuration', function (hooks) {
     await enablePage.enable('ssh', sshPath);
     await click(SES.configTab);
     await visit(`/vault/settings/secrets/configure/${sshPath}`);
-    assert.dom('[data-test-not-found]').exists('shows page-error');
+    assert.dom(GENERAL.notFound).exists('shows page-error');
     // cleanup
     await runCmd(`delete sys/mounts/${sshPath}`);
   });
@@ -80,9 +80,7 @@ module('Acceptance | ssh | configuration', function (hooks) {
     assert.dom(SES.ssh.editConfigSection).exists('renders the edit section');
     // delete Public key
     await click(SES.ssh.deletePublicKey);
-    assert
-      .dom('[data-test-confirm-action-message]')
-      .hasText('This will remove the CA certificate information.');
+    assert.dom(GENERAL.confirmMessage).hasText('This will remove the CA certificate information.');
     await click(GENERAL.confirmButton);
     assert.strictEqual(
       currentURL(),
