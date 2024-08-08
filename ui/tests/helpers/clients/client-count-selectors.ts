@@ -27,6 +27,8 @@ export const CLIENT_COUNT = {
   usageStats: (title: string) => `[data-test-usage-stats="${title}"]`,
   attributionBlock: '[data-test-clients-attribution]',
   filterBar: '[data-test-clients-filter-bar]',
+  nsFilter: '#namespace-search-select',
+  mountFilter: '#mounts-search-select',
   selectedAuthMount: 'div#mounts-search-select [data-test-selected-option] div',
   selectedNs: 'div#namespace-search-select [data-test-selected-option] div',
   upgradeWarning: '[data-test-clients-upgrade-warning]',
