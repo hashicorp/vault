@@ -16,6 +16,7 @@ import { CHARTS, CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-s
 import { ACTIVITY_RESPONSE_STUB, assertBarChart } from 'vault/tests/helpers/clients/client-count-helpers';
 import { formatNumber } from 'core/helpers/format-number';
 import { LICENSE_START, STATIC_NOW } from 'vault/mirage/handlers/clients';
+import { selectChoose } from 'ember-power-select/test-support';
 
 const { searchSelect } = GENERAL;
 
@@ -67,8 +68,7 @@ module('Acceptance | clients | counts | acme', function (hooks) {
     assert.expect(7 + nsMonthlyUsage.length + nsMonthlyNew.length);
 
     await visit('/vault/clients/counts/acme');
-    await click(searchSelect.trigger('namespace-search-select'));
-    await click(searchSelect.option(searchSelect.optionIndex(this.nsPath)));
+    await selectChoose(CLIENT_COUNT.nsFilter, this.nsPath);
 
     // each chart assertion count is data array length + 2
     assertBarChart(assert, 'ACME usage', nsMonthlyUsage);
@@ -93,6 +93,45 @@ module('Acceptance | clients | counts | acme', function (hooks) {
       );
   });
 
+  /**
+   * This test lives here because we need an acceptance test to make sure the routing works correctly,
+   * and to intercept the mirage request for counters/activity which doesn't work when using scenarios.
+   */
+  test('it queries activity with namespace header when filters change', async function (assert) {
+    assert.expect(5);
+
+    let activityCount = 0;
+    const expectedNSHeader = [undefined, this.nsPath, undefined];
+    this.server.get('sys/internal/counters/activity', (_, req) => {
+      assert.strictEqual(
+        req.requestHeaders['X-Vault-Namespace'],
+        expectedNSHeader[activityCount],
+        `queries activity with correct namespace header ${activityCount}`
+      );
+      activityCount++;
+      return {
+        request_id: 'some-activity-id',
+        data: ACTIVITY_RESPONSE_STUB,
+      };
+    });
+
+    await visit('/vault/clients/counts/acme');
+    await selectChoose(CLIENT_COUNT.nsFilter, this.nsPath);
+
+    assert.strictEqual(
+      currentURL(),
+      `/vault/clients/counts/acme?ns=${this.nsPath}`,
+      'namespace filter updates URL query param'
+    );
+
+    await click(`${CLIENT_COUNT.nsFilter} ${searchSelect.removeSelected}`);
+    assert.strictEqual(
+      currentURL(),
+      `/vault/clients/counts/acme`,
+      'namespace filter remove updates URL query param'
+    );
+  });
+
   test('it filters by mount data and renders charts', async function (assert) {
     const { nsTotals, nsMonthlyUsage, nsMonthActivity } = this.expectedValues;
     const mountTotals = nsTotals.mounts.find((m) => m.label === this.mountPath);
@@ -101,10 +140,8 @@ module('Acceptance | clients | counts | acme', function (hooks) {
     assert.expect(7 + mountMonthlyUsage.length + mountMonthlyNew.length);
 
     await visit('/vault/clients/counts/acme');
-    await click(searchSelect.trigger('namespace-search-select'));
-    await click(searchSelect.option(searchSelect.optionIndex(this.nsPath)));
-    await click(searchSelect.trigger('mounts-search-select'));
-    await click(searchSelect.option(searchSelect.optionIndex(this.mountPath)));
+    await selectChoose(CLIENT_COUNT.nsFilter, this.nsPath);
+    await selectChoose(CLIENT_COUNT.mountFilter, this.mountPath);
 
     // each chart assertion count is data array length + 2
     assertBarChart(assert, 'ACME usage', mountMonthlyUsage);
@@ -133,11 +170,9 @@ module('Acceptance | clients | counts | acme', function (hooks) {
   test('it renders empty chart for no mount data ', async function (assert) {
     assert.expect(3);
     await visit('/vault/clients/counts/acme');
-    await click(searchSelect.trigger('namespace-search-select'));
-    await click(searchSelect.option(searchSelect.optionIndex(this.nsPath)));
-    await click(searchSelect.trigger('mounts-search-select'));
+    await selectChoose(CLIENT_COUNT.nsFilter, this.nsPath);
+    await selectChoose(CLIENT_COUNT.mountFilter, 'auth/authid/0');
     // no data because this is an auth mount (acme_clients come from pki mounts)
-    await click(searchSelect.option(searchSelect.optionIndex('auth/authid/0')));
     assert.dom(CLIENT_COUNT.statText('Total ACME clients')).hasTextContaining('0');
     assert.dom(`${CHARTS.chart('ACME usage')} ${CHARTS.verticalBar}`).isNotVisible();
     assert.dom(CHARTS.container('Monthly new')).doesNotExist();
