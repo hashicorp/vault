@@ -165,11 +165,11 @@ func (c *SQLConnectionProducer) Init(ctx context.Context, conf map[string]interf
 
 	if verifyConnection {
 		if _, err := c.Connection(ctx); err != nil {
-			return nil, fmt.Errorf("error verifying connection: %w", err)
+			return nil, errwrap.Wrapf("error verifying connection: {{err}}", err)
 		}
 
 		if err := c.db.PingContext(ctx); err != nil {
-			return nil, fmt.Errorf("error verifying connection: ping failed: %s", err)
+			return nil, errwrap.Wrapf("error verifying connection: ping failed: {{err}}", err)
 		}
 	}
 
