@@ -7,7 +7,6 @@ import { click, fillIn, currentURL, waitFor, visit } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
-import { spy } from 'sinon';
 
 import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
@@ -23,10 +22,7 @@ module('Acceptance | ssh | configuration', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    const flash = this.owner.lookup('service:flash-messages');
     this.store = this.owner.lookup('service:store');
-    this.flashSuccessSpy = spy(flash, 'success');
-    this.flashDangerSpy = spy(flash, 'danger');
     this.uid = uuidv4();
     return authPage.login();
   });

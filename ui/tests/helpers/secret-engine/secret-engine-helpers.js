@@ -32,6 +32,7 @@ const createAwsRootConfig = (store, backend) => {
 };
 
 const createSshCaConfig = (store, backend) => {
+  // consider this model a placeholder for the actual ssh/ca-config model that has been generated with data. isNew is false.
   store.pushPayload('ssh/ca-config', {
     id: backend,
     modelName: 'ssh/ca-config',
