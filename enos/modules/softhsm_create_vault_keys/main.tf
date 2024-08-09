@@ -27,7 +27,7 @@ locals {
   aes_label       = "vault_hsm_aes_${local.pin}"
   hmac_label      = "vault_hsm_hmac_${local.pin}"
   seal_attributes = jsondecode(resource.enos_remote_exec.create_keys.stdout)
-  target          = tomap({ "1" = var.hosts[0] })
+  target          = tomap({ "0" = var.hosts[0] })
   token           = "${var.cluster_id}_${local.pin}"
 }
 

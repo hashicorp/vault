@@ -37,8 +37,8 @@
 // resources.
 // project_name = "vault-enos-integration"
 
-// distro_version_amzn2 is the version of Amazon Linux 2 to use for "distro:amzn2" variants
-// distro_version_amzn2 = "2"
+// distro_version_amzn is the version of Amazon Linux 2 to use for "distro:amzn" variants
+// distro_version_amzn = "2"
 
 // distro_version_leap is the version of openSUSE Leap to use for "distro:leap" variants
 // distro_version_leap = "15.5"

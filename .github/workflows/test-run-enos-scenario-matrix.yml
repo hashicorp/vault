@@ -98,7 +98,7 @@ jobs:
       ENOS_VAR_vault_revision: ${{ inputs.vault-revision }}
       ENOS_VAR_consul_license_path: ./support/consul.hclic
       ENOS_VAR_vault_license_path: ./support/vault.hclic
-      ENOS_VAR_distro_version_amzn2: ${{ matrix.attributes.distro_version_amzn2 }}
+      ENOS_VAR_distro_version_amzz: ${{ matrix.attributes.distro_version_amzn }}
       ENOS_VAR_distro_version_leap: ${{ matrix.attributes.distro_version_leap }}
       ENOS_VAR_distro_version_rhel: ${{ matrix.attributes.distro_version_rhel }}
       ENOS_VAR_distro_version_sles: ${{ matrix.attributes.distro_version_sles }}

@@ -55,22 +55,15 @@ scenario "replication" {
       edition        = [for e in matrix.edition : e if !strcontains(e, "hsm")]
     }
 
-    // arm64 AMIs are not offered for Leap
-    exclude {
-      distro = ["leap"]
-      arch   = ["arm64"]
-    }
-
-    // softhsm packages not available for leap/sles. Enos support for softhsm on amzn2 is
-    // not implemented yet.
+    // softhsm packages not available for leap/sles.
     exclude {
       primary_seal = ["pkcs11"]
-      distro       = ["amzn2", "leap", "sles"]
+      distro       = ["leap", "sles"]
     }
 
     exclude {
       secondary_seal = ["pkcs11"]
-      distro         = ["amzn2", "leap", "sles"]
+      distro         = ["leap", "sles"]
     }
 
     // Testing in IPV6 mode is currently implemented for integrated Raft storage only
@@ -96,7 +89,7 @@ scenario "replication" {
   locals {
     artifact_path = matrix.artifact_source != "artifactory" ? abspath(var.vault_artifact_path) : null
     enos_provider = {
-      amzn2  = provider.enos.ec2_user
+      amzn   = provider.enos.ec2_user
       leap   = provider.enos.ec2_user
       rhel   = provider.enos.ec2_user
       sles   = provider.enos.ec2_user
@@ -230,7 +223,7 @@ scenario "replication" {
     }
 
     variables {
-      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"]["22.04"]
+      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"][global.distro_version["ubuntu"]]
       cluster_tag_key = global.backend_tag_key
       common_tags     = global.tags
       seal_key_names  = step.create_primary_seal_key.resource_names
@@ -288,7 +281,7 @@ scenario "replication" {
     }
 
     variables {
-      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"]["22.04"]
+      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"][global.distro_version["ubuntu"]]
       cluster_tag_key = global.backend_tag_key
       common_tags     = global.tags
       seal_key_names  = step.create_secondary_seal_key.resource_names
@@ -402,7 +395,7 @@ scenario "replication" {
       license              = matrix.edition != "ce" ? step.read_vault_license.license : null
       local_artifact_path  = local.artifact_path
       manage_service       = local.manage_service
-      packages             = concat(global.packages, global.distro_packages[matrix.distro])
+      packages             = concat(global.packages, global.distro_packages[matrix.distro][global.distro_version[matrix.distro]])
       seal_attributes      = step.create_primary_seal_key.attributes
       seal_type            = matrix.primary_seal
       storage_backend      = matrix.primary_backend
@@ -507,7 +500,7 @@ scenario "replication" {
       license              = matrix.edition != "ce" ? step.read_vault_license.license : null
       local_artifact_path  = local.artifact_path
       manage_service       = local.manage_service
-      packages             = concat(global.packages, global.distro_packages[matrix.distro])
+      packages             = concat(global.packages, global.distro_packages[matrix.distro][global.distro_version[matrix.distro]])
       seal_attributes      = step.create_secondary_seal_key.attributes
       seal_type            = matrix.secondary_seal
       storage_backend      = matrix.secondary_backend
@@ -967,7 +960,7 @@ scenario "replication" {
       license             = matrix.edition != "ce" ? step.read_vault_license.license : null
       local_artifact_path = local.artifact_path
       manage_service      = local.manage_service
-      packages            = concat(global.packages, global.distro_packages[matrix.distro])
+      packages            = concat(global.packages, global.distro_packages[matrix.distro][global.distro_version[matrix.distro]])
       root_token          = step.create_primary_cluster.root_token
       seal_attributes     = step.create_primary_seal_key.attributes
       seal_type           = matrix.primary_seal
