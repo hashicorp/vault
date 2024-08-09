@@ -1,0 +1,3 @@
+```release-note:bug
+core/api: Added missing LICENSE files to API sub-modules to ensure Go module tooling recognizes MPL-2.0 license.
+```
