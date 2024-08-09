@@ -345,6 +345,8 @@ func TestBackend_config_connection(t *testing.T) {
 	assert.Equal(t, "plugin-test", eventSender.Events[2].Event.Metadata.AsMap()["name"])
 }
 
+// TestBackend_BadConnectionString tests that an error response resulting from
+// a failed connection does not expose the URL. The middleware should sanitize it.
 func TestBackend_BadConnectionString(t *testing.T) {
 	cluster, sys := getClusterPostgresDB(t)
 	defer cluster.Cleanup()
@@ -1451,7 +1453,7 @@ func TestBackend_ConnectionURL_redacted(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cleanup, u := postgreshelper.PrepareTestContainerWithPassword(t, "13.4-buster", tt.password)
+			cleanup, u := postgreshelper.PrepareTestContainerWithPassword(t, tt.password)
 			t.Cleanup(cleanup)
 
 			p, err := url.Parse(u)

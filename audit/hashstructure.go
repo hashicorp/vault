@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/reflectwalk"
 )
@@ -26,10 +25,10 @@ func hashString(ctx context.Context, salter Salter, data string) (string, error)
 	return salt.GetIdentifiedHMAC(data), nil
 }
 
-// hashAuth uses the Salter to hash the supplied Auth (modifying it).
+// hashAuth uses the Salter to hash the supplied auth (modifying it).
 // hmacAccessor is used to indicate whether the accessor should also be HMAC'd
 // when present.
-func hashAuth(ctx context.Context, salter Salter, auth *logical.Auth, hmacAccessor bool) error {
+func hashAuth(ctx context.Context, salter Salter, auth *auth, hmacAccessor bool) error {
 	if auth == nil {
 		return nil
 	}
@@ -51,12 +50,14 @@ func hashAuth(ctx context.Context, salter Salter, auth *logical.Auth, hmacAccess
 	return nil
 }
 
-// hashRequest uses the Salter to hash the supplied Request (modifying it).
-// nonHMACDataKeys is used when hashing any 'Data' field within the Request which
+// hashRequest uses the Salter to hash the supplied request (modifying it).
+// nonHMACDataKeys is used when hashing any 'Data' field within the request which
 // prevents those specific keys from HMAC'd.
 // hmacAccessor is used to indicate whether some accessors should also be HMAC'd
 // when present.
-func hashRequest(ctx context.Context, salter Salter, req *logical.Request, hmacAccessor bool, nonHMACDataKeys []string) error {
+// nonHMACDataKeys is used when hashing any 'Data' field within the request which
+// prevents those specific keys from HMAC'd.
+func hashRequest(ctx context.Context, salter Salter, req *request, hmacAccessor bool, nonHMACDataKeys []string) error {
 	if req == nil {
 		return nil
 	}
@@ -67,11 +68,6 @@ func hashRequest(ctx context.Context, salter Salter, req *logical.Request, hmacA
 	}
 
 	fn := salt.GetIdentifiedHMAC
-
-	err = hashAuth(ctx, salter, req.Auth, hmacAccessor)
-	if err != nil {
-		return err
-	}
 
 	if req.ClientToken != "" {
 		req.ClientToken = fn(req.ClientToken)
@@ -106,15 +102,13 @@ func hashMap(hashFunc hashCallback, data map[string]interface{}, nonHMACDataKeys
 	return hashStructure(data, hashFunc, nonHMACDataKeys)
 }
 
-// hashResponse uses the Salter to hash the supplied Response (modifying it).
-// nonHMACDataKeys is used when hashing any 'Data' field within the Request which
-// prevents those specific keys from HMAC'd.
+// hashResponse uses the Salter to hash the supplied response (modifying it).
 // hmacAccessor is used to indicate whether some accessors should also be HMAC'd
 // when present.
-// elideListResponseData indicates whether any 'keys' or 'key_info' data present in
-// the Response should be elided (when the request was a LIST operation).
+// nonHMACDataKeys is used when hashing any 'Data' field within the response which
+// prevents those specific keys from HMAC'd.
 // See: /vault/docs/audit#eliding-list-response-bodies
-func hashResponse(ctx context.Context, salter Salter, resp *logical.Response, hmacAccessor bool, nonHMACDataKeys []string, elideListResponseData bool) error {
+func hashResponse(ctx context.Context, salter Salter, resp *response, hmacAccessor bool, nonHMACDataKeys []string) error {
 	if resp == nil {
 		return nil
 	}
@@ -126,21 +120,9 @@ func hashResponse(ctx context.Context, salter Salter, resp *logical.Response, hm
 
 	fn := salt.GetIdentifiedHMAC
 
-	err = hashAuth(ctx, salter, resp.Auth, hmacAccessor)
-	if err != nil {
-		return err
-	}
-
 	if resp.Data != nil {
 		if b, ok := resp.Data[logical.HTTPRawBody].([]byte); ok {
 			resp.Data[logical.HTTPRawBody] = string(b)
-		}
-
-		// Processing list response data elision takes place at this point in the code for performance reasons:
-		// - take advantage of the deep copy of resp.Data that was going to be done anyway for hashing
-		// - but elide data before potentially spending time hashing it
-		if elideListResponseData {
-			doElideListResponseData(resp.Data)
 		}
 
 		err = hashMap(fn, resp.Data, nonHMACDataKeys)
@@ -160,12 +142,10 @@ func hashResponse(ctx context.Context, salter Salter, resp *logical.Response, hm
 	return nil
 }
 
-// hashWrapInfo returns a hashed copy of the ResponseWrapInfo input.
-
-// hashWrapInfo uses the supplied hashing function to hash ResponseWrapInfo (modifying it).
+// hashWrapInfo uses the supplied hashing function to hash responseWrapInfo (modifying it).
 // hmacAccessor is used to indicate whether some accessors should also be HMAC'd
 // when present.
-func hashWrapInfo(hashFunc hashCallback, wrapInfo *wrapping.ResponseWrapInfo, hmacAccessor bool) error {
+func hashWrapInfo(hashFunc hashCallback, wrapInfo *responseWrapInfo, hmacAccessor bool) error {
 	if wrapInfo == nil {
 		return nil
 	}

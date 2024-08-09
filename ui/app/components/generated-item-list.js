@@ -6,7 +6,7 @@
 import { service } from '@ember/service';
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
-import { getOwner } from '@ember/application';
+import { getOwner } from '@ember/owner';
 import { tracked } from '@glimmer/tracking';
 
 /**

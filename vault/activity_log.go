@@ -1782,12 +1782,20 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 	startTime = timeutil.StartOfMonth(startTime)
 	endTime = timeutil.EndOfMonth(endTime)
 
+	// At the max, we only want to return data up until the end of the current month.
+	// Adjust the end time be the current month if a future date has been provided.
+	endOfCurrentMonth := timeutil.EndOfMonth(a.clock.Now().UTC())
+	adjustedEndTime := endTime
+	if endTime.After(endOfCurrentMonth) {
+		adjustedEndTime = endOfCurrentMonth
+	}
+
 	// If the endTime of the query is the current month, request data from the queryStore
 	// with the endTime equal to the end of the last month, and add in the current month
 	// data.
-	precomputedQueryEndTime := endTime
-	if timeutil.IsCurrentMonth(endTime, a.clock.Now().UTC()) {
-		precomputedQueryEndTime = timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, timeutil.StartOfMonth(endTime)))
+	precomputedQueryEndTime := adjustedEndTime
+	if timeutil.IsCurrentMonth(adjustedEndTime, a.clock.Now().UTC()) {
+		precomputedQueryEndTime = timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, timeutil.StartOfMonth(adjustedEndTime)))
 		computePartial = true
 	}
 
@@ -1830,7 +1838,7 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 
 		// Estimate the current month totals. These record contains is complete with all the
 		// current month data, grouped by namespace and mounts
-		currentMonth, err := a.computeCurrentMonthForBillingPeriod(ctx, partialByMonth, startTime, endTime)
+		currentMonth, err := a.computeCurrentMonthForBillingPeriod(ctx, partialByMonth, startTime, adjustedEndTime)
 		if err != nil {
 			return nil, err
 		}
@@ -1880,7 +1888,7 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 	a.sortActivityLogMonthsResponse(months)
 
 	// Modify the final month output to make response more consumable based on API request
-	months = a.modifyResponseMonths(months, startTime, endTime)
+	months = a.modifyResponseMonths(months, startTime, adjustedEndTime)
 	responseData["months"] = months
 
 	return responseData, nil
