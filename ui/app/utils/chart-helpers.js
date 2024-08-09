@@ -28,13 +28,13 @@ export function numericalAxisLabel(number) {
 }
 
 export function calculateAverage(dataset, objectKey) {
-  // before mapping for values, check that the objectKey exists at least once in the dataset because
-  // map returns 0 when dataset[objectKey] is undefined in order to calculate average
+  // before mapping for values, check that the objectKey exists at least once in the dataset
   if (!Array.isArray(dataset) || !objectKey || !dataset.some((d) => Object.keys(d).includes(objectKey))) {
     return null;
   }
 
-  const integers = dataset.map((d) => (d[objectKey] ? d[objectKey] : 0));
+  // averages should not include items that don't have the key because that means there's no data rather than 0
+  const integers = dataset.filter((d) => typeof d[objectKey] === 'number').map((d) => d[objectKey]);
   const checkIntegers = integers.every((n) => Number.isInteger(n)); // decimals will be false
   return checkIntegers ? Math.round(mean(integers)) : null;
 }

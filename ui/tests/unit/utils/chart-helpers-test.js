@@ -37,6 +37,7 @@ module('Unit | Utility | chart-helpers', function () {
     ];
     const testArray2 = [
       { label: 'foo', value: undefined },
+      { label: 'bar', value: 0 },
       { label: 'bar', value: 22 },
     ];
     const testArray3 = [{ label: 'foo' }, { label: 'bar' }];
