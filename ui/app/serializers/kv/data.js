@@ -35,6 +35,21 @@ export default class KvDataSerializer extends ApplicationSerializer {
     };
   }
 
+  serializePatch(patchData, version) {
+    const transformedData = { ...patchData };
+    for (const key in patchData) {
+      // null is a string type because it came from a form
+      // to properly perform a JSON merge+patch we need it to be actually null
+      if (patchData[key] === 'null') {
+        transformedData[key] = null;
+      }
+    }
+    return {
+      options: { cas: version },
+      data: transformedData,
+    };
+  }
+
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     if (requestType === 'queryRecord') {
       const transformed = this.normalizeKvData(payload);
