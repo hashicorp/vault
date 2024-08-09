@@ -107,6 +107,7 @@ func (p *PostgreSQL) Initialize(ctx context.Context, req dbplugin.InitializeRequ
 		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to retrieve tls_ca: %w", err)
 	}
 
+	useTLS := false
 	tlsConfig := &tls.Config{}
 	if sslrootcert != "" {
 		caCertPool := x509.NewCertPool()
@@ -117,6 +118,7 @@ func (p *PostgreSQL) Initialize(ctx context.Context, req dbplugin.InitializeRequ
 		tlsConfig.RootCAs = caCertPool
 		tlsConfig.ClientCAs = caCertPool
 		p.TLSConfig = tlsConfig
+		useTLS = true
 	}
 
 	if (sslcert != "" && sslkey == "") || (sslcert == "" && sslkey != "") {
@@ -132,7 +134,10 @@ func (p *PostgreSQL) Initialize(ctx context.Context, req dbplugin.InitializeRequ
 		}
 		tlsConfig.Certificates = []tls.Certificate{cert}
 		p.TLSConfig = tlsConfig
-	} else {
+		useTLS = true
+	}
+
+	if !useTLS {
 		// set to nil to flag that this connection does not use a custom TLS config
 		p.TLSConfig = nil
 	}
