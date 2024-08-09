@@ -228,8 +228,7 @@ function filterByNamespace(namespaces, namespacePath) {
  */
 function filterMonths(months, namespacePath) {
   return months.map((month) => {
-    if (!month.namespaces) return month;
-
+    if (!month.namespaces || month.namespaces.length === 0) return month;
     const newMonth = {
       ...month,
     };

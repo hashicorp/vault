@@ -47,6 +47,8 @@ module('Integration | Component | clients | Clients::Page::Acme', function (hook
         @endTimestamp={{this.endTimestamp}}
         @namespace={{this.countsController.ns}}
         @mountPath={{this.countsController.mountPath}}
+        @filteredTotals={{this.activity.total}}
+        @filteredByMonth={{this.activity.byMonth}}
       />
     `);
     // Fails on #ember-testing-container

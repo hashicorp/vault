@@ -14,7 +14,7 @@ export function assertBarChart(assert, chartName, byMonthData, isStacked = false
   );
   const xAxisLabels = findAll(`${chart} ${CHARTS.xAxisLabel}`);
 
-  let count = byMonthData.filter((m) => m.clients).length;
+  let count = byMonthData.filter((m) => m?.clients).length;
   if (isStacked) count = count * 2;
 
   assert.strictEqual(dataBars.length, count, `${chartName}: it renders bars for each non-zero month`);

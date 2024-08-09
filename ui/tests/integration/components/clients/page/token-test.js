@@ -57,6 +57,8 @@ module('Integration | Component | clients | Clients::Page::Token', function (hoo
           @endTimestamp={{this.endTimestamp}}
           @namespace={{this.ns}}
           @mountPath={{this.mountPath}}
+          @filteredTotals={{this.activity.total}}
+          @filteredByMonth={{this.activity.byMonth}}
         />
       `);
     // Fails on #ember-testing-container

@@ -44,9 +44,17 @@ module('Acceptance | clients | counts | acme', function (hooks) {
     this.nsPath = 'ns1';
     this.mountPath = 'pki-engine-0';
     this.expectedValues = {
+      // since there are no nested counts under ns1, this calculation is accurate
       nsTotals: byNamespace.find((ns) => ns.label === this.nsPath),
-      nsMonthlyUsage: byMonth.map((m) => m?.namespaces_by_key[this.nsPath]).filter((d) => !!d),
-      nsMonthActivity: byMonth.find(({ month }) => month === '9/23').namespaces_by_key[this.nsPath],
+      nsMonthlyUsage: byMonth
+        .map((m) => {
+          // loosely mocks what is returned when the namespace header is passed
+          const base = { month: m.month, timestamp: m.timestamp, label: m.label };
+          return (
+            m?.namespaces_by_key[this.nsPath] || { ...base, new_clients: { ...base }, mounts_by_key: {} }
+          );
+        })
+        .filter((d) => !!d),
     };
 
     await authPage.login();
@@ -64,10 +72,9 @@ module('Acceptance | clients | counts | acme', function (hooks) {
   });
 
   test('it filters by namespace data and renders charts', async function (assert) {
-    const { nsTotals, nsMonthlyUsage, nsMonthActivity } = this.expectedValues;
-    const nsMonthlyNew = nsMonthlyUsage.map((m) => m?.new_clients);
+    const { nsTotals, nsMonthlyUsage } = this.expectedValues;
+    const nsMonthlyNew = nsMonthlyUsage.map((m) => m?.new_clients ?? 0);
     assert.expect(7 + nsMonthlyUsage.length + nsMonthlyNew.length);
-
     await visit('/vault/clients/counts/acme');
     await selectChoose(CLIENT_COUNT.nsFilter, this.nsPath);
 
@@ -85,13 +92,11 @@ module('Acceptance | clients | counts | acme', function (hooks) {
         `${formatNumber([nsTotals.acme_clients])}`,
         'renders total acme clients for namespace'
       );
-    // there is only one month in the stubbed data, so in this case the average is the same as the total new clients
+
+    // the data payload is static so we know that the average calculates to 53 over 4 months = 13
     assert
       .dom(CLIENT_COUNT.statText('Average new ACME clients per month'))
-      .hasTextContaining(
-        `${formatNumber([nsMonthActivity.new_clients.acme_clients])}`,
-        'renders average acme clients for namespace'
-      );
+      .hasTextContaining(`13`, 'renders average acme clients for namespace');
   });
 
   /**
@@ -135,9 +140,16 @@ module('Acceptance | clients | counts | acme', function (hooks) {
   });
 
   test('it filters by mount data and renders charts', async function (assert) {
-    const { nsTotals, nsMonthlyUsage, nsMonthActivity } = this.expectedValues;
+    const { nsTotals, nsMonthlyUsage } = this.expectedValues;
     const mountTotals = nsTotals.mounts.find((m) => m.label === this.mountPath);
-    const mountMonthlyUsage = nsMonthlyUsage.map((ns) => ns.mounts_by_key[this.mountPath]).filter((d) => !!d);
+    const mountMonthlyUsage = nsMonthlyUsage.map(
+      (ns) =>
+        ns.mounts_by_key[this.mountPath] || {
+          month: ns?.month,
+          timestamp: ns?.timestamp,
+          new_clients: { month: ns?.month, timestamp: ns?.timestamp },
+        }
+    );
     const mountMonthlyNew = mountMonthlyUsage.map((m) => m?.new_clients);
     assert.expect(7 + mountMonthlyUsage.length + mountMonthlyNew.length);
 
@@ -159,14 +171,11 @@ module('Acceptance | clients | counts | acme', function (hooks) {
         `${formatNumber([mountTotals.acme_clients])}`,
         'renders total acme clients for mount'
       );
-    // there is only one month in the stubbed data, so in this case the average is the same as the total new clients
-    const mountMonthActivity = nsMonthActivity.mounts_by_key[this.mountPath];
+
+    // the data payload is static so we know that the average calculates to 53 over 4 months = 13
     assert
       .dom(CLIENT_COUNT.statText('Average new ACME clients per month'))
-      .hasTextContaining(
-        `${formatNumber([mountMonthActivity.new_clients.acme_clients])}`,
-        'renders average acme clients for mount'
-      );
+      .hasTextContaining(`13`, 'renders average acme clients for mount');
   });
 
   test('it renders empty chart for no mount data ', async function (assert) {
