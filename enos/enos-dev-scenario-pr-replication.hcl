@@ -77,7 +77,7 @@ scenario "dev_pr_replication" {
   matrix {
     arch              = ["amd64", "arm64"]
     artifact          = ["local", "deb", "rpm", "zip"]
-    distro            = ["amzn2", "leap", "rhel", "sles", "ubuntu"]
+    distro            = ["amzn", "leap", "rhel", "sles", "ubuntu"]
     edition           = ["ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
     primary_backend   = ["consul", "raft"]
     primary_seal      = ["awskms", "pkcs11", "shamir"]
@@ -129,7 +129,7 @@ scenario "dev_pr_replication" {
     // The enos provider uses different ssh transport configs for different distros (as
     // specified in enos-providers.hcl), and we need to be able to access both of those here.
     enos_provider = {
-      amzn2  = provider.enos.ec2_user
+      amzn   = provider.enos.ec2_user
       leap   = provider.enos.ec2_user
       rhel   = provider.enos.ec2_user
       sles   = provider.enos.ec2_user
@@ -373,7 +373,7 @@ scenario "dev_pr_replication" {
     }
 
     variables {
-      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"]["22.04"]
+      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"][global.distro_version["ubuntu"]]
       cluster_tag_key = global.backend_tag_key
       common_tags     = global.tags
       seal_key_names  = step.create_primary_seal_key.resource_names
@@ -419,7 +419,7 @@ scenario "dev_pr_replication" {
     }
 
     variables {
-      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"]["22.04"]
+      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"][global.distro_version["ubuntu"]]
       cluster_tag_key = global.backend_tag_key
       common_tags     = global.tags
       seal_key_names  = step.create_secondary_seal_key.resource_names
@@ -523,7 +523,7 @@ scenario "dev_pr_replication" {
       license              = step.read_vault_license.license
       local_artifact_path  = matrix.artifact == "local" ? abspath(var.vault_artifact_path) : null
       manage_service       = local.manage_service
-      packages             = concat(global.packages, global.distro_packages[matrix.distro])
+      packages             = concat(global.packages, global.distro_packages[matrix.distro][global.distro_version[matrix.distro]])
       release              = matrix.artifact == "zip" ? { version = var.vault_product_version, edition = matrix.edition } : null
       seal_attributes      = step.create_primary_seal_key.attributes
       seal_type            = matrix.primary_seal
@@ -626,7 +626,7 @@ scenario "dev_pr_replication" {
       license              = step.read_vault_license.license
       local_artifact_path  = matrix.artifact == "local" ? abspath(var.vault_artifact_path) : null
       manage_service       = local.manage_service
-      packages             = concat(global.packages, global.distro_packages[matrix.distro])
+      packages             = concat(global.packages, global.distro_packages[matrix.distro][global.distro_version[matrix.distro]])
       release              = matrix.artifact == "zip" ? { version = var.vault_product_version, edition = matrix.edition } : null
       seal_attributes      = step.create_secondary_seal_key.attributes
       seal_type            = matrix.secondary_seal

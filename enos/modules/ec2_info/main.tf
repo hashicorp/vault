@@ -5,52 +5,175 @@
 # and accept SUSE's terms of use. You can do this at the links below. If the AWS account
 # you are using is already subscribed, this confirmation will be displayed on each page.
 # openSUSE Leap arm64 subscription: https://aws.amazon.com/marketplace/server/procurement?productId=a516e959-df54-4035-bb1a-63599b7a6df9
-# openSUSE leap amd64 subscription: https://aws.amazon.com/marketplace/server/procurement?productId=5535c495-72d4-4355-b169-54ffa874f849
+# openSUSE Leap amd64 subscription: https://aws.amazon.com/marketplace/server/procurement?productId=5535c495-72d4-4355-b169-54ffa874f849
 
 locals {
   architectures      = toset(["arm64", "x86_64"])
-  amzn2_owner_id     = "591542846629"
+  amazon_owner_id    = "591542846629"
   canonical_owner_id = "099720109477"
-  sles_owner_id      = "013907871322"
-  suse_owner_id      = "679593333241"
-  rhel_owner_id      = "309956199498"
+  suse_owner_id      = "013907871322"
+  opensuse_owner_id  = "679593333241"
+  redhat_owner_id    = "309956199498"
   ids = {
+    // NOTE: If you modify these versions you'll probably also need to update the `softhsm_install`
+    // module to match.
     "arm64" = {
-      "amzn2" = {
-        "2" = data.aws_ami.amzn2["arm64"].id
+      "amzn" = {
+        "2"    = data.aws_ami.amzn_2["arm64"].id
+        "2023" = data.aws_ami.amzn_2023["arm64"].id
+      }
+      "leap" = {
+        "15.6" = data.aws_ami.leap_15["arm64"].id
       }
       "rhel" = {
-        "8.9" = data.aws_ami.rhel_89["arm64"].id
-        "9.3" = data.aws_ami.rhel_93["arm64"].id
+        "8.10" = data.aws_ami.rhel_8["arm64"].id
+        "9.4"  = data.aws_ami.rhel_9["arm64"].id
       }
       "sles" = {
-        "v15_sp5_standard" = data.aws_ami.sles_15_sp5_standard["arm64"].id
+        "15.6" = data.aws_ami.sles_15["arm64"].id
       }
       "ubuntu" = {
         "20.04" = data.aws_ami.ubuntu_2004["arm64"].id
         "22.04" = data.aws_ami.ubuntu_2204["arm64"].id
+        "24.04" = data.aws_ami.ubuntu_2404["arm64"].id
       }
     }
     "amd64" = {
-      "amzn2" = {
-        "2" = data.aws_ami.amzn2["x86_64"].id
+      "amzn" = {
+        "2"    = data.aws_ami.amzn_2["x86_64"].id
+        "2023" = data.aws_ami.amzn_2023["x86_64"].id
       }
       "leap" = {
-        "15.5" = data.aws_ami.leap_155.id
+        "15.6" = data.aws_ami.leap_15["x86_64"].id
       }
       "rhel" = {
-        "8.9" = data.aws_ami.rhel_89["x86_64"].id
-        "9.3" = data.aws_ami.rhel_93["x86_64"].id
+        "8.10" = data.aws_ami.rhel_8["x86_64"].id
+        "9.4"  = data.aws_ami.rhel_9["x86_64"].id
       }
       "sles" = {
-        "v15_sp5_standard" = data.aws_ami.sles_15_sp5_standard["x86_64"].id
+        "15.6" = data.aws_ami.sles_15["x86_64"].id
       }
       "ubuntu" = {
         "20.04" = data.aws_ami.ubuntu_2004["x86_64"].id
         "22.04" = data.aws_ami.ubuntu_2204["x86_64"].id
+        "24.04" = data.aws_ami.ubuntu_2404["x86_64"].id
       }
     }
   }
+}
+
+data "aws_ami" "amzn_2" {
+  most_recent = true
+  for_each    = local.architectures
+
+  filter {
+    name   = "name"
+    values = ["amzn2-ami-ecs-hvm-2.0*"]
+  }
+
+  filter {
+    name   = "architecture"
+    values = [each.value]
+  }
+
+  owners = [local.amazon_owner_id]
+}
+
+data "aws_ami" "amzn_2023" {
+  most_recent = true
+  for_each    = local.architectures
+
+  filter {
+    name   = "name"
+    values = ["al2023-ami-ecs-hvm*"]
+  }
+
+  filter {
+    name   = "architecture"
+    values = [each.value]
+  }
+
+  owners = [local.amazon_owner_id]
+}
+
+data "aws_ami" "leap_15" {
+  most_recent = true
+  for_each    = local.architectures
+
+  filter {
+    name   = "name"
+    values = ["openSUSE-Leap-15-6*"]
+  }
+
+  filter {
+    name   = "architecture"
+    values = [each.value]
+  }
+
+  owners = [local.opensuse_owner_id]
+}
+
+data "aws_ami" "rhel_8" {
+  most_recent = true
+  for_each    = local.architectures
+
+  # Currently latest latest point release-1
+  filter {
+    name   = "name"
+    values = ["RHEL-8.10*HVM-20*"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+
+  filter {
+    name   = "architecture"
+    values = [each.value]
+  }
+
+  owners = [local.redhat_owner_id]
+}
+
+data "aws_ami" "rhel_9" {
+  most_recent = true
+  for_each    = local.architectures
+
+  # Currently latest latest point release-1
+  filter {
+    name   = "name"
+    values = ["RHEL-9.4*HVM-20*"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+
+  filter {
+    name   = "architecture"
+    values = [each.value]
+  }
+
+  owners = [local.redhat_owner_id]
+}
+
+data "aws_ami" "sles_15" {
+  most_recent = true
+  for_each    = local.architectures
+
+  filter {
+    name   = "name"
+    values = ["suse-sles-15-sp6-v*-hvm-*"]
+  }
+
+  filter {
+    name   = "architecture"
+    values = [each.value]
+  }
+
+  owners = [local.suse_owner_id]
 }
 
 data "aws_ami" "ubuntu_2004" {
@@ -97,14 +220,13 @@ data "aws_ami" "ubuntu_2204" {
   owners = [local.canonical_owner_id]
 }
 
-data "aws_ami" "rhel_89" {
+data "aws_ami" "ubuntu_2404" {
   most_recent = true
   for_each    = local.architectures
 
-  # Currently latest latest point release-1
   filter {
     name   = "name"
-    values = ["RHEL-8.9*HVM-20*"]
+    values = ["ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-*-server-*"]
   }
 
   filter {
@@ -117,81 +239,7 @@ data "aws_ami" "rhel_89" {
     values = [each.value]
   }
 
-  owners = [local.rhel_owner_id]
-}
-
-data "aws_ami" "rhel_93" {
-  most_recent = true
-  for_each    = local.architectures
-
-  # Currently latest latest point release-1
-  filter {
-    name   = "name"
-    values = ["RHEL-9.3*HVM-20*"]
-  }
-
-  filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
-  }
-
-  filter {
-    name   = "architecture"
-    values = [each.value]
-  }
-
-  owners = [local.rhel_owner_id]
-}
-
-data "aws_ami" "amzn2" {
-  most_recent = true
-  for_each    = local.architectures
-
-  filter {
-    name   = "name"
-    values = ["amzn2-ami-ecs-hvm-2.0*"]
-  }
-
-  filter {
-    name   = "architecture"
-    values = [each.value]
-  }
-
-  owners = [local.amzn2_owner_id]
-}
-
-data "aws_ami" "sles_15_sp5_standard" {
-  most_recent = true
-  for_each    = local.architectures
-
-  filter {
-    name   = "name"
-    values = ["suse-sles-15-sp5-v*-hvm-*"]
-  }
-
-  filter {
-    name   = "architecture"
-    values = [each.value]
-  }
-
-  owners = [local.sles_owner_id]
-}
-
-data "aws_ami" "leap_155" {
-  most_recent = true
-
-  filter {
-    name   = "name"
-    values = ["openSUSE-Leap-15.5*"]
-  }
-
-  filter {
-    name = "architecture"
-    # Note: arm64 AMIs are not offered for Leap.
-    values = ["x86_64"]
-  }
-
-  owners = [local.suse_owner_id]
+  owners = [local.canonical_owner_id]
 }
 
 data "aws_region" "current" {}

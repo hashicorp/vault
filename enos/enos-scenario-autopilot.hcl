@@ -55,17 +55,10 @@ scenario "autopilot" {
       edition = [for e in matrix.edition : e if !strcontains(e, "hsm")]
     }
 
-    // arm64 AMIs are not offered for Leap
-    exclude {
-      distro = ["leap"]
-      arch   = ["arm64"]
-    }
-
-    // softhsm packages not available for leap/sles. Enos support for softhsm on amzn2 is
-    // not implemented yet.
+    // softhsm packages not available for leap/sles.
     exclude {
       seal   = ["pkcs11"]
-      distro = ["amzn2", "leap", "sles"]
+      distro = ["leap", "sles"]
     }
 
     // Testing in IPV6 mode is currently implemented for integrated Raft storage only
@@ -86,7 +79,7 @@ scenario "autopilot" {
   locals {
     artifact_path = matrix.artifact_source != "artifactory" ? abspath(var.vault_artifact_path) : null
     enos_provider = {
-      amzn2  = provider.enos.ec2_user
+      amzn   = provider.enos.ec2_user
       leap   = provider.enos.ec2_user
       rhel   = provider.enos.ec2_user
       sles   = provider.enos.ec2_user
@@ -255,7 +248,7 @@ scenario "autopilot" {
       install_dir          = global.vault_install_dir[matrix.artifact_type]
       ip_version           = matrix.ip_version
       license              = matrix.edition != "ce" ? step.read_license.license : null
-      packages             = concat(global.packages, global.distro_packages[matrix.distro])
+      packages             = concat(global.packages, global.distro_packages[matrix.distro][global.distro_version[matrix.distro]])
       release = {
         edition = matrix.edition
         version = matrix.initial_version
@@ -394,7 +387,7 @@ scenario "autopilot" {
       local_artifact_path         = local.artifact_path
       log_level                   = var.vault_log_level
       manage_service              = local.manage_service
-      packages                    = concat(global.packages, global.distro_packages[matrix.distro])
+      packages                    = concat(global.packages, global.distro_packages[matrix.distro][global.distro_version[matrix.distro]])
       root_token                  = step.create_vault_cluster.root_token
       seal_attributes             = step.create_seal_key.attributes
       seal_type                   = matrix.seal

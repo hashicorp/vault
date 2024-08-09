@@ -75,7 +75,7 @@ scenario "dev_single_cluster" {
     arch     = ["amd64", "arm64"]
     artifact = ["local", "deb", "rpm", "zip"]
     backend  = ["consul", "raft"]
-    distro   = ["amzn2", "leap", "rhel", "sles", "ubuntu"]
+    distro   = ["amzn", "leap", "rhel", "sles", "ubuntu"]
     edition  = ["ce", "ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
     seal     = ["awskms", "pkcs11", "shamir"]
 
@@ -121,7 +121,7 @@ scenario "dev_single_cluster" {
     // The enos provider uses different ssh transport configs for different distros (as
     // specified in enos-providers.hcl), and we need to be able to access both of those here.
     enos_provider = {
-      amzn2  = provider.enos.ec2_user
+      amzn   = provider.enos.ec2_user
       leap   = provider.enos.ec2_user
       rhel   = provider.enos.ec2_user
       sles   = provider.enos.ec2_user
@@ -341,7 +341,7 @@ scenario "dev_single_cluster" {
     }
 
     variables {
-      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"]["22.04"]
+      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"][global.distro_version["ubuntu"]]
       cluster_tag_key = global.backend_tag_key
       common_tags     = global.tags
       seal_key_names  = step.create_seal_key.resource_names
@@ -445,7 +445,7 @@ scenario "dev_single_cluster" {
       license              = matrix.edition != "ce" ? step.read_vault_license.license : null
       local_artifact_path  = matrix.artifact == "local" ? abspath(var.vault_artifact_path) : null
       manage_service       = local.manage_service
-      packages             = concat(global.packages, global.distro_packages[matrix.distro])
+      packages             = concat(global.packages, global.distro_packages[matrix.distro][global.distro_version[matrix.distro]])
       release              = matrix.artifact == "zip" ? { version = var.vault_product_version, edition = matrix.edition } : null
       seal_attributes      = step.create_seal_key.attributes
       seal_type            = matrix.seal
