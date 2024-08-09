@@ -39,8 +39,15 @@ export default class ActivityAdapter extends ApplicationAdapter {
 
   queryRecord(store, type, query) {
     const url = `${this.buildURL()}/internal/counters/activity`;
-    const queryParams = this.formatQueryParams(query);
-    return this.ajax(url, 'GET', { data: queryParams }).then((resp) => {
+    const options = {
+      data: this.formatQueryParams(query),
+    };
+
+    if (query?.namespace) {
+      options.namespace = query.namespace;
+    }
+
+    return this.ajax(url, 'GET', options).then((resp) => {
       const response = resp || {};
       response.id = response.request_id || 'no-data';
       return response;
