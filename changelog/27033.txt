@@ -1,0 +1,3 @@
+```release-note:improvement
+command/server: Add support for dumping pprof files to during startup using CLI option `pprof-dump-dir`
+```
