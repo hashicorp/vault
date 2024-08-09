@@ -710,8 +710,11 @@ scenario "replication" {
     EOF
     module      = module.vault_setup_perf_primary
     depends_on = [
+      // Wait for both clusters to be up and healthy...
+      step.get_primary_cluster_ips,
+      step.get_secondary_cluster_ips,
       step.write_test_data_on_primary,
-      // Do base verification before continuing on to our performance replication verification.
+      // Wait base verification to complete...
       step.verify_vault_version,
       step.verify_ui,
     ]
