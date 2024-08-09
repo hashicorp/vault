@@ -10,8 +10,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestOptions_WithFormat exercises WithFormat Option to ensure it performs as expected.
-func TestOptions_WithFormat(t *testing.T) {
+// TestOptions_withFormat exercises withFormat option to ensure it performs as expected.
+func TestOptions_withFormat(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
@@ -38,12 +38,12 @@ func TestOptions_WithFormat(t *testing.T) {
 		"valid-json": {
 			Value:           "json",
 			IsErrorExpected: false,
-			ExpectedValue:   JSONFormat,
+			ExpectedValue:   jsonFormat,
 		},
 		"valid-jsonx": {
 			Value:           "jsonx",
 			IsErrorExpected: false,
-			ExpectedValue:   JSONxFormat,
+			ExpectedValue:   jsonxFormat,
 		},
 	}
 
@@ -53,7 +53,7 @@ func TestOptions_WithFormat(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			opts := &options{}
-			applyOption := WithFormat(tc.Value)
+			applyOption := withFormat(tc.Value)
 			err := applyOption(opts)
 			switch {
 			case tc.IsErrorExpected:
@@ -67,8 +67,8 @@ func TestOptions_WithFormat(t *testing.T) {
 	}
 }
 
-// TestOptions_WithSubtype exercises WithSubtype Option to ensure it performs as expected.
-func TestOptions_WithSubtype(t *testing.T) {
+// TestOptions_withSubtype exercises withSubtype option to ensure it performs as expected.
+func TestOptions_withSubtype(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
@@ -100,7 +100,7 @@ func TestOptions_WithSubtype(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			opts := &options{}
-			applyOption := WithSubtype(tc.Value)
+			applyOption := withSubtype(tc.Value)
 			err := applyOption(opts)
 			switch {
 			case tc.IsErrorExpected:
@@ -114,8 +114,8 @@ func TestOptions_WithSubtype(t *testing.T) {
 	}
 }
 
-// TestOptions_WithNow exercises WithNow Option to ensure it performs as expected.
-func TestOptions_WithNow(t *testing.T) {
+// TestOptions_withNow exercises withNow option to ensure it performs as expected.
+func TestOptions_withNow(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
@@ -143,7 +143,7 @@ func TestOptions_WithNow(t *testing.T) {
 			t.Parallel()
 
 			opts := &options{}
-			applyOption := WithNow(tc.Value)
+			applyOption := withNow(tc.Value)
 			err := applyOption(opts)
 			switch {
 			case tc.IsErrorExpected:
@@ -157,8 +157,8 @@ func TestOptions_WithNow(t *testing.T) {
 	}
 }
 
-// TestOptions_WithID exercises WithID Option to ensure it performs as expected.
-func TestOptions_WithID(t *testing.T) {
+// TestOptions_withID exercises withID option to ensure it performs as expected.
+func TestOptions_withID(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
@@ -190,7 +190,7 @@ func TestOptions_WithID(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			opts := &options{}
-			applyOption := WithID(tc.Value)
+			applyOption := withID(tc.Value)
 			err := applyOption(opts)
 			switch {
 			case tc.IsErrorExpected:
@@ -204,8 +204,8 @@ func TestOptions_WithID(t *testing.T) {
 	}
 }
 
-// TestOptions_WithPrefix exercises WithPrefix Option to ensure it performs as expected.
-func TestOptions_WithPrefix(t *testing.T) {
+// TestOptions_withPrefix exercises withPrefix option to ensure it performs as expected.
+func TestOptions_withPrefix(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
@@ -237,7 +237,7 @@ func TestOptions_WithPrefix(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			opts := &options{}
-			applyOption := WithPrefix(tc.Value)
+			applyOption := withPrefix(tc.Value)
 			err := applyOption(opts)
 			switch {
 			case tc.IsErrorExpected:
@@ -251,8 +251,8 @@ func TestOptions_WithPrefix(t *testing.T) {
 	}
 }
 
-// TestOptions_WithRaw exercises WithRaw Option to ensure it performs as expected.
-func TestOptions_WithRaw(t *testing.T) {
+// TestOptions_withRaw exercises withRaw option to ensure it performs as expected.
+func TestOptions_withRaw(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
@@ -275,7 +275,7 @@ func TestOptions_WithRaw(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			opts := &options{}
-			applyOption := WithRaw(tc.Value)
+			applyOption := withRaw(tc.Value)
 			err := applyOption(opts)
 			require.NoError(t, err)
 			require.Equal(t, tc.ExpectedValue, opts.withRaw)
@@ -283,8 +283,8 @@ func TestOptions_WithRaw(t *testing.T) {
 	}
 }
 
-// TestOptions_WithElision exercises WithElision Option to ensure it performs as expected.
-func TestOptions_WithElision(t *testing.T) {
+// TestOptions_withElision exercises withElision option to ensure it performs as expected.
+func TestOptions_withElision(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
@@ -307,7 +307,7 @@ func TestOptions_WithElision(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			opts := &options{}
-			applyOption := WithElision(tc.Value)
+			applyOption := withElision(tc.Value)
 			err := applyOption(opts)
 			require.NoError(t, err)
 			require.Equal(t, tc.ExpectedValue, opts.withElision)
@@ -315,8 +315,8 @@ func TestOptions_WithElision(t *testing.T) {
 	}
 }
 
-// TestOptions_WithHMACAccessor exercises WithHMACAccessor Option to ensure it performs as expected.
-func TestOptions_WithHMACAccessor(t *testing.T) {
+// TestOptions_withHMACAccessor exercises withHMACAccessor option to ensure it performs as expected.
+func TestOptions_withHMACAccessor(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
@@ -339,7 +339,7 @@ func TestOptions_WithHMACAccessor(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			opts := &options{}
-			applyOption := WithHMACAccessor(tc.Value)
+			applyOption := withHMACAccessor(tc.Value)
 			err := applyOption(opts)
 			require.NoError(t, err)
 			require.Equal(t, tc.ExpectedValue, opts.withHMACAccessor)
@@ -347,8 +347,8 @@ func TestOptions_WithHMACAccessor(t *testing.T) {
 	}
 }
 
-// TestOptions_WithOmitTime exercises WithOmitTime Option to ensure it performs as expected.
-func TestOptions_WithOmitTime(t *testing.T) {
+// TestOptions_withOmitTime exercises withOmitTime option to ensure it performs as expected.
+func TestOptions_withOmitTime(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
@@ -371,7 +371,7 @@ func TestOptions_WithOmitTime(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			opts := &options{}
-			applyOption := WithOmitTime(tc.Value)
+			applyOption := withOmitTime(tc.Value)
 			err := applyOption(opts)
 			require.NoError(t, err)
 			require.Equal(t, tc.ExpectedValue, opts.withOmitTime)
@@ -389,12 +389,12 @@ func TestOptions_Default(t *testing.T) {
 	require.False(t, opts.withNow.IsZero())
 }
 
-// TestOptions_Opts exercises GetOpts with various Option values.
+// TestOptions_Opts exercises GetOpts with various option values.
 func TestOptions_Opts(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		opts                 []Option
+		opts                 []option
 		IsErrorExpected      bool
 		ExpectedErrorMessage string
 		ExpectedID           string
@@ -407,73 +407,73 @@ func TestOptions_Opts(t *testing.T) {
 			opts:            nil,
 			IsErrorExpected: false,
 			IsNowExpected:   true,
-			ExpectedFormat:  JSONFormat,
+			ExpectedFormat:  jsonFormat,
 		},
 		"empty-options": {
-			opts:            []Option{},
+			opts:            []option{},
 			IsErrorExpected: false,
 			IsNowExpected:   true,
-			ExpectedFormat:  JSONFormat,
+			ExpectedFormat:  jsonFormat,
 		},
 		"with-multiple-valid-id": {
-			opts: []Option{
-				WithID("qwerty"),
-				WithID("juan"),
+			opts: []option{
+				withID("qwerty"),
+				withID("juan"),
 			},
 			IsErrorExpected: false,
 			ExpectedID:      "juan",
 			IsNowExpected:   true,
-			ExpectedFormat:  JSONFormat,
+			ExpectedFormat:  jsonFormat,
 		},
 		"with-multiple-valid-subtype": {
-			opts: []Option{
-				WithSubtype("AuditRequest"),
-				WithSubtype("AuditResponse"),
+			opts: []option{
+				withSubtype("AuditRequest"),
+				withSubtype("AuditResponse"),
 			},
 			IsErrorExpected: false,
 			ExpectedSubtype: ResponseType,
 			IsNowExpected:   true,
-			ExpectedFormat:  JSONFormat,
+			ExpectedFormat:  jsonFormat,
 		},
 		"with-multiple-valid-format": {
-			opts: []Option{
-				WithFormat("json"),
-				WithFormat("jsonx"),
+			opts: []option{
+				withFormat("json"),
+				withFormat("jsonx"),
 			},
 			IsErrorExpected: false,
-			ExpectedFormat:  JSONxFormat,
+			ExpectedFormat:  jsonxFormat,
 			IsNowExpected:   true,
 		},
 		"with-multiple-valid-now": {
-			opts: []Option{
-				WithNow(time.Date(2023, time.July, 4, 12, 3, 0, 0, time.Local)),
-				WithNow(time.Date(2023, time.July, 4, 13, 3, 0, 0, time.Local)),
+			opts: []option{
+				withNow(time.Date(2023, time.July, 4, 12, 3, 0, 0, time.Local)),
+				withNow(time.Date(2023, time.July, 4, 13, 3, 0, 0, time.Local)),
 			},
 			IsErrorExpected: false,
 			ExpectedNow:     time.Date(2023, time.July, 4, 13, 3, 0, 0, time.Local),
 			IsNowExpected:   false,
-			ExpectedFormat:  JSONFormat,
+			ExpectedFormat:  jsonFormat,
 		},
 		"with-multiple-valid-then-invalid-now": {
-			opts: []Option{
-				WithNow(time.Date(2023, time.July, 4, 12, 3, 0, 0, time.Local)),
-				WithNow(time.Time{}),
+			opts: []option{
+				withNow(time.Date(2023, time.July, 4, 12, 3, 0, 0, time.Local)),
+				withNow(time.Time{}),
 			},
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "cannot specify 'now' to be the zero time instant",
-			ExpectedFormat:       JSONFormat,
+			ExpectedFormat:       jsonFormat,
 		},
 		"with-multiple-valid-options": {
-			opts: []Option{
-				WithID("qwerty"),
-				WithSubtype("AuditRequest"),
-				WithFormat("json"),
-				WithNow(time.Date(2023, time.July, 4, 12, 3, 0, 0, time.Local)),
+			opts: []option{
+				withID("qwerty"),
+				withSubtype("AuditRequest"),
+				withFormat("json"),
+				withNow(time.Date(2023, time.July, 4, 12, 3, 0, 0, time.Local)),
 			},
 			IsErrorExpected: false,
 			ExpectedID:      "qwerty",
 			ExpectedSubtype: RequestType,
-			ExpectedFormat:  JSONFormat,
+			ExpectedFormat:  jsonFormat,
 			ExpectedNow:     time.Date(2023, time.July, 4, 12, 3, 0, 0, time.Local),
 		},
 	}

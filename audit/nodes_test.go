@@ -9,7 +9,7 @@ import (
 
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/namespace"
+	nshelper "github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/require"
@@ -32,7 +32,7 @@ func TestProcessManual_NilData(t *testing.T) {
 	ids = append(ids, sinkId)
 	nodes[sinkId] = sinkNode
 
-	err := processManual(namespace.RootContext(context.Background()), nil, ids, nodes)
+	err := processManual(nshelper.RootContext(context.Background()), nil, ids, nodes)
 	require.Error(t, err)
 	require.EqualError(t, err, "data cannot be nil")
 }
@@ -76,7 +76,7 @@ func TestProcessManual_BadIDs(t *testing.T) {
 			require.NoError(t, err)
 			data := newData(requestId)
 
-			err = processManual(namespace.RootContext(context.Background()), data, tc.IDs, nodes)
+			err = processManual(nshelper.RootContext(context.Background()), data, tc.IDs, nodes)
 			require.Error(t, err)
 			require.EqualError(t, err, tc.ExpectedErrorMessage)
 		})
@@ -103,7 +103,7 @@ func TestProcessManual_NoNodes(t *testing.T) {
 	require.NoError(t, err)
 	data := newData(requestId)
 
-	err = processManual(namespace.RootContext(context.Background()), data, ids, nodes)
+	err = processManual(nshelper.RootContext(context.Background()), data, ids, nodes)
 	require.Error(t, err)
 	require.EqualError(t, err, "nodes are required")
 }
@@ -130,7 +130,7 @@ func TestProcessManual_IdNodeMismatch(t *testing.T) {
 	require.NoError(t, err)
 	data := newData(requestId)
 
-	err = processManual(namespace.RootContext(context.Background()), data, ids, nodes)
+	err = processManual(nshelper.RootContext(context.Background()), data, ids, nodes)
 	require.Error(t, err)
 	require.ErrorContains(t, err, "node not found: ")
 }
@@ -153,7 +153,7 @@ func TestProcessManual_NotEnoughNodes(t *testing.T) {
 	require.NoError(t, err)
 	data := newData(requestId)
 
-	err = processManual(namespace.RootContext(context.Background()), data, ids, nodes)
+	err = processManual(nshelper.RootContext(context.Background()), data, ids, nodes)
 	require.Error(t, err)
 	require.EqualError(t, err, "minimum of 2 ids are required")
 }
@@ -181,7 +181,7 @@ func TestProcessManual_LastNodeNotSink(t *testing.T) {
 	require.NoError(t, err)
 	data := newData(requestId)
 
-	err = processManual(namespace.RootContext(context.Background()), data, ids, nodes)
+	err = processManual(nshelper.RootContext(context.Background()), data, ids, nodes)
 	require.Error(t, err)
 	require.EqualError(t, err, "last node must be a filter or sink")
 }
@@ -210,7 +210,7 @@ func TestProcessManualEndWithSink(t *testing.T) {
 	require.NoError(t, err)
 	data := newData(requestId)
 
-	err = processManual(namespace.RootContext(context.Background()), data, ids, nodes)
+	err = processManual(nshelper.RootContext(context.Background()), data, ids, nodes)
 	require.NoError(t, err)
 }
 
@@ -243,7 +243,7 @@ func TestProcessManual_EndWithFilter(t *testing.T) {
 	require.NoError(t, err)
 	data := newData(requestId)
 
-	err = processManual(namespace.RootContext(context.Background()), data, ids, nodes)
+	err = processManual(nshelper.RootContext(context.Background()), data, ids, nodes)
 	require.NoError(t, err)
 }
 

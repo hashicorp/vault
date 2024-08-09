@@ -25,10 +25,10 @@ func hashString(ctx context.Context, salter Salter, data string) (string, error)
 	return salt.GetIdentifiedHMAC(data), nil
 }
 
-// hashAuth uses the Salter to hash the supplied Auth (modifying it).
+// hashAuth uses the Salter to hash the supplied auth (modifying it).
 // hmacAccessor is used to indicate whether the accessor should also be HMAC'd
 // when present.
-func hashAuth(ctx context.Context, salter Salter, auth *Auth, hmacAccessor bool) error {
+func hashAuth(ctx context.Context, salter Salter, auth *auth, hmacAccessor bool) error {
 	if auth == nil {
 		return nil
 	}
@@ -50,14 +50,14 @@ func hashAuth(ctx context.Context, salter Salter, auth *Auth, hmacAccessor bool)
 	return nil
 }
 
-// hashRequest uses the Salter to hash the supplied Request (modifying it).
-// nonHMACDataKeys is used when hashing any 'Data' field within the Request which
+// hashRequest uses the Salter to hash the supplied request (modifying it).
+// nonHMACDataKeys is used when hashing any 'Data' field within the request which
 // prevents those specific keys from HMAC'd.
 // hmacAccessor is used to indicate whether some accessors should also be HMAC'd
 // when present.
-// nonHMACDataKeys is used when hashing any 'Data' field within the Request which
+// nonHMACDataKeys is used when hashing any 'Data' field within the request which
 // prevents those specific keys from HMAC'd.
-func hashRequest(ctx context.Context, salter Salter, req *Request, hmacAccessor bool, nonHMACDataKeys []string) error {
+func hashRequest(ctx context.Context, salter Salter, req *request, hmacAccessor bool, nonHMACDataKeys []string) error {
 	if req == nil {
 		return nil
 	}
@@ -102,13 +102,13 @@ func hashMap(hashFunc hashCallback, data map[string]interface{}, nonHMACDataKeys
 	return hashStructure(data, hashFunc, nonHMACDataKeys)
 }
 
-// hashResponse uses the Salter to hash the supplied Response (modifying it).
+// hashResponse uses the Salter to hash the supplied response (modifying it).
 // hmacAccessor is used to indicate whether some accessors should also be HMAC'd
 // when present.
-// nonHMACDataKeys is used when hashing any 'Data' field within the Response which
+// nonHMACDataKeys is used when hashing any 'Data' field within the response which
 // prevents those specific keys from HMAC'd.
 // See: /vault/docs/audit#eliding-list-response-bodies
-func hashResponse(ctx context.Context, salter Salter, resp *Response, hmacAccessor bool, nonHMACDataKeys []string) error {
+func hashResponse(ctx context.Context, salter Salter, resp *response, hmacAccessor bool, nonHMACDataKeys []string) error {
 	if resp == nil {
 		return nil
 	}
@@ -142,10 +142,10 @@ func hashResponse(ctx context.Context, salter Salter, resp *Response, hmacAccess
 	return nil
 }
 
-// hashWrapInfo uses the supplied hashing function to hash ResponseWrapInfo (modifying it).
+// hashWrapInfo uses the supplied hashing function to hash responseWrapInfo (modifying it).
 // hmacAccessor is used to indicate whether some accessors should also be HMAC'd
 // when present.
-func hashWrapInfo(hashFunc hashCallback, wrapInfo *ResponseWrapInfo, hmacAccessor bool) error {
+func hashWrapInfo(hashFunc hashCallback, wrapInfo *responseWrapInfo, hmacAccessor bool) error {
 	if wrapInfo == nil {
 		return nil
 	}

@@ -18,9 +18,9 @@ const (
 	optionWriteTimeout = "write_timeout"
 )
 
-var _ Backend = (*SocketBackend)(nil)
+var _ Backend = (*socketBackend)(nil)
 
-type SocketBackend struct {
+type socketBackend struct {
 	*backend
 }
 
@@ -32,7 +32,7 @@ func NewSocketBackend(conf *BackendConfig, headersConfig HeaderFormatter) (be Ba
 }
 
 // newSocketBackend creates a backend and configures all nodes including a socket sink.
-func newSocketBackend(conf *BackendConfig, headersConfig HeaderFormatter) (*SocketBackend, error) {
+func newSocketBackend(conf *BackendConfig, headersConfig HeaderFormatter) (*socketBackend, error) {
 	if headersConfig == nil || reflect.ValueOf(headersConfig).IsNil() {
 		return nil, fmt.Errorf("nil header formatter: %w", ErrInvalidParameter)
 	}
@@ -78,7 +78,7 @@ func newSocketBackend(conf *BackendConfig, headersConfig HeaderFormatter) (*Sock
 		return nil, err
 	}
 
-	b := &SocketBackend{backend: bec}
+	b := &socketBackend{backend: bec}
 
 	// Configure the sink.
 	cfg, err := newFormatterConfig(headersConfig, conf.Config)
@@ -94,7 +94,7 @@ func newSocketBackend(conf *BackendConfig, headersConfig HeaderFormatter) (*Sock
 	return b, nil
 }
 
-func (b *SocketBackend) configureSinkNode(name string, address string, format format, opts ...event.Option) error {
+func (b *socketBackend) configureSinkNode(name string, address string, format format, opts ...event.Option) error {
 	sinkNodeID, err := event.GenerateNodeID()
 	if err != nil {
 		return fmt.Errorf("error generating random NodeID for sink node: %w", err)
@@ -115,7 +115,7 @@ func (b *SocketBackend) configureSinkNode(name string, address string, format fo
 }
 
 // Reload will trigger the reload action on the sink node for this backend.
-func (b *SocketBackend) Reload() error {
+func (b *socketBackend) Reload() error {
 	for _, n := range b.nodeMap {
 		if n.Type() == eventlogger.NodeTypeSink {
 			return n.Reopen()

@@ -97,7 +97,7 @@ func TestSyslogBackend_newSyslogBackend(t *testing.T) {
 				},
 				MountPath: tc.mountPath,
 			}
-			b, err := newSyslogBackend(cfg, &NoopHeaderFormatter{})
+			b, err := newSyslogBackend(cfg, &noopHeaderFormatter{})
 
 			if tc.wantErr {
 				require.Error(t, err)

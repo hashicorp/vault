@@ -38,7 +38,7 @@ func TestAuditFile_fileModeNew(t *testing.T) {
 		SaltView:   &logical.InmemStorage{},
 		Logger:     hclog.NewNullLogger(),
 	}
-	_, err = newFileBackend(backendConfig, &NoopHeaderFormatter{})
+	_, err = newFileBackend(backendConfig, &noopHeaderFormatter{})
 	require.NoError(t, err)
 
 	info, err := os.Stat(file)
@@ -71,7 +71,7 @@ func TestAuditFile_fileModeExisting(t *testing.T) {
 		Logger:     hclog.NewNullLogger(),
 	}
 
-	_, err = newFileBackend(backendConfig, &NoopHeaderFormatter{})
+	_, err = newFileBackend(backendConfig, &noopHeaderFormatter{})
 	require.NoError(t, err)
 
 	info, err := os.Stat(f.Name())
@@ -105,7 +105,7 @@ func TestAuditFile_fileMode0000(t *testing.T) {
 		Logger:     hclog.NewNullLogger(),
 	}
 
-	_, err = newFileBackend(backendConfig, &NoopHeaderFormatter{})
+	_, err = newFileBackend(backendConfig, &noopHeaderFormatter{})
 	require.NoError(t, err)
 
 	info, err := os.Stat(f.Name())
@@ -134,7 +134,7 @@ func TestAuditFile_EventLogger_fileModeNew(t *testing.T) {
 		Logger:     hclog.NewNullLogger(),
 	}
 
-	_, err = newFileBackend(backendConfig, &NoopHeaderFormatter{})
+	_, err = newFileBackend(backendConfig, &noopHeaderFormatter{})
 	require.NoError(t, err)
 
 	info, err := os.Stat(file)
@@ -267,7 +267,7 @@ func TestFileBackend_newFileBackend(t *testing.T) {
 				},
 				MountPath: tc.mountPath,
 			}
-			b, err := newFileBackend(cfg, &NoopHeaderFormatter{})
+			b, err := newFileBackend(cfg, &noopHeaderFormatter{})
 
 			if tc.wantErr {
 				require.Error(t, err)

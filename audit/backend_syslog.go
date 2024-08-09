@@ -15,9 +15,9 @@ const (
 	optionTag      = "tag"
 )
 
-var _ Backend = (*SyslogBackend)(nil)
+var _ Backend = (*syslogBackend)(nil)
 
-type SyslogBackend struct {
+type syslogBackend struct {
 	*backend
 }
 
@@ -29,7 +29,7 @@ func NewSyslogBackend(conf *BackendConfig, headersConfig HeaderFormatter) (be Ba
 }
 
 // newSyslogBackend creates a backend and configures all nodes including a socket sink.
-func newSyslogBackend(conf *BackendConfig, headersConfig HeaderFormatter) (*SyslogBackend, error) {
+func newSyslogBackend(conf *BackendConfig, headersConfig HeaderFormatter) (*syslogBackend, error) {
 	if headersConfig == nil || reflect.ValueOf(headersConfig).IsNil() {
 		return nil, fmt.Errorf("nil header formatter: %w", ErrInvalidParameter)
 	}
@@ -68,7 +68,7 @@ func newSyslogBackend(conf *BackendConfig, headersConfig HeaderFormatter) (*Sysl
 		return nil, err
 	}
 
-	b := &SyslogBackend{backend: bec}
+	b := &syslogBackend{backend: bec}
 
 	// Configure the sink.
 	cfg, err := newFormatterConfig(headersConfig, conf.Config)
@@ -84,7 +84,7 @@ func newSyslogBackend(conf *BackendConfig, headersConfig HeaderFormatter) (*Sysl
 	return b, nil
 }
 
-func (b *SyslogBackend) configureSinkNode(name string, format format, opts ...event.Option) error {
+func (b *syslogBackend) configureSinkNode(name string, format format, opts ...event.Option) error {
 	sinkNodeID, err := event.GenerateNodeID()
 	if err != nil {
 		return fmt.Errorf("error generating random NodeID for sink node: %w: %w", ErrInternal, err)
@@ -104,6 +104,6 @@ func (b *SyslogBackend) configureSinkNode(name string, format format, opts ...ev
 }
 
 // Reload will trigger the reload action on the sink node for this backend.
-func (b *SyslogBackend) Reload() error {
+func (b *syslogBackend) Reload() error {
 	return nil
 }

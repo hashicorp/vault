@@ -7,20 +7,20 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-// Entry represents an audit entry.
+// entry represents an audit entry.
 // It could be an entry for a request or response.
-type Entry struct {
-	Auth          *Auth     `json:"auth,omitempty"`
+type entry struct {
+	Auth          *auth     `json:"auth,omitempty"`
 	Error         string    `json:"error,omitempty"`
 	Forwarded     bool      `json:"forwarded,omitempty"`
 	ForwardedFrom string    `json:"forwarded_from,omitempty"` // Populated in Enterprise when a request is forwarded
-	Request       *Request  `json:"request,omitempty"`
-	Response      *Response `json:"response,omitempty"`
+	Request       *request  `json:"request,omitempty"`
+	Response      *response `json:"response,omitempty"`
 	Time          string    `json:"time,omitempty"`
 	Type          string    `json:"type,omitempty"`
 }
 
-type Request struct {
+type request struct {
 	ClientCertificateSerialNumber string                 `json:"client_certificate_serial_number,omitempty"`
 	ClientID                      string                 `json:"client_id,omitempty"`
 	ClientToken                   string                 `json:"client_token,omitempty"`
@@ -35,7 +35,7 @@ type Request struct {
 	MountRunningSha256            string                 `json:"mount_running_sha256,omitempty"`
 	MountRunningVersion           string                 `json:"mount_running_version,omitempty"`
 	MountType                     string                 `json:"mount_type,omitempty"`
-	Namespace                     *Namespace             `json:"namespace,omitempty"`
+	Namespace                     *namespace             `json:"namespace,omitempty"`
 	Operation                     logical.Operation      `json:"operation,omitempty"`
 	Path                          string                 `json:"path,omitempty"`
 	PolicyOverride                bool                   `json:"policy_override,omitempty"`
@@ -46,8 +46,8 @@ type Request struct {
 	WrapTTL                       int                    `json:"wrap_ttl,omitempty"`
 }
 
-type Response struct {
-	Auth                  *Auth                  `json:"auth,omitempty"`
+type response struct {
+	Auth                  *auth                  `json:"auth,omitempty"`
 	Data                  map[string]interface{} `json:"data,omitempty"`
 	Headers               map[string][]string    `json:"headers,omitempty"`
 	MountAccessor         string                 `json:"mount_accessor,omitempty"`
@@ -58,12 +58,12 @@ type Response struct {
 	MountRunningVersion   string                 `json:"mount_running_plugin_version,omitempty"`
 	MountType             string                 `json:"mount_type,omitempty"`
 	Redirect              string                 `json:"redirect,omitempty"`
-	Secret                *Secret                `json:"secret,omitempty"`
-	WrapInfo              *ResponseWrapInfo      `json:"wrap_info,omitempty"`
+	Secret                *secret                `json:"secret,omitempty"`
+	WrapInfo              *responseWrapInfo      `json:"wrap_info,omitempty"`
 	Warnings              []string               `json:"warnings,omitempty"`
 }
 
-type Auth struct {
+type auth struct {
 	Accessor                  string              `json:"accessor,omitempty"`
 	ClientToken               string              `json:"client_token,omitempty"`
 	DisplayName               string              `json:"display_name,omitempty"`
@@ -75,7 +75,7 @@ type Auth struct {
 	NoDefaultPolicy           bool                `json:"no_default_policy,omitempty"`
 	NumUses                   int                 `json:"num_uses,omitempty"`
 	Policies                  []string            `json:"policies,omitempty"`
-	PolicyResults             *PolicyResults      `json:"policy_results,omitempty"`
+	PolicyResults             *policyResults      `json:"policy_results,omitempty"`
 	RemainingUses             int                 `json:"remaining_uses,omitempty"`
 	TokenPolicies             []string            `json:"token_policies,omitempty"`
 	TokenIssueTime            string              `json:"token_issue_time,omitempty"`
@@ -83,23 +83,23 @@ type Auth struct {
 	TokenType                 string              `json:"token_type,omitempty"`
 }
 
-type PolicyResults struct {
+type policyResults struct {
 	Allowed          bool         `json:"allowed"`
-	GrantingPolicies []PolicyInfo `json:"granting_policies,omitempty"`
+	GrantingPolicies []policyInfo `json:"granting_policies,omitempty"`
 }
 
-type PolicyInfo struct {
+type policyInfo struct {
 	Name          string `json:"name,omitempty"`
 	NamespaceId   string `json:"namespace_id,omitempty"`
 	NamespacePath string `json:"namespace_path,omitempty"`
 	Type          string `json:"type"`
 }
 
-type Secret struct {
+type secret struct {
 	LeaseID string `json:"lease_id,omitempty"`
 }
 
-type ResponseWrapInfo struct {
+type responseWrapInfo struct {
 	Accessor        string `json:"accessor,omitempty"`
 	CreationPath    string `json:"creation_path,omitempty"`
 	CreationTime    string `json:"creation_time,omitempty"`
@@ -108,7 +108,7 @@ type ResponseWrapInfo struct {
 	WrappedAccessor string `json:"wrapped_accessor,omitempty"`
 }
 
-type Namespace struct {
+type namespace struct {
 	ID   string `json:"id,omitempty"`
 	Path string `json:"path,omitempty"`
 }

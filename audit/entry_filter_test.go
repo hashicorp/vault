@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/eventlogger"
-	"github.com/hashicorp/vault/helper/namespace"
+	nshelper "github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/require"
@@ -117,7 +117,7 @@ func TestEntryFilter_Process_ContextDone(t *testing.T) {
 	require.NoError(t, err)
 
 	// Fake audit event
-	a, err := NewEvent(RequestType)
+	a, err := newEvent(RequestType)
 	require.NoError(t, err)
 
 	// Fake event logger event
@@ -184,7 +184,7 @@ func TestEntryFilter_Process_NoAuditDataInPayload(t *testing.T) {
 	l, err := newEntryFilter("operation == foo")
 	require.NoError(t, err)
 
-	a, err := NewEvent(RequestType)
+	a, err := newEvent(RequestType)
 	require.NoError(t, err)
 
 	// Ensure audit data is nil
@@ -212,7 +212,7 @@ func TestEntryFilter_Process_FilterSuccess(t *testing.T) {
 	l, err := newEntryFilter("mount_type == juan")
 	require.NoError(t, err)
 
-	a, err := NewEvent(RequestType)
+	a, err := newEvent(RequestType)
 	require.NoError(t, err)
 
 	a.Data = &logical.LogInput{
@@ -229,7 +229,7 @@ func TestEntryFilter_Process_FilterSuccess(t *testing.T) {
 		Payload:   a,
 	}
 
-	ctx := namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace)
+	ctx := nshelper.ContextWithNamespace(context.Background(), nshelper.RootNamespace)
 
 	e2, err := l.Process(ctx, e)
 
@@ -245,7 +245,7 @@ func TestEntryFilter_Process_FilterFail(t *testing.T) {
 	l, err := newEntryFilter("mount_type == john and operation == create and namespace == root")
 	require.NoError(t, err)
 
-	a, err := NewEvent(RequestType)
+	a, err := newEvent(RequestType)
 	require.NoError(t, err)
 
 	a.Data = &logical.LogInput{
@@ -262,7 +262,7 @@ func TestEntryFilter_Process_FilterFail(t *testing.T) {
 		Payload:   a,
 	}
 
-	ctx := namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace)
+	ctx := nshelper.ContextWithNamespace(context.Background(), nshelper.RootNamespace)
 
 	e2, err := l.Process(ctx, e)
 
