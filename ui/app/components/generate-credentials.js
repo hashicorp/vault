@@ -62,7 +62,7 @@ export default class GenerateCredentials extends Component {
     if (type) {
       return type.model;
     }
-    // if we don't have a mode for that type then redirect them back to the backend list
+    // if we don't have a model for that type then redirect them back to the backend list
     this.router.transitionTo('vault.cluster.secrets.backend.list-root', this.args.backendPath);
   }
 
