@@ -7,9 +7,11 @@
   <div class="box is-fullwidth is-shadowless is-marginless">
     <NamespaceReminder @mode="save" @noun="configuration" />
     <MessageError @errorMessage={{this.errorMessage}} />
-    <p class="has-text-grey-dark">
-      Note: If you have already set a certificate and key, you'll need to delete it before saving new values.
-    </p>
+    {{#unless @model.isNew}}
+      <p class="has-text-grey-dark">
+        Note: If you have already set a certificate and key, you'll need to delete it before saving new values.
+      </p>
+    {{/unless}}
   </div>
   {{#if @model.isNew}}
     <div class="box is-fullwidth is-sideless">
