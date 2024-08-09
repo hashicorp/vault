@@ -88,7 +88,7 @@ export default class ConfigureSshComponent extends Component<Args> {
   }
 
   transition(isCancel = false) {
-    // onCancel is the on case in which we transition to the parent route.
+    // onCancel is the only case in which we transition to the parent route.
     // If we're creating or editing the configuration we stay on the configuration page to view the new public key.
     if (isCancel) {
       this.router.transitionTo('vault.cluster.secrets.backend.configuration', this.args.id);

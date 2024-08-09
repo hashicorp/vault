@@ -87,7 +87,7 @@ module('Acceptance | ssh | configuration', function (hooks) {
     assert.dom(GENERAL.maskedInput('privateKey')).hasNoText('Private key is empty and reset');
     assert.dom(GENERAL.inputByAttr('publicKey')).hasNoText('Public key is empty and reset');
     // change in behavior after refactor. Because we refresh the model after delete, the generate signing key is checked by default.
-    // the old behavior of it not be checked was a bug.
+    // the old behavior of it not checked was a bug.
     assert.dom(GENERAL.inputByAttr('generateSigningKey')).isChecked('Generate signing key is checked');
     await click(SES.viewBackend);
     await click(SES.configTab);
