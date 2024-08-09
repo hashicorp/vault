@@ -52,6 +52,20 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/userpass/users/mitchellh
 ```
 
+### Examples
+
+Set role-level TTL values for a user named "alice" so the generated lease has a
+default TTL of 8 hours (28800 seconds) and maximum TTL of 12 hours
+(43200 seconds):
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: $VAULT_TOKEN" \
+    --request POST \
+    --data '{"token_ttl":"8h","token_max_ttl":"12h"}' \
+    $VAULT_ADDR/v1/auth/userpass/users/alice
+```
+
 ## Read user
 
 Reads the properties of an existing username.
