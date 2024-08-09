@@ -86,7 +86,7 @@
       </Toolbar>
     {{/if}}
 
-    {{#if this.filteredActivity}}
+    {{#if @filteredTotals}}
       {{#if this.upgradeExplanations}}
         <Hds::Alert data-test-clients-upgrade-warning @type="inline" @color="warning" class="has-bottom-margin-m" as |A|>
           <A.Title>

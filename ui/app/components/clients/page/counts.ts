@@ -17,6 +17,8 @@ import type VersionService from 'vault/services/version';
 import type ClientsActivityModel from 'vault/models/clients/activity';
 import type ClientsConfigModel from 'vault/models/clients/config';
 import type ClientsVersionHistoryModel from 'vault/models/clients/version-history';
+import type { TotalClients } from 'core/utils/client-count-utils';
+
 interface Args {
   activity: ClientsActivityModel;
   activityError?: AdapterError;
@@ -27,6 +29,7 @@ interface Args {
   onFilterChange: CallableFunction;
   startTimestamp: string; // ISO format
   versionHistory: ClientsVersionHistoryModel[];
+  filteredTotals: TotalClients | undefined;
 }
 
 /**
@@ -144,17 +147,6 @@ export default class ClientsCountsPageComponent extends Component<Args> {
   get activityForNamespace() {
     const { activity, namespace } = this.args;
     return namespace ? activity.byNamespace.find((ns) => ns.label === namespace) : null;
-  }
-
-  get filteredActivity() {
-    // return activity counts based on selected namespace and auth mount values
-    const { namespace, mountPath, activity } = this.args;
-    if (namespace) {
-      return mountPath
-        ? this.activityForNamespace?.mounts.find((mount) => mount.label === mountPath)
-        : this.activityForNamespace;
-    }
-    return activity?.total;
   }
 
   get hasSecretsSyncClients(): boolean {
