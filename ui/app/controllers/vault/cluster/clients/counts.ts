@@ -7,7 +7,7 @@ import Controller from '@ember/controller';
 import { action, set } from '@ember/object';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import { MountClients } from 'core/utils/client-count-utils';
+import { ByMonthClients, emptyCounts, MountByKey, MountClients } from 'core/utils/client-count-utils';
 
 import type {
   ClientsCountsRouteModel,
@@ -48,7 +48,7 @@ export default class ClientsCountsController extends Controller {
 
     // only do this if we have a mountPath filter.
     // namespace is filtered on API layer
-    if (activity?.byMonth && ns && mountPath) {
+    if (activity?.byNamespace && ns && mountPath) {
       const filtered = activity.byNamespace
         .find((namespace) => namespace.label === ns)
         ?.mounts.find((mount: MountClients) => mount.label === mountPath);
@@ -57,19 +57,37 @@ export default class ClientsCountsController extends Controller {
     return activity?.total;
   }
 
-  get filteredByMonthActivity() {
+  get filteredByMonthActivity(): (ByMonthClients | MountByKey)[] {
     const { activity } = this.model as ClientsCountsRouteModel;
     const { ns, mountPath } = this;
 
     // only do this if we have a mountPath filter.
     // namespace is filtered on API layer
     if (activity?.byMonth && ns && mountPath) {
-      const namespaceData = activity.byMonth
-        ?.map((m) => m.namespaces_by_key[ns])
-        .filter((d) => d !== undefined);
+      const mountData = activity.byMonth
+        ?.map((m) => {
+          if (!m?.clients) {
+            // if the month doesn't have data (null) or it's zero, we can just return the block
+            return m;
+          }
+          const namespace = m.namespaces_by_key[ns];
+          const mount = namespace?.mounts_by_key[mountPath];
+          if (mount) return mount;
 
-      const mountData = namespaceData
-        ?.map((namespace) => namespace?.mounts_by_key[mountPath])
+          // if the month has data but none for this mount, return mocked zeros
+          return {
+            label: mountPath,
+            timestamp: m.timestamp,
+            month: m.month,
+            ...emptyCounts(),
+            new_clients: {
+              timestamp: m.timestamp,
+              month: m.month,
+              label: mountPath,
+              ...emptyCounts(),
+            },
+          } as MountByKey;
+        })
         .filter((d) => d !== undefined);
 
       return mountData || [];

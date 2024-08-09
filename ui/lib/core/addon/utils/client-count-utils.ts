@@ -27,6 +27,18 @@ export const CLIENT_TYPES = [
 
 export type ClientTypes = (typeof CLIENT_TYPES)[number];
 
+/**
+ * emptyCounts generates a block of total clients for use as defaults
+ * @returns TotalClients block with 0's filled in for all counts
+ */
+export function emptyCounts() {
+  return CLIENT_TYPES.reduce((prev, type) => {
+    const key = type;
+    prev[key as ClientTypes] = 0;
+    return prev;
+  }, {} as TotalClientsSometimes) as TotalClients;
+}
+
 // returns array of VersionHistoryModels for noteworthy upgrades: 1.9, 1.10
 // that occurred between timestamps (i.e. queried activity data)
 export const filterVersionHistory = (
@@ -163,6 +175,7 @@ export const sortMonthsByTimestamp = (
   );
 };
 
+// TODO: Deprecate this method now that we don't filter client-side
 export const namespaceArrayToObject = (
   monthTotals: ByNamespaceClients[],
   // technically this arg (monthNew) is the same type as above, just nested inside monthly new clients
