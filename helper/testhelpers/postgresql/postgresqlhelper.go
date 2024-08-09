@@ -9,11 +9,13 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"strconv"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/helper/testhelpers/certhelpers"
-	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/helper/docker"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 )
 
 const (
@@ -68,7 +70,13 @@ func PrepareTestContainerWithVaultUser(t *testing.T, ctx context.Context) (func(
 
 // PrepareTestContainerWithSSL will setup a test container with SSL enabled so
 // that we can test client certificate authentication.
-func PrepareTestContainerWithSSL(t *testing.T, ctx context.Context, sslMode string, useFallback bool) (func(), string) {
+func PrepareTestContainerWithSSL(
+	t *testing.T,
+	sslMode string,
+	caCert certhelpers.Certificate,
+	clientCert certhelpers.Certificate,
+	useFallback bool,
+) (func(), string) {
 	runOpts := defaultRunOpts(t)
 	runner, err := docker.NewServiceRunner(runOpts)
 	if err != nil {
@@ -82,18 +90,8 @@ func PrepareTestContainerWithSSL(t *testing.T, ctx context.Context, sslMode stri
 	}
 
 	// Create certificates for postgres authentication
-	caCert := certhelpers.NewCert(t,
-		certhelpers.CommonName("ca"),
-		certhelpers.IsCA(true),
-		certhelpers.SelfSign(),
-	)
 	serverCert := certhelpers.NewCert(t,
 		certhelpers.CommonName("server"),
-		certhelpers.DNS("localhost"),
-		certhelpers.Parent(caCert),
-	)
-	clientCert := certhelpers.NewCert(t,
-		certhelpers.CommonName("postgres"),
 		certhelpers.DNS("localhost"),
 		certhelpers.Parent(caCert),
 	)
@@ -133,6 +131,9 @@ EOF
 		t.Fatalf("failed to copy to container: %v", err)
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
 	// overwrite the postgresql.conf config file with our ssl settings
 	mustRunCommand(t, ctx, runner, id,
 		[]string{"bash", "/var/lib/postgresql/pg-conf.sh"})
@@ -150,7 +151,7 @@ EOF
 		return svc.Cleanup, svc.Config.URL().String()
 	}
 
-	sslConfig, err := connectPostgresSSL(
+	sslConfig := getPostgresSSLConfig(
 		t,
 		svc.Config.URL().Host,
 		sslMode,
@@ -197,42 +198,40 @@ func prepareTestContainer(t *testing.T, runOpts docker.RunOptions, password stri
 	return runner, svc.Cleanup, svc.Config.URL().String(), containerID
 }
 
-// connectPostgresSSL is used to verify the connection of our test container
-// and construct the connection string that is used in tests.
-//
-// NOTE: The RawQuery component of the url sets the custom sslinline field and
-// inlines the certificate material in the sslrootcert, sslcert, and sslkey
-// fields. This feature will be removed in a future version of the SDK.
-func connectPostgresSSL(t *testing.T, host, sslMode, caCert, clientCert, clientKey string, useFallback bool) (docker.ServiceConfig, error) {
+func getPostgresSSLConfig(t *testing.T, host, sslMode, caCert, clientCert, clientKey string, useFallback bool) docker.ServiceConfig {
 	if useFallback {
 		// set the first host to a bad address so we can test the fallback logic
 		host = "localhost:55," + host
 	}
-	u := url.URL{
-		Scheme: "postgres",
-		User:   url.User("postgres"),
-		Host:   host,
-		Path:   "postgres",
-		RawQuery: url.Values{
-			"sslmode":     {sslMode},
-			"sslinline":   {"true"},
-			"sslrootcert": {caCert},
-			"sslcert":     {clientCert},
-			"sslkey":      {clientKey},
-		}.Encode(),
+
+	u := url.URL{}
+
+	if ok, _ := strconv.ParseBool(os.Getenv(pluginutil.PluginUsePostgresSSLInline)); ok {
+		// TODO: remove this when we remove the underlying feature in a future SDK version
+		u = url.URL{
+			Scheme: "postgres",
+			User:   url.User("postgres"),
+			Host:   host,
+			Path:   "postgres",
+			RawQuery: url.Values{
+				"sslmode":     {sslMode},
+				"sslinline":   {"true"},
+				"sslrootcert": {caCert},
+				"sslcert":     {clientCert},
+				"sslkey":      {clientKey},
+			}.Encode(),
+		}
+	} else {
+		u = url.URL{
+			Scheme:   "postgres",
+			User:     url.User("postgres"),
+			Host:     host,
+			Path:     "postgres",
+			RawQuery: url.Values{"sslmode": {sslMode}}.Encode(),
+		}
 	}
 
-	// TODO: remove this deprecated function call in a future SDK version
-	db, err := connutil.OpenPostgres("pgx", u.String())
-	if err != nil {
-		return nil, err
-	}
-	defer db.Close()
-
-	if err = db.Ping(); err != nil {
-		return nil, err
-	}
-	return docker.NewServiceURL(u), nil
+	return docker.NewServiceURL(u)
 }
 
 func connectPostgres(password, repo string, useFallback bool) docker.ServiceAdapter {

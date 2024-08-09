@@ -10,10 +10,6 @@ import (
 	"cloud.google.com/go/cloudsqlconn/postgres/pgxv4"
 )
 
-var configurableAuthTypes = []string{
-	AuthTypeGCPIAM,
-}
-
 func (c *SQLConnectionProducer) getCloudSQLDriverType() (string, error) {
 	var driverType string
 	// using switch case for future extensibility
@@ -61,16 +57,4 @@ func GetCloudSQLAuthOptions(credentials string, usePrivateIP bool) ([]cloudsqlco
 	}
 
 	return opts, nil
-}
-
-func ValidateAuthType(authType string) bool {
-	var valid bool
-	for _, typ := range configurableAuthTypes {
-		if authType == typ {
-			valid = true
-			break
-		}
-	}
-
-	return valid
 }
