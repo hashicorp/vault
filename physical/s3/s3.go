@@ -183,7 +183,7 @@ func (s *S3Backend) Put(ctx context.Context, entry *physical.Entry) error {
 		putObjectInput.SSEKMSKeyId = aws.String(s.kmsKeyId)
 	}
 
-	_, err := s.client.PutObject(putObjectInput)
+	_, err := s.client.PutObjectWithContext(ctx, putObjectInput)
 	if err != nil {
 		return err
 	}
@@ -201,7 +201,7 @@ func (s *S3Backend) Get(ctx context.Context, key string) (*physical.Entry, error
 	// Setup key
 	key = path.Join(s.path, key)
 
-	resp, err := s.client.GetObject(&s3.GetObjectInput{
+	resp, err := s.client.GetObjectWithContext(ctx, &s3.GetObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(key),
 	})
@@ -254,7 +254,7 @@ func (s *S3Backend) Delete(ctx context.Context, key string) error {
 	// Setup key
 	key = path.Join(s.path, key)
 
-	_, err := s.client.DeleteObject(&s3.DeleteObjectInput{
+	_, err := s.client.DeleteObjectWithContext(ctx, &s3.DeleteObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(key),
 	})
@@ -289,7 +289,7 @@ func (s *S3Backend) List(ctx context.Context, prefix string) ([]string, error) {
 
 	keys := []string{}
 
-	err := s.client.ListObjectsV2Pages(params,
+	err := s.client.ListObjectsV2PagesWithContext(ctx, params,
 		func(page *s3.ListObjectsV2Output, lastPage bool) bool {
 			if page != nil {
 				// Add truncated 'folder' paths
