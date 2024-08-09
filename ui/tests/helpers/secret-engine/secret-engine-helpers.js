@@ -37,6 +37,7 @@ const createSshCaConfig = (store, backend) => {
     modelName: 'ssh/ca-config',
     data: {
       backend,
+      public_key: '123456',
       generate_signing_key: true,
     },
   });

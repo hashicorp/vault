@@ -11,8 +11,9 @@ const validations = {
   publicKey: [
     {
       validator(model) {
-        const { publicKey, privateKey } = model;
-        return (publicKey && privateKey) || (!publicKey && !privateKey) ? true : false;
+        const { publicKey, privateKey, generateSigningKey } = model;
+        // if generateSigningKey is false, use the second validation to check if both public and private keys are set
+        return (publicKey && privateKey) || (!publicKey && !privateKey) || !generateSigningKey ? true : false;
       },
       message: 'Public Key and Private Key are both required if one of them is set.',
     },
@@ -35,7 +36,7 @@ const validations = {
 export default class SshCaConfig extends Model {
   @attr('string') backend; // dynamic path of secret -- set on response from value passed to queryRecord
   @attr('string', { sensitive: true }) privateKey; // obfuscated, never returned by API
-  @attr('string', { sensitive: true }) publicKey;
+  @attr('string') publicKey;
   @attr('boolean', { defaultValue: true })
   generateSigningKey;
 

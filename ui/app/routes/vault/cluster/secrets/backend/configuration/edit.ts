@@ -112,7 +112,9 @@ export default class SecretsBackendConfigurationEdit extends Route {
   }
 
   @action
-  refreshRoute() {
+  willTransition() {
+    // When editing a configuration we sometimes stay on the current route after saving/destroying the model.
+    // catch the transition and refresh model so the route shows the most recent model data.
     this.refresh();
   }
 }

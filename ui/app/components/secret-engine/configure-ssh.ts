@@ -61,22 +61,17 @@ export default class ConfigureSshComponent extends Component<Args> {
     const attributesChanged = Object.keys(model.changedAttributes()).length > 0;
     if (!attributesChanged) {
       this.flashMessages.info('No changes detected.');
-      this.transition(id);
+      this.transition();
     }
 
     try {
       yield model.save();
+      this.transition();
       this.flashMessages.success(`Successfully saved ${id}'s root configuration.`);
     } catch (error) {
       this.errorMessage = errorMessage(error);
       this.invalidFormAlert = 'There was an error submitting this form.';
     }
-
-    this.transition(id);
-  }
-
-  transition(id: string) {
-    this.router.transitionTo('vault.cluster.secrets.backend.configuration', id);
   }
 
   validate(model: CaConfigModel) {
@@ -92,11 +87,21 @@ export default class ConfigureSshComponent extends Component<Args> {
     this.invalidFormAlert = null;
   }
 
+  transition(isCancel = false) {
+    // onCancel is the on case in which we transition to the parent route.
+    // If we're creating or editing the configuration we stay on the configuration page to view the new public key.
+    if (isCancel) {
+      this.router.transitionTo('vault.cluster.secrets.backend.configuration', this.args.id);
+    } else {
+      this.router.transitionTo('vault.cluster.secrets.backend.configuration.edit', this.args.id);
+    }
+  }
+
   @action
   onCancel() {
     // clear errors because they're canceling out of the workflow.
     this.resetErrors();
-    this.transition(this.args.id);
+    this.transition(true);
   }
 
   @action
@@ -104,8 +109,8 @@ export default class ConfigureSshComponent extends Component<Args> {
     const { model } = this.args;
     try {
       await model.destroyRecord();
+      this.transition();
       this.flashMessages.success('CA information deleted successfully.');
-      this.transition(this.args.id);
     } catch (error) {
       model.rollbackAttributes();
       this.flashMessages.danger(errorMessage(error));

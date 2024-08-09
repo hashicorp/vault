@@ -3,8 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-
-import { click, fillIn, currentURL, waitUntil, waitFor, visit } from '@ember/test-helpers';
+import { click, fillIn, currentURL, waitFor, visit } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
@@ -81,7 +80,7 @@ module('Acceptance | ssh | configuration', function (hooks) {
       .dom(SES.ssh.editConfigSection)
       .exists('renders the edit configuration section of the form and not the create part');
     // delete Public key
-    await click(SES.ssh.deletePublicKey);
+    await click(SES.ssh.delete);
     assert.dom(GENERAL.confirmMessage).hasText('This will remove the CA certificate information.');
     await click(GENERAL.confirmButton);
     assert.strictEqual(
@@ -91,9 +90,9 @@ module('Acceptance | ssh | configuration', function (hooks) {
     );
     assert.dom(GENERAL.maskedInput('privateKey')).hasNoText('Private key is empty and reset');
     assert.dom(GENERAL.inputByAttr('publicKey')).hasNoText('Public key is empty and reset');
-    assert
-      .dom(GENERAL.inputByAttr('generate-signing-key-checkbox'))
-      .isNotChecked('Generate signing key is unchecked');
+    // change in behavior after refactor. Because we refresh the model after delete, the generate signing key is checked by default.
+    // the old behavior of it not be checked was a bug.
+    assert.dom(GENERAL.inputByAttr('generateSigningKey')).isChecked('Generate signing key is checked');
     await click(SES.viewBackend);
     await click(SES.configTab);
     assert
@@ -108,12 +107,12 @@ module('Acceptance | ssh | configuration', function (hooks) {
     await enablePage.enable('ssh', path);
     await click(SES.configTab);
     await click(SES.configure);
-    assert
-      .dom(GENERAL.inputByAttr('generate-signing-key-checkbox'))
-      .isChecked('generate_signing_key defaults to true');
-    await click(GENERAL.inputByAttr('generate-signing-key-checkbox'));
+    assert.dom(GENERAL.inputByAttr('generateSigningKey')).isChecked('generate_signing_key defaults to true');
+    await click(GENERAL.inputByAttr('generateSigningKey'));
     await click(SES.ssh.save);
-    assert.true(this.flashDangerSpy.calledWith('missing public_key'), 'Danger flash message is displayed');
+    assert
+      .dom(GENERAL.inlineError)
+      .hasText('Public Key and Private Key are both required if Generate Signing Key is false.');
     // visit the details page and confirm the public key is not shown
     await visit(`/vault/secrets/${path}/configuration`);
     assert.dom(GENERAL.infoRowLabel('Public key')).doesNotExist('Public Key label does not exist');
