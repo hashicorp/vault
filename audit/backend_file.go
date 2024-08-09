@@ -20,9 +20,9 @@ const (
 	optionMode     = "mode"
 )
 
-var _ Backend = (*FileBackend)(nil)
+var _ Backend = (*fileBackend)(nil)
 
-type FileBackend struct {
+type fileBackend struct {
 	*backend
 }
 
@@ -34,7 +34,7 @@ func NewFileBackend(conf *BackendConfig, headersConfig HeaderFormatter) (be Back
 }
 
 // newFileBackend creates a backend and configures all nodes including a file sink.
-func newFileBackend(conf *BackendConfig, headersConfig HeaderFormatter) (*FileBackend, error) {
+func newFileBackend(conf *BackendConfig, headersConfig HeaderFormatter) (*fileBackend, error) {
 	if headersConfig == nil || reflect.ValueOf(headersConfig).IsNil() {
 		return nil, fmt.Errorf("nil header formatter: %w", ErrInvalidParameter)
 	}
@@ -60,7 +60,7 @@ func newFileBackend(conf *BackendConfig, headersConfig HeaderFormatter) (*FileBa
 	if err != nil {
 		return nil, err
 	}
-	b := &FileBackend{backend: bec}
+	b := &fileBackend{backend: bec}
 
 	// normalize file path if configured for stdout
 	if strings.EqualFold(filePath, stdout) {
@@ -89,9 +89,9 @@ func newFileBackend(conf *BackendConfig, headersConfig HeaderFormatter) (*FileBa
 	return b, nil
 }
 
-// configureSinkNode is used internally by FileBackend to create and configure the
+// configureSinkNode is used internally by fileBackend to create and configure the
 // sink node on the backend.
-func (b *FileBackend) configureSinkNode(name string, filePath string, format format, opt ...event.Option) error {
+func (b *fileBackend) configureSinkNode(name string, filePath string, format format, opt ...event.Option) error {
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return fmt.Errorf("name is required: %w", ErrExternalOptions)
@@ -143,7 +143,7 @@ func (b *FileBackend) configureSinkNode(name string, filePath string, format for
 }
 
 // Reload will trigger the reload action on the sink node for this backend.
-func (b *FileBackend) Reload() error {
+func (b *fileBackend) Reload() error {
 	for _, n := range b.nodeMap {
 		if n.Type() == eventlogger.NodeTypeSink {
 			return n.Reopen()
