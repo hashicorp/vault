@@ -364,6 +364,14 @@
         "path": "configuration/programmatic-management"
       },
       {
+        "title": "Prevent lease explosions",
+        "path": "configuration/prevent-lease-explosions"
+      },
+      {
+        "title": "Create a lease count quota",
+        "path": "configuration/create-lease-count-quota"
+      },
+      {
         "title": "<code>listener</code>",
         "routes": [
           {
@@ -1991,22 +1999,18 @@
     "path": "interoperability-matrix"
   },
   {
-    "title": "Troubleshoot",
+    "title": "Troubleshoot Vault",
     "routes": [
       {
         "title": "Generate a root token",
         "path": "troubleshoot/generate-root-token"
       },
       {
-        "title": "Lease explosions",
-        "path": "troubleshoot/lease-explosions"
+        "title": "Troubleshoot lease errors",
+        "path": "troubleshoot/lease-issues"
       },
       {
-        "title": "Exceeded lease count quota",
-        "path": "troubleshoot/lease-count-quota-exceeded"
-      },
-      {
-        "title": "Tutorial",
+        "title": "Troubleshooting tutorials",
         "href": "https://learn.hashicorp.com/tutorials/vault/troubleshooting-vault"
       }
     ]
