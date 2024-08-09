@@ -39,7 +39,7 @@
     </Hds::ButtonSet>
   </div>
 {{else}}
-  <form {{on "submit" this.saveConfig}} data-test-configure-form="true">
+  <form {{on "submit" this.saveConfig}} data-test-configure-form>
     <div class="box is-fullwidth is-sideless is-marginless">
       <NamespaceReminder @mode="save" @noun="configuration" />
       <div class="field">
