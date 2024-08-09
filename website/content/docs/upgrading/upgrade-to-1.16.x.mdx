@@ -61,6 +61,12 @@ If you register an external plugin called `myplugin` with `SOURCE=child`, the
 plugin process starts with `SOURCE=parent` and Vault reports a conflict for
 `myplugin`.
 
+### LDAP auth login changes
+
+Users cannot log in using LDAP unless the LDAP plugin is configured
+with an `userdn` value scoped to an organization unit (OU) where the
+user resides.
+
 ### LDAP auth entity alias names no longer include upndomain
 
 The `userattr` field on the LDAP auth config is now used as the entity alias.
