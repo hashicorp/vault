@@ -4,7 +4,7 @@
 ~}}
 
 {{#if @configured}}
-  <div class="box is-fullwidth is-sideless is-marginless">
+  <div class="box is-fullwidth is-sideless is-marginless" data-test-edit-config-section>
     <div class="field">
       <label for="publicKey" class="is-label">
         Public key
@@ -16,7 +16,7 @@
           @value={{@model.publicKey}}
           @displayOnly={{true}}
           @allowCopy={{true}}
-          data-test-ssh-input="public-key"
+          data-test-input="public-key"
         />
       </div>
     </div>
@@ -34,11 +34,12 @@
         @buttonColor="secondary"
         @confirmMessage="This will remove the CA certificate information."
         @onConfirmAction={{this.delete}}
+        data-test-delete-public-key
       />
     </Hds::ButtonSet>
   </div>
 {{else}}
-  <form {{on "submit" this.saveConfig}} data-test-ssh-configure-form="true">
+  <form {{on "submit" this.saveConfig}} data-test-configure-form>
     <div class="box is-fullwidth is-sideless is-marginless">
       <NamespaceReminder @mode="save" @noun="configuration" />
       <div class="field">
@@ -54,7 +55,7 @@
           Public key
         </label>
         <div class="control">
-          <Textarea name="publicKey" id="publicKey" class="input" @value={{@model.publicKey}} />
+          <Textarea name="publicKey" id="publicKey" class="input" @value={{@model.publicKey}} data-test-input="publicKey" />
         </div>
       </div>
       <div class="b-checkbox">
@@ -64,7 +65,7 @@
           class="styled"
           @checked={{@model.generateSigningKey}}
           {{on "change" (fn (mut @model.generateSigningKey) (not @model.generateSigningKey))}}
-          data-test-ssh-input="generate-signing-key-checkbox"
+          data-test-input="generate-signing-key-checkbox"
         />
         <label for="generateSigningKey" class="is-label">
           Generate signing key
@@ -81,7 +82,7 @@
           @icon={{if @loading "loading"}}
           type="submit"
           disabled={{@loading}}
-          data-test-ssh-input="configure-submit"
+          data-test-configure-save-button
         />
       </div>
     </div>

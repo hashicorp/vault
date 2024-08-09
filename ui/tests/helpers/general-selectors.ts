@@ -26,6 +26,7 @@ export const GENERAL = {
   filterInputExplicitSearch: '[data-test-filter-input-explicit-search]',
   confirmModalInput: '[data-test-confirmation-modal-input]',
   confirmButton: '[data-test-confirm-button]',
+  confirmMessage: '[data-test-confirm-action-message]',
   confirmTrigger: '[data-test-confirm-action-trigger]',
   emptyStateTitle: '[data-test-empty-state-title]',
   emptyStateSubtitle: '[data-test-empty-state-subtitle]',
@@ -42,6 +43,7 @@ export const GENERAL = {
   inputByAttr: (attr: string) => `[data-test-input="${attr}"]`,
   selectByAttr: (attr: string) => `[data-test-select="${attr}"]`,
   toggleInput: (attr: string) => `[data-test-toggle-input="${attr}"]`,
+  toggleGroup: (attr: string) => `[data-test-toggle-group="${attr}"]`,
   ttl: {
     toggle: (attr: string) => `[data-test-toggle-label="${attr}"]`,
     input: (attr: string) => `[data-test-ttl-value="${attr}"]`,
@@ -50,12 +52,14 @@ export const GENERAL = {
   validation: (attr: string) => `[data-test-field-validation=${attr}]`,
   validationWarning: (attr: string) => `[data-test-validation-warning=${attr}]`,
   messageError: '[data-test-message-error]',
+  notFound: '[data-test-not-found]',
   pageError: {
     error: '[data-test-page-error]',
     errorTitle: (httpStatus: number) => `[data-test-page-error-title="${httpStatus}"]`,
     errorMessage: '[data-test-page-error-message]',
     errorDetails: '[data-test-page-error-details]',
   },
+  inlineError: '[data-test-inline-error-message]',
   kvObjectEditor: {
     deleteRow: (idx = 0) => `[data-test-kv-delete-row="${idx}"]`,
   },

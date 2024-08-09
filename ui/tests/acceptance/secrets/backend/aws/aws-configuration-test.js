@@ -71,7 +71,7 @@ module('Acceptance | aws | configuration', function (hooks) {
     await enablePage.enable('aws', path);
     await click(SES.configTab);
     await visit(`/vault/settings/secrets/configure/${path}`);
-    assert.dom('[data-test-not-found]').exists('shows page-error');
+    assert.dom(GENERAL.notFound).exists('shows page-error');
     // cleanup
     await runCmd(`delete sys/mounts/${path}`);
   });
