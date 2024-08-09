@@ -157,11 +157,12 @@ func (a *ActivityLog) computeCurrentMonthForBillingPeriodInternal(ctx context.Co
 		return nil, errors.New("malformed current month used to calculate current month's activity")
 	}
 
+	// sort the namespaces for this month so that they get inserted in a
+	// consistent order
 	type processByNamespaceID struct {
 		id string
 		*processByNamespace
 	}
-
 	namespaces := make([]*processByNamespaceID, 0, len(month.Namespaces))
 	for nsID, namespace := range month.Namespaces {
 		namespaces = append(namespaces, &processByNamespaceID{id: nsID, processByNamespace: namespace})
@@ -178,18 +179,20 @@ func (a *ActivityLog) computeCurrentMonthForBillingPeriodInternal(ctx context.Co
 		mountsActivity := make([]*activity.MountRecord, 0)
 		newMountsActivity := make([]*activity.MountRecord, 0)
 
+		// sort the mounts for in the namespace so that they get inserted in a
+		// consistent order
 		type summaryByMountAccessor struct {
 			accessor string
 			*processMount
 		}
 		mounts := make([]*summaryByMountAccessor, 0, len(namespace.Mounts))
-
 		for mountAccessor, mount := range namespace.Mounts {
 			mounts = append(mounts, &summaryByMountAccessor{accessor: mountAccessor, processMount: mount})
 		}
 		slices.SortStableFunc(mounts, func(a, b *summaryByMountAccessor) int {
 			return strings.Compare(a.accessor, b.accessor)
 		})
+
 		for _, m := range mounts {
 			mountAccessor := m.accessor
 			mount := m.processMount
@@ -200,6 +203,8 @@ func (a *ActivityLog) computeCurrentMonthForBillingPeriodInternal(ctx context.Co
 
 			for _, typ := range ActivityClientTypes {
 				clients := mount.Counts.clientsByType(typ)
+
+				// sort the client IDs before inserting
 				clientIDs := make([]string, 0, len(clients))
 				for clientID := range clients {
 					clientIDs = append(clientIDs, clientID)
