@@ -12,7 +12,6 @@
           aria-label="Key {{key}} in row {{idx}}"
           {{! Original subkeys are not editable, only their values can be updated }}
           disabled={{this.isOriginalSubkey key}}
-          {{on "keyup" (fn this.updateKey KV)}}
           {{on "blur" (fn this.updateKey KV)}}
           data-test-kv-key={{key}}
         />
@@ -61,14 +60,7 @@
         </Hds::Alert>
       {{/if}}
       {{#if KV.isInvalid}}
-        <Hds::Alert
-          @type="compact"
-          @color="critical"
-          @icon="alert-diamond-fill"
-          class="has-top-padding-xs"
-          data-test-alert-validation={{idx}}
-          as |A|
-        >
+        <Hds::Alert @type="compact" @color="critical" @icon="alert-diamond-fill" data-test-alert-validation={{idx}} as |A|>
           <A.Description>{{KV.isInvalid}}</A.Description>
         </Hds::Alert>
       {{/if}}
@@ -84,7 +76,6 @@
       placeholder="key"
       name="newKey"
       {{on "blur" (fn this.updateKey false)}}
-      {{on "keyup" (fn this.updateKey false)}}
       data-test-kv-key="new"
     />
 
@@ -92,25 +83,17 @@
       @value={{this.newValue}}
       aria-label="new value"
       name="newValue"
-      {{on "keyup" this.handleNewRow}}
       {{on "blur" this.handleNewRow}}
       data-test-kv-value="new"
     />
 
     <Hds::ButtonSet {{style width="15rem"}}>
-      <Hds::Button @text="Add" @color="secondary" disabled={{this.isAddDisabled}} {{on "click" this.addRow}} data-test-add />
+      <Hds::Button @text="Add" @color="secondary" {{on "click" this.addRow}} data-test-add />
     </Hds::ButtonSet>
 
   </div>
   {{#if this.isInvalid}}
-    <Hds::Alert
-      @type="compact"
-      @color="critical"
-      @icon="alert-diamond-fill"
-      class="has-top-padding-xs"
-      data-test-alert-validation="new"
-      as |A|
-    >
+    <Hds::Alert @type="compact" @color="critical" @icon="alert-diamond-fill" data-test-alert-validation="new" as |A|>
       <A.Description>{{this.isInvalid}}</A.Description>
     </Hds::Alert>
   {{/if}}

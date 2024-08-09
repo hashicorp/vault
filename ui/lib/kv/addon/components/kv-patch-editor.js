@@ -69,8 +69,8 @@ export default class KvPatchEditor extends Component {
     this.resetNewRow();
   }
 
-  get isAddDisabled() {
-    return !this.newKey || !this.newValue || this.isInvalid ? true : false;
+  get isAddAllowed() {
+    return !this.newKey || this.isInvalid ? false : true;
   }
 
   generateData(key, value, state) {
@@ -84,7 +84,7 @@ export default class KvPatchEditor extends Component {
 
   validateKey(key) {
     return this.patchData.any((KV) => KV.key === key)
-      ? `"${key}" key already exists. Patch the value of the existing key or rename this one.`
+      ? `"${key}" key already exists. Update the value of the existing key or rename this one.`
       : '';
   }
 
@@ -111,6 +111,7 @@ export default class KvPatchEditor extends Component {
 
   @action
   addRow() {
+    if (!this.isAddAllowed) return;
     const data = this.generateData(this.newKey, this.newValue, 'enabled');
     this.patchData.pushObject(data);
     // reset tracked values after adding them to patchData
