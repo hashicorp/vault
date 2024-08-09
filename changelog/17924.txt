@@ -1,0 +1,3 @@
+```release-note:improvement
+physical/postgresql: use a separate lock connection
+```

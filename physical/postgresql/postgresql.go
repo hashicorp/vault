@@ -58,6 +58,7 @@ type PostgreSQLBackend struct {
 	list_query   string
 
 	ha_table                 string
+	haClient                 *sql.DB
 	haGetLockValueQuery      string
 	haUpsertLockIdentityExec string
 	haDeleteLockExec         string
@@ -139,6 +140,17 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 		db.SetMaxIdleConns(maxIdleConns)
 	}
 
+	// Create PostgreSQL handle for the database locks.
+	haDB, err := sql.Open("pgx", connURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to postgres: %w", err)
+	}
+	haDB.SetMaxOpenConns(maxParInt)
+
+	if maxIdleConnsIsSet {
+		haDB.SetMaxIdleConns(maxIdleConns)
+	}
+
 	// Determine if we should use a function to work around lack of upsert (versions < 9.5)
 	var upsertAvailable bool
 	upsertAvailableQuery := "SELECT current_setting('server_version_num')::int >= 90500"
@@ -177,6 +189,7 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 		list_query: "SELECT key FROM " + quoted_table + " WHERE path = $1" +
 			" UNION ALL SELECT DISTINCT substring(substr(path, length($1)+1) from '^.*?/') FROM " + quoted_table +
 			" WHERE parent_path LIKE $1 || '%'",
+		haClient: db,
 		haGetLockValueQuery:
 		// only read non expired data
 		" SELECT ha_value FROM " + quoted_ha_table + " WHERE NOW() <= valid_until AND ha_key = $1 ",
@@ -385,7 +398,7 @@ func (l *PostgreSQLLock) Unlock() error {
 	}
 
 	// Delete lock owned by me
-	_, err := pg.client.Exec(pg.haDeleteLockExec, l.identity, l.key)
+	_, err := pg.haClient.Exec(pg.haDeleteLockExec, l.identity, l.key)
 	return err
 }
 
@@ -396,7 +409,7 @@ func (l *PostgreSQLLock) Value() (bool, string, error) {
 	pg.permitPool.Acquire()
 	defer pg.permitPool.Release()
 	var result string
-	err := pg.client.QueryRow(pg.haGetLockValueQuery, l.key).Scan(&result)
+	err := pg.haClient.QueryRow(pg.haGetLockValueQuery, l.key).Scan(&result)
 
 	switch err {
 	case nil:
@@ -458,7 +471,7 @@ func (l *PostgreSQLLock) writeItem() (bool, error) {
 
 	// Try steal lock or update expiry on my lock
 
-	sqlResult, err := pg.client.Exec(pg.haUpsertLockIdentityExec, l.identity, l.key, l.value, l.ttlSeconds)
+	sqlResult, err := pg.haClient.Exec(pg.haUpsertLockIdentityExec, l.identity, l.key, l.value, l.ttlSeconds)
 	if err != nil {
 		return false, err
 	}
