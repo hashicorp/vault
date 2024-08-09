@@ -6,7 +6,7 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupEngine } from 'ember-engines/test-support';
-import { render, click, fillIn, blur } from '@ember/test-helpers';
+import { blur, click, fillIn, typeIn, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import sinon from 'sinon';
@@ -171,6 +171,46 @@ module('Integration | Component | kv | kv-patch-editor', function (hooks) {
 
       const [data] = this.onSubmit.lastCall.args;
       assert.propEqual(data, {}, `onSubmit called with ${JSON.stringify(data)}`);
+    });
+  });
+
+  module('it validates', function () {
+    const validationMessage =
+      '"foo" key already exists. Patch the value of the existing key or rename this one.';
+
+    test('duplicate keys', async function (assert) {
+      await this.renderComponent();
+
+      await typeIn(FORM.keyInput('new'), 'foo');
+      await fillIn(FORM.valueInput('new'), 'value');
+      assert.dom(FORM.patchAlert('validation', 'new')).hasText(validationMessage);
+      assert.dom(FORM.patchAdd).isDisabled('add button disables for invalid inputs');
+      await typeIn(FORM.keyInput('new'), '2');
+      assert.dom(FORM.patchAlert('validation', 'new')).doesNotExist('warning disappears when key updates');
+      assert.dom(FORM.patchAdd).isEnabled('add button is enabled when input is fixed');
+    });
+
+    test('duplicate keys after they have been added', async function (assert) {
+      // check for new key and for recently added key
+      // check for changing newly added key to duplicate
+      await this.renderComponent();
+
+      // add new key and click add
+      await fillIn(FORM.keyInput('new'), 'a');
+      await fillIn(FORM.valueInput('new'), 'b');
+      await blur(FORM.valueInput('new')); // unfocus input so click event below fires
+      await click(FORM.patchAdd);
+
+      // add another
+      await fillIn(FORM.keyInput('new'), 'c');
+      await fillIn(FORM.valueInput('new'), 'd');
+
+      // update previous key to match a subkey
+      await fillIn(FORM.keyInput('a'), ''); // clear input
+      await typeIn(FORM.keyInput('a'), 'foo'); // clear input
+      assert.dom(FORM.patchAlert('validation', 2)).hasText(validationMessage);
+      await typeIn(FORM.keyInput('new'), '2');
+      assert.dom(FORM.patchAlert('validation', 'new')).doesNotExist('warning disappears when key updates');
     });
   });
 });

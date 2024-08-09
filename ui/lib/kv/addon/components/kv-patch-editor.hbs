@@ -4,22 +4,24 @@
 ~}}
 
 <form {{on "submit" this.submit}} ...attributes>
-  {{#each this.patchData as |KV|}}
+  {{#each this.patchData as |KV idx|}}
     {{#let KV.key KV.value KV.state as |key value state|}}
       <div class="flex column-gap-16 has-top-padding-s">
         <Hds::Form::TextInput::Base
           @value={{key}}
-          aria-label="Key {{key}}"
+          aria-label="Key {{key}} in row {{idx}}"
           {{! Original subkeys are not editable, only their values can be updated }}
           disabled={{this.isOriginalSubkey key}}
-          {{on "blur" (fn KV.onBlur "key")}}
+          {{on "keyup" (fn this.updateKey KV)}}
+          {{on "blur" (fn this.updateKey KV)}}
           data-test-kv-key={{key}}
         />
 
         <Hds::Form::MaskedInput::Base
           @value={{value}}
-          aria-label="Value for key {{key}}"
+          aria-label="Value for key {{key}} in row {{idx}}"
           disabled={{includes state (array "disabled" "deleted")}}
+          {{on "keyup" (fn KV.onBlur "value")}}
           {{on "blur" (fn KV.onBlur "value")}}
           data-test-kv-value={{key}}
         />
@@ -58,6 +60,18 @@
           <A.Description>This key value pair is marked for deletion.</A.Description>
         </Hds::Alert>
       {{/if}}
+      {{#if KV.isInvalid}}
+        <Hds::Alert
+          @type="compact"
+          @color="critical"
+          @icon="alert-diamond-fill"
+          class="has-top-padding-xs"
+          data-test-alert-validation={{idx}}
+          as |A|
+        >
+          <A.Description>{{KV.isInvalid}}</A.Description>
+        </Hds::Alert>
+      {{/if}}
     {{/let}}
   {{/each}}
 
@@ -69,7 +83,8 @@
       aria-label="new key"
       placeholder="key"
       name="newKey"
-      {{on "blur" this.onBlurNew}}
+      {{on "blur" (fn this.updateKey false)}}
+      {{on "keyup" (fn this.updateKey false)}}
       data-test-kv-key="new"
     />
 
@@ -77,20 +92,28 @@
       @value={{this.newValue}}
       aria-label="new value"
       name="newValue"
-      {{on "blur" this.onBlurNew}}
+      {{on "keyup" this.handleNewRow}}
+      {{on "blur" this.handleNewRow}}
       data-test-kv-value="new"
     />
 
     <Hds::ButtonSet {{style width="15rem"}}>
-      <Hds::Button
-        @text="Add"
-        @color="secondary"
-        disabled={{and (not this.newKey) (not this.newValue)}}
-        {{on "click" this.addRow}}
-        data-test-add
-      />
+      <Hds::Button @text="Add" @color="secondary" disabled={{this.isAddDisabled}} {{on "click" this.addRow}} data-test-add />
     </Hds::ButtonSet>
+
   </div>
+  {{#if this.isInvalid}}
+    <Hds::Alert
+      @type="compact"
+      @color="critical"
+      @icon="alert-diamond-fill"
+      class="has-top-padding-xs"
+      data-test-alert-validation="new"
+      as |A|
+    >
+      <A.Description>{{this.isInvalid}}</A.Description>
+    </Hds::Alert>
+  {{/if}}
 
   <hr class="has-background-gray-200" />
 

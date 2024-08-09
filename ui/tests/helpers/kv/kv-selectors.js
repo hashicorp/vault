@@ -118,7 +118,7 @@ export const FORM = {
   patchDelete: (key) => `[data-test-delete="${key}"]`,
   patchUndo: (key) => `[data-test-undo="${key}"]`,
   patchAdd: '[data-test-add]',
-  patchAlert: (type, key) => `[data-test-alert-${type}="${key}"]`,
+  patchAlert: (type, idx) => `[data-test-alert-${type}="${idx}"]`,
   // Alerts & validation
   inlineAlert: '[data-test-inline-alert]',
   validation: (attr) => `[data-test-field="${attr}"] [data-test-inline-alert]`,

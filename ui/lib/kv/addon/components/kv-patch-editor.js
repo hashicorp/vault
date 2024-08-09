@@ -19,6 +19,7 @@ class Kv {
   @tracked key;
   @tracked value;
   @tracked state;
+  @tracked isInvalid;
 
   constructor({ key, value = undefined, state = 'disabled' }) {
     this.key = key;
@@ -53,7 +54,9 @@ class Kv {
 
 export default class KvPatchEditor extends Component {
   @tracked patchData; // key value pairs in form
+
   // tracked variables for new row of inputs after user clicks "add"
+  @tracked isInvalid = '';
   @tracked newKey;
   @tracked newValue;
 
@@ -66,6 +69,10 @@ export default class KvPatchEditor extends Component {
     this.resetNewRow();
   }
 
+  get isAddDisabled() {
+    return !this.newKey || !this.newValue || this.isInvalid ? true : false;
+  }
+
   generateData(key, value, state) {
     return new Kv({ key, value, state });
   }
@@ -73,6 +80,33 @@ export default class KvPatchEditor extends Component {
   resetNewRow() {
     this.newKey = undefined;
     this.newValue = undefined;
+  }
+
+  validateKey(key) {
+    return this.patchData.any((KV) => KV.key === key)
+      ? `"${key}" key already exists. Patch the value of the existing key or rename this one.`
+      : '';
+  }
+
+  @action
+  updateKey(KV, event) {
+    const key = event.target.value;
+    const isInvalid = this.validateKey(key);
+
+    if (KV) {
+      KV.isInvalid = isInvalid;
+      if (isInvalid) return; // don't set value if invalid
+      KV.key = key;
+    } else {
+      this.isInvalid = isInvalid;
+      if (isInvalid) return; // don't set value if invalid
+      this.newKey = key;
+    }
+  }
+
+  @action
+  handleNewRow(event) {
+    this.newValue = event.target.value;
   }
 
   @action
@@ -92,12 +126,6 @@ export default class KvPatchEditor extends Component {
       // remove row all together
       this.patchData.removeObject(KV);
     }
-  }
-
-  @action
-  onBlurNew(event) {
-    const { name, value } = event.target;
-    this[name] = value;
   }
 
   @action
