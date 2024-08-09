@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, fillIn, currentURL, waitUntil, visit } from '@ember/test-helpers';
+
+import { click, fillIn, currentURL, waitUntil, waitFor, visit } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
@@ -70,28 +71,31 @@ module('Acceptance | ssh | configuration', function (hooks) {
     await click(SES.ssh.save);
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${sshPath}/configuration`,
-      'after configuring it navigates to the details page'
+      `/vault/secrets/${sshPath}/configuration/edit`,
+      'stays on configuration form page.'
     );
-
-    // There is a delay in the backend for the public key to be generated, wait for it to complete and transition to configuration index route
-    await waitUntil(() => currentURL() === `/vault/secrets/${sshPath}/configuration`, { timeout: 2000 });
-    assert.dom(GENERAL.infoRowLabel('Public key')).exists('Public Key label exists');
-    assert.dom(GENERAL.infoRowValue('Public key')).hasText('***********');
+    // There is a delay in the backend for the public key to be generated, wait for it to complete by checking that the public key is displayed
+    await waitFor(GENERAL.inputByAttr('public-key'));
+    assert.dom(GENERAL.inputByAttr('public-key')).hasText('***********', 'public key is masked');
     assert
-      .dom(GENERAL.infoRowValue('Generate signing key'))
-      .hasText('Yes', 'value for Generate signing key displays default of true/yes.');
-    // now confirm configure page shows public key and not the config create form
-    await click(SES.configure);
-    assert.dom(SES.ssh.editConfigSection).exists('renders the edit section');
+      .dom(SES.ssh.editConfigSection)
+      .exists('renders the edit configuration section of the form and not the create part');
     // delete Public key
     await click(SES.ssh.deletePublicKey);
-    assert
-      .dom('[data-test-confirm-action-message]')
-      .hasText('This will remove the CA certificate information.');
+    assert.dom(GENERAL.confirmMessage).hasText('This will remove the CA certificate information.');
     await click(GENERAL.confirmButton);
-    // There is a delay in the backend for the public key to be generated, wait for it to complete and transition to configuration index route
-    await waitUntil(() => currentURL() === `/vault/secrets/${sshPath}/configuration`, { timeout: 2000 });
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${sshPath}/configuration/edit`,
+      'after deleting public key stays on edit page'
+    );
+    assert.dom(GENERAL.maskedInput('privateKey')).hasNoText('Private key is empty and reset');
+    assert.dom(GENERAL.inputByAttr('publicKey')).hasNoText('Public key is empty and reset');
+    assert
+      .dom(GENERAL.inputByAttr('generate-signing-key-checkbox'))
+      .isNotChecked('Generate signing key is unchecked');
+    await click(SES.viewBackend);
+    await click(SES.configTab);
     assert
       .dom(GENERAL.emptyStateTitle)
       .hasText('SSH not configured', 'after deleting public key SSH is no longer configured');
@@ -99,7 +103,7 @@ module('Acceptance | ssh | configuration', function (hooks) {
     await runCmd(`delete sys/mounts/${sshPath}`);
   });
 
-  test('it should throw validation errors if generate Signing key is not checked and no public and private keys', async function (assert) {
+  test('it displays error if generate Signing key is not checked and no public and private keys', async function (assert) {
     const path = `ssh-configure-${this.uid}`;
     await enablePage.enable('ssh', path);
     await click(SES.configTab);

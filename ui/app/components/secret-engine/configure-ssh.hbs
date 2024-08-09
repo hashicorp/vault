@@ -49,11 +49,36 @@
   {{else}}
     {{! Model is not new and keys have already been created. Require user deletes the keys before creating new ones }}
     <div class="box is-fullwidth is-sideless is-marginless" data-test-ssh-edit-config-section>
+  </div>
+  <div class="field is-grouped-split box is-fullwidth is-bottomless">
+    <Hds::ButtonSet>
+      <Hds::Copy::Button
+        @text="Copy"
+        @textToCopy={{@model.publicKey}}
+        @onError={{(fn (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger"))}}
+        class="primary"
+      />
+      <ConfirmAction
+        @buttonText="Delete"
+        @buttonColor="secondary"
+        @confirmMessage="This will remove the CA certificate information."
+        @onConfirmAction={{this.delete}}
+        data-test-delete-public-key
+      />
+    </Hds::ButtonSet>
+  </div>
+{{else}}
+  <form {{on "submit" this.saveConfig}} data-test-configure-form>
+    <div class="box is-fullwidth is-sideless is-marginless">
+      <NamespaceReminder @mode="save" @noun="configuration" />
       <div class="field">
-        <label for="publicKey" class="is-label">
-          Public key
+        <label for="privateKey" class="is-label">
+          Private key
         </label>
         <div class="control">
+          <MaskedInput @name="privateKey" id="privateKey" @value={{@model.privateKey}} @onChange={{mut @model.privateKey}} />
+        </div>
+      </div>
           <MaskedInput
             @name="publickey"
             @id="publicKey"
