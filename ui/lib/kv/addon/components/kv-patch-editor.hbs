@@ -4,97 +4,119 @@
 ~}}
 
 <form {{on "submit" this.submit}} ...attributes>
+
+  <div class="flex column-gap-16 has-top-padding-s space-between">
+    <Hds::Form::Label @controlId="newKey" class="key-column">
+      Key
+    </Hds::Form::Label>
+    <Hds::Form::Label @controlId="newValue" class="value-column">
+      Value
+    </Hds::Form::Label>
+  </div>
+
+  {{! Rows for existing keys (includes new rows after user clicks "Add") }}
   {{#each this.patchData as |KV idx|}}
     {{#let KV.key KV.value KV.state as |key value state|}}
       <div class="flex column-gap-16 has-top-padding-s">
         <Hds::Form::TextInput::Base
           @value={{key}}
-          aria-label="Key {{key}} in row {{idx}}"
+          aria-label="Key {{idx}}"
+          class="key-column {{if (eq state 'deleted') 'line-through'}}"
           {{! Original subkeys are not editable, only their values can be updated }}
-          disabled={{this.isOriginalSubkey key}}
+          disabled={{and (eq state "disabled") (this.isOriginalSubkey key)}}
+          readonly={{and (not-eq state "disabled") (this.isOriginalSubkey key)}}
           {{on "blur" (fn this.updateKey KV)}}
           data-test-kv-key={{key}}
         />
 
-        <Hds::Form::MaskedInput::Base
-          @value={{value}}
-          aria-label="Value for key {{key}} in row {{idx}}"
-          disabled={{includes state (array "disabled" "deleted")}}
-          {{on "keyup" (fn KV.onBlur "value")}}
-          {{on "blur" (fn KV.onBlur "value")}}
-          data-test-kv-value={{key}}
-        />
+        <div class="flex column-gap-16 value-column">
+          <div class="value-input">
+            <Hds::Form::MaskedInput::Base
+              @value={{value}}
+              aria-label="Value {{idx}}"
+              disabled={{eq state "disabled"}}
+              readonly={{eq state "deleted"}}
+              {{on "blur" (fn KV.onBlur "value")}}
+              data-test-kv-value={{key}}
+            />
+          </div>
 
-        <Hds::ButtonSet {{style width="15rem"}}>
-          {{#if (eq state "disabled")}}
-            <Hds::Button
-              @text="Edit"
-              @icon="edit"
-              @color="secondary"
-              @isIconOnly={{true}}
-              {{on "click" (fn KV.onClick "enabled")}}
-              data-test-edit={{key}}
-            />
-            <Hds::Button
-              @text="Delete"
-              @icon="trash"
-              @color="critical"
-              @isIconOnly={{true}}
-              {{on "click" (fn KV.onClick "deleted")}}
-              data-test-delete={{key}}
-            />
-          {{else}}
-            <Hds::Button
-              @text={{if (this.isOriginalSubkey key) "Cancel" "Remove"}}
-              @color="secondary"
-              {{on "click" (fn this.undo KV)}}
-              data-test-undo={{key}}
-            />
-          {{/if}}
-        </Hds::ButtonSet>
+          <Hds::ButtonSet class="value-buttons">
+            {{#if (eq state "disabled")}}
+              <Hds::Button
+                @text="Edit"
+                @icon="edit"
+                @color="secondary"
+                @isIconOnly={{true}}
+                {{on "click" (fn KV.onClick "enabled")}}
+                data-test-edit={{key}}
+              />
+              <Hds::Button
+                @text="Delete"
+                @icon="trash"
+                @color="critical"
+                @isIconOnly={{true}}
+                {{on "click" (fn KV.onClick "deleted")}}
+                data-test-delete={{key}}
+              />
+            {{else}}
+              <Hds::Button
+                @text={{if (this.isOriginalSubkey key) "Cancel" "Remove"}}
+                @color="secondary"
+                {{on "click" (fn this.undo KV)}}
+                data-test-undo={{key}}
+              />
+            {{/if}}
+          </Hds::ButtonSet>
+        </div>
       </div>
 
       {{#if (eq state "deleted")}}
-        <Hds::Alert @type="compact" @color="critical" @icon="alert-diamond-fill" data-test-alert-delete={{key}} as |A|>
+        <Hds::Alert @type="compact" @color="critical" @icon="trash" data-test-alert-delete={{key}} as |A|>
           <A.Description>This key value pair is marked for deletion.</A.Description>
         </Hds::Alert>
       {{/if}}
-      {{#if KV.isInvalid}}
+      {{#if KV.isInvalidKey}}
         <Hds::Alert @type="compact" @color="critical" @icon="alert-diamond-fill" data-test-alert-validation={{idx}} as |A|>
-          <A.Description>{{KV.isInvalid}}</A.Description>
+          <A.Description>{{KV.isInvalidKey}}</A.Description>
         </Hds::Alert>
       {{/if}}
     {{/let}}
   {{/each}}
 
-  {{! Empty inputs for adding new key/value pairs }}
+  {{! Single row of empty inputs for adding new key/value pairs }}
   <div class="flex column-gap-16 has-top-padding-s">
     <Hds::Form::TextInput::Base
       @type="text"
       @value={{this.newKey}}
-      aria-label="new key"
+      class="key-column"
+      aria-label="New key"
       placeholder="key"
       name="newKey"
       {{on "blur" (fn this.updateKey false)}}
       data-test-kv-key="new"
     />
 
-    <Hds::Form::MaskedInput::Base
-      @value={{this.newValue}}
-      aria-label="new value"
-      name="newValue"
-      {{on "blur" this.handleNewRow}}
-      data-test-kv-value="new"
-    />
+    <div class="flex column-gap-16 value-column">
+      <div class="value-input">
+        <Hds::Form::MaskedInput::Base
+          @value={{this.newValue}}
+          aria-label="New value"
+          name="newValue"
+          {{on "blur" this.handleNewRow}}
+          data-test-kv-value="new"
+        />
+      </div>
 
-    <Hds::ButtonSet {{style width="15rem"}}>
-      <Hds::Button @text="Add" @color="secondary" {{on "click" this.addRow}} data-test-add />
-    </Hds::ButtonSet>
+      <Hds::ButtonSet class="value-buttons">
+        <Hds::Button @text="Add" @color="secondary" {{on "click" this.addRow}} data-test-add />
+      </Hds::ButtonSet>
+    </div>
 
   </div>
-  {{#if this.isInvalid}}
+  {{#if this.isInvalidKey}}
     <Hds::Alert @type="compact" @color="critical" @icon="alert-diamond-fill" data-test-alert-validation="new" as |A|>
-      <A.Description>{{this.isInvalid}}</A.Description>
+      <A.Description>{{this.isInvalidKey}}</A.Description>
     </Hds::Alert>
   {{/if}}
 
