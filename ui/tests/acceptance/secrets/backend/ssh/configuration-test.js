@@ -27,7 +27,6 @@ module('Acceptance | ssh | configuration', function (hooks) {
     this.store = this.owner.lookup('service:store');
     this.flashSuccessSpy = spy(flash, 'success');
     this.flashDangerSpy = spy(flash, 'danger');
-
     this.uid = uuidv4();
     return authPage.login();
   });
@@ -52,7 +51,7 @@ module('Acceptance | ssh | configuration', function (hooks) {
     await enablePage.enable('ssh', sshPath);
     await click(SES.configTab);
     await visit(`/vault/settings/secrets/configure/${sshPath}`);
-    assert.dom('[data-test-not-found]').exists('shows page-error');
+    assert.dom(GENERAL.notFound).exists('shows page-error');
     // cleanup
     await runCmd(`delete sys/mounts/${sshPath}`);
   });
@@ -67,8 +66,6 @@ module('Acceptance | ssh | configuration', function (hooks) {
       `/vault/secrets/${sshPath}/configuration/edit`,
       'transitions to the configuration page'
     );
-    assert.dom(SES.ssh.configureForm).exists('renders ssh configuration form');
-
     // default has generate CA checked so we just submit the form
     await click(SES.ssh.save);
     assert.strictEqual(
@@ -107,12 +104,12 @@ module('Acceptance | ssh | configuration', function (hooks) {
     await enablePage.enable('ssh', path);
     await click(SES.configTab);
     await click(SES.configure);
-    assert.dom(GENERAL.inputByAttr('generateSigningKey')).isChecked('generate_signing_key defaults to true');
-    await click(GENERAL.inputByAttr('generateSigningKey'));
-    await click(SES.ssh.save);
     assert
-      .dom(GENERAL.inlineError)
-      .hasText('Public Key and Private Key are both required if Generate Signing Key is false.');
+      .dom(GENERAL.inputByAttr('generate-signing-key-checkbox'))
+      .isChecked('generate_signing_key defaults to true');
+    await click(GENERAL.inputByAttr('generate-signing-key-checkbox'));
+    await click(SES.ssh.save);
+    assert.true(this.flashDangerSpy.calledWith('missing public_key'), 'Danger flash message is displayed');
     // visit the details page and confirm the public key is not shown
     await visit(`/vault/secrets/${path}/configuration`);
     assert.dom(GENERAL.infoRowLabel('Public key')).doesNotExist('Public Key label does not exist');

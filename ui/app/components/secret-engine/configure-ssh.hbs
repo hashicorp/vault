@@ -83,5 +83,16 @@
         />
       </Hds::ButtonSet>
     </div>
-  {{/if}}
-</form>
+    <div class="field box is-fullwidth is-bottomless is-marginless">
+      <div class="control">
+        <Hds::Button
+          @text="Save"
+          @icon={{if @loading "loading"}}
+          type="submit"
+          disabled={{@loading}}
+          data-test-configure-save-button
+        />
+      </div>
+    </div>
+  </form>
+{{/if}}

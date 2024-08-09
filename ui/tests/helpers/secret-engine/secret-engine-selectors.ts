@@ -26,10 +26,11 @@ export const SECRET_ENGINE_SELECTORS = {
     delete: (role: string) => `[data-test-aws-role-delete="${role}"]`,
   },
   ssh: {
-    configureForm: '[data-test-ssh-configure-form]',
-    editConfigSection: '[data-test-ssh-edit-config-section]',
-    deletePublicKey: '[data-test-ssh-delete-public-key]',
-    save: '[data-test-ssh-save]',
-    cancel: '[data-test-ssh-cancel]',
+    configureForm: '[data-test-configure-form]',
+    editConfigSection: '[data-test-edit-config-section]',
+    deletePublicKey: '[data-test-delete-public-key]',
+    save: '[data-test-configure-save-button]',
+    createRole: '[data-test-role-ssh-create]',
+    deleteRole: '[data-test-ssh-role-delete]',
   },
 };
