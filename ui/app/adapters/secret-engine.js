@@ -87,10 +87,8 @@ export default ApplicationAdapter.extend({
     }
   },
 
-  findRecord(store, type, path, snapshot) {
-    if (snapshot.attr('type') === 'ssh') {
-      return this.ajax(`/v1/${encodePath(path)}/config/ca`, 'GET');
-    }
+  findRecord() {
+    // TODO remove once AWS refactor is complete
     return { data: {} };
   },
 
