@@ -52,6 +52,7 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
         @namespace={{this.namespace}}
         @mountPath={{this.mountPath}}
         @onFilterChange={{this.onFilterChange}}
+        @filteredTotals={{this.activity.total}}
       >
         <div data-test-yield>Yield block</div>
       </Clients::Page::Counts>
