@@ -230,6 +230,45 @@ func Test_ActivityLog_EmptyDataMonths(t *testing.T) {
 	}
 }
 
+// Test_ActivityLog_FutureEndDate queries a start time from the past
+// and an end date in the future. The test
+// verifies that the current month is returned in the response.
+func Test_ActivityLog_FutureEndDate(t *testing.T) {
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
+		"enabled": "enable",
+	})
+	require.NoError(t, err)
+	_, err = clientcountutil.NewActivityLogData(client).
+		NewPreviousMonthData(1).
+		NewClientsSeen(10).
+		NewCurrentMonthData().
+		NewClientsSeen(10).
+		Write(context.Background(), generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES, generation.WriteOptions_WRITE_ENTITIES)
+	require.NoError(t, err)
+
+	now := time.Now().UTC()
+	// query from the beginning of 3 months ago to beginning of next month
+	resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
+		"end_time":   {timeutil.StartOfNextMonth(now).Format(time.RFC3339)},
+		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(3, now)).Format(time.RFC3339)},
+	})
+	require.NoError(t, err)
+	monthsResponse := getMonthsData(t, resp)
+
+	require.Len(t, monthsResponse, 4)
+
+	// Get the last month of data in the slice
+	expectedCurrentMonthData := monthsResponse[3]
+	expectedTime, err := time.Parse(time.RFC3339, expectedCurrentMonthData.Timestamp)
+	require.NoError(t, err)
+	if !timeutil.IsCurrentMonth(expectedTime, now) {
+		t.Fatalf("final month data is not current month")
+	}
+}
+
 func getMonthsData(t *testing.T, resp *api.Secret) []vault.ResponseMonth {
 	t.Helper()
 	monthsRaw, ok := resp.Data["months"]
