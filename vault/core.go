@@ -3777,12 +3777,6 @@ func (c *Core) isPrimary() bool {
 	return !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary | consts.ReplicationDRSecondary)
 }
 
-type LicenseState struct {
-	State      string
-	ExpiryTime time.Time
-	Terminated bool
-}
-
 func (c *Core) loadLoginMFAConfigs(ctx context.Context) error {
 	eConfigs := make([]*mfa.MFAEnforcementConfig, 0)
 	allNamespaces := c.collectNamespaces()

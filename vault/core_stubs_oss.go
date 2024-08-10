@@ -29,7 +29,7 @@ func (c *Core) entCheckLicenseInit() error {
 	return nil
 }
 
-func (c *Core) EntGetLicenseState() (*license.State, error) {
+func (c *Core) EntGetLicenseState() (*license.LicenseState, error) {
 	return nil, nil
 }
 

@@ -233,7 +233,7 @@ func (s *gRPCSystemViewClient) GenerateIdentityToken(ctx context.Context, req *p
 	}, nil
 }
 
-func (s *gRPCSystemViewClient) LicenseState() (*license.State, error) {
+func (s *gRPCSystemViewClient) LicenseState() (*license.LicenseState, error) {
 	reply, err := s.client.LicenseState(context.Background(), &pb.Empty{})
 	if err != nil {
 		return nil, err
@@ -244,7 +244,7 @@ func (s *gRPCSystemViewClient) LicenseState() (*license.State, error) {
 		expiryTime = reply.ExpiryTime.AsTime()
 	}
 
-	return &license.State{
+	return &license.LicenseState{
 		State:      reply.State,
 		ExpiryTime: expiryTime,
 		Terminated: reply.Terminated,
