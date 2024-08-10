@@ -607,6 +607,20 @@ message GenerateIdentityTokenResponse {
   int64 ttl = 2;
 }
 
+message HasFeatureRequest {
+  uint32 feature = 1;
+}
+
+message HasFeatureReply {
+  bool has_feature = 1;
+}
+
+message LicenseStateReply {
+  string state = 1;
+  google.protobuf.Timestamp expiry_time = 2;
+  bool terminated = 3;
+}
+
 // SystemView exposes system configuration information in a safe way for plugins
 // to consume. Plugins should implement the client for this service.
 service SystemView {
@@ -665,6 +679,12 @@ service SystemView {
 
   // GenerateIdentityToken returns an identity token for the requesting plugin.
   rpc GenerateIdentityToken(GenerateIdentityTokenRequest) returns (GenerateIdentityTokenResponse);
+
+  // HasFeature returns true if the Enterprise feature is enabled for the currently running Vault
+  rpc HasFeature(HasFeatureRequest) returns (HasFeatureReply);
+
+  // LicenseState returns the license state of the currently running Vault
+  rpc LicenseState(Empty) returns (LicenseStateReply);
 }
 
 message Connection {

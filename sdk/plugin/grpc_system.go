@@ -19,6 +19,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 var errMissingSystemView = errors.New("missing system view implementation: this method should not be called during plugin Setup, but only during and after Initialize")
@@ -132,8 +133,14 @@ func (s *gRPCSystemViewClient) MlockEnabled() bool {
 }
 
 func (s *gRPCSystemViewClient) HasFeature(feature license.Features) bool {
-	// Not implemented
-	return false
+	reply, err := s.client.HasFeature(context.Background(), &pb.HasFeatureRequest{
+		Feature: uint32(feature),
+	})
+	if err != nil {
+		return false
+	}
+
+	return reply.HasFeature
 }
 
 func (s *gRPCSystemViewClient) LocalMount() bool {
@@ -223,6 +230,24 @@ func (s *gRPCSystemViewClient) GenerateIdentityToken(ctx context.Context, req *p
 	return &pluginutil.IdentityTokenResponse{
 		Token: pluginutil.IdentityToken(resp.Token),
 		TTL:   time.Duration(resp.TTL) * time.Second,
+	}, nil
+}
+
+func (s *gRPCSystemViewClient) LicenseState() (*license.State, error) {
+	reply, err := s.client.LicenseState(context.Background(), &pb.Empty{})
+	if err != nil {
+		return nil, err
+	}
+
+	var expiryTime time.Time
+	if reply.ExpiryTime != nil {
+		expiryTime = reply.ExpiryTime.AsTime()
+	}
+
+	return &license.State{
+		State:      reply.State,
+		ExpiryTime: expiryTime,
+		Terminated: reply.Terminated,
 	}, nil
 }
 
@@ -427,5 +452,33 @@ func (s *gRPCSystemViewServer) GenerateIdentityToken(ctx context.Context, req *p
 	return &pb.GenerateIdentityTokenResponse{
 		Token: res.Token.Token(),
 		TTL:   int64(res.TTL.Seconds()),
+	}, nil
+}
+
+func (s *gRPCSystemViewServer) LicenseState(ctx context.Context, _ *pb.Empty) (*pb.LicenseStateReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
+
+	licenseState, err := s.impl.LicenseState()
+	if err != nil {
+		return &pb.LicenseStateReply{}, status.Errorf(codes.Internal,
+			err.Error())
+	}
+
+	return &pb.LicenseStateReply{
+		State:      licenseState.State,
+		ExpiryTime: timestamppb.New(licenseState.ExpiryTime),
+		Terminated: licenseState.Terminated,
+	}, nil
+}
+
+func (s *gRPCSystemViewServer) HasFeature(ctx context.Context, req *pb.HasFeatureRequest) (*pb.HasFeatureReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
+
+	return &pb.HasFeatureReply{
+		HasFeature: s.impl.HasFeature(license.Features(req.Feature)),
 	}, nil
 }

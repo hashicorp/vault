@@ -100,6 +100,9 @@ type SystemView interface {
 
 	// GenerateIdentityToken returns an identity token for the requesting plugin.
 	GenerateIdentityToken(ctx context.Context, req *pluginutil.IdentityTokenRequest) (*pluginutil.IdentityTokenResponse, error)
+
+	// LicenseState returns the license state of the currently running Vault
+	LicenseState() (*license.State, error)
 }
 
 type PasswordPolicy interface {
@@ -284,4 +287,8 @@ func (d StaticSystemView) GenerateIdentityToken(_ context.Context, _ *pluginutil
 
 func (d StaticSystemView) APILockShouldBlockRequest() (bool, error) {
 	return d.APILockShouldBlockRequestVal, nil
+}
+
+func (d StaticSystemView) LicenseState() (*license.State, error) {
+	return nil, errors.New("LicenseState is not implemented in StaticSystemView")
 }
