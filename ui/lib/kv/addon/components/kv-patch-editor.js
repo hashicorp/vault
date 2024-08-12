@@ -7,17 +7,13 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { A } from '@ember/array';
-import { containsWhiteSpace } from 'vault/utils/validators';
-
-// TODO validations
-/*
-  - show warning for matching keys, disable add
-  - show warning that numbers will be submitted as strings
-  - show warning for whitespace 
-  */
+import { hasWhitespace, isNonString } from 'vault/utils/validators';
 
 const WHITESPACE_WARNING =
-  "This key contains whitespace. If this is desired, you'll need to encode it with %20 in APi requests.";
+  "This key contains whitespace. If this is desired, you'll need to encode it with %20 in API requests.";
+
+const NON_STRING_WARNING =
+  'This value will be saved as a string. If you need to save a non-string value, please use the JSON editor.';
 
 class Kv {
   @tracked key;
@@ -32,10 +28,12 @@ class Kv {
   }
 
   get keyHasWarning() {
-    const isValid = containsWhiteSpace(this.key); // returns false (invalid) if contains whitespace
-    return isValid ? '' : WHITESPACE_WARNING;
+    return hasWhitespace(this.key) ? WHITESPACE_WARNING : '';
   }
 
+  get valueHasWarning() {
+    return isNonString(this.value) ? NON_STRING_WARNING : '';
+  }
   reset() {
     this.value = undefined;
     this.state = 'disabled';
@@ -76,8 +74,11 @@ export default class KvPatchEditor extends Component {
   }
 
   get keyHasWarning() {
-    const isValid = containsWhiteSpace(this.newKey); // returns false (invalid) if contains whitespace
-    return isValid ? '' : WHITESPACE_WARNING;
+    return hasWhitespace(this.newKey) ? WHITESPACE_WARNING : '';
+  }
+
+  get valueHasWarning() {
+    return isNonString(this.newValue) ? NON_STRING_WARNING : '';
   }
 
   generateData(key, value, state) {

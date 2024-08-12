@@ -49,7 +49,7 @@
                 @color="secondary"
                 @isIconOnly={{true}}
                 {{on "click" (fn KV.onClick "enabled")}}
-                data-test-edit={{idx}}
+                data-test-edit-button={{idx}}
               />
               <Hds::Button
                 @text="Delete"
@@ -57,14 +57,14 @@
                 @color="critical"
                 @isIconOnly={{true}}
                 {{on "click" (fn KV.onClick "deleted")}}
-                data-test-delete={{idx}}
+                data-test-delete-button={{idx}}
               />
             {{else}}
               <Hds::Button
                 @text={{if (this.isOriginalSubkey key) "Cancel" "Remove"}}
                 @color="secondary"
                 {{on "click" (fn this.undo KV)}}
-                data-test-undo={{idx}}
+                data-test-undo-button={{idx}}
               />
             {{/if}}
           </Hds::ButtonSet>
@@ -82,10 +82,22 @@
         </Hds::Alert>
       {{/if}}
       {{#if KV.keyHasWarning}}
-        <Hds::Alert @type="compact" @color="warning" @icon="alert-triangle-fill" data-test-alert-warning={{idx}} as |A|>
+        <Hds::Alert @type="compact" @color="warning" @icon="alert-triangle-fill" data-test-alert-key-warning={{idx}} as |A|>
           <A.Description>{{KV.keyHasWarning}}</A.Description>
         </Hds::Alert>
       {{/if}}
+      {{#if KV.valueHasWarning}}
+        <Hds::Alert
+          @type="compact"
+          @color="warning"
+          @icon="alert-triangle-fill"
+          data-test-alert-value-warning={{idx}}
+          as |A|
+        >
+          <A.Description>{{KV.valueHasWarning}}</A.Description>
+        </Hds::Alert>
+      {{/if}}
+
     {{/let}}
   {{/each}}
 
@@ -114,7 +126,7 @@
       </div>
 
       <Hds::ButtonSet class="value-buttons">
-        <Hds::Button @text="Add" @color="secondary" {{on "click" this.addRow}} data-test-add />
+        <Hds::Button @text="Add" @color="secondary" {{on "click" this.addRow}} data-test-add-button />
       </Hds::ButtonSet>
     </div>
   </div>
@@ -125,8 +137,13 @@
     </Hds::Alert>
   {{/if}}
   {{#if this.keyHasWarning}}
-    <Hds::Alert @type="compact" @color="warning" @icon="alert-triangle-fill" data-test-alert-warning="new" as |A|>
+    <Hds::Alert @type="compact" @color="warning" @icon="alert-triangle-fill" data-test-alert-key-warning="new" as |A|>
       <A.Description>{{this.keyHasWarning}}</A.Description>
+    </Hds::Alert>
+  {{/if}}
+  {{#if this.valueHasWarning}}
+    <Hds::Alert @type="compact" @color="warning" @icon="alert-triangle-fill" data-test-alert-value-warning="new" as |A|>
+      <A.Description>{{this.valueHasWarning}}</A.Description>
     </Hds::Alert>
   {{/if}}
 
