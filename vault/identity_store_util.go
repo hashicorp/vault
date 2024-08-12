@@ -459,6 +459,10 @@ LOOP:
 
 				mountAccessors := getAccessorsOnDuplicateAliases(entity.Aliases)
 
+				if len(mountAccessors) > 0 {
+					i.logger.Warn("Entity has multiple aliases on the same mount(s)", "entity_id", entity.ID, "mount_accessors", mountAccessors)
+				}
+
 				for _, accessor := range mountAccessors {
 					if _, ok := duplicatedAccessors[accessor]; !ok {
 						duplicatedAccessors[accessor] = struct{}{}
