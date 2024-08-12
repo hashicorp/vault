@@ -86,7 +86,20 @@ func (s *SocketSink) Process(ctx context.Context, e *eventlogger.Event) (_ *even
 		return nil, fmt.Errorf("unable to retrieve event formatted as %q: %w", s.requiredFormat, ErrInvalidParameter)
 	}
 
-	s.socketLock.Lock()
+	// Don't just wait for the lock, ignorant of the context as we could end up
+	// with a lot of entries queuing up for access to the sink. If our context gets
+	// cancelled then we should just give up and not continue to wait for our turn.
+contextDoneOrLock:
+	for {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+			if s.socketLock.TryLock() {
+				break contextDoneOrLock
+			}
+		}
+	}
 	defer s.socketLock.Unlock()
 
 	// Try writing and return early if successful.
@@ -133,7 +146,14 @@ func (_ *SocketSink) Type() eventlogger.NodeType {
 }
 
 // connect attempts to establish a connection using the socketType and address.
+// NOTE: connect is context aware and will not attempt to connect if the context is 'done'.
 func (s *SocketSink) connect(ctx context.Context) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
 	// If we're already connected, we should have disconnected first.
 	if s.connection != nil {
 		return nil
