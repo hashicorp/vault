@@ -7,6 +7,7 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { A } from '@ember/array';
+import { containsWhiteSpace } from 'vault/utils/validators';
 
 // TODO validations
 /*
@@ -14,6 +15,9 @@ import { A } from '@ember/array';
   - show warning that numbers will be submitted as strings
   - show warning for whitespace 
   */
+
+const WHITESPACE_WARNING =
+  "This key contains whitespace. If this is desired, you'll need to encode it with %20 in APi requests.";
 
 class Kv {
   @tracked key;
@@ -27,9 +31,9 @@ class Kv {
     this.state = state;
   }
 
-  get isPatchable() {
-    // only include edited inputs in payload
-    return this.state === 'enabled' || this.state === 'deleted';
+  get keyHasWarning() {
+    const isValid = containsWhiteSpace(this.key); // returns false (invalid) if contains whitespace
+    return isValid ? '' : WHITESPACE_WARNING;
   }
 
   reset() {
@@ -55,7 +59,9 @@ class Kv {
 export default class KvPatchEditor extends Component {
   @tracked patchData; // key value pairs in form
 
-  // tracked variables for new row of inputs after user clicks "add"
+  // tracked variables for new (initially empty) row of inputs
+  // once a user clicks "Add" a Kv class is instantiated for that row
+  // and it is added to the patchData array
   @tracked isInvalidKey = '';
   @tracked newKey;
   @tracked newValue;
@@ -69,8 +75,9 @@ export default class KvPatchEditor extends Component {
     this.resetNewRow();
   }
 
-  get isAddAllowed() {
-    return !this.newKey || this.isInvalidKey ? false : true;
+  get keyHasWarning() {
+    const isValid = containsWhiteSpace(this.newKey); // returns false (invalid) if contains whitespace
+    return isValid ? '' : WHITESPACE_WARNING;
   }
 
   generateData(key, value, state) {
@@ -82,16 +89,11 @@ export default class KvPatchEditor extends Component {
     this.newValue = undefined;
   }
 
-  validateKey(key) {
-    return this.patchData.any((KV) => KV.key === key)
-      ? `"${key}" key already exists. Update the value of the existing key or rename this one.`
-      : '';
-  }
-
   @action
   updateKey(KV, event) {
     const key = event.target.value;
     const isInvalid = this.validateKey(key);
+
     if (KV) {
       KV.isInvalidKey = isInvalid;
       if (isInvalid) return; // don't set if invalid
@@ -110,9 +112,9 @@ export default class KvPatchEditor extends Component {
 
   @action
   addRow() {
-    if (!this.isAddAllowed) return;
-    const data = this.generateData(this.newKey, this.newValue, 'enabled');
-    this.patchData.pushObject(data);
+    if (!this.newKey || this.isInvalidKey) return;
+    const KV = this.generateData(this.newKey, this.newValue, 'enabled');
+    this.patchData.pushObject(KV);
     // reset tracked values after adding them to patchData
     this.resetNewRow();
   }
@@ -132,19 +134,26 @@ export default class KvPatchEditor extends Component {
   submit(event) {
     event.preventDefault();
     // patchData will not include the last row if a user has not clicked "add"
-    // manually check for for data and add it the payload
+    // manually check for data and add it to this.patchData
     if (this.newKey && this.newValue) {
       this.addRow();
     }
 
-    // collect only relevant inputs
     const data = this.patchData.reduce((obj, KV) => {
-      if (KV.isPatchable) {
+      // only included edited inputs
+      const { state } = KV;
+      if (state === 'enabled' || state === 'deleted') {
         obj[KV.key] = KV.value;
       }
       return obj;
     }, {});
 
     this.args.onSubmit(data);
+  }
+
+  validateKey(key) {
+    return this.patchData.any((KV) => KV.key === key)
+      ? `"${key}" key already exists. Update the value of the existing key or rename this one.`
+      : '';
   }
 }

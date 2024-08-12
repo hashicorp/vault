@@ -26,7 +26,7 @@
           disabled={{and (eq state "disabled") (this.isOriginalSubkey key)}}
           readonly={{and (not-eq state "disabled") (this.isOriginalSubkey key)}}
           {{on "blur" (fn this.updateKey KV)}}
-          data-test-kv-key={{key}}
+          data-test-kv-key={{idx}}
         />
 
         <div class="flex column-gap-16 value-column">
@@ -37,7 +37,7 @@
               disabled={{eq state "disabled"}}
               readonly={{eq state "deleted"}}
               {{on "blur" (fn KV.onBlur "value")}}
-              data-test-kv-value={{key}}
+              data-test-kv-value={{idx}}
             />
           </div>
 
@@ -49,7 +49,7 @@
                 @color="secondary"
                 @isIconOnly={{true}}
                 {{on "click" (fn KV.onClick "enabled")}}
-                data-test-edit={{key}}
+                data-test-edit={{idx}}
               />
               <Hds::Button
                 @text="Delete"
@@ -57,14 +57,14 @@
                 @color="critical"
                 @isIconOnly={{true}}
                 {{on "click" (fn KV.onClick "deleted")}}
-                data-test-delete={{key}}
+                data-test-delete={{idx}}
               />
             {{else}}
               <Hds::Button
                 @text={{if (this.isOriginalSubkey key) "Cancel" "Remove"}}
                 @color="secondary"
                 {{on "click" (fn this.undo KV)}}
-                data-test-undo={{key}}
+                data-test-undo={{idx}}
               />
             {{/if}}
           </Hds::ButtonSet>
@@ -72,13 +72,18 @@
       </div>
 
       {{#if (eq state "deleted")}}
-        <Hds::Alert @type="compact" @color="critical" @icon="trash" data-test-alert-delete={{key}} as |A|>
+        <Hds::Alert @type="compact" @color="critical" @icon="trash" data-test-alert-delete={{idx}} as |A|>
           <A.Description>This key value pair is marked for deletion.</A.Description>
         </Hds::Alert>
       {{/if}}
       {{#if KV.isInvalidKey}}
         <Hds::Alert @type="compact" @color="critical" @icon="alert-diamond-fill" data-test-alert-validation={{idx}} as |A|>
           <A.Description>{{KV.isInvalidKey}}</A.Description>
+        </Hds::Alert>
+      {{/if}}
+      {{#if KV.keyHasWarning}}
+        <Hds::Alert @type="compact" @color="warning" @icon="alert-triangle-fill" data-test-alert-warning={{idx}} as |A|>
+          <A.Description>{{KV.keyHasWarning}}</A.Description>
         </Hds::Alert>
       {{/if}}
     {{/let}}
@@ -112,11 +117,16 @@
         <Hds::Button @text="Add" @color="secondary" {{on "click" this.addRow}} data-test-add />
       </Hds::ButtonSet>
     </div>
-
   </div>
+
   {{#if this.isInvalidKey}}
     <Hds::Alert @type="compact" @color="critical" @icon="alert-diamond-fill" data-test-alert-validation="new" as |A|>
       <A.Description>{{this.isInvalidKey}}</A.Description>
+    </Hds::Alert>
+  {{/if}}
+  {{#if this.keyHasWarning}}
+    <Hds::Alert @type="compact" @color="warning" @icon="alert-triangle-fill" data-test-alert-warning="new" as |A|>
+      <A.Description>{{this.keyHasWarning}}</A.Description>
     </Hds::Alert>
   {{/if}}
 

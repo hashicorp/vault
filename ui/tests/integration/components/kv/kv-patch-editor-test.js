@@ -36,13 +36,13 @@ module('Integration | Component | kv | kv-patch-editor', function (hooks) {
     };
 
     // HELPERS
-    this.assertDefaultRow = (key, assert) => {
-      assert.dom(FORM.keyInput(key)).hasValue(key);
-      assert.dom(FORM.keyInput(key)).isDisabled();
-      assert.dom(FORM.valueInput(key)).hasValue('');
-      assert.dom(FORM.valueInput(key)).isDisabled();
-      assert.dom(FORM.patchEdit(key)).exists();
-      assert.dom(FORM.patchDelete(key)).exists();
+    this.assertDefaultRow = (idx, key, assert) => {
+      assert.dom(FORM.keyInput(idx)).hasValue(key);
+      assert.dom(FORM.keyInput(idx)).isDisabled();
+      assert.dom(FORM.valueInput(idx)).hasValue('');
+      assert.dom(FORM.valueInput(idx)).isDisabled();
+      assert.dom(FORM.patchEdit(idx)).exists();
+      assert.dom(FORM.patchDelete(idx)).exists();
     };
 
     this.assertEmptyRow = (assert) => {
@@ -52,15 +52,14 @@ module('Integration | Component | kv | kv-patch-editor', function (hooks) {
       assert.dom(FORM.valueInput('new')).hasValue('');
       assert.dom(FORM.valueInput('new')).isNotDisabled();
       assert.dom(FORM.patchAdd).exists({ count: 1 });
-      assert.dom(FORM.patchAdd).isDisabled();
     };
   });
 
   test('it renders', async function (assert) {
     await this.renderComponent();
 
-    this.assertDefaultRow('foo', assert);
-    this.assertDefaultRow('baz', assert);
+    this.assertDefaultRow(0, 'foo', assert);
+    this.assertDefaultRow(1, 'baz', assert);
     this.assertEmptyRow(assert);
 
     await click(FORM.saveBtn);
@@ -72,37 +71,37 @@ module('Integration | Component | kv | kv-patch-editor', function (hooks) {
   test('it enables and disables inputs', async function (assert) {
     await this.renderComponent();
 
-    const enableAndAssert = async (key) => {
-      await click(FORM.patchEdit(key));
-      assert.dom(FORM.valueInput(key)).isEnabled('clicking edit enables value input');
-      assert.dom(FORM.keyInput(key)).isDisabled(`${key} key input is still disabled`);
-      assert.dom(FORM.patchEdit(key)).doesNotExist('edit button disappears');
-      assert.dom(FORM.patchDelete(key)).doesNotExist('delete button disappears');
+    const enableAndAssert = async (idx, key) => {
+      await click(FORM.patchEdit(idx));
+      assert.dom(FORM.valueInput(idx)).isEnabled('clicking edit enables value input');
+      assert.dom(FORM.keyInput(idx)).hasAttribute('readonly', '', `${key} input updates to readonly`);
+      assert.dom(FORM.patchEdit(idx)).doesNotExist('edit button disappears');
+      assert.dom(FORM.patchDelete(idx)).doesNotExist('delete button disappears');
       assert
-        .dom(FORM.patchUndo(key))
+        .dom(FORM.patchUndo(idx))
         .hasText('Cancel', 'Undo button reads "Cancel" and replaces edit and delete');
     };
 
-    await enableAndAssert('foo');
-    await click(FORM.patchUndo('foo'));
-    this.assertDefaultRow('foo', assert);
+    await enableAndAssert(0, 'foo');
+    await click(FORM.patchUndo(0));
+    this.assertDefaultRow(0, 'foo', assert);
 
-    await enableAndAssert('baz');
-    await click(FORM.patchUndo('baz'));
-    this.assertDefaultRow('baz', assert);
+    await enableAndAssert(1, 'baz');
+    await click(FORM.patchUndo(1));
+    this.assertDefaultRow(1, 'baz', assert);
   });
 
   test('it adds a new row', async function (assert) {
     await this.renderComponent();
 
-    await fillIn(FORM.keyInput('new'), 'a');
-    assert.dom(FORM.patchAdd).isDisabled(); // only enables when both key and value exist
-    await fillIn(FORM.valueInput('new'), 'b');
+    await fillIn(FORM.keyInput('new'), 'aKey');
+    await fillIn(FORM.valueInput('new'), 'aValue');
     await click(FORM.patchAdd);
 
-    assert.dom(FORM.keyInput('a')).hasValue('a');
-    assert.dom(FORM.keyInput('a')).isEnabled('new key inputs are enabled');
-    assert.dom(FORM.patchUndo('a')).hasText('Remove', 'Undo button reads "Remove" for new keys');
+    assert.dom(FORM.keyInput(2)).hasValue('aKey');
+    assert.dom(FORM.keyInput(2)).isEnabled('new key inputs are enabled');
+    assert.dom(FORM.valueInput(2)).isEnabled('new value inputs are enabled');
+    assert.dom(FORM.patchUndo(2)).hasText('Remove', 'Undo button reads "Remove" for new keys');
 
     // assert a new row is added
     this.assertEmptyRow(assert);
@@ -122,51 +121,52 @@ module('Integration | Component | kv | kv-patch-editor', function (hooks) {
       await this.renderComponent();
 
       // patch existing key
-      await click(FORM.patchEdit('foo'));
-      await fillIn(FORM.valueInput('foo'), 'bar');
-      await blur(FORM.valueInput('foo')); // unfocus input so click event below fires
+      await click(FORM.patchEdit(0));
+      await fillIn(FORM.valueInput(0), 'bar');
+      // in qunit we have to unfocus the input so the following click event works on first try
+      await blur(FORM.valueInput(0));
 
       // delete existing key
-      await click(FORM.patchDelete('baz'));
-      assert.dom(FORM.patchAlert('delete', 'baz')).hasText('This key value pair is marked for deletion.');
-      assert.dom(`${FORM.patchAlert('delete', 'baz')} ${GENERAL.icon('alert-diamond-fill')}`).exists();
+      await click(FORM.patchDelete(1));
+      assert.dom(FORM.patchAlert('delete', 1)).hasText('This key value pair is marked for deletion.');
+      assert.dom(`${FORM.patchAlert('delete', 1)} ${GENERAL.icon('trash')}`).exists();
 
       // add new key and click add
-      await fillIn(FORM.keyInput('new'), 'a');
-      await fillIn(FORM.valueInput('new'), 'b');
+      await fillIn(FORM.keyInput('new'), 'aKey');
+      await fillIn(FORM.valueInput('new'), 'aValue');
       await click(FORM.patchAdd);
 
       // add new key and do NOT click add
-      await fillIn(FORM.keyInput('new'), 'c');
-      await fillIn(FORM.valueInput('new'), 'd');
+      await fillIn(FORM.keyInput('new'), 'bKey');
+      await fillIn(FORM.valueInput('new'), 'bValue');
 
       await click(FORM.saveBtn);
 
       const [data] = this.onSubmit.lastCall.args;
       assert.propEqual(
         data,
-        { baz: null, foo: 'bar', a: 'b', c: 'd' },
+        { baz: null, foo: 'bar', aKey: 'aValue', bKey: 'bValue' },
         `onSubmit called with ${JSON.stringify(data)}`
       );
     });
 
-    test('patch data when every action is cancelled', async function (assert) {
+    test('patch data when every action is canceled', async function (assert) {
       await this.renderComponent();
 
-      await click(FORM.patchEdit('foo'));
-      await fillIn(FORM.valueInput('foo'), 'bar');
-      await blur(FORM.valueInput('foo')); // unfocus input so click event below fires
+      await click(FORM.patchEdit(0));
+      await fillIn(FORM.valueInput(0), 'bar');
+      // in qunit we have to unfocus the input so the following click event works on the first try
+      await blur(FORM.valueInput(0));
+      await click(FORM.patchDelete(1));
 
-      await click(FORM.patchDelete('baz'));
-
-      await fillIn(FORM.keyInput('new'), 'a');
-      await fillIn(FORM.valueInput('new'), 'b');
+      await fillIn(FORM.keyInput('new'), 'aKey');
+      await fillIn(FORM.valueInput('new'), 'aValue');
       await click(FORM.patchAdd);
 
       // undo every action
-      await click(FORM.patchUndo('foo'));
-      await click(FORM.patchUndo('baz'));
-      await click(FORM.patchUndo('a'));
+      await click(FORM.patchUndo(0)); // undo edit
+      await click(FORM.patchUndo(1)); // undo delete
+      await click(FORM.patchUndo(2)); // remove new row
       await click(FORM.saveBtn);
 
       const [data] = this.onSubmit.lastCall.args;
@@ -176,41 +176,112 @@ module('Integration | Component | kv | kv-patch-editor', function (hooks) {
 
   module('it validates', function () {
     const validationMessage =
-      '"foo" key already exists. Patch the value of the existing key or rename this one.';
+      '"foo" key already exists. Update the value of the existing key or rename this one.';
+    const whitespaceWarning =
+      "This key contains whitespace. If this is desired, you'll need to encode it with %20 in APi requests.";
 
-    test('duplicate keys', async function (assert) {
+    test('new duplicate keys', async function (assert) {
       await this.renderComponent();
 
-      await typeIn(FORM.keyInput('new'), 'foo');
-      await fillIn(FORM.valueInput('new'), 'value');
+      await fillIn(FORM.keyInput('new'), 'foo');
+      await blur(FORM.keyInput('new')); // unfocus input to fire input change event and validation
       assert.dom(FORM.patchAlert('validation', 'new')).hasText(validationMessage);
-      assert.dom(FORM.patchAdd).isDisabled('add button disables for invalid inputs');
-      await typeIn(FORM.keyInput('new'), '2');
-      assert.dom(FORM.patchAlert('validation', 'new')).doesNotExist('warning disappears when key updates');
-      assert.dom(FORM.patchAdd).isEnabled('add button is enabled when input is fixed');
+
+      await click(FORM.patchAdd);
+      assert
+        .dom(FORM.keyInput('new'))
+        .hasValue('foo', 'clicking "Add" is a noop, new row still has invalid value');
+
+      await typeIn(FORM.keyInput('new'), '2'); // input value is now "foo2"
+      await blur(FORM.keyInput('new')); // unfocus input
+      assert.dom(FORM.patchAlert('validation', 'new')).doesNotExist('error disappears when key updates');
+
+      await click(FORM.patchAdd);
+      assert.dom(FORM.keyInput('new')).hasValue('', 'clicking "Add" creates a new row');
     });
 
-    test('duplicate keys after they have been added', async function (assert) {
-      // check for new key and for recently added key
-      // check for changing newly added key to duplicate
+    test('existing duplicate keys', async function (assert) {
       await this.renderComponent();
 
       // add new key and click add
-      await fillIn(FORM.keyInput('new'), 'a');
-      await fillIn(FORM.valueInput('new'), 'b');
-      await blur(FORM.valueInput('new')); // unfocus input so click event below fires
+      await fillIn(FORM.keyInput('new'), 'aKey');
+      await fillIn(FORM.valueInput('new'), 'aValue');
       await click(FORM.patchAdd);
 
       // add another
-      await fillIn(FORM.keyInput('new'), 'c');
-      await fillIn(FORM.valueInput('new'), 'd');
+      await fillIn(FORM.keyInput('new'), 'bKey');
+      await fillIn(FORM.valueInput('new'), 'bValue');
 
-      // update previous key to match a subkey
-      await fillIn(FORM.keyInput('a'), ''); // clear input
-      await typeIn(FORM.keyInput('a'), 'foo'); // clear input
+      // go back and update "aKey" to match an existing subkey
+      await fillIn(FORM.keyInput(2), 'foo');
+      await blur(FORM.keyInput(2)); // unfocus input
       assert.dom(FORM.patchAlert('validation', 2)).hasText(validationMessage);
-      await typeIn(FORM.keyInput('new'), '2');
-      assert.dom(FORM.patchAlert('validation', 'new')).doesNotExist('warning disappears when key updates');
+
+      await typeIn(FORM.keyInput(2), '2');
+      await blur(FORM.keyInput(2)); // unfocus input
+      assert.dom(FORM.patchAlert('validation', '2')).doesNotExist('error disappears when key updates');
+    });
+
+    test('new keys with white space', async function (assert) {
+      await this.renderComponent();
+
+      await fillIn(FORM.keyInput('new'), 'a space');
+      await blur(FORM.keyInput('new')); // unfocus input
+      assert.dom(FORM.patchAlert('warning', 'new')).hasText(whitespaceWarning);
+
+      await fillIn(FORM.keyInput('new'), 'nospace');
+      await blur(FORM.keyInput('new')); // unfocus input
+      assert.dom(FORM.patchAlert('warning', 'new')).doesNotExist('warning disappears when key updates');
+    });
+
+    test('existing keys with whitespace', async function (assert) {
+      await this.renderComponent();
+
+      // add new key and click add
+      await fillIn(FORM.keyInput('new'), 'aKey');
+      await fillIn(FORM.valueInput('new'), 'aValue');
+      await click(FORM.patchAdd);
+
+      // add another
+      await fillIn(FORM.keyInput('new'), 'bKey');
+      await fillIn(FORM.valueInput('new'), 'bValue');
+
+      // go back and change "aKey" to have a space
+      await fillIn(FORM.keyInput(2), 'a key');
+      await blur(FORM.keyInput(2)); // unfocus input
+      assert.dom(FORM.patchAlert('warning', 2)).hasText(whitespaceWarning);
+
+      await fillIn(FORM.keyInput(2), 'aKey');
+      await blur(FORM.keyInput(2)); // unfocus input
+      assert.dom(FORM.patchAlert('validation', '2')).doesNotExist('warning disappears when key updates');
+    });
+
+    test('keys with whitespace after clicking "Add"', async function (assert) {
+      await this.renderComponent();
+
+      // add new key with space and click add
+      await fillIn(FORM.keyInput('new'), 'a key');
+      await fillIn(FORM.valueInput('new'), 'aValue');
+      await click(FORM.patchAdd);
+      assert
+        .dom(FORM.patchAlert('warning', 2))
+        .hasText(whitespaceWarning, 'warning is attached to relevant key');
+      assert
+        .dom(FORM.patchAlert('warning', 'new'))
+        .doesNotExist('there is no whitespace warning for the empty row');
+
+      // add another
+      await fillIn(FORM.keyInput('new'), 'bKey');
+      await fillIn(FORM.valueInput('new'), 'bValue');
+
+      // update "aKey" to have a space
+      await fillIn(FORM.keyInput(2), 'a key');
+      await blur(FORM.keyInput(2)); // unfocus input
+      assert.dom(FORM.patchAlert('warning', 2)).hasText(whitespaceWarning);
+
+      await fillIn(FORM.keyInput(2), 'aKey');
+      await blur(FORM.keyInput(2)); // unfocus input
+      assert.dom(FORM.patchAlert('validation', '2')).doesNotExist('warning disappears when key updates');
     });
   });
 });
