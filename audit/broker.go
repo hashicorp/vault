@@ -297,6 +297,8 @@ func (b *Broker) LogRequest(ctx context.Context, in *logical.LogInput) (retErr e
 		tempContext, auditCancel := context.WithTimeout(context.Background(), timeout)
 		defer auditCancel()
 		auditContext = nshelper.ContextWithNamespace(tempContext, ns)
+
+		b.logger.Trace("log request requires a derived context (original context was not viable)", "namespace ID", ns.ID, "namespace path", ns.Path, "timeout", timeout)
 	}
 
 	var status eventlogger.Status
@@ -379,6 +381,8 @@ func (b *Broker) LogResponse(ctx context.Context, in *logical.LogInput) (retErr 
 		tempContext, auditCancel := context.WithTimeout(context.Background(), timeout)
 		defer auditCancel()
 		auditContext = nshelper.ContextWithNamespace(tempContext, ns)
+
+		b.logger.Trace("log response requires a derived context (original context was not viable)", "namespace ID", ns.ID, "namespace path", ns.Path, "timeout", timeout)
 	}
 
 	var status eventlogger.Status

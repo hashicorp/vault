@@ -24,6 +24,7 @@ type metricLabelerAuditSink struct{}
 // Failure: 'vault.audit.sink.failure'
 func (m metricLabelerAuditSink) Labels(_ *eventlogger.Event, err error) []string {
 	if err != nil {
+		// NOTE: a cancelled context would still result in an error.
 		return metricLabelAuditSinkFailure
 	}
 

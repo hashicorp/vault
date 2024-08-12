@@ -4,13 +4,18 @@
 package event
 
 import (
+	"context"
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/stretchr/testify/require"
 )
 
@@ -236,6 +241,13 @@ func TestFileSink_Process(t *testing.T) {
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "event is nil: invalid parameter",
 		},
+		"happy-path": {
+			Path:             "juan.log",
+			ShouldCreateFile: true,
+			Format:           "json",
+			Data:             "{\"foo\": \"bar\"}",
+			IsErrorExpected:  false,
+		},
 	}
 
 	for name, tc := range tests {
@@ -296,4 +308,47 @@ func TestFileSink_Process(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestFileSink_log_cancelledContext tests that 'log' is context aware and won't
+// just wait for the lock on the file sink forever.
+func TestFileSink_log_cancelledContext(t *testing.T) {
+	tempDir := t.TempDir()
+	tempPath := filepath.Join(tempDir, "juan.log")
+	data := []byte("{\"foo\": \"bar\"}")
+
+	sink, err := NewFileSink(tempPath, "json")
+	require.NoError(t, err)
+	require.NotNil(t, sink)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(func() { cancel() })
+
+	// Manually acquire the lock so that the 'log' method cannot.
+	sink.fileLock.Lock()
+
+	var done atomic.Bool
+	go func() {
+		err = sink.log(ctx, data)
+		done.Store(true)
+	}()
+
+	// We shouldn't have an error as 'log' will be trying to acquire the lock.
+	require.NoError(t, err)
+
+	// Manually cancel the context and unlock to let the waiting 'log' in.
+	cancel()
+	sink.fileLock.Unlock()
+
+	// Just a little bit of time to make sure that 'log' returned and err was set.
+	corehelpers.RetryUntil(t, 3*time.Second, func() error {
+		if done.Load() {
+			return nil
+		}
+
+		return fmt.Errorf("logging still not done")
+	})
+
+	// We expect that the error now has context cancelled in it.
+	require.True(t, errors.Is(err, context.Canceled))
 }
