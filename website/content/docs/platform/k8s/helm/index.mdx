@@ -59,7 +59,14 @@ cluster](https://kubernetes.io/docs/tasks/administer-cluster/securing-a-cluster/
 options](/vault/docs/platform/k8s/helm/configuration), and read the [production deployment
 checklist](/vault/docs/platform/k8s/helm/run#architecture).
 
--> **Important:** This helm chart always provisions Application Load Balancer(ALB) at the AWS side, if you have the requirements of running vault with Network Load Balancer(NLB) then you need to provision NLB in front of your ALB. This special kind of requirement can arise where you need to use AWS PrivateLink with your vault and PrivateLink only works with NLB.
+
+<Important title="Helm chart provisions ALB on AWS side">
+
+  If you use AWS features (e.g, AWS PrivateLink) that require a network load
+  balancer (NLB), you must provision your NLB **before** your application load 
+  balancer (ALB).
+
+</Important>
 
 ## Tutorial
 
