@@ -86,21 +86,15 @@ func (s *SocketSink) Process(ctx context.Context, e *eventlogger.Event) (_ *even
 		return nil, fmt.Errorf("unable to retrieve event formatted as %q: %w", s.requiredFormat, ErrInvalidParameter)
 	}
 
-	// Don't just wait for the lock, ignorant of the context as we could end up
-	// with a lot of entries queuing up for access to the sink. If our context gets
-	// cancelled then we should just give up and not continue to wait for our turn.
-contextDoneOrLock:
-	for {
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		default:
-			if s.socketLock.TryLock() {
-				break contextDoneOrLock
-			}
-		}
-	}
+	// Wait for the lock, but ensure we check for a cancelled context as soon as
+	// we have it, as there's no point in continuing if we're cancelled.
+	s.socketLock.Lock()
 	defer s.socketLock.Unlock()
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
 
 	// Try writing and return early if successful.
 	err := s.write(ctx, formatted)

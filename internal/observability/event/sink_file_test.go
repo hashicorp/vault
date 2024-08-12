@@ -333,8 +333,9 @@ func TestFileSink_log_cancelledContext(t *testing.T) {
 	// We shouldn't have an error as 'log' will be trying to acquire the lock.
 	require.NoError(t, err)
 
-	// Manually cancel the context.
+	// Manually cancel the context and unlock to let the waiting 'log' in.
 	cancel()
+	sink.fileLock.Unlock()
 
 	// Just a little bit of time to make sure that 'log' returned and err was set.
 	time.Sleep(50 * time.Millisecond)

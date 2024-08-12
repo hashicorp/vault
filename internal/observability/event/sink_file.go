@@ -192,21 +192,15 @@ func (s *FileSink) open() error {
 // NOTE: We attempt to acquire a lock on the file in order to write, but will
 // yield if the context is 'done'.
 func (s *FileSink) log(ctx context.Context, data []byte) error {
-	// Don't just wait for the lock, ignorant of the context as we could end up
-	// with a lot of entries queuing up for access to the sink. If our context gets
-	// cancelled then we should just give up and not continue to wait for our turn.
-contextDoneOrLock:
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-			if s.fileLock.TryLock() {
-				break contextDoneOrLock
-			}
-		}
-	}
+	// Wait for the lock, but ensure we check for a cancelled context as soon as
+	// we have it, as there's no point in continuing if we're cancelled.
+	s.fileLock.Lock()
 	defer s.fileLock.Unlock()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
 
 	reader := bytes.NewReader(data)
 
