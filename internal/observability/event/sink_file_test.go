@@ -6,13 +6,16 @@ package event
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/stretchr/testify/require"
 )
 
@@ -324,11 +327,11 @@ func TestFileSink_log_cancelledContext(t *testing.T) {
 	// Manually acquire the lock so that the 'log' method cannot.
 	sink.fileLock.Lock()
 
+	var done atomic.Bool
 	go func() {
 		err = sink.log(ctx, data)
+		done.Store(true)
 	}()
-
-	time.Sleep(50 * time.Millisecond)
 
 	// We shouldn't have an error as 'log' will be trying to acquire the lock.
 	require.NoError(t, err)
@@ -338,7 +341,13 @@ func TestFileSink_log_cancelledContext(t *testing.T) {
 	sink.fileLock.Unlock()
 
 	// Just a little bit of time to make sure that 'log' returned and err was set.
-	time.Sleep(50 * time.Millisecond)
+	corehelpers.RetryUntil(t, 3*time.Second, func() error {
+		if done.Load() {
+			return nil
+		}
+
+		return fmt.Errorf("logging still not done")
+	})
 
 	// We expect that the error now has context cancelled in it.
 	require.True(t, errors.Is(err, context.Canceled))
