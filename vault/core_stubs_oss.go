@@ -29,6 +29,8 @@ func (c *Core) entCheckLicenseInit() error {
 	return nil
 }
 
+// EntGetLicenseState returns the current license state
+// ignore-nil-nil-function-check.
 func (c *Core) EntGetLicenseState() (*license.LicenseState, error) {
 	return nil, nil
 }
