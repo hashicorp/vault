@@ -1,0 +1,3 @@
+```release-note:improvement
+audit: Adds TRACE logging to log request/response under certain circumstances, and further improvements to the audit subsystem.
+```
