@@ -24,7 +24,13 @@ applications that need to interoperate.
 Vault replication addresses both of these needs in providing consistency,
 scalability, and highly-available disaster recovery.
 
-Note: Using replication requires a storage backend that supports transactional updates, such as [Integrated Storage](/vault/docs/concepts/integrated-storage) or Consul.
+<Note title="Storage backend requirement">
+
+Using replication requires a storage backend that supports transactional
+updates, such as [Integrated Storage](/vault/docs/concepts/integrated-storage)
+or Consul.
+
+</Note>
 
 ## Architecture
 
@@ -143,10 +149,13 @@ replication.
 $ vault secrets enable -local -path=us_west_data kv-v2
 ```
 
--> **Learn:** Refer to the [Performance Replication with Paths
-Filter](/vault/tutorials/enterprise/performance-replication) tutorial for
-step-by-step instructions.
+<Highlight title="Tutorials">
 
+Refer to the _manage replicated mounts_ section in the [Set up performance
+replication](/vault/tutorials/enterprise/performance-replication#manage-replicated-mounts)
+tutorial to learn how to specify the mounts to allow or deny data replication.
+
+</Highlight>
 
 ## Disaster recovery (DR) replication
 
@@ -190,7 +199,13 @@ fragments.
 | Auto         | Auto                    | Unchanged                              | Receives primary recovery      | Seal recovery config and recovery keys replaced with primary's              |
 | Auto         | Shamir                  | Receives primary recovery              | N/A                            | Seal config and keys replaced with primary's recovery seal config and keys  |
 
-Note: Clusters with Shamir seal config do not have separate recovery keys. Auto includes HSM, Cloud KMS, and Transit auto-unseal.
+<Note>
+
+Vault clusters configured with
+[auto-unseal](/vault/docs/concepts/seal#auto-unseal) have recovery keys instead
+of unseal keys.
+
+</Note>
 
 ### Vault versions
 
@@ -268,13 +283,12 @@ cluster port at a load balancer level.
 
 Refer to the following tutorials replication setup and best practices:
 
-- [Setting up Performance Replication](/vault/tutorials/enterprise/performance-replication)
+- [Set up Performance Replication](/vault/tutorials/enterprise/performance-replication)
 - [Disaster Recovery Replication Setup](/vault/tutorials/enterprise/disaster-recovery)
-- [Performance Replication with Paths Filters](/vault/tutorials/enterprise/performance-replication)
 - [Monitoring Vault Replication](/vault/tutorials/monitoring/monitor-replication)
 
 ## API
 
-The Vault replication component has a full HTTP API. Please see the
+The Vault replication component has a full HTTP API. Refer to the
 [Vault Replication API](/vault/api-docs/system/replication) for more
 details.
