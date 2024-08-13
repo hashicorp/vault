@@ -5,11 +5,11 @@
 
 <form {{on "submit" this.submit}} ...attributes>
 
-  <div class="flex column-gap-16 has-top-padding-s space-between">
-    <Hds::Form::Label @controlId="newKey" class="key-column">
+  <div class="flex column-gap-16 has-top-padding-s">
+    <Hds::Form::Label @controlId="newKey" class="one-fourth-width">
       Key
     </Hds::Form::Label>
-    <Hds::Form::Label @controlId="newValue" class="value-column">
+    <Hds::Form::Label @controlId="newValue" class="three-fourths-width">
       Value
     </Hds::Form::Label>
   </div>
@@ -21,7 +21,7 @@
         <Hds::Form::TextInput::Base
           @value={{key}}
           aria-label="Key {{idx}}"
-          class="key-column {{if (eq state 'deleted') 'line-through'}}"
+          class="one-fourth-width {{if (eq state 'deleted') 'line-through'}}"
           {{! Original subkeys are not editable, only their values can be updated }}
           disabled={{and (eq state "disabled") (this.isOriginalSubkey key)}}
           readonly={{and (not-eq state "disabled") (this.isOriginalSubkey key)}}
@@ -29,26 +29,25 @@
           data-test-kv-key={{idx}}
         />
 
-        <div class="flex column-gap-16 value-column">
-          <div class="value-input">
-            <Hds::Form::MaskedInput::Base
-              @value={{value}}
-              aria-label="Value {{idx}}"
-              disabled={{eq state "disabled"}}
-              readonly={{eq state "deleted"}}
-              {{on "blur" (fn KV.onBlur "value")}}
-              data-test-kv-value={{idx}}
-            />
-          </div>
+        <div class="flex column-gap-16 three-fourths-width">
+          <Hds::Form::MaskedInput::Base
+            @value={{value}}
+            aria-label="Value {{idx}}"
+            disabled={{eq state "disabled"}}
+            readonly={{eq state "deleted"}}
+            {{on "blur" KV.updateValue}}
+            data-test-kv-value={{idx}}
+          />
 
-          <Hds::ButtonSet class="value-buttons">
+          <div class="flex column-gap-16" {{style width="9rem"}}>
             {{#if (eq state "disabled")}}
               <Hds::Button
                 @text="Edit"
                 @icon="edit"
                 @color="secondary"
                 @isIconOnly={{true}}
-                {{on "click" (fn KV.onClick "enabled")}}
+                @isFullWidth={{true}}
+                {{on "click" (fn KV.updateState "enabled")}}
                 data-test-edit-button={{idx}}
               />
               <Hds::Button
@@ -56,18 +55,20 @@
                 @icon="trash"
                 @color="critical"
                 @isIconOnly={{true}}
-                {{on "click" (fn KV.onClick "deleted")}}
+                @isFullWidth={{true}}
+                {{on "click" (fn KV.updateState "deleted")}}
                 data-test-delete-button={{idx}}
               />
             {{else}}
               <Hds::Button
                 @text={{if (this.isOriginalSubkey key) "Cancel" "Remove"}}
                 @color="secondary"
+                @isFullWidth={{true}}
                 {{on "click" (fn this.undo KV)}}
                 data-test-undo-button={{idx}}
               />
             {{/if}}
-          </Hds::ButtonSet>
+          </div>
         </div>
       </div>
 
@@ -106,7 +107,7 @@
     <Hds::Form::TextInput::Base
       @type="text"
       @value={{this.newKey}}
-      class="key-column"
+      class="one-fourth-width"
       aria-label="New key"
       placeholder="key"
       name="newKey"
@@ -114,20 +115,18 @@
       data-test-kv-key="new"
     />
 
-    <div class="flex column-gap-16 value-column">
-      <div class="value-input">
-        <Hds::Form::MaskedInput::Base
-          @value={{this.newValue}}
-          aria-label="New value"
-          name="newValue"
-          {{on "blur" this.handleNewRow}}
-          data-test-kv-value="new"
-        />
-      </div>
+    <div class="flex column-gap-16 three-fourths-width">
+      <Hds::Form::MaskedInput::Base
+        @value={{this.newValue}}
+        aria-label="New value"
+        name="newValue"
+        {{on "blur" this.updateValue}}
+        data-test-kv-value="new"
+      />
 
-      <Hds::ButtonSet class="value-buttons">
-        <Hds::Button @text="Add" @color="secondary" {{on "click" this.addRow}} data-test-add-button />
-      </Hds::ButtonSet>
+      <div class="flex column-gap-16" {{style width="9rem"}}>
+        <Hds::Button @text="Add" @color="secondary" {{on "click" this.addRow}} @isFullWidth={{true}} data-test-add-button />
+      </div>
     </div>
   </div>
 
@@ -136,16 +135,26 @@
       <A.Description>{{this.isInvalidKey}}</A.Description>
     </Hds::Alert>
   {{/if}}
-  {{#if this.keyHasWarning}}
+  {{#if this.newKeyWarning}}
     <Hds::Alert @type="compact" @color="warning" @icon="alert-triangle-fill" data-test-alert-key-warning="new" as |A|>
-      <A.Description>{{this.keyHasWarning}}</A.Description>
+      <A.Description>{{this.newKeyWarning}}</A.Description>
     </Hds::Alert>
   {{/if}}
-  {{#if this.valueHasWarning}}
+  {{#if this.newValueWarning}}
     <Hds::Alert @type="compact" @color="warning" @icon="alert-triangle-fill" data-test-alert-value-warning="new" as |A|>
-      <A.Description>{{this.valueHasWarning}}</A.Description>
+      <A.Description>{{this.newValueWarning}}</A.Description>
     </Hds::Alert>
   {{/if}}
+
+  <div class="has-top-margin-m">
+    <Toggle @onChange={{fn (mut this.showSubkeys)}} @checked={{this.showSubkeys}}>
+      <Hds::Text::Body @tag="p" @weight="semibold">Reveal subkeys in JSON</Hds::Text::Body>
+
+      {{#if this.showSubkeys}}
+        <Hds::CodeBlock @value={{stringify @subkeys}} @hasLineNumbers={{false}} />
+      {{/if}}
+    </Toggle>
+  </div>
 
   <hr class="has-background-gray-200" />
 

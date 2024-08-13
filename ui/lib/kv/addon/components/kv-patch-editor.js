@@ -32,20 +32,22 @@ class Kv {
   }
 
   get valueHasWarning() {
+    if (this.newValue === null) return '';
     return isNonString(this.value) ? NON_STRING_WARNING : '';
   }
+
   reset() {
     this.value = undefined;
     this.state = 'disabled';
   }
 
   @action
-  onBlur(input, evt) {
-    this[input] = evt.target.value;
+  updateValue(event) {
+    this.value = event.target.value;
   }
 
   @action
-  onClick(state) {
+  updateState(state) {
     this.state = state;
 
     if (state === 'deleted') {
@@ -56,6 +58,7 @@ class Kv {
 
 export default class KvPatchEditor extends Component {
   @tracked patchData; // key value pairs in form
+  @tracked showSubkeys = false;
 
   // tracked variables for new (initially empty) row of inputs
   // once a user clicks "Add" a Kv class is instantiated for that row
@@ -64,20 +67,21 @@ export default class KvPatchEditor extends Component {
   @tracked newKey;
   @tracked newValue;
 
-  isOriginalSubkey = (key) => this.args.subkeyArray.includes(key);
+  isOriginalSubkey = (key) => Object.keys(this.args.subkeys).includes(key);
 
   constructor() {
     super(...arguments);
-    const kvData = this.args.subkeyArray.map((key) => this.generateData(key));
+    const kvData = Object.keys(this.args.subkeys).map((key) => this.generateData(key));
     this.patchData = A(kvData);
     this.resetNewRow();
   }
 
-  get keyHasWarning() {
+  get newKeyWarning() {
     return hasWhitespace(this.newKey) ? WHITESPACE_WARNING : '';
   }
 
-  get valueHasWarning() {
+  get newValueWarning() {
+    if (this.newValue === null) return '';
     return isNonString(this.newValue) ? NON_STRING_WARNING : '';
   }
 
@@ -107,7 +111,7 @@ export default class KvPatchEditor extends Component {
   }
 
   @action
-  handleNewRow(event) {
+  updateValue(event) {
     this.newValue = event.target.value;
   }
 
