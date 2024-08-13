@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"strings"
 	"testing"
 	"time"
 
@@ -519,6 +520,9 @@ func getJSONExport(t *testing.T, client *api.Client, monthsPreviousTo int, now t
 	clients := make(map[string]vault.ActivityLogExportRecord)
 
 	for {
+		if !decoder.More() {
+			break
+		}
 
 		var record vault.ActivityLogExportRecord
 		err := decoder.Decode(&record)
@@ -527,19 +531,27 @@ func getJSONExport(t *testing.T, client *api.Client, monthsPreviousTo int, now t
 		}
 
 		clients[record.ClientID] = record
-
-		if !decoder.More() {
-			break
-		}
 	}
 
 	return clients, nil
 }
 
-// getCSVExport is used to fetch activity export records using csv format.
-// The records will returned as a map keyed by client ID.
+// getCSVExport fetches activity export records using csv format. All flattened
+// map and slice fields will be unflattened so that the a proper ActivityLogExportRecord
+// can be formed. The records will returned as a map keyed by client ID.
 func getCSVExport(t *testing.T, client *api.Client, monthsPreviousTo int, now time.Time) (map[string]vault.ActivityLogExportRecord, error) {
 	t.Helper()
+
+	mapFields := map[string]struct{}{
+		"alias_custom_metadata": {},
+		"alias_metadata":        {},
+		"identity_metadata":     {},
+	}
+
+	sliceFields := map[string]struct{}{
+		"identity_group_ids": {},
+		"policies":           {},
+	}
 
 	resp, err := client.Logical().ReadRawWithData("sys/internal/counters/activity/export", map[string][]string{
 		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(monthsPreviousTo, now)).Format(time.RFC3339)},
@@ -560,13 +572,59 @@ func getCSVExport(t *testing.T, client *api.Client, monthsPreviousTo int, now ti
 		return nil, err
 	}
 
-	csvColumns := csvRecords[0]
+	if len(csvRecords) == 0 {
+		return clients, nil
+	}
 
-	for i := 1; i < len(csvRecords); i++ {
+	csvHeader := csvRecords[0]
+
+	// skip initial row as it is header
+	for rowIdx := 1; rowIdx < len(csvRecords); rowIdx++ {
 		recordMap := make(map[string]interface{})
 
-		for j, k := range csvColumns {
-			recordMap[k] = csvRecords[i][j]
+		for columnIdx, columnName := range csvHeader {
+			val := csvRecords[rowIdx][columnIdx]
+
+			// determine if column has been flattened
+			columnNameParts := strings.SplitN(columnName, ".", 2)
+
+			if len(columnNameParts) > 1 {
+				prefix := columnNameParts[0]
+
+				if _, ok := mapFields[prefix]; ok {
+					m, mOK := recordMap[prefix]
+
+					// ensure output contains non-nil map
+					if !mOK {
+						m = make(map[string]string)
+						recordMap[prefix] = m
+					}
+
+					// ignore empty CSV column value
+					if val != "" {
+						m.(map[string]string)[columnNameParts[1]] = val
+						recordMap[prefix] = m
+					}
+				} else if _, ok := sliceFields[prefix]; ok {
+					// ensure output contains non-nil slice
+					s, sOK := recordMap[prefix]
+					if !sOK {
+						s = make([]string, 0)
+						recordMap[prefix] = s
+					}
+
+					// ignore empty CSV column value
+					if val != "" {
+						s = append(s.([]string), val)
+						recordMap[prefix] = s
+					}
+				} else {
+					t.Fatalf("unexpected CSV field: %s", columnName)
+				}
+
+			} else {
+				recordMap[columnName] = val
+			}
 		}
 
 		var record vault.ActivityLogExportRecord

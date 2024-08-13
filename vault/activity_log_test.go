@@ -4896,3 +4896,131 @@ func TestActivityLog_reportPrecomputedQueryMetrics(t *testing.T) {
 		hasMetric(t, data, "identity.pki_acme.active.reporting_period", 3, nil)
 	})
 }
+
+// TestActivityLog_Export_CSV_Header verifies that the export API properly
+// generates a CSV column index and header. Various ActivityLogExportRecords
+// are used to mimic an export discovering new map and slice fields that are
+// meant to be flattened as new columns.
+func TestActivityLog_Export_CSV_Header(t *testing.T) {
+	encoder, err := newCSVEncoder(nil)
+	require.NoError(t, err)
+
+	expectedColumnIndex := make(map[string]int)
+
+	// set expected index as base columnIndex upon encoder initialization
+	for k, v := range encoder.columnIndex {
+		expectedColumnIndex[k] = v
+	}
+
+	err = encoder.accumulateHeaderFields(&ActivityLogExportRecord{
+		Policies: []string{
+			"foo",
+		},
+		IdentityMetadata: map[string]string{
+			"email_address": "jdoe@abc.com",
+		},
+	})
+	require.NoError(t, err)
+
+	expectedColumnIndex["policies.0"] = exportCSVFlatteningInitIndex
+	expectedColumnIndex["identity_metadata.email_address"] = exportCSVFlatteningInitIndex
+
+	require.Empty(t, deep.Equal(expectedColumnIndex, encoder.columnIndex))
+
+	err = encoder.accumulateHeaderFields(&ActivityLogExportRecord{
+		Policies: []string{
+			"foo",
+			"bar",
+			"baz",
+		},
+		AliasCustomMetadata: map[string]string{
+			"region": "west",
+			"group":  "san_francisco",
+		},
+	})
+	require.NoError(t, err)
+
+	expectedColumnIndex["policies.1"] = exportCSVFlatteningInitIndex
+	expectedColumnIndex["policies.2"] = exportCSVFlatteningInitIndex
+	expectedColumnIndex["alias_custom_metadata.group"] = exportCSVFlatteningInitIndex
+	expectedColumnIndex["alias_custom_metadata.region"] = exportCSVFlatteningInitIndex
+
+	require.Empty(t, deep.Equal(expectedColumnIndex, encoder.columnIndex))
+
+	err = encoder.accumulateHeaderFields(&ActivityLogExportRecord{
+		Policies: []string{
+			"foo",
+		},
+		IdentityGroupIDs: []string{
+			"97798e02-51e5-4ef3-906e-82c76d1a396e",
+		},
+		IdentityMetadata: map[string]string{
+			"first_name": "John",
+			"last_name":  "Doe",
+		},
+		AliasMetadata: map[string]string{
+			"contact_email": "foo@abc.com",
+		},
+	})
+	require.NoError(t, err)
+
+	expectedColumnIndex["identity_metadata.first_name"] = exportCSVFlatteningInitIndex
+	expectedColumnIndex["identity_metadata.last_name"] = exportCSVFlatteningInitIndex
+	expectedColumnIndex["alias_metadata.contact_email"] = exportCSVFlatteningInitIndex
+	expectedColumnIndex["identity_group_ids.0"] = exportCSVFlatteningInitIndex
+
+	require.Empty(t, deep.Equal(expectedColumnIndex, encoder.columnIndex))
+
+	// no change because all the fields have seen before
+	err = encoder.accumulateHeaderFields(&ActivityLogExportRecord{
+		AliasCustomMetadata: map[string]string{
+			"group":  "does-not-matter",
+			"region": "does-not-matter",
+		},
+		AliasMetadata: map[string]string{
+			"contact_email": "does-not-matter",
+		},
+		IdentityGroupIDs: []string{
+			"does-not-matter",
+		},
+		IdentityMetadata: map[string]string{
+			"first_name": "does-not-matter",
+			"last_name":  "does-not-matter",
+		},
+		Policies: []string{
+			"does-not-matter",
+			"does-not-matter",
+			"does-not-matter",
+		},
+	})
+	require.NoError(t, err)
+	require.Empty(t, deep.Equal(expectedColumnIndex, encoder.columnIndex))
+
+	// no change because there are no slice or map fields
+	err = encoder.accumulateHeaderFields(&ActivityLogExportRecord{})
+	require.NoError(t, err)
+	require.Empty(t, deep.Equal(expectedColumnIndex, encoder.columnIndex))
+
+	expectedHeader := append(baseActivityExportCSVHeader(),
+		"alias_custom_metadata.group",
+		"alias_custom_metadata.region",
+		"alias_metadata.contact_email",
+		"identity_group_ids.0",
+		"identity_metadata.email_address",
+		"identity_metadata.first_name",
+		"identity_metadata.last_name",
+		"policies.0",
+		"policies.1",
+		"policies.2")
+
+	header := encoder.generateHeader()
+	require.Empty(t, deep.Equal(expectedHeader, header))
+
+	expectedColumnIndex = make(map[string]int)
+
+	for idx, col := range expectedHeader {
+		expectedColumnIndex[col] = idx
+	}
+
+	require.Empty(t, deep.Equal(expectedColumnIndex, encoder.columnIndex))
+}
