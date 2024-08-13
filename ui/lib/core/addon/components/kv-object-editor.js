@@ -10,6 +10,7 @@ import { assert } from '@ember/debug';
 import { action } from '@ember/object';
 import { guidFor } from '@ember/object/internals';
 import KVObject from 'vault/lib/kv-object';
+import { hasWhitespace, isNonString } from 'vault/utils/validators';
 
 /**
  * @module KvObjectEditor
@@ -85,15 +86,11 @@ export default class KvObjectEditor extends Component {
   }
   showWhitespaceWarning = (name) => {
     if (this.args.allowWhiteSpace) return false;
-    return new RegExp('\\s', 'g').test(name);
+    return hasWhitespace(name);
   };
+
   showNonStringWarning = (value) => {
     if (!this.args.warnNonStringValues) return false;
-    try {
-      JSON.parse(value);
-      return true;
-    } catch (e) {
-      return false;
-    }
+    return isNonString(value);
   };
 }
