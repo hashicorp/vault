@@ -82,6 +82,12 @@ export default class ClientsCountsPageComponent extends Component<Args> {
     return null;
   }
 
+  // passed into page-header for the export modal alert
+  get upgradesDuringActivity() {
+    const { versionHistory, activity } = this.args;
+    return filterVersionHistory(versionHistory, activity.startTime, activity.endTime);
+  }
+
   get versionText() {
     return this.version.isEnterprise
       ? {

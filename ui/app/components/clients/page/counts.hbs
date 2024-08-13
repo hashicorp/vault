@@ -3,21 +3,14 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<PageHeader as |p|>
-  <p.levelLeft>
-    <h1 class="title is-3">
-      Vault Usage Metrics
-    </h1>
-  </p.levelLeft>
-</PageHeader>
+<Clients::PageHeader
+  @startTimestamp={{@startTimestamp}}
+  @endTimestamp={{@endTimestamp}}
+  @namespace={{@namespace}}
+  @upgradesDuringActivity={{this.upgradesDuringActivity}}
+/>
 
 <div class="box is-sideless is-fullwidth is-marginless is-bottomless">
-  <p class="has-bottom-margin-xl">
-    This dashboard surfaces Vault client usage over time.
-    <Hds::Link::Inline @href={{doc-link "/vault/docs/concepts/client-count"}}>Documentation is available here</Hds::Link::Inline>.
-    Date queries are sent in UTC.
-  </p>
-
   <Clients::DateRange
     @startTime={{@startTimestamp}}
     @endTime={{@endTimestamp}}
