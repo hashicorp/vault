@@ -85,6 +85,10 @@ func ProxyHandler(ctx context.Context, logger hclog.Logger, proxier Proxier, inm
 				logical.RespondError(w, http.StatusInternalServerError, fmt.Errorf("failed to get the response: %w", err))
 			}
 			return
+		} else if resp == nil {
+			metrics.IncrCounter([]string{"agent", "proxy", "error"}, 1)
+			logical.RespondError(w, http.StatusInternalServerError, fmt.Errorf("failed to get the response: %w", err))
+			return
 		}
 
 		err = sanitizeAutoAuthTokenResponse(ctx, logger, inmemSink, req, resp)
