@@ -82,7 +82,7 @@ module('Acceptance | aws | configuration', function (hooks) {
     await enablePage.enable('aws', path);
     await click(SES.configTab);
     await click(SES.configure);
-    await fillInAwsConfig(true);
+    await fillInAwsConfig();
     await click(SES.aws.saveRootConfig);
     assert.true(
       this.flashSuccessSpy.calledWith('The backend configuration saved successfully!'),
@@ -104,7 +104,7 @@ module('Acceptance | aws | configuration', function (hooks) {
     await click(SES.configTab);
     await click(SES.configure);
     await click(GENERAL.hdsTab('lease'));
-    await fillInAwsConfig(false, false, true);
+    await fillInAwsConfig(false, false, true); // only fills in lease config with defaults
     await click(SES.aws.saveLeaseConfig);
     assert.true(
       this.flashSuccessSpy.calledWith('The backend configuration saved successfully!'),
@@ -168,7 +168,7 @@ module('Acceptance | aws | configuration', function (hooks) {
     await fillIn(GENERAL.inputByAttr('region'), 'ap-southeast-2');
     await click(SES.aws.saveRootConfig);
     // add lease config details
-    await fillInAwsConfig(false, false, true);
+    await fillInAwsConfig(false, false, true); // only fills in lease config with defaults
     await click(SES.aws.saveLeaseConfig);
     await click(SES.viewBackend);
     await click(SES.configTab);
