@@ -17,7 +17,10 @@ module('Integration | Component | kv | kv-patch-editor', function (hooks) {
   setupEngine(hooks, 'kv');
 
   hooks.beforeEach(function () {
-    this.subkeyArray = ['foo', 'baz'];
+    this.subkeys = {
+      foo: null,
+      baz: null,
+    };
     this.onSubmit = sinon.spy();
     this.onCancel = sinon.spy();
     this.isSaving = false;
@@ -26,7 +29,7 @@ module('Integration | Component | kv | kv-patch-editor', function (hooks) {
       return render(
         hbs`
     <KvPatchEditor
-      @subkeyArray={{this.subkeyArray}}
+      @subkeys={{this.subkeys}}
       @onSubmit={{this.onSubmit}}
       @onCancel={{this.onCancel}}
       @isSaving={{this.isSaving}}
@@ -66,6 +69,36 @@ module('Integration | Component | kv | kv-patch-editor', function (hooks) {
     assert.true(this.onSubmit.calledOnce, 'clicking "Save" calls @onSubmit');
     await click(FORM.cancelBtn);
     assert.true(this.onCancel.calledOnce, 'clicking "Cancel" calls @onCancel');
+  });
+
+  test('it renders with no subkeys', async function (assert) {
+    this.subkeys = {};
+    await this.renderComponent();
+
+    this.assertEmptyRow(assert);
+  });
+
+  test('it reveals subkeys', async function (assert) {
+    this.subkeys = {
+      foo: null,
+      bar: {
+        baz: null,
+        quux: {
+          hello: null,
+        },
+      },
+    };
+    await this.renderComponent();
+
+    assert.dom(GENERAL.toggleInput('Reveal subkeys')).isNotChecked('toggle is initially unchecked');
+    assert.dom('[data-test-subkeys]').doesNotExist();
+    await click(GENERAL.toggleInput('Reveal subkeys'));
+    assert.dom(GENERAL.toggleInput('Reveal subkeys')).isChecked();
+    assert.dom('[data-test-subkeys]').hasText(JSON.stringify(this.subkeys, null, 2));
+
+    await click(GENERAL.toggleInput('Reveal subkeys'));
+    assert.dom(GENERAL.toggleInput('Reveal subkeys')).isNotChecked();
+    assert.dom('[data-test-subkeys]').doesNotExist('unchecking re-hides subkeys');
   });
 
   test('it enables and disables inputs', async function (assert) {
@@ -135,6 +168,10 @@ module('Integration | Component | kv | kv-patch-editor', function (hooks) {
       await click(FORM.patchDelete(1));
       assert.dom(FORM.patchAlert('delete', 1)).hasText('This key value pair is marked for deletion.');
       assert.dom(`${FORM.patchAlert('delete', 1)} ${GENERAL.icon('trash')}`).exists();
+      // value is set to null under the hood, confirm the non-string warning doesn't display
+      assert
+        .dom(FORM.patchAlert('value-warning', 1))
+        .doesNotExist('non-string warning does not render for null values');
 
       // add new key and click add
       await fillIn(FORM.keyInput('new'), 'aKey');

@@ -146,14 +146,15 @@
     </Hds::Alert>
   {{/if}}
 
-  <div class="has-top-margin-m">
-    <Toggle @onChange={{fn (mut this.showSubkeys)}} @checked={{this.showSubkeys}}>
-      <Hds::Text::Body @tag="p" @weight="semibold">Reveal subkeys in JSON</Hds::Text::Body>
+  <hr class="has-background-gray-200" />
 
-      {{#if this.showSubkeys}}
-        <Hds::CodeBlock @value={{stringify @subkeys}} @hasLineNumbers={{false}} />
-      {{/if}}
+  <div class="has-top-margin-m">
+    <Toggle @onChange={{fn (mut this.showSubkeys)}} @checked={{this.showSubkeys}} @name="Reveal subkeys">
+      <Hds::Text::Body @tag="p" @weight="semibold">Reveal subkeys in JSON</Hds::Text::Body>
     </Toggle>
+    {{#if this.showSubkeys}}
+      <Hds::CodeBlock @value={{stringify @subkeys}} @hasLineNumbers={{false}} data-test-subkeys />
+    {{/if}}
   </div>
 
   <hr class="has-background-gray-200" />

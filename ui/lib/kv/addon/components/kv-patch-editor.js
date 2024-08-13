@@ -32,7 +32,7 @@ class Kv {
   }
 
   get valueHasWarning() {
-    if (this.newValue === null) return '';
+    if (this.value === null) return '';
     return isNonString(this.value) ? NON_STRING_WARNING : '';
   }
 
