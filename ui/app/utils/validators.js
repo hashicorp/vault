@@ -5,6 +5,12 @@
 
 import { isPresent } from '@ember/utils';
 
+/*
+* Model Validators
+these return false when the condition fails because false means "invalid"
+for example containsWhiteSpace returns "false" when a value HAS whitespace 
+because that is an invalid value
+*/
 export const presence = (value) => isPresent(value);
 
 export const length = (value, { nullable = false, min, max } = {}) => {
@@ -25,12 +31,8 @@ export const number = (value, { nullable = false } = {}) => {
   return !isNaN(value);
 };
 
-/*
-the following validations return false (invalid) if the condition is met
-*/
 export const containsWhiteSpace = (value) => {
-  const validation = new RegExp('\\s', 'g'); // search for whitespace
-  return !validation.test(value);
+  return !hasWhitespace(value);
 };
 
 export const endsInSlash = (value) => {
@@ -38,4 +40,26 @@ export const endsInSlash = (value) => {
   return !validation.test(value);
 };
 
-export default { presence, length, number, containsWhiteSpace, endsInSlash };
+/*
+* General Validators
+these utils return true or false relative to the function name
+*/
+
+export const hasWhitespace = (value) => {
+  const validation = new RegExp('\\s', 'g'); // search for whitespace
+  return validation.test(value);
+};
+
+// HTML form inputs transform values to a string type
+// this returns if the value can be evaluated as non-string, i.e. "null"
+export const isNonString = (value) => {
+  try {
+    // if parsable the value could be an object, array, number, null, true or false
+    JSON.parse(value);
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
+
+export default { presence, length, number, containsWhiteSpace, endsInSlash, isNonString, hasWhitespace };
