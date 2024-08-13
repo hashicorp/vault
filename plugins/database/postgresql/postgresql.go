@@ -84,7 +84,7 @@ type PostgreSQL struct {
 	*connutil.SQLConnectionProducer
 
 	TLSCertificateData []byte `json:"tls_certificate" structs:"-" mapstructure:"tls_certificate"`
-	TLSPrivateKey      []byte `json:"tls_private_key" structs:"-" mapstructure:"tls_private_key"`
+	TLSPrivateKey      []byte `json:"private_key" structs:"-" mapstructure:"private_key"`
 	TLSCAData          []byte `json:"tls_ca" structs:"-" mapstructure:"tls_ca"`
 
 	usernameProducer       template.StringTemplate
@@ -97,9 +97,9 @@ func (p *PostgreSQL) Initialize(ctx context.Context, req dbplugin.InitializeRequ
 		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to retrieve tls_certificate: %w", err)
 	}
 
-	sslkey, err := strutil.GetString(req.Config, "tls_private_key")
+	sslkey, err := strutil.GetString(req.Config, "private_key")
 	if err != nil {
-		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to retrieve tls_private_key: %w", err)
+		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to retrieve private_key: %w", err)
 	}
 
 	sslrootcert, err := strutil.GetString(req.Config, "tls_ca")
