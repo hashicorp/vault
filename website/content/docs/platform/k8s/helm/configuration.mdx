@@ -79,7 +79,7 @@ and consider if they're appropriate for your deployment.
 
     - `repository` (`string: "hashicorp/vault-k8s"`) - The name of the Docker image for Vault Agent Injector.
 
-    - `tag` (`string: "1.4.1"`) - The tag of the Docker image for the Vault Agent Injector. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
+    - `tag` (`string: "1.4.2"`) - The tag of the Docker image for the Vault Agent Injector. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
 
     - `pullPolicy` (`string: "IfNotPresent"`) - The pull policy for container images. The default pull policy is `IfNotPresent` which causes the Kubelet to skip pulling an image if it already exists.
 
@@ -87,7 +87,7 @@ and consider if they're appropriate for your deployment.
 
     - `repository` (`string: "hashicorp/vault"`) - The name of the Docker image for the Vault Agent sidecar. This should be set to the official Vault Docker image.
 
-    - `tag` (`string: "1.16.1"`) - The tag of the Vault Docker image to use for the Vault Agent Sidecar. **Vault 1.3.1+ is required by the admission controller**.
+    - `tag` (`string: "1.17.2"`) - The tag of the Vault Docker image to use for the Vault Agent Sidecar. **Vault 1.3.1+ is required by the admission controller**.
 
   - `agentDefaults` - Values that configure the injected Vault Agent containers default values.
 
@@ -351,7 +351,7 @@ and consider if they're appropriate for your deployment.
 
     - `repository` (`string: "hashicorp/vault"`) - The name of the Docker image for the containers running Vault.
 
-    - `tag` (`string: "1.16.1"`) - The tag of the Docker image for the containers running Vault. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
+    - `tag` (`string: "1.17.2"`) - The tag of the Docker image for the containers running Vault. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
 
     - `pullPolicy` (`string: "IfNotPresent"`) - The pull policy for container images. The default pull policy is `IfNotPresent` which causes the Kubelet to skip pulling an image if it already exists.
 
@@ -724,7 +724,7 @@ and consider if they're appropriate for your deployment.
     "sample/annotation2": "bar"
   ```
 
-  - `configAnnotation` (`boolean: false`) - Add an annotation to the server configmap and the statefulset pods, `vaultproject.io/config-checksum`, that is a hash of the Vault configuration. This can be used together with an OnDelete deployment strategy to help identify which pods still need to be deleted during a deployment to pick up any configuration changes.
+  - `includeConfigAnnotation` (`boolean: false`) - Add an annotation to the server configmap and the statefulset pods, `vaultproject.io/config-checksum`, that is a hash of the Vault configuration. This can be used together with an OnDelete deployment strategy to help identify which pods still need to be deleted during a deployment to pick up any configuration changes.
 
   - `service` - Values that configure the Kubernetes service created for Vault. These options are also used for the `active` and `standby` services when [`ha`](#ha) is enabled.
 
@@ -1090,7 +1090,7 @@ and consider if they're appropriate for your deployment.
 
     - `repository` (`string: "hashicorp/vault-csi-provider"`) - The name of the Docker image for the Vault CSI Provider.
 
-    - `tag` (`string: "1.4.2"`) - The tag of the Docker image for the Vault CSI Provider.. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your CSI provider.
+    - `tag` (`string: "1.4.3"`) - The tag of the Docker image for the Vault CSI Provider.. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your CSI provider.
 
     - `pullPolicy` (`string: "IfNotPresent"`) - The pull policy for container images. The default pull policy is `IfNotPresent` which causes the Kubelet to skip pulling an image if it already exists locally.
 
@@ -1239,7 +1239,7 @@ and consider if they're appropriate for your deployment.
 
       - `repository` (`string: "hashicorp/vault"`) - The name of the Docker image for the Vault Agent sidecar. This should be set to the official Vault Docker image.
 
-      - `tag` (`string: "1.16.1"`) - The tag of the Vault Docker image to use for the Vault Agent Sidecar.
+      - `tag` (`string: "1.17.2"`) - The tag of the Vault Docker image to use for the Vault Agent Sidecar.
 
     - `logFormat` (`string: "standard"`) -
     - `logLevel` (`string: "info"`) -
@@ -1258,7 +1258,9 @@ and consider if they're appropriate for your deployment.
   the `telemetry {}` stanza in the Vault configuration. See the [telemetry](/vault/docs/configuration/telemetry)
   [docs](/vault/docs/internals/telemetry) for more on the Vault configuration.
 
-  Currently, this chart does not support authenticating to Vault's metrics endpoint, so the following `telemetry {}` block must be included in the `listener "tcp" {}` stanza of the Vault configuration:
+  If authorization is not set for authenticating to Vault's metrics endpoint,
+  the following Vault server `telemetry{}` config must be included in the
+  `listener "tcp"{}` stanza of the Vault configuration:
 
   ```yaml
   listener "tcp" {
@@ -1298,6 +1300,31 @@ and consider if they're appropriate for your deployment.
     - `interval` (`string: "30s"`) - Interval at which Prometheus scrapes metrics.
 
     - `scrapeTimeout` (`string: "10s"`) - Timeout for Prometheus scrapes.
+
+    - `tlsConfig` (`dictionary: {}`) - tlsConfig used for scraping the Vault metrics API. See the
+      prometheus [API
+      reference](https://prometheus-operator.dev/docs/api-reference/api/#monitoring.coreos.com/v1.TLSConfig)
+      for more details.
+
+      ```yaml
+      tlsConfig:
+        ca:
+          secret:
+            name: vault-metrics-client
+            key: ca.crt
+      ```
+
+    - `authorization` (`dictionary: {}`) - Authorization used for scraping the Vault metrics API.
+      See the prometheus [API
+      reference](https://prometheus-operator.dev/docs/api-reference/api/#monitoring.coreos.com/v1.SafeAuthorization)
+      for more details.
+
+      ```yaml
+      authorization:
+        credentials:
+          name: vault-metrics-client
+          key: token
+      ```
 
   - `prometheusRules` - Values that configure Prometheus rules.
 

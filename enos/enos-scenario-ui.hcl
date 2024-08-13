@@ -1,5 +1,5 @@
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: BUSL-1.1
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
 
 scenario "ui" {
   description = <<-EOF
@@ -37,6 +37,7 @@ scenario "ui" {
     artifact_path  = abspath(var.vault_artifact_path)
     distro         = "ubuntu"
     consul_version = "1.17.0"
+    ip_version     = 4
     seal           = "awskms"
     tags = merge({
       "Project Name" : var.project_name
@@ -75,6 +76,7 @@ scenario "ui" {
 
     variables {
       common_tags = local.tags
+      ip_version  = local.ip_version
     }
   }
 
@@ -120,7 +122,7 @@ scenario "ui" {
     }
 
     variables {
-      ami_id          = step.ec2_info.ami_ids[local.arch][local.distro][var.distro_version_ubuntu]
+      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"][global.distro_version["ubuntu"]]
       cluster_tag_key = local.vault_tag_key
       common_tags     = local.tags
       seal_key_names  = step.create_seal_key.resource_names
@@ -138,7 +140,7 @@ scenario "ui" {
     }
 
     variables {
-      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"]["22.04"]
+      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"][global.distro_version["ubuntu"]]
       cluster_tag_key = local.backend_tag_key
       common_tags     = local.tags
       seal_key_names  = step.create_seal_key.resource_names
@@ -177,12 +179,12 @@ scenario "ui" {
     variables {
       cluster_name    = step.create_vault_cluster_backend_targets.cluster_name
       cluster_tag_key = local.backend_tag_key
+      hosts           = step.create_vault_cluster_backend_targets.hosts
       license         = (matrix.backend == "consul" && matrix.consul_edition == "ent") ? step.read_backend_license.license : null
       release = {
         edition = matrix.consul_edition
         version = local.consul_version
       }
-      target_hosts = step.create_vault_cluster_backend_targets.hosts
     }
   }
 
@@ -214,6 +216,8 @@ scenario "ui" {
       quality.vault_config_log_level,
       quality.vault_init,
       quality.vault_license_required_ent,
+      quality.vault_listener_ipv4,
+      quality.vault_listener_ipv6,
       quality.vault_service_start,
       quality.vault_storage_backend_consul,
       quality.vault_storage_backend_raft,
@@ -236,20 +240,22 @@ scenario "ui" {
       backend_cluster_name    = step.create_vault_cluster_backend_targets.cluster_name
       backend_cluster_tag_key = local.backend_tag_key
       cluster_name            = step.create_vault_cluster_targets.cluster_name
+      config_mode             = "file"
       consul_license          = (matrix.backend == "consul" && matrix.consul_edition == "ent") ? step.read_backend_license.license : null
       consul_release = matrix.backend == "consul" ? {
         edition = matrix.consul_edition
         version = local.consul_version
       } : null
       enable_audit_devices = var.vault_enable_audit_devices
+      hosts                = step.create_vault_cluster_targets.hosts
       install_dir          = local.vault_install_dir
+      ip_version           = local.ip_version
       license              = matrix.edition != "ce" ? step.read_vault_license.license : null
       local_artifact_path  = local.artifact_path
-      packages             = global.distro_packages["ubuntu"]
-      seal_name            = step.create_seal_key.resource_name
+      packages             = concat(global.packages, global.distro_packages["ubuntu"][global.distro_version["ubuntu"]])
+      seal_attributes      = step.create_seal_key.attributes
       seal_type            = local.seal
       storage_backend      = matrix.backend
-      target_hosts         = step.create_vault_cluster_targets.hosts
     }
   }
 
@@ -269,8 +275,10 @@ scenario "ui" {
     ]
 
     variables {
-      timeout           = 120 # seconds
-      vault_hosts       = step.create_vault_cluster_targets.hosts
+      timeout           = 120 // seconds
+      ip_version        = local.ip_version
+      hosts             = step.create_vault_cluster_targets.hosts
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = local.vault_install_dir
       vault_root_token  = step.create_vault_cluster.root_token
     }
@@ -307,7 +315,7 @@ scenario "ui" {
 
   output "hosts" {
     description = "The Vault cluster target hosts"
-    value       = step.create_vault_cluster.target_hosts
+    value       = step.create_vault_cluster.hosts
   }
 
   output "private_ips" {
