@@ -108,11 +108,17 @@ export const FORM = {
   // <KvObjectEditor>
   kvLabel: '[data-test-kv-label]',
   kvRow: '[data-test-kv-row]',
-  keyInput: (idx = 0) => `[data-test-kv-key="${idx}"]`,
-  valueInput: (idx = 0) => `[data-test-kv-value="${idx}"]`,
-  maskedValueInput: (idx = 0) => `[data-test-kv-value="${idx}"] [data-test-textarea]`,
-  addRow: (idx = 0) => `[data-test-kv-add-row="${idx}"]`,
-  deleteRow: (idx = 0) => `[data-test-kv-delete-row="${idx}"]`,
+  keyInput: (idx) => (idx || idx === 0 ? `[data-test-kv-key="${idx}"]` : '[data-test-kv-key]'),
+  valueInput: (idx) => `[data-test-kv-value="${idx}"]`,
+  maskedValueInput: (idx) => `[data-test-kv-value="${idx}"] [data-test-textarea]`,
+  addRow: (idx) => `[data-test-kv-add-row="${idx}"]`,
+  deleteRow: (idx) => `[data-test-kv-delete-row="${idx}"]`,
+  // <KvPatchEditor>
+  patchEdit: (idx) => `[data-test-edit-button="${idx}"]`,
+  patchDelete: (idx) => `[data-test-delete-button="${idx}"]`,
+  patchUndo: (idx) => `[data-test-undo-button="${idx}"]`,
+  patchAdd: '[data-test-add-button]',
+  patchAlert: (type, idx) => `[data-test-alert-${type}="${idx}"]`,
   // Alerts & validation
   inlineAlert: '[data-test-inline-alert]',
   validation: (attr) => `[data-test-field="${attr}"] [data-test-inline-alert]`,
