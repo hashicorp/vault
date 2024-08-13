@@ -165,7 +165,7 @@ module('Acceptance | aws | configuration', function (hooks) {
     await click(SES.configure);
     await fillIn(GENERAL.inputByAttr('accessKey'), 'hello');
     await click(GENERAL.toggleGroup('Root config options'));
-    await fillIn(GENERAL.inputByAttr('region'), 'ap-southeast-2');
+    await fillIn(GENERAL.selectByAttr('region'), 'ap-southeast-2');
     await click(SES.aws.saveRootConfig);
     // add lease config details
     await fillInAwsConfig(false, false, true); // only fills in lease config with defaults

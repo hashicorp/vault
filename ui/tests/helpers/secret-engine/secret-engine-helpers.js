@@ -132,7 +132,7 @@ export const fillInAwsConfig = async (withAccess = true, withAccessOptions = fal
   }
   if (withAccessOptions) {
     await click(GENERAL.toggleGroup('Root config options'));
-    await fillIn(GENERAL.inputByAttr('region'), 'ca-central-1');
+    await fillIn(GENERAL.selectByAttr('region'), 'ca-central-1');
     await fillIn(GENERAL.inputByAttr('iamEndpoint'), 'iam-endpoint');
     await fillIn(GENERAL.inputByAttr('stsEndpoint'), 'sts-endpoint');
     await fillIn(GENERAL.inputByAttr('maxRetries'), '3');
