@@ -16,7 +16,7 @@
         "saveRootCreds"
         (hash access_key=@accessKey iam_endpoint=@iamEndpoint sts_endpoint=@stsEndpoint secret_key=@secretKey region=@region)
       }}
-      data-test-aws-root-creds-form="true"
+      data-test-root-form
       aria-label="save root creds form"
     >
       <div class="box is-fullwidth is-shadowless is-marginless">
@@ -61,7 +61,11 @@
         </div>
       </div>
 
-      <ToggleButton @isOpen={{this.showOptions}} @onClick={{fn (mut this.showOptions)}} data-test-popup-menu-trigger />
+      <ToggleButton
+        @isOpen={{this.showOptions}}
+        @onClick={{fn (mut this.showOptions)}}
+        data-test-toggle-group="Root config options"
+      />
       {{#if this.showOptions}}
         <div class="box is-marginless">
           <div class="field">
@@ -104,7 +108,7 @@
       {{/if}}
 
       <div class="box is-bottomless is-fullwidth">
-        <Hds::Button @text="Save" data-test-save="root" type="submit" />
+        <Hds::Button @text="Save" data-test-save-root-config type="submit" />
       </div>
     </form>
   </T.Panel>
@@ -112,7 +116,7 @@
     <form
       onsubmit={{action "saveLease" (hash lease=@model.lease lease_max=@model.leaseMax)}}
       aria-label="save lease form"
-      data-test-aws-leases-form="true"
+      data-test-lease-form
     >
       <div class="box is-fullwidth is-shadowless is-marginless">
         <NamespaceReminder @mode="saved" @noun="configuration" />
@@ -134,7 +138,7 @@
         @onChange={{fn this.handleTtlChange "leaseMax"}}
       />
       <div class="box is-bottomless is-fullwidth">
-        <Hds::Button @text="Save" data-test-save="lease" type="submit" />
+        <Hds::Button @text="Save" data-test-save-lease-config type="submit" />
       </div>
     </form>
   </T.Panel>
