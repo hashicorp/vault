@@ -30,6 +30,18 @@ variable "cluster_name" {
   default     = null
 }
 
+variable "cluster_port" {
+  type        = number
+  description = "The cluster port for Vault to listen on"
+  default     = 8201
+}
+
+variable "cluster_tag_key" {
+  type        = string
+  description = "The Vault cluster tag key"
+  default     = "retry_join"
+}
+
 variable "config_dir" {
   type        = string
   description = "The directory to use for Vault configuration"
@@ -112,10 +124,25 @@ variable "enable_audit_devices" {
   default     = true
 }
 
+variable "external_storage_port" {
+  type        = number
+  description = "The port to connect to when using external storage"
+  default     = 8500
+}
+
 variable "force_unseal" {
   type        = bool
   description = "Always unseal the Vault cluster even if we're not initializing it"
   default     = false
+}
+
+variable "hosts" {
+  description = "The target machines host addresses to use for the Vault cluster"
+  type = map(object({
+    ipv6       = string
+    private_ip = string
+    public_ip  = string
+  }))
 }
 
 variable "initialize_cluster" {
@@ -130,11 +157,27 @@ variable "install_dir" {
   default     = "/opt/vault/bin"
 }
 
+variable "ip_version" {
+  type        = number
+  description = "The IP version to use for the Vault TCP listeners"
+
+  validation {
+    condition     = contains([4, 6], var.ip_version)
+    error_message = "The ip_version must be either 4 or 6"
+  }
+}
+
 variable "license" {
   type        = string
   sensitive   = true
   description = "The value of the Vault license"
   default     = null
+}
+
+variable "listener_port" {
+  type        = number
+  description = "The port for Vault to listen on"
+  default     = 8200
 }
 
 variable "local_artifact_path" {
@@ -177,7 +220,7 @@ variable "release" {
 
 variable "root_token" {
   type        = string
-  description = "The Vault root token that we can use to intialize and configure the cluster"
+  description = "The Vault root token that we can use to initialize and configure the cluster"
   default     = null
 }
 
@@ -245,12 +288,4 @@ variable "storage_node_prefix" {
   type        = string
   description = "A prefix to use for each node in the Vault storage configuration"
   default     = "node"
-}
-
-variable "target_hosts" {
-  description = "The target machines host addresses to use for the Vault cluster"
-  type = map(object({
-    private_ip = string
-    public_ip  = string
-  }))
 }

@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: simplify the date range editing experience in the client counts dashboard.
+```

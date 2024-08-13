@@ -18,6 +18,10 @@ passwords from an external source.
 The method lowercases all submitted usernames, e.g. `Mary` and `mary` are the
 same entry.
 
+This documentation assumes the Username & Password method is mounted at the default `/auth/userpass`
+path in Vault. Since it is possible to enable auth methods at any location,
+please update your CLI calls accordingly with the `-path` flag.
+
 ## Authentication
 
 ### Via the CLI

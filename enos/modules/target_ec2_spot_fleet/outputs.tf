@@ -10,5 +10,6 @@ output "hosts" {
   value = { for idx in range(var.instance_count) : idx => {
     public_ip  = data.aws_instance.targets[idx].public_ip
     private_ip = data.aws_instance.targets[idx].private_ip
+    ipv6       = try(data.aws_instance.targets[idx].ipv6_addresses[0], null)
   } }
 }

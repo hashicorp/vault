@@ -6,10 +6,9 @@
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
-import { fromUnixTime, getUnixTime, isSameMonth, isAfter } from 'date-fns';
+import { isSameMonth, isAfter } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
-import { filterVersionHistory, formatDateObject } from 'core/utils/client-count-utils';
-import timestamp from 'core/utils/timestamp';
+import { filterVersionHistory } from 'core/utils/client-count-utils';
 
 import type AdapterError from '@ember-data/adapter';
 import type FlagsService from 'vault/services/flags';
@@ -22,11 +21,11 @@ interface Args {
   activity: ClientsActivityModel;
   activityError?: AdapterError;
   config: ClientsConfigModel;
-  endTimestamp: number;
+  endTimestamp: string; // ISO format
   mountPath: string;
   namespace: string;
   onFilterChange: CallableFunction;
-  startTimestamp: number;
+  startTimestamp: string; // ISO format
   versionHistory: ClientsVersionHistoryModel[];
 }
 
@@ -35,29 +34,21 @@ export default class ClientsCountsPageComponent extends Component<Args> {
   @service declare readonly version: VersionService;
   @service declare readonly store: StoreService;
 
-  get startTimestampISO() {
-    return this.args.startTimestamp ? fromUnixTime(this.args.startTimestamp).toISOString() : null;
-  }
-
-  get endTimestampISO() {
-    return this.args.endTimestamp ? fromUnixTime(this.args.endTimestamp).toISOString() : null;
-  }
-
   get formattedStartDate() {
-    return this.startTimestampISO ? parseAPITimestamp(this.startTimestampISO, 'MMMM yyyy') : null;
+    return this.args.startTimestamp ? parseAPITimestamp(this.args.startTimestamp, 'MMMM yyyy') : null;
   }
 
   // returns text for empty state message if noActivityData
   get dateRangeMessage() {
-    if (this.startTimestampISO && this.endTimestampISO) {
+    if (this.args.startTimestamp && this.args.endTimestamp) {
       const endMonth = isSameMonth(
-        parseAPITimestamp(this.startTimestampISO) as Date,
-        parseAPITimestamp(this.endTimestampISO) as Date
+        parseAPITimestamp(this.args.startTimestamp) as Date,
+        parseAPITimestamp(this.args.endTimestamp) as Date
       )
         ? ''
-        : `to ${parseAPITimestamp(this.endTimestampISO, 'MMMM yyyy')}`;
+        : `to ${parseAPITimestamp(this.args.endTimestamp, 'MMMM yyyy')}`;
       // completes the message 'No data received from { dateRangeMessage }'
-      return `from ${parseAPITimestamp(this.startTimestampISO, 'MMMM yyyy')} ${endMonth}`;
+      return `from ${parseAPITimestamp(this.args.startTimestamp, 'MMMM yyyy')} ${endMonth}`;
     }
     return null;
   }
@@ -94,17 +85,11 @@ export default class ClientsCountsPageComponent extends Component<Args> {
   get versionText() {
     return this.version.isEnterprise
       ? {
-          label: 'Billing start month',
-          description:
-            'This date comes from your license, and defines when client counting starts. Without this starting point, the data shown is not reliable.',
           title: 'No billing start date found',
           message:
             'In order to get the most from this data, please enter your billing period start month. This will ensure that the resulting data is accurate.',
         }
       : {
-          label: 'Client counting start date',
-          description:
-            'This date is when client counting starts. Without this starting point, the data shown is not reliable.',
           title: 'No start date found',
           message:
             'In order to get the most from this data, please enter a start month above. Vault will calculate new clients starting from that month.',
@@ -134,9 +119,9 @@ export default class ClientsCountsPageComponent extends Component<Args> {
     // show banner if startTime returned from activity log (response) is after the queried startTime
     const { activity, config } = this.args;
     const activityStartDateObject = parseAPITimestamp(activity.startTime) as Date;
-    const queryStartDateObject = parseAPITimestamp(this.startTimestampISO) as Date;
+    const queryStartDateObject = parseAPITimestamp(this.args.startTimestamp) as Date;
     const isEnterprise =
-      this.startTimestampISO === config.billingStartTimestamp?.toISOString() && this.version.isEnterprise;
+      this.args.startTimestamp === config.billingStartTimestamp?.toISOString() && this.version.isEnterprise;
     const message = isEnterprise ? 'Your license start date is' : 'You requested data from';
 
     if (
@@ -174,25 +159,8 @@ export default class ClientsCountsPageComponent extends Component<Args> {
   }
 
   @action
-  onDateChange(dateObject: { dateType: string; monthIdx: number; year: number }) {
-    const { dateType, monthIdx, year } = dateObject;
-    const { config } = this.args;
-    const currentTimestamp = getUnixTime(timestamp.now());
-
-    // converts the selectedDate to unix timestamp for activity query
-    const selectedDate = formatDateObject({ monthIdx, year }, dateType === 'endDate');
-
-    if (dateType !== 'cancel') {
-      const start_time = {
-        reset: getUnixTime(config?.billingStartTimestamp) || null, // clicked 'Current billing period' in calendar widget -> resets to billing start date
-        currentMonth: currentTimestamp, // clicked 'Current month' from calendar widget -> defaults to currentTimestamp
-        startDate: selectedDate, // from "Edit billing start" modal
-      }[dateType];
-      // endDate type is selection from calendar widget
-      const end_time = dateType === 'endDate' ? selectedDate : currentTimestamp; // defaults to currentTimestamp
-      const params = start_time !== undefined ? { start_time, end_time } : { end_time };
-      this.args.onFilterChange(params);
-    }
+  onDateChange(params: { start_time: number | undefined; end_time: number | undefined }) {
+    this.args.onFilterChange(params);
   }
 
   @action
