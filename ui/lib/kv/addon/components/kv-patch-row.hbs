@@ -53,7 +53,7 @@
             @text={{if (@isOriginalSubkey key) "Cancel" "Remove"}}
             @color="secondary"
             @isFullWidth={{true}}
-            {{on "click" (fn @undo @kvClass)}}
+            {{on "click" (fn @undoKey @kvClass)}}
             data-test-undo-button={{@idx}}
           />
         {{/if}}
