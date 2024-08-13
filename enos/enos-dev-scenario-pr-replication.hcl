@@ -66,11 +66,10 @@ scenario "dev_pr_replication" {
       c. 'artifact:zip'
       This will download a Vault .zip bundle from releases.hashicorp.com with the version and
       edition you specify.
-
-      TODO: add required variable
-    
+      
     5. If you don't know yet what combination of matrix variants you want to use for your scenario, you 
-    can view all the possible combinations through the `list` command:
+    can view all the possible combinations through the `list` command. You can also reduce the list by
+    adding one or more filter items, e.g. 'arch:amd64' to get just the scenario combinations that use amd64.
 
       $ enos scenario list dev_single_cluster
     
@@ -81,7 +80,7 @@ scenario "dev_pr_replication" {
 
     Notes:
     - To learn more about any Enos command, use the `--help` flag, e.g.:
-    
+
         $ enos scenario launch --help
 
     - Enos will run all matrix variant combinations that match your filter. If you specify one
@@ -108,94 +107,6 @@ scenario "dev_pr_replication" {
     7. When you're done, destroy the scenario and associated infrastructure:
 
       $ enos scenario destroy dev_pr_replication <filter>
-
-
-
-
-    PREREQUISITES
-    
-    In order to execute this scenario you'll need:
-    
-    1. To install the enos CLI:
-      - $ brew tap hashicorp/tap && brew update && brew install hashicorp/tap/enos
-
-    2. Authenticate to an AWS account via Doormat and export the credentials locally. Follow the guide here:
-      https://eng-handbook.hashicorp.services/internal-tools/enos/getting-started/#authenticate-to-aws-with-doormat
-
-    3. An SSH keypair set up in your AWS account:
-      https://eng-handbook.hashicorp.services/internal-tools/enos/getting-started/#set-your-aws-key-pair-name-and-private-key
-
-    RUNNING THIS SCENARIO
-
-    1. Set input variables
-
-    This scenario requires several input variables to be set in order to function
-    properly. While not all variants will require all variables, it's suggested that you look over
-    the scenario outline to determine which variables affect which steps and which have inputs that
-    you should set. You can use the following command to get a textual outline of the entire
-    scenario:
-      enos scenario outline dev_pr_replication
-
-    You can also create an HTML version that is suitable for viewing in web browsers:
-      enos scenario outline dev_pr_replication --format html > index.html
-      open index.html
-
-    There are two main options for setting these input variables:
-    
-    * Create an 'enos-local.vars' file in the same 'enos' directory where this scenario is defined.
-    Declare your desired variable values in this file. For example, you could copy the following content
-    and then set the values as necessary:
-
-    (Note: Artifactory credentials are only required if you are using `artifact:deb` or `artifact:rpm`,
-    as Enos will download these from Artifactory)
-    artifactory_username      = "username@hashicorp.com"
-    artifactory_token         = "<ARTIFACTORY TOKEN VALUE>
-    aws_region                = "us-west-2"
-    aws_ssh_keypair_name      = "<YOUR REGION SPECIFIC KEYPAIR NAME>"
-    aws_ssh_keypair_key_path  = "/path/to/your/private/key.pem"
-    dev_build_local_ui        = false
-    dev_consul_version        = "1.18.1"
-    vault_license_path        = "./support/vault.hclic"
-    vault_product_version     = "1.16.2"
-
-    * Set them as environment variables:
-
-    export ENOS_VAR_aws_region="us-west-2"
-    export ENOS_VAR_vault_license_path="./support/vault.hclic"
-
-    2. Launch the scenario
-    
-    After you've configured your inputs, you can list and filter the available scenarios and then
-    subsequently launch your desired one.
-
-    Note: To learn more about any Enos command, use the `--help` flag, e.g.:
-      enos scenario launch --help
-
-    If you don't know yet what combination of matrix variants you want to use for your scenario, 
-    can view all the possible combinations through the `list` command:
-      enos scenario list dev_pr_replication
-    
-
-    Once you know what filter you want to use to obtain your desired combination of matrix variants,
-    use the `launch` command with that filter to launch your scenario.
-      enos scenario launch dev_pr_replication arch:amd64 artifact:deb distro:ubuntu edition:ent.hsm primary_backend:raft primary_seal:awskms secondary_backend:raft secondary_seal:pkcs11
-
-      Note: In this scenario, the artifact:local variant builds
-
-    3. Inspect your cluster if necessary
-
-    When the scenario is finished launching, refer to the scenario outputs to see information
-    related to your cluster. You can use this information to SSH into nodes and/or to interact
-    with vault. If using Ubuntu, your SSH user will be `ubuntu`; if using any of the other
-    supported distros, it will be `ec2-user`.
-      enos scenario output dev_pr_replication arch:amd64 artifact:deb distro:ubuntu edition:ent.hsm primary_backend:raft primary_seal:awskms secondary_backend:raft secondary_seal:pkcs11
-      ssh -i /path/to/your/private/key.pem <SSH_USER>@<PUBLIC_IP>
-      vault status
-
-    4. Destroy your resources
-
-    After you've finished, destroy the cluster.
-      enos scenario destroy dev_pr_replication arch:amd64 artifact:deb distro:ubuntu edition:ent.hsm primary_backend:raft primary_seal:awskms secondary_backend:raft secondary_seal:pkcs11
   EOF
 
   // The matrix is where we define all the baseline combinations that enos can utilize to customize

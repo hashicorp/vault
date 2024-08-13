@@ -59,9 +59,7 @@ scenario "upgrade" {
         vault_artifact_path = path/to/existing-vault-artifact.[zip | rpm | deb]
 
       b. 'artifact_source:local'
-      This will build a Vault .zip bundle from your local branch. Set the following variable:
-
-        vault_artifact_path = path/to/where/vault-should-be-built.zip
+      This will build a Vault .zip bundle from your local branch. No variables required.
 
       c. 'artifact_source:artifactory'
       This will download a Vault artifact of the specified version, edition, and revision SHA
@@ -71,7 +69,8 @@ scenario "upgrade" {
         artifactory_token = your-token
     
     5. If you don't know yet what combination of matrix variants you want to use for your scenario, you 
-    can view all the possible combinations through the `list` command:
+    can view all the possible combinations through the `list` command. You can also reduce the list by
+    adding one or more filter items, e.g. 'arch:amd64' to get just the scenario combinations that use amd64.
 
       $ enos scenario list upgrade
     

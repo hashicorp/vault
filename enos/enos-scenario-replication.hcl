@@ -73,7 +73,8 @@ scenario "replication" {
         artifactory_token = your-token
     
     5. If you don't know yet what combination of matrix variants you want to use for your scenario, you 
-    can view all the possible combinations through the `list` command:
+    can view all the possible combinations through the `list` command. You can also reduce the list by
+    adding one or more filter items, e.g. 'arch:amd64' to get just the scenario combinations that use amd64.
 
       $ enos scenario list replication
     

@@ -68,7 +68,8 @@ scenario "agent" {
         artifactory_token = your-token
     
     5. If you don't know yet what combination of matrix variants you want to use for your scenario, you 
-    can view all the possible combinations through the `list` command:
+    can view all the possible combinations through the `list` command. You can also reduce the list by
+    adding one or more filter items, e.g. 'arch:amd64' to get just the scenario combinations that use amd64.
 
       $ enos scenario list agent
     
@@ -81,7 +82,7 @@ scenario "agent" {
     - To learn more about any Enos command, use the `--help` flag, e.g.:
     
         $ enos scenario launch --help
-        
+
     - Enos will run all matrix variant combinations that match your filter. If you specify one
       variant for each matrix item, the filter will produce and run only one scenario. Even if you are
       using a Raft backend, you may want to specify a consul_version (though it functionally will not

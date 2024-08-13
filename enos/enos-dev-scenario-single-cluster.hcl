@@ -65,11 +65,10 @@ scenario "dev_single_cluster" {
       c. 'artifact:zip'
       This will download a Vault .zip bundle from releases.hashicorp.com with the version and
       edition you specify.
-
-      TODO: add required variable
     
     5. If you don't know yet what combination of matrix variants you want to use for your scenario, you 
-    can view all the possible combinations through the `list` command.
+    can view all the possible combinations through the `list` command. You can also reduce the list by
+    adding one or more filter items, e.g. 'arch:amd64' to get just the scenario combinations that use amd64.
 
       $ enos scenario list dev_single_cluster
     
@@ -80,7 +79,7 @@ scenario "dev_single_cluster" {
 
     Notes:
     - To learn more about any Enos command, use the `--help` flag, e.g.:
-    
+
         $ enos scenario launch --help
 
     - Enos will run all matrix variant combinations that match your filter. If you specify one
@@ -107,69 +106,6 @@ scenario "dev_single_cluster" {
     7. When you're done, destroy the scenario and associated infrastructure:
 
       $ enos scenario destroy dev_single_cluster <filter>
-
-
-
-
-
-
-    In order to execute this scenario you'll need: 
-    
-    1. To install the enos CLI:
-      - $ brew tap hashicorp/tap && brew update && brew install hashicorp/tap/enos
-
-    2. Access to an AWS account via Doormat. Follow the guide here:
-      https://eng-handbook.hashicorp.services/internal-tools/enos/getting-started/#authenticate-to-aws-with-doormat
-
-    3. An SSH keypair set up in your AWS account:
-      https://eng-handbook.hashicorp.services/internal-tools/enos/getting-started/#set-your-aws-key-pair-name-and-private-key
-
-    Please note that this scenario requires several input variables to be set in order to function
-    properly. While not all variants will require all variables, it's suggested that you look over
-    the scenario outline to determine which variables affect which steps and which have inputs that
-    you should set. You can use the following command to get a textual outline of the entire
-    scenario:
-      enos scenario outline dev_single_cluster
-
-    You can also create an HTML version that is suitable for viewing in web browsers:
-      enos scenario outline dev_single_cluster --format html > index.html
-      open index.html
-
-    To configure the required variables you have a couple of choices. You can create an
-    'enos-local.vars' file in the same 'enos' directory where this scenario is defined. In it you
-    declare your desired variable values. For example, you could copy the following content and
-    then set the values as necessary:
-
-    artifactory_username      = "username@hashicorp.com"
-    artifactory_token         = "<ARTIFACTORY TOKEN VALUE>
-    aws_region                = "us-west-2"
-    aws_ssh_keypair_name      = "<YOUR REGION SPECIFIC KEYPAIR NAME>"
-    aws_ssh_keypair_key_path  = "/path/to/your/private/key.pem"
-    dev_build_local_ui        = false
-    dev_consul_version        = "1.18.1"
-    vault_license_path        = "./support/vault.hclic"
-    vault_product_version     = "1.16.2"
-
-    Alternatively, you can set them in your environment:
-    export ENOS_VAR_aws_region="us-west-2"
-    export ENOS_VAR_vault_license_path="./support/vault.hclic"
-
-    After you've configured your inputs you can list and filter the available scenarios and then
-    subsequently launch and destroy them.
-      enos scenario list --help
-      enos scenario launch --help
-      enos scenario list dev_single_cluster
-      enos scenario launch dev_single_cluster arch:arm64 artifact:local backend:raft distro:ubuntu edition:ce seal:awskms
-
-    When the scenario is finished launching you refer to the scenario outputs to see information
-    related to your cluster. You can use this information to SSH into nodes and/or to interact
-    with vault.
-      enos scenario output dev_single_cluster arch:arm64 artifact:local backend:raft distro:ubuntu edition:ce seal:awskms
-      ssh -i /path/to/your/private/key.pem <PUBLIC_IP>
-      vault status
-
-    After you've finished you can tear down the cluster
-      enos scenario destroy dev_single_cluster arch:arm64 artifact:local backend:raft distro:ubuntu edition:ce seal:awskms
   EOF
 
   // The matrix is where we define all the baseline combinations that enos can utilize to customize
