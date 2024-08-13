@@ -6,10 +6,14 @@
 package activity_testonly
 
 import (
+	"bytes"
 	"context"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
+	"strings"
 	"testing"
 	"time"
 
@@ -224,6 +228,45 @@ func Test_ActivityLog_EmptyDataMonths(t *testing.T) {
 			// other months should be empty
 			require.Nil(t, month.Counts)
 		}
+	}
+}
+
+// Test_ActivityLog_FutureEndDate queries a start time from the past
+// and an end date in the future. The test
+// verifies that the current month is returned in the response.
+func Test_ActivityLog_FutureEndDate(t *testing.T) {
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
+		"enabled": "enable",
+	})
+	require.NoError(t, err)
+	_, err = clientcountutil.NewActivityLogData(client).
+		NewPreviousMonthData(1).
+		NewClientsSeen(10).
+		NewCurrentMonthData().
+		NewClientsSeen(10).
+		Write(context.Background(), generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES, generation.WriteOptions_WRITE_ENTITIES)
+	require.NoError(t, err)
+
+	now := time.Now().UTC()
+	// query from the beginning of 3 months ago to beginning of next month
+	resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
+		"end_time":   {timeutil.StartOfNextMonth(now).Format(time.RFC3339)},
+		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(3, now)).Format(time.RFC3339)},
+	})
+	require.NoError(t, err)
+	monthsResponse := getMonthsData(t, resp)
+
+	require.Len(t, monthsResponse, 4)
+
+	// Get the last month of data in the slice
+	expectedCurrentMonthData := monthsResponse[3]
+	expectedTime, err := time.Parse(time.RFC3339, expectedCurrentMonthData.Timestamp)
+	require.NoError(t, err)
+	if !timeutil.IsCurrentMonth(expectedTime, now) {
+		t.Fatalf("final month data is not current month")
 	}
 }
 
@@ -449,6 +492,220 @@ func Test_ActivityLog_MountDeduplication(t *testing.T) {
 		"cubbyhole/": 2,
 		"secret/":    1,
 	}, mountSet)
+}
+
+// getJSONExport is used to fetch activity export records using json format.
+// The records will returned as a map keyed by client ID.
+func getJSONExport(t *testing.T, client *api.Client, monthsPreviousTo int, now time.Time) (map[string]vault.ActivityLogExportRecord, error) {
+	t.Helper()
+
+	resp, err := client.Logical().ReadRawWithData("sys/internal/counters/activity/export", map[string][]string{
+		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(monthsPreviousTo, now)).Format(time.RFC3339)},
+		"end_time":   {timeutil.EndOfMonth(now).Format(time.RFC3339)},
+		"format":     {"json"},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	contents, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	buf := bytes.NewBuffer(contents)
+	decoder := json.NewDecoder(buf)
+	clients := make(map[string]vault.ActivityLogExportRecord)
+
+	for {
+		if !decoder.More() {
+			break
+		}
+
+		var record vault.ActivityLogExportRecord
+		err := decoder.Decode(&record)
+		if err != nil {
+			return nil, err
+		}
+
+		clients[record.ClientID] = record
+	}
+
+	return clients, nil
+}
+
+// getCSVExport fetches activity export records using csv format. All flattened
+// map and slice fields will be unflattened so that the a proper ActivityLogExportRecord
+// can be formed. The records will returned as a map keyed by client ID.
+func getCSVExport(t *testing.T, client *api.Client, monthsPreviousTo int, now time.Time) (map[string]vault.ActivityLogExportRecord, error) {
+	t.Helper()
+
+	mapFields := map[string]struct{}{
+		"alias_custom_metadata": {},
+		"alias_metadata":        {},
+		"identity_metadata":     {},
+	}
+
+	sliceFields := map[string]struct{}{
+		"identity_group_ids": {},
+		"policies":           {},
+	}
+
+	resp, err := client.Logical().ReadRawWithData("sys/internal/counters/activity/export", map[string][]string{
+		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(monthsPreviousTo, now)).Format(time.RFC3339)},
+		"end_time":   {timeutil.EndOfMonth(now).Format(time.RFC3339)},
+		"format":     {"csv"},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	csvRdr := csv.NewReader(resp.Body)
+	clients := make(map[string]vault.ActivityLogExportRecord)
+
+	csvRecords, err := csvRdr.ReadAll()
+	if err != nil {
+		return nil, err
+	}
+
+	if len(csvRecords) == 0 {
+		return clients, nil
+	}
+
+	csvHeader := csvRecords[0]
+
+	// skip initial row as it is header
+	for rowIdx := 1; rowIdx < len(csvRecords); rowIdx++ {
+		recordMap := make(map[string]interface{})
+
+		for columnIdx, columnName := range csvHeader {
+			val := csvRecords[rowIdx][columnIdx]
+
+			// determine if column has been flattened
+			columnNameParts := strings.SplitN(columnName, ".", 2)
+
+			if len(columnNameParts) > 1 {
+				prefix := columnNameParts[0]
+
+				if _, ok := mapFields[prefix]; ok {
+					m, mOK := recordMap[prefix]
+
+					// ensure output contains non-nil map
+					if !mOK {
+						m = make(map[string]string)
+						recordMap[prefix] = m
+					}
+
+					// ignore empty CSV column value
+					if val != "" {
+						m.(map[string]string)[columnNameParts[1]] = val
+						recordMap[prefix] = m
+					}
+				} else if _, ok := sliceFields[prefix]; ok {
+					// ensure output contains non-nil slice
+					s, sOK := recordMap[prefix]
+					if !sOK {
+						s = make([]string, 0)
+						recordMap[prefix] = s
+					}
+
+					// ignore empty CSV column value
+					if val != "" {
+						s = append(s.([]string), val)
+						recordMap[prefix] = s
+					}
+				} else {
+					t.Fatalf("unexpected CSV field: %s", columnName)
+				}
+
+			} else {
+				recordMap[columnName] = val
+			}
+		}
+
+		var record vault.ActivityLogExportRecord
+		err = mapstructure.Decode(recordMap, &record)
+		if err != nil {
+			return nil, err
+		}
+
+		clients[record.ClientID] = record
+	}
+
+	return clients, nil
+}
+
+// Test_ActivityLog_Export_Sudo ensures that the export API is only accessible via
+// a root token or a token with a sudo policy.
+func Test_ActivityLog_Export_Sudo(t *testing.T) {
+	timeutil.SkipAtEndOfMonth(t)
+	t.Parallel()
+
+	now := time.Now().UTC()
+	var err error
+
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+	_, err = client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
+		"enabled": "enable",
+	})
+	require.NoError(t, err)
+
+	rootToken := client.Token()
+
+	_, err = clientcountutil.NewActivityLogData(client).
+		NewCurrentMonthData().
+		NewClientsSeen(10).
+		Write(context.Background(), generation.WriteOptions_WRITE_ENTITIES)
+
+	require.NoError(t, err)
+
+	// Ensure access via root token
+	clients, err := getJSONExport(t, client, 1, now)
+	require.NoError(t, err)
+	require.Len(t, clients, 10)
+
+	client.Sys().PutPolicy("non-sudo-export", `
+path "sys/internal/counters/activity/export" {
+	capabilities = ["read"]
+}
+	`)
+
+	secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+		Policies: []string{"non-sudo-export"},
+	})
+	require.NoError(t, err)
+
+	nonSudoToken := secret.Auth.ClientToken
+	client.SetToken(nonSudoToken)
+
+	// Ensure no access via token without sudo access
+	clients, err = getJSONExport(t, client, 1, now)
+	require.ErrorContains(t, err, "permission denied")
+
+	client.SetToken(rootToken)
+	client.Sys().PutPolicy("sudo-export", `
+path "sys/internal/counters/activity/export" {
+	capabilities = ["read", "sudo"]
+}
+	`)
+
+	secret, err = client.Auth().Token().Create(&api.TokenCreateRequest{
+		Policies: []string{"sudo-export"},
+	})
+	require.NoError(t, err)
+
+	sudoToken := secret.Auth.ClientToken
+	client.SetToken(sudoToken)
+
+	// Ensure access via token with sudo access
+	clients, err = getJSONExport(t, client, 1, now)
+	require.NoError(t, err)
+	require.Len(t, clients, 10)
 }
 
 // TestHandleQuery_MultipleMounts creates a cluster with
