@@ -9,6 +9,32 @@ import { tracked } from '@glimmer/tracking';
 import { A } from '@ember/array';
 import { hasWhitespace, isNonString, WHITESPACE_WARNING, NON_STRING_WARNING } from 'vault/utils/validators';
 
+/**
+ * @module KvPatchEditor
+ * @description
+ * This component renders one of two ways to patch a KV v2 secret (the other is using the JSON editor).
+ * Each top-level subkey returned by the API endpoint renders in a disabled column with an empty (also disabled) value input beside it.
+ * Initially, an edit or delete button is left of the value input. Clicking "Delete" marks a key for deletion (it does not remove the row).
+ * Clicking "Edit" enables the value input (the key input for retrieved subkeys is never editable). Users can then input a new value for that key.
+ * If either button is clicked it is replaced by a "Cancel" button. Canceling empties the value input and returns it to a 'disabled' state
+ *
+ * Additionally, there is one empty row at the bottom for adding new key/value pairs.
+ * Clicking "Add" adds the new key/value pair to the internally tracked state (an array) and creates a new empty row.
+ * Newly added keys are editable and therefore never disabled.
+ * A newly added pair can be undone by clicking "Remove" which deletes the row and removes it from the tracked array.
+ *
+ * Clicking the "Reveal subkeys in JSON" toggle displays the full, nested subkey structure returned by the API.
+ *
+ *
+ * @example
+ * <KvPatchEditor @subkeys={{@subkeys}} @onSubmit={{perform this.save}} @onCancel={{this.onCancel}} @isSaving={{this.save.isRunning}} />
+ *
+ * @param {object} subkeys - leaf keys of a kv v2 secret, all values (unless a nested object with more keys) return null. https://developer.hashicorp.com/vault/api-docs/secret/kv/kv-v2#read-secret-subkeys
+ * @param {function} onSubmit - called when form is saved, called with with the key value object containing patch data
+ * @param {function} onCancel - called when form is canceled
+ * @param {boolean} isSaving - if true, disables the save and cancel buttons. useful if the onSubmit callback is a concurrency task
+ */
+
 class KeyValueState {
   @tracked key;
   @tracked value;
@@ -52,7 +78,6 @@ export default class KvPatchEditor extends Component {
 
   // tracked variables for new (initially empty) row of inputs.
   // once a user clicks "Add" a KeyValueState class is instantiated for that row
-  // and it is added to the patchData array
   @tracked invalidKeyError = '';
   @tracked newKey;
   @tracked newValue;
@@ -84,11 +109,18 @@ export default class KvPatchEditor extends Component {
     this.newValue = undefined;
   }
 
+  validateKey(key) {
+    return this.patchData.any((KV) => KV.key === key)
+      ? `"${key}" key already exists. Update the value of the existing key or rename this one.`
+      : '';
+  }
+
   @action
   updateKey(KV, event) {
     const key = event.target.value;
     const isInvalid = this.validateKey(key);
 
+    // KV (KeyValueState class) is only passed for rows of this.patchData
     if (KV) {
       KV.invalidKeyError = isInvalid;
       if (isInvalid) return; // don't set if invalid
@@ -128,7 +160,7 @@ export default class KvPatchEditor extends Component {
   @action
   submit(event) {
     event.preventDefault();
-    // patchData will not include the last row if a user has not clicked "add"
+    // patchData will not include the last row if a user has not clicked "Add"
     // manually check for data and add it to this.patchData
     if (this.newKey && this.newValue) {
       this.addRow();
@@ -145,11 +177,5 @@ export default class KvPatchEditor extends Component {
     }, {});
 
     this.args.onSubmit(data);
-  }
-
-  validateKey(key) {
-    return this.patchData.any((KV) => KV.key === key)
-      ? `"${key}" key already exists. Update the value of the existing key or rename this one.`
-      : '';
   }
 }
