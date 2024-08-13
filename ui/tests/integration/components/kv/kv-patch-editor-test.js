@@ -11,6 +11,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import sinon from 'sinon';
 import { FORM } from 'vault/tests/helpers/kv/kv-selectors';
+import { NON_STRING_WARNING, WHITESPACE_WARNING } from 'vault/utils/validators';
 
 module('Integration | Component | kv | kv-patch-editor', function (hooks) {
   setupRenderingTest(hooks);
@@ -129,7 +130,7 @@ module('Integration | Component | kv | kv-patch-editor', function (hooks) {
 
     await click(FORM.patchAdd);
     assert
-      .dom(FORM.keyInput())
+      .dom('[data-test-kv-key]')
       .exists({ count: 3 }, 'clicking add does not create a new row if key input is empty');
 
     await fillIn(FORM.keyInput('new'), 'aKey');
@@ -296,15 +297,12 @@ module('Integration | Component | kv | kv-patch-editor', function (hooks) {
   });
 
   module('it shows whitespace warning', function () {
-    const whitespaceWarning =
-      "This key contains whitespace. If this is desired, you'll need to encode it with %20 in API requests.";
-
     test('for new keys with whitespace', async function (assert) {
       await this.renderComponent();
 
       await fillIn(FORM.keyInput('new'), 'a space');
       await blur(FORM.keyInput('new')); // unfocus input
-      assert.dom(FORM.patchAlert('key-warning', 'new')).hasText(whitespaceWarning);
+      assert.dom(FORM.patchAlert('key-warning', 'new')).hasText(WHITESPACE_WARNING('This key'));
 
       await fillIn(FORM.keyInput('new'), 'nospace');
       await blur(FORM.keyInput('new')); // unfocus input
@@ -326,7 +324,7 @@ module('Integration | Component | kv | kv-patch-editor', function (hooks) {
       // go back and change "aKey" to have a space
       await fillIn(FORM.keyInput(2), 'a key');
       await blur(FORM.keyInput(2)); // unfocus input
-      assert.dom(FORM.patchAlert('key-warning', 2)).hasText(whitespaceWarning);
+      assert.dom(FORM.patchAlert('key-warning', 2)).hasText(WHITESPACE_WARNING('This key'));
 
       await fillIn(FORM.keyInput(2), 'aKey');
       await blur(FORM.keyInput(2)); // unfocus input
@@ -341,7 +339,7 @@ module('Integration | Component | kv | kv-patch-editor', function (hooks) {
       await click(FORM.patchAdd);
       assert
         .dom(FORM.patchAlert('key-warning', 2))
-        .hasText(whitespaceWarning, 'warning is attached to relevant key');
+        .hasText(WHITESPACE_WARNING('This key'), 'warning is attached to relevant key');
       assert
         .dom(FORM.patchAlert('key-warning', 'new'))
         .doesNotExist('there is no whitespace warning for the new empty row');
@@ -351,17 +349,14 @@ module('Integration | Component | kv | kv-patch-editor', function (hooks) {
       await blur(FORM.keyInput('new')); // unfocus input
       assert
         .dom(FORM.patchAlert('key-warning', 2))
-        .hasText(whitespaceWarning, 'warning is still attached to relevant key');
+        .hasText(WHITESPACE_WARNING('This key'), 'warning is still attached to relevant key');
       assert
         .dom(FORM.patchAlert('key-warning', 'new'))
-        .hasText(whitespaceWarning, 'new key also has whitespace warning');
+        .hasText(WHITESPACE_WARNING('This key'), 'new key also has whitespace warning');
     });
   });
 
   module('it shows non-string warning', function () {
-    const nonStringWarning =
-      'This value will be saved as a string. If you need to save a non-string value, please use the JSON editor.';
-
     const NON_STRING_VALUES = [0, 123, '{ "a": "b" }', 'null'];
 
     NON_STRING_VALUES.forEach((value) => {
@@ -371,7 +366,7 @@ module('Integration | Component | kv | kv-patch-editor', function (hooks) {
         await fillIn(FORM.keyInput('new'), 'aKey');
         await fillIn(FORM.valueInput('new'), value);
         await blur(FORM.valueInput('new')); // unfocus input
-        assert.dom(FORM.patchAlert('value-warning', 'new')).hasText(nonStringWarning);
+        assert.dom(FORM.patchAlert('value-warning', 'new')).hasText(NON_STRING_WARNING);
 
         await typeIn(FORM.valueInput('new'), 'abc');
         await blur(FORM.valueInput('new')); // unfocus input
@@ -397,7 +392,7 @@ module('Integration | Component | kv | kv-patch-editor', function (hooks) {
         // go back and change "aKey" to have a non-string
         await fillIn(FORM.valueInput(2), value);
         await blur(FORM.valueInput(2)); // unfocus input
-        assert.dom(FORM.patchAlert('value-warning', 2)).hasText(nonStringWarning);
+        assert.dom(FORM.patchAlert('value-warning', 2)).hasText(NON_STRING_WARNING);
 
         await fillIn(FORM.valueInput(2), 'abc');
         await blur(FORM.valueInput(2)); // unfocus input
@@ -417,7 +412,7 @@ module('Integration | Component | kv | kv-patch-editor', function (hooks) {
         await click(FORM.patchAdd);
         assert
           .dom(FORM.patchAlert('value-warning', 2))
-          .hasText(nonStringWarning, 'warning is attached to relevant row');
+          .hasText(NON_STRING_WARNING, 'warning is attached to relevant row');
         assert
           .dom(FORM.patchAlert('value-warning', 'new'))
           .doesNotExist('there is no non-string warning for the new empty row');
@@ -428,10 +423,10 @@ module('Integration | Component | kv | kv-patch-editor', function (hooks) {
         await blur(FORM.valueInput('new')); // unfocus input
         assert
           .dom(FORM.patchAlert('value-warning', 2))
-          .hasText(nonStringWarning, 'warning is still attached to relevant row');
+          .hasText(NON_STRING_WARNING, 'warning is still attached to relevant row');
         assert
           .dom(FORM.patchAlert('value-warning', 'new'))
-          .hasText(nonStringWarning, 'new row also has non-string warning');
+          .hasText(NON_STRING_WARNING, 'new row also has non-string warning');
       });
     });
   });

@@ -62,4 +62,20 @@ export const isNonString = (value) => {
   }
 };
 
-export default { presence, length, number, containsWhiteSpace, endsInSlash, isNonString, hasWhitespace };
+export const WHITESPACE_WARNING = (item) =>
+  `${item} contains whitespace. If this is desired, you'll need to encode it with %20 in API requests.`;
+
+export const NON_STRING_WARNING =
+  'This value will be saved as a string. If you need to save a non-string value, please use the JSON editor.';
+
+export default {
+  presence,
+  length,
+  number,
+  containsWhiteSpace,
+  endsInSlash,
+  isNonString,
+  hasWhitespace,
+  WHITESPACE_WARNING,
+  NON_STRING_WARNING,
+};

@@ -108,11 +108,11 @@ export const FORM = {
   // <KvObjectEditor>
   kvLabel: '[data-test-kv-label]',
   kvRow: '[data-test-kv-row]',
-  keyInput: (idx) => (idx || idx === 0 ? `[data-test-kv-key="${idx}"]` : '[data-test-kv-key]'),
-  valueInput: (idx) => `[data-test-kv-value="${idx}"]`,
-  maskedValueInput: (idx) => `[data-test-kv-value="${idx}"] [data-test-textarea]`,
-  addRow: (idx) => `[data-test-kv-add-row="${idx}"]`,
-  deleteRow: (idx) => `[data-test-kv-delete-row="${idx}"]`,
+  keyInput: (idx = 0) => `[data-test-kv-key="${idx}"]`,
+  valueInput: (idx = 0) => `[data-test-kv-value="${idx}"]`,
+  maskedValueInput: (idx = 0) => `[data-test-kv-value="${idx}"] [data-test-textarea]`,
+  addRow: (idx = 0) => `[data-test-kv-add-row="${idx}"]`,
+  deleteRow: (idx = 0) => `[data-test-kv-delete-row="${idx}"]`,
   // <KvPatchEditor>
   patchEdit: (idx) => `[data-test-edit-button="${idx}"]`,
   patchDelete: (idx) => `[data-test-delete-button="${idx}"]`,

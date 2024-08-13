@@ -7,13 +7,7 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { A } from '@ember/array';
-import { hasWhitespace, isNonString } from 'vault/utils/validators';
-
-const WHITESPACE_WARNING =
-  "This key contains whitespace. If this is desired, you'll need to encode it with %20 in API requests.";
-
-const NON_STRING_WARNING =
-  'This value will be saved as a string. If you need to save a non-string value, please use the JSON editor.';
+import { hasWhitespace, isNonString, WHITESPACE_WARNING, NON_STRING_WARNING } from 'vault/utils/validators';
 
 class Kv {
   @tracked key;
@@ -28,7 +22,7 @@ class Kv {
   }
 
   get keyHasWarning() {
-    return hasWhitespace(this.key) ? WHITESPACE_WARNING : '';
+    return hasWhitespace(this.key) ? WHITESPACE_WARNING('This key') : '';
   }
 
   get valueHasWarning() {
@@ -60,7 +54,7 @@ export default class KvPatchEditor extends Component {
   @tracked patchData; // key value pairs in form
   @tracked showSubkeys = false;
 
-  // tracked variables for new (initially empty) row of inputs
+  // tracked variables for new (initially empty) row of inputs.
   // once a user clicks "Add" a Kv class is instantiated for that row
   // and it is added to the patchData array
   @tracked isInvalidKey = '';
@@ -77,7 +71,7 @@ export default class KvPatchEditor extends Component {
   }
 
   get newKeyWarning() {
-    return hasWhitespace(this.newKey) ? WHITESPACE_WARNING : '';
+    return hasWhitespace(this.newKey) ? WHITESPACE_WARNING('This key') : '';
   }
 
   get newValueWarning() {
