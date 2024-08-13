@@ -253,12 +253,13 @@ function filterMonths(months, namespacePath) {
 /**
  * Util to mock filter namespace data from the activity response, matching what the API does
  */
-export function filterActivityResponse(data, namespacePath) {
+export function filterActivityResponse(originalData, namespacePath) {
+  // make a deep copy of the object so we don't mutate the original
+  const data = JSON.parse(JSON.stringify(originalData));
   if (!namespacePath) return data;
-  const { by_namespace, months } = data;
 
-  const filteredMonths = filterMonths(months, namespacePath);
-  const filteredNs = filterByNamespace(by_namespace, namespacePath);
+  const filteredMonths = filterMonths(data.months, namespacePath);
+  const filteredNs = filterByNamespace(data.by_namespace, namespacePath);
   const filteredTotals = calcCounts(filteredNs);
   return {
     ...data,
