@@ -178,7 +178,7 @@ func (a *ActivityLog) computeCurrentMonthForBillingPeriodInternal(ctx context.Co
 			for _, typ := range ActivityClientTypes {
 				clients := mount.Counts.clientsByType(typ)
 				clientIDs := clients.sort()
-			
+
 				// sort the client IDs before inserting
 				for _, clientID := range clientIDs {
 					hllByType[typ].Insert([]byte(clientID))
