@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/raft"
 	autopilot "github.com/hashicorp/raft-autopilot"
+	"github.com/mitchellh/copystructure"
 	"github.com/mitchellh/mapstructure"
 	"go.uber.org/atomic"
 )
@@ -211,6 +212,68 @@ type FollowerState struct {
 	RedundancyZone  string
 }
 
+// PersistedFollowerState holds the information that gets persisted to storage
+type PersistedFollowerState struct {
+	Version        string `json:"version"`
+	UpgradeVersion string `json:"upgrade_version"`
+}
+
+type PersistedFollowerStates struct {
+	l      sync.RWMutex
+	States map[string]PersistedFollowerState
+}
+
+// shouldUpdate checks if the persisted state contains the same servers as the
+// current autopilot state. If grabLock is true, a read lock is acquired before
+// accessing the map
+func (p *PersistedFollowerStates) shouldUpdate(state *autopilot.State, grabLock bool) bool {
+	if grabLock {
+		p.l.RLock()
+		defer p.l.RUnlock()
+	}
+	if len(state.Servers) != len(p.States) {
+		return true
+	}
+	for id, server := range state.Servers {
+		persistedServer, found := p.States[string(id)]
+		if !found {
+			return true
+		}
+		if server.Server.Version != persistedServer.Version ||
+			server.Server.Meta[AutopilotUpgradeVersionTag] != persistedServer.UpgradeVersion {
+			return true
+		}
+	}
+	return false
+}
+
+// updatePersistedState checks if the persisted state matches the current
+// autopilot state. If not, the state is replaced and persisted
+func (d *Delegate) updatePersistedState(state *autopilot.State) error {
+	if !d.persistedState.shouldUpdate(state, true) {
+		return nil
+	}
+	newStates := make(map[string]PersistedFollowerState)
+	for id, server := range state.Servers {
+		newStates[string(id)] = PersistedFollowerState{
+			Version:        server.Server.Version,
+			UpgradeVersion: server.Server.Meta[AutopilotUpgradeVersionTag],
+		}
+	}
+	d.persistedState.l.Lock()
+	defer d.persistedState.l.Unlock()
+	if !d.persistedState.shouldUpdate(state, false) {
+		return nil
+	}
+	d.logger.Debug("updating autopilot persisted state")
+	err := d.saveStateFn(newStates)
+	if err != nil {
+		return err
+	}
+	d.persistedState.States = newStates
+	return nil
+}
+
 // EchoRequestUpdate is here to avoid 1) the list of arguments to Update() getting huge 2) an import cycle on the vault package
 type EchoRequestUpdate struct {
 	NodeID          string
@@ -315,13 +378,17 @@ type Delegate struct {
 	dl               sync.RWMutex
 	inflightRemovals map[raft.ServerID]bool
 	emptyVersionLogs map[raft.ServerID]struct{}
+	persistedState   *PersistedFollowerStates
+	saveStateFn      func(p map[string]PersistedFollowerState) error
 }
 
-func NewDelegate(b *RaftBackend) *Delegate {
+func NewDelegate(b *RaftBackend, persistedStates map[string]PersistedFollowerState, savePersistedStates func(p map[string]PersistedFollowerState) error) *Delegate {
 	return &Delegate{
 		RaftBackend:      b,
 		inflightRemovals: make(map[raft.ServerID]bool),
 		emptyVersionLogs: make(map[raft.ServerID]struct{}),
+		persistedState:   &PersistedFollowerStates{States: persistedStates},
+		saveStateFn:      savePersistedStates,
 	}
 }
 
@@ -364,6 +431,13 @@ func (d *Delegate) NotifyState(state *autopilot.State) {
 			} else {
 				metrics.SetGaugeWithLabels([]string{"autopilot", "node", "healthy"}, 0, labels)
 			}
+		}
+
+		// if there is a change in versions or membership, we should update
+		// our persisted state
+		err := d.updatePersistedState(state)
+		if err != nil {
+			d.logger.Error("failed to persist autopilot state", "error", err)
 		}
 	}
 }
@@ -420,6 +494,9 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 	d.followerStates.l.RLock()
 	defer d.followerStates.l.RUnlock()
 
+	d.persistedState.l.RLock()
+	defer d.persistedState.l.RUnlock()
+
 	ret := make(map[raft.ServerID]*autopilot.Server)
 	for id, state := range d.followerStates.followers {
 		// If the server is not in raft configuration, even if we received a follower
@@ -428,12 +505,22 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 			continue
 		}
 
-		// If version isn't found in the state, fake it using the version from the leader so that autopilot
-		// doesn't demote the node to a non-voter, just because of a missed heartbeat. Note that this should
-		// be the SDK version, not the upgrade version.
 		currentServerID := raft.ServerID(id)
 		followerVersion := state.Version
-
+		if followerVersion == "" {
+			followerVersion = d.persistedState.States[id].Version
+		}
+		if state.UpgradeVersion == "" {
+			// we only have a read lock on d.followerStates, so we need to copy
+			// the item and modify it in the copy to prevent any races
+			copiedState, err := copystructure.Copy(state)
+			if err != nil {
+				d.logger.Error("failed to copy autopilot server state", "error", err)
+			} else {
+				state = copiedState.(*FollowerState)
+				state.UpgradeVersion = d.persistedState.States[id].UpgradeVersion
+			}
+		}
 		server := &autopilot.Server{
 			ID:          currentServerID,
 			Name:        id,
@@ -819,11 +906,19 @@ func (b *RaftBackend) DisableAutopilot() {
 	b.l.Unlock()
 }
 
+type AutopilotSetupOptions struct {
+	StorageConfig       *AutopilotConfig
+	FollowerStates      *FollowerStates
+	Disable             bool
+	PersistedStates     map[string]PersistedFollowerState
+	SavePersistedStates func(p map[string]PersistedFollowerState) error
+}
+
 // SetupAutopilot gathers information required to configure autopilot and starts
 // it. If autopilot is disabled, this function does nothing.
-func (b *RaftBackend) SetupAutopilot(ctx context.Context, storageConfig *AutopilotConfig, followerStates *FollowerStates, disable bool) {
+func (b *RaftBackend) SetupAutopilot(ctx context.Context, opts *AutopilotSetupOptions) {
 	b.l.Lock()
-	if disable || os.Getenv("VAULT_RAFT_AUTOPILOT_DISABLE") != "" {
+	if opts.Disable || os.Getenv("VAULT_RAFT_AUTOPILOT_DISABLE") != "" {
 		b.disableAutopilot = true
 	}
 
@@ -837,7 +932,7 @@ func (b *RaftBackend) SetupAutopilot(ctx context.Context, storageConfig *Autopil
 	b.autopilotConfig = b.defaultAutopilotConfig()
 
 	// Merge the setting provided over the API
-	b.autopilotConfig.Merge(storageConfig)
+	b.autopilotConfig.Merge(opts.StorageConfig)
 
 	infoArgs := []interface{}{"config", b.autopilotConfig}
 
@@ -854,8 +949,9 @@ func (b *RaftBackend) SetupAutopilot(ctx context.Context, storageConfig *Autopil
 		options = append(options, autopilot.WithUpdateInterval(b.autopilotUpdateInterval))
 		infoArgs = append(infoArgs, []interface{}{"update_interval", b.autopilotUpdateInterval}...)
 	}
-	b.autopilot = autopilot.New(b.raft, NewDelegate(b), options...)
-	b.followerStates = followerStates
+	delegate := NewDelegate(b, opts.PersistedStates, opts.SavePersistedStates)
+	b.autopilot = autopilot.New(b.raft, delegate, options...)
+	b.followerStates = opts.FollowerStates
 	b.followerHeartbeatTicker = time.NewTicker(1 * time.Second)
 	b.l.Unlock()
 

@@ -49,7 +49,8 @@ var (
 	raftTLSStoragePath    = "core/raft/tls"
 	raftTLSRotationPeriod = 24 * time.Hour
 
-	raftAutopilotConfigurationStoragePath = "core/raft/autopilot/configuration"
+	raftAutopilotConfigurationStoragePath  = "core/raft/autopilot/configuration"
+	raftAutopilotPersistedStateStoragePath = "core/raft/autopilot/state"
 
 	ErrJoinWithoutAutoloading = errors.New("attempt to join a cluster using autoloaded licenses while not using autoloading ourself")
 )
@@ -339,8 +340,40 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 		c.logger.Error("failed to load autopilot config from storage when setting up cluster; continuing since autopilot falls back to default config", "error", err)
 	}
 	disableAutopilot := c.disableAutopilot
-	raftBackend.SetupAutopilot(c.activeContext, autopilotConfig, c.raftFollowerStates, disableAutopilot)
+	persistedState, err := c.autopilotPersistedState()
+	if err != nil {
+		c.logger.Error("failed to load autopilot persisted state from storage", "error", err)
+	}
+	raftBackend.SetupAutopilot(c.activeContext, &raft.AutopilotSetupOptions{
+		StorageConfig:       autopilotConfig,
+		FollowerStates:      c.raftFollowerStates,
+		Disable:             disableAutopilot,
+		PersistedStates:     persistedState,
+		SavePersistedStates: c.saveAutopilotPersistedState,
+	})
 	return nil
+}
+
+func (c *Core) autopilotPersistedState() (map[string]raft.PersistedFollowerState, error) {
+	entry, err := c.barrier.Get(c.activeContext, raftAutopilotPersistedStateStoragePath)
+	if err != nil {
+		return nil, err
+	}
+	var m map[string]raft.PersistedFollowerState
+	if entry == nil {
+		return m, nil
+	}
+
+	err = entry.DecodeJSON(&m)
+	return m, err
+}
+
+func (c *Core) saveAutopilotPersistedState(states map[string]raft.PersistedFollowerState) error {
+	entry, err := logical.StorageEntryJSON(raftAutopilotPersistedStateStoragePath, states)
+	if err != nil {
+		return err
+	}
+	return c.barrier.Put(c.activeContext, entry)
 }
 
 func (c *Core) stopRaftActiveNode() {
@@ -1254,7 +1287,11 @@ func (c *Core) raftLeaderInfo(leaderInfo *raft.LeaderJoinInfo, disco *discover.D
 
 // NewDelegateForCore creates a raft.Delegate for the specified core using its backend.
 func NewDelegateForCore(c *Core) *raft.Delegate {
-	return raft.NewDelegate(c.getRaftBackend())
+	persistedState, err := c.autopilotPersistedState()
+	if err != nil {
+		c.logger.Error("failed to load autopilot persisted state from storage", "error", err)
+	}
+	return raft.NewDelegate(c.getRaftBackend(), persistedState, c.saveAutopilotPersistedState)
 }
 
 // getRaftBackend returns the RaftBackend from the HA or physical backend,
