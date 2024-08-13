@@ -488,7 +488,7 @@ func TestPostgreSQL_InitializeSSL(t *testing.T) {
 				"connection_url":       connURL,
 				"max_open_connections": 5,
 				"tls_certificate":      string(clientCert.CombinedPEM()),
-				"tls_private_key":      string(clientCert.PrivateKeyPEM()),
+				"private_key":          string(clientCert.PrivateKeyPEM()),
 				"tls_ca":               string(caCert.CombinedPEM()),
 			}
 
