@@ -9,11 +9,11 @@ import { tracked } from '@glimmer/tracking';
 import { A } from '@ember/array';
 import { hasWhitespace, isNonString, WHITESPACE_WARNING, NON_STRING_WARNING } from 'vault/utils/validators';
 
-class Kv {
+class KeyValueState {
   @tracked key;
   @tracked value;
   @tracked state;
-  @tracked isInvalidKey;
+  @tracked invalidKeyError;
 
   constructor({ key, value = undefined, state = 'disabled' }) {
     this.key = key;
@@ -21,11 +21,11 @@ class Kv {
     this.state = state;
   }
 
-  get keyHasWarning() {
+  get keyWarning() {
     return hasWhitespace(this.key) ? WHITESPACE_WARNING('This key') : '';
   }
 
-  get valueHasWarning() {
+  get valueWarning() {
     if (this.value === null) return '';
     return isNonString(this.value) ? NON_STRING_WARNING : '';
   }
@@ -43,10 +43,6 @@ class Kv {
   @action
   updateState(state) {
     this.state = state;
-
-    if (state === 'deleted') {
-      this.value = null;
-    }
   }
 }
 
@@ -55,9 +51,9 @@ export default class KvPatchEditor extends Component {
   @tracked showSubkeys = false;
 
   // tracked variables for new (initially empty) row of inputs.
-  // once a user clicks "Add" a Kv class is instantiated for that row
+  // once a user clicks "Add" a KeyValueState class is instantiated for that row
   // and it is added to the patchData array
-  @tracked isInvalidKey = '';
+  @tracked invalidKeyError = '';
   @tracked newKey;
   @tracked newValue;
 
@@ -80,7 +76,7 @@ export default class KvPatchEditor extends Component {
   }
 
   generateData(key, value, state) {
-    return new Kv({ key, value, state });
+    return new KeyValueState({ key, value, state });
   }
 
   resetNewRow() {
@@ -94,24 +90,24 @@ export default class KvPatchEditor extends Component {
     const isInvalid = this.validateKey(key);
 
     if (KV) {
-      KV.isInvalidKey = isInvalid;
+      KV.invalidKeyError = isInvalid;
       if (isInvalid) return; // don't set if invalid
       KV.key = key;
     } else {
-      this.isInvalidKey = isInvalid;
+      this.invalidKeyError = isInvalid;
       if (isInvalid) return; // don't set if invalid
       this.newKey = key;
     }
   }
 
   @action
-  updateValue(event) {
+  updateNewValue(event) {
     this.newValue = event.target.value;
   }
 
   @action
   addRow() {
-    if (!this.newKey || this.isInvalidKey) return;
+    if (!this.newKey || this.invalidKeyError) return;
     const KV = this.generateData(this.newKey, this.newValue, 'enabled');
     this.patchData.pushObject(KV);
     // reset tracked values after adding them to patchData
@@ -119,9 +115,9 @@ export default class KvPatchEditor extends Component {
   }
 
   @action
-  undo(KV) {
+  undoKey(KV) {
     if (this.isOriginalSubkey(KV.key)) {
-      // reset state to disabled and value to undefined
+      // reset state to 'disabled' and value to undefined
       KV.reset();
     } else {
       // remove row all together
@@ -139,10 +135,11 @@ export default class KvPatchEditor extends Component {
     }
 
     const data = this.patchData.reduce((obj, KV) => {
-      // only included edited inputs
+      // only include edited inputs
       const { state } = KV;
       if (state === 'enabled' || state === 'deleted') {
-        obj[KV.key] = KV.value;
+        const value = state === 'deleted' ? null : KV.value;
+        obj[KV.key] = value;
       }
       return obj;
     }, {});
