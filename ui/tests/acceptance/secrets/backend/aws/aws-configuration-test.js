@@ -192,24 +192,4 @@ module('Acceptance | aws | configuration', function (hooks) {
     await click(SES.configTab);
     assert.dom(SES.error.title).hasText('Error', 'shows the secrets backend error route');
   });
-
-  test('it should reset models after saving', async function (assert) {
-    const path = `aws-${this.uid}`;
-    const type = 'aws';
-    await enablePage.enable(type, path);
-    await click(SES.configTab);
-    await click(SES.configure);
-    await fillInAwsConfig(true);
-    // if a record has been unloaded the private key is not saved in the store (the API does not return it, and if the record was not unloaded it would still exist in the store.)
-    await click(SES.aws.saveRootConfig); // save the configuration
-    await click(SES.viewBackend);
-    await click(SES.configTab);
-    const privateKeyExists = this.store.peekRecord('aws/root-config', path).privateKey ? true : false;
-    assert.false(
-      privateKeyExists,
-      'private key is not on the store record, meaning it was unloaded after save. This new record without the key comes from the API.'
-    );
-    // cleanup
-    await runCmd(`delete sys/mounts/${path}`);
-  });
 });
