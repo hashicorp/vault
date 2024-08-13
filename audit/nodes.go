@@ -34,7 +34,7 @@ func processManual(ctx context.Context, data *logical.LogInput, ids []eventlogge
 	}
 
 	// Create an audit event.
-	a, err := NewEvent(RequestType)
+	a, err := newEvent(RequestType)
 	if err != nil {
 		return err
 	}

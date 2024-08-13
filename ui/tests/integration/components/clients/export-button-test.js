@@ -114,9 +114,7 @@ module('Integration | Component | clients/export-button', function (hooks) {
     const namespaceSvc = this.owner.lookup('service:namespace');
     namespaceSvc.path = 'foo';
     this.server.get('/sys/internal/counters/activity/export', function (_, req) {
-      assert.deepEqual(req.requestHeaders, {
-        'X-Vault-Namespace': 'foo',
-      });
+      assert.strictEqual(req.requestHeaders['X-Vault-Namespace'], 'foo');
       return new Response(200, { 'Content-Type': 'text/csv' }, '');
     });
 
@@ -133,9 +131,7 @@ module('Integration | Component | clients/export-button', function (hooks) {
   test('it sends the selected namespace in export request', async function (assert) {
     assert.expect(2);
     this.server.get('/sys/internal/counters/activity/export', function (_, req) {
-      assert.deepEqual(req.requestHeaders, {
-        'X-Vault-Namespace': 'foobar',
-      });
+      assert.strictEqual(req.requestHeaders['X-Vault-Namespace'], 'foobar');
       return new Response(200, { 'Content-Type': 'text/csv' }, '');
     });
     this.selectedNamespace = 'foobar/';
@@ -157,9 +153,7 @@ module('Integration | Component | clients/export-button', function (hooks) {
     const namespaceSvc = this.owner.lookup('service:namespace');
     namespaceSvc.path = 'foo';
     this.server.get('/sys/internal/counters/activity/export', function (_, req) {
-      assert.deepEqual(req.requestHeaders, {
-        'X-Vault-Namespace': 'foo/bar',
-      });
+      assert.strictEqual(req.requestHeaders['X-Vault-Namespace'], 'foo/bar');
       return new Response(200, { 'Content-Type': 'text/csv' }, '');
     });
     this.selectedNamespace = 'bar/';

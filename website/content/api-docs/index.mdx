@@ -85,6 +85,10 @@ $ curl \
     http://127.0.0.1:8200/v1/ns1/ns2/secret/foo
 ```
 
+Some APIs are only available in a limited number of namespaces. More details
+are available in the Namespace
+[documentation](/vault/docs/enterprise/namespaces#restricted-api-paths).
+
 <Warning title="HCP Vault Dedicated">
 
 When you are working with HCP Vault Dedicated, your request must specify the
@@ -96,7 +100,6 @@ requests must include `-H "X-Vault-Namespace: admin"` header or `admin` in the
 API endpoint path.
 
 </Warning>
-
 
 ## API operations
 
