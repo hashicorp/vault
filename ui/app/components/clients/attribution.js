@@ -54,11 +54,6 @@ export default class Attribution extends Component {
     return isSameMonth(startDateObject, endDateObject);
   }
 
-  get showExportButton() {
-    const hasData = this.args.totalClientAttribution ? this.args.totalClientAttribution.length > 0 : false;
-    return hasData && this.canDownload;
-  }
-
   get isSingleNamespace() {
     // if a namespace is selected, then we're viewing top 10 auth methods (mounts)
     return !!this.args.selectedNamespace;
