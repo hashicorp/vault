@@ -114,9 +114,9 @@ export const FORM = {
   addRow: (idx = 0) => `[data-test-kv-add-row="${idx}"]`,
   deleteRow: (idx = 0) => `[data-test-kv-delete-row="${idx}"]`,
   // <KvPatchEditor>
-  patchEdit: (idx) => `[data-test-edit-button="${idx}"]`,
-  patchDelete: (idx) => `[data-test-delete-button="${idx}"]`,
-  patchUndo: (idx) => `[data-test-undo-button="${idx}"]`,
+  patchEdit: (idx = 0) => `[data-test-edit-button="${idx}"]`,
+  patchDelete: (idx = 0) => `[data-test-delete-button="${idx}"]`,
+  patchUndo: (idx = 0) => `[data-test-undo-button="${idx}"]`,
   patchAdd: '[data-test-add-button]',
   patchAlert: (type, idx) => `[data-test-alert-${type}="${idx}"]`,
   // Alerts & validation

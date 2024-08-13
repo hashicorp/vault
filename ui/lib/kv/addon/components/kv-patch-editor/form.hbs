@@ -15,7 +15,7 @@
 
   {{! Rows for existing keys (includes new rows after user clicks "Add") }}
   {{#each this.patchData as |kv idx|}}
-    <KvPatchRow
+    <KvPatchEditor::Row
       @idx={{idx}}
       @kvClass={{kv}}
       @isOriginalSubkey={{this.isOriginalSubkey}}
@@ -52,7 +52,7 @@
     </div>
   </div>
 
-  <KvPatchAlerts
+  <KvPatchEditor::Alerts
     @idx="new"
     @invalidKeyError={{this.invalidKeyError}}
     @keyWarning={{this.newKeyWarning}}

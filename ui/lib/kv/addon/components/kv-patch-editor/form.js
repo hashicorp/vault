@@ -10,7 +10,7 @@ import { A } from '@ember/array';
 import { hasWhitespace, isNonString, WHITESPACE_WARNING, NON_STRING_WARNING } from 'vault/utils/validators';
 
 /**
- * @module KvPatchEditor
+ * @module KvPatchEditor::Form
  * @description
  * This component renders one of two ways to patch a KV v2 secret (the other is using the JSON editor).
  * Each top-level subkey returned by the API endpoint renders in a disabled column with an empty (also disabled) value input beside it.
@@ -27,7 +27,7 @@ import { hasWhitespace, isNonString, WHITESPACE_WARNING, NON_STRING_WARNING } fr
  *
  *
  * @example
- * <KvPatchEditor @subkeys={{@subkeys}} @onSubmit={{perform this.save}} @onCancel={{this.onCancel}} @isSaving={{this.save.isRunning}} />
+ * <KvPatchEditor::Form @subkeys={{@subkeys}} @onSubmit={{perform this.save}} @onCancel={{this.onCancel}} @isSaving={{this.save.isRunning}} />
  *
  * @param {object} subkeys - leaf keys of a kv v2 secret, all values (unless a nested object with more keys) return null. https://developer.hashicorp.com/vault/api-docs/secret/kv/kv-v2#read-secret-subkeys
  * @param {function} onSubmit - called when form is saved, called with with the key value object containing patch data
@@ -35,10 +35,11 @@ import { hasWhitespace, isNonString, WHITESPACE_WARNING, NON_STRING_WARNING } fr
  * @param {boolean} isSaving - if true, disables the save and cancel buttons. useful if the onSubmit callback is a concurrency task
  */
 
-class KeyValueState {
+// only exported for testing
+export class KeyValueState {
   @tracked key;
   @tracked value;
-  @tracked state;
+  @tracked state; // 'enabled', 'disabled' or 'deleted'
   @tracked invalidKeyError;
 
   constructor({ key, value = undefined, state = 'disabled' }) {

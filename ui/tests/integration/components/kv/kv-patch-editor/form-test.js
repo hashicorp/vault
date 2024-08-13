@@ -13,7 +13,7 @@ import sinon from 'sinon';
 import { FORM } from 'vault/tests/helpers/kv/kv-selectors';
 import { NON_STRING_WARNING, WHITESPACE_WARNING } from 'vault/utils/validators';
 
-module('Integration | Component | kv | kv-patch-editor', function (hooks) {
+module('Integration | Component | kv | kv-patch-editor/form', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'kv');
 
@@ -29,7 +29,7 @@ module('Integration | Component | kv | kv-patch-editor', function (hooks) {
     this.renderComponent = async () => {
       return render(
         hbs`
-    <KvPatchEditor
+    <KvPatchEditor::Form
       @subkeys={{this.subkeys}}
       @onSubmit={{this.onSubmit}}
       @onCancel={{this.onCancel}}
