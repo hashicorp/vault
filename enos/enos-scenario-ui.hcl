@@ -122,7 +122,7 @@ scenario "ui" {
     }
 
     variables {
-      ami_id          = step.ec2_info.ami_ids[local.arch][local.distro][var.distro_version_ubuntu]
+      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"][global.distro_version["ubuntu"]]
       cluster_tag_key = local.vault_tag_key
       common_tags     = local.tags
       seal_key_names  = step.create_seal_key.resource_names
@@ -140,7 +140,7 @@ scenario "ui" {
     }
 
     variables {
-      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"]["22.04"]
+      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"][global.distro_version["ubuntu"]]
       cluster_tag_key = local.backend_tag_key
       common_tags     = local.tags
       seal_key_names  = step.create_seal_key.resource_names
@@ -252,7 +252,7 @@ scenario "ui" {
       ip_version           = local.ip_version
       license              = matrix.edition != "ce" ? step.read_vault_license.license : null
       local_artifact_path  = local.artifact_path
-      packages             = global.distro_packages["ubuntu"]
+      packages             = concat(global.packages, global.distro_packages["ubuntu"][global.distro_version["ubuntu"]])
       seal_attributes      = step.create_seal_key.attributes
       seal_type            = local.seal
       storage_backend      = matrix.backend
