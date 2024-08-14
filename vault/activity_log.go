@@ -2792,7 +2792,7 @@ func (a *ActivityLog) calculateByNamespaceResponseForQuery(ctx context.Context, 
 
 			var displayPath string
 			if ns == nil {
-				displayPath = fmt.Sprintf("deleted namespace %q", nsRecord.NamespaceID)
+				displayPath = fmt.Sprintf(DeletedNamespaceFmt, nsRecord.NamespaceID)
 			} else {
 				displayPath = ns.Path
 			}
@@ -2873,7 +2873,7 @@ func (a *ActivityLog) prepareNamespaceResponse(ctx context.Context, nsRecords []
 
 			var displayPath string
 			if ns == nil {
-				displayPath = fmt.Sprintf("deleted namespace %q", nsRecord.NamespaceID)
+				displayPath = fmt.Sprintf(DeletedNamespaceFmt, nsRecord.NamespaceID)
 			} else {
 				displayPath = ns.Path
 			}
@@ -3044,6 +3044,12 @@ func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, f
 			if err != nil {
 				return err
 			}
+			var nsDisplayPath string
+			if ns == nil {
+				nsDisplayPath = fmt.Sprintf(DeletedNamespaceFmt, e.NamespaceID)
+			} else {
+				nsDisplayPath = ns.Path
+			}
 
 			if !a.includeInResponse(reqNS, ns) {
 				continue
@@ -3054,14 +3060,14 @@ func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, f
 			record := &ActivityLogExportRecord{
 				ClientID:      e.ClientID,
 				ClientType:    e.ClientType,
-				NamespaceID:   ns.ID,
-				NamespacePath: ns.Path,
+				NamespaceID:   e.NamespaceID,
+				NamespacePath: nsDisplayPath,
 				Timestamp:     ts.UTC().Format(time.RFC3339),
 				MountAccessor: e.MountAccessor,
 			}
 
 			if e.MountAccessor != "" {
-				cacheKey := ns.Path + mountPathIdentity
+				cacheKey := e.NamespaceID + mountPathIdentity
 
 				var identityBackend logical.Backend
 
