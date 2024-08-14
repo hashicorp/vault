@@ -7,6 +7,9 @@ function fail() {
   exit 1
 }
 
+[[ -z "$EXPECTED_STATE" ]] && fail "EXPECTED_STAE env variable has not been set"
+[[ -z "$RETRY_INTERVAL" ]] && fail "RETRY_INTERVAL env variable has not been set"
+[[ -z "$TIMEOUT_SECONDS" ]] && fail "TIMEOUT_SECONDS env variable has not been set"
 [[ -z "$VAULT_ADDR" ]] && fail "VAULT_ADDR env variable has not been set"
 [[ -z "$VAULT_INSTALL_DIR" ]] && fail "VAULT_INSTALL_DIR env variable has not been set"
 [[ -z "$VAULT_TOKEN" ]] && fail "VAULT_TOKEN env variable has not been set"
@@ -14,23 +17,19 @@ function fail() {
 binpath=${VAULT_INSTALL_DIR}/vault
 test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 
-count=0
-retries=5
-while :; do
+begin_time=$(date +%s)
+end_time=$((begin_time + TIMEOUT_SECONDS))
+while [ "$(date +%s)" -lt "$end_time" ]; do
   state=$($binpath read sys/metrics -format=json | jq -r '.data.Gauges[] | select(.Name == "vault.core.replication.write_undo_logs")')
   target_undo_logs_status="$(jq -r '.Value' <<< "$state")"
 
-  if [ "$target_undo_logs_status" == "1" ]; then
+  if [ "$target_undo_logs_status" == "$EXPECTED_STATE" ]; then
+    echo "vault.core.replication.write_undo_logs has expected Value: \"${EXPECTED_STATE}\""
     exit 0
   fi
 
-  wait=$((2 ** count))
-  count=$((count + 1))
-  if [ "$count" -lt "$retries" ]; then
-    echo "Waiting for vault.core.replication.write_undo_logs to have Value:1"
-    echo "$state"
-    sleep "$wait"
-  else
-    fail "Timed out waiting for vault.core.replication.write_undo_logs to have Value:1"
-  fi
+  echo "Waiting for vault.core.replication.write_undo_logs to have Value: \"${EXPECTED_STATE}\""
+  sleep "$RETRY_INTERVAL"
 done
+
+fail "Timed out waiting for vault.core.replication.write_undo_logs to have Value: \"${EXPECTED_STATE}\""
