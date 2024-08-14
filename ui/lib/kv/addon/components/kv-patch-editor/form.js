@@ -35,7 +35,6 @@ import { hasWhitespace, isNonString, WHITESPACE_WARNING, NON_STRING_WARNING } fr
  * @param {boolean} isSaving - if true, disables the save and cancel buttons. useful if the onSubmit callback is a concurrency task
  */
 
-// only exported for testing
 export class KeyValueState {
   @tracked key;
   @tracked value;
