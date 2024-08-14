@@ -38,7 +38,7 @@ import { hasWhitespace, isNonString, NON_STRING_WARNING, WHITESPACE_WARNING } fr
 export default class KvObjectEditor extends Component {
   // kvData is type ArrayProxy, so addObject etc are fine here
   @tracked kvData;
-  whitespaceWarning = WHITESPACE_WARNING('Key');
+  whitespaceWarning = WHITESPACE_WARNING('key');
   nonStringWarning = NON_STRING_WARNING;
 
   get placeholders() {

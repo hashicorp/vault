@@ -4,6 +4,7 @@
  */
 
 import { isPresent } from '@ember/utils';
+import { capitalize } from '@ember/string';
 
 /*
 * Model Validators
@@ -63,7 +64,9 @@ export const isNonString = (value) => {
 };
 
 export const WHITESPACE_WARNING = (item) =>
-  `${item} contains whitespace. If this is desired, you'll need to encode it with %20 in API requests.`;
+  `${capitalize(
+    item
+  )} contains whitespace. If this is desired, you'll need to encode it with %20 in API requests.`;
 
 export const NON_STRING_WARNING =
   'This value will be saved as a string. If you need to save a non-string value, please use the JSON editor.';

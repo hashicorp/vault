@@ -435,7 +435,7 @@ module('Integration | Component | kv | kv-patch-editor/form', function (hooks) {
 
       await fillIn(FORM.keyInput('new'), 'a space');
       await blur(FORM.keyInput('new')); // unfocus input
-      assert.dom(FORM.patchAlert('key-warning', 'new')).hasText(WHITESPACE_WARNING('This key'));
+      assert.dom(FORM.patchAlert('key-warning', 'new')).hasText(WHITESPACE_WARNING('this key'));
 
       await fillIn(FORM.keyInput('new'), 'nospace');
       await blur(FORM.keyInput('new')); // unfocus input
@@ -457,7 +457,7 @@ module('Integration | Component | kv | kv-patch-editor/form', function (hooks) {
       // go back and change "aKey" to have a space
       await fillIn(FORM.keyInput(2), 'a key');
       await blur(FORM.keyInput(2)); // unfocus input
-      assert.dom(FORM.patchAlert('key-warning', 2)).hasText(WHITESPACE_WARNING('This key'));
+      assert.dom(FORM.patchAlert('key-warning', 2)).hasText(WHITESPACE_WARNING('this key'));
 
       await fillIn(FORM.keyInput(2), 'aKey');
       await blur(FORM.keyInput(2)); // unfocus input
@@ -472,7 +472,7 @@ module('Integration | Component | kv | kv-patch-editor/form', function (hooks) {
       await click(FORM.patchAdd);
       assert
         .dom(FORM.patchAlert('key-warning', 2))
-        .hasText(WHITESPACE_WARNING('This key'), 'warning is attached to relevant key');
+        .hasText(WHITESPACE_WARNING('this key'), 'warning is attached to relevant key');
       assert
         .dom(FORM.patchAlert('key-warning', 'new'))
         .doesNotExist('there is no whitespace warning for the new empty row');
@@ -482,10 +482,10 @@ module('Integration | Component | kv | kv-patch-editor/form', function (hooks) {
       await blur(FORM.keyInput('new')); // unfocus input
       assert
         .dom(FORM.patchAlert('key-warning', 2))
-        .hasText(WHITESPACE_WARNING('This key'), 'warning is still attached to relevant key');
+        .hasText(WHITESPACE_WARNING('this key'), 'warning is still attached to relevant key');
       assert
         .dom(FORM.patchAlert('key-warning', 'new'))
-        .hasText(WHITESPACE_WARNING('This key'), 'new key also has whitespace warning');
+        .hasText(WHITESPACE_WARNING('this key'), 'new key also has whitespace warning');
     });
   });
 

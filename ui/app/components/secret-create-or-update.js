@@ -54,7 +54,7 @@ export default class SecretCreateOrUpdate extends Component {
   @service router;
   @service store;
 
-  whitespaceWarning = WHITESPACE_WARNING('Path');
+  whitespaceWarning = WHITESPACE_WARNING('path');
 
   @action
   setup(elem, [secretData, mode]) {

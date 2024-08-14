@@ -49,7 +49,7 @@ export class KeyValueState {
   }
 
   get keyWarning() {
-    return hasWhitespace(this.key) ? WHITESPACE_WARNING('This key') : '';
+    return hasWhitespace(this.key) ? WHITESPACE_WARNING('this key') : '';
   }
 
   get valueWarning() {
@@ -93,7 +93,7 @@ export default class KvPatchEditor extends Component {
   }
 
   get newKeyWarning() {
-    return hasWhitespace(this.newKey) ? WHITESPACE_WARNING('This key') : '';
+    return hasWhitespace(this.newKey) ? WHITESPACE_WARNING('this key') : '';
   }
 
   get newValueWarning() {
