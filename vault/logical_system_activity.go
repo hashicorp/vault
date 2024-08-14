@@ -22,9 +22,6 @@ import (
 var defaultToRetentionMonthsMaxWarning = fmt.Sprintf("retention_months cannot be greater than %d; capped to %d.", activityLogMaximumRetentionMonths, activityLogMaximumRetentionMonths)
 
 const (
-	// WarningCurrentBillingPeriodDeprecated is a warning string that is used to indicate that the current_billing_period field, as the default start time will automatically be the billing period start date
-	WarningCurrentBillingPeriodDeprecated = "current_billing_period is deprecated; unless otherwise specified, all requests will default to the current billing period"
-
 	// WarningCurrentMonthIsAnEstimate is a warning string that is used to let the customer know that for this query, the current month's data is estimated.
 	WarningCurrentMonthIsAnEstimate = "Since this usage period includes both the current month and at least one historical month, counts returned in this usage period are an estimate. Client counts for this period will no longer be estimated at the start of the next month."
 )
