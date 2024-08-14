@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+import { click, fillIn } from '@ember/test-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+
 export const createSecretsEngine = (store, type, path) => {
   store.pushPayload('secret-engine', {
     modelName: 'secret-engine',
@@ -21,7 +24,7 @@ const createAwsRootConfig = (store, backend) => {
     id: backend,
     modelName: 'aws/root-config',
     data: {
-      backend: backend,
+      backend,
       region: 'us-west-2',
       access_key: '123-key',
       iam_endpoint: 'iam-endpoint',
@@ -31,13 +34,25 @@ const createAwsRootConfig = (store, backend) => {
   return store.peekRecord('aws/root-config', backend);
 };
 
+const createAwsLeaseConfig = (store, backend) => {
+  store.pushPayload('aws/lease-config', {
+    id: backend,
+    modelName: 'aws/lease-config',
+    data: {
+      backend: backend,
+      lease: '50s',
+      leaseMax: '55s',
+    },
+  });
+  return store.peekRecord('aws/lease-config', backend);
+};
+
 const createSshCaConfig = (store, backend) => {
   store.pushPayload('ssh/ca-config', {
     id: backend,
     modelName: 'ssh/ca-config',
     data: {
-      backend: backend,
-      public_key: 'public-key',
+      backend,
       generate_signing_key: true,
     },
   });
@@ -47,7 +62,9 @@ const createSshCaConfig = (store, backend) => {
 export function configUrl(type, backend) {
   switch (type) {
     case 'aws':
-      return `${backend}/config/root`;
+      return `/${backend}/config/root`;
+    case 'aws-lease':
+      return `/${backend}/config/lease`;
     case 'ssh':
       return `/${backend}/config/ca`;
     default:
@@ -59,6 +76,8 @@ export const createConfig = (store, backend, type) => {
   switch (type) {
     case 'aws':
       return createAwsRootConfig(store, backend);
+    case 'aws-lease':
+      return createAwsLeaseConfig(store, backend);
     case 'ssh':
       return createSshCaConfig(store, backend);
   }
@@ -103,5 +122,26 @@ export const expectedValueOfConfigKeys = (type, string) => {
       return valueOfAwsKeys(string);
     case 'ssh':
       return valueOfSshKeys(string);
+  }
+};
+
+export const fillInAwsConfig = async (withAccess = true, withAccessOptions = false, withLease = false) => {
+  if (withAccess) {
+    await fillIn(GENERAL.inputByAttr('accessKey'), 'foo');
+    await fillIn(GENERAL.inputByAttr('secretKey'), 'bar');
+  }
+  if (withAccessOptions) {
+    await click(GENERAL.toggleGroup('Root config options'));
+    await fillIn(GENERAL.selectByAttr('region'), 'ca-central-1');
+    await fillIn(GENERAL.inputByAttr('iamEndpoint'), 'iam-endpoint');
+    await fillIn(GENERAL.inputByAttr('stsEndpoint'), 'sts-endpoint');
+    await fillIn(GENERAL.inputByAttr('maxRetries'), '3');
+  }
+  await click(GENERAL.hdsTab('lease'));
+  if (withLease) {
+    await click(GENERAL.ttl.toggle('Lease'));
+    await fillIn(GENERAL.ttl.input('Lease'), '33');
+    await click(GENERAL.ttl.toggle('Maximum Lease'));
+    await fillIn(GENERAL.ttl.input('Maximum Lease'), '44');
   }
 };
