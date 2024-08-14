@@ -6,7 +6,7 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupEngine } from 'ember-engines/test-support';
-import { blur, click, fillIn, typeIn, render } from '@ember/test-helpers';
+import { blur, click, fillIn, typeIn, render, focus } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import sinon from 'sinon';
@@ -160,15 +160,15 @@ module('Integration | Component | kv | kv-patch-editor/form', function (hooks) {
       await this.renderComponent();
 
       // patch existing key
-      await click(FORM.patchEdit(0));
-      await fillIn(FORM.valueInput(0), 'bar');
+      await click(FORM.patchEdit());
+      await fillIn(FORM.valueInput(), 'bar');
       // in qunit we have to unfocus the input so the following click event works on first try
-      await blur(FORM.valueInput(0));
+      await blur(FORM.valueInput());
 
       // delete existing key
       await click(FORM.patchDelete(1));
       assert.dom(FORM.patchAlert('delete', 1)).hasText('This key value pair is marked for deletion.');
-      assert.dom(FORM.keyInput(1)).hasStyle({ 'text-decoration': 'line-through rgb(59, 61, 69)' });
+      assert.dom(FORM.keyInput(1)).hasClass('line-through');
       assert.dom(`${FORM.patchAlert('delete', 1)} ${GENERAL.icon('trash')}`).exists();
       // value is set to null under the hood, confirm the non-string warning doesn't display
       assert
@@ -197,10 +197,10 @@ module('Integration | Component | kv | kv-patch-editor/form', function (hooks) {
     test('patch data when every action is canceled', async function (assert) {
       await this.renderComponent();
 
-      await click(FORM.patchEdit(0));
-      await fillIn(FORM.valueInput(0), 'bar');
+      await click(FORM.patchEdit());
+      await fillIn(FORM.valueInput(), 'bar');
       // in qunit we have to unfocus the input so the following click event works on the first try
-      await blur(FORM.valueInput(0));
+      await blur(FORM.valueInput());
       await click(FORM.patchDelete(1));
 
       await fillIn(FORM.keyInput('new'), 'aKey');
@@ -218,11 +218,70 @@ module('Integration | Component | kv | kv-patch-editor/form', function (hooks) {
     });
   });
 
-  module('it shows duplicate keys error', function () {
+  module('it does not submit', function () {
+    test('new keys that duplicate original subkeys', async function (assert) {
+      await this.renderComponent();
+      // patch existing key
+      await click(FORM.patchEdit());
+      await fillIn(FORM.valueInput(), 'bar');
+      // add duplicate
+      await fillIn(FORM.keyInput('new'), 'foo');
+      await fillIn(FORM.valueInput('new'), 'duplicate');
+      await click(FORM.saveBtn);
+
+      const [data] = this.onSubmit.lastCall.args;
+      assert.propEqual(data, { foo: 'bar' }, `onSubmit called without duplicates ${JSON.stringify(data)}`);
+    });
+
+    test('newly added keys edited to duplicate original subkeys', async function (assert) {
+      await this.renderComponent();
+
+      // patch existing key
+      await click(FORM.patchEdit());
+      await fillIn(FORM.valueInput(), 'bar');
+      // add new key and click add
+      await fillIn(FORM.keyInput('new'), 'aKey');
+      await fillIn(FORM.valueInput('new'), 'aValue');
+      await click(FORM.patchAdd);
+      // go back and update "aKey" to match pre-existing subkey 'foo'
+      await fillIn(FORM.keyInput(2), 'foo');
+      await click(FORM.saveBtn);
+
+      const [data] = this.onSubmit.lastCall.args;
+      assert.propEqual(
+        data,
+        { foo: 'bar', aKey: 'aValue' },
+        `onSubmit called without duplicates ${JSON.stringify(data)}`
+      );
+    });
+
+    test('new keys that duplicate recently added keys', async function (assert) {
+      await this.renderComponent();
+
+      // create new key and click add
+      await fillIn(FORM.keyInput('new'), 'aKey');
+      await fillIn(FORM.valueInput('new'), 'aValue');
+      await click(FORM.patchAdd);
+      // add same key name as above
+      await fillIn(FORM.keyInput('new'), 'aKey');
+      await fillIn(FORM.valueInput('new'), 'duplicate');
+
+      await click(FORM.saveBtn);
+      // await blur(FORM.keyInput('new')); // unfocus input
+      const [data] = this.onSubmit.lastCall.args;
+      assert.propEqual(
+        data,
+        { aKey: 'aValue' },
+        `onSubmit called without duplicate keys: ${JSON.stringify(data)}`
+      );
+    });
+  });
+
+  module('duplicate keys error', function () {
     const validationMessage = (name) =>
       `"${name}" key already exists. Update the value of the existing key or rename this one.`;
 
-    test('for new keys that duplicate original subkeys', async function (assert) {
+    test('it renders for new keys that duplicate original subkeys', async function (assert) {
       await this.renderComponent();
 
       await fillIn(FORM.keyInput('new'), 'foo');
@@ -244,11 +303,10 @@ module('Integration | Component | kv | kv-patch-editor/form', function (hooks) {
       assert.dom(FORM.keyInput('new')).hasValue('', 'clicking "Add" creates a new row');
     });
 
-    test('for newly added keys edited to duplicate original subkeys', async function (assert) {
+    test('it renders for newly added keys edited to duplicate original subkeys', async function (assert) {
       // if a key is a duplicate then clicking "Add" does not work
       // this test asserts an error appears if a user goes back to rename a previously added key
       // to a duplicate and that it is not added to the payload
-      // TODO test that submit doesn't patch duplicate keys
       await this.renderComponent();
 
       // add new key and click add
@@ -264,7 +322,6 @@ module('Integration | Component | kv | kv-patch-editor/form', function (hooks) {
       await fillIn(FORM.keyInput(2), 'foo');
       await blur(FORM.keyInput(2)); // unfocus input
       assert.dom(FORM.patchAlert('validation', 2)).hasText(validationMessage('foo'));
-
       await typeIn(FORM.keyInput(2), '2');
       await blur(FORM.keyInput(2)); // unfocus input
       assert
@@ -272,8 +329,7 @@ module('Integration | Component | kv | kv-patch-editor/form', function (hooks) {
         .doesNotExist('error disappears when key no longer matches');
     });
 
-    test('for new keys that duplicate recently added keys', async function (assert) {
-      // TODO test that submit doesn't patch duplicate keys
+    test('it renders for new keys that duplicate recently added keys', async function (assert) {
       await this.renderComponent();
 
       // create new key and click add
@@ -286,13 +342,73 @@ module('Integration | Component | kv | kv-patch-editor/form', function (hooks) {
       await fillIn(FORM.valueInput('new'), 'bValue');
       await blur(FORM.keyInput('new')); // unfocus input
       assert.dom(FORM.patchAlert('validation', 'new')).hasText(validationMessage('aKey'));
-      // TODO clicking "Remove" for key above does not recompute validation so error still shows
 
       await typeIn(FORM.keyInput('new'), '2');
       await blur(FORM.keyInput('new')); // unfocus input
       assert
         .dom(FORM.patchAlert('validation', 'new'))
         .doesNotExist('error disappears when key no longer matches');
+    });
+
+    test('it disappears after clicking "Remove" for duplicate', async function (assert) {
+      await this.renderComponent();
+
+      // create new key and click add
+      await fillIn(FORM.keyInput('new'), 'aKey');
+      await fillIn(FORM.valueInput('new'), 'aValue');
+      await click(FORM.patchAdd);
+
+      // add same key name as above
+      await fillIn(FORM.keyInput('new'), 'aKey');
+      await fillIn(FORM.valueInput('new'), 'bValue');
+      await blur(FORM.keyInput('new')); // unfocus input
+      assert.dom(FORM.patchAlert('validation', 'new')).hasText(validationMessage('aKey'));
+
+      await click(FORM.patchUndo(2));
+      assert.dom(FORM.patchAlert('validation', 'new')).doesNotExist('error clears when duplicate is removed');
+      await click(FORM.patchAdd);
+      // assert a new row is added
+      this.assertEmptyRow(assert);
+    });
+
+    test('it disappears after clicking "Remove" for multiple duplicates', async function (assert) {
+      await this.renderComponent();
+
+      // create new key and click add
+      await fillIn(FORM.keyInput('new'), 'aKey');
+      await fillIn(FORM.valueInput('new'), 'aValue');
+      await click(FORM.patchAdd);
+
+      await fillIn(FORM.keyInput('new'), 'bKey');
+      await fillIn(FORM.valueInput('new'), 'bValue');
+      await click(FORM.patchAdd);
+
+      // and add another duplicate
+      await fillIn(FORM.keyInput('new'), 'aKey');
+      await fillIn(FORM.valueInput('new'), 'aValue');
+
+      // edit key to be same as first
+      await fillIn(FORM.keyInput(3), 'aKey');
+
+      // remove all but latest key
+      await click(FORM.patchUndo(3));
+      await click(FORM.patchUndo(2));
+      await click(FORM.patchAdd);
+
+      // assert a new row is added
+      this.assertEmptyRow(assert);
+    });
+
+    test('it does not render when refocusing a previously inputted key', async function (assert) {
+      await this.renderComponent();
+
+      await fillIn(FORM.keyInput('new'), 'aKey');
+      await fillIn(FORM.valueInput('new'), 'aValue');
+      await click(FORM.patchAdd);
+      // focus and unfocus
+      await focus(FORM.keyInput(2));
+      await blur(FORM.keyInput(2));
+      assert.dom(FORM.patchAlert('validation', 2)).doesNotExist();
     });
   });
 

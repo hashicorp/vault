@@ -118,19 +118,23 @@ export default class KvPatchEditor extends Component {
 
   @action
   updateKey(KV, event) {
+    // KV is KeyValueState class
     const key = event.target.value;
+    // if a user re-enters an input, validateKey thinks the input is a duplicate
+    // and miscalculates as invalid so return if values match
+    if (KV.key === key) return;
     const isInvalid = this.validateKey(key);
+    KV.invalidKeyError = isInvalid;
+    if (isInvalid) return;
+    // only set if valid, otherwise state will change to readonly
+    KV.key = key;
+  }
 
-    // KV (KeyValueState class) is only passed for rows of this.patchData
-    if (KV) {
-      KV.invalidKeyError = isInvalid;
-      if (isInvalid) return; // don't set if invalid
-      KV.key = key;
-    } else {
-      this.invalidKeyError = isInvalid;
-      if (isInvalid) return; // don't set if invalid
-      this.newKey = key;
-    }
+  @action
+  updateNewKey(event) {
+    const key = event.target.value;
+    this.invalidKeyError = this.validateKey(key);
+    this.newKey = key;
   }
 
   @action
@@ -156,6 +160,8 @@ export default class KvPatchEditor extends Component {
       // remove row all together
       this.patchData.removeObject(KV);
     }
+    // revalidate in case removed key was a duplicate
+    this.invalidKeyError = this.validateKey(this.newKey);
   }
 
   @action

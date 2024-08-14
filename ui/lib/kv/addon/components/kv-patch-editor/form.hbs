@@ -33,7 +33,7 @@
       aria-label="New key"
       placeholder="key"
       name="newKey"
-      {{on "blur" (fn this.updateKey null)}}
+      {{on "blur" this.updateNewKey}}
       data-test-kv-key="new"
     />
 
