@@ -25,7 +25,7 @@ module('Integration | Component | clients/page-header', function (hooks) {
     this.startTimestamp = '2022-06-01T23:00:11.050Z';
     this.endTimestamp = '2022-12-01T23:00:11.050Z';
     this.selectedNamespace = undefined;
-    this.upgradesDuringActivity = undefined;
+    this.upgradesDuringActivity = [];
     this.server.post('/sys/capabilities-self', () =>
       capabilitiesStub('sys/internal/counters/activity/export', ['sudo'])
     );
