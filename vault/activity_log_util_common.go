@@ -391,8 +391,9 @@ func (a *ActivityLog) sortActivityLogMonthsResponse(months []*ResponseMonth) {
 }
 
 const (
-	noMountAccessor = "no mount accessor (pre-1.10 upgrade?)"
-	deletedMountFmt = "deleted mount; accessor %q"
+	noMountAccessor     = "no mount accessor (pre-1.10 upgrade?)"
+	deletedMountFmt     = "deleted mount; accessor %q"
+	DeletedNamespaceFmt = "deleted namespace %q"
 )
 
 // mountAccessorToMountPath transforms the mount accessor to the mount path
