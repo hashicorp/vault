@@ -38,22 +38,8 @@ export default class ClientsOverviewPageComponent extends ActivityComponent {
   }
 
   get hasAttributionData() {
-    // TODO: update this logic. when do we hide attribution?
-    if (this.args.mountPath) return false;
-    return true;
-    // const { mountPath, namespace } = this.args;
-    // if (!mountPath) {
-    //   if (namespace) {
-    //     const mounts = this.filteredActivityByNamespace?.mounts?.map((mount) => ({
-    //       id: mount.label,
-    //       name: mount.label,
-    //     }));
-    //     return mounts && mounts.length > 0;
-    //   }
-    //   return !!this.totalClientAttribution && this.totalUsageCounts && this.totalUsageCounts.clients !== 0;
-    // }
-
-    // return false;
+    // we only hide attribution data when we filter on mountPath
+    return !this.args.mountPath;
   }
 
   get namespaceMountAttribution() {
