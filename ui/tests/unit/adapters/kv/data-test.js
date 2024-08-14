@@ -419,4 +419,29 @@ module('Unit | Adapter | kv/data', function (hooks) {
       this.adapter.fetchSubkeys({ backend: this.backend, path: this.path, depth: '1' });
     });
   });
+
+  module('patchSecret', function (hooks) {
+    hooks.beforeEach(function () {
+      this.adapter = this.store.adapterFor('kv/data');
+    });
+
+    test('it should make request to patch', async function (assert) {
+      assert.expect(2);
+      const data = { foo: 'bar', baz: null };
+      const expectedPayload = {
+        data,
+        options: {
+          cas: 1,
+        },
+      };
+      this.server.patch(this.endpoint('data'), (schema, req) => {
+        const body = JSON.parse(req.requestBody);
+        assert.true(true, `PATCH request made to ${this.endpoint('data')}`);
+        assert.propEqual(body, expectedPayload, 'payload includes cas version');
+        return EXAMPLE_KV_DATA_CREATE_RESPONSE;
+      });
+
+      this.adapter.patchSecret(this.backend, this.path, data, 1);
+    });
+  });
 });
