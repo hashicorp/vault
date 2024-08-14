@@ -16,7 +16,6 @@
 {{#if this.hasAttributionData}}
   <Clients::Attribution
     @isSecretsSyncActivated={{this.flags.secretsSyncIsActivated}}
-    @newUsageCounts={{this.newClientCounts}}
     @totalClientAttribution={{this.totalClientAttribution}}
     @newClientAttribution={{this.newClientAttribution}}
     @selectedNamespace={{@namespace}}
@@ -24,6 +23,5 @@
     @endTimestamp={{@endTimestamp}}
     @responseTimestamp={{@activity.responseTimestamp}}
     @isHistoricalMonth={{and (not this.isCurrentMonth) (not this.isDateRange)}}
-    @upgradesDuringActivity={{this.upgradesDuringActivity}}
   />
 {{/if}}

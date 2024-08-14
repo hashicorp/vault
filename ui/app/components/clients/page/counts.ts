@@ -53,11 +53,15 @@ export default class ClientsCountsPageComponent extends Component<Args> {
     return null;
   }
 
-  get upgradeExplanations() {
+  // passed into page-header for the export modal alert
+  get upgradesDuringActivity() {
     const { versionHistory, activity } = this.args;
-    const upgradesDuringActivity = filterVersionHistory(versionHistory, activity.startTime, activity.endTime);
-    if (upgradesDuringActivity.length) {
-      return upgradesDuringActivity.map((upgrade: ClientsVersionHistoryModel) => {
+    return filterVersionHistory(versionHistory, activity.startTime, activity.endTime);
+  }
+
+  get upgradeExplanations() {
+    if (this.upgradesDuringActivity.length) {
+      return this.upgradesDuringActivity.map((upgrade: ClientsVersionHistoryModel) => {
         let explanation;
         const date = parseAPITimestamp(upgrade.timestampInstalled, 'MMM d, yyyy');
         const version = upgrade.version || '';

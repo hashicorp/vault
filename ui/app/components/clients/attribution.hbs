@@ -8,52 +8,9 @@
   class={{concat "chart-wrapper" (if @isHistoricalMonth " dual-chart-grid" " single-chart-grid")}}
   data-test-clients-attribution
 >
-  <div class="chart-header has-header-link has-bottom-margin-m">
-    <div class="header-left">
-      <h2 class="chart-title">Attribution</h2>
-      <p class="chart-description" data-test-attribution-description>{{this.chartText.description}}</p>
-    </div>
-    <div class="header-right">
-      {{#if this.showExportButton}}
-        <Clients::ExportButton
-          @startTimestamp={{@startTimestamp}}
-          @endTimestamp={{@endTimestamp}}
-          @selectedNamespace={{@selectedNamespace}}
-        >
-          <:alert>
-            {{#if @upgradesDuringActivity}}
-              <Hds::Alert class="has-top-padding-m" @type="compact" @color="warning" as |A|>
-                <A.Description>
-                  <strong>Data contains {{pluralize @upgradesDuringActivity.length "upgrade"}}:</strong>
-                </A.Description>
-                <A.Description>
-                  <ul class="bullet">
-                    {{#each @upgradesDuringActivity as |upgrade|}}
-                      <li>
-                        {{upgrade.version}}
-                        {{this.parseAPITimestamp upgrade.timestampInstalled "(MMM d, yyyy)"}}
-                      </li>
-                    {{/each}}
-                  </ul>
-                </A.Description>
-                <A.Description>
-                  Visit our
-                  <Hds::Link::Inline
-                    @isHrefExternal={{true}}
-                    @href={{doc-link
-                      "/vault/docs/concepts/client-count/faq#q-which-vault-version-reflects-the-most-accurate-client-counts"
-                    }}
-                  >
-                    Client count FAQ
-                  </Hds::Link::Inline>
-                  for more information.
-                </A.Description>
-              </Hds::Alert>
-            {{/if}}
-          </:alert>
-        </Clients::ExportButton>
-      {{/if}}
-    </div>
+  <div class="chart-header has-bottom-margin-m">
+    <h2 class="chart-title">Attribution</h2>
+    <p class="chart-description" data-test-attribution-description>{{this.chartText.description}}</p>
   </div>
   {{#if this.barChartTotalClients}}
     {{#if @isHistoricalMonth}}
@@ -63,7 +20,6 @@
         <Clients::HorizontalBarChart
           @dataset={{this.barChartNewClients}}
           @chartLegend={{this.attributionLegend}}
-          @totalCounts={{@newUsageCounts}}
           @noDataMessage="There are no new clients for this namespace during this time period."
         />
       </div>

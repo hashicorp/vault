@@ -4,12 +4,8 @@
  */
 
 import Component from '@glimmer/component';
-import { tracked } from '@glimmer/tracking';
-import { service } from '@ember/service';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { isSameMonth } from 'date-fns';
-import { sanitizePath } from 'core/utils/sanitize-path';
-import { waitFor } from '@ember/test-waiters';
 
 /**
  * @module Attribution
@@ -18,7 +14,6 @@ import { waitFor } from '@ember/test-waiters';
  *
  * @example
  *  <Clients::Attribution
- *    @newUsageCounts={{this.newUsageCounts}}
  *    @totalClientAttribution={{this.totalClientAttribution}}
  *    @newClientAttribution={{this.newClientAttribution}}
  *    @selectedNamespace={{this.selectedNamespace}}
@@ -26,10 +21,8 @@ import { waitFor } from '@ember/test-waiters';
  *    @endTimestamp={{this.endTime}}
  *    @isHistoricalMonth={{false}}
  *    @responseTimestamp={{this.responseTimestamp}}
- *    @upgradesDuringActivity={{array (hash version="1.10.1" previousVersion="1.9.1" timestampInstalled= "2021-11-18T10:23:16Z") }}
  *  />
  *
- * @param {object} newUsageCounts - object with new client counts for chart tooltip text
  * @param {array} totalClientAttribution - array of objects containing a label and breakdown of client counts for total clients
  * @param {array} newClientAttribution - array of objects containing a label and breakdown of client counts for new clients
  * @param {string} selectedNamespace - namespace selected from filter bar
@@ -37,40 +30,10 @@ import { waitFor } from '@ember/test-waiters';
  * @param {string} endTimestamp - timestamp string from activity response to render end date for CSV modal and whether copy reads 'month' or 'date range'
  * @param {string} responseTimestamp -  ISO timestamp created in serializer to timestamp the response, renders in bottom left corner below attribution chart
  * @param {boolean} isHistoricalMonth - when true data is from a single, historical month so side-by-side charts should display for attribution data
- * @param {array} upgradesDuringActivity - array of objects containing version history upgrade data
  * @param {boolean} isSecretsSyncActivated - boolean to determine if secrets sync is activated
  */
 
 export default class Attribution extends Component {
-  @service download;
-  @service store;
-  @service namespace;
-
-  @tracked canDownload = false;
-  @tracked showExportModal = false;
-  @tracked exportFormat = 'csv';
-  @tracked downloadError = '';
-
-  constructor() {
-    super(...arguments);
-    this.getExportCapabilities(this.args.selectedNamespace);
-  }
-
-  @waitFor
-  async getExportCapabilities(ns = '') {
-    try {
-      // selected namespace usually ends in /
-      const url = ns
-        ? `${sanitizePath(ns)}/sys/internal/counters/activity/export`
-        : 'sys/internal/counters/activity/export';
-      const cap = await this.store.findRecord('capabilities', url);
-      this.canDownload = cap.canSudo;
-    } catch (e) {
-      // if we can't read capabilities, default to show
-      this.canDownload = true;
-    }
-  }
-
   get attributionLegend() {
     const attributionLegend = [
       { key: 'entity_clients', label: 'entity clients' },
@@ -89,11 +52,6 @@ export default class Attribution extends Component {
     const startDateObject = parseAPITimestamp(this.args.startTimestamp);
     const endDateObject = parseAPITimestamp(this.args.endTimestamp);
     return isSameMonth(startDateObject, endDateObject);
-  }
-
-  get showExportButton() {
-    const hasData = this.args.totalClientAttribution ? this.args.totalClientAttribution.length > 0 : false;
-    return hasData && this.canDownload;
   }
 
   get isSingleNamespace() {

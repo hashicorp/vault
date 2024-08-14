@@ -13,7 +13,6 @@ import subMonths from 'date-fns/subMonths';
 import timestamp from 'core/utils/timestamp';
 import { SERIALIZED_ACTIVITY_RESPONSE } from 'vault/tests/helpers/clients/client-count-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { capabilitiesStub, overrideResponse } from 'vault/tests/helpers/stubs';
 
 module('Integration | Component | clients/attribution', function (hooks) {
   setupRenderingTest(hooks);
@@ -43,7 +42,6 @@ module('Integration | Component | clients/attribution', function (hooks) {
     assert.dom('[data-test-component="empty-state"]').exists();
     assert.dom('[data-test-empty-state-title]').hasText('No data found');
     assert.dom('[data-test-attribution-description]').hasText('There is a problem gathering data');
-    assert.dom('[data-test-attribution-export-button]').doesNotExist();
     assert.dom('[data-test-attribution-timestamp]').doesNotHaveTextContaining('Updated');
   });
 
@@ -62,7 +60,6 @@ module('Integration | Component | clients/attribution', function (hooks) {
 
     assert.dom('[data-test-component="empty-state"]').doesNotExist();
     assert.dom('[data-test-horizontal-bar-chart]').exists('chart displays');
-    assert.dom('[data-test-attribution-export-button]').exists();
     assert
       .dom('[data-test-attribution-description]')
       .hasText(
@@ -188,7 +185,6 @@ module('Integration | Component | clients/attribution', function (hooks) {
 
     assert.dom('[data-test-component="empty-state"]').doesNotExist();
     assert.dom('[data-test-horizontal-bar-chart]').exists('chart displays');
-    assert.dom('[data-test-attribution-export-button]').exists();
     assert
       .dom('[data-test-attribution-description]')
       .hasText(
@@ -201,45 +197,5 @@ module('Integration | Component | clients/attribution', function (hooks) {
       );
     assert.dom('[data-test-top-attribution]').includesText('auth method').includesText('auth/authid/0');
     assert.dom('[data-test-attribution-clients]').includesText('auth method').includesText('8,394');
-  });
-
-  test('it shows the export button if user does has SUDO capabilities', async function (assert) {
-    this.server.post('/sys/capabilities-self', () =>
-      capabilitiesStub('sys/internal/counters/activity/export', ['sudo'])
-    );
-
-    await render(hbs`
-      <Clients::Attribution
-        @totalClientAttribution={{this.totalClientAttribution}}
-        @responseTimestamp={{this.timestamp}}
-        />
-    `);
-    assert.dom('[data-test-attribution-export-button]').exists();
-  });
-
-  test('it hides the export button if user does not have SUDO capabilities', async function (assert) {
-    this.server.post('/sys/capabilities-self', () =>
-      capabilitiesStub('sys/internal/counters/activity/export', ['read'])
-    );
-
-    await render(hbs`
-      <Clients::Attribution
-        @totalClientAttribution={{this.totalClientAttribution}}
-        @responseTimestamp={{this.timestamp}}
-        />
-    `);
-    assert.dom('[data-test-attribution-export-button]').doesNotExist();
-  });
-
-  test('defaults to show the export button if capabilities cannot be read', async function (assert) {
-    this.server.post('/sys/capabilities-self', () => overrideResponse(403));
-
-    await render(hbs`
-      <Clients::ExportButton
-        @totalClientAttribution={{this.totalClientAttribution}}
-        @responseTimestamp={{this.timestamp}}
-        />
-    `);
-    assert.dom('[data-test-attribution-export-button]').exists();
   });
 });
