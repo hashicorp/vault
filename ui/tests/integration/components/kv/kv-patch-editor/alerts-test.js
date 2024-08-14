@@ -16,7 +16,7 @@ module('Integration | Component | kv | kv-patch-editor/alerts', function (hooks)
   setupEngine(hooks, 'kv');
 
   hooks.beforeEach(function () {
-    this.invalidKeyError = '';
+    this.keyError = '';
     this.keyWarning = '';
     this.valueWarning = '';
     this.renderComponent = async () => {
@@ -24,7 +24,7 @@ module('Integration | Component | kv | kv-patch-editor/alerts', function (hooks)
         hbs`
       <KvPatchEditor::Alerts
         @idx={{1}}
-        @invalidKeyError={{this.invalidKeyError}}
+        @keyError={{this.keyError}}
         @keyWarning={{this.keyWarning}}
         @valueWarning={{this.valueWarning}}
       />`,
@@ -41,7 +41,7 @@ module('Integration | Component | kv | kv-patch-editor/alerts', function (hooks)
   });
 
   test('it renders key error', async function (assert) {
-    this.invalidKeyError = "There's a problem with your key";
+    this.keyError = "There's a problem with your key";
     await this.renderComponent();
     assert.dom(FORM.patchAlert('validation', 1)).hasClass('hds-alert--color-critical');
     assert.dom(`${FORM.patchAlert('validation', 1)} ${GENERAL.icon('alert-diamond-fill')}`).exists();
@@ -69,11 +69,11 @@ module('Integration | Component | kv | kv-patch-editor/alerts', function (hooks)
   });
 
   test('it renders all three alerts', async function (assert) {
-    this.invalidKeyError = "There's a problem with your key";
+    this.keyError = "There's a problem with your key";
     this.keyWarning = 'Key warning';
     this.valueWarning = 'Value warning';
     await this.renderComponent();
-    assert.dom(FORM.patchAlert('validation', 1)).hasText(this.invalidKeyError);
+    assert.dom(FORM.patchAlert('validation', 1)).hasText(this.keyError);
     assert.dom(FORM.patchAlert('key-warning', 1)).hasText(this.keyWarning);
     assert.dom(FORM.patchAlert('value-warning', 1)).hasText(this.valueWarning);
   });

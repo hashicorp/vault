@@ -5,9 +5,9 @@
 
 {{! display only template for rendering alerts for the kv patch editor }}
 
-{{#if @invalidKeyError}}
+{{#if @keyError}}
   <Hds::Alert @type="compact" @color="critical" @icon="alert-diamond-fill" data-test-alert-validation={{@idx}} as |A|>
-    <A.Description>{{@invalidKeyError}}</A.Description>
+    <A.Description>{{@keyError}}</A.Description>
   </Hds::Alert>
 {{/if}}
 {{#if @keyWarning}}

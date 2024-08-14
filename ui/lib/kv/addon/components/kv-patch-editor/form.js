@@ -40,7 +40,7 @@ export class KeyValueState {
   @tracked key;
   @tracked value;
   @tracked state; // 'enabled', 'disabled' or 'deleted'
-  @tracked invalidKeyError;
+  @tracked keyError;
 
   constructor({ key, value = undefined, state = 'disabled' }) {
     this.key = key;
@@ -76,10 +76,10 @@ export class KeyValueState {
 export default class KvPatchEditor extends Component {
   @tracked patchData; // key value pairs in form
   @tracked showSubkeys = false;
+  @tracked submitError;
 
   // tracked variables for new (initially empty) row of inputs.
   // once a user clicks "Add" a KeyValueState class is instantiated for that row
-  @tracked invalidKeyError = '';
   @tracked newKey;
   @tracked newValue;
 
@@ -99,6 +99,10 @@ export default class KvPatchEditor extends Component {
   get newValueWarning() {
     if (this.newValue === null) return '';
     return isNonString(this.newValue) ? NON_STRING_WARNING : '';
+  }
+
+  get newKeyError() {
+    return this.validateKey(this.newKey);
   }
 
   generateData(key, value, state) {
@@ -124,16 +128,16 @@ export default class KvPatchEditor extends Component {
     // and miscalculates as invalid so return if values match
     if (KV.key === key) return;
     const isInvalid = this.validateKey(key);
-    KV.invalidKeyError = isInvalid;
+    KV.keyError = isInvalid;
     if (isInvalid) return;
-    // only set if valid, otherwise state will change to readonly
+    // only set if valid, otherwise key matches original
+    // subkey and input state updates to readonly
     KV.key = key;
   }
 
   @action
   updateNewKey(event) {
     const key = event.target.value;
-    this.invalidKeyError = this.validateKey(key);
     this.newKey = key;
   }
 
@@ -144,7 +148,7 @@ export default class KvPatchEditor extends Component {
 
   @action
   addRow() {
-    if (!this.newKey || this.invalidKeyError) return;
+    if (!this.newKey || this.newKeyError) return;
     const KV = this.generateData(this.newKey, this.newValue, 'enabled');
     this.patchData.pushObject(KV);
     // reset tracked values after adding them to patchData
@@ -160,13 +164,16 @@ export default class KvPatchEditor extends Component {
       // remove row all together
       this.patchData.removeObject(KV);
     }
-    // revalidate in case removed key was a duplicate
-    this.invalidKeyError = this.validateKey(this.newKey);
   }
 
   @action
   submit(event) {
     event.preventDefault();
+    if (this.newKeyError || this.patchData.any((KV) => KV.keyError)) {
+      this.submitError = 'This form contains validations errors, please resolve those before submitting.';
+      return;
+    }
+
     // patchData will not include the last row if a user has not clicked "Add"
     // manually check for data and add it to this.patchData
     if (this.newKey && this.newValue) {

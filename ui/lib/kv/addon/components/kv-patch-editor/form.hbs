@@ -54,7 +54,7 @@
 
   <KvPatchEditor::Alerts
     @idx="new"
-    @invalidKeyError={{this.invalidKeyError}}
+    @keyError={{this.newKeyError}}
     @keyWarning={{this.newKeyWarning}}
     @valueWarning={{this.newValueWarning}}
   />
@@ -76,4 +76,8 @@
     <Hds::Button @text="Save" type="submit" @icon={{if @isSaving "loading"}} disabled={{@isSaving}} data-test-kv-save />
     <Hds::Button @text="Cancel" {{on "click" @onCancel}} @color="secondary" disabled={{@isSaving}} data-test-kv-cancel />
   </Hds::ButtonSet>
+
+  {{#if this.submitError}}
+    <AlertInline @type="danger" @message={{this.submitError}} class="has-top-padding-s" />
+  {{/if}}
 </form>

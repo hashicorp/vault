@@ -229,8 +229,9 @@ module('Integration | Component | kv | kv-patch-editor/form', function (hooks) {
       await fillIn(FORM.valueInput('new'), 'duplicate');
       await click(FORM.saveBtn);
 
-      const [data] = this.onSubmit.lastCall.args;
-      assert.propEqual(data, { foo: 'bar' }, `onSubmit called without duplicates ${JSON.stringify(data)}`);
+      assert
+        .dom(GENERAL.inlineError)
+        .hasText('This form contains validations errors, please resolve those before submitting.');
     });
 
     test('newly added keys edited to duplicate original subkeys', async function (assert) {
@@ -243,16 +244,13 @@ module('Integration | Component | kv | kv-patch-editor/form', function (hooks) {
       await fillIn(FORM.keyInput('new'), 'aKey');
       await fillIn(FORM.valueInput('new'), 'aValue');
       await click(FORM.patchAdd);
-      // go back and update "aKey" to match pre-existing subkey 'foo'
+      // go back and edit "aKey" to match pre-existing subkey 'foo'
       await fillIn(FORM.keyInput(2), 'foo');
       await click(FORM.saveBtn);
 
-      const [data] = this.onSubmit.lastCall.args;
-      assert.propEqual(
-        data,
-        { foo: 'bar', aKey: 'aValue' },
-        `onSubmit called without duplicates ${JSON.stringify(data)}`
-      );
+      assert
+        .dom(GENERAL.inlineError)
+        .hasText('This form contains validations errors, please resolve those before submitting.');
     });
 
     test('new keys that duplicate recently added keys', async function (assert) {
@@ -265,15 +263,11 @@ module('Integration | Component | kv | kv-patch-editor/form', function (hooks) {
       // add same key name as above
       await fillIn(FORM.keyInput('new'), 'aKey');
       await fillIn(FORM.valueInput('new'), 'duplicate');
-
       await click(FORM.saveBtn);
-      // await blur(FORM.keyInput('new')); // unfocus input
-      const [data] = this.onSubmit.lastCall.args;
-      assert.propEqual(
-        data,
-        { aKey: 'aValue' },
-        `onSubmit called without duplicate keys: ${JSON.stringify(data)}`
-      );
+
+      assert
+        .dom(GENERAL.inlineError)
+        .hasText('This form contains validations errors, please resolve those before submitting.');
     });
   });
 
@@ -409,6 +403,29 @@ module('Integration | Component | kv | kv-patch-editor/form', function (hooks) {
       await focus(FORM.keyInput(2));
       await blur(FORM.keyInput(2));
       assert.dom(FORM.patchAlert('validation', 2)).doesNotExist();
+    });
+
+    // accounts for an edge case where not setting invalid key values caused
+    // error to show for outdated keys and then updating the key did not remove error
+    test('it disappears for new key when another duplicate key is edited', async function (assert) {
+      await this.renderComponent();
+
+      // create new key and click add
+      await fillIn(FORM.keyInput('new'), 'aKey');
+      await fillIn(FORM.valueInput('new'), 'aValue');
+      await click(FORM.patchAdd);
+      // edit key to be a duplicate of original subkey, "foo"
+      // since "foo" is invalid it does not update the tracked KV.key value.
+      // the input value reads "foo" but underlying KV class key value is still "aKey"
+      await fillIn(FORM.keyInput(2), 'foo');
+      // fill in new key that matches underlying value of input above
+      await fillIn(FORM.keyInput('new'), 'aKey');
+      // validation errors now show for both inputs even though no visible input reads "aKey" (while strange UX, it's a super edge case)
+      // editing input at index 2 ("foo") should make both disappear
+      await fillIn(FORM.keyInput(2), 'foo2');
+      await blur(FORM.keyInput(2)); // unfocus input
+      assert.dom(FORM.patchAlert('validation', 2)).doesNotExist();
+      assert.dom(FORM.patchAlert('validation', 'new')).doesNotExist();
     });
   });
 
