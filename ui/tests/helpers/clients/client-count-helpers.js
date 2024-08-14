@@ -131,7 +131,7 @@ export const ACTIVITY_RESPONSE_STUB = {
       timestamp: '2023-07-01T00:00:00Z',
       counts: {
         acme_clients: 100,
-        clients: 100,
+        clients: 400,
         entity_clients: 100,
         non_entity_clients: 100,
         secret_syncs: 100,
@@ -142,7 +142,7 @@ export const ACTIVITY_RESPONSE_STUB = {
           namespace_path: '',
           counts: {
             acme_clients: 100,
-            clients: 100,
+            clients: 400,
             entity_clients: 100,
             non_entity_clients: 100,
             secret_syncs: 100,
@@ -162,7 +162,7 @@ export const ACTIVITY_RESPONSE_STUB = {
               mount_path: 'auth/authid/0',
               counts: {
                 acme_clients: 0,
-                clients: 100,
+                clients: 200,
                 entity_clients: 100,
                 non_entity_clients: 100,
                 secret_syncs: 0,
@@ -184,7 +184,7 @@ export const ACTIVITY_RESPONSE_STUB = {
       new_clients: {
         counts: {
           acme_clients: 100,
-          clients: 100,
+          clients: 400,
           entity_clients: 100,
           non_entity_clients: 100,
           secret_syncs: 100,
@@ -195,7 +195,7 @@ export const ACTIVITY_RESPONSE_STUB = {
             namespace_path: '',
             counts: {
               acme_clients: 100,
-              clients: 100,
+              clients: 400,
               entity_clients: 100,
               non_entity_clients: 100,
               secret_syncs: 100,
@@ -215,7 +215,7 @@ export const ACTIVITY_RESPONSE_STUB = {
                 mount_path: 'auth/authid/0',
                 counts: {
                   acme_clients: 0,
-                  clients: 100,
+                  clients: 200,
                   entity_clients: 100,
                   non_entity_clients: 100,
                   secret_syncs: 0,
@@ -240,7 +240,7 @@ export const ACTIVITY_RESPONSE_STUB = {
       timestamp: '2023-08-01T00:00:00Z',
       counts: {
         acme_clients: 100,
-        clients: 100,
+        clients: 400,
         entity_clients: 100,
         non_entity_clients: 100,
         secret_syncs: 100,
@@ -251,7 +251,7 @@ export const ACTIVITY_RESPONSE_STUB = {
           namespace_path: '',
           counts: {
             acme_clients: 100,
-            clients: 100,
+            clients: 400,
             entity_clients: 100,
             non_entity_clients: 100,
             secret_syncs: 100,
@@ -271,7 +271,7 @@ export const ACTIVITY_RESPONSE_STUB = {
               mount_path: 'auth/authid/0',
               counts: {
                 acme_clients: 0,
-                clients: 100,
+                clients: 200,
                 entity_clients: 100,
                 non_entity_clients: 100,
                 secret_syncs: 0,
@@ -740,7 +740,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
       month: '7/23',
       timestamp: '2023-07-01T00:00:00Z',
       acme_clients: 100,
-      clients: 100,
+      clients: 400,
       entity_clients: 100,
       non_entity_clients: 100,
       secret_syncs: 100,
@@ -748,7 +748,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
         {
           label: 'root',
           acme_clients: 100,
-          clients: 100,
+          clients: 400,
           entity_clients: 100,
           non_entity_clients: 100,
           secret_syncs: 100,
@@ -764,7 +764,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
             {
               label: 'auth/authid/0',
               acme_clients: 0,
-              clients: 100,
+              clients: 200,
               entity_clients: 100,
               non_entity_clients: 100,
               secret_syncs: 0,
@@ -783,7 +783,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
       namespaces_by_key: {
         root: {
           acme_clients: 100,
-          clients: 100,
+          clients: 400,
           entity_clients: 100,
           non_entity_clients: 100,
           secret_syncs: 100,
@@ -794,7 +794,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
             timestamp: '2023-07-01T00:00:00Z',
             label: 'root',
             acme_clients: 100,
-            clients: 100,
+            clients: 400,
             entity_clients: 100,
             non_entity_clients: 100,
             secret_syncs: 100,
@@ -810,7 +810,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
               {
                 label: 'auth/authid/0',
                 acme_clients: 0,
-                clients: 100,
+                clients: 200,
                 entity_clients: 100,
                 non_entity_clients: 100,
                 secret_syncs: 0,
@@ -849,7 +849,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
             'auth/authid/0': {
               label: 'auth/authid/0',
               acme_clients: 0,
-              clients: 100,
+              clients: 200,
               entity_clients: 100,
               non_entity_clients: 100,
               secret_syncs: 0,
@@ -860,7 +860,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
                 timestamp: '2023-07-01T00:00:00Z',
                 label: 'auth/authid/0',
                 acme_clients: 0,
-                clients: 100,
+                clients: 200,
                 entity_clients: 100,
                 non_entity_clients: 100,
                 secret_syncs: 0,
@@ -893,7 +893,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
         month: '7/23',
         timestamp: '2023-07-01T00:00:00Z',
         acme_clients: 100,
-        clients: 100,
+        clients: 400,
         entity_clients: 100,
         non_entity_clients: 100,
         secret_syncs: 100,
@@ -901,7 +901,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
           {
             label: 'root',
             acme_clients: 100,
-            clients: 100,
+            clients: 400,
             entity_clients: 100,
             non_entity_clients: 100,
             secret_syncs: 100,
@@ -917,7 +917,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
               {
                 label: 'auth/authid/0',
                 acme_clients: 0,
-                clients: 100,
+                clients: 200,
                 entity_clients: 100,
                 non_entity_clients: 100,
                 secret_syncs: 0,
@@ -939,7 +939,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
       month: '8/23',
       timestamp: '2023-08-01T00:00:00Z',
       acme_clients: 100,
-      clients: 100,
+      clients: 400,
       entity_clients: 100,
       non_entity_clients: 100,
       secret_syncs: 100,
@@ -947,7 +947,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
         {
           label: 'root',
           acme_clients: 100,
-          clients: 100,
+          clients: 400,
           entity_clients: 100,
           non_entity_clients: 100,
           secret_syncs: 100,
@@ -963,7 +963,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
             {
               label: 'auth/authid/0',
               acme_clients: 0,
-              clients: 100,
+              clients: 200,
               entity_clients: 100,
               non_entity_clients: 100,
               secret_syncs: 0,
@@ -982,7 +982,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
       namespaces_by_key: {
         root: {
           acme_clients: 100,
-          clients: 100,
+          clients: 400,
           entity_clients: 100,
           non_entity_clients: 100,
           secret_syncs: 100,
@@ -1013,7 +1013,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
             'auth/authid/0': {
               label: 'auth/authid/0',
               acme_clients: 0,
-              clients: 100,
+              clients: 200,
               entity_clients: 100,
               non_entity_clients: 100,
               secret_syncs: 0,
