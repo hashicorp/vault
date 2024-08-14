@@ -10,6 +10,7 @@ import { withModelValidations } from 'vault/decorators/model-validations';
 import { withExpandedAttributes } from 'vault/decorators/model-expanded-attributes';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
 import { isAddonEngine, allEngines } from 'vault/helpers/mountable-secret-engines';
+import { WHITESPACE_WARNING } from 'vault/utils/validators';
 
 const LINKED_BACKENDS = supportedSecretBackends();
 
@@ -22,8 +23,7 @@ const validations = {
     { type: 'presence', message: "Path can't be blank." },
     {
       type: 'containsWhiteSpace',
-      message:
-        "Path contains whitespace. If this is desired, you'll need to encode it with %20 in API requests.",
+      message: WHITESPACE_WARNING('path'),
       level: 'warn',
     },
   ],

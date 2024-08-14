@@ -1,0 +1,22 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{! display only template for rendering alerts for the kv patch editor }}
+
+{{#if @keyError}}
+  <Hds::Alert @type="compact" @color="critical" @icon="alert-diamond-fill" data-test-alert-validation={{@idx}} as |A|>
+    <A.Description>{{@keyError}}</A.Description>
+  </Hds::Alert>
+{{/if}}
+{{#if @keyWarning}}
+  <Hds::Alert @type="compact" @color="warning" @icon="alert-triangle-fill" data-test-alert-key-warning={{@idx}} as |A|>
+    <A.Description>{{@keyWarning}}</A.Description>
+  </Hds::Alert>
+{{/if}}
+{{#if @valueWarning}}
+  <Hds::Alert @type="compact" @color="warning" @icon="alert-triangle-fill" data-test-alert-value-warning={{@idx}} as |A|>
+    <A.Description>{{@valueWarning}}</A.Description>
+  </Hds::Alert>
+{{/if}}
