@@ -123,9 +123,9 @@ export default class KvPatchEditor extends Component {
   updateKey(KV, event) {
     // KV is KeyValueState class
     const key = event.target.value;
-    // if a user re-enters an input, validateKey thinks the input is a duplicate
-    // and miscalculates as invalid so return if values match
-    if (KV.key === key) return;
+    // if a user refocuses an input that already has a key
+    // validateKey miscalculates and thinks it's a duplicate
+    if (KV.key === key) return; // so we return if values match
     const isInvalid = this.validateKey(key);
     KV.keyError = isInvalid;
     if (isInvalid) return;
