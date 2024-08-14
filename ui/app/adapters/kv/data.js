@@ -49,9 +49,8 @@ export default class KvDataAdapter extends ApplicationAdapter {
     return this.ajax(url, 'PATCH', { data });
   }
 
-  fetchSubkeys(query) {
-    const { backend, path, version, depth } = query;
-    const url = this._url(kvSubkeysPath(backend, path, depth, version));
+  fetchSubkeys(backend, path, query) {
+    const url = this._url(kvSubkeysPath(backend, path, query));
     // TODO subkeys response handles deleted records the same as queryRecord and returns a 404
     // extrapolate error handling logic from queryRecord and share between these two methods
     return this.ajax(url, 'GET').then((resp) => resp.data);
