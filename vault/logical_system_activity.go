@@ -287,7 +287,7 @@ func (b *SystemBackend) handleClientExport(ctx context.Context, req *logical.Req
 
 	err = a.writeExport(runCtx, req.ResponseWriter, d.Get("format").(string), startTime, endTime)
 	if err != nil {
-		if errors.Is(err, ErrActivityExportNoDataInRange) || errors.Is(err, ErrActivityExportInProgress) || strings.HasPrefix(err.Error(), ActivityExportInvalidFormatPrefix) {
+		if errors.Is(err, ErrActivityExportInProgress) || strings.HasPrefix(err.Error(), ActivityExportInvalidFormatPrefix) {
 			return logical.ErrorResponse(err.Error()), nil
 		} else {
 			return nil, err
