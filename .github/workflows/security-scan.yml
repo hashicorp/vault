@@ -15,7 +15,7 @@ on:
 
 jobs:
   scan:
-    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["","ondemand","os=linux","type=c6a.4xlarge"]') }}
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ondemand","os=linux","type=c6a.4xlarge"]') }}
     # The first check ensures this doesn't run on community-contributed PRs, who
     # won't have the permissions to run this job.
     if: |
