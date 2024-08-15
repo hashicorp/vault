@@ -14,9 +14,14 @@ module('Unit | Utility | query-param-string', function () {
       expected: '?redirect=https%3A%2F%2Fhashicorp.com&some%24key=normal-value&number=7',
     },
     {
-      scenario: 'object with falsey values',
-      obj: { redirect: '', null: null, foo: 'bar', number: 0 },
-      expected: '?foo=bar',
+      scenario: 'object with invalid values',
+      obj: { redirect: '', null: null, foo: 'bar', number: 0, undefined: undefined, false: false },
+      expected: '?foo=bar&number=0&false=false',
+    },
+    {
+      scenario: 'object where every value is invalid',
+      obj: { redirect: '', null: null, undefined: undefined },
+      expected: '',
     },
     {
       scenario: 'empty object',

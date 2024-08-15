@@ -8,6 +8,7 @@ import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 import { isDeleted } from 'kv/utils/kv-deleted';
+import { WHITESPACE_WARNING } from 'vault/utils/validators';
 
 /* sample response
 {
@@ -35,8 +36,7 @@ const validations = {
     { type: 'endsInSlash', message: `Path can't end in forward slash '/'.` },
     {
       type: 'containsWhiteSpace',
-      message:
-        "Path contains whitespace. If this is desired, you'll need to encode it with %20 in API requests.",
+      message: WHITESPACE_WARNING('path'),
       level: 'warn',
     },
   ],
