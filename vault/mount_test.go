@@ -1076,7 +1076,7 @@ func TestCore_RemountSecretsEngine(t *testing.T) {
 	src := namespace.MountPathDetails{Namespace: namespace.RootNamespace, MountPath: "kv1/"}
 	dst := namespace.MountPathDetails{Namespace: namespace.RootNamespace, MountPath: "kv2/"}
 
-	// Give it a few seconds to replication userpass1 auth mount to perf standby
+	// Give it a few seconds to replicate kv1 secrets engine to perf standby
 	corehelpers.RetryUntil(t, 5*time.Second, func() error {
 		err = perfStandbyCore.remountSecretsEngine(nsCtx, src, dst, false)
 		return err
@@ -1131,7 +1131,7 @@ func TestCore_RemountAuthEngine(t *testing.T) {
 	src := namespace.MountPathDetails{Namespace: namespace.RootNamespace, MountPath: "auth/userpass1/"}
 	dst := namespace.MountPathDetails{Namespace: namespace.RootNamespace, MountPath: "auth/userpass2/"}
 
-	// Give it a few seconds to replication userpass1 auth mount to perf standby
+	// Give it a few seconds to replicate userpass1 auth mount to perf standby
 	corehelpers.RetryUntil(t, 5*time.Second, func() error {
 		err := perfStandbyCore.remountCredential(nsCtx, src, dst, false)
 		return err
