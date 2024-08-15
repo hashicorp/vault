@@ -10,6 +10,7 @@
 
 import { sanitizeStart } from 'core/utils/sanitize-path';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
+import queryParamString from './query-param-string';
 
 // only exported for testing
 export function buildKvPath(backend: string, path: string, type: string, version?: number | string) {
@@ -32,4 +33,18 @@ export function kvDestroyPath(backend: string, path: string) {
 }
 export function kvUndeletePath(backend: string, path: string) {
   return buildKvPath(backend, path, 'undelete');
+}
+export function kvSubkeysPath(
+  backend: string,
+  path: string,
+  query: { depth?: number | string; version?: number | string }
+) {
+  const apiPath = buildKvPath(backend, path, 'subkeys');
+  // depth specifies the deepest nesting level the API should return
+  // depth=0 returns all subkeys (no limit), depth=1 returns only top-level keys
+  const queryParams = queryParamString({
+    depth: query?.depth ?? undefined, // no depth returns all levels (no limit)
+    version: query?.version ?? undefined, // no version defaults to latest
+  });
+  return `${apiPath}${queryParams}`;
 }

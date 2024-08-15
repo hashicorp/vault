@@ -9,22 +9,45 @@ terraform {
   }
 }
 
-variable "vault_install_dir" {
-  type        = string
-  description = "The directory where the Vault binary will be installed"
-}
-
-variable "vault_instance_count" {
+variable "expected_state" {
   type        = number
-  description = "How many vault instances are in the cluster"
+  description = "The expected state to have in vault.core.replication.write_undo_logs telemetry. Must be either 1 for enabled or 0 for disabled."
+
+  validation {
+    condition     = contains([0, 1], var.expected_state)
+    error_message = "The expected_state must be either 0 or 1"
+  }
 }
 
-variable "vault_instances" {
+variable "hosts" {
   type = map(object({
+    ipv6       = string
     private_ip = string
     public_ip  = string
   }))
-  description = "The vault cluster instances that were created"
+  description = "The vault cluster target hosts to check"
+}
+
+variable "retry_interval" {
+  type        = number
+  description = "How many seconds to wait between each retry"
+  default     = 2
+}
+
+variable "timeout" {
+  type        = number
+  description = "The max number of seconds to wait before timing out"
+  default     = 60
+}
+
+variable "vault_addr" {
+  type        = string
+  description = "The local vault API listen address"
+}
+
+variable "vault_install_dir" {
+  type        = string
+  description = "The directory where the Vault binary will be installed"
 }
 
 variable "vault_root_token" {
@@ -32,20 +55,14 @@ variable "vault_root_token" {
   description = "The vault root token"
 }
 
-locals {
-  public_ips = {
-    for idx in range(var.vault_instance_count) : idx => {
-      public_ip  = values(var.vault_instances)[idx].public_ip
-      private_ip = values(var.vault_instances)[idx].private_ip
-    }
-  }
-}
-
 resource "enos_remote_exec" "smoke-verify-undo-logs" {
-  for_each = local.public_ips
+  for_each = var.hosts
 
   environment = {
-    VAULT_ADDR        = "http://localhost:8200"
+    EXPECTED_STATE    = var.expected_state
+    RETRY_INTERVAL    = var.retry_interval
+    TIMEOUT_SECONDS   = var.timeout
+    VAULT_ADDR        = var.vault_addr
     VAULT_INSTALL_DIR = var.vault_install_dir
     VAULT_TOKEN       = var.vault_root_token
   }

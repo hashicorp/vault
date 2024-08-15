@@ -1,5 +1,5 @@
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: BUSL-1.1
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
 
 globals {
   description = {
@@ -180,7 +180,8 @@ globals {
     EOF
 
     verify_vault_version = <<-EOF
-      Verify that the Vault cluster has the correct embedded version metadata. This metadata includes
+      Verify that the Vault CLI has the correct embedded version metadata and that the Vault Cluster
+      verision history includes our expected version. The CLI metadata that is validated includes
       the Vault version, edition, build date, and any special prerelease metadata.
     EOF
 

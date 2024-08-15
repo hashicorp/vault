@@ -3,25 +3,6 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<PageHeader as |p|>
-  <p.top>
-    <Hds::Breadcrumb>
-      {{#if @model.isNew}}
-        <Hds::Breadcrumb::Item @text="Keys" @route="vault.cluster.access.oidc.keys" />
-      {{else}}
-        <Hds::Breadcrumb::Item @text="Details" @route="vault.cluster.access.oidc.keys.key.details" @model={{@model.name}} />
-      {{/if}}
-      <Hds::Breadcrumb::Item @text="{{if @model.isNew 'Create' 'Edit'}} Key" @current={{true}} />
-    </Hds::Breadcrumb>
-  </p.top>
-  <p.levelLeft>
-    <h1 class="title is-3" data-test-oidc-key-title>
-      {{if @model.isNew "Create" "Edit"}}
-      Key
-    </h1>
-  </p.levelLeft>
-</PageHeader>
-
 <form {{on "submit" (perform this.save)}}>
   <div class="box is-sideless is-fullwidth is-bottomless">
     <MessageError @errorMessage={{this.errorBanner}} />

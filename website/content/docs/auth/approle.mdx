@@ -94,7 +94,6 @@ management tool.
    $ vault write auth/approle/role/my-role \
        token_type=batch \
        secret_id_ttl=10m \
-       token_num_uses=10 \
        token_ttl=20m \
        token_max_ttl=30m \
        secret_id_num_uses=40
@@ -237,9 +236,16 @@ belonging to configured CIDR blocks on the AppRole.
 
 ## Tutorial
 
-Refer to the [AppRole Pull
-Authentication](/vault/tutorials/auth-methods/approle)
-tutorial to learn how to use the AppRole method to generate tokens for machines or apps.
+Refer to the following tutorials to learn more:
+
+- [AppRole Pull Authentication](/vault/tutorials/auth-methods/approle) tutorial
+  to learn how to use the AppRole auth method to generate tokens for machines or
+  apps.
+
+- [AppRole usage best
+  practices](/vault/tutorials/auth-methods/approle-best-practices) to understand
+  the recommendation for distributing the AppRole credentials to the target
+  Vault clients.
 
 ## User lockout
 
