@@ -9,10 +9,10 @@ import { kvMetadataPath, kvDataPath } from 'vault/utils/kv-path';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 /**
- * @module KvPaths is used to display copyable secret paths for KV v2 for CLI and API use.
+ * @module KvPathsCard is used to display copyable secret paths for KV v2 for CLI and API use.
  * This component is permission agnostic because args come from the views mount path and url params.
  *
- * <KvPaths
+ * <KvPathsCard
  *  @path={{this.model.path}}
  *  @backend={{this.model.backend}}
  *  @isCondensed={{false}}
@@ -23,7 +23,7 @@ import { encodePath } from 'vault/utils/path-encoding-helpers';
  * @param {boolean} isCondensed - if true a smaller version displays with no commands section or extra explanatory text
  */
 
-export default class KvPaths extends Component {
+export default class KvPathsCard extends Component {
   @service namespace;
 
   get paths() {
