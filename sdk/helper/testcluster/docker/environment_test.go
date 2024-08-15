@@ -6,7 +6,7 @@ import (
 
 func TestSettingEnvsToContainer(t *testing.T) {
 	expectedEnv := "TEST_ENV=value1"
-	expectedEnv2 := "TEST_ENV=value2"
+	expectedEnv2 := "TEST_ENV2=value2"
 	opts := &DockerClusterOptions{
 		ImageRepo: "hashicorp/vault",
 		ImageTag:  "latest",
