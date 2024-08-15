@@ -123,6 +123,15 @@ $ make test TEST=./vault
 ...
 ```
 
+### Troubleshooting
+
+If you encounter an error like `could not read Username for 'https://github.com'` you may need to adjust your git config like so:
+
+```sh
+$ git config --global --add url."git@github.com:".insteadOf "https://github.com/"
+```
+
+
 ### Importing Vault
 
 This repository publishes two libraries that may be imported by other projects:

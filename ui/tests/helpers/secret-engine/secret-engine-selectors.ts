@@ -11,6 +11,9 @@ export const SECRET_ENGINE_SELECTORS = {
   configurationToggle: '[data-test-mount-config-toggle]',
   createSecret: '[data-test-secret-create]',
   crumb: (path: string) => `[data-test-secret-breadcrumb="${path}"] a`,
+  error: {
+    title: '[data-test-backend-error-title]',
+  },
   generateLink: '[data-test-backend-credentials]',
   mountType: (name: string) => `[data-test-mount-type="${name}"]`,
   mountSubmit: '[data-test-mount-submit]',
@@ -19,11 +22,19 @@ export const SECRET_ENGINE_SELECTORS = {
   viewBackend: '[data-test-backend-view-link]',
   warning: '[data-test-warning]',
   aws: {
-    rootForm: '[data-test-aws-root-creds-form]',
-    delete: (role: string) => `[data-test-aws-role-delete="${role}"]`,
+    rootForm: '[data-test-root-form]',
+    leaseForm: '[data-test-lease-form]',
+    saveRootConfig: '[data-test-save-root-config]',
+    saveLeaseConfig: '[data-test-save-lease-config]',
+    cancelConfig: '[data-test-cancel-config]',
+    deleteRole: (role: string) => `[data-test-aws-role-delete="${role}"]`,
   },
   ssh: {
-    configureForm: '[data-test-ssh-configure-form]',
-    sshInput: (name: string) => `[data-test-ssh-input="${name}"]`,
+    configureForm: '[data-test-configure-form]',
+    editConfigSection: '[data-test-edit-config-section]',
+    deletePublicKey: '[data-test-delete-public-key]',
+    save: '[data-test-configure-save-button]',
+    createRole: '[data-test-role-ssh-create]',
+    deleteRole: '[data-test-ssh-role-delete]',
   },
 };
