@@ -67,7 +67,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
     });
     test('can delete and undelete the latest secret version (a)', async function (assert) {
       assert.expect(18);
-      this.flashSuccess = sinon.spy(this.owner.lookup('service:flash-messages'), 'success');
+      const flashSuccess = sinon.spy(this.owner.lookup('service:flash-messages'), 'success');
       // go to secret details
       await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details`);
       // correct toolbar options & details show
@@ -81,7 +81,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       await click(PAGE.detail.deleteOptionLatest);
       await click(PAGE.detail.deleteConfirm);
       const expected = `Successfully deleted Version 4 of ${this.secretPath}.`;
-      const [actual] = this.flashSuccess.lastCall.args;
+      const [actual] = flashSuccess.lastCall.args;
       assert.strictEqual(actual, expected, 'renders correct flash message');
 
       // details update accordingly
@@ -129,7 +129,8 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       assertDeleteActions(assert, ['delete', 'destroy']);
     });
     test('can destroy a secret version (a)', async function (assert) {
-      assert.expect(9);
+      assert.expect(10);
+      const flashSuccess = sinon.spy(this.owner.lookup('service:flash-messages'), 'success');
       // go to secret details
       await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details?version=3`);
       // correct toolbar options show
@@ -138,6 +139,9 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       await click(PAGE.detail.destroy);
       assert.dom(PAGE.detail.deleteModalTitle).includesText('Destroy version?', 'modal has correct title');
       await click(PAGE.detail.deleteConfirm);
+      const expected = `Successfully destroyed Version 3 of ${this.secretPath}.`;
+      const [actual] = flashSuccess.lastCall.args;
+      assert.strictEqual(actual, expected, 'renders correct flash message');
       // details update accordingly
       assert
         .dom(PAGE.emptyStateTitle)
