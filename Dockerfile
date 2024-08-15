@@ -25,7 +25,7 @@ LABEL name="Vault" \
       description="Vault is a tool for securely accessing secrets. A secret is anything that you want to tightly control access to, such as API keys, passwords, certificates, and more. Vault provides a unified interface to any secret, while providing tight access control and recording a detailed audit log."
 
 # Copy the license file as per Legal requirement
-COPY LICENSE /licenses/LICENSE.txt
+COPY LICENSE /usr/share/doc/$NAME/LICENSE.txt
 
 # Set ARGs as ENV so that they can be used in ENTRYPOINT/CMD
 ENV NAME=$NAME
@@ -97,7 +97,7 @@ LABEL name="Vault" \
       description="Vault is a tool for securely accessing secrets. A secret is anything that you want to tightly control access to, such as API keys, passwords, certificates, and more. Vault provides a unified interface to any secret, while providing tight access control and recording a detailed audit log."
 
 # Copy the license file as per Legal requirement
-COPY LICENSE /licenses/LICENSE.txt
+COPY LICENSE /usr/share/doc/$NAME/LICENSE.txt
 
 # Set ARGs as ENV so that they can be used in ENTRYPOINT/CMD
 ENV NAME=$NAME
