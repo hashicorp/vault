@@ -43,17 +43,21 @@ export default class Attribution extends Component {
   }
 
   get sortedAttribution() {
-    return this.args.attribution?.sort((a, b) => b.clients - a.clients);
+    if (this.args.attribution) {
+      // shallow copy so it doesn't mutate the data during tests
+      return this.args.attribution?.slice().sort((a, b) => b.clients - a.clients);
+    }
+    return [];
   }
 
   // truncate data before sending to chart component
   get topTenAttribution() {
-    return this.sortedAttribution?.slice(0, 10);
+    return this.sortedAttribution.slice(0, 10);
   }
 
   get topAttribution() {
     // get top namespace or mount
-    return this.sortedAttribution ? this.sortedAttribution[0] : null;
+    return this.sortedAttribution[0] ?? null;
   }
 
   get chartText() {

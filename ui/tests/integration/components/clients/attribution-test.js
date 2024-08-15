@@ -79,9 +79,9 @@ module('Integration | Component | clients/attribution', function (hooks) {
       .dom(CLIENTS_ATTRIBUTION.subtext)
       .hasText('This data shows the top ten namespaces by total clients for the date range selected.');
 
-    // when noun is auth mount
-    this.set('noun', 'auth mount');
-    assert.dom(CLIENTS_ATTRIBUTION.title).hasText('Auth mount attribution');
+    // when noun is mount
+    this.set('noun', 'mount');
+    assert.dom(CLIENTS_ATTRIBUTION.title).hasText('Mount attribution');
     assert
       .dom(CLIENTS_ATTRIBUTION.description)
       .hasText(
@@ -124,18 +124,18 @@ module('Integration | Component | clients/attribution', function (hooks) {
     assert.dom(CLIENTS_ATTRIBUTION.yLabel).hasText('ns1root');
   });
 
-  test('it renders with data for auth mounts', async function (assert) {
+  test('it renders with data for mounts', async function (assert) {
     await render(hbs`
       <Clients::Attribution
-        @noun="auth mount"
+        @noun="mount"
         @attribution={{this.authMountAttribution}}
         />
     `);
 
     assert.dom(GENERAL.emptyStateTitle).doesNotExist();
     assert.dom(CLIENTS_ATTRIBUTION.chart).exists();
-    assert.dom(CLIENTS_ATTRIBUTION.topItem).includesText('auth mount').includesText('auth/authid/0');
-    assert.dom(CLIENTS_ATTRIBUTION.topItemCount).includesText('auth mount').includesText('8,394');
+    assert.dom(CLIENTS_ATTRIBUTION.topItem).includesText('mount').includesText('auth/authid/0');
+    assert.dom(CLIENTS_ATTRIBUTION.topItemCount).includesText('mount').includesText('8,394');
     assert
       .dom(CLIENTS_ATTRIBUTION.yLabels)
       .exists({ count: 3 }, 'bars reflect number of mounts in single month');

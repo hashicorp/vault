@@ -70,7 +70,7 @@ module('Acceptance | clients | overview', function (hooks) {
       .doesNotExist('running total month over month charts do not show');
     assert.dom(CLIENT_COUNT.attributionBlock).exists({ count: 2 });
     assert.dom(CHARTS.container('namespace')).exists('namespace attribution chart shows');
-    assert.dom(CHARTS.container('auth mount')).exists('mount attribution chart shows');
+    assert.dom(CHARTS.container('mount')).exists('mount attribution chart shows');
 
     // reset to billing period
     await click(CLIENT_COUNT.dateRange.edit);
@@ -105,7 +105,7 @@ module('Acceptance | clients | overview', function (hooks) {
       .doesNotExist('running total month over month charts do not show');
     assert.dom(CLIENT_COUNT.attributionBlock).exists('attribution area shows');
     assert.dom(CHARTS.container('namespace')).exists('namespace attribution chart shows');
-    assert.dom(CHARTS.container('auth mount')).exists('mount attribution chart shows');
+    assert.dom(CHARTS.container('mount')).exists('mount attribution chart shows');
 
     // query historical date range (from September 2023 to December 2023)
     await click(CLIENT_COUNT.dateRange.edit);
@@ -167,10 +167,10 @@ module('Acceptance | clients | overview', function (hooks) {
 
     assert.dom(CLIENT_COUNT.selectedNs).hasText(topNamespace.label, 'selects top namespace');
     assert
-      .dom('[data-test-clients-attribution="auth mount"] [data-test-top-attribution]')
-      .includesText('Top auth mount');
+      .dom('[data-test-clients-attribution="mount"] [data-test-top-attribution]')
+      .includesText('Top mount');
     assert
-      .dom('[data-test-clients-attribution="auth mount"] [data-test-attribution-clients] p')
+      .dom('[data-test-clients-attribution="mount"] [data-test-attribution-clients] p')
       .includesText(`${formatNumber([topMount.clients])}`, 'top attribution clients accurate');
 
     let expectedStats = {
