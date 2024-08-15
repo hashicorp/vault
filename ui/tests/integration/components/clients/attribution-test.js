@@ -73,7 +73,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
     assert
       .dom(CLIENTS_ATTRIBUTION.description)
       .hasText(
-        'This data shows the top ten namespaces by total clients and can be used to understand where clients are originating. Namespaces are identified by path. To see all namespaces, click export data on top of the page.'
+        'This data shows the top ten namespaces by total clients and can be used to understand where clients are originating. Namespaces are identified by path.'
       );
     assert
       .dom(CLIENTS_ATTRIBUTION.subtext)
@@ -85,12 +85,12 @@ module('Integration | Component | clients/attribution', function (hooks) {
     assert
       .dom(CLIENTS_ATTRIBUTION.description)
       .hasText(
-        'This data shows the top ten authentication methods by client count within this namespace, and can be used to understand where clients are originating. Auth methods are organized by path. To see all auth methods, click export data on top of the page.'
+        'This data shows the top ten mounts by client count within this namespace, and can be used to understand where clients are originating. Mounts are organized by path.'
       );
     assert
       .dom(CLIENTS_ATTRIBUTION.subtext)
       .hasText(
-        'The total clients used by the auth method for this date range. This number is useful for identifying overall usage volume.'
+        'The total clients used by the mounts for this date range. This number is useful for identifying overall usage volume.'
       );
 
     // when noun is namespace
@@ -99,7 +99,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
     assert
       .dom(CLIENTS_ATTRIBUTION.description)
       .hasText(
-        'This data shows the top ten namespaces by total clients and can be used to understand where clients are originating. Namespaces are identified by path. To see all namespaces, click export data on top of the page.'
+        'This data shows the top ten namespaces by total clients and can be used to understand where clients are originating. Namespaces are identified by path.'
       );
     assert
       .dom(CLIENTS_ATTRIBUTION.subtext)
