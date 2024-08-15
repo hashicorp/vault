@@ -26,6 +26,15 @@ export const CLIENT_TYPES = [
 
 export type ClientTypes = (typeof CLIENT_TYPES)[number];
 
+// generates a block of total clients with 0's for use as defaults
+function emptyCounts() {
+  return CLIENT_TYPES.reduce((prev, type) => {
+    const key = type;
+    prev[key as ClientTypes] = 0;
+    return prev;
+  }, {} as TotalClientsSometimes) as TotalClients;
+}
+
 // returns array of VersionHistoryModels for noteworthy upgrades: 1.9, 1.10
 // that occurred between timestamps (i.e. queried activity data)
 export const filterVersionHistory = (
@@ -63,6 +72,62 @@ export const filterVersionHistory = (
     }
   }
   return [];
+};
+
+export const filterByMonthDataForMount = (
+  months: ByMonthClients[],
+  namespacePath: string,
+  mountPath: string
+): ByMonthClients[] => {
+  if (months && namespacePath && mountPath) {
+    // do stuff
+    return [...months].map((m) => {
+      if (!m?.clients) {
+        // if the month doesn't have data (null) or it's zero, we can just return the block
+        return m;
+      }
+
+      const nsData = m.namespaces?.find((ns) => sanitizePath(ns.label) === sanitizePath(namespacePath));
+      const mountData = nsData?.mounts.find((mount) => sanitizePath(mount.label) === sanitizePath(mountPath));
+      if (mountData) {
+        // if we do have mount data, we need to add in new_client namespace information
+        const nsNew = m.new_clients?.namespaces?.find(
+          (ns) => sanitizePath(ns.label) === sanitizePath(namespacePath)
+        );
+        const mountNew = nsNew?.mounts.find((mount) => sanitizePath(mount.label) === sanitizePath(mountPath));
+        // TODO: add in new_clients from m.new_clients filtered etc
+        return {
+          month: m.month,
+          timestamp: m.timestamp,
+          ...mountData,
+          namespaces: [], // this is just for making TS happy, matching the ByMonthClients shape
+          new_clients: mountNew || {
+            month: m.month,
+            timestamp: m.timestamp,
+            namespaces: [], // this is just for making TS happy, matching the ByMonthClients shape
+            ...emptyCounts(),
+          },
+        } as ByMonthClients;
+      }
+
+      // if the month has data but none for this mount, return mocked zeros
+      return {
+        label: mountPath,
+        timestamp: m.timestamp,
+        month: m.month,
+        namespaces: [], // this is just for making TS happy, matching the ByMonthClients shape
+        ...emptyCounts(),
+        new_clients: {
+          timestamp: m.timestamp,
+          month: m.month,
+          namespaces: [], // this is just for making TS happy, matching the ByMonthClients shape
+          label: mountPath,
+          ...emptyCounts(),
+        },
+      } as ByMonthClients;
+    });
+  }
+  return months;
 };
 
 // METHODS FOR SERIALIZING ACTIVITY RESPONSE
