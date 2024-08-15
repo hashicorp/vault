@@ -1058,10 +1058,10 @@ $ curl \
 ```
 
 <Note title="Important change to supported versions">
-   As of 1.16.7, 1.17.3 and later, 
-   the <a href="/vault/docs/concepts/billing-start-date">billing start date</a> automatically 
+   As of 1.16.7, 1.17.3 and later,
+   the <a href="/vault/docs/concepts/billing-start-date">billing start date</a> automatically
    rolls over to the latest billing year at the end of the last cycle.
-        
+
    For more information, refer to the upgrade guide for your Vault version:
 
    [Vault v1.16.x](/vault/docs/upgrading/upgrade-to-1.16.x#auto-rolled-billing-start-date),
@@ -1104,6 +1104,10 @@ it may be up to 20 minutes delayed.
 - `format` `(string, optional)` - The desired format of the output file. Allowed
     values are `csv` and `json`. If no format is provided a default of `json`
     will be used.
+
+The response will include all child namespaces of the namespace in which the
+request was made. If some namespace has subsequently been deleted, its path will
+be listed as "deleted namespace :ID:"
 
 ### Sample request
 

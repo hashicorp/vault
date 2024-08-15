@@ -38,9 +38,8 @@ export default class KvDataAdapter extends ApplicationAdapter {
     });
   }
 
-  fetchSubkeys(query) {
-    const { backend, path, version, depth } = query;
-    const url = this._url(kvSubkeysPath(backend, path, depth, version));
+  fetchSubkeys(backend, path, query) {
+    const url = this._url(kvSubkeysPath(backend, path, query));
     // TODO subkeys response handles deleted records the same as queryRecord and returns a 404
     // extrapolate error handling logic from queryRecord and share between these two methods
     return this.ajax(url, 'GET').then((resp) => resp.data);
@@ -50,6 +49,17 @@ export default class KvDataAdapter extends ApplicationAdapter {
     const { backend, path, version, wrapTTL } = query;
     const id = kvDataPath(backend, path, version);
     return this.ajax(this._url(id), 'GET', { wrapTTL }).then((resp) => resp.wrap_info);
+  }
+
+  // patching a secret happens without retrieving the ember data model
+  // so we use a custom method instead of updateRecord
+  patchSecret(backend, path, patchData, version) {
+    const url = this._url(kvDataPath(backend, path));
+    const data = {
+      options: { cas: version },
+      data: patchData,
+    };
+    return this.ajax(url, 'PATCH', { data });
   }
 
   queryRecord(store, type, query) {
