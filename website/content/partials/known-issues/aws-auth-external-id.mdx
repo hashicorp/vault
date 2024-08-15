@@ -1,0 +1,15 @@
+<a id="#aws-auth-external-id" />
+### AWS Auth Role configuration requires an external_id
+
+#### Affected Versions
+
+- 1.17.0 - 1.17.3
+
+#### Issue
+
+The Vault AWS Auth backend requires an external_id to be set during role configuration, or it will return a validation error.
+
+#### Workaround
+
+Configure the backend with an external_id set (if external ids are not being used, supplying any string longer than two
+characters will work). Then, configure any desired roles. After this is done, the external id can be removed.
