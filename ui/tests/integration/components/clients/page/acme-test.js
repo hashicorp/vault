@@ -155,7 +155,6 @@ module('Integration | Component | clients | Clients::Page::Acme', function (hook
         month: '3/24',
         timestamp: '2024-03-01T00:00:00Z',
         namespaces: [],
-        namespaces_by_key: {},
         new_clients: {
           month: '3/24',
           timestamp: '2024-03-01T00:00:00Z',
@@ -167,7 +166,6 @@ module('Integration | Component | clients | Clients::Page::Acme', function (hook
         timestamp: '2024-04-01T00:00:00Z',
         ...counts,
         namespaces: [],
-        namespaces_by_key: {},
         new_clients: {
           month: '4/24',
           timestamp: '2024-04-01T00:00:00Z',

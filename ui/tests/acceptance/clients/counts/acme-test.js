@@ -45,8 +45,12 @@ module('Acceptance | clients | counts | acme', function (hooks) {
     this.mountPath = 'pki-engine-0';
     this.expectedValues = {
       nsTotals: byNamespace.find((ns) => ns.label === this.nsPath),
-      nsMonthlyUsage: byMonth.map((m) => m?.namespaces_by_key[this.nsPath]).filter((d) => !!d),
-      nsMonthActivity: byMonth.find(({ month }) => month === '9/23').namespaces_by_key[this.nsPath],
+      nsMonthlyUsage: byMonth
+        .map((m) => m?.namespaces.find((n) => n.label === this.nsPath))
+        .filter((d) => !!d),
+      nsMonthActivity: byMonth
+        .find(({ month }) => month === '9/23')
+        .namespaces.filter((n) => n.label === this.nsPath),
     };
 
     await authPage.login();

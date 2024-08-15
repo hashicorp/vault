@@ -10,16 +10,21 @@ import Component from '@glimmer/component';
 import { isSameMonth } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { calculateAverage } from 'vault/utils/chart-helpers';
-import { filterVersionHistory } from 'core/utils/client-count-utils';
+import { filterByMonthDataForMount, filterVersionHistory } from 'core/utils/client-count-utils';
+import { service } from '@ember/service';
+import { sanitizePath } from 'core/utils/sanitize-path';
 
 import type ClientsActivityModel from 'vault/models/clients/activity';
 import type ClientsVersionHistoryModel from 'vault/models/clients/version-history';
 import type {
   ByMonthNewClients,
+  MountClients,
   MountNewClients,
   NamespaceByKey,
   NamespaceNewClients,
+  TotalClients,
 } from 'core/utils/client-count-utils';
+import type NamespaceService from 'vault/services/namespace';
 
 interface Args {
   activity: ClientsActivityModel;
@@ -31,6 +36,8 @@ interface Args {
 }
 
 export default class ClientsActivityComponent extends Component<Args> {
+  @service declare readonly namespace: NamespaceService;
+
   average = (
     data:
       | (ByMonthNewClients | NamespaceNewClients | MountNewClients | undefined)[]
@@ -40,33 +47,25 @@ export default class ClientsActivityComponent extends Component<Args> {
     return calculateAverage(data, key);
   };
 
+  // path of the filtered namespace OR current one, for filtering relevant data
+  get namespacePathForFilter() {
+    const { namespace } = this.args;
+    const currentNs = this.namespace.currentNamespace;
+    return sanitizePath(namespace || currentNs || 'root');
+  }
+
   get byMonthActivityData() {
-    const { activity, namespace } = this.args;
-    return namespace ? this.filteredActivityByMonth : activity.byMonth;
+    const { activity, mountPath } = this.args;
+    const nsPath = this.namespacePathForFilter;
+    if (mountPath) {
+      // only do client-side filtering if we have a mountPath filter set
+      return filterByMonthDataForMount(activity.byMonth, nsPath, mountPath);
+    }
+    return activity.byMonth;
   }
 
   get byMonthNewClients() {
     return this.byMonthActivityData ? this.byMonthActivityData?.map((m) => m?.new_clients) : [];
-  }
-
-  get filteredActivityByMonth() {
-    const { namespace, mountPath, activity } = this.args;
-    if (!namespace && !mountPath) {
-      return activity.byMonth;
-    }
-    const namespaceData = activity.byMonth
-      ?.map((m) => m.namespaces_by_key[namespace])
-      .filter((d) => d !== undefined);
-
-    if (!mountPath) {
-      return namespaceData || [];
-    }
-
-    const mountData = namespaceData
-      ?.map((namespace) => namespace?.mounts_by_key[mountPath])
-      .filter((d) => d !== undefined);
-
-    return mountData || [];
   }
 
   get filteredActivityByNamespace() {

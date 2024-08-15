@@ -181,12 +181,6 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
       this.activity.byMonth = [
         {
           ...monthData,
-          namespaces_by_key: {
-            root: {
-              ...monthData,
-              mounts_by_key: {},
-            },
-          },
           new_clients: {
             ...monthData,
           },

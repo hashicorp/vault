@@ -11,7 +11,6 @@ import {
   formatByMonths,
   formatByNamespace,
   destructureClientCounts,
-  namespaceArrayToObject,
   sortMonthsByTimestamp,
 } from 'core/utils/client-count-utils';
 import clientsHandler from 'vault/mirage/handlers/clients';
@@ -125,7 +124,7 @@ module('Integration | Util | client count utils', function (hooks) {
   });
 
   test('formatByMonths: it formats the months array', async function (assert) {
-    assert.expect(9);
+    assert.expect(7);
     const original = [...RESPONSE.months];
 
     const [formattedNoData, formattedWithActivity, formattedNoNew] = formatByMonths(RESPONSE.months);
@@ -135,7 +134,7 @@ module('Integration | Util | client count utils', function (hooks) {
     const [expectedNoData, expectedWithActivity, expectedNoNew] = SERIALIZED_ACTIVITY_RESPONSE.by_month;
 
     assert.propEqual(formattedNoData, expectedNoData, 'it formats months without data');
-    ['namespaces', 'new_clients', 'namespaces_by_key'].forEach((key) => {
+    ['namespaces', 'new_clients'].forEach((key) => {
       assert.propEqual(
         formattedWithActivity[key],
         expectedWithActivity[key],
@@ -192,33 +191,6 @@ module('Integration | Util | client count utils', function (hooks) {
     assert.propEqual(RESPONSE.months, original, 'it does not modify original array');
   });
 
-  test('namespaceArrayToObject: it returns namespaces_by_key and mounts_by_key', async function (assert) {
-    // namespaceArrayToObject only called when there are counts, so skip month 0 which has no counts
-    for (let i = 1; i < RESPONSE.months.length; i++) {
-      const original = { ...RESPONSE.months[i] };
-      const expectedObject = SERIALIZED_ACTIVITY_RESPONSE.by_month[i].namespaces_by_key;
-      const formattedTotal = formatByNamespace(RESPONSE.months[i].namespaces);
-      const testObject = namespaceArrayToObject(
-        formattedTotal,
-        formatByNamespace(RESPONSE.months[i].new_clients.namespaces),
-        `${i + 6}/23`,
-        original.timestamp
-      );
-      const { root } = testObject;
-      const { root: expectedRoot } = expectedObject;
-
-      assert.propEqual(
-        root?.new_clients,
-        expectedRoot?.new_clients,
-        `it formats namespaces new_clients for ${original.timestamp}`
-      );
-      assert.propEqual(root.mounts_by_key, expectedRoot.mounts_by_key, 'it formats namespaces mounts_by_key');
-      assert.propContains(root, expectedRoot, 'namespace has correct keys');
-
-      assert.propEqual(RESPONSE.months[i], original, 'it does not modify original month data');
-    }
-  });
-
   // TESTS FOR COMBINED ACTIVITY DATA - no mount attribution < 1.10
   test('it formats the namespaces array with no mount attribution (activity log data < 1.10)', async function (assert) {
     assert.expect(2);
@@ -272,7 +244,7 @@ module('Integration | Util | client count utils', function (hooks) {
   });
 
   test('it formats the months array with mixed activity data', async function (assert) {
-    assert.expect(3);
+    assert.expect(2);
 
     const [, formattedWithActivity] = formatByMonths(MIXED_RESPONSE.months);
     // mirage isn't set up to generate mixed data, so hardcoding the expected responses here
@@ -348,91 +320,6 @@ module('Integration | Util | client count utils', function (hooks) {
         timestamp: '2024-04-01T00:00:00Z',
       },
       'it formats combined data for monthly new_clients spanning upgrade to 1.10'
-    );
-    assert.propEqual(
-      formattedWithActivity.namespaces_by_key,
-      {
-        root: {
-          acme_clients: 0,
-          clients: 3,
-          entity_clients: 3,
-          month: '4/24',
-          mounts_by_key: {
-            'auth/u/': {
-              acme_clients: 0,
-              clients: 1,
-              entity_clients: 1,
-              label: 'auth/u/',
-              month: '4/24',
-              new_clients: {
-                acme_clients: 0,
-                clients: 1,
-                entity_clients: 1,
-                label: 'auth/u/',
-                month: '4/24',
-                timestamp: '2024-04-01T00:00:00Z',
-                non_entity_clients: 0,
-                secret_syncs: 0,
-              },
-              non_entity_clients: 0,
-              secret_syncs: 0,
-              timestamp: '2024-04-01T00:00:00Z',
-            },
-            'no mount accessor (pre-1.10 upgrade?)': {
-              acme_clients: 0,
-              clients: 2,
-              entity_clients: 2,
-              label: 'no mount accessor (pre-1.10 upgrade?)',
-              month: '4/24',
-              new_clients: {
-                acme_clients: 0,
-                clients: 2,
-                entity_clients: 2,
-                label: 'no mount accessor (pre-1.10 upgrade?)',
-                month: '4/24',
-                timestamp: '2024-04-01T00:00:00Z',
-                non_entity_clients: 0,
-                secret_syncs: 0,
-              },
-              non_entity_clients: 0,
-              secret_syncs: 0,
-              timestamp: '2024-04-01T00:00:00Z',
-            },
-          },
-          new_clients: {
-            acme_clients: 0,
-            clients: 3,
-            entity_clients: 3,
-            label: 'root',
-            month: '4/24',
-            timestamp: '2024-04-01T00:00:00Z',
-            mounts: [
-              {
-                acme_clients: 0,
-                clients: 2,
-                entity_clients: 2,
-                label: 'no mount accessor (pre-1.10 upgrade?)',
-                non_entity_clients: 0,
-                secret_syncs: 0,
-              },
-              {
-                acme_clients: 0,
-                clients: 1,
-                entity_clients: 1,
-                label: 'auth/u/',
-                non_entity_clients: 0,
-                secret_syncs: 0,
-              },
-            ],
-            non_entity_clients: 0,
-            secret_syncs: 0,
-          },
-          non_entity_clients: 0,
-          secret_syncs: 0,
-          timestamp: '2024-04-01T00:00:00Z',
-        },
-      },
-      'it formats combined data for monthly namespaces_by_key spanning upgrade to 1.10'
     );
   });
 });
