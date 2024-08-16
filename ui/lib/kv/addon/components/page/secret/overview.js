@@ -13,10 +13,9 @@ import { dateFormat } from 'core/helpers/date-format';
  * @breadcrumbs={{this.breadcrumbs}}
  * @canReadMetadata={{true}}
  * @canUpdateSecret={{true}}
- * @isDeleted={{false}}
- * @isDestroyed={{false}}
  * @metadata={{this.model.metadata}}
  * @path={{this.model.path}}
+ * @secretState="created"
  * @subkeys={{this.model.subkeys}}
  * />
  *
@@ -24,19 +23,19 @@ import { dateFormat } from 'core/helpers/date-format';
  * @param {array} breadcrumbs - Array to generate breadcrumbs, passed to the page header component
  * @param {boolean} canReadMetadata - permissions to read metadata
  * @param {boolean} canUpdateSecret - permissions to create a new version of a secret
- * @param {boolean} isDeleted - whether the latest version of a secret has been deleted
- * @param {boolean} isDestroyed - whether the latest version of a secret has been destroyed
  * @param {model} metadata - Ember data model: 'kv/metadata'
  * @param {string} path - path to request secret data for selected version
+ * @param {string} secretState - if a secret has been "destroyed", "deleted" or "created" (still active)
  * @param {object} subkeys - API response from subkeys endpoint, object with "subkeys" and "metadata" keys
  */
 
 export default class KvSecretOverview extends Component {
   get versionSubtext() {
-    if (this.args.isDestroyed) {
+    const { state } = this.args;
+    if (state === 'destroyed') {
       return 'The current version of this secret has been permanently deleted and cannot be restored.';
     }
-    if (this.args.isDeleted) {
+    if (state === 'deleted') {
       const time =
         this.args.metadata?.currentSecret.deletionTime || this.args.subkeys?.metadata.deletion_time;
       const date = dateFormat([time], {});

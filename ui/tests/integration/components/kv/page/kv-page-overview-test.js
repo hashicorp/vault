@@ -57,23 +57,21 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
     };
     this.canReadMetadata = true;
     this.canUpdateSecret = true;
-    this.isDeleted = false;
-    this.isDestroyed = false;
+    this.secretState = 'created';
 
     this.format = (time) => dateFormat([time, 'MMM d yyyy, h:mm:ss aa'], {});
     this.renderComponent = async () => {
       return render(
         hbs`
         <Page::Secret::Overview
-          @path={{this.path}}
           @backend={{this.backend}}
-          @subkeys={{this.subkeys}}
-          @metadata={{this.metadata}}
           @breadcrumbs={{this.breadcrumbs}}
           @canReadMetadata={{this.canReadMetadata}}
           @canUpdateSecret={{this.canUpdateSecret}}
-          @isDeleted={{this.isDeleted}}
-          @isDestroyed={{this.isDestroyed}}
+          @metadata={{this.metadata}}
+          @path={{this.path}}
+          @secretState={{this.secretState}}
+          @subkeys={{this.subkeys}}
         />`,
         { owner: this.engine }
       );
@@ -204,7 +202,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
 
   module('it renders when version is deleted', function (hooks) {
     hooks.beforeEach(async function () {
-      this.isDeleted = true;
+      this.secretState = 'deleted';
       // subkeys is null but metadata still has data
       this.subkeys = {
         subkeys: null,
@@ -280,7 +278,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
 
   module('it renders when version is destroyed', function (hooks) {
     hooks.beforeEach(async function () {
-      this.isDestroyed = true;
+      this.secretState = 'destroyed';
       // subkeys is null but metadata still has data
       this.subkeys = {
         subkeys: null,
