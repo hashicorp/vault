@@ -15,7 +15,7 @@ import (
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-sockaddr"
-	"github.com/hashicorp/vault/helper/namespace"
+	nshelper "github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -132,14 +132,14 @@ func TestNewEntryFormatter(t *testing.T) {
 			Options: map[string]string{
 				"format": "json",
 			},
-			ExpectedFormat: JSONFormat,
+			ExpectedFormat: jsonFormat,
 		},
 		"default": {
 			Name:            "juan",
 			UseStaticSalt:   true,
 			Logger:          hclog.NewNullLogger(),
 			IsErrorExpected: false,
-			ExpectedFormat:  JSONFormat,
+			ExpectedFormat:  jsonFormat,
 		},
 		"config-json": {
 			Name:          "juan",
@@ -149,7 +149,7 @@ func TestNewEntryFormatter(t *testing.T) {
 				"format": "json",
 			},
 			IsErrorExpected: false,
-			ExpectedFormat:  JSONFormat,
+			ExpectedFormat:  jsonFormat,
 		},
 		"config-jsonx": {
 			Name:          "juan",
@@ -159,7 +159,7 @@ func TestNewEntryFormatter(t *testing.T) {
 				"format": "jsonx",
 			},
 			IsErrorExpected: false,
-			ExpectedFormat:  JSONxFormat,
+			ExpectedFormat:  jsonxFormat,
 		},
 		"config-json-prefix": {
 			Name:          "juan",
@@ -170,7 +170,7 @@ func TestNewEntryFormatter(t *testing.T) {
 				"format": "json",
 			},
 			IsErrorExpected: false,
-			ExpectedFormat:  JSONFormat,
+			ExpectedFormat:  jsonFormat,
 			ExpectedPrefix:  "foo",
 		},
 		"config-jsonx-prefix": {
@@ -182,7 +182,7 @@ func TestNewEntryFormatter(t *testing.T) {
 				"format": "jsonx",
 			},
 			IsErrorExpected: false,
-			ExpectedFormat:  JSONxFormat,
+			ExpectedFormat:  jsonxFormat,
 			ExpectedPrefix:  "foo",
 		},
 	}
@@ -245,7 +245,7 @@ func TestEntryFormatter_Type(t *testing.T) {
 }
 
 // TestEntryFormatter_Process attempts to run the Process method to convert the
-// logical.LogInput within an audit event to JSON and JSONx (Entry),
+// logical.LogInput within an audit event to JSON and JSONx (entry),
 func TestEntryFormatter_Process(t *testing.T) {
 	t.Parallel()
 
@@ -261,21 +261,21 @@ func TestEntryFormatter_Process(t *testing.T) {
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "cannot audit a 'request' event with no data: invalid internal parameter",
 			Subtype:              RequestType,
-			RequiredFormat:       JSONFormat,
+			RequiredFormat:       jsonFormat,
 			Data:                 nil,
 		},
 		"json-response-no-data": {
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "cannot audit a 'response' event with no data: invalid internal parameter",
 			Subtype:              ResponseType,
-			RequiredFormat:       JSONFormat,
+			RequiredFormat:       jsonFormat,
 			Data:                 nil,
 		},
 		"json-request-basic-input": {
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "unable to parse request from 'request' audit event: request cannot be nil",
 			Subtype:              RequestType,
-			RequiredFormat:       JSONFormat,
+			RequiredFormat:       jsonFormat,
 			Data:                 &logical.LogInput{Type: "magic"},
 			RootNamespace:        true,
 		},
@@ -283,34 +283,34 @@ func TestEntryFormatter_Process(t *testing.T) {
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "unable to parse request from 'response' audit event: request cannot be nil",
 			Subtype:              ResponseType,
-			RequiredFormat:       JSONFormat,
+			RequiredFormat:       jsonFormat,
 			Data:                 &logical.LogInput{Type: "magic"},
 		},
 		"json-request-basic-input-and-request-no-ns": {
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "unable to retrieve namespace from context: no namespace",
 			Subtype:              RequestType,
-			RequiredFormat:       JSONFormat,
+			RequiredFormat:       jsonFormat,
 			Data:                 &logical.LogInput{Request: &logical.Request{ID: "123"}},
 		},
 		"json-response-basic-input-and-request-no-ns": {
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "unable to retrieve namespace from context: no namespace",
 			Subtype:              ResponseType,
-			RequiredFormat:       JSONFormat,
+			RequiredFormat:       jsonFormat,
 			Data:                 &logical.LogInput{Request: &logical.Request{ID: "123"}},
 		},
 		"json-request-basic-input-and-request-with-ns": {
 			IsErrorExpected: false,
 			Subtype:         RequestType,
-			RequiredFormat:  JSONFormat,
+			RequiredFormat:  jsonFormat,
 			Data:            &logical.LogInput{Request: &logical.Request{ID: "123"}},
 			RootNamespace:   true,
 		},
 		"json-response-basic-input-and-request-with-ns": {
 			IsErrorExpected: false,
 			Subtype:         ResponseType,
-			RequiredFormat:  JSONFormat,
+			RequiredFormat:  jsonFormat,
 			Data: &logical.LogInput{
 				Request:  &logical.Request{ID: "123"},
 				Response: &logical.Response{},
@@ -321,21 +321,21 @@ func TestEntryFormatter_Process(t *testing.T) {
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "cannot audit a 'request' event with no data: invalid internal parameter",
 			Subtype:              RequestType,
-			RequiredFormat:       JSONxFormat,
+			RequiredFormat:       jsonxFormat,
 			Data:                 nil,
 		},
 		"jsonx-response-no-data": {
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "cannot audit a 'response' event with no data: invalid internal parameter",
 			Subtype:              ResponseType,
-			RequiredFormat:       JSONxFormat,
+			RequiredFormat:       jsonxFormat,
 			Data:                 nil,
 		},
 		"jsonx-request-basic-input": {
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "unable to parse request from 'request' audit event: request cannot be nil",
 			Subtype:              RequestType,
-			RequiredFormat:       JSONxFormat,
+			RequiredFormat:       jsonxFormat,
 			Data:                 &logical.LogInput{Type: "magic"},
 			RootNamespace:        true,
 		},
@@ -343,7 +343,7 @@ func TestEntryFormatter_Process(t *testing.T) {
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "unable to parse request from 'response' audit event: request cannot be nil",
 			Subtype:              ResponseType,
-			RequiredFormat:       JSONxFormat,
+			RequiredFormat:       jsonxFormat,
 			Data:                 &logical.LogInput{Type: "magic"},
 			RootNamespace:        true,
 		},
@@ -351,27 +351,27 @@ func TestEntryFormatter_Process(t *testing.T) {
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "unable to retrieve namespace from context: no namespace",
 			Subtype:              RequestType,
-			RequiredFormat:       JSONxFormat,
+			RequiredFormat:       jsonxFormat,
 			Data:                 &logical.LogInput{Request: &logical.Request{ID: "123"}},
 		},
 		"jsonx-response-basic-input-and-request-no-ns": {
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "unable to retrieve namespace from context: no namespace",
 			Subtype:              ResponseType,
-			RequiredFormat:       JSONxFormat,
+			RequiredFormat:       jsonxFormat,
 			Data:                 &logical.LogInput{Request: &logical.Request{ID: "123"}},
 		},
 		"jsonx-request-basic-input-and-request-with-ns": {
 			IsErrorExpected: false,
 			Subtype:         RequestType,
-			RequiredFormat:  JSONxFormat,
+			RequiredFormat:  jsonxFormat,
 			Data:            &logical.LogInput{Request: &logical.Request{ID: "123"}},
 			RootNamespace:   true,
 		},
 		"jsonx-response-basic-input-and-request-with-ns": {
 			IsErrorExpected: false,
 			Subtype:         ResponseType,
-			RequiredFormat:  JSONxFormat,
+			RequiredFormat:  jsonxFormat,
 			Data: &logical.LogInput{
 				Request:  &logical.Request{ID: "123"},
 				Response: &logical.Response{},
@@ -382,7 +382,7 @@ func TestEntryFormatter_Process(t *testing.T) {
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "unable to parse request from 'response' audit event: request cannot be nil",
 			Subtype:              ResponseType,
-			RequiredFormat:       JSONxFormat,
+			RequiredFormat:       jsonxFormat,
 			Data: &logical.LogInput{
 				Auth: &logical.Auth{},
 			},
@@ -409,7 +409,7 @@ func TestEntryFormatter_Process(t *testing.T) {
 			var ctx context.Context
 			switch {
 			case tc.RootNamespace:
-				ctx = namespace.RootContext(context.Background())
+				ctx = nshelper.RootContext(context.Background())
 			default:
 				ctx = context.Background()
 			}
@@ -461,7 +461,7 @@ func BenchmarkAuditFileSink_Process(b *testing.B) {
 		},
 	}
 
-	ctx := namespace.RootContext(context.Background())
+	ctx := nshelper.RootContext(context.Background())
 
 	// Create the formatter node.
 	cfg, err := newFormatterConfig(&testHeaderFormatter{}, nil)
@@ -472,7 +472,7 @@ func BenchmarkAuditFileSink_Process(b *testing.B) {
 	require.NotNil(b, formatter)
 
 	// Create the sink node.
-	sink, err := event.NewFileSink("/dev/null", JSONFormat.String())
+	sink, err := event.NewFileSink("/dev/null", jsonFormat.String())
 	require.NoError(b, err)
 	require.NotNil(b, sink)
 
@@ -551,12 +551,12 @@ func TestEntryFormatter_Process_Request(t *testing.T) {
 			var ctx context.Context
 			switch {
 			case tc.RootNamespace:
-				ctx = namespace.RootContext(context.Background())
+				ctx = nshelper.RootContext(context.Background())
 			default:
 				ctx = context.Background()
 			}
 
-			auditEvent, err := NewEvent(RequestType)
+			auditEvent, err := newEvent(RequestType)
 			auditEvent.setTimeProvider(&testTimeProvider{})
 			require.NoError(t, err)
 			auditEvent.Data = tc.Input
@@ -577,18 +577,18 @@ func TestEntryFormatter_Process_Request(t *testing.T) {
 			case tc.ShouldOmitTime:
 				require.NoError(t, err)
 				require.NotNil(t, e2)
-				b, ok := e2.Format(JSONFormat.String())
+				b, ok := e2.Format(jsonFormat.String())
 				require.True(t, ok)
-				var entry *Entry
+				var entry *entry
 				err = json.Unmarshal(b, &entry)
 				require.NoError(t, err)
 				require.Zero(t, entry.Time)
 			default:
 				require.NoError(t, err)
 				require.NotNil(t, e2)
-				b, ok := e2.Format(JSONFormat.String())
+				b, ok := e2.Format(jsonFormat.String())
 				require.True(t, ok)
-				var entry *Entry
+				var entry *entry
 				err = json.Unmarshal(b, &entry)
 				require.NoError(t, err)
 				require.NotZero(t, entry.Time)
@@ -661,12 +661,12 @@ func TestEntryFormatter_Process_ResponseType(t *testing.T) {
 			var ctx context.Context
 			switch {
 			case tc.RootNamespace:
-				ctx = namespace.RootContext(context.Background())
+				ctx = nshelper.RootContext(context.Background())
 			default:
 				ctx = context.Background()
 			}
 
-			auditEvent, err := NewEvent(ResponseType)
+			auditEvent, err := newEvent(ResponseType)
 			auditEvent.setTimeProvider(&testTimeProvider{})
 			require.NoError(t, err)
 			auditEvent.Data = tc.Input
@@ -688,18 +688,18 @@ func TestEntryFormatter_Process_ResponseType(t *testing.T) {
 			case tc.ShouldOmitTime:
 				require.NoError(t, err)
 				require.NotNil(t, e2)
-				b, ok := e2.Format(JSONFormat.String())
+				b, ok := e2.Format(jsonFormat.String())
 				require.True(t, ok)
-				var entry *Entry
+				var entry *entry
 				err = json.Unmarshal(b, &entry)
 				require.NoError(t, err)
 				require.Zero(t, entry.Time)
 			default:
 				require.NoError(t, err)
 				require.NotNil(t, e2)
-				b, ok := e2.Format(JSONFormat.String())
+				b, ok := e2.Format(jsonFormat.String())
 				require.True(t, ok)
-				var entry *Entry
+				var entry *entry
 				err = json.Unmarshal(b, &entry)
 				require.NoError(t, err)
 				require.NotZero(t, entry.Time)
@@ -807,7 +807,7 @@ func TestEntryFormatter_Process_JSON(t *testing.T) {
 
 		// Create an audit event and more generic eventlogger.event to allow us
 		// to process (format).
-		auditEvent, err := NewEvent(RequestType)
+		auditEvent, err := newEvent(RequestType)
 		require.NoError(t, err)
 		auditEvent.Data = in
 
@@ -818,10 +818,10 @@ func TestEntryFormatter_Process_JSON(t *testing.T) {
 			Payload:   auditEvent,
 		}
 
-		e2, err := formatter.Process(namespace.RootContext(nil), e)
+		e2, err := formatter.Process(nshelper.RootContext(nil), e)
 		require.NoErrorf(t, err, "bad: %s\nerr: %s", name, err)
 
-		jsonBytes, ok := e2.Format(JSONFormat.String())
+		jsonBytes, ok := e2.Format(jsonFormat.String())
 		require.True(t, ok)
 		require.Positive(t, len(jsonBytes))
 
@@ -829,14 +829,14 @@ func TestEntryFormatter_Process_JSON(t *testing.T) {
 			t.Fatalf("no prefix: %s \n log: %s\nprefix: %s", name, expectedResultStr, tc.Prefix)
 		}
 
-		expectedJSON := new(Entry)
+		expectedJSON := new(entry)
 
 		if err := jsonutil.DecodeJSON([]byte(expectedResultStr), &expectedJSON); err != nil {
 			t.Fatalf("bad json: %s", err)
 		}
-		expectedJSON.Request.Namespace = &Namespace{ID: "root"}
+		expectedJSON.Request.Namespace = &namespace{ID: "root"}
 
-		actualJSON := new(Entry)
+		actualJSON := new(entry)
 		if err := jsonutil.DecodeJSON(jsonBytes[len(tc.Prefix):], &actualJSON); err != nil {
 			t.Fatalf("bad json: %s", err)
 		}
@@ -972,7 +972,7 @@ func TestEntryFormatter_Process_JSONx(t *testing.T) {
 
 		// Create an audit event and more generic eventlogger.event to allow us
 		// to process (format).
-		auditEvent, err := NewEvent(RequestType)
+		auditEvent, err := newEvent(RequestType)
 		require.NoError(t, err)
 		auditEvent.Data = in
 
@@ -983,10 +983,10 @@ func TestEntryFormatter_Process_JSONx(t *testing.T) {
 			Payload:   auditEvent,
 		}
 
-		e2, err := formatter.Process(namespace.RootContext(nil), e)
+		e2, err := formatter.Process(nshelper.RootContext(nil), e)
 		require.NoErrorf(t, err, "bad: %s\nerr: %s", name, err)
 
-		jsonxBytes, ok := e2.Format(JSONxFormat.String())
+		jsonxBytes, ok := e2.Format(jsonxFormat.String())
 		require.True(t, ok)
 		require.Positive(t, len(jsonxBytes))
 
@@ -1071,11 +1071,11 @@ func TestEntryFormatter_ElideListResponses(t *testing.T) {
 	oneInterestingTestCase := tests["Enhanced list (has key_info)"]
 
 	ss := newStaticSalt(t)
-	ctx := namespace.RootContext(context.Background())
+	ctx := nshelper.RootContext(context.Background())
 	var formatter *entryFormatter
 	var err error
 
-	format := func(t *testing.T, config formatterConfig, operation logical.Operation, inputData map[string]any) *Entry {
+	format := func(t *testing.T, config formatterConfig, operation logical.Operation, inputData map[string]any) *entry {
 		formatter, err = newEntryFormatter("juan", config, ss, hclog.NewNullLogger())
 		require.NoError(t, err)
 		require.NotNil(t, formatter)
@@ -1085,7 +1085,7 @@ func TestEntryFormatter_ElideListResponses(t *testing.T) {
 			Response: &logical.Response{Data: inputData},
 		}
 
-		auditEvent, err := NewEvent(ResponseType)
+		auditEvent, err := newEvent(ResponseType)
 		require.NoError(t, err)
 		auditEvent.Data = in
 
@@ -1182,7 +1182,7 @@ func TestEntryFormatter_Process_NoMutation(t *testing.T) {
 
 	e := fakeEvent(t, RequestType, in)
 
-	e2, err := formatter.Process(namespace.RootContext(nil), e)
+	e2, err := formatter.Process(nshelper.RootContext(nil), e)
 	require.NoError(t, err)
 	require.NotNil(t, e2)
 
@@ -1245,7 +1245,7 @@ func TestEntryFormatter_Process_Panic(t *testing.T) {
 
 	e := fakeEvent(t, ResponseType, in)
 
-	e2, err := formatter.Process(namespace.RootContext(nil), e)
+	e2, err := formatter.Process(nshelper.RootContext(nil), e)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "panic generating audit log: \"juan\"")
 	require.Nil(t, e2)
@@ -1282,13 +1282,13 @@ func TestEntryFormatter_Process_NeverLeaksHeaders(t *testing.T) {
 	e := fakeEvent(t, RequestType, input)
 
 	// Process the node.
-	ctx := namespace.RootContext(context.Background())
+	ctx := nshelper.RootContext(context.Background())
 	e2, err := formatter.Process(ctx, e)
 	require.NoError(t, err)
 	require.NotNil(t, e2)
 
 	// Now check we can retrieve the formatted JSON.
-	jsonFormatted, b2 := e2.Format(JSONFormat.String())
+	jsonFormatted, b2 := e2.Format(jsonFormat.String())
 	require.True(t, b2)
 	require.NotNil(t, jsonFormatted)
 	var input2 *logical.LogInput
@@ -1328,9 +1328,9 @@ func fakeEvent(tb testing.TB, subtype subtype, input *logical.LogInput) *eventlo
 
 	date := time.Date(2023, time.July, 11, 15, 49, 10, 0o0, time.Local)
 
-	auditEvent, err := NewEvent(subtype,
-		WithID("123"),
-		WithNow(date),
+	auditEvent, err := newEvent(subtype,
+		withID("123"),
+		withNow(date),
 	)
 	require.NoError(tb, err)
 	require.NotNil(tb, auditEvent)

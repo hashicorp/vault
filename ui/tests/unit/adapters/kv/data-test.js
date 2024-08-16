@@ -384,39 +384,86 @@ module('Unit | Adapter | kv/data', function (hooks) {
       this.subkeysUrl = `${encodePath(this.backend)}/subkeys/${encodePath(this.path)}`;
     });
 
-    test('it should make request with default query', async function (assert) {
+    test('it should make request with no query', async function (assert) {
       assert.expect(2);
-      const expectedQuery = { depth: '0' };
-
+      const expectedQuery = {};
       this.server.get(this.subkeysUrl, (schema, { queryParams }) => {
         assert.true(true, `GET request made to ${this.subkeysUrl}`);
         assert.propEqual(queryParams, expectedQuery, `queryParams contain: ${JSON.stringify(queryParams)}`);
         return EXAMPLE_KV_SUBKEYS_RESPONSE;
       });
 
-      this.adapter.fetchSubkeys({ backend: this.backend, path: this.path });
+      this.adapter.fetchSubkeys(this.backend, this.path);
     });
 
-    test('it should make request with version query', async function (assert) {
+    test('it should make request with version param', async function (assert) {
       assert.expect(1);
+      const query = { version: '2' };
+      this.server.get(this.subkeysUrl, (schema, { queryParams }) => {
+        assert.propEqual(queryParams, query, `queryParams contain: ${JSON.stringify(queryParams)}`);
+        return EXAMPLE_KV_SUBKEYS_RESPONSE;
+      });
+
+      this.adapter.fetchSubkeys(this.backend, this.path, query);
+    });
+
+    test('it should make request with depth param', async function (assert) {
+      assert.expect(1);
+      const query = { depth: '1' };
+      this.server.get(this.subkeysUrl, (schema, { queryParams }) => {
+        assert.propEqual(queryParams, query, `queryParams contain: ${JSON.stringify(queryParams)}`);
+        return EXAMPLE_KV_SUBKEYS_RESPONSE;
+      });
+
+      this.adapter.fetchSubkeys(this.backend, this.path, query);
+    });
+
+    test('it should make request with both params as strings', async function (assert) {
+      assert.expect(1);
+      const query = { version: '2', depth: '1' };
+      this.server.get(this.subkeysUrl, (schema, { queryParams }) => {
+        assert.propEqual(queryParams, query, `queryParams contain: ${JSON.stringify(queryParams)}`);
+        return EXAMPLE_KV_SUBKEYS_RESPONSE;
+      });
+
+      this.adapter.fetchSubkeys(this.backend, this.path, query);
+    });
+
+    test('it should make request with both params as integers', async function (assert) {
+      assert.expect(1);
+      const query = { depth: 0, version: 2 };
       const expectedQuery = { depth: '0', version: '2' };
       this.server.get(this.subkeysUrl, (schema, { queryParams }) => {
         assert.propEqual(queryParams, expectedQuery, `queryParams contain: ${JSON.stringify(queryParams)}`);
         return EXAMPLE_KV_SUBKEYS_RESPONSE;
       });
 
-      this.adapter.fetchSubkeys({ backend: this.backend, path: this.path, version: '2' });
+      this.adapter.fetchSubkeys(this.backend, this.path, query);
+    });
+  });
+
+  module('patchSecret', function (hooks) {
+    hooks.beforeEach(function () {
+      this.adapter = this.store.adapterFor('kv/data');
     });
 
-    test('it should make request with just depth query', async function (assert) {
-      assert.expect(1);
-      const expectedQuery = { depth: '1' };
-      this.server.get(this.subkeysUrl, (schema, { queryParams }) => {
-        assert.propEqual(queryParams, expectedQuery, `queryParams contain: ${JSON.stringify(queryParams)}`);
-        return EXAMPLE_KV_SUBKEYS_RESPONSE;
+    test('it should make request to patch', async function (assert) {
+      assert.expect(2);
+      const data = { foo: 'bar', baz: null };
+      const expectedPayload = {
+        data,
+        options: {
+          cas: 1,
+        },
+      };
+      this.server.patch(this.endpoint('data'), (schema, req) => {
+        const body = JSON.parse(req.requestBody);
+        assert.true(true, `PATCH request made to ${this.endpoint('data')}`);
+        assert.propEqual(body, expectedPayload, 'payload includes cas version');
+        return EXAMPLE_KV_DATA_CREATE_RESPONSE;
       });
 
-      this.adapter.fetchSubkeys({ backend: this.backend, path: this.path, depth: '1' });
+      this.adapter.patchSecret(this.backend, this.path, data, 1);
     });
   });
 });
