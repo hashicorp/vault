@@ -61,7 +61,6 @@ export default class ClientsCountsRoute extends Route {
     if (!isNaN(millis)) {
       timestamp = fromUnixTime(millis).toISOString();
     }
-    console.log(qpMillisString, activityTimeStamp);
     // fallback to activity timestamp only if there was no query param
     if (!timestamp && activityTimeStamp) {
       timestamp = activityTimeStamp;
