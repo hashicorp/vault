@@ -15,7 +15,7 @@ import (
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/helper/namespace"
+	nshelper "github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -77,7 +77,7 @@ func (*entryFormatter) Type() eventlogger.NodeType {
 }
 
 // Process will attempt to parse the incoming event data into a corresponding
-// audit Request/Response which is serialized to JSON/JSONx and stored within the event.
+// audit request/response which is serialized to JSON/JSONx and stored within the event.
 func (f *entryFormatter) Process(ctx context.Context, e *eventlogger.Event) (_ *eventlogger.Event, retErr error) {
 	// Return early if the context was cancelled, eventlogger will not carry on
 	// asking nodes to process, so any sink node in the pipeline won't be called.
@@ -93,7 +93,7 @@ func (f *entryFormatter) Process(ctx context.Context, e *eventlogger.Event) (_ *
 		return nil, fmt.Errorf("event is nil: %w", ErrInvalidParameter)
 	}
 
-	a, ok := e.Payload.(*AuditEvent)
+	a, ok := e.Payload.(*Event)
 	if !ok {
 		return nil, fmt.Errorf("cannot parse event payload: %w", ErrInvalidParameter)
 	}
@@ -137,7 +137,7 @@ func (f *entryFormatter) Process(ctx context.Context, e *eventlogger.Event) (_ *
 		return nil, fmt.Errorf("unable to format %s: %w", a.Subtype, err)
 	}
 
-	if f.config.requiredFormat == JSONxFormat {
+	if f.config.requiredFormat == jsonxFormat {
 		var err error
 		result, err = jsonx.EncodeJSONBytes(result)
 		if err != nil {
@@ -243,45 +243,46 @@ func clone[V any](s V) (V, error) {
 
 // newAuth takes a logical.Auth and the number of remaining client token uses
 // (which should be supplied from the logical.Request's client token), and creates
-// an audit Auth.
+// an audit auth.
 // tokenRemainingUses should be the client token remaining uses to include in auth.
 // This usually can be found in logical.Request.ClientTokenRemainingUses.
 // NOTE: supplying a nil value for auth will result in a nil return value and
 // (nil) error. The caller should check the return value before attempting to use it.
-func newAuth(auth *logical.Auth, tokenRemainingUses int) (*Auth, error) {
-	if auth == nil {
+// ignore-nil-nil-function-check.
+func newAuth(input *logical.Auth, tokenRemainingUses int) (*auth, error) {
+	if input == nil {
 		return nil, nil
 	}
 
-	extNSPolicies, err := clone(auth.ExternalNamespacePolicies)
+	extNSPolicies, err := clone(input.ExternalNamespacePolicies)
 	if err != nil {
 		return nil, fmt.Errorf("unable to clone logical auth: external namespace policies: %w", err)
 	}
 
-	identityPolicies, err := clone(auth.IdentityPolicies)
+	identityPolicies, err := clone(input.IdentityPolicies)
 	if err != nil {
 		return nil, fmt.Errorf("unable to clone logical auth: identity policies: %w", err)
 	}
 
-	metadata, err := clone(auth.Metadata)
+	metadata, err := clone(input.Metadata)
 	if err != nil {
 		return nil, fmt.Errorf("unable to clone logical auth: metadata: %w", err)
 	}
 
-	policies, err := clone(auth.Policies)
+	policies, err := clone(input.Policies)
 	if err != nil {
 		return nil, fmt.Errorf("unable to clone logical auth: policies: %w", err)
 	}
 
-	var policyResults *PolicyResults
-	if auth.PolicyResults != nil {
-		policyResults = &PolicyResults{
-			Allowed:          auth.PolicyResults.Allowed,
-			GrantingPolicies: make([]PolicyInfo, len(auth.PolicyResults.GrantingPolicies)),
+	var polRes *policyResults
+	if input.PolicyResults != nil {
+		polRes = &policyResults{
+			Allowed:          input.PolicyResults.Allowed,
+			GrantingPolicies: make([]policyInfo, len(input.PolicyResults.GrantingPolicies)),
 		}
 
-		for _, p := range auth.PolicyResults.GrantingPolicies {
-			policyResults.GrantingPolicies = append(policyResults.GrantingPolicies, PolicyInfo{
+		for _, p := range input.PolicyResults.GrantingPolicies {
+			polRes.GrantingPolicies = append(polRes.GrantingPolicies, policyInfo{
 				Name:          p.Name,
 				NamespaceId:   p.NamespaceId,
 				NamespacePath: p.NamespacePath,
@@ -290,40 +291,40 @@ func newAuth(auth *logical.Auth, tokenRemainingUses int) (*Auth, error) {
 		}
 	}
 
-	tokenPolicies, err := clone(auth.TokenPolicies)
+	tokenPolicies, err := clone(input.TokenPolicies)
 	if err != nil {
 		return nil, fmt.Errorf("unable to clone logical auth: token policies: %w", err)
 	}
 
 	var tokenIssueTime string
-	if !auth.IssueTime.IsZero() {
-		tokenIssueTime = auth.IssueTime.Format(time.RFC3339)
+	if !input.IssueTime.IsZero() {
+		tokenIssueTime = input.IssueTime.Format(time.RFC3339)
 	}
 
-	return &Auth{
-		Accessor:                  auth.Accessor,
-		ClientToken:               auth.ClientToken,
-		DisplayName:               auth.DisplayName,
-		EntityCreated:             auth.EntityCreated,
-		EntityID:                  auth.EntityID,
+	return &auth{
+		Accessor:                  input.Accessor,
+		ClientToken:               input.ClientToken,
+		DisplayName:               input.DisplayName,
+		EntityCreated:             input.EntityCreated,
+		EntityID:                  input.EntityID,
 		ExternalNamespacePolicies: extNSPolicies,
 		IdentityPolicies:          identityPolicies,
 		Metadata:                  metadata,
-		NoDefaultPolicy:           auth.NoDefaultPolicy,
-		NumUses:                   auth.NumUses,
+		NoDefaultPolicy:           input.NoDefaultPolicy,
+		NumUses:                   input.NumUses,
 		Policies:                  policies,
-		PolicyResults:             policyResults,
+		PolicyResults:             polRes,
 		RemainingUses:             tokenRemainingUses,
 		TokenPolicies:             tokenPolicies,
 		TokenIssueTime:            tokenIssueTime,
-		TokenTTL:                  int64(auth.TTL.Seconds()),
-		TokenType:                 auth.TokenType.String(),
+		TokenTTL:                  int64(input.TTL.Seconds()),
+		TokenType:                 input.TokenType.String(),
 	}, nil
 }
 
 // newRequest takes a logical.Request and namespace.Namespace, transforms and
-// aggregates them into an audit Request.
-func newRequest(req *logical.Request, ns *namespace.Namespace) (*Request, error) {
+// aggregates them into an audit request.
+func newRequest(req *logical.Request, ns *nshelper.Namespace) (*request, error) {
 	if req == nil {
 		return nil, fmt.Errorf("request cannot be nil")
 	}
@@ -351,7 +352,7 @@ func newRequest(req *logical.Request, ns *namespace.Namespace) (*Request, error)
 		wrapTTL = int(req.WrapInfo.TTL / time.Second)
 	}
 
-	return &Request{
+	return &request{
 		ClientCertificateSerialNumber: clientCertSerial,
 		ClientID:                      req.ClientID,
 		ClientToken:                   req.ClientToken,
@@ -366,7 +367,7 @@ func newRequest(req *logical.Request, ns *namespace.Namespace) (*Request, error)
 		MountRunningSha256:            req.MountRunningSha256(),
 		MountRunningVersion:           req.MountRunningVersion(),
 		MountType:                     req.MountType,
-		Namespace: &Namespace{
+		Namespace: &namespace{
 			ID:   ns.ID,
 			Path: ns.Path,
 		},
@@ -382,11 +383,12 @@ func newRequest(req *logical.Request, ns *namespace.Namespace) (*Request, error)
 }
 
 // newResponse takes a logical.Response and logical.Request, transforms and
-// aggregates them into an audit Response.
+// aggregates them into an audit response.
 // isElisionRequired is used to indicate that response 'Data' should be elided.
 // NOTE: supplying a nil value for response will result in a nil return value and
 // (nil) error. The caller should check the return value before attempting to use it.
-func newResponse(resp *logical.Response, req *logical.Request, isElisionRequired bool) (*Response, error) {
+// ignore-nil-nil-function-check.
+func newResponse(resp *logical.Response, req *logical.Request, isElisionRequired bool) (*response, error) {
 	if resp == nil {
 		return nil, nil
 	}
@@ -447,12 +449,12 @@ func newResponse(resp *logical.Response, req *logical.Request, isElisionRequired
 		return nil, fmt.Errorf("unable to clone logical response: headers: %w", err)
 	}
 
-	var secret *Secret
+	var s *secret
 	if resp.Secret != nil {
-		secret = &Secret{LeaseID: resp.Secret.LeaseID}
+		s = &secret{LeaseID: resp.Secret.LeaseID}
 	}
 
-	var wrapInfo *ResponseWrapInfo
+	var wrapInfo *responseWrapInfo
 	if resp.WrapInfo != nil {
 		token := resp.WrapInfo.Token
 		if jwtToken := parseVaultTokenFromJWT(token); jwtToken != nil {
@@ -460,7 +462,7 @@ func newResponse(resp *logical.Response, req *logical.Request, isElisionRequired
 		}
 
 		ttl := int(resp.WrapInfo.TTL / time.Second)
-		wrapInfo = &ResponseWrapInfo{
+		wrapInfo = &responseWrapInfo{
 			TTL:             ttl,
 			Token:           token,
 			Accessor:        resp.WrapInfo.Accessor,
@@ -475,7 +477,7 @@ func newResponse(resp *logical.Response, req *logical.Request, isElisionRequired
 		return nil, fmt.Errorf("unable to clone logical response: warnings: %w", err)
 	}
 
-	return &Response{
+	return &response{
 		Auth:                  auth,
 		Data:                  data,
 		Headers:               headers,
@@ -487,15 +489,15 @@ func newResponse(resp *logical.Response, req *logical.Request, isElisionRequired
 		MountRunningVersion:   req.MountRunningVersion(),
 		MountType:             req.MountType,
 		Redirect:              resp.Redirect,
-		Secret:                secret,
+		Secret:                s,
 		WrapInfo:              wrapInfo,
 		Warnings:              warnings,
 	}, nil
 }
 
-// createEntry takes the AuditEvent and builds an audit Entry.
-// The Entry will be HMAC'd and elided where required.
-func (f *entryFormatter) createEntry(ctx context.Context, a *AuditEvent) (*Entry, error) {
+// createEntry takes the AuditEvent and builds an audit entry.
+// The entry will be HMAC'd and elided where required.
+func (f *entryFormatter) createEntry(ctx context.Context, a *Event) (*entry, error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -510,7 +512,7 @@ func (f *entryFormatter) createEntry(ctx context.Context, a *AuditEvent) (*Entry
 		return nil, fmt.Errorf("unable to parse request from '%s' audit event: request cannot be nil", a.Subtype)
 	}
 
-	ns, err := namespace.FromContext(ctx)
+	ns, err := nshelper.FromContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("unable to retrieve namespace from context: %w", err)
 	}
@@ -525,7 +527,7 @@ func (f *entryFormatter) createEntry(ctx context.Context, a *AuditEvent) (*Entry
 		return nil, fmt.Errorf("cannot convert request: %w", err)
 	}
 
-	var resp *Response
+	var resp *response
 	if a.Subtype == ResponseType {
 		shouldElide := f.config.elideListResponses && req.Operation == logical.ListOperation
 		resp, err = newResponse(data.Response, data.Request, shouldElide)
@@ -544,7 +546,7 @@ func (f *entryFormatter) createEntry(ctx context.Context, a *AuditEvent) (*Entry
 		entryType = a.Subtype.String()
 	}
 
-	entry := &Entry{
+	entry := &entry{
 		Auth:          auth,
 		Error:         outerErr,
 		Forwarded:     false,

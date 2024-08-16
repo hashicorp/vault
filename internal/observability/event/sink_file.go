@@ -115,7 +115,7 @@ func (s *FileSink) Process(ctx context.Context, e *eventlogger.Event) (_ *eventl
 		return nil, fmt.Errorf("unable to retrieve event formatted as %q: %w", s.requiredFormat, ErrInvalidParameter)
 	}
 
-	err := s.log(formatted)
+	err := s.log(ctx, formatted)
 	if err != nil {
 		return nil, fmt.Errorf("error writing file for sink %q: %w", s.path, err)
 	}
@@ -189,10 +189,18 @@ func (s *FileSink) open() error {
 }
 
 // log writes the buffer to the file.
-// It acquires a lock on the file to do this.
-func (s *FileSink) log(data []byte) error {
+// NOTE: We attempt to acquire a lock on the file in order to write, but will
+// yield if the context is 'done'.
+func (s *FileSink) log(ctx context.Context, data []byte) error {
+	// Wait for the lock, but ensure we check for a cancelled context as soon as
+	// we have it, as there's no point in continuing if we're cancelled.
 	s.fileLock.Lock()
 	defer s.fileLock.Unlock()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
 
 	reader := bytes.NewReader(data)
 

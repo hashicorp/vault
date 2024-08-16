@@ -21,6 +21,11 @@ import (
 // defaultToRetentionMonthsMaxWarning is a warning message for setting the max retention_months value when retention_months value is more than activityLogMaximumRetentionMonths
 var defaultToRetentionMonthsMaxWarning = fmt.Sprintf("retention_months cannot be greater than %d; capped to %d.", activityLogMaximumRetentionMonths, activityLogMaximumRetentionMonths)
 
+const (
+	// WarningCurrentMonthIsAnEstimate is a warning string that is used to let the customer know that for this query, the current month's data is estimated.
+	WarningCurrentMonthIsAnEstimate = "Since this usage period includes both the current month and at least one historical month, counts returned in this usage period are an estimate. Client counts for this period will no longer be estimated at the start of the next month."
+)
+
 // activityQueryPath is available in every namespace
 func (b *SystemBackend) activityQueryPath() *framework.Path {
 	return &framework.Path{
@@ -182,6 +187,34 @@ func (b *SystemBackend) rootActivityPaths() []*framework.Path {
 	return paths
 }
 
+// queryContainsEstimates calculates if the query for client counts will contain estimates.
+// A query between months N-2 and N-1 would not be an estimate, as with a query for month N.
+// But a query between N-2 and N or N-1 and N would be an estimate.
+func queryContainsEstimates(startTime time.Time, endTime time.Time) bool {
+	startTime = timeutil.EndOfMonth(startTime)
+	endTime = timeutil.EndOfMonth(endTime)
+
+	if startTime == endTime {
+		// If we're only estimating the current month, then we have no estimation
+		return false
+	}
+
+	if timeutil.IsCurrentMonth(endTime, time.Now().UTC()) {
+		// Our query includes the current month and previous months, so we have estimation
+		return true
+	}
+
+	// If the endTime is in the future, the behaviour is equivalent to when endTime is set to the current month
+	// (it includes the current month and previous months, so we have estimation)
+	endOfCurrentMonth := timeutil.EndOfMonth(time.Now().UTC())
+	if endTime.After(endOfCurrentMonth) {
+		return true
+	}
+
+	// Our query doesn't include the current month
+	return false
+}
+
 func parseStartEndTimes(a *ActivityLog, d *framework.FieldData) (time.Time, time.Time, error) {
 	startTime := d.Get("start_time").(time.Time)
 	endTime := d.Get("end_time").(time.Time)
@@ -252,6 +285,8 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
 		return logical.ErrorResponse("no activity log present"), nil
 	}
 
+	warnings := make([]string, 0)
+
 	if d.Get("current_billing_period").(bool) {
 		startTime = b.Core.BillingStart()
 		endTime = time.Now().UTC()
@@ -277,8 +312,13 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
 		return resp204, err
 	}
 
+	if queryContainsEstimates(startTime, endTime) {
+		warnings = append(warnings, WarningCurrentMonthIsAnEstimate)
+	}
+
 	return &logical.Response{
-		Data: results,
+		Warnings: warnings,
+		Data:     results,
 	}, nil
 }
 

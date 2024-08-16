@@ -44,6 +44,6 @@ func (b *Broker) requiredSuccessThresholdSinks() int {
 	return 0
 }
 
-func (b *brokerEnt) handleAdditionalAudit(_ context.Context, _ *AuditEvent) error {
+func (b *brokerEnt) handleAdditionalAudit(_ context.Context, _ *Event) error {
 	return nil
 }
