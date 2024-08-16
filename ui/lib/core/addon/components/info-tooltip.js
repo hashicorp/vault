@@ -7,12 +7,10 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 
 /**
- * @module JsonEditor
+ * @module InfoTooltip
  *
  * @example
- * ```js
- * <JsonEditor @title="Policy" @value={{codemirror.string}} @valueUpdated={{ action "codemirrorUpdate"}} />
- * ```
+ *  <InfoTooltip>Important info!</InfoTooltip>
  *
  * @param {string} [verticalPosition] - vertical position specification (above, below)
  * @param {string} [horizontalPosition] - horizontal position specification (center, auto-right)

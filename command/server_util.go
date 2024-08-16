@@ -24,6 +24,10 @@ func (c *ServerCommand) ReloadedCh() chan struct{} {
 	return c.reloadedCh
 }
 
+func (c *ServerCommand) LicenseReloadedCh() chan error {
+	return c.licenseReloadedCh
+}
+
 func testServerCommand(tb testing.TB) (*cli.MockUi, *ServerCommand) {
 	tb.Helper()
 

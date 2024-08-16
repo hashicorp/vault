@@ -1,0 +1,418 @@
+```json
+{
+  "type": "object",
+  "properties": {
+    "auth": {
+      "type": "object",
+      "properties": {
+        "accessor": {
+          "type": "string"
+        },
+        "client_token": {
+          "type": "string"
+        },
+        "display_name": {
+          "type": "string"
+        },
+        "entity_created": {
+          "type": "boolean"
+        },
+        "entity_id": {
+          "type": "string"
+        },
+        "external_namespace_policies": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "identity_policies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "no_default_policy": {
+          "type": "boolean"
+        },
+        "num_uses": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "policies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "policy_results": {
+          "type": "object",
+          "properties": {
+            "allowed": {
+              "type": "boolean"
+            },
+            "granting_policies": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "namespace_id": {
+                    "type": "string"
+                  },
+                  "namespace_path": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "type"
+                ]
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "allowed"
+          ]
+        },
+        "remaining_uses": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "token_issue_time": {
+          "type": "string"
+        },
+        "token_policies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "token_ttl": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "token_type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "error": {
+      "type": "string"
+    },
+    "forwarded": {
+      "type": "boolean"
+    },
+    "request": {
+      "type": "object",
+      "properties": {
+        "client_certificate_serial_number": {
+          "type": "string"
+        },
+        "client_id": {
+          "type": "string"
+        },
+        "client_token": {
+          "type": "string"
+        },
+        "client_token_accessor": {
+          "type": "string"
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "headers": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "id": {
+          "type": "string"
+        },
+        "mount_accessor": {
+          "type": "string"
+        },
+        "mount_class": {
+          "type": "string"
+        },
+        "mount_is_external_plugin": {
+          "type": "boolean"
+        },
+        "mount_point": {
+          "type": "string"
+        },
+        "mount_running_sha256": {
+          "type": "string"
+        },
+        "mount_running_version": {
+          "type": "string"
+        },
+        "mount_type": {
+          "type": "string"
+        },
+        "namespace": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "path": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "operation": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "policy_override": {
+          "type": "boolean"
+        },
+        "remote_address": {
+          "type": "string"
+        },
+        "remote_port": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "replication_cluster": {
+          "type": "string"
+        },
+        "request_uri": {
+          "type": "string"
+        },
+        "wrap_ttl": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "additionalProperties": false
+    },
+    "response": {
+      "type": "object",
+      "properties": {
+        "auth": {
+          "type": "object",
+          "properties": {
+            "accessor": {
+              "type": "string"
+            },
+            "client_token": {
+              "type": "string"
+            },
+            "display_name": {
+              "type": "string"
+            },
+            "entity_created": {
+              "type": "boolean"
+            },
+            "entity_id": {
+              "type": "string"
+            },
+            "external_namespace_policies": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "identity_policies": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "metadata": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "no_default_policy": {
+              "type": "boolean"
+            },
+            "num_uses": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "policies": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "policy_results": {
+              "type": "object",
+              "properties": {
+                "allowed": {
+                  "type": "boolean"
+                },
+                "granting_policies": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "namespace_id": {
+                        "type": "string"
+                      },
+                      "namespace_path": {
+                        "type": "string"
+                      },
+                      "type": {
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "type"
+                    ]
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "allowed"
+              ]
+            },
+            "remaining_uses": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "token_issue_time": {
+              "type": "string"
+            },
+            "token_policies": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "token_ttl": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "token_type": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "headers": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "mount_accessor": {
+          "type": "string"
+        },
+        "mount_class": {
+          "type": "string"
+        },
+        "mount_is_external_plugin": {
+          "type": "boolean"
+        },
+        "mount_point": {
+          "type": "string"
+        },
+        "mount_running_plugin_version": {
+          "type": "string"
+        },
+        "mount_running_sha256": {
+          "type": "string"
+        },
+        "mount_type": {
+          "type": "string"
+        },
+        "redirect": {
+          "type": "string"
+        },
+        "secret": {
+          "type": "object",
+          "properties": {
+            "lease_id": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "wrap_info": {
+          "type": "object",
+          "properties": {
+            "accessor": {
+              "type": "string"
+            },
+            "creation_path": {
+              "type": "string"
+            },
+            "creation_time": {
+              "type": "string"
+            },
+            "token": {
+              "type": "string"
+            },
+            "ttl": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "wrapped_accessor": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "time": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}
+```

@@ -1,0 +1,14 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+.clients-date-range-display {
+  display: flex;
+  align-items: bottom;
+  > * {
+    margin-right: $spacing-8;
+    vertical-align: bottom;
+    align-self: end;
+  }
+}

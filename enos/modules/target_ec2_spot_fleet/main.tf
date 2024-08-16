@@ -454,3 +454,13 @@ data "aws_instance" "targets" {
 
   instance_id = data.aws_instances.targets.ids[each.key]
 }
+
+module "disable_selinux" {
+  source = "../disable_selinux"
+  count  = var.disable_selinux == true ? 1 : 0
+
+  hosts = { for idx in range(var.instance_count) : idx => {
+    public_ip  = aws_instance.targets[idx].public_ip
+    private_ip = aws_instance.targets[idx].private_ip
+  } }
+}

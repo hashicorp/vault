@@ -1,5 +1,5 @@
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: BUSL-1.1
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
 
 scenario "dev_pr_replication" {
   description = <<-EOF
@@ -14,11 +14,13 @@ scenario "dev_pr_replication" {
     build and deploy the current branch!
 
     In order to execute this scenario you'll need to install the enos CLI:
-      brew tap hashicorp/tap && brew update && brew install hashicorp/tap/enos
+      - $ brew tap hashicorp/tap && brew update && brew install hashicorp/tap/enos
 
-    You'll also need access to an AWS account with an SSH keypair.
-    Perform the steps here to get AWS access with Doormat https://eng-handbook.hashicorp.services/internal-tools/enos/common-setup-steps/#authenticate-with-doormat
-    Perform the steps here to get an AWS keypair set up: https://eng-handbook.hashicorp.services/internal-tools/enos/common-setup-steps/#set-your-aws-key-pair-name-and-private-key
+    You'll also need access to an AWS account via Doormat, follow the guide here:
+      https://eng-handbook.hashicorp.services/internal-tools/enos/common-setup-steps/#authenticate-with-doormat
+
+    Follow this guide to get an SSH keypair set up in the AWS account:
+      https://eng-handbook.hashicorp.services/internal-tools/enos/common-setup-steps/#set-your-aws-key-pair-name-and-private-key
 
     Please note that this scenario requires several inputs variables to be set in order to function
     properly. While not all variants will require all variables, it's suggested that you look over
@@ -69,13 +71,13 @@ scenario "dev_pr_replication" {
   EOF
 
   // The matrix is where we define all the baseline combinations that enos can utilize to customize
-  // your scenario. By default enos attempts to perform your command an the entire product! Most
-  // of the time you'll want to reduce that by passing in a filter.
+  // your scenario. By default enos attempts to perform your command on the entire product of these
+  // possible comginations! Most of the time you'll want to reduce that by passing in a filter.
   // Run 'enos scenario list --help' to see more about how filtering scenarios works in enos.
   matrix {
     arch              = ["amd64", "arm64"]
     artifact          = ["local", "deb", "rpm", "zip"]
-    distro            = ["ubuntu", "rhel"]
+    distro            = ["amzn", "leap", "rhel", "sles", "ubuntu"]
     edition           = ["ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
     primary_backend   = ["consul", "raft"]
     primary_seal      = ["awskms", "pkcs11", "shamir"]
@@ -117,8 +119,8 @@ scenario "dev_pr_replication" {
   // Here we declare all of the providers that we might need for our scenario.
   providers = [
     provider.aws.default,
-    provider.enos.ubuntu,
-    provider.enos.rhel
+    provider.enos.ec2_user,
+    provider.enos.ubuntu
   ]
 
   // These are variable values that are local to our scenario. They are evaluated after external
@@ -127,19 +129,24 @@ scenario "dev_pr_replication" {
     // The enos provider uses different ssh transport configs for different distros (as
     // specified in enos-providers.hcl), and we need to be able to access both of those here.
     enos_provider = {
-      rhel   = provider.enos.rhel
+      amzn   = provider.enos.ec2_user
+      leap   = provider.enos.ec2_user
+      rhel   = provider.enos.ec2_user
+      sles   = provider.enos.ec2_user
       ubuntu = provider.enos.ubuntu
     }
     // We install vault packages from artifactory. If you wish to use one of these variants you'll
     // need to configure your artifactory credentials.
     use_artifactory = matrix.artifact == "deb" || matrix.artifact == "rpm"
+    // The IP version to use for the Vault listener and associated things.
+    ip_version = 4
     // Zip bundles and local builds don't come with systemd units or any associated configuration.
     // When this is true we'll let enos handle this for us.
     manage_service = matrix.artifact == "zip" || matrix.artifact == "local"
     // If you are using an ent edition, you will need a Vault license. Common convention
     // is to store it at ./support/vault.hclic, but you may change this path according
     // to your own preference.
-    vault_install_dir = matrix.artifact == "zip" ? var.vault_install_dir : global.vault_install_dir_packages[matrix.distro]
+    vault_install_dir = matrix.artifact == "zip" || matrix.artifact == "local" ? global.vault_install_dir["bundle"] : global.vault_install_dir["package"]
   }
 
   // Begin scenario steps. These are the steps we'll perform to get your cluster up and running.
@@ -336,6 +343,7 @@ scenario "dev_pr_replication" {
       ami_id          = step.ec2_info.ami_ids[matrix.arch][matrix.distro][global.distro_version[matrix.distro]]
       cluster_tag_key = global.vault_tag_key
       common_tags     = global.tags
+      instance_count  = try(var.vault_instance_count, 3)
       seal_key_names  = step.create_primary_seal_key.resource_names
       vpc_id          = step.create_vpc.id
     }
@@ -365,7 +373,7 @@ scenario "dev_pr_replication" {
     }
 
     variables {
-      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"]["22.04"]
+      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"][global.distro_version["ubuntu"]]
       cluster_tag_key = global.backend_tag_key
       common_tags     = global.tags
       seal_key_names  = step.create_primary_seal_key.resource_names
@@ -411,7 +419,7 @@ scenario "dev_pr_replication" {
     }
 
     variables {
-      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"]["22.04"]
+      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"][global.distro_version["ubuntu"]]
       cluster_tag_key = global.backend_tag_key
       common_tags     = global.tags
       seal_key_names  = step.create_secondary_seal_key.resource_names
@@ -445,12 +453,12 @@ scenario "dev_pr_replication" {
     variables {
       cluster_name    = step.create_primary_cluster_backend_targets.cluster_name
       cluster_tag_key = global.backend_tag_key
+      hosts           = step.create_primary_cluster_backend_targets.hosts
       license         = matrix.primary_backend == "consul" ? step.read_backend_license.license : null
       release = {
         edition = var.backend_edition
         version = var.dev_consul_version
       }
-      target_hosts = step.create_primary_cluster_backend_targets.hosts
     }
   }
 
@@ -509,16 +517,17 @@ scenario "dev_pr_replication" {
         version = var.dev_consul_version
       } : null
       enable_audit_devices = var.vault_enable_audit_devices
+      hosts                = step.create_primary_cluster_targets.hosts
       install_dir          = local.vault_install_dir
+      ip_version           = local.ip_version
       license              = step.read_vault_license.license
       local_artifact_path  = matrix.artifact == "local" ? abspath(var.vault_artifact_path) : null
       manage_service       = local.manage_service
-      packages             = concat(global.packages, global.distro_packages[matrix.distro])
+      packages             = concat(global.packages, global.distro_packages[matrix.distro][global.distro_version[matrix.distro]])
       release              = matrix.artifact == "zip" ? { version = var.vault_product_version, edition = matrix.edition } : null
       seal_attributes      = step.create_primary_seal_key.attributes
       seal_type            = matrix.primary_seal
       storage_backend      = matrix.primary_backend
-      target_hosts         = step.create_primary_cluster_targets.hosts
     }
   }
 
@@ -548,12 +557,12 @@ scenario "dev_pr_replication" {
     variables {
       cluster_name    = step.create_secondary_cluster_backend_targets.cluster_name
       cluster_tag_key = global.backend_tag_key
+      hosts           = step.create_secondary_cluster_backend_targets.hosts
       license         = matrix.secondary_backend == "consul" ? step.read_backend_license.license : null
       release = {
         edition = var.backend_edition
         version = var.dev_consul_version
       }
-      target_hosts = step.create_secondary_cluster_backend_targets.hosts
     }
   }
 
@@ -611,16 +620,17 @@ scenario "dev_pr_replication" {
         version = var.dev_consul_version
       } : null
       enable_audit_devices = var.vault_enable_audit_devices
+      hosts                = step.create_secondary_cluster_targets.hosts
       install_dir          = local.vault_install_dir
+      ip_version           = local.ip_version
       license              = step.read_vault_license.license
       local_artifact_path  = matrix.artifact == "local" ? abspath(var.vault_artifact_path) : null
       manage_service       = local.manage_service
-      packages             = concat(global.packages, global.distro_packages[matrix.distro])
+      packages             = concat(global.packages, global.distro_packages[matrix.distro][global.distro_version[matrix.distro]])
       release              = matrix.artifact == "zip" ? { version = var.vault_product_version, edition = matrix.edition } : null
       seal_attributes      = step.create_secondary_seal_key.attributes
       seal_type            = matrix.secondary_seal
       storage_backend      = matrix.secondary_backend
-      target_hosts         = step.create_secondary_cluster_targets.hosts
     }
   }
 
@@ -638,7 +648,8 @@ scenario "dev_pr_replication" {
     }
 
     variables {
-      vault_instances   = step.create_primary_cluster_targets.hosts
+      hosts             = step.create_primary_cluster_targets.hosts
+      vault_addr        = step.create_primary_cluster.api_addr_localhost
       vault_install_dir = local.vault_install_dir
     }
   }
@@ -657,7 +668,8 @@ scenario "dev_pr_replication" {
     }
 
     variables {
-      vault_instances   = step.create_secondary_cluster_targets.hosts
+      hosts             = step.create_secondary_cluster_targets.hosts
+      vault_addr        = step.create_secondary_cluster.api_addr_localhost
       vault_install_dir = local.vault_install_dir
     }
   }
@@ -676,7 +688,9 @@ scenario "dev_pr_replication" {
     }
 
     variables {
-      vault_hosts       = step.create_primary_cluster_targets.hosts
+      hosts             = step.create_primary_cluster_targets.hosts
+      ip_version        = local.ip_version
+      vault_addr        = step.create_primary_cluster.api_addr_localhost
       vault_install_dir = local.vault_install_dir
       vault_root_token  = step.create_primary_cluster.root_token
     }
@@ -696,7 +710,9 @@ scenario "dev_pr_replication" {
     }
 
     variables {
-      vault_hosts       = step.create_secondary_cluster_targets.hosts
+      hosts             = step.create_secondary_cluster_targets.hosts
+      ip_version        = local.ip_version
+      vault_addr        = step.create_secondary_cluster.api_addr_localhost
       vault_install_dir = local.vault_install_dir
       vault_root_token  = step.create_secondary_cluster.root_token
     }
@@ -715,9 +731,9 @@ scenario "dev_pr_replication" {
     }
 
     variables {
-      leader_public_ip  = step.get_primary_cluster_ips.leader_public_ip
-      leader_private_ip = step.get_primary_cluster_ips.leader_private_ip
-      vault_instances   = step.create_primary_cluster_targets.hosts
+      hosts             = step.create_primary_cluster_targets.hosts
+      leader_host       = step.get_primary_cluster_ips.leader_host
+      vault_addr        = step.create_primary_cluster.api_addr_localhost
       vault_install_dir = local.vault_install_dir
       vault_root_token  = step.create_primary_cluster.root_token
     }
@@ -740,10 +756,10 @@ scenario "dev_pr_replication" {
     }
 
     variables {
-      primary_leader_public_ip  = step.get_primary_cluster_ips.leader_public_ip
-      primary_leader_private_ip = step.get_primary_cluster_ips.leader_private_ip
-      vault_install_dir         = local.vault_install_dir
-      vault_root_token          = step.create_primary_cluster.root_token
+      primary_leader_public_ip = step.get_primary_cluster_ips.leader_public_ip
+      vault_addr               = step.create_primary_cluster.api_addr_localhost
+      vault_install_dir        = local.vault_install_dir
+      vault_root_token         = step.create_primary_cluster.root_token
     }
   }
 
@@ -761,6 +777,7 @@ scenario "dev_pr_replication" {
 
     variables {
       primary_leader_public_ip = step.get_primary_cluster_ips.leader_public_ip
+      vault_addr               = step.create_primary_cluster.api_addr_localhost
       vault_install_dir        = local.vault_install_dir
       vault_root_token         = step.create_primary_cluster.root_token
     }
@@ -778,11 +795,11 @@ scenario "dev_pr_replication" {
     }
 
     variables {
-      secondary_leader_public_ip  = step.get_secondary_cluster_ips.leader_public_ip
-      secondary_leader_private_ip = step.get_secondary_cluster_ips.leader_private_ip
-      vault_install_dir           = local.vault_install_dir
-      vault_root_token            = step.create_secondary_cluster.root_token
-      wrapping_token              = step.generate_secondary_token.secondary_token
+      secondary_leader_public_ip = step.get_secondary_cluster_ips.leader_public_ip
+      vault_addr                 = step.create_secondary_cluster.api_addr_localhost
+      vault_install_dir          = local.vault_install_dir
+      vault_root_token           = step.create_secondary_cluster.root_token
+      wrapping_token             = step.generate_secondary_token.secondary_token
     }
   }
 
@@ -805,10 +822,11 @@ scenario "dev_pr_replication" {
     }
 
     variables {
-      follower_public_ips = step.get_secondary_cluster_ips.follower_public_ips
-      vault_install_dir   = local.vault_install_dir
-      vault_unseal_keys   = matrix.primary_seal == "shamir" ? step.create_primary_cluster.unseal_keys_hex : step.create_primary_cluster.recovery_keys_hex
-      vault_seal_type     = matrix.primary_seal == "shamir" ? matrix.primary_seal : matrix.secondary_seal
+      hosts             = step.get_secondary_cluster_ips.follower_hosts
+      vault_addr        = step.create_secondary_cluster.api_addr_localhost
+      vault_install_dir = local.vault_install_dir
+      vault_unseal_keys = matrix.primary_seal == "shamir" ? step.create_primary_cluster.unseal_keys_hex : step.create_primary_cluster.recovery_keys_hex
+      vault_seal_type   = matrix.primary_seal == "shamir" ? matrix.primary_seal : matrix.secondary_seal
     }
   }
 
@@ -826,7 +844,8 @@ scenario "dev_pr_replication" {
     }
 
     variables {
-      vault_instances   = step.create_secondary_cluster_targets.hosts
+      hosts             = step.create_secondary_cluster_targets.hosts
+      vault_addr        = step.create_primary_cluster.api_addr_localhost
       vault_install_dir = local.vault_install_dir
     }
   }
@@ -844,11 +863,11 @@ scenario "dev_pr_replication" {
     }
 
     variables {
-      primary_leader_public_ip    = step.get_primary_cluster_ips.leader_public_ip
-      primary_leader_private_ip   = step.get_primary_cluster_ips.leader_private_ip
-      secondary_leader_public_ip  = step.get_secondary_cluster_ips.leader_public_ip
-      secondary_leader_private_ip = step.get_secondary_cluster_ips.leader_private_ip
-      vault_install_dir           = local.vault_install_dir
+      ip_version            = local.ip_version
+      primary_leader_host   = step.get_primary_cluster_ips.leader_host
+      secondary_leader_host = step.get_secondary_cluster_ips.leader_host
+      vault_addr            = step.create_primary_cluster.api_addr_localhost
+      vault_install_dir     = local.vault_install_dir
     }
   }
 

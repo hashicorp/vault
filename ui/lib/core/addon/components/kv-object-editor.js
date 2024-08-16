@@ -10,22 +10,18 @@ import { assert } from '@ember/debug';
 import { action } from '@ember/object';
 import { guidFor } from '@ember/object/internals';
 import KVObject from 'vault/lib/kv-object';
+import { hasWhitespace, isNonString, NON_STRING_WARNING, WHITESPACE_WARNING } from 'vault/utils/validators';
 
 /**
  * @module KvObjectEditor
  * KvObjectEditor components are called in FormFields when the editType on the model is kv.  They are used to show a key-value input field.
  *
  * @example
- * ```js
- * <KvObjectEditor
- *  @value={{get model valuePath}}
- *  @onChange={{action "setAndBroadcast" valuePath }}
- *  @label="some label"
-   />
- * ```
+ * <KvObjectEditor @value={{hash foo="bar"}} @onChange={{log "on change called"}} @label="Label here" />
+ *
  * @param {string} value - the value is captured from the model.
  * @param {function} onChange - function that captures the value on change
- * @param {boolean} [isMasked = false] - when true the <MaskedInput> renders instead of the default <textarea> to input the value portion of the key/value object
+ * @param {boolean} [isMasked = false] - when true the `<MaskedInput>` renders instead of the default `<textarea>` to input the value portion of the key/value object
  * @param {boolean} [isSingleRow = false] - when true the kv object editor will only show one row and hide the Add button
  * @param {function} [onKeyUp] - function passed in that handles the dom keyup event. Used for validation on the kv custom metadata.
  * @param {string} [label] - label displayed over key value inputs
@@ -42,6 +38,8 @@ import KVObject from 'vault/lib/kv-object';
 export default class KvObjectEditor extends Component {
   // kvData is type ArrayProxy, so addObject etc are fine here
   @tracked kvData;
+  whitespaceWarning = WHITESPACE_WARNING('key');
+  nonStringWarning = NON_STRING_WARNING;
 
   get placeholders() {
     return {
@@ -90,15 +88,11 @@ export default class KvObjectEditor extends Component {
   }
   showWhitespaceWarning = (name) => {
     if (this.args.allowWhiteSpace) return false;
-    return new RegExp('\\s', 'g').test(name);
+    return hasWhitespace(name);
   };
+
   showNonStringWarning = (value) => {
     if (!this.args.warnNonStringValues) return false;
-    try {
-      JSON.parse(value);
-      return true;
-    } catch (e) {
-      return false;
-    }
+    return isNonString(value);
   };
 }

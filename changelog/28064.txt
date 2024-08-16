@@ -1,0 +1,7 @@
+```release-note:improvement
+activity: The [activity export API](https://developer.hashicorp.com/vault/api-docs/system/internal-counters#activity-export) now includes identity metadata about entity clients.
+```
+
+```release-note:change
+activity: The [activity export API](https://developer.hashicorp.com/vault/api-docs/system/internal-counters#activity-export) now responds with a status of 204 instead 400 when no data exists within the time range specified by `start_time` and `end_time`.
+```

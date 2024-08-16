@@ -43,8 +43,8 @@ module('Integration | Component | kv-v2 | KvDataFields', function (hooks) {
     await render(hbs`<KvDataFields @showJson={{true}} @secret={{this.secret}} />`, { owner: this.engine });
     assert.strictEqual(
       codemirror().getValue(' '),
-      `{ \"\": \"\" }`, // eslint-disable-line no-useless-escape
-      'json editor initializes with empty object'
+      `{   \"\": \"\" }`, // eslint-disable-line no-useless-escape
+      'json editor initializes with empty object that includes whitespace'
     );
     await fillIn(`${FORM.jsonEditor} textarea`, 'blah');
     assert.strictEqual(codemirror().state.lint.marked.length, 1, 'codemirror lints input');

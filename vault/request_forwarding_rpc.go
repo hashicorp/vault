@@ -102,6 +102,15 @@ func (s *forwardedRequestRPCServer) Echo(ctx context.Context, in *EchoRequest) (
 	}
 
 	if in.RaftAppliedIndex > 0 && len(in.RaftNodeID) > 0 && s.raftFollowerStates != nil {
+		s.core.logger.Trace("forwarding RPC: echo received",
+			"node_id", in.RaftNodeID,
+			"applied_index", in.RaftAppliedIndex,
+			"term", in.RaftTerm,
+			"desired_suffrage", in.RaftDesiredSuffrage,
+			"sdk_version", in.SdkVersion,
+			"upgrade_version", in.RaftUpgradeVersion,
+			"redundancy_zone", in.RaftRedundancyZone)
+
 		s.raftFollowerStates.Update(&raft.EchoRequestUpdate{
 			NodeID:          in.RaftNodeID,
 			AppliedIndex:    in.RaftAppliedIndex,

@@ -133,6 +133,7 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 				"storage/raft/snapshot-auto/config/*",
 				"leases",
 				"internal/inspect/*",
+				"internal/counters/activity/export",
 				// sys/seal and sys/step-down actually have their sudo requirement enforced through hardcoding
 				// PolicyCheckOpts.RootPrivsRequired in dedicated calls to Core.performPolicyChecks, but we still need
 				// to declare them here so that the generated OpenAPI spec gets their sudo status correct.
@@ -2225,12 +2226,12 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		return nil, logical.ErrReadOnly
 	}
 
-	var lock *locking.DeadlockRWMutex
+	var lock locking.RWMutex
 	switch {
 	case strings.HasPrefix(path, credentialRoutePrefix):
-		lock = &b.Core.authLock
+		lock = b.Core.authLock
 	default:
-		lock = &b.Core.mountsLock
+		lock = b.Core.mountsLock
 	}
 
 	lock.Lock()
@@ -2419,6 +2420,17 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		pluginType := consts.PluginTypeSecrets
 		if strings.HasPrefix(path, "auth/") {
 			pluginType = consts.PluginTypeCredential
+		}
+
+		// Update MountEntry.Type of external plugins registered in Vault pre-v1.0.0 to the plugin binary name
+		// stored in MountEntry.Config.PluginName
+		// Previously, when upgrading Vault from pre-v1.0.0 to post-v1.0.0, MountEntry.Type of external plugins
+		// remained "plugin" where it should follow the new scheme and be updated to the plugin binary name.
+		// https://hashicorp.atlassian.net/browse/VAULT-21999
+		if mountEntry.Config.PluginName != "" {
+			if mountEntry.Config.PluginName != mountEntry.Type && mountEntry.Type == "plugin" {
+				mountEntry.Type = mountEntry.Config.PluginName
+			}
 		}
 
 		pinnedVersion, err := b.Core.pluginCatalog.GetPinnedVersion(ctx, pluginType, mountEntry.Type)
@@ -3913,7 +3925,7 @@ func (b *SystemBackend) handleEnableAudit(ctx context.Context, _ *logical.Reques
 
 	// Attempt enabling
 	if err := b.Core.enableAudit(ctx, me, true); err != nil {
-		b.Backend.Logger().Error("enable audit mount failed", "path", me.Path, "error", err)
+		b.Core.logger.Error("enable audit mount failed", "path", me.Path, "error", err)
 
 		return handleError(audit.ConvertToExternalError(err))
 	}
@@ -5061,6 +5073,14 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 	var routerPrefix string
 	if strings.HasPrefix(me.APIPathNoNamespace(), credentialRoutePrefix) {
 		routerPrefix = credentialRoutePrefix
+	}
+
+	// the mount's namespace is (at least partially) in the request path and not
+	// in the request's context, so we need to add the namespace from the
+	// request path to the router prefix
+	if me.NamespaceID != ns.ID {
+		namespaceRouterPrefix := strings.TrimPrefix(me.Namespace().Path, ns.Path)
+		routerPrefix = namespaceRouterPrefix + routerPrefix
 	}
 
 	filtered, err := b.Core.checkReplicatedFiltering(ctx, me, routerPrefix)

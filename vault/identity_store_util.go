@@ -148,7 +148,7 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 			}
 
 			if i.logger.IsDebug() {
-				i.logger.Debug("loading group", "name", group.Name, "id", group.ID)
+				i.logger.Debug("loading group", "namespace", ns.ID, "name", group.Name, "id", group.ID)
 			}
 
 			txn := i.db.Txn(true)
@@ -171,6 +171,19 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 			}
 
 			err = i.UpsertGroupInTxn(ctx, txn, group, persist)
+
+			if errors.Is(err, logical.ErrReadOnly) {
+				// This is an imperfect solution to unblock customers who are running into
+				// a readonly error during a DR failover (jira #28191). More specifically, if there
+				// are duplicate aliases in storage then they are merged during loadEntities. Vault
+				// attempts to remove the deleted duplicate entities from their groups to clean up.
+				// If the node is a PR secondary though it will fail because the RPC client
+				// is not yet initialized and the storage is read-only. This prevents the cluster from
+				// unsealing entirely and can potentially block a DR failover from succeeding.
+				i.logger.Warn("received a read only error while trying to upsert group to storage")
+				err = nil
+			}
+
 			if err != nil {
 				txn.Abort()
 				return fmt.Errorf("failed to update group in memdb: %w", err)
@@ -1267,6 +1280,36 @@ func (i *IdentityStore) MemDBDeleteEntityByID(entityID string) error {
 	txn.Commit()
 
 	return nil
+}
+
+// FetchEntityForLocalAliasInTxn fetches the entity associated with the provided
+// local identity.Alias. MemDB will first be searched for the entity. If it is
+// not found there, the localAliasPacker storagepacker.StoragePacker will be
+// used. If an error occurs, an appropriate error message is logged and nil is
+// returned.
+func (i *IdentityStore) FetchEntityForLocalAliasInTxn(txn *memdb.Txn, alias *identity.Alias) *identity.Entity {
+	entity, err := i.MemDBEntityByIDInTxn(txn, alias.CanonicalID, false)
+	if err != nil {
+		i.logger.Error("failed to fetch entity from local alias", "entity_id", alias.CanonicalID, "error", err)
+		return nil
+	}
+
+	if entity == nil {
+		cachedEntityItem, err := i.localAliasPacker.GetItem(alias.CanonicalID + tmpSuffix)
+		if err != nil {
+			i.logger.Error("failed to fetch cached entity from local alias", "key", alias.CanonicalID+tmpSuffix, "error", err)
+			return nil
+		}
+		if cachedEntityItem != nil {
+			entity, err = i.parseCachedEntity(cachedEntityItem)
+			if err != nil {
+				i.logger.Error("failed to parse cached entity", "key", alias.CanonicalID+tmpSuffix, "error", err)
+				return nil
+			}
+		}
+	}
+
+	return entity
 }
 
 func (i *IdentityStore) MemDBDeleteEntityByIDInTxn(txn *memdb.Txn, entityID string) error {
@@ -2467,6 +2510,7 @@ func (i *IdentityStore) handleAliasListCommon(ctx context.Context, groupAlias bo
 			"canonical_id":    alias.CanonicalID,
 			"mount_accessor":  alias.MountAccessor,
 			"custom_metadata": alias.CustomMetadata,
+			"metadata":        alias.Metadata,
 			"local":           alias.Local,
 		}
 

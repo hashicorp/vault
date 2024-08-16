@@ -50,8 +50,9 @@ export default class LdapLibrariesRoute extends Route {
     super.setupController(controller, resolvedModel, transition);
 
     controller.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: resolvedModel.backendModel.id },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
+      { label: resolvedModel.backendModel.id, route: 'overview', model: resolvedModel.backend },
+      { label: 'Libraries' },
     ];
   }
 }

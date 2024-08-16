@@ -13,11 +13,11 @@ export default class KvSecretMetadataEditRoute extends Route {
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
     const breadcrumbsArray = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: resolvedModel.backend, route: 'list', model: resolvedModel.backend },
       ...breadcrumbsForSecret(resolvedModel.backend, resolvedModel.path),
-      { label: 'metadata', route: 'secret.metadata' },
-      { label: 'edit' },
+      { label: 'Metadata', route: 'secret.metadata' },
+      { label: 'Edit' },
     ];
 
     controller.set('breadcrumbs', breadcrumbsArray);

@@ -13,13 +13,8 @@ export default class SyncSecretsRoute extends Route {
   @service declare readonly router: RouterService;
   @service declare readonly flags: FlagService;
 
-  beforeModel() {
-    return this.flags.fetchActivatedFlags();
-  }
-
   model() {
     return {
-      // TODO will modify when we use the persona service.
       activatedFeatures: this.flags.activatedFlags,
     };
   }

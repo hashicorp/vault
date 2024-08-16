@@ -31,10 +31,10 @@ export default class KvSecretsCreateRoute extends Route {
     super.setupController(controller, resolvedModel);
 
     const crumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: resolvedModel.backend, route: 'list', model: resolvedModel.backend },
       ...breadcrumbsForSecret(resolvedModel.backend, resolvedModel.path),
-      { label: 'create' },
+      { label: 'Create' },
     ];
     controller.breadcrumbs = crumbs;
   }

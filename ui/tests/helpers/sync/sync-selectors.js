@@ -51,14 +51,18 @@ export const PAGE = {
     },
   },
   overview: {
-    optInBanner: '[data-test-secrets-sync-opt-in-banner]',
-    optInBannerEnable: '[data-test-secrets-sync-opt-in-banner-enable]',
-    optInBannerDescription: '[data-test-secrets-sync-opt-in-banner-description]',
-    optInDismiss: '[data-test-secrets-sync-opt-in-banner] [data-test-icon="x"]',
-    optInModal: '[data-test-secrets-sync-opt-in-modal]',
-    optInCheck: '[data-test-opt-in-check]',
-    optInConfirm: '[data-test-opt-in-confirm]',
-    optInCancel: '[data-test-opt-in-cancel]',
+    optInBanner: {
+      container: '[data-test-secrets-sync-opt-in-banner]',
+      enable: '[data-test-secrets-sync-opt-in-banner-enable]',
+      description: '[data-test-secrets-sync-opt-in-banner-description]',
+      dismiss: '[data-test-secrets-sync-opt-in-banner] [data-test-icon="x"]',
+    },
+    activationModal: {
+      container: '[data-test-secrets-sync-opt-in-modal]',
+      checkbox: '[data-test-opt-in-check]',
+      confirm: '[data-test-opt-in-confirm]',
+      cancel: '[data-test-opt-in-cancel]',
+    },
     optInError: '[data-test-opt-in-error]',
     createDestination: '[data-test-create-destination]',
     table: {
@@ -82,6 +86,8 @@ export const PAGE = {
   toolbar: (btnText) => `[data-test-toolbar="${btnText}"]`,
   form: {
     enableInput: (attr) => `[data-test-enable-field="${attr}"] [data-test-icon="edit"]`,
+    fieldGroupHeader: (group) => `[data-test-destination-header="${group}"]`,
+    fieldGroupSubtext: (group) => `[data-test-destination-subText="${group}"]`,
     fillInByAttr: async (attr, value) => {
       // for handling more complex form input elements by attr name
       switch (attr) {
@@ -93,6 +99,11 @@ export const PAGE = {
         case 'customTags':
           await fillIn('[data-test-kv-key="0"]', 'foo');
           return fillIn('[data-test-kv-value="0"]', value);
+        case 'accessKeyId':
+        case 'secretAccessKey':
+        case 'clientSecret':
+        case 'accessToken':
+          return fillIn(GENERAL.maskedInput(attr), value);
         case 'deploymentEnvironments':
           await click('[data-test-input="deploymentEnvironments"] input#development');
           await click('[data-test-input="deploymentEnvironments"] input#preview');

@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
-	"crypto/x509"
 	"encoding/base64"
 	"fmt"
 	"io"
@@ -330,7 +329,7 @@ func TestDefaulRetryPolicy(t *testing.T) {
 		},
 		"don't retry connection failures": {
 			err: &url.Error{
-				Err: x509.UnknownAuthorityError{},
+				Err: &tls.CertificateVerificationError{},
 			},
 		},
 		"don't retry on 200": {
@@ -372,6 +371,61 @@ func TestDefaulRetryPolicy(t *testing.T) {
 				t.Fatalf("expected error from retry policy: %q, but actual result was: %q", err, test.expectErr)
 			}
 		})
+	}
+}
+
+func TestClientEnvHeaders(t *testing.T) {
+	oldHeaders := os.Getenv(EnvVaultHeaders)
+
+	defer func() {
+		os.Setenv(EnvVaultHeaders, oldHeaders)
+	}()
+
+	cases := []struct {
+		Input string
+		Valid bool
+	}{
+		{
+			"{}",
+			true,
+		},
+		{
+			"{\"foo\": \"bar\"}",
+			true,
+		},
+		{
+			"{\"foo\": 1}", // Values must be strings
+			false,
+		},
+		{
+			"{\"X-Vault-Foo\": \"bar\"}", // X-Vault-* not allowed
+			false,
+		},
+	}
+
+	for _, tc := range cases {
+		os.Setenv(EnvVaultHeaders, tc.Input)
+		config := DefaultConfig()
+		config.ReadEnvironment()
+		_, err := NewClient(config)
+		if err != nil {
+			if tc.Valid {
+				t.Fatalf("unexpected error reading headers from environment: %v", err)
+			}
+		} else {
+			if !tc.Valid {
+				t.Fatal("no error reading headers from environment when error was expected")
+			}
+		}
+	}
+
+	os.Setenv(EnvVaultHeaders, "{\"foo\": \"bar\"}")
+	config := DefaultConfig()
+	config.ReadEnvironment()
+	cli, _ := NewClient(config)
+
+	if !reflect.DeepEqual(cli.Headers().Values("foo"), []string{"bar"}) {
+		t.Error("Environment-supplied headers not set in CLI client")
 	}
 }
 
