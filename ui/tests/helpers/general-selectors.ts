@@ -74,11 +74,12 @@ export const GENERAL = {
     removeSelected: '[data-test-selected-list-button="delete"]',
   },
   overviewCard: {
+    container: (title: string) => `[data-test-overview-card-container="${title}"]`,
     title: (title: string) => `[data-test-overview-card-title="${title}"]`,
     description: (title: string) => `[data-test-overview-card-subtitle="${title}"]`,
     content: (title: string) => `[data-test-overview-card-content="${title}"]`,
-    action: (title: string) => `[data-test-overview-card-container="${title}"] [data-test-action-text]`,
-    actionLink: (label: string) => `[data-test-action-text="${label}"]`,
+    actionText: (text: string) => `[data-test-action-text="${text}"]`,
+    actionLink: (label: string) => `[data-test-overview-card="${label}"] a`,
   },
   pagination: {
     next: '.hds-pagination-nav__arrow--direction-next',
