@@ -10,7 +10,11 @@ import Component from '@glimmer/component';
 import { isSameMonth } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { calculateAverage } from 'vault/utils/chart-helpers';
-import { filterByMonthDataForMount, filterVersionHistory } from 'core/utils/client-count-utils';
+import {
+  filterByMonthDataForMount,
+  filteredTotalForMount,
+  filterVersionHistory,
+} from 'core/utils/client-count-utils';
 import { service } from '@ember/service';
 import { sanitizePath } from 'core/utils/sanitize-path';
 
@@ -47,6 +51,7 @@ export default class ClientsActivityComponent extends Component<Args> {
     return calculateAverage(data, key);
   };
 
+  // TODO: move to controller + arg
   // path of the filtered namespace OR current one, for filtering relevant data
   get namespacePathForFilter() {
     const { namespace } = this.args;
@@ -85,15 +90,12 @@ export default class ClientsActivityComponent extends Component<Args> {
   }
 
   // (object) top level TOTAL client counts for given date range
-  get totalUsageCounts(): TotalClients | MountClients | undefined {
+  get totalUsageCounts(): TotalClients {
     const { namespace, activity, mountPath } = this.args;
     // only do this if we have a mountPath filter.
     // namespace is filtered on API layer
     if (activity?.byNamespace && namespace && mountPath) {
-      const filtered = activity.byNamespace
-        .find((ns) => ns.label === namespace)
-        ?.mounts.find((mount: MountClients) => mount.label === mountPath);
-      return filtered;
+      return filteredTotalForMount(activity.byNamespace, namespace, mountPath);
     }
     return activity?.total;
   }

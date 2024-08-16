@@ -8,7 +8,7 @@ import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { isSameMonth, isAfter } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
-import { filterVersionHistory, MountClients } from 'core/utils/client-count-utils';
+import { filteredTotalForMount, filterVersionHistory, TotalClients } from 'core/utils/client-count-utils';
 
 import type AdapterError from '@ember-data/adapter';
 import type FlagsService from 'vault/services/flags';
@@ -141,20 +141,17 @@ export default class ClientsCountsPageComponent extends Component<Args> {
   }
 
   get activityForNamespace() {
+    // TODO: always return activity for namespace. If no namespace selected, use the current
     const { activity, namespace } = this.args;
     return namespace ? activity.byNamespace.find((ns) => ns.label === namespace) : null;
   }
 
-  get filteredActivity() {
-    // return activity counts based on selected namespace and auth mount values
+  get filteredActivity(): TotalClients {
     const { namespace, mountPath, activity } = this.args;
-    // only do this if we have a mountPath filter.
-    // namespace is filtered on API layer
-    if (activity?.byNamespace && namespace && mountPath) {
-      const filtered = activity.byNamespace
-        .find((ns) => ns.label === namespace)
-        ?.mounts.find((mount: MountClients) => mount.label === mountPath);
-      return filtered;
+    if (mountPath) {
+      // only do this if we have a mountPath filter.
+      // namespace is filtered on API layer
+      return filteredTotalForMount(activity.byNamespace, namespace, mountPath);
     }
     return activity?.total;
   }

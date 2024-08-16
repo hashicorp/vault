@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+import isEmpty from '@ember/utils/lib/is_empty';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { sanitizePath } from 'core/utils/sanitize-path';
 import { compareAsc, getUnixTime, isWithinInterval } from 'date-fns';
@@ -74,6 +75,21 @@ export const filterVersionHistory = (
   return [];
 };
 
+// This method is used to return totals relevant only to the specified
+// mount path within the specified namespace.
+export const filteredTotalForMount = (
+  byNamespace: ByNamespaceClients[],
+  nsPath: string,
+  mountPath: string
+): TotalClients => {
+  if (!nsPath || !mountPath || isEmpty(byNamespace)) return emptyCounts();
+  return (
+    byNamespace
+      .find((namespace) => namespace.label === nsPath)
+      ?.mounts.find((mount: MountClients) => mount.label === mountPath) || emptyCounts()
+  );
+};
+
 // This method is used to filter byMonth data and return data for only
 // the specified mount within the specified namespace. If data exists
 // for the month but not the mount, it should return zero'd data. If
@@ -132,7 +148,7 @@ export const filterByMonthDataForMount = (
       } as ByMonthClients;
     });
   }
-  return months;
+  return byMonth;
 };
 
 // METHODS FOR SERIALIZING ACTIVITY RESPONSE
