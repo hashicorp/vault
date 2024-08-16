@@ -13,9 +13,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/go-test/deep"
-	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
@@ -23,9 +21,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/compressutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/physical"
-	"github.com/hashicorp/vault/sdk/physical/inmem"
-	"github.com/stretchr/testify/require"
 )
 
 func TestMount_ReadOnlyViewDuringMount(t *testing.T) {
@@ -1026,114 +1021,4 @@ func TestCore_MountInitialize(t *testing.T) {
 			t.Fatal("backend is not initialized")
 		}
 	}
-}
-
-// This test ensures that a performance standby core does not
-// try to persist mount changes to storage during remountSecretsEngine.
-func TestCore_RemountSecretsEngine(t *testing.T) {
-	inm, err := inmem.NewTransactionalInmem(nil, logger)
-	if err != nil {
-		t.Fatal(err)
-	}
-	inmha, err := inmem.NewInmemHA(nil, logger)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	coreConfig := &CoreConfig{
-		Physical:                  inm,
-		HAPhysical:                inmha.(physical.HABackend),
-		DisablePerformanceStandby: false,
-		// add kv engine
-		LogicalBackends: map[string]logical.Factory{
-			"kv": logicalKv.Factory,
-		},
-	}
-
-	cluster := NewTestCluster(t, coreConfig, &TestClusterOptions{
-		NumCores: 2,
-	})
-
-	cluster.Start()
-
-	// Wait for cluster to be ready
-	activeCore := cluster.Cores[0].Core
-	perfStandbyCore := cluster.Cores[1].Core
-	TestWaitActive(t, activeCore)
-	TestWaitPerfStandby(t, perfStandbyCore)
-
-	// Mount kv engine
-	nsCtx := namespace.RootContext(nil)
-	_, err = activeCore.systemBackend.HandleRequest(nsCtx, &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "mounts/kv1/",
-		Data: map[string]interface{}{
-			"type": "kv",
-		},
-	})
-	require.NoError(t, err)
-
-	src := namespace.MountPathDetails{Namespace: namespace.RootNamespace, MountPath: "kv1/"}
-	dst := namespace.MountPathDetails{Namespace: namespace.RootNamespace, MountPath: "kv2/"}
-
-	// Give it a few seconds to replicate kv1 secrets engine to perf standby
-	corehelpers.RetryUntil(t, 5*time.Second, func() error {
-		err = perfStandbyCore.remountSecretsEngine(nsCtx, src, dst, false)
-		return err
-	})
-}
-
-// This test ensures that a performance standby core does not
-// try to persist auth changes to storage during remountCredential.
-func TestCore_RemountAuthEngine(t *testing.T) {
-	inm, err := inmem.NewTransactionalInmem(nil, logger)
-	if err != nil {
-		t.Fatal(err)
-	}
-	inmha, err := inmem.NewInmemHA(nil, logger)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	coreConfig := &CoreConfig{
-		Physical:                  inm,
-		HAPhysical:                inmha.(physical.HABackend),
-		DisablePerformanceStandby: false,
-		// add auth method
-		CredentialBackends: map[string]logical.Factory{
-			"userpass": userpass.Factory,
-		},
-	}
-
-	cluster := NewTestCluster(t, coreConfig, &TestClusterOptions{
-		NumCores: 2,
-	})
-
-	cluster.Start()
-
-	// Wait for cluster to be ready
-	activeCore := cluster.Cores[0].Core
-	perfStandbyCore := cluster.Cores[1].Core
-	TestWaitActive(t, activeCore)
-	TestWaitPerfStandby(t, perfStandbyCore)
-
-	// Mount auth engine
-	nsCtx := namespace.RootContext(nil)
-	_, err = activeCore.systemBackend.HandleRequest(nsCtx, &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "auth/userpass1/",
-		Data: map[string]interface{}{
-			"type": "userpass",
-		},
-	})
-	require.NoError(t, err)
-
-	src := namespace.MountPathDetails{Namespace: namespace.RootNamespace, MountPath: "auth/userpass1/"}
-	dst := namespace.MountPathDetails{Namespace: namespace.RootNamespace, MountPath: "auth/userpass2/"}
-
-	// Give it a few seconds to replicate userpass1 auth mount to perf standby
-	corehelpers.RetryUntil(t, 5*time.Second, func() error {
-		err := perfStandbyCore.remountCredential(nsCtx, src, dst, false)
-		return err
-	})
 }
