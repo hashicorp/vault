@@ -168,6 +168,10 @@ output "leader_host" {
   value = local.leader_host
 }
 
+output "leader_hosts" {
+  value = { 0 : local.leader_host }
+}
+
 output "leader_ipv6" {
   value = local.leader_ipv6
 }
