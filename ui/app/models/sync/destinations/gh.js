@@ -6,7 +6,7 @@
 import SyncDestinationModel from '../destination';
 import { attr } from '@ember-data/model';
 import { withFormFields } from 'vault/decorators/model-form-fields';
-
+// displayFields are used on the destination details view
 const displayFields = [
   // connection details
   'name',
@@ -17,9 +17,12 @@ const displayFields = [
   'granularity',
   'secretNameTemplate',
 ];
+
+// formFieldGroups are used on the create-edit destination view
 const formFieldGroups = [
-  { default: ['name', 'repositoryOwner', 'repositoryName', 'granularity', 'secretNameTemplate'] },
+  { default: ['name', 'repositoryOwner', 'repositoryName'] },
   { Credentials: ['accessToken'] },
+  { 'Advanced configuration': ['granularity', 'secretNameTemplate'] },
 ];
 
 @withFormFields(displayFields, formFieldGroups)
@@ -27,6 +30,8 @@ export default class SyncDestinationsGithubModel extends SyncDestinationModel {
   @attr('string', {
     subText:
       'Personal access token to authenticate to the GitHub repository. If empty, Vault will use the GITHUB_ACCESS_TOKEN environment variable if configured.',
+    sensitive: true,
+    noCopy: true,
   })
   accessToken; // obfuscated, never returned by API
 

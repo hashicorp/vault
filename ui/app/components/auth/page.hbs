@@ -1,0 +1,119 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{#if this.mfaErrors}}
+  <div class="has-top-margin-xxl" data-test-mfa-error>
+    <EmptyState
+      @title="Unauthorized"
+      @message="Multi-factor authentication is required, but failed. Go back and try again, or contact your administrator."
+      @icon="alert-circle"
+      @bottomBorder={{true}}
+      @subTitle={{join ". " this.mfaErrors}}
+      class="is-shadowless"
+    >
+      <Hds::Button @text="Go back" @icon="chevron-left" @color="tertiary" {{on "click" this.onMfaErrorDismiss}} />
+    </EmptyState>
+  </div>
+{{else}}
+  <SplashPage>
+    <:header>
+      {{#if @oidcProviderQueryParam}}
+        <div class="box is-shadowless is-flex-v-centered" data-test-auth-logo>
+          <LogoEdition aria-label="Sign in with Hashicorp Vault" />
+        </div>
+      {{else}}
+        <div class="is-flex-v-centered has-bottom-margin-xxl">
+          <div class="brand-icon-large">
+            <Icon @name="vault" @size="24" @stretched={{true}} />
+          </div>
+        </div>
+        <div class="is-flex-row">
+          {{#if this.mfaAuthData}}
+            <Hds::Button
+              @text="Back to login"
+              @icon="arrow-left"
+              @isIconOnly={{true}}
+              @color="tertiary"
+              {{on "click" (fn (mut this.mfaAuthData) null)}}
+            />
+          {{/if}}
+          <h1 class="title is-3">
+            {{if this.mfaAuthData "Authenticate" "Sign in to Vault"}}
+          </h1>
+        </div>
+      {{/if}}
+    </:header>
+
+    <:subHeader>
+      {{#if (has-feature "Namespaces")}}
+        {{#unless this.mfaAuthData}}
+          <Toolbar class="toolbar-namespace-picker">
+            <div class="field is-horizontal" data-test-namespace-toolbar>
+              <div class="field-label is-normal">
+                <label class="is-label" for="namespace">Namespace</label>
+              </div>
+              {{#if this.flags.hvdManagedNamespaceRoot}}
+                <div class="field-label">
+                  <span class="has-text-grey" data-test-managed-namespace-root>/{{this.flags.hvdManagedNamespaceRoot}}</span>
+                </div>
+              {{/if}}
+              <div class="field-body">
+                <div class="field">
+                  <div class="control">
+                    <input
+                      data-test-auth-form-ns-input
+                      value={{this.namespaceInput}}
+                      placeholder={{if this.flags.hvdManagedNamespaceRoot "/ (Default)" "/ (Root)"}}
+                      {{on "input" this.handleNamespaceUpdate}}
+                      autocomplete="off"
+                      spellcheck="false"
+                      name="namespace"
+                      id="namespace"
+                      class="input"
+                      type="text"
+                      disabled={{@oidcProviderQueryParam}}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Toolbar>
+        {{/unless}}
+      {{/if}}
+    </:subHeader>
+
+    <:content>
+      {{#if this.mfaAuthData}}
+        <Mfa::MfaForm
+          @clusterId={{@cluster.id}}
+          @authData={{this.mfaAuthData}}
+          @onSuccess={{this.onMfaSuccess}}
+          @onError={{fn (mut this.mfaErrors)}}
+        />
+      {{else}}
+        <Auth::LoginForm
+          @wrappedToken={{@wrappedToken}}
+          @cluster={{@cluster}}
+          @namespace={{@namespaceQueryParam}}
+          @selectedAuth={{@authMethodQueryParam}}
+          @onSuccess={{this.onAuthResponse}}
+        />
+      {{/if}}
+    </:content>
+
+    <:footer>
+      <div class="has-short-padding">
+        <p class="help has-text-grey-dark" data-test-auth-helptext>
+          {{#if @oidcProviderQueryParam}}
+            Once you log in, you will be redirected back to your application. If you require login credentials, contact your
+            administrator.
+          {{else}}
+            Contact your administrator for login credentials.
+          {{/if}}
+        </p>
+      </div>
+    </:footer>
+  </SplashPage>
+{{/if}}

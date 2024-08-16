@@ -1,0 +1,34 @@
+### JWT auth login requires bound audiences on the role
+
+#### Affected versions
+
+- 1.15.9
+- 1.15.10
+- 1.15.11
+- 1.16.3
+- 1.16.4
+- 1.16.5
+
+#### Issue
+A behavior change was made in the jwt auth plugin to address CVE-2024-5798.
+Since the behavior change was a breaking change, we reverted the change in
+the versions 1.15.12 and 1.16.6 and later. However, the behavior change will go
+into effect in 1.17.
+
+The new behavior requires that the `bound_audiences` parameter of "jwt" roles
+**must** be set and **must** match at least one of the JWT's associated `aud` claims if there are any. 
+The `aud` claim can be a single string or a list of strings as per
+[RFC 7519 Section 4.1.3](https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.3).
+
+Users may not be able to log into Vault if the JWT role is configured
+incorrectly. For additional details, refer to the
+[JWT auth method (API)](/vault/api-docs/auth/jwt) documentation.
+
+See this [issue](https://github.com/hashicorp/vault/issues/27343) for more details.
+
+#### Workaround
+
+Configure the `bound_audiences` parameter of "jwt" roles to match at least one
+of the JWT's associated `aud` claims. This configuratoin will be required for
+1.17 and later.
+

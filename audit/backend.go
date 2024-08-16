@@ -20,6 +20,7 @@ import (
 
 const (
 	optionElideListResponses = "elide_list_responses"
+	optionExclude            = "exclude"
 	optionFallback           = "fallback"
 	optionFilter             = "filter"
 	optionFormat             = "format"
@@ -254,6 +255,7 @@ func HasInvalidOptions(options map[string]string) bool {
 // are only for use in the Enterprise version of Vault.
 func hasEnterpriseAuditOptions(options map[string]string) bool {
 	enterpriseAuditOptions := []string{
+		optionExclude,
 		optionFallback,
 		optionFilter,
 	}

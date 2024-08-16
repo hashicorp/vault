@@ -21,8 +21,7 @@ A modern system requires access to a multitude of secrets: database credentials,
 
 The key features of Vault are:
 
-* **Secure Secret Storage**: Arbitrary key/value secrets can be stored
-  in Vault. Vault encrypts these secrets prior to writing them to persistent
+* **Secure Secret Storage**: Vault can store arbitrary key/value pairs. Vault encrypts data before writing it to persistent
   storage, so gaining access to the raw storage isn't enough to access
   your secrets. Vault can write to disk, [Consul](https://www.consul.io),
   and more.
@@ -39,8 +38,8 @@ The key features of Vault are:
   developers to store encrypted data in a location such as a SQL database without
   having to design their own encryption methods.
 
-* **Leasing and Renewal**: All secrets in Vault have a _lease_ associated
-  with them. At the end of the lease, Vault will automatically revoke that
+* **Leasing and Renewal**: Vault associates a **lease** with each secret.
+  At the end of the lease, Vault automatically revokes the
   secret. Clients are able to renew leases via built-in renew APIs.
 
 * **Revocation**: Vault has built-in support for secret revocation. Vault
@@ -73,9 +72,12 @@ If you wish to work on Vault itself or any of its built-in systems, you'll
 first need [Go](https://www.golang.org) installed on your machine.
 
 For local dev first make sure Go is properly installed, including setting up a
-[GOPATH](https://golang.org/doc/code.html#GOPATH). Ensure that `$GOPATH/bin` is in
-your path as some distributions bundle the old version of build tools. Next, clone this
-repository. Vault uses [Go Modules](https://github.com/golang/go/wiki/Modules),
+[GOPATH](https://golang.org/doc/code.html#GOPATH), then setting the 
+[GOBIN](https://pkg.go.dev/cmd/go#hdr-Environment_variables) variable to `$GOPATH/bin`. 
+Ensure that `$GOPATH/bin` is in your path as some distributions bundle the old version 
+of build tools. 
+
+Next, clone this repository. Vault uses [Go Modules](https://github.com/golang/go/wiki/Modules),
 so it is recommended that you clone the repository ***outside*** of the GOPATH.
 You can then download any required build tools by bootstrapping your environment:
 
@@ -120,6 +122,15 @@ package by specifying the `TEST` variable. For example below, only
 $ make test TEST=./vault
 ...
 ```
+
+### Troubleshooting
+
+If you encounter an error like `could not read Username for 'https://github.com'` you may need to adjust your git config like so:
+
+```sh
+$ git config --global --add url."git@github.com:".insteadOf "https://github.com/"
+```
+
 
 ### Importing Vault
 

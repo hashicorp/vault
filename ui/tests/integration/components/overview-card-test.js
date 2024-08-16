@@ -16,9 +16,10 @@ const SELECTORS = {
   title: '[data-test-overview-card-title]',
   subtitle: '[data-test-overview-card-subtitle]',
   action: '[data-test-action-text]',
+  customSubtext: '[data-test-custom-subtext]',
 };
 
-module('Integration | Component overview-card', function (hooks) {
+module('Integration | Component | overview-card', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
@@ -31,14 +32,36 @@ module('Integration | Component overview-card', function (hooks) {
     await render(hbs`<OverviewCard @cardTitle={{this.cardTitle}}/>`);
     assert.dom(SELECTORS.title).hasText('Card title');
   });
-  test('it returns card subtext, ', async function (assert) {
+  test('it renders card @subText arg, ', async function (assert) {
     await render(hbs`<OverviewCard @cardTitle={{this.cardTitle}}  @subText={{this.subText}} />`);
     assert.dom(SELECTORS.subtitle).hasText('This is subtext for card');
   });
-  test('it returns card action text', async function (assert) {
+  test('it renders card action text', async function (assert) {
     await render(
-      hbs`<OverviewCard @cardTitle={{this.cardTitle}} @actionText={{this.actionText}} @actionTo="route"/>`
+      hbs`
+      <OverviewCard @cardTitle={{this.cardTitle}}>
+        <:action>
+        <div data-test-action-text>
+        {{this.actionText}}
+        </div>
+        </:action>
+      </OverviewCard>
+      `
     );
     assert.dom(SELECTORS.action).hasText('View card');
+  });
+  test('it renders custom subtext text', async function (assert) {
+    await render(
+      hbs`
+      <OverviewCard @cardTitle={{this.cardTitle}}>
+        <:customSubtext>
+          <div data-test-custom-subtext>
+            Fancy yielded subtext
+          </div>
+        </:customSubtext>
+      </OverviewCard>
+      `
+    );
+    assert.dom(SELECTORS.customSubtext).hasText('Fancy yielded subtext');
   });
 });

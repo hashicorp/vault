@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/namespace"
+	nshelper "github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -23,7 +23,7 @@ func testAuditBackend(t *testing.T, path string, config map[string]string) Backe
 	t.Helper()
 
 	headersCfg := &HeadersConfig{
-		headerSettings: make(map[string]*HeaderSettings),
+		headerSettings: make(map[string]*headerSettings),
 		view:           nil,
 	}
 
@@ -148,7 +148,7 @@ func BenchmarkAuditBroker_File_Request_DevNull(b *testing.B) {
 		},
 	}
 
-	ctx := namespace.RootContext(context.Background())
+	ctx := nshelper.RootContext(context.Background())
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
@@ -160,11 +160,14 @@ func BenchmarkAuditBroker_File_Request_DevNull(b *testing.B) {
 }
 
 // TestBroker_isContextViable_basics checks the expected result of isContextViable
-// for basic inputs such as nil and a never-ending context.
+// for basic inputs such as nil, cancelled context and a never-ending context.
 func TestBroker_isContextViable_basics(t *testing.T) {
 	t.Parallel()
 
 	require.False(t, isContextViable(nil))
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	require.False(t, isContextViable(ctx))
 	require.True(t, isContextViable(context.Background()))
 }
 

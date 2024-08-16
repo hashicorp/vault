@@ -7,18 +7,36 @@ terraform {
     # to the public registry
     enos = {
       source  = "registry.terraform.io/hashicorp-forge/enos"
-      version = ">= 0.4.10"
+      version = ">= 0.5.3"
     }
   }
 }
 
 locals {
+  api_addr_localhost = var.ip_version == 4 ? "http://127.0.0.1:${var.listener_port}" : "http://[::1]:${var.listener_port}"
+  api_addrs = tolist([for h in var.hosts : {
+    4 : "http://${h.public_ip}:${var.listener_port}",
+    6 : "http://[${h.ipv6}]:${var.listener_port}",
+  }])
+  api_addrs_internal = tolist([for h in var.hosts : {
+    4 : "http://${h.private_ip}:${var.listener_port}",
+    6 : "http://[${h.ipv6}]:${var.listener_port}",
+  }])
   bin_path = "${var.install_dir}/vault"
+  cluster_addrs = tolist([for h in var.hosts : {
+    4 : "http://${h.public_ip}:${var.cluster_port}",
+    6 : "http://[${h.ipv6}]:${var.cluster_port}",
+  }])
+  cluster_addrs_internal = tolist([for h in var.hosts : {
+    4 : "http://${h.private_ip}:${var.cluster_port}",
+    6 : "http://[${h.ipv6}]:${var.cluster_port}",
+  }])
   // In order to get Terraform to plan we have to use collections with keys that are known at plan
   // time. Here we're creating locals that keep track of index values that point to our target hosts.
-  followers = toset(slice(local.instances, 1, length(local.instances)))
-  instances = [for idx in range(length(var.target_hosts)) : tostring(idx)]
-  leader    = toset(slice(local.instances, 0, 1))
+  followers        = toset(slice(local.instances, 1, length(local.instances)))
+  instances        = [for idx in range(length(var.hosts)) : tostring(idx)]
+  leader           = toset(slice(local.instances, 0, 1))
+  listener_address = var.ip_version == 4 ? "0.0.0.0:${var.listener_port}" : "[::]:${var.listener_port}"
   // Handle cases where we might have to distribute HSM tokens for the pkcs11 seal before starting
   // vault.
   token_base64           = try(lookup(var.seal_attributes, "token_base64", ""), "")
@@ -52,7 +70,9 @@ locals {
         // keys on a machines that have different shared object locations.
         merge(
           try({ for key, val in var.seal_attributes : key => val if key != "token_base64" && key != "token_dir" }, {}),
-          try({ lib = module.maybe_configure_hsm.lib }, {})
+          # Note: the below reference has to point to a specific instance of the maybe_configure_hsm
+          # module (in this case [0]) due to the maybe_configure_hsm module call using `count` to control whether it runs or not.
+          try({ lib = module.maybe_configure_hsm[0].lib }, {})
         ),
       )
     }
@@ -81,7 +101,9 @@ locals {
         },
         merge(
           try({ for key, val in var.seal_attributes_secondary : key => val if key != "token_base64" && key != "token_dir" }, {}),
-          try({ lib = module.maybe_configure_hsm_secondary.lib }, {})
+          # Note: the below reference has to point to a specific instance of the maybe_configure_hsm_secondary
+          # module (in this case [0]) due to the maybe_configure_hsm_secondary module call using `count` to control whether it runs or not.
+          try({ lib = module.maybe_configure_hsm_secondary[0].lib }, {})
         ),
       )
     }
@@ -90,8 +112,9 @@ locals {
       attributes = null
     }
   }
-  seal_secondary = local.seals_secondary[var.seal_type_secondary]
-  storage_config = [for idx, host in var.target_hosts : (var.storage_backend == "raft" ?
+  seal_secondary  = local.seals_secondary[var.seal_type_secondary]
+  storage_address = var.ip_version == 4 ? "0.0.0.0:${var.external_storage_port}" : "[::]:${var.external_storage_port}"
+  storage_attributes = [for idx, host in var.hosts : (var.storage_backend == "raft" ?
     merge(
       {
         node_id = "${var.storage_node_prefix}_${idx}"
@@ -99,10 +122,16 @@ locals {
       var.storage_backend_attrs
     ) :
     {
-      address = "127.0.0.1:8500"
+      address = local.storage_address
       path    = "vault"
     })
   ]
+  storage_retry_join = {
+    "raft" : {
+      auto_join : "provider=aws addr_type=${var.ip_version == 4 ? "private_v4" : "public_v6"} tag_key=${var.cluster_tag_key} tag_value=${var.cluster_name}",
+      auto_join_scheme : "http",
+    },
+  }
 }
 
 # You might be wondering why our start_vault module, which supports shamir, awskms, and pkcs11 seal
@@ -135,16 +164,18 @@ locals {
 # the key data that was passed in via seal attributes.
 module "maybe_configure_hsm" {
   source = "../softhsm_distribute_vault_keys"
+  count  = (var.seal_type == "pkcs11" || var.seal_type_secondary == "pkcs11") ? 1 : 0
 
-  hosts        = var.target_hosts
+  hosts        = var.hosts
   token_base64 = local.token_base64
 }
 
 module "maybe_configure_hsm_secondary" {
   source     = "../softhsm_distribute_vault_keys"
   depends_on = [module.maybe_configure_hsm]
+  count      = (var.seal_type == "pkcs11" || var.seal_type_secondary == "pkcs11") ? 1 : 0
 
-  hosts        = var.target_hosts
+  hosts        = var.hosts
   token_base64 = local.token_base64_secondary
 }
 
@@ -159,20 +190,21 @@ resource "enos_vault_start" "leader" {
   config_mode = var.config_mode
   environment = var.environment
   config = {
-    api_addr     = "http://${var.target_hosts[each.value].private_ip}:8200"
-    cluster_addr = "http://${var.target_hosts[each.value].private_ip}:8201"
+    api_addr     = local.api_addrs_internal[tonumber(each.value)][var.ip_version]
+    cluster_addr = local.cluster_addrs_internal[tonumber(each.value)][var.ip_version]
     cluster_name = var.cluster_name
     listener = {
       type = "tcp"
       attributes = {
-        address     = "0.0.0.0:8200"
+        address     = local.listener_address
         tls_disable = "true"
       }
     }
     log_level = var.log_level
     storage = {
       type       = var.storage_backend
-      attributes = ({ for key, value in local.storage_config[each.key] : key => value })
+      attributes = local.storage_attributes[each.key]
+      retry_join = try(local.storage_retry_join[var.storage_backend], null)
     }
     seals = local.seals
     ui    = true
@@ -184,7 +216,7 @@ resource "enos_vault_start" "leader" {
 
   transport = {
     ssh = {
-      host = var.target_hosts[each.value].public_ip
+      host = var.hosts[each.value].public_ip
     }
   }
 }
@@ -200,20 +232,21 @@ resource "enos_vault_start" "followers" {
   config_mode = var.config_mode
   environment = var.environment
   config = {
-    api_addr     = "http://${var.target_hosts[each.value].private_ip}:8200"
-    cluster_addr = "http://${var.target_hosts[each.value].private_ip}:8201"
+    api_addr     = local.api_addrs_internal[tonumber(each.value)][var.ip_version]
+    cluster_addr = local.cluster_addrs_internal[tonumber(each.value)][var.ip_version]
     cluster_name = var.cluster_name
     listener = {
       type = "tcp"
       attributes = {
-        address     = "0.0.0.0:8200"
+        address     = local.listener_address
         tls_disable = "true"
       }
     }
     log_level = var.log_level
     storage = {
       type       = var.storage_backend
-      attributes = { for key, value in local.storage_config[each.key] : key => value }
+      attributes = { for key, value in local.storage_attributes[each.key] : key => value }
+      retry_join = try(local.storage_retry_join[var.storage_backend], null)
     }
     seals = local.seals
     ui    = true
@@ -225,7 +258,7 @@ resource "enos_vault_start" "followers" {
 
   transport = {
     ssh = {
-      host = var.target_hosts[each.value].public_ip
+      host = var.hosts[each.value].public_ip
     }
   }
 }

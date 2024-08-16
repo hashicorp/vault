@@ -7,7 +7,7 @@ description: >-
 
 # Key metrics for common health checks
 
-This document covers common Vault monitoring patterns. It is important to have operational and usage insight into a running Vault cluster to understand performance, assist with proactive incident response, and understand business workloads and use cases. 
+This document covers common Vault monitoring patterns. It is important to have operational and usage insight into a running Vault cluster to understand performance, assist with proactive incident response, and understand business workloads and use cases.
 
 This document consists of five metrics sections: core, usage, storage backend, audit, and resource. Core metrics are fundamental internal metrics which you should monitor to ensure the health of your Vault cluster. The usage metrics section covers metrics which help count active and historical clients Vault. The storage backend section highlights the metrics to monitor so that you understand the storage infrastructure that your Vault cluster uses, allowing you to ensure your storage is functioning as intended. Audit metrics allow you to set up monitoring that helps you meet your compliance requirements. Resource metrics allow you to monitor metrics such as CPU, networking, and other resources Vault uses on its host. Replication covers metrics you can use to help ensure that Vault is replicating data as intended.
 
@@ -31,9 +31,9 @@ The diagram illustrates a highly available Vault cluster with five nodes distrib
 
 When you operate Vault with Integrated Storage, it automatically provides [additional metrics for Raft leadership changes](/vault/docs/internals/integrated-storage#consensus-protocol).
 
-</Tip> 
+</Tip>
 
-#### Alerting: 
+#### Alerting:
 
 The metric `vault.core.leadership_lost` measures the duration a server held the leader position before losing it. A consistently low value for this metric suggests a high leadership turnover, indicating potential instability within the cluster.
 
@@ -41,9 +41,9 @@ On the other hand, spikes in the `vault.core.leadership_setup_failed` metric ind
 
 ### Higher latency in your application
 
-#### Metrics: 
+#### Metrics:
 
-`vault.core.handle_login_request` 
+`vault.core.handle_login_request`
 
 `vault.core.handle_request`
 
@@ -63,7 +63,7 @@ You should also monitor the `vault.core.handle_request` metric, which measures s
 
 ### Difficulties with setting up auditing or problems with mounting a custom plugin backend
 
-#### Metrics: 
+#### Metrics:
 
 `vault.core.post_unseal`
 
@@ -77,7 +77,7 @@ If you notice sudden increases in the `vault.core.post_unseal` metric, issues mi
 
 ## Usage metrics
 
-### Excessive token creations affecting Vault performance 
+### Excessive token creations affecting Vault performance
 
 #### Metrics:
 
@@ -85,13 +85,13 @@ If you notice sudden increases in the `vault.core.post_unseal` metric, issues mi
 
 ##### Background:
 
-All authenticated Vault requests require a valid client token. Tokens are linked to policies determining which capabilities  a client (user or system) has for a given path. Vault issues three types of tokens: service tokens, batch tokens, and recovery tokens.  
+All authenticated Vault requests require a valid client token. Tokens are linked to policies determining which capabilities  a client (user or system) has for a given path. Vault issues three types of tokens: service tokens, batch tokens, and recovery tokens.
 
 Service tokens are what users will generally think of as "normal" Vault tokens. They support all features, such as renewal, revocation, creating child tokens, and more. They are correspondingly heavyweight to create and track.
 
 Batch tokens are encrypted binary large objects (blobs) with just enough information about the client. While Vault does not persist the batch tokens, it persists the service tokens. The amount of space required to store the service token depends on the authentication method. Therefore, a large number of service tokens could contribute to an out-of-memory issue.
 
-Recovery tokens are used exclusively for operating Vault in [recovery mode](/vault/docs/concepts/recovery-mode). 
+Recovery tokens are used exclusively for operating Vault in [recovery mode](/vault/docs/concepts/recovery-mode).
 
 #### Alerting
 
@@ -103,9 +103,9 @@ To learn more about batch tokens, refer to the [batch tokens](/vault/tutorials/t
 
 ### Lease lifecycle introducing unexpected traffic spikes in Vault
 
-#### Metrics: 
+#### Metrics:
 
-`vault.expire.num_leases` 
+`vault.expire.num_leases`
 
 #### Background:
 
@@ -133,9 +133,9 @@ The lifecycle of the leases are managed by the expiration manager, which handles
 
 #### Metrics:
 
-`vault.expire.renew-token` 
+`vault.expire.renew-token`
 
-`vault.expire.revoke` 
+`vault.expire.revoke`
 
 #### Background:
 
@@ -149,7 +149,7 @@ Monitoring the timely completion of revocation (`vault.expire.revoke`) and renew
 
 ### Detect any performance issues with your Vault's storage backend
 
-#### Metrics: 
+#### Metrics:
 
 `vault.<STORAGE>.get`
 
@@ -175,11 +175,11 @@ If you are using Integrated Storage, the following resources provide additional 
 
 ###  Blocked audit devices
 
-#### Metrics: 
+#### Metrics:
 
 `vault.audit.log_request_failure`
 
-`vault.audit.log_response_failure` 
+`vault.audit.log_response_failure`
 
 #### Background:
 
@@ -209,9 +209,9 @@ Refer to the [Blocked audit devices](/vault/tutorials/monitoring/blocked-audit-d
 
 #### Metrics:
 
-`vault.runtime.sys_bytes` 
+`vault.runtime.sys_bytes`
 
-`vault.runtime.gc_pause_ns` 
+`vault.runtime.gc_pause_ns`
 
 #### Background:
 
@@ -249,15 +249,15 @@ Refer to the [Protecting Vault with resource quotas](/vault/tutorials/operations
 
 ### Free memory in the storage backend by monitoring Write-Ahead logs
 
-#### Metrics: 
+#### Metrics:
 
-`vault.wal_flushready` 
+`vault.wal_flushready`
 
 `vault.wal.persistWALs`
 
 #### Background:
 
-To maintain high performance, Vault utilizes a garbage collector that periodically removes old Write-Ahead Logs (WALs) to free up memory on the storage backend. However, when there are unexpected surges in traffic, the accumulation of WALs can occur rapidly, leading to increased strain on the storage backend. These surges can negatively affect other processes in Vault that rely on the same storage backend. Therefore, it is important to assess the impact of replication on the performance of your storage backend. By doing so, you can better understand how the replication process influences your system's overall performance. 
+To maintain high performance, Vault utilizes a garbage collector that periodically removes old Write-Ahead Logs (WALs) to free up memory on the storage backend. However, when there are unexpected surges in traffic, the accumulation of WALs can occur rapidly, leading to increased strain on the storage backend. These surges can negatively affect other processes in Vault that rely on the same storage backend. Therefore, it is important to assess the impact of replication on the performance of your storage backend. By doing so, you can better understand how the replication process influences your system's overall performance.
 
 #### Alerting
 
@@ -271,7 +271,7 @@ If either of these alerts is triggered, consider scaling your storage backend to
 
 #### Metrics:
 
-`vault.replication.wal.last_wal` 
+`vault.replication.wal.last_wal`
 
 #### Background:
 
@@ -289,7 +289,6 @@ Refer to the [Monitoring Vault replication](/vault/tutorials/monitoring/monitor-
 
 ## Additional references
 
-- [Monitoring Vault with Datadog](/vault/tutorials/monitoring/monitoring-vault-with-datadog)
 - [Monitor telemetry with Prometheus & Grafana](/vault/tutorials/monitoring/monitor-telemetry-grafana-prometheus)
 - [Monitor telemetry & Audit Device Log Data](/vault/tutorials/monitoring/monitor-telemetry-audit-splunk)
 - [Vault usage metrics](/vault/tutorials/monitoring/usage-metrics)

@@ -44,6 +44,7 @@ import (
 	"github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
+	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
@@ -6084,7 +6085,7 @@ func TestPKI_EmptyCRLConfigUpgraded(t *testing.T) {
 	b, s := CreateBackendWithStorage(t)
 
 	// Write an empty CRLConfig into storage.
-	crlConfigEntry, err := logical.StorageEntryJSON("config/crl", &crlConfig{})
+	crlConfigEntry, err := logical.StorageEntryJSON("config/crl", &pki_backend.CrlConfig{})
 	require.NoError(t, err)
 	err = s.Put(ctx, crlConfigEntry)
 	require.NoError(t, err)
@@ -6093,13 +6094,13 @@ func TestPKI_EmptyCRLConfigUpgraded(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.NotNil(t, resp.Data)
-	require.Equal(t, resp.Data["expiry"], defaultCrlConfig.Expiry)
-	require.Equal(t, resp.Data["disable"], defaultCrlConfig.Disable)
-	require.Equal(t, resp.Data["ocsp_disable"], defaultCrlConfig.OcspDisable)
-	require.Equal(t, resp.Data["auto_rebuild"], defaultCrlConfig.AutoRebuild)
-	require.Equal(t, resp.Data["auto_rebuild_grace_period"], defaultCrlConfig.AutoRebuildGracePeriod)
-	require.Equal(t, resp.Data["enable_delta"], defaultCrlConfig.EnableDelta)
-	require.Equal(t, resp.Data["delta_rebuild_interval"], defaultCrlConfig.DeltaRebuildInterval)
+	require.Equal(t, resp.Data["expiry"], pki_backend.DefaultCrlConfig.Expiry)
+	require.Equal(t, resp.Data["disable"], pki_backend.DefaultCrlConfig.Disable)
+	require.Equal(t, resp.Data["ocsp_disable"], pki_backend.DefaultCrlConfig.OcspDisable)
+	require.Equal(t, resp.Data["auto_rebuild"], pki_backend.DefaultCrlConfig.AutoRebuild)
+	require.Equal(t, resp.Data["auto_rebuild_grace_period"], pki_backend.DefaultCrlConfig.AutoRebuildGracePeriod)
+	require.Equal(t, resp.Data["enable_delta"], pki_backend.DefaultCrlConfig.EnableDelta)
+	require.Equal(t, resp.Data["delta_rebuild_interval"], pki_backend.DefaultCrlConfig.DeltaRebuildInterval)
 }
 
 func TestPKI_ListRevokedCerts(t *testing.T) {
@@ -6764,12 +6765,14 @@ const (
 	shouldBeAuthed pathAuthChecker = iota
 	shouldBeUnauthedReadList
 	shouldBeUnauthedWriteOnly
+	shouldBeUnauthedReadWriteOnly
 )
 
 var pathAuthChckerMap = map[pathAuthChecker]pathAuthCheckerFunc{
-	shouldBeAuthed:            pathShouldBeAuthed,
-	shouldBeUnauthedReadList:  pathShouldBeUnauthedReadList,
-	shouldBeUnauthedWriteOnly: pathShouldBeUnauthedWriteOnly,
+	shouldBeAuthed:                pathShouldBeAuthed,
+	shouldBeUnauthedReadList:      pathShouldBeUnauthedReadList,
+	shouldBeUnauthedWriteOnly:     pathShouldBeUnauthedWriteOnly,
+	shouldBeUnauthedReadWriteOnly: pathShouldBeUnauthedWriteOnly,
 }
 
 func TestProperAuthing(t *testing.T) {
@@ -7062,6 +7065,10 @@ func TestProperAuthing(t *testing.T) {
 		} else if handler == shouldBeUnauthedWriteOnly {
 			if hasGet || hasList {
 				t.Fatalf("Unauthed write-only endpoints should not have GET/LIST capabilities: %v->%v", openapi_path, raw_path)
+			}
+		} else if handler == shouldBeUnauthedReadWriteOnly {
+			if hasDelete || hasList {
+				t.Fatalf("Unauthed read-write-only endpoints should not have DELETE/LIST capabilities: %v->%v", openapi_path, raw_path)
 			}
 		}
 	}

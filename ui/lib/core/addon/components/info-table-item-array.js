@@ -17,23 +17,13 @@ import { action } from '@ember/object';
  * return a wildcard count similar to what is done in the searchSelect component.
  *
  * @example
- * ```js
- * <InfoTableItemArray
- * @label="Roles"
- * @displayArray={{['test-1','test-2','test-3']}}
- * @isLink={{true}}
- * @rootRoute="vault.cluster.secrets.backend.list-root"
- * @itemRoute="vault.cluster.secrets.backend.show"
- * @modelType="transform/role"
- * @queryParam="role"
- * @backend="transform"
- * ```
+ * <InfoTableItemArray @label="Roles" @displayArray={{array "test-1" "test-2" "test-3"}}  />
  *
- * @param {string} label - used to render lowercased display text for "View all <label>."
- * @param {array} displayArray - The array of data to be displayed. (In InfoTableRow this comes from the @value arg.) If the array length > 10, and @doNotTruncate is false only 5 will show with a count of the number hidden.
+ * @param {string} label - used to render lowercased display text for "View all [label]."
+ * @param {array} displayArray - The array of data to be displayed. (In InfoTableRow this comes from the `@value` arg.) If the array length > 10, and `@doNotTruncate` is false only 5 will show with a count of the number hidden.
  * @param {boolean} [isLink]  - Indicates if the item should contain a link-to component.  Only setup for arrays, but this could be changed if needed.
- * @param {string || array} [rootRoute="vault.cluster.secrets.backend.list-root"] -  Tells what route the link should go to when selecting "view all". If the route requires more than one dynamic param, insert an array.
- * @param {string || array} [itemRoute=vault.cluster.secrets.backend.show] - Tells what route the link should go to when selecting the individual item. If the route requires more than one dynamic param, insert an array.
+ * @param {string | array} [rootRoute=vault.cluster.secrets.backend.list-root] -  Tells what route the link should go to when selecting "view all". If the route requires more than one dynamic param, insert an array.
+ * @param {string | array} [itemRoute=vault.cluster.secrets.backend.show] - Tells what route the link should go to when selecting the individual item. If the route requires more than one dynamic param, insert an array.
  * @param {string} [modelType]  - Tells which model you want to query and set allOptions.  Used in conjunction with the the isLink.
  * @param {string} [wildcardLabel]  - when you want the component to return a count on the model for options returned when using a wildcard you must provide a label of the count e.g. role.  Should be singular.
  * @param {string} [backend] - To specify which backend to point the link to.

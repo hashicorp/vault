@@ -17,6 +17,8 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
+
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -33,6 +35,8 @@ type ParsedCert struct {
 	Entry        *CertEntry
 	Certificates []*x509.Certificate
 }
+
+const certAuthFailMsg = "failed to match all constraints for this login certificate"
 
 func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
@@ -312,10 +316,11 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d
 	// If no trusted chain was found, client is not authenticated
 	// This check happens after checking for a matching configured non-CA certs
 	if len(trustedChains) == 0 {
-		if retErr == nil {
-			return nil, logical.ErrorResponse(fmt.Sprintf("invalid certificate or no client certificate supplied; additionally got errors during verification: %v", retErr)), nil
+		if retErr != nil {
+			return nil, logical.ErrorResponse(fmt.Sprintf("%s; additionally got errors during verification: %v", certAuthFailMsg, retErr)), nil
 		}
-		return nil, logical.ErrorResponse("invalid certificate or no client certificate supplied"), nil
+
+		return nil, logical.ErrorResponse(certAuthFailMsg), nil
 	}
 
 	// Search for a ParsedCert that intersects with the validated chains and any additional constraints
@@ -350,10 +355,10 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d
 	}
 
 	if retErr != nil {
-		return nil, logical.ErrorResponse(fmt.Sprintf("no chain matching all constraints could be found for this login certificate; additionally got errors during verification: %v", retErr)), nil
+		return nil, logical.ErrorResponse(fmt.Sprintf("%s; additionally got errors during verification: %v", certAuthFailMsg, retErr)), nil
 	}
 
-	return nil, logical.ErrorResponse("no chain matching all constraints could be found for this login certificate"), nil
+	return nil, logical.ErrorResponse(certAuthFailMsg), nil
 }
 
 func (b *backend) matchesConstraints(ctx context.Context, clientCert *x509.Certificate, trustedChain []*x509.Certificate,
@@ -593,15 +598,39 @@ func (b *backend) certificateExtensionsMetadata(clientCert *x509.Certificate, co
 
 func (b *backend) getTrustedCerts(ctx context.Context, storage logical.Storage, certName string) (pool *x509.CertPool, trusted []*ParsedCert, trustedNonCAs []*ParsedCert, conf *ocsp.VerifyConfig) {
 	if !b.trustedCacheDisabled.Load() {
-		if trusted, found := b.trustedCache.Get(certName); found {
+		trusted, found := b.getTrustedCertsFromCache(certName)
+		if found {
 			return trusted.pool, trusted.trusted, trusted.trustedNonCAs, trusted.ocspConf
 		}
 	}
 	return b.loadTrustedCerts(ctx, storage, certName)
 }
 
+func (b *backend) getTrustedCertsFromCache(certName string) (*trusted, bool) {
+	if certName == "" {
+		trusted := b.trustedCacheFull.Load()
+		if trusted != nil {
+			return trusted, true
+		}
+	} else if trusted, found := b.trustedCache.Get(certName); found {
+		return trusted, true
+	}
+	return nil, false
+}
+
 // loadTrustedCerts is used to load all the trusted certificates from the backend
 func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage, certName string) (pool *x509.CertPool, trustedCerts []*ParsedCert, trustedNonCAs []*ParsedCert, conf *ocsp.VerifyConfig) {
+	lock := locksutil.LockForKey(b.trustedCacheLocks, certName)
+	lock.Lock()
+	defer lock.Unlock()
+
+	if !b.trustedCacheDisabled.Load() {
+		trusted, found := b.getTrustedCertsFromCache(certName)
+		if found {
+			return trusted.pool, trusted.trusted, trusted.trustedNonCAs, trusted.ocspConf
+		}
+	}
+
 	pool = x509.NewCertPool()
 	trustedCerts = make([]*ParsedCert, 0)
 	trustedNonCAs = make([]*ParsedCert, 0)
@@ -669,12 +698,17 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 	}
 
 	if !b.trustedCacheDisabled.Load() {
-		b.trustedCache.Add(certName, &trusted{
+		entry := &trusted{
 			pool:          pool,
 			trusted:       trustedCerts,
 			trustedNonCAs: trustedNonCAs,
 			ocspConf:      conf,
-		})
+		}
+		if certName == "" {
+			b.trustedCacheFull.Store(entry)
+		} else {
+			b.trustedCache.Add(certName, entry)
+		}
 	}
 	return
 }

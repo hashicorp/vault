@@ -1,0 +1,3 @@
+```release-note:bug
+auth/aws: fixes an issue where not supplying an external id was interpreted as an empty external id
+```

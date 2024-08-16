@@ -51,7 +51,7 @@ func TestBackend_newFormatterConfig(t *testing.T) {
 	}{
 		"happy-path-json": {
 			config: map[string]string{
-				"format":               JSONFormat.String(),
+				"format":               jsonFormat.String(),
 				"hmac_accessor":        "true",
 				"log_raw":              "true",
 				"elide_list_responses": "true",
@@ -65,7 +65,7 @@ func TestBackend_newFormatterConfig(t *testing.T) {
 		},
 		"happy-path-jsonx": {
 			config: map[string]string{
-				"format":               JSONxFormat.String(),
+				"format":               jsonxFormat.String(),
 				"hmac_accessor":        "true",
 				"log_raw":              "true",
 				"elide_list_responses": "true",
@@ -91,7 +91,7 @@ func TestBackend_newFormatterConfig(t *testing.T) {
 		},
 		"invalid-hmac-accessor": {
 			config: map[string]string{
-				"format":        JSONFormat.String(),
+				"format":        jsonFormat.String(),
 				"hmac_accessor": "maybe",
 			},
 			want:            formatterConfig{},
@@ -100,7 +100,7 @@ func TestBackend_newFormatterConfig(t *testing.T) {
 		},
 		"invalid-log-raw": {
 			config: map[string]string{
-				"format":        JSONFormat.String(),
+				"format":        jsonFormat.String(),
 				"hmac_accessor": "true",
 				"log_raw":       "maybe",
 			},
@@ -110,7 +110,7 @@ func TestBackend_newFormatterConfig(t *testing.T) {
 		},
 		"invalid-elide-bool": {
 			config: map[string]string{
-				"format":               JSONFormat.String(),
+				"format":               jsonFormat.String(),
 				"hmac_accessor":        "true",
 				"log_raw":              "true",
 				"elide_list_responses": "maybe",
@@ -121,11 +121,11 @@ func TestBackend_newFormatterConfig(t *testing.T) {
 		},
 		"prefix": {
 			config: map[string]string{
-				"format": JSONFormat.String(),
+				"format": jsonFormat.String(),
 				"prefix": "foo",
 			},
 			want: formatterConfig{
-				requiredFormat: JSONFormat,
+				requiredFormat: jsonFormat,
 				prefix:         "foo",
 				hmacAccessor:   true,
 			},
@@ -137,7 +137,7 @@ func TestBackend_newFormatterConfig(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := newFormatterConfig(&NoopHeaderFormatter{}, tc.config)
+			got, err := newFormatterConfig(&noopHeaderFormatter{}, tc.config)
 			if tc.wantErr {
 				require.Error(t, err)
 				require.EqualError(t, err, tc.expectedMessage)
@@ -159,7 +159,7 @@ func TestBackend_newFormatterConfig(t *testing.T) {
 func TestBackend_configureFormatterNode(t *testing.T) {
 	t.Parallel()
 
-	b, err := newBackend(&NoopHeaderFormatter{}, &BackendConfig{
+	b, err := newBackend(&noopHeaderFormatter{}, &BackendConfig{
 		MountPath: "foo",
 		Logger:    hclog.NewNullLogger(),
 	})
@@ -214,6 +214,15 @@ func TestBackend_hasEnterpriseAuditOptions(t *testing.T) {
 			},
 			expected: true,
 		},
+		"ent-opt-exclude": {
+			input: map[string]string{
+				"exclude": `{
+					"condition": "\"/request/mount_type\" == transit",
+					"fields": [ "/request/data", "/response/data" ]
+				}`,
+			},
+			expected: true,
+		},
 	}
 
 	for name, tc := range tests {
@@ -264,6 +273,15 @@ func TestBackend_hasInvalidAuditOptions(t *testing.T) {
 			input: map[string]string{
 				"filter":   "mount_type == kv",
 				"fallback": "true",
+			},
+			expected: !constants.IsEnterprise,
+		},
+		"ent-opt-exclude": {
+			input: map[string]string{
+				"exclude": `{
+					"condition": "\"/request/mount_type\" == transit",
+					"fields": [ "/request/data", "/response/data" ]
+				}`,
 			},
 			expected: !constants.IsEnterprise,
 		},

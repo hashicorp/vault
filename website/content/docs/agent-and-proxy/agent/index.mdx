@@ -288,6 +288,8 @@ runtime metrics about its performance, the auto-auth and the cache status:
 
 | Metric                           | Description                                          | Type    |
 | -------------------------------- | ---------------------------------------------------- | ------- |
+| `vault.agent.authenticated`      | Current authentication status (1 - has valid token,  | gauge   |
+|                                  | 0 - no valid token)                                  |         |
 | `vault.agent.auth.failure`       | Number of authentication failures                    | counter |
 | `vault.agent.auth.success`       | Number of authentication successes                   | counter |
 | `vault.agent.proxy.success`      | Number of requests successfully proxied              | counter |
