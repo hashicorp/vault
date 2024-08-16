@@ -25,15 +25,14 @@ import { hasWhitespace, isNonString, WHITESPACE_WARNING, NON_STRING_WARNING } fr
  *
  * Clicking the "Reveal subkeys in JSON" toggle displays the full, nested subkey structure returned by the API.
  *
- *
  * @example
  * <KvPatchEditor::Form @subkeys={{@subkeys}} @onSubmit={{perform this.save}} @onCancel={{this.onCancel}} @isSaving={{this.save.isRunning}} />
  *
- * @param {object} subkeys - leaf keys of a kv v2 secret, all values (unless a nested object with more keys) return null. https://developer.hashicorp.com/vault/api-docs/secret/kv/kv-v2#read-secret-subkeys
- * @param {function} onSubmit - called when form is saved, called with with the key value object containing patch data
- * @param {function} onCancel - called when form is canceled
- * @param {string} submitError - error message string from parent if submit failed
  * @param {boolean} isSaving - if true, disables the save and cancel buttons. useful if the onSubmit callback is a concurrency task
+ * @param {function} onCancel - called when form is canceled
+ * @param {function} onSubmit - called when form is saved, called with with the key value object containing patch data
+ * @param {object} subkeys - leaf keys of a kv v2 secret, all values (unless a nested object with more keys) return null. https://developer.hashicorp.com/vault/api-docs/secret/kv/kv-v2#read-secret-subkeys
+ * @param {string} submitError - error message string from parent if submit failed
  */
 
 export class KeyValueState {
