@@ -69,11 +69,6 @@ export default class KvSecretMetadataModel extends Model {
     return keyIsFolder(this.path);
   }
 
-  // cannot use isDeleted due to ember property conflict
-  get isSecretDeleted() {
-    return isDeleted(this.deletionTime);
-  }
-
   // turns version object into an array for version dropdown menu
   get sortedVersions() {
     const array = [];
@@ -93,6 +88,7 @@ export default class KvSecretMetadataModel extends Model {
     return {
       state,
       isDeactivated: state !== 'created',
+      deletionTime: data.deletion_time,
     };
   }
 

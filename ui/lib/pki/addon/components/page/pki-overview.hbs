@@ -18,7 +18,7 @@
       />
     </:action>
     <:content>
-      <Hds::Text::Display @tag="h2" @size="500">
+      <Hds::Text::Display @tag="p" @size="400" @weight="medium" class="has-top-margin-m">
         {{format-number (if (eq @issuers 404) 0 @issuers.length)}}
       </Hds::Text::Display>
     </:content>
@@ -38,7 +38,7 @@
         />
       </:action>
       <:content>
-        <Hds::Text::Display @tag="h2" @size="500">
+        <Hds::Text::Display @tag="p" @size="400" @weight="medium" class="has-top-margin-m">
           {{format-number (if (eq @roles 404) 0 @roles.length)}}
         </Hds::Text::Display>
       </:content>

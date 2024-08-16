@@ -9,23 +9,21 @@ import { kvMetadataPath, kvDataPath } from 'vault/utils/kv-path';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 /**
- * @module KvSecretPaths is used to display copyable secret paths for KV v2 for CLI and API use.
- * This view is permission agnostic because args come from the views mount path and url params.
+ * @module KvPathsCard is used to display copyable secret paths for KV v2 for CLI and API use.
+ * This component is permission agnostic because args come from the views mount path and url params.
  *
- * <Page::Secret::Paths
+ * <KvPathsCard
  *  @path={{this.model.path}}
  *  @backend={{this.model.backend}}
- *  @breadcrumbs={{this.breadcrumbs}}
- *  @canReadMetadata={{this.model.secret.canReadMetadata}}
+ *  @isCondensed={{false}}
  * />
  *
  * @param {string} path - kv secret path for building the CLI and API paths
  * @param {string} backend - the secret engine mount path, comes from the secretMountPath service defined in the route
- * @param {array} breadcrumbs - Array to generate breadcrumbs, passed to the page header component
- * @param {boolean} [canReadMetadata=true] - if true, displays tab for Version History
+ * @param {boolean} isCondensed - if true a smaller version displays with no commands section or extra explanatory text
  */
 
-export default class KvSecretPaths extends Component {
+export default class KvPathsCard extends Component {
   @service namespace;
 
   get paths() {
@@ -46,11 +44,15 @@ export default class KvSecretPaths extends Component {
         snippet: namespace ? `-namespace=${namespace} ${cli}` : cli,
         text: 'Use this path when referring to this secret in the CLI.',
       },
-      {
-        label: 'API path for metadata',
-        snippet: namespace ? `/v1/${encodePath(namespace)}/${metadata}` : `/v1/${metadata}`,
-        text: `Use this path when referring to this secret's metadata in the API and permanent secret deletion.`,
-      },
+      ...(this.args.isCondensed
+        ? []
+        : [
+            {
+              label: 'API path for metadata',
+              snippet: namespace ? `/v1/${encodePath(namespace)}/${metadata}` : `/v1/${metadata}`,
+              text: `Use this path when referring to this secret's metadata in the API and permanent secret deletion.`,
+            },
+          ]),
     ];
   }
 

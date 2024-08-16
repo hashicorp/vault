@@ -1,0 +1,82 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<div data-test-overview-card-container="Paths" ...attributes>
+  <Hds::Text::Display @weight="semibold" @size="300" @tag="h2">
+    Paths
+  </Hds::Text::Display>
+  {{#if @isCondensed}}
+    <Hds::Text::Body @tag="p" @color="faint">
+      The paths to use when referring to this secret in API or CLI.
+    </Hds::Text::Body>
+  {{/if}}
+
+  <div class="box is-fullwidth is-sideless is-paddingless is-marginless {{if @isCondensed 'is-shadowless'}} ">
+    {{#each this.paths as |path|}}
+      <InfoTableRow
+        @label={{path.label}}
+        @labelWidth={{if @isCondensed "is-one-quarter" "is-one-third"}}
+        @helperText={{if @isCondensed "" path.text}}
+        @truncateValue={{true}}
+      >
+        <Hds::Copy::Button
+          @text="Copy"
+          @isIconOnly={{true}}
+          @textToCopy={{path.snippet}}
+          @onError={{fn (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")}}
+          data-test-copy-button={{path.snippet}}
+          class="transparent"
+        />
+        <code class="is-flex-1 text-overflow-ellipsis has-left-margin-s">
+          {{path.snippet}}
+        </code>
+      </InfoTableRow>
+    {{/each}}
+  </div>
+
+  {{#unless @isCondensed}}
+    <Hds::Text::Display @weight="semibold" @size="300" @tag="h3" class="has-top-margin-xl">
+      Commands
+    </Hds::Text::Display>
+
+    <div class="box is-fullwidth is-sideless">
+      <h3 class="is-label">
+        CLI
+        <Hds::Badge @text="kv get" @color="neutral" />
+      </h3>
+      <p class="helper-text has-text-grey-light has-bottom-padding-s">
+        This command retrieves the value from KV secrets engine at the given key name. See our
+        <Hds::Link::Inline @isHrefExternal={{true}} @href={{doc-link "/vault/docs/commands/kv"}}>
+          documentation</Hds::Link::Inline>
+        for other CLI commands.
+      </p>
+      <Hds::CodeBlock
+        data-test-commands="cli"
+        @language="bash"
+        @hasLineNumbers={{false}}
+        @hasCopyButton={{true}}
+        @value={{this.commands.cli}}
+      />
+
+      <h3 class="has-top-margin-l is-label">
+        API read secret version
+      </h3>
+      <p class="helper-text has-text-grey-light has-bottom-padding-s">
+        This command obtains data and metadata for the latest version of this secret. In this example, Vault is located at
+        https://127.0.0.1:8200. For other API commands,
+        <DocLink @path="/vault/api-docs/secret/kv/kv-v2">
+          learn more.
+        </DocLink>
+      </p>
+      <Hds::CodeBlock
+        data-test-commands="api"
+        @language="bash"
+        @hasLineNumbers={{false}}
+        @hasCopyButton={{true}}
+        @value={{this.commands.api}}
+      />
+    </div>
+  {{/unless}}
+</div>

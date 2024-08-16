@@ -3,9 +3,9 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<OverviewCard @cardTitle="Subkeys">
+<OverviewCard @cardTitle="Subkeys" class="has-top-margin-l">
   <:customSubtext>
-    <Hds::Text::Body @color="faint" data-test-overview-card-subtitle="Subkeys">
+    <Hds::Text::Body @tag="p" @color="faint" data-test-overview-card-subtitle="Subkeys">
       {{#if this.showJson}}
         These are the subkeys within this secret. All underlying values of leaf keys are not retrieved and are replaced with
         <code>null</code>

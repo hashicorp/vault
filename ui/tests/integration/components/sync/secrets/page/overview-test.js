@@ -358,7 +358,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     test('it should show the Totals cards', async function (assert) {
       await this.renderComponent();
 
-      const { title, description, action, content } = overviewCard;
+      const { title, description, actionLink, content } = overviewCard;
       const cardData = [
         {
           cardTitle: 'Total destinations',
@@ -379,7 +379,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
         assert.dom(title(cardTitle)).hasText(cardTitle, `${cardTitle} card title renders`);
         assert.dom(description(cardTitle)).hasText(subText, ` ${cardTitle} card description renders`);
         assert.dom(content(cardTitle)).hasText(count, 'Total count renders');
-        assert.dom(action(cardTitle)).hasText(actionText, 'Card action renders');
+        assert.dom(actionLink(cardTitle)).hasText(actionText, 'Card action renders');
       });
     });
   });
