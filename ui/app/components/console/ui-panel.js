@@ -6,7 +6,7 @@
 import { service } from '@ember/service';
 import { alias, or } from '@ember/object/computed';
 import Component from '@ember/component';
-import { getOwner } from '@ember/application';
+import { getOwner } from '@ember/owner';
 import { schedule } from '@ember/runloop';
 import { camelize } from '@ember/string';
 import { task } from 'ember-concurrency';

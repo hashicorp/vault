@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -156,20 +157,30 @@ func (a *ActivityLog) computeCurrentMonthForBillingPeriodInternal(ctx context.Co
 		return nil, errors.New("malformed current month used to calculate current month's activity")
 	}
 
-	for nsID, namespace := range month.Namespaces {
+	namespaces := month.Namespaces.sort()
+	for _, n := range namespaces {
+		nsID := n.id
+		namespace := n.processByNamespace
 		namespaceActivity := &activity.MonthlyNamespaceRecord{NamespaceID: nsID, Counts: &activity.CountsRecord{}}
 		newNamespaceActivity := &activity.MonthlyNamespaceRecord{NamespaceID: nsID, Counts: &activity.CountsRecord{}}
 		mountsActivity := make([]*activity.MountRecord, 0)
 		newMountsActivity := make([]*activity.MountRecord, 0)
 
-		for mountAccessor, mount := range namespace.Mounts {
+		mounts := namespace.Mounts.sort()
+		for _, m := range mounts {
+			mountAccessor := m.accessor
+			mount := m.processMount
 			mountPath := a.mountAccessorToMountPath(mountAccessor)
 
 			mountCounts := &activity.CountsRecord{}
 			newMountCounts := &activity.CountsRecord{}
 
 			for _, typ := range ActivityClientTypes {
-				for clientID := range mount.Counts.clientsByType(typ) {
+				clients := mount.Counts.clientsByType(typ)
+				clientIDs := clients.sort()
+
+				// sort the client IDs before inserting
+				for _, clientID := range clientIDs {
 					hllByType[typ].Insert([]byte(clientID))
 
 					// increment the per mount, per namespace, and total counts
@@ -239,6 +250,47 @@ func (a *ActivityLog) incrementCount(c *activity.CountsRecord, num int, typ stri
 	case ACMEActivityType:
 		c.ACMEClients += num
 	}
+}
+
+type processByNamespaceID struct {
+	id string
+	*processByNamespace
+}
+
+func (s summaryByNamespace) sort() []*processByNamespaceID {
+	namespaces := make([]*processByNamespaceID, 0, len(s))
+	for nsID, namespace := range s {
+		namespaces = append(namespaces, &processByNamespaceID{id: nsID, processByNamespace: namespace})
+	}
+	slices.SortStableFunc(namespaces, func(a, b *processByNamespaceID) int {
+		return strings.Compare(a.id, b.id)
+	})
+	return namespaces
+}
+
+type processMountAccessor struct {
+	accessor string
+	*processMount
+}
+
+func (s summaryByMount) sort() []*processMountAccessor {
+	mounts := make([]*processMountAccessor, 0, len(s))
+	for mountAccessor, mount := range s {
+		mounts = append(mounts, &processMountAccessor{accessor: mountAccessor, processMount: mount})
+	}
+	slices.SortStableFunc(mounts, func(a, b *processMountAccessor) int {
+		return strings.Compare(a.accessor, b.accessor)
+	})
+	return mounts
+}
+
+func (c clientIDSet) sort() []string {
+	clientIDs := make([]string, 0, len(c))
+	for clientID := range c {
+		clientIDs = append(clientIDs, clientID)
+	}
+	sort.Strings(clientIDs)
+	return clientIDs
 }
 
 // sortALResponseNamespaces sorts the namespaces for activity log responses.
@@ -339,8 +391,9 @@ func (a *ActivityLog) sortActivityLogMonthsResponse(months []*ResponseMonth) {
 }
 
 const (
-	noMountAccessor = "no mount accessor (pre-1.10 upgrade?)"
-	deletedMountFmt = "deleted mount; accessor %q"
+	noMountAccessor     = "no mount accessor (pre-1.10 upgrade?)"
+	deletedMountFmt     = "deleted mount; accessor %q"
+	DeletedNamespaceFmt = "deleted namespace %q"
 )
 
 // mountAccessorToMountPath transforms the mount accessor to the mount path
@@ -458,19 +511,14 @@ func (e *segmentReader) ReadEntity(ctx context.Context) (*activity.EntityActivit
 
 // namespaceRecordToCountsResponse converts the record to the ResponseCounts
 // type. The function sums entity, non-entity, and secret sync counts to get the
-// total client count. If includeDeprecated is true, the deprecated fields
-// NonEntityTokens and DistinctEntities are populated
-func (a *ActivityLog) countsRecordToCountsResponse(record *activity.CountsRecord, includeDeprecated bool) *ResponseCounts {
+// total client count.
+func (a *ActivityLog) countsRecordToCountsResponse(record *activity.CountsRecord) *ResponseCounts {
 	response := &ResponseCounts{
 		EntityClients:    record.EntityClients,
 		NonEntityClients: record.NonEntityClients,
 		Clients:          record.EntityClients + record.NonEntityClients + record.SecretSyncs + record.ACMEClients,
 		SecretSyncs:      record.SecretSyncs,
 		ACMEClients:      record.ACMEClients,
-	}
-	if includeDeprecated {
-		response.NonEntityTokens = response.NonEntityClients
-		response.DistinctEntities = response.EntityClients
 	}
 	return response
 }
@@ -480,9 +528,7 @@ func (a *ActivityLog) countsRecordToCountsResponse(record *activity.CountsRecord
 // counts to get the total client count.
 func (a *ActivityLog) namespaceRecordToCountsResponse(record *activity.NamespaceRecord) *ResponseCounts {
 	return &ResponseCounts{
-		DistinctEntities: int(record.Entities),
 		EntityClients:    int(record.Entities),
-		NonEntityTokens:  int(record.NonEntityTokens),
 		NonEntityClients: int(record.NonEntityTokens),
 		Clients:          int(record.Entities + record.NonEntityTokens + record.SecretSyncs + record.ACMEClients),
 		SecretSyncs:      int(record.SecretSyncs),

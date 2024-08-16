@@ -55,7 +55,7 @@ drop connection requests from clients using TLS 1.0 or 1.1.
 Vault uses the following ciphersuites by default:
 
 - **TLS 1.3** - `TLS_AES_128_GCM_SHA256`, `TLS_AES_256_GCM_SHA384`, or `TLS_CHACHA20_POLY1305_SHA256`.
-- **TLS 1.2** - depends on whether you configure Vault with a RSA or ECDSA certificate. 
+- **TLS 1.2** - depends on whether you configure Vault with a RSA or ECDSA certificate.
 
 You can configure Vault with any cipher supported by the
 [`tls`](https://pkg.go.dev/crypto/tls) and
@@ -162,7 +162,7 @@ default value in the `"/sys/config/ui"` [API endpoint](/vault/api-docs/system/co
   `default_max_request_duration` for this listener.
 
 - `proxy_protocol_behavior` `(string: "")` – When specified, enables a PROXY
-  protocol version 1 behavior for the listener.
+  protocol behavior for the listener (version 1 and 2 are both supported).
   Accepted Values:
 
   - _use_always_ - The client's IP address will always be used.
@@ -245,7 +245,7 @@ default value in the `"/sys/config/ui"` [API endpoint](/vault/api-docs/system/co
   used for checking the authenticity of client.
 
 - `tls_disable_client_certs` `(string: "false")` – Turns off client
-  authentication for this listener. The default behavior (when this is false) 
+  authentication for this listener. The default behavior (when this is false)
   is for Vault to request client authentication certificates when available.
 
   ~> **Warning**: The `tls_disable_client_certs` and `tls_require_and_verify_client_cert` fields in the listener stanza of the Vault server configuration are mutually exclusive fields. Please ensure they are not both set to true. TLS client verification remains optional with default settings and is not enforced.
@@ -261,19 +261,19 @@ default value in the `"/sys/config/ui"` [API endpoint](/vault/api-docs/system/co
 
 - `x_forwarded_for_client_cert_header` `(string: "")` –
   Specifies the header that will be used for the client certificate.
-  This is required if you use the [TLS Certificates Auth Method](/vault/docs/auth/cert) and your 
+  This is required if you use the [TLS Certificates Auth Method](/vault/docs/auth/cert) and your
   vault server is behind a reverse proxy.
 
 - `x_forwarded_for_client_cert_header_decoders` `(string: "")` –
   Comma delimited list that specifies the decoders that will be used to decode the client certificate.
-  This is required if you use the [TLS Certificates Auth Method](/vault/docs/auth/cert) and your 
+  This is required if you use the [TLS Certificates Auth Method](/vault/docs/auth/cert) and your
   vault server is behind a reverse proxy. The resulting certificate should be in DER format.
   Available Values:
 
   - BASE64 - Runs Base64 decode
   - DER - Converts a pem certificate to der
   - URL - Runs URL decode
-  
+
   Known Values:
 
   - Traefik = "BASE64"

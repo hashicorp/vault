@@ -66,15 +66,16 @@ to specify where the configuration is.
 
 - `user_lockout` `([UserLockout][user-lockout]: nil)` –
   Configures the user-lockout behaviour for failed logins. For more information, please see the
-  [user lockout configuration documentation](/vault/docs/configuration/user-lockout). 
+  [user lockout configuration documentation](/vault/docs/configuration/user-lockout).
 
 - `seal` `([Seal][seal]: nil)` – Configures the seal type to use for
   auto-unsealing, as well as for
   [seal wrapping][sealwrap] as an additional layer of data protection.
 
-- `cluster_name` `(string: <generated>)` – Specifies the identifier for the
-  Vault cluster. If omitted, Vault will generate a value. When connecting to
-  Vault Enterprise, this value will be used in the interface.
+- `cluster_name` `(string: <generated>)` – Specifies a human-readable
+  identifier for the Vault cluster. If omitted, Vault will generate a value.
+  The cluster name is included as a label in some [telemetry metrics](/vault/docs/internals/telemetry/metrics/).
+  The cluster name is safe to update on an existing Vault cluster.
 
 - `cache_size` `(string: "131072")` – Specifies the size of the read cache used
   by the physical storage subsystem. The value is in number of entries, so the
@@ -169,10 +170,10 @@ to specify where the configuration is.
   maximum request duration allowed before Vault cancels the request. This can
   be overridden per listener via the `max_request_duration` value.
 
-- `detect_deadlocks` `(string: "")` - A comma separated string that specifies the internal 
-mutex locks that should be monitored for potential deadlocks. Currently supported values 
+- `detect_deadlocks` `(string: "")` - A comma separated string that specifies the internal
+mutex locks that should be monitored for potential deadlocks. Currently supported values
 include `statelock`, `quotas` and `expiration` which will cause "POTENTIAL DEADLOCK:"
-to be logged when an attempt at a core state lock appears to be deadlocked. Enabling this 
+to be logged when an attempt at a core state lock appears to be deadlocked. Enabling this
 can have a negative effect on performance due to the tracking of each lock attempt.
 
 - `raw_storage_endpoint` `(bool: false)` – Enables the `sys/raw` endpoint which
@@ -282,6 +283,9 @@ The following parameters are only used with Vault Enterprise
 - `license_path` `(string: "")` - Path to license file. This can also be
   provided via the environment variable `VAULT_LICENSE_PATH`, or the license
   itself can be provided in the environment variable `VAULT_LICENSE`.
+
+- `administrative_namespace_path` `(string: "")` - Specifies the absolute path 
+  to the Vault namespace to be used as an [Administrative namespace](/vault/docs/enterprise/namespaces/create-admin-namespace).
 
 [storage-backend]: /vault/docs/configuration/storage
 [listener]: /vault/docs/configuration/listener

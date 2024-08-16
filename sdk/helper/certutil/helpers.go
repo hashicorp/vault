@@ -23,7 +23,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/big"
 	"net"
 	"net/url"
@@ -1187,9 +1186,10 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 		return nil, errutil.UserError{Err: "nil csr given to signCertificate"}
 	}
 
-	err := data.CSR.CheckSignature()
-	if err != nil {
-		return nil, errutil.UserError{Err: "request signature invalid"}
+	if !data.Params.IgnoreCSRSignature {
+		if err := data.CSR.CheckSignature(); err != nil {
+			return nil, errutil.UserError{Err: "request signature invalid"}
+		}
 	}
 
 	result := &ParsedCertBundle{}
@@ -1315,7 +1315,7 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 }
 
 func NewCertPool(reader io.Reader) (*x509.CertPool, error) {
-	pemBlock, err := ioutil.ReadAll(reader)
+	pemBlock, err := io.ReadAll(reader)
 	if err != nil {
 		return nil, err
 	}

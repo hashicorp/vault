@@ -10,13 +10,6 @@ import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 @withFormFields()
 export default class PkiConfigClusterModel extends Model {
   // This model uses the backend value as the model ID
-  get useOpenAPI() {
-    return true;
-  }
-
-  getHelpUrl(backendPath) {
-    return `/v1/${backendPath}/config/cluster?help=1`;
-  }
 
   @attr('string', {
     label: "Mount's API path",

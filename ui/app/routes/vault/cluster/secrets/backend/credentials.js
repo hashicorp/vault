@@ -24,7 +24,7 @@ export default Route.extend({
     }
     // hydrate model if backend type is ssh
     if (backendType === 'ssh') {
-      this.pathHelp.getNewModel('ssh-otp-credential', backendPath);
+      this.pathHelp.hydrateModel('ssh-otp-credential', backendPath);
     }
   },
 

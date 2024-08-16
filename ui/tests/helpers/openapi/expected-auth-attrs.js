@@ -607,6 +607,12 @@ const jwt = {
       label: 'Provider Config',
       type: 'object',
     },
+    unsupportedCriticalCertExtensions: {
+      editType: 'stringArray',
+      fieldGroup: 'default',
+      helpText:
+        'A list of ASN1 OIDs of certificate extensions marked Critical that are unsupported by Vault and should be ignored. This option should very rarely be needed except in specialized PKI environments.',
+    },
   },
 };
 

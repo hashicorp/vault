@@ -147,7 +147,6 @@ module('Integration | Component | auth form', function (hooks) {
 
     await this.renderComponent();
     later(() => cancelTimers(), 50);
-
     await settled();
     assert.dom(GENERAL.messageError).hasText('Error Token unwrap failed: There was an error unwrapping!');
   });

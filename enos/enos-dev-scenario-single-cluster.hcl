@@ -1,5 +1,5 @@
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: BUSL-1.1
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
 
 scenario "dev_single_cluster" {
   description = <<-EOF
@@ -75,7 +75,7 @@ scenario "dev_single_cluster" {
     arch     = ["amd64", "arm64"]
     artifact = ["local", "deb", "rpm", "zip"]
     backend  = ["consul", "raft"]
-    distro   = ["amzn2", "leap", "rhel", "sles", "ubuntu"]
+    distro   = ["amzn", "leap", "rhel", "sles", "ubuntu"]
     edition  = ["ce", "ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
     seal     = ["awskms", "pkcs11", "shamir"]
 
@@ -121,7 +121,7 @@ scenario "dev_single_cluster" {
     // The enos provider uses different ssh transport configs for different distros (as
     // specified in enos-providers.hcl), and we need to be able to access both of those here.
     enos_provider = {
-      amzn2  = provider.enos.ec2_user
+      amzn   = provider.enos.ec2_user
       leap   = provider.enos.ec2_user
       rhel   = provider.enos.ec2_user
       sles   = provider.enos.ec2_user
@@ -130,6 +130,8 @@ scenario "dev_single_cluster" {
     // We install vault packages from artifactory. If you wish to use one of these variants you'll
     // need to configure your artifactory credentials.
     use_artifactory = matrix.artifact == "deb" || matrix.artifact == "rpm"
+    // The IP version to use for the Vault listener and associated things.
+    ip_version = 4
     // Zip bundles and local builds don't come with systemd units or any associated configuration.
     // When this is true we'll let enos handle this for us.
     manage_service = matrix.artifact == "zip" || matrix.artifact == "local"
@@ -339,7 +341,7 @@ scenario "dev_single_cluster" {
     }
 
     variables {
-      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"]["22.04"]
+      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"][global.distro_version["ubuntu"]]
       cluster_tag_key = global.backend_tag_key
       common_tags     = global.tags
       seal_key_names  = step.create_seal_key.resource_names
@@ -373,12 +375,12 @@ scenario "dev_single_cluster" {
     variables {
       cluster_name    = step.create_vault_cluster_backend_targets.cluster_name
       cluster_tag_key = global.backend_tag_key
+      hosts           = step.create_vault_cluster_backend_targets.hosts
       license         = (matrix.backend == "consul" && var.backend_edition == "ent") ? step.read_backend_license.license : null
       release = {
         edition = var.backend_edition
         version = var.dev_consul_version
       }
-      target_hosts = step.create_vault_cluster_backend_targets.hosts
     }
   }
 
@@ -437,16 +439,17 @@ scenario "dev_single_cluster" {
         version = var.dev_consul_version
       } : null
       enable_audit_devices = var.vault_enable_audit_devices
+      hosts                = step.create_vault_cluster_targets.hosts
       install_dir          = local.vault_install_dir
+      ip_version           = local.ip_version
       license              = matrix.edition != "ce" ? step.read_vault_license.license : null
       local_artifact_path  = matrix.artifact == "local" ? abspath(var.vault_artifact_path) : null
       manage_service       = local.manage_service
-      packages             = concat(global.packages, global.distro_packages[matrix.distro])
+      packages             = concat(global.packages, global.distro_packages[matrix.distro][global.distro_version[matrix.distro]])
       release              = matrix.artifact == "zip" ? { version = var.vault_product_version, edition = matrix.edition } : null
       seal_attributes      = step.create_seal_key.attributes
       seal_type            = matrix.seal
       storage_backend      = matrix.backend
-      target_hosts         = step.create_vault_cluster_targets.hosts
     }
   }
 
@@ -464,7 +467,7 @@ scenario "dev_single_cluster" {
 
   output "hosts" {
     description = "The Vault cluster target hosts"
-    value       = step.create_vault_cluster.target_hosts
+    value       = step.create_vault_cluster.hosts
   }
 
   output "private_ips" {

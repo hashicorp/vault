@@ -89,7 +89,6 @@ func TestACMERegeneration_RegenerateWithCurrentMonth(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Equal(t, vault.ResponseCounts{
-		NonEntityTokens:  26,
 		NonEntityClients: 26,
 		Clients:          43,
 		ACMEClients:      17,
@@ -102,7 +101,6 @@ func TestACMERegeneration_RegenerateWithCurrentMonth(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Equal(t, vault.ResponseCounts{
-		NonEntityTokens:  36,
 		NonEntityClients: 36,
 		Clients:          73,
 		ACMEClients:      37,
@@ -146,7 +144,6 @@ func TestACMERegeneration_RegenerateMuchOlder(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Equal(t, vault.ResponseCounts{
-		NonEntityTokens:  26,
 		NonEntityClients: 26,
 		Clients:          43,
 		ACMEClients:      17,
@@ -191,7 +188,6 @@ func TestACMERegeneration_RegeneratePreviousMonths(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Equal(t, vault.ResponseCounts{
-		NonEntityTokens:  26,
 		NonEntityClients: 26,
 		Clients:          43,
 		ACMEClients:      17,
