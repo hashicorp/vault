@@ -13,6 +13,14 @@ The format of this file is [HCL](https://github.com/hashicorp/hcl) or JSON.
 
 An example configuration is shown below:
 
+<Note>
+
+For multi-node clusters, replace the loopback address with a valid, routable IP address for each Vault node in your network.
+
+Refer to the [Vault HA clustering with integrated storage tutorial](/vault/tutorials/raft/raft-storage) for a complete scenario.
+
+</Note>
+
 ```hcl
 ui            = true
 cluster_addr  = "https://127.0.0.1:8201"
@@ -116,9 +124,13 @@ to specify where the configuration is.
   sudo setcap cap_ipc_lock=+ep $(readlink -f $(which vault))
   ```
 
-  ~> Note: Since each plugin runs as a separate process, you need to do the same
+  <Note>
+
+  Since each plugin runs as a separate process, you need to do the same
   for each plugin in your [plugins
   directory](/vault/docs/plugins/plugin-architecture#plugin-directory).
+
+  </Note>
 
   If you use a Linux distribution with a modern version of systemd, you can add
   the following directive to the "[Service]" configuration section:
@@ -211,11 +223,19 @@ can have a negative effect on performance due to the tracking of each lock attem
   Supported values (in order of descending detail) are `trace`, `debug`, `info`, `warn`, and `error`.
   This can also be specified via the `VAULT_LOG_LEVEL` environment variable.
 
-  ~> Note: On SIGHUP (`sudo kill -s HUP` _pid of vault_), if a valid value is specified, Vault will update the existing log level,
+  <Note>
+  
+  On SIGHUP (`sudo kill -s HUP` _pid of vault_), if a valid value is specified, Vault will update the existing log level,
   overriding (even if specified) both the CLI flag and environment variable.
 
-  ~> Note: Not all parts of Vault's logging can have its log level be changed dynamically this way; in particular,
+  </Note>
+
+  <Note>
+  
+  Not all parts of Vault's logging can have its log level be changed dynamically this way; in particular,
   secrets/auth plugins are currently not updated dynamically.
+
+  </Note>
 
 - `log_format` - Equivalent to the [`-log-format` command-line flag](/vault/docs/commands/server#_log_format).
 
