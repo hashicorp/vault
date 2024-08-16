@@ -32,6 +32,7 @@ import { hasWhitespace, isNonString, WHITESPACE_WARNING, NON_STRING_WARNING } fr
  * @param {object} subkeys - leaf keys of a kv v2 secret, all values (unless a nested object with more keys) return null. https://developer.hashicorp.com/vault/api-docs/secret/kv/kv-v2#read-secret-subkeys
  * @param {function} onSubmit - called when form is saved, called with with the key value object containing patch data
  * @param {function} onCancel - called when form is canceled
+ * @param {string} submitError - error message string from parent if submit failed
  * @param {boolean} isSaving - if true, disables the save and cancel buttons. useful if the onSubmit callback is a concurrency task
  */
 
@@ -75,7 +76,7 @@ export class KeyValueState {
 export default class KvPatchEditor extends Component {
   @tracked patchData; // key value pairs in form
   @tracked showSubkeys = false;
-  @tracked submitError;
+  @tracked validationError;
 
   // tracked variables for new (initially empty) row of inputs.
   // once a user clicks "Add" a KeyValueState class is instantiated for that row
@@ -169,7 +170,7 @@ export default class KvPatchEditor extends Component {
   submit(event) {
     event.preventDefault();
     if (this.newKeyError || this.patchData.any((KV) => KV.keyError)) {
-      this.submitError = 'This form contains validations errors, please resolve those before submitting.';
+      this.validationError = 'This form contains validations errors, please resolve those before submitting.';
       return;
     }
 

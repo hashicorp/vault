@@ -25,6 +25,7 @@ module('Integration | Component | kv | kv-patch-editor/form', function (hooks) {
     this.onSubmit = sinon.spy();
     this.onCancel = sinon.spy();
     this.isSaving = false;
+    this.submitError = '';
 
     this.renderComponent = async () => {
       return render(
@@ -34,6 +35,7 @@ module('Integration | Component | kv | kv-patch-editor/form', function (hooks) {
       @onSubmit={{this.onSubmit}}
       @onCancel={{this.onCancel}}
       @isSaving={{this.isSaving}}
+      @submitError={{this.submitError}}
     />`,
         { owner: this.engine }
       );
@@ -77,6 +79,12 @@ module('Integration | Component | kv | kv-patch-editor/form', function (hooks) {
     await this.renderComponent();
 
     this.assertEmptyRow(assert);
+  });
+
+  test('it renders submit error from parent', async function (assert) {
+    this.submitError = 'There was a problem submitting this form.';
+    await this.renderComponent();
+    assert.dom(GENERAL.inlineError).hasText(this.submitError);
   });
 
   test('it reveals subkeys', async function (assert) {
@@ -495,7 +503,6 @@ module('Integration | Component | kv | kv-patch-editor/form', function (hooks) {
     NON_STRING_VALUES.forEach((value) => {
       test(`for new non-string values: ${value}`, async function (assert) {
         await this.renderComponent();
-
         await fillIn(FORM.keyInput('new'), 'aKey');
         await fillIn(FORM.valueInput('new'), value);
         await blur(FORM.valueInput('new')); // unfocus input

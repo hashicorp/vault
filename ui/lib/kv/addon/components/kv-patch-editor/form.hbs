@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<form {{on "submit" this.submit}} ...attributes>
+<form {{on "submit" this.submit}} data-test-kv-patch-editor ...attributes>
   <div class="flex column-gap-16 has-top-padding-s">
     <Hds::Form::Label @controlId="newKey" class="one-fourth-width">
       Key
@@ -77,7 +77,7 @@
     <Hds::Button @text="Cancel" {{on "click" @onCancel}} @color="secondary" disabled={{@isSaving}} data-test-kv-cancel />
   </Hds::ButtonSet>
 
-  {{#if this.submitError}}
-    <AlertInline @type="danger" @message={{this.submitError}} class="has-top-padding-s" />
+  {{#if (or @submitError this.validationError)}}
+    <AlertInline @type="danger" @message={{or @submitError this.validationError}} class="has-top-padding-s" />
   {{/if}}
 </form>
