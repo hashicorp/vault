@@ -30,8 +30,13 @@ import { dateFormat } from 'core/helpers/date-format';
  */
 
 export default class KvSecretOverview extends Component {
+  get isActive() {
+    const state = this.args.secretState;
+    return state !== 'destroyed' && state !== 'deleted';
+  }
+
   get versionSubtext() {
-    const { state } = this.args;
+    const state = this.args.secretState;
     if (state === 'destroyed') {
       return 'The current version of this secret has been permanently deleted and cannot be restored.';
     }
