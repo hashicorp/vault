@@ -1,0 +1,3 @@
+```release-note:improvement
+sdk/helper: Allow setting environment variables when using NewTestDockerCluster
+```
