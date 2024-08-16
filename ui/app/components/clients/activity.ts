@@ -51,7 +51,6 @@ export default class ClientsActivityComponent extends Component<Args> {
     return calculateAverage(data, key);
   };
 
-  // TODO: move to controller + arg
   // path of the filtered namespace OR current one, for filtering relevant data
   get namespacePathForFilter() {
     const { namespace } = this.args;
