@@ -78,6 +78,7 @@ export const GENERAL = {
     title: (title: string) => `[data-test-overview-card-title="${title}"]`,
     description: (title: string) => `[data-test-overview-card-subtitle="${title}"]`,
     content: (title: string) => `[data-test-overview-card-content="${title}"]`,
+    actionText: (text: string) => `[data-test-action-text="${text}"]`,
     actionLink: (label: string) => `[data-test-overview-card="${label}"] a`,
   },
   pagination: {

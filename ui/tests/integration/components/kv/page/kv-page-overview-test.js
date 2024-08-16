@@ -9,12 +9,11 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { kvMetadataPath } from 'vault/utils/kv-path';
 import { dateFormat } from 'core/helpers/date-format';
 import { dateFromNow } from 'core/helpers/date-from-now';
+import { baseSetup } from 'vault/tests/helpers/kv/kv-run-commands';
 
 const { overviewCard } = GENERAL;
 module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hooks) {
@@ -23,22 +22,12 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
-    const store = this.owner.lookup('service:store');
-    this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
-    this.backend = 'kv-engine';
-    this.path = 'my-secret';
+    baseSetup(this);
     this.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.backend, route: 'list' },
       { label: this.path },
     ];
-    const metadata = this.server.create('kv-metadatum');
-    metadata.id = kvMetadataPath(this.backend, this.path);
-    store.pushPayload('kv/metadata', {
-      modelName: 'kv/metadata',
-      ...metadata,
-    });
-    this.metadata = store.peekRecord('kv/metadata', metadata.id);
     this.subkeys = {
       subkeys: {
         foo: null,
