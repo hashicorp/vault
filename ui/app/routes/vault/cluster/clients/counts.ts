@@ -61,6 +61,7 @@ export default class ClientsCountsRoute extends Route {
     if (!isNaN(millis)) {
       timestamp = fromUnixTime(millis).toISOString();
     }
+    console.log(qpMillisString, activityTimeStamp);
     // fallback to activity timestamp only if there was no query param
     if (!timestamp && activityTimeStamp) {
       timestamp = activityTimeStamp;
@@ -116,7 +117,11 @@ export default class ClientsCountsRoute extends Route {
       activityError,
       config,
       // activity.startTime corresponds to first month with data, but we want first month returned or requested
-      startTimestamp: this.paramOrResponseTimestamp(params?.start_time, activity?.byMonth[0]?.timestamp),
+      // unless no months present, then we can fallback to response's start time
+      startTimestamp: this.paramOrResponseTimestamp(
+        params?.start_time,
+        activity?.byMonth[0]?.timestamp || activity?.startTime
+      ),
       endTimestamp: this.paramOrResponseTimestamp(params?.end_time, activity?.endTime),
       versionHistory,
     };

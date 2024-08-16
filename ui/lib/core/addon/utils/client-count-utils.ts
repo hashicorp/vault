@@ -79,11 +79,12 @@ export const filterVersionHistory = (
 // for the month but not the mount, it should return zero'd data. If
 // no data exists for the month is returns the month as-is.
 export const filterByMonthDataForMount = (
-  months: ByMonthClients[],
+  byMonth: ByMonthClients[],
   namespacePath: string,
   mountPath: string
 ): ByMonthClients[] => {
-  if (months && namespacePath && mountPath) {
+  if (byMonth && namespacePath && mountPath) {
+    const months: ByMonthClients[] = JSON.parse(JSON.stringify(byMonth));
     return [...months].map((m) => {
       if (m?.clients === undefined) {
         // if the month doesn't have data we can just return the block

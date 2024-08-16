@@ -85,9 +85,17 @@ export default class ClientsActivityComponent extends Component<Args> {
   }
 
   // (object) top level TOTAL client counts for given date range
-  get totalUsageCounts() {
-    const { namespace, activity } = this.args;
-    return namespace ? this.filteredActivity : activity.total;
+  get totalUsageCounts(): TotalClients | MountClients | undefined {
+    const { namespace, activity, mountPath } = this.args;
+    // only do this if we have a mountPath filter.
+    // namespace is filtered on API layer
+    if (activity?.byNamespace && namespace && mountPath) {
+      const filtered = activity.byNamespace
+        .find((ns) => ns.label === namespace)
+        ?.mounts.find((mount: MountClients) => mount.label === mountPath);
+      return filtered;
+    }
+    return activity?.total;
   }
 
   get upgradesDuringActivity() {

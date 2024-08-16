@@ -25,7 +25,8 @@ export const CLIENT_COUNT = {
   statTextValue: (label: string) =>
     label ? `[data-test-stat-text="${label}"] .stat-value` : '[data-test-stat-text]',
   usageStats: (title: string) => `[data-test-usage-stats="${title}"]`,
-  attributionBlock: '[data-test-clients-attribution]',
+  attributionBlock: (type: string) =>
+    type ? `[data-test-clients-attribution="${type}"]` : '[data-test-clients-attribution]',
   filterBar: '[data-test-clients-filter-bar]',
   nsFilter: '#namespace-search-select',
   mountFilter: '#mounts-search-select',
