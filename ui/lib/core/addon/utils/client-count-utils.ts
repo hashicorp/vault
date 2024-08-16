@@ -74,16 +74,19 @@ export const filterVersionHistory = (
   return [];
 };
 
+// This method is used to filter byMonth data and return data for only
+// the specified mount within the specified namespace. If data exists
+// for the month but not the mount, it should return zero'd data. If
+// no data exists for the month is returns the month as-is.
 export const filterByMonthDataForMount = (
   months: ByMonthClients[],
   namespacePath: string,
   mountPath: string
 ): ByMonthClients[] => {
   if (months && namespacePath && mountPath) {
-    // do stuff
     return [...months].map((m) => {
-      if (!m?.clients) {
-        // if the month doesn't have data (null) or it's zero, we can just return the block
+      if (m?.clients === undefined) {
+        // if the month doesn't have data we can just return the block
         return m;
       }
 
@@ -94,33 +97,35 @@ export const filterByMonthDataForMount = (
         const nsNew = m.new_clients?.namespaces?.find(
           (ns) => sanitizePath(ns.label) === sanitizePath(namespacePath)
         );
-        const mountNew = nsNew?.mounts.find((mount) => sanitizePath(mount.label) === sanitizePath(mountPath));
+        const mountNew =
+          nsNew?.mounts.find((mount) => sanitizePath(mount.label) === sanitizePath(mountPath)) ||
+          emptyCounts();
         return {
           month: m.month,
           timestamp: m.timestamp,
           ...mountData,
           namespaces: [], // this is just for making TS happy, matching the ByMonthClients shape
-          new_clients: mountNew || {
+          new_clients: {
             month: m.month,
             timestamp: m.timestamp,
+            label: mountPath,
             namespaces: [], // this is just for making TS happy, matching the ByMonthClients shape
-            ...emptyCounts(),
+            ...mountNew,
           },
         } as ByMonthClients;
       }
-
       // if the month has data but none for this mount, return mocked zeros
       return {
-        label: mountPath,
-        timestamp: m.timestamp,
         month: m.month,
+        timestamp: m.timestamp,
+        label: mountPath,
         namespaces: [], // this is just for making TS happy, matching the ByMonthClients shape
         ...emptyCounts(),
         new_clients: {
           timestamp: m.timestamp,
           month: m.month,
-          namespaces: [], // this is just for making TS happy, matching the ByMonthClients shape
           label: mountPath,
+          namespaces: [], // this is just for making TS happy, matching the ByMonthClients shape
           ...emptyCounts(),
         },
       } as ByMonthClients;
