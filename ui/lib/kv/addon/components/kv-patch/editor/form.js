@@ -10,7 +10,7 @@ import { A } from '@ember/array';
 import { hasWhitespace, isNonString, WHITESPACE_WARNING, NON_STRING_WARNING } from 'vault/utils/validators';
 
 /**
- * @module KvPatchEditor::Form
+ * @module KvPatch::Editor::Form
  * @description
  * This component renders one of two ways to patch a KV v2 secret (the other is using the JSON editor).
  * Each top-level subkey returned by the API endpoint renders in a disabled column with an empty (also disabled) value input beside it.
@@ -26,7 +26,7 @@ import { hasWhitespace, isNonString, WHITESPACE_WARNING, NON_STRING_WARNING } fr
  * Clicking the "Reveal subkeys in JSON" toggle displays the full, nested subkey structure returned by the API.
  *
  * @example
- * <KvPatchEditor::Form @subkeys={{@subkeys}} @onSubmit={{perform this.save}} @onCancel={{this.onCancel}} @isSaving={{this.save.isRunning}} />
+ * <KvPatch::Editor::Form @subkeys={{@subkeys}} @onSubmit={{perform this.save}} @onCancel={{this.onCancel}} @isSaving={{this.save.isRunning}} />
  *
  * @param {boolean} isSaving - if true, disables the save and cancel buttons. useful if the onSubmit callback is a concurrency task
  * @param {function} onCancel - called when form is canceled
@@ -72,7 +72,7 @@ export class KeyValueState {
   }
 }
 
-export default class KvPatchEditor extends Component {
+export default class KvPatchEditorForm extends Component {
   @tracked patchData; // key value pairs in form
   @tracked showSubkeys = false;
   @tracked validationError;
