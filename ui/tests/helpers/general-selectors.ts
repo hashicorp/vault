@@ -74,6 +74,7 @@ export const GENERAL = {
     removeSelected: '[data-test-selected-list-button="delete"]',
   },
   overviewCard: {
+    container: (title: string) => `[data-test-overview-card-container="${title}"]`,
     title: (title: string) => `[data-test-overview-card-title="${title}"]`,
     description: (title: string) => `[data-test-overview-card-subtitle="${title}"]`,
     content: (title: string) => `[data-test-overview-card-content="${title}"]`,
