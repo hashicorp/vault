@@ -16,10 +16,10 @@ on:
 jobs:
   scan:
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ondemand","os=linux","type=c6a.4xlarge"]') }}
-    # The first check ensures this doesn't run on community-contributed PRs, who
-    # won't have the permissions to run this job.
+    # The first check ensures this doesn't run on community-contributed PRs, who won't have the
+    # permissions to run this job.
     if: |
-      (startsWith(github.repository, 'hashicorp/vault') || (github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name)) &&
+      ! github.event.pull_request.head.repo.fork &&
       github.actor != 'dependabot[bot]' &&
       github.actor != 'hc-github-team-secure-vault-core'
     steps:
