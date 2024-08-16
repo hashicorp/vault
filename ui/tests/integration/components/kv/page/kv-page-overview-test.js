@@ -96,6 +96,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
     test('it renders with full permissions', async function (assert) {
       await this.renderComponent();
       const fromNow = dateFromNow([this.metadata.createdTime]); // uses date-fns so can't stub timestamp util
+      assert.dom(`${overviewCard.container('Current version')} .hds-badge`).doesNotExist();
       assert
         .dom(overviewCard.container('Current version'))
         .hasText(
