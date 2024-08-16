@@ -68,19 +68,6 @@ export default class ClientsActivityComponent extends Component<Args> {
     return this.byMonthActivityData ? this.byMonthActivityData?.map((m) => m?.new_clients) : [];
   }
 
-  get filteredActivityByNamespace() {
-    const { namespace, activity } = this.args;
-    return activity.byNamespace.find((ns) => ns.label === namespace);
-  }
-
-  get filteredActivityByAuthMount() {
-    return this.filteredActivityByNamespace?.mounts?.find((mount) => mount.label === this.args.mountPath);
-  }
-
-  get filteredActivity() {
-    return this.args.mountPath ? this.filteredActivityByAuthMount : this.filteredActivityByNamespace;
-  }
-
   get isCurrentMonth() {
     const { activity } = this.args;
     const current = parseAPITimestamp(activity.responseTimestamp) as Date;

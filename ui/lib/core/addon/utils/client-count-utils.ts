@@ -278,7 +278,6 @@ export interface ByMonthNewClients extends TotalClientsSometimes {
 export interface NamespaceByKey extends TotalClients {
   month: string;
   timestamp: string;
-  mounts_by_key: { [key: string]: MountByKey };
   new_clients: NamespaceNewClients;
 }
 
