@@ -12,7 +12,10 @@ import { waitFor } from '@ember/test-waiters';
 import errorMessage from 'vault/utils/error-message';
 
 /**
- * @module KvSecretPatch is used for creating a new version of a secret using HTTP patch
+ * @module KvSecretPatch
+ * @description
+ * This page template provides two methods for submitting patch data to update a KV v2 secret.
+ * Either using a key/value form KvPatch::Editor::Form or the json editor via KvPatch::JsonForm
  *
  * <Page::Secret::Patch
  *  @backend="my-kv-engine"
@@ -37,37 +40,13 @@ export default class KvSecretPatch extends Component {
   @service router;
   @service store;
 
-  @tracked jsonObject;
-  @tracked lintingErrors;
   @tracked patchMethod = 'UI';
   @tracked errorMessage;
   @tracked invalidFormAlert;
 
-  // initial formValues
-  _emptyJson = JSON.stringify({ '': '' }, null, 2);
-
-  resetForm() {
-    this.jsonObject = this._emptyJson;
-  }
-
   @action
   selectPatchMethod(event) {
     this.patchMethod = event.target.value;
-    this.resetForm();
-  }
-
-  @action
-  handleJson(value, codemirror) {
-    codemirror.performLint();
-    this.lintingErrors = codemirror.state.lint.marked.length > 0;
-    if (!this.lintingErrors) {
-      this.jsonObject = value;
-    }
-  }
-
-  @action
-  saveJson() {
-    this.save.perform(JSON.parse(this.jsonObject));
   }
 
   @task
