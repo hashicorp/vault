@@ -40,9 +40,15 @@ export default class KvDataAdapter extends ApplicationAdapter {
 
   fetchSubkeys(backend, path, query) {
     const url = this._url(kvSubkeysPath(backend, path, query));
-    // TODO subkeys response handles deleted records the same as queryRecord and returns a 404
-    // extrapolate error handling logic from queryRecord and share between these two methods
-    return this.ajax(url, 'GET').then((resp) => resp.data);
+    return (
+      this.ajax(url, 'GET')
+        .then((resp) => resp.data)
+        // deleted/destroyed secret versions throw an error
+        // but still have metadata that we want to return
+        .catch((errorOrResponse) => {
+          return this.parseErrorOrResponse(errorOrResponse, { backend, path }, true);
+        })
+    );
   }
 
   fetchWrapInfo(query) {
@@ -85,39 +91,7 @@ export default class KvDataAdapter extends ApplicationAdapter {
         };
       })
       .catch((errorOrResponse) => {
-        const baseResponse = { id, backend, path, version };
-        const errorCode = errorOrResponse.httpStatus;
-        // if it's a legitimate error - throw it!
-        if (errorOrResponse instanceof ControlGroupError) {
-          throw errorOrResponse;
-        }
-
-        if (errorCode === 403) {
-          return {
-            data: {
-              ...baseResponse,
-              fail_read_error_code: errorCode,
-            },
-          };
-        }
-
-        if (errorOrResponse.data) {
-          // in the case of a deleted/destroyed secret the API returns a 404 because { data: null }
-          // however, there could be a metadata block with important information like deletion_time
-          // handleResponse below checks 404 status codes for metadata and updates the code to 200 if it exists.
-          // we still end up in the good ol' catch() block, but instead of a 404 adapter error we've "caught"
-          // the metadata that sneakily tried to hide from us
-          return {
-            ...errorOrResponse,
-            data: {
-              ...baseResponse,
-              ...errorOrResponse.data, // includes the { metadata } key we want
-            },
-          };
-        }
-
-        // If we get here, it's probably a 404 because it doesn't exist
-        throw errorOrResponse;
+        return this.parseErrorOrResponse(errorOrResponse, { id, backend, path, version });
       });
   }
 
@@ -161,5 +135,43 @@ export default class KvDataAdapter extends ApplicationAdapter {
       return super.handleResponse(200, headers, payload, requestData);
     }
     return super.handleResponse(...arguments);
+  }
+
+  parseErrorOrResponse(errorOrResponse, secretDataBaseResponse, isSubkeys = false) {
+    // if it's a legitimate error - throw it!
+    if (errorOrResponse instanceof ControlGroupError) {
+      throw errorOrResponse;
+    }
+
+    const errorCode = errorOrResponse.httpStatus;
+    if (errorCode === 403) {
+      return {
+        data: {
+          ...secretDataBaseResponse,
+          fail_read_error_code: errorCode,
+        },
+      };
+    }
+
+    // in the case of a deleted/destroyed secret the API returns a 404 because { data: null }
+    // however, there could be a metadata block with important information like deletion_time
+    // handleResponse below checks 404 status codes for metadata and updates the code to 200 if it exists.
+    // we still end up in the good ol' catch() block, but instead of a 404 adapter error we've "caught"
+    // the metadata that sneakily tried to hide from us
+    if (errorOrResponse.data) {
+      // subkeys response doesn't correspond to a model, no need to include base response
+      if (isSubkeys) return errorOrResponse.data;
+
+      return {
+        ...errorOrResponse,
+        data: {
+          ...secretDataBaseResponse,
+          ...errorOrResponse.data, // includes the { metadata } key we want
+        },
+      };
+    }
+
+    // If we get here, it's probably a 404 because it doesn't exist
+    throw errorOrResponse;
   }
 }
