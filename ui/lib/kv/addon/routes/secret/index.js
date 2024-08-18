@@ -9,7 +9,13 @@ import { service } from '@ember/service';
 export default class SecretIndex extends Route {
   @service router;
 
-  redirect() {
-    this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.details');
+  setupController(controller, resolvedModel) {
+    super.setupController(controller, resolvedModel);
+    const breadcrumbsArray = [
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
+      { label: resolvedModel.backend, route: 'list', model: resolvedModel.backend },
+      { label: 'Overview' },
+    ];
+    controller.breadcrumbs = breadcrumbsArray;
   }
 }
