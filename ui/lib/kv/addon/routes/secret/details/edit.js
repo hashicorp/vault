@@ -38,7 +38,7 @@ export default class KvSecretDetailsEditRoute extends Route {
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: resolvedModel.backend, route: 'list', model: resolvedModel.backend },
       ...breadcrumbsForSecret(resolvedModel.backend, resolvedModel.path),
-      { label: 'edit' },
+      { label: 'Edit' },
     ];
   }
 }

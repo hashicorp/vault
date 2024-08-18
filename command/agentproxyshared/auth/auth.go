@@ -313,10 +313,11 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			isTokenFileMethod = path == "auth/token/lookup-self"
 			if isTokenFileMethod {
 				token, _ := data["token"].(string)
-				lookupSelfClient, err := clientToUse.CloneWithHeaders()
-				if err != nil {
+				// The error is called clientErr as to not shadow the other err above it.
+				lookupSelfClient, clientErr := clientToUse.CloneWithHeaders()
+				if clientErr != nil {
 					ah.logger.Error("failed to clone client to perform token lookup")
-					return err
+					return clientErr
 				}
 				lookupSelfClient.SetToken(token)
 				secret, err = lookupSelfClient.Auth().Token().LookupSelf()
@@ -563,18 +564,12 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 				// Set authenticated when authentication succeeds
 				metrics.SetGauge([]string{ah.metricsSignifier, "authenticated"}, 1)
 				ah.logger.Info("renewed auth token")
-
 			case <-credCh:
 				ah.logger.Info("auth method found new credentials, re-authenticating")
 				break LifetimeWatcherLoop
-			default:
-				select {
-				case <-ah.InvalidToken:
-					ah.logger.Info("invalid token found, re-authenticating")
-					break LifetimeWatcherLoop
-				default:
-					continue
-				}
+			case <-ah.InvalidToken:
+				ah.logger.Info("invalid token found, re-authenticating")
+				break LifetimeWatcherLoop
 			}
 		}
 	}

@@ -14,8 +14,8 @@ export default create({
   ip: fillable('[data-test-input="ip"]'),
   warningIsPresent: isPresent('[data-test-warning]'),
   commonNameValue: value('[data-test-input="commonName"]'),
-  submit: clickable('[data-test-secret-generate]'),
-  back: clickable('[data-test-secret-generate-back]'),
+  submit: clickable('[data-test-save]'),
+  back: clickable('[data-test-back-button]'),
   generateOTP: async function () {
     await this.user('admin').ip('192.168.1.1').submit();
   },

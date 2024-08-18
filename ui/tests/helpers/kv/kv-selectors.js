@@ -44,6 +44,7 @@ export const PAGE = {
     destroy: '[data-test-kv-delete="destroy"]',
     undelete: '[data-test-kv-delete="undelete"]',
     copy: '[data-test-copy-menu-trigger]',
+    wrap: '[data-test-wrap-button]',
     deleteModal: '[data-test-delete-modal]',
     deleteModalTitle: '[data-test-delete-modal] [data-test-modal-title]',
     deleteOption: 'input#delete-version',
@@ -112,6 +113,12 @@ export const FORM = {
   maskedValueInput: (idx = 0) => `[data-test-kv-value="${idx}"] [data-test-textarea]`,
   addRow: (idx = 0) => `[data-test-kv-add-row="${idx}"]`,
   deleteRow: (idx = 0) => `[data-test-kv-delete-row="${idx}"]`,
+  // <KvPatchEditor>
+  patchEdit: (idx = 0) => `[data-test-edit-button="${idx}"]`,
+  patchDelete: (idx = 0) => `[data-test-delete-button="${idx}"]`,
+  patchUndo: (idx = 0) => `[data-test-undo-button="${idx}"]`,
+  patchAdd: '[data-test-add-button]',
+  patchAlert: (type, idx) => `[data-test-alert-${type}="${idx}"]`,
   // Alerts & validation
   inlineAlert: '[data-test-inline-alert]',
   validation: (attr) => `[data-test-field="${attr}"] [data-test-inline-alert]`,

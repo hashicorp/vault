@@ -6,9 +6,7 @@
 import Model from '@ember-data/model';
 export default class PkiCertificateBaseModel extends Model {
   secretMountPath: class;
-  get useOpenAPI(): boolean;
   get backend(): string;
-  getHelpUrl(): void;
   altNames: string;
   commonName: string;
   caChain: string;

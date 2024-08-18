@@ -61,40 +61,10 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     assert.dom(overview.createDestination).hasText('Create new destination', 'Toolbar action renders');
   });
 
-  module('community', function (hooks) {
-    hooks.beforeEach(function () {
-      this.version.type = 'community';
-      this.isActivated = false;
-      this.licenseHasSecretsSync = false;
-      this.destinations = [];
-    });
-
-    test('it should show an upsell CTA', async function (assert) {
-      await this.renderComponent();
-
-      assert
-        .dom(title)
-        .hasText('Secrets Sync Enterprise feature', 'page title indicates feature is only for Enterprise');
-      assert.dom(cta.button).doesNotExist();
-      assert.dom(cta.summary).exists();
-    });
-  });
-
   module('ent', function (hooks) {
     hooks.beforeEach(function () {
       this.isActivated = false;
       this.destinations = [];
-    });
-
-    test('it should show an upsell CTA if license does NOT have the secrets sync feature', async function (assert) {
-      this.version.features = [];
-      await this.renderComponent();
-
-      assert
-        .dom(title)
-        .hasText('Secrets Sync Premium feature', 'title indicates feature is only for Premium');
-      assert.dom(cta.button).doesNotExist();
-      assert.dom(cta.summary).exists();
     });
 
     test('it should show create CTA if license has the secrets sync feature', async function (assert) {
@@ -182,7 +152,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     });
   });
 
-  module('secrets sync is not activated and license has secrets sync', function (hooks) {
+  module('secrets sync is not activated', function (hooks) {
     hooks.beforeEach(async function () {
       this.isActivated = false;
     });
@@ -260,18 +230,6 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
       await click(overview.activationModal.confirm);
 
       assert.dom(overview.optInError).doesNotExist('error banner is cleared upon trying to opt-in again');
-    });
-  });
-
-  module('secrets sync is not activated and license does not have secrets sync', function (hooks) {
-    hooks.beforeEach(async function () {
-      this.licenseHasSecretsSync = false;
-    });
-
-    test('it should hide the opt-in banner', async function (assert) {
-      await this.renderComponent();
-
-      assert.dom(overview.optInBanner.container).doesNotExist();
     });
   });
 
@@ -400,11 +358,11 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     test('it should show the Totals cards', async function (assert) {
       await this.renderComponent();
 
-      const { title, description, action, content } = overviewCard;
+      const { title, description, actionLink, content } = overviewCard;
       const cardData = [
         {
           cardTitle: 'Total destinations',
-          subText: 'The total number of connected destinations',
+          subText: 'The total number of connected destinations.',
           actionText: 'Create new',
           count: '6',
         },
@@ -421,7 +379,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
         assert.dom(title(cardTitle)).hasText(cardTitle, `${cardTitle} card title renders`);
         assert.dom(description(cardTitle)).hasText(subText, ` ${cardTitle} card description renders`);
         assert.dom(content(cardTitle)).hasText(count, 'Total count renders');
-        assert.dom(action(cardTitle)).hasText(actionText, 'Card action renders');
+        assert.dom(actionLink(cardTitle)).hasText(actionText, 'Card action renders');
       });
     });
   });

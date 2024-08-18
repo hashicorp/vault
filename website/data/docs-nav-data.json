@@ -181,14 +181,6 @@
         "path": "concepts/lease"
       },
       {
-        "title": "Lease Explosions",
-        "path": "concepts/lease-explosions"
-      },
-      {
-        "title": "Lease count quota exceeded",
-        "path": "concepts/lease-count-quota-exceeded"
-      },
-      {
         "title": "Authentication",
         "path": "concepts/auth"
       },
@@ -256,6 +248,10 @@
       {
         "title": "Resource Quotas",
         "path": "concepts/resource-quotas"
+      },
+      {
+        "title": "Billing Start Date",
+        "path": "concepts/billing-start-date"
       },
       {
         "title": "Client count",
@@ -368,6 +364,14 @@
         "path": "configuration/programmatic-management"
       },
       {
+        "title": "Prevent lease explosions",
+        "path": "configuration/prevent-lease-explosions"
+      },
+      {
+        "title": "Create a lease count quota",
+        "path": "configuration/create-lease-count-quota"
+      },
+      {
         "title": "<code>listener</code>",
         "routes": [
           {
@@ -376,7 +380,7 @@
           },
           {
             "title": "TCP",
-            "routes": [  
+            "routes": [
               {
                 "title": "Overview",
                 "path": "configuration/listener/tcp"
@@ -412,9 +416,9 @@
           {
             "title": "High Availability",
             "badge": {
-              "text": "ENTERPRISE | BETA",
+              "text": "ENTERPRISE",
               "type": "outlined",
-              "color": "highlight"
+              "color": "neutral"
             },
             "path": "configuration/seal/seal-ha"
           },
@@ -1101,6 +1105,19 @@
           {
             "title": "<code>import</code> and <code>import-version</code>",
             "path": "commands/transit/import"
+          }
+        ]
+      },
+      {
+        "title": "<code>transform</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/transform"
+          },
+          {
+            "title": "<code>import</code> and <code>import-version</code>",
+            "path": "commands/transform/import"
           }
         ]
       },
@@ -1982,8 +1999,21 @@
     "path": "interoperability-matrix"
   },
   {
-    "title": "Troubleshoot",
-    "href": "https://learn.hashicorp.com/tutorials/vault/troubleshooting-vault"
+    "title": "Troubleshoot Vault",
+    "routes": [
+      {
+        "title": "Generate a root token",
+        "path": "troubleshoot/generate-root-token"
+      },
+      {
+        "title": "Troubleshoot lease errors",
+        "path": "troubleshoot/lease-issues"
+      },
+      {
+        "title": "Troubleshooting tutorials",
+        "href": "https://learn.hashicorp.com/tutorials/vault/troubleshooting-vault"
+      }
+    ]
   },
   {
     "divider": true
@@ -2195,8 +2225,12 @@
                         "path": "platform/k8s/vso/sources/vault"
                       },
                       {
-                        "title": "Auth Methods",
+                        "title": "Authentication",
                         "routes": [
+                          {
+                            "title": "Overview",
+                            "path": "platform/k8s/vso/sources/vault/auth"
+                          },
                           {
                             "title": "AWS",
                             "path": "platform/k8s/vso/sources/vault/auth/aws"
@@ -2210,6 +2244,10 @@
                       {
                         "title": "Encrypted client cache",
                         "path": "platform/k8s/vso/sources/vault/client-cache"
+                      },
+                      {
+                        "title": "Instant updates",
+                        "path": "platform/k8s/vso/sources/vault/instant-updates"
                       }
                     ]
                   },
@@ -2590,6 +2628,10 @@
         "path": "release-notes"
       },
       {
+        "title": "1.17.0",
+        "path": "release-notes/1.17.0"
+      },
+      {
         "title": "1.16.1",
         "path": "release-notes/1.16.1"
       },
@@ -2835,6 +2877,15 @@
               "type": "outlined",
               "color": "neutral"
             }
+          },
+          {
+            "title": "Configure cross namespace access",
+            "path": "enterprise/namespaces/configure-cross-namespace-access",
+            "badge": {
+              "text": "ENTERPRISE",
+              "type": "outlined",
+              "color": "neutral"
+            }
           }
         ]
       },
@@ -2849,6 +2900,10 @@
       {
         "title": "Audit",
         "routes": [
+          {
+            "title": "Audit Exclusion",
+            "path": "enterprise/audit/exclusion"
+          },
           {
             "title": "Audit Filtering",
             "path": "enterprise/audit/filtering"

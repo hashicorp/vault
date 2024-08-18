@@ -32,6 +32,7 @@
     "test": "concurrently --kill-others-on-fail -P -c \"auto\" -n lint:js,lint:hbs,vault \"yarn:lint:js:quiet\" \"yarn:lint:hbs:quiet\" \"node scripts/start-vault.js {@}\" --",
     "test:enos": "concurrently --kill-others-on-fail -P -c \"auto\" -n lint:js,lint:hbs,enos \"yarn:lint:js:quiet\" \"yarn:lint:hbs:quiet\" \"node scripts/enos-test-ember.js {@}\" --",
     "test:oss": "yarn run test -f='!enterprise' --split=8 --preserve-test-name --parallel",
+    "test:ent": "node scripts/start-vault.js -f='enterprise'",
     "test:quick": "node scripts/start-vault.js --split=8 --preserve-test-name --parallel",
     "test:quick-oss": "node scripts/start-vault.js -f='!enterprise' --split=8 --preserve-test-name --parallel",
     "test:filter": "node scripts/start-vault.js --server -f='!enterprise'",
@@ -189,6 +190,7 @@
   "resolutions": {
     "ansi-html": "^0.0.8",
     "async": "^2.6.4",
+    "braces": "^3.0.3",
     "eslint-utils": "^1.4.1",
     "highlight.js": "^10.4.1",
     "https-proxy-agent": "^2.2.3",
@@ -231,7 +233,7 @@
   },
   "dependencies": {
     "@babel/core": "^7.24.0",
-    "@hashicorp/design-system-components": "^4.1.0",
+    "@hashicorp/design-system-components": "^4.6.0",
     "@hashicorp/ember-flight-icons": "^5.0.1",
     "ember-auto-import": "^2.7.2",
     "handlebars": "4.7.7",

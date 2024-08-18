@@ -15,8 +15,7 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/helper/namespace"
+	nshelper "github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -253,7 +252,7 @@ func (b *Broker) Deregister(ctx context.Context, name string) error {
 
 // LogRequest is used to ensure all the audit backends have an opportunity to
 // log the given request and that *at least one* succeeds.
-func (b *Broker) LogRequest(ctx context.Context, in *logical.LogInput) (ret error) {
+func (b *Broker) LogRequest(ctx context.Context, in *logical.LogInput) (retErr error) {
 	b.RLock()
 	defer b.RUnlock()
 
@@ -265,18 +264,15 @@ func (b *Broker) LogRequest(ctx context.Context, in *logical.LogInput) (ret erro
 	defer metrics.MeasureSince([]string{"audit", "log_request"}, time.Now())
 	defer func() {
 		metricVal := float32(0.0)
-		if ret != nil {
+		if retErr != nil {
 			metricVal = 1.0
 		}
 		metrics.IncrCounter([]string{"audit", "log_request_failure"}, metricVal)
 	}()
 
-	var retErr *multierror.Error
-
-	e, err := NewEvent(RequestType)
+	e, err := newEvent(RequestType)
 	if err != nil {
-		retErr = multierror.Append(retErr, err)
-		return retErr.ErrorOrNil()
+		return err
 	}
 
 	e.Data = in
@@ -293,49 +289,54 @@ func (b *Broker) LogRequest(ctx context.Context, in *logical.LogInput) (ret erro
 		// has taken up a lot of time handling the request before audit (request)
 		// is triggered. Pipeline nodes and the eventlogger.Broker may check for a
 		// cancelled context and refuse to process the nodes further.
-		ns, err := namespace.FromContext(ctx)
+		ns, err := nshelper.FromContext(ctx)
 		if err != nil {
-			retErr = multierror.Append(retErr, fmt.Errorf("namespace missing from context: %w", err))
-			return retErr.ErrorOrNil()
+			return fmt.Errorf("namespace missing from context: %w", err)
 		}
 
 		tempContext, auditCancel := context.WithTimeout(context.Background(), timeout)
 		defer auditCancel()
-		auditContext = namespace.ContextWithNamespace(tempContext, ns)
+		auditContext = nshelper.ContextWithNamespace(tempContext, ns)
+
+		b.logger.Trace("log request requires a derived context (original context was not viable)", "namespace ID", ns.ID, "namespace path", ns.Path, "timeout", timeout)
 	}
 
 	var status eventlogger.Status
 	if hasAuditPipelines(b.broker) {
 		status, err = b.broker.Send(auditContext, event.AuditType.AsEventType(), e)
 		if err != nil {
-			retErr = multierror.Append(retErr, multierror.Append(err, status.Warnings...))
-			return retErr.ErrorOrNil()
+			return errors.Join(append([]error{err}, status.Warnings...)...)
 		}
 	}
 
 	// Audit event ended up in at least 1 sink.
 	if len(status.CompleteSinks()) > 0 {
-		return retErr.ErrorOrNil()
+		// We should log warnings to the operational logs regardless of whether
+		// we consider the overall auditing attempt to be successful.
+		if len(status.Warnings) > 0 {
+			b.logger.Error("log request underlying pipeline error(s)", "error", errors.Join(status.Warnings...))
+		}
+
+		return nil
 	}
 
 	// There were errors from inside the pipeline and we didn't write to a sink.
 	if len(status.Warnings) > 0 {
-		retErr = multierror.Append(retErr, multierror.Append(errors.New("error during audit pipeline processing"), status.Warnings...))
-		return retErr.ErrorOrNil()
+		return fmt.Errorf("error during audit pipeline processing: %w", errors.Join(status.Warnings...))
 	}
 
 	// Handle any additional audit that is required (Enterprise/CE dependant).
 	err = b.handleAdditionalAudit(auditContext, e)
 	if err != nil {
-		retErr = multierror.Append(retErr, err)
+		return err
 	}
 
-	return retErr.ErrorOrNil()
+	return nil
 }
 
 // LogResponse is used to ensure all the audit backends have an opportunity to
 // log the given response and that *at least one* succeeds.
-func (b *Broker) LogResponse(ctx context.Context, in *logical.LogInput) (ret error) {
+func (b *Broker) LogResponse(ctx context.Context, in *logical.LogInput) (retErr error) {
 	b.RLock()
 	defer b.RUnlock()
 
@@ -347,18 +348,15 @@ func (b *Broker) LogResponse(ctx context.Context, in *logical.LogInput) (ret err
 	defer metrics.MeasureSince([]string{"audit", "log_response"}, time.Now())
 	defer func() {
 		metricVal := float32(0.0)
-		if ret != nil {
+		if retErr != nil {
 			metricVal = 1.0
 		}
 		metrics.IncrCounter([]string{"audit", "log_response_failure"}, metricVal)
 	}()
 
-	var retErr *multierror.Error
-
-	e, err := NewEvent(ResponseType)
+	e, err := newEvent(ResponseType)
 	if err != nil {
-		retErr = multierror.Append(retErr, err)
-		return retErr.ErrorOrNil()
+		return err
 	}
 
 	e.Data = in
@@ -375,44 +373,49 @@ func (b *Broker) LogResponse(ctx context.Context, in *logical.LogInput) (ret err
 		// has taken up a lot of time handling the request before audit (response)
 		// is triggered. Pipeline nodes and the eventlogger.Broker may check for a
 		// cancelled context and refuse to process the nodes further.
-		ns, err := namespace.FromContext(ctx)
+		ns, err := nshelper.FromContext(ctx)
 		if err != nil {
-			retErr = multierror.Append(retErr, fmt.Errorf("namespace missing from context: %w", err))
-			return retErr.ErrorOrNil()
+			return fmt.Errorf("namespace missing from context: %w", err)
 		}
 
 		tempContext, auditCancel := context.WithTimeout(context.Background(), timeout)
 		defer auditCancel()
-		auditContext = namespace.ContextWithNamespace(tempContext, ns)
+		auditContext = nshelper.ContextWithNamespace(tempContext, ns)
+
+		b.logger.Trace("log response requires a derived context (original context was not viable)", "namespace ID", ns.ID, "namespace path", ns.Path, "timeout", timeout)
 	}
 
 	var status eventlogger.Status
 	if hasAuditPipelines(b.broker) {
 		status, err = b.broker.Send(auditContext, event.AuditType.AsEventType(), e)
 		if err != nil {
-			retErr = multierror.Append(retErr, multierror.Append(err, status.Warnings...))
-			return retErr.ErrorOrNil()
+			return errors.Join(append([]error{err}, status.Warnings...)...)
 		}
 	}
 
 	// Audit event ended up in at least 1 sink.
 	if len(status.CompleteSinks()) > 0 {
-		return retErr.ErrorOrNil()
+		// We should log warnings to the operational logs regardless of whether
+		// we consider the overall auditing attempt to be successful.
+		if len(status.Warnings) > 0 {
+			b.logger.Error("log response underlying pipeline error(s)", "error", errors.Join(status.Warnings...))
+		}
+
+		return nil
 	}
 
 	// There were errors from inside the pipeline and we didn't write to a sink.
 	if len(status.Warnings) > 0 {
-		retErr = multierror.Append(retErr, multierror.Append(errors.New("error during audit pipeline processing"), status.Warnings...))
-		return retErr.ErrorOrNil()
+		return fmt.Errorf("error during audit pipeline processing: %w", errors.Join(status.Warnings...))
 	}
 
 	// Handle any additional audit that is required (Enterprise/CE dependant).
 	err = b.handleAdditionalAudit(auditContext, e)
 	if err != nil {
-		retErr = multierror.Append(retErr, err)
+		return err
 	}
 
-	return retErr.ErrorOrNil()
+	return nil
 }
 
 func (b *Broker) Invalidate(ctx context.Context, _ string) {
@@ -449,7 +452,7 @@ func (b *Broker) GetHash(ctx context.Context, name string, input string) (string
 		return "", fmt.Errorf("unknown audit backend %q", name)
 	}
 
-	return HashString(ctx, be.backend, input)
+	return hashString(ctx, be.backend, input)
 }
 
 // IsRegistered is used to check if a given audit backend is registered.
@@ -462,6 +465,8 @@ func (b *Broker) IsRegistered(name string) bool {
 
 // isContextViable examines the supplied context to see if its own deadline would
 // occur later than a newly created context with a specific timeout.
+// Additionally, whether the supplied context is already cancelled, thus making it
+// unviable.
 // If the existing context is viable it can be used 'as-is', if not, the caller
 // should consider creating a new context with the relevant deadline and associated
 // context values (e.g. namespace) in order to reduce the likelihood that the
@@ -470,6 +475,12 @@ func (b *Broker) IsRegistered(name string) bool {
 func isContextViable(ctx context.Context) bool {
 	if ctx == nil {
 		return false
+	}
+
+	select {
+	case <-ctx.Done():
+		return false
+	default:
 	}
 
 	deadline, hasDeadline := ctx.Deadline()

@@ -16,6 +16,8 @@ Vault 1.17. **Please read carefully**.
 
 ### Activity Log Changes
 
+#### Default Activity Log Querying Period
+
 The field `default_report_months` can no longer be configured or read. Any previously set values
 will be ignored by the system.
 
@@ -36,3 +38,28 @@ WARNING! The following warnings were returned from Vault:
 ```
 
 </CodeBlockConfig>
+
+
+The `current_billing_period` toggle for `/sys/internal/counters/activity` is also deprecated, as this will be set
+true by default.
+
+Attempts to set `current_billing_period` will result in the following warning from Vault:
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+
+WARNING! The following warnings were returned from Vault:
+
+  * current_billing_period is deprecated; unless otherwise specified, all requests will default to the current billing period
+
+
+```
+
+</CodeBlockConfig>
+
+### Docker image no longer contains `curl`
+
+The `curl` binary is no longer included in the published Docker container images for Vault and Vault
+Enterprise. If your workflow depends on `curl` in the image you can dynamically install it using
+`apk`, e.g.: `docker exec <CONTAINER-ID> apk add curl` or `kubectl exec -ti <NAME> -- apk add curl`.

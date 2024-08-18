@@ -1,0 +1,4 @@
+```release-note:improvement
+activity log: Changes how new client counts in the current month are estimated, in order to return more
+visibly sensible totals.
+```

@@ -13,7 +13,6 @@ import {
   destructureClientCounts,
   namespaceArrayToObject,
   sortMonthsByTimestamp,
-  setStartTimeQuery,
 } from 'core/utils/client-count-utils';
 import clientsHandler from 'vault/mirage/handlers/clients';
 import {
@@ -28,9 +27,6 @@ used to normalize the sys/counters/activity response in the clients/activity
 serializer. these functions are tested individually here, instead of all at once
 in a serializer test for easier debugging
 */
-
-// TODO refactor tests into a module for each util method, then make each assertion its separate tests
-
 module('Integration | Util | client count utils', function (hooks) {
   setupTest(hooks);
 
@@ -59,23 +55,23 @@ module('Integration | Util | client count utils', function (hooks) {
       const expected = [
         {
           previousVersion: '1.9.0',
-          timestampInstalled: '2023-08-02T00:00:00.000Z',
+          timestampInstalled: '2023-08-02T00:00:00Z',
           version: '1.9.1',
         },
         {
           previousVersion: '1.9.1',
-          timestampInstalled: '2023-09-02T00:00:00.000Z',
+          timestampInstalled: '2023-09-02T00:00:00Z',
           version: '1.10.1',
         },
         {
           previousVersion: '1.16.0',
-          timestampInstalled: '2023-12-02T00:00:00.000Z',
+          timestampInstalled: '2023-12-02T00:00:00Z',
           version: '1.17.0',
         },
       ];
       // set start/end times longer than version history to test all relevant upgrades return
       const startTime = '2023-06-02T00:00:00Z'; // first upgrade installed '2023-07-02T00:00:00Z'
-      const endTime = '2024-03-04T16:14:21.000Z'; // latest upgrade installed '2023-12-02T01:00:00.000Z'
+      const endTime = '2024-03-04T16:14:21Z'; // latest upgrade installed '2023-12-02T00:00:00Z'
       const filteredHistory = filterVersionHistory(this.versionHistory, startTime, endTime);
       assert.deepEqual(
         JSON.stringify(filteredHistory),
@@ -99,17 +95,17 @@ module('Integration | Util | client count utils', function (hooks) {
       const expected = [
         {
           previousVersion: '1.9.0',
-          timestampInstalled: '2023-08-02T00:00:00.000Z',
+          timestampInstalled: '2023-08-02T00:00:00Z',
           version: '1.9.1',
         },
         {
           previousVersion: '1.9.1',
-          timestampInstalled: '2023-09-02T00:00:00.000Z',
+          timestampInstalled: '2023-09-02T00:00:00Z',
           version: '1.10.1',
         },
       ];
-      const startTime = '2023-08-02T00:00:00.000Z'; // same date as 1.9.1 install date to catch same day edge cases
-      const endTime = '2023-11-02T00:00:00.000Z';
+      const startTime = '2023-08-02T00:00:00Z'; // same date as 1.9.1 install date to catch same day edge cases
+      const endTime = '2023-11-02T00:00:00Z';
       const filteredHistory = filterVersionHistory(this.versionHistory, startTime, endTime);
       assert.deepEqual(
         JSON.stringify(filteredHistory),
@@ -121,7 +117,7 @@ module('Integration | Util | client count utils', function (hooks) {
         {
           version: '1.10.3',
           previousVersion: '1.10.1',
-          timestampInstalled: '2023-09-23T00:00:00.000Z',
+          timestampInstalled: '2023-09-23T00:00:00Z',
         },
         'it does not return subsequent patch versions of the same notable upgrade version'
       );
@@ -231,9 +227,7 @@ module('Integration | Util | client count utils', function (hooks) {
         namespace_id: 'root',
         namespace_path: '',
         counts: {
-          distinct_entities: 10,
           entity_clients: 10,
-          non_entity_tokens: 20,
           non_entity_clients: 20,
           secret_syncs: 0,
           acme_clients: 0,
@@ -242,9 +236,7 @@ module('Integration | Util | client count utils', function (hooks) {
         mounts: [
           {
             counts: {
-              distinct_entities: 10,
               entity_clients: 10,
-              non_entity_tokens: 20,
               non_entity_clients: 20,
               secret_syncs: 0,
               acme_clients: 0,
@@ -441,37 +433,6 @@ module('Integration | Util | client count utils', function (hooks) {
         },
       },
       'it formats combined data for monthly namespaces_by_key spanning upgrade to 1.10'
-    );
-  });
-
-  test('setStartTimeQuery: it returns start time query for activity log', async function (assert) {
-    assert.expect(6);
-    const apiPath = 'sys/internal/counters/config';
-    assert.strictEqual(setStartTimeQuery(true, {}), null, `it returns null if no permission to ${apiPath}`);
-    assert.strictEqual(
-      setStartTimeQuery(false, {}),
-      null,
-      `it returns null for community edition and no permission to ${apiPath}`
-    );
-    assert.strictEqual(
-      setStartTimeQuery(true, { billingStartTimestamp: new Date('2022-06-08T00:00:00Z') }),
-      1654646400,
-      'it returns unix time if enterprise and billing_start_timestamp exists'
-    );
-    assert.strictEqual(
-      setStartTimeQuery(false, { billingStartTimestamp: new Date('0001-01-01T00:00:00Z') }),
-      null,
-      'it returns null time for community edition even if billing_start_timestamp exists'
-    );
-    assert.strictEqual(
-      setStartTimeQuery(false, { foo: 'bar' }),
-      null,
-      'it returns null if billing_start_timestamp key does not exist'
-    );
-    assert.strictEqual(
-      setStartTimeQuery(false, undefined),
-      null,
-      'fails gracefully if no config model is passed'
     );
   });
 });

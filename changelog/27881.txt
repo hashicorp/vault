@@ -1,0 +1,4 @@
+```release-note:bug
+sys: Fix a bug where mounts of external plugins that were registered before Vault v1.0.0 could not be tuned to
+use versioned plugins.
+```
