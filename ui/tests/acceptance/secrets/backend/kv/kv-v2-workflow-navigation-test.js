@@ -301,8 +301,8 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         `cancel btn goes back to metadata page`
       );
     });
-    test('breadcrumbs & page titles are correct (a)', async function (assert) {
-      assert.expect(45);
+    test('breadcrumbs, tabs & page titles are correct (a)', async function (assert) {
+      assert.expect(75);
       const backend = this.backend;
       await navToBackend(backend);
       await click(PAGE.secretTab('Configuration'));
@@ -315,6 +315,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
       await click(PAGE.list.item(secretPath));
       assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath]);
+      // tabs are already asserted in test above
       assert.dom(PAGE.title).hasText(secretPath, 'correct page title for secret detail');
 
       await click(PAGE.detail.createNewVersion);
@@ -324,6 +325,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       await click(PAGE.breadcrumbAtIdx(2));
       await click(PAGE.secretTab('Metadata'));
       assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'Metadata']);
+      assertDetailTabs(assert, 'Metadata');
       assert.dom(PAGE.title).hasText(secretPath, 'correct page title for metadata');
 
       await click(PAGE.metadata.editBtn);
@@ -333,10 +335,12 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       await click(PAGE.breadcrumbAtIdx(3));
       await click(PAGE.secretTab('Paths'));
       assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'Paths']);
+      assertDetailTabs(assert, 'Paths');
       assert.dom(PAGE.title).hasText(secretPath, 'correct page title for paths');
 
       await click(PAGE.secretTab('Version History'));
       assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'Version History']);
+      assertDetailTabs(assert, 'Version History');
       assert.dom(PAGE.title).hasText(secretPath, 'correct page title for version history');
     });
   });
