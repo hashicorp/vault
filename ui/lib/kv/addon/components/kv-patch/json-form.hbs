@@ -4,7 +4,7 @@
 ~}}
 
 <form {{on "submit" this.submit}}>
-  <JsonEditor class="has-top-margin-m" @showToolbar={{false}} @valueUpdated={{this.handleJson}} @value={{this.jsonObject}} />
+  <JsonEditor class="has-top-margin-l" @title="Patch data" @valueUpdated={{this.handleJson}} @value={{this.jsonObject}} />
   {{#if this.lintingErrors}}
     <AlertInline
       @color="warning"
