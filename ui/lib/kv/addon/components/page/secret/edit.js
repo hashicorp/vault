@@ -102,6 +102,6 @@ export default class KvSecretEdit extends Component {
 
   @action
   onCancel() {
-    this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.details');
+    this.router.transitionTo('vault.cluster.secrets.backend.kv.secret');
   }
 }
