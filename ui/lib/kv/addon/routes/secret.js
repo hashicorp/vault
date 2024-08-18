@@ -39,6 +39,7 @@ export default class KvSecretRoute extends Route {
       secret: this.fetchSecretData(backend, path),
       subkeys: this.fetchSubkeys(backend, path),
       metadata: this.fetchSecretMetadata(backend, path),
+      canPatchSecret: this.capabilities.fetchSpecific(`${backend}/data/${path}`, 'canPatch'),
       // for creating a new secret version
       canUpdateSecret: this.capabilities.canUpdate(`${backend}/data/${path}`),
     });

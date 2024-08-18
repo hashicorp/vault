@@ -21,10 +21,27 @@
     </Hds::Text::Body>
   </:customSubtext>
   <:action>
-    <div>
-      <Toggle @name="kv-subkeys" @checked={{this.showJson}} @onChange={{fn (mut this.showJson)}}>
-        <p class="has-text-grey">JSON</p>
-      </Toggle>
+    <div class="flex column-gap-16">
+      <div class="top-padding-4">
+        <Hds::Form::Toggle::Field
+          checked={{this.showJson}}
+          {{on "change" this.toggleJson}}
+          data-test-toggle-input="kv-subkeys"
+          as |F|
+        >
+          <F.Label>JSON</F.Label>
+        </Hds::Form::Toggle::Field>
+      </div>
+      {{#if @canPatchSecret}}
+        <Hds::Link::Standalone
+          @text="Patch secret"
+          @route="secret.patch"
+          @icon="arrow-right"
+          @iconPosition="trailing"
+          data-test-action-text="Patch secret"
+          @isFullWidth={{true}}
+        />
+      {{/if}}
     </div>
   </:action>
   <:content>

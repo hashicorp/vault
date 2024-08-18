@@ -51,6 +51,7 @@ export default Model.extend({
   canRead: computedCapability('read'),
   canCreate: computedCapability('create'),
   canUpdate: computedCapability('update'),
+  canPatch: computedCapability('patch'),
   canDelete: computedCapability('delete'),
   canList: computedCapability('list'),
   allowedParameters: attr(),
