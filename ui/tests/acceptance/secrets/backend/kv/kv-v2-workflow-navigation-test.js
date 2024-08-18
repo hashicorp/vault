@@ -41,7 +41,7 @@ const assertCorrectBreadcrumbs = (assert, expected) => {
   });
 };
 const assertDetailTabs = (assert, current, hidden = []) => {
-  const allTabs = ['Secret', 'Metadata', 'Paths', 'Version History'];
+  const allTabs = ['Overview', 'Secret', 'Metadata', 'Paths', 'Version History'];
   allTabs.forEach((tab) => {
     if (hidden.includes(tab)) {
       assert.dom(PAGE.secretTab(tab)).doesNotExist(`${tab} tab does not render`);
@@ -216,7 +216,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       );
     });
     test('versioned secret nav, tabs, breadcrumbs (a)', async function (assert) {
-      assert.expect(45);
+      assert.expect(47);
       const backend = this.backend;
       await navToBackend(backend);
       await click(PAGE.list.item(secretPath));
@@ -443,7 +443,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.ok(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
     });
     test('versioned secret nav, tabs, breadcrumbs (dr)', async function (assert) {
-      assert.expect(28);
+      assert.expect(30);
       const backend = this.backend;
       await navToBackend(backend);
 
@@ -618,7 +618,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.ok(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
     });
     test('versioned secret nav, tabs, breadcrumbs (dlr)', async function (assert) {
-      assert.expect(28);
+      assert.expect(30);
       const backend = this.backend;
       await navToBackend(backend);
       await click(PAGE.list.item(secretPath));
@@ -794,7 +794,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.ok(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
     });
     test('versioned secret nav, tabs, breadcrumbs (mm)', async function (assert) {
-      assert.expect(37);
+      assert.expect(39);
       const backend = this.backend;
       await navToBackend(backend);
       await click(PAGE.list.item(secretPath));
@@ -986,7 +986,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.ok(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
     });
     test('versioned secret nav, tabs, breadcrumbs (sc)', async function (assert) {
-      assert.expect(36);
+      assert.expect(38);
       const backend = this.backend;
       await navToBackend(backend);
 
