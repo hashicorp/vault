@@ -46,7 +46,6 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
     };
     this.canReadMetadata = true;
     this.canUpdateSecret = true;
-    this.secretState = 'created';
 
     this.format = (time) => dateFormat([time, 'MMM d yyyy, h:mm:ss aa'], {});
     this.renderComponent = async () => {
@@ -59,7 +58,6 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
           @canUpdateSecret={{this.canUpdateSecret}}
           @metadata={{this.metadata}}
           @path={{this.path}}
-          @secretState={{this.secretState}}
           @subkeys={{this.subkeys}}
         />`,
         { owner: this.engine }
@@ -196,7 +194,6 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
 
   module('deleted version', function (hooks) {
     hooks.beforeEach(async function () {
-      this.secretState = 'deleted';
       // subkeys is null but metadata still has data
       this.subkeys = {
         subkeys: null,
@@ -272,7 +269,6 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
 
   module('destroyed version', function (hooks) {
     hooks.beforeEach(async function () {
-      this.secretState = 'destroyed';
       // subkeys is null but metadata still has data
       this.subkeys = {
         subkeys: null,
