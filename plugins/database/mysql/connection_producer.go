@@ -123,11 +123,8 @@ func (c *mySQLConnectionProducer) Init(ctx context.Context, conf map[string]inte
 	}
 
 	// validate auth_type if provided
-	authType := c.AuthType
-	if authType != "" {
-		if ok := connutil.ValidateAuthType(authType); !ok {
-			return nil, fmt.Errorf("invalid auth_type %s provided", authType)
-		}
+	if ok := connutil.ValidateAuthType(c.AuthType); !ok {
+		return nil, fmt.Errorf("invalid auth_type: %s", c.AuthType)
 	}
 
 	if c.AuthType == connutil.AuthTypeGCPIAM {

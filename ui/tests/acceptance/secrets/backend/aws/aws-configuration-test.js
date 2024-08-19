@@ -21,6 +21,7 @@ import {
   expectedConfigKeys,
   expectedValueOfConfigKeys,
   configUrl,
+  fillInAwsConfig,
 } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
 
 module('Acceptance | aws | configuration', function (hooks) {
@@ -51,7 +52,7 @@ module('Acceptance | aws | configuration', function (hooks) {
     await runCmd(`delete sys/mounts/${path}`);
   });
 
-  test('it should transition to configure page on Configure click from toolbar', async function (assert) {
+  test('it should transition to configure page on click "Configure" from toolbar', async function (assert) {
     const path = `aws-${this.uid}`;
     await enablePage.enable('aws', path);
     await click(SES.configTab);
@@ -77,15 +78,12 @@ module('Acceptance | aws | configuration', function (hooks) {
   });
 
   test('it should save root AWS configuration', async function (assert) {
-    assert.expect(3);
     const path = `aws-${this.uid}`;
     await enablePage.enable('aws', path);
     await click(SES.configTab);
     await click(SES.configure);
-    await fillIn(GENERAL.inputByAttr('accessKey'), 'foo');
-    await fillIn(GENERAL.inputByAttr('secretKey'), 'bar');
-
-    await click(GENERAL.saveButtonId('root'));
+    await fillInAwsConfig();
+    await click(SES.aws.saveRootConfig);
     assert.true(
       this.flashSuccessSpy.calledWith('The backend configuration saved successfully!'),
       'Success flash message is rendered'
@@ -101,26 +99,21 @@ module('Acceptance | aws | configuration', function (hooks) {
   });
 
   test('it should save lease AWS configuration', async function (assert) {
-    assert.expect(3);
     const path = `aws-${this.uid}`;
     await enablePage.enable('aws', path);
     await click(SES.configTab);
     await click(SES.configure);
     await click(GENERAL.hdsTab('lease'));
-    await click(GENERAL.toggleInput('Lease'));
-    await fillIn(GENERAL.ttl.input('Lease'), '55');
-    await click(GENERAL.toggleInput('Maximum Lease'));
-    await fillIn(GENERAL.ttl.input('Maximum Lease'), '65');
-    await click(GENERAL.saveButtonId('lease'));
+    await fillInAwsConfig(false, false, true); // only fills in lease config with defaults
+    await click(SES.aws.saveLeaseConfig);
     assert.true(
       this.flashSuccessSpy.calledWith('The backend configuration saved successfully!'),
       'Success flash message is rendered'
     );
 
     await visit(`/vault/secrets/${path}/configuration`);
-    assert.dom(GENERAL.infoRowValue('Default Lease TTL')).hasText('55s', `Default TTL has been set.`);
-    assert.dom(GENERAL.infoRowValue('Max Lease TTL')).hasText('1m5s', `Default TTL has been set.`);
-
+    assert.dom(GENERAL.infoRowValue('Default Lease TTL')).hasText('33s', `Default TTL has been set.`);
+    assert.dom(GENERAL.infoRowValue('Max Lease TTL')).hasText('44s', `Max lease TTL has been set.`);
     // cleanup
     await runCmd(`delete sys/mounts/${path}`);
   });
@@ -154,7 +147,6 @@ module('Acceptance | aws | configuration', function (hooks) {
   });
 
   test('it should update AWS configuration details after editing', async function (assert) {
-    assert.expect(6);
     const path = `aws-${this.uid}`;
     const type = 'aws';
     await enablePage.enable(type, path);
@@ -162,7 +154,7 @@ module('Acceptance | aws | configuration', function (hooks) {
     await click(SES.configTab);
     await click(SES.configure);
     await fillIn(GENERAL.inputByAttr('accessKey'), 'foo');
-    await click(GENERAL.saveButtonId('root'));
+    await click(SES.aws.saveRootConfig);
     await click(SES.viewBackend);
     await click(SES.configTab);
     assert.dom(GENERAL.infoRowValue('Access key')).hasText('foo', 'Access key is foo');
@@ -172,23 +164,18 @@ module('Acceptance | aws | configuration', function (hooks) {
     // edit root config details and lease config details and confirm the configuration.index page is updated.
     await click(SES.configure);
     await fillIn(GENERAL.inputByAttr('accessKey'), 'hello');
-    await click(GENERAL.menuTrigger);
-    await fillIn(GENERAL.selectByAttr('region'), 'ca-central-1');
-    await click(GENERAL.saveButtonId('root'));
+    await click(GENERAL.toggleGroup('Root config options'));
+    await fillIn(GENERAL.selectByAttr('region'), 'ap-southeast-2');
+    await click(SES.aws.saveRootConfig);
     // add lease config details
-    await click(GENERAL.hdsTab('lease'));
-    await click(GENERAL.toggleInput('Lease'));
-    await fillIn(GENERAL.ttl.input('Lease'), '33');
-    await click(GENERAL.toggleInput('Maximum Lease'));
-    await fillIn(GENERAL.ttl.input('Maximum Lease'), '43');
-    await click(GENERAL.saveButtonId('lease'));
-
+    await fillInAwsConfig(false, false, true); // only fills in lease config with defaults
+    await click(SES.aws.saveLeaseConfig);
     await click(SES.viewBackend);
     await click(SES.configTab);
     assert.dom(GENERAL.infoRowValue('Access key')).hasText('hello', 'Access key has been updated to hello');
-    assert.dom(GENERAL.infoRowValue('Region')).hasText('ca-central-1', 'Region has been added');
+    assert.dom(GENERAL.infoRowValue('Region')).hasText('ap-southeast-2', 'Region has been added');
     assert.dom(GENERAL.infoRowValue('Default Lease TTL')).hasText('33s', 'Default Lease TTL has been added');
-    assert.dom(GENERAL.infoRowValue('Max Lease TTL')).hasText('43s', 'Max Lease TTL has been added');
+    assert.dom(GENERAL.infoRowValue('Max Lease TTL')).hasText('44s', 'Max Lease TTL has been added');
     // cleanup
     await runCmd(`delete sys/mounts/${path}`);
   });

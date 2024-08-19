@@ -56,7 +56,7 @@ func newSinkMetricTimer(name string, sink eventlogger.Node) (*sinkMetricTimer, e
 // 'vault.audit.{DEVICE}.log_response'
 func (s *sinkMetricTimer) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
 	defer func() {
-		auditEvent, ok := e.Payload.(*AuditEvent)
+		auditEvent, ok := e.Payload.(*Event)
 		if ok {
 			metrics.MeasureSince([]string{"audit", s.name, auditEvent.Subtype.MetricTag()}, e.CreatedAt)
 		}

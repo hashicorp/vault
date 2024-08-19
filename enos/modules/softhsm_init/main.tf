@@ -31,6 +31,7 @@ locals {
 
   // Where the default configuration is
   config_paths = {
+    "amzn"   = "/etc/softhsm2.conf"
     "rhel"   = "/etc/softhsm2.conf"
     "ubuntu" = "/etc/softhsm/softhsm2.conf"
   }

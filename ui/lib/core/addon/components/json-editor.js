@@ -16,6 +16,7 @@ import { obfuscateData } from 'core/utils/advanced-secret';
  * <JsonEditor @title="Policy" @value={{hash foo="bar"}} @viewportMargin={{100}} />
  *
  * @param {string} [title] - Name above codemirror view
+ * @param {boolean} [showToolbar=true] - If false, toolbar and title are hidden
  * @param {string} value - a specific string the comes from codemirror. It's the value inside the codemirror display
  * @param {Function} [valueUpdated] - action to preform when you edit the codemirror value.
  * @param {Function} [onFocusOut] - action to preform when you focus out of codemirror.
