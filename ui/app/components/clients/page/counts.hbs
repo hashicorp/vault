@@ -55,7 +55,7 @@
               @disallowNewItems={{true}}
               @fallbackComponent="input-search"
               @onChange={{fn this.setFilterValue "ns"}}
-              @placeholder="Filter by namespace"
+              @placeholder="Namespace within {{this.namespacePathForFilter}}"
               @displayInherit={{true}}
               class="is-marginless"
               data-test-counts-namespaces
@@ -71,7 +71,7 @@
               @disallowNewItems={{true}}
               @fallbackComponent="input-search"
               @onChange={{fn this.setFilterValue "mountPath"}}
-              @placeholder="Filter by mount path"
+              @placeholder="Mount path within {{this.namespacePathForFilter}}"
               @displayInherit={{true}}
               data-test-counts-auth-mounts
             />
