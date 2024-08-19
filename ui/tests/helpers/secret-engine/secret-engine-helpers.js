@@ -48,11 +48,13 @@ const createAwsLeaseConfig = (store, backend) => {
 };
 
 const createSshCaConfig = (store, backend) => {
+  // consider this model a placeholder for the actual ssh/ca-config model that has been generated with data. isNew is false.
   store.pushPayload('ssh/ca-config', {
     id: backend,
     modelName: 'ssh/ca-config',
     data: {
       backend,
+      public_key: '123456',
       generate_signing_key: true,
     },
   });
