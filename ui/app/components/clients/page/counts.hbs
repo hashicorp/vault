@@ -35,7 +35,7 @@
       </Hds::Alert>
     {{/if}}
 
-    {{#if @startTimestamp}}
+    {{#if (or @mountPath this.mountPaths)}}
       <Hds::Text::Display @tag="p">
         Filters
       </Hds::Text::Display>
