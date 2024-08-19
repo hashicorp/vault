@@ -43,8 +43,11 @@ export default class SecretsBackendConfigurationEdit extends Route {
       // and pre-set with the type and backend (e.g. type: ssh, id: ssh-123)
       const model: Record<string, unknown> = { type, id: backend };
       for (const adapterPath of CONFIG_ADAPTERS_PATHS[type] as string[]) {
+        // convert the adapterPath with a name that can be passed to the components
+        // ex: adapterPath = ssh/ca-config, convert to: ssh-ca-config so that you can pass to component @model={{this.model.ssh-ca-config}}
+        const standardizedKey = adapterPath.replace(/\//g, '-');
         try {
-          model[adapterPath] = await this.store.queryRecord(adapterPath, {
+          model[standardizedKey] = await this.store.queryRecord(adapterPath, {
             backend,
             type,
           });
@@ -56,7 +59,7 @@ export default class SecretsBackendConfigurationEdit extends Route {
             e.httpStatus === 404 ||
             (type === 'ssh' && e.httpStatus === 400 && errorMessage(e) === `keys haven't been configured yet`)
           ) {
-            model[adapterPath] = await this.store.createRecord(adapterPath, {
+            model[standardizedKey] = await this.store.createRecord(adapterPath, {
               backend,
               type,
             });
@@ -65,11 +68,6 @@ export default class SecretsBackendConfigurationEdit extends Route {
           }
         }
       }
-      // convert the adapterPath with a name that can be passed to the components
-      // ex: adapterPath = ssh/ca-config, convert to: ssh-ca-config so that you can pass to component @model={{this.model.ssh-ca-config}}
-      for (const key in model) {
-        this.standardizeModelName(key, model);
-      }
       return model;
     } else {
       // TODO for now AWS configs rely on the secret-engine model and adapter. This will be refactored.
@@ -77,14 +75,6 @@ export default class SecretsBackendConfigurationEdit extends Route {
     }
   }
 
-  standardizeModelName(key: string, model: Record<string, unknown>) {
-    if (key !== 'type' && key !== 'id') {
-      // type and id are properties on the model that do not need to be standardized
-      const newKey = key.replace(/\//g, '-');
-      model[newKey] = model[key] as object | null;
-      delete model[key];
-    }
-  }
   // TODO everything below line will be removed once we handle AWS. This is the old code wrapped in AWS conditionals when appropriate.
   afterModel(model: Record<string, unknown>) {
     const type = model.type;
@@ -113,7 +103,6 @@ export default class SecretsBackendConfigurationEdit extends Route {
 
   @action
   willTransition() {
-    // When editing a configuration we sometimes stay on the current route after saving/destroying the model.
     // catch the transition and refresh model so the route shows the most recent model data.
     this.refresh();
   }

@@ -87,13 +87,12 @@ export default class ConfigureSshComponent extends Component<Args> {
     this.invalidFormAlert = null;
   }
 
-  transition(isCancel = false) {
-    // onCancel is the only case in which we transition to the parent route.
-    // If we're creating or editing the configuration we stay on the configuration page to view the new public key.
-    if (isCancel) {
-      this.router.transitionTo('vault.cluster.secrets.backend.configuration', this.args.id);
-    } else {
+  transition(isDelete = false) {
+    // deleting a key is the only case in which we want to stay on the create/edit page.
+    if (isDelete) {
       this.router.transitionTo('vault.cluster.secrets.backend.configuration.edit', this.args.id);
+    } else {
+      this.router.transitionTo('vault.cluster.secrets.backend.configuration', this.args.id);
     }
   }
 
@@ -101,7 +100,7 @@ export default class ConfigureSshComponent extends Component<Args> {
   onCancel() {
     // clear errors because they're canceling out of the workflow.
     this.resetErrors();
-    this.transition(true);
+    this.transition();
   }
 
   @action
@@ -109,7 +108,7 @@ export default class ConfigureSshComponent extends Component<Args> {
     const { model } = this.args;
     try {
       await model.destroyRecord();
-      this.transition();
+      this.transition(true);
       this.flashMessages.success('CA information deleted successfully.');
     } catch (error) {
       model.rollbackAttributes();

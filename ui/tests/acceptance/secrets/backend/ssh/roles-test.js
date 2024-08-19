@@ -3,7 +3,16 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, fillIn, currentURL, find, settled, waitUntil, currentRouteName } from '@ember/test-helpers';
+import {
+  click,
+  fillIn,
+  currentURL,
+  find,
+  settled,
+  waitUntil,
+  currentRouteName,
+  waitFor,
+} from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
@@ -102,8 +111,9 @@ module('Acceptance | ssh | roles', function (hooks) {
     await click(SES.configure);
     // default has generate CA checked so we just submit the form
     await click(SES.ssh.save);
-    await click(SES.viewBackend);
-
+    // There is a delay in the backend for the public key to be generated, wait for it to complete by checking that the public key is displayed
+    await waitFor(GENERAL.infoRowLabel('Public key'));
+    await click(GENERAL.tab(sshPath));
     for (const role of ROLES) {
       // create a role
       await click(SES.createSecret);

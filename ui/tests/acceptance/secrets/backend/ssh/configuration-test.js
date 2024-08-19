@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, fillIn, currentURL, waitFor, visit } from '@ember/test-helpers';
+import { click, fillIn, currentURL, visit, waitFor } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
@@ -66,12 +66,14 @@ module('Acceptance | ssh | configuration', function (hooks) {
     await click(SES.ssh.save);
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${sshPath}/configuration/edit`,
-      'stays on configuration form page.'
+      `/vault/secrets/${sshPath}/configuration`,
+      'navigates to the details page.'
     );
     // There is a delay in the backend for the public key to be generated, wait for it to complete by checking that the public key is displayed
-    await waitFor(GENERAL.inputByAttr('public-key'));
-    assert.dom(GENERAL.inputByAttr('public-key')).hasText('***********', 'public key is masked');
+    await waitFor(GENERAL.infoRowLabel('Public key'));
+    assert.dom(GENERAL.infoRowLabel('Public key')).exists('public key shown on the details screen');
+
+    await click(SES.configure);
     assert
       .dom(SES.ssh.editConfigSection)
       .exists('renders the edit configuration section of the form and not the create part');
@@ -86,8 +88,6 @@ module('Acceptance | ssh | configuration', function (hooks) {
     );
     assert.dom(GENERAL.maskedInput('privateKey')).hasNoText('Private key is empty and reset');
     assert.dom(GENERAL.inputByAttr('publicKey')).hasNoText('Public key is empty and reset');
-    // change in behavior after refactor. Because we refresh the model after delete, the generate signing key is checked by default.
-    // the old behavior of it not checked was a bug.
     assert.dom(GENERAL.inputByAttr('generateSigningKey')).isChecked('Generate signing key is checked');
     await click(SES.viewBackend);
     await click(SES.configTab);
