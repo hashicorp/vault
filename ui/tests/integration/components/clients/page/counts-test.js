@@ -265,9 +265,9 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
       );
   });
 
-  test('it should render empty state for no start or license start time', async function (assert) {
+  test('it should render empty state for no start when CE', async function (assert) {
+    this.owner.lookup('service:version').type = 'community';
     this.startTimestamp = null;
-    this.config.billingStartTimestamp = null;
     this.activity = {};
 
     await this.renderComponent();

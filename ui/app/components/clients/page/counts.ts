@@ -115,7 +115,7 @@ export default class ClientsCountsPageComponent extends Component<Args> {
     const { activity } = this.args;
     const nsPath = this.namespacePathForFilter;
     // we always return activity for namespace, either the selected filter or the current
-    return activity.byNamespace.find((ns) => sanitizePath(ns.label) === nsPath);
+    return activity?.byNamespace?.find((ns) => sanitizePath(ns.label) === nsPath);
   }
 
   // duplicate of the method found in the activity component, so that we render the child only when there is activity to view
