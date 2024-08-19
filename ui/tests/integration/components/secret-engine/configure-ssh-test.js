@@ -5,94 +5,145 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { render, click } from '@ember/test-helpers';
+import { render, click, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 import { createConfig } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
+import { setupMirage } from 'ember-cli-mirage/test-support';
 import sinon from 'sinon';
 
 module('Integration | Component | SecretEngine/configure-ssh', function (hooks) {
   setupRenderingTest(hooks);
+  setupMirage(hooks);
 
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
-    this.model = createConfig(this.store, 'ssh-test', 'ssh');
-    this.saveConfig = sinon.stub();
+    const router = this.owner.lookup('service:router');
+    this.id = 'ssh-test';
+    this.model = this.store.createRecord('ssh/ca-config', { backend: this.id });
+    this.transitionStub = sinon.stub(router, 'transitionTo');
+    this.refreshStub = sinon.stub(router, 'refresh');
   });
 
   test('it shows create fields if not configured', async function (assert) {
     await render(hbs`
       <SecretEngine::ConfigureSsh
     @model={{this.model}}
-    @configured={{false}}
-    @saveConfig={{this.saveConfig}}
-    @loading={{false}}
+    @id={{this.id}}
   />
     `);
     assert.dom(GENERAL.maskedInput('privateKey')).hasNoText('Private key is empty and reset');
     assert.dom(GENERAL.inputByAttr('publicKey')).hasNoText('Public key is empty and reset');
     assert
-      .dom(GENERAL.inputByAttr('generate-signing-key-checkbox'))
+      .dom(GENERAL.inputByAttr('generateSigningKey'))
       .isChecked('Generate signing key is checked by default');
   });
 
-  test('it calls save with correct arg', async function (assert) {
+  test('it should go back to parent route on cancel', async function (assert) {
     await render(hbs`
       <SecretEngine::ConfigureSsh
     @model={{this.model}}
-    @configured={{false}}
-    @saveConfig={{this.saveConfig}}
-    @loading={{false}}
+    @id={{this.id}}
   />
     `);
+
+    await click(SES.ssh.cancel);
+
+    assert.true(
+      this.transitionStub.calledWith('vault.cluster.secrets.backend.configuration', 'ssh-test'),
+      'On cancel the router transitions to the parent configuration index route.'
+    );
+  });
+
+  test('it should validate form fields', async function (assert) {
+    await render(hbs`
+      <SecretEngine::ConfigureSsh
+    @model={{this.model}}
+    @id={{this.id}}
+  />
+    `);
+    await fillIn(GENERAL.inputByAttr('publicKey'), 'hello');
     await click(SES.ssh.save);
-    assert.ok(
-      this.saveConfig.withArgs({ delete: false }).calledOnce,
-      'calls the saveConfig action with args delete:false'
-    );
+    assert
+      .dom(GENERAL.inlineError)
+      .hasText(
+        'You must provide a Public and Private keys or leave both unset.',
+        'Public key validation error renders.'
+      );
+
+    await click(GENERAL.inputByAttr('generateSigningKey'));
+    await click(SES.ssh.save);
+    assert
+      .dom(GENERAL.inlineError)
+      .hasText(
+        'You must provide a Public and Private keys or leave both unset.',
+        'Generate signing key validation message shows.'
+      );
   });
 
-  test('it shows masked key if model is not new', async function (assert) {
-    // replace model with model that has public_key
-    this.model = {
-      publicKey:
-        'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC3lCZ7W2eJZ9W9qzv7K9GJ5qJYQ2cY6C+5Kv8Jtjz8h6wqZJ9U9K1lJ9Z6zq4sX0f7Q5X2l8L4gTt2+2ZKpVv6g1KQ6JG5H4QbVrQq2r4FzZQ2B0Y8q5c7q3Y5X6q4Q6',
-    };
+  test('it should generate signing key', async function (assert) {
+    assert.expect(2);
+    this.server.post('/ssh-test/config/ca', (schema, req) => {
+      const data = JSON.parse(req.requestBody);
+      const expected = {
+        backend: this.id,
+        generate_signing_key: true,
+      };
+      assert.deepEqual(expected, data, 'POST request made to save ca-config with correct properties');
+    });
     await render(hbs`
       <SecretEngine::ConfigureSsh
     @model={{this.model}}
-    @configured={{true}}
-    @saveConfig={{this.saveConfig}}
-    @loading={{false}}
+    @id={{this.id}}
   />
     `);
-    assert
-      .dom(SES.ssh.editConfigSection)
-      .exists('renders the edit configuration section of the form and not the create part');
-    assert.dom(GENERAL.inputByAttr('public-key')).hasText('***********', 'public key is masked');
-    await click('[data-test-button="toggle-masked"]');
-    assert
-      .dom(GENERAL.inputByAttr('public-key'))
-      .hasText(this.model.publicKey, 'public key is unmasked and shows the actual value');
+
+    await click(SES.ssh.save);
+    assert.dom(SES.ssh.editConfigSection).exists('renders the edit configuration section of the form');
   });
 
-  test('it calls delete correctly', async function (assert) {
-    await render(hbs`
+  module('editing', function (hooks) {
+    hooks.beforeEach(function () {
+      this.editId = 'ssh-edit-me';
+      this.editModel = createConfig(this.store, 'ssh-edit-me', 'ssh');
+    });
+    test('it populates fields when editing', async function (assert) {
+      await render(hbs`
       <SecretEngine::ConfigureSsh
-    @model={{this.model}}
-    @configured={{true}}
-    @saveConfig={{this.saveConfig}}
-    @loading={{false}}
+    @model={{this.editModel}}
+    @id={{this.editId}}
   />
     `);
-    // delete Public key
-    await click(SES.ssh.deletePublicKey);
-    assert.dom(GENERAL.confirmMessage).hasText('This will remove the CA certificate information.');
-    await click(GENERAL.confirmButton);
-    assert.ok(
-      this.saveConfig.withArgs({ delete: true }).calledOnce,
-      'calls the saveConfig action with args delete:true'
-    );
+      assert
+        .dom(SES.ssh.editConfigSection)
+        .exists('renders the edit configuration section of the form and not the create part');
+      assert.dom(GENERAL.inputByAttr('public-key')).hasText('***********', 'public key is masked');
+      await click('[data-test-button="toggle-masked"]');
+      assert
+        .dom(GENERAL.inputByAttr('public-key'))
+        .hasText(this.editModel.publicKey, 'public key is unmasked and shows the actual value');
+    });
+
+    test('it allows you to delete a public key', async function (assert) {
+      assert.expect(3);
+      this.server.delete('/ssh-edit-me/config/ca', () => {
+        assert.true(true, 'DELETE request made to ca-config with correct properties');
+      });
+      await render(hbs`
+      <SecretEngine::ConfigureSsh
+    @model={{this.editModel}}
+    @id={{this.editId}}
+  />
+    `);
+      // delete Public key
+      await click(SES.ssh.delete);
+      assert.dom(GENERAL.confirmMessage).hasText('Confirming will remove the CA certificate information.');
+      await click(GENERAL.confirmButton);
+      assert.true(
+        this.transitionStub.calledWith('vault.cluster.secrets.backend.configuration.edit', 'ssh-edit-me'),
+        'On delete the router transitions to the current route.'
+      );
+    });
   });
 });

@@ -32,8 +32,9 @@ export const SECRET_ENGINE_SELECTORS = {
   ssh: {
     configureForm: '[data-test-configure-form]',
     editConfigSection: '[data-test-edit-config-section]',
-    deletePublicKey: '[data-test-delete-public-key]',
     save: '[data-test-configure-save-button]',
+    cancel: '[data-test-cancel-button]',
+    delete: '[data-test-delete-public-key]',
     createRole: '[data-test-role-ssh-create]',
     deleteRole: '[data-test-ssh-role-delete]',
   },
