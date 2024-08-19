@@ -9,7 +9,7 @@
     <MessageError @errorMessage={{this.errorMessage}} />
     {{#unless @model.isNew}}
       <p class="has-text-grey-dark">
-        Note: If you have already set a certificate and key, you'll need to delete it before saving new values.
+        NOTE: You must delete your existing certificate and key before saving new values.
       </p>
     {{/unless}}
   </div>
@@ -70,15 +70,13 @@
         <Hds::Copy::Button
           @text="Copy"
           @textToCopy={{@model.publicKey}}
-          @onError={{(fn
-            (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")
-          )}}
+          @onError={{fn (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")}}
           class="primary"
         />
         <ConfirmAction
           @buttonText="Delete"
           @buttonColor="secondary"
-          @confirmMessage="This will remove the CA certificate information."
+          @confirmMessage="Confirming will remove the CA certificate information."
           @onConfirmAction={{this.deleteCaConfig}}
           data-test-delete-public-key
         />

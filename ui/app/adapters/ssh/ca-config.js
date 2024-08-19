@@ -22,10 +22,12 @@ export default class SshCaConfig extends ApplicationAdapter {
     const serializer = store.serializerFor(type.modelName);
     const data = serializer.serialize(snapshot);
     const backend = snapshot.record.backend;
-    data.id = backend;
-    return this.ajax(`${this.buildURL()}/${backend}/config/ca`, 'POST', { data }).then(() => {
+    return this.ajax(`${this.buildURL()}/${backend}/config/ca`, 'POST', { data }).then((resp) => {
       // ember data requires an id on the response
-      return data;
+      return {
+        ...resp,
+        id: backend,
+      };
     });
   }
 

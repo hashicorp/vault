@@ -77,7 +77,7 @@ module('Acceptance | ssh | configuration', function (hooks) {
       .exists('renders the edit configuration section of the form and not the create part');
     // delete Public key
     await click(SES.ssh.delete);
-    assert.dom(GENERAL.confirmMessage).hasText('This will remove the CA certificate information.');
+    assert.dom(GENERAL.confirmMessage).hasText('Confirming will remove the CA certificate information.');
     await click(GENERAL.confirmButton);
     assert.strictEqual(
       currentURL(),
@@ -108,10 +108,10 @@ module('Acceptance | ssh | configuration', function (hooks) {
     await click(SES.ssh.save);
     assert
       .dom(GENERAL.inlineError)
-      .hasText('Public Key and Private Key are both required if Generate Signing Key is false.');
+      .hasText('Provide a Public and Private key or set "Generate Signing Key" to true.');
     // visit the details page and confirm the public key is not shown
     await visit(`/vault/secrets/${path}/configuration`);
-    assert.dom(GENERAL.infoRowLabel('Public key')).doesNotExist('Public Key label does not exist');
+    assert.dom(GENERAL.infoRowLabel('Public key')).doesNotExist('Public key label does not exist');
     assert.dom(GENERAL.emptyStateTitle).hasText('SSH not configured', 'SSH not configured');
     // cleanup
     await runCmd(`delete sys/mounts/${path}`);

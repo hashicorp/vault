@@ -87,11 +87,6 @@ export default ApplicationAdapter.extend({
     }
   },
 
-  findRecord() {
-    // TODO remove once AWS refactor is complete
-    return { data: {} };
-  },
-
   queryRecord(store, type, query) {
     if (query.type === 'aws') {
       return this.ajax(`/v1/${encodePath(query.backend)}/config/lease`, 'GET').then((resp) => {

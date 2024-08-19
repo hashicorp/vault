@@ -8,26 +8,27 @@ import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { withModelValidations } from 'vault/decorators/model-validations';
 
 const validations = {
-  publicKey: [
-    {
-      validator(model) {
-        const { publicKey, privateKey, generateSigningKey } = model;
-        // if generateSigningKey is false, use the second validation to check if both public and private keys are set
-        return (publicKey && privateKey) || (!publicKey && !privateKey) || !generateSigningKey ? true : false;
-      },
-      message: 'Public Key and Private Key are both required if one of them is set.',
-    },
-  ],
   generateSigningKey: [
     {
       validator(model) {
         const { publicKey, privateKey, generateSigningKey } = model;
+        // if generateSigningKey is false, both public and private keys are required
         if (!generateSigningKey && (!publicKey || !privateKey)) {
           return false;
         }
         return true;
       },
-      message: 'Public Key and Private Key are both required if Generate Signing Key is false.',
+      message: 'Provide a Public and Private key or set "Generate Signing Key" to true.',
+    },
+  ],
+  publicKey: [
+    {
+      validator(model) {
+        const { publicKey, privateKey } = model;
+        // regardless of generateSigningKey, if one key is set they both need to be set.
+        return publicKey || privateKey ? publicKey && privateKey : true;
+      },
+      message: 'You must provide a Public and Private keys or leave both unset.',
     },
   ],
 };

@@ -68,7 +68,7 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
     assert
       .dom(GENERAL.inlineError)
       .hasText(
-        'Public Key and Private Key are both required if one of them is set.',
+        'You must provide a Public and Private keys or leave both unset.',
         'Public key validation error renders.'
       );
 
@@ -77,7 +77,7 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
     assert
       .dom(GENERAL.inlineError)
       .hasText(
-        'Public Key and Private Key are both required if Generate Signing Key is false.',
+        'You must provide a Public and Private keys or leave both unset.',
         'Generate signing key validation message shows.'
       );
   });
@@ -89,7 +89,6 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
       const expected = {
         backend: this.id,
         generate_signing_key: true,
-        id: this.id,
       };
       assert.deepEqual(expected, data, 'POST request made to save ca-config with correct properties');
     });
@@ -139,7 +138,7 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
     `);
       // delete Public key
       await click(SES.ssh.delete);
-      assert.dom(GENERAL.confirmMessage).hasText('This will remove the CA certificate information.');
+      assert.dom(GENERAL.confirmMessage).hasText('Confirming will remove the CA certificate information.');
       await click(GENERAL.confirmButton);
       assert.true(
         this.transitionStub.calledWith('vault.cluster.secrets.backend.configuration.edit', 'ssh-edit-me'),
