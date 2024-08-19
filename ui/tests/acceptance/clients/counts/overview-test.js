@@ -9,20 +9,15 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import clientsHandler, { STATIC_NOW, LICENSE_START, UPGRADE_DATE } from 'vault/mirage/handlers/clients';
 import syncHandler from 'vault/mirage/handlers/sync';
 import sinon from 'sinon';
-import { visit, click, findAll, settled, fillIn } from '@ember/test-helpers';
+import { visit, click, findAll, fillIn, currentURL } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CHARTS, CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
-import { create } from 'ember-cli-page-object';
-import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import { formatNumber } from 'core/helpers/format-number';
 import timestamp from 'core/utils/timestamp';
-import ss from 'vault/tests/pages/components/search-select';
 import { runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 import { selectChoose } from 'ember-power-select/test-support';
 import { format } from 'date-fns';
-
-const searchSelect = create(ss);
 
 module('Acceptance | clients | overview', function (hooks) {
   setupApplicationTest(hooks);
@@ -31,6 +26,15 @@ module('Acceptance | clients | overview', function (hooks) {
   hooks.beforeEach(async function () {
     sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
     clientsHandler(this.server);
+    // stub secrets sync being activated
+    this.server.get('/sys/activation-flags', function () {
+      return {
+        data: {
+          activated: ['secrets-sync'],
+          unactivated: [],
+        },
+      };
+    });
     this.store = this.owner.lookup('service:store');
     await authPage.login();
     return visit('/vault/clients/counts/overview');
@@ -43,7 +47,7 @@ module('Acceptance | clients | overview', function (hooks) {
     assert
       .dom(CLIENT_COUNT.dateRange.dateDisplay('end'))
       .hasText('January 2024', 'billing start month is correctly parsed from license');
-    assert.dom(CLIENT_COUNT.attributionBlock).exists('Shows attribution area');
+    assert.dom(CLIENT_COUNT.attributionBlock()).exists({ count: 2 });
     assert
       .dom(CHARTS.container('Vault client counts'))
       .exists('Shows running totals with monthly breakdown charts');
@@ -68,7 +72,7 @@ module('Acceptance | clients | overview', function (hooks) {
     assert
       .dom(CHARTS.container('Vault client counts'))
       .doesNotExist('running total month over month charts do not show');
-    assert.dom(CLIENT_COUNT.attributionBlock).exists({ count: 2 });
+    assert.dom(CLIENT_COUNT.attributionBlock()).exists({ count: 2 });
     assert.dom(CHARTS.container('namespace')).exists('namespace attribution chart shows');
     assert.dom(CHARTS.container('mount')).exists('mount attribution chart shows');
 
@@ -82,7 +86,7 @@ module('Acceptance | clients | overview', function (hooks) {
     await fillIn(CLIENT_COUNT.dateRange.editDate('start'), upgradeMonth);
     await click(GENERAL.saveButton);
 
-    assert.dom(CLIENT_COUNT.attributionBlock).exists('Shows attribution area');
+    assert.dom(CLIENT_COUNT.attributionBlock()).exists({ count: 2 });
     assert
       .dom(CHARTS.container('Vault client counts'))
       .exists('Shows running totals with monthly breakdown charts');
@@ -103,7 +107,7 @@ module('Acceptance | clients | overview', function (hooks) {
     assert
       .dom(CHARTS.container('Vault client counts'))
       .doesNotExist('running total month over month charts do not show');
-    assert.dom(CLIENT_COUNT.attributionBlock).exists('attribution area shows');
+    assert.dom(CLIENT_COUNT.attributionBlock()).exists({ count: 2 });
     assert.dom(CHARTS.container('namespace')).exists('namespace attribution chart shows');
     assert.dom(CHARTS.container('mount')).exists('mount attribution chart shows');
 
@@ -113,7 +117,7 @@ module('Acceptance | clients | overview', function (hooks) {
     await fillIn(CLIENT_COUNT.dateRange.editDate('end'), '2023-12');
     await click(GENERAL.saveButton);
 
-    assert.dom(CLIENT_COUNT.attributionBlock).exists('Shows attribution area');
+    assert.dom(CLIENT_COUNT.attributionBlock()).exists({ count: 2 });
     assert
       .dom(CHARTS.container('Vault client counts'))
       .exists('Shows running totals with monthly breakdown charts');
@@ -142,35 +146,31 @@ module('Acceptance | clients | overview', function (hooks) {
   });
 
   test('totals filter correctly with full data', async function (assert) {
-    // stub secrets sync being activated
-    this.server.get('/sys/activation-flags', function () {
-      return {
-        data: {
-          activated: ['secrets-sync'],
-          unactivated: [],
-        },
-      };
-    });
-
     assert
       .dom(CHARTS.container('Vault client counts'))
       .exists('Shows running totals with monthly breakdown charts');
-    assert.dom(CLIENT_COUNT.attributionBlock).exists('Shows attribution area');
+    assert.dom(CLIENT_COUNT.attributionBlock()).exists({ count: 2 });
 
     const response = await this.store.peekRecord('clients/activity', 'some-activity-id');
-    // FILTER BY NAMESPACE
-    await clickTrigger();
-    await searchSelect.options.objectAt(0).click();
-    await settled();
-    const topNamespace = response.byNamespace[0];
-    const topMount = topNamespace.mounts[0];
+    const topNamespace = response.byNamespace.sort((a, b) => b.clients - a.clients)[0];
+    const topMount = topNamespace?.mounts.sort((a, b) => b.clients - a.clients)[0];
 
+    assert
+      .dom(`${CLIENT_COUNT.attributionBlock('namespace')} [data-test-top-attribution]`)
+      .includesText(`Top namespace ${topNamespace.label}`);
+    // this math works because there are no nested namespaces in the mirage data
+    assert
+      .dom(`${CLIENT_COUNT.attributionBlock('namespace')} [data-test-attribution-clients] p`)
+      .includesText(`${formatNumber([topNamespace.clients])}`, 'top attribution clients accurate');
+
+    // Filter by top namespace
+    await selectChoose(CLIENT_COUNT.nsFilter, topNamespace.label);
     assert.dom(CLIENT_COUNT.selectedNs).hasText(topNamespace.label, 'selects top namespace');
     assert
-      .dom('[data-test-clients-attribution="mount"] [data-test-top-attribution]')
+      .dom(`${CLIENT_COUNT.attributionBlock('mount')} [data-test-top-attribution]`)
       .includesText('Top mount');
     assert
-      .dom('[data-test-clients-attribution="mount"] [data-test-attribution-clients] p')
+      .dom(`${CLIENT_COUNT.attributionBlock('mount')} [data-test-attribution-clients] p`)
       .includesText(`${formatNumber([topMount.clients])}`, 'top attribution clients accurate');
 
     let expectedStats = {
@@ -186,12 +186,9 @@ module('Acceptance | clients | overview', function (hooks) {
     }
 
     // FILTER BY AUTH METHOD
-    await clickTrigger();
-    await searchSelect.options.objectAt(0).click();
-    await settled();
-    assert.ok(true, 'Filter by first auth method');
+    await selectChoose(CLIENT_COUNT.mountFilter, topMount.label);
     assert.dom(CLIENT_COUNT.selectedAuthMount).hasText(topMount.label, 'selects top mount');
-    assert.dom(CLIENT_COUNT.attributionBlock).doesNotExist('Does not show attribution block');
+    assert.dom(CLIENT_COUNT.attributionBlock()).doesNotExist('Does not show attribution block');
 
     expectedStats = {
       Entity: formatNumber([topMount.entity_clients]),
@@ -205,8 +202,9 @@ module('Acceptance | clients | overview', function (hooks) {
         .includesText(`${expectedStats[label]}`, `label: "${label} "renders accurate mount client counts`);
     }
 
+    // Remove namespace filter without first removing auth method filter
     await click(GENERAL.searchSelect.removeSelected);
-    assert.ok(true, 'Remove namespace filter without first removing auth method filter');
+    assert.strictEqual(currentURL(), '/vault/clients/counts/overview', 'removes both query params');
     assert.dom('[data-test-top-attribution]').includesText('Top namespace');
     assert
       .dom('[data-test-attribution-clients]')

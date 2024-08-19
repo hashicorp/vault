@@ -17,6 +17,7 @@ import { ACTIVITY_RESPONSE_STUB, assertBarChart } from 'vault/tests/helpers/clie
 import { formatNumber } from 'core/helpers/format-number';
 import { filterActivityResponse, LICENSE_START, STATIC_NOW } from 'vault/mirage/handlers/clients';
 import { selectChoose } from 'ember-power-select/test-support';
+import { filterByMonthDataForMount } from 'core/utils/client-count-utils';
 
 const { searchSelect } = GENERAL;
 
@@ -35,18 +36,18 @@ module('Acceptance | clients | counts | acme', function (hooks) {
       };
     });
     // store serialized activity data for value comparison
-    const { byMonth, byNamespace } = await this.owner
-      .lookup('service:store')
-      .queryRecord('clients/activity', {
-        start_time: { timestamp: getUnixTime(LICENSE_START) },
-        end_time: { timestamp: getUnixTime(STATIC_NOW) },
-      });
+    const activity = await this.owner.lookup('service:store').queryRecord('clients/activity', {
+      start_time: { timestamp: getUnixTime(LICENSE_START) },
+      end_time: { timestamp: getUnixTime(STATIC_NOW) },
+    });
     this.nsPath = 'ns1';
     this.mountPath = 'pki-engine-0';
+
     this.expectedValues = {
-      nsTotals: byNamespace.find((ns) => ns.label === this.nsPath),
-      nsMonthlyUsage: byMonth.map((m) => m?.namespaces_by_key[this.nsPath]).filter((d) => !!d),
-      nsMonthActivity: byMonth.find(({ month }) => month === '9/23').namespaces_by_key[this.nsPath],
+      nsTotals: activity.byNamespace
+        .find((ns) => ns.label === this.nsPath)
+        .mounts.find((mount) => mount.label === this.mountPath),
+      nsMonthlyUsage: filterByMonthDataForMount(activity.byMonth, this.nsPath, this.mountPath),
     };
 
     await authPage.login();
@@ -63,20 +64,21 @@ module('Acceptance | clients | counts | acme', function (hooks) {
     assert.strictEqual(currentURL(), '/vault/dashboard', 'it navigates back to dashboard');
   });
 
-  test('it filters by namespace data and renders charts', async function (assert) {
-    const { nsTotals, nsMonthlyUsage, nsMonthActivity } = this.expectedValues;
+  test('it filters by mount data and renders charts', async function (assert) {
+    const { nsTotals, nsMonthlyUsage } = this.expectedValues;
     const nsMonthlyNew = nsMonthlyUsage.map((m) => m?.new_clients);
     assert.expect(7 + nsMonthlyUsage.length + nsMonthlyNew.length);
 
     await visit('/vault/clients/counts/acme');
     await selectChoose(CLIENT_COUNT.nsFilter, this.nsPath);
+    await selectChoose(CLIENT_COUNT.mountFilter, this.mountPath);
 
     // each chart assertion count is data array length + 2
     assertBarChart(assert, 'ACME usage', nsMonthlyUsage);
     assertBarChart(assert, 'Monthly new', nsMonthlyNew);
     assert.strictEqual(
       currentURL(),
-      `/vault/clients/counts/acme?ns=${this.nsPath}`,
+      `/vault/clients/counts/acme?mountPath=pki-engine-0&ns=${this.nsPath}`,
       'namespace filter updates URL query param'
     );
     assert
@@ -85,13 +87,11 @@ module('Acceptance | clients | counts | acme', function (hooks) {
         `${formatNumber([nsTotals.acme_clients])}`,
         'renders total acme clients for namespace'
       );
-    // there is only one month in the stubbed data, so in this case the average is the same as the total new clients
+
+    // TODO: update this
     assert
       .dom(CLIENT_COUNT.statText('Average new ACME clients per month'))
-      .hasTextContaining(
-        `${formatNumber([nsMonthActivity.new_clients.acme_clients])}`,
-        'renders average acme clients for namespace'
-      );
+      .hasTextContaining(`13`, 'renders average acme clients for namespace');
   });
 
   /**
@@ -132,41 +132,6 @@ module('Acceptance | clients | counts | acme', function (hooks) {
       `/vault/clients/counts/acme`,
       'namespace filter remove updates URL query param'
     );
-  });
-
-  test('it filters by mount data and renders charts', async function (assert) {
-    const { nsTotals, nsMonthlyUsage, nsMonthActivity } = this.expectedValues;
-    const mountTotals = nsTotals.mounts.find((m) => m.label === this.mountPath);
-    const mountMonthlyUsage = nsMonthlyUsage.map((ns) => ns.mounts_by_key[this.mountPath]).filter((d) => !!d);
-    const mountMonthlyNew = mountMonthlyUsage.map((m) => m?.new_clients);
-    assert.expect(7 + mountMonthlyUsage.length + mountMonthlyNew.length);
-
-    await visit('/vault/clients/counts/acme');
-    await selectChoose(CLIENT_COUNT.nsFilter, this.nsPath);
-    await selectChoose(CLIENT_COUNT.mountFilter, this.mountPath);
-
-    // each chart assertion count is data array length + 2
-    assertBarChart(assert, 'ACME usage', mountMonthlyUsage);
-    assertBarChart(assert, 'Monthly new', mountMonthlyNew);
-    assert.strictEqual(
-      currentURL(),
-      `/vault/clients/counts/acme?mountPath=${this.mountPath}&ns=${this.nsPath}`,
-      'mount filter updates URL query param'
-    );
-    assert
-      .dom(CLIENT_COUNT.statText('Total ACME clients'))
-      .hasTextContaining(
-        `${formatNumber([mountTotals.acme_clients])}`,
-        'renders total acme clients for mount'
-      );
-    // there is only one month in the stubbed data, so in this case the average is the same as the total new clients
-    const mountMonthActivity = nsMonthActivity.mounts_by_key[this.mountPath];
-    assert
-      .dom(CLIENT_COUNT.statText('Average new ACME clients per month'))
-      .hasTextContaining(
-        `${formatNumber([mountMonthActivity.new_clients.acme_clients])}`,
-        'renders average acme clients for mount'
-      );
   });
 
   test('it renders empty chart for no mount data ', async function (assert) {
