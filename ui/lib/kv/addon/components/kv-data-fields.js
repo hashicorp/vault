@@ -28,6 +28,14 @@ import { stringify } from 'core/helpers/stringify';
 
 export default class KvDataFields extends Component {
   @tracked lintingErrors;
+  @tracked stringifiedSecretData;
+
+  constructor() {
+    super(...arguments);
+    this.stringifiedSecretData = this.args.secret?.secretData
+      ? stringify([this.args.secret.secretData], {})
+      : this.startingValue;
+  }
 
   get startingValue() {
     // must pass the third param called "space" in JSON.stringify to structure object with whitespace
@@ -37,14 +45,11 @@ export default class KvDataFields extends Component {
     return JSON.stringify({ '': '' }, null, 2);
   }
 
-  get stringifiedSecretData() {
-    return this.args.secret?.secretData ? stringify([this.args.secret.secretData], {}) : this.startingValue;
-  }
-
   @action
   handleJson(value, codemirror) {
     codemirror.performLint();
     this.lintingErrors = codemirror.state.lint.marked.length > 0;
+    this.stringifiedSecretData = value;
     if (!this.lintingErrors) {
       this.args.secret.secretData = JSON.parse(value);
     }
