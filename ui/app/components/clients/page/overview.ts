@@ -12,13 +12,16 @@ export default class ClientsOverviewPageComponent extends ActivityComponent {
   @service declare readonly flags: FlagsService;
 
   get hasAttributionData() {
-    // we only hide attribution data when we filter on mountPath
-    return !this.args.mountPath;
+    // we hide attribution data when mountPath filter present
+    // or if there's no data
+    if (this.args.mountPath || !this.totalUsageCounts.clients) return false;
+    return true;
   }
 
+  // mounts attribution
   get namespaceMountAttribution() {
     const { activity } = this.args;
     const nsLabel = this.namespacePathForFilter;
-    return activity.byNamespace?.find((ns) => sanitizePath(ns.label) === nsLabel)?.mounts;
+    return activity?.byNamespace?.find((ns) => sanitizePath(ns.label) === nsLabel)?.mounts || [];
   }
 }
