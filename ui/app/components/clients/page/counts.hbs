@@ -60,6 +60,7 @@
               class="is-marginless"
               data-test-counts-namespaces
             />
+            <div class="has-left-margin-xs"></div>
           {{/if}}
           {{#if (or @mountPath this.mountPaths)}}
             <SearchSelect
@@ -79,7 +80,7 @@
       </Toolbar>
     {{/if}}
 
-    {{#if this.filteredActivity}}
+    {{#if this.totalUsageCounts}}
       {{#if this.upgradeExplanations}}
         <Hds::Alert data-test-clients-upgrade-warning @type="inline" @color="warning" class="has-bottom-margin-m" as |A|>
           <A.Title>
