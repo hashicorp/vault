@@ -2,7 +2,6 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: BUSL-1.1
 
-
 set -e
 
 retry() {
@@ -28,51 +27,72 @@ fail() {
   exit 1
 }
 
-export VAULT_ADDR=http://localhost:8200
+[[ -z "$VAULT_ADDR" ]] && fail "VAULT_ADDR env variable has not been set"
 [[ -z "$VAULT_TOKEN" ]] && fail "VAULT_TOKEN env variable has not been set"
 
 binpath=${VAULT_INSTALL_DIR}/vault
-
 test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 
-function enable_debugging() {
-        echo "Turning debugging on.."
-        export PS4='+(${BASH_SOURCE}:${LINENO})> ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
-        set -x
+enable_debugging() {
+  echo "Turning debugging on.."
+  export PS4='+(${BASH_SOURCE}:${LINENO})> ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
+  set -x
+}
+
+get_billing_start_date() {
+  "$binpath" read -format=json sys/internal/counters/config  | jq -r ".data.billing_start_timestamp"
+}
+
+get_target_platform() {
+  uname -s
+}
+
+# Given the date as ARGV 1, return 1 year as a unix date
+verify_date_is_in_current_year() {
+  local billing_start_unix
+  local one_year_ago_unix
+
+  # Verify if the billing start date is in the latest billing year
+  case $(get_target_platform) in
+    Linux)
+      billing_start_unix=$(TZ=UTC date -d "$1" +'%s')    # For "now", use $(date +'%s')
+      one_year_ago_unix=$(TZ=UTC date -d "1 year ago" +'%s')
+    ;;
+    Darwin)
+      one_year_ago_unix=$(TZ=UTC date -v -1y +'%s')
+      billing_start_unix=$(TZ=UTC date -j -f "%Y-%m-%dT%H:%M:%SZ" "${1}" +'%s' )
+    ;;
+    *)
+      fail "Unsupported target host operating system: $(get_target_platform)" 1>&2
+    ;;
+  esac
+
+  if [ "$billing_start_unix" -gt "$one_year_ago_unix" ]; then
+    echo "Billing start date $1 has successfully rolled over to current year."
+    exit 0
+  else
+    local vault_ps
+    vault_ps=$(pgrep vault | xargs)
+    echo "On version $version, pid $vault_ps, addr $VAULT_ADDR, Billing start date $1 did not roll over to current year" 1>&2
+  fi
+}
+
+verify_billing_start_date() {
+  local billing_start
+  billing_start=$(get_billing_start_date)
+
+  if verify_date_is_in_current_year "$billing_start"; then
+    return 0
+  fi
+
+  local version
+  local vault_ps
+  version=$("$binpath" status -format=json | jq .version)
+  vault_ps=$(pgrep vault | xargs)
+  echo "On version $version, pid $vault_ps, addr $VAULT_ADDR, Billing start date $billing_start did not roll over to current year" 1>&2
+  return 1
 }
 
 enable_debugging
-
-verify_billing_start_date() {
-  # get the version of vault
-  version=$("$binpath" status -format=json | jq .version)
-
-  # Get the billing start date 
-  billing_start_time=$(retry 5 "$binpath" read -format=json sys/internal/counters/config  | jq -r ".data.billing_start_timestamp")
-
-  # Verify if the billing start date is in the latest billing year
-
-  # macOS
-  if date -v -1y > /dev/null 2>&1; then
-    oneYearAgoUnix=$(TZ=UTC date -v -1y +'%s')
-    billingStartUnix=$(TZ=UTC date -j -f "%Y-%m-%dT%H:%M:%SZ" "${billing_start_time}" +'%s' )
-  else
-  # linux and unix systems
-    timeago='1 year ago'
-    billingStartUnix=$(TZ=UTC date -d "$billing_start_time" +'%s')    # For "now", use $(date +'%s')
-    oneYearAgoUnix=$(TZ=UTC date -d "$timeago" +'%s')
-  fi
-
-  version=$("$binpath" status -format=json | jq .version)
-  vault_ps=$(pgrep vault | xargs)
-  #fail "Vault ADDR: $VAULT_ADDR, Vault version: $version, Vault process: $vault_ps, Billing start date: $billing_start_time"
-
-  if [ "$billingStartUnix" -gt "$oneYearAgoUnix" ]; then
-      echo "Billing start date $billing_start_time has successfully rolled over to current year."
-      exit 0
-  else
-        fail "On version $version, pid $vault_ps, addr $VAULT_ADDR, Billing start date $billing_start_time did not roll over to current year"
-  fi
-}
 
 retry 10 verify_billing_start_date
