@@ -450,9 +450,10 @@ Once you confirm the removal succeeded, you can delete the pod.
 
 <Warning title="Delete nodes to avoid unnecessary leader elections">
 
-Removing a pod without deleting the node from its cluster first means that the
-number of nodes Raft
-will be unaware of the correct number of nodes in the cluster. This can trigger a leader election, potentially causing downtime.
+Removing a pod without first deleting the node from its cluster means that
+Raft will be aware of the correct number of nodes in the cluster. Not knowing
+the correct number of nodes can trigger a leader election, which can potentially
+cause unneeded downtime.
 
 </Warning>
 
