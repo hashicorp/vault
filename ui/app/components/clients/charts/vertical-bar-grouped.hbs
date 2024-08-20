@@ -39,18 +39,21 @@
           />
         {{/if}}
 
-        <Lineal::VBars
-          @data={{this.chartData}}
-          @x="timestamp"
-          @y="counts"
-          @width={{this.barWidth}}
-          @xScale={{xScale}}
-          @yScale={{yScale}}
-          @color="clientType"
-          @colorScale="blue-bar"
-          transform="translate({{this.barOffset xScale.bandwidth}},0)"
-          data-test-vertical-bar
-        />
+        {{#each @chartLegend as |legend idx|}}
+          <Lineal::Bars
+            @data={{@data}}
+            @x="timestamp"
+            @y={{legend.key}}
+            @height={{legend.key}}
+            @width={{this.barWidth}}
+            @xScale={{xScale}}
+            @yScale={{yScale}}
+            @heightScale={{hScale}}
+            class="lineal-chart-bar blue-bar-{{idx}}"
+            transform="translate({{this.barOffset xScale.bandwidth idx}},0)"
+            data-test-vertical-bar
+          />
+        {{/each}}
 
         {{! TOOLTIP target rectangles }}
         {{#if (and xScale.isValid yScale.isValid)}}

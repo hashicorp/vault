@@ -30,18 +30,16 @@ interface AggregatedDatum {
   legendY: string[];
 }
 
-interface DatumBase {
+type ChartDatum = {
   timestamp: string;
   clientType: string;
-}
-// separated because "A mapped type may not declare properties or methods."
-type ChartDatum = DatumBase & {
+} & {
   [key in ClientTypes]?: number | undefined;
 };
 
 /**
  * @module VerticalBarGrouped
- * Renders a stacked bar chart of counts for different client types over time. Which client types render
+ * Renders a grouped bar chart of counts for different client types over time. Which client types render
  * is mapped from the "key" values of the @legend arg
  *
  * @example
@@ -101,17 +99,20 @@ export default class VerticalBarGrouped extends Component<Args> {
       const values = this.dataKeys
         .map((k: string) => datum[k as ClientTypes])
         .filter((count) => Number.isInteger(count));
-      const sum = values.length ? values.reduce((sum, currentValue) => sum + currentValue, 0) : null;
+      const maximum = values.length
+        ? values.reduce((prev, currentValue) => (prev > currentValue ? prev : currentValue), 0)
+        : null;
       const xValue = datum.timestamp;
-      return {
+      const legend = {
         x: xValue,
-        y: sum ?? 0, // y-axis point where tooltip renders
+        y: maximum ?? 0, // y-axis point where tooltip renders
         legendX: parseAPITimestamp(xValue, 'MMMM yyyy') as string,
         legendY:
-          sum === null
+          maximum === null
             ? ['No data']
             : this.dataKeys.map((k) => `${formatNumber([datum[k]])} ${this.label(k)}`),
       };
+      return legend;
     });
   }
 
@@ -125,12 +126,16 @@ export default class VerticalBarGrouped extends Component<Args> {
   }
 
   get xBounds() {
-    const domain = this.chartData.map((d) => d.timestamp);
+    const domain = this.args.data.map((d) => d.timestamp);
     return new Set(domain);
   }
 
   // TEMPLATE HELPERS
-  barOffset = (bandwidth: number) => (bandwidth - this.barWidth) / 2;
+  barOffset = (bandwidth: number, idx = 0) => {
+    const withPadding = this.barWidth + 4;
+    const moved = (bandwidth - withPadding * this.args.chartLegend.length) / 2;
+    return moved + idx * withPadding;
+  };
 
   tooltipX = (original: number, bandwidth: number) => (original + bandwidth / 2).toString();
 
@@ -140,12 +145,3 @@ export default class VerticalBarGrouped extends Component<Args> {
 
   formatTicksY = (num: number): string => numericalAxisLabel(num) || num.toString();
 }
-
-// TEMPLATE HELPERS
-// barOffset = (bandwidth: number, idx = 0) => {
-//   const og = (bandwidth - this.barWidth) / 2;
-//   const withPadding = this.barWidth + 4;
-//   const moved = (bandwidth - withPadding * this.args.chartLegend.length) / 2;
-//   console.log('bar offset', idx, moved, withPadding, moved + idx * withPadding);
-//   return moved + idx * withPadding;
-// };
