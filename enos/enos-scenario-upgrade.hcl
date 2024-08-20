@@ -693,7 +693,7 @@ scenario "upgrade" {
 
   step "verify_billing_start_date" {
     description = global.description.verify_billing_start_date
-    skip_step   = matrix.edition == "ce"
+    skip_step   = semverconstraint(var.vault_product_version, "<=1.16.6-0 || >=1.17.0-0 <=1.17.2-0")
     module      = module.vault_verify_billing_start_date
     depends_on = [
       step.get_updated_vault_cluster_ips,

@@ -38,15 +38,6 @@ variable "vault_root_token" {
   description = "The vault root token"
 }
 
-locals {
-  instances = {
-    for idx in range(var.vault_instance_count) : idx => {
-      public_ip  = values(var.hosts)[idx].public_ip
-      private_ip = values(var.hosts)[idx].private_ip
-    }
-  }
-}
-
 resource "enos_remote_exec" "vault_verify_billing_start_date" {
   for_each = var.hosts
 
