@@ -24,7 +24,7 @@ const createAwsRootConfig = (store, backend) => {
     id: backend,
     modelName: 'aws/root-config',
     data: {
-      backend,
+      backend: backend,
       region: 'us-west-2',
       access_key: '123-key',
       iam_endpoint: 'iam-endpoint',
@@ -48,13 +48,12 @@ const createAwsLeaseConfig = (store, backend) => {
 };
 
 const createSshCaConfig = (store, backend) => {
-  // consider this model a placeholder for the actual ssh/ca-config model that has been generated with data. isNew is false.
   store.pushPayload('ssh/ca-config', {
     id: backend,
     modelName: 'ssh/ca-config',
     data: {
-      backend,
-      public_key: '123456',
+      backend: backend,
+      public_key: 'public-key',
       generate_signing_key: true,
     },
   });
@@ -89,6 +88,10 @@ export const expectedConfigKeys = (type) => {
   switch (type) {
     case 'aws':
       return ['Access key', 'Region', 'IAM endpoint', 'STS endpoint', 'Maximum retries'];
+    case 'aws-lease':
+      return ['Default Lease TTL', 'Max Lease TTL'];
+    case 'aws-root-create':
+      return ['accessKey', 'secretKey', 'region', 'iamEndpoint', 'stsEndpoint', 'maxRetries'];
     case 'ssh':
       return ['Public key', 'Generate signing key'];
   }
@@ -130,20 +133,19 @@ export const expectedValueOfConfigKeys = (type, string) => {
 export const fillInAwsConfig = async (withAccess = true, withAccessOptions = false, withLease = false) => {
   if (withAccess) {
     await fillIn(GENERAL.inputByAttr('accessKey'), 'foo');
-    await fillIn(GENERAL.inputByAttr('secretKey'), 'bar');
+    await fillIn(GENERAL.maskedInput('secretKey'), 'bar');
   }
   if (withAccessOptions) {
     await click(GENERAL.toggleGroup('Root config options'));
-    await fillIn(GENERAL.selectByAttr('region'), 'ca-central-1');
+    await fillIn(GENERAL.inputByAttr('region'), 'ca-central-1');
     await fillIn(GENERAL.inputByAttr('iamEndpoint'), 'iam-endpoint');
     await fillIn(GENERAL.inputByAttr('stsEndpoint'), 'sts-endpoint');
     await fillIn(GENERAL.inputByAttr('maxRetries'), '3');
   }
-  await click(GENERAL.hdsTab('lease'));
   if (withLease) {
-    await click(GENERAL.ttl.toggle('Lease'));
-    await fillIn(GENERAL.ttl.input('Lease'), '33');
-    await click(GENERAL.ttl.toggle('Maximum Lease'));
-    await fillIn(GENERAL.ttl.input('Maximum Lease'), '44');
+    await click(GENERAL.ttl.toggle('Default Lease TTL'));
+    await fillIn(GENERAL.ttl.input('Default Lease TTL'), '33');
+    await click(GENERAL.ttl.toggle('Max Lease TTL'));
+    await fillIn(GENERAL.ttl.input('Max Lease TTL'), '44');
   }
 };
