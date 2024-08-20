@@ -691,6 +691,31 @@ scenario "upgrade" {
     }
   }
 
+  step "verify_billing_start_date" {
+    description = global.description.verify_billing_start_date
+    skip_step   = semverconstraint(var.vault_product_version, "<=1.16.6-0 || >=1.17.0-0 <=1.17.2-0")
+    module      = module.vault_verify_billing_start_date
+    depends_on = [
+      step.get_updated_vault_cluster_ips,
+      step.verify_vault_unsealed,
+      step.verify_read_test_data,
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    verifies = [
+      quality.vault_billing_start_date,
+    ]
+
+    variables {
+      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
+      hosts             = step.create_vault_cluster_targets.hosts
+      vault_root_token  = step.create_vault_cluster.root_token
+    }
+  }
+
   step "verify_ui" {
     description = global.description.verify_ui
     module      = module.vault_verify_ui

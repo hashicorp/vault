@@ -499,3 +499,7 @@ quality "vault_version_edition" {
 quality "vault_version_release" {
   description = "Vault's reported release version matches our expectations"
 }
+
+quality "vault_billing_start_date" {
+  description = "Vault's billing start date has adjusted to the latest billing year"
+}
