@@ -22,7 +22,6 @@ import type ClientsActivityModel from 'vault/models/clients/activity';
 import type ClientsVersionHistoryModel from 'vault/models/clients/version-history';
 import type {
   ByMonthNewClients,
-  MountClients,
   MountNewClients,
   NamespaceByKey,
   NamespaceNewClients,
