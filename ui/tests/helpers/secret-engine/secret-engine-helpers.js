@@ -41,7 +41,7 @@ const createAwsLeaseConfig = (store, backend) => {
     data: {
       backend: backend,
       lease: '50s',
-      leaseMax: '55s',
+      lease_max: '55s',
     },
   });
   return store.peekRecord('aws/lease-config', backend);

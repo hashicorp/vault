@@ -34,7 +34,6 @@ module('Integration | Component | SecretEngine/configure-aws', function (hooks) 
 
     this.uid = uuidv4();
     this.id = `aws-${this.uid}`;
-    this.model = createConfig(this.store, this.id, 'aws-lease');
     this.rootConfig = this.store.createRecord('aws/root-config');
     this.leaseConfig = this.store.createRecord('aws/lease-config');
     // Add backend to the configs because it's not on the testing snapshot (would come from url)
@@ -157,11 +156,45 @@ module('Integration | Component | SecretEngine/configure-aws', function (hooks) 
       );
     });
   });
-  module('Edit view', function () {
-    // TODO: module edit
-    // ('it shows previously saved lease information and allows you to edit', async function (assert) {});
-    // ('it requires a double click to change the secret key', async function (assert) {});
-    // ('it transitions without sending a payload on cancel', async function (assert) {});
-    // FOR EACH: check transition, payload, and flashMessages.
+  module('Edit view', function (hooks) {
+    hooks.beforeEach(function () {
+      this.rootConfig = createConfig(this.store, this.id, 'aws');
+      this.leaseConfig = createConfig(this.store, this.id, 'aws-lease');
+    });
+
+    test('it shows previously saved root and lease information', async function (assert) {
+      await this.renderComponent();
+      assert.dom(GENERAL.inputByAttr('accessKey')).hasValue(this.rootConfig.accessKey);
+      assert
+        .dom(GENERAL.inputByAttr('secretKey'))
+        .hasValue('**********', 'secretKey is masked on edit the value');
+
+      await click(GENERAL.toggleGroup('Root config options'));
+      assert.dom(GENERAL.inputByAttr('region')).hasValue(this.rootConfig.region);
+      assert.dom(GENERAL.inputByAttr('iamEndpoint')).hasValue(this.rootConfig.iamEndpoint);
+      assert.dom(GENERAL.inputByAttr('stsEndpoint')).hasValue(this.rootConfig.stsEndpoint);
+      assert.dom(GENERAL.inputByAttr('maxRetries')).hasValue('-1');
+      // Check lease config values
+      assert.dom(GENERAL.ttl.input('Default Lease TTL')).hasValue('50');
+      assert.dom(GENERAL.ttl.input('Max Lease TTL')).hasValue('55');
+    });
+
+    test('it requires a double click to change the secret key', async function (assert) {
+      await this.renderComponent();
+
+      this.server.post(configUrl('aws', this.id), (schema, req) => {
+        const payload = JSON.parse(req.requestBody);
+        assert.strictEqual(
+          payload.secret_key,
+          'new-secret',
+          'post request was made to config/root with the updated secret_key.'
+        );
+      });
+
+      await click(GENERAL.enableField('secretKey'));
+      await click('[data-test-button="toggle-masked"]');
+      await fillIn(GENERAL.maskedInput('secretKey'), 'new-secret');
+      await click(SES.aws.save);
+    });
   });
 });
