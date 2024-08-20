@@ -35,7 +35,7 @@ require (
 	github.com/ProtonMail/go-crypto v0.0.0-20230828082145-3c4c8a2d2371
 	github.com/SAP/go-hdb v1.10.1
 	github.com/Sectorbob/mlab-ns2 v0.0.0-20171030222938-d3aa0c295a8a
-	github.com/absolutelightning/go-memdb v1.0.93
+	github.com/absolutelightning/go-memdb v1.0.94
 	github.com/aerospike/aerospike-client-go/v5 v5.6.0
 	github.com/aliyun/alibaba-cloud-sdk-go v1.62.737
 	github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20190307165228-86c17b95fcd5
@@ -231,7 +231,7 @@ require (
 require (
 	cel.dev/expr v0.15.0 // indirect
 	cloud.google.com/go/longrunning v0.5.7 // indirect
-	github.com/absolutelightning/go-immutable-adaptive-radix v1.0.93 // indirect
+	github.com/absolutelightning/go-immutable-adaptive-radix v1.0.94 // indirect
 	github.com/containerd/containerd v1.7.12 // indirect
 	github.com/hashicorp/go-secure-stdlib/httputil v0.1.0 // indirect
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
