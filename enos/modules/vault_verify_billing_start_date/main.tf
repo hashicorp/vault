@@ -9,6 +9,11 @@ terraform {
   }
 }
 
+variable "vault_addr" {
+  type        = string
+  description = "The local vault API listen address"
+}
+
 variable "vault_cluster_addr_port" {
   description = "The Raft cluster address port"
   type        = string
@@ -42,6 +47,7 @@ resource "enos_remote_exec" "vault_verify_billing_start_date" {
   for_each = var.hosts
 
   environment = {
+    VAULT_ADDR              = var.vault_addr
     VAULT_CLUSTER_ADDR      = "${each.value.private_ip}:${var.vault_cluster_addr_port}"
     VAULT_INSTALL_DIR       = var.vault_install_dir
     VAULT_LOCAL_BINARY_PATH = "${var.vault_install_dir}/vault"
