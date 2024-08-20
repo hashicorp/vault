@@ -74,13 +74,6 @@ export default class ConfigureSshComponent extends Component<Args> {
     }
   }
 
-  validate(model: CaConfigModel) {
-    const { isValid, state, invalidFormMessage } = model.validate();
-    this.modelValidations = isValid ? null : state;
-    this.invalidFormAlert = isValid ? '' : invalidFormMessage;
-    return isValid;
-  }
-
   resetErrors() {
     this.flashMessages.clearMessages();
     this.errorMessage = null;
@@ -94,6 +87,13 @@ export default class ConfigureSshComponent extends Component<Args> {
     } else {
       this.router.transitionTo('vault.cluster.secrets.backend.configuration', this.args.id);
     }
+  }
+
+  validate(model: CaConfigModel) {
+    const { isValid, state, invalidFormMessage } = model.validate();
+    this.modelValidations = isValid ? null : state;
+    this.invalidFormAlert = isValid ? '' : invalidFormMessage;
+    return isValid;
   }
 
   @action

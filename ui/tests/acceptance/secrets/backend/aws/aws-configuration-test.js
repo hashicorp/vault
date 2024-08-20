@@ -32,7 +32,7 @@ module('Acceptance | aws | configuration', function (hooks) {
     const flash = this.owner.lookup('service:flash-messages');
     this.store = this.owner.lookup('service:store');
     this.flashSuccessSpy = spy(flash, 'success');
-    this.flashDangerSpy = spy(flash, 'danger');
+    this.flashInfoSpy = spy(flash, 'info');
 
     this.uid = uuidv4();
     return authPage.login();
@@ -213,7 +213,7 @@ module('Acceptance | aws | configuration', function (hooks) {
     await click(SES.configure);
     await click(SES.aws.save);
     assert.true(
-      this.flashDangerSpy.calledWith('No changes detected.'),
+      this.flashInfoSpy.calledWith('No changes detected.'),
       'Flash message shows no changes detected.'
     );
     assert.strictEqual(
