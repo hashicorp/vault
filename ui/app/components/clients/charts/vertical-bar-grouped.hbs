@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<div class="lineal-chart" data-test-chart={{or @chartTitle "stacked vertical bar chart"}}>
+<div class="lineal-chart" data-test-chart={{or @chartTitle "grouped vertical bar chart"}}>
   <Lineal::Fluid as |width|>
     {{#let
       (scale-band domain=this.xBounds range=(array 0 width) padding=0.1)
@@ -49,7 +49,7 @@
             @xScale={{xScale}}
             @yScale={{yScale}}
             @heightScale={{hScale}}
-            class="lineal-chart-bar blue-bar-{{idx}}"
+            class="lineal-chart-bar custom-bar-{{legend.key}}"
             transform="translate({{this.barOffset xScale.bandwidth idx}},0)"
             data-test-vertical-bar
           />
@@ -97,6 +97,12 @@
 
     {{/let}}
   </Lineal::Fluid>
+</div>
+
+<div class="legend">
+  {{#each @chartLegend as |legend|}}
+    <span class="legend-colors dot-{{legend.key}}"></span><span class="legend-label">{{capitalize legend.label}}</span>
+  {{/each}}
 </div>
 
 {{#if @showTable}}
