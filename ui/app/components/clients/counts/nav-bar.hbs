@@ -1,0 +1,31 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<nav class="tabs has-bottom-margin-s" aria-label="navigation for managing client counts">
+  <ul>
+    <li>
+      <LinkTo @route="vault.cluster.clients.counts.overview" data-test-tab="overview">
+        Overview
+      </LinkTo>
+    </li>
+    <li>
+      <LinkTo @route="vault.cluster.clients.counts.token" data-test-tab="token">
+        Entity/Non-entity clients
+      </LinkTo>
+    </li>
+    {{#if @showSecretsSyncClientCounts}}
+      <li>
+        <LinkTo @route="vault.cluster.clients.counts.sync" data-test-tab="sync">
+          Secrets sync clients
+        </LinkTo>
+      </li>
+    {{/if}}
+    <li>
+      <LinkTo @route="vault.cluster.clients.counts.acme" data-test-tab="acme">
+        ACME clients
+      </LinkTo>
+    </li>
+  </ul>
+</nav>

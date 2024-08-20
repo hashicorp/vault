@@ -4,24 +4,24 @@
 ~}}
 
 <Clients::RunningTotal
-  @isSecretsSyncActivated={{@isSecretsSyncActivated}}
+  @isSecretsSyncActivated={{this.flags.secretsSyncIsActivated}}
   @byMonthActivityData={{this.byMonthActivityData}}
   @isHistoricalMonth={{and (not this.isCurrentMonth) (not this.isDateRange)}}
   @isCurrentMonth={{this.isCurrentMonth}}
   @runningTotals={{this.totalUsageCounts}}
   @upgradeData={{this.upgradesDuringActivity}}
   @responseTimestamp={{@activity.responseTimestamp}}
+  @mountPath={{@mountPath}}
 />
 {{#if this.hasAttributionData}}
   <Clients::Attribution
-    @isSecretsSyncActivated={{@isSecretsSyncActivated}}
-    @totalUsageCounts={{this.totalUsageCounts}}
+    @isSecretsSyncActivated={{this.flags.secretsSyncIsActivated}}
     @newUsageCounts={{this.newClientCounts}}
     @totalClientAttribution={{this.totalClientAttribution}}
     @newClientAttribution={{this.newClientAttribution}}
     @selectedNamespace={{@namespace}}
-    @startTimestamp={{this.startTimeISO}}
-    @endTimestamp={{this.endTimeISO}}
+    @startTimestamp={{@startTimestamp}}
+    @endTimestamp={{@endTimestamp}}
     @responseTimestamp={{@activity.responseTimestamp}}
     @isHistoricalMonth={{and (not this.isCurrentMonth) (not this.isDateRange)}}
     @upgradesDuringActivity={{this.upgradesDuringActivity}}

@@ -8,7 +8,8 @@ import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render } from '@ember/test-helpers';
-import { typeInSearch, clickTrigger, selectChoose } from 'ember-power-select/test-support/helpers';
+import { selectChoose } from 'ember-power-select/test-support';
+import { typeInSearch, clickTrigger } from 'ember-power-select/test-support/helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -42,7 +43,7 @@ module('Integration | Component | kubernetes | Page::Overview', function (hooks)
     this.backend = this.store.peekRecord('secret-engine', 'kubernetes-test');
     this.roles = this.store.peekAll('kubernetes/role');
     this.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.backend.id },
     ];
     this.promptConfig = false;

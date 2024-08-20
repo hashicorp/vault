@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/builtin/logical/pki/managed_key"
 	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
+	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -48,9 +49,9 @@ const (
  * will be forwarded to that cluster's active node and not go all the way up to the performance primary's
  * active node.
  *
- * If a certificate issue request has a role in which no_store is set to true, that node itself
- * will issue the certificate and not forward the request to the active node, as this does not
- * need to write to storage.
+ * If a certificate issue request has a role in which no_store and no_store_metadata is set to
+ * true, that node itself will issue the certificate and not forward the request to the active
+ * node, as this does not need to write to storage.
  *
  * Following the same pattern, if a managed key is involved to sign an issued certificate request
  * and the local node does not have access for some reason to it, the request will be forwarded to
@@ -124,8 +125,9 @@ func Backend(conf *logical.BackendConfig) *backend {
 				localDeltaWALPath,
 				legacyCRLPath,
 				clusterConfigPath,
-				"crls/",
-				"certs/",
+				issuing.PathCrls,
+				issuing.PathCerts,
+				issuing.PathCertMetadata,
 				acmePathPrefix,
 			},
 
@@ -142,7 +144,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 
 			WriteForwardedStorage: []string{
 				crossRevocationPath,
-				unifiedRevocationWritePathPrefix,
+				revocation.UnifiedRevocationWritePathPrefix,
 				unifiedDeltaWALPath,
 			},
 
@@ -653,7 +655,7 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 		}
 
 		// Then attempt to rebuild the CRLs if required.
-		warnings, err := b.CrlBuilder().rebuildIfForced(sc)
+		warnings, err := b.CrlBuilder().RebuildIfForced(sc)
 		if err != nil {
 			return err
 		}
@@ -790,7 +792,7 @@ func (b *backend) initializeStoredCertificateCounts(ctx context.Context) error {
 		return nil
 	}
 
-	entries, err := b.storage.List(ctx, "certs/")
+	entries, err := b.storage.List(ctx, issuing.PathCerts)
 	if err != nil {
 		return err
 	}

@@ -31,6 +31,8 @@ import (
 	"golang.org/x/crypto/ocsp"
 )
 
+//go:generate enumer -type=FailOpenMode -trimprefix=FailOpen
+
 // FailOpenMode is OCSP fail open mode. FailOpenTrue by default and may
 // set to ocspModeFailClosed for fail closed mode
 type FailOpenMode uint32
@@ -700,12 +702,12 @@ func (c *Client) VerifyLeafCertificate(ctx context.Context, subject, issuer *x50
 	if results.code == ocspStatusGood {
 		return nil
 	} else {
-		serial := issuer.SerialNumber
+		serial := subject.SerialNumber
 		serialHex := strings.TrimSpace(certutil.GetHexFormatted(serial.Bytes(), ":"))
 		if results.code == ocspStatusRevoked {
 			return fmt.Errorf("certificate with serial number %s has been revoked", serialHex)
 		} else if conf.OcspFailureMode == FailOpenFalse {
-			return fmt.Errorf("unknown OCSP status for cert with serial number %s", strings.TrimSpace(certutil.GetHexFormatted(serial.Bytes(), ":")))
+			return fmt.Errorf("unknown OCSP status for cert with serial number %s", serialHex)
 		} else {
 			c.Logger().Warn("could not validate OCSP status for cert, but continuing in fail open mode", "serial", serialHex)
 		}

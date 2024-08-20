@@ -10,7 +10,14 @@ description: >-
 
 @include 'alerts/enterprise-only.mdx'
 
-@include 'alerts/beta.mdx'
+<Warning title="Beta (Deprecated)">
+
+The request limiter was released in Vault 1.16 as a Beta
+feature. During Beta evaluation we found an alternative approach better met
+the needs of our users. This feature will be removed from Vault in a future
+release. It is replaced with [adaptive overload protection](/vault/docs/concepts/adaptive-overload-protection).
+
+</Warning>
 
 This document contains conceptual information about the **Request Limiter** and
 its user-facing effects.
@@ -71,4 +78,4 @@ needing to retry.
 
 When Vault has reached capacity, new requests will be immediately rejected with a
 retryable `503 - Service Unavailable`
-[error](/vault/docs/concepts/request-limiter/vault-server-temporarily-overloaded).
+[error](/vault/docs/concepts/adaptive-overload-protection/vault-server-temporarily-overloaded).

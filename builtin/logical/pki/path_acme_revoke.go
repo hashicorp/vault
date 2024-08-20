@@ -11,6 +11,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -82,7 +84,7 @@ func (b *backend) acmeRevocationHandler(acmeCtx *acmeContext, _ *logical.Request
 
 	// Fetch the CRL config as we need it to ultimately do the
 	// revocation. This should be cached and thus relatively fast.
-	config, err := b.CrlBuilder().getConfigWithUpdate(acmeCtx.sc)
+	config, err := b.CrlBuilder().GetConfigWithUpdate(acmeCtx.sc)
 	if err != nil {
 		return nil, fmt.Errorf("unable to revoke certificate: failed reading revocation config: %v: %w", err, ErrServerInternal)
 	}
@@ -90,7 +92,7 @@ func (b *backend) acmeRevocationHandler(acmeCtx *acmeContext, _ *logical.Request
 	// Load our certificate from storage to ensure it exists and matches
 	// what was given to us.
 	serial := serialFromCert(cert)
-	certEntry, err := fetchCertBySerial(acmeCtx.sc, "certs/", serial)
+	certEntry, err := fetchCertBySerial(acmeCtx.sc, issuing.PathCerts, serial)
 	if err != nil {
 		return nil, fmt.Errorf("unable to revoke certificate: err reading global cert entry: %v: %w", err, ErrServerInternal)
 	}
@@ -133,7 +135,7 @@ func (b *backend) acmeRevocationHandler(acmeCtx *acmeContext, _ *logical.Request
 	return b.acmeRevocationByAccount(acmeCtx, userCtx, cert, config)
 }
 
-func (b *backend) acmeRevocationByPoP(acmeCtx *acmeContext, userCtx *jwsCtx, cert *x509.Certificate, config *crlConfig) (*logical.Response, error) {
+func (b *backend) acmeRevocationByPoP(acmeCtx *acmeContext, userCtx *jwsCtx, cert *x509.Certificate, config *pki_backend.CrlConfig) (*logical.Response, error) {
 	// Since this account does not exist, ensure we've gotten a private key
 	// matching the certificate's public key. This private key isn't
 	// explicitly provided, but instead provided by proxy (public key,
@@ -159,7 +161,7 @@ func (b *backend) acmeRevocationByPoP(acmeCtx *acmeContext, userCtx *jwsCtx, cer
 	return revokeCert(acmeCtx.sc, config, cert)
 }
 
-func (b *backend) acmeRevocationByAccount(acmeCtx *acmeContext, userCtx *jwsCtx, cert *x509.Certificate, config *crlConfig) (*logical.Response, error) {
+func (b *backend) acmeRevocationByAccount(acmeCtx *acmeContext, userCtx *jwsCtx, cert *x509.Certificate, config *pki_backend.CrlConfig) (*logical.Response, error) {
 	// Fetch the account; disallow revocations from non-valid-status accounts.
 	_, err := requireValidAcmeAccount(acmeCtx, userCtx)
 	if err != nil {

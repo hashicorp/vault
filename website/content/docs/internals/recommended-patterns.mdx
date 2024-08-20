@@ -1,0 +1,287 @@
+---
+layout: docs
+page_title: Recommended patterns
+description: Follow these recommended patterns to effectively operate Vault.
+---
+
+# Recommended patterns
+
+Help keep your Vault environments operating effectively by implementing the following best practice so you avoid common anti-patterns.
+
+| Description  	| Applicable Vault edition 	|
+|---	|---	|
+| [Adjust the default lease time](#adjust-the-default-lease-time) 	|  All 	|
+| [Use identity entities for accurate client count](#use-identity-entities-for-accurate-client-count)  	| Enterprise, HCP	|
+| [Increase IOPS](#increase-iops)  	| Enterprise, Community 	|
+| [Enable disaster recovery](#enable-disaster-recovery)  	| Enterprise 	|
+| [Test disaster recovery](#test-disaster-recovery)  	| Enterprise 	|
+| [Improve upgrade cadence](#improve-upgrade-cadence)  	| Enterprise, Community |
+| [Test before upgrades](#test-before-upgrades)  	| Enterprise, Community 	|
+| [Rotate audit device logs](#rotate-audit-device-logs)  	| Enterprise, Community	|
+| [Monitor metrics](#monitor-metrics)   	| Enterprise, Community 	|
+| [Establish usage baseline](#establish-usage-baseline)  	| Enterprise, Community	|
+| [Minimize root token use](#minimize-root-token-use)  	| All 	|
+| [Rekey when necessary](#rekey-when-necessary)  	| All 	|
+
+## Adjust the default lease time
+
+The default lease time in Vault is 32 days or 768 hours. This time allows for some operations, such as re-authentication or renewal.
+See [lease](/vault/docs/concepts/lease) documentation for more information.
+
+**Recommended pattern:**
+
+You should tune the lease TTL value for your needs. Vault holds leases in memory until the lease expires. 
+We recommend keeping TTLs as short as the use case will allow. 
+- [Auth tune](/vault/docs/commands/auth/tune)
+- [Secrets tune](/vault/docs/commands/secrets/tune)
+
+<Note>
+Tuning or adjusting TTLs does not retroactively affect tokens that were issued. New tokens must be issued after tuning TTLs. 
+</Note>
+
+**Anti-pattern issue:**
+
+If you create leases without changing the default time-to-live (TTL), leases will live in Vault until the default lease time is up. 
+Depending on your infrastructure and available system memory, using the default or long TTL may cause performance issues as Vault stores
+leases in memory. 
+
+## Use identity entities for accurate client count
+
+Each Vault client may have multiple accounts with the auth methods enabled on the Vault server.
+
+![Entity](/img/vault-entity-waf1.png)
+
+**Recommended pattern:**
+
+Since each token adds to the client count, and each unique authentication issues a token, you should use identity entities to create aliases that connect each login to a single identity. 
+
+  - [Client count](/vault/docs/concepts/client-count)
+  - [Vault identity concepts](/vault/docs/concepts/identity)
+  - [Vault Identity secrets engine](/vault/docs/secrets/identity)
+  - [Identity: Entities and groups tutorial](/vault/tutorials/auth-methods/identity)
+
+**Anti-pattern issue:**
+
+When you do not use identity entities, each new client is counted as a separate identity when using another auth method not linked to the user's entity. 
+
+## Increase IOPS
+
+IOPS (input/output operations per second) measures performance for Vault cluster members. Vault is bound by the IO limits of the storage backend rather than the compute requirements. 
+
+**Recommended pattern:**
+
+Use the HashiCorp reference guidelines for Vault servers' hardware sizing and network considerations.
+
+- [Vault with Integrated storage reference architecture](/vault/tutorials/day-one-raft/raft-reference-architecture#system-requirements)
+- [Performance tuning](/vault/tutorials/operations/performance-tuning)
+- [Transform secrets engine](/vault/docs/concepts/transform)
+
+<Note>
+
+Depending on the client count, the Transform (Enterprise) and Transit secret engines can be resource-intensive.
+
+</Note>
+
+**Anti-pattern issue:**
+
+Limited IOPS can significantly degrade Vault’s performance.
+
+## Enable disaster recovery
+
+HashiCorp Vault's (HA) highly available [Integrated storage (Raft)](/vault/docs/concepts/integrated-storage) 
+backend provides intra-cluster data replication across cluster members. Integrated Storage provides Vault with 
+horizontal scalability and failure tolerance, but it does not provide backup for the entire cluster. Not utilizing 
+disaster recovery for your production environment will negatively impact your organization's Recovery Point 
+Objective (RPO) and Recovery Time Objective (RTO). 
+
+**Recommended pattern:** 
+
+For cluster-wide issues (i.e., network connectivity), Vault Enterprise Disaster Recovery (DR) replication 
+provides a warm standby cluster containing all primary cluster data. The DR cluster does not service reads 
+or writes but you can promote it to replace the primary cluster when needed.
+
+- [Disaster recovery replication setup](/vault/tutorials/day-one-raft/disaster-recovery)
+- [Disaster recovery (DR) replication](/vault/docs/enterprise/replication#disaster-recovery-dr-replication)
+- [DR replication API documentation](/vault/api-docs/system/replication/replication-dr)
+
+We also recommend periodically creating data snapshots to protect against data corruption.
+
+- [Vault data backup standard procedure](/vault/tutorials/standard-procedures/sop-backup)
+- [Automated integrated storage snapshots](/vault/docs/enterprise/automated-integrated-storage-snapshots)
+- [/sys/storage/raft/snapshot-auto](/vault/api-docs/system/storage/raftautosnapshots)
+
+**Anti-pattern issue:**
+
+If you do not enable disaster recovery and catastrophic failure occurs, your use cases will encounter longer downtime duration and costs associated with not serving Vault clients in your environment.
+
+## Test disaster recovery
+
+Your disaster recovery (DR) solution is a key part of your overall disaster recovery plan.
+
+Designing and configuring your Vault disaster recovery solution is only the first step. You also need to validate the DR solution, as not doing so can negatively impact your organization's Recovery Point Objective (RPO) and Recovery Time Objective (RTO).
+
+**Recommended pattern:**
+
+Vault's Disaster Recovery (DR) replication mode provides a warm standby for 
+failover if the primary cluster experiences catastrophic failure. You should 
+periodically test the disaster recovery replication cluster by completing the 
+failover and failback procedure. 
+
+- [Vault disaster recovery replication failover and failback tutorial](/vault/tutorials/enterprise/disaster-recovery-replication-failover)
+- [Vault Enterprise replication](/vault/docs/enterprise/replication)
+- [Monitoring Vault replication](/vault/tutorials/monitoring/monitor-replication)
+
+You should establish standard operating procedures for restoring a Vault cluster from a snapshot. The restoration methods following a DR situation would be in response to data corruption or sabotage, which Disaster Recovery Replication might be unable to protect against.
+
+- [Standard procedure for restoring a Vault cluster](/vault/tutorials/standard-procedures/sop-restore)
+
+**Anti-pattern issue:**
+
+If you don't test your disaster recovery solution, your key stakeholders will not feel confident they can effectively perform the disaster recovery plan. Testing the DR solution also helps your team to remove uncertainty around recovering the system during an outage.
+
+## Improve upgrade cadence
+
+While it might be easy to upgrade Vault whenever you have capacity, not having a frequent upgrade cadence can impact your Vault performance and security.
+
+**Recommended pattern:** 
+
+We recommend upgrading to our latest version of Vault. Subscribe to the releases in [Vault's GitHub repository](https://github.com/hashicorp/vault), and notifications from [HashiCorp Vault discuss](https://discuss.hashicorp.com/c/release-notifications/57), will inform you when we release a new Vault version.
+
+- [Vault upgrade guides](/vault/docs/upgrading)
+- [Vault feature deprecation notice and plans](/vault/docs/deprecation)
+
+**Anti-pattern issue:**
+
+When you do not keep a regular upgrade cadence, your Vault environment could be missing key features or improvements.
+
+- Missing patches for bugs or vulnerabilities as documented in the [CHANGELOG](https://github.com/hashicorp/vault/blob/main/CHANGELOG.md).
+- New features to improve workflow.
+- Must use version-specific rather than the latest documentation.
+- Some educational resourcesrequire a specific minimum Vault version.
+- Updates may require a stepped approach that uses an intermediate version before installing the latest binary.
+
+## Test before upgrades
+
+We recommend testing Vault in a sandbox environment before deploying to production.
+
+Although it might be faster to upgrade immediately in production, testing will help identify any compatibility issues.
+
+Be aware of the [CHANGELOG](https://github.com/hashicorp/vault/blob/main/CHANGELOG.md) and account for any new features, improvements, known issues and bug fixes in your testing.
+
+**Recommended pattern:** 
+
+Test new Vault versions in sandbox environments before upgrading in production and follow our upgrading documentation.
+
+We recommend adding a testing phase to your standard upgrade procedure.
+
+- [Vault upgrade standard procedure](/vault/tutorials/standard-procedures/sop-upgrade)
+- [Upgrading Vault](/vault/docs/upgrading)
+
+**Anti-pattern issue:**
+
+Without adequate testing before upgrading in production, you risk compatibility and performance issues. 
+
+<Warning>
+
+This could lead to downtime or degradation in your production Vault environment.
+
+</Warning>
+
+## Rotate audit device logs
+
+Audit devices in Vault maintain a detailed log of every client request and server response.
+
+If you allow the logs for audit devices to run perpetually without rotating you may face a blocked audit device if the filesystem storage becomes exhausted.
+
+**Recommended pattern:**
+
+Inspect and rotate audit logs periodically.
+
+- [Blocked audit devices tutorial](/vault/tutorials/monitoring/blocked-audit-devices)
+- [blocked audit devices](/vault/docs/audit#blocked-audit-devices)
+
+**Anti-pattern issue:**
+
+Vault will not respond to requests when audit devices are not enabled to record them.
+
+The audit device can exhaust the local storage if the audit device log is not maintained and rotated over time.
+
+## Monitor metrics
+
+Relying solely on Vault operational logs and data in Vault UI will give you a partial picture of the cluster's performance.
+
+
+**Recommended pattern:**
+
+Continuous monitoring will allow organizations to detect minor problems and promptly resolve them. 
+Migrating from reactive to proactive monitoring will help to prevent system failures. Vault has multiple outputs 
+that help monitor the cluster's activity: audit logs, operational logs, and telemetry data. This data can work 
+with a SIEM (security information and event management) tool for aggregation, inspection, and alerting capabilities.
+
+- [Telemetry](/vault/docs/internals/telemetry#secrets-engines-metric)
+- [Telemetry metrics reference](/vault/tutorials/monitoring/telemetry-metrics-reference)
+
+Adding a monitoring solution:
+- [Audit device logs and incident response with elasticsearch](/vault/tutorials/monitoring/audit-elastic-incident-response)
+- [Monitor telemetry & audit device log data](/vault/tutorials/monitoring/monitor-telemetry-audit-splunk)
+- [Monitor telemetry with Prometheus & Grafana](/vault/tutorials/monitoring/monitor-telemetry-grafana-prometheus)
+
+
+<Note>
+
+  Vault logs to standard output and standard error by default, automatically captured by the systemd journal. You can also instruct Vault to redirect operational log writes to a file. 
+
+</Note>
+
+**Anti-pattern issue:** 
+
+Having partial insight into cluster activity can leave the business in a reactive state.
+
+## Establish usage baseline
+
+A baseline provides insight into current utilization and thresholds. Telemetry metrics are valuable, especially when monitored over time. You can use telemetry metrics to gather a baseline of cluster activity, while alerts inform you of abnormal activity. 
+
+**Recommended pattern:**
+
+Telemetry information can also be streamed directly from Vault to a range of metrics aggregation solutions and 
+saved for aggregation and inspection. 
+
+- [Vault usage metrics](/vault/tutorials/monitoring/usage-metrics)
+- [Diagnose server issues](/vault/tutorials/monitoring/diagnose-startup-issues)
+
+**Anti-pattern issue:**
+
+This issue closely relates to the recommended pattern for [monitor metrics](#monitor-metrics).
+ Telemetry data is 
+only held in memory for a short period.
+
+## Minimize root token use
+
+Initializing a Vault server emits an initial root token that gives root-level access across all Vault features.
+
+**Recommended pattern:**
+
+We recommend that you revoke the root token after initializing Vault within your environment. If users require elevated access, create access control list policies that grant proper capabilities on the necessary paths in Vault. If your operations require the root token, keep it for the shortest possible time before revoking it.
+
+- [Generate root tokens tutorial](/vault/tutorials/operations/generate-root)
+- [Root tokens](/vault/docs/concepts/tokens#root-tokens)
+- [Vault policies](/vault/docs/concepts/policies)
+
+**Anti-pattern issue:**
+
+A root token can perform all actions within Vault and never expire. Unrestricted access can give users higher privileges than necessary to all Vault operations and paths. Sharing and providing access to root tokens poses a security risk.
+
+## Rekey when necessary
+
+Vault distributes unsealed keys to stakeholders. A quorum of keys is needed to unlock Vault based on your initialization settings. 
+
+**Recommended pattern:** 
+
+Vault supports rekeying, and you should establish a workflow for rekeying when necessary. 
+
+- [Rekeying & rotating Vault](/vault/tutorials/operations/rekeying-and-rotating)
+- [Operator rekey](/vault/docs/commands/operator/rekey)
+
+**Anti-pattern issue:**
+
+If several stakeholders leave the organization, you risk not having the required key shares to meet the unseal quorum, which could result in the loss of the ability to unseal Vault.

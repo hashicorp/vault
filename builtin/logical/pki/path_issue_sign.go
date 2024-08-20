@@ -315,6 +315,7 @@ func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, da
 	// to populate and influence the sign-verbatim behavior.
 	if role != nil {
 		opts = append(opts, issuing.WithNoStore(role.NoStore))
+		opts = append(opts, issuing.WithNoStoreMetadata(role.NoStoreMetadata))
 		opts = append(opts, issuing.WithIssuer(role.Issuer))
 
 		if role.TTL > 0 {
@@ -339,9 +340,20 @@ func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, da
 }
 
 func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, data *framework.FieldData, role *issuing.RoleEntry, useCSR, useCSRValues bool) (*logical.Response, error) {
-	// If storing the certificate and on a performance standby, forward this request on to the primary
-	// Allow performance secondaries to generate and store certificates locally to them.
-	if !role.NoStore && b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) {
+	// Error out early if incompatible fields set:
+	certMetadata, metadataInRequest := data.GetOk("cert_metadata")
+	if metadataInRequest {
+		err := validateCertMetadataConfiguration(role)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// If storing the certificate or certMetadata about this certificate and on a performance standby, forward this request
+	// on to the primary
+	// Allow performance secondaries to generate and store certificates and certMetadata locally to them.
+	needsStorage := !role.NoStore || (metadataInRequest && !role.NoStoreMetadata && issuing.MetadataPermitted)
+	if needsStorage && b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) {
 		return nil, logical.ErrReadOnly
 	}
 
@@ -389,17 +401,23 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 				"error fetching CA certificate: %s", caErr)}
 		}
 	}
-
+	issuerId, err := issuing.ResolveIssuerReference(ctx, req.Storage, role.Issuer)
+	if err != nil {
+		if issuerId == issuing.IssuerRefNotFound {
+			b.Logger().Warn("could not resolve issuer reference, may be using a legacy CA bundle")
+		} else {
+			return nil, err
+		}
+	}
 	input := &inputBundle{
 		req:     req,
 		apiData: data,
 		role:    role,
 	}
 	var parsedBundle *certutil.ParsedCertBundle
-	var err error
 	var warnings []string
 	if useCSR {
-		parsedBundle, warnings, err = signCert(b, input, signingBundle, false, useCSRValues)
+		parsedBundle, warnings, err = signCert(b.System(), input, signingBundle, false, useCSRValues)
 	} else {
 		parsedBundle, warnings, err = generateCert(sc, input, signingBundle, false, rand.Reader)
 	}
@@ -427,6 +445,19 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 	if !role.NoStore {
 		err = issuing.StoreCertificate(ctx, req.Storage, b.GetCertificateCounter(), parsedBundle)
 		if err != nil {
+			return nil, err
+		}
+	}
+
+	if metadataInRequest {
+		metadataBytes, err := base64.StdEncoding.DecodeString(certMetadata.(string))
+		if err != nil {
+			// TODO: Should we clean up the original cert here?
+			return nil, err
+		}
+		err = storeCertMetadata(ctx, req.Storage, issuerId, role.Name, parsedBundle.Certificate, metadataBytes)
+		if err != nil {
+			// TODO: Should we clean up the original cert here?
 			return nil, err
 		}
 	}

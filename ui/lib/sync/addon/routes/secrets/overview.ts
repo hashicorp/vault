@@ -7,28 +7,26 @@ import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { hash } from 'rsvp';
 
+import type FlagsService from 'vault/services/flags';
 import type RouterService from '@ember/routing/router-service';
-import type FeatureFlagService from 'vault/services/feature-flag';
 import type StoreService from 'vault/services/store';
+import type VersionService from 'vault/services/version';
 
 export default class SyncSecretsOverviewRoute extends Route {
   @service declare readonly router: RouterService;
   @service declare readonly store: StoreService;
-  @service declare readonly featureFlag: FeatureFlagService;
-
-  beforeModel(): void | Promise<unknown> {
-    if (this.featureFlag.managedNamespaceRoot !== null) {
-      this.router.transitionTo('vault.cluster.dashboard');
-    }
-  }
+  @service declare readonly flags: FlagsService;
+  @service declare readonly version: VersionService;
 
   async model() {
-    const { activatedFeatures } = this.modelFor('secrets') as {
-      activatedFeatures: Array<string>;
-    };
-    const isActivated = activatedFeatures.includes('secrets-sync');
+    const isActivated = this.flags.secretsSyncIsActivated;
+    const licenseHasSecretsSync = this.version.hasSecretsSync;
+    const isHvdManaged = this.flags.isHvdManaged;
+
     return hash({
+      licenseHasSecretsSync,
       isActivated,
+      isHvdManaged,
       destinations: isActivated ? this.store.query('sync/destination', {}).catch(() => []) : [],
       associations: isActivated
         ? this.store
@@ -37,5 +35,11 @@ export default class SyncSecretsOverviewRoute extends Route {
             .catch(() => [])
         : [],
     });
+  }
+
+  redirect() {
+    if (!this.flags.showSecretsSync) {
+      this.router.replaceWith('vault.cluster.dashboard');
+    }
   }
 }

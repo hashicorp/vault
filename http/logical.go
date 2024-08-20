@@ -7,7 +7,6 @@ import (
 	"bufio"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"mime"
@@ -17,9 +16,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/limits"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -51,8 +50,7 @@ func buildLogicalRequestNoAuth(perfStandby bool, ra *vault.RouterAccess, w http.
 	if err != nil {
 		return nil, nil, http.StatusBadRequest, nil
 	}
-	path := ns.TrimmedPath(r.URL.Path[len("/v1/"):])
-
+	path := trimPath(ns, r.URL.Path)
 	var data map[string]interface{}
 	var origBody io.ReadCloser
 	var passHTTPReq bool
@@ -362,11 +360,13 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForw
 			respondError(w, http.StatusInternalServerError, err)
 			return
 		}
+		trimmedPath := trimPath(ns, r.URL.Path)
+
 		nsPath := ns.Path
 		if ns.ID == namespace.RootNamespaceID {
 			nsPath = ""
 		}
-		if strings.HasPrefix(r.URL.Path, fmt.Sprintf("/v1/%ssys/events/subscribe/", nsPath)) {
+		if websocketPaths.HasPath(trimmedPath) {
 			handler := entHandleEventsSubscribe(core, req)
 			if handler != nil {
 				handler.ServeHTTP(w, r)
@@ -386,8 +386,8 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForw
 		// success.
 		resp, ok, needsForward := request(core, w, r, req)
 		switch {
-		case errors.Is(resp.Error(), limits.ErrCapacity):
-			respondError(w, http.StatusServiceUnavailable, limits.ErrCapacity)
+		case errwrap.Contains(resp.Error(), consts.ErrOverloaded.Error()):
+			respondError(w, http.StatusServiceUnavailable, consts.ErrOverloaded)
 			return
 		case needsForward && noForward:
 			respondError(w, http.StatusBadRequest, vault.ErrCannotForwardLocalOnly)

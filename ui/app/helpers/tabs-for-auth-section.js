@@ -11,88 +11,101 @@ const TABS_FOR_SETTINGS = {
   aws: [
     {
       label: 'Client',
-      routeParams: ['vault.cluster.settings.auth.configure.section', 'client'],
+      route: 'vault.cluster.settings.auth.configure.section',
+      routeParams: ['client'],
     },
     {
       label: 'Identity Allow List Tidy',
-      routeParams: ['vault.cluster.settings.auth.configure.section', 'identity-accesslist'],
+      route: 'vault.cluster.settings.auth.configure.section',
+      routeParams: ['identity-accesslist'],
     },
     {
       label: 'Role Tag Deny List Tidy',
-      routeParams: ['vault.cluster.settings.auth.configure.section', 'roletag-denylist'],
+      route: 'vault.cluster.settings.auth.configure.section',
+      routeParams: ['roletag-denylist'],
     },
   ],
   azure: [
     {
       label: 'Configuration',
-      routeParams: ['vault.cluster.settings.auth.configure.section', 'configuration'],
+      route: 'vault.cluster.settings.auth.configure.section',
+      routeParams: ['configuration'],
     },
   ],
   github: [
     {
       label: 'Configuration',
-      routeParams: ['vault.cluster.settings.auth.configure.section', 'configuration'],
+      route: 'vault.cluster.settings.auth.configure.section',
+      routeParams: ['configuration'],
     },
   ],
   gcp: [
     {
       label: 'Configuration',
-      routeParams: ['vault.cluster.settings.auth.configure.section', 'configuration'],
+      route: 'vault.cluster.settings.auth.configure.section',
+      routeParams: ['configuration'],
     },
   ],
   jwt: [
     {
       label: 'Configuration',
-      routeParams: ['vault.cluster.settings.auth.configure.section', 'configuration'],
+      route: 'vault.cluster.settings.auth.configure.section',
+      routeParams: ['configuration'],
     },
   ],
   oidc: [
     {
       label: 'Configuration',
-      routeParams: ['vault.cluster.settings.auth.configure.section', 'configuration'],
+      route: 'vault.cluster.settings.auth.configure.section',
+      routeParams: ['configuration'],
     },
   ],
   kubernetes: [
     {
       label: 'Configuration',
-      routeParams: ['vault.cluster.settings.auth.configure.section', 'configuration'],
+      route: 'vault.cluster.settings.auth.configure.section',
+      routeParams: ['configuration'],
     },
   ],
   ldap: [
     {
       label: 'Configuration',
-      routeParams: ['vault.cluster.settings.auth.configure.section', 'configuration'],
+      route: 'vault.cluster.settings.auth.configure.section',
+      routeParams: ['configuration'],
     },
   ],
   okta: [
     {
       label: 'Configuration',
-      routeParams: ['vault.cluster.settings.auth.configure.section', 'configuration'],
+      route: 'vault.cluster.settings.auth.configure.section',
+      routeParams: ['configuration'],
     },
   ],
   radius: [
     {
       label: 'Configuration',
-      routeParams: ['vault.cluster.settings.auth.configure.section', 'configuration'],
+      route: 'vault.cluster.settings.auth.configure.section',
+      routeParams: ['configuration'],
     },
   ],
 };
 
 const TABS_FOR_SHOW = {};
 
-export function tabsForAuthSection([model, sectionType = 'authSettings', paths]) {
+export function tabsForAuthSection([authMethodModel, sectionType = 'authSettings', paths]) {
   let tabs;
   if (sectionType === 'authSettings') {
-    tabs = (TABS_FOR_SETTINGS[model.type] || []).slice();
+    tabs = (TABS_FOR_SETTINGS[authMethodModel.type] || []).slice();
     tabs.push({
       label: 'Method Options',
-      routeParams: ['vault.cluster.settings.auth.configure.section', 'options'],
+      route: 'vault.cluster.settings.auth.configure.section',
+      routeParams: [authMethodModel.id, 'options'],
     });
     return tabs;
   }
-  if (paths || model.paths) {
-    if (model.paths) {
-      paths = model.paths.paths.filter((path) => path.navigation);
+  if (paths || authMethodModel.paths) {
+    if (authMethodModel.paths) {
+      paths = authMethodModel.paths.paths.filter((path) => path.navigation);
     }
 
     // TODO: we're unsure if we actually need compact here
@@ -100,18 +113,24 @@ export function tabsForAuthSection([model, sectionType = 'authSettings', paths])
     tabs = paths.compact().map((path) => {
       return {
         label: capitalize(pluralize(path.itemName)),
-        routeParams: ['vault.cluster.access.method.item.list', path.itemType],
+        route: 'vault.cluster.access.method.item.list',
+        routeParams: [path.itemType],
       };
     });
   } else {
-    tabs = (TABS_FOR_SHOW[model.type] || []).slice();
+    tabs = (TABS_FOR_SHOW[authMethodModel.type] || []).slice();
   }
   tabs.push({
     label: 'Configuration',
-    routeParams: ['vault.cluster.access.method.section', 'configuration'],
+    route: 'vault.cluster.access.method.section',
+    routeParams: ['configuration'],
   });
 
-  return tabs;
+  return tabs.map((tab) => ({
+    label: tab.label,
+    route: tab.route,
+    routeParams: [authMethodModel.id, ...tab.routeParams],
+  }));
 }
 
 export default buildHelper(tabsForAuthSection);

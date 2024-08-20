@@ -109,5 +109,20 @@ module.exports = [
     source: '/vault/api-docs/system/plugins-reload-backend',
     destination: '/vault/api-docs/system/plugins-reload',
     permanent: true,
+  },
+  {
+    source: '/vault/docs/deprecation/faq',
+    destination: '/vault/docs/deprecation',
+    permanent: true,
+  },
+  {
+    source: '/vault/docs/concepts/lease-explosions',
+    destination: '/vault/docs/troubleshoot/lease-explosions',
+    permanent: true,
+  },
+  {
+    source: '/vault/docs/concepts/lease-count-quota-exceeded',
+    destination: '/vault/docs/troubleshoot/lease-count-quota-exceeded',
+    permanent: true,
   }
 ]

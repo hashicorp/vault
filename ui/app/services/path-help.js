@@ -9,70 +9,89 @@
   has less (or no) information about.
 */
 import Model from '@ember-data/model';
-import Service, { service } from '@ember/service';
+import Service from '@ember/service';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
-import { getOwner } from '@ember/application';
+import { getOwner } from '@ember/owner';
 import { expandOpenApiProps, combineAttributes } from 'vault/utils/openapi-to-attrs';
 import fieldToAttrs from 'vault/utils/field-to-attrs';
 import { resolve, reject } from 'rsvp';
-import { assert, debug } from '@ember/debug';
+import { debug } from '@ember/debug';
 import { capitalize } from '@ember/string';
 import { computed } from '@ember/object'; // eslint-disable-line
 import { withModelValidations } from 'vault/decorators/model-validations';
 
-import GeneratedItemAdapter from 'vault/adapters/generated-item-list';
+import generatedItemAdapter from 'vault/adapters/generated-item-list';
 import { sanitizePath } from 'core/utils/sanitize-path';
 import {
   filterPathsByItemType,
   pathToHelpUrlSegment,
   reducePathsByPathName,
+  getHelpUrlForModel,
 } from 'vault/utils/openapi-helpers';
+import { isPresent } from '@ember/utils';
 
-export default class PathHelpService extends Service {
-  @service store;
-
+export default Service.extend({
+  attrs: null,
+  dynamicApiPath: '',
   ajax(url, options = {}) {
     const appAdapter = getOwner(this).lookup(`adapter:application`);
     const { data } = options;
     return appAdapter.ajax(url, 'GET', {
       data,
     });
-  }
+  },
 
   /**
-   * getNewModel instantiates models which use OpenAPI fully or partially
+   * hydrateModel instantiates models which use OpenAPI partially
+   * @param {string} modelType path for model, eg pki/role
+   * @param {string} backend path, which will be used for the generated helpUrl
+   * @returns void - as side effect, registers model via registerNewModelWithProps
+   */
+  hydrateModel(modelType, backend) {
+    const owner = getOwner(this);
+    const modelName = `model:${modelType}`;
+
+    const modelFactory = owner.factoryFor(modelName);
+    const helpUrl = getHelpUrlForModel(modelType, backend);
+
+    if (!modelFactory) {
+      throw new Error(`modelFactory for ${modelType} not found -- use getNewModel instead.`);
+    }
+
+    debug(`Model factory found for ${modelType}`);
+    const newModel = modelFactory.class;
+    if (newModel.merged || !helpUrl) {
+      return resolve();
+    }
+    return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
+  },
+
+  /**
+   * getNewModel instantiates models which use OpenAPI to generate the model fully
    * @param {string} modelType
    * @param {string} backend
-   * @param {string} apiPath (optional) if passed, this method will call getPaths and build submodels for item types
+   * @param {string} apiPath this method will call getPaths and build submodels for item types
    * @param {*} itemType (optional) used in getPaths for additional models
    * @returns void - as side effect, registers model via registerNewModelWithProps
    */
   getNewModel(modelType, backend, apiPath, itemType) {
     const owner = getOwner(this);
-    const modelFactory = owner.factoryFor(`model:${modelType}`);
-    let newModel, helpUrl;
-    // if we have a factory, we need to take the existing model into account
+    const modelName = `model:${modelType}`;
+
+    const modelFactory = owner.factoryFor(modelName);
+
     if (modelFactory) {
-      debug(`Model factory found for ${modelType}`);
-      newModel = modelFactory.class;
-      const modelProto = newModel.proto();
-      if (newModel.merged || modelProto.useOpenAPI !== true) {
-        return resolve();
+      // if the modelFactory already exists, it means either this model was already
+      // generated or the model exists in the code already. In either case resolve
+
+      if (!modelFactory.class.merged) {
+        // no merged flag means this model was not previously generated
+        debug(`Model exists for ${modelType} -- use hydrateModel instead`);
       }
-
-      helpUrl = modelProto.getHelpUrl(backend);
-      return this.registerNewModelWithProps(helpUrl, backend, newModel, modelType);
-    } else {
-      debug(`Creating new Model for ${modelType}`);
-      newModel = Model.extend({});
+      return resolve();
     }
-
-    // we don't have an apiPath for dynamic secrets
-    // and we don't need paths for them yet
-    if (!apiPath) {
-      helpUrl = newModel.proto().getHelpUrl(backend);
-      return this.registerNewModelWithProps(helpUrl, backend, newModel, modelType);
-    }
+    debug(`Creating new Model for ${modelType}`);
+    let newModel = Model.extend({});
 
     // use paths to dynamically create our openapi help url
     // if we have a brand new model
@@ -95,16 +114,16 @@ export default class PathHelpService extends Service {
           return reject();
         }
 
-        helpUrl = `/v1/${apiPath}${path.slice(1)}?help=true` || newModel.proto().getHelpUrl(backend);
+        const helpUrl = `/v1/${apiPath}${path.slice(1)}?help=true`;
         pathInfo.paths = paths;
         newModel = newModel.extend({ paths: pathInfo });
-        return this.registerNewModelWithProps(helpUrl, backend, newModel, modelType);
+        return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
       })
       .catch((err) => {
         // TODO: we should handle the error better here
         console.error(err); // eslint-disable-line
       });
-  }
+  },
 
   /**
    * getPaths is used to fetch all the openAPI paths available for an auth method,
@@ -133,7 +152,7 @@ export default class PathHelpService extends Service {
         itemID,
       });
     });
-  }
+  },
 
   // Makes a call to grab the OpenAPI document.
   // Returns relevant information from OpenAPI
@@ -183,7 +202,7 @@ export default class PathHelpService extends Service {
       const newProps = { ...paramProp, ...props };
       return expandOpenApiProps(newProps);
     });
-  }
+  },
 
   getNewAdapter(pathInfo, itemType) {
     // we need list and create paths to set the correct urls for actions
@@ -197,7 +216,7 @@ export default class PathHelpService extends Service {
     const createPath = paths.find((path) => path.action === 'Create' || path.operations.includes('post'));
     const deletePath = paths.find((path) => path.operations.includes('delete'));
 
-    return class NewAdapter extends GeneratedItemAdapter {
+    return generatedItemAdapter.extend({
       urlForItem(id, isList, dynamicApiPath) {
         const itemType = sanitizePath(getPath.path);
         let url;
@@ -219,30 +238,30 @@ export default class PathHelpService extends Service {
         }
 
         return url;
-      }
+      },
 
       urlForQueryRecord(id, modelName) {
         return this.urlForItem(id, modelName);
-      }
+      },
 
       urlForUpdateRecord(id) {
         const itemType = createPath.path.slice(1, createPath.path.indexOf('{') - 1);
         return `${this.buildURL()}/${apiPath}${itemType}/${id}`;
-      }
+      },
 
       urlForCreateRecord(modelType, snapshot) {
         const id = snapshot.record.mutableId; // computed property that returns either id or private settable _id value
         const path = createPath.path.slice(1, createPath.path.indexOf('{') - 1);
         return `${this.buildURL()}/${apiPath}${path}/${id}`;
-      }
+      },
 
       urlForDeleteRecord(id) {
         const path = deletePath.path.slice(1, deletePath.path.indexOf('{') - 1);
         return `${this.buildURL()}/${apiPath}${path}/${id}`;
-      }
+      },
 
       createRecord(store, type, snapshot) {
-        return super.createRecord(...arguments).then((response) => {
+        return this._super(...arguments).then((response) => {
           // if the server does not return an id and one has not been set on the model we need to set it manually from the mutableId value
           if (!response?.id && !snapshot.record.id) {
             snapshot.record.id = snapshot.record.mutableId;
@@ -250,12 +269,11 @@ export default class PathHelpService extends Service {
           }
           return response;
         });
-      }
-    };
-  }
+      },
+    });
+  },
 
   registerNewModelWithProps(helpUrl, backend, newModel, modelName) {
-    assert('modelName should not include the type prefix', modelName.includes(':') === false);
     return this.getProps(helpUrl, backend).then((props) => {
       const { attrs, newFields } = combineAttributes(newModel.attributes, props);
       const owner = getOwner(this);
@@ -272,17 +290,22 @@ export default class PathHelpService extends Service {
           // Build and add validations on model
           // NOTE: For initial phase, initialize validations only for user pass auth
           if (backend === 'userpass') {
-            const validations = fieldGroups.reduce((obj, element) => {
-              if (element.default) {
-                element.default.forEach((v) => {
-                  const key = v.options.fieldValue || v.name;
-                  obj[key] = [{ type: 'presence', message: `${v.name} can't be blank` }];
-                });
-              }
-              return obj;
-            }, {});
-
-            newModel = withModelValidations(validations)(class GeneratedItemModel extends newModel {});
+            const validations = {
+              password: [
+                {
+                  validator(model) {
+                    return (
+                      !(isPresent(model.password) && isPresent(model.passwordHash)) &&
+                      (isPresent(model.password) || isPresent(model.passwordHash))
+                    );
+                  },
+                  message: 'You must provide either password or password hash, but not both.',
+                },
+              ],
+            };
+            @withModelValidations(validations)
+            class GeneratedItemModel extends newModel {}
+            newModel = GeneratedItemModel;
           }
         }
       } catch (err) {
@@ -300,11 +323,11 @@ export default class PathHelpService extends Service {
           },
         }),
       });
-      newModel.reopenClass({ merged: true });
-      owner.unregister(`model:${modelName}`);
-      owner.register(`model:${modelName}`, newModel);
+      newModel.merged = true;
+      owner.unregister(modelName);
+      owner.register(modelName, newModel);
     });
-  }
+  },
   getFieldGroups(newModel) {
     const groups = {
       default: [],
@@ -328,5 +351,5 @@ export default class PathHelpService extends Service {
       fieldGroups.push({ [group]: groups[group] });
     }
     return fieldToAttrs(newModel, fieldGroups);
-  }
-}
+  },
+});

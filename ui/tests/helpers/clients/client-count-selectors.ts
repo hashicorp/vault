@@ -6,82 +6,48 @@
 // TODO: separate nested into distinct exported consts
 export const CLIENT_COUNT = {
   counts: {
-    startLabel: '[data-test-counts-start-label]',
     description: '[data-test-counts-description]',
-    startMonth: '[data-test-counts-start-month]',
-    startEdit: '[data-test-counts-start-edit]',
-    startDropdown: '[data-test-counts-start-dropdown]',
     configDisabled: '[data-test-counts-disabled]',
     namespaces: '[data-test-counts-namespaces]',
     mountPaths: '[data-test-counts-auth-mounts]',
     startDiscrepancy: '[data-test-counts-start-discrepancy]',
   },
-  tokenTab: {
-    entity: '[data-test-monthly-new-entity]',
-    nonentity: '[data-test-monthly-new-nonentity]',
-    legend: '[data-test-monthly-new-legend]',
+  dateRange: {
+    dateDisplay: (name: string) => (name ? `[data-test-date-range="${name}"]` : '[data-test-date-range]'),
+    edit: '[data-test-date-range-edit]',
+    editModal: '[data-test-date-range-edit-modal]',
+    editDate: (name: string) => `[data-test-date-edit="${name}"]`,
+    reset: '[data-test-date-edit="reset"]',
+    defaultRangeAlert: '[data-test-range-default-alert]',
+    validation: '[data-test-date-range-validation]',
   },
-  syncTab: {
-    total: '[data-test-total-sync-clients]',
-    average: '[data-test-average-sync-clients]',
-  },
-  charts: {
-    chart: (title: string) => `[data-test-chart="${title}"]`, // newer lineal charts
-    statTextValue: (label: string) =>
-      label ? `[data-test-stat-text-container="${label}"] .stat-value` : '[data-test-stat-text-container]',
-    legend: '[data-test-chart-container-legend]',
-    legendLabel: (nth: number) => `.legend-label:nth-child(${nth * 2})`, // nth * 2 accounts for dots in legend
-    timestamp: '[data-test-chart-container-timestamp]',
-    dataBar: '[data-test-vertical-bar]',
-    xAxisLabel: '[data-test-x-axis] text',
-    // selectors for old d3 charts
-    verticalBar: '[data-test-vertical-bar-chart]',
-    lineChart: '[data-test-line-chart]',
-    bar: {
-      xAxisLabel: '[data-test-vertical-chart="x-axis-labels"] text',
-      dataBar: '[data-test-vertical-chart="data-bar"]',
-    },
-    line: {
-      xAxisLabel: '[data-test-line-chart] [data-test-x-axis] text',
-      plotPoint: '[data-test-line-chart="plot-point"]',
-    },
-  },
-  usageStats: '[data-test-usage-stats]',
-  dateDisplay: '[data-test-date-display]',
+  statText: (label: string) => `[data-test-stat-text="${label}"]`,
+  statTextValue: (label: string) =>
+    label ? `[data-test-stat-text="${label}"] .stat-value` : '[data-test-stat-text]',
+  usageStats: (title: string) => `[data-test-usage-stats="${title}"]`,
   attributionBlock: '[data-test-clients-attribution]',
   filterBar: '[data-test-clients-filter-bar]',
-  rangeDropdown: '[data-test-calendar-widget-trigger]',
-  monthDropdown: '[data-test-toggle-month]',
-  yearDropdown: '[data-test-toggle-year]',
-  currentBillingPeriod: '[data-test-current-billing-period]',
-  dateDropdown: {
-    toggleMonth: '[data-test-toggle-month]',
-    toggleYear: '[data-test-toggle-year]',
-    selectMonth: (month: string) => `[data-test-dropdown-month="${month}"]`,
-    selectYear: (year: string) => `[data-test-dropdown-year="${year}"]`,
-    submit: '[data-test-date-dropdown-submit]',
-  },
-  calendarWidget: {
-    trigger: '[data-test-calendar-widget-trigger]',
-    currentMonth: '[data-test-current-month]',
-    currentBillingPeriod: '[data-test-current-billing-period]',
-    customEndMonth: '[data-test-show-calendar]',
-    previousYear: '[data-test-previous-year]',
-    nextYear: '[data-test-next-year]',
-    calendarMonth: (month: string) => `[data-test-calendar-month="${month}"]`,
-  },
-  runningTotalMonthStats: '[data-test-running-total="single-month-stats"]',
-  runningTotalMonthlyCharts: '[data-test-running-total="monthly-charts"]',
-  selectedAuthMount: 'div#auth-method-search-select [data-test-selected-option] div',
+  selectedAuthMount: 'div#mounts-search-select [data-test-selected-option] div',
   selectedNs: 'div#namespace-search-select [data-test-selected-option] div',
   upgradeWarning: '[data-test-clients-upgrade-warning]',
+  exportButton: '[data-test-attribution-export-button]',
 };
 
-export const CHART_ELEMENTS = {
-  entityClientDataBars: '[data-test-group="entity_clients"]',
-  nonEntityDataBars: '[data-test-group="non_entity_clients"]',
-  yLabels: '[data-test-group="y-labels"]',
-  actionBars: '[data-test-group="action-bars"]',
-  labelActionBars: '[data-test-group="label-action-bars"]',
-  totalValues: '[data-test-group="total-values"]',
+export const CHARTS = {
+  // container
+  container: (title: string) => `[data-test-chart-container="${title}"]`,
+  timestamp: '[data-test-chart-container-timestamp]',
+  legend: '[data-test-chart-container-legend]',
+  legendLabel: (nth: number) => `.legend-label:nth-child(${nth * 2})`, // nth * 2 accounts for dots in legend
+
+  // chart elements
+  chart: (title: string) => `[data-test-chart="${title}"]`,
+  hover: (area: string) => `[data-test-interactive-area="${area}"]`,
+  table: '[data-test-underlying-data]',
+  tooltip: '[data-test-tooltip]',
+  verticalBar: '[data-test-vertical-bar]',
+  xAxis: '[data-test-x-axis]',
+  yAxis: '[data-test-y-axis]',
+  xAxisLabel: '[data-test-x-axis] text',
+  plotPoint: '[data-test-plot-point]',
 };

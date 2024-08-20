@@ -6,7 +6,7 @@ terraform {
     # We need to specify the provider source in each module until we publish it
     # to the public registry
     enos = {
-      source  = "app.terraform.io/hashicorp-qti/enos"
+      source  = "registry.terraform.io/hashicorp-forge/enos"
       version = ">= 0.4.0"
     }
   }
@@ -21,11 +21,11 @@ locals {
   consul_bin_path        = "${var.consul_install_dir}/consul"
   enable_audit_devices   = var.enable_audit_devices && var.initialize_cluster
   // In order to get Terraform to plan we have to use collections with keys
-  // that are known at plan time. In order for our module to work our var.target_hosts
+  // that are known at plan time. In order for our module to work our var.hosts
   // must be a map with known keys at plan time. Here we're creating locals
   // that keep track of index values that point to our target hosts.
   followers = toset(slice(local.instances, 1, length(local.instances)))
-  instances = [for idx in range(length(var.target_hosts)) : tostring(idx)]
+  instances = [for idx in range(length(var.hosts)) : tostring(idx)]
   key_shares = {
     "awskms" = null
     "shamir" = 5
@@ -37,6 +37,13 @@ locals {
     "pkcs11" = null
   }
   leader = toset(slice(local.instances, 0, 1))
+  netcat_command = {
+    amzn          = "nc"
+    opensuse-leap = "netcat"
+    rhel          = "nc"
+    sles          = "nc"
+    ubuntu        = "netcat"
+  }
   recovery_shares = {
     "awskms" = 5
     "shamir" = null
@@ -50,9 +57,19 @@ locals {
   vault_service_user = "vault"
 }
 
+resource "enos_host_info" "hosts" {
+  for_each = var.hosts
+
+  transport = {
+    ssh = {
+      host = each.value.public_ip
+    }
+  }
+}
+
 resource "enos_bundle_install" "consul" {
   for_each = {
-    for idx, host in var.target_hosts : idx => var.target_hosts[idx]
+    for idx, host in var.hosts : idx => var.hosts[idx]
     if var.storage_backend == "consul"
   }
 
@@ -66,8 +83,21 @@ resource "enos_bundle_install" "consul" {
   }
 }
 
+# We run install_packages before we install Vault because for some combinations of
+# certain Linux distros and artifact types (e.g. SLES and RPM packages), there may
+# be packages that are required to perform Vault installation (e.g. openssl).
+module "install_packages" {
+  source = "../install_packages"
+
+  hosts    = var.hosts
+  packages = var.packages
+}
+
 resource "enos_bundle_install" "vault" {
-  for_each = var.target_hosts
+  for_each = var.hosts
+  depends_on = [
+    module.install_packages, // Don't race for the package manager locks with install_packages
+  ]
 
   destination = var.install_dir
   release     = var.release == null ? var.release : merge({ product = "vault" }, var.release)
@@ -81,22 +111,17 @@ resource "enos_bundle_install" "vault" {
   }
 }
 
-module "install_packages" {
-  source = "../install_packages"
-  depends_on = [
-    enos_bundle_install.vault, // Don't race for the package manager locks with vault install
-  ]
-
-  hosts    = var.target_hosts
-  packages = var.packages
-}
-
 resource "enos_consul_start" "consul" {
   for_each = enos_bundle_install.consul
 
   bin_path = local.consul_bin_path
   data_dir = var.consul_data_dir
   config = {
+    # GetPrivateInterfaces is a go-sockaddr template that helps Consul get the correct
+    # addr in all of our default cases. This is required in the case of Amazon Linux,
+    # because amzn has a default docker listener that will make Consul try to use the
+    # incorrect addr.
+    bind_addr        = "{{ GetPrivateInterfaces | include \"type\" \"IP\" | sort \"default\" |  limit 1 | attr \"address\"}}"
     data_dir         = var.consul_data_dir
     datacenter       = "dc1"
     retry_join       = ["provider=aws tag_key=${var.backend_cluster_tag_key} tag_value=${var.backend_cluster_name}"]
@@ -112,7 +137,7 @@ resource "enos_consul_start" "consul" {
 
   transport = {
     ssh = {
-      host = var.target_hosts[each.key].public_ip
+      host = var.hosts[each.key].public_ip
     }
   }
 }
@@ -122,25 +147,31 @@ module "start_vault" {
 
   depends_on = [
     enos_consul_start.consul,
+    module.install_packages,
     enos_bundle_install.vault,
   ]
 
   cluster_name              = var.cluster_name
+  cluster_port              = var.cluster_port
+  cluster_tag_key           = var.cluster_tag_key
   config_dir                = var.config_dir
+  config_mode               = var.config_mode
+  external_storage_port     = var.external_storage_port
+  hosts                     = var.hosts
   install_dir               = var.install_dir
+  ip_version                = var.ip_version
   license                   = var.license
+  listener_port             = var.listener_port
   log_level                 = var.log_level
   manage_service            = var.manage_service
   seal_attributes           = var.seal_attributes
   seal_attributes_secondary = var.seal_attributes_secondary
-  seal_ha_beta              = var.seal_ha_beta
   seal_type                 = var.seal_type
   seal_type_secondary       = var.seal_type_secondary
   service_username          = local.vault_service_user
   storage_backend           = var.storage_backend
   storage_backend_attrs     = var.storage_backend_addl_config
   storage_node_prefix       = var.storage_node_prefix
-  target_hosts              = var.target_hosts
 }
 
 resource "enos_vault_init" "leader" {
@@ -163,7 +194,7 @@ resource "enos_vault_init" "leader" {
 
   transport = {
     ssh = {
-      host = var.target_hosts[each.value].public_ip
+      host = var.hosts[each.value].public_ip
     }
   }
 }
@@ -182,7 +213,7 @@ resource "enos_vault_unseal" "leader" {
 
   transport = {
     ssh = {
-      host = var.target_hosts[tolist(local.leader)[0]].public_ip
+      host = var.hosts[tolist(local.leader)[0]].public_ip
     }
   }
 }
@@ -206,7 +237,7 @@ resource "enos_vault_unseal" "followers" {
 
   transport = {
     ssh = {
-      host = var.target_hosts[each.value].public_ip
+      host = var.hosts[each.value].public_ip
     }
   }
 }
@@ -220,17 +251,72 @@ resource "enos_vault_unseal" "maybe_force_unseal" {
     module.start_vault.followers,
   ]
   for_each = {
-    for idx, host in var.target_hosts : idx => host
+    for idx, host in var.hosts : idx => host
     if var.force_unseal && !var.initialize_cluster
   }
 
   bin_path   = local.bin_path
-  vault_addr = "http://localhost:8200"
+  vault_addr = module.start_vault.api_addr_localhost
   seal_type  = var.seal_type
   unseal_keys = coalesce(
     var.shamir_unseal_keys,
     try(enos_vault_init.leader[0].unseal_keys_hex, null),
   )
+
+  transport = {
+    ssh = {
+      host = each.value.public_ip
+    }
+  }
+}
+
+# Add the vault install location to the PATH and set up VAULT_ADDR and VAULT_TOKEN environement
+# variables in the login shell so we don't have to do it if/when we login in to a cluster node.
+resource "enos_remote_exec" "configure_login_shell_profile" {
+  depends_on = [
+    enos_vault_init.leader,
+    enos_vault_unseal.leader,
+  ]
+  for_each = var.hosts
+
+  environment = {
+    VAULT_ADDR        = module.start_vault.api_addr_localhost
+    VAULT_TOKEN       = var.root_token != null ? var.root_token : try(enos_vault_init.leader[0].root_token, "_")
+    VAULT_INSTALL_DIR = var.install_dir
+  }
+
+  scripts = [abspath("${path.module}/scripts/set-up-login-shell-profile.sh")]
+
+  transport = {
+    ssh = {
+      host = each.value.public_ip
+    }
+  }
+}
+
+# Add a motd to assist people that might be logging in.
+resource "enos_file" "motd" {
+  depends_on = [
+    enos_remote_exec.configure_login_shell_profile
+  ]
+  for_each = var.hosts
+
+  destination = "/etc/motd"
+  content     = <<EOF
+ ▄█    █▄     ▄████████ ███    █▄   ▄█           ███
+███    ███   ███    ███ ███    ███ ███       ▀█████████▄
+███    ███   ███    ███ ███    ███ ███          ▀███▀▀██
+███    ███   ███    ███ ███    ███ ███           ███   ▀
+███    ███ ▀███████████ ███    ███ ███           ███
+███    ███   ███    ███ ███    ███ ███           ███
+███    ███   ███    ███ ███    ███ ███▌    ▄     ███
+ ▀██████▀    ███    █▀  ████████▀  █████▄▄██    ▄████▀
+                                   ▀
+We've added `vault` to the PATH for you and configured
+the VAULT_ADDR and VAULT_TOKEN with the root token.
+
+Have fun!
+EOF
 
   transport = {
     ssh = {
@@ -262,7 +348,7 @@ resource "enos_remote_exec" "create_audit_log_dir" {
 
   transport = {
     ssh = {
-      host = var.target_hosts[each.value].public_ip
+      host = var.hosts[each.value].public_ip
     }
   }
 }
@@ -283,14 +369,16 @@ resource "enos_remote_exec" "start_audit_socket_listener" {
   ])
 
   environment = {
-    SOCKET_PORT = local.audit_socket_port
+    IP_VERSION     = var.ip_version
+    NETCAT_COMMAND = local.netcat_command[enos_host_info.hosts[each.key].distro]
+    SOCKET_PORT    = local.audit_socket_port
   }
 
   scripts = [abspath("${path.module}/scripts/start-audit-socket-listener.sh")]
 
   transport = {
     ssh = {
-      host = var.target_hosts[each.value].public_ip
+      host = var.hosts[each.value].public_ip
     }
   }
 }
@@ -306,9 +394,10 @@ resource "enos_remote_exec" "enable_audit_devices" {
   ])
 
   environment = {
+    IP_VERSION     = var.ip_version
     LOG_FILE_PATH  = local.audit_device_file_path
     SOCKET_PORT    = local.audit_socket_port
-    VAULT_ADDR     = "http://127.0.0.1:8200"
+    VAULT_ADDR     = module.start_vault.api_addr_localhost
     VAULT_BIN_PATH = local.bin_path
     VAULT_TOKEN    = enos_vault_init.leader[each.key].root_token
   }
@@ -317,7 +406,7 @@ resource "enos_remote_exec" "enable_audit_devices" {
 
   transport = {
     ssh = {
-      host = var.target_hosts[each.key].public_ip
+      host = var.hosts[each.key].public_ip
     }
   }
 }

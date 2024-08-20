@@ -21,8 +21,8 @@ module('Integration | Component | page/pki-configure-create', function (hooks) {
     this.store = this.owner.lookup('service:store');
     this.cancelSpy = sinon.spy();
     this.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: 'pki', route: 'overview' },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
+      { label: 'pki', route: 'overview', model: 'pki' },
       { label: 'configure' },
     ];
     this.config = this.store.createRecord('pki/action');

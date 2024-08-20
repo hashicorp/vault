@@ -13,7 +13,8 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/go-jose/go-jose/v3/jwt"
+	jose "github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/hashicorp/errwrap"
 )
 
@@ -40,6 +41,11 @@ const (
 	// PluginUnwrapTokenEnv is the ENV name used to pass unwrap tokens to the
 	// plugin.
 	PluginUnwrapTokenEnv = "VAULT_UNWRAP_TOKEN"
+
+	// CubbyHoleJWTSignatureAlgorithm is the signature algorithm used for
+	// the unwrap token that Vault passes to a plugin when auto-mTLS is
+	// not enabled.
+	CubbyHoleJWTSignatureAlgorithm = jose.ES512
 )
 
 // PluginAPIClientMeta is a helper that plugins can use to configure TLS connections
@@ -102,7 +108,7 @@ func VaultPluginTLSProviderContext(ctx context.Context, apiTLSConfig *TLSConfig)
 	return func() (*tls.Config, error) {
 		unwrapToken := os.Getenv(PluginUnwrapTokenEnv)
 
-		parsedJWT, err := jwt.ParseSigned(unwrapToken)
+		parsedJWT, err := jwt.ParseSigned(unwrapToken, []jose.SignatureAlgorithm{CubbyHoleJWTSignatureAlgorithm})
 		if err != nil {
 			return nil, errwrap.Wrapf("error parsing wrapping token: {{err}}", err)
 		}

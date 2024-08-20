@@ -7,7 +7,7 @@
 // contains getters that filter and extract data from activity model for use in charts
 
 import Component from '@glimmer/component';
-import { isSameMonth, fromUnixTime } from 'date-fns';
+import { isSameMonth } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { calculateAverage } from 'vault/utils/chart-helpers';
 import { filterVersionHistory, hasMountsKey, hasNamespacesKey } from 'core/utils/client-count-utils';
@@ -22,11 +22,10 @@ import type {
 } from 'core/utils/client-count-utils';
 
 interface Args {
-  isSecretsSyncActivated?: boolean;
   activity: ClientsActivityModel;
   versionHistory: ClientsVersionHistoryModel[];
-  startTimestamp: number;
-  endTimestamp: number;
+  startTimestamp: string;
+  endTimestamp: string;
   namespace: string;
   mountPath: string;
 }
@@ -40,14 +39,6 @@ export default class ClientsActivityComponent extends Component<Args> {
   ) => {
     return calculateAverage(data, key);
   };
-
-  get startTimeISO() {
-    return fromUnixTime(this.args.startTimestamp).toISOString();
-  }
-
-  get endTimeISO() {
-    return fromUnixTime(this.args.endTimestamp).toISOString();
-  }
 
   get byMonthActivityData() {
     const { activity, namespace } = this.args;

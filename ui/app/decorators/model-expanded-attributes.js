@@ -5,7 +5,7 @@
 
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import Model from '@ember-data/model';
-import { assert } from '@ember/debug';
+import { debug } from '@ember/debug';
 
 /**
  * sets allByKey properties on model class. These are all the attributes on the model
@@ -40,7 +40,10 @@ export function withExpandedAttributes() {
         return groups.map((obj) => {
           const [key, stringArray] = Object.entries(obj)[0];
           const expanded = stringArray.map((fieldName) => this.allByKey[fieldName]).filter((f) => !!f);
-          assert(`all fields found in allByKey for group ${key}`, expanded.length === stringArray.length);
+          // if this fails, it might mean there are missing fields in the model or the model must be hydrated via OpenAPI
+          if (expanded.length !== stringArray.length) {
+            debug(`not all model fields found in allByKey for group "${key}"`);
+          }
           return { [key]: expanded };
         });
       }

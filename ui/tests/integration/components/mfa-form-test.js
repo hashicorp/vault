@@ -5,10 +5,9 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render } from '@ember/test-helpers';
+import { render, settled, fillIn, click, waitUntil, waitFor } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { fillIn, click, waitUntil } from '@ember/test-helpers';
 import { _cancelTimers as cancelTimers, later } from '@ember/runloop';
 import { TOTP_VALIDATION_ERROR } from 'vault/components/mfa/mfa-form';
 
@@ -82,6 +81,12 @@ module('Integration | Component | mfa-form', function (hooks) {
         'Two methods are required for successful authentication.',
         'Correct description renders for multiple constraints'
       );
+  });
+
+  test('it should render a submit button', async function (assert) {
+    await render(hbs`<Mfa::MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} />`);
+
+    assert.dom('[data-test-mfa-validate]').isNotDisabled('Button is not disabled by default');
   });
 
   test('it should render method selects and passcode inputs', async function (assert) {
@@ -170,12 +175,12 @@ module('Integration | Component | mfa-form', function (hooks) {
     await click('[data-test-mfa-validate]');
   });
 
-  // TODO JLR: It doesn't appear that cancelTimers is working and tests wait for the full countdown
   test('it should show countdown on passcode already used and rate limit errors', async function (assert) {
     const messages = {
-      used: 'code already used; new code is available in 45 seconds',
+      used: 'code already used; new code is available in 30 seconds',
+      // note: the backend returns a duplicate "s" in "30s seconds" in the limit message below. we have intentionally left it as is to ensure our regex for parsing the delay time can handle it
       limit:
-        'maximum TOTP validation attempts 4 exceeded the allowed attempts 3. Please try again in 15 seconds',
+        'maximum TOTP validation attempts 4 exceeded the allowed attempts 3. Please try again in 30s seconds',
     };
     const codes = ['used', 'limit'];
     for (const code of codes) {
@@ -184,19 +189,44 @@ module('Integration | Component | mfa-form', function (hooks) {
           throw { errors: [messages[code]] };
         },
       });
+
       await render(hbs`<Mfa::MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} />`);
 
-      await fillIn('[data-test-mfa-passcode]', code);
-      later(() => cancelTimers(), 50);
+      await fillIn('[data-test-mfa-passcode]', 'foo');
       await click('[data-test-mfa-validate]');
-      const expectedTime = code === 'used' ? '45' : '15';
+
+      await waitFor('[data-test-mfa-countdown]');
+
       assert
         .dom('[data-test-mfa-countdown]')
-        .includesText(expectedTime, 'countdown renders with correct initial value from error response');
+        .includesText('30', 'countdown renders with correct initial value from error response');
       assert.dom('[data-test-mfa-validate]').isDisabled('Button is disabled during countdown');
       assert.dom('[data-test-mfa-passcode]').isDisabled('Input is disabled during countdown');
       assert.dom('[data-test-inline-error-message]').exists('Alert message renders');
     }
+  });
+
+  test('it defaults countdown to 30 seconds if error message does not indicate when user can try again ', async function (assert) {
+    this.owner.lookup('service:auth').reopen({
+      totpValidate() {
+        throw {
+          errors: ['maximum TOTP validation attempts 4 exceeded the allowed attempts 3. Beep-boop.'],
+        };
+      },
+    });
+    await render(hbs`<Mfa::MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} />`);
+
+    await fillIn('[data-test-mfa-passcode]', 'foo');
+    await click('[data-test-mfa-validate]');
+
+    await waitFor('[data-test-mfa-countdown]');
+
+    assert
+      .dom('[data-test-mfa-countdown]')
+      .includesText('30', 'countdown renders with correct initial value from error response');
+    assert.dom('[data-test-mfa-validate]').isDisabled('Button is disabled during countdown');
+    assert.dom('[data-test-mfa-passcode]').isDisabled('Input is disabled during countdown');
+    assert.dom('[data-test-inline-error-message]').exists('Alert message renders');
   });
 
   test('it should show error message for passcode invalid error', async function (assert) {
@@ -209,6 +239,8 @@ module('Integration | Component | mfa-form', function (hooks) {
 
     await fillIn('[data-test-mfa-passcode]', 'test-code');
     later(() => cancelTimers(), 50);
+    await settled();
+
     await click('[data-test-mfa-validate]');
     assert
       .dom('[data-test-message-error]')

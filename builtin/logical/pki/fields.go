@@ -166,6 +166,13 @@ Any values are added with OID 0.9.2342.19200300.100.1.1.`,
 			Name: "User ID(s)",
 		},
 	}
+	fields["cert_metadata"] = &framework.FieldSchema{
+		Type:        framework.TypeString,
+		Description: `User supplied metadata to store associated with this certificate's serial number, base64 encoded`,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Name: "Certificate Metadata",
+		},
+	}
 
 	fields = addIssuerRefField(fields)
 
@@ -570,6 +577,11 @@ especially if the cluster is offline.`,
 		Description: `Set to true to enable tidying up
 the cross-cluster revoked certificate store. Only runs on the active
 primary node.`,
+	}
+
+	fields["tidy_cert_metadata"] = &framework.FieldSchema{
+		Type:        framework.TypeBool,
+		Description: `Set to true to enable tidying up certificate metadata`,
 	}
 
 	return fields

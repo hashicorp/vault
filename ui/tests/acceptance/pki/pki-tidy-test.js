@@ -143,6 +143,33 @@ module('Acceptance | pki tidy', function (hooks) {
     assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.pki.tidy.auto.index');
   });
 
+  // test coverage for a bug where toggling acme tidy on then off caused API failure
+  test('it configures a manual tidy operation', async function (assert) {
+    await authPage.login(this.pkiAdminToken);
+    await visit(`/vault/secrets/${this.mountPath}/pki/tidy`);
+    await click(PKI_TIDY.tidyEmptyStateConfigure);
+    assert.dom(PKI_TIDY.tidyConfigureModal.configureTidyModal).exists();
+    assert.dom(PKI_TIDY.tidyConfigureModal.tidyModalAutoButton).exists();
+    assert.dom(PKI_TIDY.tidyConfigureModal.tidyModalManualButton).exists();
+    await click(PKI_TIDY.tidyConfigureModal.tidyModalManualButton);
+
+    assert.dom(PKI_TIDY_FORM.tidyFormName('manual')).exists();
+    await click(PKI_TIDY_FORM.inputByAttr('tidyCertStore'));
+
+    await click(GENERAL.ttl.toggle('Tidy ACME disabled'));
+    assert
+      .dom(GENERAL.ttl.input('Tidy ACME enabled'))
+      .hasValue('30', 'acmeAccountSafetyBuffer defaults to 30 days');
+    await click('[data-test-toggle-input="Tidy ACME enabled"]');
+
+    await click(PKI_TIDY_FORM.tidySave);
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.pki.tidy.index',
+      'saves successfully and redirects to index'
+    );
+  });
+
   test('it opens a tidy modal when the user clicks on the tidy toolbar action', async function (assert) {
     await authPage.login(this.pkiAdminToken);
     await visit(`/vault/secrets/${this.mountPath}/pki/tidy`);

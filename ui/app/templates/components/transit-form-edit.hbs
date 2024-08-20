@@ -50,7 +50,7 @@
         </div>
       </div>
       <p class="help">
-        The minimum decryption version required to reverse transformations performed with the encryption key. Results from
+        The minimum decryption version required to reverse transformations performed with the cryptographic key. Results from
         lower key versions may be rewrapped with the new key version using the
         <code>rewrap</code>
         action.
@@ -104,7 +104,7 @@
           @text="Cancel"
           @color="secondary"
           @route="vault.cluster.secrets.backend.show"
-          @model={{@key.id}}
+          @models={{array @key.backend @key.id}}
           @query={{hash tab="details"}}
         />
       </div>

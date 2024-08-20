@@ -38,7 +38,9 @@ var (
 	GetEnvConfigFunc             = getEnvConfig
 )
 
-// Entropy contains Entropy configuration for the server
+//go:generate enumer -type=EntropyMode -trimprefix=Entropy
+
+// EntropyMode contains Entropy configuration for the server
 type EntropyMode int
 
 const (

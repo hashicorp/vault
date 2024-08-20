@@ -12,7 +12,8 @@ The `approle` auth method allows machines or _apps_ to authenticate with
 Vault-defined _roles_. The open design of `AppRole` enables a varied set of
 workflows and configurations to handle large numbers of apps. This auth method
 is oriented to automated workflows (machines and services), and is less useful
-for human operators.
+for human operators. We recommend using `batch` tokens with the
+ `AppRole` auth method.
 
 An "AppRole" represents a set of Vault policies and login constraints that must
 be met to receive a token with those policies. The scope can be as narrow or
@@ -91,8 +92,8 @@ management tool.
 
    ```shell-session
    $ vault write auth/approle/role/my-role \
+       token_type=batch \
        secret_id_ttl=10m \
-       token_num_uses=10 \
        token_ttl=20m \
        token_max_ttl=30m \
        secret_id_num_uses=40
@@ -138,7 +139,7 @@ documentation.
    $ curl \
        --header "X-Vault-Token: ..." \
        --request POST \
-       --data '{"policies": "dev-policy,test-policy"}' \
+       --data '{"policies": "dev-policy,test-policy", "token_type": "batch"}' \
        http://127.0.0.1:8200/v1/auth/approle/role/my-role
    ```
 
@@ -235,9 +236,16 @@ belonging to configured CIDR blocks on the AppRole.
 
 ## Tutorial
 
-Refer to the [AppRole Pull
-Authentication](/vault/tutorials/auth-methods/approle)
-tutorial to learn how to use the AppRole method to generate tokens for machines or apps.
+Refer to the following tutorials to learn more:
+
+- [AppRole Pull Authentication](/vault/tutorials/auth-methods/approle) tutorial
+  to learn how to use the AppRole auth method to generate tokens for machines or
+  apps.
+
+- [AppRole usage best
+  practices](/vault/tutorials/auth-methods/approle-best-practices) to understand
+  the recommendation for distributing the AppRole credentials to the target
+  Vault clients.
 
 ## User lockout
 

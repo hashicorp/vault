@@ -4,7 +4,7 @@
 terraform {
   required_providers {
     enos = {
-      source  = "app.terraform.io/hashicorp-qti/enos"
+      source  = "registry.terraform.io/hashicorp-forge/enos"
       version = ">= 0.4.9"
     }
   }
@@ -12,6 +12,7 @@ terraform {
 
 variable "hosts" {
   type = map(object({
+    ipv6       = string
     private_ip = string
     public_ip  = string
   }))
@@ -30,6 +31,7 @@ locals {
 
   // Where the default configuration is
   config_paths = {
+    "amzn"   = "/etc/softhsm2.conf"
     "rhel"   = "/etc/softhsm2.conf"
     "ubuntu" = "/etc/softhsm/softhsm2.conf"
   }

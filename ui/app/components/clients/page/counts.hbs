@@ -18,40 +18,17 @@
     Date queries are sent in UTC.
   </p>
 
-  <h2 class="title is-6 has-bottom-margin-xs" data-test-counts-start-label>
-    {{this.versionText.label}}
-  </h2>
-
-  <div class="is-flex-align-baseline">
-    {{#if this.formattedStartDate}}
-      <p class="is-size-6" data-test-counts-start-month>{{this.formattedStartDate}}</p>
-      <Hds::Button
-        class="has-left-margin-xs"
-        @text="Edit"
-        @color="tertiary"
-        @icon="edit"
-        @iconPosition="trailing"
-        data-test-counts-start-edit
-        {{on "click" (fn (mut this.showBillingStartModal) true)}}
-      />
-    {{else}}
-      <DateDropdown
-        @handleSubmit={{this.onDateChange}}
-        @dateType="startDate"
-        @submitText="Save"
-        data-test-counts-start-dropdown
-      />
-    {{/if}}
-  </div>
-
-  <p class="is-8 has-text-grey has-bottom-margin-l" data-test-counts-description>
-    {{this.versionText.description}}
-  </p>
+  <Clients::DateRange
+    @startTime={{@startTimestamp}}
+    @endTime={{@endTimestamp}}
+    @onChange={{this.onDateChange}}
+    class="has-bottom-margin-l"
+  />
 
   {{#if (eq @activity.id "no-data")}}
     <Clients::NoData @config={{@config}} @dateRangeMessage={{this.dateRangeMessage}} />
   {{else if @activityError}}
-    <Clients::Error @error={{@activityError}} />
+    <Clients::Counts::Error @error={{@activityError}} />
   {{else}}
     {{#if (eq @config.enabled "Off")}}
       <Hds::Alert @type="inline" @color="warning" class="has-bottom-margin-s" as |A|>
@@ -66,47 +43,47 @@
     {{/if}}
 
     {{#if @startTimestamp}}
-      <div class="is-subtitle-gray has-bottom-margin-m">
-        FILTERS
-        <Toolbar data-test-clients-filter-bar>
-          <ToolbarFilters>
-            <CalendarWidget
-              @startTimestamp={{this.startTimestampISO}}
-              @endTimestamp={{this.endTimestampISO}}
-              @selectMonth={{this.onDateChange}}
+      <Hds::Text::Display @tag="p">
+        Filters
+      </Hds::Text::Display>
+      <Hds::Text::Body @tag="p" @color="faint">
+        Apply a filter to look at data from a specific namespace and drill down by mount. The mount filter includes auth
+        methods, KV engines, and PKI engines. Each mount type generates a different type of client and will not be applicable
+        to every tab.
+      </Hds::Text::Body>
+      <Toolbar aria-label="toolbar for filtering client count data" class="has-bottom-margin-m" data-test-clients-filter-bar>
+        <ToolbarFilters>
+          {{#if (or @namespace this.namespaces)}}
+            <SearchSelect
+              @id="namespace-search-select"
+              @options={{this.namespaces}}
+              @inputValue={{if @namespace (array @namespace)}}
+              @selectLimit="1"
+              @disallowNewItems={{true}}
+              @fallbackComponent="input-search"
+              @onChange={{fn this.setFilterValue "ns"}}
+              @placeholder="Filter by namespace"
+              @displayInherit={{true}}
+              class="is-marginless"
+              data-test-counts-namespaces
             />
-            {{#if (or @namespace this.namespaces)}}
-              <SearchSelect
-                @id="namespace-search-select"
-                @options={{this.namespaces}}
-                @inputValue={{if @namespace (array @namespace)}}
-                @selectLimit="1"
-                @disallowNewItems={{true}}
-                @fallbackComponent="input-search"
-                @onChange={{fn this.setFilterValue "ns"}}
-                @placeholder="Filter by namespace"
-                @displayInherit={{true}}
-                class="is-marginless"
-                data-test-counts-namespaces
-              />
-            {{/if}}
-            {{#if (or @mountPath this.mountPaths)}}
-              <SearchSelect
-                @id="auth-method-search-select"
-                @options={{this.mountPaths}}
-                @inputValue={{if @mountPath (array @mountPath)}}
-                @selectLimit="1"
-                @disallowNewItems={{true}}
-                @fallbackComponent="input-search"
-                @onChange={{fn this.setFilterValue "mountPath"}}
-                @placeholder="Filter by mount path"
-                @displayInherit={{true}}
-                data-test-counts-auth-mounts
-              />
-            {{/if}}
-          </ToolbarFilters>
-        </Toolbar>
-      </div>
+          {{/if}}
+          {{#if (or @mountPath this.mountPaths)}}
+            <SearchSelect
+              @id="mounts-search-select"
+              @options={{this.mountPaths}}
+              @inputValue={{if @mountPath (array @mountPath)}}
+              @selectLimit="1"
+              @disallowNewItems={{true}}
+              @fallbackComponent="input-search"
+              @onChange={{fn this.setFilterValue "mountPath"}}
+              @placeholder="Filter by mount path"
+              @displayInherit={{true}}
+              data-test-counts-auth-mounts
+            />
+          {{/if}}
+        </ToolbarFilters>
+      </Toolbar>
     {{/if}}
 
     {{#if this.filteredActivity}}
@@ -146,32 +123,7 @@
         </Hds::Alert>
       {{/if}}
 
-      <nav class="tabs has-bottom-margin-s" aria-label="navigation for managing client counts">
-        <ul>
-          <li>
-            <LinkTo @route="vault.cluster.clients.counts.overview" data-test-tab="overview">
-              Overview
-            </LinkTo>
-          </li>
-          <li>
-            <LinkTo @route="vault.cluster.clients.counts.token" data-test-tab="token">
-              Entity/Non-entity clients
-            </LinkTo>
-          </li>
-          {{#if this.version.hasSecretsSync}}
-            <li>
-              <LinkTo @route="vault.cluster.clients.counts.sync" data-test-tab="sync">
-                Secrets sync clients
-              </LinkTo>
-            </li>
-          {{/if}}
-          <li>
-            <LinkTo @route="vault.cluster.clients.counts.acme" data-test-tab="acme">
-              ACME clients
-            </LinkTo>
-          </li>
-        </ul>
-      </nav>
+      <Clients::Counts::NavBar @showSecretsSyncClientCounts={{or this.hasSecretsSyncClients this.flags.showSecretsSync}} />
 
       {{! CLIENT COUNT PAGE COMPONENTS RENDER HERE }}
       {{yield}}
@@ -193,21 +145,3 @@
     {{/if}}
   {{/if}}
 </div>
-
-{{#if this.showBillingStartModal}}
-  <Hds::Modal id="clients-edit-date-modal" @onClose={{fn (mut this.showBillingStartModal) false}} as |M|>
-    <M.Header>
-      Edit start month
-    </M.Header>
-    <M.Body>
-      <p class="has-bottom-margin-s">
-        {{this.versionText.description}}
-      </p>
-      <p><strong>{{this.versionText.label}}</strong></p>
-      <DateDropdown class="has-top-padding-s" @handleSubmit={{this.onDateChange}} @dateType="startDate" @submitText="Save" />
-    </M.Body>
-    <M.Footer as |F|>
-      <Hds::Button data-test-date-dropdown-cancel @text="Cancel" @color="secondary" {{on "click" F.close}} />
-    </M.Footer>
-  </Hds::Modal>
-{{/if}}

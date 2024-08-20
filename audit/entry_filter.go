@@ -10,22 +10,22 @@ import (
 
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-bexpr"
-	"github.com/hashicorp/vault/helper/namespace"
+	nshelper "github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-var _ eventlogger.Node = (*EntryFilter)(nil)
+var _ eventlogger.Node = (*entryFilter)(nil)
 
-// EntryFilter should be used to filter audit requests and responses which should
+// entryFilter should be used to filter audit requests and responses which should
 // make it to a sink.
-type EntryFilter struct {
+type entryFilter struct {
 	// the evaluator for the bexpr expression that should be applied by the node.
 	evaluator *bexpr.Evaluator
 }
 
-// NewEntryFilter should be used to create an EntryFilter node.
+// newEntryFilter should be used to create an entryFilter node.
 // The filter supplied should be in bexpr format and reference fields from logical.LogInputBexpr.
-func NewEntryFilter(filter string) (*EntryFilter, error) {
+func newEntryFilter(filter string) (*entryFilter, error) {
 	filter = strings.TrimSpace(filter)
 	if filter == "" {
 		return nil, fmt.Errorf("cannot create new audit filter with empty filter expression: %w", ErrExternalOptions)
@@ -45,22 +45,22 @@ func NewEntryFilter(filter string) (*EntryFilter, error) {
 		return nil, fmt.Errorf("filter references an unsupported field: %s: %w", filter, ErrExternalOptions)
 	}
 
-	return &EntryFilter{evaluator: eval}, nil
+	return &entryFilter{evaluator: eval}, nil
 }
 
 // Reopen is a no-op for the filter node.
-func (*EntryFilter) Reopen() error {
+func (*entryFilter) Reopen() error {
 	return nil
 }
 
 // Type describes the type of this node (filter).
-func (*EntryFilter) Type() eventlogger.NodeType {
+func (*entryFilter) Type() eventlogger.NodeType {
 	return eventlogger.NodeTypeFilter
 }
 
 // Process will attempt to parse the incoming event data and decide whether it
 // should be filtered or remain in the pipeline and passed to the next node.
-func (f *EntryFilter) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
+func (f *entryFilter) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -71,7 +71,7 @@ func (f *EntryFilter) Process(ctx context.Context, e *eventlogger.Event) (*event
 		return nil, fmt.Errorf("event is nil: %w", ErrInvalidParameter)
 	}
 
-	a, ok := e.Payload.(*AuditEvent)
+	a, ok := e.Payload.(*Event)
 	if !ok {
 		return nil, fmt.Errorf("cannot parse event payload: %w", ErrInvalidParameter)
 	}
@@ -81,7 +81,7 @@ func (f *EntryFilter) Process(ctx context.Context, e *eventlogger.Event) (*event
 		return nil, nil
 	}
 
-	ns, err := namespace.FromContext(ctx)
+	ns, err := nshelper.FromContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("cannot obtain namespace: %w", err)
 	}

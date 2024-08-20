@@ -17,19 +17,34 @@
       <div class="toolbar-separator"></div>
     {{/if}}
     {{#if @role.canGenerateCert}}
-      <LinkTo class="toolbar-link" @route="roles.role.generate" @model={{@role.id}} data-test-pki-role-generate-cert>
+      <LinkTo
+        class="toolbar-link"
+        @route="roles.role.generate"
+        @models={{array @role.backend @role.id}}
+        data-test-pki-role-generate-cert
+      >
         Generate Certificate
         <Icon @name="chevron-right" />
       </LinkTo>
     {{/if}}
     {{#if @role.canSign}}
-      <LinkTo class="toolbar-link" @route="roles.role.sign" @model={{@role.id}} data-test-pki-role-sign-cert>
+      <LinkTo
+        class="toolbar-link"
+        @route="roles.role.sign"
+        @models={{array @role.backend @role.id}}
+        data-test-pki-role-sign-cert
+      >
         Sign Certificate
         <Icon @name="chevron-right" />
       </LinkTo>
     {{/if}}
     {{#if @role.canEdit}}
-      <LinkTo class="toolbar-link" @route="roles.role.edit" @model={{@role.id}} data-test-pki-role-edit-link>
+      <LinkTo
+        class="toolbar-link"
+        @route="roles.role.edit"
+        @models={{array @role.backend @role.id}}
+        data-test-pki-role-edit-link
+      >
         Edit
         <Icon @name="chevron-right" />
       </LinkTo>
@@ -49,7 +64,7 @@
             @value={{val}}
             @alwaysRender={{true}}
           >
-            <LinkTo @route="issuers.issuer.details" @model={{val}}>{{val}}</LinkTo>
+            <LinkTo @route="issuers.issuer.details" @models={{array @role.backend val}}>{{val}}</LinkTo>
           </InfoTableRow>
         {{else if (includes attr.name this.arrayAttrs)}}
           <InfoTableRow
@@ -57,7 +72,7 @@
             @value={{val}}
             @alwaysRender={{true}}
           />
-        {{else if (eq attr.name "noStore")}}
+        {{else if (includes attr.name (array "noStore" "noStoreMetadata"))}}
           <InfoTableRow
             @label={{capitalize (or attr.options.detailsLabel attr.options.label (humanize (dasherize attr.name)))}}
             @value={{not val}}

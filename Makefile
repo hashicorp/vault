@@ -22,6 +22,12 @@ ifneq ($(FDB_ENABLED), )
 	BUILD_TAGS+=foundationdb
 endif
 
+# Set BUILD_MINIMAL to a non-empty value to build a minimal version of Vault with only core features.
+BUILD_MINIMAL ?=
+ifneq ($(strip $(BUILD_MINIMAL)),)
+	BUILD_TAGS+=minimal
+endif
+
 default: dev
 
 # bin generates the releasable binaries for Vault
@@ -174,7 +180,7 @@ hooks:
 
 # bootstrap the build by generating any necessary code and downloading additional tools that may
 # be used by devs.
-bootstrap: prep tools
+bootstrap: tools prep
 
 # Note: if you have plugins in GOPATH you can update all of them via something like:
 # for i in $(ls | grep vault-plugin-); do cd $i; git remote update; git reset --hard origin/master; dep ensure -update; git add .; git commit; git push; cd ..; done
@@ -366,9 +372,13 @@ ci-get-version-package:
 ci-install-external-tools:
 	@$(CURDIR)/scripts/ci-helper.sh install-external-tools
 
-.PHONY: ci-prepare-legal
-ci-prepare-legal:
-	@$(CURDIR)/scripts/ci-helper.sh prepare-legal
+.PHONY: ci-prepare-ent-legal
+ci-prepare-ent-legal:
+	@$(CURDIR)/scripts/ci-helper.sh prepare-ent-legal
+
+.PHONY: ci-prepare-ce-legal
+ci-prepare-ce-legal:
+	@$(CURDIR)/scripts/ci-helper.sh prepare-ce-legal
 
 .PHONY: ci-update-external-tool-modules
 ci-update-external-tool-modules:

@@ -34,7 +34,8 @@ check_tool() {
 install_external() {
   local tools
   # If you update this please update check_external below as well as our external tools
-  # install action ./github/actions/install-external-tools.yml
+  # install action .github/actions/install-external-tools/action.yml
+  #
   tools=(
     github.com/bufbuild/buf/cmd/buf@v1.25.0
     github.com/favadi/protoc-go-inject-tag@latest
@@ -43,10 +44,11 @@ install_external() {
     github.com/rinchsan/gosimports/cmd/gosimports@latest
     golang.org/x/tools/cmd/goimports@latest
     google.golang.org/protobuf/cmd/protoc-gen-go@latest
-    google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+    google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.4.0
     gotest.tools/gotestsum@latest
     honnef.co/go/tools/cmd/staticcheck@latest
     mvdan.cc/gofumpt@latest
+    github.com/loggerhead/enumer@latest
   )
 
   echo "==> Installing external tools..."
@@ -64,6 +66,7 @@ check_external() {
   local tools
   tools=(
     buf
+    enumer
     gofumpt
     goimports
     gosimports

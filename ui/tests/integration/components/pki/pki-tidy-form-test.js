@@ -32,7 +32,7 @@ module('Integration | Component | pki tidy form', function (hooks) {
   });
 
   test('it hides or shows fields depending on auto-tidy toggle', async function (assert) {
-    assert.expect(37);
+    assert.expect(39);
     const sectionHeaders = [
       'Universal operations',
       'ACME operations',
@@ -82,7 +82,7 @@ module('Integration | Component | pki tidy form', function (hooks) {
   });
 
   test('it renders all attribute fields, including enterprise', async function (assert) {
-    assert.expect(25);
+    assert.expect(27);
     this.autoTidy.enabled = true;
     const skipFields = ['enabled', 'tidyAcme', 'intervalDuration']; // combined with duration ttl or asserted separately
     await render(
@@ -121,8 +121,7 @@ module('Integration | Component | pki tidy form', function (hooks) {
     });
   });
 
-  test('it hides enterprise fields for OSS', async function (assert) {
-    assert.expect(7);
+  test('it hides enterprise fields for CE', async function (assert) {
     this.version.type = 'community';
     this.autoTidy.enabled = true;
 
@@ -181,7 +180,7 @@ module('Integration | Component | pki tidy form', function (hooks) {
       assert.propEqual(
         JSON.parse(req.requestBody),
         {
-          acme_account_safety_buffer: '60s',
+          acme_account_safety_buffer: '72h',
           enabled: true,
           interval_duration: '10s',
           issuer_safety_buffer: '20s',
@@ -189,6 +188,7 @@ module('Integration | Component | pki tidy form', function (hooks) {
           revocation_queue_safety_buffer: '40s',
           safety_buffer: '50s',
           tidy_acme: true,
+          tidy_cert_metadata: true,
           tidy_cert_store: true,
           tidy_cross_cluster_revoked_certs: true,
           tidy_expired_issuers: true,
@@ -230,7 +230,7 @@ module('Integration | Component | pki tidy form', function (hooks) {
     assert.false(this.autoTidy.tidyAcme, 'tidyAcme is false on model');
 
     await click(PKI_TIDY_FORM.toggleInput('acmeAccountSafetyBuffer'));
-    await fillIn(PKI_TIDY_FORM.acmeAccountSafetyBuffer, 60);
+    await fillIn(PKI_TIDY_FORM.acmeAccountSafetyBuffer, 3); // units are days based on defaultValue
     assert.true(this.autoTidy.tidyAcme, 'tidyAcme toggles to true');
 
     const fillInValues = {
@@ -262,6 +262,7 @@ module('Integration | Component | pki tidy form', function (hooks) {
       assert.propEqual(
         JSON.parse(req.requestBody),
         {
+          acme_account_safety_buffer: '720h',
           enabled: false,
           tidy_acme: false,
         },
@@ -294,7 +295,7 @@ module('Integration | Component | pki tidy form', function (hooks) {
       assert.ok(true, 'Request made to perform manual tidy');
       assert.propEqual(
         JSON.parse(req.requestBody),
-        { tidy_acme: false },
+        { acme_account_safety_buffer: '720h', tidy_acme: false },
         'response contains manual tidy params'
       );
       return { id: 'pki-manual-tidy' };

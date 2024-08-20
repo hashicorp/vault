@@ -1,5 +1,5 @@
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: BUSL-1.1
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
 
 module "autopilot_upgrade_storageconfig" {
   source = "./modules/autopilot_upgrade_storageconfig"
@@ -16,16 +16,29 @@ module "backend_raft" {
   source = "./modules/backend_raft"
 }
 
+// Find any artifact in Artifactory. Requires the version, revision, and edition.
+module "build_artifactory" {
+  source = "./modules/build_artifactory_artifact"
+}
+
+// Find any released RPM or Deb in Artifactory. Requires the version, edition, distro, and distro
+// version.
+module "build_artifactory_package" {
+  source = "./modules/build_artifactory_package"
+}
+
+// A shim "build module" suitable for use when using locally pre-built artifacts or a zip bundle
+// from releases.hashicorp.com. When using a local pre-built artifact it requires the local
+// artifact path. When using a release zip it does nothing as you'll need to configure the
+// vault_cluster module with release info instead.
 module "build_crt" {
   source = "./modules/build_crt"
 }
 
+// Build the local branch and package it into a zip artifact. Requires the goarch, goos, build tags,
+// and bundle path.
 module "build_local" {
   source = "./modules/build_local"
-}
-
-module "build_artifactory" {
-  source = "./modules/vault_artifactory_artifact"
 }
 
 module "create_vpc" {
@@ -101,7 +114,7 @@ module "stop_vault" {
   source = "./modules/stop_vault"
 }
 
-# create target instances using ec2:CreateFleet
+// create target instances using ec2:CreateFleet
 module "target_ec2_fleet" {
   source = "./modules/target_ec2_fleet"
 
@@ -110,25 +123,27 @@ module "target_ec2_fleet" {
   ssh_keypair  = var.aws_ssh_keypair_name
 }
 
-# create target instances using ec2:RunInstances
+// create target instances using ec2:RunInstances
 module "target_ec2_instances" {
   source = "./modules/target_ec2_instances"
 
-  common_tags  = var.tags
-  project_name = var.project_name
-  ssh_keypair  = var.aws_ssh_keypair_name
+  common_tags   = var.tags
+  ports_ingress = values(global.ports)
+  project_name  = var.project_name
+  ssh_keypair   = var.aws_ssh_keypair_name
 }
 
-# don't create instances but satisfy the module interface
+// don't create instances but satisfy the module interface
 module "target_ec2_shim" {
   source = "./modules/target_ec2_shim"
 
-  common_tags  = var.tags
-  project_name = var.project_name
-  ssh_keypair  = var.aws_ssh_keypair_name
+  common_tags   = var.tags
+  ports_ingress = values(global.ports)
+  project_name  = var.project_name
+  ssh_keypair   = var.aws_ssh_keypair_name
 }
 
-# create target instances using ec2:RequestSpotFleet
+// create target instances using ec2:RequestSpotFleet
 module "target_ec2_spot_fleet" {
   source = "./modules/target_ec2_spot_fleet"
 
@@ -140,36 +155,34 @@ module "target_ec2_spot_fleet" {
 module "vault_agent" {
   source = "./modules/vault_agent"
 
-  vault_install_dir    = var.vault_install_dir
-  vault_instance_count = var.vault_instance_count
+  vault_install_dir = var.vault_install_dir
+  vault_agent_port  = global.ports["vault_agent"]["port"]
 }
 
 module "vault_proxy" {
   source = "./modules/vault_proxy"
 
-  vault_install_dir    = var.vault_install_dir
-  vault_instance_count = var.vault_instance_count
+  vault_install_dir = var.vault_install_dir
+  vault_proxy_port  = global.ports["vault_proxy"]["port"]
 }
 
 module "vault_verify_agent_output" {
   source = "./modules/vault_verify_agent_output"
-
-  vault_instance_count = var.vault_instance_count
 }
 
 module "vault_cluster" {
   source = "./modules/vault_cluster"
 
-  install_dir    = var.vault_install_dir
-  consul_license = var.backend_license_path == null ? null : file(abspath(var.backend_license_path))
-  log_level      = var.vault_log_level
+  install_dir     = var.vault_install_dir
+  consul_license  = var.backend_license_path == null ? null : file(abspath(var.backend_license_path))
+  cluster_tag_key = global.vault_tag_key
+  log_level       = var.vault_log_level
 }
 
 module "vault_get_cluster_ips" {
   source = "./modules/vault_get_cluster_ips"
 
-  vault_install_dir    = var.vault_install_dir
-  vault_instance_count = var.vault_instance_count
+  vault_install_dir = var.vault_install_dir
 }
 
 module "vault_raft_remove_peer" {
@@ -183,6 +196,12 @@ module "vault_setup_perf_secondary" {
   vault_install_dir = var.vault_install_dir
 }
 
+module "vault_step_down" {
+  source = "./modules/vault_step_down"
+
+  vault_install_dir = var.vault_install_dir
+}
+
 module "vault_test_ui" {
   source = "./modules/vault_test_ui"
 
@@ -192,65 +211,53 @@ module "vault_test_ui" {
 module "vault_unseal_nodes" {
   source = "./modules/vault_unseal_nodes"
 
-  vault_install_dir    = var.vault_install_dir
-  vault_instance_count = var.vault_instance_count
+  vault_install_dir = var.vault_install_dir
 }
 
 module "vault_upgrade" {
   source = "./modules/vault_upgrade"
 
-  vault_install_dir    = var.vault_install_dir
-  vault_instance_count = var.vault_instance_count
+  vault_install_dir = var.vault_install_dir
 }
-
 
 module "vault_verify_autopilot" {
   source = "./modules/vault_verify_autopilot"
 
   vault_autopilot_upgrade_status = "await-server-removal"
   vault_install_dir              = var.vault_install_dir
-  vault_instance_count           = var.vault_instance_count
 }
 
 module "vault_verify_raft_auto_join_voter" {
   source = "./modules/vault_verify_raft_auto_join_voter"
 
-  vault_install_dir    = var.vault_install_dir
-  vault_instance_count = var.vault_instance_count
+  vault_install_dir       = var.vault_install_dir
+  vault_cluster_addr_port = global.ports["vault_cluster"]["port"]
 }
 
 module "vault_verify_undo_logs" {
   source = "./modules/vault_verify_undo_logs"
 
-  vault_install_dir    = var.vault_install_dir
-  vault_instance_count = var.vault_instance_count
+  vault_install_dir = var.vault_install_dir
 }
 
 module "vault_verify_default_lcq" {
   source = "./modules/vault_verify_default_lcq"
 
   vault_autopilot_default_max_leases = "300000"
-  vault_instance_count               = var.vault_instance_count
 }
 
 module "vault_verify_replication" {
   source = "./modules/vault_verify_replication"
-
-  vault_install_dir    = var.vault_install_dir
-  vault_instance_count = var.vault_instance_count
 }
 
 module "vault_verify_ui" {
   source = "./modules/vault_verify_ui"
-
-  vault_instance_count = var.vault_instance_count
 }
 
 module "vault_verify_unsealed" {
   source = "./modules/vault_verify_unsealed"
 
-  vault_install_dir    = var.vault_install_dir
-  vault_instance_count = var.vault_instance_count
+  vault_install_dir = var.vault_install_dir
 }
 
 module "vault_setup_perf_primary" {
@@ -262,8 +269,7 @@ module "vault_setup_perf_primary" {
 module "vault_verify_read_data" {
   source = "./modules/vault_verify_read_data"
 
-  vault_install_dir    = var.vault_install_dir
-  vault_instance_count = var.vault_instance_count
+  vault_install_dir = var.vault_install_dir
 }
 
 module "vault_verify_performance_replication" {
@@ -275,15 +281,13 @@ module "vault_verify_performance_replication" {
 module "vault_verify_version" {
   source = "./modules/vault_verify_version"
 
-  vault_install_dir    = var.vault_install_dir
-  vault_instance_count = var.vault_instance_count
+  vault_install_dir = var.vault_install_dir
 }
 
 module "vault_verify_write_data" {
   source = "./modules/vault_verify_write_data"
 
-  vault_install_dir    = var.vault_install_dir
-  vault_instance_count = var.vault_instance_count
+  vault_install_dir = var.vault_install_dir
 }
 
 module "vault_wait_for_leader" {

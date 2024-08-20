@@ -76,6 +76,7 @@ func TestSystemBackend_handleActivityWriteData(t *testing.T) {
 			name:      "correctly formatted data succeeds",
 			operation: logical.UpdateOperation,
 			input:     map[string]interface{}{"input": `{"write":["WRITE_PRECOMPUTED_QUERIES"],"data":[{"current_month":true,"all":{"clients":[{"count":5}]}}]}`},
+			wantPaths: 1,
 		},
 		{
 			name:      "entities with multiple segments",
@@ -169,7 +170,7 @@ func Test_singleMonthActivityClients_addNewClients(t *testing.T) {
 			m := &singleMonthActivityClients{
 				predefinedSegments: make(map[int][]int),
 			}
-			err := m.addNewClients(tt.clients, tt.mount, tt.segmentIndex)
+			err := m.addNewClients(tt.clients, tt.mount, tt.segmentIndex, 0, time.Now().UTC())
 			require.NoError(t, err)
 			numNew := tt.clients.Count
 			if numNew == 0 {
@@ -274,7 +275,7 @@ func Test_multipleMonthsActivityClients_processMonth(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := newMultipleMonthsActivityClients(tt.numMonths)
-			err := m.processMonth(context.Background(), core, tt.clients)
+			err := m.processMonth(context.Background(), core, tt.clients, time.Now().UTC())
 			if tt.wantError {
 				require.Error(t, err)
 			} else {
@@ -319,7 +320,7 @@ func Test_multipleMonthsActivityClients_processMonth_segmented(t *testing.T) {
 	}
 	m := newMultipleMonthsActivityClients(1)
 	core, _, _ := TestCoreUnsealed(t)
-	require.NoError(t, m.processMonth(context.Background(), core, data))
+	require.NoError(t, m.processMonth(context.Background(), core, data, time.Now().UTC()))
 	require.Len(t, m.months[0].predefinedSegments, 3)
 	require.Len(t, m.months[0].clients, 3)
 
@@ -338,13 +339,15 @@ func Test_multipleMonthsActivityClients_processMonth_segmented(t *testing.T) {
 // from 1 month ago and 2 months ago, and verifies that the correct clients are
 // added based on namespace, mount, and non-entity attributes
 func Test_multipleMonthsActivityClients_addRepeatedClients(t *testing.T) {
+	now := time.Now().UTC()
+
 	m := newMultipleMonthsActivityClients(3)
 	defaultMount := "default"
 
-	require.NoError(t, m.addClientToMonth(2, &generation.Client{Count: 2}, "identity", nil))
-	require.NoError(t, m.addClientToMonth(2, &generation.Client{Count: 2, Namespace: "other_ns"}, defaultMount, nil))
-	require.NoError(t, m.addClientToMonth(1, &generation.Client{Count: 2}, defaultMount, nil))
-	require.NoError(t, m.addClientToMonth(1, &generation.Client{Count: 2, ClientType: "non-entity"}, defaultMount, nil))
+	require.NoError(t, m.addClientToMonth(2, &generation.Client{Count: 2}, "identity", nil, now))
+	require.NoError(t, m.addClientToMonth(2, &generation.Client{Count: 2, Namespace: "other_ns"}, defaultMount, nil, now))
+	require.NoError(t, m.addClientToMonth(1, &generation.Client{Count: 2}, defaultMount, nil, now))
+	require.NoError(t, m.addClientToMonth(1, &generation.Client{Count: 2, ClientType: "non-entity"}, defaultMount, nil, now))
 
 	month2Clients := m.months[2].clients
 	month1Clients := m.months[1].clients
@@ -526,7 +529,7 @@ func Test_handleActivityWriteData(t *testing.T) {
 		paths := resp.Data["paths"].([]string)
 		require.Len(t, paths, 9)
 
-		times, err := core.activityLog.availableLogs(context.Background())
+		times, err := core.activityLog.availableLogs(context.Background(), time.Now())
 		require.NoError(t, err)
 		require.Len(t, times, 4)
 
@@ -643,9 +646,9 @@ func Test_handleActivityWriteData(t *testing.T) {
 		next := time.Unix(intent.NextMonth, 0)
 
 		require.Equal(t, timeutil.StartOfMonth(now), next.UTC())
-		require.Equal(t, timeutil.StartOfMonth(timeutil.MonthsPreviousTo(3, now)), prev.UTC())
+		require.Equal(t, timeutil.StartOfMonth(timeutil.MonthsPreviousTo(1, now)), prev.UTC())
 
-		times, err := core.activityLog.availableLogs(context.Background())
+		times, err := core.activityLog.availableLogs(context.Background(), time.Now())
 		require.NoError(t, err)
 		require.Len(t, times, 4)
 	})

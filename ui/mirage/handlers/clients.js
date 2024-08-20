@@ -21,7 +21,7 @@ import { CLIENT_TYPES } from 'core/utils/client-count-utils';
 
 /*
 HOW TO ADD NEW TYPES:
-1. add key to CLIENT_TYPES 
+1. add key to CLIENT_TYPES
 2. Find "ADD NEW CLIENT TYPES HERE" comment below and add type to destructuring array
 3. Add generateMounts() for that client type to the mounts array
 */
@@ -31,72 +31,82 @@ const COUNTS_START = subMonths(STATIC_NOW, 12); // user started Vault cluster on
 // upgrade happened 2 month after license start
 export const UPGRADE_DATE = addMonths(LICENSE_START, 2); // monthly attribution added
 
+// exported so that tests not using this scenario can use the same response
+export const CONFIG_RESPONSE = {
+  request_id: 'some-config-id',
+  data: {
+    billing_start_timestamp: formatRFC3339(LICENSE_START),
+    enabled: 'default-enabled',
+    minimum_retention_months: 48,
+    queries_available: false,
+    reporting_enabled: true,
+    retention_months: 48,
+  },
+};
+
 function getSum(array, key) {
   return array.reduce((sum, { counts }) => sum + counts[key], 0);
 }
 
 function getTotalCounts(array) {
-  const counts = CLIENT_TYPES.reduce((obj, key) => {
+  return CLIENT_TYPES.reduce((obj, key) => {
     obj[key] = getSum(array, key);
     return obj;
   }, {});
-
-  // add deprecated keys
-  return {
-    ...counts,
-    distinct_entities: counts.entity_clients,
-    non_entity_tokens: counts.non_entity_clients,
-  };
 }
 
 function randomBetween(min, max) {
   return Math.floor(Math.random() * (max - min + 1) + min);
 }
 
-function generateMounts(pathPrefix, counts) {
+function generateMountBlock(path, counts) {
   const baseObject = CLIENT_TYPES.reduce((obj, key) => {
     obj[key] = 0;
     return obj;
   }, {});
-  return Array.from(Array(5)).map((mount, index) => {
-    return {
-      mount_path: `${pathPrefix}${index}`,
-      counts: {
-        ...baseObject,
-        distinct_entities: 0,
-        non_entity_tokens: 0,
-        // object contains keys for which 0-values of base object to overwrite
-        ...counts,
-      },
-    };
-  });
+  return {
+    mount_path: path,
+    counts: {
+      ...baseObject,
+      // object contains keys for which 0-values of base object to overwrite
+      ...counts,
+    },
+  };
 }
 
-function generateNamespaceBlock(idx = 0, isLowerCounts = false, ns) {
+function generateNamespaceBlock(idx = 0, isLowerCounts = false, ns, skipCounts = false) {
   const min = isLowerCounts ? 10 : 50;
-  const max = isLowerCounts ? 100 : 5000;
+  const max = isLowerCounts ? 100 : 1000;
   const nsBlock = {
     namespace_id: ns?.namespace_id || (idx === 0 ? 'root' : Math.random().toString(36).slice(2, 7) + idx),
-    namespace_path: ns?.namespace_path || (idx === 0 ? '' : `ns/${idx}`),
+    namespace_path: ns?.namespace_path || (idx === 0 ? '' : `ns${idx}`),
     counts: {},
     mounts: {},
   };
 
-  // * ADD NEW CLIENT TYPES HERE and pass to a new generateMounts() function below
-  const [acme_clients, entity_clients, non_entity_clients, secret_syncs] = CLIENT_TYPES.map(() =>
-    randomBetween(min, max)
-  );
+  if (skipCounts) return nsBlock; // skip counts to generate empty ns block with namespace ids and paths
 
-  // each mount type generates a different type of client
-  const mounts = [
-    ...generateMounts('auth/authid/', {
-      clients: non_entity_clients + entity_clients,
-      non_entity_clients,
-      entity_clients,
-    }),
-    ...generateMounts('kvv2-engine-', { clients: secret_syncs, secret_syncs }),
-    ...generateMounts('pki-engine-', { clients: acme_clients, acme_clients }),
-  ];
+  // generates one mount per client type
+  const mountsArray = (idx) => {
+    // * ADD NEW CLIENT TYPES HERE and pass to a new generateMountBlock() function below
+    const [acme_clients, entity_clients, non_entity_clients, secret_syncs] = CLIENT_TYPES.map(() =>
+      randomBetween(min, max)
+    );
+
+    // each mount type generates a different type of client
+    return [
+      generateMountBlock(`auth/authid/${idx}`, {
+        clients: non_entity_clients + entity_clients,
+        non_entity_clients,
+        entity_clients,
+      }),
+      generateMountBlock(`kvv2-engine-${idx}`, { clients: secret_syncs, secret_syncs }),
+      generateMountBlock(`pki-engine-${idx}`, { clients: acme_clients, acme_clients }),
+    ];
+  };
+
+  // two mounts per client type for more varied mock data
+  const mounts = [...mountsArray(0), ...mountsArray(1)];
 
   mounts.sort((a, b) => b.counts.clients - a.counts.clients);
   nsBlock.mounts = mounts;
@@ -144,12 +154,34 @@ function generateMonths(startDate, endDate, namespaces) {
   return months;
 }
 
-function generateActivityResponse(namespaces, startDate, endDate) {
+function generateActivityResponse(startDate, endDate) {
+  let namespaces = Array.from(Array(12)).map((v, idx) => generateNamespaceBlock(idx, null, null, true));
+  const months = generateMonths(startDate, endDate, namespaces);
+  if (months.length) {
+    const monthlyCounts = months.filter((m) => m.counts);
+    // sum namespace counts from monthly data
+    namespaces.forEach((ns) => {
+      const nsData = monthlyCounts.map((d) =>
+        d.namespaces.find((n) => n.namespace_path === ns.namespace_path)
+      );
+      const mountCounts = nsData.flatMap((d) => d.mounts);
+      const paths = nsData[0].mounts.map(({ mount_path }) => mount_path);
+      ns.mounts = paths.map((path) => {
+        const counts = getTotalCounts(mountCounts.filter((m) => m.mount_path === path));
+        return { mount_path: path, counts };
+      });
+      ns.counts = getTotalCounts(nsData);
+    });
+  } else {
+    // if no monthly data due to upgrade stuff, generate counts
+    namespaces = Array.from(Array(12)).map((v, idx) => generateNamespaceBlock(idx));
+  }
+  namespaces.sort((a, b) => b.counts.clients - a.counts.clients);
   return {
     start_time: isAfter(new Date(startDate), COUNTS_START) ? startDate : formatRFC3339(COUNTS_START),
     end_time: endDate,
-    by_namespace: namespaces.sort((a, b) => b.counts.clients - a.counts.clients),
-    months: generateMonths(startDate, endDate, namespaces),
+    by_namespace: namespaces,
+    months,
     total: getTotalCounts(namespaces),
   };
 }
@@ -169,30 +201,43 @@ export default function (server) {
   });
 
   server.get('sys/internal/counters/config', function () {
-    return {
-      request_id: 'some-config-id',
-      data: {
-        default_report_months: 12,
-        enabled: 'default-enable',
-        queries_available: true,
-        retention_months: 24,
-        billing_start_timestamp: formatRFC3339(LICENSE_START),
-      },
-    };
+    return CONFIG_RESPONSE;
   });
 
   server.get('/sys/internal/counters/activity', (schema, req) => {
+    const activities = schema['clients/activities'];
     let { start_time, end_time } = req.queryParams;
+    if (!start_time && !end_time) {
+      // if there are no date query params, the activity log default behavior
+      // queries from the builtin license start timestamp to the current month
+      start_time = LICENSE_START.toISOString();
+      end_time = STATIC_NOW.toISOString();
+    }
     // backend returns a timestamp if given unix time, so first convert to timestamp string here
     if (!start_time.includes('T')) start_time = fromUnixTime(start_time).toISOString();
     if (!end_time.includes('T')) end_time = fromUnixTime(end_time).toISOString();
-    const namespaces = Array.from(Array(12)).map((v, idx) => generateNamespaceBlock(idx));
+
+    const record = activities.findBy({ start_time, end_time });
+    let data;
+    if (record) {
+      // if we already have data for the given start/end time, use that
+      data = {
+        start_time: record.start_time,
+        end_time: record.end_time,
+        by_namespace: record.by_namespace,
+        months: record.months,
+        total: record.total,
+      };
+    } else {
+      data = generateActivityResponse(start_time, end_time);
+      activities.create(data);
+    }
     return {
       request_id: 'some-activity-id',
       lease_id: '',
       renewable: false,
       lease_duration: 0,
-      data: generateActivityResponse(namespaces, start_time, end_time),
+      data,
       wrap_info: null,
       warnings: null,
       auth: null,
@@ -205,37 +250,48 @@ export default function (server) {
     return {
       request_id: 'version-history-request-id',
       data: {
-        keys: ['1.9.0', '1.9.1', '1.10.1', '1.14.4', '1.16.0'],
+        keys: ['1.9.0', '1.9.1', '1.10.1', '1.10.3', '1.14.4', '1.16.0', '1.17.0'],
         key_info: {
           // entity/non-entity breakdown added
           '1.9.0': {
-            // we don't currently use build_date, including for accuracy. it's only tracked in versions >= 1.110
+            // we don't currently use build_date, including for accuracy. it's only tracked in versions >= 1.11.0
             build_date: null,
             previous_version: null,
-            timestamp_installed: LICENSE_START.toISOString(),
+            timestamp_installed: '2023-07-02T00:00:00Z',
           },
           '1.9.1': {
             build_date: null,
             previous_version: '1.9.0',
-            timestamp_installed: addMonths(LICENSE_START, 1).toISOString(),
+            timestamp_installed: '2023-08-02T00:00:00Z',
           },
           // auth mount attribution added in 1.10.0
           '1.10.1': {
             build_date: null,
             previous_version: '1.9.1',
-            timestamp_installed: UPGRADE_DATE.toISOString(),
+            timestamp_installed: '2023-09-02T00:00:00Z', // same as UPGRADE_DATE
+          },
+          '1.10.3': {
+            build_date: null,
+            previous_version: '1.10.1',
+            timestamp_installed: '2023-10-23T00:00:00Z',
           },
           // no notable UI changes
           '1.14.4': {
-            build_date: addMonths(LICENSE_START, 3).toISOString(),
-            previous_version: '1.10.1',
-            timestamp_installed: addMonths(LICENSE_START, 3).toISOString(),
+            build_date: '2023-11-02T00:00:00Z',
+            previous_version: '1.10.3',
+            timestamp_installed: '2023-11-02T00:00:00Z',
           },
           // sync clients added
           '1.16.0': {
-            build_date: addMonths(LICENSE_START, 4).toISOString(),
+            build_date: '2023-11-23T00:00:00Z',
             previous_version: '1.14.4',
-            timestamp_installed: addMonths(LICENSE_START, 4).toISOString(),
+            timestamp_installed: '2023-11-23T00:00:00Z',
+          },
+          // acme_clients separated from non-entity clients
+          '1.17.0': {
+            build_date: '2023-12-02T00:00:00Z',
+            previous_version: '1.16.0',
+            timestamp_installed: '2023-12-02T00:00:00Z',
           },
         },
       },

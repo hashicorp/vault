@@ -12,7 +12,7 @@ import (
 )
 
 // TestNewSinkMetricTimer ensures that parameters are checked correctly and errors
-// reported as expected when attempting to create a SinkMetricTimer.
+// reported as expected when attempting to create a sinkMetricTimer.
 func TestNewSinkMetricTimer(t *testing.T) {
 	t.Parallel()
 
@@ -40,7 +40,7 @@ func TestNewSinkMetricTimer(t *testing.T) {
 		},
 		"bad-node": {
 			name:                 "foo",
-			node:                 &EntryFormatter{},
+			node:                 &entryFormatter{},
 			isErrorExpected:      true,
 			expectedErrorMessage: "sink node must be of type 'sink': invalid internal parameter",
 		},
@@ -52,7 +52,7 @@ func TestNewSinkMetricTimer(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			m, err := NewSinkMetricTimer(tc.name, tc.node)
+			m, err := newSinkMetricTimer(tc.name, tc.node)
 
 			switch {
 			case tc.isErrorExpected:

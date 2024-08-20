@@ -805,20 +805,23 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 		}
 	}
 
+	envs := []string{
+		// For now we're using disable_mlock, because this is for testing
+		// anyway, and because it prevents us using external plugins.
+		"SKIP_SETCAP=true",
+		"VAULT_LOG_FORMAT=json",
+		"VAULT_LICENSE=" + opts.VaultLicense,
+	}
+	envs = append(envs, opts.Envs...)
+
 	r, err := dockhelper.NewServiceRunner(dockhelper.RunOptions{
 		ImageRepo: n.ImageRepo,
 		ImageTag:  n.ImageTag,
 		// We don't need to run update-ca-certificates in the container, because
 		// we're providing the CA in the raft join call, and otherwise Vault
 		// servers don't talk to one another on the API port.
-		Cmd: append([]string{"server"}, opts.Args...),
-		Env: []string{
-			// For now we're using disable_mlock, because this is for testing
-			// anyway, and because it prevents us using external plugins.
-			"SKIP_SETCAP=true",
-			"VAULT_LOG_FORMAT=json",
-			"VAULT_LICENSE=" + opts.VaultLicense,
-		},
+		Cmd:               append([]string{"server"}, opts.Args...),
+		Env:               envs,
 		Ports:             ports,
 		ContainerName:     n.Name(),
 		NetworkName:       opts.NetworkName,
@@ -1008,6 +1011,7 @@ func (n *DockerClusterNode) PartitionFromCluster(ctx context.Context) error {
 		"-xec", strings.Join([]string{
 			fmt.Sprintf("echo partitioning container from network"),
 			"apk add iproute2",
+			"apk add iptables",
 			// Get the gateway address for the bridge so we can allow host to
 			// container traffic still.
 			"GW=$(ip r | grep default | grep eth0 | cut -f 3 -d' ')",
@@ -1088,6 +1092,7 @@ type DockerClusterOptions struct {
 	CA          *testcluster.CA
 	VaultBinary string
 	Args        []string
+	Envs        []string
 	StartProbe  func(*api.Client) error
 	Storage     testcluster.ClusterStorage
 	DisableTLS  bool

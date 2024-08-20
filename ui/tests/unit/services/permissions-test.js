@@ -5,8 +5,10 @@
 
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
-import Pretender from 'pretender';
 import Service from '@ember/service';
+import { setupMirage } from 'ember-cli-mirage/test-support';
+import { overrideResponse } from 'vault/tests/helpers/stubs';
+import { PERMISSIONS_BANNER_STATES } from 'vault/services/permissions';
 
 const PERMISSIONS_RESPONSE = {
   data: {
@@ -34,17 +36,13 @@ const PERMISSIONS_RESPONSE = {
 
 module('Unit | Service | permissions', function (hooks) {
   setupTest(hooks);
+  setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.server = new Pretender();
-    this.server.get('/v1/sys/internal/ui/resultant-acl', () => {
-      return [200, { 'Content-Type': 'application/json' }, JSON.stringify(PERMISSIONS_RESPONSE)];
+    this.server.get('/sys/internal/ui/resultant-acl', () => {
+      return PERMISSIONS_RESPONSE;
     });
     this.service = this.owner.lookup('service:permissions');
-  });
-
-  hooks.afterEach(function () {
-    this.server.shutdown();
   });
 
   test('sets paths properly', async function (assert) {
@@ -59,9 +57,7 @@ module('Unit | Service | permissions', function (hooks) {
   });
 
   test('defaults to show all items when policy cannot be found', async function (assert) {
-    this.server.get('/v1/sys/internal/ui/resultant-acl', () => {
-      return [403, { 'Content-Type': 'application/json' }];
-    });
+    this.server.get('/sys/internal/ui/resultant-acl', () => overrideResponse(403));
     await this.service.getPaths.perform();
     assert.true(this.service.canViewAll);
   });
@@ -251,58 +247,9 @@ module('Unit | Service | permissions', function (hooks) {
     });
   });
 
-  module('wildcardPath calculates correctly', function () {
+  module('permissions banner calculates correctly', function () {
     [
-      {
-        scenario: 'no user root or chroot',
-        userRoot: '',
-        chroot: null,
-        expectedPath: '',
-      },
-      {
-        scenario: 'user root = child ns and no chroot',
-        userRoot: 'bar',
-        chroot: null,
-        expectedPath: 'bar/',
-      },
-      {
-        scenario: 'user root = child ns and chroot set',
-        userRoot: 'bar',
-        chroot: 'admin/',
-        expectedPath: 'admin/bar/',
-      },
-      {
-        scenario: 'no user root and chroot set',
-        userRoot: '',
-        chroot: 'admin/',
-        expectedPath: 'admin/',
-      },
-    ].forEach((testCase) => {
-      test(`when ${testCase.scenario}`, function (assert) {
-        const namespaceService = Service.extend({
-          userRootNamespace: testCase.userRoot,
-          path: 'current/path/does/not/matter',
-        });
-        this.owner.register('service:namespace', namespaceService);
-        this.service.set('chrootNamespace', testCase.chroot);
-        assert.strictEqual(this.service.wildcardPath, testCase.expectedPath);
-      });
-    });
-    test('when user root =child ns and chroot set', function (assert) {
-      const namespaceService = Service.extend({
-        path: 'bar/baz',
-        userRootNamespace: 'bar',
-      });
-      this.owner.register('service:namespace', namespaceService);
-      this.service.set('chrootNamespace', 'admin/');
-      assert.strictEqual(this.service.wildcardPath, 'admin/bar/');
-    });
-  });
-
-  module('hasWildcardAccess calculates correctly', function () {
-    // The resultant-acl endpoint returns paths with chroot and
-    // relative root prefixed on all paths.
-    [
+      // First set: no chroot or user root
       {
         scenario: 'when root wildcard in root namespace',
         chroot: null,
@@ -311,17 +258,139 @@ module('Unit | Service | permissions', function (hooks) {
         globs: {
           '': { capabilities: ['read'] },
         },
-        expectedAccess: true,
+        expected: {
+          wildcard: true,
+          banner: null,
+          fullNs: 'foo/bar',
+        },
       },
+      {
+        scenario: 'when nested access granted in root namespace',
+        chroot: null,
+        userRoot: '',
+        currentNs: 'foo/bing',
+        globs: {
+          'foo/': { capabilities: ['read'] },
+        },
+        expected: {
+          wildcard: true,
+          banner: null,
+          fullNs: 'foo/bing',
+        },
+      },
+      {
+        scenario: 'when engine access granted',
+        chroot: null,
+        userRoot: '',
+        currentNs: 'foo/bing',
+        globs: {
+          'foo/bing/kv/data/': { capabilities: ['read'] },
+        },
+        expected: {
+          wildcard: false,
+          banner: null,
+          fullNs: 'foo/bing',
+        },
+      },
+      // Second set: chroot and user root (currentNs excludes chroot)
+      {
+        scenario: 'when namespace wildcard in child ns & chroot',
+        chroot: 'foo/',
+        userRoot: 'bar',
+        currentNs: 'bar/baz',
+        globs: {
+          'foo/bar/': { capabilities: ['read'] },
+        },
+        expected: {
+          wildcard: true,
+          banner: null,
+          fullNs: 'foo/bar/baz',
+        },
+      },
+      {
+        scenario: 'when namespace wildcard in different ns than user root',
+        chroot: 'foo/',
+        userRoot: 'bar',
+        currentNs: 'bing',
+        globs: {
+          'foo/bar/': { capabilities: ['read'] },
+        },
+        expected: {
+          wildcard: false,
+          banner: PERMISSIONS_BANNER_STATES.noAccess,
+          fullNs: 'foo/bing',
+        },
+      },
+      {
+        scenario: 'when engine access granted with chroot and user root',
+        chroot: 'foo/',
+        userRoot: 'bing',
+        currentNs: 'bing',
+        globs: {
+          'foo/bing/kv/data/': { capabilities: ['read'] },
+        },
+        expected: {
+          wildcard: false,
+          banner: null,
+          fullNs: 'foo/bing',
+        },
+      },
+      // Third set: chroot only (currentNs excludes chroot)
       {
         scenario: 'when root wildcard in chroot ns',
         chroot: 'admin/',
         userRoot: '',
-        currentNs: 'admin/child',
+        currentNs: 'child',
         globs: {
           'admin/': { capabilities: ['read'] },
         },
+        expected: {
+          wildcard: true,
+          banner: null,
+          fullNs: 'admin/child',
+        },
         expectedAccess: true,
+      },
+      {
+        scenario: 'when nested access granted in root namespace and chroot',
+        chroot: 'foo/',
+        userRoot: '',
+        currentNs: 'bing/baz',
+        globs: {
+          'foo/bing/': { capabilities: ['read'] },
+        },
+        expected: {
+          wildcard: true,
+          banner: null,
+          fullNs: 'foo/bing/baz',
+        },
+      },
+      {
+        scenario: 'when engine access granted with chroot',
+        chroot: 'foo/',
+        userRoot: '',
+        currentNs: 'bing',
+        globs: {
+          'foo/bing/kv/data/': { capabilities: ['read'] },
+        },
+        expected: {
+          wildcard: false,
+          banner: null,
+          fullNs: 'foo/bing',
+        },
+      },
+      // Fourth set: user root, no chroot
+      {
+        scenario: 'when globs is empty',
+        chroot: null,
+        userRoot: 'foo',
+        currentNs: 'foo/bing',
+        globs: {},
+        expected: {
+          wildcard: false,
+          banner: PERMISSIONS_BANNER_STATES.noAccess,
+          fullNs: 'foo/bing',
+        },
       },
       {
         scenario: 'when namespace wildcard in child ns',
@@ -331,56 +400,89 @@ module('Unit | Service | permissions', function (hooks) {
         globs: {
           'bar/': { capabilities: ['read'] },
         },
-        expectedAccess: true,
-      },
-      {
-        scenario: 'when namespace wildcard in child ns & chroot',
-        chroot: 'foo/',
-        userRoot: 'bar',
-        currentNs: 'foo/bar/baz',
-        globs: {
-          'foo/bar/': { capabilities: ['read'] },
+        expected: {
+          wildcard: true,
+          banner: null,
+          fullNs: 'bar/baz',
         },
-        expectedAccess: true,
       },
       {
-        scenario: 'when namespace wildcard in different ns with chroot & user root',
-        chroot: 'foo/',
-        userRoot: 'bar',
-        currentNs: 'foo/bing',
-        globs: {
-          'foo/bar/': { capabilities: ['read'] },
-        },
-        expectedAccess: false,
-      },
-      {
-        scenario: 'when namespace wildcard in different ns without chroot',
+        scenario: 'when namespace wildcard in different ns',
         chroot: null,
         userRoot: 'bar',
         currentNs: 'foo/bing',
         globs: {
           'bar/': { capabilities: ['read'] },
         },
+        expected: {
+          wildcard: false,
+          banner: PERMISSIONS_BANNER_STATES.noAccess,
+          fullNs: 'foo/bing',
+        },
         expectedAccess: false,
       },
       {
-        scenario: 'when globs is empty',
-        chroot: 'foo/',
+        scenario: 'when access granted via parent namespace in child ns',
+        chroot: null,
+        userRoot: 'foo',
+        currentNs: 'foo/bing/baz',
+        globs: {
+          'foo/bing/': { capabilities: ['read'] },
+        },
+        expected: {
+          wildcard: true,
+          banner: null,
+          fullNs: 'foo/bing/baz',
+        },
+      },
+      {
+        scenario: 'when namespace access denied for child ns',
+        chroot: null,
         userRoot: 'bar',
+        currentNs: 'bar/baz/bin',
+        globs: {
+          'bar/': { capabilities: ['read'] },
+          'bar/baz/': { capabilities: ['deny'] },
+        },
+        expected: {
+          wildcard: false,
+          banner: PERMISSIONS_BANNER_STATES.noAccess,
+          fullNs: 'bar/baz/bin',
+        },
+      },
+      {
+        scenario: 'when engine access granted with user root',
+        chroot: null,
+        userRoot: 'foo',
         currentNs: 'foo/bing',
-        globs: {},
-        expectedAccess: false,
+        globs: {
+          'foo/bing/kv/data/': { capabilities: ['read'] },
+        },
+        expected: {
+          wildcard: false,
+          banner: null,
+          fullNs: 'foo/bing',
+        },
       },
     ].forEach((testCase) => {
-      test(`when ${testCase.scenario}`, function (assert) {
+      test(`${testCase.scenario}`, async function (assert) {
         const namespaceService = Service.extend({
-          path: testCase.currentNs,
           userRootNamespace: testCase.userRoot,
+          path: testCase.currentNs,
         });
         this.owner.register('service:namespace', namespaceService);
-        this.service.set('chrootNamespace', testCase.chroot);
-        const result = this.service.hasWildcardAccess(testCase.globs);
-        assert.strictEqual(result, testCase.expectedAccess);
+        this.service.setPaths({
+          data: {
+            glob_paths: testCase.globs,
+            exact_paths: {},
+            chroot_namespace: testCase.chroot,
+          },
+        });
+        const fullNamespace = this.service.fullCurrentNamespace;
+        assert.strictEqual(fullNamespace, testCase.expected.fullNs);
+        const wildcardResult = this.service.hasWildcardNsAccess(fullNamespace, testCase.globs);
+        assert.strictEqual(wildcardResult, testCase.expected.wildcard);
+        assert.strictEqual(this.service.permissionsBanner, testCase.expected.banner);
       });
     });
   });

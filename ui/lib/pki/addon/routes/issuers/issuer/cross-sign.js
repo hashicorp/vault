@@ -20,11 +20,15 @@ export default class PkiIssuerCrossSignRoute extends Route {
     super.setupController(controller, resolvedModel);
 
     controller.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: this.secretMountPath.currentPath, route: 'overview' },
-      { label: 'issuers', route: 'issuers.index' },
-      { label: resolvedModel.id, route: 'issuers.issuer.details' },
-      { label: 'cross-sign' },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
+      { label: this.secretMountPath.currentPath, route: 'overview', model: this.secretMountPath.currentPath },
+      { label: 'Issuers', route: 'issuers.index', model: this.secretMountPath.currentPath },
+      {
+        label: resolvedModel.id,
+        route: 'issuers.issuer.details',
+        models: [this.secretMountPath.currentPath, resolvedModel.id],
+      },
+      { label: 'Cross-sign' },
     ];
   }
 }

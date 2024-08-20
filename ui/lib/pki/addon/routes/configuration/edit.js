@@ -25,10 +25,10 @@ export default class PkiConfigurationEditRoute extends Route {
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
     controller.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: this.secretMountPath.currentPath, route: 'overview' },
-      { label: 'configuration', route: 'configuration.index' },
-      { label: 'edit' },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
+      { label: this.secretMountPath.currentPath, route: 'overview', model: this.secretMountPath.currentPath },
+      { label: 'Configuration', route: 'configuration.index', model: this.secretMountPath.currentPath },
+      { label: 'Edit' },
     ];
   }
 }

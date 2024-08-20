@@ -10,6 +10,7 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -41,6 +42,7 @@ const (
 	EnvVaultClientCert       = "VAULT_CLIENT_CERT"
 	EnvVaultClientKey        = "VAULT_CLIENT_KEY"
 	EnvVaultClientTimeout    = "VAULT_CLIENT_TIMEOUT"
+	EnvVaultHeaders          = "VAULT_HEADERS"
 	EnvVaultSRVLookup        = "VAULT_SRV_LOOKUP"
 	EnvVaultSkipVerify       = "VAULT_SKIP_VERIFY"
 	EnvVaultNamespace        = "VAULT_NAMESPACE"
@@ -665,6 +667,30 @@ func NewClient(c *Config) (*Client, error) {
 		client.setNamespace(namespace)
 	}
 
+	if envHeaders := os.Getenv(EnvVaultHeaders); envHeaders != "" {
+		var result map[string]any
+		err := json.Unmarshal([]byte(envHeaders), &result)
+		if err != nil {
+			return nil, fmt.Errorf("could not unmarshal environment-supplied headers")
+		}
+		var forbiddenHeaders []string
+		for key, value := range result {
+			if strings.HasPrefix(key, "X-Vault-") {
+				forbiddenHeaders = append(forbiddenHeaders, key)
+				continue
+			}
+
+			value, ok := value.(string)
+			if !ok {
+				return nil, fmt.Errorf("environment-supplied headers include non-string values")
+			}
+			client.AddHeader(key, value)
+		}
+		if len(forbiddenHeaders) > 0 {
+			return nil, fmt.Errorf("failed to setup Headers[%s]: Header starting by 'X-Vault-' are for internal usage only", strings.Join(forbiddenHeaders, ", "))
+		}
+	}
+
 	return client, nil
 }
 
@@ -705,7 +731,7 @@ func (c *Client) SetAddress(addr string) error {
 
 	parsedAddr, err := c.config.ParseAddress(addr)
 	if err != nil {
-		return errwrap.Wrapf("failed to set address: {{err}}", err)
+		return fmt.Errorf("failed to set address: %w", err)
 	}
 
 	c.addr = parsedAddr

@@ -17,7 +17,6 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/pki/managed_key"
 	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -40,11 +39,11 @@ var (
 )
 
 func serialFromCert(cert *x509.Certificate) string {
-	return serialFromBigInt(cert.SerialNumber)
+	return parsing.SerialFromCert(cert)
 }
 
 func serialFromBigInt(serial *big.Int) string {
-	return strings.TrimSpace(certutil.GetHexFormatted(serial.Bytes(), ":"))
+	return parsing.SerialFromBigInt(serial)
 }
 
 func normalizeSerialFromBigInt(serial *big.Int) string {
@@ -253,15 +252,16 @@ func parseIfNotModifiedSince(req *logical.Request) (time.Time, error) {
 	return headerTimeValue, nil
 }
 
+//go:generate enumer -type=ifModifiedReqType -trimprefix=ifModified
 type ifModifiedReqType int
 
 const (
-	ifModifiedUnknown         ifModifiedReqType = iota
-	ifModifiedCA                                = iota
-	ifModifiedCRL                               = iota
-	ifModifiedDeltaCRL                          = iota
-	ifModifiedUnifiedCRL                        = iota
-	ifModifiedUnifiedDeltaCRL                   = iota
+	ifModifiedUnknown ifModifiedReqType = iota
+	ifModifiedCA
+	ifModifiedCRL
+	ifModifiedDeltaCRL
+	ifModifiedUnifiedCRL
+	ifModifiedUnifiedDeltaCRL
 )
 
 type IfModifiedSinceHelper struct {
@@ -307,7 +307,7 @@ func (sc *storageContext) isIfModifiedSinceBeforeLastModified(helper *IfModified
 
 	switch helper.reqType {
 	case ifModifiedCRL, ifModifiedDeltaCRL:
-		if sc.Backend.CrlBuilder().invalidate.Load() {
+		if sc.CrlBuilder().ShouldInvalidate() {
 			// When we see the CRL is invalidated, respond with false
 			// regardless of what the local CRL state says. We've likely
 			// renamed some issuers or are about to rebuild a new CRL....
@@ -327,7 +327,7 @@ func (sc *storageContext) isIfModifiedSinceBeforeLastModified(helper *IfModified
 			lastModified = crlConfig.DeltaLastModified
 		}
 	case ifModifiedUnifiedCRL, ifModifiedUnifiedDeltaCRL:
-		if sc.Backend.CrlBuilder().invalidate.Load() {
+		if sc.CrlBuilder().ShouldInvalidate() {
 			// When we see the CRL is invalidated, respond with false
 			// regardless of what the local CRL state says. We've likely
 			// renamed some issuers or are about to rebuild a new CRL....

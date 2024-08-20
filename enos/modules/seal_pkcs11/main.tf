@@ -44,7 +44,7 @@ Now you should be able to configure Vault Enterprise seal stanza.
 terraform {
   required_providers {
     enos = {
-      source = "app.terraform.io/hashicorp-qti/enos"
+      source = "registry.terraform.io/hashicorp-forge/enos"
     }
   }
 }
@@ -100,6 +100,13 @@ module "target" {
     amd64 = "t3a.small"
     arm64 = "t4g.small"
   }
+  ports_ingress = [
+    {
+      description = "SSH"
+      port        = 22
+      protocol    = "tcp"
+    },
+  ]
   // Make sure it's not too long as we use this for aws resources that size maximums that are easy
   // to hit.
   project_name = substr("vault-ci-softhsm-${local.id}", 0, 32)

@@ -22,6 +22,7 @@ import (
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -73,7 +74,7 @@ to the issuer.`,
 				Type: framework.TypeString,
 				Description: `The amount of time the generated CRL should be
 valid; defaults to 72 hours.`,
-				Default: defaultCrlConfig.Expiry,
+				Default: pki_backend.DefaultCrlConfig.Expiry,
 			},
 			crlsParam: {
 				Type:        framework.TypeStringSlice,
@@ -142,7 +143,7 @@ to the issuer.`,
 				Type: framework.TypeString,
 				Description: `The amount of time the generated CRL should be
 valid; defaults to 72 hours.`,
-				Default: defaultCrlConfig.Expiry,
+				Default: pki_backend.DefaultCrlConfig.Expiry,
 			},
 			formatParam: {
 				Type: framework.TypeString,
@@ -552,6 +553,10 @@ func parseSerialNum(cert map[string]interface{}) (*big.Int, error) {
 	if !serialExists {
 		return nil, errors.New("missing 'serial_number' field")
 	}
+	return parseSerialNumStr(serialNumRaw)
+}
+
+func parseSerialNumStr(serialNumRaw interface{}) (*big.Int, error) {
 	serialNumStr, err := parseutil.ParseString(serialNumRaw)
 	if err != nil {
 		return nil, fmt.Errorf("'serial_number' field value was not a string: %w", err)

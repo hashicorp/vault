@@ -5,7 +5,7 @@
 
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
-import { BAR_WIDTH, formatNumbers } from 'vault/utils/chart-helpers';
+import { BAR_WIDTH, numericalAxisLabel } from 'vault/utils/chart-helpers';
 import { formatNumber } from 'core/helpers/format-number';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 
@@ -93,6 +93,6 @@ export default class VerticalBarBasic extends Component<Args> {
   };
 
   formatTicksY = (num: number): string => {
-    return formatNumbers(num) || num.toString();
+    return numericalAxisLabel(num) || num.toString();
   };
 }

@@ -10,6 +10,12 @@ description: >-
 
 @include 'x509-sha1-deprecation.mdx'
 
+~> **Note**: Starting in Vault 1.17, if the JWT in the authentication request
+contains an `aud` claim, the associated `bound_audiences` for the "jwt" role
+must match at least one of the `aud` claims declared for the JWT. For
+additional details, refer to the [JWT auth method (API)](/vault/api-docs/auth/jwt)
+documentation and [1.17 Upgrade Guide](/vault/docs/upgrading/upgrade-to-1.17.x#jwt-auth-login-requires-bound-audiences-on-the-role).
+
 The `jwt` auth method can be used to authenticate with Vault using
 [OIDC](https://en.wikipedia.org/wiki/OpenID_Connect) or by providing a
 [JWT](https://en.wikipedia.org/wiki/JSON_Web_Token).
@@ -178,8 +184,9 @@ only needs to validate the provided JWT.
 
 ### JWT verification
 
-JWT signatures will be verified against public keys from the issuer. This process can be done in
-three different ways, though only one method may be configured for a single backend:
+Vault verifies JWT signatures against public keys from the issuer. You can
+only configure one JWT signature verification method per mounted backend from
+the following options:
 
 - **Static Keys**. A set of public keys is stored directly in the backend configuration. See the
   [jwt_validation_pubkeys](/vault/api-docs/auth/jwt#jwt_validation_pubkeys) 
@@ -201,8 +208,15 @@ three different ways, though only one method may be configured for a single back
   and [oidc_discovery_ca_pem](/vault/api-docs/auth/jwt#oidc_discovery_ca_pem) configuration 
   options.
 
-If multiple methods are needed, another instance of the backend can be mounted and configured
-at a different path.
+
+To configure additional verification methods, you must mount and configure one
+backend instance per method at different paths.
+
+After verifying the JWT signatures, Vault checks the corresponding `aud` claim.
+
+If the JWT in the authentication request contains an `aud` claim, the
+associated `bound_audiences` for the role must match at least one of the `aud`
+claims declared for the JWT.
 
 ### Via the CLI
 
@@ -308,10 +322,13 @@ management tool.
 Once a JWT has been validated as being properly signed and not expired, the
 authorization flow will validate that any configured "bound" parameters match.
 In some cases there are dedicated parameters, for example `bound_subject`,
-which must match the JWT's `sub` parameter. A role may also be configured to
-check arbitrary claims through the `bound_claims` map. The map contains a set
-of claims and their required values. For example, assume `bound_claims` is set
-to:
+that must match the provided `sub` claim. For roles of type "jwt":
+
+1. the `bound_audiences` parameter is required when an `aud` claim is set.
+1. the `bound_audiences` parameter must match at least one of provided `aud` claims.
+
+You can also configure roles to check an arbitrary set of claims and required
+values with the `bound_claims` map. For example, assume `bound_claims` is set to:
 
 ```json
 {

@@ -1,0 +1,3 @@
+```release-note:bug
+core: Fix `redact_version` listener parameter being ignored for some OpenAPI related endpoints.
+```

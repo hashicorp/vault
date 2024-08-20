@@ -47,6 +47,8 @@ func (b *SystemBackend) activityWritePath() *framework.Path {
 }
 
 func (b *SystemBackend) handleActivityWriteData(ctx context.Context, request *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	now := time.Now().UTC()
+
 	json := data.Get("input")
 	input := &generation.ActivityLogMockInput{}
 	err := protojson.Unmarshal([]byte(json.(string)), input)
@@ -73,7 +75,7 @@ func (b *SystemBackend) handleActivityWriteData(ctx context.Context, request *lo
 	}
 	generated := newMultipleMonthsActivityClients(numMonths + 1)
 	for _, month := range input.Data {
-		err := generated.processMonth(ctx, b.Core, month)
+		err := generated.processMonth(ctx, b.Core, month, now)
 		if err != nil {
 			return logical.ErrorResponse("failed to process data for month %d", month.GetMonthsAgo()), err
 		}
@@ -83,8 +85,9 @@ func (b *SystemBackend) handleActivityWriteData(ctx context.Context, request *lo
 	for _, opt := range input.Write {
 		opts[opt] = struct{}{}
 	}
-	paths, err := generated.write(ctx, opts, b.Core.activityLog)
+	paths, err := generated.write(ctx, opts, b.Core.activityLog, now)
 	if err != nil {
+		b.logger.Debug("failed to write activity log data", "error", err.Error())
 		return logical.ErrorResponse("failed to write data"), err
 	}
 	return &logical.Response{
@@ -184,12 +187,14 @@ func (s *singleMonthActivityClients) populateSegments() (map[int][]*activity.Ent
 
 // addNewClients generates clients according to the given parameters, and adds them to the month
 // the client will always have the mountAccessor as its mount accessor
-func (s *singleMonthActivityClients) addNewClients(c *generation.Client, mountAccessor string, segmentIndex *int) error {
+func (s *singleMonthActivityClients) addNewClients(c *generation.Client, mountAccessor string, segmentIndex *int, monthsAgo int32, now time.Time) error {
 	count := 1
 	if c.Count > 1 {
 		count = int(c.Count)
 	}
 	isNonEntity := c.ClientType != entityActivityType
+	ts := timeutil.MonthsPreviousTo(int(monthsAgo), now)
+
 	for i := 0; i < count; i++ {
 		record := &activity.EntityRecord{
 			ClientID:      c.Id,
@@ -197,6 +202,7 @@ func (s *singleMonthActivityClients) addNewClients(c *generation.Client, mountAc
 			MountAccessor: mountAccessor,
 			NonEntity:     isNonEntity,
 			ClientType:    c.ClientType,
+			Timestamp:     ts.Unix(),
 		}
 		if record.ClientID == "" {
 			var err error
@@ -211,7 +217,7 @@ func (s *singleMonthActivityClients) addNewClients(c *generation.Client, mountAc
 }
 
 // processMonth populates a month of client data
-func (m *multipleMonthsActivityClients) processMonth(ctx context.Context, core *Core, month *generation.Data) error {
+func (m *multipleMonthsActivityClients) processMonth(ctx context.Context, core *Core, month *generation.Data, now time.Time) error {
 	// default to using the root namespace and the first mount on the root namespace
 	mounts, err := core.ListMounts()
 	if err != nil {
@@ -274,7 +280,7 @@ func (m *multipleMonthsActivityClients) processMonth(ctx context.Context, core *
 				}
 			}
 
-			err = m.addClientToMonth(month.GetMonthsAgo(), clients, mountAccessor, segmentIndex)
+			err = m.addClientToMonth(month.GetMonthsAgo(), clients, mountAccessor, segmentIndex, now)
 			if err != nil {
 				return err
 			}
@@ -300,11 +306,11 @@ func (m *multipleMonthsActivityClients) processMonth(ctx context.Context, core *
 	return nil
 }
 
-func (m *multipleMonthsActivityClients) addClientToMonth(monthsAgo int32, c *generation.Client, mountAccessor string, segmentIndex *int) error {
+func (m *multipleMonthsActivityClients) addClientToMonth(monthsAgo int32, c *generation.Client, mountAccessor string, segmentIndex *int, now time.Time) error {
 	if c.Repeated || c.RepeatedFromMonth > 0 {
 		return m.addRepeatedClients(monthsAgo, c, mountAccessor, segmentIndex)
 	}
-	return m.months[monthsAgo].addNewClients(c, mountAccessor, segmentIndex)
+	return m.months[monthsAgo].addNewClients(c, mountAccessor, segmentIndex, monthsAgo, now)
 }
 
 func (m *multipleMonthsActivityClients) addRepeatedClients(monthsAgo int32, c *generation.Client, mountAccessor string, segmentIndex *int) error {
@@ -333,75 +339,76 @@ func (m *multipleMonthsActivityClients) addRepeatedClients(monthsAgo int32, c *g
 	return nil
 }
 
-func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[generation.WriteOptions]struct{}, activityLog *ActivityLog) ([]string, error) {
-	now := time.Now().UTC()
+func (m *multipleMonthsActivityClients) addMissingCurrentMonth() {
+	missing := m.months[0].generationParameters == nil &&
+		len(m.months) > 1 &&
+		m.months[1].generationParameters != nil
+	if !missing {
+		return
+	}
+	m.months[0].generationParameters = &generation.Data{EmptySegmentIndexes: []int32{0}, NumSegments: 2}
+}
+
+func (m *multipleMonthsActivityClients) timestampForMonth(i int, now time.Time) time.Time {
+	if i > 0 {
+		return timeutil.StartOfMonth(timeutil.MonthsPreviousTo(i, now))
+	}
+	return now
+}
+
+func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[generation.WriteOptions]struct{}, activityLog *ActivityLog, now time.Time) ([]string, error) {
 	paths := []string{}
 
 	_, writePQ := opts[generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES]
 	_, writeDistinctClients := opts[generation.WriteOptions_WRITE_DISTINCT_CLIENTS]
-	_, writeEntities := opts[generation.WriteOptions_WRITE_ENTITIES]
 	_, writeIntentLog := opts[generation.WriteOptions_WRITE_INTENT_LOGS]
 
-	pqOpts := pqOptions{}
-	if writePQ || writeDistinctClients {
-		pqOpts.byNamespace = make(map[string]*processByNamespace)
-		pqOpts.byMonth = make(map[int64]*processMonth)
-		pqOpts.activePeriodEnd = m.latestTimestamp(now, true)
-		pqOpts.endTime = timeutil.EndOfMonth(m.latestTimestamp(pqOpts.activePeriodEnd, false))
-		pqOpts.activePeriodStart = m.earliestTimestamp(now)
-	}
+	m.addMissingCurrentMonth()
 
-	var earliestTimestamp, latestTimestamp time.Time
 	for i, month := range m.months {
 		if month.generationParameters == nil {
 			continue
 		}
-		var timestamp time.Time
-		if i > 0 {
-			timestamp = timeutil.StartOfMonth(timeutil.MonthsPreviousTo(i, now))
-		} else {
-			timestamp = now
-		}
-		if earliestTimestamp.IsZero() || timestamp.Before(earliestTimestamp) {
-			earliestTimestamp = timestamp
-		}
-		if timestamp.After(latestTimestamp) {
-			latestTimestamp = timestamp
-		}
+		timestamp := m.timestampForMonth(i, now)
 		segments, err := month.populateSegments()
 		if err != nil {
 			return nil, err
 		}
 		for segmentIndex, segment := range segments {
-			if writeEntities || writeIntentLog {
-				if segment == nil {
-					// skip the index
-					continue
-				}
-				entityPath, err := activityLog.saveSegmentEntitiesInternal(ctx, segmentInfo{
-					startTimestamp:       timestamp.Unix(),
-					currentClients:       &activity.EntityActivityLog{Clients: segment},
-					clientSequenceNumber: uint64(segmentIndex),
-					tokenCount:           &activity.TokenCount{},
-				}, true)
-				if err != nil {
-					return nil, err
-				}
-				paths = append(paths, entityPath)
+			if segment == nil {
+				// skip the index
+				continue
 			}
-		}
-
-		if (writePQ || writeDistinctClients) && i > 0 {
-			reader := newProtoSegmentReader(segments)
-			err = activityLog.segmentToPrecomputedQuery(ctx, timestamp, reader, pqOpts)
+			entityPath, err := activityLog.saveSegmentEntitiesInternal(ctx, segmentInfo{
+				startTimestamp:       timestamp.Unix(),
+				currentClients:       &activity.EntityActivityLog{Clients: segment},
+				clientSequenceNumber: uint64(segmentIndex),
+				tokenCount:           &activity.TokenCount{},
+			}, true)
 			if err != nil {
 				return nil, err
 			}
+			paths = append(paths, entityPath)
 		}
-
+	}
+	if writePQ || writeDistinctClients {
+		// start with the oldest month of data, and create precomputed queries
+		// up to that month
+		pqWg := sync.WaitGroup{}
+		for i := len(m.months) - 1; i > 0; i-- {
+			pqWg.Add(1)
+			go func(i int) {
+				defer pqWg.Done()
+				activityLog.precomputedQueryWorker(ctx, &ActivityIntentLog{
+					PreviousMonth: m.timestampForMonth(i, now).Unix(),
+					NextMonth:     now.Unix(),
+				})
+			}(i)
+		}
+		pqWg.Wait()
 	}
 	if writeIntentLog {
-		err := activityLog.writeIntentLog(ctx, earliestTimestamp.UTC().Unix(), latestTimestamp.UTC())
+		err := activityLog.writeIntentLog(ctx, m.latestTimestamp(now, false).Unix(), m.latestTimestamp(now, true).UTC())
 		if err != nil {
 			return nil, err
 		}

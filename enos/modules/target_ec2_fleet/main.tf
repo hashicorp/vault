@@ -6,7 +6,7 @@ terraform {
     # We need to specify the provider source in each module until we publish it
     # to the public registry
     enos = {
-      source  = "app.terraform.io/hashicorp-qti/enos"
+      source  = "registry.terraform.io/hashicorp-forge/enos"
       version = ">= 0.3.24"
     }
   }
@@ -335,4 +335,5 @@ data "aws_instance" "targets" {
   for_each = local.instances
 
   instance_id = aws_ec2_fleet.targets.fleet_instance_set[0].instance_ids[each.key]
+
 }

@@ -109,6 +109,7 @@ type Cache struct {
 	DisableCachingDynamicSecrets                  bool                            `hcl:"disable_caching_dynamic_secrets"`
 	StaticSecretTokenCapabilityRefreshIntervalRaw interface{}                     `hcl:"static_secret_token_capability_refresh_interval"`
 	StaticSecretTokenCapabilityRefreshInterval    time.Duration                   `hcl:"-"`
+	StaticSecretTokenCapabilityRefreshBehaviour   string                          `hcl:"static_secret_token_capability_refresh_behavior"`
 }
 
 // AutoAuth is the configured authentication method and sinks
@@ -269,6 +270,15 @@ func (c *Config) ValidateConfig() error {
 
 	if c.AutoAuth == nil && c.Cache == nil && len(c.Listeners) == 0 {
 		return fmt.Errorf("no auto_auth, cache, or listener block found in config")
+	}
+
+	if c.Cache != nil && c.Cache.StaticSecretTokenCapabilityRefreshBehaviour != "" {
+		switch c.Cache.StaticSecretTokenCapabilityRefreshBehaviour {
+		case "pessimistic":
+		case "optimistic":
+		default:
+			return fmt.Errorf("cache.static_secret_token_capability_refresh_behavior must be either \"optimistic\" or \"pessimistic\"")
+		}
 	}
 
 	return nil
