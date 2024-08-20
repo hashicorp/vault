@@ -90,11 +90,14 @@
             {{#each this.activeDatum.legendY as |stat|}}
               <p>{{stat}}</p>
             {{/each}}
+            {{#if this.activeDatum.tooltipUpgrade}}
+              <br />
+              <p class="has-text-highlight">{{this.activeDatum.tooltipUpgrade}}</p>
+            {{/if}}
           </div>
           <div class="chart-tooltip-arrow"></div>
         </div>
       {{/if}}
-
     {{/let}}
   </Lineal::Fluid>
 </div>

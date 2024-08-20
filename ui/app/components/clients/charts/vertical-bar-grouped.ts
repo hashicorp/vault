@@ -11,12 +11,14 @@ import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { flatGroup } from 'd3-array';
 import type { MonthlyChartData } from 'vault/vault/charts/client-counts';
 import type { ClientTypes } from 'core/utils/client-count-utils';
+import ClientsVersionHistoryModel from 'vault/vault/models/clients/version-history';
 
 interface Args {
   chartHeight?: number;
   chartLegend: Legend[];
   chartTitle: string;
   data: MonthlyChartData[];
+  upgradeData: ClientsVersionHistoryModel[];
 }
 
 interface Legend {
@@ -36,6 +38,10 @@ type ChartDatum = {
 } & {
   [key in ClientTypes]?: number | undefined;
 };
+
+interface UpgradeByMonth {
+  [key: string]: ClientsVersionHistoryModel;
+}
 
 /**
  * @module VerticalBarGrouped
@@ -111,6 +117,7 @@ export default class VerticalBarGrouped extends Component<Args> {
           maximum === null
             ? ['No data']
             : this.dataKeys.map((k) => `${formatNumber([datum[k]])} ${this.label(k)}`),
+        tooltipUpgrade: this.upgradeMessage(datum),
       };
       return legend;
     });
@@ -128,6 +135,31 @@ export default class VerticalBarGrouped extends Component<Args> {
   get xBounds() {
     const domain = this.args.data.map((d) => d.timestamp);
     return new Set(domain);
+  }
+
+  // UPGRADE STUFF
+  get upgradeByMonthYear(): UpgradeByMonth {
+    const empty: UpgradeByMonth = {};
+    if (!Array.isArray(this.args.upgradeData)) return empty;
+    return (
+      this.args.upgradeData?.reduce((acc, upgrade) => {
+        if (upgrade.timestampInstalled) {
+          const key = parseAPITimestamp(upgrade.timestampInstalled, 'M/yy');
+          acc[key as string] = upgrade;
+        }
+        return acc;
+      }, empty) || empty
+    );
+  }
+
+  upgradeMessage(datum: MonthlyChartData) {
+    const upgradeInfo = this.upgradeByMonthYear[datum.month as string];
+    if (upgradeInfo) {
+      const { version, previousVersion } = upgradeInfo;
+      return `Vault was upgraded
+        ${previousVersion ? 'from ' + previousVersion : ''} to ${version}`;
+    }
+    return null;
   }
 
   // TEMPLATE HELPERS
