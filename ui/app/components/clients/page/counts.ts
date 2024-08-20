@@ -174,8 +174,7 @@ export default class ClientsCountsPageComponent extends Component<Args> {
 
   // the dashboard should show sync tab if the flag is on or there's data
   get hasSecretsSyncClients(): boolean {
-    const { activity } = this.args;
-    return activity && activity?.total?.secret_syncs > 0;
+    return this.args.activity?.total?.secret_syncs > 0;
   }
 
   @action
