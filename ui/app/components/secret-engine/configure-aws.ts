@@ -74,13 +74,13 @@ export default class ConfigureAwsComponent extends Component<Args> {
 
     if (!leaseAttrChanged && !rootAttrChanged) {
       this.flashMessages.info('No changes detected.');
-      this.transition(id);
+      this.transition();
     }
     if (rootAttrChanged) {
       try {
         yield rootConfig.save();
-        this.transition();
         this.flashMessages.success(`Successfully saved ${id}'s root configuration.`);
+        this.transition();
       } catch (error) {
         this.errorMessageRoot = errorMessage(error);
         this.invalidFormAlert = 'There was an error submitting this form.';
@@ -92,7 +92,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
         this.flashMessages.success(`Successfully saved ${id}'s lease configuration.`);
         this.transition();
       } catch (error) {
-        // if lease config fails, but there was no error saving rootConfig: notify user of the lease failure with a flash message and allow users to save the root config and transition.
+        // if lease config fails, but there was no error saving rootConfig: notify user of the lease failure with a flash message, save the root config, and transition.
         if (!this.errorMessageRoot) {
           this.flashMessages.danger(`Lease configuration was not saved: ${errorMessage(error)}`, {
             sticky: true,
@@ -101,10 +101,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
         } else {
           this.errorMessageLease = errorMessage(error);
           this.flashMessages.danger(
-            `Configuration not saved: ${errorMessage(error)}. ${this.errorMessageRoot}`,
-            {
-              sticky: true,
-            }
+            `Configuration not saved: ${errorMessage(error)}. ${this.errorMessageRoot}`
           );
         }
       }

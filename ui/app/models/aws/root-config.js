@@ -31,7 +31,7 @@ export default class AwsRootConfig extends Model {
     const keys = ['accessKey', 'region', 'iamEndpoint', 'stsEndpoint', 'maxRetries'];
     return expandAttributeMeta(this, keys);
   }
-  // used for the configure-aws-secret component
+
   get formFieldGroups() {
     return [
       { default: ['accessKey', 'secretKey'] },

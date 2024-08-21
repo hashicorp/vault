@@ -24,7 +24,7 @@ const createAwsRootConfig = (store, backend) => {
     id: backend,
     modelName: 'aws/root-config',
     data: {
-      backend: backend,
+      backend,
       region: 'us-west-2',
       access_key: '123-key',
       iam_endpoint: 'iam-endpoint',
@@ -39,7 +39,7 @@ const createAwsLeaseConfig = (store, backend) => {
     id: backend,
     modelName: 'aws/lease-config',
     data: {
-      backend: backend,
+      backend,
       lease: '50s',
       lease_max: '55s',
     },
@@ -52,7 +52,7 @@ const createSshCaConfig = (store, backend) => {
     id: backend,
     modelName: 'ssh/ca-config',
     data: {
-      backend: backend,
+      backend,
       public_key: 'public-key',
       generate_signing_key: true,
     },

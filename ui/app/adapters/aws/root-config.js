@@ -12,9 +12,11 @@ export default class AwsRootConfig extends ApplicationAdapter {
   queryRecord(store, type, query) {
     const { backend } = query;
     return this.ajax(`${this.buildURL()}/${encodePath(backend)}/config/root`, 'GET').then((resp) => {
-      resp.id = backend;
-      resp.backend = backend;
-      return resp;
+      return {
+        ...resp,
+        id: backend,
+        backend,
+      };
     });
   }
 

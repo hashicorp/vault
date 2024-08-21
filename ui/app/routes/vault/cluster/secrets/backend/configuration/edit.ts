@@ -38,7 +38,7 @@ export default class SecretsBackendConfigurationEdit extends Route {
       throw error;
     }
     // generate the model based on the engine type.
-    // and pre-set with the type and backend (e.g. type: ssh, id: ssh-123)
+    // and pre-set model with type and backend e.g. {type: ssh, id: ssh-123}
     const model: Record<string, unknown> = { type, id: backend };
     for (const adapterPath of CONFIG_ADAPTERS_PATHS[type] as string[]) {
       // convert the adapterPath with a name that can be passed to the components
