@@ -6,7 +6,8 @@
 
 #### Issue
 
-The Vault AWS Auth backend requires an external_id to be set during role configuration, or it will return a validation error.
+You must set the `external_id` parameter during role configuration, or the Vault
+AWS authentication plugin returns a validation error.
 
 #### Workaround
 
