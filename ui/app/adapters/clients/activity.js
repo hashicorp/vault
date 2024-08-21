@@ -78,11 +78,12 @@ export default class ActivityAdapter extends ApplicationAdapter {
     }
   }
 
-  urlForFindRecord(id) {
-    // debug reminder so model is stored in Ember data with the same id for consistency
+  // Only dashboard uses findRecord, the client count dashboard uses queryRecord
+  findRecord(store, type, id) {
     if (id !== 'clients/activity') {
       debug(`findRecord('clients/activity') should pass 'clients/activity' as the id, you passed: '${id}'`);
     }
-    return `${this.buildURL()}/internal/counters/activity`;
+    const url = `${this.buildURL()}/internal/counters/activity`;
+    return this.ajax(url, 'GET', { skipWarnings: true });
   }
 }
