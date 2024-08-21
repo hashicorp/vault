@@ -21,7 +21,7 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
     this.store = this.owner.lookup('service:store');
     const router = this.owner.lookup('service:router');
     this.id = 'ssh-test';
-    this.model = this.store.createRecord('ssh/ca-config', { backend: this.id, id: this.id });
+    this.model = this.store.createRecord('ssh/ca-config', { backend: this.id });
     this.transitionStub = sinon.stub(router, 'transitionTo');
     this.refreshStub = sinon.stub(router, 'refresh');
   });
@@ -51,7 +51,7 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
     await click(SES.ssh.cancel);
 
     assert.true(
-      this.transitionStub.calledWith('vault.cluster.secrets.backend.configuration', this.id),
+      this.transitionStub.calledWith('vault.cluster.secrets.backend.configuration', 'ssh-test'),
       'On cancel the router transitions to the parent configuration index route.'
     );
   });
