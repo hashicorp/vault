@@ -30,7 +30,7 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
     await render(hbs`
       <SecretEngine::ConfigureSsh
     @model={{this.model}}
-    @id={{this.id}}
+    @backendPath={{this.id}}
   />
     `);
     assert.dom(GENERAL.maskedInput('privateKey')).hasNoText('Private key is empty and reset');
@@ -44,7 +44,7 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
     await render(hbs`
       <SecretEngine::ConfigureSsh
     @model={{this.model}}
-    @id={{this.id}}
+    @backendPath={{this.id}}
   />
     `);
 
@@ -60,7 +60,7 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
     await render(hbs`
       <SecretEngine::ConfigureSsh
     @model={{this.model}}
-    @id={{this.id}}
+    @backendPath={{this.id}}
   />
     `);
     await fillIn(GENERAL.inputByAttr('publicKey'), 'hello');
@@ -95,7 +95,7 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
     await render(hbs`
       <SecretEngine::ConfigureSsh
     @model={{this.model}}
-    @id={{this.id}}
+    @backendPath={{this.id}}
   />
     `);
 

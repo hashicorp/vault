@@ -28,19 +28,19 @@ import type FlashMessageService from 'vault/services/flash-messages';
  * <SecretEngine::ConfigureAws
     @rootConfig={{this.model.aws-root-config}}
     @leaseConfig={{this.model.aws-lease-config}} 
-    @id={{this.model.id}} 
+    @backendPath={{this.model.id}} 
     />
  * ```
  *
  * @param {object} rootConfig - AWS config/root model
  * @param {object} leaseConfig - AWS config/lease model
- * @param {string} id - name of the AWS secret engine, ex: 'aws-123'
+ * @param {string} backendPath - name of the AWS secret engine, ex: 'aws-123'
  */
 
 interface Args {
   leaseConfig: LeaseConfigModel;
   rootConfig: RootConfigModel;
-  id: string;
+  backendPath: string;
 }
 
 export default class ConfigureAwsComponent extends Component<Args> {
@@ -58,14 +58,13 @@ export default class ConfigureAwsComponent extends Component<Args> {
   *save(event: Event) {
     event.preventDefault();
     this.resetErrors();
-    const { id, leaseConfig, rootConfig } = this.args;
+    const { leaseConfig, rootConfig, backendPath } = this.args;
     // Note: aws/root-config model does not have any validations
     const isValid = this.validate(leaseConfig);
     if (!isValid) return;
     // Check if any of the models' attributes have changed.
     // If no changes to either model, transition and notify user.
-    // If changes to one model, save the model that changed and notify user.
-    // Otherwise save both models.
+    // If changes to either model, save the model(s) that changed and notify user.
     // Note: "backend" dirties model state so explicity ignore it here.
     const leaseAttrChanged =
       Object.keys(leaseConfig.changedAttributes()).filter((item) => item !== 'backend').length > 0;
@@ -76,34 +75,50 @@ export default class ConfigureAwsComponent extends Component<Args> {
       this.flashMessages.info('No changes detected.');
       this.transition();
     }
-    if (rootAttrChanged) {
-      try {
-        yield rootConfig.save();
-        this.flashMessages.success(`Successfully saved ${id}'s root configuration.`);
-        this.transition();
-      } catch (error) {
-        this.errorMessageRoot = errorMessage(error);
-        this.invalidFormAlert = 'There was an error submitting this form.';
-      }
+
+    const rootSaved = rootAttrChanged ? yield this.saveRoot() : false;
+    const leaseSaved = leaseAttrChanged ? yield this.saveLease() : false;
+
+    if (rootSaved || leaseSaved) {
+      this.transition();
+    } else {
+      // otherwise there was a failure and we should not transition and exit the function.
+      return;
     }
-    if (leaseAttrChanged) {
-      try {
-        yield leaseConfig.save();
-        this.flashMessages.success(`Successfully saved ${id}'s lease configuration.`);
-        this.transition();
-      } catch (error) {
-        // if lease config fails, but there was no error saving rootConfig: notify user of the lease failure with a flash message, save the root config, and transition.
-        if (!this.errorMessageRoot) {
-          this.flashMessages.danger(`Lease configuration was not saved: ${errorMessage(error)}`, {
-            sticky: true,
-          });
-          this.transition();
-        } else {
-          this.errorMessageLease = errorMessage(error);
-          this.flashMessages.danger(
-            `Configuration not saved: ${errorMessage(error)}. ${this.errorMessageRoot}`
-          );
-        }
+  }
+
+  async saveRoot() {
+    const { backendPath, rootConfig } = this.args;
+    try {
+      rootConfig.save();
+      this.flashMessages.success(`Successfully saved ${backendPath}'s root configuration.`);
+      return true;
+    } catch (error) {
+      this.errorMessageRoot = errorMessage('error');
+      this.invalidFormAlert = 'There was an error submitting this form.';
+      return false;
+    }
+  }
+
+  async saveLease() {
+    const { backendPath, leaseConfig } = this.args;
+    try {
+      leaseConfig.save();
+      this.flashMessages.success(`Successfully saved ${backendPath}'s lease configuration.`);
+      return true;
+    } catch (error) {
+      // if lease config fails, but there was no error saving rootConfig: notify user of the lease failure with a flash message, save the root config, and transition.
+      if (!this.errorMessageRoot) {
+        this.flashMessages.danger(`Lease configuration was not saved: ${errorMessage(error)}`, {
+          sticky: true,
+        });
+        return true;
+      } else {
+        this.errorMessageLease = errorMessage(error);
+        this.flashMessages.danger(
+          `Configuration not saved: ${errorMessage(error)}. ${this.errorMessageRoot}`
+        );
+        return false;
       }
     }
   }
@@ -115,7 +130,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
   }
 
   transition() {
-    this.router.transitionTo('vault.cluster.secrets.backend.configuration', this.args.id);
+    this.router.transitionTo('vault.cluster.secrets.backend.configuration', this.args.backendPath);
   }
 
   validate(model: LeaseConfigModel) {
@@ -125,10 +140,16 @@ export default class ConfigureAwsComponent extends Component<Args> {
     return isValid;
   }
 
+  unloadModels() {
+    this.args.rootConfig.unloadRecord();
+    this.args.leaseConfig.unloadRecord();
+  }
+
   @action
   onCancel() {
     // clear errors because they're canceling out of the workflow.
     this.resetErrors();
+    this.unloadModels();
     this.transition();
   }
 }

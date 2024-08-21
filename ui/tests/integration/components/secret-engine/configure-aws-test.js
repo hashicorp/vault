@@ -41,7 +41,7 @@ module('Integration | Component | SecretEngine/configure-aws', function (hooks) 
 
     this.renderComponent = () => {
       return render(hbs`
-        <SecretEngine::ConfigureAws @rootConfig={{this.rootConfig}} @leaseConfig={{this.leaseConfig}} @id={{this.id}} />
+        <SecretEngine::ConfigureAws @rootConfig={{this.rootConfig}} @leaseConfig={{this.leaseConfig}} @backendPath={{this.id}} />
         `);
     };
   });
