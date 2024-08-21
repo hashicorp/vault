@@ -58,7 +58,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
   *save(event: Event) {
     event.preventDefault();
     this.resetErrors();
-    const { leaseConfig, rootConfig, backendPath } = this.args;
+    const { leaseConfig, rootConfig } = this.args;
     // Note: aws/root-config model does not have any validations
     const isValid = this.validate(leaseConfig);
     if (!isValid) return;
