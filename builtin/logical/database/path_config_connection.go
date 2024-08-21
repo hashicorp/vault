@@ -430,7 +430,9 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		}
 
 		// Baseline
-		config := &DatabaseConfig{}
+		config := &DatabaseConfig{
+			VerifyConnection: true,
+		}
 
 		entry, err := req.Storage.Get(ctx, fmt.Sprintf("config/%s", name))
 		if err != nil {
