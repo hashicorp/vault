@@ -192,5 +192,10 @@ globals {
     wait_for_seal_rewrap = <<-EOF
       Wait for the Vault cluster seal rewrap process to complete.
     EOF
+
+    verify_billing_start_date = <<-EOF
+      Verify that the billing start date has successfully rolled over to the latest billing year if needed.  
+    EOF
+
   }
 }
