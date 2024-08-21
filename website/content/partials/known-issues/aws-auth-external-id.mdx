@@ -11,5 +11,9 @@ AWS authentication plugin returns a validation error.
 
 #### Workaround
 
-Configure the backend with an external_id set (if external ids are not being used, supplying any string longer than two
-characters will work). Then, configure any desired roles. After this is done, the external id can be removed.
+To avoid the error during configuration:
+
+1. Set the `external_id` parameter when configuring AWS authentication plugin
+   with a valid ID or any string longer than two characters.
+1. Configure any desired roles. 
+1. If you used an arbitrary string, remove the external ID.
