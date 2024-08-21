@@ -24,17 +24,17 @@ import type FlashMessageService from 'vault/services/flash-messages';
  * ```js
  * <SecretEngine::ConfigureSsh
  *    @model={{this.model.ssh-ca-config}}
- *    @backendPath={{this.model.id}}
+ *    @id={{this.model.id}}
  *  />
  * ```
  *
  * @param {string} model - SSH ca-config model
- * @param {string} backendPath - name of the SSH secret engine, ex: 'ssh-123'
+ * @param {string} id - name of the SSH secret engine, ex: 'ssh-123'
  */
 
 interface Args {
   model: CaConfigModel;
-  backendPath: string;
+  id: string;
 }
 
 export default class ConfigureSshComponent extends Component<Args> {
@@ -51,7 +51,7 @@ export default class ConfigureSshComponent extends Component<Args> {
   *save(event: Event) {
     event.preventDefault();
     this.resetErrors();
-    const { backendPath, model } = this.args;
+    const { id, model } = this.args;
     const isValid = this.validate(model);
 
     if (!isValid) return;
@@ -67,7 +67,7 @@ export default class ConfigureSshComponent extends Component<Args> {
     try {
       yield model.save();
       this.transition();
-      this.flashMessages.success(`Successfully saved ${backendPath}'s root configuration.`);
+      this.flashMessages.success(`Successfully saved ${id}'s root configuration.`);
     } catch (error) {
       this.errorMessage = errorMessage(error);
       this.invalidFormAlert = 'There was an error submitting this form.';
@@ -82,11 +82,11 @@ export default class ConfigureSshComponent extends Component<Args> {
 
   transition(isDelete = false) {
     // deleting a key is the only case in which we want to stay on the create/edit page.
-    const { backendPath } = this.args;
+    const { id } = this.args;
     if (isDelete) {
-      this.router.transitionTo('vault.cluster.secrets.backend.configuration.edit', backendPath);
+      this.router.transitionTo('vault.cluster.secrets.backend.configuration.edit', id);
     } else {
-      this.router.transitionTo('vault.cluster.secrets.backend.configuration', backendPath);
+      this.router.transitionTo('vault.cluster.secrets.backend.configuration', id);
     }
   }
 

@@ -21,7 +21,7 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
     this.store = this.owner.lookup('service:store');
     const router = this.owner.lookup('service:router');
     this.id = 'ssh-test';
-    this.model = this.store.createRecord('ssh/ca-config', { backend: this.id });
+    this.model = this.store.createRecord('ssh/ca-config', { backend: this.id, id: this.id });
     this.transitionStub = sinon.stub(router, 'transitionTo');
     this.refreshStub = sinon.stub(router, 'refresh');
   });
@@ -30,7 +30,7 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
     await render(hbs`
       <SecretEngine::ConfigureSsh
     @model={{this.model}}
-    @backendPath={{this.id}}
+    @id={{this.id}}
   />
     `);
     assert.dom(GENERAL.maskedInput('privateKey')).hasNoText('Private key is empty and reset');
@@ -44,14 +44,14 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
     await render(hbs`
       <SecretEngine::ConfigureSsh
     @model={{this.model}}
-    @backendPath={{this.id}}
+    @id={{this.id}}
   />
     `);
 
     await click(SES.ssh.cancel);
 
     assert.true(
-      this.transitionStub.calledWith('vault.cluster.secrets.backend.configuration', 'ssh-test'),
+      this.transitionStub.calledWith('vault.cluster.secrets.backend.configuration', this.id),
       'On cancel the router transitions to the parent configuration index route.'
     );
   });
@@ -60,7 +60,7 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
     await render(hbs`
       <SecretEngine::ConfigureSsh
     @model={{this.model}}
-    @backendPath={{this.id}}
+    @id={{this.id}}
   />
     `);
     await fillIn(GENERAL.inputByAttr('publicKey'), 'hello');
@@ -95,7 +95,7 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
     await render(hbs`
       <SecretEngine::ConfigureSsh
     @model={{this.model}}
-    @backendPath={{this.id}}
+    @id={{this.id}}
   />
     `);
 
