@@ -40,7 +40,8 @@ type DatabaseConfig struct {
 
 	RootCredentialsRotateStatements []string `json:"root_credentials_rotate_statements" structs:"root_credentials_rotate_statements" mapstructure:"root_credentials_rotate_statements"`
 
-	PasswordPolicy string `json:"password_policy" structs:"password_policy" mapstructure:"password_policy"`
+	PasswordPolicy   string `json:"password_policy" structs:"password_policy" mapstructure:"password_policy"`
+	VerifyConnection bool   `json:"verify_connection" structs:"verify_connection" mapstructure:"verify_connection"`
 }
 
 func (c *DatabaseConfig) SupportsCredentialType(credentialType v5.CredentialType) bool {
@@ -378,7 +379,7 @@ func (b *databaseBackend) connectionReadHandler() framework.OperationFunc {
 		delete(config.ConnectionDetails, "service_account_json")
 
 		resp := &logical.Response{}
-		if dbi, err := b.GetConnection(ctx, req.Storage, name); err == nil {
+		if dbi, err := b.GetConnectionSkipVerify(ctx, req.Storage, name); err == nil {
 			config.RunningPluginVersion = dbi.runningPluginVersion
 			if config.PluginVersion != "" && config.PluginVersion != config.RunningPluginVersion {
 				warning := fmt.Sprintf("Plugin version is configured as %q, but running %q", config.PluginVersion, config.RunningPluginVersion)
@@ -422,15 +423,15 @@ func (b *databaseBackend) connectionDeleteHandler() framework.OperationFunc {
 // both builtin and plugin database types.
 func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		verifyConnection := data.Get("verify_connection").(bool)
-
 		name := data.Get("name").(string)
 		if name == "" {
 			return logical.ErrorResponse(respErrEmptyName), nil
 		}
 
 		// Baseline
-		config := &DatabaseConfig{}
+		config := &DatabaseConfig{
+			VerifyConnection: true,
+		}
 
 		entry, err := req.Storage.Get(ctx, fmt.Sprintf("config/%s", name))
 		if err != nil {
@@ -440,6 +441,13 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 			if err := entry.DecodeJSON(config); err != nil {
 				return nil, err
 			}
+		}
+
+		// If this value was provided as part of the request we want to set it to this value
+		if verifyConnectionRaw, ok := data.GetOk("verify_connection"); ok {
+			config.VerifyConnection = verifyConnectionRaw.(bool)
+		} else if req.Operation == logical.CreateOperation {
+			config.VerifyConnection = data.Get("verify_connection").(bool)
 		}
 
 		if pluginNameRaw, ok := data.GetOk("plugin_name"); ok {
@@ -509,7 +517,7 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 
 		initReq := v5.InitializeRequest{
 			Config:           config.ConnectionDetails,
-			VerifyConnection: verifyConnection,
+			VerifyConnection: config.VerifyConnection,
 		}
 		initResp, err := dbw.Initialize(ctx, initReq)
 		if err != nil {
