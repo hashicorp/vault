@@ -393,7 +393,6 @@ func (b *databaseBackend) connectionReadHandler() framework.OperationFunc {
 		}
 
 		resp.Data = structs.New(config).Map()
-		delete(resp.Data, "verify_connection")
 		return resp, nil
 	}
 }
