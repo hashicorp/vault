@@ -51,18 +51,6 @@ module('Unit | Adapter | secret engine', function (hooks) {
     adapter['query'](storeStub, type, { path: 'foo/bar/baz' });
   });
 
-  test('Fails gracefully finding records for non ssh engines', function (assert) {
-    assert.expect(1);
-    const snapshot = {
-      attr() {
-        return { type: 'aws', path: 'aws/' };
-      },
-    };
-    const adapter = this.owner.lookup('adapter:secret-engine');
-    const response = adapter.findRecord(storeStub, 'aws', { path: 'aws' }, snapshot);
-    assert.propEqual(response, { data: {} }, 'returns empty data object');
-  });
-
   module('WIF secret engines', function (hooks) {
     hooks.beforeEach(function () {
       this.store = this.owner.lookup('service:store');
@@ -76,7 +64,6 @@ module('Unit | Adapter | secret engine', function (hooks) {
           {
             path: 'aws-wif',
             type: 'aws',
-            generate_signing_key: true,
             config: { id: 'aws-wif', identity_token_key: 'test-key', listing_visibility: 'hidden' },
           },
           'Correct payload is sent when adding aws secret engine with identity_token_key set'
@@ -104,7 +91,6 @@ module('Unit | Adapter | secret engine', function (hooks) {
           {
             path: 'aws-wif',
             type: 'aws',
-            generate_signing_key: true,
             config: { id: 'aws-wif', max_lease_ttl: '125h', listing_visibility: 'hidden' },
           },
           'Correct payload is sent when adding aws secret engine with no identity_token_key set'
@@ -131,8 +117,7 @@ module('Unit | Adapter | secret engine', function (hooks) {
           JSON.parse(req.requestBody),
           {
             path: 'cubbyhole-test',
-            type: 'aws',
-            generate_signing_key: true,
+            type: 'cubbyhole',
             config: { id: 'cubbyhole-test', max_lease_ttl: '125h', listing_visibility: 'hidden' },
           },
           'Correct payload is sent when sending a non-wif secret engine with identity_token_key accidentally set'
@@ -142,7 +127,7 @@ module('Unit | Adapter | secret engine', function (hooks) {
       const mountData = {
         id: 'cubbyhole-test',
         path: 'cubbyhole-test',
-        type: 'aws',
+        type: 'cubbyhole',
         config: this.store.createRecord('mount-config', {
           maxLeaseTtl: '125h',
           identity_token_key: 'test-key',

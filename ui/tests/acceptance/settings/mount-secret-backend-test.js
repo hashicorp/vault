@@ -30,7 +30,7 @@ import { mountableEngines } from 'vault/helpers/mountable-secret-engines'; // al
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SELECTORS as OIDC } from 'vault/tests/helpers/oidc-config';
-import { adminOidcCreateRead, adminOidcCreate } from 'vault/tests/helpers/secrets/policy-generator';
+import { adminOidcCreateRead, adminOidcCreate } from 'vault/tests/helpers/secret-engine/policy-generator';
 import { WIF_ENGINES } from 'vault/helpers/mountable-secret-engines';
 
 const consoleComponent = create(consoleClass);
