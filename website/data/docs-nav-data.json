@@ -2200,6 +2200,15 @@
             ]
           },
           {
+            "title": "Guides",
+            "routes": [
+              {
+                "title": "Consul to Raft storage migration",
+                "path": "platform/k8s/guides"
+              }
+            ]
+          },
+          {
             "title": "Vault Secrets Operator",
             "routes": [
               {
