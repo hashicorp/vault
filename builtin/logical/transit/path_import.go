@@ -17,11 +17,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/tink/go/kwp/subtle"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/tink-crypto/tink-go/v2/kwp/subtle"
 )
 
 const EncryptedKeyBytes = 512
