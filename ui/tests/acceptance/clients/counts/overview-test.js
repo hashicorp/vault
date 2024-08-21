@@ -42,6 +42,12 @@ module('Acceptance | clients | overview', function (hooks) {
 
   test('it should render charts', async function (assert) {
     assert
+      .dom(`${GENERAL.flashMessage}.is-info`)
+      .includesText(
+        'counts returned in this usage period are an estimate',
+        'Shows warning from API about client count estimations'
+      );
+    assert
       .dom(CLIENT_COUNT.dateRange.dateDisplay('start'))
       .hasText('July 2023', 'billing start month is correctly parsed from license');
     assert
