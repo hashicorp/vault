@@ -17,6 +17,38 @@
     Access to AWS
   </h2>
   <div class="box is-fullwidth is-sideless">
+    {{! WIF is an enterprise only feature. We default to iam access type. }}
+    {{#if this.version.isEnterprise}}
+      <fieldset class="field form-fieldset" id="protection" data-test-access-type-selection>
+        <legend class="is-label">Access Type</legend>
+        <p class="sub-text">Choose the way to configure access to AWS. Access can be configured either with IAM access keys,
+          or using Plugin Workload Identity Federation (WIF).</p>
+        <div>
+          {{! ARG TODO enterprise only }}
+          <RadioButton
+            id="access-type-iam"
+            name="iam"
+            class="radio"
+            data-test-access-type="iam"
+            @value="iam"
+            @groupValue={{@rootConfig.accessType}}
+            @onChange={{fn (mut @rootConfig.accessType)}}
+          />
+          <label for="protection-hsm">IAM Credentials</label>
+
+          <RadioButton
+            id="access-type-wif"
+            name="wif"
+            class="radio has-left-margin-m"
+            data-test-access-type="wif"
+            @value="wif"
+            @groupValue={{@rootConfig.accessType}}
+            @onChange={{fn (mut @rootConfig.accessType)}}
+          />
+          <label for="protection-hsm">Workflow Identity Federation</label>
+        </div>
+      </fieldset>
+    {{/if}}
     <FormFieldGroups
       @model={{@rootConfig}}
       @mode={{if @rootConfig.isNew "create" "edit"}}

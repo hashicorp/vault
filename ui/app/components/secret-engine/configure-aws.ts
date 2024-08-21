@@ -16,6 +16,7 @@ import type LeaseConfigModel from 'vault/models/aws/lease-config';
 import type RootConfigModel from 'vault/models/aws/root-config';
 import type Router from '@ember/routing/router';
 import type Store from '@ember-data/store';
+import type VersionService from 'vault/services/version';
 import type FlashMessageService from 'vault/services/flash-messages';
 
 /**
@@ -46,6 +47,7 @@ interface Args {
 export default class ConfigureAwsComponent extends Component<Args> {
   @service declare readonly router: Router;
   @service declare readonly store: Store;
+  @service declare readonly version: VersionService;
   @service declare readonly flashMessages: FlashMessageService;
 
   @tracked errorMessageRoot: string | null = null;

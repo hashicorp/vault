@@ -9,8 +9,35 @@ import { regions } from 'vault/helpers/aws-regions';
 
 export default class AwsRootConfig extends Model {
   @attr('string') backend; // dynamic path of secret -- set on response from value passed to queryRecord
+  @attr('string', {
+    defaultValue: 'iam',
+  })
+  accessType; // not a api attr, but used to track fields to display
+  // IAM only fields
   @attr('string') accessKey;
   @attr('string', { sensitive: true }) secretKey; // obfuscated, never returned by API
+
+  // WIF only fields
+  @attr('string', {
+    subText: 'Role ARN to assume for plugin workload identity federation.',
+  })
+  roleArn;
+  @attr('string', {
+    subText:
+      'The audience claim value for plugin identity tokens. Must match an allowed audience configured for the target IAM OIDC identity provider..',
+  })
+  identityTokenAudience;
+  @attr({
+    defaultValue: '1h',
+    label: 'Identity token TTL',
+    helperTextDisabled:
+      'The TTL of generated tokens. Defaults to 1 hour, turn on the toggle to specify a different value.',
+    subText: '',
+    editType: 'ttl',
+  })
+  identityTokenTll;
+
+  // WIF + IAM fields
   @attr('string', {
     possibleValues: regions(),
     subText:
@@ -32,9 +59,17 @@ export default class AwsRootConfig extends Model {
     return expandAttributeMeta(this, keys);
   }
 
+  get defaultFields() {
+    if (this.accessType === 'iam') {
+      return ['accessKey', 'secretKey'];
+    } else {
+      return ['roleArn', 'identityTokenAudience', 'identityTokenTll'];
+    }
+  }
+
   get formFieldGroups() {
     return [
-      { default: ['accessKey', 'secretKey'] },
+      { default: this.defaultFields },
       {
         'Root config options': ['region', 'iamEndpoint', 'stsEndpoint', 'maxRetries'],
       },
