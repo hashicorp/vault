@@ -14,11 +14,11 @@ import type { ClientTypes } from 'core/utils/client-count-utils';
 import ClientsVersionHistoryModel from 'vault/vault/models/clients/version-history';
 
 interface Args {
-  chartHeight?: number;
-  chartLegend: Legend[];
-  chartTitle: string;
+  legend: Legend[];
   data: MonthlyChartData[];
-  upgradeData: ClientsVersionHistoryModel[];
+  upgradeData?: ClientsVersionHistoryModel[];
+  chartTitle?: string;
+  chartHeight?: number;
 }
 
 interface Legend {
@@ -46,13 +46,13 @@ interface UpgradeByMonth {
 /**
  * @module VerticalBarGrouped
  * Renders a grouped bar chart of counts for different client types over time. Which client types render
- * is mapped from the "key" values of the @legend arg
+ * is mapped from the "key" values of the @legend arg.
  *
  * @example
  * <Clients::Charts::VerticalBarGrouped
  * @chartTitle="Total monthly usage"
- * @data={{this.byMonthActivityData}}
- * @chartLegend={{this.legend}}
+ * @data={{this.flattenedByMonthData}}
+ * @legend={{array (hash key="clients" label="Total clients")}}
  * @chartHeight={{250}}
  * />
  */
@@ -65,11 +65,11 @@ export default class VerticalBarGrouped extends Component<Args> {
   }
 
   get dataKeys(): ClientTypes[] {
-    return this.args.chartLegend.map((l: Legend) => l.key);
+    return this.args.legend.map((l: Legend) => l.key);
   }
 
   label(legendKey: string) {
-    return this.args.chartLegend.find((l: Legend) => l.key === legendKey)?.label;
+    return this.args.legend.find((l: Legend) => l.key === legendKey)?.label;
   }
 
   get chartData() {
@@ -165,7 +165,7 @@ export default class VerticalBarGrouped extends Component<Args> {
   // TEMPLATE HELPERS
   barOffset = (bandwidth: number, idx = 0) => {
     const withPadding = this.barWidth + 4;
-    const moved = (bandwidth - withPadding * this.args.chartLegend.length) / 2;
+    const moved = (bandwidth - withPadding * this.args.legend.length) / 2;
     return moved + idx * withPadding;
   };
 
