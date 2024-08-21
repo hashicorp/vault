@@ -194,7 +194,7 @@ server:
 
   **Configuration notes**
     - `storage “raft”` configuration to specify the path for the Raft DB (`/vault/data` by default), and any `retry_join` parameters in your original configuration.
-      - This example uses `auto_join` to automatically find Raft peers via the Kubernetes API.  See the [`retry_join`](https://developer.hashicorp.com/vault/docs/configuration/storage/raft#retry_join-stanza) for more information.
+      - This example uses `auto_join` to automatically find Raft peers via the Kubernetes API.  See the [`retry_join`](/vault/docs/configuration/storage/raft#retry_join-stanza) for more information.
     - `dataStorage` configuration in the Helm override values, to specify the parameters of the PVCs the Vault `StatefulSet` will create.
     - `extraInitContainers` will start an init container mounting the storage migration ConfigMap and `data` volume, which it will then use to execute the storage migration.  
     - `replicas: 1`
@@ -351,11 +351,11 @@ Note that the Vault Helm Chart's default configuration using Raft storage will r
 
 ## References
 
-- https://developer.hashicorp.com/vault/docs/commands/operator/migrate
-- https://developer.hashicorp.com/vault/docs/platform/k8s/helm/configuration
-- https://developer.hashicorp.com/vault/tutorials/kubernetes/kubernetes-raft-deployment-guide
-- https://github.com/hashicorp/vault-helm
-- https://kubernetes.io/docs/reference/generated/kubectl/kubectl-commands
-- https://kubernetes.io/docs/concepts/storage/volumes/
-- https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-initialization/#create-a-pod-that-has-an-init-container
-- https://helm.sh/docs/
+- [Vault operator migrate command](/vault/docs/commands/operator/migrate)
+- [Helm Chart configuration](/vault/docs/platform/k8s/helm/configuration)
+- [Vault on Kubernetes deployment guide](/vault/tutorials/kubernetes/kubernetes-raft-deployment-guide)
+- [Vault Helm Chart configuration](https://github.com/hashicorp/vault-helm)
+- [kubectl commands](https://kubernetes.io/docs/reference/generated/kubectl/kubectl-commands)
+- [Kubernetes storage volumes](https://kubernetes.io/docs/concepts/storage/volumes/)
+- [Create a Pod that has an Init Container](https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-initialization/#create-a-pod-that-has-an-init-container)
+- [Helm docs](https://helm.sh/docs/)
