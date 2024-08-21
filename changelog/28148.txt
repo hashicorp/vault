@@ -1,0 +1,3 @@
+```release-note:feature
+ui: Add WIF fields to the AWS secrets engine.
+```
