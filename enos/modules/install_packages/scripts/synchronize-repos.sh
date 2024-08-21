@@ -35,11 +35,11 @@ sles_check_guestregister_service_and_restart_if_failed() {
   set -e
 
   case "$active_state" in
-    active|activating|deactivating)
+    active | activating | deactivating)
       # It's running so we'll return 1 and get retried by the caller
       echo "the guestregister.service is still in the ${active_state} state" 1>&2
       return 1
-    ;;
+      ;;
     *)
       if [ "$active_state" == "inactive" ] && [ "$failed_state" == "inactive" ]; then
         # The oneshot has completed and hasn't "failed"
@@ -49,7 +49,7 @@ sles_check_guestregister_service_and_restart_if_failed() {
 
       # Our service is stopped and failed, restart it and hope it works the next time
       sudo systemctl restart --wait guestregister.service
-    ;;
+      ;;
   esac
 }
 
@@ -77,13 +77,13 @@ synchronize_repos() {
   case $PACKAGE_MANAGER in
     apt)
       sudo apt update
-    ;;
+      ;;
     dnf)
       sudo dnf makecache
-    ;;
+      ;;
     yum)
       sudo yum makecache
-    ;;
+      ;;
     zypper)
       if [ "$DISTRO" == "sles" ]; then
         if ! sles_ensure_suseconnect; then
@@ -95,7 +95,7 @@ synchronize_repos() {
       ;;
     *)
       return 0
-    ;;
+      ;;
   esac
 }
 
