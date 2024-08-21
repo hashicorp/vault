@@ -44,6 +44,12 @@
         @chartTitle="Vault client counts"
       />
     </:chart>
+
+    <:legend>
+      {{#each this.chartLegend as |l|}}
+        <span class="legend-colors dot-{{l.key}}"></span><span class="legend-label">{{capitalize l.label}}</span>
+      {{/each}}
+    </:legend>
   </Clients::ChartContainer>
 {{else}}
   {{#let (get @byMonthActivityData "0") as |singleMonthData|}}

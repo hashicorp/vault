@@ -103,12 +103,6 @@
     </Lineal::Fluid>
   </div>
 
-  <div class="legend">
-    {{#each @legend as |l|}}
-      <span class="legend-colors dot-{{l.key}}"></span><span class="legend-label">{{capitalize l.label}}</span>
-    {{/each}}
-  </div>
-
   {{#if @showTable}}
     <details data-test-underlying-data>
       <summary>{{@chartTitle}} data</summary>

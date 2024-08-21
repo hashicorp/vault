@@ -30,7 +30,11 @@
       </div>
     {{/if}}
 
-    {{#if @legend}}
+    {{#if (has-block "legend")}}
+      <div class="legend">
+        {{yield to="legend"}}
+      </div>
+    {{else if @legend}}
       <div class="legend" data-test-chart-container-legend>
         {{#each @legend as |legend idx|}}
           <span class="legend-colors dot-{{idx}}"></span>
