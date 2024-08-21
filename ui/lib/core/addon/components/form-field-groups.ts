@@ -21,6 +21,7 @@ import type { ValidationMap } from 'vault/vault/app-types';
  * @param {function} [onKeyUp] - Handler that will set the value and trigger validation on input changes
  * @param {object} [modelValidations] - Object containing validation message for each property
  * @param {string} [groupName=fieldGroups] - attribute name where the field groups are
+ * @param {boolean} [useEnableInput=false] - if you want to wrap your sensitive fields with the EnableInput component while editing.
  */
 
 interface Args {

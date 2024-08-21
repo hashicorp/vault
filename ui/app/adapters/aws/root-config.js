@@ -8,13 +8,36 @@ import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 export default class AwsRootConfig extends ApplicationAdapter {
   namespace = 'v1';
-  // For now this is only being used on the vault.cluster.secrets.backend.configuration route. This is a read-only route.
-  // Eventually, this will be used to create the root config for the AWS secret backend, replacing the requests located on the secret-engine adapter.
+
   queryRecord(store, type, query) {
     const { backend } = query;
     return this.ajax(`${this.buildURL()}/${encodePath(backend)}/config/root`, 'GET').then((resp) => {
-      resp.id = backend;
-      return resp;
+      return {
+        ...resp,
+        id: backend,
+        backend,
+      };
     });
+  }
+
+  createOrUpdate(store, type, snapshot) {
+    const serializer = store.serializerFor(type.modelName);
+    const data = serializer.serialize(snapshot);
+    const backend = snapshot.record.backend;
+    return this.ajax(`${this.buildURL()}/${backend}/config/root`, 'POST', { data }).then((resp) => {
+      // ember data requires an id on the response
+      return {
+        ...resp,
+        id: backend,
+      };
+    });
+  }
+
+  createRecord() {
+    return this.createOrUpdate(...arguments);
+  }
+
+  updateRecord() {
+    return this.createOrUpdate(...arguments);
   }
 }
