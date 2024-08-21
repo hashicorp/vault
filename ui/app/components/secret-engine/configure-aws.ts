@@ -66,6 +66,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
     // If no changes to either model, transition and notify user.
     // If changes to either model, save the model(s) that changed and notify user.
     // Note: "backend" dirties model state so explicity ignore it here.
+
     const leaseAttrChanged =
       Object.keys(leaseConfig.changedAttributes()).filter((item) => item !== 'backend').length > 0;
     const rootAttrChanged =
@@ -90,11 +91,11 @@ export default class ConfigureAwsComponent extends Component<Args> {
   async saveRoot() {
     const { backendPath, rootConfig } = this.args;
     try {
-      rootConfig.save();
+      await rootConfig.save();
       this.flashMessages.success(`Successfully saved ${backendPath}'s root configuration.`);
       return true;
     } catch (error) {
-      this.errorMessageRoot = errorMessage('error');
+      this.errorMessageRoot = errorMessage(error);
       this.invalidFormAlert = 'There was an error submitting this form.';
       return false;
     }
@@ -103,7 +104,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
   async saveLease() {
     const { backendPath, leaseConfig } = this.args;
     try {
-      leaseConfig.save();
+      await leaseConfig.save();
       this.flashMessages.success(`Successfully saved ${backendPath}'s lease configuration.`);
       return true;
     } catch (error) {
