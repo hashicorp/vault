@@ -23,10 +23,10 @@ export const SECRET_ENGINE_SELECTORS = {
   warning: '[data-test-warning]',
   aws: {
     rootForm: '[data-test-root-form]',
-    leaseForm: '[data-test-lease-form]',
-    saveRootConfig: '[data-test-save-root-config]',
-    saveLeaseConfig: '[data-test-save-lease-config]',
-    cancelConfig: '[data-test-cancel-config]',
+    accessTitle: '[data-test-access-title]',
+    leaseTitle: '[data-test-lease-title]',
+    save: '[data-test-save]',
+    cancel: '[data-test-cancel]',
     deleteRole: (role: string) => `[data-test-aws-role-delete="${role}"]`,
   },
   ssh: {
