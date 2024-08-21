@@ -10,8 +10,8 @@ import (
 	"path"
 	"strings"
 
+	"github.com/absolutelightning/go-memdb"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/locking"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"

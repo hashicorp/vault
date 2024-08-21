@@ -11,9 +11,9 @@ import (
 	"sync"
 	"time"
 
+	memdb "github.com/absolutelightning/go-memdb"
 	metrics "github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
-	memdb "github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/identity"
