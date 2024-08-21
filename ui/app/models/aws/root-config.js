@@ -12,7 +12,8 @@ export default class AwsRootConfig extends Model {
   @attr('string', {
     defaultValue: 'iam',
   })
-  accessType; // not a api attr, but used to track fields to display
+  accessType; // This is not an API attr. It should only be displayed for Enterprise users with access to WIF
+
   // IAM only fields
   @attr('string') accessKey;
   @attr('string', { sensitive: true }) secretKey; // obfuscated, never returned by API
@@ -31,6 +32,8 @@ export default class AwsRootConfig extends Model {
     defaultValue: '1h',
     label: 'Identity token TTL',
     helperTextDisabled:
+      'The TTL of generated tokens. Defaults to 1 hour, turn on the toggle to specify a different value.',
+    helperTextEnabled:
       'The TTL of generated tokens. Defaults to 1 hour, turn on the toggle to specify a different value.',
     subText: '',
     editType: 'ttl',

@@ -17,14 +17,13 @@
     Access to AWS
   </h2>
   <div class="box is-fullwidth is-sideless">
-    {{! WIF is an enterprise only feature. We default to iam access type. }}
+    {{! WIF is an enterprise only feature. We default to IAM for community users and display only those related form fields. }}
     {{#if this.version.isEnterprise}}
       <fieldset class="field form-fieldset" id="protection" data-test-access-type-selection>
         <legend class="is-label">Access Type</legend>
         <p class="sub-text">Choose the way to configure access to AWS. Access can be configured either with IAM access keys,
           or using Plugin Workload Identity Federation (WIF).</p>
         <div>
-          {{! ARG TODO enterprise only }}
           <RadioButton
             id="access-type-iam"
             name="iam"
