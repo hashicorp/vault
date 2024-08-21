@@ -25,6 +25,7 @@ import { task } from 'ember-concurrency';
  * @param {string} [endTimestamp] - ISO timestamp of end time, to be passed to export request
  * @param {string} [namespace] - namespace filter. Will be appended to the current namespace in the export request.
  * @param {string} [upgradesDuringActivity] - array of objects containing version history upgrade data
+ * @param {boolean} [noData = false] - when true, export button will hide regardless of capabilities
  */
 export default class ClientsPageHeaderComponent extends Component {
   @service download;
@@ -39,6 +40,11 @@ export default class ClientsPageHeaderComponent extends Component {
   constructor() {
     super(...arguments);
     this.getExportCapabilities(this.args.namespace);
+  }
+
+  get showExportButton() {
+    if (this.args.noData === true) return false;
+    return this.canDownload;
   }
 
   @waitFor

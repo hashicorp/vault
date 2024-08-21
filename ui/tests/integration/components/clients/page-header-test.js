@@ -26,6 +26,7 @@ module('Integration | Component | clients/page-header', function (hooks) {
     this.endTimestamp = '2022-12-01T23:00:11.050Z';
     this.selectedNamespace = undefined;
     this.upgradesDuringActivity = [];
+    this.noData = undefined;
     this.server.post('/sys/capabilities-self', () =>
       capabilitiesStub('sys/internal/counters/activity/export', ['sudo'])
     );
@@ -37,6 +38,7 @@ module('Integration | Component | clients/page-header', function (hooks) {
           @endTimestamp={{this.endTimestamp}}
           @namespace={{this.selectedNamespace}}
           @upgradesDuringActivity={{this.upgradesDuringActivity}}
+          @noData={{this.noData}}
         />`);
     };
   });
@@ -44,6 +46,12 @@ module('Integration | Component | clients/page-header', function (hooks) {
   test('it shows the export button if user does has SUDO capabilities', async function (assert) {
     await this.renderComponent();
     assert.dom(CLIENT_COUNT.exportButton).exists();
+  });
+
+  test('it hides the export button if user does has SUDO capabilities but there is no data', async function (assert) {
+    this.noData = true;
+    await this.renderComponent();
+    assert.dom(CLIENT_COUNT.exportButton).doesNotExist();
   });
 
   test('it hides the export button if user does not have SUDO capabilities', async function (assert) {

@@ -324,7 +324,11 @@ export default function (server) {
       lease_duration: 0,
       data: filterActivityResponse(data, namespace),
       wrap_info: null,
-      warnings: null,
+      warnings: req.queryParams.end_time
+        ? null
+        : [
+            'Since this usage period includes both the current month and at least one historical month, counts returned in this usage period are an estimate. Client counts for this period will no longer be estimated at the start of the next month.',
+          ],
       auth: null,
     };
   });
