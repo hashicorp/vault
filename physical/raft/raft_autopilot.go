@@ -19,7 +19,6 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/raft"
 	autopilot "github.com/hashicorp/raft-autopilot"
-	"github.com/mitchellh/copystructure"
 	"github.com/mitchellh/mapstructure"
 	"go.uber.org/atomic"
 )
@@ -210,6 +209,19 @@ type FollowerState struct {
 	Version         string
 	UpgradeVersion  string
 	RedundancyZone  string
+}
+
+func (f *FollowerState) Copy() *FollowerState {
+	return &FollowerState{
+		AppliedIndex:    f.AppliedIndex,
+		LastHeartbeat:   f.LastHeartbeat,
+		LastTerm:        f.LastTerm,
+		IsDead:          atomic.NewBool(f.IsDead.Load()),
+		DesiredSuffrage: f.DesiredSuffrage,
+		Version:         f.Version,
+		UpgradeVersion:  f.UpgradeVersion,
+		RedundancyZone:  f.RedundancyZone,
+	}
 }
 
 // PersistedFollowerState holds the information that gets persisted to storage
@@ -509,17 +521,15 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 		followerVersion := state.Version
 		if followerVersion == "" {
 			followerVersion = d.persistedState.States[id].Version
+			d.logger.Debug("using follower version from persisted states", "id", id, "version", followerVersion)
 		}
 		if state.UpgradeVersion == "" {
 			// we only have a read lock on d.followerStates, so we need to copy
 			// the item and modify it in the copy to prevent any races
-			copiedState, err := copystructure.Copy(state)
-			if err != nil {
-				d.logger.Error("failed to copy autopilot server state", "error", err)
-			} else {
-				state = copiedState.(*FollowerState)
-				state.UpgradeVersion = d.persistedState.States[id].UpgradeVersion
-			}
+			copiedState := state.Copy()
+			state = copiedState
+			state.UpgradeVersion = d.persistedState.States[id].UpgradeVersion
+			d.logger.Debug("using upgrade version from persisted states", "id", id, "upgrade_version", state.UpgradeVersion)
 		}
 		server := &autopilot.Server{
 			ID:          currentServerID,
