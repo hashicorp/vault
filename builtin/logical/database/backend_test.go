@@ -764,6 +764,7 @@ func TestBackend_connectionCrud(t *testing.T) {
 		"root_credentials_rotate_statements": []any{},
 		"password_policy":                    "",
 		"plugin_version":                     "",
+		"verify_connection":                  false,
 	}
 	resp, err = client.Read("database/config/plugin-test")
 	if err != nil {
