@@ -8,6 +8,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { find, render, settled } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { formatTimeZone } from 'core/helpers/date-format';
+import { isMatch } from 'date-fns';
 
 const TEST_DATE = new Date('2018-04-03T14:15:30');
 
@@ -54,6 +55,14 @@ module('Integration | Helper | date-format', function (hooks) {
     // Testing the difference because depending on the time of year the value may change
     const resultLengthWithTimezone = result.innerText.length;
     assert.strictEqual(resultLengthWithTimezone - 4, 4, 'Adds 4 characters for timezone');
+  });
+
+  test('it renders default format', async function (assert) {
+    this.set('timestampDate', TEST_DATE);
+    await render(hbs`<span data-test-formatted>{{date-format this.timestampDate}}</span>`);
+    const value = find('[data-test-formatted]').innerText;
+    const format = 'MMM d yyyy, h:mm:ss aa';
+    assert.true(isMatch(value, format), `${value} is formatted as ${format}`);
   });
 
   test('fails gracefully if given a non-date value', async function (assert) {

@@ -33,7 +33,7 @@ module('Integration | Component | SecretEngine/configuration-details', function 
   });
 
   test('it shows config details if configModel(s) are passed in', async function (assert) {
-    assert.expect(14);
+    assert.expect(21);
     for (const type of CONFIGURABLE_SECRET_ENGINES) {
       const backend = `test-${type}`;
       this.configModels = createConfig(this.store, backend, type);
@@ -45,6 +45,12 @@ module('Integration | Component | SecretEngine/configuration-details', function 
         assert
           .dom(GENERAL.infoRowValue(key))
           .hasText(responseKeyAndValue, `${key} value for the ${type} config details exists.`);
+        // make sure the ones that should be masked are masked, and others are not.
+        if (key === 'private_key' || key === 'public_key') {
+          assert.dom(GENERAL.infoRowValue(key)).hasClass('masked-input', `${key} is masked`);
+        } else {
+          assert.dom(GENERAL.infoRowValue(key)).doesNotHaveClass('masked-input', `${key} is not masked`);
+        }
       }
     }
   });

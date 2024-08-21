@@ -10,6 +10,7 @@ import { withModelValidations } from 'vault/decorators/model-validations';
 import { withExpandedAttributes } from 'vault/decorators/model-expanded-attributes';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
 import { isAddonEngine, allEngines } from 'vault/helpers/mountable-secret-engines';
+import { WHITESPACE_WARNING } from 'vault/utils/validators';
 
 const LINKED_BACKENDS = supportedSecretBackends();
 
@@ -22,8 +23,7 @@ const validations = {
     { type: 'presence', message: "Path can't be blank." },
     {
       type: 'containsWhiteSpace',
-      message:
-        "Path contains whitespace. If this is desired, you'll need to encode it with %20 in API requests.",
+      message: WHITESPACE_WARNING('path'),
       level: 'warn',
     },
   ],
@@ -67,14 +67,6 @@ export default class SecretEngineModel extends Model {
     defaultFormValue: 2, // Set the form to 2 by default
   })
   version;
-
-  // SSH specific attributes
-  @attr('string') privateKey;
-  @attr('string') publicKey;
-  @attr('boolean', {
-    defaultValue: true,
-  })
-  generateSigningKey;
 
   // AWS specific attributes
   @attr('string') lease;
@@ -257,24 +249,6 @@ export default class SecretEngineModel extends Model {
   }
 
   /* ACTIONS */
-  saveCA(options) {
-    if (this.type !== 'ssh') {
-      return;
-    }
-    if (options.isDelete) {
-      this.privateKey = null;
-      this.publicKey = null;
-      this.generateSigningKey = false;
-    }
-    return this.save({
-      adapterOptions: {
-        options: options,
-        apiPath: 'config/ca',
-        attrsToSend: ['privateKey', 'publicKey', 'generateSigningKey'],
-      },
-    });
-  }
-
   saveZeroAddressConfig() {
     return this.save({
       adapterOptions: {
