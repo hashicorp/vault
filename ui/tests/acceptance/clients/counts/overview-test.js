@@ -54,7 +54,7 @@ module('Acceptance | clients | overview', function (hooks) {
     assert
       .dom(`${CHARTS.container('Vault client counts')} ${CHARTS.xAxisLabel}`)
       .hasText('7/23', 'x-axis labels start with billing start date');
-    assert.strictEqual(findAll(CHARTS.plotPoint).length, 5, 'line chart plots 5 points to match query');
+    assert.dom(CHARTS.xAxisLabel).exists({ count: 7 }, 'chart months matches query');
   });
 
   test('it should update charts when querying date ranges', async function (assert) {
@@ -86,6 +86,12 @@ module('Acceptance | clients | overview', function (hooks) {
     await fillIn(CLIENT_COUNT.dateRange.editDate('start'), upgradeMonth);
     await click(GENERAL.saveButton);
 
+    assert
+      .dom(CLIENT_COUNT.dateRange.dateDisplay('start'))
+      .hasText('September 2023', 'billing start month is correctly parsed from license');
+    assert
+      .dom(CLIENT_COUNT.dateRange.dateDisplay('end'))
+      .hasText('January 2024', 'billing start month is correctly parsed from license');
     assert.dom(CLIENT_COUNT.attributionBlock()).exists({ count: 2 });
     assert
       .dom(CHARTS.container('Vault client counts'))
@@ -93,7 +99,7 @@ module('Acceptance | clients | overview', function (hooks) {
     assert
       .dom(`${CHARTS.container('Vault client counts')} ${CHARTS.xAxisLabel}`)
       .hasText('9/23', 'x-axis labels start with queried start month (upgrade date)');
-    assert.strictEqual(findAll(CHARTS.plotPoint).length, 5, 'line chart plots 5 points to match query');
+    assert.dom(CHARTS.xAxisLabel).exists({ count: 5 }, 'chart months matches query');
 
     // query for single, historical month (upgrade month)
     await click(CLIENT_COUNT.dateRange.edit);
@@ -117,11 +123,18 @@ module('Acceptance | clients | overview', function (hooks) {
     await fillIn(CLIENT_COUNT.dateRange.editDate('end'), '2023-12');
     await click(GENERAL.saveButton);
 
+    assert
+      .dom(CLIENT_COUNT.dateRange.dateDisplay('start'))
+      .hasText('September 2023', 'billing start month is correctly parsed from license');
+    assert
+      .dom(CLIENT_COUNT.dateRange.dateDisplay('end'))
+      .hasText('December 2023', 'billing start month is correctly parsed from license');
     assert.dom(CLIENT_COUNT.attributionBlock()).exists({ count: 2 });
     assert
       .dom(CHARTS.container('Vault client counts'))
       .exists('Shows running totals with monthly breakdown charts');
-    assert.strictEqual(findAll(CHARTS.plotPoint).length, 4, 'line chart plots 4 points to match query');
+
+    assert.dom(CHARTS.xAxisLabel).exists({ count: 4 }, 'chart months matches query');
     const xAxisLabels = findAll(CHARTS.xAxisLabel);
     assert
       .dom(xAxisLabels[xAxisLabels.length - 1])
