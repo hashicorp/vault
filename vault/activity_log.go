@@ -247,6 +247,9 @@ type ActivityLogExportRecord struct {
 	// AliasName is the entity alias name provided by the auth backend upon login
 	AliasName string `json:"alias_name" mapstructure:"alias_name"`
 
+	// LocalAlias indicates if the alias only belongs to the cluster where it was created.
+	LocalAlias bool `json:"local_alias" mapstructure:"local_alias"`
+
 	// ClientID is the unique identifier assigned to the entity that performed the activity
 	ClientID string `json:"client_id" mapstructure:"client_id"`
 
@@ -3147,6 +3150,11 @@ func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, f
 								return fmt.Errorf("failed to process alias name")
 							}
 
+							record.LocalAlias, ok = alias["local"].(bool)
+							if !ok {
+								return fmt.Errorf("failed to process local alias")
+							}
+
 							record.MountType, ok = alias["mount_type"].(string)
 							if !ok {
 								return fmt.Errorf("failed to process mount type")
@@ -3296,6 +3304,7 @@ func baseActivityExportCSVHeader() []string {
 		"alias_name",
 		"client_id",
 		"client_type",
+		"local_alias",
 		"namespace_id",
 		"namespace_path",
 		"mount_accessor",
@@ -3430,6 +3439,11 @@ func (c *csvEncoder) Encode(record *ActivityLogExportRecord) error {
 		case string:
 			if idx, ok := c.columnIndex[col]; ok {
 				row[idx] = typedValue
+			}
+
+		case bool:
+			if idx, ok := c.columnIndex[col]; ok {
+				row[idx] = strconv.FormatBool(typedValue)
 			}
 
 		case map[string]string:
