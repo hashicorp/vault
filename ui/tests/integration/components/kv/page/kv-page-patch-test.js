@@ -113,7 +113,6 @@ module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks)
 
     hooks.beforeEach(async function () {
       this.endpoint = `${encodePath(this.backend)}/data/${encodePath(this.path)}`;
-      this.flashSpy = sinon.spy(this.owner.lookup('service:flash-messages'), 'info');
     });
 
     test('patch data from kv editor form', async function (assert) {
@@ -187,52 +186,6 @@ module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks)
       );
     });
 
-    test('no changes from kv editor form', async function (assert) {
-      assert.expect(3);
-      this.server.patch(this.endpoint, () =>
-        overrideResponse(500, `Request made to: ${this.endpoint}. This should not have happened!`)
-      );
-      await this.renderComponent();
-      await click(FORM.saveBtn);
-      assert.dom(GENERAL.messageError).doesNotExist('PATCH request is not made');
-      const route = this.transitionStub.lastCall?.args[0] || '';
-      const flash = this.flashSpy.lastCall?.args[0] || '';
-      assert.strictEqual(
-        route,
-        'vault.cluster.secrets.backend.kv.secret',
-        `it transitions to overview route: ${route}`
-      );
-      assert.strictEqual(
-        flash,
-        `No changes to submit. No changes made to "${this.path}".`,
-        `flash message renders: ${flash}`
-      );
-    });
-
-    test('no changes from json form', async function (assert) {
-      assert.expect(3);
-      this.server.patch(this.endpoint, () =>
-        overrideResponse(500, `Request made to: ${this.endpoint}. This should not have happened!`)
-      );
-      await this.renderComponent();
-      await click(GENERAL.inputByAttr('JSON'));
-      await waitUntil(() => find('.CodeMirror'));
-      await click(FORM.saveBtn);
-      assert.dom(GENERAL.messageError).doesNotExist('PATCH request is not made');
-      const route = this.transitionStub.lastCall?.args[0] || '';
-      const flash = this.flashSpy.lastCall?.args[0] || '';
-      assert.strictEqual(
-        route,
-        'vault.cluster.secrets.backend.kv.secret',
-        `it transitions to overview route: ${route}`
-      );
-      assert.strictEqual(
-        flash,
-        `No changes to submit. No changes made to "${this.path}".`,
-        `flash message renders: ${flash}`
-      );
-    });
-
     // this assertion confirms submit allows empty values
     test('empty string values from kv editor form', async function (assert) {
       assert.expect(1);
@@ -290,6 +243,59 @@ module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks)
       await waitUntil(() => find('.CodeMirror'));
       await codemirror().setValue('{ "foo": "" }');
       await click(FORM.saveBtn);
+    });
+  });
+
+  module('it does not submit', function (hooks) {
+    hooks.beforeEach(async function () {
+      this.endpoint = `${encodePath(this.backend)}/data/${encodePath(this.path)}`;
+      this.flashSpy = sinon.spy(this.owner.lookup('service:flash-messages'), 'info');
+    });
+
+    test('if no changes from kv editor form', async function (assert) {
+      assert.expect(3);
+      this.server.patch(this.endpoint, () =>
+        overrideResponse(500, `Request made to: ${this.endpoint}. This should not have happened!`)
+      );
+      await this.renderComponent();
+      await click(FORM.saveBtn);
+      assert.dom(GENERAL.messageError).doesNotExist('PATCH request is not made');
+      const route = this.transitionStub.lastCall?.args[0] || '';
+      const flash = this.flashSpy.lastCall?.args[0] || '';
+      assert.strictEqual(
+        route,
+        'vault.cluster.secrets.backend.kv.secret',
+        `it transitions to overview route: ${route}`
+      );
+      assert.strictEqual(
+        flash,
+        `No changes to submit. No changes made to "${this.path}".`,
+        `flash message has message: "${flash}"`
+      );
+    });
+
+    test('if no changes from json form', async function (assert) {
+      assert.expect(3);
+      this.server.patch(this.endpoint, () =>
+        overrideResponse(500, `Request made to: ${this.endpoint}. This should not have happened!`)
+      );
+      await this.renderComponent();
+      await click(GENERAL.inputByAttr('JSON'));
+      await waitUntil(() => find('.CodeMirror'));
+      await click(FORM.saveBtn);
+      assert.dom(GENERAL.messageError).doesNotExist('PATCH request is not made');
+      const route = this.transitionStub.lastCall?.args[0] || '';
+      const flash = this.flashSpy.lastCall?.args[0] || '';
+      assert.strictEqual(
+        route,
+        'vault.cluster.secrets.backend.kv.secret',
+        `it transitions to overview route: ${route}`
+      );
+      assert.strictEqual(
+        flash,
+        `No changes to submit. No changes made to "${this.path}".`,
+        `flash message has message: "${flash}"`
+      );
     });
   });
 
