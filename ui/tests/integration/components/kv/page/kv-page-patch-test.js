@@ -187,7 +187,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks)
       );
     });
 
-    test('empty patch data from kv editor form', async function (assert) {
+    test('no changes from kv editor form', async function (assert) {
       assert.expect(3);
       this.server.patch(this.endpoint, () =>
         overrideResponse(500, `Request made to: ${this.endpoint}. This should not have happened!`)
@@ -209,7 +209,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks)
       );
     });
 
-    test('empty patch data from json form', async function (assert) {
+    test('no changes from json form', async function (assert) {
       assert.expect(3);
       this.server.patch(this.endpoint, () =>
         overrideResponse(500, `Request made to: ${this.endpoint}. This should not have happened!`)
@@ -231,6 +231,65 @@ module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks)
         `No changes to submit. No changes made to "${this.path}".`,
         `flash message renders: ${flash}`
       );
+    });
+
+    // this assertion confirms submit allows empty values
+    test('empty string values from kv editor form', async function (assert) {
+      assert.expect(1);
+      this.server.patch(this.endpoint, (schema, req) => {
+        const payload = JSON.parse(req.requestBody);
+        const expected = {
+          data: { foo: '', aKey: '', bKey: '' },
+          options: {
+            cas: this.metadata.currentVersion,
+          },
+        };
+        assert.propEqual(
+          payload,
+          expected,
+          `payload: ${JSON.stringify(payload)} matches expected: ${JSON.stringify(payload)}`
+        );
+        return EXAMPLE_KV_DATA_CREATE_RESPONSE;
+      });
+
+      await this.renderComponent();
+      await click(FORM.patchEdit());
+      // edit existing key's value
+      await fillIn(FORM.valueInput(), '');
+      // add a new key with empty value, click add
+      await fillIn(FORM.keyInput('new'), 'aKey');
+      await fillIn(FORM.valueInput('new'), '');
+      await click(FORM.patchAdd);
+      // add new key and do NOT click add
+      await fillIn(FORM.keyInput('new'), 'bKey');
+      await fillIn(FORM.valueInput('new'), '');
+      await click(FORM.saveBtn);
+    });
+
+    // this assertion confirms submit allows empty values
+    test('empty string value from json form', async function (assert) {
+      assert.expect(1);
+      this.server.patch(this.endpoint, (schema, req) => {
+        const payload = JSON.parse(req.requestBody);
+        const expected = {
+          data: { foo: '' },
+          options: {
+            cas: this.metadata.currentVersion,
+          },
+        };
+        assert.propEqual(
+          payload,
+          expected,
+          `payload: ${JSON.stringify(payload)} matches expected: ${JSON.stringify(payload)}`
+        );
+        return EXAMPLE_KV_DATA_CREATE_RESPONSE;
+      });
+
+      await this.renderComponent();
+      await click(GENERAL.inputByAttr('JSON'));
+      await waitUntil(() => find('.CodeMirror'));
+      await codemirror().setValue('{ "foo": "" }');
+      await click(FORM.saveBtn);
     });
   });
 

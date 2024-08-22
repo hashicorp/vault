@@ -175,7 +175,7 @@ export default class KvPatchEditorForm extends Component {
 
     // patchData will not include the last row if a user has not clicked "Add"
     // manually check for data and add it to this.patchData
-    if (this.newKey && this.newValue) {
+    if (this.newKey) {
       this.addRow();
     }
 

@@ -20,9 +20,9 @@ module('Integration | Component | kv | kv-patch/editor/form', function (hooks) {
   hooks.beforeEach(function () {
     this.subkeys = {
       foo: null,
-      bar: {
-        baz: null,
-        quux: {
+      baz: {
+        nested: null,
+        bar: {
           hello: null,
         },
       },
