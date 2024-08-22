@@ -31,7 +31,7 @@ if ! out=$(jq -eMc --arg version "$version" '.keys | contains([$version])' <<< "
 fi
 
 if ! out=$(jq -eMc --arg version "$version" --arg bd "$VAULT_BUILD_DATE" '.key_info[$version].build_date == $bd' <<< "$vh"); then
-  fail "cluster version history build date is not the expected date: expected: $VAULT_BUILD_DATE, output: $out"
+  fail "cluster version history build date is not the expected date: expected: true, expected date: $VAULT_BUILD_DATE, key_info: $(jq -eMc '.key_info' <<< "$vh"), output: $out"
 fi
 
 printf "Cluster version information is valid!: %s\n" "$vh"

@@ -26,6 +26,7 @@ export const GENERAL = {
   filterInputExplicitSearch: '[data-test-filter-input-explicit-search]',
   confirmModalInput: '[data-test-confirmation-modal-input]',
   confirmButton: '[data-test-confirm-button]',
+  confirmMessage: '[data-test-confirm-action-message]',
   confirmTrigger: '[data-test-confirm-action-trigger]',
   emptyStateTitle: '[data-test-empty-state-title]',
   emptyStateSubtitle: '[data-test-empty-state-subtitle]',
@@ -42,6 +43,7 @@ export const GENERAL = {
   inputByAttr: (attr: string) => `[data-test-input="${attr}"]`,
   selectByAttr: (attr: string) => `[data-test-select="${attr}"]`,
   toggleInput: (attr: string) => `[data-test-toggle-input="${attr}"]`,
+  toggleGroup: (attr: string) => `[data-test-toggle-group="${attr}"]`,
   ttl: {
     toggle: (attr: string) => `[data-test-toggle-label="${attr}"]`,
     input: (attr: string) => `[data-test-ttl-value="${attr}"]`,
@@ -50,12 +52,14 @@ export const GENERAL = {
   validation: (attr: string) => `[data-test-field-validation=${attr}]`,
   validationWarning: (attr: string) => `[data-test-validation-warning=${attr}]`,
   messageError: '[data-test-message-error]',
+  notFound: '[data-test-not-found]',
   pageError: {
     error: '[data-test-page-error]',
     errorTitle: (httpStatus: number) => `[data-test-page-error-title="${httpStatus}"]`,
     errorMessage: '[data-test-page-error-message]',
     errorDetails: '[data-test-page-error-details]',
   },
+  inlineError: '[data-test-inline-error-message]',
   kvObjectEditor: {
     deleteRow: (idx = 0) => `[data-test-kv-delete-row="${idx}"]`,
   },
@@ -70,11 +74,12 @@ export const GENERAL = {
     removeSelected: '[data-test-selected-list-button="delete"]',
   },
   overviewCard: {
+    container: (title: string) => `[data-test-overview-card-container="${title}"]`,
     title: (title: string) => `[data-test-overview-card-title="${title}"]`,
     description: (title: string) => `[data-test-overview-card-subtitle="${title}"]`,
     content: (title: string) => `[data-test-overview-card-content="${title}"]`,
-    action: (title: string) => `[data-test-overview-card-container="${title}"] [data-test-action-text]`,
-    actionLink: (label: string) => `[data-test-action-text="${label}"]`,
+    actionText: (text: string) => `[data-test-action-text="${text}"]`,
+    actionLink: (label: string) => `[data-test-overview-card="${label}"] a`,
   },
   pagination: {
     next: '.hds-pagination-nav__arrow--direction-next',
@@ -87,7 +92,6 @@ export const GENERAL = {
   navLink: (label: string) => `[data-test-sidebar-nav-link="${label}"]`,
   cancelButton: '[data-test-cancel]',
   saveButton: '[data-test-save]',
-  saveButtonId: (id: string) => `[data-test-save="${id}"]`, // there are many uses of save button, but very few with an id. Instead of making all instances of saveButton a function with an empty string, we can just use this selector. TODO: should be removed after refactor of AWS.
   maskedInput: (name: string) => `[data-test-textarea="${name}"]`,
   codemirror: `[data-test-component="code-mirror-modifier"]`,
   codemirrorTextarea: `[data-test-component="code-mirror-modifier"] textarea`,

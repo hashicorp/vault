@@ -291,6 +291,18 @@ func (b *databaseBackend) GetConnection(ctx context.Context, s logical.Storage, 
 	return b.GetConnectionWithConfig(ctx, name, config)
 }
 
+func (b *databaseBackend) GetConnectionSkipVerify(ctx context.Context, s logical.Storage, name string) (*dbPluginInstance, error) {
+	config, err := b.DatabaseConfig(ctx, s, name)
+	if err != nil {
+		return nil, err
+	}
+
+	// Force the skip verifying the connection
+	config.VerifyConnection = false
+
+	return b.GetConnectionWithConfig(ctx, name, config)
+}
+
 func (b *databaseBackend) GetConnectionWithConfig(ctx context.Context, name string, config *DatabaseConfig) (*dbPluginInstance, error) {
 	// fast path, reuse the existing connection
 	dbi := b.connections.Get(name)
@@ -331,7 +343,7 @@ func (b *databaseBackend) GetConnectionWithConfig(ctx context.Context, name stri
 
 	initReq := v5.InitializeRequest{
 		Config:           config.ConnectionDetails,
-		VerifyConnection: true,
+		VerifyConnection: config.VerifyConnection,
 	}
 	_, err = dbw.Initialize(ctx, initReq)
 	if err != nil {

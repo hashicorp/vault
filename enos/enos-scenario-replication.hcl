@@ -55,22 +55,15 @@ scenario "replication" {
       edition        = [for e in matrix.edition : e if !strcontains(e, "hsm")]
     }
 
-    // arm64 AMIs are not offered for Leap
-    exclude {
-      distro = ["leap"]
-      arch   = ["arm64"]
-    }
-
-    // softhsm packages not available for leap/sles. Enos support for softhsm on amzn2 is
-    // not implemented yet.
+    // softhsm packages not available for leap/sles.
     exclude {
       primary_seal = ["pkcs11"]
-      distro       = ["amzn2", "leap", "sles"]
+      distro       = ["leap", "sles"]
     }
 
     exclude {
       secondary_seal = ["pkcs11"]
-      distro         = ["amzn2", "leap", "sles"]
+      distro         = ["leap", "sles"]
     }
 
     // Testing in IPV6 mode is currently implemented for integrated Raft storage only
@@ -96,7 +89,7 @@ scenario "replication" {
   locals {
     artifact_path = matrix.artifact_source != "artifactory" ? abspath(var.vault_artifact_path) : null
     enos_provider = {
-      amzn2  = provider.enos.ec2_user
+      amzn   = provider.enos.ec2_user
       leap   = provider.enos.ec2_user
       rhel   = provider.enos.ec2_user
       sles   = provider.enos.ec2_user
@@ -230,7 +223,7 @@ scenario "replication" {
     }
 
     variables {
-      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"]["22.04"]
+      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"][global.distro_version["ubuntu"]]
       cluster_tag_key = global.backend_tag_key
       common_tags     = global.tags
       seal_key_names  = step.create_primary_seal_key.resource_names
@@ -288,7 +281,7 @@ scenario "replication" {
     }
 
     variables {
-      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"]["22.04"]
+      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"][global.distro_version["ubuntu"]]
       cluster_tag_key = global.backend_tag_key
       common_tags     = global.tags
       seal_key_names  = step.create_secondary_seal_key.resource_names
@@ -402,7 +395,7 @@ scenario "replication" {
       license              = matrix.edition != "ce" ? step.read_vault_license.license : null
       local_artifact_path  = local.artifact_path
       manage_service       = local.manage_service
-      packages             = concat(global.packages, global.distro_packages[matrix.distro])
+      packages             = concat(global.packages, global.distro_packages[matrix.distro][global.distro_version[matrix.distro]])
       seal_attributes      = step.create_primary_seal_key.attributes
       seal_type            = matrix.primary_seal
       storage_backend      = matrix.primary_backend
@@ -507,7 +500,7 @@ scenario "replication" {
       license              = matrix.edition != "ce" ? step.read_vault_license.license : null
       local_artifact_path  = local.artifact_path
       manage_service       = local.manage_service
-      packages             = concat(global.packages, global.distro_packages[matrix.distro])
+      packages             = concat(global.packages, global.distro_packages[matrix.distro][global.distro_version[matrix.distro]])
       seal_attributes      = step.create_secondary_seal_key.attributes
       seal_type            = matrix.secondary_seal
       storage_backend      = matrix.secondary_backend
@@ -590,58 +583,6 @@ scenario "replication" {
     }
   }
 
-  step "verify_vault_version" {
-    description = global.description.verify_vault_version
-    module      = module.vault_verify_version
-    depends_on = [
-      step.create_primary_cluster,
-      step.wait_for_primary_cluster_leader,
-    ]
-
-    providers = {
-      enos = local.enos_provider[matrix.distro]
-    }
-
-    verifies = [
-      quality.vault_api_sys_version_history_keys,
-      quality.vault_api_sys_version_history_key_info,
-      quality.vault_version_build_date,
-      quality.vault_version_edition,
-      quality.vault_version_release,
-    ]
-
-    variables {
-      hosts                 = step.create_primary_cluster_targets.hosts
-      vault_addr            = step.create_primary_cluster.api_addr_localhost
-      vault_edition         = matrix.edition
-      vault_install_dir     = global.vault_install_dir[matrix.artifact_type]
-      vault_product_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
-      vault_revision        = matrix.artifact_source == "local" ? step.get_local_metadata.revision : var.vault_revision
-      vault_build_date      = matrix.artifact_source == "local" ? step.get_local_metadata.build_date : var.vault_build_date
-      vault_root_token      = step.create_primary_cluster.root_token
-    }
-  }
-
-  step "verify_ui" {
-    description = global.description.verify_ui
-    module      = module.vault_verify_ui
-    depends_on = [
-      step.create_primary_cluster,
-      step.wait_for_primary_cluster_leader,
-    ]
-
-    providers = {
-      enos = local.enos_provider[matrix.distro]
-    }
-
-    verifies = quality.vault_ui_assets
-
-    variables {
-      vault_addr = step.create_primary_cluster.api_addr_localhost
-      hosts      = step.create_primary_cluster_targets.hosts
-    }
-  }
-
   step "get_primary_cluster_ips" {
     description = global.description.get_vault_cluster_ip_addresses
     module      = module.vault_get_cluster_ips
@@ -690,11 +631,56 @@ scenario "replication" {
     }
   }
 
+  step "verify_vault_version" {
+    description = global.description.verify_vault_version
+    module      = module.vault_verify_version
+    depends_on  = [step.get_primary_cluster_ips]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    verifies = [
+      quality.vault_api_sys_version_history_keys,
+      quality.vault_api_sys_version_history_key_info,
+      quality.vault_version_build_date,
+      quality.vault_version_edition,
+      quality.vault_version_release,
+    ]
+
+    variables {
+      hosts                 = step.create_primary_cluster_targets.hosts
+      vault_addr            = step.create_primary_cluster.api_addr_localhost
+      vault_edition         = matrix.edition
+      vault_install_dir     = global.vault_install_dir[matrix.artifact_type]
+      vault_product_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
+      vault_revision        = matrix.artifact_source == "local" ? step.get_local_metadata.revision : var.vault_revision
+      vault_build_date      = matrix.artifact_source == "local" ? step.get_local_metadata.build_date : var.vault_build_date
+      vault_root_token      = step.create_primary_cluster.root_token
+    }
+  }
+
+  step "verify_ui" {
+    description = global.description.verify_ui
+    module      = module.vault_verify_ui
+    depends_on  = [step.get_primary_cluster_ips]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    verifies = quality.vault_ui_assets
+
+    variables {
+      vault_addr = step.create_primary_cluster.api_addr_localhost
+      hosts      = step.create_primary_cluster_targets.hosts
+    }
+  }
+
   step "write_test_data_on_primary" {
     description = global.description.verify_write_test_data
     module      = module.vault_verify_write_data
     depends_on  = [step.get_primary_cluster_ips]
-
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -724,9 +710,13 @@ scenario "replication" {
     EOF
     module      = module.vault_setup_perf_primary
     depends_on = [
+      // Wait for both clusters to be up and healthy...
       step.get_primary_cluster_ips,
       step.get_secondary_cluster_ips,
-      step.write_test_data_on_primary
+      step.write_test_data_on_primary,
+      // Wait base verification to complete...
+      step.verify_vault_version,
+      step.verify_ui,
     ]
 
     providers = {
@@ -973,7 +963,7 @@ scenario "replication" {
       license             = matrix.edition != "ce" ? step.read_vault_license.license : null
       local_artifact_path = local.artifact_path
       manage_service      = local.manage_service
-      packages            = concat(global.packages, global.distro_packages[matrix.distro])
+      packages            = concat(global.packages, global.distro_packages[matrix.distro][global.distro_version[matrix.distro]])
       root_token          = step.create_primary_cluster.root_token
       seal_attributes     = step.create_primary_seal_key.attributes
       seal_type           = matrix.primary_seal
