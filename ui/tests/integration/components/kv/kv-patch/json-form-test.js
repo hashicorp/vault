@@ -22,7 +22,15 @@ module('Integration | Component | kv | kv-patch/editor/json-form', function (hoo
     this.onCancel = sinon.spy();
     this.isSaving = false;
     this.submitError = '';
-
+    this.subkeys = {
+      foo: null,
+      bar: {
+        baz: null,
+        quux: {
+          hello: null,
+        },
+      },
+    };
     this.renderComponent = async () => {
       return render(
         hbs`
@@ -30,6 +38,7 @@ module('Integration | Component | kv | kv-patch/editor/json-form', function (hoo
       @onSubmit={{this.onSubmit}}
       @onCancel={{this.onCancel}}
       @isSaving={{this.isSaving}}
+      @subkeys={{this.subkeys}}
       @submitError={{this.submitError}}
     />`,
         { owner: this.engine }
@@ -44,6 +53,20 @@ module('Integration | Component | kv | kv-patch/editor/json-form', function (hoo
     assert.true(this.onSubmit.calledOnce, 'clicking "Save" calls @onSubmit');
     await click(FORM.cancelBtn);
     assert.true(this.onCancel.calledOnce, 'clicking "Cancel" calls @onCancel');
+  });
+
+  test('it reveals subkeys', async function (assert) {
+    await this.renderComponent();
+
+    assert.dom(GENERAL.toggleInput('Reveal subkeys')).isNotChecked('toggle is initially unchecked');
+    assert.dom('[data-test-subkeys]').doesNotExist();
+    await click(GENERAL.toggleInput('Reveal subkeys'));
+    assert.dom(GENERAL.toggleInput('Reveal subkeys')).isChecked();
+    assert.dom('[data-test-subkeys]').hasText(JSON.stringify(this.subkeys, null, 2));
+
+    await click(GENERAL.toggleInput('Reveal subkeys'));
+    assert.dom(GENERAL.toggleInput('Reveal subkeys')).isNotChecked();
+    assert.dom('[data-test-subkeys]').doesNotExist('unchecking re-hides subkeys');
   });
 
   test('it renders linting errors', async function (assert) {

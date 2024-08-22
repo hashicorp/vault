@@ -20,7 +20,12 @@ module('Integration | Component | kv | kv-patch/editor/form', function (hooks) {
   hooks.beforeEach(function () {
     this.subkeys = {
       foo: null,
-      baz: null,
+      bar: {
+        baz: null,
+        quux: {
+          hello: null,
+        },
+      },
     };
     this.onSubmit = sinon.spy();
     this.onCancel = sinon.spy();
@@ -88,15 +93,6 @@ module('Integration | Component | kv | kv-patch/editor/form', function (hooks) {
   });
 
   test('it reveals subkeys', async function (assert) {
-    this.subkeys = {
-      foo: null,
-      bar: {
-        baz: null,
-        quux: {
-          hello: null,
-        },
-      },
-    };
     await this.renderComponent();
 
     assert.dom(GENERAL.toggleInput('Reveal subkeys')).isNotChecked('toggle is initially unchecked');
