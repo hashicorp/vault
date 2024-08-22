@@ -21,7 +21,8 @@ import type FlashMessageService from 'vault/services/flash-messages';
 
 /**
  * @module ConfigureAwsComponent is used to configure the AWS secret engine
- * A user can configure the endpoint root/config and/or lease/config. 
+ * A user can configure the endpoint root/config and/or lease/config.
+ * For enterprise users, they will see an additional option to config WIF attributes in place of IAM attributes. 
  * The fields for these endpoints are on one form.
  *
  * @example
@@ -58,10 +59,9 @@ export default class ConfigureAwsComponent extends Component<Args> {
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
-    // we want to default the aceessType to 'iam' if the rootConfig has no WIF attributes set.
-    // Check first if the rootConfig is a new record, if so, we can assume it's a new secret engine and we should default to 'iam'.
-    // Otherwise, check if the rootConfig has any WIF attributes set.
-    // this.setTrackedFromArgs();
+    // If any WIF attributes have been set in the rootConfig model, set accessType to 'wif'.
+    const { roleArn, identityTokenAudience, identityTokenTtl } = this.args.rootConfig;
+    this.accessType = roleArn || identityTokenAudience || identityTokenTtl ? 'wif' : 'iam';
   }
 
   @task
@@ -163,7 +163,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
     const { rootConfig } = this.args; // cannot destructure attributes and use them below because they're within if statements and javascript doesn't like that.
     if (accessType === 'iam') {
       // reset all WIF attributes
-      rootConfig.roleArn = rootConfig.identityTokenAudience = rootConfig.identityTokenTll = undefined;
+      rootConfig.roleArn = rootConfig.identityTokenAudience = rootConfig.identityTokenTtl = undefined;
     }
     if (accessType === 'wif') {
       // reset all IAM attributes

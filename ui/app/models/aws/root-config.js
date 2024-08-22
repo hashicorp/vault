@@ -52,14 +52,14 @@ export default class AwsRootConfig extends Model {
 
   get attrs() {
     const keys = [
+      'roleArn',
+      'identityTokenAudience',
+      'identityTokenTtl',
       'accessKey',
       'region',
       'iamEndpoint',
       'stsEndpoint',
       'maxRetries',
-      'roleArn',
-      'identityTokenAudience',
-      'identityTokenTtl',
     ];
     return expandAttributeMeta(this, keys);
   }
