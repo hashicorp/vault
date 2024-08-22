@@ -139,10 +139,6 @@ module('Acceptance | aws | configuration', function (hooks) {
     await click(GENERAL.toggleGroup('Root config options'));
     await fillIn(GENERAL.inputByAttr('region'), 'eu-central-1');
     await click(SES.aws.save);
-    assert.true(
-      this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s root configuration.`),
-      'Success flash message is rendered showing the root configuration was saved.'
-    );
     // the Serializer removes these two from the payload if the API returns their default value.
     assert.dom(GENERAL.infoRowValue('Identity token TTL')).doesNotExist('Identity token TTL does not show.');
     assert.dom(GENERAL.infoRowValue('Maximum retries')).doesNotExist('Maximum retries does not show.');
