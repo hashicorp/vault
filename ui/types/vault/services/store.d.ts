@@ -13,5 +13,4 @@ export default class StoreService extends Store {
   ): Promise<RecordArray>;
 
   clearDataset(modelName: string);
-  findRecord(modelName: string, path: string);
 }
