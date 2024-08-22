@@ -28,6 +28,8 @@ export const SECRET_ENGINE_SELECTORS = {
     save: '[data-test-save]',
     cancel: '[data-test-cancel]',
     deleteRole: (role: string) => `[data-test-aws-role-delete="${role}"]`,
+    accessTypeSection: '[data-test-access-type-section]',
+    accessType: (type: string) => `[data-test-access-type="${type}"]`,
   },
   ssh: {
     configureForm: '[data-test-configure-form]',
