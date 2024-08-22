@@ -25,7 +25,6 @@ export default class AwsRootConfig extends Model {
   })
   identityTokenAudience;
   @attr({
-    defaultValue: '1h',
     label: 'Identity token TTL',
     helperTextDisabled:
       'The TTL of generated tokens. Defaults to 1 hour, turn on the toggle to specify a different value.',
@@ -47,7 +46,6 @@ export default class AwsRootConfig extends Model {
   iamEndpoint;
   @attr('string', { label: 'STS endpoint' }) stsEndpoint;
   @attr('number', {
-    defaultValue: -1,
     label: 'Maximum retries',
     subText: 'Number of max retries the client should use for recoverable errors. Default is -1.',
   })
