@@ -2421,6 +2421,17 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 			pluginType = consts.PluginTypeCredential
 		}
 
+		// Update MountEntry.Type of external plugins registered in Vault pre-v1.0.0 to the plugin binary name
+		// stored in MountEntry.Config.PluginName
+		// Previously, when upgrading Vault from pre-v1.0.0 to post-v1.0.0, MountEntry.Type of external plugins
+		// remained "plugin" where it should follow the new scheme and be updated to the plugin binary name.
+		// https://hashicorp.atlassian.net/browse/VAULT-21999
+		if mountEntry.Config.PluginName != "" {
+			if mountEntry.Config.PluginName != mountEntry.Type && mountEntry.Type == "plugin" {
+				mountEntry.Type = mountEntry.Config.PluginName
+			}
+		}
+
 		pinnedVersion, err := b.Core.pluginCatalog.GetPinnedVersion(ctx, pluginType, mountEntry.Type)
 		if err != nil && !errors.Is(err, pluginutil.ErrPinnedVersionNotFound) {
 			return nil, err
@@ -3913,7 +3924,7 @@ func (b *SystemBackend) handleEnableAudit(ctx context.Context, _ *logical.Reques
 
 	// Attempt enabling
 	if err := b.Core.enableAudit(ctx, me, true); err != nil {
-		b.Backend.Logger().Error("enable audit mount failed", "path", me.Path, "error", err)
+		b.Core.logger.Error("enable audit mount failed", "path", me.Path, "error", err)
 
 		return handleError(audit.ConvertToExternalError(err))
 	}
@@ -5061,6 +5072,14 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 	var routerPrefix string
 	if strings.HasPrefix(me.APIPathNoNamespace(), credentialRoutePrefix) {
 		routerPrefix = credentialRoutePrefix
+	}
+
+	// the mount's namespace is (at least partially) in the request path and not
+	// in the request's context, so we need to add the namespace from the
+	// request path to the router prefix
+	if me.NamespaceID != ns.ID {
+		namespaceRouterPrefix := strings.TrimPrefix(me.Namespace().Path, ns.Path)
+		routerPrefix = namespaceRouterPrefix + routerPrefix
 	}
 
 	filtered, err := b.Core.checkReplicatedFiltering(ctx, me, routerPrefix)

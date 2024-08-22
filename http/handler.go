@@ -116,7 +116,7 @@ var (
 		"/v1/sys/wrapping/wrap",
 	}
 	websocketRawPaths = []string{
-		"/v1/sys/events/subscribe",
+		"sys/events/subscribe",
 	}
 	oidcProtectedPathRegex = regexp.MustCompile(`^identity/oidc/provider/\w(([\w-.]+)?\w)?/userinfo$`)
 )
@@ -128,9 +128,7 @@ func init() {
 		"!sys/storage/raft/snapshot-auto/config",
 	})
 	websocketPaths.AddPaths(websocketRawPaths)
-	for _, path := range websocketRawPaths {
-		alwaysRedirectPaths.AddPaths([]string{strings.TrimPrefix(path, "/v1/")})
-	}
+	alwaysRedirectPaths.AddPaths(websocketRawPaths)
 }
 
 type HandlerAnchor struct{}
@@ -434,7 +432,7 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 			} else if standby && !perfStandby {
 				// Standby nodes, not performance standbys, don't start plugins
 				// so registration can not happen, instead redirect to active
-				respondStandby(core, w, r.URL)
+				respondStandby(core, w, r)
 				cancelFunc()
 				return
 			} else {
@@ -908,7 +906,7 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 				respondError(w, http.StatusBadRequest, err)
 				return
 			}
-			path := ns.TrimmedPath(r.URL.Path[len("/v1/"):])
+			path := trimPath(ns, r.URL.Path)
 			if !perfStandbyAlwaysForwardPaths.HasPath(path) && !alwaysRedirectPaths.HasPath(path) {
 				handler.ServeHTTP(w, r)
 				return
@@ -945,14 +943,14 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 
 func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 	if r.Header.Get(vault.IntNoForwardingHeaderName) != "" {
-		respondStandby(core, w, r.URL)
+		respondStandby(core, w, r)
 		return
 	}
 
 	if r.Header.Get(NoRequestForwardingHeaderName) != "" {
 		// Forwarding explicitly disabled, fall back to previous behavior
 		core.Logger().Debug("handleRequestForwarding: forwarding disabled by client request")
-		respondStandby(core, w, r.URL)
+		respondStandby(core, w, r)
 		return
 	}
 
@@ -961,9 +959,25 @@ func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 		respondError(w, http.StatusBadRequest, err)
 		return
 	}
-	path := ns.TrimmedPath(r.URL.Path[len("/v1/"):])
-	if alwaysRedirectPaths.HasPath(path) {
-		respondStandby(core, w, r.URL)
+	path := trimPath(ns, r.URL.Path)
+	redirect := alwaysRedirectPaths.HasPath(path)
+	// websocket paths are special, because they can contain a namespace
+	// in front of them. This isn't an issue on perf standbys where the
+	// namespace manager will know all the namespaces, so we will have
+	// already extracted it from the path. But regular standbys don't have
+	// knowledge of the namespaces, so we need
+	// to add an extra check
+	if !redirect && !core.PerfStandby() {
+		for _, websocketPath := range websocketRawPaths {
+			if strings.Contains(path, websocketPath) {
+				redirect = true
+				break
+			}
+		}
+	}
+	if redirect {
+		core.Logger().Trace("cannot forward request (path included in always redirect paths), falling back to redirection to standby")
+		respondStandby(core, w, r)
 		return
 	}
 
@@ -979,7 +993,7 @@ func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Fall back to redirection
-		respondStandby(core, w, r.URL)
+		respondStandby(core, w, r)
 		return
 	}
 
@@ -1041,7 +1055,7 @@ func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *l
 		return resp, false, false
 	}
 	if errwrap.Contains(err, consts.ErrStandby.Error()) {
-		respondStandby(core, w, rawReq.URL)
+		respondStandby(core, w, rawReq)
 		return resp, false, false
 	}
 	if err != nil && errwrap.Contains(err, logical.ErrPerfStandbyPleaseForward.Error()) {
@@ -1090,7 +1104,8 @@ func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *l
 }
 
 // respondStandby is used to trigger a redirect in the case that this Vault is currently a hot standby
-func respondStandby(core *vault.Core, w http.ResponseWriter, reqURL *url.URL) {
+func respondStandby(core *vault.Core, w http.ResponseWriter, r *http.Request) {
+	reqURL := r.URL
 	// Request the leader address
 	_, redirectAddr, _, err := core.Leader()
 	if err != nil {
@@ -1127,13 +1142,23 @@ func respondStandby(core *vault.Core, w http.ResponseWriter, reqURL *url.URL) {
 		RawQuery: reqURL.RawQuery,
 	}
 
+	ctx := r.Context()
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, err)
+	}
 	// WebSockets schemas are ws or wss
-	if websocketPaths.HasPath(reqURL.Path) {
+	if websocketPaths.HasPath(trimPath(ns, reqURL.Path)) {
 		if finalURL.Scheme == "http" {
 			finalURL.Scheme = "ws"
 		} else {
 			finalURL.Scheme = "wss"
 		}
+	}
+
+	originalPath, ok := logical.ContextOriginalRequestPathValue(ctx)
+	if ok {
+		finalURL.Path = originalPath
 	}
 
 	// Ensure there is a scheme, default to https
@@ -1386,4 +1411,9 @@ func respondOIDCPermissionDenied(w http.ResponseWriter) {
 
 	enc := json.NewEncoder(w)
 	enc.Encode(oidcResponse)
+}
+
+// trimPath removes the /v1/ prefix and the namespace from the path
+func trimPath(ns *namespace.Namespace, path string) string {
+	return ns.TrimmedPath(path[len("/v1/"):])
 }

@@ -142,6 +142,12 @@ func (c *OperatorUsageCommand) Run(args []string) int {
 	colConfig.Empty = " " // Do not show n/a on intentional blank lines
 	colConfig.Glue = "   "
 	c.UI.Output(tableOutput(out, colConfig))
+
+	// Also, output the warnings returned, if any:
+	for _, warning := range resp.Warnings {
+		c.UI.Warn(warning)
+	}
+
 	return 0
 }
 

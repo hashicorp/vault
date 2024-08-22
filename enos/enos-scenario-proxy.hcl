@@ -1,5 +1,5 @@
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: BUSL-1.1
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
 
 scenario "proxy" {
   description = <<-EOF
@@ -28,37 +28,31 @@ scenario "proxy" {
     consul_version  = global.consul_versions
     distro          = global.distros
     edition         = global.editions
+    ip_version      = global.ip_versions
     seal            = global.seals
 
-    # Our local builder always creates bundles
+    // Our local builder always creates bundles
     exclude {
       artifact_source = ["local"]
       artifact_type   = ["package"]
     }
 
-    # HSM and FIPS 140-2 are only supported on amd64
-    exclude {
-      arch    = ["arm64"]
-      edition = ["ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
-    }
-
-    # PKCS#11 can only be used on ent.hsm and ent.hsm.fips1402.
+    // PKCS#11 can only be used on ent.hsm and ent.hsm.fips1402.
     exclude {
       seal    = ["pkcs11"]
       edition = [for e in matrix.edition : e if !strcontains(e, "hsm")]
     }
 
-    # arm64 AMIs are not offered for Leap
-    exclude {
-      distro = ["leap"]
-      arch   = ["arm64"]
-    }
-
-    # softhsm packages not available for leap/sles; Enos support for softhsm
-    # on amzn2 to be added later.
+    // softhsm packages not available for leap/sles.
     exclude {
       seal   = ["pkcs11"]
-      distro = ["amzn2", "leap", "sles"]
+      distro = ["leap", "sles"]
+    }
+
+    // Testing in IPV6 mode is currently implemented for integrated Raft storage only
+    exclude {
+      ip_version = ["6"]
+      backend    = ["consul"]
     }
   }
 
@@ -73,7 +67,7 @@ scenario "proxy" {
   locals {
     artifact_path = matrix.artifact_source != "artifactory" ? abspath(var.vault_artifact_path) : null
     enos_provider = {
-      amzn2  = provider.enos.ec2_user
+      amzn   = provider.enos.ec2_user
       leap   = provider.enos.ec2_user
       rhel   = provider.enos.ec2_user
       sles   = provider.enos.ec2_user
@@ -122,6 +116,7 @@ scenario "proxy" {
 
     variables {
       common_tags = global.tags
+      ip_version  = matrix.ip_version
     }
   }
 
@@ -190,7 +185,7 @@ scenario "proxy" {
     }
 
     variables {
-      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"]["22.04"]
+      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"][global.distro_version["ubuntu"]]
       cluster_tag_key = global.backend_tag_key
       common_tags     = global.tags
       seal_key_names  = step.create_seal_key.resource_names
@@ -229,12 +224,12 @@ scenario "proxy" {
     variables {
       cluster_name    = step.create_vault_cluster_backend_targets.cluster_name
       cluster_tag_key = global.backend_tag_key
+      hosts           = step.create_vault_cluster_backend_targets.hosts
       license         = (matrix.backend == "consul" && matrix.consul_edition == "ent") ? step.read_backend_license.license : null
       release = {
         edition = matrix.consul_edition
         version = matrix.consul_version
       }
-      target_hosts = step.create_vault_cluster_backend_targets.hosts
     }
   }
 
@@ -266,6 +261,8 @@ scenario "proxy" {
       quality.vault_config_log_level,
       quality.vault_init,
       quality.vault_license_required_ent,
+      quality.vault_listener_ipv4,
+      quality.vault_listener_ipv6,
       quality.vault_service_start,
       quality.vault_storage_backend_consul,
       quality.vault_storage_backend_raft,
@@ -296,15 +293,16 @@ scenario "proxy" {
         version = matrix.consul_version
       } : null
       enable_audit_devices = var.vault_enable_audit_devices
+      hosts                = step.create_vault_cluster_targets.hosts
       install_dir          = global.vault_install_dir[matrix.artifact_type]
+      ip_version           = matrix.ip_version
       license              = matrix.edition != "ce" ? step.read_vault_license.license : null
       local_artifact_path  = local.artifact_path
       manage_service       = local.manage_service
-      packages             = concat(global.packages, global.distro_packages[matrix.distro])
+      packages             = concat(global.packages, global.distro_packages[matrix.distro][global.distro_version[matrix.distro]])
       seal_attributes      = step.create_seal_key.attributes
       seal_type            = matrix.seal
       storage_backend      = matrix.backend
-      target_hosts         = step.create_vault_cluster_targets.hosts
     }
   }
 
@@ -324,15 +322,17 @@ scenario "proxy" {
     ]
 
     variables {
-      timeout           = 120 # seconds
-      vault_hosts       = step.create_vault_cluster_targets.hosts
+      hosts             = step.create_vault_cluster_targets.hosts
+      ip_version        = matrix.ip_version
+      timeout           = 120 // seconds
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
       vault_root_token  = step.create_vault_cluster.root_token
     }
   }
 
   step "start_vault_proxy" {
-    module = "vault_proxy"
+    module = module.vault_proxy
     depends_on = [
       step.build_vault,
       step.create_vault_cluster,
@@ -349,8 +349,10 @@ scenario "proxy" {
     ]
 
     variables {
+      hosts             = step.create_vault_cluster_targets.hosts
+      ip_version        = matrix.ip_version
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
-      vault_instances   = step.create_vault_cluster_targets.hosts
       vault_root_token  = step.create_vault_cluster.root_token
     }
   }
@@ -371,35 +373,11 @@ scenario "proxy" {
     ]
 
     variables {
-      vault_hosts       = step.create_vault_cluster_targets.hosts
+      hosts             = step.create_vault_cluster_targets.hosts
+      ip_version        = matrix.ip_version
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
       vault_root_token  = step.create_vault_cluster.root_token
-    }
-  }
-
-  step "verify_vault_version" {
-    description = global.description.verify_vault_version
-    module      = module.vault_verify_version
-    depends_on  = [step.create_vault_cluster]
-
-    providers = {
-      enos = local.enos_provider[matrix.distro]
-    }
-
-    verifies = [
-      quality.vault_version_build_date,
-      quality.vault_version_edition,
-      quality.vault_version_release,
-    ]
-
-    variables {
-      vault_instances       = step.create_vault_cluster_targets.hosts
-      vault_edition         = matrix.edition
-      vault_install_dir     = global.vault_install_dir[matrix.artifact_type]
-      vault_product_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
-      vault_revision        = matrix.artifact_source == "local" ? step.get_local_metadata.revision : var.vault_revision
-      vault_build_date      = matrix.artifact_source == "local" ? step.get_local_metadata.build_date : var.vault_build_date
-      vault_root_token      = step.create_vault_cluster.root_token
     }
   }
 
@@ -419,18 +397,45 @@ scenario "proxy" {
     ]
 
     variables {
+      hosts             = step.create_vault_cluster_targets.hosts
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
-      vault_instances   = step.create_vault_cluster_targets.hosts
+    }
+  }
+
+  step "verify_vault_version" {
+    description = global.description.verify_vault_version
+    module      = module.vault_verify_version
+    depends_on  = [step.verify_vault_unsealed]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    verifies = [
+      quality.vault_api_sys_version_history_keys,
+      quality.vault_api_sys_version_history_key_info,
+      quality.vault_version_build_date,
+      quality.vault_version_edition,
+      quality.vault_version_release,
+    ]
+
+    variables {
+      hosts                 = step.create_vault_cluster_targets.hosts
+      vault_addr            = step.create_vault_cluster.api_addr_localhost
+      vault_edition         = matrix.edition
+      vault_install_dir     = global.vault_install_dir[matrix.artifact_type]
+      vault_product_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
+      vault_revision        = matrix.artifact_source == "local" ? step.get_local_metadata.revision : var.vault_revision
+      vault_build_date      = matrix.artifact_source == "local" ? step.get_local_metadata.build_date : var.vault_build_date
+      vault_root_token      = step.create_vault_cluster.root_token
     }
   }
 
   step "verify_write_test_data" {
     description = global.description.verify_write_test_data
     module      = module.vault_verify_write_data
-    depends_on = [
-      step.create_vault_cluster,
-      step.get_vault_cluster_ips
-    ]
+    depends_on  = [step.verify_vault_unsealed]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -444,9 +449,9 @@ scenario "proxy" {
     ]
 
     variables {
-      leader_public_ip  = step.get_vault_cluster_ips.leader_public_ip
-      leader_private_ip = step.get_vault_cluster_ips.leader_private_ip
-      vault_instances   = step.create_vault_cluster_targets.hosts
+      hosts             = step.create_vault_cluster_targets.hosts
+      leader_host       = step.get_vault_cluster_ips.leader_host
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
       vault_root_token  = step.create_vault_cluster.root_token
     }
@@ -456,7 +461,7 @@ scenario "proxy" {
     description = global.description.verify_raft_cluster_all_nodes_are_voters
     skip_step   = matrix.backend != "raft"
     module      = module.vault_verify_raft_auto_join_voter
-    depends_on  = [step.create_vault_cluster]
+    depends_on  = [step.verify_vault_unsealed]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -465,8 +470,10 @@ scenario "proxy" {
     verifies = quality.vault_raft_voters
 
     variables {
+      hosts             = step.create_vault_cluster_targets.hosts
+      ip_version        = matrix.ip_version
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
-      vault_instances   = step.create_vault_cluster_targets.hosts
       vault_root_token  = step.create_vault_cluster.root_token
     }
   }
@@ -474,7 +481,7 @@ scenario "proxy" {
   step "verify_replication" {
     description = global.description.verify_replication_status
     module      = module.vault_verify_replication
-    depends_on  = [step.create_vault_cluster]
+    depends_on  = [step.verify_vault_unsealed]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -487,9 +494,9 @@ scenario "proxy" {
     ]
 
     variables {
-      vault_edition     = matrix.edition
-      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
-      vault_instances   = step.create_vault_cluster_targets.hosts
+      hosts         = step.create_vault_cluster_targets.hosts
+      vault_addr    = step.create_vault_cluster.api_addr_localhost
+      vault_edition = matrix.edition
     }
   }
 
@@ -508,7 +515,8 @@ scenario "proxy" {
     verifies = quality.vault_secrets_kv_read
 
     variables {
-      node_public_ips   = step.get_vault_cluster_ips.follower_public_ips
+      hosts             = step.get_vault_cluster_ips.follower_hosts
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
     }
   }
@@ -516,7 +524,7 @@ scenario "proxy" {
   step "verify_ui" {
     description = global.description.verify_ui
     module      = module.vault_verify_ui
-    depends_on  = [step.create_vault_cluster]
+    depends_on  = [step.verify_vault_unsealed]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -525,7 +533,8 @@ scenario "proxy" {
     verifies = quality.vault_ui_assets
 
     variables {
-      vault_instances = step.create_vault_cluster_targets.hosts
+      hosts      = step.create_vault_cluster_targets.hosts
+      vault_addr = step.create_vault_cluster.api_addr_localhost
     }
   }
 
@@ -541,7 +550,7 @@ scenario "proxy" {
 
   output "hosts" {
     description = "The Vault cluster target hosts"
-    value       = step.create_vault_cluster.target_hosts
+    value       = step.create_vault_cluster.hosts
   }
 
   output "private_ips" {

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/eventlogger"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 )
 
@@ -25,6 +26,7 @@ type SocketSink struct {
 	maxDuration    time.Duration
 	socketLock     sync.RWMutex
 	connection     net.Conn
+	logger         hclog.Logger
 }
 
 // NewSocketSink should be used to create a new SocketSink.
@@ -52,21 +54,28 @@ func NewSocketSink(address string, format string, opt ...Option) (*SocketSink, e
 		maxDuration:    opts.withMaxDuration,
 		socketLock:     sync.RWMutex{},
 		connection:     nil,
+		logger:         opts.withLogger,
 	}
 
 	return sink, nil
 }
 
 // Process handles writing the event to the socket.
-func (s *SocketSink) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
+func (s *SocketSink) Process(ctx context.Context, e *eventlogger.Event) (_ *eventlogger.Event, retErr error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	default:
 	}
 
-	s.socketLock.Lock()
-	defer s.socketLock.Unlock()
+	defer func() {
+		// If the context is errored (cancelled), and we were planning to return
+		// an error, let's also log (if we have a logger) in case the eventlogger's
+		// status channel and errors propagated.
+		if err := ctx.Err(); err != nil && retErr != nil && s.logger != nil {
+			s.logger.Error("socket sink error", "context", err, "error", retErr)
+		}
+	}()
 
 	if e == nil {
 		return nil, fmt.Errorf("event is nil: %w", ErrInvalidParameter)
@@ -75,6 +84,16 @@ func (s *SocketSink) Process(ctx context.Context, e *eventlogger.Event) (*eventl
 	formatted, found := e.Format(s.requiredFormat)
 	if !found {
 		return nil, fmt.Errorf("unable to retrieve event formatted as %q: %w", s.requiredFormat, ErrInvalidParameter)
+	}
+
+	// Wait for the lock, but ensure we check for a cancelled context as soon as
+	// we have it, as there's no point in continuing if we're cancelled.
+	s.socketLock.Lock()
+	defer s.socketLock.Unlock()
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
 	}
 
 	// Try writing and return early if successful.
@@ -121,7 +140,14 @@ func (_ *SocketSink) Type() eventlogger.NodeType {
 }
 
 // connect attempts to establish a connection using the socketType and address.
+// NOTE: connect is context aware and will not attempt to connect if the context is 'done'.
 func (s *SocketSink) connect(ctx context.Context) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
 	// If we're already connected, we should have disconnected first.
 	if s.connection != nil {
 		return nil
