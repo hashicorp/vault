@@ -54,6 +54,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
   @tracked errorMessageLease: string | null = null;
   @tracked invalidFormAlert: string | null = null;
   @tracked modelValidationsLease: ValidationMap | null = null;
+  @tracked accessType = 'iam';
 
   @task
   @waitFor

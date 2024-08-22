@@ -24,8 +24,6 @@ export default class AwsRootConfig extends ApplicationAdapter {
     const serializer = store.serializerFor(type.modelName);
     const data = serializer.serialize(snapshot);
     const backend = snapshot.record.backend;
-    // we use Access Type to determine what fields to show, however it's not an API field
-    delete data.access_type;
     return this.ajax(`${this.buildURL()}/${backend}/config/root`, 'POST', { data }).then((resp) => {
       // ember data requires an id on the response
       return {

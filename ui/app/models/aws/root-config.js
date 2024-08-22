@@ -9,10 +9,6 @@ import { regions } from 'vault/helpers/aws-regions';
 
 export default class AwsRootConfig extends Model {
   @attr('string') backend; // dynamic path of secret -- set on response from value passed to queryRecord
-  @attr('string', {
-    defaultValue: 'iam',
-  })
-  accessType; // This is not an API attr. It should only be displayed for Enterprise users with access to WIF
 
   // IAM only fields
   @attr('string') accessKey;
@@ -62,17 +58,9 @@ export default class AwsRootConfig extends Model {
     return expandAttributeMeta(this, keys);
   }
 
-  get defaultFields() {
-    if (this.accessType === 'iam') {
-      return ['accessKey', 'secretKey'];
-    } else {
-      return ['roleArn', 'identityTokenAudience', 'identityTokenTll'];
-    }
-  }
-
   get formFieldGroups() {
     return [
-      { default: this.defaultFields },
+      { default: ['accessKey', 'secretKey', 'roleArn', 'identityTokenAudience', 'identityTokenTll'] },
       {
         'Root config options': ['region', 'iamEndpoint', 'stsEndpoint', 'maxRetries'],
       },
@@ -81,5 +69,31 @@ export default class AwsRootConfig extends Model {
 
   get fieldGroups() {
     return fieldToAttrs(this, this.formFieldGroups);
+  }
+
+  get fieldGroupsWif() {
+    return fieldToAttrs(this, this.formFieldGroupsWif);
+  }
+
+  get fieldGroupsIam() {
+    return fieldToAttrs(this, this.formFieldGroupsIam);
+  }
+
+  get formFieldGroupsWif() {
+    return [
+      { default: ['roleArn', 'identityTokenAudience', 'identityTokenTll'] },
+      {
+        'Root config options': ['region', 'iamEndpoint', 'stsEndpoint', 'maxRetries'],
+      },
+    ];
+  }
+
+  get formFieldGroupsIam() {
+    return [
+      { default: ['accessKey', 'secretKey'] },
+      {
+        'Root config options': ['region', 'iamEndpoint', 'stsEndpoint', 'maxRetries'],
+      },
+    ];
   }
 }

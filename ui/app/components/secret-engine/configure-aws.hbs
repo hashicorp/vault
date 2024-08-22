@@ -30,8 +30,8 @@
             class="radio"
             data-test-access-type="iam"
             @value="iam"
-            @groupValue={{@rootConfig.accessType}}
-            @onChange={{fn (mut @rootConfig.accessType)}}
+            @groupValue={{this.accessType}}
+            @onChange={{fn (mut this.accessType)}}
           />
           <label for="protection-hsm">IAM Credentials</label>
 
@@ -41,19 +41,29 @@
             class="radio has-left-margin-m"
             data-test-access-type="wif"
             @value="wif"
-            @groupValue={{@rootConfig.accessType}}
-            @onChange={{fn (mut @rootConfig.accessType)}}
+            @groupValue={{this.accessType}}
+            @onChange={{fn (mut this.accessType)}}
           />
           <label for="protection-hsm">Workflow Identity Federation</label>
         </div>
       </fieldset>
     {{/if}}
-    <FormFieldGroups
-      @model={{@rootConfig}}
-      @mode={{if @rootConfig.isNew "create" "edit"}}
-      @modelValidations={{this.modelValidationsRoot}}
-      @useEnableInput={{true}}
-    />
+    {{#if (eq this.accessType "wif")}}
+      <FormFieldGroups
+        @model={{@rootConfig}}
+        @mode={{if @rootConfig.isNew "create" "edit"}}
+        @modelValidations={{this.modelValidationsRoot}}
+        @groupName="fieldGroupsWif"
+      />
+    {{else}}
+      <FormFieldGroups
+        @model={{@rootConfig}}
+        @mode={{if @rootConfig.isNew "create" "edit"}}
+        @modelValidations={{this.modelValidationsRoot}}
+        @useEnableInput={{true}}
+        @groupName="fieldGroupsIam"
+      />
+    {{/if}}
   </div>
 
   {{! Lease configuration details }}
