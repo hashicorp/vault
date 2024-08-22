@@ -23,6 +23,13 @@
   &.dot-3 {
     background-color: var(--token-color-palette-neutral-500);
   }
+  // custom naming for running totals, which matches the custom-bar naming
+  &.dot-clients {
+    background-color: var(--token-color-palette-blue-200);
+  }
+  &.dot-new_clients {
+    background-color: var(--token-color-palette-blue-100);
+  }
 }
 
 .legend-label {
@@ -83,13 +90,6 @@
 // RESPONSIVE STYLING //
 
 @media only screen and (max-width: 950px) {
-  .dual-chart-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    grid-template-rows: 0.2fr 0.75fr 0.75fr 0.2fr;
-    width: 100%;
-  }
-
   .chart-container-left {
     grid-column-start: 1;
     grid-column-end: 4;

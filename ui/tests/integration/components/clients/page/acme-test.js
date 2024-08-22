@@ -59,9 +59,8 @@ module('Integration | Component | clients | Clients::Page::Acme', function (hook
 
   test('it should render with full month activity data charts', async function (assert) {
     const monthCount = this.activity.byMonth.length;
-    assert.expect(8 + monthCount * 2);
+    assert.expect(7 + monthCount * 2);
     const expectedTotal = formatNumber([this.activity.total.acme_clients]);
-    const expectedAvg = formatNumber([calculateAverage(this.activity.byMonth, 'acme_clients')]);
     const expectedNewAvg = formatNumber([
       calculateAverage(
         this.activity.byMonth.map((m) => m?.new_clients),
@@ -75,7 +74,6 @@ module('Integration | Component | clients | Clients::Page::Acme', function (hook
         `Total ACME clients The total number of ACME requests made to Vault during this time period. ${expectedTotal}`,
         `renders correct total acme stat ${expectedTotal}`
       );
-    assert.dom(statText('Average ACME clients per month')).hasTextContaining(`${expectedAvg}`);
     assert.dom(statText('Average new ACME clients per month')).hasTextContaining(`${expectedNewAvg}`);
 
     const formattedTimestamp = dateFormat([this.activity.responseTimestamp, 'MMM d yyyy, h:mm:ss aaa'], {
@@ -88,7 +86,7 @@ module('Integration | Component | clients | Clients::Page::Acme', function (hook
   });
 
   test('it should render stats without chart for a single month', async function (assert) {
-    assert.expect(5);
+    assert.expect(4);
     const activityQuery = { start_time: { timestamp: END_TIME }, end_time: { timestamp: END_TIME } };
     this.activity = await this.store.queryRecord('clients/activity', activityQuery);
     const expectedTotal = formatNumber([this.activity.total.acme_clients]);
@@ -96,7 +94,6 @@ module('Integration | Component | clients | Clients::Page::Acme', function (hook
 
     assert.dom(CHARTS.chart('ACME usage')).doesNotExist('total usage chart does not render');
     assert.dom(CHARTS.container('Monthly new')).doesNotExist('monthly new chart does not render');
-    assert.dom(statText('Average ACME clients per month')).doesNotExist();
     assert.dom(statText('Average new ACME clients per month')).doesNotExist();
     assert
       .dom(usageStats('ACME usage'))
@@ -108,7 +105,7 @@ module('Integration | Component | clients | Clients::Page::Acme', function (hook
 
   // EMPTY STATES
   test('it should render empty state when ACME data does not exist for a date range', async function (assert) {
-    assert.expect(8);
+    assert.expect(7);
     // this happens when a user queries historical data that predates the monthly breakdown (added in 1.11)
     // only entity + non-entity clients existed then, so we show an empty state for ACME clients
     // because the activity response just returns { acme_clients: 0 } which isn't very clear
@@ -124,7 +121,6 @@ module('Integration | Component | clients | Clients::Page::Acme', function (hook
     assert.dom(CHARTS.chart('ACME usage')).doesNotExist('vertical bar chart does not render');
     assert.dom(CHARTS.container('Monthly new')).doesNotExist('monthly new chart does not render');
     assert.dom(statText('Total ACME clients')).doesNotExist();
-    assert.dom(statText('Average ACME clients per month')).doesNotExist();
     assert.dom(statText('Average new ACME clients per month')).doesNotExist();
     assert.dom(usageStats('ACME usage')).doesNotExist();
   });
@@ -141,7 +137,7 @@ module('Integration | Component | clients | Clients::Page::Acme', function (hook
   });
 
   test('it should render empty total usage chart when monthly counts are null or 0', async function (assert) {
-    assert.expect(9);
+    assert.expect(8);
     // manually stub because mirage isn't setup to handle mixed data yet
     const counts = {
       acme_clients: 0,
@@ -155,7 +151,6 @@ module('Integration | Component | clients | Clients::Page::Acme', function (hook
         month: '3/24',
         timestamp: '2024-03-01T00:00:00Z',
         namespaces: [],
-        namespaces_by_key: {},
         new_clients: {
           month: '3/24',
           timestamp: '2024-03-01T00:00:00Z',
@@ -167,7 +162,6 @@ module('Integration | Component | clients | Clients::Page::Acme', function (hook
         timestamp: '2024-04-01T00:00:00Z',
         ...counts,
         namespaces: [],
-        namespaces_by_key: {},
         new_clients: {
           month: '4/24',
           timestamp: '2024-04-01T00:00:00Z',
@@ -198,7 +192,6 @@ module('Integration | Component | clients | Clients::Page::Acme', function (hook
     assert
       .dom(CHARTS.container('Monthly new'))
       .doesNotExist('empty monthly new chart does not render at all');
-    assert.dom(statText('Average ACME clients per month')).doesNotExist();
     assert.dom(statText('Average new ACME clients per month')).doesNotExist();
   });
 });

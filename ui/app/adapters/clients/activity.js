@@ -39,8 +39,15 @@ export default class ActivityAdapter extends ApplicationAdapter {
 
   queryRecord(store, type, query) {
     const url = `${this.buildURL()}/internal/counters/activity`;
-    const queryParams = this.formatQueryParams(query);
-    return this.ajax(url, 'GET', { data: queryParams }).then((resp) => {
+    const options = {
+      data: this.formatQueryParams(query),
+    };
+
+    if (query?.namespace) {
+      options.namespace = query.namespace;
+    }
+
+    return this.ajax(url, 'GET', options).then((resp) => {
       const response = resp || {};
       response.id = response.request_id || 'no-data';
       return response;
@@ -71,11 +78,12 @@ export default class ActivityAdapter extends ApplicationAdapter {
     }
   }
 
-  urlForFindRecord(id) {
-    // debug reminder so model is stored in Ember data with the same id for consistency
+  // Only dashboard uses findRecord, the client count dashboard uses queryRecord
+  findRecord(store, type, id) {
     if (id !== 'clients/activity') {
       debug(`findRecord('clients/activity') should pass 'clients/activity' as the id, you passed: '${id}'`);
     }
-    return `${this.buildURL()}/internal/counters/activity`;
+    const url = `${this.buildURL()}/internal/counters/activity`;
+    return this.ajax(url, 'GET', { skipWarnings: true });
   }
 }

@@ -7,12 +7,15 @@ import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { fromUnixTime } from 'date-fns';
 
+import type AdapterError from '@ember-data/adapter';
 import type FlagsService from 'vault/services/flags';
+import type NamespaceService from 'vault/services/namespace';
 import type StoreService from 'vault/services/store';
 import type VersionService from 'vault/services/version';
 import type { ModelFrom } from 'vault/vault/route';
 import type ClientsRoute from '../clients';
 import type ClientsCountsController from 'vault/controllers/vault/cluster/clients/counts';
+import type ClientsActivityModel from 'vault/vault/models/clients/activity';
 
 export interface ClientsCountsRouteParams {
   start_time?: string | number | undefined;
@@ -21,8 +24,17 @@ export interface ClientsCountsRouteParams {
   mountPath?: string | undefined;
 }
 
+interface ActivityAdapterQuery {
+  start_time: { timestamp: number } | undefined;
+  end_time: { timestamp: number } | undefined;
+  namespace?: string;
+}
+
+export type ClientsCountsRouteModel = ModelFrom<ClientsCountsRoute>;
+
 export default class ClientsCountsRoute extends Route {
   @service declare readonly flags: FlagsService;
+  @service declare readonly namespace: NamespaceService;
   @service declare readonly store: StoreService;
   @service declare readonly version: VersionService;
 
@@ -56,16 +68,23 @@ export default class ClientsCountsRoute extends Route {
     return timestamp;
   }
 
-  async getActivity(params: ClientsCountsRouteParams) {
+  async getActivity(params: ClientsCountsRouteParams): Promise<{
+    activity: ClientsActivityModel;
+    activityError: AdapterError;
+  }> {
     let activity, activityError;
     // if CE without start time we want to skip the activity call
     // so that the user is forced to choose a date range
     if (this.version.isEnterprise || params.start_time) {
-      const query = {
+      const query: ActivityAdapterQuery = {
         // start and end params are optional -- if not provided, will fallback to API default
         start_time: this.formatTimeQuery(params?.start_time),
         end_time: this.formatTimeQuery(params?.end_time),
       };
+      if (params?.ns) {
+        // only set explicit namespace if it's a query param
+        query.namespace = params.ns;
+      }
       try {
         activity = await this.store.queryRecord('clients/activity', query);
       } catch (error) {
@@ -97,7 +116,11 @@ export default class ClientsCountsRoute extends Route {
       activityError,
       config,
       // activity.startTime corresponds to first month with data, but we want first month returned or requested
-      startTimestamp: this.paramOrResponseTimestamp(params?.start_time, activity?.byMonth[0]?.timestamp),
+      // unless no months present, then we can fallback to response's start time
+      startTimestamp: this.paramOrResponseTimestamp(
+        params?.start_time,
+        activity?.byMonth[0]?.timestamp || activity?.startTime
+      ),
       endTimestamp: this.paramOrResponseTimestamp(params?.end_time, activity?.endTime),
       versionHistory,
     };

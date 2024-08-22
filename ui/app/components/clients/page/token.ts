@@ -29,10 +29,6 @@ export default class ClientsTokenPageComponent extends ActivityComponent {
     }, 0);
   }
 
-  get averageTotalClients() {
-    return this.calculateClientAverages(this.byMonthActivityData);
-  }
-
   get averageNewClients() {
     return this.calculateClientAverages(this.byMonthNewClients);
   }

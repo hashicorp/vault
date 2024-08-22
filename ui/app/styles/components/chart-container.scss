@@ -21,13 +21,6 @@
   }
 }
 
-.dual-chart-grid {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  grid-template-rows: 0.7fr 1fr 1fr 1fr 0.3fr;
-  width: 100%;
-}
-
 .chart-header {
   grid-column-start: 1;
   grid-column-end: span col4-end;

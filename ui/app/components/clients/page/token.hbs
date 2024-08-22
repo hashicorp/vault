@@ -21,15 +21,6 @@
       />
     </:subTitle>
 
-    <:stats>
-      <StatText
-        @label="Average total clients per month"
-        @value={{this.averageTotalClients}}
-        @size="m"
-        class="data-details-top has-top-padding-l"
-      />
-    </:stats>
-
     <:chart>
       <Clients::Charts::VerticalBarStacked
         @chartTitle="Entity/Non-entity clients usage"

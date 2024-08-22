@@ -29,6 +29,7 @@ import { runCmd, deleteEngineCmd, createNS } from 'vault/tests/helpers/commands'
 
 import { DASHBOARD } from 'vault/tests/helpers/components/dashboard/dashboard-selectors';
 import { CUSTOM_MESSAGES } from 'vault/tests/helpers/config-ui/message-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const authenticatedMessageResponse = {
   request_id: '664fbad0-fcd8-9023-4c5b-81a7962e9f4b',
@@ -397,12 +398,11 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
 
     test('shows the client count card for enterprise', async function (assert) {
-      assert.expect(9);
       const version = this.owner.lookup('service:version');
       assert.true(version.isEnterprise, 'version is enterprise');
       assert.strictEqual(currentURL(), '/vault/dashboard');
       assert.dom(DASHBOARD.cardName('client-count')).exists();
-      const response = await this.store.findRecord('clients/activity', 'clients/activity');
+      const response = await this.store.peekRecord('clients/activity', 'clients/activity');
       assert.dom('[data-test-client-count-title]').hasText('Client count');
       assert.dom('[data-test-stat-text="Total"] .stat-label').hasText('Total');
       assert.dom('[data-test-stat-text="Total"] .stat-value').hasText(formatNumber([response.total.clients]));
@@ -413,6 +413,9 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert
         .dom('[data-test-stat-text="New"] .stat-value')
         .hasText(formatNumber([response.byMonth.lastObject.new_clients.clients]));
+      assert
+        .dom(`${GENERAL.flashMessage}.is-info`)
+        .doesNotExist('Does not show warning about client count estimations');
     });
   });
 
@@ -427,7 +430,6 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
 
     test('shows the replication card empty state in enterprise version', async function (assert) {
-      assert.expect(5);
       await visit('/vault/dashboard');
       const version = this.owner.lookup('service:version');
       assert.true(version.isEnterprise, 'vault is enterprise');
@@ -440,7 +442,6 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
 
     test('hides the replication card on a non-root namespace enterprise version', async function (assert) {
-      assert.expect(3);
       await visit('/vault/dashboard');
       const version = this.owner.lookup('service:version');
       assert.true(version.isEnterprise, 'vault is enterprise');
@@ -451,7 +452,6 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
 
     test('it should show replication status if both dr and performance replication are enabled as features in enterprise', async function (assert) {
-      assert.expect(9);
       const version = this.owner.lookup('service:version');
       assert.true(version.isEnterprise, 'vault is enterprise');
       await visit('/vault/replication');
@@ -483,7 +483,6 @@ module('Acceptance | landing page dashboard', function (hooks) {
       this.server.get('/sys/internal/ui/unauthenticated-messages', function () {
         return authenticatedMessageResponse;
       });
-      assert.expect(7);
       await visit('/vault/dashboard');
       const modalId = 'some-awesome-id-1';
       const alertId = 'some-awesome-id-2';
@@ -497,7 +496,6 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert.dom(CUSTOM_MESSAGES.alertAction('link')).hasText('some link title');
     });
     test('it shows the multiple modal messages', async function (assert) {
-      assert.expect(8);
       const modalIdOne = 'some-awesome-id-2';
       const modalIdTwo = 'some-awesome-id-1';
 
@@ -521,7 +519,6 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await click(CUSTOM_MESSAGES.modalButton(modalIdTwo));
     });
     test('it shows the multiple banner messages', async function (assert) {
-      assert.expect(5);
       const bannerIdOne = 'some-awesome-id-2';
       const bannerIdTwo = 'some-awesome-id-1';
 

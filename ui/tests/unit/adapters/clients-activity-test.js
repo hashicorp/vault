@@ -166,6 +166,26 @@ module('Unit | Adapter | clients activity', function (hooks) {
     this.store.queryRecord(this.modelName, {});
   });
 
+  test('it adds the passed namespace to the request header', async function (assert) {
+    assert.expect(2);
+    const queryParams = {
+      start_time: { timestamp: this.startDate.toISOString() },
+      end_time: { timestamp: this.endDate.toISOString() },
+      // the adapter does not do any more transformations, so it must be called
+      // with the combined current + selected namespace
+      namespace: 'foobar/baz',
+    };
+    this.server.get('sys/internal/counters/activity', (schema, req) => {
+      assert.propEqual(req.queryParams, {
+        start_time: this.startDate.toISOString(),
+        end_time: this.endDate.toISOString(),
+      });
+      assert.strictEqual(req.requestHeaders['X-Vault-Namespace'], 'foobar/baz');
+    });
+
+    this.store.queryRecord(this.modelName, queryParams);
+  });
+
   module('exportData', function (hooks) {
     hooks.beforeEach(function () {
       this.adapter = this.store.adapterFor('clients/activity');
