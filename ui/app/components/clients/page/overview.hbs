@@ -13,17 +13,18 @@
   @responseTimestamp={{@activity.responseTimestamp}}
   @mountPath={{@mountPath}}
 />
+
 {{#if this.hasAttributionData}}
   <Clients::Attribution
-    @isSecretsSyncActivated={{this.flags.secretsSyncIsActivated}}
-    @newUsageCounts={{this.newClientCounts}}
-    @totalClientAttribution={{this.totalClientAttribution}}
-    @newClientAttribution={{this.newClientAttribution}}
-    @selectedNamespace={{@namespace}}
-    @startTimestamp={{@startTimestamp}}
-    @endTimestamp={{@endTimestamp}}
+    @noun="namespace"
+    @attribution={{@activity.byNamespace}}
     @responseTimestamp={{@activity.responseTimestamp}}
-    @isHistoricalMonth={{and (not this.isCurrentMonth) (not this.isDateRange)}}
-    @upgradesDuringActivity={{this.upgradesDuringActivity}}
+    @isSecretsSyncActivated={{this.flags.secretsSyncIsActivated}}
+  />
+  <Clients::Attribution
+    @noun="mount"
+    @attribution={{this.namespaceMountAttribution}}
+    @responseTimestamp={{@activity.responseTimestamp}}
+    @isSecretsSyncActivated={{this.flags.secretsSyncIsActivated}}
   />
 {{/if}}

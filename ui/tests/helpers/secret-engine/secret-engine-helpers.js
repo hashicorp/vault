@@ -29,6 +29,7 @@ const createAwsRootConfig = (store, backend) => {
       access_key: '123-key',
       iam_endpoint: 'iam-endpoint',
       sts_endpoint: 'sts-endpoint',
+      max_retries: 1,
     },
   });
   return store.peekRecord('aws/root-config', backend);
@@ -108,7 +109,7 @@ const valueOfAwsKeys = (string) => {
     case 'STS endpoint':
       return 'sts-endpoint';
     case 'Maximum retries':
-      return '-1';
+      return '1';
   }
 };
 

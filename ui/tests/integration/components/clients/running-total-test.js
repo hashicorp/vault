@@ -67,7 +67,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
     await this.renderComponent();
 
     assert.dom(CHARTS.container('Vault client counts')).exists('running total component renders');
-    assert.dom(CHARTS.chart('Vault client counts line chart')).exists('line chart renders');
+    assert.dom(CHARTS.chart('Vault client counts')).exists('bar chart renders');
 
     const expectedValues = {
       'Running client total': formatNumber([this.totalUsageCounts.clients]),
@@ -85,21 +85,18 @@ module('Integration | Component | clients/running-total', function (hooks) {
         );
     }
 
-    // assert line chart is correct
+    // assert grouped bar chart is correct
     findAll(CHARTS.xAxisLabel).forEach((e, i) => {
       assert
         .dom(e)
         .hasText(
           `${this.byMonthActivity[i].month}`,
-          `renders x-axis labels for line chart: ${this.byMonthActivity[i].month}`
+          `renders x-axis labels for bar chart: ${this.byMonthActivity[i].month}`
         );
     });
     assert
-      .dom(CHARTS.plotPoint)
-      .exists(
-        { count: this.byMonthActivity.filter((m) => m.clients).length },
-        'renders correct number of plot points'
-      );
+      .dom(CHARTS.verticalBar)
+      .exists({ count: this.byMonthActivity.length * 2 }, 'renders correct number of bars ');
   });
 
   test('it renders with no new monthly data', async function (assert) {
@@ -111,7 +108,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
     await this.renderComponent();
 
     assert.dom(CHARTS.container('Vault client counts')).exists('running total component renders');
-    assert.dom(CHARTS.chart('Vault client counts line chart')).exists('line chart renders');
+    assert.dom(CHARTS.chart('Vault client counts')).exists('bar chart renders');
 
     const expectedValues = {
       Entity: formatNumber([this.totalUsageCounts.entity_clients]),
@@ -168,7 +165,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
           `stat label: ${label} renders single month new clients: ${expectedStats[label]}`
         );
     }
-    assert.dom(CHARTS.chart('Vault client counts line chart')).doesNotExist('line chart does not render');
+    assert.dom(CHARTS.chart('Vault client counts')).doesNotExist('bar chart does not render');
     assert.dom(CLIENT_COUNT.statTextValue()).exists({ count: 10 }, 'renders 10 stat text containers');
   });
 
@@ -178,7 +175,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
     await this.renderComponent();
 
     assert.dom(CHARTS.container('Vault client counts')).exists('running total component renders');
-    assert.dom(CHARTS.chart('Vault client counts line chart')).exists('line chart renders');
+    assert.dom(CHARTS.chart('Vault client counts')).exists('bar chart renders');
     assert.dom(CLIENT_COUNT.statTextValue('Entity')).exists();
     assert.dom(CLIENT_COUNT.statTextValue('Non-entity')).exists();
     assert.dom(CLIENT_COUNT.statTextValue('Secret sync')).doesNotExist('does not render secret syncs');

@@ -29,6 +29,7 @@ import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import { mountableEngines } from 'vault/helpers/mountable-secret-engines'; // allEngines() includes enterprise engines, those are tested elsewhere
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 import { SELECTORS as OIDC } from 'vault/tests/helpers/oidc-config';
 import { adminOidcCreateRead, adminOidcCreate } from 'vault/tests/helpers/secret-engine/policy-generator';
 import { WIF_ENGINES } from 'vault/helpers/mountable-secret-engines';
@@ -347,6 +348,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     test('it allows a user with permissions to oidc/key to create an identity_token_key', async function (assert) {
       for (const engine of WIF_ENGINES) {
         const path = `secrets-adminPolicy-${engine}`;
+        const newKey = `key-${uuidv4()}`;
         const secrets_admin_policy = adminOidcCreateRead(path);
         const secretsAdminToken = await runCmd(
           tokenWithPolicyCmd(`secrets-admin-${path}`, secrets_admin_policy)
@@ -360,36 +362,25 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
         await click(GENERAL.toggleGroup('Method Options'));
         await clickTrigger('#key');
         // create new key
-        await fillIn(GENERAL.searchSelect.searchInput, 'new-key');
+        await fillIn(GENERAL.searchSelect.searchInput, newKey);
         await click(GENERAL.searchSelect.options);
         assert.dom('#search-select-modal').exists('modal with form opens');
         assert.dom('[data-test-modal-title]').hasText('Create new key', 'Create key modal renders');
 
         await click(OIDC.keySaveButton);
         assert.dom('#search-select-modal').doesNotExist('modal disappears onSave');
-        assert.dom(GENERAL.searchSelect.selectedOption()).hasText('new-key', 'new-key is now selected');
+        assert.dom(GENERAL.searchSelect.selectedOption()).hasText(newKey, `${newKey} is now selected`);
 
         await page.submit();
-        assert
-          .dom(GENERAL.latestFlashContent)
-          .hasText(`Successfully mounted the aws secrets engine at ${path}.`);
-
         await visit(`/vault/secrets/${path}/configuration`);
+        await click(SES.configurationToggle);
         assert
-          .dom(GENERAL.infoRowValue('Identity token key'))
-          .hasText('new-key', 'shows identity token key on configuration page');
-
-        // ARG TODO should redirect to the mount config page. Later PR to address this.
-        // assert.strictEqual(
-        //   currentURL(),
-        //   `/vault/cluster/secrets/backend/${path}/configuration`,
-        //   'After mounting, redirects to secrets configuration page.'
-        // );
-
+          .dom(GENERAL.infoRowValue('Identity Token Key'))
+          .hasText(newKey, 'shows identity token key on configuration page');
         // cleanup
         await runCmd(`delete sys/mounts/${path}`);
         await runCmd(`delete identity/oidc/key/some-key`);
-        await runCmd(`delete identity/oidc/key/new-key`);
+        await runCmd(`delete identity/oidc/key/${newKey}`);
       }
     });
 
@@ -417,7 +408,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
           .hasText(`Successfully mounted the aws secrets engine at ${path}.`);
 
         await visit(`/vault/secrets/${path}/configuration`);
-
+        await click(SES.configurationToggle);
         assert
           .dom(GENERAL.infoRowValue('Identity token key'))
           .hasText('general-key', 'shows identity token key on configuration page');
