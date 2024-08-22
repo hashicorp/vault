@@ -152,7 +152,15 @@ export default class ConfigureAwsComponent extends Component<Args> {
   @action
   onChangeAccessType(accessType: string) {
     this.accessType = accessType;
-    this.args.rootConfig.rollbackAttributes();
+    const { rootConfig } = this.args; // cannot destructure attributes and use them below because they're within if statements and javascript doesn't like that.
+    if (accessType === 'iam') {
+      // reset all WIF attributes
+      rootConfig.roleArn = rootConfig.identityTokenAudience = rootConfig.identityTokenTll = undefined;
+    }
+    if (accessType === 'wif') {
+      // reset all IAM attributes
+      rootConfig.accessKey = rootConfig.secretKey = undefined;
+    }
   }
 
   @action
