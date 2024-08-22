@@ -3,14 +3,26 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<Hds::Button
-  data-test-attribution-export-button
-  @text="Export activity data"
-  @color="secondary"
-  {{on "click" (fn (mut this.showExportModal) true)}}
-/>
+<Hds::PageHeader class="has-top-padding-l has-bottom-padding-m" as |PH|>
+  <PH.Title>Vault Usage Metrics</PH.Title>
+  <PH.Description>
+    This dashboard surfaces Vault client usage over time.
+    <Hds::Link::Inline @href={{doc-link "/vault/docs/concepts/client-count"}}>Documentation is available here</Hds::Link::Inline>.
+    Date queries are sent in UTC.
+  </PH.Description>
+  <PH.Actions>
+    {{#if this.showExportButton}}
+      <Hds::Button
+        data-test-export-button
+        @text="Export activity data"
+        @color="secondary"
+        @icon="download"
+        {{on "click" (fn (mut this.showExportModal) true)}}
+      />
+    {{/if}}
+  </PH.Actions>
+</Hds::PageHeader>
 
-{{! MODAL FOR CSV DOWNLOAD }}
 {{#if this.showExportModal}}
   <Hds::Modal id="attribution-csv-download-modal" class="has-text-left" @onClose={{this.resetModal}} as |M|>
     <M.Header @icon="info" data-test-export-modal-title>
@@ -66,7 +78,35 @@
         />
         <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} />
       </Hds::ButtonSet>
-      {{yield to="alert"}}
+      {{#if @upgradesDuringActivity}}
+        <Hds::Alert class="has-top-padding-m" @type="compact" @color="warning" data-test-export-upgrade-warning as |A|>
+          <A.Description>
+            <strong>Data contains {{pluralize @upgradesDuringActivity.length "upgrade"}}:</strong>
+          </A.Description>
+          <A.Description>
+            <ul class="bullet">
+              {{#each @upgradesDuringActivity as |upgrade|}}
+                <li>
+                  {{upgrade.version}}
+                  {{this.parseAPITimestamp upgrade.timestampInstalled "(MMM d, yyyy)"}}
+                </li>
+              {{/each}}
+            </ul>
+          </A.Description>
+          <A.Description>
+            Visit our
+            <Hds::Link::Inline
+              @isHrefExternal={{true}}
+              @href={{doc-link
+                "/vault/docs/concepts/client-count/faq#q-which-vault-version-reflects-the-most-accurate-client-counts"
+              }}
+            >
+              Client count FAQ
+            </Hds::Link::Inline>
+            for more information.
+          </A.Description>
+        </Hds::Alert>
+      {{/if}}
     </M.Footer>
   </Hds::Modal>
 {{/if}}
