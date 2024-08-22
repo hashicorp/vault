@@ -173,7 +173,7 @@ module('Integration | Component | SecretEngine/configure-aws', function (hooks) 
       assert.dom(GENERAL.inputByAttr('region')).hasValue(this.rootConfig.region);
       assert.dom(GENERAL.inputByAttr('iamEndpoint')).hasValue(this.rootConfig.iamEndpoint);
       assert.dom(GENERAL.inputByAttr('stsEndpoint')).hasValue(this.rootConfig.stsEndpoint);
-      assert.dom(GENERAL.inputByAttr('maxRetries')).hasValue('-1');
+      assert.dom(GENERAL.inputByAttr('maxRetries')).hasValue('1');
       // Check lease config values
       assert.dom(GENERAL.ttl.input('Default Lease TTL')).hasValue('50');
       assert.dom(GENERAL.ttl.input('Max Lease TTL')).hasValue('55');
