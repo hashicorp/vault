@@ -25,6 +25,7 @@ import {
 } from 'vault/tests/helpers/kv/kv-run-commands';
 import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import { setupControlGroup, grantAccess } from 'vault/tests/helpers/control-groups';
+import { humanize } from 'vault/helpers/humanize';
 
 const secretPath = `my-#:$=?-secret`;
 // This doesn't encode in a normal way, so hardcoding it here until we sort that out
@@ -61,11 +62,8 @@ const assertDetailsToolbar = (assert, expected = DETAIL_TOOLBARS) => {
     .dom(PAGE.toolbarAction)
     .exists({ count: expected.length }, 'correct number of toolbar actions render');
   DETAIL_TOOLBARS.forEach((toolbar) => {
-    if (expected.includes(toolbar)) {
-      assert.dom(PAGE.detail[toolbar]).exists(`${toolbar} toolbar action exists`);
-    } else {
-      assert.dom(PAGE.detail[toolbar]).doesNotExist(`${toolbar} toolbar action not rendered`);
-    }
+    const method = expected.includes(toolbar) ? 'exists' : 'doesNotExist';
+    assert.dom(PAGE.detail[toolbar])[method](`${toolbar} action ${humanize([method])}`);
   });
 };
 
@@ -155,14 +153,22 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
       // Navigate through list items
       await click(PAGE.list.item('app/'));
-      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list/app/`);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/list/app/`,
+        `navigated to ${currentURL()}`
+      );
       assertCorrectBreadcrumbs(assert, ['Secrets', backend, 'app']);
       assert.dom(PAGE.title).hasText(`${backend} version 2`);
       assert.dom(PAGE.list.filter).hasValue('app/', 'List filter input is prefilled');
       assert.dom(PAGE.list.item('nested/')).exists('Shows nested secret');
 
       await click(PAGE.list.item('nested/'));
-      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list/app/nested/`);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/list/app/nested/`,
+        `navigated to ${currentURL()}`
+      );
       assertCorrectBreadcrumbs(assert, ['Secrets', backend, 'app', 'nested']);
       assert.dom(PAGE.title).hasText(`${backend} version 2`);
       assert.dom(PAGE.list.filter).hasValue('app/nested/', 'List filter input is prefilled');
@@ -171,7 +177,8 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       await click(PAGE.list.item('secret'));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/app%2Fnested%2Fsecret/details?version=1`
+        `/vault/secrets/${backend}/kv/app%2Fnested%2Fsecret/details?version=1`,
+        `navigated to ${currentURL()}`
       );
       assertCorrectBreadcrumbs(assert, ['Secrets', backend, 'app', 'nested', 'secret']);
       assert.dom(PAGE.title).hasText('app/nested/secret', 'title is full secret path');
@@ -197,22 +204,32 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       const backend = this.backend;
       // create with initialKey
       await visit(`/vault/secrets/${backend}/create/test`);
-      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/create?initialKey=test`);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/create?initialKey=test`,
+        `navigated to ${currentURL()}`
+      );
       // Reported bug, backported fix https://github.com/hashicorp/vault/pull/24281
       // list for directory
       await visit(`/vault/secrets/${backend}/list/app/`);
-      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list/app/`);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/list/app/`,
+        `navigated to ${currentURL()}`
+      );
       // show for secret
       await visit(`/vault/secrets/${backend}/show/app/nested/secret`);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/app%2Fnested%2Fsecret/details?version=1`
+        `/vault/secrets/${backend}/kv/app%2Fnested%2Fsecret/details?version=1`,
+        `navigated to ${currentURL()}`
       );
       // edit for secret
       await visit(`/vault/secrets/${backend}/edit/app/nested/secret`);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/app%2Fnested%2Fsecret/details?version=1`
+        `/vault/secrets/${backend}/kv/app%2Fnested%2Fsecret/details?version=1`,
+        `navigated to ${currentURL()}`
       );
     });
     test('versioned secret nav, tabs, breadcrumbs (a)', async function (assert) {
@@ -418,10 +435,10 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       await typeIn(PAGE.list.overviewInput, 'app/nested/secret');
       await click(PAGE.list.overviewButton);
 
-      // Goes to correct detail view
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/app%2Fnested%2Fsecret/details?version=1`
+        `/vault/secrets/${backend}/kv/app%2Fnested%2Fsecret/details?version=1`,
+        `navigated to correct details view ${currentURL()}`
       );
       assertCorrectBreadcrumbs(assert, ['Secrets', backend, 'app', 'nested', 'secret']);
       assert.dom(PAGE.title).hasText('app/nested/secret', 'title is full secret path');
@@ -583,7 +600,11 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
       // Navigate through list items
       await click(PAGE.list.item('app/'));
-      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list/app/`);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/list/app/`,
+        `navigated to ${currentURL()}`
+      );
       assertCorrectBreadcrumbs(assert, ['Secrets', backend, 'app']);
       assert.dom(PAGE.title).hasText(`${backend} version 2`);
       assert.dom(PAGE.list.filter).doesNotExist('List filter hidden since no nested list access');
@@ -596,7 +617,8 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/app%2Fnested%2Fsecret/details?version=1`
+        `/vault/secrets/${backend}/kv/app%2Fnested%2Fsecret/details?version=1`,
+        `navigated to ${currentURL()}`
       );
       assertCorrectBreadcrumbs(assert, ['Secrets', backend, 'app', 'nested', 'secret']);
       assert.dom(PAGE.title).hasText('app/nested/secret', 'title is full secret path');
@@ -754,14 +776,22 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
       // Navigate through list items
       await click(PAGE.list.item('app/'));
-      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list/app/`);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/list/app/`,
+        `navigated to ${currentURL()}`
+      );
       assertCorrectBreadcrumbs(assert, ['Secrets', backend, 'app']);
       assert.dom(PAGE.title).hasText(`${backend} version 2`);
       assert.dom(PAGE.list.filter).hasValue('app/', 'List filter input is prefilled');
       assert.dom(PAGE.list.item('nested/')).exists('Shows nested secret');
 
       await click(PAGE.list.item('nested/'));
-      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list/app/nested/`);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/list/app/nested/`,
+        `navigated to ${currentURL()}`
+      );
       assertCorrectBreadcrumbs(assert, ['Secrets', backend, 'app', 'nested']);
       assert.dom(PAGE.title).hasText(`${backend} version 2`);
       assert.dom(PAGE.list.filter).hasValue('app/nested/', 'List filter input is prefilled');
@@ -1135,14 +1165,22 @@ path "${this.backend}/*" {
 
       // Navigate through list items
       await click(PAGE.list.item('app/'));
-      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list/app/`);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/list/app/`,
+        `navigated to ${currentURL()}`
+      );
       assertCorrectBreadcrumbs(assert, ['Secrets', backend, 'app']);
       assert.dom(PAGE.title).hasText(`${backend} version 2`);
       assert.dom(PAGE.list.filter).hasValue('app/', 'List filter input is prefilled');
       assert.dom(PAGE.list.item('nested/')).exists('Shows nested secret');
 
       await click(PAGE.list.item('nested/'));
-      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list/app/nested/`);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/list/app/nested/`,
+        `navigated to ${currentURL()}`
+      );
       assertCorrectBreadcrumbs(assert, ['Secrets', backend, 'app', 'nested']);
       assert.dom(PAGE.title).hasText(`${backend} version 2`);
       assert.dom(PAGE.list.filter).hasValue('app/nested/', 'List filter input is prefilled');
