@@ -56,12 +56,17 @@ export default class ConfigureAwsComponent extends Component<Args> {
   @tracked invalidFormAlert: string | null = null;
   @tracked modelValidationsLease: ValidationMap | null = null;
   @tracked accessType = 'iam';
+  @tracked disableAccessType = false;
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
+    const { roleArn, identityTokenAudience, identityTokenTtl, accessKey } = this.args.rootConfig;
+    const wifAttributesSet = !!roleArn || !!identityTokenAudience || !!identityTokenTtl;
+    const iamAttributesSet = !!accessKey;
     // If any WIF attributes have been set in the rootConfig model, set accessType to 'wif'.
-    const { roleArn, identityTokenAudience, identityTokenTtl } = this.args.rootConfig;
-    this.accessType = roleArn || identityTokenAudience || identityTokenTtl ? 'wif' : 'iam';
+    this.accessType = wifAttributesSet ? 'wif' : 'iam';
+    // If there are either WIF or IAM attributes set then disable user's ability to change accessType.
+    this.disableAccessType = wifAttributesSet || iamAttributesSet;
   }
 
   @task

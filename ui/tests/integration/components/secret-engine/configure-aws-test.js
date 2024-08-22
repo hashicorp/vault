@@ -250,21 +250,29 @@ module('Integration | Component | SecretEngine/configure-aws', function (hooks) 
     test('it defaults to IAM accessType if IAM fields are already set', async function (assert) {
       await this.renderComponent();
       assert.dom(SES.aws.accessType('iam')).isChecked('IAM accessType is checked');
+      assert.dom(SES.aws.accessType('iam')).isDisabled('IAM accessType is disabled');
       assert.dom(SES.aws.accessType('wif')).isNotChecked('WIF accessType is not checked');
-      // ARG TODO disables ability to change
+      assert.dom(SES.aws.accessType('wif')).isDisabled('WIF accessType is disabled');
+      assert
+        .dom(SES.aws.accessTypeSubtext)
+        .hasText('You cannot edit Access Type if you have already saved access credentials.');
     });
 
     test('it defaults to WIF accessType if WIF fields are already set', async function (assert) {
       this.rootConfig = createConfig(this.store, this.id, 'aws-wif');
       await this.renderComponent();
       assert.dom(SES.aws.accessType('wif')).isChecked('WIF accessType is checked');
+      assert.dom(SES.aws.accessType('wif')).isDisabled('WIF accessType is disabled');
       assert.dom(SES.aws.accessType('iam')).isNotChecked('IAM accessType is not checked');
+      assert.dom(SES.aws.accessType('iam')).isDisabled('IAM accessType is disabled');
       assert.dom(GENERAL.inputByAttr('roleArn')).hasValue(this.rootConfig.roleArn);
+      assert
+        .dom(SES.aws.accessTypeSubtext)
+        .hasText('You cannot edit Access Type if you have already saved access credentials.');
       assert
         .dom(GENERAL.inputByAttr('identityTokenAudience'))
         .hasValue(this.rootConfig.identityTokenAudience);
       assert.dom(GENERAL.ttl.input('Identity token TTL')).hasValue('2'); // 7200 on payload is 2hrs in ttl picker
-      // ARG TODO disables ability to change
     });
 
     test('it shows previously saved root and lease information', async function (assert) {

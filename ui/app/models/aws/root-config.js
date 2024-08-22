@@ -21,7 +21,7 @@ export default class AwsRootConfig extends Model {
   roleArn;
   @attr('string', {
     subText:
-      'The audience claim value for plugin identity tokens. Must match an allowed audience configured for the target IAM OIDC identity provider..',
+      'The audience claim value for plugin identity tokens. Must match an allowed audience configured for the target IAM OIDC identity provider.',
   })
   identityTokenAudience;
   @attr({
@@ -64,7 +64,7 @@ export default class AwsRootConfig extends Model {
     return expandAttributeMeta(this, keys);
   }
 
-  // "filedGroupsWif" and "fieldGroupsIam" are the passed to the FormFieldGroups component to determine which group to show in the form (ex: @groupName="fieldGroupsWif")
+  // "filedGroupsWif" and "fieldGroupsIam" are passed to the FormFieldGroups component to determine which group to show in the form (ex: @groupName="fieldGroupsWif")
   get fieldGroupsWif() {
     return fieldToAttrs(this, this.formFieldGroups('wif'));
   }

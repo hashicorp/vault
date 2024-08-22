@@ -29,6 +29,7 @@ export const SECRET_ENGINE_SELECTORS = {
     cancel: '[data-test-cancel]',
     deleteRole: (role: string) => `[data-test-aws-role-delete="${role}"]`,
     accessTypeSection: '[data-test-access-type-section]',
+    accessTypeSubtext: '[data-test-access-type-subtext]',
     accessType: (type: string) => `[data-test-access-type="${type}"]`,
   },
   ssh: {
