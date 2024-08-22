@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -542,6 +543,10 @@ func getJSONExport(t *testing.T, client *api.Client, monthsPreviousTo int, now t
 func getCSVExport(t *testing.T, client *api.Client, monthsPreviousTo int, now time.Time) (map[string]vault.ActivityLogExportRecord, error) {
 	t.Helper()
 
+	boolFields := map[string]struct{}{
+		"local_alias": {},
+	}
+
 	mapFields := map[string]struct{}{
 		"alias_custom_metadata": {},
 		"alias_metadata":        {},
@@ -621,7 +626,11 @@ func getCSVExport(t *testing.T, client *api.Client, monthsPreviousTo int, now ti
 				} else {
 					t.Fatalf("unexpected CSV field: %s", columnName)
 				}
-
+			} else if _, ok := boolFields[columnName]; ok {
+				recordMap[columnName], err = strconv.ParseBool(val)
+				if err != nil {
+					return nil, err
+				}
 			} else {
 				recordMap[columnName] = val
 			}

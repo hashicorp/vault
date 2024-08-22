@@ -19,9 +19,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/google/tink/go/kwp/subtle"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/tink-crypto/tink-go/v2/kwp/subtle"
 )
 
 var keyTypes = []string{

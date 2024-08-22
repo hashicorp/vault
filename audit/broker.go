@@ -305,7 +305,7 @@ func (b *Broker) LogRequest(ctx context.Context, in *logical.LogInput) (retErr e
 	if hasAuditPipelines(b.broker) {
 		status, err = b.broker.Send(auditContext, event.AuditType.AsEventType(), e)
 		if err != nil {
-			return fmt.Errorf("%w: %w", err, errors.Join(status.Warnings...))
+			return errors.Join(append([]error{err}, status.Warnings...)...)
 		}
 	}
 
@@ -389,7 +389,7 @@ func (b *Broker) LogResponse(ctx context.Context, in *logical.LogInput) (retErr 
 	if hasAuditPipelines(b.broker) {
 		status, err = b.broker.Send(auditContext, event.AuditType.AsEventType(), e)
 		if err != nil {
-			return fmt.Errorf("%w: %w", err, errors.Join(status.Warnings...))
+			return errors.Join(append([]error{err}, status.Warnings...)...)
 		}
 	}
 
