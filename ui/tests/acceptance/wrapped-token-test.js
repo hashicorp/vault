@@ -16,7 +16,6 @@ module(`Acceptance | wrapped_token query param functionality`, function (hooks) 
 
   hooks.beforeEach(async function () {
     await login();
-    // create wrapped token
     const token = await runCmd(`write -field=token auth/token/create policies=default -wrap-ttl=3m`);
     await logout();
     this.token = token;
