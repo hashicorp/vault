@@ -410,15 +410,8 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
         await visit(`/vault/secrets/${path}/configuration`);
         await click(SES.configurationToggle);
         assert
-          .dom(GENERAL.infoRowValue('Identity token key'))
+          .dom(GENERAL.infoRowValue('Identity Token Key'))
           .hasText('general-key', 'shows identity token key on configuration page');
-        // ARG TODO should redirect to the mount config page. Later PR to address this.
-        // assert.strictEqual(
-        //   currentURL(),
-        //   `/vault/cluster/secrets/backend/${path}/configuration`,
-        //   'After mounting, redirects to secrets configuration page.'
-        // );
-
         // cleanup
         await runCmd(`delete sys/mounts/${path}`);
       }
