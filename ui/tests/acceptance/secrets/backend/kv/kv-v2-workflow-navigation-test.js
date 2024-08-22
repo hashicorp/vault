@@ -130,14 +130,14 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
       // click toolbar CTA
       await click(PAGE.list.createSecret);
-      assert.ok(
+      assert.true(
         currentURL().startsWith(`/vault/secrets/${backend}/kv/create`),
         `url includes /vault/secrets/${backend}/kv/create`
       );
 
       // Click cancel btn
       await click(FORM.cancelBtn);
-      assert.ok(
+      assert.true(
         currentURL().startsWith(`/vault/secrets/${backend}/kv/list`),
         `url includes /vault/secrets/${backend}/kv/list`
       );
@@ -185,19 +185,19 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assertDetailsToolbar(assert);
 
       await click(PAGE.breadcrumbAtIdx(3));
-      assert.ok(
+      assert.true(
         currentURL().startsWith(`/vault/secrets/${backend}/kv/list/app/nested/`),
         'links back to list directory'
       );
 
       await click(PAGE.breadcrumbAtIdx(2));
-      assert.ok(
+      assert.true(
         currentURL().startsWith(`/vault/secrets/${backend}/kv/list/app/`),
         'links back to list directory'
       );
 
       await click(PAGE.breadcrumbAtIdx(1));
-      assert.ok(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
+      assert.true(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
     });
     test('it redirects from LIST, SHOW and EDIT views using old non-engine url to ember engine url (a)', async function (assert) {
       assert.expect(4);
@@ -445,19 +445,19 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assertDetailsToolbar(assert, ['copy']);
 
       await click(PAGE.breadcrumbAtIdx(3));
-      assert.ok(
+      assert.true(
         currentURL().startsWith(`/vault/secrets/${backend}/kv/list/app/nested/`),
         'links back to list directory'
       );
 
       await click(PAGE.breadcrumbAtIdx(2));
-      assert.ok(
+      assert.true(
         currentURL().startsWith(`/vault/secrets/${backend}/kv/list/app/`),
         'links back to list directory'
       );
 
       await click(PAGE.breadcrumbAtIdx(1));
-      assert.ok(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
+      assert.true(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
     });
     test('versioned secret nav, tabs, breadcrumbs (dr)', async function (assert) {
       assert.expect(28);
@@ -577,14 +577,14 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
       // click toolbar CTA
       await click(PAGE.list.createSecret);
-      assert.ok(
+      assert.true(
         currentURL().startsWith(`/vault/secrets/${backend}/kv/create`),
         `url includes /vault/secrets/${backend}/kv/create`
       );
 
       // Click cancel btn
       await click(FORM.cancelBtn);
-      assert.ok(
+      assert.true(
         currentURL().startsWith(`/vault/secrets/${backend}/kv/list`),
         `url includes /vault/secrets/${backend}/kv/list`
       );
@@ -625,19 +625,19 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assertDetailsToolbar(assert, ['delete', 'copy']);
 
       await click(PAGE.breadcrumbAtIdx(3));
-      assert.ok(
+      assert.true(
         currentURL().startsWith(`/vault/secrets/${backend}/kv/list/app/nested/`),
         'links back to list directory'
       );
 
       await click(PAGE.breadcrumbAtIdx(2));
-      assert.ok(
+      assert.true(
         currentURL().startsWith(`/vault/secrets/${backend}/kv/list/app/`),
         'links back to list directory'
       );
 
       await click(PAGE.breadcrumbAtIdx(1));
-      assert.ok(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
+      assert.true(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
     });
     test('versioned secret nav, tabs, breadcrumbs (dlr)', async function (assert) {
       assert.expect(28);
@@ -753,14 +753,14 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
       // click toolbar CTA
       await click(PAGE.list.createSecret);
-      assert.ok(
+      assert.true(
         currentURL().startsWith(`/vault/secrets/${backend}/kv/create`),
         `url includes /vault/secrets/${backend}/kv/create`
       );
 
       // Click cancel btn
       await click(FORM.cancelBtn);
-      assert.ok(
+      assert.true(
         currentURL().startsWith(`/vault/secrets/${backend}/kv/list`),
         `url includes /vault/secrets/${backend}/kv/list`
       );
@@ -809,19 +809,19 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.detail.versionDropdown).hasText('Version 1', 'Shows version timestamp');
 
       await click(PAGE.breadcrumbAtIdx(3));
-      assert.ok(
+      assert.true(
         currentURL().startsWith(`/vault/secrets/${backend}/kv/list/app/nested/`),
         'links back to list directory'
       );
 
       await click(PAGE.breadcrumbAtIdx(2));
-      assert.ok(
+      assert.true(
         currentURL().startsWith(`/vault/secrets/${backend}/kv/list/app/`),
         'links back to list directory'
       );
 
       await click(PAGE.breadcrumbAtIdx(1));
-      assert.ok(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
+      assert.true(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
     });
     test('versioned secret nav, tabs, breadcrumbs (mm)', async function (assert) {
       assert.expect(37);
@@ -1001,19 +1001,19 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assertDetailsToolbar(assert, ['createNewVersion']);
 
       await click(PAGE.breadcrumbAtIdx(3));
-      assert.ok(
+      assert.true(
         currentURL().startsWith(`/vault/secrets/${backend}/kv/list/app/nested/`),
         'links back to list directory'
       );
 
       await click(PAGE.breadcrumbAtIdx(2));
-      assert.ok(
+      assert.true(
         currentURL().startsWith(`/vault/secrets/${backend}/kv/list/app/`),
         'links back to list directory'
       );
 
       await click(PAGE.breadcrumbAtIdx(1));
-      assert.ok(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
+      assert.true(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
     });
     test('versioned secret nav, tabs, breadcrumbs (sc)', async function (assert) {
       assert.expect(36);
@@ -1189,7 +1189,7 @@ path "${this.backend}/*" {
       // For some reason when we click on the item in tests it throws a global control group error
       // But not when we visit the page directly
       await visit(`/vault/secrets/${backend}/kv/app%2Fnested%2Fsecret/details`);
-      assert.ok(
+      assert.true(
         await waitUntil(() => currentRouteName() === 'vault.cluster.access.control-group-accessor'),
         'redirects to access control group route'
       );
@@ -1216,19 +1216,19 @@ path "${this.backend}/*" {
       assertDetailsToolbar(assert, ['delete', 'copy', 'createNewVersion']);
 
       await click(PAGE.breadcrumbAtIdx(3));
-      assert.ok(
+      assert.true(
         currentURL().startsWith(`/vault/secrets/${backend}/kv/list/app/nested/`),
         'links back to list directory'
       );
 
       await click(PAGE.breadcrumbAtIdx(2));
-      assert.ok(
+      assert.true(
         currentURL().startsWith(`/vault/secrets/${backend}/kv/list/app/`),
         'links back to list directory'
       );
 
       await click(PAGE.breadcrumbAtIdx(1));
-      assert.ok(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
+      assert.true(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
     });
     test('breadcrumbs & page titles are correct (cg)', async function (assert) {
       assert.expect(36);
@@ -1244,7 +1244,7 @@ path "${this.backend}/*" {
 
       await visit(`/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/details`);
 
-      assert.ok(
+      assert.true(
         await waitUntil(() => currentRouteName() === 'vault.cluster.access.control-group-accessor'),
         'redirects to access control group route'
       );
