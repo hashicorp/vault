@@ -8,32 +8,39 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { blur, click, fillIn, typeIn, render, focus } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import sinon from 'sinon';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { FORM } from 'vault/tests/helpers/kv/kv-selectors';
 import { NON_STRING_WARNING, WHITESPACE_WARNING } from 'vault/utils/validators';
 
-module('Integration | Component | kv | kv-patch-editor/form', function (hooks) {
+module('Integration | Component | kv | kv-patch/editor/form', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'kv');
 
   hooks.beforeEach(function () {
     this.subkeys = {
       foo: null,
-      baz: null,
+      baz: {
+        nested: null,
+        bar: {
+          hello: null,
+        },
+      },
     };
     this.onSubmit = sinon.spy();
     this.onCancel = sinon.spy();
     this.isSaving = false;
+    this.submitError = '';
 
     this.renderComponent = async () => {
       return render(
         hbs`
-    <KvPatchEditor::Form
+    <KvPatch::Editor::Form
       @subkeys={{this.subkeys}}
       @onSubmit={{this.onSubmit}}
       @onCancel={{this.onCancel}}
       @isSaving={{this.isSaving}}
+      @submitError={{this.submitError}}
     />`,
         { owner: this.engine }
       );
@@ -79,16 +86,13 @@ module('Integration | Component | kv | kv-patch-editor/form', function (hooks) {
     this.assertEmptyRow(assert);
   });
 
+  test('it renders submit error from parent', async function (assert) {
+    this.submitError = 'There was a problem submitting this form.';
+    await this.renderComponent();
+    assert.dom(GENERAL.inlineError).hasText(this.submitError);
+  });
+
   test('it reveals subkeys', async function (assert) {
-    this.subkeys = {
-      foo: null,
-      bar: {
-        baz: null,
-        quux: {
-          hello: null,
-        },
-      },
-    };
     await this.renderComponent();
 
     assert.dom(GENERAL.toggleInput('Reveal subkeys')).isNotChecked('toggle is initially unchecked');
@@ -495,7 +499,6 @@ module('Integration | Component | kv | kv-patch-editor/form', function (hooks) {
     NON_STRING_VALUES.forEach((value) => {
       test(`for new non-string values: ${value}`, async function (assert) {
         await this.renderComponent();
-
         await fillIn(FORM.keyInput('new'), 'aKey');
         await fillIn(FORM.valueInput('new'), value);
         await blur(FORM.valueInput('new')); // unfocus input
