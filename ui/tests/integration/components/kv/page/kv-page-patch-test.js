@@ -99,17 +99,6 @@ module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks)
     );
   });
 
-  test('it transitions on save', async function (assert) {
-    await this.renderComponent();
-    await click(FORM.saveBtn);
-    const [route] = this.transitionStub.lastCall.args;
-    assert.strictEqual(
-      route,
-      'vault.cluster.secrets.backend.kv.secret',
-      `it transitions on save to: ${route}`
-    );
-  });
-
   module('it submits', function (hooks) {
     const EXAMPLE_KV_DATA_CREATE_RESPONSE = {
       request_id: 'foobar',
@@ -124,10 +113,11 @@ module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks)
 
     hooks.beforeEach(async function () {
       this.endpoint = `${encodePath(this.backend)}/data/${encodePath(this.path)}`;
+      this.flashSpy = sinon.spy(this.owner.lookup('service:flash-messages'), 'info');
     });
 
     test('patch data from kv editor form', async function (assert) {
-      assert.expect(2);
+      assert.expect(3);
       this.server.patch(this.endpoint, (schema, req) => {
         const payload = JSON.parse(req.requestBody);
         const expected = {
@@ -158,10 +148,16 @@ module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks)
       await fillIn(FORM.keyInput('new'), 'bKey');
       await fillIn(FORM.valueInput('new'), 'null');
       await click(FORM.saveBtn);
+      const [route] = this.transitionStub.lastCall.args;
+      assert.strictEqual(
+        route,
+        'vault.cluster.secrets.backend.kv.secret',
+        `it transitions on save to: ${route}`
+      );
     });
 
     test('patch data from json form', async function (assert) {
-      assert.expect(2);
+      assert.expect(3);
       this.server.patch(this.endpoint, (schema, req) => {
         const payload = JSON.parse(req.requestBody);
         const expected = {
@@ -183,8 +179,61 @@ module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks)
       await waitUntil(() => find('.CodeMirror'));
       await codemirror().setValue('{ "foo": "foovalue", "bar":null, "number":1 }');
       await click(FORM.saveBtn);
+      const [route] = this.transitionStub.lastCall.args;
+      assert.strictEqual(
+        route,
+        'vault.cluster.secrets.backend.kv.secret',
+        `it transitions on save to: ${route}`
+      );
+    });
+
+    test('empty patch data from kv editor form', async function (assert) {
+      assert.expect(3);
+      this.server.patch(this.endpoint, () =>
+        overrideResponse(500, `Request made to: ${this.endpoint}. This should not have happened!`)
+      );
+      await this.renderComponent();
+      await click(FORM.saveBtn);
+      assert.dom(GENERAL.messageError).doesNotExist('PATCH request is not made');
+      const route = this.transitionStub.lastCall?.args[0] || '';
+      const flash = this.flashSpy.lastCall?.args[0] || '';
+      assert.strictEqual(
+        route,
+        'vault.cluster.secrets.backend.kv.secret',
+        `it transitions to overview route: ${route}`
+      );
+      assert.strictEqual(
+        flash,
+        `No changes to submit. No changes made to "${this.path}".`,
+        `flash message renders: ${flash}`
+      );
+    });
+
+    test('empty patch data from json form', async function (assert) {
+      assert.expect(3);
+      this.server.patch(this.endpoint, () =>
+        overrideResponse(500, `Request made to: ${this.endpoint}. This should not have happened!`)
+      );
+      await this.renderComponent();
+      await click(GENERAL.inputByAttr('JSON'));
+      await waitUntil(() => find('.CodeMirror'));
+      await click(FORM.saveBtn);
+      assert.dom(GENERAL.messageError).doesNotExist('PATCH request is not made');
+      const route = this.transitionStub.lastCall?.args[0] || '';
+      const flash = this.flashSpy.lastCall?.args[0] || '';
+      assert.strictEqual(
+        route,
+        'vault.cluster.secrets.backend.kv.secret',
+        `it transitions to overview route: ${route}`
+      );
+      assert.strictEqual(
+        flash,
+        `No changes to submit. No changes made to "${this.path}".`,
+        `flash message renders: ${flash}`
+      );
     });
   });
+
   module('it passes error', function (hooks) {
     hooks.beforeEach(async function () {
       this.endpoint = `${encodePath(this.backend)}/data/${encodePath(this.path)}`;
