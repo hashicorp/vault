@@ -40,9 +40,9 @@ export default class KvSecretPatch extends Component {
   @service router;
   @service store;
 
-  @tracked patchMethod = 'UI';
   @tracked errorMessage;
   @tracked invalidFormAlert;
+  @tracked patchMethod = 'UI';
 
   @action
   selectPatchMethod(event) {
