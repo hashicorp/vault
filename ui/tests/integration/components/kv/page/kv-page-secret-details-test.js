@@ -9,11 +9,11 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { click, find, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import { kvDataPath, kvMetadataPath } from 'vault/utils/kv-path';
-import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
+import { kvDataPath } from 'vault/utils/kv-path';
 import { FORM, PAGE, parseJsonEditor } from 'vault/tests/helpers/kv/kv-selectors';
 import { syncStatusResponse } from 'vault/mirage/handlers/sync';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
+import { baseSetup } from 'vault/tests/helpers/kv/kv-run-commands';
 
 module('Integration | Component | kv-v2 | Page::Secret::Details', function (hooks) {
   setupRenderingTest(hooks);
@@ -21,15 +21,11 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
-    this.store = this.owner.lookup('service:store');
-    this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
-    this.backend = 'kv-engine';
-    this.path = 'my-secret';
+    baseSetup(this);
     this.pathComplex = 'my-secret-object';
     this.version = 2;
     this.dataId = kvDataPath(this.backend, this.path);
     this.dataIdComplex = kvDataPath(this.backend, this.pathComplex);
-    this.metadataId = kvMetadataPath(this.backend, this.path);
 
     this.secretData = { foo: 'bar' };
     this.store.pushPayload('kv/data', {
@@ -60,15 +56,6 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
       destroyed: false,
       version: this.version,
     });
-
-    const metadata = this.server.create('kv-metadatum');
-    metadata.id = this.metadataId;
-    this.store.pushPayload('kv/metadata', {
-      modelName: 'kv/metadata',
-      ...metadata,
-    });
-
-    this.metadata = this.store.peekRecord('kv/metadata', this.metadataId);
     this.secret = this.store.peekRecord('kv/data', this.dataId);
     this.secretComplex = this.store.peekRecord('kv/data', this.dataIdComplex);
 
