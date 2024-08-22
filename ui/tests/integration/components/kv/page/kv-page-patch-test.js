@@ -9,6 +9,7 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { blur, click, fillIn, find, render, waitUntil } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
+import sinon from 'sinon';
 import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { baseSetup } from 'vault/tests/helpers/kv/kv-run-commands';
@@ -23,6 +24,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks)
 
   hooks.beforeEach(async function () {
     baseSetup(this);
+    this.transitionStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
     this.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.backend, route: 'list' },
@@ -84,6 +86,28 @@ module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks)
     assert.dom(GENERAL.inputByAttr('UI')).isNotChecked();
     assert.dom(FORM.patchEditorForm).doesNotExist();
     assert.dom(GENERAL.codemirror).exists();
+  });
+
+  test('it transitions on cancel', async function (assert) {
+    await this.renderComponent();
+    await click(FORM.cancelBtn);
+    const [route] = this.transitionStub.lastCall.args;
+    assert.strictEqual(
+      route,
+      'vault.cluster.secrets.backend.kv.secret',
+      `it transitions on cancel to: ${route}`
+    );
+  });
+
+  test('it transitions on save', async function (assert) {
+    await this.renderComponent();
+    await click(FORM.saveBtn);
+    const [route] = this.transitionStub.lastCall.args;
+    assert.strictEqual(
+      route,
+      'vault.cluster.secrets.backend.kv.secret',
+      `it transitions on save to: ${route}`
+    );
   });
 
   module('it submits', function (hooks) {

@@ -11,7 +11,6 @@ import { tracked } from '@glimmer/tracking';
  * @module KvPatchJsonForm
  * @description
  * This component renders one of two ways to patch a KV v2 secret (the other is using the KvPatch::Editor::Form).
- * This input instantiates empty so it does not receive @subkeys as an argument.
  *
  * @example
  * <KvPatch::JsonForm @onSubmit={{perform this.save}} @onCancel={{this.onCancel}} @isSaving={{this.save.isRunning}} />
@@ -19,6 +18,7 @@ import { tracked } from '@glimmer/tracking';
  * @param {boolean} isSaving - if true, disables the save and cancel buttons. useful if the onSubmit callback is a concurrency task
  * @param {function} onCancel - called when form is canceled
  * @param {function} onSubmit - called when form is saved, called with with the key value object containing patch data
+ * @param {object} subkeys - leaf keys of a kv v2 secret, all values (unless a nested object with more keys) return null. used for toggle that reveals codeblock of subkey structure
  * @param {string} submitError - error message string from parent if submit failed
  */
 

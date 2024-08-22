@@ -8,8 +8,8 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { blur, click, fillIn, typeIn, render, focus } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import sinon from 'sinon';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { FORM } from 'vault/tests/helpers/kv/kv-selectors';
 import { NON_STRING_WARNING, WHITESPACE_WARNING } from 'vault/utils/validators';
 
