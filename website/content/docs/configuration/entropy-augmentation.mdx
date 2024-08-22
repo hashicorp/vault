@@ -59,6 +59,5 @@ These parameters apply to the `entropy` stanza in the Vault configuration file:
 - `mode` `(string: <required>)`: The mode determines which Vault operations requiring
   entropy will sample entropy from the external source. Currently, the only mode supported
   is `augmentation` which sources entropy for [Critical Security Parameters (CSPs)](/vault/docs/enterprise/entropy-augmentation#critical-security-parameters-csps).
-- `seal_name` `(string: '')`: If present, specifies which seal (by name) in a [Seal HA](/vault/docs/concepts/seal#seal-high-availability)
-  setup will be used to source entropy.  If absent, entropy will be sourced from
-  the lowest priority seal, then the next lowest if the first was unavailable, and so on.
+- `seal_name` `(string: '')`: Specifies which seal (by name) in a   [Seal HA](/vault/docs/concepts/seal#seal-high-availability) setup to use to  source entropy. 
+  By default, Vault sources entropy from the first available seal by increasing priority.
