@@ -119,14 +119,6 @@
                       @models={{array @backend metadata.fullSecretPath}}
                     />
                   {{/if}}
-                  {{#if metadata.canCreateVersionData}}
-                    <dd.Interactive
-                      @text="Create new version"
-                      @route="secret.details.edit"
-                      @models={{array @backend metadata.fullSecretPath}}
-                      data-test-popup-create-new-version
-                    />
-                  {{/if}}
                   {{#if metadata.canDeleteMetadata}}
                     <dd.Interactive
                       @text="Permanently delete"
