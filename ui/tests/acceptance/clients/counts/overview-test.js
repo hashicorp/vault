@@ -171,7 +171,9 @@ module('Acceptance | clients | overview', function (hooks) {
     assert.dom(CLIENT_COUNT.attributionBlock()).exists({ count: 2 });
 
     const response = await this.store.peekRecord('clients/activity', 'some-activity-id');
-    const topNamespace = response.byNamespace.sort((a, b) => b.clients - a.clients)[0];
+    const topNamespace = response.byNamespace
+      .filter((ns) => ns.label !== 'root')
+      .sort((a, b) => b.clients - a.clients)[0];
     const topMount = topNamespace?.mounts.sort((a, b) => b.clients - a.clients)[0];
 
     assert
