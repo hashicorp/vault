@@ -13,6 +13,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -31,7 +32,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
-	"golang.org/x/sys/unix"
 )
 
 const (
@@ -261,7 +261,7 @@ func (f *FSM) openDBFile(dbPath string) error {
 	}
 
 	opts := boltOptions(dbPath)
-	if opts.MmapFlags != unix.MAP_POPULATE {
+	if runtime.GOOS == "linux" && !usingMapPopulate(opts.MmapFlags) {
 		f.logger.Warn("the MAP_POPULATE mmap flag was not used. This may be due to Vault's database file being larger than the available memory on the system, or due to the VAULT_RAFT_DISABLE_MAP_POPULATE environment variable being set. As a result, Vault may be slower to start up.")
 	}
 

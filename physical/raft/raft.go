@@ -74,7 +74,10 @@ const (
 	defaultMaxBatchSize = 128 * 1024
 )
 
-var getMmapFlags = func(string) int { return 0 }
+var (
+	getMmapFlags     = func(string) int { return 0 }
+	usingMapPopulate = func(int) bool { return false }
+)
 
 // Verify RaftBackend satisfies the correct interfaces
 var (
