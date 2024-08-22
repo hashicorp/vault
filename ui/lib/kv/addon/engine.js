@@ -17,14 +17,13 @@ export default class KvEngine extends Engine {
   Resolver = Resolver;
   dependencies = {
     services: [
-      'capabilities',
-      'control-group',
       'download',
-      'flash-messages',
       'namespace',
       'router',
-      'secret-mount-path',
       'store',
+      'secret-mount-path',
+      'flash-messages',
+      'control-group',
     ],
     externalRoutes: ['secrets', 'syncDestination'],
   };
