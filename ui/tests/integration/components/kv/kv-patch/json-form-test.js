@@ -13,7 +13,7 @@ import sinon from 'sinon';
 import { FORM, parseObject } from 'vault/tests/helpers/kv/kv-selectors';
 import codemirror from 'vault/tests/helpers/codemirror';
 
-module('Integration | Component | kv | kv-patch/editor/json', function (hooks) {
+module('Integration | Component | kv | kv-patch/editor/json-form', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'kv');
 
