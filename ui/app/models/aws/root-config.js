@@ -32,7 +32,7 @@ export default class AwsRootConfig extends Model {
     subText: '',
     editType: 'ttl',
   })
-  identityTokenTll;
+  identityTokenTtl;
 
   // WIF + IAM fields
   @attr('string', {
@@ -59,7 +59,7 @@ export default class AwsRootConfig extends Model {
       'maxRetries',
       'roleArn',
       'identityTokenAudience',
-      'identityTokenTll',
+      'identityTokenTtl',
     ];
     return expandAttributeMeta(this, keys);
   }
@@ -76,7 +76,7 @@ export default class AwsRootConfig extends Model {
   formFieldGroups(accessType = 'iam') {
     const formFieldGroups = [];
     if (accessType === 'wif') {
-      formFieldGroups.push({ default: ['roleArn', 'identityTokenAudience', 'identityTokenTll'] });
+      formFieldGroups.push({ default: ['roleArn', 'identityTokenAudience', 'identityTokenTtl'] });
     }
     if (accessType === 'iam') {
       formFieldGroups.push({ default: ['accessKey', 'secretKey'] });

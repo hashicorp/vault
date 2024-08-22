@@ -56,6 +56,14 @@ export default class ConfigureAwsComponent extends Component<Args> {
   @tracked modelValidationsLease: ValidationMap | null = null;
   @tracked accessType = 'iam';
 
+  constructor(owner: unknown, args: Args) {
+    super(owner, args);
+    // we want to default the aceessType to 'iam' if the rootConfig has no WIF attributes set.
+    // Check first if the rootConfig is a new record, if so, we can assume it's a new secret engine and we should default to 'iam'.
+    // Otherwise, check if the rootConfig has any WIF attributes set.
+    // this.setTrackedFromArgs();
+  }
+
   @task
   @waitFor
   *save(event: Event) {
