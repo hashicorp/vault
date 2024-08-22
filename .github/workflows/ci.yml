@@ -167,7 +167,7 @@ jobs:
       - uses: browser-actions/setup-chrome@facf10a55b9caf92e0cc749b4f82bf8220989148 # v1.7.2
         with:
           # Temporarily pin our Chrome version while we sort out a broken test on latest
-          chrome-version: 1314712
+          chrome-version: 1331488
       - name: ui-dependencies
         working-directory: ./ui
         run: |
