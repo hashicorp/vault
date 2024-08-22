@@ -64,7 +64,7 @@ module('Acceptance | sync | overview', function (hooks) {
             await click(ts.navLink('Secrets Sync'));
             await click(ts.destinations.list.create);
             await click(ts.createCancel);
-            await click(ts.overviewCard.actionLink('Create new'));
+            await click(ts.overviewCard.actionText('Create new'));
             await click(ts.createCancel);
             await waitFor(ts.overview.table.actionToggle(0));
             await click(ts.overview.table.actionToggle(0));

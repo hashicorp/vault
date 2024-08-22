@@ -74,11 +74,12 @@ export const GENERAL = {
     removeSelected: '[data-test-selected-list-button="delete"]',
   },
   overviewCard: {
+    container: (title: string) => `[data-test-overview-card-container="${title}"]`,
     title: (title: string) => `[data-test-overview-card-title="${title}"]`,
     description: (title: string) => `[data-test-overview-card-subtitle="${title}"]`,
     content: (title: string) => `[data-test-overview-card-content="${title}"]`,
-    action: (title: string) => `[data-test-overview-card-container="${title}"] [data-test-action-text]`,
-    actionLink: (label: string) => `[data-test-action-text="${label}"]`,
+    actionText: (text: string) => `[data-test-action-text="${text}"]`,
+    actionLink: (label: string) => `[data-test-overview-card="${label}"] a`,
   },
   pagination: {
     next: '.hds-pagination-nav__arrow--direction-next',
@@ -91,7 +92,6 @@ export const GENERAL = {
   navLink: (label: string) => `[data-test-sidebar-nav-link="${label}"]`,
   cancelButton: '[data-test-cancel]',
   saveButton: '[data-test-save]',
-  saveButtonId: (id: string) => `[data-test-save="${id}"]`, // there are many uses of save button, but very few with an id. Instead of making all instances of saveButton a function with an empty string, we can just use this selector. TODO: should be removed after refactor of AWS.
   maskedInput: (name: string) => `[data-test-textarea="${name}"]`,
   codemirror: `[data-test-component="code-mirror-modifier"]`,
   codemirrorTextarea: `[data-test-component="code-mirror-modifier"] textarea`,

@@ -30,20 +30,6 @@
         />
       </:subTitle>
 
-      <:stats>
-        {{#let (this.average this.byMonthActivityData "secret_syncs") as |avg|}}
-          {{! intentionally hides a 0 average (0 is falsy) }}
-          {{#if avg}}
-            <StatText
-              @label="Average sync clients per month"
-              @value={{avg}}
-              @size="m"
-              class="data-details-top has-top-padding-l"
-            />
-          {{/if}}
-        {{/let}}
-      </:stats>
-
       <:chart>
         <Clients::Charts::VerticalBarBasic
           @chartTitle={{this.title}}
