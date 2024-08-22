@@ -17,7 +17,7 @@
     Access to AWS
   </h2>
   <div class="box is-fullwidth is-sideless">
-    {{! WIF is an enterprise only feature. We default to IAM for community users and display only those related form fields. }}
+    {{! WIF is an enterprise only feature. We default to IAM access type for community users and display only those related form fields. }}
     {{#if this.version.isEnterprise}}
       <fieldset class="field form-fieldset" id="protection" data-test-access-type-section>
         <legend class="is-label">Access Type</legend>

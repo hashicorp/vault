@@ -10,7 +10,7 @@ export default class AwsRootConfigSerializer extends ApplicationSerializer {
     if (!payload.data) {
       return super.normalizeResponse(...arguments);
     }
-    // remove identityTokenTtl and maxRetries if default value of 0, -1 is returned, respectively. We don't want to display this value on configuration details if they haven't changed the default value
+    // remove identityTokenTtl and maxRetries if the API's default value of 0 or -1, respectively. We don't want to display this value on configuration details if they haven't changed the default value
     if (payload.data.identity_token_ttl === 0) {
       delete payload.data.identity_token_ttl;
     }

@@ -165,7 +165,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
   @action
   onChangeAccessType(accessType: string) {
     this.accessType = accessType;
-    const { rootConfig } = this.args; // cannot destructure attributes and use them below because they're within if statements and javascript doesn't like that.
+    const { rootConfig } = this.args;
     if (accessType === 'iam') {
       // reset all WIF attributes
       rootConfig.roleArn = rootConfig.identityTokenAudience = rootConfig.identityTokenTtl = undefined;

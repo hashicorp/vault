@@ -34,7 +34,7 @@ export default class AwsRootConfig extends Model {
   })
   identityTokenTtl;
 
-  // WIF + IAM fields
+  // Non-access type specific fields (e.g. they show regardless of access type)
   @attr('string', {
     possibleValues: regions(),
     subText:

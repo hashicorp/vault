@@ -125,8 +125,7 @@ module('Acceptance | aws | configuration', function (hooks) {
     await runCmd(`delete sys/mounts/${path}`);
   });
 
-  test('it should not show identityTokenTtl if it has not been set', async function (assert) {
-    assert.expect(2);
+  test('it should not show identityTokenTtl or maxRetries if they have not been set', async function (assert) {
     const path = `aws-${this.uid}`;
     await enablePage.enable('aws', path);
 
@@ -136,13 +135,17 @@ module('Acceptance | aws | configuration', function (hooks) {
     await click(SES.aws.accessType('wif')); // toggle to wif
     await fillIn(GENERAL.inputByAttr('roleArn'), 'foo-role');
     await fillIn(GENERAL.inputByAttr('identityTokenAudience'), 'foo-audience');
+    // manually fill in non-access type specific fields on root config so we can exclude Max Retries.
+    await click(GENERAL.toggleGroup('Root config options'));
+    await fillIn(GENERAL.inputByAttr('region'), 'eu-central-1');
     await click(SES.aws.save);
     assert.true(
       this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s root configuration.`),
       'Success flash message is rendered showing the root configuration was saved.'
     );
-    // the Serializer removes this from the payload because the API returns 0 as the default.
+    // the Serializer removes these two from the payload if the API returns their default value.
     assert.dom(GENERAL.infoRowValue('Identity token TTL')).doesNotExist('Identity token TTL does not show.');
+    assert.dom(GENERAL.infoRowValue('Maximum retries')).doesNotExist('Maximum retries does not show.');
     // cleanup
     await runCmd(`delete sys/mounts/${path}`);
   });
