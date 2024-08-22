@@ -150,6 +150,12 @@ export default class ConfigureAwsComponent extends Component<Args> {
   }
 
   @action
+  onChangeAccessType(accessType: string) {
+    this.accessType = accessType;
+    this.args.rootConfig.rollbackAttributes();
+  }
+
+  @action
   onCancel() {
     // clear errors because they're canceling out of the workflow.
     this.resetErrors();

@@ -31,7 +31,7 @@
             data-test-access-type="iam"
             @value="iam"
             @groupValue={{this.accessType}}
-            @onChange={{fn (mut this.accessType)}}
+            @onChange={{fn this.onChangeAccessType "iam"}}
           />
           <label for="protection-hsm">IAM Credentials</label>
 
@@ -42,7 +42,7 @@
             data-test-access-type="wif"
             @value="wif"
             @groupValue={{this.accessType}}
-            @onChange={{fn (mut this.accessType)}}
+            @onChange={{fn this.onChangeAccessType "wif"}}
           />
           <label for="protection-hsm">Workflow Identity Federation</label>
         </div>

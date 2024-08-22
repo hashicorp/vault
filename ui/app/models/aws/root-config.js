@@ -52,48 +52,41 @@ export default class AwsRootConfig extends Model {
     subText: 'Number of max retries the client should use for recoverable errors. Default is -1.',
   })
   maxRetries;
-  // there are more options available on the API, but the UI does not support them yet.
+
   get attrs() {
-    const keys = ['accessKey', 'region', 'iamEndpoint', 'stsEndpoint', 'maxRetries'];
+    const keys = [
+      'accessKey',
+      'region',
+      'iamEndpoint',
+      'stsEndpoint',
+      'maxRetries',
+      'roleArn',
+      'identityTokenAudience',
+      'identityTokenTll',
+    ];
     return expandAttributeMeta(this, keys);
   }
 
-  get formFieldGroups() {
-    return [
-      { default: ['accessKey', 'secretKey', 'roleArn', 'identityTokenAudience', 'identityTokenTll'] },
-      {
-        'Root config options': ['region', 'iamEndpoint', 'stsEndpoint', 'maxRetries'],
-      },
-    ];
-  }
-
-  get fieldGroups() {
-    return fieldToAttrs(this, this.formFieldGroups);
-  }
-
+  // "filedGroupsWif" and "fieldGroupsIam" are the passed to the FormFieldGroups component to determine which group to show in the form (ex: @groupName="fieldGroupsWif")
   get fieldGroupsWif() {
-    return fieldToAttrs(this, this.formFieldGroupsWif);
+    return fieldToAttrs(this, this.formFieldGroups('wif'));
   }
 
   get fieldGroupsIam() {
-    return fieldToAttrs(this, this.formFieldGroupsIam);
+    return fieldToAttrs(this, this.formFieldGroups('iam'));
   }
 
-  get formFieldGroupsWif() {
-    return [
-      { default: ['roleArn', 'identityTokenAudience', 'identityTokenTll'] },
-      {
-        'Root config options': ['region', 'iamEndpoint', 'stsEndpoint', 'maxRetries'],
-      },
-    ];
-  }
-
-  get formFieldGroupsIam() {
-    return [
-      { default: ['accessKey', 'secretKey'] },
-      {
-        'Root config options': ['region', 'iamEndpoint', 'stsEndpoint', 'maxRetries'],
-      },
-    ];
+  formFieldGroups(accessType = 'iam') {
+    const formFieldGroups = [];
+    if (accessType === 'wif') {
+      formFieldGroups.push({ default: ['roleArn', 'identityTokenAudience', 'identityTokenTll'] });
+    }
+    if (accessType === 'iam') {
+      formFieldGroups.push({ default: ['accessKey', 'secretKey'] });
+    }
+    formFieldGroups.push({
+      'Root config options': ['region', 'iamEndpoint', 'stsEndpoint', 'maxRetries'],
+    });
+    return formFieldGroups;
   }
 }
