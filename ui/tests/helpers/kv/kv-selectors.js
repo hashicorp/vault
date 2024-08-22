@@ -114,6 +114,7 @@ export const FORM = {
   addRow: (idx = 0) => `[data-test-kv-add-row="${idx}"]`,
   deleteRow: (idx = 0) => `[data-test-kv-delete-row="${idx}"]`,
   // <KvPatchEditor>
+  patchEditorForm: '[data-test-kv-patch-editor]',
   patchEdit: (idx = 0) => `[data-test-edit-button="${idx}"]`,
   patchDelete: (idx = 0) => `[data-test-delete-button="${idx}"]`,
   patchUndo: (idx = 0) => `[data-test-undo-button="${idx}"]`,
@@ -135,3 +136,5 @@ export const FORM = {
 export const parseJsonEditor = (find) => {
   return JSON.parse(find(FORM.jsonEditor).innerText);
 };
+
+export const parseObject = (cm) => JSON.parse(cm().getValue());

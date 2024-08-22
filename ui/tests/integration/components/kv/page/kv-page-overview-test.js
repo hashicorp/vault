@@ -67,7 +67,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
     };
   });
 
-  module('it renders when version is not deleted nor destroyed', function () {
+  module('active secret (version not deleted or destroyed)', function () {
     test('it renders tabs', async function (assert) {
       await this.renderComponent();
       const tabs = ['Overview', 'Secret', 'Metadata', 'Paths', 'Version History'];
@@ -190,7 +190,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
     });
   });
 
-  module('it renders when version is deleted', function (hooks) {
+  module('deleted version', function (hooks) {
     hooks.beforeEach(async function () {
       this.secretState = 'deleted';
       // subkeys is null but metadata still has data
@@ -266,7 +266,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
     });
   });
 
-  module('it renders when version is destroyed', function (hooks) {
+  module('destroyed version', function (hooks) {
     hooks.beforeEach(async function () {
       this.secretState = 'destroyed';
       // subkeys is null but metadata still has data

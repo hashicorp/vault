@@ -11,7 +11,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const { overviewCard } = GENERAL;
-module('Integration | Component | kv | kv-subkeys', function (hooks) {
+module('Integration | Component | kv | kv-subkeys-card', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'kv');
   hooks.beforeEach(function () {
@@ -22,7 +22,7 @@ module('Integration | Component | kv | kv-subkeys', function (hooks) {
       },
     };
     this.renderComponent = async () => {
-      return render(hbs`<KvSubkeys @subkeys={{this.subkeys}} />`, {
+      return render(hbs`<KvSubkeysCard @subkeys={{this.subkeys}} />`, {
         owner: this.engine,
       });
     };

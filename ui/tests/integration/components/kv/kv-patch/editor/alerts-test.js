@@ -11,7 +11,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { FORM } from 'vault/tests/helpers/kv/kv-selectors';
 
-module('Integration | Component | kv | kv-patch-editor/alerts', function (hooks) {
+module('Integration | Component | kv | kv-patch/editor/alerts', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'kv');
 
@@ -22,7 +22,7 @@ module('Integration | Component | kv | kv-patch-editor/alerts', function (hooks)
     this.renderComponent = async () => {
       return render(
         hbs`
-      <KvPatchEditor::Alerts
+      <KvPatch::Editor::Alerts
         @idx={{1}}
         @keyError={{this.keyError}}
         @keyWarning={{this.keyWarning}}

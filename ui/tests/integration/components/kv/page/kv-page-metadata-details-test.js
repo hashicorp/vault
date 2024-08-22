@@ -9,9 +9,9 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import { kvDataPath, kvMetadataPath } from 'vault/utils/kv-path';
-import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
+import { kvDataPath } from 'vault/utils/kv-path';
 import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
+import { baseSetup, metadataModel } from 'vault/tests/helpers/kv/kv-run-commands';
 
 module('Integration | Component | kv-v2 | Page::Secret::Metadata::Details', function (hooks) {
   setupRenderingTest(hooks);
@@ -19,27 +19,8 @@ module('Integration | Component | kv-v2 | Page::Secret::Metadata::Details', func
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
-    this.store = this.owner.lookup('service:store');
-    this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
-    this.backend = 'kv-engine';
-    this.path = 'my-secret';
+    baseSetup(this);
     this.dataId = kvDataPath(this.backend, this.path);
-    this.metadataId = kvMetadataPath(this.backend, this.path);
-
-    this.metadataModel = (withCustom = false) => {
-      const metadata = withCustom
-        ? this.server.create('kv-metadatum', 'withCustomMetadata')
-        : this.server.create('kv-metadatum');
-      metadata.id = this.metadataId;
-      this.store.pushPayload('kv/metadata', {
-        modelName: 'kv/metadata',
-        ...metadata,
-      });
-      return this.store.peekRecord('kv/metadata', this.metadataId);
-    };
-
-    this.metadata = this.metadataModel();
-
     // empty secret model always exists for permissions
     this.store.pushPayload('kv/data', {
       modelName: 'kv/data',
@@ -64,7 +45,6 @@ module('Integration | Component | kv-v2 | Page::Secret::Metadata::Details', func
 
   test('it renders metadata details', async function (assert) {
     assert.expect(8);
-    this.metadata = this.metadataModel();
     await render(
       hbs`
        <Page::Secret::Metadata::Details
@@ -95,7 +75,6 @@ module('Integration | Component | kv-v2 | Page::Secret::Metadata::Details', func
 
   test('it renders custom metadata from secret model', async function (assert) {
     assert.expect(2);
-    this.metadata = this.metadataModel();
     this.secret.customMetadata = { hi: 'there' };
     await render(
       hbs`
@@ -115,7 +94,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Metadata::Details', func
 
   test('it renders custom metadata from metadata model', async function (assert) {
     assert.expect(4);
-    this.metadata = this.metadataModel({ withCustom: true });
+    this.model.metadata = metadataModel(this, { withCustom: true });
     await render(
       hbs`
        <Page::Secret::Metadata::Details
