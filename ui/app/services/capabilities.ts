@@ -31,6 +31,14 @@ export default class CapabilitiesService extends Service {
     }
   }
 
+  async canRead(apiPath: string) {
+    try {
+      return await this.fetchSpecific(apiPath, 'canRead');
+    } catch (e) {
+      return e;
+    }
+  }
+
   async canUpdate(apiPath: string) {
     try {
       return await this.fetchSpecific(apiPath, 'canUpdate');
