@@ -5,8 +5,11 @@
 
 <div ...attributes>
   <Hds::Text::Display @tag="p" class="has-bottom-margin-xs">
-    Date range
+    Client counting period
   </Hds::Text::Display>
+  <Hds::Text::Body @tag="p" @color="faint" @size="300">
+    The dashboard displays client count activity during the specified date range below. Click edit to update the date range.
+  </Hds::Text::Body>
 
   <div class="is-flex-align-baseline">
     {{#if (and @startTime @endTime)}}
