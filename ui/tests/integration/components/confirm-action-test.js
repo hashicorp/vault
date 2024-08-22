@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, click, find } from '@ember/test-helpers';
+import { render, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
@@ -34,12 +34,9 @@ module('Integration | Component | confirm-action', function (hooks) {
 
     assert.dom(SELECTORS.modalToggle).hasText('DELETE', 'renders button text');
     await click(SELECTORS.modalToggle);
-    // hasClass assertion wasn't working so this is the workaround
-    assert.strictEqual(
-      find('#confirm-action-modal').className,
-      'hds-modal hds-modal--size-small hds-modal--color-critical has-text-left',
-      'renders critical modal color by default'
-    );
+    assert
+      .dom('#confirm-action-modal')
+      .hasClass('hds-modal--color-critical', 'renders critical modal color by default');
     assert.dom(SELECTORS.confirm).hasClass('hds-button--color-critical', 'renders critical confirm button');
     assert.dom(SELECTORS.title).hasText('Are you sure?', 'renders default title');
     assert
@@ -99,23 +96,20 @@ module('Integration | Component | confirm-action', function (hooks) {
   });
 
   test('it renders disabledMessage modal', async function (assert) {
-    this.condition = true;
     await render(hbs`
       <ConfirmAction
         @buttonText="Open!"
         @onConfirmAction={{this.onConfirm}}
         @confirmTitle="Do this?"
         @confirmMessage="Are you really, really sure?"
-        @disabledMessage={{if this.condition "This is the reason you cannot do the thing"}}
+        @disabledMessage="This is the reason you cannot do the thing"
       />
       `);
 
     await click(SELECTORS.modalToggle);
-    assert.strictEqual(
-      find('#confirm-action-modal').className,
-      'hds-modal hds-modal--size-small hds-modal--color-neutral has-text-left',
-      'renders critical modal color by default'
-    );
+    assert
+      .dom('#confirm-action-modal')
+      .hasClass('hds-modal--color-neutral', 'renders neutral modal because disabledMessage is present');
     assert.dom(SELECTORS.title).hasText('Not allowed', 'renders disabled title');
     assert
       .dom(SELECTORS.message)
