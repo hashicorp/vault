@@ -5,6 +5,7 @@
 
 import { click, fillIn } from '@ember/test-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 
 export const createSecretsEngine = (store, type, path) => {
   store.pushPayload('secret-engine', {
@@ -20,6 +21,8 @@ export const createSecretsEngine = (store, type, path) => {
 };
 
 const createAwsRootConfig = (store, backend, accessType = 'iam') => {
+  // clear any records first
+  store.unloadAll('aws/root-config');
   if (accessType === 'wif') {
     store.pushPayload('aws/root-config', {
       id: backend,
@@ -29,6 +32,16 @@ const createAwsRootConfig = (store, backend, accessType = 'iam') => {
         role_arn: '123-role',
         identity_token_audience: '123-audience',
         identity_token_ttl: 7200,
+      },
+    });
+  } else if (accessType === 'no-access') {
+    // set root config options that are not associated with accessType 'wif' or 'iam'
+    store.pushPayload('aws/root-config', {
+      id: backend,
+      modelName: 'aws/root-config',
+      data: {
+        backend,
+        region: 'ap-northeast-1',
       },
     });
   } else {
@@ -93,6 +106,8 @@ export const createConfig = (store, backend, type) => {
       return createAwsRootConfig(store, backend);
     case 'aws-wif':
       return createAwsRootConfig(store, backend, 'wif');
+    case 'aws-no-access':
+      return createAwsRootConfig(store, backend, 'no-access');
     case 'aws-lease':
       return createAwsLeaseConfig(store, backend);
     case 'ssh':
@@ -174,6 +189,7 @@ export const fillInAwsConfig = async (
     await fillIn(GENERAL.ttl.input('Max Lease TTL'), '44');
   }
   if (withWif) {
+    await click(SES.aws.accessType('wif')); // toggle to wif
     await fillIn(GENERAL.inputByAttr('roleArn'), 'foo-role');
     await fillIn(GENERAL.inputByAttr('identityTokenAudience'), 'foo-audience');
     await click(GENERAL.ttl.toggle('Identity token TTL'));

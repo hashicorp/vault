@@ -275,6 +275,15 @@ module('Integration | Component | SecretEngine/configure-aws', function (hooks) 
       assert.dom(GENERAL.ttl.input('Identity token TTL')).hasValue('2'); // 7200 on payload is 2hrs in ttl picker
     });
 
+    test('it allows you to change access type if record does not have wif or iam values already set', async function (assert) {
+      // the model does not have to be new for a user to see the option to change the access type.
+      // the access type is only disabled if the model has values already set for access type fields.
+      this.rootConfig = createConfig(this.store, this.id, 'aws-no-access');
+      await this.renderComponent();
+      assert.dom(SES.aws.accessType('wif')).isNotDisabled('WIF accessType is NOT disabled');
+      assert.dom(SES.aws.accessType('iam')).isNotDisabled('IAM accessType is NOT disabled');
+    });
+
     test('it shows previously saved root and lease information', async function (assert) {
       await this.renderComponent();
       assert.dom(GENERAL.inputByAttr('accessKey')).hasValue(this.rootConfig.accessKey);

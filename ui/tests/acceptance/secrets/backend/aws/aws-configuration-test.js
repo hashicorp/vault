@@ -75,7 +75,7 @@ module('Acceptance | aws | configuration', function (hooks) {
     await runCmd(`delete sys/mounts/${path}`);
   });
 
-  test('it should save root AWS configuration', async function (assert) {
+  test('it should save root AWS—with IAM options—configuration', async function (assert) {
     assert.expect(3);
     const path = `aws-${this.uid}`;
     await enablePage.enable('aws', path);
@@ -96,6 +96,53 @@ module('Acceptance | aws | configuration', function (hooks) {
     assert
       .dom(GENERAL.infoRowValue('Secret key'))
       .doesNotExist('Secret key is not shown because it does not get returned by the api.');
+    // cleanup
+    await runCmd(`delete sys/mounts/${path}`);
+  });
+
+  test('it should save root AWS—with WIF options—configuration', async function (assert) {
+    assert.expect(5);
+    const path = `aws-${this.uid}`;
+    await enablePage.enable('aws', path);
+
+    await click(SES.configTab);
+    await click(SES.configure);
+    await fillInAwsConfig(false, false, false, true); // only fill in wif options
+    await click(SES.aws.save);
+    assert.true(
+      this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s root configuration.`),
+      'Success flash message is rendered showing the root configuration was saved.'
+    );
+    assert.dom(GENERAL.infoRowValue('Role arn')).hasText('foo-role', 'Role arn has been set.');
+    assert
+      .dom(GENERAL.infoRowValue('Identity token audience'))
+      .hasText('foo-audience', 'Identity token audience has been set.');
+    assert
+      .dom(GENERAL.infoRowValue('Identity token TTL'))
+      .hasText('7200', 'Identity token TTL has been set.');
+    assert.dom(GENERAL.infoRowValue('Access key')).doesNotExist('Access key—a non-wif attr is not shown.');
+    // cleanup
+    await runCmd(`delete sys/mounts/${path}`);
+  });
+
+  test('it should not show identityTokenTtl if it has not been set', async function (assert) {
+    assert.expect(2);
+    const path = `aws-${this.uid}`;
+    await enablePage.enable('aws', path);
+
+    await click(SES.configTab);
+    await click(SES.configure);
+    // manually fill in attrs without using helper so we can exclude Identity Token Ttl
+    await click(SES.aws.accessType('wif')); // toggle to wif
+    await fillIn(GENERAL.inputByAttr('roleArn'), 'foo-role');
+    await fillIn(GENERAL.inputByAttr('identityTokenAudience'), 'foo-audience');
+    await click(SES.aws.save);
+    assert.true(
+      this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s root configuration.`),
+      'Success flash message is rendered showing the root configuration was saved.'
+    );
+    // the Serializer removes this from the payload because the API returns 0 as the default.
+    assert.dom(GENERAL.infoRowValue('Identity token TTL')).doesNotExist('Identity token TTL does not show.');
     // cleanup
     await runCmd(`delete sys/mounts/${path}`);
   });
