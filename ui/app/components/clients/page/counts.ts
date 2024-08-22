@@ -8,7 +8,8 @@ import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { isSameMonth, isAfter } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
-import { filterVersionHistory } from 'core/utils/client-count-utils';
+import { filteredTotalForMount, filterVersionHistory, TotalClients } from 'core/utils/client-count-utils';
+import { sanitizePath } from 'core/utils/sanitize-path';
 
 import type AdapterError from '@ember-data/adapter';
 import type FlagsService from 'vault/services/flags';
@@ -17,6 +18,7 @@ import type VersionService from 'vault/services/version';
 import type ClientsActivityModel from 'vault/models/clients/activity';
 import type ClientsConfigModel from 'vault/models/clients/config';
 import type ClientsVersionHistoryModel from 'vault/models/clients/version-history';
+import type NamespaceService from 'vault/services/namespace';
 interface Args {
   activity: ClientsActivityModel;
   activityError?: AdapterError;
@@ -32,6 +34,7 @@ interface Args {
 export default class ClientsCountsPageComponent extends Component<Args> {
   @service declare readonly flags: FlagsService;
   @service declare readonly version: VersionService;
+  @service declare readonly namespace: NamespaceService;
   @service declare readonly store: StoreService;
 
   get formattedStartDate() {
@@ -53,11 +56,15 @@ export default class ClientsCountsPageComponent extends Component<Args> {
     return null;
   }
 
-  get upgradeExplanations() {
+  // passed into page-header for the export modal alert
+  get upgradesDuringActivity() {
     const { versionHistory, activity } = this.args;
-    const upgradesDuringActivity = filterVersionHistory(versionHistory, activity.startTime, activity.endTime);
-    if (upgradesDuringActivity.length) {
-      return upgradesDuringActivity.map((upgrade: ClientsVersionHistoryModel) => {
+    return filterVersionHistory(versionHistory, activity.startTime, activity.endTime);
+  }
+
+  get upgradeExplanations() {
+    if (this.upgradesDuringActivity.length) {
+      return this.upgradesDuringActivity.map((upgrade: ClientsVersionHistoryModel) => {
         let explanation;
         const date = parseAPITimestamp(upgrade.timestampInstalled, 'MMM d, yyyy');
         const version = upgrade.version || '';
@@ -96,27 +103,56 @@ export default class ClientsCountsPageComponent extends Component<Args> {
         };
   }
 
+  // path of the filtered namespace OR current one, for filtering relevant data
+  get namespacePathForFilter() {
+    const { namespace } = this.args;
+    const currentNs = this.namespace.currentNamespace;
+    return sanitizePath(namespace || currentNs || 'root');
+  }
+
+  // activityForNamespace gets the byNamespace data for the selected or current namespace so we can get the list of mounts from that namespace for attribution
+  get activityForNamespace() {
+    const { activity } = this.args;
+    const nsPath = this.namespacePathForFilter;
+    // we always return activity for namespace, either the selected filter or the current
+    return activity?.byNamespace?.find((ns) => sanitizePath(ns.label) === nsPath);
+  }
+
+  // duplicate of the method found in the activity component, so that we render the child only when there is activity to view
+  get totalUsageCounts(): TotalClients {
+    const { namespace, mountPath, activity } = this.args;
+    if (mountPath) {
+      // only do this if we have a mountPath filter.
+      // namespace is filtered on API layer
+      return filteredTotalForMount(activity.byNamespace, namespace, mountPath);
+    }
+    return activity?.total;
+  }
+
+  // namespace list for the search-select filter
   get namespaces() {
     return this.args.activity.byNamespace
-      ? this.args.activity.byNamespace.map((namespace) => ({
-          name: namespace.label,
-          id: namespace.label,
-        }))
+      ? this.args.activity.byNamespace
+          .map((namespace) => ({
+            name: namespace.label,
+            id: namespace.label,
+          }))
+          .filter((ns) => sanitizePath(ns.name) !== this.namespacePathForFilter)
       : [];
   }
 
+  // mounts within the current/filtered namespace for the sesarch-select filter
   get mountPaths() {
-    if (this.namespaces.length) {
-      return this.activityForNamespace?.mounts.map((mount) => ({
+    return (
+      this.activityForNamespace?.mounts.map((mount) => ({
         id: mount.label,
         name: mount.label,
-      }));
-    }
-    return [];
+      })) || []
+    );
   }
 
+  // banner contents shown if startTime returned from activity API (which matches the first month with data) is after the queried startTime
   get startTimeDiscrepancy() {
-    // show banner if startTime returned from activity log (response) is after the queried startTime
     const { activity, config } = this.args;
     const activityStartDateObject = parseAPITimestamp(activity.startTime) as Date;
     const queryStartDateObject = parseAPITimestamp(this.args.startTimestamp) as Date;
@@ -136,26 +172,9 @@ export default class ClientsCountsPageComponent extends Component<Args> {
     }
   }
 
-  get activityForNamespace() {
-    const { activity, namespace } = this.args;
-    return namespace ? activity.byNamespace.find((ns) => ns.label === namespace) : null;
-  }
-
-  get filteredActivity() {
-    // return activity counts based on selected namespace and auth mount values
-    const { namespace, mountPath, activity } = this.args;
-    if (namespace) {
-      return mountPath
-        ? this.activityForNamespace?.mounts.find((mount) => mount.label === mountPath)
-        : this.activityForNamespace;
-    }
-    return activity?.total;
-  }
-
+  // the dashboard should show sync tab if the flag is on or there's data
   get hasSecretsSyncClients(): boolean {
-    const { activity } = this.args;
-    // if there is any sync client data, show it
-    return activity && activity?.total?.secret_syncs > 0;
+    return this.args.activity?.total?.secret_syncs > 0;
   }
 
   @action
@@ -166,9 +185,12 @@ export default class ClientsCountsPageComponent extends Component<Args> {
   @action
   setFilterValue(type: 'ns' | 'mountPath', [value]: [string | undefined]) {
     const params = { [type]: value };
-    // unset mountPath value when namespace is cleared
     if (type === 'ns' && !value) {
+      // unset mountPath value when namespace is cleared
       params['mountPath'] = undefined;
+    } else if (type === 'mountPath' && !this.args.namespace) {
+      // set namespace when mountPath set without namespace already set
+      params['ns'] = this.namespacePathForFilter;
     }
     this.args.onFilterChange(params);
   }

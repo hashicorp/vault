@@ -8,13 +8,25 @@ import sinon from 'sinon';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import { endOfMonth, formatRFC3339 } from 'date-fns';
+import { formatRFC3339 } from 'date-fns';
 import subMonths from 'date-fns/subMonths';
 import timestamp from 'core/utils/timestamp';
 import { SERIALIZED_ACTIVITY_RESPONSE } from 'vault/tests/helpers/clients/client-count-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { capabilitiesStub, overrideResponse } from 'vault/tests/helpers/stubs';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { CLIENT_TYPES } from 'core/utils/client-count-utils';
 
+const CLIENTS_ATTRIBUTION = {
+  title: '[data-test-attribution-title]',
+  description: '[data-test-attribution-description]',
+  subtext: '[data-test-attribution-subtext]',
+  timestamp: '[data-test-attribution-timestamp]',
+  chart: '[data-test-horizontal-bar-chart]',
+  topItem: '[data-test-top-attribution]',
+  topItemCount: '[data-test-attribution-clients]',
+  yLabel: '[data-test-group="y-labels"]',
+  yLabels: '[data-test-group="y-labels"] text',
+};
 module('Integration | Component | clients/attribution', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
@@ -24,15 +36,15 @@ module('Integration | Component | clients/attribution', function (hooks) {
   });
 
   hooks.beforeEach(function () {
-    const { total, by_namespace } = SERIALIZED_ACTIVITY_RESPONSE;
     const mockNow = this.timestampStub();
     this.mockNow = mockNow;
     this.startTimestamp = formatRFC3339(subMonths(mockNow, 6));
     this.timestamp = formatRFC3339(mockNow);
     this.selectedNamespace = null;
-    this.totalUsageCounts = total;
-    this.totalClientAttribution = [...by_namespace];
-    this.namespaceMountsData = by_namespace.find((ns) => ns.label === 'ns1').mounts;
+    this.namespaceAttribution = SERIALIZED_ACTIVITY_RESPONSE.by_namespace;
+    this.authMountAttribution = SERIALIZED_ACTIVITY_RESPONSE.by_namespace.find(
+      (ns) => ns.label === 'ns1'
+    ).mounts;
   });
 
   test('it renders empty state with no data', async function (assert) {
@@ -40,206 +52,137 @@ module('Integration | Component | clients/attribution', function (hooks) {
       <Clients::Attribution />
     `);
 
-    assert.dom('[data-test-component="empty-state"]').exists();
-    assert.dom('[data-test-empty-state-title]').hasText('No data found');
-    assert.dom('[data-test-attribution-description]').hasText('There is a problem gathering data');
-    assert.dom('[data-test-attribution-export-button]').doesNotExist();
-    assert.dom('[data-test-attribution-timestamp]').doesNotHaveTextContaining('Updated');
+    assert.dom(GENERAL.emptyStateTitle).hasText('No data found');
+    assert.dom(CLIENTS_ATTRIBUTION.title).hasText('Namespace attribution', 'uses default noun');
+    assert.dom(CLIENTS_ATTRIBUTION.timestamp).hasNoText();
+  });
+
+  test('it updates language based on noun', async function (assert) {
+    this.noun = '';
+    await render(hbs`
+      <Clients::Attribution
+        @noun={{this.noun}}
+        @attribution={{this.namespaceAttribution}}
+        @responseTimestamp={{this.timestamp}}
+        />
+    `);
+    assert.dom(CLIENTS_ATTRIBUTION.timestamp).includesText('Updated Apr 3');
+
+    // when noun is blank, uses default
+    assert.dom(CLIENTS_ATTRIBUTION.title).hasText('Namespace attribution');
+    assert
+      .dom(CLIENTS_ATTRIBUTION.description)
+      .hasText(
+        'This data shows the top ten namespaces by total clients and can be used to understand where clients are originating. Namespaces are identified by path.'
+      );
+    assert
+      .dom(CLIENTS_ATTRIBUTION.subtext)
+      .hasText('This data shows the top ten namespaces by total clients for the date range selected.');
+
+    // when noun is mount
+    this.set('noun', 'mount');
+    assert.dom(CLIENTS_ATTRIBUTION.title).hasText('Mount attribution');
+    assert
+      .dom(CLIENTS_ATTRIBUTION.description)
+      .hasText(
+        'This data shows the top ten mounts by client count within this namespace, and can be used to understand where clients are originating. Mounts are organized by path.'
+      );
+    assert
+      .dom(CLIENTS_ATTRIBUTION.subtext)
+      .hasText(
+        'The total clients used by the mounts for this date range. This number is useful for identifying overall usage volume.'
+      );
+
+    // when noun is namespace
+    this.set('noun', 'namespace');
+    assert.dom(CLIENTS_ATTRIBUTION.title).hasText('Namespace attribution');
+    assert
+      .dom(CLIENTS_ATTRIBUTION.description)
+      .hasText(
+        'This data shows the top ten namespaces by total clients and can be used to understand where clients are originating. Namespaces are identified by path.'
+      );
+    assert
+      .dom(CLIENTS_ATTRIBUTION.subtext)
+      .hasText('This data shows the top ten namespaces by total clients for the date range selected.');
   });
 
   test('it renders with data for namespaces', async function (assert) {
     await render(hbs`
       <Clients::Attribution
-        @totalClientAttribution={{this.totalClientAttribution}}
-        @totalUsageCounts={{this.totalUsageCounts}}
+        @attribution={{this.namespaceAttribution}}
         @responseTimestamp={{this.timestamp}}
-        @startTimestamp={{this.startTimestamp}}
-        @endTimestamp={{this.timestamp}}
-        @selectedNamespace={{this.selectedNamespace}}
-        @isHistoricalMonth={{false}}
         />
     `);
 
-    assert.dom('[data-test-component="empty-state"]').doesNotExist();
-    assert.dom('[data-test-horizontal-bar-chart]').exists('chart displays');
-    assert.dom('[data-test-attribution-export-button]').exists();
+    assert.dom(GENERAL.emptyStateTitle).doesNotExist();
+    assert.dom(CLIENTS_ATTRIBUTION.chart).exists();
+    assert.dom(CLIENTS_ATTRIBUTION.topItem).includesText('namespace').includesText('ns1');
+    assert.dom(CLIENTS_ATTRIBUTION.topItemCount).includesText('namespace').includesText('18,903');
     assert
-      .dom('[data-test-attribution-description]')
-      .hasText(
-        'This data shows the top ten namespaces by client count and can be used to understand where clients are originating. Namespaces are identified by path. To see all namespaces, export this data.'
-      );
-    assert
-      .dom('[data-test-attribution-subtext]')
-      .hasText(
-        'The total clients in the namespace for this date range. This number is useful for identifying overall usage volume.'
-      );
-    assert.dom('[data-test-top-attribution]').includesText('namespace').includesText('ns1');
-    assert.dom('[data-test-attribution-clients]').includesText('namespace').includesText('18,903');
+      .dom(CLIENTS_ATTRIBUTION.yLabels)
+      .exists({ count: 2 }, 'bars reflect number of namespaces in single month');
+    assert.dom(CLIENTS_ATTRIBUTION.yLabel).hasText('ns1root');
   });
 
-  test('it renders two charts and correct text for single, historical month', async function (assert) {
-    this.start = formatRFC3339(subMonths(this.mockNow, 1));
-    this.end = formatRFC3339(subMonths(endOfMonth(this.mockNow), 1));
+  test('it renders with data for mounts', async function (assert) {
     await render(hbs`
       <Clients::Attribution
-        @totalClientAttribution={{this.totalClientAttribution}}
-        @totalUsageCounts={{this.totalUsageCounts}}
-        @responseTimestamp={{this.timestamp}}
-        @startTimestamp={{this.start}}
-        @endTimestamp={{this.end}}
-        @selectedNamespace={{this.selectedNamespace}}
-        @isHistoricalMonth={{true}}
+        @noun="mount"
+        @attribution={{this.authMountAttribution}}
         />
     `);
-    assert
-      .dom('[data-test-attribution-description]')
-      .includesText(
-        'This data shows the top ten namespaces by client count and can be used to understand where clients are originating. Namespaces are identified by path. To see all namespaces, export this data.',
-        'renders correct auth attribution description'
-      );
-    assert
-      .dom('[data-test-chart-container="total-clients"] .chart-description')
-      .includesText(
-        'The total clients in the namespace for this month. This number is useful for identifying overall usage volume.',
-        'renders total monthly namespace text'
-      );
-    assert
-      .dom('[data-test-chart-container="new-clients"] .chart-description')
-      .includesText(
-        'The new clients in the namespace for this month. This aids in understanding which namespaces create and use new clients.',
-        'renders new monthly namespace text'
-      );
-    this.set('selectedNamespace', 'ns1');
 
+    assert.dom(GENERAL.emptyStateTitle).doesNotExist();
+    assert.dom(CLIENTS_ATTRIBUTION.chart).exists();
+    assert.dom(CLIENTS_ATTRIBUTION.topItem).includesText('mount').includesText('auth/authid/0');
+    assert.dom(CLIENTS_ATTRIBUTION.topItemCount).includesText('mount').includesText('8,394');
     assert
-      .dom('[data-test-attribution-description]')
-      .includesText(
-        'This data shows the top ten authentication methods by client count within this namespace, and can be used to understand where clients are originating. Authentication methods are organized by path.',
-        'renders correct auth attribution description'
-      );
-    assert
-      .dom('[data-test-chart-container="total-clients"] .chart-description')
-      .includesText(
-        'The total clients used by the auth method for this month. This number is useful for identifying overall usage volume.',
-        'renders total monthly auth method text'
-      );
-    assert
-      .dom('[data-test-chart-container="new-clients"] .chart-description')
-      .includesText(
-        'The new clients used by the auth method for this month. This aids in understanding which auth methods create and use new clients.',
-        'renders new monthly auth method text'
-      );
+      .dom(CLIENTS_ATTRIBUTION.yLabels)
+      .exists({ count: 3 }, 'bars reflect number of mounts in single month');
+    assert.dom(CLIENTS_ATTRIBUTION.yLabel).hasText('auth/authid/0pki-engine-0kvv2-engine-0');
   });
 
-  test('it renders single chart for current month', async function (assert) {
+  test('it shows secret syncs when flag is on', async function (assert) {
+    this.isSecretsSyncActivated = true;
     await render(hbs`
       <Clients::Attribution
-        @totalClientAttribution={{this.totalClientAttribution}}
-        @totalUsageCounts={{this.totalUsageCounts}}
+        @attribution={{this.namespaceAttribution}}
         @responseTimestamp={{this.timestamp}}
-        @startTimestamp={{this.timestamp}}
-        @endTimestamp={{this.timestamp}}
-        @selectedNamespace={{this.selectedNamespace}}
-        @isHistoricalMonth={{false}}
+        @isSecretsSyncActivated={{true}}
         />
     `);
-    assert
-      .dom('[data-test-chart-container="single-chart"]')
-      .exists('renders single chart with total clients');
-    assert
-      .dom('[data-test-attribution-subtext]')
-      .hasTextContaining('this month', 'renders total monthly namespace text');
+
+    assert.dom('[data-test-group="secret_syncs"] rect').exists({ count: 2 });
   });
 
-  test('it renders single chart and correct text for for date range', async function (assert) {
+  test('it hids secret syncs when flag is off or missing', async function (assert) {
+    this.isSecretsSyncActivated = true;
     await render(hbs`
       <Clients::Attribution
-        @totalClientAttribution={{this.totalClientAttribution}}
-        @totalUsageCounts={{this.totalUsageCounts}}
+        @attribution={{this.namespaceAttribution}}
         @responseTimestamp={{this.timestamp}}
-        @startTimestamp={{this.startTimestamp}}
-        @endTimestamp={{this.timestamp}}
-        @selectedNamespace={{this.selectedNamespace}}
-        @isHistoricalMonth={{false}}
         />
     `);
 
-    assert
-      .dom('[data-test-chart-container="single-chart"]')
-      .exists('renders single chart with total clients');
-    assert
-      .dom('[data-test-attribution-subtext]')
-      .hasTextContaining('date range', 'renders total monthly namespace text');
+    assert.dom('[data-test-group="secret_syncs"]').doesNotExist();
   });
 
-  test('it renders with data for selected namespace auth methods for a date range', async function (assert) {
-    this.set('selectedNamespace', 'ns1');
+  test('it sorts and limits before rendering bars', async function (assert) {
+    this.tooManyAttributions = Array(15)
+      .fill(null)
+      .map((_, idx) => {
+        const attr = { label: `ns${idx}` };
+        CLIENT_TYPES.forEach((type) => {
+          attr[type] = 10 + idx;
+        });
+        return attr;
+      });
     await render(hbs`
       <Clients::Attribution
-        @totalClientAttribution={{this.namespaceMountsData}}
-        @totalUsageCounts={{this.totalUsageCounts}}
-        @responseTimestamp={{this.timestamp}}
-        @startTimestamp={{this.startTimestamp}}
-        @endTimestamp={{this.timestamp}}
-        @selectedNamespace={{this.selectedNamespace}}
-        @isHistoricalMonth={{this.isHistoricalMonth}}
+        @attribution={{this.tooManyAttributions}}
         />
     `);
-
-    assert.dom('[data-test-component="empty-state"]').doesNotExist();
-    assert.dom('[data-test-horizontal-bar-chart]').exists('chart displays');
-    assert.dom('[data-test-attribution-export-button]').exists();
-    assert
-      .dom('[data-test-attribution-description]')
-      .hasText(
-        'This data shows the top ten authentication methods by client count within this namespace, and can be used to understand where clients are originating. Authentication methods are organized by path.'
-      );
-    assert
-      .dom('[data-test-attribution-subtext]')
-      .hasText(
-        'The total clients used by the auth method for this date range. This number is useful for identifying overall usage volume.'
-      );
-    assert.dom('[data-test-top-attribution]').includesText('auth method').includesText('auth/authid/0');
-    assert.dom('[data-test-attribution-clients]').includesText('auth method').includesText('8,394');
-  });
-
-  test('it shows the export button if user does has SUDO capabilities', async function (assert) {
-    this.server.post('/sys/capabilities-self', () =>
-      capabilitiesStub('sys/internal/counters/activity/export', ['sudo'])
-    );
-
-    await render(hbs`
-      <Clients::Attribution
-        @totalClientAttribution={{this.totalClientAttribution}}
-        @responseTimestamp={{this.timestamp}}
-        />
-    `);
-    assert.dom('[data-test-attribution-export-button]').exists();
-  });
-
-  test('it hides the export button if user does not have SUDO capabilities', async function (assert) {
-    this.server.post('/sys/capabilities-self', () =>
-      capabilitiesStub('sys/internal/counters/activity/export', ['read'])
-    );
-
-    await render(hbs`
-      <Clients::Attribution
-        @totalClientAttribution={{this.totalClientAttribution}}
-        @responseTimestamp={{this.timestamp}}
-        />
-    `);
-    assert.dom('[data-test-attribution-export-button]').doesNotExist();
-  });
-
-  test('defaults to show the export button if capabilities cannot be read', async function (assert) {
-    this.server.post('/sys/capabilities-self', () => overrideResponse(403));
-
-    await render(hbs`
-      <Clients::ExportButton
-        @totalClientAttribution={{this.totalClientAttribution}}
-        @responseTimestamp={{this.timestamp}}
-        />
-    `);
-    assert.dom('[data-test-attribution-export-button]').exists();
+    assert.dom(CLIENTS_ATTRIBUTION.yLabels).exists({ count: 10 }, 'only 10 bars are shown');
+    assert.dom(CLIENTS_ATTRIBUTION.topItem).includesText('ns14');
   });
 });
