@@ -51,30 +51,32 @@
         </p>
         <div class="clients-date-range-display">
           <div>
-            <Hds::Form::Label for="start-month">Start</Hds::Form::Label>
-            <input
-              class="hds-form-text-input"
-              type="month"
-              value={{this.startDate}}
+            <Hds::Form::TextInput::Field
+              @type="month"
+              @value={{this.startDate}}
               max={{this.currentMonth}}
               id="start-month"
               name="start"
               {{on "change" this.updateDate}}
               data-test-date-edit="start"
-            />
+              as |F|
+            >
+              <F.Label>Start</F.Label>
+            </Hds::Form::TextInput::Field>
           </div>
           <div>
-            <Hds::Form::Label for="end-month">End</Hds::Form::Label>
-            <input
-              class="hds-form-text-input"
-              type="month"
-              value={{this.endDate}}
+            <Hds::Form::TextInput::Field
+              @type="month"
+              @value={{this.endDate}}
               max={{this.currentMonth}}
               id="end-month"
               name="end"
               {{on "change" this.updateDate}}
               data-test-date-edit="end"
-            />
+              as |F|
+            >
+              <F.Label>End</F.Label>
+            </Hds::Form::TextInput::Field>
           </div>
           <Hds::Button
             @text="Reset"
