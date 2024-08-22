@@ -165,9 +165,6 @@ jobs:
           cache: yarn
           cache-dependency-path: ui/yarn.lock
       - uses: browser-actions/setup-chrome@facf10a55b9caf92e0cc749b4f82bf8220989148 # v1.7.2
-        with:
-          # Temporarily pin our Chrome version while we sort out a broken test on latest
-          chrome-version: 1314712
       - name: ui-dependencies
         working-directory: ./ui
         run: |
