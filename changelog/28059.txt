@@ -1,0 +1,3 @@
+```release-note:bug
+command: The `vault secrets move` and `vault auth move` command will no longer attempt to write to storage on performance standby nodes.
+```

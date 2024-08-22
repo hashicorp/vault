@@ -485,15 +485,17 @@ func (c *Core) remountCredential(ctx context.Context, src, dst namespace.MountPa
 	srcMatch.Path = strings.TrimPrefix(dst.MountPath, credentialRoutePrefix)
 
 	// Update the mount table
-	if err := c.persistAuth(ctx, c.auth, &srcMatch.Local); err != nil {
-		srcMatch.Path = srcPath
-		srcMatch.Tainted = true
-		c.authLock.Unlock()
-		if err == logical.ErrReadOnly && c.perfStandby {
-			return err
-		}
+	if updateStorage {
+		if err := c.persistAuth(ctx, c.auth, &srcMatch.Local); err != nil {
+			srcMatch.Path = srcPath
+			srcMatch.Tainted = true
+			c.authLock.Unlock()
+			if err == logical.ErrReadOnly && c.perfStandby {
+				return err
+			}
 
-		return fmt.Errorf("failed to update auth table with error %+v", err)
+			return fmt.Errorf("failed to update auth table with error %+v", err)
+		}
 	}
 
 	// Remount the backend, setting the existing route entry
