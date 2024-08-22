@@ -269,7 +269,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks)
       );
       assert.strictEqual(
         flash,
-        `No changes to submit. No changes made to "${this.path}".`,
+        `No changes to submit. No updates made to "${this.path}".`,
         `flash message has message: "${flash}"`
       );
     });
@@ -293,7 +293,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks)
       );
       assert.strictEqual(
         flash,
-        `No changes to submit. No changes made to "${this.path}".`,
+        `No changes to submit. No updates made to "${this.path}".`,
         `flash message has message: "${flash}"`
       );
     });

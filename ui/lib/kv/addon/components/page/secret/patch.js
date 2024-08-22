@@ -54,7 +54,7 @@ export default class KvSecretPatch extends Component {
   *save(patchData) {
     const isEmpty = this.isEmpty(patchData);
     if (isEmpty) {
-      this.flashMessages.info(`No changes to submit. No changes made to "${this.args.path}".`);
+      this.flashMessages.info(`No changes to submit. No updates made to "${this.args.path}".`);
       return this.onCancel();
     }
 
