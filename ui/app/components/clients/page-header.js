@@ -5,6 +5,7 @@
 
 import { action } from '@ember/object';
 import { service } from '@ember/service';
+import { waitFor } from '@ember/test-waiters';
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
@@ -13,25 +14,53 @@ import { format, isSameMonth } from 'date-fns';
 import { task } from 'ember-concurrency';
 
 /**
- * @module ClientsExportButtonComponent
- * ClientsExportButton components are used to display the export button, manage the modal, and download the file from the clients export API
+ * @module ClientsPageHeader
+ * ClientsPageHeader components are used to render a header and check for export capabilities before rendering an export button.
  *
  * @example
  * ```js
- * <Clients::ExportButton @startTimestamp="2022-06-01T23:00:11.050Z" @endTimestamp="2022-12-01T23:00:11.050Z" @selectedNamespace="foo" />
+ * <Clients::PageHeader @startTimestamp="2022-06-01T23:00:11.050Z" @endTimestamp="2022-12-01T23:00:11.050Z" @namespace="foo" @upgradesDuringActivity={{array (hash version="1.10.1" previousVersion="1.9.1" timestampInstalled= "2021-11-18T10:23:16Z") }} />
  * ```
  * @param {string} [startTimestamp] - ISO timestamp of start time, to be passed to export request
  * @param {string} [endTimestamp] - ISO timestamp of end time, to be passed to export request
  * @param {string} [namespace] - namespace filter. Will be appended to the current namespace in the export request.
+ * @param {string} [upgradesDuringActivity] - array of objects containing version history upgrade data
+ * @param {boolean} [noData = false] - when true, export button will hide regardless of capabilities
  */
-export default class ClientsExportButtonComponent extends Component {
+export default class ClientsPageHeaderComponent extends Component {
   @service download;
   @service namespace;
   @service store;
 
+  @tracked canDownload = false;
   @tracked showExportModal = false;
   @tracked exportFormat = 'csv';
   @tracked downloadError = '';
+
+  constructor() {
+    super(...arguments);
+    this.getExportCapabilities(this.args.namespace);
+  }
+
+  get showExportButton() {
+    if (this.args.noData === true) return false;
+    return this.canDownload;
+  }
+
+  @waitFor
+  async getExportCapabilities(ns = '') {
+    try {
+      // selected namespace usually ends in /
+      const url = ns
+        ? `${sanitizePath(ns)}/sys/internal/counters/activity/export`
+        : 'sys/internal/counters/activity/export';
+      const cap = await this.store.findRecord('capabilities', url);
+      this.canDownload = cap.canSudo;
+    } catch (e) {
+      // if we can't read capabilities, default to show
+      this.canDownload = true;
+    }
+  }
 
   get formattedStartDate() {
     if (!this.args.startTimestamp) return null;
@@ -55,8 +84,8 @@ export default class ClientsExportButtonComponent extends Component {
 
   get namespaceFilter() {
     const currentNs = this.namespace.path;
-    const { selectedNamespace } = this.args;
-    return selectedNamespace ? sanitizePath(`${currentNs}/${selectedNamespace}`) : sanitizePath(currentNs);
+    const { namespace } = this.args;
+    return namespace ? sanitizePath(`${currentNs}/${namespace}`) : sanitizePath(currentNs);
   }
 
   async getExportData() {
@@ -70,6 +99,10 @@ export default class ClientsExportButtonComponent extends Component {
       namespace: this.namespaceFilter,
     });
   }
+
+  parseAPITimestamp = (timestamp, format) => {
+    return parseAPITimestamp(timestamp, format);
+  };
 
   exportChartData = task({ drop: true }, async (filename) => {
     try {

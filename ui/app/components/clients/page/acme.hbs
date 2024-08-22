@@ -32,20 +32,6 @@
       />
     </:subTitle>
 
-    <:stats>
-      {{#let (this.average this.byMonthActivityData "acme_clients") as |avg|}}
-        {{! 0 is falsy, intentionally hide 0 averages }}
-        {{#if avg}}
-          <StatText
-            @label="Average ACME clients per month"
-            @value={{avg}}
-            @size="m"
-            class="data-details-top has-top-padding-l"
-          />
-        {{/if}}
-      {{/let}}
-    </:stats>
-
     <:chart>
       <Clients::Charts::VerticalBarBasic
         @chartTitle={{this.title}}
