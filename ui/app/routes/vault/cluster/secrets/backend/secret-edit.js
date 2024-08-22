@@ -86,11 +86,7 @@ export default Route.extend({
         if (!secret) {
           this.router.transitionTo('vault.cluster.secrets.backend.kv.create', secretEngine.id);
         } else {
-          this.router.transitionTo(
-            'vault.cluster.secrets.backend.kv.secret.details',
-            secretEngine.id,
-            secret
-          );
+          this.router.transitionTo('vault.cluster.secrets.backend.kv.secret', secretEngine.id, secret);
         }
         return;
       }
