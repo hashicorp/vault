@@ -2200,11 +2200,11 @@
             ]
           },
           {
-            "title": "Guides",
+            "title": "Migrate from Consul storage to Raft",
             "routes": [
               {
-                "title": "Consul to Raft storage migration",
-                "path": "platform/k8s/guides"
+                "title": "Migrate from Consul storage to Raft",
+                "path": "platform/k8s/consul2raft"
               }
             ]
           },
