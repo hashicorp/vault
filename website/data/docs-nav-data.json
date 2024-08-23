@@ -2200,10 +2200,10 @@
             ]
           },
           {
-            "title": "Migrate from Consul storage to Raft",
+            "title": "Migrate Consul to Raft storage",
             "routes": [
               {
-                "title": "Migrate from Consul storage to Raft",
+                "title": "Overview",
                 "path": "platform/k8s/consul2raft"
               }
             ]
