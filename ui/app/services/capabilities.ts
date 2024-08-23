@@ -18,7 +18,7 @@ interface Query {
 export default class CapabilitiesService extends Service {
   @service declare readonly store: StoreService;
 
-  request = async (query: Query) => {
+  async request(query: Query) {
     if (query?.paths) {
       const { paths } = query;
       return this.store.query('capabilities', { paths });
@@ -29,7 +29,7 @@ export default class CapabilitiesService extends Service {
       return storeData ? storeData : this.store.findRecord('capabilities', path);
     }
     return assert('query object must contain "paths" or "path" key', false);
-  };
+  }
 
   /*
   this method returns a capabilities model for each path in the array of paths
