@@ -7,7 +7,6 @@ import Service, { service } from '@ember/service';
 import { assert } from '@ember/debug';
 
 import type AdapterError from '@ember-data/adapter/error';
-import type ArrayProxy from '@ember/array/proxy';
 import type CapabilitiesModel from 'vault/vault/models/capabilities';
 import type StoreService from 'vault/services/store';
 
@@ -16,14 +15,6 @@ interface Query {
   path?: string;
 }
 
-interface ComputedCapabilities {
-  canSudo: string;
-  canRead: string;
-  canCreate: string;
-  canUpdate: string;
-  canDelete: string;
-  canList: string;
-}
 export default class CapabilitiesService extends Service {
   @service declare readonly store: StoreService;
 
@@ -41,11 +32,22 @@ export default class CapabilitiesService extends Service {
   };
 
   /*
-  this method returns all of the capabilities for a particular path or paths
+  this method returns a capabilities model for each path in the array of paths
   */
-  async fetchAll(query: Query): Promise<CapabilitiesModel | ArrayProxy<CapabilitiesModel>> | AdapterError {
+  async fetchMultiplePaths(paths: string[]): Promise<Array<CapabilitiesModel>> | AdapterError {
     try {
-      return await this.request(query);
+      return await this.request({ paths });
+    } catch (e) {
+      return e;
+    }
+  }
+
+  /*
+  this method returns all of the capabilities for a singular path 
+  */
+  async fetchPathCapabilities(path: string): Promise<CapabilitiesModel> | AdapterError {
+    try {
+      return await this.request({ path });
     } catch (error) {
       return error;
     }
@@ -53,37 +55,31 @@ export default class CapabilitiesService extends Service {
 
   /* 
   internal method for specific capability checks below
-  checks each capability model (one for each path, if multiple)
-  for the passed capability, ie "canRead"
+  checks the capability model for the passed capability, ie "canRead"
   */
-  async _fetchSpecific(
-    query: Query,
+  async _fetchSpecificCapability(
+    path: string,
     capability: string
-  ): Promise<CapabilitiesModel | ArrayProxy<CapabilitiesModel>> | AdapterError {
+  ): Promise<CapabilitiesModel> | AdapterError {
     try {
-      const capabilities = await this.request(query);
-      if (query?.path) {
-        return capabilities[capability];
-      }
-      if (query?.paths) {
-        return capabilities.every((c: CapabilitiesModel) => c[capability as keyof ComputedCapabilities]);
-      }
+      const capabilities = await this.request({ path });
+      return capabilities[capability];
     } catch (e) {
       return e;
     }
   }
 
-  async canRead(query: Query) {
+  async canRead(path: string) {
     try {
-      return await this._fetchSpecific(query, 'canRead');
+      return await this._fetchSpecificCapability(path, 'canRead');
     } catch (e) {
       return e;
     }
   }
 
-  async canUpdate(query: Query) {
+  async canUpdate(path: string) {
     try {
-      return await this._fetchSpecific(query, 'canUpdate');
+      return await this._fetchSpecificCapability(path, 'canUpdate');
     } catch (e) {
       return e;
     }
