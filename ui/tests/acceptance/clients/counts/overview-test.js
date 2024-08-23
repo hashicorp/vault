@@ -173,11 +173,8 @@ module('Acceptance | clients | overview', function (hooks) {
     const response = await this.store.peekRecord('clients/activity', 'some-activity-id');
     const orderedNs = response.byNamespace.sort((a, b) => b.clients - a.clients);
     const topNamespace = orderedNs[0];
-    let filterNamespace = orderedNs[0];
     // the namespace dropdown excludes the current namespace, so use second-largest if that's the case
-    if (filterNamespace === 'root') {
-      filterNamespace = orderedNs[1];
-    }
+    const filterNamespace = topNamespace === 'root' ? orderedNs[1] : topNamespace;
     const topMount = filterNamespace?.mounts.sort((a, b) => b.clients - a.clients)[0];
 
     assert
