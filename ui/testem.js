@@ -12,6 +12,7 @@ module.exports = {
   disable_watching: true,
   launch_in_ci: ['Chrome'],
   browser_start_timeout: 120,
+  browser_disconnect_timeout: 30,
   browser_args: {
     Chrome: {
       ci: [
