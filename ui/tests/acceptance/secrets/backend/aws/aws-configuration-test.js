@@ -33,6 +33,8 @@ module('Acceptance | aws | configuration', function (hooks) {
     this.store = this.owner.lookup('service:store');
     this.flashSuccessSpy = spy(flash, 'success');
     this.flashInfoSpy = spy(flash, 'info');
+    this.version = this.owner.lookup('service:version');
+    this.version.type = 'enterprise';
 
     this.uid = uuidv4();
     return authPage.login();
@@ -75,6 +77,34 @@ module('Acceptance | aws | configuration', function (hooks) {
     await runCmd(`delete sys/mounts/${path}`);
   });
 
+  test('it should save root AWS—with WIF options—configuration', async function (assert) {
+    const path = `aws-${this.uid}`;
+    await enablePage.enable('aws', path);
+
+    this.server.post(configUrl('aws-lease', path), () => {
+      assert.false(true, 'post request was made to config/lease when no data was changed. test should fail.');
+    });
+
+    await click(SES.configTab);
+    await click(SES.configure);
+    await fillInAwsConfig(false, false, false, true); // only fill in wif options
+    await click(SES.aws.save);
+    assert.true(
+      this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s root configuration.`),
+      'Success flash message is rendered showing the root configuration was saved.'
+    );
+    assert.dom(GENERAL.infoRowValue('Role ARN')).hasText('foo-role', 'Role ARN has been set.');
+    assert
+      .dom(GENERAL.infoRowValue('Identity token audience'))
+      .hasText('foo-audience', 'Identity token audience has been set.');
+    assert
+      .dom(GENERAL.infoRowValue('Identity token TTL'))
+      .hasText('7200', 'Identity token TTL has been set.');
+    assert.dom(GENERAL.infoRowValue('Access key')).doesNotExist('Access key—a non-wif attr is not shown.');
+    // cleanup
+    await runCmd(`delete sys/mounts/${path}`);
+  });
+
   test('it should save root AWS—with IAM options—configuration', async function (assert) {
     assert.expect(3);
     const path = `aws-${this.uid}`;
@@ -96,27 +126,6 @@ module('Acceptance | aws | configuration', function (hooks) {
     assert
       .dom(GENERAL.infoRowValue('Secret key'))
       .doesNotExist('Secret key is not shown because it does not get returned by the api.');
-    // cleanup
-    await runCmd(`delete sys/mounts/${path}`);
-  });
-
-  test('it should save root AWS—with WIF options—configuration', async function (assert) {
-    const path = `aws-${this.uid}`;
-    await enablePage.enable('aws', path);
-
-    await click(SES.configTab);
-    await click(SES.configure);
-    await fillInAwsConfig(false, false, false, true); // only fill in wif options
-    await click(SES.aws.save);
-
-    assert.dom(GENERAL.infoRowValue('Role ARN')).hasText('foo-role', 'Role ARN has been set.');
-    assert
-      .dom(GENERAL.infoRowValue('Identity token audience'))
-      .hasText('foo-audience', 'Identity token audience has been set.');
-    assert
-      .dom(GENERAL.infoRowValue('Identity token TTL'))
-      .hasText('7200', 'Identity token TTL has been set.');
-    assert.dom(GENERAL.infoRowValue('Access key')).doesNotExist('Access key—a non-wif attr is not shown.');
     // cleanup
     await runCmd(`delete sys/mounts/${path}`);
   });
@@ -288,5 +297,36 @@ module('Acceptance | aws | configuration', function (hooks) {
       .exists('secret key field is wrapped inside an enableInput component');
     // cleanup
     await runCmd(`delete sys/mounts/${path}`);
+  });
+
+  module('isCommunity', function (hooks) {
+    hooks.beforeEach(function () {
+      this.version.type = 'community';
+    });
+
+    test('it does not show access type option and iam fields are shown', async function (assert) {
+      const path = `aws-${this.uid}`;
+      const type = 'aws';
+      await enablePage.enable(type, path);
+      await click(SES.configTab);
+      await click(SES.configure);
+      assert
+        .dom(SES.aws.accessTypeSection)
+        .doesNotExist('Access type section does not render for a community user');
+      // check all the form fields are present
+      await click(GENERAL.toggleGroup('Root config options'));
+      for (const key of expectedConfigKeys('aws-root-create')) {
+        if (key === 'secretKey') {
+          assert.dom(GENERAL.maskedInput(key)).exists(`${key} shows for root section.`);
+        } else {
+          assert.dom(GENERAL.inputByAttr(key)).exists(`${key} shows for root section.`);
+        }
+      }
+      for (const key of expectedConfigKeys('aws-lease')) {
+        assert.dom(`[data-test-ttl-form-label="${key}"]`).exists(`${key} shows for Lease section.`);
+      }
+      // cleanup
+      await runCmd(`delete sys/mounts/${path}`);
+    });
   });
 });

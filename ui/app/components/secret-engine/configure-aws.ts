@@ -74,7 +74,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
 
   @task
   @waitFor
-  *save(event: Event) {
+  *save(event: Event): Generator<Promise<boolean | LeaseConfigModel | RootConfigModel>> {
     event.preventDefault();
     this.resetErrors();
     const { leaseConfig, rootConfig } = this.args;
@@ -107,7 +107,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
     }
   }
 
-  async saveRoot() {
+  async saveRoot(): Promise<boolean> {
     const { backendPath, rootConfig } = this.args;
     try {
       await rootConfig.save();
@@ -120,7 +120,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
     }
   }
 
-  async saveLease() {
+  async saveLease(): Promise<boolean> {
     const { backendPath, leaseConfig } = this.args;
     try {
       await leaseConfig.save();
