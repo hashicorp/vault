@@ -109,7 +109,7 @@ module('Acceptance | aws | configuration', function (hooks) {
     await fillInAwsConfig(false, false, false, true); // only fill in wif options
     await click(SES.aws.save);
 
-    assert.dom(GENERAL.infoRowValue('Role arn')).hasText('foo-role', 'Role arn has been set.');
+    assert.dom(GENERAL.infoRowValue('Role ARN')).hasText('foo-role', 'Role ARN has been set.');
     assert
       .dom(GENERAL.infoRowValue('Identity token audience'))
       .hasText('foo-audience', 'Identity token audience has been set.');
@@ -127,7 +127,7 @@ module('Acceptance | aws | configuration', function (hooks) {
 
     await click(SES.configTab);
     await click(SES.configure);
-    // manually fill in attrs without using helper so we can exclude Identity Token Ttl
+    // manually fill in attrs without using helper so we can exclude identityTokenTtl and maxRetries.
     await click(SES.aws.accessType('wif')); // toggle to wif
     await fillIn(GENERAL.inputByAttr('roleArn'), 'foo-role');
     await fillIn(GENERAL.inputByAttr('identityTokenAudience'), 'foo-audience');

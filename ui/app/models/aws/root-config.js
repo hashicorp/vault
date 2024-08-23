@@ -16,6 +16,7 @@ export default class AwsRootConfig extends Model {
 
   // WIF only fields
   @attr('string', {
+    label: 'Role ARN',
     subText: 'Role ARN to assume for plugin workload identity federation.',
   })
   roleArn;

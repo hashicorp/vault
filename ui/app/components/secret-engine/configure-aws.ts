@@ -60,6 +60,9 @@ export default class ConfigureAwsComponent extends Component<Args> {
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
+    // the following checks are only relevant to enterprise users and those editing an existing root configuration.
+    if (this.version.isCommunity || this.args.rootConfig.isNew) return;
+
     const { roleArn, identityTokenAudience, identityTokenTtl, accessKey } = this.args.rootConfig;
     const wifAttributesSet = !!roleArn || !!identityTokenAudience || !!identityTokenTtl;
     const iamAttributesSet = !!accessKey;
