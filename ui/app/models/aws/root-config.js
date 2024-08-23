@@ -4,20 +4,22 @@
  */
 
 import Model, { attr } from '@ember-data/model';
-import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
+import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
+import { regions } from 'vault/helpers/aws-regions';
 
 export default class AwsRootConfig extends Model {
   @attr('string') backend; // dynamic path of secret -- set on response from value passed to queryRecord
   @attr('string') accessKey;
-  @attr('string') region;
+  @attr('string', { sensitive: true }) secretKey; // obfuscated, never returned by API
   @attr('string', {
-    label: 'IAM endpoint',
+    possibleValues: regions(),
+    subText:
+      'Specifies the AWS region. If not set it will use the AWS_REGION env var, AWS_DEFAULT_REGION env var, or us-east-1 in that order.',
   })
+  region;
+  @attr('string', { label: 'IAM endpoint' })
   iamEndpoint;
-  @attr('string', {
-    label: 'STS endpoint',
-  })
-  stsEndpoint;
+  @attr('string', { label: 'STS endpoint' }) stsEndpoint;
   @attr('number', {
     defaultValue: -1,
     label: 'Maximum retries',
@@ -28,5 +30,18 @@ export default class AwsRootConfig extends Model {
   get attrs() {
     const keys = ['accessKey', 'region', 'iamEndpoint', 'stsEndpoint', 'maxRetries'];
     return expandAttributeMeta(this, keys);
+  }
+
+  get formFieldGroups() {
+    return [
+      { default: ['accessKey', 'secretKey'] },
+      {
+        'Root config options': ['region', 'iamEndpoint', 'stsEndpoint', 'maxRetries'],
+      },
+    ];
+  }
+
+  get fieldGroups() {
+    return fieldToAttrs(this, this.formFieldGroups);
   }
 }

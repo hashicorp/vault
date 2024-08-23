@@ -11,7 +11,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { FORM } from 'vault/tests/helpers/kv/kv-selectors';
 import sinon from 'sinon';
 
-module('Integration | Component | kv | kv-patch-editor/row', function (hooks) {
+module('Integration | Component | kv | kv-patch/editor/row', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'kv');
 
@@ -32,7 +32,7 @@ module('Integration | Component | kv | kv-patch-editor/row', function (hooks) {
     this.renderComponent = async () => {
       return render(
         hbs`
-      <KvPatchEditor::Row
+      <KvPatch::Editor::Row
         @idx={{0}}
         @kvClass={{this.kvClass}}
         @isOriginalSubkey={{this.isOriginalSubkey}}
