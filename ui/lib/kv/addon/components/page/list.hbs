@@ -77,7 +77,7 @@
       <LinkedBlock
         data-test-list-item={{metadata.path}}
         class="list-item-row"
-        @params={{array (if metadata.pathIsDirectory "list-directory" "secret") @backend metadata.fullSecretPath}}
+        @params={{array (if metadata.pathIsDirectory "list-directory" "secret.index") @backend metadata.fullSecretPath}}
         @linkPrefix={{this.mountPoint}}
       >
         <div class="level is-mobile">
@@ -105,7 +105,11 @@
                     @models={{array @backend metadata.fullSecretPath}}
                   />
                 {{else}}
-                  <dd.Interactive @text="Overview" @route="secret" @models={{array @backend metadata.fullSecretPath}} />
+                  <dd.Interactive
+                    @text="Overview"
+                    @route="secret.index"
+                    @models={{array @backend metadata.fullSecretPath}}
+                  />
                   {{! TODO wrap in permissions check? }}
                   <dd.Interactive
                     @text="Secret data"
