@@ -17,7 +17,7 @@ if [ "$SKIP" == "true" ]; then
   exit 0
 fi
 
-cat <<EOF | sudo tee "$CONFIG_PATH"
+cat << EOF | sudo tee "$CONFIG_PATH"
 directories.tokendir = $TOKEN_DIR
 objectstore.backend = file
 log.level = DEBUG
