@@ -56,7 +56,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
   @tracked invalidFormAlert: string | null = null;
   @tracked modelValidationsLease: ValidationMap | null = null;
   @tracked accessType = 'iam';
-  @tracked disableAccessType = false;
+  disableAccessType = false;
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
