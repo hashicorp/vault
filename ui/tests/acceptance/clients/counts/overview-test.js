@@ -171,10 +171,11 @@ module('Acceptance | clients | overview', function (hooks) {
     assert.dom(CLIENT_COUNT.attributionBlock()).exists({ count: 2 });
 
     const response = await this.store.peekRecord('clients/activity', 'some-activity-id');
-    const topNamespace = response.byNamespace
-      .filter((ns) => ns.label !== 'root')
-      .sort((a, b) => b.clients - a.clients)[0];
-    const topMount = topNamespace?.mounts.sort((a, b) => b.clients - a.clients)[0];
+    const orderedNs = response.byNamespace.sort((a, b) => b.clients - a.clients);
+    const topNamespace = orderedNs[0];
+    // the namespace dropdown excludes the current namespace, so use second-largest if that's the case
+    const filterNamespace = topNamespace === 'root' ? orderedNs[1] : topNamespace;
+    const topMount = filterNamespace?.mounts.sort((a, b) => b.clients - a.clients)[0];
 
     assert
       .dom(`${CLIENT_COUNT.attributionBlock('namespace')} [data-test-top-attribution]`)
@@ -185,8 +186,8 @@ module('Acceptance | clients | overview', function (hooks) {
       .includesText(`${formatNumber([topNamespace.clients])}`, 'top attribution clients accurate');
 
     // Filter by top namespace
-    await selectChoose(CLIENT_COUNT.nsFilter, topNamespace.label);
-    assert.dom(CLIENT_COUNT.selectedNs).hasText(topNamespace.label, 'selects top namespace');
+    await selectChoose(CLIENT_COUNT.nsFilter, filterNamespace.label);
+    assert.dom(CLIENT_COUNT.selectedNs).hasText(filterNamespace.label, 'selects top namespace');
     assert
       .dom(`${CLIENT_COUNT.attributionBlock('mount')} [data-test-top-attribution]`)
       .includesText('Top mount');
@@ -195,10 +196,10 @@ module('Acceptance | clients | overview', function (hooks) {
       .includesText(`${formatNumber([topMount.clients])}`, 'top attribution clients accurate');
 
     let expectedStats = {
-      Entity: formatNumber([topNamespace.entity_clients]),
-      'Non-entity': formatNumber([topNamespace.non_entity_clients]),
-      ACME: formatNumber([topNamespace.acme_clients]),
-      'Secret sync': formatNumber([topNamespace.secret_syncs]),
+      Entity: formatNumber([filterNamespace.entity_clients]),
+      'Non-entity': formatNumber([filterNamespace.non_entity_clients]),
+      ACME: formatNumber([filterNamespace.acme_clients]),
+      'Secret sync': formatNumber([filterNamespace.secret_syncs]),
     };
     for (const label in expectedStats) {
       assert
