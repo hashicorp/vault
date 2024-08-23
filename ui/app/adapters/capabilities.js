@@ -48,10 +48,7 @@ export default class CapabilitiesAdapter extends ApplicationAdapter {
 
   query(store, type, query) {
     const paths = query?.paths.map((p) => this._formatPath(p));
-    return this.ajax(this.buildURL(type), 'POST', {
-      data: { paths },
-      namespace: sanitizePath(this.namespaceService.userRootNamespace),
-    }).catch((e) => {
+    return this.ajax(this.buildURL(type), 'POST', { data: { paths } }).catch((e) => {
       if (e instanceof AdapterError) {
         set(e, 'policyPath', 'sys/capabilities-self');
       }
