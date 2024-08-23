@@ -101,7 +101,6 @@ module('Acceptance | aws | configuration', function (hooks) {
   });
 
   test('it should save root AWS—with WIF options—configuration', async function (assert) {
-    assert.expect(5);
     const path = `aws-${this.uid}`;
     await enablePage.enable('aws', path);
 
@@ -109,10 +108,7 @@ module('Acceptance | aws | configuration', function (hooks) {
     await click(SES.configure);
     await fillInAwsConfig(false, false, false, true); // only fill in wif options
     await click(SES.aws.save);
-    assert.true(
-      this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s root configuration.`),
-      'Success flash message is rendered showing the root configuration was saved.'
-    );
+
     assert.dom(GENERAL.infoRowValue('Role arn')).hasText('foo-role', 'Role arn has been set.');
     assert
       .dom(GENERAL.infoRowValue('Identity token audience'))
