@@ -70,8 +70,8 @@ module('Unit | Service | capabilities', function (hooks) {
         return this.generateResponse({ path, capabilities });
       });
 
-      const canReadResponse = await this.capabilities.canRead({ path });
-      const canUpdateResponse = await this.capabilities.canUpdate({ path });
+      const canReadResponse = await this.capabilities.canRead(path);
+      const canUpdateResponse = await this.capabilities.canUpdate(path);
       assert[canRead](canReadResponse, `canRead returns ${canRead}`);
       assert[canUpdate](canUpdateResponse, `canUpdate returns ${canRead}`);
     });
