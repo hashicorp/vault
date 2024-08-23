@@ -97,9 +97,10 @@ module('Integration | Component | SecretEngine/configure-aws', function (hooks) 
 
       test('it clears wif/iam inputs after toggling accessType', async function (assert) {
         await this.renderComponent();
-        await fillInAwsConfig(true, false, true); // fill in IAM fields
+        await fillInAwsConfig('withAccess');
+        await fillInAwsConfig('withLease');
         await click(SES.aws.accessType('wif')); // toggle to wif
-        await fillInAwsConfig(false, false, false, true); // fill in wif fields
+        await fillInAwsConfig('withWif');
         await click(SES.aws.accessType('iam')); // toggle to wif
         assert
           .dom(GENERAL.inputByAttr('accessKey'))
@@ -157,7 +158,8 @@ module('Integration | Component | SecretEngine/configure-aws', function (hooks) 
           );
         });
         // fill in both lease and root endpoints to ensure that both payloads are attempted to be sent
-        await fillInAwsConfig(true, false, true);
+        await fillInAwsConfig('withAccess');
+        await fillInAwsConfig('withLease');
         await click(SES.aws.save);
         assert.dom(GENERAL.messageError).exists('API error surfaced to user');
         assert.dom(GENERAL.inlineError).exists('User shown inline error message');
@@ -176,7 +178,8 @@ module('Integration | Component | SecretEngine/configure-aws', function (hooks) 
           return overrideResponse(400, { errors: ['bad request'] });
         });
         // fill in both lease and root endpoints to ensure that both payloads are attempted to be sent
-        await fillInAwsConfig(true, false, true);
+        await fillInAwsConfig('withAccess');
+        await fillInAwsConfig('withLease');
         await click(SES.aws.save);
 
         assert.true(
@@ -205,7 +208,8 @@ module('Integration | Component | SecretEngine/configure-aws', function (hooks) 
           );
         });
         // fill in both lease and root endpoints to ensure that both payloads are attempted to be sent
-        await fillInAwsConfig(true, false, true);
+        await fillInAwsConfig('withAccess');
+        await fillInAwsConfig('withLease');
         await click(SES.aws.cancel);
 
         assert.true(this.flashDangerSpy.notCalled, 'No danger flash messages called.');

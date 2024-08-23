@@ -92,7 +92,7 @@ module('Acceptance | aws | configuration', function (hooks) {
 
       await click(SES.configTab);
       await click(SES.configure);
-      await fillInAwsConfig(false, false, false, true); // only fill in wif options
+      await fillInAwsConfig('withWif');
       await click(SES.aws.save);
       assert.true(
         this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s root configuration.`),
@@ -124,7 +124,7 @@ module('Acceptance | aws | configuration', function (hooks) {
 
       await click(SES.configTab);
       await click(SES.configure);
-      await fillInAwsConfig();
+      await fillInAwsConfig('withAccess');
       await click(SES.aws.save);
       assert.true(
         this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s root configuration.`),
@@ -174,7 +174,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       });
       await click(SES.configTab);
       await click(SES.configure);
-      await fillInAwsConfig(false, false, true); // only fills in lease config with defaults
+      await fillInAwsConfig('withLease');
       await click(SES.aws.save);
       assert.true(
         this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s lease configuration.`),
@@ -222,7 +222,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       // create accessKey with value foo and confirm it shows up in the details page.
       await click(SES.configTab);
       await click(SES.configure);
-      await fillInAwsConfig();
+      await fillInAwsConfig('withAccess');
       await click(SES.aws.save);
       assert.dom(GENERAL.infoRowValue('Access key')).hasText('foo', 'Access key is foo');
       assert
@@ -235,7 +235,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       await click(GENERAL.toggleGroup('Root config options'));
       await fillIn(GENERAL.inputByAttr('region'), 'ap-southeast-2');
       // add lease config details
-      await fillInAwsConfig(false, false, true); // only fills in lease config with defaults
+      await fillInAwsConfig('withLease');
       await click(SES.aws.save);
       assert
         .dom(GENERAL.infoRowValue('Access key'))
@@ -304,7 +304,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       await enablePage.enable(type, path);
       await click(SES.configTab);
       await click(SES.configure);
-      await fillInAwsConfig(true);
+      await fillInAwsConfig('withAccess');
       //  the way to tell if a record has been unloaded is if the private key is not saved in the store (the API does not return it, but if the record was not unloaded it would have stayed.)
       await click(SES.aws.save); // save the configuration
       await click(SES.configure);

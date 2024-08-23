@@ -165,30 +165,25 @@ export const expectedValueOfConfigKeys = (type, string) => {
   }
 };
 
-export const fillInAwsConfig = async (
-  withAccess = true,
-  withAccessOptions = false,
-  withLease = false,
-  withWif = false
-) => {
-  if (withAccess) {
+export const fillInAwsConfig = async (situation = 'withAccess') => {
+  if (situation === 'withAccess') {
     await fillIn(GENERAL.inputByAttr('accessKey'), 'foo');
     await fillIn(GENERAL.maskedInput('secretKey'), 'bar');
   }
-  if (withAccessOptions) {
+  if (situation === 'withAccessOptions') {
     await click(GENERAL.toggleGroup('Root config options'));
     await fillIn(GENERAL.inputByAttr('region'), 'ca-central-1');
     await fillIn(GENERAL.inputByAttr('iamEndpoint'), 'iam-endpoint');
     await fillIn(GENERAL.inputByAttr('stsEndpoint'), 'sts-endpoint');
     await fillIn(GENERAL.inputByAttr('maxRetries'), '3');
   }
-  if (withLease) {
+  if (situation === 'withLease') {
     await click(GENERAL.ttl.toggle('Default Lease TTL'));
     await fillIn(GENERAL.ttl.input('Default Lease TTL'), '33');
     await click(GENERAL.ttl.toggle('Max Lease TTL'));
     await fillIn(GENERAL.ttl.input('Max Lease TTL'), '44');
   }
-  if (withWif) {
+  if (situation === 'withWif') {
     await click(SES.aws.accessType('wif')); // toggle to wif
     await fillIn(GENERAL.inputByAttr('roleArn'), 'foo-role');
     await fillIn(GENERAL.inputByAttr('identityTokenAudience'), 'foo-audience');
