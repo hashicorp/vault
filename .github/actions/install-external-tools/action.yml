@@ -18,6 +18,7 @@ runs:
     - uses: ./.github/actions/set-up-gosimports
     - uses: ./.github/actions/set-up-gotestsum
     - uses: ./.github/actions/set-up-misspell
+    - uses: ./.github/actions/set-up-shfmt
     - uses: ./.github/actions/set-up-staticcheck
       # We assume that the Go toolchain will be managed by the caller workflow so we don't set one
       # up here.

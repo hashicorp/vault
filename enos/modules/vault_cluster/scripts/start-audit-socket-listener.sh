@@ -31,13 +31,13 @@ test_socket_listener() {
   case $IP_VERSION in
     4)
       "${NETCAT_COMMAND}" -zvw 2 "${SOCKET_ADDR}" "$SOCKET_PORT" < /dev/null
-    ;;
+      ;;
     6)
       "${NETCAT_COMMAND}" -6 -zvw 2 "${SOCKET_ADDR}" "$SOCKET_PORT" < /dev/null
-    ;;
+      ;;
     *)
       fail "unknown IP_VERSION: $IP_VERSION"
-    ;;
+      ;;
   esac
 }
 
@@ -53,13 +53,13 @@ start_socket_listener() {
   case $IP_VERSION in
     4)
       nohup nc -kl "$SOCKET_PORT" >> /tmp/vault-socket.log 2>&1 < /dev/null &
-    ;;
+      ;;
     6)
       nohup nc -6 -kl "$SOCKET_PORT" >> /tmp/vault-socket.log 2>&1 < /dev/null &
-    ;;
+      ;;
     *)
       fail "unknown IP_VERSION: $IP_VERSION"
-    ;;
+      ;;
   esac
 }
 

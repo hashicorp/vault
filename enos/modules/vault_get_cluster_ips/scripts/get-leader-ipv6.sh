@@ -2,7 +2,6 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: BUSL-1.1
 
-
 set -e
 
 function fail() {
@@ -45,16 +44,16 @@ while :; do
   case $IP_VERSION in
     4)
       exit 0
-    ;;
+      ;;
     6)
       if ip=$(findLeaderIPV6); then
         echo "$ip"
         exit 0
       fi
-    ;;
+      ;;
     *)
       fail "unknown IP_VERSION: $IP_VERSION"
-    ;;
+      ;;
   esac
 
   wait=$((2 ** count))

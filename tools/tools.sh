@@ -37,18 +37,19 @@ install_external() {
   # install action .github/actions/install-external-tools/action.yml
   #
   tools=(
+    honnef.co/go/tools/cmd/staticcheck@latest
     github.com/bufbuild/buf/cmd/buf@v1.25.0
     github.com/favadi/protoc-go-inject-tag@latest
     github.com/golangci/misspell/cmd/misspell@latest
     github.com/golangci/revgrep/cmd/revgrep@latest
+    github.com/loggerhead/enumer@latest
     github.com/rinchsan/gosimports/cmd/gosimports@latest
     golang.org/x/tools/cmd/goimports@latest
     google.golang.org/protobuf/cmd/protoc-gen-go@latest
     google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.4.0
     gotest.tools/gotestsum@latest
-    honnef.co/go/tools/cmd/staticcheck@latest
     mvdan.cc/gofumpt@latest
-    github.com/loggerhead/enumer@latest
+    mvdan.cc/sh/v3/cmd/shfmt@latest
   )
 
   echo "==> Installing external tools..."
@@ -76,6 +77,7 @@ check_external() {
     protoc-gen-go-grpc
     protoc-go-inject-tag
     revgrep
+    shfmt
     staticcheck
   )
 

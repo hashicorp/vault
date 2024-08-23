@@ -2,7 +2,6 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: BUSL-1.1
 
-
 set -e
 
 binpath=${VAULT_INSTALL_DIR}/vault
@@ -15,7 +14,7 @@ fail() {
 test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 
 # Create superuser policy
-$binpath policy write superuser -<<EOF
+$binpath policy write superuser - << EOF
 path "*" {
   capabilities = ["create", "read", "update", "delete", "list", "sudo"]
 }

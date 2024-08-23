@@ -2,7 +2,6 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: BUSL-1.1
 
-
 # The Vault smoke test to verify the Vault version installed
 
 set -e
@@ -25,12 +24,12 @@ fi
 vault_expected_version="Vault v${EXPECTED_VERSION} (${VAULT_REVISION})"
 
 case "${VAULT_EDITION}" in
-  ce) version_expected="${vault_expected_version}${expected_build_date}";;
-  ent) version_expected="${vault_expected_version}${expected_build_date}";;
-  ent.hsm) version_expected="${vault_expected_version}${expected_build_date} (cgo)";;
+  ce) version_expected="${vault_expected_version}${expected_build_date}" ;;
+  ent) version_expected="${vault_expected_version}${expected_build_date}" ;;
+  ent.hsm) version_expected="${vault_expected_version}${expected_build_date} (cgo)" ;;
   ent.fips1402) version_expected="${vault_expected_version}${expected_build_date} (cgo)" ;;
   ent.hsm.fips1402) version_expected="${vault_expected_version}${expected_build_date} (cgo)" ;;
-  *) fail "(${VAULT_EDITION}) does not match any known Vault editions"
+  *) fail "(${VAULT_EDITION}) does not match any known Vault editions" ;;
 esac
 
 version_expected_nosha=$(echo "$version_expected" | awk '!($3="")' | sed 's/  / /' | sed -e 's/[[:space:]]*$//')
