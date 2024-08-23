@@ -4,17 +4,19 @@
  */
 
 import { module, test } from 'qunit';
-import Sinon from 'sinon';
-import { Response } from 'miragejs';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, fillIn, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-
-import { setupRenderingTest } from 'vault/tests/helpers';
+import { Response } from 'miragejs';
+import Sinon from 'sinon';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { overrideResponse } from 'vault/tests/helpers/stubs';
+import { capabilitiesStub, overrideResponse } from 'vault/tests/helpers/stubs';
+import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
 
-module('Integration | Component | clients/export-button', function (hooks) {
+// this test coverage mostly is around the export button functionality
+// since everything else is static
+module('Integration | Component | clients/page-header', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
@@ -23,52 +25,64 @@ module('Integration | Component | clients/export-button', function (hooks) {
     this.startTimestamp = '2022-06-01T23:00:11.050Z';
     this.endTimestamp = '2022-12-01T23:00:11.050Z';
     this.selectedNamespace = undefined;
+    this.upgradesDuringActivity = [];
+    this.noData = undefined;
+    this.server.post('/sys/capabilities-self', () =>
+      capabilitiesStub('sys/internal/counters/activity/export', ['sudo'])
+    );
 
     this.renderComponent = async () => {
       return render(hbs`
-        <Clients::ExportButton
+        <Clients::PageHeader
           @startTimestamp={{this.startTimestamp}}
           @endTimestamp={{this.endTimestamp}}
-          @selectedNamespace={{this.selectedNamespace}}
+          @namespace={{this.selectedNamespace}}
+          @upgradesDuringActivity={{this.upgradesDuringActivity}}
+          @noData={{this.noData}}
         />`);
     };
   });
 
-  test('it renders modal with yielded alert', async function (assert) {
-    await render(hbs`
-      <Clients::ExportButton
-        @startTimestamp={{this.startTimestamp}}
-        @endTimestamp={{this.endTimestamp}}
-      >
-        <:alert>
-          <Hds::Alert class="has-top-padding-m" @type="compact" @color="warning" as |A|>
-            <A.Description data-test-custom-alert>Yielded alert!</A.Description>
-          </Hds::Alert>
-        </:alert>
-      </Clients::ExportButton>
-    `);
-
-    await click('[data-test-attribution-export-button]');
-    assert.dom('[data-test-custom-alert]').hasText('Yielded alert!');
+  test('it shows the export button if user does has SUDO capabilities', async function (assert) {
+    await this.renderComponent();
+    assert.dom(CLIENT_COUNT.exportButton).exists();
   });
 
-  test('shows the API error on the modal', async function (assert) {
+  test('it hides the export button if user does has SUDO capabilities but there is no data', async function (assert) {
+    this.noData = true;
+    await this.renderComponent();
+    assert.dom(CLIENT_COUNT.exportButton).doesNotExist();
+  });
+
+  test('it hides the export button if user does not have SUDO capabilities', async function (assert) {
+    this.server.post('/sys/capabilities-self', () =>
+      capabilitiesStub('sys/internal/counters/activity/export', ['read'])
+    );
+
+    await this.renderComponent();
+    assert.dom(CLIENT_COUNT.exportButton).doesNotExist();
+  });
+
+  test('defaults to show the export button if capabilities cannot be read', async function (assert) {
+    this.server.post('/sys/capabilities-self', () => overrideResponse(403));
+
+    await this.renderComponent();
+    assert.dom(CLIENT_COUNT.exportButton).exists();
+  });
+
+  test('it shows the export API error on the modal', async function (assert) {
     this.server.get('/sys/internal/counters/activity/export', function () {
-      return new Response(
-        403,
-        { 'Content-Type': 'application/json' },
-        { errors: ['this is an error from the API'] }
-      );
+      return overrideResponse(403);
     });
 
     await this.renderComponent();
 
-    await click('[data-test-attribution-export-button]');
+    await click(CLIENT_COUNT.exportButton);
     await click(GENERAL.confirmButton);
-    assert.dom('[data-test-export-error]').hasText('this is an error from the API');
+    assert.dom('[data-test-export-error]').hasText('permission denied');
   });
 
-  test('it works for json format', async function (assert) {
+  test('it exports when json format', async function (assert) {
     assert.expect(2);
     this.server.get('/sys/internal/counters/activity/export', function (_, req) {
       assert.deepEqual(req.queryParams, {
@@ -81,14 +95,14 @@ module('Integration | Component | clients/export-button', function (hooks) {
 
     await this.renderComponent();
 
-    await click('[data-test-attribution-export-button]');
+    await click(CLIENT_COUNT.exportButton);
     await fillIn('[data-test-download-format]', 'jsonl');
     await click(GENERAL.confirmButton);
     const extension = this.downloadStub.lastCall.args[2];
     assert.strictEqual(extension, 'jsonl');
   });
 
-  test('it works for csv format', async function (assert) {
+  test('it exports when csv format', async function (assert) {
     assert.expect(2);
 
     this.server.get('/sys/internal/counters/activity/export', function (_, req) {
@@ -102,7 +116,7 @@ module('Integration | Component | clients/export-button', function (hooks) {
 
     await this.renderComponent();
 
-    await click('[data-test-attribution-export-button]');
+    await click(CLIENT_COUNT.exportButton);
     await fillIn('[data-test-download-format]', 'csv');
     await click(GENERAL.confirmButton);
     const extension = this.downloadStub.lastCall.args[2];
@@ -118,14 +132,10 @@ module('Integration | Component | clients/export-button', function (hooks) {
       return new Response(200, { 'Content-Type': 'text/csv' }, '');
     });
 
-    await render(hbs`
-      <Clients::ExportButton
-        @totalClientAttribution={{this.totalClientAttribution}}
-        @responseTimestamp={{this.timestamp}}
-        />
-    `);
-    assert.dom('[data-test-attribution-export-button]').exists();
-    await click('[data-test-attribution-export-button]');
+    await this.renderComponent();
+
+    assert.dom(CLIENT_COUNT.exportButton).exists();
+    await click(CLIENT_COUNT.exportButton);
     await click(GENERAL.confirmButton);
   });
   test('it sends the selected namespace in export request', async function (assert) {
@@ -136,15 +146,9 @@ module('Integration | Component | clients/export-button', function (hooks) {
     });
     this.selectedNamespace = 'foobar/';
 
-    await render(hbs`
-      <Clients::ExportButton
-        @totalClientAttribution={{this.totalClientAttribution}}
-        @responseTimestamp={{this.timestamp}}
-        @selectedNamespace={{this.selectedNamespace}}
-        />
-    `);
-    assert.dom('[data-test-attribution-export-button]').exists();
-    await click('[data-test-attribution-export-button]');
+    await this.renderComponent();
+    assert.dom(CLIENT_COUNT.exportButton).exists();
+    await click(CLIENT_COUNT.exportButton);
     await click(GENERAL.confirmButton);
   });
 
@@ -158,30 +162,29 @@ module('Integration | Component | clients/export-button', function (hooks) {
     });
     this.selectedNamespace = 'bar/';
 
-    await render(hbs`
-      <Clients::ExportButton
-        @totalClientAttribution={{this.totalClientAttribution}}
-        @responseTimestamp={{this.timestamp}}
-        @selectedNamespace={{this.selectedNamespace}}
-        />
-    `);
-    assert.dom('[data-test-attribution-export-button]').exists();
-    await click('[data-test-attribution-export-button]');
+    await this.renderComponent();
+
+    assert.dom(CLIENT_COUNT.exportButton).exists();
+    await click(CLIENT_COUNT.exportButton);
     await click(GENERAL.confirmButton);
   });
 
-  test('it shows a no data message if endpoint returns 204', async function (assert) {
+  test('it shows a no data message if export returns 204', async function (assert) {
     this.server.get('/sys/internal/counters/activity/export', () => overrideResponse(204));
+    await this.renderComponent();
 
-    await render(hbs`
-      <Clients::ExportButton
-        @totalClientAttribution={{this.totalClientAttribution}}
-        @responseTimestamp={{this.timestamp}}
-        />
-    `);
-    await click('[data-test-attribution-export-button]');
+    await click(CLIENT_COUNT.exportButton);
     await click(GENERAL.confirmButton);
     assert.dom('[data-test-export-error]').hasText('no data to export in provided time range.');
+  });
+
+  test('it shows upgrade data in export modal', async function (assert) {
+    this.upgradesDuringActivity = [
+      { version: '1.10.1', previousVersion: '1.9.9', timestampInstalled: '2021-11-18T10:23:16Z' },
+    ];
+    await this.renderComponent();
+    await click(CLIENT_COUNT.exportButton);
+    assert.dom('[data-test-export-upgrade-warning]').includesText('1.10.1 (Nov 18, 2021)');
   });
 
   module('download naming', function () {
@@ -197,7 +200,7 @@ module('Integration | Component | clients/export-button', function (hooks) {
       });
 
       await this.renderComponent();
-      await click('[data-test-attribution-export-button]');
+      await click(CLIENT_COUNT.exportButton);
       await click(GENERAL.confirmButton);
       const args = this.downloadStub.lastCall.args;
       const [filename] = args;
@@ -217,7 +220,7 @@ module('Integration | Component | clients/export-button', function (hooks) {
       });
       await this.renderComponent();
 
-      await click('[data-test-attribution-export-button]');
+      await click(CLIENT_COUNT.exportButton);
       await click(GENERAL.confirmButton);
       const [filename] = this.downloadStub.lastCall.args;
       assert.strictEqual(filename, 'clients_export_June 2022', 'csv has single month in filename');
@@ -236,7 +239,7 @@ module('Integration | Component | clients/export-button', function (hooks) {
 
       await this.renderComponent();
 
-      await click('[data-test-attribution-export-button]');
+      await click(CLIENT_COUNT.exportButton);
       await click(GENERAL.confirmButton);
       const [filename] = this.downloadStub.lastCall.args;
       assert.strictEqual(filename, 'clients_export');
@@ -258,7 +261,7 @@ module('Integration | Component | clients/export-button', function (hooks) {
 
       await this.renderComponent();
 
-      await click('[data-test-attribution-export-button]');
+      await click(CLIENT_COUNT.exportButton);
       await click(GENERAL.confirmButton);
       const [filename] = this.downloadStub.lastCall.args;
       assert.strictEqual(filename, 'clients_export_bar');
@@ -279,7 +282,7 @@ module('Integration | Component | clients/export-button', function (hooks) {
 
       await this.renderComponent();
 
-      await click('[data-test-attribution-export-button]');
+      await click(CLIENT_COUNT.exportButton);
       await click(GENERAL.confirmButton);
       const [filename] = this.downloadStub.lastCall.args;
       assert.strictEqual(filename, 'clients_export_foo');

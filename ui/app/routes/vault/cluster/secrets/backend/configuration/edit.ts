@@ -19,7 +19,7 @@ import type SecretEngineModel from 'vault/models/secret-engine';
 // Saving and updating of those models are done within the engine specific components.
 
 const CONFIG_ADAPTERS_PATHS: Record<string, string[]> = {
-  // aws: ['aws/lease-config', 'aws/root-config'], TODO will be uncommented when AWS refactor occurs
+  aws: ['aws/lease-config', 'aws/root-config'],
   ssh: ['ssh/ca-config'],
 };
 
@@ -37,68 +37,36 @@ export default class SecretsBackendConfigurationEdit extends Route {
       set(error, 'httpStatus', 404);
       throw error;
     }
-    // TODO this conditional will be removed when we handle AWS
-    if (type !== 'aws') {
-      // generate the model based on the engine type.
-      // and pre-set with the type and backend (e.g. type: ssh, id: ssh-123)
-      const model: Record<string, unknown> = { type, id: backend };
-      for (const adapterPath of CONFIG_ADAPTERS_PATHS[type] as string[]) {
-        // convert the adapterPath with a name that can be passed to the components
-        // ex: adapterPath = ssh/ca-config, convert to: ssh-ca-config so that you can pass to component @model={{this.model.ssh-ca-config}}
-        const standardizedKey = adapterPath.replace(/\//g, '-');
-        try {
-          model[standardizedKey] = await this.store.queryRecord(adapterPath, {
+    // generate the model based on the engine type.
+    // and pre-set model with type and backend e.g. {type: ssh, id: ssh-123}
+    const model: Record<string, unknown> = { type, id: backend };
+    for (const adapterPath of CONFIG_ADAPTERS_PATHS[type] as string[]) {
+      // convert the adapterPath with a name that can be passed to the components
+      // ex: adapterPath = ssh/ca-config, convert to: ssh-ca-config so that you can pass to component @model={{this.model.ssh-ca-config}}
+      const standardizedKey = adapterPath.replace(/\//g, '-');
+      try {
+        model[standardizedKey] = await this.store.queryRecord(adapterPath, {
+          backend,
+          type,
+        });
+      } catch (e: AdapterError) {
+        // For most models if the adapter returns a 404, we want to create a new record.
+        // The ssh secret engine however returns a 400 if the CA is not configured.
+        // For ssh's 400 error, we want to create the CA config model.
+        if (
+          e.httpStatus === 404 ||
+          (type === 'ssh' && e.httpStatus === 400 && errorMessage(e) === `keys haven't been configured yet`)
+        ) {
+          model[standardizedKey] = await this.store.createRecord(adapterPath, {
             backend,
             type,
           });
-        } catch (e: AdapterError) {
-          // For most models if the adapter returns a 404, we want to create a new record.
-          // The ssh secret engine however returns a 400 if the CA is not configured.
-          // For ssh's 400 error, we want to create the CA config model.
-          if (
-            e.httpStatus === 404 ||
-            (type === 'ssh' && e.httpStatus === 400 && errorMessage(e) === `keys haven't been configured yet`)
-          ) {
-            model[standardizedKey] = await this.store.createRecord(adapterPath, {
-              backend,
-              type,
-            });
-          } else {
-            throw e;
-          }
+        } else {
+          throw e;
         }
       }
-      return model;
-    } else {
-      // TODO for now AWS configs rely on the secret-engine model and adapter. This will be refactored.
-      return await this.store.findRecord('secret-engine', backend);
-    }
-  }
-
-  // TODO everything below line will be removed once we handle AWS. This is the old code wrapped in AWS conditionals when appropriate.
-  afterModel(model: Record<string, unknown>) {
-    const type = model.type;
-
-    if (type === 'aws') {
-      return this.store
-        .queryRecord('secret-engine', {
-          backend: model.id,
-          type,
-        })
-        .then(
-          () => model,
-          () => model
-        );
     }
     return model;
-  }
-
-  resetController(controller, isExiting) {
-    if (controller.model.type === 'aws') {
-      if (isExiting) {
-        controller.reset();
-      }
-    }
   }
 
   @action

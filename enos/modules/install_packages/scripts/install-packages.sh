@@ -40,7 +40,7 @@ install_packages() {
           fi
         fi
       done
-    ;;
+      ;;
     dnf)
       for package in ${PACKAGES}; do
         if rpm -q "${package}"; then
@@ -55,7 +55,7 @@ install_packages() {
           fi
         fi
       done
-    ;;
+      ;;
     yum)
       for package in ${PACKAGES}; do
         if rpm -q "${package}"; then
@@ -70,7 +70,7 @@ install_packages() {
           fi
         fi
       done
-    ;;
+      ;;
     zypper)
       for package in ${PACKAGES}; do
         if rpm -q "${package}"; then
@@ -85,10 +85,10 @@ install_packages() {
           fi
         fi
       done
-    ;;
+      ;;
     *)
       fail "No matching package manager provided."
-    ;;
+      ;;
   esac
 }
 
