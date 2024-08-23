@@ -165,11 +165,20 @@ jobs:
           cache: yarn
           cache-dependency-path: ui/yarn.lock
       - uses: browser-actions/setup-chrome@facf10a55b9caf92e0cc749b4f82bf8220989148 # v1.7.2
+        with:
+          # Temporarily pin our Chrome version while we sort out a broken test on latest
+          chrome-version: 1314712
       - name: ui-dependencies
         working-directory: ./ui
         run: |
           yarn install --frozen-lockfile
           npm rebuild node-sass
+      - if: needs.setup.outputs.is-enterprise != 'true'
+        name: Rebuild font cache on Github hosted runner
+        # Fix `Fontconfig error: No writable cache directories` error on Github hosted runners
+        # This seems to have been introduced with this runner image: https://github.com/actions/runner-images/releases/tag/ubuntu22%2F20240818.1
+        # Hopefully this will resolve itself at some point with a newer image and we can remove it
+        run: fc-cache -f -v
       - if: needs.setup.outputs.is-enterprise == 'true'
         id: vault-auth
         name: Authenticate to Vault
