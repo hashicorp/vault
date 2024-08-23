@@ -170,6 +170,12 @@ jobs:
         run: |
           yarn install --frozen-lockfile
           npm rebuild node-sass
+      - if: needs.setup.outputs.is-enterprise != 'true'
+        name: Rebuild font cache on Github hosted runner
+        # Fix `Fontconfig error: No writable cache directories` error on Github hosted runners
+        # This seems to have been introduced with this runner image: https://github.com/actions/runner-images/releases/tag/ubuntu22%2F20240818.1
+        # Hopefully this will resolve itself at some point with a newer image and we can remove it
+        run: fc-cache -f -v
       - if: needs.setup.outputs.is-enterprise == 'true'
         id: vault-auth
         name: Authenticate to Vault
