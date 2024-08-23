@@ -39,7 +39,6 @@ module('Integration | Component | SecretEngine/configure-aws', function (hooks) 
     // Add backend to the configs because it's not on the testing snapshot (would come from url)
     this.rootConfig.backend = this.leaseConfig.backend = this.id;
     this.version = this.owner.lookup('service:version');
-    this.version.type = 'enterprise';
 
     this.renderComponent = () => {
       return render(hbs`
@@ -48,7 +47,11 @@ module('Integration | Component | SecretEngine/configure-aws', function (hooks) 
     };
   });
   module('Create view', function () {
-    module('isEnterprise', function () {
+    module('isEnterprise', function (hooks) {
+      hooks.beforeEach(function () {
+        this.version.type = 'enterprise';
+      });
+
       test('it renders fields ', async function (assert) {
         await this.renderComponent();
         assert.dom(SES.aws.rootForm).exists('it lands on the aws root configuration form.');
@@ -246,77 +249,105 @@ module('Integration | Component | SecretEngine/configure-aws', function (hooks) 
       this.rootConfig = createConfig(this.store, this.id, 'aws');
       this.leaseConfig = createConfig(this.store, this.id, 'aws-lease');
     });
-
-    test('it defaults to IAM accessType if IAM fields are already set', async function (assert) {
-      await this.renderComponent();
-      assert.dom(SES.aws.accessType('iam')).isChecked('IAM accessType is checked');
-      assert.dom(SES.aws.accessType('iam')).isDisabled('IAM accessType is disabled');
-      assert.dom(SES.aws.accessType('wif')).isNotChecked('WIF accessType is not checked');
-      assert.dom(SES.aws.accessType('wif')).isDisabled('WIF accessType is disabled');
-      assert
-        .dom(SES.aws.accessTypeSubtext)
-        .hasText('You cannot edit Access Type if you have already saved access credentials.');
-    });
-
-    test('it defaults to WIF accessType if WIF fields are already set', async function (assert) {
-      this.rootConfig = createConfig(this.store, this.id, 'aws-wif');
-      await this.renderComponent();
-      assert.dom(SES.aws.accessType('wif')).isChecked('WIF accessType is checked');
-      assert.dom(SES.aws.accessType('wif')).isDisabled('WIF accessType is disabled');
-      assert.dom(SES.aws.accessType('iam')).isNotChecked('IAM accessType is not checked');
-      assert.dom(SES.aws.accessType('iam')).isDisabled('IAM accessType is disabled');
-      assert.dom(GENERAL.inputByAttr('roleArn')).hasValue(this.rootConfig.roleArn);
-      assert
-        .dom(SES.aws.accessTypeSubtext)
-        .hasText('You cannot edit Access Type if you have already saved access credentials.');
-      assert
-        .dom(GENERAL.inputByAttr('identityTokenAudience'))
-        .hasValue(this.rootConfig.identityTokenAudience);
-      assert.dom(GENERAL.ttl.input('Identity token TTL')).hasValue('2'); // 7200 on payload is 2hrs in ttl picker
-    });
-
-    test('it allows you to change access type if record does not have wif or iam values already set', async function (assert) {
-      // the model does not have to be new for a user to see the option to change the access type.
-      // the access type is only disabled if the model has values already set for access type fields.
-      this.rootConfig = createConfig(this.store, this.id, 'aws-no-access');
-      await this.renderComponent();
-      assert.dom(SES.aws.accessType('wif')).isNotDisabled('WIF accessType is NOT disabled');
-      assert.dom(SES.aws.accessType('iam')).isNotDisabled('IAM accessType is NOT disabled');
-    });
-
-    test('it shows previously saved root and lease information', async function (assert) {
-      await this.renderComponent();
-      assert.dom(GENERAL.inputByAttr('accessKey')).hasValue(this.rootConfig.accessKey);
-      assert
-        .dom(GENERAL.inputByAttr('secretKey'))
-        .hasValue('**********', 'secretKey is masked on edit the value');
-
-      await click(GENERAL.toggleGroup('Root config options'));
-      assert.dom(GENERAL.inputByAttr('region')).hasValue(this.rootConfig.region);
-      assert.dom(GENERAL.inputByAttr('iamEndpoint')).hasValue(this.rootConfig.iamEndpoint);
-      assert.dom(GENERAL.inputByAttr('stsEndpoint')).hasValue(this.rootConfig.stsEndpoint);
-      assert.dom(GENERAL.inputByAttr('maxRetries')).hasValue('1');
-      // Check lease config values
-      assert.dom(GENERAL.ttl.input('Default Lease TTL')).hasValue('50');
-      assert.dom(GENERAL.ttl.input('Max Lease TTL')).hasValue('55');
-    });
-
-    test('it requires a double click to change the secret key', async function (assert) {
-      await this.renderComponent();
-
-      this.server.post(configUrl('aws', this.id), (schema, req) => {
-        const payload = JSON.parse(req.requestBody);
-        assert.strictEqual(
-          payload.secret_key,
-          'new-secret',
-          'post request was made to config/root with the updated secret_key.'
-        );
+    module('isEnterprise', function (hooks) {
+      hooks.beforeEach(function () {
+        this.version.type = 'enterprise';
       });
 
-      await click(GENERAL.enableField('secretKey'));
-      await click('[data-test-button="toggle-masked"]');
-      await fillIn(GENERAL.maskedInput('secretKey'), 'new-secret');
-      await click(SES.aws.save);
+      test('it defaults to IAM accessType if IAM fields are already set', async function (assert) {
+        await this.renderComponent();
+        assert.dom(SES.aws.accessType('iam')).isChecked('IAM accessType is checked');
+        assert.dom(SES.aws.accessType('iam')).isDisabled('IAM accessType is disabled');
+        assert.dom(SES.aws.accessType('wif')).isNotChecked('WIF accessType is not checked');
+        assert.dom(SES.aws.accessType('wif')).isDisabled('WIF accessType is disabled');
+        assert
+          .dom(SES.aws.accessTypeSubtext)
+          .hasText('You cannot edit Access Type if you have already saved access credentials.');
+      });
+
+      test('it defaults to WIF accessType if WIF fields are already set', async function (assert) {
+        this.rootConfig = createConfig(this.store, this.id, 'aws-wif');
+        await this.renderComponent();
+        assert.dom(SES.aws.accessType('wif')).isChecked('WIF accessType is checked');
+        assert.dom(SES.aws.accessType('wif')).isDisabled('WIF accessType is disabled');
+        assert.dom(SES.aws.accessType('iam')).isNotChecked('IAM accessType is not checked');
+        assert.dom(SES.aws.accessType('iam')).isDisabled('IAM accessType is disabled');
+        assert.dom(GENERAL.inputByAttr('roleArn')).hasValue(this.rootConfig.roleArn);
+        assert
+          .dom(SES.aws.accessTypeSubtext)
+          .hasText('You cannot edit Access Type if you have already saved access credentials.');
+        assert
+          .dom(GENERAL.inputByAttr('identityTokenAudience'))
+          .hasValue(this.rootConfig.identityTokenAudience);
+        assert.dom(GENERAL.ttl.input('Identity token TTL')).hasValue('2'); // 7200 on payload is 2hrs in ttl picker
+      });
+
+      test('it allows you to change access type if record does not have wif or iam values already set', async function (assert) {
+        // the model does not have to be new for a user to see the option to change the access type.
+        // the access type is only disabled if the model has values already set for access type fields.
+        this.rootConfig = createConfig(this.store, this.id, 'aws-no-access');
+        await this.renderComponent();
+        assert.dom(SES.aws.accessType('wif')).isNotDisabled('WIF accessType is NOT disabled');
+        assert.dom(SES.aws.accessType('iam')).isNotDisabled('IAM accessType is NOT disabled');
+      });
+
+      test('it shows previously saved root and lease information', async function (assert) {
+        await this.renderComponent();
+        assert.dom(GENERAL.inputByAttr('accessKey')).hasValue(this.rootConfig.accessKey);
+        assert
+          .dom(GENERAL.inputByAttr('secretKey'))
+          .hasValue('**********', 'secretKey is masked on edit the value');
+
+        await click(GENERAL.toggleGroup('Root config options'));
+        assert.dom(GENERAL.inputByAttr('region')).hasValue(this.rootConfig.region);
+        assert.dom(GENERAL.inputByAttr('iamEndpoint')).hasValue(this.rootConfig.iamEndpoint);
+        assert.dom(GENERAL.inputByAttr('stsEndpoint')).hasValue(this.rootConfig.stsEndpoint);
+        assert.dom(GENERAL.inputByAttr('maxRetries')).hasValue('1');
+        // Check lease config values
+        assert.dom(GENERAL.ttl.input('Default Lease TTL')).hasValue('50');
+        assert.dom(GENERAL.ttl.input('Max Lease TTL')).hasValue('55');
+      });
+
+      test('it requires a double click to change the secret key', async function (assert) {
+        await this.renderComponent();
+
+        this.server.post(configUrl('aws', this.id), (schema, req) => {
+          const payload = JSON.parse(req.requestBody);
+          assert.strictEqual(
+            payload.secret_key,
+            'new-secret',
+            'post request was made to config/root with the updated secret_key.'
+          );
+        });
+
+        await click(GENERAL.enableField('secretKey'));
+        await click('[data-test-button="toggle-masked"]');
+        await fillIn(GENERAL.maskedInput('secretKey'), 'new-secret');
+        await click(SES.aws.save);
+      });
+    });
+    module('isCommunity', function (hooks) {
+      hooks.beforeEach(function () {
+        this.version.type = 'community';
+      });
+
+      test('it does not show access types but defaults to iam fields', async function (assert) {
+        await this.renderComponent();
+        assert.dom(SES.aws.accessTypeSection).doesNotExist('Access type section does not render');
+        assert.dom(GENERAL.inputByAttr('accessKey')).hasValue(this.rootConfig.accessKey);
+        assert
+          .dom(GENERAL.inputByAttr('secretKey'))
+          .hasValue('**********', 'secretKey is masked on edit the value');
+
+        await click(GENERAL.toggleGroup('Root config options'));
+        assert.dom(GENERAL.inputByAttr('region')).hasValue(this.rootConfig.region);
+        assert.dom(GENERAL.inputByAttr('iamEndpoint')).hasValue(this.rootConfig.iamEndpoint);
+        assert.dom(GENERAL.inputByAttr('stsEndpoint')).hasValue(this.rootConfig.stsEndpoint);
+        assert.dom(GENERAL.inputByAttr('maxRetries')).hasValue('1');
+        // Check lease config values
+        assert.dom(GENERAL.ttl.input('Default Lease TTL')).hasValue('50');
+        assert.dom(GENERAL.ttl.input('Max Lease TTL')).hasValue('55');
+      });
     });
   });
 });
