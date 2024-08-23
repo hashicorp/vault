@@ -16,11 +16,13 @@ import type LeaseConfigModel from 'vault/models/aws/lease-config';
 import type RootConfigModel from 'vault/models/aws/root-config';
 import type Router from '@ember/routing/router';
 import type Store from '@ember-data/store';
+import type VersionService from 'vault/services/version';
 import type FlashMessageService from 'vault/services/flash-messages';
 
 /**
  * @module ConfigureAwsComponent is used to configure the AWS secret engine
- * A user can configure the endpoint root/config and/or lease/config. 
+ * A user can configure the endpoint root/config and/or lease/config.
+ * For enterprise users, they will see an additional option to config WIF attributes in place of IAM attributes. 
  * The fields for these endpoints are on one form.
  *
  * @example
@@ -46,16 +48,33 @@ interface Args {
 export default class ConfigureAwsComponent extends Component<Args> {
   @service declare readonly router: Router;
   @service declare readonly store: Store;
+  @service declare readonly version: VersionService;
   @service declare readonly flashMessages: FlashMessageService;
 
   @tracked errorMessageRoot: string | null = null;
   @tracked errorMessageLease: string | null = null;
   @tracked invalidFormAlert: string | null = null;
   @tracked modelValidationsLease: ValidationMap | null = null;
+  @tracked accessType = 'iam';
+  disableAccessType = false;
+
+  constructor(owner: unknown, args: Args) {
+    super(owner, args);
+    // the following checks are only relevant to enterprise users and those editing an existing root configuration.
+    if (this.version.isCommunity || this.args.rootConfig.isNew) return;
+
+    const { roleArn, identityTokenAudience, identityTokenTtl, accessKey } = this.args.rootConfig;
+    const wifAttributesSet = !!roleArn || !!identityTokenAudience || !!identityTokenTtl;
+    const iamAttributesSet = !!accessKey;
+    // If any WIF attributes have been set in the rootConfig model, set accessType to 'wif'.
+    this.accessType = wifAttributesSet ? 'wif' : 'iam';
+    // If there are either WIF or IAM attributes set then disable user's ability to change accessType.
+    this.disableAccessType = wifAttributesSet || iamAttributesSet;
+  }
 
   @task
   @waitFor
-  *save(event: Event) {
+  *save(event: Event): Generator<Promise<boolean | LeaseConfigModel | RootConfigModel>> {
     event.preventDefault();
     this.resetErrors();
     const { leaseConfig, rootConfig } = this.args;
@@ -88,7 +107,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
     }
   }
 
-  async saveRoot() {
+  async saveRoot(): Promise<boolean> {
     const { backendPath, rootConfig } = this.args;
     try {
       await rootConfig.save();
@@ -101,7 +120,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
     }
   }
 
-  async saveLease() {
+  async saveLease(): Promise<boolean> {
     const { backendPath, leaseConfig } = this.args;
     try {
       await leaseConfig.save();
@@ -144,6 +163,20 @@ export default class ConfigureAwsComponent extends Component<Args> {
   unloadModels() {
     this.args.rootConfig.unloadRecord();
     this.args.leaseConfig.unloadRecord();
+  }
+
+  @action
+  onChangeAccessType(accessType: string) {
+    this.accessType = accessType;
+    const { rootConfig } = this.args;
+    if (accessType === 'iam') {
+      // reset all WIF attributes
+      rootConfig.roleArn = rootConfig.identityTokenAudience = rootConfig.identityTokenTtl = undefined;
+    }
+    if (accessType === 'wif') {
+      // reset all IAM attributes
+      rootConfig.accessKey = rootConfig.secretKey = undefined;
+    }
   }
 
   @action

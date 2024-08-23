@@ -5,6 +5,7 @@
 
 import { click, fillIn } from '@ember/test-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 
 export const createSecretsEngine = (store, type, path) => {
   store.pushPayload('secret-engine', {
@@ -19,19 +20,44 @@ export const createSecretsEngine = (store, type, path) => {
   return store.peekRecord('secret-engine', path);
 };
 
-const createAwsRootConfig = (store, backend) => {
-  store.pushPayload('aws/root-config', {
-    id: backend,
-    modelName: 'aws/root-config',
-    data: {
-      backend,
-      region: 'us-west-2',
-      access_key: '123-key',
-      iam_endpoint: 'iam-endpoint',
-      sts_endpoint: 'sts-endpoint',
-      max_retries: 1,
-    },
-  });
+const createAwsRootConfig = (store, backend, accessType = 'iam') => {
+  // clear any records first
+  store.unloadAll('aws/root-config');
+  if (accessType === 'wif') {
+    store.pushPayload('aws/root-config', {
+      id: backend,
+      modelName: 'aws/root-config',
+      data: {
+        backend,
+        role_arn: '123-role',
+        identity_token_audience: '123-audience',
+        identity_token_ttl: 7200,
+      },
+    });
+  } else if (accessType === 'no-access') {
+    // set root config options that are not associated with accessType 'wif' or 'iam'
+    store.pushPayload('aws/root-config', {
+      id: backend,
+      modelName: 'aws/root-config',
+      data: {
+        backend,
+        region: 'ap-northeast-1',
+      },
+    });
+  } else {
+    store.pushPayload('aws/root-config', {
+      id: backend,
+      modelName: 'aws/root-config',
+      data: {
+        backend,
+        region: 'us-west-2',
+        access_key: '123-key',
+        iam_endpoint: 'iam-endpoint',
+        sts_endpoint: 'sts-endpoint',
+        max_retries: 1,
+      },
+    });
+  }
   return store.peekRecord('aws/root-config', backend);
 };
 
@@ -78,6 +104,10 @@ export const createConfig = (store, backend, type) => {
   switch (type) {
     case 'aws':
       return createAwsRootConfig(store, backend);
+    case 'aws-wif':
+      return createAwsRootConfig(store, backend, 'wif');
+    case 'aws-no-access':
+      return createAwsRootConfig(store, backend, 'no-access');
     case 'aws-lease':
       return createAwsLeaseConfig(store, backend);
     case 'ssh':
@@ -93,6 +123,10 @@ export const expectedConfigKeys = (type) => {
       return ['Default Lease TTL', 'Max Lease TTL'];
     case 'aws-root-create':
       return ['accessKey', 'secretKey', 'region', 'iamEndpoint', 'stsEndpoint', 'maxRetries'];
+    case 'aws-root-create-wif':
+      return ['roleArn', 'identityTokenAudience', 'Identity token TTL'];
+    case 'aws-root-create-iam':
+      return ['accessKey', 'secretKey'];
     case 'ssh':
       return ['Public key', 'Generate signing key'];
   }
@@ -131,22 +165,29 @@ export const expectedValueOfConfigKeys = (type, string) => {
   }
 };
 
-export const fillInAwsConfig = async (withAccess = true, withAccessOptions = false, withLease = false) => {
-  if (withAccess) {
+export const fillInAwsConfig = async (situation = 'withAccess') => {
+  if (situation === 'withAccess') {
     await fillIn(GENERAL.inputByAttr('accessKey'), 'foo');
     await fillIn(GENERAL.maskedInput('secretKey'), 'bar');
   }
-  if (withAccessOptions) {
+  if (situation === 'withAccessOptions') {
     await click(GENERAL.toggleGroup('Root config options'));
     await fillIn(GENERAL.inputByAttr('region'), 'ca-central-1');
     await fillIn(GENERAL.inputByAttr('iamEndpoint'), 'iam-endpoint');
     await fillIn(GENERAL.inputByAttr('stsEndpoint'), 'sts-endpoint');
     await fillIn(GENERAL.inputByAttr('maxRetries'), '3');
   }
-  if (withLease) {
+  if (situation === 'withLease') {
     await click(GENERAL.ttl.toggle('Default Lease TTL'));
     await fillIn(GENERAL.ttl.input('Default Lease TTL'), '33');
     await click(GENERAL.ttl.toggle('Max Lease TTL'));
     await fillIn(GENERAL.ttl.input('Max Lease TTL'), '44');
+  }
+  if (situation === 'withWif') {
+    await click(SES.aws.accessType('wif')); // toggle to wif
+    await fillIn(GENERAL.inputByAttr('roleArn'), 'foo-role');
+    await fillIn(GENERAL.inputByAttr('identityTokenAudience'), 'foo-audience');
+    await click(GENERAL.ttl.toggle('Identity token TTL'));
+    await fillIn(GENERAL.ttl.input('Identity token TTL'), '7200');
   }
 };
