@@ -14,34 +14,34 @@ module('Unit | Service | capabilities', function (hooks) {
   hooks.beforeEach(function () {
     this.capabilities = this.owner.lookup('service:capabilities');
     this.store = this.owner.lookup('service:store');
-    this.generateResponse = (apiPath, perms) => {
-      return {
-        [apiPath]: perms,
-        capabilities: perms,
-        request_id: '6cc7a484-921a-a730-179c-eaf6c6fbe97e',
-        data: {
-          capabilities: perms,
-          [apiPath]: perms,
-        },
-      };
+    this.generateResponse = ({ path, capabilities }) => {
+      if (path) {
+        return {
+          request_id: '6cc7a484-921a-a730-179c-eaf6c6fbe97e',
+          data: {
+            capabilities: capabilities,
+            [path]: capabilities,
+          },
+        };
+      }
     };
   });
 
   test('it makes request to capabilities-self', function (assert) {
-    const apiPath = '/my/api/path';
+    const path = '/my/api/path';
     const expectedPayload = {
-      paths: [apiPath],
+      paths: [path],
     };
     this.server.post('/sys/capabilities-self', (schema, req) => {
       const actual = JSON.parse(req.requestBody);
       assert.true(true, 'request made to capabilities-self');
       assert.propEqual(actual, expectedPayload, `request made with path: ${JSON.stringify(actual)}`);
-      return this.generateResponse(apiPath, ['read']);
+      return this.generateResponse({ path, capabilities: ['read'] });
     });
-    this.capabilities.request(apiPath);
+    this.capabilities.request({ path });
   });
 
-  const TEST_CASES = [
+  const SINGULAR_PATH = [
     {
       capabilities: ['read'],
       canRead: true,
@@ -63,15 +63,15 @@ module('Unit | Service | capabilities', function (hooks) {
       canUpdate: true,
     },
   ];
-  TEST_CASES.forEach(({ capabilities, canRead, canUpdate }) => {
-    test(`it returns expected boolean for "${capabilities.join(', ')}"`, async function (assert) {
-      const apiPath = '/my/api/path';
+  SINGULAR_PATH.forEach(({ capabilities, canRead, canUpdate }) => {
+    const path = '/my/api/path';
+    test(`singular path returns expected boolean for "${capabilities.join(', ')}"`, async function (assert) {
       this.server.post('/sys/capabilities-self', () => {
-        return this.generateResponse(apiPath, capabilities);
+        return this.generateResponse({ path, capabilities });
       });
 
-      const canReadResponse = await this.capabilities.canRead(apiPath);
-      const canUpdateResponse = await this.capabilities.canUpdate(apiPath);
+      const canReadResponse = await this.capabilities.canRead({ path });
+      const canUpdateResponse = await this.capabilities.canUpdate({ path });
       assert[canRead](canReadResponse, `canRead returns ${canRead}`);
       assert[canUpdate](canUpdateResponse, `canUpdate returns ${canRead}`);
     });
