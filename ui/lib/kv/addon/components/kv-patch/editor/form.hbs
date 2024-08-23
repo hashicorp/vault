@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<form {{on "submit" this.submit}} ...attributes>
+<form {{on "submit" this.submit}} data-test-kv-patch-editor>
   <div class="flex column-gap-16 has-top-padding-s">
     <Hds::Form::Label @controlId="newKey" class="one-fourth-width">
       Key
@@ -15,7 +15,7 @@
 
   {{! Rows for existing keys (includes new rows after user clicks "Add") }}
   {{#each this.patchData as |kv idx|}}
-    <KvPatchEditor::Row
+    <KvPatch::Editor::Row
       @idx={{idx}}
       @kvClass={{kv}}
       @isOriginalSubkey={{this.isOriginalSubkey}}
@@ -52,7 +52,7 @@
     </div>
   </div>
 
-  <KvPatchEditor::Alerts
+  <KvPatch::Editor::Alerts
     @idx="new"
     @keyError={{this.newKeyError}}
     @keyWarning={{this.newKeyWarning}}
@@ -60,16 +60,7 @@
   />
 
   <hr class="has-background-gray-200" />
-
-  <div class="has-top-margin-m">
-    <Toggle @onChange={{fn (mut this.showSubkeys)}} @checked={{this.showSubkeys}} @name="Reveal subkeys">
-      <Hds::Text::Body @tag="p" @weight="semibold">Reveal subkeys in JSON</Hds::Text::Body>
-    </Toggle>
-    {{#if this.showSubkeys}}
-      <Hds::CodeBlock @value={{stringify @subkeys}} @hasLineNumbers={{false}} data-test-subkeys />
-    {{/if}}
-  </div>
-
+  <KvPatch::SubkeysReveal @subkeys={{@subkeys}} />
   <hr class="has-background-gray-200" />
 
   <Hds::ButtonSet>
@@ -77,7 +68,7 @@
     <Hds::Button @text="Cancel" {{on "click" @onCancel}} @color="secondary" disabled={{@isSaving}} data-test-kv-cancel />
   </Hds::ButtonSet>
 
-  {{#if this.submitError}}
-    <AlertInline @type="danger" @message={{this.submitError}} class="has-top-padding-s" />
+  {{#if (or @submitError this.validationError)}}
+    <AlertInline @type="danger" @message={{or @submitError this.validationError}} class="has-top-padding-s" />
   {{/if}}
 </form>
