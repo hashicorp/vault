@@ -13,6 +13,13 @@ export default class CapabilitiesAdapter extends ApplicationAdapter {
     return 'capabilities-self';
   }
 
+  /* 
+  users don't always have access to the capabilities-self endpoint, 
+  this can happen when logging in to a namespace and then navigating to a child namespace.
+  adding "relativeNamespace" to the path and/or "this.namespaceService.userRootNamespace" 
+  to the request header ensures we are querying capabilities-self in the user's root namespace,
+  which is where they are most likely to have their policy/permissions.
+  */
   _formatPath(path) {
     const { relativeNamespace } = this.namespaceService;
     if (!relativeNamespace) {
