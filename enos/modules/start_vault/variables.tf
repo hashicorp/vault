@@ -6,6 +6,18 @@ variable "cluster_name" {
   description = "The Vault cluster name"
 }
 
+variable "cluster_port" {
+  type        = number
+  description = "The cluster port for Vault to listen on"
+  default     = 8201
+}
+
+variable "cluster_tag_key" {
+  type        = string
+  description = "The Vault cluster tag key"
+  default     = "retry_join"
+}
+
 variable "config_dir" {
   type        = string
   description = "The directory to use for Vault configuration"
@@ -28,10 +40,35 @@ variable "environment" {
   default     = null
 }
 
+variable "external_storage_port" {
+  type        = number
+  description = "The port to connect to when using external storage"
+  default     = 8500
+}
+
+variable "hosts" {
+  description = "The target machines host addresses to use for the Vault cluster"
+  type = map(object({
+    ipv6       = string
+    private_ip = string
+    public_ip  = string
+  }))
+}
+
 variable "install_dir" {
   type        = string
   description = "The directory where the vault binary will be installed"
   default     = "/opt/vault/bin"
+}
+
+variable "ip_version" {
+  type        = number
+  description = "The IP version to use for the Vault TCP listeners"
+
+  validation {
+    condition     = contains([4, 6], var.ip_version)
+    error_message = "The ip_version must be either 4 or 6"
+  }
 }
 
 variable "license" {
@@ -56,6 +93,12 @@ variable "manage_service" {
   type        = bool
   description = "Manage the Vault service users and systemd unit. Disable this to use configuration in RPM and Debian packages"
   default     = true
+}
+
+variable "listener_port" {
+  type        = number
+  description = "The port for Vault to listen on"
+  default     = 8200
 }
 
 variable "seal_alias" {
@@ -141,12 +184,4 @@ variable "storage_node_prefix" {
   type        = string
   description = "A prefix to use for each node in the Vault storage configuration"
   default     = "node"
-}
-
-variable "target_hosts" {
-  description = "The target machines host addresses to use for the Vault cluster"
-  type = map(object({
-    private_ip = string
-    public_ip  = string
-  }))
 }

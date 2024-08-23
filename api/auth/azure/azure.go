@@ -7,7 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"time"
@@ -175,7 +175,7 @@ func (a *AzureAuth) getJWT() (string, error) {
 	}
 	defer resp.Body.Close()
 
-	responseBytes, err := ioutil.ReadAll(resp.Body)
+	responseBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", fmt.Errorf("error reading response body from Azure token endpoint: %w", err)
 	}
@@ -222,7 +222,7 @@ func getMetadata() (metadataJSON, error) {
 	}
 	defer resp.Body.Close()
 
-	responseBytes, err := ioutil.ReadAll(resp.Body)
+	responseBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return metadataJSON{}, fmt.Errorf("error reading response body from metadata endpoint: %w", err)
 	}

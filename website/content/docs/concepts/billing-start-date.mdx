@@ -1,0 +1,21 @@
+---
+layout: docs
+page_title: Billing start date
+description: >-
+   A description of Vault cluster's billing start date used throughout Vault.
+---
+
+# Billing start date
+
+It is the start of the period for which [automated](/vault/docs/enterprise/license/utilization-reporting) and [manual](/vault/docs/enterprise/license/manual-reporting) license utilization data will be reported for a cluster. This is the license start date if you do not have an explicit
+billing start date configured. 
+
+Vault also uses the billing start date as a default start timestamp for:
+- [Direct queries via the activity log API](/vault/api-docs/system/internal-counters)
+- [Activity export CLI](/vault/api-docs/system/internal-counters#activity-export)
+
+As of 1.16.7, 1.17.3 and later, Vault clusters will automatically adjust the billing start date to provide a year's worth of utilization data. 
+
+@include 'auto-roll-billing-start.mdx'
+
+@include 'auto-roll-billing-start-example.mdx'
