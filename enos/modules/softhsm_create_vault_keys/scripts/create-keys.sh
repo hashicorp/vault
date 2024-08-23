@@ -66,7 +66,7 @@ main() {
   fi
 
   # Return our seal configuration attributes as JSON
-  cat <<EOF
+  cat << EOF
 {
   "lib": "${so}",
   "slot": "${slot}",
