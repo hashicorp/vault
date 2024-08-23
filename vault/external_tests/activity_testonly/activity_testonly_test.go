@@ -544,18 +544,18 @@ func getCSVExport(t *testing.T, client *api.Client, monthsPreviousTo int, now ti
 	t.Helper()
 
 	boolFields := map[string]struct{}{
-		"local_alias": {},
+		"local_entity_alias": {},
 	}
 
 	mapFields := map[string]struct{}{
-		"alias_custom_metadata": {},
-		"alias_metadata":        {},
-		"identity_metadata":     {},
+		"entity_alias_custom_metadata": {},
+		"entity_alias_metadata":        {},
+		"entity_metadata":              {},
 	}
 
 	sliceFields := map[string]struct{}{
-		"identity_group_ids": {},
-		"policies":           {},
+		"entity_group_ids": {},
+		"policies":         {},
 	}
 
 	resp, err := client.Logical().ReadRawWithData("sys/internal/counters/activity/export", map[string][]string{
