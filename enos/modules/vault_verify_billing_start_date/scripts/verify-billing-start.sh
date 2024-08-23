@@ -57,14 +57,14 @@ verify_date_is_in_current_year() {
     Linux)
       billing_start_unix=$(TZ=UTC date -d "$1" +'%s')    # For "now", use $(date +'%s')
       one_year_ago_unix=$(TZ=UTC date -d "1 year ago" +'%s')
-    ;;
+      ;;
     Darwin)
       one_year_ago_unix=$(TZ=UTC date -v -1y +'%s')
-      billing_start_unix=$(TZ=UTC date -j -f "%Y-%m-%dT%H:%M:%SZ" "${1}" +'%s' )
-    ;;
+      billing_start_unix=$(TZ=UTC date -j -f "%Y-%m-%dT%H:%M:%SZ" "${1}" +'%s')
+      ;;
     *)
       fail "Unsupported target host operating system: $(get_target_platform)" 1>&2
-    ;;
+      ;;
   esac
 
   if [ "$billing_start_unix" -gt "$one_year_ago_unix" ]; then
