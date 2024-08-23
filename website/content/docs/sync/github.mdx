@@ -28,7 +28,7 @@ Prerequisites:
 </Warning>
 
 
-If you decide to go with an access token, here's how you can configure a sync destination:
+Using an access token to configure a repository sync destination:
 
   ```shell-session
   $ vault write sys/sync/destinations/gh/my-dest \
@@ -45,6 +45,30 @@ If you decide to go with an access token, here's how you can configure a sync de
   Key                   Value
   ---                   -----
   connection_details    map[access_token:***** repository_owner:<owner> repository_name:<name>]
+  name                  my-dest
+  type                  gh
+  ```
+
+  </CodeBlockConfig>
+
+  Configure an environment sync destination:
+
+  ```shell-session
+  $ vault write sys/sync/destinations/gh/my-dest \
+      access_token="$ACCESS_TOKEN" \
+      repository_owner="$OWNER" \
+      repository_name="$NAME"
+      environment_name="$ENVIRONMENT"
+  ```
+
+  **Output:**
+
+  <CodeBlockConfig hideClipboard>
+
+  ```plaintext
+  Key                   Value
+  ---                   -----
+  connection_details    map[access_token:***** environment_name:<environment> repository_owner:<owner> repository_name:<name>]
   name                  my-dest
   type                  gh
   ```
@@ -72,7 +96,7 @@ If you decide to go with an access token, here's how you can configure a sync de
 1. Create secrets you wish to sync with a target GitHub repository for Actions.
 
   ```shell-session
-  $ vault kv put -mount='my-kv' my-secret foo='bar'
+  $ vault kv put -mount='my-kv' my-secret foo='bar' baz='quux'
   ```
 
   **Output:**
@@ -99,8 +123,8 @@ If you decide to go with an access token, here's how you can configure a sync de
 
   ```shell-session
   $ vault write sys/sync/destinations/gh/my-dest/associations/set \
-      mount=my-kv \
-      secret_name=my-secret
+      mount='my-kv' \
+      secret_name='my-secret'
   ```
 
   **Output:**
@@ -127,9 +151,13 @@ or the association in Vault will delete the secret in GitHub as well.
 
 <Note>
 
-GitHub only supports single value secrets, so KVv2 secrets from Vault will be stored as a JSON string.
-In the example above, the value for secret "my-secret" will be synced to GitHub as the JSON string `{"foo":"bar"}` if the
-destination is configured to use the `secret-path` [granularity level](/vault/docs/sync#granularity).
+GitHub only supports single-value secrets. By default, GitHub destinations use a
+[granularity level](/vault/docs/sync#granularity) of `secret-key` so that KVv2 secrets from Vault will be split
+where key-value pairs are stored as distinct entries in GitHub secrets. If a granularity level of `secret-path` is
+chosen insteaad, the secret will be stored as a JSON string with each key-value pair contained within.
+
+In the example above, the value for secret "my-secret" will be synced to GitHub as the JSON string
+`{"foo":"bar", "baz":"quux"}` if the destination is configured to use the `secret-path` granularity level.
 
 </Note>
 
