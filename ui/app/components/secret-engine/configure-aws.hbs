@@ -121,3 +121,22 @@
     {{/if}}
   </div>
 </form>
+
+{{#if this.saveIssuerWarning}}
+  <Hds::Modal id="rotate-credentials-modal" @onClose={{this.cancelSave}} data-test-issuer-warning as |M|>
+    <M.Header @icon="info">
+      Save global issuer?
+    </M.Header>
+    <M.Body>
+      <p class="has-bottom-margin-s">
+        {{this.saveIssuerWarning}}
+      </p>
+    </M.Body>
+    <M.Footer>
+      <Hds::ButtonSet>
+        <Hds::Button @text="Continue" {{on "click" (action (mut this.saveIssuerWarning) false)}} data-test-save-issuer />
+        <Hds::Button @text="Cancel" @color="secondary" {{on "click" this.cancelSave}} data-test-cancel />
+      </Hds::ButtonSet>
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}

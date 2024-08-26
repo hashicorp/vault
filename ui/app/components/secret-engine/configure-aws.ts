@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+import Ember from 'ember';
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
-import { task } from 'ember-concurrency';
+import { task, timeout } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
@@ -80,6 +81,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
   @tracked modelValidationsLease: ValidationMap | null = null;
   @tracked accessType = 'iam';
   @tracked issuerConfig = new IssuerConfig();
+  @tracked saveIssuerWarning = '';
 
   disableAccessType = false;
 
@@ -108,6 +110,12 @@ export default class ConfigureAwsComponent extends Component<Args> {
       // Note: aws/root-config model does not have any validations
       const isValid = this.validate(leaseConfig);
       if (!isValid) return;
+
+      // do issuer save and side effects if enterprise and isser saved
+      if (this.version.isEnterprise && this.issuerConfig.dirty) {
+        await this.updateIssuer.perform(this.issuerConfig);
+      }
+
       // Check if any of the models' attributes have changed.
       // If no changes to either model, transition and notify user.
       // If changes to either model, save the model(s) that changed and notify user.
@@ -134,6 +142,38 @@ export default class ConfigureAwsComponent extends Component<Args> {
       }
     })
   );
+
+  updateIssuer = task(async (issuerConfig: IssuerConfig) => {
+    if (issuerConfig.dirty && issuerConfig.original) {
+      // show modal with warning that the config will change
+      this.saveIssuerWarning = 'Issuer will be updated. Continue?';
+      while (this.saveIssuerWarning) {
+        if (Ember.testing) {
+          return;
+        }
+        await timeout(500);
+      }
+    } else if (issuerConfig.dirty && issuerConfig.noRead) {
+      // show modal with warning that the config *may* update existing configs
+      this.saveIssuerWarning = 'Issuer may overwrite previous value. Continue?';
+      while (this.saveIssuerWarning) {
+        if (Ember.testing) {
+          return;
+        }
+        await timeout(500);
+      }
+    }
+    try {
+      return this.store
+        .adapterFor('application')
+        .ajax('/v1/identity/oidc/config', 'POST', { data: { issuer: issuerConfig.issuer } });
+      this.flashMessages.success(`Issuer saved successfully`);
+    } catch (e) {
+      this.flashMessages.danger(`Issuer not saved: ${errorMessage(e, 'Check Vault logs for details.')}`);
+      // continue without read
+      return;
+    }
+  });
 
   async saveRoot(): Promise<boolean> {
     const { backendPath, rootConfig } = this.args;
@@ -191,6 +231,11 @@ export default class ConfigureAwsComponent extends Component<Args> {
   unloadModels() {
     this.args.rootConfig.unloadRecord();
     this.args.leaseConfig.unloadRecord();
+  }
+
+  @action cancelSave() {
+    this.updateIssuer.cancelAll();
+    this.saveIssuerWarning = '';
   }
 
   @action
