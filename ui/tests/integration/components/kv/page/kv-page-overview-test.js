@@ -90,7 +90,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
           `Current version Create new The current version of this secret. ${this.metadata.currentVersion}`
         );
       assert
-        .dom(overviewCard.container('Secret version age'))
+        .dom(overviewCard.container('Secret age'))
         .hasText(
           `Secret age View metadata Current secret version age. Last updated on ${this.format(
             this.metadata.updatedTime

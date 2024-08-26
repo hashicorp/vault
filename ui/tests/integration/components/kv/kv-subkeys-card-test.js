@@ -23,9 +23,12 @@ module('Integration | Component | kv | kv-subkeys-card', function (hooks) {
       },
     };
     this.renderComponent = async () => {
-      return render(hbs`<KvSubkeys @subkeys={{this.subkeys}} @canPatchSecret={{this.canPatchSecret}} />`, {
-        owner: this.engine,
-      });
+      return render(
+        hbs`<KvSubkeysCard @subkeys={{this.subkeys}} @canPatchSecret={{this.canPatchSecret}} />`,
+        {
+          owner: this.engine,
+        }
+      );
     };
   });
 
