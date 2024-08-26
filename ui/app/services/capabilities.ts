@@ -34,9 +34,9 @@ export default class CapabilitiesService extends Service {
   /*
   this method returns a capabilities model for each path in the array of paths
   */
-  async fetchMultiplePaths(paths: string[]): Promise<Array<CapabilitiesModel>> | AdapterError {
+  fetchMultiplePaths(paths: string[]): Promise<Array<CapabilitiesModel>> | AdapterError {
     try {
-      return await this.request({ paths });
+      return this.request({ paths });
     } catch (e) {
       return e;
     }
@@ -45,9 +45,9 @@ export default class CapabilitiesService extends Service {
   /*
   this method returns all of the capabilities for a singular path 
   */
-  async fetchPathCapabilities(path: string): Promise<CapabilitiesModel> | AdapterError {
+  fetchPathCapabilities(path: string): Promise<CapabilitiesModel> | AdapterError {
     try {
-      return await this.request({ path });
+      return this.request({ path });
     } catch (error) {
       return error;
     }
@@ -69,17 +69,17 @@ export default class CapabilitiesService extends Service {
     }
   }
 
-  async canRead(path: string) {
+  canRead(path: string) {
     try {
-      return await this._fetchSpecificCapability(path, 'canRead');
+      return this._fetchSpecificCapability(path, 'canRead');
     } catch (e) {
       return e;
     }
   }
 
-  async canUpdate(path: string) {
+  canUpdate(path: string) {
     try {
-      return await this._fetchSpecificCapability(path, 'canUpdate');
+      return this._fetchSpecificCapability(path, 'canUpdate');
     } catch (e) {
       return e;
     }
