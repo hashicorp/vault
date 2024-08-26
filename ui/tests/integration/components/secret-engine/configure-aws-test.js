@@ -251,7 +251,7 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
         assert.dom(SES.aws.issuerWarningModal).doesNotExist();
         assert.true(this.flashDangerSpy.notCalled, 'No danger flash messages called.');
         assert.true(this.flashSuccessSpy.notCalled, 'No success flash messages called.');
-        assert.true(this.transitionStub.notCalled(), 'Does not redirect');
+        assert.true(this.transitionStub.notCalled, 'Does not redirect');
       });
 
       test('it shows modal when updating issuer from no read and calls correct APIs on save', async function (assert) {
@@ -275,6 +275,8 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
         await click(GENERAL.saveButton);
         assert.dom(SES.aws.issuerWarningModal).exists();
         await click(SES.aws.issuerWarningSave);
+
+        // TODO: these aren't working correctly
         assert.true(this.flashDangerSpy.notCalled, 'No danger flash messages called.');
         assert.true(
           this.flashSuccessSpy.calledWith('Issuer was saved'),
@@ -302,8 +304,9 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
         await click(GENERAL.saveButton);
         assert.dom(SES.aws.issuerWarningModal).exists();
         await click(SES.aws.issuerWarningSave);
+        // TODO: these aren't working correctly
         assert.true(
-          this.flashDangerSpy.calledWith('Issuer was not saved'),
+          this.flashDangerSpy.calledWith('Issuer was not saved: permission denied'),
           'shows danger flash for issuer save'
         );
         assert.true(this.flashSuccessSpy.notCalled, 'No success flash messages called.');
