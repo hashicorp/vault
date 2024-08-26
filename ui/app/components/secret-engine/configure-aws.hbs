@@ -123,9 +123,9 @@
 </form>
 
 {{#if this.saveIssuerWarning}}
-  <Hds::Modal id="rotate-credentials-modal" @onClose={{this.cancelSave}} data-test-issuer-warning as |M|>
-    <M.Header @icon="info">
-      Save global issuer?
+  <Hds::Modal @color="warning" @onClose={{this.cancelSave}} data-test-issuer-warning as |M|>
+    <M.Header @icon="alert-circle">
+      Are you sure?
     </M.Header>
     <M.Body>
       <p class="has-bottom-margin-s">

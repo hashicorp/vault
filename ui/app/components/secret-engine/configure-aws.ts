@@ -109,11 +109,6 @@ export default class ConfigureAwsComponent extends Component<Args> {
       const isValid = this.validate(leaseConfig);
       if (!isValid) return;
 
-      // do issuer save and side effects if enterprise and isser saved
-      if (this.version.isEnterprise && this.issuerConfig.dirty) {
-        await this.updateIssuer.perform(this.issuerConfig);
-      }
-
       // Check if any of the models' attributes have changed.
       // If no changes to either model, transition and notify user.
       // If changes to either model, save the model(s) that changed and notify user.
@@ -124,15 +119,21 @@ export default class ConfigureAwsComponent extends Component<Args> {
       const rootAttrChanged =
         Object.keys(rootConfig.changedAttributes()).filter((item) => item !== 'backend').length > 0;
 
-      if (!leaseAttrChanged && !rootAttrChanged) {
+      if (!leaseAttrChanged && !rootAttrChanged && !this.issuerConfig.dirty) {
         this.flashMessages.info('No changes detected.');
         this.transition();
       }
 
+      // Attempt saves of changed models. If at least one of them succeed, transition
       const rootSaved = rootAttrChanged ? await this.saveRoot() : false;
       const leaseSaved = leaseAttrChanged ? await this.saveLease() : false;
+      // do issuer save and side effects if enterprise and isser updated
+      const issuerSucceed =
+        this.version.isEnterprise && this.issuerConfig.dirty
+          ? await this.updateIssuer.perform(this.issuerConfig)
+          : false;
 
-      if (rootSaved || leaseSaved) {
+      if (rootSaved || leaseSaved || issuerSucceed) {
         this.transition();
       } else {
         // otherwise there was a failure and we should not transition and exit the function.
@@ -141,28 +142,28 @@ export default class ConfigureAwsComponent extends Component<Args> {
     })
   );
 
-  updateIssuer = task(async (issuerConfig: IssuerConfig) => {
-    if (issuerConfig.dirty && issuerConfig.original) {
+  updateIssuer = task(async (issuerConfig: IssuerConfig): Promise<boolean> => {
+    if (issuerConfig.dirty) {
       // show modal with warning that the config will change
-      this.saveIssuerWarning = 'Issuer will be updated. Continue?';
-    } else if (issuerConfig.dirty && issuerConfig.noRead) {
-      // show modal with warning that the config *may* update existing configs
-      this.saveIssuerWarning = 'Issuer may overwrite previous value. Continue?';
+      this.saveIssuerWarning = `You are updating the global issuer config. This will overwrite Vault's current issuer ${
+        issuerConfig.noRead && 'if it exists '
+      }and may affect other configurations using this value. Continue?`;
     }
     while (this.saveIssuerWarning) {
-      if (Ember.testing) {
-        return;
+      if (!Ember.testing) {
+        await timeout(500);
       }
-      await timeout(500);
     }
     try {
       await this.store
         .adapterFor('application')
         .ajax('/v1/identity/oidc/config', 'POST', { data: { issuer: issuerConfig.issuer } });
       this.flashMessages.success(`Issuer saved successfully`);
+      return true;
     } catch (e) {
-      this.flashMessages.danger(`Issuer not saved: ${errorMessage(e, 'Check Vault logs for details.')}`);
+      this.flashMessages.danger(`Issuer was not saved: ${errorMessage(e, 'Check Vault logs for details.')}`);
       // continue without read
+      return false;
     }
   });
 

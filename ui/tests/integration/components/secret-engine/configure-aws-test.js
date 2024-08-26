@@ -20,7 +20,7 @@ import {
   fillInAwsConfig,
 } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
 
-module('Integration | Component | SecretEngine/configure-aws', function (hooks) {
+module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
@@ -36,13 +36,14 @@ module('Integration | Component | SecretEngine/configure-aws', function (hooks) 
     this.id = `aws-${this.uid}`;
     this.rootConfig = this.store.createRecord('aws/root-config');
     this.leaseConfig = this.store.createRecord('aws/lease-config');
+    this.issuer = '';
     // Add backend to the configs because it's not on the testing snapshot (would come from url)
     this.rootConfig.backend = this.leaseConfig.backend = this.id;
     this.version = this.owner.lookup('service:version');
 
     this.renderComponent = () => {
       return render(hbs`
-        <SecretEngine::ConfigureAws @rootConfig={{this.rootConfig}} @leaseConfig={{this.leaseConfig}} @backendPath={{this.id}} />
+        <SecretEngine::ConfigureAws @rootConfig={{this.rootConfig}} @leaseConfig={{this.leaseConfig}} @backendPath={{this.id}} @issuer={{this.issuer}} />
         `);
     };
   });
@@ -72,6 +73,7 @@ module('Integration | Component | SecretEngine/configure-aws', function (hooks) 
         for (const key of expectedConfigKeys('aws-lease')) {
           assert.dom(`[data-test-ttl-form-label="${key}"]`).exists(`${key} shows for Lease section.`);
         }
+        assert.dom(GENERAL.inputByAttr('issuer')).doesNotExist();
       });
 
       test('it renders wif fields when selected', async function (assert) {
@@ -219,13 +221,104 @@ module('Integration | Component | SecretEngine/configure-aws', function (hooks) 
           'Transitioned to the configuration index route.'
         );
       });
+
+      // ISSUER FIELD TESTING
+      // the other tests where issuer is not passed do not show modals, so we only need to test when the modal should show up
+      test('it shows existing issuer, shows modal when saving changes, and does not call APIs on cancel', async function (assert) {
+        this.issuer = 'http://foo.bar';
+        this.server.post('/identity/oidc/config', () => {
+          assert.notOk(true, 'request should not be made to issuer config endpoint');
+        });
+        this.server.post(configUrl('aws', this.id), () => {
+          assert.notOk(
+            true,
+            'post request was made to config/root when user canceled out of flow. test should fail.'
+          );
+        });
+        this.server.post(configUrl('aws-lease', this.id), () => {
+          assert.notOk(
+            true,
+            'post request was made to config/lease when user canceled out of flow. test should fail.'
+          );
+        });
+        await this.renderComponent();
+        await click(SES.aws.accessType('wif'));
+        assert.dom(GENERAL.inputByAttr('issuer')).hasValue(this.issuer);
+        await fillIn(GENERAL.inputByAttr('issuer'), 'http://bar.foo');
+        await click(GENERAL.saveButton);
+        assert.dom(SES.aws.issuerWarningModal).exists();
+        await click(SES.aws.issuerWarningCancel);
+        assert.dom(SES.aws.issuerWarningModal).doesNotExist();
+        assert.true(this.flashDangerSpy.notCalled, 'No danger flash messages called.');
+        assert.true(this.flashSuccessSpy.notCalled, 'No success flash messages called.');
+        assert.true(this.transitionStub.notCalled(), 'Does not redirect');
+      });
+
+      test('it shows modal when updating issuer from no read and calls correct APIs on save', async function (assert) {
+        this.issuer = 'no-read'; // this is the string returned from route when read issuer failed
+        const newIssuer = 'http://bar.foo';
+        this.server.post('/identity/oidc/config', (_, req) => {
+          const payload = JSON.parse(req.requestBody);
+          assert.deepEqual(payload, { issuer: newIssuer });
+          return overrideResponse(204);
+        });
+        this.server.post(configUrl('aws', this.id), () => {
+          assert.notOk(true, 'skips request to config/root due to no changes');
+        });
+        this.server.post(configUrl('aws-lease', this.id), () => {
+          assert.notOk(true, 'skips request to config/lease due to no changes');
+        });
+        await this.renderComponent();
+        await click(SES.aws.accessType('wif'));
+        assert.dom(GENERAL.inputByAttr('issuer')).hasValue('', 'issuer does not reflect passed value');
+        await fillIn(GENERAL.inputByAttr('issuer'), newIssuer);
+        await click(GENERAL.saveButton);
+        assert.dom(SES.aws.issuerWarningModal).exists();
+        await click(SES.aws.issuerWarningSave);
+        assert.true(this.flashDangerSpy.notCalled, 'No danger flash messages called.');
+        assert.true(
+          this.flashSuccessSpy.calledWith('Issuer was saved'),
+          'Success flash message called for issuer'
+        );
+        assert.ok(
+          this.transitionStub.calledWith('vault.cluster.secrets.backend.configuration', this.id),
+          'Transitioned to the configuration index route.'
+        );
+      });
+
+      test('shows modal when unsetting issuer, has correct payload, and shows flash message on fail', async function (assert) {
+        this.issuer = 'http://foo.bar';
+        this.server.post('/identity/oidc/config', (_, req) => {
+          const payload = JSON.parse(req.requestBody);
+          assert.deepEqual(payload, { issuer: '' }, 'correctly unsets the issuer');
+          return overrideResponse(403);
+        });
+
+        await this.renderComponent();
+        await click(SES.aws.accessType('wif'));
+        assert.dom(GENERAL.inputByAttr('issuer')).hasValue(this.issuer);
+        await fillIn(GENERAL.inputByAttr('issuer'), '');
+        await fillIn(GENERAL.inputByAttr('roleArn'), 'some-other-value');
+        await click(GENERAL.saveButton);
+        assert.dom(SES.aws.issuerWarningModal).exists();
+        await click(SES.aws.issuerWarningSave);
+        assert.true(
+          this.flashDangerSpy.calledWith('Issuer was not saved'),
+          'shows danger flash for issuer save'
+        );
+        assert.true(this.flashSuccessSpy.notCalled, 'No success flash messages called.');
+        assert.ok(
+          this.transitionStub.calledWith('vault.cluster.secrets.backend.configuration', this.id),
+          'Transitioned to the configuration index route.'
+        );
+      });
     });
     module('isCommunity', function (hooks) {
       hooks.beforeEach(function () {
         this.version.type = 'community';
       });
       test('it renders fields', async function (assert) {
-        assert.expect(12);
+        assert.expect(13);
         await this.renderComponent();
         assert.dom(SES.aws.rootForm).exists('it lands on the aws root configuration form.');
         assert.dom(SES.aws.accessTitle).exists('Access section is rendered');
@@ -245,6 +338,7 @@ module('Integration | Component | SecretEngine/configure-aws', function (hooks) 
         for (const key of expectedConfigKeys('aws-lease')) {
           assert.dom(`[data-test-ttl-form-label="${key}"]`).exists(`${key} shows for Lease section.`);
         }
+        assert.dom(GENERAL.inputByAttr('issuer')).doesNotExist();
       });
     });
   });

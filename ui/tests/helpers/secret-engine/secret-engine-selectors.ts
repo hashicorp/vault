@@ -32,8 +32,8 @@ export const SECRET_ENGINE_SELECTORS = {
     accessTypeSubtext: '[data-test-access-type-subtext]',
     accessType: (type: string) => `[data-test-access-type="${type}"]`,
     issuerWarningModal: '[data-test-issuer-warning]',
-    issuerWarningSave: '[data-test-save-issuer]',
-    issuerWarningCancel: '[data-test-cancel-issuer]',
+    issuerWarningSave: '[data-test-issuer-save]',
+    issuerWarningCancel: '[data-test-issuer-cancel]',
   },
   ssh: {
     configureForm: '[data-test-configure-form]',

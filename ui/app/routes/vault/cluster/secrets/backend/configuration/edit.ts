@@ -69,6 +69,7 @@ export default class SecretsBackendConfigurationEdit extends Route {
       }
     }
     // if the type is AWS and it's enterprise, we also fetch the issuer
+    // from a global endpoint which has no associated model/adapter
     if (type === 'aws' && this.version.isEnterprise) {
       try {
         const adapter = this.store.adapterFor('application');
