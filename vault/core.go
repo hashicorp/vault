@@ -28,6 +28,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	lru "github.com/hashicorp/golang-lru/v2"
+
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
@@ -628,7 +630,7 @@ type Core struct {
 	// Stop channel for raft TLS rotations
 	raftTLSRotationStopCh chan struct{}
 	// Stores the pending peers we are waiting to give answers
-	pendingRaftPeers *sync.Map
+	pendingRaftPeers *lru.Cache[string, *raftBootstrapChallenge]
 
 	// rawConfig stores the config as-is from the provided server configuration.
 	rawConfig *atomic.Value

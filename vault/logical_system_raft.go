@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -24,6 +25,16 @@ import (
 	"github.com/hashicorp/vault/vault/seal"
 	"github.com/mitchellh/mapstructure"
 )
+
+const (
+	maxInFlightRaftChallenges = 100
+	maxInFlightChallengeDelay = 100 * time.Millisecond
+)
+
+type raftBootstrapChallenge struct {
+	answer    []byte // the random answer
+	challenge []byte // the Sealed answer
+}
 
 // raftStoragePaths returns paths for use when raft is the storage mechanism.
 func (b *SystemBackend) raftStoragePaths() []*framework.Path {
@@ -280,25 +291,33 @@ func (b *SystemBackend) handleRaftBootstrapChallengeWrite(makeSealer func() snap
 		}
 
 		var answer []byte
-		answerRaw, ok := b.Core.pendingRaftPeers.Load(serverID)
+		challenge, ok := b.Core.pendingRaftPeers.Get(serverID)
 		if !ok {
 			var err error
 			answer, err = uuid.GenerateRandomBytes(16)
 			if err != nil {
 				return nil, err
 			}
-			b.Core.pendingRaftPeers.Store(serverID, answer)
-		} else {
-			answer = answerRaw.([]byte)
-		}
 
-		sealer := makeSealer()
-		if sealer == nil {
-			return nil, errors.New("core has no seal Access to write raft bootstrap challenge")
-		}
-		protoBlob, err := sealer.Seal(ctx, answer)
-		if err != nil {
-			return nil, err
+			sealer := makeSealer()
+			if sealer == nil {
+				return nil, errors.New("core has no seal Access to write raft bootstrap challenge")
+			}
+			protoBlob, err := sealer.Seal(ctx, answer)
+			if err != nil {
+				return nil, err
+			}
+
+			if b.Core.pendingRaftPeers.Len() > maxInFlightRaftChallenges {
+				// 429 with delay
+				time.Sleep(maxInFlightChallengeDelay)
+				return logical.RespondWithStatusCode(logical.ErrorResponse("too many raft challenges in flight"), req, http.StatusTooManyRequests)
+			}
+
+			b.Core.pendingRaftPeers.Add(serverID, &raftBootstrapChallenge{
+				answer:    answer,
+				challenge: protoBlob,
+			})
 		}
 
 		sealConfig, err := b.Core.seal.BarrierConfig(ctx)
@@ -308,7 +327,7 @@ func (b *SystemBackend) handleRaftBootstrapChallengeWrite(makeSealer func() snap
 
 		return &logical.Response{
 			Data: map[string]interface{}{
-				"challenge":   base64.StdEncoding.EncodeToString(protoBlob),
+				"challenge":   base64.StdEncoding.EncodeToString(challenge.challenge),
 				"seal_config": sealConfig,
 			},
 		}, nil
@@ -342,14 +361,14 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 			return logical.ErrorResponse("could not base64 decode answer"), logical.ErrInvalidRequest
 		}
 
-		expectedAnswerRaw, ok := b.Core.pendingRaftPeers.Load(serverID)
+		expectedChallenge, ok := b.Core.pendingRaftPeers.Get(serverID)
 		if !ok {
 			return logical.ErrorResponse("no expected answer for the server id provided"), logical.ErrInvalidRequest
 		}
 
-		b.Core.pendingRaftPeers.Delete(serverID)
+		b.Core.pendingRaftPeers.Remove(serverID)
 
-		if subtle.ConstantTimeCompare(answer, expectedAnswerRaw.([]byte)) == 0 {
+		if subtle.ConstantTimeCompare(answer, expectedChallenge.answer) == 0 {
 			return logical.ErrorResponse("invalid answer given"), logical.ErrInvalidRequest
 		}
 

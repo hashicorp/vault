@@ -25,6 +25,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/go-uuid"
 	goversion "github.com/hashicorp/go-version"
+	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/hashicorp/vault/api"
 	httpPriority "github.com/hashicorp/vault/http/priority"
 	"github.com/hashicorp/vault/physical/raft"
@@ -314,7 +315,11 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 
 	c.logger.Info("starting raft active node")
 
-	c.pendingRaftPeers = &sync.Map{}
+	var err error
+	c.pendingRaftPeers, err = lru.New[string, *raftBootstrapChallenge](maxInFlightRaftChallenges)
+	if err != nil {
+		return err
+	}
 
 	// Reload the raft TLS keys to ensure we are using the latest version.
 	if err := c.checkRaftTLSKeyUpgrades(ctx); err != nil {
