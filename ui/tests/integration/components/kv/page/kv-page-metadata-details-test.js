@@ -12,6 +12,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { kvDataPath } from 'vault/utils/kv-path';
 import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import { baseSetup, metadataModel } from 'vault/tests/helpers/kv/kv-run-commands';
+import { dateFormat } from 'core/helpers/date-format';
 
 module('Integration | Component | kv-v2 | Page::Secret::Metadata::Details', function (hooks) {
   setupRenderingTest(hooks);
@@ -63,9 +64,10 @@ module('Integration | Component | kv-v2 | Page::Secret::Metadata::Details', func
     assert.dom(PAGE.metadata.editBtn).exists();
 
     // Metadata details
+    const expectedTime = dateFormat([this.metadata.updatedTime, 'MMM d, yyyy hh:mm aa'], {});
     assert
       .dom(PAGE.infoRowValue('Last updated'))
-      .hasTextContaining('Mar', 'Displays updated date with formatting');
+      .hasTextContaining(expectedTime, 'Displays updated date with formatting');
     assert.dom(PAGE.infoRowValue('Maximum versions')).hasText('15');
     assert.dom(PAGE.infoRowValue('Check-and-Set required')).hasText('Yes');
     assert
