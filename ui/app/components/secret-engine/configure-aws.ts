@@ -100,7 +100,8 @@ export default class ConfigureAwsComponent extends Component<Args> {
     this.disableAccessType = wifAttributesSet || iamAttributesSet;
   }
 
-  save = task(
+  // validate inputs and make sure there are things to save
+  submitForm = task(
     waitFor(async (event: Event) => {
       event.preventDefault();
       this.resetErrors();
@@ -109,11 +110,19 @@ export default class ConfigureAwsComponent extends Component<Args> {
       const isValid = this.validate(leaseConfig);
       if (!isValid) return;
 
+      if (this.version.isEnterprise && this.issuerConfig.dirty) {
+        // show modal with warning that the config will change
+        // if the modal is shown, the user has to click confirm to continue save
+        this.saveIssuerWarning = `You are updating the global issuer config. This will overwrite Vault's current issuer ${
+          this.issuerConfig.noRead && 'if it exists '
+        }and may affect other configurations using this value. Continue?`;
+        return;
+      }
+
       // Check if any of the models' attributes have changed.
       // If no changes to either model, transition and notify user.
       // If changes to either model, save the model(s) that changed and notify user.
       // Note: "backend" dirties model state so explicity ignore it here.
-
       const leaseAttrChanged =
         Object.keys(leaseConfig.changedAttributes()).filter((item) => item !== 'backend').length > 0;
       const rootAttrChanged =
@@ -122,18 +131,43 @@ export default class ConfigureAwsComponent extends Component<Args> {
       if (!leaseAttrChanged && !rootAttrChanged && !this.issuerConfig.dirty) {
         this.flashMessages.info('No changes detected.');
         this.transition();
+        return;
       }
+      // only perform save if there are things to save
+      await this.save.perform();
+    })
+  );
 
+  save = task(
+    waitFor(async () => {
+      // when we get here, the models have already been validated so just continue with save
+      const { leaseConfig, rootConfig } = this.args;
+      // reset modal if it was up
+      this.saveIssuerWarning = '';
+
+      // Check if any of the models' attributes have changed.
+      // If no changes to either model, transition and notify user.
+      // If changes to either model, save the model(s) that changed and notify user.
+      // Note: "backend" dirties model state so explicity ignore it here.
+      const leaseAttrChanged =
+        Object.keys(leaseConfig.changedAttributes()).filter((item) => item !== 'backend').length > 0;
+      const rootAttrChanged =
+        Object.keys(rootConfig.changedAttributes()).filter((item) => item !== 'backend').length > 0;
+
+      if (!leaseAttrChanged && !rootAttrChanged && !this.issuerConfig.dirty) {
+        this.flashMessages.info('No changes detected.');
+        this.transition();
+        return;
+      }
       // Attempt saves of changed models. If at least one of them succeed, transition
       const rootSaved = rootAttrChanged ? await this.saveRoot() : false;
       const leaseSaved = leaseAttrChanged ? await this.saveLease() : false;
-      // do issuer save and side effects if enterprise and isser updated
-      const issuerSucceed =
+      const issuerSaved =
         this.version.isEnterprise && this.issuerConfig.dirty
-          ? await this.updateIssuer.perform(this.issuerConfig)
+          ? await this.updateIssuer(this.issuerConfig)
           : false;
 
-      if (rootSaved || leaseSaved || issuerSucceed) {
+      if (rootSaved || leaseSaved || issuerSaved) {
         this.transition();
       } else {
         // otherwise there was a failure and we should not transition and exit the function.
@@ -142,18 +176,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
     })
   );
 
-  updateIssuer = task(async (issuerConfig: IssuerConfig): Promise<boolean> => {
-    if (issuerConfig.dirty) {
-      // show modal with warning that the config will change
-      this.saveIssuerWarning = `You are updating the global issuer config. This will overwrite Vault's current issuer ${
-        issuerConfig.noRead && 'if it exists '
-      }and may affect other configurations using this value. Continue?`;
-    }
-    while (this.saveIssuerWarning) {
-      if (!Ember.testing) {
-        await timeout(500);
-      }
-    }
+  async updateIssuer(issuerConfig: IssuerConfig): Promise<boolean> {
     try {
       await this.store
         .adapterFor('application')
@@ -162,10 +185,9 @@ export default class ConfigureAwsComponent extends Component<Args> {
       return true;
     } catch (e) {
       this.flashMessages.danger(`Issuer was not saved: ${errorMessage(e, 'Check Vault logs for details.')}`);
-      // continue without read
       return false;
     }
-  });
+  }
 
   async saveRoot(): Promise<boolean> {
     const { backendPath, rootConfig } = this.args;
@@ -223,11 +245,6 @@ export default class ConfigureAwsComponent extends Component<Args> {
   unloadModels() {
     this.args.rootConfig.unloadRecord();
     this.args.leaseConfig.unloadRecord();
-  }
-
-  @action cancelSave() {
-    this.updateIssuer.cancelAll();
-    this.saveIssuerWarning = '';
   }
 
   @action

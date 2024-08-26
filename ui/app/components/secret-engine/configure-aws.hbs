@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<form {{on "submit" (perform this.save)}} aria-label="save aws creds" data-test-root-form>
+<form {{on "submit" (perform this.submitForm)}} aria-label="save aws creds" data-test-root-form>
   <div class="box is-fullwidth is-shadowless is-marginless">
     <NamespaceReminder @mode="save" @noun="configuration" />
     <MessageError @errorMessage={{this.errorMessageRoot}} />
@@ -63,6 +63,7 @@
           options=(hash
             placeholder="https://vault.prod/v1/identity/oidc"
             subText="The Issuer URL to be used in configuring Vault as an identity provider in AWS. If not set, Vault's default issuer will be used."
+            docLink="/vault/api-docs/secret/identity/tokens#configure-the-identity-tokens-backend"
           )
         }}
       />
@@ -123,7 +124,7 @@
 </form>
 
 {{#if this.saveIssuerWarning}}
-  <Hds::Modal @color="warning" @onClose={{this.cancelSave}} data-test-issuer-warning as |M|>
+  <Hds::Modal @color="warning" @onClose={{action (mut this.saveIssuerWarning) ""}} data-test-issuer-warning as |M|>
     <M.Header @icon="alert-circle">
       Are you sure?
     </M.Header>
@@ -134,8 +135,13 @@
     </M.Body>
     <M.Footer>
       <Hds::ButtonSet>
-        <Hds::Button @text="Continue" {{on "click" (action (mut this.saveIssuerWarning) "")}} data-test-issuer-save />
-        <Hds::Button @text="Cancel" @color="secondary" {{on "click" this.cancelSave}} data-test-issuer-cancel />
+        <Hds::Button @text="Continue" {{on "click" (perform this.save)}} data-test-issuer-save />
+        <Hds::Button
+          @text="Cancel"
+          @color="secondary"
+          {{on "click" (action (mut this.saveIssuerWarning) "")}}
+          data-test-issuer-cancel
+        />
       </Hds::ButtonSet>
     </M.Footer>
   </Hds::Modal>
