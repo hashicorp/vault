@@ -14,6 +14,7 @@
           @icon="docs-link"
           @iconPosition="trailing"
           @href={{doc-link "/vault/api-docs/secret/kv/kv-v2#read-secret-subkeys"}}
+          @isHrefExternal={{true}}
         >API documentation</Hds::Link::Inline>.
       {{else}}
         The table is displaying the top level subkeys. Toggle on the JSON view to see the full depth.
@@ -36,6 +37,7 @@
         <Hds::Link::Standalone
           @text="Patch secret"
           @route="secret.patch"
+          @models={{array @backend @path}}
           @icon="arrow-right"
           @iconPosition="trailing"
           data-test-action-text="Patch secret"
