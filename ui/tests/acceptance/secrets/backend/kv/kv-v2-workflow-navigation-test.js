@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { v4 as uuidv4 } from 'uuid';
-import { click, currentRouteName, currentURL, typeIn, visit, waitUntil } from '@ember/test-helpers';
+import { click, currentRouteName, currentURL, findAll, typeIn, visit, waitUntil } from '@ember/test-helpers';
 import { setupApplicationTest } from 'vault/tests/helpers';
 import authPage from 'vault/tests/pages/auth';
 import {
@@ -38,7 +38,7 @@ const navToBackend = async (backend) => {
 };
 const assertCorrectBreadcrumbs = (assert, expected) => {
   assert.dom(PAGE.breadcrumbs).hasText(expected.join(' '));
-  const breadcrumbs = document.querySelectorAll(PAGE.breadcrumb);
+  const breadcrumbs = findAll(PAGE.breadcrumb);
   expected.forEach((text, idx) => {
     assert.dom(breadcrumbs[idx]).hasText(text, `position ${idx} breadcrumb includes text ${text}`);
   });
@@ -107,13 +107,21 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       return;
     });
     test('empty backend - breadcrumbs, title, tabs, emptyState (a)', async function (assert) {
-      assert.expect(15);
+      assert.expect(23);
       const backend = this.emptyBackend;
       await navToBackend(backend);
 
       // URL correct
       assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list`, 'lands on secrets list page');
+      // CONFIGURATION TAB
+      await click(PAGE.secretTab('Configuration'));
+      assertCorrectBreadcrumbs(assert, ['Secrets', backend, 'Configuration']);
+      assert.dom(PAGE.secretTab('Configuration')).hasClass('active');
+      assert.dom(PAGE.secretTab('Configuration')).hasText('Configuration');
+      assert.dom(PAGE.secretTab('Secrets')).hasText('Secrets');
+      assert.dom(PAGE.secretTab('Secrets')).doesNotHaveClass('active');
       // SECRETS TAB
+      await click(PAGE.secretTab('Secrets'));
       assertCorrectBreadcrumbs(assert, ['Secrets', backend]);
       assert.dom(PAGE.title).hasText(`${backend} version 2`);
       assert.dom(PAGE.secretTab('Secrets')).hasText('Secrets');
@@ -140,14 +148,6 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         currentURL().startsWith(`/vault/secrets/${backend}/kv/list`),
         `url includes /vault/secrets/${backend}/kv/list`
       );
-
-      // CONFIGURATION TAB
-      await click(PAGE.secretTab('Configuration'));
-      assertCorrectBreadcrumbs(assert, ['Secrets', backend, 'Configuration']);
-      assert.dom(PAGE.secretTab('Configuration')).hasClass('active');
-      assert.dom(PAGE.secretTab('Configuration')).hasText('Configuration');
-      assert.dom(PAGE.secretTab('Secrets')).hasText('Secrets');
-      assert.dom(PAGE.secretTab('Secrets')).doesNotHaveClass('active');
     });
     test('can access nested secret (a)', async function (assert) {
       assert.expect(46);
@@ -222,28 +222,24 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       // Reported bug, backported fix https://github.com/hashicorp/vault/pull/24281
       // list for directory
       await visit(`/vault/secrets/${backend}/list/app/`);
-      assert.strictEqual(
-        currentURL(),
-        `/vault/secrets/${backend}/kv/list/app/`,
-        `navigated to ${currentURL()}`
-      );
+      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list/app/`, `navigates to list`);
       // show for secret
       await visit(`/vault/secrets/${backend}/show/app/nested/secret`);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/app%2Fnested%2Fsecret`,
-        `navigated to ${currentURL()}`
+        `navigates to overview`
       );
       // edit for secret
       await visit(`/vault/secrets/${backend}/edit/app/nested/secret`);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/app%2Fnested%2Fsecret`,
-        `navigated to ${currentURL()}`
+        `/vault/secrets/${backend}/kv/app%2Fnested%2Fsecret/details/edit?version=1`,
+        `navigates to edit`
       );
     });
     test('versioned secret nav, tabs (a)', async function (assert) {
-      assert.expect(48);
+      assert.expect(27);
       const backend = this.backend;
       await navToBackend(backend);
       await click(PAGE.list.item(secretPath));
