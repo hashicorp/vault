@@ -96,7 +96,7 @@ server:
 
   Deployed `StatefulSets` cannot have certain attributes modified after their initial deployment.  Therefore, the `StatefulSet` deployment must be entirely replaced.
 
-  Vault servers using Consul storage are by default stateless. Unless explicitly configured otherwise, the Vault server `StatefulSet` does not create any Persistent Volume Claims (PVC) or other artifacts.  Vault's index holds it's state, which is entirely stored in the Consul server `StatefulSet`'s persistent volumes.
+ Vault servers using Consul storage are by default stateless. Unless explicitly configured, the Vault server `StatefulSet` does not create any Persistent Volume Claims (PVC) or other artifacts.  Vault's index holds its state, which is entirely stored in the Consul server `StatefulSet`'s persistent volumes.
 
   <Warning title='Caution'>
 
@@ -216,12 +216,14 @@ server:
   $ helm install vault hashicorp/vault -f vault-migration-values.yml
   ```
   
-1. Review migration logs and unseal Vault
+1. Review the migration logs.
   
   ```shell-session
   $ kubectl logs vault-0 -c vault-server-migration
   ```
   
+1. Unseal Vault.
+
   ```shell-session
   $ kubectl exec -it vault-0 -- vault operator unseal
   Key                     Value
@@ -296,11 +298,13 @@ server:
   $ helm upgrade vault hashicorp/vault -f vault-raft-values.yml
   ```
   
-1. Unseal Vault and confirm the Raft peers have formed a quorum.
+1. Unseal Vault.
 
   ```shell-session
   $ for i in {1..4} ; do kubectl exec -it vault-0 -- vault operator unseal ; done
   ```
+
+1. Confirm the Raft peers have formed a quorum.
 
   ```shell-session
   $ kubectl exec -it vault-0 -- vault operator raft list-peers
