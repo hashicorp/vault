@@ -13,6 +13,7 @@ import { action } from '@ember/object';
 
 import type Store from '@ember-data/store';
 import type SecretEngineModel from 'vault/models/secret-engine';
+import type VersionService from 'vault/services/version';
 
 // This route file is reused for all configurable secret engines.
 // It generates config models based on the engine type.
@@ -25,6 +26,7 @@ const CONFIG_ADAPTERS_PATHS: Record<string, string[]> = {
 
 export default class SecretsBackendConfigurationEdit extends Route {
   @service declare readonly store: Store;
+  @service declare readonly version: VersionService;
 
   async model() {
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
@@ -64,6 +66,16 @@ export default class SecretsBackendConfigurationEdit extends Route {
         } else {
           throw e;
         }
+      }
+    }
+    // if the type is AWS and it's enterprise, we also fetch the issuer
+    if (type === 'aws' && this.version.isEnterprise) {
+      try {
+        const adapter = this.store.adapterFor('application');
+        const response = await adapter.ajax('/v1/identity/oidc/config', 'GET');
+        model['issuer'] = response.issuer || 'foo-bar';
+      } catch (e) {
+        model['issuer'] = 'no-read';
       }
     }
     return model;
