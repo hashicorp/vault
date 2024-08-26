@@ -26,6 +26,7 @@ import {
 import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import { setupControlGroup, grantAccess } from 'vault/tests/helpers/control-groups';
 import { humanize } from 'vault/helpers/humanize';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const secretPath = `my-#:$=?-secret`;
 // This doesn't encode in a normal way, so hardcoding it here until we sort that out
@@ -365,6 +366,14 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assertDetailTabs(assert, 'Overview');
       assertTabHrefs(assert, 'Overview');
       assert.dom(PAGE.title).hasText(secretPath, 'correct page title for secret overview');
+      await click(GENERAL.overviewCard.actionText('Patch secret'));
+      assert.strictEqual(
+        currentRouteName(),
+        'vault.cluster.secrets.backend.kv.secret.patch',
+        'navs to patch'
+      );
+      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'Patch']);
+      await click(FORM.cancelBtn);
 
       // secret tab
       await click(PAGE.secretTab('Secret'));
@@ -829,7 +838,6 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.expect(15);
       const backend = this.emptyBackend;
       await navToBackend(backend);
-
       // URL correct
       assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list`, 'lands on secrets list page');
       // Breadcrumbs correct

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-const root = ['create', 'read', 'update', 'delete', 'list'];
+const root = ['create', 'read', 'update', 'delete', 'list', 'patch'];
 
 // returns a string with each capability wrapped in double quotes => ["create", "read"]
 const format = (array) => array.map((c) => `"${c}"`).join(', ');
