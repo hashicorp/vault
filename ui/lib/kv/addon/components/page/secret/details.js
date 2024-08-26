@@ -123,9 +123,8 @@ export default class KvSecretDetails extends Component {
 
   refreshRoute() {
     // transition to the parent secret route to refresh both metadata and data models
-    this.router.transitionTo('vault.cluster.secrets.backend.kv.secret', {
-      queryParams: { version: this.version },
-    });
+    // TODO test/update this when model moves to details route
+    this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.index');
   }
 
   get version() {

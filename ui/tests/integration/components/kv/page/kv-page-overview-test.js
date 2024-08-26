@@ -46,7 +46,6 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
     };
     this.canReadMetadata = true;
     this.canUpdateSecret = true;
-    this.secretState = 'created';
 
     this.format = (time) => dateFormat([time, 'MMM d yyyy, h:mm:ss aa'], {});
     this.renderComponent = async () => {
@@ -59,7 +58,6 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
           @canUpdateSecret={{this.canUpdateSecret}}
           @metadata={{this.metadata}}
           @path={{this.path}}
-          @secretState={{this.secretState}}
           @subkeys={{this.subkeys}}
         />`,
         { owner: this.engine }
@@ -84,7 +82,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
 
     test('it renders with full permissions', async function (assert) {
       await this.renderComponent();
-      const fromNow = dateFromNow([this.metadata.createdTime]); // uses date-fns so can't stub timestamp util
+      const fromNow = dateFromNow([this.metadata.updatedTime]); // uses date-fns so can't stub timestamp util
       assert.dom(`${overviewCard.container('Current version')} .hds-badge`).doesNotExist();
       assert
         .dom(overviewCard.container('Current version'))
@@ -94,8 +92,8 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
       assert
         .dom(overviewCard.container('Secret age'))
         .hasText(
-          `Secret age View metadata Time since last update at ${this.format(
-            this.metadata.createdTime
+          `Secret age View metadata Current secret version age. Last updated on ${this.format(
+            this.metadata.updatedTime
           )}. ${fromNow}`
         );
       assert
@@ -138,7 +136,11 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
         .hasText(`Current version Create new The current version of this secret. ${subkeyMeta.version}`);
       assert
         .dom(overviewCard.container('Secret age'))
-        .hasText(`Secret age Time since last update at ${this.format(subkeyMeta.created_time)}. ${fromNow}`);
+        .hasText(
+          `Secret age Current secret version age. Last updated on ${this.format(
+            subkeyMeta.created_time
+          )}. ${fromNow}`
+        );
       assert.dom(`${overviewCard.container('Secret age')} a`).doesNotExist('metadata link does not render');
       assert
         .dom(overviewCard.container('Paths'))
@@ -157,8 +159,8 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
     test('it renders with no subkeys permissions', async function (assert) {
       this.subkeys = null;
       await this.renderComponent();
-      const fromNow = dateFromNow([this.metadata.createdTime]); // uses date-fns so can't stub timestamp util
-      const expectedTime = this.format(this.metadata.createdTime);
+      const fromNow = dateFromNow([this.metadata.updatedTime]); // uses date-fns so can't stub timestamp util
+      const expectedTime = this.format(this.metadata.updatedTime);
       assert
         .dom(overviewCard.container('Current version'))
         .hasText(
@@ -166,7 +168,9 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
         );
       assert
         .dom(overviewCard.container('Secret age'))
-        .hasText(`Secret age View metadata Time since last update at ${expectedTime}. ${fromNow}`);
+        .hasText(
+          `Secret age View metadata Current secret version age. Last updated on ${expectedTime}. ${fromNow}`
+        );
       assert
         .dom(overviewCard.container('Paths'))
         .hasText(
@@ -192,7 +196,6 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
 
   module('deleted version', function (hooks) {
     hooks.beforeEach(async function () {
-      this.secretState = 'deleted';
       // subkeys is null but metadata still has data
       this.subkeys = {
         subkeys: null,
@@ -268,7 +271,6 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
 
   module('destroyed version', function (hooks) {
     hooks.beforeEach(async function () {
-      this.secretState = 'destroyed';
       // subkeys is null but metadata still has data
       this.subkeys = {
         subkeys: null,

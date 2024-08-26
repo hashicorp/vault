@@ -28,6 +28,9 @@ export const PAGE = {
   backends: {
     link: (backend) => `[data-test-secrets-backend-link="${backend}"]`,
   },
+  overview: {
+    action: (label) => `[data-test-overview-action="${label}"]`,
+  },
   metadata: {
     editBtn: '[data-test-edit-metadata]',
     addCustomMetadataBtn: '[data-test-add-custom-metadata]',
@@ -61,10 +64,9 @@ export const PAGE = {
     item: (secret) => (!secret ? '[data-test-list-item]' : `[data-test-list-item="${secret}"]`),
     filter: `[data-test-kv-list-filter]`,
     listMenuDelete: `[data-test-popup-metadata-delete]`,
-    listMenuCreate: `[data-test-popup-create-new-version]`,
     overviewCard: '[data-test-overview-card-container="View secret"]',
     overviewInput: '[data-test-view-secret] input',
-    overviewButton: '[data-test-get-secret-detail]',
+    overviewButton: '[data-test-submit-button]',
     pagination: '[data-test-pagination]',
     paginationInfo: '.hds-pagination-info',
     paginationNext: '.hds-pagination-nav__arrow--direction-next',
