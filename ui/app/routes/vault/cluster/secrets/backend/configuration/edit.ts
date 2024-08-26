@@ -28,8 +28,8 @@ export default class SecretsBackendConfigurationEdit extends Route {
 
   async model() {
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
-    const secretEngineRecord = this.modelFor('vault.cluster.secrets.backend') as { type: SecretEngineModel };
-    const type = secretEngineRecord.type as string;
+    const secretEngineRecord = this.modelFor('vault.cluster.secrets.backend') as SecretEngineModel;
+    const type = secretEngineRecord.type;
 
     // if the engine type is not configurable, return a 404.
     if (!secretEngineRecord || !CONFIGURABLE_SECRET_ENGINES.includes(type)) {
