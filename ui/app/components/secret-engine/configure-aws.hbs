@@ -134,8 +134,8 @@
     </M.Body>
     <M.Footer>
       <Hds::ButtonSet>
-        <Hds::Button @text="Continue" {{on "click" (action (mut this.saveIssuerWarning) false)}} data-test-save-issuer />
-        <Hds::Button @text="Cancel" @color="secondary" {{on "click" this.cancelSave}} data-test-cancel />
+        <Hds::Button @text="Continue" {{on "click" (action (mut this.saveIssuerWarning) "")}} data-test-issuer-save />
+        <Hds::Button @text="Cancel" @color="secondary" {{on "click" this.cancelSave}} data-test-issuer-cancel />
       </Hds::ButtonSet>
     </M.Footer>
   </Hds::Modal>

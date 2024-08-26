@@ -51,7 +51,7 @@ class IssuerConfig {
   original = '';
   @tracked issuer = '';
   @tracked noRead = false;
-  init(initialIssuer: string | undefined) {
+  constructor(initialIssuer: string | undefined) {
     if (initialIssuer === 'no-read') {
       // if we couldn't read it, this string comes back from the route model
       this.noRead = true;
@@ -80,15 +80,13 @@ export default class ConfigureAwsComponent extends Component<Args> {
   @tracked invalidFormAlert: string | null = null;
   @tracked modelValidationsLease: ValidationMap | null = null;
   @tracked accessType = 'iam';
-  @tracked issuerConfig = new IssuerConfig();
+  @tracked issuerConfig = new IssuerConfig(this.args.issuer);
   @tracked saveIssuerWarning = '';
 
   disableAccessType = false;
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
-
-    this.issuerConfig.init(this.args.issuer);
 
     // the following checks are only relevant to enterprise users and those editing an existing root configuration.
     if (this.version.isCommunity || this.args.rootConfig.isNew) return;
@@ -147,31 +145,24 @@ export default class ConfigureAwsComponent extends Component<Args> {
     if (issuerConfig.dirty && issuerConfig.original) {
       // show modal with warning that the config will change
       this.saveIssuerWarning = 'Issuer will be updated. Continue?';
-      while (this.saveIssuerWarning) {
-        if (Ember.testing) {
-          return;
-        }
-        await timeout(500);
-      }
     } else if (issuerConfig.dirty && issuerConfig.noRead) {
       // show modal with warning that the config *may* update existing configs
       this.saveIssuerWarning = 'Issuer may overwrite previous value. Continue?';
-      while (this.saveIssuerWarning) {
-        if (Ember.testing) {
-          return;
-        }
-        await timeout(500);
+    }
+    while (this.saveIssuerWarning) {
+      if (Ember.testing) {
+        return;
       }
+      await timeout(500);
     }
     try {
-      return this.store
+      await this.store
         .adapterFor('application')
         .ajax('/v1/identity/oidc/config', 'POST', { data: { issuer: issuerConfig.issuer } });
       this.flashMessages.success(`Issuer saved successfully`);
     } catch (e) {
       this.flashMessages.danger(`Issuer not saved: ${errorMessage(e, 'Check Vault logs for details.')}`);
       // continue without read
-      return;
     }
   });
 
