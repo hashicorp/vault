@@ -15,7 +15,7 @@ import errorMessage from 'vault/utils/error-message';
 import type LeaseConfigModel from 'vault/models/aws/lease-config';
 import type RootConfigModel from 'vault/models/aws/root-config';
 import type Router from '@ember/routing/router';
-import type Store from '@ember-data/store';
+import type StoreService from 'vault/services/store';
 import type VersionService from 'vault/services/version';
 import type FlashMessageService from 'vault/services/flash-messages';
 
@@ -43,11 +43,34 @@ interface Args {
   leaseConfig: LeaseConfigModel;
   rootConfig: RootConfigModel;
   backendPath: string;
+  issuer?: string;
+}
+
+class IssuerConfig {
+  original = '';
+  @tracked issuer = '';
+  @tracked noRead = false;
+  init(initialIssuer: string | undefined) {
+    if (initialIssuer === 'no-read') {
+      // if we couldn't read it, this string comes back from the route model
+      this.noRead = true;
+    } else if (initialIssuer) {
+      this.original = initialIssuer;
+      this.issuer = initialIssuer;
+    }
+  }
+  // this is to make it work with FormField
+  @action set(_: string, val: string) {
+    this.issuer = val;
+  }
+  get dirty() {
+    return this.issuer !== this.original;
+  }
 }
 
 export default class ConfigureAwsComponent extends Component<Args> {
   @service declare readonly router: Router;
-  @service declare readonly store: Store;
+  @service declare readonly store: StoreService;
   @service declare readonly version: VersionService;
   @service declare readonly flashMessages: FlashMessageService;
 
@@ -56,10 +79,15 @@ export default class ConfigureAwsComponent extends Component<Args> {
   @tracked invalidFormAlert: string | null = null;
   @tracked modelValidationsLease: ValidationMap | null = null;
   @tracked accessType = 'iam';
+  @tracked issuerConfig = new IssuerConfig();
+
   disableAccessType = false;
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
+
+    this.issuerConfig.init(this.args.issuer);
+
     // the following checks are only relevant to enterprise users and those editing an existing root configuration.
     if (this.version.isCommunity || this.args.rootConfig.isNew) return;
 

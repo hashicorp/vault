@@ -55,6 +55,17 @@
       </fieldset>
     {{/if}}
     {{#if (eq this.accessType "wif")}}
+      <FormField
+        @model={{this.issuerConfig}}
+        @attr={{hash
+          name="issuer"
+          type="string"
+          options=(hash
+            placeholder="https://vault.prod/v1/identity/oidc"
+            subText="The Issuer URL to be used in configuring Vault as an identity provider in AWS. If not set, Vault's default issuer will be used."
+          )
+        }}
+      />
       <FormFieldGroups
         @model={{@rootConfig}}
         @mode={{if @rootConfig.isNew "create" "edit"}}
