@@ -6,6 +6,7 @@
 import AdapterError from '@ember-data/adapter/error';
 import { set } from '@ember/object';
 import Route from '@ember/routing/route';
+import type Controller from '@ember/controller';
 import { service } from '@ember/service';
 import { CONFIGURABLE_SECRET_ENGINES } from 'vault/helpers/mountable-secret-engines';
 import errorMessage from 'vault/utils/error-message';
@@ -13,6 +14,15 @@ import { action } from '@ember/object';
 
 import type Store from '@ember-data/store';
 import type SecretEngineModel from 'vault/models/secret-engine';
+import type Transition from '@ember/routing/transition';
+import type { Breadcrumb } from 'vault/vault/app-types';
+
+interface SecretsConfigurationEditController extends Controller {
+  breadcrumbs: Array<Breadcrumb>;
+  model: Record<string, string>;
+  type: string;
+  id: string;
+}
 
 // This route file is reused for all configurable secret engines.
 // It generates config models based on the engine type.
@@ -28,8 +38,8 @@ export default class SecretsBackendConfigurationEdit extends Route {
 
   async model() {
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
-    const secretEngineRecord = this.modelFor('vault.cluster.secrets.backend') as { type: SecretEngineModel };
-    const type = secretEngineRecord.type as string;
+    const secretEngineRecord = this.modelFor('vault.cluster.secrets.backend') as SecretEngineModel;
+    const type = secretEngineRecord.type;
 
     // if the engine type is not configurable, return a 404.
     if (!secretEngineRecord || !CONFIGURABLE_SECRET_ENGINES.includes(type)) {
@@ -73,5 +83,22 @@ export default class SecretsBackendConfigurationEdit extends Route {
   willTransition() {
     // catch the transition and refresh model so the route shows the most recent model data.
     this.refresh();
+  }
+
+  setupController(
+    controller: SecretsConfigurationEditController,
+    resolvedModel: { backend: string; type: string; id: string },
+    transition: Transition
+  ) {
+    super.setupController(controller, resolvedModel, transition);
+    const routeStub = 'vault.cluster.secrets.backend';
+    const label = resolvedModel.id || resolvedModel.backend;
+
+    controller.breadcrumbs = [
+      { label: 'Secrets', route: 'vault.cluster.secrets.backends' },
+      { label: label, route: routeStub, model: resolvedModel.id }, // to landing page of the engine (ex: roles or secrets list)
+      { label: 'Configuration', route: `${routeStub}.configuration.index`, model: resolvedModel.id },
+      { label: 'Edit' },
+    ];
   }
 }

@@ -90,5 +90,9 @@ export default Route.extend({
     };
     controller.set('showEmptyState', showEmptyState);
     controller.set('emptyStateMessage', emptyStateMessage());
+    controller.breadcrumbs = [
+      { label: 'Secrets', route: 'vault.cluster.secrets.backends' },
+      { label: model.backend },
+    ];
   },
 });

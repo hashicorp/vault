@@ -187,6 +187,10 @@ export default Route.extend({
         page: model.meta?.currentPage || 1,
       });
     }
+    controller.breadcrumbs = [
+      { label: 'Secrets', route: 'vault.cluster.secrets.backends' },
+      { label: backend },
+    ];
   },
 
   resetController(controller, isExiting) {

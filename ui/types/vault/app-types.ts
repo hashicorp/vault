@@ -62,6 +62,7 @@ export interface WithFormFieldsAndValidationsModel extends WithFormFieldsModel, 
 
 export interface Breadcrumb {
   label: string;
+  model?: string;
   route?: string;
   linkExternal?: boolean;
 }

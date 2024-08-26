@@ -109,10 +109,16 @@ export default class SecretsBackendConfigurationRoute extends Route {
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
-    controller.typeDisplay = allEngines().find(
-      (engine) => engine.type === resolvedModel.secretEngineModel.type
-    )?.displayName;
-    controller.isConfigurable = CONFIGURABLE_SECRET_ENGINES.includes(resolvedModel.secretEngineModel.type);
-    controller.modelId = resolvedModel.secretEngineModel.id;
+    const { type, id } = resolvedModel.secretEngineModel;
+    controller.typeDisplay = allEngines().find((engine) => engine.type === type)?.displayName;
+    controller.isConfigurable = CONFIGURABLE_SECRET_ENGINES.includes(type);
+    controller.modelId = id;
+    // breadcrumbs for configuration.index route
+    const routeStub = 'vault.cluster.secrets.backend';
+    controller.breadcrumbs = [
+      { label: 'Secrets', route: 'vault.cluster.secrets.backends' },
+      { label: id, route: routeStub, model: id }, // to landing page of the engine (ex: roles or secrets list)
+      { label: 'Configuration' },
+    ];
   }
 }
