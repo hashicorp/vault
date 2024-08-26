@@ -74,7 +74,7 @@ export default class SecretsBackendConfigurationEdit extends Route {
       try {
         const adapter = this.store.adapterFor('application');
         const response = await adapter.ajax('/v1/identity/oidc/config', 'GET');
-        model['issuer'] = response.issuer;
+        model['issuer'] = response.data.issuer;
       } catch (e) {
         model['issuer'] = 'no-read';
       }

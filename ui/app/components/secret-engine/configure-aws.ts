@@ -114,7 +114,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
         // show modal with warning that the config will change
         // if the modal is shown, the user has to click confirm to continue save
         this.saveIssuerWarning = `You are updating the global issuer config. This will overwrite Vault's current issuer ${
-          this.issuerConfig.noRead && 'if it exists '
+          this.issuerConfig.noRead ? 'if it exists ' : ''
         }and may affect other configurations using this value. Continue?`;
         return;
       }
