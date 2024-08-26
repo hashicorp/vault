@@ -184,7 +184,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
       this.metadata = null;
       await this.renderComponent();
       assert.dom(overviewCard.container('Current version')).doesNotExist();
-      assert.dom(overviewCard.container('Secret version age')).doesNotExist();
+      assert.dom(overviewCard.container('Secret age')).doesNotExist();
       assert.dom(overviewCard.container('Subkeys')).doesNotExist();
       assert
         .dom(overviewCard.container('Paths'))
@@ -228,7 +228,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
         .hasText(
           `Current version Deleted Create new The current version of this secret was deleted ${expectedTime}. ${this.metadata.currentVersion}`
         );
-      assert.dom(overviewCard.container('Secret version age')).doesNotExist();
+      assert.dom(overviewCard.container('Secret age')).doesNotExist();
       assert.dom(overviewCard.container('Subkeys')).doesNotExist();
       assert
         .dom(overviewCard.container('Paths'))
@@ -302,7 +302,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
         .hasText(
           `Current version Destroyed Create new The current version of this secret has been permanently deleted and cannot be restored. ${this.metadata.currentVersion}`
         );
-      assert.dom(overviewCard.container('Secret version age')).doesNotExist();
+      assert.dom(overviewCard.container('Secret age')).doesNotExist();
       assert.dom(overviewCard.container('Subkeys')).doesNotExist();
       assert
         .dom(overviewCard.container('Paths'))
