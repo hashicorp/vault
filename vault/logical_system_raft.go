@@ -27,13 +27,17 @@ import (
 )
 
 const (
-	maxInFlightRaftChallenges = 100
+	// These constants are debatable
+	maxInFlightRaftChallenges = 10
 	maxInFlightChallengeDelay = 100 * time.Millisecond
+	maxRaftChallengeAge       = 30 * time.Second
 )
 
 type raftBootstrapChallenge struct {
+	serverID  string
 	answer    []byte // the random answer
 	challenge []byte // the Sealed answer
+	issued    time.Time
 }
 
 // raftStoragePaths returns paths for use when raft is the storage mechanism.
@@ -308,16 +312,25 @@ func (b *SystemBackend) handleRaftBootstrapChallengeWrite(makeSealer func() snap
 				return nil, err
 			}
 
-			if b.Core.pendingRaftPeers.Len() > maxInFlightRaftChallenges {
+			if b.Core.pendingRaftPeers.Len() >= maxInFlightRaftChallenges {
+				// See if there are some old ones we could prune
+				for _, v := range b.Core.pendingRaftPeers.Values() {
+					if time.Since(v.issued) > maxRaftChallengeAge {
+						b.Core.pendingRaftPeers.Remove(v.serverID)
+					}
+				}
 				// 429 with delay
 				time.Sleep(maxInFlightChallengeDelay)
 				return logical.RespondWithStatusCode(logical.ErrorResponse("too many raft challenges in flight"), req, http.StatusTooManyRequests)
 			}
 
-			b.Core.pendingRaftPeers.Add(serverID, &raftBootstrapChallenge{
+			challenge = &raftBootstrapChallenge{
+				serverID:  serverID,
 				answer:    answer,
 				challenge: protoBlob,
-			})
+				issued:    time.Now(),
+			}
+			b.Core.pendingRaftPeers.Add(serverID, challenge)
 		}
 
 		sealConfig, err := b.Core.seal.BarrierConfig(ctx)
