@@ -22,15 +22,15 @@ import type FlashMessageService from 'vault/services/flash-messages';
 /**
  * @module ConfigureAwsComponent is used to configure the AWS secret engine
  * A user can configure the endpoint root/config and/or lease/config.
- * For enterprise users, they will see an additional option to config WIF attributes in place of IAM attributes. 
+ * For enterprise users, they will see an additional option to config WIF attributes in place of IAM attributes.
  * The fields for these endpoints are on one form.
  *
  * @example
  * ```js
  * <SecretEngine::ConfigureAws
     @rootConfig={{this.model.aws-root-config}}
-    @leaseConfig={{this.model.aws-lease-config}} 
-    @backendPath={{this.model.id}} 
+    @leaseConfig={{this.model.aws-lease-config}}
+    @backendPath={{this.model.id}}
     />
  * ```
  *
@@ -72,40 +72,40 @@ export default class ConfigureAwsComponent extends Component<Args> {
     this.disableAccessType = wifAttributesSet || iamAttributesSet;
   }
 
-  @task
-  @waitFor
-  *save(event: Event): Generator<Promise<boolean | LeaseConfigModel | RootConfigModel>> {
-    event.preventDefault();
-    this.resetErrors();
-    const { leaseConfig, rootConfig } = this.args;
-    // Note: aws/root-config model does not have any validations
-    const isValid = this.validate(leaseConfig);
-    if (!isValid) return;
-    // Check if any of the models' attributes have changed.
-    // If no changes to either model, transition and notify user.
-    // If changes to either model, save the model(s) that changed and notify user.
-    // Note: "backend" dirties model state so explicity ignore it here.
+  save = task(
+    waitFor(async (event: Event) => {
+      event.preventDefault();
+      this.resetErrors();
+      const { leaseConfig, rootConfig } = this.args;
+      // Note: aws/root-config model does not have any validations
+      const isValid = this.validate(leaseConfig);
+      if (!isValid) return;
+      // Check if any of the models' attributes have changed.
+      // If no changes to either model, transition and notify user.
+      // If changes to either model, save the model(s) that changed and notify user.
+      // Note: "backend" dirties model state so explicity ignore it here.
 
-    const leaseAttrChanged =
-      Object.keys(leaseConfig.changedAttributes()).filter((item) => item !== 'backend').length > 0;
-    const rootAttrChanged =
-      Object.keys(rootConfig.changedAttributes()).filter((item) => item !== 'backend').length > 0;
+      const leaseAttrChanged =
+        Object.keys(leaseConfig.changedAttributes()).filter((item) => item !== 'backend').length > 0;
+      const rootAttrChanged =
+        Object.keys(rootConfig.changedAttributes()).filter((item) => item !== 'backend').length > 0;
 
-    if (!leaseAttrChanged && !rootAttrChanged) {
-      this.flashMessages.info('No changes detected.');
-      this.transition();
-    }
+      if (!leaseAttrChanged && !rootAttrChanged) {
+        this.flashMessages.info('No changes detected.');
+        this.transition();
+      }
 
-    const rootSaved = rootAttrChanged ? yield this.saveRoot() : false;
-    const leaseSaved = leaseAttrChanged ? yield this.saveLease() : false;
+      const rootSaved = rootAttrChanged ? await this.saveRoot() : false;
+      const leaseSaved = leaseAttrChanged ? await this.saveLease() : false;
 
-    if (rootSaved || leaseSaved) {
-      this.transition();
-    } else {
-      // otherwise there was a failure and we should not transition and exit the function.
-      return;
-    }
-  }
+      if (rootSaved || leaseSaved) {
+        this.transition();
+      } else {
+        // otherwise there was a failure and we should not transition and exit the function.
+        return;
+      }
+    })
+  );
 
   async saveRoot(): Promise<boolean> {
     const { backendPath, rootConfig } = this.args;
