@@ -72,7 +72,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details`);
       // correct toolbar options & details show
       assertDeleteActions(assert);
-      assert.dom(PAGE.infoRow).exists('shows secret data');
+      assert.dom(PAGE.infoRow).exists('shows secret data on load');
       // delete flow
       await click(PAGE.detail.delete);
       assert.dom(PAGE.detail.deleteModalTitle).includesText('Delete version?', 'shows correct modal title');
@@ -85,6 +85,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       assert.strictEqual(actual, expected, 'renders correct flash message');
 
       // details update accordingly
+      await click(PAGE.secretTab('Secret'));
       assert
         .dom(PAGE.emptyStateTitle)
         .hasText('Version 4 of this secret has been deleted', 'Shows deleted message');
@@ -94,7 +95,8 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       // undelete flow
       await click(PAGE.detail.undelete);
       // details update accordingly
-      assert.dom(PAGE.infoRow).exists('shows secret data');
+      await click(PAGE.secretTab('Secret'));
+      assert.dom(PAGE.infoRow).exists('shows secret data after undeleting');
       assert.dom(PAGE.detail.versionTimestamp).includesText('Version 4 created');
       // correct toolbar options
       assertDeleteActions(assert, ['delete', 'destroy']);
@@ -105,7 +107,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details?version=2`);
       // correct toolbar options & details show
       assertDeleteActions(assert);
-      assert.dom(PAGE.infoRow).exists('shows secret data');
+      assert.dom(PAGE.infoRow).exists('shows secret data on load');
       // delete flow
       await click(PAGE.detail.delete);
       assert.dom(PAGE.detail.deleteModalTitle).includesText('Delete version?', 'shows correct modal title');
@@ -113,7 +115,8 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       assert.dom(PAGE.detail.deleteOptionLatest).isNotDisabled('delete latest option is selectable');
       await click(PAGE.detail.deleteOption);
       await click(PAGE.detail.deleteConfirm);
-      // details update accordingly
+      // we get navigated back to the overview page, so manually go back to deleted version
+      await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details?version=2`);
       assert
         .dom(PAGE.emptyStateTitle)
         .hasText('Version 2 of this secret has been deleted', 'Shows deleted message');
@@ -123,7 +126,8 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       // undelete flow
       await click(PAGE.detail.undelete);
       // details update accordingly
-      assert.dom(PAGE.infoRow).exists('shows secret data');
+      await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details?version=2`);
+      assert.dom(PAGE.infoRow).exists('shows secret data after undeleting');
       assert.dom(PAGE.detail.versionTimestamp).includesText('Version 2 created');
       // correct toolbar options
       assertDeleteActions(assert, ['delete', 'destroy']);
@@ -143,6 +147,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       const [actual] = flashSuccess.lastCall.args;
       assert.strictEqual(actual, expected, 'renders correct flash message');
       // details update accordingly
+      await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details?version=3`);
       assert
         .dom(PAGE.emptyStateTitle)
         .hasText('Version 3 of this secret has been permanently destroyed', 'Shows destroyed message');
@@ -237,6 +242,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       await click(PAGE.detail.deleteOptionLatest);
       await click(PAGE.detail.deleteConfirm);
       // details update accordingly
+      await click(PAGE.secretTab('Secret'));
       assert
         .dom(PAGE.emptyStateTitle)
         .hasText('Version 4 of this secret has been deleted', 'Shows deleted message');
@@ -302,6 +308,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       // undelete flow
       await click(PAGE.detail.undelete);
       // details update accordingly
+      await click(PAGE.secretTab('Secret'));
       assert.dom(PAGE.emptyStateTitle).hasText('You do not have permission to read this secret');
       assert.dom(PAGE.detail.versionTimestamp).doesNotExist('Version 2 timestamp not rendered');
       // correct toolbar options
@@ -323,6 +330,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       await click(PAGE.detail.deleteOption);
       await click(PAGE.detail.deleteConfirm);
       // details update accordingly
+      await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details?version=2`);
       assert.dom(PAGE.emptyStateTitle).hasText('You do not have permission to read this secret');
       assert.dom(PAGE.detail.versionTimestamp).doesNotExist('Version 2 timestamp not rendered');
       // updated toolbar options
@@ -330,6 +338,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       // undelete flow
       await click(PAGE.detail.undelete);
       // details update accordingly
+      await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details?version=2`);
       assert.dom(PAGE.emptyStateTitle).hasText('You do not have permission to read this secret');
       assert.dom(PAGE.detail.versionTimestamp).doesNotExist('Version 2 timestamp not rendered');
       // correct toolbar options
@@ -346,6 +355,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       assert.dom(PAGE.detail.deleteModalTitle).includesText('Destroy version?', 'modal has correct title');
       await click(PAGE.detail.deleteConfirm);
       // details update accordingly
+      await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details?version=3`);
       assert
         .dom(PAGE.emptyStateTitle)
         .hasText('You do not have permission to read this secret', 'Shows permissions message');
