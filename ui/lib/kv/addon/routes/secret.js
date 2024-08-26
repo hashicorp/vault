@@ -11,6 +11,7 @@ import { action } from '@ember/object';
 export default class KvSecretRoute extends Route {
   @service secretMountPath;
   @service store;
+  @service capabilities;
 
   fetchSecretData(backend, path) {
     // This will always return a record unless 404 not found (show error) or control group
@@ -22,6 +23,11 @@ export default class KvSecretRoute extends Route {
     return this.store.queryRecord('kv/metadata', { backend, path }).catch(() => {});
   }
 
+  fetchSubkeys(backend, path) {
+    const adapter = this.store.adapterFor('kv/data');
+    return adapter.fetchSubkeys(backend, path);
+  }
+
   model() {
     const backend = this.secretMountPath.currentPath;
     const { name: path } = this.paramsFor('secret');
@@ -29,8 +35,12 @@ export default class KvSecretRoute extends Route {
     return hash({
       path,
       backend,
+      // TODO remove and move to details tab
       secret: this.fetchSecretData(backend, path),
+      subkeys: this.fetchSubkeys(backend, path),
       metadata: this.fetchSecretMetadata(backend, path),
+      // for creating a new secret version
+      canUpdateSecret: this.capabilities.canUpdate(`${backend}/data/${path}`),
     });
   }
 
