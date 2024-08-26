@@ -25,6 +25,8 @@ This guide uses an intermediate Helm configuration to introduce an init containe
 
 Consider the following `vault status` output and Helm Chart values for Vault:
 
+<CodeBlockConfig hideClipboard>
+
 ```plaintext
 Key             Value
 ---             -----
@@ -44,6 +46,12 @@ HA Mode         active
 Active Since    2024-04-10T02:45:33.367042122Z
 Last WAL        52
 ```
+
+</CodeBlockConfig>
+
+Helm chart values:
+
+<CodeBlockConfig hideClipboard>
 
 ```plaintext
 global:
@@ -75,6 +83,8 @@ server:
         address = "http://HOST_IP:8500"
       }
 ```
+
+</CodeBlockConfig>
 
 ### Migration procedure
 
