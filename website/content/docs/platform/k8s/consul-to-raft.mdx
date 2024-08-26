@@ -17,7 +17,7 @@ Always back up your data before attempting migration! Although this is an offlin
 
 </Warning>
 
-## Summary
+## Overview
 
 This guide uses an intermediate Helm configuration to introduce an init container that will perform the storage migration, and then start a single Vault server using the Raft storage backend to verify the results.  Then update the Helm configuration to remove the init container and start Vault replicas.
 
