@@ -81,7 +81,6 @@ export default class ConfigureAwsComponent extends Component<Args> {
   @tracked modelValidationsLease: ValidationMap | null = null;
   @tracked accessType = 'iam';
   @tracked issuerConfig = new IssuerConfig(this.args.issuer);
-  @tracked issuerChangeConfirmed = false;
   @tracked saveIssuerWarning = '';
 
   disableAccessType = false;
@@ -103,45 +102,28 @@ export default class ConfigureAwsComponent extends Component<Args> {
 
   @action continueSubmitForm() {
     // called when the user confirms they are okay with the issuer change
-    this.issuerChangeConfirmed = true;
     this.saveIssuerWarning = '';
-    this.submitForm.perform(null); // go back into the save function and try again.
+    this.save.perform();
   }
 
-  // validate inputs and make sure there are things to save
+  // on form submit - validate inputs and check for issuer changes
   submitForm = task(
-    waitFor(async (event: Event | null) => {
+    waitFor(async (event: Event) => {
       event?.preventDefault();
       this.resetErrors();
-      const { leaseConfig, rootConfig } = this.args;
-      // Note: aws/root-config model does not have any validations
+      const { leaseConfig } = this.args;
+      // Note: only aws/lease-config model has validations
       const isValid = this.validate(leaseConfig);
       if (!isValid) return;
-      if (!this.issuerChangeConfirmed && this.issuerConfig.dirty) {
-        // if the issuer has changed, and the user has not confirmed the change
-        // show modal with warning that the config will change
+      if (this.issuerConfig.dirty) {
+        // if the issuer has changed show modal with warning that the config will change
         // if the modal is shown, the user has to click confirm to continue save
         this.saveIssuerWarning = `You are updating the global issuer config. This will overwrite Vault's current issuer ${
           this.issuerConfig.noRead ? 'if it exists ' : ''
         }and may affect other configurations using this value. Continue?`;
-        // exit out of save task until user confirms
+        // exit task until user confirms
         return;
       }
-      // Check if any of the models' attributes have changed.
-      // If no changes to either model, transition and notify user.
-      // If changes to either model, save the model(s) that changed and notify user.
-      // Note: "backend" dirties model state so explicity ignore it here.
-      const leaseAttrChanged =
-        Object.keys(leaseConfig.changedAttributes()).filter((item) => item !== 'backend').length > 0;
-      const rootAttrChanged =
-        Object.keys(rootConfig.changedAttributes()).filter((item) => item !== 'backend').length > 0;
-
-      if (!leaseAttrChanged && !rootAttrChanged && !this.issuerConfig.dirty) {
-        this.flashMessages.info('No changes detected.');
-        this.transition();
-        return;
-      }
-      // only perform save if there are things to save
       await this.save.perform();
     })
   );
@@ -154,10 +136,10 @@ export default class ConfigureAwsComponent extends Component<Args> {
       // If no changes to either model, transition and notify user.
       // If changes to either model, save the model(s) that changed and notify user.
       // Note: "backend" dirties model state so explicity ignore it here.
-      const leaseAttrChanged =
-        Object.keys(leaseConfig.changedAttributes()).filter((item) => item !== 'backend').length > 0;
-      const rootAttrChanged =
-        Object.keys(rootConfig.changedAttributes()).filter((item) => item !== 'backend').length > 0;
+      const leaseAttrChanged = Object.keys(leaseConfig.changedAttributes()).some(
+        (item) => item !== 'backend'
+      );
+      const rootAttrChanged = Object.keys(rootConfig.changedAttributes()).some((item) => item !== 'backend');
       const issuerAttrChanged = this.issuerConfig.dirty;
 
       if (!leaseAttrChanged && !rootAttrChanged && !issuerAttrChanged) {
