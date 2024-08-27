@@ -86,6 +86,7 @@ export default class App extends Application {
           'router',
           'secret-mount-path',
           'store',
+          'version',
         ],
         externalRoutes: {
           secrets: 'vault.cluster.secrets.backends',

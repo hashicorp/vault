@@ -26,6 +26,7 @@ import {
 import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import { setupControlGroup, grantAccess } from 'vault/tests/helpers/control-groups';
 import { humanize } from 'vault/helpers/humanize';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const secretPath = `my-#:$=?-secret`;
 // This doesn't encode in a normal way, so hardcoding it here until we sort that out
@@ -65,6 +66,19 @@ const assertDetailsToolbar = (assert, expected = DETAIL_TOOLBARS) => {
   DETAIL_TOOLBARS.forEach((toolbar) => {
     const method = expected.includes(toolbar) ? 'exists' : 'doesNotExist';
     assert.dom(PAGE.detail[toolbar])[method](`${toolbar} action ${humanize([method])}`);
+  });
+};
+
+const patchRedirectTest = (test, testCase) => {
+  // only run this test on enterprise so we are testing permissions specifically and not enterprise vs CE (which also redirects)
+  test(`enterprise: patch route redirects for users without permissions (${testCase})`, async function (assert) {
+    await visit(`/vault/secrets/${this.backend}/kv/app%2Fnested%2Fsecret/patch`);
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${this.backend}/kv/app%2Fnested%2Fsecret`,
+      'redirects to index'
+    );
+    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.kv.secret.index');
   });
 };
 
@@ -351,10 +365,9 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       };
       const backend = this.backend;
       await navToBackend(backend);
-
-      // PAGE COMPONENTS RENDER THEIR OWN TABS, ASSERT EACH HREF ON EACH PAGE
       await click(PAGE.list.item(secretPath));
 
+      // PAGE COMPONENTS RENDER THEIR OWN TABS, ASSERT EACH HREF ON EACH PAGE
       // overview tab
       assert.strictEqual(
         currentRouteName(),
@@ -433,6 +446,16 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assertDetailTabs(assert, 'Version History');
       assertTabHrefs(assert, 'Version History');
       assert.dom(PAGE.title).hasText(secretPath, 'correct page title for version history');
+    });
+    // only run this test on enterprise so we are testing permissions specifically and not enterprise vs CE (which also redirects)
+    test('enterprise: patch route does not redirect for users with permissions (a)', async function (assert) {
+      await visit(`/vault/secrets/${this.backend}/kv/app%2Fnested%2Fsecret/patch`);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.backend}/kv/app%2Fnested%2Fsecret/patch`,
+        'redirects to index'
+      );
+      assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.kv.secret.patch');
     });
   });
 
@@ -621,6 +644,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
       assert.dom(PAGE.secretTab('Version History')).doesNotExist('Version History tab not shown');
     });
+    patchRedirectTest(test, 'dr');
   });
 
   module('data-list-reader persona', function (hooks) {
@@ -810,6 +834,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
       assert.dom(PAGE.secretTab('Version History')).doesNotExist('Version History tab not shown');
     });
+    patchRedirectTest(test, 'dlr');
   });
 
   module('metadata-maintainer persona', function (hooks) {
@@ -829,7 +854,6 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.expect(15);
       const backend = this.emptyBackend;
       await navToBackend(backend);
-
       // URL correct
       assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list`, 'lands on secrets list page');
       // Breadcrumbs correct
@@ -1033,6 +1057,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'Version History']);
       assert.dom(PAGE.title).hasText(secretPath, 'correct page title for version history');
     });
+    patchRedirectTest(test, 'mm');
   });
 
   module('secret-creator persona', function (hooks) {
@@ -1249,6 +1274,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
       assert.dom(PAGE.secretTab('Version History')).doesNotExist('Version History tab not shown');
     });
+    patchRedirectTest(test, 'sc');
   });
 
   module('enterprise controlled access persona', function (hooks) {
@@ -1417,6 +1443,66 @@ path "${this.backend}/*" {
       await click(PAGE.detail.createNewVersion);
       assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'Edit']);
       assert.dom(PAGE.title).hasText('Create New Version', 'correct page title for secret edit');
+    });
+  });
+
+  // patch is technically enterprise only but stubbing the version
+  // for these tests so they can run on both CE and enterprise
+  module('patch persona', function (hooks) {
+    hooks.beforeEach(async function () {
+      this.version = this.owner.lookup('service:version');
+      const token = await runCmd([
+        createPolicyCmd(
+          `secret-patcher-${this.backend}`,
+          personas.secretPatcher(this.backend) + personas.secretPatcher(this.emptyBackend)
+        ),
+        createTokenCmd(`secret-patcher-${this.backend}`),
+      ]);
+      await authPage.login(token);
+      clearRecords(this.store);
+      return;
+    });
+
+    test('it navigates to patch a secret from overview', async function (assert) {
+      this.version.type = 'enterprise';
+      await navToBackend(this.backend);
+      await click(PAGE.list.item(secretPath));
+      await click(GENERAL.overviewCard.actionText('Patch secret'));
+      assert.strictEqual(
+        currentRouteName(),
+        'vault.cluster.secrets.backend.kv.secret.patch',
+        'navs to patch'
+      );
+      assertCorrectBreadcrumbs(assert, ['Secrets', this.backend, secretPath, 'Patch']);
+      assert.dom(PAGE.title).hasText('Patch Secret to New Version');
+      await click(FORM.cancelBtn);
+      assert.strictEqual(
+        currentRouteName(),
+        'vault.cluster.secrets.backend.kv.secret.index',
+        'navs back to overview'
+      );
+    });
+
+    test('it does not redirect for enterprise', async function (assert) {
+      this.version.type = 'enterprise';
+      await visit(`/vault/secrets/${this.backend}/kv/app%2Fnested%2Fsecret/patch`);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.backend}/kv/app%2Fnested%2Fsecret/patch`,
+        'redirects to index'
+      );
+      assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.kv.secret.patch');
+    });
+
+    test('it redirects for community edition', async function (assert) {
+      this.version.type = 'community';
+      await visit(`/vault/secrets/${this.backend}/kv/app%2Fnested%2Fsecret/patch`);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.backend}/kv/app%2Fnested%2Fsecret`,
+        'redirects to index'
+      );
+      assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.kv.secret.index');
     });
   });
 });

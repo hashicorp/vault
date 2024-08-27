@@ -25,6 +25,7 @@ export default class KvEngine extends Engine {
       'router',
       'secret-mount-path',
       'store',
+      'version',
     ],
     externalRoutes: ['secrets', 'syncDestination'],
   };

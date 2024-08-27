@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-const root = ['create', 'read', 'update', 'delete', 'list'];
+const root = ['create', 'read', 'update', 'delete', 'list', 'patch'];
 
 // returns a string with each capability wrapped in double quotes => ["create", "read"]
 const format = (array) => array.map((c) => `"${c}"`).join(', ');
@@ -21,6 +21,14 @@ export const dataPolicy = ({ backend, secretPath = '*', capabilities = root }) =
   return `
     path "${backend}/data/${secretPath}" {
       capabilities = [${format(capabilities)}]
+    }
+  `;
+};
+
+export const subkeyPolicy = ({ backend, secretPath = '*' }) => {
+  return `
+    path "${backend}/subkeys/${secretPath}" {
+      capabilities = ["read"]
     }
   `;
 };
@@ -97,4 +105,8 @@ export const personas = {
   secretCreator: (backend) =>
     dataPolicy({ backend, capabilities: ['create', 'update'] }) +
     metadataPolicy({ backend, capabilities: ['delete'] }),
+  secretPatcher: (backend) =>
+    dataPolicy({ backend, capabilities: ['patch'] }) +
+    metadataPolicy({ backend, capabilities: ['list', 'read'] }) +
+    subkeyPolicy({ backend }),
 };
