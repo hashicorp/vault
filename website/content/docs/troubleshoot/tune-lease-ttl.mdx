@@ -96,6 +96,12 @@ on the mount.
 $ vault auth tune -max-lease-ttl=120d approle
 ```
 
+The following command lists all available parameters that you can tune.
+
+```shell-session
+$ vault auth tune -h
+```
+
 Now, the AppRole will generate a lease with token duration of 120 days (2880 hours). 
 
 <CodeBlockConfig highlight="7" hideClipboard>
@@ -172,6 +178,12 @@ max_lease_ttl        2880h
 ```
 
 </CodeBlockConfig>
+
+The following command lists all available parameters that you can tune.
+
+```shell-session
+$ vault secrets tune -h
+```
 
 When you introduce Vault into your existing system, the existing applications
 may not be able to handle short-lived leases. You can tune the default TTLs
