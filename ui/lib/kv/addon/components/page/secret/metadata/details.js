@@ -6,6 +6,7 @@
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { service } from '@ember/service';
+import errorMessage from 'vault/utils/error-message';
 
 /**
  * @module KvSecretMetadataDetails renders the details view for kv/metadata.
@@ -35,18 +36,17 @@ export default class KvSecretMetadataDetails extends Component {
   @action
   async onDelete() {
     // The only delete option from this view is delete all versions
-    const { secret } = this.args;
+    const { path, metadata } = this.args;
+
     try {
-      await secret.destroyRecord({
-        adapterOptions: { deleteType: 'destroy-all-versions', deleteVersions: this.version },
-      });
+      await metadata.destroyRecord();
       this.store.clearDataset('kv/metadata'); // Clear out the store cache so that the metadata/list view is updated.
       this.flashMessages.success(
-        `Successfully deleted the metadata and all version data for the secret ${secret.path}.`
+        `Successfully deleted the metadata and all version data for the secret ${path}.`
       );
       this.router.transitionTo('vault.cluster.secrets.backend.kv.list');
     } catch (err) {
-      this.flashMessages.danger(`There was an issue deleting ${secret.path} metadata.`);
+      this.flashMessages.danger(`There was an issue deleting ${path} metadata. \n ${errorMessage(err)}`);
     }
   }
 }
