@@ -133,16 +133,10 @@
         {{this.saveIssuerWarning}}
       </p>
     </M.Body>
-    <M.Footer>
+    <M.Footer as |F|>
       <Hds::ButtonSet>
         <Hds::Button @text="Continue" {{on "click" this.continueSubmitForm}} data-test-issuer-save />
-        <Hds::Button
-          @text="Cancel"
-          @color="secondary"
-          {{! clear the warning and return to form }}
-          {{on "click" (action (mut this.saveIssuerWarning) "")}}
-          data-test-issuer-cancel
-        />
+        <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} data-test-issuer-cancel />
       </Hds::ButtonSet>
     </M.Footer>
   </Hds::Modal>
