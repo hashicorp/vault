@@ -28,9 +28,6 @@ export const PAGE = {
   backends: {
     link: (backend) => `[data-test-secrets-backend-link="${backend}"]`,
   },
-  overview: {
-    action: (label) => `[data-test-overview-action="${label}"]`,
-  },
   metadata: {
     editBtn: '[data-test-edit-metadata]',
     addCustomMetadataBtn: '[data-test-add-custom-metadata]',

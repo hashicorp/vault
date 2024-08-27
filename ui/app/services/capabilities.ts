@@ -84,4 +84,12 @@ export default class CapabilitiesService extends Service {
       return e;
     }
   }
+
+  canPatch(path: string) {
+    try {
+      return this._fetchSpecificCapability(path, 'canPatch');
+    } catch (e) {
+      return e;
+    }
+  }
 }

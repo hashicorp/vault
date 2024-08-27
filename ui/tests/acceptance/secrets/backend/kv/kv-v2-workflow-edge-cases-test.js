@@ -359,7 +359,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await click(FORM.saveBtn);
 
     // Create another version
-    await click(PAGE.overview.action('Create new'));
+    await click(GENERAL.overviewCard.actionText('Create new'));
     codemirror().setValue('{ "foo2": { "name": "bar2" } }');
     await click(FORM.saveBtn);
 
@@ -382,7 +382,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await fillIn(FORM.keyInput(), 'foo');
     await fillIn(FORM.maskedValueInput(), '{bar}');
     await click(FORM.saveBtn);
-    await click(PAGE.overview.action('Create new'));
+    await click(GENERAL.overviewCard.actionText('Create new'));
     assert.dom(FORM.toggleJson).isNotDisabled();
     assert.dom(FORM.toggleJson).isNotChecked();
   });
@@ -475,7 +475,7 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
         .hasText(`Current version Create new The current version of this secret. 1`);
 
       // Create a new version
-      await click(PAGE.overview.action('Create new'));
+      await click(GENERAL.overviewCard.actionText('Create new'));
       assert.dom(FORM.inputByAttr('path')).isDisabled('path input is disabled');
       assert.dom(FORM.inputByAttr('path')).hasValue(secret);
       assert.dom(FORM.toggleMetadata).doesNotExist('Does not show metadata toggle when creating new version');

@@ -9,6 +9,15 @@ import { SUDO_PATHS, SUDO_PATH_PREFIXES } from 'vault/models/capabilities';
 
 import { run } from '@ember/runloop';
 
+const CAPABILITIES = {
+  canCreate: 'create',
+  canRead: 'read',
+  canUpdate: 'update',
+  canDelete: 'delete',
+  canList: 'list',
+  canPatch: 'patch',
+};
+
 module('Unit | Model | capabilities', function (hooks) {
   setupTest(hooks);
 
@@ -17,7 +26,7 @@ module('Unit | Model | capabilities', function (hooks) {
     assert.ok(!!model);
   });
 
-  test('it reads capabilities', function (assert) {
+  test('it computes capabilities', function (assert) {
     const model = run(() =>
       this.owner.lookup('service:store').createRecord('capabilities', {
         path: 'foo',
@@ -31,6 +40,23 @@ module('Unit | Model | capabilities', function (hooks) {
     assert.notOk(model.get('canDelete'));
   });
 
+  for (const capability in CAPABILITIES) {
+    test(`it computes capability: ${capability}`, function (assert) {
+      const permission = CAPABILITIES[capability];
+      const model = run(() =>
+        this.owner.lookup('service:store').createRecord('capabilities', {
+          path: 'foo',
+          capabilities: [permission],
+        })
+      );
+      assert.true(model.get(capability), `${capability} is true`);
+      const falsyCapabilities = Object.keys(CAPABILITIES).filter((c) => c !== capability);
+      falsyCapabilities.forEach((c) => {
+        assert.false(model.get(c), `${c} is false`);
+      });
+    });
+  }
+
   test('it allows everything if root is present', function (assert) {
     const model = run(() =>
       this.owner.lookup('service:store').createRecord('capabilities', {
@@ -38,11 +64,10 @@ module('Unit | Model | capabilities', function (hooks) {
         capabilities: ['root', 'deny', 'read'],
       })
     );
-    assert.ok(model.get('canRead'));
-    assert.ok(model.get('canCreate'));
-    assert.ok(model.get('canUpdate'));
-    assert.ok(model.get('canDelete'));
-    assert.ok(model.get('canList'));
+
+    Object.keys(CAPABILITIES).forEach((c) => {
+      assert.true(model.get(c), `${c} is true`);
+    });
   });
 
   test('it denies everything if deny is present', function (assert) {
@@ -52,11 +77,9 @@ module('Unit | Model | capabilities', function (hooks) {
         capabilities: ['sudo', 'deny', 'read'],
       })
     );
-    assert.notOk(model.get('canRead'));
-    assert.notOk(model.get('canCreate'));
-    assert.notOk(model.get('canUpdate'));
-    assert.notOk(model.get('canDelete'));
-    assert.notOk(model.get('canList'));
+    Object.keys(CAPABILITIES).forEach((c) => {
+      assert.false(model.get(c), `${c} is false`);
+    });
   });
 
   test('it requires sudo on sudo paths', function (assert) {
