@@ -14,25 +14,4 @@
   </:tabLinks>
 </KvPageHeader>
 
-{{#if this.model.permissionsError}}
-  {{#let this.model.message this.model.title as |message title|}}
-    <div
-      class="box is-sideless has-background-white-bis has-text-grey-light has-text-centered has-tall-padding"
-      data-test-page-error
-    >
-      {{#if title}}
-        <h1 class="title is-3 has-text-grey-light">
-          {{title}}
-        </h1>
-      {{/if}}
-      {{#if message}}
-        <p>{{message}}</p>
-      {{/if}}
-      {{#each-in this.model.permissionsError as |capability path|}}
-        <p> <code>{{capability}} {{path}}</code> </p>
-      {{/each-in}}
-    </div>
-  {{/let}}
-{{else}}
-  <Page::Error @error={{this.model}} />
-{{/if}}
+<Page::Error @error={{this.model}} />
