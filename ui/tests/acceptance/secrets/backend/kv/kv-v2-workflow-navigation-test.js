@@ -352,10 +352,9 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       };
       const backend = this.backend;
       await navToBackend(backend);
-
-      // PAGE COMPONENTS RENDER THEIR OWN TABS, ASSERT EACH HREF ON EACH PAGE
       await click(PAGE.list.item(secretPath));
 
+      // PAGE COMPONENTS RENDER THEIR OWN TABS, ASSERT EACH HREF ON EACH PAGE
       // overview tab
       assert.strictEqual(
         currentRouteName(),
@@ -366,14 +365,6 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assertDetailTabs(assert, 'Overview');
       assertTabHrefs(assert, 'Overview');
       assert.dom(PAGE.title).hasText(secretPath, 'correct page title for secret overview');
-      await click(GENERAL.overviewCard.actionText('Patch secret'));
-      assert.strictEqual(
-        currentRouteName(),
-        'vault.cluster.secrets.backend.kv.secret.patch',
-        'navs to patch'
-      );
-      assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'Patch']);
-      await click(FORM.cancelBtn);
 
       // secret tab
       await click(PAGE.secretTab('Secret'));
@@ -629,6 +620,14 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.title).hasText('app/nested/secret', 'correct page title for paths');
 
       assert.dom(PAGE.secretTab('Version History')).doesNotExist('Version History tab not shown');
+    });
+    test('patch route redirects for users without permissions (dr)', async function (assert) {
+      await visit(`/vault/secrets/${this.backend}/kv/app%2Fnested%2Fsecret/patch`);
+      assert
+        .dom(GENERAL.pageError.error)
+        .hasText(
+          `You do not have permissions to patch a KV v2 secret Ask your administrator if you think you should have access to: READ "${this.backend}/subkeys/app/nested/secret" PATCH "${this.backend}/data/app/nested/secret"`
+        );
     });
   });
 
@@ -1425,6 +1424,49 @@ path "${this.backend}/*" {
       await click(PAGE.detail.createNewVersion);
       assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'Edit']);
       assert.dom(PAGE.title).hasText('Create New Version', 'correct page title for secret edit');
+    });
+  });
+
+  module('patch persona', function (hooks) {
+    hooks.beforeEach(async function () {
+      const token = await runCmd([
+        createPolicyCmd(
+          `secret-patcher-${this.backend}`,
+          personas.secretPatcher(this.backend) + personas.secretPatcher(this.emptyBackend)
+        ),
+        createTokenCmd(`secret-patcher-${this.backend}`),
+      ]);
+      await authPage.login(token);
+      clearRecords(this.store);
+      return;
+    });
+
+    test('it navigates to patch a secret', async function (assert) {
+      await navToBackend(this.backend);
+      await click(PAGE.list.item(secretPath));
+      await click(GENERAL.overviewCard.actionText('Patch secret'));
+      assert.strictEqual(
+        currentRouteName(),
+        'vault.cluster.secrets.backend.kv.secret.patch',
+        'navs to patch'
+      );
+      assertCorrectBreadcrumbs(assert, ['Secrets', this.backend, secretPath, 'Patch']);
+      assert.dom(PAGE.title).hasText('Patch Secret to New Version');
+      await click(FORM.cancelBtn);
+      assert.strictEqual(
+        currentRouteName(),
+        'vault.cluster.secrets.backend.kv.secret.index',
+        'navs back to overview'
+      );
+    });
+
+    test('it redirects for users on community', async function (assert) {
+      this.version = this.owner.lookup('service:version');
+      this.version.type = 'community';
+      await visit(`/vault/secrets/${this.backend}/kv/app%2Fnested%2Fsecret/patch`);
+      assert
+        .dom(GENERAL.pageError.error)
+        .hasText('Error Patching a KV v2 secret is only available on Vault Enterprise.');
     });
   });
 });

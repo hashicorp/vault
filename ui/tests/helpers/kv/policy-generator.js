@@ -25,6 +25,14 @@ export const dataPolicy = ({ backend, secretPath = '*', capabilities = root }) =
   `;
 };
 
+export const subkeyPolicy = ({ backend, secretPath = '*' }) => {
+  return `
+    path "${backend}/subkeys/${secretPath}" {
+      capabilities = ["read"]
+    }
+  `;
+};
+
 export const dataNestedPolicy = ({ backend, secretPath = '*', capabilities = root }) => {
   return `
     path "${backend}/data/app/${secretPath}" {
@@ -97,4 +105,8 @@ export const personas = {
   secretCreator: (backend) =>
     dataPolicy({ backend, capabilities: ['create', 'update'] }) +
     metadataPolicy({ backend, capabilities: ['delete'] }),
+  secretPatcher: (backend) =>
+    dataPolicy({ backend, capabilities: ['patch'] }) +
+    metadataPolicy({ backend, capabilities: ['list', 'read'] }) +
+    subkeyPolicy({ backend }),
 };
