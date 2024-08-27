@@ -1388,7 +1388,7 @@ path "${this.backend}/*" {
       assert.true(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
     });
     test('breadcrumbs & page titles are correct (cg)', async function (assert) {
-      assert.expect(42);
+      assert.expect(43);
       const backend = this.backend;
       await navToBackend(backend);
       await click(PAGE.secretTab('Configuration'));
@@ -1438,6 +1438,16 @@ path "${this.backend}/*" {
       assert.dom(PAGE.secretTab('Version History')).doesNotExist('Version History tab not shown');
 
       await click(PAGE.secretTab('Secret'));
+      assert.true(
+        await waitUntil(() => currentRouteName() === 'vault.cluster.access.control-group-accessor'),
+        'redirects to access control group route'
+      );
+      await grantAccess({
+        apiPath: `${backend}/data/${encodeURIComponent(secretPath)}`,
+        originUrl: `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/details`,
+        userToken: this.userToken,
+        backend: this.backend,
+      });
       assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath]);
       assert.dom(PAGE.title).hasText(secretPath, 'correct page title for secret details');
       await click(PAGE.detail.createNewVersion);
