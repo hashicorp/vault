@@ -211,12 +211,17 @@ type FollowerState struct {
 	RedundancyZone  string
 }
 
+// Copy returns a copy of the follower state.
+// This copy uses the same pointer to the IsDead
+// atomic field. We need to do this to ensure that
+// an update of the IsDead boolean will still be
+// accessible in a copied state.
 func (f *FollowerState) Copy() *FollowerState {
 	return &FollowerState{
 		AppliedIndex:    f.AppliedIndex,
 		LastHeartbeat:   f.LastHeartbeat,
 		LastTerm:        f.LastTerm,
-		IsDead:          atomic.NewBool(f.IsDead.Load()),
+		IsDead:          f.IsDead,
 		DesiredSuffrage: f.DesiredSuffrage,
 		Version:         f.Version,
 		UpgradeVersion:  f.UpgradeVersion,
@@ -518,19 +523,14 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 		}
 
 		currentServerID := raft.ServerID(id)
-		followerVersion := state.Version
-		if followerVersion == "" {
-			followerVersion = d.persistedState.States[id].Version
-			d.logger.Debug("using follower version from persisted states", "id", id, "version", followerVersion)
+		followerVersion, upgradeVersion := d.determineFollowerVersions(id, state)
+		if state.UpgradeVersion != upgradeVersion {
+			// we only have a read lock on state, so we can't modify it
+			// safely. Instead, copy it to override the upgrade version
+			state = state.Copy()
+			state.UpgradeVersion = upgradeVersion
 		}
-		if state.UpgradeVersion == "" {
-			// we only have a read lock on d.followerStates, so we need to copy
-			// the item and modify it in the copy to prevent any races
-			copiedState := state.Copy()
-			state = copiedState
-			state.UpgradeVersion = d.persistedState.States[id].UpgradeVersion
-			d.logger.Debug("using upgrade version from persisted states", "id", id, "upgrade_version", state.UpgradeVersion)
-		}
+
 		server := &autopilot.Server{
 			ID:          currentServerID,
 			Name:        id,
@@ -581,6 +581,57 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 	}
 
 	return ret
+}
+
+// determineFollowerVersions uses the following logic:
+//
+// - if the version and upgrade version are present in the follower state,
+// return those.
+//
+// - if the persisted states map is empty, it means that persisted states
+// don't exist. This happens on an upgrade to 1.18. Use the leader node's
+// versions.
+//
+// - use the versions in the persisted states map
+//
+// This function must be called with a lock on d.followerStates
+// and d.persistedStates.
+func (d *Delegate) determineFollowerVersions(id string, state *FollowerState) (version string, upgradeVersion string) {
+	// if we have both versions in follower states, use those
+	if state.Version != "" && state.UpgradeVersion != "" {
+		return state.Version, state.UpgradeVersion
+	}
+
+	version = state.Version
+	upgradeVersion = state.UpgradeVersion
+
+	// the persistedState map should only be empty on upgrades
+	// to 1.18.x. This is the only case where we'll stub with
+	// the leader's versions
+	if len(d.persistedState.States) == 0 {
+		if version == "" {
+			version = d.effectiveSDKVersion
+			d.logger.Debug("no persisted state, using leader version", "id", id, "version", d.effectiveSDKVersion)
+		}
+		if upgradeVersion == "" {
+			upgradeVersion = d.upgradeVersion
+			d.logger.Debug("no persisted state, using leader upgrade version version", "id", id, "upgrade_version", d.effectiveSDKVersion)
+		}
+		return version, upgradeVersion
+	}
+
+	// Use the persistedStates map to fill in the sdk
+	// and upgrade versions
+	pState := d.persistedState.States[id]
+	if version == "" {
+		version = pState.Version
+		d.logger.Debug("using follower version from persisted states", "id", id, "version", version)
+	}
+	if upgradeVersion == "" {
+		upgradeVersion = pState.UpgradeVersion
+		d.logger.Debug("using upgrade version from persisted states", "id", id, "upgrade_version", upgradeVersion)
+	}
+	return version, upgradeVersion
 }
 
 // RemoveFailedServer is called by the autopilot library when it desires a node
