@@ -2010,6 +2010,10 @@
         "path": "troubleshoot/lease-issues"
       },
       {
+        "title": "Tune the lease TTL",
+        "path": "troubleshoot/tune-lease-ttl"
+      },
+      {
         "title": "Troubleshooting tutorials",
         "href": "https://learn.hashicorp.com/tutorials/vault/troubleshooting-vault"
       }
