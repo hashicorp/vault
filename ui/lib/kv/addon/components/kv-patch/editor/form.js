@@ -10,7 +10,7 @@ import { A } from '@ember/array';
 import { hasWhitespace, isNonString, WHITESPACE_WARNING, NON_STRING_WARNING } from 'vault/utils/validators';
 
 /**
- * @module KvPatchEditor::Form
+ * @module KvPatch::Editor::Form
  * @description
  * This component renders one of two ways to patch a KV v2 secret (the other is using the JSON editor).
  * Each top-level subkey returned by the API endpoint renders in a disabled column with an empty (also disabled) value input beside it.
@@ -25,14 +25,14 @@ import { hasWhitespace, isNonString, WHITESPACE_WARNING, NON_STRING_WARNING } fr
  *
  * Clicking the "Reveal subkeys in JSON" toggle displays the full, nested subkey structure returned by the API.
  *
- *
  * @example
- * <KvPatchEditor::Form @subkeys={{@subkeys}} @onSubmit={{perform this.save}} @onCancel={{this.onCancel}} @isSaving={{this.save.isRunning}} />
+ * <KvPatch::Editor::Form @subkeys={{@subkeys}} @onSubmit={{perform this.save}} @onCancel={{this.onCancel}} @isSaving={{this.save.isRunning}} />
  *
- * @param {object} subkeys - leaf keys of a kv v2 secret, all values (unless a nested object with more keys) return null. https://developer.hashicorp.com/vault/api-docs/secret/kv/kv-v2#read-secret-subkeys
- * @param {function} onSubmit - called when form is saved, called with with the key value object containing patch data
- * @param {function} onCancel - called when form is canceled
  * @param {boolean} isSaving - if true, disables the save and cancel buttons. useful if the onSubmit callback is a concurrency task
+ * @param {function} onCancel - called when form is canceled
+ * @param {function} onSubmit - called when form is saved, called with with the key value object containing patch data
+ * @param {object} subkeys - leaf keys of a kv v2 secret, all values (unless a nested object with more keys) return null. https://developer.hashicorp.com/vault/api-docs/secret/kv/kv-v2#read-secret-subkeys
+ * @param {string} submitError - error message string from parent if submit failed
  */
 
 export class KeyValueState {
@@ -72,10 +72,10 @@ export class KeyValueState {
   }
 }
 
-export default class KvPatchEditor extends Component {
+export default class KvPatchEditorForm extends Component {
   @tracked patchData; // key value pairs in form
   @tracked showSubkeys = false;
-  @tracked submitError;
+  @tracked validationError;
 
   // tracked variables for new (initially empty) row of inputs.
   // once a user clicks "Add" a KeyValueState class is instantiated for that row
@@ -169,13 +169,13 @@ export default class KvPatchEditor extends Component {
   submit(event) {
     event.preventDefault();
     if (this.newKeyError || this.patchData.any((KV) => KV.keyError)) {
-      this.submitError = 'This form contains validations errors, please resolve those before submitting.';
+      this.validationError = 'This form contains validations errors, please resolve those before submitting.';
       return;
     }
 
     // patchData will not include the last row if a user has not clicked "Add"
     // manually check for data and add it to this.patchData
-    if (this.newKey && this.newValue) {
+    if (this.newKey) {
       this.addRow();
     }
 

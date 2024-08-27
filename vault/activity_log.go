@@ -241,14 +241,14 @@ type ActivityLogCoreConfig struct {
 // perform the logged activity. The omitempty JSON tag is not used to ensure
 // that the fields are consistent between CSV and JSON output.
 type ActivityLogExportRecord struct {
-	// IdentityName is the name of the entity
-	IdentityName string `json:"identity_name" mapstructure:"identity_name"`
+	// EntityName is the name of the entity
+	EntityName string `json:"entity_name" mapstructure:"entity_name"`
 
-	// AliasName is the entity alias name provided by the auth backend upon login
-	AliasName string `json:"alias_name" mapstructure:"alias_name"`
+	// EntityAliasName is the entity alias name provided by the auth backend upon login
+	EntityAliasName string `json:"entity_alias_name" mapstructure:"entity_alias_name"`
 
-	// LocalAlias indicates if the alias only belongs to the cluster where it was created.
-	LocalAlias bool `json:"local_alias" mapstructure:"local_alias"`
+	// LocalEntityAlias indicates if the entity alias only belongs to the cluster where it was created.
+	LocalEntityAlias bool `json:"local_entity_alias" mapstructure:"local_entity_alias"`
 
 	// ClientID is the unique identifier assigned to the entity that performed the activity
 	ClientID string `json:"client_id" mapstructure:"client_id"`
@@ -277,19 +277,19 @@ type ActivityLogExportRecord struct {
 	// Policies are the list of policy names attached to the token used
 	Policies []string `json:"policies" mapstructure:"policies"`
 
-	// IdentityMetadata represents explicit metadata set by clients. Multiple entities can have the
+	// EntityMetadata represents explicit metadata set by clients. Multiple entities can have the
 	// same metadata which enables virtual groupings of entities.
-	IdentityMetadata map[string]string `json:"identity_metadata" mapstructure:"identity_metadata"`
+	EntityMetadata map[string]string `json:"entity_metadata" mapstructure:"entity_metadata"`
 
-	// AliasMetadata represents the metadata associated with the identity alias. Multiple aliases can
+	// EntityAliasMetadata represents the metadata associated with the identity alias. Multiple aliases can
 	// have the same custom metadata which enables virtual grouping of aliases.
-	AliasMetadata map[string]string `json:"alias_metadata" mapstructure:"alias_metadata"`
+	EntityAliasMetadata map[string]string `json:"entity_alias_metadata" mapstructure:"entity_alias_metadata"`
 
-	// AliasCustomMetadata represents the custom metadata associated with the identity alias
-	AliasCustomMetadata map[string]string `json:"alias_custom_metadata" mapstructure:"alias_custom_metadata"`
+	// EntityAliasCustomMetadata represents the custom metadata associated with the identity alias
+	EntityAliasCustomMetadata map[string]string `json:"entity_alias_custom_metadata" mapstructure:"entity_alias_custom_metadata"`
 
-	// IdentityGroupIDs provides a list of all of the identity group IDs in which an entity belongs
-	IdentityGroupIDs []string `json:"identity_group_ids" mapstructure:"identity_group_ids"`
+	// EntityGroupIDs provides a list of all of the identity group IDs in which an entity belongs
+	EntityGroupIDs []string `json:"entity_group_ids" mapstructure:"entity_group_ids"`
 }
 
 // NewActivityLog creates an activity log.
@@ -3101,9 +3101,9 @@ func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, f
 					}
 
 					if entityResp != nil {
-						record.IdentityName, ok = entityResp.Data["name"].(string)
+						record.EntityName, ok = entityResp.Data["name"].(string)
 						if !ok {
-							return fmt.Errorf("failed to process identity name")
+							return fmt.Errorf("failed to process entity name")
 						}
 
 						record.Policies, ok = entityResp.Data["policies"].([]string)
@@ -3113,17 +3113,17 @@ func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, f
 
 						slices.Sort(record.Policies)
 
-						record.IdentityMetadata, ok = entityResp.Data["metadata"].(map[string]string)
+						record.EntityMetadata, ok = entityResp.Data["metadata"].(map[string]string)
 						if !ok {
-							return fmt.Errorf("failed to process identity metadata")
+							return fmt.Errorf("failed to process entity metadata")
 						}
 
-						record.IdentityGroupIDs, ok = entityResp.Data["group_ids"].([]string)
+						record.EntityGroupIDs, ok = entityResp.Data["group_ids"].([]string)
 						if !ok {
-							return fmt.Errorf("failed to process identity group IDs")
+							return fmt.Errorf("failed to process entity group IDs")
 						}
 
-						slices.Sort(record.IdentityGroupIDs)
+						slices.Sort(record.EntityGroupIDs)
 
 						aliases, ok := entityResp.Data["aliases"].([]interface{})
 						if !ok {
@@ -3145,14 +3145,14 @@ func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, f
 								continue
 							}
 
-							record.AliasName, ok = alias["name"].(string)
+							record.EntityAliasName, ok = alias["name"].(string)
 							if !ok {
-								return fmt.Errorf("failed to process alias name")
+								return fmt.Errorf("failed to process entity alias name")
 							}
 
-							record.LocalAlias, ok = alias["local"].(bool)
+							record.LocalEntityAlias, ok = alias["local"].(bool)
 							if !ok {
-								return fmt.Errorf("failed to process local alias")
+								return fmt.Errorf("failed to process local entity alias")
 							}
 
 							record.MountType, ok = alias["mount_type"].(string)
@@ -3165,14 +3165,14 @@ func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, f
 								return fmt.Errorf("failed to process mount path")
 							}
 
-							record.AliasMetadata, ok = alias["metadata"].(map[string]string)
+							record.EntityAliasMetadata, ok = alias["metadata"].(map[string]string)
 							if !ok {
-								return fmt.Errorf("failed to process alias metadata")
+								return fmt.Errorf("failed to process entity alias metadata")
 							}
 
-							record.AliasCustomMetadata, ok = alias["custom_metadata"].(map[string]string)
+							record.EntityAliasCustomMetadata, ok = alias["custom_metadata"].(map[string]string)
 							if !ok {
-								return fmt.Errorf("failed to process alias custom metadata")
+								return fmt.Errorf("failed to process entity alias custom metadata")
 							}
 						}
 					}
@@ -3300,11 +3300,11 @@ type csvEncoder struct {
 // be appended to the end.
 func baseActivityExportCSVHeader() []string {
 	return []string{
-		"identity_name",
-		"alias_name",
+		"entity_name",
+		"entity_alias_name",
 		"client_id",
 		"client_type",
-		"local_alias",
+		"local_entity_alias",
 		"namespace_id",
 		"namespace_path",
 		"mount_accessor",

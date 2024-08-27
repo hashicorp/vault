@@ -20,7 +20,7 @@ enable_file_audit_device() {
   $VAULT_BIN_PATH audit enable file file_path="$LOG_FILE_PATH"
 }
 
-enable_syslog_audit_device(){
+enable_syslog_audit_device() {
   $VAULT_BIN_PATH audit enable syslog tag="vault" facility="AUTH"
 }
 

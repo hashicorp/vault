@@ -7,7 +7,7 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 
 /**
- * @module KvSubkeys
+ * @module KvSubkeysCard
  * @description
 sample secret data:
 ```
@@ -31,11 +31,11 @@ sample subkeys:
 ```
  * 
  * @example
- * <KvSubkeys @subkeys={{this.subkeys}} />
+ * <KvSubkeysCard @subkeys={{this.subkeys}} />
  *
  * @param {object} subkeys - leaf keys of a kv v2 secret, all values (unless a nested object with more keys) return null
  */
 
-export default class KvSubkeys extends Component {
+export default class KvSubkeysCard extends Component {
   @tracked showJson = false;
 }

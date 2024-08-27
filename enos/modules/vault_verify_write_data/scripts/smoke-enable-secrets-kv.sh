@@ -2,7 +2,6 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: BUSL-1.1
 
-
 set -e
 
 retry() {
@@ -40,7 +39,7 @@ test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 retry 5 "$binpath" status > /dev/null 2>&1
 
 # Create user policy
-retry 5 "$binpath" policy write reguser -<<EOF
+retry 5 "$binpath" policy write reguser - << EOF
 path "*" {
   capabilities = ["read", "list"]
 }
