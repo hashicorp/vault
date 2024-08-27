@@ -4,14 +4,7 @@
  */
 
 import ApplicationAdapter from '../application';
-import {
-  kvDataPath,
-  kvDeletePath,
-  kvDestroyPath,
-  kvMetadataPath,
-  kvSubkeysPath,
-  kvUndeletePath,
-} from 'vault/utils/kv-path';
+import { kvDataPath, kvDeletePath, kvDestroyPath, kvSubkeysPath, kvUndeletePath } from 'vault/utils/kv-path';
 import { assert } from '@ember/debug';
 import ControlGroupError from 'vault/lib/control-group-error';
 
@@ -119,12 +112,8 @@ export default class KvDataAdapter extends ApplicationAdapter {
         return this.ajax(this._url(kvUndeletePath(backend, path)), 'POST', {
           data: { versions: deleteVersions },
         });
-      case 'destroy-all-versions':
-        return this.ajax(this._url(kvMetadataPath(backend, path)), 'DELETE');
       default:
-        assert(
-          'deleteType must be one of delete-latest-version, delete-version, destroy, undelete, or destroy-all-versions.'
-        );
+        assert('deleteType must be one of delete-latest-version, delete-version, destroy, or undelete.');
     }
   }
 
