@@ -181,6 +181,13 @@ type UpdateUserRequest struct {
 	// Expiration indicates the new expiration date to change to.
 	// If nil, no change is requested.
 	Expiration *ChangeExpiration
+
+	// SelfManagedPassword is the password for an externally managed user in the DB.
+	// If this field is supplied, a DB connection is retrieved from the static
+	// account cache for the particular DB plugin and used to update the password of
+	// the self-managed static role.
+	// *ENTERPRISE-ONLY*
+	SelfManagedPassword string
 }
 
 // ChangePublicKey of a given user
