@@ -139,7 +139,7 @@ server:
   $ kubectl create -f vault-storage-migration-configmap.yml
   ```
 
-1. Install Vault via Helm deployment with Raft Migration storage configuration
+1. Install Vault via Helm deployment with Raft Migration storage configuration.
 
   ```shell-session
   $ cat > vault-migration-values.yml <<EOF
@@ -247,7 +247,7 @@ server:
   Last WAL                55
   ```
 
-1. Update Vault Helm deployment with Raft storage configuration
+1. Update Vault Helm deployment with Raft storage configuration.
 
   ```shell-session
   $ cat > vault-raft-values.yml <<EOF
@@ -324,19 +324,19 @@ To revert to the original configuration, you'll just need to delete the Helm dep
 
 Note that the Vault Helm Chart's default configuration using Raft storage will retain any PVCs created.  Vault does not use these while configured with Consul storage.  You will need to remove the PVCs before re-attempting the migration.
 
-1. Uninstall Vault via Helm
+1. Uninstall Vault via Helm.
 
   ```shell-session
   $ helm uninstall vault
   ```
 
-1. Install Vault via Helm with old Consul storage configuration
+1. Install Vault via Helm with old Consul storage configuration.
 
   ```shell-session
   $ `helm install vault hashicorp/vault -f vault-consul-values.yml
   ```
   
-1. Unseal Vault and confirm the storage has reverted to Consul
+1. Unseal Vault and confirm the storage has reverted to Consul.
 
   <CodeBlockConfig highlight="11">
 
