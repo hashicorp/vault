@@ -316,7 +316,7 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 	c.logger.Info("starting raft active node")
 
 	var err error
-	c.pendingRaftPeers, err = lru.New[string, *raftBootstrapChallenge](maxInFlightRaftChallenges)
+	c.pendingRaftPeers, err = lru.New[string, *raftBootstrapChallenge](MaxInFlightRaftChallenges)
 	if err != nil {
 		return err
 	}

@@ -26,11 +26,11 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-const (
+var (
 	// These constants are debatable
-	maxInFlightRaftChallenges = 10
-	maxInFlightChallengeDelay = 100 * time.Millisecond
-	maxRaftChallengeAge       = 30 * time.Second
+	MaxInFlightRaftChallenges = 10
+	MaxInFlightChallengeDelay = 100 * time.Millisecond
+	MaxRaftChallengeAge       = 30 * time.Second
 )
 
 type raftBootstrapChallenge struct {
@@ -312,16 +312,19 @@ func (b *SystemBackend) handleRaftBootstrapChallengeWrite(makeSealer func() snap
 				return nil, err
 			}
 
-			if b.Core.pendingRaftPeers.Len() >= maxInFlightRaftChallenges {
+			if b.Core.pendingRaftPeers.Len() >= MaxInFlightRaftChallenges {
 				// See if there are some old ones we could prune
 				for _, v := range b.Core.pendingRaftPeers.Values() {
-					if time.Since(v.issued) > maxRaftChallengeAge {
+					if time.Since(v.issued) >= MaxRaftChallengeAge {
 						b.Core.pendingRaftPeers.Remove(v.serverID)
 					}
 				}
-				// 429 with delay
-				time.Sleep(maxInFlightChallengeDelay)
-				return logical.RespondWithStatusCode(logical.ErrorResponse("too many raft challenges in flight"), req, http.StatusTooManyRequests)
+				// There is a tiny race here (another request could have increased the list size by this point), but as long as we're in the ballpark it's fine
+				if b.Core.pendingRaftPeers.Len() >= MaxInFlightRaftChallenges {
+					// 429 with delay
+					time.Sleep(MaxInFlightChallengeDelay)
+					return logical.RespondWithStatusCode(logical.ErrorResponse("too many raft challenges in flight"), req, http.StatusTooManyRequests)
+				}
 			}
 
 			challenge = &raftBootstrapChallenge{
