@@ -621,7 +621,8 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
       assert.dom(PAGE.secretTab('Version History')).doesNotExist('Version History tab not shown');
     });
-    test('patch route redirects for users without permissions (dr)', async function (assert) {
+    // only run this test on enterprise, otherwise we get the wrong error message on community
+    test('enterprise: patch route redirects for users without permissions (dr)', async function (assert) {
       await visit(`/vault/secrets/${this.backend}/kv/app%2Fnested%2Fsecret/patch`);
       assert
         .dom(GENERAL.pageError.error)
@@ -1427,8 +1428,11 @@ path "${this.backend}/*" {
     });
   });
 
+  // patch is technically enterprise only
+  // but opted to stub the version for these tests so they can run on both CE and enterprise
   module('patch persona', function (hooks) {
     hooks.beforeEach(async function () {
+      this.version = this.owner.lookup('service:version');
       const token = await runCmd([
         createPolicyCmd(
           `secret-patcher-${this.backend}`,
@@ -1442,6 +1446,7 @@ path "${this.backend}/*" {
     });
 
     test('it navigates to patch a secret', async function (assert) {
+      this.version.type = 'enterprise';
       await navToBackend(this.backend);
       await click(PAGE.list.item(secretPath));
       await click(GENERAL.overviewCard.actionText('Patch secret'));
@@ -1461,7 +1466,6 @@ path "${this.backend}/*" {
     });
 
     test('it redirects for users on community', async function (assert) {
-      this.version = this.owner.lookup('service:version');
       this.version.type = 'community';
       await visit(`/vault/secrets/${this.backend}/kv/app%2Fnested%2Fsecret/patch`);
       assert
