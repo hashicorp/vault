@@ -2062,7 +2062,10 @@
             "title": "Agent Injector vs. Vault CSI Provider",
             "path": "platform/k8s/injector-csi"
           },
-
+          {
+            "title": "Migrate Consul to Raft storage",
+            "path": "platform/k8s/consul-to-raft"
+          },
           {
             "title": "Helm Chart",
             "routes": [
