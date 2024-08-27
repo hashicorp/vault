@@ -5,9 +5,12 @@ package revocation
 
 import (
 	"bytes"
+	"context"
 	"crypto/x509"
 	"fmt"
 	"time"
+
+	"github.com/hashicorp/vault/sdk/logical"
 
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
@@ -17,6 +20,15 @@ import (
 const (
 	RevokedPath = "revoked/"
 )
+
+type RevokerFactory interface {
+	GetRevoker(context.Context, logical.Storage) Revoker
+}
+
+type Revoker interface {
+	RevokeCert(cert *x509.Certificate) (*logical.Response, error)
+	RevokeCertBySerial(serial string) (*logical.Response, error)
+}
 
 type RevocationInfo struct {
 	CertificateBytes  []byte           `json:"certificate_bytes"`
