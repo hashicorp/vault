@@ -259,7 +259,7 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
         const newIssuer = 'http://bar.foo';
         this.server.post('/identity/oidc/config', (_, req) => {
           const payload = JSON.parse(req.requestBody);
-          assert.deepEqual(payload, { issuer: newIssuer });
+          assert.deepEqual(payload, { issuer: newIssuer }, 'payload for issue is correct');
           return overrideResponse(204);
         });
         this.server.post(configUrl('aws', this.id), () => {
@@ -273,13 +273,11 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
         assert.dom(GENERAL.inputByAttr('issuer')).hasValue('', 'issuer does not reflect passed value');
         await fillIn(GENERAL.inputByAttr('issuer'), newIssuer);
         await click(GENERAL.saveButton);
-        assert.dom(SES.aws.issuerWarningModal).exists();
+        assert.dom(SES.aws.issuerWarningModal).exists('issue warning modal exists');
         await click(SES.aws.issuerWarningSave);
-
-        // TODO: these aren't working correctly
         assert.true(this.flashDangerSpy.notCalled, 'No danger flash messages called.');
         assert.true(
-          this.flashSuccessSpy.calledWith('Issuer was saved'),
+          this.flashSuccessSpy.calledWith('Issuer saved successfully'),
           'Success flash message called for issuer'
         );
         assert.ok(
@@ -289,6 +287,13 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
       });
 
       test('shows modal when unsetting issuer, has correct payload, and shows flash message on fail', async function (assert) {
+        assert.expect(7);
+        this.server.post(configUrl('aws', this.id), () => {
+          assert.true(
+            true,
+            'post request was made to config/root when unsetting the issuer. test should pass.'
+          );
+        });
         this.issuer = 'http://foo.bar';
         this.server.post('/identity/oidc/config', (_, req) => {
           const payload = JSON.parse(req.requestBody);
@@ -302,14 +307,18 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
         await fillIn(GENERAL.inputByAttr('issuer'), '');
         await fillIn(GENERAL.inputByAttr('roleArn'), 'some-other-value');
         await click(GENERAL.saveButton);
-        assert.dom(SES.aws.issuerWarningModal).exists();
+        assert.dom(SES.aws.issuerWarningModal).exists('issuer warning modal exists');
+
         await click(SES.aws.issuerWarningSave);
-        // TODO: these aren't working correctly
         assert.true(
           this.flashDangerSpy.calledWith('Issuer was not saved: permission denied'),
           'shows danger flash for issuer save'
         );
-        assert.true(this.flashSuccessSpy.notCalled, 'No success flash messages called.');
+        assert.true(
+          this.flashSuccessSpy.calledWith(`Successfully saved ${this.id}'s root configuration.`),
+          "calls the root flash message not the issuer's"
+        );
+
         assert.ok(
           this.transitionStub.calledWith('vault.cluster.secrets.backend.configuration', this.id),
           'Transitioned to the configuration index route.'

@@ -81,6 +81,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
   @tracked modelValidationsLease: ValidationMap | null = null;
   @tracked accessType = 'iam';
   @tracked issuerConfig = new IssuerConfig(this.args.issuer);
+  @tracked issuerChangeConfirmed = false;
   @tracked saveIssuerWarning = '';
 
   disableAccessType = false;
@@ -100,25 +101,32 @@ export default class ConfigureAwsComponent extends Component<Args> {
     this.disableAccessType = wifAttributesSet || iamAttributesSet;
   }
 
+  @action continueSubmitForm() {
+    // called when the user confirms they are okay with the issuer change
+    this.issuerChangeConfirmed = true;
+    this.saveIssuerWarning = '';
+    this.submitForm.perform(null); // go back into the save function and try again.
+  }
+
   // validate inputs and make sure there are things to save
   submitForm = task(
-    waitFor(async (event: Event) => {
-      event.preventDefault();
+    waitFor(async (event: Event | null) => {
+      event?.preventDefault();
       this.resetErrors();
       const { leaseConfig, rootConfig } = this.args;
       // Note: aws/root-config model does not have any validations
       const isValid = this.validate(leaseConfig);
       if (!isValid) return;
-
-      if (this.version.isEnterprise && this.issuerConfig.dirty) {
+      if (!this.issuerChangeConfirmed && this.issuerConfig.dirty) {
+        // if the issuer has changed, and the user has not confirmed the change
         // show modal with warning that the config will change
         // if the modal is shown, the user has to click confirm to continue save
         this.saveIssuerWarning = `You are updating the global issuer config. This will overwrite Vault's current issuer ${
           this.issuerConfig.noRead ? 'if it exists ' : ''
         }and may affect other configurations using this value. Continue?`;
+        // exit out of save task until user confirms
         return;
       }
-
       // Check if any of the models' attributes have changed.
       // If no changes to either model, transition and notify user.
       // If changes to either model, save the model(s) that changed and notify user.
@@ -142,9 +150,6 @@ export default class ConfigureAwsComponent extends Component<Args> {
     waitFor(async () => {
       // when we get here, the models have already been validated so just continue with save
       const { leaseConfig, rootConfig } = this.args;
-      // reset modal if it was up
-      this.saveIssuerWarning = '';
-
       // Check if any of the models' attributes have changed.
       // If no changes to either model, transition and notify user.
       // If changes to either model, save the model(s) that changed and notify user.
@@ -153,8 +158,9 @@ export default class ConfigureAwsComponent extends Component<Args> {
         Object.keys(leaseConfig.changedAttributes()).filter((item) => item !== 'backend').length > 0;
       const rootAttrChanged =
         Object.keys(rootConfig.changedAttributes()).filter((item) => item !== 'backend').length > 0;
+      const issuerAttrChanged = this.issuerConfig.dirty;
 
-      if (!leaseAttrChanged && !rootAttrChanged && !this.issuerConfig.dirty) {
+      if (!leaseAttrChanged && !rootAttrChanged && !issuerAttrChanged) {
         this.flashMessages.info('No changes detected.');
         this.transition();
         return;
@@ -162,10 +168,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
       // Attempt saves of changed models. If at least one of them succeed, transition
       const rootSaved = rootAttrChanged ? await this.saveRoot() : false;
       const leaseSaved = leaseAttrChanged ? await this.saveLease() : false;
-      const issuerSaved =
-        this.version.isEnterprise && this.issuerConfig.dirty
-          ? await this.updateIssuer(this.issuerConfig)
-          : false;
+      const issuerSaved = issuerAttrChanged ? await this.updateIssuer(this.issuerConfig) : false;
 
       if (rootSaved || leaseSaved || issuerSaved) {
         this.transition();
@@ -181,7 +184,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
       await this.store
         .adapterFor('application')
         .ajax('/v1/identity/oidc/config', 'POST', { data: { issuer: issuerConfig.issuer } });
-      this.flashMessages.success(`Issuer saved successfully`);
+      this.flashMessages.success('Issuer saved successfully');
       return true;
     } catch (e) {
       this.flashMessages.danger(`Issuer was not saved: ${errorMessage(e, 'Check Vault logs for details.')}`);
