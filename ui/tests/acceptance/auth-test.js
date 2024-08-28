@@ -6,8 +6,9 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { click, currentURL, visit, waitUntil, find, fillIn } from '@ember/test-helpers';
-import { allSupportedAuthBackends, supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import { allSupportedAuthBackends, supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
+import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
 
 const AUTH_FORM = {
   method: '[data-test-select=auth-method]',
@@ -15,6 +16,7 @@ const AUTH_FORM = {
   login: '[data-test-auth-submit]',
 };
 const ENT_AUTH_METHODS = ['saml'];
+const { rootToken } = VAULT_KEYS;
 
 module('Acceptance | auth', function (hooks) {
   setupApplicationTest(hooks);
@@ -192,5 +194,18 @@ module('Acceptance | auth', function (hooks) {
     await visit('/vault/auth');
     await fillIn(AUTH_FORM.method, 'token');
     await click('[data-test-auth-submit]');
+  });
+
+  test('it does not call renew-self after successful login with non-renewable token', async function (assert) {
+    this.server.post(
+      '/auth/token/renew-self',
+      () => new Error('should not call renew-self directly after logging in')
+    );
+
+    await visit('/vault/auth');
+    await fillIn(AUTH_FORM.method, 'token');
+    await fillIn(AUTH_FORM.token, rootToken);
+    await click('[data-test-auth-submit]');
+    assert.strictEqual(currentURL(), '/vault/dashboard');
   });
 });
