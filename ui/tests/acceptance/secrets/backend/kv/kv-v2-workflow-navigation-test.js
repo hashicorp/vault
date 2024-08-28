@@ -1494,6 +1494,13 @@ path "${this.backend}/*" {
       );
     });
 
+    test('overview subkeys card is hidden for community edition', async function (assert) {
+      this.version.type = 'community';
+      await navToBackend(this.backend);
+      await click(PAGE.list.item(secretPath));
+      assert.dom(GENERAL.overviewCard.container('Subkeys')).doesNotExist();
+    });
+
     test('it does not redirect for enterprise', async function (assert) {
       this.version.type = 'enterprise';
       await visit(`/vault/secrets/${this.backend}/kv/app%2Fnested%2Fsecret/patch`);
