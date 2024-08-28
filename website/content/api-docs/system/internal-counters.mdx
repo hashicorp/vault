@@ -1088,8 +1088,12 @@ months in the requested time range.
 information returned by this API will include activity for this month, however
 it may be up to 20 minutes delayed.
 
+- This endpoint can be called from all namespaces. The requested namespace (specified via the `X-Vault-Namespace`
+  header or as part of the path) will act as a filter. The exported data will include activity for the requested
+  namespace and all of its children.
 
-@include 'alerts/restricted-root.mdx'
+- **`sudo` required** – This endpoint requires `sudo` capability in addition to
+  any path-specific capabilities.
 
 | Method | Path                                      |
 | :----- | :---------------------------------------- |
@@ -1120,9 +1124,107 @@ $ curl \
 
 ### Sample response
 
+~> **NOTE**: The activity records below are pretty-printed to improve readability. The API returns
+   JSON lines and will thus be compacted so that each record consumes a single line.
+
 ```json
-{"client_id":"3f210722-7210-98e8-1f0d-e6a39ffb29c6","namespace_id":"root","timestamp":1653350457,"mount_accessor":"auth_userpass_bb52979d"}
-{"client_id":"X/Yed4Oj4cqODj9tSHjKwnRy5QVSBRlX3COxjjWSXyI=","namespace_id":"root","timestamp":1653350491,"non_entity":true,"mount_accessor":"auth_token_f6f2c11c"}
-{"client_id":"d93405dc-b592-b1c3-a520-14e618d359c1","namespace_id":"root","timestamp":1653350501,"mount_accessor":"auth_userpass_bb52979d"}
+{
+  "entity_name": "3f210722-7210-98e8-1f0d-e6a39ffb29c6",
+  "entity_alias_name": "admin",
+  "local_entity_alias": false,
+  "client_id": "",
+  "client_type": "entity",
+  "namespace_id": "root",
+  "namespace_path": "",
+  "mount_accessor": "auth_userpass_a005db73",
+  "mount_type": "userpass",
+  "mount_path": "auth/userpass/",
+  "timestamp": "2024-07-10T09:33:51Z",
+  "policies": [
+    "secret-read",
+    "secret-list",
+    "secret-write",
+    "secret-delete"
+  ],
+  "entity_metadata": {
+    "email_address": "admin@example.com"
+  },
+  "entity_alias_metadata": null,
+  "entity_alias_custom_metadata": {
+    "contact_email": "admin@example.com"
+  },
+  "entity_group_ids": [
+    "746fbaf9-ffeb-62b9-7f0b-42d79ca0883f"
+  ]
+}
+
+{
+  "entity_name": "",
+  "entity_alias_name": "",
+  "local_entity_alias": false,
+  "client_id": "590198f7-9178-57d6-c345-48746bb438d8",
+  "client_type": "non-entity-token",
+  "namespace_id": "YWZzu",
+  "namespace_path": "ns1/a/",
+  "mount_accessor": "auth_ns_token_e3119312",
+  "mount_type": "ns_token",
+  "mount_path": "auth/token/",
+  "timestamp": "2024-07-08T11:35:23Z",
+  "policies": null,
+  "entity_metadata": null,
+  "entity_alias_metadata": null,
+  "entity_alias_custom_metadata": null,
+  "entity_group_ids": null
+}
+
+{
+  "entity_name": "jdoe",
+  "entity_alias_name": "jdoe",
+  "client_id": "665a54bf-8652-c0c5-8121-40adf0d9786a",
+  "client_type": "entity",
+  "namespace_id": "wOsmr",
+  "namespace_path": "ns1/a",
+  "mount_accessor": "auth_ldap_a005db73",
+  "mount_type": "ldap",
+  "mount_path": "auth/ldap/",
+  "timestamp": "2024-07-08T11:47:57Z",
+  "policies": [
+    "secret-read"
+  ],
+  "entity_metadata": {},
+  "entity_alias_metadata": {
+    "name": "jdoe"
+  },
+  "entity_alias_custom_metadata": {
+    "contact_email": "jdoe@example.com"
+  },
+  "entity_group_ids": [
+    "9f18cd4a-4e64-a2b2-b001-7b6b0dfb1270"
+  ]
+}
+
+{
+  "entity_name": "jdoe",
+  "entity_alias_name": "jdoe",
+  "client_id": "0640a8f0-b315-cc8a-c0c2-713f663774df",
+  "client_type": "entity",
+  "namespace_id": "oIiGy",
+  "namespace_path": "ns1/b",
+  "mount_accessor": "auth_userpass_01a6ea85",
+  "mount_type": "userpass",
+  "mount_path": "auth/userpass/",
+  "timestamp": "2024-07-21T14:51:36Z",
+  "policies": [
+    "secret-read"
+  ],
+  "entity_metadata": {},
+  "entity_alias_metadata": {
+    "name": "jdoe"
+  },
+  "entity_alias_custom_metadata": {},
+  "entity_group_ids": [
+    "76a374a1-72fd-30ca-2455-f51dfeaa805e"
+  ]
+}
 ```
 
