@@ -3067,6 +3067,13 @@ func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, f
 				NamespacePath: nsDisplayPath,
 				Timestamp:     ts.UTC().Format(time.RFC3339),
 				MountAccessor: e.MountAccessor,
+
+				// Default following to empty versus nil, will be overwritten if necessary
+				Policies:                  []string{},
+				EntityMetadata:            map[string]string{},
+				EntityAliasMetadata:       map[string]string{},
+				EntityAliasCustomMetadata: map[string]string{},
+				EntityGroupIDs:            []string{},
 			}
 
 			if e.MountAccessor != "" {
@@ -3106,24 +3113,34 @@ func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, f
 							return fmt.Errorf("failed to process entity name")
 						}
 
-						record.Policies, ok = entityResp.Data["policies"].([]string)
+						policies, ok := entityResp.Data["policies"].([]string)
 						if !ok {
 							return fmt.Errorf("failed to process policies")
 						}
 
-						slices.Sort(record.Policies)
+						if policies != nil {
+							record.Policies = policies
+							slices.Sort(record.Policies)
+						}
 
-						record.EntityMetadata, ok = entityResp.Data["metadata"].(map[string]string)
+						entityMetadata, ok := entityResp.Data["metadata"].(map[string]string)
 						if !ok {
 							return fmt.Errorf("failed to process entity metadata")
 						}
 
-						record.EntityGroupIDs, ok = entityResp.Data["group_ids"].([]string)
+						if entityMetadata != nil {
+							record.EntityMetadata = entityMetadata
+						}
+
+						entityGroupIDs, ok := entityResp.Data["group_ids"].([]string)
 						if !ok {
 							return fmt.Errorf("failed to process entity group IDs")
 						}
 
-						slices.Sort(record.EntityGroupIDs)
+						if entityGroupIDs != nil {
+							record.EntityGroupIDs = entityGroupIDs
+							slices.Sort(record.EntityGroupIDs)
+						}
 
 						aliases, ok := entityResp.Data["aliases"].([]interface{})
 						if !ok {
@@ -3165,15 +3182,31 @@ func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, f
 								return fmt.Errorf("failed to process mount path")
 							}
 
-							record.EntityAliasMetadata, ok = alias["metadata"].(map[string]string)
+							entityAliasMetadata, ok := alias["metadata"].(map[string]string)
 							if !ok {
 								return fmt.Errorf("failed to process entity alias metadata")
 							}
 
-							record.EntityAliasCustomMetadata, ok = alias["custom_metadata"].(map[string]string)
+							if entityAliasMetadata != nil {
+								record.EntityAliasMetadata = entityAliasMetadata
+							}
+
+							entityAliasCustomMetadata, ok := alias["custom_metadata"].(map[string]string)
 							if !ok {
 								return fmt.Errorf("failed to process entity alias custom metadata")
 							}
+
+							if entityAliasCustomMetadata != nil {
+								record.EntityAliasCustomMetadata = entityAliasCustomMetadata
+							}
+						}
+					} else {
+						// fetch mount directly to ensure mount type and path are populated
+						// this will be necessary for non-entity client types (e.g. non-entity-token)
+						validateResp := a.core.router.ValidateMountByAccessor(e.MountAccessor)
+						if validateResp != nil {
+							record.MountPath = validateResp.MountPath
+							record.MountType = validateResp.MountType
 						}
 					}
 				}

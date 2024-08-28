@@ -585,7 +585,21 @@ func getCSVExport(t *testing.T, client *api.Client, monthsPreviousTo int, now ti
 
 	// skip initial row as it is header
 	for rowIdx := 1; rowIdx < len(csvRecords); rowIdx++ {
+		baseRecord := vault.ActivityLogExportRecord{
+			Policies:                  []string{},
+			EntityMetadata:            map[string]string{},
+			EntityAliasMetadata:       map[string]string{},
+			EntityAliasCustomMetadata: map[string]string{},
+			EntityGroupIDs:            []string{},
+		}
+
 		recordMap := make(map[string]interface{})
+
+		// create base map
+		err = mapstructure.Decode(baseRecord, &recordMap)
+		if err != nil {
+			return nil, err
+		}
 
 		for columnIdx, columnName := range csvHeader {
 			val := csvRecords[rowIdx][columnIdx]
@@ -597,13 +611,7 @@ func getCSVExport(t *testing.T, client *api.Client, monthsPreviousTo int, now ti
 				prefix := columnNameParts[0]
 
 				if _, ok := mapFields[prefix]; ok {
-					m, mOK := recordMap[prefix]
-
-					// ensure output contains non-nil map
-					if !mOK {
-						m = make(map[string]string)
-						recordMap[prefix] = m
-					}
+					m := recordMap[prefix]
 
 					// ignore empty CSV column value
 					if val != "" {
@@ -611,12 +619,7 @@ func getCSVExport(t *testing.T, client *api.Client, monthsPreviousTo int, now ti
 						recordMap[prefix] = m
 					}
 				} else if _, ok := sliceFields[prefix]; ok {
-					// ensure output contains non-nil slice
-					s, sOK := recordMap[prefix]
-					if !sOK {
-						s = make([]string, 0)
-						recordMap[prefix] = s
-					}
+					s := recordMap[prefix]
 
 					// ignore empty CSV column value
 					if val != "" {
@@ -624,7 +627,7 @@ func getCSVExport(t *testing.T, client *api.Client, monthsPreviousTo int, now ti
 						recordMap[prefix] = s
 					}
 				} else {
-					t.Fatalf("unexpected CSV field: %s", columnName)
+					t.Fatalf("unexpected CSV field: %q", columnName)
 				}
 			} else if _, ok := boolFields[columnName]; ok {
 				recordMap[columnName], err = strconv.ParseBool(val)
