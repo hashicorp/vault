@@ -255,18 +255,12 @@ func TestRaft_ChallengeSpam(t *testing.T) {
 	})
 	defer cluster.Cleanup()
 
-	vault.MaxRaftChallengeAge = time.Second
-
-	var first time.Time
 	min := time.Hour
 	for n := 0; n < vault.MaxInFlightRaftChallenges; n++ {
 		start := time.Now()
 		_, err := cluster.Cores[0].Client.Logical().Write("sys/storage/raft/bootstrap/challenge", map[string]interface{}{
 			"server_id": fmt.Sprintf("core-%d", n),
 		})
-		if n == 0 {
-			first = time.Now()
-		}
 		require.NoError(t, err)
 		elapsed := time.Since(start)
 		if elapsed < min {
@@ -274,21 +268,25 @@ func TestRaft_ChallengeSpam(t *testing.T) {
 		}
 	}
 
-	// Test one challenge over the limit
-	start := time.Now()
+	// Make sure that after the first N we eventually hit the limit.  A bit sloppy since time passes executing the above
+	// loop, introducing new tokens
+	for n := 0; n < vault.MaxInFlightRaftChallenges; n++ {
+		start := time.Now()
+		_, err := cluster.Cores[0].Client.Logical().Write("sys/storage/raft/bootstrap/challenge", map[string]interface{}{
+			"server_id": "core-next",
+		})
+		require.Error(t, err)
+		require.Equal(t, 429, err.(*api.ResponseError).StatusCode)
+		elapsed := time.Since(start)
+		if err != nil {
+			// Could be flaky, but we hope that at least the delay has been added to the fastest request we saw
+			require.True(t, elapsed > (min+vault.MaxInFlightChallengeDelay))
+			break
+		}
+	}
+
+	time.Sleep(time.Duration(1000/vault.RaftChallengesPerSecond) * time.Millisecond)
 	_, err := cluster.Cores[0].Client.Logical().Write("sys/storage/raft/bootstrap/challenge", map[string]interface{}{
-		"server_id": "core-next",
-	})
-	require.Error(t, err)
-	require.Equal(t, 429, err.(*api.ResponseError).StatusCode)
-	elapsed := time.Since(start)
-
-	// Could be flaky, but we hope that at least the delay has been added to the fastest request we saw
-	require.True(t, elapsed > (min+vault.MaxInFlightChallengeDelay))
-
-	// Test expiration of challenges, by waiting until maxChallengeAge + the first challenge above
-	time.Sleep(time.Until(first.Add(vault.MaxRaftChallengeAge + time.Millisecond)))
-	_, err = cluster.Cores[0].Client.Logical().Write("sys/storage/raft/bootstrap/challenge", map[string]interface{}{
 		"server_id": "core-next2",
 	})
 	require.NoError(t, err)

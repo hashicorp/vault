@@ -29,15 +29,14 @@ import (
 var (
 	// These constants are debatable
 	MaxInFlightRaftChallenges = 10
+	RaftChallengesPerSecond   = 10
 	MaxInFlightChallengeDelay = 100 * time.Millisecond
-	MaxRaftChallengeAge       = 30 * time.Second
 )
 
 type raftBootstrapChallenge struct {
 	serverID  string
 	answer    []byte // the random answer
 	challenge []byte // the Sealed answer
-	issued    time.Time
 }
 
 // raftStoragePaths returns paths for use when raft is the storage mechanism.
@@ -297,43 +296,33 @@ func (b *SystemBackend) handleRaftBootstrapChallengeWrite(makeSealer func() snap
 		var answer []byte
 		challenge, ok := b.Core.pendingRaftPeers.Get(serverID)
 		if !ok {
-			var err error
-			answer, err = uuid.GenerateRandomBytes(16)
-			if err != nil {
-				return nil, err
-			}
-
-			sealer := makeSealer()
-			if sealer == nil {
-				return nil, errors.New("core has no seal Access to write raft bootstrap challenge")
-			}
-			protoBlob, err := sealer.Seal(ctx, answer)
-			if err != nil {
-				return nil, err
-			}
-
-			if b.Core.pendingRaftPeers.Len() >= MaxInFlightRaftChallenges {
-				// See if there are some old ones we could prune
-				for _, v := range b.Core.pendingRaftPeers.Values() {
-					if time.Since(v.issued) >= MaxRaftChallengeAge {
-						b.Core.pendingRaftPeers.Remove(v.serverID)
-					}
+			if b.raftChallengeLimiter.Allow() {
+				var err error
+				answer, err = uuid.GenerateRandomBytes(16)
+				if err != nil {
+					return nil, err
 				}
-				// There is a tiny race here (another request could have increased the list size by this point), but as long as we're in the ballpark it's fine
-				if b.Core.pendingRaftPeers.Len() >= MaxInFlightRaftChallenges {
-					// 429 with delay
-					time.Sleep(MaxInFlightChallengeDelay)
-					return logical.RespondWithStatusCode(logical.ErrorResponse("too many raft challenges in flight"), req, http.StatusTooManyRequests)
-				}
-			}
 
-			challenge = &raftBootstrapChallenge{
-				serverID:  serverID,
-				answer:    answer,
-				challenge: protoBlob,
-				issued:    time.Now(),
+				sealer := makeSealer()
+				if sealer == nil {
+					return nil, errors.New("core has no seal Access to write raft bootstrap challenge")
+				}
+				protoBlob, err := sealer.Seal(ctx, answer)
+				if err != nil {
+					return nil, err
+				}
+
+				challenge = &raftBootstrapChallenge{
+					serverID:  serverID,
+					answer:    answer,
+					challenge: protoBlob,
+				}
+				b.Core.pendingRaftPeers.Add(serverID, challenge)
+			} else {
+				// 429 with delay
+				time.Sleep(MaxInFlightChallengeDelay)
+				return logical.RespondWithStatusCode(logical.ErrorResponse("too many raft challenges in flight"), req, http.StatusTooManyRequests)
 			}
-			b.Core.pendingRaftPeers.Add(serverID, challenge)
 		}
 
 		sealConfig, err := b.Core.seal.BarrierConfig(ctx)

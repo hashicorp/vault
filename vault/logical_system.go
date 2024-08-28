@@ -25,6 +25,8 @@ import (
 	"time"
 	"unicode"
 
+	"golang.org/x/time/rate"
+
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-memdb"
@@ -94,11 +96,12 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 	}
 
 	b := &SystemBackend{
-		Core:        core,
-		db:          db,
-		logger:      logger,
-		mfaBackend:  NewPolicyMFABackend(core, logger),
-		syncBackend: syncBackend,
+		Core:                 core,
+		db:                   db,
+		logger:               logger,
+		mfaBackend:           NewPolicyMFABackend(core, logger),
+		syncBackend:          syncBackend,
+		raftChallengeLimiter: rate.NewLimiter(rate.Limit(RaftChallengesPerSecond), MaxInFlightRaftChallenges),
 	}
 
 	b.Backend = &framework.Backend{
@@ -270,11 +273,12 @@ func (b *SystemBackend) rawPaths() []*framework.Path {
 type SystemBackend struct {
 	*framework.Backend
 	entSystemBackend
-	Core        *Core
-	db          *memdb.MemDB
-	logger      log.Logger
-	mfaBackend  *PolicyMFABackend
-	syncBackend *SecretsSyncBackend
+	Core                 *Core
+	db                   *memdb.MemDB
+	logger               log.Logger
+	mfaBackend           *PolicyMFABackend
+	syncBackend          *SecretsSyncBackend
+	raftChallengeLimiter *rate.Limiter
 }
 
 // handleConfigStateSanitized returns the current configuration state. The configuration
