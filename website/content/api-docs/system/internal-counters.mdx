@@ -1122,17 +1122,17 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/internal/counters/activity/export
 ```
 
-### Sample response
+### Sample JSON response
 
 ~> **NOTE**: The activity records below are pretty-printed to improve readability. The API returns
    JSON lines and will thus be compacted so that each record consumes a single line.
 
 ```json
 {
-  "entity_name": "3f210722-7210-98e8-1f0d-e6a39ffb29c6",
+  "entity_name": "admin",
   "entity_alias_name": "admin",
   "local_entity_alias": false,
-  "client_id": "",
+  "client_id": "3f210722-7210-98e8-1f0d-e6a39ffb29c6",
   "client_type": "entity",
   "namespace_id": "root",
   "namespace_path": "",
@@ -1149,8 +1149,10 @@ $ curl \
   "entity_metadata": {
     "email_address": "admin@example.com"
   },
-  "entity_alias_metadata": null,
+  "entity_alias_metadata": {},
   "entity_alias_custom_metadata": {
+    "region": "west",
+    "group": "san_francisco",
     "contact_email": "admin@example.com"
   },
   "entity_group_ids": [
@@ -1193,11 +1195,11 @@ $ curl \
     "secret-read"
   ],
   "entity_metadata": {},
-  "entity_alias_metadata": {
-    "name": "jdoe"
-  },
+  "entity_alias_metadata": {},
   "entity_alias_custom_metadata": {
-    "contact_email": "jdoe@example.com"
+    "contact_email": "jdoe@example.com",
+    "region": "east",
+    "group": "new_york"
   },
   "entity_group_ids": [
     "9f18cd4a-4e64-a2b2-b001-7b6b0dfb1270"
@@ -1220,13 +1222,29 @@ $ curl \
     "secret-read"
   ],
   "entity_metadata": {},
-  "entity_alias_metadata": {
-    "name": "jdoe"
+  "entity_alias_metadata": {},
+  "entity_alias_custom_metadata": {
+    "region": "east",
+    "group": "new_york"
   },
-  "entity_alias_custom_metadata": {},
   "entity_group_ids": [
     "76a374a1-72fd-30ca-2455-f51dfeaa805e"
   ]
 }
 ```
 
+### Sample CSV response
+Nested fields within the exported records will be flattened into individual CSV columns. Columns for arrays (`policies` and `entity_group_ids`)
+will be named using the field name and underlying index (e.g. `policies.0`, `policies.1`). Columns for key-value pairs
+(`entity_metadata`, `entity_alias_metadata`, and `entity_alias_custom_metadata`) will be named using the field name and underlying key
+(e.g. `entity_metadata.email_address`, `entity_alias_metadata.region`). A flattened field will only be added if at least one record contains
+it. If a top-level field (e.g. `entity_metadata`) is not populated in any of the records then there will not be any flattened fields of prefix `enttiy_metadata.`.
+
+```text
+entity_name,entity_alias_name,client_id,client_type,local_entity_alias,namespace_id,namespace_path,mount_accessor,mount_path,mount_type,timestamp,entity_alias_custom_metadata.contact_email,entity_alias_custom_metadata.group,entity_alias_custom_metadata.region,entity_metadata.email_address,entity_group_ids.0,policies.0,policies.1,policies.2,policies.4
+admin,admin,3f210722-7210-98e8-1f0d-e6a39ffb29c6,entity,false,root,,auth_userpass_a005db73,auth/userpass/,userpass,2024-07-10T09:33:51Z,admin@example.com,san_francisco,west,admin@example.com,746fbaf9-ffeb-62b9-7f0b-42d79ca0883f,secret-read,secret-list,secret-write,secret-delete
+,,590198f7-9178-57d6-c345-48746bb438d8,non-entity-token,false,YWZzu,ns1/a/,auth_ns_token_e3119312,auth/token/,ns_token,2024-07-08T11:35:23Z,,,,,,,,,
+jdoe,jdoe,665a54bf-8652-c0c5-8121-40adf0d9786a,entity,false,wOsmr,ns1/a,auth_ldap_a005db73,auth/ldap/,ldap,2024-07-08T11:47:57Z,jdoe@example.com,new_york,east,,9f18cd4a-4e64-a2b2-b001-7b6b0dfb1270,secret-read,,,
+jdoe,jdoe,0640a8f0-b315-cc8a-c0c2-713f663774df,entity,false,oIiGy,ns1/b,auth_userpass_01a6ea85,auth/userpass/,userpass,2024-07-21T14:51:36Z,,new_york,east,,76a374a1-72fd-30ca-2455-f51dfeaa805e,secret-read,,,
+
+```
