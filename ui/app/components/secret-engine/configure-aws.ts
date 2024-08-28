@@ -3,10 +3,9 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Ember from 'ember';
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
-import { task, timeout } from 'ember-concurrency';
+import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
@@ -15,6 +14,7 @@ import errorMessage from 'vault/utils/error-message';
 
 import type LeaseConfigModel from 'vault/models/aws/lease-config';
 import type RootConfigModel from 'vault/models/aws/root-config';
+import type IdentityToken from 'vault/models/identity-token';
 import type Router from '@ember/routing/router';
 import type StoreService from 'vault/services/store';
 import type VersionService from 'vault/services/version';
@@ -43,30 +43,9 @@ import type FlashMessageService from 'vault/services/flash-messages';
 interface Args {
   leaseConfig: LeaseConfigModel;
   rootConfig: RootConfigModel;
+  issuerConfig: IdentityToken;
   backendPath: string;
   issuer?: string;
-}
-
-class IssuerConfig {
-  original = '';
-  @tracked issuer = '';
-  @tracked noRead = false;
-  constructor(initialIssuer: string | undefined) {
-    if (initialIssuer === 'no-read') {
-      // if we couldn't read it, this string comes back from the route model
-      this.noRead = true;
-    } else if (initialIssuer) {
-      this.original = initialIssuer;
-      this.issuer = initialIssuer;
-    }
-  }
-  // this is to make it work with FormField
-  @action set(_: string, val: string) {
-    this.issuer = val;
-  }
-  get dirty() {
-    return this.issuer !== this.original;
-  }
 }
 
 export default class ConfigureAwsComponent extends Component<Args> {
@@ -80,7 +59,6 @@ export default class ConfigureAwsComponent extends Component<Args> {
   @tracked invalidFormAlert: string | null = null;
   @tracked modelValidationsLease: ValidationMap | null = null;
   @tracked accessType = 'iam';
-  @tracked issuerConfig = new IssuerConfig(this.args.issuer);
   @tracked saveIssuerWarning = '';
 
   disableAccessType = false;
@@ -111,15 +89,16 @@ export default class ConfigureAwsComponent extends Component<Args> {
     waitFor(async (event: Event) => {
       event?.preventDefault();
       this.resetErrors();
-      const { leaseConfig } = this.args;
+      const { leaseConfig, issuerConfig } = this.args;
       // Note: only aws/lease-config model has validations
       const isValid = this.validate(leaseConfig);
       if (!isValid) return;
-      if (this.issuerConfig.dirty) {
+
+      if (Object.keys(issuerConfig.changedAttributes()).length > 0) {
         // if the issuer has changed show modal with warning that the config will change
         // if the modal is shown, the user has to click confirm to continue save
         this.saveIssuerWarning = `You are updating the global issuer config. This will overwrite Vault's current issuer ${
-          this.issuerConfig.noRead ? 'if it exists ' : ''
+          issuerConfig.canRead ? '' : 'if it exists '
         }and may affect other configurations using this value. Continue?`;
         // exit task until user confirms
         return;
@@ -131,7 +110,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
   save = task(
     waitFor(async () => {
       // when we get here, the models have already been validated so just continue with save
-      const { leaseConfig, rootConfig } = this.args;
+      const { leaseConfig, rootConfig, issuerConfig } = this.args;
       // Check if any of the models' attributes have changed.
       // If no changes to either model, transition and notify user.
       // If changes to either model, save the model(s) that changed and notify user.
@@ -140,7 +119,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
         (item) => item !== 'backend'
       );
       const rootAttrChanged = Object.keys(rootConfig.changedAttributes()).some((item) => item !== 'backend');
-      const issuerAttrChanged = this.issuerConfig.dirty;
+      const issuerAttrChanged = Object.keys(issuerConfig.changedAttributes()).length > 0;
 
       if (!leaseAttrChanged && !rootAttrChanged && !issuerAttrChanged) {
         this.flashMessages.info('No changes detected.');
@@ -150,7 +129,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
       // Attempt saves of changed models. If at least one of them succeed, transition
       const rootSaved = rootAttrChanged ? await this.saveRoot() : false;
       const leaseSaved = leaseAttrChanged ? await this.saveLease() : false;
-      const issuerSaved = issuerAttrChanged ? await this.updateIssuer(this.issuerConfig) : false;
+      const issuerSaved = issuerAttrChanged ? await this.updateIssuer() : false;
 
       if (rootSaved || leaseSaved || issuerSaved) {
         this.transition();
@@ -161,11 +140,9 @@ export default class ConfigureAwsComponent extends Component<Args> {
     })
   );
 
-  async updateIssuer(issuerConfig: IssuerConfig): Promise<boolean> {
+  async updateIssuer(): Promise<boolean> {
     try {
-      await this.store
-        .adapterFor('application')
-        .ajax('/v1/identity/oidc/config', 'POST', { data: { issuer: issuerConfig.issuer } });
+      await this.args.issuerConfig.save();
       this.flashMessages.success('Issuer saved successfully');
       return true;
     } catch (e) {

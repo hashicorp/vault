@@ -55,18 +55,10 @@
       </fieldset>
     {{/if}}
     {{#if (eq this.accessType "wif")}}
-      <FormField
-        @model={{this.issuerConfig}}
-        @attr={{hash
-          name="issuer"
-          type="string"
-          options=(hash
-            placeholder="https://vault.prod/v1/identity/oidc"
-            subText="The Issuer URL to be used in configuring Vault as an identity provider in AWS. If not set, Vault's default issuer will be used."
-            docLink="/vault/api-docs/secret/identity/tokens#configure-the-identity-tokens-backend"
-          )
-        }}
-      />
+      {{! WIF Fields }}
+      {{#each @issuerConfig.formFields as |attr|}}
+        <FormField @attr={{attr}} @model={{@issuerConfig}} />
+      {{/each}}
       <FormFieldGroups
         @model={{@rootConfig}}
         @mode={{if @rootConfig.isNew "create" "edit"}}
@@ -74,6 +66,7 @@
         @groupName="fieldGroupsWif"
       />
     {{else}}
+      {{! IAM Fields }}
       <FormFieldGroups
         @model={{@rootConfig}}
         @mode={{if @rootConfig.isNew "create" "edit"}}

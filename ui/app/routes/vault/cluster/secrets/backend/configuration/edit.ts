@@ -20,7 +20,7 @@ import type VersionService from 'vault/services/version';
 // Saving and updating of those models are done within the engine specific components.
 
 const CONFIG_ADAPTERS_PATHS: Record<string, string[]> = {
-  aws: ['aws/lease-config', 'aws/root-config'],
+  aws: ['aws/lease-config', 'aws/root-config', 'identity-token'],
   ssh: ['ssh/ca-config'],
 };
 
@@ -68,17 +68,17 @@ export default class SecretsBackendConfigurationEdit extends Route {
         }
       }
     }
-    // if the type is AWS and it's enterprise, we also fetch the issuer
-    // from a global endpoint which has no associated model/adapter
-    if (type === 'aws' && this.version.isEnterprise) {
-      try {
-        const adapter = this.store.adapterFor('application');
-        const response = await adapter.ajax('/v1/identity/oidc/config', 'GET');
-        model['issuer'] = response.data.issuer;
-      } catch (e) {
-        model['issuer'] = 'no-read';
-      }
-    }
+    // // if the type is AWS and it's enterprise, we also fetch the issuer
+    // // from a global endpoint which has no associated model/adapter
+    // if (type === 'aws' && this.version.isEnterprise) {
+    //   try {
+    //     const adapter = this.store.adapterFor('application');
+    //     const response = await adapter.ajax('/v1/identity/oidc/config', 'GET');
+    //     model['issuer'] = response.data.issuer;
+    //   } catch (e) {
+    //     model['issuer'] = 'no-read';
+    //   }
+    // }
     return model;
   }
 

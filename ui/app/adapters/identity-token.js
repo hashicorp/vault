@@ -4,7 +4,6 @@
  */
 
 import ApplicationAdapter from './application';
-import { v4 as uuidv4 } from 'uuid';
 
 export default class AwsRootConfig extends ApplicationAdapter {
   namespace = 'v1';
@@ -13,30 +12,27 @@ export default class AwsRootConfig extends ApplicationAdapter {
     return this.ajax(`${this.buildURL()}/identity/oidc/config`, 'GET').then((resp) => {
       return {
         ...resp,
-        id: uuidv4(), // generate a random id for ember data
+        id: resp.data.issuer, // id required for ember data
       };
     });
   }
 
-  // ARG TODO return to this
-  // createOrUpdate(store, type, snapshot) {
-  //   const serializer = store.serializerFor(type.modelName);
-  //   const data = serializer.serialize(snapshot);
-  //   const backend = snapshot.record.backend;
-  //   return this.ajax(`${this.buildURL()}/${backend}/config/root`, 'POST', { data }).then((resp) => {
-  //     // ember data requires an id on the response
-  //     return {
-  //       ...resp,
-  //       id: backend,
-  //     };
-  //   });
-  // }
+  createOrUpdate(store, type, snapshot) {
+    const serializer = store.serializerFor(type.modelName);
+    const data = serializer.serialize(snapshot);
+    return this.ajax(`${this.buildURL()}/identity/oidc/config`, 'POST', { data }).then((resp) => {
+      // id is returned from API so we do not need to explicitly set it here
+      return {
+        ...resp,
+      };
+    });
+  }
 
-  // createRecord() {
-  //   return this.createOrUpdate(...arguments);
-  // }
+  createRecord() {
+    return this.createOrUpdate(...arguments);
+  }
 
-  // updateRecord() {
-  //   return this.createOrUpdate(...arguments);
-  // }
+  updateRecord() {
+    return this.createOrUpdate(...arguments);
+  }
 }
