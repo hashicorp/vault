@@ -120,7 +120,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       await runCmd(`delete sys/mounts/${path}`);
     });
 
-    test('it not show issuer if no root WIF configuration data is returned', async function (assert) {
+    test('it should not show issuer if no root WIF configuration data is returned', async function (assert) {
       const path = `aws-${this.uid}`;
       const type = 'aws';
       this.server.get(`${path}/config/root`, (schema, req) => {
