@@ -219,7 +219,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
     if (accessType === 'iam') {
       // reset all WIF attributes
       rootConfig.roleArn = rootConfig.identityTokenAudience = rootConfig.identityTokenTtl = undefined;
-      // issuer handle differently as we need to return to the original value on toggle
+      // for the issuer return to the globally set value (if there is one) on toggle
       this.args.issuerConfig.issuer = this.originalIssuer;
     }
     if (accessType === 'wif') {
