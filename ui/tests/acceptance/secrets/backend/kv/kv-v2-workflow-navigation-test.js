@@ -1444,10 +1444,11 @@ path "${this.backend}/*" {
       );
       await grantAccess({
         apiPath: `${backend}/data/${encodeURIComponent(secretPath)}`,
-        originUrl: `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/details`,
+        originUrl: `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/paths`,
         userToken: this.userToken,
         backend: this.backend,
       });
+      await click(PAGE.secretTab('Secret'));
       assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath]);
       assert.dom(PAGE.title).hasText(secretPath, 'correct page title for secret details');
       await click(PAGE.detail.createNewVersion);
