@@ -11,8 +11,6 @@ import (
 	"errors"
 )
 
-//go:generate go run github.com/hashicorp/vault/tools/stubmaker
-
 func (c *SQLConnectionProducer) StaticConnection(_ context.Context, _, _ string) (*sql.DB, error) {
 	return nil, errors.New("self-managed static roles not implemented in CE")
 }
