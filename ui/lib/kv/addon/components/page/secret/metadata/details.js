@@ -31,6 +31,8 @@ export default class KvSecretMetadataDetails extends Component {
   @service router;
   @service store;
 
+  // if the user had read permissions and there is no custom_metadata
+  // this returns an empty object, without read capabilities it's undefined
   get customMetadata() {
     // metadata tab is available even if user only has access to kv/data path
     return this.args.metadata?.customMetadata || this.args.secret?.customMetadata;

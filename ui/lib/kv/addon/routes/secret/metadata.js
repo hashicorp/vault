@@ -61,7 +61,8 @@ export default class KvSecretMetadataRoute extends Route {
       }
       // only fetch secret data if metadata is unavailable and user can read endpoint
       if (permissions.data.canRead) {
-        const secret = await this.store.queryRecord('kv/data', { backend, path });
+        // fail silently because this request is just for custom_metadata
+        const secret = await this.store.queryRecord('kv/data', { backend, path }).catch(() => {});
         return {
           ...model,
           secret,
