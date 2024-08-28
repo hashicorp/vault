@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<OverviewCard @cardTitle="Subkeys" class="has-top-margin-l">
+<OverviewCard @cardTitle="Subkeys" class="has-top-margin-l" {{style max-height="325px" overflow-y="auto"}}>
   <:customSubtext>
     <Hds::Text::Body @tag="p" @color="faint" data-test-overview-card-subtitle="Subkeys">
       {{#if this.showJson}}
