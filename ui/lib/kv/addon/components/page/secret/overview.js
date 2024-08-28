@@ -6,6 +6,7 @@
 import Component from '@glimmer/component';
 import { dateFormat } from 'core/helpers/date-format';
 import { isDeleted } from 'kv/utils/kv-deleted';
+import { service } from '@ember/service';
 
 /**
  * @module KvSecretOverview
@@ -29,6 +30,8 @@ import { isDeleted } from 'kv/utils/kv-deleted';
  */
 
 export default class KvSecretOverview extends Component {
+  @service version;
+
   get secretState() {
     if (this.args.metadata) {
       return this.args.metadata.currentSecret.state;
