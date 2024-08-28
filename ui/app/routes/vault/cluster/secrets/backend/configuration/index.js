@@ -74,11 +74,13 @@ export default class SecretsBackendConfigurationRoute extends Route {
   }
 
   async fetchAwsConfigs(id) {
-    // AWS has two configuration endpoints root and lease, return an array of these responses.
+    // AWS has two configuration endpoints root and lease, as well as a separate endpoint for the issuer.
+    // return an array of these responses.
     const configArray = [];
     const configRoot = await this.fetchAwsConfig(id, 'aws/root-config');
     const configLease = await this.fetchAwsConfig(id, 'aws/lease-config');
-    configArray.push(configRoot, configLease);
+    const issuer = await this.fetchIssuer();
+    configArray.push(configRoot, configLease, issuer);
     return configArray;
   }
 
@@ -91,6 +93,15 @@ export default class SecretsBackendConfigurationRoute extends Route {
         return;
       }
       throw e;
+    }
+  }
+
+  async fetchIssuer() {
+    try {
+      return await this.store.queryRecord('identity-token', {});
+    } catch (e) {
+      // silently fail if the endpoint is not available or the user doesn't have permission to access it.
+      return;
     }
   }
 
