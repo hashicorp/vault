@@ -60,16 +60,21 @@ export default class ConfigureAwsComponent extends Component<Args> {
   @tracked modelValidationsLease: ValidationMap | null = null;
   @tracked accessType = 'iam';
   @tracked saveIssuerWarning = '';
+  @tracked originalIssuer = '';
 
   disableAccessType = false;
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
-
-    // the following checks are only relevant to enterprise users and those editing an existing root configuration.
+    // the following checks are only relevant to enterprise users
+    if (this.version.isCommunity) return;
+    // keep track of the original issuer so that when a user toggles the accessType we can return to the original value
+    this.originalIssuer = this.args.issuerConfig.issuer || '';
+    // the following checks are only relevant to those editing an existing root configuration
+    if (this.args.rootConfig.isNew) return;
     if (this.version.isCommunity || this.args.rootConfig.isNew) return;
-
     const { roleArn, identityTokenAudience, identityTokenTtl, accessKey } = this.args.rootConfig;
+    // specifically do not include issuer as this is global and can bet set even if we're not editing wif attributes
     const wifAttributesSet = !!roleArn || !!identityTokenAudience || !!identityTokenTtl;
     const iamAttributesSet = !!accessKey;
     // If any WIF attributes have been set in the rootConfig model, set accessType to 'wif'.
@@ -93,8 +98,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
       // Note: only aws/lease-config model has validations
       const isValid = this.validate(leaseConfig);
       if (!isValid) return;
-
-      if (Object.keys(issuerConfig.changedAttributes()).length > 0) {
+      if (Object.keys(issuerConfig?.changedAttributes()).length > 0) {
         // if the issuer has changed show modal with warning that the config will change
         // if the modal is shown, the user has to click confirm to continue save
         this.saveIssuerWarning = `You are updating the global issuer config. This will overwrite Vault's current issuer ${
@@ -115,12 +119,11 @@ export default class ConfigureAwsComponent extends Component<Args> {
       // If no changes to either model, transition and notify user.
       // If changes to either model, save the model(s) that changed and notify user.
       // Note: "backend" dirties model state so explicity ignore it here.
-      const leaseAttrChanged = Object.keys(leaseConfig.changedAttributes()).some(
+      const leaseAttrChanged = Object.keys(leaseConfig?.changedAttributes()).some(
         (item) => item !== 'backend'
       );
-      const rootAttrChanged = Object.keys(rootConfig.changedAttributes()).some((item) => item !== 'backend');
-      const issuerAttrChanged = Object.keys(issuerConfig.changedAttributes()).length > 0;
-
+      const rootAttrChanged = Object.keys(rootConfig?.changedAttributes()).some((item) => item !== 'backend');
+      const issuerAttrChanged = Object.keys(issuerConfig?.changedAttributes()).length > 0;
       if (!leaseAttrChanged && !rootAttrChanged && !issuerAttrChanged) {
         this.flashMessages.info('No changes detected.');
         this.transition();
@@ -216,6 +219,8 @@ export default class ConfigureAwsComponent extends Component<Args> {
     if (accessType === 'iam') {
       // reset all WIF attributes
       rootConfig.roleArn = rootConfig.identityTokenAudience = rootConfig.identityTokenTtl = undefined;
+      // issuer handle differently as we need to return to the original value on toggle
+      this.args.issuerConfig.issuer = this.originalIssuer;
     }
     if (accessType === 'wif') {
       // reset all IAM attributes

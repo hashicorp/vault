@@ -12,7 +12,7 @@ export default class AwsRootConfig extends ApplicationAdapter {
     return this.ajax(`${this.buildURL()}/identity/oidc/config`, 'GET').then((resp) => {
       return {
         ...resp,
-        id: resp.data.issuer, // id required for ember data
+        id: resp.request_id, // id required for ember data
       };
     });
   }
@@ -20,6 +20,7 @@ export default class AwsRootConfig extends ApplicationAdapter {
   createOrUpdate(store, type, snapshot) {
     const serializer = store.serializerFor(type.modelName);
     const data = serializer.serialize(snapshot);
+    if (!data.id) data.id = data.issuer; // the api should return an id if not explicity set it to the issuer
     return this.ajax(`${this.buildURL()}/identity/oidc/config`, 'POST', { data }).then((resp) => {
       // id is returned from API so we do not need to explicitly set it here
       return {

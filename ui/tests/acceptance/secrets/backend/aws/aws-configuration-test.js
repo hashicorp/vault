@@ -93,11 +93,21 @@ module('Acceptance | aws | configuration', function (hooks) {
       await click(SES.configTab);
       await click(SES.configure);
       await fillInAwsConfig('withWif');
-      await click(SES.aws.save);
-      assert.true(
-        this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s root configuration.`),
-        'Success flash message is rendered showing the root configuration was saved.'
+      await click(GENERAL.saveButton);
+      assert.dom(SES.aws.issuerWarningModal).exists('issue warning modal exists');
+      await click(SES.aws.issuerWarningSave);
+      // three flash messages, the first is about mounting the engine, only care about the last two
+      assert.strictEqual(
+        this.flashSuccessSpy.args[1][0],
+        `Successfully saved ${path}'s root configuration.`,
+        'first flash message about the root config.'
       );
+      assert.strictEqual(
+        this.flashSuccessSpy.args[2][0],
+        'Issuer saved successfully',
+        'second success message is about the issuer.'
+      );
+      assert.dom(GENERAL.infoRowValue('Issuer')).exists('Issuer has been set and is shown.');
       assert.dom(GENERAL.infoRowValue('Role ARN')).hasText('foo-role', 'Role ARN has been set.');
       assert
         .dom(GENERAL.infoRowValue('Identity token audience'))
@@ -125,7 +135,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       await click(SES.configTab);
       await click(SES.configure);
       await fillInAwsConfig('withAccess');
-      await click(SES.aws.save);
+      await click(GENERAL.saveButton);
       assert.true(
         this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s root configuration.`),
         'Success flash message is rendered showing the root configuration was saved.'
@@ -151,7 +161,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       // manually fill in non-access type specific fields on root config so we can exclude Max Retries.
       await click(GENERAL.toggleGroup('Root config options'));
       await fillIn(GENERAL.inputByAttr('region'), 'eu-central-1');
-      await click(SES.aws.save);
+      await click(GENERAL.saveButton);
       // the Serializer removes these two from the payload if the API returns their default value.
       assert
         .dom(GENERAL.infoRowValue('Identity token TTL'))
@@ -175,7 +185,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       await click(SES.configTab);
       await click(SES.configure);
       await fillInAwsConfig('withLease');
-      await click(SES.aws.save);
+      await click(GENERAL.saveButton);
       assert.true(
         this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s lease configuration.`),
         'Success flash message is rendered showing the lease configuration was saved.'
@@ -223,7 +233,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       await click(SES.configTab);
       await click(SES.configure);
       await fillInAwsConfig('withAccess');
-      await click(SES.aws.save);
+      await click(GENERAL.saveButton);
       assert.dom(GENERAL.infoRowValue('Access key')).hasText('foo', 'Access key is foo');
       assert
         .dom(GENERAL.infoRowValue('Region'))
@@ -236,7 +246,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       await fillIn(GENERAL.inputByAttr('region'), 'ap-southeast-2');
       // add lease config details
       await fillInAwsConfig('withLease');
-      await click(SES.aws.save);
+      await click(GENERAL.saveButton);
       assert
         .dom(GENERAL.infoRowValue('Access key'))
         .hasText('not-foo', 'Access key has been updated to not-foo');
@@ -283,7 +293,7 @@ module('Acceptance | aws | configuration', function (hooks) {
 
       await click(SES.configTab);
       await click(SES.configure);
-      await click(SES.aws.save);
+      await click(GENERAL.saveButton);
       assert.true(
         this.flashInfoSpy.calledWith('No changes detected.'),
         'Flash message shows no changes detected.'
@@ -306,7 +316,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       await click(SES.configure);
       await fillInAwsConfig('withAccess');
       //  the way to tell if a record has been unloaded is if the private key is not saved in the store (the API does not return it, but if the record was not unloaded it would have stayed.)
-      await click(SES.aws.save); // save the configuration
+      await click(GENERAL.saveButton); // save the configuration
       await click(SES.configure);
       const privateKeyExists = this.store.peekRecord('aws/root-config', path).privateKey ? true : false;
       assert.false(

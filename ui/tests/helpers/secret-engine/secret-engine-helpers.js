@@ -6,6 +6,7 @@
 import { click, fillIn } from '@ember/test-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
+import { v4 as uuidv4 } from 'uuid';
 
 export const createSecretsEngine = (store, type, path) => {
   store.pushPayload('secret-engine', {
@@ -32,6 +33,14 @@ const createAwsRootConfig = (store, backend, accessType = 'iam') => {
         role_arn: '123-role',
         identity_token_audience: '123-audience',
         identity_token_ttl: 7200,
+      },
+    });
+    store.pushPayload('identity-token', {
+      id: 'something-unique',
+      modelName: 'identity-token',
+      data: {
+        id: 'something-unique',
+        issuer: 'http://foo.bar',
       },
     });
   } else if (accessType === 'no-access') {
@@ -124,7 +133,7 @@ export const expectedConfigKeys = (type) => {
     case 'aws-root-create':
       return ['accessKey', 'secretKey', 'region', 'iamEndpoint', 'stsEndpoint', 'maxRetries'];
     case 'aws-root-create-wif':
-      return ['roleArn', 'identityTokenAudience', 'Identity token TTL'];
+      return ['issuer', 'roleArn', 'identityTokenAudience', 'Identity token TTL'];
     case 'aws-root-create-iam':
       return ['accessKey', 'secretKey'];
     case 'ssh':
@@ -185,6 +194,7 @@ export const fillInAwsConfig = async (situation = 'withAccess') => {
   }
   if (situation === 'withWif') {
     await click(SES.aws.accessType('wif')); // toggle to wif
+    await fillIn(GENERAL.inputByAttr('issuer'), `http://bar.${uuidv4()}`); // make random because global setting
     await fillIn(GENERAL.inputByAttr('roleArn'), 'foo-role');
     await fillIn(GENERAL.inputByAttr('identityTokenAudience'), 'foo-audience');
     await click(GENERAL.ttl.toggle('Identity token TTL'));

@@ -25,8 +25,6 @@ export const SECRET_ENGINE_SELECTORS = {
     rootForm: '[data-test-root-form]',
     accessTitle: '[data-test-access-title]',
     leaseTitle: '[data-test-lease-title]',
-    save: '[data-test-save]',
-    cancel: '[data-test-cancel]',
     deleteRole: (role: string) => `[data-test-aws-role-delete="${role}"]`,
     accessTypeSection: '[data-test-access-type-section]',
     accessTypeSubtext: '[data-test-access-type-subtext]',
