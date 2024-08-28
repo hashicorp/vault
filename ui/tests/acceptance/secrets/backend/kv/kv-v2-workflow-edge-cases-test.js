@@ -184,7 +184,9 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       assert.dom(PAGE.error.title).hasText('404 Not Found');
       assert
         .dom(PAGE.error.message)
-        .hasText(`Sorry, we were unable to find any content at /v1/${backend}/data/${root}/${subdirectory}.`);
+        .hasText(
+          `Sorry, we were unable to find any content at /v1/${backend}/metadata/${root}/${subdirectory}.`
+        );
 
       assert.dom(PAGE.breadcrumbAtIdx(0)).hasText('Secrets');
       assert.dom(PAGE.breadcrumbAtIdx(1)).hasText(backend);

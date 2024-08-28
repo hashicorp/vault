@@ -10,15 +10,24 @@ import type AdapterError from '@ember-data/adapter/error';
 import type CapabilitiesModel from 'vault/vault/models/capabilities';
 import type StoreService from 'vault/services/store';
 
-interface Query {
-  paths?: string[];
-  path?: string;
+interface Capabilities {
+  canCreate: boolean;
+  canDelete: boolean;
+  canList: boolean;
+  canPatch: boolean;
+  canRead: boolean;
+  canSudo: boolean;
+  canUpdate: boolean;
+}
+
+interface MultipleCapabilities {
+  [key: string]: Capabilities;
 }
 
 export default class CapabilitiesService extends Service {
   @service declare readonly store: StoreService;
 
-  async request(query: Query) {
+  async request(query: { paths?: string[]; path?: string }) {
     if (query?.paths) {
       const { paths } = query;
       return this.store.query('capabilities', { paths });
@@ -31,12 +40,30 @@ export default class CapabilitiesService extends Service {
     return assert('query object must contain "paths" or "path" key', false);
   }
 
-  /*
-  this method returns a capabilities model for each path in the array of paths
-  */
-  fetchMultiplePaths(paths: string[]): Promise<Array<CapabilitiesModel>> | AdapterError {
+  async fetchMultiplePaths(paths: string[]): MultipleCapabilities | AdapterError {
     try {
-      return this.request({ paths });
+      const resp: Array<CapabilitiesModel> = await this.request({ paths });
+      return paths.reduce((obj: MultipleCapabilities, apiPath: string) => {
+        // path is the model's primaryKey (id)
+        const model: CapabilitiesModel | undefined = resp.find((m) => m.path === apiPath);
+        if (model) {
+          const { canCreate, canDelete, canList, canPatch, canRead, canSudo, canUpdate } = model;
+          obj[apiPath] = { canCreate, canDelete, canList, canPatch, canRead, canSudo, canUpdate };
+        } else {
+          // default to true if there is a problem fetching the model
+          // since we can rely on the API to gate as a fallback
+          obj[apiPath] = {
+            canCreate: true,
+            canDelete: true,
+            canList: true,
+            canPatch: true,
+            canRead: true,
+            canSudo: true,
+            canUpdate: true,
+          };
+        }
+        return obj;
+      }, {});
     } catch (e) {
       return e;
     }

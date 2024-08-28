@@ -13,18 +13,21 @@ export default class KvSecretRoute extends Route {
   @service store;
   @service capabilities;
 
-  fetchSecretData(backend, path) {
-    // This will always return a record unless 404 not found (show error) or control group
-    return this.store.queryRecord('kv/data', { backend, path });
-  }
-
   fetchSecretMetadata(backend, path) {
-    // catch error and do nothing because kv/data model handles metadata capabilities
-    return this.store.queryRecord('kv/metadata', { backend, path }).catch(() => {});
+    // catch error and only return 404 which indicates the secret truly does not exist.
+    // control group error is handled by the metadata route
+    return this.store.queryRecord('kv/metadata', { backend, path }).catch((e) => {
+      if (e.httpStatus === 404) {
+        throw e;
+      }
+      return null;
+    });
   }
 
   fetchSubkeys(backend, path) {
     const adapter = this.store.adapterFor('kv/data');
+    // metadata will throw if the secret does not exist
+    // always return here so we get deletion state and relevant metadata
     return adapter.fetchSubkeys(backend, path);
   }
 
@@ -35,8 +38,6 @@ export default class KvSecretRoute extends Route {
     return hash({
       path,
       backend,
-      // TODO remove and move to details tab
-      secret: this.fetchSecretData(backend, path),
       subkeys: this.fetchSubkeys(backend, path),
       metadata: this.fetchSecretMetadata(backend, path),
       canPatchSecret: this.capabilities.canPatch(`${backend}/data/${path}`),
