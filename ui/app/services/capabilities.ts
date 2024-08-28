@@ -43,14 +43,16 @@ export default class CapabilitiesService extends Service {
   async fetchMultiplePaths(paths: string[]): MultipleCapabilities | AdapterError {
     try {
       const resp: Array<CapabilitiesModel> = await this.request({ paths });
-      return resp.reduce((obj: MultipleCapabilities, model: CapabilitiesModel) => {
-        const path = paths.find((p) => model.path === p);
-        if (path) {
+      return paths.reduce((obj: MultipleCapabilities, apiPath: string) => {
+        // path is the model's primaryKey (id)
+        const model: CapabilitiesModel | undefined = resp.find((m) => m.path === apiPath);
+        if (model) {
           const { canCreate, canDelete, canList, canPatch, canRead, canSudo, canUpdate } = model;
-          obj[path] = { canCreate, canDelete, canList, canPatch, canRead, canSudo, canUpdate };
+          obj[apiPath] = { canCreate, canDelete, canList, canPatch, canRead, canSudo, canUpdate };
         } else {
-          // default to true since we can rely on API to gate as a fallback
-          obj[model.path] = {
+          // default to true if there is a problem fetching the model
+          // since we can rely on the API to gate as a fallback
+          obj[apiPath] = {
             canCreate: true,
             canDelete: true,
             canList: true,

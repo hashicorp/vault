@@ -116,6 +116,42 @@ module('Unit | Service | capabilities', function (hooks) {
     assert.propEqual(actual, expected, `it returns expected response: ${JSON.stringify(actual)}`);
   });
 
+  test('fetchMultiplePaths: it defaults to true if no model is found', async function (assert) {
+    const paths = ['/my/api/path', 'another/api/path'];
+    const expectedPayload = { paths };
+    this.server.post('/sys/capabilities-self', (schema, req) => {
+      const actual = JSON.parse(req.requestBody);
+      assert.true(true, 'request made to capabilities-self');
+      assert.propEqual(actual, expectedPayload, `request made with path: ${JSON.stringify(actual)}`);
+      return this.generateResponse({
+        paths: ['/my/api/path'],
+        capabilities: { '/my/api/path': ['read', 'list'] },
+      });
+    });
+    const actual = await this.capabilities.fetchMultiplePaths(paths);
+    const expected = {
+      '/my/api/path': {
+        canCreate: false,
+        canDelete: false,
+        canList: true,
+        canPatch: false,
+        canRead: true,
+        canSudo: false,
+        canUpdate: false,
+      },
+      'another/api/path': {
+        canCreate: true,
+        canDelete: true,
+        canList: true,
+        canPatch: true,
+        canRead: true,
+        canSudo: true,
+        canUpdate: true,
+      },
+    };
+    assert.propEqual(actual, expected, `it returns expected response: ${JSON.stringify(actual)}`);
+  });
+
   module('specific methods', function () {
     const path = '/my/api/path';
     [
