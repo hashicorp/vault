@@ -15,9 +15,11 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	"github.com/hashicorp/vault/sdk/database/helper/cacheutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/jackc/pgx/v4"
@@ -34,6 +36,12 @@ const (
 const (
 	dbTypePostgres   = "pgx"
 	cloudSQLPostgres = "cloudsql-postgres"
+
+	// controls the size of the static account cache
+	// as part of the self-managed workflow
+	defaultStaticCacheSize     = 4
+	defaultSelfManagedUsername = "self-managed-user"
+	defaultSelfManagedPassword = "self-managed-password"
 )
 
 var _ ConnectionProducer = &SQLConnectionProducer{}
@@ -46,6 +54,7 @@ type SQLConnectionProducer struct {
 	MaxConnectionLifetimeRaw interface{} `json:"max_connection_lifetime" mapstructure:"max_connection_lifetime" structs:"max_connection_lifetime"`
 	DisableEscaping          bool        `json:"disable_escaping" mapstructure:"disable_escaping" structs:"disable_escaping"`
 	usePrivateIP             bool        `json:"use_private_ip" mapstructure:"use_private_ip" structs:"use_private_ip"`
+	SelfManaged              bool        `json:"self_managed" mapstructure:"self_managed" structs:"self_managed"`
 
 	// Username/Password is the default auth type when AuthType is not set
 	Username string `json:"username" mapstructure:"username" structs:"username"`
@@ -66,6 +75,7 @@ type SQLConnectionProducer struct {
 	maxConnectionLifetime time.Duration
 	Initialized           bool
 	db                    *sql.DB
+	staticAccountsCache   *cacheutil.Cache
 	sync.Mutex
 }
 
@@ -89,6 +99,11 @@ func (c *SQLConnectionProducer) Init(ctx context.Context, conf map[string]interf
 		return nil, fmt.Errorf("connection_url cannot be empty")
 	}
 
+	isTemplatedURL := true
+	if !strings.Contains(c.ConnectionURL, "{{username}}") || !strings.Contains(c.ConnectionURL, "{{password}}") {
+		isTemplatedURL = false
+	}
+
 	// Do not allow the username or password template pattern to be used as
 	// part of the user-supplied username or password
 	if strings.Contains(c.Username, "{{username}}") ||
@@ -99,16 +114,40 @@ func (c *SQLConnectionProducer) Init(ctx context.Context, conf map[string]interf
 		return nil, fmt.Errorf("username and/or password cannot contain the template variables")
 	}
 
-	// Don't escape special characters for MySQL password
-	// Also don't escape special characters for the username and password if
-	// the disable_escaping parameter is set to true
-	username := c.Username
-	password := c.Password
-	if !c.DisableEscaping {
-		username = url.PathEscape(c.Username)
+	// validate that at least one of username/password / self_managed is set
+	if !c.SelfManaged && (c.Username == "" && c.Password == "") && isTemplatedURL {
+		return nil, fmt.Errorf("must either provide username/password or set self-managed to 'true'")
 	}
-	if (c.Type != "mysql") && !c.DisableEscaping {
-		password = url.PathEscape(c.Password)
+
+	// validate that self-managed and username/password are mutually exclusive
+	if c.SelfManaged {
+		if (c.Username != "" || c.Password != "") || !isTemplatedURL {
+			return nil, fmt.Errorf("cannot use both self-managed and vault-managed workflows")
+		}
+	}
+
+	var username string
+	var password string
+	if !c.SelfManaged {
+		// Default behavior
+		username = c.Username
+		password = c.Password
+
+		// Don't escape special characters for MySQL password
+		// Also don't escape special characters for the username and password if
+		// the disable_escaping parameter is set to true
+		if !c.DisableEscaping {
+			username = url.PathEscape(c.Username)
+		}
+		if (c.Type != "mysql") && !c.DisableEscaping {
+			password = url.PathEscape(c.Password)
+		}
+
+	} else {
+		// this is added to make middleware happy
+		// these placeholders are replaced when we make the actual static connection
+		username = defaultSelfManagedUsername
+		password = defaultSelfManagedPassword
 	}
 
 	// QueryHelper doesn't do any SQL escaping, but if it starts to do so
@@ -159,11 +198,35 @@ func (c *SQLConnectionProducer) Init(ctx context.Context, conf map[string]interf
 		c.cloudDialerCleanup = dialerCleanup
 	}
 
+	if c.SelfManaged && c.staticAccountsCache == nil {
+		logger := log.New(&log.LoggerOptions{
+			Level: log.Trace,
+		})
+
+		closer := func(key interface{}, value interface{}) {
+			logger.Trace(fmt.Sprintf("Evicting key %s from static LRU cache", key))
+			conn, ok := value.(*sql.DB)
+			if !ok {
+				logger.Error(fmt.Sprintf("error retrieving connection %s from static LRU cache, err=%s", key, err))
+			}
+
+			if err := conn.Close(); err != nil {
+				logger.Error(fmt.Sprintf("error closing connection for %s, err=%s", key, err))
+			}
+			logger.Trace(fmt.Sprintf("closed DB connection for %s", key))
+		}
+		c.staticAccountsCache, err = cacheutil.NewCache(defaultStaticCacheSize, closer)
+		if err != nil {
+			return nil, fmt.Errorf("error initializing static account cache: %s", err)
+		}
+	}
+
 	// Set initialized to true at this point since all fields are set,
 	// and the connection can be established at a later time.
 	c.Initialized = true
 
-	if verifyConnection {
+	// only verify if not self-managed
+	if verifyConnection && !c.SelfManaged {
 		if _, err := c.Connection(ctx); err != nil {
 			return nil, errwrap.Wrapf("error verifying connection: {{err}}", err)
 		}
@@ -210,22 +273,8 @@ func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, er
 	}
 
 	// Otherwise, attempt to make connection
-	conn := c.ConnectionURL
-
-	// PostgreSQL specific settings
-	if strings.HasPrefix(conn, "postgres://") || strings.HasPrefix(conn, "postgresql://") {
-		// Ensure timezone is set to UTC for all the connections
-		if strings.Contains(conn, "?") {
-			conn += "&timezone=UTC"
-		} else {
-			conn += "?timezone=UTC"
-		}
-
-		// Ensure a reasonable application_name is set
-		if !strings.Contains(conn, "application_name") {
-			conn += "&application_name=vault"
-		}
-	}
+	// Apply PostgreSQL specific settings if needed
+	conn := applyPostgresSettings(c.ConnectionURL)
 
 	if driverName == dbTypePostgres && c.TLSConfig != nil {
 		config, err := pgx.ParseConfig(conn)
@@ -310,6 +359,25 @@ func (c *SQLConnectionProducer) Close() error {
 // Vault's storage.
 func (c *SQLConnectionProducer) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticUser dbplugin.StaticUserConfig) (username, password string, err error) {
 	return "", "", dbutil.Unimplemented()
+}
+
+func applyPostgresSettings(connURL string) string {
+	res := connURL
+	if strings.HasPrefix(res, "postgres://") || strings.HasPrefix(res, "postgresql://") {
+		// Ensure timezone is set to UTC for all the connections
+		if strings.Contains(res, "?") {
+			res += "&timezone=UTC"
+		} else {
+			res += "?timezone=UTC"
+		}
+
+		// Ensure a reasonable application_name is set
+		if !strings.Contains(res, "application_name") {
+			res += "&application_name=vault"
+		}
+	}
+
+	return res
 }
 
 var configurableAuthTypes = map[string]bool{

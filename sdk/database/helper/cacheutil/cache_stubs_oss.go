@@ -3,14 +3,14 @@
 
 //go:build !enterprise
 
-package connutil
+package cacheutil
 
-import (
-	"context"
-	"database/sql"
-	"errors"
-)
+import "errors"
 
-func (c *SQLConnectionProducer) StaticConnection(_ context.Context, _, _ string) (*sql.DB, error) {
+type EvictionFunc func(key interface{}, value interface{})
+
+type Cache struct{}
+
+func NewCache(_ int, _ EvictionFunc) (*Cache, error) {
 	return nil, errors.New("self-managed static roles only available in Vault Enterprise")
 }
