@@ -197,11 +197,10 @@ module('Acceptance | auth', function (hooks) {
   });
 
   test('it does not call renew-self after successful login with non-renewable token', async function (assert) {
-    assert.expect(1);
-
-    this.server.post('/auth/token/renew-self', function () {
-      assert.notOk(true, 'should not call renew-self directly after logging in');
-    });
+    this.server.post(
+      '/auth/token/renew-self',
+      () => new Error('should not call renew-self directly after logging in')
+    );
 
     await visit('/vault/auth');
     await fillIn(AUTH_FORM.method, 'token');
