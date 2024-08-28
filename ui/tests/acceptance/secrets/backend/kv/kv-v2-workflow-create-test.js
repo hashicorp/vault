@@ -889,11 +889,17 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // Add new version
       await click(PAGE.secretTab('Secret'));
       await click(PAGE.detail.createNewVersion);
+      assert
+        .dom(FORM.noReadAlert)
+        .hasText(
+          'Warning You do not have read permissions for this secret data. Saving will overwrite the existing secret.',
+          'shows alert for no read permissions'
+        );
       assert.dom(FORM.inputByAttr('path')).isDisabled('path input is disabled');
       assert.dom(FORM.inputByAttr('path')).hasValue(secretPath);
       assert.dom(FORM.toggleMetadata).doesNotExist('Does not show metadata toggle when creating new version');
-      assert.dom(FORM.keyInput()).hasValue('', 'row 1 is empty key');
-      assert.dom(FORM.maskedValueInput()).hasValue('', 'row 1 has empty value');
+      assert.dom(FORM.keyInput()).hasValue('', 'Key input has empty value');
+      assert.dom(FORM.maskedValueInput()).hasValue('', 'Val input has empty value');
       await fillIn(FORM.keyInput(), 'api_url');
       await fillIn(FORM.maskedValueInput(), 'hashicorp.com');
       await click(FORM.saveBtn);
@@ -1007,40 +1013,6 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(PAGE.breadcrumbAtIdx(2));
       assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list/app/`, 'sub-dir page');
       assert.dom(PAGE.list.item()).doesNotExist('Does not list any secrets');
-    });
-    test('create new version of secret from older version (sc)', async function (assert) {
-      const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details?version=1`);
-      assert.dom(PAGE.detail.versionDropdown).doesNotExist('version dropdown does not show');
-      assert.dom(PAGE.detail.versionTimestamp).doesNotExist('Version created not shown');
-      await click(PAGE.detail.createNewVersion);
-      assert.strictEqual(
-        currentURL(),
-        `/vault/secrets/${backend}/kv/app%2Ffirst/details/edit?version=1`,
-        'Goes to new version page'
-      );
-      assert
-        .dom(FORM.noReadAlert)
-        .hasText(
-          'Warning You do not have read permissions for this secret data. Saving will overwrite the existing secret.',
-          'shows alert for no read permissions'
-        );
-      assert.dom(FORM.keyInput()).hasValue('', 'Key input has empty value');
-      assert.dom(FORM.maskedValueInput()).hasValue('', 'Val input has empty value');
-
-      await fillIn(FORM.keyInput(), 'my-key');
-      await fillIn(FORM.maskedValueInput(), 'my-value');
-      await click(FORM.saveBtn);
-      assert.strictEqual(
-        currentURL(),
-        `/vault/secrets/${backend}/kv/app%2Ffirst`,
-        'redirects to overview page'
-      );
-      await click(PAGE.secretTab('Secret'));
-      assert.dom(PAGE.infoRow).doesNotExist('does not show data contents');
-      assert
-        .dom(PAGE.emptyStateTitle)
-        .hasText('You do not have permission to read this secret', 'shows permissions empty state');
     });
   });
 
