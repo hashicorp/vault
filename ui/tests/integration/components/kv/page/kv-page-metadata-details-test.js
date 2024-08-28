@@ -51,14 +51,13 @@ module('Integration | Component | kv-v2 | Page::Secret::Metadata::Details', func
       return render(
         hbs`
        <Page::Secret::Metadata::Details
-        @path={{this.model.path}}
-        @secret={{this.model.secret}}
-        @metadata={{this.model.metadata}}
         @breadcrumbs={{this.breadcrumbs}}
         @canDeleteMetadata={{this.canDeleteMetadata}}
-        @canReadCustomMetadata={{this.canDeleteMetadata}}
         @canReadMetadata={{this.canReadMetadata}}
         @canUpdateMetadata={{this.canReadMetadata}}
+        @customMetadata={{or this.model.metadata.customMetadata this.model.secret.customMetadata}}
+        @metadata={{this.model.metadata}}
+        @path={{this.model.path}}
       />
       `,
         { owner: this.engine }

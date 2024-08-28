@@ -8,35 +8,34 @@ import { action } from '@ember/object';
 import { service } from '@ember/service';
 
 /**
- * @module KvSecretMetadataDetails renders the details view for kv/metadata.
- * It also renders a button to delete metadata.
+ * @module KvSecretMetadataDetails renders the details view for kv/metadata and button to delete (which deletes the whole secret) or edit metadata.
  * <Page::Secret::Metadata::Details
- *  @path={{this.model.path}}
- *  @secret={{this.model.secret}}
- *  @metadata={{this.model.metadata}}
- *  @breadcrumbs={{this.breadcrumbs}}
-  />
+ * @backend={{this.model.backend}}
+ * @breadcrumbs={{this.breadcrumbs}}
+ * @canDeleteMetadata={{this.model.permissions.metadata.canDelete}}
+ * @canReadMetadata={{this.model.permissions.metadata.canRead}}
+ * @canUpdateMetadata={{this.model.permissions.metadata.canUpdate}}
+ * @customMetadata={{or this.model.metadata.customMetadata this.model.secret.customMetadata}}
+ * @metadata={{this.model.metadata}}
+ * @path={{this.model.path}}
+ * />
  *
- * @param {string} path - path of kv secret 'my/secret' used as the title for the KV page header
- * @param {model} [secret] - Ember data model: 'kv/data'. Only fetched if user cannot read metadata
- * @param {model} metadata - Ember data model: 'kv/metadata'
+ * @param {string} backend - The name of the kv secret engine.
  * @param {array} breadcrumbs - Array to generate breadcrumbs, passed to the page header component
  * @param {boolean} canDeleteMetadata - if true, "Permanently delete" action renders in the toolbar
+ * @param {boolean} canReadMetadata - if true, secret metadata renders below custom_metadata
  * @param {boolean} canUpdateMetadata - if true, "Edit" action renders in the toolbar
- * 
+ * @param {object} customMetadata - comes from secret metadata or data endpoint. if undefined, user does not have "read" access, if an empty object then there is none
+ * @param {model} metadata - Ember data model: 'kv/metadata'
+ * @param {string} path - path of kv secret 'my/secret' used as the title for the KV page header
+ *
+ *
  */
 
 export default class KvSecretMetadataDetails extends Component {
   @service flashMessages;
   @service router;
   @service store;
-
-  // if the user had read permissions and there is no custom_metadata
-  // this returns an empty object, without read capabilities it's undefined
-  get customMetadata() {
-    // metadata tab is available even if user only has access to kv/data path
-    return this.args.metadata?.customMetadata || this.args.secret?.customMetadata;
-  }
 
   @action
   async onDelete() {
