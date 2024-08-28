@@ -87,6 +87,7 @@ export default class KvListPageComponent extends Component {
     evt.preventDefault();
     pathIsDirectory(this.secretPath)
       ? this.router.transitionTo('vault.cluster.secrets.backend.kv.list-directory', this.secretPath)
-      : this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.index', this.secretPath);
+      : // navigate directly to the details because user has explicitly typed in a secret path
+        this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.details', this.secretPath);
   }
 }
