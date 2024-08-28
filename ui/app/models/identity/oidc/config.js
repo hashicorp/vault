@@ -7,7 +7,7 @@ import Model, { attr } from '@ember-data/model';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
-export default class IdentityToken extends Model {
+export default class IdentityOidcConfig extends Model {
   @attr('string', {
     label: 'Issuer',
     subText:

@@ -5,7 +5,7 @@
 
 import type Model from '@ember-data/model';
 
-export default class IdentityTokenModel extends Model {
+export default class IdentityOidcConfigModel extends Model {
   issuer: string;
   get attrs(): any;
   // for some reason the following Model attrs don't exist on the Model definition

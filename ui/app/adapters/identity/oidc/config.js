@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import ApplicationAdapter from './application';
+import ApplicationAdapter from '../../application';
 
-export default class AwsRootConfig extends ApplicationAdapter {
+export default class IdentityOidcConfig extends ApplicationAdapter {
   namespace = 'v1';
 
   queryRecord() {

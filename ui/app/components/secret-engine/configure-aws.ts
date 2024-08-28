@@ -14,7 +14,7 @@ import errorMessage from 'vault/utils/error-message';
 
 import type LeaseConfigModel from 'vault/models/aws/lease-config';
 import type RootConfigModel from 'vault/models/aws/root-config';
-import type IdentityToken from 'vault/models/identity-token';
+import type IdentityOidcConfigModel from 'vault/models/identity/oidc/config';
 import type Router from '@ember/routing/router';
 import type StoreService from 'vault/services/store';
 import type VersionService from 'vault/services/version';
@@ -43,7 +43,7 @@ import type FlashMessageService from 'vault/services/flash-messages';
 interface Args {
   leaseConfig: LeaseConfigModel;
   rootConfig: RootConfigModel;
-  issuerConfig: IdentityToken;
+  issuerConfig: IdentityOidcConfigModel;
   backendPath: string;
   issuer?: string;
 }

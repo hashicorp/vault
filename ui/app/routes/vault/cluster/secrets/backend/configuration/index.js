@@ -105,7 +105,7 @@ export default class SecretsBackendConfigurationRoute extends Route {
 
   async fetchIssuer() {
     try {
-      return await this.store.queryRecord('identity-token', {});
+      return await this.store.queryRecord('identity/oidc/config', {});
     } catch (e) {
       // silently fail if the endpoint is not available or the user doesn't have permission to access it.
       return;

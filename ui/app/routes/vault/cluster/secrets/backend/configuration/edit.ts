@@ -20,7 +20,7 @@ import type VersionService from 'vault/services/version';
 // Saving and updating of those models are done within the engine specific components.
 
 const CONFIG_ADAPTERS_PATHS: Record<string, string[]> = {
-  aws: ['aws/lease-config', 'aws/root-config', 'identity-token'],
+  aws: ['aws/lease-config', 'aws/root-config', 'identity/oidc/config'],
   ssh: ['ssh/ca-config'],
 };
 
@@ -29,9 +29,13 @@ export default class SecretsBackendConfigurationEdit extends Route {
   @service declare readonly version: VersionService;
 
   get configAdapterPaths() {
-    // we only want to check identity-token for enterprise users
+    // we only want to check identity/oidc/config for enterprise users
     return {
-      aws: ['aws/lease-config', 'aws/root-config', ...(this.version.isEnterprise ? ['identity-token'] : [])],
+      aws: [
+        'aws/lease-config',
+        'aws/root-config',
+        ...(this.version.isEnterprise ? ['identity/oidc/config'] : []),
+      ],
       ssh: ['ssh/ca-config'],
     };
   }

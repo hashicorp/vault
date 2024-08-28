@@ -63,15 +63,15 @@ const createAwsRootConfig = (store, backend, accessType = 'iam') => {
 };
 
 const createIssuerConfig = (store, backend) => {
-  store.pushPayload('identity-token', {
+  store.pushPayload('identity/oidc/config', {
     id: backend,
-    modelName: 'identity-token',
+    modelName: 'identity/oidc/config',
     data: {
       backend,
       issuer: `http://bar-${uuidv4()}`,
     },
   });
-  return store.peekRecord('identity-token', backend);
+  return store.peekRecord('identity/oidc/config', backend);
 };
 
 const createAwsLeaseConfig = (store, backend) => {

@@ -37,7 +37,7 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
     this.id = `aws-${this.uid}`;
     this.rootConfig = this.store.createRecord('aws/root-config');
     this.leaseConfig = this.store.createRecord('aws/lease-config');
-    this.issuerConfig = this.store.createRecord('identity-token');
+    this.issuerConfig = this.store.createRecord('identity/oidc/config');
     // Add backend to the configs because it's not on the testing snapshot (would come from url)
     this.rootConfig.backend = this.leaseConfig.backend = this.id;
     this.version = this.owner.lookup('service:version');
