@@ -35,14 +35,6 @@ const createAwsRootConfig = (store, backend, accessType = 'iam') => {
         identity_token_ttl: 7200,
       },
     });
-    store.pushPayload('identity-token', {
-      id: 'something-unique',
-      modelName: 'identity-token',
-      data: {
-        id: 'something-unique',
-        issuer: 'http://foo.bar',
-      },
-    });
   } else if (accessType === 'no-access') {
     // set root config options that are not associated with accessType 'wif' or 'iam'
     store.pushPayload('aws/root-config', {
@@ -68,6 +60,18 @@ const createAwsRootConfig = (store, backend, accessType = 'iam') => {
     });
   }
   return store.peekRecord('aws/root-config', backend);
+};
+
+const createIssuerConfig = (store, backend) => {
+  store.pushPayload('identity-token', {
+    id: backend,
+    modelName: 'identity-token',
+    data: {
+      backend,
+      issuer: `http://bar-${uuidv4()}`,
+    },
+  });
+  return store.peekRecord('identity-token', backend);
 };
 
 const createAwsLeaseConfig = (store, backend) => {
@@ -117,6 +121,8 @@ export const createConfig = (store, backend, type) => {
       return createAwsRootConfig(store, backend, 'wif');
     case 'aws-no-access':
       return createAwsRootConfig(store, backend, 'no-access');
+    case 'issuer':
+      return createIssuerConfig(store, backend);
     case 'aws-lease':
       return createAwsLeaseConfig(store, backend);
     case 'ssh':

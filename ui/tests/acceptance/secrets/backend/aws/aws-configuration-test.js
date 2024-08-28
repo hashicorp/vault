@@ -120,6 +120,26 @@ module('Acceptance | aws | configuration', function (hooks) {
       await runCmd(`delete sys/mounts/${path}`);
     });
 
+    test('it not show issuer if no root WIF configuration data is returned', async function (assert) {
+      const path = `aws-${this.uid}`;
+      const type = 'aws';
+      this.server.get(`${path}/config/root`, (schema, req) => {
+        const payload = JSON.parse(req.requestBody);
+        assert.ok(true, 'request made to config/root when navigating to the configuration page.');
+        return { data: { id: path, type, attributes: payload } };
+      });
+      this.server.get(`identity/oidc/config`, () => {
+        assert.false(true, 'request made to return issuer. test should fail.');
+      });
+      await enablePage.enable(type, path);
+      createConfig(this.store, path, type); // create the aws root config in the store
+      await click(SES.configTab);
+      assert.dom(GENERAL.infoRowLabel('Issuer')).doesNotExist(`Issuer does not exists on config details.`);
+      assert.dom(GENERAL.infoRowLabel('Access key')).exists(`Access key does exists on config details.`);
+      // cleanup
+      await runCmd(`delete sys/mounts/${path}`);
+    });
+
     test('it should save root AWS—with IAM options—configuration', async function (assert) {
       assert.expect(3);
       const path = `aws-${this.uid}`;

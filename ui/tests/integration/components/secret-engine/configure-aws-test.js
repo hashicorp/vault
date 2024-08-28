@@ -136,6 +136,24 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
           .isNotChecked('identityTokenTtl is cleared after toggling accessType');
       });
 
+      test('it does not clear global issuer when toggling accessType', async function (assert) {
+        this.issuerConfig = createConfig(this.store, this.id, 'issuer');
+        await this.renderComponent();
+        await click(SES.aws.accessType('wif'));
+        assert
+          .dom(GENERAL.inputByAttr('issuer'))
+          .hasValue(this.issuerConfig.issuer, 'issuer is what is sent in my the model on first load');
+        await fillIn(GENERAL.inputByAttr('issuer'), 'http://ive-changed');
+        await click(SES.aws.accessType('iam'));
+        await click(SES.aws.accessType('wif'));
+        assert
+          .dom(GENERAL.inputByAttr('issuer'))
+          .hasValue(
+            this.issuerConfig.issuer,
+            'issuer value is still the same global value after toggling accessType'
+          );
+      });
+
       test('it shows validation error if default lease is entered but max lease is not', async function (assert) {
         assert.expect(2);
         await this.renderComponent();
@@ -207,7 +225,34 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
         );
       });
 
-      test('it transitions without sending a lease or root payload on cancel', async function (assert) {
+      test('it allows user to submit root config even if API error occurs on issuer config', async function (assert) {
+        assert.expect(4);
+        await this.renderComponent();
+        this.server.post(configUrl('aws', this.id), () => {
+          assert.true(true, 'post request was made to config/root when issuer failed. test should pass.');
+        });
+        this.server.post('/identity/oidc/config', () => {
+          return overrideResponse(400, { errors: ['bad request'] });
+        });
+        await fillInAwsConfig('withWif');
+        await click(GENERAL.saveButton);
+        await click(SES.aws.issuerWarningSave);
+
+        assert.true(
+          this.flashDangerSpy.calledWith('Issuer was not saved: bad request'),
+          'Flash message shows that issuer was not saved'
+        );
+        assert.true(
+          this.flashSuccessSpy.calledWith(`Successfully saved ${this.id}'s root configuration.`),
+          'Flash message shows that root was saved even if issuer was not'
+        );
+        assert.ok(
+          this.transitionStub.calledWith('vault.cluster.secrets.backend.configuration', this.id),
+          'Transitioned to the configuration index route.'
+        );
+      });
+
+      test('it transitions without sending a lease, root, or issuer payload on cancel', async function (assert) {
         assert.expect(3);
         await this.renderComponent();
         this.server.post(configUrl('aws', this.id), () => {
@@ -222,8 +267,14 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
             'post request was made to config/lease when user canceled out of flow. test should fail.'
           );
         });
+        this.server.post('/identity/oidc/config', () => {
+          assert.true(
+            false,
+            'post request was made to save issuer when user canceled out of flow. test should fail.'
+          );
+        });
         // fill in both lease and root endpoints to ensure that both payloads are attempted to be sent
-        await fillInAwsConfig('withAccess');
+        await fillInAwsConfig('withWif');
         await fillInAwsConfig('withLease');
         await click(GENERAL.cancelButton);
 
@@ -236,7 +287,7 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
       });
 
       module('issuer field tests', function () {
-        // the other tests where issuer is not passed do not show modals, so we only need to test when the modal should show up
+        // the other tests where issuer is not passed do not show modals, so we only need to test when the modal should shows up
         test('is shows placeholder issuer, shows modal when saving changes, and does not call APIs on cancel', async function (assert) {
           this.server.post('/identity/oidc/config', () => {
             assert.notOk(true, 'request should not be made to issuer config endpoint');
@@ -374,6 +425,28 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
         assert.dom(GENERAL.inputByAttr('issuer')).doesNotExist();
       });
     });
+    test('it does not send issuer on save', async function (assert) {
+      assert.expect(4);
+      await this.renderComponent();
+      this.server.post(configUrl('aws', this.id), () => {
+        assert.true(true, 'post request was made to config/root. test should pass.');
+      });
+      this.server.post('/identity/oidc/config', () => {
+        assert.true(false, 'post request was made to update issuer. test should fail.');
+      });
+      await fillInAwsConfig('withAccess');
+      await fillInAwsConfig('withLease');
+      await click(GENERAL.saveButton);
+      assert.dom(SES.aws.issuerWarningModal).doesNotExist('modal should not render');
+      assert.true(
+        this.flashSuccessSpy.calledWith(`Successfully saved ${this.id}'s root configuration.`),
+        'Flash message shows that root was saved even if issuer was not'
+      );
+      assert.ok(
+        this.transitionStub.calledWith('vault.cluster.secrets.backend.configuration', this.id),
+        'Transitioned to the configuration index route.'
+      );
+    });
   });
   module('Edit view', function (hooks) {
     hooks.beforeEach(function () {
@@ -411,6 +484,17 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
           .dom(GENERAL.inputByAttr('identityTokenAudience'))
           .hasValue(this.rootConfig.identityTokenAudience);
         assert.dom(GENERAL.ttl.input('Identity token TTL')).hasValue('2'); // 7200 on payload is 2hrs in ttl picker
+      });
+
+      test('it renders issuer if global issuer is already set', async function (assert) {
+        this.rootConfig = createConfig(this.store, this.id, 'aws-wif');
+        this.issuerConfig = createConfig(this.store, this.id, 'issuer');
+        await this.renderComponent();
+        assert.dom(SES.aws.accessType('wif')).isChecked('WIF accessType is checked');
+        assert.dom(SES.aws.accessType('wif')).isDisabled('WIF accessType is disabled');
+        assert
+          .dom(GENERAL.inputByAttr('issuer'))
+          .hasValue(this.issuerConfig.issuer, 'it has the models issuer value');
       });
 
       test('it allows you to change access type if record does not have wif or iam values already set', async function (assert) {
