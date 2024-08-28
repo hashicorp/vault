@@ -16,6 +16,8 @@ import { dateFromNow } from 'core/helpers/date-from-now';
 import { baseSetup } from 'vault/tests/helpers/kv/kv-run-commands';
 
 const { overviewCard } = GENERAL;
+
+// subkey is enterprise only but we don't have any version testing here because the @subkey arg is null for non-enterprise versions
 module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'kv');
@@ -23,9 +25,6 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
 
   hooks.beforeEach(async function () {
     baseSetup(this);
-    // subkey/patch is enterprise only, stub service here so these tests can run on both repos
-    this.version = this.owner.lookup('service:version');
-    this.version.type = 'enterprise';
     this.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.backend, route: 'list' },
@@ -195,29 +194,6 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
           `Paths The paths to use when referring to this secret in API or CLI. API path /v1/${this.backend}/data/${this.path} CLI path -mount="${this.backend}" "${this.path}"`
         );
     });
-
-    test('on community edition', async function (assert) {
-      this.version.type = 'community';
-      await this.renderComponent();
-      const fromNow = dateFromNow([this.metadata.updatedTime]); // uses date-fns so can't stub timestamp util
-      const expectedTime = this.format(this.metadata.updatedTime);
-      assert
-        .dom(overviewCard.container('Current version'))
-        .hasText(
-          `Current version Create new The current version of this secret. ${this.metadata.currentVersion}`
-        );
-      assert
-        .dom(overviewCard.container('Secret age'))
-        .hasText(
-          `Secret age View metadata Current secret version age. Last updated on ${expectedTime}. ${fromNow}`
-        );
-      assert
-        .dom(overviewCard.container('Paths'))
-        .hasText(
-          `Paths The paths to use when referring to this secret in API or CLI. API path /v1/${this.backend}/data/${this.path} CLI path -mount="${this.backend}" "${this.path}"`
-        );
-      assert.dom(overviewCard.container('Subkeys')).doesNotExist();
-    });
   });
 
   module('deleted version', function (hooks) {
@@ -294,18 +270,6 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
       await this.renderComponent();
       assert.dom(overviewCard.container('Current version')).doesNotExist();
     });
-
-    test('on community edition', async function (assert) {
-      this.version.type = 'community';
-      const expectedTime = this.format(this.metadata.versions[4].deletion_time);
-      await this.renderComponent();
-      assert
-        .dom(overviewCard.container('Current version'))
-        .hasText(
-          `Current version Deleted Create new The current version of this secret was deleted ${expectedTime}. ${this.metadata.currentVersion}`
-        );
-      assert.dom(overviewCard.container('Subkeys')).doesNotExist();
-    });
   });
 
   module('destroyed version', function (hooks) {
@@ -378,17 +342,6 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
       this.metadata = null;
       await this.renderComponent();
       assert.dom(overviewCard.container('Current version')).doesNotExist();
-    });
-
-    test('on community edition', async function (assert) {
-      this.version.type = 'community';
-      await this.renderComponent();
-      assert
-        .dom(overviewCard.container('Current version'))
-        .hasText(
-          `Current version Destroyed Create new The current version of this secret has been permanently deleted and cannot be restored. ${this.metadata.currentVersion}`
-        );
-      assert.dom(overviewCard.container('Subkeys')).doesNotExist();
     });
   });
 });
