@@ -76,4 +76,9 @@ export default class KvMetadataAdapter extends ApplicationAdapter {
     // path is used when deleting from the metadata details view.
     return this.ajax(this._url(kvMetadataPath(backend, fullSecretPath || path)), 'DELETE');
   }
+
+  // custom method when users do not permissions to fetch record
+  deleteAllVersions(backend, path) {
+    return this.ajax(this._url(kvMetadataPath(backend, path)), 'DELETE');
+  }
 }
