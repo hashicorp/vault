@@ -23,21 +23,10 @@ export default class KvSecretMetadataRoute extends Route {
   async fetchCapabilities(backend, path) {
     const metadataPath = `${backend}/metadata/${path}`;
     const dataPath = `${backend}/data/${path}`;
-    const resp = await this.capabilities.fetchMultiplePaths([metadataPath, dataPath]);
-
-    const findPerms = (path) => {
-      const model = resp.find((m) => m.id === path);
-      if (model) {
-        const { canRead, canUpdate, canDelete } = model;
-        return { canRead, canUpdate, canDelete };
-      }
-      // default to true since we can rely on API to gate as a fallback
-      return { canRead: true, canUpdate: true, canDelete: true };
-    };
-
+    const capabilities = await this.capabilities.fetchMultiplePaths([metadataPath, dataPath]);
     return {
-      metadata: findPerms(metadataPath),
-      data: findPerms(dataPath),
+      metadata: capabilities[metadataPath],
+      data: capabilities[dataPath],
     };
   }
 
