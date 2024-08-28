@@ -40,11 +40,11 @@ export default class KvSecretMetadataDetails extends Component {
 
   @action
   async onDelete() {
-    // The only delete option from this view is delete all versions
+    // The only delete option from this view is delete metadata and all versions
     const { backend, path } = this.args;
     const adapter = this.store.adapterFor('kv/metadata');
     try {
-      await adapter.deleteAllVersions(backend, path);
+      await adapter.deleteMetadata(backend, path);
       this.store.clearDataset('kv/metadata'); // Clear out the store cache so that the metadata/list view is updated.
       this.flashMessages.success(
         `Successfully deleted the metadata and all version data for the secret ${path}.`
