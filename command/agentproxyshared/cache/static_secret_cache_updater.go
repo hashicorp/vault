@@ -12,6 +12,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -28,7 +29,7 @@ import (
 	"nhooyr.io/websocket"
 )
 
-// Example Event:
+// Example write event (this does not contain all possible fields):
 //{
 //  "id": "a3be9fb1-b514-519f-5b25-b6f144a8c1ce",
 //  "source": "https://vaultproject.io/",
@@ -56,6 +57,37 @@ import (
 //  },
 //  "datacontentype": "application/cloudevents",
 //  "time": "2023-09-12T15:19:49.394915-07:00"
+//}
+
+// Example event with namespaces for an undelete (this does not contain all possible fields):
+// {
+//  "id": "6c6b13fd-f133-f351-3cf0-b09ae6a417b1",
+//  "source": "vault://hostname",
+//  "specversion": "1.0",
+//  "type": "*",
+//  "data": {
+//    "event": {
+//      "id": "6c6b13fd-f133-f351-3cf0-b09ae6a417b1",
+//      "metadata": {
+//        "current_version": "3",
+//        "destroyed_versions": "[2,3]",
+//        "modified": "true",
+//        "oldest_version": "0",
+//        "operation": "destroy",
+//        "path": "secret-v2/destroy/my-secret"
+//      }
+//    },
+//    "event_type": "kv-v2/destroy",
+//    "plugin_info": {
+//      "mount_class": "secret",
+//      "mount_accessor": "kv_b27b3cad",
+//      "mount_path": "secret-v2/",
+//      "plugin": "kv",
+//      "version": "2"
+//    }
+//  },
+//  "datacontentype": "application/cloudevents",
+//  "time": "2024-08-27T12:46:01.373097-04:00"
 //}
 
 // StaticSecretCacheUpdater is a struct that utilizes
@@ -165,15 +197,47 @@ func (updater *StaticSecretCacheUpdater) streamStaticSecretEvents(ctx context.Co
 			}
 			modified, ok := metadata["modified"].(string)
 			if ok && modified == "true" {
+				// If data_path were in every event, we'd get that instead, but unfortunately it isn't.
 				path, ok := metadata["path"].(string)
 				if !ok {
-					return fmt.Errorf("unexpected event format when decoding 'path' element, message: %s\nerror: %w", string(message), err)
+					return fmt.Errorf("unexpected event format when decoding 'data_path' element, message: %s\nerror: %w", string(message), err)
 				}
 				namespace, ok := data["namespace"].(string)
 				if ok {
 					path = namespace + path
 				}
-				err := updater.updateStaticSecret(ctx, path)
+
+				deletedOrDestroyedVersions, newPath := checkForDeleteOrDestroyEvent(messageMap)
+				if len(deletedOrDestroyedVersions) > 0 {
+					path = newPath
+					err = updater.handleDeleteDestroyVersions(path, deletedOrDestroyedVersions)
+					if err != nil {
+						// While we are kind of 'missing' an event this way, re-calling this function will
+						// result in the secret remaining up to date.
+						return fmt.Errorf("error handling delete/destroy versions for static secret: path: %q, message: %s error: %w", path, message, err)
+					}
+				}
+
+				// For all other operations, we *only* care about the latest version.
+				// However, if we know the current version, we should update that too
+				currentVersion := 0
+				currentVersionString, ok := metadata["current_version"].(string)
+				if ok {
+					versionInt, err := strconv.Atoi(currentVersionString)
+					if err != nil {
+						return fmt.Errorf("unexpected event format when decoding 'current_version' element, message: %s\nerror: %w", string(message), err)
+					}
+					currentVersion = versionInt
+				}
+
+				// Note: For delete/destroy events, we continue through to updating the secret itself, too.
+				// This means that if the latest version of the secret gets deleted, then the cache keeps
+				// knowledge of which the latest version is.
+				// One intricacy of e.g. destroyed events is that if the latest secret is destroyed, continuing
+				// to update the secret will 404. This is consistent with other behaviour. For Proxy, this means
+				// the secret may be evicted. That's okay.
+
+				err = updater.updateStaticSecret(ctx, path, currentVersion)
 				if err != nil {
 					// While we are kind of 'missing' an event this way, re-calling this function will
 					// result in the secret remaining up to date.
@@ -188,6 +252,97 @@ func (updater *StaticSecretCacheUpdater) streamStaticSecretEvents(ctx context.Co
 	}
 
 	return nil
+}
+
+// checkForDeleteOrDestroyEvent checks an event message for delete/destroy events and if there
+// are any, returns the versions to be deleted or destroyed, as well as the path to
+// If none can be found, returns empty array and empty string.
+// We have to do this since events do not always return data_path for all events. If they did,
+// we could rely on that instead of doing string manipulation.
+// Example return value: [1, 2, 3], "secrets/data/my-secret".
+func checkForDeleteOrDestroyEvent(eventMap map[string]interface{}) ([]int, string) {
+	var versions []int
+
+	data, ok := eventMap["data"].(map[string]interface{})
+	if !ok {
+		return versions, ""
+	}
+
+	event, ok := data["event"].(map[string]interface{})
+	if !ok {
+		return versions, ""
+	}
+
+	metadata, ok := event["metadata"].(map[string]interface{})
+	if !ok {
+		return versions, ""
+	}
+
+	// We should have only one of these:
+	deletedVersions, ok := metadata["deleted_versions"].(string)
+	if ok {
+		err := json.Unmarshal([]byte(deletedVersions), &versions)
+		if err != nil {
+			return versions, ""
+		}
+	}
+
+	destroyedVersions, ok := metadata["destroyed_versions"].(string)
+	if ok {
+		err := json.Unmarshal([]byte(destroyedVersions), &versions)
+		if err != nil {
+			return versions, ""
+		}
+	}
+
+	undeletedVersions, ok := metadata["undeleted_versions"].(string)
+	if ok {
+		err := json.Unmarshal([]byte(undeletedVersions), &versions)
+		if err != nil {
+			return versions, ""
+		}
+	}
+
+	// We have neither deleted_versions nor destroyed_versions, return early
+	if len(versions) == 0 {
+		return versions, ""
+	}
+
+	path, ok := metadata["path"].(string)
+	if !ok {
+		return versions, ""
+	}
+
+	namespace, ok := data["namespace"].(string)
+	if ok {
+		path = namespace + path
+	}
+
+	pluginInfo, ok := data["plugin_info"].(map[string]interface{})
+	if !ok {
+		return versions, ""
+	}
+
+	mountPath := pluginInfo["mount_path"].(string)
+	if !ok {
+		return versions, ""
+	}
+
+	// We get the path without the mount path for safety, just in case the namespace or mount path
+	// have 'data' inside.
+	namespaceMountPathOnly := namespace + mountPath
+	pathWithoutMountPath := strings.TrimPrefix(path, namespaceMountPathOnly)
+
+	// We need to trim destroy or delete to add the correct path for where the secret
+	// is stored.
+	trimmedPath := strings.TrimPrefix(pathWithoutMountPath, "delete")
+	trimmedPath = strings.TrimPrefix(trimmedPath, "destroy")
+	trimmedPath = strings.TrimPrefix(trimmedPath, "undelete")
+
+	// This is how we form the ID of the cached secrets
+	fixedPath := namespaceMountPathOnly + "data" + trimmedPath
+
+	return versions, fixedPath
 }
 
 // preEventStreamUpdate is called after successful connection to the event system, but before
@@ -208,7 +363,7 @@ func (updater *StaticSecretCacheUpdater) preEventStreamUpdate(ctx context.Contex
 		if index.Type != cacheboltdb.StaticSecretType {
 			continue
 		}
-		err = updater.updateStaticSecret(ctx, index.RequestPath)
+		err = updater.updateStaticSecret(ctx, index.RequestPath, 0)
 		if err != nil {
 			errs = multierror.Append(errs, err)
 		}
@@ -219,9 +374,46 @@ func (updater *StaticSecretCacheUpdater) preEventStreamUpdate(ctx context.Contex
 	return errs.ErrorOrNil()
 }
 
+// handleDeleteDestroyVersions will handle calls to deleteVersions and destroyVersions for a given cached
+// secret. The handling is simple: remove them from the cache. We do the same for undeletes, as this will
+// also affect the cache, but we don't re-grab the secret for undeletes.
+func (updater *StaticSecretCacheUpdater) handleDeleteDestroyVersions(path string, versions []int) error {
+	indexId := hashStaticSecretIndex(path)
+	// received delete/destroy versions request: path=secret-v2/delete/my-secret
+	updater.logger.Debug("received delete/undelete/destroy versions request", "path", path, "indexId", indexId, "versions", versions)
+
+	index, err := updater.leaseCache.db.Get(cachememdb.IndexNameID, indexId)
+	if errors.Is(err, cachememdb.ErrCacheItemNotFound) {
+		// This event doesn't correspond to a secret in our cache
+		// so this is a no-op.
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+
+	// Hold the lock as we're modifying the secret
+	index.IndexLock.Lock()
+	defer index.IndexLock.Unlock()
+
+	for _, version := range versions {
+		delete(index.Versions, version)
+	}
+
+	// Lastly, store the secret
+	updater.logger.Debug("storing updated secret as result of delete/undelete/destroy", "path", path, "deletedVersions", versions)
+	err = updater.leaseCache.db.Set(index)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // updateStaticSecret checks for updates for a static secret on the path given,
-// and updates the cache if appropriate
-func (updater *StaticSecretCacheUpdater) updateStaticSecret(ctx context.Context, path string) error {
+// and updates the cache if appropriate. If currentVersion is not 0, we will also update
+// will also update the version at index.Versions[currentVersion] with the same data.
+func (updater *StaticSecretCacheUpdater) updateStaticSecret(ctx context.Context, path string, currentVersion int) error {
 	// We clone the client, as we won't be using the same token.
 	client, err := updater.client.Clone()
 	if err != nil {
@@ -325,9 +517,16 @@ func (updater *StaticSecretCacheUpdater) updateStaticSecret(ctx context.Context,
 		// Set the index's Response
 		index.Response = respBytes.Bytes()
 		index.LastRenewed = time.Now().UTC()
+		if currentVersion != 0 {
+			// It should always be non-nil, but avoid a panic just in case.
+			if index.Versions == nil {
+				index.Versions = map[int][]byte{}
+			}
+			index.Versions[currentVersion] = index.Response
+		}
 
 		// Lastly, store the secret
-		updater.logger.Debug("storing response into the cache due to update", "path", path)
+		updater.logger.Debug("storing response into the cache due to update", "path", path, "currentVersion", currentVersion)
 		err = updater.leaseCache.db.Set(index)
 		if err != nil {
 			return err

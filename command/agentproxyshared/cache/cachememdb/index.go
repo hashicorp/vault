@@ -53,6 +53,15 @@ type Index struct {
 	// Required: true, Unique: false
 	RequestPath string
 
+	// Versions are the versions of the secret for KVv2 static secrets only. This is
+	// a map of version to response, where version is the version number and response is the
+	// serialized cached response for that secret version.
+	// We could have chosen to put index.Response as Versions[0], but opted not to for consistency,
+	// and also to elevate the fact that the current version/representation of the path being
+	// cached here is stored there, not here.
+	// Required: false, Unique: false
+	Versions map[int][]byte
+
 	// Lease is the identifier of the lease in Vault, that belongs to the
 	// response held by this index.
 	// Required: false, Unique: true

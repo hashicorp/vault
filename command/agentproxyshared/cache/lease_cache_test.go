@@ -511,7 +511,7 @@ func TestLeaseCache_StoreCacheableStaticSecret(t *testing.T) {
 	// We expect two entries to be stored by this:
 	// 1. The actual static secret
 	// 2. The capabilities index
-	err := lc.cacheStaticSecret(context.Background(), request, response, index)
+	err := lc.cacheStaticSecret(context.Background(), request, response, index, nil)
 	if err != nil {
 		return
 	}
@@ -577,7 +577,7 @@ func TestLeaseCache_StaticSecret_CacheClear_All(t *testing.T) {
 	// We expect two entries to be stored by this:
 	// 1. The actual static secret
 	// 2. The capabilities index
-	err := lc.cacheStaticSecret(context.Background(), request, response, index)
+	err := lc.cacheStaticSecret(context.Background(), request, response, index, nil)
 	if err != nil {
 		return
 	}
