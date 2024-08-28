@@ -19,9 +19,12 @@ export default class KvSecretDetailsRoute extends Route {
   model(params) {
     const parentModel = this.modelFor('secret');
     const { backend, path } = parentModel;
+    const query = { backend, path };
     // if a version is selected from the dropdown it triggers a model refresh
     // and we fire off new request for that version's secret data
-    const query = { backend, path, ...(params.version ? { version: params.version } : null) };
+    if (params.version) {
+      query.version = params.version;
+    }
     return hash({
       ...parentModel,
       secret: this.store.queryRecord('kv/data', query),
