@@ -27,8 +27,12 @@ export default class KvSecretMetadataRoute extends Route {
 
     const findPerms = (path) => {
       const model = resp.find((m) => m.id === path);
-      const { canRead, canUpdate, canDelete } = model;
-      return { canRead, canUpdate, canDelete };
+      if (model) {
+        const { canRead, canUpdate, canDelete } = model;
+        return { canRead, canUpdate, canDelete };
+      }
+      // default to true since we can rely on API to gate as a fallback
+      return { canRead: true, canUpdate: true, canDelete: true };
     };
 
     return {
