@@ -28,6 +28,14 @@ export default class SecretsBackendConfigurationEdit extends Route {
   @service declare readonly store: Store;
   @service declare readonly version: VersionService;
 
+  get configAdapterPaths() {
+    // we only want to check identity-token for enterprise users
+    return {
+      aws: ['aws/lease-config', 'aws/root-config', ...(this.version.isEnterprise ? ['identity-token'] : [])],
+      ssh: ['ssh/ca-config'],
+    };
+  }
+
   async model() {
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
     const secretEngineRecord = this.modelFor('vault.cluster.secrets.backend') as SecretEngineModel;
@@ -68,17 +76,6 @@ export default class SecretsBackendConfigurationEdit extends Route {
         }
       }
     }
-    // // if the type is AWS and it's enterprise, we also fetch the issuer
-    // // from a global endpoint which has no associated model/adapter
-    // if (type === 'aws' && this.version.isEnterprise) {
-    //   try {
-    //     const adapter = this.store.adapterFor('application');
-    //     const response = await adapter.ajax('/v1/identity/oidc/config', 'GET');
-    //     model['issuer'] = response.data.issuer;
-    //   } catch (e) {
-    //     model['issuer'] = 'no-read';
-    //   }
-    // }
     return model;
   }
 

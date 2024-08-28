@@ -17,6 +17,7 @@ import { reject } from 'rsvp';
 
 export default class SecretsBackendConfigurationRoute extends Route {
   @service store;
+  @service version;
 
   async model() {
     const secretEngineModel = this.modelFor('vault.cluster.secrets.backend');
@@ -79,7 +80,13 @@ export default class SecretsBackendConfigurationRoute extends Route {
     const configArray = [];
     const configRoot = await this.fetchAwsConfig(id, 'aws/root-config');
     const configLease = await this.fetchAwsConfig(id, 'aws/lease-config');
-    const issuer = await this.fetchIssuer();
+    let issuer = null;
+    if (this.version.isEnterprise && configRoot) {
+      // Issuer is an enterprise only related feature
+      // Issuer is also a global endpoint that doesn't mean anything in the AWS secret details context if WIF related fields on the rootConfig have not been set.
+      const WIF_FIELDS = ['roleArn', 'identityTokenAudience', 'identityTokenTtl'];
+      WIF_FIELDS.some((field) => configRoot[field]) ? (issuer = await this.fetchIssuer()) : null;
+    }
     configArray.push(configRoot, configLease, issuer);
     return configArray;
   }
