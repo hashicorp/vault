@@ -74,7 +74,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
     if (this.args.rootConfig.isNew) return;
     if (this.version.isCommunity || this.args.rootConfig.isNew) return;
     const { roleArn, identityTokenAudience, identityTokenTtl, accessKey } = this.args.rootConfig;
-    // specifically do not include issuer as this is global and can bet set even if we're not editing wif attributes
+    // do not include issuer in this check. Issuer is a global endpoint and can bet set even if we're not editing wif attributes
     const wifAttributesSet = !!roleArn || !!identityTokenAudience || !!identityTokenTtl;
     const iamAttributesSet = !!accessKey;
     // If any WIF attributes have been set in the rootConfig model, set accessType to 'wif'.
@@ -98,7 +98,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
       // Note: only aws/lease-config model has validations
       const isValid = this.validate(leaseConfig);
       if (!isValid) return;
-      if (Object.keys(issuerConfig?.changedAttributes()).length > 0) {
+      if (Object.keys(issuerConfig?.changedAttributes()).some((item) => item)) {
         // if the issuer has changed show modal with warning that the config will change
         // if the modal is shown, the user has to click confirm to continue save
         this.saveIssuerWarning = `You are updating the global issuer config. This will overwrite Vault's current issuer ${
@@ -123,7 +123,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
         (item) => item !== 'backend'
       );
       const rootAttrChanged = Object.keys(rootConfig?.changedAttributes()).some((item) => item !== 'backend');
-      const issuerAttrChanged = Object.keys(issuerConfig?.changedAttributes()).length > 0;
+      const issuerAttrChanged = Object.keys(issuerConfig?.changedAttributes()).some((item) => item);
       if (!leaseAttrChanged && !rootAttrChanged && !issuerAttrChanged) {
         this.flashMessages.info('No changes detected.');
         this.transition();
