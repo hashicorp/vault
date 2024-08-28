@@ -28,8 +28,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	lru "github.com/hashicorp/golang-lru/v2"
-
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
@@ -42,6 +40,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/go-uuid"
+	lru "github.com/hashicorp/golang-lru/v2"
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"

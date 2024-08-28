@@ -371,11 +371,11 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 			return logical.ErrorResponse("no expected answer for the server id provided"), logical.ErrInvalidRequest
 		}
 
+		b.Core.pendingRaftPeers.Remove(serverID)
+
 		if subtle.ConstantTimeCompare(answer, expectedChallenge.answer) == 0 {
 			return logical.ErrorResponse("invalid answer given"), logical.ErrInvalidRequest
 		}
-
-		b.Core.pendingRaftPeers.Remove(serverID)
 
 		tlsKeyringEntry, err := b.Core.barrier.Get(ctx, raftTLSStoragePath)
 		if err != nil {
