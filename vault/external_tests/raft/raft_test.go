@@ -259,12 +259,12 @@ func TestRaft_ChallengeSpam(t *testing.T) {
 	// refills.
 	var someLaterFailed bool
 	var someLaterSucceeded bool
-	for n := 0; n < 2*vault.MaxInFlightRaftChallenges; n++ {
+	for n := 0; n < 2*vault.RaftInitialChallengeLimit; n++ {
 		_, err := cluster.Cores[0].Client.Logical().Write("sys/storage/raft/bootstrap/challenge", map[string]interface{}{
 			"server_id": fmt.Sprintf("core-%d", n),
 		})
 		// First MaxInFlightRequests should succeed for sure
-		if n < vault.MaxInFlightRaftChallenges {
+		if n < vault.RaftInitialChallengeLimit {
 			require.NoError(t, err)
 		} else {
 			// slow down to twice the configured rps

@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	MaxInFlightRaftChallenges = 20 // allow an initial burst to 20
+	RaftInitialChallengeLimit = 20 // allow an initial burst to 20
 	RaftChallengesPerSecond   = 5  // equating to an average 200ms min time
 )
 

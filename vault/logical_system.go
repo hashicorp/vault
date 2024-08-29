@@ -25,8 +25,6 @@ import (
 	"time"
 	"unicode"
 
-	"golang.org/x/time/rate"
-
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-memdb"
@@ -58,6 +56,7 @@ import (
 	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/mapstructure"
 	"golang.org/x/crypto/sha3"
+	"golang.org/x/time/rate"
 )
 
 const (
@@ -101,7 +100,7 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 		logger:               logger,
 		mfaBackend:           NewPolicyMFABackend(core, logger),
 		syncBackend:          syncBackend,
-		raftChallengeLimiter: rate.NewLimiter(rate.Limit(RaftChallengesPerSecond), MaxInFlightRaftChallenges),
+		raftChallengeLimiter: rate.NewLimiter(rate.Limit(RaftChallengesPerSecond), RaftInitialChallengeLimit),
 	}
 
 	b.Backend = &framework.Backend{
