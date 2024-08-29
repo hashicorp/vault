@@ -1,0 +1,156 @@
+---
+layout: docs
+page_title: Vault CLI usage
+description: >-
+  Technical reference for the Vault CLI
+---
+
+# Vault CLI usage
+
+The Vault CLI is a thin wrapper around the HTTP API. Every CLI command maps
+directly to the HTTP API internally.
+
+## Syntax 
+
+<CodeBlockConfig hideClipboard>
+
+```text
+vault <command> [args]
+```
+
+</CodeBlockConfig>
+
+Depending on the command, the Vault CLI accepts input data as key/value pairs,
+a stdin stream, or local files.
+
+<Tabs>
+
+<Tab heading="Key/value pairs">
+
+The primary way to provide input data is with key/value pairs where the key is
+the command argument: 
+
+```shell-session
+$ vault kv put secret/password value=itsasecret
+```
+
+</Tab>
+
+<Tab heading="stdin">
+
+To pass data from `stdin`, use `-` as a stand-in for the entire argument or a
+specific argument value.
+
+Pass the entire argument as a JSON object:
+
+```shell-session
+$ echo -n '{"value":"itsasecret"}' | vault kv put secret/password -
+```
+
+Pass a specific key value:
+
+```shell-session
+$ echo -n "itsasecret" | vault kv put secret/password value=-
+```
+
+</Tab>
+
+<Tab heading="Files">
+
+To pass data as a file, use `@` as a stand-in for the entire argument or a
+specific argument value.
+
+Pass the entire argument as file:
+
+```shell-session
+$ vault kv put secret/password @data.json
+```
+
+Pass a specific key value:
+
+```shell-session
+$ vault kv put secret/password value=@data.txt
+```
+
+If you use `@` as part of an argument **name** in `key=value` format, Vault
+treats the `@` as part of the key name, rather than a file reference. As a
+result, Vault does not support filenames that include the `=` character.
+
+<Tip title="Escape literal '@' values">
+
+  To keep Vault from parsing values that begin with a literal `@`, escape the
+  value with a backslash (`\`):
+
+  ```shell-session
+  $ vault login -method userpass username="mitchellh" password="\@foo"
+  ```
+
+</Tip>
+
+</Tab>
+
+</Tabs>
+
+## Autocomplete
+
+Use the opt-in auto-completion configuration option to enable autocomplete for
+flags, subcommands, and arguments (where supported):
+
+```shell-session
+$ vault -autocomplete-install
+```
+
+## Exit codes
+
+The Vault CLI returns different exit codes depending on whether it encountered
+an error and where the error occurred:
+
+Exit code | Meaning
+--------- | -------
+0         | Success
+1         | Local errors such as incorrect flags, failed validations, or wrong numbers of arguments
+2         | Remote errors such as API failures, bad TLS, or incorrect API parameters
+
+Commands that override these defaults document the anomalous behavior.
+
+## Environment variables
+
+Use the following environment variables to configure the CLI globally and use
+the corresponding CLI flag to override the configured value for a specific
+command.
+
+@include 'env-variables/vault_addr.mdx'
+
+@include 'env-variables/vault_cacert.mdx'
+
+@include 'env-variables/vault_capath.mdx'
+
+@include 'env-variables/vault_cli_no_color.mdx'
+
+@include 'env-variables/vault_client_cert.mdx'
+
+## Common flags
+
+The following flags apply to all CLI commands and subcommands.
+
+@include 'cli/common/flags/address.mdx'
+
+@include 'cli/common/flags/output-curl-string.mdx'
+
+@include 'cli/common/flags/output-policy.mdx'
+
+@include 'cli/common/flags/help.mdx'
+
+## Examples
+
+Create a new user (`bob`) that uses the user/password method for authentication
+under the `my-organization` namespace, and override the default Vault server
+address:
+
+```shell-session
+$ vault write                  \
+  auth/userpass/users/bob      \
+  password="long-password"     \
+  -namespace="my-organization" \
+  -address="http://127.0.10.1:8200"
+```

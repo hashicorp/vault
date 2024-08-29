@@ -1,0 +1,16 @@
+---
+
+<a id="flag-output-policy" />
+
+**`-output-policy`**
+
+Print the Vault policy capabilities required to perform the CLI command instead
+of running the command.
+
+```shell-session
+$ vault kv put -output-policy kv/secret value=itsasecret
+
+path "kv/data/secret" {
+  capabilities = ["create", "update"]
+}
+```

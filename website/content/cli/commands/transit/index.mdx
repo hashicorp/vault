@@ -1,0 +1,32 @@
+---
+layout: docs
+page_title: transit - Command
+description: |-
+  The "transit" command groups subcommands for interacting with Vault's Transit
+  secrets engine.
+---
+
+# transit
+
+The `transit` command groups subcommands for interacting with Vault's
+[Transit Secrets Engine](/vault/docs/secrets/transit).
+
+## Syntax
+
+Option flags for a given subcommand are provided after the subcommand, but before the arguments.
+
+## Examples
+
+To [import](/vault/docs/commands/transit/import) keys into a mount via the
+[Transit BYOK](/vault/docs/secrets/transit#bring-your-own-key-byok)
+mechanism, use the `vault transit import <path> <key>` or
+`vault transit import-version <path> <key>` commands:
+
+```
+$ vault transit import transit/keys/test-key @test-key type=rsa-2048
+Retrieving transit wrapping key.
+Wrapping source key with ephemeral key.
+Encrypting ephemeral key with transit wrapping key.
+Submitting wrapped key.
+Success!
+```

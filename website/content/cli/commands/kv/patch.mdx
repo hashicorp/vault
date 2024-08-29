@@ -1,0 +1,91 @@
+---
+layout: docs
+page_title: kv patch - Command
+description: |-
+  The "kv patch" command writes the data to the given path in the key-value
+  store. The data can be of any type.
+---
+
+# kv patch
+
+~> **NOTE:** This is a [KV version 2](/vault/docs/secrets/kv/kv-v2) secrets
+engine command, and not available for Version 1.
+
+The `kv patch` command writes the data to the given path in the KV v2 secrets
+engine. The data can be of any type. Unlike the `kv put` command, the `patch`
+command combines the change with existing data instead of replacing them.
+Therefore, this command makes it easy to make a partial updates to an existing
+data.
+
+## Examples
+
+If you wish to add an additional key-value (`ttl=48h`) to the existing data at
+the key "creds":
+
+```shell-session
+$ vault kv patch -mount=secret creds ttl=48h
+== Secret Path ==
+secret/data/creds
+
+======= Metadata =======
+Key              Value
+---              -----
+created_time     2019-06-06T16:46:22.090654Z
+deletion_time    n/a
+destroyed        false
+version          6
+```
+
+**NOTE:** The `kv put` command requires both the existing data and
+the data you wish to add in order to accomplish the same result.
+
+```shell-session
+$ vault kv put -mount=secret creds ttl=48h passcode=my-long-passcode
+```
+
+The data can also be consumed from a file on disk by prefixing with the "@"
+symbol. For example:
+
+```shell-session
+$ vault kv patch -mount=secret creds @data.json
+```
+
+Or it can be read from stdin using the "-" symbol:
+
+```shell-session
+$ echo "abcd1234" | vault kv patch -mount=secret foo bar=-
+```
+
+## Usage
+
+### Output options
+
+- `-field` `(string: "")` - Print only the field with the given name. Specifying
+  this option will take precedence over other formatting directives. The result
+  will not have a trailing newline making it ideal for piping to other
+  processes.
+
+- `-format` `(string: "table")` - Print the output in the given format. Valid
+  formats are "table", "json", or "yaml". This can also be specified via the
+  `VAULT_FORMAT` environment variable.
+
+### Command options
+
+- `-method` `(string: "patch")` - Specifies the patch method to use. Valid
+  methods are `patch` and `rw`. The `patch` method uses an HTTP `PATCH` request
+  to apply the partial update. The `rw` method will fetch the secret's data,
+  perform an in-memory update, and write the updated data.
+
+- `-cas` `(int: 0)` - Specifies the value to use for the Check-And-Set operation.
+  This flag will only be used for the `patch` method. This flag is required if
+  `cas_required` is set to `true` on either the secret or the engine's config.
+  In order for a `patch` to be successful, `-cas` must be set to the current
+  version of the secret. This flag will be ignored for the `rw` method.
+  Instead, its value will be derived from fetching the current version of the
+  secret.
+
+- `-mount` `(string: "")` - Specifies the path where the KV backend is mounted. 
+  If specified, the next argument will be interpreted as the secret path. If 
+  this flag is not specified, the next argument will be interpreted as the 
+  combined mount path and secret path, with /data/ automatically inserted for 
+  KV v2 secrets.
