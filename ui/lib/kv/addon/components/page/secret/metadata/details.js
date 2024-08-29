@@ -6,6 +6,7 @@
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { service } from '@ember/service';
+import errorMessage from 'vault/utils/error-message';
 
 /**
  * @module KvSecretMetadataDetails renders the details view for kv/metadata and button to delete (which deletes the whole secret) or edit metadata.
@@ -50,7 +51,7 @@ export default class KvSecretMetadataDetails extends Component {
       );
       this.router.transitionTo('vault.cluster.secrets.backend.kv.list');
     } catch (err) {
-      this.flashMessages.danger(`There was an issue deleting ${path} metadata.`);
+      this.flashMessages.danger(`There was an issue deleting ${path} metadata. \n ${errorMessage(err)}`);
     }
   }
 }
