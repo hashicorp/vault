@@ -17,7 +17,7 @@ import { baseSetup } from 'vault/tests/helpers/kv/kv-run-commands';
 
 const { overviewCard } = GENERAL;
 
-// subkey is enterprise only but we don't have any version testing here because the @subkey arg is null for non-enterprise versions
+// subkeys access is enterprise only (in the GUI) but we don't have any version testing here because the @subkeys arg is null for non-enterprise versions
 module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'kv');
