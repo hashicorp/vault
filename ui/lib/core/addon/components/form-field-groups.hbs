@@ -65,7 +65,11 @@
                   @onKeyUp={{@onKeyUp}}
                   @modelValidations={{@modelValidations}}
                   @showHelpText={{@showHelpText}}
-                />
+                >
+                  {{#if (and (has-block "identityTokenKey") (eq attr.name "identityTokenKey"))}}
+                    {{yield to="identityTokenKey"}}
+                  {{/if}}
+                </FormField>
               {{else}}
                 {{! OTHERWISE WE'RE EDITING }}
                 {{#if (or (eq attr.name "name") (eq attr.options.editDisabled true))}}

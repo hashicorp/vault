@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<form {{on "submit" (perform this.save)}} aria-label="save aws creds" data-test-root-form>
+<form {{on "submit" (perform this.submitForm)}} aria-label="save aws creds" data-test-root-form>
   <div class="box is-fullwidth is-shadowless is-marginless">
     <NamespaceReminder @mode="save" @noun="configuration" />
     <MessageError @errorMessage={{this.errorMessageRoot}} />
@@ -17,12 +17,64 @@
     Access to AWS
   </h2>
   <div class="box is-fullwidth is-sideless">
-    <FormFieldGroups
-      @model={{@rootConfig}}
-      @mode={{if @rootConfig.isNew "create" "edit"}}
-      @modelValidations={{this.modelValidationsRoot}}
-      @useEnableInput={{true}}
-    />
+    {{! WIF is an enterprise only feature. We default to IAM access type for community users and display only those related form fields. }}
+    {{#if this.version.isEnterprise}}
+      <fieldset class="field form-fieldset" id="protection" data-test-access-type-section>
+        <legend class="is-label">Access Type</legend>
+        <p class="sub-text" data-test-access-type-subtext>
+          {{#if this.disableAccessType}}
+            You cannot edit Access Type if you have already saved access credentials.
+          {{else}}
+            Choose the way to configure access to AWS. Access can be configured either with IAM access keys, or using Plugin
+            Workload Identity Federation (WIF).{{/if}}</p>
+        <div>
+          <RadioButton
+            id="access-type-iam"
+            name="iam"
+            class="radio"
+            data-test-access-type="iam"
+            @value="iam"
+            @groupValue={{this.accessType}}
+            @onChange={{fn this.onChangeAccessType "iam"}}
+            @disabled={{this.disableAccessType}}
+          />
+          <label for="access-type-iam">IAM Credentials</label>
+
+          <RadioButton
+            id="access-type-wif"
+            name="wif"
+            class="radio has-left-margin-m"
+            data-test-access-type="wif"
+            @value="wif"
+            @groupValue={{this.accessType}}
+            @onChange={{fn this.onChangeAccessType "wif"}}
+            @disabled={{this.disableAccessType}}
+          />
+          <label for="access-type-wif">Workflow Identity Federation</label>
+        </div>
+      </fieldset>
+    {{/if}}
+    {{#if (eq this.accessType "wif")}}
+      {{! WIF Fields }}
+      {{#each @issuerConfig.attrs as |attr|}}
+        <FormField @attr={{attr}} @model={{@issuerConfig}} />
+      {{/each}}
+      <FormFieldGroups
+        @model={{@rootConfig}}
+        @mode={{if @rootConfig.isNew "create" "edit"}}
+        @modelValidations={{this.modelValidationsRoot}}
+        @groupName="fieldGroupsWif"
+      />
+    {{else}}
+      {{! IAM Fields }}
+      <FormFieldGroups
+        @model={{@rootConfig}}
+        @mode={{if @rootConfig.isNew "create" "edit"}}
+        @modelValidations={{this.modelValidationsRoot}}
+        @useEnableInput={{true}}
+        @groupName="fieldGroupsIam"
+      />
+    {{/if}}
   </div>
 
   {{! Lease configuration details }}
@@ -63,3 +115,22 @@
     {{/if}}
   </div>
 </form>
+
+{{#if this.saveIssuerWarning}}
+  <Hds::Modal @color="warning" @onClose={{action (mut this.saveIssuerWarning) ""}} data-test-issuer-warning as |M|>
+    <M.Header @icon="alert-circle">
+      Are you sure?
+    </M.Header>
+    <M.Body>
+      <p class="has-bottom-margin-s" data-test-issuer-warning-message>
+        {{this.saveIssuerWarning}}
+      </p>
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::ButtonSet>
+        <Hds::Button @text="Continue" {{on "click" this.continueSubmitForm}} data-test-issuer-save />
+        <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} data-test-issuer-cancel />
+      </Hds::ButtonSet>
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}
