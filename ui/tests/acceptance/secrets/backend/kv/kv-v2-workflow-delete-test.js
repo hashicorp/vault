@@ -155,9 +155,14 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       // updated toolbar options
       assertDeleteActions(assert, []);
     });
+
     test('can permanently delete all secret versions (a)', async function (assert) {
+      const deleteSecret = 'nuke';
+      const flash = this.owner.lookup('service:flash-messages');
+      const flashSuccess = sinon.spy(flash, 'success');
+      const flashDanger = sinon.spy(flash, 'danger');
       // go to secret details
-      await visit(`/vault/secrets/${this.backend}/kv/nuke/details`);
+      await visit(`/vault/secrets/${this.backend}/kv/${deleteSecret}/details`);
       // Check metadata toolbar
       await click(PAGE.secretTab('Metadata'));
       assert.dom(PAGE.metadata.deleteMetadata).hasText('Permanently delete', 'shows delete metadata button');
@@ -168,6 +173,12 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
         .includesText('Delete metadata and secret data?', 'modal has correct title');
       await click(PAGE.detail.deleteConfirm);
 
+      const [actual] = flashSuccess.lastCall.args;
+      const expected = `Successfully deleted the metadata and all version data for the secret ${deleteSecret}.`;
+      assert.strictEqual(actual, expected, 'renders success flash message');
+      const danger = flashDanger.lastCall?.args ? flashDanger.lastCall?.args[0] : '';
+      // this assertion is to help debug this test because when it fails it's unclear why
+      assert.strictEqual(danger, '', `does not render error flash message ${danger}`);
       // redirects to list
       assert.strictEqual(currentURL(), `/vault/secrets/${this.backend}/kv/list`, 'redirects to list');
     });
@@ -437,6 +448,10 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       assertDeleteActions(assert, []);
     });
     test('can permanently delete all secret versions (sc)', async function (assert) {
+      const deleteSecret = 'nuke';
+      const flash = this.owner.lookup('service:flash-messages');
+      const flashSuccess = sinon.spy(flash, 'success');
+      const flashDanger = sinon.spy(flash, 'danger');
       // go to secret details
       await visit(`/vault/secrets/${this.backend}/kv/nuke/details`);
       // Check metadata toolbar
@@ -449,6 +464,12 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
         .includesText('Delete metadata and secret data?', 'modal has correct title');
       await click(PAGE.detail.deleteConfirm);
 
+      const [actual] = flashSuccess.lastCall.args;
+      const expected = `Successfully deleted the metadata and all version data for the secret ${deleteSecret}.`;
+      assert.strictEqual(actual, expected, 'renders success flash message');
+      const danger = flashDanger.lastCall?.args ? flashDanger.lastCall?.args[0] : '';
+      // this assertion is to help debug this test because when it fails it's unclear why
+      assert.strictEqual(danger, '', `does not render error flash message ${danger}`);
       // redirects to list
       assert.strictEqual(currentURL(), `/vault/secrets/${this.backend}/kv/list`, 'redirects to list');
     });
