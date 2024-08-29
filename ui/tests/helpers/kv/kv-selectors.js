@@ -40,6 +40,7 @@ export const PAGE = {
     versionDropdown: '[data-test-version-dropdown]',
     version: (number) => `[data-test-version="${number}"]`,
     createNewVersion: '[data-test-create-new-version]',
+    patchLatest: '[data-test-patch-latest-version]',
     delete: '[data-test-kv-delete="delete"]',
     destroy: '[data-test-kv-delete="destroy"]',
     undelete: '[data-test-kv-delete="undelete"]',
