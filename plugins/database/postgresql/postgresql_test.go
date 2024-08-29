@@ -641,7 +641,7 @@ func TestPostgreSQL_Initialize_CloudGCP(t *testing.T) {
 }
 
 // TestPostgreSQL_Initialize_SelfManaged_OSS tests the initialization of
-// the self-managed flow.
+// the self-managed flow and ensures an error is returned on OSS.
 func TestPostgreSQL_Initialize_SelfManaged_OSS(t *testing.T) {
 	cleanup, url := postgresql.PrepareTestContainerSelfManaged(t)
 	defer cleanup()
@@ -1133,6 +1133,8 @@ func TestUpdateUser_Password(t *testing.T) {
 	})
 }
 
+// TestUpdateUser_SelfManaged_OSS checks basic validation
+// for self-managed fields and confirms an error is returned on OSS
 func TestUpdateUser_SelfManaged_OSS(t *testing.T) {
 	// Shared test container for speed - there should not be any overlap between the tests
 	db, cleanup := getPostgreSQL(t, nil)
