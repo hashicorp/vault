@@ -14,6 +14,7 @@ import { setupControlGroup } from 'vault/tests/helpers/control-groups';
 import { click, currentRouteName, currentURL, waitUntil, visit } from '@ember/test-helpers';
 import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import sinon from 'sinon';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const ALL_DELETE_ACTIONS = ['delete', 'destroy', 'undelete'];
 const assertDeleteActions = (assert, expected = ['delete', 'destroy']) => {
@@ -234,7 +235,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       clearRecords(this.store);
       return;
     });
-    test('can delete and undelete the latest secret version (dlr)', async function (assert) {
+    test('can delete and cannot undelete the latest secret version (dlr)', async function (assert) {
       assert.expect(12);
       // go to secret details
       await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details`);
@@ -298,8 +299,8 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       clearRecords(this.store);
       return;
     });
-    test('can delete and undelete the latest secret version (mm)', async function (assert) {
-      assert.expect(17);
+    test('cannot delete but can undelete the latest secret version (mm)', async function (assert) {
+      assert.expect(18);
       // go to secret details
       await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details`);
       // correct toolbar options & details show
@@ -319,6 +320,10 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       assertDeleteActions(assert, ['undelete', 'destroy']);
       // undelete flow
       await click(PAGE.detail.undelete);
+      await waitUntil(() => currentRouteName() === 'vault.cluster.secrets.backend.kv.secret.index');
+      assert
+        .dom(GENERAL.overviewCard.container('Current version'))
+        .hasText(`Current version The current version of this secret. 2`);
       // details update accordingly
       await click(PAGE.secretTab('Secret'));
       assert.dom(PAGE.emptyStateTitle).hasText('You do not have permission to read this secret');
