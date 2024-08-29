@@ -35,11 +35,19 @@ export default class KvSecretRoute extends Route {
     return null;
   }
 
-  async isPatchAllowed(backend, path) {
+  isPatchAllowed(backend, path) {
     if (!this.version.isEnterprise) return false;
-    const canPatch = await this.capabilities.canPatch(`${backend}/data/${path}`);
-    const canReadSubkeys = await this.capabilities.canRead(`${backend}/subkeys/${path}`);
-    return canPatch && canReadSubkeys;
+    const capabilities = {
+      canPatch: this.capabilities.canPatch(`${backend}/data/${path}`),
+      canReadSubkeys: this.capabilities.canRead(`${backend}/subkeys/${path}`),
+    };
+    return hash(capabilities).then(
+      ({ canPatch, canReadSubkeys }) => canPatch && canReadSubkeys,
+      // this callback fires if either promise is rejected
+      // since this is GUI gated feature we return false (instead of default to true)
+      // for debugging you can pass an arg to log the failure reason
+      () => false
+    );
   }
 
   model() {
