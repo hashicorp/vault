@@ -350,7 +350,7 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
           const newIssuer = 'http://bar.foo';
           this.server.post('/identity/oidc/config', (schema, req) => {
             const payload = JSON.parse(req.requestBody);
-            assert.deepEqual(payload, { id: newIssuer, issuer: newIssuer }, 'payload for issuer is correct');
+            assert.deepEqual(payload, { issuer: newIssuer }, 'payload for issuer is correct');
             return {
               id: 'some-id',
               data: null,
@@ -394,7 +394,7 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
           });
           this.server.post('/identity/oidc/config', (_, req) => {
             const payload = JSON.parse(req.requestBody);
-            assert.deepEqual(payload, { id: this.issuer, issuer: this.issuer }, 'correctly sets the issuer');
+            assert.deepEqual(payload, { issuer: this.issuer }, 'correctly sets the issuer');
             return overrideResponse(403);
           });
 
