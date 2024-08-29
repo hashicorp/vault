@@ -158,9 +158,9 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
 
     test('can permanently delete all secret versions (a)', async function (assert) {
       const deleteSecret = 'nuke';
-      const flash = this.owner.lookup('service:flash-messages');
-      const flashSuccess = sinon.spy(flash, 'success');
-      const flashDanger = sinon.spy(flash, 'danger');
+      this.flash = this.owner.lookup('service:flash-messages');
+      const flashSuccess = sinon.spy(this.flash, 'success');
+      const flashDanger = sinon.spy(this.flash, 'danger');
       // go to secret details
       await visit(`/vault/secrets/${this.backend}/kv/${deleteSecret}/details`);
       // Check metadata toolbar
@@ -173,7 +173,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
         .includesText('Delete metadata and secret data?', 'modal has correct title');
       await click(PAGE.detail.deleteConfirm);
 
-      const [actual] = flashSuccess.lastCall.args;
+      const actual = flashSuccess.lastCall?.args ? flashSuccess.lastCall?.args[0] : '';
       const expected = `Successfully deleted the metadata and all version data for the secret ${deleteSecret}.`;
       assert.strictEqual(actual, expected, 'renders success flash message');
       const danger = flashDanger.lastCall?.args ? flashDanger.lastCall?.args[0] : '';
@@ -449,9 +449,9 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
     });
     test('can permanently delete all secret versions (sc)', async function (assert) {
       const deleteSecret = 'nuke';
-      const flash = this.owner.lookup('service:flash-messages');
-      const flashSuccess = sinon.spy(flash, 'success');
-      const flashDanger = sinon.spy(flash, 'danger');
+      this.flash = this.owner.lookup('service:flash-messages');
+      const flashSuccess = sinon.spy(this.flash, 'success');
+      const flashDanger = sinon.spy(this.flash, 'danger');
       // go to secret details
       await visit(`/vault/secrets/${this.backend}/kv/nuke/details`);
       // Check metadata toolbar
@@ -464,7 +464,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
         .includesText('Delete metadata and secret data?', 'modal has correct title');
       await click(PAGE.detail.deleteConfirm);
 
-      const [actual] = flashSuccess.lastCall.args;
+      const actual = flashSuccess.lastCall?.args ? flashSuccess.lastCall?.args[0] : '';
       const expected = `Successfully deleted the metadata and all version data for the secret ${deleteSecret}.`;
       assert.strictEqual(actual, expected, 'renders success flash message');
       const danger = flashDanger.lastCall?.args ? flashDanger.lastCall?.args[0] : '';
