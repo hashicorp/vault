@@ -15,7 +15,7 @@ module('Integration | Component | kv | kv-subkeys-card', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'kv');
   hooks.beforeEach(function () {
-    this.canPatchSecret = true;
+    this.isPatchAllowed = true;
     this.subkeys = {
       foo: null,
       bar: {
@@ -24,7 +24,7 @@ module('Integration | Component | kv | kv-subkeys-card', function (hooks) {
     };
     this.renderComponent = async () => {
       return render(
-        hbs`<KvSubkeysCard @subkeys={{this.subkeys}} @canPatchSecret={{this.canPatchSecret}} />`,
+        hbs`<KvSubkeysCard @subkeys={{this.subkeys}} @isPatchAllowed={{this.isPatchAllowed}} />`,
         {
           owner: this.engine,
         }
@@ -46,8 +46,8 @@ module('Integration | Component | kv | kv-subkeys-card', function (hooks) {
     assert.dom(overviewCard.actionText('Patch secret')).exists();
   });
 
-  test('it hides patch action when canPatchSecret is false', async function (assert) {
-    this.canPatchSecret = false;
+  test('it hides patch action when isPatchAllowed is false', async function (assert) {
+    this.isPatchAllowed = false;
     await this.renderComponent();
     assert.dom(overviewCard.title('Subkeys')).exists();
     assert.dom(overviewCard.actionText('Patch secret')).doesNotExist();

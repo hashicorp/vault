@@ -35,6 +35,21 @@ export default class KvSecretRoute extends Route {
     return null;
   }
 
+  isPatchAllowed(backend, path) {
+    if (!this.version.isEnterprise) return false;
+    const capabilities = {
+      canPatch: this.capabilities.canPatch(`${backend}/data/${path}`),
+      canReadSubkeys: this.capabilities.canRead(`${backend}/subkeys/${path}`),
+    };
+    return hash(capabilities).then(
+      ({ canPatch, canReadSubkeys }) => canPatch && canReadSubkeys,
+      // this callback fires if either promise is rejected
+      // since this feature is only client-side gated we return false (instead of default to true)
+      // for debugging you can pass an arg to log the failure reason
+      () => false
+    );
+  }
+
   model() {
     const backend = this.secretMountPath.currentPath;
     const { name: path } = this.paramsFor('secret');
@@ -44,7 +59,7 @@ export default class KvSecretRoute extends Route {
       backend,
       subkeys: this.fetchSubkeys(backend, path),
       metadata: this.fetchSecretMetadata(backend, path),
-      canPatchSecret: this.capabilities.canPatch(`${backend}/data/${path}`),
+      isPatchAllowed: this.isPatchAllowed(backend, path),
       // for creating a new secret version
       canUpdateSecret: this.capabilities.canUpdate(`${backend}/data/${path}`),
     });
