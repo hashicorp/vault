@@ -65,7 +65,7 @@ export default class KvSecretPatch extends Component {
     try {
       yield adapter.patchSecret(backend, path, patchData, version);
       this.flashMessages.success(`Successfully patched new version of ${path}.`);
-      this.router.transitionTo('vault.cluster.secrets.backend.kv.secret');
+      this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.index');
     } catch (error) {
       // TODO test...this is copy pasta'd from the edit page
       let message = errorMessage(error);
@@ -81,7 +81,7 @@ export default class KvSecretPatch extends Component {
 
   @action
   onCancel() {
-    this.router.transitionTo('vault.cluster.secrets.backend.kv.secret');
+    this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.index');
   }
 
   isEmpty(object) {

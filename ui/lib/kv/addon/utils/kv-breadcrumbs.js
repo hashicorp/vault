@@ -45,7 +45,7 @@ export function breadcrumbsForSecret(backend, secretPath, lastItemCurrent = fals
         };
       }
       if (!isDir) {
-        return { label: segment.label, route: 'secret.details', models: [backend, segment.model] };
+        return { label: segment.label, route: 'secret.index', models: [backend, segment.model] };
       }
     }
     return { label: segment.label, route: 'list-directory', models: [backend, `${segment.model}/`] };
