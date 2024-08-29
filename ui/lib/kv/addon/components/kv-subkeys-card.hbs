@@ -33,7 +33,7 @@
           <F.Label>JSON</F.Label>
         </Hds::Form::Toggle::Field>
       </div>
-      {{#if @canPatchSecret}}
+      {{#if @isPatchAllowed}}
         <Hds::Link::Standalone
           @text="Patch secret"
           @route="secret.patch"
