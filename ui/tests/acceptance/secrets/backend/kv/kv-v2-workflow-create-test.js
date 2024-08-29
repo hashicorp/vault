@@ -306,7 +306,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
 
     // patch is technically enterprise only but stubbing the version so these run on both CE and enterprise
-    test('it creates a new version and patches a secret from the overview page', async function (assert) {
+    test('it patches a secret', async function (assert) {
       this.owner.lookup('service:version').type = 'enterprise';
       const patchSecret = 'patch-secret';
       await writeSecret(this.backend, patchSecret, 'foo', 'bar');
@@ -324,7 +324,9 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
 
       // check patch updated secret
       await click(PAGE.secretTab('Secret'));
+      await click(PAGE.infoRowToggleMasked('foo'));
       assert.dom(PAGE.infoRowValue('foo')).hasText('newfoo', 'has updated value');
+      await click(PAGE.infoRowToggleMasked('newkey'));
       assert.dom(PAGE.infoRowValue('newkey')).hasText('newvalue', 'has new key/value pair');
 
       await click(PAGE.detail.patchLatest);
@@ -333,6 +335,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(GENERAL.overviewCard.content('Subkeys')).hasText('Keys newkey');
       // check patch updated secret
       await click(PAGE.secretTab('Secret'));
+      await click(PAGE.infoRowToggleMasked('newkey'));
       assert.dom(PAGE.infoRowValue('foo')).doesNotExist();
       assert.dom(PAGE.infoRowValue('newkey')).hasText('newvalue', 'has new key/value pair');
     });
