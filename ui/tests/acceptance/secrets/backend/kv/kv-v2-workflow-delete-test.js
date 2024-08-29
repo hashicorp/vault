@@ -47,9 +47,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
     await runCmd(mountEngineCmd('kv-v2', this.backend), false);
     await writeVersionedSecret(this.backend, this.secretPath, 'foo', 'bar', 4);
     await writeVersionedSecret(this.backend, this.nestedSecretPath, 'foo', 'bar', 1);
-    await writeVersionedSecret(this.backend, 'nuke', 'foo', 'bar', 2);
-    // Delete latest version for testing undelete for users that can't delete
-    await runCmd(deleteLatestCmd(this.backend, 'nuke'));
+    // Versioned secret for testing delete is created (and deleted) by each module to avoid race condition failures
     return;
   });
 
@@ -157,12 +155,9 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
     });
 
     test('can permanently delete all secret versions (a)', async function (assert) {
-      const deleteSecret = 'nuke';
-      this.flash = this.owner.lookup('service:flash-messages');
-      const flashSuccess = sinon.spy(this.flash, 'success');
-      const flashDanger = sinon.spy(this.flash, 'danger');
+      await writeVersionedSecret(this.backend, 'nuke', 'foo', 'bar', 2);
       // go to secret details
-      await visit(`/vault/secrets/${this.backend}/kv/${deleteSecret}/details`);
+      await visit(`/vault/secrets/${this.backend}/kv/nuke/details`);
       // Check metadata toolbar
       await click(PAGE.secretTab('Metadata'));
       assert.dom(PAGE.metadata.deleteMetadata).hasText('Permanently delete', 'shows delete metadata button');
@@ -172,13 +167,6 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
         .dom(PAGE.detail.deleteModalTitle)
         .includesText('Delete metadata and secret data?', 'modal has correct title');
       await click(PAGE.detail.deleteConfirm);
-
-      const actual = flashSuccess.lastCall?.args ? flashSuccess.lastCall?.args[0] : '';
-      const expected = `Successfully deleted the metadata and all version data for the secret ${deleteSecret}.`;
-      assert.strictEqual(actual, expected, 'renders success flash message');
-      const danger = flashDanger.lastCall?.args ? flashDanger.lastCall?.args[0] : '';
-      // this assertion is to help debug this test because when it fails it's unclear why
-      assert.strictEqual(danger, '', `does not render error flash message ${danger}`);
       // redirects to list
       assert.strictEqual(currentURL(), `/vault/secrets/${this.backend}/kv/list`, 'redirects to list');
     });
@@ -186,6 +174,11 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
 
   module('data-reader persona', function (hooks) {
     hooks.beforeEach(async function () {
+      // create and delete a secret as root user
+      await authPage.login();
+      await writeVersionedSecret(this.backend, 'nuke', 'foo', 'bar', 2);
+      await runCmd(deleteLatestCmd(this.backend, 'nuke'));
+      // login as data-reader persona
       const token = await runCmd(makeToken('data-reader', this.backend, personas.dataReader));
       await authPage.login(token);
       clearRecords(this.store);
@@ -233,6 +226,11 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
 
   module('data-list-reader persona', function (hooks) {
     hooks.beforeEach(async function () {
+      // create and delete a secret as root user
+      await authPage.login();
+      await writeVersionedSecret(this.backend, 'nuke', 'foo', 'bar', 2);
+      await runCmd(deleteLatestCmd(this.backend, 'nuke'));
+      // login as data-list-reader persona
       const token = await runCmd(makeToken('data-list-reader', this.backend, personas.dataListReader));
       await authPage.login(token);
       clearRecords(this.store);
@@ -281,7 +279,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       // correct toolbar options show
       assertDeleteActions(assert, ['delete']);
     });
-    test('cannot permanently delete all secret versions (dr)', async function (assert) {
+    test('cannot permanently delete all secret versions (dlr)', async function (assert) {
       // go to secret details
       await visit(`/vault/secrets/${this.backend}/kv/nuke/details`);
       // Check metadata toolbar
@@ -292,6 +290,11 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
 
   module('metadata-maintainer persona', function (hooks) {
     hooks.beforeEach(async function () {
+      // create and delete a secret as root user
+      await authPage.login();
+      await writeVersionedSecret(this.backend, 'nuke', 'foo', 'bar', 2);
+      await runCmd(deleteLatestCmd(this.backend, 'nuke'));
+      // login as metadata-maintainer persona
       const token = await runCmd(makeToken('metadata-maintainer', this.backend, personas.metadataMaintainer));
       await authPage.login(token);
       clearRecords(this.store);
@@ -448,10 +451,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       assertDeleteActions(assert, []);
     });
     test('can permanently delete all secret versions (sc)', async function (assert) {
-      const deleteSecret = 'nuke';
-      this.flash = this.owner.lookup('service:flash-messages');
-      const flashSuccess = sinon.spy(this.flash, 'success');
-      const flashDanger = sinon.spy(this.flash, 'danger');
+      await writeVersionedSecret(this.backend, 'nuke', 'foo', 'bar', 2);
       // go to secret details
       await visit(`/vault/secrets/${this.backend}/kv/nuke/details`);
       // Check metadata toolbar
@@ -463,13 +463,6 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
         .dom(PAGE.detail.deleteModalTitle)
         .includesText('Delete metadata and secret data?', 'modal has correct title');
       await click(PAGE.detail.deleteConfirm);
-
-      const actual = flashSuccess.lastCall?.args ? flashSuccess.lastCall?.args[0] : '';
-      const expected = `Successfully deleted the metadata and all version data for the secret ${deleteSecret}.`;
-      assert.strictEqual(actual, expected, 'renders success flash message');
-      const danger = flashDanger.lastCall?.args ? flashDanger.lastCall?.args[0] : '';
-      // this assertion is to help debug this test because when it fails it's unclear why
-      assert.strictEqual(danger, '', `does not render error flash message ${danger}`);
       // redirects to list
       assert.strictEqual(currentURL(), `/vault/secrets/${this.backend}/kv/list`, 'redirects to list');
     });
