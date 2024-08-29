@@ -26,6 +26,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 	goversion "github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/api"
+	httpPriority "github.com/hashicorp/vault/http/priority"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -373,7 +374,7 @@ func (c *Core) saveAutopilotPersistedState(states map[string]raft.PersistedFollo
 	if err != nil {
 		return err
 	}
-	return c.barrier.Put(c.activeContext, entry)
+	return c.barrier.Put(httpPriority.ContextWithRequestPriority(c.activeContext, httpPriority.NeverDrop), entry)
 }
 
 func (c *Core) stopRaftActiveNode() {
