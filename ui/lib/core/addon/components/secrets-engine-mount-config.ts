@@ -40,6 +40,7 @@ export default class SecretsEngineMountConfig extends Component<Args> {
       { label: 'Seal Wrap', value: model.sealWrap },
       { label: 'Default Lease TTL', value: duration([model.config.defaultLeaseTtl]) },
       { label: 'Max Lease TTL', value: duration([model.config.maxLeaseTtl]) },
+      { label: 'Identity Token Key', value: model.config.identityTokenKey },
     ];
   }
 }

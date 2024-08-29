@@ -17,6 +17,7 @@ import { reject } from 'rsvp';
 
 export default class SecretsBackendConfigurationRoute extends Route {
   @service store;
+  @service version;
 
   async model() {
     const secretEngineModel = this.modelFor('vault.cluster.secrets.backend');
@@ -74,11 +75,19 @@ export default class SecretsBackendConfigurationRoute extends Route {
   }
 
   async fetchAwsConfigs(id) {
-    // AWS has two configuration endpoints root and lease, return an array of these responses.
+    // AWS has two configuration endpoints root and lease, as well as a separate endpoint for the issuer.
+    // return an array of these responses.
     const configArray = [];
     const configRoot = await this.fetchAwsConfig(id, 'aws/root-config');
     const configLease = await this.fetchAwsConfig(id, 'aws/lease-config');
-    configArray.push(configRoot, configLease);
+    let issuer = null;
+    if (this.version.isEnterprise && configRoot) {
+      // Issuer is an enterprise only related feature
+      // Issuer is also a global endpoint that doesn't mean anything in the AWS secret details context if WIF related fields on the rootConfig have not been set.
+      const WIF_FIELDS = ['roleArn', 'identityTokenAudience', 'identityTokenTtl'];
+      WIF_FIELDS.some((field) => configRoot[field]) ? (issuer = await this.fetchIssuer()) : null;
+    }
+    configArray.push(configRoot, configLease, issuer);
     return configArray;
   }
 
@@ -91,6 +100,15 @@ export default class SecretsBackendConfigurationRoute extends Route {
         return;
       }
       throw e;
+    }
+  }
+
+  async fetchIssuer() {
+    try {
+      return await this.store.queryRecord('identity/oidc/config', {});
+    } catch (e) {
+      // silently fail if the endpoint is not available or the user doesn't have permission to access it.
+      return;
     }
   }
 
