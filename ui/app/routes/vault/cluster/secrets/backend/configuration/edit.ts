@@ -72,11 +72,11 @@ export default class SecretsBackendConfigurationEdit extends Route {
     // from a global endpoint which has no associated model/adapter
     if (type === 'aws' && this.version.isEnterprise) {
       try {
-        const adapter = this.store.adapterFor('application');
-        const response = await adapter.ajax('/v1/identity/oidc/config', 'GET');
-        model['issuer'] = response.data.issuer;
+        const response = await this.store.queryRecord('identity/oidc/config', {});
+        model['identity-oidc-config'] = response;
       } catch (e) {
-        model['issuer'] = 'no-read';
+        // return a property called queryIssuerError and let the component handle it.
+        model['identity-oidc-config'] = { queryIssuerError: true };
       }
     }
     return model;

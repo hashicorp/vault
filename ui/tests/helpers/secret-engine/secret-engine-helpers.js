@@ -6,6 +6,7 @@
 import { click, fillIn } from '@ember/test-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
+import { v4 as uuidv4 } from 'uuid';
 
 export const createSecretsEngine = (store, type, path) => {
   store.pushPayload('secret-engine', {
@@ -61,6 +62,17 @@ const createAwsRootConfig = (store, backend, accessType = 'iam') => {
   return store.peekRecord('aws/root-config', backend);
 };
 
+const createIssuerConfig = (store) => {
+  store.pushPayload('identity/oidc/config', {
+    id: 'identity-oidc-config',
+    modelName: 'identity/oidc/config',
+    data: {
+      issuer: ``,
+    },
+  });
+  return store.peekRecord('identity/oidc/config', 'identity-oidc-config');
+};
+
 const createAwsLeaseConfig = (store, backend) => {
   store.pushPayload('aws/lease-config', {
     id: backend,
@@ -108,6 +120,8 @@ export const createConfig = (store, backend, type) => {
       return createAwsRootConfig(store, backend, 'wif');
     case 'aws-no-access':
       return createAwsRootConfig(store, backend, 'no-access');
+    case 'issuer':
+      return createIssuerConfig(store, backend);
     case 'aws-lease':
       return createAwsLeaseConfig(store, backend);
     case 'ssh':
@@ -124,7 +138,7 @@ export const expectedConfigKeys = (type) => {
     case 'aws-root-create':
       return ['accessKey', 'secretKey', 'region', 'iamEndpoint', 'stsEndpoint', 'maxRetries'];
     case 'aws-root-create-wif':
-      return ['roleArn', 'identityTokenAudience', 'Identity token TTL'];
+      return ['issuer', 'roleArn', 'identityTokenAudience', 'Identity token TTL'];
     case 'aws-root-create-iam':
       return ['accessKey', 'secretKey'];
     case 'ssh':
@@ -185,6 +199,7 @@ export const fillInAwsConfig = async (situation = 'withAccess') => {
   }
   if (situation === 'withWif') {
     await click(SES.aws.accessType('wif')); // toggle to wif
+    await fillIn(GENERAL.inputByAttr('issuer'), `http://bar.${uuidv4()}`); // make random because global setting
     await fillIn(GENERAL.inputByAttr('roleArn'), 'foo-role');
     await fillIn(GENERAL.inputByAttr('identityTokenAudience'), 'foo-audience');
     await click(GENERAL.ttl.toggle('Identity token TTL'));
