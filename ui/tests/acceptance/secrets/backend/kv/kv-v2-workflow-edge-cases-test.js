@@ -35,6 +35,7 @@ import { clearRecords, writeSecret, writeVersionedSecret } from 'vault/tests/hel
 import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import codemirror from 'vault/tests/helpers/codemirror';
+import { personas } from 'vault/tests/helpers/kv/policy-generator';
 
 /**
  * This test set is for testing edge cases, such as specific bug fixes or reported user workflows
@@ -387,6 +388,71 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await click(GENERAL.overviewCard.actionText('Create new'));
     assert.dom(FORM.toggleJson).isNotDisabled();
     assert.dom(FORM.toggleJson).isNotChecked();
+  });
+
+  // patch is technically enterprise only but stubbing the version so these run on both CE and enterprise
+  module('patch-persona', function (hooks) {
+    hooks.beforeEach(async function () {
+      this.patchSecret = 'patch-secret';
+      this.version = this.owner.lookup('service:version');
+      this.version.type = 'enterprise';
+      this.store = this.owner.lookup('service:store');
+      await writeSecret(this.backend, this.patchSecret, 'foo', 'bar');
+      const token = await runCmd([
+        createPolicyCmd(
+          `secret-patcher-${this.backend}`,
+          personas.secretPatcher(this.backend) + personas.secretPatcher(this.emptyBackend)
+        ),
+        createTokenCmd(`secret-patcher-${this.backend}`),
+      ]);
+      await authPage.login(token);
+      clearRecords(this.store);
+      return;
+    });
+
+    test('it patches a secret from the overview page', async function (assert) {
+      await visit(`/vault/secrets/${this.backend}/kv/${this.patchSecret}`);
+      assert.dom(GENERAL.overviewCard.content('Subkeys')).hasText('Keys foo');
+
+      await click(GENERAL.overviewCard.actionText('Patch secret'));
+      await click(FORM.patchEdit(0));
+      await fillIn(FORM.valueInput(0), 'newvalue');
+      await fillIn(FORM.keyInput('new'), 'newkey');
+      await fillIn(FORM.valueInput('new'), 'newvalue');
+      await click(FORM.saveBtn);
+      assert.dom(GENERAL.overviewCard.content('Subkeys')).hasText('Keys foo newkey');
+    });
+
+    test('it patches a secret from the secret details', async function (assert) {
+      await visit(`/vault/secrets/${this.backend}/kv/${this.patchSecret}`);
+      assert.dom(GENERAL.overviewCard.content('Subkeys')).hasText('Keys foo');
+      await click(PAGE.secretTab('Secret'));
+      await click(PAGE.detail.patchLatest);
+      await click(FORM.patchEdit(0));
+      await fillIn(FORM.valueInput(0), 'newvalue');
+      await fillIn(FORM.keyInput('new'), 'newkey');
+      await fillIn(FORM.valueInput('new'), 'newvalue');
+      await click(FORM.saveBtn);
+      assert.dom(GENERAL.overviewCard.content('Subkeys')).hasText('Keys foo newkey');
+    });
+
+    // in the same test because the writeSecret helper only creates a single key/value pair
+    test('it adds and deletes a key', async function (assert) {
+      await visit(`/vault/secrets/${this.backend}/kv/${this.patchSecret}`);
+      // add a new key
+      assert.dom(GENERAL.overviewCard.content('Subkeys')).hasText('Keys foo');
+      await click(GENERAL.overviewCard.actionText('Patch secret'));
+      await fillIn(FORM.keyInput('new'), 'newkey');
+      await fillIn(FORM.valueInput('new'), 'newvalue');
+      await click(FORM.saveBtn);
+      assert.dom(GENERAL.overviewCard.content('Subkeys')).hasText('Keys foo newkey');
+
+      // deletes a key
+      await click(GENERAL.overviewCard.actionText('Patch secret'));
+      await click(FORM.patchDelete());
+      await click(FORM.saveBtn);
+      assert.dom(GENERAL.overviewCard.content('Subkeys')).hasText('Keys newkey');
+    });
   });
 });
 

@@ -67,7 +67,6 @@ export default class KvSecretRoute extends Route {
 
   @action
   willTransition(transition) {
-    // TODO update this comment and refreshes
     // refresh the route if transitioning to secret.index (which happens after delete, undelete or destroy)
     // or transitioning from editing either metadata or secret data (creating a new version)
     const isToIndex = transition.to.name === 'vault.cluster.secrets.backend.kv.secret.index';

@@ -11,7 +11,7 @@ import { setupApplicationTest } from 'vault/tests/helpers';
 import authPage from 'vault/tests/pages/auth';
 import { deleteEngineCmd, mountEngineCmd, runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 import { personas } from 'vault/tests/helpers/kv/policy-generator';
-import { clearRecords, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
+import { clearRecords, writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import { grantAccessForWrite, setupControlGroup } from 'vault/tests/helpers/control-groups';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -303,6 +303,41 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       );
       await click(PAGE.infoRowToggleMasked('my-key'));
       assert.dom(PAGE.infoRowValue('my-key')).hasText('my-value', 'has new value');
+    });
+
+    // patch is technically enterprise only but stubbing the version so these run on both CE and enterprise
+    test('it patches a secret', async function (assert) {
+      this.owner.lookup('service:version').type = 'enterprise';
+      const patchSecret = 'patch-secret';
+      await writeSecret(this.backend, patchSecret, 'foo', 'bar');
+      assert.dom(GENERAL.overviewCard.content('Subkeys')).hasText('Keys foo');
+
+      await click(GENERAL.overviewCard.actionText('Patch secret'));
+      // edit existing key
+      await click(FORM.patchEdit(0));
+      await fillIn(FORM.valueInput(0), 'newfoo');
+      // add new key
+      await fillIn(FORM.keyInput('new'), 'newkey');
+      await fillIn(FORM.valueInput('new'), 'newvalue');
+      await click(FORM.saveBtn);
+      assert.dom(GENERAL.overviewCard.content('Subkeys')).hasText('Keys foo newkey');
+
+      // check patch updated secret
+      await click(PAGE.secretTab('Secret'));
+      await click(PAGE.infoRowToggleMasked('foo'));
+      assert.dom(PAGE.infoRowValue('foo')).hasText('newfoo', 'has updated value');
+      await click(PAGE.infoRowToggleMasked('newkey'));
+      assert.dom(PAGE.infoRowValue('newkey')).hasText('newvalue', 'has new key/value pair');
+
+      await click(PAGE.detail.patchLatest);
+      await click(FORM.patchDelete());
+      await click(FORM.saveBtn);
+      assert.dom(GENERAL.overviewCard.content('Subkeys')).hasText('Keys newkey');
+      // check patch updated secret
+      await click(PAGE.secretTab('Secret'));
+      await click(PAGE.infoRowToggleMasked('newkey'));
+      assert.dom(PAGE.infoRowValue('foo')).doesNotExist();
+      assert.dom(PAGE.infoRowValue('newkey')).hasText('newvalue', 'has new key/value pair');
     });
   });
 

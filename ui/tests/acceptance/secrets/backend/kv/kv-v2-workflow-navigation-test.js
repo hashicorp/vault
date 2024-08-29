@@ -24,9 +24,8 @@ import {
   writeVersionedSecret,
 } from 'vault/tests/helpers/kv/kv-run-commands';
 import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
-import { setupControlGroup, grantAccess } from 'vault/tests/helpers/control-groups';
-import { humanize } from 'vault/helpers/humanize';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { setupControlGroup, grantAccess } from 'vault/tests/helpers/control-groups';
 
 const secretPath = `my-#:$=?-secret`;
 // This doesn't encode in a normal way, so hardcoding it here until we sort that out
@@ -58,14 +57,18 @@ const assertDetailTabs = (assert, current, hidden = []) => {
     }
   });
 };
+// patchLatest is only available for enterprise so it's not included here
 const DETAIL_TOOLBARS = ['delete', 'destroy', 'copy', 'versionDropdown', 'createNewVersion'];
 const assertDetailsToolbar = (assert, expected = DETAIL_TOOLBARS) => {
   assert
     .dom(PAGE.toolbarAction)
     .exists({ count: expected.length }, 'correct number of toolbar actions render');
-  DETAIL_TOOLBARS.forEach((toolbar) => {
-    const method = expected.includes(toolbar) ? 'exists' : 'doesNotExist';
-    assert.dom(PAGE.detail[toolbar])[method](`${toolbar} action ${humanize([method])}`);
+  expected.forEach((toolbar) => {
+    assert.dom(PAGE.detail[toolbar]).exists(`${toolbar} action exists`);
+  });
+  const unexpected = DETAIL_TOOLBARS.filter((t) => !expected.includes(t));
+  unexpected.forEach((toolbar) => {
+    assert.dom(PAGE.detail[toolbar]).doesNotExist(`${toolbar} action doesNotExist`);
   });
 };
 
@@ -93,6 +96,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
   hooks.beforeEach(async function () {
     const uid = uuidv4();
     this.store = this.owner.lookup('service:store');
+    this.version = this.owner.lookup('service:version');
     this.emptyBackend = `kv-empty-${uid}`;
     this.backend = `kv-nav-${uid}`;
     await authPage.login();
@@ -164,7 +168,9 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       );
     });
     test('can access nested secret (a)', async function (assert) {
-      assert.expect(46);
+      // enterprise has "Patch latest version" in the toolbar which adds an assertion
+      const count = this.version.isEnterprise ? 47 : 46;
+      assert.expect(count);
       const backend = this.backend;
       await navToBackend(backend);
       assert.dom(PAGE.title).hasText(`${backend} version 2`, 'title text correct');
@@ -206,7 +212,10 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
       await click(PAGE.secretTab('Secret'));
       assertCorrectBreadcrumbs(assert, ['Secrets', backend, 'app', 'nested', 'secret']);
-      assertDetailsToolbar(assert);
+      const expectedToolbar = this.version.isEnterprise
+        ? [...DETAIL_TOOLBARS, 'patchLatest']
+        : DETAIL_TOOLBARS;
+      assertDetailsToolbar(assert, expectedToolbar);
 
       await click(PAGE.breadcrumbAtIdx(3));
       assert.true(
@@ -1458,9 +1467,8 @@ path "${this.backend}/*" {
   });
 
   // patch is technically enterprise only but stubbing the version so they can run on both CE and enterprise
-  module('patch persona', function (hooks) {
+  module('patch-persona', function (hooks) {
     hooks.beforeEach(async function () {
-      this.version = this.owner.lookup('service:version');
       const token = await runCmd([
         createPolicyCmd(
           `secret-patcher-${this.backend}`,
