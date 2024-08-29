@@ -461,6 +461,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
         .dom(PAGE.detail.deleteModalTitle)
         .includesText('Delete metadata and secret data?', 'modal has correct title');
       await click(PAGE.detail.deleteConfirm);
+      await waitUntil(() => currentRouteName() === 'vault.cluster.secrets.backend.kv.list');
       // redirects to list
       assert.strictEqual(currentURL(), `/vault/secrets/${this.backend}/kv/list`, 'redirects to list');
     });
