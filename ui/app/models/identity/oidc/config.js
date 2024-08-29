@@ -4,7 +4,6 @@
  */
 
 import Model, { attr } from '@ember-data/model';
-import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
 export default class IdentityOidcConfig extends Model {
@@ -20,11 +19,5 @@ export default class IdentityOidcConfig extends Model {
   get attrs() {
     const keys = ['issuer'];
     return expandAttributeMeta(this, keys);
-  }
-
-  // CAPABILITIES
-  @lazyCapabilities(apiPath`identity/oidc/config`) issuerPath;
-  get canRead() {
-    return this.issuerPath.get('canRead') !== false;
   }
 }

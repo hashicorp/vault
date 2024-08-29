@@ -290,14 +290,8 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
 
       module('issuer field tests', function () {
         // the other tests where issuer is not passed do not show modals, so we only need to test when the modal should shows up
-        test('it shows message about overriding value if user does not have read access to identity/oidc/config', async function (assert) {
-          // only give create and update but no read access
-          this.server.post('/sys/capabilities-self', () =>
-            capabilitiesStub('identity/oidc/config', ['create', 'update'])
-          );
-          this.issuerConfig = this.store.createRecord('identity/oidc/config');
-          // if I don't call issuerConfig.canRead before it fails
-          this.issuerConfig.canRead;
+        test('if issuer API error and user changes issuer value, shows specific warning message', async function (assert) {
+          this.issuerConfig.queryIssuerError = true;
           await this.renderComponent();
           await click(SES.aws.accessType('wif'));
           await fillIn(GENERAL.inputByAttr('issuer'), 'http://change.me.no.read');
@@ -452,28 +446,28 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
         }
         assert.dom(GENERAL.inputByAttr('issuer')).doesNotExist();
       });
-    });
-    test('it does not send issuer on save', async function (assert) {
-      assert.expect(4);
-      await this.renderComponent();
-      this.server.post(configUrl('aws', this.id), () => {
-        assert.true(true, 'post request was made to config/root. test should pass.');
+      test('it does not send issuer on save', async function (assert) {
+        assert.expect(4);
+        await this.renderComponent();
+        this.server.post(configUrl('aws', this.id), () => {
+          assert.true(true, 'post request was made to config/root. test should pass.');
+        });
+        this.server.post('/identity/oidc/config', () => {
+          throw new Error('post request was incorrectly made to update issuer');
+        });
+        await fillInAwsConfig('withAccess');
+        await fillInAwsConfig('withLease');
+        await click(GENERAL.saveButton);
+        assert.dom(SES.aws.issuerWarningModal).doesNotExist('modal should not render');
+        assert.true(
+          this.flashSuccessSpy.calledWith(`Successfully saved ${this.id}'s root configuration.`),
+          'Flash message shows that root was saved even if issuer was not'
+        );
+        assert.ok(
+          this.transitionStub.calledWith('vault.cluster.secrets.backend.configuration', this.id),
+          'Transitioned to the configuration index route.'
+        );
       });
-      this.server.post('/identity/oidc/config', () => {
-        throw new Error('post request was incorrectly made to update issuer');
-      });
-      await fillInAwsConfig('withAccess');
-      await fillInAwsConfig('withLease');
-      await click(GENERAL.saveButton);
-      assert.dom(SES.aws.issuerWarningModal).doesNotExist('modal should not render');
-      assert.true(
-        this.flashSuccessSpy.calledWith(`Successfully saved ${this.id}'s root configuration.`),
-        'Flash message shows that root was saved even if issuer was not'
-      );
-      assert.ok(
-        this.transitionStub.calledWith('vault.cluster.secrets.backend.configuration', this.id),
-        'Transitioned to the configuration index route.'
-      );
     });
   });
   module('Edit view', function (hooks) {

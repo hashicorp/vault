@@ -75,7 +75,8 @@ export default class SecretsBackendConfigurationEdit extends Route {
         const response = await this.store.queryRecord('identity/oidc/config', {});
         model['identity-oidc-config'] = response;
       } catch (e) {
-        // silently fail if the issuer is not available
+        // return a property called queryIssuerError and let the component handle it.
+        model['identity-oidc-config'] = { queryIssuerError: true };
       }
     }
     return model;

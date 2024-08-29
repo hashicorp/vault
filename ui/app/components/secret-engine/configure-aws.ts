@@ -96,7 +96,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
         // if the issuer has changed show modal with warning that the config will change
         // if the modal is shown, the user has to click confirm to continue save
         this.saveIssuerWarning = `You are updating the global issuer config. This will overwrite Vault's current issuer ${
-          issuerConfig.canRead ? '' : 'if it exists '
+          issuerConfig.queryIssuerError ? 'if it exists ' : ''
         }and may affect other configurations using this value. Continue?`;
         // exit task until user confirms
         return;
