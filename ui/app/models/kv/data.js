@@ -105,6 +105,9 @@ export default class KvSecretDataModel extends Model {
   get canEditData() {
     return this.dataPath.get('canUpdate') !== false;
   }
+  get canPatchData() {
+    return this.dataPath.get('canPatch') !== false;
+  }
   get canReadData() {
     return this.dataPath.get('canRead') !== false;
   }
