@@ -12,6 +12,8 @@ export default class IdentityOidcConfigModel extends Model {
   changedAttributes(): {
     [key: string]: unknown[];
   };
+  rollbackAttributes(): { void };
+  hasDirtyAttributes: boolean;
   isNew: boolean;
   canRead: boolean;
   save(): void;

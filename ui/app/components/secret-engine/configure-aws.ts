@@ -60,18 +60,12 @@ export default class ConfigureAwsComponent extends Component<Args> {
   @tracked modelValidationsLease: ValidationMap | null = null;
   @tracked accessType = 'iam';
   @tracked saveIssuerWarning = '';
-  @tracked originalIssuer = '';
 
   disableAccessType = false;
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
-    // the following checks are only relevant to enterprise users
-    if (this.version.isCommunity) return;
-    // keep track of the original issuer so that when a user toggles the accessType we can return to the original value
-    this.originalIssuer = this.args.issuerConfig.issuer || '';
-    // the following checks are only relevant to those editing an existing root configuration
-    if (this.args.rootConfig.isNew) return;
+    // the following checks are only relevant to enterprise users and those editing an existing root configuration.
     if (this.version.isCommunity || this.args.rootConfig.isNew) return;
     const { roleArn, identityTokenAudience, identityTokenTtl, accessKey } = this.args.rootConfig;
     // do not include issuer in this check. Issuer is a global endpoint and can bet set even if we're not editing wif attributes
@@ -220,7 +214,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
       // reset all WIF attributes
       rootConfig.roleArn = rootConfig.identityTokenAudience = rootConfig.identityTokenTtl = undefined;
       // for the issuer return to the globally set value (if there is one) on toggle
-      this.args.issuerConfig.issuer = this.originalIssuer;
+      this.args.issuerConfig.rollbackAttributes();
     }
     if (accessType === 'wif') {
       // reset all IAM attributes

@@ -30,6 +30,7 @@ export const SECRET_ENGINE_SELECTORS = {
     accessTypeSubtext: '[data-test-access-type-subtext]',
     accessType: (type: string) => `[data-test-access-type="${type}"]`,
     issuerWarningModal: '[data-test-issuer-warning]',
+    issuerWarningMessage: '[data-test-issuer-warning-message]',
     issuerWarningSave: '[data-test-issuer-save]',
     issuerWarningCancel: '[data-test-issuer-cancel]',
   },

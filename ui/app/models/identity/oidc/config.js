@@ -21,10 +21,6 @@ export default class IdentityOidcConfig extends Model {
     const keys = ['issuer'];
     return expandAttributeMeta(this, keys);
   }
-  get formFields() {
-    const keys = ['issuer'];
-    return expandAttributeMeta(this, keys);
-  }
 
   // CAPABILITIES
   @lazyCapabilities(apiPath`identity/oidc/config`) issuerPath;

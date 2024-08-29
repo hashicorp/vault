@@ -20,25 +20,13 @@ import type VersionService from 'vault/services/version';
 // Saving and updating of those models are done within the engine specific components.
 
 const CONFIG_ADAPTERS_PATHS: Record<string, string[]> = {
-  aws: ['aws/lease-config', 'aws/root-config', 'identity/oidc/config'],
+  aws: ['aws/lease-config', 'aws/root-config'],
   ssh: ['ssh/ca-config'],
 };
 
 export default class SecretsBackendConfigurationEdit extends Route {
   @service declare readonly store: Store;
   @service declare readonly version: VersionService;
-
-  get configAdapterPaths() {
-    // we only want to check identity/oidc/config for enterprise users
-    return {
-      aws: [
-        'aws/lease-config',
-        'aws/root-config',
-        ...(this.version.isEnterprise ? ['identity/oidc/config'] : []),
-      ],
-      ssh: ['ssh/ca-config'],
-    };
-  }
 
   async model() {
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
@@ -78,6 +66,16 @@ export default class SecretsBackendConfigurationEdit extends Route {
         } else {
           throw e;
         }
+      }
+    }
+    // if the type is AWS and it's enterprise, we also fetch the issuer
+    // from a global endpoint which has no associated model/adapter
+    if (type === 'aws' && this.version.isEnterprise) {
+      try {
+        const response = await this.store.queryRecord('identity/oidc/config', {});
+        model['identity-oidc-config'] = response;
+      } catch (e) {
+        // silently fail if the issuer is not available
       }
     }
     return model;

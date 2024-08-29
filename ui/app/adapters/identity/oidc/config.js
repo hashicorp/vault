@@ -12,7 +12,7 @@ export default class IdentityOidcConfig extends ApplicationAdapter {
     return this.ajax(`${this.buildURL()}/identity/oidc/config`, 'GET').then((resp) => {
       return {
         ...resp,
-        id: resp.request_id, // id required for ember data
+        id: 'identity-oidc-config', // id required for ember data. only one record is expected so static id is fine
       };
     });
   }

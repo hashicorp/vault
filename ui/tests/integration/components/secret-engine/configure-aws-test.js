@@ -288,6 +288,26 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
 
       module('issuer field tests', function () {
         // the other tests where issuer is not passed do not show modals, so we only need to test when the modal should shows up
+        test('it shows message about overriding value if user does not have read access to identity/oidc/config', async function (assert) {
+          // only give create and update but no read access
+          this.server.post('/sys/capabilities-self', () =>
+            capabilitiesStub('identity/oidc/config', ['create', 'update'])
+          );
+          this.issuerConfig = this.store.createRecord('identity/oidc/config');
+          // if I don't call issuerConfig.canRead before it fails
+          this.issuerConfig.canRead;
+          await this.renderComponent();
+          await click(SES.aws.accessType('wif'));
+          await fillIn(GENERAL.inputByAttr('issuer'), 'http://change.me.no.read');
+          await click(GENERAL.saveButton);
+          assert
+            .dom(SES.aws.issuerWarningMessage)
+            .hasText(
+              `You are updating the global issuer config. This will overwrite Vault's current issuer if it exists and may affect other configurations using this value. Continue?`,
+              'modal shows message about overwriting value if it exists'
+            );
+        });
+
         test('is shows placeholder issuer, shows modal when saving changes, and does not call APIs on cancel', async function (assert) {
           this.server.post('/identity/oidc/config', () => {
             assert.notOk(true, 'request should not be made to issuer config endpoint');
@@ -313,6 +333,12 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
           await fillIn(GENERAL.inputByAttr('issuer'), 'http://bar.foo');
           await click(GENERAL.saveButton);
           assert.dom(SES.aws.issuerWarningModal).exists('issuer modal exists');
+          assert
+            .dom(SES.aws.issuerWarningMessage)
+            .hasText(
+              `You are updating the global issuer config. This will overwrite Vault's current issuer and may affect other configurations using this value. Continue?`,
+              'modal shows message about overwriting value without the noRead: "if it exists" adage'
+            );
           await click(SES.aws.issuerWarningCancel);
           assert.dom(SES.aws.issuerWarningModal).doesNotExist('issuer modal is removed on cancel');
           assert.true(this.flashDangerSpy.notCalled, 'No danger flash messages called.');
