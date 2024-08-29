@@ -25,7 +25,7 @@ export const dataPolicy = ({ backend, secretPath = '*', capabilities = root }) =
   `;
 };
 
-export const subkeyPolicy = ({ backend, secretPath = '*' }) => {
+export const subkeysPolicy = ({ backend, secretPath = '*' }) => {
   return `
     path "${backend}/subkeys/${secretPath}" {
       capabilities = ["read"]
@@ -90,7 +90,7 @@ export const destroyVersionsPolicy = ({ backend, secretPath = '*' }) => {
 
 // Personas for reuse in workflow tests
 export const personas = {
-  admin: (backend) => adminPolicy(backend),
+  admin: (backend) => adminPolicy(backend) + subkeysPolicy({ backend }),
   dataReader: (backend) => dataPolicy({ backend, capabilities: ['read'] }),
   dataListReader: (backend) =>
     dataPolicy({ backend, capabilities: ['read', 'delete'] }) + metadataListPolicy(backend),
@@ -108,5 +108,5 @@ export const personas = {
   secretPatcher: (backend) =>
     dataPolicy({ backend, capabilities: ['patch'] }) +
     metadataPolicy({ backend, capabilities: ['list', 'read'] }) +
-    subkeyPolicy({ backend }),
+    subkeysPolicy({ backend }),
 };
