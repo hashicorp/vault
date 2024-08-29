@@ -222,11 +222,12 @@ func getUpdateUserRequest(req *proto.UpdateUserRequest) (UpdateUserRequest, erro
 	}
 
 	dbReq := UpdateUserRequest{
-		Username:       req.GetUsername(),
-		CredentialType: CredentialType(req.GetCredentialType()),
-		Password:       password,
-		PublicKey:      publicKey,
-		Expiration:     expiration,
+		Username:            req.GetUsername(),
+		CredentialType:      CredentialType(req.GetCredentialType()),
+		Password:            password,
+		PublicKey:           publicKey,
+		Expiration:          expiration,
+		SelfManagedPassword: req.SelfManagedPassword,
 	}
 
 	if !hasChange(dbReq) {

@@ -640,6 +640,94 @@ func TestPostgreSQL_Initialize_CloudGCP(t *testing.T) {
 	}
 }
 
+// TestPostgreSQL_Initialize_SelfManaged_OSS tests the initialization of
+// the self-managed flow and ensures an error is returned on OSS.
+func TestPostgreSQL_Initialize_SelfManaged_OSS(t *testing.T) {
+	cleanup, url := postgresql.PrepareTestContainerSelfManaged(t)
+	defer cleanup()
+
+	connURL := fmt.Sprintf("postgresql://{{username}}:{{password}}@%s/postgres?sslmode=disable", url.Host)
+
+	testCases := []struct {
+		name              string
+		connectionDetails map[string]interface{}
+		wantErr           bool
+		errContains       string
+	}{
+		{
+			name: "no parameters set",
+			connectionDetails: map[string]interface{}{
+				"connection_url": connURL,
+				"self_managed":   false,
+				"username":       "",
+				"password":       "",
+			},
+			wantErr:     true,
+			errContains: "must either provide username/password or set self-managed to 'true'",
+		},
+		{
+			name: "both sets of parameters set",
+			connectionDetails: map[string]interface{}{
+				"connection_url": connURL,
+				"self_managed":   true,
+				"username":       "test",
+				"password":       "test",
+			},
+			wantErr:     true,
+			errContains: "cannot use both self-managed and vault-managed workflows",
+		},
+		{
+			name: "either username/password with self-managed",
+			connectionDetails: map[string]interface{}{
+				"connection_url": connURL,
+				"self_managed":   true,
+				"username":       "test",
+				"password":       "",
+			},
+			wantErr:     true,
+			errContains: "cannot use both self-managed and vault-managed workflows",
+		},
+		{
+			name: "cache not implemented",
+			connectionDetails: map[string]interface{}{
+				"connection_url": connURL,
+				"self_managed":   true,
+				"username":       "",
+				"password":       "",
+			},
+			wantErr:     true,
+			errContains: "self-managed static roles only available in Vault Enterprise",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := dbplugin.InitializeRequest{
+				Config:           tc.connectionDetails,
+				VerifyConnection: true,
+			}
+
+			db := new()
+			_, err := dbtesting.VerifyInitialize(t, db, req)
+			if err == nil && tc.wantErr {
+				t.Fatalf("got: %s, wantErr: %t", err, tc.wantErr)
+			}
+
+			if err != nil && !strings.Contains(err.Error(), tc.errContains) {
+				t.Fatalf("expected error: %s, received error: %s", tc.errContains, err)
+			}
+
+			if !tc.wantErr && !db.Initialized {
+				t.Fatal("Database should be initialized")
+			}
+
+			if err := db.Close(); err != nil {
+				t.Fatalf("err closing DB: %s", err)
+			}
+		})
+	}
+}
+
 // TestPostgreSQL_PasswordAuthentication tests that the default "password_authentication" is "none", and that
 // an error is returned if an invalid "password_authentication" is provided.
 func TestPostgreSQL_PasswordAuthentication(t *testing.T) {
@@ -1043,6 +1131,37 @@ func TestUpdateUser_Password(t *testing.T) {
 
 		assertCredsDoNotExist(t, db.ConnectionURL, updateReq.Username, newPass)
 	})
+}
+
+// TestUpdateUser_SelfManaged_OSS checks basic validation
+// for self-managed fields and confirms an error is returned on OSS
+func TestUpdateUser_SelfManaged_OSS(t *testing.T) {
+	// Shared test container for speed - there should not be any overlap between the tests
+	db, cleanup := getPostgreSQL(t, nil)
+	defer cleanup()
+
+	updateReq := dbplugin.UpdateUserRequest{
+		Username: "static",
+		Password: &dbplugin.ChangePassword{
+			NewPassword: "somenewpassword",
+			Statements: dbplugin.Statements{
+				Commands: nil,
+			},
+		},
+		SelfManagedPassword: "test",
+	}
+
+	expectedErr := "self-managed static roles only available in Vault Enterprise"
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	_, err := db.UpdateUser(ctx, updateReq)
+	if err == nil {
+		t.Fatalf("err expected, got nil")
+	}
+	if !strings.Contains(err.Error(), expectedErr) {
+		t.Fatalf("err expected: %s, got: %s", expectedErr, err)
+	}
 }
 
 func TestUpdateUser_Expiration(t *testing.T) {

@@ -199,11 +199,12 @@ func updateUserReqToProto(req UpdateUserRequest) (*proto.UpdateUserRequest, erro
 	}
 
 	rpcReq := &proto.UpdateUserRequest{
-		Username:       req.Username,
-		CredentialType: int32(req.CredentialType),
-		Password:       password,
-		PublicKey:      publicKey,
-		Expiration:     expiration,
+		Username:            req.Username,
+		CredentialType:      int32(req.CredentialType),
+		Password:            password,
+		PublicKey:           publicKey,
+		Expiration:          expiration,
+		SelfManagedPassword: req.SelfManagedPassword,
 	}
 	return rpcReq, nil
 }
