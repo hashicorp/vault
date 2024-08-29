@@ -48,7 +48,7 @@ these device-specific options:
 ## Notes
 
 If the items written to the syslog audit device are larger than the syslog host's configured maximum socket
-send buffer, then Vault will log error such as this example:
+send buffer, then Vault will log an error such as this example:
 
 ```
 [ERROR] audit: backend failed to log response:  backend=syslog/ error=write unixgram ->/var/run/log: write: message too long
