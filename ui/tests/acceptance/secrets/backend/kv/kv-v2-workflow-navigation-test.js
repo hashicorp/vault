@@ -1457,8 +1457,7 @@ path "${this.backend}/*" {
     });
   });
 
-  // patch is technically enterprise only but stubbing the version
-  // for these tests so they can run on both CE and enterprise
+  // patch is technically enterprise only but stubbing the version so they can run on both CE and enterprise
   module('patch persona', function (hooks) {
     hooks.beforeEach(async function () {
       this.version = this.owner.lookup('service:version');
@@ -1501,7 +1500,7 @@ path "${this.backend}/*" {
       assert.dom(GENERAL.overviewCard.container('Subkeys')).doesNotExist();
     });
 
-    test('it does not redirect for enterprise', async function (assert) {
+    test('it does not redirect for ent', async function (assert) {
       this.version.type = 'enterprise';
       await visit(`/vault/secrets/${this.backend}/kv/app%2Fnested%2Fsecret/patch`);
       assert.strictEqual(

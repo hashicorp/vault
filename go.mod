@@ -121,7 +121,7 @@ require (
 	github.com/hashicorp/hcp-scada-provider v0.2.2
 	github.com/hashicorp/hcp-sdk-go v0.101.0
 	github.com/hashicorp/nomad/api v0.0.0-20240213164230-c364cb57298d
-	github.com/hashicorp/raft v1.7.0
+	github.com/hashicorp/raft v1.7.1
 	github.com/hashicorp/raft-autopilot v0.2.0
 	github.com/hashicorp/raft-boltdb/v2 v2.3.0
 	github.com/hashicorp/raft-snapshot v1.0.4
