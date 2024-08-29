@@ -157,6 +157,7 @@ func (c *forwardingClient) startHeartbeat() {
 		var echoDuration time.Duration
 		var serverTimeDelta int64
 		tick := func() {
+			c.core.logger.Trace("sending tick")
 			labels := make([]metrics.Label, 0, 1)
 			defer metrics.MeasureSinceWithLabels([]string{"ha", "rpc", "client", "echo"}, time.Now(), labels)
 
