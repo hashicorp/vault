@@ -116,6 +116,33 @@ module('Unit | Service | capabilities', function (hooks) {
     assert.propEqual(actual, expected, `it returns expected response: ${JSON.stringify(actual)}`);
   });
 
+  test('fetchMultiplePaths: it defaults to true if the capabilities request fails', async function (assert) {
+    // don't stub endpoint which causes request to fail
+    const paths = ['/my/api/path', 'another/api/path'];
+    const actual = await this.capabilities.fetchMultiplePaths(paths);
+    const expected = {
+      '/my/api/path': {
+        canCreate: true,
+        canDelete: true,
+        canList: true,
+        canPatch: true,
+        canRead: true,
+        canSudo: true,
+        canUpdate: true,
+      },
+      'another/api/path': {
+        canCreate: true,
+        canDelete: true,
+        canList: true,
+        canPatch: true,
+        canRead: true,
+        canSudo: true,
+        canUpdate: true,
+      },
+    };
+    assert.propEqual(actual, expected, `it returns expected response: ${JSON.stringify(actual)}`);
+  });
+
   test('fetchMultiplePaths: it defaults to true if no model is found', async function (assert) {
     const paths = ['/my/api/path', 'another/api/path'];
     const expectedPayload = { paths };
