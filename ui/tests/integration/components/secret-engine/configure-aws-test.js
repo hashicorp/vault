@@ -367,7 +367,7 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
           });
           await this.renderComponent();
           await click(SES.aws.accessType('wif'));
-          assert.dom(GENERAL.inputByAttr('issuer')).hasValue('', 'issuer does not reflect passed value');
+          assert.dom(GENERAL.inputByAttr('issuer')).hasValue('', 'issuer defaults to empty string');
           await fillIn(GENERAL.inputByAttr('issuer'), newIssuer);
           await click(GENERAL.saveButton);
           assert.dom(SES.aws.issuerWarningModal).exists('issue warning modal exists');
@@ -458,7 +458,7 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
         assert.true(true, 'post request was made to config/root. test should pass.');
       });
       this.server.post('/identity/oidc/config', () => {
-        assert.true(false, 'post request was made to update issuer. test should fail.');
+        throw new Error('post request was incorrectly made to update issuer');
       });
       await fillInAwsConfig('withAccess');
       await fillInAwsConfig('withLease');
