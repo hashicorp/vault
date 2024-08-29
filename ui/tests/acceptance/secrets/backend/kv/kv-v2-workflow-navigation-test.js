@@ -1467,7 +1467,7 @@ path "${this.backend}/*" {
   });
 
   // patch is technically enterprise only but stubbing the version so they can run on both CE and enterprise
-  module('patch persona', function (hooks) {
+  module('patch-persona', function (hooks) {
     hooks.beforeEach(async function () {
       const token = await runCmd([
         createPolicyCmd(
