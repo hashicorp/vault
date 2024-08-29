@@ -11,7 +11,7 @@ import { deleteEngineCmd, mountEngineCmd, runCmd, tokenWithPolicyCmd } from 'vau
 import { personas } from 'vault/tests/helpers/kv/policy-generator';
 import { clearRecords, deleteLatestCmd, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import { setupControlGroup } from 'vault/tests/helpers/control-groups';
-import { click, currentURL, visit } from '@ember/test-helpers';
+import { click, currentRouteName, currentURL, waitUntil, visit } from '@ember/test-helpers';
 import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import sinon from 'sinon';
 
@@ -156,10 +156,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
 
     test('can permanently delete all secret versions (a)', async function (assert) {
       await writeVersionedSecret(this.backend, 'nuke', 'foo', 'bar', 2);
-      // go to secret details
-      await visit(`/vault/secrets/${this.backend}/kv/nuke/details`);
-      // Check metadata toolbar
-      await click(PAGE.secretTab('Metadata'));
+      await visit(`/vault/secrets/${this.backend}/kv/nuke/metadata`);
       assert.dom(PAGE.metadata.deleteMetadata).hasText('Permanently delete', 'shows delete metadata button');
       // delete flow
       await click(PAGE.metadata.deleteMetadata);
@@ -167,6 +164,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
         .dom(PAGE.detail.deleteModalTitle)
         .includesText('Delete metadata and secret data?', 'modal has correct title');
       await click(PAGE.detail.deleteConfirm);
+      await waitUntil(() => currentRouteName() === 'vault.cluster.secrets.backend.kv.list');
       // redirects to list
       assert.strictEqual(currentURL(), `/vault/secrets/${this.backend}/kv/list`, 'redirects to list');
     });
