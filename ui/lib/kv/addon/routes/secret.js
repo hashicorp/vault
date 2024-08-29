@@ -62,6 +62,7 @@ export default class KvSecretRoute extends Route {
       isPatchAllowed: this.isPatchAllowed(backend, path),
       // for creating a new secret version
       canUpdateSecret: this.capabilities.canUpdate(`${backend}/data/${path}`),
+      canReadMetadata: this.capabilities.canRead(`${backend}/metadata/${path}`),
     });
   }
 
