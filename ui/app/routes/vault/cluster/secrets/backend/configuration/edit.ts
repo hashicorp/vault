@@ -13,6 +13,7 @@ import { action } from '@ember/object';
 
 import type Store from '@ember-data/store';
 import type SecretEngineModel from 'vault/models/secret-engine';
+import type VersionService from 'vault/services/version';
 
 // This route file is reused for all configurable secret engines.
 // It generates config models based on the engine type.
@@ -25,11 +26,12 @@ const CONFIG_ADAPTERS_PATHS: Record<string, string[]> = {
 
 export default class SecretsBackendConfigurationEdit extends Route {
   @service declare readonly store: Store;
+  @service declare readonly version: VersionService;
 
   async model() {
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
-    const secretEngineRecord = this.modelFor('vault.cluster.secrets.backend') as { type: SecretEngineModel };
-    const type = secretEngineRecord.type as string;
+    const secretEngineRecord = this.modelFor('vault.cluster.secrets.backend') as SecretEngineModel;
+    const type = secretEngineRecord.type;
 
     // if the engine type is not configurable, return a 404.
     if (!secretEngineRecord || !CONFIGURABLE_SECRET_ENGINES.includes(type)) {
@@ -64,6 +66,17 @@ export default class SecretsBackendConfigurationEdit extends Route {
         } else {
           throw e;
         }
+      }
+    }
+    // if the type is AWS and it's enterprise, we also fetch the issuer
+    // from a global endpoint which has no associated model/adapter
+    if (type === 'aws' && this.version.isEnterprise) {
+      try {
+        const response = await this.store.queryRecord('identity/oidc/config', {});
+        model['identity-oidc-config'] = response;
+      } catch (e) {
+        // return a property called queryIssuerError and let the component handle it.
+        model['identity-oidc-config'] = { queryIssuerError: true };
       }
     }
     return model;

@@ -190,4 +190,10 @@ export default class MountBackendForm extends Component<Args> {
     this.typeChangeSideEffect(value);
     this.checkPathChange(value);
   }
+
+  @action
+  handleIdentityTokenKeyChange(value: string[] | string): void {
+    // if array, it's coming from the search-select component, otherwise it hit the fallback component and will come in as a string.
+    this.args.mountModel.config.identityTokenKey = Array.isArray(value) ? value[0] : value;
+  }
 }
