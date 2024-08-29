@@ -11,9 +11,11 @@ import authForm from '../pages/components/auth-form';
 import jwtForm from '../pages/components/auth-jwt';
 import { create } from 'ember-cli-page-object';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
 
 const component = create(authForm);
 const jwtComponent = create(jwtForm);
+const { rootToken } = VAULT_KEYS;
 
 module('Acceptance | auth', function (hooks) {
   setupApplicationTest(hooks);
@@ -140,5 +142,18 @@ module('Acceptance | auth', function (hooks) {
     await visit('/vault/auth');
     await component.selectMethod('token');
     await click('[data-test-auth-submit]');
+  });
+
+  test('it does not call renew-self after successful login with non-renewable token', async function (assert) {
+    this.server.post(
+      '/auth/token/renew-self',
+      () => new Error('should not call renew-self directly after logging in')
+    );
+
+    await visit('/vault/auth');
+    await component.selectMethod('token');
+    await component.token(rootToken);
+    await click('[data-test-auth-submit]');
+    assert.strictEqual(currentURL(), '/vault/dashboard');
   });
 });
