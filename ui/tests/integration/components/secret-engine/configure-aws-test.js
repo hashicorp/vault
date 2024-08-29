@@ -35,9 +35,11 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
 
     this.uid = uuidv4();
     this.id = `aws-${this.uid}`;
+    // using createRecord on root and lease configs to simulate a fresh mount
     this.rootConfig = this.store.createRecord('aws/root-config');
     this.leaseConfig = this.store.createRecord('aws/lease-config');
-    this.issuerConfig = this.store.createRecord('identity/oidc/config');
+    // issuer config is never a createdRecord but the response from the API.
+    this.issuerConfig = createConfig(this.store, this.id, 'issuer');
     // Add backend to the configs because it's not on the testing snapshot (would come from url)
     this.rootConfig.backend = this.leaseConfig.backend = this.id;
     this.version = this.owner.lookup('service:version');
@@ -352,7 +354,7 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
             const payload = JSON.parse(req.requestBody);
             assert.deepEqual(payload, { issuer: newIssuer }, 'payload for issuer is correct');
             return {
-              id: 'some-id',
+              id: 'identity-oidc-config', // id needs to match the id on secret-engine-helpers createIssuerConfig
               data: null,
               warnings: [
                 'If "issuer" is set explicitly, all tokens must be validated against that address, including those issued by secondary clusters. Setting issuer to "" will restore the default behavior of using the cluster\'s api_addr as the issuer.',

@@ -92,7 +92,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
       // Note: only aws/lease-config model has validations
       const isValid = this.validate(leaseConfig);
       if (!isValid) return;
-      if (Object.keys(issuerConfig?.changedAttributes()).some((item) => item)) {
+      if (issuerConfig?.hasDirtyAttributes) {
         // if the issuer has changed show modal with warning that the config will change
         // if the modal is shown, the user has to click confirm to continue save
         this.saveIssuerWarning = `You are updating the global issuer config. This will overwrite Vault's current issuer ${
@@ -117,7 +117,7 @@ export default class ConfigureAwsComponent extends Component<Args> {
         (item) => item !== 'backend'
       );
       const rootAttrChanged = Object.keys(rootConfig?.changedAttributes()).some((item) => item !== 'backend');
-      const issuerAttrChanged = Object.keys(issuerConfig?.changedAttributes()).some((item) => item);
+      const issuerAttrChanged = issuerConfig?.hasDirtyAttributes;
       if (!leaseAttrChanged && !rootAttrChanged && !issuerAttrChanged) {
         this.flashMessages.info('No changes detected.');
         this.transition();
