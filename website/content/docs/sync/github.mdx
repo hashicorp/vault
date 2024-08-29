@@ -51,29 +51,36 @@ Using an access token to configure a repository sync destination:
 
   </CodeBlockConfig>
 
-  Configure an environment sync destination:
+  Use `vault write` to configure an environment sync destination:
 
   ```shell-session
-  $ vault write sys/sync/destinations/gh/my-dest \
-      access_token="$ACCESS_TOKEN" \
-      repository_owner="$OWNER" \
-      repository_name="$NAME"
-      environment_name="$ENVIRONMENT"
+  $ vault write sys/sync/destinations/gh/DESTINATION_NAME \
+      access_token="GITHUB_ACCESS_TOKEN"                  \
+      repository_owner="GITHUB_OWNER_NAME"                \
+      repository_name="GITHUB_REPO_NAME"                  \
+      environment_name="GITHUB_ENVIRONMENT_NAME"
   ```
-
-  **Output:**
+  
+  For example:
 
   <CodeBlockConfig hideClipboard>
+  
+  ```
+  $ vault write sys/sync/destinations/gh/hcrepo-sandbox       \
+      access_token="0000000000000000000000000000000000000000" \
+      repository_owner="hashicorp"                            \
+      repository_name="hcrepo"                                \
+      environment_name="sandbox"
 
-  ```plaintext
   Key                   Value
   ---                   -----
-  connection_details    map[access_token:***** environment_name:<environment> repository_owner:<owner> repository_name:<name>]
-  name                  my-dest
+  connection_details    map[access_token:***** environment_name:sandbox repository_owner:hashicorp repository_name:hcrepo]
+  name                  hcrepo-sandbox
   type                  gh
   ```
 
   </CodeBlockConfig>
+
 
 ## Usage
 
