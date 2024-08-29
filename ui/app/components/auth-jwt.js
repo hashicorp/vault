@@ -87,8 +87,6 @@ export default Component.extend({
     this.onError(err);
   },
 
-  // NOTE TO DEVS: Be careful when updating the OIDC flow and ensure the updates
-  // work with implicit flow. See issue https://github.com/hashicorp/vault-plugin-auth-jwt/pull/192
   prepareForOIDC: task(function* (oidcWindow) {
     const thisWindow = this.getWindow();
     // show the loading animation in the parent
