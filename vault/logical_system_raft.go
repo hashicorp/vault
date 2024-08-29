@@ -26,11 +26,9 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-var (
-	// These constants are debatable
-	MaxInFlightRaftChallenges = 10
-	RaftChallengesPerSecond   = 10
-	MaxInFlightChallengeDelay = 100 * time.Millisecond
+const (
+	MaxInFlightRaftChallenges = 20 // allow an initial burst to 20
+	RaftChallengesPerSecond   = 5  // equating to an average 200ms min time
 )
 
 type raftBootstrapChallenge struct {
@@ -319,8 +317,6 @@ func (b *SystemBackend) handleRaftBootstrapChallengeWrite(makeSealer func() snap
 				}
 				b.Core.pendingRaftPeers.Add(serverID, challenge)
 			} else {
-				// 429 with delay
-				time.Sleep(MaxInFlightChallengeDelay)
 				return logical.RespondWithStatusCode(logical.ErrorResponse("too many raft challenges in flight"), req, http.StatusTooManyRequests)
 			}
 		}

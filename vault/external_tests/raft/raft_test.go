@@ -255,41 +255,30 @@ func TestRaft_ChallengeSpam(t *testing.T) {
 	})
 	defer cluster.Cleanup()
 
-	min := time.Hour
-	for n := 0; n < vault.MaxInFlightRaftChallenges; n++ {
-		start := time.Now()
+	// Execute 2 * MaxInFlightRequests, over a period that should allow some to proceed as the token bucket
+	// refills.
+	var someLaterFailed bool
+	var someLaterSucceeded bool
+	for n := 0; n < 2*vault.MaxInFlightRaftChallenges; n++ {
 		_, err := cluster.Cores[0].Client.Logical().Write("sys/storage/raft/bootstrap/challenge", map[string]interface{}{
 			"server_id": fmt.Sprintf("core-%d", n),
 		})
-		require.NoError(t, err)
-		elapsed := time.Since(start)
-		if elapsed < min {
-			min = elapsed
+		// First MaxInFlightRequests should succeed for sure
+		if n < vault.MaxInFlightRaftChallenges {
+			require.NoError(t, err)
+		} else {
+			// slow down to twice the configured rps
+			time.Sleep((1000 * time.Millisecond) / (2 * time.Duration(vault.RaftChallengesPerSecond)))
+			if err != nil {
+				require.Equal(t, 429, err.(*api.ResponseError).StatusCode)
+				someLaterFailed = true
+			} else {
+				someLaterSucceeded = true
+			}
 		}
 	}
-
-	// Make sure that after the first N we eventually hit the limit.  A bit sloppy since time passes executing the above
-	// loop, introducing new tokens
-	for n := 0; n < vault.MaxInFlightRaftChallenges; n++ {
-		start := time.Now()
-		_, err := cluster.Cores[0].Client.Logical().Write("sys/storage/raft/bootstrap/challenge", map[string]interface{}{
-			"server_id": "core-next",
-		})
-		require.Error(t, err)
-		require.Equal(t, 429, err.(*api.ResponseError).StatusCode)
-		elapsed := time.Since(start)
-		if err != nil {
-			// Could be flaky, but we hope that at least the delay has been added to the fastest request we saw
-			require.True(t, elapsed > (min+vault.MaxInFlightChallengeDelay))
-			break
-		}
-	}
-
-	time.Sleep(time.Duration(1000/vault.RaftChallengesPerSecond) * time.Millisecond)
-	_, err := cluster.Cores[0].Client.Logical().Write("sys/storage/raft/bootstrap/challenge", map[string]interface{}{
-		"server_id": "core-next2",
-	})
-	require.NoError(t, err)
+	require.True(t, someLaterFailed)
+	require.True(t, someLaterSucceeded)
 }
 
 func TestRaft_Join(t *testing.T) {
