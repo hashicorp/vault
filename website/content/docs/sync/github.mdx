@@ -17,7 +17,7 @@ Prerequisites:
 
 ## Setup
 
-1. To get started with syncing Vault secrets to your GitHub repository, you will need a configured [GitHub application](#github-application) or an
+1. To get started with syncing Vault secrets to your GitHub, you will need a configured [GitHub application](#github-application) or an
   [access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
   which has access to the repository you want to manage secrets for and write permissions on the repository's actions secrets.
   In the list of GitHub permissions, this is simply called "Secrets". Choosing this will automatically include read-only Metadata.
@@ -27,25 +27,29 @@ Prerequisites:
   GitHub applications are long-lived and do not expire. Using a GitHub application for authentication is preferred over using a personal access token.
 </Warning>
 
-
-Using an access token to configure a repository sync destination:
+Use `vault write` to configure a repository sync destination with an access token:
 
   ```shell-session
-  $ vault write sys/sync/destinations/gh/my-dest \
-      access_token="$ACCESS_TOKEN" \
-      repository_owner="$OWNER" \
-      repository_name="$NAME"
+  $ vault write sys/sync/destinations/gh/DESTINATION_NAME \
+      access_token="GITHUB_ACCESS_TOKEN"                  \
+      repository_owner="GITHUB_OWNER_NAME"                \
+      repository_name="GITHUB_REPO_NAME"
   ```
-
-  **Output:**
+  
+  For example:
 
   <CodeBlockConfig hideClipboard>
+  
+  ```
+  $ vault write sys/sync/destinations/gh/hcrepo-sandbox       \
+      access_token="github_pat_11ABC000000000000000000000DEF" \
+      repository_owner="hashicorp"                            \
+      repository_name="hcrepo"
 
-  ```plaintext
   Key                   Value
   ---                   -----
-  connection_details    map[access_token:***** repository_owner:<owner> repository_name:<name>]
-  name                  my-dest
+  connection_details    map[access_token:***** repository_owner:hashicorp repository_name:hcrepo]
+  name                  hcrepo-sandbox
   type                  gh
   ```
 
@@ -67,7 +71,7 @@ Using an access token to configure a repository sync destination:
   
   ```
   $ vault write sys/sync/destinations/gh/hcrepo-sandbox       \
-      access_token="0000000000000000000000000000000000000000" \
+      access_token="github_pat_11ABC000000000000000000000DEF" \
       repository_owner="hashicorp"                            \
       repository_name="hcrepo"                                \
       environment_name="sandbox"
@@ -103,7 +107,7 @@ Using an access token to configure a repository sync destination:
 1. Create secrets you wish to sync with a target GitHub repository for Actions.
 
   ```shell-session
-  $ vault kv put -mount='my-kv' my-secret foo='bar' baz='quux'
+  $ vault kv put -mount='my-kv' my-secret key1='val1' key2='val2'
   ```
 
   **Output:**
@@ -150,7 +154,7 @@ Using an access token to configure a repository sync destination:
 
 1. Navigate to your GitHub repository settings to confirm your secret was successfully created.
 
-Moving forward, any modification on the Vault secret will be propagated in near real time to its GitHub repository secrets
+Moving forward, any modification on the Vault secret will be propagated in near-real time to its GitHub secrets
 counterpart. Creating a new secret version in Vault will create a new version in GitHub. Deleting the secret
 or the association in Vault will delete the secret in GitHub as well.
 
@@ -158,15 +162,15 @@ or the association in Vault will delete the secret in GitHub as well.
 
 <Note>
 
-GitHub only supports single-value secrets and stores secrets differently,
+GitHub only supports single-value secrets, and Vault syncs secrets differently
 depending on whether you have configured
 `secret-key` or `secret-path` [granularity](/vault/docs/sync#granularity):
 
 - `secret-key` granularity splits KVv2 secrets from Vault into key-value pairs
   and stores the pairs as distinct entries in GitHub secrets. For example,
-  `secrets.foo="bar"` and `secrets.baz="quux"`.
+  `secrets.key1="val1"` and `secrets.key2="val2"`.
 - `secret-path` granularity stores secrets as a single JSON string that contains
-  all of the associated key-value pairs. For example, `{"foo":"bar", "baz":"quux"}`.
+  all of the associated key-value pairs. For example, `{"key1":"val1", "key2":"val2"}`.
 
 </Note>
 
