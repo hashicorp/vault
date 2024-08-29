@@ -104,6 +104,9 @@ ENV VERSION=$VERSION
 # Copy the license file as per Legal requirement
 COPY LICENSE /usr/share/doc/$NAME/LICENSE.txt
 
+# We must have a copy of the license in this directory to comply with the HasLicense Redhat requirement
+COPY LICENSE /licenses/LICENSE.txt
+
 # Set up certificates, our base tools, and Vault. Unlike the other version of
 # this (https://github.com/hashicorp/docker-vault/blob/master/ubi/Dockerfile),
 # we copy in the Vault binary from CRT.
