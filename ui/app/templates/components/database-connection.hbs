@@ -102,7 +102,7 @@
     </Hds::Alert>
   {{/if}}
 
-  <form {{on "submit" this.handleCreateConnection}} aria-label="create connection form">
+  <form {{on "submit" (perform this.handleCreateConnection)}} aria-label="create connection form">
     {{#each @model.fieldAttrs as |attr|}}
       {{#if (not-eq attr.options.readOnly true)}}
         <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
@@ -177,7 +177,12 @@
     <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
       <div class="field is-grouped">
         <Hds::ButtonSet>
-          <Hds::Button @text="Create database" type="submit" data-test-secret-save />
+          <Hds::Button
+            @icon={{if this.handleCreateConnection.isRunning "loading"}}
+            @text="Create database"
+            type="submit"
+            data-test-secret-save
+          />
           <Hds::Button
             @text="Cancel"
             @color="secondary"
@@ -370,7 +375,12 @@
     </M.Body>
     <M.Footer>
       <Hds::ButtonSet>
-        <Hds::Button @text="Rotate and enable" {{on "click" this.continueWithRotate}} data-test-enable-rotate-connection />
+        <Hds::Button
+          @icon={{if this.continueWithRotate.isRunning "loading"}}
+          @text="Rotate and enable"
+          {{on "click" (perform this.continueWithRotate)}}
+          data-test-enable-rotate-connection
+        />
         <Hds::Button
           @text="Enable without rotating"
           @color="secondary"
