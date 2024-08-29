@@ -129,6 +129,14 @@ export default class KvDataAdapter extends ApplicationAdapter {
   parseErrorOrResponse(errorOrResponse, secretDataBaseResponse, isSubkeys = false) {
     // if it's a legitimate error - throw it!
     if (errorOrResponse instanceof ControlGroupError) {
+      if (!isSubkeys) {
+        // note this will redirect any control group error for secret /data/ to the details route
+        const { backend, path } = secretDataBaseResponse;
+        errorOrResponse.uiParams = {
+          redirect_route: 'vault.cluster.secrets.backend.kv.secret.details.index',
+          params: [backend, path],
+        };
+      }
       throw errorOrResponse;
     }
 
