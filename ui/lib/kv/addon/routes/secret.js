@@ -12,6 +12,7 @@ export default class KvSecretRoute extends Route {
   @service secretMountPath;
   @service store;
   @service capabilities;
+  @service version;
 
   fetchSecretMetadata(backend, path) {
     // catch error and only return 404 which indicates the secret truly does not exist.
@@ -25,10 +26,13 @@ export default class KvSecretRoute extends Route {
   }
 
   fetchSubkeys(backend, path) {
-    const adapter = this.store.adapterFor('kv/data');
-    // metadata will throw if the secret does not exist
-    // always return here so we get deletion state and relevant metadata
-    return adapter.fetchSubkeys(backend, path);
+    if (this.version.isEnterprise) {
+      const adapter = this.store.adapterFor('kv/data');
+      // metadata will throw if the secret does not exist
+      // always return here so we get deletion state and relevant metadata
+      return adapter.fetchSubkeys(backend, path);
+    }
+    return null;
   }
 
   model() {

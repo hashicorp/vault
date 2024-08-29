@@ -25,7 +25,7 @@ import { isDeleted } from 'kv/utils/kv-deleted';
  * @param {boolean} canUpdateSecret - permissions to create a new version of a secret
  * @param {model} metadata - Ember data model: 'kv/metadata'
  * @param {string} path - path to request secret data for selected version
- * @param {object} subkeys - API response from subkeys endpoint, object with "subkeys" and "metadata" keys
+ * @param {object} subkeys - API response from subkeys endpoint, object with "subkeys" and "metadata" keys. This arg is null for community edition
  */
 
 export default class KvSecretOverview extends Component {

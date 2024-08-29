@@ -16,6 +16,8 @@ import { dateFromNow } from 'core/helpers/date-from-now';
 import { baseSetup } from 'vault/tests/helpers/kv/kv-run-commands';
 
 const { overviewCard } = GENERAL;
+
+// subkeys access is enterprise only (in the GUI) but we don't have any version testing here because the @subkeys arg is null for non-enterprise versions
 module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'kv');
@@ -259,6 +261,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
         .hasText(
           `Current version Deleted Create new The current version of this secret was deleted ${expectedTime}. ${this.metadata.currentVersion}`
         );
+      assert.dom(overviewCard.container('Subkeys')).doesNotExist();
     });
 
     test('with no permissions', async function (assert) {
@@ -331,6 +334,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
         .hasText(
           `Current version Destroyed Create new The current version of this secret has been permanently deleted and cannot be restored. ${this.metadata.currentVersion}`
         );
+      assert.dom(overviewCard.container('Subkeys')).doesNotExist();
     });
 
     test('with no permissions', async function (assert) {
