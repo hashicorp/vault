@@ -158,13 +158,15 @@ or the association in Vault will delete the secret in GitHub as well.
 
 <Note>
 
-GitHub only supports single-value secrets. By default, GitHub destinations use a
-[granularity level](/vault/docs/sync#granularity) of `secret-key` so that KVv2 secrets from Vault will be split
-where key-value pairs are stored as distinct entries in GitHub secrets. If a granularity level of `secret-path` is
-chosen insteaad, the secret will be stored as a JSON string with each key-value pair contained within.
+GitHub only supports single-value secrets and stores secrets differently,
+depending on whether you have configured
+`secret-key` or `secret-path` [granularity](/vault/docs/sync#granularity):
 
-In the example above, the value for secret "my-secret" will be synced to GitHub as the JSON string
-`{"foo":"bar", "baz":"quux"}` if the destination is configured to use the `secret-path` granularity level.
+- `secret-key` granularity splits KVv2 secrets from Vault into key-value pairs
+  and stores the pairs as distinct entries in GitHub secrets. For example,
+  `secrets.foo="bar"` and `secrets.baz="quux"`.
+- `secret-path` granularity stores secrets as a single JSON string that contains
+  all of the associated key-value pairs. For example, `{"foo":"bar", "baz":"quux"}`.
 
 </Note>
 
