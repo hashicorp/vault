@@ -4,6 +4,7 @@
  */
 
 import Component from '@glimmer/component';
+import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 
 /**
@@ -38,4 +39,9 @@ sample subkeys:
 
 export default class KvSubkeysCard extends Component {
   @tracked showJson = false;
+
+  @action
+  toggleJson(event) {
+    this.showJson = event.target.checked;
+  }
 }

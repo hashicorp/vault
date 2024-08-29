@@ -80,7 +80,7 @@ module('Unit | Service | capabilities', function (hooks) {
     this.capabilities.fetchPathCapabilities(path);
   });
 
-  test('fetchMultiplePaths: it makes request to capabilities-self with paths param', function (assert) {
+  test('fetchMultiplePaths: it makes request to capabilities-self with paths param', async function (assert) {
     const paths = ['/my/api/path', 'another/api/path'];
     const expectedPayload = { paths };
     this.server.post('/sys/capabilities-self', (schema, req) => {
@@ -89,10 +89,94 @@ module('Unit | Service | capabilities', function (hooks) {
       assert.propEqual(actual, expectedPayload, `request made with path: ${JSON.stringify(actual)}`);
       return this.generateResponse({
         paths,
-        capabilities: { '/my/api/path': ['read'], 'another/api/path': ['read'] },
+        capabilities: { '/my/api/path': ['read', 'list'], 'another/api/path': ['read', 'delete'] },
       });
     });
-    this.capabilities.fetchMultiplePaths(paths);
+    const actual = await this.capabilities.fetchMultiplePaths(paths);
+    const expected = {
+      '/my/api/path': {
+        canCreate: false,
+        canDelete: false,
+        canList: true,
+        canPatch: false,
+        canRead: true,
+        canSudo: false,
+        canUpdate: false,
+      },
+      'another/api/path': {
+        canCreate: false,
+        canDelete: true,
+        canList: false,
+        canPatch: false,
+        canRead: true,
+        canSudo: false,
+        canUpdate: false,
+      },
+    };
+    assert.propEqual(actual, expected, `it returns expected response: ${JSON.stringify(actual)}`);
+  });
+
+  test('fetchMultiplePaths: it defaults to true if the capabilities request fails', async function (assert) {
+    // don't stub endpoint which causes request to fail
+    const paths = ['/my/api/path', 'another/api/path'];
+    const actual = await this.capabilities.fetchMultiplePaths(paths);
+    const expected = {
+      '/my/api/path': {
+        canCreate: true,
+        canDelete: true,
+        canList: true,
+        canPatch: true,
+        canRead: true,
+        canSudo: true,
+        canUpdate: true,
+      },
+      'another/api/path': {
+        canCreate: true,
+        canDelete: true,
+        canList: true,
+        canPatch: true,
+        canRead: true,
+        canSudo: true,
+        canUpdate: true,
+      },
+    };
+    assert.propEqual(actual, expected, `it returns expected response: ${JSON.stringify(actual)}`);
+  });
+
+  test('fetchMultiplePaths: it defaults to true if no model is found', async function (assert) {
+    const paths = ['/my/api/path', 'another/api/path'];
+    const expectedPayload = { paths };
+    this.server.post('/sys/capabilities-self', (schema, req) => {
+      const actual = JSON.parse(req.requestBody);
+      assert.true(true, 'request made to capabilities-self');
+      assert.propEqual(actual, expectedPayload, `request made with path: ${JSON.stringify(actual)}`);
+      return this.generateResponse({
+        paths: ['/my/api/path'],
+        capabilities: { '/my/api/path': ['read', 'list'] },
+      });
+    });
+    const actual = await this.capabilities.fetchMultiplePaths(paths);
+    const expected = {
+      '/my/api/path': {
+        canCreate: false,
+        canDelete: false,
+        canList: true,
+        canPatch: false,
+        canRead: true,
+        canSudo: false,
+        canUpdate: false,
+      },
+      'another/api/path': {
+        canCreate: true,
+        canDelete: true,
+        canList: true,
+        canPatch: true,
+        canRead: true,
+        canSudo: true,
+        canUpdate: true,
+      },
+    };
+    assert.propEqual(actual, expected, `it returns expected response: ${JSON.stringify(actual)}`);
   });
 
   module('specific methods', function () {
@@ -102,23 +186,33 @@ module('Unit | Service | capabilities', function (hooks) {
         capabilities: ['read'],
         expectedRead: true, // expected computed properties based on response
         expectedUpdate: false,
+        expectedPatch: false,
       },
       {
         capabilities: ['update'],
         expectedRead: false,
         expectedUpdate: true,
+        expectedPatch: false,
+      },
+      {
+        capabilities: ['patch'],
+        expectedRead: false,
+        expectedUpdate: false,
+        expectedPatch: true,
       },
       {
         capabilities: ['deny'],
         expectedRead: false,
         expectedUpdate: false,
+        expectedPatch: false,
       },
       {
         capabilities: ['read', 'update'],
         expectedRead: true,
         expectedUpdate: true,
+        expectedPatch: false,
       },
-    ].forEach(({ capabilities, expectedRead, expectedUpdate }) => {
+    ].forEach(({ capabilities, expectedRead, expectedUpdate, expectedPatch }) => {
       test(`canRead returns expected value for "${capabilities.join(', ')}"`, async function (assert) {
         this.server.post('/sys/capabilities-self', () => {
           return this.generateResponse({ path, capabilities });
@@ -134,6 +228,14 @@ module('Unit | Service | capabilities', function (hooks) {
         });
         const response = await this.capabilities.canUpdate(path);
         assert[expectedUpdate](response, `canUpdate returns ${expectedUpdate}`);
+      });
+
+      test(`canPatch returns expected value for "${capabilities.join(', ')}"`, async function (assert) {
+        this.server.post('/sys/capabilities-self', () => {
+          return this.generateResponse({ path, capabilities });
+        });
+        const response = await this.capabilities.canPatch(path);
+        assert[expectedPatch](response, `canPatch returns ${expectedPatch}`);
       });
     });
   });

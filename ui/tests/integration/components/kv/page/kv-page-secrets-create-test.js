@@ -100,10 +100,11 @@ module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hook
     await fillIn(FORM.inputByAttr('maxVersions'), this.maxVersions);
 
     await click(FORM.saveBtn);
-
-    assert.ok(
-      this.transitionStub.calledWith('vault.cluster.secrets.backend.kv.secret.details'),
-      'router transitions to secret details route on save'
+    const [actual] = this.transitionStub.lastCall.args;
+    assert.strictEqual(
+      actual,
+      'vault.cluster.secrets.backend.kv.secret.index',
+      'router transitions to secret overview route on save'
     );
   });
 

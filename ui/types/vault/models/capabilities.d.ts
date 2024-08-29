@@ -9,12 +9,13 @@ import Model from '@ember-data/model';
 interface CapabilitiesModel extends Model {
   path: string;
   capabilities: Array<string>;
-  canSudo: ComputedProperty<boolean | undefined>;
-  canRead: ComputedProperty<boolean | undefined>;
   canCreate: ComputedProperty<boolean | undefined>;
-  canUpdate: ComputedProperty<boolean | undefined>;
   canDelete: ComputedProperty<boolean | undefined>;
   canList: ComputedProperty<boolean | undefined>;
+  canPatch: ComputedProperty<boolean | undefined>;
+  canRead: ComputedProperty<boolean | undefined>;
+  canSudo: ComputedProperty<boolean | undefined>;
+  canUpdate: ComputedProperty<boolean | undefined>;
   // these don't seem to be used anywhere
   // inferring type from key name
   allowedParameters: Array<string>;

@@ -5,6 +5,7 @@
 
 import Component from '@glimmer/component';
 import { dateFormat } from 'core/helpers/date-format';
+import { isDeleted } from 'kv/utils/kv-deleted';
 
 /**
  * @module KvSecretOverview
@@ -15,7 +16,6 @@ import { dateFormat } from 'core/helpers/date-format';
  * @canUpdateSecret={{true}}
  * @metadata={{this.model.metadata}}
  * @path={{this.model.path}}
- * @secretState="created"
  * @subkeys={{this.model.subkeys}}
  * />
  *
@@ -25,18 +25,28 @@ import { dateFormat } from 'core/helpers/date-format';
  * @param {boolean} canUpdateSecret - permissions to create a new version of a secret
  * @param {model} metadata - Ember data model: 'kv/metadata'
  * @param {string} path - path to request secret data for selected version
- * @param {string} secretState - if a secret has been "destroyed", "deleted" or "created" (still active)
- * @param {object} subkeys - API response from subkeys endpoint, object with "subkeys" and "metadata" keys
+ * @param {object} subkeys - API response from subkeys endpoint, object with "subkeys" and "metadata" keys. This arg is null for community edition
  */
 
 export default class KvSecretOverview extends Component {
-  get isActive() {
-    const state = this.args.secretState;
-    return state !== 'destroyed' && state !== 'deleted';
+  get secretState() {
+    if (this.args.metadata) {
+      return this.args.metadata.currentSecret.state;
+    }
+    if (this.args.subkeys?.metadata) {
+      const { metadata } = this.args.subkeys;
+      const state = metadata.destroyed
+        ? 'destroyed'
+        : isDeleted(metadata.deletion_time)
+        ? 'deleted'
+        : 'created';
+      return state;
+    }
+    return 'created';
   }
 
   get versionSubtext() {
-    const state = this.args.secretState;
+    const state = this.secretState;
     if (state === 'destroyed') {
       return 'The current version of this secret has been permanently deleted and cannot be restored.';
     }

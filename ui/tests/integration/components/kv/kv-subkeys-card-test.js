@@ -15,6 +15,7 @@ module('Integration | Component | kv | kv-subkeys-card', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'kv');
   hooks.beforeEach(function () {
+    this.isPatchAllowed = true;
     this.subkeys = {
       foo: null,
       bar: {
@@ -22,14 +23,16 @@ module('Integration | Component | kv | kv-subkeys-card', function (hooks) {
       },
     };
     this.renderComponent = async () => {
-      return render(hbs`<KvSubkeysCard @subkeys={{this.subkeys}} />`, {
-        owner: this.engine,
-      });
+      return render(
+        hbs`<KvSubkeysCard @subkeys={{this.subkeys}} @isPatchAllowed={{this.isPatchAllowed}} />`,
+        {
+          owner: this.engine,
+        }
+      );
     };
   });
 
   test('it renders', async function (assert) {
-    assert.expect(4);
     await this.renderComponent();
 
     assert.dom(overviewCard.title('Subkeys')).exists();
@@ -40,10 +43,17 @@ module('Integration | Component | kv | kv-subkeys-card', function (hooks) {
       );
     assert.dom(overviewCard.content('Subkeys')).hasText('Keys foo bar');
     assert.dom(GENERAL.toggleInput('kv-subkeys')).isNotChecked('JSON toggle is not checked by default');
+    assert.dom(overviewCard.actionText('Patch secret')).exists();
+  });
+
+  test('it hides patch action when isPatchAllowed is false', async function (assert) {
+    this.isPatchAllowed = false;
+    await this.renderComponent();
+    assert.dom(overviewCard.title('Subkeys')).exists();
+    assert.dom(overviewCard.actionText('Patch secret')).doesNotExist();
   });
 
   test('it toggles to JSON', async function (assert) {
-    assert.expect(4);
     await this.renderComponent();
 
     assert.dom(GENERAL.toggleInput('kv-subkeys')).isNotChecked();

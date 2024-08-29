@@ -1,0 +1,3 @@
+```release-note:feature
+**KV v2 Patch/Subkey (enterprise)**: Adds GUI support to read the subkeys of a KV v2 secret and patch (partially update) secret data.
+```

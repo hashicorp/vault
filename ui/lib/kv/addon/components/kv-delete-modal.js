@@ -20,7 +20,7 @@ import { assert } from '@ember/debug';
  *
  * @param {string} mode - delete, delete-metadata, or destroy.
  * @param {object} secret - The kv/data model.
- * @param {object} [metadata] - The kv/metadata model. It is only required when mode is "delete" or "metadata-delete".
+ * @param {object} [metadata] - The kv/metadata model. It is only required when mode is "delete".
  * @param {string} [text] - Button text that renders in KV v2 toolbar, defaults to capitalize @mode
  * @param {callback} onDelete - callback function fired to handle delete event.
  */
