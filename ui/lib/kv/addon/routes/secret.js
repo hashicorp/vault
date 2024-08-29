@@ -44,7 +44,7 @@ export default class KvSecretRoute extends Route {
     return hash(capabilities).then(
       ({ canPatch, canReadSubkeys }) => canPatch && canReadSubkeys,
       // this callback fires if either promise is rejected
-      // since this is GUI gated feature we return false (instead of default to true)
+      // since this feature is only client-side gated we return false (instead of default to true)
       // for debugging you can pass an arg to log the failure reason
       () => false
     );
