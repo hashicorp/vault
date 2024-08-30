@@ -11,15 +11,43 @@ import { action } from '@ember/object';
 export default class KvSecretRoute extends Route {
   @service secretMountPath;
   @service store;
-
-  fetchSecretData(backend, path) {
-    // This will always return a record unless 404 not found (show error) or control group
-    return this.store.queryRecord('kv/data', { backend, path });
-  }
+  @service capabilities;
+  @service version;
 
   fetchSecretMetadata(backend, path) {
-    // catch error and do nothing because kv/data model handles metadata capabilities
-    return this.store.queryRecord('kv/metadata', { backend, path }).catch(() => {});
+    // catch error and only return 404 which indicates the secret truly does not exist.
+    // control group error is handled by the metadata route
+    return this.store.queryRecord('kv/metadata', { backend, path }).catch((e) => {
+      if (e.httpStatus === 404) {
+        throw e;
+      }
+      return null;
+    });
+  }
+
+  fetchSubkeys(backend, path) {
+    if (this.version.isEnterprise) {
+      const adapter = this.store.adapterFor('kv/data');
+      // metadata will throw if the secret does not exist
+      // always return here so we get deletion state and relevant metadata
+      return adapter.fetchSubkeys(backend, path);
+    }
+    return null;
+  }
+
+  isPatchAllowed(backend, path) {
+    if (!this.version.isEnterprise) return false;
+    const capabilities = {
+      canPatch: this.capabilities.canPatch(`${backend}/data/${path}`),
+      canReadSubkeys: this.capabilities.canRead(`${backend}/subkeys/${path}`),
+    };
+    return hash(capabilities).then(
+      ({ canPatch, canReadSubkeys }) => canPatch && canReadSubkeys,
+      // this callback fires if either promise is rejected
+      // since this feature is only client-side gated we return false (instead of default to true)
+      // for debugging you can pass an arg to log the failure reason
+      () => false
+    );
   }
 
   model() {
@@ -29,8 +57,11 @@ export default class KvSecretRoute extends Route {
     return hash({
       path,
       backend,
-      secret: this.fetchSecretData(backend, path),
+      subkeys: this.fetchSubkeys(backend, path),
       metadata: this.fetchSecretMetadata(backend, path),
+      isPatchAllowed: this.isPatchAllowed(backend, path),
+      // for creating a new secret version
+      canUpdateSecret: this.capabilities.canUpdate(`${backend}/data/${path}`),
     });
   }
 

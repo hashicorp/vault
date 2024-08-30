@@ -94,7 +94,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks)
     const [route] = this.transitionStub.lastCall.args;
     assert.strictEqual(
       route,
-      'vault.cluster.secrets.backend.kv.secret',
+      'vault.cluster.secrets.backend.kv.secret.index',
       `it transitions on cancel to: ${route}`
     );
   });
@@ -150,7 +150,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks)
       const [route] = this.transitionStub.lastCall.args;
       assert.strictEqual(
         route,
-        'vault.cluster.secrets.backend.kv.secret',
+        'vault.cluster.secrets.backend.kv.secret.index',
         `it transitions on save to: ${route}`
       );
     });
@@ -181,7 +181,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks)
       const [route] = this.transitionStub.lastCall.args;
       assert.strictEqual(
         route,
-        'vault.cluster.secrets.backend.kv.secret',
+        'vault.cluster.secrets.backend.kv.secret.index',
         `it transitions on save to: ${route}`
       );
     });
@@ -264,7 +264,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks)
       const flash = this.flashSpy.lastCall?.args[0] || '';
       assert.strictEqual(
         route,
-        'vault.cluster.secrets.backend.kv.secret',
+        'vault.cluster.secrets.backend.kv.secret.index',
         `it transitions to overview route: ${route}`
       );
       assert.strictEqual(
@@ -288,7 +288,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Patch', function (hooks)
       const flash = this.flashSpy.lastCall?.args[0] || '';
       assert.strictEqual(
         route,
-        'vault.cluster.secrets.backend.kv.secret',
+        'vault.cluster.secrets.backend.kv.secret.index',
         `it transitions to overview route: ${route}`
       );
       assert.strictEqual(

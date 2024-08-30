@@ -10,15 +10,24 @@ import type AdapterError from '@ember-data/adapter/error';
 import type CapabilitiesModel from 'vault/vault/models/capabilities';
 import type StoreService from 'vault/services/store';
 
-interface Query {
-  paths?: string[];
-  path?: string;
+interface Capabilities {
+  canCreate: boolean;
+  canDelete: boolean;
+  canList: boolean;
+  canPatch: boolean;
+  canRead: boolean;
+  canSudo: boolean;
+  canUpdate: boolean;
+}
+
+interface MultipleCapabilities {
+  [key: string]: Capabilities;
 }
 
 export default class CapabilitiesService extends Service {
   @service declare readonly store: StoreService;
 
-  async request(query: Query) {
+  async request(query: { paths?: string[]; path?: string }) {
     if (query?.paths) {
       const { paths } = query;
       return this.store.query('capabilities', { paths });
@@ -31,23 +40,40 @@ export default class CapabilitiesService extends Service {
     return assert('query object must contain "paths" or "path" key', false);
   }
 
-  /*
-  this method returns a capabilities model for each path in the array of paths
-  */
-  async fetchMultiplePaths(paths: string[]): Promise<Array<CapabilitiesModel>> | AdapterError {
-    try {
-      return await this.request({ paths });
-    } catch (e) {
-      return e;
-    }
+  async fetchMultiplePaths(paths: string[]): MultipleCapabilities | AdapterError {
+    // if the request to capabilities-self fails, silently catch
+    // all of path capabilities default to "true"
+    const resp: Array<CapabilitiesModel> | [] = await this.request({ paths }).catch(() => []);
+
+    return paths.reduce((obj: MultipleCapabilities, apiPath: string) => {
+      // path is the model's primaryKey (id)
+      const model: CapabilitiesModel | undefined = resp.find((m) => m.path === apiPath);
+      if (model) {
+        const { canCreate, canDelete, canList, canPatch, canRead, canSudo, canUpdate } = model;
+        obj[apiPath] = { canCreate, canDelete, canList, canPatch, canRead, canSudo, canUpdate };
+      } else {
+        // default to true if there is a problem fetching the model
+        // since we can rely on the API to gate as a fallback
+        obj[apiPath] = {
+          canCreate: true,
+          canDelete: true,
+          canList: true,
+          canPatch: true,
+          canRead: true,
+          canSudo: true,
+          canUpdate: true,
+        };
+      }
+      return obj;
+    }, {});
   }
 
   /*
   this method returns all of the capabilities for a singular path 
   */
-  async fetchPathCapabilities(path: string): Promise<CapabilitiesModel> | AdapterError {
+  fetchPathCapabilities(path: string): Promise<CapabilitiesModel> | AdapterError {
     try {
-      return await this.request({ path });
+      return this.request({ path });
     } catch (error) {
       return error;
     }
@@ -69,17 +95,25 @@ export default class CapabilitiesService extends Service {
     }
   }
 
-  async canRead(path: string) {
+  canRead(path: string) {
     try {
-      return await this._fetchSpecificCapability(path, 'canRead');
+      return this._fetchSpecificCapability(path, 'canRead');
     } catch (e) {
       return e;
     }
   }
 
-  async canUpdate(path: string) {
+  canUpdate(path: string) {
     try {
-      return await this._fetchSpecificCapability(path, 'canUpdate');
+      return this._fetchSpecificCapability(path, 'canUpdate');
+    } catch (e) {
+      return e;
+    }
+  }
+
+  canPatch(path: string) {
+    try {
+      return this._fetchSpecificCapability(path, 'canPatch');
     } catch (e) {
       return e;
     }
