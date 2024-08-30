@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/helper/metricsutil"
+	"github.com/hashicorp/vault/sdk/helper/metricregistry"
 	"google.golang.org/api/option"
 )
 
@@ -288,6 +289,10 @@ func SetupTelemetry(opts *SetupTelemetryOpts) (*metrics.InmemSink, *metricsutil.
 		prometheusOpts := prometheus.PrometheusOpts{
 			Expiration: opts.Config.PrometheusRetentionTime,
 		}
+
+		// Merge in explicit metric definitions so Prometheus always reports those
+		// metrics.
+		metricregistry.MergeDefinitions(&prometheusOpts)
 
 		sink, err := prometheus.NewPrometheusSinkFrom(prometheusOpts)
 		if err != nil {
