@@ -571,7 +571,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.true(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
     });
     test('versioned secret nav, tabs, breadcrumbs (dr)', async function (assert) {
-      assert.expect(31);
+      assert.expect(32);
       const backend = this.backend;
       await navToBackend(backend);
 
@@ -614,6 +614,10 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'Metadata']);
       assert.dom(PAGE.title).hasText(secretPath);
       assert.dom(PAGE.toolbarAction).doesNotExist('no toolbar actions available on metadata');
+      assert
+        .dom(`${PAGE.metadata.customMetadataSection} ${PAGE.emptyStateTitle}`)
+        .hasText('Request custom metadata?');
+      await click(PAGE.metadata.requestData);
       assert
         .dom(`${PAGE.metadata.customMetadataSection} ${PAGE.emptyStateTitle}`)
         .hasText('No custom metadata');
@@ -764,7 +768,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.true(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
     });
     test('versioned secret nav, tabs, breadcrumbs (dlr)', async function (assert) {
-      assert.expect(31);
+      assert.expect(32);
       const backend = this.backend;
       await navToBackend(backend);
       await click(PAGE.list.item(secretPath));
@@ -804,6 +808,10 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       );
       assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'Metadata']);
       assert.dom(PAGE.title).hasText(secretPath);
+      assert
+        .dom(`${PAGE.metadata.customMetadataSection} ${PAGE.emptyStateTitle}`)
+        .hasText('Request custom metadata?');
+      await click(PAGE.metadata.requestData);
       assert
         .dom(`${PAGE.metadata.customMetadataSection} ${PAGE.emptyStateTitle}`)
         .hasText('No custom metadata');
