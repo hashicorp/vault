@@ -1,0 +1,3 @@
+```release-note:improvement
+raft/autopilot: Persist Raft server versions so autopilot always knows the versions of all servers in the cluster. Include server versions in the Raft bootstrap challenge answer so autopilot immediately knows the versions of new nodes.
+```
