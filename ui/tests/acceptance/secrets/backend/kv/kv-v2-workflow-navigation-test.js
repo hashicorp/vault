@@ -1337,7 +1337,7 @@ path "${this.backend}/subkeys/*" {
       return;
     });
     test('can access nested secret (cg)', async function (assert) {
-      assert.expect(43);
+      assert.expect(44);
       const backend = this.backend;
       await navToBackend(backend);
       assert.dom(PAGE.title).hasText(`${backend} version 2`, 'title text correct');
@@ -1401,7 +1401,7 @@ path "${this.backend}/subkeys/*" {
       );
       assertCorrectBreadcrumbs(assert, ['Secrets', backend, 'app', 'nested', 'secret']);
       assert.dom(PAGE.title).hasText('app/nested/secret', 'title is full secret path');
-      assertDetailsToolbar(assert, ['delete', 'copy', 'createNewVersion']);
+      assertDetailsToolbar(assert, ['delete', 'copy', 'createNewVersion', 'patchLatest']);
 
       await click(PAGE.breadcrumbAtIdx(3));
       assert.true(
@@ -1516,6 +1516,11 @@ path "${this.backend}/subkeys/*" {
         .hasTextContaining(
           `Control Group Error A Control Group was encountered at ${backend}/data/${secretPath}.`
         );
+      assert
+        .dom(GENERAL.messageError)
+        .hasTextContaining(
+          'You can re-submit the form once access is granted. Ask your authorizer when to attempt saving again.'
+        );
       const url = find('[data-test-control-error="href"]').innerText;
       await visit(url);
       await grantAccess({
@@ -1524,8 +1529,13 @@ path "${this.backend}/subkeys/*" {
         userToken: this.userToken,
         backend: this.backend,
       });
-      await click(PAGE.metadata.requestData);
-      assert.dom(PAGE.infoRowValue('special')).hasText('secret', 'it renders custom metadata');
+      // we have to refill the data because granting access reloads the form
+      // however in the real world it's likely access is authorized in a separate browser
+      // once granted, the user can click "submit" the form will save successfully.
+      await fillIn(FORM.keyInput('new'), 'newkey');
+      await fillIn(FORM.valueInput('new'), 'newvalue');
+      await click(FORM.saveBtn);
+      assert.dom(GENERAL.overviewCard.container('Subkeys')).hasTextContaining('Keys foo newkey');
     });
     test('can read custom_metadata from data endpoint (cg)', async function (assert) {
       assert.expect(3);
