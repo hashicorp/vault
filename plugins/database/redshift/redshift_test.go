@@ -9,9 +9,10 @@ import (
 	"fmt"
 	"os"
 	"reflect"
-	"regexp"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/go-secure-stdlib/regexp"
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/testhelpers"

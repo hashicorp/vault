@@ -9,7 +9,8 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"regexp"
+
+	"github.com/hashicorp/go-secure-stdlib/regexp"
 
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"google.golang.org/protobuf/proto"

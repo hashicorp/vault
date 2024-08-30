@@ -7,9 +7,10 @@ import (
 	"errors"
 	"fmt"
 	"net/textproto"
-	"regexp"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/go-secure-stdlib/regexp"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"

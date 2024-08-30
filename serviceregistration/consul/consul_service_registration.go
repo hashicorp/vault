@@ -12,12 +12,13 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/hashicorp/go-secure-stdlib/regexp"
 
 	"github.com/hashicorp/consul/api"
 	log "github.com/hashicorp/go-hclog"

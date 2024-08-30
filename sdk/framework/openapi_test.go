@@ -9,10 +9,11 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"reflect"
-	"regexp"
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/hashicorp/go-secure-stdlib/regexp"
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"

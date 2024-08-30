@@ -1,7 +1,10 @@
 module github.com/hashicorp/vault/sdk
 
-go 1.22
+go 1.23
 
+toolchain go1.23.0
+
+replace github.com/hashicorp/go-secure-stdlib/regexp => ../../go-secure-stdlib/regexp
 require (
 	cloud.google.com/go/cloudsqlconn v1.4.3
 	github.com/armon/go-metrics v0.4.1
@@ -54,6 +57,8 @@ require (
 
 require (
 	github.com/go-jose/go-jose/v4 v4.0.1 // indirect
+	github.com/hashicorp/go-secure-stdlib/regexp v0.0.0-20240830193800-439bf50829f2 // indirect
+	github.com/jellydator/ttlcache/v3 v3.3.0 // indirect
 	go.opentelemetry.io/otel/sdk v1.22.0 // indirect
 	golang.org/x/sync v0.8.0 // indirect
 )

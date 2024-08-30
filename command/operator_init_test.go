@@ -8,10 +8,11 @@ package command
 import (
 	"fmt"
 	"os"
-	"regexp"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/hashicorp/go-secure-stdlib/regexp"
 
 	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"

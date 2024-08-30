@@ -4,9 +4,10 @@
 package command
 
 import (
-	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/hashicorp/go-secure-stdlib/regexp"
 
 	"github.com/hashicorp/cli"
 )

@@ -8,9 +8,10 @@ package command
 import (
 	"io"
 	"reflect"
-	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/hashicorp/go-secure-stdlib/regexp"
 
 	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"

@@ -10,7 +10,9 @@ module github.com/hashicorp/vault
 // semantic related to Go module handling), this comment should be updated to explain that.
 //
 // Whenever this value gets updated, sdk/go.mod should be updated to the same value.
-go 1.22.5
+go 1.23
+
+toolchain go1.23.0
 
 replace github.com/hashicorp/vault/api => ./api
 
@@ -21,6 +23,7 @@ replace github.com/hashicorp/vault/api/auth/kubernetes => ./api/auth/kubernetes
 replace github.com/hashicorp/vault/api/auth/userpass => ./api/auth/userpass
 
 replace github.com/hashicorp/vault/sdk => ./sdk
+replace github.com/hashicorp/go-secure-stdlib/regexp => ../go-secure-stdlib/regexp
 
 require (
 	cloud.google.com/go/cloudsqlconn v1.4.3
@@ -233,6 +236,8 @@ require (
 	cloud.google.com/go/longrunning v0.5.7 // indirect
 	github.com/containerd/containerd v1.7.20 // indirect
 	github.com/hashicorp/go-secure-stdlib/httputil v0.1.0 // indirect
+	github.com/hashicorp/go-secure-stdlib/regexp v0.0.0-20240830193800-439bf50829f2 // indirect
+	github.com/jellydator/ttlcache/v3 v3.3.0 // indirect
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
 	gopkg.in/go-jose/go-jose.v2 v2.6.3 // indirect

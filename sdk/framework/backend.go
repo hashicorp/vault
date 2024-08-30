@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/go-kms-wrapping/entropy/v2"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	cregexp "github.com/hashicorp/go-secure-stdlib/regexp"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/license"
@@ -516,7 +517,7 @@ func (b *Backend) init() {
 		}
 
 		// Detect the coding error of an invalid Pattern
-		b.pathsRe[i] = regexp.MustCompile(p.Pattern)
+		b.pathsRe[i] = cregexp.MustCompile(p.Pattern)
 	}
 }
 

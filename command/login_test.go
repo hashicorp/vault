@@ -5,10 +5,11 @@ package command
 
 import (
 	"context"
-	"regexp"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/go-secure-stdlib/regexp"
 
 	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"

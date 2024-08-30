@@ -8,10 +8,11 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/hashicorp/go-secure-stdlib/regexp"
 
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/builtin/logical/pki/managed_key"

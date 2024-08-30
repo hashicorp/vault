@@ -13,8 +13,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"regexp"
 	"strings"
+
+	"github.com/hashicorp/go-secure-stdlib/regexp"
 
 	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"

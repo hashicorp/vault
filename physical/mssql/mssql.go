@@ -7,11 +7,12 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/go-secure-stdlib/regexp"
 
 	metrics "github.com/armon/go-metrics"
 	_ "github.com/denisenkom/go-mssqldb"

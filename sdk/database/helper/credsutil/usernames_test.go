@@ -4,8 +4,9 @@
 package credsutil
 
 import (
-	"regexp"
 	"testing"
+
+	"github.com/hashicorp/go-secure-stdlib/regexp"
 )
 
 func TestGenerateUsername(t *testing.T) {

@@ -6,8 +6,9 @@ package aws
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"time"
+
+	"github.com/hashicorp/go-secure-stdlib/regexp"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/iam"

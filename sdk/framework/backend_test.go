@@ -616,7 +616,7 @@ func TestBackendRoute(t *testing.T) {
 			"^foo$",
 		},
 
-		"regexp": {
+		"github.com/hashicorp/go-secure-stdlib/regexp": {
 			[]string{"fo+"},
 			"foo",
 			"^fo+$",

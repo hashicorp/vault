@@ -5,8 +5,9 @@ package vault
 
 import (
 	"context"
-	"regexp"
 	"sync"
+
+	"github.com/hashicorp/go-secure-stdlib/regexp"
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-memdb"

@@ -10,8 +10,9 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"regexp"
 	"strings"
+
+	"github.com/hashicorp/go-secure-stdlib/regexp"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"

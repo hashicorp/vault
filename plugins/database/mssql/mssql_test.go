@@ -8,10 +8,11 @@ import (
 	"database/sql"
 	"fmt"
 	"reflect"
-	"regexp"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/go-secure-stdlib/regexp"
 
 	mssqlhelper "github.com/hashicorp/vault/helper/testhelpers/mssql"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"

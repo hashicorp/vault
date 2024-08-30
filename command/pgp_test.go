@@ -9,9 +9,10 @@ import (
 	"encoding/hex"
 	"io/ioutil"
 	"reflect"
-	"regexp"
 	"sort"
 	"testing"
+
+	"github.com/hashicorp/go-secure-stdlib/regexp"
 
 	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/ProtonMail/go-crypto/openpgp/packet"

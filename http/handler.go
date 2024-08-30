@@ -21,9 +21,10 @@ import (
 	"net/textproto"
 	"net/url"
 	"os"
-	"regexp"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/go-secure-stdlib/regexp"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-cleanhttp"

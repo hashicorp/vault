@@ -5,8 +5,9 @@ package command
 
 import (
 	"errors"
-	"regexp"
 	"strings"
+
+	"github.com/hashicorp/go-secure-stdlib/regexp"
 
 	"github.com/hashicorp/cli"
 	"github.com/posener/complete"

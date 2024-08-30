@@ -9,9 +9,10 @@ import (
 	"encoding/base64"
 	"io"
 	"os"
-	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/hashicorp/go-secure-stdlib/regexp"
 
 	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/sdk/helper/xor"

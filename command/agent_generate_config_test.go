@@ -7,9 +7,10 @@ import (
 	"bytes"
 	"context"
 	"reflect"
-	"regexp"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/go-secure-stdlib/regexp"
 )
 
 // TestConstructTemplates tests the construcTemplates helper function

@@ -8,8 +8,9 @@ import (
 	"fmt"
 	"os"
 	"reflect"
-	"regexp"
 	"testing"
+
+	"github.com/hashicorp/go-secure-stdlib/regexp"
 
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/constants"
