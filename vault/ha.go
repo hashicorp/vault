@@ -49,7 +49,7 @@ const (
 )
 
 func init() {
-	// Register metrics that we should always consistenty report whether or not
+	// Register metrics that we should always consistently report whether or not
 	// they've been hit recently. The help texts are taken verbatim from our
 	// telemetry reference docs so if updated should probably stay in sync.
 	metricregistry.RegisterSummaries([]metricregistry.SummaryDefinition{
