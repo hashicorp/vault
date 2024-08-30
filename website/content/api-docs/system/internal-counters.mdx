@@ -1088,8 +1088,7 @@ months in the requested time range.
 information returned by this API will include activity for this month, however
 it may be up to 20 minutes delayed.
 
-- This endpoint can be called from all namespaces. The requested namespace (specified via the `X-Vault-Namespace`
-  header or as part of the path) will act as a filter. The exported data will include activity for the requested
+- This endpoint can be called from all namespaces. The requested namespace will act as a filter. The exported data will include activity for the requested
   namespace and all of its children.
 
 - **`sudo` required** – This endpoint requires `sudo` capability in addition to
