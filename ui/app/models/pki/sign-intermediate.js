@@ -23,6 +23,7 @@ const validations = {
   'format',
   'permittedDnsDomains',
   'maxPathLength',
+  'keyUsage',
 ])
 export default class PkiSignIntermediateModel extends PkiCertificateBaseModel {
   @attr issuerRef;
