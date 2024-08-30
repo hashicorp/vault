@@ -410,6 +410,10 @@ func generateIntermediateCSR(sc *storageContext, input *inputBundle, randomSourc
 		return nil, nil, errutil.InternalError{Err: "nil parameters received from parameter bundle generation"}
 	}
 
+	_, exists := input.apiData.GetOk("key_usage")
+	if !exists {
+		creation.Params.KeyUsage = 0
+	}
 	addBasicConstraints := input.apiData != nil && input.apiData.Get("add_basic_constraints").(bool)
 	parsedBundle, err := generateCSRBundle(sc, input, creation, addBasicConstraints, randomSource)
 	if err != nil {
