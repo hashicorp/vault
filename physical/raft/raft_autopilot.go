@@ -211,12 +211,12 @@ type FollowerState struct {
 	RedundancyZone  string
 }
 
-// Copy returns a copy of the follower state.
+// partialCopy returns a partial copy of the follower state.
 // This copy uses the same pointer to the IsDead
 // atomic field. We need to do this to ensure that
 // an update of the IsDead boolean will still be
 // accessible in a copied state.
-func (f *FollowerState) Copy() *FollowerState {
+func (f *FollowerState) partialCopy() *FollowerState {
 	return &FollowerState{
 		AppliedIndex:    f.AppliedIndex,
 		LastHeartbeat:   f.LastHeartbeat,
@@ -527,7 +527,7 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 		if state.UpgradeVersion != upgradeVersion {
 			// we only have a read lock on state, so we can't modify it
 			// safely. Instead, copy it to override the upgrade version
-			state = state.Copy()
+			state = state.partialCopy()
 			state.UpgradeVersion = upgradeVersion
 		}
 
@@ -584,15 +584,12 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 }
 
 // determineFollowerVersions uses the following logic:
-//
-// - if the version and upgrade version are present in the follower state,
-// return those.
-//
-// - if the persisted states map is empty, it means that persisted states
-// don't exist. This happens on an upgrade to 1.18. Use the leader node's
-// versions.
-//
-// - use the versions in the persisted states map
+//   - if the version and upgrade version are present in the follower state,
+//     return those.
+//   - if the persisted states map is empty, it means that persisted states
+//     don't exist. This happens on an upgrade to 1.18. Use the leader node's
+//     versions.
+//   - use the versions in the persisted states map
 //
 // This function must be called with a lock on d.followerStates
 // and d.persistedStates.
@@ -611,11 +608,11 @@ func (d *Delegate) determineFollowerVersions(id string, state *FollowerState) (v
 	if len(d.persistedState.States) == 0 {
 		if version == "" {
 			version = d.effectiveSDKVersion
-			d.logger.Debug("no persisted state, using leader version", "id", id, "version", d.effectiveSDKVersion)
+			d.logger.Debug("no persisted state, using leader version", "id", id, "version", version)
 		}
 		if upgradeVersion == "" {
 			upgradeVersion = d.upgradeVersion
-			d.logger.Debug("no persisted state, using leader upgrade version version", "id", id, "upgrade_version", d.effectiveSDKVersion)
+			d.logger.Debug("no persisted state, using leader upgrade version version", "id", id, "upgrade_version", upgradeVersion)
 		}
 		return version, upgradeVersion
 	}
