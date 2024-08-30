@@ -50,6 +50,12 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 				"non_voter": {
 					Type: framework.TypeBool,
 				},
+				"upgrade_version": {
+					Type: framework.TypeString,
+				},
+				"sdk_version": {
+					Type: framework.TypeString,
+				},
 			},
 
 			Operations: map[logical.Operation]framework.OperationHandler{
@@ -370,6 +376,8 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 		added := b.Core.raftFollowerStates.Update(&raft.EchoRequestUpdate{
 			NodeID:          serverID,
 			DesiredSuffrage: desiredSuffrage,
+			SDKVersion:      d.Get("sdk_version").(string),
+			UpgradeVersion:  d.Get("upgrade_version").(string),
 		})
 
 		switch nonVoter {
