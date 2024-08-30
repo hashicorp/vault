@@ -58,7 +58,7 @@ In some cases, a sudden influx of write requests that exceeds Vault's hardware
 capacity can result in the writes queueing for so long that every request times
 out before the write can make it through the queue. This makes Vault effectively
 unavailable to clients even though it is still processing requests and storing
-data as fast as it can. This can also result in Replication lagging behind causing
+data as fast as it can. This can also result in replication lagging behind causing
 data discrepancies between replicated clusters. This is illustrated in the test
 results shown below for a workload of 100% logins.
 
