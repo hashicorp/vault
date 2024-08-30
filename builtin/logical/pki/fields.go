@@ -275,6 +275,20 @@ this value.`,
 		},
 	}
 
+	fields["key_usage"] = &framework.FieldSchema{ // Same Name as Leaf-Cert Field, but Description and Default Differ
+		Type:    framework.TypeCommaStringSlice,
+		Default: []string{"CertSign", "CRLSign"},
+		Description: `A comma-separated string or list of key usages (not extended
+key usages). Valid values can be found at
+https://golang.org/pkg/crypto/x509/#KeyUsage
+-- simply drop the "KeyUsage" part of the name.
+To remove all key usages from being set, set
+this value to an empty list.  This defaults to 
+CertSign, CRLSign for CAs.  If neither of those
+two set, a warning will be thrown.  To use the
+issuer for CMPv2, DigitalSignature must be set.`,
+	} // TODO: Fix Description Here
+
 	fields["serial_number"] = &framework.FieldSchema{
 		Type: framework.TypeString,
 		Description: `The Subject's requested serial number, if any.
