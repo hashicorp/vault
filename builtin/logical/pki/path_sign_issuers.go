@@ -110,7 +110,7 @@ certs signed by this path; for instance,
 the non-repudiation flag;
 3) Extensions requested in the CSR will be copied
 into the issued certificate.`,
-	}
+	} // TODO: Re-Write This (!)
 
 	fields["signature_bits"] = &framework.FieldSchema{
 		Type:    framework.TypeInt,
