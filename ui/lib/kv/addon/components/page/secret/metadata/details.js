@@ -5,6 +5,7 @@
 
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
+import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
 import errorMessage from 'vault/utils/error-message';
 
@@ -34,9 +35,14 @@ import errorMessage from 'vault/utils/error-message';
  */
 
 export default class KvSecretMetadataDetails extends Component {
+  @service controlGroup;
   @service flashMessages;
   @service router;
   @service store;
+
+  @tracked controlGroupError = null;
+  @tracked errorMessage = null;
+  @tracked customMetadataFromData = null;
 
   @action
   async onDelete() {
@@ -52,6 +58,23 @@ export default class KvSecretMetadataDetails extends Component {
       this.router.transitionTo('vault.cluster.secrets.backend.kv.list');
     } catch (err) {
       this.flashMessages.danger(`There was an issue deleting ${path} metadata. \n ${errorMessage(err)}`);
+    }
+  }
+
+  @action
+  async requestData() {
+    const { backend, path } = this.args;
+    try {
+      const secretData = await this.store.queryRecord('kv/data', { backend, path });
+      this.customMetadataFromData = secretData.customMetadata;
+    } catch (error) {
+      if (error.message === 'Control Group encountered') {
+        this.controlGroup.saveTokenFromError(error);
+        const err = this.controlGroup.logFromError(error);
+        this.controlGroupError = err.content;
+        return;
+      }
+      this.errorMessage = 'There was a problem requesting secret data.';
     }
   }
 }
