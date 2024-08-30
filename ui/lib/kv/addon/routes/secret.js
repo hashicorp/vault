@@ -66,7 +66,7 @@ export default class KvSecretRoute extends Route {
       canReadData: capabilities.data.canRead,
       canReadMetadata: capabilities.metadata.canRead,
       canDeleteMetadata: capabilities.metadata.canDelete,
-      canUpdateMetadata: capabilities.metadata.canUpdateMetadata,
+      canUpdateMetadata: capabilities.metadata.canUpdate,
     });
   }
 
