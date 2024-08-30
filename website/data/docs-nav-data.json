@@ -326,19 +326,14 @@
       {
         "title": "Adaptive overload protection",
         "badge": {
-          "text": "ENTERPRISE | BETA",
+          "text": "ENTERPRISE",
           "type": "outlined",
           "color": "neutral"
         },
         "routes": [
           {
             "title": "Overview",
-            "path": "concepts/adaptive-overload-protection",
-            "badge": {
-              "text": "BETA",
-              "type": "outlined",
-              "color": "highlight"
-            }
+            "path": "concepts/adaptive-overload-protection"
           },
           {
             "title": "Vault server temporarily overloaded",
