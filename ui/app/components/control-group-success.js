@@ -34,10 +34,6 @@ export default Component.extend({
 
   markAndNavigate: task(function* () {
     this.controlGroup.markTokenForUnwrap(this.model.id);
-    if (this.controlGroupResponse.uiParams?.redirect_route) {
-      const { redirect_route, params = [] } = this.controlGroupResponse.uiParams;
-      yield this.router.transitionTo(redirect_route, ...params);
-    }
     const { url } = this.controlGroupResponse.uiParams;
     yield this.router.transitionTo(url);
   }).drop(),

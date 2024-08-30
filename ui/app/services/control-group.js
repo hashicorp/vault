@@ -102,9 +102,9 @@ export default Service.extend({
   },
 
   handleError(error) {
-    const { accessor, token, creation_path, creation_time, ttl, uiParams } = error;
-    const data = { accessor, token, creation_path, creation_time, ttl, uiParams };
-    data.uiParams = { ...uiParams, url: this.router.currentURL };
+    const { accessor, token, creation_path, creation_time, ttl } = error;
+    const data = { accessor, token, creation_path, creation_time, ttl };
+    data.uiParams = { url: this.router.currentURL };
     this.storeControlGroupToken(data);
     return this.router.transitionTo('vault.cluster.access.control-group-accessor', accessor);
   },
