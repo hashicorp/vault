@@ -65,9 +65,7 @@ func testNewStaticSecretCacheUpdater(t *testing.T, client *api.Client) *StaticSe
 		Logger:     logging.NewVaultLogger(hclog.Trace).Named("cache.updater"),
 		TokenSink:  tokenSink,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	return updater
 }
 
@@ -80,9 +78,7 @@ func TestNewStaticSecretCacheUpdater(t *testing.T) {
 	config := api.DefaultConfig()
 	logger := logging.NewVaultLogger(hclog.Trace).Named("cache.updater")
 	client, err := api.NewClient(config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	tokenSink := newMockSink(t)
 
 	// Expect an error if any of the arguments are nil:
@@ -129,9 +125,7 @@ func TestNewStaticSecretCacheUpdater(t *testing.T) {
 		Logger:     logging.NewVaultLogger(hclog.Trace).Named("cache.updater"),
 		TokenSink:  tokenSink,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	require.NotNil(t, updater)
 }
 
@@ -194,9 +188,7 @@ func TestOpenWebSocketConnection_BadPolicyToken(t *testing.T) {
 		select {
 		case <-ctx.Done():
 		case err := <-errCh:
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 		}
 	}()
 
@@ -245,9 +237,7 @@ func TestOpenWebSocketConnection_AutoAuthSelfHeal(t *testing.T) {
 		select {
 		case <-ctx.Done():
 		case err := <-errCh:
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 		}
 	}()
 
@@ -305,9 +295,7 @@ func TestOpenWebSocketConnectionReceivesEventsDefaultMount(t *testing.T) {
 	updater := testNewStaticSecretCacheUpdater(t, client)
 
 	conn, err := updater.openWebSocketConnection(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	require.NotNil(t, conn)
 
 	t.Cleanup(func() {
@@ -321,24 +309,17 @@ func TestOpenWebSocketConnectionReceivesEventsDefaultMount(t *testing.T) {
 	}
 	// Put a secret, which should trigger an event
 	err = client.KVv1("secret").Put(context.Background(), "foo", makeData(100))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	for i := 0; i < 5; i++ {
 		// Do a fresh PUT just to refresh the secret and send a new message
 		err = client.KVv1("secret").Put(context.Background(), "foo", makeData(i))
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 
 		// This method blocks until it gets a secret, so this test
 		// will only pass if we're receiving events correctly.
-		_, message, err := conn.Read(context.Background())
-		if err != nil {
-			t.Fatal(err)
-		}
-		t.Log(string(message))
+		_, _, err = conn.Read(context.Background())
+		require.NoError(t, err)
 	}
 }
 
@@ -364,9 +345,7 @@ func TestOpenWebSocketConnectionReceivesEventsKVV1(t *testing.T) {
 	updater := testNewStaticSecretCacheUpdater(t, client)
 
 	conn, err := updater.openWebSocketConnection(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	require.NotNil(t, conn)
 
 	t.Cleanup(func() {
@@ -376,9 +355,7 @@ func TestOpenWebSocketConnectionReceivesEventsKVV1(t *testing.T) {
 	err = client.Sys().Mount("secret-v1", &api.MountInput{
 		Type: "kv",
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	makeData := func(i int) map[string]interface{} {
 		return map[string]interface{}{
@@ -387,23 +364,17 @@ func TestOpenWebSocketConnectionReceivesEventsKVV1(t *testing.T) {
 	}
 	// Put a secret, which should trigger an event
 	err = client.KVv1("secret-v1").Put(context.Background(), "foo", makeData(100))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	for i := 0; i < 5; i++ {
 		// Do a fresh PUT just to refresh the secret and send a new message
 		err = client.KVv1("secret-v1").Put(context.Background(), "foo", makeData(i))
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 
 		// This method blocks until it gets a secret, so this test
 		// will only pass if we're receiving events correctly.
 		_, _, err := conn.Read(context.Background())
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 	}
 }
 
@@ -429,9 +400,7 @@ func TestOpenWebSocketConnectionReceivesEventsKVV2(t *testing.T) {
 	updater := testNewStaticSecretCacheUpdater(t, client)
 
 	conn, err := updater.openWebSocketConnection(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	require.NotNil(t, conn)
 
 	t.Cleanup(func() {
@@ -447,29 +416,21 @@ func TestOpenWebSocketConnectionReceivesEventsKVV2(t *testing.T) {
 	err = client.Sys().Mount("secret-v2", &api.MountInput{
 		Type: "kv-v2",
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	// Put a secret, which should trigger an event
 	_, err = client.KVv2("secret-v2").Put(context.Background(), "foo", makeData(100))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	for i := 0; i < 5; i++ {
 		// Do a fresh PUT just to refresh the secret and send a new message
 		_, err = client.KVv2("secret-v2").Put(context.Background(), "foo", makeData(i))
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 
 		// This method blocks until it gets a secret, so this test
 		// will only pass if we're receiving events correctly.
 		_, _, err := conn.Read(context.Background())
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 	}
 }
 
@@ -489,24 +450,18 @@ func TestOpenWebSocketConnectionTestServer(t *testing.T) {
 	keys, rootToken := vault.TestCoreInit(t, core)
 	for _, key := range keys {
 		_, err := core.Unseal(key)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 	}
 
 	config := api.DefaultConfig()
 	config.Address = addr
 	client, err := api.NewClient(config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	client.SetToken(rootToken)
 	updater := testNewStaticSecretCacheUpdater(t, client)
 
 	conn, err := updater.openWebSocketConnection(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	require.NotNil(t, conn)
 }
 
@@ -636,7 +591,7 @@ func TestUpdateStaticSecret(t *testing.T) {
 	require.NoError(t, err)
 
 	// attempt the update
-	err = updater.updateStaticSecret(context.Background(), path, 0)
+	err = updater.updateStaticSecret(context.Background(), path)
 	require.NoError(t, err)
 
 	newIndex, err := leaseCache.db.Get(cachememdb.IndexNameID, indexId)
@@ -647,6 +602,72 @@ func TestUpdateStaticSecret(t *testing.T) {
 	require.Equal(t, index.RequestPath, newIndex.RequestPath)
 	require.Equal(t, index.Tokens, newIndex.Tokens)
 	require.Len(t, newIndex.Versions, 0)
+}
+
+// TestUpdateStaticSecret_KVv2 tests that updateStaticSecret works as expected, reaching out
+// to Vault to get an updated secret when called. It should also update the corresponding
+// version of that secret in the cache index's Versions field.
+func TestUpdateStaticSecret_KVv2(t *testing.T) {
+	t.Parallel()
+	// We need a valid cluster for the connection to succeed.
+	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": kv.VersionedKVFactory,
+		},
+	}, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	client := cluster.Cores[0].Client
+
+	updater := testNewStaticSecretCacheUpdater(t, client)
+	leaseCache := updater.leaseCache
+
+	path := "secret-v2/data/foo"
+	indexId := hashStaticSecretIndex(path)
+	initialTime := time.Now().UTC()
+	// pre-populate the leaseCache with a secret to update
+	index := &cachememdb.Index{
+		Namespace:   "root/",
+		RequestPath: path,
+		LastRenewed: initialTime,
+		ID:          indexId,
+		Versions:    map[int][]byte{},
+		// Valid token provided, so update should work.
+		Tokens:   map[string]struct{}{client.Token(): {}},
+		Response: []byte{},
+	}
+	err := leaseCache.db.Set(index)
+	require.NoError(t, err)
+
+	secretData := map[string]interface{}{
+		"foo": "bar",
+	}
+
+	err = client.Sys().Mount("secret-v2", &api.MountInput{
+		Type: "kv-v2",
+	})
+	require.NoError(t, err)
+
+	// create the secret in Vault
+	_, err = client.KVv2("secret-v2").Put(context.Background(), "foo", secretData)
+	require.NoError(t, err)
+
+	// attempt the update
+	err = updater.updateStaticSecret(context.Background(), path)
+	require.NoError(t, err)
+
+	newIndex, err := leaseCache.db.Get(cachememdb.IndexNameID, indexId)
+	require.NoError(t, err)
+	require.NotNil(t, newIndex)
+	require.Truef(t, initialTime.Before(newIndex.LastRenewed), "last updated time not updated on index")
+	require.NotEqual(t, []byte{}, newIndex.Response)
+	require.Equal(t, index.RequestPath, newIndex.RequestPath)
+	require.Equal(t, index.Tokens, newIndex.Tokens)
+
+	// It should have also updated version 1 with the same version.
+	require.Len(t, newIndex.Versions, 1)
+	require.NotNil(t, newIndex.Versions[1])
+	require.Equal(t, newIndex.Versions[1], newIndex.Response)
 }
 
 // TestUpdateStaticSecret_EvictsIfInvalidTokens tests that updateStaticSecret will
@@ -676,9 +697,7 @@ func TestUpdateStaticSecret_EvictsIfInvalidTokens(t *testing.T) {
 		Tokens: map[string]struct{}{"invalid token": {}},
 	}
 	err := leaseCache.db.Set(index)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	secretData := map[string]interface{}{
 		"foo": "bar",
@@ -686,15 +705,11 @@ func TestUpdateStaticSecret_EvictsIfInvalidTokens(t *testing.T) {
 
 	// create the secret in Vault. n.b. the test cluster has already mounted the KVv1 backend at "secret"
 	err = client.KVv1("secret").Put(context.Background(), "foo", secretData)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	// attempt the update
-	err = updater.updateStaticSecret(context.Background(), path, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	err = updater.updateStaticSecret(context.Background(), path)
+	require.NoError(t, err)
 
 	newIndex, err := leaseCache.db.Get(cachememdb.IndexNameID, indexId)
 	require.Equal(t, cachememdb.ErrCacheItemNotFound, err)
@@ -715,13 +730,8 @@ func TestUpdateStaticSecret_HandlesNonCachedPaths(t *testing.T) {
 
 	path := "secret/foo"
 
-	// Attempt the update for with currentVersion 0
-	err := updater.updateStaticSecret(context.Background(), path, 0)
-	require.NoError(t, err)
-	require.Nil(t, err)
-
-	// Attempt a higher currentVersion just to be sure
-	err = updater.updateStaticSecret(context.Background(), path, 100)
+	// Attempt the update
+	err := updater.updateStaticSecret(context.Background(), path)
 	require.NoError(t, err)
 	require.Nil(t, err)
 }
@@ -821,9 +831,7 @@ func TestPreEventStreamUpdateErrorUpdating(t *testing.T) {
 		Type:     cacheboltdb.StaticSecretType,
 	}
 	err := leaseCache.db.Set(index)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	secretData := map[string]interface{}{
 		"foo": "bar",
@@ -832,15 +840,11 @@ func TestPreEventStreamUpdateErrorUpdating(t *testing.T) {
 	err = client.Sys().Mount("secret-v2", &api.MountInput{
 		Type: "kv-v2",
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	// Put a secret (with different values to what's currently in the cache)
 	_, err = client.KVv2("secret-v2").Put(context.Background(), "foo", secretData)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	// Seal Vault, so that the update will fail
 	cluster.EnsureCoresSealed(t)
