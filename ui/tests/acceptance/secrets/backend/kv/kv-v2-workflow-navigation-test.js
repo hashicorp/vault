@@ -5,7 +5,17 @@
 
 import { module, test } from 'qunit';
 import { v4 as uuidv4 } from 'uuid';
-import { click, currentRouteName, currentURL, findAll, typeIn, visit, waitUntil } from '@ember/test-helpers';
+import {
+  click,
+  currentRouteName,
+  currentURL,
+  find,
+  findAll,
+  fillIn,
+  typeIn,
+  visit,
+  waitUntil,
+} from '@ember/test-helpers';
 import { setupApplicationTest } from 'vault/tests/helpers';
 import authPage from 'vault/tests/pages/auth';
 import {
@@ -1405,7 +1415,7 @@ path "${this.backend}/*" {
       assert.true(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
     });
     test('breadcrumbs & page titles are correct (cg)', async function (assert) {
-      assert.expect(43);
+      assert.expect(42);
       const backend = this.backend;
       await navToBackend(backend);
       await click(PAGE.secretTab('Configuration'));
@@ -1455,22 +1465,74 @@ path "${this.backend}/*" {
       assert.dom(PAGE.secretTab('Version History')).doesNotExist('Version History tab not shown');
 
       await click(PAGE.secretTab('Secret'));
-      assert.true(
-        await waitUntil(() => currentRouteName() === 'vault.cluster.access.control-group-accessor'),
-        'redirects to access control group route'
-      );
-      await grantAccess({
-        apiPath: `${backend}/data/${encodeURIComponent(secretPath)}`,
-        originUrl: `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/paths`,
-        userToken: this.userToken,
-        backend: this.backend,
-      });
-      await click(PAGE.secretTab('Secret'));
       assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath]);
       assert.dom(PAGE.title).hasText(secretPath, 'correct page title for secret details');
       await click(PAGE.detail.createNewVersion);
       assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath, 'Edit']);
       assert.dom(PAGE.title).hasText('Create New Version', 'correct page title for secret edit');
+    });
+    test('can request custom_metadata from data endpoint (cg)', async function (assert) {
+      // custom metadata is empty
+      assert.expect(3);
+      const backend = this.backend;
+      await visit(`/vault/secrets/${backend}/kv/${secretPathUrlEncoded}`);
+      await click(PAGE.secretTab('Metadata'));
+      assert
+        .dom(`${PAGE.metadata.customMetadataSection} ${PAGE.emptyStateTitle}`)
+        .hasText('Request custom metadata?');
+      await click(PAGE.metadata.requestData);
+      assert
+        .dom(GENERAL.messageError)
+        .hasTextContaining(
+          `Control Group Error A Control Group was encountered at ${backend}/data/${secretPath}.`
+        );
+      const url = find('[data-test-control-error="href"]').innerText;
+      await visit(url);
+      await grantAccess({
+        apiPath: `${backend}/data/${encodeURIComponent(secretPath)}`,
+        originUrl: `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/metadata`,
+        userToken: this.userToken,
+        backend: this.backend,
+      });
+      await click(PAGE.metadata.requestData);
+      assert
+        .dom(`${PAGE.metadata.customMetadataSection} ${PAGE.emptyStateTitle}`)
+        .hasText('No custom metadata', 'empty state updates when access is granted');
+    });
+
+    test('can read custom_metadata from data endpoint (cg)', async function (assert) {
+      assert.expect(3);
+      // login is root user and make custom metadata since console can't be used to pass an object
+      await authPage.login();
+      await visit(`/vault/secrets/${this.backend}/kv/${secretPathUrlEncoded}/metadata/edit`);
+      await fillIn(FORM.keyInput(), 'special');
+      await fillIn(FORM.valueInput(), 'secret');
+      await click(FORM.saveBtn);
+      await authPage.login(this.userToken);
+
+      const backend = this.backend;
+      await visit(`/vault/secrets/${backend}/kv/${secretPathUrlEncoded}`);
+
+      await click(PAGE.secretTab('Metadata'));
+      assert
+        .dom(`${PAGE.metadata.customMetadataSection} ${PAGE.emptyStateTitle}`)
+        .hasText('Request custom metadata?');
+      await click(PAGE.metadata.requestData);
+      assert
+        .dom(GENERAL.messageError)
+        .hasTextContaining(
+          `Control Group Error A Control Group was encountered at ${backend}/data/${secretPath}.`
+        );
+      const url = find('[data-test-control-error="href"]').innerText;
+      await visit(url);
+      await grantAccess({
+        apiPath: `${backend}/data/${encodeURIComponent(secretPath)}`,
+        originUrl: `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/metadata`,
+        userToken: this.userToken,
+        backend: this.backend,
+      });
+      await click(PAGE.metadata.requestData);
+      assert.dom(PAGE.infoRowValue('special')).hasText('secret', 'it renders custom metadata');
     });
   });
 

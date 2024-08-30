@@ -15,7 +15,12 @@
   </A.Description>
   <A.Description>
     Visit
-    <Hds::Link::Inline @color="primary" @href={{@error.href}}>{{@error.href}}</Hds::Link::Inline>
+    <Hds::Link::Inline
+      @color="primary"
+      @href={{@error.href}}
+      data-test-control-error="href"
+      @isHrefExternal={{false}}
+    >{{@error.href}}</Hds::Link::Inline>
     for more details.
   </A.Description>
 </Hds::Alert>
