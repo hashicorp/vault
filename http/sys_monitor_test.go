@@ -97,7 +97,8 @@ func TestSysMonitorStreamingLogs(t *testing.T) {
 			}
 			jsonLog := &jsonlog{}
 
-			timeCh := time.After(5 * time.Second)
+			// default timeout is 90 seconds
+			timeCh := time.After(120 * time.Second)
 
 			for {
 				select {
@@ -119,7 +120,7 @@ func TestSysMonitorStreamingLogs(t *testing.T) {
 						return
 					}
 				case <-timeCh:
-					t.Fatal("Failed to get a DEBUG message after 5 seconds")
+					t.Fatal("Failed to get a DEBUG message after 120 seconds")
 				}
 			}
 		})

@@ -1,0 +1,3 @@
+```release-note:bug
+core: Fixed an issue where maximum request duration timeout was not being added to all requests containing strings sys/monitor and sys/events. With this change, timeout is now added to all requests except monitor and events endpoint. 
+```

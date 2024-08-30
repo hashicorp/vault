@@ -6,6 +6,7 @@ package cache
 import (
 	"context"
 	"fmt"
+	"os"
 	"sync"
 	syncatomic "sync/atomic"
 	"testing"
@@ -281,6 +282,8 @@ func TestOpenWebSocketConnection_AutoAuthSelfHeal(t *testing.T) {
 // works as expected with the default KVV1 mount, and then the connection can be used to receive an event.
 // This acts as more of an event system sanity check than a test of the updater
 // logic. It's still important coverage, though.
+// It also adds a client timeout of 1 second and checks that the connection does not timeout as this is a
+// streaming request.
 func TestOpenWebSocketConnectionReceivesEventsDefaultMount(t *testing.T) {
 	if !constants.IsEnterprise {
 		t.Skip("test can only run on enterprise due to requiring the event notification system")
@@ -290,6 +293,11 @@ func TestOpenWebSocketConnectionReceivesEventsDefaultMount(t *testing.T) {
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
+
+	oldClientTimeout := os.Getenv("VAULT_CLIENT_TIMEOUT")
+	os.Setenv("VAULT_CLIENT_TIMEOUT", "1")
+	defer os.Setenv("VAULT_CLIENT_TIMEOUT", oldClientTimeout)
+
 	client := cluster.Cores[0].Client
 
 	updater := testNewStaticSecretCacheUpdater(t, client)
@@ -318,6 +326,7 @@ func TestOpenWebSocketConnectionReceivesEventsDefaultMount(t *testing.T) {
 
 		// This method blocks until it gets a secret, so this test
 		// will only pass if we're receiving events correctly.
+		// It will fail here if the connection times out.
 		_, _, err = conn.Read(context.Background())
 		require.NoError(t, err)
 	}
