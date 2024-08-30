@@ -4,6 +4,7 @@
 package cache
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -12,7 +13,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -218,18 +218,6 @@ func (updater *StaticSecretCacheUpdater) streamStaticSecretEvents(ctx context.Co
 					}
 				}
 
-				// For all other operations, we *only* care about the latest version.
-				// However, if we know the current version, we should update that too
-				currentVersion := 0
-				currentVersionString, ok := metadata["current_version"].(string)
-				if ok {
-					versionInt, err := strconv.Atoi(currentVersionString)
-					if err != nil {
-						return fmt.Errorf("unexpected event format when decoding 'current_version' element, message: %s\nerror: %w", string(message), err)
-					}
-					currentVersion = versionInt
-				}
-
 				// Note: For delete/destroy events, we continue through to updating the secret itself, too.
 				// This means that if the latest version of the secret gets deleted, then the cache keeps
 				// knowledge of which the latest version is.
@@ -237,7 +225,7 @@ func (updater *StaticSecretCacheUpdater) streamStaticSecretEvents(ctx context.Co
 				// to update the secret will 404. This is consistent with other behaviour. For Proxy, this means
 				// the secret may be evicted. That's okay.
 
-				err = updater.updateStaticSecret(ctx, path, currentVersion)
+				err = updater.updateStaticSecret(ctx, path)
 				if err != nil {
 					// While we are kind of 'missing' an event this way, re-calling this function will
 					// result in the secret remaining up to date.
@@ -363,7 +351,7 @@ func (updater *StaticSecretCacheUpdater) preEventStreamUpdate(ctx context.Contex
 		if index.Type != cacheboltdb.StaticSecretType {
 			continue
 		}
-		err = updater.updateStaticSecret(ctx, index.RequestPath, 0)
+		err = updater.updateStaticSecret(ctx, index.RequestPath)
 		if err != nil {
 			errs = multierror.Append(errs, err)
 		}
@@ -411,9 +399,9 @@ func (updater *StaticSecretCacheUpdater) handleDeleteDestroyVersions(path string
 }
 
 // updateStaticSecret checks for updates for a static secret on the path given,
-// and updates the cache if appropriate. If currentVersion is not 0, we will also update
-// will also update the version at index.Versions[currentVersion] with the same data.
-func (updater *StaticSecretCacheUpdater) updateStaticSecret(ctx context.Context, path string, currentVersion int) error {
+// and updates the cache if appropriate. For KVv2 secrets, we will also update
+// the version at index.Versions[currentVersion] with the same data.
+func (updater *StaticSecretCacheUpdater) updateStaticSecret(ctx context.Context, path string) error {
 	// We clone the client, as we won't be using the same token.
 	client, err := updater.client.Clone()
 	if err != nil {
@@ -514,19 +502,37 @@ func (updater *StaticSecretCacheUpdater) updateStaticSecret(ctx context.Context,
 			return err
 		}
 
-		// Set the index's Response
 		index.Response = respBytes.Bytes()
 		index.LastRenewed = time.Now().UTC()
-		if currentVersion != 0 {
-			// It should always be non-nil, but avoid a panic just in case.
-			if index.Versions == nil {
-				index.Versions = map[int][]byte{}
-			}
-			index.Versions[currentVersion] = index.Response
+
+		// For KVv2 secrets, let's also update index.Versions[version_of_secret]
+		// with the response we received from the current version.
+		// Instead of relying on current_version in the event, we should
+		// check the message we received, since it's possible the secret
+		// got updated between receipt of the event and when we received
+		// the request for the secret.
+		// First, re-read secret into response so that we can parse it again:
+		reader := bufio.NewReader(bytes.NewReader(index.Response))
+		resp, err := http.ReadResponse(reader, nil)
+		if err != nil {
+			// This shouldn't happen, but log just in case it does. There's
+			// no real negative consequences of the following function though.
+			updater.logger.Warn("failed to deserialize response", "error", err)
 		}
 
+		secret, err := api.ParseSecret(resp.Body)
+		if err != nil {
+			// This shouldn't happen, but log just in case it does. There's
+			// no real negative consequences of the following function though.
+			updater.logger.Warn("failed to serialize response", "error", err)
+		}
+
+		// In case of failures or KVv1 secrets, this function will simply fail silently,
+		// which is fine (and expected) since this could be arbitrary JSON.
+		updater.leaseCache.addToVersionListForCurrentVersionKVv2Secret(index, secret)
+
 		// Lastly, store the secret
-		updater.logger.Debug("storing response into the cache due to update", "path", path, "currentVersion", currentVersion)
+		updater.logger.Debug("storing response into the cache due to update", "path", path)
 		err = updater.leaseCache.db.Set(index)
 		if err != nil {
 			return err
