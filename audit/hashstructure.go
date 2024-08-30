@@ -120,6 +120,11 @@ func hashResponse(ctx context.Context, salter Salter, resp *response, hmacAccess
 
 	fn := salt.GetIdentifiedHMAC
 
+	err = hashAuth(ctx, salter, resp.Auth, hmacAccessor)
+	if err != nil {
+		return err
+	}
+
 	if resp.Data != nil {
 		if b, ok := resp.Data[logical.HTTPRawBody].([]byte); ok {
 			resp.Data[logical.HTTPRawBody] = string(b)
