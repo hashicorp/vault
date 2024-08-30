@@ -2010,6 +2010,10 @@
         "path": "troubleshoot/lease-issues"
       },
       {
+        "title": "Tune the lease TTL",
+        "path": "troubleshoot/tune-lease-ttl"
+      },
+      {
         "title": "Troubleshooting tutorials",
         "href": "https://learn.hashicorp.com/tutorials/vault/troubleshooting-vault"
       }
@@ -2062,7 +2066,10 @@
             "title": "Agent Injector vs. Vault CSI Provider",
             "path": "platform/k8s/injector-csi"
           },
-
+          {
+            "title": "Migrate Consul to Raft storage",
+            "path": "platform/k8s/consul-to-raft"
+          },
           {
             "title": "Helm Chart",
             "routes": [

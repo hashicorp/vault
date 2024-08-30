@@ -48,8 +48,8 @@ const connectionTests = [
   {
     name: 'elasticsearch-connection',
     plugin: 'elasticsearch-database-plugin',
-    elasticUser: 'username',
-    elasticPassword: 'password',
+    username: 'username',
+    password: 'password',
     url: 'http://127.0.0.1:9200',
     assertCount: 9,
     requiredFields: async (assert, name) => {
@@ -199,6 +199,8 @@ const connectionTests = [
     name: 'postgresql-connection',
     plugin: 'postgresql-database-plugin',
     url: `postgresql://{{username}}:{{password}}@localhost:5432/postgres?sslmode=disable`,
+    username: 'username',
+    password: 'password',
     assertCount: 7,
     requiredFields: async (assert, name) => {
       assert.dom('[data-test-input="username"]').exists(`Username field exists for ${name}`);
@@ -269,12 +271,18 @@ module('Acceptance | secrets/database/*', function (hooks) {
       await connectionPage.dbPlugin(testCase.plugin);
       assert.dom('[data-test-empty-state]').doesNotExist('Empty state goes away after plugin selected');
       await connectionPage.name(testCase.name);
+
+      // elasticsearch has a special url field
       if (testCase.plugin === 'elasticsearch-database-plugin') {
         await connectionPage.url(testCase.url);
-        await connectionPage.username(testCase.elasticUser);
-        await connectionPage.password(testCase.elasticPassword);
       } else {
         await connectionPage.connectionUrl(testCase.url);
+      }
+
+      // elasticsearch and postgres require username and password set in order to save
+      if (testCase.username) {
+        await connectionPage.username(testCase.username);
+        await connectionPage.password(testCase.password);
       }
       testCase.requiredFields(assert, testCase.plugin);
       assert.dom('[data-test-input="verify_connection"]').isChecked('verify is checked');

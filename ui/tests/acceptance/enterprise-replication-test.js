@@ -317,7 +317,6 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await click('[data-test-sidebar-nav-link="Disaster Recovery"]');
     // let the controller set replicationMode in afterModel
     await waitFor('[data-test-replication-enable-form]');
-    assert.dom('[data-test-replication-title]').hasText('Enable Disaster Recovery Replication');
     await click('[data-test-replication-enable]');
 
     await pollCluster(this.owner);

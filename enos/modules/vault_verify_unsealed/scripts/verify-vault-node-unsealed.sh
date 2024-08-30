@@ -4,7 +4,6 @@
 
 set -e
 
-
 fail() {
   echo "$1" 1>&2
   exit 1
@@ -23,21 +22,21 @@ while :; do
     if unseal_status=$($binpath status -format json | jq -Mre --argjson expected "false" '.sealed == $expected'); then
       echo "$health_status"
       exit 0
-    fi
+  fi
 
     wait=$((2 ** count))
     count=$((count + 1))
     if [ "$count" -lt "$retries" ]; then
       sleep "$wait"
-    else
+  else
       if [ -n "$HOST_IPV6" ]; then
         fail "expected ${HOST_IPV6} to be unsealed, got unseal status: $unseal_status"
-      else
+    else
         if [ -n "$HOST_IPV4" ]; then
           fail "expected ${HOST_IPV4} to be unsealed, got unseal status: $unseal_status"
-        else
+      else
           fail "expected ${VAULT_ADDR} to be unsealed, got unseal status: $unseal_status"
-        fi
       fi
     fi
+  fi
 done

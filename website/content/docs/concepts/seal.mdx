@@ -53,7 +53,7 @@ decrypt the root key.
 
 The unseal process is done by running `vault operator unseal` or via the API.
 This process is stateful: each key can be entered via multiple mechanisms from
-multiple client machines and it will work. This allows each shares of the root
+multiple client machines and it will work. This allows each share of the root
 key to be on a distinct client machine for better security.
 
 Note that when using the Shamir seal with multiple nodes, each node must be
@@ -346,7 +346,6 @@ migration will not happen again on the peer nodes.
 
 Seal high availability (Seal HA) allows the configuration of more than one auto 
 seal mechanism such that Vault can tolerate the temporary loss of a seal service 
-
 or device for a time.  With Seal HA configured with at least two and no more than
 three auto seals, Vault can also start up and unseal if one of the
 configured seals is still available (though Vault will remain in a degraded mode in

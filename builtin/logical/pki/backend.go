@@ -5,6 +5,7 @@ package pki
 
 import (
 	"context"
+	"crypto/x509"
 	"fmt"
 	"strings"
 	"sync"
@@ -342,6 +343,8 @@ type BackendOps interface {
 	pki_backend.SystemViewGetter
 	pki_backend.MountInfo
 	pki_backend.Logger
+	revocation.RevokerFactory
+
 	UseLegacyBundleCaStorage() bool
 	CrlBuilder() *CrlBuilder
 	GetRevokeStorageLock() *sync.RWMutex
@@ -804,4 +807,29 @@ func (b *backend) initializeStoredCertificateCounts(ctx context.Context) error {
 
 	certCounter.InitializeCountsFromStorage(entries, revokedEntries)
 	return nil
+}
+
+var _ revocation.Revoker = &revoker{}
+
+type revoker struct {
+	backend        *backend
+	storageContext *storageContext
+	crlConfig      *pki_backend.CrlConfig
+}
+
+func (r *revoker) RevokeCert(cert *x509.Certificate) (*logical.Response, error) {
+	return revokeCert(r.storageContext, r.crlConfig, cert)
+}
+
+func (r *revoker) RevokeCertBySerial(serial string) (*logical.Response, error) {
+	return tryRevokeCertBySerial(r.storageContext, r.crlConfig, serial)
+}
+
+func (b *backend) GetRevoker(ctx context.Context, s logical.Storage) revocation.Revoker {
+	sc := b.makeStorageContext(ctx, s)
+	return &revoker{
+		backend:        b,
+		crlConfig:      &b.CrlBuilder().config,
+		storageContext: sc,
+	}
 }

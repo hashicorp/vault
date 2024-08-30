@@ -109,13 +109,37 @@ module('Unit | Model | secret-engine', function (hooks) {
         'config.allowedResponseHeaders',
       ]);
     });
+
+    test('it returns correct fields for aws', function (assert) {
+      assert.expect(1);
+      const model = this.store.createRecord('secret-engine', {
+        type: 'aws',
+      });
+
+      assert.deepEqual(model.get('formFields'), [
+        'type',
+        'path',
+        'description',
+        'accessor',
+        'local',
+        'sealWrap',
+        'config.defaultLeaseTtl',
+        'config.maxLeaseTtl',
+        'config.allowedManagedKeys',
+        'config.auditNonHmacRequestKeys',
+        'config.auditNonHmacResponseKeys',
+        'config.passthroughRequestHeaders',
+        'config.allowedResponseHeaders',
+        'config.identityTokenKey',
+      ]);
+    });
   });
 
   module('formFieldGroups', function () {
     test('returns correct values by default', function (assert) {
       assert.expect(1);
       const model = this.store.createRecord('secret-engine', {
-        type: 'aws',
+        type: 'cubbyhole',
       });
 
       assert.deepEqual(model.get('formFieldGroups'), [
@@ -261,6 +285,33 @@ module('Unit | Model | secret-engine', function (hooks) {
         },
       ]);
     });
+
+    test('returns correct values for aws', function (assert) {
+      assert.expect(1);
+      const model = this.store.createRecord('secret-engine', {
+        type: 'aws',
+      });
+
+      assert.deepEqual(model.get('formFieldGroups'), [
+        { default: ['path'] },
+        {
+          'Method Options': [
+            'description',
+            'config.listingVisibility',
+            'local',
+            'sealWrap',
+            'config.defaultLeaseTtl',
+            'config.maxLeaseTtl',
+            'config.identityTokenKey',
+            'config.allowedManagedKeys',
+            'config.auditNonHmacRequestKeys',
+            'config.auditNonHmacResponseKeys',
+            'config.passthroughRequestHeaders',
+            'config.allowedResponseHeaders',
+          ],
+        },
+      ]);
+    });
   });
 
   module('engineType', function () {
@@ -343,80 +394,6 @@ module('Unit | Model | secret-engine', function (hooks) {
         local: false,
       });
       assert.strictEqual(model.localDisplay, 'replicated');
-    });
-  });
-
-  module('saveCA', function () {
-    test('does not call endpoint if type != ssh', async function (assert) {
-      assert.expect(1);
-      const model = this.store.createRecord('secret-engine', {
-        type: 'not-ssh',
-      });
-      const saveSpy = sinon.spy(model, 'save');
-      await model.saveCA({});
-      assert.ok(saveSpy.notCalled, 'save not called');
-    });
-    test('calls save with correct params', async function (assert) {
-      assert.expect(4);
-      const model = this.store.createRecord('secret-engine', {
-        type: 'ssh',
-        privateKey: 'private-key',
-        publicKey: 'public-key',
-        generateSigningKey: true,
-      });
-      const saveStub = sinon.stub(model, 'save').callsFake((params) => {
-        assert.deepEqual(
-          params,
-          {
-            adapterOptions: {
-              options: {},
-              apiPath: 'config/ca',
-              attrsToSend: ['privateKey', 'publicKey', 'generateSigningKey'],
-            },
-          },
-          'send correct params to save'
-        );
-        return;
-      });
-
-      await model.saveCA({});
-      assert.strictEqual(model.privateKey, 'private-key', 'value exists before save');
-      assert.strictEqual(model.publicKey, 'public-key', 'value exists before save');
-      assert.true(model.generateSigningKey, 'value true before save');
-
-      saveStub.restore();
-    });
-    test('sets properties when isDelete', async function (assert) {
-      assert.expect(7);
-      const model = this.store.createRecord('secret-engine', {
-        type: 'ssh',
-        privateKey: 'private-key',
-        publicKey: 'public-key',
-        generateSigningKey: true,
-      });
-      const saveStub = sinon.stub(model, 'save').callsFake((params) => {
-        assert.deepEqual(
-          params,
-          {
-            adapterOptions: {
-              options: { isDelete: true },
-              apiPath: 'config/ca',
-              attrsToSend: ['privateKey', 'publicKey', 'generateSigningKey'],
-            },
-          },
-          'send correct params to save'
-        );
-        return;
-      });
-      assert.strictEqual(model.privateKey, 'private-key', 'value exists before save');
-      assert.strictEqual(model.publicKey, 'public-key', 'value exists before save');
-      assert.true(model.generateSigningKey, 'value true before save');
-
-      await model.saveCA({ isDelete: true });
-      assert.strictEqual(model.privateKey, null, 'value null after save');
-      assert.strictEqual(model.publicKey, null, 'value null after save');
-      assert.false(model.generateSigningKey, 'value false after save');
-      saveStub.restore();
     });
   });
 

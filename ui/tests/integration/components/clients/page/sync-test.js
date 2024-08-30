@@ -52,7 +52,6 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
 
       assert.dom(CHARTS.chart('Secrets sync usage')).doesNotExist();
       assert.dom(statText('Total sync clients')).doesNotExist();
-      assert.dom(statText('Average sync clients per month')).doesNotExist();
     });
   });
 
@@ -74,9 +73,8 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
 
     test('it should render with full month activity data', async function (assert) {
       const monthCount = this.activity.byMonth.length;
-      assert.expect(8 + monthCount * 2);
+      assert.expect(7 + monthCount * 2);
       const expectedTotal = formatNumber([this.activity.total.secret_syncs]);
-      const expectedAvg = formatNumber([calculateAverage(this.activity.byMonth, 'secret_syncs')]);
       const expectedNewAvg = formatNumber([
         calculateAverage(
           this.activity.byMonth.map((m) => m?.new_clients),
@@ -91,12 +89,6 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
           `Total sync clients The total number of secrets synced from Vault to other destinations during this date range. ${expectedTotal}`,
           `renders correct total sync stat ${expectedTotal}`
         );
-      assert
-        .dom(statText('Average sync clients per month'))
-        .hasText(
-          `Average sync clients per month ${expectedAvg}`,
-          `renders correct average sync stat ${expectedAvg}`
-        );
       assert.dom(statText('Average new sync clients per month')).hasTextContaining(`${expectedNewAvg}`);
 
       const formattedTimestamp = dateFormat([this.activity.responseTimestamp, 'MMM d yyyy, h:mm:ss aaa'], {
@@ -109,7 +101,6 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
     });
 
     test('it should render stats without chart for a single month', async function (assert) {
-      assert.expect(5);
       const activityQuery = { start_time: { timestamp: END_TIME }, end_time: { timestamp: END_TIME } };
       this.activity = await this.store.queryRecord('clients/activity', activityQuery);
       const expectedTotal = formatNumber([this.activity.total.secret_syncs]);
@@ -117,7 +108,6 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
 
       assert.dom(CHARTS.chart('Secrets sync usage')).doesNotExist('total usage chart does not render');
       assert.dom(CHARTS.container('Monthly new')).doesNotExist('monthly new chart does not render');
-      assert.dom(statText('Average sync clients per month')).doesNotExist();
       assert.dom(statText('Average new sync clients per month')).doesNotExist();
       assert
         .dom(usageStats('Secrets sync usage'))
@@ -129,7 +119,7 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
 
     // EMPTY STATES
     test('it should render empty state when sync data does not exist for a date range', async function (assert) {
-      assert.expect(8);
+      assert.expect(7);
       // this happens when a user queries historical data that predates the monthly breakdown (added in 1.11)
       // only entity + non-entity clients existed then, so we show an empty state for sync clients
       // because the activity response just returns { secret_syncs: 0 } which isn't very clear
@@ -143,7 +133,6 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
       assert.dom(CHARTS.chart('Secrets sync usage')).doesNotExist('vertical bar chart does not render');
       assert.dom(CHARTS.container('Monthly new')).doesNotExist('monthly new chart does not render');
       assert.dom(statText('Total sync clients')).doesNotExist();
-      assert.dom(statText('Average sync clients per month')).doesNotExist();
       assert.dom(statText('Average new sync clients per month')).doesNotExist();
       assert.dom(usageStats('Secrets sync usage')).doesNotExist();
     });
@@ -181,20 +170,14 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
       this.activity.byMonth = [
         {
           ...monthData,
-          namespaces_by_key: {
-            root: {
-              ...monthData,
-              mounts_by_key: {},
-            },
-          },
           new_clients: {
             ...monthData,
           },
         },
       ];
       this.activity.total = counts;
-      const monthCount = this.activity.byMonth.length;
-      assert.expect(6 + monthCount * 2);
+
+      assert.expect(6);
       await this.renderComponent();
 
       assert.dom(CHARTS.chart('Secrets sync usage')).exists('renders empty sync usage chart');
@@ -203,9 +186,6 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
         .hasText(
           'Total sync clients The total number of secrets synced from Vault to other destinations during this date range. 0'
         );
-      assert
-        .dom(statText('Average sync clients per month'))
-        .doesNotExist('Does not render average if the calculation is 0');
       findAll(`${CHARTS.chart('Secrets sync usage')} ${CHARTS.xAxisLabel}`).forEach((e, i) => {
         assert
           .dom(e)
@@ -221,7 +201,6 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
       assert
         .dom(CHARTS.container('Monthly new'))
         .doesNotExist('empty monthly new chart does not render at all');
-      assert.dom(statText('Average sync clients per month')).doesNotExist();
       assert.dom(statText('Average new sync clients per month')).doesNotExist();
     });
   });

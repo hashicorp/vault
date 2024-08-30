@@ -1,0 +1,3 @@
+```release-note:feature
+**Self-Managed Static Roles**: Self-Managed Static Roles are now supported for select SQL database engines (Postgres, Oracle). Requires Vault Enterprise.
+```

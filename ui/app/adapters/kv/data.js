@@ -4,14 +4,7 @@
  */
 
 import ApplicationAdapter from '../application';
-import {
-  kvDataPath,
-  kvDeletePath,
-  kvDestroyPath,
-  kvMetadataPath,
-  kvSubkeysPath,
-  kvUndeletePath,
-} from 'vault/utils/kv-path';
+import { kvDataPath, kvDeletePath, kvDestroyPath, kvSubkeysPath, kvUndeletePath } from 'vault/utils/kv-path';
 import { assert } from '@ember/debug';
 import ControlGroupError from 'vault/lib/control-group-error';
 
@@ -38,18 +31,34 @@ export default class KvDataAdapter extends ApplicationAdapter {
     });
   }
 
-  fetchSubkeys(query) {
-    const { backend, path, version, depth } = query;
-    const url = this._url(kvSubkeysPath(backend, path, depth, version));
-    // TODO subkeys response handles deleted records the same as queryRecord and returns a 404
-    // extrapolate error handling logic from queryRecord and share between these two methods
-    return this.ajax(url, 'GET').then((resp) => resp.data);
+  fetchSubkeys(backend, path, query) {
+    const url = this._url(kvSubkeysPath(backend, path, query));
+    return (
+      this.ajax(url, 'GET')
+        .then((resp) => resp.data)
+        // deleted/destroyed secret versions throw an error
+        // but still have metadata that we want to return
+        .catch((errorOrResponse) => {
+          return this.parseErrorOrResponse(errorOrResponse, { backend, path }, true);
+        })
+    );
   }
 
   fetchWrapInfo(query) {
     const { backend, path, version, wrapTTL } = query;
     const id = kvDataPath(backend, path, version);
     return this.ajax(this._url(id), 'GET', { wrapTTL }).then((resp) => resp.wrap_info);
+  }
+
+  // patching a secret happens without retrieving the ember data model
+  // so we use a custom method instead of updateRecord
+  patchSecret(backend, path, patchData, version) {
+    const url = this._url(kvDataPath(backend, path));
+    const data = {
+      options: { cas: version },
+      data: patchData,
+    };
+    return this.ajax(url, 'PATCH', { data });
   }
 
   queryRecord(store, type, query) {
@@ -75,39 +84,7 @@ export default class KvDataAdapter extends ApplicationAdapter {
         };
       })
       .catch((errorOrResponse) => {
-        const baseResponse = { id, backend, path, version };
-        const errorCode = errorOrResponse.httpStatus;
-        // if it's a legitimate error - throw it!
-        if (errorOrResponse instanceof ControlGroupError) {
-          throw errorOrResponse;
-        }
-
-        if (errorCode === 403) {
-          return {
-            data: {
-              ...baseResponse,
-              fail_read_error_code: errorCode,
-            },
-          };
-        }
-
-        if (errorOrResponse.data) {
-          // in the case of a deleted/destroyed secret the API returns a 404 because { data: null }
-          // however, there could be a metadata block with important information like deletion_time
-          // handleResponse below checks 404 status codes for metadata and updates the code to 200 if it exists.
-          // we still end up in the good ol' catch() block, but instead of a 404 adapter error we've "caught"
-          // the metadata that sneakily tried to hide from us
-          return {
-            ...errorOrResponse,
-            data: {
-              ...baseResponse,
-              ...errorOrResponse.data, // includes the { metadata } key we want
-            },
-          };
-        }
-
-        // If we get here, it's probably a 404 because it doesn't exist
-        throw errorOrResponse;
+        return this.parseErrorOrResponse(errorOrResponse, { id, backend, path, version });
       });
   }
 
@@ -135,12 +112,8 @@ export default class KvDataAdapter extends ApplicationAdapter {
         return this.ajax(this._url(kvUndeletePath(backend, path)), 'POST', {
           data: { versions: deleteVersions },
         });
-      case 'destroy-all-versions':
-        return this.ajax(this._url(kvMetadataPath(backend, path)), 'DELETE');
       default:
-        assert(
-          'deleteType must be one of delete-latest-version, delete-version, destroy, undelete, or destroy-all-versions.'
-        );
+        assert('deleteType must be one of delete-latest-version, delete-version, destroy, or undelete.');
     }
   }
 
@@ -151,5 +124,43 @@ export default class KvDataAdapter extends ApplicationAdapter {
       return super.handleResponse(200, headers, payload, requestData);
     }
     return super.handleResponse(...arguments);
+  }
+
+  parseErrorOrResponse(errorOrResponse, secretDataBaseResponse, isSubkeys = false) {
+    // if it's a legitimate error - throw it!
+    if (errorOrResponse instanceof ControlGroupError) {
+      throw errorOrResponse;
+    }
+
+    const errorCode = errorOrResponse.httpStatus;
+    if (errorCode === 403) {
+      return {
+        data: {
+          ...secretDataBaseResponse,
+          fail_read_error_code: errorCode,
+        },
+      };
+    }
+
+    // in the case of a deleted/destroyed secret the API returns a 404 because { data: null }
+    // however, there could be a metadata block with important information like deletion_time
+    // handleResponse below checks 404 status codes for metadata and updates the code to 200 if it exists.
+    // we still end up in the good ol' catch() block, but instead of a 404 adapter error we've "caught"
+    // the metadata that sneakily tried to hide from us
+    if (errorOrResponse.data) {
+      // subkeys response doesn't correspond to a model, no need to include base response
+      if (isSubkeys) return errorOrResponse.data;
+
+      return {
+        ...errorOrResponse,
+        data: {
+          ...secretDataBaseResponse,
+          ...errorOrResponse.data, // includes the { metadata } key we want
+        },
+      };
+    }
+
+    // If we get here, it's probably a 404 because it doesn't exist
+    throw errorOrResponse;
   }
 }

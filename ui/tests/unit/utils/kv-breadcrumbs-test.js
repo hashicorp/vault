@@ -47,7 +47,7 @@ module('Unit | Utility | kv-breadcrumbs', function () {
       [
         { label: 'beep', route: 'list-directory', models: ['kv-mount', 'beep/'] },
         { label: 'bop', route: 'list-directory', models: ['kv-mount', 'beep/bop/'] },
-        { label: 'boop', route: 'secret.details', models: ['kv-mount', 'beep/bop/boop'] },
+        { label: 'boop', route: 'secret.index', models: ['kv-mount', 'beep/bop/boop'] },
       ],
       'correct when full nested path to secret'
     );
@@ -66,7 +66,7 @@ module('Unit | Utility | kv-breadcrumbs', function () {
     results = breadcrumbsForSecret('kv-mount', 'beep');
     assert.deepEqual(
       results,
-      [{ label: 'beep', route: 'secret.details', models: ['kv-mount', 'beep'] }],
+      [{ label: 'beep', route: 'secret.index', models: ['kv-mount', 'beep'] }],
       'correct when non-nested secret path'
     );
 

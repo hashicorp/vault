@@ -50,6 +50,10 @@ func PrepareTestContainer(t *testing.T) (func(), string) {
 	return cleanup, url
 }
 
+func PrepareTestContainerSelfManaged(t *testing.T) (func(), *url.URL) {
+	return prepareTestContainerSelfManaged(t, defaultRunOpts(t), defaultPGPass, true, false, false)
+}
+
 func PrepareTestContainerMultiHost(t *testing.T) (func(), string) {
 	_, cleanup, url, _ := prepareTestContainer(t, defaultRunOpts(t), defaultPGPass, true, false, true)
 
@@ -196,6 +200,25 @@ func prepareTestContainer(t *testing.T, runOpts docker.RunOptions, password stri
 	}
 
 	return runner, svc.Cleanup, svc.Config.URL().String(), containerID
+}
+
+func prepareTestContainerSelfManaged(t *testing.T, runOpts docker.RunOptions, password string, addSuffix, forceLocalAddr, useFallback bool,
+) (func(), *url.URL) {
+	if os.Getenv("PG_URL") != "" {
+		return func() {}, nil
+	}
+
+	runner, err := docker.NewServiceRunner(runOpts)
+	if err != nil {
+		t.Fatalf("Could not start docker Postgres: %s", err)
+	}
+
+	svc, _, err := runner.StartNewService(context.Background(), addSuffix, forceLocalAddr, connectPostgres(password, runOpts.ImageRepo, useFallback))
+	if err != nil {
+		t.Fatalf("Could not start docker Postgres: %s", err)
+	}
+
+	return svc.Cleanup, svc.Config.URL()
 }
 
 func getPostgresSSLConfig(t *testing.T, host, sslMode, caCert, clientCert, clientKey string, useFallback bool) docker.ServiceConfig {

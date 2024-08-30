@@ -95,7 +95,7 @@ export default class KvSecretDetails extends Component {
         adapterOptions: { deleteType: 'undelete', deleteVersions: this.version },
       });
       this.flashMessages.success(`Successfully undeleted ${secret.path}.`);
-      this.refreshRoute();
+      this.transition();
     } catch (err) {
       this.flashMessages.danger(
         `There was a problem undeleting ${secret.path}. Error: ${err.errors?.join(' ')}.`
@@ -108,8 +108,9 @@ export default class KvSecretDetails extends Component {
     const { secret } = this.args;
     try {
       await secret.destroyRecord({ adapterOptions: { deleteType: type, deleteVersions: this.version } });
-      this.flashMessages.success(`Successfully ${secret.state} Version ${this.version} of ${secret.path}.`);
-      this.refreshRoute();
+      const verb = type.includes('delete') ? 'deleted' : 'destroyed';
+      this.flashMessages.success(`Successfully ${verb} Version ${this.version} of ${secret.path}.`);
+      this.transition();
     } catch (err) {
       const verb = type.includes('delete') ? 'deleting' : 'destroying';
       this.flashMessages.danger(
@@ -120,11 +121,9 @@ export default class KvSecretDetails extends Component {
     }
   }
 
-  refreshRoute() {
-    // transition to the parent secret route to refresh both metadata and data models
-    this.router.transitionTo('vault.cluster.secrets.backend.kv.secret', {
-      queryParams: { version: this.version },
-    });
+  transition() {
+    // transition to the overview to prevent automatically reading sensitive secret data
+    this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.index');
   }
 
   get version() {

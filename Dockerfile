@@ -25,7 +25,7 @@ LABEL name="Vault" \
       description="Vault is a tool for securely accessing secrets. A secret is anything that you want to tightly control access to, such as API keys, passwords, certificates, and more. Vault provides a unified interface to any secret, while providing tight access control and recording a detailed audit log."
 
 # Copy the license file as per Legal requirement
-COPY LICENSE /licenses/LICENSE.txt
+COPY LICENSE /usr/share/doc/$NAME/LICENSE.txt
 
 # Set ARGs as ENV so that they can be used in ENTRYPOINT/CMD
 ENV NAME=$NAME
@@ -78,8 +78,9 @@ CMD ["server", "-dev"]
 FROM registry.access.redhat.com/ubi8/ubi-minimal as ubi
 
 ARG BIN_NAME
-# PRODUCT_VERSION is the version built dist/$TARGETOS/$TARGETARCH/$BIN_NAME,
-# which we COPY in later. Example: PRODUCT_VERSION=1.2.3.
+# NAME and PRODUCT_VERSION are the name of the software in releases.hashicorp.com
+# and the version to download. Example: NAME=vault PRODUCT_VERSION=1.2.3.
+ARG NAME=vault
 ARG PRODUCT_VERSION
 ARG PRODUCT_REVISION
 # TARGETARCH and TARGETOS are set automatically when --platform is provided.
@@ -96,12 +97,15 @@ LABEL name="Vault" \
       summary="Vault is a tool for securely accessing secrets." \
       description="Vault is a tool for securely accessing secrets. A secret is anything that you want to tightly control access to, such as API keys, passwords, certificates, and more. Vault provides a unified interface to any secret, while providing tight access control and recording a detailed audit log."
 
-# Copy the license file as per Legal requirement
-COPY LICENSE /licenses/LICENSE.txt
-
 # Set ARGs as ENV so that they can be used in ENTRYPOINT/CMD
 ENV NAME=$NAME
 ENV VERSION=$VERSION
+
+# Copy the license file as per Legal requirement
+COPY LICENSE /usr/share/doc/$NAME/LICENSE.txt
+
+# We must have a copy of the license in this directory to comply with the HasLicense Redhat requirement
+COPY LICENSE /licenses/LICENSE.txt
 
 # Set up certificates, our base tools, and Vault. Unlike the other version of
 # this (https://github.com/hashicorp/docker-vault/blob/master/ubi/Dockerfile),
