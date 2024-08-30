@@ -40,8 +40,7 @@ export default class KvSecretMetadataDetails extends Component {
   @service router;
   @service store;
 
-  @tracked controlGroupError = null;
-  @tracked errorMessage = null;
+  @tracked error = null;
   @tracked customMetadataFromData = null;
 
   @action
@@ -70,11 +69,12 @@ export default class KvSecretMetadataDetails extends Component {
     } catch (error) {
       if (error.message === 'Control Group encountered') {
         this.controlGroup.saveTokenFromError(error);
-        const err = this.controlGroup.logFromError(error);
-        this.controlGroupError = err.content;
+        this.error = this.controlGroup.logFromError(error);
+        this.error.isControlGroup = true;
         return;
       }
-      this.errorMessage = 'There was a problem requesting secret data.';
+      this.error.isControlGroup = false;
+      this.error = errorMessage(error);
     }
   }
 }
