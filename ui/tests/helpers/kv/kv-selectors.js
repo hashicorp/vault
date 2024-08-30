@@ -40,6 +40,7 @@ export const PAGE = {
     versionDropdown: '[data-test-version-dropdown]',
     version: (number) => `[data-test-version="${number}"]`,
     createNewVersion: '[data-test-create-new-version]',
+    patchLatest: '[data-test-patch-latest-version]',
     delete: '[data-test-kv-delete="delete"]',
     destroy: '[data-test-kv-delete="destroy"]',
     undelete: '[data-test-kv-delete="undelete"]',
@@ -61,10 +62,9 @@ export const PAGE = {
     item: (secret) => (!secret ? '[data-test-list-item]' : `[data-test-list-item="${secret}"]`),
     filter: `[data-test-kv-list-filter]`,
     listMenuDelete: `[data-test-popup-metadata-delete]`,
-    listMenuCreate: `[data-test-popup-create-new-version]`,
     overviewCard: '[data-test-overview-card-container="View secret"]',
     overviewInput: '[data-test-view-secret] input',
-    overviewButton: '[data-test-get-secret-detail]',
+    overviewButton: '[data-test-submit-button]',
     pagination: '[data-test-pagination]',
     paginationInfo: '.hds-pagination-info',
     paginationNext: '.hds-pagination-nav__arrow--direction-next',
@@ -113,6 +113,13 @@ export const FORM = {
   maskedValueInput: (idx = 0) => `[data-test-kv-value="${idx}"] [data-test-textarea]`,
   addRow: (idx = 0) => `[data-test-kv-add-row="${idx}"]`,
   deleteRow: (idx = 0) => `[data-test-kv-delete-row="${idx}"]`,
+  // <KvPatchEditor>
+  patchEditorForm: '[data-test-kv-patch-editor]',
+  patchEdit: (idx = 0) => `[data-test-edit-button="${idx}"]`,
+  patchDelete: (idx = 0) => `[data-test-delete-button="${idx}"]`,
+  patchUndo: (idx = 0) => `[data-test-undo-button="${idx}"]`,
+  patchAdd: '[data-test-add-button]',
+  patchAlert: (type, idx) => `[data-test-alert-${type}="${idx}"]`,
   // Alerts & validation
   inlineAlert: '[data-test-inline-alert]',
   validation: (attr) => `[data-test-field="${attr}"] [data-test-inline-alert]`,
@@ -129,3 +136,5 @@ export const FORM = {
 export const parseJsonEditor = (find) => {
   return JSON.parse(find(FORM.jsonEditor).innerText);
 };
+
+export const parseObject = (cm) => JSON.parse(cm().getValue());

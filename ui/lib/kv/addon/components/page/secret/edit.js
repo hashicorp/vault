@@ -84,9 +84,7 @@ export default class KvSecretEdit extends Component {
         const { secret } = this.args;
         yield secret.save();
         this.flashMessages.success(`Successfully created new version of ${secret.path}.`);
-        this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.details', {
-          queryParams: { version: secret?.version },
-        });
+        this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.index');
       }
     } catch (error) {
       let message = errorMessage(error);
@@ -102,6 +100,6 @@ export default class KvSecretEdit extends Component {
 
   @action
   onCancel() {
-    this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.details');
+    this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.index');
   }
 }

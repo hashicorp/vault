@@ -65,17 +65,10 @@ scenario "upgrade" {
       edition = [for e in matrix.edition : e if !strcontains(e, "hsm")]
     }
 
-    // arm64 AMIs are not offered for Leap
-    exclude {
-      distro = ["leap"]
-      arch   = ["arm64"]
-    }
-
-    // softhsm packages not available for leap/sles. Enos support for softhsm on amzn2 is
-    // not implemented yet.
+    // softhsm packages not available for leap/sles.
     exclude {
       seal   = ["pkcs11"]
-      distro = ["amzn2", "leap", "sles"]
+      distro = ["leap", "sles"]
     }
 
     // Testing in IPV6 mode is currently implemented for integrated Raft storage only
@@ -96,7 +89,7 @@ scenario "upgrade" {
   locals {
     artifact_path = matrix.artifact_source != "artifactory" ? abspath(var.vault_artifact_path) : null
     enos_provider = {
-      amzn2  = provider.enos.ec2_user
+      amzn   = provider.enos.ec2_user
       leap   = provider.enos.ec2_user
       rhel   = provider.enos.ec2_user
       sles   = provider.enos.ec2_user
@@ -207,7 +200,7 @@ scenario "upgrade" {
     }
 
     variables {
-      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"]["22.04"]
+      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"][global.distro_version["ubuntu"]]
       cluster_tag_key = global.backend_tag_key
       common_tags     = global.tags
       seal_key_names  = step.create_seal_key.resource_names
@@ -318,7 +311,7 @@ scenario "upgrade" {
       ip_version           = matrix.ip_version
       license              = matrix.edition != "ce" ? step.read_vault_license.license : null
       manage_service       = true # always handle systemd for released bundles
-      packages             = concat(global.packages, global.distro_packages[matrix.distro])
+      packages             = concat(global.packages, global.distro_packages[matrix.distro][global.distro_version[matrix.distro]])
       release = {
         edition = matrix.edition
         version = matrix.initial_version
@@ -695,6 +688,32 @@ scenario "upgrade" {
       hosts         = step.create_vault_cluster_targets.hosts
       vault_addr    = step.create_vault_cluster.api_addr_localhost
       vault_edition = matrix.edition
+    }
+  }
+
+  step "verify_billing_start_date" {
+    description = global.description.verify_billing_start_date
+    skip_step   = semverconstraint(var.vault_product_version, "<=1.16.6-0 || >=1.17.0-0 <=1.17.2-0")
+    module      = module.vault_verify_billing_start_date
+    depends_on = [
+      step.get_updated_vault_cluster_ips,
+      step.verify_vault_unsealed,
+      step.verify_read_test_data,
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    verifies = [
+      quality.vault_billing_start_date,
+    ]
+
+    variables {
+      hosts             = step.create_vault_cluster_targets.hosts
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
+      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
+      vault_root_token  = step.create_vault_cluster.root_token
     }
   }
 

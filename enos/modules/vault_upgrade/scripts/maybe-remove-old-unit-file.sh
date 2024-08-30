@@ -11,7 +11,7 @@ fail() {
 
 [[ -z "$ARTIFACT_NAME" ]] && fail "ARTIFACT_NAME env variable has not been set"
 
-if [ "${ARTIFACT_NAME##*.}" == "zip" ];  then
+if [ "${ARTIFACT_NAME##*.}" == "zip" ]; then
   echo "Skipped removing unit file because new artifact is a zip bundle"
   exit 0
 fi
@@ -19,7 +19,7 @@ fi
 # Get the unit file for the vault.service that is running. If it's not in /etc/systemd then it
 # should be a package provided unit file so we don't need to delete anything.
 #
-# Note that we use -p instead of -P so that we support ancient amzn2 systemctl.
+# Note that we use -p instead of -P so that we support ancient amzn 2 systemctl.
 if ! unit_path=$(systemctl show -p FragmentPath vault | cut -d = -f2 2>&1); then
   echo "Skipped removing unit file because and existing path could not be found: $unit_path"
   exit 0
