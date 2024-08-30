@@ -387,7 +387,7 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		var cancelFunc context.CancelFunc
 		// Add our timeout, but not for the monitor or events endpoints, as they are streaming
 		// Request URL path for sys/monitor looks like /v1/sys/monitor
-		// Request URL path for sys/monitor looks like /v1/sys/events/subscribe/{eventType}. Example: /v1/sys/events/subscribe/kv*
+		// Request URL paths for event subscriptions look like /v1/sys/events/subscribe/{eventType}. Example: /v1/sys/events/subscribe/kv*
 		if r.URL.Path == "/v1/sys/monitor" || strings.HasPrefix(r.URL.Path, "/v1/sys/events/subscribe") {
 			ctx, cancelFunc = context.WithCancel(ctx)
 		} else {
