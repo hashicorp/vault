@@ -72,6 +72,7 @@ func getGenerationParams(sc *storageContext, data *framework.FieldData) (exporte
 		PostalCode:                data.Get("postal_code").([]string),
 		NotBeforeDuration:         time.Duration(data.Get("not_before_duration").(int)) * time.Second,
 		CNValidations:             []string{"disabled"},
+		KeyUsage:                  data.Get("key_usage").([]string),
 	}
 	*role.AllowWildcardCertificates = true
 

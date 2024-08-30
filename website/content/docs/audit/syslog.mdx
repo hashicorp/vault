@@ -43,3 +43,18 @@ these device-specific options:
 - `facility` `(string: "AUTH")` - The syslog facility to use.
 
 - `tag` `(string: "vault")` - The syslog tag to use.
+
+
+## Notes
+
+If the items written to the syslog audit device are larger than the syslog host's configured maximum socket
+send buffer, then Vault will log an error such as this example:
+
+```
+[ERROR] audit: backend failed to log response:  backend=syslog/ error=write unixgram ->/var/run/log: write: message too long
+[ERROR] core: failed to audit response: request_path=pki/certs/ error=1 error occurred:
+* no audit backend succeeded in logging the response
+```
+
+To remediate this, consult the [Linux Programmer's Manual manual page for socket(7)] (https://man7.org/linux/man-pages/man7/socket.7.html) to
+increase socket send buffer size.
