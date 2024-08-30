@@ -1309,11 +1309,11 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       // Set up control group scenario
       const userPolicy = `
 path "${this.backend}/data/*" {
-  capabilities = ["create", "read", "update", "delete", "list"]
+  capabilities = ["create", "read", "update", "delete", "list", "patch"]
   control_group = {
     max_ttl = "24h"
     factor "ops_manager" {
-      controlled_capabilities = ["read"]
+      controlled_capabilities = ["read", "patch"]
       identity {
           group_names = ["managers"]
           approvals = 1
@@ -1324,6 +1324,10 @@ path "${this.backend}/data/*" {
 
 path "${this.backend}/*" {
   capabilities = ["list"]
+}
+
+path "${this.backend}/subkeys/*" {
+  capabilities = ["read"]
 }
 `;
       const { userToken } = await setupControlGroup({ userPolicy, backend: this.backend });
@@ -1499,7 +1503,30 @@ path "${this.backend}/*" {
         .dom(`${PAGE.metadata.customMetadataSection} ${PAGE.emptyStateTitle}`)
         .hasText('No custom metadata', 'empty state updates when access is granted');
     });
-
+    test('can patch a secret (cg)', async function (assert) {
+      assert.expect(3);
+      const backend = this.backend;
+      await visit(`/vault/secrets/${backend}/kv/${secretPathUrlEncoded}`);
+      await click(GENERAL.overviewCard.actionText('Patch secret'));
+      await fillIn(FORM.keyInput('new'), 'newkey');
+      await fillIn(FORM.valueInput('new'), 'newvalue');
+      await click(FORM.saveBtn);
+      assert
+        .dom(GENERAL.messageError)
+        .hasTextContaining(
+          `Control Group Error A Control Group was encountered at ${backend}/data/${secretPath}.`
+        );
+      const url = find('[data-test-control-error="href"]').innerText;
+      await visit(url);
+      await grantAccess({
+        apiPath: `${backend}/data/${encodeURIComponent(secretPath)}`,
+        originUrl: `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/patch`,
+        userToken: this.userToken,
+        backend: this.backend,
+      });
+      await click(PAGE.metadata.requestData);
+      assert.dom(PAGE.infoRowValue('special')).hasText('secret', 'it renders custom metadata');
+    });
     test('can read custom_metadata from data endpoint (cg)', async function (assert) {
       assert.expect(3);
       // login is root user and make custom metadata since console can't be used to pass an object

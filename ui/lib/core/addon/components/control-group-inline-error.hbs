@@ -13,6 +13,11 @@
     <code>{{@error.token}}</code>. The Accessor is
     <code>{{@error.accessor}}</code>.
   </A.Description>
+  {{#if (has-block "customMessage")}}
+    <A.Description>
+      {{yield to="customMessage"}}
+    </A.Description>
+  {{/if}}
   <A.Description>
     Visit
     <Hds::Link::Inline
