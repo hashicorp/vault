@@ -62,7 +62,7 @@ export default class KvSecretRoute extends Route {
       subkeys: this.fetchSubkeys(backend, path),
       metadata: this.fetchSecretMetadata(backend, path),
       isPatchAllowed: this.isPatchAllowed(capabilities),
-      canUpdateSecret: capabilities.data.canUpdate,
+      canUpdateData: capabilities.data.canUpdate,
       canReadData: capabilities.data.canRead,
       canReadMetadata: capabilities.metadata.canRead,
       canDeleteMetadata: capabilities.metadata.canDelete,
