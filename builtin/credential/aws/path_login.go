@@ -18,6 +18,8 @@ import (
 	"strings"
 	"time"
 
+	regexp2 "github.com/hashicorp/go-secure-stdlib/regexp"
+
 	"github.com/aws/aws-sdk-go/aws"
 	awsClient "github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/endpoints"

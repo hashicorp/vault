@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -20,7 +21,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-var userPathRegex = regexp2.MustCompileInterned(`^\/([\x21-\x7F]{0,510}\/)?$`)
+var userPathRegex = regexp.MustCompile(`^\/([\x21-\x7F]{0,510}\/)?$`)
 
 func pathListRoles(b *backend) *framework.Path {
 	return &framework.Path{
