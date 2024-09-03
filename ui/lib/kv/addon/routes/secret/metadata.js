@@ -20,44 +20,22 @@ export default class KvSecretMetadataRoute extends Route {
     });
   }
 
-  async fetchCapabilities(backend, path) {
-    const metadataPath = `${backend}/metadata/${path}`;
-    const dataPath = `${backend}/data/${path}`;
-    const capabilities = await this.capabilities.fetchMultiplePaths([metadataPath, dataPath]);
-    return {
-      metadata: capabilities[metadataPath],
-      data: capabilities[dataPath],
-    };
-  }
-
   async model() {
     const parentModel = this.modelFor('secret');
     const { backend, path } = parentModel;
-    const permissions = await this.fetchCapabilities(backend, path);
-    const model = {
-      ...parentModel,
-      permissions,
-    };
     if (!parentModel.metadata) {
       // metadata read on the secret root fails silently
       // if there's no metadata, try again in case it's a control group
       const metadata = await this.fetchMetadata(backend, path);
       if (metadata) {
         return {
-          ...model,
+          ...parentModel,
           metadata,
         };
       }
-      // only fetch secret data if metadata is unavailable and user can read endpoint
-      if (permissions.data.canRead) {
-        // fail silently because this request is just for custom_metadata
-        const secret = await this.store.queryRecord('kv/data', { backend, path }).catch(() => {});
-        return {
-          ...model,
-          secret,
-        };
-      }
     }
-    return model;
+    // if users can read secret data they can make an explicit request
+    // to retrieve secret data in the component
+    return parentModel;
   }
 }

@@ -221,7 +221,7 @@ module('Integration | Component | edit form kmip role', function (hooks) {
         );
       }
 
-      click('[data-test-edit-form-submit]');
+      await click('[data-test-edit-form-submit]');
 
       later(() => cancelTimers(), 50);
       await settled();

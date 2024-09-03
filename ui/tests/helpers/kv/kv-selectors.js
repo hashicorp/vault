@@ -29,6 +29,7 @@ export const PAGE = {
     link: (backend) => `[data-test-secrets-backend-link="${backend}"]`,
   },
   metadata: {
+    requestData: '[data-test-request-data]',
     editBtn: '[data-test-edit-metadata]',
     addCustomMetadataBtn: '[data-test-add-custom-metadata]',
     customMetadataSection: '[data-test-kv-custom-metadata-section]',

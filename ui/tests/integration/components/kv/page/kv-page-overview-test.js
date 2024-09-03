@@ -47,7 +47,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
       },
     };
     this.canReadMetadata = true;
-    this.canUpdateSecret = true;
+    this.canUpdateData = true;
 
     this.format = (time) => dateFormat([time, 'MMM d yyyy, h:mm:ss aa'], {});
     this.renderComponent = async () => {
@@ -57,7 +57,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
           @backend={{this.backend}}
           @breadcrumbs={{this.breadcrumbs}}
           @canReadMetadata={{this.canReadMetadata}}
-          @canUpdateSecret={{this.canUpdateSecret}}
+          @canUpdateData={{this.canUpdateData}}
           @metadata={{this.metadata}}
           @path={{this.path}}
           @subkeys={{this.subkeys}}
@@ -116,7 +116,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Overview', function (hoo
       // creating a new version of a secret is updating a secret
       // the overview only exists after an initial version is created
       // which is why we just check for update and not also create
-      this.canUpdateSecret = false;
+      this.canUpdateData = false;
       await this.renderComponent();
       assert
         .dom(`${overviewCard.container('Current version')} a`)
