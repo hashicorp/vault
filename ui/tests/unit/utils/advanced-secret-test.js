@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { isAdvancedSecret, obfuscateData } from 'core/utils/advanced-secret';
+import { isAdvancedSecret } from 'core/utils/advanced-secret';
 import { module, test } from 'qunit';
 
 module('Unit | Utility | advanced-secret', function () {
@@ -43,113 +43,6 @@ module('Unit | Utility | advanced-secret', function () {
         assert.true(result, `returns true for object ${stringValue}`);
         result = isAdvancedSecret(stringValue);
         assert.true(result, `returns true for json ${stringValue}`);
-      });
-    });
-  });
-  module('obfuscateData', function () {
-    test('it obfuscates values of an object', function (assert) {
-      assert.expect(4);
-      [
-        {
-          name: 'flat map',
-          data: {
-            first: 'one',
-            second: 'two',
-            third: 'three',
-          },
-          obscured: {
-            first: '********',
-            second: '********',
-            third: '********',
-          },
-        },
-        {
-          name: 'nested map',
-          data: {
-            first: 'one',
-            second: {
-              third: 'two',
-            },
-          },
-          obscured: {
-            first: '********',
-            second: {
-              third: '********',
-            },
-          },
-        },
-        {
-          name: 'numbers and arrays',
-          data: {
-            first: 1,
-            list: ['one', 'two'],
-            second: {
-              third: ['one', 'two'],
-              number: 5,
-            },
-          },
-          obscured: {
-            first: '********',
-            list: ['********', '********'],
-            second: {
-              third: ['********', '********'],
-              number: '********',
-            },
-          },
-        },
-        {
-          name: 'object arrays',
-          data: {
-            list: [{ one: 'one' }, { two: 'two' }],
-          },
-          obscured: {
-            list: ['********', '********'],
-          },
-        },
-      ].forEach((test) => {
-        const result = obfuscateData(test.data);
-        assert.deepEqual(result, test.obscured, `obfuscates object values of ${test.name}`);
-      });
-    });
-
-    test('it obfuscates null values', function (assert) {
-      assert.expect(2);
-      [
-        {
-          name: 'null value',
-          data: {
-            one: 'fish',
-            two: 'fish',
-            three: 'fish',
-            blue: null,
-          },
-          obscured: {
-            blue: '********',
-            one: '********',
-            three: '********',
-            two: '********',
-          },
-        },
-        {
-          name: 'null value nested-object',
-          data: {
-            one: { two: null },
-          },
-          obscured: {
-            one: { two: '********' },
-          },
-        },
-      ].forEach((test) => {
-        const result = obfuscateData(test.data);
-        assert.deepEqual(result, test.obscured, `obfuscates null values of ${test.name}`);
-      });
-    });
-
-    test('it does not obfuscate non-object values', function (assert) {
-      assert.expect(3);
-      ['some-string', 5, ['my', 'array']].forEach((test) => {
-        const result = obfuscateData(test);
-        assert.deepEqual(result, test, `does not obfuscate value ${JSON.stringify(test)}`);
       });
     });
   });
