@@ -34,7 +34,7 @@ async function processLines(input, eachLine = () => {}) {
         '-dev-ha',
         '-dev-transactional',
         '-dev-root-token-id=root',
-        '-dev-listen-address=127.0.0.1:9200',
+        '-dev-listen-address=127.0.0.1:8200',
       ],
       false
     );
