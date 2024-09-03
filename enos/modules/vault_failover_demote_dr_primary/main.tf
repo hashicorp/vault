@@ -28,14 +28,14 @@ variable "primary_leader_host" {
   description = "The primary cluster leader host"
 }
 
-variable "vault_addr" {
-  type        = string
-  description = "The local vault API listen address"
-}
-
 variable "vault_install_dir" {
   type        = string
   description = "The directory where the Vault binary will be installed"
+}
+
+variable "vault_addr" {
+  type        = string
+  description = "The local vault API listen address"
 }
 
 variable "vault_root_token" {
@@ -43,14 +43,17 @@ variable "vault_root_token" {
   description = "The vault root token"
 }
 
-resource "enos_remote_exec" "configure_pr_primary" {
+locals {
+}
+
+resource "enos_remote_exec" "demote_dr_primary" {
   environment = {
-    VAULT_ADDR        = var.vault_addr
-    VAULT_TOKEN       = var.vault_root_token
-    VAULT_INSTALL_DIR = var.vault_install_dir
+    VAULT_ADDR  = var.vault_addr
+    VAULT_TOKEN = var.vault_root_token
   }
 
-  scripts = [abspath("${path.module}/scripts/configure-vault-pr-primary.sh")]
+  inline = ["${var.vault_install_dir}/vault write -f sys/replication/dr/primary/demote"]
+
 
   transport = {
     ssh = {

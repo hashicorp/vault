@@ -42,15 +42,14 @@ variable "vault_root_token" {
   type        = string
   description = "The vault root token"
 }
-
-resource "enos_remote_exec" "configure_pr_primary" {
+resource "enos_remote_exec" "configure_dr_primary" {
   environment = {
     VAULT_ADDR        = var.vault_addr
     VAULT_TOKEN       = var.vault_root_token
     VAULT_INSTALL_DIR = var.vault_install_dir
   }
 
-  scripts = [abspath("${path.module}/scripts/configure-vault-pr-primary.sh")]
+  scripts = [abspath("${path.module}/scripts/configure-vault-dr-primary.sh")]
 
   transport = {
     ssh = {
