@@ -1,4 +1,4 @@
-j[
+[
   {
     "title": "Client Libraries",
     "path": "libraries"
@@ -259,7 +259,6 @@ j[
       },
       {
         "title": "PKI",
-        "path": "secret/pki",
         "routes": [
           {
             "title": "Overview",

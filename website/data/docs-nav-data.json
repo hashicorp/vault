@@ -1617,6 +1617,19 @@
               "color": "highlight"
             },
             "path": "secrets/pki/est"
+          },
+          {
+            "title": "Certificate Management Protocol (CMPv2)",
+            "badge": {
+              "text": "BETA",
+              "type": "outlined",
+              "color": "highlight"
+            },
+            "path": "secrets/pki/cmpv2"
+          },
+          {
+            "title": "Troubleshooting ACME",
+            "path": "secrets/pki/troubleshooting-acme"
           }
         ]
       },
