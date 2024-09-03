@@ -21,7 +21,7 @@ module('Acceptance | settings/auth/enable', function (hooks) {
     return authPage.login();
   });
 
-  test('it mounts and redirects', async function (assert) {
+  test('it mounts and redirects FLAKY', async function (assert) {
     // always force the new mount to the top of the list
     const path = `aaa-approle-${this.uid}`;
     const type = 'approle';
