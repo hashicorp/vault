@@ -59,11 +59,8 @@ export default Factory.extend({
   }),
 
   withCustomPath: trait({
-    data: {
-      ...data,
-      path(i) {
-        return `my-secret-${i}`;
-      },
+    path(i) {
+      return `my-secret-${i}`;
     },
   }),
 });
