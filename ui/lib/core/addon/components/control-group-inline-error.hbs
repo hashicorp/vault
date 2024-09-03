@@ -7,25 +7,29 @@
 
 <Hds::Alert data-test-message-error @type="inline" @color="warning" ...attributes as |A|>
   <A.Title>Control Group Error</A.Title>
-  <A.Description>
-    A Control Group was encountered at
-    <code>{{@error.creation_path}}</code>. The Control Group Token is
-    <code>{{@error.token}}</code>. The Accessor is
-    <code>{{@error.accessor}}</code>.
-  </A.Description>
+  {{#if (and @error.creation_path @error.token @error.accessor)}}
+    <A.Description>
+      A Control Group was encountered at
+      <code>{{@error.creation_path}}</code>. The Control Group Token is
+      <code>{{@error.token}}</code>. The Accessor is
+      <code>{{@error.accessor}}</code>.
+    </A.Description>
+  {{/if}}
   {{#if (has-block "customMessage")}}
     <A.Description>
       {{yield to="customMessage"}}
     </A.Description>
   {{/if}}
-  <A.Description>
-    Visit
-    <Hds::Link::Inline
-      @color="primary"
-      @href={{@error.href}}
-      data-test-control-error="href"
-      @isHrefExternal={{false}}
-    >{{@error.href}}</Hds::Link::Inline>
-    for more details.
-  </A.Description>
+  {{#if @error.href}}
+    <A.Description>
+      Visit
+      <Hds::Link::Inline
+        @color="primary"
+        @href={{@error.href}}
+        @isHrefExternal={{false}}
+        data-test-control-error="href"
+      >{{@error.href}}</Hds::Link::Inline>
+      for more details.
+    </A.Description>
+  {{/if}}
 </Hds::Alert>
