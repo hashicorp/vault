@@ -122,7 +122,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       await click(PAGE.list.item(secret));
       assert
         .dom(GENERAL.overviewCard.container('Current version'))
-        .hasText(`Current version Create new The current version of this secret. 1`);
+        .hasText(`Current version The current version of this secret. 1`);
       // Secret details visible
       await click(PAGE.secretTab('Secret'));
       assert.dom(PAGE.title).hasText(this.fullSecretPath);

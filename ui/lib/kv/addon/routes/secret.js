@@ -35,33 +35,38 @@ export default class KvSecretRoute extends Route {
     return null;
   }
 
-  isPatchAllowed(backend, path) {
+  isPatchAllowed({ subkeys, data }) {
     if (!this.version.isEnterprise) return false;
-    const capabilities = {
-      canPatch: this.capabilities.canPatch(`${backend}/data/${path}`),
-      canReadSubkeys: this.capabilities.canRead(`${backend}/subkeys/${path}`),
-    };
-    return hash(capabilities).then(
-      ({ canPatch, canReadSubkeys }) => canPatch && canReadSubkeys,
-      // this callback fires if either promise is rejected
-      // since this feature is only client-side gated we return false (instead of default to true)
-      // for debugging you can pass an arg to log the failure reason
-      () => false
-    );
+    return subkeys.canRead && data.canPatch;
   }
 
-  model() {
+  async fetchCapabilities(backend, path) {
+    const metadataPath = `${backend}/metadata/${path}`;
+    const dataPath = `${backend}/data/${path}`;
+    const subkeysPath = `${backend}/subkeys/${path}`;
+    const perms = await this.capabilities.fetchMultiplePaths([metadataPath, dataPath, subkeysPath]);
+    return {
+      metadata: perms[metadataPath],
+      data: perms[dataPath],
+      subkeys: perms[subkeysPath],
+    };
+  }
+
+  async model() {
     const backend = this.secretMountPath.currentPath;
     const { name: path } = this.paramsFor('secret');
-
+    const capabilities = await this.fetchCapabilities(backend, path);
     return hash({
       path,
       backend,
       subkeys: this.fetchSubkeys(backend, path),
       metadata: this.fetchSecretMetadata(backend, path),
-      isPatchAllowed: this.isPatchAllowed(backend, path),
-      // for creating a new secret version
-      canUpdateSecret: this.capabilities.canUpdate(`${backend}/data/${path}`),
+      isPatchAllowed: this.isPatchAllowed(capabilities),
+      canUpdateData: capabilities.data.canUpdate,
+      canReadData: capabilities.data.canRead,
+      canReadMetadata: capabilities.metadata.canRead,
+      canDeleteMetadata: capabilities.metadata.canDelete,
+      canUpdateMetadata: capabilities.metadata.canUpdate,
     });
   }
 
