@@ -9,6 +9,7 @@ fail() {
   exit 1
 }
 
+[[ -z "$IP_VERSION" ]] && fail "IP_VERSION env variable has not been set"
 [[ -z "$LOG_FILE_PATH" ]] && fail "LOG_FILE_PATH env variable has not been set"
 [[ -z "$SOCKET_PORT" ]] && fail "SOCKET_PORT env variable has not been set"
 [[ -z "$VAULT_ADDR" ]] && fail "VAULT_ADDR env variable has not been set"
@@ -19,12 +20,16 @@ enable_file_audit_device() {
   $VAULT_BIN_PATH audit enable file file_path="$LOG_FILE_PATH"
 }
 
-enable_syslog_audit_device(){
+enable_syslog_audit_device() {
   $VAULT_BIN_PATH audit enable syslog tag="vault" facility="AUTH"
 }
 
 enable_socket_audit_device() {
-  "$VAULT_BIN_PATH" audit enable socket address="127.0.0.1:$SOCKET_PORT"
+  if [ "$IP_VERSION" = "4" ]; then
+    "$VAULT_BIN_PATH" audit enable socket address="127.0.0.1:$SOCKET_PORT"
+  else
+    "$VAULT_BIN_PATH" audit enable socket address="[::1]:$SOCKET_PORT"
+  fi
 }
 
 main() {

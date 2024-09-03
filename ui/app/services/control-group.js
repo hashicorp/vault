@@ -135,6 +135,10 @@ export default Service.extend({
     return {
       type: 'error-with-html',
       content: lines.join('\n'),
+      href,
+      token,
+      accessor,
+      creation_path,
     };
   },
 });

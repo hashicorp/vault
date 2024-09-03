@@ -36,9 +36,17 @@ Usage: vault read [options] PATH
   Reads data from Vault at the given path. This can be used to read secrets,
   generate dynamic credentials, get configuration details, and more.
 
-  Read a secret from the static secrets engine:
+  Read details of your own token:
 
-      $ vault read secret/my-secret
+      $ vault read auth/token/lookup-self
+
+  Read entity details of a given ID:
+
+      $ vault read identity/entity/id/2f09126d-d161-abb8-2241-555886491d97
+
+  Generate credentials for my-role in an AWS secrets engine:
+
+      $ vault read aws/creds/my-role
 
   For a full list of examples and paths, please see the documentation that
   corresponds to the secrets engine in use.

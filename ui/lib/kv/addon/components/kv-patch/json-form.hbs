@@ -1,0 +1,25 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<form {{on "submit" this.submit}}>
+  <JsonEditor class="has-top-margin-l" @title="Patch data" @valueUpdated={{this.handleJson}} @value={{this.jsonObject}} />
+  {{#if this.lintingErrors}}
+    <AlertInline
+      @color="warning"
+      class="has-top-padding-s"
+      @message="JSON is unparsable. Fix linting errors to avoid data discrepancies."
+    />
+  {{/if}}
+
+  <KvPatch::SubkeysReveal @subkeys={{@subkeys}} />
+  <hr class="has-background-gray-200" />
+  <Hds::ButtonSet>
+    <Hds::Button @text="Save" type="submit" @icon={{if @isSaving "loading"}} disabled={{@isSaving}} data-test-kv-save />
+    <Hds::Button @text="Cancel" {{on "click" @onCancel}} @color="secondary" disabled={{@isSaving}} data-test-kv-cancel />
+  </Hds::ButtonSet>
+  {{#if @submitError}}
+    <AlertInline @type="danger" @message={{@submitError}} class="has-top-padding-s" />
+  {{/if}}
+</form>

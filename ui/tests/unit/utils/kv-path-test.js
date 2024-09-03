@@ -123,20 +123,20 @@ module('Unit | Utility | kv-path utils', function () {
       {
         backend: 'some/back end',
         path: 'my/secret/path',
-        expected: 'some/back%20end/subkeys/my/secret/path?depth=0',
+        expected: 'some/back%20end/subkeys/my/secret/path',
       },
       {
         backend: 'some/back end',
         path: 'my/secret/path',
+        version: 3,
+        expected: 'some/back%20end/subkeys/my/secret/path?version=3',
+      },
+      {
+        backend: 'some/back end',
+        path: 'my/secret/path',
+        depth: 0,
         version: 3,
         expected: 'some/back%20end/subkeys/my/secret/path?depth=0&version=3',
-      },
-      {
-        backend: 'some/back end',
-        path: 'my/secret/path',
-        depth: 4,
-        version: 3,
-        expected: 'some/back%20end/subkeys/my/secret/path?depth=4&version=3',
       },
       {
         backend: 'some/back end',
@@ -146,7 +146,8 @@ module('Unit | Utility | kv-path utils', function () {
       },
     ].forEach((t, idx) => {
       test(`kvSubkeysPath ${idx}`, function (assert) {
-        const result = kvSubkeysPath(t.backend, t.path, t.depth, t.version);
+        const query = { depth: t.depth, version: t.version };
+        const result = kvSubkeysPath(t.backend, t.path, query);
         assert.strictEqual(result, t.expected);
       });
     });

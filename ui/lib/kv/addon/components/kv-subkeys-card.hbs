@@ -1,0 +1,67 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<OverviewCard @cardTitle="Subkeys" class="has-top-margin-l" {{style max-height="325px" overflow-y="auto"}}>
+  <:customSubtext>
+    <Hds::Text::Body @tag="p" @color="faint" data-test-overview-card-subtitle="Subkeys">
+      {{#if this.showJson}}
+        These are the subkeys within this secret. All underlying values of leaf keys are not retrieved and are replaced with
+        <code>null</code>
+        instead. Subkey
+        <Hds::Link::Inline
+          @icon="docs-link"
+          @iconPosition="trailing"
+          @href={{doc-link "/vault/api-docs/secret/kv/kv-v2#read-secret-subkeys"}}
+          @isHrefExternal={{true}}
+        >API documentation</Hds::Link::Inline>.
+      {{else}}
+        The table is displaying the top level subkeys. Toggle on the JSON view to see the full depth.
+      {{/if}}
+    </Hds::Text::Body>
+  </:customSubtext>
+  <:action>
+    <div class="flex column-gap-16">
+      <div class="top-padding-4">
+        <Hds::Form::Toggle::Field
+          checked={{this.showJson}}
+          {{on "change" this.toggleJson}}
+          data-test-toggle-input="kv-subkeys"
+          as |F|
+        >
+          <F.Label>JSON</F.Label>
+        </Hds::Form::Toggle::Field>
+      </div>
+      {{#if @isPatchAllowed}}
+        <Hds::Link::Standalone
+          @text="Patch secret"
+          @route="secret.patch"
+          @models={{array @backend @path}}
+          @icon="arrow-right"
+          @iconPosition="trailing"
+          @isFullWidth={{true}}
+          data-test-action-text="Patch secret"
+        />
+      {{/if}}
+    </div>
+  </:action>
+  <:content>
+    <div class="has-top-margin-s" data-test-overview-card-content="Subkeys">
+      {{#if this.showJson}}
+        <Hds::CodeBlock @value={{stringify @subkeys}} @hasLineNumbers={{false}} />
+      {{else}}
+        <Hds::Text::Display @tag="p" @size="200" @weight="semibold" @color="faint" class="has-bottom-margin-s">
+          Keys
+        </Hds::Text::Display>
+        <hr class="has-background-gray-100 is-marginless" />
+        {{#each-in @subkeys as |key|}}
+          <Hds::Text::Display @tag="p" @size="200" @weight="semibold" class="has-top-bottom-margin-12">
+            {{key}}
+          </Hds::Text::Display>
+          <hr class="has-background-gray-100 is-marginless" />
+        {{/each-in}}
+      {{/if}}
+    </div>
+  </:content>
+</OverviewCard>

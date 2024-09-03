@@ -1,0 +1,375 @@
+---
+layout: docs
+page_title: Migrate Consul to Raft storage
+description: >-
+  Guide to migration of Consul storage to Raft. 
+---
+
+# Migrate Consul to Raft storage
+
+This procedure assumes you have a Vault cluster deployed in a Kubernetes environment configured with Consul storage.  The storage migration can occur while leaving the Consul cluster intact.  A single change to the Consul cluster is a lock file written by Vault during the migration.
+
+This guide uses basic examples and default Vault configurations.  It is for illustrative purposes, and adaption to specific configurations relevant to your environment is still required.
+
+<Warning title="Back up data">
+
+Always back up your data before attempting migration! Although this is an offline operation and the risk is low, it is advisable to take a recent snapshot from your Consul cluster before proceeding.
+
+</Warning>
+
+## Overview
+
+This guide uses an intermediate Helm configuration to introduce an init container that will perform the storage migration, and then start a single Vault server using the Raft storage backend to verify the results.  Then update the Helm configuration to remove the init container and start Vault replicas.
+
+### Vault and Kubernetes setup
+
+Consider the following `vault status` output and Helm Chart values for Vault:
+
+<CodeBlockConfig hideClipboard>
+
+```plaintext
+Key             Value
+---             -----
+Seal Type       shamir
+Initialized     true
+Sealed          false
+Total Shares    1
+Threshold       1
+Version         1.14.8+ent
+Build Date      2023-12-05T01:49:39Z
+Storage Type    consul
+Cluster Name    vault-cluster-68870bf8
+Cluster ID      cd18c692-f2e3-77a5-fba3-28f06f41f375
+HA Enabled      true
+HA Cluster      https://vault-0.vault-internal:8201
+HA Mode         active
+Active Since    2024-04-10T02:45:33.367042122Z
+Last WAL        52
+```
+
+</CodeBlockConfig>
+
+Helm chart values:
+
+<CodeBlockConfig hideClipboard>
+
+```plaintext
+global:
+  enabled: false
+
+server:
+  enabled: true
+  image:
+    repository: hashicorp/vault-enterprise
+    tag: 1.14.8-ent
+  enterpriseLicense:
+    secretName: vault-license
+    secretKey: vault.hclic
+  ha:
+    enabled: true
+    replicas: 3
+    config: |
+      ui = true
+      service_registration "kubernetes" {}
+
+      listener "tcp" {
+        address = ":8200"
+        cluster_address = ":8201"
+        tls_disable = 1
+      }
+
+      storage "consul" {
+        path = "vault"
+        address = "http://HOST_IP:8500"
+      }
+```
+
+</CodeBlockConfig>
+
+### Migration procedure
+
+1. Uninstall Vault via Helm.
+
+  ```shell-session
+  $ helm uninstall vault
+  ```
+
+  Deployed `StatefulSets` cannot have certain attributes modified after their initial deployment.  Therefore, the `StatefulSet` deployment must be entirely replaced.
+
+ Vault servers using Consul storage are by default stateless. Unless explicitly configured, the Vault server `StatefulSet` does not create any Persistent Volume Claims (PVC) or other artifacts.  Vault's index holds its state, which is entirely stored in the Consul server `StatefulSet`'s persistent volumes.
+
+  <Warning title='Caution'>
+
+  It is strongly advised to review your Vault deployment configurations and take appropriate backups for any stateful information managed via Helm or other orchestration platforms.
+
+  </Warning>
+
+1. Create a `ConfigMap` containing the Storage Migration configuration.
+
+  ```shell-session
+  $ cat > vault-storage-migration-configmap.yml <<EOF
+  apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    labels:
+      app.kubernetes.io/instance: vault
+      app.kubernetes.io/name: vault
+    name: storage-migration
+    namespace: default
+  data:
+    migrate.hcl: |-
+      storage_source "consul" {
+        address = "http://consul-server.default.svc.cluster.local:8500"
+        path = "vault/"
+      }
+
+      storage_destination "raft" {
+        path = "/vault/data"
+      }
+
+      cluster_addr = "https://vault-0.vault-internal:8201" 
+  EOF
+  ```
+  
+  Often your Vault server should communicate to Consul via a Consul client agent.  This example uses the service endpoint for a Consul server deployed in Kubernetes, although it can work for a Consul server cluster deployed outside of Kubernetes as well.
+
+1. Apply the `ConfigMap`.
+
+  ```shell-session
+  $ kubectl create -f vault-storage-migration-configmap.yml
+  ```
+
+1. Install Vault via Helm deployment with Raft Migration storage configuration.
+
+  ```shell-session
+  $ cat > vault-migration-values.yml <<EOF
+  global:
+    enabled: false
+
+  server:
+    enabled: true
+    image:
+      repository: hashicorp/vault-enterprise
+      tag: 1.14.8-ent
+    enterpriseLicense:
+      secretName: vault-license
+      secretKey: vault.hclic
+    extraInitContainers:
+      - name: vault-storage-migration
+        image: hashicorp/vault-enterprise:1.14.8-ent
+        command:
+          - "/bin/sh"
+          - "-ec"
+        args:
+          - "/bin/vault operator migrate -config /vault/storage-migration/migrate.hcl"
+        volumeMounts:
+          - name: storage-migration
+            mountPath: "/vault/storage-migration"
+          - name: data
+            mountPath: "/vault/data"
+    volumeMounts:
+      - name: storage-migration
+        mountPath: "/vault/storage-migration"
+    volumes:
+      - name: storage-migration
+        configMap:
+          name: storage-migration
+    dataStorage:
+      enabled: true
+      size: "1Gi"
+    ha:
+      enabled: true
+      replicas: 1
+      raft:
+        enabled: true
+        config: |
+          ui = true
+          service_registration "kubernetes" {}
+
+          listener "tcp" {
+            address = ":8200"
+            cluster_address = ":8201"
+            tls_disable = 1
+          }
+
+          storage "raft" {
+            path = "/vault/data"
+            retry_join {
+              auto_join_scheme = "http"
+              auto_join = "provider=k8s"
+            }
+          }
+  EOF
+  ```
+
+  **Configuration notes**
+    - `storage “raft”` configuration to specify the path for the Raft DB (`/vault/data` by default), and any `retry_join` parameters in your original configuration.
+      - This example uses `auto_join` to automatically find Raft peers via the Kubernetes API.  See the [`retry_join`](/vault/docs/configuration/storage/raft#retry_join-stanza) for more information.
+    - `dataStorage` configuration in the Helm override values, to specify the parameters of the PVCs the Vault `StatefulSet` will create.
+    - `extraInitContainers` will start an init container mounting the storage migration ConfigMap and `data` volume, which it will then use to execute the storage migration.  
+    - `replicas: 1`
+      - This setting is temporary for the purposes of the migration.  A new Vault `StatefulSet` with one replica to confirm the init container completed the migration and unseal Vault using the new storage backend.
+
+1. Apply this configuration.
+
+  ```shell-session
+  $ helm install vault hashicorp/vault -f vault-migration-values.yml
+  ```
+  
+1. Review the migration logs.
+  
+  ```shell-session
+  $ kubectl logs vault-0 -c vault-server-migration
+  ```
+  
+1. Unseal Vault.
+
+  ```shell-session
+  $ kubectl exec -it vault-0 -- vault operator unseal
+  Key                     Value
+  ---                     -----
+  Seal Type               shamir
+  Initialized             true
+  Sealed                  false
+  Total Shares            1
+  Threshold               1
+  Version                 1.14.8+ent
+  Build Date              2023-12-05T01:49:39Z
+  Storage Type            raft
+  Cluster Name            vault-cluster-68870bf8
+  Cluster ID              cd18c692-f2e3-77a5-fba3-28f06f41f375
+  HA Enabled              true
+  HA Cluster              https://vault-0.vault-internal:8201
+  HA Mode                 active
+  Active Since            2024-04-10T04:20:23.707098402Z
+  Raft Committed Index    157
+  Raft Applied Index      157
+  Last WAL                55
+  ```
+
+1. Update Vault Helm deployment with Raft storage configuration.
+
+  ```shell-session
+  $ cat > vault-raft-values.yml <<EOF
+  global:
+    enabled: false
+  server:
+    enabled: true
+    image:
+      repository: hashicorp/vault-enterprise
+      tag: 1.14.8-ent
+    enterpriseLicense:
+      secretName: vault-license
+      secretKey: vault.hclic
+    dataStorage:
+      enabled: true
+      size: "1Gi"
+    ha:
+      enabled: true
+      replicas: 5
+      raft:
+        enabled: true
+        config: |
+          ui = true
+          service_registration "kubernetes" {}
+
+          listener "tcp" {
+            address = ":8200"
+            cluster_address = ":8201"
+            tls_disable = 1
+          }
+
+          storage "raft" {
+            path = "/vault/data"
+            retry_join {
+              auto_join_scheme = "http"
+              auto_join = "provider=k8s"
+            }
+          }
+  EOF
+  ```
+  **Configuration notes**
+    - `replicas: 5`
+      - Upgrade the Helm deployment in place using the final Raft storage configuration, removing the `extraInitContainer` and storage migration `ConfigMap`, and increasing the number of replicas.  The `retry_join` parameters used by the new Vault server replicas to automatically join the cluster.
+
+1. Apply the configuration.
+
+  ```shell-session
+  $ helm upgrade vault hashicorp/vault -f vault-raft-values.yml
+  ```
+  
+1. Unseal Vault.
+
+  ```shell-session
+  $ for i in {1..4} ; do kubectl exec -it vault-0 -- vault operator unseal ; done
+  ```
+
+1. Confirm the Raft peers have formed a quorum.
+
+  ```shell-session
+  $ kubectl exec -it vault-0 -- vault operator raft list-peers
+
+  Node                                    Address                        State       Voter
+  ----                                    -------                        -----       -----
+  24c166d8-a8bb-3ac7-f8a0-12bd066a34bb    vault-0.vault-internal:8201    leader      true
+  626434d1-170b-575a-2a04-af4f2e90820b    vault-1.vault-internal:8201    follower    true
+  1dfbba31-9b5b-2d16-18ce-bfa7b6c0ead6    vault-2.vault-internal:8201    follower    true
+  3f333082-1a64-7559-0142-e4f1658a28f3    vault-3.vault-internal:8201    follower    true
+  9ca5a15e-3ddc-d132-0b46-5b895f3828dc    vault-4.vault-internal:8201    follower    true
+  ```
+  
+## Rollback procedure
+
+To revert to the original configuration, you'll just need to delete the Helm deployment, and re-deploy it using the override values specifying your Consul storage configuration.
+
+Note that the Vault Helm Chart's default configuration using Raft storage will retain any PVCs created.  Vault does not use these while configured with Consul storage.  You will need to remove the PVCs before re-attempting the migration.
+
+1. Uninstall Vault via Helm.
+
+  ```shell-session
+  $ helm uninstall vault
+  ```
+
+1. Install Vault via Helm with old Consul storage configuration.
+
+  ```shell-session
+  $ `helm install vault hashicorp/vault -f vault-consul-values.yml
+  ```
+  
+1. Unseal Vault and confirm the storage has reverted to Consul.
+
+  <CodeBlockConfig highlight="11">
+
+  ```she-session
+  $ kubectl exec -it vault-0 -- vault status
+  Key             Value
+  ---             -----
+  Seal Type       shamir
+  Initialized     true
+  Sealed          false
+  Total Shares    1
+  Threshold       1
+  Version         1.14.8+ent
+  Build Date      2023-12-05T01:49:39Z
+  Storage Type    consul
+  Cluster Name    vault-cluster-68870bf8
+  Cluster ID      cd18c692-f2e3-77a5-fba3-28f06f41f375
+  HA Enabled      true
+  HA Cluster      https://vault-0.vault-internal:8201
+  HA Mode         active
+  Active Since    2024-04-10T04:44:12.516016652Z
+  Last WAL        54
+  ```
+
+  </CodeBlockConfig>
+
+## References
+
+- [Vault operator migrate command](/vault/docs/commands/operator/migrate)
+- [Helm Chart configuration](/vault/docs/platform/k8s/helm/configuration)
+- [Vault on Kubernetes deployment guide](/vault/tutorials/kubernetes/kubernetes-raft-deployment-guide)
+- [Vault Helm Chart configuration](https://github.com/hashicorp/vault-helm)
+- [kubectl commands](https://kubernetes.io/docs/reference/generated/kubectl/kubectl-commands)
+- [Kubernetes storage volumes](https://kubernetes.io/docs/concepts/storage/volumes/)
+- [Create a Pod that has an Init Container](https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-initialization/#create-a-pod-that-has-an-init-container)
+- [Helm docs](https://helm.sh/docs/)

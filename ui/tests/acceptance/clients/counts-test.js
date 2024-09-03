@@ -30,9 +30,12 @@ module('Acceptance | clients | counts', function (hooks) {
     assert.expect(2);
     this.owner.lookup('service:version').type = 'community';
     await visit('/vault/clients/counts/overview');
-
-    assert.dom(GENERAL.emptyStateTitle).hasText('No data received');
-    assert.dom(GENERAL.emptyStateMessage).hasText('Select a start date above to query client count data.');
+    assert.dom(GENERAL.emptyStateTitle).hasText('No start date found');
+    assert
+      .dom(GENERAL.emptyStateMessage)
+      .hasText(
+        'In order to get the most from this data, please enter a start month above. Vault will calculate new clients starting from that month.'
+      );
   });
 
   test('it should redirect to counts overview route for transitions to parent', async function (assert) {
@@ -43,19 +46,19 @@ module('Acceptance | clients | counts', function (hooks) {
   test('it should persist filter query params between child routes', async function (assert) {
     await visit('/vault/clients/counts/overview');
     await click(CLIENT_COUNT.dateRange.edit);
-    await fillIn(CLIENT_COUNT.dateRange.editDate('start'), '2020-03');
-    await fillIn(CLIENT_COUNT.dateRange.editDate('start'), '2022-02');
+    await fillIn(CLIENT_COUNT.dateRange.editDate('start'), '2023-03');
+    await fillIn(CLIENT_COUNT.dateRange.editDate('end'), '2023-10');
     await click(GENERAL.saveButton);
     assert.strictEqual(
       currentURL(),
-      '/vault/clients/counts/overview?end_time=1706659200&start_time=1643673600',
+      '/vault/clients/counts/overview?end_time=1698710400&start_time=1677628800',
       'Start and end times added as query params'
     );
 
     await click(GENERAL.tab('token'));
     assert.strictEqual(
       currentURL(),
-      '/vault/clients/counts/token?end_time=1706659200&start_time=1643673600',
+      '/vault/clients/counts/token?end_time=1698710400&start_time=1677628800',
       'Start and end times persist through child route change'
     );
 
@@ -80,5 +83,83 @@ module('Acceptance | clients | counts', function (hooks) {
       .hasText(
         'You must be granted permissions to view this page. Ask your administrator if you think you should have access to the /v1/sys/internal/counters/activity endpoint.'
       );
+  });
+
+  test('it should use the first month timestamp from default response rather than response start_time', async function (assert) {
+    const getCounts = () => {
+      return {
+        acme_clients: 0,
+        clients: 0,
+        entity_clients: 0,
+        non_entity_clients: 0,
+        secret_syncs: 0,
+        distinct_entities: 0,
+        non_entity_tokens: 1,
+      };
+    };
+    // set to enterprise because when community the initial activity call is skipped
+    this.owner.lookup('service:version').type = 'enterprise';
+    this.server.get('/sys/internal/counters/activity', function () {
+      return {
+        request_id: 'some-activity-id',
+        data: {
+          start_time: '2023-04-01T00:00:00Z', // reflects the first month with data
+          end_time: '2023-04-30T00:00:00Z',
+          by_namespace: [],
+          months: [
+            {
+              timestamp: '2023-02-01T00:00:00Z',
+              counts: null,
+              namespaces: null,
+              new_clients: null,
+            },
+            {
+              timestamp: '2023-03-01T00:00:00Z',
+              counts: null,
+              namespaces: null,
+              new_clients: null,
+            },
+            {
+              timestamp: '2023-04-01T00:00:00Z',
+              counts: getCounts(),
+              namespaces: [
+                {
+                  namespace_id: 'root',
+                  namespace_path: '',
+                  counts: getCounts(),
+                  mounts: [
+                    {
+                      mount_path: 'auth/authid/0',
+                      counts: getCounts(),
+                    },
+                  ],
+                },
+              ],
+              new_clients: {
+                counts: getCounts(),
+                namespaces: [
+                  {
+                    namespace_id: 'root',
+                    namespace_path: '',
+                    counts: getCounts(),
+                    mounts: [
+                      {
+                        mount_path: 'auth/authid/0',
+                        counts: getCounts(),
+                      },
+                    ],
+                  },
+                ],
+              },
+            },
+          ],
+          total: getCounts(),
+        },
+      };
+    });
+    await visit('/vault/clients/counts/overview');
+    assert.dom(CLIENT_COUNT.dateRange.dateDisplay('start')).hasText('February 2023');
+    assert.dom(CLIENT_COUNT.dateRange.dateDisplay('end')).hasText('April 2023');
+    assert.dom(CLIENT_COUNT.counts.startDiscrepancy).exists();
   });
 });

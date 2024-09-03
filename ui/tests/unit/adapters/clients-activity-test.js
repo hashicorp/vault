@@ -15,14 +15,13 @@ module('Unit | Adapter | clients activity', function (hooks) {
   setupTest(hooks);
   setupMirage(hooks);
 
-  hooks.before(function () {
-    this.timestampStub = sinon.replace(timestamp, 'now', sinon.fake.returns(new Date('2023-01-13T09:30:15')));
-  });
   hooks.beforeEach(function () {
+    this.timestampStub = sinon.replace(timestamp, 'now', sinon.fake.returns(new Date('2023-01-13T09:30:15')));
     this.store = this.owner.lookup('service:store');
     this.modelName = 'clients/activity';
-    this.startDate = subMonths(this.timestampStub(), 6);
-    this.endDate = this.timestampStub();
+    const mockNow = timestamp.now();
+    this.startDate = subMonths(mockNow, 6);
+    this.endDate = mockNow;
     this.readableUnix = (unix) => parseAPITimestamp(fromUnixTime(unix).toISOString(), 'MMMM dd yyyy');
   });
 
@@ -137,17 +136,98 @@ module('Unit | Adapter | clients activity', function (hooks) {
     this.store.queryRecord(this.modelName, queryParams);
   });
 
-  test('it sends current billing period boolean if provided', async function (assert) {
+  test('it sends without query if no dates provided', async function (assert) {
     assert.expect(1);
 
     this.server.get('sys/internal/counters/activity', (schema, req) => {
-      assert.propEqual(
-        req.queryParams,
-        { current_billing_period: 'true' },
-        'it passes current_billing_period to query record'
-      );
+      assert.propEqual(req.queryParams, {});
     });
 
-    this.store.queryRecord(this.modelName, { current_billing_period: true });
+    this.store.queryRecord(this.modelName, { foo: 'bar' });
+  });
+
+  test('it sends without query if no valid dates provided', async function (assert) {
+    assert.expect(1);
+
+    this.server.get('sys/internal/counters/activity', (schema, req) => {
+      assert.propEqual(req.queryParams, {});
+    });
+
+    this.store.queryRecord(this.modelName, { start_time: 'bar' });
+  });
+
+  test('it handles empty query gracefully', async function (assert) {
+    assert.expect(1);
+
+    this.server.get('sys/internal/counters/activity', (schema, req) => {
+      assert.propEqual(req.queryParams, {});
+    });
+
+    this.store.queryRecord(this.modelName, {});
+  });
+
+  test('it adds the passed namespace to the request header', async function (assert) {
+    assert.expect(2);
+    const queryParams = {
+      start_time: { timestamp: this.startDate.toISOString() },
+      end_time: { timestamp: this.endDate.toISOString() },
+      // the adapter does not do any more transformations, so it must be called
+      // with the combined current + selected namespace
+      namespace: 'foobar/baz',
+    };
+    this.server.get('sys/internal/counters/activity', (schema, req) => {
+      assert.propEqual(req.queryParams, {
+        start_time: this.startDate.toISOString(),
+        end_time: this.endDate.toISOString(),
+      });
+      assert.strictEqual(req.requestHeaders['X-Vault-Namespace'], 'foobar/baz');
+    });
+
+    this.store.queryRecord(this.modelName, queryParams);
+  });
+
+  module('exportData', function (hooks) {
+    hooks.beforeEach(function () {
+      this.adapter = this.store.adapterFor('clients/activity');
+    });
+    test('it requests with correct params when no query', async function (assert) {
+      assert.expect(1);
+
+      this.server.get('sys/internal/counters/activity/export', (schema, req) => {
+        assert.propEqual(req.queryParams, { format: 'csv' });
+      });
+
+      await this.adapter.exportData();
+    });
+
+    test('it requests with correct params when start only', async function (assert) {
+      assert.expect(1);
+
+      this.server.get('sys/internal/counters/activity/export', (schema, req) => {
+        assert.propEqual(req.queryParams, { format: 'csv', start_time: '2024-04-01T00:00:00.000Z' });
+      });
+
+      await this.adapter.exportData({ start_time: '2024-04-01T00:00:00.000Z' });
+    });
+
+    test('it requests with correct params when all params', async function (assert) {
+      assert.expect(2);
+
+      this.server.get('sys/internal/counters/activity/export', (schema, req) => {
+        assert.strictEqual(req.requestHeaders['X-Vault-Namespace'], 'foo/bar');
+        assert.propEqual(req.queryParams, {
+          format: 'json',
+          start_time: '2024-04-01T00:00:00.000Z',
+          end_time: '2024-05-31T00:00:00.000Z',
+        });
+      });
+
+      await this.adapter.exportData({
+        start_time: '2024-04-01T00:00:00.000Z',
+        end_time: '2024-05-31T00:00:00.000Z',
+        format: 'json',
+        namespace: 'foo/bar',
+      });
+    });
   });
 });

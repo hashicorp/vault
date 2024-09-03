@@ -1,0 +1,74 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<form {{on "submit" this.submit}} data-test-kv-patch-editor>
+  <div class="flex column-gap-16 has-top-padding-s">
+    <Hds::Form::Label @controlId="newKey" class="one-fourth-width">
+      Key
+    </Hds::Form::Label>
+    <Hds::Form::Label @controlId="newValue" class="three-fourths-width">
+      Value
+    </Hds::Form::Label>
+  </div>
+
+  {{! Rows for existing keys (includes new rows after user clicks "Add") }}
+  {{#each this.patchData as |kv idx|}}
+    <KvPatch::Editor::Row
+      @idx={{idx}}
+      @kvClass={{kv}}
+      @isOriginalSubkey={{this.isOriginalSubkey}}
+      @updateKey={{this.updateKey}}
+      @undoKey={{this.undoKey}}
+    />
+  {{/each}}
+
+  {{! Single row of empty inputs for adding new key/value pairs }}
+  <div class="flex column-gap-16 has-top-padding-s">
+    <Hds::Form::TextInput::Base
+      @type="text"
+      @value={{this.newKey}}
+      class="one-fourth-width"
+      aria-label="New key"
+      placeholder="key"
+      name="newKey"
+      {{on "blur" this.updateNewKey}}
+      data-test-kv-key="new"
+    />
+
+    <div class="flex column-gap-16 three-fourths-width">
+      <Hds::Form::MaskedInput::Base
+        @value={{this.newValue}}
+        aria-label="New value"
+        name="newValue"
+        {{on "blur" this.updateNewValue}}
+        data-test-kv-value="new"
+      />
+
+      <div class="flex column-gap-16" {{style width="9rem"}}>
+        <Hds::Button @text="Add" @color="secondary" {{on "click" this.addRow}} @isFullWidth={{true}} data-test-add-button />
+      </div>
+    </div>
+  </div>
+
+  <KvPatch::Editor::Alerts
+    @idx="new"
+    @keyError={{this.newKeyError}}
+    @keyWarning={{this.newKeyWarning}}
+    @valueWarning={{this.newValueWarning}}
+  />
+
+  <hr class="has-background-gray-200" />
+  <KvPatch::SubkeysReveal @subkeys={{@subkeys}} />
+  <hr class="has-background-gray-200" />
+
+  <Hds::ButtonSet>
+    <Hds::Button @text="Save" type="submit" @icon={{if @isSaving "loading"}} disabled={{@isSaving}} data-test-kv-save />
+    <Hds::Button @text="Cancel" {{on "click" @onCancel}} @color="secondary" disabled={{@isSaving}} data-test-kv-cancel />
+  </Hds::ButtonSet>
+
+  {{#if (or @submitError this.validationError)}}
+    <AlertInline @type="danger" @message={{or @submitError this.validationError}} class="has-top-padding-s" />
+  {{/if}}
+</form>

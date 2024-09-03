@@ -31,7 +31,7 @@ add_repos() {
         fi
         sudo add-apt-repository "${repo}"
       done
-    ;;
+      ;;
     dnf)
       for repo in ${DISTRO_REPOS}; do
         if [ "$repo" == "__none" ]; then
@@ -40,7 +40,7 @@ add_repos() {
         sudo dnf install -y "${repo}"
         sudo dnf makecache -y
       done
-    ;;
+      ;;
     yum)
       for repo in ${DISTRO_REPOS}; do
         if [ "$repo" == "__none" ]; then
@@ -49,7 +49,7 @@ add_repos() {
         sudo yum install -y "${repo}"
         sudo yum makecache -y
       done
-    ;;
+      ;;
     zypper)
       # Add each repo
       for repo in ${DISTRO_REPOS}; do
@@ -64,9 +64,10 @@ add_repos() {
       done
       sudo zypper --gpg-auto-import-keys ref
       sudo zypper --gpg-auto-import-keys refs
-    ;;
+      ;;
     *)
       fail "Unsupported package manager: ${PACKAGE_MANAGER}"
+      ;;
   esac
 }
 

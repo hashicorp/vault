@@ -5,6 +5,7 @@
 
 import ApplicationSerializer from './application';
 import { EmbeddedRecordsMixin } from '@ember-data/serializer/rest';
+import { WIF_ENGINES } from 'vault/helpers/mountable-secret-engines';
 
 export default ApplicationSerializer.extend(EmbeddedRecordsMixin, {
   attrs: {
@@ -83,6 +84,13 @@ export default ApplicationSerializer.extend(EmbeddedRecordsMixin, {
     // move version back to options
     data.options = data.version ? { version: data.version } : {};
     delete data.version;
+
+    if (!WIF_ENGINES.includes(type)) {
+      // only send identity_token_key if it's set on a WIF secret engine.
+      // because of issues with the model unloading with a belongsTo relationships
+      // identity_token_key can accidentally carry over if a user backs out of the form and changes the type from WIF to non-WIF.
+      delete data.config.identity_token_key;
+    }
 
     if (type !== 'kv' || data.options.version === 1) {
       // These items are on the model, but used by the kv-v2 config endpoint only

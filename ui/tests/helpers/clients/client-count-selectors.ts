@@ -14,7 +14,6 @@ export const CLIENT_COUNT = {
   },
   dateRange: {
     dateDisplay: (name: string) => (name ? `[data-test-date-range="${name}"]` : '[data-test-date-range]'),
-    set: '[data-test-set-date-range]',
     edit: '[data-test-date-range-edit]',
     editModal: '[data-test-date-range-edit-modal]',
     editDate: (name: string) => `[data-test-date-edit="${name}"]`,
@@ -26,11 +25,15 @@ export const CLIENT_COUNT = {
   statTextValue: (label: string) =>
     label ? `[data-test-stat-text="${label}"] .stat-value` : '[data-test-stat-text]',
   usageStats: (title: string) => `[data-test-usage-stats="${title}"]`,
-  attributionBlock: '[data-test-clients-attribution]',
+  attributionBlock: (type: string) =>
+    type ? `[data-test-clients-attribution="${type}"]` : '[data-test-clients-attribution]',
   filterBar: '[data-test-clients-filter-bar]',
+  nsFilter: '#namespace-search-select',
+  mountFilter: '#mounts-search-select',
   selectedAuthMount: 'div#mounts-search-select [data-test-selected-option] div',
   selectedNs: 'div#namespace-search-select [data-test-selected-option] div',
   upgradeWarning: '[data-test-clients-upgrade-warning]',
+  exportButton: '[data-test-export-button]',
 };
 
 export const CHARTS = {

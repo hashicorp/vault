@@ -15,7 +15,7 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/namespace"
+	nshelper "github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -270,7 +270,7 @@ func (b *Broker) LogRequest(ctx context.Context, in *logical.LogInput) (retErr e
 		metrics.IncrCounter([]string{"audit", "log_request_failure"}, metricVal)
 	}()
 
-	e, err := NewEvent(RequestType)
+	e, err := newEvent(RequestType)
 	if err != nil {
 		return err
 	}
@@ -289,21 +289,23 @@ func (b *Broker) LogRequest(ctx context.Context, in *logical.LogInput) (retErr e
 		// has taken up a lot of time handling the request before audit (request)
 		// is triggered. Pipeline nodes and the eventlogger.Broker may check for a
 		// cancelled context and refuse to process the nodes further.
-		ns, err := namespace.FromContext(ctx)
+		ns, err := nshelper.FromContext(ctx)
 		if err != nil {
 			return fmt.Errorf("namespace missing from context: %w", err)
 		}
 
 		tempContext, auditCancel := context.WithTimeout(context.Background(), timeout)
 		defer auditCancel()
-		auditContext = namespace.ContextWithNamespace(tempContext, ns)
+		auditContext = nshelper.ContextWithNamespace(tempContext, ns)
+
+		b.logger.Trace("log request requires a derived context (original context was not viable)", "namespace ID", ns.ID, "namespace path", ns.Path, "timeout", timeout)
 	}
 
 	var status eventlogger.Status
 	if hasAuditPipelines(b.broker) {
 		status, err = b.broker.Send(auditContext, event.AuditType.AsEventType(), e)
 		if err != nil {
-			return fmt.Errorf("%w: %w", err, errors.Join(status.Warnings...))
+			return errors.Join(append([]error{err}, status.Warnings...)...)
 		}
 	}
 
@@ -352,7 +354,7 @@ func (b *Broker) LogResponse(ctx context.Context, in *logical.LogInput) (retErr 
 		metrics.IncrCounter([]string{"audit", "log_response_failure"}, metricVal)
 	}()
 
-	e, err := NewEvent(ResponseType)
+	e, err := newEvent(ResponseType)
 	if err != nil {
 		return err
 	}
@@ -371,21 +373,23 @@ func (b *Broker) LogResponse(ctx context.Context, in *logical.LogInput) (retErr 
 		// has taken up a lot of time handling the request before audit (response)
 		// is triggered. Pipeline nodes and the eventlogger.Broker may check for a
 		// cancelled context and refuse to process the nodes further.
-		ns, err := namespace.FromContext(ctx)
+		ns, err := nshelper.FromContext(ctx)
 		if err != nil {
 			return fmt.Errorf("namespace missing from context: %w", err)
 		}
 
 		tempContext, auditCancel := context.WithTimeout(context.Background(), timeout)
 		defer auditCancel()
-		auditContext = namespace.ContextWithNamespace(tempContext, ns)
+		auditContext = nshelper.ContextWithNamespace(tempContext, ns)
+
+		b.logger.Trace("log response requires a derived context (original context was not viable)", "namespace ID", ns.ID, "namespace path", ns.Path, "timeout", timeout)
 	}
 
 	var status eventlogger.Status
 	if hasAuditPipelines(b.broker) {
 		status, err = b.broker.Send(auditContext, event.AuditType.AsEventType(), e)
 		if err != nil {
-			return fmt.Errorf("%w: %w", err, errors.Join(status.Warnings...))
+			return errors.Join(append([]error{err}, status.Warnings...)...)
 		}
 	}
 

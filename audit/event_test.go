@@ -15,7 +15,7 @@ func TestAuditEvent_new(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		Options              []Option
+		Options              []option
 		Subtype              subtype
 		Format               format
 		IsErrorExpected      bool
@@ -33,47 +33,47 @@ func TestAuditEvent_new(t *testing.T) {
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "invalid event subtype \"\": invalid internal parameter",
 		},
-		"empty-Option": {
-			Options:              []Option{},
+		"empty-option": {
+			Options:              []option{},
 			Subtype:              subtype(""),
 			Format:               format(""),
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "invalid event subtype \"\": invalid internal parameter",
 		},
 		"bad-id": {
-			Options:              []Option{WithID("")},
+			Options:              []option{withID("")},
 			Subtype:              ResponseType,
-			Format:               JSONFormat,
+			Format:               jsonFormat,
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "id cannot be empty",
 		},
 		"good": {
-			Options: []Option{
-				WithID("audit_123"),
-				WithFormat(string(JSONFormat)),
-				WithSubtype(string(ResponseType)),
-				WithNow(time.Date(2023, time.July, 4, 12, 3, 0, 0, time.Local)),
+			Options: []option{
+				withID("audit_123"),
+				withFormat(string(jsonFormat)),
+				withSubtype(string(ResponseType)),
+				withNow(time.Date(2023, time.July, 4, 12, 3, 0, 0, time.Local)),
 			},
 			Subtype:           RequestType,
-			Format:            JSONxFormat,
+			Format:            jsonxFormat,
 			IsErrorExpected:   false,
 			ExpectedID:        "audit_123",
 			ExpectedTimestamp: time.Date(2023, time.July, 4, 12, 3, 0, 0, time.Local),
 			ExpectedSubtype:   RequestType,
-			ExpectedFormat:    JSONxFormat,
+			ExpectedFormat:    jsonxFormat,
 		},
 		"good-no-time": {
-			Options: []Option{
-				WithID("audit_123"),
-				WithFormat(string(JSONFormat)),
-				WithSubtype(string(ResponseType)),
+			Options: []option{
+				withID("audit_123"),
+				withFormat(string(jsonFormat)),
+				withSubtype(string(ResponseType)),
 			},
 			Subtype:         RequestType,
-			Format:          JSONxFormat,
+			Format:          jsonxFormat,
 			IsErrorExpected: false,
 			ExpectedID:      "audit_123",
 			ExpectedSubtype: RequestType,
-			ExpectedFormat:  JSONxFormat,
+			ExpectedFormat:  jsonxFormat,
 			IsNowExpected:   true,
 		},
 	}
@@ -84,7 +84,7 @@ func TestAuditEvent_new(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			audit, err := NewEvent(tc.Subtype, tc.Options...)
+			audit, err := newEvent(tc.Subtype, tc.Options...)
 			switch {
 			case tc.IsErrorExpected:
 				require.Error(t, err)
@@ -112,7 +112,7 @@ func TestAuditEvent_Validate(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		Value                *AuditEvent
+		Value                *Event
 		IsErrorExpected      bool
 		ExpectedErrorMessage string
 	}{
@@ -122,12 +122,12 @@ func TestAuditEvent_Validate(t *testing.T) {
 			ExpectedErrorMessage: "event is nil: invalid internal parameter",
 		},
 		"default": {
-			Value:                &AuditEvent{},
+			Value:                &Event{},
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "missing ID: invalid internal parameter",
 		},
 		"id-empty": {
-			Value: &AuditEvent{
+			Value: &Event{
 				ID:        "",
 				Version:   version,
 				Subtype:   RequestType,
@@ -138,7 +138,7 @@ func TestAuditEvent_Validate(t *testing.T) {
 			ExpectedErrorMessage: "missing ID: invalid internal parameter",
 		},
 		"version-fiddled": {
-			Value: &AuditEvent{
+			Value: &Event{
 				ID:        "audit_123",
 				Version:   "magic-v2",
 				Subtype:   RequestType,
@@ -149,7 +149,7 @@ func TestAuditEvent_Validate(t *testing.T) {
 			ExpectedErrorMessage: "event version unsupported: invalid internal parameter",
 		},
 		"subtype-fiddled": {
-			Value: &AuditEvent{
+			Value: &Event{
 				ID:        "audit_123",
 				Version:   version,
 				Subtype:   subtype("moon"),
@@ -160,7 +160,7 @@ func TestAuditEvent_Validate(t *testing.T) {
 			ExpectedErrorMessage: "invalid event subtype \"moon\": invalid internal parameter",
 		},
 		"default-time": {
-			Value: &AuditEvent{
+			Value: &Event{
 				ID:        "audit_123",
 				Version:   version,
 				Subtype:   ResponseType,
@@ -171,7 +171,7 @@ func TestAuditEvent_Validate(t *testing.T) {
 			ExpectedErrorMessage: "event timestamp cannot be the zero time instant: invalid internal parameter",
 		},
 		"valid": {
-			Value: &AuditEvent{
+			Value: &Event{
 				ID:        "audit_123",
 				Version:   version,
 				Subtype:   ResponseType,
@@ -373,7 +373,7 @@ func TestAuditEvent_Subtype_String(t *testing.T) {
 // method returns the correct format.
 func TestAuditEvent_formattedTime(t *testing.T) {
 	theTime := time.Date(2024, time.March, 22, 10, 0o0, 5, 10, time.UTC)
-	a, err := NewEvent(ResponseType, WithNow(theTime))
+	a, err := newEvent(ResponseType, withNow(theTime))
 	require.NoError(t, err)
 	require.NotNil(t, a)
 	require.Equal(t, "2024-03-22T10:00:05.00000001Z", a.formattedTime())
@@ -439,7 +439,7 @@ func TestEvent_IsValidFormat(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			res := IsValidFormat(tc.input)
+			res := isValidFormat(tc.input)
 			require.Equal(t, tc.expected, res)
 		})
 	}

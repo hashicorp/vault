@@ -7,7 +7,7 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-import { getOwner } from '@ember/application';
+import { getOwner } from '@ember/owner';
 import { ancestorKeysForKey } from 'core/utils/key-utils';
 import errorMessage from 'vault/utils/error-message';
 import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
@@ -87,6 +87,6 @@ export default class KvListPageComponent extends Component {
     evt.preventDefault();
     pathIsDirectory(this.secretPath)
       ? this.router.transitionTo('vault.cluster.secrets.backend.kv.list-directory', this.secretPath)
-      : this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.details', this.secretPath);
+      : this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.index', this.secretPath);
   }
 }

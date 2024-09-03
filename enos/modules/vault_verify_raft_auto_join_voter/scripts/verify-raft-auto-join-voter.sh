@@ -2,7 +2,6 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: BUSL-1.1
 
-
 set -e
 
 binpath=${VAULT_INSTALL_DIR}/vault
@@ -42,7 +41,7 @@ check_voter_status() {
 
 test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 
-export VAULT_ADDR='http://127.0.0.1:8200'
+[[ -z "$VAULT_ADDR" ]] && fail "VAULT_ADDR env variable has not been set"
 [[ -z "$VAULT_TOKEN" ]] && fail "VAULT_TOKEN env variable has not been set"
 
 # Retry a few times because it can take some time for things to settle after

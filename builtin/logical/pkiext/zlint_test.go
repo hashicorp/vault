@@ -6,10 +6,13 @@ package pkiext
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/builtin/logical/pki"
+	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/stretchr/testify/require"
 )
@@ -23,7 +26,7 @@ func buildZLintContainer(t *testing.T) {
 	containerfile := `
 FROM docker.mirror.hashicorp.services/library/golang:latest
 
-RUN go install github.com/zmap/zlint/v3/cmd/zlint@latest
+RUN go install github.com/zmap/zlint/v3/cmd/zlint@v3.6.2
 `
 
 	bCtx := docker.NewBuildContext()
@@ -50,15 +53,21 @@ RUN go install github.com/zmap/zlint/v3/cmd/zlint@latest
 	}
 
 	ctx := context.Background()
-	output, err := zRunner.BuildImage(ctx, containerfile, bCtx,
-		docker.BuildRemove(true), docker.BuildForceRemove(true),
-		docker.BuildPullParent(true),
-		docker.BuildTags([]string{imageName + ":" + imageTag}))
-	if err != nil {
-		t.Fatalf("Could not build new image: %v", err)
-	}
 
-	t.Logf("Image build output: %v", string(output))
+	// Sometimes we see timeouts and issues pulling the zlint code from GitHub
+	testhelpers.RetryUntil(t, 30*time.Second, func() error {
+		output, err := zRunner.BuildImage(ctx, containerfile, bCtx,
+			docker.BuildRemove(true),
+			docker.BuildForceRemove(true),
+			docker.BuildPullParent(true),
+			docker.BuildTags([]string{imageName + ":" + imageTag}))
+		if err != nil {
+			return fmt.Errorf("could not build new image with zlint: %w", err)
+		}
+
+		t.Logf("Image build output: %v", string(output))
+		return nil
+	})
 }
 
 func RunZLintContainer(t *testing.T, certificate string) []byte {
