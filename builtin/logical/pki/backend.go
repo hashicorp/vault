@@ -818,6 +818,8 @@ type revoker struct {
 }
 
 func (r *revoker) RevokeCert(cert *x509.Certificate) (*logical.Response, error) {
+	r.backend.GetRevokeStorageLock().Lock()
+	defer r.backend.GetRevokeStorageLock().Unlock()
 	return revokeCert(r.storageContext, r.crlConfig, cert)
 }
 
