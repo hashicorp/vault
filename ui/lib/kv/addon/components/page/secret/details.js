@@ -33,7 +33,7 @@ import { isAdvancedSecret } from 'core/utils/advanced-secret';
  * @param {boolean} canReadData - if true and the secret is not destroyed/deleted the copy secret dropdown renders
  * @param {boolean} canReadMetadata - if true it renders the kv select version dropdown in the toolbar and "Version History" tab
  * @param {boolean} canUpdateData - if true it renders "Create new version" toolbar action
- * @param {boolean} isPatchAllowed - if true it renders "Patch latest version" toolbar action
+ * @param {boolean} isPatchAllowed - isPatchAllowed is true if the version is enterprise AND a user has "patch" secret + "read" subkeys capabilities, if true it renders "Patch latest version" toolbar action
  * @param {model} metadata - Ember data model: 'kv/metadata'
  * @param {string} path - path of kv secret 'my/secret' used as the title for the KV page header
  * @param {model} secret - Ember data model: 'kv/data'
