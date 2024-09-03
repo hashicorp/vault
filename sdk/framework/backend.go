@@ -517,7 +517,7 @@ func (b *Backend) init() {
 		}
 
 		// Detect the coding error of an invalid Pattern
-		b.pathsRe[i] = cregexp.MustCompile(p.Pattern)
+		b.pathsRe[i] = cregexp.MustCompileInterned(p.Pattern)
 	}
 }
 

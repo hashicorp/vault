@@ -4,12 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"regexp"
 	"regexp/syntax"
 	"sort"
 	"strconv"
 	"strings"
-
-	"github.com/hashicorp/go-secure-stdlib/regexp"
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"

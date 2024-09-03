@@ -192,6 +192,8 @@ github.com/hashicorp/go-secure-stdlib/plugincontainer v0.3.0 h1:KMWpBsC65ZBXDpox
 github.com/hashicorp/go-secure-stdlib/plugincontainer v0.3.0/go.mod h1:qKYwSZ2EOpppko5ud+Sh9TrUgiTAZSaQCr8XWIYXsbM=
 github.com/hashicorp/go-secure-stdlib/regexp v0.0.0-20240830193800-439bf50829f2 h1:LmUFYM8z51bkauAIMVx1ayDoNxs31tHrRRVbJOG+p9U=
 github.com/hashicorp/go-secure-stdlib/regexp v0.0.0-20240830193800-439bf50829f2/go.mod h1:Cku0nHTC/t67G7NLBK1g6o5igeDzJj5ZdyfAryi/53s=
+github.com/hashicorp/go-secure-stdlib/regexp v0.0.0-20240903182802-cf697c9b00f4 h1:Ve0fFmDZ8V2ZAPH8UuNTL+YkHb1E/yLu4Mq8K1wjFko=
+github.com/hashicorp/go-secure-stdlib/regexp v0.0.0-20240903182802-cf697c9b00f4/go.mod h1:VK75gkqpJVOqcD5IvjuOm9sTsosCLeLm+hxQZes+HvM=
 github.com/hashicorp/go-secure-stdlib/strutil v0.1.2 h1:kes8mmyCpxJsI7FTwtzRqEy9CdjCtrXrXGuOpxEA7Ts=
 github.com/hashicorp/go-secure-stdlib/strutil v0.1.2/go.mod h1:Gou2R9+il93BqX25LAKCLuM+y9U2T4hlwvT1yprcna4=
 github.com/hashicorp/go-secure-stdlib/tlsutil v0.1.3 h1:xbrxd0U9XQW8qL1BAz2XrAjAF/P2vcqUTAues9c24B8=

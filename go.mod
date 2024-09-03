@@ -24,8 +24,6 @@ replace github.com/hashicorp/vault/api/auth/userpass => ./api/auth/userpass
 
 replace github.com/hashicorp/vault/sdk => ./sdk
 
-replace github.com/hashicorp/go-secure-stdlib/regexp => ../go-secure-stdlib/regexp
-
 require (
 	cloud.google.com/go/cloudsqlconn v1.4.3
 	cloud.google.com/go/monitoring v1.19.0
@@ -237,7 +235,7 @@ require (
 	cloud.google.com/go/longrunning v0.5.7 // indirect
 	github.com/containerd/containerd v1.7.20 // indirect
 	github.com/hashicorp/go-secure-stdlib/httputil v0.1.0 // indirect
-	github.com/hashicorp/go-secure-stdlib/regexp v0.0.0-20240903164449-892773d5e0b4 // indirect
+	github.com/hashicorp/go-secure-stdlib/regexp v0.0.0-20240903182802-cf697c9b00f4 // indirect
 	github.com/jellydator/ttlcache/v3 v3.3.0 // indirect
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
