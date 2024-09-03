@@ -14,6 +14,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/builtin/logical/pki/managed_key"
 	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
@@ -817,19 +818,68 @@ type revoker struct {
 	crlConfig      *pki_backend.CrlConfig
 }
 
-func (r *revoker) RevokeCert(cert *x509.Certificate) (*logical.Response, error) {
-	return revokeCert(r.storageContext, r.crlConfig, cert)
+func (r *revoker) RevokeCert(cert *x509.Certificate) (revocation.RevokeCertInfo, error) {
+	r.backend.GetRevokeStorageLock().Lock()
+	defer r.backend.GetRevokeStorageLock().Unlock()
+	resp, err := revokeCert(r.storageContext, r.crlConfig, cert)
+	return parseRevokeCertOutput(resp, err)
 }
 
-func (r *revoker) RevokeCertBySerial(serial string) (*logical.Response, error) {
-	return tryRevokeCertBySerial(r.storageContext, r.crlConfig, serial)
+func (r *revoker) RevokeCertBySerial(serial string) (revocation.RevokeCertInfo, error) {
+	// NOTE: tryRevokeCertBySerial grabs the revoke storage lock for us
+	resp, err := tryRevokeCertBySerial(r.storageContext, r.crlConfig, serial)
+	return parseRevokeCertOutput(resp, err)
 }
 
-func (b *backend) GetRevoker(ctx context.Context, s logical.Storage) revocation.Revoker {
+// There are a bunch of reasons that a certificate will/won't be revoked. Sadly we will need a further
+// refactoring but for now handle the basics of the reasons/response objects back to a usable object
+// that doesn't directly reply to the API request
+func parseRevokeCertOutput(resp *logical.Response, err error) (revocation.RevokeCertInfo, error) {
+	if err != nil {
+		return revocation.RevokeCertInfo{}, err
+	}
+
+	if resp == nil {
+		// nil, nil response, most likely means the certificate was missing,
+		// but *might* be other things such as a tainted mount
+		return revocation.RevokeCertInfo{}, nil
+	}
+
+	if resp.IsError() {
+		// There are a few reasons we return a response error but not an error,
+		// such as UserError's or they tried to revoke the CA
+		return revocation.RevokeCertInfo{}, resp.Error()
+	}
+
+	// It is possible we don't return the field for various reasons if just a bunch of warnings are set.
+	if revTimeRaw, ok := resp.Data["revocation_time"]; ok {
+		revTimeInt, err := parseutil.ParseInt(revTimeRaw)
+		if err != nil {
+			// Lets me lenient for now
+			revTimeInt = 0
+		}
+		revTime := time.Unix(revTimeInt, 0)
+		return revocation.RevokeCertInfo{
+			RevocationTime: revTime,
+		}, nil
+	}
+
+	// Since we don't really know what went wrong if anything, for example the certificate might
+	// have been expired or close to expiry, lets punt on it for now
+	return revocation.RevokeCertInfo{
+		Warnings: resp.Warnings,
+	}, nil
+}
+
+func (b *backend) GetRevoker(ctx context.Context, s logical.Storage) (revocation.Revoker, error) {
 	sc := b.makeStorageContext(ctx, s)
+	crlConfig, err := b.CrlBuilder().GetConfigWithUpdate(sc)
+	if err != nil {
+		return nil, err
+	}
 	return &revoker{
 		backend:        b,
-		crlConfig:      &b.CrlBuilder().config,
+		crlConfig:      crlConfig,
 		storageContext: sc,
-	}
+	}, nil
 }

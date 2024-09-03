@@ -21,12 +21,17 @@ const (
 )
 
 type RevokerFactory interface {
-	GetRevoker(context.Context, logical.Storage) Revoker
+	GetRevoker(context.Context, logical.Storage) (Revoker, error)
+}
+
+type RevokeCertInfo struct {
+	RevocationTime time.Time
+	Warnings       []string
 }
 
 type Revoker interface {
-	RevokeCert(cert *x509.Certificate) (*logical.Response, error)
-	RevokeCertBySerial(serial string) (*logical.Response, error)
+	RevokeCert(cert *x509.Certificate) (RevokeCertInfo, error)
+	RevokeCertBySerial(serial string) (RevokeCertInfo, error)
 }
 
 type RevocationInfo struct {
