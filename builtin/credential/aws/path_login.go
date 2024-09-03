@@ -15,7 +15,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strings"
 	"time"
 
@@ -1679,7 +1678,7 @@ func validateVaultHeaderValue(method string, headers http.Header, parsedUrl *url
 		if authzHeaders, ok := headers["Authorization"]; ok {
 			// authzHeader looks like AWS4-HMAC-SHA256 Credential=AKI..., SignedHeaders=host;x-amz-date;x-vault-awsiam-id, Signature=...
 			// We need to extract out the SignedHeaders
-			re := regexp.MustCompile(".*SignedHeaders=([^,]+)")
+			re := regexp2.MustCompileInterned(".*SignedHeaders=([^,]+)")
 			authzHeader := strings.Join(authzHeaders, ",")
 			matches := re.FindSubmatch([]byte(authzHeader))
 			if len(matches) < 1 {

@@ -18,6 +18,8 @@ import (
 	"sync"
 	"time"
 
+	regexp2 "github.com/hashicorp/go-secure-stdlib/regexp"
+
 	jsonpatch "github.com/evanphx/json-patch/v5"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
@@ -516,7 +518,7 @@ func (b *Backend) init() {
 		}
 
 		// Detect the coding error of an invalid Pattern
-		b.pathsRe[i] = regexp.MustCompile(p.Pattern)
+		b.pathsRe[i] = regexp2.MustCompileInterned(p.Pattern)
 	}
 }
 

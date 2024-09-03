@@ -1,6 +1,8 @@
 module github.com/hashicorp/vault/sdk
 
-go 1.22
+go 1.23
+
+toolchain go1.23.0
 
 require (
 	cloud.google.com/go/cloudsqlconn v1.4.3
@@ -30,6 +32,7 @@ require (
 	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.8
 	github.com/hashicorp/go-secure-stdlib/password v0.1.1
 	github.com/hashicorp/go-secure-stdlib/plugincontainer v0.3.0
+	github.com/hashicorp/go-secure-stdlib/regexp v0.0.0-20240903182802-cf697c9b00f4
 	github.com/hashicorp/go-secure-stdlib/strutil v0.1.2
 	github.com/hashicorp/go-secure-stdlib/tlsutil v0.1.3
 	github.com/hashicorp/go-sockaddr v1.0.6
@@ -53,7 +56,14 @@ require (
 )
 
 require (
+	github.com/beorn7/perks v1.0.1 // indirect
+	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/go-jose/go-jose/v4 v4.0.1 // indirect
+	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
+	github.com/prometheus/client_golang v1.14.0 // indirect
+	github.com/prometheus/client_model v0.3.0 // indirect
+	github.com/prometheus/common v0.37.0 // indirect
+	github.com/prometheus/procfs v0.8.0 // indirect
 	go.opentelemetry.io/otel/sdk v1.22.0 // indirect
 	golang.org/x/sync v0.8.0 // indirect
 )
