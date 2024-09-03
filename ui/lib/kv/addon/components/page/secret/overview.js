@@ -14,6 +14,7 @@ import { isDeleted } from 'kv/utils/kv-deleted';
  * @breadcrumbs={{this.breadcrumbs}}
  * @canReadMetadata={{true}}
  * @canUpdateData={{true}}
+ * @isPatchAllowed={{true}}
  * @metadata={{this.model.metadata}}
  * @path={{this.model.path}}
  * @subkeys={{this.model.subkeys}}
@@ -23,6 +24,7 @@ import { isDeleted } from 'kv/utils/kv-deleted';
  * @param {array} breadcrumbs - Array to generate breadcrumbs, passed to the page header component
  * @param {boolean} canReadMetadata - permissions to read metadata
  * @param {boolean} canUpdateData - permissions to create a new version of a secret
+ * @param {boolean} isPatchAllowed - isPatchAllowed is true if the version is enterprise AND a user has "patch" secret + "read" subkeys capabilities, passed to KvSubkeysCard
  * @param {model} metadata - Ember data model: 'kv/metadata'
  * @param {string} path - path to request secret data for selected version
  * @param {object} subkeys - API response from subkeys endpoint, object with "subkeys" and "metadata" keys. This arg is null for community edition
