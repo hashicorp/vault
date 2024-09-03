@@ -237,7 +237,7 @@ require (
 	cloud.google.com/go/longrunning v0.5.7 // indirect
 	github.com/containerd/containerd v1.7.20 // indirect
 	github.com/hashicorp/go-secure-stdlib/httputil v0.1.0 // indirect
-	github.com/hashicorp/go-secure-stdlib/regexp v0.0.0-20240903163805-c35e29d54cf6 // indirect
+	github.com/hashicorp/go-secure-stdlib/regexp v0.0.0-20240903164208-84aceb1cf3ee // indirect
 	github.com/jellydator/ttlcache/v3 v3.3.0 // indirect
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
