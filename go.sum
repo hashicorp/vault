@@ -1562,8 +1562,8 @@ github.com/hashicorp/vault-plugin-auth-oci v0.16.0 h1:V8vz5b/rqo16cKuvczv8s6n5w6
 github.com/hashicorp/vault-plugin-auth-oci v0.16.0/go.mod h1:BFcFkE1w2uPvQG52a2ZT7XsFENr0W2N7y4FwTqvDk/c=
 github.com/hashicorp/vault-plugin-database-couchbase v0.11.0 h1:SH+/CQUZayrmgqgozeyM8Ctz6i6ZkwT/q7fyB5OKFfg=
 github.com/hashicorp/vault-plugin-database-couchbase v0.11.0/go.mod h1:R4KHWLLyQhHUACZuFJqlNFasbm3hoDyF/kruiUvTEmM=
-github.com/hashicorp/vault-plugin-database-elasticsearch v0.15.0 h1:RGH87sxehWL74/JsEV8BacmErLeNRfxg6Pv1tudjGFU=
-github.com/hashicorp/vault-plugin-database-elasticsearch v0.15.0/go.mod h1:LYqjVkcdXvGCPDdYNeOM0j3MqWSkMAWeZ4r++Xn+tS8=
+github.com/hashicorp/vault-plugin-database-elasticsearch v0.16.0 h1:gArlFh8W0SVQA3OmYZ/IwD6H4RxLphAtKB71jOEKawE=
+github.com/hashicorp/vault-plugin-database-elasticsearch v0.16.0/go.mod h1:IqiX9rT/8wCsriRogV4kOCIgAV21yEgjK1D+Oucda3Y=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.13.0 h1:QfqA3GYVtuVOBe02snoEoU1BS6u3hUkzObd27lVb6FQ=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.13.0/go.mod h1:4JKUfOniWUxWjnrsBKyPpy3u7dCxkncYAH6VM0BCPhg=
 github.com/hashicorp/vault-plugin-database-redis v0.3.0 h1:chSbAsc7cYkn5ajQ/528nKoCm9ExGpJaDjTDos2IUa4=
