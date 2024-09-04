@@ -39,7 +39,7 @@ export default class App extends Application {
           'flash-messages',
           'namespace',
           'replication-mode',
-          'router',
+          { 'app-router': 'router' },
           'store',
           'version',
           '-portal',

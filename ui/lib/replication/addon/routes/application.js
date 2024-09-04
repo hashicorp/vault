@@ -13,7 +13,7 @@ export default Route.extend(ClusterRoute, {
   version: service(),
   store: service(),
   auth: service(),
-  router: service(),
+  router: service('app-router'),
 
   beforeModel() {
     if (this.auth.activeCluster.replicationRedacted) {

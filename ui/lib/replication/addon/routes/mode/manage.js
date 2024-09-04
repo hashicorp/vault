@@ -20,7 +20,7 @@ const pathForAction = (action, replicationMode, clusterMode) => {
 };
 
 export default Route.extend({
-  router: service(),
+  router: service('app-router'),
   store: service(),
   model() {
     const store = this.store;

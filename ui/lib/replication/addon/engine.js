@@ -19,7 +19,7 @@ const Eng = Engine.extend({
       'flash-messages',
       'namespace',
       'replication-mode',
-      'router',
+      'app-router',
       'store',
       'version',
       '-portal',
