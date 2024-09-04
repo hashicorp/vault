@@ -10,8 +10,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { click, currentURL, fillIn, visit, settled, find, waitFor, waitUntil } from '@ember/test-helpers';
 import { v4 as uuidv4 } from 'uuid';
 
-import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
+import { login, logout } from 'vault/tests/helpers/auth/auth-helpers';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { runCmd } from 'vault/tests/helpers/commands';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -29,17 +28,17 @@ module('Acceptance | pki configuration test', function (hooks) {
 
   hooks.beforeEach(async function () {
     this.pemBundle = issuerPemBundle;
-    await authPage.login();
+    await login();
     // Setup PKI engine
     const mountPath = `pki-workflow-${uuidv4()}`;
     await enablePage.enable('pki', mountPath);
     this.mountPath = mountPath;
-    await logout.visit();
+    await logout();
   });
 
   hooks.afterEach(async function () {
-    await logout.visit();
-    await authPage.login();
+    await logout();
+    await login();
     // Cleanup engine
     await runCmd([`delete sys/mounts/${this.mountPath}`]);
   });
@@ -48,7 +47,7 @@ module('Acceptance | pki configuration test', function (hooks) {
     setupMirage(hooks);
 
     test('it shows the delete all issuers modal', async function (assert) {
-      await authPage.login(this.pkiAdminToken);
+      await login(this.pkiAdminToken);
       await visit(`/vault/secrets/${this.mountPath}/pki/configuration`);
       await click(PKI_CONFIGURE_CREATE.configureButton);
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration/create`);
@@ -78,7 +77,7 @@ module('Acceptance | pki configuration test', function (hooks) {
     });
 
     test('it shows the correct empty state message if certificates exists after delete all issuers', async function (assert) {
-      await authPage.login(this.pkiAdminToken);
+      await login(this.pkiAdminToken);
       await visit(`/vault/secrets/${this.mountPath}/pki/configuration`);
       await click(PKI_CONFIGURE_CREATE.configureButton);
       assert.strictEqual(
@@ -157,7 +156,7 @@ module('Acceptance | pki configuration test', function (hooks) {
     });
 
     test('it shows the correct empty state message if roles and certificates exists after delete all issuers', async function (assert) {
-      await authPage.login(this.pkiAdminToken);
+      await login(this.pkiAdminToken);
       // Configure PKI
       await visit(`/vault/secrets/${this.mountPath}/pki/configuration`);
       await click(PKI_CONFIGURE_CREATE.configureButton);
@@ -231,7 +230,7 @@ module('Acceptance | pki configuration test', function (hooks) {
     // test coverage for ed25519 certs not displaying because the verify() function errors
     test('it generates and displays a root issuer of key type = ed25519', async function (assert) {
       assert.expect(4);
-      await authPage.login(this.pkiAdminToken);
+      await login(this.pkiAdminToken);
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       await click(GENERAL.secretTab('Issuers'));
       await click(PKI_ISSUER_LIST.generateIssuerDropdown);

@@ -10,7 +10,7 @@ import apiPath from 'vault/utils/api-path';
 import lazyCapabilities from 'vault/macros/lazy-capabilities';
 import { removeManyFromArray } from 'vault/helpers/remove-from-array';
 
-export const COMPUTEDS = {
+const COMPUTEDS = {
   operationFields: computed('newFields', function () {
     return this.newFields.filter((key) => key.startsWith('operation'));
   }),

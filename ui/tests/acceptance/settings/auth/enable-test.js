@@ -11,14 +11,14 @@ import { v4 as uuidv4 } from 'uuid';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import page from 'vault/tests/pages/settings/auth/enable';
 import listPage from 'vault/tests/pages/access/methods';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 
 module('Acceptance | settings/auth/enable', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
     this.uid = uuidv4();
-    return authPage.login();
+    return login();
   });
 
   test('it mounts and redirects', async function (assert) {
@@ -29,7 +29,7 @@ module('Acceptance | settings/auth/enable', function (hooks) {
     assert.strictEqual(currentRouteName(), 'vault.cluster.settings.auth.enable');
     await page.enable(type, path);
     await settled();
-    await assert.strictEqual(
+    assert.strictEqual(
       page.flash.latestMessage,
       `Successfully mounted the ${type} auth method at ${path}.`,
       'success flash shows'
