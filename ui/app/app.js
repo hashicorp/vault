@@ -29,7 +29,7 @@ export default class App extends Application {
     },
     'open-api-explorer': {
       dependencies: {
-        services: ['auth', 'flash-messages', 'namespace', 'router', 'version'],
+        services: ['auth', 'flash-messages', 'namespace', { 'app-router': 'router' }, 'version'],
       },
     },
     replication: {
