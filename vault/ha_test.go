@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-// TestGrabLockOrStopped is a non-deterministic test to detect deadlocks in the
+// TestGrabLockOrStop is a non-deterministic test to detect deadlocks in the
 // grabLockOrStopped function. This test starts a bunch of workers which
 // continually lock/unlock and rlock/runlock the same RWMutex. Each worker also
 // starts a goroutine which closes the stop channel 1/2 the time, which races
