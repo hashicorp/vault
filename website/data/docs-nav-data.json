@@ -1612,7 +1612,12 @@
           },
           {
             "title": "Enrollment over Secure Transport (EST)",
-            "path": "secrets/pki/est"
+            "path": "secrets/pki/est",
+            "badge": {
+              "text": "ENTERPRISE",
+              "type": "outlined",
+              "color": "neutral"
+            }
           }
         ]
       },
