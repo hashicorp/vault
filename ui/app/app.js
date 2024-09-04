@@ -58,7 +58,7 @@ export default class App extends Application {
           'flash-messages',
           'namespace',
           'path-help',
-          'router',
+          { 'app-router': 'router' },
           'store',
           'version',
           'secret-mount-path',
