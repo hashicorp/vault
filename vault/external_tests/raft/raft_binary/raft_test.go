@@ -26,7 +26,7 @@ import (
 // TestRaft_Configuration_Docker is a variant of TestRaft_Configuration that
 // uses docker containers for the vault nodes.
 func TestRaft_Configuration_Docker(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	binary := os.Getenv("VAULT_BINARY")
 	if binary == "" {
 		t.Skip("only running docker test when $VAULT_BINARY present")
@@ -326,7 +326,7 @@ func TestDocker_LogStore_Boltdb_To_Raftwal_And_Back(t *testing.T) {
 // TestRaft_LogStore_Migration_Snapshot checks migration from a boltDB to raftwal
 // by performing a snapshot restore from one cluster to another, and checking no data loss
 func TestRaft_LogStore_Migration_Snapshot(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	binary := os.Getenv("VAULT_BINARY")
 	if binary == "" {
 		t.Skip("only running docker test when $VAULT_BINARY present")

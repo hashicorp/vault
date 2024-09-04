@@ -11,7 +11,7 @@ import (
 
 // TestGetAuth tests that we can get a single auth mount
 func TestGetAuth(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 
 	testCases := []struct {
 		name        string
@@ -59,7 +59,7 @@ func TestGetAuth(t *testing.T) {
 		tc := tc
 
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel()
+			t.Parallel()
 
 			client, closer := testVaultServer(t)
 			defer closer()

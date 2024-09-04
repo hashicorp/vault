@@ -16,7 +16,7 @@ import (
 // TestKV_Subkeys_NotFound issues a read to the subkeys endpoint for a path
 // that does not exist. A 400 status should be returned.
 func TestKV_Subkeys_NotFound(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	c := cluster.Cores[0].Client
 
@@ -52,7 +52,7 @@ func TestKV_Subkeys_NotFound(t *testing.T) {
 // endpoint should return a 400 status with a nil "subkeys" value and the
 // "deletion_time" key in the "metadata" key should be not be empty.
 func TestKV_Subkeys_Deleted(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	c := cluster.Cores[0].Client
 
@@ -136,7 +136,7 @@ func TestKV_Subkeys_Deleted(t *testing.T) {
 // endpoint should return a 400 status with a nil "subkeys" value and the
 // "destroyed" key in the "metadata" key should be set to true.
 func TestKV_Subkeys_Destroyed(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	c := cluster.Cores[0].Client
 
@@ -228,7 +228,7 @@ func TestKV_Subkeys_Destroyed(t *testing.T) {
 // KVv2 secret engine. It ensures that the subkeys endpoint returns a 200 status
 // and current version of the secret.
 func TestKV_Subkeys_CurrentVersion(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	c := cluster.Cores[0].Client
 

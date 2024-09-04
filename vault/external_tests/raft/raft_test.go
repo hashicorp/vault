@@ -110,7 +110,7 @@ func raftCluster(t testing.TB, ropts *RaftClusterOpts) (*vault.TestCluster, *vau
 }
 
 func TestRaft_BoltDBMetrics(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	conf, opts := raftClusterBuilder(t, &RaftClusterOpts{
 		InmemCluster: true,
 		NumCores:     1,
@@ -162,7 +162,7 @@ func TestRaft_BoltDBMetrics(t *testing.T) {
 }
 
 func TestRaft_RetryAutoJoin(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 
 	cluster, _ := raftCluster(t, &RaftClusterOpts{
 		InmemCluster:         true,
@@ -197,7 +197,7 @@ func TestRaft_RetryAutoJoin(t *testing.T) {
 }
 
 func TestRaft_Retry_Join(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	cluster, _ := raftCluster(t, &RaftClusterOpts{
 		InmemCluster:         true,
 		DisableFollowerJoins: true,
@@ -249,7 +249,7 @@ func TestRaft_Retry_Join(t *testing.T) {
 }
 
 func TestRaft_Join(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	cluster, _ := raftCluster(t, &RaftClusterOpts{
 		DisableFollowerJoins: true,
 	})
@@ -298,7 +298,7 @@ func TestRaft_Join(t *testing.T) {
 }
 
 func TestRaft_RemovePeer(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	cluster, _ := raftCluster(t, nil)
 	defer cluster.Cleanup()
 
@@ -350,7 +350,7 @@ func TestRaft_RemovePeer(t *testing.T) {
 }
 
 func TestRaft_NodeIDHeader(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	testCases := []struct {
 		description   string
 		ropts         *RaftClusterOpts
@@ -409,14 +409,14 @@ func TestRaft_NodeIDHeader(t *testing.T) {
 }
 
 func TestRaft_Configuration(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	cluster, _ := raftCluster(t, nil)
 	defer cluster.Cleanup()
 	Raft_Configuration_Test(t, cluster)
 }
 
 func TestRaft_ShamirUnseal(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	cluster, _ := raftCluster(t, nil)
 	defer cluster.Cleanup()
 
@@ -428,7 +428,7 @@ func TestRaft_ShamirUnseal(t *testing.T) {
 }
 
 func TestRaft_SnapshotAPI(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	cluster, _ := raftCluster(t, nil)
 	defer cluster.Cleanup()
 
@@ -486,7 +486,7 @@ func TestRaft_SnapshotAPI(t *testing.T) {
 
 func TestRaft_SnapshotAPI_MidstreamFailure(t *testing.T) {
 	// defer goleak.VerifyNone(t)
-	// t.Parallel()
+	t.Parallel()
 
 	seal, wrappers := vaultseal.NewTestSeal(nil)
 	autoSeal := vault.NewAutoSeal(seal)
@@ -538,7 +538,7 @@ func TestRaft_SnapshotAPI_MidstreamFailure(t *testing.T) {
 }
 
 func TestRaft_SnapshotAPI_RekeyRotate_Backward(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	type testCase struct {
 		Name               string
 		Rekey              bool
@@ -594,7 +594,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Backward(t *testing.T) {
 		t.Run(tCase.Name, func(t *testing.T) {
 			// bind locally
 			tCaseLocal := tCase
-			// t.Parallel()
+			t.Parallel()
 
 			cluster, _ := raftCluster(t, &RaftClusterOpts{
 				DisablePerfStandby: tCaseLocal.DisablePerfStandby,
@@ -727,7 +727,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Backward(t *testing.T) {
 }
 
 func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	type testCase struct {
 		Name               string
 		Rekey              bool
@@ -798,7 +798,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 		t.Run(tCase.Name, func(t *testing.T) {
 			// bind locally
 			tCaseLocal := tCase
-			// t.Parallel()
+			t.Parallel()
 
 			cluster, _ := raftCluster(t, &RaftClusterOpts{
 				DisablePerfStandby: tCaseLocal.DisablePerfStandby,
@@ -988,7 +988,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 }
 
 func TestRaft_SnapshotAPI_DifferentCluster(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	cluster, _ := raftCluster(t, nil)
 	defer cluster.Cleanup()
 
@@ -1111,7 +1111,7 @@ func BenchmarkRaft_SingleNode(b *testing.B) {
 }
 
 func TestRaft_Join_InitStatus(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 
 	cluster, _ := raftCluster(t, &RaftClusterOpts{
 		InmemCluster:         true,

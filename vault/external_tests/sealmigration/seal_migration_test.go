@@ -17,7 +17,7 @@ func testVariousBackends(t *testing.T, tf testFunc, basePort int, includeRaft bo
 	logger := corehelpers.NewTestLogger(t)
 
 	t.Run("inmem", func(t *testing.T) {
-		// t.Parallel()
+		t.Parallel()
 
 		logger := logger.Named("inmem")
 		storage, cleanup := teststorage.MakeReusableStorage(
@@ -28,7 +28,7 @@ func testVariousBackends(t *testing.T, tf testFunc, basePort int, includeRaft bo
 
 	if includeRaft {
 		t.Run("raft", func(t *testing.T) {
-			// t.Parallel()
+			t.Parallel()
 
 			logger := logger.Named("raft")
 			raftBasePort := basePort + 400
@@ -44,7 +44,7 @@ func testVariousBackends(t *testing.T, tf testFunc, basePort int, includeRaft bo
 // migration, using the post-1.4 method of bring individual nodes in the cluster
 // to do the migration.
 func TestSealMigration_ShamirToTransit_Post14(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	testVariousBackends(t, ParamTestSealMigrationShamirToTransit_Post14, BasePort_ShamirToTransit_Post14, true)
 }
 
@@ -52,7 +52,7 @@ func TestSealMigration_ShamirToTransit_Post14(t *testing.T) {
 // migration, using the post-1.4 method of bring individual nodes in the
 // cluster to do the migration.
 func TestSealMigration_TransitToShamir_Post14(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	testVariousBackends(t, ParamTestSealMigrationTransitToShamir_Post14, BasePort_TransitToShamir_Post14, true)
 }
 

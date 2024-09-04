@@ -16,7 +16,7 @@ import (
 // particular reason why TestSysPprof was chosen to validate that mechanism,
 // other than that it was fast and simple.
 func TestSysPprof_Exec(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	binary := os.Getenv("VAULT_BINARY")
 	if binary == "" {
 		t.Skip("only running exec test when $VAULT_BINARY present")

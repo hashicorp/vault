@@ -71,7 +71,7 @@ var allClientTypeTestCases = []struct {
 // test queries for the current month data and verifies that the data from
 // before the leadership transfer is returned
 func Test_ActivityLog_LoseLeadership(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 		NumCores:    2,
@@ -114,7 +114,7 @@ func Test_ActivityLog_LoseLeadership(t *testing.T) {
 // previous and current months, and verifies that the repeated clients are not
 // considered new
 func Test_ActivityLog_ClientsOverlapping(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
@@ -162,7 +162,7 @@ func Test_ActivityLog_ClientsOverlapping(t *testing.T) {
 // The test then queries the activity log for only the current month, and
 // verifies that all 7 clients seen this month are considered new.
 func Test_ActivityLog_ClientsNewCurrentMonth(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
@@ -196,7 +196,7 @@ func Test_ActivityLog_ClientsNewCurrentMonth(t *testing.T) {
 // verifies that empty months of data are returned for the past, and the current
 // month data is correct.
 func Test_ActivityLog_EmptyDataMonths(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
@@ -236,7 +236,7 @@ func Test_ActivityLog_EmptyDataMonths(t *testing.T) {
 // and an end date in the future. The test
 // verifies that the current month is returned in the response.
 func Test_ActivityLog_FutureEndDate(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
@@ -306,11 +306,11 @@ func getTotals(t *testing.T, resp *api.Secret) vault.ResponseCounts {
 // activity log query response returns 10 clients of that type at every level of
 // the response hierarchy
 func Test_ActivityLog_ClientTypeResponse(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	for _, tc := range allClientTypeTestCases {
 		tc := tc
 		t.Run(tc.clientType, func(t *testing.T) {
-			// t.Parallel()
+			t.Parallel()
 			cluster := minimal.NewTestSoloCluster(t, nil)
 			client := cluster.Cores[0].Client
 			_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
@@ -358,12 +358,12 @@ func Test_ActivityLog_ClientTypeResponse(t *testing.T) {
 // month response returns 10 clients of that type at every level of the response
 // hierarchy
 func Test_ActivityLogCurrentMonth_Response(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 
 	for _, tc := range allClientTypeTestCases {
 		tc := tc
 		t.Run(tc.clientType, func(t *testing.T) {
-			// t.Parallel()
+			t.Parallel()
 			cluster := minimal.NewTestSoloCluster(t, nil)
 			client := cluster.Cores[0].Client
 			_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
@@ -410,11 +410,11 @@ func Test_ActivityLogCurrentMonth_Response(t *testing.T) {
 // registers 3 and then 2 new clients. The test verifies that the total number
 // of clients is 15 (10 + 2 + 3), ensuring that the duplicates are not included
 func Test_ActivityLog_Deduplication(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	for _, tc := range allClientTypeTestCases {
 		tc := tc
 		t.Run(tc.clientType, func(t *testing.T) {
-			// t.Parallel()
+			t.Parallel()
 			cluster := minimal.NewTestSoloCluster(t, nil)
 			client := cluster.Cores[0].Client
 			_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
@@ -452,7 +452,7 @@ func Test_ActivityLog_Deduplication(t *testing.T) {
 // current month as well. The test verifies that the mount counts are correctly
 // summed in the results when the previous and current month are queried.
 func Test_ActivityLog_MountDeduplication(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
@@ -655,7 +655,7 @@ func getCSVExport(t *testing.T, client *api.Client, monthsPreviousTo int, now ti
 // a root token or a token with a sudo policy.
 func Test_ActivityLog_Export_Sudo(t *testing.T) {
 	timeutil.SkipAtEndOfMonth(t)
-	// t.Parallel()
+	t.Parallel()
 
 	now := time.Now().UTC()
 	var err error

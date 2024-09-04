@@ -40,7 +40,7 @@ var credentialVersionMap = map[string]string{
 var testCtx = context.TODO()
 
 func TestSystemBackend_Plugin_secret(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	testCases := []struct {
 		pluginVersion string
 	}{
@@ -57,7 +57,7 @@ func TestSystemBackend_Plugin_secret(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.pluginVersion, func(t *testing.T) {
-			// t.Parallel()
+			t.Parallel()
 			cluster := testSystemBackendMock(t, 1, 1, logical.TypeLogical, tc.pluginVersion)
 			defer cluster.Cleanup()
 
@@ -98,7 +98,7 @@ func TestSystemBackend_Plugin_secret(t *testing.T) {
 }
 
 func TestSystemBackend_Plugin_auth(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	testCases := []struct {
 		pluginVersion string
 	}{
@@ -115,7 +115,7 @@ func TestSystemBackend_Plugin_auth(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.pluginVersion, func(t *testing.T) {
-			// t.Parallel()
+			t.Parallel()
 			cluster := testSystemBackendMock(t, 1, 1, logical.TypeCredential, tc.pluginVersion)
 			defer cluster.Cleanup()
 
@@ -156,7 +156,7 @@ func TestSystemBackend_Plugin_auth(t *testing.T) {
 }
 
 func TestSystemBackend_Plugin_MissingBinary(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	testCases := []struct {
 		pluginVersion string
 	}{
@@ -173,7 +173,7 @@ func TestSystemBackend_Plugin_MissingBinary(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.pluginVersion, func(t *testing.T) {
-			// t.Parallel()
+			t.Parallel()
 			cluster := testSystemBackendMock(t, 1, 1, logical.TypeLogical, tc.pluginVersion)
 			defer cluster.Cleanup()
 
@@ -217,7 +217,7 @@ func TestSystemBackend_Plugin_MissingBinary(t *testing.T) {
 }
 
 func TestSystemBackend_Plugin_MismatchType(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	testCases := []struct {
 		pluginVersion string
 	}{
@@ -256,22 +256,22 @@ func TestSystemBackend_Plugin_MismatchType(t *testing.T) {
 
 func TestSystemBackend_Plugin_CatalogRemoved(t *testing.T) {
 	t.Run("secret", func(t *testing.T) {
-		// t.Parallel()
+		t.Parallel()
 		testPlugin_CatalogRemoved(t, logical.TypeLogical, false, logicalVersionMap)
 	})
 
 	t.Run("auth", func(t *testing.T) {
-		// t.Parallel()
+		t.Parallel()
 		testPlugin_CatalogRemoved(t, logical.TypeCredential, false, credentialVersionMap)
 	})
 
 	t.Run("secret-mount-existing", func(t *testing.T) {
-		// t.Parallel()
+		t.Parallel()
 		testPlugin_CatalogRemoved(t, logical.TypeLogical, true, logicalVersionMap)
 	})
 
 	t.Run("auth-mount-existing", func(t *testing.T) {
-		// t.Parallel()
+		t.Parallel()
 		testPlugin_CatalogRemoved(t, logical.TypeCredential, true, credentialVersionMap)
 	})
 }
@@ -293,7 +293,7 @@ func testPlugin_CatalogRemoved(t *testing.T, btype logical.BackendType, testMoun
 
 	for _, tc := range testCases {
 		t.Run(tc.pluginVersion, func(t *testing.T) {
-			// t.Parallel()
+			t.Parallel()
 			cluster := testSystemBackendMock(t, 1, 1, logical.TypeLogical, tc.pluginVersion)
 			defer cluster.Cleanup()
 
@@ -355,7 +355,7 @@ func testPlugin_CatalogRemoved(t *testing.T, btype logical.BackendType, testMoun
 }
 
 func TestSystemBackend_Plugin_autoReload(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	testCases := []struct {
 		pluginVersion string
 	}{
@@ -372,7 +372,7 @@ func TestSystemBackend_Plugin_autoReload(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.pluginVersion, func(t *testing.T) {
-			// t.Parallel()
+			t.Parallel()
 			cluster := testSystemBackendMock(t, 1, 1, logical.TypeLogical, tc.pluginVersion)
 			defer cluster.Cleanup()
 
@@ -432,7 +432,7 @@ func TestSystemBackend_Plugin_SealUnseal(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.pluginVersion, func(t *testing.T) {
-			// t.Parallel()
+			t.Parallel()
 			cluster := testSystemBackendMock(t, 1, 1, logical.TypeLogical, tc.pluginVersion)
 			defer cluster.Cleanup()
 
@@ -523,7 +523,7 @@ func TestSystemBackend_Plugin_reload(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel()
+			t.Parallel()
 			testSystemBackend_PluginReload(t, tc.path, tc.data, tc.backendType)
 		})
 	}

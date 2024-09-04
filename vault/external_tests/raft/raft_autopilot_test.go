@@ -27,7 +27,7 @@ import (
 )
 
 func TestRaft_Autopilot_Disable(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	cluster, _ := raftCluster(t, &RaftClusterOpts{
 		DisableFollowerJoins: true,
 		InmemCluster:         true,
@@ -46,7 +46,7 @@ func TestRaft_Autopilot_Disable(t *testing.T) {
 // version of the raft library is working. Hopefully this will trivially pass
 // from now on, however it would have caught a regression in the past!
 func TestRaft_Autopilot_BinaryVersionPlumbing(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 
 	coreCfg, clusterOpts := raftClusterBuilder(t, &RaftClusterOpts{
 		EnableAutopilot: true,
@@ -80,7 +80,7 @@ func TestRaft_Autopilot_BinaryVersionPlumbing(t *testing.T) {
 // to be voters after the stabilization time has elapsed.  Also checks that
 // the autopilot state is Healthy once all nodes are available.
 func TestRaft_Autopilot_Stabilization_And_State(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	cluster, _ := raftCluster(t, &RaftClusterOpts{
 		DisableFollowerJoins: true,
 		InmemCluster:         true,
@@ -154,7 +154,7 @@ func TestRaft_Autopilot_Stabilization_And_State(t *testing.T) {
 }
 
 func TestRaft_Autopilot_Configuration(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	cluster, _ := raftCluster(t, &RaftClusterOpts{
 		DisableFollowerJoins: true,
 		InmemCluster:         true,
@@ -250,7 +250,7 @@ func TestRaft_Autopilot_Configuration(t *testing.T) {
 // TestRaft_Autopilot_Stabilization_Delay verifies that if a node takes a long
 // time to become ready, it doesn't get promoted to voter until then.
 func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	core2SnapshotDelay := 5 * time.Second
 	conf, opts := raftClusterBuilder(t, &RaftClusterOpts{
 		DisableFollowerJoins: true,
@@ -357,7 +357,7 @@ func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
 }
 
 func TestRaft_AutoPilot_Peersets_Equivalent(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	cluster, _ := raftCluster(t, &RaftClusterOpts{
 		InmemCluster:         true,
 		EnableAutopilot:      true,
@@ -406,7 +406,7 @@ func TestRaft_AutoPilot_Peersets_Equivalent(t *testing.T) {
 // TestRaft_VotersStayVoters ensures that autopilot doesn't demote a node just
 // because it hasn't been heard from in some time.
 func TestRaft_VotersStayVoters(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	reconcileInterval := 300 * time.Millisecond
 	cluster, _ := raftCluster(t, &RaftClusterOpts{
 		DisableFollowerJoins: true,
@@ -465,7 +465,7 @@ func TestRaft_VotersStayVoters(t *testing.T) {
 // The expected behavior is that removing a node from a 3 node cluster wouldn't
 // remove it from Raft until a replacement voter had joined and stabilized/been promoted.
 func TestRaft_Autopilot_DeadServerCleanup(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	cluster, _ := raftCluster(t, &RaftClusterOpts{
 		DisableFollowerJoins: true,
 		InmemCluster:         true,

@@ -31,7 +31,7 @@ func TestSysRekey_Verification(t *testing.T) {
 	for _, tc := range testcases {
 		recovery, legacy := tc.recovery, tc.legacyShamir
 		t.Run(fmt.Sprintf("recovery=%v,legacyShamir=%v", recovery, legacy), func(t *testing.T) {
-			// t.Parallel()
+			t.Parallel()
 			testSysRekey_Verification(t, recovery, legacy)
 		})
 	}

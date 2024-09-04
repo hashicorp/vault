@@ -21,7 +21,7 @@ import (
 // Test_Echo_Duration_Skew tests that the sys/health and sys/ha-status endpoints
 // report reasonable values for echo duration and clock skew.
 func Test_Echo_Duration_Skew(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	cases := []struct {
 		name        string
 		perfstandby bool
@@ -35,7 +35,7 @@ func Test_Echo_Duration_Skew(t *testing.T) {
 			continue
 		}
 		t.Run(cases[i].name, func(t *testing.T) {
-			// t.Parallel()
+			t.Parallel()
 			conf, opts := teststorage.ClusterSetup(nil, nil, nil)
 			name := strings.Replace(t.Name(), "/", "_", -1)
 			logger := corehelpers.NewTestLogger(t)

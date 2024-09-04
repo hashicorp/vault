@@ -14,7 +14,7 @@ import (
 )
 
 func TestSealMigration_ShamirToTransit_Pre14(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	logger := logging.NewVaultLogger(hclog.Debug).Named(t.Name())
 	storage, cleanup := teststorage.MakeReusableStorage(t, logger,
 		consul.MakeConsulBackend(t, logger))
@@ -24,7 +24,7 @@ func TestSealMigration_ShamirToTransit_Pre14(t *testing.T) {
 }
 
 func TestSealMigration_TransitToShamir_Pre14(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	logger := logging.NewVaultLogger(hclog.Debug).Named(t.Name())
 	storage, cleanup := teststorage.MakeReusableStorage(t, logger,
 		consul.MakeConsulBackend(t, logger))
@@ -34,7 +34,7 @@ func TestSealMigration_TransitToShamir_Pre14(t *testing.T) {
 }
 
 func TestSealMigration_ShamirToTransit_Post14(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	logger := logging.NewVaultLogger(hclog.Debug).Named(t.Name())
 	storage, cleanup := teststorage.MakeReusableStorage(t, logger,
 		consul.MakeConsulBackend(t, logger))
@@ -44,7 +44,7 @@ func TestSealMigration_ShamirToTransit_Post14(t *testing.T) {
 }
 
 func TestSealMigration_TransitToShamir_Post14(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	logger := logging.NewVaultLogger(hclog.Debug).Named(t.Name())
 	storage, cleanup := teststorage.MakeReusableStorage(t, logger,
 		consul.MakeConsulBackend(t, logger))
@@ -54,7 +54,7 @@ func TestSealMigration_TransitToShamir_Post14(t *testing.T) {
 }
 
 func TestSealMigration_TransitToTransit_Post14(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	logger := logging.NewVaultLogger(hclog.Debug).Named(t.Name())
 	storage, cleanup := teststorage.MakeReusableStorage(t, logger,
 		consul.MakeConsulBackend(t, logger))

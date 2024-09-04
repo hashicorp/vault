@@ -25,7 +25,7 @@ import (
 func TestRecovery_Docker(t *testing.T) {
 	ctx := context.TODO()
 
-	// t.Parallel()
+	t.Parallel()
 	binary := os.Getenv("VAULT_BINARY")
 	if binary == "" {
 		t.Skip("only running docker test when $VAULT_BINARY present")

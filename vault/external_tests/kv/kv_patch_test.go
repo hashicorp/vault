@@ -18,7 +18,7 @@ import (
 )
 
 func TestKV_Patch_BadContentTypeHeader(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	c := cluster.Cores[0].Client
 
@@ -103,7 +103,7 @@ func kvRequestWithRetry(t *testing.T, req func() (interface{}, error)) (interfac
 }
 
 func TestKV_Patch_Audit(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	c := cluster.Cores[0].Client
 
@@ -187,7 +187,7 @@ func TestKV_Patch_Audit(t *testing.T) {
 
 // Verifies that patching works by default with the root token
 func TestKV_Patch_RootToken(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 

@@ -12,7 +12,7 @@ import (
 )
 
 func TestApproleSecretId_Wrapped(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
@@ -52,7 +52,7 @@ func TestApproleSecretId_Wrapped(t *testing.T) {
 }
 
 func TestApproleSecretId_NotWrapped(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 

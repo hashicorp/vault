@@ -19,7 +19,7 @@ import (
 )
 
 func TestSysPprof(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc:             vaulthttp.Handler,
 		RequestResponseCallback: schema.ResponseValidatingCallback(t),
@@ -33,7 +33,7 @@ func TestSysPprof(t *testing.T) {
 }
 
 func TestSysPprof_MaxRequestDuration(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})

@@ -49,7 +49,7 @@ func setupKVv2Test(t *testing.T, client *api.Client) (func(t *testing.T), *api.K
 }
 
 func TestKVHelpers(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 
 	// initialize test cluster
 	coreConfig := &vault.CoreConfig{
