@@ -8,7 +8,7 @@ import { service } from '@ember/service';
 import { breadcrumbsForSecret } from 'kv/utils/kv-breadcrumbs';
 
 export default class SecretIndex extends Route {
-  @service router;
+  @service('app-router') router;
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);

@@ -92,7 +92,7 @@ export default class App extends Application {
           'download',
           'flash-messages',
           'namespace',
-          'router',
+          { 'app-router': 'router' },
           'secret-mount-path',
           'store',
           'version',
