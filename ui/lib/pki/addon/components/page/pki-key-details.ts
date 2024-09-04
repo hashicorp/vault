@@ -15,7 +15,7 @@ interface Args {
 }
 
 export default class PkiKeyDetails extends Component<Args> {
-  @service declare readonly router: RouterService;
+  @service('app-router') declare readonly router: RouterService;
   @service declare readonly flashMessages: FlashMessageService;
 
   @action

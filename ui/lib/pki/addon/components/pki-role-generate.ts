@@ -23,7 +23,7 @@ interface Args {
 }
 
 export default class PkiRoleGenerate extends Component<Args> {
-  @service declare readonly router: Router;
+  @service('app-router') declare readonly router: Router;
   @service declare readonly store: Store;
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly download: DownloadService;

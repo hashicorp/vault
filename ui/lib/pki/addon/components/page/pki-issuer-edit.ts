@@ -21,7 +21,7 @@ interface Args {
 }
 
 export default class PkiIssuerEditComponent extends Component<Args> {
-  @service declare readonly router: RouterService;
+  @service('app-router') declare readonly router: RouterService;
   @service declare readonly flashMessages: FlashMessageService;
 
   @tracked usageValues: Array<string> = [];

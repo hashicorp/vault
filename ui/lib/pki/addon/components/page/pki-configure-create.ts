@@ -27,7 +27,7 @@ interface Args {
  */
 export default class PkiConfigureCreate extends Component<Args> {
   @service declare readonly store: Store;
-  @service declare readonly router: Router;
+  @service('app-router') declare readonly router: Router;
   @service declare readonly flashMessages: FlashMessageService;
 
   @tracked title = 'Configure PKI';
