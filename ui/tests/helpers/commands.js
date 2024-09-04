@@ -4,6 +4,7 @@
  */
 
 import { click, fillIn, findAll, triggerKeyEvent } from '@ember/test-helpers';
+
 const REPL = {
   toggle: '[data-test-console-toggle]',
   consoleInput: '[data-test-component="console/command-input"] input',
