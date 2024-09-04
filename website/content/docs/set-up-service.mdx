@@ -1,0 +1,135 @@
+---
+layout: docs
+page_title: Set up Vault service
+description: |-
+  Configure Vault to be run as a service.
+---
+
+# Set up Vault service
+
+When you [install the Vault binary](/vault/docs/install) to be run as a server,
+it is common to configure to run Vault as a service, instead of manually
+starting Vault.
+
+The instructions included on this page are based on the example
+[`vault.service`](https://github.com/hashicorp/vault/blob/main/.release/linux/package/usr/lib/systemd/system/vault.service)
+included in the [Vault GitHub repository](https://github.com/hashicorp/vault)
+and tested on Ubuntu 22.04.
+
+1. Download a [precompiled binary or build from source](/vault/docs/install).
+
+1. Move the Vault binary to `/usr/bin/`
+
+   ```shell-session
+   $ sudo mv vault /usr/bin/
+   ```
+
+1. Configure the Vault binary with the ability to allow `mlock()`
+
+   ```shell-session
+   $ sudo setcap cap_ipc_lock=+ep $(readlink -f $(which vault))
+   ```
+
+1. Create a directory to store Vault data. A good practice is to store Vault
+   data, and Vault logs on a different volume than the operating system.
+
+   ```shell-session
+   $ sudo mkdir -p /opt/vault/data
+   ```
+
+1. Create a system user to run Vault and set the shell to `nologin`.
+
+   ```shell-session
+   $ sudo useradd --system --home /opt/vault/data --shell /sbin/nologin vault
+   ```
+
+1. Change directory ownership of `/opt/vault/data` to Vault and set permissions.
+
+   ```shell-session
+   $ sudo chown vault:vault /opt/vault/data && sudo chmod -R 750 /opt/vault/data
+   ```
+
+1. Create a directory for the Vault configuration file.
+
+   ```shell-session
+   $ sudo mkdir -p /etc/vault.d
+   ```
+
+1. Create a Vault configuration file. The example used is suitable for testing
+   and development but should not be used for real use cases with `tls_disable`
+   set to `1` (true). Refer to the [configuration
+   documentation](/vault/docs/configuration) for a list of supported parameters.
+
+   ```shell-session
+   $ sudo tee /etc/vault.d/vault.hcl <<EOF
+   ui            = true
+   cluster_addr  = "http://127.0.0.1:8201"
+   api_addr      = "https://127.0.0.1:8200"
+   disable_mlock = true
+
+   storage "raft" {
+     path    = "/opt/vault/data"
+     node_id = "127.0.0.1"
+   }
+
+   listener "tcp" {
+     address       = "0.0.0.0:8200"
+     cluster_address = "0.0.0.0:8201"
+     tls_disable = 1
+   }
+   EOF
+   ```
+
+1. Change ownership and permission on the Vault configuration file.
+
+   ```shell-session
+   $ sudo chown vault:vault /etc/vault.d/vault.hcl && sudo chmod 640 /etc/vault.d/vault.hcl
+   ```
+
+1. Create a systemd service.
+
+   ```shell-session
+   $ sudo tee /etc/systemd/system/vault.service <<EOF
+   [Unit]
+   Description="HashiCorp Vault - A tool for managing secrets"
+   Documentation=https://developer.hashicorp.com/vault/docs
+   ConditionFileNotEmpty=/etc/vault.d/vault.hcl
+
+   [Service]
+   User=vault
+   Group=vault
+   SecureBits=keep-caps
+   AmbientCapabilities=CAP_IPC_LOCK
+   CapabilityBoundingSet=CAP_SYSLOG CAP_IPC_LOCK
+   NoNewPrivileges=yes
+   ExecStart=/usr/bin/vault server -config=/etc/vault.d/vault.hcl
+   ExecReload=/bin/kill --signal HUP
+   KillMode=process
+   KillSignal=SIGINT
+
+   [Install]
+   WantedBy=multi-user.target
+   EOF
+   ```
+
+1. Reload the systemd configuration.
+
+   ```shell-session
+   $ sudo systemctl daemon-reload
+   ```
+
+1. Start the Vault service.
+
+   ```shell-session
+   $ sudo systemctl start vault.service
+   ```
+
+1. Verify the service status.
+
+   ```shell-session
+   $ systemctl status vault.service
+   ```
+
+## Additional information
+
+- [Vault and mlock()](https://support.hashicorp.com/hc/en-us/articles/115012787688-Vault-and-mlock)

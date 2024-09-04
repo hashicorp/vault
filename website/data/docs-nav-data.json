@@ -34,8 +34,12 @@
   },
 
   {
-    "title": "Installing Vault",
+    "title": "Install Vault",
     "path": "install"
+  },
+  {
+    "title": "Set up Vault service",
+    "path": "set-up-service"
   },
   {
     "title": "Internals",
