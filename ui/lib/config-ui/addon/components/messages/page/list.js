@@ -24,7 +24,7 @@ import errorMessage from 'vault/utils/error-message';
 
 export default class MessagesList extends Component {
   @service store;
-  @service router;
+  @service('app-router') router;
   @service flashMessages;
   @service namespace;
   @service customMessages;
