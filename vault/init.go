@@ -227,7 +227,10 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 
 	// Avoid an initialization race
 	c.stateLock.Lock()
-	defer c.stateLock.Unlock()
+	defer func() {
+		c.logger.Debug("unlocking the stateLock()")
+		c.stateLock.Unlock()
+	}()
 
 	// Check if we are initialized
 	init, err := c.Initialized(ctx)
