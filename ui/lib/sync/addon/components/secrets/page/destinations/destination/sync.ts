@@ -22,7 +22,7 @@ interface Args {
 }
 
 export default class DestinationSyncPageComponent extends Component<Args> {
-  @service declare readonly router: RouterService;
+  @service('app-router') declare readonly router: RouterService;
   @service declare readonly store: StoreService;
   @service declare readonly flashMessages: FlashMessageService;
 
