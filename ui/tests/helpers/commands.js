@@ -68,7 +68,7 @@ export const enterCommands = async (commands) => {
 };
 
 export const lastLogOutput = async () => {
-  const items = await findAll(REPL.logOutputItems);
+  const items = findAll(REPL.logOutputItems);
   const count = items.length;
   if (count === 0) {
     // If no logOutput items are found, we can assume the response is empty
