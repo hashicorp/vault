@@ -16,7 +16,7 @@ import (
 )
 
 func TestBatchTokens(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"kv": vault.LeasedPassthroughBackendFactory,
@@ -192,7 +192,7 @@ path "kv/*" {
 }
 
 func TestBatchToken_ParentLeaseRevoke(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"kv": vault.LeasedPassthroughBackendFactory,
@@ -302,7 +302,7 @@ path "kv/*" {
 }
 
 func TestTokenStore_Roles_Batch(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 	rootToken := client.Token()

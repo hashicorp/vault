@@ -14,7 +14,7 @@ import (
 )
 
 func TestIdentityStore_EntityDisabled(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
@@ -166,7 +166,7 @@ func TestIdentityStore_EntityDisabled(t *testing.T) {
 }
 
 func TestIdentityStore_EntityPoliciesInInitialAuth(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 

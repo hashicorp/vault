@@ -19,7 +19,7 @@ import (
 
 // TestKVV1Get tests an end-to-end KVV1 get, and checks the response
 func TestKVV1Get(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
@@ -41,7 +41,7 @@ func TestKVV1Get(t *testing.T) {
 
 // TestKVV2Get tests an end-to-end KVV2 get, and checks the response
 func TestKVV2Get(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
@@ -70,7 +70,7 @@ func TestKVV2Get(t *testing.T) {
 
 // TestKVV2Get_RequestForwarding tests an end-to-end KVV2 get via request forwarding, and checks the response
 func TestKVV2Get_RequestForwarding(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 
 	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
 		DisablePerformanceStandby: true,

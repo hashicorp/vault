@@ -22,7 +22,7 @@ import (
 // includes both the disabled and enabled dates. The test verifies that the past
 // month's data is returned, but there is no current month data.
 func Test_ActivityLog_Disable(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{

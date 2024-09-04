@@ -18,7 +18,7 @@ import (
 
 func TestRaft_HA_NewCluster(t *testing.T) {
 	t.Run("file", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		t.Run("no_client_certs", func(t *testing.T) {
 			testRaftHANewCluster(t, teststorage.MakeFileBackend, false)
@@ -30,7 +30,7 @@ func TestRaft_HA_NewCluster(t *testing.T) {
 	})
 
 	t.Run("inmem", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		t.Run("no_client_certs", func(t *testing.T) {
 			testRaftHANewCluster(t, teststorage.MakeInmemBackend, false)
@@ -42,7 +42,7 @@ func TestRaft_HA_NewCluster(t *testing.T) {
 	})
 
 	t.Run("consul", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		t.Run("no_client_certs", func(t *testing.T) {
 			testRaftHANewCluster(t, consulstorage.MakeConsulBackend, false)
@@ -118,7 +118,7 @@ func testRaftHANewCluster(t *testing.T, bundler teststorage.PhysicalBackendBundl
 }
 
 func TestRaft_HA_ExistingCluster(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 	conf := vault.CoreConfig{
 		DisablePerformanceStandby: true,
 	}

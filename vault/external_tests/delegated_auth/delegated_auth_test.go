@@ -117,7 +117,7 @@ func buildDelegatedAuthFactory(defaults map[string]string) logical.Factory {
 }
 
 func TestDelegatedAuth(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 
 	// A map of success values to be populated once and used in request
 	// operations that can't pass in values

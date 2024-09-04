@@ -18,7 +18,7 @@ import (
 )
 
 func TestIdentityStore_ListAlias(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
@@ -168,7 +168,7 @@ func TestIdentityStore_ListAlias(t *testing.T) {
 // returned on an attempt to rename an alias to match another alias with the
 // same mount accessor.  This used to result in a merge entity.
 func TestIdentityStore_RenameAlias_CannotMergeEntity(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
@@ -238,7 +238,7 @@ func TestIdentityStore_RenameAlias_CannotMergeEntity(t *testing.T) {
 }
 
 func TestIdentityStore_MergeEntities_FailsDueToClash(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
@@ -313,7 +313,7 @@ func TestIdentityStore_MergeEntities_FailsDueToClash(t *testing.T) {
 }
 
 func TestIdentityStore_MergeEntities_FailsDueToClashInFromEntities(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
@@ -383,7 +383,7 @@ func TestIdentityStore_MergeEntities_FailsDueToClashInFromEntities(t *testing.T)
 }
 
 func TestIdentityStore_MergeEntities_FailsDueToDoubleClash(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
@@ -510,7 +510,7 @@ func TestIdentityStore_MergeEntities_FailsDueToDoubleClash(t *testing.T) {
 }
 
 func TestIdentityStore_MergeEntities_FailsDueToClashInFromEntities_CheckRawRequest(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
@@ -665,7 +665,7 @@ func TestIdentityStore_MergeEntities_FailsDueToClashInFromEntities_CheckRawReque
 }
 
 func TestIdentityStore_MergeEntities_SameMountAccessor_ThenUseAlias(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
@@ -773,7 +773,7 @@ func TestIdentityStore_MergeEntities_SameMountAccessor_ThenUseAlias(t *testing.T
 }
 
 func TestIdentityStore_MergeEntities_FailsDueToMultipleClashMergesAttempted(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 

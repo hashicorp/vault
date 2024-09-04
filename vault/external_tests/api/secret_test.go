@@ -14,7 +14,7 @@ import (
 )
 
 func TestParseSecret(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 
 	raw := strings.TrimSpace(`
 {
@@ -69,7 +69,7 @@ func TestParseSecret(t *testing.T) {
 }
 
 func TestSecret_TokenID(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 
 	cases := []struct {
 		name   string
@@ -153,7 +153,7 @@ func TestSecret_TokenID(t *testing.T) {
 		tc := tc
 
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel()
 
 			act, err := tc.secret.TokenID()
 			if err != nil && !tc.err {
@@ -166,7 +166,7 @@ func TestSecret_TokenID(t *testing.T) {
 	}
 
 	t.Run("auth", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -199,7 +199,7 @@ func TestSecret_TokenID(t *testing.T) {
 	})
 
 	t.Run("token create", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -222,7 +222,7 @@ func TestSecret_TokenID(t *testing.T) {
 	})
 
 	t.Run("token lookup", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -250,7 +250,7 @@ func TestSecret_TokenID(t *testing.T) {
 	})
 
 	t.Run("token lookup-self", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -279,7 +279,7 @@ func TestSecret_TokenID(t *testing.T) {
 	})
 
 	t.Run("token renew", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -307,7 +307,7 @@ func TestSecret_TokenID(t *testing.T) {
 	})
 
 	t.Run("token renew-self", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -337,7 +337,7 @@ func TestSecret_TokenID(t *testing.T) {
 }
 
 func TestSecret_TokenAccessor(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 
 	cases := []struct {
 		name   string
@@ -421,7 +421,7 @@ func TestSecret_TokenAccessor(t *testing.T) {
 		tc := tc
 
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel()
 
 			act, err := tc.secret.TokenAccessor()
 			if err != nil && !tc.err {
@@ -434,7 +434,7 @@ func TestSecret_TokenAccessor(t *testing.T) {
 	}
 
 	t.Run("auth", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -467,7 +467,7 @@ func TestSecret_TokenAccessor(t *testing.T) {
 	})
 
 	t.Run("token create", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -490,7 +490,7 @@ func TestSecret_TokenAccessor(t *testing.T) {
 	})
 
 	t.Run("token lookup", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -518,7 +518,7 @@ func TestSecret_TokenAccessor(t *testing.T) {
 	})
 
 	t.Run("token lookup-self", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -547,7 +547,7 @@ func TestSecret_TokenAccessor(t *testing.T) {
 	})
 
 	t.Run("token renew", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -575,7 +575,7 @@ func TestSecret_TokenAccessor(t *testing.T) {
 	})
 
 	t.Run("token renew-self", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -605,7 +605,7 @@ func TestSecret_TokenAccessor(t *testing.T) {
 }
 
 func TestSecret_TokenRemainingUses(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 
 	cases := []struct {
 		name   string
@@ -655,7 +655,7 @@ func TestSecret_TokenRemainingUses(t *testing.T) {
 		tc := tc
 
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel()
 
 			act, err := tc.secret.TokenRemainingUses()
 			if tc.exp != -1 && err != nil {
@@ -668,7 +668,7 @@ func TestSecret_TokenRemainingUses(t *testing.T) {
 	}
 
 	t.Run("auth", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -705,7 +705,7 @@ func TestSecret_TokenRemainingUses(t *testing.T) {
 	})
 
 	t.Run("token create", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -732,7 +732,7 @@ func TestSecret_TokenRemainingUses(t *testing.T) {
 	})
 
 	t.Run("token lookup", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -763,7 +763,7 @@ func TestSecret_TokenRemainingUses(t *testing.T) {
 	})
 
 	t.Run("token lookup-self", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -796,7 +796,7 @@ func TestSecret_TokenRemainingUses(t *testing.T) {
 	})
 
 	t.Run("token renew", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -829,7 +829,7 @@ func TestSecret_TokenRemainingUses(t *testing.T) {
 	})
 
 	t.Run("token renew-self", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -864,7 +864,7 @@ func TestSecret_TokenRemainingUses(t *testing.T) {
 }
 
 func TestSecret_TokenPolicies(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 
 	cases := []struct {
 		name   string
@@ -958,7 +958,7 @@ func TestSecret_TokenPolicies(t *testing.T) {
 		tc := tc
 
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel()
 
 			act, err := tc.secret.TokenPolicies()
 			if err != nil && !tc.err {
@@ -971,7 +971,7 @@ func TestSecret_TokenPolicies(t *testing.T) {
 	}
 
 	t.Run("auth", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -1005,7 +1005,7 @@ func TestSecret_TokenPolicies(t *testing.T) {
 	})
 
 	t.Run("token create", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -1029,7 +1029,7 @@ func TestSecret_TokenPolicies(t *testing.T) {
 	})
 
 	t.Run("token lookup", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -1059,7 +1059,7 @@ func TestSecret_TokenPolicies(t *testing.T) {
 	})
 
 	t.Run("token lookup-self", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -1090,7 +1090,7 @@ func TestSecret_TokenPolicies(t *testing.T) {
 	})
 
 	t.Run("token renew", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -1120,7 +1120,7 @@ func TestSecret_TokenPolicies(t *testing.T) {
 	})
 
 	t.Run("token renew-self", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -1152,7 +1152,7 @@ func TestSecret_TokenPolicies(t *testing.T) {
 }
 
 func TestSecret_TokenMetadata(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 
 	cases := []struct {
 		name   string
@@ -1256,7 +1256,7 @@ func TestSecret_TokenMetadata(t *testing.T) {
 		tc := tc
 
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel()
 
 			act, err := tc.secret.TokenMetadata()
 			if err != nil && !tc.err {
@@ -1269,7 +1269,7 @@ func TestSecret_TokenMetadata(t *testing.T) {
 	}
 
 	t.Run("auth", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -1303,7 +1303,7 @@ func TestSecret_TokenMetadata(t *testing.T) {
 	})
 
 	t.Run("token create", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -1328,7 +1328,7 @@ func TestSecret_TokenMetadata(t *testing.T) {
 	})
 
 	t.Run("token lookup", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -1359,7 +1359,7 @@ func TestSecret_TokenMetadata(t *testing.T) {
 	})
 
 	t.Run("token lookup-self", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -1391,7 +1391,7 @@ func TestSecret_TokenMetadata(t *testing.T) {
 	})
 
 	t.Run("token renew", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -1422,7 +1422,7 @@ func TestSecret_TokenMetadata(t *testing.T) {
 	})
 
 	t.Run("token renew-self", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -1455,7 +1455,7 @@ func TestSecret_TokenMetadata(t *testing.T) {
 }
 
 func TestSecret_TokenIsRenewable(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 
 	cases := []struct {
 		name   string
@@ -1548,7 +1548,7 @@ func TestSecret_TokenIsRenewable(t *testing.T) {
 		tc := tc
 
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel()
 
 			act, err := tc.secret.TokenIsRenewable()
 			if err != nil {
@@ -1561,7 +1561,7 @@ func TestSecret_TokenIsRenewable(t *testing.T) {
 	}
 
 	t.Run("auth", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -1595,7 +1595,7 @@ func TestSecret_TokenIsRenewable(t *testing.T) {
 	})
 
 	t.Run("token create", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -1620,7 +1620,7 @@ func TestSecret_TokenIsRenewable(t *testing.T) {
 	})
 
 	t.Run("token lookup", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -1651,7 +1651,7 @@ func TestSecret_TokenIsRenewable(t *testing.T) {
 	})
 
 	t.Run("token lookup-self", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -1683,7 +1683,7 @@ func TestSecret_TokenIsRenewable(t *testing.T) {
 	})
 
 	t.Run("token renew", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -1714,7 +1714,7 @@ func TestSecret_TokenIsRenewable(t *testing.T) {
 	})
 
 	t.Run("token renew-self", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -1747,7 +1747,7 @@ func TestSecret_TokenIsRenewable(t *testing.T) {
 }
 
 func TestSecret_TokenTTL(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 
 	cases := []struct {
 		name   string
@@ -1822,7 +1822,7 @@ func TestSecret_TokenTTL(t *testing.T) {
 		tc := tc
 
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel()
 
 			act, err := tc.secret.TokenTTL()
 			if err != nil {
@@ -1835,7 +1835,7 @@ func TestSecret_TokenTTL(t *testing.T) {
 	}
 
 	t.Run("auth", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -1871,7 +1871,7 @@ func TestSecret_TokenTTL(t *testing.T) {
 	})
 
 	t.Run("token create", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -1897,7 +1897,7 @@ func TestSecret_TokenTTL(t *testing.T) {
 	})
 
 	t.Run("token lookup", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -1929,7 +1929,7 @@ func TestSecret_TokenTTL(t *testing.T) {
 	})
 
 	t.Run("token lookup-self", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -1962,7 +1962,7 @@ func TestSecret_TokenTTL(t *testing.T) {
 	})
 
 	t.Run("token renew", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -1994,7 +1994,7 @@ func TestSecret_TokenTTL(t *testing.T) {
 	})
 
 	t.Run("token renew-self", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		client, closer := testVaultServer(t)
 		defer closer()

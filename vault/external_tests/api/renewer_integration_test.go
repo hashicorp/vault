@@ -11,14 +11,14 @@ import (
 )
 
 func TestRenewer_Renew(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 
 	client, vaultDone := testVaultServer(t)
 	defer vaultDone()
 
 	t.Run("group", func(t *testing.T) {
 		t.Run("kv", func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel()
 
 			if _, err := client.Logical().Write("secret/value", map[string]interface{}{
 				"foo": "bar",
@@ -53,7 +53,7 @@ func TestRenewer_Renew(t *testing.T) {
 		})
 
 		t.Run("transit", func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel()
 
 			if err := client.Sys().Mount("transit", &api.MountInput{
 				Type: "transit",
@@ -90,7 +90,7 @@ func TestRenewer_Renew(t *testing.T) {
 		})
 
 		t.Run("auth", func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel()
 
 			secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 				Policies:       []string{"default"},

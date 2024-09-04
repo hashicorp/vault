@@ -14,7 +14,7 @@ import (
 )
 
 func TestExpiration_irrevocableLeaseCountsAPI(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 	core := cluster.Cores[0].Core
@@ -115,7 +115,7 @@ func TestExpiration_irrevocableLeaseCountsAPI(t *testing.T) {
 }
 
 func TestExpiration_irrevocableLeaseListAPI(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 	core := cluster.Cores[0].Core
@@ -212,7 +212,7 @@ func TestExpiration_irrevocableLeaseListAPI(t *testing.T) {
 }
 
 func TestExpiration_irrevocableLeaseListAPI_includeAll(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 	core := cluster.Cores[0].Core

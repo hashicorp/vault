@@ -15,7 +15,7 @@ import (
 // TestAuditFilteringInCE ensures that the audit device 'filter'
 // option is only supported in the enterprise edition of the product.
 func TestAuditFilteringInCE(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
@@ -43,7 +43,7 @@ func TestAuditFilteringInCE(t *testing.T) {
 // TestAuditFilteringFallbackDeviceInCE validates that the audit device
 // 'fallback' option is only available in the enterprise edition of the product.
 func TestAuditFilteringFallbackDeviceInCE(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 

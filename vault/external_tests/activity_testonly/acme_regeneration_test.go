@@ -46,7 +46,7 @@ func forceRegeneration(t *testing.T, cluster *vault.TestCluster) {
 // and verifies that the counts are correct when querying both with and without
 // the current month
 func TestACMERegeneration_RegenerateWithCurrentMonth(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{EnableRaw: true})
 	client := cluster.Cores[0].Client
 	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
@@ -111,7 +111,7 @@ func TestACMERegeneration_RegenerateWithCurrentMonth(t *testing.T) {
 // months ago, and 3 months ago. The test regenerates the precomputed queries
 // and then verifies that this older data is included in the generated results.
 func TestACMERegeneration_RegenerateMuchOlder(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{EnableRaw: true})
 	client := cluster.Cores[0].Client
 
@@ -154,7 +154,7 @@ func TestACMERegeneration_RegenerateMuchOlder(t *testing.T) {
 // previous 3 months, and no segments for the current month. The test verifies
 // that the older data gets regenerated
 func TestACMERegeneration_RegeneratePreviousMonths(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{EnableRaw: true})
 	client := cluster.Cores[0].Client
 

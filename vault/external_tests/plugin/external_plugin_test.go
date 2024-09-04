@@ -151,27 +151,27 @@ func testRegisterAndEnable(t *testing.T, client *api.Client, plugin pluginhelper
 // sha256 mismatch or missing plugin binary scenario
 func TestExternalPlugin_ContinueOnError(t *testing.T) {
 	t.Run("secret", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 		t.Run("sha256_mismatch", func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel()
 			testExternalPlugin_ContinueOnError(t, true, consts.PluginTypeSecrets)
 		})
 
 		t.Run("missing_plugin", func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel()
 			testExternalPlugin_ContinueOnError(t, false, consts.PluginTypeSecrets)
 		})
 	})
 
 	t.Run("auth", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 		t.Run("sha256_mismatch", func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel()
 			testExternalPlugin_ContinueOnError(t, true, consts.PluginTypeCredential)
 		})
 
 		t.Run("missing_plugin", func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel()
 			testExternalPlugin_ContinueOnError(t, false, consts.PluginTypeCredential)
 		})
 	})
@@ -486,7 +486,7 @@ func TestExternalPlugin_AuthMethodReload(t *testing.T) {
 // TestExternalPlugin_SecretsEngine tests that we can build, register and use an
 // external secrets engine (consul)
 func TestExternalPlugin_SecretsEngine(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 	// getCluster calls pluginhelper.CompilePlugin which builds the consul
 	// secrets engine as a stand-in for the PluginTypeSecrets
 	cluster := getCluster(t, 1, consts.PluginTypeSecrets)
@@ -592,7 +592,7 @@ func TestExternalPlugin_SecretsEngine(t *testing.T) {
 // TestExternalPlugin_SecretsEngineReload tests that we can use an external
 // secrets engine after reload
 func TestExternalPlugin_SecretsEngineReload(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 	cluster := getCluster(t, 1, consts.PluginTypeSecrets)
 	t.Cleanup(cluster.Cleanup)
 
@@ -663,7 +663,7 @@ func TestExternalPlugin_SecretsEngineReload(t *testing.T) {
 // TestExternalPlugin_Database tests that we can build, register and use an
 // external database secrets engine (postgres)
 func TestExternalPlugin_Database(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 	// getCluster calls pluginhelper.CompilePlugin which builds the postgres
 	// database engine as a stand-in for the PluginTypeSecrets
 	cluster := getCluster(t, 1, consts.PluginTypeDatabase)
@@ -799,7 +799,7 @@ func TestExternalPlugin_Database(t *testing.T) {
 // TestExternalPlugin_DatabaseReload tests that we can use an external database
 // secrets engine after reload
 func TestExternalPlugin_DatabaseReload(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 	cluster := getCluster(t, 1, consts.PluginTypeDatabase)
 	t.Cleanup(cluster.Cleanup)
 

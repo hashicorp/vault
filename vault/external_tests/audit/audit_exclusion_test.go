@@ -14,7 +14,7 @@ import (
 // TestAudit_Exclusion_ByVaultVersion ensures that the audit device 'exclude'
 // option is only supported in the enterprise edition of the product.
 func TestAudit_Exclusion_ByVaultVersion(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client

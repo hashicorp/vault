@@ -23,7 +23,7 @@ func TestHCPLinkConnected(t *testing.T) {
 }
 
 func TestHCPLinkNotConfigured(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 	cluster := getTestCluster(t, 2)
 	defer cluster.Cleanup()
 

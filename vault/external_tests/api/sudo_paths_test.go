@@ -21,7 +21,7 @@ const sudoKey = "x-vault-sudo"
 
 // Tests that the static list of sudo paths in the api package matches what's in the current OpenAPI spec.
 func TestSudoPaths(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 
 	coreConfig := &vault.CoreConfig{
 		EnableRaw:           true,

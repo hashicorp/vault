@@ -11,7 +11,7 @@ import (
 )
 
 func TestIdentityStore_GroupAliasLocalMount(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
