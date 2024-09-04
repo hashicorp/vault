@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// ParseDeadlockDetectionSetting takes the detectDeadlockConfigParameter string
+// ParseDetectDeadlockConfigParameter takes the detectDeadlockConfigParameter string
 // and transforms it to a lowercase version of the string, then splits it into
 // a slice of strings by interpreting commas as the element delimiters.
 func ParseDetectDeadlockConfigParameter(detectDeadlockConfigParameter string) []string {

@@ -638,7 +638,7 @@ func (l *Listener) parseProfilingSettings() error {
 	return nil
 }
 
-// parseProfilingSettings attempts to parse the raw listener in-flight request logging settings.
+// parseInFlightRequestSettings attempts to parse the raw listener in-flight request logging settings.
 // The state of the listener will be modified, raw data will be cleared upon
 // successful parsing.
 func (l *Listener) parseInFlightRequestSettings() error {
