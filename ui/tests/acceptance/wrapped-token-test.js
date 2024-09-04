@@ -8,7 +8,7 @@ import { setupApplicationTest } from 'ember-qunit';
 import { currentURL, visit, currentRouteName } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { login, logout } from 'vault/tests/helpers/auth/auth-helpers';
-import { runCmd } from 'vault/tests/helpers/ui-console/helpers';
+import { runCmd } from 'vault/tests/helpers/commands';
 
 module(`Acceptance | wrapped_token query param functionality`, function (hooks) {
   setupApplicationTest(hooks);
