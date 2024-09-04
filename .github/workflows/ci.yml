@@ -58,7 +58,7 @@ jobs:
       binary-tests: true
       checkout-ref: ${{ needs.setup.outputs.checkout-ref }}
       go-arch: amd64
-      go-tags: "${{ needs.setup.outputs.go-tags }},deadlock"
+      go-tags: '${{ needs.setup.outputs.go-tags }},deadlock'
       name: standard
       runs-on: ${{ needs.setup.outputs.compute-test-go }}
       runs-on-small: ${{ needs.setup.outputs.compute-small }}
@@ -75,7 +75,7 @@ jobs:
     with:
       checkout-ref: ${{ needs.setup.outputs.checkout-ref }}
       go-arch: amd64
-      go-tags: "${{ needs.setup.outputs.go-tags }},deadlock,testonly"
+      go-tags: '${{ needs.setup.outputs.go-tags }},deadlock,testonly'
       name: testonly
       runs-on: ${{ needs.setup.outputs.compute-test-go }}
       runs-on-small: ${{ needs.setup.outputs.compute-small }}
@@ -97,7 +97,7 @@ jobs:
         {
           "VAULT_CI_GO_TEST_RACE": 1
         }
-      extra-flags: "-race"
+      extra-flags: '-race'
       name: race
       go-arch: amd64
       go-tags: ${{ needs.setup.outputs.go-tags }}
@@ -125,7 +125,7 @@ jobs:
         }
       name: fips
       go-arch: amd64
-      go-tags: "${{ needs.setup.outputs.go-tags }},deadlock,cgo,fips,fips_140_2"
+      go-tags: '${{ needs.setup.outputs.go-tags }},deadlock,cgo,fips,fips_140_2'
       runs-on: ${{ needs.setup.outputs.compute-test-go }}
       runs-on-small: ${{ needs.setup.outputs.compute-small }}
       test-timing-cache-key: go-test-timing-fips
@@ -156,15 +156,18 @@ jobs:
       # Setup node.js without caching to allow running npm install -g yarn (next step)
       - uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
         with:
-          node-version-file: "./ui/package.json"
+          node-version-file: './ui/package.json'
       - run: npm install -g yarn
       # Setup node.js with caching using the yarn.lock file
       - uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
         with:
-          node-version-file: "./ui/package.json"
+          node-version-file: './ui/package.json'
           cache: yarn
           cache-dependency-path: ui/yarn.lock
       - uses: browser-actions/setup-chrome@facf10a55b9caf92e0cc749b4f82bf8220989148 # v1.7.2
+        with:
+          # Temporarily pin our Chrome version while we sort out a broken test on latest
+          chrome-version: 1314712
       - name: ui-dependencies
         working-directory: ./ui
         run: |
@@ -282,7 +285,8 @@ jobs:
           secrets: |
             kv/data/github/${{ github.repository }}/github_actions_notifications_bot token | SLACK_BOT_TOKEN;
       - id: slackbot-token
-        run: echo "slackbot-token=${{ needs.setup.outputs.is-enterprise != 'true' && secrets.SLACK_BOT_TOKEN || steps.secrets.outputs.SLACK_BOT_TOKEN }}" >> "$GITHUB_OUTPUT"
+        run:
+          echo "slackbot-token=${{ needs.setup.outputs.is-enterprise != 'true' && secrets.SLACK_BOT_TOKEN || steps.secrets.outputs.SLACK_BOT_TOKEN }}" >> "$GITHUB_OUTPUT"
       - if: |
           always() &&
           needs.setup.outputs.workflow-trigger == 'push' &&
