@@ -8,6 +8,7 @@ import Resolver from 'ember-resolver';
 import loadInitializers from 'ember-load-initializers';
 import config from 'vault/config/environment';
 
+// TODO: DEPRECATION https://ember-engines.com/docs/deprecations#-use-alias-for-inject-router-service-from-host-application
 export default class App extends Application {
   modulePrefix = config.modulePrefix;
   podModulePrefix = config.podModulePrefix;
