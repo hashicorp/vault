@@ -432,8 +432,8 @@ func (b *Broker) IsRegistered(name string) bool {
 // getAuditContext extracts the namespace from the specified context and returns
 // a new context and cancelation function, completely detached from the original
 // with a timeout.
-// NOTE: The context.CancelFunc returned from this function should be deferred
-// immediately by the caller to prevent resource leaks.
+// NOTE: When error is nil, the context.CancelFunc returned from this function
+// should be deferred immediately by the caller to prevent resource leaks.
 func getAuditContext(ctx context.Context) (context.Context, context.CancelFunc, error) {
 	ns, err := nshelper.FromContext(ctx)
 	if err != nil {
