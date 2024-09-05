@@ -1029,7 +1029,7 @@ scenario "dr_replication" {
         so that secondary clusters can utilize it.
       EOF
     module      = module.generate_failover_secondary_token
-    depends_on  = [step.generate_demoted_secondary_pubilc_key]
+    depends_on  = [step.generate_demoted_secondary_public_key]
 
     verifies = quality.vault_api_sys_replication_dr_primary_secondary_token_write
 
