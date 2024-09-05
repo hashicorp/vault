@@ -36,14 +36,14 @@ require (
 	github.com/SAP/go-hdb v1.10.1
 	github.com/Sectorbob/mlab-ns2 v0.0.0-20171030222938-d3aa0c295a8a
 	github.com/aerospike/aerospike-client-go/v5 v5.6.0
-	github.com/aliyun/alibaba-cloud-sdk-go v1.63.11
+	github.com/aliyun/alibaba-cloud-sdk-go v1.63.12
 	github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20190307165228-86c17b95fcd5
 	github.com/apple/foundationdb/bindings/go v0.0.0-20190411004307-cd5c9d91fad2
 	github.com/armon/go-metrics v0.4.1
 	github.com/armon/go-radix v1.0.0
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/aws/aws-sdk-go v1.53.5
-	github.com/aws/aws-sdk-go-v2/config v1.18.19
+	github.com/aws/aws-sdk-go-v2/config v1.27.11
 	github.com/axiomhq/hyperloglog v0.0.0-20220105174342-98591331716a
 	github.com/cenkalti/backoff/v3 v3.2.2
 	github.com/chrismalek/oktasdk-go v0.0.0-20181212195951-3430665dfaa0
@@ -112,7 +112,7 @@ require (
 	github.com/hashicorp/go-sockaddr v1.0.6
 	github.com/hashicorp/go-syslog v1.0.0
 	github.com/hashicorp/go-uuid v1.0.3
-	github.com/hashicorp/go-version v1.6.0
+	github.com/hashicorp/go-version v1.7.0
 	github.com/hashicorp/golang-lru v1.0.2
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/hashicorp/hcl v1.0.1-vault-5
@@ -136,18 +136,18 @@ require (
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.19.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.16.0
 	github.com/hashicorp/vault-plugin-database-couchbase v0.11.0
-	github.com/hashicorp/vault-plugin-database-elasticsearch v0.15.0
+	github.com/hashicorp/vault-plugin-database-elasticsearch v0.16.0
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.13.0
 	github.com/hashicorp/vault-plugin-database-redis v0.3.0
 	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.4.0
-	github.com/hashicorp/vault-plugin-database-snowflake v0.11.0
+	github.com/hashicorp/vault-plugin-database-snowflake v0.12.0
 	github.com/hashicorp/vault-plugin-mock v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-ad v0.18.0
-	github.com/hashicorp/vault-plugin-secrets-alicloud v0.17.0
+	github.com/hashicorp/vault-plugin-secrets-alicloud v0.18.0
 	github.com/hashicorp/vault-plugin-secrets-azure v0.20.0
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.19.1-0.20240725202923-b240a5ad808a
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.17.0
-	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.8.0
+	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.9.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.19.0
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.12.0
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.13.0
@@ -222,8 +222,8 @@ require (
 	google.golang.org/grpc v1.66.0
 	google.golang.org/protobuf v1.34.2
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
-	k8s.io/apimachinery v0.29.3
-	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
+	k8s.io/apimachinery v0.31.0
+	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8
 	layeh.com/radius v0.0.0-20231213012653-1006025d24f8
 	nhooyr.io/websocket v1.8.11
 )
@@ -232,10 +232,12 @@ require (
 	cel.dev/expr v0.15.0 // indirect
 	cloud.google.com/go/longrunning v0.5.7 // indirect
 	github.com/containerd/containerd v1.7.20 // indirect
+	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/hashicorp/go-secure-stdlib/httputil v0.1.0 // indirect
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
+	github.com/x448/float16 v0.8.4 // indirect
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
 	gopkg.in/go-jose/go-jose.v2 v2.6.3 // indirect
 )
@@ -285,24 +287,24 @@ require (
 	github.com/agext/levenshtein v1.2.1 // indirect
 	github.com/apache/arrow/go/v15 v15.0.0 // indirect
 	github.com/apparentlymart/go-textseg/v13 v13.0.0 // indirect
-	github.com/aws/aws-sdk-go-v2 v1.23.4 // indirect
-	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.4.10 // indirect
-	github.com/aws/aws-sdk-go-v2/credentials v1.13.18 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.13.1 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.11.59 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.2.7 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.5.7 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/ini v1.3.32 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/v4a v1.0.23 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.9.11 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.1.26 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.25 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.14.0 // indirect
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.31.0 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.12.6 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.14.6 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sts v1.18.7 // indirect
-	github.com/aws/smithy-go v1.18.1 // indirect
+	github.com/aws/aws-sdk-go-v2 v1.26.1 // indirect
+	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.2 // indirect
+	github.com/aws/aws-sdk-go-v2/credentials v1.17.11 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.1 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.16.15 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.5 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.5 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.0 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/v4a v1.3.5 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.11.2 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.3.7 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.11.7 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.17.5 // indirect
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.53.1 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.20.5 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.23.4 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sts v1.28.6 // indirect
+	github.com/aws/smithy-go v1.20.2 // indirect
 	github.com/baiyubin/aliyun-sts-go-sdk v0.0.0-20180326062324-cfa1a18b161f // indirect
 	github.com/benbjohnson/immutable v0.4.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -488,7 +490,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/skeema/knownhosts v1.2.1 // indirect
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966 // indirect
-	github.com/snowflakedb/gosnowflake v1.10.0 // indirect
+	github.com/snowflakedb/gosnowflake v1.11.0 // indirect
 	github.com/softlayer/softlayer-go v0.0.0-20180806151055-260589d94c7d // indirect
 	github.com/sony/gobreaker v0.5.0 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
@@ -533,13 +535,13 @@ require (
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/api v0.29.3 // indirect
-	k8s.io/client-go v0.29.3 // indirect
-	k8s.io/klog/v2 v2.110.1 // indirect
-	k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00 // indirect
+	k8s.io/api v0.31.0 // indirect
+	k8s.io/client-go v0.31.0 // indirect
+	k8s.io/klog/v2 v2.130.1 // indirect
+	k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
-	sigs.k8s.io/yaml v1.3.0 // indirect
+	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
 replace github.com/ma314smith/signedxml v1.1.1 => github.com/moov-io/signedxml v1.1.1
