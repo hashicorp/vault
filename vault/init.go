@@ -226,6 +226,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	}
 
 	// Avoid an initialization race
+	c.logger.Debug("grabbing the stateLock()")
 	c.stateLock.Lock()
 	defer func() {
 		c.logger.Debug("unlocking the stateLock()")
