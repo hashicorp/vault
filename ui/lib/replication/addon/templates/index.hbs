@@ -98,6 +98,8 @@
         @onSuccess={{this.onEnableSuccess}}
         @doTransition={{true}}
       />
+    {{else if (not (has-feature "DR Replication"))}}
+      <UpgradePage @title="Replication" />
     {{else if (and (eq this.model.dr.mode "primary") (eq this.model.performance.mode "primary"))}}
       {{! Renders when cluster is primary for both replication modes }}
       <ReplicationPage @model={{this.model}} as |Page|>
