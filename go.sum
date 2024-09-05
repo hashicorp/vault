@@ -805,8 +805,8 @@ github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 h1:DklsrG3d
 github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2/go.mod h1:WaHUgvxTVq04UNunO+XhnAqY/wQc+bxr74GqbsZ/Jqw=
 github.com/aws/aws-sdk-go v1.25.41/go.mod h1:KmX6BPdI08NWTb3/sm4ZGu5ShLoqVDhKgpiN924inxo=
 github.com/aws/aws-sdk-go v1.34.0/go.mod h1:5zCpMtNQVjRREroY7sYe8lOMRSxkhG6MZveU8YkpAk0=
-github.com/aws/aws-sdk-go v1.53.5 h1:1OcVWMjGlwt7EU5OWmmEEXqaYfmX581EK317QJZXItM=
-github.com/aws/aws-sdk-go v1.53.5/go.mod h1:LF8svs817+Nz+DmiMQKTO3ubZ/6IaTpq3TjupRn3Eqk=
+github.com/aws/aws-sdk-go v1.55.5 h1:KKUZBfBoyqy5d3swXyiC7Q76ic40rYcbqH7qjh59kzU=
+github.com/aws/aws-sdk-go v1.55.5/go.mod h1:eRwEWoyTWFMVYVQzKMNHWP5/RV4xIUGMQfXQHfHkpNU=
 github.com/aws/aws-sdk-go-v2 v1.26.1 h1:5554eUqIYVWpU0YmeeYZ0wU64H2VLBs8TlhRB2L+EkA=
 github.com/aws/aws-sdk-go-v2 v1.26.1/go.mod h1:ffIFB97e2yNsv4aTSGkqtHnppsIJzw7G7BReUZ3jCXM=
 github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.2 h1:x6xsQXGSmW6frevwDA+vi/wqhp1ct18mVXYN08/93to=
@@ -1571,8 +1571,8 @@ github.com/hashicorp/vault-plugin-database-mongodbatlas v0.13.0 h1:QfqA3GYVtuVOB
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.13.0/go.mod h1:4JKUfOniWUxWjnrsBKyPpy3u7dCxkncYAH6VM0BCPhg=
 github.com/hashicorp/vault-plugin-database-redis v0.3.0 h1:chSbAsc7cYkn5ajQ/528nKoCm9ExGpJaDjTDos2IUa4=
 github.com/hashicorp/vault-plugin-database-redis v0.3.0/go.mod h1:Tr6VELF9q/VAslIO7+ROykrzrvEONVaONrcsthX9qcY=
-github.com/hashicorp/vault-plugin-database-redis-elasticache v0.4.0 h1:kU6zic2/iIo40kUKzRvTIj1TozcC1T0sqkWimV5e290=
-github.com/hashicorp/vault-plugin-database-redis-elasticache v0.4.0/go.mod h1:KQmyYsR5CfoTPSjQqXq6TO9QqucESSga9f+bph+Rx74=
+github.com/hashicorp/vault-plugin-database-redis-elasticache v0.5.0 h1:XCbJLn02bRf9+eyjoMVaEx5TPoIJD9YV7u+shjr4paU=
+github.com/hashicorp/vault-plugin-database-redis-elasticache v0.5.0/go.mod h1:o1ac/VruWlSmjIaTx4GVCOiXw6+aUuXxHs3btG0XYjU=
 github.com/hashicorp/vault-plugin-database-snowflake v0.12.0 h1:rykZv8cV7W6iSeR9vEAFB3FivLz/tTuO8s8mNd9Xrbw=
 github.com/hashicorp/vault-plugin-database-snowflake v0.12.0/go.mod h1:grT3WmPmEiRY6zjEkJJ781jWq7h9Yg68jlU8G/BXuBU=
 github.com/hashicorp/vault-plugin-mock v0.16.1 h1:5QQvSUHxDjEEbrd2REOeacqyJnCLPD51IQzy71hx8P0=
