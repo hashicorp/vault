@@ -390,12 +390,11 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     assert.dom(FORM.toggleJson).isNotChecked();
   });
 
-  // patch is technically enterprise only but stubbing the version so these run on both CE and enterprise
+  // patch is technically enterprise only but stubbing the version so these tests run on both CE and enterprise
   module('patch-persona', function (hooks) {
     hooks.beforeEach(async function () {
       this.patchSecret = 'patch-secret';
-      this.version = this.owner.lookup('service:version');
-      this.version.type = 'enterprise';
+      this.owner.lookup('service:version').type = 'enterprise';
       this.store = this.owner.lookup('service:store');
       await writeSecret(this.backend, this.patchSecret, 'foo', 'bar');
       await writeSecret(this.backend, 'my-destroyed-secret', 'foo', 'bar');

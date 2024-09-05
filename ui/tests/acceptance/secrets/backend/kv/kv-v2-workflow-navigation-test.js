@@ -1573,7 +1573,7 @@ path "${this.backend}/subkeys/*" {
     });
   });
 
-  // patch is technically enterprise only but stubbing the version so they can run on both CE and enterprise
+  // patch is technically enterprise only but stubbing the version so these tests can run on both CE and enterprise
   module('patch-persona', function (hooks) {
     hooks.beforeEach(async function () {
       const token = await runCmd([
