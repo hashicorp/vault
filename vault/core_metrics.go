@@ -58,6 +58,11 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 	for {
 		select {
 		case <-emitTimer:
+			select {
+			default:
+			case <-stopCh:
+				return
+			}
 			c.logger.Debug("before stopOrHAState 2")
 			stopped, haState := stopOrHAState()
 			c.logger.Debug("after stopOrHAState 2")
@@ -171,6 +176,11 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 			// Refresh gauge metrics that are looped
 			c.cachedGaugeMetricsEmitter()
 		case <-writeTimer:
+			select {
+			default:
+			case <-stopCh:
+				return
+			}
 			l := newLockGrabber(c.stateLock.RLock, c.stateLock.RUnlock, stopCh)
 			c.logger.Debug("grabbing lock in metricsLoop 2")
 			go l.grab()
@@ -188,6 +198,11 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 			}
 			c.stateLock.RUnlock()
 		case <-identityCountTimer:
+			select {
+			default:
+			case <-stopCh:
+				return
+			}
 			// TODO: this can be replaced by the identity gauge counter; we need to
 			// sum across all namespaces.
 			go func() {
