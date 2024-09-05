@@ -43,7 +43,7 @@
     <AccountsCheckedOut
       @libraries={{array @library}}
       @statuses={{@statuses}}
-      @onCheckInSuccess={{transition-to "vault.cluster.secrets.backend.ldap.libraries.library.details.accounts"}}
+      @onCheckInSuccess={{engine-transition-to "vault.cluster.secrets.backend.ldap.libraries.library.details.accounts"}}
       data-test-checked-out-card
     />
 
