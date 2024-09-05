@@ -301,6 +301,8 @@ func (c *Core) tokenGaugeTtlCollector(ctx context.Context) ([]metricsutil.GaugeL
 // emitMetricsActiveNode is used to start all the periodic metrics; all of them should
 // be shut down when stopCh is closed.  This code runs on the active node only.
 func (c *Core) emitMetricsActiveNode(stopCh chan struct{}) {
+	c.logger.Debug("entering emitMetricsActiveNode")
+	defer c.logger.Debug("exiting emitMetricsActiveNode")
 	// The gauge collection processes are started and stopped here
 	// because there's more than one TokenManager created during startup,
 	// but we only want one set of gauges.

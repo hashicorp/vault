@@ -159,6 +159,8 @@ func (c *Core) generateShares(sc *SealConfig) ([]byte, [][]byte, error) {
 // Initialize is used to initialize the Vault with the given
 // configurations.
 func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitResult, error) {
+	c.logger.Debug("entering Initialize")
+	defer c.logger.Debug("exiting Initialize")
 	if err := c.entCheckLicenseInit(); err != nil {
 		return nil, err
 	}

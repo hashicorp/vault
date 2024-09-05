@@ -504,6 +504,8 @@ func (c *Core) runStandby(doneCh, manualStepDownCh, stopCh chan struct{}) {
 // is enabled. It waits until we are leader and switches this Vault to
 // active.
 func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stopCh chan struct{}) {
+	c.logger.Debug("entering waitForLeadership")
+	defer c.logger.Debug("exiting waitForLeadership")
 	var manualStepDown bool
 	firstIteration := true
 	for {

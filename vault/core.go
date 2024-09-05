@@ -2429,6 +2429,8 @@ type UnsealStrategy interface {
 type standardUnsealStrategy struct{}
 
 func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c *Core) error {
+	c.logger.Debug("entering standardUnsealStrategy unseal")
+	defer c.logger.Debug("exiting standardUnsealStrategy unseal")
 	// Clear forwarding clients; we're active
 	c.requestForwardingConnectionLock.Lock()
 	c.clearForwardingClients()
@@ -2709,6 +2711,9 @@ func (c *Core) runUnsealSetupForPrimary(ctx context.Context, logger log.Logger) 
 // credential stores, etc.
 func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc, unsealer UnsealStrategy) (retErr error) {
 	defer metrics.MeasureSince([]string{"core", "post_unseal"}, time.Now())
+
+	c.logger.Debug("entering postUnseal")
+	defer c.logger.Debug("exiting postUnseal")
 
 	// Clear any out
 	c.postUnsealFuncs = nil
