@@ -998,7 +998,7 @@ scenario "dr_replication" {
     }
   }
 
-  step "generate_demoted_secondary_pubilc_key" {
+  step "generate_demoted_secondary_public_key" {
     description = <<-EOF
           Generate a random token and configure the DR replication primary secondary-token and
           configure the Vault cluster primary replication with the token. Export the wrapping token
