@@ -26,7 +26,19 @@ import { encodePath } from 'vault/utils/path-encoding-helpers';
  */
 
 export default class LinkedBlockComponent extends Component {
+  @service('app-router') appRouter;
   @service router;
+
+  transitionTo(...args) {
+    // when this component is used within an engine,
+    // appRouter will be available and should be used
+    // otherwise we use the regular router service
+    if (this.appRouter) {
+      this.appRouter.transitionTo(...args);
+    } else {
+      this.router.transitionTo(...args);
+    }
+  }
 
   @action
   onClick(event) {
@@ -56,7 +68,7 @@ export default class LinkedBlockComponent extends Component {
           targetRoute = `${this.args.linkPrefix}.${targetRoute}`;
           this.args.params[0] = targetRoute;
         }
-        this.router.transitionTo(...params);
+        this.transitionTo(...params);
       }
     }
   }
