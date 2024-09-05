@@ -19,13 +19,23 @@ variable "ip_version" {
   }
 }
 
-variable "primary_leader_host" {
+variable "secondary_leader_host" {
   type = object({
     ipv6       = string
     private_ip = string
     public_ip  = string
   })
-  description = "The primary cluster leader host"
+  description = "The secondary cluster leader host"
+}
+
+variable "replication_type" {
+  type        = string
+  description = "The type of replication to perform"
+
+  validation {
+    condition     = contains(["dr", "performance"], var.replication_type)
+    error_message = "The replication_type must be either dr or performance"
+  }
 }
 
 variable "vault_addr" {
@@ -43,18 +53,22 @@ variable "vault_root_token" {
   description = "The vault root token"
 }
 
-resource "enos_remote_exec" "configure_pr_primary" {
+variable "wrapping_token" {
+  type        = string
+  description = "The wrapping token created on primary cluster"
+}
+
+resource "enos_remote_exec" "configure_pr_secondary" {
   environment = {
-    VAULT_ADDR        = var.vault_addr
-    VAULT_TOKEN       = var.vault_root_token
-    VAULT_INSTALL_DIR = var.vault_install_dir
+    VAULT_ADDR  = var.vault_addr
+    VAULT_TOKEN = var.vault_root_token
   }
 
-  scripts = [abspath("${path.module}/scripts/configure-vault-pr-primary.sh")]
+  inline = ["${var.vault_install_dir}/vault write sys/replication/${var.replication_type}/secondary/enable token=${var.wrapping_token}"]
 
   transport = {
     ssh = {
-      host = var.primary_leader_host.public_ip
+      host = var.secondary_leader_host.public_ip
     }
   }
 }
