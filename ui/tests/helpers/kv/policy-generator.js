@@ -106,6 +106,7 @@ export const personas = {
     dataPolicy({ backend, capabilities: ['create', 'update'] }) +
     metadataPolicy({ backend, capabilities: ['delete'] }),
   secretPatcher: (backend) =>
+    // this persona should never have data "read"
     dataPolicy({ backend, capabilities: ['patch'] }) +
     metadataPolicy({ backend, capabilities: ['list', 'read'] }) +
     subkeysPolicy({ backend }) +
