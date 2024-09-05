@@ -756,10 +756,12 @@ scenario "dev_pr_replication" {
     }
 
     variables {
-      primary_leader_public_ip = step.get_primary_cluster_ips.leader_public_ip
-      vault_addr               = step.create_primary_cluster.api_addr_localhost
-      vault_install_dir        = local.vault_install_dir
-      vault_root_token         = step.create_primary_cluster.root_token
+      ip_version          = local.ip_version
+      primary_leader_host = step.get_primary_cluster_ips.leader_host
+      replication_type    = "performance"
+      vault_addr          = step.create_primary_cluster.api_addr_localhost
+      vault_install_dir   = local.vault_install_dir
+      vault_root_token    = step.create_primary_cluster.root_token
     }
   }
 
@@ -776,10 +778,12 @@ scenario "dev_pr_replication" {
     }
 
     variables {
-      primary_leader_public_ip = step.get_primary_cluster_ips.leader_public_ip
-      vault_addr               = step.create_primary_cluster.api_addr_localhost
-      vault_install_dir        = local.vault_install_dir
-      vault_root_token         = step.create_primary_cluster.root_token
+      ip_version          = local.ip_version
+      primary_leader_host = step.get_primary_cluster_ips.leader_host
+      replication_type    = "performance"
+      vault_addr          = step.create_primary_cluster.api_addr_localhost
+      vault_install_dir   = local.vault_install_dir
+      vault_root_token    = step.create_primary_cluster.root_token
     }
   }
 
@@ -787,7 +791,7 @@ scenario "dev_pr_replication" {
     description = <<-EOF
       Enable performance replication on the secondary using the new shared token.
     EOF
-    module      = module.vault_setup_perf_secondary
+    module      = module.vault_setup_replication_secondary
     depends_on  = [step.generate_secondary_token]
 
     providers = {
@@ -795,11 +799,13 @@ scenario "dev_pr_replication" {
     }
 
     variables {
-      secondary_leader_public_ip = step.get_secondary_cluster_ips.leader_public_ip
-      vault_addr                 = step.create_secondary_cluster.api_addr_localhost
-      vault_install_dir          = local.vault_install_dir
-      vault_root_token           = step.create_secondary_cluster.root_token
-      wrapping_token             = step.generate_secondary_token.secondary_token
+      ip_version            = local.ip_version
+      secondary_leader_host = step.get_secondary_cluster_ips.leader_host
+      replication_type      = "performance"
+      vault_addr            = step.create_secondary_cluster.api_addr_localhost
+      vault_install_dir     = local.vault_install_dir
+      vault_root_token      = step.create_secondary_cluster.root_token
+      wrapping_token        = step.generate_secondary_token.secondary_token
     }
   }
 

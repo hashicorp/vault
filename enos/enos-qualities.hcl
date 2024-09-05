@@ -120,6 +120,59 @@ quality "vault_api_sys_quotas_lease_count_read_max_leases_default" {
   EOF
 }
 
+quality "vault_api_sys_replication_dr_primary_enable_write" {
+  description = <<-EOF
+    The v1/sys/replication/dr/primary/enable Vault API enables DR replication
+  EOF
+}
+
+quality "vault_api_sys_replication_dr_primary_secondary_token_write" {
+  description = <<-EOF
+    The v1/sys/replication/dr/primary/secondary-token Vault API configures the DR replication
+    secondary token
+  EOF
+}
+
+quality "vault_api_sys_replication_dr_secondary_enable_write" {
+  description = <<-EOF
+    The v1/sys/replication/dr/secondary/enable Vault API enables DR replication
+  EOF
+}
+
+quality "vault_api_sys_replication_dr_read_connection_status_connected" {
+  description = <<-EOF
+    The v1/sys/replication/dr/status Vault API returns status info and the
+    'connection_status' is correct for the given node
+  EOF
+}
+
+quality "vault_api_sys_replication_dr_status_known_primary_cluster_addrs" {
+  description = <<-EOF
+    The v1/sys/replication/dr/status Vault API returns the DR replication status and
+    'known_primary_cluster_address' is the expected primary cluster leader
+  EOF
+}
+
+quality "vault_api_sys_replication_dr_status_read" {
+  description = <<-EOF
+    The v1/sys/replication/dr/status Vault API returns the DR replication status
+  EOF
+}
+
+quality "vault_api_sys_replication_dr_status_read_cluster_address" {
+  description = <<-EOF
+    The v1/sys/replication/dr/status Vault API returns the DR replication status
+    and the '{primaries,secondaries}[*].cluster_address' is correct for the given node
+  EOF
+}
+
+quality "vault_api_sys_replication_dr_status_read_state_not_idle" {
+  description = <<-EOF
+    The v1/sys/replication/dr/status Vault API returns the DR replication status
+    and the state is not idle
+  EOF
+}
+
 quality "vault_api_sys_replication_performance_primary_enable_write" {
   description = <<-EOF
     The v1/sys/replication/performance/primary/enable Vault API enables performance replication

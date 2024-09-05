@@ -6,6 +6,10 @@ terraform {
     enos = {
       source = "registry.terraform.io/hashicorp-forge/enos"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = ">= 3.4.3"
+    }
   }
 }
 
@@ -38,23 +42,36 @@ variable "vault_install_dir" {
   description = "The directory where the Vault binary will be installed"
 }
 
+
 variable "vault_root_token" {
   type        = string
   description = "The vault root token"
 }
 
-resource "enos_remote_exec" "configure_pr_primary" {
+locals {
+  primary_leader_addr  = var.ip_version == 6 ? var.primary_leader_host.ipv6 : var.primary_leader_host.private_ip
+  token_id             = random_uuid.token_id.id
+  secondary_public_key = enos_remote_exec.fetch_secondary_public_key.stdout
+}
+
+resource "random_uuid" "token_id" {}
+
+resource "enos_remote_exec" "fetch_secondary_public_key" {
+  depends_on = [random_uuid.token_id]
   environment = {
-    VAULT_ADDR        = var.vault_addr
-    VAULT_TOKEN       = var.vault_root_token
-    VAULT_INSTALL_DIR = var.vault_install_dir
+    VAULT_ADDR  = var.vault_addr
+    VAULT_TOKEN = var.vault_root_token
   }
 
-  scripts = [abspath("${path.module}/scripts/configure-vault-pr-primary.sh")]
+  inline = ["${var.vault_install_dir}/vault write -field secondary_public_key -f sys/replication/dr/secondary/generate-public-key"]
 
   transport = {
     ssh = {
       host = var.primary_leader_host.public_ip
     }
   }
+}
+
+output "secondary_public_key" {
+  value = local.secondary_public_key
 }

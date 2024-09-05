@@ -32,14 +32,21 @@ variable "primary_leader_host" {
   description = "The primary cluster leader host"
 }
 
-variable "replication_type" {
+variable "retry_interval" {
   type        = string
-  description = "The type of replication to perform"
+  default     = "2"
+  description = "How long to wait between retries"
+}
 
-  validation {
-    condition     = contains(["dr", "performance"], var.replication_type)
-    error_message = "The replication_type must be either dr or performance"
-  }
+variable "secondary_public_key" {
+  type        = string
+  description = "The secondary public key"
+}
+
+variable "timeout" {
+  type        = string
+  default     = "15"
+  description = "How many seconds to wait before timing out"
 }
 
 variable "vault_addr" {
@@ -68,11 +75,16 @@ resource "random_uuid" "token_id" {}
 resource "enos_remote_exec" "fetch_secondary_token" {
   depends_on = [random_uuid.token_id]
   environment = {
-    VAULT_ADDR  = var.vault_addr
-    VAULT_TOKEN = var.vault_root_token
+    VAULT_ADDR           = var.vault_addr
+    VAULT_TOKEN          = var.vault_root_token
+    RETRY_INTERVAL       = var.retry_interval
+    TIMEOUT_SECONDS      = var.timeout
+    SECONDARY_PUBLIC_KEY = var.secondary_public_key
+    VAULT_INSTALL_DIR    = var.vault_install_dir
   }
 
-  inline = ["${var.vault_install_dir}/vault write sys/replication/${var.replication_type}/primary/secondary-token id=${local.token_id} |sed -n '/^wrapping_token:/p' |awk '{print $2}'"]
+  scripts = [abspath("${path.module}/scripts/generate-failover-secondary-token.sh")]
+
 
   transport = {
     ssh = {

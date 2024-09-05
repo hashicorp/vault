@@ -6,6 +6,10 @@ terraform {
     enos = {
       source = "registry.terraform.io/hashicorp-forge/enos"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = ">= 3.4.3"
+    }
   }
 }
 
@@ -43,18 +47,36 @@ variable "vault_root_token" {
   description = "The vault root token"
 }
 
-resource "enos_remote_exec" "configure_pr_primary" {
+variable "storage_backend" {
+  type        = string
+  description = "The storage backend to use for the Vault cluster"
+}
+
+locals {
+  token_id           = random_uuid.token_id.id
+  dr_operation_token = enos_remote_exec.fetch_dr_operation_token.stdout
+}
+
+resource "random_uuid" "token_id" {}
+
+resource "enos_remote_exec" "fetch_dr_operation_token" {
+  depends_on = [random_uuid.token_id]
   environment = {
     VAULT_ADDR        = var.vault_addr
-    VAULT_TOKEN       = var.vault_root_token
     VAULT_INSTALL_DIR = var.vault_install_dir
+    VAULT_TOKEN       = var.vault_root_token
+    STORAGE_BACKEND   = var.storage_backend
   }
 
-  scripts = [abspath("${path.module}/scripts/configure-vault-pr-primary.sh")]
+  scripts = [abspath("${path.module}/scripts/configure-vault-dr-primary.sh")]
 
   transport = {
     ssh = {
       host = var.primary_leader_host.public_ip
     }
   }
+}
+
+output "dr_operation_token" {
+  value = local.dr_operation_token
 }

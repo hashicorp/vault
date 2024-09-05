@@ -14,4 +14,4 @@ fail() {
 test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 
 # Activate the primary
-$binpath write -f sys/replication/performance/primary/enable
+$binpath write -f sys/replication/dr/primary/enable
