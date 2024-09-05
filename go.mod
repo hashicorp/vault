@@ -42,7 +42,7 @@ require (
 	github.com/armon/go-metrics v0.4.1
 	github.com/armon/go-radix v1.0.0
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
-	github.com/aws/aws-sdk-go v1.53.5
+	github.com/aws/aws-sdk-go v1.55.5
 	github.com/aws/aws-sdk-go-v2/config v1.27.11
 	github.com/axiomhq/hyperloglog v0.0.0-20220105174342-98591331716a
 	github.com/cenkalti/backoff/v3 v3.2.2
@@ -50,7 +50,7 @@ require (
 	github.com/cockroachdb/cockroach-go/v2 v2.3.8
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf
 	github.com/denisenkom/go-mssqldb v0.12.3
-	github.com/docker/docker v25.0.6+incompatible
+	github.com/docker/docker v26.1.5+incompatible
 	github.com/duosecurity/duo_api_golang v0.0.0-20190308151101-6c680f768e74
 	github.com/dustin/go-humanize v1.0.1
 	github.com/fatih/color v1.17.0
@@ -94,7 +94,7 @@ require (
 	github.com/hashicorp/go-kms-wrapping/wrappers/transit/v2 v2.0.11
 	github.com/hashicorp/go-memdb v1.3.4
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/hashicorp/go-plugin v1.6.0
+	github.com/hashicorp/go-plugin v1.6.1
 	github.com/hashicorp/go-raftchunking v0.6.3-0.20191002164813-7e9e8525653a
 	github.com/hashicorp/go-retryablehttp v0.7.7
 	github.com/hashicorp/go-rootcerts v1.0.2
@@ -112,7 +112,7 @@ require (
 	github.com/hashicorp/go-sockaddr v1.0.6
 	github.com/hashicorp/go-syslog v1.0.0
 	github.com/hashicorp/go-uuid v1.0.3
-	github.com/hashicorp/go-version v1.6.0
+	github.com/hashicorp/go-version v1.7.0
 	github.com/hashicorp/golang-lru v1.0.2
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/hashicorp/hcl v1.0.1-vault-5
@@ -128,7 +128,7 @@ require (
 	github.com/hashicorp/raft-wal v0.4.0
 	github.com/hashicorp/vault-hcp-lib v0.0.0-20240704151836-a5c058ac604c
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.19.0
-	github.com/hashicorp/vault-plugin-auth-azure v0.18.0
+	github.com/hashicorp/vault-plugin-auth-azure v0.19.0
 	github.com/hashicorp/vault-plugin-auth-cf v0.19.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.18.0
 	github.com/hashicorp/vault-plugin-auth-jwt v0.21.1
@@ -136,10 +136,10 @@ require (
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.19.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.16.0
 	github.com/hashicorp/vault-plugin-database-couchbase v0.11.0
-	github.com/hashicorp/vault-plugin-database-elasticsearch v0.15.0
+	github.com/hashicorp/vault-plugin-database-elasticsearch v0.16.0
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.13.0
 	github.com/hashicorp/vault-plugin-database-redis v0.3.0
-	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.4.0
+	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.5.0
 	github.com/hashicorp/vault-plugin-database-snowflake v0.12.0
 	github.com/hashicorp/vault-plugin-mock v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-ad v0.18.0
@@ -147,12 +147,12 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-azure v0.20.0
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.19.1-0.20240725202923-b240a5ad808a
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.17.0
-	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.8.0
+	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.9.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.19.0
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.12.0
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.13.0
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.9.0
-	github.com/hashicorp/vault-testing-stepwise v0.1.4
+	github.com/hashicorp/vault-testing-stepwise v0.3.1
 	github.com/hashicorp/vault/api v1.17.1
 	github.com/hashicorp/vault/api/auth/approle v0.1.0
 	github.com/hashicorp/vault/api/auth/userpass v0.1.0
@@ -212,7 +212,7 @@ require (
 	golang.org/x/crypto v0.26.0
 	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842
 	golang.org/x/net v0.28.0
-	golang.org/x/oauth2 v0.21.0
+	golang.org/x/oauth2 v0.23.0
 	golang.org/x/sync v0.8.0
 	golang.org/x/sys v0.24.0
 	golang.org/x/term v0.23.0
@@ -222,8 +222,8 @@ require (
 	google.golang.org/grpc v1.66.0
 	google.golang.org/protobuf v1.34.2
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
-	k8s.io/apimachinery v0.29.3
-	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
+	k8s.io/apimachinery v0.31.0
+	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8
 	layeh.com/radius v0.0.0-20231213012653-1006025d24f8
 	nhooyr.io/websocket v1.8.11
 )
@@ -232,9 +232,12 @@ require (
 	cel.dev/expr v0.15.0 // indirect
 	cloud.google.com/go/longrunning v0.5.7 // indirect
 	github.com/containerd/containerd v1.7.20 // indirect
+	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/hashicorp/go-secure-stdlib/httputil v0.1.0 // indirect
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
+	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
+	github.com/x448/float16 v0.8.4 // indirect
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
 	gopkg.in/go-jose/go-jose.v2 v2.6.3 // indirect
 )
@@ -396,7 +399,7 @@ require (
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
 	github.com/hashicorp/go-msgpack/v2 v2.1.2 // indirect
 	github.com/hashicorp/go-secure-stdlib/fileutil v0.1.0 // indirect
-	github.com/hashicorp/go-secure-stdlib/plugincontainer v0.3.0 // indirect
+	github.com/hashicorp/go-secure-stdlib/plugincontainer v0.4.0 // indirect
 	github.com/hashicorp/go-slug v0.15.0 // indirect
 	github.com/hashicorp/go-tfe v1.61.0 // indirect
 	github.com/hashicorp/jsonapi v1.3.1 // indirect
@@ -452,7 +455,7 @@ require (
 	github.com/mitchellh/pointerstructure v1.2.1 // indirect
 	github.com/moby/patternmatcher v0.5.0 // indirect
 	github.com/moby/sys/sequential v0.5.0 // indirect
-	github.com/moby/sys/user v0.1.0 // indirect
+	github.com/moby/sys/user v0.2.0 // indirect
 	github.com/moby/term v0.5.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
@@ -532,13 +535,13 @@ require (
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/api v0.29.3 // indirect
-	k8s.io/client-go v0.29.3 // indirect
-	k8s.io/klog/v2 v2.110.1 // indirect
-	k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00 // indirect
+	k8s.io/api v0.31.0 // indirect
+	k8s.io/client-go v0.31.0 // indirect
+	k8s.io/klog/v2 v2.130.1 // indirect
+	k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
-	sigs.k8s.io/yaml v1.3.0 // indirect
+	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
 replace github.com/ma314smith/signedxml v1.1.1 => github.com/moov-io/signedxml v1.1.1

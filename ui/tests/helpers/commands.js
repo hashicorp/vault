@@ -3,8 +3,13 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import consoleClass from 'vault/tests/pages/components/console/ui-panel';
-import { create } from 'ember-cli-page-object';
+import { click, fillIn, findAll, triggerKeyEvent } from '@ember/test-helpers';
+
+const REPL = {
+  toggle: '[data-test-console-toggle]',
+  consoleInput: '[data-test-component="console/command-input"] input',
+  logOutputItems: '[data-test-component="console/output-log"] > div',
+};
 
 /**
  * Helper functions to run common commands in the consoleComponent during tests.
@@ -31,30 +36,47 @@ import { create } from 'ember-cli-page-object';
  * }
  */
 
-const cc = create(consoleClass);
-
 /**
  * runCmd is used to run commands and throw an error if the output includes "Error"
  * @param {string || string[]} commands array of commands that should run
  * @param {boolean} throwErrors
  * @returns the last log output. Throws an error if it includes an error
  */
-export async function runCmd(commands, throwErrors = true) {
+export const runCmd = async (commands, throwErrors = true) => {
   if (!commands) {
     throw new Error('runCmd requires commands array passed in');
   }
   if (!Array.isArray(commands)) {
     commands = [commands];
   }
-  await cc.toggle();
-  await cc.runCommands(commands, false);
-  const lastOutput = cc.lastLogOutput;
-  await cc.toggle();
+  await click(REPL.toggle);
+  await enterCommands(commands);
+  const lastOutput = await lastLogOutput();
+  await click(REPL.toggle);
   if (throwErrors && lastOutput.includes('Error')) {
     throw new Error(`Error occurred while running commands: "${commands.join('; ')}" - ${lastOutput}`);
   }
   return lastOutput;
-}
+};
+
+export const enterCommands = async (commands) => {
+  const toExecute = Array.isArray(commands) ? commands : [commands];
+  for (const command of toExecute) {
+    await fillIn(REPL.consoleInput, command);
+    await triggerKeyEvent(REPL.consoleInput, 'keyup', 'Enter');
+  }
+};
+
+export const lastLogOutput = async () => {
+  const items = findAll(REPL.logOutputItems);
+  const count = items.length;
+  if (count === 0) {
+    // If no logOutput items are found, we can assume the response is empty
+    return '';
+  }
+  const outputItemText = items[count - 1].innerText;
+  return outputItemText;
+};
 
 // Common commands
 export function mountEngineCmd(type, customName = '') {
