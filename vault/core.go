@@ -1619,6 +1619,8 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 // .seal, which must already be populated before unseal is called.)
 func (c *Core) unsealFragment(key []byte, migrate bool) error {
 	defer metrics.MeasureSince([]string{"core", "unseal"}, time.Now())
+	c.logger.Debug("entering unsealFragment")
+	defer c.logger.Debug("exiting unsealFragment")
 
 	c.stateLock.Lock()
 	defer c.stateLock.Unlock()
@@ -1700,6 +1702,9 @@ func (c *Core) unsealFragment(key []byte, migrate bool) error {
 }
 
 func (c *Core) unsealWithRaft(combinedKey []byte) error {
+	c.logger.Debug("entering unsealWithRaft")
+	defer c.logger.Debug("exiting unsealWithRaft")
+
 	ctx := context.Background()
 
 	if c.seal.BarrierSealConfigType() == SealConfigTypeShamir {
@@ -2016,6 +2021,8 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 // unsealInternal takes in the master key and attempts to unseal the barrier.
 // N.B.: This must be called with the state write lock held.
 func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) error {
+	c.logger.Debug("entering unsealInternal")
+	defer c.logger.Debug("exiting unsealInternal")
 	// Attempt to unlock
 	if err := c.barrier.Unseal(ctx, masterKey); err != nil {
 		return err

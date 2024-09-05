@@ -440,6 +440,9 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 // Callers should attempt to retry any NonFatalErrors. Callers should
 // not re-attempt fatal errors.
 func (c *Core) UnsealWithStoredKeys(ctx context.Context) error {
+	c.logger.Debug("entering UnsealWithStoredKeys")
+	defer c.logger.Debug("exiting UnsealWithStoredKeys")
+
 	c.unsealWithStoredKeysLock.Lock()
 	defer c.unsealWithStoredKeysLock.Unlock()
 

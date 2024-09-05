@@ -20,6 +20,8 @@ import (
 )
 
 func (c *Core) metricsLoop(stopCh chan struct{}) {
+	c.logger.Debug("entering metricsLoop")
+	defer c.logger.Debug("exiting metricsLoop")
 	emitTimer := time.Tick(time.Second)
 
 	stopOrHAState := func() (bool, consts.HAState) {
