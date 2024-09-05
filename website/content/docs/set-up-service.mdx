@@ -7,16 +7,23 @@ description: |-
 
 # Set up Vault service
 
-When you [install the Vault binary](/vault/docs/install) to be run as a server,
+If you [build or manually download the Vault binary](/vault/docs/install) to be run as a server,
 it is common to configure to run Vault as a service, instead of manually
 starting Vault.
+
+<Note>
+
+These steps are not required if you install Vault from a supported package
+manager.
+
+</Note>
 
 The instructions included on this page are based on the example
 [`vault.service`](https://github.com/hashicorp/vault/blob/main/.release/linux/package/usr/lib/systemd/system/vault.service)
 included in the [Vault GitHub repository](https://github.com/hashicorp/vault)
 and tested on Ubuntu 22.04.
 
-1. Download a [precompiled binary or build from source](/vault/docs/install).
+1. Download a [precompiled binary and extract it or build from source](/vault/docs/install).
 
 1. Move the Vault binary to `/usr/bin/`
 
@@ -31,7 +38,7 @@ and tested on Ubuntu 22.04.
    ```
 
 1. Create a directory to store Vault data. A good practice is to store Vault
-   data, and Vault logs on a different volume than the operating system.
+   data, and Vault logs on different volumes than the operating system.
 
    ```shell-session
    $ sudo mkdir -p /opt/vault/data
@@ -89,7 +96,7 @@ and tested on Ubuntu 22.04.
 1. Create a systemd service.
 
    ```shell-session
-   $ sudo tee /etc/systemd/system/vault.service <<EOF
+   $ sudo tee /lib/systemd/system/vault.service <<EOF
    [Unit]
    Description="HashiCorp Vault - A tool for managing secrets"
    Documentation=https://developer.hashicorp.com/vault/docs
@@ -112,6 +119,12 @@ and tested on Ubuntu 22.04.
    EOF
    ```
 
+1. Change the permissions on `/lib/systemd/system/vault.service` to `644`.
+
+   ```shell-session
+   $ sudo chmod 644 /lib/systemd/system/vault.service
+   ```
+
 1. Reload the systemd configuration.
 
    ```shell-session
@@ -128,6 +141,17 @@ and tested on Ubuntu 22.04.
 
    ```shell-session
    $ systemctl status vault.service
+
+   vault.service - "HashiCorp Vault - A tool for managing secrets"
+        Loaded: loaded (/lib/systemd/system/vault.service; disabled; vendor preset: enabled)
+        Active: active (running) since Thu 2024-09-05 13:58:45 UTC; 4s ago
+          Docs: https://developer.hashicorp.com/vault/docs
+      Main PID: 3145 (vault)
+         Tasks: 8 (limit: 2241)
+        Memory: 23.6M
+           CPU: 200ms
+        CGroup: /system.slice/vault.service
+                └─3145 /usr/bin/vault server -config=/etc/vault.d/vault.hcl
    ```
 
 ## Additional information
