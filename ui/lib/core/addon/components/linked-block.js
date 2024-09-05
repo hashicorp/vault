@@ -30,7 +30,7 @@ export default class LinkedBlockComponent extends Component {
   @service router;
 
   transitionTo(...args) {
-    // when this component is used within an engine,
+    // when this component is used within an engine
     // appRouter will be available and should be used
     // otherwise we use the regular router service
     if (this.appRouter) {

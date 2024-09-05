@@ -15,6 +15,6 @@
 </PageHeader>
 <EditFormKmipRole
   @model={{this.model}}
-  @onSave={{transition-to "vault.cluster.secrets.backend.kmip.role" this.scope this.role}}
+  @onSave={{engine-transition-to "vault.cluster.secrets.backend.kmip.role" this.scope this.role}}
   @cancelLinkParams={{array "role" this.scope this.role}}
 />

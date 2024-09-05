@@ -16,6 +16,6 @@
 <EditFormKmipRole
   @model={{this.model}}
   @mode="create"
-  @onSave={{transition-to "vault.cluster.secrets.backend.kmip.scope.roles" this.scope}}
+  @onSave={{engine-transition-to "vault.cluster.secrets.backend.kmip.scope.roles" this.scope}}
   @cancelLinkParams={{array "scope.roles" this.scope}}
 />

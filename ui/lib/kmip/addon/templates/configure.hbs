@@ -16,6 +16,6 @@
 </PageHeader>
 <EditForm
   @model={{this.model}}
-  @onSave={{transition-to "vault.cluster.secrets.backend.kmip.configuration"}}
+  @onSave={{engine-transition-to "vault.cluster.secrets.backend.kmip.configuration"}}
   @cancelLinkParams={{array "configuration"}}
 />
