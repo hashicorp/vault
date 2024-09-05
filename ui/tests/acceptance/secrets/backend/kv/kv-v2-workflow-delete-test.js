@@ -59,13 +59,16 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
 
   module('admin persona', function (hooks) {
     hooks.beforeEach(async function () {
+      // patch is an enterprise feature but stubbing the version so assertions that check
+      // patch actions exist before/after deletion can run on both CE and ent repos
+      this.version = this.owner.lookup('service:version').type = 'enterprise';
       const token = await runCmd(makeToken('admin', this.backend, personas.admin));
       await authPage.login(token);
       clearRecords(this.store);
       return;
     });
     test('can delete and undelete the latest secret version (a)', async function (assert) {
-      assert.expect(20);
+      assert.expect(21);
       const flashSuccess = sinon.spy(this.owner.lookup('service:flash-messages'), 'success');
       // go to secret details
       await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details`);
@@ -104,7 +107,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       assert.dom(PAGE.detail.patchLatest).exists('patch is allowed after undeleting');
     });
     test('can soft delete and undelete an older secret version (a)', async function (assert) {
-      assert.expect(20);
+      assert.expect(19);
       // go to secret details
       await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details?version=2`);
       // correct toolbar options & details show
