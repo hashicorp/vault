@@ -2564,6 +2564,8 @@ func (c *Core) setupPluginCatalog(ctx context.Context) error {
 // Core's replication state, that can be passed to the runUnsealSetupFunctions
 // function.
 func buildUnsealSetupFunctionSlice(c *Core) []func(context.Context) error {
+	c.logger.Debug("entering buildUnsealSetupFunctionSlice")
+	defer c.logger.Debug("exiting buildUnsealSetupFunctionSlice")
 	// setupFunctions is a slice of functions that need to be called in order,
 	// that if any return an error, processing should immediately cease.
 	setupFunctions := []func(context.Context) error{

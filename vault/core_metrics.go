@@ -30,6 +30,7 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 		go l.grab()
 		c.logger.Debug("did not fail grabbing lock in metricsLoop")
 		if stopped := l.lockOrStop(); stopped {
+			c.logger.Debug("stopped metricsLoop")
 			return true, 0
 		}
 		defer c.stateLock.RUnlock()

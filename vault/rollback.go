@@ -119,6 +119,8 @@ func (m *RollbackManager) numRollbackWorkers() int {
 
 // Start starts the rollback manager
 func (m *RollbackManager) Start() {
+	m.logger.Debug("entering Start of rollback manager ")
+	defer m.logger.Debug("exiting Start of rollback manager")
 	go m.run()
 }
 
@@ -225,6 +227,8 @@ func (m *RollbackManager) newRollbackLocked(fullPath string) *rollbackState {
 
 // startOrLookupRollback is used to start an async rollback attempt.
 func (m *RollbackManager) startOrLookupRollback(ctx context.Context, fullPath string, grabStatelock bool) *rollbackState {
+	m.logger.Debug("entering startOrLookupRollback")
+	defer m.logger.Debug("exiting startOrLookupRollback")
 	m.inflightLock.Lock()
 	defer m.inflightLock.Unlock()
 	rs := m.lookupRollbackLocked(fullPath)
@@ -367,6 +371,8 @@ func (m *RollbackManager) attemptRollback(ctx context.Context, fullPath string, 
 // core's statelock held (write OR read). If an already inflight rollback is
 // happening this function will simply wait for it to complete
 func (m *RollbackManager) Rollback(ctx context.Context, path string) error {
+	m.logger.Debug("entering Rollback")
+	defer m.logger.Debug("exiting Rollback")
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return err
@@ -411,6 +417,8 @@ func (m *RollbackManager) Rollback(ctx context.Context, path string) error {
 
 // startRollback is used to start the rollback manager after unsealing
 func (c *Core) startRollback() error {
+	c.logger.Debug("entering startRollback")
+	defer c.logger.Debug("exiting startRollback")
 	backendsFunc := func() []*MountEntry {
 		ret := []*MountEntry{}
 		c.mountsLock.RLock()
