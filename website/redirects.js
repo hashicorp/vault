@@ -117,7 +117,12 @@ module.exports = [
   },
   {
     source: '/vault/docs/concepts/lease-explosions',
-    destination: '/vault/docs/troubleshoot/lease-explosions',
+    destination: '/vault/docs/configuration/prevent-lease-explosions',
+    permanent: true,
+  },
+  {
+    source: '/vault/docs/troubleshoot/lease-explosions',
+    destination: '/vault/docs/configuration/prevent-lease-explosions',
     permanent: true,
   },
   {
