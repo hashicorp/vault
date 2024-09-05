@@ -93,6 +93,9 @@ module.exports = function (defaults) {
   app.import('node_modules/jsondiffpatch/dist/formatters-styles/html.css');
 
   app.import('app/styles/bulma/bulma-radio-checkbox.css');
+  app.import(
+    'node_modules/@hashicorp/design-system-components/dist/styles/@hashicorp/design-system-components.css'
+  );
 
   return app.toTree();
 };
