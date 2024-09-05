@@ -935,7 +935,7 @@ scenario "dr_replication" {
   step "vault_failover_demote_dr_primary_cluster" {
     description = <<-EOF
         Demote the primary cluster to be the secondary cluster. This step will also
-        generate a new dr operation token for the secondary cluster to connect to the new
+        generate a new DR operation token for the secondary cluster to connect to the new
         primary cluster.
       EOF
     module      = module.vault_failover_demote_dr_primary
