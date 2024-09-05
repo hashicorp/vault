@@ -1188,7 +1188,7 @@ scenario "dr_replication" {
 
   output "demoted_secondary_public_key" {
     description = "The dr secondary public key"
-    value       = step.generate_demoted_secondary_pubilc_key.secondary_public_key
+    value       = step.generate_demoted_secondary_public_key.secondary_public_key
   }
 
   output "demoted_secondary_token" {
