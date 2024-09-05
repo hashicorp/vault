@@ -12,7 +12,7 @@ export default class IdentityOidcConfig extends Model {
     subText:
       "The Issuer URL to be used in configuring Vault as an identity provider in AWS. If not set, Vault's default issuer will be used",
     docLink: '/vault/api-docs/secret/identity/tokens#configure-the-identity-tokens-backend',
-    placeholder: 'https://vault.prod/v1/identity/oidc',
+    placeholder: 'https://vault-test.com',
   })
   issuer;
 
