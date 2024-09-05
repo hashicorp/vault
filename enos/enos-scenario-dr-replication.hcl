@@ -888,7 +888,7 @@ scenario "dr_replication" {
   step "vault_failover_promote_dr_secondary_cluster" {
     description = <<-EOF
         Promote the secondary cluster to be the primary cluster. This step will also
-        generate a new dr operation token for the secondary cluster to connect to the new
+        generate a new DR operation token for the secondary cluster to connect to the new
         primary cluster.
       EOF
     module      = module.vault_failover_promote_dr_secondary
