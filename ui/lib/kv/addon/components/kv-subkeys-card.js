@@ -35,8 +35,7 @@ sample subkeys:
  * <KvSubkeysCard @subkeys={{this.subkeys}} @isPatchAllowed={{true}} />
  *
  * @param {object} subkeys - leaf keys of a kv v2 secret, all values (unless a nested object with more keys) return null
- * @param {boolean} isPatchAllowed - true if the version is enterprise AND a user has "patch" secret + "read" subkeys capabilities, if true renders the "Patch secret" action
-
+ * @param {boolean} isPatchAllowed - if true, renders the "Patch secret" action. True when: (1) the version is enterprise, (2) a user has "patch" secret + "read" subkeys capabilities, (3) latest secret version is not deleted or destroyed
  */
 
 export default class KvSubkeysCard extends Component {
