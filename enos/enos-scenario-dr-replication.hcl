@@ -1040,7 +1040,7 @@ scenario "dr_replication" {
     variables {
       ip_version           = matrix.ip_version
       primary_leader_host  = step.get_secondary_cluster_ips.leader_host
-      secondary_public_key = step.generate_demoted_secondary_pubilc_key.secondary_public_key
+      secondary_public_key = step.generate_demoted_secondary_public_key.secondary_public_key
       vault_addr           = step.create_secondary_cluster.api_addr_localhost
       vault_install_dir    = global.vault_install_dir[matrix.artifact_type]
       vault_root_token     = step.create_primary_cluster.root_token
