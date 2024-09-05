@@ -3,7 +3,7 @@
 
 scenario "dr_replication" {
   description = <<-EOF
-    The replication scenario configures disaster recovery replication between two Vault clusters and
+    The DR replication scenario configures disaster recovery replication between two Vault clusters and
     verifies behavior and failure tolerance. The build can be a local branch, any CRT built Vault
     Enterprise artifact saved to the local machine, or any CRT built Vault Enterprise artifact in
     the stable channel in Artifactory.
