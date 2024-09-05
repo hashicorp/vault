@@ -148,7 +148,7 @@ quality "vault_api_sys_replication_dr_read_connection_status_connected" {
 
 quality "vault_api_sys_replication_dr_status_known_primary_cluster_addrs" {
   description = <<-EOF
-    The v1/sys/replication/dr/status Vault API returns the replication status and
+    The v1/sys/replication/dr/status Vault API returns the DR replication status and
     'known_primary_cluster_address' is the expected primary cluster leader
   EOF
 }
