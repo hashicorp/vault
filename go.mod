@@ -133,7 +133,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-gcp v0.18.0
 	github.com/hashicorp/vault-plugin-auth-jwt v0.21.1
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.13.0
-	github.com/hashicorp/vault-plugin-auth-kubernetes v0.19.0
+	github.com/hashicorp/vault-plugin-auth-kubernetes v0.20.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.16.0
 	github.com/hashicorp/vault-plugin-database-couchbase v0.11.0
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.16.0
@@ -238,7 +238,6 @@ require (
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
-	gopkg.in/go-jose/go-jose.v2 v2.6.3 // indirect
 )
 
 require (
