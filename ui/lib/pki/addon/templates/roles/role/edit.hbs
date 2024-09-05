@@ -16,6 +16,6 @@
 <PkiRoleForm
   @role={{this.model.role}}
   @issuers={{this.model.issuers}}
-  @onCancel={{transition-to "vault.cluster.secrets.backend.pki.roles.role.details" this.model.role.id}}
-  @onSave={{transition-to "vault.cluster.secrets.backend.pki.roles.role.details" this.model.role.id}}
+  @onCancel={{engine-transition-to "vault.cluster.secrets.backend.pki.roles.role.details" this.model.role.id}}
+  @onSave={{engine-transition-to "vault.cluster.secrets.backend.pki.roles.role.details" this.model.role.id}}
 />

@@ -53,7 +53,7 @@
     @model={{@config}}
     @onCancel={{@onCancel}}
     @onSave={{fn (mut this.title) "View imported items"}}
-    @onComplete={{transition-to "vault.cluster.secrets.backend.pki.overview"}}
+    @onComplete={{engine-transition-to "vault.cluster.secrets.backend.pki.overview"}}
     @adapterOptions={{hash actionType=@config.actionType useIssuer=@config.canImportBundle}}
   />
 {{else if (eq @config.actionType "generate-root")}}
@@ -75,14 +75,14 @@
     @onCancel={{@onCancel}}
     @adapterOptions={{hash actionType=@config.actionType useIssuer=@config.canGenerateIssuerRoot}}
     @onSave={{fn (mut this.title) "View Root Certificate"}}
-    @onComplete={{transition-to "vault.cluster.secrets.backend.pki.overview"}}
+    @onComplete={{engine-transition-to "vault.cluster.secrets.backend.pki.overview"}}
   />
 {{else if (eq @config.actionType "generate-csr")}}
   <PkiGenerateCsr
     @model={{@config}}
     @onCancel={{@onCancel}}
     @onSave={{fn (mut this.title) "View Generated CSR"}}
-    @onComplete={{transition-to "vault.cluster.secrets.backend.pki.overview"}}
+    @onComplete={{engine-transition-to "vault.cluster.secrets.backend.pki.overview"}}
   />
 {{else}}
   <EmptyState @title="Choose an option" @message="To see configuration options, choose your desired output above." />

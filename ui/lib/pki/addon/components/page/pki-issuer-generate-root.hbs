@@ -31,8 +31,8 @@
 {{/if}}
 <PkiGenerateRoot
   @model={{@model}}
-  @onCancel={{transition-to "vault.cluster.secrets.backend.pki.issuers.index"}}
-  @onComplete={{transition-to "vault.cluster.secrets.backend.pki.issuers.index"}}
+  @onCancel={{engine-transition-to "vault.cluster.secrets.backend.pki.issuers.index"}}
+  @onComplete={{engine-transition-to "vault.cluster.secrets.backend.pki.issuers.index"}}
   @onSave={{fn (mut this.title) "View generated root"}}
   @adapterOptions={{hash actionType="generate-root" useIssuer=@model.canGenerateIssuerRoot}}
 />

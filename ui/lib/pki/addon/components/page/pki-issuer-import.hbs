@@ -19,8 +19,8 @@
 {{/if}}
 <PkiImportPemBundle
   @model={{@model}}
-  @onCancel={{transition-to "vault.cluster.secrets.backend.pki.issuers.index"}}
-  @onComplete={{transition-to "vault.cluster.secrets.backend.pki.issuers.index"}}
+  @onCancel={{engine-transition-to "vault.cluster.secrets.backend.pki.issuers.index"}}
+  @onComplete={{engine-transition-to "vault.cluster.secrets.backend.pki.issuers.index"}}
   @onSave={{fn (mut this.title) "View imported items"}}
   @adapterOptions={{hash actionType="import" useIssuer=true}}
 />

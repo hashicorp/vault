@@ -19,7 +19,7 @@ import type { ValidationMap } from 'vault/app-types';
  *
  * @example
  * ```js
- * <PkiKeyForm @model={{this.model}} @onCancel={{transition-to "vault.cluster"}} @onSave={{transition-to "vault.cluster"}} />
+ * <PkiKeyForm @model={{this.model}} @onCancel={{engine-transition-to "vault.cluster"}} @onSave={{engine-transition-to "vault.cluster"}} />
  * ```
  *
  * @param {Object} model - pki/key model.
