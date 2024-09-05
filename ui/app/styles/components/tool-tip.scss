@@ -63,7 +63,9 @@
 }
 .ember-basic-dropdown-content--above.tool-tip {
   @include css-bottom-arrow(8px, $black, 1px, $black);
-  margin-top: -8px;
+  & {
+    margin-top: -8px;
+  }
 }
 .ember-basic-dropdown-content--above.ember-basic-dropdown-content--right.tool-tip {
   @include css-bottom-arrow(8px, $black, 1px, $black, calc(100% - 20px));
