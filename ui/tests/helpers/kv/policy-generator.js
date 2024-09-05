@@ -108,5 +108,8 @@ export const personas = {
   secretPatcher: (backend) =>
     dataPolicy({ backend, capabilities: ['patch'] }) +
     metadataPolicy({ backend, capabilities: ['list', 'read'] }) +
-    subkeysPolicy({ backend }),
+    subkeysPolicy({ backend }) +
+    // granting patcher persona delete/destroy capabilities because this matches policies from real customer use cases
+    deleteVersionsPolicy({ backend }) +
+    destroyVersionsPolicy({ backend }),
 };

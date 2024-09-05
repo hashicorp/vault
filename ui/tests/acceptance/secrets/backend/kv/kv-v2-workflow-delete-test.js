@@ -65,12 +65,13 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       return;
     });
     test('can delete and undelete the latest secret version (a)', async function (assert) {
-      assert.expect(18);
+      assert.expect(20);
       const flashSuccess = sinon.spy(this.owner.lookup('service:flash-messages'), 'success');
       // go to secret details
       await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details`);
       // correct toolbar options & details show
       assertDeleteActions(assert);
+      assert.dom(PAGE.detail.patchLatest).exists();
       assert.dom(PAGE.infoRow).exists('shows secret data on load');
       // delete flow
       await click(PAGE.detail.delete);
@@ -91,6 +92,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       assert.dom(PAGE.detail.versionTimestamp).includesText('Version 4 deleted');
       // updated toolbar options
       assertDeleteActions(assert, ['undelete', 'destroy']);
+      assert.dom(PAGE.detail.patchLatest).doesNotExist('patching a deleted secret is not allowed');
       // undelete flow
       await click(PAGE.detail.undelete);
       // details update accordingly
@@ -99,13 +101,15 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       assert.dom(PAGE.detail.versionTimestamp).includesText('Version 4 created');
       // correct toolbar options
       assertDeleteActions(assert, ['delete', 'destroy']);
+      assert.dom(PAGE.detail.patchLatest).exists('patch is allowed after undeleting');
     });
     test('can soft delete and undelete an older secret version (a)', async function (assert) {
-      assert.expect(17);
+      assert.expect(20);
       // go to secret details
       await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details?version=2`);
       // correct toolbar options & details show
       assertDeleteActions(assert);
+      assert.dom(PAGE.detail.patchLatest).exists();
       assert.dom(PAGE.infoRow).exists('shows secret data on load');
       // delete flow
       await click(PAGE.detail.delete);
@@ -122,6 +126,10 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       assert.dom(PAGE.detail.versionTimestamp).includesText('Version 2 deleted');
       // updated toolbar options
       assertDeleteActions(assert, ['undelete', 'destroy']);
+      assert
+        .dom(PAGE.detail.patchLatest)
+        .exists('patching the latest version is allowed after deleting an older version');
+
       // undelete flow
       await click(PAGE.detail.undelete);
       // details update accordingly
@@ -132,12 +140,13 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       assertDeleteActions(assert, ['delete', 'destroy']);
     });
     test('can destroy a secret version (a)', async function (assert) {
-      assert.expect(10);
+      assert.expect(12);
       const flashSuccess = sinon.spy(this.owner.lookup('service:flash-messages'), 'success');
       // go to secret details
       await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details?version=3`);
       // correct toolbar options show
       assertDeleteActions(assert);
+      assert.dom(PAGE.detail.patchLatest).exists();
       // delete flow
       await click(PAGE.detail.destroy);
       assert.dom(PAGE.detail.deleteModalTitle).includesText('Destroy version?', 'modal has correct title');
@@ -153,6 +162,9 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       assert.dom(PAGE.detail.versionTimestamp).doesNotExist('does not show version timestamp');
       // updated toolbar options
       assertDeleteActions(assert, []);
+      assert
+        .dom(PAGE.detail.patchLatest)
+        .exists('patching the latest version is allowed after destroying an older version');
     });
 
     test('can permanently delete all secret versions (a)', async function (assert) {
