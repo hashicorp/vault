@@ -44,7 +44,7 @@ export default class KvSecretRoute extends Route {
     if (canReadSubkeys && canPatchData) {
       const { deletion_time, destroyed } = subkeysMeta;
       const isLatestActive = isDeleted(deletion_time) || destroyed ? false : true;
-      // only the latest secret version can be patched, it cannot be deleted or destroyed
+      // only the latest secret version can be patched and it must not be deleted or destroyed
       return isLatestActive;
     }
     return false;
