@@ -12,7 +12,6 @@ self.deprecationWorkflow.config = {
 self.deprecationWorkflow.config = {
   // current output from deprecationWorkflow.flushDeprecations();
   workflow: [
-    { handler: 'silence', matchId: 'ember-engines.deprecation-router-service-from-host' },
     // ember-data
     { handler: 'silence', matchId: 'ember-data:deprecate-early-static' },
     { handler: 'silence', matchId: 'ember-data:deprecate-model-reopen' },
