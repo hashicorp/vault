@@ -321,7 +321,9 @@ func (m *RollbackManager) attemptRollback(ctx context.Context, fullPath string, 
 
 		// Grab the statelock or stop
 		l := newLockGrabber(m.core.stateLock.RLock, m.core.stateLock.RUnlock, stopCh)
+		m.logger.Debug("grabbing lock in attemptRollback")
 		go l.grab()
+		m.logger.Debug("did not fail grabbing lock in attemptRollback")
 		if stopped := l.lockOrStop(); stopped {
 			// If we stopped due to shutdown, return. Otherwise another thread
 			// is holding the lock for us, continue on.

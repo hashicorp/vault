@@ -577,9 +577,9 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 
 		// Grab the statelock or stop
 		l := newLockGrabber(c.stateLock.Lock, c.stateLock.Unlock, stopCh)
-		c.logger.Debug("grabbing lock 1")
+		c.logger.Debug("grabbing lock in waitForLeadership")
 		go l.grab()
-		c.logger.Debug("did not fail here 1")
+		c.logger.Debug("did not fail grabbing lock in waitForLeadership")
 		if stopped := l.lockOrStop(); stopped {
 			lock.Unlock()
 			close(continueCh)
@@ -744,9 +744,9 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 
 			// Grab lock if we are not stopped
 			l := newLockGrabber(c.stateLock.Lock, c.stateLock.Unlock, stopCh)
-			c.logger.Debug("grabbing lock 2")
+			c.logger.Debug("grabbing lock in waitForLeadership 2")
 			go l.grab()
-			c.logger.Debug("did not fail here 2")
+			c.logger.Debug("did not fail grabbing lock in waitForLeadership 2")
 			stopped := l.lockOrStop()
 
 			// Cancel the context incase the above go routine hasn't done it

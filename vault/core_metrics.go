@@ -24,7 +24,9 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 
 	stopOrHAState := func() (bool, consts.HAState) {
 		l := newLockGrabber(c.stateLock.RLock, c.stateLock.RUnlock, stopCh)
+		c.logger.Debug("grabbing lock in metricsLoop")
 		go l.grab()
+		c.logger.Debug("did not fail grabbing lock in metricsLoop")
 		if stopped := l.lockOrStop(); stopped {
 			return true, 0
 		}
@@ -166,7 +168,9 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 			c.cachedGaugeMetricsEmitter()
 		case <-writeTimer:
 			l := newLockGrabber(c.stateLock.RLock, c.stateLock.RUnlock, stopCh)
+			c.logger.Debug("grabbing lock in metricsLoop 2")
 			go l.grab()
+			c.logger.Debug("did not fail grabbing lock in metricsLoop 2")
 			if stopped := l.lockOrStop(); stopped {
 				return
 			}
