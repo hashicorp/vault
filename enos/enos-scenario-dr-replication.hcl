@@ -1074,7 +1074,7 @@ scenario "dr_replication" {
 
   step "verify_failover_dr_replication" {
     description = <<-EOF
-        Verify that the dr replication status meets our expectations after enabling replication
+        Verify that the DR replication status meets our expectations after enabling replication
         and ensuring that all secondary nodes are unsealed.
       EOF
     module      = module.vault_verify_dr_replication
