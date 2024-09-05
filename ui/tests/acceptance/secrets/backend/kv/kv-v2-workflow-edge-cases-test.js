@@ -390,14 +390,14 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     assert.dom(FORM.toggleJson).isNotChecked();
   });
 
-  // patch is technically enterprise only but stubbing the version so these run on both CE and enterprise
+  // patch is technically enterprise only but stubbing the version so these tests run on both CE and enterprise
   module('patch-persona', function (hooks) {
     hooks.beforeEach(async function () {
       this.patchSecret = 'patch-secret';
-      this.version = this.owner.lookup('service:version');
-      this.version.type = 'enterprise';
+      this.owner.lookup('service:version').type = 'enterprise';
       this.store = this.owner.lookup('service:store');
       await writeSecret(this.backend, this.patchSecret, 'foo', 'bar');
+      await writeSecret(this.backend, 'my-destroyed-secret', 'foo', 'bar');
       const token = await runCmd([
         createPolicyCmd(
           `secret-patcher-${this.backend}`,
@@ -436,7 +436,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       assert.dom(GENERAL.overviewCard.content('Subkeys')).hasText('Keys foo newkey');
     });
 
-    // in the same test because the writeSecret helper only creates a single key/value pair
+    // testing both adding and deleting a key here because the writeSecret helper only creates a single key/value pair
     test('it adds and deletes a key', async function (assert) {
       await visit(`/vault/secrets/${this.backend}/kv/${this.patchSecret}`);
       // add a new key
@@ -452,6 +452,33 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       await click(FORM.patchDelete());
       await click(FORM.saveBtn);
       assert.dom(GENERAL.overviewCard.content('Subkeys')).hasText('Keys newkey');
+    });
+
+    test('patching a destroyed secret is not allowed', async function (assert) {
+      assert.expect(5);
+      const secret = 'my-destroyed-secret';
+      await visit(`/vault/secrets/${this.backend}/kv/${secret}`);
+      assert.dom(GENERAL.overviewCard.actionText('Patch secret')).exists();
+      await click(PAGE.secretTab('Secret'));
+      assert.dom(PAGE.detail.patchLatest).exists();
+      await click(PAGE.detail.destroy);
+      await click(PAGE.detail.deleteConfirm);
+      // check overview
+      assert
+        .dom(GENERAL.overviewCard.actionText('Patch secret'))
+        .doesNotExist('overview patch action is hidden for destroyed versions');
+      await click(PAGE.secretTab('Secret'));
+      // check secret tab
+      assert
+        .dom(PAGE.detail.patchLatest)
+        .doesNotExist('toolbar patch action is hidden for destroyed versions');
+      // check navigating directly
+      await visit(`/vault/secrets/${this.backend}/kv/${secret}/patch`);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.backend}/kv/${secret}`,
+        'destroyed secrets redirect'
+      );
     });
   });
 });
