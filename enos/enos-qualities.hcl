@@ -128,8 +128,8 @@ quality "vault_api_sys_replication_dr_primary_enable_write" {
 
 quality "vault_api_sys_replication_dr_primary_secondary_token_write" {
   description = <<-EOF
-    The v1/sys/replication/dr/primary/secondary-token Vault API configures the replication
-    token
+    The v1/sys/replication/dr/primary/secondary-token Vault API configures the DR replication
+    secondary token
   EOF
 }
 
