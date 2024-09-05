@@ -36,11 +36,13 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 
 	identityCountTimer := time.Tick(time.Minute * 10)
 	// Only emit on active node of cluster that is not a DR secondary.
+	c.logger.Debug("before stopOrHAState 1")
 	if stopped, haState := stopOrHAState(); stopped {
 		return
 	} else if haState == consts.Standby || c.IsDRSecondary() {
 		identityCountTimer = nil
 	}
+	c.logger.Debug("after stopOrHAState 1")
 
 	writeTimer := time.Tick(time.Second * 30)
 	// Do not process the writeTimer on DR Secondary nodes
@@ -56,7 +58,9 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 	for {
 		select {
 		case <-emitTimer:
+			c.logger.Debug("before stopOrHAState 2")
 			stopped, haState := stopOrHAState()
+			c.logger.Debug("after stopOrHAState 2")
 			if stopped {
 				return
 			}
