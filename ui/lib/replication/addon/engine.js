@@ -19,7 +19,7 @@ const Eng = Engine.extend({
       'flash-messages',
       'namespace',
       'replication-mode',
-      'app-router',
+      'router', // TODO: resolve deprecation
       'store',
       'version',
       '-portal',

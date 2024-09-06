@@ -9,7 +9,7 @@ import Base from '../../replication-base';
 
 export default Base.extend({
   flashMessages: service(),
-  router: service('app-router'),
+  router: service(),
 
   modelPath: 'model.config',
 

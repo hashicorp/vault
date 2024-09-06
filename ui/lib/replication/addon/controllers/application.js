@@ -29,7 +29,7 @@ export default Controller.extend(structuredClone(DEFAULTS), {
   isModalActive: false,
   isTokenCopied: false,
   expirationDate: null,
-  router: service('app-router'),
+  router: service(),
   store: service(),
   rm: service('replication-mode'),
   replicationMode: alias('rm.mode'),

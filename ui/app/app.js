@@ -38,7 +38,7 @@ export default class App extends Application {
           'flash-messages',
           'namespace',
           'replication-mode',
-          { 'app-router': 'router' },
+          'router', // TODO: resolve
           'store',
           'version',
           '-portal',
