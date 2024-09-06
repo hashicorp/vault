@@ -942,6 +942,7 @@ func (ts *TokenStore) rootToken(ctx context.Context) (*logical.TokenEntry, error
 		NamespaceID:  namespace.RootNamespaceID,
 		Type:         logical.TokenTypeService,
 	}
+	ts.logger.Debug("creating root token")
 	if err := ts.create(ctx, te); err != nil {
 		return nil, err
 	}
@@ -1225,13 +1226,16 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 func (ts *TokenStore) GenerateSSCTokenID(innerToken string, walState *logical.WALState, te *logical.TokenEntry) string {
 	// Set up the prefix prepending function. This should really only be used in
 	// the token ID generation code itself.
+	ts.logger.Debug("generating token")
 	prependServicePrefix := func(externalToken string) string {
 		if strings.HasPrefix(externalToken, consts.ServiceTokenPrefix) {
 			// We didn't generate a SSC token and furthermore are attempting
 			// to regenerate a token that already has passed through
 			// GenerateSSCTokenID, as it has a prefix.
+			ts.logger.Debug("returning externalToken")
 			return externalToken
 		}
+		ts.logger.Debug("returning externalToken 2")
 		return consts.ServiceTokenPrefix + externalToken
 	}
 
@@ -1250,6 +1254,7 @@ func (ts *TokenStore) GenerateSSCTokenID(innerToken string, walState *logical.WA
 		walState = &logical.WALState{}
 	}
 	if te.IsRoot() {
+		ts.logger.Debug("is root token")
 		return prependServicePrefix(innerToken)
 	}
 
