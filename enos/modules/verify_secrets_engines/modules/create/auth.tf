@@ -62,7 +62,6 @@ resource "enos_remote_exec" "read_sys_auth" {
     VAULT_INSTALL_DIR = var.vault_install_dir
   }
 
-  //scripts = [abspath("${path.module}/../../scripts/read.sh")]
   scripts = [abspath("${path.module}/../../scripts/read.sh")]
 
   transport = {
