@@ -591,11 +591,23 @@ GATHER_RESULTS:
 	for {
 		select {
 		case result := <-resultCh:
+			select {
+			default:
+			case <-ctx.Done():
+				cancelEncryptCtx()
+				break GATHER_RESULTS
+			}
 			results[result.name] = result
 			if len(results) == len(enabledWrappersByPriority) {
 				break GATHER_RESULTS
 			}
 		case <-encryptCtx.Done():
+			select {
+			default:
+			case <-ctx.Done():
+				cancelEncryptCtx()
+				break GATHER_RESULTS
+			}
 			break GATHER_RESULTS
 		case <-ctx.Done():
 			cancelEncryptCtx()
@@ -810,14 +822,29 @@ GATHER_RESULTS:
 		case result := <-resultCh:
 			switch {
 			case result.err != nil:
+				select {
+				default:
+				case <-ctx.Done():
+					break GATHER_RESULTS
+				}
 				errs[result.name] = result.err
 				if len(errs) == len(wrappersByPriority) {
 					break GATHER_RESULTS
 				}
 
 			case result.oldKey:
+				select {
+				default:
+				case <-ctx.Done():
+					break GATHER_RESULTS
+				}
 				return result.pt, false, OldKey
 			default:
+				select {
+				default:
+				case <-ctx.Done():
+					break GATHER_RESULTS
+				}
 				return result.pt, isUpToDate, nil
 			}
 		case <-ctx.Done():

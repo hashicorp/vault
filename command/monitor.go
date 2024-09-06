@@ -127,6 +127,11 @@ func (c *MonitorCommand) Run(args []string) int {
 	for {
 		select {
 		case log, ok := <-logCh:
+			select {
+			default:
+			case <-c.ShutdownCh:
+				return 0
+			}
 			if !ok {
 				return 0
 			}

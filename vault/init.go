@@ -372,18 +372,24 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	// disabled. When using recovery keys they are stored in the barrier, so
 	// this must happen post-unseal.
 	if c.seal.RecoveryKeySupported() {
+		c.logger.Debug("executing code for recovery key supported")
+		c.logger.Debug("executing code for set recovery config")
 		err = c.seal.SetRecoveryConfig(ctx, recoveryConfig)
 		if err != nil {
 			c.logger.Error("failed to save recovery configuration", "error", err)
 			return nil, fmt.Errorf("recovery configuration saving failed: %w", err)
 		}
+		c.logger.Debug("finished executing code for set recovery config")
 
 		if recoveryConfig.SecretShares > 0 {
+			c.logger.Debug("secret shares greater than 0")
 			recoveryKey, recoveryUnsealKeys, err := c.generateShares(recoveryConfig)
 			if err != nil {
 				c.logger.Error("failed to generate recovery shares", "error", err)
 				return nil, err
 			}
+			c.logger.Debug("finished generating shares")
+			c.logger.Debug("set recovery key")
 
 			err = c.seal.SetRecoveryKey(ctx, recoveryKey)
 			if err != nil {
@@ -393,6 +399,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 			results.RecoveryShares = recoveryUnsealKeys
 		}
 	}
+	c.logger.Debug("finished recovery key")
 
 	// Generate a new root token
 	rootToken, err := c.tokenStore.rootToken(ctx)
