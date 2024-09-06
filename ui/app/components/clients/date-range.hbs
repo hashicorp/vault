@@ -78,13 +78,15 @@
               <F.Label>End</F.Label>
             </Hds::Form::TextInput::Field>
           </div>
-          <Hds::Button
-            @text="Reset"
-            @color="tertiary"
-            @icon="reload"
-            {{on "click" this.resetDates}}
-            data-test-date-edit="reset"
-          />
+          {{#if this.version.isEnterprise}}
+            <Hds::Button
+              @text="Reset"
+              @color="tertiary"
+              @icon="reload"
+              {{on "click" this.resetDates}}
+              data-test-date-edit="reset"
+            />
+          {{/if}}
         </div>
         {{#if this.validationError}}
           <Hds::Form::Error
