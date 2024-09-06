@@ -5,6 +5,19 @@
 
 import Component from '@glimmer/component';
 
+/**
+ * @module ReplicationOverviewModeComponent
+ * ReplicationOverviewMode components are used on the Replication index page to display
+ * details about a given mode (DR or Performance) status.
+ *
+ * @example
+ * ```js
+ * <ReplicationOverviewModeComponent @mode="dr" @model={{this.cluster.dr}} @clusterName={{this.cluster.name}} />
+ * ```
+ * @param {string} mode - should be "dr" or "performance"
+ * @param {ReplicationAttributesModel} model - either the dr or performance attribute of the cluster model
+ * @param {string} clusterName - used for the link to the mode details
+ */
 export default class ReplicationOverviewModeComponent extends Component {
   get details() {
     if (this.args.mode === 'dr') {
