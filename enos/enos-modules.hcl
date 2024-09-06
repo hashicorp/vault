@@ -56,6 +56,24 @@ module "get_local_metadata" {
   source = "./modules/get_local_metadata"
 }
 
+module "generate_dr_operation_token" {
+  source = "./modules/generate_dr_operation_token"
+
+  vault_install_dir = var.vault_install_dir
+}
+
+module "generate_failover_secondary_token" {
+  source = "./modules/generate_failover_secondary_token"
+
+  vault_install_dir = var.vault_install_dir
+}
+
+module "generate_secondary_public_key" {
+  source = "./modules/generate_secondary_public_key"
+
+  vault_install_dir = var.vault_install_dir
+}
+
 module "generate_secondary_token" {
   source = "./modules/generate_secondary_token"
 
@@ -181,6 +199,24 @@ module "vault_cluster" {
 
 module "vault_get_cluster_ips" {
   source = "./modules/vault_get_cluster_ips"
+
+  vault_install_dir = var.vault_install_dir
+}
+
+module "vault_failover_demote_dr_primary" {
+  source = "./modules/vault_failover_demote_dr_primary"
+
+  vault_install_dir = var.vault_install_dir
+}
+
+module "vault_failover_promote_dr_secondary" {
+  source = "./modules/vault_failover_promote_dr_secondary"
+
+  vault_install_dir = var.vault_install_dir
+}
+
+module "vault_failover_update_dr_primary" {
+  source = "./modules/vault_failover_update_dr_primary"
 
   vault_install_dir = var.vault_install_dir
 }
