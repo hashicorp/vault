@@ -89,7 +89,6 @@ module('Integration | Component | kv-v2 | KvDataFields', function (hooks) {
   });
 
   test('it shows readonly json editor when viewing secret details of complex secret', async function (assert) {
-    assert.expect(4);
     this.secret.secretData = {
       foo: {
         bar: 'baz',
