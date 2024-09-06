@@ -290,11 +290,6 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
   });
 
   test('advanced secret values default to JSON display', async function (assert) {
-    const obscuredData = `{
-  "foo3": {
-    "name": "********"
-  }
-}`;
     await visit(`/vault/secrets/${this.backend}/kv/create`);
     await fillIn(FORM.inputByAttr('path'), 'complex');
 
@@ -313,13 +308,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await click(PAGE.secretTab('Secret'));
     assert.dom(FORM.toggleJson).isNotDisabled();
     assert.dom(FORM.toggleJson).isChecked();
-    assert.strictEqual(
-      codemirror().getValue(),
-      obscuredData,
-      'Value is obscured by default on details view when advanced'
-    );
-    await click('[data-test-toggle-input="revealValues"]');
-    assert.false(codemirror().getValue().includes('*'), 'Value unobscured after toggle');
+    assert.false(codemirror().getValue().includes('*'), 'Values are not obscured on details view');
 
     // New version view
     await click(PAGE.detail.createNewVersion);
@@ -343,14 +332,14 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 
   test('viewing advanced secret data versions displays the correct version data', async function (assert) {
     assert.expect(2);
-    const obscuredDataV1 = `{
+    const expectedDataV1 = `{
   "foo1": {
-    "name": "********"
+    "name": "bar1"
   }
 }`;
-    const obscuredDataV2 = `{
+    const expectedDataV2 = `{
   "foo2": {
-    "name": "********"
+    "name": "bar2"
   }
 }`;
 
@@ -370,12 +359,12 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await click(PAGE.secretTab('Secret'));
     await click(PAGE.detail.versionDropdown);
     await click(`${PAGE.detail.version(1)} a`);
-    assert.strictEqual(codemirror().getValue(), obscuredDataV1, 'Version one data is displayed');
+    assert.strictEqual(codemirror().getValue(), expectedDataV1, 'Version one data is displayed');
 
     // Navigate back the second version and make sure the secret data is correct
     await click(PAGE.detail.versionDropdown);
     await click(`${PAGE.detail.version(2)} a`);
-    assert.strictEqual(codemirror().getValue(), obscuredDataV2, 'Version two data is displayed');
+    assert.strictEqual(codemirror().getValue(), expectedDataV2, 'Version two data is displayed');
   });
 
   test('does not register as advanced when value includes {', async function (assert) {
