@@ -239,4 +239,107 @@ module('Unit | Service | capabilities', function (hooks) {
       });
     });
   });
+
+  module('within namespace', function (hooks) {
+    // capabilities within namespaces are queried at the user's root namespace with a path that includes
+    // the relative namespace. The capabilities record is saved at the path without the namespace.
+    hooks.beforeEach(function () {
+      this.nsSvc = this.owner.lookup('service:namespace');
+      this.nsSvc.path = 'ns1';
+      this.store.unloadAll('capabilities');
+    });
+
+    test('fetchPathCapabilities works as expected', async function (assert) {
+      const ns = this.nsSvc.path;
+      const path = '/my/api/path';
+      const expectedAttrs = {
+        // capabilities has ID at non-namespaced path
+        id: path,
+        canCreate: false,
+        canDelete: false,
+        canList: true,
+        canPatch: false,
+        canRead: true,
+        canSudo: false,
+        canUpdate: false,
+      };
+      this.server.post('/sys/capabilities-self', (schema, req) => {
+        const actual = JSON.parse(req.requestBody);
+        assert.strictEqual(req.url, '/v1/sys/capabilities-self', 'request made to capabilities-self');
+        assert.propEqual(
+          actual.paths,
+          [`${ns}/my/api/path`],
+          `request made with path: ${JSON.stringify(actual)}`
+        );
+        return this.generateResponse({
+          path: `${ns}${path}`,
+          capabilities: ['read', 'list'],
+        });
+      });
+      const actual = await this.capabilities.fetchPathCapabilities(path);
+      assert.strictEqual(this.store.peekAll('capabilities').length, 1, 'adds 1 record');
+
+      Object.keys(expectedAttrs).forEach(function (key) {
+        assert.strictEqual(
+          actual[key],
+          expectedAttrs[key],
+          `record has expected value for ${key}: ${actual[key]}`
+        );
+      });
+    });
+
+    test('fetchMultiplePaths works as expected', async function (assert) {
+      const ns = this.nsSvc.path;
+      const paths = ['/my/api/path', '/another/api/path'];
+      const expectedPayload = paths.map((p) => `${ns}${p}`);
+
+      this.server.post('/sys/capabilities-self', (schema, req) => {
+        const actual = JSON.parse(req.requestBody);
+        assert.strictEqual(req.url, '/v1/sys/capabilities-self', 'request made to capabilities-self');
+        assert.propEqual(actual.paths, expectedPayload, `request made with paths: ${JSON.stringify(actual)}`);
+        const resp = this.generateResponse({
+          paths: expectedPayload,
+          capabilities: {
+            [`${ns}/my/api/path`]: ['read', 'list'],
+            [`${ns}/another/api/path`]: ['update', 'patch'],
+          },
+        });
+        return resp;
+      });
+      const actual = await this.capabilities.fetchMultiplePaths(paths);
+      const expected = {
+        '/my/api/path': {
+          canCreate: false,
+          canDelete: false,
+          canList: true,
+          canPatch: false,
+          canRead: true,
+          canSudo: false,
+          canUpdate: false,
+        },
+        '/another/api/path': {
+          canCreate: false,
+          canDelete: false,
+          canList: false,
+          canPatch: true,
+          canRead: false,
+          canSudo: false,
+          canUpdate: true,
+        },
+      };
+      assert.deepEqual(actual, expected, 'method returns expected response');
+      assert.strictEqual(this.store.peekAll('capabilities').length, 2, 'adds 2 records');
+      Object.keys(expected).forEach((path) => {
+        const record = this.store.peekRecord('capabilities', path);
+        assert.strictEqual(record.id, path, `record exists with id: ${record.id}`);
+        Object.keys(expected[path]).forEach((attr) => {
+          assert.strictEqual(
+            record[attr],
+            expected[path][attr],
+            `record has correct value for ${attr}: ${record[attr]}`
+          );
+        });
+      });
+    });
+  });
 });
