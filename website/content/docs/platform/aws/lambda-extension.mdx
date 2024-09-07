@@ -248,7 +248,7 @@ token.
   The Vault Lambda Extension cache key includes headers from proxy requests, but excludes
   standard distributed tracing headers `traceparent` and `tracestate`, since trace IDs are unique
   per request. However, certain distributed tracing tools may add nonstandard tracing headers. 
-  These nonstandard tracing headers headers can lead to individualized hashes, which render repeated 
+  These nonstandard tracing headers headers can lead to individualized hashes that make repeated 
   requests unique and cause cache misses.
 
 </Warning>
