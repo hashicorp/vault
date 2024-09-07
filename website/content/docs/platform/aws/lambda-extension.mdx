@@ -243,12 +243,13 @@ request will be forwarded to Vault and the response returned and cached.
 Currently, the cache key is a hash of the request URL path, headers, body, and
 token.
 
-<Warning title="Distributed tracing headers may negate the cache">
+<Warning title="Nonstandard distributed tracing headers may negate the cache">
 
-  The Vault Lambda Extension cache key includes headers from proxy requests. As
-  a result, distributed tracing headers like `traceparent` can lead to
-  individualized hashes that make repeated requests appear unique and cause cache
-  misses.
+  The Vault Lambda Extension cache key includes headers from proxy requests, but excludes
+  standard distributed tracing headers `traceparent` and `tracestate`, since trace IDs are unique
+  per request. However, certain distributed tracing tools may add nonstandard tracing headers. 
+  These nonstandard tracing headers headers can lead to individualized hashes, which render repeated 
+  requests unique and cause cache misses.
 
 </Warning>
 
