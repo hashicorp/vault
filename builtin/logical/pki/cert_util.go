@@ -410,6 +410,10 @@ func generateIntermediateCSR(sc *storageContext, input *inputBundle, randomSourc
 		return nil, nil, errutil.InternalError{Err: "nil parameters received from parameter bundle generation"}
 	}
 
+	_, exists := input.apiData.GetOk("key_usage")
+	if !exists {
+		creation.Params.KeyUsage = 0
+	}
 	addBasicConstraints := input.apiData != nil && input.apiData.Get("add_basic_constraints").(bool)
 	parsedBundle, err := generateCSRBundle(sc, input, creation, addBasicConstraints, randomSource)
 	if err != nil {
@@ -468,6 +472,10 @@ func (i SignCertInputFromDataFields) GetPermittedDomains() []string {
 	return i.data.Get("permitted_dns_domains").([]string)
 }
 
+func (i SignCertInputFromDataFields) IgnoreCSRSignature() bool {
+	return false
+}
+
 func signCert(sysView logical.SystemView, data *inputBundle, caSign *certutil.CAInfoBundle, isCA bool, useCSRValues bool) (*certutil.ParsedCertBundle, []string, error) {
 	if data.role == nil {
 		return nil, nil, errutil.InternalError{Err: "no role found in data bundle"}
@@ -496,6 +504,10 @@ func NewCreationBundleInputFromFieldData(data *framework.FieldData) CreationBund
 type CreationBundleInputFromFieldData struct {
 	CertNotAfterInputFromFieldData
 	data *framework.FieldData
+}
+
+func (cb CreationBundleInputFromFieldData) IgnoreCSRSignature() bool {
+	return false
 }
 
 func (cb CreationBundleInputFromFieldData) GetCommonName() string {

@@ -3438,6 +3438,79 @@ func InduceDeadlock(t *testing.T, vaultcore *Core, expected uint32) {
 	}
 }
 
+// TestDetectedDeadlockSetting verifies that a Core struct gets the appropriate
+// locking.RWMutex implementation assigned for the stateLock, authLock, and
+// mountsLock fields based on various values that could be obtained from the
+// detect_deadlocks configuration parameter.
+func TestDetectedDeadlockSetting(t *testing.T) {
+	var standardLock string = "*locking.SyncRWMutex"
+	var deadlockLock string = "*locking.DeadlockRWMutex"
+
+	for _, tc := range []struct {
+		name                        string
+		input                       string
+		expectedDetectDeadlockSlice []string
+		expectedStateLockImpl       string
+		expectedAuthLockImpl        string
+		expectedMountsLockImpl      string
+	}{
+		{
+			name:                        "none",
+			input:                       "",
+			expectedDetectDeadlockSlice: []string{},
+			expectedStateLockImpl:       standardLock,
+			expectedAuthLockImpl:        standardLock,
+			expectedMountsLockImpl:      standardLock,
+		},
+		{
+			name:                        "stateLock-only",
+			input:                       "STATELOCK",
+			expectedDetectDeadlockSlice: []string{"statelock"},
+			expectedStateLockImpl:       deadlockLock,
+			expectedAuthLockImpl:        standardLock,
+			expectedMountsLockImpl:      standardLock,
+		},
+		{
+			name:                        "authLock-only",
+			input:                       "AuthLock",
+			expectedDetectDeadlockSlice: []string{"authlock"},
+			expectedStateLockImpl:       standardLock,
+			expectedAuthLockImpl:        deadlockLock,
+			expectedMountsLockImpl:      standardLock,
+		},
+		{
+			name:                        "state-auth-mounts",
+			input:                       "mountsLock,AUTHlock,sTaTeLoCk",
+			expectedDetectDeadlockSlice: []string{"mountslock", "authlock", "statelock"},
+			expectedStateLockImpl:       deadlockLock,
+			expectedAuthLockImpl:        deadlockLock,
+			expectedMountsLockImpl:      deadlockLock,
+		},
+		{
+			name:                        "stateLock-with-unrecognized",
+			input:                       "stateLock,otherLock",
+			expectedDetectDeadlockSlice: []string{"statelock", "otherlock"},
+			expectedStateLockImpl:       deadlockLock,
+			expectedAuthLockImpl:        standardLock,
+			expectedMountsLockImpl:      standardLock,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			core, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{DetectDeadlocks: tc.input})
+
+			assert.ElementsMatch(t, tc.expectedDetectDeadlockSlice, core.detectDeadlocks)
+
+			stateLockImpl := fmt.Sprintf("%T", core.stateLock)
+			authLockImpl := fmt.Sprintf("%T", core.authLock)
+			mountsLockImpl := fmt.Sprintf("%T", core.mountsLock)
+
+			assert.Equal(t, tc.expectedStateLockImpl, stateLockImpl)
+			assert.Equal(t, tc.expectedAuthLockImpl, authLockImpl)
+			assert.Equal(t, tc.expectedMountsLockImpl, mountsLockImpl)
+		})
+	}
+}
+
 func TestSetSeals(t *testing.T) {
 	oldSeal := NewTestSeal(t, &seal.TestSealOpts{
 		StoredKeys:   seal.StoredKeysSupportedGeneric,

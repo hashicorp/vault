@@ -13,7 +13,7 @@ export default class KvSecretMetadataVersionsRoute extends Route {
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: resolvedModel.backend, route: 'list', model: resolvedModel.backend },
       ...breadcrumbsForSecret(resolvedModel.backend, resolvedModel.path),
-      { label: 'version history' },
+      { label: 'Version History' },
     ];
 
     controller.set('breadcrumbs', breadcrumbsArray);

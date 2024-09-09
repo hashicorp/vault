@@ -17,7 +17,7 @@ module('Unit | Decorators | fetch-secrets-engine-config', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.spy = sinon.spy(console, 'error');
+    this.spy = sinon.spy(console, 'debug');
     this.store = this.owner.lookup('service:store');
     this.backend = 'test-path';
     this.owner.lookup('service:secretMountPath').update(this.backend);

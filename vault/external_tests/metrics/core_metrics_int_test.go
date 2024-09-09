@@ -7,7 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"io"
 	"testing"
 	"time"
 
@@ -139,7 +139,7 @@ func TestLeaderReElectionMetrics(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	bodyBytes, err := ioutil.ReadAll(respo.Response.Body)
+	bodyBytes, err := io.ReadAll(respo.Response.Body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -183,7 +183,7 @@ func TestLeaderReElectionMetrics(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	bodyBytes, err = ioutil.ReadAll(respo.Response.Body)
+	bodyBytes, err = io.ReadAll(respo.Response.Body)
 	if err != nil {
 		t.Fatal(err)
 	}

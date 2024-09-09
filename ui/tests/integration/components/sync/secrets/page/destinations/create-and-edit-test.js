@@ -10,7 +10,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { Response } from 'miragejs';
-import { click, render, typeIn } from '@ember/test-helpers';
+import { click, fillIn, render, typeIn } from '@ember/test-helpers';
 import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
 import { syncDestinations } from 'vault/helpers/sync-destinations';
 import { decamelize, underscore } from '@ember/string';
@@ -44,7 +44,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
     };
   });
 
-  test('create: it renders and navigates back to create on cancel', async function (assert) {
+  test('create: it renders breadcrumbs and navigates back to create on cancel', async function (assert) {
     assert.expect(2);
     const { type } = SYNC_DESTINATIONS[0];
     this.model = this.store.createRecord(`sync/destinations/${type}`, { type });
@@ -56,21 +56,57 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
     assert.true(transition, 'transitions to vault.cluster.sync.secrets.destinations.create on cancel');
   });
 
-  test('edit: it renders and navigates back to details on cancel', async function (assert) {
+  test('create: it renders headers and fieldGroups subtext', async function (assert) {
     assert.expect(4);
+    const { type } = SYNC_DESTINATIONS[0];
+    this.model = this.store.createRecord(`sync/destinations/${type}`, { type });
+
+    await this.renderFormComponent();
+    assert
+      .dom(PAGE.form.fieldGroupHeader('Credentials'))
+      .hasText('Credentials', 'renders credentials section on create');
+    assert
+      .dom(PAGE.form.fieldGroupHeader('Advanced configuration'))
+      .hasText('Advanced configuration', 'renders advanced configuration section on create');
+    assert
+      .dom(PAGE.form.fieldGroupSubtext('Credentials'))
+      .hasText('Connection credentials are sensitive information used to authenticate with the destination.');
+    assert
+      .dom(PAGE.form.fieldGroupSubtext('Advanced configuration'))
+      .hasText('Configuration options for the destination.');
+  });
+
+  test('edit: it renders breadcrumbs and navigates back to details on cancel', async function (assert) {
+    assert.expect(2);
     this.model = this.generateModel();
 
     await this.renderFormComponent();
     assert.dom(PAGE.breadcrumbs).hasText('Secrets Sync Destinations Destination Edit Destination');
-    assert.dom('h2').hasText('Credentials', 'renders credentials section on edit');
-    assert
-      .dom('p.hds-foreground-faint')
-      .hasText(
-        'Connection credentials are sensitive information and the value cannot be read. Enable the input to update.'
-      );
+
     await click(PAGE.cancelButton);
     const transition = this.transitionStub.calledWith('vault.cluster.sync.secrets.destinations.destination');
     assert.true(transition, 'transitions to vault.cluster.sync.secrets.destinations.destination on cancel');
+  });
+
+  test('edit: it renders headers and fieldGroup subtext', async function (assert) {
+    assert.expect(4);
+    this.model = this.generateModel();
+
+    await this.renderFormComponent();
+    assert
+      .dom(PAGE.form.fieldGroupHeader('Credentials'))
+      .hasText('Credentials', 'renders credentials section on edit');
+    assert
+      .dom(PAGE.form.fieldGroupHeader('Advanced configuration'))
+      .hasText('Advanced configuration', 'renders advanced configuration section on edit');
+    assert
+      .dom(PAGE.form.fieldGroupSubtext('Credentials'))
+      .hasText(
+        'Connection credentials are sensitive information and the value cannot be read. Enable the input to update.'
+      );
+    assert
+      .dom(PAGE.form.fieldGroupSubtext('Advanced configuration'))
+      .hasText('Configuration options for the destination.');
   });
 
   test('edit: it PATCH updates custom_tags', async function (assert) {
@@ -128,6 +164,28 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
 
     await this.renderFormComponent();
     await click(PAGE.kvObjectEditor.deleteRow());
+    await click(PAGE.saveButton);
+  });
+
+  test('edit: payload only contains masked inputs when they have changed', async function (assert) {
+    assert.expect(1);
+    this.model = this.generateModel();
+
+    this.server.patch(`sys/sync/destinations/${this.model.type}/${this.model.name}`, (schema, req) => {
+      const payload = JSON.parse(req.requestBody);
+      assert.propEqual(
+        payload,
+        { secret_access_key: 'new-secret' },
+        'payload contains the changed obfuscated field'
+      );
+      return { payload };
+    });
+
+    await this.renderFormComponent();
+    await click(PAGE.enableField('accessKeyId'));
+    await click(PAGE.maskedInput('accessKeyId')); // click on input but do not change value
+    await click(PAGE.enableField('secretAccessKey'));
+    await fillIn(PAGE.maskedInput('secretAccessKey'), 'new-secret');
     await click(PAGE.saveButton);
   });
 
@@ -192,6 +250,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
   // CREATE FORM ASSERTIONS FOR EACH DESTINATION TYPE
   for (const destination of SYNC_DESTINATIONS) {
     const { name, type } = destination;
+    const obfuscatedFields = ['accessToken', 'clientSecret', 'secretAccessKey', 'accessKeyId'];
 
     module(`create destination: ${type}`, function (hooks) {
       hooks.beforeEach(function () {
@@ -207,6 +266,26 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
         for (const attr of this.model.formFields) {
           assert.dom(PAGE.fieldByAttr(attr.name)).exists();
         }
+      });
+
+      test('it masks obfuscated fields', async function (assert) {
+        const filteredObfuscatedFields = this.model.formFields.filter((field) =>
+          obfuscatedFields.includes(field.name)
+        );
+        assert.expect(filteredObfuscatedFields.length * 2);
+        await this.renderFormComponent();
+        // iterate over the form fields and filter for those that are obfuscated
+        // fill those in and assert that they are masked
+        filteredObfuscatedFields.forEach(async (field) => {
+          await fillIn(PAGE.maskedInput(field.name), 'blah');
+
+          assert
+            .dom(PAGE.maskedInput(field.name))
+            .hasClass('masked-font', `it renders ${field.name} for ${destination} with masked font`);
+          assert
+            .dom(PAGE.form.enableInput(field.name))
+            .doesNotExist(`it does not render enable input for ${field.name}`);
+        });
       });
 
       test('it saves destination and transitions to details', async function (assert) {

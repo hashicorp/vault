@@ -44,22 +44,16 @@ export const CONFIG_RESPONSE = {
   },
 };
 
+// --------- FOR DATA GENERATION
 function getSum(array, key) {
   return array.reduce((sum, { counts }) => sum + counts[key], 0);
 }
 
 function getTotalCounts(array) {
-  const counts = CLIENT_TYPES.reduce((obj, key) => {
+  return CLIENT_TYPES.reduce((obj, key) => {
     obj[key] = getSum(array, key);
     return obj;
   }, {});
-
-  // add deprecated keys
-  return {
-    ...counts,
-    distinct_entities: counts.entity_clients,
-    non_entity_tokens: counts.non_entity_clients,
-  };
 }
 
 function randomBetween(min, max) {
@@ -75,8 +69,6 @@ function generateMountBlock(path, counts) {
     mount_path: path,
     counts: {
       ...baseObject,
-      distinct_entities: 0,
-      non_entity_tokens: 0,
       // object contains keys for which 0-values of base object to overwrite
       ...counts,
     },
@@ -195,6 +187,89 @@ function generateActivityResponse(startDate, endDate) {
   };
 }
 
+// --------- FOR MOCK FILTERING
+
+/**
+ * Helper fn for calculating total counts based on array containing counts block
+ */
+function calcCounts(arr) {
+  return arr.reduce(
+    (prev, ns) => {
+      const base = ns.counts;
+      prev.entity_clients += base.entity_clients;
+      prev.non_entity_clients += base.non_entity_clients;
+      prev.clients += base.clients;
+      prev.secret_syncs += base.secret_syncs;
+      prev.acme_clients += base.acme_clients;
+      return prev;
+    },
+    {
+      entity_clients: 0,
+      non_entity_clients: 0,
+      clients: 0,
+      secret_syncs: 0,
+      acme_clients: 0,
+    }
+  );
+}
+
+/**
+ * Helper fn to filter namespaces to include the namespace itself, and any children
+ */
+function filterByNamespace(namespaces, namespacePath) {
+  // if we simply do a check for startsWith, filtering for `ns1` will include `ns11` as well as the desired `ns1/child`
+  return namespaces.filter(
+    (ns) => ns.namespace_path === namespacePath || ns.namespace_path.startsWith(`${namespacePath}/`)
+  );
+}
+
+/**
+ * Helper fn to filter months data from activity response
+ */
+function filterMonths(months, namespacePath) {
+  return months.map((month) => {
+    if (!month.namespaces) return month;
+
+    const newMonth = {
+      ...month,
+    };
+    const filteredNs = filterByNamespace(month.namespaces, namespacePath);
+    const monthsCount = calcCounts(filteredNs);
+
+    if (month.new_clients?.namespaces) {
+      const filteredNewNs = filterByNamespace(month.new_clients.namespaces, namespacePath);
+      const newCount = calcCounts(filteredNewNs);
+
+      newMonth.new_clients.namespaces = filteredNewNs;
+      newMonth.new_clients.counts = newCount;
+    }
+
+    newMonth.namespaces = filteredNs;
+    newMonth.counts = monthsCount;
+    return newMonth;
+  });
+}
+
+/**
+ * Util to mock filter namespace data from the activity response, matching what the API does
+ */
+export function filterActivityResponse(originalData, namespacePath) {
+  // make a deep copy of the object so we don't mutate the original
+  const data = JSON.parse(JSON.stringify(originalData));
+  if (!namespacePath) return data;
+
+  const filteredMonths = filterMonths(data.months, namespacePath);
+  const filteredNs = filterByNamespace(data.by_namespace, namespacePath);
+  const filteredTotals = calcCounts(filteredNs);
+  return {
+    ...data,
+    months: filteredMonths,
+    by_namespace: filteredNs,
+    total: filteredTotals,
+  };
+}
+
+// --------- SERVER FN
 export default function (server) {
   server.get('sys/license/status', function () {
     return {
@@ -214,24 +289,46 @@ export default function (server) {
   });
 
   server.get('/sys/internal/counters/activity', (schema, req) => {
+    const activities = schema['clients/activities'];
+    const namespace = req.requestHeaders['X-Vault-Namespace'];
     let { start_time, end_time } = req.queryParams;
-    if (req.queryParams.current_billing_period) {
-      // { current_billing_period: true } automatically queries the activity log
-      // from the builtin license start timestamp to the current month
+    if (!start_time && !end_time) {
+      // if there are no date query params, the activity log default behavior
+      // queries from the builtin license start timestamp to the current month
       start_time = LICENSE_START.toISOString();
       end_time = STATIC_NOW.toISOString();
     }
     // backend returns a timestamp if given unix time, so first convert to timestamp string here
     if (!start_time.includes('T')) start_time = fromUnixTime(start_time).toISOString();
     if (!end_time.includes('T')) end_time = fromUnixTime(end_time).toISOString();
+
+    const record = activities.findBy({ start_time, end_time });
+    let data;
+    if (record) {
+      // if we already have data for the given start/end time, use that
+      data = {
+        start_time: record.start_time,
+        end_time: record.end_time,
+        by_namespace: record.by_namespace,
+        months: record.months,
+        total: record.total,
+      };
+    } else {
+      data = generateActivityResponse(start_time, end_time);
+      activities.create(data);
+    }
     return {
       request_id: 'some-activity-id',
       lease_id: '',
       renewable: false,
       lease_duration: 0,
-      data: generateActivityResponse(start_time, end_time),
+      data: filterActivityResponse(data, namespace),
       wrap_info: null,
-      warnings: null,
+      warnings: req.queryParams.end_time
+        ? null
+        : [
+            'Since this usage period includes both the current month and at least one historical month, counts returned in this usage period are an estimate. Client counts for this period will no longer be estimated at the start of the next month.',
+          ],
       auth: null,
     };
   });

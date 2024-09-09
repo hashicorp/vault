@@ -1,0 +1,3 @@
+```release-note:bug
+storage/azure: Fix invalid account name initialization bug
+```

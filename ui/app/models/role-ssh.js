@@ -47,10 +47,6 @@ const CA_FIELDS = [
 ];
 
 export default Model.extend({
-  useOpenAPI: true,
-  getHelpUrl: function (backend) {
-    return `/v1/${backend}/roles/example?help=1`;
-  },
   zeroAddress: attr('boolean', {
     readOnly: true,
   }),

@@ -11,7 +11,6 @@ import { combineFieldGroups } from 'vault/utils/openapi-to-attrs';
 import fieldToAttrs from 'vault/utils/field-to-attrs';
 
 export default AuthConfig.extend({
-  useOpenAPI: true,
   kubernetesHost: attr('string', {
     helpText:
       'Host must be a host string, a host:port pair, or a URL to the base of the Kubernetes API server.',

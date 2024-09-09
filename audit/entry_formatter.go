@@ -5,7 +5,6 @@ package audit
 
 import (
 	"context"
-	"crypto/tls"
 	"errors"
 	"fmt"
 	"reflect"
@@ -16,12 +15,12 @@ import (
 	"github.com/go-jose/go-jose/v3/jwt"
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/helper/namespace"
+	nshelper "github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/jefferai/jsonx"
+	"github.com/mitchellh/copystructure"
 )
 
 var _ eventlogger.Node = (*entryFormatter)(nil)
@@ -78,7 +77,7 @@ func (*entryFormatter) Type() eventlogger.NodeType {
 }
 
 // Process will attempt to parse the incoming event data into a corresponding
-// audit Request/Response which is serialized to JSON/JSONx and stored within the event.
+// audit request/response which is serialized to JSON/JSONx and stored within the event.
 func (f *entryFormatter) Process(ctx context.Context, e *eventlogger.Event) (_ *eventlogger.Event, retErr error) {
 	// Return early if the context was cancelled, eventlogger will not carry on
 	// asking nodes to process, so any sink node in the pipeline won't be called.
@@ -94,13 +93,13 @@ func (f *entryFormatter) Process(ctx context.Context, e *eventlogger.Event) (_ *
 		return nil, fmt.Errorf("event is nil: %w", ErrInvalidParameter)
 	}
 
-	a, ok := e.Payload.(*AuditEvent)
+	a, ok := e.Payload.(*Event)
 	if !ok {
 		return nil, fmt.Errorf("cannot parse event payload: %w", ErrInvalidParameter)
 	}
 
 	if a.Data == nil {
-		return nil, fmt.Errorf("cannot audit event (%s) with no data: %w", a.Subtype, ErrInvalidParameter)
+		return nil, fmt.Errorf("cannot audit a '%s' event with no data: %w", a.Subtype, ErrInvalidParameter)
 	}
 
 	// Handle panics
@@ -110,56 +109,27 @@ func (f *entryFormatter) Process(ctx context.Context, e *eventlogger.Event) (_ *
 			return
 		}
 
+		path := "unknown"
+		if a.Data.Request != nil {
+			path = a.Data.Request.Path
+		}
+
 		f.logger.Error("panic during logging",
-			"request_path", a.Data.Request.Path,
+			"request_path", path,
 			"audit_device_path", f.name,
 			"error", r,
 			"stacktrace", string(debug.Stack()))
 
 		// Ensure that we add this error onto any pre-existing error that was being returned.
-		retErr = multierror.Append(retErr, fmt.Errorf("panic generating audit log: %q", f.name)).ErrorOrNil()
+		retErr = errors.Join(retErr, fmt.Errorf("panic generating audit log: %q", f.name))
 	}()
 
-	// Take a copy of the event data before we modify anything.
-	data, err := a.Data.Clone()
-	if err != nil {
-		return nil, fmt.Errorf("unable to clone audit event data: %w", err)
-	}
-
-	// If the request is present in the input data, apply header configuration
-	// regardless. We shouldn't be in a situation where the header formatter isn't
-	// present as it's required.
-	if data.Request != nil {
-		// Ensure that any headers in the request, are formatted as required, and are
-		// only present if they have been configured to appear in the audit log.
-		// e.g. via: /sys/config/auditing/request-headers/:name
-		data.Request.Headers, err = f.config.headerFormatter.ApplyConfig(ctx, data.Request.Headers, f.salter)
-		if err != nil {
-			return nil, fmt.Errorf("unable to transform headers for auditing: %w", err)
-		}
-	}
-
-	// If the request contains a Server-Side Consistency Token (SSCT), and we
-	// have an auth response, overwrite the existing client token with the SSCT,
-	// so that the SSCT appears in the audit log for this entry.
-	if data.Request != nil && data.Request.InboundSSCToken != "" && data.Auth != nil {
-		data.Auth.ClientToken = data.Request.InboundSSCToken
-	}
-
-	// Using 'any' as we have two different types that we can get back from either
-	// formatRequest or formatResponse, but the JSON encoder doesn't care about types.
+	// Using 'any' to make exclusion easier, the JSON encoder doesn't care about types.
 	var entry any
-
-	switch a.Subtype {
-	case RequestType:
-		entry, err = f.formatRequest(ctx, data, a)
-	case ResponseType:
-		entry, err = f.formatResponse(ctx, data, a)
-	default:
-		return nil, fmt.Errorf("unknown audit event subtype: %q", a.Subtype)
-	}
+	var err error
+	entry, err = f.createEntry(ctx, a)
 	if err != nil {
-		return nil, fmt.Errorf("unable to parse %s from audit event: %w", a.Subtype, err)
+		return nil, err
 	}
 
 	// If this pipeline has been configured with (Enterprise-only) exclusions then
@@ -178,7 +148,7 @@ func (f *entryFormatter) Process(ctx context.Context, e *eventlogger.Event) (_ *
 		return nil, fmt.Errorf("unable to format %s: %w", a.Subtype, err)
 	}
 
-	if f.config.requiredFormat == JSONxFormat {
+	if f.config.requiredFormat == jsonxFormat {
 		var err error
 		result, err = jsonx.EncodeJSONBytes(result)
 		if err != nil {
@@ -197,21 +167,12 @@ func (f *entryFormatter) Process(ctx context.Context, e *eventlogger.Event) (_ *
 		result = append([]byte(f.config.prefix), result...)
 	}
 
-	// Copy some properties from the event (and audit event) and store the
-	// format for the next (sink) node to Process.
-	a2 := &AuditEvent{
-		ID:        a.ID,
-		Version:   a.Version,
-		Subtype:   a.Subtype,
-		Timestamp: a.Timestamp,
-		Data:      data, // Use the cloned data here rather than a pointer to the original.
-	}
-
+	// Create a new event, so we can store our formatted data without conflict.
 	e2 := &eventlogger.Event{
 		Type:      e.Type,
 		CreatedAt: e.CreatedAt,
 		Formatted: make(map[string][]byte), // we are about to set this ourselves.
-		Payload:   a2,
+		Payload:   a,
 	}
 
 	e2.FormattedAs(f.config.requiredFormat.String(), result)
@@ -219,377 +180,31 @@ func (f *entryFormatter) Process(ctx context.Context, e *eventlogger.Event) (_ *
 	return e2, nil
 }
 
-// formatRequest attempts to format the specified logical.LogInput into a RequestEntry.
-func (f *entryFormatter) formatRequest(ctx context.Context, in *logical.LogInput, provider timeProvider) (*RequestEntry, error) {
-	switch {
-	case in == nil || in.Request == nil:
-		return nil, errors.New("request to request-audit a nil request")
-	case f.salter == nil:
-		return nil, errors.New("salt func not configured")
-	}
-
-	// Set these to the input values at first
-	auth := in.Auth
-	req := in.Request
-	var connState *tls.ConnectionState
-	if auth == nil {
-		auth = new(logical.Auth)
-	}
-
-	if in.Request.Connection != nil && in.Request.Connection.ConnState != nil {
-		connState = in.Request.Connection.ConnState
-	}
-
-	if !f.config.raw {
-		var err error
-		auth, err = HashAuth(ctx, f.salter, auth, f.config.hmacAccessor)
-		if err != nil {
-			return nil, err
-		}
-
-		req, err = HashRequest(ctx, f.salter, req, f.config.hmacAccessor, in.NonHMACReqDataKeys)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	var errString string
-	if in.OuterErr != nil {
-		errString = in.OuterErr.Error()
-	}
-
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	reqType := in.Type
-	if reqType == "" {
-		reqType = "request"
-	}
-	reqEntry := &RequestEntry{
-		Type:          reqType,
-		Error:         errString,
-		ForwardedFrom: req.ForwardedFrom,
-		Auth: &Auth{
-			ClientToken:               auth.ClientToken,
-			Accessor:                  auth.Accessor,
-			DisplayName:               auth.DisplayName,
-			Policies:                  auth.Policies,
-			TokenPolicies:             auth.TokenPolicies,
-			IdentityPolicies:          auth.IdentityPolicies,
-			ExternalNamespacePolicies: auth.ExternalNamespacePolicies,
-			NoDefaultPolicy:           auth.NoDefaultPolicy,
-			Metadata:                  auth.Metadata,
-			EntityID:                  auth.EntityID,
-			RemainingUses:             req.ClientTokenRemainingUses,
-			TokenType:                 auth.TokenType.String(),
-			TokenTTL:                  int64(auth.TTL.Seconds()),
-		},
-
-		Request: &Request{
-			ID:                    req.ID,
-			ClientID:              req.ClientID,
-			ClientToken:           req.ClientToken,
-			ClientTokenAccessor:   req.ClientTokenAccessor,
-			Operation:             req.Operation,
-			MountPoint:            req.MountPoint,
-			MountType:             req.MountType,
-			MountAccessor:         req.MountAccessor,
-			MountRunningVersion:   req.MountRunningVersion(),
-			MountRunningSha256:    req.MountRunningSha256(),
-			MountIsExternalPlugin: req.MountIsExternalPlugin(),
-			MountClass:            req.MountClass(),
-			Namespace: &Namespace{
-				ID:   ns.ID,
-				Path: ns.Path,
-			},
-			Path:                          req.Path,
-			Data:                          req.Data,
-			PolicyOverride:                req.PolicyOverride,
-			RemoteAddr:                    getRemoteAddr(req),
-			RemotePort:                    getRemotePort(req),
-			ReplicationCluster:            req.ReplicationCluster,
-			Headers:                       req.Headers,
-			ClientCertificateSerialNumber: getClientCertificateSerialNumber(connState),
-		},
-	}
-
-	if req.HTTPRequest != nil && req.HTTPRequest.RequestURI != req.Path {
-		reqEntry.Request.RequestURI = req.HTTPRequest.RequestURI
-	}
-
-	if !auth.IssueTime.IsZero() {
-		reqEntry.Auth.TokenIssueTime = auth.IssueTime.Format(time.RFC3339)
-	}
-
-	if auth.PolicyResults != nil {
-		reqEntry.Auth.PolicyResults = &PolicyResults{
-			Allowed: auth.PolicyResults.Allowed,
-		}
-
-		for _, p := range auth.PolicyResults.GrantingPolicies {
-			reqEntry.Auth.PolicyResults.GrantingPolicies = append(reqEntry.Auth.PolicyResults.GrantingPolicies, PolicyInfo{
-				Name:          p.Name,
-				NamespaceId:   p.NamespaceId,
-				NamespacePath: p.NamespacePath,
-				Type:          p.Type,
-			})
-		}
-	}
-
-	if req.WrapInfo != nil {
-		reqEntry.Request.WrapTTL = int(req.WrapInfo.TTL / time.Second)
-	}
-
-	if !f.config.omitTime {
-		// Use the time provider to supply the time for this entry.
-		reqEntry.Time = provider.formattedTime()
-	}
-
-	return reqEntry, nil
-}
-
-// formatResponse attempts to format the specified logical.LogInput into a ResponseEntry.
-func (f *entryFormatter) formatResponse(ctx context.Context, in *logical.LogInput, provider timeProvider) (*ResponseEntry, error) {
-	switch {
-	case f == nil:
-		return nil, errors.New("formatter is nil")
-	case in == nil || in.Request == nil:
-		return nil, errors.New("request to response-audit a nil request")
-	case f.salter == nil:
-		return nil, errors.New("salt func not configured")
-	}
-
-	// Set these to the input values at first
-	auth, req, resp := in.Auth, in.Request, in.Response
-	if auth == nil {
-		auth = new(logical.Auth)
-	}
-	if resp == nil {
-		resp = new(logical.Response)
-	}
-	var connState *tls.ConnectionState
-
-	if in.Request.Connection != nil && in.Request.Connection.ConnState != nil {
-		connState = in.Request.Connection.ConnState
-	}
-
-	elideListResponseData := f.config.elideListResponses && req.Operation == logical.ListOperation
-
-	var respData map[string]interface{}
-	if f.config.raw {
-		// In the non-raw case, elision of list response data occurs inside HashResponse, to avoid redundant deep
-		// copies and hashing of data only to elide it later. In the raw case, we need to do it here.
-		if elideListResponseData && resp.Data != nil {
-			// Copy the data map before making changes, but we only need to go one level deep in this case
-			respData = make(map[string]interface{}, len(resp.Data))
-			for k, v := range resp.Data {
-				respData[k] = v
-			}
-
-			doElideListResponseData(respData)
-		} else {
-			respData = resp.Data
-		}
-	} else {
-		var err error
-		auth, err = HashAuth(ctx, f.salter, auth, f.config.hmacAccessor)
-		if err != nil {
-			return nil, err
-		}
-
-		req, err = HashRequest(ctx, f.salter, req, f.config.hmacAccessor, in.NonHMACReqDataKeys)
-		if err != nil {
-			return nil, err
-		}
-
-		resp, err = HashResponse(ctx, f.salter, resp, f.config.hmacAccessor, in.NonHMACRespDataKeys, elideListResponseData)
-		if err != nil {
-			return nil, err
-		}
-
-		respData = resp.Data
-	}
-
-	var errString string
-	if in.OuterErr != nil {
-		errString = in.OuterErr.Error()
-	}
-
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	var respAuth *Auth
-	if resp.Auth != nil {
-		respAuth = &Auth{
-			ClientToken:               resp.Auth.ClientToken,
-			Accessor:                  resp.Auth.Accessor,
-			DisplayName:               resp.Auth.DisplayName,
-			Policies:                  resp.Auth.Policies,
-			TokenPolicies:             resp.Auth.TokenPolicies,
-			IdentityPolicies:          resp.Auth.IdentityPolicies,
-			ExternalNamespacePolicies: resp.Auth.ExternalNamespacePolicies,
-			NoDefaultPolicy:           resp.Auth.NoDefaultPolicy,
-			Metadata:                  resp.Auth.Metadata,
-			NumUses:                   resp.Auth.NumUses,
-			EntityID:                  resp.Auth.EntityID,
-			TokenType:                 resp.Auth.TokenType.String(),
-			TokenTTL:                  int64(resp.Auth.TTL.Seconds()),
-		}
-		if !resp.Auth.IssueTime.IsZero() {
-			respAuth.TokenIssueTime = resp.Auth.IssueTime.Format(time.RFC3339)
-		}
-	}
-
-	var respSecret *Secret
-	if resp.Secret != nil {
-		respSecret = &Secret{
-			LeaseID: resp.Secret.LeaseID,
-		}
-	}
-
-	var respWrapInfo *ResponseWrapInfo
-	if resp.WrapInfo != nil {
-		token := resp.WrapInfo.Token
-		if jwtToken := parseVaultTokenFromJWT(token); jwtToken != nil {
-			token = *jwtToken
-		}
-		respWrapInfo = &ResponseWrapInfo{
-			TTL:             int(resp.WrapInfo.TTL / time.Second),
-			Token:           token,
-			Accessor:        resp.WrapInfo.Accessor,
-			CreationTime:    resp.WrapInfo.CreationTime.UTC().Format(time.RFC3339Nano),
-			CreationPath:    resp.WrapInfo.CreationPath,
-			WrappedAccessor: resp.WrapInfo.WrappedAccessor,
-		}
-	}
-
-	respType := in.Type
-	if respType == "" {
-		respType = "response"
-	}
-	respEntry := &ResponseEntry{
-		Type:      respType,
-		Error:     errString,
-		Forwarded: req.ForwardedFrom != "",
-		Auth: &Auth{
-			ClientToken:               auth.ClientToken,
-			Accessor:                  auth.Accessor,
-			DisplayName:               auth.DisplayName,
-			Policies:                  auth.Policies,
-			TokenPolicies:             auth.TokenPolicies,
-			IdentityPolicies:          auth.IdentityPolicies,
-			ExternalNamespacePolicies: auth.ExternalNamespacePolicies,
-			NoDefaultPolicy:           auth.NoDefaultPolicy,
-			Metadata:                  auth.Metadata,
-			RemainingUses:             req.ClientTokenRemainingUses,
-			EntityID:                  auth.EntityID,
-			EntityCreated:             auth.EntityCreated,
-			TokenType:                 auth.TokenType.String(),
-			TokenTTL:                  int64(auth.TTL.Seconds()),
-		},
-
-		Request: &Request{
-			ID:                    req.ID,
-			ClientToken:           req.ClientToken,
-			ClientTokenAccessor:   req.ClientTokenAccessor,
-			ClientID:              req.ClientID,
-			Operation:             req.Operation,
-			MountPoint:            req.MountPoint,
-			MountType:             req.MountType,
-			MountAccessor:         req.MountAccessor,
-			MountRunningVersion:   req.MountRunningVersion(),
-			MountRunningSha256:    req.MountRunningSha256(),
-			MountIsExternalPlugin: req.MountIsExternalPlugin(),
-			MountClass:            req.MountClass(),
-			Namespace: &Namespace{
-				ID:   ns.ID,
-				Path: ns.Path,
-			},
-			Path:                          req.Path,
-			Data:                          req.Data,
-			PolicyOverride:                req.PolicyOverride,
-			RemoteAddr:                    getRemoteAddr(req),
-			RemotePort:                    getRemotePort(req),
-			ClientCertificateSerialNumber: getClientCertificateSerialNumber(connState),
-			ReplicationCluster:            req.ReplicationCluster,
-			Headers:                       req.Headers,
-		},
-
-		Response: &Response{
-			MountPoint:            req.MountPoint,
-			MountType:             req.MountType,
-			MountAccessor:         req.MountAccessor,
-			MountRunningVersion:   req.MountRunningVersion(),
-			MountRunningSha256:    req.MountRunningSha256(),
-			MountIsExternalPlugin: req.MountIsExternalPlugin(),
-			MountClass:            req.MountClass(),
-			Auth:                  respAuth,
-			Secret:                respSecret,
-			Data:                  respData,
-			Warnings:              resp.Warnings,
-			Redirect:              resp.Redirect,
-			WrapInfo:              respWrapInfo,
-			Headers:               resp.Headers,
-		},
-	}
-
-	if req.HTTPRequest != nil && req.HTTPRequest.RequestURI != req.Path {
-		respEntry.Request.RequestURI = req.HTTPRequest.RequestURI
-	}
-
-	if auth.PolicyResults != nil {
-		respEntry.Auth.PolicyResults = &PolicyResults{
-			Allowed: auth.PolicyResults.Allowed,
-		}
-
-		for _, p := range auth.PolicyResults.GrantingPolicies {
-			respEntry.Auth.PolicyResults.GrantingPolicies = append(respEntry.Auth.PolicyResults.GrantingPolicies, PolicyInfo{
-				Name:          p.Name,
-				NamespaceId:   p.NamespaceId,
-				NamespacePath: p.NamespacePath,
-				Type:          p.Type,
-			})
-		}
-	}
-
-	if !auth.IssueTime.IsZero() {
-		respEntry.Auth.TokenIssueTime = auth.IssueTime.Format(time.RFC3339)
-	}
-	if req.WrapInfo != nil {
-		respEntry.Request.WrapTTL = int(req.WrapInfo.TTL / time.Second)
-	}
-
-	if !f.config.omitTime {
-		// Use the time provider to supply the time for this entry.
-		respEntry.Time = provider.formattedTime()
-	}
-
-	return respEntry, nil
-}
-
-// getRemoteAddr safely gets the remote address avoiding a nil pointer
-func getRemoteAddr(req *logical.Request) string {
+// remoteAddr safely gets the remote address avoiding a nil pointer.
+func remoteAddr(req *logical.Request) string {
 	if req != nil && req.Connection != nil {
 		return req.Connection.RemoteAddr
 	}
 	return ""
 }
 
-// getRemotePort safely gets the remote port avoiding a nil pointer
-func getRemotePort(req *logical.Request) int {
+// remotePort safely gets the remote port avoiding a nil pointer.
+func remotePort(req *logical.Request) int {
 	if req != nil && req.Connection != nil {
 		return req.Connection.RemotePort
 	}
 	return 0
 }
 
-// getClientCertificateSerialNumber attempts the retrieve the serial number of
-// the peer certificate from the specified tls.ConnectionState.
-func getClientCertificateSerialNumber(connState *tls.ConnectionState) string {
+// clientCertSerialNumber attempts the retrieve the serial number of the peer
+// certificate from the specified tls.ConnectionState.
+func clientCertSerialNumber(req *logical.Request) string {
+	if req == nil || req.Connection == nil {
+		return ""
+	}
+
+	connState := req.Connection.ConnState
+
 	if connState == nil || len(connState.VerifiedChains) == 0 || len(connState.VerifiedChains[0]) == 0 {
 		return ""
 	}
@@ -617,25 +232,6 @@ func parseVaultTokenFromJWT(token string) *string {
 	return &claims.ID
 }
 
-// doElideListResponseData performs the actual elision of list operation response data, once surrounding code has
-// determined it should apply to a particular request. The data map that is passed in must be a copy that is safe to
-// modify in place, but need not be a full recursive deep copy, as only top-level keys are changed.
-//
-// See the documentation of the controlling option in formatterConfig for more information on the purpose.
-func doElideListResponseData(data map[string]interface{}) {
-	for k, v := range data {
-		if k == "keys" {
-			if vSlice, ok := v.([]string); ok {
-				data[k] = len(vSlice)
-			}
-		} else if k == "key_info" {
-			if vMap, ok := v.(map[string]interface{}); ok {
-				data[k] = len(vMap)
-			}
-		}
-	}
-}
-
 // newTemporaryEntryFormatter creates a cloned entryFormatter instance with a non-persistent Salter.
 func newTemporaryEntryFormatter(n *entryFormatter) *entryFormatter {
 	return &entryFormatter{
@@ -647,4 +243,374 @@ func newTemporaryEntryFormatter(n *entryFormatter) *entryFormatter {
 // Salt returns a new salt with default configuration and no storage usage, and no error.
 func (s *nonPersistentSalt) Salt(_ context.Context) (*salt.Salt, error) {
 	return salt.NewNonpersistentSalt(), nil
+}
+
+// clone can be used to deep clone the specified type.
+func clone[V any](s V) (V, error) {
+	s2, err := copystructure.Copy(s)
+
+	return s2.(V), err
+}
+
+// newAuth takes a logical.Auth and the number of remaining client token uses
+// (which should be supplied from the logical.Request's client token), and creates
+// an audit auth.
+// tokenRemainingUses should be the client token remaining uses to include in auth.
+// This usually can be found in logical.Request.ClientTokenRemainingUses.
+// NOTE: supplying a nil value for auth will result in a nil return value and
+// (nil) error. The caller should check the return value before attempting to use it.
+// ignore-nil-nil-function-check.
+func newAuth(input *logical.Auth, tokenRemainingUses int) (*auth, error) {
+	if input == nil {
+		return nil, nil
+	}
+
+	extNSPolicies, err := clone(input.ExternalNamespacePolicies)
+	if err != nil {
+		return nil, fmt.Errorf("unable to clone logical auth: external namespace policies: %w", err)
+	}
+
+	identityPolicies, err := clone(input.IdentityPolicies)
+	if err != nil {
+		return nil, fmt.Errorf("unable to clone logical auth: identity policies: %w", err)
+	}
+
+	metadata, err := clone(input.Metadata)
+	if err != nil {
+		return nil, fmt.Errorf("unable to clone logical auth: metadata: %w", err)
+	}
+
+	policies, err := clone(input.Policies)
+	if err != nil {
+		return nil, fmt.Errorf("unable to clone logical auth: policies: %w", err)
+	}
+
+	var polRes *policyResults
+	if input.PolicyResults != nil {
+		polRes = &policyResults{
+			Allowed:          input.PolicyResults.Allowed,
+			GrantingPolicies: make([]policyInfo, len(input.PolicyResults.GrantingPolicies)),
+		}
+
+		for _, p := range input.PolicyResults.GrantingPolicies {
+			polRes.GrantingPolicies = append(polRes.GrantingPolicies, policyInfo{
+				Name:          p.Name,
+				NamespaceId:   p.NamespaceId,
+				NamespacePath: p.NamespacePath,
+				Type:          p.Type,
+			})
+		}
+	}
+
+	tokenPolicies, err := clone(input.TokenPolicies)
+	if err != nil {
+		return nil, fmt.Errorf("unable to clone logical auth: token policies: %w", err)
+	}
+
+	var tokenIssueTime string
+	if !input.IssueTime.IsZero() {
+		tokenIssueTime = input.IssueTime.Format(time.RFC3339)
+	}
+
+	return &auth{
+		Accessor:                  input.Accessor,
+		ClientToken:               input.ClientToken,
+		DisplayName:               input.DisplayName,
+		EntityCreated:             input.EntityCreated,
+		EntityID:                  input.EntityID,
+		ExternalNamespacePolicies: extNSPolicies,
+		IdentityPolicies:          identityPolicies,
+		Metadata:                  metadata,
+		NoDefaultPolicy:           input.NoDefaultPolicy,
+		NumUses:                   input.NumUses,
+		Policies:                  policies,
+		PolicyResults:             polRes,
+		RemainingUses:             tokenRemainingUses,
+		TokenPolicies:             tokenPolicies,
+		TokenIssueTime:            tokenIssueTime,
+		TokenTTL:                  int64(input.TTL.Seconds()),
+		TokenType:                 input.TokenType.String(),
+	}, nil
+}
+
+// newRequest takes a logical.Request and namespace.Namespace, transforms and
+// aggregates them into an audit request.
+func newRequest(req *logical.Request, ns *nshelper.Namespace) (*request, error) {
+	if req == nil {
+		return nil, fmt.Errorf("request cannot be nil")
+	}
+
+	remoteAddr := remoteAddr(req)
+	remotePort := remotePort(req)
+	clientCertSerial := clientCertSerialNumber(req)
+
+	data, err := clone(req.Data)
+	if err != nil {
+		return nil, fmt.Errorf("unable to clone logical request: data: %w", err)
+	}
+
+	headers, err := clone(req.Headers)
+	if err != nil {
+		return nil, fmt.Errorf("unable to clone logical request: headers: %w", err)
+	}
+
+	var reqURI string
+	if req.HTTPRequest != nil && req.HTTPRequest.RequestURI != req.Path {
+		reqURI = req.HTTPRequest.RequestURI
+	}
+	var wrapTTL int
+	if req.WrapInfo != nil {
+		wrapTTL = int(req.WrapInfo.TTL / time.Second)
+	}
+
+	return &request{
+		ClientCertificateSerialNumber: clientCertSerial,
+		ClientID:                      req.ClientID,
+		ClientToken:                   req.ClientToken,
+		ClientTokenAccessor:           req.ClientTokenAccessor,
+		Data:                          data,
+		Headers:                       headers,
+		ID:                            req.ID,
+		MountAccessor:                 req.MountAccessor,
+		MountClass:                    req.MountClass(),
+		MountIsExternalPlugin:         req.MountIsExternalPlugin(),
+		MountPoint:                    req.MountPoint,
+		MountRunningSha256:            req.MountRunningSha256(),
+		MountRunningVersion:           req.MountRunningVersion(),
+		MountType:                     req.MountType,
+		Namespace: &namespace{
+			ID:   ns.ID,
+			Path: ns.Path,
+		},
+		Operation:          req.Operation,
+		Path:               req.Path,
+		PolicyOverride:     req.PolicyOverride,
+		RemoteAddr:         remoteAddr,
+		RemotePort:         remotePort,
+		ReplicationCluster: req.ReplicationCluster,
+		RequestURI:         reqURI,
+		WrapTTL:            wrapTTL,
+	}, nil
+}
+
+// newResponse takes a logical.Response and logical.Request, transforms and
+// aggregates them into an audit response.
+// isElisionRequired is used to indicate that response 'Data' should be elided.
+// NOTE: supplying a nil value for response will result in a nil return value and
+// (nil) error. The caller should check the return value before attempting to use it.
+// ignore-nil-nil-function-check.
+func newResponse(resp *logical.Response, req *logical.Request, isElisionRequired bool) (*response, error) {
+	if resp == nil {
+		return nil, nil
+	}
+
+	if req == nil {
+		// Request should never be nil, even for a response.
+		return nil, fmt.Errorf("request cannot be nil")
+	}
+
+	auth, err := newAuth(resp.Auth, req.ClientTokenRemainingUses)
+	if err != nil {
+		return nil, fmt.Errorf("unable to convert logical auth response: %w", err)
+	}
+
+	var data map[string]any
+	if resp.Data != nil {
+		data = make(map[string]any, len(resp.Data))
+
+		if isElisionRequired {
+			// Performs the actual elision (ideally for list operations) of response data,
+			// once surrounding code has determined it should apply to a particular request.
+			// If the value for a key should not be elided, then it will be cloned.
+			for k, v := range resp.Data {
+				isCloneRequired := true
+				switch k {
+				case "keys":
+					if vSlice, ok := v.([]string); ok {
+						data[k] = len(vSlice)
+						isCloneRequired = false
+					}
+				case "key_info":
+					if vMap, ok := v.(map[string]any); ok {
+						data[k] = len(vMap)
+						isCloneRequired = false
+					}
+				}
+
+				// Clone values if they weren't legitimate keys or key_info.
+				if isCloneRequired {
+					v2, err := clone(v)
+					if err != nil {
+						return nil, fmt.Errorf("unable to clone response data while eliding: %w", err)
+					}
+					data[k] = v2
+				}
+			}
+		} else {
+			// Deep clone all values, no shortcuts here.
+			data, err = clone(resp.Data)
+			if err != nil {
+				return nil, fmt.Errorf("unable to clone response data: %w", err)
+			}
+		}
+	}
+
+	headers, err := clone(resp.Headers)
+	if err != nil {
+		return nil, fmt.Errorf("unable to clone logical response: headers: %w", err)
+	}
+
+	var s *secret
+	if resp.Secret != nil {
+		s = &secret{LeaseID: resp.Secret.LeaseID}
+	}
+
+	var wrapInfo *responseWrapInfo
+	if resp.WrapInfo != nil {
+		token := resp.WrapInfo.Token
+		if jwtToken := parseVaultTokenFromJWT(token); jwtToken != nil {
+			token = *jwtToken
+		}
+
+		ttl := int(resp.WrapInfo.TTL / time.Second)
+		wrapInfo = &responseWrapInfo{
+			TTL:             ttl,
+			Token:           token,
+			Accessor:        resp.WrapInfo.Accessor,
+			CreationTime:    resp.WrapInfo.CreationTime.UTC().Format(time.RFC3339Nano),
+			CreationPath:    resp.WrapInfo.CreationPath,
+			WrappedAccessor: resp.WrapInfo.WrappedAccessor,
+		}
+	}
+
+	warnings, err := clone(resp.Warnings)
+	if err != nil {
+		return nil, fmt.Errorf("unable to clone logical response: warnings: %w", err)
+	}
+
+	return &response{
+		Auth:                  auth,
+		Data:                  data,
+		Headers:               headers,
+		MountAccessor:         req.MountAccessor,
+		MountClass:            req.MountClass(),
+		MountIsExternalPlugin: req.MountIsExternalPlugin(),
+		MountPoint:            req.MountPoint,
+		MountRunningSha256:    req.MountRunningSha256(),
+		MountRunningVersion:   req.MountRunningVersion(),
+		MountType:             req.MountType,
+		Redirect:              resp.Redirect,
+		Secret:                s,
+		WrapInfo:              wrapInfo,
+		Warnings:              warnings,
+	}, nil
+}
+
+// createEntry takes the AuditEvent and builds an audit entry.
+// The entry will be HMAC'd and elided where required.
+func (f *entryFormatter) createEntry(ctx context.Context, a *Event) (*entry, error) {
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+
+	}
+
+	data := a.Data
+
+	if data.Request == nil {
+		// Request should never be nil, even for a response.
+		return nil, fmt.Errorf("unable to parse request from '%s' audit event: request cannot be nil", a.Subtype)
+	}
+
+	ns, err := nshelper.FromContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("unable to retrieve namespace from context: %w", err)
+	}
+
+	auth, err := newAuth(data.Auth, data.Request.ClientTokenRemainingUses)
+	if err != nil {
+		return nil, fmt.Errorf("cannot convert auth: %w", err)
+	}
+
+	req, err := newRequest(data.Request, ns)
+	if err != nil {
+		return nil, fmt.Errorf("cannot convert request: %w", err)
+	}
+
+	var resp *response
+	if a.Subtype == ResponseType {
+		shouldElide := f.config.elideListResponses && req.Operation == logical.ListOperation
+		resp, err = newResponse(data.Response, data.Request, shouldElide)
+		if err != nil {
+			return nil, fmt.Errorf("cannot convert response: %w", err)
+		}
+	}
+
+	var outerErr string
+	if data.OuterErr != nil {
+		outerErr = data.OuterErr.Error()
+	}
+
+	entryType := data.Type
+	if entryType == "" {
+		entryType = a.Subtype.String()
+	}
+
+	entry := &entry{
+		Auth:          auth,
+		Error:         outerErr,
+		Forwarded:     false,
+		ForwardedFrom: data.Request.ForwardedFrom,
+		Request:       req,
+		Response:      resp,
+		Type:          entryType,
+	}
+
+	if !f.config.omitTime {
+		// Use the time provider to supply the time for this entry.
+		entry.Time = a.timeProvider().formattedTime()
+	}
+
+	// If the request is present in the input data, apply header configuration
+	// regardless. We shouldn't be in a situation where the header formatter isn't
+	// present as it's required.
+	if entry.Request != nil {
+		// Ensure that any headers in the request, are formatted as required, and are
+		// only present if they have been configured to appear in the audit log.
+		// e.g. via: /sys/config/auditing/request-headers/:name
+		entry.Request.Headers, err = f.config.headerFormatter.ApplyConfig(ctx, entry.Request.Headers, f.salter)
+		if err != nil {
+			return nil, fmt.Errorf("unable to transform headers for auditing: %w", err)
+		}
+	}
+
+	// If the request contains a Server-Side Consistency Token (SSCT), and we
+	// have an auth response, overwrite the existing client token with the SSCT,
+	// so that the SSCT appears in the audit log for this entry.
+	if data.Request != nil && data.Request.InboundSSCToken != "" && entry.Auth != nil {
+		entry.Auth.ClientToken = data.Request.InboundSSCToken
+	}
+
+	// Hash the entry if we aren't expecting raw output.
+	if !f.config.raw {
+		// Requests and responses have auth and request.
+		err = hashAuth(ctx, f.salter, entry.Auth, f.config.hmacAccessor)
+		if err != nil {
+			return nil, err
+		}
+
+		err = hashRequest(ctx, f.salter, entry.Request, f.config.hmacAccessor, data.NonHMACReqDataKeys)
+		if err != nil {
+			return nil, err
+		}
+
+		if a.Subtype == ResponseType {
+			if err = hashResponse(ctx, f.salter, entry.Response, f.config.hmacAccessor, data.NonHMACRespDataKeys); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return entry, nil
 }

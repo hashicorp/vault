@@ -9,17 +9,21 @@ terraform {
   }
 }
 
-variable "node_public_ip" {
-  type        = string
-  description = "Node Public IP address"
+variable "host" {
+  type = object({
+    ipv6       = string
+    private_ip = string
+    public_ip  = string
+  })
+  description = "The node to shut down"
 }
 
 resource "enos_remote_exec" "shutdown_node" {
-  inline = ["sudo shutdown -H --no-wall; exit 0"]
+  inline = ["sudo shutdown -P --no-wall; exit 0"]
 
   transport = {
     ssh = {
-      host = var.node_public_ip
+      host = var.host.public_ip
     }
   }
 }

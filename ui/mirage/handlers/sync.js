@@ -276,30 +276,24 @@ export default function (server) {
         end_time, // set by query params
         total: {
           clients: 15,
-          distinct_entities: 0,
           entity_clients: 0,
           non_entity_clients: 0,
-          non_entity_tokens: 0,
           secret_syncs: 15,
         },
         by_namespace: [
           {
             counts: {
               clients: 15,
-              distinct_entities: 0,
               entity_clients: 0,
               non_entity_clients: 0,
-              non_entity_tokens: 0,
               secret_syncs: 15,
             },
             mounts: [
               {
                 counts: {
                   clients: 15,
-                  distinct_entities: 0,
                   entity_clients: 0,
                   non_entity_clients: 0,
-                  non_entity_tokens: 0,
                   secret_syncs: 15,
                 },
                 mount_path: 'sys/',
@@ -314,30 +308,24 @@ export default function (server) {
           {
             counts: {
               clients: 10,
-              distinct_entities: 0,
               entity_clients: 0,
               non_entity_clients: 0,
-              non_entity_tokens: 0,
               secret_syncs: 10,
             },
             namespaces: [
               {
                 counts: {
                   clients: 10,
-                  distinct_entities: 0,
                   entity_clients: 0,
                   non_entity_clients: 0,
-                  non_entity_tokens: 0,
                   secret_syncs: 10,
                 },
                 mounts: [
                   {
                     counts: {
                       clients: 10,
-                      distinct_entities: 0,
                       entity_clients: 0,
                       non_entity_clients: 0,
-                      non_entity_tokens: 0,
                       secret_syncs: 10,
                     },
                     mount_path: 'sys/',
@@ -350,30 +338,24 @@ export default function (server) {
             new_clients: {
               counts: {
                 clients: 10,
-                distinct_entities: 0,
                 entity_clients: 0,
                 non_entity_clients: 0,
-                non_entity_tokens: 0,
                 secret_syncs: 10,
               },
               namespaces: [
                 {
                   counts: {
                     clients: 10,
-                    distinct_entities: 0,
                     entity_clients: 0,
                     non_entity_clients: 0,
-                    non_entity_tokens: 0,
                     secret_syncs: 10,
                   },
                   mounts: [
                     {
                       counts: {
                         clients: 10,
-                        distinct_entities: 0,
                         entity_clients: 0,
                         non_entity_clients: 0,
-                        non_entity_tokens: 0,
                         secret_syncs: 10,
                       },
                       mount_path: 'sys/',
@@ -389,30 +371,24 @@ export default function (server) {
           {
             counts: {
               clients: 7,
-              distinct_entities: 0,
               entity_clients: 0,
               non_entity_clients: 0,
-              non_entity_tokens: 0,
               secret_syncs: 7,
             },
             namespaces: [
               {
                 counts: {
                   clients: 7,
-                  distinct_entities: 0,
                   entity_clients: 0,
                   non_entity_clients: 0,
-                  non_entity_tokens: 0,
                   secret_syncs: 7,
                 },
                 mounts: [
                   {
                     counts: {
                       clients: 7,
-                      distinct_entities: 0,
                       entity_clients: 0,
                       non_entity_clients: 0,
-                      non_entity_tokens: 0,
                       secret_syncs: 7,
                     },
                     mount_path: 'sys/',
@@ -425,30 +401,24 @@ export default function (server) {
             new_clients: {
               counts: {
                 clients: 3,
-                distinct_entities: 0,
                 entity_clients: 0,
                 non_entity_clients: 0,
-                non_entity_tokens: 0,
                 secret_syncs: 3,
               },
               namespaces: [
                 {
                   counts: {
                     clients: 3,
-                    distinct_entities: 0,
                     entity_clients: 0,
                     non_entity_clients: 0,
-                    non_entity_tokens: 0,
                     secret_syncs: 3,
                   },
                   mounts: [
                     {
                       counts: {
                         clients: 3,
-                        distinct_entities: 0,
                         entity_clients: 0,
                         non_entity_clients: 0,
-                        non_entity_tokens: 0,
                         secret_syncs: 3,
                       },
                       mount_path: 'sys/',
@@ -464,30 +434,24 @@ export default function (server) {
           {
             counts: {
               clients: 7,
-              distinct_entities: 0,
               entity_clients: 0,
               non_entity_clients: 0,
-              non_entity_tokens: 0,
               secret_syncs: 7,
             },
             namespaces: [
               {
                 counts: {
                   clients: 7,
-                  distinct_entities: 0,
                   entity_clients: 0,
                   non_entity_clients: 0,
-                  non_entity_tokens: 0,
                   secret_syncs: 7,
                 },
                 mounts: [
                   {
                     counts: {
                       clients: 7,
-                      distinct_entities: 0,
                       entity_clients: 0,
                       non_entity_clients: 0,
-                      non_entity_tokens: 0,
                       secret_syncs: 7,
                     },
                     mount_path: 'sys/',
@@ -500,30 +464,24 @@ export default function (server) {
             new_clients: {
               counts: {
                 clients: 2,
-                distinct_entities: 0,
                 entity_clients: 0,
                 non_entity_clients: 0,
-                non_entity_tokens: 0,
                 secret_syncs: 2,
               },
               namespaces: [
                 {
                   counts: {
                     clients: 2,
-                    distinct_entities: 0,
                     entity_clients: 0,
                     non_entity_clients: 0,
-                    non_entity_tokens: 0,
                     secret_syncs: 2,
                   },
                   mounts: [
                     {
                       counts: {
                         clients: 2,
-                        distinct_entities: 0,
                         entity_clients: 0,
                         non_entity_clients: 0,
-                        non_entity_tokens: 0,
                         secret_syncs: 2,
                       },
                       mount_path: 'sys/',

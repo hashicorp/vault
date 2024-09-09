@@ -24,8 +24,6 @@ export default class PkiTidyModel extends Model {
   tidyRevocationQueue: boolean;
   tidyRevokedCertIssuerAssociations: boolean;
   tidyRevokedCerts: boolean;
-  get useOpenAPI(): boolean;
-  getHelpUrl(backend: string): string;
   allByKey: {
     intervalDuration: FormField[];
   };

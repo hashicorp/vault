@@ -44,25 +44,30 @@
         @cardTitle="View secret"
         @subText="Type the path of the secret you want to view. Include a trailing slash to navigate to the list view."
       >
-        <form {{on "submit" this.transitionToSecretDetail}} class="has-top-margin-m">
-          <InputSearch
-            @id="search-input-kv-secret"
-            @initialValue={{@pathToSecret}}
-            @onChange={{this.handleSecretPathInput}}
-            @placeholder="secret/"
-            data-test-view-secret
-          />
-          <Hds::Button
-            @text={{this.buttonText}}
-            @color="secondary"
-            type="submit"
-            disabled={{not this.secretPath}}
-            data-test-get-secret-detail
-          />
-        </form>
-        {{#if @failedDirectoryQuery}}
-          <AlertInline @type="danger" @message="You do not have the required permissions or the directory does not exist." />
-        {{/if}}
+        <:content>
+          <form {{on "submit" this.transitionToSecretDetail}} class="has-top-margin-m">
+            <InputSearch
+              @id="search-input-kv-secret"
+              @initialValue={{@pathToSecret}}
+              @onChange={{this.handleSecretPathInput}}
+              @placeholder="secret/"
+              data-test-view-secret
+            />
+            <Hds::Button
+              @text={{this.buttonText}}
+              @color="secondary"
+              type="submit"
+              disabled={{not this.secretPath}}
+              data-test-submit-button
+            />
+          </form>
+          {{#if @failedDirectoryQuery}}
+            <AlertInline
+              @type="danger"
+              @message="You do not have the required permissions or the directory does not exist."
+            />
+          {{/if}}
+        </:content>
       </OverviewCard>
     </div>
   </div>
@@ -72,7 +77,7 @@
       <LinkedBlock
         data-test-list-item={{metadata.path}}
         class="list-item-row"
-        @params={{array (if metadata.pathIsDirectory "list-directory" "secret.details") @backend metadata.fullSecretPath}}
+        @params={{array (if metadata.pathIsDirectory "list-directory" "secret.index") @backend metadata.fullSecretPath}}
         @linkPrefix={{this.mountPoint}}
       >
         <div class="level is-mobile">
@@ -101,7 +106,12 @@
                   />
                 {{else}}
                   <dd.Interactive
-                    @text="Details"
+                    @text="Overview"
+                    @route="secret.index"
+                    @models={{array @backend metadata.fullSecretPath}}
+                  />
+                  <dd.Interactive
+                    @text="Secret data"
                     @route="secret.details"
                     @models={{array @backend metadata.fullSecretPath}}
                   />
@@ -110,14 +120,6 @@
                       @text="View version history"
                       @route="secret.metadata.versions"
                       @models={{array @backend metadata.fullSecretPath}}
-                    />
-                  {{/if}}
-                  {{#if metadata.canCreateVersionData}}
-                    <dd.Interactive
-                      @text="Create new version"
-                      @route="secret.details.edit"
-                      @models={{array @backend metadata.fullSecretPath}}
-                      data-test-popup-create-new-version
                     />
                   {{/if}}
                   {{#if metadata.canDeleteMetadata}}

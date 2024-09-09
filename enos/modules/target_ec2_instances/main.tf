@@ -141,78 +141,21 @@ resource "aws_security_group" "target" {
   description = "Target instance security group"
   vpc_id      = var.vpc_id
 
-  # SSH traffic
-  ingress {
-    from_port = 22
-    to_port   = 22
-    protocol  = "tcp"
-    cidr_blocks = flatten([
-      formatlist("%s/32", data.enos_environment.localhost.public_ipv4_addresses),
-      join(",", data.aws_vpc.vpc.cidr_block_associations.*.cidr_block),
-    ])
-  }
+  # External ingress
+  dynamic "ingress" {
+    for_each = var.ports_ingress
 
-  # Vault traffic
-  ingress {
-    from_port = 8200
-    to_port   = 8201
-    protocol  = "tcp"
-    cidr_blocks = flatten([
-      formatlist("%s/32", data.enos_environment.localhost.public_ipv4_addresses),
-      join(",", data.aws_vpc.vpc.cidr_block_associations.*.cidr_block),
-      formatlist("%s/32", var.ssh_allow_ips)
-    ])
-  }
-
-  # Consul traffic
-  ingress {
-    from_port = 8300
-    to_port   = 8302
-    protocol  = "tcp"
-    cidr_blocks = flatten([
-      formatlist("%s/32", data.enos_environment.localhost.public_ipv4_addresses),
-      join(",", data.aws_vpc.vpc.cidr_block_associations.*.cidr_block),
-    ])
-  }
-
-  ingress {
-    from_port = 8301
-    to_port   = 8302
-    protocol  = "udp"
-    cidr_blocks = flatten([
-      formatlist("%s/32", data.enos_environment.localhost.public_ipv4_addresses),
-      join(",", data.aws_vpc.vpc.cidr_block_associations.*.cidr_block),
-    ])
-  }
-
-  ingress {
-    from_port = 8500
-    to_port   = 8503
-    protocol  = "tcp"
-    cidr_blocks = flatten([
-      formatlist("%s/32", data.enos_environment.localhost.public_ipv4_addresses),
-      join(",", data.aws_vpc.vpc.cidr_block_associations.*.cidr_block),
-    ])
-  }
-
-  ingress {
-    from_port = 8600
-    to_port   = 8600
-    protocol  = "tcp"
-    cidr_blocks = flatten([
-      formatlist("%s/32", data.enos_environment.localhost.public_ipv4_addresses),
-      join(",", data.aws_vpc.vpc.cidr_block_associations.*.cidr_block),
-    ])
-  }
-
-  ingress {
-    from_port = 8600
-    to_port   = 8600
-    protocol  = "udp"
-    cidr_blocks = flatten([
-      formatlist("%s/32", data.enos_environment.localhost.public_ipv4_addresses),
-      join(",", data.aws_vpc.vpc.cidr_block_associations.*.cidr_block),
-    ])
+    content {
+      from_port = ingress.value.port
+      to_port   = ingress.value.port
+      protocol  = ingress.value.protocol
+      cidr_blocks = flatten([
+        formatlist("%s/32", data.enos_environment.localhost.public_ipv4_addresses),
+        join(",", data.aws_vpc.vpc.cidr_block_associations.*.cidr_block),
+        formatlist("%s/32", var.ssh_allow_ips)
+      ])
+      ipv6_cidr_blocks = data.aws_vpc.vpc.ipv6_cidr_block != "" ? [data.aws_vpc.vpc.ipv6_cidr_block] : null
+    }
   }
 
   # Internal traffic
@@ -225,10 +168,11 @@ resource "aws_security_group" "target" {
 
   # External traffic
   egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    cidr_blocks      = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = ["::/0"]
   }
 
   tags = merge(
@@ -242,12 +186,15 @@ resource "aws_security_group" "target" {
 resource "aws_instance" "targets" {
   for_each = local.instances
 
-  ami                    = var.ami_id
-  iam_instance_profile   = aws_iam_instance_profile.target.name
-  instance_type          = local.instance_type
-  key_name               = var.ssh_keypair
-  subnet_id              = data.aws_subnets.vpc.ids[tonumber(each.key) % length(data.aws_subnets.vpc.ids)]
-  vpc_security_group_ids = [aws_security_group.target.id]
+  ami                  = var.ami_id
+  iam_instance_profile = aws_iam_instance_profile.target.name
+  // Some scenarios (autopilot, pr_replication) shutdown instances to simulate failure. In those
+  // cases we should terminate the instance entirely rather than get stuck in stopped limbo.
+  instance_initiated_shutdown_behavior = "terminate"
+  instance_type                        = local.instance_type
+  key_name                             = var.ssh_keypair
+  subnet_id                            = data.aws_subnets.vpc.ids[tonumber(each.key) % length(data.aws_subnets.vpc.ids)]
+  vpc_security_group_ids               = [aws_security_group.target.id]
 
   tags = merge(
     var.common_tags,
@@ -259,11 +206,9 @@ resource "aws_instance" "targets" {
 }
 
 module "disable_selinux" {
-  source = "../disable_selinux"
-  count  = var.disable_selinux == true ? 1 : 0
+  depends_on = [aws_instance.targets]
+  source     = "../disable_selinux"
+  count      = var.disable_selinux == true ? 1 : 0
 
-  hosts = { for idx in range(var.instance_count) : idx => {
-    public_ip  = aws_instance.targets[idx].public_ip
-    private_ip = aws_instance.targets[idx].private_ip
-  } }
+  hosts = local.hosts
 }

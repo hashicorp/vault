@@ -374,6 +374,61 @@ func TestDefaulRetryPolicy(t *testing.T) {
 	}
 }
 
+func TestClientEnvHeaders(t *testing.T) {
+	oldHeaders := os.Getenv(EnvVaultHeaders)
+
+	defer func() {
+		os.Setenv(EnvVaultHeaders, oldHeaders)
+	}()
+
+	cases := []struct {
+		Input string
+		Valid bool
+	}{
+		{
+			"{}",
+			true,
+		},
+		{
+			"{\"foo\": \"bar\"}",
+			true,
+		},
+		{
+			"{\"foo\": 1}", // Values must be strings
+			false,
+		},
+		{
+			"{\"X-Vault-Foo\": \"bar\"}", // X-Vault-* not allowed
+			false,
+		},
+	}
+
+	for _, tc := range cases {
+		os.Setenv(EnvVaultHeaders, tc.Input)
+		config := DefaultConfig()
+		config.ReadEnvironment()
+		_, err := NewClient(config)
+		if err != nil {
+			if tc.Valid {
+				t.Fatalf("unexpected error reading headers from environment: %v", err)
+			}
+		} else {
+			if !tc.Valid {
+				t.Fatal("no error reading headers from environment when error was expected")
+			}
+		}
+	}
+
+	os.Setenv(EnvVaultHeaders, "{\"foo\": \"bar\"}")
+	config := DefaultConfig()
+	config.ReadEnvironment()
+	cli, _ := NewClient(config)
+
+	if !reflect.DeepEqual(cli.Headers().Values("foo"), []string{"bar"}) {
+		t.Error("Environment-supplied headers not set in CLI client")
+	}
+}
+
 func TestClientEnvSettings(t *testing.T) {
 	cwd, _ := os.Getwd()
 

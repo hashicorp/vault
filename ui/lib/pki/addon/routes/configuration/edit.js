@@ -27,8 +27,8 @@ export default class PkiConfigurationEditRoute extends Route {
     controller.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.secretMountPath.currentPath, route: 'overview', model: this.secretMountPath.currentPath },
-      { label: 'configuration', route: 'configuration.index', model: this.secretMountPath.currentPath },
-      { label: 'edit' },
+      { label: 'Configuration', route: 'configuration.index', model: this.secretMountPath.currentPath },
+      { label: 'Edit' },
     ];
   }
 }

@@ -16,7 +16,7 @@ import (
 )
 
 // TestFileBackend_newFileBackend_fallback ensures that we get the correct errors
-// in CE when we try to enable a FileBackend with enterprise options like fallback
+// in CE when we try to enable a fileBackend with enterprise options like fallback
 // and filter.
 func TestFileBackend_newFileBackend_fallback(t *testing.T) {
 	t.Parallel()
@@ -62,7 +62,7 @@ func TestFileBackend_newFileBackend_fallback(t *testing.T) {
 		name := name
 		tc := tc
 		t.Run(name, func(t *testing.T) {
-			be, err := newFileBackend(tc.backendConfig, &NoopHeaderFormatter{})
+			be, err := newFileBackend(tc.backendConfig, &noopHeaderFormatter{})
 
 			if tc.isErrorExpected {
 				require.Error(t, err)
@@ -97,13 +97,13 @@ func TestFileBackend_newFileBackend_FilterFormatterSink(t *testing.T) {
 		Logger:     hclog.NewNullLogger(),
 	}
 
-	b, err := newFileBackend(backendConfig, &NoopHeaderFormatter{})
+	b, err := newFileBackend(backendConfig, &noopHeaderFormatter{})
 	require.Error(t, err)
 	require.EqualError(t, err, "enterprise-only options supplied: invalid configuration")
 
 	// Try without filter option
 	delete(cfg, "filter")
-	b, err = newFileBackend(backendConfig, &NoopHeaderFormatter{})
+	b, err = newFileBackend(backendConfig, &noopHeaderFormatter{})
 	require.NoError(t, err)
 
 	require.Len(t, b.nodeIDList, 2)
@@ -133,14 +133,14 @@ func TestBackend_IsFallback(t *testing.T) {
 		},
 	}
 
-	be, err := newFileBackend(cfg, &NoopHeaderFormatter{})
+	be, err := newFileBackend(cfg, &noopHeaderFormatter{})
 	require.Error(t, err)
 	require.EqualError(t, err, "enterprise-only options supplied: invalid configuration")
 
 	// Remove the option and try again
 	delete(cfg.Config, "fallback")
 
-	be, err = newFileBackend(cfg, &NoopHeaderFormatter{})
+	be, err = newFileBackend(cfg, &noopHeaderFormatter{})
 	require.NoError(t, err)
 	require.NotNil(t, be)
 	require.Equal(t, false, be.IsFallback())

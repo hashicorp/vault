@@ -10,6 +10,12 @@ description: >-
 
 @include 'x509-sha1-deprecation.mdx'
 
+~> **Note**: Starting in Vault 1.17, if the JWT in the authentication request
+contains an `aud` claim, the associated `bound_audiences` for the "jwt" role
+must match at least one of the `aud` claims declared for the JWT. For
+additional details, refer to the [JWT auth method (API)](/vault/api-docs/auth/jwt)
+documentation and [1.17 Upgrade Guide](/vault/docs/upgrading/upgrade-to-1.17.x#jwt-auth-login-requires-bound-audiences-on-the-role).
+
 The `jwt` auth method can be used to authenticate with Vault using
 [OIDC](https://en.wikipedia.org/wiki/OpenID_Connect) or by providing a
 [JWT](https://en.wikipedia.org/wiki/JSON_Web_Token).

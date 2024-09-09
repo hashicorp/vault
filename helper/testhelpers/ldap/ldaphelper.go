@@ -49,32 +49,47 @@ func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ld
 	cfg.RequestTimeout = 60
 	cfg.MaximumPageSize = 1000
 
-	svc, err := runner.StartService(context.Background(), func(ctx context.Context, host string, port int) (docker.ServiceConfig, error) {
-		connURL := fmt.Sprintf("ldap://%s:%d", host, port)
-		cfg.Url = connURL
+	var started bool
 
-		client, err := ldap.NewClient(ctx, ldaputil.ConvertConfig(cfg))
+	for i := 0; i < 3; i++ {
+		svc, err := runner.StartService(context.Background(), func(ctx context.Context, host string, port int) (docker.ServiceConfig, error) {
+			connURL := fmt.Sprintf("ldap://%s:%d", host, port)
+			cfg.Url = connURL
+
+			client, err := ldap.NewClient(ctx, ldaputil.ConvertConfig(cfg))
+			if err != nil {
+				return nil, err
+			}
+
+			defer client.Close(ctx)
+
+			_, err = client.Authenticate(ctx, "Philip J. Fry", "fry")
+			if err != nil {
+				return nil, err
+			}
+
+			return docker.NewServiceURLParse(connURL)
+		})
 		if err != nil {
-			return nil, err
+			t.Logf("could not start local LDAP docker container: %s", err)
+			t.Log("Docker container logs: ")
+			t.Log(logsWriter.String())
+			continue
 		}
 
-		defer client.Close(ctx)
-
-		_, err = client.Authenticate(ctx, "Philip J. Fry", "fry")
-		if err != nil {
-			return nil, err
+		started = true
+		cleanup = func() {
+			if t.Failed() {
+				t.Log(logsWriter.String())
+			}
+			svc.Cleanup()
 		}
-
-		return docker.NewServiceURLParse(connURL)
-	})
-	if err != nil {
-		t.Fatalf("could not start local LDAP docker container: %s", err)
+		break
 	}
 
-	return func() {
-		if t.Failed() {
-			t.Log(logsWriter.String())
-		}
-		svc.Cleanup()
-	}, cfg
+	if !started {
+		t.FailNow()
+	}
+
+	return cleanup, cfg
 }

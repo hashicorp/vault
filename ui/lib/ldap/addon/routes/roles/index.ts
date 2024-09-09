@@ -76,7 +76,8 @@ export default class LdapRolesRoute extends Route {
 
     controller.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
-      { label: resolvedModel.backendModel.id },
+      { label: resolvedModel.backendModel.id, route: 'overview', model: resolvedModel.backend },
+      { label: 'Roles' },
     ];
   }
 

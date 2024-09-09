@@ -14,7 +14,7 @@ export default class KvSecretPathsRoute extends Route {
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: resolvedModel.backend, route: 'list', model: resolvedModel.backend },
       ...breadcrumbsForSecret(resolvedModel.backend, resolvedModel.path),
-      { label: 'paths' },
+      { label: 'Paths' },
     ];
   }
 }
