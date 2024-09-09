@@ -990,11 +990,37 @@ scenario "dr_replication" {
     }
   }
 
+  step "verify_new_primary_cluster_unsealed" {
+    description = global.description.verify_vault_unsealed
+    module      = module.vault_verify_unsealed
+    depends_on = [
+      step.wait_for_demoted_cluster_leader,
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    verifies = [
+      quality.vault_auto_unseals_after_autopilot_upgrade,
+      quality.vault_seal_awskms,
+      quality.vault_seal_pkcs11,
+      quality.vault_seal_shamir,
+    ]
+
+    variables {
+      hosts             = step.get_secondary_cluster_ips.follower_hosts
+      vault_addr        = step.create_secondary_cluster.api_addr_localhost
+      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
+    }
+  }
+
   step "verify_replicated_data_during_failover" {
     description = global.description.verify_secrets_engines_read
     module      = module.vault_verify_secrets_engines_read
     depends_on = [
-      step.wait_for_demoted_cluster_leader
+      step.wait_for_demoted_cluster_leader,
+      step.verify_new_primary_cluster_unsealed,
     ]
 
     providers = {
@@ -1025,7 +1051,9 @@ scenario "dr_replication" {
           so that secondary clusters can utilize it.
         EOF
     module      = module.generate_secondary_public_key
-    depends_on  = [step.verify_replicated_data_during_failover]
+    depends_on = [
+      step.verify_replicated_data_during_failover,
+    ]
 
     verifies = quality.vault_api_sys_replication_dr_primary_secondary_token_write
 
