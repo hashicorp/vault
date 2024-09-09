@@ -141,6 +141,13 @@ export function wifEngines() {
   return WIF_ENGINES.slice();
 }
 
+// A list of configuration only secret engines. These engines do not have a list of secrets, etc. The UX is the mount the engine and when they click on the engine they are directed to a configuration.index view with a link to configuration.edit
+export const CONFIGURATION_ONLY = ['azure', 'gcp'];
+
+export function configurationOnly() {
+  return CONFIGURATION_ONLY.slice();
+}
+
 // Secret Engines that have their own configuration page and actions
 // These engines do not exist in their own Ember engine.
 export const CONFIGURABLE_SECRET_ENGINES = ['aws', 'ssh', 'azure', 'gcp'];
