@@ -569,6 +569,10 @@ func (c *Core) switchedLockHandleRequest(httpCtx context.Context, req *logical.R
 	go func(ctx context.Context, httpCtx context.Context) {
 		select {
 		case <-ctx.Done():
+			select {
+			case <-httpCtx.Done():
+				cancel()
+			}
 		case <-httpCtx.Done():
 			cancel()
 		}

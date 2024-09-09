@@ -217,6 +217,11 @@ func (r *revocationJob) Execute() error {
 		case <-r.m.quitCh:
 			cancel()
 		case <-revokeCtx.Done():
+			select {
+			case <-r.m.quitCh:
+				cancel()
+			}
+
 		}
 	}()
 
@@ -797,6 +802,17 @@ LOOP:
 			break LOOP
 
 		case <-result:
+			select {
+			case err = <-errs:
+				// Close all go routines
+				close(quit)
+				break LOOP
+
+			case <-m.quitCh:
+				close(quit)
+				break LOOP
+			}
+
 		}
 	}
 
@@ -1787,6 +1803,10 @@ func (m *ExpirationManager) uniquePoliciesGc() {
 		case <-m.quitCh:
 			return
 		case <-m.emptyUniquePolicies.C:
+			select {
+			case <-m.quitCh:
+				return
+			}
 		}
 
 		// If the maximum lease is a month, and we blow away the unique

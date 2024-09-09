@@ -42,6 +42,12 @@ func retryKVCommand(t *testing.T, cmdFunc func() (int, string)) (int, string) {
 			t.Errorf("timeout expired waiting for upgrade: %q", combined)
 			return code, combined
 		case <-ticker:
+			select {
+			default:
+			case <-timeout:
+				t.Errorf("timeout expired waiting for upgrade: %q", combined)
+				return code, combined
+			}
 			code, combined = cmdFunc()
 
 			// This is an error if a v1 mount, but test case doesn't
