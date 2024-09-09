@@ -538,16 +538,12 @@ func verifySignature(res *ocsp.Response, extraCas []*x509.Certificate) (*x509.Ce
 	var overallErr error
 	var matchedCA *x509.Certificate
 	for _, ca := range extraCas {
-		if ca.IsCA {
-			if err := res.CheckSignatureFrom(ca); err != nil {
-				overallErr = multierror.Append(overallErr, err)
-			} else {
-				matchedCA = ca
-				overallErr = nil
-				break
-			}
+		if err := res.CheckSignatureFrom(ca); err != nil {
+			overallErr = multierror.Append(overallErr, err)
 		} else {
-			overallErr = multierror.Append(overallErr, fmt.Errorf("certificate with subject %s is not a CA certificate", ca.Subject.String()))
+			matchedCA = ca
+			overallErr = nil
+			break
 		}
 	}
 	return matchedCA, overallErr
