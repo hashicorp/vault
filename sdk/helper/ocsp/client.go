@@ -463,8 +463,33 @@ func validateOCSPParsedResponse(ocspRes *ocsp.Response, subject, issuer *x509.Ce
 	//
 	// This addresses the !!unsafe!! behavior above.
 	if ocspRes.Certificate == nil {
+		// With no certificate, we need to validate that the response is signed by the issuer or an extra CA
 		if err := ocspRes.CheckSignatureFrom(issuer); err != nil {
-			return &ErrOcspIssuerVerification{fmt.Errorf("error directly verifying signature: %w", err)}
+			if len(extraCas) > 0 {
+				// Perhaps it was signed by one of the extra configured OCSP CAs
+				var overallErr error
+				var matchedCA *x509.Certificate
+				for _, ca := range extraCas {
+					if err := ocspRes.CheckSignatureFrom(ca); err != nil {
+						overallErr = multierror.Append(overallErr, err)
+					} else {
+						matchedCA = ca
+						overallErr = nil
+						break
+					}
+				}
+
+				if overallErr != nil {
+					return &ErrOcspIssuerVerification{fmt.Errorf("error checking chain of trust %v failed: %w", issuer.Subject.String(), overallErr)}
+				}
+
+				err := validateSigner(matchedCA)
+				if err != nil {
+					return err
+				}
+			} else {
+				return &ErrOcspIssuerVerification{fmt.Errorf("error directly verifying signature: %w", err)}
+			}
 		}
 	} else {
 		// Because we have at least one certificate here, we know that
@@ -501,21 +526,9 @@ func validateOCSPParsedResponse(ocspRes *ocsp.Response, subject, issuer *x509.Ce
 				return &ErrOcspIssuerVerification{fmt.Errorf("error checking chain of trust %v failed: %w", issuer.Subject.String(), overallErr)}
 			}
 
-			// Verify the OCSP responder certificate is still valid and
-			// contains the required EKU since it is a delegated OCSP
-			// responder certificate.
-			if matchedCA.NotAfter.Before(time.Now()) {
-				return &ErrOcspIssuerVerification{fmt.Errorf("error checking delegated OCSP responder OCSP response: certificate has expired")}
-			}
-			haveEKU := false
-			for _, ku := range matchedCA.ExtKeyUsage {
-				if ku == x509.ExtKeyUsageOCSPSigning {
-					haveEKU = true
-					break
-				}
-			}
-			if !haveEKU {
-				return &ErrOcspIssuerVerification{fmt.Errorf("error checking delegated OCSP responder: certificate lacks the OCSP Signing EKU")}
+			err := validateSigner(matchedCA)
+			if err != nil {
+				return err
 			}
 		}
 	}
@@ -531,6 +544,26 @@ func validateOCSPParsedResponse(ocspRes *ocsp.Response, subject, issuer *x509.Ce
 			certutil.GetHexFormatted(subject.SerialNumber.Bytes(), ":"))}
 	}
 
+	return nil
+}
+
+func validateSigner(matchedCA *x509.Certificate) error {
+	// Verify the OCSP responder certificate is still valid and
+	// contains the required EKU since it is a delegated OCSP
+	// responder certificate.
+	if matchedCA.NotAfter.Before(time.Now()) {
+		return &ErrOcspIssuerVerification{fmt.Errorf("error checking delegated OCSP responder OCSP response: certificate has expired")}
+	}
+	haveEKU := false
+	for _, ku := range matchedCA.ExtKeyUsage {
+		if ku == x509.ExtKeyUsageOCSPSigning {
+			haveEKU = true
+			break
+		}
+	}
+	if !haveEKU {
+		return &ErrOcspIssuerVerification{fmt.Errorf("error checking delegated OCSP responder: certificate lacks the OCSP Signing EKU")}
+	}
 	return nil
 }
 
