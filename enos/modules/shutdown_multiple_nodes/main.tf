@@ -19,7 +19,7 @@ variable "old_hosts" {
 
 resource "enos_remote_exec" "shutdown_multiple_nodes" {
   for_each = var.old_hosts
-  inline   = ["sudo shutdown -H --no-wall; exit 0"]
+  inline   = ["sudo shutdown -P --no-wall; exit 0"]
 
   transport = {
     ssh = {
