@@ -494,7 +494,7 @@ func validateOCSPParsedResponse(ocspRes *ocsp.Response, subject, issuer *x509.Ce
 					}
 				}
 			} else {
-				matchedCA = issuer
+				matchedCA = ocspRes.Certificate
 			}
 
 			if overallErr != nil {
