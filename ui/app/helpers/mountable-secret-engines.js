@@ -134,8 +134,8 @@ const MOUNTABLE_SECRET_ENGINES = [
   },
 ];
 
-// A list of Workflow Identity Federation engines. Will eventually include Azure and GCP.
-export const WIF_ENGINES = ['aws'];
+// A list of Workflow Identity Federation engines.
+export const WIF_ENGINES = ['aws', 'azure', 'gcp'];
 
 export function wifEngines() {
   return WIF_ENGINES.slice();
@@ -143,8 +143,7 @@ export function wifEngines() {
 
 // Secret Engines that have their own configuration page and actions
 // These engines do not exist in their own Ember engine.
-// Ex: AWS vs. LDAP which is configurable but is handled inside the routing of its own Ember engine.
-export const CONFIGURABLE_SECRET_ENGINES = ['aws', 'ssh'];
+export const CONFIGURABLE_SECRET_ENGINES = ['aws', 'ssh', 'azure', 'gcp'];
 
 export function configurableSecretEngines() {
   return MOUNTABLE_SECRET_ENGINES.slice();
