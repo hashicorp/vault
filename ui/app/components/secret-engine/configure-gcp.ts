@@ -45,6 +45,7 @@ interface Args {
   rootConfig: RootConfigModel;
   issuerConfig: IdentityOidcConfigModel;
   backendPath: string;
+  issuer?: string;
 }
 
 export default class ConfigureAwsComponent extends Component<Args> {
