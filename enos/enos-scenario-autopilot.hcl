@@ -320,9 +320,9 @@ scenario "autopilot" {
     }
   }
 
-  step "verify_write_test_data" {
-    description = global.description.verify_write_test_data
-    module      = module.vault_verify_write_data
+  step "verify_secrets_engines_create" {
+    description = global.description.verify_secrets_engines_create
+    module      = module.vault_verify_secrets_engines_create
     depends_on = [
       step.create_vault_cluster,
       step.get_vault_cluster_ips
@@ -333,9 +333,21 @@ scenario "autopilot" {
     }
 
     verifies = [
+      quality.vault_api_auth_userpass_login_write,
+      quality.vault_api_auth_userpass_user_write,
+      quality.vault_api_identity_entity_write,
+      quality.vault_api_identity_entity_alias_write,
+      quality.vault_api_identity_group_write,
+      quality.vault_api_identity_oidc_config_write,
+      quality.vault_api_identity_oidc_introspect_write,
+      quality.vault_api_identity_oidc_key_write,
+      quality.vault_api_identity_oidc_key_rotate_write,
+      quality.vault_api_identity_oidc_role_write,
+      quality.vault_api_identity_oidc_token_read,
+      quality.vault_api_sys_auth_userpass_user_write,
+      quality.vault_api_sys_policy_write,
       quality.vault_mount_auth,
       quality.vault_mount_kv,
-      quality.vault_secrets_auth_user_policy_write,
       quality.vault_secrets_kv_write,
     ]
 
@@ -366,7 +378,7 @@ scenario "autopilot" {
       step.build_vault,
       step.create_vault_cluster,
       step.create_autopilot_upgrade_storageconfig,
-      step.verify_write_test_data
+      step.verify_secrets_engines_create
     ]
 
     providers = {
@@ -535,12 +547,12 @@ scenario "autopilot" {
     }
   }
 
-  step "verify_read_test_data" {
-    description = global.description.verify_read_test_data
-    module      = module.vault_verify_read_data
+  step "verify_secrets_engines_read" {
+    description = global.description.verify_secrets_engines_read
+    module      = module.vault_verify_secrets_engines_read
     depends_on = [
       step.get_updated_vault_cluster_ips,
-      step.verify_write_test_data,
+      step.verify_secrets_engines_create,
       step.upgrade_vault_cluster_with_autopilot,
       step.verify_raft_auto_join_voter
     ]
@@ -549,9 +561,17 @@ scenario "autopilot" {
       enos = local.enos_provider[matrix.distro]
     }
 
-    verifies = quality.vault_secrets_kv_read
+    verifies = [
+      quality.vault_api_auth_userpass_login_write,
+      quality.vault_api_identity_entity_read,
+      quality.vault_api_identity_oidc_config_read,
+      quality.vault_api_identity_oidc_key_read,
+      quality.vault_api_identity_oidc_role_read,
+      quality.vault_secrets_kv_read
+    ]
 
     variables {
+      create_state      = step.verify_secrets_engines_create.state
       hosts             = step.get_updated_vault_cluster_ips.follower_hosts
       vault_addr        = step.upgrade_vault_cluster_with_autopilot.api_addr_localhost
       vault_install_dir = local.vault_install_dir
@@ -840,6 +860,11 @@ scenario "autopilot" {
   output "recovery_keys_hex" {
     description = "The Vault cluster recovery keys hex"
     value       = step.create_vault_cluster.recovery_keys_hex
+  }
+
+  output "secrets_engines_state" {
+    description = "The state of configured secrets engines"
+    value       = step.verify_secrets_engines_create.state
   }
 
   output "seal_attributes" {

@@ -655,9 +655,9 @@ scenario "dr_replication" {
     }
   }
 
-  step "write_test_data_on_primary" {
-    description = global.description.verify_write_test_data
-    module      = module.vault_verify_write_data
+  step "verify_secrets_engines_on_primary" {
+    description = global.description.verify_secrets_engines_create
+    module      = module.vault_verify_secrets_engines_create
     depends_on  = [step.get_primary_cluster_ips]
 
     providers = {
@@ -665,9 +665,21 @@ scenario "dr_replication" {
     }
 
     verifies = [
+      quality.vault_api_auth_userpass_login_write,
+      quality.vault_api_auth_userpass_user_write,
+      quality.vault_api_identity_entity_write,
+      quality.vault_api_identity_entity_alias_write,
+      quality.vault_api_identity_group_write,
+      quality.vault_api_identity_oidc_config_write,
+      quality.vault_api_identity_oidc_introspect_write,
+      quality.vault_api_identity_oidc_key_write,
+      quality.vault_api_identity_oidc_key_rotate_write,
+      quality.vault_api_identity_oidc_role_write,
+      quality.vault_api_identity_oidc_token_read,
+      quality.vault_api_sys_auth_userpass_user_write,
+      quality.vault_api_sys_policy_write,
       quality.vault_mount_auth,
       quality.vault_mount_kv,
-      quality.vault_secrets_auth_user_policy_write,
       quality.vault_secrets_kv_write,
     ]
 
@@ -699,7 +711,7 @@ scenario "dr_replication" {
     depends_on = [
       step.get_primary_cluster_ips,
       step.get_secondary_cluster_ips,
-      step.write_test_data_on_primary
+      step.verify_secrets_engines_on_primary
     ]
 
     providers = {
@@ -978,20 +990,54 @@ scenario "dr_replication" {
     }
   }
 
-  step "verify_replicated_data_during_failover" {
-    description = global.description.verify_read_test_data
-    module      = module.vault_verify_read_data
+  step "verify_new_primary_cluster_unsealed" {
+    description = global.description.verify_vault_unsealed
+    module      = module.vault_verify_unsealed
     depends_on = [
-      step.wait_for_demoted_cluster_leader
+      step.wait_for_demoted_cluster_leader,
     ]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
     }
 
-    verifies = quality.vault_secrets_kv_read
+    verifies = [
+      quality.vault_auto_unseals_after_autopilot_upgrade,
+      quality.vault_seal_awskms,
+      quality.vault_seal_pkcs11,
+      quality.vault_seal_shamir,
+    ]
 
     variables {
+      hosts             = step.get_secondary_cluster_ips.follower_hosts
+      vault_addr        = step.create_secondary_cluster.api_addr_localhost
+      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
+    }
+  }
+
+  step "verify_replicated_data_during_failover" {
+    description = global.description.verify_secrets_engines_read
+    module      = module.vault_verify_secrets_engines_read
+    depends_on = [
+      step.wait_for_demoted_cluster_leader,
+      step.verify_new_primary_cluster_unsealed,
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    verifies = [
+      quality.vault_api_auth_userpass_login_write,
+      quality.vault_api_identity_entity_read,
+      quality.vault_api_identity_oidc_config_read,
+      quality.vault_api_identity_oidc_key_read,
+      quality.vault_api_identity_oidc_role_read,
+      quality.vault_secrets_kv_read
+    ]
+
+    variables {
+      create_state      = step.verify_secrets_engines_on_primary.state
       hosts             = step.get_secondary_cluster_ips.follower_hosts
       vault_addr        = step.create_secondary_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
@@ -1005,7 +1051,9 @@ scenario "dr_replication" {
           so that secondary clusters can utilize it.
         EOF
     module      = module.generate_secondary_public_key
-    depends_on  = [step.verify_replicated_data_during_failover]
+    depends_on = [
+      step.verify_replicated_data_during_failover,
+    ]
 
     verifies = quality.vault_api_sys_replication_dr_primary_secondary_token_write
 
@@ -1102,12 +1150,12 @@ scenario "dr_replication" {
   }
 
   step "verify_failover_replicated_data" {
-    description = global.description.verify_read_test_data
-    module      = module.vault_verify_read_data
+    description = global.description.verify_secrets_engines_read
+    module      = module.vault_verify_secrets_engines_read
     depends_on = [
       step.verify_dr_replication,
       step.get_secondary_cluster_ips,
-      step.write_test_data_on_primary,
+      step.verify_secrets_engines_on_primary,
       step.verify_failover_dr_replication
     ]
 
@@ -1115,9 +1163,17 @@ scenario "dr_replication" {
       enos = local.enos_provider[matrix.distro]
     }
 
-    verifies = quality.vault_secrets_kv_read
+    verifies = [
+      quality.vault_api_auth_userpass_login_write,
+      quality.vault_api_identity_entity_read,
+      quality.vault_api_identity_oidc_config_read,
+      quality.vault_api_identity_oidc_key_read,
+      quality.vault_api_identity_oidc_role_read,
+      quality.vault_secrets_kv_read
+    ]
 
     variables {
+      create_state      = step.verify_secrets_engines_on_primary.state
       hosts             = step.get_secondary_cluster_ips.follower_hosts
       vault_addr        = step.create_secondary_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
@@ -1174,6 +1230,11 @@ scenario "dr_replication" {
   output "secondary_cluster_root_token" {
     description = "The Vault secondary cluster root token"
     value       = step.create_secondary_cluster.root_token
+  }
+
+  output "secrets_engines_state" {
+    description = "The state of configured secrets engines"
+    value       = step.verify_secrets_engines_on_primary.state
   }
 
   output "dr_secondary_token" {

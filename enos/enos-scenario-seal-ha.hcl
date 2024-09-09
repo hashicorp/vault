@@ -410,9 +410,9 @@ scenario "seal_ha" {
   }
 
   // Write some test data before we create the new seal
-  step "verify_write_test_data" {
-    description = global.description.verify_write_test_data
-    module      = module.vault_verify_write_data
+  step "verify_secrets_engines_create" {
+    description = global.description.verify_secrets_engines_create
+    module      = module.vault_verify_secrets_engines_create
     depends_on = [
       step.create_vault_cluster,
       step.get_vault_cluster_ips,
@@ -424,9 +424,21 @@ scenario "seal_ha" {
     }
 
     verifies = [
+      quality.vault_api_auth_userpass_login_write,
+      quality.vault_api_auth_userpass_user_write,
+      quality.vault_api_identity_entity_write,
+      quality.vault_api_identity_entity_alias_write,
+      quality.vault_api_identity_group_write,
+      quality.vault_api_identity_oidc_config_write,
+      quality.vault_api_identity_oidc_introspect_write,
+      quality.vault_api_identity_oidc_key_write,
+      quality.vault_api_identity_oidc_key_rotate_write,
+      quality.vault_api_identity_oidc_role_write,
+      quality.vault_api_identity_oidc_token_read,
+      quality.vault_api_sys_auth_userpass_user_write,
+      quality.vault_api_sys_policy_write,
       quality.vault_mount_auth,
       quality.vault_mount_kv,
-      quality.vault_secrets_auth_user_policy_write,
       quality.vault_secrets_kv_write,
     ]
 
@@ -444,7 +456,7 @@ scenario "seal_ha" {
     description = global.description.wait_for_seal_rewrap
     module      = module.vault_wait_for_seal_rewrap
     depends_on = [
-      step.verify_write_test_data,
+      step.verify_secrets_engines_create,
     ]
 
     providers = {
@@ -471,7 +483,7 @@ scenario "seal_ha" {
     module      = module.stop_vault
     depends_on = [
       step.create_vault_cluster,
-      step.verify_write_test_data,
+      step.verify_secrets_engines_create,
       step.wait_for_initial_seal_rewrap,
     ]
 
@@ -756,18 +768,26 @@ scenario "seal_ha" {
   }
 
   // Make sure our data is still available
-  step "verify_read_test_data" {
-    description = global.description.verify_read_test_data
-    module      = module.vault_verify_read_data
+  step "verify_secrets_engines_read" {
+    description = global.description.verify_secrets_engines_read
+    module      = module.vault_verify_secrets_engines_read
     depends_on  = [step.wait_for_seal_rewrap]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
     }
 
-    verifies = quality.vault_secrets_kv_read
+    verifies = [
+      quality.vault_api_auth_userpass_login_write,
+      quality.vault_api_identity_entity_read,
+      quality.vault_api_identity_oidc_config_read,
+      quality.vault_api_identity_oidc_key_read,
+      quality.vault_api_identity_oidc_role_read,
+      quality.vault_secrets_kv_read
+    ]
 
     variables {
+      create_state      = step.verify_secrets_engines_create.state
       hosts             = step.get_updated_cluster_ips.follower_hosts
       vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
@@ -820,7 +840,7 @@ scenario "seal_ha" {
     module      = module.stop_vault
     depends_on = [
       step.wait_for_seal_rewrap,
-      step.verify_read_test_data,
+      step.verify_secrets_engines_read,
     ]
 
     providers = {
@@ -949,15 +969,25 @@ scenario "seal_ha" {
   }
 
   // Make sure our data is still available after migration
-  step "verify_read_test_data_after_migration" {
-    module     = module.vault_verify_read_data
+  step "verify_secrets_engines_read_after_migration" {
+    module     = module.vault_verify_secrets_engines_read
     depends_on = [step.wait_for_seal_rewrap_after_migration]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
     }
 
+    verifies = [
+      quality.vault_api_auth_userpass_login_write,
+      quality.vault_api_identity_entity_read,
+      quality.vault_api_identity_oidc_config_read,
+      quality.vault_api_identity_oidc_key_read,
+      quality.vault_api_identity_oidc_role_read,
+      quality.vault_secrets_kv_read
+    ]
+
     variables {
+      create_state      = step.verify_secrets_engines_create.state
       hosts             = step.get_cluster_ips_after_migration.follower_hosts
       vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
@@ -1046,6 +1076,11 @@ scenario "seal_ha" {
   output "secondary_seal_attributes" {
     description = "The Vault cluster secondary seal attributes"
     value       = step.create_secondary_seal_key.attributes
+  }
+
+  output "secrets_engines_state" {
+    description = "The state of configured secrets engines"
+    value       = step.verify_secrets_engines_create.state
   }
 
   output "unseal_keys_b64" {

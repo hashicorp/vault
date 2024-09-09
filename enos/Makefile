@@ -2,10 +2,10 @@
 default: check-fmt shellcheck
 
 .PHONY: check-fmt
-check-fmt: check-fmt-enos check-fmt-modules
+check-fmt: check-fmt-enos check-fmt-modules check-shfmt
 
 .PHONY: fmt
-fmt: fmt-enos fmt-modules
+fmt: fmt-enos fmt-modules shfmt
 
 .PHONY: check-fmt-enos
 check-fmt-enos:

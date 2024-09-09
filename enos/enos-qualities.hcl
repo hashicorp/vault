@@ -72,8 +72,79 @@ quality "vault_agent_log_template" {
   description = global.description.verify_agent_output
 }
 
+quality "vault_api_auth_userpass_login_write" {
+  description = "The v1/auth/userpass/login/<user> Vault API creates a token for a user"
+}
+
+quality "vault_api_auth_userpass_user_write" {
+  description = "The v1/auth/userpass/users/<user> Vault API associates a policy with a user"
+}
+
+quality "vault_api_identity_entity_read" {
+  description = <<-EOF
+    The v1/identity/entity Vault API returns an identity entity, has the correct metadata, and is
+    associated with the expected entity-alias, groups, and policies
+  EOF
+}
+
+quality "vault_api_identity_entity_write" {
+  description = "The v1/identity/entity Vault API creates an identity entity"
+}
+
+quality "vault_api_identity_entity_alias_write" {
+  description = "The v1/identity/entity-alias Vault API creates an identity entity alias"
+}
+
+quality "vault_api_identity_group_write" {
+  description = "The v1/identity/group/<group> Vault API creates an identity group"
+}
+
+quality "vault_api_identity_oidc_config_read" {
+  description = <<-EOF
+    The v1/identity/oidc/config Vault API returns the built-in identity secrets engine configuration
+  EOF
+}
+
+quality "vault_api_identity_oidc_config_write" {
+  description = "The v1/identity/oidc/config Vault API configures the built-in identity secrets engine"
+}
+
+quality "vault_api_identity_oidc_introspect_write" {
+  description = "The v1/identity/oidc/introspect Vault API creates introspect verifies the active state of a signed OIDC token"
+}
+
+quality "vault_api_identity_oidc_key_read" {
+  description = <<-EOF
+    The v1/identity/oidc/key Vault API returns the OIDC signing key and verifies the key's algorithm,
+    rotation_period, and verification_ttl are correct
+  EOF
+}
+
+quality "vault_api_identity_oidc_key_write" {
+  description = "The v1/identity/oidc/key Vault API creates an OIDC signing key"
+}
+
+quality "vault_api_identity_oidc_key_rotate_write" {
+  description = "The v1/identity/oidc/key/<name>/rotate Vault API rotates an OIDC signing key and applies a new verification TTL"
+}
+
+quality "vault_api_identity_oidc_role_read" {
+  description = <<-EOF
+    The v1/identity/oidc/role Vault API returns the OIDC role and verifies that the roles key and
+    ttl are corect.
+  EOF
+}
+
+quality "vault_api_identity_oidc_role_write" {
+  description = "The v1/identity/oidc/role Vault API creates an OIDC role associated with a key and clients"
+}
+
+quality "vault_api_identity_oidc_token_read" {
+  description = "The v1/identity/oidc/token Vault API creates an OIDC token associated with a role"
+}
+
 quality "vault_api_sys_auth_userpass_user_write" {
-  description = "The v1/sys/auth/userpass/users/<user> Vault API associates a policy with a user"
+  description = "The v1/sys/auth/userpass/users/<user> Vault API associates a superuser policy with a user"
 }
 
 quality "vault_api_sys_config_read" {
@@ -110,7 +181,7 @@ quality "vault_api_sys_metrics_vault_core_replication_write_undo_logs_enabled" {
 }
 
 quality "vault_api_sys_policy_write" {
-  description = "The v1/sys/policy Vault API writes a superuser policy"
+  description = "The v1/sys/policy Vault API writes a policy"
 }
 
 quality "vault_api_sys_quotas_lease_count_read_max_leases_default" {
@@ -435,6 +506,10 @@ quality "vault_mount_auth" {
   description = "Vault mounts the auth engine"
 }
 
+quality "vault_mount_identity" {
+  description = "Vault mounts the identity engine"
+}
+
 quality "vault_mount_kv" {
   description = "Vault mounts the kv engine"
 }
@@ -485,10 +560,6 @@ quality "vault_seal_shamir" {
 
 quality "vault_seal_pkcs11" {
   description = "Vault auto-unseals with the pkcs11 seal"
-}
-
-quality "vault_secrets_auth_user_policy_write" {
-  description = "Vault creates auth user policies with the root token"
 }
 
 quality "vault_secrets_kv_read" {

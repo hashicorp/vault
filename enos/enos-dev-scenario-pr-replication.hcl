@@ -722,7 +722,7 @@ scenario "dev_pr_replication" {
     description = <<-EOF
       Enable the auth userpass method and create a new user.
     EOF
-    module      = module.vault_verify_write_data
+    module      = module.vault_verify_secrets_engines_create
     depends_on  = [step.get_primary_cluster_ips]
 
 
