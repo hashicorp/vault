@@ -467,17 +467,7 @@ func validateOCSPParsedResponse(ocspRes *ocsp.Response, subject, issuer *x509.Ce
 		if err := ocspRes.CheckSignatureFrom(issuer); err != nil {
 			if len(extraCas) > 0 {
 				// Perhaps it was signed by one of the extra configured OCSP CAs
-				var overallErr error
-				var matchedCA *x509.Certificate
-				for _, ca := range extraCas {
-					if err := ocspRes.CheckSignatureFrom(ca); err != nil {
-						overallErr = multierror.Append(overallErr, err)
-					} else {
-						matchedCA = ca
-						overallErr = nil
-						break
-					}
-				}
+				matchedCA, overallErr := verifySignature(ocspRes, extraCas)
 
 				if overallErr != nil {
 					return &ErrOcspIssuerVerification{fmt.Errorf("error checking chain of trust %v failed: %w", issuer.Subject.String(), overallErr)}
@@ -509,14 +499,11 @@ func validateOCSPParsedResponse(ocspRes *ocsp.Response, subject, issuer *x509.Ce
 				// Assumption 2 failed, try 3
 				overallErr = multierror.Append(overallErr, err)
 
-				for _, ca := range extraCas {
-					if err := ocspRes.CheckSignatureFrom(ca); err != nil {
-						overallErr = multierror.Append(overallErr, err)
-					} else {
-						matchedCA = ca
-						overallErr = nil
-						break
-					}
+				m, err := verifySignature(ocspRes, extraCas)
+				if err != nil {
+					overallErr = multierror.Append(overallErr, err)
+				} else {
+					matchedCA = m
 				}
 			} else {
 				matchedCA = ocspRes.Certificate
@@ -545,6 +532,25 @@ func validateOCSPParsedResponse(ocspRes *ocsp.Response, subject, issuer *x509.Ce
 	}
 
 	return nil
+}
+
+func verifySignature(res *ocsp.Response, extraCas []*x509.Certificate) (*x509.Certificate, error) {
+	var overallErr error
+	var matchedCA *x509.Certificate
+	for _, ca := range extraCas {
+		if ca.IsCA {
+			if err := res.CheckSignatureFrom(ca); err != nil {
+				overallErr = multierror.Append(overallErr, err)
+			} else {
+				matchedCA = ca
+				overallErr = nil
+				break
+			}
+		} else {
+			overallErr = multierror.Append(overallErr, fmt.Errorf("certificate with subject %s is not a CA certificate", ca.Subject.String()))
+		}
+	}
+	return matchedCA, overallErr
 }
 
 func validateSigner(matchedCA *x509.Certificate) error {
