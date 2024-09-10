@@ -28,7 +28,7 @@ module('Integration | Component | replication-overview-mode', function (hooks) {
           @mode={{this.mode}}
           @model={{this.modeDetails}}
         />`,
-        { context: this.engine }
+        { owner: this.engine }
       );
     };
   });
