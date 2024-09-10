@@ -1535,11 +1535,14 @@ func (i *IdentityStore) getKeysCacheControlHeader() (string, error) {
 	return "", nil
 }
 
+type oidcCachedPublicKeyData struct {
+	data    []byte
+	numKeys int
+}
+
 // pathOIDCReadPublicKeys is used to retrieve all public keys so that clients can
 // verify the validity of a signed OIDC token.
 func (i *IdentityStore) pathOIDCReadPublicKeys(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	var data []byte
-
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return nil, err
@@ -1558,20 +1561,26 @@ func (i *IdentityStore) pathOIDCReadPublicKeys(ctx context.Context, req *logical
 		return nil, err
 	}
 
+	var cachedPublicKeyData *oidcCachedPublicKeyData
 	if ok {
-		data = v.([]byte)
+		cachedPublicKeyData = v.(*oidcCachedPublicKeyData)
 	} else {
 		jwks, err := i.generatePublicJWKS(ctx, req.Storage)
 		if err != nil {
 			return nil, err
 		}
 
-		data, err = json.Marshal(jwks)
+		data, err := json.Marshal(jwks)
 		if err != nil {
 			return nil, err
 		}
 
-		if err := i.oidcCache.SetDefault(ns, "jwksResponse", data); err != nil {
+		cachedPublicKeyData = &oidcCachedPublicKeyData{
+			data:    data,
+			numKeys: len(jwks.Keys),
+		}
+
+		if err := i.oidcCache.SetDefault(ns, "jwksResponse", cachedPublicKeyData); err != nil {
 			return nil, err
 		}
 	}
@@ -1579,17 +1588,13 @@ func (i *IdentityStore) pathOIDCReadPublicKeys(ctx context.Context, req *logical
 	resp := &logical.Response{
 		Data: map[string]interface{}{
 			logical.HTTPStatusCode:  200,
-			logical.HTTPRawBody:     data,
+			logical.HTTPRawBody:     cachedPublicKeyData.data,
 			logical.HTTPContentType: "application/json",
 		},
 	}
 
 	// set a Cache-Control header only if there are keys
-	keys, err := listOIDCPublicKeys(ctx, req.Storage)
-	if err != nil {
-		return nil, err
-	}
-	if len(keys) > 0 {
+	if cachedPublicKeyData.numKeys > 0 {
 		header, err := i.getKeysCacheControlHeader()
 		if err != nil {
 			return nil, err
