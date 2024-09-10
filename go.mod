@@ -135,7 +135,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.13.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.19.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.17.0
-	github.com/hashicorp/vault-plugin-database-couchbase v0.11.0
+	github.com/hashicorp/vault-plugin-database-couchbase v0.12.0
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.16.0
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.13.0
 	github.com/hashicorp/vault-plugin-database-redis v0.3.0
@@ -145,12 +145,12 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-ad v0.18.0
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.18.0
 	github.com/hashicorp/vault-plugin-secrets-azure v0.20.0
-	github.com/hashicorp/vault-plugin-secrets-gcp v0.19.1-0.20240725202923-b240a5ad808a
+	github.com/hashicorp/vault-plugin-secrets-gcp v0.20.0
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.18.0
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.9.0
-	github.com/hashicorp/vault-plugin-secrets-kv v0.19.0
+	github.com/hashicorp/vault-plugin-secrets-kv v0.20.0
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.12.0
-	github.com/hashicorp/vault-plugin-secrets-openldap v0.13.0
+	github.com/hashicorp/vault-plugin-secrets-openldap v0.14.0
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.10.0
 	github.com/hashicorp/vault-testing-stepwise v0.3.1
 	github.com/hashicorp/vault/api v1.17.1
@@ -321,18 +321,18 @@ require (
 	github.com/cloudflare/circl v1.3.7 // indirect
 	github.com/cloudfoundry-community/go-cfclient v0.0.0-20220930021109-9c4e6c59ccf1 // indirect
 	github.com/cncf/xds/go v0.0.0-20240423153145-555b57ec207b // indirect
-	github.com/containerd/continuity v0.4.2 // indirect
+	github.com/containerd/continuity v0.4.3 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/coreos/etcd v3.3.27+incompatible // indirect
 	github.com/coreos/go-oidc/v3 v3.11.0 // indirect
 	github.com/coreos/go-semver v0.3.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/coreos/pkg v0.0.0-20220810130054-c7d1c02cb6cf // indirect
-	github.com/couchbase/gocb/v2 v2.8.1 // indirect
-	github.com/couchbase/gocbcore/v10 v10.4.1 // indirect
-	github.com/couchbase/gocbcoreps v0.1.2 // indirect
+	github.com/couchbase/gocb/v2 v2.9.1 // indirect
+	github.com/couchbase/gocbcore/v10 v10.5.1 // indirect
+	github.com/couchbase/gocbcoreps v0.1.3 // indirect
 	github.com/couchbase/goprotostellar v1.0.2 // indirect
-	github.com/couchbaselabs/gocbconnstr/v2 v2.0.0-20230515165046-68b522a21131 // indirect
+	github.com/couchbaselabs/gocbconnstr/v2 v2.0.0-20240607131231-fb385523de28 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.4 // indirect
 	github.com/danieljoos/wincred v1.1.2 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
@@ -341,8 +341,8 @@ require (
 	github.com/digitalocean/godo v1.7.5 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
-	github.com/docker/cli v25.0.5+incompatible // indirect
-	github.com/docker/go-connections v0.4.0 // indirect
+	github.com/docker/cli v25.0.6+incompatible // indirect
+	github.com/docker/go-connections v0.5.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dvsekhvalnov/jose2go v1.6.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
@@ -522,7 +522,7 @@ require (
 	go.opentelemetry.io/otel/metric v1.29.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
-	golang.org/x/mod v0.17.0 // indirect
+	golang.org/x/mod v0.21.0 // indirect
 	golang.org/x/time v0.6.0 // indirect
 	google.golang.org/genproto v0.0.0-20240903143218-8af14fe29dc1 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240903143218-8af14fe29dc1 // indirect
