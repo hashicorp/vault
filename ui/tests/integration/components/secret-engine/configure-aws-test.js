@@ -124,7 +124,7 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
           .dom(GENERAL.inputByAttr('issuer'))
           .hasAttribute(
             'placeholder',
-            'https://vault.prod/v1/identity/oidc',
+            'https://vault-test.com',
             'issue shows no value after toggling accessType'
           );
         assert
@@ -324,7 +324,7 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
           await click(SES.aws.accessType('wif'));
           assert
             .dom(GENERAL.inputByAttr('issuer'))
-            .hasAttribute('placeholder', 'https://vault.prod/v1/identity/oidc', 'shows issuer placeholder');
+            .hasAttribute('placeholder', 'https://vault-test.com', 'shows issuer placeholder');
           assert.dom(GENERAL.inputByAttr('issuer')).hasValue('', 'shows issuer is empty when not passed');
           await fillIn(GENERAL.inputByAttr('issuer'), 'http://bar.foo');
           await click(GENERAL.saveButton);
