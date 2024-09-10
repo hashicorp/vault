@@ -39,7 +39,7 @@ DOCKER_RUN_FLAGS=-it \
 .PHONY: website
 website:
 	@echo "==> Downloading latest Docker image..."
-	$(DOCKER_CMD) pull $(DOCKER_IMAGE)
+	@$(DOCKER_CMD) pull $(DOCKER_IMAGE)
 	@echo "==> Starting website..."
 	@$(DOCKER_CMD) run $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE)
 
