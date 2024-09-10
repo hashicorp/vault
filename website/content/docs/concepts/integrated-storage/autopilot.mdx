@@ -61,7 +61,7 @@ provide the autopilot functionality.
 
 ## Automated upgrades
 
-Automated Upgrades lets you automatically upgrade a cluster of Vault nodes to a new version as
+[Automated Upgrades](/vault/docs/enterprise/automated-upgrades) lets you automatically upgrade a cluster of Vault nodes to a new version as
 updated server nodes join the cluster. Once the number of nodes on the new version is
 equal to or greater than the number of nodes on the old version, Autopilot will promote
 the newer versioned nodes to voters, demote the older versioned nodes to non-voters,
@@ -71,7 +71,7 @@ nodes can be removed from the cluster.
 
 ## Redundancy zones
 
-Redundancy Zones provide both scaling and resiliency benefits by deploying non-voting
+[Redundancy Zones](/vault/docs/enterprise/redundancy-zones) provide both scaling and resiliency benefits by deploying non-voting
 nodes alongside voting nodes on a per availability zone basis. When using redundancy zones,
 each zone will have exactly one voting node and as many additional non-voting nodes as desired.
 If the voting node in a zone fails, a non-voting node will be automatically promoted to

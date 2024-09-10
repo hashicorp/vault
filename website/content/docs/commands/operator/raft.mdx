@@ -128,6 +128,13 @@ Usage: vault operator raft list-peers
 }
 ```
 
+Use the output of `list-peers` to ensure that your cluster is in an expected state.
+If you've removed a server using `remove-peer`, the server should no longer be
+listed in the `list-peers` output. If you've added a server using `add-peer` or
+through `retry_join`, check the `list-peers` output to see that it has been added
+to the cluster and (if the node has not been added as a non-voter)
+it has been promoted to a voter.
+
 ## remove-peer
 
 This command is used to remove a node from being a peer to the Raft cluster. In
