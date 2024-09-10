@@ -2,7 +2,6 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: BUSL-1.1
 
-
 set -e
 
 binpath=${VAULT_INSTALL_DIR}/vault

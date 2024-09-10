@@ -8,6 +8,7 @@ import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { waitFor } from '@ember/test-waiters';
+import { task } from 'ember-concurrency';
 
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
@@ -56,42 +57,43 @@ export default class DatabaseConnectionEdit extends Component {
     this.args.model[attr] = value;
   }
 
-  @action
-  async handleCreateConnection(evt) {
-    evt.preventDefault();
-    const secret = this.args.model;
-    secret
-      .save()
-      .then(() => {
+  handleCreateConnection = task(
+    waitFor(async (evt) => {
+      evt.preventDefault();
+      try {
+        const secret = this.args.model;
+        await secret.save();
         this.showSaveModal = true;
-      })
-      .catch((e) => {
+      } catch (e) {
         const errorMessage = getErrorMessage(e.errors);
         this.flashMessages.danger(errorMessage);
-      });
-  }
+      }
+    })
+  );
 
   @action
   continueWithoutRotate() {
+    if (this.continueWithRotate.isRunning) return;
     this.showSaveModal = false;
     const { name } = this.args.model;
     this.transitionToRoute(SHOW_ROUTE, name);
   }
 
-  @action
-  @waitFor
-  async continueWithRotate() {
-    this.showSaveModal = false;
-    const { backend, name } = this.args.model;
-    try {
-      await this.rotateCredentials(backend, name);
-      this.flashMessages.success(`Successfully rotated root credentials for connection "${name}"`);
-      this.transitionToRoute(SHOW_ROUTE, name);
-    } catch (e) {
-      this.flashMessages.danger(`Error rotating root credentials: ${e.errors}`);
-      this.transitionToRoute(SHOW_ROUTE, name);
-    }
-  }
+  continueWithRotate = task(
+    waitFor(async () => {
+      const { backend, name } = this.args.model;
+      try {
+        await this.rotateCredentials(backend, name);
+        this.flashMessages.success(`Successfully rotated root credentials for connection "${name}"`);
+        this.transitionToRoute(SHOW_ROUTE, name);
+      } catch (e) {
+        this.flashMessages.danger(`Error rotating root credentials: ${e.errors}`);
+        this.transitionToRoute(SHOW_ROUTE, name);
+      } finally {
+        this.showSaveModal = false;
+      }
+    })
+  );
 
   @action
   handleUpdateConnection(evt) {

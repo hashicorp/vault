@@ -1,0 +1,15 @@
+### Client tokens and token accessors audited in plaintext
+
+#### Affected versions
+
+- 1.16.7, 1.16.8, 1.17.3, 1.17.4 
+
+#### Issue
+
+In versions 1.16.7, 1.16.8, 1.17.3, and 1.17.4 audit logs may contain non-hmac’d values for
+client_token and accessor data in the response portion. 
+A fix has been created and is released in 1.16.9 and 1.17.5.
+
+#### Workaround
+It is recommended to avoid affected versions when upgrading.
+If you are on these versions and using the audit logging feature please upgrade promptly to 1.16.9 or 1.17.5.

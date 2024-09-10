@@ -13,6 +13,8 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -227,6 +229,45 @@ func Test_ActivityLog_EmptyDataMonths(t *testing.T) {
 			// other months should be empty
 			require.Nil(t, month.Counts)
 		}
+	}
+}
+
+// Test_ActivityLog_FutureEndDate queries a start time from the past
+// and an end date in the future. The test
+// verifies that the current month is returned in the response.
+func Test_ActivityLog_FutureEndDate(t *testing.T) {
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
+		"enabled": "enable",
+	})
+	require.NoError(t, err)
+	_, err = clientcountutil.NewActivityLogData(client).
+		NewPreviousMonthData(1).
+		NewClientsSeen(10).
+		NewCurrentMonthData().
+		NewClientsSeen(10).
+		Write(context.Background(), generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES, generation.WriteOptions_WRITE_ENTITIES)
+	require.NoError(t, err)
+
+	now := time.Now().UTC()
+	// query from the beginning of 3 months ago to beginning of next month
+	resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
+		"end_time":   {timeutil.StartOfNextMonth(now).Format(time.RFC3339)},
+		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(3, now)).Format(time.RFC3339)},
+	})
+	require.NoError(t, err)
+	monthsResponse := getMonthsData(t, resp)
+
+	require.Len(t, monthsResponse, 4)
+
+	// Get the last month of data in the slice
+	expectedCurrentMonthData := monthsResponse[3]
+	expectedTime, err := time.Parse(time.RFC3339, expectedCurrentMonthData.Timestamp)
+	require.NoError(t, err)
+	if !timeutil.IsCurrentMonth(expectedTime, now) {
+		t.Fatalf("final month data is not current month")
 	}
 }
 
@@ -480,6 +521,9 @@ func getJSONExport(t *testing.T, client *api.Client, monthsPreviousTo int, now t
 	clients := make(map[string]vault.ActivityLogExportRecord)
 
 	for {
+		if !decoder.More() {
+			break
+		}
 
 		var record vault.ActivityLogExportRecord
 		err := decoder.Decode(&record)
@@ -488,19 +532,31 @@ func getJSONExport(t *testing.T, client *api.Client, monthsPreviousTo int, now t
 		}
 
 		clients[record.ClientID] = record
-
-		if !decoder.More() {
-			break
-		}
 	}
 
 	return clients, nil
 }
 
-// getCSVExport is used to fetch activity export records using csv format.
-// The records will returned as a map keyed by client ID.
+// getCSVExport fetches activity export records using csv format. All flattened
+// map and slice fields will be unflattened so that the a proper ActivityLogExportRecord
+// can be formed. The records will returned as a map keyed by client ID.
 func getCSVExport(t *testing.T, client *api.Client, monthsPreviousTo int, now time.Time) (map[string]vault.ActivityLogExportRecord, error) {
 	t.Helper()
+
+	boolFields := map[string]struct{}{
+		"local_entity_alias": {},
+	}
+
+	mapFields := map[string]struct{}{
+		"entity_alias_custom_metadata": {},
+		"entity_alias_metadata":        {},
+		"entity_metadata":              {},
+	}
+
+	sliceFields := map[string]struct{}{
+		"entity_group_ids": {},
+		"policies":         {},
+	}
 
 	resp, err := client.Logical().ReadRawWithData("sys/internal/counters/activity/export", map[string][]string{
 		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(monthsPreviousTo, now)).Format(time.RFC3339)},
@@ -521,13 +577,66 @@ func getCSVExport(t *testing.T, client *api.Client, monthsPreviousTo int, now ti
 		return nil, err
 	}
 
-	csvColumns := csvRecords[0]
+	if len(csvRecords) == 0 {
+		return clients, nil
+	}
 
-	for i := 1; i < len(csvRecords); i++ {
+	csvHeader := csvRecords[0]
+
+	// skip initial row as it is header
+	for rowIdx := 1; rowIdx < len(csvRecords); rowIdx++ {
+		baseRecord := vault.ActivityLogExportRecord{
+			Policies:                  []string{},
+			EntityMetadata:            map[string]string{},
+			EntityAliasMetadata:       map[string]string{},
+			EntityAliasCustomMetadata: map[string]string{},
+			EntityGroupIDs:            []string{},
+		}
+
 		recordMap := make(map[string]interface{})
 
-		for j, k := range csvColumns {
-			recordMap[k] = csvRecords[i][j]
+		// create base map
+		err = mapstructure.Decode(baseRecord, &recordMap)
+		if err != nil {
+			return nil, err
+		}
+
+		for columnIdx, columnName := range csvHeader {
+			val := csvRecords[rowIdx][columnIdx]
+
+			// determine if column has been flattened
+			columnNameParts := strings.SplitN(columnName, ".", 2)
+
+			if len(columnNameParts) > 1 {
+				prefix := columnNameParts[0]
+
+				if _, ok := mapFields[prefix]; ok {
+					m := recordMap[prefix]
+
+					// ignore empty CSV column value
+					if val != "" {
+						m.(map[string]string)[columnNameParts[1]] = val
+						recordMap[prefix] = m
+					}
+				} else if _, ok := sliceFields[prefix]; ok {
+					s := recordMap[prefix]
+
+					// ignore empty CSV column value
+					if val != "" {
+						s = append(s.([]string), val)
+						recordMap[prefix] = s
+					}
+				} else {
+					t.Fatalf("unexpected CSV field: %q", columnName)
+				}
+			} else if _, ok := boolFields[columnName]; ok {
+				recordMap[columnName], err = strconv.ParseBool(val)
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				recordMap[columnName] = val
+			}
 		}
 
 		var record vault.ActivityLogExportRecord

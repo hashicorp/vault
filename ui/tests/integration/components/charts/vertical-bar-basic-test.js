@@ -43,7 +43,6 @@ module('Integration | Component | clients/charts/vertical-bar-basic', function (
   });
 
   test('it renders when some months have no data', async function (assert) {
-    assert.expect(10);
     await render(
       hbs`<Clients::Charts::VerticalBarBasic @data={{this.data}} @dataKey="secret_syncs" @chartTitle="My chart"/>`
     );
@@ -51,6 +50,7 @@ module('Integration | Component | clients/charts/vertical-bar-basic', function (
     assert.dom('[data-test-vertical-bar]').exists({ count: 3 }, 'renders 3 vertical bars');
 
     // Tooltips
+    assert.dom('[data-test-interactive-area="9/22"]').exists('interactive area exists');
     await triggerEvent('[data-test-interactive-area="9/22"]', 'mouseover');
     assert.dom('[data-test-tooltip]').exists({ count: 1 }, 'renders tooltip on mouseover');
     assert.dom('[data-test-tooltip-count]').hasText('5,802 secret syncs', 'tooltip has exact count');
@@ -70,8 +70,6 @@ module('Integration | Component | clients/charts/vertical-bar-basic', function (
 
   // 0 is different than null (no data)
   test('it renders when all months have 0 clients', async function (assert) {
-    assert.expect(9);
-
     this.data = [
       {
         month: '6/22',
@@ -110,7 +108,6 @@ module('Integration | Component | clients/charts/vertical-bar-basic', function (
   });
 
   test('it renders underlying data', async function (assert) {
-    assert.expect(3);
     await render(
       hbs`<Clients::Charts::VerticalBarBasic @data={{this.data}} @dataKey="secret_syncs" @showTable={{true}} @chartTitle="My chart"/>`
     );

@@ -18,20 +18,34 @@ globals {
   config_modes    = ["env", "file"]
   consul_editions = ["ce", "ent"]
   consul_versions = ["1.14.11", "1.15.7", "1.16.3", "1.17.0"]
-  distros         = ["amzn2", "leap", "rhel", "sles", "ubuntu"]
+  distros         = ["amzn", "leap", "rhel", "sles", "ubuntu"]
   // Different distros may require different packages, or use different aliases for the same package
   distro_packages = {
-    amzn2 = ["nc"]
-    leap  = ["netcat", "openssl"]
-    rhel  = ["nc"]
-    // When installing Vault RPM packages on a SLES AMI, the openssl package provided
-    // isn't named "openssl, which rpm doesn't know how to handle. Therefore we add the
-    // "correctly" named one in our package installation before installing Vault.
-    sles   = ["netcat-openbsd", "openssl"]
-    ubuntu = ["netcat"]
+    amzn = {
+      "2"    = ["nc"]
+      "2023" = ["nc"]
+    }
+    leap = {
+      "15.6" = ["netcat", "openssl"]
+    }
+    rhel = {
+      "8.10" = ["nc"]
+      "9.4"  = ["nc"]
+    }
+    sles = {
+      // When installing Vault RPM packages on a SLES AMI, the openssl package provided
+      // isn't named "openssl, which rpm doesn't know how to handle. Therefore we add the
+      // "correctly" named one in our package installation before installing Vault.
+      "15.6" = ["netcat-openbsd", "openssl"]
+    }
+    ubuntu = {
+      "20.04" = ["netcat"]
+      "22.04" = ["netcat"]
+      "24.04" = ["netcat-openbsd"]
+    }
   }
   distro_version = {
-    amzn2  = var.distro_version_amzn2
+    amzn   = var.distro_version_amzn
     leap   = var.distro_version_leap
     rhel   = var.distro_version_rhel
     sles   = var.distro_version_sles
@@ -41,7 +55,7 @@ globals {
   enterprise_editions = [for e in global.editions : e if e != "ce"]
   ip_versions         = ["4", "6"]
   package_manager = {
-    "amzn2"  = "yum"
+    "amzn"   = "yum"
     "leap"   = "zypper"
     "rhel"   = "yum"
     "sles"   = "zypper"
@@ -134,11 +148,11 @@ globals {
   }
   sample_attributes = {
     aws_region            = ["us-east-1", "us-west-2"]
-    distro_version_amzn2  = ["2"]
-    distro_version_leap   = ["15.5"]
-    distro_version_rhel   = ["8.9", "9.3"]
-    distro_version_sles   = ["v15_sp5_standard"]
-    distro_version_ubuntu = ["20.04", "22.04"]
+    distro_version_amzn   = ["2023"]
+    distro_version_leap   = ["15.6"]
+    distro_version_rhel   = ["8.10", "9.4"]
+    distro_version_sles   = ["15.6"]
+    distro_version_ubuntu = ["20.04", "24.04"]
   }
   seals = ["awskms", "pkcs11", "shamir"]
   tags = merge({

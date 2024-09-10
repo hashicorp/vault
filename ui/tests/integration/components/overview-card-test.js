@@ -13,6 +13,7 @@ const ACTION_TEXT = 'View card';
 const SUBTEXT = 'This is subtext for card';
 
 const SELECTORS = {
+  container: '[data-test-overview-card-container]',
   title: '[data-test-overview-card-title]',
   subtitle: '[data-test-overview-card-subtitle]',
   action: '[data-test-action-text]',
@@ -28,9 +29,20 @@ module('Integration | Component | overview-card', function (hooks) {
     this.set('subText', SUBTEXT);
   });
 
-  test('it returns card title, ', async function (assert) {
+  test('it returns card title', async function (assert) {
     await render(hbs`<OverviewCard @cardTitle={{this.cardTitle}}/>`);
     assert.dom(SELECTORS.title).hasText('Card title');
+  });
+  test('it returns custom title if both exist', async function (assert) {
+    await render(hbs`
+      <OverviewCard @cardTitle={{this.cardTitle}}>
+        <:customTitle>
+          Fancy custom title
+        </:customTitle>
+      </OverviewCard>
+      `);
+    assert.dom(SELECTORS.container).hasText('Fancy custom title');
+    assert.dom(SELECTORS.container).doesNotIncludeText(this.cardTitle);
   });
   test('it renders card @subText arg, ', async function (assert) {
     await render(hbs`<OverviewCard @cardTitle={{this.cardTitle}}  @subText={{this.subText}} />`);

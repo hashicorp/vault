@@ -119,7 +119,7 @@ resource "enos_consul_start" "consul" {
   config = {
     # GetPrivateInterfaces is a go-sockaddr template that helps Consul get the correct
     # addr in all of our default cases. This is required in the case of Amazon Linux,
-    # because amzn2 has a default docker listener that will make Consul try to use the
+    # because amzn has a default docker listener that will make Consul try to use the
     # incorrect addr.
     bind_addr        = "{{ GetPrivateInterfaces | include \"type\" \"IP\" | sort \"default\" |  limit 1 | attr \"address\"}}"
     data_dir         = var.consul_data_dir

@@ -23,20 +23,37 @@ const (
 
 // Audit formats.
 const (
-	JSONFormat  format = "json"
-	JSONxFormat format = "jsonx"
+	jsonFormat  format = "json"
+	jsonxFormat format = "jsonx"
 )
 
 // Check AuditEvent implements the timeProvider at compile time.
-var _ timeProvider = (*AuditEvent)(nil)
+var _ timeProvider = (*Event)(nil)
 
-// AuditEvent is the audit event.
-type AuditEvent struct {
+// Event is the audit event.
+type Event struct {
 	ID        string            `json:"id"`
 	Version   string            `json:"version"`
 	Subtype   subtype           `json:"subtype"` // the subtype of the audit event.
 	Timestamp time.Time         `json:"timestamp"`
 	Data      *logical.LogInput `json:"data"`
+	prov      timeProvider
+}
+
+// setTimeProvider can be used to set a specific time provider which is used when
+// creating an entry.
+// NOTE: This is primarily used for testing to supply a known time value.
+func (a *Event) setTimeProvider(t timeProvider) {
+	a.prov = t
+}
+
+// timeProvider returns a configured time provider, or the default if not set.
+func (a *Event) timeProvider() timeProvider {
+	if a.prov == nil {
+		return a
+	}
+
+	return a.prov
 }
 
 // format defines types of format audit events support.
@@ -45,10 +62,10 @@ type format string
 // subtype defines the type of audit event.
 type subtype string
 
-// NewEvent should be used to create an audit event. The subtype field is needed
+// newEvent should be used to create an audit event. The subtype field is needed
 // for audit events. It will generate an ID if no ID is supplied. Supported
-// options: WithID, WithNow.
-func NewEvent(s subtype, opt ...Option) (*AuditEvent, error) {
+// options: withID, withNow.
+func newEvent(s subtype, opt ...option) (*Event, error) {
 	// Get the default options
 	opts, err := getOpts(opt...)
 	if err != nil {
@@ -64,7 +81,7 @@ func NewEvent(s subtype, opt ...Option) (*AuditEvent, error) {
 		}
 	}
 
-	audit := &AuditEvent{
+	audit := &Event{
 		ID:        opts.withID,
 		Timestamp: opts.withNow,
 		Version:   version,
@@ -78,7 +95,7 @@ func NewEvent(s subtype, opt ...Option) (*AuditEvent, error) {
 }
 
 // validate attempts to ensure the audit event in its present state is valid.
-func (a *AuditEvent) validate() error {
+func (a *Event) validate() error {
 	if a == nil {
 		return fmt.Errorf("event is nil: %w", ErrInvalidParameter)
 	}
@@ -116,7 +133,7 @@ func (t subtype) validate() error {
 // validate ensures that format is one of the set of allowed event formats.
 func (f format) validate() error {
 	switch f {
-	case JSONFormat, JSONxFormat:
+	case jsonFormat, jsonxFormat:
 		return nil
 	default:
 		return fmt.Errorf("invalid format %q: %w", f, ErrInvalidParameter)
@@ -155,13 +172,13 @@ func (t subtype) String() string {
 
 // formattedTime returns the UTC time the AuditEvent was created in the RFC3339Nano
 // format (which removes trailing zeros from the seconds field).
-func (a *AuditEvent) formattedTime() string {
+func (a *Event) formattedTime() string {
 	return a.Timestamp.UTC().Format(time.RFC3339Nano)
 }
 
-// IsValidFormat provides a means to validate whether the supplied format is valid.
+// isValidFormat provides a means to validate whether the supplied format is valid.
 // Examples of valid formats are JSON and JSONx.
-func IsValidFormat(v string) bool {
+func isValidFormat(v string) bool {
 	err := format(strings.TrimSpace(strings.ToLower(v))).validate()
 	return err == nil
 }

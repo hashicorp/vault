@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/namespace"
+	nshelper "github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -23,7 +23,7 @@ func testAuditBackend(t *testing.T, path string, config map[string]string) Backe
 	t.Helper()
 
 	headersCfg := &HeadersConfig{
-		headerSettings: make(map[string]*HeaderSettings),
+		headerSettings: make(map[string]*headerSettings),
 		view:           nil,
 	}
 
@@ -148,7 +148,7 @@ func BenchmarkAuditBroker_File_Request_DevNull(b *testing.B) {
 		},
 	}
 
-	ctx := namespace.RootContext(context.Background())
+	ctx := nshelper.RootContext(context.Background())
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
@@ -159,54 +159,51 @@ func BenchmarkAuditBroker_File_Request_DevNull(b *testing.B) {
 	})
 }
 
-// TestBroker_isContextViable_basics checks the expected result of isContextViable
-// for basic inputs such as nil, cancelled context and a never-ending context.
-func TestBroker_isContextViable_basics(t *testing.T) {
+// TestBroker_getAuditContext_NoNamespace checks that we get the right error when
+// trying to get an audit context with no namespace.
+func TestBroker_getAuditContext_NoNamespace(t *testing.T) {
 	t.Parallel()
 
-	require.False(t, isContextViable(nil))
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
-	require.False(t, isContextViable(ctx))
-	require.True(t, isContextViable(context.Background()))
+	_, _, err := getAuditContext(context.Background())
+	require.Error(t, err)
+	require.EqualError(t, err, "namespace missing from context: no namespace")
 }
 
-// TestBroker_isContextViable_timeouts checks the expected result of isContextViable
-// for various timeout durations.
-func TestBroker_isContextViable_timeouts(t *testing.T) {
+// TestBroker_getAuditContext checks that we get a context back which isn't linked
+// to the original context, and contains our namespace.
+func TestBroker_getAuditContext(t *testing.T) {
 	t.Parallel()
 
-	tests := map[string]struct {
-		timeout  time.Duration
-		expected bool
-	}{
-		"2s-smaller-deadline": {
-			timeout:  timeout - 2*time.Second,
-			expected: false,
-		},
-		"same-deadline": {
-			timeout:  timeout,
-			expected: false, // Expected as a near miss
-		},
-		"same-deadline-plus": {
-			timeout:  timeout + 100*time.Millisecond,
-			expected: true,
-		},
-		"2x-longer-deadline": {
-			timeout:  timeout * 2,
-			expected: true,
-		},
+	// context with namespace
+	ns := &nshelper.Namespace{
+		ID:   "foo",
+		Path: "foo/",
 	}
 
-	for name, tc := range tests {
-		name := name
-		tc := tc
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
+	// Create a context with a namespace.
+	originalContext, originalCancel := context.WithCancel(context.Background())
+	t.Cleanup(originalCancel)
+	nsContext := nshelper.ContextWithNamespace(originalContext, ns)
 
-			ctx, cancel := context.WithTimeout(context.Background(), tc.timeout)
-			t.Cleanup(func() { cancel() })
-			require.Equal(t, tc.expected, isContextViable(ctx))
-		})
-	}
+	// Get the audit context
+	auditContext, auditCancel, err := getAuditContext(nsContext)
+	t.Cleanup(auditCancel)
+
+	require.NoError(t, err)
+	require.NotNil(t, auditContext)
+	require.NotNil(t, auditCancel)
+
+	// Ensure the namespace is there too.
+	val, err := nshelper.FromContext(auditContext)
+	require.NoError(t, err)
+	require.Equal(t, ns, val)
+
+	// Now cancel the original context and ensure it is done but audit context isn't.
+	originalCancel()
+	require.NotNil(t, originalContext.Err())
+	require.Nil(t, auditContext.Err())
+
+	// Now cancel the audit context and ensure that it is done.
+	auditCancel()
+	require.NotNil(t, auditContext.Err())
 }

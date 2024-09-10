@@ -55,17 +55,10 @@ scenario "autopilot" {
       edition = [for e in matrix.edition : e if !strcontains(e, "hsm")]
     }
 
-    // arm64 AMIs are not offered for Leap
-    exclude {
-      distro = ["leap"]
-      arch   = ["arm64"]
-    }
-
-    // softhsm packages not available for leap/sles. Enos support for softhsm on amzn2 is
-    // not implemented yet.
+    // softhsm packages not available for leap/sles.
     exclude {
       seal   = ["pkcs11"]
-      distro = ["amzn2", "leap", "sles"]
+      distro = ["leap", "sles"]
     }
 
     // Testing in IPV6 mode is currently implemented for integrated Raft storage only
@@ -86,7 +79,7 @@ scenario "autopilot" {
   locals {
     artifact_path = matrix.artifact_source != "artifactory" ? abspath(var.vault_artifact_path) : null
     enos_provider = {
-      amzn2  = provider.enos.ec2_user
+      amzn   = provider.enos.ec2_user
       leap   = provider.enos.ec2_user
       rhel   = provider.enos.ec2_user
       sles   = provider.enos.ec2_user
@@ -252,10 +245,10 @@ scenario "autopilot" {
       config_mode          = matrix.config_mode
       enable_audit_devices = var.vault_enable_audit_devices
       hosts                = step.create_vault_cluster_targets.hosts
-      install_dir          = global.vault_install_dir[matrix.artifact_type]
+      install_dir          = local.vault_install_dir
       ip_version           = matrix.ip_version
       license              = matrix.edition != "ce" ? step.read_license.license : null
-      packages             = concat(global.packages, global.distro_packages[matrix.distro])
+      packages             = concat(global.packages, global.distro_packages[matrix.distro][global.distro_version[matrix.distro]])
       release = {
         edition = matrix.edition
         version = matrix.initial_version
@@ -322,14 +315,14 @@ scenario "autopilot" {
       hosts             = step.create_vault_cluster.hosts
       ip_version        = matrix.ip_version
       vault_addr        = step.create_vault_cluster.api_addr_localhost
-      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
+      vault_install_dir = local.vault_install_dir
       vault_root_token  = step.create_vault_cluster.root_token
     }
   }
 
-  step "verify_write_test_data" {
-    description = global.description.verify_write_test_data
-    module      = module.vault_verify_write_data
+  step "verify_secrets_engines_create" {
+    description = global.description.verify_secrets_engines_create
+    module      = module.vault_verify_secrets_engines_create
     depends_on = [
       step.create_vault_cluster,
       step.get_vault_cluster_ips
@@ -340,9 +333,21 @@ scenario "autopilot" {
     }
 
     verifies = [
+      quality.vault_api_auth_userpass_login_write,
+      quality.vault_api_auth_userpass_user_write,
+      quality.vault_api_identity_entity_write,
+      quality.vault_api_identity_entity_alias_write,
+      quality.vault_api_identity_group_write,
+      quality.vault_api_identity_oidc_config_write,
+      quality.vault_api_identity_oidc_introspect_write,
+      quality.vault_api_identity_oidc_key_write,
+      quality.vault_api_identity_oidc_key_rotate_write,
+      quality.vault_api_identity_oidc_role_write,
+      quality.vault_api_identity_oidc_token_read,
+      quality.vault_api_sys_auth_userpass_user_write,
+      quality.vault_api_sys_policy_write,
       quality.vault_mount_auth,
       quality.vault_mount_kv,
-      quality.vault_secrets_auth_user_policy_write,
       quality.vault_secrets_kv_write,
     ]
 
@@ -350,7 +355,7 @@ scenario "autopilot" {
       hosts             = step.create_vault_cluster.hosts
       leader_host       = step.get_vault_cluster_ips.leader_host
       vault_addr        = step.create_vault_cluster.api_addr_localhost
-      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
+      vault_install_dir = local.vault_install_dir
       vault_root_token  = step.create_vault_cluster.root_token
     }
   }
@@ -373,7 +378,7 @@ scenario "autopilot" {
       step.build_vault,
       step.create_vault_cluster,
       step.create_autopilot_upgrade_storageconfig,
-      step.verify_write_test_data
+      step.verify_secrets_engines_create
     ]
 
     providers = {
@@ -388,13 +393,13 @@ scenario "autopilot" {
       force_unseal                = matrix.seal == "shamir"
       hosts                       = step.create_vault_cluster_upgrade_targets.hosts
       initialize_cluster          = false
-      install_dir                 = global.vault_install_dir[matrix.artifact_type]
+      install_dir                 = local.vault_install_dir
       ip_version                  = matrix.ip_version
       license                     = matrix.edition != "ce" ? step.read_license.license : null
       local_artifact_path         = local.artifact_path
       log_level                   = var.vault_log_level
       manage_service              = local.manage_service
-      packages                    = concat(global.packages, global.distro_packages[matrix.distro])
+      packages                    = concat(global.packages, global.distro_packages[matrix.distro][global.distro_version[matrix.distro]])
       root_token                  = step.create_vault_cluster.root_token
       seal_attributes             = step.create_seal_key.attributes
       seal_type                   = matrix.seal
@@ -428,7 +433,7 @@ scenario "autopilot" {
     variables {
       hosts             = step.upgrade_vault_cluster_with_autopilot.hosts
       vault_addr        = step.upgrade_vault_cluster_with_autopilot.api_addr_localhost
-      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
+      vault_install_dir = local.vault_install_dir
     }
   }
 
@@ -450,7 +455,7 @@ scenario "autopilot" {
       hosts             = step.upgrade_vault_cluster_with_autopilot.hosts
       ip_version        = matrix.ip_version
       vault_addr        = step.upgrade_vault_cluster_with_autopilot.api_addr_localhost
-      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
+      vault_install_dir = local.vault_install_dir
       vault_root_token  = step.upgrade_vault_cluster_with_autopilot.root_token
     }
   }
@@ -478,7 +483,7 @@ scenario "autopilot" {
       vault_addr                      = step.create_vault_cluster.api_addr_localhost
       vault_autopilot_upgrade_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
       vault_autopilot_upgrade_status  = "await-server-removal"
-      vault_install_dir               = global.vault_install_dir[matrix.artifact_type]
+      vault_install_dir               = local.vault_install_dir
       vault_root_token                = step.upgrade_vault_cluster_with_autopilot.root_token
     }
   }
@@ -507,7 +512,7 @@ scenario "autopilot" {
       ip_version        = matrix.ip_version
       timeout           = 120 // seconds
       vault_addr        = step.create_vault_cluster.api_addr_localhost
-      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
+      vault_install_dir = local.vault_install_dir
       vault_root_token  = step.create_vault_cluster.root_token
     }
   }
@@ -537,17 +542,17 @@ scenario "autopilot" {
       hosts             = step.upgrade_vault_cluster_with_autopilot.hosts
       ip_version        = matrix.ip_version
       vault_addr        = step.create_vault_cluster.api_addr_localhost
-      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
+      vault_install_dir = local.vault_install_dir
       vault_root_token  = step.create_vault_cluster.root_token
     }
   }
 
-  step "verify_read_test_data" {
-    description = global.description.verify_read_test_data
-    module      = module.vault_verify_read_data
+  step "verify_secrets_engines_read" {
+    description = global.description.verify_secrets_engines_read
+    module      = module.vault_verify_secrets_engines_read
     depends_on = [
       step.get_updated_vault_cluster_ips,
-      step.verify_write_test_data,
+      step.verify_secrets_engines_create,
       step.upgrade_vault_cluster_with_autopilot,
       step.verify_raft_auto_join_voter
     ]
@@ -556,12 +561,20 @@ scenario "autopilot" {
       enos = local.enos_provider[matrix.distro]
     }
 
-    verifies = quality.vault_secrets_kv_read
+    verifies = [
+      quality.vault_api_auth_userpass_login_write,
+      quality.vault_api_identity_entity_read,
+      quality.vault_api_identity_oidc_config_read,
+      quality.vault_api_identity_oidc_key_read,
+      quality.vault_api_identity_oidc_role_read,
+      quality.vault_secrets_kv_read
+    ]
 
     variables {
+      create_state      = step.verify_secrets_engines_create.state
       hosts             = step.get_updated_vault_cluster_ips.follower_hosts
       vault_addr        = step.upgrade_vault_cluster_with_autopilot.api_addr_localhost
-      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
+      vault_install_dir = local.vault_install_dir
     }
   }
 
@@ -592,7 +605,7 @@ scenario "autopilot" {
       operator_instance       = step.get_updated_vault_cluster_ips.leader_public_ip
       vault_addr              = step.upgrade_vault_cluster_with_autopilot.api_addr_localhost
       vault_cluster_addr_port = step.upgrade_vault_cluster_with_autopilot.cluster_port
-      vault_install_dir       = global.vault_install_dir[matrix.artifact_type]
+      vault_install_dir       = local.vault_install_dir
       vault_root_token        = step.create_vault_cluster.root_token
     }
   }
@@ -638,7 +651,7 @@ scenario "autopilot" {
       vault_addr                      = step.upgrade_vault_cluster_with_autopilot.api_addr_localhost
       vault_autopilot_upgrade_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
       vault_autopilot_upgrade_status  = "idle"
-      vault_install_dir               = global.vault_install_dir[matrix.artifact_type]
+      vault_install_dir               = local.vault_install_dir
       vault_root_token                = step.create_vault_cluster.root_token
     }
   }
@@ -685,6 +698,8 @@ scenario "autopilot" {
     }
 
     verifies = [
+      quality.vault_api_sys_version_history_keys,
+      quality.vault_api_sys_version_history_key_info,
       quality.vault_version_build_date,
       quality.vault_version_edition,
       quality.vault_version_release,
@@ -694,7 +709,7 @@ scenario "autopilot" {
       hosts                 = step.upgrade_vault_cluster_with_autopilot.hosts
       vault_addr            = step.upgrade_vault_cluster_with_autopilot.api_addr_localhost
       vault_edition         = matrix.edition
-      vault_install_dir     = global.vault_install_dir[matrix.artifact_type]
+      vault_install_dir     = local.vault_install_dir
       vault_product_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
       vault_revision        = matrix.artifact_source == "local" ? step.get_local_metadata.revision : var.vault_revision
       vault_build_date      = matrix.artifact_source == "local" ? step.get_local_metadata.build_date : var.vault_build_date
@@ -724,10 +739,8 @@ scenario "autopilot" {
     }
   }
 
-  step "verify_undo_logs_status" {
-    skip_step = true
-    // NOTE: temporarily disable undo logs checking until it is fixed. See VAULT-20259
-    // skip_step = semverconstraint(var.vault_product_version, "<1.13.0-0")
+  step "verify_undo_logs_enabled_on_primary" {
+    skip_step   = semverconstraint(var.vault_product_version, "<1.13.0-0")
     module      = module.vault_verify_undo_logs
     description = <<-EOF
       Verifies that undo logs is correctly enabled on newly upgraded target hosts. For this it will
@@ -748,8 +761,30 @@ scenario "autopilot" {
     }
 
     variables {
-      hosts             = step.upgrade_vault_cluster_with_autopilot.hosts
-      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
+      expected_state    = 1 # Enabled
+      hosts             = step.get_updated_vault_cluster_ips.leader_hosts
+      timeout           = 180 # Seconds
+      vault_addr        = step.upgrade_vault_cluster_with_autopilot.api_addr_localhost
+      vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_vault_cluster.root_token
+    }
+  }
+
+  step "verify_undo_logs_disabled_on_followers" {
+    skip_step  = semverconstraint(var.vault_product_version, "<1.13.0-0")
+    module     = module.vault_verify_undo_logs
+    depends_on = [step.verify_undo_logs_enabled_on_primary]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      expected_state    = 0 # Disabled
+      hosts             = step.get_updated_vault_cluster_ips.follower_hosts
+      timeout           = 10 # Seconds
+      vault_addr        = step.upgrade_vault_cluster_with_autopilot.api_addr_localhost
+      vault_install_dir = local.vault_install_dir
       vault_root_token  = step.create_vault_cluster.root_token
     }
   }
@@ -825,6 +860,11 @@ scenario "autopilot" {
   output "recovery_keys_hex" {
     description = "The Vault cluster recovery keys hex"
     value       = step.create_vault_cluster.recovery_keys_hex
+  }
+
+  output "secrets_engines_state" {
+    description = "The state of configured secrets engines"
+    value       = step.verify_secrets_engines_create.state
   }
 
   output "seal_attributes" {

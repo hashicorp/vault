@@ -7,7 +7,8 @@ terraform {
       source = "hashicorp/aws"
     }
     enos = {
-      source = "registry.terraform.io/hashicorp-forge/enos"
+      source  = "registry.terraform.io/hashicorp-forge/enos"
+      version = ">= 0.5.4"
     }
   }
 }
@@ -79,6 +80,10 @@ locals {
   vault_bin_path = "${var.vault_install_dir}/vault"
 }
 
+// Upgrade the Vault artifact in-place. With zip bundles we must use the same path of the original
+// installation so that we can re-use the systemd unit that enos_vault_start created at
+// /etc/systemd/system/vault.service. The path does not matter for package types as the systemd
+// unit for the bianry is included and will be installed.
 resource "enos_bundle_install" "upgrade_vault_binary" {
   for_each = var.hosts
 
@@ -93,10 +98,32 @@ resource "enos_bundle_install" "upgrade_vault_binary" {
   }
 }
 
+// We assume that our original Vault cluster used a zip bundle from releases.hashicorp.com and as
+// such enos_vault_start will have created a systemd unit for it at /etc/systemd/systemd/vault.service.
+// If we're upgrading to a package that contains its own systemd unit we'll need to remove the
+// old unit file so that when we restart vault we pick up the new unit that points to the updated
+// binary.
+resource "enos_remote_exec" "maybe_remove_old_unit_file" {
+  for_each   = var.hosts
+  depends_on = [enos_bundle_install.upgrade_vault_binary]
+
+  environment = {
+    ARTIFACT_NAME = enos_bundle_install.upgrade_vault_binary[each.key].name
+  }
+
+  scripts = [abspath("${path.module}/scripts/maybe-remove-old-unit-file.sh")]
+
+  transport = {
+    ssh = {
+      host = each.value.public_ip
+    }
+  }
+}
+
 module "get_ip_addresses" {
   source = "../vault_get_cluster_ips"
 
-  depends_on = [enos_bundle_install.upgrade_vault_binary]
+  depends_on = [enos_remote_exec.maybe_remove_old_unit_file]
 
   hosts             = var.hosts
   ip_version        = var.ip_version

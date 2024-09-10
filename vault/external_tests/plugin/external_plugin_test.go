@@ -28,6 +28,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	_ "github.com/jackc/pgx/v4/stdlib"
+	"github.com/stretchr/testify/require"
 )
 
 func getCluster(t *testing.T, numCores int, types ...consts.PluginType) *vault.TestCluster {
@@ -946,25 +947,32 @@ func TestExternalPlugin_AuditEnabled_ShouldLogPluginMetadata_Auth(t *testing.T) 
 
 	// Check the audit trail on request and response
 	decoder := json.NewDecoder(auditLogFile)
-	var auditRecord map[string]interface{}
-	for decoder.Decode(&auditRecord) == nil {
-		auditRequest := map[string]interface{}{}
-		if req, ok := auditRecord["request"]; ok {
-			auditRequest = req.(map[string]interface{})
-			if auditRequest["path"] != "auth/"+plugin.Name+"/role/role1" {
-				continue
-			}
-		}
-		testExternalPluginMetadataAuditLog(t, auditRequest, consts.PluginTypeCredential.String())
+	for decoder.More() {
+		var auditRecord map[string]interface{}
+		err := decoder.Decode(&auditRecord)
+		require.NoError(t, err)
 
-		auditResponse := map[string]interface{}{}
-		if req, ok := auditRecord["response"]; ok {
-			auditRequest = req.(map[string]interface{})
-			if auditResponse["path"] != "auth/"+plugin.Name+"/role/role1" {
+		if req, ok := auditRecord["request"]; ok {
+			auditRequest, ok := req.(map[string]interface{})
+			require.True(t, ok)
+
+			path, ok := auditRequest["path"]
+			require.True(t, ok)
+
+			if path != "auth/"+plugin.Name+"/role/role1" {
 				continue
 			}
+
+			testExternalPluginMetadataAuditLog(t, auditRequest, consts.PluginTypeCredential.String())
 		}
-		testExternalPluginMetadataAuditLog(t, auditResponse, consts.PluginTypeCredential.String())
+
+		if resp, ok := auditRecord["response"]; ok {
+			auditResponse, ok := resp.(map[string]interface{})
+			require.True(t, ok)
+
+			testExternalPluginMetadataAuditLog(t, auditResponse, consts.PluginTypeCredential.String())
+		}
+
 	}
 
 	// Deregister
@@ -1014,31 +1022,39 @@ func TestExternalPlugin_AuditEnabled_ShouldLogPluginMetadata_Secret(t *testing.T
 		"address": consulConfig.Address(),
 		"token":   consulConfig.Token,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+
+	// Disable audit now we're done performing operations
+	err = client.Sys().DisableAudit("file")
+	require.NoError(t, err)
 
 	// Check the audit trail on request and response
 	decoder := json.NewDecoder(auditLogFile)
-	var auditRecord map[string]interface{}
-	for decoder.Decode(&auditRecord) == nil {
-		auditRequest := map[string]interface{}{}
-		if req, ok := auditRecord["request"]; ok {
-			auditRequest = req.(map[string]interface{})
-			if auditRequest["path"] != plugin.Name+"/config/access" {
-				continue
-			}
-		}
-		testExternalPluginMetadataAuditLog(t, auditRequest, consts.PluginTypeSecrets.String())
+	for decoder.More() {
+		var auditRecord map[string]interface{}
+		err := decoder.Decode(&auditRecord)
+		require.NoError(t, err)
 
-		auditResponse := map[string]interface{}{}
-		if req, ok := auditRecord["response"]; ok {
-			auditRequest = req.(map[string]interface{})
-			if auditResponse["path"] != plugin.Name+"/config/access" {
+		if req, ok := auditRecord["request"]; ok {
+			auditRequest, ok := req.(map[string]interface{})
+			require.True(t, ok)
+
+			path, ok := auditRequest["path"].(string)
+			require.True(t, ok)
+
+			if path != plugin.Name+"/config/access" {
 				continue
 			}
+
+			testExternalPluginMetadataAuditLog(t, auditRequest, consts.PluginTypeSecrets.String())
 		}
-		testExternalPluginMetadataAuditLog(t, auditResponse, consts.PluginTypeSecrets.String())
+
+		if resp, ok := auditRecord["response"]; ok {
+			auditResponse, ok := resp.(map[string]interface{})
+			require.True(t, ok)
+
+			testExternalPluginMetadataAuditLog(t, auditResponse, consts.PluginTypeSecrets.String())
+		}
 	}
 
 	// Deregister

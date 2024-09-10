@@ -6,7 +6,7 @@
 // Low level service that allows users to input paths to make requests to vault
 // this service provides the UI synecdote to the cli commands read, write, delete, and list
 import Service from '@ember/service';
-import { getOwner } from '@ember/application';
+import { getOwner } from '@ember/owner';
 import { shiftCommandIndex } from 'vault/lib/console-helpers';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { sanitizePath, ensureTrailingSlash } from 'core/utils/sanitize-path';

@@ -42,17 +42,10 @@ scenario "smoke" {
       edition = [for e in matrix.edition : e if !strcontains(e, "hsm")]
     }
 
-    // arm64 AMIs are not offered for Leap
-    exclude {
-      distro = ["leap"]
-      arch   = ["arm64"]
-    }
-
-    // softhsm packages not available for leap/sles. Enos support for softhsm on amzn2 is
-    // not implemented yet.
+    // softhsm packages not available for leap/sles.
     exclude {
       seal   = ["pkcs11"]
-      distro = ["amzn2", "leap", "sles"]
+      distro = ["leap", "sles"]
     }
 
     // Testing in IPV6 mode is currently implemented for integrated Raft storage only
@@ -73,7 +66,7 @@ scenario "smoke" {
   locals {
     artifact_path = matrix.artifact_source != "artifactory" ? abspath(var.vault_artifact_path) : null
     enos_provider = {
-      amzn2  = provider.enos.ec2_user
+      amzn   = provider.enos.ec2_user
       leap   = provider.enos.ec2_user
       rhel   = provider.enos.ec2_user
       sles   = provider.enos.ec2_user
@@ -182,7 +175,7 @@ scenario "smoke" {
     }
 
     variables {
-      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"]["22.04"]
+      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"][global.distro_version["ubuntu"]]
       cluster_tag_key = global.backend_tag_key
       common_tags     = global.tags
       seal_key_names  = step.create_seal_key.resource_names
@@ -296,7 +289,7 @@ scenario "smoke" {
       license              = matrix.edition != "ce" ? step.read_vault_license.license : null
       local_artifact_path  = local.artifact_path
       manage_service       = local.manage_service
-      packages             = concat(global.packages, global.distro_packages[matrix.distro])
+      packages             = concat(global.packages, global.distro_packages[matrix.distro][global.distro_version[matrix.distro]])
       seal_attributes      = step.create_seal_key.attributes
       seal_type            = matrix.seal
       storage_backend      = matrix.backend
@@ -430,33 +423,6 @@ scenario "smoke" {
     }
   }
 
-  step "verify_vault_version" {
-    description = global.description.verify_vault_version
-    module      = module.vault_verify_version
-    depends_on  = [step.create_vault_cluster]
-
-    providers = {
-      enos = local.enos_provider[matrix.distro]
-    }
-
-    verifies = [
-      quality.vault_version_build_date,
-      quality.vault_version_edition,
-      quality.vault_version_release,
-    ]
-
-    variables {
-      hosts                 = step.create_vault_cluster_targets.hosts
-      vault_addr            = step.create_vault_cluster.api_addr_localhost
-      vault_edition         = matrix.edition
-      vault_install_dir     = global.vault_install_dir[matrix.artifact_type]
-      vault_product_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
-      vault_revision        = matrix.artifact_source == "local" ? step.get_local_metadata.revision : var.vault_revision
-      vault_build_date      = matrix.artifact_source == "local" ? step.get_local_metadata.build_date : var.vault_build_date
-      vault_root_token      = step.create_vault_cluster.root_token
-    }
-  }
-
   step "verify_vault_unsealed" {
     description = global.description.verify_vault_unsealed
     module      = module.vault_verify_unsealed
@@ -479,22 +445,60 @@ scenario "smoke" {
     }
   }
 
-  step "verify_write_test_data" {
-    description = global.description.verify_write_test_data
-    module      = module.vault_verify_write_data
-    depends_on = [
-      step.create_vault_cluster,
-      step.get_vault_cluster_ips
-    ]
+  step "verify_vault_version" {
+    description = global.description.verify_vault_version
+    module      = module.vault_verify_version
+    depends_on  = [step.verify_vault_unsealed]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
     }
 
     verifies = [
+      quality.vault_api_sys_version_history_keys,
+      quality.vault_api_sys_version_history_key_info,
+      quality.vault_version_build_date,
+      quality.vault_version_edition,
+      quality.vault_version_release,
+    ]
+
+    variables {
+      hosts                 = step.create_vault_cluster_targets.hosts
+      vault_addr            = step.create_vault_cluster.api_addr_localhost
+      vault_edition         = matrix.edition
+      vault_install_dir     = global.vault_install_dir[matrix.artifact_type]
+      vault_product_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
+      vault_revision        = matrix.artifact_source == "local" ? step.get_local_metadata.revision : var.vault_revision
+      vault_build_date      = matrix.artifact_source == "local" ? step.get_local_metadata.build_date : var.vault_build_date
+      vault_root_token      = step.create_vault_cluster.root_token
+    }
+  }
+
+  step "verify_secrets_engines_create" {
+    description = global.description.verify_secrets_engines_create
+    module      = module.vault_verify_secrets_engines_create
+    depends_on  = [step.verify_vault_unsealed]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    verifies = [
+      quality.vault_api_auth_userpass_login_write,
+      quality.vault_api_auth_userpass_user_write,
+      quality.vault_api_identity_entity_write,
+      quality.vault_api_identity_entity_alias_write,
+      quality.vault_api_identity_group_write,
+      quality.vault_api_identity_oidc_config_write,
+      quality.vault_api_identity_oidc_introspect_write,
+      quality.vault_api_identity_oidc_key_write,
+      quality.vault_api_identity_oidc_key_rotate_write,
+      quality.vault_api_identity_oidc_role_write,
+      quality.vault_api_identity_oidc_token_read,
+      quality.vault_api_sys_auth_userpass_user_write,
+      quality.vault_api_sys_policy_write,
       quality.vault_mount_auth,
       quality.vault_mount_kv,
-      quality.vault_secrets_auth_user_policy_write,
       quality.vault_secrets_kv_write,
     ]
 
@@ -511,10 +515,7 @@ scenario "smoke" {
     description = global.description.verify_raft_cluster_all_nodes_are_voters
     skip_step   = matrix.backend != "raft"
     module      = module.vault_verify_raft_auto_join_voter
-    depends_on = [
-      step.create_vault_cluster,
-      step.get_vault_cluster_ips
-    ]
+    depends_on  = [step.verify_vault_unsealed]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -534,10 +535,7 @@ scenario "smoke" {
   step "verify_replication" {
     description = global.description.verify_replication_status
     module      = module.vault_verify_replication
-    depends_on = [
-      step.create_vault_cluster,
-      step.get_vault_cluster_ips
-    ]
+    depends_on  = [step.verify_vault_unsealed]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -556,11 +554,11 @@ scenario "smoke" {
     }
   }
 
-  step "verify_read_test_data" {
-    description = global.description.verify_read_test_data
-    module      = module.vault_verify_read_data
+  step "verify_secrets_engines_read" {
+    description = global.description.verify_secrets_engines_read
+    module      = module.vault_verify_secrets_engines_read
     depends_on = [
-      step.verify_write_test_data,
+      step.verify_secrets_engines_create,
       step.verify_replication
     ]
 
@@ -568,9 +566,17 @@ scenario "smoke" {
       enos = local.enos_provider[matrix.distro]
     }
 
-    verifies = quality.vault_secrets_kv_read
+    verifies = [
+      quality.vault_api_auth_userpass_login_write,
+      quality.vault_api_identity_entity_read,
+      quality.vault_api_identity_oidc_config_read,
+      quality.vault_api_identity_oidc_key_read,
+      quality.vault_api_identity_oidc_role_read,
+      quality.vault_secrets_kv_read
+    ]
 
     variables {
+      create_state      = step.verify_secrets_engines_create.state
       hosts             = step.get_vault_cluster_ips.follower_hosts
       vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
@@ -580,10 +586,7 @@ scenario "smoke" {
   step "verify_ui" {
     description = global.description.verify_ui
     module      = module.vault_verify_ui
-    depends_on = [
-      step.create_vault_cluster,
-      step.get_vault_cluster_ips
-    ]
+    depends_on  = [step.verify_vault_unsealed]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -640,6 +643,11 @@ scenario "smoke" {
   output "recovery_keys_hex" {
     description = "The Vault cluster recovery keys hex"
     value       = step.create_vault_cluster.recovery_keys_hex
+  }
+
+  output "secrets_engines_state" {
+    description = "The state of configured secrets engines"
+    value       = step.verify_secrets_engines_create.state
   }
 
   output "seal_key_attributes" {

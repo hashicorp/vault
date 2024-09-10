@@ -81,7 +81,57 @@ Users may not be able to log into Vault if the JWT role is configured
 incorrectly. For additional details, refer to the
 [JWT auth method (API)](/vault/api-docs/auth/jwt) documentation.
 
+### Auto-rolled billing start date
+
+As of 1.17.3 and later, the billing start date (license start date if not configured) rolls over to the latest billing year at the end of the last cycle.
+
+@include 'auto-roll-billing-start.mdx'
+
+@include 'auto-roll-billing-start-example.mdx'
+
+### Docker image no longer contains `curl`
+
+As of 1.17.3 and later, the `curl` binary is no longer included in the published Docker container
+images for Vault and Vault Enterprise. If your workflow depends on `curl` being available in the
+container, consider one of the following strategies:
+
+#### Create a wrapper container image
+
+Use the HashiCorp image as a base image to create a new container image with `curl` installed.
+
+```Dockerfile
+FROM hashicorp/vault-enterprise
+RUN apk add curl
+```
+
+**NOTE:** While this is the preferred option it will require managing your own registry and rebuilding new images.
+
+#### Install it at runtime dynamically
+
+When running the image as root (not recommended), you can install it at runtime dynamically by using the `apk` package manager:
+
+```shell-session
+docker exec <CONTAINER-ID> apk add curl
+```
+```shell-session
+kubectl exec -ti <NAME> -- apk add curl
+```
+
+When running the image as non-root without privilege escalation (recommended) you can use existing
+tools to install a static binary of `curl` into the `vault` users home directory:
+
+```shell-session
+docker exec <CONTAINER-ID> wget https://github.com/moparisthebest/static-curl/releases/latest/download/curl-amd64 -O /home/vault/curl && chmod +x /home/vault/curl
+```
+```shell-session
+kubectl exec -ti <NAME> -- wget https://github.com/moparisthebest/static-curl/releases/latest/download/curl-amd64 -O /home/vault/curl && chmod +x /home/vault/curl
+```
+
+**NOTE:** When using this option you'll want to verify that the static binary comes from a trusted source.
+
 ## Known issues and workarounds
+
+@include 'known-issues/1_17_audit-log-hmac.mdx'
 
 @include 'known-issues/ocsp-redirect.mdx'
 
@@ -92,3 +142,7 @@ incorrectly. For additional details, refer to the
 @include 'known-issues/transit-input-on-cmac-response.mdx'
 
 @include 'known-issues/dangling-entity-aliases-in-memory.mdx'
+
+@include 'known-issues/duplicate-identity-groups.mdx'
+
+@include 'known-issues/manual-entity-merge-does-not-persist.mdx'

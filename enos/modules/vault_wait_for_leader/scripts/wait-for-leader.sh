@@ -2,7 +2,6 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: BUSL-1.1
 
-
 set -e
 
 fail() {
@@ -22,7 +21,7 @@ test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 findLeaderInPrivateIPs() {
   # Find the leader private IP address
   local leader_private_ip
-  if ! leader_private_ip=$($binpath read sys/leader -format=json | jq -er '.data.leader_address | scan("[0-9]+.[0-9]+.[0-9]+.[0-9]+")') ; then
+  if ! leader_private_ip=$($binpath read sys/leader -format=json | jq -er '.data.leader_address | scan("[0-9]+.[0-9]+.[0-9]+.[0-9]+")'); then
     # Some older versions of vault don't support reading sys/leader. Fallback to the cli status.
     if ! leader_private_ip=$($binpath status -format json | jq -er '.leader_address | scan("[0-9]+.[0-9]+.[0-9]+.[0-9]+")'); then
       return 1
@@ -42,7 +41,7 @@ findLeaderInPrivateIPs() {
 findLeaderInIPV6s() {
   # Find the leader private IP address
   local leader_ipv6
-  if ! leader_ipv6=$($binpath read sys/leader -format=json | jq -er '.data.leader_address | scan("\\[(.+)\\]") | .[0]') ; then
+  if ! leader_ipv6=$($binpath read sys/leader -format=json | jq -er '.data.leader_address | scan("\\[(.+)\\]") | .[0]'); then
     # Some older versions of vault don't support reading sys/leader. Fallback to the cli status.
     if ! leader_ipv6=$($binpath status -format json | jq -er '.leader_address | scan("\\[(.+)\\]") | .[0]'); then
       return 1
@@ -69,16 +68,16 @@ while [ "$(date +%s)" -lt "$end_time" ]; do
       if findLeaderInPrivateIPs; then
         exit 0
       fi
-    ;;
+      ;;
     6)
       [[ -z "$VAULT_INSTANCE_IPV6S" ]] && fail "VAULT_INSTANCE_IPV6S env variable has not been set"
       if findLeaderInIPV6s; then
         exit 0
       fi
-    ;;
+      ;;
     *)
       fail "No matching package manager provided."
-    ;;
+      ;;
   esac
 
   sleep "$RETRY_INTERVAL"
@@ -87,11 +86,11 @@ done
 case $IP_VERSION in
   4)
     fail "Timed out waiting for one of $VAULT_INSTANCE_PRIVATE_IPS to be leader."
-  ;;
+    ;;
   6)
     fail "Timed out waiting for one of $VAULT_INSTANCE_IPV6S to be leader."
-  ;;
+    ;;
   *)
     fail "Timed out waiting for leader"
-  ;;
+    ;;
 esac

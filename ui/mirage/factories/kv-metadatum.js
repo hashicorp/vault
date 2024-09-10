@@ -16,10 +16,13 @@ const data = {
   delete_version_after: '3h25m19s',
   max_versions: 15,
   oldest_version: 0,
-  updated_time: '2018-03-22T02:36:43.986212308Z',
+  updated_time: '2023-07-21T03:11:58.095971Z',
+  // the API returns custom_metadata: null if empty but because the attr is an 'object' ember data transforms it to an empty object.
+  // this is important because we rely on the empty object as a truthy value in template conditionals
+  custom_metadata: null,
   versions: {
     1: {
-      created_time: '2023-07-20T02:12:09.11529Z',
+      created_time: '2018-03-22T02:24:06.945319214Z',
       deletion_time: '',
       destroyed: false,
     },
@@ -45,10 +48,13 @@ export default Factory.extend({
   data,
 
   withCustomMetadata: trait({
-    custom_metadata: {
-      foo: 'abc',
-      bar: '123',
-      baz: '5c07d823-3810-48f6-a147-4c06b5219e84',
+    data: {
+      ...data,
+      custom_metadata: {
+        foo: 'abc',
+        bar: '123',
+        baz: '5c07d823-3810-48f6-a147-4c06b5219e84',
+      },
     },
   }),
 
