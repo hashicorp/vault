@@ -17,9 +17,9 @@
       {{#if (not (has-feature this.details.feature))}}
         <Hds::Text::Body @size="300" @tag="div">
           {{this.details.upgradeTitle}}
-          <ExternalLink @href={{this.details.upgradeLink}} class="link" data-test-upgrade-link={{@mode}}>
+          <Hds::Link::Inline @href={{this.details.upgradeLink}} data-test-upgrade-link={{@mode}}>
             Upgrade
-          </ExternalLink>
+          </Hds::Link::Inline>
         </Hds::Text::Body>
       {{else if @model.replicationEnabled}}
         <Hds::Text::Body @tag="div" @size="300" @weight="semibold" @color="strong">ENABLED</Hds::Text::Body>

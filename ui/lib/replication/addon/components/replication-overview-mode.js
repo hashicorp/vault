@@ -11,9 +11,8 @@ import Component from '@glimmer/component';
  * details about a given mode (DR or Performance) status.
  *
  * @example
- * ```js
  * <ReplicationOverviewModeComponent @mode="dr" @model={{this.cluster.dr}} @clusterName={{this.cluster.name}} />
- * ```
+ *
  * @param {string} mode - should be "dr" or "performance"
  * @param {ReplicationAttributesModel} model - either the dr or performance attribute of the cluster model
  * @param {string} clusterName - used for the link to the mode details
