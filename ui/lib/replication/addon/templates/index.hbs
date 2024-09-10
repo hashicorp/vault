@@ -6,6 +6,7 @@
 <section class="section">
   <div class="container is-widescreen">
     {{#if (eq this.model.mode "unsupported")}}
+      {{! Replication is unsupported in non-enterprise or when using non-transactional storage (eg inmem) }}
       <PageHeader as |p|>
         <p.levelLeft>
           <h1 class="title is-3 has-text-grey" data-test-replication-title>
