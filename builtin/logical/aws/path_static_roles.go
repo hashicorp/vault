@@ -220,11 +220,10 @@ func (b *backend) pathStaticRolesWrite(ctx context.Context, req *logical.Request
 			return nil, fmt.Errorf("expected an item with name %q, but got an error: %w", config.Name, err)
 		}
 		// check if i is nil to prevent panic
-		if i != nil {
-			i.Value = config
-		} else {
-			return nil, fmt.Errorf("expected an item with name %q, but no name exists", config.Name)
+		if i == nil {
+			return nil, fmt.Errorf("expected an item with name %q, but got nil", config.Name)
 		}
+		i.Value = config
 		// update the next rotation to occur at now + the new rotation period
 		i.Priority = time.Now().Add(config.RotationPeriod).Unix()
 		err = b.credRotationQueue.Push(i)
