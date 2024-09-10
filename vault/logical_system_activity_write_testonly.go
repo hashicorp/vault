@@ -153,10 +153,19 @@ func (s *singleMonthActivityClients) populateSegments() (map[int][]*activity.Ent
 		return segments, nil
 	}
 
-	totalSegmentCount := 1
+	// determine how many segments are necessary to store the clients for this month
+	// using the default storage limits
+	numNecessarySegments := len(s.clients) / ActivitySegmentClientCapacity
+	if len(s.clients)%ActivitySegmentClientCapacity != 0 {
+		numNecessarySegments++
+	}
+	totalSegmentCount := numNecessarySegments
+
+	// override the segment count if set by client
 	if s.generationParameters.GetNumSegments() > 0 {
 		totalSegmentCount = int(s.generationParameters.GetNumSegments())
 	}
+
 	numNonUsable := len(skipIndexes) + len(emptyIndexes)
 	usableSegmentCount := totalSegmentCount - numNonUsable
 	if usableSegmentCount <= 0 {
@@ -167,6 +176,10 @@ func (s *singleMonthActivityClients) populateSegments() (map[int][]*activity.Ent
 	segmentSizes := len(s.clients) / usableSegmentCount
 	if len(s.clients)%usableSegmentCount != 0 {
 		segmentSizes++
+	}
+
+	if segmentSizes > ActivitySegmentClientCapacity {
+		return nil, fmt.Errorf("the number of segments is too low, it must be greater than %d in order to meet storage limits", numNecessarySegments)
 	}
 
 	clientIndex := 0
