@@ -92,6 +92,7 @@ type tidyConfig struct {
 	CrossRevokedCerts bool `json:"tidy_cross_cluster_revoked_certs"`
 	TidyAcme          bool `json:"tidy_acme"`
 	CertMetadata      bool `json:"tidy_cert_metadata"`
+	CMPV2NonceStore   bool `json:"tidy_cmpv2_nonce_store"`
 
 	// Safety Buffers
 	SafetyBuffer            time.Duration `json:"safety_buffer"`
@@ -106,11 +107,11 @@ type tidyConfig struct {
 }
 
 func (tc *tidyConfig) IsAnyTidyEnabled() bool {
-	return tc.CertStore || tc.RevokedCerts || tc.IssuerAssocs || tc.ExpiredIssuers || tc.BackupBundle || tc.TidyAcme || tc.CrossRevokedCerts || tc.RevocationQueue || tc.CertMetadata
+	return tc.CertStore || tc.RevokedCerts || tc.IssuerAssocs || tc.ExpiredIssuers || tc.BackupBundle || tc.TidyAcme || tc.CrossRevokedCerts || tc.RevocationQueue || tc.CertMetadata || tc.CMPV2NonceStore
 }
 
 func (tc *tidyConfig) AnyTidyConfig() string {
-	return "tidy_cert_store / tidy_revoked_certs / tidy_revoked_cert_issuer_associations / tidy_expired_issuers / tidy_move_legacy_ca_bundle / tidy_revocation_queue / tidy_cross_cluster_revoked_certs / tidy_acme"
+	return "tidy_cert_store / tidy_revoked_certs / tidy_revoked_cert_issuer_associations / tidy_expired_issuers / tidy_move_legacy_ca_bundle / tidy_revocation_queue / tidy_cross_cluster_revoked_certs / tidy_acme / tidy_cmpv2_nonce_store"
 }
 
 var defaultTidyConfig = tidyConfig{
@@ -132,6 +133,7 @@ var defaultTidyConfig = tidyConfig{
 	QueueSafetyBuffer:       48 * time.Hour,
 	CrossRevokedCerts:       false,
 	CertMetadata:            false,
+	CMPV2NonceStore:         false,
 }
 
 func pathTidy(b *backend) *framework.Path {
@@ -226,6 +228,11 @@ func pathTidyCancel(b *backend) *framework.Path {
 							"tidy_cert_metadata": {
 								Type:        framework.TypeBool,
 								Description: `Tidy cert metadata`,
+								Required:    false,
+							},
+							"tidy_cmpv2_nonce_store": {
+								Type:        framework.TypeBool,
+								Description: `Tidy CMPv2 nonce store`,
 								Required:    false,
 							},
 							"pause_duration": {
@@ -337,6 +344,11 @@ func pathTidyCancel(b *backend) *framework.Path {
 								Description: `The number of metadata entries removed`,
 								Required:    false,
 							},
+							"cmpv2_nonce_deleted_count": {
+								Type:        framework.TypeInt,
+								Description: `The number of CMPv2 nonces removed`,
+								Required:    false,
+							},
 						},
 					}},
 				},
@@ -418,6 +430,11 @@ func pathTidyStatus(b *backend) *framework.Path {
 							"tidy_cert_metadata": {
 								Type:        framework.TypeBool,
 								Description: `Tidy cert metadata`,
+								Required:    true,
+							},
+							"tidy_cmpv2_nonce_store": {
+								Type:        framework.TypeBool,
+								Description: `Tidy CMPv2 nonce store`,
 								Required:    true,
 							},
 							"pause_duration": {
@@ -525,6 +542,11 @@ func pathTidyStatus(b *backend) *framework.Path {
 								Description: `The number of metadata entries removed`,
 								Required:    false,
 							},
+							"cmpv2_nonce_deleted_count": {
+								Type:        framework.TypeInt,
+								Description: `The number of CMPv2 nonces removed`,
+								Required:    false,
+							},
 						},
 					}},
 				},
@@ -616,6 +638,11 @@ available on the tidy-status endpoint.`,
 							"tidy_cert_metadata": {
 								Type:        framework.TypeBool,
 								Description: `Tidy cert metadata`,
+								Required:    true,
+							},
+							"tidy_cmpv2_nonce_store": {
+								Type:        framework.TypeBool,
+								Description: `Tidy CMPv2 nonce store`,
 								Required:    true,
 							},
 							"safety_buffer": {
@@ -716,6 +743,11 @@ available on the tidy-status endpoint.`,
 								Description: `Tidy cert metadata`,
 								Required:    true,
 							},
+							"tidy_cmpv2_nonce_store": {
+								Type:        framework.TypeBool,
+								Description: `Tidy CMPv2 nonce store`,
+								Required:    true,
+							},
 							"safety_buffer": {
 								Type:        framework.TypeInt,
 								Description: `Safety buffer time duration`,
@@ -790,6 +822,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 	tidyAcme := d.Get("tidy_acme").(bool)
 	acmeAccountSafetyBuffer := d.Get("acme_account_safety_buffer").(int)
 	tidyCertMetadata := d.Get("tidy_cert_metadata").(bool)
+	tidyCMPV2NonceStore := d.Get("tidy_cmpv2_nonce_store").(bool)
 
 	if safetyBuffer < 1 {
 		return logical.ErrorResponse("safety_buffer must be greater than zero"), nil
@@ -846,6 +879,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 		TidyAcme:                tidyAcme,
 		AcmeAccountSafetyBuffer: acmeAccountSafetyBufferDuration,
 		CertMetadata:            tidyCertMetadata,
+		CMPV2NonceStore:         tidyCMPV2NonceStore,
 	}
 
 	if !atomic.CompareAndSwapUint32(b.tidyCASGuard, 0, 1) {
@@ -979,6 +1013,17 @@ func (b *backend) startTidyOperation(req *logical.Request, config *tidyConfig) {
 
 			if config.CertMetadata {
 				if err := b.doTidyCertMetadata(ctx, req, logger, config); err != nil {
+					return err
+				}
+			}
+
+			// Check for cancel before continuing.
+			if atomic.CompareAndSwapUint32(b.tidyCancelCAS, 1, 0) {
+				return tidyCancelledError
+			}
+
+			if config.CMPV2NonceStore {
+				if err := b.doTidyCMPV2NonceStore(ctx, req.Storage); err != nil {
 					return err
 				}
 			}
