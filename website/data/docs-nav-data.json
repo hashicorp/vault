@@ -1607,10 +1607,11 @@
           },
           {
             "title": "Enrollment over Secure Transport (EST)",
+            "path": "secrets/pki/est",
             "badge": {
-              "text": "BETA",
+              "text": "ENTERPRISE",
               "type": "outlined",
-              "color": "highlight"
+              "color": "neutral"
             },
             "path": "secrets/pki/est"
           },
