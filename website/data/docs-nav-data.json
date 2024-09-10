@@ -1618,9 +1618,9 @@
           {
             "title": "Certificate Management Protocol (CMPv2)",
             "badge": {
-              "text": "BETA",
+              "text": "ENTERPRISE",
               "type": "outlined",
-              "color": "highlight"
+              "color": "neutral"
             },
             "path": "secrets/pki/cmpv2"
           },
