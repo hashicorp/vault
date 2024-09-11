@@ -1593,11 +1593,6 @@
             "path": "secrets/pki/considerations"
           },
           {
-            "title": "Troubleshooting ACME integration",
-            "path": "secrets/pki/troubleshooting-acme"
-          },
-
-          {
             "title": "Rotation Primitives",
             "path": "secrets/pki/rotation-primitives"
           },
@@ -1612,12 +1607,26 @@
           },
           {
             "title": "Enrollment over Secure Transport (EST)",
+            "path": "secrets/pki/est",
             "badge": {
-              "text": "BETA",
+              "text": "ENTERPRISE",
               "type": "outlined",
-              "color": "highlight"
+              "color": "neutral"
             },
             "path": "secrets/pki/est"
+          },
+          {
+            "title": "Certificate Management Protocol (CMPv2)",
+            "badge": {
+              "text": "ENTERPRISE",
+              "type": "outlined",
+              "color": "neutral"
+            },
+            "path": "secrets/pki/cmpv2"
+          },
+          {
+            "title": "Troubleshooting ACME",
+            "path": "secrets/pki/troubleshooting-acme"
           }
         ]
       },

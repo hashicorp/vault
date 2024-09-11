@@ -4,10 +4,10 @@ go 1.21
 
 toolchain go1.22.2
 
-require github.com/hashicorp/vault/api v1.14.0
+require github.com/hashicorp/vault/api v1.15.0
 
 require (
-	github.com/cenkalti/backoff/v3 v3.0.0 // indirect
+	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/go-jose/go-jose/v4 v4.0.1 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
