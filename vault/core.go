@@ -3749,12 +3749,6 @@ func (c *Core) autoRotateBarrierLoop(ctx context.Context) {
 	for {
 		select {
 		case <-t.C:
-			select {
-			default:
-			case <-ctx.Done():
-				t.Stop()
-				return
-			}
 			c.checkBarrierAutoRotate(ctx)
 		case <-ctx.Done():
 			t.Stop()

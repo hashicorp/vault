@@ -2817,12 +2817,6 @@ func runUnseal(c *ServerCommand, core *vault.Core, ctx context.Context) {
 			timer.Stop()
 			return
 		case <-timer.C:
-			select {
-			default:
-			case <-c.ShutdownCh:
-				timer.Stop()
-				return
-			}
 		}
 	}
 }
