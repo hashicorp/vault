@@ -53,6 +53,7 @@ type tidyStatus struct {
 	tidyCrossRevokedCerts bool
 	tidyAcme              bool
 	tidyCertMetadata      bool
+	tidyCMPV2NonceStore   bool
 	pauseDuration         string
 
 	// Status
@@ -70,6 +71,7 @@ type tidyStatus struct {
 	revQueueDeletedCount     uint
 	crossRevokedDeletedCount uint
 	certMetadataDeletedCount uint
+	cmpv2NonceDeletedCount   uint
 
 	acmeAccountsCount        uint
 	acmeAccountsRevokedCount uint
@@ -111,7 +113,7 @@ func (tc *tidyConfig) IsAnyTidyEnabled() bool {
 }
 
 func (tc *tidyConfig) AnyTidyConfig() string {
-	return "tidy_cert_store / tidy_revoked_certs / tidy_revoked_cert_issuer_associations / tidy_expired_issuers / tidy_move_legacy_ca_bundle / tidy_revocation_queue / tidy_cross_cluster_revoked_certs / tidy_acme / tidy_cmpv2_nonce_store"
+	return "tidy_cert_store / tidy_revoked_certs / tidy_revoked_cert_issuer_associations / tidy_expired_issuers / tidy_move_legacy_ca_bundle / tidy_revocation_queue / tidy_cross_cluster_revoked_certs / tidy_acme"
 }
 
 var defaultTidyConfig = tidyConfig{
@@ -1746,6 +1748,7 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 			"tidy_cross_cluster_revoked_certs":      nil,
 			"tidy_acme":                             nil,
 			"tidy_cert_metadata":                    nil,
+			"tidy_cmpv2_nonce_store":                nil,
 			"pause_duration":                        nil,
 			"state":                                 "Inactive",
 			"error":                                 nil,
@@ -1766,6 +1769,7 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 			"acme_orders_deleted_count":             nil,
 			"acme_account_safety_buffer":            nil,
 			"cert_metadata_deleted_count":           nil,
+			"cmpv2_nonce_deleted_count":             nil,
 		},
 	}
 
@@ -1800,6 +1804,7 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 	resp.Data["tidy_cross_cluster_revoked_certs"] = b.tidyStatus.tidyCrossRevokedCerts
 	resp.Data["tidy_acme"] = b.tidyStatus.tidyAcme
 	resp.Data["tidy_cert_metadata"] = b.tidyStatus.tidyCertMetadata
+	resp.Data["tidy_cmpv2_nonce_store"] = b.tidyStatus.tidyCMPV2NonceStore
 	resp.Data["pause_duration"] = b.tidyStatus.pauseDuration
 	resp.Data["time_started"] = b.tidyStatus.timeStarted
 	resp.Data["message"] = b.tidyStatus.message
@@ -1816,6 +1821,7 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 	resp.Data["acme_orders_deleted_count"] = b.tidyStatus.acmeOrdersDeletedCount
 	resp.Data["acme_account_safety_buffer"] = b.tidyStatus.acmeAccountSafetyBuffer
 	resp.Data["cert_metadata_deleted_count"] = b.tidyStatus.certMetadataDeletedCount
+	resp.Data["cmpv2_nonce_deleted_count"] = b.tidyStatus.cmpv2NonceDeletedCount
 
 	switch b.tidyStatus.state {
 	case tidyStatusStarted:
@@ -2101,6 +2107,13 @@ func (b *backend) tidyStatusIncCertMetadataCount() {
 	b.tidyStatus.certMetadataDeletedCount++
 }
 
+func (b *backend) tidyStatusIncCMPV2NonceDeletedCount() {
+	b.tidyStatusLock.Lock()
+	defer b.tidyStatusLock.Unlock()
+
+	b.tidyStatus.cmpv2NonceDeletedCount++
+}
+
 const pathTidyHelpSyn = `
 Tidy up the backend by removing expired certificates, revocation information,
 or both.
@@ -2213,5 +2226,6 @@ func getTidyConfigData(config tidyConfig) map[string]interface{} {
 		"revocation_queue_safety_buffer":           int(config.QueueSafetyBuffer / time.Second),
 		"tidy_cross_cluster_revoked_certs":         config.CrossRevokedCerts,
 		"tidy_cert_metadata":                       config.CertMetadata,
+		"tidy_cmpv2_nonce_store":                   config.CMPV2NonceStore,
 	}
 }
