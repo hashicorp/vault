@@ -160,6 +160,16 @@ func (m *RollbackManager) run() {
 	for {
 		select {
 		case <-tick.C:
+			select {
+			default:
+			case <-m.stopTicker:
+				if !logTestStopOnce {
+					m.logger.Info("stopping rollback manager ticker for tests")
+					logTestStopOnce = true
+				}
+				tick.Stop()
+			}
+
 			m.triggerRollbacks()
 		case <-m.shutdownCh:
 			m.logger.Info("stopping rollback manager")

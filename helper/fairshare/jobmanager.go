@@ -314,6 +314,12 @@ func (j *JobManager) assignWork() {
 				// periodically check if new workers can be assigned. with the
 				// fairsharing worker distribution it can be the case that there
 				// is work waiting, but no queues are eligible for another worker
+				select {
+				default:
+				case <-j.quit:
+					j.wg.Done()
+					return
+				}
 			}
 		}
 	}()
