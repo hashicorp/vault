@@ -13,6 +13,7 @@ import {
   destructureClientCounts,
   sortMonthsByTimestamp,
   filterByMonthDataForMount,
+  filteredTotalForMount,
 } from 'core/utils/client-count-utils';
 import clientsHandler from 'vault/mirage/handlers/clients';
 import {
@@ -479,6 +480,77 @@ module('Integration | Util | client count utils', function (hooks) {
       assert.deepEqual(result[0], this.getExpected('another-mount', 0), 'works when mount is not found');
       result = filterByMonthDataForMount(months, 'unknown-child', 'some-mount');
       assert.deepEqual(result[0], this.getExpected('some-mount', 0), 'works when namespace is not found');
+    });
+  });
+
+  module('filteredTotalForMount', function (hooks) {
+    hooks.beforeEach(function () {
+      this.byNamespace = SERIALIZED_ACTIVITY_RESPONSE.by_namespace;
+    });
+
+    const emptyCounts = {
+      acme_clients: 0,
+      clients: 0,
+      entity_clients: 0,
+      non_entity_clients: 0,
+      secret_syncs: 0,
+    };
+
+    [
+      {
+        when: 'no namespace filter passed',
+        result: 'it returns empty counts',
+        ns: '',
+        mount: 'auth/authid/0',
+        expected: emptyCounts,
+      },
+      {
+        when: 'no mount filter passed',
+        result: 'it returns empty counts',
+        ns: 'ns1',
+        mount: '',
+        expected: emptyCounts,
+      },
+      {
+        when: 'no matching ns/mount exists',
+        result: 'it returns empty counts',
+        ns: 'ns1',
+        mount: 'auth/authid/1',
+        expected: emptyCounts,
+      },
+      {
+        when: 'mount and label have extra slashes',
+        result: 'it returns the data sanitized',
+        ns: 'ns1/',
+        mount: 'auth/authid/0/',
+        expected: {
+          label: 'auth/authid/0',
+          acme_clients: 0,
+          clients: 8394,
+          entity_clients: 4256,
+          non_entity_clients: 4138,
+          secret_syncs: 0,
+        },
+      },
+      {
+        when: 'mount within root',
+        result: 'it returns the data',
+        ns: 'root',
+        mount: 'kvv2-engine-0',
+        expected: {
+          label: 'kvv2-engine-0',
+          acme_clients: 0,
+          clients: 4290,
+          entity_clients: 0,
+          non_entity_clients: 0,
+          secret_syncs: 4290,
+        },
+      },
+    ].forEach((testCase) => {
+      test(`it returns correct values when ${testCase.when}`, async function (assert) {
+        const actual = filteredTotalForMount(this.byNamespace, testCase.ns, testCase.mount);
+        assert.deepEqual(actual, testCase.expected);
+      });
     });
   });
 });
