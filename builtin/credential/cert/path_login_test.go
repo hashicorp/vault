@@ -5,6 +5,7 @@ package cert
 
 import (
 	"context"
+	"crypto"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -281,19 +282,6 @@ func TestCert_RoleResolve_RoleDoesNotExist(t *testing.T) {
 }
 
 func TestCert_RoleResolveOCSP(t *testing.T) {
-	cases := []struct {
-		name        string
-		failOpen    bool
-		certStatus  int
-		errExpected bool
-	}{
-		{"failFalseGoodCert", false, ocsp.Good, false},
-		{"failFalseRevokedCert", false, ocsp.Revoked, true},
-		{"failFalseUnknownCert", false, ocsp.Unknown, true},
-		{"failTrueGoodCert", true, ocsp.Good, false},
-		{"failTrueRevokedCert", true, ocsp.Revoked, true},
-		{"failTrueUnknownCert", true, ocsp.Unknown, false},
-	}
 	certTemplate := &x509.Certificate{
 		Subject: pkix.Name{
 			CommonName: "example.com",
@@ -332,15 +320,76 @@ func TestCert_RoleResolveOCSP(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
+	tempDir, connState2, err := generateTestCertAndConnState(t, certTemplate)
+	if err != nil {
+		t.Fatalf("error testing connection state: %v", err)
+	}
+	ca2, err := ioutil.ReadFile(filepath.Join(tempDir, "ca_cert.pem"))
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	issuer2 := parsePEM(ca2)
+	pkf2, err := ioutil.ReadFile(filepath.Join(tempDir, "ca_key.pem"))
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	pk2, err := certutil.ParsePEMBundle(string(pkf2))
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	type caData struct {
+		privateKey crypto.Signer
+		caBytes    []byte
+		caChain    []*x509.Certificate
+		connState  tls.ConnectionState
+	}
+
+	ca1Data := caData{
+		pk.PrivateKey,
+		ca,
+		issuer,
+		connState,
+	}
+	ca2Data := caData{
+		pk2.PrivateKey,
+		ca2,
+		issuer2,
+		connState2,
+	}
+
+	cases := []struct {
+		name        string
+		failOpen    bool
+		certStatus  int
+		errExpected bool
+		caData      caData
+		ocspCaCerts string
+	}{
+		{name: "failFalseGoodCert", certStatus: ocsp.Good, caData: ca1Data},
+		{name: "failFalseRevokedCert", certStatus: ocsp.Revoked, errExpected: true, caData: ca1Data},
+		{name: "failFalseUnknownCert", certStatus: ocsp.Unknown, errExpected: true, caData: ca1Data},
+		{name: "failTrueGoodCert", failOpen: true, certStatus: ocsp.Good, caData: ca1Data},
+		{name: "failTrueRevokedCert", failOpen: true, certStatus: ocsp.Revoked, errExpected: true, caData: ca1Data},
+		{name: "failTrueUnknownCert", failOpen: true, certStatus: ocsp.Unknown, caData: ca1Data},
+		{name: "failFalseGoodCertExtraCas", certStatus: ocsp.Good, caData: ca2Data, ocspCaCerts: string(pkf2)},
+		{name: "failFalseRevokedCertExtraCas", certStatus: ocsp.Revoked, errExpected: true, caData: ca2Data, ocspCaCerts: string(pkf2)},
+		{name: "failFalseUnknownCertExtraCas", certStatus: ocsp.Unknown, errExpected: true, caData: ca2Data, ocspCaCerts: string(pkf2)},
+		{name: "failTrueGoodCertExtraCas", failOpen: true, certStatus: ocsp.Good, caData: ca2Data, ocspCaCerts: string(pkf2)},
+		{name: "failTrueRevokedCertExtraCas", failOpen: true, certStatus: ocsp.Revoked, errExpected: true, caData: ca2Data, ocspCaCerts: string(pkf2)},
+		{name: "failTrueUnknownCertExtraCas", failOpen: true, certStatus: ocsp.Unknown, caData: ca2Data, ocspCaCerts: string(pkf2)},
+	}
+
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			resp, err := ocsp.CreateResponse(issuer[0], issuer[0], ocsp.Response{
+			resp, err := ocsp.CreateResponse(c.caData.caChain[0], c.caData.caChain[0], ocsp.Response{
 				Status:       c.certStatus,
 				SerialNumber: certTemplate.SerialNumber,
 				ProducedAt:   time.Now(),
 				ThisUpdate:   time.Now(),
 				NextUpdate:   time.Now().Add(time.Hour),
-			}, pk.PrivateKey)
+			}, c.caData.privateKey)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -351,18 +400,18 @@ func TestCert_RoleResolveOCSP(t *testing.T) {
 			var resolveStep logicaltest.TestStep
 			var loginStep logicaltest.TestStep
 			if c.errExpected {
-				loginStep = testAccStepLoginWithNameInvalid(t, connState, "web")
-				resolveStep = testAccStepResolveRoleOCSPFail(t, connState, "web")
+				loginStep = testAccStepLoginWithNameInvalid(t, c.caData.connState, "web")
+				resolveStep = testAccStepResolveRoleOCSPFail(t, c.caData.connState, "web")
 			} else {
-				loginStep = testAccStepLoginWithName(t, connState, "web")
-				resolveStep = testAccStepResolveRoleWithName(t, connState, "web")
+				loginStep = testAccStepLoginWithName(t, c.caData.connState, "web")
+				resolveStep = testAccStepResolveRoleWithName(t, c.caData.connState, "web")
 			}
 			logicaltest.Test(t, logicaltest.TestCase{
 				CredentialBackend: b,
 				Steps: []logicaltest.TestStep{
-					testAccStepCertWithExtraParams(t, "web", ca, "foo", allowed{dns: "example.com"}, false,
-						map[string]interface{}{"ocsp_enabled": true, "ocsp_fail_open": c.failOpen}),
-					testAccStepReadCertPolicy(t, "web", false, map[string]interface{}{"ocsp_enabled": true, "ocsp_fail_open": c.failOpen}),
+					testAccStepCertWithExtraParams(t, "web", c.caData.caBytes, "foo", allowed{dns: "example.com"}, false,
+						map[string]interface{}{"ocsp_enabled": true, "ocsp_fail_open": c.failOpen, "ocsp_ca_certificates": c.ocspCaCerts}),
+					testAccStepReadCertPolicy(t, "web", false, map[string]interface{}{"ocsp_enabled": true, "ocsp_fail_open": c.failOpen, "ocsp_ca_certificates": c.ocspCaCerts}),
 					loginStep,
 					resolveStep,
 				},
