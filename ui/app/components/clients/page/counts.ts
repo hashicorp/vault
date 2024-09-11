@@ -131,7 +131,7 @@ export default class ClientsCountsPageComponent extends Component<Args> {
 
   // namespace list for the search-select filter
   get namespaces() {
-    return this.args.activity.byNamespace
+    return this.args.activity?.byNamespace
       ? this.args.activity.byNamespace
           .map((namespace) => ({
             name: namespace.label,

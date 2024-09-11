@@ -36,7 +36,7 @@
       </Hds::Alert>
     {{/if}}
 
-    {{#if (or @mountPath this.mountPaths)}}
+    {{#if (or @namespace this.namespaces @mountPath this.mountPaths)}}
       <Hds::Text::Display @tag="p">
         Filters
       </Hds::Text::Display>
