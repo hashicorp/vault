@@ -32,10 +32,11 @@ module('Acceptance | chroot-namespace enterprise ui', function (hooks) {
   test('root-only nav items are unavailable', async function (assert) {
     await authPage.login();
 
-    ['Dashboard', 'Secrets Engines', 'Access', 'Tools', 'Policies', 'Client Count'].forEach((nav) => {
+    ['Dashboard', 'Secrets Engines', 'Access', 'Tools', 'Policies'].forEach((nav) => {
       assert.dom(navLink(nav)).exists(`Shows ${nav} nav item in chroot listener`);
     });
-    ['Replication', 'Raft Storage', 'License', 'Seal Vault'].forEach((nav) => {
+    // Client count is not root-only, but it is hidden for chroot
+    ['Replication', 'Raft Storage', 'License', 'Seal Vault', 'Client Count'].forEach((nav) => {
       assert.dom(navLink(nav)).doesNotExist(`Does not show ${nav} nav item in chroot listener`);
     });
 
@@ -83,10 +84,10 @@ module('Acceptance | chroot-namespace enterprise ui', function (hooks) {
     );
 
     await authPage.loginNs(namespace, reader);
-    ['Dashboard', 'Secrets Engines', 'Access', 'Policies', 'Tools', 'Client Count'].forEach((nav) => {
+    ['Dashboard', 'Secrets Engines', 'Access', 'Policies', 'Tools'].forEach((nav) => {
       assert.dom(navLink(nav)).exists(`Shows ${nav} nav item for user with read access policy`);
     });
-    ['Replication', 'Raft Storage', 'License', 'Seal Vault'].forEach((nav) => {
+    ['Replication', 'Raft Storage', 'License', 'Seal Vault', 'Client Count'].forEach((nav) => {
       assert.dom(navLink(nav)).doesNotExist(`Does not show ${nav} nav item for user with read access policy`);
     });
 
@@ -123,10 +124,10 @@ module('Acceptance | chroot-namespace enterprise ui', function (hooks) {
     });
 
     await authPage.loginNs(`${namespace}/child`, childReader);
-    ['Dashboard', 'Secrets Engines', 'Access', 'Policies', 'Tools', 'Client Count'].forEach((nav) => {
+    ['Dashboard', 'Secrets Engines', 'Access', 'Policies', 'Tools'].forEach((nav) => {
       assert.dom(navLink(nav)).exists(`Shows ${nav} nav item within child namespace`);
     });
-    ['Replication', 'Raft Storage', 'License', 'Seal Vault'].forEach((nav) => {
+    ['Replication', 'Raft Storage', 'License', 'Seal Vault', 'Client Count'].forEach((nav) => {
       assert.dom(navLink(nav)).doesNotExist(`Does not show ${nav} nav item within child namespace`);
     });
 
