@@ -217,11 +217,6 @@ func (r *revocationJob) Execute() error {
 		case <-r.m.quitCh:
 			cancel()
 		case <-revokeCtx.Done():
-			select {
-			default:
-			case <-r.m.quitCh:
-				cancel()
-			}
 		}
 	}()
 
