@@ -112,6 +112,32 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
     });
   });
 
+  test('it should hide client counts link in chroot namespace', async function (assert) {
+    this.owner.lookup('service:permissions').setPaths({
+      data: {
+        chroot_namespace: 'admin',
+        root: true,
+      },
+    });
+    this.owner.lookup('service:currentCluster').setCluster({
+      id: 'foo',
+      anyReplicationEnabled: true,
+      usingRaft: true,
+      hasChrootNamespace: true,
+    });
+    const links = ['Client Counts', 'Replication', 'Raft Storage', 'License', 'Seal Vault'];
+
+    await renderComponent();
+    assert
+      .dom('[data-test-sidebar-nav-heading="Monitoring"]')
+      .doesNotExist('Monitoring heading is hidden in chroot namespace');
+    links.forEach((link) => {
+      assert
+        .dom(`[data-test-sidebar-nav-link="${link}"]`)
+        .doesNotExist(`${link} is hidden in chroot namespace`);
+    });
+  });
+
   test('it should render badge for promotional links on managed clusters', async function (assert) {
     this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
     const promotionalLinks = ['Secrets Sync'];
