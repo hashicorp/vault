@@ -2116,12 +2116,6 @@ func (l *RaftLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 	for {
 		select {
 		case isLeader := <-leaderNotifyCh:
-			select {
-			default:
-			case <-stopCh:
-				return nil, nil
-			}
-
 			if isLeader {
 				// We are leader, set the key
 				l.b.l.RLock()

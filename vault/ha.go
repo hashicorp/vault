@@ -332,10 +332,6 @@ func (c *Core) StepDown(httpCtx context.Context, req *logical.Request) (retErr e
 	go func() {
 		select {
 		case <-ctx.Done():
-			select {
-			case <-httpCtx.Done():
-				cancel()
-			}
 		case <-httpCtx.Done():
 			cancel()
 		}
@@ -530,12 +526,6 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 				// If we restarted the for loop due to an error, wait a second
 				// so that we don't busy loop if the error persists.
 				time.Sleep(1 * time.Second)
-			}
-
-			select {
-			case <-stopCh:
-				c.logger.Debug("stop channel triggered in runStandby")
-				return
 			}
 		}
 		firstIteration = false
@@ -936,12 +926,6 @@ func (c *Core) periodicLeaderRefresh(newLeaderCh chan func(), stopCh chan struct
 				}
 				atomic.AddInt32(lopCount, -1)
 			}()
-			select {
-			case <-stopCh:
-				timer.Stop()
-				return
-			}
-
 		case <-stopCh:
 			timer.Stop()
 			return
@@ -1013,12 +997,6 @@ func (c *Core) periodicCheckKeyUpgrades(ctx context.Context, stopCh chan struct{
 				atomic.AddInt32(lopCount, -1)
 				return
 			}()
-			select {
-			case <-stopCh:
-				timer.Stop()
-				return
-			}
-
 		case <-stopCh:
 			timer.Stop()
 			return
@@ -1158,12 +1136,6 @@ func (c *Core) acquireLock(lock physical.Lock, stopCh <-chan struct{}) <-chan st
 		timer := time.NewTimer(lockRetryInterval)
 		select {
 		case <-timer.C:
-			select {
-			case <-stopCh:
-				timer.Stop()
-				return nil
-			}
-
 		case <-stopCh:
 			timer.Stop()
 			return nil
@@ -1239,11 +1211,6 @@ func (c *Core) cleanLeaderPrefix(ctx context.Context, uuid string, leaderLostCh 
 				c.barrier.Delete(ctx, coreLeaderPrefix+keys[0])
 			}
 			keys = keys[1:]
-			select {
-			case <-leaderLostCh:
-				timer.Stop()
-				return
-			}
 		case <-leaderLostCh:
 			timer.Stop()
 			return

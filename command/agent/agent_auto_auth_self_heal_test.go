@@ -173,18 +173,8 @@ func TestAutoAuthSelfHealing_TokenFileAuth_SinkOutput(t *testing.T) {
 	for {
 		select {
 		case <-time.After(wrapUpTimeout):
-			select {
-			default:
-			case <-ctx.Done():
-				return
-			}
 			t.Fatal("test timed out")
 		case err := <-errCh:
-			select {
-			default:
-			case <-ctx.Done():
-				return
-			}
 			require.NoError(t, err)
 		case <-ctx.Done():
 			// We can finish the test ourselves

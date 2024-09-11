@@ -114,12 +114,6 @@ func (b *databaseBackend) runTicker(ctx context.Context, queueTickInterval time.
 	for {
 		select {
 		case <-tick.C:
-			select {
-			default:
-			case <-ctx.Done():
-				b.logger.Info("stopping periodic ticker")
-				return
-			}
 			b.rotateCredentials(ctx, s)
 
 		case <-ctx.Done():

@@ -2126,11 +2126,6 @@ func (c *Core) SealWithRequest(httpCtx context.Context, req *logical.Request) er
 	go func() {
 		select {
 		case <-ctx.Done():
-			select {
-			default:
-			case <-httpCtx.Done():
-				cancel()
-			}
 		case <-httpCtx.Done():
 			cancel()
 		}

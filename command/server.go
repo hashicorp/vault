@@ -722,19 +722,6 @@ func (c *ServerCommand) runRecoveryMode() int {
 			return 0
 
 		case <-c.SigUSR2Ch:
-			select {
-			default:
-			case <-c.ShutdownCh:
-				c.UI.Output("==> Vault shutdown triggered")
-
-				c.cleanupGuard.Do(listenerCloseFunc)
-
-				if err := core.Shutdown(); err != nil {
-					c.UI.Error(fmt.Sprintf("Error with core shutdown: %s", err))
-				}
-
-				return 0
-			}
 			buf := make([]byte, 32*1024*1024)
 			n := runtime.Stack(buf[:], true)
 			c.logger.Info("goroutine trace", "stack", string(buf[:n]))
@@ -1620,17 +1607,6 @@ func (c *ServerCommand) Run(args []string) int {
 			c.UI.Output("==> Vault shutdown triggered")
 			shutdownTriggered = true
 		case <-c.SighupCh:
-			select {
-			default:
-			case <-coreShutdownDoneCh:
-				c.UI.Output("==> Vault core was shut down")
-				retCode = 1
-				shutdownTriggered = true
-			case <-c.ShutdownCh:
-				c.UI.Output("==> Vault shutdown triggered")
-				shutdownTriggered = true
-				continue
-			}
 			c.UI.Output("==> Vault reload triggered")
 
 			// Notify systemd that the server is reloading config
@@ -2317,12 +2293,6 @@ func (c *ServerCommand) storageMigrationActive(backend physical.Backend) bool {
 		timer := time.NewTimer(2 * time.Second)
 		select {
 		case <-timer.C:
-			select {
-			default:
-			case <-c.ShutdownCh:
-				timer.Stop()
-				return true
-			}
 		case <-c.ShutdownCh:
 			timer.Stop()
 			return true
