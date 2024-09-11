@@ -1,0 +1,49 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<Hds::Card::Container @level="mid" @hasBorder={{true}} ...attributes>
+  <div class="has-padding-m">
+    <div class="flex">
+      <Icon @size="24" @name={{this.details.icon}} />
+      <Hds::Text::Display
+        @tag="h2"
+        @size="400"
+        data-test-overview-mode-title
+      >{{this.details.blockTitle}}</Hds::Text::Display>
+    </div>
+    <div class="has-top-padding-m has-bottom-padding-m" data-test-overview-mode-body>
+      {{#if (not (has-feature this.details.feature))}}
+        <Hds::Text::Body @size="300" @tag="div">
+          {{this.details.upgradeTitle}}
+          <Hds::Link::Inline @href={{this.details.upgradeLink}} data-test-upgrade-link={{@mode}}>
+            Upgrade
+          </Hds::Link::Inline>
+        </Hds::Text::Body>
+      {{else if @model.replicationEnabled}}
+        <Hds::Text::Body @tag="div" @size="300" @weight="semibold" @color="strong">ENABLED</Hds::Text::Body>
+        <div class="has-bottom-padding-s">
+          <Hds::Text::Body @color="faint">{{capitalize @model.modeForUrl}}</Hds::Text::Body>
+          {{#if @model.secondaryId}}
+            <Hds::Badge @text={{@model.secondaryId}} />
+          {{/if}}
+          {{#if @model.clusterIdDisplay}}
+            <Hds::Badge @text={{@model.clusterIdDisplay}} />
+          {{/if}}
+        </div>
+      {{/if}}
+
+      <Hds::Text::Body @color="faint">{{replication-mode-description @mode}}</Hds::Text::Body>
+    </div>
+    {{#if (has-feature this.details.feature)}}
+      <Hds::Button
+        @route="mode.index"
+        @models={{array @clusterName @mode}}
+        @color={{if @model.replicationEnabled "secondary" "primary"}}
+        @text={{if @model.replicationEnabled "Details" "Enable"}}
+        data-test-replication-details-link={{@mode}}
+      />
+    {{/if}}
+  </div>
+</Hds::Card::Container>

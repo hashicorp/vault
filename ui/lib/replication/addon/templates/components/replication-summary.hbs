@@ -3,88 +3,39 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-{{#if (not (has-feature "DR Replication"))}}
-  <UpgradePage @title="Replication" />
-{{else if this.showModeSummary}}
-  {{#if (not (and this.cluster.dr.replicationEnabled this.cluster.performance.replicationEnabled))}}
-    <PageHeader as |p|>
-      <p.levelLeft>
-        <h1 class="title is-3" data-test-replication-title>
-          Replication
-        </h1>
-      </p.levelLeft>
-    </PageHeader>
-  {{/if}}
-
-  {{#if (and (eq this.cluster.dr.mode "primary") (eq this.cluster.performance.mode "primary"))}}
+{{#if (eq this.attrsForCurrentMode.mode "initializing")}}
+  The cluster is initializing replication. This may take some time.
+{{else}}
+  <p>{{this.cluster.replicationModeStatus.cluster_id}}</p>
+  <div class="replication">
     <ReplicationPage @model={{this.cluster}} as |Page|>
-      <Page.header @showTabs={{true}} />
-      <Page.dashboard @componentToRender="replication-summary-card" as |Dashboard|>
-        <Dashboard.card @title="Disaster Recovery" />
-        <Dashboard.card @title="Performance" />
+      <Page.dashboard
+        @data={{this.cluster}}
+        @componentToRender={{if
+          (eq this.attrsForCurrentMode.mode "secondary")
+          "replication-secondary-card"
+          "replication-primary-card"
+        }}
+        as |Dashboard|
+      >
+        {{#if (eq this.attrsForCurrentMode.mode "secondary")}}
+          <Dashboard.card @title="Status" />
+          <Dashboard.card @title="Primary cluster" />
+        {{else}}
+          <Dashboard.card
+            @title="State"
+            @description="The cluster’s current operating state."
+            @glyph={{get (cluster-states this.attrsForCurrentMode.state) "glyph"}}
+            @metric={{this.attrsForCurrentMode.state}}
+          />
+          <Dashboard.card
+            @title="Last WAL entry"
+            @description="Index of last Write Ahead Logs entry written on local storage. Updates every ten seconds."
+            @metric={{format-number this.attrsForCurrentMode.lastWAL}}
+          />
+          <Dashboard.secondaryCard @cluster={{this.cluster}} @replicationAttrs={{this.attrsForCurrentMode}} />
+        {{/if}}
       </Page.dashboard>
     </ReplicationPage>
-  {{else}}
-    <div class="box is-sideless is-fullwidth is-marginless">
-      <h3 class="title is-flex-center is-5 is-marginless">
-        <Icon @size="24" @name="replication-direct" />
-        Disaster Recovery (DR)
-      </h3>
-      {{#if this.cluster.dr.replicationEnabled}}
-        {{#if this.submit.isRunning}}
-          <LayoutLoading />
-        {{else}}
-          <ReplicationModeSummary @mode="dr" @cluster={{this.cluster}} @tagName="span" />
-        {{/if}}
-      {{else}}
-        <ReplicationModeSummary @mode="dr" @cluster={{this.cluster}} @tagName="div" />
-      {{/if}}
-    </div>
-    {{#if (not (and this.submit.isRunning (eq this.cluster.dr.mode "bootstrapping")))}}
-      <div class="box is-bottomless is-fullwidth is-marginless">
-        <h3 class="title is-flex-center is-5 is-marginless">
-          <Icon @size="24" @name="replication-perf" />
-          Performance
-        </h3>
-        <ReplicationModeSummary @mode="performance" @cluster={{this.cluster}} @tagName="span" />
-      </div>
-    {{/if}}
-  {{/if}}
-{{else}}
-  {{#if (eq this.attrsForCurrentMode.mode "initializing")}}
-    The cluster is initializing replication. This may take some time.
-  {{else}}
-    <p>{{this.cluster.replicationModeStatus.cluster_id}}</p>
-    <div class="replication">
-      <ReplicationPage @model={{this.cluster}} as |Page|>
-        <Page.dashboard
-          @data={{this.cluster}}
-          @componentToRender={{if
-            (eq this.attrsForCurrentMode.mode "secondary")
-            "replication-secondary-card"
-            "replication-primary-card"
-          }}
-          as |Dashboard|
-        >
-          {{#if (eq this.attrsForCurrentMode.mode "secondary")}}
-            <Dashboard.card @title="Status" />
-            <Dashboard.card @title="Primary cluster" />
-          {{else}}
-            <Dashboard.card
-              @title="State"
-              @description="The cluster’s current operating state."
-              @glyph={{get (cluster-states this.attrsForCurrentMode.state) "glyph"}}
-              @metric={{this.attrsForCurrentMode.state}}
-            />
-            <Dashboard.card
-              @title="Last WAL entry"
-              @description="Index of last Write Ahead Logs entry written on local storage. Updates every ten seconds."
-              @metric={{format-number this.attrsForCurrentMode.lastWAL}}
-            />
-            <Dashboard.secondaryCard @cluster={{this.cluster}} @replicationAttrs={{this.attrsForCurrentMode}} />
-          {{/if}}
-        </Page.dashboard>
-      </ReplicationPage>
-    </div>
-  {{/if}}
+  </div>
 {{/if}}
