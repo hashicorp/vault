@@ -13,7 +13,7 @@ import { ValidationMap } from 'vault/vault/app-types';
 import errorMessage from 'vault/utils/error-message';
 
 import type LeaseConfigModel from 'vault/models/aws/lease-config';
-import type RootConfigModel from 'vault/models/aws/root-config';
+import type ConfigModel from 'vault/models/azure/config';
 import type IdentityOidcConfigModel from 'vault/models/identity/oidc/config';
 import type Router from '@ember/routing/router';
 import type StoreService from 'vault/services/store';
@@ -21,28 +21,27 @@ import type VersionService from 'vault/services/version';
 import type FlashMessageService from 'vault/services/flash-messages';
 
 /**
- * @module ConfigureAwsComponent is used to configure the AWS secret engine
- * A user can configure the endpoint root/config and/or lease/config.
+ * @module ConfigureAzureComponent is used to configure the Azure secret engine
+ * A user can configure the endpoint config.
  * For enterprise users, they will see an additional option to config WIF attributes in place of IAM attributes.
  * The fields for these endpoints are on one form.
  *
  * @example
  * ```js
- * <SecretEngine::ConfigureAws
-    @rootConfig={{this.model.aws-root-config}}
-    @leaseConfig={{this.model.aws-lease-config}}
+ * <SecretEngine::ConfigureAzure
+    @model={{this.model.azure-config}}
     @backendPath={{this.model.id}}
+    @issuerConfig={{this.model.identity-oidc-config}}
     />
  * ```
  *
- * @param {object} rootConfig - AWS config/root model
- * @param {object} leaseConfig - AWS config/lease model
- * @param {string} backendPath - name of the AWS secret engine, ex: 'aws-123'
+ * @param {object} model - Azure config model
+ * @param {string} backendPath - name of the Azure secret engine, ex: 'azure-123'
+ * @param {object} issuerConfigModel - the identity/oidc/config model
  */
 
 interface Args {
-  leaseConfig: LeaseConfigModel;
-  rootConfig: RootConfigModel;
+  model: ConfigModel;
   issuerConfig: IdentityOidcConfigModel;
   backendPath: string;
 }
@@ -53,10 +52,9 @@ export default class ConfigureAwsComponent extends Component<Args> {
   @service declare readonly version: VersionService;
   @service declare readonly flashMessages: FlashMessageService;
 
-  @tracked errorMessageRoot: string | null = null;
-  @tracked errorMessageLease: string | null = null;
+  @tracked errorMessage: string | null = null;
   @tracked invalidFormAlert: string | null = null;
-  @tracked modelValidationsLease: ValidationMap | null = null;
+  // @tracked modelValidationsLease: ValidationMap | null = null;
   @tracked accessType = 'iam';
   @tracked saveIssuerWarning = '';
 

@@ -21,6 +21,8 @@ import type VersionService from 'vault/services/version';
 
 const CONFIG_ADAPTERS_PATHS: Record<string, string[]> = {
   aws: ['aws/lease-config', 'aws/root-config'],
+  azure: ['azure/config'],
+  gcp: ['gcp/config'],
   ssh: ['ssh/ca-config'],
 };
 
@@ -79,6 +81,7 @@ export default class SecretsBackendConfigurationEdit extends Route {
         model['identity-oidc-config'] = { queryIssuerError: true };
       }
     }
+
     return model;
   }
 

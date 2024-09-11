@@ -69,6 +69,10 @@ export default class SecretsBackendConfigurationRoute extends Route {
         return this.fetchAwsConfigs(id);
       case 'ssh':
         return this.fetchSshCaConfig(id);
+      case 'azure':
+        return this.fetchAzureConfig(id);
+      case 'gcp':
+        return this.fetchGcpConfig(id);
       default:
         return reject({ httpStatus: 404, message: 'not found', path: id });
     }
@@ -119,6 +123,32 @@ export default class SecretsBackendConfigurationRoute extends Route {
       if (e.httpStatus === 400 && e.errors[0] === `keys haven't been configured yet`) {
         // When first mounting a SSH engine it throws a 400 error with this specific message.
         // We want to catch this situation and return nothing so that the component can handle it correctly.
+        return;
+      }
+      throw e;
+    }
+  }
+
+  async fetchAzureConfig(id) {
+    try {
+      // Azure will return a 200 if the config has not been set. The only way to check if it's been configured or not is to check the response for subscription_id which is a required field.
+      const response = await this.store.queryRecord('azure/config', { backend: id });
+      return response.subscriptionId ? response : null;
+    } catch (e) {
+      if (e.httpStatus === 404) {
+        // a 404 error is thrown when Azure's config hasn't been set yet.
+        return;
+      }
+      throw e;
+    }
+  }
+
+  async fetchGcpConfig(id) {
+    try {
+      return await this.store.queryRecord('gcp/config', { backend: id });
+    } catch (e) {
+      if (e.httpStatus === 404) {
+        // a 404 error is thrown when GCP's config hasn't been set yet.
         return;
       }
       throw e;

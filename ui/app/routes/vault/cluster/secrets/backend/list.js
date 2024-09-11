@@ -7,7 +7,7 @@ import { set } from '@ember/object';
 import { hash } from 'rsvp';
 import Route from '@ember/routing/route';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
-import { allEngines, isAddonEngine } from 'vault/helpers/mountable-secret-engines';
+import { allEngines, isAddonEngine, CONFIGURATION_ONLY } from 'vault/helpers/mountable-secret-engines';
 import { service } from '@ember/service';
 import { normalizePath } from 'vault/utils/path-encoding-helpers';
 import { assert } from '@ember/debug';
@@ -83,6 +83,10 @@ export default Route.extend({
     const secretEngine = this.store.peekRecord('secret-engine', backend);
     const type = secretEngine?.engineType;
     assert('secretEngine.engineType is not defined', !!type);
+    // if configuration only, redirect to configuration route
+    CONFIGURATION_ONLY.includes(type) &&
+      this.router.transitionTo('vault.cluster.secrets.backend.configuration', backend);
+
     const engineRoute = allEngines().find((engine) => engine.type === type)?.engineRoute;
 
     if (!type || !SUPPORTED_BACKENDS.includes(type)) {
