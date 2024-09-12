@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+import { debug } from '@ember/debug';
 import { dasherize } from '@ember/string';
 import { singularize } from 'ember-inflector';
 
@@ -166,3 +167,73 @@ export function getHelpUrlForModel(modelType: string, backend: string) {
   if (!urlFn) return null;
   return urlFn(backend);
 }
+
+interface Attribute {
+  name: string;
+  type: string | undefined;
+  options: {
+    editType?: string;
+    fieldGroup?: string;
+    fieldValue?: string;
+    label?: string;
+    readonly?: boolean;
+  };
+}
+// This is the object returned from expandOpenApiProps
+interface MixedAttr {
+  type: string;
+  editType?: string;
+  fieldGroup: string;
+  fieldValue?: string;
+  label?: string;
+  readonly?: boolean;
+}
+
+/**
+ * combineOpenApiAttrs takes attributes defined on an existing models
+ * and adds in the attributes found on an OpenAPI response. The values
+ * defined on the model should take precedence so we can overwrite
+ * attributes from OpenAPI.
+ */
+export const combineOpenApiAttrs = function (
+  oldAttrs: Map<string, Attribute>,
+  openApiProps: Record<string, MixedAttr>
+) {
+  const allAttrs: Record<string, boolean> = {};
+  const attrsArray: Attribute[] = [];
+  const newFields: string[] = [];
+
+  // First iterate over all the existing attrs and combine with recieved props, if they exist
+  oldAttrs.forEach(function (oldAttr, name) {
+    const attr: Attribute = { name, type: oldAttr.type, options: oldAttr.options };
+    const openApiProp = openApiProps[name];
+    if (openApiProp) {
+      const { type, ...options } = openApiProp;
+      // TODO: previous behavior took the openApi type no matter what
+      attr.type = oldAttr.type ?? type;
+      if (oldAttr.type && type && type !== oldAttr.type) {
+        debug(`mismatched type for ${name} -- ${type} vs ${oldAttr.type}`);
+      }
+      attr.options = { ...options, ...oldAttr.options };
+    }
+    attrsArray.push(attr);
+    // add to all attrs so we skip in the next part
+    allAttrs[name] = true;
+  });
+
+  // then iterate over all the new props and add them if they haven't already been accounted for
+  for (const name in openApiProps) {
+    // iterate over each
+    if (allAttrs[name]) {
+      continue;
+    } else {
+      const prop = openApiProps[name];
+      if (prop) {
+        const { type, ...options } = prop;
+        newFields.push(name);
+        attrsArray.push({ name, type, options });
+      }
+    }
+  }
+  return { attrs: attrsArray, newFields };
+};

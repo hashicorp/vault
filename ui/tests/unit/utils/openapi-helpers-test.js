@@ -4,9 +4,18 @@
  */
 
 import { module, test } from 'qunit';
-import { _getPathParam, getHelpUrlForModel, pathToHelpUrlSegment } from 'vault/utils/openapi-helpers';
+import {
+  _getPathParam,
+  combineOpenApiAttrs,
+  getHelpUrlForModel,
+  pathToHelpUrlSegment,
+} from 'vault/utils/openapi-helpers';
+import Model, { attr } from '@ember-data/model';
+import { setupTest } from 'ember-qunit';
 
-module('Unit | Utility | OpenAPI helper utils', function () {
+module('Unit | Utility | OpenAPI helper utils', function (hooks) {
+  setupTest(hooks);
+
   test(`pathToHelpUrlSegment`, function (assert) {
     [
       { path: '/auth/{username}', result: '/auth/example' },
@@ -46,6 +55,87 @@ module('Unit | Utility | OpenAPI helper utils', function () {
         test.result,
         `returns first param for ${test.path}`
       );
+    });
+  });
+
+  test('combineOpenApiAttrs should combine attributes correctly', async function (assert) {
+    class FooModel extends Model {
+      @attr('string', {
+        label: 'Foo',
+        subText: 'A form field',
+      })
+      foo;
+      @attr('boolean', {
+        label: 'Bar',
+        subText: 'Maybe a checkbox',
+      })
+      bar;
+      @attr('number', {
+        label: 'Baz',
+        subText: 'A number field',
+      })
+      baz;
+    }
+    this.owner.register('model:foo', FooModel);
+    const myModel = this.owner.lookup('service:store').modelFor('foo');
+    const newProps = {
+      foo: {
+        editType: 'ttl',
+      },
+      baz: {
+        type: 'number',
+        editType: 'slider',
+        label: 'Old label',
+      },
+      foobar: {
+        type: 'string',
+        label: 'Foo-bar',
+      },
+    };
+    const expected = [
+      {
+        name: 'foo',
+        type: 'string',
+        options: {
+          label: 'Foo',
+          subText: 'A form field',
+          editType: 'ttl',
+        },
+      },
+      {
+        name: 'bar',
+        type: 'boolean',
+        options: {
+          label: 'Bar',
+          subText: 'Maybe a checkbox',
+        },
+      },
+      {
+        name: 'baz',
+        type: 'number',
+        options: {
+          label: 'Baz', // uses the value we set on the model
+          editType: 'slider',
+          subText: 'A number field',
+        },
+      },
+      {
+        name: 'foobar',
+        type: 'string',
+        options: {
+          label: 'Foo-bar',
+        },
+      },
+    ];
+    const { attrs, newFields } = combineOpenApiAttrs(myModel.attributes, newProps);
+    assert.deepEqual(newFields, ['foobar'], 'correct newFields added');
+
+    // When combineOpenApiAttrs
+    assert.strictEqual(attrs.length, 4, 'correct number of attributes returned');
+    expected.forEach((exp) => {
+      const name = exp.name;
+      const attr = attrs.find((a) => a.name === name);
+      assert.deepEqual(attr, exp, `${name} combined properly`);
     });
   });
 });
