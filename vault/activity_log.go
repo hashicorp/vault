@@ -1401,7 +1401,7 @@ func (a *ActivityLog) perfStandbyFragmentWorker(ctx context.Context) {
 		select {
 		case <-a.doneCh:
 			// Shutting down activity log.
-			if fragmentWaiting && !timer.Stop() {
+			if fragmentWaiting && cap(timer.C) == 1 && !timer.Stop() {
 				<-timer.C
 			}
 			if !endOfMonth.Stop() {
@@ -1430,7 +1430,7 @@ func (a *ActivityLog) perfStandbyFragmentWorker(ctx context.Context) {
 			// not running.
 			if fragmentWaiting {
 				fragmentWaiting = false
-				if !timer.Stop() {
+				if cap(timer.C) == 1 && !timer.Stop() {
 					<-timer.C
 				}
 			}
@@ -1440,7 +1440,7 @@ func (a *ActivityLog) perfStandbyFragmentWorker(ctx context.Context) {
 			// Flush the current fragment, if any
 			if fragmentWaiting {
 				fragmentWaiting = false
-				if !timer.Stop() {
+				if cap(timer.C) == 1 && !timer.Stop() {
 					<-timer.C
 				}
 			}
