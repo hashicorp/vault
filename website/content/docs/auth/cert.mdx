@@ -23,7 +23,7 @@ CA certificates are associated with a role; role names and CRL names are normali
 lower-case.
 
 Please note that to use this auth method, `tls_disable` and `tls_disable_client_certs` must be false in the Vault
-configuration. This is because the certificates are sent through TLS communication itself.
+configuration. This is because the certificates are sent through TLS communication itself. 
 
 ## Revocation checking
 
@@ -139,6 +139,18 @@ management tool.
    "web" and "prod" policies. The certificate (public key) used to verify
    clients is given by the "web-cert.pem" file. Lastly, an optional `ttl` value
    can be provided in seconds to limit the lease duration.
+
+### Load Balancing / Proxying Consideration
+
+If the Vault server is fronted by a reverse proxy or load balancer, TLS is
+terminated before Vault.  In that case the proxy must provide the validated
+client certificate via header, and [configured in the Vault configuration's
+listener stanza](/vault/docs/configuration/listener/tcp#tcp-listener-parameters).
+
+Configure the listener with the header name that your load balancer provides.  
+In this mode, the security of authentication depends on the load balancer performing 
+full TLS verification to the client, and that the connection between the load
+balancer and Vault is secured, ideally with Mutual TLS.
 
 ## API
 
