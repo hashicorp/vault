@@ -2835,6 +2835,7 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 func (c *Core) preSeal() error {
 	defer metrics.MeasureSince([]string{"core", "pre_seal"}, time.Now())
 	c.logger.Info("pre-seal teardown starting")
+	defer c.logger.Debug("exiting pre-seal teardown")
 
 	if seal, ok := c.seal.(*autoSeal); ok {
 		seal.StopHealthCheck()
