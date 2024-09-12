@@ -219,6 +219,12 @@ func (b *backend) pathStaticRolesWrite(ctx context.Context, req *logical.Request
 		if err != nil {
 			return nil, fmt.Errorf("expected an item with name %q, but got an error: %w", config.Name, err)
 		}
+		// check if i is nil to prevent panic because
+		// 1. PopByKey returns nil if the key does not exist; and
+		// 2. the static cred queue is not repopulated on reload (see VAULT-30877)
+		if i == nil {
+			return nil, fmt.Errorf("expected an item with name %q, but got nil", config.Name)
+		}
 		i.Value = config
 		// update the next rotation to occur at now + the new rotation period
 		i.Priority = time.Now().Add(config.RotationPeriod).Unix()
