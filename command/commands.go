@@ -189,18 +189,18 @@ func newVaultHandlers() *vaultHandlers {
 	return handlers
 }
 
+func getBaseCommand(ui cli.Ui, runOpts *RunOptions) *BaseCommand {
+	return &BaseCommand{
+		UI:             ui,
+		tokenHelper:    runOpts.TokenHelper,
+		flagAddress:    runOpts.Address,
+		client:         runOpts.Client,
+		hcpTokenHelper: runOpts.HCPTokenHelper,
+	}
+}
+
 func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.CommandFactory {
 	handlers := newVaultHandlers()
-
-	getBaseCommand := func() *BaseCommand {
-		return &BaseCommand{
-			UI:             ui,
-			tokenHelper:    runOpts.TokenHelper,
-			flagAddress:    runOpts.Address,
-			client:         runOpts.Client,
-			hcpTokenHelper: runOpts.HCPTokenHelper,
-		}
-	}
 
 	commands := map[string]cli.CommandFactory{
 		"agent": func() (cli.Command, error) {
@@ -215,377 +215,377 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 		},
 		"agent generate-config": func() (cli.Command, error) {
 			return &AgentGenerateConfigCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"audit": func() (cli.Command, error) {
 			return &AuditCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"audit disable": func() (cli.Command, error) {
 			return &AuditDisableCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"audit enable": func() (cli.Command, error) {
 			return &AuditEnableCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"audit list": func() (cli.Command, error) {
 			return &AuditListCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"auth tune": func() (cli.Command, error) {
 			return &AuthTuneCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"auth": func() (cli.Command, error) {
 			return &AuthCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"auth disable": func() (cli.Command, error) {
 			return &AuthDisableCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"auth enable": func() (cli.Command, error) {
 			return &AuthEnableCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"auth help": func() (cli.Command, error) {
 			return &AuthHelpCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 				Handlers:    handlers.loginHandlers,
 			}, nil
 		},
 		"auth list": func() (cli.Command, error) {
 			return &AuthListCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"auth move": func() (cli.Command, error) {
 			return &AuthMoveCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"debug": func() (cli.Command, error) {
 			return &DebugCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 				ShutdownCh:  MakeShutdownCh(),
 			}, nil
 		},
 		"delete": func() (cli.Command, error) {
 			return &DeleteCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"events subscribe": func() (cli.Command, error) {
 			return &EventsSubscribeCommands{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"lease": func() (cli.Command, error) {
 			return &LeaseCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"lease renew": func() (cli.Command, error) {
 			return &LeaseRenewCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"lease lookup": func() (cli.Command, error) {
 			return &LeaseLookupCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"lease revoke": func() (cli.Command, error) {
 			return &LeaseRevokeCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"list": func() (cli.Command, error) {
 			return &ListCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"login": func() (cli.Command, error) {
 			return &LoginCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 				Handlers:    handlers.loginHandlers,
 			}, nil
 		},
 		"namespace": func() (cli.Command, error) {
 			return &NamespaceCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"namespace list": func() (cli.Command, error) {
 			return &NamespaceListCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"namespace lookup": func() (cli.Command, error) {
 			return &NamespaceLookupCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"namespace create": func() (cli.Command, error) {
 			return &NamespaceCreateCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"namespace patch": func() (cli.Command, error) {
 			return &NamespacePatchCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"namespace delete": func() (cli.Command, error) {
 			return &NamespaceDeleteCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"namespace lock": func() (cli.Command, error) {
 			return &NamespaceAPILockCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"namespace unlock": func() (cli.Command, error) {
 			return &NamespaceAPIUnlockCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"operator": func() (cli.Command, error) {
 			return &OperatorCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"operator diagnose": func() (cli.Command, error) {
 			return &OperatorDiagnoseCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"operator generate-root": func() (cli.Command, error) {
 			return &OperatorGenerateRootCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"operator init": func() (cli.Command, error) {
 			return &OperatorInitCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"operator key-status": func() (cli.Command, error) {
 			return &OperatorKeyStatusCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"operator migrate": func() (cli.Command, error) {
 			return &OperatorMigrateCommand{
-				BaseCommand:      getBaseCommand(),
+				BaseCommand:      getBaseCommand(ui, runOpts),
 				PhysicalBackends: handlers.physicalBackends,
 				ShutdownCh:       MakeShutdownCh(),
 			}, nil
 		},
 		"operator raft": func() (cli.Command, error) {
 			return &OperatorRaftCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"operator raft autopilot get-config": func() (cli.Command, error) {
 			return &OperatorRaftAutopilotGetConfigCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"operator raft autopilot set-config": func() (cli.Command, error) {
 			return &OperatorRaftAutopilotSetConfigCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"operator raft autopilot state": func() (cli.Command, error) {
 			return &OperatorRaftAutopilotStateCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"operator raft list-peers": func() (cli.Command, error) {
 			return &OperatorRaftListPeersCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"operator raft join": func() (cli.Command, error) {
 			return &OperatorRaftJoinCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"operator raft remove-peer": func() (cli.Command, error) {
 			return &OperatorRaftRemovePeerCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"operator raft snapshot": func() (cli.Command, error) {
 			return &OperatorRaftSnapshotCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"operator raft snapshot inspect": func() (cli.Command, error) {
 			return &OperatorRaftSnapshotInspectCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"operator raft snapshot restore": func() (cli.Command, error) {
 			return &OperatorRaftSnapshotRestoreCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"operator raft snapshot save": func() (cli.Command, error) {
 			return &OperatorRaftSnapshotSaveCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"operator rekey": func() (cli.Command, error) {
 			return &OperatorRekeyCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"operator rotate": func() (cli.Command, error) {
 			return &OperatorRotateCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"operator seal": func() (cli.Command, error) {
 			return &OperatorSealCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"operator step-down": func() (cli.Command, error) {
 			return &OperatorStepDownCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"operator usage": func() (cli.Command, error) {
 			return &OperatorUsageCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"operator utilization": func() (cli.Command, error) {
 			return &OperatorUtilizationCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"operator unseal": func() (cli.Command, error) {
 			return &OperatorUnsealCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"operator members": func() (cli.Command, error) {
 			return &OperatorMembersCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"patch": func() (cli.Command, error) {
 			return &PatchCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"path-help": func() (cli.Command, error) {
 			return &PathHelpCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"pki": func() (cli.Command, error) {
 			return &PKICommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"pki health-check": func() (cli.Command, error) {
 			return &PKIHealthCheckCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"pki issue": func() (cli.Command, error) {
 			return &PKIIssueCACommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"pki list-intermediates": func() (cli.Command, error) {
 			return &PKIListIntermediateCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"pki reissue": func() (cli.Command, error) {
 			return &PKIReIssueCACommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"pki verify-sign": func() (cli.Command, error) {
 			return &PKIVerifySignCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"plugin": func() (cli.Command, error) {
 			return &PluginCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"plugin deregister": func() (cli.Command, error) {
 			return &PluginDeregisterCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"plugin info": func() (cli.Command, error) {
 			return &PluginInfoCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"plugin list": func() (cli.Command, error) {
 			return &PluginListCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"plugin register": func() (cli.Command, error) {
 			return &PluginRegisterCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"plugin reload": func() (cli.Command, error) {
 			return &PluginReloadCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"plugin reload-status": func() (cli.Command, error) {
 			return &PluginReloadStatusCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"plugin runtime": func() (cli.Command, error) {
 			return &PluginRuntimeCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"plugin runtime register": func() (cli.Command, error) {
 			return &PluginRuntimeRegisterCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"plugin runtime deregister": func() (cli.Command, error) {
 			return &PluginRuntimeDeregisterCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"plugin runtime info": func() (cli.Command, error) {
 			return &PluginRuntimeInfoCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"plugin runtime list": func() (cli.Command, error) {
 			return &PluginRuntimeListCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"proxy": func() (cli.Command, error) {
@@ -600,270 +600,254 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 		},
 		"policy": func() (cli.Command, error) {
 			return &PolicyCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"policy delete": func() (cli.Command, error) {
 			return &PolicyDeleteCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"policy fmt": func() (cli.Command, error) {
 			return &PolicyFmtCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"policy list": func() (cli.Command, error) {
 			return &PolicyListCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"policy read": func() (cli.Command, error) {
 			return &PolicyReadCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"policy write": func() (cli.Command, error) {
 			return &PolicyWriteCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"print": func() (cli.Command, error) {
 			return &PrintCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"print token": func() (cli.Command, error) {
 			return &PrintTokenCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"read": func() (cli.Command, error) {
 			return &ReadCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"secrets": func() (cli.Command, error) {
 			return &SecretsCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"secrets disable": func() (cli.Command, error) {
 			return &SecretsDisableCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"secrets enable": func() (cli.Command, error) {
 			return &SecretsEnableCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"secrets list": func() (cli.Command, error) {
 			return &SecretsListCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"secrets move": func() (cli.Command, error) {
 			return &SecretsMoveCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"secrets tune": func() (cli.Command, error) {
 			return &SecretsTuneCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"server": func() (cli.Command, error) {
-			return &ServerCommand{
-				BaseCommand: &BaseCommand{
-					UI:          serverCmdUi,
-					tokenHelper: runOpts.TokenHelper,
-					flagAddress: runOpts.Address,
-				},
-				AuditBackends:        handlers.auditBackends,
-				CredentialBackends:   handlers.credentialBackends,
-				LogicalBackends:      handlers.logicalBackends,
-				PhysicalBackends:     handlers.physicalBackends,
-				ServiceRegistrations: handlers.serviceRegistrations,
-
-				ShutdownCh: MakeShutdownCh(),
-				SighupCh:   MakeSighupCh(),
-				SigUSR2Ch:  MakeSigUSR2Ch(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"ssh": func() (cli.Command, error) {
 			return &SSHCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"status": func() (cli.Command, error) {
 			return &StatusCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"transform": func() (cli.Command, error) {
 			return &TransformCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"transform import": func() (cli.Command, error) {
 			return &TransformImportCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"transform import-version": func() (cli.Command, error) {
 			return &TransformImportVersionCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"transit": func() (cli.Command, error) {
 			return &TransitCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"transit import": func() (cli.Command, error) {
 			return &TransitImportCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"transit import-version": func() (cli.Command, error) {
 			return &TransitImportVersionCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"token": func() (cli.Command, error) {
 			return &TokenCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"token create": func() (cli.Command, error) {
 			return &TokenCreateCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"token capabilities": func() (cli.Command, error) {
 			return &TokenCapabilitiesCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"token lookup": func() (cli.Command, error) {
 			return &TokenLookupCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"token renew": func() (cli.Command, error) {
 			return &TokenRenewCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"token revoke": func() (cli.Command, error) {
 			return &TokenRevokeCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"unwrap": func() (cli.Command, error) {
 			return &UnwrapCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"version": func() (cli.Command, error) {
 			return &VersionCommand{
 				VersionInfo: version.GetVersion(),
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"version-history": func() (cli.Command, error) {
 			return &VersionHistoryCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"write": func() (cli.Command, error) {
 			return &WriteCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"kv": func() (cli.Command, error) {
 			return &KVCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"kv put": func() (cli.Command, error) {
 			return &KVPutCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"kv patch": func() (cli.Command, error) {
 			return &KVPatchCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"kv rollback": func() (cli.Command, error) {
 			return &KVRollbackCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"kv get": func() (cli.Command, error) {
 			return &KVGetCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"kv delete": func() (cli.Command, error) {
 			return &KVDeleteCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"kv list": func() (cli.Command, error) {
 			return &KVListCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"kv destroy": func() (cli.Command, error) {
 			return &KVDestroyCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"kv undelete": func() (cli.Command, error) {
 			return &KVUndeleteCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"kv enable-versioning": func() (cli.Command, error) {
 			return &KVEnableVersioningCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"kv metadata": func() (cli.Command, error) {
 			return &KVMetadataCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"kv metadata put": func() (cli.Command, error) {
 			return &KVMetadataPutCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"kv metadata patch": func() (cli.Command, error) {
 			return &KVMetadataPatchCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"kv metadata get": func() (cli.Command, error) {
 			return &KVMetadataGetCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"kv metadata delete": func() (cli.Command, error) {
 			return &KVMetadataDeleteCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 			}, nil
 		},
 		"monitor": func() (cli.Command, error) {
 			return &MonitorCommand{
-				BaseCommand: getBaseCommand(),
+				BaseCommand: getBaseCommand(ui, runOpts),
 				ShutdownCh:  MakeShutdownCh(),
 			}, nil
 		},
 	}
+
+	extendServerCommands(commands, serverCmdUi, runOpts, handlers)
 
 	entInitCommands(ui, serverCmdUi, runOpts, commands)
 	initHCPCommands(ui, commands)

@@ -8,6 +8,7 @@ package command
 import (
 	"maps"
 
+	"github.com/hashicorp/cli"
 	credAliCloud "github.com/hashicorp/vault-plugin-auth-alicloud"
 	credCF "github.com/hashicorp/vault-plugin-auth-cf"
 	credGcp "github.com/hashicorp/vault-plugin-auth-gcp/plugin"
@@ -93,4 +94,29 @@ func extendAddonHandlers(handlers *vaultHandlers) {
 
 	maps.Copy(handlers.physicalBackends, addonPhysicalBackends)
 	maps.Copy(handlers.loginHandlers, addonLoginHandlers)
+}
+
+func extendServerCommands(commands map[string]cli.CommandFactory, serverCmdUi cli.Ui, runOpts *RunOptions, handlers *vaultHandlers) {
+	serverCommads := map[string]cli.CommandFactory{
+		"server": func() (cli.Command, error) {
+			return &ServerCommand{
+				BaseCommand: &BaseCommand{
+					UI:          serverCmdUi,
+					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
+				},
+				AuditBackends:        handlers.auditBackends,
+				CredentialBackends:   handlers.credentialBackends,
+				LogicalBackends:      handlers.logicalBackends,
+				PhysicalBackends:     handlers.physicalBackends,
+				ServiceRegistrations: handlers.serviceRegistrations,
+
+				ShutdownCh: MakeShutdownCh(),
+				SighupCh:   MakeSighupCh(),
+				SigUSR2Ch:  MakeSigUSR2Ch(),
+			}, nil
+		},
+	}
+
+	maps.Copy(commands, serverCommads)
 }
