@@ -598,6 +598,11 @@ primary node.`,
 		Description: `Set to true to enable tidying up certificate metadata`,
 	}
 
+	fields["tidy_cmpv2_nonce_store"] = &framework.FieldSchema{
+		Type:        framework.TypeBool,
+		Description: `Set to true to enable tidying up the CMPv2 nonce store`,
+	}
+
 	return fields
 }
 
