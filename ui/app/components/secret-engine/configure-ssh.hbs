@@ -3,88 +3,84 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-{{#if @configured}}
-  <div class="box is-fullwidth is-sideless is-marginless" data-test-edit-config-section>
-    <div class="field">
-      <label for="publicKey" class="is-label">
-        Public key
-      </label>
+<form {{on "submit" (perform this.save)}} aria-label="save ssh creds" data-test-configure-form>
+  <div class="box is-fullwidth is-shadowless is-marginless">
+    <NamespaceReminder @mode="save" @noun="configuration" />
+    <MessageError @errorMessage={{this.errorMessage}} />
+    {{#unless @model.isNew}}
+      <p class="has-text-grey-dark">
+        NOTE: You must delete your existing certificate and key before saving new values.
+      </p>
+    {{/unless}}
+  </div>
+  {{#if @model.isNew}}
+    <div class="box is-fullwidth is-sideless">
+      {{#each @model.formFields as |attr|}}
+        <FormField @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} />
+      {{/each}}
+    </div>
+    <div class="box is-fullwidth is-bottomless">
       <div class="control">
-        <MaskedInput
-          @name="publickey"
-          @id="publicKey"
-          @value={{@model.publicKey}}
-          @displayOnly={{true}}
-          @allowCopy={{true}}
-          data-test-input="public-key"
+        <Hds::Button
+          @text="Save"
+          @icon={{if this.save.isRunning "loading"}}
+          type="submit"
+          disabled={{this.save.isRunning}}
+          data-test-configure-save-button
+        />
+        <Hds::Button
+          @text="Cancel"
+          @color="secondary"
+          class="has-left-margin-s"
+          disabled={{this.save.isRunning}}
+          {{on "click" this.onCancel}}
+          data-test-cancel-button
         />
       </div>
+      {{#if this.invalidFormAlert}}
+        <AlertInline
+          data-test-invalid-form-alert
+          class="has-top-padding-s"
+          @type="danger"
+          @message={{this.invalidFormAlert}}
+        />
+      {{/if}}
     </div>
-  </div>
-  <div class="field is-grouped-split box is-fullwidth is-bottomless">
-    <Hds::ButtonSet>
-      <Hds::Copy::Button
-        @text="Copy"
-        @textToCopy={{@model.publicKey}}
-        @onError={{(fn (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger"))}}
-        class="primary"
-      />
-      <ConfirmAction
-        @buttonText="Delete"
-        @buttonColor="secondary"
-        @confirmMessage="This will remove the CA certificate information."
-        @onConfirmAction={{this.delete}}
-        data-test-delete-public-key
-      />
-    </Hds::ButtonSet>
-  </div>
-{{else}}
-  <form {{on "submit" this.saveConfig}} data-test-configure-form>
-    <div class="box is-fullwidth is-sideless is-marginless">
-      <NamespaceReminder @mode="save" @noun="configuration" />
-      <div class="field">
-        <label for="privateKey" class="is-label">
-          Private key
-        </label>
-        <div class="control">
-          <MaskedInput @name="privateKey" id="privateKey" @value={{@model.privateKey}} @onChange={{mut @model.privateKey}} />
-        </div>
-      </div>
+  {{else}}
+    {{! Model is not new and keys have already been created. Require user deletes the keys before creating new ones }}
+    <div class="box is-fullwidth is-sideless is-marginless" data-test-edit-config-section>
       <div class="field">
         <label for="publicKey" class="is-label">
           Public key
         </label>
         <div class="control">
-          <Textarea name="publicKey" id="publicKey" class="input" @value={{@model.publicKey}} data-test-input="publicKey" />
+          <MaskedInput
+            @name="publickey"
+            @id="publicKey"
+            @value={{@model.publicKey}}
+            @displayOnly={{true}}
+            @allowCopy={{true}}
+            data-test-input="public-key"
+          />
         </div>
       </div>
-      <div class="b-checkbox">
-        <Input
-          @type="checkbox"
-          id="generateSigningKey"
-          class="styled"
-          @checked={{@model.generateSigningKey}}
-          {{on "change" (fn (mut @model.generateSigningKey) (not @model.generateSigningKey))}}
-          data-test-input="generate-signing-key-checkbox"
-        />
-        <label for="generateSigningKey" class="is-label">
-          Generate signing key
-          <InfoTooltip>
-            Specifies if Vault should generate the signing key pair internally
-          </InfoTooltip>
-        </label>
-      </div>
     </div>
-    <div class="field box is-fullwidth is-bottomless is-marginless">
-      <div class="control">
-        <Hds::Button
-          @text="Save"
-          @icon={{if @loading "loading"}}
-          type="submit"
-          disabled={{@loading}}
-          data-test-configure-save-button
+    <div class="field is-grouped-split box is-fullwidth is-bottomless">
+      <Hds::ButtonSet>
+        <Hds::Copy::Button
+          @text="Copy"
+          @textToCopy={{@model.publicKey}}
+          @onError={{fn (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")}}
+          class="primary"
         />
-      </div>
+        <ConfirmAction
+          @buttonText="Delete"
+          @buttonColor="secondary"
+          @confirmMessage="Confirming will remove the CA certificate information."
+          @onConfirmAction={{this.deleteCaConfig}}
+          data-test-delete-public-key
+        />
+      </Hds::ButtonSet>
     </div>
-  </form>
-{{/if}}
+  {{/if}}
+</form>

@@ -84,7 +84,7 @@ type PostgreSQL struct {
 	*connutil.SQLConnectionProducer
 
 	TLSCertificateData []byte `json:"tls_certificate" structs:"-" mapstructure:"tls_certificate"`
-	TLSPrivateKey      []byte `json:"tls_private_key" structs:"-" mapstructure:"tls_private_key"`
+	TLSPrivateKey      []byte `json:"private_key" structs:"-" mapstructure:"private_key"`
 	TLSCAData          []byte `json:"tls_ca" structs:"-" mapstructure:"tls_ca"`
 
 	usernameProducer       template.StringTemplate
@@ -97,9 +97,9 @@ func (p *PostgreSQL) Initialize(ctx context.Context, req dbplugin.InitializeRequ
 		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to retrieve tls_certificate: %w", err)
 	}
 
-	sslkey, err := strutil.GetString(req.Config, "tls_private_key")
+	sslkey, err := strutil.GetString(req.Config, "private_key")
 	if err != nil {
-		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to retrieve tls_private_key: %w", err)
+		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to retrieve private_key: %w", err)
 	}
 
 	sslrootcert, err := strutil.GetString(req.Config, "tls_ca")
@@ -199,6 +199,15 @@ func (p *PostgreSQL) getConnection(ctx context.Context) (*sql.DB, error) {
 	return db.(*sql.DB), nil
 }
 
+func (p *PostgreSQL) getStaticConnection(ctx context.Context, username, password string) (*sql.DB, error) {
+	db, err := p.StaticConnection(ctx, username, password)
+	if err != nil {
+		return nil, err
+	}
+
+	return db, nil
+}
+
 func (p *PostgreSQL) UpdateUser(ctx context.Context, req dbplugin.UpdateUserRequest) (dbplugin.UpdateUserResponse, error) {
 	if req.Username == "" {
 		return dbplugin.UpdateUserResponse{}, fmt.Errorf("missing username")
@@ -209,17 +218,17 @@ func (p *PostgreSQL) UpdateUser(ctx context.Context, req dbplugin.UpdateUserRequ
 
 	merr := &multierror.Error{}
 	if req.Password != nil {
-		err := p.changeUserPassword(ctx, req.Username, req.Password)
+		err := p.changeUserPassword(ctx, req.Username, req.Password, req.SelfManagedPassword)
 		merr = multierror.Append(merr, err)
 	}
 	if req.Expiration != nil {
-		err := p.changeUserExpiration(ctx, req.Username, req.Expiration)
+		err := p.changeUserExpiration(ctx, req.Username, req.Expiration, req.SelfManagedPassword)
 		merr = multierror.Append(merr, err)
 	}
 	return dbplugin.UpdateUserResponse{}, merr.ErrorOrNil()
 }
 
-func (p *PostgreSQL) changeUserPassword(ctx context.Context, username string, changePass *dbplugin.ChangePassword) error {
+func (p *PostgreSQL) changeUserPassword(ctx context.Context, username string, changePass *dbplugin.ChangePassword, selfManagedPass string) error {
 	stmts := changePass.Statements.Commands
 	if len(stmts) == 0 {
 		stmts = []string{defaultChangePasswordStatement}
@@ -233,9 +242,18 @@ func (p *PostgreSQL) changeUserPassword(ctx context.Context, username string, ch
 	p.Lock()
 	defer p.Unlock()
 
-	db, err := p.getConnection(ctx)
-	if err != nil {
-		return fmt.Errorf("unable to get connection: %w", err)
+	var db *sql.DB
+	var err error
+	if selfManagedPass == "" {
+		db, err = p.getConnection(ctx)
+		if err != nil {
+			return fmt.Errorf("unable to get connection: %w", err)
+		}
+	} else {
+		db, err = p.getStaticConnection(ctx, username, selfManagedPass)
+		if err != nil {
+			return fmt.Errorf("unable to get static connection from cache: %w", err)
+		}
 	}
 
 	// Check if the role exists
@@ -285,7 +303,7 @@ func (p *PostgreSQL) changeUserPassword(ctx context.Context, username string, ch
 	return nil
 }
 
-func (p *PostgreSQL) changeUserExpiration(ctx context.Context, username string, changeExp *dbplugin.ChangeExpiration) error {
+func (p *PostgreSQL) changeUserExpiration(ctx context.Context, username string, changeExp *dbplugin.ChangeExpiration, selfManagedPass string) error {
 	p.Lock()
 	defer p.Unlock()
 
@@ -294,9 +312,18 @@ func (p *PostgreSQL) changeUserExpiration(ctx context.Context, username string, 
 		renewStmts = []string{defaultExpirationStatement}
 	}
 
-	db, err := p.getConnection(ctx)
-	if err != nil {
-		return err
+	var db *sql.DB
+	var err error
+	if selfManagedPass == "" {
+		db, err = p.getConnection(ctx)
+		if err != nil {
+			return fmt.Errorf("unable to get connection: %w", err)
+		}
+	} else {
+		db, err = p.getStaticConnection(ctx, username, selfManagedPass)
+		if err != nil {
+			return fmt.Errorf("unable to get static connection from cache: %w", err)
+		}
 	}
 
 	tx, err := db.BeginTx(ctx, nil)

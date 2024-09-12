@@ -5,9 +5,6 @@
 
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
-import { tracked } from '@glimmer/tracking';
-import { stringify } from 'core/helpers/stringify';
-import { obfuscateData } from 'core/utils/advanced-secret';
 
 /**
  * @module JsonEditor
@@ -16,6 +13,7 @@ import { obfuscateData } from 'core/utils/advanced-secret';
  * <JsonEditor @title="Policy" @value={{hash foo="bar"}} @viewportMargin={{100}} />
  *
  * @param {string} [title] - Name above codemirror view
+ * @param {boolean} [showToolbar=true] - If false, toolbar and title are hidden
  * @param {string} value - a specific string the comes from codemirror. It's the value inside the codemirror display
  * @param {Function} [valueUpdated] - action to preform when you edit the codemirror value.
  * @param {Function} [onFocusOut] - action to preform when you focus out of codemirror.
@@ -34,16 +32,8 @@ import { obfuscateData } from 'core/utils/advanced-secret';
  */
 
 export default class JsonEditorComponent extends Component {
-  @tracked revealValues = false;
   get getShowToolbar() {
     return this.args.showToolbar === false ? false : true;
-  }
-
-  get showObfuscatedData() {
-    return this.args.readOnly && this.args.allowObscure && !this.revealValues;
-  }
-  get obfuscatedData() {
-    return stringify([obfuscateData(JSON.parse(this.args.value))], {});
   }
 
   @action

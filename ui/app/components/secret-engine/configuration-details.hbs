@@ -6,13 +6,14 @@
 {{#if @configModels.length}}
   {{#each @configModels as |configModel|}}
     {{#each configModel.attrs as |attr|}}
-      {{#if attr.options.sensitive}}
+      {{! public key while not sensitive when editing/creating, should be hidden by default on viewing }}
+      {{#if (or attr.options.sensitive (eq attr.name "publicKey"))}}
         <InfoTableRow
           alwaysRender={{not (is-empty-value (get configModel attr.name))}}
           @label={{or attr.options.label (to-label attr.name)}}
           @value={{get configModel (or attr.options.fieldValue attr.name)}}
         >
-          {{#if attr.options.sensitive}}
+          {{#if (or attr.options.sensitive (eq attr.name "publicKey"))}}
             <MaskedInput
               @value={{get configModel attr.name}}
               @name={{attr.name}}

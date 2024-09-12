@@ -30,9 +30,12 @@ module('Acceptance | clients | counts', function (hooks) {
     assert.expect(2);
     this.owner.lookup('service:version').type = 'community';
     await visit('/vault/clients/counts/overview');
-
-    assert.dom(GENERAL.emptyStateTitle).hasText('No data received');
-    assert.dom(GENERAL.emptyStateMessage).hasText('Select a start date above to query client count data.');
+    assert.dom(GENERAL.emptyStateTitle).hasText('No start date found');
+    assert
+      .dom(GENERAL.emptyStateMessage)
+      .hasText(
+        'In order to get the most from this data, please enter a start month above. Vault will calculate new clients starting from that month.'
+      );
   });
 
   test('it should redirect to counts overview route for transitions to parent', async function (assert) {

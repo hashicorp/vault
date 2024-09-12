@@ -10,10 +10,12 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"runtime"
 	"strings"
 	"testing"
@@ -7233,4 +7235,89 @@ func TestWellKnownSysApi(t *testing.T) {
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	require.NoError(t, err, "failed get well-known request")
 	require.Nil(t, resp, "response from unknown should have been nil was %v", resp)
+}
+
+// Test_sanitizePath verifies that sanitizePath can correctly remove leading
+// slashes and add trailing slashes
+func Test_sanitizePath(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		path string
+		want string
+	}{
+		{
+			path: "/mount/path",
+			want: "mount/path/",
+		},
+		{
+			path: "///mount/path",
+			want: "mount/path/",
+		},
+		{
+			path: "/mount/path/",
+			want: "mount/path/",
+		},
+		{
+			path: "",
+			want: "",
+		},
+		{
+			path: "/",
+			want: "",
+		},
+		{
+			path: "///",
+			want: "",
+		},
+	}
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.path, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, tc.want, sanitizePath(tc.path))
+		})
+	}
+}
+
+// TestFuzz_sanitizePath verifies that randomly generated paths must abide by
+// the invariants:
+//   - if the original path was empty or was only made up of slashes, the
+//     sanitized path must be empty
+//   - otherwise,
+//     -- the sanitized path must not have a slash as a prefix
+//     -- the sanitized path must have a slash as a suffix
+//
+// The randomly generated paths will always have at least 1 slash
+func TestFuzz_sanitizePath(t *testing.T) {
+	slashesOrEmpty := regexp.MustCompile(`/*`)
+	valid := func(path, newPath string) bool {
+		if newPath == "" && slashesOrEmpty.MatchString(path) {
+			return true
+		}
+		if strings.HasPrefix(newPath, "/") {
+			return false
+		}
+		return strings.HasSuffix(newPath, "/")
+	}
+
+	r := rand.New(rand.NewSource(time.Now().Unix()))
+	gen := &random.StringGenerator{
+		Length: 10,
+		Rules: []random.Rule{
+			random.CharsetRule{
+				Charset:  random.LowercaseRuneset,
+				MinChars: 1,
+			},
+			random.CharsetRule{
+				Charset:  []rune{'/'},
+				MinChars: 1,
+			},
+		},
+	}
+	for i := 0; i < 100; i++ {
+		path, err := gen.Generate(context.Background(), r)
+		require.NoError(t, err)
+		newPath := sanitizePath(path)
+		require.True(t, valid(path, newPath), `"%s" not sanitized correctly, got "%s"`, path, newPath)
+	}
 }

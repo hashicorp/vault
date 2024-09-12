@@ -17,13 +17,12 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/hashicorp/vault/sdk/helper/locksutil"
-
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/helper/ocsp"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -694,6 +693,15 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 			conf.QueryAllServers = conf.QueryAllServers || entry.OcspQueryAllServers
 			conf.OcspThisUpdateMaxAge = entry.OcspThisUpdateMaxAge
 			conf.OcspMaxRetries = entry.OcspMaxRetries
+
+			if len(entry.OcspCaCertificates) > 0 {
+				certs, err := certutil.ParseCertsPEM([]byte(entry.OcspCaCertificates))
+				if err != nil {
+					b.Logger().Error("failed to parse ocsp_ca_certificates", "name", name, "error", err)
+					continue
+				}
+				conf.ExtraCas = certs
+			}
 		}
 	}
 

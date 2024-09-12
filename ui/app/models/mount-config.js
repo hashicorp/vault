@@ -74,6 +74,14 @@ export default class MountConfigModel extends Model {
   })
   pluginVersion;
 
+  // identityTokenKey is yielded in a named block on the mount-backend-form component
+  @attr({
+    label: 'Identity token key',
+    subText: `A named key to sign tokens. If not provided, this will default to Vault's OIDC default key.`,
+    editType: 'yield',
+  })
+  identityTokenKey;
+
   // Auth mount userLockoutConfig params, added to user_lockout_config object in saveModel method
   @attr('string', {
     label: 'Lockout threshold',

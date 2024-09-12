@@ -2,7 +2,6 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: BUSL-1.1
 
-
 set -e
 
 function fail() {
@@ -56,7 +55,7 @@ while :; do
     4)
       echo "[]"
       exit 0
-    ;;
+      ;;
     6)
       [[ -z "$VAULT_IPV6S" ]] && fail "VAULT_IPV6S env variable has not been set"
       [[ -z "$VAULT_LEADER_IPV6" ]] && fail "VAULT_LEADER_IPV6 env variable has not been set"
@@ -72,10 +71,10 @@ while :; do
         removeIP "$VAULT_LEADER_IPV6" "$VAULT_IPV6S"
         exit $?
       fi
-    ;;
+      ;;
     *)
       fail "unknown IP_VERSION: $IP_VERSION"
-    ;;
+      ;;
   esac
 
   wait=$((2 ** count))

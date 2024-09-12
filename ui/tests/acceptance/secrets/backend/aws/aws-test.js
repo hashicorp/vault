@@ -97,8 +97,8 @@ module('Acceptance | aws secret backend', function (hooks) {
 
     // delete role
     await click(`${SES.secretLink(roleName)} [data-test-popup-menu-trigger]`);
-    await waitUntil(() => find(SES.aws.delete(roleName))); // flaky without
-    await click(SES.aws.delete(roleName));
+    await waitUntil(() => find(SES.aws.deleteRole(roleName))); // flaky without
+    await click(SES.aws.deleteRole(roleName));
     await click(GENERAL.confirmButton);
     assert.dom(SES.secretLink(roleName)).doesNotExist('aws: role is no longer in the list');
   });

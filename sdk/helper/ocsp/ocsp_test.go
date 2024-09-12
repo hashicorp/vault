@@ -677,7 +677,7 @@ func TestOCSPRetry(t *testing.T) {
 		context.TODO(),
 		client, fakeRequestFunc,
 		dummyOCSPHost,
-		make(map[string]string), []byte{0}, certs[0], certs[len(certs)-1])
+		make(map[string]string), []byte{0}, certs[0], certs[len(certs)-1], nil)
 	if err == nil {
 		fmt.Printf("should fail: %v, %v, %v\n", res, b, st)
 	}
@@ -692,7 +692,7 @@ func TestOCSPRetry(t *testing.T) {
 		context.TODO(),
 		client, fakeRequestFunc,
 		dummyOCSPHost,
-		make(map[string]string), []byte{0}, certs[0], certs[len(certs)-1])
+		make(map[string]string), []byte{0}, certs[0], certs[len(certs)-1], nil)
 	if err == nil {
 		fmt.Printf("should fail: %v, %v, %v\n", res, b, st)
 	}

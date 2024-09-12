@@ -2,15 +2,12 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: BUSL-1.1
 
-
 set -e
-
 
 fail() {
   echo "$1" 1>&2
   return 1
 }
-
 
 [[ -z "$VAULT_PROXY_ADDRESS" ]] && fail "VAULT_ADDR env variable has not been set"
 [[ -z "$VAULT_PROXY_PIDFILE" ]] && fail "VAULT_ADDR env variable has not been set"
