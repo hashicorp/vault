@@ -217,7 +217,7 @@ func (b *backend) pathStaticRolesWrite(ctx context.Context, req *logical.Request
 		// what here stays the same and what changes? Can we change the name?
 		i, err := b.credRotationQueue.PopByKey(config.Name)
 		if err != nil {
-			return nil, fmt.Errorf("could not populate the queue with %q, due to an error: %w", config.Name, err)
+			return nil, fmt.Errorf("expected an item with name %q, but got an error: %w", config.Name, err)
 		}
 		// check if i is nil to prevent panic
 		if i == nil {
