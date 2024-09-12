@@ -9,7 +9,7 @@
       {{! Replication is unsupported in non-enterprise or when using non-transactional storage (eg inmem) }}
       <PageHeader as |p|>
         <p.levelLeft>
-          <h1 class="title is-3 has-text-grey" data-test-replication-title>
+          <h1 class="title is-3 has-text-grey" data-test-replication-title="Replication unsupported">
             Replication unsupported
           </h1>
         </p.levelLeft>
@@ -20,7 +20,7 @@
     {{else if this.model.allReplicationDisabled}}
       <PageHeader as |p|>
         <p.levelLeft>
-          <h1 class="title is-3" data-test-replication-title>
+          <h1 class="title is-3" data-test-replication-title="Enable Replication">
             Enable Replication
           </h1>
         </p.levelLeft>
@@ -114,7 +114,7 @@
       {{! Renders when at least one mode is not enabled }}
       <PageHeader as |p|>
         <p.levelLeft>
-          <h1 class="title is-3" data-test-replication-title>
+          <h1 class="title is-3" data-test-replication-title="Replication">
             Replication
           </h1>
         </p.levelLeft>
