@@ -868,8 +868,8 @@ func expireNoop(ctx context.Context, manager *ExpirationManager, s string, n *na
 // This must be called before sealing the view.
 func (m *ExpirationManager) Stop() error {
 	// Stop all the pending expiration timers
-	m.logger.Debug("stop triggered")
-	defer m.logger.Debug("finished stopping")
+	m.logger.Debug("stop expirationtriggered")
+	defer m.logger.Debug("finished stopping expiration")
 
 	m.jobManager.Stop()
 

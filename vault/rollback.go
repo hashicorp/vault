@@ -127,14 +127,18 @@ func (m *RollbackManager) Start() {
 // Stop stops the running manager. This will wait for any in-flight
 // rollbacks to complete.
 func (m *RollbackManager) Stop() {
+	m.logger.Debug("entering rollback manager stop")
 	m.shutdownLock.Lock()
 	defer m.shutdownLock.Unlock()
+	defer m.logger.Debug("exiting rollback manager stop")
 	if !m.shutdown {
 		m.shutdown = true
 		close(m.shutdownCh)
 		<-m.doneCh
 	}
+	m.logger.Debug("entering rollback stopWait")
 	m.runner.StopWait()
+	m.logger.Debug("exiting rollback stopWait")
 }
 
 // StopTicker stops the automatic Rollback manager's ticker, causing us
@@ -144,7 +148,7 @@ func (m *RollbackManager) Stop() {
 //
 // THIS SHOULD ONLY BE CALLED FROM TEST HELPERS.
 func (m *RollbackManager) StopTicker() {
-	if !m.tickerIsStopped {
+	if cap(m.stopTicker) == 1 && !m.tickerIsStopped {
 		close(m.stopTicker)
 		m.tickerIsStopped = true
 	}
