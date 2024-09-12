@@ -19,16 +19,15 @@ import { waitFor } from '@ember/test-waiters';
  * but otherwise it handles the rest of the form inputs. On success it will clear the form and call the onSuccess callback.
  *
  * @example
- * ```js
  * <EnableReplicationForm @replicationMode="dr" @canEnablePrimary={{true}} @canEnableSecondary={{false}} @performanceReplicationDisabled={{false}} @onSuccess={{this.reloadCluster}} />
- *    @param {string} replicationMode - should be one of "dr" or "performance"
- *    @param {boolean} canEnablePrimary - if the capabilities allow the user to enable a primary cluster
- *    @param {boolean} canEnableSecondary - if the capabilities allow the user to enable a secondary cluster
- *    @param {boolean} performanceMode - should be "primary", "secondary", or "disabled". If enabled, form will show a warning when attempting to enable DR secondary
- *    @param {Promise} onSuccess - (optional) callback called after successful replication enablement. Must be a promise.
- *    @param {boolean} doTransition - (optional) if provided, passed to onSuccess callback to determine if a transition should be done
- *  />
- * ```
+ *
+ * @param {string} replicationMode - should be one of "dr" or "performance"
+ * @param {boolean} canEnablePrimary - if the capabilities allow the user to enable a primary cluster, parent getter returns capabilities based on type (i.e. "dr" or "performance")
+ * @param {boolean} canEnableSecondary - if the capabilities allow the user to enable a secondary cluster, parent getter returns capabilities based on type (i.e. "dr" or "performance")
+ * @param {boolean} performanceMode - should be "primary", "secondary", or "disabled". If enabled, form will show a warning when attempting to enable DR secondary
+ * @param {Promise} onSuccess - (optional) callback called after successful replication enablement. Must be a promise.
+ * @param {boolean} doTransition - (optional) if provided, passed to onSuccess callback to determine if a transition should be done
+ *
  */
 export default class EnableReplicationFormComponent extends Component {
   @service version;

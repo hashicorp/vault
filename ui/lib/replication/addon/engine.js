@@ -16,6 +16,7 @@ const Eng = Engine.extend({
   dependencies: {
     services: [
       'auth',
+      'capabilities',
       'flash-messages',
       'namespace',
       'replication-mode',
