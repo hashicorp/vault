@@ -2835,10 +2835,11 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 func (c *Core) preSeal() error {
 	defer metrics.MeasureSince([]string{"core", "pre_seal"}, time.Now())
 	c.logger.Info("pre-seal teardown starting")
-	defer c.logger.Debug("exiting pre-seal teardown")
 
 	if seal, ok := c.seal.(*autoSeal); ok {
+		c.logger.Debug("entering stop health check 1")
 		seal.StopHealthCheck()
+		c.logger.Debug("exiting stop health check 1")
 	}
 	// Clear any pending funcs
 	c.postUnsealFuncs = nil
@@ -2854,66 +2855,108 @@ func (c *Core) preSeal() error {
 
 	var result error
 
+	c.logger.Debug("entering stop forwarding")
 	c.stopForwarding()
+	c.logger.Debug("exiting stop forwarding")
 
+	c.logger.Debug("entering stop raft active node")
 	c.stopRaftActiveNode()
+	c.logger.Debug("exiting stop raft active node")
 
 	c.clusterParamsLock.Lock()
+	c.logger.Debug("entering stop replication")
 	if err := c.entStopReplication(); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error stopping replication: %w", err))
 	}
+	c.logger.Debug("exiting stop replication")
+
 	c.clusterParamsLock.Unlock()
 
+	c.logger.Debug("entering teardown audits")
 	if err := c.teardownAudits(); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down audits: %w", err))
 	}
+	c.logger.Debug("exiting teardown audits")
+
+	c.logger.Debug("entering stop expiration")
 	if err := c.stopExpiration(); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error stopping expiration: %w", err))
 	}
+	c.logger.Debug("exiting stop expiration")
+
+	c.logger.Debug("entering stop activity log")
 	c.stopActivityLog()
+	c.logger.Debug("exiting stop activity log")
+
 	// Clean up census on seal
+	c.logger.Debug("entering teardown census manager")
 	if err := c.teardownCensusManager(); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down reporting agent: %w", err))
 	}
+	c.logger.Debug("exiting teardown census manager")
+
+	c.logger.Debug("entering teardown credentials")
 	if err := c.teardownCredentials(context.Background()); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down credentials: %w", err))
 	}
+	c.logger.Debug("exiting teardown credentials")
+
+	c.logger.Debug("entering teardown policy store")
 	if err := c.teardownPolicyStore(); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down policy store: %w", err))
 	}
+	c.logger.Debug("exiting teardown policy store")
+
+	c.logger.Debug("entering stop rollback")
 	if err := c.stopRollback(); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error stopping rollback: %w", err))
 	}
+	c.logger.Debug("exiting stop rollback")
+
+	c.logger.Debug("entering unload mounts")
 	if err := c.unloadMounts(context.Background()); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error unloading mounts: %w", err))
 	}
+	c.logger.Debug("exiting unload mounts")
 
+	c.logger.Debug("entering ent preseal")
 	if err := c.entPreSeal(); err != nil {
 		result = multierror.Append(result, err)
 	}
+	c.logger.Debug("exiting ent preseal")
 
 	if c.autoRotateCancel != nil {
+		c.logger.Debug("entering autorotate cancel")
 		c.autoRotateCancel()
+		c.logger.Debug("exiting autorotate cancel")
 		c.autoRotateCancel = nil
 	}
 
 	if c.updateLockedUserEntriesCancel != nil {
+		c.logger.Debug("entering update locked user entries cancel")
 		c.updateLockedUserEntriesCancel()
+		c.logger.Debug("exiting update locked user entries cancel")
 		c.updateLockedUserEntriesCancel = nil
 	}
 
 	if seal, ok := c.seal.(*autoSeal); ok {
+		c.logger.Debug("entering stop health check 2")
 		seal.StopHealthCheck()
+		c.logger.Debug("exiting stop health check 2")
 	}
 
 	if c.systemBackend != nil && c.systemBackend.mfaBackend != nil {
 		c.systemBackend.mfaBackend.usedCodes = nil
 	}
+	c.logger.Debug("entering teardownLoginMFA")
 	if err := c.teardownLoginMFA(); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down login MFA, error: %w", err))
 	}
+	c.logger.Debug("exiting teardownLoginMFA")
 
+	c.logger.Debug("entering preseal physical")
 	preSealPhysical(c)
+	c.logger.Debug("exiting preseal physical")
 
 	c.logger.Info("pre-seal teardown complete")
 	return result
@@ -3878,13 +3921,16 @@ func (c *Core) updateLockedUserEntries() {
 	go func() {
 		ticker := time.NewTicker(15 * time.Minute)
 		for {
-			select {
-			case <-updateLockedUserEntriesCtx.Done():
-				ticker.Stop()
-				return
-			case <-ticker.C:
-				if err := c.runLockedUserEntryUpdates(updateLockedUserEntriesCtx); err != nil {
-					c.Logger().Error("failed to run locked user entry updates", "error", err)
+			// If using go < 1.23, clear timer channel after Stop.
+			if cap(ticker.C) == 1 {
+				select {
+				case <-updateLockedUserEntriesCtx.Done():
+					ticker.Stop()
+					return
+				case <-ticker.C:
+					if err := c.runLockedUserEntryUpdates(updateLockedUserEntriesCtx); err != nil {
+						c.Logger().Error("failed to run locked user entry updates", "error", err)
+					}
 				}
 			}
 		}

@@ -530,15 +530,18 @@ error and restart Vault.`)
 		}
 
 		for {
-			select {
-			case <-healthCheckStop:
-				if healthCheck != nil {
-					healthCheck.Stop()
+			// If using go < 1.23, clear timer channel after Stop.
+			if cap(healthCheck.C) == 1 {
+				select {
+				case <-healthCheckStop:
+					if healthCheck != nil {
+						healthCheck.Stop()
+					}
+					healthCheckStop = nil
+					return
+				case t := <-healthCheck.C:
+					check(t)
 				}
-				healthCheckStop = nil
-				return
-			case t := <-healthCheck.C:
-				check(t)
 			}
 		}
 	}()
