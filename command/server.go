@@ -2291,11 +2291,14 @@ func (c *ServerCommand) storageMigrationActive(backend physical.Backend) bool {
 		c.logger.Warn("storage migration check error", "error", err.Error())
 
 		timer := time.NewTimer(2 * time.Second)
-		select {
-		case <-timer.C:
-		case <-c.ShutdownCh:
-			timer.Stop()
-			return true
+		// If using go < 1.23, clear timer channel after Stop.
+		if cap(timer.C) == 1 {
+			select {
+			case <-timer.C:
+			case <-c.ShutdownCh:
+				timer.Stop()
+				return true
+			}
 		}
 	}
 }
@@ -2812,11 +2815,14 @@ func runUnseal(c *ServerCommand, core *vault.Core, ctx context.Context) {
 		c.logger.Warn("failed to unseal core", "error", err)
 
 		timer := time.NewTimer(5 * time.Second)
-		select {
-		case <-c.ShutdownCh:
-			timer.Stop()
-			return
-		case <-timer.C:
+		// If using go < 1.23, clear timer channel after Stop.
+		if cap(timer.C) == 1 {
+			select {
+			case <-c.ShutdownCh:
+				timer.Stop()
+				return
+			case <-timer.C:
+			}
 		}
 	}
 }

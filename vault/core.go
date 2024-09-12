@@ -3747,12 +3747,15 @@ func (c *Core) SetKeyRotateGracePeriod(t time.Duration) {
 func (c *Core) autoRotateBarrierLoop(ctx context.Context) {
 	t := time.NewTicker(autoRotateCheckInterval)
 	for {
-		select {
-		case <-t.C:
-			c.checkBarrierAutoRotate(ctx)
-		case <-ctx.Done():
-			t.Stop()
-			return
+		// If using go < 1.23, clear timer channel after Stop.
+		if cap(t.C) == 1 {
+			select {
+			case <-t.C:
+				c.checkBarrierAutoRotate(ctx)
+			case <-ctx.Done():
+				t.Stop()
+				return
+			}
 		}
 	}
 }

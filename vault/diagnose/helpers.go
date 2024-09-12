@@ -230,12 +230,16 @@ func WithTimeout(d time.Duration, f testFunction) testFunction {
 		t := time.NewTimer(d)
 		defer t.Stop()
 		go func() { rch <- f(ctx) }()
-		select {
-		case <-t.C:
-			return fmt.Errorf("Timeout after %s.", d.String())
-		case err := <-rch:
-			return err
+		// If using go < 1.23, clear timer channel after Stop.
+		if cap(t.C) == 1 {
+			select {
+			case <-t.C:
+				return fmt.Errorf("Timeout after %s.", d.String())
+			case err := <-rch:
+				return err
+			}
 		}
+		return nil
 	}
 }
 
