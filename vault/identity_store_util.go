@@ -502,10 +502,6 @@ LOOP:
 		accessorCounter++
 	}
 
-	if len(duplicatedAccessorsList) > 0 {
-		i.logger.Warn("One or more entities have multiple aliases on the same mount(s), remove duplicates to avoid ACL templating issues", "mount_accessors", duplicatedAccessorsList)
-	}
-
 	if i.logger.IsInfo() {
 		i.logger.Info("entities restored")
 	}
