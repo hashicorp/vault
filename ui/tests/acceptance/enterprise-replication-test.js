@@ -317,7 +317,8 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await click('[data-test-replication-details-link="dr"]');
     // eslint-disable-next-line ember/no-settled-after-test-helper
     await settled(); // let the controller set replicationMode in afterModel
-    assert.dom('[data-test-replication-title]').hasText('Enable Disaster Recovery Replication');
+    await waitFor('[data-test-replication-title="dr"]');
+    assert.dom('[data-test-replication-title="dr"]').hasText('Enable Disaster Recovery Replication');
     await click('[data-test-replication-enable]');
 
     await pollCluster(this.owner);
