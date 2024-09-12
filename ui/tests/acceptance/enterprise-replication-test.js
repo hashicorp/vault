@@ -165,14 +165,12 @@ module('Acceptance | Enterprise | replication', function (hooks) {
         'shows the correct title of the empty state'
       );
 
-    assert.ok(
-      find('[data-test-replication-title]').textContent.includes('Disaster Recovery'),
-      'it displays the replication type correctly'
-    );
-    assert.ok(
-      find('[data-test-replication-mode-display]').textContent.includes('primary'),
-      'it displays the cluster mode correctly'
-    );
+    assert
+      .dom('[data-test-replication-title="Disaster Recovery"]')
+      .includesText('Disaster Recovery', 'it displays the replication type correctly');
+    assert
+      .dom('[data-test-replication-mode-display]')
+      .includesText('primary', 'it displays the cluster mode correctly');
 
     // add dr secondary
     await click('[data-test-replication-link="secondaries"]');
