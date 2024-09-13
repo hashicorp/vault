@@ -8,7 +8,7 @@
   shape of data at a specific path to hydrate a model with attrs it
   has less (or no) information about.
 */
-import Model from '@ember-data/model';
+import Model, { attr } from '@ember-data/model';
 import Service from '@ember/service';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { getOwner } from '@ember/owner';
@@ -27,6 +27,7 @@ import {
   pathToHelpUrlSegment,
   reducePathsByPathName,
   getHelpUrlForModel,
+  combineOpenApiAttrs,
 } from 'vault/utils/openapi-helpers';
 import { isPresent } from '@ember/utils';
 
@@ -41,29 +42,68 @@ export default Service.extend({
     });
   },
 
+  upgradeModelSchema(owner, type, newAttrs) {
+    const store = owner.lookup('service:store');
+    const Klass = store.modelFor(type);
+    // extending the class will ensure that static schema lookups regenerate
+    const NewKlass = class extends Klass {};
+
+    for (const { name, type, options } of newAttrs) {
+      const decorator = attr(type, options);
+      const descriptor = decorator(NewKlass.prototype, name, {});
+      Object.defineProperty(NewKlass.prototype, name, descriptor);
+    }
+    // ORIGINAL
+    // for (const [key, schema] of Object.entries(newAttrs)) {
+    //   console.log('upgrading', key, schema);
+    //   const decorator = attr(schema.type, schema.options);
+    //   const descriptor = decorator(NewKlass.prototype, key, {});
+    //   Object.defineProperty(NewKlass.prototype, key, descriptor);
+    // }
+
+    // Ensure this class doesn't get re-hydrated
+    NewKlass.merged = true;
+
+    // bust cache in ember's registry
+    owner.unregister('model:' + type);
+    owner.register('model:' + type, NewKlass);
+
+    // bust cache in EmberData's model lookup
+    delete store._modelFactoryCache[type];
+
+    // bust cache in schema service
+    const schemas = store.getSchemaDefinitionService?.();
+    if (schemas) {
+      delete schemas._relationshipsDefCache[type];
+      delete schemas._attributesDefCache[type];
+    }
+  },
+
   /**
    * hydrateModel instantiates models which use OpenAPI partially
    * @param {string} modelType path for model, eg pki/role
    * @param {string} backend path, which will be used for the generated helpUrl
-   * @returns void - as side effect, registers model via registerNewModelWithProps
+   * @returns void - as side effect, re-registers model via upgradeModelSchema
    */
-  hydrateModel(modelType, backend) {
+  async hydrateModel(modelType, backend) {
     const owner = getOwner(this);
-    const modelName = `model:${modelType}`;
-
-    const modelFactory = owner.factoryFor(modelName);
     const helpUrl = getHelpUrlForModel(modelType, backend);
+    const store = owner.lookup('service:store');
+    const Klass = store.modelFor(modelType);
 
-    if (!modelFactory) {
-      throw new Error(`modelFactory for ${modelType} not found -- use getNewModel instead.`);
-    }
-
-    debug(`Model factory found for ${modelType}`);
-    const newModel = modelFactory.class;
-    if (newModel.merged || !helpUrl) {
+    if (Klass?.merged || !helpUrl) {
+      // if the model is already merged, we don't need to do anything
       return resolve();
     }
-    return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
+    debug(`Hydrating model ${modelType} at backend ${backend}`);
+
+    // fetch props from openAPI
+    const props = await this.getProps(helpUrl);
+    // combine existing attributes with openAPI data
+    const { attrs, newFields } = combineOpenApiAttrs(Klass.attributes, props);
+    debug(`${modelType} has ${newFields.length} new fields: ${newFields.join(', ')}`);
+
+    return this.upgradeModelSchema(owner, modelType, attrs);
   },
 
   /**
