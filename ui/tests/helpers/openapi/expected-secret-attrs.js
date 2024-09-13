@@ -1457,6 +1457,12 @@ const pki = {
       fieldGroup: 'default',
       type: 'boolean',
     },
+    tidyCmpv2NonceStore: {
+      editType: 'boolean',
+      fieldGroup: 'default',
+      helpText: 'Set to true to enable tidying up the CMPv2 nonce store',
+      type: 'boolean',
+    },
     tidyCrossClusterRevokedCerts: {
       editType: 'boolean',
       helpText:
