@@ -22,8 +22,10 @@ import { waitFor } from '@ember/test-waiters';
  * ```js
  * <EnableReplicationForm @replicationMode="dr" @canEnablePrimary={{true}} @canEnableSecondary={{false}} @performanceReplicationDisabled={{false}} @onSuccess={{this.reloadCluster}} />
  *    @param {string} replicationMode - should be one of "dr" or "performance"
- *    @param {boolean} canEnablePrimary - if the capabilities allow the user to enable a primary cluster
- *    @param {boolean} canEnableSecondary - if the capabilities allow the user to enable a secondary cluster
+ *    @param {boolean} canEnablePrimaryDr - if the capabilities allow the user to enable a DR primary cluster
+ *    @param {boolean} canEnablePrimaryPerformance - if the capabilities allow the user to enable a Performance primary cluster
+ *    @param {boolean} canEnableSecondaryDr - if the capabilities allow the user to enable a DR secondary cluster
+ *    @param {boolean} canEnableSecondaryPerformance - if the capabilities allow the user to enable a Performance secondary cluster
  *    @param {boolean} performanceMode - should be "primary", "secondary", or "disabled". If enabled, form will show a warning when attempting to enable DR secondary
  *    @param {Promise} onSuccess - (optional) callback called after successful replication enablement. Must be a promise.
  *    @param {boolean} doTransition - (optional) if provided, passed to onSuccess callback to determine if a transition should be done
@@ -56,6 +58,22 @@ export default class EnableReplicationFormComponent extends Component {
       return false;
     }
     return true;
+  }
+
+  get canEnablePrimary() {
+    const { replicationMode, canEnablePrimaryDr, canEnablePrimaryPerformance } = this.args;
+    if (replicationMode === 'dr') {
+      return canEnablePrimaryDr !== false;
+    }
+    return canEnablePrimaryPerformance !== false;
+  }
+
+  get canEnableSecondary() {
+    const { replicationMode, canEnableSecondaryDr, canEnableSecondaryPerformance } = this.args;
+    if (replicationMode === 'dr') {
+      return canEnableSecondaryDr !== false;
+    }
+    return canEnableSecondaryPerformance !== false;
   }
 
   async onSuccess(resp, clusterMode) {
