@@ -3791,16 +3791,16 @@ func (c *Core) SetKeyRotateGracePeriod(t time.Duration) {
 func (c *Core) autoRotateBarrierLoop(ctx context.Context) {
 	t := time.NewTicker(autoRotateCheckInterval)
 	for {
-		// If using go < 1.23, clear timer channel after Stop.
-		if cap(t.C) == 1 {
-			select {
-			case <-t.C:
-				c.checkBarrierAutoRotate(ctx)
-			case <-ctx.Done():
-				t.Stop()
-				return
-			}
+		// // If using go < 1.23, clear timer channel after Stop.
+		// if cap(t.C) == 1 {
+		select {
+		case <-t.C:
+			c.checkBarrierAutoRotate(ctx)
+		case <-ctx.Done():
+			t.Stop()
+			return
 		}
+		// }
 	}
 }
 
@@ -3921,18 +3921,18 @@ func (c *Core) updateLockedUserEntries() {
 	go func() {
 		ticker := time.NewTicker(15 * time.Minute)
 		for {
-			// If using go < 1.23, clear timer channel after Stop.
-			if cap(ticker.C) == 1 {
-				select {
-				case <-updateLockedUserEntriesCtx.Done():
-					ticker.Stop()
-					return
-				case <-ticker.C:
-					if err := c.runLockedUserEntryUpdates(updateLockedUserEntriesCtx); err != nil {
-						c.Logger().Error("failed to run locked user entry updates", "error", err)
-					}
+			// // If using go < 1.23, clear timer channel after Stop.
+			// if cap(ticker.C) == 1 {
+			select {
+			case <-updateLockedUserEntriesCtx.Done():
+				ticker.Stop()
+				return
+			case <-ticker.C:
+				if err := c.runLockedUserEntryUpdates(updateLockedUserEntriesCtx); err != nil {
+					c.Logger().Error("failed to run locked user entry updates", "error", err)
 				}
 			}
+			// }
 		}
 	}()
 	return

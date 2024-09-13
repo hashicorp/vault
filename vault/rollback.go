@@ -162,23 +162,23 @@ func (m *RollbackManager) run() {
 	defer tick.Stop()
 	defer close(m.doneCh)
 	for {
-		// If using go < 1.23, clear timer channel after Stop.
-		if cap(tick.C) == 1 {
-			select {
-			case <-tick.C:
-				m.triggerRollbacks()
-			case <-m.shutdownCh:
-				m.logger.Info("stopping rollback manager")
-				return
+		// // If using go < 1.23, clear timer channel after Stop.
+		// if cap(tick.C) == 1 {
+		select {
+		case <-tick.C:
+			m.triggerRollbacks()
+		case <-m.shutdownCh:
+			m.logger.Info("stopping rollback manager")
+			return
 
-			case <-m.stopTicker:
-				if !logTestStopOnce {
-					m.logger.Info("stopping rollback manager ticker for tests")
-					logTestStopOnce = true
-				}
-				tick.Stop()
+		case <-m.stopTicker:
+			if !logTestStopOnce {
+				m.logger.Info("stopping rollback manager ticker for tests")
+				logTestStopOnce = true
 			}
+			tick.Stop()
 		}
+		// }
 	}
 }
 

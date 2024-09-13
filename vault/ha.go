@@ -735,16 +735,16 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 			// unblock any inflight requests that are holding the statelock.
 			go func() {
 				timer := time.NewTimer(DefaultMaxRequestDuration)
-				// If using go < 1.23, clear timer channel after Stop.
-				if cap(timer.C) == 1 {
-					select {
-					case <-activeCtx.Done():
-						timer.Stop()
-						// Attempt to drain any inflight requests
-					case <-timer.C:
-						activeCtxCancel()
-					}
+				// // If using go < 1.23, clear timer channel after Stop.
+				// if cap(timer.C) == 1 {
+				select {
+				case <-activeCtx.Done():
+					timer.Stop()
+					// Attempt to drain any inflight requests
+				case <-timer.C:
+					activeCtxCancel()
 				}
+				// }
 			}()
 
 			// Grab lock if we are not stopped
@@ -883,59 +883,59 @@ func (c *Core) periodicLeaderRefresh(newLeaderCh chan func(), stopCh chan struct
 	clusterAddr := ""
 	for {
 		timer := time.NewTimer(c.periodicLeaderRefreshInterval)
-		// If using go < 1.23, clear timer channel after Stop.
-		if cap(timer.C) == 1 {
-			select {
-			case <-timer.C:
-				count := atomic.AddInt32(opCount, 1)
-				if count > 1 {
-					atomic.AddInt32(opCount, -1)
-					continue
-				}
-				// We do this in a goroutine because otherwise if this refresh is
-				// called while we're shutting down the call to Leader() can
-				// deadlock, which then means stopCh can never been seen and we can
-				// block shutdown
-				go func() {
-					// Bind locally, as the race detector is tripping here
-					lopCount := opCount
-					isLeader, _, newClusterAddr, err := c.Leader()
-					if err != nil {
-						// This is debug level because it's not really something the user
-						// needs to see typically. This will only really fail if we are sealed
-						// or the HALock fails (e.g. can't connect to Consul or elect raft
-						// leader) and other things in logs should make those kinds of
-						// conditions obvious. However when debugging, it is useful to know
-						// for sure why a standby is not seeing the leadership update which
-						// could be due to errors being returned or could be due to some other
-						// bug.
-						c.logger.Debug("periodicLeaderRefresh fail to fetch leader info", "err", err)
-					}
-
-					// If we are the leader reset the clusterAddr since the next
-					// failover might go to the node that was previously active.
-					if isLeader {
-						clusterAddr = ""
-					}
-
-					if !isLeader && newClusterAddr != clusterAddr && newLeaderCh != nil {
-						select {
-						case newLeaderCh <- nil:
-							c.logger.Debug("new leader found, triggering new leader channel")
-							clusterAddr = newClusterAddr
-						default:
-							c.logger.Debug("new leader found, but still processing previous leader change")
-						}
-					}
-					atomic.AddInt32(lopCount, -1)
-				}()
-			case <-stopCh:
-				timer.Stop()
-				return
+		// // If using go < 1.23, clear timer channel after Stop.
+		// if cap(timer.C) == 1 {
+		select {
+		case <-timer.C:
+			count := atomic.AddInt32(opCount, 1)
+			if count > 1 {
+				atomic.AddInt32(opCount, -1)
+				continue
 			}
-		}
+			// We do this in a goroutine because otherwise if this refresh is
+			// called while we're shutting down the call to Leader() can
+			// deadlock, which then means stopCh can never been seen and we can
+			// block shutdown
+			go func() {
+				// Bind locally, as the race detector is tripping here
+				lopCount := opCount
+				isLeader, _, newClusterAddr, err := c.Leader()
+				if err != nil {
+					// This is debug level because it's not really something the user
+					// needs to see typically. This will only really fail if we are sealed
+					// or the HALock fails (e.g. can't connect to Consul or elect raft
+					// leader) and other things in logs should make those kinds of
+					// conditions obvious. However when debugging, it is useful to know
+					// for sure why a standby is not seeing the leadership update which
+					// could be due to errors being returned or could be due to some other
+					// bug.
+					c.logger.Debug("periodicLeaderRefresh fail to fetch leader info", "err", err)
+				}
 
+				// If we are the leader reset the clusterAddr since the next
+				// failover might go to the node that was previously active.
+				if isLeader {
+					clusterAddr = ""
+				}
+
+				if !isLeader && newClusterAddr != clusterAddr && newLeaderCh != nil {
+					select {
+					case newLeaderCh <- nil:
+						c.logger.Debug("new leader found, triggering new leader channel")
+						clusterAddr = newClusterAddr
+					default:
+						c.logger.Debug("new leader found, but still processing previous leader change")
+					}
+				}
+				atomic.AddInt32(lopCount, -1)
+			}()
+		case <-stopCh:
+			timer.Stop()
+			return
+		}
 	}
+
+	// }
 }
 
 // periodicCheckKeyUpgrade is used to watch for key rotation events as a standby
@@ -946,69 +946,69 @@ func (c *Core) periodicCheckKeyUpgrades(ctx context.Context, stopCh chan struct{
 	opCount := new(int32)
 	for {
 		timer := time.NewTimer(keyRotateCheckInterval)
-		// If using go < 1.23, clear timer channel after Stop.
-		if cap(timer.C) == 1 {
-			select {
-			case <-timer.C:
-				count := atomic.AddInt32(opCount, 1)
-				if count > 1 {
-					atomic.AddInt32(opCount, -1)
-					continue
-				}
+		// // If using go < 1.23, clear timer channel after Stop.
+		// if cap(timer.C) == 1 {
+		select {
+		case <-timer.C:
+			count := atomic.AddInt32(opCount, 1)
+			if count > 1 {
+				atomic.AddInt32(opCount, -1)
+				continue
+			}
 
-				go func() {
-					// Bind locally, as the race detector is tripping here
-					lopCount := opCount
+			go func() {
+				// Bind locally, as the race detector is tripping here
+				lopCount := opCount
 
-					// Only check if we are a standby
-					c.stateLock.RLock()
-					standby := c.standby
-					c.stateLock.RUnlock()
-					if !standby {
-						atomic.AddInt32(lopCount, -1)
-						return
-					}
-
-					// Check for a poison pill. If we can read it, it means we have stale
-					// keys (e.g. from replication being activated) and we need to seal to
-					// be unsealed again.
-					entry, _ := c.barrier.Get(ctx, poisonPillPath)
-					entryDR, _ := c.barrier.Get(ctx, poisonPillDRPath)
-					if (entry != nil && len(entry.Value) > 0) || (entryDR != nil && len(entryDR.Value) > 0) {
-						c.logger.Warn("encryption keys have changed out from underneath us (possibly due to replication enabling), must be unsealed again")
-						// If we are using raft storage we do not want to shut down
-						// raft during replication secondary enablement. This will
-						// allow us to keep making progress on the raft log.
-						go c.sealInternalWithOptions(true, false, !isRaft)
-						atomic.AddInt32(lopCount, -1)
-						return
-					}
-
-					if err := c.checkKeyUpgrades(ctx); err != nil {
-						c.logger.Error("key rotation periodic upgrade check failed", "error", err)
-					}
-
-					if isRaft {
-						hasState, err := raftBackend.HasState()
-						if err != nil {
-							c.logger.Error("could not check raft state", "error", err)
-						}
-
-						if raftBackend.Initialized() && hasState {
-							if err := c.checkRaftTLSKeyUpgrades(ctx); err != nil {
-								c.logger.Error("raft tls periodic upgrade check failed", "error", err)
-							}
-						}
-					}
-
+				// Only check if we are a standby
+				c.stateLock.RLock()
+				standby := c.standby
+				c.stateLock.RUnlock()
+				if !standby {
 					atomic.AddInt32(lopCount, -1)
 					return
-				}()
-			case <-stopCh:
-				timer.Stop()
+				}
+
+				// Check for a poison pill. If we can read it, it means we have stale
+				// keys (e.g. from replication being activated) and we need to seal to
+				// be unsealed again.
+				entry, _ := c.barrier.Get(ctx, poisonPillPath)
+				entryDR, _ := c.barrier.Get(ctx, poisonPillDRPath)
+				if (entry != nil && len(entry.Value) > 0) || (entryDR != nil && len(entryDR.Value) > 0) {
+					c.logger.Warn("encryption keys have changed out from underneath us (possibly due to replication enabling), must be unsealed again")
+					// If we are using raft storage we do not want to shut down
+					// raft during replication secondary enablement. This will
+					// allow us to keep making progress on the raft log.
+					go c.sealInternalWithOptions(true, false, !isRaft)
+					atomic.AddInt32(lopCount, -1)
+					return
+				}
+
+				if err := c.checkKeyUpgrades(ctx); err != nil {
+					c.logger.Error("key rotation periodic upgrade check failed", "error", err)
+				}
+
+				if isRaft {
+					hasState, err := raftBackend.HasState()
+					if err != nil {
+						c.logger.Error("could not check raft state", "error", err)
+					}
+
+					if raftBackend.Initialized() && hasState {
+						if err := c.checkRaftTLSKeyUpgrades(ctx); err != nil {
+							c.logger.Error("raft tls periodic upgrade check failed", "error", err)
+						}
+					}
+				}
+
+				atomic.AddInt32(lopCount, -1)
 				return
-			}
+			}()
+		case <-stopCh:
+			timer.Stop()
+			return
 		}
+		// }
 
 	}
 }
@@ -1143,15 +1143,15 @@ func (c *Core) acquireLock(lock physical.Lock, stopCh <-chan struct{}) <-chan st
 		// Retry the acquisition
 		c.logger.Error("failed to acquire lock", "error", err)
 		timer := time.NewTimer(lockRetryInterval)
-		// If using go < 1.23, clear timer channel after Stop.
-		if cap(timer.C) == 1 {
-			select {
-			case <-timer.C:
-			case <-stopCh:
-				timer.Stop()
-				return nil
-			}
+		// // If using go < 1.23, clear timer channel after Stop.
+		// if cap(timer.C) == 1 {
+		select {
+		case <-timer.C:
+		case <-stopCh:
+			timer.Stop()
+			return nil
 		}
+		// }
 	}
 }
 
@@ -1217,19 +1217,19 @@ func (c *Core) cleanLeaderPrefix(ctx context.Context, uuid string, leaderLostCh 
 	}
 	for len(keys) > 0 {
 		timer := time.NewTimer(leaderPrefixCleanDelay)
-		// If using go < 1.23, clear timer channel after Stop.
-		if cap(timer.C) == 1 {
-			select {
-			case <-timer.C:
-				if keys[0] != uuid {
-					c.barrier.Delete(ctx, coreLeaderPrefix+keys[0])
-				}
-				keys = keys[1:]
-			case <-leaderLostCh:
-				timer.Stop()
-				return
+		// // If using go < 1.23, clear timer channel after Stop.
+		// if cap(timer.C) == 1 {
+		select {
+		case <-timer.C:
+			if keys[0] != uuid {
+				c.barrier.Delete(ctx, coreLeaderPrefix+keys[0])
 			}
+			keys = keys[1:]
+		case <-leaderLostCh:
+			timer.Stop()
+			return
 		}
+		// }
 	}
 }
 

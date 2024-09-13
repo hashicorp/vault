@@ -422,16 +422,16 @@ func (c *Core) setupExpiration(e ExpireLeaseStrategy) error {
 	go func() {
 		t := time.NewTimer(24 * time.Hour)
 		for {
-			// If using go < 1.23, clear timer channel after Stop.
-			if cap(t.C) == 1 {
-				select {
-				case <-quit:
-					return
-				case <-t.C:
-					c.expiration.attemptIrrevocableLeasesRevoke()
-					t.Reset(24 * time.Hour)
-				}
+			// // If using go < 1.23, clear timer channel after Stop.
+			// if cap(t.C) == 1 {
+			select {
+			case <-quit:
+				return
+			case <-t.C:
+				c.expiration.attemptIrrevocableLeasesRevoke()
+				t.Reset(24 * time.Hour)
 			}
+			// }
 		}
 	}()
 
