@@ -27,7 +27,6 @@ export default class App extends Application {
       dependencies: {
         services: [
           'auth',
-          'capabilities',
           'flash-messages',
           'namespace',
           'replication-mode',

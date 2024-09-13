@@ -5,6 +5,7 @@
 
 import { service } from '@ember/service';
 import { setProperties } from '@ember/object';
+import { hash } from 'rsvp';
 import Route from '@ember/routing/route';
 import ClusterRoute from 'vault/mixins/cluster-route';
 
@@ -13,23 +14,6 @@ export default Route.extend(ClusterRoute, {
   store: service(),
   auth: service(),
   router: service(),
-  capabilities: service(),
-
-  async fetchCapabilities() {
-    const enablePath = (type, cluster) => `sys/replication/${type}/${cluster}/enable`;
-    const perms = await this.capabilities.fetchMultiplePaths([
-      enablePath('dr', 'primary'),
-      enablePath('dr', 'primary'),
-      enablePath('performance', 'secondary'),
-      enablePath('performance', 'secondary'),
-    ]);
-    return {
-      canEnablePrimaryDr: perms[enablePath('dr', 'primary')].canUpdate,
-      canEnableSecondaryDr: perms[enablePath('dr', 'primary')].canUpdate,
-      canEnablePrimaryPerformance: perms[enablePath('performance', 'secondary')].canUpdate,
-      canEnableSecondaryPerformance: perms[enablePath('performance', 'secondary')].canUpdate,
-    };
-  },
 
   beforeModel() {
     if (this.auth.activeCluster.replicationRedacted) {
@@ -45,21 +29,21 @@ export default Route.extend(ClusterRoute, {
     return this.auth.activeCluster;
   },
 
-  async afterModel(model) {
-    const {
-      canEnablePrimaryDr,
-      canEnableSecondaryDr,
-      canEnablePrimaryPerformance,
-      canEnableSecondaryPerformance,
-    } = await this.fetchCapabilities();
-
-    setProperties(model, {
-      canEnablePrimaryDr,
-      canEnableSecondaryDr,
-      canEnablePrimaryPerformance,
-      canEnableSecondaryPerformance,
+  afterModel(model) {
+    return hash({
+      canEnablePrimary: this.store
+        .findRecord('capabilities', 'sys/replication/primary/enable')
+        .then((c) => c.canUpdate),
+      canEnableSecondary: this.store
+        .findRecord('capabilities', 'sys/replication/secondary/enable')
+        .then((c) => c.canUpdate),
+    }).then(({ canEnablePrimary, canEnableSecondary }) => {
+      setProperties(model, {
+        canEnablePrimary,
+        canEnableSecondary,
+      });
+      return model;
     });
-    return model;
   },
   actions: {
     refresh() {

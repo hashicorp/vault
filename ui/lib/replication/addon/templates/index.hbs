@@ -91,8 +91,8 @@
       </div>
       <EnableReplicationForm
         @replicationMode={{this.modeSelection}}
-        @canEnablePrimary={{this.canEnablePrimary}}
-        @canEnableSecondary={{this.canEnableSecondary}}
+        @canEnablePrimary={{this.model.canEnablePrimary}}
+        @canEnableSecondary={{this.model.canEnableSecondary}}
         @performanceReplicationDisabled={{this.model.performance.replicationDisabled}}
         @performanceMode={{if this.model.performance.replicationDisabled "disabled" this.model.performance.modeForUrl}}
         @onSuccess={{this.onEnableSuccess}}

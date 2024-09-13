@@ -45,8 +45,8 @@
   </div>
   <EnableReplicationForm
     @replicationMode={{@replicationMode}}
-    @canEnablePrimary={{this.canEnable "Primary"}}
-    @canEnableSecondary={{this.canEnable "Secondary"}}
+    @canEnablePrimary={{@cluster.canEnablePrimary}}
+    @canEnableSecondary={{@cluster.canEnableSecondary}}
     @performanceReplicationDisabled={{@cluster.performance.replicationDisabled}}
     @performanceMode={{if @cluster.performance.replicationDisabled "disabled" @cluster.performance.modeForUrl}}
     @onSuccess={{@onEnableSuccess}}
