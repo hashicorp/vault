@@ -53,9 +53,7 @@ export default class DashboardClientCountCard extends Component {
     this.updatedAt = timestamp.now().toISOString();
 
     try {
-      this.activityData = yield this.store.queryRecord('clients/activity', {
-        current_billing_period: true,
-      });
+      this.activityData = yield this.store.findRecord('clients/activity', 'clients/activity');
       this.hasActivity = this.activityData.id === 'no-data' ? false : true;
     } catch (error) {
       this.error = error;
