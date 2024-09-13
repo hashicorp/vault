@@ -98,6 +98,11 @@ export default class PkiTidyModel extends Model {
   tidyCrossClusterRevokedCerts; // enterprise only
 
   @attr('boolean', {
+    label: 'Tidy CMPv2 nonce store',
+  })
+  tidyCmpv2NonceStore; // enterprise only
+
+  @attr('boolean', {
     subText: 'Automatically remove expired issuers after the issuer safety buffer duration has elapsed.',
   })
   tidyExpiredIssuers;
@@ -155,6 +160,7 @@ export default class PkiTidyModel extends Model {
         'Cross-cluster operations': [
           'tidyRevocationQueue',
           'tidyCrossClusterRevokedCerts',
+          'tidyCmpv2NonceStore',
           'revocationQueueSafetyBuffer',
         ],
       });
