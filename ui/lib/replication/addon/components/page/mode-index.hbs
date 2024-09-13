@@ -6,7 +6,7 @@
 {{#if @replicationDisabled}}
   <PageHeader as |p|>
     <p.levelLeft>
-      <h1 class="title is-3" data-test-replication-title>
+      <h1 class="title is-3" data-test-replication-title={{@replicationMode}}>
         {{#if (eq @replicationMode "dr")}}
           Enable Disaster Recovery Replication
         {{else if (eq @replicationMode "performance")}}
