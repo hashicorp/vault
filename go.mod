@@ -130,10 +130,10 @@ require (
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.19.0
 	github.com/hashicorp/vault-plugin-auth-azure v0.19.0
 	github.com/hashicorp/vault-plugin-auth-cf v0.19.0
-	github.com/hashicorp/vault-plugin-auth-gcp v0.18.0
-	github.com/hashicorp/vault-plugin-auth-jwt v0.21.1
+	github.com/hashicorp/vault-plugin-auth-gcp v0.19.0
+	github.com/hashicorp/vault-plugin-auth-jwt v0.22.0
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.13.0
-	github.com/hashicorp/vault-plugin-auth-kubernetes v0.19.0
+	github.com/hashicorp/vault-plugin-auth-kubernetes v0.20.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.17.0
 	github.com/hashicorp/vault-plugin-database-couchbase v0.12.0
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.16.0
@@ -142,21 +142,21 @@ require (
 	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.5.0
 	github.com/hashicorp/vault-plugin-database-snowflake v0.12.0
 	github.com/hashicorp/vault-plugin-mock v0.16.1
-	github.com/hashicorp/vault-plugin-secrets-ad v0.18.0
+	github.com/hashicorp/vault-plugin-secrets-ad v0.19.0
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.18.0
 	github.com/hashicorp/vault-plugin-secrets-azure v0.20.0
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.20.0
-	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.18.0
+	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.19.0
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.9.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.20.0
-	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.12.0
+	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.13.0
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.14.0
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.10.0
 	github.com/hashicorp/vault-testing-stepwise v0.3.1
-	github.com/hashicorp/vault/api v1.17.1
+	github.com/hashicorp/vault/api v1.15.0
 	github.com/hashicorp/vault/api/auth/approle v0.1.0
 	github.com/hashicorp/vault/api/auth/userpass v0.1.0
-	github.com/hashicorp/vault/sdk v0.13.0
+	github.com/hashicorp/vault/sdk v0.14.0
 	github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20230201201504-b741fa893d77
 	github.com/influxdata/influxdb1-client v0.0.0-20200827194710-b269163b24ab
 	github.com/jackc/pgx/v4 v4.18.3
@@ -211,15 +211,15 @@ require (
 	go.uber.org/goleak v1.3.0
 	golang.org/x/crypto v0.27.0
 	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842
-	golang.org/x/net v0.28.0
+	golang.org/x/net v0.29.0
 	golang.org/x/oauth2 v0.23.0
 	golang.org/x/sync v0.8.0
 	golang.org/x/sys v0.25.0
 	golang.org/x/term v0.24.0
 	golang.org/x/text v0.18.0
 	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d
-	google.golang.org/api v0.196.0
-	google.golang.org/grpc v1.66.0
+	google.golang.org/api v0.197.0
+	google.golang.org/grpc v1.66.1
 	google.golang.org/protobuf v1.34.2
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
 	k8s.io/apimachinery v0.31.0
@@ -239,7 +239,6 @@ require (
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	golang.org/x/xerrors v0.0.0-20240716161551-93cc26a95ae9 // indirect
-	gopkg.in/go-jose/go-jose.v2 v2.6.3 // indirect
 )
 
 require (
@@ -388,7 +387,7 @@ require (
 	github.com/google/s2a-go v0.1.8 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/googleapis/enterprise-certificate-proxy v0.3.3 // indirect
+	github.com/googleapis/enterprise-certificate-proxy v0.3.4 // indirect
 	github.com/googleapis/gax-go/v2 v2.13.0 // indirect
 	github.com/gophercloud/gophercloud v0.1.0 // indirect
 	github.com/gorilla/websocket v1.5.1 // indirect
