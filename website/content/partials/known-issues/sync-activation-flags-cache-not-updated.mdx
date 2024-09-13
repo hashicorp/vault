@@ -1,0 +1,23 @@
+### Cached activation flags for secrets sync on follower nodes are not updated
+
+#### Affected versions
+
+- 1.16.0 - 1.16.2
+- 1.17.0 - 1.17.5
+
+#### Issue
+
+Vault 1.16 introduced secrets sync with a one-time flag required to activate the
+feature before use. Writing the activation flag to enable secrets sync is forwarded
+to leader nodes for storage and distributed to follower nodes, but the in-memory
+cache for this flag is not updated on the followers. 
+
+This prevents any secrets sync endpoints (those starting with `sys/sync/`) from
+being usable on follower nodes in a cluster.
+
+#### Workaround
+
+The cache is force-updated on all nodes when the leader node steps down and the
+cluster promotes a new leader. First, activate the secrets sync feature as described
+in the [documentation](/vault/docs/sync#activating-the-feature). Then, have the leader node
+step down.
