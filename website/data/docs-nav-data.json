@@ -115,57 +115,236 @@
   },
   
   { "divider": true },
-  { "heading": "DESIGN A VAULT CLUSTER" },
-  {
-    "title": "Design a robust cluster",
-    "href": "#"
-  },
-  {
-    "title": "Namespace planning",
-    "href": "#",
-    "badge": {
-      "text": "ENTERPRISE",
-      "type": "outlined",
-      "color": "highlight"
-    }
-  },
-  {
-    "title": "Determine your quota and lease limits",
-    "href": "#"
-  },
-  
-  { "divider": true },
-  { "heading": "DEPLOY VAULT" },
+  { "heading": "VAULT OPERATIONS" },
   
   {
-    "title": "Overview",
-    "href": "#"
+    "title": "Design a Vault cluster",
+    "routes": [
+      {
+        "title": "Design a robust cluster",
+        "href": "#"
+      },
+      {
+        "title": "Namespace planning",
+        "href": "#",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "highlight"
+        }
+      },
+      {
+        "title": "Determine your quota and lease limits",
+        "href": "#"
+      }
+    ]
   },
+  
   {
-    "title": "Create a robust Vault configuration",
-    "href": "#"
+    "title": "Configure Vault",
+    "routes": [
+      {
+        "title": "Overview",
+        "href": "#"
+      },
+      {
+        "title": "Vault storage",
+        "routes": [
+          {
+            "title": "Overview",
+            "href": "#"
+          },
+          {
+            "title": "Use Vault-integrated storage",
+            "href": "#"
+          },
+          {
+            "title": "Use Consul storage",
+            "href": "#"
+          },
+          {
+            "title": "Enable local system storage",
+            "routes": [
+              {
+                "title": "In-memory storage",
+                "href": "#"
+              },
+              {
+                "title": "Local file system",
+                "href": "#"
+              }
+            ]
+          },
+          {
+            "title": "Enable external storage",
+            "routes": [
+              {
+                "title": "Overview",
+                "href": "#"
+              },
+              {
+                "title": "Aerospike",
+                "href": "#"
+              },
+              {
+                "title": "Alicloud OSS",
+                "href": "#"
+              },
+              {
+                "title": "Azure (duplicates Enable Azure backend storage)",
+                "href": "#"
+              },
+              {
+                "title": "Cassandra",
+                "href": "#"
+              },
+              {
+                "title": "CockroachDB",
+                "href": "#"
+              },
+              {
+                "title": "CouchDB",
+                "href": "#"
+              },
+              {
+                "title": "DynamoDB",
+                "href": "#"
+              },
+              {
+                "title": "Etcd",
+                "href": "#"
+              },
+              {
+                "title": "FoundationDB",
+                "href": "#"
+              },
+              {
+                "title": "Google Cloud Spanner (duplicates Enable Google Cloud Spanner)",
+                "href": "#"
+              },
+              {
+                "title": "Google Cloud Storage (duplicates Enable GCP storage)",
+                "href": "#"
+              },
+              {
+                "title": "Manta",
+                "href": "#"
+              },
+              {
+                "title": "MSSQL",
+                "href": "#"
+              },
+              {
+                "title": "MySQL",
+                "href": "#"
+              },
+              {
+                "title": "OCI Object Storage",
+                "href": "#"
+              },
+              {
+                "title": "PostgreSQL",
+                "href": "#"
+              },
+              {
+                "title": "S3 (duplicates Enable S3 backend storage)",
+                "href": "#"
+              },
+              {
+                "title": "Swift",
+                "href": "#"
+              },
+              {
+                "title": "Zookeeper",
+                "href": "#"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "title": "Vault GUI",
+        "href": "#"
+      },
+      {
+        "title": "Auditing and logging",
+        "href": "#"
+      },
+      {
+        "title": "Quotas and leases",
+        "href": "#"
+      },
+      {
+        "title": "Configuration reference",
+        "routes":[
+          {
+            "title": "<code>api_addr</code>",
+            "href": "#"
+          },
+          {
+            "title": "<code>cluster_addr</code>",
+            "href": "#"
+          },
+          {
+            "title": "<code>disable_mlock</code>",
+            "href": "#"
+          },
+          {
+            "title": "<code>ha_storage</code>",
+            "href": "#"
+          },
+          {
+            "title": "<code>listener</code>",
+            "href": "#"
+          },
+          {
+            "title": "<code>storage</code>",
+            "href": "#"
+          },
+          {
+            "title": "<code>ui</code>",
+            "href": "#"
+          }
+        ]
+      }
+    ]
   },
+
   {
-    "title": "Deploy with Terraform",
-    "href": "#"
+    "title": "Deploy Vault",
+    "routes": [
+      {
+        "title": "Overview",
+        "href": "#"
+      },
+      {
+        "title": "Create a robust Vault configuration",
+        "href": "#"
+      },
+      {
+        "title": "Deploy with Terraform",
+        "href": "#"
+      },
+      {
+        "title": "Install a Vault license",
+        "href": "#",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "highlight"
+        }
+      },
+      {
+        "title": "Start Vault in production mode",
+        "href": "#"
+      },
+      {
+        "title": "Initialize and unseal Vault",
+        "href": "#"
+      }
+    ]
   },
-  {
-    "title": "Install a Vault license",
-    "href": "#",
-    "badge": {
-      "text": "ENTERPRISE",
-      "type": "outlined",
-      "color": "highlight"
-    }
-  },
-  {
-    "title": "Start Vault in production mode",
-    "href": "#"
-  },
-  {
-    "title": "Initialize and unseal Vault",
-    "href": "#"
-  },
+  
   {
     "title": "Run Vault at scale",
     "routes": [
@@ -218,6 +397,32 @@
       }
     ]
   },
+  
+  {
+    "title": "Upgrade Vault",
+    "routes": [
+      {
+        "title": "Enable automated upgrades",
+        "href": "#"
+      },
+      {
+        "title": "Upgrade your Vault installation",
+        "href": "#"
+      },
+      {
+        "title": "Upgrade a Vault HA installation",
+        "href": "#"
+      },
+      {
+        "title": "Upgrade enabled plugins",
+        "href": "#"
+      },
+      {
+        "title": "Upgrade integrated storage to Raft WAL",
+        "href": "#"
+      }
+    ]
+  }, 
 
   { "divider": true },
   { "heading": "RUN VAULT IN THE CLOUD" },
@@ -358,80 +563,61 @@
   },
   
   { "divider": true },
-  { "heading": "MANAGE VAULT" },
+  { "heading": "MANAGE VAULT DAY-TO-DAY" },
+
+  {
+    "title": "Manage Vault resources",
+    "routes": [
+      
+
+      {
+        "title": "Vault GUI",
+        "href": "#"
+      },
   
-  {
-    "title": "Manage Vault with Terraform",
-    "routes": [
       {
-        "title": "Overview",
-        "href": "#"
-      },
-      {
-        "title": "Import unmanaged resources",
-        "href": "#"
-      },
-      {
-        "title": "Create new resources",
-        "href": "#"
-      },
-      {
-        "title": "Delete resources",
-        "href": "#"
-      }
-    ]
-  },
-  {
-    "title": "Configure Vault",
-    "routes": [
-      {
-        "title": "Overview",
-        "href": "#"
-      },
-      {
-        "title": "Configure the Vault UI",
-        "href": "#"
-      },
-      {
-        "title": "Configure quotas and leases",
-        "href": "#"
-      },
-      {
-        "title": "Configuration blocks",
-        "routes":[
+        "title": "Use Terraform",
+        "routes": [
           {
-            "title": "<code>api_addr</code>",
+            "title": "Overview",
             "href": "#"
           },
           {
-            "title": "<code>cluster_addr</code>",
+            "title": "Import unmanaged resources",
             "href": "#"
           },
           {
-            "title": "<code>disable_mlock</code>",
+            "title": "Create new resources",
             "href": "#"
           },
           {
-            "title": "<code>ha_storage</code>",
+            "title": "Delete resources",
+            "href": "#"
+          }
+        ]
+      },
+
+      {
+        "title": "Namespaces",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "highlight"
+        },
+        "routes": [
+          {
+            "title": "Create a namespace",
             "href": "#"
           },
           {
-            "title": "<code>listener</code>",
-            "href": "#"
-          },
-          {
-            "title": "<code>storage</code>",
-            "href": "#"
-          },
-          {
-            "title": "<code>ui</code>",
+            "title": "Create an administrative namespace",
             "href": "#"
           }
         ]
       }
     ]
   },
-  
+
   {
     "title": "Control Vault access",
     "routes": [
@@ -579,147 +765,6 @@
       }
     ]
   },
-  {
-    "title": "Manage Vault storage",
-    "routes": [
-      {
-        "title": "Overview",
-        "href": "#"
-      },
-      {
-        "title": "Use Vault-integrated storage",
-        "href": "#"
-      },
-      {
-        "title": "Use Consul storage",
-        "href": "#"
-      },
-      {
-        "title": "Enable local system storage",
-        "routes": [
-          {
-            "title": "In-memory storage",
-            "href": "#"
-          },
-          {
-            "title": "Local file system",
-            "href": "#"
-          }
-        ]
-      },
-      {
-        "title": "Enable external storage",
-        "routes": [
-          {
-            "title": "Overview",
-            "href": "#"
-          },
-          {
-            "title": "Aerospike",
-            "href": "#"
-          },
-          {
-            "title": "Alicloud OSS",
-            "href": "#"
-          },
-          {
-            "title": "Azure (duplicates Enable Azure backend storage)",
-            "href": "#"
-          },
-          {
-            "title": "Cassandra",
-            "href": "#"
-          },
-          {
-            "title": "CockroachDB",
-            "href": "#"
-          },
-          {
-            "title": "CouchDB",
-            "href": "#"
-          },
-          {
-            "title": "DynamoDB",
-            "href": "#"
-          },
-          {
-            "title": "Etcd",
-            "href": "#"
-          },
-          {
-            "title": "FoundationDB",
-            "href": "#"
-          },
-          {
-            "title": "Google Cloud Spanner (duplicates Enable Google Cloud Spanner)",
-            "href": "#"
-          },
-          {
-            "title": "Google Cloud Storage (duplicates Enable GCP storage)",
-            "href": "#"
-          },
-          {
-            "title": "Manta",
-            "href": "#"
-          },
-          {
-            "title": "MSSQL",
-            "href": "#"
-          },
-          {
-            "title": "MySQL",
-            "href": "#"
-          },
-          {
-            "title": "OCI Object Storage",
-            "href": "#"
-          },
-          {
-            "title": "PostgreSQL",
-            "href": "#"
-          },
-          {
-            "title": "S3 (duplicates Enable S3 backend storage)",
-            "href": "#"
-          },
-          {
-            "title": "Swift",
-            "href": "#"
-          },
-          {
-            "title": "Zookeeper",
-            "href": "#"
-          }
-        ]
-      }
-    ]
-  },
-  
-  {
-    "title": "Upgrade Vault",
-    "routes": [
-      {
-        "title": "Enable automated upgrades",
-        "href": "#"
-      },
-      {
-        "title": "Upgrade your Vault installation",
-        "href": "#"
-      },
-      {
-        "title": "Upgrade a Vault HA installation",
-        "href": "#"
-      },
-      {
-        "title": "Upgrade enabled plugins",
-        "href": "#"
-      },
-      {
-        "title": "Upgrade integrated storage to Raft WAL",
-        "href": "#"
-      }
-    ]
-  },
   
   {
     "title": "Monitor Vault",
@@ -758,22 +803,12 @@
       }
     ]
   },
-  
+
   {
-    "title": "Manage namespaces",
-    "href": "#",
-    "badge": {
-      "text": "ENTERPRISE",
-      "type": "outlined",
-      "color": "highlight"
-    },
+    "title": "Tune Vault",
     "routes": [
       {
-        "title": "Create a namespace",
-        "href": "#"
-      },
-      {
-        "title": "Create an administrative namespace",
+        "title": "Placeholder",
         "href": "#"
       }
     ]
@@ -796,7 +831,70 @@
       }
     ]
   },
+
+  { "divider": true },
+  { "heading": "PROTECT SECRETS" },
+
+  {
+    "title": "Manage encryption keys",
+    "routes": [
+      {
+        "title": "Placeholder",
+        "href": "#"
+      }
+    ]
+  },
+
+  {
+    "title": "Use certificate authorities",
+    "routes": [
+      {
+        "title": "Placeholder",
+        "href": "#"
+      }
+    ]
+  },
+
+  {
+    "title": "Manage DB credentials",
+    "routes": [
+      {
+        "title": "Placeholder",
+        "href": "#"
+      }
+    ]
+  },
+
+  {
+    "title": "Manage cloud keys",
+    "routes": [
+      {
+        "title": "Placeholder",
+        "href": "#"
+      }
+    ]
+  },
+
+  {
+    "title": "Use identity tokens",
+    "routes": [
+      {
+        "title": "Placeholder",
+        "href": "#"
+      }
+    ]
+  },
   
+  {
+    "title": "Use encryption as a service",
+    "routes": [
+      {
+        "title": "Placeholder",
+        "href": "#"
+      }
+    ]
+  },
+
   {
     "title": "Use advanced data protection",
     "badge": {
@@ -835,31 +933,6 @@
         ]
       }
     ]
-  }, 
-  {
-    "title": "Integrate with GitHub",
-    "routes": [
-      {
-        "title": "Use Vault in GitHub actions",
-        "href": "#"
-      },
-      {
-        "title": "Sync data with GitHub",
-        "href": "#"
-      },
-      {
-        "title": "Enable GitHub authentication",
-        "href": "#"
-      }
-    ]
-  },
-  {
-    "title": "Integrate with MSSQL EKM provider",
-    "href": "#"
-  },
-  {
-    "title": "Integrate with ServiceNow MID",
-    "href": "#"
   },
 
   { "divider": true },
