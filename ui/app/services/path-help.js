@@ -13,7 +13,6 @@ import Service from '@ember/service';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { getOwner } from '@ember/owner';
 import { expandOpenApiProps, combineAttributes } from 'vault/utils/openapi-to-attrs';
-import fieldToAttrs from 'vault/utils/field-to-attrs';
 import { resolve, reject } from 'rsvp';
 import { debug } from '@ember/debug';
 import { capitalize } from '@ember/string';
@@ -30,6 +29,7 @@ import {
   combineOpenApiAttrs,
 } from 'vault/utils/openapi-helpers';
 import { isPresent } from '@ember/utils';
+import GeneratedItemModel from 'vault/models/generated-item';
 
 export default Service.extend({
   attrs: null,
@@ -42,41 +42,48 @@ export default Service.extend({
     });
   },
 
-  upgradeModelSchema(owner, type, newAttrs) {
+  /**
+   * Registers new ModelClass at specified model type, and busts cache
+   */
+  _registerModel(owner, NewKlass, modelType, isNew = false) {
     const store = owner.lookup('service:store');
-    const Klass = store.modelFor(type);
-    // extending the class will ensure that static schema lookups regenerate
-    const NewKlass = class extends Klass {};
-
-    for (const { name, type, options } of newAttrs) {
-      const decorator = attr(type, options);
-      const descriptor = decorator(NewKlass.prototype, name, {});
-      Object.defineProperty(NewKlass.prototype, name, descriptor);
-    }
-    // ORIGINAL
-    // for (const [key, schema] of Object.entries(newAttrs)) {
-    //   console.log('upgrading', key, schema);
-    //   const decorator = attr(schema.type, schema.options);
-    //   const descriptor = decorator(NewKlass.prototype, key, {});
-    //   Object.defineProperty(NewKlass.prototype, key, descriptor);
-    // }
-
-    // Ensure this class doesn't get re-hydrated
-    NewKlass.merged = true;
-
     // bust cache in ember's registry
-    owner.unregister('model:' + type);
-    owner.register('model:' + type, NewKlass);
+    if (!isNew) {
+      owner.unregister('model:' + modelType);
+    }
+    owner.register('model:' + modelType, NewKlass);
 
     // bust cache in EmberData's model lookup
-    delete store._modelFactoryCache[type];
+    delete store._modelFactoryCache[modelType];
 
     // bust cache in schema service
     const schemas = store.getSchemaDefinitionService?.();
     if (schemas) {
-      delete schemas._relationshipsDefCache[type];
-      delete schemas._attributesDefCache[type];
+      delete schemas._relationshipsDefCache[modelType];
+      delete schemas._attributesDefCache[modelType];
     }
+  },
+
+  /**
+   * upgradeModelSchema takes an existing ModelClass and hydrates it with the passed attributes
+   * @param {ModelClass} Klass model class retrieved with store.modelFor(modelType)
+   * @param {Attribute[]} attrs array of attributes {name, type, options}
+   * @returns new ModelClass extended from passed one, with the passed attributes added
+   */
+  _upgradeModelSchema(Klass, attrs) {
+    // extending the class will ensure that static schema lookups regenerate
+    const NewKlass = class extends Klass {};
+
+    for (const { name, type, options } of attrs) {
+      const decorator = attr(type, options);
+      const descriptor = decorator(NewKlass.prototype, name, {});
+      Object.defineProperty(NewKlass.prototype, name, descriptor);
+    }
+
+    // Ensure this class doesn't get re-hydrated
+    NewKlass.merged = true;
+
+    return NewKlass;
   },
 
   /**
@@ -103,7 +110,10 @@ export default Service.extend({
     const { attrs, newFields } = combineOpenApiAttrs(Klass.attributes, props);
     debug(`${modelType} has ${newFields.length} new fields: ${newFields.join(', ')}`);
 
-    return this.upgradeModelSchema(owner, modelType, attrs);
+    // hydrate model
+    const HydratedKlass = this._upgradeModelSchema(Klass, attrs);
+
+    this._registerModel(owner, HydratedKlass, modelType);
   },
 
   /**
@@ -157,7 +167,7 @@ export default Service.extend({
         const helpUrl = `/v1/${apiPath}${path.slice(1)}?help=true`;
         pathInfo.paths = paths;
         newModel = newModel.extend({ paths: pathInfo });
-        return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
+        return this.registerNewModelWithAttrs(helpUrl, modelType);
       })
       .catch((err) => {
         // TODO: we should handle the error better here
@@ -313,6 +323,20 @@ export default Service.extend({
     });
   },
 
+  /**
+   * registerNewModelWithAttrs takes the helpUrl of the given model type,
+   * fetches props, and registers the model hydrated with the provided attrs
+   * @param {string} helpUrl like /v1/auth/userpass2/users/example?help=true
+   * @param {string} modelType like generated-user-userpass
+   */
+  async registerNewModelWithAttrs(helpUrl, modelType) {
+    const owner = getOwner(this);
+    const props = await this.getProps(helpUrl);
+    const { attrs } = combineOpenApiAttrs(new Map(), props);
+    const NewKlass = this._upgradeModelSchema(GeneratedItemModel, attrs);
+    this._registerModel(owner, NewKlass, modelType, true);
+  },
+
   registerNewModelWithProps(helpUrl, backend, newModel, modelName) {
     return this.getProps(helpUrl, backend).then((props) => {
       const { attrs, newFields } = combineAttributes(newModel.attributes, props);
@@ -367,29 +391,5 @@ export default Service.extend({
       owner.unregister(modelName);
       owner.register(modelName, newModel);
     });
-  },
-  getFieldGroups(newModel) {
-    const groups = {
-      default: [],
-    };
-    const fieldGroups = [];
-    newModel.attributes.forEach((attr) => {
-      // if the attr comes in with a fieldGroup from OpenAPI,
-      // add it to that group
-      if (attr.options.fieldGroup) {
-        if (groups[attr.options.fieldGroup]) {
-          groups[attr.options.fieldGroup].push(attr.name);
-        } else {
-          groups[attr.options.fieldGroup] = [attr.name];
-        }
-      } else {
-        // otherwise just add that attr to the default group
-        groups.default.push(attr.name);
-      }
-    });
-    for (const group in groups) {
-      fieldGroups.push({ [group]: groups[group] });
-    }
-    return fieldToAttrs(newModel, fieldGroups);
   },
 });
