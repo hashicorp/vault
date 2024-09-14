@@ -45,7 +45,9 @@ export default BaseAdapter.extend({
     // the endpoint here won't allow sending `operation_all` and `operation_none` at the same time or with
     // other operation_ values, so we manually check for them and send an abbreviated object
     const json = snapshot.serialize();
-    const keys = snapshot.record.nonOperationFields.map(decamelize);
+    const keys = Object.keys(snapshot.record.editableFields)
+      .filter((key) => !key.startsWith('operation'))
+      .map(decamelize);
     const nonOperationFields = getProperties(json, keys);
     for (const field in nonOperationFields) {
       if (nonOperationFields[field] == null) {
