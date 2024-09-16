@@ -31,7 +31,7 @@ export default class KmipRoleFormComponent extends Component {
     ];
     const attributes = ['operationAddAttribute', 'operationGetAttributes'];
     const server = ['operationDiscoverVersions'];
-    const others = removeManyFromArray(operationFieldsWithoutSpecial(this.model.editableFields), [
+    const others = removeManyFromArray(operationFieldsWithoutSpecial(this.args.model.editableFields), [
       ...objects,
       ...attributes,
       ...server,
@@ -69,7 +69,7 @@ export default class KmipRoleFormComponent extends Component {
     // doing here instead of on the 'operationNone' input because a user might deselect all, then reselect some options
     // and immediately setting operationNone will hide all of the checkboxes in the UI
     this.args.model.operationNone =
-      opFieldsWithoutSpecial.every((attr) => this.args.model[attr]) && !this.args.model.operationAll;
+      opFieldsWithoutSpecial.every((attr) => this.args.model[attr] !== true) && !this.args.model.operationAll;
     return this.args.model;
   }
 
