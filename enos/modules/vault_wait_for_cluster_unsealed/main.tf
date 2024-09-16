@@ -18,6 +18,18 @@ variable "hosts" {
   description = "The vault cluster instances that were created"
 }
 
+variable "retry_interval" {
+  type        = number
+  description = "How many seconds to wait between each retry"
+  default     = 2
+}
+
+variable "timeout" {
+  type        = number
+  description = "The max number of seconds to wait before timing out"
+  default     = 60
+}
+
 variable "vault_addr" {
   type        = string
   description = "The local vault API listen address"
@@ -36,6 +48,8 @@ resource "enos_remote_exec" "verify_node_unsealed" {
   environment = {
     HOST_IPV4         = each.value.public_ip
     HOST_IPV6         = each.value.ipv6
+    RETRY_INTERVAL    = var.retry_interval
+    TIMEOUT_SECONDS   = var.timeout
     VAULT_ADDR        = var.vault_addr
     VAULT_INSTALL_DIR = var.vault_install_dir
   }
