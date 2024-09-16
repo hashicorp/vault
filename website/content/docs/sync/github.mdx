@@ -35,11 +35,11 @@ Use `vault write` to configure a repository sync destination with an access toke
       repository_owner="GITHUB_OWNER_NAME"                \
       repository_name="GITHUB_REPO_NAME"
   ```
-  
+
   For example:
 
   <CodeBlockConfig hideClipboard>
-  
+
   ```
   $ vault write sys/sync/destinations/gh/hcrepo-sandbox       \
       access_token="github_pat_11ABC000000000000000000000DEF" \
@@ -64,11 +64,11 @@ Use `vault write` to configure a repository sync destination with an access toke
       repository_name="GITHUB_REPO_NAME"                  \
       environment_name="GITHUB_ENVIRONMENT_NAME"
   ```
-  
+
   For example:
 
   <CodeBlockConfig hideClipboard>
-  
+
   ```
   $ vault write sys/sync/destinations/gh/hcrepo-sandbox       \
       access_token="github_pat_11ABC000000000000000000000DEF" \
@@ -177,7 +177,7 @@ depending on whether you have configured
 If using the secret-path granularity, it is strongly advised to mask individual values for each sub-key to prevent the
 unintended disclosure of secrets in any GitHub Action outputs. The following snippet illustrates how to mask each secret values:
 
-  ```yaml
+```yaml
   name: Mask synced secret values
 
   on:
@@ -192,7 +192,7 @@ unintended disclosure of secrets in any GitHub Action outputs. The following sni
             for v in $(echo '${{ secrets.VAULT_KV_1234_MY_SECRET }}' | jq -r '.[]'); do
               echo "::add-mask::$v"
             done
-  ```
+```
 
 If the GitHub destination uses the default `secret-key` granularity, the values are masked by GitHub automatically.
 
