@@ -221,16 +221,11 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
 
   test('it can create a role', async function (assert) {
     // moving create scope here to help with flaky test
+    const scope = `scope-for-can-create-role`;
+    const role = `role-new-role`;
     const backend = await mountWithConfig(this.backend);
     await settled();
-    const scope = `scope-for-can-create-role`;
-    await settled();
-    const res = await runCmd([`write ${backend}/scope/${scope} -force`]);
-    await settled();
-    if (res.includes('Error')) {
-      throw new Error(`Error creating scope: ${res}`);
-    }
-    const role = `role-new-role`;
+    await runCmd([`write ${backend}/scope/${scope} -force`], true);
     await rolesPage.visit({ backend, scope });
     await settled();
     assert.ok(rolesPage.isEmpty, 'renders the empty role page');
@@ -244,8 +239,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
 
     await rolesPage.roleName(role);
     await settled();
-    await rolesPage.submit();
-    await settled();
+    await click(GENERAL.saveButton);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/kmip/scopes/${scope}/roles`,
@@ -304,8 +298,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
       `/vault/secrets/${backend}/kmip/scopes/${scope}/roles/${role}/edit`,
       'navigates to role edit'
     );
-    await rolesPage.cancelLink();
-    await settled();
+    await click(GENERAL.cancelButton);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/kmip/scopes/${scope}/roles/${role}`,
@@ -369,7 +362,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
       await runCmd([`write ${this.backend}/scope/${this.scope} -force`]);
       await rolesPage.visit({ backend: this.backend, scope: this.scope });
       this.setModel = async () => {
-        await click('[data-test-edit-form-submit]');
+        await click(GENERAL.saveButton);
         await visit(`/vault/secrets/${this.backend}/kmip/scopes/${this.scope}/roles/${this.name}`);
         this.model = this.store.peekRecord('kmip/role', this.name);
       };
@@ -382,7 +375,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
       assert.expect(3);
 
       await click('[data-test-role-create]');
-      await fillIn(GENERAL.inputByAttr('name'), this.name);
+      await fillIn(GENERAL.inputByAttr('role'), this.name);
       assert.dom(GENERAL.inputByAttr('operationAll')).isChecked('operationAll is checked by default');
       await this.setModel();
       assert.true(this.model.operationAll, 'operationAll is true');
@@ -393,7 +386,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
       assert.expect(4);
 
       await click('[data-test-role-create]');
-      await fillIn(GENERAL.inputByAttr('name'), this.name);
+      await fillIn(GENERAL.inputByAttr('role'), this.name);
       await click(GENERAL.inputByAttr('operationNone'));
       assert
         .dom(GENERAL.inputByAttr('operationNone'))
@@ -410,9 +403,10 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
       assert.expect(2);
 
       await click('[data-test-role-create]');
-      await fillIn(GENERAL.inputByAttr('name'), this.name);
+      await fillIn(GENERAL.inputByAttr('role'), this.name);
       await click(GENERAL.inputByAttr('operationAll'));
       await this.setModel();
+
       assert.strictEqual(this.model.operationAll, undefined, 'operationAll is unset');
       assert.true(this.model.operationNone, 'operationNone is true');
     });
@@ -421,7 +415,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
       assert.expect(6);
 
       await click('[data-test-role-create]');
-      await fillIn(GENERAL.inputByAttr('name'), this.name);
+      await fillIn(GENERAL.inputByAttr('role'), this.name);
       await click(GENERAL.inputByAttr('operationAll'));
       await click(GENERAL.inputByAttr('operationGet'));
       await click(GENERAL.inputByAttr('operationGetAttributes'));
