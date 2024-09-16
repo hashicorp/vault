@@ -2335,46 +2335,6 @@ BUG FIXES:
 * secrets/transit (enterprise): Apply hashing arguments and defaults to managed key sign/verify operations
 * secrets/transit: Do not allow auto rotation on managed_key key types [[GH-23723](https://github.com/hashicorp/vault/pull/23723)]
 
-## 1.13.6
-### August 30, 2023
-
-CHANGES:
-
-* core: Bump Go version to 1.20.7.
-
-IMPROVEMENTS:
-
-* core: Log rollback manager failures during unmount, remount to prevent replication failures on secondary clusters. [[GH-22235](https://github.com/hashicorp/vault/pull/22235)]
-* replication (enterprise): Make reindex less disruptive by allowing writes during the flush phase.
-* secrets/database: Improves error logging for static role rotations by including the database and role names. [[GH-22253](https://github.com/hashicorp/vault/pull/22253)]
-* storage/raft: Cap the minimum dead_server_last_contact_threshold to 1m. [[GH-22040](https://github.com/hashicorp/vault/pull/22040)]
-* ui: KV View Secret card will link to list view if input ends in "/" [[GH-22502](https://github.com/hashicorp/vault/pull/22502)]
-* ui: enables create and update KV secret workflow when control group present [[GH-22471](https://github.com/hashicorp/vault/pull/22471)]
-
-BUG FIXES:
-
-* activity (enterprise): Fix misattribution of entities to no or child namespace auth methods [[GH-18809](https://github.com/hashicorp/vault/pull/18809)]
-* api: Fix breakage with UNIX domain socket addresses introduced by newest Go versions as a security fix. [[GH-22523](https://github.com/hashicorp/vault/pull/22523)]
-* core (enterprise): Remove MFA Configuration for namespace when deleting namespace
-* core/quotas (enterprise): Fix a case where we were applying login roles to lease count quotas in a non-login context.
-Also fix a related potential deadlock. [[GH-21110](https://github.com/hashicorp/vault/pull/21110)]
-* core:  Remove "expiration manager is nil on tokenstore" error log for unauth requests on DR secondary as they do not have expiration manager. [[GH-22137](https://github.com/hashicorp/vault/pull/22137)]
-* core: Fix bug where background thread to update locked user entries runs on DR secondaries. [[GH-22355](https://github.com/hashicorp/vault/pull/22355)]
-* core: Fix readonly errors that could occur while loading mounts/auths during unseal [[GH-22362](https://github.com/hashicorp/vault/pull/22362)]
-* core: Fixed an instance where incorrect route entries would get tainted. We now pre-calculate namespace specific paths to avoid this. [[GH-21470](https://github.com/hashicorp/vault/pull/21470)]
-* expiration: Fix a deadlock that could occur when a revocation failure happens while restoring leases on startup. [[GH-22374](https://github.com/hashicorp/vault/pull/22374)]
-* license: Add autoloaded license path to the cache exempt list. This is to ensure the license changes on the active node is observed on the perfStandby node. [[GH-22363](https://github.com/hashicorp/vault/pull/22363)]
-* replication (enterprise): Fix bug sync invalidate CoreReplicatedClusterInfoPath
-* replication (enterprise): Fix panic when update-primary was called on demoted clusters using update_primary_addrs
-* replication (enterprise): Fixing a bug by which the atomicity of a merkle diff result could be affected. This means it could be a source of a merkle-diff & sync process failing to switch into stream-wal mode afterwards.
-* sdk/ldaputil: Properly escape user filters when using UPN domains
-sdk/ldaputil: use EscapeLDAPValue implementation from cap/ldap [[GH-22249](https://github.com/hashicorp/vault/pull/22249)]
-* secrets/ldap: Fix bug causing schema and password_policy to be overwritten in config. [[GH-22331](https://github.com/hashicorp/vault/pull/22331)]
-* secrets/transform (enterprise): Tidy operations will be re-scheduled at a minimum of every minute, not a maximum of every minute
-* ui: Fix blank page or ghost secret when canceling KV secret create [[GH-22541](https://github.com/hashicorp/vault/pull/22541)]
-* ui: fixes `max_versions` default for secret metadata unintentionally overriding kv engine defaults [[GH-22394](https://github.com/hashicorp/vault/pull/22394)]
-* ui: fixes model defaults overwriting input value when user tries to clear form input [[GH-22458](https://github.com/hashicorp/vault/pull/22458)]
-
 ## 1.13.8
 ### September 27, 2023
 
