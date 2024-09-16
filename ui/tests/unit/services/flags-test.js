@@ -6,6 +6,7 @@
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import sinon from 'sinon';
 
 const ACTIVATED_FLAGS_RESPONSE = {
   data: {
@@ -24,6 +25,8 @@ module('Unit | Service | flags', function (hooks) {
 
   hooks.beforeEach(function () {
     this.service = this.owner.lookup('service:flags');
+    this.version = this.owner.lookup('service:version');
+    this.permissions = this.owner.lookup('service:permissions');
   });
 
   test('it loads with defaults', function (assert) {
@@ -33,7 +36,7 @@ module('Unit | Service | flags', function (hooks) {
 
   module('#fetchActivatedFlags', function (hooks) {
     hooks.beforeEach(function () {
-      this.owner.lookup('service:version').type = 'enterprise';
+      this.version.type = 'enterprise';
     });
 
     test('it returns activated flags', async function (assert) {
@@ -66,8 +69,16 @@ module('Unit | Service | flags', function (hooks) {
       assert.deepEqual(this.service.activatedFlags, [], 'Activated flags are empty');
     });
 
-    test('it returns an empty array if the cluster is OSS', async function (assert) {
-      this.owner.lookup('service:version').type = 'community';
+    test('it does not call activation-flags endpoint if the cluster is OSS', async function (assert) {
+      this.version.type = 'community';
+
+      this.server.get(
+        'sys/activation-flags',
+        () =>
+          new Error(
+            'uh oh! a request was made to sys/activation-flags, this should not happen for community versions'
+          )
+      );
 
       await this.service.fetchActivatedFlags();
       assert.deepEqual(this.service.activatedFlags, [], 'Activated flags are empty');
@@ -76,7 +87,7 @@ module('Unit | Service | flags', function (hooks) {
 
   module('#fetchFeatureFlags', function (hooks) {
     hooks.beforeEach(function () {
-      this.owner.lookup('service:version').type = 'enterprise';
+      this.version.type = 'enterprise';
     });
 
     test('it returns feature flags', async function (assert) {
@@ -119,9 +130,9 @@ module('Unit | Service | flags', function (hooks) {
     });
   });
 
-  module('#secretsSyncActivated', function (hooks) {
+  module('#secretsSyncIsActivated', function (hooks) {
     hooks.beforeEach(function () {
-      this.owner.lookup('service:version').type = 'enterprise';
+      this.version.type = 'enterprise';
       this.service.activatedFlags = ACTIVATED_FLAGS_RESPONSE.data.activated;
     });
 
@@ -132,6 +143,80 @@ module('Unit | Service | flags', function (hooks) {
     test('it returns false when secrets sync is not activated', function (assert) {
       this.service.activatedFlags = [];
       assert.false(this.service.secretsSyncIsActivated);
+    });
+  });
+
+  module('#showSecretsSync', function () {
+    test('it returns false when version is community', function (assert) {
+      this.version.type = 'community';
+      assert.false(this.service.showSecretsSync);
+    });
+
+    module('isHvdManaged', function (hooks) {
+      hooks.beforeEach(function () {
+        this.version.type = 'enterprise';
+        this.service.featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
+      });
+
+      test('it returns true when not activated', function (assert) {
+        this.service.activatedFlags = [];
+        assert.true(this.service.showSecretsSync);
+      });
+
+      test('it returns true when activated', function (assert) {
+        this.service.activatedFlags = ACTIVATED_FLAGS_RESPONSE.data.activated;
+        assert.true(this.service.showSecretsSync);
+      });
+    });
+
+    module('is Enterprise', function (hooks) {
+      hooks.beforeEach(function () {
+        this.version.type = 'enterprise';
+      });
+
+      test('it returns false when not on license ', function (assert) {
+        this.version.features = ['replication'];
+        assert.false(this.service.showSecretsSync);
+      });
+
+      module('no permissions to sys/sync', function (hooks) {
+        hooks.beforeEach(function () {
+          this.version.features = ['Secrets Sync'];
+          const hasNavPermission = sinon.stub(this.permissions, 'hasNavPermission');
+          hasNavPermission.returns(false);
+        });
+
+        test('it returns false when activated ', function (assert) {
+          this.service.activatedFlags = ACTIVATED_FLAGS_RESPONSE.data.activated;
+          assert.false(this.service.showSecretsSync);
+        });
+
+        test('it returns true when not activated ', function (assert) {
+          // the activate endpoint is located at a different path than sys/sync.
+          // the expected UX experience: if the feature is not activated, regardless of permissions
+          // the user should see the landing page and a banner that tells them to either have an admin activate the feature or activate it themselves
+          this.service.activatedFlags = [];
+          assert.true(this.service.showSecretsSync);
+        });
+      });
+
+      module('user has permissions to sys/sync', function (hooks) {
+        hooks.beforeEach(function () {
+          this.version.features = ['Secrets Sync'];
+          const hasNavPermission = sinon.stub(this.permissions, 'hasNavPermission');
+          hasNavPermission.returns(true);
+        });
+
+        test('it returns true when activated ', function (assert) {
+          this.service.activatedFlags = ACTIVATED_FLAGS_RESPONSE.data.activated;
+          assert.true(this.service.showSecretsSync);
+        });
+
+        test('it returns true when not activated ', function (assert) {
+          this.service.activatedFlags = [];
+          assert.true(this.service.showSecretsSync);
+        });
+      });
     });
   });
 });

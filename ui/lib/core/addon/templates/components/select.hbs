@@ -12,6 +12,7 @@
   <div class="select {{if this.isFullwidth 'is-fullwidth'}}">
     <select
       class="select"
+      {{! TODO: when 2 TtlPickers are on the same view this becomes two of the same ids. Shows up as dom warning. JIRA 29298}}
       id="select-{{this.name}}"
       onchange={{action this.onChange value="target.value"}}
       data-test-select={{this.name}}

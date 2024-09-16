@@ -16,6 +16,7 @@ variable "ami_id" { default = null }
 variable "cluster_name" { default = null }
 variable "cluster_tag_key" { default = null }
 variable "common_tags" { default = null }
+variable "disable_selinux" { default = true }
 variable "instance_count" { default = 3 }
 variable "instance_cpu_max" { default = null }
 variable "instance_cpu_min" { default = null }
@@ -23,6 +24,7 @@ variable "instance_mem_max" { default = null }
 variable "instance_mem_min" { default = null }
 variable "instance_types" { default = null }
 variable "max_price" { default = null }
+variable "ports_ingress" { default = null }
 variable "project_name" { default = null }
 variable "seal_key_names" { default = null }
 variable "ssh_allow_ips" { default = null }
@@ -45,5 +47,6 @@ output "hosts" {
   value = { for idx in range(var.instance_count) : idx => {
     public_ip  = "null-public-${idx}"
     private_ip = "null-private-${idx}"
+    ipv6       = "null-ipv6-${idx}"
   } }
 }

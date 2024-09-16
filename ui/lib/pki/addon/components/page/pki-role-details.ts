@@ -23,7 +23,7 @@ export default class DetailsPage extends Component<Args> {
 
   get breadcrumbs() {
     return [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.secretMountPath.currentPath, route: 'overview' },
       { label: 'roles', route: 'roles.index' },
       { label: this.args.role.id },

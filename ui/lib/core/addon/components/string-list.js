@@ -17,9 +17,8 @@ import { removeFromArray } from 'vault/helpers/remove-from-array';
  * @module StringList
  *
  * @example
- * ```js
- * <StringList @label={label} @onChange={{this.setAndBroadcast}} @inputValue={{this.valuePath}}/>
- * ```
+ * <StringList @label="My label" @inputValue={{array "one" "two"}} />
+ *
  * @param {string} label - Text displayed in the header above all the inputs.
  * @param {function} onChange - Function called when any of the inputs change.
  * @param {string} inputValue - A string or an array of strings.

@@ -1,0 +1,3 @@
+```release-note:bug
+storage/raft (enterprise): Fix issue with namespace cache not getting cleared on snapshot restore, resulting in namespaces not found in the snapshot being inaccurately represented by API responses.
+```

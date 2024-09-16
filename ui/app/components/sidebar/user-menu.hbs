@@ -55,9 +55,7 @@
                 class="in-dropdown link is-flex-start"
                 @onSuccess={{(fn (set-flash-message "Token copied!"))}}
                 @onError={{(fn
-                  (set-flash-message
-                    "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger"
-                  )
+                  (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")
                 )}}
                 data-test-copy-button={{this.auth.currentToken}}
               />

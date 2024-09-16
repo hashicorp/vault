@@ -1,0 +1,50 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<PageHeader as |p|>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      Lookup Token
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+{{#if this.lookupData}}
+  <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
+    {{#each-in this.lookupData as |key value|}}
+      {{#let (if (eq key "creation_ttl") "Creation TTL" (to-label key)) as |label|}}
+        <InfoTableRow @label={{label}} @value={{value}} />
+      {{/let}}
+    {{/each-in}}
+    {{#if this.expirationDate}}
+      <InfoTableRow @label="Expiration date" @value={{this.expirationDate}} />
+      <InfoTableRow @label="Expires in" @value={{date-from-now this.expirationDate}} />
+    {{/if}}
+  </div>
+  <div class="field is-grouped box is-fullwidth is-bottomless">
+    <Hds::Button @text="Done" @color="secondary" {{on "click" this.reset}} data-test-button="Done" />
+  </div>
+{{else}}
+  <form {{on "submit" this.handleSubmit}}>
+    <div class="box is-sideless is-fullwidth is-marginless">
+      <NamespaceReminder @mode="perform" @noun="lookup" />
+      <MessageError @errorMessage={{this.errorMessage}} />
+      <div class="field">
+        <label for="token" class="is-label">Wrapped token</label>
+        <div class="has-text-grey is-size-8 has-bottom-margin-xs">
+          Enter your wrapped token here to display its information.
+        </div>
+        <div class="control">
+          <Input @value={{this.token}} class="input" id="token" name="token" data-test-tools-input="wrapping-token" />
+        </div>
+      </div>
+    </div>
+    <div class="field is-grouped box is-fullwidth is-bottomless">
+      <div class="control">
+        <Hds::Button @text="Lookup token" type="submit" data-test-tools-submit />
+      </div>
+    </div>
+  </form>
+{{/if}}

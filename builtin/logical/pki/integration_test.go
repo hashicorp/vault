@@ -718,6 +718,7 @@ func TestIntegrationOCSPClientWithPKI(t *testing.T) {
 
 		err = ocspClient.VerifyLeafCertificate(context.Background(), cert, issuer, conf)
 		require.Error(t, err)
+		require.Contains(t, err.Error(), serialNumber, "Expected revoked serial number to appear in err")
 	}
 }
 

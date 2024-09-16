@@ -410,6 +410,11 @@ func (d *DynamoDBBackend) List(ctx context.Context, prefix string) ([]string, er
 				}},
 			},
 		},
+		ProjectionExpression: aws.String("#key, #path"),
+		ExpressionAttributeNames: map[string]*string{
+			"#key":  aws.String("Key"),
+			"#path": aws.String("Path"),
+		},
 	}
 
 	d.permitPool.Acquire()
@@ -452,6 +457,11 @@ func (d *DynamoDBBackend) hasChildren(prefix string, exclude []string) (bool, er
 					S: aws.String(prefix),
 				}},
 			},
+		},
+		ProjectionExpression: aws.String("#key, #path"),
+		ExpressionAttributeNames: map[string]*string{
+			"#key":  aws.String("Key"),
+			"#path": aws.String("Path"),
 		},
 		// Avoid fetching too many items from DynamoDB for performance reasons.
 		// We want to know if there are any children we don't expect to see.

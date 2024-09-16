@@ -15,6 +15,7 @@ variable "cluster_id" {
 
 variable "hosts" {
   type = map(object({
+    ipv6       = string
     private_ip = string
     public_ip  = string
   }))
@@ -22,11 +23,12 @@ variable "hosts" {
 }
 
 locals {
-  pin        = resource.random_string.pin.result
-  aes_label  = "vault_hsm_aes_${local.pin}"
-  hmac_label = "vault_hsm_hmac_${local.pin}"
-  target     = tomap({ "1" = var.hosts[0] })
-  token      = "${var.cluster_id}_${local.pin}"
+  pin             = resource.random_string.pin.result
+  aes_label       = "vault_hsm_aes_${local.pin}"
+  hmac_label      = "vault_hsm_hmac_${local.pin}"
+  seal_attributes = jsondecode(resource.enos_remote_exec.create_keys.stdout)
+  target          = tomap({ "0" = var.hosts[0] })
+  token           = "${var.cluster_id}_${local.pin}"
 }
 
 resource "random_string" "pin" {
@@ -93,10 +95,6 @@ resource "enos_remote_exec" "get_keys" {
       host = var.hosts[0].public_ip
     }
   }
-}
-
-locals {
-  seal_attributes = jsondecode(resource.enos_remote_exec.create_keys.stdout)
 }
 
 output "seal_attributes" {

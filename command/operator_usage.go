@@ -56,7 +56,7 @@ func (c *OperatorUsageCommand) Flags() *FlagSets {
 
 	f.TimeVar(&TimeVar{
 		Name:       "start-time",
-		Usage:      "Start of report period. Defaults to 'default_reporting_period' before end time.",
+		Usage:      "Start of report period. Defaults to billing start time",
 		Target:     &c.flagStartTime,
 		Completion: complete.PredictNothing,
 		Default:    time.Time{},
@@ -64,7 +64,7 @@ func (c *OperatorUsageCommand) Flags() *FlagSets {
 	})
 	f.TimeVar(&TimeVar{
 		Name:       "end-time",
-		Usage:      "End of report period. Defaults to end of last month.",
+		Usage:      "End of report period. Defaults to end of the current month.",
 		Target:     &c.flagEndTime,
 		Completion: complete.PredictNothing,
 		Default:    time.Time{},
@@ -132,7 +132,7 @@ func (c *OperatorUsageCommand) Run(args []string) int {
 	c.outputTimestamps(resp.Data)
 
 	out := []string{
-		"Namespace path | Distinct entities | Non-Entity tokens | Secret syncs | ACME clients | Active clients",
+		"Namespace path | Entity Clients | Non-Entity clients | Secret syncs | ACME clients | Active clients",
 	}
 
 	out = append(out, c.namespacesOutput(resp.Data)...)
@@ -142,6 +142,12 @@ func (c *OperatorUsageCommand) Run(args []string) int {
 	colConfig.Empty = " " // Do not show n/a on intentional blank lines
 	colConfig.Glue = "   "
 	c.UI.Output(tableOutput(out, colConfig))
+
+	// Also, output the warnings returned, if any:
+	for _, warning := range resp.Warnings {
+		c.UI.Warn(warning)
+	}
+
 	return 0
 }
 
@@ -233,14 +239,14 @@ func (c *OperatorUsageCommand) parseNamespaceCount(rawVal interface{}) (UsageRes
 		return ret, errors.New("missing counts")
 	}
 
-	ret.entityCount, ok = jsonNumberOK(counts, "distinct_entities")
+	ret.entityCount, ok = jsonNumberOK(counts, "entity_clients")
 	if !ok {
-		return ret, errors.New("missing distinct_entities")
+		return ret, errors.New("missing entity_clients")
 	}
 
-	ret.tokenCount, ok = jsonNumberOK(counts, "non_entity_tokens")
+	ret.tokenCount, ok = jsonNumberOK(counts, "non_entity_clients")
 	if !ok {
-		return ret, errors.New("missing non_entity_tokens")
+		return ret, errors.New("missing non_entity_clients")
 	}
 
 	// don't error if the secret syncs key is missing
@@ -311,15 +317,15 @@ func (c *OperatorUsageCommand) totalOutput(data map[string]interface{}) []string
 		return out
 	}
 
-	entityCount, ok := jsonNumberOK(total, "distinct_entities")
+	entityCount, ok := jsonNumberOK(total, "entity_clients")
 	if !ok {
-		c.UI.Error("missing distinct_entities in total")
+		c.UI.Error("missing entity_clients in total")
 		return out
 	}
 
-	tokenCount, ok := jsonNumberOK(total, "non_entity_tokens")
+	tokenCount, ok := jsonNumberOK(total, "non_entity_clients")
 	if !ok {
-		c.UI.Error("missing non_entity_tokens in total")
+		c.UI.Error("missing non_entity_clients in total")
 		return out
 	}
 	// don't error if secret syncs key is missing

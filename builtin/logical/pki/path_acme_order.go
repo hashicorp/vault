@@ -271,7 +271,7 @@ func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, r *logical.Request, 
 			return nil, err
 		}
 
-		err = issuing.StoreCertificate(ac.sc.Context, ac.sc.Storage, ac.sc.Backend.GetCertificateCounter(), signedCertBundle)
+		err = issuing.StoreCertificate(ac.sc.Context, ac.sc.Storage, ac.sc.GetCertificateCounter(), signedCertBundle)
 		if err != nil {
 			return nil, err
 		}
@@ -476,7 +476,7 @@ func removeDuplicatesAndSortIps(ipIdentifiers []net.IP) []net.IP {
 
 func maybeAugmentReqDataWithSuitableCN(ac *acmeContext, csr *x509.CertificateRequest, data *framework.FieldData) {
 	// Role doesn't require a CN, so we don't care.
-	if !ac.role.RequireCN {
+	if !ac.Role.RequireCN {
 		return
 	}
 
@@ -522,9 +522,9 @@ func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.
 	// (TLS) clients are mostly verifying against server's DNS SANs.
 	maybeAugmentReqDataWithSuitableCN(ac, csr, data)
 
-	signingBundle, issuerId, err := ac.sc.fetchCAInfoWithIssuer(ac.issuer.ID.String(), issuing.IssuanceUsage)
+	signingBundle, issuerId, err := ac.sc.fetchCAInfoWithIssuer(ac.Issuer.ID.String(), issuing.IssuanceUsage)
 	if err != nil {
-		return nil, "", fmt.Errorf("failed loading CA %s: %w", ac.issuer.ID.String(), err)
+		return nil, "", fmt.Errorf("failed loading CA %s: %w", ac.Issuer.ID.String(), err)
 	}
 
 	// ACME issued cert will override the TTL values to truncate to the issuer's
@@ -536,17 +536,17 @@ func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.
 	input := &inputBundle{
 		req:     &logical.Request{},
 		apiData: data,
-		role:    ac.role,
+		role:    ac.Role,
 	}
 
-	normalNotAfter, _, err := getCertificateNotAfter(ac.sc.Backend, input, signingBundle)
+	normalNotAfter, _, err := getCertificateNotAfter(ac.sc.System(), input, signingBundle)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed computing certificate TTL from role/mount: %v: %w", err, ErrMalformed)
 	}
 
 	// We only allow ServerAuth key usage from ACME issued certs
 	// when configuration does not allow usage of ExtKeyusage field.
-	config, err := ac.sc.Backend.GetAcmeState().getConfigWithUpdate(ac.sc)
+	config, err := ac.acmeState.getConfigWithUpdate(ac.sc)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to fetch ACME configuration: %w", err)
 	}
@@ -573,7 +573,7 @@ func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.
 	// unit, we have no way of validating this (via ACME here, without perhaps
 	// an external policy engine), and thus should not be setting it on our
 	// final issued certificate.
-	parsedBundle, _, err := signCert(ac.sc.Backend, input, signingBundle, false /* is_ca=false */, false /* use_csr_values */)
+	parsedBundle, _, err := signCert(ac.sc.System(), input, signingBundle, false /* is_ca=false */, false /* use_csr_values */)
 	if err != nil {
 		return nil, "", fmt.Errorf("%w: refusing to sign CSR: %s", ErrBadCSR, err.Error())
 	}
@@ -730,7 +730,7 @@ func (b *backend) acmeNewOrderHandler(ac *acmeContext, _ *logical.Request, _ *fr
 		return nil, err
 	}
 
-	err = b.validateIdentifiersAgainstRole(ac.role, identifiers)
+	err = b.validateIdentifiersAgainstRole(ac.Role, identifiers)
 	if err != nil {
 		return nil, err
 	}

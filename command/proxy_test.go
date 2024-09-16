@@ -44,6 +44,7 @@ func testProxyCommand(tb testing.TB, logger hclog.Logger) (*cli.MockUi, *ProxyCo
 		},
 		ShutdownCh: MakeShutdownCh(),
 		SighupCh:   MakeSighupCh(),
+		SigUSR2Ch:  MakeSigUSR2Ch(),
 		logger:     logger,
 		startedCh:  make(chan struct{}, 5),
 		reloadedCh: make(chan struct{}, 5),

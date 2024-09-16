@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/require"
 )
 
@@ -419,6 +420,40 @@ func TestOptions_WithFileMode(t *testing.T) {
 					// Dereference the pointer, so we can examine the file mode.
 					require.Equal(t, tc.ExpectedValue, *opts.withFileMode)
 				}
+			}
+		})
+	}
+}
+
+// TestOptions_WithLogger exercises WithLogger Option to ensure it performs as expected.
+func TestOptions_WithLogger(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		value         hclog.Logger
+		isNilExpected bool
+	}{
+		"nil-pointer": {
+			value:         nil,
+			isNilExpected: true,
+		},
+		"logger": {
+			value: hclog.NewNullLogger(),
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			opts := &options{}
+			applyOption := WithLogger(tc.value)
+			err := applyOption(opts)
+			require.NoError(t, err)
+			if tc.isNilExpected {
+				require.Nil(t, opts.withLogger)
+			} else {
+				require.NotNil(t, opts.withLogger)
 			}
 		})
 	}

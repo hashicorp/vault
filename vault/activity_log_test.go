@@ -10,8 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
-	"path/filepath"
 	"reflect"
 	"sort"
 	"strconv"
@@ -1016,7 +1014,6 @@ func TestActivityLog_API_ConfigCRUD_Census(t *testing.T) {
 	}
 
 	expected := map[string]interface{}{
-		"default_report_months":    12,
 		"retention_months":         56,
 		"enabled":                  "enable",
 		"queries_available":        false,
@@ -1901,182 +1898,6 @@ func TestActivityLog_refreshFromStoredLogPreviousMonth(t *testing.T) {
 	if err := ActiveEntitiesEqual(activeClients, expectedActive.Clients); err != nil {
 		// we expect activeClients to be loaded for the entire month
 		t.Error(err)
-	}
-}
-
-// TestActivityLog_Export writes overlapping client for 5 months with various mounts and namespaces. It performs an
-// export for various month ranges in the range, and verifies that the outputs are correct.
-func TestActivityLog_Export(t *testing.T) {
-	timeutil.SkipAtEndOfMonth(t)
-
-	january := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
-	august := time.Date(2020, 8, 15, 12, 0, 0, 0, time.UTC)
-	september := timeutil.StartOfMonth(time.Date(2020, 9, 1, 0, 0, 0, 0, time.UTC))
-	october := timeutil.StartOfMonth(time.Date(2020, 10, 1, 0, 0, 0, 0, time.UTC))
-	november := timeutil.StartOfMonth(time.Date(2020, 11, 1, 0, 0, 0, 0, time.UTC))
-
-	core, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{
-		ActivityLogConfig: ActivityLogCoreConfig{
-			DisableTimers: true,
-			ForceEnable:   true,
-		},
-	})
-	a := core.activityLog
-	ctx := namespace.RootContext(nil)
-
-	// Generate overlapping sets of entity IDs from this list.
-	//   january:      40-44                                          RRRRR
-	//   first month:   0-19  RRRRRAAAAABBBBBRRRRR
-	//   second month: 10-29            BBBBBRRRRRRRRRRCCCCC
-	//   third month:  15-39                 RRRRRRRRRRCCCCCRRRRRBBBBB
-
-	entityRecords := make([]*activity.EntityRecord, 45)
-	entityNamespaces := []string{"root", "aaaaa", "bbbbb", "root", "root", "ccccc", "root", "bbbbb", "rrrrr"}
-	authMethods := []string{"auth_1", "auth_2", "auth_3", "auth_4", "auth_5", "auth_6", "auth_7", "auth_8", "auth_9"}
-
-	for i := range entityRecords {
-		entityRecords[i] = &activity.EntityRecord{
-			ClientID:      fmt.Sprintf("111122222-3333-4444-5555-%012v", i),
-			NamespaceID:   entityNamespaces[i/5],
-			MountAccessor: authMethods[i/5],
-		}
-	}
-
-	toInsert := []struct {
-		StartTime int64
-		Segment   uint64
-		Clients   []*activity.EntityRecord
-	}{
-		// January, should not be included
-		{
-			january.Unix(),
-			0,
-			entityRecords[40:45],
-		},
-		// Artifically split August and October
-		{ // 1
-			august.Unix(),
-			0,
-			entityRecords[:13],
-		},
-		{ // 2
-			august.Unix(),
-			1,
-			entityRecords[13:20],
-		},
-		{ // 3
-			september.Unix(),
-			0,
-			entityRecords[10:30],
-		},
-		{ // 4
-			october.Unix(),
-			0,
-			entityRecords[15:40],
-		},
-		{
-			october.Unix(),
-			1,
-			entityRecords[15:40],
-		},
-		{
-			october.Unix(),
-			2,
-			entityRecords[17:23],
-		},
-	}
-
-	for i, segment := range toInsert {
-		eal := &activity.EntityActivityLog{
-			Clients: segment.Clients,
-		}
-
-		// Mimic a lower time stamp for earlier clients
-		for _, c := range eal.Clients {
-			c.Timestamp = int64(i)
-		}
-
-		data, err := proto.Marshal(eal)
-		if err != nil {
-			t.Fatal(err)
-		}
-		path := fmt.Sprintf("%ventity/%v/%v", ActivityLogPrefix, segment.StartTime, segment.Segment)
-		WriteToStorage(t, core, path, data)
-	}
-
-	tCases := []struct {
-		format    string
-		startTime time.Time
-		endTime   time.Time
-		expected  string
-	}{
-		{
-			format:    "json",
-			startTime: august,
-			endTime:   timeutil.EndOfMonth(september),
-			expected:  "aug_sep.json",
-		},
-		{
-			format:    "csv",
-			startTime: august,
-			endTime:   timeutil.EndOfMonth(september),
-			expected:  "aug_sep.csv",
-		},
-		{
-			format:    "json",
-			startTime: january,
-			endTime:   timeutil.EndOfMonth(november),
-			expected:  "full_history.json",
-		},
-		{
-			format:    "csv",
-			startTime: january,
-			endTime:   timeutil.EndOfMonth(november),
-			expected:  "full_history.csv",
-		},
-		{
-			format:    "json",
-			startTime: august,
-			endTime:   timeutil.EndOfMonth(october),
-			expected:  "aug_oct.json",
-		},
-		{
-			format:    "csv",
-			startTime: august,
-			endTime:   timeutil.EndOfMonth(october),
-			expected:  "aug_oct.csv",
-		},
-		{
-			format:    "json",
-			startTime: august,
-			endTime:   timeutil.EndOfMonth(august),
-			expected:  "aug.json",
-		},
-		{
-			format:    "csv",
-			startTime: august,
-			endTime:   timeutil.EndOfMonth(august),
-			expected:  "aug.csv",
-		},
-	}
-
-	for _, tCase := range tCases {
-		rw := &fakeResponseWriter{
-			buffer:  &bytes.Buffer{},
-			headers: http.Header{},
-		}
-		if err := a.writeExport(ctx, rw, tCase.format, tCase.startTime, tCase.endTime); err != nil {
-			t.Fatal(err)
-		}
-
-		expected, err := os.ReadFile(filepath.Join("activity", "test_fixtures", tCase.expected))
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if !bytes.Equal(rw.buffer.Bytes(), expected) {
-			t.Fatal(rw.buffer.String())
-		}
 	}
 }
 
@@ -3991,8 +3812,8 @@ func TestActivityLog_partialMonthClientCount(t *testing.T) {
 	}
 
 	for _, clientCount := range clientCountResponse {
-		if int(clientCounts[clientCount.NamespaceID]) != clientCount.Counts.DistinctEntities {
-			t.Errorf("bad entity count for namespace %s . expected %d, got %d", clientCount.NamespaceID, int(clientCounts[clientCount.NamespaceID]), clientCount.Counts.DistinctEntities)
+		if int(clientCounts[clientCount.NamespaceID]) != clientCount.Counts.EntityClients {
+			t.Errorf("bad entity count for namespace %s . expected %d, got %d", clientCount.NamespaceID, int(clientCounts[clientCount.NamespaceID]), clientCount.Counts.EntityClients)
 		}
 		totalCount := int(clientCounts[clientCount.NamespaceID])
 		if totalCount != clientCount.Counts.Clients {
@@ -4000,12 +3821,12 @@ func TestActivityLog_partialMonthClientCount(t *testing.T) {
 		}
 	}
 
-	distinctEntities, ok := results["distinct_entities"]
+	entityClients, ok := results["entity_clients"]
 	if !ok {
 		t.Fatalf("malformed results. got %v", results)
 	}
-	if distinctEntities != len(clients) {
-		t.Errorf("bad entity count. expected %d, got %d", len(clients), distinctEntities)
+	if entityClients != len(clients) {
+		t.Errorf("bad entity count. expected %d, got %d", len(clients), entityClients)
 	}
 
 	clientCount, ok := results["clients"]
@@ -4068,8 +3889,8 @@ func TestActivityLog_partialMonthClientCountUsingHandleQuery(t *testing.T) {
 	}
 
 	for _, clientCount := range clientCountResponse {
-		if int(clientCounts[clientCount.NamespaceID]) != clientCount.Counts.DistinctEntities {
-			t.Errorf("bad entity count for namespace %s . expected %d, got %d", clientCount.NamespaceID, int(clientCounts[clientCount.NamespaceID]), clientCount.Counts.DistinctEntities)
+		if int(clientCounts[clientCount.NamespaceID]) != clientCount.Counts.EntityClients {
+			t.Errorf("bad entity count for namespace %s . expected %d, got %d", clientCount.NamespaceID, int(clientCounts[clientCount.NamespaceID]), clientCount.Counts.EntityClients)
 		}
 		totalCount := int(clientCounts[clientCount.NamespaceID])
 		if totalCount != clientCount.Counts.Clients {
@@ -4083,9 +3904,9 @@ func TestActivityLog_partialMonthClientCountUsingHandleQuery(t *testing.T) {
 	}
 	totalCounts := ResponseCounts{}
 	err = mapstructure.Decode(totals, &totalCounts)
-	distinctEntities := totalCounts.DistinctEntities
-	if distinctEntities != len(clients) {
-		t.Errorf("bad entity count. expected %d, got %d", len(clients), distinctEntities)
+	entityClients := totalCounts.EntityClients
+	if entityClients != len(clients) {
+		t.Errorf("bad entity count. expected %d, got %d", len(clients), entityClients)
 	}
 
 	clientCount := totalCounts.Clients
@@ -4113,14 +3934,8 @@ func TestActivityLog_partialMonthClientCountUsingHandleQuery(t *testing.T) {
 	if monthsResponse[0].Counts.NonEntityClients != totalCounts.NonEntityClients {
 		t.Fatalf("wrong non-entity client count. got %v, expected %v", monthsResponse[0].Counts.NonEntityClients, totalCounts.NonEntityClients)
 	}
-	if monthsResponse[0].Counts.NonEntityTokens != totalCounts.NonEntityTokens {
-		t.Fatalf("wrong non-entity client count. got %v, expected %v", monthsResponse[0].Counts.NonEntityTokens, totalCounts.NonEntityTokens)
-	}
 	if monthsResponse[0].Counts.Clients != monthsResponse[0].NewClients.Counts.Clients {
 		t.Fatalf("wrong client count. got %v, expected %v", monthsResponse[0].Counts.Clients, monthsResponse[0].NewClients.Counts.Clients)
-	}
-	if monthsResponse[0].Counts.DistinctEntities != monthsResponse[0].NewClients.Counts.DistinctEntities {
-		t.Fatalf("wrong distinct entities count. got %v, expected %v", monthsResponse[0].Counts.DistinctEntities, monthsResponse[0].NewClients.Counts.DistinctEntities)
 	}
 	if monthsResponse[0].Counts.EntityClients != monthsResponse[0].NewClients.Counts.EntityClients {
 		t.Fatalf("wrong entity client count. got %v, expected %v", monthsResponse[0].Counts.EntityClients, monthsResponse[0].NewClients.Counts.EntityClients)
@@ -4128,15 +3943,11 @@ func TestActivityLog_partialMonthClientCountUsingHandleQuery(t *testing.T) {
 	if monthsResponse[0].Counts.NonEntityClients != monthsResponse[0].NewClients.Counts.NonEntityClients {
 		t.Fatalf("wrong non-entity client count. got %v, expected %v", monthsResponse[0].Counts.NonEntityClients, monthsResponse[0].NewClients.Counts.NonEntityClients)
 	}
-	if monthsResponse[0].Counts.NonEntityTokens != monthsResponse[0].NewClients.Counts.NonEntityTokens {
-		t.Fatalf("wrong non-entity token count. got %v, expected %v", monthsResponse[0].Counts.NonEntityTokens, monthsResponse[0].NewClients.Counts.NonEntityTokens)
-	}
-
 	namespaceResponseMonth := monthsResponse[0].Namespaces
 
 	for _, clientCount := range namespaceResponseMonth {
 		if int(clientCounts[clientCount.NamespaceID]) != clientCount.Counts.EntityClients {
-			t.Errorf("bad entity count for namespace %s . expected %d, got %d", clientCount.NamespaceID, int(clientCounts[clientCount.NamespaceID]), clientCount.Counts.DistinctEntities)
+			t.Errorf("bad entity count for namespace %s . expected %d, got %d", clientCount.NamespaceID, int(clientCounts[clientCount.NamespaceID]), clientCount.Counts.EntityClients)
 		}
 		totalCount := int(clientCounts[clientCount.NamespaceID])
 		if totalCount != clientCount.Counts.Clients {
@@ -5084,4 +4895,132 @@ func TestActivityLog_reportPrecomputedQueryMetrics(t *testing.T) {
 		hasMetric(t, data, "identity.secret_sync.active.reporting_period", 3, nil)
 		hasMetric(t, data, "identity.pki_acme.active.reporting_period", 3, nil)
 	})
+}
+
+// TestActivityLog_Export_CSV_Header verifies that the export API properly
+// generates a CSV column index and header. Various ActivityLogExportRecords
+// are used to mimic an export discovering new map and slice fields that are
+// meant to be flattened as new columns.
+func TestActivityLog_Export_CSV_Header(t *testing.T) {
+	encoder, err := newCSVEncoder(nil)
+	require.NoError(t, err)
+
+	expectedColumnIndex := make(map[string]int)
+
+	// set expected index as base columnIndex upon encoder initialization
+	for k, v := range encoder.columnIndex {
+		expectedColumnIndex[k] = v
+	}
+
+	err = encoder.accumulateHeaderFields(&ActivityLogExportRecord{
+		Policies: []string{
+			"foo",
+		},
+		EntityMetadata: map[string]string{
+			"email_address": "jdoe@abc.com",
+		},
+	})
+	require.NoError(t, err)
+
+	expectedColumnIndex["policies.0"] = exportCSVFlatteningInitIndex
+	expectedColumnIndex["entity_metadata.email_address"] = exportCSVFlatteningInitIndex
+
+	require.Empty(t, deep.Equal(expectedColumnIndex, encoder.columnIndex))
+
+	err = encoder.accumulateHeaderFields(&ActivityLogExportRecord{
+		Policies: []string{
+			"foo",
+			"bar",
+			"baz",
+		},
+		EntityAliasCustomMetadata: map[string]string{
+			"region": "west",
+			"group":  "san_francisco",
+		},
+	})
+	require.NoError(t, err)
+
+	expectedColumnIndex["policies.1"] = exportCSVFlatteningInitIndex
+	expectedColumnIndex["policies.2"] = exportCSVFlatteningInitIndex
+	expectedColumnIndex["entity_alias_custom_metadata.group"] = exportCSVFlatteningInitIndex
+	expectedColumnIndex["entity_alias_custom_metadata.region"] = exportCSVFlatteningInitIndex
+
+	require.Empty(t, deep.Equal(expectedColumnIndex, encoder.columnIndex))
+
+	err = encoder.accumulateHeaderFields(&ActivityLogExportRecord{
+		Policies: []string{
+			"foo",
+		},
+		EntityGroupIDs: []string{
+			"97798e02-51e5-4ef3-906e-82c76d1a396e",
+		},
+		EntityMetadata: map[string]string{
+			"first_name": "John",
+			"last_name":  "Doe",
+		},
+		EntityAliasMetadata: map[string]string{
+			"contact_email": "foo@abc.com",
+		},
+	})
+	require.NoError(t, err)
+
+	expectedColumnIndex["entity_metadata.last_name"] = exportCSVFlatteningInitIndex
+	expectedColumnIndex["entity_metadata.first_name"] = exportCSVFlatteningInitIndex
+	expectedColumnIndex["entity_alias_metadata.contact_email"] = exportCSVFlatteningInitIndex
+	expectedColumnIndex["entity_group_ids.0"] = exportCSVFlatteningInitIndex
+
+	require.Empty(t, deep.Equal(expectedColumnIndex, encoder.columnIndex))
+
+	// no change because all the fields have seen before
+	err = encoder.accumulateHeaderFields(&ActivityLogExportRecord{
+		EntityAliasCustomMetadata: map[string]string{
+			"group":  "does-not-matter",
+			"region": "does-not-matter",
+		},
+		EntityAliasMetadata: map[string]string{
+			"contact_email": "does-not-matter",
+		},
+		EntityGroupIDs: []string{
+			"does-not-matter",
+		},
+		EntityMetadata: map[string]string{
+			"first_name": "does-not-matter",
+			"last_name":  "does-not-matter",
+		},
+		Policies: []string{
+			"does-not-matter",
+			"does-not-matter",
+			"does-not-matter",
+		},
+	})
+	require.NoError(t, err)
+	require.Empty(t, deep.Equal(expectedColumnIndex, encoder.columnIndex))
+
+	// no change because there are no slice or map fields
+	err = encoder.accumulateHeaderFields(&ActivityLogExportRecord{})
+	require.NoError(t, err)
+	require.Empty(t, deep.Equal(expectedColumnIndex, encoder.columnIndex))
+
+	expectedHeader := append(baseActivityExportCSVHeader(),
+		"entity_alias_custom_metadata.group",
+		"entity_alias_custom_metadata.region",
+		"entity_alias_metadata.contact_email",
+		"entity_group_ids.0",
+		"entity_metadata.email_address",
+		"entity_metadata.first_name",
+		"entity_metadata.last_name",
+		"policies.0",
+		"policies.1",
+		"policies.2")
+
+	header := encoder.generateHeader()
+	require.Empty(t, deep.Equal(expectedHeader, header))
+
+	expectedColumnIndex = make(map[string]int)
+
+	for idx, col := range expectedHeader {
+		expectedColumnIndex[col] = idx
+	}
+
+	require.Empty(t, deep.Equal(expectedColumnIndex, encoder.columnIndex))
 }

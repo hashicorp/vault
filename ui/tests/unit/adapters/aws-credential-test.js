@@ -75,6 +75,11 @@ module('Unit | Adapter | aws credential', function (hooks) {
       'POST',
     ],
     [
+      'assumed_role type no arn, ttl empty',
+      [storeStub, type, makeSnapshot({ credentialType: 'assumed_role', ttl: '' })],
+      'POST',
+    ],
+    [
       'assumed_role type no arn',
       [storeStub, type, makeSnapshot({ credentialType: 'assumed_role', ttl: '3h' })],
       'POST',

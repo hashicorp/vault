@@ -4,6 +4,8 @@
 package minimal
 
 import (
+	"testing"
+
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/audit"
 	logicalDb "github.com/hashicorp/vault/builtin/logical/database"
@@ -15,7 +17,6 @@ import (
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/copystructure"
-	"github.com/mitchellh/go-testing-interface"
 )
 
 // NewTestSoloCluster is a simpler version of NewTestCluster that only creates
@@ -23,7 +24,7 @@ import (
 // from vault.TestClusterOptions, use NewTestCluster instead.  It should work fine
 // with a nil config argument.  There is no need to call Start or Cleanup or
 // TestWaitActive on the resulting cluster.
-func NewTestSoloCluster(t testing.T, config *vault.CoreConfig) *vault.TestCluster {
+func NewTestSoloCluster(t testing.TB, config *vault.CoreConfig) *vault.TestCluster {
 	logger := corehelpers.NewTestLogger(t)
 
 	mycfg := &vault.CoreConfig{}

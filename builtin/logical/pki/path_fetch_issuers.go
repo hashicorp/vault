@@ -1121,7 +1121,7 @@ func (b *backend) pathDeleteIssuer(ctx context.Context, req *logical.Request, da
 	// Finally, we need to rebuild both the local and the unified CRLs. This
 	// will free up any now unnecessary space used in both the CRL config
 	// and for the underlying CRL.
-	warnings, err := b.CrlBuilder().rebuild(sc, true)
+	warnings, err := b.CrlBuilder().Rebuild(sc, true)
 	if err != nil {
 		return nil, err
 	}
@@ -1231,7 +1231,7 @@ func (b *backend) pathGetIssuerCRL(ctx context.Context, req *logical.Request, da
 	}
 
 	sc := b.makeStorageContext(ctx, req.Storage)
-	warnings, err := b.CrlBuilder().rebuildIfForced(sc)
+	warnings, err := b.CrlBuilder().RebuildIfForced(sc)
 	if err != nil {
 		return nil, err
 	}
@@ -1271,7 +1271,7 @@ func (b *backend) pathGetIssuerCRL(ctx context.Context, req *logical.Request, da
 		return response, nil
 	}
 
-	crlPath, err := sc.resolveIssuerCRLPath(issuerName, isUnified)
+	crlPath, err := issuing.ResolveIssuerCRLPath(sc.GetContext(), sc.GetStorage(), sc.UseLegacyBundleCaStorage(), issuerName, isUnified)
 	if err != nil {
 		return nil, err
 	}

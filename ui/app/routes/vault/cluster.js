@@ -63,6 +63,10 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
       'Cannot use VAULT_CLOUD_ADMIN_NAMESPACE flag with non-enterprise Vault version',
       !(managedRoot && this.version.isCommunity)
     );
+
+    // activatedFlags are called this high in routing to return a response used to show/hide Secrets sync on sidebar nav.
+    await this.flagsService.fetchActivatedFlags();
+
     if (!namespace && currentTokenName && !Ember.testing) {
       // if no namespace queryParam and user authenticated,
       // use user's root namespace to redirect to properly param'd url

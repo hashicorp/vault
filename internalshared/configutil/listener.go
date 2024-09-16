@@ -562,9 +562,9 @@ func (l *Listener) parseProxySettings() error {
 
 	// Validation/sanity check on allowed settings for behavior.
 	switch l.ProxyProtocolBehavior {
-	case "allow_authorized", "deny_authorized", "use_always", "":
+	case "allow_authorized", "deny_unauthorized", "use_always", "":
 		// Ignore these cases, they're all valid values.
-		// In the case of 'allow_authorized' and 'deny_authorized', we don't need
+		// In the case of 'allow_authorized' and 'deny_unauthorized', we don't need
 		// to check how many addresses we have in ProxyProtocolAuthorizedAddrs
 		// as parseutil.ParseAddrs returns "one or more addresses" (or an error)
 		// so we'd have returned earlier.
@@ -638,7 +638,7 @@ func (l *Listener) parseProfilingSettings() error {
 	return nil
 }
 
-// parseProfilingSettings attempts to parse the raw listener in-flight request logging settings.
+// parseInFlightRequestSettings attempts to parse the raw listener in-flight request logging settings.
 // The state of the listener will be modified, raw data will be cleared upon
 // successful parsing.
 func (l *Listener) parseInFlightRequestSettings() error {

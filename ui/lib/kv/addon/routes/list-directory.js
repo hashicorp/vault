@@ -71,7 +71,7 @@ export default class KvSecretsListRoute extends Route {
     resolvedModel.failedDirectoryQuery =
       resolvedModel.secrets === 403 && pathIsDirectory(resolvedModel.pathToSecret);
 
-    let breadcrumbsArray = [{ label: 'secrets', route: 'secrets', linkExternal: true }];
+    let breadcrumbsArray = [{ label: 'Secrets', route: 'secrets', linkExternal: true }];
     // if on top level don't link the engine breadcrumb label, but if within a directory, do link back to top level.
     if (this.routeName === 'list') {
       breadcrumbsArray.push({ label: resolvedModel.backend });

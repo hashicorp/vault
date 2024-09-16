@@ -10,7 +10,7 @@ import (
 
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-bexpr"
-	"github.com/hashicorp/vault/helper/namespace"
+	nshelper "github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -71,7 +71,7 @@ func (f *entryFilter) Process(ctx context.Context, e *eventlogger.Event) (*event
 		return nil, fmt.Errorf("event is nil: %w", ErrInvalidParameter)
 	}
 
-	a, ok := e.Payload.(*AuditEvent)
+	a, ok := e.Payload.(*Event)
 	if !ok {
 		return nil, fmt.Errorf("cannot parse event payload: %w", ErrInvalidParameter)
 	}
@@ -81,7 +81,7 @@ func (f *entryFilter) Process(ctx context.Context, e *eventlogger.Event) (*event
 		return nil, nil
 	}
 
-	ns, err := namespace.FromContext(ctx)
+	ns, err := nshelper.FromContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("cannot obtain namespace: %w", err)
 	}

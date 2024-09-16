@@ -166,11 +166,11 @@ Any values are added with OID 0.9.2342.19200300.100.1.1.`,
 			Name: "User ID(s)",
 		},
 	}
-	fields["metadata"] = &framework.FieldSchema{
+	fields["cert_metadata"] = &framework.FieldSchema{
 		Type:        framework.TypeString,
 		Description: `User supplied metadata to store associated with this certificate's serial number, base64 encoded`,
 		DisplayAttrs: &framework.DisplayAttributes{
-			Name: "Metadata",
+			Name: "Certificate Metadata",
 		},
 	}
 
@@ -274,6 +274,20 @@ this value.`,
 			Name: "Postal Code",
 		},
 	}
+
+	fields["key_usage"] = &framework.FieldSchema{ // Same Name as Leaf-Cert Field, but Description and Default Differ
+		Type:    framework.TypeCommaStringSlice,
+		Default: []string{"CertSign", "CRLSign"},
+		Description: `A comma-separated string or list of key usages (not extended
+key usages). Valid values can be found at
+https://golang.org/pkg/crypto/x509/#KeyUsage
+-- simply drop the "KeyUsage" part of the name.
+To remove all key usages from being set, set
+this value to an empty list.  This defaults to 
+CertSign, CRLSign for CAs.  If neither of those
+two set, a warning will be thrown.  To use the
+issuer for CMPv2, DigitalSignature must be set.`,
+	} // TODO: Fix Description Here
 
 	fields["serial_number"] = &framework.FieldSchema{
 		Type: framework.TypeString,
@@ -582,6 +596,11 @@ primary node.`,
 	fields["tidy_cert_metadata"] = &framework.FieldSchema{
 		Type:        framework.TypeBool,
 		Description: `Set to true to enable tidying up certificate metadata`,
+	}
+
+	fields["tidy_cmpv2_nonce_store"] = &framework.FieldSchema{
+		Type:        framework.TypeBool,
+		Description: `Set to true to enable tidying up the CMPv2 nonce store`,
 	}
 
 	return fields

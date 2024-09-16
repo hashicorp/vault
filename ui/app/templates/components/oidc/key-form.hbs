@@ -3,25 +3,6 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<PageHeader as |p|>
-  <p.top>
-    <Hds::Breadcrumb>
-      {{#if @model.isNew}}
-        <Hds::Breadcrumb::Item @text="Keys" @route="vault.cluster.access.oidc.keys" />
-      {{else}}
-        <Hds::Breadcrumb::Item @text="Details" @route="vault.cluster.access.oidc.keys.key.details" @model={{@model.name}} />
-      {{/if}}
-      <Hds::Breadcrumb::Item @text="{{if @model.isNew 'Create' 'Edit'}} Key" @current={{true}} />
-    </Hds::Breadcrumb>
-  </p.top>
-  <p.levelLeft>
-    <h1 class="title is-3" data-test-oidc-key-title>
-      {{if @model.isNew "Create" "Edit"}}
-      Key
-    </h1>
-  </p.levelLeft>
-</PageHeader>
-
 <form {{on "submit" (perform this.save)}}>
   <div class="box is-sideless is-fullwidth is-bottomless">
     <MessageError @errorMessage={{this.errorBanner}} />
@@ -29,47 +10,49 @@
       <FormField @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} />
     {{/each}}
   </div>
-  {{! RADIO CARD + SEARCH SELECT }}
-  <div class="box is-sideless is-fullwidth is-marginless has-top-padding-xxl">
-    <Hds::Text::Display @tag="h2" @size="400">Allowed applications</Hds::Text::Display>
-    <div class="is-flex-row">
-      <RadioCard
-        data-test-oidc-radio="allow-all"
-        @title="Allow every application to use"
-        @description="All applications can use this key for authentication requests."
-        @icon="globe"
-        @value="allow_all"
-        @groupValue={{this.radioCardGroupValue}}
-        @onChange={{this.handleClientSelection}}
-      />
-      <RadioCard
-        data-test-oidc-radio="limited"
-        @title="Limit access to selected application"
-        @description="Only selected applications can use this key for authentication requests."
-        @icon="globe-private"
-        @value="limited"
-        @groupValue={{this.radioCardGroupValue}}
-        @onChange={{this.handleClientSelection}}
-        @disabled={{@model.isNew}}
-        @disabledTooltipMessage="This option has been disabled for now. To limit access, you must first create an application that references this key."
-      />
+  {{#unless @isModalForm}}
+    {{! RADIO CARD + SEARCH SELECT }}
+    <div class="box is-sideless is-fullwidth is-marginless has-top-padding-xxl">
+      <Hds::Text::Display @tag="h2" @size="400">Allowed applications</Hds::Text::Display>
+      <div class="is-flex-row">
+        <RadioCard
+          data-test-oidc-radio="allow-all"
+          @title="Allow every application to use"
+          @description="All applications can use this key for authentication requests."
+          @icon="globe"
+          @value="allow_all"
+          @groupValue={{this.radioCardGroupValue}}
+          @onChange={{this.handleClientSelection}}
+        />
+        <RadioCard
+          data-test-oidc-radio="limited"
+          @title="Limit access to selected application"
+          @description="Only selected applications can use this key for authentication requests."
+          @icon="globe-private"
+          @value="limited"
+          @groupValue={{this.radioCardGroupValue}}
+          @onChange={{this.handleClientSelection}}
+          @disabled={{@model.isNew}}
+          @disabledTooltipMessage="This option has been disabled for now. To limit access, you must first create an application that references this key."
+        />
+      </div>
+      {{#if (eq this.radioCardGroupValue "limited")}}
+        <SearchSelect
+          @id="allowedClientIds"
+          @label="Application name"
+          @subText="Select which applications are allowed to use this key. Only applications that currently reference this key will appear in the dropdown."
+          @models={{array "oidc/client"}}
+          @inputValue={{@model.allowedClientIds}}
+          @onChange={{this.handleClientSelection}}
+          @disallowNewItems={{true}}
+          @fallbackComponent="string-list"
+          @passObject={{true}}
+          @objectKeys={{array "clientId"}}
+          @queryObject={{this.filterDropdownOptions}}
+        />
+      {{/if}}
     </div>
-    {{#if (eq this.radioCardGroupValue "limited")}}
-      <SearchSelect
-        @id="allowedClientIds"
-        @label="Application name"
-        @subText="Select which applications are allowed to use this key. Only applications that currently reference this key will appear in the dropdown."
-        @models={{array "oidc/client"}}
-        @inputValue={{@model.allowedClientIds}}
-        @onChange={{this.handleClientSelection}}
-        @disallowNewItems={{true}}
-        @fallbackComponent="string-list"
-        @passObject={{true}}
-        @objectKeys={{array "clientId"}}
-        @queryObject={{this.filterDropdownOptions}}
-      />
-    {{/if}}
-  </div>
+  {{/unless}}
   <div class="field box is-fullwidth is-bottomless">
     <div class="control">
       <Hds::Button

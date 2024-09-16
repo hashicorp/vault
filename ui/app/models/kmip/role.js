@@ -10,7 +10,7 @@ import apiPath from 'vault/utils/api-path';
 import lazyCapabilities from 'vault/macros/lazy-capabilities';
 import { removeManyFromArray } from 'vault/helpers/remove-from-array';
 
-export const COMPUTEDS = {
+const COMPUTEDS = {
   operationFields: computed('newFields', function () {
     return this.newFields.filter((key) => key.startsWith('operation'));
   }),
@@ -36,13 +36,10 @@ export const COMPUTEDS = {
 };
 
 export default Model.extend(COMPUTEDS, {
-  useOpenAPI: true,
   backend: attr({ readOnly: true }),
   scope: attr({ readOnly: true }),
   name: attr({ readOnly: true }),
-  getHelpUrl(path) {
-    return `/v1/${path}/scope/example/role/example?help=1`;
-  },
+
   fieldGroups: computed('fields', 'defaultFields.length', 'tlsFields', function () {
     const groups = [{ TLS: this.tlsFields }];
     if (this.defaultFields.length) {

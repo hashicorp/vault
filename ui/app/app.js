@@ -27,6 +27,7 @@ export default class App extends Application {
       dependencies: {
         services: [
           'auth',
+          'capabilities',
           'flash-messages',
           'namespace',
           'replication-mode',
@@ -78,13 +79,15 @@ export default class App extends Application {
     kv: {
       dependencies: {
         services: [
+          'capabilities',
+          'control-group',
           'download',
+          'flash-messages',
           'namespace',
           'router',
-          'store',
           'secret-mount-path',
-          'flash-messages',
-          'control-group',
+          'store',
+          'version',
         ],
         externalRoutes: {
           secrets: 'vault.cluster.secrets.backends',
@@ -116,7 +119,7 @@ export default class App extends Application {
       dependencies: {
         services: ['flash-messages', 'flags', 'router', 'store', 'version'],
         externalRoutes: {
-          kvSecretDetails: 'vault.cluster.secrets.backend.kv.secret.details',
+          kvSecretOverview: 'vault.cluster.secrets.backend.kv.secret.index',
           clientCountOverview: 'vault.cluster.clients',
         },
       },

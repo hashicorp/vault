@@ -594,6 +594,14 @@ const pki = {
       label: 'DNS/Email Subject Alternative Names (SANs)',
       type: 'string',
     },
+    certMetadata: {
+      editType: 'string',
+      fieldGroup: 'default',
+      helpText:
+        "User supplied metadata to store associated with this certificate's serial number, base64 encoded",
+      label: 'Certificate Metadata',
+      type: 'string',
+    },
     commonName: {
       editType: 'string',
       helpText:
@@ -629,14 +637,6 @@ const pki = {
       helpText:
         'Reference to a existing issuer; either "default" for the configured default issuer, an identifier or the name assigned to the issuer.',
       fieldGroup: 'default',
-      type: 'string',
-    },
-    metadata: {
-      editType: 'string',
-      fieldGroup: 'default',
-      helpText:
-        "User supplied metadata to store associated with this certificate's serial number, base64 encoded",
-      label: 'Metadata',
       type: 'string',
     },
     notAfter: {
@@ -714,6 +714,14 @@ const pki = {
       label: 'DNS/Email Subject Alternative Names (SANs)',
       type: 'string',
     },
+    certMetadata: {
+      editType: 'string',
+      fieldGroup: 'default',
+      helpText:
+        "User supplied metadata to store associated with this certificate's serial number, base64 encoded",
+      label: 'Certificate Metadata',
+      type: 'string',
+    },
     commonName: {
       editType: 'string',
       helpText:
@@ -755,14 +763,6 @@ const pki = {
       helpText:
         'Reference to a existing issuer; either "default" for the configured default issuer, an identifier or the name assigned to the issuer.',
       fieldGroup: 'default',
-      type: 'string',
-    },
-    metadata: {
-      editType: 'string',
-      fieldGroup: 'default',
-      helpText:
-        "User supplied metadata to store associated with this certificate's serial number, base64 encoded",
-      label: 'Metadata',
       type: 'string',
     },
     notAfter: {
@@ -1071,7 +1071,7 @@ const pki = {
     noStoreMetadata: {
       editType: 'boolean',
       helpText:
-        'If set, if a client attempts to issue or sign a certificate with attached metadata to store, the issuance / signing instead fails.',
+        'If set, if a client attempts to issue or sign a certificate with attached cert_metadata to store, the issuance / signing instead fails.',
       fieldGroup: 'default',
       type: 'boolean',
     },
@@ -1248,6 +1248,12 @@ const pki = {
         "Provide a name to the generated or existing issuer, the name must be unique across all issuers and not be the reserved value 'default'",
       fieldGroup: 'default',
       type: 'string',
+    },
+    keyUsage: {
+      editType: 'stringArray',
+      fieldGroup: 'default',
+      helpText:
+        'A comma-separated string or list of key usages (not extended key usages). Valid values can be found at https://golang.org/pkg/crypto/x509/#KeyUsage -- simply drop the "KeyUsage" part of the name. To remove all key usages from being set, set this value to an empty list. This defaults to CertSign, CRLSign for CAs. If neither of those two set, a warning will be thrown. To use the issuer for CMPv2, DigitalSignature must be set.',
     },
     locality: {
       editType: 'stringArray',
@@ -1449,6 +1455,12 @@ const pki = {
       editType: 'boolean',
       helpText: 'Set to true to enable tidying up the certificate store',
       fieldGroup: 'default',
+      type: 'boolean',
+    },
+    tidyCmpv2NonceStore: {
+      editType: 'boolean',
+      fieldGroup: 'default',
+      helpText: 'Set to true to enable tidying up the CMPv2 nonce store',
       type: 'boolean',
     },
     tidyCrossClusterRevokedCerts: {

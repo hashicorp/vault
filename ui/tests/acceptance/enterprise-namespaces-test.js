@@ -41,6 +41,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
       const targetNamespace = nses.slice(0, i + 1).join('/');
       const url = `/vault/secrets?namespace=${targetNamespace}`;
       // this is usually triggered when creating a ns in the form -- trigger a reload of the namespaces manually
+      await click('[data-test-namespace-toggle]');
       await click('[data-test-refresh-namespaces]');
       await waitFor(`[data-test-namespace-link="${targetNamespace}"]`);
       // check that the single namespace "beep" or "boop" not "beep/boop" shows in the toggle display

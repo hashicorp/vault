@@ -27,14 +27,14 @@ module('Integration | Component | ldap | TabPageHeader', function (hooks) {
     });
     this.model = this.store.peekRecord('secret-engine', 'ldap-test');
     this.mount = this.model.path.slice(0, -1);
-    this.breadcrumbs = [{ label: 'secrets', route: 'secrets', linkExternal: true }, { label: this.mount }];
+    this.breadcrumbs = [{ label: 'Secrets', route: 'secrets', linkExternal: true }, { label: this.mount }];
   });
 
   test('it should render breadcrumbs', async function (assert) {
     await render(hbs`<TabPageHeader @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`, {
       owner: this.engine,
     });
-    assert.dom('[data-test-breadcrumbs] li:nth-child(1) a').hasText('secrets', 'Secrets breadcrumb renders');
+    assert.dom('[data-test-breadcrumbs] li:nth-child(1) a').hasText('Secrets', 'Secrets breadcrumb renders');
 
     assert
       .dom('[data-test-breadcrumbs] li:nth-child(2)')

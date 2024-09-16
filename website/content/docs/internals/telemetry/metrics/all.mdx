@@ -80,11 +80,7 @@ alphabetic order by name.
 
 @include 'telemetry-metrics/secrets/pki/tidy/success.mdx'
 
-@include 'telemetry-metrics/vault/audit/device/log_request_failure.mdx'
-
 @include 'telemetry-metrics/vault/audit/device/log_request.mdx'
-
-@include 'telemetry-metrics/vault/audit/device/log_response_failure.mdx'
 
 @include 'telemetry-metrics/vault/audit/device/log_response.mdx'
 
@@ -329,6 +325,14 @@ alphabetic order by name.
 @include 'telemetry-metrics/vault/identity/entity/creation.mdx'
 
 @include 'telemetry-metrics/vault/identity/num_entities.mdx'
+
+@include 'telemetry-metrics/vault/identity/pki_acme/monthly.mdx'
+
+@include 'telemetry-metrics/vault/identity/pki_acme/reporting_period.mdx'
+
+@include 'telemetry-metrics/vault/identity/secret_sync/monthly.mdx'
+
+@include 'telemetry-metrics/vault/identity/secret_sync/reporting_period.mdx'
 
 @include 'telemetry-metrics/vault/identity/upsert_entity_txn.mdx'
 
@@ -615,6 +619,8 @@ alphabetic order by name.
 @include 'telemetry-metrics/vault/replication/rpc/server/conflicting_pages_request.mdx'
 
 @include 'telemetry-metrics/vault/replication/rpc/server/echo.mdx'
+
+@include 'telemetry-metrics/vault/replication/rpc/server/last_heartbeat.mdx'
 
 @include 'telemetry-metrics/vault/replication/rpc/server/forwarding_request.mdx'
 

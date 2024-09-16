@@ -14,7 +14,9 @@ $console-close-height: 35px;
   overflow: auto;
   position: fixed;
   bottom: 0;
-  transition: min-height $speed $easing, transform $speed ease-in;
+  transition:
+    min-height $speed $easing,
+    transform $speed ease-in;
   will-change: transform, min-height;
   -webkit-overflow-scrolling: touch;
   z-index: 199;
@@ -118,11 +120,11 @@ $console-close-height: 35px;
 
 .panel-open .console-ui-panel {
   box-shadow: $box-shadow-highest;
-  min-height: 400px;
+  min-height: 425px;
 }
 
 .main--console-open {
-  padding-bottom: 400px;
+  padding-bottom: 425px;
 }
 
 .panel-open .console-ui-panel.fullscreen {

@@ -39,6 +39,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/cluster"
+	"github.com/hashicorp/vault/version"
 	etcdbolt "go.etcd.io/bbolt"
 )
 
@@ -582,6 +583,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		failGetInTxn:                  new(uint32),
 		raftLogVerifierEnabled:        backendConfig.RaftLogVerifierEnabled,
 		raftLogVerificationInterval:   backendConfig.RaftLogVerificationInterval,
+		effectiveSDKVersion:           version.GetVersion().Version,
 	}, nil
 }
 
@@ -660,12 +662,6 @@ func (b *RaftBackend) FailGetInTxn(fail bool) {
 	atomic.StoreUint32(b.failGetInTxn, val)
 }
 
-func (b *RaftBackend) SetEffectiveSDKVersion(sdkVersion string) {
-	b.l.Lock()
-	b.effectiveSDKVersion = sdkVersion
-	b.l.Unlock()
-}
-
 func (b *RaftBackend) RedundancyZone() string {
 	b.l.RLock()
 	defer b.l.RUnlock()
@@ -691,6 +687,12 @@ func (b *RaftBackend) UpgradeVersion() string {
 		return b.upgradeVersion
 	}
 
+	return b.effectiveSDKVersion
+}
+
+func (b *RaftBackend) SDKVersion() string {
+	b.l.RLock()
+	defer b.l.RUnlock()
 	return b.effectiveSDKVersion
 }
 
@@ -1089,6 +1091,11 @@ type SetupOpts struct {
 	// RecoveryModeConfig is the configuration for the raft cluster in recovery
 	// mode.
 	RecoveryModeConfig *raft.Configuration
+
+	// EffectiveSDKVersion is typically the version string baked into the binary.
+	// We pass it in though because it can be overridden in tests or via ENV in
+	// core.
+	EffectiveSDKVersion string
 }
 
 func (b *RaftBackend) StartRecoveryCluster(ctx context.Context, peer Peer) error {
@@ -1130,6 +1137,11 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 
 	if len(b.localID) == 0 {
 		return errors.New("no local node id configured")
+	}
+
+	if opts.EffectiveSDKVersion != "" {
+		// Override the SDK version
+		b.effectiveSDKVersion = opts.EffectiveSDKVersion
 	}
 
 	// Setup the raft config

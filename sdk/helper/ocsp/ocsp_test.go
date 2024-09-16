@@ -15,7 +15,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/big"
 	"net"
 	"net/http"
@@ -64,7 +63,7 @@ func TestOCSP(t *testing.T) {
 				t.Fatalf("failed to GET contents. err: %v", err)
 			}
 			defer res.Body.Close()
-			_, err = ioutil.ReadAll(res.Body)
+			_, err = io.ReadAll(res.Body)
 			if err != nil {
 				t.Fatalf("failed to read content body for %v", tgt)
 			}
@@ -113,7 +112,7 @@ func TestMultiOCSP(t *testing.T) {
 			t.Fatalf("failed to GET contents. err: %v", err)
 		}
 		defer res.Body.Close()
-		_, err = ioutil.ReadAll(res.Body)
+		_, err = io.ReadAll(res.Body)
 		if err != nil {
 			t.Fatalf("failed to read content body for %v", tgt)
 		}
@@ -678,7 +677,7 @@ func TestOCSPRetry(t *testing.T) {
 		context.TODO(),
 		client, fakeRequestFunc,
 		dummyOCSPHost,
-		make(map[string]string), []byte{0}, certs[0], certs[len(certs)-1])
+		make(map[string]string), []byte{0}, certs[0], certs[len(certs)-1], nil)
 	if err == nil {
 		fmt.Printf("should fail: %v, %v, %v\n", res, b, st)
 	}
@@ -693,7 +692,7 @@ func TestOCSPRetry(t *testing.T) {
 		context.TODO(),
 		client, fakeRequestFunc,
 		dummyOCSPHost,
-		make(map[string]string), []byte{0}, certs[0], certs[len(certs)-1])
+		make(map[string]string), []byte{0}, certs[0], certs[len(certs)-1], nil)
 	if err == nil {
 		fmt.Printf("should fail: %v, %v, %v\n", res, b, st)
 	}

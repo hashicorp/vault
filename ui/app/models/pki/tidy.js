@@ -21,6 +21,7 @@ export default class PkiTidyModel extends Model {
       'The amount of time that must pass after creation that an account with no orders is marked revoked, and the amount of time after being marked revoked or deactivated.',
     detailsLabel: 'ACME account safety buffer',
     formatTtl: true,
+    defaultValue: '720h',
   })
   acmeAccountSafetyBuffer;
 
@@ -97,6 +98,11 @@ export default class PkiTidyModel extends Model {
   tidyCrossClusterRevokedCerts; // enterprise only
 
   @attr('boolean', {
+    label: 'Tidy CMPv2 nonce store',
+  })
+  tidyCmpv2NonceStore; // enterprise only
+
+  @attr('boolean', {
     subText: 'Automatically remove expired issuers after the issuer safety buffer duration has elapsed.',
   })
   tidyExpiredIssuers;
@@ -123,14 +129,6 @@ export default class PkiTidyModel extends Model {
     subText: 'Remove all invalid and expired certificates from storage.',
   })
   tidyRevokedCerts;
-
-  get useOpenAPI() {
-    return true;
-  }
-
-  getHelpUrl(backend) {
-    return `/v1/${backend}/config/auto-tidy?help=1`;
-  }
 
   get allGroups() {
     const groups = [{ autoTidy: ['enabled', 'intervalDuration'] }, ...this.sharedFields];
@@ -162,6 +160,7 @@ export default class PkiTidyModel extends Model {
         'Cross-cluster operations': [
           'tidyRevocationQueue',
           'tidyCrossClusterRevokedCerts',
+          'tidyCmpv2NonceStore',
           'revocationQueueSafetyBuffer',
         ],
       });

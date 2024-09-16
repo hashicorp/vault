@@ -8,7 +8,16 @@ import { computed } from '@ember/object';
 import Component from '@ember/component';
 import ReplicationActions from 'core/mixins/replication-actions';
 
+/**
+ * @module ReplicationSummary
+ * ReplicationSummary component is a component to show the mode-specific summary for replication
+ *
+ * @param {ClusterModel} cluster - the cluster ember-data model
+ * @param {string} initialReplicationMode - mode for replication details we want to see, either "dr" or "performance"
+ */
 export default Component.extend(ReplicationActions, {
+  'data-test-replication-summary': true,
+  attributeBindings: ['data-test-replication-summary'],
   replicationMode: 'dr',
   mode: 'primary',
   version: service(),
@@ -20,7 +29,6 @@ export default Component.extend(ReplicationActions, {
       this.set('replicationMode', initialReplicationMode);
     }
   },
-  showModeSummary: false,
   initialReplicationMode: null,
   cluster: null,
 
