@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { debug } from '@ember/debug';
 import ApplicationAdapter from '../application';
 import { formatDateObject } from 'core/utils/client-count-utils';
+import { debug } from '@ember/debug';
 
 export default class ActivityAdapter extends ApplicationAdapter {
   // javascript localizes new Date() objects but all activity log data is stored in UTC

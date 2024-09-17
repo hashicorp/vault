@@ -23,7 +23,7 @@ export default class DashboardClientCountCard extends Component {
   @service store;
 
   @tracked activityData = null;
-  @tracked hasActivity = false;
+  @tracked activityConfig = null;
   @tracked updatedAt = null;
 
   constructor() {
@@ -54,8 +54,9 @@ export default class DashboardClientCountCard extends Component {
 
     try {
       this.activityData = yield this.store.findRecord('clients/activity', 'clients/activity');
-      this.hasActivity = this.activityData.id === 'no-data' ? false : true;
     } catch (error) {
+      // used for rendering the "No data" empty state, swallow any errors requesting config data
+      this.activityConfig = yield this.store.queryRecord('clients/config', {}).catch(() => null);
       this.error = error;
     }
   }
