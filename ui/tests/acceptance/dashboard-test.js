@@ -29,6 +29,7 @@ import { runCmd, deleteEngineCmd, createNS } from 'vault/tests/helpers/commands'
 
 import { DASHBOARD } from 'vault/tests/helpers/components/dashboard/dashboard-selectors';
 import { CUSTOM_MESSAGES } from 'vault/tests/helpers/config-ui/message-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const authenticatedMessageResponse = {
   request_id: '664fbad0-fcd8-9023-4c5b-81a7962e9f4b',
@@ -397,12 +398,11 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
 
     test('shows the client count card for enterprise', async function (assert) {
-      assert.expect(9);
       const version = this.owner.lookup('service:version');
       assert.true(version.isEnterprise, 'version is enterprise');
       assert.strictEqual(currentURL(), '/vault/dashboard');
       assert.dom(DASHBOARD.cardName('client-count')).exists();
-      const response = await this.store.peekRecord('clients/activity', 'some-activity-id');
+      const response = await this.store.findRecord('clients/activity', 'clients/activity');
       assert.dom('[data-test-client-count-title]').hasText('Client count');
       assert.dom('[data-test-stat-text="Total"] .stat-label').hasText('Total');
       assert.dom('[data-test-stat-text="Total"] .stat-value').hasText(formatNumber([response.total.clients]));
@@ -413,6 +413,9 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert
         .dom('[data-test-stat-text="New"] .stat-value')
         .hasText(formatNumber([response.byMonth.lastObject.new_clients.clients]));
+      assert
+        .dom(`${GENERAL.flashMessage}.is-info`)
+        .doesNotExist('Does not show warning about client count estimations');
     });
   });
 
