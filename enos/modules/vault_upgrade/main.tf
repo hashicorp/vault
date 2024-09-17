@@ -169,7 +169,7 @@ resource "enos_vault_unseal" "followers" {
 }
 
 module "wait_for_followers_unsealed" {
-  source = "../vault_verify_unsealed"
+  source = "../vault_wait_for_cluster_unsealed"
   depends_on = [
     enos_remote_exec.restart_followers,
     enos_vault_unseal.followers,
