@@ -26,7 +26,7 @@ env:
 jobs:
   enos:
     name: Integration
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(contains(inputs.artifact-name, 'vault-enterprise') && (contains(inputs.artifact-name, 'arm64') && '["self-hosted","ondemand","os=ubuntu-arm","type=c6g.xlarge"]' || '["self-hosted","linux","small"]') || '"ubuntu-latest"') }}
     env:
       GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
     steps:
