@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { currentRouteName } from '@ember/test-helpers';
+import { currentRouteName, waitFor } from '@ember/test-helpers';
 import { login, loginNs } from 'vault/tests/helpers/auth/auth-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import chrootNamespaceHandlers from 'vault/mirage/handlers/chroot-namespace';
@@ -83,6 +83,7 @@ module('Acceptance | chroot-namespace enterprise ui', function (hooks) {
     );
 
     await loginNs(namespace, reader);
+    await waitFor(navLink('Dashboard'));
     ['Dashboard', 'Secrets Engines', 'Access', 'Policies', 'Tools', 'Client Count'].forEach((nav) => {
       assert.dom(navLink(nav)).exists(`Shows ${nav} nav item for user with read access policy`);
     });
