@@ -6,7 +6,7 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { currentRouteName } from '@ember/test-helpers';
-import authPage from 'vault/tests/pages/auth';
+import { login, loginNs } from 'vault/tests/helpers/auth/auth-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import chrootNamespaceHandlers from 'vault/mirage/handlers/chroot-namespace';
 import { createTokenCmd, runCmd, tokenWithPolicyCmd } from '../helpers/commands';
@@ -24,13 +24,13 @@ module('Acceptance | chroot-namespace enterprise ui', function (hooks) {
   });
 
   test('it should render normally when chroot namespace exists', async function (assert) {
-    await authPage.login();
+    await login();
     assert.strictEqual(currentRouteName(), 'vault.cluster.dashboard', 'goes to dashboard page');
     assert.dom('[data-test-badge-namespace]').includesText('root', 'Shows root namespace badge');
   });
 
   test('root-only nav items are unavailable', async function (assert) {
-    await authPage.login();
+    await login();
 
     ['Dashboard', 'Secrets Engines', 'Access', 'Tools', 'Policies', 'Client Count'].forEach((nav) => {
       assert.dom(navLink(nav)).exists(`Shows ${nav} nav item in chroot listener`);
@@ -40,19 +40,19 @@ module('Acceptance | chroot-namespace enterprise ui', function (hooks) {
     });
 
     // cleanup namespace
-    await authPage.login();
+    await login();
     await runCmd(`delete sys/namespaces/${namespace}`);
   });
 
   test('a user with default policy should see nav items', async function (assert) {
-    await authPage.login();
+    await login();
     // Create namespace
     await runCmd(`write sys/namespaces/${namespace} -f`, false);
     // Create user within the namespace
-    await authPage.loginNs(namespace);
+    await loginNs(namespace);
     const userDefault = await runCmd(createTokenCmd());
 
-    await authPage.loginNs(namespace, userDefault);
+    await loginNs(namespace, userDefault);
     ['Dashboard', 'Secrets Engines', 'Access', 'Tools'].forEach((nav) => {
       assert.dom(navLink(nav)).exists(`Shows ${nav} nav item for user with default policy`);
     });
@@ -61,16 +61,16 @@ module('Acceptance | chroot-namespace enterprise ui', function (hooks) {
     });
 
     // cleanup namespace
-    await authPage.login();
+    await login();
     await runCmd(`delete sys/namespaces/${namespace}`);
   });
 
   test('a user with read policy should see nav items', async function (assert) {
-    await authPage.login();
+    await login();
     // Create namespace
     await runCmd(`write sys/namespaces/${namespace} -f`, false);
     // Create user within the namespace
-    await authPage.loginNs(namespace);
+    await loginNs(namespace);
     const reader = await runCmd(
       tokenWithPolicyCmd(
         'read-all',
@@ -82,7 +82,7 @@ module('Acceptance | chroot-namespace enterprise ui', function (hooks) {
       )
     );
 
-    await authPage.loginNs(namespace, reader);
+    await loginNs(namespace, reader);
     ['Dashboard', 'Secrets Engines', 'Access', 'Policies', 'Tools', 'Client Count'].forEach((nav) => {
       assert.dom(navLink(nav)).exists(`Shows ${nav} nav item for user with read access policy`);
     });
@@ -91,16 +91,16 @@ module('Acceptance | chroot-namespace enterprise ui', function (hooks) {
     });
 
     // cleanup namespace
-    await authPage.login();
+    await login();
     await runCmd(`delete sys/namespaces/${namespace}`);
   });
 
   test('it works within a child namespace', async function (assert) {
-    await authPage.login();
+    await login();
     // Create namespace
     await runCmd(`write sys/namespaces/${namespace} -f`, false);
     // Create user within the namespace
-    await authPage.loginNs(namespace);
+    await loginNs(namespace);
     const childReader = await runCmd(
       tokenWithPolicyCmd(
         'read-child',
@@ -114,7 +114,7 @@ module('Acceptance | chroot-namespace enterprise ui', function (hooks) {
     // Create child namespace
     await runCmd(`write sys/namespaces/child -f`, false);
 
-    await authPage.loginNs(namespace, childReader);
+    await loginNs(namespace, childReader);
     ['Dashboard', 'Secrets Engines', 'Access', 'Tools'].forEach((nav) => {
       assert.dom(navLink(nav)).exists(`Shows ${nav} nav item`);
     });
@@ -122,7 +122,7 @@ module('Acceptance | chroot-namespace enterprise ui', function (hooks) {
       assert.dom(navLink(nav)).doesNotExist(`Does not show ${nav} nav item`);
     });
 
-    await authPage.loginNs(`${namespace}/child`, childReader);
+    await loginNs(`${namespace}/child`, childReader);
     ['Dashboard', 'Secrets Engines', 'Access', 'Policies', 'Tools', 'Client Count'].forEach((nav) => {
       assert.dom(navLink(nav)).exists(`Shows ${nav} nav item within child namespace`);
     });
@@ -131,9 +131,9 @@ module('Acceptance | chroot-namespace enterprise ui', function (hooks) {
     });
 
     // cleanup namespaces
-    await authPage.loginNs(namespace);
+    await loginNs(namespace);
     await runCmd(`delete sys/namespaces/child`);
-    await authPage.login();
+    await login();
     await runCmd(`delete sys/namespaces/${namespace}`);
   });
 });
