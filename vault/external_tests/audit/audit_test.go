@@ -50,6 +50,8 @@ func TestAudit_HMACFields(t *testing.T) {
 	require.NoError(t, err)
 
 	// Request 1
+	// Enable the audit device. A test probe request will audited along with the associated
+	// to the creation response
 	_, err = client.Logical().Write("sys/audit/"+devicePath, deviceData)
 	require.NoError(t, err)
 
@@ -60,6 +62,7 @@ func TestAudit_HMACFields(t *testing.T) {
 	require.Len(t, devices, 1)
 
 	// Request 3
+	// Enable the userpass auth method (this will be an audited action)
 	err = client.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
 		Type: "userpass",
 	})
@@ -69,6 +72,7 @@ func TestAudit_HMACFields(t *testing.T) {
 	password := "abc123"
 
 	// Request 4
+	// Create a user with a password (another audited action)
 	_, err = client.Logical().Write(fmt.Sprintf("auth/userpass/users/%s", username), map[string]interface{}{
 		"password": password,
 	})
