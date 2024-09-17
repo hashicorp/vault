@@ -533,7 +533,7 @@ scenario "pr_replication" {
 
   step "verify_that_vault_primary_cluster_is_unsealed" {
     description = global.description.verify_vault_unsealed
-    module      = module.vault_verify_unsealed
+    module      = module.vault_wait_for_cluster_unsealed
     depends_on = [
       step.create_primary_cluster,
       step.wait_for_primary_cluster_leader,
@@ -559,7 +559,7 @@ scenario "pr_replication" {
 
   step "verify_that_vault_secondary_cluster_is_unsealed" {
     description = global.description.verify_vault_unsealed
-    module      = module.vault_verify_unsealed
+    module      = module.vault_wait_for_cluster_unsealed
     depends_on = [
       step.create_secondary_cluster,
       step.wait_for_secondary_cluster_leader,
@@ -843,7 +843,7 @@ scenario "pr_replication" {
 
   step "verify_secondary_cluster_is_unsealed_after_enabling_replication" {
     description = global.description.verify_vault_unsealed
-    module      = module.vault_verify_unsealed
+    module      = module.vault_wait_for_cluster_unsealed
     depends_on = [
       step.unseal_secondary_followers
     ]
@@ -1012,7 +1012,7 @@ scenario "pr_replication" {
 
   step "verify_additional_primary_nodes_are_unsealed" {
     description = global.description.verify_vault_unsealed
-    module      = module.vault_verify_unsealed
+    module      = module.vault_wait_for_cluster_unsealed
     depends_on  = [step.add_additional_nodes_to_primary_cluster]
 
     providers = {
