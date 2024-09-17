@@ -115,14 +115,28 @@ func TestAudit_HMACFields(t *testing.T) {
 	hashedBar, err := client.Sys().AuditHash(devicePath, "bar")
 	require.NoError(t, err)
 
+	// Request 11
 	hashedWrapAccessor, err := client.Sys().AuditHash(devicePath, wrapResp.WrapInfo.Accessor)
 	require.NoError(t, err)
 
+	// Request 12
 	hashedWrapToken, err := client.Sys().AuditHash(devicePath, wrapResp.WrapInfo.Token)
 	require.NoError(t, err)
 
+	// Request 13
 	hashedCorrelationID, err := client.Sys().AuditHash(devicePath, correlationID)
 	require.NoError(t, err)
+
+	// Request 14
+	// Disable the audit device. The request will be audited but not the response.
+	_, err = client.Logical().Delete("sys/audit/" + devicePath)
+	require.NoError(t, err)
+
+	// Request 15
+	// Ensure the device has been deleted. This will not be audited.
+	devices, err = client.Sys().ListAudit()
+	require.NoError(t, err)
+	require.Len(t, devices, 0)
 
 	entries := make([]map[string]interface{}, 0)
 	scanner := bufio.NewScanner(logFile)
@@ -137,7 +151,7 @@ func TestAudit_HMACFields(t *testing.T) {
 	}
 
 	// This count includes the initial test probe upon creation of the audit device
-	require.Equal(t, 26, len(entries))
+	require.Equal(t, 27, len(entries))
 
 	loginReqEntry := entries[8]
 	loginRespEntry := entries[9]
