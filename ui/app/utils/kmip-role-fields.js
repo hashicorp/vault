@@ -12,11 +12,11 @@ export const operationFieldsWithoutSpecial = (fieldNames) => {
   return removeManyFromArray(opFields, ['operationAll', 'operationNone']);
 };
 
-export const tlsFields = () => {
-  return ['tlsClientKeyBits', 'tlsClientKeyType', 'tlsClientTtl'];
-};
-
 export const nonOperationFields = (fieldNames) => {
   const opFields = operationFields(fieldNames);
   return removeManyFromArray(fieldNames, opFields);
+};
+
+export const tlsFields = () => {
+  return ['tlsClientKeyBits', 'tlsClientKeyType', 'tlsClientTtl'];
 };
