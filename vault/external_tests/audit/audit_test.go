@@ -22,7 +22,6 @@ import (
 // request and response entries are HMACed properly. The fields in question are:
 //   - request.headers.x-correlation-id
 //   - request.data: all sub-fields
-//   - all sub-fields
 //   - respnse.auth.client_token
 //   - response.auth.accessor
 //   - response.data: all sub-fields
@@ -55,7 +54,7 @@ func TestAudit_HMACFields(t *testing.T) {
 	require.NoError(t, err)
 
 	// Request 2
-	// Ensure the device has not been created.
+	// Ensure the device has been created.
 	devices, err := client.Sys().ListAudit()
 	require.NoError(t, err)
 	require.Len(t, devices, 1)
