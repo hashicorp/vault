@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { removeManyFromArray } from 'vault/helpers/remove-from-array';
 
 export const operationFields = (fieldNames) => {
