@@ -130,6 +130,7 @@ func TestAudit_HMACFields(t *testing.T) {
 		entries = append(entries, entry)
 	}
 
+	// This count includes the initial test probe upon creation of the audit device
 	require.Equal(t, 26, len(entries))
 
 	loginReqEntry := entries[8]
