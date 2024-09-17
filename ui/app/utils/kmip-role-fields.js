@@ -16,13 +16,6 @@ export const tlsFields = () => {
   return ['tlsClientKeyBits', 'tlsClientKeyType', 'tlsClientTtl'];
 };
 
-export const defaultFields = (fieldNames) => {
-  const opFields = operationFields(fieldNames);
-  const tls = tlsFields();
-  const excludeFields = ['role'].concat(opFields, tls);
-  return removeManyFromArray(fieldNames, excludeFields);
-};
-
 export const nonOperationFields = (fieldNames) => {
   const opFields = operationFields(fieldNames);
   return removeManyFromArray(fieldNames, opFields);
