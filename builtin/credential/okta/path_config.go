@@ -16,7 +16,7 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	oktanew "github.com/okta/okta-sdk-golang/v2/okta"
+	oktanew "github.com/okta/okta-sdk-golang/v4/okta"
 )
 
 const (
