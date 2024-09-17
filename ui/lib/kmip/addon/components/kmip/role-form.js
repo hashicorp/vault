@@ -84,7 +84,7 @@ export default class KmipRoleFormComponent extends Component {
     const model = this.preSave();
     try {
       await model.save();
-      this.flashMessages.success(`Saved role ${model.name}`);
+      this.flashMessages.success(`Saved role ${model.role}`);
     } catch (err) {
       // err will display via model state
       // AdapterErrors are handled by the error-message component

@@ -6,6 +6,7 @@
 import BaseAdapter from './base';
 import { decamelize } from '@ember/string';
 import { getProperties } from '@ember/object';
+import { nonOperationFields } from 'vault/utils/kmip-role-fields';
 
 export default BaseAdapter.extend({
   createRecord(store, type, snapshot) {
@@ -51,23 +52,23 @@ export default BaseAdapter.extend({
     // the endpoint here won't allow sending `operation_all` and `operation_none` at the same time or with
     // other operation_ values, so we manually check for them and send an abbreviated object
     const json = snapshot.serialize();
-    const keys = snapshot.record.editableFields.filter((key) => !key.startsWith('operation')).map(decamelize);
-    const nonOperationFields = getProperties(json, keys);
-    for (const field in nonOperationFields) {
-      if (nonOperationFields[field] == null) {
-        delete nonOperationFields[field];
+    const keys = nonOperationFields(snapshot.record.editableFields).map(decamelize);
+    const nonOp = getProperties(json, keys);
+    for (const field in nonOp) {
+      if (nonOp[field] == null) {
+        delete nonOp[field];
       }
     }
     if (json.operation_all) {
       return {
         operation_all: true,
-        ...nonOperationFields,
+        ...nonOp,
       };
     }
     if (json.operation_none) {
       return {
         operation_none: true,
-        ...nonOperationFields,
+        ...nonOp,
       };
     }
     delete json.operation_none;
