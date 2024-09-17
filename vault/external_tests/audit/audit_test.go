@@ -1,0 +1,194 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
+package audit
+
+import (
+	"bufio"
+	"context"
+	"encoding/json"
+	"fmt"
+	"os"
+	"strings"
+	"testing"
+
+	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/api/auth/userpass"
+	"github.com/hashicorp/vault/helper/testhelpers/minimal"
+	"github.com/stretchr/testify/require"
+)
+
+// TestAudit_HMACFields verifies that all appropriate fields in audit
+// request and response entries are HMACed properly. The fields in question are:
+//   - request.headers.x-correlation-id
+//   - request.data: all sub-fields
+//   - all sub-fields
+//   - respnse.auth.client_token
+//   - response.auth.accessor
+//   - response.data: all sub-fields
+//   - response.wrap_info.token
+//   - response.wrap_info.accessor
+func TestAudit_HMACFields(t *testing.T) {
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+
+	tempDir := t.TempDir()
+	logFile, err := os.CreateTemp(tempDir, "")
+	require.NoError(t, err)
+	devicePath := "file"
+	deviceData := map[string]any{
+		"type":        "file",
+		"description": "",
+		"local":       false,
+		"options": map[string]any{
+			"file_path": logFile.Name(),
+		},
+	}
+
+	_, err = client.Logical().Write("sys/config/auditing/request-headers/x-correlation-id", map[string]interface{}{
+		"hmac": true,
+	})
+	require.NoError(t, err)
+
+	// Request 1
+	_, err = client.Logical().Write("sys/audit/"+devicePath, deviceData)
+	require.NoError(t, err)
+
+	// Request 2
+	// Ensure the device has not been created.
+	devices, err := client.Sys().ListAudit()
+	require.NoError(t, err)
+	require.Len(t, devices, 1)
+
+	// Request 3
+	err = client.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
+		Type: "userpass",
+	})
+	require.NoError(t, err)
+
+	username := "jdoe"
+	password := "abc123"
+
+	// Request 4
+	_, err = client.Logical().Write(fmt.Sprintf("auth/userpass/users/%s", username), map[string]interface{}{
+		"password": password,
+	})
+	require.NoError(t, err)
+
+	authInput, err := userpass.NewUserpassAuth(username, &userpass.Password{FromString: password})
+	require.NoError(t, err)
+
+	newClient, err := client.Clone()
+	require.NoError(t, err)
+
+	correlationID := "correlation-id-foo"
+	newClient.AddHeader("x-correlation-id", correlationID)
+
+	// Request 5
+	authOutput, err := newClient.Auth().Login(context.Background(), authInput)
+	require.NoError(t, err)
+
+	// Request 6
+	hashedPassword, err := client.Sys().AuditHash(devicePath, password)
+	require.NoError(t, err)
+
+	// Request 7
+	hashedClientToken, err := client.Sys().AuditHash(devicePath, authOutput.Auth.ClientToken)
+	require.NoError(t, err)
+
+	// Request 8
+	hashedAccessor, err := client.Sys().AuditHash(devicePath, authOutput.Auth.Accessor)
+	require.NoError(t, err)
+
+	// Request 9
+	wrapResp, err := client.Logical().Write("sys/wrapping/wrap", map[string]interface{}{
+		"foo": "bar",
+	})
+	require.NoError(t, err)
+
+	// Request 10
+	hashedBar, err := client.Sys().AuditHash(devicePath, "bar")
+	require.NoError(t, err)
+
+	hashedWrapAccessor, err := client.Sys().AuditHash(devicePath, wrapResp.WrapInfo.Accessor)
+	require.NoError(t, err)
+
+	hashedWrapToken, err := client.Sys().AuditHash(devicePath, wrapResp.WrapInfo.Token)
+	require.NoError(t, err)
+
+	hashedCorrelationID, err := client.Sys().AuditHash(devicePath, correlationID)
+	require.NoError(t, err)
+
+	entries := make([]map[string]interface{}, 0)
+	scanner := bufio.NewScanner(logFile)
+
+	for scanner.Scan() {
+		entry := make(map[string]interface{})
+
+		err := json.Unmarshal(scanner.Bytes(), &entry)
+		require.NoError(t, err)
+
+		entries = append(entries, entry)
+	}
+
+	require.Equal(t, 26, len(entries))
+
+	loginReqEntry := entries[8]
+	loginRespEntry := entries[9]
+
+	loginRequestFromReq := loginReqEntry["request"].(map[string]interface{})
+	loginRequestDataFromReq := loginRequestFromReq["data"].(map[string]interface{})
+	loginHeadersFromReq := loginRequestFromReq["headers"].(map[string]interface{})
+
+	loginRequestFromResp := loginRespEntry["request"].(map[string]interface{})
+	loginRequestDataFromResp := loginRequestFromResp["data"].(map[string]interface{})
+	loginHeadersFromResp := loginRequestFromResp["headers"].(map[string]interface{})
+
+	loginAuth := loginRespEntry["auth"].(map[string]interface{})
+
+	require.True(t, strings.HasPrefix(loginRequestDataFromReq["password"].(string), "hmac-sha256:"))
+	require.Equal(t, loginRequestDataFromReq["password"].(string), hashedPassword)
+
+	require.True(t, strings.HasPrefix(loginRequestDataFromResp["password"].(string), "hmac-sha256:"))
+	require.Equal(t, loginRequestDataFromResp["password"].(string), hashedPassword)
+
+	require.True(t, strings.HasPrefix(loginAuth["client_token"].(string), "hmac-sha256:"))
+	require.Equal(t, loginAuth["client_token"].(string), hashedClientToken)
+
+	require.True(t, strings.HasPrefix(loginAuth["accessor"].(string), "hmac-sha256:"))
+	require.Equal(t, loginAuth["accessor"].(string), hashedAccessor)
+
+	xCorrelationIDFromReq := loginHeadersFromReq["x-correlation-id"].([]interface{})
+	require.Equal(t, len(xCorrelationIDFromReq), 1)
+	require.True(t, strings.HasPrefix(xCorrelationIDFromReq[0].(string), "hmac-sha256:"))
+	require.Equal(t, xCorrelationIDFromReq[0].(string), hashedCorrelationID)
+
+	xCorrelationIDFromResp := loginHeadersFromResp["x-correlation-id"].([]interface{})
+	require.Equal(t, len(xCorrelationIDFromResp), 1)
+	require.True(t, strings.HasPrefix(xCorrelationIDFromReq[0].(string), "hmac-sha256:"))
+	require.Equal(t, xCorrelationIDFromResp[0].(string), hashedCorrelationID)
+
+	wrapReqEntry := entries[16]
+	wrapRespEntry := entries[17]
+
+	wrapRequestFromReq := wrapReqEntry["request"].(map[string]interface{})
+	wrapRequestDataFromReq := wrapRequestFromReq["data"].(map[string]interface{})
+
+	wrapRequestFromResp := wrapRespEntry["request"].(map[string]interface{})
+	wrapRequestDataFromResp := wrapRequestFromResp["data"].(map[string]interface{})
+
+	require.True(t, strings.HasPrefix(wrapRequestDataFromReq["foo"].(string), "hmac-sha256:"))
+	require.Equal(t, wrapRequestDataFromReq["foo"].(string), hashedBar)
+
+	require.True(t, strings.HasPrefix(wrapRequestDataFromResp["foo"].(string), "hmac-sha256:"))
+	require.Equal(t, wrapRequestDataFromResp["foo"].(string), hashedBar)
+
+	wrapResponseData := wrapRespEntry["response"].(map[string]interface{})
+	wrapInfo := wrapResponseData["wrap_info"].(map[string]interface{})
+
+	require.True(t, strings.HasPrefix(wrapInfo["accessor"].(string), "hmac-sha256:"))
+	require.Equal(t, wrapInfo["accessor"].(string), hashedWrapAccessor)
+
+	require.True(t, strings.HasPrefix(wrapInfo["token"].(string), "hmac-sha256:"))
+	require.Equal(t, wrapInfo["token"].(string), hashedWrapToken)
+}
