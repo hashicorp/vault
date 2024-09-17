@@ -383,7 +383,7 @@ scenario "proxy" {
 
   step "verify_vault_unsealed" {
     description = global.description.verify_vault_unsealed
-    module      = module.vault_verify_unsealed
+    module      = module.vault_wait_for_cluster_unsealed
     depends_on  = [step.create_vault_cluster]
 
     providers = {
