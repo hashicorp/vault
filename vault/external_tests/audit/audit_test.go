@@ -28,6 +28,8 @@ import (
 //   - response.wrap_info.token
 //   - response.wrap_info.accessor
 func TestAudit_HMACFields(t *testing.T) {
+	const hmacPrefix = "hmac-sha256:"
+
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
@@ -150,26 +152,26 @@ func TestAudit_HMACFields(t *testing.T) {
 
 	loginAuth := loginRespEntry["auth"].(map[string]interface{})
 
-	require.True(t, strings.HasPrefix(loginRequestDataFromReq["password"].(string), "hmac-sha256:"))
+	require.True(t, strings.HasPrefix(loginRequestDataFromReq["password"].(string), hmacPrefix))
 	require.Equal(t, loginRequestDataFromReq["password"].(string), hashedPassword)
 
-	require.True(t, strings.HasPrefix(loginRequestDataFromResp["password"].(string), "hmac-sha256:"))
+	require.True(t, strings.HasPrefix(loginRequestDataFromResp["password"].(string), hmacPrefix))
 	require.Equal(t, loginRequestDataFromResp["password"].(string), hashedPassword)
 
-	require.True(t, strings.HasPrefix(loginAuth["client_token"].(string), "hmac-sha256:"))
+	require.True(t, strings.HasPrefix(loginAuth["client_token"].(string), hmacPrefix))
 	require.Equal(t, loginAuth["client_token"].(string), hashedClientToken)
 
-	require.True(t, strings.HasPrefix(loginAuth["accessor"].(string), "hmac-sha256:"))
+	require.True(t, strings.HasPrefix(loginAuth["accessor"].(string), hmacPrefix))
 	require.Equal(t, loginAuth["accessor"].(string), hashedAccessor)
 
 	xCorrelationIDFromReq := loginHeadersFromReq["x-correlation-id"].([]interface{})
 	require.Equal(t, len(xCorrelationIDFromReq), 1)
-	require.True(t, strings.HasPrefix(xCorrelationIDFromReq[0].(string), "hmac-sha256:"))
+	require.True(t, strings.HasPrefix(xCorrelationIDFromReq[0].(string), hmacPrefix))
 	require.Equal(t, xCorrelationIDFromReq[0].(string), hashedCorrelationID)
 
 	xCorrelationIDFromResp := loginHeadersFromResp["x-correlation-id"].([]interface{})
 	require.Equal(t, len(xCorrelationIDFromResp), 1)
-	require.True(t, strings.HasPrefix(xCorrelationIDFromReq[0].(string), "hmac-sha256:"))
+	require.True(t, strings.HasPrefix(xCorrelationIDFromReq[0].(string), hmacPrefix))
 	require.Equal(t, xCorrelationIDFromResp[0].(string), hashedCorrelationID)
 
 	wrapReqEntry := entries[16]
@@ -181,18 +183,18 @@ func TestAudit_HMACFields(t *testing.T) {
 	wrapRequestFromResp := wrapRespEntry["request"].(map[string]interface{})
 	wrapRequestDataFromResp := wrapRequestFromResp["data"].(map[string]interface{})
 
-	require.True(t, strings.HasPrefix(wrapRequestDataFromReq["foo"].(string), "hmac-sha256:"))
+	require.True(t, strings.HasPrefix(wrapRequestDataFromReq["foo"].(string), hmacPrefix))
 	require.Equal(t, wrapRequestDataFromReq["foo"].(string), hashedBar)
 
-	require.True(t, strings.HasPrefix(wrapRequestDataFromResp["foo"].(string), "hmac-sha256:"))
+	require.True(t, strings.HasPrefix(wrapRequestDataFromResp["foo"].(string), hmacPrefix))
 	require.Equal(t, wrapRequestDataFromResp["foo"].(string), hashedBar)
 
 	wrapResponseData := wrapRespEntry["response"].(map[string]interface{})
 	wrapInfo := wrapResponseData["wrap_info"].(map[string]interface{})
 
-	require.True(t, strings.HasPrefix(wrapInfo["accessor"].(string), "hmac-sha256:"))
+	require.True(t, strings.HasPrefix(wrapInfo["accessor"].(string), hmacPrefix))
 	require.Equal(t, wrapInfo["accessor"].(string), hashedWrapAccessor)
 
-	require.True(t, strings.HasPrefix(wrapInfo["token"].(string), "hmac-sha256:"))
+	require.True(t, strings.HasPrefix(wrapInfo["token"].(string), hmacPrefix))
 	require.Equal(t, wrapInfo["token"].(string), hashedWrapToken)
 }
