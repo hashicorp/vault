@@ -21,7 +21,7 @@
     </div>
     {{#unless @model.operationNone}}
       <Toolbar>
-        <h3 class="title is-6 has-left-padding-s">
+        <h3 class="title is-6 has-left-padding-s" data-test-kmip-section="Allowed Operations">
           Allowed Operations
         </h3>
       </Toolbar>
@@ -34,7 +34,7 @@
         <div class="is-flex">
           {{#each this.operationFormGroups as |group|}}
             <div class="kmip-role-allowed-operations">
-              <h4 class="title is-7">{{group.name}}</h4>
+              <h4 class="title is-7" data-test-kmip-operations={{group.name}}>{{group.name}}</h4>
               {{#each group.fields as |attr|}}
                 <FormField
                   data-test-field
@@ -50,7 +50,7 @@
       </div>
     {{/unless}}
     <div class="box is-fullwidth is-shadowless">
-      <h3 class="title is-3">
+      <h3 class="title is-3" data-test-kmip-section="TLS">
         TLS
       </h3>
       {{#each this.tlsFormFields as |attr|}}

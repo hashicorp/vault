@@ -16,7 +16,7 @@ import {
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import scopesPage from 'vault/tests/pages/secrets/backend/kmip/scopes';
 import rolesPage from 'vault/tests/pages/secrets/backend/kmip/roles';
 import credentialsPage from 'vault/tests/pages/secrets/backend/kmip/credentials';
@@ -91,7 +91,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
 
   hooks.beforeEach(async function () {
     this.backend = `kmip-${uuidv4()}`;
-    await authPage.login();
+    await login();
     return;
   });
 
@@ -236,6 +236,11 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
       `/vault/secrets/${backend}/kmip/scopes/${scope}/roles/create`,
       'links to the role create form'
     );
+    // check that the role form looks right
+    assert.dom(GENERAL.inputByAttr('operationNone')).isChecked('allows role to perform roles by default');
+    assert.dom(GENERAL.inputByAttr('operationAll')).isChecked('operationAll is checked by default');
+    assert.dom('[data-test-kmip-section]').exists({ count: 2 });
+    assert.dom('[data-test-kmip-operations]').exists({ count: 4 });
 
     await rolesPage.roleName(role);
     await settled();
@@ -247,6 +252,13 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     );
 
     assert.strictEqual(rolesPage.listItemLinks.length, 1, 'renders a single role');
+    await rolesPage.visitDetail({ backend, scope, role });
+    // check that the role details looks right
+    assert.dom('h2').exists({ count: 2 }, 'renders correct section headings');
+    assert.dom('[data-test-inline-error-message]').hasText('This role allows all KMIP operations');
+    ['Managed Cryptographic Objects', 'Object Attributes', 'Server', 'Other'].forEach((title) => {
+      assert.dom(`[data-test-row-label="${title}"]`).exists(`Renders allowed operations row for: ${title}`);
+    });
   });
 
   test('it navigates to kmip roles view using breadcrumbs', async function (assert) {
@@ -357,7 +369,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
       this.store = this.owner.lookup('service:store');
       this.scope = 'my-scope';
       this.name = 'my-role';
-      await authPage.login();
+      await login();
       await runCmd(mountEngineCmd('kmip', this.backend), false);
       await runCmd([`write ${this.backend}/scope/${this.scope} -force`]);
       await rolesPage.visit({ backend: this.backend, scope: this.scope });
