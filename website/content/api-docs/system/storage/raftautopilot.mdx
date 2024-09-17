@@ -35,54 +35,69 @@ $ curl \
 
 ```json
 {
-  "healthy": true,
   "failure_tolerance": 1,
+  "healthy": true,
+  "leader": "vault_1",
   "servers": {
-    "raft1": {
-      "id": "raft1",
-      "name": "raft1",
+    "vault_1": {
       "address": "127.0.0.1:8201",
-      "node_status": "alive",
+      "healthy": true,
+      "id": "vault_1",
       "last_contact": "0s",
+      "last_index": 63,
       "last_term": 3,
-      "last_index": 459,
-      "healthy": true,
-      "stable_since": "2021-03-19T20:14:11.831678-04:00",
+      "name": "vault_1",
+      "node_status": "alive",
+      "node_type": "voter",
+      "stable_since": "2024-08-29T16:02:45.639829+02:00",
       "status": "leader",
-      "meta": null
+      "version": "1.17.3"
     },
-    "raft2": {
-      "id": "raft2",
-      "name": "raft2",
-      "address": "127.0.0.2:8201",
-      "node_status": "alive",
-      "last_contact": "516.49595ms",
-      "last_term": 3,
-      "last_index": 459,
+    "vault_2": {
+      "address": "127.0.0.1:8203",
       "healthy": true,
-      "stable_since": "2021-03-19T20:14:19.831931-04:00",
+      "id": "vault_2",
+      "last_contact": "678.62575ms",
+      "last_index": 63,
+      "last_term": 3,
+      "name": "vault_2",
+      "node_status": "alive",
+      "node_type": "voter",
+      "stable_since": "2024-08-29T16:02:47.640976+02:00",
       "status": "voter",
-      "meta": null
+      "version": "1.17.3"
     },
-    "raft3": {
-      "id": "raft3",
-      "name": "raft3",
-      "address": "127.0.0.3:8201",
-      "node_status": "alive",
-      "last_contact": "196.706591ms",
-      "last_term": 3,
-      "last_index": 459,
+    "vault_3": {
+      "address": "127.0.0.1:8205",
       "healthy": true,
-      "stable_since": "2021-03-19T20:14:25.83565-04:00",
+      "id": "vault_3",
+      "last_contact": "3.969159375s",
+      "last_index": 63,
+      "last_term": 3,
+      "name": "vault_3",
+      "node_status": "alive",
+      "node_type": "voter",
+      "stable_since": "2024-08-29T16:02:49.640905+02:00",
       "status": "voter",
-      "meta": null
+      "version": "1.17.3"
     }
   },
-  "leader": "raft1",
-  "voters": ["raft1", "raft2", "raft3"],
-  "non_voters": null
+  "voters": [
+    "vault_1",
+    "vault_2",
+    "vault_3"
+  ]
 }
 ```
+The `failure_tolerance` of a cluster is the number of nodes in the cluster that could
+fail gradually without causing an outage.
+
+When verifying the health of your cluster, check the following fields of each server:
+- `healthy`: whether Autopilot considers this node healthy or not
+- `status`: the voting status of the node. This will be `voter`, `leader`, or [`non-voter`](/vault/docs/concepts/integrated-storage#non-voting-nodes-enterprise-only)")
+- `last_index`: the index of the last applied Raft log. This should be close to the `last_index` value of the leader.
+- `version`: the version of Vault running on the server
+- `node_type`: the type of node. On CE, this will always be `voter`. See below for an explanation of Enterprise node types.
 
 ### Enterprise only
 Vault Enterprise will include additional output in its API response to indicate the current state of redundancy zones,
@@ -149,7 +164,7 @@ automated upgrade progress (if any), and optimistic failure tolerance.
       }
     },
     "status": "await-new-voters",
-    "target_version": "1.12.0",
+    "target_version": "1.17.5",
     "target_version_non_voters": [
       "vault_5"
     ]
@@ -160,6 +175,11 @@ automated upgrade progress (if any), and optimistic failure tolerance.
   ]
 }
 ```
+
+`optimistic_failure_tolerance` describes the number of healthy active and
+back-up voting servers that can fail gradually without causing an outage.
+
+@include 'autopilot/node-types.mdx'
 
 ## Get configuration
 
@@ -203,31 +223,7 @@ This endpoint is used to modify the configuration of the autopilot subsystem of 
 
 ### Parameters
 
-- `cleanup_dead_servers` `(bool: false)` - Controls whether to remove dead servers from
-  the Raft peer list periodically or when a new server joins. This requires that
-  `min_quorum` is also set.
-
-- `last_contact_threshold` `(string: "10s")` - Limit on the amount of time a server can
-  go without leader contact before being considered unhealthy.
-
-- `dead_server_last_contact_threshold` `(string: "24h")` - Limit on the amount of time
-  a server can go without leader contact before being considered failed. This
-  takes effect only when `cleanup_dead_servers` is `true`. This can not be set to a value
-  smaller than 1m. **We strongly recommend that this is kept at a high duration, such as a day,
-  as it being too low could result in removal of nodes that aren't actually dead.**
-
-- `max_trailing_logs` `(int: 1000)` - Amount of entries in the Raft Log that a server
-  can be behind before being considered unhealthy.
-
-- `min_quorum` `(int: 3)` - Minimum number of servers allowed in a cluster before
-  autopilot can prune dead servers. This should at least be 3. Applicable only for
-  voting nodes.
-
-- `server_stabilization_time` `(string: "10s")` - Minimum amount of time a server must
-  be in a stable, healthy state before it can be added to the cluster.
-
-- `disable_upgrade_migration` `(bool: false)` - Disables automatically upgrading Vault using
-  autopilot. (Enterprise-only)
+@include 'autopilot/config.mdx'
 
 ### Sample request
 

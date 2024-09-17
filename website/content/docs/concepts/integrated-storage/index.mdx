@@ -60,6 +60,11 @@ API (both methods described below). When joining a node, the API address of the 
 recommend setting the [`api_addr`](/vault/docs/concepts/ha#direct-access) configuration
 option on all nodes to make joining simpler.
 
+Always join nodes to a cluster one at a time and wait for the node to become
+healthy and (if applicable) a voter before continuing to add more nodes. The
+status of a node can be verified by performing a [`list-peers`](/vault/docs/commands/operator/raft#list-peers)
+command or by checking the [`autopilot state`](/vault/docs/commands/operator/raft#autopilot-state).
+
 #### `retry_join` configuration
 
 This method enables setting one, or more, target leader nodes in the config file.
@@ -95,9 +100,10 @@ provided, Vault will use [go-discover](https://github.com/hashicorp/go-discover)
 to automatically attempt to discover and resolve potential Raft leader
 addresses.
 
-See the go-discover
+Check the go-discover
 [README](https://github.com/hashicorp/go-discover/blob/master/README.md) for
-details on the format of the [`auto_join`](/vault/docs/configuration/storage/raft#auto_join) value.
+details on the format of the [`auto_join`](/vault/docs/configuration/storage/raft#auto_join)
+value per cloud provider.
 
 ```hcl
 storage "raft" {
@@ -166,6 +172,14 @@ node ID you wish to remove:
 $ vault operator raft remove-peer node1
 Peer removed successfully!
 ```
+
+#### Re-joining after removal
+
+If you have used `remove-peer` to remove a node from the Raft cluster, but you
+later want to have this same node re-join the cluster, you will need to delete
+any existing Raft data on the removed node before adding it back to the cluster.
+This will involve stopping the Vault process, deleting the data directory containing
+Raft data, and then restarting the Vault process.
 
 ### Listing peers
 

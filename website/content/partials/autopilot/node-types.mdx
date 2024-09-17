@@ -1,0 +1,6 @@
+#### Enterprise Node Types
+- `voter`: The server is a Raft voter and contributing to quorum.
+- `read-replica`: The server is not a Raft voter, but receives a replica of all data.
+- `zone-voter`: The main Raft voter in a redundancy zone.
+- `zone-extra-voter`: An additional Raft voter in a redundancy zone.
+- `zone-standby`: A non-voter in a redundancy zone that can be promoted to a voter, if needed.

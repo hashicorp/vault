@@ -17,7 +17,7 @@ These two features were introduced in Vault 1.11.
 Server stabilization helps to retain the stability of the Raft cluster by safely
 joining new voting nodes to the cluster. When a new voter node is joined to an
 existing cluster, autopilot adds it as a non-voter instead, and waits for a
-pre-configured amount of time to monitor it's health. If the node remains to be
+pre-configured amount of time to monitor its health. If the node remains
 healthy for the entire duration of stabilization, then that node will be
 promoted as a voter. The server stabilization period can be tuned using
 `server_stabilization_time` (see below).
@@ -31,7 +31,7 @@ and `min_quorum` (see below).
 
 ## State API
 
-State API provides detailed information about all the nodes in the Raft cluster
+The [State API](/vault/api-docs/system/storage/raftautopilot#get-cluster-state) provides detailed information about all the nodes in the Raft cluster
 in a single call. This API can be used for monitoring for cluster health.
 
 ### Follower health
@@ -50,40 +50,7 @@ although dead server cleanup is not enabled by default. Upgrade of
 Raft clusters deployed with older versions of Vault will also transition to use
 Autopilot automatically.
 
-Autopilot exposes a [configuration
-API](/vault/api-docs/system/storage/raftautopilot#set-configuration) to manage its
-behavior. Autopilot gets initialized with the following default values. If these default values do not meet your expected autopilot behavior, don't forget to set them to your desired values.
-
-- `cleanup_dead_servers` - `false`
-  - This controls whether to remove dead servers from
-    the Raft peer list periodically or when a new server joins. This requires that
-    `min-quorum` is also set.
-
-- `dead_server_last_contact_threshold` - `24h`
-  - Limit on the amount of time
-    a server can go without leader contact before being considered failed. This
-    takes effect only when `cleanup_dead_servers` is set. **We strongly recommend
-    that this is kept at a high duration, such as a day, as it being too low could
-    result in removal of nodes that aren't actually dead.**
-
-- `min_quorum` - This doesn't default to anything and should be set to the expected
-  number of voters in your cluster when `cleanup_dead_servers` is set as `true`.
-  - Minimum number of servers that should always be present in a cluster.
-  Autopilot will not prune servers below this number.
-
-- `max_trailing_logs` - `1000`
-  - Amount of entries in the Raft Log that a server
-    can be behind before being considered unhealthy.
-
-- `last_contact_threshold` - `10s`
-  - Limit on the amount of time a server can go without leader contact before being considered unhealthy.
-
-- `server_stabilization_time` - `10s`
-  - Minimum amount of time a server must be in a healthy state before it can become a voter. Until that happens,
-    it will be visible as a peer in the cluster, but as a non-voter, meaning it won't contribute to quorum.
-
-- `disable_upgrade_migration` - `false`
-  - Controls whether to disable automated upgrade migrations, an Enterprise-only feature.
+@include 'autopilot/config.mdx'
 
 ~> **Note**: Autopilot in Vault does similar things to what autopilot does in
 [Consul](https://www.consul.io/). However, the configuration in these 2 systems
@@ -94,7 +61,7 @@ provide the autopilot functionality.
 
 ## Automated upgrades
 
-Automated Upgrades lets you automatically upgrade a cluster of Vault nodes to a new version as
+[Automated Upgrades](/vault/docs/enterprise/automated-upgrades) lets you automatically upgrade a cluster of Vault nodes to a new version as
 updated server nodes join the cluster. Once the number of nodes on the new version is
 equal to or greater than the number of nodes on the old version, Autopilot will promote
 the newer versioned nodes to voters, demote the older versioned nodes to non-voters,
@@ -104,7 +71,7 @@ nodes can be removed from the cluster.
 
 ## Redundancy zones
 
-Redundancy Zones provide both scaling and resiliency benefits by deploying non-voting
+[Redundancy Zones](/vault/docs/enterprise/redundancy-zones) provide both scaling and resiliency benefits by deploying non-voting
 nodes alongside voting nodes on a per availability zone basis. When using redundancy zones,
 each zone will have exactly one voting node and as many additional non-voting nodes as desired.
 If the voting node in a zone fails, a non-voting node will be automatically promoted to
