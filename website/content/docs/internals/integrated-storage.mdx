@@ -271,6 +271,28 @@ For example, if you start with a 5-node cluster:
 You should always maintain quorum to limit the impact on failure tolerance when
 changing or scaling your Vault instance.
 
+### Redundancy Zones
+
+If you are using autopilot with [redundancy zones](/vault/docs/enterprise/redundancy-zones),
+the total number of servers will be different from the above, and is dependent
+on how many redundancy zones and servers per redundancy zone that you choose.
+
+@include 'autopilot/redundancy-zones.mdx'
+
+<Highlight title="Best practice">
+
+  If you choose to use redundancy zones, we **strongly recommend** using at least 3
+  zones to ensure failure tolerance.
+
+</Highlight>
+
+Redundancy zones | Servers per zone | Quorum size | Failure tolerance | Optimistic failure tolerance
+:--------------: | :--------------: | :---------: | :---------------: | :--------------------------:
+2                | 2                | 2           | 0                 | 2
+3                | 2                | 2           | 1                 | 3
+3                | 3                | 2           | 1                 | 5
+5                | 2                | 3           | 2                 | 6
+
 [consensus protocol]: https://en.wikipedia.org/wiki/Consensus_(computer_science)
 [consistency]: https://en.wikipedia.org/wiki/CAP_theorem
 ["Raft: In search of an Understandable Consensus Algorithm"]: https://raft.github.io/raft.pdf
