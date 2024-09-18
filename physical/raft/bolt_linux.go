@@ -53,8 +53,8 @@ func setMapPopulateFlag(dbPath string) bool {
 
 // the unix.MAP_POPULATE constant only exists on Linux,
 // so reference to this constant can only live in a *_linux.go file
-func usingMapPopulateLinux(mmapFlags int) bool {
-	if mmapFlags == unix.MAP_POPULATE {
+func usingMapPopulateLinux(mmapFlag int) bool {
+	if mmapFlag == unix.MAP_POPULATE {
 		return true
 	}
 	return false
