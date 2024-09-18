@@ -35,11 +35,24 @@
 
   {
     "title": "Install Vault",
-    "path": "install"
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "install"
+      },
+      {
+        "title": "Install manually",
+        "path": "install/install-binary"
+      },
+      {
+        "title": "Build from code",
+        "path": "install/build-from-code"
+      }
+    ]
   },
   {
-    "title": "Set up Vault service",
-    "path": "set-up-service"
+    "title": "Run Vault as a service",
+    "path": "run-as-service"
   },
   {
     "title": "Internals",
