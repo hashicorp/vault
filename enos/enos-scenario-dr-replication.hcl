@@ -695,12 +695,15 @@ scenario "dr_replication" {
   # ================================================
   #     DISASTER RECOVERY (DR) REPLICATION SETUP
   # ================================================
-  # 1. Configure DR primary replication on cluster A.
-  # 2. Generate secondary token on cluster A.
-  # 3. Configure DR secondary replication on cluster B.
-  # 4. Confirm replication status on both clusters.
+  # - Wait for seal rewrap to complete on both clusters.
+  # - Configure DR primary replication on cluster A.
+  # - Generate secondary token on cluster A.
+  # - Configure DR secondary replication on cluster B.
+  # - Confirm replication status on both clusters.
 
 
+  // Wait for our seals to finish any inflight rewraps before we enable DR replication as we don't
+  // want to accidentally swap seal info on the secondary before it has finished.
   step "configure_dr_replication_primary" {
     description = <<-EOF
       Create the necessary superuser auth policy necessary for DR replication, assign it
@@ -711,7 +714,7 @@ scenario "dr_replication" {
     depends_on = [
       step.get_primary_cluster_ips,
       step.get_secondary_cluster_ips,
-      step.verify_secrets_engines_on_primary
+      step.verify_secrets_engines_on_primary,
     ]
 
     providers = {
@@ -759,13 +762,53 @@ scenario "dr_replication" {
     }
   }
 
+  step "wait_for_primary_seal_rewrap" {
+    module = module.vault_wait_for_seal_rewrap
+    depends_on = [
+      step.generate_secondary_token,
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      hosts             = step.create_primary_cluster.hosts
+      vault_addr        = step.create_primary_cluster.api_addr_localhost
+      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
+      vault_root_token  = step.create_primary_cluster.root_token
+    }
+  }
+
+  step "wait_for_secondary_seal_rewrap" {
+    module = module.vault_wait_for_seal_rewrap
+    depends_on = [
+      step.wait_for_primary_seal_rewrap,
+
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      hosts             = step.create_secondary_cluster.hosts
+      vault_addr        = step.create_secondary_cluster.api_addr_localhost
+      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
+      vault_root_token  = step.create_secondary_cluster.root_token
+    }
+  }
+
   step "configure_dr_replication_secondary" {
     description = <<-EOF
       Enable dr replication on the secondary cluster with the wrapping token created by
       the primary cluster.
     EOF
     module      = module.vault_setup_replication_secondary
-    depends_on  = [step.generate_secondary_token]
+    depends_on = [
+      step.wait_for_secondary_seal_rewrap,
+      step.generate_secondary_token,
+    ]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -786,16 +829,13 @@ scenario "dr_replication" {
 
   step "unseal_secondary_followers" {
     description = <<-EOF
-        After replication is enabled the secondary cluster followers need to be unsealed.
-        Secondary unseal keys are passed differently depending primary and secondary seal
-        type combinations. See the guide for more information:
-          https://developer.hashicorp.com/vault/docs/enterprise/replication#seals
-      EOF
+      After replication is enabled the secondary cluster followers need to be unsealed.
+      Secondary unseal keys are passed differently depending primary and secondary seal
+      type combinations. See the guide for more information:
+        https://developer.hashicorp.com/vault/docs/enterprise/replication#seals
+    EOF
     module      = module.vault_unseal_nodes
     depends_on = [
-      step.create_primary_cluster,
-      step.create_secondary_cluster,
-      step.get_secondary_cluster_ips,
       step.configure_dr_replication_secondary
     ]
 
@@ -899,10 +939,10 @@ scenario "dr_replication" {
 
   step "vault_failover_promote_dr_secondary_cluster" {
     description = <<-EOF
-        Promote the secondary cluster to be the primary cluster. This step will also
-        generate a new DR operation token for the secondary cluster to connect to the new
-        primary cluster.
-      EOF
+      Promote the secondary cluster to be the primary cluster. This step will also
+      generate a new DR operation token for the secondary cluster to connect to the new
+      primary cluster.
+    EOF
     module      = module.vault_failover_promote_dr_secondary
     depends_on  = [step.generate_batch_dr_operation_token]
 
@@ -946,10 +986,10 @@ scenario "dr_replication" {
 
   step "vault_failover_demote_dr_primary_cluster" {
     description = <<-EOF
-        Demote the primary cluster to be the secondary cluster. This step will also
-        generate a new DR operation token for the secondary cluster to connect to the new
-        primary cluster.
-      EOF
+      Demote the primary cluster to be the secondary cluster. This step will also
+      generate a new DR operation token for the secondary cluster to connect to the new
+      primary cluster.
+    EOF
     module      = module.vault_failover_demote_dr_primary
     depends_on  = [step.wait_for_promoted_cluster_leader]
 
@@ -1047,10 +1087,10 @@ scenario "dr_replication" {
 
   step "generate_demoted_secondary_public_key" {
     description = <<-EOF
-          Generate a random token and configure the DR replication primary secondary-token and
-          configure the Vault cluster primary replication with the token. Export the wrapping token
-          so that secondary clusters can utilize it.
-        EOF
+      Generate a random token and configure the DR replication primary secondary-token and
+      configure the Vault cluster primary replication with the token. Export the wrapping token
+      so that secondary clusters can utilize it.
+    EOF
     module      = module.generate_secondary_public_key
     depends_on = [
       step.verify_replicated_data_during_failover,
@@ -1073,10 +1113,10 @@ scenario "dr_replication" {
 
   step "generate_demoted_secondary_token" {
     description = <<-EOF
-        Generate a random token and configure the DR replication primary secondary-token and
-        configure the Vault cluster primary replication with the token. Export the wrapping token
-        so that secondary clusters can utilize it.
-      EOF
+      Generate a random token and configure the DR replication primary secondary-token and
+      configure the Vault cluster primary replication with the token. Export the wrapping token
+      so that secondary clusters can utilize it.
+    EOF
     module      = module.generate_failover_secondary_token
     depends_on  = [step.generate_demoted_secondary_public_key]
 
@@ -1098,8 +1138,8 @@ scenario "dr_replication" {
 
   step "vault_failover_update_dr_primary_cluster" {
     description = <<-EOF
-          Update the secondary cluster to connect to the new primary cluster.
-        EOF
+      Update the secondary cluster to connect to the new primary cluster.
+    EOF
     module      = module.vault_failover_update_dr_primary
     depends_on = [
       step.generate_demoted_secondary_token,
@@ -1123,9 +1163,9 @@ scenario "dr_replication" {
 
   step "verify_failover_dr_replication" {
     description = <<-EOF
-        Verify that the DR replication status meets our expectations after enabling replication
-        and ensuring that all secondary nodes are unsealed.
-      EOF
+      Verify that the DR replication status meets our expectations after enabling replication
+      and ensuring that all secondary nodes are unsealed.
+    EOF
     module      = module.vault_verify_dr_replication
     depends_on  = [step.vault_failover_update_dr_primary_cluster]
 
