@@ -1,0 +1,95 @@
+---
+layout: docs
+page_title: Build Vault from code
+description: >-
+  Build Vault locally from source code.
+---
+
+# Build Vault from code
+
+Clone the official Vault repo and build a Vault binary from source code for your
+system.
+
+<Tip title="Assumptions">
+
+- You have [Go](https://golang.org) installed and the `GOPATH` environment
+  variable configured.
+- You have [`git`](https://www.git-scm.com/) installed.
+
+</Tip>
+
+<Tabs>
+
+<Tab heading="Linux shell" group="nix">
+
+1. Create a `hashicorp` source directory under your `GOPATH` and change to the
+   new directory:
+
+  ```shell-session
+  $ mkdir -p ${GOPATH}/src/hashicorp && cd $_
+  ```
+
+1. Clone the Vault repository from GitHub:
+  ```shell-session
+  $ git clone https://github.com/hashicorp/vault.git
+  ```
+
+1. Change to the cloned Vault directory:
+  ```shell-session
+  $ cd vault
+  ```
+
+1. Bootstrap the Go project to download and compile the libraries and tools
+   needed to compile Vault:
+  ```shell-session
+  $ make bootstrap
+  ```
+
+1. Use `make` to build Vault for your current system:
+  ```shell-session
+  $ make dev
+  ```
+
+  You can copy the compiled binary from `${GOPATH}/src/hashicorp/vault/bin/`.
+
+</Tab>
+
+<Tab heading="Powershell" group="ps">
+
+1. Create a `hashicorp` source directory under your `GOPATH` and change to the
+   new directory:
+  
+  ```powershell
+  New-Item -ItemType Directory -Force -Path "${env:GOPATH}/src/hashicorp" | Set-Location
+  ```
+
+1. Clone the Vault repository from GitHub:
+  
+  ```powershell
+  git clone https://github.com/hashicorp/vault.git
+  ```
+
+1. Change to the cloned Vault directory:
+  
+  ```powershell
+  Set-Location vault
+  ```
+
+1. Use the included `make` tool to bootstrap the Go project to download and
+   compile the libraries and tools needed to compile Vault:
+  
+  ```powershell
+  .\make bootstrap
+  ```
+
+1. Use the included `make` tool to build Vault for your current system:
+
+  ```powershell
+  .\make dev
+  ```
+
+  You can copy the compiled binary from `${env:GOPATH}/src/hashicorp/vault/bin/`.
+
+</Tab>
+
+</Tabs>
