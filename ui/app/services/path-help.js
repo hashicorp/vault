@@ -70,7 +70,7 @@ export default Service.extend({
    * @param {Attribute[]} attrs array of attributes {name, type, options}
    * @returns new ModelClass extended from passed one, with the passed attributes added
    */
-  _upgradeModelSchema(Klass, attrs) {
+  _upgradeModelSchema(Klass, attrs, newFields) {
     // extending the class will ensure that static schema lookups regenerate
     const NewKlass = class extends Klass {};
 
@@ -78,6 +78,11 @@ export default Service.extend({
       const decorator = attr(type, options);
       const descriptor = decorator(NewKlass.prototype, name, {});
       Object.defineProperty(NewKlass.prototype, name, descriptor);
+    }
+
+    // newFields is used in combineFieldGroups within various models
+    if (newFields) {
+      NewKlass.prototype.newFields = newFields;
     }
 
     // Ensure this class doesn't get re-hydrated
@@ -111,7 +116,7 @@ export default Service.extend({
     debug(`${modelType} has ${newFields.length} new fields: ${newFields.join(', ')}`);
 
     // hydrate model
-    const HydratedKlass = this._upgradeModelSchema(Klass, attrs);
+    const HydratedKlass = this._upgradeModelSchema(Klass, attrs, newFields);
 
     this._registerModel(owner, HydratedKlass, modelType);
   },
@@ -332,8 +337,8 @@ export default Service.extend({
   async registerNewModelWithAttrs(helpUrl, modelType) {
     const owner = getOwner(this);
     const props = await this.getProps(helpUrl);
-    const { attrs } = combineOpenApiAttrs(new Map(), props);
-    const NewKlass = this._upgradeModelSchema(GeneratedItemModel, attrs);
+    const { attrs, newFields } = combineOpenApiAttrs(new Map(), props);
+    const NewKlass = this._upgradeModelSchema(GeneratedItemModel, attrs, newFields);
     this._registerModel(owner, NewKlass, modelType, true);
   },
 
