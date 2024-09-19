@@ -23,8 +23,12 @@ module('Acceptance | ldap | libraries', function (hooks) {
     ldapMirageScenario(this.server);
     this.backend = `ldap-test-${uuidv4()}`;
     await authPage.login();
-    await runCmd(mountEngineCmd('ldap', this.backend));
-    return visitURL('libraries');
+    // mount & configure
+    await runCmd([
+      mountEngineCmd('ldap', this.backend),
+      `write ${this.backend}/config binddn=foo bindpass=bar url=http://localhost:8208`,
+    ]);
+    return visitURL('libraries', this.backend);
   });
 
   hooks.afterEach(async function () {
@@ -32,19 +36,22 @@ module('Acceptance | ldap | libraries', function (hooks) {
   });
 
   test('it should show libraries on overview page', async function (assert) {
-    await visitURL('overview');
+    await visitURL('overview', this.backend);
     assert.dom('[data-test-libraries-count]').hasText('1');
   });
 
   test('it should transition to create library route on toolbar link click', async function (assert) {
     await click('[data-test-toolbar-action="library"]');
-    assert.true(isURL('libraries/create'), 'Transitions to library create route on toolbar link click');
+    assert.true(
+      isURL('libraries/create', this.backend),
+      'Transitions to library create route on toolbar link click'
+    );
   });
 
   test('it should transition to library details route on list item click', async function (assert) {
     await click('[data-test-list-item-link] a');
     assert.true(
-      isURL('libraries/test-library/details/accounts'),
+      isURL('libraries/test-library/details/accounts', this.backend),
       'Transitions to library details accounts route on list item click'
     );
     assert.dom('[data-test-account-name]').exists({ count: 2 }, 'lists the accounts');
@@ -59,7 +66,7 @@ module('Acceptance | ldap | libraries', function (hooks) {
       await click(`[data-test-${action}]`);
       const uri = action === 'details' ? 'details/accounts' : action;
       assert.true(
-        isURL(`libraries/test-library/${uri}`),
+        isURL(`libraries/test-library/${uri}`, this.backend),
         `Transitions to ${action} route on list item action menu click`
       );
       await click('[data-test-breadcrumb="libraries"] a');
@@ -70,13 +77,13 @@ module('Acceptance | ldap | libraries', function (hooks) {
     await click('[data-test-list-item-link] a');
     await click('[data-test-tab="config"]');
     assert.true(
-      isURL('libraries/test-library/details/configuration'),
+      isURL('libraries/test-library/details/configuration', this.backend),
       'Transitions to configuration route on tab click'
     );
 
     await click('[data-test-tab="accounts"]');
     assert.true(
-      isURL('libraries/test-library/details/accounts'),
+      isURL('libraries/test-library/details/accounts', this.backend),
       'Transitions to accounts route on tab click'
     );
   });
@@ -84,6 +91,9 @@ module('Acceptance | ldap | libraries', function (hooks) {
   test('it should transition to routes from library details toolbar links', async function (assert) {
     await click('[data-test-list-item-link] a');
     await click('[data-test-edit]');
-    assert.true(isURL('libraries/test-library/edit'), 'Transitions to credentials route from toolbar link');
+    assert.true(
+      isURL('libraries/test-library/edit', this.backend),
+      'Transitions to credentials route from toolbar link'
+    );
   });
 });
