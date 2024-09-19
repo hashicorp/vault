@@ -9,8 +9,9 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import ldapMirageScenario from 'vault/mirage/scenarios/ldap';
 import ldapHandlers from 'vault/mirage/handlers/ldap';
 import authPage from 'vault/tests/pages/auth';
-import { click, fillIn, settled } from '@ember/test-helpers';
+import { click, fillIn, waitFor } from '@ember/test-helpers';
 import { isURL, visitURL } from 'vault/tests/helpers/ldap/ldap-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Acceptance | ldap | roles', function (hooks) {
   setupApplicationTest(hooks);
@@ -76,7 +77,7 @@ module('Acceptance | ldap | roles', function (hooks) {
     assert
       .dom('[data-test-filter-input]')
       .hasValue('foo', 'Roles page filter value set after model refresh and rerender');
-    await settled();
+    await waitFor(GENERAL.emptyStateTitle);
     await click('[data-test-tab="libraries"]');
     await click('[data-test-tab="roles"]');
     assert.dom('[data-test-filter-input]').hasNoValue('Roles page filter value cleared on route exit');

@@ -11,7 +11,6 @@ import ldapHandlers from 'vault/mirage/handlers/ldap';
 import authPage from 'vault/tests/pages/auth';
 import { click } from '@ember/test-helpers';
 import { isURL, visitURL } from 'vault/tests/helpers/ldap/ldap-helpers';
-import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 
 module('Acceptance | ldap | libraries', function (hooks) {
   setupApplicationTest(hooks);
@@ -21,12 +20,12 @@ module('Acceptance | ldap | libraries', function (hooks) {
     ldapHandlers(this.server);
     ldapMirageScenario(this.server);
     await authPage.login();
-    await runCmd(mountEngineCmd('ldap', 'ldap-test'));
     return visitURL('libraries');
   });
 
-  hooks.afterEach(async function () {
-    await runCmd(deleteEngineCmd('ldap-test'));
+  test('it should show libraries on overview page', async function (assert) {
+    await visitURL('overview');
+    assert.dom('[data-test-libraries-count]').hasText('1');
   });
 
   test('it should transition to create library route on toolbar link click', async function (assert) {
@@ -40,6 +39,8 @@ module('Acceptance | ldap | libraries', function (hooks) {
       isURL('libraries/test-library/details/accounts'),
       'Transitions to library details accounts route on list item click'
     );
+    assert.dom('[data-test-account-name]').exists({ count: 2 }, 'lists the accounts');
+    assert.dom('[data-test-checked-out-account]').exists({ count: 1 }, 'lists the checked out accounts');
   });
 
   test('it should transition to routes from list item action menu', async function (assert) {
