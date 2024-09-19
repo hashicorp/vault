@@ -11,6 +11,7 @@ import ldapHandlers from 'vault/mirage/handlers/ldap';
 import authPage from 'vault/tests/pages/auth';
 import { click } from '@ember/test-helpers';
 import { isURL, visitURL } from 'vault/tests/helpers/ldap/ldap-helpers';
+import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 
 module('Acceptance | ldap | libraries', function (hooks) {
   setupApplicationTest(hooks);
@@ -20,7 +21,12 @@ module('Acceptance | ldap | libraries', function (hooks) {
     ldapHandlers(this.server);
     ldapMirageScenario(this.server);
     await authPage.login();
+    await runCmd(mountEngineCmd('ldap', 'ldap-test'));
     return visitURL('libraries');
+  });
+
+  hooks.afterEach(async function () {
+    await runCmd(deleteEngineCmd('ldap-test'));
   });
 
   test('it should transition to create library route on toolbar link click', async function (assert) {
