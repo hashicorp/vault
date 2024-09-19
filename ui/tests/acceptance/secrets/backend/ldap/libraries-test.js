@@ -6,11 +6,13 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import { v4 as uuidv4 } from 'uuid';
 import ldapMirageScenario from 'vault/mirage/scenarios/ldap';
 import ldapHandlers from 'vault/mirage/handlers/ldap';
 import authPage from 'vault/tests/pages/auth';
 import { click } from '@ember/test-helpers';
 import { isURL, visitURL } from 'vault/tests/helpers/ldap/ldap-helpers';
+import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 
 module('Acceptance | ldap | libraries', function (hooks) {
   setupApplicationTest(hooks);
@@ -19,8 +21,14 @@ module('Acceptance | ldap | libraries', function (hooks) {
   hooks.beforeEach(async function () {
     ldapHandlers(this.server);
     ldapMirageScenario(this.server);
+    this.backend = `ldap-test-${uuidv4()}`;
     await authPage.login();
+    await runCmd(mountEngineCmd('ldap', this.backend));
     return visitURL('libraries');
+  });
+
+  hooks.afterEach(async function () {
+    await runCmd(deleteEngineCmd(this.backend));
   });
 
   test('it should show libraries on overview page', async function (assert) {
