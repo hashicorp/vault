@@ -50,15 +50,16 @@ func TestOCSP(t *testing.T) {
 	for _, tgt := range targetURL {
 		c.ocspResponseCache, _ = lru.New2Q(10)
 		for _, tr := range transports {
-			c := &http.Client{
-				Transport: tr,
-				Timeout:   30 * time.Second,
-			}
-			req, err := http.NewRequest("GET", tgt, bytes.NewReader(nil))
+			ocspClient := retryablehttp.NewClient()
+			ocspClient.Logger = c.Logger()
+			ocspClient.RetryMax = conf.OcspMaxRetries
+			ocspClient.HTTPClient.Timeout = 30 * time.Second
+			ocspClient.HTTPClient.Transport = tr
+			req, err := retryablehttp.NewRequest("GET", tgt, bytes.NewReader(nil))
 			if err != nil {
 				t.Fatalf("fail to create a request. err: %v", err)
 			}
-			res, err := c.Do(req)
+			res, err := ocspClient.Do(req)
 			if err != nil {
 				t.Fatalf("failed to GET contents. err: %v", err)
 			}
