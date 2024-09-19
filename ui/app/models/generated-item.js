@@ -1,5 +1,11 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Model from '@ember-data/model';
 
+// This model is used for OpenApi-generated models in path-help service's getNewModel method
 export default class GeneratedItemModel extends Model {
   allFields = [];
 
