@@ -131,6 +131,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 				issuing.PathCerts,
 				issuing.PathCertMetadata,
 				acmePathPrefix,
+				autoTidyLastRunPath,
 			},
 
 			Root: []string{
@@ -294,8 +295,8 @@ func Backend(conf *logical.BackendConfig) *backend {
 		conf.System.ReplicationState().HasState(consts.ReplicationDRSecondary)
 	b.crlBuilder = newCRLBuilder(!cannotRebuildCRLs)
 
-	// Delay the first tidy until after we've started up.
-	b.lastTidy = time.Now()
+	// Delay the first tidy until after we've started up, this will be reset within the initialize function
+	b.lastAutoTidy = time.Now()
 
 	b.unifiedTransferStatus = newUnifiedTransferStatus()
 
@@ -320,7 +321,9 @@ type backend struct {
 
 	tidyStatusLock sync.RWMutex
 	tidyStatus     *tidyStatus
-	lastTidy       time.Time
+	// lastAutoTidy should be accessed through the tidyStatusLock,
+	// use getAutoTidyLastRun and writeAutoTidyLastRun instead of direct access
+	lastAutoTidy time.Time
 
 	unifiedTransferStatus *UnifiedTransferStatus
 
@@ -448,7 +451,36 @@ func (b *backend) initialize(ctx context.Context, ir *logical.InitializationRequ
 		b.GetCertificateCounter().SetError(err)
 	}
 
+	// Initialize lastAutoTidy from disk
+	b.initializeLastTidyFromStorage(sc)
+
 	return b.initializeEnt(sc, ir)
+}
+
+// initializeLastTidyFromStorage reads the time we last ran auto tidy from storage and initializes
+// b.lastAutoTidy with the value. If no previous value existed, we persist time.Now() and initialize
+// b.lastAutoTidy with that value.
+func (b *backend) initializeLastTidyFromStorage(sc *storageContext) {
+	now := time.Now()
+
+	lastTidyTime, err := sc.getAutoTidyLastRun()
+	if err != nil {
+		lastTidyTime = now
+		b.Logger().Error("failed loading previous tidy last run time, using now", "error", err.Error())
+	}
+	if lastTidyTime.IsZero() {
+		// No previous time was set, persist now so we can track a starting point across Vault restarts
+		lastTidyTime = now
+		if err = b.updateLastAutoTidyTime(sc, now); err != nil {
+			b.Logger().Error("failed persisting tidy last run time", "error", err.Error())
+		}
+	}
+
+	// We bypass using updateLastAutoTidyTime here to avoid the storage write on init
+	// that normally isn't required
+	b.tidyStatusLock.Lock()
+	defer b.tidyStatusLock.Unlock()
+	b.lastAutoTidy = lastTidyTime
 }
 
 func (b *backend) cleanup(ctx context.Context) {
@@ -708,9 +740,7 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 
 		// Check if we should run another tidy...
 		now := time.Now()
-		b.tidyStatusLock.RLock()
-		nextOp := b.lastTidy.Add(config.Interval)
-		b.tidyStatusLock.RUnlock()
+		nextOp := b.getLastAutoTidyTime().Add(config.Interval)
 		if now.Before(nextOp) {
 			return nil
 		}
@@ -724,9 +754,11 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 		// Prevent ourselves from starting another tidy operation while
 		// this one is still running. This operation runs in the background
 		// and has a separate error reporting mechanism.
-		b.tidyStatusLock.Lock()
-		b.lastTidy = now
-		b.tidyStatusLock.Unlock()
+		err = b.updateLastAutoTidyTime(sc, now)
+		if err != nil {
+			// We don't really mind if this write fails, we'll re-run in the future
+			b.Logger().Warn("failed to persist auto tidy last run time", "error", err.Error())
+		}
 
 		// Because the request from the parent storage will be cleared at
 		// some point (and potentially reused) -- due to tidy executing in

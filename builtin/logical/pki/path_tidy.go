@@ -896,16 +896,20 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 		Storage: req.Storage,
 	}
 
+	resp := &logical.Response{}
 	// Mark the last tidy operation as relatively recent, to ensure we don't
 	// try to trigger the periodic function.
-	b.tidyStatusLock.Lock()
-	b.lastTidy = time.Now()
-	b.tidyStatusLock.Unlock()
+	// NOTE: not sure this is correct as we are updating the auto tidy time with this manual run. Ideally we
+	//       could track when we ran each type of tidy was last run which would allow manual runs and auto
+	//       runs to properly impact each other.
+	sc := b.makeStorageContext(ctx, req.Storage)
+	if err := b.updateLastAutoTidyTime(sc, time.Now()); err != nil {
+		resp.AddWarning(fmt.Sprintf("failed persisting tidy last run time: %v", err))
+	}
 
 	// Kick off the actual tidy.
 	b.startTidyOperation(req, config)
 
-	resp := &logical.Response{}
 	if !config.IsAnyTidyEnabled() {
 		resp.AddWarning("Manual tidy requested but no tidy operations were set. Enable at least one tidy operation to be run (" + config.AnyTidyConfig() + ").")
 	} else {
@@ -1042,9 +1046,10 @@ func (b *backend) startTidyOperation(req *logical.Request, config *tidyConfig) {
 			// Since the tidy operation finished without an error, we don't
 			// really want to start another tidy right away (if the interval
 			// is too short). So mark the last tidy as now.
-			b.tidyStatusLock.Lock()
-			b.lastTidy = time.Now()
-			b.tidyStatusLock.Unlock()
+			sc := b.makeStorageContext(ctx, req.Storage)
+			if err := b.updateLastAutoTidyTime(sc, time.Now()); err != nil {
+				logger.Error("error persisting last tidy run time", "error", err)
+			}
 		}
 	}()
 }
@@ -1770,6 +1775,7 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 			"acme_account_safety_buffer":            nil,
 			"cert_metadata_deleted_count":           nil,
 			"cmpv2_nonce_deleted_count":             nil,
+			"last_auto_tidy_finished":               b.getLastAutoTidyTime(),
 		},
 	}
 
@@ -1814,7 +1820,6 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 	resp.Data["revocation_queue_deleted_count"] = b.tidyStatus.revQueueDeletedCount
 	resp.Data["cross_revoked_cert_deleted_count"] = b.tidyStatus.crossRevokedDeletedCount
 	resp.Data["revocation_queue_safety_buffer"] = b.tidyStatus.revQueueSafetyBuffer
-	resp.Data["last_auto_tidy_finished"] = b.lastTidy
 	resp.Data["total_acme_account_count"] = b.tidyStatus.acmeAccountsCount
 	resp.Data["acme_account_deleted_count"] = b.tidyStatus.acmeAccountsDeletedCount
 	resp.Data["acme_account_revoked_count"] = b.tidyStatus.acmeAccountsRevokedCount
@@ -1865,8 +1870,18 @@ func (b *backend) pathConfigAutoTidyWrite(ctx context.Context, req *logical.Requ
 		return nil, err
 	}
 
+	isAutoTidyBeingEnabled := false
+
 	if enabledRaw, ok := d.GetOk("enabled"); ok {
-		config.Enabled = enabledRaw.(bool)
+		enabled, err := parseutil.ParseBool(enabledRaw)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("failed to parse enabled flag as a boolean: %s", err.Error())), nil
+		}
+		if !config.Enabled && enabled {
+			// we are turning on auto-tidy reset our persisted time to now
+			isAutoTidyBeingEnabled = true
+		}
+		config.Enabled = enabled
 	}
 
 	if intervalRaw, ok := d.GetOk("interval_duration"); ok {
@@ -1973,6 +1988,13 @@ func (b *backend) pathConfigAutoTidyWrite(ctx context.Context, req *logical.Requ
 
 	if err := sc.writeAutoTidyConfig(config); err != nil {
 		return nil, err
+	}
+
+	if isAutoTidyBeingEnabled {
+		if err := b.updateLastAutoTidyTime(sc, time.Now()); err != nil {
+			b.Logger().Warn("failed to update last auto tidy run time to now, the first auto-tidy "+
+				"might run soon and not at the next delay provided", "error", err.Error())
+		}
 	}
 
 	return &logical.Response{
@@ -2112,6 +2134,24 @@ func (b *backend) tidyStatusIncCMPV2NonceDeletedCount() {
 	defer b.tidyStatusLock.Unlock()
 
 	b.tidyStatus.cmpv2NonceDeletedCount++
+}
+
+// updateLastAutoTidyTime should be used to update b.lastAutoTidy as the required locks
+// are acquired and the auto tidy time is persisted to storage to work across restarts
+func (b *backend) updateLastAutoTidyTime(sc *storageContext, lastRunTime time.Time) error {
+	b.tidyStatusLock.Lock()
+	defer b.tidyStatusLock.Unlock()
+
+	b.lastAutoTidy = lastRunTime
+	return sc.writeAutoTidyLastRun(lastRunTime)
+}
+
+// getLastAutoTidyTime should be used to read from b.lastAutoTidy as the required locks
+// are acquired prior to reading
+func (b *backend) getLastAutoTidyTime() time.Time {
+	b.tidyStatusLock.RLock()
+	defer b.tidyStatusLock.RUnlock()
+	return b.lastAutoTidy
 }
 
 const pathTidyHelpSyn = `
