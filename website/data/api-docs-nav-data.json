@@ -259,7 +259,16 @@
       },
       {
         "title": "PKI",
-        "path": "secret/pki"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "secret/pki"
+          },
+          {
+            "title": "Issuance Protocols",
+            "path": "secret/pki/issuance"
+          }
+        ]
       },
       {
         "title": "RabbitMQ",

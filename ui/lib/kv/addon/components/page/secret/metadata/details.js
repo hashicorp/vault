@@ -5,6 +5,7 @@
 
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
+import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
 import errorMessage from 'vault/utils/error-message';
 
@@ -13,10 +14,10 @@ import errorMessage from 'vault/utils/error-message';
  * <Page::Secret::Metadata::Details
  * @backend={{this.model.backend}}
  * @breadcrumbs={{this.breadcrumbs}}
- * @canDeleteMetadata={{this.model.permissions.metadata.canDelete}}
- * @canReadMetadata={{this.model.permissions.metadata.canRead}}
- * @canUpdateMetadata={{this.model.permissions.metadata.canUpdate}}
- * @customMetadata={{or this.model.metadata.customMetadata this.model.secret.customMetadata}}
+ * @canDeleteMetadata={{this.model.canDeleteMetadata}}
+ * @canReadData={{this.model.canReadData}}
+ * @canReadMetadata={{this.model.canReadMetadata}}
+ * @canUpdateMetadata={{this.model.canUpdateMetadata}}
  * @metadata={{this.model.metadata}}
  * @path={{this.model.path}}
  * />
@@ -24,9 +25,9 @@ import errorMessage from 'vault/utils/error-message';
  * @param {string} backend - The name of the kv secret engine.
  * @param {array} breadcrumbs - Array to generate breadcrumbs, passed to the page header component
  * @param {boolean} canDeleteMetadata - if true, "Permanently delete" action renders in the toolbar
+ * @param {boolean} canReadData - if true, user can make a request for custom_metadata if they don't have "read" permissions for metadata
  * @param {boolean} canReadMetadata - if true, secret metadata renders below custom_metadata
  * @param {boolean} canUpdateMetadata - if true, "Edit" action renders in the toolbar
- * @param {object} customMetadata - comes from secret metadata or data endpoint. if undefined, user does not have "read" access, if an empty object then there is none
  * @param {model} metadata - Ember data model: 'kv/metadata'
  * @param {string} path - path of kv secret 'my/secret' used as the title for the KV page header
  *
@@ -34,9 +35,17 @@ import errorMessage from 'vault/utils/error-message';
  */
 
 export default class KvSecretMetadataDetails extends Component {
+  @service controlGroup;
   @service flashMessages;
   @service router;
   @service store;
+
+  @tracked error = null;
+  @tracked customMetadataFromData = null;
+
+  get customMetadata() {
+    return this.args.metadata?.customMetadata || this.customMetadataFromData;
+  }
 
   @action
   async onDelete() {
@@ -52,6 +61,24 @@ export default class KvSecretMetadataDetails extends Component {
       this.router.transitionTo('vault.cluster.secrets.backend.kv.list');
     } catch (err) {
       this.flashMessages.danger(`There was an issue deleting ${path} metadata. \n ${errorMessage(err)}`);
+    }
+  }
+
+  @action
+  async requestData() {
+    const { backend, path } = this.args;
+    try {
+      const secretData = await this.store.queryRecord('kv/data', { backend, path });
+      this.customMetadataFromData = secretData.customMetadata;
+    } catch (error) {
+      if (error.message === 'Control Group encountered') {
+        this.controlGroup.saveTokenFromError(error);
+        this.error = this.controlGroup.logFromError(error);
+        this.error.isControlGroup = true;
+        return;
+      }
+      this.error.isControlGroup = false;
+      this.error = errorMessage(error);
     }
   }
 }

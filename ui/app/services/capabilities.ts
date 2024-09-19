@@ -40,14 +40,13 @@ export default class CapabilitiesService extends Service {
     return assert('query object must contain "paths" or "path" key', false);
   }
 
-  async fetchMultiplePaths(paths: string[]): MultipleCapabilities | AdapterError {
+  async fetchMultiplePaths(paths: string[]): Promise<MultipleCapabilities> {
     // if the request to capabilities-self fails, silently catch
     // all of path capabilities default to "true"
-    const resp: Array<CapabilitiesModel> | [] = await this.request({ paths }).catch(() => []);
-
+    const resp: CapabilitiesModel[] = await this.request({ paths }).catch(() => []);
     return paths.reduce((obj: MultipleCapabilities, apiPath: string) => {
       // path is the model's primaryKey (id)
-      const model: CapabilitiesModel | undefined = resp.find((m) => m.path === apiPath);
+      const model = resp.find((m) => m.path === apiPath);
       if (model) {
         const { canCreate, canDelete, canList, canPatch, canRead, canSudo, canUpdate } = model;
         obj[apiPath] = { canCreate, canDelete, canList, canPatch, canRead, canSudo, canUpdate };
