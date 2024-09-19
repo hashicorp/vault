@@ -7,6 +7,7 @@ import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { hash } from 'rsvp';
 import { action } from '@ember/object';
+import { isDeleted } from 'kv/utils/kv-deleted';
 
 export default class KvSecretRoute extends Route {
   @service secretMountPath;
@@ -25,6 +26,7 @@ export default class KvSecretRoute extends Route {
     });
   }
 
+  // this request always returns subkeys for the latest version
   fetchSubkeys(backend, path) {
     if (this.version.isEnterprise) {
       const adapter = this.store.adapterFor('kv/data');
@@ -35,9 +37,17 @@ export default class KvSecretRoute extends Route {
     return null;
   }
 
-  isPatchAllowed({ subkeys, data }) {
+  isPatchAllowed({ capabilities, subkeysMeta }) {
     if (!this.version.isEnterprise) return false;
-    return subkeys.canRead && data.canPatch;
+    const canReadSubkeys = capabilities.subkeys.canRead;
+    const canPatchData = capabilities.data.canPatch;
+    if (canReadSubkeys && canPatchData) {
+      const { deletion_time, destroyed } = subkeysMeta;
+      const isLatestActive = isDeleted(deletion_time) || destroyed ? false : true;
+      // only the latest secret version can be patched and it must not be deleted or destroyed
+      return isLatestActive;
+    }
+    return false;
   }
 
   async fetchCapabilities(backend, path) {
@@ -56,12 +66,13 @@ export default class KvSecretRoute extends Route {
     const backend = this.secretMountPath.currentPath;
     const { name: path } = this.paramsFor('secret');
     const capabilities = await this.fetchCapabilities(backend, path);
+    const subkeys = await this.fetchSubkeys(backend, path);
     return hash({
       path,
       backend,
-      subkeys: this.fetchSubkeys(backend, path),
+      subkeys,
       metadata: this.fetchSecretMetadata(backend, path),
-      isPatchAllowed: this.isPatchAllowed(capabilities),
+      isPatchAllowed: this.isPatchAllowed({ capabilities, subkeysMeta: subkeys?.metadata }),
       canUpdateData: capabilities.data.canUpdate,
       canReadData: capabilities.data.canRead,
       canReadMetadata: capabilities.metadata.canRead,
