@@ -3,8 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { attr } from '@ember-data/model';
-import { expandOpenApiProps, combineAttributes, combineFieldGroups } from 'vault/utils/openapi-to-attrs';
+import { expandOpenApiProps, combineFieldGroups } from 'vault/utils/openapi-to-attrs';
 import { module, test } from 'qunit';
 import { camelize } from '@ember/string';
 
@@ -91,59 +90,6 @@ module('Unit | Util | OpenAPI Data Utilities', function () {
     },
   };
 
-  const EXISTING_MODEL_ATTRS = [
-    {
-      key: 'name',
-      value: {
-        isAttribute: true,
-        name: 'name',
-        options: {
-          editType: 'string',
-          label: 'Role name',
-        },
-      },
-    },
-    {
-      key: 'awesomePeople',
-      value: {
-        isAttribute: true,
-        name: 'awesomePeople',
-        options: {
-          label: 'People Who Are Awesome',
-        },
-      },
-    },
-  ];
-
-  const COMBINED_ATTRS = {
-    name: attr('string', {
-      editType: 'string',
-      type: 'string',
-      label: 'Role name',
-    }),
-    ttl: attr('string', {
-      editType: 'ttl',
-      label: 'TTL',
-      helpText: 'this is a TTL!',
-    }),
-    awesomePeople: attr({
-      label: 'People Who Are Awesome',
-      editType: 'stringArray',
-      defaultValue: 'Grace Hopper,Lady Ada',
-    }),
-    favoriteIceCream: attr('string', {
-      type: 'string',
-      editType: 'string',
-      possibleValues: ['vanilla', 'chocolate', 'strawberry'],
-    }),
-    superSecret: attr('string', {
-      type: 'string',
-      editType: 'string',
-      sensitive: true,
-      description: 'A really secret thing',
-    }),
-  };
-
   const NEW_FIELDS = ['one', 'two', 'three'];
 
   const OPENAPI_DESCRIPTIONS = {
@@ -201,14 +147,6 @@ module('Unit | Util | OpenAPI Data Utilities', function () {
     const generatedProps = expandOpenApiProps(OPENAPI_RESPONSE_PROPS);
     for (const propName in EXPANDED_PROPS) {
       assert.deepEqual(EXPANDED_PROPS[propName], generatedProps[propName], `correctly expands ${propName}`);
-    }
-  });
-
-  test('it combines OpenAPI props with existing model attrs', function (assert) {
-    assert.expect(3);
-    const combined = combineAttributes(EXISTING_MODEL_ATTRS, EXPANDED_PROPS);
-    for (const propName in EXISTING_MODEL_ATTRS) {
-      assert.deepEqual(COMBINED_ATTRS[propName], combined[propName]);
     }
   });
 

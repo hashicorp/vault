@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { attr } from '@ember-data/model';
 import { camelize, capitalize } from '@ember/string';
 
 export const expandOpenApiProps = function (props) {
@@ -83,39 +82,14 @@ export const expandOpenApiProps = function (props) {
   return attrs;
 };
 
-export const combineAttributes = function (oldAttrs, newProps) {
-  const newAttrs = {};
-  const newFields = [];
-  if (oldAttrs) {
-    oldAttrs.forEach(function (value, name) {
-      if (newProps[name]) {
-        newAttrs[name] = attr(newProps[name].type, { ...newProps[name], ...value.options });
-      } else {
-        newAttrs[name] = attr(value.type, value.options);
-      }
-    });
-  }
-  for (const prop in newProps) {
-    if (newAttrs[prop]) {
-      continue;
-    } else {
-      newAttrs[prop] = attr(newProps[prop].type, newProps[prop]);
-      newFields.push(prop);
-    }
-  }
-  return { attrs: newAttrs, newFields };
-};
-
-export const combineFields = function (currentFields, newFields, excludedFields) {
-  const otherFields = newFields.filter((field) => {
-    return !currentFields.includes(field) && !excludedFields.includes(field);
-  });
-  if (otherFields.length) {
-    currentFields = currentFields.concat(otherFields);
-  }
-  return currentFields;
-};
-
+/**
+ * combineFieldGroups takes the newFields returned from OpenAPI and adds them to the default field group
+ * if they are not already accounted for in other field groups
+ * @param {Record<string,string[]>[]} currentGroups Field groups, as an array of objects like: [{ default: [] }, { 'TLS options': [] }]
+ * @param {string[]} newFields
+ * @param {string[]} excludedFields
+ * @returns modified currentGroups
+ */
 export const combineFieldGroups = function (currentGroups, newFields, excludedFields) {
   let allFields = [];
   for (const group of currentGroups) {
