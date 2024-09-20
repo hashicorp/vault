@@ -16,7 +16,6 @@
 
 <Kmip::RoleForm
   @model={{this.model}}
-  @mode="create"
   @onSave={{transition-to "vault.cluster.secrets.backend.kmip.scope.roles" this.scope}}
   @onCancel={{transition-to "vault.cluster.secrets.backend.kmip.scope.roles" this.scope}}
 />

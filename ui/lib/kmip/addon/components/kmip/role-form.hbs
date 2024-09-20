@@ -7,7 +7,7 @@
   <MessageError @model={{@model}} data-test-edit-form-error />
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="save" />
-    {{#if (eq @mode "create")}}
+    {{#if @model.isNew}}
       {{! Show role name only in create mode }}
       <FormField data-test-field @attr={{hash name="role" type="string" options=(hash label="Name")}} @model={{@model}} />
     {{/if}}
