@@ -92,7 +92,7 @@ export default RESTAdapter.extend({
         controlGroup.deleteControlGroupToken(controlGroupToken.accessor);
       }
       const [resp] = args;
-      if (resp && resp.warnings) {
+      if (resp && resp.warnings && !options.skipWarnings) {
         const flash = this.flashMessages;
         resp.warnings.forEach((message) => {
           flash.info(message);

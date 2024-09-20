@@ -17,6 +17,15 @@ export const login = async (token = rootToken) => {
   return await click(AUTH_FORM.login);
 };
 
+export const loginNs = async (ns: string, token = rootToken) => {
+  // make sure we're always logged out and logged back in
+  await logout();
+  await visit('/vault/auth?with=token');
+  await fillIn('[data-test-auth-form-ns-input]', ns);
+  await fillIn(AUTH_FORM.input('token'), token);
+  return await click(AUTH_FORM.login);
+};
+
 export const logout = async () => {
   // make sure we're always logged out and logged back in
   await visit('/vault/logout');
