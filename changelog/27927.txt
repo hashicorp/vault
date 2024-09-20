@@ -1,0 +1,4 @@
+```release-note:improvement
+storage/s3: Pass context to AWS SDK calls
+storage/dynamodb: Pass context to AWS SDK calls
+```
