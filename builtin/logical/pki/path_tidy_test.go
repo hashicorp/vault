@@ -236,11 +236,13 @@ func TestAutoTidy(t *testing.T) {
 
 	// Write the auto-tidy config.
 	_, err = client.Logical().Write("pki/config/auto-tidy", map[string]interface{}{
-		"enabled":            true,
-		"interval_duration":  "1s",
-		"tidy_cert_store":    true,
-		"tidy_revoked_certs": true,
-		"safety_buffer":      "1s",
+		"enabled":                      true,
+		"interval_duration":            "1s",
+		"tidy_cert_store":              true,
+		"tidy_revoked_certs":           true,
+		"safety_buffer":                "1s",
+		"min_startup_backoff_duration": "1s",
+		"max_startup_backoff_duration": "1s",
 	})
 	require.NoError(t, err)
 
@@ -614,6 +616,8 @@ func TestTidyIssuerConfig(t *testing.T) {
 	defaultConfigMap["pause_duration"] = time.Duration(defaultConfigMap["pause_duration"].(float64)).String()
 	defaultConfigMap["revocation_queue_safety_buffer"] = int(time.Duration(defaultConfigMap["revocation_queue_safety_buffer"].(float64)) / time.Second)
 	defaultConfigMap["acme_account_safety_buffer"] = int(time.Duration(defaultConfigMap["acme_account_safety_buffer"].(float64)) / time.Second)
+	defaultConfigMap["min_startup_backoff_duration"] = int(time.Duration(defaultConfigMap["min_startup_backoff_duration"].(float64)) / time.Second)
+	defaultConfigMap["max_startup_backoff_duration"] = int(time.Duration(defaultConfigMap["max_startup_backoff_duration"].(float64)) / time.Second)
 
 	require.Equal(t, defaultConfigMap, resp.Data)
 
@@ -744,6 +748,8 @@ func TestCertStorageMetrics(t *testing.T) {
 		"safety_buffer":                            "1s",
 		"maintain_stored_certificate_counts":       true,
 		"publish_stored_certificate_count_metrics": false,
+		"min_startup_backoff_duration":             "1s",
+		"max_startup_backoff_duration":             "1s",
 	})
 	require.NoError(t, err)
 

@@ -715,6 +715,14 @@ func (sc *storageContext) getAutoTidyConfig() (*tidyConfig, error) {
 		result.IssuerSafetyBuffer = defaultTidyConfig.IssuerSafetyBuffer
 	}
 
+	if result.MinStartupBackoff == 0 {
+		result.MinStartupBackoff = defaultTidyConfig.MinStartupBackoff
+	}
+
+	if result.MaxStartupBackoff == 0 {
+		result.MaxStartupBackoff = defaultTidyConfig.MaxStartupBackoff
+	}
+
 	return &result, nil
 }
 

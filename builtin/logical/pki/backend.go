@@ -296,7 +296,11 @@ func Backend(conf *logical.BackendConfig) *backend {
 	b.crlBuilder = newCRLBuilder(!cannotRebuildCRLs)
 
 	// Delay the first tidy until after we've started up, this will be reset within the initialize function
-	b.lastAutoTidy = time.Now()
+	now := time.Now()
+	b.lastAutoTidy = now
+
+	// Keep track of when this mount was started up.
+	b.mountStartup = now
 
 	b.unifiedTransferStatus = newUnifiedTransferStatus()
 
@@ -325,6 +329,11 @@ type backend struct {
 	// use getAutoTidyLastRun and writeAutoTidyLastRun instead of direct access
 	lastAutoTidy time.Time
 
+	// autoTidyBackoff a random time in the future in which auto-tidy can't start
+	// for after the system starts up to avoid a thundering herd of tidy operations
+	// at startup.
+	autoTidyBackoff time.Time
+
 	unifiedTransferStatus *UnifiedTransferStatus
 
 	certificateCounter *CertificateCounter
@@ -338,6 +347,9 @@ type backend struct {
 	// Context around ACME operations
 	acmeState       *acmeState
 	acmeAccountLock sync.RWMutex // (Write) Locked on Tidy, (Read) Locked on Account Creation
+
+	// Track when this mount was started.
+	mountStartup time.Time
 }
 
 // BackendOps a bridge/legacy interface until we can further
@@ -742,6 +754,15 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 		now := time.Now()
 		nextOp := b.getLastAutoTidyTime().Add(config.Interval)
 		if now.Before(nextOp) {
+			return nil
+		}
+
+		if b.autoTidyBackoff.IsZero() {
+			b.autoTidyBackoff = config.CalculateStartupBackoff(b.mountStartup)
+		}
+
+		if b.autoTidyBackoff.After(now) {
+			b.Logger().Info("Auto tidy will not run as we are still within the random backoff ending at", "backoff_until", b.autoTidyBackoff)
 			return nil
 		}
 
