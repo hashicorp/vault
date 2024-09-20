@@ -32,8 +32,9 @@ module('Integration | Component | pki tidy form', function (hooks) {
   });
 
   test('it hides or shows fields depending on auto-tidy toggle', async function (assert) {
-    assert.expect(41);
+    assert.expect(47);
     const sectionHeaders = [
+      'Auto Tidy Startup Backoff',
       'Universal operations',
       'ACME operations',
       'Issuer operations',
@@ -82,9 +83,10 @@ module('Integration | Component | pki tidy form', function (hooks) {
   });
 
   test('it renders all attribute fields, including enterprise', async function (assert) {
-    assert.expect(29);
+    assert.expect(33);
     this.autoTidy.enabled = true;
     const skipFields = ['enabled', 'tidyAcme', 'intervalDuration']; // combined with duration ttl or asserted separately
+    const fieldsNotPartOfManualTidy = ['minStartupBackoffDuration', 'maxStartupBackoffDuration']; // fields we shouldn't see on the manual tidy screen
     await render(
       hbs`
       <PkiTidyForm
@@ -117,7 +119,13 @@ module('Integration | Component | pki tidy form', function (hooks) {
 
     this.manualTidy.eachAttribute((attr) => {
       if (skipFields.includes(attr)) return;
-      assert.dom(PKI_TIDY_FORM.inputByAttr(attr)).exists(`renders ${attr} for manual tidyType`);
+      if (fieldsNotPartOfManualTidy.includes(attr)) {
+        assert
+          .dom(PKI_TIDY_FORM.inputByAttr(attr))
+          .doesNotExist(`${attr} should not appear on manual tidyType`);
+      } else {
+        assert.dom(PKI_TIDY_FORM.inputByAttr(attr)).exists(`renders ${attr} for manual tidyType`);
+      }
     });
   });
 
@@ -175,13 +183,15 @@ module('Integration | Component | pki tidy form', function (hooks) {
   });
 
   test('it should change the attributes on the model', async function (assert) {
-    assert.expect(12);
+    assert.expect(11);
     this.server.post('/pki-auto-tidy/config/auto-tidy', (schema, req) => {
       assert.propEqual(
         JSON.parse(req.requestBody),
         {
           acme_account_safety_buffer: '72h',
           enabled: true,
+          min_startup_backoff_duration: '5m',
+          max_startup_backoff_duration: '15m',
           interval_duration: '10s',
           issuer_safety_buffer: '20s',
           pause_duration: '30s',

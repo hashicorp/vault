@@ -52,6 +52,24 @@ export default class PkiTidyModel extends Model {
   @attr('string', {
     editType: 'ttl',
     helperTextEnabled:
+      'Sets the min_startup_backoff_duration field which forces the minimum delay after Vault startup auto-tidy can run',
+    hideToggle: true,
+    formatTtl: true,
+  })
+  minStartupBackoffDuration;
+
+  @attr('string', {
+    editType: 'ttl',
+    helperTextEnabled:
+      'Sets the max_startup_backoff_duration field which forces the maximum delay after Vault startup auto-tidy can run',
+    hideToggle: true,
+    formatTtl: true,
+  })
+  maxStartupBackoffDuration;
+
+  @attr('string', {
+    editType: 'ttl',
+    helperTextEnabled:
       'Specifies a duration that issuers should be kept for, past their NotAfter validity period. Defaults to 365 days (8760 hours).',
     hideToggle: true,
     formatTtl: true,
@@ -131,8 +149,19 @@ export default class PkiTidyModel extends Model {
   tidyRevokedCerts;
 
   get allGroups() {
-    const groups = [{ autoTidy: ['enabled', 'intervalDuration'] }, ...this.sharedFields];
+    const groups = [
+      { autoTidy: ['enabled', 'intervalDuration', 'minStartupBackoffDuration', 'maxStartupBackoffDuration'] },
+      ...this.sharedFields,
+    ];
     return this._expandGroups(groups);
+  }
+
+  // fields that are specific to auto-tidy, which should only show up when enabled.
+  get autoTidyEnabledFields() {
+    const enabledFields = [
+      { 'Auto Tidy Startup Backoff': ['minStartupBackoffDuration', 'maxStartupBackoffDuration'] },
+    ];
+    return this._expandGroups(enabledFields);
   }
 
   // shared between auto and manual tidy operations

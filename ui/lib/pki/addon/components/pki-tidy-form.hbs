@@ -27,6 +27,18 @@
       />
     {{/let}}
   {{/if}}
+  {{#each @tidy.autoTidyEnabledFields as |fieldGroup|}}
+    {{#each-in fieldGroup as |group fields|}}
+      {{#if (and (eq @tidyType "auto") @tidy.enabled)}}
+        <h2 class="title is-size-5 has-border-bottom-light page-header" data-test-tidy-header={{group}}>
+          {{group}}
+        </h2>
+        {{#each fields as |attr|}}
+          <FormField @attr={{attr}} @model={{@tidy}} />
+        {{/each}}
+      {{/if}}
+    {{/each-in}}
+  {{/each}}
   {{#each @tidy.formFieldGroups as |fieldGroup|}}
     {{#each-in fieldGroup as |group fields|}}
       {{#if (or (eq @tidyType "manual") @tidy.enabled)}}
