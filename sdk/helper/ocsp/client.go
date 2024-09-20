@@ -321,6 +321,7 @@ func (c *Client) retryOCSP(
 	reqBody []byte,
 	subject,
 	issuer *x509.Certificate,
+	extraCas []*x509.Certificate,
 ) (ocspRes *ocsp.Response, ocspResBytes []byte, ocspS *ocspStatus, retErr error) {
 	doRequest := func(request *retryablehttp.Request) (*http.Response, error) {
 		if request != nil {
@@ -391,7 +392,7 @@ func (c *Client) retryOCSP(
 			continue
 		}
 
-		if err := validateOCSPParsedResponse(ocspRes, subject, issuer); err != nil {
+		if err := validateOCSPParsedResponse(ocspRes, subject, issuer, extraCas); err != nil {
 			err = fmt.Errorf("error validating %v OCSP response: %w", method, err)
 
 			if IsOcspVerificationError(err) {
@@ -443,7 +444,7 @@ func IsOcspVerificationError(err error) bool {
 	return errors.As(err, &errOcspIssuer)
 }
 
-func validateOCSPParsedResponse(ocspRes *ocsp.Response, subject, issuer *x509.Certificate) error {
+func validateOCSPParsedResponse(ocspRes *ocsp.Response, subject, issuer *x509.Certificate, extraCas []*x509.Certificate) error {
 	// Above, we use the unsafe issuer=nil parameter to ocsp.ParseResponse
 	// because Go's library does the wrong thing.
 	//
@@ -462,38 +463,59 @@ func validateOCSPParsedResponse(ocspRes *ocsp.Response, subject, issuer *x509.Ce
 	//
 	// This addresses the !!unsafe!! behavior above.
 	if ocspRes.Certificate == nil {
+		// With no certificate, we need to validate that the response is signed by the issuer or an extra CA
 		if err := ocspRes.CheckSignatureFrom(issuer); err != nil {
-			return &ErrOcspIssuerVerification{fmt.Errorf("error directly verifying signature: %w", err)}
+			if len(extraCas) > 0 {
+				// Perhaps it was signed by one of the extra configured OCSP CAs
+				matchedCA, overallErr := verifySignature(ocspRes, extraCas)
+
+				if overallErr != nil {
+					return &ErrOcspIssuerVerification{fmt.Errorf("error checking chain of trust %v failed: %w", issuer.Subject.String(), overallErr)}
+				}
+
+				err := validateSigner(matchedCA)
+				if err != nil {
+					return err
+				}
+			} else {
+				return &ErrOcspIssuerVerification{fmt.Errorf("error directly verifying signature: %w", err)}
+			}
 		}
 	} else {
 		// Because we have at least one certificate here, we know that
 		// Go's ocsp library verified the signature from this certificate
 		// onto the response and it was valid. Now we need to know we trust
-		// this certificate. There's two ways we can do this:
+		// this certificate. There are three ways we can do this:
 		//
 		// 1. Via confirming issuer == ocspRes.Certificate, or
 		// 2. Via confirming ocspRes.Certificate.CheckSignatureFrom(issuer).
+		// 3. Trusting extra configured OCSP CAs
 		if !bytes.Equal(issuer.Raw, ocspRes.Raw) {
-			// 1 must not hold, so 2 holds; verify the signature.
+			var overallErr error
+			var matchedCA *x509.Certificate
+
+			// Assumption 1 failed, try 2
 			if err := ocspRes.Certificate.CheckSignatureFrom(issuer); err != nil {
-				return &ErrOcspIssuerVerification{fmt.Errorf("error checking chain of trust %v failed: %w", issuer.Subject.String(), err)}
+				// Assumption 2 failed, try 3
+				overallErr = multierror.Append(overallErr, err)
+
+				m, err := verifySignature(ocspRes, extraCas)
+				if err != nil {
+					overallErr = multierror.Append(overallErr, err)
+				} else {
+					matchedCA = m
+				}
+			} else {
+				matchedCA = ocspRes.Certificate
 			}
 
-			// Verify the OCSP responder certificate is still valid and
-			// contains the required EKU since it is a delegated OCSP
-			// responder certificate.
-			if ocspRes.Certificate.NotAfter.Before(time.Now()) {
-				return &ErrOcspIssuerVerification{fmt.Errorf("error checking delegated OCSP responder OCSP response: certificate has expired")}
+			if overallErr != nil {
+				return &ErrOcspIssuerVerification{fmt.Errorf("error checking chain of trust %v failed: %w", issuer.Subject.String(), overallErr)}
 			}
-			haveEKU := false
-			for _, ku := range ocspRes.Certificate.ExtKeyUsage {
-				if ku == x509.ExtKeyUsageOCSPSigning {
-					haveEKU = true
-					break
-				}
-			}
-			if !haveEKU {
-				return &ErrOcspIssuerVerification{fmt.Errorf("error checking delegated OCSP responder: certificate lacks the OCSP Signing EKU")}
+
+			err := validateSigner(matchedCA)
+			if err != nil {
+				return err
 			}
 		}
 	}
@@ -509,6 +531,41 @@ func validateOCSPParsedResponse(ocspRes *ocsp.Response, subject, issuer *x509.Ce
 			certutil.GetHexFormatted(subject.SerialNumber.Bytes(), ":"))}
 	}
 
+	return nil
+}
+
+func verifySignature(res *ocsp.Response, extraCas []*x509.Certificate) (*x509.Certificate, error) {
+	var overallErr error
+	var matchedCA *x509.Certificate
+	for _, ca := range extraCas {
+		if err := res.CheckSignatureFrom(ca); err != nil {
+			overallErr = multierror.Append(overallErr, err)
+		} else {
+			matchedCA = ca
+			overallErr = nil
+			break
+		}
+	}
+	return matchedCA, overallErr
+}
+
+func validateSigner(matchedCA *x509.Certificate) error {
+	// Verify the OCSP responder certificate is still valid and
+	// contains the required EKU since it is a delegated OCSP
+	// responder certificate.
+	if matchedCA.NotAfter.Before(time.Now()) {
+		return &ErrOcspIssuerVerification{fmt.Errorf("error checking delegated OCSP responder OCSP response: certificate has expired")}
+	}
+	haveEKU := false
+	for _, ku := range matchedCA.ExtKeyUsage {
+		if ku == x509.ExtKeyUsageOCSPSigning {
+			haveEKU = true
+			break
+		}
+	}
+	if !haveEKU {
+		return &ErrOcspIssuerVerification{fmt.Errorf("error checking delegated OCSP responder: certificate lacks the OCSP Signing EKU")}
+	}
 	return nil
 }
 
@@ -564,7 +621,7 @@ func (c *Client) GetRevocationStatus(ctx context.Context, subject, issuer *x509.
 				defer wg.Done()
 			}
 			ocspRes, _, ocspS, err := c.retryOCSP(
-				ctx, ocspClient, retryablehttp.NewRequest, u, headers, ocspReq, subject, issuer)
+				ctx, ocspClient, retryablehttp.NewRequest, u, headers, ocspReq, subject, issuer, conf.ExtraCas)
 			ocspResponses[i] = ocspRes
 			if err != nil {
 				errors[i] = err

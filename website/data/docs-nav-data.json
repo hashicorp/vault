@@ -34,8 +34,25 @@
   },
 
   {
-    "title": "Installing Vault",
-    "path": "install"
+    "title": "Install Vault",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "install"
+      },
+      {
+        "title": "Install manually",
+        "path": "install/install-binary"
+      },
+      {
+        "title": "Build from code",
+        "path": "install/build-from-code"
+      }
+    ]
+  },
+  {
+    "title": "Run Vault as a service",
+    "path": "run-as-service"
   },
   {
     "title": "Internals",
@@ -1607,19 +1624,20 @@
           },
           {
             "title": "Enrollment over Secure Transport (EST)",
+            "path": "secrets/pki/est",
             "badge": {
-              "text": "BETA",
+              "text": "ENTERPRISE",
               "type": "outlined",
-              "color": "highlight"
+              "color": "neutral"
             },
             "path": "secrets/pki/est"
           },
           {
             "title": "Certificate Management Protocol (CMPv2)",
             "badge": {
-              "text": "BETA",
+              "text": "ENTERPRISE",
               "type": "outlined",
-              "color": "highlight"
+              "color": "neutral"
             },
             "path": "secrets/pki/cmpv2"
           },

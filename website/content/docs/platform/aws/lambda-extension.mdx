@@ -280,7 +280,8 @@ processing with returned secrets such as automatic lease renewal. The proxy serv
 own Vault auth token is the only thing that gets automatically refreshed. It will
 synchronously refresh its own token before proxying requests if the token is
 expired (including a grace window), and it will attempt to renew its token if the
-token is nearly expired but renewable.
+token is nearly expired but renewable. The proxy will also immediately refresh its token
+if the incoming request header `X-Vault-Token-Options: revoke` is present.
 
 <Note title="Not SnapStart compatible">
 

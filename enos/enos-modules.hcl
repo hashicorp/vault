@@ -326,8 +326,8 @@ module "vault_verify_undo_logs" {
   vault_install_dir = var.vault_install_dir
 }
 
-module "vault_verify_unsealed" {
-  source = "./modules/vault_verify_unsealed"
+module "vault_wait_for_cluster_unsealed" {
+  source = "./modules/vault_wait_for_cluster_unsealed"
 
   vault_install_dir = var.vault_install_dir
 }
