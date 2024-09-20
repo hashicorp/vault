@@ -16,7 +16,7 @@ import {
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import scopesPage from 'vault/tests/pages/secrets/backend/kmip/scopes';
 import rolesPage from 'vault/tests/pages/secrets/backend/kmip/roles';
 import credentialsPage from 'vault/tests/pages/secrets/backend/kmip/credentials';
@@ -91,7 +91,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
 
   hooks.beforeEach(async function () {
     this.backend = `kmip-${uuidv4()}`;
-    await authPage.login();
+    await login();
     return;
   });
 
@@ -221,16 +221,11 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
 
   test('it can create a role', async function (assert) {
     // moving create scope here to help with flaky test
+    const scope = `scope-for-can-create-role`;
+    const role = `role-new-role`;
     const backend = await mountWithConfig(this.backend);
     await settled();
-    const scope = `scope-for-can-create-role`;
-    await settled();
-    const res = await runCmd([`write ${backend}/scope/${scope} -force`]);
-    await settled();
-    if (res.includes('Error')) {
-      throw new Error(`Error creating scope: ${res}`);
-    }
-    const role = `role-new-role`;
+    await runCmd([`write ${backend}/scope/${scope} -force`], true);
     await rolesPage.visit({ backend, scope });
     await settled();
     assert.ok(rolesPage.isEmpty, 'renders the empty role page');
@@ -241,11 +236,15 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
       `/vault/secrets/${backend}/kmip/scopes/${scope}/roles/create`,
       'links to the role create form'
     );
+    // check that the role form looks right
+    assert.dom(GENERAL.inputByAttr('operationNone')).isChecked('allows role to perform roles by default');
+    assert.dom(GENERAL.inputByAttr('operationAll')).isChecked('operationAll is checked by default');
+    assert.dom('[data-test-kmip-section]').exists({ count: 2 });
+    assert.dom('[data-test-kmip-operations]').exists({ count: 4 });
 
     await rolesPage.roleName(role);
     await settled();
-    await rolesPage.submit();
-    await settled();
+    await click(GENERAL.saveButton);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/kmip/scopes/${scope}/roles`,
@@ -253,6 +252,13 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     );
 
     assert.strictEqual(rolesPage.listItemLinks.length, 1, 'renders a single role');
+    await rolesPage.visitDetail({ backend, scope, role });
+    // check that the role details looks right
+    assert.dom('h2').exists({ count: 2 }, 'renders correct section headings');
+    assert.dom('[data-test-inline-error-message]').hasText('This role allows all KMIP operations');
+    ['Managed Cryptographic Objects', 'Object Attributes', 'Server', 'Other'].forEach((title) => {
+      assert.dom(`[data-test-row-label="${title}"]`).exists(`Renders allowed operations row for: ${title}`);
+    });
   });
 
   test('it navigates to kmip roles view using breadcrumbs', async function (assert) {
@@ -304,8 +310,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
       `/vault/secrets/${backend}/kmip/scopes/${scope}/roles/${role}/edit`,
       'navigates to role edit'
     );
-    await rolesPage.cancelLink();
-    await settled();
+    await click(GENERAL.cancelButton);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/kmip/scopes/${scope}/roles/${role}`,
@@ -364,12 +369,12 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
       this.store = this.owner.lookup('service:store');
       this.scope = 'my-scope';
       this.name = 'my-role';
-      await authPage.login();
+      await login();
       await runCmd(mountEngineCmd('kmip', this.backend), false);
       await runCmd([`write ${this.backend}/scope/${this.scope} -force`]);
       await rolesPage.visit({ backend: this.backend, scope: this.scope });
       this.setModel = async () => {
-        await click('[data-test-edit-form-submit]');
+        await click(GENERAL.saveButton);
         await visit(`/vault/secrets/${this.backend}/kmip/scopes/${this.scope}/roles/${this.name}`);
         this.model = this.store.peekRecord('kmip/role', this.name);
       };
@@ -382,7 +387,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
       assert.expect(3);
 
       await click('[data-test-role-create]');
-      await fillIn(GENERAL.inputByAttr('name'), this.name);
+      await fillIn(GENERAL.inputByAttr('role'), this.name);
       assert.dom(GENERAL.inputByAttr('operationAll')).isChecked('operationAll is checked by default');
       await this.setModel();
       assert.true(this.model.operationAll, 'operationAll is true');
@@ -393,7 +398,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
       assert.expect(4);
 
       await click('[data-test-role-create]');
-      await fillIn(GENERAL.inputByAttr('name'), this.name);
+      await fillIn(GENERAL.inputByAttr('role'), this.name);
       await click(GENERAL.inputByAttr('operationNone'));
       assert
         .dom(GENERAL.inputByAttr('operationNone'))
@@ -410,9 +415,10 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
       assert.expect(2);
 
       await click('[data-test-role-create]');
-      await fillIn(GENERAL.inputByAttr('name'), this.name);
+      await fillIn(GENERAL.inputByAttr('role'), this.name);
       await click(GENERAL.inputByAttr('operationAll'));
       await this.setModel();
+
       assert.strictEqual(this.model.operationAll, undefined, 'operationAll is unset');
       assert.true(this.model.operationNone, 'operationNone is true');
     });
@@ -421,7 +427,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
       assert.expect(6);
 
       await click('[data-test-role-create]');
-      await fillIn(GENERAL.inputByAttr('name'), this.name);
+      await fillIn(GENERAL.inputByAttr('role'), this.name);
       await click(GENERAL.inputByAttr('operationAll'));
       await click(GENERAL.inputByAttr('operationGet'));
       await click(GENERAL.inputByAttr('operationGetAttributes'));

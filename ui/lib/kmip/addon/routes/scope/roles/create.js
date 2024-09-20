@@ -21,6 +21,7 @@ export default Route.extend({
     const model = this.store.createRecord('kmip/role', {
       backend: this.secretMountPath.currentPath,
       scope: this.scope(),
+      operationAll: true,
     });
     return model;
   },
