@@ -44,8 +44,10 @@ module('Integration | Component | enable-replication-form', function (hooks) {
       await render(
         hbs`<EnableReplicationForm
       @replicationMode={{this.replicationMode}}
-      @canEnablePrimary={{true}}
-      @canEnableSecondary={{true}}
+      @canEnablePrimaryDr={{true}}
+      @canEnablePrimaryPerformance={{true}}
+      @canEnableSecondaryDr={{true}}
+      @canEnableSecondaryPerformance={{true}}
       @performanceMode="disabled"
     />`,
         this.context
@@ -74,8 +76,10 @@ module('Integration | Component | enable-replication-form', function (hooks) {
       await render(
         hbs`<EnableReplicationForm
           @replicationMode={{this.replicationMode}}
-          @canEnablePrimary={{false}}
-          @canEnableSecondary={{false}}
+          @canEnablePrimaryDr={{false}}
+          @canEnablePrimaryPerformance={{false}}
+          @canEnableSecondaryDr={{false}}
+          @canEnableSecondaryPerformance={{false}}
           @performanceMode="disabled"
         />`,
         this.context
@@ -105,8 +109,10 @@ module('Integration | Component | enable-replication-form', function (hooks) {
     await render(
       hbs`<EnableReplicationForm
         @replicationMode={{this.replicationMode}}
-        @canEnablePrimary={{true}}
-        @canEnableSecondary={{true}}
+        @canEnablePrimaryDr={{true}}
+        @canEnablePrimaryPerformance={{true}}
+        @canEnableSecondaryDr={{true}}
+        @canEnableSecondaryPerformance={{true}}
         @performanceMode={{this.performanceMode}}
       />`,
       this.context
@@ -146,8 +152,10 @@ module('Integration | Component | enable-replication-form', function (hooks) {
       await render(
         hbs`<EnableReplicationForm
           @replicationMode="performance"
-          @canEnablePrimary={{true}}
-          @canEnableSecondary={{true}}
+          @canEnablePrimaryDr={{true}}
+          @canEnablePrimaryPerformance={{true}}
+          @canEnableSecondaryDr={{true}}
+          @canEnableSecondaryPerformance={{true}}
           @performanceMode="disabled"
         />`,
         this.context
@@ -178,8 +186,10 @@ module('Integration | Component | enable-replication-form', function (hooks) {
         await render(
           hbs`<EnableReplicationForm
             @replicationMode={{this.replicationMode}}
-            @canEnablePrimary={{true}}
-            @canEnableSecondary={{true}}
+            @canEnablePrimaryDr={{true}}
+            @canEnablePrimaryPerformance={{true}}
+            @canEnableSecondaryDr={{true}}
+            @canEnableSecondaryPerformance={{true}}
             @performanceMode="disabled"
             @onSuccess={{this.onSuccess}}
             @doTransition={{false}}
@@ -217,8 +227,10 @@ module('Integration | Component | enable-replication-form', function (hooks) {
         await render(
           hbs`<EnableReplicationForm
           @replicationMode={{this.replicationMode}}
-            @canEnablePrimary={{true}}
-            @canEnableSecondary={{true}}
+            @canEnablePrimaryDr={{true}}
+            @canEnablePrimaryPerformance={{true}}
+            @canEnableSecondaryDr={{true}}
+            @canEnableSecondaryPerformance={{true}}
             @performanceMode="disabled"
             @onSuccess={{this.onSuccess}}
             @doTransition={{true}}
@@ -258,8 +270,10 @@ module('Integration | Component | enable-replication-form', function (hooks) {
         await render(
           hbs`<EnableReplicationForm
             @replicationMode={{this.replicationMode}}
-            @canEnablePrimary={{true}}
-            @canEnableSecondary={{true}}
+            @canEnablePrimaryDr={{true}}
+            @canEnablePrimaryPerformance={{true}}
+            @canEnableSecondaryDr={{true}}
+            @canEnableSecondaryPerformance={{true}}
             @performanceMode="disabled"
             @onSuccess={{this.onSuccess}}
           />`,
@@ -277,8 +291,10 @@ module('Integration | Component | enable-replication-form', function (hooks) {
         await render(
           hbs`<EnableReplicationForm
           @replicationMode={{this.replicationMode}}
-            @canEnablePrimary={{true}}
-            @canEnableSecondary={{true}}
+            @canEnablePrimaryDr={{true}}
+            @canEnablePrimaryPerformance={{true}}
+            @canEnableSecondaryDr={{true}}
+            @canEnableSecondaryPerformance={{true}}
             @performanceMode="disabled"
             @onSuccess={{this.onSuccess}}
           />`,
