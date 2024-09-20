@@ -31,16 +31,14 @@ import {
 import { isPresent } from '@ember/utils';
 import GeneratedItemModel from 'vault/models/generated-item';
 
-export default Service.extend({
-  attrs: null,
-  dynamicApiPath: '',
+export default class PathHelpService extends Service {
   ajax(url, options = {}) {
     const appAdapter = getOwner(this).lookup(`adapter:application`);
     const { data } = options;
     return appAdapter.ajax(url, 'GET', {
       data,
     });
-  },
+  }
 
   /**
    * Registers new ModelClass at specified model type, and busts cache
@@ -62,7 +60,7 @@ export default Service.extend({
       delete schemas._relationshipsDefCache[modelType];
       delete schemas._attributesDefCache[modelType];
     }
-  },
+  }
 
   /**
    * upgradeModelSchema takes an existing ModelClass and hydrates it with the passed attributes
@@ -89,7 +87,7 @@ export default Service.extend({
     NewKlass.merged = true;
 
     return NewKlass;
-  },
+  }
 
   /**
    * hydrateModel instantiates models which use OpenAPI partially
@@ -119,7 +117,7 @@ export default Service.extend({
     const HydratedKlass = this._upgradeModelSchema(Klass, attrs, newFields);
 
     this._registerModel(owner, HydratedKlass, modelType);
-  },
+  }
 
   /**
    * getNewModel instantiates models which use OpenAPI to generate the model fully
@@ -127,7 +125,7 @@ export default Service.extend({
    * @param {string} backend
    * @param {string} apiPath this method will call getPaths and build submodels for item types
    * @param {*} itemType (optional) used in getPaths for additional models
-   * @returns void - as side effect, registers model via registerNewModelWithProps
+   * @returns void - as side effect, registers model via registerNewModelWithAttrs
    */
   getNewModel(modelType, backend, apiPath, itemType) {
     const owner = getOwner(this);
@@ -178,7 +176,7 @@ export default Service.extend({
         // TODO: we should handle the error better here
         console.error(err); // eslint-disable-line
       });
-  },
+  }
 
   /**
    * getPaths is used to fetch all the openAPI paths available for an auth method,
@@ -207,7 +205,7 @@ export default Service.extend({
         itemID,
       });
     });
-  },
+  }
 
   // Makes a call to grab the OpenAPI document.
   // Returns relevant information from OpenAPI
@@ -252,12 +250,11 @@ export default Service.extend({
       } else if (schema.properties) {
         props = schema.properties;
       }
-      // put url params (e.g. {name}, {role})
-      // at the front of the props list
+      // put url params (e.g. {name}, {role}) at the front of the props list
       const newProps = { ...paramProp, ...props };
       return expandOpenApiProps(newProps);
     });
-  },
+  }
 
   getNewAdapter(pathInfo, itemType) {
     // we need list and create paths to set the correct urls for actions
@@ -316,7 +313,7 @@ export default Service.extend({
       },
 
       createRecord(store, type, snapshot) {
-        return this._super(...arguments).then((response) => {
+        return super.createRecord(...arguments).then((response) => {
           // if the server does not return an id and one has not been set on the model we need to set it manually from the mutableId value
           if (!response?.id && !snapshot.record.id) {
             snapshot.record.id = snapshot.record.mutableId;
@@ -326,7 +323,7 @@ export default Service.extend({
         });
       },
     });
-  },
+  }
 
   /**
    * registerNewModelWithAttrs takes the helpUrl of the given model type,
@@ -340,7 +337,7 @@ export default Service.extend({
     const { attrs, newFields } = combineOpenApiAttrs(new Map(), props);
     const NewKlass = this._upgradeModelSchema(GeneratedItemModel, attrs, newFields);
     this._registerModel(owner, NewKlass, modelType, true);
-  },
+  }
 
   registerNewModelWithProps(helpUrl, backend, newModel, modelName) {
     return this.getProps(helpUrl, backend).then((props) => {
@@ -396,5 +393,5 @@ export default Service.extend({
       owner.unregister(modelName);
       owner.register(modelName, newModel);
     });
-  },
-});
+  }
+}
