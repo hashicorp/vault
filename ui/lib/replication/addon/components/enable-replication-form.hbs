@@ -29,7 +29,7 @@
       {{/if}}
     </div>
     {{#if (eq this.data.mode "primary")}}
-      {{#if @canEnablePrimary}}
+      {{#if this.canEnablePrimary}}
         <div class="field">
           <label for="primary_cluster_addr" class="is-label">
             Primary cluster address
@@ -55,7 +55,7 @@
         </p>
       {{/if}}
     {{else}}
-      {{#if @canEnableSecondary}}
+      {{#if this.canEnableSecondary}}
         {{#if (and (eq @replicationMode "dr") this.performanceReplicationEnabled (has-feature "Performance Replication"))}}
           <div>
             <ToggleButton
@@ -169,7 +169,9 @@
     {{/if}}
   </div>
   {{#if
-    (or (and (eq this.data.mode "primary") @canEnablePrimary) (and (eq this.data.mode "secondary") @canEnableSecondary))
+    (or
+      (and (eq this.data.mode "primary") this.canEnablePrimary) (and (eq this.data.mode "secondary") this.canEnableSecondary)
+    )
   }}
     <div class="field is-grouped box is-fullwidth is-bottomless">
       <Hds::Button @text="Enable Replication" type="submit" disabled={{this.disallowEnable}} data-test-replication-enable />
