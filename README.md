@@ -65,6 +65,13 @@ Show off your Vault knowledge by passing a certification exam. Visit the
 for information about exams and find [study materials](https://learn.hashicorp.com/collections/vault/certification)
 on HashiCorp's learning platform.
 
+One-click Deploy Vault
+--------------------
+
+You can deploy Vault on Elestio using one-click deployment. Elestio supports Vault by providing revenue share so go ahead and click below to deploy and use Vault.
+
+[![Deploy on Elestio](https://elest.io/images/logos/deploy-to-elestio-btn.png)](https://elest.io/open-source/vault)
+
 Developing Vault
 --------------------
 
