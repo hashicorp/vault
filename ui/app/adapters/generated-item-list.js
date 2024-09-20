@@ -8,17 +8,19 @@ import { task } from 'ember-concurrency';
 import { service } from '@ember/service';
 import { sanitizePath } from 'core/utils/sanitize-path';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
+import { tracked } from '@glimmer/tracking';
 
 export default class GeneratedItemListAdapter extends ApplicationAdapter {
   @service store;
   namespace = 'v1';
 
   // these items are set within getNewAdapter in path-help service
-  apiPath = '';
+  @tracked apiPath = '';
   paths = {};
 
   getDynamicApiPath(id) {
     const result = this.store.peekRecord('auth-method', id);
+    this.apiPath = result.apiPath;
     return result.apiPath;
   }
 
