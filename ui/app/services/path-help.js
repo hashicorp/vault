@@ -10,17 +10,13 @@
 */
 import Model, { attr } from '@ember-data/model';
 import Service from '@ember/service';
-import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { getOwner } from '@ember/owner';
-import { expandOpenApiProps, combineAttributes } from 'vault/utils/openapi-to-attrs';
+import { expandOpenApiProps } from 'vault/utils/openapi-to-attrs';
 import { resolve, reject } from 'rsvp';
 import { debug } from '@ember/debug';
 import { capitalize } from '@ember/string';
 import { computed } from '@ember/object'; // eslint-disable-line
-import { withModelValidations } from 'vault/decorators/model-validations';
 
-import generatedItemAdapter from 'vault/adapters/generated-item-list';
-import { sanitizePath } from 'core/utils/sanitize-path';
 import {
   filterPathsByItemType,
   pathToHelpUrlSegment,
@@ -28,8 +24,8 @@ import {
   getHelpUrlForModel,
   combineOpenApiAttrs,
 } from 'vault/utils/openapi-helpers';
-import { isPresent } from '@ember/utils';
 import GeneratedItemModel from 'vault/models/generated-item';
+import GeneratedItemListAdapter from 'vault/adapters/generated-item-list';
 
 export default class PathHelpService extends Service {
   ajax(url, options = {}) {
@@ -259,7 +255,7 @@ export default class PathHelpService extends Service {
   getNewAdapter(pathInfo, itemType) {
     // we need list and create paths to set the correct urls for actions
     const paths = filterPathsByItemType(pathInfo, itemType);
-    let { apiPath } = pathInfo;
+    const { apiPath } = pathInfo;
     const getPath = paths.find((path) => path.operations.includes('get'));
 
     // the action might be "Generate" or something like that so we'll grab the first post endpoint if there
@@ -268,61 +264,15 @@ export default class PathHelpService extends Service {
     const createPath = paths.find((path) => path.action === 'Create' || path.operations.includes('post'));
     const deletePath = paths.find((path) => path.operations.includes('delete'));
 
-    return generatedItemAdapter.extend({
-      urlForItem(id, isList, dynamicApiPath) {
-        const itemType = sanitizePath(getPath.path);
-        let url;
-        id = encodePath(id);
-        // the apiPath changes when you switch between routes but the apiPath variable does not unless the model is reloaded
-        // overwrite apiPath if dynamicApiPath exist.
-        // dynamicApiPath comes from the model->adapter
-        if (dynamicApiPath) {
-          apiPath = dynamicApiPath;
-        }
-        // isList indicates whether we are viewing the list page
-        // of a top-level item such as userpass
-        if (isList) {
-          url = `${this.buildURL()}/${apiPath}${itemType}/`;
-        } else {
-          // build the URL for the show page of a nested item
-          // such as a userpass group
-          url = `${this.buildURL()}/${apiPath}${itemType}/${id}`;
-        }
+    return class NewAdapter extends GeneratedItemListAdapter {
+      apiPath = apiPath;
 
-        return url;
-      },
-
-      urlForQueryRecord(id, modelName) {
-        return this.urlForItem(id, modelName);
-      },
-
-      urlForUpdateRecord(id) {
-        const itemType = createPath.path.slice(1, createPath.path.indexOf('{') - 1);
-        return `${this.buildURL()}/${apiPath}${itemType}/${id}`;
-      },
-
-      urlForCreateRecord(modelType, snapshot) {
-        const id = snapshot.record.mutableId; // computed property that returns either id or private settable _id value
-        const path = createPath.path.slice(1, createPath.path.indexOf('{') - 1);
-        return `${this.buildURL()}/${apiPath}${path}/${id}`;
-      },
-
-      urlForDeleteRecord(id) {
-        const path = deletePath.path.slice(1, deletePath.path.indexOf('{') - 1);
-        return `${this.buildURL()}/${apiPath}${path}/${id}`;
-      },
-
-      createRecord(store, type, snapshot) {
-        return super.createRecord(...arguments).then((response) => {
-          // if the server does not return an id and one has not been set on the model we need to set it manually from the mutableId value
-          if (!response?.id && !snapshot.record.id) {
-            snapshot.record.id = snapshot.record.mutableId;
-            snapshot.id = snapshot.record.id;
-          }
-          return response;
-        });
-      },
-    });
+      paths = {
+        createPath: createPath.path,
+        deletePath: deletePath.path,
+        getPath: getPath.path,
+      };
+    };
   }
 
   /**
@@ -337,61 +287,5 @@ export default class PathHelpService extends Service {
     const { attrs, newFields } = combineOpenApiAttrs(new Map(), props);
     const NewKlass = this._upgradeModelSchema(GeneratedItemModel, attrs, newFields);
     this._registerModel(owner, NewKlass, modelType, true);
-  }
-
-  registerNewModelWithProps(helpUrl, backend, newModel, modelName) {
-    return this.getProps(helpUrl, backend).then((props) => {
-      const { attrs, newFields } = combineAttributes(newModel.attributes, props);
-      const owner = getOwner(this);
-      newModel = newModel.extend(attrs, { newFields });
-      // if our newModel doesn't have fieldGroups already
-      // we need to create them
-      try {
-        // Initialize prototype to access field groups
-        let fieldGroups = newModel.proto().fieldGroups;
-        if (!fieldGroups) {
-          debug(`Constructing fieldGroups for ${backend}`);
-          fieldGroups = this.getFieldGroups(newModel);
-          newModel = newModel.extend({ fieldGroups });
-          // Build and add validations on model
-          // NOTE: For initial phase, initialize validations only for user pass auth
-          if (backend === 'userpass') {
-            const validations = {
-              password: [
-                {
-                  validator(model) {
-                    return (
-                      !(isPresent(model.password) && isPresent(model.passwordHash)) &&
-                      (isPresent(model.password) || isPresent(model.passwordHash))
-                    );
-                  },
-                  message: 'You must provide either password or password hash, but not both.',
-                },
-              ],
-            };
-            @withModelValidations(validations)
-            class GeneratedItemModel extends newModel {}
-            newModel = GeneratedItemModel;
-          }
-        }
-      } catch (err) {
-        // eat the error, fieldGroups is computed in the model definition
-      }
-      // attempting to set the id prop on a model will trigger an error
-      // this computed will be used in place of the the id fieldValue -- see openapi-to-attrs
-      newModel.reopen({
-        mutableId: computed('id', '_id', {
-          get() {
-            return this._id || this.id;
-          },
-          set(key, value) {
-            return (this._id = value);
-          },
-        }),
-      });
-      newModel.merged = true;
-      owner.unregister(modelName);
-      owner.register(modelName, newModel);
-    });
   }
 }
