@@ -11,7 +11,6 @@
 import Model, { attr } from '@ember-data/model';
 import Service from '@ember/service';
 import { getOwner } from '@ember/owner';
-import { expandOpenApiProps } from 'vault/utils/openapi-to-attrs';
 import { resolve, reject } from 'rsvp';
 import { debug } from '@ember/debug';
 import { capitalize } from '@ember/string';
@@ -23,6 +22,7 @@ import {
   reducePathsByPathName,
   getHelpUrlForModel,
   combineOpenApiAttrs,
+  expandOpenApiProps,
 } from 'vault/utils/openapi-helpers';
 import GeneratedItemModel from 'vault/models/generated-item';
 import GeneratedItemListAdapter from 'vault/adapters/generated-item-list';

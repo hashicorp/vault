@@ -4,10 +4,8 @@
  */
 
 import { debug } from '@ember/debug';
-import { dasherize } from '@ember/string';
+import { camelize, capitalize, dasherize } from '@ember/string';
 import { singularize } from 'ember-inflector';
-
-// TODO: Consolidate with openapi-to-attrs once it's typescript
 
 interface Path {
   path: string;
@@ -179,15 +177,116 @@ interface Attribute {
     readonly?: boolean;
   };
 }
-// This is the object returned from expandOpenApiProps
-interface MixedAttr {
+
+interface OpenApiProp {
+  description: string;
   type: string;
+  'x-vault-displayAttrs': {
+    name: string;
+    value: string | number;
+    group: string;
+    sensitive: boolean;
+    editType?: string;
+    description?: string;
+  };
+  items?: { type: string };
+  format?: string;
+  isId?: boolean;
+  deprecated?: boolean;
+  enum?: string[];
+}
+interface MixedAttr {
+  type?: string;
+  helpText?: string;
   editType?: string;
   fieldGroup: string;
   fieldValue?: string;
   label?: string;
   readonly?: boolean;
+  possibleValues?: string[];
+  defaultValue?: string | number | (() => string | number);
+  sensitive?: boolean;
+  readOnly?: boolean;
+  [key: string]: unknown;
 }
+
+export const expandOpenApiProps = function (props: Record<string, OpenApiProp>): Record<string, MixedAttr> {
+  const attrs: Record<string, MixedAttr> = {};
+  // expand all attributes
+  for (const propName in props) {
+    const prop = props[propName];
+    if (!prop) continue;
+    let { description, items, type, format, isId, deprecated } = prop;
+    if (deprecated === true) {
+      continue;
+    }
+    let {
+      name,
+      value,
+      group,
+      sensitive,
+      editType,
+      description: displayDescription,
+    } = prop['x-vault-displayAttrs'] || {};
+
+    if (type === 'integer') {
+      type = 'number';
+    }
+
+    if (displayDescription) {
+      description = displayDescription;
+    }
+
+    editType = editType || type;
+
+    if (format === 'seconds' || format === 'duration') {
+      editType = 'ttl';
+    } else if (items) {
+      editType = items.type + capitalize(type);
+    }
+
+    const attrDefn: MixedAttr = {
+      editType,
+      helpText: description,
+      possibleValues: prop['enum'],
+      fieldValue: isId ? 'mutableId' : undefined,
+      fieldGroup: group || 'default',
+      readOnly: isId,
+      defaultValue: value || undefined,
+    };
+
+    if (type === 'object' && !!value) {
+      attrDefn.defaultValue = () => {
+        return value;
+      };
+    }
+
+    if (sensitive) {
+      attrDefn.sensitive = true;
+    }
+
+    // only set a label if we have one from OpenAPI
+    // otherwise the propName will be humanized by the form-field component
+    if (name) {
+      attrDefn.label = name;
+    }
+
+    // ttls write as a string and read as a number
+    // so setting type on them runs the wrong transform
+    if (editType !== 'ttl' && type !== 'array') {
+      attrDefn.type = type;
+    }
+
+    // loop to remove empty vals
+    for (const attrProp in attrDefn) {
+      if (attrDefn[attrProp] == null) {
+        delete attrDefn[attrProp];
+      }
+    }
+    attrs[camelize(propName)] = attrDefn;
+  }
+  return attrs;
+};
 
 /**
  * combineOpenApiAttrs takes attributes defined on an existing models
@@ -237,3 +336,29 @@ export const combineOpenApiAttrs = function (
   }
   return { attrs: attrsArray, newFields };
 };
+
+// interface FieldGroups {
+//   default: string[];
+//   [key: string]: string[];
+// }
+
+// export const combineFieldGroups = function (
+//   currentGroups: Array<Record<string, string[]>>,
+//   newFields: string[],
+//   excludedFields: string[]
+// ) {
+//   console.log({ currentGroups, newFields, excludedFields });
+//   let allFields: string[] = [];
+//   for (const group of currentGroups) {
+//     const fields = Object.values(group)[0] || [];
+//     allFields = allFields.concat(fields);
+//   }
+//   const otherFields = newFields.filter((field) => {
+//     return !allFields.includes(field) && !excludedFields.includes(field);
+//   });
+//   if (otherFields.length) {
+//     currentGroups[0].default = currentGroups[0].default.concat(otherFields);
+//   }
+
+//   return currentGroups;
+// };
