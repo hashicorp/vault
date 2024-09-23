@@ -1,0 +1,3 @@
+```release-note:bug
+auth: Updated error handling for missing login credentials in AppRole and UserPass auth methods to return a 400 error instead of a 500 error.
+```
