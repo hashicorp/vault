@@ -92,6 +92,11 @@ flags](/vault/docs/commands) included on all commands.
   `VAULT_EXPERIMENTS` environment variable as a comma-separated list, or via the
   [`experiments`](/vault/docs/configuration#experiments) config key.
 
+- `-pprof-dump-dir` `(string: "")` - Directory where the generated profiles are
+  created. Vault does not generate profiles when `pprof-dump-dir` is unset.
+  Use `pprof-dump-dir` temporarily during debugging sessions. Do not use
+  `pprof-dump-dir` in regular production processes.
+
 - `VAULT_ALLOW_PENDING_REMOVAL_MOUNTS` `(bool: false)` - (environment variable)
   Allow Vault to be started with builtin engines which have the `Pending Removal`
   deprecation state. This is a temporary stopgap in place in order to perform an

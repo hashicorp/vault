@@ -389,7 +389,7 @@ scenario "seal_ha" {
 
   step "verify_vault_unsealed" {
     description = global.description.verify_vault_unsealed
-    module      = module.vault_verify_unsealed
+    module      = module.vault_wait_for_cluster_unsealed
     depends_on  = [step.wait_for_leader]
 
     providers = {
@@ -646,7 +646,7 @@ scenario "seal_ha" {
 
   step "verify_vault_unsealed_with_new_seal" {
     description = global.description.verify_vault_unsealed
-    module      = module.vault_verify_unsealed
+    module      = module.vault_wait_for_cluster_unsealed
     depends_on  = [step.wait_for_new_leader]
 
     providers = {
@@ -934,7 +934,7 @@ scenario "seal_ha" {
 
   // Make sure we unsealed
   step "verify_vault_unsealed_after_migration" {
-    module     = module.vault_verify_unsealed
+    module     = module.vault_wait_for_cluster_unsealed
     depends_on = [step.wait_for_leader_after_migration]
 
     providers = {

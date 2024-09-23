@@ -85,8 +85,9 @@ export const filteredTotalForMount = (
   if (!nsPath || !mountPath || isEmpty(byNamespace)) return emptyCounts();
   return (
     byNamespace
-      .find((namespace) => namespace.label === nsPath)
-      ?.mounts.find((mount: MountClients) => mount.label === mountPath) || emptyCounts()
+      .find((namespace) => sanitizePath(namespace.label) === sanitizePath(nsPath))
+      ?.mounts.find((mount: MountClients) => sanitizePath(mount.label) === sanitizePath(mountPath)) ||
+    emptyCounts()
   );
 };
 

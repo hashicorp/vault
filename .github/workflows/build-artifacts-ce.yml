@@ -93,7 +93,7 @@ jobs:
             redhat: true
           - goos: linux
             goarch: arm64
-            redhat: false
+            redhat: true
       fail-fast: true
     runs-on: ${{ fromJSON(inputs.compute-build) }}
     name: (${{ matrix.goos }}, ${{ matrix.goarch }})
