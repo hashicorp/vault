@@ -7,7 +7,11 @@ import Model, { attr } from '@ember-data/model';
 import apiPath from 'vault/utils/api-path';
 import lazyCapabilities from 'vault/macros/lazy-capabilities';
 import { withExpandedAttributes } from 'vault/decorators/model-expanded-attributes';
-import { operationFields, operationFieldsWithoutSpecial, tlsFields } from 'vault/utils/kmip-role-fields';
+import {
+  operationFields,
+  operationFieldsWithoutSpecial,
+  tlsFields,
+} from 'vault/utils/model-helpers/kmip-role-fields';
 import { removeManyFromArray } from 'vault/helpers/remove-from-array';
 
 @withExpandedAttributes()
