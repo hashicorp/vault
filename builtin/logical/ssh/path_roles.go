@@ -66,6 +66,7 @@ type sshRole struct {
 	AlgorithmSigner            string            `mapstructure:"algorithm_signer" json:"algorithm_signer"`
 	Version                    int               `mapstructure:"role_version" json:"role_version"`
 	NotBeforeDuration          time.Duration     `mapstructure:"not_before_duration" json:"not_before_duration"`
+	AllowEmptyPrincipals       bool              `mapstructure:"allow_empty_principals" json:"allow_empty_principals"`
 }
 
 func pathListRoles(b *backend) *framework.Path {
@@ -363,6 +364,11 @@ func pathRoles(b *backend) *framework.Path {
 					Value: 30,
 				},
 			},
+			"allow_empty_principals": {
+				Type:        framework.TypeBool,
+				Description: `Whether to allow issuing certificates with no valid principals (meaning any valid principal).  Exists for backwards compatibility only, the default of false is highly recommended.`,
+				Default:     false,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -499,6 +505,7 @@ func (b *backend) createCARole(allowedUsers, defaultUser, signer string, data *f
 		AlgorithmSigner:           signer,
 		Version:                   roleEntryVersion,
 		NotBeforeDuration:         time.Duration(data.Get("not_before_duration").(int)) * time.Second,
+		AllowEmptyPrincipals:      data.Get("allow_empty_principals").(bool),
 	}
 
 	if !role.AllowUserCertificates && !role.AllowHostCertificates {
