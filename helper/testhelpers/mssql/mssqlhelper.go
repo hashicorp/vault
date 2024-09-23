@@ -35,7 +35,8 @@ func PrepareMSSQLTestContainer(t *testing.T) (cleanup func(), retURL string) {
 	var err error
 	for i := 0; i < numRetries; i++ {
 		var svc *docker.Service
-		runner, err := docker.NewServiceRunner(docker.RunOptions{
+		var runner *docker.Runner
+		runner, err = docker.NewServiceRunner(docker.RunOptions{
 			ContainerName: "sqlserver",
 			ImageRepo:     "mcr.microsoft.com/mssql/server",
 			ImageTag:      "2017-latest-ubuntu",
@@ -48,7 +49,8 @@ func PrepareMSSQLTestContainer(t *testing.T) (cleanup func(), retURL string) {
 			},
 		})
 		if err != nil {
-			t.Fatalf("Could not start docker MSSQL: %s", err)
+			t.Logf("Could not start docker MSSQL: %v", err)
+			continue
 		}
 
 		svc, err = runner.StartService(context.Background(), connectMSSQL)
@@ -57,7 +59,7 @@ func PrepareMSSQLTestContainer(t *testing.T) (cleanup func(), retURL string) {
 		}
 	}
 
-	t.Fatalf("Could not start docker MSSQL: %s", err)
+	t.Fatalf("Could not start docker MSSQL: %v", err)
 	return nil, ""
 }
 
