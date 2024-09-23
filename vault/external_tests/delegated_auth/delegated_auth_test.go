@@ -327,7 +327,7 @@ func TestDelegatedAuth(t *testing.T) {
 			path:          "login",
 			username:      "allowed-est",
 			password:      "",
-			errorContains: "missing password",
+			errorContains: "invalid credentials",
 		},
 		{
 			name:          "bad-path-within-delegated-auth-error",
