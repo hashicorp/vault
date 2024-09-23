@@ -440,13 +440,11 @@ $ kubectl delete pod <name of Vault pod>
 If you deployed Vault in high availability (`ha`) mode, you must upgrade your
 standby pods before upgrading the active pod:
 
-Before deleting the standby pod, remove the associated node from the raft with
-`vault operator raft remove-peer <server_id>`.
-
-To confirm that the node was successfully removed from Raft, run
-`vault operator raft list-peers`.
-
-Once you confirm the removal succeeded, you can delete the pod.
+1. Before deleting the standby pod, remove the associated node from the raft
+   with `vault operator raft remove-peer <server_id>`.
+1. Confirm Vault removed the node successfully from Raft with
+   `vault operator raft list-peers`.
+1. Once you confirm the removal, delete the pod.
 
 <Warning title="Delete nodes to avoid unnecessary leader elections">
 
