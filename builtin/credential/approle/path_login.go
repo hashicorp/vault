@@ -125,7 +125,7 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 	// RoleID must be supplied during every login
 	roleID := strings.TrimSpace(data.Get("role_id").(string))
 	if roleID == "" {
-		return logical.ErrorResponse("missing role_id"), nil
+		return nil, logical.ErrInvalidCredentials
 	}
 
 	// Look for the storage entry that maps the roleID to role
