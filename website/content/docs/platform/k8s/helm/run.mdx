@@ -449,7 +449,7 @@ standby pods before upgrading the active pod:
 <Warning title="Delete nodes to avoid unnecessary leader elections">
 
 Removing a pod without first deleting the node from its cluster means that
-Raft will be aware of the correct number of nodes in the cluster. Not knowing
+Raft will not be aware of the correct number of nodes in the cluster. Not knowing
 the correct number of nodes can trigger a leader election, which can potentially
 cause unneeded downtime.
 
