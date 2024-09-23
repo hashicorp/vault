@@ -150,7 +150,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.8.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.19.0
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.12.0
-	github.com/hashicorp/vault-plugin-secrets-openldap v0.13.0
+	github.com/hashicorp/vault-plugin-secrets-openldap v0.13.1
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.9.0
 	github.com/hashicorp/vault-testing-stepwise v0.1.4
 	github.com/hashicorp/vault/api v1.14.0
