@@ -49,7 +49,7 @@ func PrepareMSSQLTestContainer(t *testing.T) (cleanup func(), retURL string) {
 			},
 		})
 		if err != nil {
-			t.Logf("Could not start docker MSSQL: %v", err)
+			t.Logf("Could not confgure docker runner MSSQL: %v", err)
 			continue
 		}
 
@@ -59,7 +59,7 @@ func PrepareMSSQLTestContainer(t *testing.T) (cleanup func(), retURL string) {
 		}
 	}
 
-	t.Fatalf("Could not start docker MSSQL: %v", err)
+	t.Fatalf("Could not start docker container MSSQL: %v", err)
 	return nil, ""
 }
 
