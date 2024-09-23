@@ -612,6 +612,7 @@ func (c *Client) GetRevocationStatus(ctx context.Context, subject, issuer *x509.
 		timeout := defaultOCSPResponderTimeout
 
 		ocspClient := retryablehttp.NewClient()
+		ocspClient.Logger = c.Logger()
 		ocspClient.RetryMax = conf.OcspMaxRetries
 		ocspClient.HTTPClient.Timeout = timeout
 		ocspClient.HTTPClient.Transport = newInsecureOcspTransport(conf.ExtraCas)

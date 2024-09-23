@@ -1,0 +1,3 @@
+```release-note:bug
+auth/cert: During certificate validation, OCSP requests are debug logged even if Vault's log level is above DEBUG.
+```
