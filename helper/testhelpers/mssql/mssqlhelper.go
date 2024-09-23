@@ -42,7 +42,7 @@ func PrepareMSSQLTestContainer(t *testing.T) (cleanup func(), retURL string) {
 		runner, err = docker.NewServiceRunner(docker.RunOptions{
 			ContainerName: "sqlserver",
 			ImageRepo:     "mcr.microsoft.com/mssql/server",
-			ImageTag:      "2017-latest-ubuntu",
+			ImageTag:      "2022-latest",
 			Env:           []string{"ACCEPT_EULA=Y", "SA_PASSWORD=" + mssqlPassword},
 			Ports:         []string{"1433/tcp"},
 			LogConsumer: func(s string) {
