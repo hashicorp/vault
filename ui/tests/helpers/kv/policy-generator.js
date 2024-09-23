@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-const root = ['create', 'read', 'update', 'delete', 'list'];
+const root = ['create', 'read', 'update', 'delete', 'list', 'patch'];
 
 // returns a string with each capability wrapped in double quotes => ["create", "read"]
 const format = (array) => array.map((c) => `"${c}"`).join(', ');
@@ -21,6 +21,14 @@ export const dataPolicy = ({ backend, secretPath = '*', capabilities = root }) =
   return `
     path "${backend}/data/${secretPath}" {
       capabilities = [${format(capabilities)}]
+    }
+  `;
+};
+
+export const subkeysPolicy = ({ backend, secretPath = '*' }) => {
+  return `
+    path "${backend}/subkeys/${secretPath}" {
+      capabilities = ["read"]
     }
   `;
 };
@@ -82,7 +90,7 @@ export const destroyVersionsPolicy = ({ backend, secretPath = '*' }) => {
 
 // Personas for reuse in workflow tests
 export const personas = {
-  admin: (backend) => adminPolicy(backend),
+  admin: (backend) => adminPolicy(backend) + subkeysPolicy({ backend }),
   dataReader: (backend) => dataPolicy({ backend, capabilities: ['read'] }),
   dataListReader: (backend) =>
     dataPolicy({ backend, capabilities: ['read', 'delete'] }) + metadataListPolicy(backend),
@@ -97,4 +105,12 @@ export const personas = {
   secretCreator: (backend) =>
     dataPolicy({ backend, capabilities: ['create', 'update'] }) +
     metadataPolicy({ backend, capabilities: ['delete'] }),
+  secretPatcher: (backend) =>
+    // this persona should never have data "read"
+    dataPolicy({ backend, capabilities: ['patch'] }) +
+    metadataPolicy({ backend, capabilities: ['list', 'read'] }) +
+    subkeysPolicy({ backend }) +
+    // granting patcher persona delete/destroy capabilities because this matches policies from real customer use cases
+    deleteVersionsPolicy({ backend }) +
+    destroyVersionsPolicy({ backend }),
 };

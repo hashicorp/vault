@@ -11,7 +11,7 @@ fail() {
 
 [[ -z "$ARTIFACT_NAME" ]] && fail "ARTIFACT_NAME env variable has not been set"
 
-if [ "${ARTIFACT_NAME##*.}" == "zip" ];  then
+if [ "${ARTIFACT_NAME##*.}" == "zip" ]; then
   echo "Skipped removing unit file because new artifact is a zip bundle"
   exit 0
 fi

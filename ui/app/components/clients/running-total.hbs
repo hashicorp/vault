@@ -36,13 +36,20 @@
     </:stats>
 
     <:chart>
-      <Clients::Charts::Line
-        @dataset={{@byMonthActivityData}}
+      <Clients::Charts::VerticalBarGrouped
+        @data={{this.runningTotalData}}
+        @legend={{this.chartLegend}}
         @upgradeData={{@upgradeData}}
         @chartHeight="250"
-        @chartTitle="Vault client counts line chart"
+        @chartTitle="Vault client counts"
       />
     </:chart>
+
+    <:legend>
+      {{#each this.chartLegend as |l|}}
+        <span class="legend-colors dot-{{l.key}}"></span><span class="legend-label">{{capitalize l.label}}</span>
+      {{/each}}
+    </:legend>
   </Clients::ChartContainer>
 {{else}}
   {{#let (get @byMonthActivityData "0") as |singleMonthData|}}

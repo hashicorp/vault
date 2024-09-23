@@ -15,7 +15,7 @@ import {
   expectedValueOfConfigKeys,
 } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
 
-module('Integration | Component | SecretEngine/configuration-details', function (hooks) {
+module('Integration | Component | SecretEngine/ConfigurationDetails', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {

@@ -9,9 +9,23 @@ terraform {
   }
 }
 
-variable "primary_leader_public_ip" {
-  type        = string
-  description = "Vault primary cluster leader Public IP address"
+variable "ip_version" {
+  type        = number
+  description = "The IP version used for the Vault TCP listener"
+
+  validation {
+    condition     = contains([4, 6], var.ip_version)
+    error_message = "The ip_version must be either 4 or 6"
+  }
+}
+
+variable "primary_leader_host" {
+  type = object({
+    ipv6       = string
+    private_ip = string
+    public_ip  = string
+  })
+  description = "The primary cluster leader host"
 }
 
 variable "vault_addr" {
@@ -40,7 +54,7 @@ resource "enos_remote_exec" "configure_pr_primary" {
 
   transport = {
     ssh = {
-      host = var.primary_leader_public_ip
+      host = var.primary_leader_host.public_ip
     }
   }
 }

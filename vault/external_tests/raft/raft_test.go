@@ -64,6 +64,7 @@ func raftClusterBuilder(t testing.TB, ropts *RaftClusterOpts) (*vault.CoreConfig
 		DisableAutopilot:               !ropts.EnableAutopilot,
 		EnableResponseHeaderRaftNodeID: ropts.EnableResponseHeaderRaftNodeID,
 		Seal:                           ropts.Seal,
+		EnableRaw:                      true,
 	}
 
 	opts := vault.TestClusterOptions{

@@ -4,71 +4,29 @@
  */
 
 import Component from '@glimmer/component';
-import { tracked } from '@glimmer/tracking';
-import { service } from '@ember/service';
-import { parseAPITimestamp } from 'core/utils/date-formatters';
-import { isSameMonth } from 'date-fns';
-import { sanitizePath } from 'core/utils/sanitize-path';
-import { waitFor } from '@ember/test-waiters';
 
 /**
  * @module Attribution
- * Attribution components display the top 10 total client counts for namespaces or auth methods (mounts) during a billing period.
- * A horizontal bar chart shows on the right, with the top namespace/auth method and respective client totals on the left.
+ * Attribution components display the top 10 total client counts for namespaces or mounts during a billing period.
+ * A horizontal bar chart shows on the right, with the top namespace/mount and respective client totals on the left.
  *
  * @example
  *  <Clients::Attribution
- *    @newUsageCounts={{this.newUsageCounts}}
- *    @totalClientAttribution={{this.totalClientAttribution}}
- *    @newClientAttribution={{this.newClientAttribution}}
- *    @selectedNamespace={{this.selectedNamespace}}
- *    @startTimestamp={{this.startTime}}
- *    @endTimestamp={{this.endTime}}
- *    @isHistoricalMonth={{false}}
- *    @responseTimestamp={{this.responseTimestamp}}
- *    @upgradesDuringActivity={{array (hash version="1.10.1" previousVersion="1.9.1" timestampInstalled= "2021-11-18T10:23:16Z") }}
+ *    @noun="mount"
+ *    @attribution={{array (hash label="my-kv" clients=100)}}
+ *    @responseTimestamp="2018-04-03T14:15:30"
+ *    @isSecretsSyncActivated={{true}}
  *  />
  *
- * @param {object} newUsageCounts - object with new client counts for chart tooltip text
- * @param {array} totalClientAttribution - array of objects containing a label and breakdown of client counts for total clients
- * @param {array} newClientAttribution - array of objects containing a label and breakdown of client counts for new clients
- * @param {string} selectedNamespace - namespace selected from filter bar
- * @param {string} startTimestamp - timestamp string from activity response to render start date for CSV modal and whether copy reads 'month' or 'date range'
- * @param {string} endTimestamp - timestamp string from activity response to render end date for CSV modal and whether copy reads 'month' or 'date range'
+ * @param {string} noun - noun which reflects the type of data and used in title. Should be "namespace" (default) or "mount"
+ * @param {array} attribution - array of objects containing a label and breakdown of client counts for total clients
  * @param {string} responseTimestamp -  ISO timestamp created in serializer to timestamp the response, renders in bottom left corner below attribution chart
- * @param {boolean} isHistoricalMonth - when true data is from a single, historical month so side-by-side charts should display for attribution data
- * @param {array} upgradesDuringActivity - array of objects containing version history upgrade data
- * @param {boolean} isSecretsSyncActivated - boolean to determine if secrets sync is activated
+ * @param {boolean} isSecretsSyncActivated - boolean reflecting if secrets sync is activated. Determines the labels and data shown
  */
 
 export default class Attribution extends Component {
-  @service download;
-  @service store;
-  @service namespace;
-
-  @tracked canDownload = false;
-  @tracked showExportModal = false;
-  @tracked exportFormat = 'csv';
-  @tracked downloadError = '';
-
-  constructor() {
-    super(...arguments);
-    this.getExportCapabilities(this.args.selectedNamespace);
-  }
-
-  @waitFor
-  async getExportCapabilities(ns = '') {
-    try {
-      // selected namespace usually ends in /
-      const url = ns
-        ? `${sanitizePath(ns)}/sys/internal/counters/activity/export`
-        : 'sys/internal/counters/activity/export';
-      const cap = await this.store.findRecord('capabilities', url);
-      this.canDownload = cap.canSudo;
-    } catch (e) {
-      // if we can't read capabilities, default to show
-      this.canDownload = true;
-    }
+  get noun() {
+    return this.args.noun || 'namespace';
   }
 
   get attributionLegend() {
@@ -84,69 +42,38 @@ export default class Attribution extends Component {
     return attributionLegend;
   }
 
-  get isSingleMonth() {
-    if (!this.args.startTimestamp && !this.args.endTimestamp) return false;
-    const startDateObject = parseAPITimestamp(this.args.startTimestamp);
-    const endDateObject = parseAPITimestamp(this.args.endTimestamp);
-    return isSameMonth(startDateObject, endDateObject);
-  }
-
-  get showExportButton() {
-    const hasData = this.args.totalClientAttribution ? this.args.totalClientAttribution.length > 0 : false;
-    return hasData && this.canDownload;
-  }
-
-  get isSingleNamespace() {
-    // if a namespace is selected, then we're viewing top 10 auth methods (mounts)
-    return !!this.args.selectedNamespace;
+  get sortedAttribution() {
+    if (this.args.attribution) {
+      // shallow copy so it doesn't mutate the data during tests
+      return this.args.attribution?.slice().sort((a, b) => b.clients - a.clients);
+    }
+    return [];
   }
 
   // truncate data before sending to chart component
-  get barChartTotalClients() {
-    return this.args.totalClientAttribution?.slice(0, 10);
+  get topTenAttribution() {
+    return this.sortedAttribution.slice(0, 10);
   }
 
-  get barChartNewClients() {
-    return this.args.newClientAttribution?.slice(0, 10);
-  }
-
-  get topClientCounts() {
-    // get top namespace or auth method
-    return this.args.totalClientAttribution ? this.args.totalClientAttribution[0] : null;
-  }
-
-  get attributionBreakdown() {
-    // display text for hbs
-    return this.isSingleNamespace ? 'auth method' : 'namespace';
+  get topAttribution() {
+    // get top namespace or mount
+    return this.sortedAttribution[0] ?? null;
   }
 
   get chartText() {
-    if (!this.args.totalClientAttribution) {
-      return { description: 'There is a problem gathering data' };
-    }
-    const dateText = this.isSingleMonth ? 'month' : 'date range';
-    switch (this.isSingleNamespace) {
-      case true:
-        return {
-          description:
-            'This data shows the top ten authentication methods by client count within this namespace, and can be used to understand where clients are originating. Authentication methods are organized by path.',
-          newCopy: `The new clients used by the auth method for this ${dateText}. This aids in understanding which auth methods create and use new clients${
-            dateText === 'date range' ? ' over time.' : '.'
-          }`,
-          totalCopy: `The total clients used by the auth method for this ${dateText}. This number is useful for identifying overall usage volume. `,
-        };
-      case false:
-        return {
-          description:
-            'This data shows the top ten namespaces by client count and can be used to understand where clients are originating. Namespaces are identified by path. To see all namespaces, export this data.',
-          newCopy: `The new clients in the namespace for this ${dateText}.
-          This aids in understanding which namespaces create and use new clients${
-            dateText === 'date range' ? ' over time.' : '.'
-          }`,
-          totalCopy: `The total clients in the namespace for this ${dateText}. This number is useful for identifying overall usage volume.`,
-        };
-      default:
-        return '';
+    if (this.noun === 'namespace') {
+      return {
+        subtext: 'This data shows the top ten namespaces by total clients for the date range selected.',
+        description:
+          'This data shows the top ten namespaces by total clients and can be used to understand where clients are originating. Namespaces are identified by path.',
+      };
+    } else {
+      return {
+        subtext:
+          'The total clients used by the mounts for this date range. This number is useful for identifying overall usage volume.',
+        description:
+          'This data shows the top ten mounts by client count within this namespace, and can be used to understand where clients are originating. Mounts are organized by path.',
+      };
     }
   }
 }

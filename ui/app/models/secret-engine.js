@@ -179,6 +179,10 @@ export default class SecretEngineModel extends Model {
     if (type === 'kv' && parseInt(this.version, 10) === 2) {
       fields.push('casRequired', 'deleteVersionAfter', 'maxVersions');
     }
+    // WIF secret engines
+    if (type === 'aws') {
+      fields.push('config.identityTokenKey');
+    }
     return fields;
   }
 
@@ -227,6 +231,17 @@ export default class SecretEngineModel extends Model {
       case 'keymgmt':
         // no ttl options for keymgmt
         optionFields = [...CORE_OPTIONS, 'config.allowedManagedKeys', ...STANDARD_CONFIG];
+        break;
+      case 'aws':
+        defaultFields = ['path'];
+        optionFields = [
+          ...CORE_OPTIONS,
+          'config.defaultLeaseTtl',
+          'config.maxLeaseTtl',
+          'config.identityTokenKey',
+          'config.allowedManagedKeys',
+          ...STANDARD_CONFIG,
+        ];
         break;
       default:
         defaultFields = ['path'];

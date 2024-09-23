@@ -652,6 +652,23 @@ func GenerateRandBytes(length int) ([]byte, error) {
 	return buf, nil
 }
 
+func TestWaitPerfStandby(t testing.TB, core *Core) {
+	t.Helper()
+	start := time.Now()
+	var perfStandby bool
+	for time.Now().Sub(start) < 30*time.Second {
+		perfStandby = core.PerfStandby()
+
+		if perfStandby {
+			break
+		}
+	}
+	if !perfStandby {
+		err := errors.New("core not in perf standby mode")
+		t.Fatal(err)
+	}
+}
+
 func TestWaitActive(t testing.TB, core *Core) {
 	t.Helper()
 	if err := TestWaitActiveWithError(core); err != nil {

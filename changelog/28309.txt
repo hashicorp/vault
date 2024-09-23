@@ -1,0 +1,3 @@
+```release-note:bug
+auth/cert: ocsp_ca_certificates field was not honored when validating OCSP responses signed by a CA that did not issue the certificate.
+```

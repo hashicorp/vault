@@ -2,7 +2,6 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: BUSL-1.1
 
-
 set -e
 
 function fail() {
@@ -66,14 +65,14 @@ while :; do
 
         return $?
       fi
-    ;;
+      ;;
     6)
       echo '[]'
       exit 0
-    ;;
+      ;;
     *)
       fail "unknown IP_VERSION: $IP_VERSION"
-    ;;
+      ;;
   esac
 
   wait=$((2 ** count))
