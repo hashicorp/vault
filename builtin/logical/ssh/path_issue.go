@@ -58,7 +58,7 @@ be later than the role max TTL.`,
 			},
 			"valid_principals": {
 				Type:        framework.TypeString,
-				Description: `Valid principals, either usernames or hostnames, that the certificate should be signed for.`,
+				Description: `Valid principals, either usernames or hostnames, that the certificate should be signed for.  Must be non-empty unless allow_empty_principals=true (not recommended) or a value for DefaultUser has been set in the role`,
 			},
 			"cert_type": {
 				Type:        framework.TypeString,
