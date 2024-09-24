@@ -791,6 +791,7 @@ func (c *LeaseCache) storeStaticSecretIndex(ctx context.Context, req *SendReques
 
 	path := getStaticSecretPathFromRequest(req)
 
+	capabilitiesIndex.IndexLock.Lock()
 	// Extra caution -- avoid potential nil
 	if capabilitiesIndex.ReadablePaths == nil {
 		capabilitiesIndex.ReadablePaths = make(map[string]struct{})
@@ -798,6 +799,7 @@ func (c *LeaseCache) storeStaticSecretIndex(ctx context.Context, req *SendReques
 
 	// update the index with the new capability:
 	capabilitiesIndex.ReadablePaths[path] = struct{}{}
+	capabilitiesIndex.IndexLock.Unlock()
 
 	err = c.SetCapabilitiesIndex(ctx, capabilitiesIndex)
 	if err != nil {
