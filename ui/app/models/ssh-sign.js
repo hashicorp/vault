@@ -13,7 +13,6 @@ const CREATE_FIELDS = [
   'certType',
   'criticalOptions',
   'extensions',
-  'allowEmptyPrincipals',
   'ttl',
 ];
 
@@ -30,10 +29,6 @@ export default Model.extend({
   ttl: attr({
     label: 'TTL',
     editType: 'ttl',
-  }),
-  allowEmptyPrincipals: attr('boolean', {
-    helpText:
-      'Allow signing certificates with no valid principals (e.g. any valid principal). For backwards compatibility only. The default of false is highly recommended.',
   }),
   validPrincipals: attr('string', {
     helpText:
