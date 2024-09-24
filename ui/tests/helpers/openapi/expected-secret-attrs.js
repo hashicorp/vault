@@ -1260,7 +1260,7 @@ const pki = {
       editType: 'stringArray',
       fieldGroup: 'default',
       helpText:
-        'A comma-separated string or list of key usages (not extended key usages). Valid values can be found at https://golang.org/pkg/crypto/x509/#KeyUsage -- simply drop the "KeyUsage" part of the name. To remove all key usages from being set, set this value to an empty list. This defaults to CertSign, CRLSign for CAs. If neither of those two set, a warning will be thrown. To use the issuer for CMPv2, DigitalSignature must be set.',
+        'This list of key usages (not extended key usages) will be added to the existing set of key usages, CRL,CertSign, on the generated certificate. Valid values can be found at https://golang.org/pkg/crypto/x509/#KeyUsage -- simply drop the "KeyUsage" part of the name. To use the issuer for CMPv2, DigitalSignature must be set.',
     },
     locality: {
       editType: 'stringArray',
