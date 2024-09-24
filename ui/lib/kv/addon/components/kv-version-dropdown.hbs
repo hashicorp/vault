@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
+<BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" @renderInPlace={{true}} as |D|>
   <D.Trigger data-test-version-dropdown class="toolbar-link {{if D.isOpen ' is-active'}}">
     Version
     {{or @displayVersion "current"}}
@@ -13,7 +13,7 @@
     <nav class="box menu">
       <ul class="menu-list">
         {{#each @metadata.sortedVersions as |versionData|}}
-          <li data-test-version={{versionData.version}} class="action">
+          <li data-test-version={{versionData.version}}>
             {{#if @onSelect}}
               {{! TODO use Hds::Dropdown instead https://helios.hashicorp.design/components/dropdown }}
               <button

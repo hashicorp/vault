@@ -4,7 +4,7 @@
  */
 
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 
 export default class KmipRoleRoute extends Route {
   @service store;
@@ -12,7 +12,7 @@ export default class KmipRoleRoute extends Route {
   @service pathHelp;
 
   beforeModel() {
-    return this.pathHelp.getNewModel('kmip/role', this.secretMountPath.currentPath);
+    return this.pathHelp.hydrateModel('kmip/role', this.secretMountPath.currentPath);
   }
 
   model(params) {

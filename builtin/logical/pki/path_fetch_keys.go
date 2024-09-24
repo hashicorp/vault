@@ -9,14 +9,12 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/hashicorp/vault/sdk/helper/certutil"
-	"github.com/hashicorp/vault/sdk/helper/errutil"
-
-	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/logical"
-
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/builtin/logical/pki/managed_key"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/errutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func pathListKeys(b *backend) *framework.Path {
@@ -269,7 +267,7 @@ func (b *backend) pathGetKeyHandler(ctx context.Context, req *logical.Request, d
 			return nil, errutil.InternalError{Err: fmt.Sprintf("failed fetching managed key info from key id %s (%s): %v", key.ID, key.Name, err)}
 		}
 
-		pkForSkid, err = managed_key.GetManagedKeyPublicKey(sc.Context, sc.Backend, managedKeyUUID)
+		pkForSkid, err = managed_key.GetManagedKeyPublicKey(sc.Context, sc.GetPkiManagedView(), managedKeyUUID)
 		if err != nil {
 			return nil, err
 		}

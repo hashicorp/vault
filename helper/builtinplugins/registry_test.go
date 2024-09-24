@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/vault/helper/constants"
 	dbMysql "github.com/hashicorp/vault/plugins/database/mysql"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-
 	"golang.org/x/exp/slices"
 )
 
@@ -99,7 +98,7 @@ func Test_RegistryKeyCounts(t *testing.T) {
 		{
 			name:       "number of auth plugins",
 			pluginType: consts.PluginTypeCredential,
-			want:       19,
+			want:       18,
 			entWant:    1,
 		},
 		{

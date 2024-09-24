@@ -249,7 +249,7 @@ func TestFlagParsing(t *testing.T) {
 			pluginType:      api.PluginTypeUnknown,
 			name:            "foo",
 			sha256:          "abc123",
-			expectedPayload: `{"type":0,"command":"foo","sha256":"abc123"}`,
+			expectedPayload: `{"type":"unknown","command":"foo","sha256":"abc123"}`,
 		},
 		"full": {
 			pluginType:      api.PluginTypeCredential,
@@ -261,14 +261,14 @@ func TestFlagParsing(t *testing.T) {
 			sha256:          "abc123",
 			args:            []string{"--a=b", "--b=c", "positional"},
 			env:             []string{"x=1", "y=2"},
-			expectedPayload: `{"type":1,"args":["--a=b","--b=c","positional"],"command":"cmd","sha256":"abc123","version":"v1.0.0","oci_image":"image","runtime":"runtime","env":["x=1","y=2"]}`,
+			expectedPayload: `{"type":"auth","args":["--a=b","--b=c","positional"],"command":"cmd","sha256":"abc123","version":"v1.0.0","oci_image":"image","runtime":"runtime","env":["x=1","y=2"]}`,
 		},
 		"command remains empty if oci_image specified": {
 			pluginType:      api.PluginTypeCredential,
 			name:            "name",
 			ociImage:        "image",
 			sha256:          "abc123",
-			expectedPayload: `{"type":1,"sha256":"abc123","oci_image":"image"}`,
+			expectedPayload: `{"type":"auth","sha256":"abc123","oci_image":"image"}`,
 		},
 	} {
 		tc := tc

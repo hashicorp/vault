@@ -42,7 +42,7 @@ module('Integration | Component | kubernetes | Page::Configuration', function (h
     };
 
     this.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.backend.id },
     ];
 

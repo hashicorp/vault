@@ -55,6 +55,18 @@ func TestPluginReloadCommand_Run(t *testing.T) {
 			"Must specify exactly one of -plugin or -mounts",
 			1,
 		},
+		{
+			"type_and_mounts_mutually_exclusive",
+			[]string{"-mounts", "bar", "-type", "secret"},
+			"Cannot specify -type with -mounts",
+			1,
+		},
+		{
+			"invalid_type",
+			[]string{"-plugin", "bar", "-type", "unsupported"},
+			"Error parsing -type as a plugin type",
+			1,
+		},
 	}
 
 	for _, tc := range cases {

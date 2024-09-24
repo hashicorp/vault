@@ -274,6 +274,22 @@ func (c *Sys) DeregisterPluginWithContext(ctx context.Context, i *DeregisterPlug
 	return err
 }
 
+// RootReloadPluginInput is used as input to the RootReloadPlugin function.
+type RootReloadPluginInput struct {
+	Plugin string     `json:"-"`               // Plugin name, as registered in the plugin catalog.
+	Type   PluginType `json:"-"`               // Plugin type: auth, secret, or database.
+	Scope  string     `json:"scope,omitempty"` // Empty to reload on current node, "global" for all nodes.
+}
+
+// RootReloadPlugin reloads plugins, possibly returning reloadID for a global
+// scoped reload. This is only available in the root namespace, and reloads
+// plugins across all namespaces, whereas ReloadPlugin is available in all
+// namespaces but only reloads plugins in use in the request's namespace.
+func (c *Sys) RootReloadPlugin(ctx context.Context, i *RootReloadPluginInput) (string, error) {
+	path := fmt.Sprintf("/v1/sys/plugins/reload/%s/%s", i.Type.String(), i.Plugin)
+	return c.reloadPluginInternal(ctx, path, i, i.Scope == "global")
+}
+
 // ReloadPluginInput is used as input to the ReloadPlugin function.
 type ReloadPluginInput struct {
 	// Plugin is the name of the plugin to reload, as registered in the plugin catalog
@@ -292,15 +308,20 @@ func (c *Sys) ReloadPlugin(i *ReloadPluginInput) (string, error) {
 }
 
 // ReloadPluginWithContext reloads mounted plugin backends, possibly returning
-// reloadId for a cluster scoped reload
+// reloadID for a cluster scoped reload. It is limited to reloading plugins that
+// are in use in the request's namespace. See RootReloadPlugin for an API that
+// can reload plugins across all namespaces.
 func (c *Sys) ReloadPluginWithContext(ctx context.Context, i *ReloadPluginInput) (string, error) {
+	return c.reloadPluginInternal(ctx, "/v1/sys/plugins/reload/backend", i, i.Scope == "global")
+}
+
+func (c *Sys) reloadPluginInternal(ctx context.Context, path string, body any, global bool) (string, error) {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	path := "/v1/sys/plugins/reload/backend"
 	req := c.c.NewRequest(http.MethodPut, path)
 
-	if err := req.SetJSONBody(i); err != nil {
+	if err := req.SetJSONBody(body); err != nil {
 		return "", err
 	}
 
@@ -310,7 +331,7 @@ func (c *Sys) ReloadPluginWithContext(ctx context.Context, i *ReloadPluginInput)
 	}
 	defer resp.Body.Close()
 
-	if i.Scope == "global" {
+	if global {
 		// Get the reload id
 		secret, parseErr := ParseSecret(resp.Body)
 		if parseErr != nil {

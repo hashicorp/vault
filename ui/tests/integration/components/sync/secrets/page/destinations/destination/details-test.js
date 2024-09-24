@@ -74,7 +74,7 @@ module(
           this.unmaskedAttrs = this.model.formFields.filter((attr) => !maskedParams.includes(attr.name));
         });
 
-        test('it renders destination details with connection_details', async function (assert) {
+        test('it renders destination details with connection_details and options', async function (assert) {
           assert.expect(this.model.formFields.length);
 
           await this.renderFormComponent();
@@ -86,23 +86,36 @@ module(
           });
 
           // assert the remaining model attributes render
-          this.unmaskedAttrs.forEach(({ name, options }) => {
-            const label = options.label || toLabel([name]);
-            const value = Array.isArray(this.model[name]) ? this.model[name].join(',') : this.model[name];
+          this.unmaskedAttrs.forEach(({ name, options, type }) => {
+            let label, value;
+            if (type === 'object') {
+              [label] = Object.keys(this.model[name]);
+              [value] = Object.values(this.model[name]);
+            } else {
+              label = options.label || toLabel([name]);
+              value = Array.isArray(this.model[name]) ? this.model[name].join(',') : this.model[name];
+            }
             assert.dom(PAGE.infoRowValue(label)).hasText(value);
           });
         });
 
-        test('it renders destination details without connection_details', async function (assert) {
-          assert.expect(this.maskedAttrs.length + 3);
+        test('it renders destination details without connection_details or options', async function (assert) {
+          assert.expect(this.maskedAttrs.length + 4);
 
           this.maskedAttrs.forEach((attr) => {
             // these values are undefined when environment variables are set
             this.model[attr.name] = undefined;
           });
+          // assert custom tags section header does not render
+          if (this.model?.get('customTags')) {
+            this.model['customTags'] = undefined;
+          }
 
           await this.renderFormComponent();
 
+          assert
+            .dom(PAGE.destinations.details.sectionHeader)
+            .doesNotExist('does not render Custom tags header');
           assert.dom(PAGE.title).hasTextContaining(this.model.name);
           assert.dom(PAGE.icon(this.model.icon)).exists();
           assert.dom(PAGE.infoRowValue('Name')).hasText(this.model.name);

@@ -3,7 +3,9 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Store from '@ember-data/store';
+import Store, { CacheHandler } from '@ember-data/store';
+import RequestManager from '@ember-data/request';
+import { LegacyNetworkHandler } from '@ember-data/legacy-compat';
 import { run, schedule } from '@ember/runloop';
 import { resolve, Promise } from 'rsvp';
 import { dasherize } from '@ember/string';
@@ -33,6 +35,16 @@ export function keyForCache(query) {
 }
 
 export default class StoreService extends Store {
+  requestManager = new RequestManager();
+
+  constructor(args) {
+    super(args);
+    // If at some point we no longer need an extended store, we can remove the @ember-data/legacy-compat dep
+    // See: https://api.emberjs.com/ember-data/4.12/modules/@ember-data%2Frequest
+    this.requestManager.use([LegacyNetworkHandler]);
+    this.requestManager.useCache(CacheHandler);
+  }
+
   lazyCaches = new Map();
 
   setLazyCacheForModel(modelName, key, value) {
@@ -175,7 +187,7 @@ export default class StoreService extends Store {
         );
         // Hack to make sure all records get in model correctly. remove with update to ember-data@4.12
         this.peekAll(modelName).length;
-        const model = this.peekAll(modelName).toArray();
+        const model = this.peekAll(modelName).slice();
         model.set('meta', response.meta);
         resolve(model);
       });

@@ -4,12 +4,13 @@
  */
 
 import Component from '@glimmer/component';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import parseURL from 'core/utils/parse-url';
 import config from 'open-api-explorer/config/environment';
 import { guidFor } from '@ember/object/internals';
+import SwaggerUIBundle from 'swagger-ui-dist/swagger-ui-bundle.js';
 
 const { APP } = config;
 
@@ -25,18 +26,24 @@ export default class SwaggerUiComponent extends Component {
     return {
       fn: {
         opsFilter: (taggedOps, phrase) => {
-          // map over the options and filter out operations where the path doesn't match what's typed
-          return (
-            taggedOps
-              .map((tagObj) => {
-                const operations = tagObj.get('operations').filter((operationObj) => {
-                  return operationObj.get('path').includes(phrase);
-                });
-                return tagObj.set('operations', operations);
-              })
-              // then traverse again and remove the top level item if there are no operations left after filtering
-              .filter((tagObj) => !!tagObj.get('operations').size)
-          );
+          const filteredOperations = taggedOps.reduce((acc, tagObj) => {
+            const operations = tagObj.get('operations');
+
+            // filter out operations where the path doesn't match search phrase
+            const operationsWithMatchingPath = operations.filter((operationObj) => {
+              const path = operationObj.get('path');
+              return path.includes(phrase);
+            });
+
+            // if there are any operations left after filtering, add the tagObj to the accumulator
+            if (operationsWithMatchingPath.size > 0) {
+              acc.push(tagObj.set('operations', operationsWithMatchingPath));
+            }
+
+            return acc;
+          }, []);
+
+          return filteredOperations;
         },
       },
     };
@@ -84,8 +91,6 @@ export default class SwaggerUiComponent extends Component {
 
   // using an action to bind the correct "this" context
   @action async swaggerInit() {
-    const { default: SwaggerUIBundle } = await import('swagger-ui-dist/swagger-ui-bundle.js');
-    // trim any slashes on the filter value
     const configSettings = this.CONFIG(SwaggerUIBundle, this);
     SwaggerUIBundle(configSettings);
   }

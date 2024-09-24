@@ -7,11 +7,9 @@ import (
 	"context"
 
 	"github.com/go-ldap/ldap/v3"
-
+	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/base62"
 	"github.com/hashicorp/vault/sdk/helper/ldaputil"
-
-	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 

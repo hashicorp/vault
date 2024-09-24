@@ -13,6 +13,7 @@ import './helpers/flash-message';
 import preloadAssets from 'ember-asset-loader/test-support/preload-assets';
 import { setupGlobalA11yHooks, setRunOptions } from 'ember-a11y-testing/test-support';
 import manifest from 'vault/config/asset-manifest';
+import setupSinon from 'ember-sinon-qunit';
 
 preloadAssets(manifest).then(() => {
   setup(QUnit.assert);
@@ -26,7 +27,7 @@ preloadAssets(manifest).then(() => {
       values: ['wcag2a'],
     },
   });
-
+  setupSinon();
   start({
     setupTestIsolationValidation: true,
   });

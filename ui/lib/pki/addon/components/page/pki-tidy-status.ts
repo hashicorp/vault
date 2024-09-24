@@ -5,7 +5,7 @@
 
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import errorMessage from 'vault/utils/error-message';
@@ -67,6 +67,7 @@ export default class PkiTidyStatusComponent extends Component<Args> {
 
   tidyStatusConfigFields = [
     'tidy_cert_store',
+    'tidy_cert_metadata',
     'tidy_revoked_certs',
     'safety_buffer',
     'pause_duration',

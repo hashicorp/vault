@@ -67,7 +67,7 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 
 	password := d.Get("password").(string)
 	if password == "" {
-		return nil, fmt.Errorf("missing password")
+		return nil, logical.ErrInvalidCredentials
 	}
 
 	// Get the user and validate auth

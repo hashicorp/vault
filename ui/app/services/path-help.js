@@ -11,8 +11,7 @@
 import Model from '@ember-data/model';
 import Service from '@ember/service';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
-import { getOwner } from '@ember/application';
-import { assign } from '@ember/polyfills';
+import { getOwner } from '@ember/owner';
 import { expandOpenApiProps, combineAttributes } from 'vault/utils/openapi-to-attrs';
 import fieldToAttrs from 'vault/utils/field-to-attrs';
 import { resolve, reject } from 'rsvp';
@@ -27,7 +26,9 @@ import {
   filterPathsByItemType,
   pathToHelpUrlSegment,
   reducePathsByPathName,
+  getHelpUrlForModel,
 } from 'vault/utils/openapi-helpers';
+import { isPresent } from '@ember/utils';
 
 export default Service.extend({
   attrs: null,
@@ -41,10 +42,35 @@ export default Service.extend({
   },
 
   /**
-   * getNewModel instantiates models which use OpenAPI fully or partially
+   * hydrateModel instantiates models which use OpenAPI partially
+   * @param {string} modelType path for model, eg pki/role
+   * @param {string} backend path, which will be used for the generated helpUrl
+   * @returns void - as side effect, registers model via registerNewModelWithProps
+   */
+  hydrateModel(modelType, backend) {
+    const owner = getOwner(this);
+    const modelName = `model:${modelType}`;
+
+    const modelFactory = owner.factoryFor(modelName);
+    const helpUrl = getHelpUrlForModel(modelType, backend);
+
+    if (!modelFactory) {
+      throw new Error(`modelFactory for ${modelType} not found -- use getNewModel instead.`);
+    }
+
+    debug(`Model factory found for ${modelType}`);
+    const newModel = modelFactory.class;
+    if (newModel.merged || !helpUrl) {
+      return resolve();
+    }
+    return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
+  },
+
+  /**
+   * getNewModel instantiates models which use OpenAPI to generate the model fully
    * @param {string} modelType
    * @param {string} backend
-   * @param {string} apiPath (optional) if passed, this method will call getPaths and build submodels for item types
+   * @param {string} apiPath this method will call getPaths and build submodels for item types
    * @param {*} itemType (optional) used in getPaths for additional models
    * @returns void - as side effect, registers model via registerNewModelWithProps
    */
@@ -53,29 +79,19 @@ export default Service.extend({
     const modelName = `model:${modelType}`;
 
     const modelFactory = owner.factoryFor(modelName);
-    let newModel, helpUrl;
-    // if we have a factory, we need to take the existing model into account
+
     if (modelFactory) {
-      debug(`Model factory found for ${modelType}`);
-      newModel = modelFactory.class;
-      const modelProto = newModel.proto();
-      if (newModel.merged || modelProto.useOpenAPI !== true) {
-        return resolve();
+      // if the modelFactory already exists, it means either this model was already
+      // generated or the model exists in the code already. In either case resolve
+
+      if (!modelFactory.class.merged) {
+        // no merged flag means this model was not previously generated
+        debug(`Model exists for ${modelType} -- use hydrateModel instead`);
       }
-
-      helpUrl = modelProto.getHelpUrl(backend);
-      return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
-    } else {
-      debug(`Creating new Model for ${modelType}`);
-      newModel = Model.extend({});
+      return resolve();
     }
-
-    // we don't have an apiPath for dynamic secrets
-    // and we don't need paths for them yet
-    if (!apiPath) {
-      helpUrl = newModel.proto().getHelpUrl(backend);
-      return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
-    }
+    debug(`Creating new Model for ${modelType}`);
+    let newModel = Model.extend({});
 
     // use paths to dynamically create our openapi help url
     // if we have a brand new model
@@ -98,7 +114,7 @@ export default Service.extend({
           return reject();
         }
 
-        helpUrl = `/v1/${apiPath}${path.slice(1)}?help=true` || newModel.proto().getHelpUrl(backend);
+        const helpUrl = `/v1/${apiPath}${path.slice(1)}?help=true`;
         pathInfo.paths = paths;
         newModel = newModel.extend({ paths: pathInfo });
         return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
@@ -183,7 +199,7 @@ export default Service.extend({
       }
       // put url params (e.g. {name}, {role})
       // at the front of the props list
-      const newProps = assign({}, paramProp, props);
+      const newProps = { ...paramProp, ...props };
       return expandOpenApiProps(newProps);
     });
   },
@@ -274,15 +290,19 @@ export default Service.extend({
           // Build and add validations on model
           // NOTE: For initial phase, initialize validations only for user pass auth
           if (backend === 'userpass') {
-            const validations = fieldGroups.reduce((obj, element) => {
-              if (element.default) {
-                element.default.forEach((v) => {
-                  const key = v.options.fieldValue || v.name;
-                  obj[key] = [{ type: 'presence', message: `${v.name} can't be blank` }];
-                });
-              }
-              return obj;
-            }, {});
+            const validations = {
+              password: [
+                {
+                  validator(model) {
+                    return (
+                      !(isPresent(model.password) && isPresent(model.passwordHash)) &&
+                      (isPresent(model.password) || isPresent(model.passwordHash))
+                    );
+                  },
+                  message: 'You must provide either password or password hash, but not both.',
+                },
+              ],
+            };
             @withModelValidations(validations)
             class GeneratedItemModel extends newModel {}
             newModel = GeneratedItemModel;
@@ -303,7 +323,7 @@ export default Service.extend({
           },
         }),
       });
-      newModel.reopenClass({ merged: true });
+      newModel.merged = true;
       owner.unregister(modelName);
       owner.register(modelName, newModel);
     });

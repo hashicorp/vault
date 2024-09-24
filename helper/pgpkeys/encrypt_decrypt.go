@@ -56,7 +56,6 @@ func GetFingerprints(pgpKeys []string, entities []*openpgp.Entity) ([]string, er
 	if entities == nil {
 		var err error
 		entities, err = GetEntities(pgpKeys)
-
 		if err != nil {
 			return nil, err
 		}

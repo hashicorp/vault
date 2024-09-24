@@ -16,12 +16,9 @@ import timestamp from 'core/utils/timestamp';
 module('Integration | Component | license-banners', function (hooks) {
   setupRenderingTest(hooks);
 
-  hooks.before(function () {
-    sinon.stub(timestamp, 'now').callsFake(() => new Date('2018-04-03T14:15:30'));
-  });
   hooks.beforeEach(function () {
+    sinon.replace(timestamp, 'now', sinon.fake.returns(new Date('2018-04-03T14:15:30')));
     const mockNow = timestamp.now();
-    this.now = mockNow;
     this.yesterday = subDays(mockNow, 1);
     this.nextMonth = addDays(mockNow, 30);
     this.outside30 = addDays(mockNow, 32);
@@ -29,9 +26,6 @@ module('Integration | Component | license-banners', function (hooks) {
     this.version = this.owner.lookup('service:version');
     this.version.version = '1.13.1+ent';
     this.version.type = 'enterprise';
-  });
-  hooks.after(function () {
-    timestamp.now.restore();
   });
 
   test('it does not render if no expiry', async function (assert) {

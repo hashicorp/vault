@@ -5,22 +5,22 @@
 
 /*
 returns an instance of CodeMirror, see docs for callable functions https://codemirror.net/5/doc/manual.html#api_constructor
+If you are targeting a specific CodeMirror instance, pass the selector of the parent element as an argument.
 sample use:
 
   import codemirror from 'vault/tests/helpers/codemirror';
 
   test('it renders initial value', function (assert) {
-
-    assert.strictEqual(codemirror.getValue(), 'some value')
+    // General use
+    assert.strictEqual(codemirror().getValue(), 'some other value')
+    // Specific selector
+    codemirror('#my-control').setValue('some value');
+    assert.strictEqual(codemirror('#my-control').getValue(), 'some value')
   )}
 */
-
-const invariant = (truthy, error) => {
-  if (!truthy) throw new Error(error);
-};
-
-export default function () {
-  const element = document.querySelector('.CodeMirror');
+export default function (parent) {
+  const selector = parent ? `${parent} .CodeMirror` : '.CodeMirror';
+  const element = document.querySelector(selector);
   invariant(element, `Selector '.CodeMirror' matched no elements`);
 
   const cm = element.CodeMirror;
@@ -28,3 +28,7 @@ export default function () {
 
   return cm;
 }
+
+const invariant = (truthy, error) => {
+  if (!truthy) throw new Error(error);
+};

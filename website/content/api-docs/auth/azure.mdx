@@ -22,6 +22,9 @@ Configures the credentials required for the plugin to perform API calls
 to Azure. These credentials will be used to query the metadata about the
 virtual machine.
 
+You can configure the auth engine with account credentials or plugin workload
+identity federation (WIF).
+
 | Method | Path                 |
 | :----- | :------------------- |
 | `POST` | `/auth/azure/config` |
@@ -41,7 +44,14 @@ virtual machine.
   This value can also be provided with the `AZURE_CLIENT_ID` environment variable.
 - `client_secret` `(string: '')` - The client secret for credentials to query the Azure APIs.
   This value can also be provided with the `AZURE_CLIENT_SECRET` environment variable.
-- `max_retries` `(int: 3)` - The maximum number of attempts a failed operation will be 
+  Mutually exclusive with `identity_token_audience`.
+- `identity_token_audience` `(string: "")` - <EnterpriseAlert product="vault" inline /> The
+  audience claim value for plugin identity tokens. Must match the allowed audiences configured
+  for the target [Federated Identity Credential](https://learn.microsoft.com/en-us/entra/workload-id/workload-identity-federation-create-trust?pivots=identity-wif-apps-methods-azp#configure-a-federated-identity-credential-on-an-app).
+  Mutually exclusive with `client_secret`.
+- `identity_token_ttl` `(string/int: 3600)` - <EnterpriseAlert product="vault" inline /> The
+  TTL of generated tokens. Defaults to 1 hour. Uses [duration format strings](/vault/docs/concepts/duration-format).
+- `max_retries` `(int: 3)` - The maximum number of attempts a failed operation will be
   retried before producing an error.
 - `max_retry_delay` `(string: '60s')` - The maximum delay, in seconds, allowed before retrying an operation.
 - `retry_delay` `(string: '4s')` - The initial amount of delay, in seconds, to use before retrying an operation. Increases exponentially.

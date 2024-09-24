@@ -93,14 +93,14 @@
           @icon={{if this.submit.isRunning "loading"}}
           type="submit"
           disabled={{this.submit.isRunning}}
-          data-test-cross-sign-submit
+          data-test-save
         />
         <Hds::Button
           @text="Cancel"
           @color="secondary"
           @route="issuers.issuer.details"
           disabled={{this.submit.isRunning}}
-          data-test-cross-sign-cancel
+          data-test-cancel
         />
       </Hds::ButtonSet>
     </form>

@@ -4,7 +4,7 @@
  */
 
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { withConfig } from 'pki/decorators/check-issuers';
 import { hash } from 'rsvp';
 import { PKI_DEFAULT_EMPTY_STATE_MSG } from 'pki/routes/overview';
@@ -45,9 +45,9 @@ export default class PkiKeysIndexRoute extends Route {
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
     controller.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: this.secretMountPath.currentPath, route: 'overview' },
-      { label: 'keys', route: 'keys.index' },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
+      { label: this.secretMountPath.currentPath, route: 'overview', model: resolvedModel.parentModel.id },
+      { label: 'keys', route: 'keys.index', model: resolvedModel.parentModel.id },
     ];
     controller.notConfiguredMessage = PKI_DEFAULT_EMPTY_STATE_MSG;
   }

@@ -8,28 +8,26 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/versions"
-
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin"
 )
 
+const (
+	pluginReloadPluginsType = "plugins"
+	pluginReloadMountsType  = "mounts"
+)
+
 // reloadMatchingPluginMounts reloads provided mounts, regardless of
 // plugin name, as long as the backend type is plugin.
-func (c *Core) reloadMatchingPluginMounts(ctx context.Context, mounts []string) error {
+func (c *Core) reloadMatchingPluginMounts(ctx context.Context, ns *namespace.Namespace, mounts []string) error {
 	c.mountsLock.RLock()
 	defer c.mountsLock.RUnlock()
 	c.authLock.RLock()
 	defer c.authLock.RUnlock()
-
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
-		return err
-	}
 
 	var errors error
 	for _, mount := range mounts {
@@ -65,7 +63,7 @@ func (c *Core) reloadMatchingPluginMounts(ctx context.Context, mounts []string) 
 			errors = multierror.Append(errors, fmt.Errorf("cannot reload plugin on %q: %w", mount, err))
 			continue
 		}
-		c.logger.Info("successfully reloaded plugin", "plugin", entry.Accessor, "path", entry.Path, "version", entry.Version)
+		c.logger.Info("successfully reloaded plugin", "plugin", entry.Accessor, "path", entry.Path, "version", entry.RunningVersion)
 	}
 	return errors
 }
@@ -73,70 +71,87 @@ func (c *Core) reloadMatchingPluginMounts(ctx context.Context, mounts []string) 
 // reloadMatchingPlugin reloads all mounted backends that are named pluginName
 // (name of the plugin as registered in the plugin catalog). It returns the
 // number of plugins that were reloaded and an error if any.
-func (c *Core) reloadMatchingPlugin(ctx context.Context, pluginName string) (reloaded int, err error) {
-	c.mountsLock.RLock()
-	defer c.mountsLock.RUnlock()
-	c.authLock.RLock()
-	defer c.authLock.RUnlock()
-
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
-		return reloaded, err
+func (c *Core) reloadMatchingPlugin(ctx context.Context, ns *namespace.Namespace, pluginType consts.PluginType, pluginName string) (reloaded int, err error) {
+	var secrets, auth, database bool
+	switch pluginType {
+	case consts.PluginTypeSecrets:
+		secrets = true
+	case consts.PluginTypeCredential:
+		auth = true
+	case consts.PluginTypeDatabase:
+		database = true
+	case consts.PluginTypeUnknown:
+		secrets = true
+		auth = true
+		database = true
+	default:
+		return reloaded, fmt.Errorf("unsupported plugin type %q", pluginType.String())
 	}
 
-	for _, entry := range c.mounts.Entries {
-		// We dont reload mounts that are not in the same namespace
-		if ns.ID != entry.Namespace().ID {
-			continue
-		}
+	if secrets || database {
+		c.mountsLock.RLock()
+		defer c.mountsLock.RUnlock()
 
-		if entry.Type == pluginName || (entry.Type == "plugin" && entry.Config.PluginName == pluginName) {
-			err := c.reloadBackendCommon(ctx, entry, false)
-			if err != nil {
-				return reloaded, err
-			}
-			reloaded++
-			c.logger.Info("successfully reloaded plugin", "plugin", pluginName, "namespace", entry.Namespace(), "path", entry.Path, "version", entry.Version)
-		} else if entry.Type == "database" {
-			// The combined database plugin is itself a secrets engine, but
-			// knowledge of whether a database plugin is in use within a particular
-			// mount is internal to the combined database plugin's storage, so
-			// we delegate the reload request with an internally routed request.
-			req := &logical.Request{
-				Operation: logical.UpdateOperation,
-				Path:      entry.Path + "reload/" + pluginName,
-			}
-			resp, err := c.router.Route(ctx, req)
-			if err != nil {
-				return reloaded, err
-			}
-			if resp == nil {
-				return reloaded, fmt.Errorf("failed to reload %q database plugin(s) mounted under %s", pluginName, entry.Path)
-			}
-			if resp.IsError() {
-				return reloaded, fmt.Errorf("failed to reload %q database plugin(s) mounted under %s: %s", pluginName, entry.Path, resp.Error())
+		for _, entry := range c.mounts.Entries {
+			// We don't reload mounts that are not in the same namespace
+			if ns != nil && ns.ID != entry.Namespace().ID {
+				continue
 			}
 
-			if count, ok := resp.Data["count"].(int); ok && count > 0 {
-				c.logger.Info("successfully reloaded database plugin(s)", "plugin", pluginName, "namespace", entry.Namespace(), "path", entry.Path, "connections", resp.Data["connections"])
-				reloaded += count
+			if secrets && (entry.Type == pluginName || (entry.Type == "plugin" && entry.Config.PluginName == pluginName)) {
+				err := c.reloadBackendCommon(ctx, entry, false)
+				if err != nil {
+					return reloaded, err
+				}
+				reloaded++
+				c.logger.Info("successfully reloaded plugin", "plugin", pluginName, "namespace", entry.Namespace(), "path", entry.Path, "version", entry.RunningVersion)
+			} else if database && entry.Type == "database" {
+				// The combined database plugin is itself a secrets engine, but
+				// knowledge of whether a database plugin is in use within a particular
+				// mount is internal to the combined database plugin's storage, so
+				// we delegate the reload request with an internally routed request.
+				reqCtx := namespace.ContextWithNamespace(ctx, entry.namespace)
+				req := &logical.Request{
+					Operation: logical.UpdateOperation,
+					Path:      entry.Path + "reload/" + pluginName,
+				}
+				resp, err := c.router.Route(reqCtx, req)
+				if err != nil {
+					return reloaded, err
+				}
+				if resp == nil {
+					return reloaded, fmt.Errorf("failed to reload %q database plugin(s) mounted under %s", pluginName, entry.Path)
+				}
+				if resp.IsError() {
+					return reloaded, fmt.Errorf("failed to reload %q database plugin(s) mounted under %s: %s", pluginName, entry.Path, resp.Error())
+				}
+
+				if count, ok := resp.Data["count"].(int); ok && count > 0 {
+					c.logger.Info("successfully reloaded database plugin(s)", "plugin", pluginName, "namespace", entry.Namespace(), "path", entry.Path, "connections", resp.Data["connections"])
+					reloaded += count
+				}
 			}
 		}
 	}
 
-	for _, entry := range c.auth.Entries {
-		// We dont reload mounts that are not in the same namespace
-		if ns.ID != entry.Namespace().ID {
-			continue
-		}
+	if auth {
+		c.authLock.RLock()
+		defer c.authLock.RUnlock()
 
-		if entry.Type == pluginName || (entry.Type == "plugin" && entry.Config.PluginName == pluginName) {
-			err := c.reloadBackendCommon(ctx, entry, true)
-			if err != nil {
-				return reloaded, err
+		for _, entry := range c.auth.Entries {
+			// We don't reload mounts that are not in the same namespace
+			if ns != nil && ns.ID != entry.Namespace().ID {
+				continue
 			}
-			reloaded++
-			c.logger.Info("successfully reloaded plugin", "plugin", entry.Accessor, "path", entry.Path, "version", entry.Version)
+
+			if entry.Type == pluginName || (entry.Type == "plugin" && entry.Config.PluginName == pluginName) {
+				err := c.reloadBackendCommon(ctx, entry, true)
+				if err != nil {
+					return reloaded, err
+				}
+				reloaded++
+				c.logger.Info("successfully reloaded plugin", "plugin", entry.Accessor, "path", entry.Path, "version", entry.RunningVersion)
+			}
 		}
 	}
 
@@ -207,28 +222,15 @@ func (c *Core) reloadBackendCommon(ctx context.Context, entry *MountEntry, isAut
 	oldSha := entry.RunningSha256
 	if !isAuth {
 		// Dispense a new backend
-		backend, entry.RunningSha256, err = c.newLogicalBackend(ctx, entry, sysView, view)
+		backend, err = c.newLogicalBackend(ctx, entry, sysView, view)
 	} else {
-		backend, entry.RunningSha256, err = c.newCredentialBackend(ctx, entry, sysView, view)
+		backend, err = c.newCredentialBackend(ctx, entry, sysView, view)
 	}
 	if err != nil {
 		return err
 	}
 	if backend == nil {
 		return fmt.Errorf("nil backend of type %q returned from creation function", entry.Type)
-	}
-
-	// update the entry running version with the configured version, which was verified during registration.
-	entry.RunningVersion = entry.Version
-	if entry.RunningVersion == "" {
-		// don't set the running version to a builtin if it is running as an external plugin
-		if entry.RunningSha256 == "" {
-			if isAuth {
-				entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeCredential, entry.Type)
-			} else {
-				entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeSecrets, entry.Type)
-			}
-		}
 	}
 
 	// update the mount table since we changed the runningSha

@@ -5,6 +5,7 @@ package vault
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/http"
@@ -402,6 +403,11 @@ func (b *SystemBackend) handleCreateCustomMessages(ctx context.Context, req *log
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
+	_, err = base64.StdEncoding.DecodeString(messageValue)
+	if err != nil {
+		return logical.ErrorResponse("invalid message parameter value, must be base64 encoded"), nil
+	}
+
 	startTime, err := parameterValidateOrReportMissing[time.Time]("start_time", d)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
@@ -422,25 +428,9 @@ func (b *SystemBackend) handleCreateCustomMessages(ctx context.Context, req *log
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	if len(linkMap) > 1 {
-		return logical.ErrorResponse("invalid number of elements in link parameter value; only a single element can be provided"), nil
-	}
-
-	var link *uicustommessages.MessageLink
-	if linkMap != nil {
-		link = &uicustommessages.MessageLink{}
-
-		for k, v := range linkMap {
-			href, ok := v.(string)
-			if !ok {
-				return logical.ErrorResponse(fmt.Sprintf("invalid url for %q key in link parameter value", k)), nil
-			}
-
-			link.Title = k
-			link.Href = href
-
-			break
-		}
+	link, resp := validateLinkMap(linkMap)
+	if resp != nil {
+		return resp, nil
 	}
 
 	options, err := parameterValidateMap("options", d)
@@ -482,6 +472,50 @@ func (b *SystemBackend) handleCreateCustomMessages(ctx context.Context, req *log
 			"active":        message.Active(),
 		},
 	}, nil
+}
+
+// validateLinkMap takes care of detecting either incomplete or invalid link
+// parameter value.
+// An invalid link parameter value is one where there's either
+// an empty string for the title key or the href value or the href value not
+// being a string. A linkMap that is invalid, results in only a logical.Response
+// containing an error response being returned.
+// An incomplete link parameter value is one where the linkMap is either nil or
+// empty, where the title key is an empty string and the href value is an empty
+// string. A linkMap that is incomplete, results in neither a MessageLink nor a
+// Response being returned.
+// If the linkMap is neither invalid nor incomplete, a MessageLink is returned.
+func validateLinkMap(linkMap map[string]any) (*uicustommessages.MessageLink, *logical.Response) {
+	if len(linkMap) > 1 {
+		return nil, logical.ErrorResponse("invalid number of elements in link parameter value; only a single element can be provided")
+	}
+
+	for k, v := range linkMap {
+		href, ok := v.(string)
+
+		switch {
+		case !ok:
+			// href value is not a string, so return an error
+			return nil, logical.ErrorResponse(fmt.Sprintf("invalid url for %q key in link parameter value", k))
+		case len(k) == 0 && len(href) > 0:
+			// no title key, but there's an href value, so return an error
+			return nil, logical.ErrorResponse("missing title key in link parameter value")
+		case len(k) > 0 && len(href) == 0:
+			// no href value, but there's a title key, so return an error
+			return nil, logical.ErrorResponse(fmt.Sprintf("missing url for %q key in link parameter value", k))
+		case len(k) != 0 && len(href) != 0:
+			// when title key and href value are not empty, return a MessageLink
+			// pointer
+			return &uicustommessages.MessageLink{
+				Title: k,
+				Href:  href,
+			}, nil
+		}
+
+	}
+
+	// no title key and no href value, treat it as if no link was specified
+	return nil, nil
 }
 
 // handleReadCustomMessage is the operation callback for the READ operation of
@@ -556,30 +590,19 @@ func (b *SystemBackend) handleUpdateCustomMessage(ctx context.Context, req *logi
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
+	_, err = base64.StdEncoding.DecodeString(messageValue)
+	if err != nil {
+		return logical.ErrorResponse("invalid message parameter value, must be base64 encoded"), nil
+	}
+
 	linkMap, err := parameterValidateMap("link", d)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	if len(linkMap) > 1 {
-		return logical.ErrorResponse("invalid number of elements in link parameter value; only a single element can be provided"), nil
-	}
-
-	var link *uicustommessages.MessageLink
-	if linkMap != nil {
-		link = &uicustommessages.MessageLink{}
-
-		for k, v := range linkMap {
-			href, ok := v.(string)
-			if !ok {
-				return logical.ErrorResponse("invalid url for %q key link parameter value", k), nil
-			}
-
-			link.Title = k
-			link.Href = href
-
-			break
-		}
+	link, resp := validateLinkMap(linkMap)
+	if resp != nil {
+		return resp, nil
 	}
 
 	options, err := parameterValidateMap("options", d)

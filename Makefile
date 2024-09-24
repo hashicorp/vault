@@ -2,7 +2,11 @@
 # Be sure to place this BEFORE `include` directives, if any.
 THIS_FILE := $(lastword $(MAKEFILE_LIST))
 
-TEST?=$$($(GO_CMD) list ./... | grep -v /vendor/ | grep -v /integ)
+MAIN_PACKAGES=$$($(GO_CMD) list ./... | grep -v vendor/ )
+SDK_PACKAGES=$$(cd $(CURDIR)/sdk && $(GO_CMD) list ./... | grep -v vendor/ )
+API_PACKAGES=$$(cd $(CURDIR)/api && $(GO_CMD) list ./... | grep -v vendor/ )
+ALL_PACKAGES=$(MAIN_PACKAGES) $(SDK_PACKAGES) $(API_PACKAGES)
+TEST=$$(echo $(ALL_PACKAGES) | grep -v integ/ )
 TEST_TIMEOUT?=45m
 EXTENDED_TEST_TIMEOUT=60m
 INTEG_TEST_TIMEOUT=120m
@@ -16,6 +20,12 @@ CGO_ENABLED?=0
 ifneq ($(FDB_ENABLED), )
 	CGO_ENABLED=1
 	BUILD_TAGS+=foundationdb
+endif
+
+# Set BUILD_MINIMAL to a non-empty value to build a minimal version of Vault with only core features.
+BUILD_MINIMAL ?=
+ifneq ($(strip $(BUILD_MINIMAL)),)
+	BUILD_TAGS+=minimal
 endif
 
 default: dev
@@ -154,14 +164,23 @@ protolint: prep check-tools-external
 # now run as a pre-commit hook (and there's little value in
 # making every build run the formatter), we've removed that
 # dependency.
-prep: check-go-version
+prep: check-go-version clean
 	@echo "==> Running go generate..."
-	@GOARCH= GOOS= $(GO_CMD) generate $$($(GO_CMD) list ./... | grep -v /vendor/)
+	@GOARCH= GOOS= $(GO_CMD) generate $(MAIN_PACKAGES)
+	@GOARCH= GOOS= cd api && $(GO_CMD) generate $(API_PACKAGES)
+	@GOARCH= GOOS= cd sdk && $(GO_CMD) generate $(SDK_PACKAGES)
+
+# Git doesn't allow us to store shared hooks in .git. Instead, we make sure they're up-to-date
+# whenever a make target is invoked.
+.PHONY: hooks
+hooks:
 	@if [ -d .git/hooks ]; then cp .hooks/* .git/hooks/; fi
+
+-include hooks # Make sure they're always up-to-date
 
 # bootstrap the build by generating any necessary code and downloading additional tools that may
 # be used by devs.
-bootstrap: prep tools
+bootstrap: tools prep
 
 # Note: if you have plugins in GOPATH you can update all of them via something like:
 # for i in $(ls | grep vault-plugin-); do cd $i; git remote update; git reset --hard origin/master; dep ensure -update; git add .; git commit; git push; cd ..; done
@@ -211,7 +230,10 @@ proto: check-tools-external
 	protoc-go-inject-tag -input=./helper/identity/types.pb.go
 	protoc-go-inject-tag -input=./helper/identity/mfa/types.pb.go
 
-fmt:
+importfmt: check-tools-external
+	find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs gosimports -w
+
+fmt: importfmt
 	find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs gofumpt -w
 
 fmtcheck: check-go-fmt
@@ -350,9 +372,13 @@ ci-get-version-package:
 ci-install-external-tools:
 	@$(CURDIR)/scripts/ci-helper.sh install-external-tools
 
-.PHONY: ci-prepare-legal
-ci-prepare-legal:
-	@$(CURDIR)/scripts/ci-helper.sh prepare-legal
+.PHONY: ci-prepare-ent-legal
+ci-prepare-ent-legal:
+	@$(CURDIR)/scripts/ci-helper.sh prepare-ent-legal
+
+.PHONY: ci-prepare-ce-legal
+ci-prepare-ce-legal:
+	@$(CURDIR)/scripts/ci-helper.sh prepare-ce-legal
 
 .PHONY: ci-update-external-tool-modules
 ci-update-external-tool-modules:
@@ -369,3 +395,11 @@ ci-copywriteheaders:
 .PHONY: all bin default prep test vet bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path packages build build-ci semgrep semgrep-ci vet-codechecker ci-vet-codechecker clean dev
 
 .NOTPARALLEL: ember-dist ember-dist-dev
+
+.PHONY: all-packages
+all-packages:
+	@echo $(ALL_PACKAGES) | tr ' ' '\n'
+
+.PHONY: clean
+clean:
+	@echo "==> Cleaning..."

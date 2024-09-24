@@ -14,6 +14,7 @@ export default class SyncAssociationModel extends Model {
   // destination related properties that are not serialized to payload
   @attr destinationName;
   @attr destinationType;
+  @attr subKey; // this property is added if a destination has 'secret-key' granularity
 
   @lazyCapabilities(
     apiPath`sys/sync/destinations/${'destinationType'}/${'destinationName'}/associations/set`,

@@ -4,7 +4,7 @@
  */
 
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { withConfig } from 'pki/decorators/check-issuers';
 import { hash } from 'rsvp';
 import { PKI_DEFAULT_EMPTY_STATE_MSG } from 'pki/routes/overview';
@@ -16,7 +16,7 @@ export default class ConfigurationIndexRoute extends Route {
   async fetchMountConfig(backend) {
     const mountConfig = await this.store.query('secret-engine', { path: backend });
     if (mountConfig) {
-      return mountConfig.get('firstObject');
+      return mountConfig[0];
     }
   }
 

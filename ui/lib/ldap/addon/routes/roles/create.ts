@@ -4,7 +4,7 @@
  */
 
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 
 import type Store from '@ember-data/store';
 import type SecretMountPath from 'vault/services/secret-mount-path';
@@ -36,8 +36,8 @@ export default class LdapRolesCreateRoute extends Route {
 
     controller.breadcrumbs = [
       { label: resolvedModel.backend, route: 'overview' },
-      { label: 'roles', route: 'roles' },
-      { label: 'create' },
+      { label: 'Roles', route: 'roles' },
+      { label: 'Create' },
     ];
   }
 }

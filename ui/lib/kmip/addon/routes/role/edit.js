@@ -4,14 +4,14 @@
  */
 
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 
 export default Route.extend({
   store: service(),
   secretMountPath: service(),
   pathHelp: service(),
   beforeModel() {
-    return this.pathHelp.getNewModel('kmip/role', this.secretMountPath.currentPath);
+    return this.pathHelp.hydrateModel('kmip/role', this.secretMountPath.currentPath);
   },
   model() {
     const params = this.paramsFor(this.routeName);

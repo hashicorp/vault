@@ -59,7 +59,7 @@ module('Integration | Component | kv | Page::List', function (hooks) {
     this.model.meta = META;
     this.backend = 'kv-engine';
     this.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.backend, route: 'list' },
     ];
     this.failedDirectoryQuery = false;
@@ -90,7 +90,7 @@ module('Integration | Component | kv | Page::List', function (hooks) {
 
     const popupSelector = `${PAGE.list.item('my-secret-0')} ${PAGE.popup}`;
     await click(popupSelector);
-    await click('[data-test-confirm-action-trigger]');
+    await click('[data-test-popup-metadata-delete]');
     await click('[data-test-confirm-button]');
     assert.dom(PAGE.list.item('my-secret-0')).doesNotExist('deleted the first record from the list');
   });

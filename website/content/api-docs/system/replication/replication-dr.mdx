@@ -36,22 +36,32 @@ primary, it will look something like:
 ```json
 {
   "data": {
-    "cluster_id": "d4095d41-3aee-8791-c421-9bc7f88f7c3e",
-    "known_secondaries": ["3"],
+    "cluster_id": "eef2a5ab-51e2-1c05-407c-8b4dc8d09ebf",
     "corrupted_merkle_tree": false,
-    "last_corruption_check_epoch": "1694456090",
-    "last_wal": 241,
-    "merkle_root": "56794a98e52598f35974024fba6691f047e772e9",
+    "known_secondaries": [
+      "4ca6b639-046b-5bb1-8043-6788ddf09121"
+    ],
+    "last_corruption_check_epoch": "-62135596800",
+    "last_dr_wal": 223,
+    "last_reindex_epoch": "0",
+    "last_wal": 223,
+    "merkle_root": "2494830f1a1c304829b5742a232d39b5457bce9a",
     "mode": "primary",
+    "primary_cluster_addr": "",
     "secondaries": [
       {
-        "api_address": "https://127.0.0.1:49264",
-        "cluster_address": "https://127.0.0.1:49267",
+        "api_address": "https://127.0.0.1:65531",
+        "clock_skew_ms": "0",
+        "cluster_address": "https://127.0.0.1:65534",
         "connection_status": "connected",
-        "last_heartbeat": "2020-06-10T15:40:47-07:00",
-        "node_id": "3"
+        "last_heartbeat": "2024-03-04T10:05:56-05:00",
+        "last_heartbeat_duration_ms": "0",
+        "node_id": "4ca6b639-046b-5bb1-8043-6788ddf09121",
+        "replication_primary_canary_age_ms": "696"
       }
-    ]
+    ],
+    "ssct_generation_counter": 0,
+    "state": "running"
   }
 }
 ```
@@ -64,21 +74,34 @@ secondary, it will look something like:
 ```json
 {
   "data": {
-    "cluster_id": "d4095d41-3aee-8791-c421-9bc7f88f7c3e",
-    "known_primary_cluster_addrs": ["https://127.0.0.1:8201"],
-    "last_remote_wal": 241,
-    "merkle_root": "56794a98e52598f35974024fba6691f047e772e9",
+    "cluster_id": "eef2a5ab-51e2-1c05-407c-8b4dc8d09ebf",
+    "connection_state": "ready",
+    "corrupted_merkle_tree": false,
+    "known_primary_cluster_addrs": [
+      "https://127.0.0.1:65524",
+      "https://127.0.0.1:65525",
+      "https://127.0.0.1:65526"
+    ],
+    "last_corruption_check_epoch": "-62135596800",
+    "last_reindex_epoch": "1709564746",
+    "last_remote_wal": 223,
+    "last_start": "2024-03-04T10:05:46-05:00",
+    "merkle_root": "2494830f1a1c304829b5742a232d39b5457bce9a",
     "mode": "secondary",
     "primaries": [
       {
-        "api_address": "https://127.0.0.1:49244",
-        "cluster_address": "https://127.0.0.1:8201",
+        "api_address": "https://127.0.0.1:65521",
+        "clock_skew_ms": "0",
+        "cluster_address": "https://127.0.0.1:65524",
         "connection_status": "connected",
-        "last_heartbeat": "2020-06-10T15:40:46-07:00"
+        "last_heartbeat": "2024-03-04T10:05:56-05:00",
+        "last_heartbeat_duration_ms": "0",
+        "replication_primary_canary_age_ms": "697"
       }
     ],
-    "primary_cluster_addr": "https://127.0.0.1:8201",
-    "secondary_id": "3",
+    "primary_cluster_addr": "https://127.0.0.1:65524",
+    "secondary_id": "4ca6b639-046b-5bb1-8043-6788ddf09121",
+    "ssct_generation_counter": 0,
     "state": "stream-wals"
   }
 }

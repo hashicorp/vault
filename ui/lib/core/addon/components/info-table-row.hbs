@@ -40,6 +40,9 @@
           @text="Copy"
           @isIconOnly={{true}}
           @textToCopy={{@value}}
+          @onError={{(fn
+            (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")
+          )}}
           class="transparent has-padding-xxs"
           data-test-copy-button={{@value}}
         />
@@ -94,6 +97,9 @@
                       @text="Copy"
                       @isIconOnly={{true}}
                       @textToCopy={{@tooltipText}}
+                      @onError={{(fn
+                        (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")
+                      )}}
                       class="transparent white-icon"
                       data-test-tooltip-copy={{@tooltipText}}
                     />

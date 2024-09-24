@@ -1,0 +1,45 @@
+diff --git a/index.js b/index.js
+index f051141e362679e1cc12f3dca924d8f6e7f5459b..63815c4c53412263de74fd4d779cfd198be87c8e 100644
+--- a/index.js
++++ b/index.js
+@@ -17,6 +17,9 @@ var HOT_COUNT = 800,
+ var INFINITY = 1 / 0,
+     MAX_SAFE_INTEGER = 9007199254740991;
+ 
++/** Error message constants. */
++var INVALID_TEMPL_VAR_ERROR_TEXT = 'Invalid `variable` option passed into `_.template`';
++
+ /** `Object#toString` result references. */
+ var argsTag = '[object Arguments]',
+     arrayTag = '[object Array]',
+@@ -1343,6 +1346,18 @@ function keysIn(object) {
+   return isArrayLike(object) ? arrayLikeKeys(object, true) : baseKeysIn(object);
+ }
+ 
++/**
++   * Used to validate the `validate` option in `_.template` variable.
++   *
++   * Forbids characters which could potentially change the meaning of the function argument definition:
++   * - "()," (modification of function parameters)
++   * - "=" (default value)
++   * - "[]{}" (destructuring of function parameters)
++   * - "/" (beginning of a comment)
++   * - whitespace
++   */
++var reForbiddenIdentifierChars = /[()=,{}\[\]\/\s]/;
++
+ /**
+  * Creates a compiled template function that can interpolate data properties
+  * in "interpolate" delimiters, HTML-escape interpolated data properties in
+@@ -1522,6 +1537,11 @@ function template(string, options, guard) {
+   if (!variable) {
+     source = 'with (obj) {\n' + source + '\n}\n';
+   }
++  // Throw an error if a forbidden character was found in `variable`, to prevent
++  // potential command injection attacks.
++  else if (reForbiddenIdentifierChars.test(variable)) {
++    throw new Error(INVALID_TEMPL_VAR_ERROR_TEXT);
++  }
+   // Cleanup code by stripping empty strings.
+   source = (isEvaluating ? source.replace(reEmptyStringLeading, '') : source)
+     .replace(reEmptyStringMiddle, '$1')

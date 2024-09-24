@@ -18,7 +18,7 @@ module('Integration | Component | client count config', function (hooks) {
     this.router = this.owner.lookup('service:router');
     this.transitionStub = sinon.stub(this.router, 'transitionTo');
     const store = this.owner.lookup('service:store');
-    this.createModel = (enabled = 'enable', reporting_enabled = false, minimum_retention_months = 24) => {
+    this.createModel = (enabled = 'enable', reporting_enabled = false, minimum_retention_months = 48) => {
       store.pushPayload('clients/config', {
         modelName: 'clients/config',
         id: 'foo',
@@ -26,7 +26,7 @@ module('Integration | Component | client count config', function (hooks) {
           enabled,
           reporting_enabled,
           minimum_retention_months,
-          retention_months: 24,
+          retention_months: 49,
         },
       });
       this.model = store.peekRecord('clients/config', 'foo');
@@ -46,18 +46,18 @@ module('Integration | Component | client count config', function (hooks) {
       'Enabled value matches model'
     );
     assert.ok(
-      find('[data-test-row-value="Retention period"]').textContent.includes('24'),
+      find('[data-test-row-value="Retention period"]').textContent.includes('49'),
       'Retention period value matches model'
     );
   });
 
   test('it should function in edit mode when reporting is disabled', async function (assert) {
-    assert.expect(12);
-
+    assert.expect(13);
+    const retentionMonths = 60;
     this.server.put('/sys/internal/counters/config', (schema, req) => {
       const { enabled, retention_months } = JSON.parse(req.requestBody);
-      const expected = { enabled: 'enable', retention_months: 24 };
-      assert.deepEqual(expected, { enabled, retention_months }, 'Correct data sent in PUT request');
+      const expected = { enabled: 'enable', retention_months: retentionMonths };
+      assert.deepEqual({ enabled, retention_months }, expected, 'Correct data sent in PUT request (1)');
       return {};
     });
 
@@ -71,19 +71,27 @@ module('Integration | Component | client count config', function (hooks) {
     assert
       .dom('label[for="enabled"]')
       .hasText('Data collection is off', 'Correct label renders when data collection is off');
-    assert.dom('[data-test-input="retentionMonths"]').hasValue('24', 'Retention months render');
+    assert.dom('[data-test-input="retentionMonths"]').hasValue('49', 'Retention months render');
 
     await click('[data-test-input="enabled"]');
-    await fillIn('[data-test-input="retentionMonths"]', -3);
+    await fillIn('[data-test-input="retentionMonths"]', 20);
     await click('[data-test-clients-config-save]');
     assert
       .dom('[data-test-inline-error-message]')
       .hasText(
-        'Retention period must be greater than or equal to 24.',
-        'Validation error shows for incorrect retention period'
+        'Retention period must be greater than or equal to 48.',
+        'Validation error shows for min retention period'
+      );
+    await fillIn('[data-test-input="retentionMonths"]', 90);
+    await click('[data-test-clients-config-save]');
+    assert
+      .dom('[data-test-inline-error-message]')
+      .hasText(
+        'Retention period must be less than or equal to 60.',
+        'Validation error shows for max retention period'
       );
 
-    await fillIn('[data-test-input="retentionMonths"]', 24);
+    await fillIn('[data-test-input="retentionMonths"]', retentionMonths);
     await click('[data-test-clients-config-save]');
     assert
       .dom('[data-test-clients-config-modal="title"]')
@@ -108,13 +116,13 @@ module('Integration | Component | client count config', function (hooks) {
     assert.dom('[data-test-clients-config-modal]').doesNotExist('Modal is hidden on cancel');
   });
 
-  test('it should function in edit mode when reporting is enabled', async function (assert) {
-    assert.expect(6);
+  test('it should be hidden in edit mode when reporting is enabled', async function (assert) {
+    assert.expect(4);
 
     this.server.put('/sys/internal/counters/config', (schema, req) => {
       const { enabled, retention_months } = JSON.parse(req.requestBody);
       const expected = { enabled: 'enable', retention_months: 48 };
-      assert.deepEqual(expected, { enabled, retention_months }, 'Correct data sent in PUT request');
+      assert.deepEqual({ enabled, retention_months }, expected, 'Correct data sent in PUT request (2)');
       return {};
     });
 
@@ -124,14 +132,8 @@ module('Integration | Component | client count config', function (hooks) {
       <Clients::Config @model={{this.model}} @mode="edit" />
     `);
 
-    assert.dom('[data-test-input="enabled"]').isChecked('Data collection input is checked');
-    assert
-      .dom('[data-test-input="enabled"]')
-      .isDisabled('Data collection input disabled when reporting is enabled');
-    assert
-      .dom('label[for="enabled"]')
-      .hasText('Data collection is on', 'Correct label renders when data collection is on');
-    assert.dom('[data-test-input="retentionMonths"]').hasValue('24', 'Retention months render');
+    assert.dom('[data-test-input="enabled"]').doesNotExist('Data collection input not shown ');
+    assert.dom('[data-test-input="retentionMonths"]').hasValue('49', 'Retention months render');
 
     await fillIn('[data-test-input="retentionMonths"]', 5);
     await click('[data-test-clients-config-save]');
@@ -151,8 +153,8 @@ module('Integration | Component | client count config', function (hooks) {
 
     this.server.put('/sys/internal/counters/config', (schema, req) => {
       const { enabled, retention_months } = JSON.parse(req.requestBody);
-      const expected = { enabled: 'enable', retention_months: 24 };
-      assert.deepEqual(expected, { enabled, retention_months }, 'Correct data sent in PUT request');
+      const expected = { enabled: 'enable', retention_months: 48 };
+      assert.deepEqual({ enabled, retention_months }, expected, 'Correct data sent in PUT request (3)');
       return {};
     });
 
@@ -161,7 +163,7 @@ module('Integration | Component | client count config', function (hooks) {
     await render(hbs`
       <Clients::Config @model={{this.model}} @mode="edit" />
     `);
-    await fillIn('[data-test-input="retentionMonths"]', 24);
+    await fillIn('[data-test-input="retentionMonths"]', 48);
     await click('[data-test-clients-config-save]');
   });
 });

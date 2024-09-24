@@ -33,7 +33,7 @@ module('Unit | Adapter | ldap/role', function (hooks) {
 
     this.models = await this.store.query('ldap/role', { backend: 'ldap-test' });
 
-    const model = this.models.firstObject;
+    const model = this.models[0];
     assert.strictEqual(this.models.length, 2, 'Returns responses from both endpoints');
     assert.strictEqual(model.backend, 'ldap-test', 'Backend value is set on records returned from query');
     // sorted alphabetically by name so dynamic should be first

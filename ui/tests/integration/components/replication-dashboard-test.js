@@ -6,7 +6,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
-import { assign } from '@ember/polyfills';
 import hbs from 'htmlbars-inline-precompile';
 
 const REPLICATION_DETAILS = {
@@ -116,7 +115,7 @@ module('Integration | Component | replication-dashboard', function (hooks) {
         IS_REINDEXING.reindex_building_progress,
         'shows the reindexing progress inside the alert banner'
       );
-    const reindexingInProgress = assign({}, IS_REINDEXING, { reindex_building_progress: 152721 });
+    const reindexingInProgress = { ...IS_REINDEXING, reindex_building_progress: 152721 };
     this.set('replicationDetails', reindexingInProgress);
     assert
       .dom('[data-test-reindexing-progress]')

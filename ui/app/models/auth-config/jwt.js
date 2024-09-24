@@ -10,7 +10,6 @@ import fieldToAttrs from 'vault/utils/field-to-attrs';
 import { combineFieldGroups } from 'vault/utils/openapi-to-attrs';
 
 export default AuthConfig.extend({
-  useOpenAPI: true,
   oidcDiscoveryUrl: attr('string', {
     label: 'OIDC discovery URL',
     helpText:
@@ -39,6 +38,11 @@ export default AuthConfig.extend({
 
   jwksUrl: attr('string', {
     label: 'JWKS URL',
+  }),
+
+  jwksPairs: attr({
+    label: 'JWKS pairs',
+    // This attribute is not shown in the UI
   }),
 
   oidcResponseMode: attr('string', {

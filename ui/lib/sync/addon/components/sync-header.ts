@@ -4,9 +4,9 @@
  */
 
 import Component from '@glimmer/component';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 
-import type VersionService from 'vault/services/version';
+import type FlagsService from 'vault/services/flags';
 import type { Breadcrumb } from 'vault/vault/app-types';
 
 interface Args {
@@ -16,5 +16,5 @@ interface Args {
 }
 
 export default class SyncHeaderComponent extends Component<Args> {
-  @service declare readonly version: VersionService;
+  @service declare readonly flags: FlagsService;
 }

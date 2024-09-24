@@ -49,8 +49,11 @@ export default class KvSecretMetadataModel extends Model {
   })
   deleteVersionAfter;
 
+  // the API returns custom_metadata: null if empty but because the attr is an 'object' ember data transforms it to an empty object.
+  // this is important because we rely on the empty object as a truthy value in template conditionals
   @attr('object', {
     editType: 'kv',
+    isSectionHeader: true,
     subText: 'An optional set of informational key-value pairs that will be stored with all secret versions.',
   })
   customMetadata;
@@ -66,11 +69,6 @@ export default class KvSecretMetadataModel extends Model {
   get pathIsDirectory() {
     // ex: beep/
     return keyIsFolder(this.path);
-  }
-
-  // cannot use isDeleted due to ember property conflict
-  get isSecretDeleted() {
-    return isDeleted(this.deletionTime);
   }
 
   // turns version object into an array for version dropdown menu
@@ -92,6 +90,7 @@ export default class KvSecretMetadataModel extends Model {
     return {
       state,
       isDeactivated: state !== 'created',
+      deletionTime: data.deletion_time,
     };
   }
 

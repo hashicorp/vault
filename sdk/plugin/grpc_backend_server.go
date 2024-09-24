@@ -9,9 +9,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/hashicorp/go-plugin"
-
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
@@ -198,6 +197,7 @@ func (b *backendGRPCPluginServer) SpecialPaths(ctx context.Context, args *pb.Emp
 			SealWrapStorage:       paths.SealWrapStorage,
 			WriteForwardedStorage: paths.WriteForwardedStorage,
 			Binary:                paths.Binary,
+			Limited:               paths.Limited,
 		},
 	}, nil
 }

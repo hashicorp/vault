@@ -5,6 +5,7 @@ package pluginutil
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 
@@ -16,6 +17,9 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"google.golang.org/grpc"
 )
+
+// ErrPluginNotFound is returned when a plugin does not have a pinned version.
+var ErrPinnedVersionNotFound = errors.New("pinned version not found")
 
 // Looker defines the plugin Lookup function that looks into the plugin catalog
 // for available plugins and returns a PluginRunner
@@ -65,6 +69,7 @@ type PluginRunner struct {
 	Builtin        bool                        `json:"builtin" structs:"builtin"`
 	BuiltinFactory func() (interface{}, error) `json:"-" structs:"-"`
 	RuntimeConfig  *prutil.PluginRuntimeConfig `json:"-" structs:"-"`
+	Tmpdir         string                      `json:"-" structs:"-"`
 }
 
 // BinaryReference returns either the OCI image reference if it's a container
@@ -142,6 +147,12 @@ type VersionedPlugin struct {
 
 	// Pre-parsed semver struct of the Version field
 	SemanticVersion *version.Version `json:"-"`
+}
+
+type PinnedVersion struct {
+	Name    string            `json:"name"`
+	Type    consts.PluginType `json:"type"`
+	Version string            `json:"version"`
 }
 
 // CtxCancelIfCanceled takes a context cancel func and a context. If the context is

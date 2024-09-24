@@ -11,22 +11,20 @@ import { pluralize } from 'ember-inflector';
  * `ListView` components are used in conjunction with `ListItem` for rendering a list.
  *
  * @example
- * ```js
- * <ListView @items={{model}} @itemNoun="role" @paginationRouteName="scope.roles" as |list|>
+ * <ListView @items={{hash meta=(hash currentPage=1 total=1 pageSize=1)}} @itemNoun="role" @paginationRouteName="vault" as |list|>
  *   {{#if list.empty}}
  *     <list.empty @title="No roles here" />
  *   {{else}}
  *     <div>
- *       {{list.item.id}}
+ *       my item
  *     </div>
  *   {{/if}}
  * </ListView>
- * ```
  *
  * @param {array} [items=null] - An Ember array of items (objects) to render as a list. Because it's an Ember array it has properties like length an meta on it.
  * @param {string} [itemNoun=item] - A noun to use in the empty state of message and title.
  * @param {string} [message=null] - The message to display within the banner.
- * @param {string} [paginationRouteName=''] - The link used in the ListPagination component.
+ * @param {string} [paginationRouteName] - The link used in the ListPagination component.
  * @yields {object} Yields the current item in the loop.
  * @yields If there are no objects in items, then `empty` will be yielded - this is an instance of
  * the EmptyState component.

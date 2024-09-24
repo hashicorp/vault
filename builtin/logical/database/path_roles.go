@@ -217,6 +217,11 @@ func staticFields() map[string]*framework.FieldSchema {
 	this functionality. See the plugin's API page for more information on
 	support and formatting for this parameter.`,
 		},
+		"self_managed_password": {
+			Type: framework.TypeString,
+			Description: `Used to connect to a self-managed static account. Must
+	be provided by the user when root credentials are not provided.`,
+		},
 	}
 	return fields
 }
@@ -238,11 +243,12 @@ func (b *databaseBackend) pathStaticRoleExistenceCheck(ctx context.Context, req 
 }
 
 func (b *databaseBackend) pathRoleDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	err := req.Storage.Delete(ctx, databaseRolePath+data.Get("name").(string))
+	name := data.Get("name").(string)
+	err := req.Storage.Delete(ctx, databaseRolePath+name)
 	if err != nil {
 		return nil, err
 	}
-
+	b.dbEvent(ctx, "role-delete", req.Path, name, true)
 	return nil, nil
 }
 
@@ -283,6 +289,7 @@ func (b *databaseBackend) pathStaticRoleDelete(ctx context.Context, req *logical
 		}
 	}
 
+	b.dbEvent(ctx, "static-role-delete", req.Path, name, true)
 	return nil, merr.ErrorOrNil()
 }
 
@@ -498,6 +505,7 @@ func (b *databaseBackend) pathRoleCreateUpdate(ctx context.Context, req *logical
 		return nil, err
 	}
 
+	b.dbEvent(ctx, fmt.Sprintf("role-%s", req.Operation), req.Path, name, true)
 	return nil, nil
 }
 
@@ -625,6 +633,10 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		}
 	}
 
+	if smPasswordRaw, ok := data.GetOk("self_managed_password"); ok && createRole {
+		role.StaticAccount.SelfManagedPassword = smPasswordRaw.(string)
+	}
+
 	var credentialConfig map[string]string
 	if raw, ok := data.GetOk("credential_config"); ok {
 		credentialConfig = raw.(map[string]string)
@@ -696,7 +708,7 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 	if err := b.pushItem(item); err != nil {
 		return nil, err
 	}
-
+	b.dbEvent(ctx, fmt.Sprintf("static-role-%s", req.Operation), req.Path, name, true)
 	return response, nil
 }
 
@@ -781,6 +793,12 @@ func (r *roleEntry) setCredentialConfig(config map[string]string) error {
 type staticAccount struct {
 	// Username to create or assume management for static accounts
 	Username string `json:"username"`
+
+	// SelfManagedPassword is used to make a dedicated connection to the DB
+	// user specified by Username. The credentials will leverage the existing
+	// static role mechanisms to handle password rotations. Required when root
+	// credentials are not provided.
+	SelfManagedPassword string `json:"self_managed_password"`
 
 	// Password is the current password credential for static accounts. As an input,
 	// this is used/required when trying to assume management of an existing static

@@ -10,19 +10,20 @@
     <Chevron />
   {{/if}}
   <input
-    aria-label="command input"
+    aria-label="web R.E.P.L."
+    aria-describedby="namespace-reminder"
     onkeyup={{action "handleKeyUp"}}
     value={{this.value}}
     autocomplete="off"
     spellcheck="false"
+    id="console-input"
   />
   <Hds::Button
     class="hds-side-nav__icon-button"
     {{on "click" (action "fullscreen")}}
-    {{hds-tooltip (if this.isFullscreen "minimize" "maximize")}}
-    data-test-tool-tip-trigger
+    data-test-dismiss-console-button
     @icon={{if this.isFullscreen "minimize" "maximize"}}
-    @text={{if this.isFullscreen "Minimize" "Maximize"}}
+    @text={{if this.isFullscreen "Minimize window" "Maximize window"}}
     @isIconOnly={{true}}
   />
 </div>

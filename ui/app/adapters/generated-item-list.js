@@ -3,10 +3,9 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { assign } from '@ember/polyfills';
 import ApplicationAdapter from './application';
 import { task } from 'ember-concurrency';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 
 export default ApplicationAdapter.extend({
   store: service(),
@@ -34,7 +33,7 @@ export default ApplicationAdapter.extend({
         id,
         method: id,
       };
-      return assign({}, resp, data);
+      return { ...resp, ...data };
     });
   }),
 

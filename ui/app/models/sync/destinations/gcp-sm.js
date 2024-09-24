@@ -6,11 +6,32 @@
 import SyncDestinationModel from '../destination';
 import { attr } from '@ember-data/model';
 import { withFormFields } from 'vault/decorators/model-form-fields';
-
-const displayFields = ['name', 'credentials'];
-const formFieldGroups = [{ default: ['name'] }, { Credentials: ['credentials'] }];
+// displayFields are used on the destination details view
+const displayFields = [
+  // connection details
+  'name',
+  'projectId',
+  'credentials',
+  // vault sync config options
+  'granularity',
+  'secretNameTemplate',
+  'customTags',
+];
+// formFieldGroups are used on the create-edit destination view
+const formFieldGroups = [
+  { default: ['name', 'projectId'] },
+  { Credentials: ['credentials'] },
+  { 'Advanced configuration': ['granularity', 'secretNameTemplate', 'customTags'] },
+];
 @withFormFields(displayFields, formFieldGroups)
 export default class SyncDestinationsGoogleCloudSecretManagerModel extends SyncDestinationModel {
+  @attr('string', {
+    label: 'Project ID',
+    subText:
+      'The target project to manage secrets in. If set, overrides the project derived from the service account JSON credentials or application default credentials.',
+  })
+  projectId;
+
   @attr('string', {
     label: 'JSON credentials',
     subText:
@@ -18,7 +39,12 @@ export default class SyncDestinationsGoogleCloudSecretManagerModel extends SyncD
     editType: 'file',
     docLink: '/vault/docs/secrets/gcp#authentication',
   })
-  credentials; // obfuscated, never returned by API
+  credentials; // obfuscated, never returned by API. Masking handled by EnableInput component
 
-  // TODO - confirm if project_id is going to be added to READ response (not editable)
+  @attr('object', {
+    subText:
+      'An optional set of informational key-value pairs added as additional metadata on secrets synced to this destination. Custom tags are merged with built-in tags.',
+    editType: 'kv',
+  })
+  customTags;
 }

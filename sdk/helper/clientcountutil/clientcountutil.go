@@ -267,7 +267,10 @@ func (d *ActivityLogDataGenerator) Segment(opts ...SegmentOption) *ActivityLogDa
 }
 
 // ToJSON returns the JSON representation of the data
-func (d *ActivityLogDataGenerator) ToJSON() ([]byte, error) {
+func (d *ActivityLogDataGenerator) ToJSON(writeOptions ...generation.WriteOptions) ([]byte, error) {
+	if len(writeOptions) > 0 {
+		d.data.Write = writeOptions
+	}
 	return protojson.Marshal(d.data)
 }
 

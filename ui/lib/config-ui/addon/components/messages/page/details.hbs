@@ -1,0 +1,60 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<Messages::TabPageHeader
+  @authenticated={{@message.authenticated}}
+  @pageTitle={{@message.title}}
+  @breadcrumbs={{@breadcrumbs}}
+/>
+
+<Toolbar>
+  <ToolbarActions aria-label="message delete and edit">
+    {{#if @message.canDeleteCustomMessages}}
+      <ConfirmAction
+        class="toolbar-button"
+        @buttonColor="secondary"
+        @onConfirmAction={{this.deleteMessage}}
+        @confirmTitle="Are you sure?"
+        @confirmMessage="This will delete this message permanently. You cannot undo this action."
+        @buttonText="Delete message"
+        data-test-confirm-action="Delete message"
+      />
+      <div class="toolbar-separator"></div>
+    {{/if}}
+    {{#if @message.canEditCustomMessages}}
+      <LinkTo class="toolbar-link" @route="messages.message.edit" @model={{@message.id}} data-test-link="edit">
+        Edit message
+        <Icon @name="chevron-right" />
+      </LinkTo>
+    {{/if}}
+  </ToolbarActions>
+</Toolbar>
+
+{{#each @message.allFields as |attr|}}
+  {{#if (or (eq attr.name "endTime") (eq attr.name "startTime"))}}
+    {{! if the attr is an endTime and is falsy, we want to show a 'Never' text value }}
+    <InfoTableRow
+      @label={{capitalize (humanize (dasherize attr.name))}}
+      @value={{if
+        (and (eq attr.name "endTime") (not (get @message attr.name)))
+        "Never"
+        (date-format (get @message attr.name) "MMM d, yyyy hh:mm aaa" withTimeZone=true)
+      }}
+    />
+  {{else if (eq attr.name "link")}}
+    {{#if (is-empty-value @message.link)}}
+      <InfoTableRow @label="Link" @value="None" />
+    {{else}}
+      {{#each-in @message.link as |title href|}}
+        <InfoTableRow @label="Link" @value={{title}}>
+          <Hds::Link::Inline @icon="external-link" @href={{href}} data-test-link="message link">{{title}}</Hds::Link::Inline>
+        </InfoTableRow>
+      {{/each-in}}
+    {{/if}}
+  {{else}}
+    <InfoTableRow @label={{capitalize (humanize (dasherize attr.name))}} @value={{get @message attr.name}} />
+  {{/if}}
+
+{{/each}}

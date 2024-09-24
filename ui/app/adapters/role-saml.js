@@ -4,7 +4,7 @@
  */
 
 import ApplicationAdapter from './application';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { v4 as uuidv4 } from 'uuid';
 

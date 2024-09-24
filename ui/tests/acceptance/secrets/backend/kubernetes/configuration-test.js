@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import kubernetesScenario from 'vault/mirage/scenarios/kubernetes';
-import ENV from 'vault/config/environment';
+import kubernetesHandlers from 'vault/mirage/handlers/kubernetes';
 import authPage from 'vault/tests/pages/auth';
 import { visit, click, currentRouteName } from '@ember/test-helpers';
 import { Response } from 'miragejs';
@@ -16,11 +16,8 @@ module('Acceptance | kubernetes | configuration', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.before(function () {
-    ENV['ember-cli-mirage'].handler = 'kubernetes';
-  });
-
   hooks.beforeEach(function () {
+    kubernetesHandlers(this.server);
     kubernetesScenario(this.server);
     this.visitConfiguration = () => {
       return visit('/vault/secrets/kubernetes/kubernetes/configuration');
@@ -29,10 +26,6 @@ module('Acceptance | kubernetes | configuration', function (hooks) {
       assert.strictEqual(currentRouteName(), `vault.cluster.secrets.backend.kubernetes.${route}`, message);
     };
     return authPage.login();
-  });
-
-  hooks.after(function () {
-    ENV['ember-cli-mirage'].handler = null;
   });
 
   test('it should transition to configure page on Edit Configuration click from toolbar', async function (assert) {

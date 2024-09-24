@@ -16,7 +16,7 @@
     {{else}}
       <ToolbarLink
         @route="mode.secondaries.config-create"
-        @params={{this.model.config.id}}
+        @model={{this.model.config.id}}
         data-test-replication-link="create-mount-config"
       >
         Create config

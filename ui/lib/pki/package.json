@@ -5,9 +5,13 @@
     "ember-engine"
   ],
   "dependencies": {
+    "date-fns": "*",
+    "ember-basic-dropdown": "*",
     "ember-cli-babel": "*",
     "ember-cli-htmlbars": "*",
     "ember-cli-typescript": "*",
+    "ember-concurrency": "*",
+    "ember-auto-import": "*",
     "@hashicorp/design-system-components": "*",
     "@types/ember": "latest",
     "@types/ember-data": "latest",

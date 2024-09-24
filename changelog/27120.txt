@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix KVv2 cursor jumping inside json editor after initial input.
+```

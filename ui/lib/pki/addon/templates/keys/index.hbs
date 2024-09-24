@@ -8,9 +8,10 @@
 <Page::PkiKeyList
   @keyModels={{this.model.keyModels}}
   @mountPoint={{this.mountPoint}}
-  @canImportKey={{this.model.keyModels.firstObject.canImportKey}}
-  @canGenerateKey={{this.model.keyModels.firstObject.canGenerateKey}}
-  @canRead={{this.model.keyModels.firstObject.canRead}}
-  @canEdit={{this.model.keyModels.firstObject.canEdit}}
+  @backend={{this.model.parentModel.id}}
+  @canImportKey={{(get (get this.model.keyModels 0) "canImportKey")}}
+  @canGenerateKey={{(get (get this.model.keyModels 0) "canGenerateKey")}}
+  @canRead={{(get (get this.model.keyModels 0) "canRead")}}
+  @canEdit={{(get (get this.model.keyModels 0) "canEdit")}}
   @hasConfig={{this.model.hasConfig}}
 />

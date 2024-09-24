@@ -6,7 +6,7 @@
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
 /**
  * @module DashboardQuickActionsCard
@@ -49,7 +49,7 @@ export default class DashboardQuickActionsCard extends Component {
           subText: 'Path of the secret you want to read.',
           buttonText: 'Read secrets',
           model: 'kv/metadata',
-          route: 'vault.cluster.secrets.backend.kv.secret.details',
+          route: 'vault.cluster.secrets.backend.kv.secret.index',
           nameKey: 'path',
           queryObject: { pathToSecret: '', backend: this.selectedEngine.id },
           objectKeys: ['path', 'id'],
@@ -149,7 +149,7 @@ export default class DashboardQuickActionsCard extends Component {
       const path = this.paramValue.path || this.paramValue;
       route = pathIsDirectory(path)
         ? 'vault.cluster.secrets.backend.kv.list-directory'
-        : 'vault.cluster.secrets.backend.kv.secret.details';
+        : 'vault.cluster.secrets.backend.kv.secret.index';
       param = path;
     }
 

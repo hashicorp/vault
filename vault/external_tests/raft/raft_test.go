@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"strings"
 	"sync"
@@ -21,7 +20,6 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
-	"github.com/hashicorp/vault/helper/benchhelpers"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
@@ -66,6 +64,7 @@ func raftClusterBuilder(t testing.TB, ropts *RaftClusterOpts) (*vault.CoreConfig
 		DisableAutopilot:               !ropts.EnableAutopilot,
 		EnableResponseHeaderRaftNodeID: ropts.EnableResponseHeaderRaftNodeID,
 		Seal:                           ropts.Seal,
+		EnableRaw:                      true,
 	}
 
 	opts := vault.TestClusterOptions{
@@ -105,8 +104,8 @@ func raftClusterBuilder(t testing.TB, ropts *RaftClusterOpts) (*vault.CoreConfig
 
 func raftCluster(t testing.TB, ropts *RaftClusterOpts) (*vault.TestCluster, *vault.TestClusterOptions) {
 	conf, opts := raftClusterBuilder(t, ropts)
-	cluster := vault.NewTestCluster(benchhelpers.TBtoT(t), conf, &opts)
-	vault.TestWaitActive(benchhelpers.TBtoT(t), cluster.Cores[0].Core)
+	cluster := vault.NewTestCluster(t, conf, &opts)
+	vault.TestWaitActive(t, cluster.Cores[0].Core)
 	return cluster, &opts
 }
 
@@ -518,7 +517,7 @@ func TestRaft_SnapshotAPI_MidstreamFailure(t *testing.T) {
 
 	var readErr error
 	go func() {
-		snap, readErr = ioutil.ReadAll(r)
+		snap, readErr = io.ReadAll(r)
 		wg.Done()
 	}()
 
@@ -635,7 +634,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Backward(t *testing.T) {
 			}
 			defer resp.Body.Close()
 
-			snap, err := ioutil.ReadAll(resp.Body)
+			snap, err := io.ReadAll(resp.Body)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -838,7 +837,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			snap, err := ioutil.ReadAll(resp.Body)
+			snap, err := io.ReadAll(resp.Body)
 			resp.Body.Close()
 			if err != nil {
 				t.Fatal(err)
@@ -895,7 +894,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			snap2, err := ioutil.ReadAll(resp.Body)
+			snap2, err := io.ReadAll(resp.Body)
 			resp.Body.Close()
 			if err != nil {
 				t.Fatal(err)
@@ -1025,7 +1024,7 @@ func TestRaft_SnapshotAPI_DifferentCluster(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	snap, err := ioutil.ReadAll(resp.Body)
+	snap, err := io.ReadAll(resp.Body)
 	resp.Body.Close()
 	if err != nil {
 		t.Fatal(err)

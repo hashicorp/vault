@@ -9,7 +9,8 @@ import PromiseProxyMixin from '@ember/object/promise-proxy-mixin';
 import { methods } from 'vault/helpers/mountable-auth-methods';
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { isPresent } from '@ember/utils';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
+import { addManyToArray, addToArray } from 'vault/helpers/add-to-array';
 
 const validations = {
   name: [{ type: 'presence', message: 'Name is required' }],
@@ -52,7 +53,7 @@ export default class MfaLoginEnforcementModel extends Model {
 
   async prepareTargets() {
     let authMethods;
-    const targets = [];
+    let targets = [];
 
     if (this.auth_method_accessors.length || this.auth_method_types.length) {
       // fetch all auth methods and lookup by accessor to get mount path and type
@@ -68,7 +69,8 @@ export default class MfaLoginEnforcementModel extends Model {
       const selectedAuthMethods = authMethods.filter((model) => {
         return this.auth_method_accessors.includes(model.accessor);
       });
-      targets.addObjects(
+      targets = addManyToArray(
+        targets,
         selectedAuthMethods.map((method) => ({
           icon: this.iconForMount(method.type),
           link: 'vault.cluster.access.method',
@@ -82,7 +84,7 @@ export default class MfaLoginEnforcementModel extends Model {
     this.auth_method_types.forEach((type) => {
       const icon = this.iconForMount(type);
       const mountCount = authMethods.filterBy('type', type).length;
-      targets.addObject({
+      targets = addToArray(targets, {
         key: 'auth_method_types',
         icon,
         title: type,
@@ -92,7 +94,7 @@ export default class MfaLoginEnforcementModel extends Model {
 
     for (const key of ['identity_entities', 'identity_groups']) {
       (await this[key]).forEach((model) => {
-        targets.addObject({
+        targets = addToArray(targets, {
           key,
           icon: 'user',
           link: 'vault.cluster.access.identity.show',
@@ -108,7 +110,7 @@ export default class MfaLoginEnforcementModel extends Model {
 
   iconForMount(type) {
     const mountableMethods = methods();
-    const mount = mountableMethods.findBy('type', type);
+    const mount = mountableMethods.find((method) => method.type === type);
     return mount ? mount.glyph || mount.type : 'token';
   }
 }

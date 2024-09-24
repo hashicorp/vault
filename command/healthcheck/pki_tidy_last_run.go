@@ -7,9 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/logical"
-
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 type TidyLastRun struct {

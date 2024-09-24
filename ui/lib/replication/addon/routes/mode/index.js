@@ -6,9 +6,10 @@
 import { setProperties } from '@ember/object';
 import { hash } from 'rsvp';
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 
 export default Route.extend({
+  router: service(),
   store: service(),
   model() {
     const replicationMode = this.paramsFor('mode').replication_mode;
@@ -17,10 +18,10 @@ export default Route.extend({
       cluster: this.modelFor('mode'),
       canAddSecondary: this.store
         .findRecord('capabilities', `sys/replication/${replicationMode}/primary/secondary-token`)
-        .then((c) => c.get('canUpdate')),
+        .then((c) => c.canUpdate),
       canRevokeSecondary: this.store
         .findRecord('capabilities', `sys/replication/${replicationMode}/primary/revoke-secondary`)
-        .then((c) => c.get('canUpdate')),
+        .then((c) => c.canUpdate),
     }).then(({ cluster, canAddSecondary, canRevokeSecondary }) => {
       setProperties(cluster, {
         canRevokeSecondary,
@@ -29,14 +30,12 @@ export default Route.extend({
       return cluster;
     });
   },
+
   afterModel(model) {
     const replicationMode = this.paramsFor('mode').replication_mode;
-    if (
-      !model.get(`${replicationMode}.isPrimary`) ||
-      model.get(`${replicationMode}.replicationDisabled`) ||
-      model.get(`${replicationMode}.replicationUnsupported`)
-    ) {
-      return this.transitionTo('mode', replicationMode);
+    const cluster = model[replicationMode];
+    if (!cluster.isPrimary || cluster.replicationDisabled || cluster.replicationUnsupported) {
+      return this.router.transitionTo('vault.cluster.replication.mode', replicationMode);
     }
   },
 });

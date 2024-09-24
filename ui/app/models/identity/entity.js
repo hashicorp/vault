@@ -23,6 +23,7 @@ export default IdentityModel.extend({
   mergedEntityIds: attr(),
   metadata: attr({
     editType: 'kv',
+    isSectionHeader: true,
   }),
   policies: attr({
     editType: 'yield',

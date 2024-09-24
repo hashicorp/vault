@@ -9,8 +9,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/go-secure-stdlib/parseutil"
-
 	monitoring "cloud.google.com/go/monitoring/apiv3"
 	"github.com/armon/go-metrics"
 	"github.com/armon/go-metrics/circonus"
@@ -20,9 +18,11 @@ import (
 	stackdrivervault "github.com/google/go-metrics-stackdriver/vault"
 	"github.com/hashicorp/cli"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/helper/metricsutil"
+	"github.com/hashicorp/vault/sdk/helper/metricregistry"
 	"google.golang.org/api/option"
 )
 
@@ -289,6 +289,10 @@ func SetupTelemetry(opts *SetupTelemetryOpts) (*metrics.InmemSink, *metricsutil.
 		prometheusOpts := prometheus.PrometheusOpts{
 			Expiration: opts.Config.PrometheusRetentionTime,
 		}
+
+		// Merge in explicit metric definitions so Prometheus always reports those
+		// metrics.
+		metricregistry.MergeDefinitions(&prometheusOpts)
 
 		sink, err := prometheus.NewPrometheusSinkFrom(prometheusOpts)
 		if err != nil {

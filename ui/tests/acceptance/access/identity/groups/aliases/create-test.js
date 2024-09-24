@@ -3,11 +3,12 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { module, skip, test } from 'qunit';
+import { module, test } from 'qunit';
 import { settled } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import { testAliasCRUD, testAliasDeleteFromForm } from '../../_shared-alias-tests';
 import authPage from 'vault/tests/pages/auth';
+import { v4 as uuidv4 } from 'uuid';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Acceptance | /access/identity/groups/aliases/add', function (hooks) {
@@ -24,18 +25,16 @@ module('Acceptance | /access/identity/groups/aliases/add', function (hooks) {
     return;
   });
 
-  skip('it allows create, list, delete of an entity alias', async function (assert) {
-    // TODO figure out what is wrong with this test
+  test('it allows create, list, delete of an entity alias', async function (assert) {
     assert.expect(6);
-    const name = `alias-${Date.now()}`;
+    const name = `alias-${uuidv4()}`;
     await testAliasCRUD(name, 'groups', assert);
     await settled();
   });
 
   test('it allows delete from the edit form', async function (assert) {
-    // TODO figure out what is wrong with this test
     assert.expect(4);
-    const name = `alias-${Date.now()}`;
+    const name = `alias-${uuidv4()}`;
     await testAliasDeleteFromForm(name, 'groups', assert);
     await settled();
   });

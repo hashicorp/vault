@@ -38,7 +38,9 @@ var (
 	GetEnvConfigFunc             = getEnvConfig
 )
 
-// Entropy contains Entropy configuration for the server
+//go:generate enumer -type=EntropyMode -trimprefix=Entropy
+
+// EntropyMode contains Entropy configuration for the server
 type EntropyMode int
 
 const (
@@ -317,7 +319,7 @@ func GetAliCloudKMSFunc(kms *KMS, opts ...wrapping.Option) (wrapping.Wrapper, ma
 
 var GetAWSKMSFunc = func(kms *KMS, opts ...wrapping.Option) (wrapping.Wrapper, map[string]string, error) {
 	wrapper := awskms.NewWrapper()
-	wrapperInfo, err := wrapper.SetConfig(context.Background(), append(opts, wrapping.WithDisallowEnvVars(true), wrapping.WithConfigMap(kms.Config))...)
+	wrapperInfo, err := wrapper.SetConfig(context.Background(), append(opts, awskms.WithDisallowEnvVars(true), wrapping.WithConfigMap(kms.Config))...)
 	if err != nil {
 		// If the error is any other than logical.KeyNotFoundError, return the error
 		if !errwrap.ContainsType(err, new(logical.KeyNotFoundError)) {
@@ -337,7 +339,7 @@ var GetAWSKMSFunc = func(kms *KMS, opts ...wrapping.Option) (wrapping.Wrapper, m
 
 func GetAzureKeyVaultKMSFunc(kms *KMS, opts ...wrapping.Option) (wrapping.Wrapper, map[string]string, error) {
 	wrapper := azurekeyvault.NewWrapper()
-	wrapperInfo, err := wrapper.SetConfig(context.Background(), append(opts, wrapping.WithDisallowEnvVars(true), wrapping.WithConfigMap(kms.Config))...)
+	wrapperInfo, err := wrapper.SetConfig(context.Background(), append(opts, azurekeyvault.WithDisallowEnvVars(true), wrapping.WithConfigMap(kms.Config))...)
 	if err != nil {
 		// If the error is any other than logical.KeyNotFoundError, return the error
 		if !errwrap.ContainsType(err, new(logical.KeyNotFoundError)) {

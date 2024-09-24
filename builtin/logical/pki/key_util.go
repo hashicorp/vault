@@ -10,15 +10,14 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/hashicorp/vault/sdk/helper/certutil"
-	"github.com/hashicorp/vault/sdk/helper/errutil"
-
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/builtin/logical/pki/managed_key"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/errutil"
 )
 
 func comparePublicKey(sc *storageContext, key *issuing.KeyEntry, publicKey crypto.PublicKey) (bool, error) {
-	publicKeyForKeyEntry, err := getPublicKey(sc.Context, sc.Backend, key)
+	publicKeyForKeyEntry, err := getPublicKey(sc.Context, sc.GetPkiManagedView(), key)
 	if err != nil {
 		return false, err
 	}
@@ -26,9 +25,9 @@ func comparePublicKey(sc *storageContext, key *issuing.KeyEntry, publicKey crypt
 	return certutil.ComparePublicKeysAndType(publicKeyForKeyEntry, publicKey)
 }
 
-func getPublicKey(ctx context.Context, b *backend, key *issuing.KeyEntry) (crypto.PublicKey, error) {
+func getPublicKey(ctx context.Context, mkv managed_key.PkiManagedKeyView, key *issuing.KeyEntry) (crypto.PublicKey, error) {
 	if key.PrivateKeyType == certutil.ManagedPrivateKey {
-		return managed_key.GetPublicKeyFromKeyBytes(ctx, b, []byte(key.PrivateKey))
+		return managed_key.GetPublicKeyFromKeyBytes(ctx, mkv, []byte(key.PrivateKey))
 	}
 
 	signer, _, _, err := getSignerFromKeyEntryBytes(key)

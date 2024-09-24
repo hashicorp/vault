@@ -1,3 +1,0 @@
-```release-note:feature
-core/audit: add filter parameter when enabling an audit device, allowing filtering (using go-bexpr expressions) of audit entries written to the device's audit log
-```

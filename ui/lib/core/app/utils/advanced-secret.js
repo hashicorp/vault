@@ -3,4 +3,4 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-export { default } from 'core/utils/advanced-secret';
+export { isAdvancedSecret } from 'core/utils/advanced-secret';

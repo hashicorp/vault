@@ -4,7 +4,7 @@
  */
 
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { hash } from 'rsvp';
 // eslint-disable-next-line ember/no-mixins
 import ClusterRoute from 'vault/mixins/cluster-route';
@@ -40,7 +40,6 @@ export default class VaultClusterDashboardRoute extends Route.extend(ClusterRout
     return hash({
       replication,
       secretsEngines: this.store.query('secret-engine', {}),
-      license: this.store.queryRecord('license', {}).catch(() => null),
       isRootNamespace: this.namespace.inRootNamespace && !hasChroot,
       version: this.version,
       vaultConfiguration: hasChroot ? null : this.getVaultConfiguration(),

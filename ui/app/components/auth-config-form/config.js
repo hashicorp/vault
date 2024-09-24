@@ -4,8 +4,8 @@
  */
 
 import AdapterError from '@ember-data/adapter/error';
-import { inject as service } from '@ember/service';
-import Component from '@ember/component';
+import { service } from '@ember/service';
+import Component from '@glimmer/component';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 
@@ -14,40 +14,31 @@ import { waitFor } from '@ember/test-waiters';
  * The `AuthConfigForm/Config` is the base form to configure auth methods.
  *
  * @example
- * ```js
- * {{auth-config-form/config model.model}}
- * ```
+ * <AuthConfigForm::Config @model={{this.model}} />
  *
  * @property model=null {DS.Model} - The corresponding auth model that is being configured.
  *
  */
 
-const AuthConfigBase = Component.extend({
-  tagName: '',
-  model: null,
+export default class AuthConfigBase extends Component {
+  @service flashMessages;
+  @service router;
 
-  flashMessages: service(),
-  router: service(),
-  saveModel: task(
-    waitFor(function* () {
-      try {
-        yield this.model.save();
-      } catch (err) {
-        // AdapterErrors are handled by the error-message component
-        // in the form
-        if (err instanceof AdapterError === false) {
-          throw err;
-        }
-        return;
+  @task
+  @waitFor
+  *saveModel(evt) {
+    evt.preventDefault();
+    try {
+      yield this.args.model.save();
+    } catch (err) {
+      // AdapterErrors are handled by the error-message component
+      // in the form
+      if (err instanceof AdapterError === false) {
+        throw err;
       }
-      this.router.transitionTo('vault.cluster.access.methods').followRedirects();
-      this.flashMessages.success('The configuration was saved successfully.');
-    })
-  ),
-});
-
-AuthConfigBase.reopenClass({
-  positionalParams: ['model'],
-});
-
-export default AuthConfigBase;
+      return;
+    }
+    this.router.transitionTo('vault.cluster.access.methods').followRedirects();
+    this.flashMessages.success('The configuration was saved successfully.');
+  }
+}

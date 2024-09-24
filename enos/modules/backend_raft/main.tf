@@ -7,7 +7,7 @@ terraform {
 
   required_providers {
     enos = {
-      source  = "app.terraform.io/hashicorp-qti/enos"
+      source  = "registry.terraform.io/hashicorp-forge/enos"
       version = ">= 0.4.0"
     }
   }
@@ -53,18 +53,18 @@ variable "release" {
   default = null
 }
 
-variable "target_hosts" {
+variable "hosts" {
   default = null
 }
 
 output "private_ips" {
-  value = [for host in var.target_hosts : host.private_ip]
+  value = [for host in var.hosts : host.private_ip]
 }
 
 output "public_ips" {
-  value = [for host in var.target_hosts : host.public_ip]
+  value = [for host in var.hosts : host.public_ip]
 }
 
-output "target_hosts" {
-  value = var.target_hosts
+output "hosts" {
+  value = var.hosts
 }

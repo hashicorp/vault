@@ -38,6 +38,10 @@ check_fmt() {
     echo "--> The following files need to be reformatted with gofumpt"
     printf '%s\n' "${malformed[@]}"
     echo "Run \`make fmt\` to reformat code."
+    for file in "${malformed[@]}"; do
+      gofumpt -w "$file"
+      echo "$(git diff --no-color "$file")"
+    done
     exit 1
   fi
 }

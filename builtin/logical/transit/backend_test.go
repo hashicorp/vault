@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/pki"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
@@ -32,10 +33,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
-
-	uuid "github.com/hashicorp/go-uuid"
 	"github.com/mitchellh/mapstructure"
-
 	"github.com/stretchr/testify/require"
 )
 

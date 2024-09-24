@@ -23,12 +23,14 @@ import (
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/cluster"
 )
 
 const (
 	// Storage path where the local cluster name and identifier are stored
 	coreLocalClusterInfoPath = "core/cluster/local/info"
+	coreLocalClusterNamePath = "core/cluster/local/name"
 
 	corePrivateKeyTypeP521    = "p521"
 	corePrivateKeyTypeED25519 = "ed25519"
@@ -61,18 +63,30 @@ type Cluster struct {
 // when Vault is sealed.
 func (c *Core) Cluster(ctx context.Context) (*Cluster, error) {
 	var cluster Cluster
+	var logicalEntry *logical.StorageEntry
+	var physicalEntry *physical.Entry
 
 	// Fetch the storage entry. This call fails when Vault is sealed.
-	entry, err := c.barrier.Get(ctx, coreLocalClusterInfoPath)
+	logicalEntry, err := c.barrier.Get(ctx, coreLocalClusterInfoPath)
 	if err != nil {
-		return nil, err
+		// Vault is sealed, pull cluster name from unencrypted storage
+		physicalEntry, err = c.physical.Get(ctx, coreLocalClusterNamePath)
+		if err != nil {
+			return nil, err
+		}
 	}
-	if entry == nil {
+	if logicalEntry == nil && physicalEntry == nil {
 		return &cluster, nil
 	}
 
 	// Decode the cluster information
-	if err = jsonutil.DecodeJSON(entry.Value, &cluster); err != nil {
+	var value []byte
+	if logicalEntry != nil {
+		value = logicalEntry.Value
+	} else {
+		value = physicalEntry.Value
+	}
+	if err = jsonutil.DecodeJSON(value, &cluster); err != nil {
 		return nil, fmt.Errorf("failed to decode cluster details: %w", err)
 	}
 
@@ -162,6 +176,7 @@ func (c *Core) setupCluster(ctx context.Context) error {
 	}
 
 	var modified bool
+	var generatedClusterName bool
 
 	if cluster == nil {
 		cluster = &Cluster{}
@@ -178,6 +193,7 @@ func (c *Core) setupCluster(ctx context.Context) error {
 			}
 
 			c.clusterName = fmt.Sprintf("vault-cluster-%08x", clusterNameBytes)
+			generatedClusterName = true
 		}
 
 		cluster.Name = c.clusterName
@@ -270,7 +286,7 @@ func (c *Core) setupCluster(ctx context.Context) error {
 			return err
 		}
 
-		// Store it
+		// Store cluster information in logical storage
 		err = c.barrier.Put(ctx, &logical.StorageEntry{
 			Key:   coreLocalClusterInfoPath,
 			Value: rawCluster,
@@ -278,6 +294,32 @@ func (c *Core) setupCluster(ctx context.Context) error {
 		if err != nil {
 			c.logger.Error("failed to store cluster details", "error", err)
 			return err
+		}
+
+		// Store only cluster name in physical storage, but only if name isn't provided in config
+		if generatedClusterName {
+			rawCluster, err = json.Marshal(&Cluster{Name: cluster.Name})
+			if err != nil {
+				c.logger.Error("failed to marshal cluster name", "error", err)
+				return err
+			}
+
+			err = c.physical.Put(ctx, &physical.Entry{
+				Key:   coreLocalClusterNamePath,
+				Value: rawCluster,
+			})
+			if err != nil {
+				c.logger.Error("failed to store cluster name", "error", err)
+				return err
+			}
+		} else {
+			// check to ensure there is no entry at coreLocalClusterNamePath
+			err = c.physical.Delete(ctx, coreLocalClusterNamePath)
+			if err != nil {
+				c.logger.Error("failed to clear cluster name", "error", err)
+				return err
+			}
+
 		}
 	}
 

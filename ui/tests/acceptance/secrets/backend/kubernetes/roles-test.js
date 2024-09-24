@@ -7,19 +7,17 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import kubernetesScenario from 'vault/mirage/scenarios/kubernetes';
-import ENV from 'vault/config/environment';
+import kubernetesHandlers from 'vault/mirage/handlers/kubernetes';
 import authPage from 'vault/tests/pages/auth';
 import { fillIn, visit, currentURL, click, currentRouteName } from '@ember/test-helpers';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Acceptance | kubernetes | roles', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.before(function () {
-    ENV['ember-cli-mirage'].handler = 'kubernetes';
-  });
   hooks.beforeEach(function () {
+    kubernetesHandlers(this.server);
     kubernetesScenario(this.server);
     this.visitRoles = () => {
       return visit('/vault/secrets/kubernetes/kubernetes/roles');
@@ -29,14 +27,12 @@ module('Acceptance | kubernetes | roles', function (hooks) {
     };
     return authPage.login();
   });
-  hooks.after(function () {
-    ENV['ember-cli-mirage'].handler = null;
-  });
 
   test('it should filter roles', async function (assert) {
     await this.visitRoles();
     assert.dom('[data-test-list-item-link]').exists({ count: 3 }, 'Roles list renders');
-    await fillIn('[data-test-component="navigate-input"]', '1');
+    await fillIn(GENERAL.filterInputExplicit, '1');
+    await click(GENERAL.filterInputExplicitSearch);
     assert.dom('[data-test-list-item-link]').exists({ count: 1 }, 'Filtered roles list renders');
     assert.ok(currentURL().includes('pageFilter=1'), 'pageFilter query param value is set');
   });
@@ -60,12 +56,6 @@ module('Acceptance | kubernetes | roles', function (hooks) {
   });
 
   test('it should have functional list item menu', async function (assert) {
-    // Popup menu causes flakiness
-    setRunOptions({
-      rules: {
-        'color-contrast': { enabled: false },
-      },
-    });
     assert.expect(3);
     await this.visitRoles();
     for (const action of ['details', 'edit', 'delete']) {

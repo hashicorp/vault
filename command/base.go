@@ -8,7 +8,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"regexp"
@@ -16,14 +15,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/vault/command/config"
-
 	"github.com/hashicorp/cli"
 	hcpvlib "github.com/hashicorp/vault-hcp-lib"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/command/token"
+	"github.com/hashicorp/vault/api/cliconfig"
+	"github.com/hashicorp/vault/api/tokenhelper"
+	"github.com/hashicorp/vault/command/config"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/mattn/go-isatty"
+	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	"github.com/posener/complete"
 )
@@ -73,7 +73,7 @@ type BaseCommand struct {
 
 	flagHeader map[string]string
 
-	tokenHelper    token.TokenHelper
+	tokenHelper    tokenhelper.TokenHelper
 	hcpTokenHelper hcpvlib.HCPTokenHelper
 
 	client *api.Client
@@ -84,8 +84,13 @@ type BaseCommand struct {
 func (c *BaseCommand) Client() (*api.Client, error) {
 	// Read the test client if present
 	if c.client != nil {
-		if err := c.applyHCPConfig(); err != nil {
-			return nil, err
+		// Ignoring homedir errors here and moving on to avoid
+		// spamming user with warnings/errors that homedir isn't set.
+		path, err := homedir.Dir()
+		if err == nil {
+			if err := c.applyHCPConfig(path); err != nil {
+				return nil, err
+			}
 		}
 
 		return c.client, nil
@@ -196,12 +201,17 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 
 	c.client = client
 
-	if err := c.applyHCPConfig(); err != nil {
-		return nil, err
+	// Ignoring homedir errors here and moving on to avoid
+	// spamming user with warnings/errors that homedir isn't set.
+	path, err := homedir.Dir()
+	if err == nil {
+		if err := c.applyHCPConfig(path); err != nil {
+			return nil, err
+		}
 	}
 
 	if c.addrWarning != "" && c.UI != nil {
-		if os.Getenv("VAULT_ADDR") == "" {
+		if os.Getenv("VAULT_ADDR") == "" && !c.flags.hadAddressFlag {
 			if !c.flagNonInteractive && isatty.IsTerminal(os.Stdin.Fd()) {
 				c.UI.Warn(wrapAtLength(c.addrWarning))
 			}
@@ -211,12 +221,12 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 	return client, nil
 }
 
-func (c *BaseCommand) applyHCPConfig() error {
+func (c *BaseCommand) applyHCPConfig(path string) error {
 	if c.hcpTokenHelper == nil {
 		c.hcpTokenHelper = c.HCPTokenHelper()
 	}
 
-	hcpToken, err := c.hcpTokenHelper.GetHCPToken()
+	hcpToken, err := c.hcpTokenHelper.GetHCPToken(path)
 	if err != nil {
 		return err
 	}
@@ -249,17 +259,17 @@ func (c *BaseCommand) SetAddress(addr string) {
 }
 
 // SetTokenHelper sets the token helper on the command.
-func (c *BaseCommand) SetTokenHelper(th token.TokenHelper) {
+func (c *BaseCommand) SetTokenHelper(th tokenhelper.TokenHelper) {
 	c.tokenHelper = th
 }
 
 // TokenHelper returns the token helper attached to the command.
-func (c *BaseCommand) TokenHelper() (token.TokenHelper, error) {
+func (c *BaseCommand) TokenHelper() (tokenhelper.TokenHelper, error) {
 	if c.tokenHelper != nil {
 		return c.tokenHelper, nil
 	}
 
-	helper, err := DefaultTokenHelper()
+	helper, err := cliconfig.DefaultTokenHelper()
 	if err != nil {
 		return nil, err
 	}
@@ -616,6 +626,10 @@ type FlagSets struct {
 	hiddens     map[string]struct{}
 	completions complete.Flags
 	ui          cli.Ui
+	// hadAddressFlag signals if the FlagSet had an -address
+	// flag set, for the purposes of warning (see also:
+	// BaseCommand::addrWarning).
+	hadAddressFlag bool
 }
 
 // NewFlagSets creates a new flag sets.
@@ -624,7 +638,7 @@ func NewFlagSets(ui cli.Ui) *FlagSets {
 
 	// Errors and usage are controlled by the CLI.
 	mainSet.Usage = func() {}
-	mainSet.SetOutput(ioutil.Discard)
+	mainSet.SetOutput(io.Discard)
 
 	return &FlagSets{
 		flagSets:    make([]*FlagSet, 0, 6),
@@ -658,6 +672,15 @@ type (
 // Parse parses the given flags, returning any errors.
 // Warnings, if any, regarding the arguments format are sent to stdout
 func (f *FlagSets) Parse(args []string, opts ...ParseOptions) error {
+	// Before parsing, check to see if we have an address flag, for the
+	// purposes of warning later. This must be done now, as the argument
+	// will be removed during parsing.
+	for _, arg := range args {
+		if strings.HasPrefix(arg, "-address") {
+			f.hadAddressFlag = true
+		}
+	}
+
 	err := f.mainSet.Parse(args)
 
 	displayFlagWarningsDisabled := false

@@ -22,7 +22,8 @@ When Vault Agent or Vault Proxy are started with Auto-Auth enabled, it will atte
 Vault token using the configured Method. On failure, it will exponentially back
 off and then retry. On success, unless the auth method is configured to wrap
 the tokens, it will keep the resulting token renewed until renewal is no longer
-allowed or fails, at which point it will attempt to reauthenticate.
+allowed. If renewal fails, the token has been revoked, the token has exceeded the maximum number of uses,
+or the token is an otherwise invalid value, it will attempt to reauthenticate.
 
 Every time an authentication is successful, the token is written to the
 configured Sinks, subject to their configuration.

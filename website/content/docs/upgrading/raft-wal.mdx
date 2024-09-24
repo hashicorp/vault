@@ -1,0 +1,67 @@
+---
+layout: docs
+page_title: Upgrade integrated storage to use Raft WAL
+description: >-
+   Upgrade your Vault storage to use write-ahead with Raft logs
+---
+
+# Upgrade integrated storage to use Raft WAL
+
+@include 'alerts/experimental.mdx'
+
+## Before you start
+
+- **You must be using Vault 1.16+**.
+- **You must be using Raft integrated storage**.
+
+## Step 1: Migrate a single node
+
+1. Take a snapshot of the current node state. Snapshots are completely separate
+   from log storage, so the subsequent steps will not affect the snapshot.
+1. Gracefully shut down the Vault process.
+1. Rename the existing Vault storage directory. For example, if your current
+   storage path is `/opt/vault/data`, rename it to `/opt/vault/data.boltdb`.
+1. Update the `storage` stanza in your Vault config file:
+   - Set `raft_wal = "true"`.
+   - Set `raft_log_verifier_enabled = "true"`.
+   - Set `raft_log_verification_interval = "<TIME>"` if the default (`1m`) is
+     not optimal. The verification interval must be `10s` or more.
+1. Restart the Vault process.
+1. Monitor the node until it syncs with the cluster leader.
+
+## Step 2: Verify and repeat
+
+1. Observe and monitor your logging metrics and the verification log output on
+   the upgraded nodes for 3 &ndash; 7 days, depending on how much traffic the
+   node normally receives.
+1. Continue updating follower nodes one-by-one.
+1. Only migrate the cluster leader once the other nodes have upgraded
+   successfully.
+
+## Troubleshooting
+
+**If you encounter any issues or errors, immediately roll back the upgraded nodes
+using the snapshot taken before migration**.
+
+If you need to revert fully from `raft-wal` to `raft-boltdb` on a node:
+
+1. Gracefully shut down the Vault process.
+1. Rename the upgraded Vault storage directory. For example, if your upgraded
+   storage path is `/opt/vault/data`, rename it to `/opt/vault/data.raftwal`.
+1. Update the `storage` stanza in your Vault config file:
+   - Remove `raft_wal = "true"`.
+   - Remove `raft_log_verifier_enabled = "true"`, if desired.
+   - Remove `raft_log_verification_interval = "<TIME>"` if desired.
+1. Restart the Vault process.
+1. Monitor the node until it syncs with the cluster leader.
+
+Continue reverting nodes one-by-one. Only revert the cluster leader once the 
+other nodes are reverted successfully.
+
+<Note title="">
+
+   As of Vault 1.16, you can use `raft_log_verifier_enabled` and
+   `raft_log_verification_interval` even if you choose to use BoltDB instead of
+   Raft WAL.
+
+</Note>

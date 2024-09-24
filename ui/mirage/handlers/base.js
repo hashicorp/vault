@@ -16,6 +16,15 @@ export default function (server) {
     };
   });
 
+  server.get('/sys/activation-flags', () => {
+    return {
+      data: {
+        activated: [''],
+        unactivated: ['secrets-sync'],
+      },
+    };
+  });
+
   server.get('/sys/health', function () {
     return {
       enterprise: true,
@@ -34,14 +43,6 @@ export default function (server) {
       cluster_name: 'vault-cluster-e779cd7c',
       cluster_id: '5f20f5ab-acea-0481-787e-71ec2ff5a60b',
       last_wal: 121,
-    };
-  });
-
-  server.get('/sys/internal/ui/version', function () {
-    return {
-      data: {
-        version: '1.9.0+ent',
-      },
     };
   });
 

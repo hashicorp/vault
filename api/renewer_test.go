@@ -177,6 +177,20 @@ func TestLifetimeWatcher(t *testing.T) {
 			expectError:   nil,
 			expectRenewal: true,
 		},
+		{
+			maxTestTime:          time.Second,
+			name:                 "permission_denied_error",
+			leaseDurationSeconds: 60,
+			incrementSeconds:     10,
+			// This should cause the lifetime watcher to behave just
+			// like a non-renewable secret, i.e. wait until its lifetime
+			// then be done.
+			renew: func(_ string, _ int) (*Secret, error) {
+				return nil, fmt.Errorf("permission denied")
+			},
+			expectError:   nil,
+			expectRenewal: false,
+		},
 	}
 
 	for _, tc := range cases {
@@ -204,7 +218,9 @@ func TestLifetimeWatcher(t *testing.T) {
 			for {
 				select {
 				case <-time.After(tc.maxTestTime):
-					t.Fatalf("renewal didn't happen")
+					if tc.expectRenewal || tc.expectError != nil {
+						t.Fatalf("expected error or renewal, and neither happened")
+					}
 				case r := <-v.RenewCh():
 					if !tc.expectRenewal {
 						t.Fatal("expected no renewals")

@@ -9,7 +9,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/textproto"
@@ -19,16 +19,15 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/vault/internalshared/configutil"
-	"github.com/stretchr/testify/require"
-
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/versions"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+	"github.com/stretchr/testify/require"
 )
 
 func TestHandler_parseMFAHandler(t *testing.T) {
@@ -886,7 +885,7 @@ func TestHandler_Parse_Form(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	req.Body = ioutil.NopCloser(strings.NewReader(values.Encode()))
+	req.Body = io.NopCloser(strings.NewReader(values.Encode()))
 	req.Header.Set("x-vault-token", cluster.RootToken)
 	req.Header.Set("content-type", "application/x-www-form-urlencoded")
 	resp, err := c.Do(req)

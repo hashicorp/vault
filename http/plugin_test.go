@@ -6,7 +6,7 @@ package http
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"reflect"
 	"sync"
@@ -15,7 +15,6 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	bplugin "github.com/hashicorp/vault/builtin/plugin"
-	"github.com/hashicorp/vault/helper/benchhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
@@ -48,7 +47,7 @@ func getPluginClusterAndCore(t *testing.T, logger log.Logger) (*vault.TestCluste
 		PluginDirectory: pluginDir,
 	}
 
-	cluster := vault.NewTestCluster(benchhelpers.TBtoT(t), coreConfig, &vault.TestClusterOptions{
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: Handler,
 	})
 	cluster.Start()
@@ -56,8 +55,8 @@ func getPluginClusterAndCore(t *testing.T, logger log.Logger) (*vault.TestCluste
 	cores := cluster.Cores
 	core := cores[0]
 
-	vault.TestWaitActive(benchhelpers.TBtoT(t), core.Core)
-	vault.TestAddTestPlugin(benchhelpers.TBtoT(t), core.Core, "mock-plugin", consts.PluginTypeSecrets, "", "TestPlugin_PluginMain",
+	vault.TestWaitActive(t, core.Core)
+	vault.TestAddTestPlugin(t, core.Core, "mock-plugin", consts.PluginTypeSecrets, "", "TestPlugin_PluginMain",
 		[]string{fmt.Sprintf("%s=%s", pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)})
 
 	// Mount the mock plugin
@@ -148,7 +147,7 @@ func TestPlugin_MockRawResponse(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatal(err)
 	}

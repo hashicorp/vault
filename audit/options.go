@@ -5,24 +5,39 @@ package audit
 
 import (
 	"errors"
-	"reflect"
 	"strings"
 	"time"
 )
+
+// option is how options are passed as arguments.
+type option func(*options) error
+
+// options are used to represent configuration for a audit related nodes.
+type options struct {
+	withID           string
+	withNow          time.Time
+	withSubtype      subtype
+	withFormat       format
+	withPrefix       string
+	withRaw          bool
+	withElision      bool
+	withOmitTime     bool
+	withHMACAccessor bool
+}
 
 // getDefaultOptions returns options with their default values.
 func getDefaultOptions() options {
 	return options{
 		withNow:          time.Now(),
-		withFormat:       JSONFormat,
+		withFormat:       jsonFormat,
 		withHMACAccessor: true,
 	}
 }
 
-// getOpts applies each supplied Option and returns the fully configured options.
-// Each Option is applied in the order it appears in the argument list, so it is
-// possible to supply the same Option numerous times and the 'last write wins'.
-func getOpts(opt ...Option) (options, error) {
+// getOpts applies each supplied option and returns the fully configured options.
+// Each option is applied in the order it appears in the argument list, so it is
+// possible to supply the same option numerous times and the 'last write wins'.
+func getOpts(opt ...option) (options, error) {
 	opts := getDefaultOptions()
 	for _, o := range opt {
 		if o == nil {
@@ -35,8 +50,8 @@ func getOpts(opt ...Option) (options, error) {
 	return opts, nil
 }
 
-// WithID provides an optional ID.
-func WithID(id string) Option {
+// withID provides an optional ID.
+func withID(id string) option {
 	return func(o *options) error {
 		var err error
 
@@ -52,8 +67,8 @@ func WithID(id string) Option {
 	}
 }
 
-// WithNow provides an Option to represent 'now'.
-func WithNow(now time.Time) Option {
+// withNow provides an option to represent 'now'.
+func withNow(now time.Time) option {
 	return func(o *options) error {
 		var err error
 
@@ -68,8 +83,8 @@ func WithNow(now time.Time) Option {
 	}
 }
 
-// WithSubtype provides an Option to represent the event subtype.
-func WithSubtype(s string) Option {
+// withSubtype provides an option to represent the event subtype.
+func withSubtype(s string) option {
 	return func(o *options) error {
 		s := strings.TrimSpace(s)
 		if s == "" {
@@ -86,10 +101,10 @@ func WithSubtype(s string) Option {
 	}
 }
 
-// WithFormat provides an Option to represent event format.
-func WithFormat(f string) Option {
+// withFormat provides an option to represent event format.
+func withFormat(f string) option {
 	return func(o *options) error {
-		f := strings.TrimSpace(f)
+		f := strings.TrimSpace(strings.ToLower(f))
 		if f == "" {
 			// Return early, we won't attempt to apply this option if its empty.
 			return nil
@@ -106,8 +121,8 @@ func WithFormat(f string) Option {
 	}
 }
 
-// WithPrefix provides an Option to represent a prefix for a file sink.
-func WithPrefix(prefix string) Option {
+// withPrefix provides an option to represent a prefix for a file sink.
+func withPrefix(prefix string) option {
 	return func(o *options) error {
 		o.withPrefix = prefix
 
@@ -115,46 +130,34 @@ func WithPrefix(prefix string) Option {
 	}
 }
 
-// WithRaw provides an Option to represent whether 'raw' is required.
-func WithRaw(r bool) Option {
+// withRaw provides an option to represent whether 'raw' is required.
+func withRaw(r bool) option {
 	return func(o *options) error {
 		o.withRaw = r
 		return nil
 	}
 }
 
-// WithElision provides an Option to represent whether elision (...) is required.
-func WithElision(e bool) Option {
+// withElision provides an option to represent whether elision (...) is required.
+func withElision(e bool) option {
 	return func(o *options) error {
 		o.withElision = e
 		return nil
 	}
 }
 
-// WithOmitTime provides an Option to represent whether to omit time.
-func WithOmitTime(t bool) Option {
+// withOmitTime provides an option to represent whether to omit time.
+func withOmitTime(t bool) option {
 	return func(o *options) error {
 		o.withOmitTime = t
 		return nil
 	}
 }
 
-// WithHMACAccessor provides an Option to represent whether an HMAC accessor is applicable.
-func WithHMACAccessor(h bool) Option {
+// withHMACAccessor provides an option to represent whether an HMAC accessor is applicable.
+func withHMACAccessor(h bool) option {
 	return func(o *options) error {
 		o.withHMACAccessor = h
-		return nil
-	}
-}
-
-// WithHeaderFormatter provides an Option to supply a HeaderFormatter.
-// If the HeaderFormatter interface supplied is nil (type or value), the option will not be applied.
-func WithHeaderFormatter(f HeaderFormatter) Option {
-	return func(o *options) error {
-		if f != nil && !reflect.ValueOf(f).IsNil() {
-			o.withHeaderFormatter = f
-		}
-
 		return nil
 	}
 }
