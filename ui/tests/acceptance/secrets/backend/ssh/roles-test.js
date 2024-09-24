@@ -47,6 +47,9 @@ module('Acceptance | ssh | roles', function (hooks) {
       credsRoute: 'vault.cluster.secrets.backend.sign',
       async fillInCreate() {
         await click(GENERAL.inputByAttr('allowUserCertificates'));
+        await click(GENERAL.toggleGroup('Options'));
+        // it's recommended to keep allow_empty_principals false, check for testing so we don't have to input an extra field when signing a key
+        await click(GENERAL.inputByAttr('allowEmptyPrincipals'));
       },
       async fillInGenerate() {
         await fillIn(GENERAL.inputByAttr('publicKey'), PUB_KEY);

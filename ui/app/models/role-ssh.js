@@ -40,6 +40,7 @@ const CA_FIELDS = [
   'defaultExtensions',
   'allowBareDomains',
   'allowSubdomains',
+  'allowEmptyPrincipals',
   'allowUserKeyIds',
   'keyIdFormat',
   'notBeforeDuration',
@@ -117,6 +118,10 @@ export default Model.extend({
   allowSubdomains: attr('boolean', {
     helpText:
       'Specifies if host certificates that are requested are allowed to be subdomains of those listed in Allowed Domains',
+  }),
+  allowEmptyPrincipals: attr('boolean', {
+    helpText:
+      'Allow signing certificates with no valid principals (e.g. any valid principal). For backwards compatibility only. The default of false is highly recommended.',
   }),
   allowUserKeyIds: attr('boolean', {
     helpText: 'Specifies if users can override the key ID for a signed certificate with the "key_id" field',
