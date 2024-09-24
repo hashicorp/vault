@@ -9,7 +9,7 @@ import { service } from '@ember/service';
 import Component from '@glimmer/component';
 import { task } from 'ember-concurrency';
 import { removeManyFromArray } from 'vault/helpers/remove-from-array';
-import { operationFieldsWithoutSpecial, tlsFields } from 'vault/utils/kmip-role-fields';
+import { operationFieldsWithoutSpecial, tlsFields } from 'vault/utils/model-helpers/kmip-role-fields';
 
 export default class KmipRoleFormComponent extends Component {
   @service flashMessages;
