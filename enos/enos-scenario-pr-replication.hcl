@@ -820,7 +820,7 @@ scenario "pr_replication" {
       type combinations. See the guide for more information:
         https://developer.hashicorp.com/vault/docs/enterprise/replication#seals
     EOF
-    module      = module.vault_unseal_nodes
+    module      = module.vault_unseal_replication_followers
     depends_on = [
       step.create_primary_cluster,
       step.create_secondary_cluster,

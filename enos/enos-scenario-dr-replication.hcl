@@ -814,7 +814,11 @@ scenario "dr_replication" {
       enos = local.enos_provider[matrix.distro]
     }
 
-    verifies = quality.vault_api_sys_replication_dr_secondary_enable_write
+    verifies = [
+      quality.vault_api_sys_leader_read,
+      quality.vault_api_sys_replication_dr_secondary_enable_write,
+      quality.vault_api_sys_replication_dr_status_read,
+    ]
 
     variables {
       ip_version            = matrix.ip_version
@@ -834,7 +838,7 @@ scenario "dr_replication" {
       type combinations. See the guide for more information:
         https://developer.hashicorp.com/vault/docs/enterprise/replication#seals
     EOF
-    module      = module.vault_unseal_nodes
+    module      = module.vault_unseal_replication_followers
     depends_on = [
       step.configure_dr_replication_secondary
     ]
@@ -883,7 +887,11 @@ scenario "dr_replication" {
       and ensuring that all secondary nodes are unsealed.
     EOF
     module      = module.vault_verify_dr_replication
-    depends_on  = [step.configure_dr_replication_secondary]
+    depends_on = [
+      step.configure_dr_replication_secondary,
+      step.unseal_secondary_followers,
+      step.verify_secondary_cluster_is_unsealed_after_enabling_replication,
+    ]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
