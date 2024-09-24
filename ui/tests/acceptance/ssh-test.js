@@ -8,6 +8,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
@@ -28,6 +29,9 @@ module('Acceptance | ssh secret backend', function (hooks) {
       name: 'carole',
       async fillInCreate() {
         await click('[data-test-input="allowUserCertificates"]');
+        await click('[data-test-toggle-group="Options"]');
+        // it's recommended to keep allow_empty_principals false, check for testing so we don't have to input an extra field when signing a key
+        await click(GENERAL.inputByAttr('allowEmptyPrincipals'));
       },
       async fillInGenerate() {
         await fillIn('[data-test-input="publicKey"]', PUB_KEY);

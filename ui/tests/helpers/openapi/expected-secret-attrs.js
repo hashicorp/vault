@@ -34,6 +34,13 @@ const ssh = {
       fieldGroup: 'default',
       type: 'boolean',
     },
+    allowEmptyPrincipals: {
+      editType: 'boolean',
+      fieldGroup: 'default',
+      helpText:
+        'Whether to allow issuing certificates with no valid principals (meaning any valid principal). Exists for backwards compatibility only, the default of false is highly recommended.',
+      type: 'boolean',
+    },
     allowHostCertificates: {
       editType: 'boolean',
       helpText:
