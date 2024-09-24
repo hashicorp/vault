@@ -1,0 +1,3 @@
+```release-note:bug
+auth/token: Fix token TTL calculation so that it uses `max_lease_ttl` tune value for tokens created via `auth/token/create`.
+```
