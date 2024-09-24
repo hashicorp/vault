@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
-import validators from 'vault/utils/validators';
+import validators from 'vault/utils/model-helpers/validators';
 
 module('Unit | Util | validators', function (hooks) {
   setupTest(hooks);

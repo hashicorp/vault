@@ -7,7 +7,12 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { A } from '@ember/array';
-import { hasWhitespace, isNonString, WHITESPACE_WARNING, NON_STRING_WARNING } from 'vault/utils/validators';
+import {
+  hasWhitespace,
+  isNonString,
+  WHITESPACE_WARNING,
+  NON_STRING_WARNING,
+} from 'vault/utils/model-helpers/validators';
 
 /**
  * @module KvPatch::Editor::Form

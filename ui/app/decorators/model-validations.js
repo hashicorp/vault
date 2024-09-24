@@ -4,7 +4,7 @@
  */
 
 /* eslint-disable no-console */
-import validators from 'vault/utils/validators';
+import validators from 'vault/utils/model-helpers/validators';
 import { get } from '@ember/object';
 
 // see documentation at ui/docs/model-validations.md for detailed usage information

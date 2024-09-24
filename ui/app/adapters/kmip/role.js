@@ -6,7 +6,7 @@
 import BaseAdapter from './base';
 import { decamelize } from '@ember/string';
 import { getProperties } from '@ember/object';
-import { nonOperationFields } from 'vault/utils/kmip-role-fields';
+import { nonOperationFields } from 'vault/utils/model-helpers/kmip-role-fields';
 
 export default BaseAdapter.extend({
   createRecord(store, type, snapshot) {

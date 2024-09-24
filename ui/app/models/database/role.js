@@ -8,7 +8,7 @@ import { computed } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
-import { getRoleFields } from 'vault/utils/database-helpers';
+import { getRoleFields } from 'vault/utils/model-helpers/database-helpers';
 
 export default Model.extend({
   idPrefix: 'role/',

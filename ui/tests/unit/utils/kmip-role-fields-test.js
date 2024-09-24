@@ -9,7 +9,7 @@ import {
   nonOperationFields,
   operationFields,
   operationFieldsWithoutSpecial,
-} from 'vault/utils/kmip-role-fields';
+} from 'vault/utils/model-helpers/kmip-role-fields';
 
 module('Unit | Util | kmip role fields', function (hooks) {
   setupTest(hooks);
