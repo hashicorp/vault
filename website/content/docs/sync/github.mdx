@@ -99,6 +99,13 @@ Use `vault write` to configure an environment sync destination:
 
 @include 'alerts/beta.mdx'
 
+<Note title="Beta limitation">
+
+Organization secrets are currently in **beta**. The `organization_visibility` and `selected_repository_names` fields cannot
+be updated after a destination is created. We are looking into allowing these fields to be changed at any time post-creation.
+
+</Note>
+
 Organization secrets allow for secrets to be shared by an organization across many of its repositories. Various subsets of repositories
 within the organization can be configured to have access to the secrets synced by the destination. The choices for repos within the organization are all
 repositories, all private repositories, or a list of selected repositories. See the [API docs](/vault/docs/sync/github#api) for more information regarding configuration.
