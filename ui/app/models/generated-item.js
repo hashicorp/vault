@@ -4,10 +4,19 @@
  */
 
 import Model from '@ember-data/model';
+import { tracked } from '@glimmer/tracking';
 
 // This model is used for OpenApi-generated models in path-help service's getNewModel method
 export default class GeneratedItemModel extends Model {
   allFields = [];
+
+  @tracked _id;
+  get mutableId() {
+    return this._id || this.id;
+  }
+  set mutableId(value) {
+    this._id = value;
+  }
 
   get fieldGroups() {
     const groups = {

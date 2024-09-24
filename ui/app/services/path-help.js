@@ -206,11 +206,11 @@ export default class PathHelpService extends Service {
   // Makes a call to grab the OpenAPI document.
   // Returns relevant information from OpenAPI
   // as determined by the expandOpenApiProps util
-  getProps(helpUrl, backend) {
+  getProps(helpUrl) {
     // add name of thing you want
-    debug(`Fetching schema properties for ${backend} from ${helpUrl}`);
+    debug(`Fetching schema properties from ${helpUrl}`);
 
-    return this.ajax(helpUrl, backend).then((help) => {
+    return this.ajax(helpUrl).then((help) => {
       // paths is an array but it will have a single entry
       // for the scope we're in
       const path = Object.keys(help.openapi.paths)[0]; // do this or look at name
@@ -268,9 +268,9 @@ export default class PathHelpService extends Service {
       apiPath = apiPath;
 
       paths = {
-        createPath: createPath.path,
-        deletePath: deletePath.path,
-        getPath: getPath.path,
+        createPath: createPath?.path,
+        deletePath: deletePath?.path,
+        getPath: getPath?.path,
       };
     };
   }

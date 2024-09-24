@@ -18,6 +18,17 @@ export default class GeneratedItemListAdapter extends ApplicationAdapter {
   @tracked apiPath = '';
   paths = {};
 
+  // These are the paths used for the adapter actions
+  get getPath() {
+    return this.paths.getPath || '';
+  }
+  get createPath() {
+    return this.paths.createPath || '';
+  }
+  get deletePath() {
+    return this.paths.deletePath || '';
+  }
+
   getDynamicApiPath(id) {
     const result = this.store.peekRecord('auth-method', id);
     this.apiPath = result.apiPath;
@@ -49,7 +60,7 @@ export default class GeneratedItemListAdapter extends ApplicationAdapter {
   }
 
   urlForItem(id, isList, dynamicApiPath) {
-    const itemType = sanitizePath(this.paths.getPath);
+    const itemType = sanitizePath(this.getPath);
     let url;
     id = encodePath(id);
     // the apiPath changes when you switch between routes but the apiPath variable does not unless the model is reloaded
@@ -77,18 +88,18 @@ export default class GeneratedItemListAdapter extends ApplicationAdapter {
   }
 
   urlForUpdateRecord(id) {
-    const itemType = this.paths.createPath.slice(1, this.paths.createPath.indexOf('{') - 1);
+    const itemType = this.createPath.slice(1, this.createPath.indexOf('{') - 1);
     return `${this.buildURL()}/${this.apiPath}${itemType}/${id}`;
   }
 
   urlForCreateRecord(modelType, snapshot) {
     const id = snapshot.record.mutableId; // computed property that returns either id or private settable _id value
-    const path = this.paths.createPath.slice(1, this.paths.createPath.indexOf('{') - 1);
+    const path = this.createPath.slice(1, this.createPath.indexOf('{') - 1);
     return `${this.buildURL()}/${this.apiPath}${path}/${id}`;
   }
 
   urlForDeleteRecord(id) {
-    const path = this.paths.deletePath.slice(1, this.paths.deletePath.indexOf('{') - 1);
+    const path = this.deletePath.slice(1, this.deletePath.indexOf('{') - 1);
     return `${this.buildURL()}/${this.apiPath}${path}/${id}`;
   }
 
