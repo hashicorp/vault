@@ -149,6 +149,8 @@ in the above RFC section.`,
 RSA key-type issuer. Defaults to false.`,
 	}
 
+	fields = addCACertKeyUsage(fields)
+
 	return path
 }
 
