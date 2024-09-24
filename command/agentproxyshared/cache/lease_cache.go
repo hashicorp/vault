@@ -789,8 +789,11 @@ func (c *LeaseCache) storeStaticSecretIndex(ctx context.Context, req *SendReques
 		return err
 	}
 
+	// TODO Violet: Lock here, unlock before set
+
 	path := getStaticSecretPathFromRequest(req)
 
+	capabilitiesIndex.IndexLock.Lock()
 	// Extra caution -- avoid potential nil
 	if capabilitiesIndex.ReadablePaths == nil {
 		capabilitiesIndex.ReadablePaths = make(map[string]struct{})
@@ -798,6 +801,7 @@ func (c *LeaseCache) storeStaticSecretIndex(ctx context.Context, req *SendReques
 
 	// update the index with the new capability:
 	capabilitiesIndex.ReadablePaths[path] = struct{}{}
+	capabilitiesIndex.IndexLock.Unlock()
 
 	err = c.SetCapabilitiesIndex(ctx, capabilitiesIndex)
 	if err != nil {
