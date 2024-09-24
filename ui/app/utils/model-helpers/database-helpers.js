@@ -2,7 +2,7 @@
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
  */
-// TODO: move to model-helpers
+
 export const AVAILABLE_PLUGIN_TYPES = [
   {
     value: 'elasticsearch-database-plugin',
