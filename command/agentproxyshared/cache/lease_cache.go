@@ -789,8 +789,6 @@ func (c *LeaseCache) storeStaticSecretIndex(ctx context.Context, req *SendReques
 		return err
 	}
 
-	// TODO Violet: Lock here, unlock before set
-
 	path := getStaticSecretPathFromRequest(req)
 
 	capabilitiesIndex.IndexLock.Lock()
