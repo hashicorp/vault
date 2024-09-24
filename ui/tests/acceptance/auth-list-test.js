@@ -134,7 +134,7 @@ module('Acceptance | auth backend list', function (hooks) {
       // Only SAML is enterprise-only for now
       const type = 'saml';
       const path = `auth-list-${type}-${uid}`;
-      await runCmd(mountAuthCmd(type, path));
+      await runCmd([mountAuthCmd(type, path), 'refresh']);
       await settled();
       await visit('/vault/access');
 
