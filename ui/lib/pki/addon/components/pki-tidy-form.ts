@@ -24,8 +24,6 @@ interface Args {
 
 interface PkiTidyTtls {
   intervalDuration: string;
-  minStartupBackoffDuration: string;
-  maxStartupBackoffDuration: string;
   acmeAccountSafetyBuffer: string;
 }
 interface PkiTidyBooleans {

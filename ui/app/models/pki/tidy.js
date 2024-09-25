@@ -58,11 +58,11 @@ export default class PkiTidyModel extends Model {
     hideToggle: true,
     formatTtl: true,
   })
-  minStartupBackoffDuration; // auto-tidy only 
+  minStartupBackoffDuration; // auto-tidy only
 
   @attr('string', {
-      label: 'Maximum startup backoff duration',
-      defaultValue: '15m'
+    label: 'Maximum startup backoff duration',
+    defaultValue: '15m',
     editType: 'ttl',
     helperTextEnabled:
       'Sets the max_startup_backoff_duration field which forces the maximum delay after Vault startup auto-tidy can run',
@@ -154,18 +154,15 @@ export default class PkiTidyModel extends Model {
 
   get allGroups() {
     const groups = [
-      { autoTidy: ['enabled', 'intervalDuration', 'minStartupBackoffDuration', 'maxStartupBackoffDuration'] },
+      { autoTidy: ['enabled', 'intervalDuration', ...this.autoTidyConfigFields] },
       ...this.sharedFields,
     ];
     return this._expandGroups(groups);
   }
 
-  // fields that are specific to auto-tidy, which should only show up when enabled.
-  get autoTidyEnabledFields() {
-    const enabledFields = [
-      { 'Auto Tidy Startup Backoff': ['minStartupBackoffDuration', 'maxStartupBackoffDuration'] },
-    ];
-    return this._expandGroups(enabledFields);
+  // fields that are specific to auto-tidy
+  get autoTidyConfigFields() {
+    return ['minStartupBackoffDuration', 'maxStartupBackoffDuration'];
   }
 
   // shared between auto and manual tidy operations

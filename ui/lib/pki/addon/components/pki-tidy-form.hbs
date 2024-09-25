@@ -13,7 +13,7 @@
 <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
 
 <form class="has-bottom-margin-s" {{on "submit" (perform this.save)}} data-test-tidy-form={{@tidyType}}>
-  {{#if (and (eq @tidyType "auto") this.intervalDurationAttr)}}
+  {{#if (eq @tidyType "auto")}}
     {{#let this.intervalDurationAttr as |attr|}}
       <TtlPicker
         data-test-input={{attr.name}}
@@ -26,19 +26,13 @@
         @initialValue={{get @tidy attr.name}}
       />
     {{/let}}
+
+    {{#if @tidy.enabled}}
+      {{#each @tidy.autoTidyConfigFields as |field|}}
+        <FormField @attr={{get @tidy.allByKey field}} @model={{@tidy}} />
+      {{/each}}
+    {{/if}}
   {{/if}}
-  {{#each @tidy.autoTidyEnabledFields as |fieldGroup|}}
-    {{#each-in fieldGroup as |group fields|}}
-      {{#if (and (eq @tidyType "auto") @tidy.enabled)}}
-        <h2 class="title is-size-5 has-border-bottom-light page-header" data-test-tidy-header={{group}}>
-          {{group}}
-        </h2>
-        {{#each fields as |attr|}}
-          <FormField @attr={{attr}} @model={{@tidy}} />
-        {{/each}}
-      {{/if}}
-    {{/each-in}}
-  {{/each}}
   {{#each @tidy.formFieldGroups as |fieldGroup|}}
     {{#each-in fieldGroup as |group fields|}}
       {{#if (or (eq @tidyType "manual") @tidy.enabled)}}

@@ -34,7 +34,6 @@ module('Integration | Component | pki tidy form', function (hooks) {
   test('it hides or shows fields depending on auto-tidy toggle', async function (assert) {
     assert.expect(47);
     const sectionHeaders = [
-      'Auto Tidy Startup Backoff',
       'Universal operations',
       'ACME operations',
       'Issuer operations',
@@ -183,7 +182,7 @@ module('Integration | Component | pki tidy form', function (hooks) {
   });
 
   test('it should change the attributes on the model', async function (assert) {
-    assert.expect(11);
+    assert.expect(12);
     this.server.post('/pki-auto-tidy/config/auto-tidy', (schema, req) => {
       assert.propEqual(
         JSON.parse(req.requestBody),
@@ -249,6 +248,8 @@ module('Integration | Component | pki tidy form', function (hooks) {
       pauseDuration: 30,
       revocationQueueSafetyBuffer: 40,
       safetyBuffer: 50,
+      minStartupBackoffDuration: 300,
+      maxStartupBackoffDuration: 900,
     };
     this.autoTidy.eachAttribute(async (attr, { type }) => {
       const skipFields = ['enabled', 'tidyAcme', 'intervalDuration', 'acmeAccountSafetyBuffer']; // combined with duration ttl or asserted separately
