@@ -1408,12 +1408,12 @@ const pki = {
     },
     minStartupBackoffDuration: {
       editType: 'ttl',
-      helpText: 'The minimum amount of time auto-tidy will be delayed after startup in seconds.',
+      helpText: 'The minimum amount of time in seconds auto-tidy will be delayed after startup.',
       fieldGroup: 'default',
     },
     maxStartupBackoffDuration: {
       editType: 'ttl',
-      helpText: 'The maximum amount of time auto-tidy will be delayed after startup in seconds.',
+      helpText: 'The maximum amount of time in seconds auto-tidy will be delayed after startup.',
       fieldGroup: 'default',
     },
     issuerSafetyBuffer: {

@@ -587,12 +587,12 @@ func pathConfigAutoTidy(b *backend) *framework.Path {
 		},
 		"min_startup_backoff_duration": {
 			Type:        framework.TypeInt,
-			Description: `The minimum amount of time auto-tidy will be delayed after startup in seconds`,
+			Description: `The minimum amount of time in seconds auto-tidy will be delayed after startup`,
 			Required:    true,
 		},
 		"max_startup_backoff_duration": {
 			Type:        framework.TypeInt,
-			Description: `The maximum amount of time auto-tidy will be delayed after startup in seconds`,
+			Description: `The maximum amount of time in seconds auto-tidy will be delayed after startup`,
 			Required:    true,
 		},
 		"interval_duration": {
@@ -693,12 +693,12 @@ func pathConfigAutoTidy(b *backend) *framework.Path {
 			},
 			"min_startup_backoff_duration": {
 				Type:        framework.TypeDurationSecond,
-				Description: `The minimum amount of time auto-tidy will be delayed after startup in seconds.`,
+				Description: `The minimum amount of time in seconds auto-tidy will be delayed after startup.`,
 				Default:     int(defaultTidyConfig.MinStartupBackoff.Seconds()),
 			},
 			"max_startup_backoff_duration": {
 				Type:        framework.TypeDurationSecond,
-				Description: `The maximum amount of time auto-tidy will be delayed after startup in seconds.`,
+				Description: `The maximum amount of time in seconds auto-tidy will be delayed after startup.`,
 				Default:     int(defaultTidyConfig.MaxStartupBackoff.Seconds()),
 			},
 			"interval_duration": {
