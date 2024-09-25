@@ -6,7 +6,7 @@
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import { withModelValidations } from 'vault/decorators/model-validations';
-import validators from 'vault/utils/validators';
+import validators from 'vault/utils/model-helpers/validators';
 import sinon from 'sinon';
 import Model from '@ember-data/model';
 

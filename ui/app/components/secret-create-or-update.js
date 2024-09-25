@@ -35,7 +35,7 @@ import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { isBlank, isNone } from '@ember/utils';
 import { task, waitForEvent } from 'ember-concurrency';
-import { WHITESPACE_WARNING } from 'vault/utils/validators';
+import { WHITESPACE_WARNING } from 'vault/utils/model-helpers/validators';
 
 const LIST_ROUTE = 'vault.cluster.secrets.backend.list';
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
