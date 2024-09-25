@@ -11,13 +11,14 @@ import { v4 as uuidv4 } from 'uuid';
 import { encodeString } from 'vault/utils/b64';
 import authPage from 'vault/tests/pages/auth';
 import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
+import codemirror from 'vault/tests/helpers/codemirror';
+import { GENERAL } from '../helpers/general-selectors';
 
 const SELECTORS = {
   secretLink: '[data-test-secret-link]',
   popupMenu: '[data-test-popup-menu-trigger]',
   versionsTab: '[data-test-transit-link="versions"]',
   actionsTab: '[data-test-transit-key-actions-link]',
-  rootCrumb: (path) => `[data-test-secret-breadcrumb="${path}"] a`,
   card: (action) => `[data-test-transit-card="${action}"]`,
   infoRow: (label) => `[data-test-value-div="${label}"]`,
   form: (item) => `[data-test-transit-key="${item}"]`,
@@ -150,7 +151,7 @@ const testConvergentEncryption = async function (assert, keyName) {
   for (const testCase of tests) {
     await click('[data-test-transit-action-link="encrypt"]');
 
-    find('#plaintext-control .CodeMirror').CodeMirror.setValue(testCase.plaintext);
+    codemirror('#plaintext-control').setValue(testCase.plaintext);
     await fillIn('[data-test-transit-input="context"]', testCase.context);
 
     if (!testCase.encodePlaintext) {
@@ -160,7 +161,7 @@ const testConvergentEncryption = async function (assert, keyName) {
     if (testCase.encodeContext) {
       await click('[data-test-transit-b64-toggle="context"]');
     }
-    assert.dom('[data-test-encrypt-modal]').doesNotExist(`${name}: is not open before encrypt`);
+    assert.dom('[data-test-encrypt-modal]').doesNotExist(`${keyName}: is not open before encrypt`);
     await click('[data-test-button-encrypt]');
 
     if (testCase.assertAfterEncrypt) {
@@ -171,14 +172,15 @@ const testConvergentEncryption = async function (assert, keyName) {
     const copiedCiphertext = find('[data-test-encrypted-value="ciphertext"]').innerText;
     await click('dialog button');
 
-    assert.dom('dialog.hds-modal').doesNotExist(`${name}: Modal closes after background clicked`);
+    assert.dom('dialog.hds-modal').doesNotExist(`${keyName}: Modal closes after background clicked`);
     await click('[data-test-transit-action-link="decrypt"]');
 
     if (testCase.assertBeforeDecrypt) {
       await settled();
       testCase.assertBeforeDecrypt(keyName);
     }
-    find('#ciphertext-control .CodeMirror').CodeMirror.setValue(copiedCiphertext);
+
+    codemirror('#ciphertext-control').setValue(copiedCiphertext);
     await click('[data-test-button-decrypt]');
 
     if (testCase.assertAfterDecrypt) {
@@ -188,7 +190,7 @@ const testConvergentEncryption = async function (assert, keyName) {
 
     await click('dialog button');
 
-    assert.dom('dialog.hds-modal').doesNotExist(`${name}: Modal closes after background clicked`);
+    assert.dom('dialog.hds-modal').doesNotExist(`${keyName}: Modal closes after background clicked`);
   }
 };
 
@@ -246,7 +248,7 @@ module('Acceptance | transit (flaky)', function (hooks) {
     assert.dom(SELECTORS.infoRow('Deletion allowed')).hasText('false');
     assert.dom(SELECTORS.infoRow('Derived')).hasText('Yes');
     assert.dom(SELECTORS.infoRow('Convergent encryption')).hasText('Yes');
-    await click(SELECTORS.rootCrumb(this.path));
+    await click(GENERAL.breadcrumbLink(this.path));
     await click(SELECTORS.popupMenu);
     const actions = findAll('.hds-dropdown__list li');
     assert.strictEqual(actions.length, 2, 'shows 2 items in popup menu');

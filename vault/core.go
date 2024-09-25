@@ -50,7 +50,6 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/osutil"
 	"github.com/hashicorp/vault/physical/raft"
-	"github.com/hashicorp/vault/plugins/event"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -204,6 +203,20 @@ func (e *ErrInvalidKey) Error() string {
 	return fmt.Sprintf("invalid key: %v", e.Reason)
 }
 
+// possiblyWrapOverloadedError wraps ErrInternalError with the provided err
+// argument and a description if the err argument is ErrOverloaded. This is a
+// conservative approach to wrapping in some call paths which previously
+// discarded lower-level errors and returned ErrInternalError. The intent is to
+// prevent potential behavior changes by reducing the scope of errors which are
+// bubbled up.
+func possiblyWrapOverloadedError(desc string, err error) error {
+	if errors.Is(err, consts.ErrOverloaded) {
+		return fmt.Errorf("%s: %w: %w", desc, err, ErrInternalError)
+	}
+
+	return ErrInternalError
+}
+
 type RegisterAuthFunc func(context.Context, time.Duration, string, *logical.Auth, string) error
 
 type activeAdvertisement struct {
@@ -322,9 +335,6 @@ type Core struct {
 	// auditBackends is the mapping of backends to use for this core
 	auditBackends map[string]audit.Factory
 
-	// eventBackends is the mapping of event plugins to use for this core
-	eventBackends map[string]event.Factory
-
 	// stateLock protects mutable state
 	stateLock locking.RWMutex
 	sealed    *uint32
@@ -365,7 +375,7 @@ type Core struct {
 
 	// mountsLock is used to ensure that the mounts table does not
 	// change underneath a calling function
-	mountsLock locking.DeadlockRWMutex
+	mountsLock locking.RWMutex
 
 	// mountMigrationTracker tracks past and ongoing remount operations
 	// against their migration ids
@@ -377,7 +387,7 @@ type Core struct {
 
 	// authLock is used to ensure that the auth table does not
 	// change underneath a calling function
-	authLock locking.DeadlockRWMutex
+	authLock locking.RWMutex
 
 	// audit is loaded after unseal since it is a protected
 	// configuration
@@ -389,11 +399,11 @@ type Core struct {
 
 	// auditBroker is used to ingest the audit events and fan
 	// out into the configured audit backends
-	auditBroker *AuditBroker
+	auditBroker *audit.Broker
 
 	// auditedHeaders is used to configure which http headers
 	// can be output in the audit logs
-	auditedHeaders *AuditedHeadersConfig
+	auditedHeaders *audit.HeadersConfig
 
 	// systemBackend is the backend which is used to manage internal operations
 	systemBackend   *SystemBackend
@@ -717,6 +727,8 @@ type Core struct {
 	periodicLeaderRefreshInterval time.Duration
 
 	clusterAddrBridge *raft.ClusterAddrBridge
+
+	censusManager *CensusManager
 }
 
 func (c *Core) ActiveNodeClockSkewMillis() int64 {
@@ -763,8 +775,6 @@ type CoreConfig struct {
 	CredentialBackends map[string]logical.Factory
 
 	AuditBackends map[string]audit.Factory
-
-	EventBackends map[string]event.Factory
 
 	Physical physical.Backend
 
@@ -993,21 +1003,10 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		effectiveSDKVersion = version.GetVersion().Version
 	}
 
-	var detectDeadlocks []string
-	if conf.DetectDeadlocks != "" {
-		detectDeadlocks = strings.Split(conf.DetectDeadlocks, ",")
-		for k, v := range detectDeadlocks {
-			detectDeadlocks[k] = strings.ToLower(strings.TrimSpace(v))
-		}
-	}
-
-	// Use imported logging deadlock if requested
-	var stateLock locking.RWMutex
-	stateLock = &locking.SyncRWMutex{}
-
-	if slices.Contains(detectDeadlocks, "statelock") {
-		stateLock = &locking.DeadlockRWMutex{}
-	}
+	detectDeadlocks := locking.ParseDetectDeadlockConfigParameter(conf.DetectDeadlocks)
+	stateLock := locking.CreateConfigurableRWMutex(detectDeadlocks, "statelock")
+	mountsLock := locking.CreateConfigurableRWMutex(detectDeadlocks, "mountsLock")
+	authLock := locking.CreateConfigurableRWMutex(detectDeadlocks, "authLock")
 
 	// Setup the core
 	c := &Core{
@@ -1023,6 +1022,8 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		customListenerHeader: new(atomic.Value),
 		seal:                 conf.Seal,
 		stateLock:            stateLock,
+		mountsLock:           mountsLock,
+		authLock:             authLock,
 		router:               NewRouter(),
 		sealed:               new(uint32),
 		sealMigrationDone:    new(uint32),
@@ -1232,7 +1233,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	if c.recoveryMode {
 		checkResult, err := c.checkForSealMigration(context.Background(), conf.UnwrapSeal)
 		if err != nil {
-			return nil, fmt.Errorf("error checking if a seal migration is needed")
+			return nil, fmt.Errorf("error checking if a seal migration is needed: %w", err)
 		}
 		if conf.UnwrapSeal != nil || checkResult == sealMigrationCheckAdjust {
 			return nil, errors.New("cannot run in recovery mode when a seal migration is needed")
@@ -1282,9 +1283,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	// Audit backends
 	c.configureAuditBackends(conf.AuditBackends)
 
-	// Event plugins
-	c.configureEventBackends(conf.EventBackends)
-
 	// UI
 	uiStoragePrefix := systemBarrierPrefix + "ui"
 	c.uiConfig = NewUIConfig(conf.EnableUI, physical.NewView(c.physical, uiStoragePrefix), NewBarrierView(c.barrier, uiStoragePrefix))
@@ -1318,6 +1316,19 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	if c.versionHistory == nil {
 		c.logger.Info("Initializing version history cache for core")
 		c.versionHistory = make(map[string]VaultVersion)
+	}
+
+	// Setup the Census Manager
+	cmConfig, err := c.parseCensusManagerConfig(conf)
+	if err != nil {
+		return nil, err
+	}
+
+	cmLogger := conf.Logger.Named("reporting")
+	c.allLoggers = append(c.allLoggers, cmLogger)
+	c.censusManager, err = NewCensusManager(cmLogger, cmConfig, NewBarrierView(c.barrier, utilizationBasePath))
+	if err != nil {
+		return nil, err
 	}
 
 	// Events
@@ -1444,19 +1455,6 @@ func (c *Core) configureLogicalBackends(backends map[string]logical.Factory, log
 	c.logicalBackends = logicalBackends
 
 	c.addExtraLogicalBackends(adminNamespacePath)
-}
-
-// configureEventBackends configures the Core with the ability to create
-// event backends for various types.
-func (c *Core) configureEventBackends(backends map[string]event.Factory) {
-	eventBackends := make(map[string]event.Factory, len(backends))
-	for k, f := range backends {
-		eventBackends[k] = f
-	}
-
-	c.eventBackends = eventBackends
-
-	c.addExtraEventBackends()
 }
 
 // handleVersionTimeStamps stores the current version at the current time to
@@ -2346,7 +2344,7 @@ func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock, performCleanup
 
 		if err := c.preSeal(); err != nil {
 			c.logger.Error("pre-seal teardown failed", "error", err)
-			return fmt.Errorf("internal error")
+			return fmt.Errorf("internal error: %w", err)
 		}
 	} else {
 		// If we are keeping the lock we already have the state write lock
@@ -2460,24 +2458,18 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	}
 
 	if !c.IsDRSecondary() {
-		if !c.perfStandby {
-			if err := c.setupCensusManager(); err != nil {
-				logger.Error("failed to instantiate the license reporting agent", "error", err)
-			}
-		}
-
 		// not waiting on wg to avoid changing existing behavior
 		var wg sync.WaitGroup
-		if err := c.setupActivityLog(ctx, &wg); err != nil {
+		if err := c.setupActivityLog(ctx, &wg, false); err != nil {
 			return err
 		}
 
-		if !c.perfStandby {
-			c.StartManualCensusSnapshots()
+		if err := c.setupCensusManager(ctx); err != nil {
+			return err
 		}
-
 	} else {
-		broker, err := NewAuditBroker(logger)
+		brokerLogger := logger.Named("audit")
+		broker, err := audit.NewBroker(brokerLogger)
 		if err != nil {
 			return err
 		}
@@ -2487,6 +2479,11 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	if c.isPrimary() {
 		if err := c.runUnsealSetupForPrimary(ctx, logger); err != nil {
 			return err
+		}
+	} else if c.IsMultisealEnabled() {
+		sealGenInfo := c.SealAccess().GetAccess().GetSealGenerationInfo()
+		if sealGenInfo != nil && !sealGenInfo.IsRewrapped() {
+			atomic.StoreUint32(c.sealMigrationDone, 1)
 		}
 	}
 
@@ -2839,6 +2836,7 @@ func (c *Core) preSeal() error {
 		close(c.metricsCh)
 		c.metricsCh = nil
 	}
+
 	var result error
 
 	c.stopForwarding()
@@ -2862,7 +2860,6 @@ func (c *Core) preSeal() error {
 	if err := c.teardownCensusManager(); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down reporting agent: %w", err))
 	}
-
 	if err := c.teardownCredentials(context.Background()); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down credentials: %w", err))
 	}
@@ -2934,7 +2931,7 @@ func (c *Core) BarrierKeyLength() (min, max int) {
 	return
 }
 
-func (c *Core) AuditedHeadersConfig() *AuditedHeadersConfig {
+func (c *Core) AuditedHeadersConfig() *audit.HeadersConfig {
 	return c.auditedHeaders
 }
 
@@ -3024,6 +3021,8 @@ func setPhysicalSealConfig(ctx context.Context, c *Core, label, configPath strin
 
 	return nil
 }
+
+//go:generate enumer -type=sealMigrationCheckResult -trimprefix=sealMigrationCheck -transform=snake
 
 type sealMigrationCheckResult int
 
@@ -4128,15 +4127,16 @@ func (c *Core) ReloadIntrospectionEndpointEnabled() {
 }
 
 type PeerNode struct {
-	Hostname        string        `json:"hostname"`
-	APIAddress      string        `json:"api_address"`
-	ClusterAddress  string        `json:"cluster_address"`
-	Version         string        `json:"version"`
-	LastEcho        time.Time     `json:"last_echo"`
-	UpgradeVersion  string        `json:"upgrade_version,omitempty"`
-	RedundancyZone  string        `json:"redundancy_zone,omitempty"`
-	EchoDuration    time.Duration `json:"echo_duration"`
-	ClockSkewMillis int64         `json:"clock_skew_millis"`
+	Hostname                    string        `json:"hostname"`
+	APIAddress                  string        `json:"api_address"`
+	ClusterAddress              string        `json:"cluster_address"`
+	Version                     string        `json:"version"`
+	LastEcho                    time.Time     `json:"last_echo"`
+	UpgradeVersion              string        `json:"upgrade_version,omitempty"`
+	RedundancyZone              string        `json:"redundancy_zone,omitempty"`
+	EchoDuration                time.Duration `json:"echo_duration"`
+	ClockSkewMillis             int64         `json:"clock_skew_millis"`
+	ReplicationPrimaryCanaryAge int64         `json:"replication_primary_canary_age_ms"`
 }
 
 // GetHAPeerNodesCached returns the nodes that've sent us Echo requests recently.
@@ -4153,15 +4153,16 @@ func (c *Core) GetHAPeerNodesCached() []PeerNode {
 			apiAddr = info.nodeInfo.ApiAddr
 		}
 		nodes = append(nodes, PeerNode{
-			Hostname:        hostname,
-			APIAddress:      apiAddr,
-			ClusterAddress:  itemClusterAddr,
-			LastEcho:        info.lastHeartbeat,
-			Version:         info.version,
-			UpgradeVersion:  info.upgradeVersion,
-			RedundancyZone:  info.redundancyZone,
-			EchoDuration:    info.echoDuration,
-			ClockSkewMillis: info.clockSkewMillis,
+			Hostname:                    hostname,
+			APIAddress:                  apiAddr,
+			ClusterAddress:              itemClusterAddr,
+			LastEcho:                    info.lastHeartbeat,
+			Version:                     info.version,
+			UpgradeVersion:              info.upgradeVersion,
+			RedundancyZone:              info.redundancyZone,
+			EchoDuration:                info.echoDuration,
+			ClockSkewMillis:             info.clockSkewMillis,
+			ReplicationPrimaryCanaryAge: info.replicationLagMillis,
 		})
 	}
 	return nodes
@@ -4464,12 +4465,22 @@ func (c *Core) GetRaftAutopilotState(ctx context.Context) (*raft.AutopilotState,
 	return raftBackend.GetAutopilotServerState(ctx)
 }
 
-// Events returns a reference to the common event bus for sending and subscribint to events.
+// Events returns a reference to the common event bus for sending and subscribing to events.
 func (c *Core) Events() *eventbus.EventBus {
 	return c.events
 }
 
 func (c *Core) SetSeals(ctx context.Context, grabLock bool, barrierSeal Seal, secureRandomReader io.Reader, shouldRewrap bool) error {
+	return c.setSeals(ctx, grabLock, barrierSeal, secureRandomReader, shouldRewrap, true)
+}
+
+// SetSealsOnPerfStandby sets the seal state within the core object without attempting to persist it to disk,
+// normally SetSeals is what you should be calling.
+func (c *Core) SetSealsOnPerfStandby(ctx context.Context, grabLock bool, barrierSeal Seal, secureRandomReader io.Reader) error {
+	return c.setSeals(ctx, grabLock, barrierSeal, secureRandomReader, false, false)
+}
+
+func (c *Core) setSeals(ctx context.Context, grabLock bool, barrierSeal Seal, secureRandomReader io.Reader, shouldRewrap bool, performWrite bool) error {
 	if grabLock {
 		ctx, _ = c.GetContext()
 
@@ -4497,14 +4508,16 @@ func (c *Core) SetSeals(ctx context.Context, grabLock bool, barrierSeal Seal, se
 	}
 
 	barrierConfigCopy.Type = barrierSeal.BarrierSealConfigType().String()
-	err = barrierSeal.SetBarrierConfig(ctx, barrierConfigCopy)
-	if err != nil {
-		return fmt.Errorf("error setting barrier config for new seal: %s", err)
-	}
+	if performWrite {
+		err = barrierSeal.SetBarrierConfig(ctx, barrierConfigCopy)
+		if err != nil {
+			return fmt.Errorf("error setting barrier config for new seal: %s", err)
+		}
 
-	err = barrierSeal.SetStoredKeys(ctx, rootKey)
-	if err != nil {
-		return fmt.Errorf("error setting root key in new seal: %s", err)
+		err = barrierSeal.SetStoredKeys(ctx, rootKey)
+		if err != nil {
+			return fmt.Errorf("error setting root key in new seal: %s", err)
+		}
 	}
 
 	c.seal = barrierSeal
@@ -4533,4 +4546,27 @@ func (c *Core) DetectStateLockDeadlocks() bool {
 		return true
 	}
 	return false
+}
+
+// setupAuditedHeadersConfig will initialize new audited headers configuration on
+// the Core by loading data from the barrier view.
+func (c *Core) setupAuditedHeadersConfig(ctx context.Context) error {
+	// Create a sub-view, e.g. sys/audited-headers-config/
+	view := c.systemBarrierView.SubView(audit.AuditedHeadersSubPath)
+
+	headers, err := audit.NewHeadersConfig(view)
+	if err != nil {
+		return err
+	}
+
+	// Invalidate the headers now in order to load them for the first time.
+	err = headers.Invalidate(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Update the Core.
+	c.auditedHeaders = headers
+
+	return nil
 }

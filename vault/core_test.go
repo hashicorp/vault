@@ -21,9 +21,6 @@ import (
 	"github.com/hashicorp/go-uuid"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/builtin/audit/file"
-	"github.com/hashicorp/vault/builtin/audit/socket"
-	"github.com/hashicorp/vault/builtin/audit/syslog"
 	logicalDb "github.com/hashicorp/vault/builtin/logical/database"
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/command/server"
@@ -59,24 +56,24 @@ func TestNewCore_configureAuditBackends(t *testing.T) {
 		},
 		"file": {
 			backends: map[string]audit.Factory{
-				"file": file.Factory,
+				"file": audit.NewFileBackend,
 			},
 		},
 		"socket": {
 			backends: map[string]audit.Factory{
-				"socket": socket.Factory,
+				"socket": audit.NewSocketBackend,
 			},
 		},
 		"syslog": {
 			backends: map[string]audit.Factory{
-				"syslog": syslog.Factory,
+				"syslog": audit.NewSyslogBackend,
 			},
 		},
 		"all": {
 			backends: map[string]audit.Factory{
-				"file":   file.Factory,
-				"socket": socket.Factory,
-				"syslog": syslog.Factory,
+				"file":   audit.NewFileBackend,
+				"socket": audit.NewSocketBackend,
+				"syslog": audit.NewSyslogBackend,
 			},
 		},
 	}
@@ -1543,11 +1540,11 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 
 func TestCore_HandleRequest_AuditTrail(t *testing.T) {
 	// Create a noop audit backend
-	var noop *corehelpers.NoopAudit
+	var noop *audit.NoopAudit
 	c, _, root := TestCoreUnsealed(t)
-	c.auditBackends["noop"] = func(_ context.Context, config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, error) {
+	c.auditBackends["noop"] = func(config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, error) {
 		var err error
-		noop, err = corehelpers.NewNoopAudit(config)
+		noop, err = audit.NewNoopAudit(config)
 		return noop, err
 	}
 
@@ -1606,11 +1603,11 @@ func TestCore_HandleRequest_AuditTrail(t *testing.T) {
 
 func TestCore_HandleRequest_AuditTrail_noHMACKeys(t *testing.T) {
 	// Create a noop audit backend
-	var noop *corehelpers.NoopAudit
+	var noop *audit.NoopAudit
 	c, _, root := TestCoreUnsealed(t)
-	c.auditBackends["noop"] = func(_ context.Context, config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, error) {
+	c.auditBackends["noop"] = func(config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, error) {
 		var err error
-		noop, err = corehelpers.NewNoopAudit(config)
+		noop, err = audit.NewNoopAudit(config)
 		return noop, err
 	}
 
@@ -1709,7 +1706,7 @@ func TestCore_HandleRequest_AuditTrail_noHMACKeys(t *testing.T) {
 
 func TestCore_HandleLogin_AuditTrail(t *testing.T) {
 	// Create a badass credential backend that always logs in as armon
-	var noop *corehelpers.NoopAudit
+	var noop *audit.NoopAudit
 	noopBack := &NoopBackend{
 		Login: []string{"login"},
 		Response: &logical.Response{
@@ -1729,9 +1726,9 @@ func TestCore_HandleLogin_AuditTrail(t *testing.T) {
 	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
 		return noopBack, nil
 	}
-	c.auditBackends["noop"] = func(_ context.Context, config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, error) {
+	c.auditBackends["noop"] = func(config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, error) {
 		var err error
-		noop, err = corehelpers.NewNoopAudit(config)
+		noop, err = audit.NewNoopAudit(config)
 		return noop, err
 	}
 
@@ -3289,11 +3286,12 @@ func TestCore_HandleRequest_TokenCreate_RegisterAuthFailure(t *testing.T) {
 
 // mockServiceRegistration helps test whether standalone ServiceRegistration works
 type mockServiceRegistration struct {
-	notifyActiveCount int
-	notifySealedCount int
-	notifyPerfCount   int
-	notifyInitCount   int
-	runDiscoveryCount int
+	notifyActiveCount         int
+	notifySealedCount         int
+	notifyPerfCount           int
+	notifyInitCount           int
+	notifyConfigurationReload int
+	runDiscoveryCount         int
 }
 
 func (m *mockServiceRegistration) Run(shutdownCh <-chan struct{}, wait *sync.WaitGroup, redirectAddr string) error {
@@ -3318,6 +3316,11 @@ func (m *mockServiceRegistration) NotifyPerformanceStandbyStateChange(isStandby 
 
 func (m *mockServiceRegistration) NotifyInitializedStateChange(isInitialized bool) error {
 	m.notifyInitCount++
+	return nil
+}
+
+func (m *mockServiceRegistration) NotifyConfigurationReload(config *map[string]string) error {
+	m.notifyConfigurationReload++
 	return nil
 }
 
@@ -3377,10 +3380,11 @@ func TestCore_ServiceRegistration(t *testing.T) {
 
 	// Vault should be registered, unsealed, and active
 	if diff := deep.Equal(sr, &mockServiceRegistration{
-		runDiscoveryCount: 1,
-		notifyActiveCount: 1,
-		notifySealedCount: 1,
-		notifyInitCount:   1,
+		runDiscoveryCount:         1,
+		notifyActiveCount:         1,
+		notifySealedCount:         1,
+		notifyInitCount:           1,
+		notifyConfigurationReload: 1,
 	}); diff != nil {
 		t.Fatal(diff)
 	}
@@ -3431,6 +3435,79 @@ func InduceDeadlock(t *testing.T, vaultcore *Core, expected uint32) {
 	wg.Wait()
 	if atomic.LoadUint32(&deadlocks) != expected {
 		t.Fatalf("expected 1 deadlock, detected %d", deadlocks)
+	}
+}
+
+// TestDetectedDeadlockSetting verifies that a Core struct gets the appropriate
+// locking.RWMutex implementation assigned for the stateLock, authLock, and
+// mountsLock fields based on various values that could be obtained from the
+// detect_deadlocks configuration parameter.
+func TestDetectedDeadlockSetting(t *testing.T) {
+	var standardLock string = "*locking.SyncRWMutex"
+	var deadlockLock string = "*locking.DeadlockRWMutex"
+
+	for _, tc := range []struct {
+		name                        string
+		input                       string
+		expectedDetectDeadlockSlice []string
+		expectedStateLockImpl       string
+		expectedAuthLockImpl        string
+		expectedMountsLockImpl      string
+	}{
+		{
+			name:                        "none",
+			input:                       "",
+			expectedDetectDeadlockSlice: []string{},
+			expectedStateLockImpl:       standardLock,
+			expectedAuthLockImpl:        standardLock,
+			expectedMountsLockImpl:      standardLock,
+		},
+		{
+			name:                        "stateLock-only",
+			input:                       "STATELOCK",
+			expectedDetectDeadlockSlice: []string{"statelock"},
+			expectedStateLockImpl:       deadlockLock,
+			expectedAuthLockImpl:        standardLock,
+			expectedMountsLockImpl:      standardLock,
+		},
+		{
+			name:                        "authLock-only",
+			input:                       "AuthLock",
+			expectedDetectDeadlockSlice: []string{"authlock"},
+			expectedStateLockImpl:       standardLock,
+			expectedAuthLockImpl:        deadlockLock,
+			expectedMountsLockImpl:      standardLock,
+		},
+		{
+			name:                        "state-auth-mounts",
+			input:                       "mountsLock,AUTHlock,sTaTeLoCk",
+			expectedDetectDeadlockSlice: []string{"mountslock", "authlock", "statelock"},
+			expectedStateLockImpl:       deadlockLock,
+			expectedAuthLockImpl:        deadlockLock,
+			expectedMountsLockImpl:      deadlockLock,
+		},
+		{
+			name:                        "stateLock-with-unrecognized",
+			input:                       "stateLock,otherLock",
+			expectedDetectDeadlockSlice: []string{"statelock", "otherlock"},
+			expectedStateLockImpl:       deadlockLock,
+			expectedAuthLockImpl:        standardLock,
+			expectedMountsLockImpl:      standardLock,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			core, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{DetectDeadlocks: tc.input})
+
+			assert.ElementsMatch(t, tc.expectedDetectDeadlockSlice, core.detectDeadlocks)
+
+			stateLockImpl := fmt.Sprintf("%T", core.stateLock)
+			authLockImpl := fmt.Sprintf("%T", core.authLock)
+			mountsLockImpl := fmt.Sprintf("%T", core.mountsLock)
+
+			assert.Equal(t, tc.expectedStateLockImpl, stateLockImpl)
+			assert.Equal(t, tc.expectedAuthLockImpl, authLockImpl)
+			assert.Equal(t, tc.expectedMountsLockImpl, mountsLockImpl)
+		})
 	}
 }
 

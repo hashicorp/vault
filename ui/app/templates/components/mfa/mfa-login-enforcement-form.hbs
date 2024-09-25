@@ -35,6 +35,7 @@
       {{! component only computes inputValue on init -- ensure Ember Data hasMany promise has resolved }}
       {{#if @model.mfa_methods.isFulfilled}}
         <SearchSelect
+          @id="methods"
           @placeholder="Type to search for existing MFA methods"
           @inputValue={{map-by "id" @model.mfa_methods}}
           @shouldRenderName={{true}}
@@ -114,6 +115,7 @@
           />
         {{else}}
           <SearchSelect
+            @id="existing-targets"
             @placeholder="Search for an existing target"
             @options={{this.searchSelect.options}}
             @parentManageSelected={{this.searchSelect.selected}}

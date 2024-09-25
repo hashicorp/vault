@@ -3,11 +3,14 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+.kmip-role-operations {
+  column-count: 2;
+}
 .kmip-role-allowed-operations {
   @extend .box;
   flex: 1 1 auto;
   box-shadow: none;
-  padding: 0;
+  padding: $spacing-4 0;
 }
 .kmip-role-allowed-operations .field {
   margin-bottom: $spacing-4;

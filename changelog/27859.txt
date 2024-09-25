@@ -1,0 +1,4 @@
+```release-note:improvement
+audit: sinks (file, socket, syslog) will attempt to log errors to the server operational 
+log before returning (if there are errors to log, and the context is done).
+```

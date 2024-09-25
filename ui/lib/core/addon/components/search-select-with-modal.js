@@ -14,34 +14,23 @@ import { addToArray } from 'vault/helpers/add-to-array';
 
 /**
  * @module SearchSelectWithModal
- * The `SearchSelectWithModal` is an implementation of the [ember-power-select](https://github.com/cibernox/ember-power-select) used for form elements where options come dynamically from the API.
+ * The SearchSelectWithModal is an implementation of the [ember-power-select](https://github.com/cibernox/ember-power-select) used for form elements where options come dynamically from the API.
  * It renders a passed template component that parents a form so records can be created inline, via a modal that pops up after clicking 'No results found for "${term}". Click here to create it.' from the dropdown menu.
- * **!! NOTE: any form passed must be able to receive an @onSave and @onCancel arg so that the modal will close properly. See `oidc/client-form.hbs` that renders a modal for the `oidc-assignment-template.hbs` as an example.
+ * **!! NOTE: any form passed must be able to receive an `@onSave` and `@onCancel` arg so that the modal will close properly. See `oidc/client-form.hbs` that renders a modal for the `oidc-assignment-template.hbs` as an example.
  * @example
- * <SearchSelectWithModal
- *   @id="assignments"
- *   @models={{array "oidc/assignment"}}
- *   @label="assignment name"
- *   @subText="Search for an existing assignment, or type a new name to create it."
- *   @inputValue={{map-by "id" @model.assignments}}
- *   @onChange={{this.handleSearchSelect}}
- *   {{! since this is the "limited" radio select option we do not want to include 'allow_all' }}
- *   @excludeOptions={{array "allow_all"}}
- *   @fallbackComponent="string-list"
- *   @modalFormTemplate="modal-form/some-template"
- *   @modalSubtext="Use assignment to specify which Vault entities and groups are allowed to authenticate."
+ * <SearchSelectWithModal @id="assignments" @models={{array "oidc/assignment"}} @label="assignment name" @subText="Search for an existing assignment, or type a new name to create it." @inputValue={{map-by "id" @model.assignments}} @onChange={{this.handleSearchSelect}} @excludeOptions={{array "allow_all"}} @fallbackComponent="string-list" @modalFormTemplate="modal-form/some-template" @modalSubtext="Use assignment to specify which Vault entities and groups are allowed to authenticate."
  * />
  *
- // * component functionality
+ * component functionality
  * @param {function} onChange - The onchange action for this form field. ** SEE EXAMPLE ** mfa-login-enforcement-form.js (onMethodChange) for example when selecting models from a hasMany relationship
  * @param {array} [inputValue] - Array of strings corresponding to the input's initial value, e.g. an array of model ids that on edit will appear as selected items below the input
  * @param {boolean} [shouldRenderName=false] - By default an item's id renders in the dropdown, `true` displays the name with its id in smaller text beside it *NOTE: the boolean flips automatically with 'identity' models
  * @param {array} [excludeOptions] - array of strings containing model ids to filter from the dropdown (ex: ['allow_all'])
 
-// * query params for dropdown items
+ * query params for dropdown items
  * @param {array} models - models to fetch from API. models with varying permissions should be ordered from least restricted to anticipated most restricted (ex. if one model is an enterprise only feature, pass it in last)
 
- // * template only/display args
+ * template only/display args
  * @param {string} id - The name of the form field
  * @param {string} [label] - Label appears above the form field
  * @param {string} [labelClass] - overwrite default label size (14px) from class="is-label"
@@ -49,7 +38,9 @@ import { addToArray } from 'vault/helpers/add-to-array';
  * @param {string} [subText] - Text to be displayed below the label
  * @param {string} fallbackComponent - name of component to be rendered if the API call 403s
  * @param {string} [placeholder] - placeholder text to override the default text of "Search"
+ * @param {string} [fallbackComponentPlaceholder] - specific placeholder text relevant to fallback component. In some cases, the placeholder text does not make sense for both the search-select and the fallback component. Ex: "Input key name" for input-search and "Search or type to create a new item" for search-select.
  * @param {boolean} [displayInherit=false] - if you need the search select component to display inherit instead of box.
+ * @param {number} [selectLimit=1] - if you only want the user to select a limited number of options, add number to this param.
  */
 export default class SearchSelectWithModal extends Component {
   @service store;

@@ -7,7 +7,7 @@ import { format } from 'd3-format';
 import { mean } from 'd3-array';
 
 // COLOR THEME:
-export const BLUE_PALETTE = ['#cce3fe', '#0c56e9', '#1c345f']; // blues from https://helios.hashicorp.design/foundations/colors?tab=palette#core-palette
+export const BAR_PALETTE = ['#CCE3FE', '#1060FF', '#C2C5CB', '#656A76'];
 export const UPGRADE_WARNING = '#FDEEBA';
 export const GREY = '#EBEEF2';
 
@@ -18,7 +18,7 @@ export const SVG_DIMENSIONS = { height: 190, width: 500 };
 export const BAR_WIDTH = 7; // data bar width is 7 pixels
 
 // Reference for tickFormat https://www.youtube.com/watch?v=c3MCROTNN8g
-export function formatNumbers(number) {
+export function numericalAxisLabel(number) {
   if (number < 1000) return number;
   if (number < 1100) return format('.1s')(number);
   if (number < 2000) return format('.2s')(number); // between 1k and 2k, show 2 decimals

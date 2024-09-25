@@ -2,14 +2,13 @@
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
  */
-
+import Ember from 'ember';
 import { service } from '@ember/service';
 // ARG NOTE: Once you remove outer-html after glimmerizing you can remove the outer-html component
 import Component from './outer-html';
 import { task, timeout, waitForEvent } from 'ember-concurrency';
 import { debounce } from '@ember/runloop';
 
-const WAIT_TIME = 500;
 const ERROR_WINDOW_CLOSED =
   'The provider window was closed before authentication was complete. Your web browser may have blocked or closed a pop-up window. Please check your settings and click Sign In to try again.';
 const ERROR_MISSING_PARAMS =
@@ -19,7 +18,7 @@ export { ERROR_WINDOW_CLOSED, ERROR_MISSING_PARAMS, ERROR_JWT_LOGIN };
 
 export default Component.extend({
   store: service(),
-  featureFlagService: service('featureFlag'),
+  flagsService: service('flags'),
 
   selectedAuthPath: null,
   selectedAuthType: null,
@@ -88,6 +87,8 @@ export default Component.extend({
     this.onError(err);
   },
 
+  // NOTE TO DEVS: Be careful when updating the OIDC flow and ensure the updates
+  // work with implicit flow. See issue https://github.com/hashicorp/vault-plugin-auth-jwt/pull/192
   prepareForOIDC: task(function* (oidcWindow) {
     const thisWindow = this.getWindow();
     // show the loading animation in the parent
@@ -109,6 +110,8 @@ export default Component.extend({
 
   watchPopup: task(function* (oidcWindow) {
     while (true) {
+      const WAIT_TIME = Ember.testing ? 50 : 500;
+
       yield timeout(WAIT_TIME);
       if (!oidcWindow || oidcWindow.closed) {
         return this.handleOIDCError(ERROR_WINDOW_CLOSED);
@@ -133,7 +136,7 @@ export default Component.extend({
     // The namespace can be either be passed as a query parameter, or be embedded
     // in the state param in the format `<state_id>,ns=<namespace>`. So if
     // `namespace` is empty, check for namespace in state as well.
-    if (namespace === '' || this.featureFlagService.managedNamespaceRoot) {
+    if (namespace === '' || this.flagsService.hvdManagedNamespaceRoot) {
       const i = state.indexOf(',ns=');
       if (i >= 0) {
         // ",ns=" is 4 characters

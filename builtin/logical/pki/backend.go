@@ -5,6 +5,7 @@ package pki
 
 import (
 	"context"
+	"crypto/x509"
 	"fmt"
 	"strings"
 	"sync"
@@ -13,9 +14,11 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/builtin/logical/pki/managed_key"
 	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
+	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -48,9 +51,9 @@ const (
  * will be forwarded to that cluster's active node and not go all the way up to the performance primary's
  * active node.
  *
- * If a certificate issue request has a role in which no_store is set to true, that node itself
- * will issue the certificate and not forward the request to the active node, as this does not
- * need to write to storage.
+ * If a certificate issue request has a role in which no_store and no_store_metadata is set to
+ * true, that node itself will issue the certificate and not forward the request to the active
+ * node, as this does not need to write to storage.
  *
  * Following the same pattern, if a managed key is involved to sign an issued certificate request
  * and the local node does not have access for some reason to it, the request will be forwarded to
@@ -124,8 +127,9 @@ func Backend(conf *logical.BackendConfig) *backend {
 				localDeltaWALPath,
 				legacyCRLPath,
 				clusterConfigPath,
-				"crls/",
-				"certs/",
+				issuing.PathCrls,
+				issuing.PathCerts,
+				issuing.PathCertMetadata,
 				acmePathPrefix,
 			},
 
@@ -142,7 +146,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 
 			WriteForwardedStorage: []string{
 				crossRevocationPath,
-				unifiedRevocationWritePathPrefix,
+				revocation.UnifiedRevocationWritePathPrefix,
 				unifiedDeltaWALPath,
 			},
 
@@ -340,6 +344,8 @@ type BackendOps interface {
 	pki_backend.SystemViewGetter
 	pki_backend.MountInfo
 	pki_backend.Logger
+	revocation.RevokerFactory
+
 	UseLegacyBundleCaStorage() bool
 	CrlBuilder() *CrlBuilder
 	GetRevokeStorageLock() *sync.RWMutex
@@ -653,7 +659,7 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 		}
 
 		// Then attempt to rebuild the CRLs if required.
-		warnings, err := b.CrlBuilder().rebuildIfForced(sc)
+		warnings, err := b.CrlBuilder().RebuildIfForced(sc)
 		if err != nil {
 			return err
 		}
@@ -790,7 +796,7 @@ func (b *backend) initializeStoredCertificateCounts(ctx context.Context) error {
 		return nil
 	}
 
-	entries, err := b.storage.List(ctx, "certs/")
+	entries, err := b.storage.List(ctx, issuing.PathCerts)
 	if err != nil {
 		return err
 	}
@@ -802,4 +808,78 @@ func (b *backend) initializeStoredCertificateCounts(ctx context.Context) error {
 
 	certCounter.InitializeCountsFromStorage(entries, revokedEntries)
 	return nil
+}
+
+var _ revocation.Revoker = &revoker{}
+
+type revoker struct {
+	backend        *backend
+	storageContext *storageContext
+	crlConfig      *pki_backend.CrlConfig
+}
+
+func (r *revoker) RevokeCert(cert *x509.Certificate) (revocation.RevokeCertInfo, error) {
+	r.backend.GetRevokeStorageLock().Lock()
+	defer r.backend.GetRevokeStorageLock().Unlock()
+	resp, err := revokeCert(r.storageContext, r.crlConfig, cert)
+	return parseRevokeCertOutput(resp, err)
+}
+
+func (r *revoker) RevokeCertBySerial(serial string) (revocation.RevokeCertInfo, error) {
+	// NOTE: tryRevokeCertBySerial grabs the revoke storage lock for us
+	resp, err := tryRevokeCertBySerial(r.storageContext, r.crlConfig, serial)
+	return parseRevokeCertOutput(resp, err)
+}
+
+// There are a bunch of reasons that a certificate will/won't be revoked. Sadly we will need a further
+// refactoring but for now handle the basics of the reasons/response objects back to a usable object
+// that doesn't directly reply to the API request
+func parseRevokeCertOutput(resp *logical.Response, err error) (revocation.RevokeCertInfo, error) {
+	if err != nil {
+		return revocation.RevokeCertInfo{}, err
+	}
+
+	if resp == nil {
+		// nil, nil response, most likely means the certificate was missing,
+		// but *might* be other things such as a tainted mount
+		return revocation.RevokeCertInfo{}, nil
+	}
+
+	if resp.IsError() {
+		// There are a few reasons we return a response error but not an error,
+		// such as UserError's or they tried to revoke the CA
+		return revocation.RevokeCertInfo{}, resp.Error()
+	}
+
+	// It is possible we don't return the field for various reasons if just a bunch of warnings are set.
+	if revTimeRaw, ok := resp.Data["revocation_time"]; ok {
+		revTimeInt, err := parseutil.ParseInt(revTimeRaw)
+		if err != nil {
+			// Lets me lenient for now
+			revTimeInt = 0
+		}
+		revTime := time.Unix(revTimeInt, 0)
+		return revocation.RevokeCertInfo{
+			RevocationTime: revTime,
+		}, nil
+	}
+
+	// Since we don't really know what went wrong if anything, for example the certificate might
+	// have been expired or close to expiry, lets punt on it for now
+	return revocation.RevokeCertInfo{
+		Warnings: resp.Warnings,
+	}, nil
+}
+
+func (b *backend) GetRevoker(ctx context.Context, s logical.Storage) (revocation.Revoker, error) {
+	sc := b.makeStorageContext(ctx, s)
+	crlConfig, err := b.CrlBuilder().GetConfigWithUpdate(sc)
+	if err != nil {
+		return nil, err
+	}
+	return &revoker{
+		backend:        b,
+		crlConfig:      crlConfig,
+		storageContext: sc,
+	}, nil
 }

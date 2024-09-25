@@ -21,7 +21,7 @@ const validations = {
   // getter/setter for the deploymentEnvironments model attribute
   deploymentEnvironmentsArray: [{ type: 'presence', message: 'At least one environment is required.' }],
 };
-
+// displayFields are used on the destination details view
 const displayFields = [
   // connection details
   'name',
@@ -33,15 +33,19 @@ const displayFields = [
   'granularity',
   'secretNameTemplate',
 ];
+// formFieldGroups are used on the create-edit destination view
 const formFieldGroups = [
-  { default: ['name', 'projectId', 'teamId', 'deploymentEnvironments', 'granularity', 'secretNameTemplate'] },
+  { default: ['name', 'projectId', 'teamId', 'deploymentEnvironments'] },
   { Credentials: ['accessToken'] },
+  { 'Advanced configuration': ['granularity', 'secretNameTemplate'] },
 ];
 @withModelValidations(validations)
 @withFormFields(displayFields, formFieldGroups)
 export default class SyncDestinationsVercelProjectModel extends SyncDestinationModel {
   @attr('string', {
     subText: 'Vercel API access token with the permissions to manage environment variables.',
+    sensitive: true,
+    noCopy: true,
   })
   accessToken; // obfuscated, never returned by API
 

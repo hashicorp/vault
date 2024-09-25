@@ -30,21 +30,13 @@ $ go get github.com/hashicorp/vault/api
 
 ### Ruby
 
+@include 'alerts/deprecated.mdx'
+
 - [Vault Ruby Client](https://github.com/hashicorp/vault-ruby)
 
 ```shell-session
 $ gem install vault
 ```
-
-## C#
-
-- [Vault DotNet Client](https://github.com/hashicorp/vault-client-dotnet) - Note that this is currently in early development, and is not yet production-ready. 
-
-```shell-session
-# Install-Package HashiCorp.Vault
-```
-
-[Example application](https://github.com/hashicorp/vault-client-dotnet#getting-started)
 
 ## Community
 
@@ -62,7 +54,8 @@ $ pip install ansible-modules-hashivault
 ### C&#35;
 
 - [VaultSharp](https://github.com/rajanadar/VaultSharp)
-  - Supports .NET 4.6.x, 4.7.x, 4.8.x, .NET Standard 2.x, .NET 6.0 and 7.0.
+  - Supports .NET 4.6.x, 4.7.x, 4.8.x, .NET Standard 2.x, .NET 6.0, 7.0, and 8.0.
+  - Supports every auth and secret backend supported by Vault, along with several system APIs.
 
 ```shell-session
 $ Install-Package VaultSharp
@@ -117,6 +110,7 @@ $ stack install gothic
 
 ### Java
 
+- [Quarkus Vault](https://github.com/quarkiverse/quarkus-vault)
 - [Spring Vault](https://github.com/spring-projects/spring-vault)
 - [vault-java-driver](https://github.com/jopenlibs/vault-java-driver)
 
@@ -211,3 +205,19 @@ $ pip install hvac
 ### Scala
 
 - [scala-vault](https://github.com/janstenpickle/scala-vault)
+
+## Experimental
+
+### C#
+
+- [Vault DotNet Client](https://github.com/hashicorp/vault-client-dotnet) - 
+Note that this is an experimental approach to auto-generating libraries from
+OpenAPI content and is not production-ready. We do not have plans to make
+this production-ready at this time.
+
+```shell-session
+# Install-Package HashiCorp.Vault
+```
+
+[Example application](https://github.com/hashicorp/vault-client-dotnet#getting-started)
+

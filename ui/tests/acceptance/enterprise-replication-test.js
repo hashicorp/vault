@@ -46,7 +46,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
   });
 
   test('replication', async function (assert) {
-    assert.expect(17);
+    assert.expect(18);
     const secondaryName = 'firstSecondary';
     const mode = 'deny';
 
@@ -91,7 +91,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await click('#deny');
     await clickTrigger();
     await searchSelect.options.objectAt(0).click();
-    const mountPath = find('[data-test-selected-option="0"]').textContent.trim();
+    const mountPath = find('[data-test-selected-option="0"]').innerText?.trim();
     await click('[data-test-secondary-add]');
 
     await pollCluster(this.owner);
@@ -165,14 +165,12 @@ module('Acceptance | Enterprise | replication', function (hooks) {
         'shows the correct title of the empty state'
       );
 
-    assert.ok(
-      find('[data-test-replication-title]').textContent.includes('Disaster Recovery'),
-      'it displays the replication type correctly'
-    );
-    assert.ok(
-      find('[data-test-replication-mode-display]').textContent.includes('primary'),
-      'it displays the cluster mode correctly'
-    );
+    assert
+      .dom('[data-test-replication-title="Disaster Recovery"]')
+      .includesText('Disaster Recovery', 'it displays the replication type correctly');
+    assert
+      .dom('[data-test-replication-mode-display]')
+      .includesText('primary', 'it displays the cluster mode correctly');
 
     // add dr secondary
     await click('[data-test-replication-link="secondaries"]');
@@ -314,12 +312,16 @@ module('Acceptance | Enterprise | replication', function (hooks) {
       .doesNotExist(`does not render replication summary card when both modes are not enabled as primary`);
 
     // enable DR primary replication
-    await click('[data-test-replication-details-link="dr"]');
+    await click('[data-test-sidebar-nav-link="Disaster Recovery"]');
+    // let the controller set replicationMode in afterModel
+    await waitFor('[data-test-replication-enable-form]');
     await click('[data-test-replication-enable]');
 
     await pollCluster(this.owner);
     await settled();
 
+    // Breadcrumbs only load once we're in the summary mode after enabling
+    await waitFor('[data-test-replication-breadcrumb]');
     // navigate using breadcrumbs back to replication.index
     assert.dom('[data-test-replication-breadcrumb]').exists('shows the replication breadcrumb (flaky)');
     await click('[data-test-replication-breadcrumb] a');

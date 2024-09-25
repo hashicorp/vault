@@ -1,0 +1,4 @@
+```release-note:bug
+core/config: fix issue when using `proxy_protocol_behavior` with `deny_unauthorized`, 
+which causes the Vault TCP listener to close after receiving an untrusted upstream proxy connection.
+```

@@ -256,6 +256,12 @@ func TestDegenerateCertificate(t *testing.T) {
 	}
 	testOpenSSLParse(t, deg)
 	pem.Encode(os.Stdout, &pem.Block{Type: "PKCS7", Bytes: deg})
+
+	// Make sure the library can parse the PKCS7 we generated along with OpenSSL
+	_, err = Parse(deg)
+	if err != nil {
+		t.Fatalf("failed parsing degenerated certificate: %v", err)
+	}
 }
 
 // writes the cert to a temporary file and tests that openssl can read it.

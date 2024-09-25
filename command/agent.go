@@ -13,6 +13,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -74,6 +75,7 @@ type AgentCommand struct {
 
 	ShutdownCh chan struct{}
 	SighupCh   chan struct{}
+	SigUSR2Ch  chan struct{}
 
 	tlsReloadFuncsLock sync.RWMutex
 	tlsReloadFuncs     []reloadutil.ReloadFunc
@@ -328,6 +330,9 @@ func (c *AgentCommand) Run(args []string) int {
 			client.SetNamespace(config.AutoAuth.Method.Namespace)
 		}
 		templateNamespace = client.Namespace()
+		if !namespaceSetByEnvironmentVariable && config.Vault != nil && config.Vault.Namespace != "" {
+			templateNamespace = config.Vault.Namespace
+		}
 
 		sinkClient, err := client.CloneWithHeaders()
 		if err != nil {
@@ -655,7 +660,6 @@ func (c *AgentCommand) Run(args []string) int {
 
 		listeners = append(listeners, ln)
 
-		proxyVaultToken := true
 		apiProxyLogger.Debug("auto-auth token is allowed to be used; configuring inmem sink")
 		inmemSink, err := inmem.New(&sink.SinkConfig{
 			Logger: apiProxyLogger,
@@ -669,15 +673,18 @@ func (c *AgentCommand) Run(args []string) int {
 			Logger: apiProxyLogger,
 			Sink:   inmemSink,
 		})
+		useAutoAuthToken := false
+		forceAutoAuthToken := false
 		if config.APIProxy != nil {
-			proxyVaultToken = !config.APIProxy.ForceAutoAuthToken
+			useAutoAuthToken = config.APIProxy.UseAutoAuthToken
+			forceAutoAuthToken = config.APIProxy.ForceAutoAuthToken
 		}
 
 		var muxHandler http.Handler
 		if leaseCache != nil {
-			muxHandler = cache.ProxyHandler(ctx, apiProxyLogger, leaseCache, inmemSink, proxyVaultToken, authInProgress, invalidTokenErrCh)
+			muxHandler = cache.ProxyHandler(ctx, apiProxyLogger, leaseCache, inmemSink, forceAutoAuthToken, useAutoAuthToken, authInProgress, invalidTokenErrCh)
 		} else {
-			muxHandler = cache.ProxyHandler(ctx, apiProxyLogger, apiProxy, inmemSink, proxyVaultToken, authInProgress, invalidTokenErrCh)
+			muxHandler = cache.ProxyHandler(ctx, apiProxyLogger, apiProxy, inmemSink, forceAutoAuthToken, useAutoAuthToken, authInProgress, invalidTokenErrCh)
 		}
 
 		// Parse 'require_request_header' listener config option, and wrap
@@ -753,6 +760,16 @@ func (c *AgentCommand) Run(args []string) int {
 				case c.reloadedCh <- struct{}{}:
 				default:
 				}
+			case <-c.SigUSR2Ch:
+				pprofPath := filepath.Join(os.TempDir(), "vault-agent-pprof")
+				cpuProfileDuration := time.Second * 1
+				err := WritePprofToFile(pprofPath, cpuProfileDuration)
+				if err != nil {
+					c.logger.Error(err.Error())
+					continue
+				}
+
+				c.logger.Info(fmt.Sprintf("Wrote pprof files to: %s", pprofPath))
 			case <-ctx.Done():
 				return nil
 			}

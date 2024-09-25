@@ -6,6 +6,7 @@ package sealhelper
 import (
 	"path"
 	"strconv"
+	"testing"
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/transit"
@@ -16,14 +17,13 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/seal"
-	"github.com/mitchellh/go-testing-interface"
 )
 
 type TransitSealServer struct {
 	*vault.TestCluster
 }
 
-func NewTransitSealServer(t testing.T, idx int) *TransitSealServer {
+func NewTransitSealServer(t testing.TB, idx int) *TransitSealServer {
 	conf := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"transit": transit.Factory,
@@ -47,7 +47,7 @@ func NewTransitSealServer(t testing.T, idx int) *TransitSealServer {
 	return &TransitSealServer{cluster}
 }
 
-func (tss *TransitSealServer) MakeKey(t testing.T, key string) {
+func (tss *TransitSealServer) MakeKey(t testing.TB, key string) {
 	client := tss.Cores[0].Client
 	if _, err := client.Logical().Write(path.Join("transit", "keys", key), nil); err != nil {
 		t.Fatal(err)
@@ -59,7 +59,7 @@ func (tss *TransitSealServer) MakeKey(t testing.T, key string) {
 	}
 }
 
-func (tss *TransitSealServer) MakeSeal(t testing.T, key string) (vault.Seal, error) {
+func (tss *TransitSealServer) MakeSeal(t testing.TB, key string) (vault.Seal, error) {
 	client := tss.Cores[0].Client
 	wrapperConfig := map[string]string{
 		"address":     client.Address(),

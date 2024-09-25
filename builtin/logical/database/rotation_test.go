@@ -63,7 +63,7 @@ func TestBackend_StaticRole_Rotation_basic(t *testing.T) {
 
 	b.schedule = &TestSchedule{}
 
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t)
 	defer cleanup()
 
 	// create the database user
@@ -274,7 +274,7 @@ func TestBackend_StaticRole_Rotation_Schedule_ErrorRecover(t *testing.T) {
 
 	b.schedule = &TestSchedule{}
 
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t)
 	t.Cleanup(cleanup)
 
 	// create the database user
@@ -458,7 +458,7 @@ func TestBackend_StaticRole_Rotation_NonStaticError(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t)
 	defer cleanup()
 
 	// create the database user
@@ -562,7 +562,7 @@ func TestBackend_StaticRole_Rotation_Revoke_user(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t)
 	defer cleanup()
 
 	// create the database user
@@ -783,7 +783,7 @@ func TestBackend_StaticRole_Rotation_QueueWAL_discard_role_newer_rotation_date(t
 		t.Fatal("could not convert to db backend")
 	}
 
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t)
 	defer cleanup()
 
 	// create the database user
@@ -952,7 +952,7 @@ func assertWALCount(t *testing.T, s logical.Storage, expected int, key string) {
 type userCreator func(t *testing.T, username, password string)
 
 func TestBackend_StaticRole_Rotation_PostgreSQL(t *testing.T) {
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "13.4-buster")
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t)
 	defer cleanup()
 	uc := userCreator(func(t *testing.T, username, password string) {
 		createTestPGUser(t, connURL, username, password, testRoleStaticCreate)
@@ -1246,7 +1246,7 @@ func TestBackend_StaticRole_Rotation_LockRegression(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t)
 	defer cleanup()
 
 	// Configure a connection
@@ -1325,7 +1325,7 @@ func TestBackend_StaticRole_Rotation_Invalid_Role(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t)
 	defer cleanup()
 
 	// create the database user

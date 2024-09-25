@@ -108,14 +108,14 @@ export default class PagePkiIssuerRotateRootComponent extends Component<Args> {
     const endpoint = `/v1/${this.secretMountPath.currentPath}/issuer/${this.args.newRootModel.issuerId}/${format}`;
     const adapter = this.store.adapterFor('application');
     try {
-      return adapter
-        .rawRequest(endpoint, 'GET', { unauthenticated: true })
-        .then(function (response: Response) {
-          if (format === 'der') {
-            return response.blob();
-          }
-          return response.text();
-        });
+      return adapter.rawRequest(endpoint, 'GET', { unauthenticated: true }).then(function (
+        response: Response
+      ) {
+        if (format === 'der') {
+          return response.blob();
+        }
+        return response.text();
+      });
     } catch (e) {
       return null;
     }

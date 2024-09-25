@@ -61,6 +61,7 @@
         <ToolbarSecretLink
           @secret={{concat "role/" @model.id}}
           @mode="edit"
+          @backend={{@model.backend}}
           @replace={{true}}
           @queryParams={{hash itemType="role"}}
           data-test-edit-link={{true}}

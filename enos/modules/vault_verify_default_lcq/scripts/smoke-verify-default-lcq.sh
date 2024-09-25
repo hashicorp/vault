@@ -7,6 +7,9 @@ function fail() {
   exit 1
 }
 
+# Exit early if we haven't been given an expected DEFAULT_LCQ
+[[ -z "$DEFAULT_LCQ" ]] && exit 0
+
 [[ -z "$RETRY_INTERVAL" ]] && fail "RETRY_INTERVAL env variable has not been set"
 [[ -z "$TIMEOUT_SECONDS" ]] && fail "TIMEOUT_SECONDS env variable has not been set"
 [[ -z "$VAULT_ADDR" ]] && fail "VAULT_ADDR env variable has not been set"

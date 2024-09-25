@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 
 	"github.com/armon/go-metrics"
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 )
 
 type CertificateCounter struct {
@@ -185,7 +186,7 @@ func (c *CertificateCounter) IncrementTotalCertificatesCount(certsCounted bool, 
 		switch {
 		case !certsCounted:
 			// This is unsafe, but a good best-attempt
-			if strings.HasPrefix(newSerial, "certs/") {
+			if strings.HasPrefix(newSerial, issuing.PathCerts) {
 				newSerial = newSerial[6:]
 			}
 			c.possibleDoubleCountedSerials = append(c.possibleDoubleCountedSerials, newSerial)

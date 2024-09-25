@@ -5,7 +5,7 @@
 
 {{! HBS display template for rendering title, description and stat boxes with a chart on the right }}
 
-<div class="chart-wrapper single-chart-grid" ...attributes>
+<div class="chart-wrapper single-chart-grid" data-test-chart-container={{@title}} ...attributes>
   <div class="chart-header has-bottom-margin-xl">
     <h2 class="chart-title">{{@title}}</h2>
     <p class="chart-description">
@@ -30,7 +30,11 @@
       </div>
     {{/if}}
 
-    {{#if @legend}}
+    {{#if (has-block "legend")}}
+      <div class="legend">
+        {{yield to="legend"}}
+      </div>
+    {{else if @legend}}
       <div class="legend" data-test-chart-container-legend>
         {{#each @legend as |legend idx|}}
           <span class="legend-colors dot-{{idx}}"></span>

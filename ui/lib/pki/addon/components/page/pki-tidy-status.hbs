@@ -7,10 +7,10 @@
   <ToolbarActions>
     <div class="toolbar-separator"></div>
     {{#if @autoTidyConfig.enabled}}
-      <ToolbarLink @route="tidy.auto" data-test-pki-auto-tidy-config>
+      <ToolbarLink @route="tidy.auto" @model={{@autoTidyConfig.id}} data-test-pki-auto-tidy-config>
         Auto-tidy configuration
       </ToolbarLink>
-      <ToolbarLink @route="tidy.manual" data-test-pki-manual-tidy-config>
+      <ToolbarLink @route="tidy.manual" @model={{@autoTidyConfig.id}} data-test-pki-manual-tidy-config>
         Perform manual tidy
       </ToolbarLink>
     {{else}}
@@ -146,8 +146,18 @@
     </M.Body>
     <M.Footer as |F|>
       <Hds::ButtonSet>
-        <Hds::Button @text="Automatic tidy" @route="tidy.auto.configure" data-test-tidy-modal-auto-button />
-        <Hds::Button @text="Manual tidy" @route="tidy.manual" data-test-tidy-modal-manual-button />
+        <Hds::Button
+          @text="Automatic tidy"
+          @route="tidy.auto.configure"
+          @model={{@autoTidyConfig.id}}
+          data-test-tidy-modal-auto-button
+        />
+        <Hds::Button
+          @text="Manual tidy"
+          @route="tidy.manual"
+          @model={{@autoTidyConfig.id}}
+          data-test-tidy-modal-manual-button
+        />
         <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} data-test-tidy-modal-cancel-button />
       </Hds::ButtonSet>
     </M.Footer>

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -116,6 +117,7 @@ func buildPathGenerateRoot(b *backend, pattern string, displayAttrs *framework.D
 	ret.Fields = addCACommonFields(map[string]*framework.FieldSchema{})
 	ret.Fields = addCAKeyGenerationFields(ret.Fields)
 	ret.Fields = addCAIssueFields(ret.Fields)
+	ret.Fields = addCACertKeyUsage(ret.Fields)
 	return ret
 }
 
@@ -196,6 +198,7 @@ extension with CA: true. Only needed as a
 workaround in some compatibility scenarios
 with Active Directory Certificate Services.`,
 	}
+	ret.Fields = addCaCsrKeyUsage(ret.Fields)
 
 	// At this time Go does not support signing CSRs using PSS signatures, see
 	// https://github.com/golang/go/issues/45990
@@ -407,7 +410,7 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 	}
 
 	if len(createdIssuers) > 0 {
-		warnings, err := b.CrlBuilder().rebuild(sc, true)
+		warnings, err := b.CrlBuilder().Rebuild(sc, true)
 		if err != nil {
 			// Before returning, check if the error message includes the
 			// string "PSS". If so, it indicates we might've wanted to modify
@@ -677,7 +680,7 @@ func (b *backend) pathRevokeIssuer(ctx context.Context, req *logical.Request, da
 
 	// Now, if the parent issuer exists within this mount, we'd have written
 	// a storage entry for this certificate, making it appear as any other
-	// leaf. We need to add a revocationInfo entry for this into storage,
+	// leaf. We need to add a RevocationInfo entry for this into storage,
 	// so that it appears as if it was revoked.
 	//
 	// This is a _necessary_ but not necessarily _sufficient_ step to
@@ -688,7 +691,7 @@ func (b *backend) pathRevokeIssuer(ctx context.Context, req *logical.Request, da
 	// include both in two separate CRLs. Hence, the former is the condition
 	// we check in CRL building, but this step satisfies other guarantees
 	// within Vault.
-	certEntry, err := fetchCertBySerial(sc, "certs/", issuer.SerialNumber)
+	certEntry, err := fetchCertBySerial(sc, issuing.PathCerts, issuer.SerialNumber)
 	if err == nil && certEntry != nil {
 		// We've inverted this error check as it doesn't matter; we already
 		// consider this certificate revoked.
@@ -712,7 +715,7 @@ func (b *backend) pathRevokeIssuer(ctx context.Context, req *logical.Request, da
 			//
 			// We'll let a cleanup pass or CRL build identify the issuer for
 			// us.
-			revInfo := revocationInfo{
+			revInfo := revocation.RevocationInfo{
 				CertificateBytes:  issuerCert.Raw,
 				RevocationTime:    issuer.RevocationTime,
 				RevocationTimeUTC: issuer.RevocationTimeUTC,
@@ -731,7 +734,7 @@ func (b *backend) pathRevokeIssuer(ctx context.Context, req *logical.Request, da
 	}
 
 	// Rebuild the CRL to include the newly revoked issuer.
-	warnings, crlErr := b.CrlBuilder().rebuild(sc, false)
+	warnings, crlErr := b.CrlBuilder().Rebuild(sc, false)
 	if crlErr != nil {
 		switch crlErr.(type) {
 		case errutil.UserError:

@@ -27,7 +27,7 @@
       />
     {{/if}}
     {{#if @canEdit}}
-      <ToolbarLink @route="keys.key.edit" @model={{@key.keyId}} data-test-pki-key-edit>
+      <ToolbarLink @route="keys.key.edit" @models={{array @key.backend @key.keyId}} data-test-pki-key-edit>
         Edit key
       </ToolbarLink>
     {{/if}}

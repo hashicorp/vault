@@ -15,10 +15,10 @@ module('Integration | Component | keymgmt/key-edit', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.before(function () {
-    sinon.stub(timestamp, 'now').callsFake(() => new Date('2018-04-03T14:15:30'));
+    this.timestampStub = sinon.replace(timestamp, 'now', sinon.fake.returns(new Date('2018-04-03T14:15:30')));
   });
   hooks.beforeEach(function () {
-    const now = timestamp.now();
+    const now = this.timestampStub();
     const model = EmberObject.create({
       name: 'Unicorns',
       id: 'Unicorns',
@@ -37,9 +37,6 @@ module('Integration | Component | keymgmt/key-edit', function (hooks) {
     });
     this.model = model;
     this.tab = '';
-  });
-  hooks.after(function () {
-    timestamp.now.restore();
   });
 
   // TODO: Add capabilities tests

@@ -67,6 +67,7 @@ export default class PkiTidyStatusComponent extends Component<Args> {
 
   tidyStatusConfigFields = [
     'tidy_cert_store',
+    'tidy_cert_metadata',
     'tidy_revoked_certs',
     'safety_buffer',
     'pause_duration',

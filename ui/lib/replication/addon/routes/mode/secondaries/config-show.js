@@ -31,7 +31,7 @@ export default Base.extend({
       replicationMode !== 'performance' ||
       !cluster[replicationMode].isPrimary
     ) {
-      return this.transitionTo('mode', cluster.name, replicationMode);
+      return this.router.transitionTo('vault.cluster.replication.mode', cluster.name, replicationMode);
     }
   },
 });

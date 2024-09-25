@@ -8,7 +8,7 @@ import { formatISO } from 'date-fns';
 import { formatByMonths, formatByNamespace, destructureClientCounts } from 'core/utils/client-count-utils';
 import timestamp from 'core/utils/timestamp';
 
-// see tests/helpers/clients for sample API response (ACTIVITY_RESPONSE_STUB)
+// see tests/helpers/clients/client-count-helpers for sample API response (ACTIVITY_RESPONSE_STUB)
 // and transformed by_namespace and by_month examples (SERIALIZED_ACTIVITY_RESPONSE)
 export default class ActivitySerializer extends ApplicationSerializer {
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {

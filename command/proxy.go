@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -71,6 +72,7 @@ type ProxyCommand struct {
 
 	ShutdownCh chan struct{}
 	SighupCh   chan struct{}
+	SigUSR2Ch  chan struct{}
 
 	tlsReloadFuncsLock sync.RWMutex
 	tlsReloadFuncs     []reloadutil.ReloadFunc
@@ -520,7 +522,8 @@ func (c *ProxyCommand) Run(args []string) int {
 				LeaseCache: leaseCache,
 				Logger:     c.logger.Named("cache.staticsecretcapabilitymanager"),
 				Client:     client,
-				StaticSecretTokenCapabilityRefreshInterval: config.Cache.StaticSecretTokenCapabilityRefreshInterval,
+				StaticSecretTokenCapabilityRefreshInterval:  config.Cache.StaticSecretTokenCapabilityRefreshInterval,
+				StaticSecretTokenCapabilityRefreshBehaviour: config.Cache.StaticSecretTokenCapabilityRefreshBehaviour,
 			})
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("Error creating static secret capability manager: %v", err))
@@ -627,16 +630,18 @@ func (c *ProxyCommand) Run(args []string) int {
 			Logger: apiProxyLogger,
 			Sink:   inmemSink,
 		})
-		proxyVaultToken := true
+		useAutoAuthToken := false
+		forceAutoAuthToken := false
 		if config.APIProxy != nil {
-			proxyVaultToken = !config.APIProxy.ForceAutoAuthToken
+			useAutoAuthToken = config.APIProxy.UseAutoAuthToken
+			forceAutoAuthToken = config.APIProxy.ForceAutoAuthToken
 		}
 
 		var muxHandler http.Handler
 		if leaseCache != nil {
-			muxHandler = cache.ProxyHandler(ctx, apiProxyLogger, leaseCache, inmemSink, proxyVaultToken, authInProgress, invalidTokenErrCh)
+			muxHandler = cache.ProxyHandler(ctx, apiProxyLogger, leaseCache, inmemSink, forceAutoAuthToken, useAutoAuthToken, authInProgress, invalidTokenErrCh)
 		} else {
-			muxHandler = cache.ProxyHandler(ctx, apiProxyLogger, apiProxy, inmemSink, proxyVaultToken, authInProgress, invalidTokenErrCh)
+			muxHandler = cache.ProxyHandler(ctx, apiProxyLogger, apiProxy, inmemSink, forceAutoAuthToken, useAutoAuthToken, authInProgress, invalidTokenErrCh)
 		}
 
 		// Parse 'require_request_header' listener config option, and wrap
@@ -712,6 +717,16 @@ func (c *ProxyCommand) Run(args []string) int {
 				case c.reloadedCh <- struct{}{}:
 				default:
 				}
+			case <-c.SigUSR2Ch:
+				pprofPath := filepath.Join(os.TempDir(), "vault-proxy-pprof")
+				cpuProfileDuration := time.Second * 1
+				err := WritePprofToFile(pprofPath, cpuProfileDuration)
+				if err != nil {
+					c.logger.Error(err.Error())
+					continue
+				}
+
+				c.logger.Info(fmt.Sprintf("Wrote pprof files to: %s", pprofPath))
 			case <-ctx.Done():
 				return nil
 			}

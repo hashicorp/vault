@@ -31,7 +31,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
   auth: service(),
   currentCluster: service(),
   customMessages: service(),
-  featureFlagService: service('featureFlag'),
+  flagsService: service('flags'),
   namespaceService: service('namespace'),
   permissions: service(),
   router: service(),
@@ -58,11 +58,15 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     const params = this.paramsFor(this.routeName);
     let namespace = params.namespaceQueryParam;
     const currentTokenName = this.auth.currentTokenName;
-    const managedRoot = this.featureFlagService.managedNamespaceRoot;
+    const managedRoot = this.flagsService.hvdManagedNamespaceRoot;
     assert(
       'Cannot use VAULT_CLOUD_ADMIN_NAMESPACE flag with non-enterprise Vault version',
       !(managedRoot && this.version.isCommunity)
     );
+
+    // activatedFlags are called this high in routing to return a response used to show/hide Secrets sync on sidebar nav.
+    await this.flagsService.fetchActivatedFlags();
+
     if (!namespace && currentTokenName && !Ember.testing) {
       // if no namespace queryParam and user authenticated,
       // use user's root namespace to redirect to properly param'd url
@@ -123,6 +127,10 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
   afterModel(model, transition) {
     this._super(...arguments);
     this.currentCluster.setCluster(model);
+    if (model.needsInit && this.auth.currentToken) {
+      // clear token to prevent infinite load state
+      this.auth.deleteCurrentToken();
+    }
 
     // Check that namespaces is enabled and if not,
     // clear the namespace by transition to this route w/o it

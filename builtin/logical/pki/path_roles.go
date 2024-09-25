@@ -387,6 +387,8 @@ serviced by this role.`,
 		},
 	}
 
+	issuing.AddNoStoreMetadataRoleField(pathRolesResponseFields)
+
 	return &framework.Path{
 		Pattern: "roles/" + framework.GenericNameRegex("name"),
 
@@ -395,7 +397,7 @@ serviced by this role.`,
 			OperationSuffix: "role",
 		},
 
-		Fields: map[string]*framework.FieldSchema{
+		Fields: issuing.AddNoStoreMetadataRoleField(map[string]*framework.FieldSchema{
 			"backend": {
 				Type:        framework.TypeString,
 				Description: "Backend Type",
@@ -806,7 +808,7 @@ The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ.`,
 serviced by this role.`,
 				Default: defaultRef,
 			},
-		},
+		}),
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
@@ -974,6 +976,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		PostalCode:                    data.Get("postal_code").([]string),
 		GenerateLease:                 new(bool),
 		NoStore:                       data.Get("no_store").(bool),
+		NoStoreMetadata:               issuing.GetNoStoreMetadata(data),
 		RequireCN:                     data.Get("require_cn").(bool),
 		CNValidations:                 data.Get("cn_validations").([]string),
 		AllowedSerialNumbers:          data.Get("allowed_serial_numbers").([]string),
@@ -1174,6 +1177,7 @@ func (b *backend) pathRolePatch(ctx context.Context, req *logical.Request, data 
 		PostalCode:                    getWithExplicitDefault(data, "postal_code", oldEntry.PostalCode).([]string),
 		GenerateLease:                 new(bool),
 		NoStore:                       getWithExplicitDefault(data, "no_store", oldEntry.NoStore).(bool),
+		NoStoreMetadata:               issuing.NoStoreMetadataValue(getWithExplicitDefault(data, "no_store_metadata", oldEntry.NoStoreMetadata).(bool)),
 		RequireCN:                     getWithExplicitDefault(data, "require_cn", oldEntry.RequireCN).(bool),
 		CNValidations:                 getWithExplicitDefault(data, "cn_validations", oldEntry.CNValidations).([]string),
 		AllowedSerialNumbers:          getWithExplicitDefault(data, "allowed_serial_numbers", oldEntry.AllowedSerialNumbers).([]string),

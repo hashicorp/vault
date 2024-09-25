@@ -123,8 +123,8 @@ function build() {
   popd
 }
 
-# Prepare legal requirements for packaging
-function prepare_legal() {
+# ENT: Prepare legal requirements for packaging
+function prepare_ent_legal() {
   : "${PKG_NAME:="vault"}"
 
   pushd "$(repo_root)"
@@ -134,6 +134,21 @@ function prepare_legal() {
   mkdir -p ".release/linux/package/usr/share/doc/$PKG_NAME"
   cp dist/EULA.txt ".release/linux/package/usr/share/doc/$PKG_NAME/EULA.txt"
   cp dist/TermsOfEvaluation.txt ".release/linux/package/usr/share/doc/$PKG_NAME/TermsOfEvaluation.txt"
+  popd
+}
+
+# CE: Prepare legal requirements for packaging
+function prepare_ce_legal() {
+  : "${PKG_NAME:="vault"}"
+
+  pushd "$(repo_root)"
+
+  mkdir -p dist
+  cp LICENSE dist/LICENSE.txt
+
+  mkdir -p ".release/linux/package/usr/share/doc/$PKG_NAME"
+  cp LICENSE ".release/linux/package/usr/share/doc/$PKG_NAME/LICENSE.txt"
+
   popd
 }
 
@@ -161,8 +176,11 @@ function main() {
   date)
     build_date
   ;;
-  prepare-legal)
-    prepare_legal
+  prepare-ent-legal)
+    prepare_ent_legal
+  ;;
+  prepare-ce-legal)
+    prepare_ce_legal
   ;;
   revision)
     build_revision

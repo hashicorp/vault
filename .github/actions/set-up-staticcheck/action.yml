@@ -34,7 +34,7 @@ runs:
       env:
         GH_TOKEN: ${{ github.token }}
       run: |
-        VERSION=$(gh release list -R dominikh/go-tools --exclude-drafts --exclude-pre-releases | grep ${{ inputs.version }} | cut -d " " -f2)
+        VERSION=$(./.github/scripts/retry-command.sh gh release list -R dominikh/go-tools --exclude-drafts --exclude-pre-releases | grep ${{ inputs.version }} | cut -d " " -f2)
 
         mkdir -p $(dirname ${{ inputs.destination }})
         DESTINATION="$(readlink -f "${{ inputs.destination }}")"
@@ -57,7 +57,7 @@ runs:
         fi
 
         mkdir -p tmp
-        gh release download "$VERSION" -p "staticcheck_${OS}_${ARCH}.tar.gz" -O tmp/staticcheck.tgz -R dominikh/go-tools
+        ./.github/scripts/retry-command.sh gh release download "$VERSION" --clobber -p "staticcheck_${OS}_${ARCH}.tar.gz" -O tmp/staticcheck.tgz -R dominikh/go-tools
         pushd tmp && tar -xvf staticcheck.tgz && popd
         mv tmp/staticcheck/staticcheck "$DESTINATION"
         rm -rf tmp

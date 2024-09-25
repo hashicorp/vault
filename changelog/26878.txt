@@ -1,0 +1,3 @@
+```release-note:bug
+core/metrics: store cluster name in unencrypted storage to prevent blank cluster name
+```

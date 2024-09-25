@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"strings"
 	"sync/atomic"
@@ -25,11 +24,11 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func ProxyHandler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSink sink.Sink, proxyVaultToken bool, authInProgress *atomic.Bool, invalidTokenErrCh chan error) http.Handler {
+func ProxyHandler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSink sink.Sink, forceAutoAuthToken bool, useAutoAuthToken bool, authInProgress *atomic.Bool, invalidTokenErrCh chan error) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		logger.Info("received request", "method", r.Method, "path", r.URL.Path)
 
-		if !proxyVaultToken {
+		if forceAutoAuthToken {
 			r.Header.Del(consts.AuthHeaderName)
 		}
 
@@ -38,7 +37,7 @@ func ProxyHandler(ctx context.Context, logger hclog.Logger, proxier Proxier, inm
 		var autoAuthToken string
 		if inmemSink != nil {
 			autoAuthToken = inmemSink.(sink.SinkReader).Token()
-			if token == "" {
+			if token == "" && useAutoAuthToken {
 				logger.Debug("using auto auth token", "method", r.Method, "path", r.URL.Path)
 				token = autoAuthToken
 			}
@@ -85,6 +84,10 @@ func ProxyHandler(ctx context.Context, logger hclog.Logger, proxier Proxier, inm
 				metrics.IncrCounter([]string{"agent", "proxy", "error"}, 1)
 				logical.RespondError(w, http.StatusInternalServerError, fmt.Errorf("failed to get the response: %w", err))
 			}
+			return
+		} else if resp == nil {
+			metrics.IncrCounter([]string{"agent", "proxy", "error"}, 1)
+			logical.RespondError(w, http.StatusInternalServerError, fmt.Errorf("failed to get the response: %w", err))
 			return
 		}
 
@@ -218,7 +221,7 @@ func sanitizeAutoAuthTokenResponse(ctx context.Context, logger hclog.Logger, inm
 	if resp.Response.Body != nil {
 		resp.Response.Body.Close()
 	}
-	resp.Response.Body = ioutil.NopCloser(bytes.NewReader(bodyBytes))
+	resp.Response.Body = io.NopCloser(bytes.NewReader(bodyBytes))
 	resp.Response.ContentLength = int64(len(bodyBytes))
 
 	// Serialize and re-read the response

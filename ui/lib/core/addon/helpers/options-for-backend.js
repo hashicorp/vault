@@ -140,11 +140,11 @@ const SECRET_BACKENDS = {
   transit: {
     searchPlaceholder: 'Filter keys',
     item: 'key',
-    create: 'Create encryption key',
+    create: 'Create key',
     navigateTree: false,
     editComponent: 'transit-edit',
     listItemPartial: 'secret-list/item',
-    firstStep: `To use transit, you'll need to create an encryption key`,
+    firstStep: `To use transit, you'll need to create a key`,
   },
 };
 

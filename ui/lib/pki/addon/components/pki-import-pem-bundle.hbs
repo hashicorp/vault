@@ -25,7 +25,7 @@
         <div class="is-flex-start">
           <div class="is-flex-grow-1 basis-0 has-bottom-margin-xs" data-test-imported-issuer>
             {{#if imported.issuer}}
-              <LinkTo @route="issuers.issuer.details" @model={{imported.issuer}}>
+              <LinkTo @route="issuers.issuer.details" @models={{array @model.backend imported.issuer}}>
                 {{imported.issuer}}
               </LinkTo>
             {{else}}
@@ -34,7 +34,7 @@
           </div>
           <div class="is-flex-grow-1 basis-0 has-bottom-margin-xs" data-test-imported-key>
             {{#if imported.key}}
-              <LinkTo @route="keys.key.details" @model={{imported.key}}>
+              <LinkTo @route="keys.key.details" @models={{array @model.backend imported.key}}>
                 {{imported.key}}
               </LinkTo>
             {{else}}

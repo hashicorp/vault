@@ -124,14 +124,14 @@
       @icon={{if this.save.isRunning "loading"}}
       type="submit"
       disabled={{this.save.isRunning}}
-      data-test-pki-role-save
+      data-test-save
     />
     <Hds::Button
       @text="Cancel"
       @color="secondary"
       disabled={{this.save.isRunning}}
       {{on "click" @onCancel}}
-      data-test-pki-role-cancel
+      data-test-cancel
     />
   </Hds::ButtonSet>
   {{#if this.modelValidations.targets.errors}}

@@ -169,7 +169,7 @@ export default ApplicationAdapter.extend({
   urlFor(endpoint) {
     if (!ENDPOINTS.includes(endpoint)) {
       throw new Error(
-        `Calls to a ${endpoint} endpoint are not currently allowed in the vault cluster adapater`
+        `Calls to a ${endpoint} endpoint are not currently allowed in the vault cluster adapter`
       );
     }
     return `${this.buildURL()}/${endpoint}`;

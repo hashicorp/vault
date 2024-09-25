@@ -1,0 +1,16 @@
+### New nodes added by autopilot upgrades provisioned with the wrong version
+
+#### Affected versions
+
+- 1.15.3 - 1.15.9
+- 1.16.1 - 1.16.3
+
+#### Issue
+
+If `autopilot_upgrade_version` is not explicitly set in the Vault configuration file in the `storage` 
+section, new non-active nodes will retain their original Vault version as opposed to the new version.
+
+#### Workaround
+
+Set the desired version in the configuration file as `autopilot_upgrade_version=<version string>`. This will 
+allow all nodes to receive the proper version to upgrade to.

@@ -10,10 +10,10 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"testing"
 
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
-	"github.com/mitchellh/go-testing-interface"
 )
 
 // TestAddTestPlugin registers the testFunc as part of the plugin command to the
@@ -23,7 +23,7 @@ import (
 // will be something like:
 // stderr (ignored by go-plugin): "testing: warning: no tests to run"
 // stdout: "PASS"
-func TestAddTestPlugin(t testing.T, pluginCatalog *PluginCatalog, name string, pluginType consts.PluginType, version string, testFunc string, env []string) {
+func TestAddTestPlugin(t testing.TB, pluginCatalog *PluginCatalog, name string, pluginType consts.PluginType, version string, testFunc string, env []string) {
 	t.Helper()
 	if pluginCatalog.directory == "" {
 		t.Fatal("plugin catalog must have a plugin directory set to add plugins")

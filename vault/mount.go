@@ -110,7 +110,6 @@ var (
 		mountPathCubbyhole,
 		mountPathSystem,
 		"audit/",
-		mountPathIdentity,
 	}
 
 	// singletonMounts can only exist in one location and are
@@ -149,25 +148,15 @@ type MountTable struct {
 	Entries []*MountEntry `json:"entries"`
 }
 
+//go:generate enumer -type=MountMigrationStatus -trimprefix=MigrationStatus -transform=kebab
+
 type MountMigrationStatus int
 
 const (
-	MigrationInProgressStatus MountMigrationStatus = iota
-	MigrationSuccessStatus
-	MigrationFailureStatus
+	MigrationStatusInProgress MountMigrationStatus = iota
+	MigrationStatusSuccess
+	MigrationStatusFailure
 )
-
-func (m MountMigrationStatus) String() string {
-	switch m {
-	case MigrationInProgressStatus:
-		return "in-progress"
-	case MigrationSuccessStatus:
-		return "success"
-	case MigrationFailureStatus:
-		return "failure"
-	}
-	return "unknown"
-}
 
 type MountMigrationInfo struct {
 	SourceMount     string `json:"source_mount"`
@@ -1200,15 +1189,17 @@ func (c *Core) remountSecretsEngine(ctx context.Context, src, dst namespace.Moun
 	srcMatch.Path = dst.MountPath
 
 	// Update the mount table
-	if err := c.persistMounts(ctx, c.mounts, &srcMatch.Local); err != nil {
-		srcMatch.Path = srcPath
-		srcMatch.Tainted = true
-		c.mountsLock.Unlock()
-		if err == logical.ErrReadOnly && c.perfStandby {
-			return err
-		}
+	if updateStorage {
+		if err := c.persistMounts(ctx, c.mounts, &srcMatch.Local); err != nil {
+			srcMatch.Path = srcPath
+			srcMatch.Tainted = true
+			c.mountsLock.Unlock()
+			if err == logical.ErrReadOnly && c.perfStandby {
+				return err
+			}
 
-		return fmt.Errorf("failed to update mount table with error %+v", err)
+			return fmt.Errorf("failed to update mount table with error %+v", err)
+		}
 	}
 
 	// Remount the backend
@@ -1978,7 +1969,7 @@ func (c *Core) createMigrationStatus(from, to namespace.MountPathDetails) (strin
 	migrationInfo := MountMigrationInfo{
 		SourceMount:     from.Namespace.Path + from.MountPath,
 		TargetMount:     to.Namespace.Path + to.MountPath,
-		MigrationStatus: MigrationInProgressStatus.String(),
+		MigrationStatus: MigrationStatusInProgress.String(),
 	}
 	c.mountMigrationTracker.Store(migrationID, migrationInfo)
 	return migrationID, nil

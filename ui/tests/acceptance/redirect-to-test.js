@@ -25,7 +25,12 @@ const visit = async (url) => {
 const consoleComponent = create(consoleClass);
 
 const wrappedAuth = async () => {
-  await consoleComponent.runCommands(`write -field=token auth/token/create policies=default -wrap-ttl=5m`);
+  await consoleComponent.toggle();
+  await settled();
+  await consoleComponent.runCommands(
+    `write -field=token auth/token/create policies=default -wrap-ttl=5m`,
+    false
+  );
   await settled();
   // because of flaky test, trying to capture the token using a dom selector instead of the page object
   const token = document.querySelector('[data-test-component="console/log-text"] pre').textContent;

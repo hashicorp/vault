@@ -1,0 +1,3 @@
+```release-note:bug
+proxy/cache (enterprise): Fixed an issue where Proxy would not correctly update KV secrets when talking to a perf standby. Proxy will now attempt to forward requests to update secrets triggered by events to the active node. Note that this requires `allow_forwarding_via_header` to be configured on the cluster.
+```

@@ -5,6 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
+import { settled } from '@ember/test-helpers';
 import EmberObject from '@ember/object';
 import Evented from '@ember/object/evented';
 import sinon from 'sinon';
@@ -29,9 +30,14 @@ module('Unit | Component | auth-jwt', function (hooks) {
     this.component.prepareForOIDC.perform(mockWindow.create());
     this.component.window.trigger('message', { origin: 'http://anotherdomain.com', isTrusted: true });
 
-    assert.ok(this.errorSpy.notCalled, 'Error handler not triggered while waiting for oidc callback message');
+    assert.true(
+      this.errorSpy.notCalled,
+      'Error handler not triggered while waiting for oidc callback message'
+    );
     assert.strictEqual(this.component.exchangeOIDC.performCount, 0, 'exchangeOIDC method not fired');
+
     cancelTimers();
+    await settled();
   });
 
   test('it should ignore untrusted messages while waiting for oidc callback', async function (assert) {
@@ -40,10 +46,11 @@ module('Unit | Component | auth-jwt', function (hooks) {
     this.component.window.trigger('message', { origin: 'http://localhost:4200', isTrusted: false });
     assert.ok(this.errorSpy.notCalled, 'Error handler not triggered while waiting for oidc callback message');
     assert.strictEqual(this.component.exchangeOIDC.performCount, 0, 'exchangeOIDC method not fired');
+
     cancelTimers();
+    await settled();
   });
 
-  // TODO: Flaky
   // test case for https://github.com/hashicorp/vault/issues/12436
   test('it should ignore messages sent from outside the app while waiting for oidc callback', async function (assert) {
     assert.expect(2);
@@ -65,12 +72,17 @@ module('Unit | Component | auth-jwt', function (hooks) {
     message.data.source = 'oidc-callback';
     this.component.window.trigger('message', message);
 
-    assert.ok(this.errorSpy.notCalled, 'Error handler not triggered while waiting for oidc callback message');
+    assert.true(
+      this.errorSpy.notCalled,
+      'Error handler not triggered while waiting for oidc callback message'
+    );
     assert.strictEqual(
       this.component.exchangeOIDC.performCount,
       1,
       'exchangeOIDC method fires when oidc callback message is received'
     );
+
     cancelTimers();
+    await settled();
   });
 });

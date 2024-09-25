@@ -18,6 +18,7 @@ module('Integration | Component | sync | SyncHeader', function (hooks) {
 
   hooks.beforeEach(function () {
     this.version = this.owner.lookup('service:version');
+    this.flags = this.owner.lookup('service:flags');
     this.title = 'Secrets Sync';
     this.renderComponent = () => {
       return render(hbs`<SyncHeader @title={{this.title}} @breadcrumbs={{this.breadcrumbs}} />`, {
@@ -43,24 +44,17 @@ module('Integration | Component | sync | SyncHeader', function (hooks) {
 
       assert.dom(title).hasText('Secrets Sync');
     });
-
-    test('it should render title and premium badge if license does not have secrets sync feature', async function (assert) {
-      this.version.features = [];
-      await this.renderComponent();
-
-      assert.dom(title).hasText('Secrets Sync Premium feature');
-    });
   });
 
-  module('community', function (hooks) {
+  module('managed', function (hooks) {
     hooks.beforeEach(function () {
-      this.version.type = 'community';
+      this.version.type = 'enterprise';
+      this.flags.featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
     });
 
-    test('it should render title and enterprise badge', async function (assert) {
+    test('it should render title and plus badge', async function (assert) {
       await this.renderComponent();
-
-      assert.dom(title).hasText('Secrets Sync Enterprise feature');
+      assert.dom(title).hasText('Secrets Sync Plus feature');
     });
   });
 

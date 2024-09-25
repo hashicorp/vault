@@ -82,9 +82,14 @@ export default class SyncAssociationAdapter extends ApplicationAdapter {
       const association = Object.values(resp.data.associated_secrets).find((association) => {
         return association.mount === data.mount && association.secret_name === data.secret_name;
       });
+
+      // generate an id if an association is found
+      // (an association may not be found if the secret is being unsynced)
+      const id = association ? serializer.generateId(association) : undefined;
+
       return {
         ...association,
-        id: serializer.generateId(association),
+        id,
         destinationName: resp.data.store_name,
         destinationType: resp.data.store_type,
       };

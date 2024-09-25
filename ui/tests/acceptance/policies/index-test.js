@@ -10,7 +10,6 @@ import {
   fillIn,
   visit,
   click,
-  find,
   waitFor,
   waitUntil,
 } from '@ember/test-helpers';
@@ -20,6 +19,8 @@ import { v4 as uuidv4 } from 'uuid';
 
 import authPage from 'vault/tests/pages/auth';
 import { runCmd } from 'vault/tests/helpers/commands';
+import codemirror from 'vault/tests/helpers/codemirror';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const SELECT = {
   policyByName: (name) => `[data-test-policy-link="${name}"]`,
@@ -33,6 +34,7 @@ const SELECT = {
   policyTitle: '[data-test-policy-name]',
   listBreadcrumb: '[data-test-policy-list-link] a',
 };
+
 module('Acceptance | policies/acl', function (hooks) {
   setupApplicationTest(hooks);
 
@@ -86,7 +88,7 @@ module('Acceptance | policies/acl', function (hooks) {
     await click(SELECT.createLink);
 
     await fillIn(SELECT.nameInput, policyName);
-    find('.CodeMirror').CodeMirror.setValue(policyString);
+    codemirror().setValue(policyString);
     await click(SELECT.save);
     assert.strictEqual(
       currentURL(),
@@ -110,7 +112,7 @@ module('Acceptance | policies/acl', function (hooks) {
     assert
       .dom(SELECT.createError)
       .hasText(`Error 'policy' parameter not supplied or empty`, 'renders error message on save');
-    find('.CodeMirror').CodeMirror.setValue(policyString);
+    codemirror().setValue(policyString);
     await click(SELECT.save);
 
     await waitUntil(() => currentURL() === `/vault/policy/acl/${encodeURIComponent(policyLower)}`);
@@ -120,8 +122,7 @@ module('Acceptance | policies/acl', function (hooks) {
       'navigates to policy show on successful save'
     );
     assert.dom(SELECT.policyTitle).hasText(policyLower, 'displays the policy name on the show page');
-    // will fail if you have a license about to expire.
-    assert.dom('[data-test-flash-message].is-info').doesNotExist('no flash message is displayed on save');
+    assert.dom(GENERAL.latestFlashContent).hasText(`ACL policy "${policyLower}" was successfully created.`);
     await click(SELECT.listBreadcrumb);
 
     assert.strictEqual(currentURL(), `/vault/policies/acl`, 'navigates to policy list from breadcrumb');

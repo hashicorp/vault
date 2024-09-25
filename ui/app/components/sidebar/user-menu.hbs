@@ -17,7 +17,7 @@
   <Dropdown.Content>
     <div class="popup-menu-content" data-test-user-menu-content>
       <div class="box">
-        <div class="menu-label">
+        <div class="menu-label overflow-wrap">
           {{capitalize this.auth.authData.displayName}}
         </div>
         <nav class="menu">
@@ -55,9 +55,7 @@
                 class="in-dropdown link is-flex-start"
                 @onSuccess={{(fn (set-flash-message "Token copied!"))}}
                 @onError={{(fn
-                  (set-flash-message
-                    "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger"
-                  )
+                  (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")
                 )}}
                 data-test-copy-button={{this.auth.currentToken}}
               />

@@ -9,7 +9,7 @@
       <Hds::Breadcrumb::Item
         @text={{pluralize this.itemType}}
         @route="vault.cluster.access.method.item.list"
-        @model={{this.itemType}}
+        @models={{array this.mountPath this.itemType}}
       />
       <Hds::Breadcrumb::Item @text={{if (eq this.mode "show") this.model.id (capitalize this.mode)}} @current={{true}} />
     </Hds::Breadcrumb>
@@ -43,7 +43,7 @@
       <div class="toolbar-separator"></div>
       <ToolbarLink
         @route="vault.cluster.access.method.item.edit"
-        @models={{array this.itemType this.model.id}}
+        @models={{array this.mountPath this.itemType this.model.id}}
         data-test-configure-link="true"
       >
         Edit
@@ -59,12 +59,7 @@
     <div class="box is-sideless is-fullwidth is-marginless">
       <NamespaceReminder @mode="save" @noun={{this.itemType}} />
       <MessageError @model={{this.model}} />
-      <FormFieldGroups
-        @model={{this.model}}
-        @mode={{this.mode}}
-        @onKeyUp={{action "onKeyUp"}}
-        @modelValidations={{this.modelValidations}}
-      />
+      <FormFieldGroups @model={{this.model}} @mode={{this.mode}} @modelValidations={{this.modelValidations}} />
     </div>
     <div class="field is-grouped-split box is-fullwidth is-bottomless">
       <Hds::ButtonSet>
@@ -80,6 +75,7 @@
             @text="Cancel"
             @color="secondary"
             @route="vault.cluster.access.method.item.list"
+            @models={{array this.mountPath this.itemType}}
             data-test-cancel-link={{true}}
           />
         {{else}}
@@ -87,7 +83,7 @@
             @text="Cancel"
             @color="secondary"
             @route="vault.cluster.access.method.item.show"
-            @model={{this.model.id}}
+            @models={{array this.mountPath this.itemType this.model.id}}
             data-test-cancel-link={{true}}
           />
         {{/if}}

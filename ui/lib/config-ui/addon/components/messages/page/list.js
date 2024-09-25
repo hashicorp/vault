@@ -3,14 +3,14 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+import Ember from 'ember';
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
-import { task } from 'ember-concurrency';
+import { task, timeout } from 'ember-concurrency';
 import { dateFormat } from 'core/helpers/date-format';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import errorMessage from 'vault/utils/error-message';
-import { next } from '@ember/runloop';
 
 /**
  * @module Page::MessagesList
@@ -31,26 +31,6 @@ export default class MessagesList extends Component {
 
   @tracked showMaxMessageModal = false;
   @tracked messageToDelete = null;
-
-  // This follows the pattern in sync/addon/components/secrets/page/destinations for FilterInput.
-  // Currently, FilterInput doesn't do a full page refresh causing it to lose focus.
-  // The work around is to verify that a transition from this route was completed and then focus the input.
-  constructor(owner, args) {
-    super(owner, args);
-    this.router.on('routeDidChange', this.focusNameFilter);
-  }
-
-  willDestroy() {
-    super.willDestroy();
-    this.router.off('routeDidChange', this.focusNameFilter);
-  }
-
-  focusNameFilter(transition) {
-    const route = 'vault.cluster.config-ui.messages.index';
-    if (transition?.from?.name === route && transition?.to?.name === route) {
-      next(() => document.getElementById('message-filter')?.focus());
-    }
-  }
 
   get formattedMessages() {
     return this.args.messages.map((message) => {
@@ -91,20 +71,6 @@ export default class MessagesList extends Component {
     return [{ label: 'Messages' }, { label }];
   }
 
-  get statusFilterOptions() {
-    return [
-      { id: 'active', name: 'active' },
-      { id: 'inactive', name: 'inactive' },
-    ];
-  }
-
-  get typeFilterOptions() {
-    return [
-      { id: 'modal', name: 'modal' },
-      { id: 'banner', name: 'banner' },
-    ];
-  }
-
   // callback from HDS pagination to set the queryParams page
   get paginationQueryParams() {
     return (page) => {
@@ -116,7 +82,8 @@ export default class MessagesList extends Component {
 
   transitionToMessagesWithParams(queryParams) {
     this.router.transitionTo('vault.cluster.config-ui.messages', {
-      queryParams,
+      // always reset back to page 1 when changing filters
+      queryParams: { ...queryParams, page: 1 },
     });
   }
 
@@ -136,17 +103,24 @@ export default class MessagesList extends Component {
     }
   }
 
-  @action
-  onFilterInputChange(pageFilter) {
-    this.transitionToMessagesWithParams({ pageFilter });
+  @task
+  *handleSearch(evt) {
+    evt.preventDefault();
+    const formData = new FormData(evt.target);
+    // shows loader to indicate that the search was executed
+    yield timeout(Ember.testing ? 0 : 250);
+    const params = {};
+    for (const key of formData.keys()) {
+      const valDefault = key === 'pageFilter' ? '' : null;
+      const val = formData.get(key) || valDefault;
+      params[key] = val;
+    }
+    this.transitionToMessagesWithParams(params);
   }
 
   @action
-  onFilterChange(filterType, [filterOption]) {
-    const param = {};
-    param[filterType] = filterOption;
-    param.page = 1;
-    this.transitionToMessagesWithParams(param);
+  resetFilters() {
+    this.transitionToMessagesWithParams({ pageFilter: '', status: null, type: null });
   }
 
   @action
