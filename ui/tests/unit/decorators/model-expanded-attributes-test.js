@@ -4,58 +4,16 @@
  */
 
 import { module, test } from 'qunit';
-import { setupTest } from 'ember-qunit';
+import { setupApplicationTest } from 'ember-qunit';
 import sinon from 'sinon';
-import Model, { attr } from '@ember-data/model';
 import { withExpandedAttributes } from 'vault/decorators/model-expanded-attributes';
 
-// create class using decorator
-const createClass = () => {
-  @withExpandedAttributes()
-  class Foo extends Model {
-    @attr('string', {
-      label: 'Foo',
-      subText: 'A form field',
-    })
-    foo;
-    @attr('boolean', {
-      label: 'Bar',
-      subText: 'Maybe a checkbox',
-    })
-    bar;
-    @attr('number', {
-      label: 'Baz',
-      subText: 'A number field',
-    })
-    baz;
-
-    get fieldGroups() {
-      return [{ default: ['baz'] }, { 'Other options': ['foo', 'bar'] }];
-    }
-  }
-  return new Foo();
-};
-
 module('Unit | Decorators | model-expanded-attributes', function (hooks) {
-  setupTest(hooks);
+  setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
+    this.store = this.owner.lookup('service:store');
     this.spy = sinon.spy(console, 'error');
-    this.fooField = {
-      name: 'foo',
-      options: { label: 'Foo', subText: 'A form field' },
-      type: 'string',
-    };
-    this.barField = {
-      name: 'bar',
-      options: { label: 'Bar', subText: 'Maybe a checkbox' },
-      type: 'boolean',
-    };
-    this.bazField = {
-      name: 'baz',
-      options: { label: 'Baz', subText: 'A number field' },
-      type: 'number',
-    };
   });
   hooks.afterEach(function () {
     this.spy.restore();
@@ -71,28 +29,70 @@ module('Unit | Decorators | model-expanded-attributes', function (hooks) {
 
   test('it adds allByKey value to model', function (assert) {
     assert.expect(1);
-    const model = createClass();
+    const model = this.store.modelFor('namespace');
     assert.deepEqual(
-      { foo: this.fooField, bar: this.barField, baz: this.bazField },
-      model.allByKey,
+      model.prototype.allByKey,
+      {
+        path: {
+          name: 'path',
+          options: {},
+          type: 'string',
+        },
+      },
       'allByKey set on Model class'
     );
   });
 
   test('_expandGroups helper works correctly', function (assert) {
-    const model = createClass();
-    const result = model._expandGroups(model.fieldGroups);
+    const model = this.store.modelFor('aws-credential');
+    const result = model.prototype._expandGroups([
+      { default: ['roleArn'] },
+      { 'Other options': ['ttl', 'leaseId'] },
+    ]);
     assert.deepEqual(result, [
-      { default: [this.bazField] },
-      { 'Other options': [this.fooField, this.barField] },
+      {
+        default: [
+          {
+            name: 'roleArn',
+            options: {
+              helpText:
+                'The ARN of the role to assume if credential_type on the Vault role is assumed_role. Optional if the role has a single role ARN; required otherwise.',
+              label: 'Role ARN',
+            },
+            type: 'string',
+          },
+        ],
+      },
+      {
+        'Other options': [
+          {
+            name: 'ttl',
+            options: {
+              defaultValue: '3600s',
+              editType: 'ttl',
+              helpText:
+                'Specifies the TTL for the use of the STS token. Valid only when credential_type is assumed_role, federation_token, or session_token.',
+              label: 'TTL',
+              setDefault: true,
+              ttlOffValue: '',
+            },
+            type: undefined,
+          },
+          {
+            name: 'leaseId',
+            options: {},
+            type: 'string',
+          },
+        ],
+      },
     ]);
   });
 
   test('_expandGroups throws assertion when incorrect inputs', function (assert) {
     assert.expect(1);
-    const model = createClass();
+    const model = this.store.modelFor('aws-credential');
     try {
-      model._expandGroups({ foo: ['bar'] });
+      model.prototype._expandGroups({ foo: ['bar'] });
     } catch (e) {
       assert.strictEqual(e.message, '_expandGroups expects an array of objects');
     }

@@ -8,11 +8,12 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 
-import authPage from 'vault/tests/pages/auth';
+import { login, loginNs } from 'vault/tests/helpers/auth/auth-helpers';
 import enablePage from 'vault/tests/pages/settings/auth/enable';
 import { supportedManagedAuthBackends } from 'vault/helpers/supported-managed-auth-backends';
 import { deleteAuthCmd, mountAuthCmd, runCmd, createNS } from 'vault/tests/helpers/commands';
 import { methods } from 'vault/helpers/mountable-auth-methods';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const SELECTORS = {
   backendLink: (path) => `[data-test-auth-backend-link="${path}"]`,
@@ -27,7 +28,7 @@ module('Acceptance | auth backend list', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
-    await authPage.login();
+    await login();
     this.path1 = `userpass-${uuidv4()}`;
     this.path2 = `userpass-${uuidv4()}`;
     this.user1 = 'user1';
@@ -37,16 +38,16 @@ module('Acceptance | auth backend list', function (hooks) {
   });
 
   hooks.afterEach(async function () {
-    await authPage.login();
+    await login();
     await runCmd([deleteAuthCmd(this.path1), deleteAuthCmd(this.path2)], false);
     return;
   });
 
   test('userpass secret backend', async function (assert) {
-    assert.expect(5);
     // enable a user in first userpass backend
     await visit('/vault/access');
     await click(SELECTORS.backendLink(this.path1));
+    assert.dom(GENERAL.emptyStateTitle).exists('shows empty state');
     await click(SELECTORS.createUser);
     await fillIn(SELECTORS.input('username'), this.user1);
     await fillIn(SELECTORS.password, this.user1);
@@ -58,12 +59,12 @@ module('Acceptance | auth backend list', function (hooks) {
 
     // enable a user in second userpass backend
     await click(SELECTORS.backendLink(this.path2));
+    assert.dom(GENERAL.emptyStateTitle).exists('shows empty state');
     await click(SELECTORS.createUser);
     await fillIn(SELECTORS.input('username'), this.user2);
     await fillIn(SELECTORS.password, this.user2);
     await click(SELECTORS.saveBtn);
     assert.strictEqual(currentURL(), `/vault/access/${this.path2}/item/user`);
-
     // Confirm that the user was created. There was a bug where the apiPath was not being updated when toggling between auth routes.
     assert.dom(SELECTORS.listItem).hasText(this.user2, 'user2 exists in the list');
 
@@ -133,7 +134,7 @@ module('Acceptance | auth backend list', function (hooks) {
       // Only SAML is enterprise-only for now
       const type = 'saml';
       const path = `auth-list-${type}-${uid}`;
-      await enablePage.enable(type, path);
+      await runCmd([mountAuthCmd(type, path), 'refresh']);
       await settled();
       await visit('/vault/access');
 
@@ -151,7 +152,7 @@ module('Acceptance | auth backend list', function (hooks) {
       const ns = 'ns-wxyz';
       await runCmd(createNS(ns), false);
       await settled();
-      await authPage.loginNs(ns);
+      await loginNs(ns);
       // go directly to token configure route
       await visit('/vault/settings/auth/configure/token/options');
       await fillIn('[data-test-input="description"]', 'My custom description');
