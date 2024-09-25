@@ -50,22 +50,26 @@ export default class PkiTidyModel extends Model {
   intervalDuration; // auto-tidy only
 
   @attr('string', {
+    label: 'Minimum startup backoff duration',
+    defaultValue: '5m',
     editType: 'ttl',
     helperTextEnabled:
       'Sets the min_startup_backoff_duration field which forces the minimum delay after Vault startup auto-tidy can run',
     hideToggle: true,
     formatTtl: true,
   })
-  minStartupBackoffDuration;
+  minStartupBackoffDuration; // auto-tidy only 
 
   @attr('string', {
+      label: 'Maximum startup backoff duration',
+      defaultValue: '15m'
     editType: 'ttl',
     helperTextEnabled:
       'Sets the max_startup_backoff_duration field which forces the maximum delay after Vault startup auto-tidy can run',
     hideToggle: true,
     formatTtl: true,
   })
-  maxStartupBackoffDuration;
+  maxStartupBackoffDuration; // auto-tidy only
 
   @attr('string', {
     editType: 'ttl',
