@@ -4,7 +4,6 @@
  */
 
 import ApplicationAdapter from './application';
-import { task } from 'ember-concurrency';
 import { service } from '@ember/service';
 import { sanitizePath } from 'core/utils/sanitize-path';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
@@ -14,7 +13,7 @@ export default class GeneratedItemListAdapter extends ApplicationAdapter {
   @service store;
   namespace = 'v1';
 
-  // these items are set within getNewAdapter in path-help service
+  // these items are set by calling getNewAdapter in the path-help service.
   @tracked apiPath = '';
   paths = {};
 
@@ -35,7 +34,7 @@ export default class GeneratedItemListAdapter extends ApplicationAdapter {
     return result.apiPath;
   }
 
-  fetchByQuery = task(async (store, query, isList) => {
+  async fetchByQuery(store, query, isList) {
     const { id } = query;
     const payload = {};
     if (isList) {
@@ -49,14 +48,14 @@ export default class GeneratedItemListAdapter extends ApplicationAdapter {
       method: id,
     };
     return { ...resp, ...data };
-  });
+  }
 
   query(store, type, query) {
-    return this.fetchByQuery.perform(store, query, true);
+    return this.fetchByQuery(store, query, true);
   }
 
   queryRecord(store, type, query) {
-    return this.fetchByQuery.perform(store, query);
+    return this.fetchByQuery(store, query);
   }
 
   urlForItem(id, isList, dynamicApiPath) {

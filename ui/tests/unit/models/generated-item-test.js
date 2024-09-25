@@ -13,6 +13,6 @@ module('Unit | Model | generated item', function (hooks) {
   test('it exists', function (assert) {
     const store = this.owner.lookup('service:store');
     const model = store.createRecord('generated-item', {});
-    assert.ok(model);
+    assert.ok(model, 'generated-item model exists');
   });
 });
