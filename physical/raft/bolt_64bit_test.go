@@ -44,6 +44,7 @@ func Test_BoltOptions(t *testing.T) {
 	}
 }
 
+// TestMmapFlags tests the getMmapFlags function, ensuring it returns the appropriate integer representing the desired mmap flag.
 func TestMmapFlags(t *testing.T) {
 	t.Parallel()
 
