@@ -13,23 +13,34 @@
 <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
 
 <form class="has-bottom-margin-s" {{on "submit" (perform this.save)}} data-test-tidy-form={{@tidyType}}>
-  {{#if (and (eq @tidyType "auto") this.intervalDurationAttr)}}
-    {{#let this.intervalDurationAttr as |attr|}}
-      <TtlPicker
-        data-test-input={{attr.name}}
-        @onChange={{fn this.handleTtl attr}}
-        @label={{attr.options.label}}
-        @labelDisabled={{attr.options.labelDisabled}}
-        @helperTextDisabled={{attr.options.helperTextDisabled}}
-        @helperTextEnabled={{attr.options.helperTextEnabled}}
-        @initialEnabled={{get @tidy attr.options.mapToBoolean}}
-        @initialValue={{get @tidy attr.name}}
-      />
+  {{#if (eq @tidyType "auto")}}
+    {{#let (get @tidy.allByKey "enabled") as |enabledAttr|}}
+      <div class="field">
+        <Toggle @onChange={{fn (mut @tidy.enabled)}} @checked={{@tidy.enabled}} @name={{enabledAttr.name}}>
+          <legend>
+            <span class="ttl-picker-label is-large">
+              {{if @tidy.enabled enabledAttr.options.label enabledAttr.options.labelDisabled}}
+            </span>
+            {{#unless @tidy.enabled}}
+              <p class="sub-text">{{enabledAttr.options.helperTextDisabled}}</p>
+            {{/unless}}
+          </legend>
+        </Toggle>
+      </div>
     {{/let}}
+    {{#if @tidy.enabled}}
+      <h2 class="title is-size-5 has-border-bottom-light page-header" data-test-tidy-header="Automatic tidy settings">
+        Automatic tidy settings
+      </h2>
+      {{#each @tidy.autoTidyConfigFields as |field|}}
+        <FormField @attr={{get @tidy.allByKey field}} @model={{@tidy}} />
+      {{/each}}
+    {{/if}}
   {{/if}}
-  {{#each @tidy.formFieldGroups as |fieldGroup|}}
-    {{#each-in fieldGroup as |group fields|}}
-      {{#if (or (eq @tidyType "manual") @tidy.enabled)}}
+
+  {{#if (or (eq @tidyType "manual") @tidy.enabled)}}
+    {{#each @tidy.formFieldGroups as |fieldGroup|}}
+      {{#each-in fieldGroup as |group fields|}}
         <h2 class="title is-size-5 has-border-bottom-light page-header" data-test-tidy-header={{group}}>
           {{group}}
         </h2>
@@ -52,9 +63,9 @@
             {{/if}}
           {{/if}}
         {{/each}}
-      {{/if}}
-    {{/each-in}}
-  {{/each}}
+      {{/each-in}}
+    {{/each}}
+  {{/if}}
 
   <hr class="is-marginless has-background-gray-200" />
   <Hds::ButtonSet class="has-top-margin-m">
