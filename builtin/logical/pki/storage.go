@@ -50,6 +50,8 @@ const (
 	autoTidyConfigPath = "config/auto-tidy"
 	clusterConfigPath  = "config/cluster"
 
+	autoTidyLastRunPath = "config/auto-tidy-last-run"
+
 	maxRolesToScanOnIssuerChange = 100
 	maxRolesToFindOnIssuerChange = 10
 )
@@ -713,6 +715,14 @@ func (sc *storageContext) getAutoTidyConfig() (*tidyConfig, error) {
 		result.IssuerSafetyBuffer = defaultTidyConfig.IssuerSafetyBuffer
 	}
 
+	if result.MinStartupBackoff == 0 {
+		result.MinStartupBackoff = defaultTidyConfig.MinStartupBackoff
+	}
+
+	if result.MaxStartupBackoff == 0 {
+		result.MaxStartupBackoff = defaultTidyConfig.MaxStartupBackoff
+	}
+
 	return &result, nil
 }
 
@@ -767,6 +777,41 @@ func (sc *storageContext) writeClusterConfig(config *issuing.ClusterConfigEntry)
 	}
 
 	return sc.Storage.Put(sc.Context, entry)
+}
+
+// tidyLastRun Track the various pieces of information around tidy on a specific cluster
+type tidyLastRun struct {
+	LastRunTime time.Time
+}
+
+func (sc *storageContext) getAutoTidyLastRun() (time.Time, error) {
+	entry, err := sc.Storage.Get(sc.Context, autoTidyLastRunPath)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("failed getting auto tidy last run: %w", err)
+	}
+	if entry == nil {
+		return time.Time{}, nil
+	}
+
+	var result tidyLastRun
+	if err = entry.DecodeJSON(&result); err != nil {
+		return time.Time{}, fmt.Errorf("failed parsing auto tidy last run: %w", err)
+	}
+	return result.LastRunTime, nil
+}
+
+func (sc *storageContext) writeAutoTidyLastRun(lastRunTime time.Time) error {
+	lastRun := tidyLastRun{LastRunTime: lastRunTime}
+	entry, err := logical.StorageEntryJSON(autoTidyLastRunPath, lastRun)
+	if err != nil {
+		return fmt.Errorf("failed generating json for auto tidy last run: %w", err)
+	}
+
+	if err := sc.Storage.Put(sc.Context, entry); err != nil {
+		return fmt.Errorf("failed writing auto tidy last run: %w", err)
+	}
+
+	return nil
 }
 
 func fetchRevocationInfo(sc pki_backend.StorageContext, serial string) (*revocation.RevocationInfo, error) {
