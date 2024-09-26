@@ -1,0 +1,1 @@
+database/postgresql: Fix potential error revoking privileges in postgresql database secrets engine when a schema contains special characters
