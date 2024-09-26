@@ -4778,9 +4778,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"body-parser@npm:1.20.2, body-parser@npm:^1.17.0, body-parser@npm:^1.19.0, body-parser@npm:^1.19.1":
-  version: 1.20.2
-  resolution: "body-parser@npm:1.20.2"
+"body-parser@npm:^1.20.3":
+  version: 1.20.3
+  resolution: "body-parser@npm:1.20.3"
   dependencies:
     bytes: 3.1.2
     content-type: ~1.0.5
@@ -4790,11 +4790,11 @@ __metadata:
     http-errors: 2.0.0
     iconv-lite: 0.4.24
     on-finished: 2.4.1
-    qs: 6.11.0
+    qs: 6.13.0
     raw-body: 2.5.2
     type-is: ~1.6.18
     unpipe: 1.0.0
-  checksum: 14d37ec638ab5c93f6099ecaed7f28f890d222c650c69306872e00b9efa081ff6c596cd9afb9930656aae4d6c4e1c17537bea12bb73c87a217cb3cfea8896737
+  checksum: 1a35c59a6be8d852b00946330141c4f142c6af0f970faa87f10ad74f1ee7118078056706a05ae3093c54dabca9cd3770fa62a170a85801da1a4324f04381167d
   languageName: node
   linkType: hard
 
@@ -7549,9 +7549,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-a11y-testing@npm:^6.1.1":
-  version: 6.1.1
-  resolution: "ember-a11y-testing@npm:6.1.1"
+"ember-a11y-testing@npm:^7.0.1":
+  version: 7.0.1
+  resolution: "ember-a11y-testing@npm:7.0.1"
   dependencies:
     "@ember/test-waiters": ^2.4.3 || ^3.0.0
     "@scalvert/ember-setup-middleware-reporter": ^0.1.1
@@ -7563,15 +7563,15 @@ __metadata:
     ember-cli-typescript: ^4.2.1
     ember-cli-version-checker: ^5.1.2
     ember-destroyable-polyfill: ^2.0.1
-    fs-extra: ^10.0.0
+    fs-extra: ^11.2.0
     validate-peer-dependencies: ^2.0.0
   peerDependencies:
-    "@ember/test-helpers": ^3.0.3
+    "@ember/test-helpers": ^3.0.3 || ^4.0.2
     qunit: ">= 2"
   peerDependenciesMeta:
     qunit:
       optional: true
-  checksum: cbb69a7e043adb1eee73d8f46c11a9d7c393e30069ff4b0c20e3fb1d76accf460968d3d9876189a0cd1d95cfcaecc8731343cbd072171464ea35fa957cbb5ccc
+  checksum: d546eecd628c34161b435a7fe877a5c5e15b98d2635d4b5215510832d687e41a3bdcfdd0e56ff9dd54f574d0a679431a45b29004482a4f9dbbac1c22f715aba0
   languageName: node
   linkType: hard
 
@@ -15753,6 +15753,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"qs@npm:6.13.0":
+  version: 6.13.0
+  resolution: "qs@npm:6.13.0"
+  dependencies:
+    side-channel: ^1.0.6
+  checksum: e9404dc0fc2849245107108ce9ec2766cde3be1b271de0bf1021d049dc5b98d1a2901e67b431ac5509f865420a7ed80b7acb3980099fe1c118a1c5d2e1432ad8
+  languageName: node
+  linkType: hard
+
 "qs@npm:^6.4.0":
   version: 6.12.3
   resolution: "qs@npm:6.12.3"
@@ -19053,7 +19062,7 @@ __metadata:
     deepmerge: ^4.0.0
     doctoc: ^2.2.0
     dompurify: ^3.0.2
-    ember-a11y-testing: ^6.1.1
+    ember-a11y-testing: ^7.0.1
     ember-auto-import: ^2.7.2
     ember-basic-dropdown: ^8.0.4
     ember-cli: ~5.4.2
