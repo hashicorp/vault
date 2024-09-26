@@ -322,25 +322,6 @@
         }
       },
       {
-        "title": "Request Limiter",
-        "badge": {
-          "text": "ENTERPRISE | DEPRECATED",
-          "type": "outlined",
-          "color": "neutral"
-        },
-        "routes": [
-          {
-            "title": "Overview",
-            "path": "concepts/request-limiter",
-            "badge": {
-              "text": "BETA",
-              "type": "outlined",
-              "color": "highlight"
-            }
-          }
-        ]
-      },
-      {
         "title": "Adaptive overload protection",
         "badge": {
           "text": "ENTERPRISE",
