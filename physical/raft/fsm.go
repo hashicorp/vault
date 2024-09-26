@@ -243,16 +243,15 @@ func (r *RaftBackend) SetFSMApplyCallback(f func()) {
 }
 
 func (f *FSM) openDBFile(dbPath string) error {
-	var isNewDB bool
-
 	if len(dbPath) == 0 {
 		return errors.New("can not open empty filename")
 	}
 
+	vaultDbExists := true
 	st, err := os.Stat(dbPath)
 	switch {
 	case err != nil && os.IsNotExist(err):
-		isNewDB = true
+		vaultDbExists = false
 	case err != nil:
 		return fmt.Errorf("error checking raft FSM db file %q: %v", dbPath, err)
 	default:
@@ -264,9 +263,8 @@ func (f *FSM) openDBFile(dbPath string) error {
 	}
 
 	opts := boltOptions(dbPath)
-	if runtime.GOOS == "linux" && !isNewDB && !usingMapPopulate(opts.MmapFlags) {
-		// we're on linux, doing a snapshot restore, and MAP_POPULATE is not set
-		f.logger.Warn("the MAP_POPULATE mmap flag was not used. This may be due to Vault's database file being larger than the available memory on the system, or due to the VAULT_RAFT_DISABLE_MAP_POPULATE environment variable being set. As a result, Vault may be slower to start up.")
+	if runtime.GOOS == "linux" && vaultDbExists && !usingMapPopulate(opts.MmapFlags) {
+		f.logger.Warn("the MAP_POPULATE mmap flag has not been set before opening the FSM database. This may be due to the database file being larger than the available memory on the system, or due to the VAULT_RAFT_DISABLE_MAP_POPULATE environment variable being set. As a result, Vault may be slower to start up.")
 	}
 
 	start := time.Now()
