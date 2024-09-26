@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki: Track the last time auto-tidy ran to address auto-tidy not running if the auto-tidy interval is longer than scheduled Vault restarts.
+```

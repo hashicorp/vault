@@ -23,11 +23,9 @@ interface Args {
 }
 
 interface PkiTidyTtls {
-  intervalDuration: string;
   acmeAccountSafetyBuffer: string;
 }
 interface PkiTidyBooleans {
-  enabled: boolean;
   tidyAcme: boolean;
 }
 
@@ -36,10 +34,6 @@ export default class PkiTidyForm extends Component<Args> {
 
   @tracked errorBanner = '';
   @tracked invalidFormAlert = '';
-
-  get intervalDurationAttr() {
-    return this.args.tidy?.allByKey.intervalDuration;
-  }
 
   @task
   @waitFor

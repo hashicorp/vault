@@ -12,6 +12,8 @@ export default class PkiTidyModel extends Model {
   tidyAcme: boolean;
   enabled: boolean;
   intervalDuration: string;
+  minStartupBackoffDuration: string;
+  maxStartupBackoffDuration: string;
   issuerSafetyBuffer: string;
   pauseDuration: string;
   revocationQueueSafetyBuffer: string;
