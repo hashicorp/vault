@@ -190,7 +190,6 @@
   "resolutions": {
     "ansi-html": "^0.0.8",
     "async": "^2.6.4",
-    "body-parser": "1.20.3",
     "braces": "^3.0.3",
     "eslint-utils": "^1.4.1",
     "highlight.js": "^10.4.1",
