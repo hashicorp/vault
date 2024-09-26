@@ -6,7 +6,7 @@
 <div class="has-text-right">
   <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
     <dd.ToggleIcon @icon="more-horizontal" @text="Metadata options" @hasChevron={{false}} data-test-popup-menu-trigger />
-    <dd.Interactive @text="Remove" @color="critical" {{on "click" (fn (mut this.showConfirmModal) true)}} />
+    <dd.Interactive @color="critical" {{on "click" (fn (mut this.showConfirmModal) true)}}>Remove</dd.Interactive>
   </Hds::Dropdown>
 </div>
 
