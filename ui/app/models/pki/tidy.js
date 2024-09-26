@@ -16,7 +16,7 @@ export default class PkiTidyModel extends Model {
     label: 'Tidy ACME enabled',
     labelDisabled: 'Tidy ACME disabled',
     mapToBoolean: 'tidyAcme',
-    helperTextDisabled: 'Tidying of ACME accounts, orders and authorizations is disabled',
+    helperTextDisabled: 'Tidying of ACME accounts, orders and authorizations is disabled.',
     helperTextEnabled:
       'The amount of time that must pass after creation that an account with no orders is marked revoked, and the amount of time after being marked revoked or deactivated.',
     detailsLabel: 'ACME account safety buffer',
@@ -31,47 +31,45 @@ export default class PkiTidyModel extends Model {
   })
   tidyAcme;
 
+  // * auto tidy only fields
   @attr('boolean', {
     label: 'Automatic tidy enabled',
-    defaultValue: false,
+    labelDisabled: 'Automatic tidy disabled',
+    helperTextDisabled: 'Automatic tidy operations will not run.',
   })
-  enabled; // auto-tidy only
+  enabled; // renders outside FormField loop as a toggle, auto tidy fields only render if enabled
 
   @attr({
-    label: 'Automatic tidy enabled',
-    labelDisabled: 'Automatic tidy disabled',
-    mapToBoolean: 'enabled',
+    editType: 'ttl',
     helperTextEnabled:
       'Sets the interval_duration between automatic tidy operations; note that this is from the end of one operation to the start of the next.',
-    helperTextDisabled: 'Automatic tidy operations will not run.',
-    detailsLabel: 'Automatic tidy duration',
+    hideToggle: true,
     formatTtl: true,
   })
-  intervalDuration; // auto-tidy only
+  intervalDuration;
 
-  @attr('string', {
+  @attr({
     label: 'Minimum startup backoff duration',
-    defaultValue: '5m',
     editType: 'ttl',
     helperTextEnabled:
-      'Sets the min_startup_backoff_duration field which forces the minimum delay after Vault startup auto-tidy can run',
+      'Sets the min_startup_backoff_duration field which forces the minimum delay after Vault startup auto-tidy can run.',
     hideToggle: true,
     formatTtl: true,
   })
-  minStartupBackoffDuration; // auto-tidy only
+  minStartupBackoffDuration;
 
-  @attr('string', {
+  @attr({
     label: 'Maximum startup backoff duration',
-    defaultValue: '15m',
     editType: 'ttl',
     helperTextEnabled:
-      'Sets the max_startup_backoff_duration field which forces the maximum delay after Vault startup auto-tidy can run',
+      'Sets the max_startup_backoff_duration field which forces the maximum delay after Vault startup auto-tidy can run.',
     hideToggle: true,
     formatTtl: true,
   })
-  maxStartupBackoffDuration; // auto-tidy only
+  maxStartupBackoffDuration;
+  // * end of auto-tidy only fields
 
-  @attr('string', {
+  @attr({
     editType: 'ttl',
     helperTextEnabled:
       'Specifies a duration that issuers should be kept for, past their NotAfter validity period. Defaults to 365 days (8760 hours).',
@@ -98,7 +96,7 @@ export default class PkiTidyModel extends Model {
   })
   revocationQueueSafetyBuffer; // enterprise only
 
-  @attr('string', {
+  @attr({
     editType: 'ttl',
     helperTextEnabled:
       'For a certificate to be expunged, the time must be after the expiration time of the certificate (according to the local clock) plus the safety buffer. Defaults to 72 hours.',
@@ -153,16 +151,14 @@ export default class PkiTidyModel extends Model {
   tidyRevokedCerts;
 
   get allGroups() {
-    const groups = [
-      { autoTidy: ['enabled', 'intervalDuration', ...this.autoTidyConfigFields] },
-      ...this.sharedFields,
-    ];
+    const groups = [{ autoTidy: ['enabled', ...this.autoTidyConfigFields] }, ...this.sharedFields];
     return this._expandGroups(groups);
   }
 
   // fields that are specific to auto-tidy
   get autoTidyConfigFields() {
-    return ['minStartupBackoffDuration', 'maxStartupBackoffDuration'];
+    // 'enabled' is not included here because it is responsible for hiding/showing these params and renders separately in the form
+    return ['intervalDuration', 'minStartupBackoffDuration', 'maxStartupBackoffDuration'];
   }
 
   // shared between auto and manual tidy operations
