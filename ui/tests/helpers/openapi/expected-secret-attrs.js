@@ -1400,6 +1400,16 @@ const pki = {
         'Interval at which to run an auto-tidy operation. This is the time between tidy invocations (after one finishes to the start of the next). Running a manual tidy will reset this duration.',
       fieldGroup: 'default',
     },
+    minStartupBackoffDuration: {
+      editType: 'ttl',
+      helpText: 'The minimum amount of time in seconds auto-tidy will be delayed after startup.',
+      fieldGroup: 'default',
+    },
+    maxStartupBackoffDuration: {
+      editType: 'ttl',
+      helpText: 'The maximum amount of time in seconds auto-tidy will be delayed after startup.',
+      fieldGroup: 'default',
+    },
     issuerSafetyBuffer: {
       editType: 'ttl',
       helpText:
