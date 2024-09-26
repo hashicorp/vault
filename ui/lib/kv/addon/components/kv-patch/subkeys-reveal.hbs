@@ -1,0 +1,13 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<div class="has-top-margin-m">
+  <Toggle @onChange={{fn (mut this.showSubkeys)}} @checked={{this.showSubkeys}} @name="Reveal subkeys">
+    <Hds::Text::Body @tag="p" @weight="semibold">Reveal subkeys in JSON</Hds::Text::Body>
+  </Toggle>
+  {{#if this.showSubkeys}}
+    <Hds::CodeBlock @value={{stringify @subkeys}} @hasLineNumbers={{false}} data-test-subkeys />
+  {{/if}}
+</div>

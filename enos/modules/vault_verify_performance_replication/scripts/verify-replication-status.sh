@@ -2,7 +2,6 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: BUSL-1.1
 
-
 # This script waits for the replication status to be established
 # then verifies the performance replication between primary and
 # secondary clusters
@@ -89,7 +88,6 @@ check_pr_status() {
   echo "$pr_status"
   return 0
 }
-
 
 if [ "$IP_VERSION" != 4 ] && [ "$IP_VERSION" != 6 ]; then
   fail "unsupported IP_VERSION: $IP_VERSION"

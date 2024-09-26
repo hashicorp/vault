@@ -243,6 +243,19 @@ request will be forwarded to Vault and the response returned and cached.
 Currently, the cache key is a hash of the request URL path, headers, body, and
 token.
 
+<Warning title="Nonstandard distributed tracing headers may negate the cache">
+
+  The Vault Lambda Extension cache key includes headers from proxy requests, but 
+  excludes the standard distributed tracing headers `traceparent` and
+  `tracestate` because trace IDs are unique per request and would lead to unique
+  hashes for repeated requests.
+  
+  Some distributed tracing tools may add nonstandard tracing headers, which can 
+  also lead to individualized hashes that make repeated requests unique and 
+  cause cache misses.
+
+</Warning>
+
 Caching may also be enabled for all requests by setting the environment variable
 `VAULT_DEFAULT_CACHE_ENABLED` to `true`. Then all requests will be fetched and/or
 cached as though the header `X-Vault-Cache-Control: cache` was present. Setting
@@ -271,7 +284,8 @@ processing with returned secrets such as automatic lease renewal. The proxy serv
 own Vault auth token is the only thing that gets automatically refreshed. It will
 synchronously refresh its own token before proxying requests if the token is
 expired (including a grace window), and it will attempt to renew its token if the
-token is nearly expired but renewable.
+token is nearly expired but renewable. The proxy will also immediately refresh its token
+if the incoming request header `X-Vault-Token-Options: revoke` is present.
 
 <Note title="Not SnapStart compatible">
 

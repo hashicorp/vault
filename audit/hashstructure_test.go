@@ -269,6 +269,24 @@ func TestHashResponse(t *testing.T) {
 			CreationTime:    now,
 			WrappedAccessor: "bar",
 		},
+		Auth: &logical.Auth{
+			ClientToken: "hvs.QWERTY-T1q5lEjIWux1Tjx-VGqAYJdd4FZtbp1wpD5Ym9pGh4KHGh2cy5TSjRndGoxaU44NzNscm5MSlRLQXZ0ZGg",
+			Accessor:    "ABClk9ZNLGOCuTrOEIAooJG3",
+			TokenType:   logical.TokenTypeService,
+		},
+		Secret: &logical.Secret{
+			LeaseOptions: logical.LeaseOptions{
+				TTL:       3,
+				MaxTTL:    5,
+				Renewable: false,
+				Increment: 1,
+				IssueTime: now,
+			},
+			InternalData: map[string]any{
+				"foo": "bar",
+			},
+			LeaseID: "abc",
+		},
 	}
 
 	req := &logical.Request{MountPoint: "/foo/bar"}
@@ -280,6 +298,11 @@ func TestHashResponse(t *testing.T) {
 	nonHMACDataKeys := []string{"baz"}
 
 	expected := &response{
+		Auth: &auth{
+			Accessor:    "hmac-sha256:253184715b2d5a6c3a2fc7afe0d2294085f5e886a1275ca735646a6f23be2587",
+			ClientToken: "hmac-sha256:2ce541100a8bcd687e8ec7712c8bb4c975a8d8599c02d98945e63ecd413bf0f3",
+			TokenType:   "service",
+		},
 		Data: map[string]interface{}{
 			"foo": "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317",
 			"baz": "foobar",
@@ -298,6 +321,9 @@ func TestHashResponse(t *testing.T) {
 		MountPoint:            "/foo/bar",
 		MountRunningVersion:   "123",
 		MountRunningSha256:    "256-256!",
+		Secret: &secret{
+			LeaseID: "abc",
+		},
 	}
 
 	inmemStorage := &logical.InmemStorage{}

@@ -90,7 +90,7 @@ export default class KvSecretCreate extends Component {
       if (this.errorMessage) {
         this.invalidFormAlert = 'There was an error submitting this form.';
       } else {
-        this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.details', secret.path);
+        this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.index', secret.path);
       }
     }
   }

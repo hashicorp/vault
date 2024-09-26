@@ -21,10 +21,12 @@
     @responseTimestamp={{@activity.responseTimestamp}}
     @isSecretsSyncActivated={{this.flags.secretsSyncIsActivated}}
   />
-  <Clients::Attribution
-    @noun="mount"
-    @attribution={{this.namespaceMountAttribution}}
-    @responseTimestamp={{@activity.responseTimestamp}}
-    @isSecretsSyncActivated={{this.flags.secretsSyncIsActivated}}
-  />
+  {{#if this.namespaceMountAttribution}}
+    <Clients::Attribution
+      @noun="mount"
+      @attribution={{this.namespaceMountAttribution}}
+      @responseTimestamp={{@activity.responseTimestamp}}
+      @isSecretsSyncActivated={{this.flags.secretsSyncIsActivated}}
+    />
+  {{/if}}
 {{/if}}

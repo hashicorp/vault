@@ -186,12 +186,15 @@ resource "aws_security_group" "target" {
 resource "aws_instance" "targets" {
   for_each = local.instances
 
-  ami                    = var.ami_id
-  iam_instance_profile   = aws_iam_instance_profile.target.name
-  instance_type          = local.instance_type
-  key_name               = var.ssh_keypair
-  subnet_id              = data.aws_subnets.vpc.ids[tonumber(each.key) % length(data.aws_subnets.vpc.ids)]
-  vpc_security_group_ids = [aws_security_group.target.id]
+  ami                  = var.ami_id
+  iam_instance_profile = aws_iam_instance_profile.target.name
+  // Some scenarios (autopilot, pr_replication) shutdown instances to simulate failure. In those
+  // cases we should terminate the instance entirely rather than get stuck in stopped limbo.
+  instance_initiated_shutdown_behavior = "terminate"
+  instance_type                        = local.instance_type
+  key_name                             = var.ssh_keypair
+  subnet_id                            = data.aws_subnets.vpc.ids[tonumber(each.key) % length(data.aws_subnets.vpc.ids)]
+  vpc_security_group_ids               = [aws_security_group.target.id]
 
   tags = merge(
     var.common_tags,

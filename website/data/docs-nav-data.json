@@ -34,8 +34,25 @@
   },
 
   {
-    "title": "Installing Vault",
-    "path": "install"
+    "title": "Install Vault",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "install"
+      },
+      {
+        "title": "Install manually",
+        "path": "install/install-binary"
+      },
+      {
+        "title": "Build from code",
+        "path": "install/build-from-code"
+      }
+    ]
+  },
+  {
+    "title": "Run Vault as a service",
+    "path": "run-as-service"
   },
   {
     "title": "Internals",
@@ -326,19 +343,14 @@
       {
         "title": "Adaptive overload protection",
         "badge": {
-          "text": "ENTERPRISE | BETA",
+          "text": "ENTERPRISE",
           "type": "outlined",
           "color": "neutral"
         },
         "routes": [
           {
             "title": "Overview",
-            "path": "concepts/adaptive-overload-protection",
-            "badge": {
-              "text": "BETA",
-              "type": "outlined",
-              "color": "highlight"
-            }
+            "path": "concepts/adaptive-overload-protection"
           },
           {
             "title": "Vault server temporarily overloaded",
@@ -1598,11 +1610,6 @@
             "path": "secrets/pki/considerations"
           },
           {
-            "title": "Troubleshooting ACME integration",
-            "path": "secrets/pki/troubleshooting-acme"
-          },
-
-          {
             "title": "Rotation Primitives",
             "path": "secrets/pki/rotation-primitives"
           },
@@ -1617,12 +1624,26 @@
           },
           {
             "title": "Enrollment over Secure Transport (EST)",
+            "path": "secrets/pki/est",
             "badge": {
-              "text": "BETA",
+              "text": "ENTERPRISE",
               "type": "outlined",
-              "color": "highlight"
+              "color": "neutral"
             },
             "path": "secrets/pki/est"
+          },
+          {
+            "title": "Certificate Management Protocol (CMPv2)",
+            "badge": {
+              "text": "ENTERPRISE",
+              "type": "outlined",
+              "color": "neutral"
+            },
+            "path": "secrets/pki/cmpv2"
+          },
+          {
+            "title": "Troubleshooting ACME",
+            "path": "secrets/pki/troubleshooting-acme"
           }
         ]
       },
@@ -2010,6 +2031,10 @@
         "path": "troubleshoot/lease-issues"
       },
       {
+        "title": "Tune the lease TTL",
+        "path": "troubleshoot/tune-lease-ttl"
+      },
+      {
         "title": "Troubleshooting tutorials",
         "href": "https://learn.hashicorp.com/tutorials/vault/troubleshooting-vault"
       }
@@ -2062,7 +2087,10 @@
             "title": "Agent Injector vs. Vault CSI Provider",
             "path": "platform/k8s/injector-csi"
           },
-
+          {
+            "title": "Migrate Consul to Raft storage",
+            "path": "platform/k8s/consul-to-raft"
+          },
           {
             "title": "Helm Chart",
             "routes": [

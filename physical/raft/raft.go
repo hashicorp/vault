@@ -700,6 +700,12 @@ func (b *RaftBackend) UpgradeVersion() string {
 	return b.effectiveSDKVersion
 }
 
+func (b *RaftBackend) SDKVersion() string {
+	b.l.RLock()
+	defer b.l.RUnlock()
+	return b.effectiveSDKVersion
+}
+
 func (b *RaftBackend) verificationInterval() time.Duration {
 	b.l.RLock()
 	defer b.l.RUnlock()

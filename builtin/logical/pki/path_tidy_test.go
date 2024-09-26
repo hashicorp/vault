@@ -236,11 +236,13 @@ func TestAutoTidy(t *testing.T) {
 
 	// Write the auto-tidy config.
 	_, err = client.Logical().Write("pki/config/auto-tidy", map[string]interface{}{
-		"enabled":            true,
-		"interval_duration":  "1s",
-		"tidy_cert_store":    true,
-		"tidy_revoked_certs": true,
-		"safety_buffer":      "1s",
+		"enabled":                      true,
+		"interval_duration":            "1s",
+		"tidy_cert_store":              true,
+		"tidy_revoked_certs":           true,
+		"safety_buffer":                "1s",
+		"min_startup_backoff_duration": "1s",
+		"max_startup_backoff_duration": "1s",
 	})
 	require.NoError(t, err)
 
@@ -339,6 +341,67 @@ func TestAutoTidy(t *testing.T) {
 	resp, err = client.Logical().Read("pki/cert/" + leafSerial)
 	require.Nil(t, err)
 	require.Nil(t, resp)
+}
+
+// TestAutoTidyPersistsAcrossRestarts validates that on initial
+// startup of a mount we persisted the current auto tidy time so that
+// our counter that auto-tidy is based on isn't reset everytime Vault restarts
+func TestAutoTidyPersistsAcrossRestarts(t *testing.T) {
+	t.Parallel()
+
+	newPeriod := 1 * time.Second
+
+	// This test requires the periodicFunc to trigger, which requires we stand
+	// up a full test cluster.
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"pki": Factory,
+		},
+		RollbackPeriod: newPeriod,
+	}
+	opts := &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+		NumCores:    1,
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, opts)
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	client := cluster.Cores[0].Client
+
+	// Mount PKI
+	err := client.Sys().Mount("pki", &api.MountInput{
+		Type: "pki",
+	})
+	require.NoError(t, err, "failed mounting pki")
+
+	// Run a tidy that should set us up
+	_, err = client.Logical().Write("pki/tidy", map[string]interface{}{
+		"tidy_cert_store": "true",
+	})
+	require.NoError(t, err, "failed running tidy")
+
+	waitForTidyToFinish(t, client, "pki")
+
+	resp, err := client.Logical().Read("pki/tidy-status")
+	require.NoError(t, err, "failed reading tidy status")
+	require.NotNil(t, resp, "response from tidy-status was nil")
+	lastAutoTidy, exists := resp.Data["last_auto_tidy_finished"]
+	require.True(t, exists, "did not find last_auto_tidy_finished")
+
+	cluster.StopCore(t, 0)
+	cluster.StartCore(t, 0, opts)
+	cluster.UnsealCore(t, cluster.Cores[0])
+	vault.TestWaitActive(t, cluster.Cores[0].Core)
+
+	client = cluster.Cores[0].Client
+	resp, err = client.Logical().Read("pki/tidy-status")
+	require.NoError(t, err, "failed reading tidy status")
+	require.NotNil(t, resp, "response from tidy-status was nil")
+	postRestartLastAutoTidy, exists := resp.Data["last_auto_tidy_finished"]
+	require.True(t, exists, "did not find last_auto_tidy_finished")
+
+	require.Equal(t, lastAutoTidy, postRestartLastAutoTidy, "values for last_auto_tidy_finished did not match on restart")
 }
 
 func TestTidyCancellation(t *testing.T) {
@@ -553,6 +616,8 @@ func TestTidyIssuerConfig(t *testing.T) {
 	defaultConfigMap["pause_duration"] = time.Duration(defaultConfigMap["pause_duration"].(float64)).String()
 	defaultConfigMap["revocation_queue_safety_buffer"] = int(time.Duration(defaultConfigMap["revocation_queue_safety_buffer"].(float64)) / time.Second)
 	defaultConfigMap["acme_account_safety_buffer"] = int(time.Duration(defaultConfigMap["acme_account_safety_buffer"].(float64)) / time.Second)
+	defaultConfigMap["min_startup_backoff_duration"] = int(time.Duration(defaultConfigMap["min_startup_backoff_duration"].(float64)) / time.Second)
+	defaultConfigMap["max_startup_backoff_duration"] = int(time.Duration(defaultConfigMap["max_startup_backoff_duration"].(float64)) / time.Second)
 
 	require.Equal(t, defaultConfigMap, resp.Data)
 
@@ -683,6 +748,8 @@ func TestCertStorageMetrics(t *testing.T) {
 		"safety_buffer":                            "1s",
 		"maintain_stored_certificate_counts":       true,
 		"publish_stored_certificate_count_metrics": false,
+		"min_startup_backoff_duration":             "1s",
+		"max_startup_backoff_duration":             "1s",
 	})
 	require.NoError(t, err)
 
@@ -1301,6 +1368,9 @@ func waitForTidyToFinish(t *testing.T, client *api.Client, mount string) *api.Se
 		statusResp, err = client.Logical().Read(tidyStatusPath)
 		if err != nil {
 			return fmt.Errorf("failed reading path: %s: %w", tidyStatusPath, err)
+		}
+		if statusResp == nil {
+			return fmt.Errorf("got nil, nil response from: %s", tidyStatusPath)
 		}
 		if state, ok := statusResp.Data["state"]; !ok || state == "Running" {
 			return fmt.Errorf("tidy status state is still running")

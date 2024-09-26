@@ -6,9 +6,10 @@
 <section class="section">
   <div class="container is-widescreen">
     {{#if (eq this.model.mode "unsupported")}}
+      {{! Replication is unsupported in non-enterprise or when using non-transactional storage (eg inmem) }}
       <PageHeader as |p|>
         <p.levelLeft>
-          <h1 class="title is-3 has-text-grey" data-test-replication-title>
+          <h1 class="title is-3 has-text-grey" data-test-replication-title="Replication unsupported">
             Replication unsupported
           </h1>
         </p.levelLeft>
@@ -19,7 +20,7 @@
     {{else if this.model.allReplicationDisabled}}
       <PageHeader as |p|>
         <p.levelLeft>
-          <h1 class="title is-3" data-test-replication-title>
+          <h1 class="title is-3" data-test-replication-title="Enable Replication">
             Enable Replication
           </h1>
         </p.levelLeft>
@@ -91,15 +92,43 @@
       </div>
       <EnableReplicationForm
         @replicationMode={{this.modeSelection}}
-        @canEnablePrimary={{this.model.canEnablePrimary}}
-        @canEnableSecondary={{this.model.canEnableSecondary}}
+        @canEnablePrimary={{this.canEnablePrimary}}
+        @canEnableSecondary={{this.canEnableSecondary}}
         @performanceReplicationDisabled={{this.model.performance.replicationDisabled}}
         @performanceMode={{if this.model.performance.replicationDisabled "disabled" this.model.performance.modeForUrl}}
         @onSuccess={{this.onEnableSuccess}}
         @doTransition={{true}}
       />
+    {{else if (not (has-feature "DR Replication"))}}
+      <UpgradePage @title="Replication" />
+    {{else if (and (eq this.model.dr.mode "primary") (eq this.model.performance.mode "primary"))}}
+      {{! Renders when cluster is primary for both replication modes }}
+      <ReplicationPage @model={{this.model}} as |Page|>
+        <Page.header @showTabs={{true}} />
+        <Page.dashboard @componentToRender="replication-summary-card" as |Dashboard|>
+          <Dashboard.card @title="Disaster Recovery" />
+          <Dashboard.card @title="Performance" />
+        </Page.dashboard>
+      </ReplicationPage>
     {{else}}
-      <ReplicationSummary @cluster={{this.model}} @showModeSummary={{true}} @onDisable={{this.onDisable}} />
+      {{! Renders when at least one mode is not enabled }}
+      <PageHeader as |p|>
+        <p.levelLeft>
+          <h1 class="title is-3" data-test-replication-title="Replication">
+            Replication
+          </h1>
+        </p.levelLeft>
+      </PageHeader>
+
+      <div class="box is-sideless is-fullwidth is-marginless flex-col">
+        <ReplicationOverviewMode
+          @mode="dr"
+          @model={{this.model.dr}}
+          @clusterName={{this.model.name}}
+          class="has-bottom-margin-m"
+        />
+        <ReplicationOverviewMode @mode="performance" @model={{this.model.performance}} @clusterName={{this.model.name}} />
+      </div>
     {{/if}}
   </div>
 </section>

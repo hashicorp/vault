@@ -134,6 +134,13 @@ const MOUNTABLE_SECRET_ENGINES = [
   },
 ];
 
+// A list of Workload Identity Federation engines. Will eventually include Azure and GCP.
+export const WIF_ENGINES = ['aws'];
+
+export function wifEngines() {
+  return WIF_ENGINES.slice();
+}
+
 // Secret Engines that have their own configuration page and actions
 // These engines do not exist in their own Ember engine.
 // Ex: AWS vs. LDAP which is configurable but is handled inside the routing of its own Ember engine.
