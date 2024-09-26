@@ -195,6 +195,31 @@ use versioned plugins. [[GH-27881](https://github.com/hashicorp/vault/pull/27881
 * ui: fixes renew-self being called right after login for non-renewable tokens [[GH-28204](https://github.com/hashicorp/vault/pull/28204)]
 * ui: fixes toast (flash) alert message saying "created" when deleting a kv v2 secret [[GH-28093](https://github.com/hashicorp/vault/pull/28093)]
 
+## 1.17.6
+### September 25, 2024
+
+CHANGES:
+
+* core: Bump Go version to 1.22.7
+* secrets/ldap: Update vault-plugin-secrets-openldap to v0.13.1 [[GH-28478](https://github.com/hashicorp/vault/pull/28478)]
+* secrets/ssh: Add a flag, `allow_empty_principals` to allow keys or certs to apply to any user/principal. [[GH-28466](https://github.com/hashicorp/vault/pull/28466)]
+
+IMPROVEMENTS:
+
+* audit: Internal implementation changes to the audit subsystem which improve relability. [[GH-28286](https://github.com/hashicorp/vault/pull/28286)]
+* ui: Remove deprecated `current_billing_period` from dashboard activity log request [[GH-27559](https://github.com/hashicorp/vault/pull/27559)]
+
+BUG FIXES:
+
+* auth/aws: Fixed potential panic after step-down and the queue has not repopulated. [[GH-28330](https://github.com/hashicorp/vault/pull/28330)]
+* auth/cert: During certificate validation, OCSP requests are debug logged even if Vault's log level is above DEBUG. [[GH-28450](https://github.com/hashicorp/vault/pull/28450)]
+* auth/cert: ocsp_ca_certificates field was not honored when validating OCSP responses signed by a CA that did not issue the certificate. [[GH-28309](https://github.com/hashicorp/vault/pull/28309)]
+* auth: Updated error handling for missing login credentials in AppRole and UserPass auth methods to return a 400 error instead of a 500 error. [[GH-28441](https://github.com/hashicorp/vault/pull/28441)]
+* core: Fixed an issue where maximum request duration timeout was not being added to all requests containing strings sys/monitor and sys/events. With this change, timeout is now added to all requests except monitor and events endpoint. [[GH-28230](https://github.com/hashicorp/vault/pull/28230)]
+* proxy/cache (enterprise): Fixed a data race that could occur while tracking capabilities in Proxy's static secret cache. [[GH-28494](https://github.com/hashicorp/vault/pull/28494)]
+* secrets-sync (enterprise): Secondary nodes in a cluster now properly check activation-flags values.
+* secrets-sync (enterprise): Validate corresponding GitHub app parameters `app_name` and `installation_id` are set
+
 ## 1.17.5 
 ## August 30, 2024 
 
@@ -525,6 +550,31 @@ autopilot to fail to discover new server versions and so not trigger an upgrade.
 * ui: fix issue where a month without new clients breaks the client count dashboard [[GH-27352](https://github.com/hashicorp/vault/pull/27352)]
 * ui: fixed a bug where the replication pages did not update display when navigating between DR and performance [[GH-26325](https://github.com/hashicorp/vault/pull/26325)]
 * ui: fixes undefined start time in filename for downloaded client count attribution csv [[GH-26485](https://github.com/hashicorp/vault/pull/26485)]
+
+## 1.16.10 Enterprise
+### September 25, 2024
+
+**Enterprise LTS:** Vault Enterprise 1.16 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
+
+CHANGES:
+
+* core: Bump Go version to 1.22.7.
+* secrets/ssh: Add a flag, `allow_empty_principals` to allow keys or certs to apply to any user/principal. [[GH-28466](https://github.com/hashicorp/vault/pull/28466)]
+
+IMPROVEMENTS:
+
+* audit: Internal implementation changes to the audit subsystem which improve relability. [[GH-28286](https://github.com/hashicorp/vault/pull/28286)]
+* ui: Remove deprecated `current_billing_period` from dashboard activity log request [[GH-27559](https://github.com/hashicorp/vault/pull/27559)]
+
+BUG FIXES:
+
+* auth/aws: Fixed potential panic after step-down and the queue has not repopulated. [[GH-28330](https://github.com/hashicorp/vault/pull/28330)]
+* auth/cert: During certificate validation, OCSP requests are debug logged even if Vault's log level is above DEBUG. [[GH-28450](https://github.com/hashicorp/vault/pull/28450)]
+* auth/cert: ocsp_ca_certificates field was not honored when validating OCSP responses signed by a CA that did not issue the certificate. [[GH-28309](https://github.com/hashicorp/vault/pull/28309)]
+* auth: Updated error handling for missing login credentials in AppRole and UserPass auth methods to return a 400 error instead of a 500 error. [[GH-28441](https://github.com/hashicorp/vault/pull/28441)]
+* core: Fixed an issue where maximum request duration timeout was not being added to all requests containing strings sys/monitor and sys/events. With this change, timeout is now added to all requests except monitor and events endpoint. [[GH-28230](https://github.com/hashicorp/vault/pull/28230)]
+* proxy/cache (enterprise): Fixed a data race that could occur while tracking capabilities in Proxy's static secret cache. [[GH-28494](https://github.com/hashicorp/vault/pull/28494)]
+* secrets-sync (enterprise): Validate corresponding GitHub app parameters `app_name` and `installation_id` are set
 
 ## 1.16.9 Enterprise
 ### August 30, 2024
@@ -1127,6 +1177,22 @@ leading to failure to complete merkle sync without a full re-index. [[GH-23013](
 * ui: fix navigation items shown to user when chroot_namespace configured [[GH-24492](https://github.com/hashicorp/vault/pull/24492)]
 * ui: remove user_lockout_config settings for unsupported methods [[GH-25867](https://github.com/hashicorp/vault/pull/25867)]
 * ui: show error from API when seal fails [[GH-23921](https://github.com/hashicorp/vault/pull/23921)]
+
+## 1.15.15 Enterprise
+### September 25, 2024
+
+CHANGES:
+
+* core: Bump Go version to 1.22.7.
+* secrets/ssh: Add a flag, `allow_empty_principals` to allow keys or certs to apply to any user/principal. [[GH-28466](https://github.com/hashicorp/vault/pull/28466)]
+
+BUG FIXES:
+
+* auth/aws: Fixed potential panic after step-down and the queue has not repopulated. [[GH-28330](https://github.com/hashicorp/vault/pull/28330)]
+* auth/cert: During certificate validation, OCSP requests are debug logged even if Vault's log level is above DEBUG. [[GH-28450](https://github.com/hashicorp/vault/pull/28450)]
+* auth/cert: ocsp_ca_certificates field was not honored when validating OCSP responses signed by a CA that did not issue the certificate. [[GH-28309](https://github.com/hashicorp/vault/pull/28309)]
+* auth: Updated error handling for missing login credentials in AppRole and UserPass auth methods to return a 400 error instead of a 500 error. [[GH-28441](https://github.com/hashicorp/vault/pull/28441)]
+* core: Fixed an issue where maximum request duration timeout was not being added to all requests containing strings sys/monitor and sys/events. With this change, timeout is now added to all requests except monitor and events endpoint. [[GH-28230](https://github.com/hashicorp/vault/pull/28230)]
 
 ## 1.15.14 Enterprise
 ### August 29, 2024
