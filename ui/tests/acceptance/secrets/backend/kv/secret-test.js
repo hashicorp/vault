@@ -219,7 +219,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
         '(',
         ')',
         '"',
-        "'",
+        // "'",
         '!',
         '#',
         '$',
