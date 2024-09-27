@@ -74,6 +74,7 @@
             <dd.Interactive
               data-test-details
               @route="roles.role.details"
+              {{! this will force the roles.role model hook to fire since we may only have a partial model loaded in the list view }}
               @models={{array role.type role.name}}
             >Details</dd.Interactive>
             {{#if role.canDelete}}
