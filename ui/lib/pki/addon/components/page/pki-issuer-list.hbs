@@ -101,7 +101,12 @@
           <div class="level-right is-flex is-paddingless is-marginless">
             <div class="level-item">
               <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
-                <dd.ToggleIcon @icon="more-horizontal" @hasChevron={{false}} data-test-popup-menu-trigger>Manage issuer</dd.ToggleIcon>
+                <dd.ToggleIcon
+                  @text="Manage issuer"
+                  @icon="more-horizontal"
+                  @hasChevron={{false}}
+                  data-test-popup-menu-trigger
+                />
                 <dd.Interactive
                   @route="issuers.issuer.details"
                   @models={{array @backend pkiIssuer.id}}
