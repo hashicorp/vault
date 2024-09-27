@@ -13,7 +13,7 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 const SELECTORS = {
   identityRow: (name) => `[data-test-identity-row="${name}"]`,
   popupMenu: '[data-test-popup-menu-trigger]',
-  menuDelete: '[data-test-popup-menu="delete"]',
+  menuDelete: (name) => `[data-test-identity-row="${name}"] [data-test-popup-menu="delete"]`,
 };
 export const testCRUD = async (name, itemType, assert) => {
   await page.visit({ item_type: itemType });
@@ -36,8 +36,8 @@ export const testCRUD = async (name, itemType, assert) => {
   );
 
   await click(`${SELECTORS.identityRow(name)} ${SELECTORS.popupMenu}`);
-  await waitUntil(() => find(SELECTORS.menuDelete));
-  await click(SELECTORS.menuDelete);
+  await waitUntil(() => find(SELECTORS.menuDelete(name)));
+  await click(SELECTORS.menuDelete(name));
   await indexPage.confirmDelete();
   await settled();
   assert.dom(GENERAL.latestFlashContent).includesText('Successfully deleted');
