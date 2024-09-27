@@ -301,8 +301,8 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
         await listPage.create();
         await editPage.createSecret(`${path}/2`, 'foo', 'bar');
         await listPage.visit({ backend, id: path });
-        assert.ok(listPage.secrets.filterBy('text', '2')[0], `${path}: secret is displayed properly`);
-        await listPage.secrets.filterBy('text', '2')[0].click();
+        assert.dom(SS.secretLinkATag()).hasText('2', `${path}: secret is displayed properly`);
+        await click(SS.secretLink());
         assert.strictEqual(
           currentRouteName(),
           'vault.cluster.secrets.backend.show',
