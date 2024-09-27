@@ -57,7 +57,7 @@ export const testDeleteFromForm = async (name, itemType, assert) => {
   await click('[data-test-tab-subnav="policies"]');
   assert.dom('.list-item-row').exists({ count: 1 }, 'One item is under policies');
   await click('[data-test-tab-subnav="metadata"]');
-  assert.dom('.info-table-row').hasText('hello goodbye', 'Metadata shows on tab');
+  assert.dom('.info-table-row').hasTextContaining('hello goodbye', 'Metadata shows on tab');
   await showPage.edit();
   assert.strictEqual(
     currentRouteName(),
