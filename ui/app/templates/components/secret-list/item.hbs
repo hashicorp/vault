@@ -21,6 +21,7 @@
         @backend={{@backendModel.id}}
         @queryParams={{secret-query-params @backendModel.type @item.type asQueryParams=true}}
         class="has-text-black has-text-weight-semibold"
+        data-test-secret-item-link={{@item.id}}
       >
         {{#if (eq @backendModel.type "transit")}}
           <Icon @name="key" class="has-text-grey-light" />
