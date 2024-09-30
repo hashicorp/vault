@@ -1125,10 +1125,10 @@ $ curl \
 
 The entity alias names for userpass in the sample response records below are user-provided. They are
 system-provided for AWS and Kubernetes based on how the auth backend has been configured. In the case of
-AWS, an IAM role ID is used but this can be configured via the [iam_alias](vault/api-docs/auth/aws#iam_alias)
-or [ec2_alias](vault/api-docs/auth/aws#ec2_alias) configuration parameters. In the case of Kubernetes, the entity
+AWS, an IAM role ID is used but this can be configured via the [iam_alias](/vault/api-docs/auth/aws#iam_alias)
+or [ec2_alias](/vault/api-docs/auth/aws#ec2_alias) configuration parameters. In the case of Kubernetes, the entity
 alias name has been populated with the service account ID though this can be configured via the
-[alias_name_source](vault/api-docs/auth/kubernetes#alias_name_source) configuration parameter.
+[alias_name_source](/vault/api-docs/auth/kubernetes#alias_name_source) configuration parameter.
 
 ~> **NOTE**: The activity records below are pretty-printed to improve readability. The API returns
    JSON lines and will thus be compacted so that each record consumes a single line.
