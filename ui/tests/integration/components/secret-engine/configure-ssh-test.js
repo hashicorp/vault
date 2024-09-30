@@ -33,7 +33,7 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
     @id={{this.id}}
   />
     `);
-    assert.dom(GENERAL.maskedInput('privateKey')).hasNoText('Private key is empty and reset');
+    assert.dom(GENERAL.inputByAttr('privateKey')).hasNoText('Private key is empty and reset');
     assert.dom(GENERAL.inputByAttr('publicKey')).hasNoText('Public key is empty and reset');
     assert
       .dom(GENERAL.inputByAttr('generateSigningKey'))
