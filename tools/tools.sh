@@ -93,13 +93,14 @@ install_internal() {
   # If you update this please update check tools below.
   tools=(
     codechecker
+    pipeline
     stubmaker
   )
 
   echo "==> Installing internal tools..."
-  pushd "$(repo_root)" &> /dev/null
+  pushd "$(repo_root)/tools" &> /dev/null
   for tool in "${tools[@]}"; do
-    go_install ./tools/"$tool"
+    GOPRIVATE=github.com/hashicorp go_install ./"$tool"
   done
   popd &> /dev/null
 }
@@ -110,6 +111,7 @@ check_internal() {
   local tools
   tools=(
     codechecker
+    pipeline
     stubmaker
   )
 
