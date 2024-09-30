@@ -110,7 +110,7 @@ export const FORM = {
   kvRow: '[data-test-kv-row]',
   keyInput: (idx = 0) => `[data-test-kv-key="${idx}"]`,
   valueInput: (idx = 0) => `[data-test-kv-value="${idx}"]`,
-  maskedValueInput: (idx = 0) => `[data-test-kv-value="${idx}"] [data-test-textarea]`,
+  maskedValueInput: (idx = 0) => `[data-test-kv-value="${idx}"] [data-test-input]`,
   addRow: (idx = 0) => `[data-test-kv-add-row="${idx}"]`,
   deleteRow: (idx = 0) => `[data-test-kv-delete-row="${idx}"]`,
   // <KvPatchEditor>
