@@ -142,6 +142,7 @@ const OPENAPI_POWERED_MODELS = {
   'auth-config/gcp': (backend: string) => `/v1/auth/${backend}/config?help=1`,
   'auth-config/github': (backend: string) => `/v1/auth/${backend}/config?help=1`,
   'auth-config/jwt': (backend: string) => `/v1/auth/${backend}/config?help=1`,
+  'auth-config/oidc': (backend: string) => `/v1/auth/${backend}/config?help=1`,
   'auth-config/kubernetes': (backend: string) => `/v1/auth/${backend}/config?help=1`,
   'auth-config/ldap': (backend: string) => `/v1/auth/${backend}/config?help=1`,
   'auth-config/okta': (backend: string) => `/v1/auth/${backend}/config?help=1`,
