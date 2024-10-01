@@ -515,4 +515,3 @@ scenario "dev_single_cluster" {
     value       = step.create_vault_cluster.unseal_keys_hex
   }
 }
-
