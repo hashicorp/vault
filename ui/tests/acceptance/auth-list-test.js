@@ -13,6 +13,7 @@ import enablePage from 'vault/tests/pages/settings/auth/enable';
 import { supportedManagedAuthBackends } from 'vault/helpers/supported-managed-auth-backends';
 import { deleteAuthCmd, mountAuthCmd, runCmd, createNS } from 'vault/tests/helpers/commands';
 import { methods } from 'vault/helpers/mountable-auth-methods';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const SELECTORS = {
   backendLink: (path) => `[data-test-auth-backend-link="${path}"]`,
