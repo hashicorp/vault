@@ -1,0 +1,3 @@
+```release-note:bug
+ui: fix `default_role` input missing from oidc auth method configuration form
+```
