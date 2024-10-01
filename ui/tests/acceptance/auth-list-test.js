@@ -13,12 +13,11 @@ import enablePage from 'vault/tests/pages/settings/auth/enable';
 import { supportedManagedAuthBackends } from 'vault/helpers/supported-managed-auth-backends';
 import { deleteAuthCmd, mountAuthCmd, runCmd, createNS } from 'vault/tests/helpers/commands';
 import { methods } from 'vault/helpers/mountable-auth-methods';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const SELECTORS = {
   backendLink: (path) => `[data-test-auth-backend-link="${path}"]`,
   createUser: '[data-test-entity-create-link="user"]',
-  input: (attr) => `[data-test-input="${attr}"]`,
-  password: '[data-test-textarea]',
   saveBtn: '[data-test-save-config]',
   methods: '[data-test-access-methods] a',
   listItem: '[data-test-list-item-content]',
@@ -48,8 +47,8 @@ module('Acceptance | auth backend list', function (hooks) {
     await visit('/vault/access');
     await click(SELECTORS.backendLink(this.path1));
     await click(SELECTORS.createUser);
-    await fillIn(SELECTORS.input('username'), this.user1);
-    await fillIn(SELECTORS.password, this.user1);
+    await fillIn(GENERAL.inputByAttr('username'), this.user1);
+    await fillIn(GENERAL.inputByAttr('password'), this.user1);
     await click(SELECTORS.saveBtn);
     assert.strictEqual(currentURL(), `/vault/access/${this.path1}/item/user`);
 
@@ -59,8 +58,8 @@ module('Acceptance | auth backend list', function (hooks) {
     // enable a user in second userpass backend
     await click(SELECTORS.backendLink(this.path2));
     await click(SELECTORS.createUser);
-    await fillIn(SELECTORS.input('username'), this.user2);
-    await fillIn(SELECTORS.password, this.user2);
+    await fillIn(GENERAL.inputByAttr('username'), this.user2);
+    await fillIn(GENERAL.inputByAttr('password'), this.user2);
     await click(SELECTORS.saveBtn);
     assert.strictEqual(currentURL(), `/vault/access/${this.path2}/item/user`);
 
