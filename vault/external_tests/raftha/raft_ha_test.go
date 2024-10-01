@@ -55,7 +55,7 @@ func TestRaft_HA_NewCluster(t *testing.T) {
 	})
 }
 
-// Test_RaftHA_Recover_Cluster test that we can recover data and re-boostrap a cluster
+// TestRaftHA_Recover_Cluster test that we can recover data and re-boostrap a cluster
 // that was created with raft HA enabled but is not using raft as the storage backend.
 func TestRaftHA_Recover_Cluster(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Debug).Named(t.Name())
@@ -132,7 +132,7 @@ func testRaftHANewCluster(t *testing.T, bundler teststorage.PhysicalBackendBundl
 	}
 }
 
-// In this test, we're going to create a raft HA cluster and store a test secret in a KVv2
+// testRaftHARecoverCluster : in this test, we're going to create a raft HA cluster and store a test secret in a KVv2
 // We're going to simulate an outage and destroy the cluster but we'll keep the storage backend.
 // We'll recreate a new cluster with the same storage backend and ensure that we can recover using
 // sys/storage/raft/bootstrap. We'll check that the new cluster
