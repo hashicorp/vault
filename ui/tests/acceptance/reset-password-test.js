@@ -59,11 +59,11 @@ module('Acceptance | reset password', function (hooks) {
       );
 
     assert.dom('[data-test-title]').hasText('Reset password', 'page title');
-    await fillIn('[data-test-textarea]', 'newpassword');
+    await fillIn('[data-test-input="reset-password"]', 'newpassword');
     await click('[data-test-reset-password-save]');
     await waitFor('[data-test-flash-message]');
     assert.dom('[data-test-flash-message]').hasText(`Success ${SUCCESS_MESSAGE}`);
-    assert.dom('[data-test-textarea]').hasValue('', 'Resets input after save');
+    assert.dom('[data-test-input="reset-password"]').hasValue('', 'Resets input after save');
   });
 
   test('allows password reset for userpass users logged in via tab', async function (assert) {
@@ -91,10 +91,10 @@ module('Acceptance | reset password', function (hooks) {
       );
 
     assert.dom('[data-test-title]').hasText('Reset password', 'page title');
-    await fillIn('[data-test-textarea]', 'newpassword');
+    await fillIn('[data-test-input="reset-password"]', 'newpassword');
     await click('[data-test-reset-password-save]');
     await waitFor('[data-test-flash-message]');
     assert.dom('[data-test-flash-message]').hasText(`Success ${SUCCESS_MESSAGE}`);
-    assert.dom('[data-test-textarea]').hasValue('', 'Resets input after save');
+    assert.dom('[data-test-input="reset-password"]').hasValue('', 'Resets input after save');
   });
 });

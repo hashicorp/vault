@@ -368,11 +368,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       // check all the form fields are present
       await click(GENERAL.toggleGroup('Root config options'));
       for (const key of expectedConfigKeys('aws-root-create')) {
-        if (key === 'secretKey') {
-          assert.dom(GENERAL.maskedInput(key)).exists(`${key} shows for root section.`);
-        } else {
-          assert.dom(GENERAL.inputByAttr(key)).exists(`${key} shows for root section.`);
-        }
+        assert.dom(GENERAL.inputByAttr(key)).exists(`${key} shows for root section.`);
       }
       for (const key of expectedConfigKeys('aws-lease')) {
         assert.dom(`[data-test-ttl-form-label="${key}"]`).exists(`${key} shows for Lease section.`);

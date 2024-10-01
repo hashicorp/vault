@@ -136,7 +136,6 @@ export function filterPathsByItemType(pathInfo: PathsInfo, itemType: string): Pa
  * This object maps model names to the openAPI path that hydrates the model, given the backend path.
  */
 const OPENAPI_POWERED_MODELS = {
-  'role-ssh': (backend: string) => `/v1/${backend}/roles/example?help=1`,
   'auth-config/azure': (backend: string) => `/v1/auth/${backend}/config?help=1`,
   'auth-config/cert': (backend: string) => `/v1/auth/${backend}/config?help=1`,
   'auth-config/gcp': (backend: string) => `/v1/auth/${backend}/config?help=1`,
@@ -144,18 +143,20 @@ const OPENAPI_POWERED_MODELS = {
   'auth-config/jwt': (backend: string) => `/v1/auth/${backend}/config?help=1`,
   'auth-config/kubernetes': (backend: string) => `/v1/auth/${backend}/config?help=1`,
   'auth-config/ldap': (backend: string) => `/v1/auth/${backend}/config?help=1`,
+  'auth-config/oidc': (backend: string) => `/v1/auth/${backend}/config?help=1`,
   'auth-config/okta': (backend: string) => `/v1/auth/${backend}/config?help=1`,
   'auth-config/radius': (backend: string) => `/v1/auth/${backend}/config?help=1`,
   'kmip/config': (backend: string) => `/v1/${backend}/config?help=1`,
   'kmip/role': (backend: string) => `/v1/${backend}/scope/example/role/example?help=1`,
-  'pki/role': (backend: string) => `/v1/${backend}/roles/example?help=1`,
-  'pki/tidy': (backend: string) => `/v1/${backend}/config/auto-tidy?help=1`,
-  'pki/sign-intermediate': (backend: string) => `/v1/${backend}/issuer/example/sign-intermediate?help=1`,
   'pki/certificate/generate': (backend: string) => `/v1/${backend}/issue/example?help=1`,
   'pki/certificate/sign': (backend: string) => `/v1/${backend}/sign/example?help=1`,
   'pki/config/acme': (backend: string) => `/v1/${backend}/config/acme?help=1`,
   'pki/config/cluster': (backend: string) => `/v1/${backend}/config/cluster?help=1`,
   'pki/config/urls': (backend: string) => `/v1/${backend}/config/urls?help=1`,
+  'pki/role': (backend: string) => `/v1/${backend}/roles/example?help=1`,
+  'pki/sign-intermediate': (backend: string) => `/v1/${backend}/issuer/example/sign-intermediate?help=1`,
+  'pki/tidy': (backend: string) => `/v1/${backend}/config/auto-tidy?help=1`,
+  'role-ssh': (backend: string) => `/v1/${backend}/roles/example?help=1`,
 };
 
 export function getHelpUrlForModel(modelType: string, backend: string) {
