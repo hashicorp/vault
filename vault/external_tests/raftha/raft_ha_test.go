@@ -57,7 +57,7 @@ func TestRaft_HA_NewCluster(t *testing.T) {
 
 // Test_RaftHA_Recover_Cluster test that we can recover data and re-boostrap a cluster
 // that was created with raft HA enabled but is not using raft as the storage backend.
-func Test_RaftHA_Recover_Cluster(t *testing.T) {
+func TestRaftHA_Recover_Cluster(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Debug).Named(t.Name())
 	t.Run("file", func(t *testing.T) {
 		physBundle := teststorage.MakeFileBackend(t, logger)
@@ -149,30 +149,17 @@ func testRaftHARecoverCluster(t *testing.T, physBundle *vault.PhysicalBackendBun
 	haStorage.Setup(nil, &opts)
 	cluster := vault.NewTestCluster(t, nil, &opts)
 
-	addressProvider := &testhelpers.TestRaftServerAddressProvider{Cluster: cluster}
-
-	leaderCore := cluster.Cores[0]
-	atomic.StoreUint32(&vault.TestingUpdateClusterAddr, 1)
-
-	// Seal the leader so we can install an address provider
-	{
-		testhelpers.EnsureCoreSealed(t, leaderCore)
-		leaderCore.UnderlyingHAStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-		cluster.UnsealCore(t, leaderCore)
-		vault.TestWaitActive(t, leaderCore.Core)
-	}
-
 	var (
 		clusterBarrierKeys [][]byte
 		clusterRootToken   string
 	)
 	clusterBarrierKeys = cluster.BarrierKeys
 	clusterRootToken = cluster.RootToken
-	// Now unseal core
-	testhelpers.EnsureCoresUnsealed(t, cluster)
+	leaderCore := cluster.Cores[0]
+	testhelpers.EnsureCoreUnsealed(t, cluster, leaderCore)
 
-	// Ensure peers are added
 	leaderClient := cluster.Cores[0].Client
+	leaderClient.SetToken(clusterRootToken)
 
 	// Mount a KVv2 backend to store a test data
 	err := leaderClient.Sys().Mount("kv", &api.MountInput{
@@ -187,7 +174,7 @@ func testRaftHARecoverCluster(t *testing.T, physBundle *vault.PhysicalBackendBun
 	}
 
 	// Store the test data in the KVv2 backend
-	_, err = leaderClient.Logical().Write("kv/test_known_data", kvData)
+	_, err = leaderClient.Logical().Write("kv/data/test_known_data", kvData)
 	require.NoError(t, err)
 
 	// We delete the current cluster. We keep the storage backend so we can recover the cluster
@@ -209,19 +196,9 @@ func testRaftHARecoverCluster(t *testing.T, physBundle *vault.PhysicalBackendBun
 	haStorage.Setup(nil, &opts)
 	clusterRestored := vault.NewTestCluster(t, nil, &opts)
 
-	addressProviderRestored := &testhelpers.TestRaftServerAddressProvider{Cluster: clusterRestored}
-
 	clusterRestored.BarrierKeys = clusterBarrierKeys
 	clusterRestored.RootToken = clusterRootToken
 	leaderCoreRestored := clusterRestored.Cores[0]
-	atomic.StoreUint32(&vault.TestingUpdateClusterAddr, 1)
-
-	// Seal the leader so we can install an address provider
-	{
-		testhelpers.EnsureCoreSealed(t, leaderCoreRestored)
-		leaderCore.UnderlyingHAStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProviderRestored)
-		clusterRestored.UnsealCore(t, leaderCoreRestored)
-	}
 
 	testhelpers.EnsureCoresUnsealed(t, clusterRestored)
 
@@ -235,12 +212,11 @@ func testRaftHARecoverCluster(t *testing.T, physBundle *vault.PhysicalBackendBun
 	// Core should be active and cluster in a working state. We should be able to
 	// read the data from the KVv2 backend.
 	leaderClientRestored.SetToken(clusterRootToken)
-	secretRaw, err := leaderClientRestored.Logical().Read("kv/test_known_data")
+	secretRaw, err := leaderClientRestored.Logical().Read("kv/data/test_known_data")
 	require.NoError(t, err)
 
 	data := secretRaw.Data["data"]
-	dataAsMap, ok := data.(map[string]interface{})
-	require.True(t, ok)
+	dataAsMap := data.(map[string]interface{})
 	require.NotNil(t, dataAsMap)
 	require.Equal(t, "awesome", dataAsMap["kittens"])
 }
