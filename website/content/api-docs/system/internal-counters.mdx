@@ -1123,6 +1123,13 @@ $ curl \
 
 ### Sample JSON response
 
+The entity alias names for userpass in the sample response records below are user-provided. They are
+system-provided for AWS and Kubernetes based on how the auth backend has been configured. In the case of
+AWS, an IAM role ID is used but this can be configured via the [iam_alias](/vault/api-docs/auth/aws#iam_alias)
+or [ec2_alias](/vault/api-docs/auth/aws#ec2_alias) configuration parameters. In the case of Kubernetes, the entity
+alias name has been populated with the service account ID though this can be configured via the
+[alias_name_source](/vault/api-docs/auth/kubernetes#alias_name_source) configuration parameter.
+
 ~> **NOTE**: The activity records below are pretty-printed to improve readability. The API returns
    JSON lines and will thus be compacted so that each record consumes a single line.
 
@@ -1229,6 +1236,53 @@ $ curl \
   "entity_group_ids": [
     "76a374a1-72fd-30ca-2455-f51dfeaa805e"
   ]
+}
+
+{
+  "entity_name": "e91fa61e-d53e-4b0a-8fe2-ce813a064caa",
+  "entity_alias_name": "bee2d6ea-b873-47bc-9bc3-6f5e16e5c1b3",
+  "local_entity_alias": false,
+  "client_id": "cc7c504f-8d10-4add-9951-f6a194f188ec",
+  "client_type": "entity",
+  "namespace_id": "root",
+  "namespace_path": "",
+  "mount_accessor": "auth_kubernetes_b596406f",
+  "mount_type": "kubernetes",
+  "mount_path": "auth/kubernetes/",
+  "timestamp": "2024-07-10T09:33:51Z",
+  "policies": [
+    "secret-read"
+  ],
+  "entity_metadata": {},
+  "entity_alias_metadata": {
+	  "service_account_uid": "bee2d6ea-b873-47bc-9bc3-6f5e16e5c1b3",
+	  "service_account_name": "vault-auth",
+	  "service_account_namespace": "default",
+	  "service_account_secret_name": "vault-auth-token"
+  },
+  "entity_alias_custom_metadata": {},
+  "entity_group_ids": []
+}
+
+{
+  "entity_name": "55ee5905-0314-485d-85ad-c29dc987a054",
+  "entity_alias_name": "admin",
+  "local_entity_alias": false,
+  "client_id": "cc7c504f-8d10-4add-9951-f6a194f188ec",
+  "client_type": "entity",
+  "namespace_id": "root",
+  "namespace_path": "",
+  "mount_accessor": "auth_aws_c223ff01",
+  "mount_type": "aws",
+  "mount_path": "auth/aws/",
+  "timestamp": "2024-07-10T09:33:51Z",
+  "policies": [
+    "secret-read"
+  ],
+  "entity_metadata": {},
+  "entity_alias_metadata": {},
+  "entity_alias_custom_metadata": {},
+  "entity_group_ids": []
 }
 ```
 
