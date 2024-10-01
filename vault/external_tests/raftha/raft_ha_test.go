@@ -1,7 +1,6 @@
 package raftha
 
 import (
-	"strings"
 	"sync/atomic"
 	"testing"
 
@@ -14,6 +13,7 @@ import (
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/vault"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRaft_HA_NewCluster(t *testing.T) {
@@ -54,6 +54,8 @@ func TestRaft_HA_NewCluster(t *testing.T) {
 	})
 }
 
+// Test_RaftHA_Recover_Cluster test that we can recover data and re-boostrap a cluster
+// that was created with raft HA enabled but is not using raft as the storage backend.
 func Test_RaftHA_Recover_Cluster(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Debug).Named(t.Name())
 	t.Run("file", func(t *testing.T) {
@@ -149,11 +151,9 @@ func testRaftHANewCluster(t *testing.T, bundler teststorage.PhysicalBackendBundl
 // In this test, we're going to create a raft HA cluster and store a test secret in a KVv2
 // We're going to simulate an outage and destroy the cluster but we'll keep the storage backend.
 // We'll recreate a new cluster with the same storage backend and ensure that we can recover using
-// sys/storage/raft/bootstrap with `reset_tls_keyring` set to true. We'll check that the new cluster
+// sys/storage/raft/bootstrap. We'll check that the new cluster
 // is functional and no data was lost: we can get the test secret from the KVv2.
 func testRaftHARecoverCluster(t *testing.T, physBundle *vault.PhysicalBackendBundle, logger hclog.Logger) {
-	t.Log("Simulating cluster recovery with raft as HABackend but not storage")
-	var conf vault.CoreConfig
 	opts := vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 		// We're not testing the HA, only that it can be recovered. No need for multiple cores.
@@ -162,10 +162,8 @@ func testRaftHARecoverCluster(t *testing.T, physBundle *vault.PhysicalBackendBun
 
 	haStorage, haCleanup := teststorage.MakeReusableRaftHAStorage(t, logger, opts.NumCores, physBundle)
 	defer haCleanup()
-	haStorage.Setup(&conf, &opts)
-	cluster := vault.NewTestCluster(t, &conf, &opts)
-	cluster.Start()
-	defer cluster.Cleanup()
+	haStorage.Setup(nil, &opts)
+	cluster := vault.NewTestCluster(t, nil, &opts)
 
 	addressProvider := &testhelpers.TestRaftServerAddressProvider{Cluster: cluster}
 
@@ -196,9 +194,7 @@ func testRaftHARecoverCluster(t *testing.T, physBundle *vault.PhysicalBackendBun
 	err := leaderClient.Sys().Mount("kv", &api.MountInput{
 		Type: "kv-v2",
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	kvData := map[string]interface{}{
 		"data": map[string]interface{}{
@@ -207,10 +203,8 @@ func testRaftHARecoverCluster(t *testing.T, physBundle *vault.PhysicalBackendBun
 	}
 
 	// Store the test data in the KVv2 backend
-	secretRaw, err := leaderClient.Logical().Write("kv/test_known_data", kvData)
-	if err != nil {
-		t.Fatalf("write secret failed - err :%#v, resp: %#v\n", err, secretRaw)
-	}
+	_, err = leaderClient.Logical().Write("kv/test_known_data", kvData)
+	require.NoError(t, err)
 
 	// We delete the current cluster. We keep the storage backend so we can recover the cluster
 	cluster.Cleanup()
@@ -228,55 +222,43 @@ func testRaftHARecoverCluster(t *testing.T, physBundle *vault.PhysicalBackendBun
 	}
 	haStorage, haCleanup = teststorage.MakeReusableRaftHAStorage(t, logger, opts.NumCores, physBundle)
 	defer haCleanup()
-	haStorage.Setup(&conf, &opts)
-	cluster_restored := vault.NewTestCluster(t, &conf, &opts)
-	cluster_restored.Start()
-	defer cluster_restored.Cleanup()
+	haStorage.Setup(nil, &opts)
+	clusterRestored := vault.NewTestCluster(t, nil, &opts)
 
-	addressProviderRestored := &testhelpers.TestRaftServerAddressProvider{Cluster: cluster_restored}
+	addressProviderRestored := &testhelpers.TestRaftServerAddressProvider{Cluster: clusterRestored}
 
-	cluster_restored.BarrierKeys = clusterBarrierKeys
-	cluster_restored.RootToken = clusterRootToken
-	leaderCoreRestored := cluster_restored.Cores[0]
+	clusterRestored.BarrierKeys = clusterBarrierKeys
+	clusterRestored.RootToken = clusterRootToken
+	leaderCoreRestored := clusterRestored.Cores[0]
 	atomic.StoreUint32(&vault.TestingUpdateClusterAddr, 1)
 
 	// Seal the leader so we can install an address provider
 	{
 		testhelpers.EnsureCoreSealed(t, leaderCoreRestored)
 		leaderCore.UnderlyingHAStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProviderRestored)
-		cluster_restored.UnsealCore(t, leaderCoreRestored)
+		clusterRestored.UnsealCore(t, leaderCoreRestored)
 	}
 
-	testhelpers.EnsureCoresUnsealed(t, cluster_restored)
+	testhelpers.EnsureCoresUnsealed(t, clusterRestored)
 
-	leaderClientRestored := cluster_restored.Cores[0].Client
-	// Trying to bootstrap the cluster, it should fail as it already exists.
-	result, err := leaderClientRestored.Logical().Write("sys/storage/raft/bootstrap", nil)
-	if err == nil || !strings.Contains(err.Error(), "could not generate TLS keyring during bootstrap: TLS keyring already present") {
-		t.Fatalf("re-bootstraping backend should error as TLS keyring already exists.")
-	}
+	leaderClientRestored := clusterRestored.Cores[0].Client
 
 	// We now reset the TLS keyring and bootstrap the cluster again.
-	result, err = leaderClientRestored.Logical().Write("sys/storage/raft/bootstrap", map[string]interface{}{
-		"reset_tls_keyring": true,
-	})
-	if err != nil {
-		t.Fatalf("failed re-bootstraping backend - err :%#v, resp: %#v\n", err, result)
-	}
+	_, err = leaderClientRestored.Logical().Write("sys/storage/raft/bootstrap", nil)
+	require.NoError(t, err)
 
 	vault.TestWaitActive(t, leaderCoreRestored.Core)
 	// Core should be active and cluster in a working state. We should be able to
 	// read the data from the KVv2 backend.
 	leaderClientRestored.SetToken(clusterRootToken)
-	secretRaw, err = leaderClientRestored.Logical().Read("kv/test_known_data")
-	if err != nil {
-		t.Fatalf("read secret failed - err :%#v, resp: %#v\n", err, secretRaw)
-	}
+	secretRaw, err := leaderClientRestored.Logical().Read("kv/test_known_data")
+	require.NoError(t, err)
 
-	kittens := secretRaw.Data["data"].(map[string]interface{})["kittens"]
-	if kittens != "awesome" {
-		t.Fatalf("expected kittens secret to be awesome but it was %q", kittens)
-	}
+	data := secretRaw.Data["data"]
+	dataAsMap, ok := data.(map[string]interface{})
+	require.True(t, ok)
+	require.NotNil(t, dataAsMap)
+	require.Equal(t, "awesome", dataAsMap["kittens"])
 }
 
 func TestRaft_HA_ExistingCluster(t *testing.T) {

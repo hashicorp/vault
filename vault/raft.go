@@ -682,7 +682,7 @@ func (c *Core) raftReadTLSKeyring(ctx context.Context) (*raft.TLSKeyring, error)
 // raftCreateTLSKeyring creates the initial TLS key and the TLS Keyring for raft
 // use. If a keyring entry is already present in storage, it will return an
 // error.
-func (c *Core) raftCreateTLSKeyring(ctx context.Context, resetTLSKeyring bool) (*raft.TLSKeyring, error) {
+func (c *Core) raftCreateTLSKeyring(ctx context.Context) (*raft.TLSKeyring, error) {
 	if raftBackend := c.getRaftBackend(); raftBackend == nil {
 		return nil, fmt.Errorf("raft backend not in use")
 	}
@@ -694,8 +694,9 @@ func (c *Core) raftCreateTLSKeyring(ctx context.Context, resetTLSKeyring bool) (
 	}
 
 	if raftTLSEntry != nil {
-		// If resetTLSKeyring is set, we will overwrite the existing keyring.
-		if !resetTLSKeyring {
+		// We will overwrite the existing keyring.
+		// This is only allowed if the underlying storage is not RAFT.
+		if _, usingRaftStorage := c.underlyingPhysical.(*raft.RaftBackend); usingRaftStorage {
 			return nil, fmt.Errorf("TLS keyring already present")
 		}
 	}
@@ -1357,7 +1358,7 @@ func (c *Core) loadAutopilotConfiguration(ctx context.Context) (*raft.AutopilotC
 // RaftBootstrap performs bootstrapping of a raft cluster if core contains a raft
 // backend. If raft is not part for the storage or HA storage backend, this
 // call results in an error.
-func (c *Core) RaftBootstrap(ctx context.Context, onInit bool, resetTLSKeyring bool) error {
+func (c *Core) RaftBootstrap(ctx context.Context, onInit bool) error {
 	if c.logger.IsDebug() {
 		c.logger.Debug("bootstrapping raft backend")
 		defer c.logger.Debug("finished bootstrapping raft backend")
@@ -1387,7 +1388,7 @@ func (c *Core) RaftBootstrap(ctx context.Context, onInit bool, resetTLSKeyring b
 
 	if !onInit {
 		// Generate the TLS Keyring info for SetupCluster to consume
-		raftTLS, err := c.raftCreateTLSKeyring(ctx, resetTLSKeyring)
+		raftTLS, err := c.raftCreateTLSKeyring(ctx)
 		if err != nil {
 			return fmt.Errorf("could not generate TLS keyring during bootstrap: %w", err)
 		}
