@@ -694,8 +694,9 @@ func (c *Core) raftCreateTLSKeyring(ctx context.Context) (*raft.TLSKeyring, erro
 	}
 
 	if raftTLSEntry != nil {
-		// We will overwrite the existing keyring.
-		// This is only allowed if the underlying storage is not RAFT.
+		// For Raft storage, the keyring should already be there, but
+		// for situations with non-Raft storage and Raft HA, we can ignore this,
+		// as it will need to be remade.
 		if _, usingRaftStorage := c.underlyingPhysical.(*raft.RaftBackend); usingRaftStorage {
 			return nil, fmt.Errorf("TLS keyring already present")
 		}
