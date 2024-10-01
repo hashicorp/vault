@@ -182,7 +182,7 @@ export const expectedValueOfConfigKeys = (type, string) => {
 export const fillInAwsConfig = async (situation = 'withAccess') => {
   if (situation === 'withAccess') {
     await fillIn(GENERAL.inputByAttr('accessKey'), 'foo');
-    await fillIn(GENERAL.maskedInput('secretKey'), 'bar');
+    await fillIn(GENERAL.inputByAttr('secretKey'), 'bar');
   }
   if (situation === 'withAccessOptions') {
     await click(GENERAL.toggleGroup('Root config options'));

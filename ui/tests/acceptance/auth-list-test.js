@@ -17,8 +17,6 @@ import { methods } from 'vault/helpers/mountable-auth-methods';
 const SELECTORS = {
   backendLink: (path) => `[data-test-auth-backend-link="${path}"]`,
   createUser: '[data-test-entity-create-link="user"]',
-  input: (attr) => `[data-test-input="${attr}"]`,
-  password: '[data-test-textarea]',
   saveBtn: '[data-test-save-config]',
   methods: '[data-test-access-methods] a',
   listItem: '[data-test-list-item-content]',
@@ -48,8 +46,8 @@ module('Acceptance | auth backend list', function (hooks) {
     await visit('/vault/access');
     await click(SELECTORS.backendLink(this.path1));
     await click(SELECTORS.createUser);
-    await fillIn(SELECTORS.input('username'), this.user1);
-    await fillIn(SELECTORS.password, this.user1);
+    await fillIn(GENERAL.inputByAttr('username'), this.user1);
+    await fillIn(GENERAL.inputByAttr('password'), this.user1);
     await click(SELECTORS.saveBtn);
     assert.strictEqual(currentURL(), `/vault/access/${this.path1}/item/user`);
 
@@ -59,8 +57,8 @@ module('Acceptance | auth backend list', function (hooks) {
     // enable a user in second userpass backend
     await click(SELECTORS.backendLink(this.path2));
     await click(SELECTORS.createUser);
-    await fillIn(SELECTORS.input('username'), this.user2);
-    await fillIn(SELECTORS.password, this.user2);
+    await fillIn(GENERAL.inputByAttr('username'), this.user2);
+    await fillIn(GENERAL.inputByAttr('password'), this.user2);
     await click(SELECTORS.saveBtn);
     assert.strictEqual(currentURL(), `/vault/access/${this.path2}/item/user`);
 
