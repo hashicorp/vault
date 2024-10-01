@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki: Allow setting Ext_Key_Usage and Ext_Key_Usage_OIDs on issuers.
+```
