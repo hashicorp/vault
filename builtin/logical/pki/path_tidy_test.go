@@ -301,41 +301,9 @@ func TestAutoTidy(t *testing.T) {
 	// Wait for cert to expire and the safety buffer to elapse.
 	time.Sleep(time.Until(leafCert.NotAfter) + 3*time.Second)
 
-	// Wait for auto-tidy to run afterwards.
-	var foundTidyRunning string
-	var foundTidyFinished bool
-	timeoutChan := time.After(120 * time.Second)
-	for {
-		if foundTidyRunning != "" && foundTidyFinished {
-			break
-		}
-
-		select {
-		case <-timeoutChan:
-			t.Fatalf("expected auto-tidy to run (%v) and finish (%v) before 120 seconds elapsed", foundTidyRunning, foundTidyFinished)
-		default:
-			time.Sleep(250 * time.Millisecond)
-
-			resp, err = client.Logical().Read("pki/tidy-status")
-			require.NoError(t, err)
-			require.NotNil(t, resp)
-			require.NotNil(t, resp.Data)
-			require.NotEmpty(t, resp.Data["state"])
-			require.NotEmpty(t, resp.Data["time_started"])
-			state := resp.Data["state"].(string)
-			started := resp.Data["time_started"].(string)
-			t.Logf("Resp: %v", resp.Data)
-
-			// We want the _next_ tidy run after the cert expires. This
-			// means if we're currently finished when we hit this the
-			// first time, we want to wait for the next run.
-			if foundTidyRunning == "" {
-				foundTidyRunning = started
-			} else if foundTidyRunning != started && !foundTidyFinished && state == "Finished" {
-				foundTidyFinished = true
-			}
-		}
-	}
+	// We run this twice to make absolutely sure we didn't read a previous run of tidy
+	_, lastRun := waitForTidyToFinish(t, client, "pki")
+	waitForTidyToFinishWithLastRun(t, client, "pki", lastRun)
 
 	// Cert should no longer exist.
 	resp, err = client.Logical().Read("pki/cert/" + leafSerial)
@@ -712,9 +680,8 @@ func TestCertStorageMetrics(t *testing.T) {
 
 	// Since certificate counts are off by default, we shouldn't see counts in the tidy status
 	tidyStatus, err := client.Logical().Read("pki/tidy-status")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err, "failed reading from tidy-status")
+
 	// backendUUID should exist, we need this for metrics
 	backendUUID := tidyStatus.Data["internal_backend_uuid"].(string)
 	// "current_cert_store_count", "current_revoked_cert_count"
@@ -759,16 +726,7 @@ func TestCertStorageMetrics(t *testing.T) {
 	testhelpers.EnsureCoresUnsealed(t, cluster)
 
 	// Wait until a tidy run has completed.
-	testhelpers.RetryUntil(t, 5*time.Second, func() error {
-		resp, err = client.Logical().Read("pki/tidy-status")
-		if err != nil {
-			return fmt.Errorf("error reading tidy status: %w", err)
-		}
-		if finished, ok := resp.Data["time_finished"]; !ok || finished == "" || finished == nil {
-			return fmt.Errorf("tidy time_finished not run yet: %v", finished)
-		}
-		return nil
-	})
+	tidyStatus, _ = waitForTidyToFinish(t, client, "pki")
 
 	// Since publish_stored_certificate_count_metrics is still false, these metrics should still not exist yet
 	stableMetric = inmemSink.Data()
@@ -783,9 +741,6 @@ func TestCertStorageMetrics(t *testing.T) {
 	}
 
 	// But since certificate counting is on, the metrics should exist on tidyStatus endpoint:
-	tidyStatus, err = client.Logical().Read("pki/tidy-status")
-	require.NoError(t, err, "failed reading tidy-status endpoint")
-
 	// backendUUID should exist, we need this for metrics
 	backendUUID = tidyStatus.Data["internal_backend_uuid"].(string)
 	// "current_cert_store_count", "current_revoked_cert_count"
@@ -905,49 +860,11 @@ func TestCertStorageMetrics(t *testing.T) {
 	t.Logf("%v: Sleeping for %v, leaf certificate expires: %v", time.Now().Format(time.RFC3339), sleepFor, leafCert.NotAfter)
 	time.Sleep(sleepFor)
 
-	// Wait for auto-tidy to run afterwards.
-	var foundTidyRunning string
-	var foundTidyFinished bool
-	timeoutChan := time.After(120 * time.Second)
-	for {
-		if foundTidyRunning != "" && foundTidyFinished {
-			break
-		}
-
-		select {
-		case <-timeoutChan:
-			t.Fatalf("expected auto-tidy to run (%v) and finish (%v) before 120 seconds elapsed", foundTidyRunning, foundTidyFinished)
-		default:
-			time.Sleep(250 * time.Millisecond)
-
-			resp, err = client.Logical().Read("pki/tidy-status")
-			require.NoError(t, err)
-			require.NotNil(t, resp)
-			require.NotNil(t, resp.Data)
-			require.NotEmpty(t, resp.Data["state"])
-			require.NotEmpty(t, resp.Data["time_started"])
-			state := resp.Data["state"].(string)
-			started := resp.Data["time_started"].(string)
-
-			t.Logf("%v: Resp: %v", time.Now().Format(time.RFC3339), resp.Data)
-
-			// We want the _next_ tidy run after the cert expires. This
-			// means if we're currently finished when we hit this the
-			// first time, we want to wait for the next run.
-			if foundTidyRunning == "" {
-				foundTidyRunning = started
-			} else if foundTidyRunning != started && !foundTidyFinished && state == "Finished" {
-				foundTidyFinished = true
-			}
-		}
-	}
+	_, lastRun := waitForTidyToFinish(t, client, "pki")
+	tidyStatus, _ = waitForTidyToFinishWithLastRun(t, client, "pki", lastRun)
 
 	// After Tidy, Cert Store Count Should Still Be Available, and Be Updated:
 	// Check Metrics After Cert Has Be Created and Revoked
-	tidyStatus, err = client.Logical().Read("pki/tidy-status")
-	if err != nil {
-		t.Fatal(err)
-	}
 	backendUUID = tidyStatus.Data["internal_backend_uuid"].(string)
 	// "current_cert_store_count", "current_revoked_cert_count"
 	certStoreCount, ok = tidyStatus.Data["current_cert_store_count"]
@@ -1007,8 +924,8 @@ func TestTidyAcmeWithBackdate(t *testing.T) {
 	// Create new account with order/cert
 	t.Logf("Testing register on %s", baseAcmeURL)
 	acct, err := acmeClient.Register(testCtx, &acme.Account{}, func(tosURL string) bool { return true })
-	t.Logf("got account URI: %v", acct.URI)
 	require.NoError(t, err, "failed registering account")
+	t.Logf("got account URI: %v", acct.URI)
 	identifiers := []string{"*.localdomain"}
 	order, err := acmeClient.AuthorizeOrder(testCtx, []acme.AuthzID{
 		{Type: "dns", Value: identifiers[0]},
@@ -1072,7 +989,7 @@ func TestTidyAcmeWithBackdate(t *testing.T) {
 	require.NoError(t, err)
 
 	// Wait for tidy to finish.
-	tidyResp := waitForTidyToFinish(t, client, "pki")
+	tidyResp, _ := waitForTidyToFinish(t, client, "pki")
 
 	require.Equal(t, tidyResp.Data["acme_orders_deleted_count"], json.Number("1"),
 		"expected to revoke a single ACME order: %v", tidyResp)
@@ -1100,7 +1017,7 @@ func TestTidyAcmeWithBackdate(t *testing.T) {
 	require.NoError(t, err)
 
 	// Wait for tidy to finish.
-	tidyResp = waitForTidyToFinish(t, client, "pki")
+	tidyResp, _ = waitForTidyToFinish(t, client, "pki")
 	require.Equal(t, tidyResp.Data["acme_orders_deleted_count"], json.Number("0"),
 		"no ACME orders should have been deleted: %v", tidyResp)
 	require.Equal(t, tidyResp.Data["acme_account_revoked_count"], json.Number("1"),
@@ -1164,8 +1081,8 @@ func TestTidyAcmeWithSafetyBuffer(t *testing.T) {
 	// Create new account
 	t.Logf("Testing register on %s", baseAcmeURL)
 	acct, err := acmeClient.Register(testCtx, &acme.Account{}, func(tosURL string) bool { return true })
-	t.Logf("got account URI: %v", acct.URI)
 	require.NoError(t, err, "failed registering account")
+	t.Logf("got account URI: %v", acct.URI)
 
 	// -> Ensure we see it in storage. Since we don't have direct storage
 	// access, use sys/raw interface.
@@ -1187,7 +1104,7 @@ func TestTidyAcmeWithSafetyBuffer(t *testing.T) {
 	require.NoError(t, err)
 
 	// Wait for tidy to finish.
-	statusResp := waitForTidyToFinish(t, client, "pki")
+	statusResp, _ := waitForTidyToFinish(t, client, "pki")
 	require.Equal(t, statusResp.Data["acme_account_revoked_count"], json.Number("1"), "expected to revoke a single ACME account")
 
 	// Wait for the account to expire.
@@ -1359,11 +1276,17 @@ func backDate(original time.Time, change time.Duration) time.Time {
 	return original.Add(-change)
 }
 
-func waitForTidyToFinish(t *testing.T, client *api.Client, mount string) *api.Secret {
-	var statusResp *api.Secret
-	testhelpers.RetryUntil(t, 5*time.Second, func() error {
-		var err error
+func waitForTidyToFinish(t *testing.T, client *api.Client, mount string) (*api.Secret, time.Time) {
+	return waitForTidyToFinishWithLastRun(t, client, mount, time.Time{})
+}
 
+func waitForTidyToFinishWithLastRun(t *testing.T, client *api.Client, mount string, previousFinishTime time.Time) (*api.Secret, time.Time) {
+	t.Helper()
+
+	var statusResp *api.Secret
+	var currentFinishTime time.Time
+	testhelpers.RetryUntil(t, 30*time.Second, func() error {
+		var err error
 		tidyStatusPath := mount + "/tidy-status"
 		statusResp, err = client.Logical().Read(tidyStatusPath)
 		if err != nil {
@@ -1372,8 +1295,21 @@ func waitForTidyToFinish(t *testing.T, client *api.Client, mount string) *api.Se
 		if statusResp == nil {
 			return fmt.Errorf("got nil, nil response from: %s", tidyStatusPath)
 		}
-		if state, ok := statusResp.Data["state"]; !ok || state == "Running" {
-			return fmt.Errorf("tidy status state is still running")
+		if state, ok := statusResp.Data["state"]; !ok || state != "Finished" {
+			return fmt.Errorf("tidy has not finished got state: %v", state)
+		}
+
+		if currentFinishTimeRaw, ok := statusResp.Data["time_finished"]; !ok {
+			return fmt.Errorf("tidy status did not contain a time_finished field")
+		} else {
+			if currentFinishTimeStr, ok := currentFinishTimeRaw.(string); !ok {
+				return fmt.Errorf("tidy status time_finished field was not a string was %T", currentFinishTimeRaw)
+			} else {
+				currentFinishTime, err = time.Parse(time.RFC3339, currentFinishTimeStr)
+				if !currentFinishTime.After(previousFinishTime) {
+					return fmt.Errorf("tidy status time_finished %v was not after previous time %v", currentFinishTime, previousFinishTime)
+				}
+			}
 		}
 
 		if errorOccurred, ok := statusResp.Data["error"]; !ok || !(errorOccurred == nil || errorOccurred == "") {
@@ -1384,5 +1320,5 @@ func waitForTidyToFinish(t *testing.T, client *api.Client, mount string) *api.Se
 	})
 
 	t.Logf("got tidy status: %v", statusResp.Data)
-	return statusResp
+	return statusResp, currentFinishTime
 }
