@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package kubernetes
 
 import (
@@ -100,6 +103,10 @@ func (r *serviceRegistration) NotifyInitializedStateChange(isInitialized bool) e
 		Path:      pathToLabels + labelInitialized,
 		Value:     strconv.FormatBool(isInitialized),
 	})
+	return nil
+}
+
+func (c *serviceRegistration) NotifyConfigurationReload(conf *map[string]string) error {
 	return nil
 }
 

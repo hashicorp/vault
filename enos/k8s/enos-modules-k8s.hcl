@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 module "create_kind_cluster" {
   source = "../modules/local_kind_cluster"
 }
@@ -41,7 +44,7 @@ module "k8s_verify_version" {
 module "k8s_verify_write_data" {
   source = "../modules/k8s_vault_verify_write_data"
 
-  vault_instance_count   = var.vault_instance_count
+  vault_instance_count = var.vault_instance_count
 }
 
 module "read_license" {

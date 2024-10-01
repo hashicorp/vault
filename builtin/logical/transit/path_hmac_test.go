@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package transit
 
 import (
@@ -91,17 +94,40 @@ func TestTransit_HMAC(t *testing.T) {
 			}
 
 			// Now verify
+			verify := func() {
+				t.Helper()
+
+				resp, err = b.HandleRequest(context.Background(), req)
+				if err != nil {
+					t.Fatalf("%v: %v", err, resp)
+				}
+				if resp == nil {
+					t.Fatal("expected non-nil response")
+				}
+				if errStr, ok := resp.Data["error"]; ok {
+					t.Fatalf("error validating hmac: %s", errStr)
+				}
+				if resp.Data["valid"].(bool) == false {
+					t.Fatalf(fmt.Sprintf("error validating hmac;\nreq:\n%#v\nresp:\n%#v", *req, *resp))
+				}
+			}
 			req.Path = strings.ReplaceAll(req.Path, "hmac", "verify")
 			req.Data["hmac"] = value.(string)
-			resp, err = b.HandleRequest(context.Background(), req)
-			if err != nil {
-				t.Fatalf("%v: %v", err, resp)
-			}
-			if resp == nil {
-				t.Fatal("expected non-nil response")
-			}
-			if resp.Data["valid"].(bool) == false {
-				panic(fmt.Sprintf("error validating hmac;\nreq:\n%#v\nresp:\n%#v", *req, *resp))
+			verify()
+
+			// If `algorithm` parameter is used, try with `hash_algorithm` as well
+			if algorithm, ok := req.Data["algorithm"]; ok {
+				// Note that `hash_algorithm` takes precedence over `algorithm`, since the
+				// latter is deprecated.
+				req.Data["hash_algorithm"] = algorithm
+				req.Data["algorithm"] = "xxx"
+				defer func() {
+					// Restore the req fields, since it is re-used by the tests below
+					delete(req.Data, "hash_algorithm")
+					req.Data["algorithm"] = algorithm
+				}()
+
+				verify()
 			}
 		}
 

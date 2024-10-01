@@ -55,22 +55,25 @@ Vagrantfile
 !.release/ci.hcl
 !.release/security-scan.hcl
 !.release/linux/package/etc/vault.d/vault.hcl
-!command/agent/config/test-fixtures/*.hcl
-!command/server/test-fixtures/**/*.hcl
 !enos/**/*.hcl
+!**/test-fixtures/**/*.hcl
+!**/testdata/*.hcl
 
 # Enos
-enos/.enos
-enos/support
-# Enos local Terraform files
-enos/.terraform/*
-enos/.terraform.lock.hcl
-enos/*.tfstate
-enos/*.tfstate.*
+.enos
+enos-local.vars.hcl
+enos/**/support
+enos/**/kubeconfig
+.terraform
+.terraform.lock.hcl
+.tfstate.*
 
 .DS_Store
 .idea
 .vscode
+
+# VSCode debugger executable
+__debug_bin*
 
 dist/*
 
@@ -126,3 +129,8 @@ website/components/node_modules
 .buildcache/
 .releaser/
 *.log
+
+tools/godoctests/.bin
+tools/gonilnilfunctions/.bin
+tools/codechecker/.bin
+.ci-bootstrap

@@ -1,0 +1,43 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<PageHeader as |p|>
+  <p.top>
+    <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3" data-test-header-title>
+      <Icon @name={{@model.icon}} @size="24" class="has-text-grey-light" />
+      {{@model.id}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+<div class="tabs-container box is-bottomless is-marginless is-paddingless">
+  <nav class="tabs" aria-label="kubernetes tabs">
+    <ul>
+      <li><LinkTo @route="overview" data-test-tab="overview">Overview</LinkTo></li>
+      <li><LinkTo @route="roles" data-test-tab="roles">Roles</LinkTo></li>
+      <li><LinkTo @route="configuration" data-test-tab="config">Configuration</LinkTo></li>
+    </ul>
+  </nav>
+</div>
+
+<Toolbar aria-label="items for managing kubernetes items">
+  {{#if @filterRoles}}
+    <ToolbarFilters>
+      <FilterInputExplicit
+        @query={{@query}}
+        @placeholder="Filter roles"
+        @handleSearch={{@handleSearch}}
+        @handleInput={{@handleInput}}
+        @handleKeyDown={{@handleKeyDown}}
+      />
+    </ToolbarFilters>
+  {{/if}}
+  <ToolbarActions>
+    {{yield}}
+  </ToolbarActions>
+</Toolbar>

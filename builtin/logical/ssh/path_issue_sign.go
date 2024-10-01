@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package ssh
 
 import (
@@ -186,10 +189,19 @@ func (b *backend) calculateValidPrincipals(data *framework.FieldData, req *logic
 		allowedPrincipals = strutil.RemoveDuplicates(strutil.ParseStringSlice(principalsAllowedByRole, ","), false)
 	}
 
+	if len(parsedPrincipals) == 0 && defaultPrincipal != "" {
+		// defaultPrincipal will either be the defaultUser or a rendered defaultUserTemplate
+		parsedPrincipals = []string{defaultPrincipal}
+	}
+
 	switch {
 	case len(parsedPrincipals) == 0:
-		// There is nothing to process
-		return nil, nil
+		if role.AllowEmptyPrincipals {
+			// There is nothing to process
+			return nil, nil
+		} else {
+			return nil, fmt.Errorf("empty valid principals not allowed by role")
+		}
 	case len(allowedPrincipals) == 0:
 		// User has requested principals to be set, but role is not configured
 		// with any principals
@@ -498,7 +510,7 @@ func (b *creationBundle) sign() (retCert *ssh.Certificate, retErr error) {
 	// prepare certificate for signing
 	nonce := make([]byte, 32)
 	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
-		return nil, fmt.Errorf("failed to generate signed SSH key: error generating random nonce")
+		return nil, fmt.Errorf("failed to generate signed SSH key: error generating random nonce: %w", err)
 	}
 	certificate := &ssh.Certificate{
 		Serial:          serialNumber.Uint64(),

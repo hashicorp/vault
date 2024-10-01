@@ -1,11 +1,19 @@
-<div class="splash-page-container section is-flex-v-centered-tablet is-flex-1 is-fullwidth">
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<div class="splash-page-container section is-flex-v-centered-tablet is-flex-grow-1 is-fullwidth">
   <div class="columns is-centered is-gapless is-fullwidth">
     <div class="column is-4-desktop is-6-tablet">
       {{#if this.model.error}}
         <div class="box is-shadowless is-flex-v-centered">
           <LogoEdition />
         </div>
-        <AlertBanner @type="danger" @title={{this.model.error.title}} @message={{this.model.error.message}} />
+        <Hds::Alert @type="inline" @color="critical" class="has-bottom-margin-s" as |A|>
+          <A.Title>{{this.model.error.title}}</A.Title>
+          <A.Description>{{this.model.error.message}}</A.Description>
+        </Hds::Alert>
       {{else if this.model.consent}}
         <OidcConsentBlock
           @code={{this.model.consent.code}}

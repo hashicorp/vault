@@ -1,1 +1,11 @@
-<ReplicationSummary @cluster={{this.model}} @initialReplicationMode={{this.replicationMode}} />
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<Page::ModeIndex
+  @replicationDisabled={{this.replicationForMode.replicationDisabled}}
+  @replicationMode={{this.replicationMode}}
+  @cluster={{this.model}}
+  @onEnableSuccess={{this.onEnableSuccess}}
+/>

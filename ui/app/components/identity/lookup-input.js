@@ -1,4 +1,9 @@
-import { inject as service } from '@ember/service';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { service } from '@ember/service';
 import Component from '@ember/component';
 import { task } from 'ember-concurrency';
 import { underscore } from 'vault/helpers/underscore';
@@ -22,7 +27,7 @@ export default Component.extend({
     this._super(...arguments);
     this.store.findAll('auth-method').then((methods) => {
       this.set('authMethods', methods);
-      this.set('aliasMountAccessor', methods.get('firstObject.accessor'));
+      this.set('aliasMountAccessor', methods[0].accessor);
     });
   },
 

@@ -1,0 +1,3 @@
+```release-note:improvement
+website/docs: Added API documentation for Azure Secrets Engine delete role
+```

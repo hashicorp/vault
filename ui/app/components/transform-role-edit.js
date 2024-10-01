@@ -1,5 +1,10 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import TransformBase, { addToList, removeFromList } from './transform-edit-base';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 
 export default TransformBase.extend({
   flashMessages: service(),
@@ -60,7 +65,10 @@ export default TransformBase.extend({
           message =
             'This role was edited to remove transformations, but this role was not removed from those transformations’ allowed_roles due to a lack of permissions.';
         }
-        this.flashMessages.stickyInfo(message);
+        this.flashMessages.info(message, {
+          sticky: true,
+          priority: 300,
+        });
       }
     });
   },

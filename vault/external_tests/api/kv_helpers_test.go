@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package api
 
 import (
@@ -20,18 +23,15 @@ const (
 	secretPath  = "my-secret"
 )
 
-var (
-	client     *api.Client
-	secretData = map[string]interface{}{
-		"foo": "bar",
-	}
-)
+var secretData = map[string]interface{}{
+	"foo": "bar",
+}
 
 // setupKVv2Test creates the secret that will be used in each KV v2 subtest. It
 // returns a function (that should be deferred whenever setupKVv2Test is called)
 // which will perform the cleanup of all existing versions of the secret, as
 // well as the secret that was written for comparison.
-func setupKVv2Test(t *testing.T) (func(t *testing.T), *api.KVSecret) {
+func setupKVv2Test(t *testing.T, client *api.Client) (func(t *testing.T), *api.KVSecret) {
 	writtenSecret, err := client.KVv2(v2MountPath).Put(context.Background(), secretPath, secretData)
 	if err != nil {
 		t.Fatal(err)
@@ -68,7 +68,7 @@ func TestKVHelpers(t *testing.T) {
 
 	cores := cluster.Cores
 	core := cores[0].Core
-	client = cluster.Cores[0].Client
+	client := cluster.Cores[0].Client
 	vault.TestWaitActive(t, core)
 
 	// mount the KVv2 backend
@@ -117,7 +117,7 @@ func TestKVHelpers(t *testing.T) {
 
 	//// v2 ////
 	t.Run("kv v2: get data and full metadata", func(t *testing.T) {
-		teardownTest, originalSecret := setupKVv2Test(t)
+		teardownTest, originalSecret := setupKVv2Test(t, client)
 		defer teardownTest(t)
 
 		secret, err := client.KVv2(v2MountPath).Get(context.Background(), secretPath)
@@ -142,27 +142,27 @@ func TestKVHelpers(t *testing.T) {
 	})
 
 	t.Run("kv v2: get secret that does not exist", func(t *testing.T) {
-		teardownTest, _ := setupKVv2Test(t)
+		teardownTest, _ := setupKVv2Test(t, client)
 		defer teardownTest(t)
 
-		_, err = client.KVv2(v1MountPath).Get(context.Background(), "does/not/exist")
+		_, err = client.KVv2(v2MountPath).Get(context.Background(), "does/not/exist")
 		if !errors.Is(err, api.ErrSecretNotFound) {
 			t.Fatalf("KVv2.Get is expected to return an api.ErrSecretNotFound wrapped error for a missing secret; got %v", err)
 		}
 
-		_, err = client.KVv2(v1MountPath).GetMetadata(context.Background(), "does/not/exist")
+		_, err = client.KVv2(v2MountPath).GetMetadata(context.Background(), "does/not/exist")
 		if !errors.Is(err, api.ErrSecretNotFound) {
 			t.Fatalf("KVv2.GetMetadata is expected to return an api.ErrSecretNotFound wrapped error for a missing secret; got %v", err)
 		}
 
-		_, err = client.KVv2(v1MountPath).GetVersion(context.Background(), secretPath, 99)
+		_, err = client.KVv2(v2MountPath).GetVersion(context.Background(), secretPath, 99)
 		if !errors.Is(err, api.ErrSecretNotFound) {
 			t.Fatalf("KVv2.GetVersion is expected to return an api.ErrSecretNotFound wrapped error for a missing secret version; got %v", err)
 		}
 	})
 
 	t.Run("kv v2: multiple versions", func(t *testing.T) {
-		teardownTest, _ := setupKVv2Test(t)
+		teardownTest, _ := setupKVv2Test(t, client)
 		defer teardownTest(t)
 
 		// create a second version
@@ -186,7 +186,7 @@ func TestKVHelpers(t *testing.T) {
 	})
 
 	t.Run("kv v2: delete and undelete", func(t *testing.T) {
-		teardownTest, _ := setupKVv2Test(t)
+		teardownTest, _ := setupKVv2Test(t, client)
 		defer teardownTest(t)
 
 		// create a second version
@@ -241,7 +241,7 @@ func TestKVHelpers(t *testing.T) {
 	})
 
 	t.Run("kv v2: destroy", func(t *testing.T) {
-		teardownTest, _ := setupKVv2Test(t)
+		teardownTest, _ := setupKVv2Test(t, client)
 		defer teardownTest(t)
 
 		err = client.KVv2(v2MountPath).Destroy(context.Background(), secretPath, []int{1})
@@ -260,7 +260,7 @@ func TestKVHelpers(t *testing.T) {
 	})
 
 	t.Run("kv v2: use named functional options and generic WithOption", func(t *testing.T) {
-		teardownTest, _ := setupKVv2Test(t)
+		teardownTest, _ := setupKVv2Test(t, client)
 		defer teardownTest(t)
 
 		// check that KVOption works
@@ -284,7 +284,7 @@ func TestKVHelpers(t *testing.T) {
 	})
 
 	t.Run("kv v2: patch", func(t *testing.T) {
-		teardownTest, _ := setupKVv2Test(t)
+		teardownTest, _ := setupKVv2Test(t, client)
 		defer teardownTest(t)
 
 		// WithMergeMethod Patch (implicit)
@@ -409,7 +409,7 @@ func TestKVHelpers(t *testing.T) {
 	})
 
 	t.Run("kv v2: roll back to an old version", func(t *testing.T) {
-		teardownTest, _ := setupKVv2Test(t)
+		teardownTest, _ := setupKVv2Test(t, client)
 		defer teardownTest(t)
 
 		// create a second version
@@ -458,7 +458,7 @@ func TestKVHelpers(t *testing.T) {
 	})
 
 	t.Run("kv v2: delete all versions of a secret", func(t *testing.T) {
-		teardownTest, _ := setupKVv2Test(t)
+		teardownTest, _ := setupKVv2Test(t, client)
 		defer teardownTest(t)
 
 		// create a second version
@@ -513,7 +513,7 @@ func TestKVHelpers(t *testing.T) {
 	})
 
 	t.Run("kv v2: put and patch metadata", func(t *testing.T) {
-		teardownTest, _ := setupKVv2Test(t)
+		teardownTest, _ := setupKVv2Test(t, client)
 		defer teardownTest(t)
 
 		md, err := client.KVv2(v2MountPath).GetMetadata(context.Background(), secretPath)
@@ -585,7 +585,7 @@ func TestKVHelpers(t *testing.T) {
 	})
 
 	t.Run("kv v2: patch with explicit zero values", func(t *testing.T) {
-		teardownTest, _ := setupKVv2Test(t)
+		teardownTest, _ := setupKVv2Test(t, client)
 		defer teardownTest(t)
 
 		// now let's do another patch to test the "explicit zero value" use case

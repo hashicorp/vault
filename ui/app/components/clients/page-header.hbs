@@ -1,0 +1,112 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<Hds::PageHeader class="has-top-padding-l has-bottom-padding-m" as |PH|>
+  <PH.Title>Vault Usage Metrics</PH.Title>
+  <PH.Description>
+    This dashboard surfaces Vault client usage over time.
+    <Hds::Link::Inline @href={{doc-link "/vault/docs/concepts/client-count"}}>Documentation is available here</Hds::Link::Inline>.
+    Date queries are sent in UTC.
+  </PH.Description>
+  <PH.Actions>
+    {{#if this.showExportButton}}
+      <Hds::Button
+        data-test-export-button
+        @text="Export activity data"
+        @color="secondary"
+        @icon="download"
+        {{on "click" (fn (mut this.showExportModal) true)}}
+      />
+    {{/if}}
+  </PH.Actions>
+</Hds::PageHeader>
+
+{{#if this.showExportModal}}
+  <Hds::Modal id="attribution-csv-download-modal" class="has-text-left" @onClose={{this.resetModal}} as |M|>
+    <M.Header @icon="info" data-test-export-modal-title>
+      Export activity data
+    </M.Header>
+    <M.Body>
+      {{#if this.exportChartData.isRunning}}
+        <p class="has-bottom-margin-s">
+          Your export request is being processed. This may take some time; please do not navigate away from this page.
+        </p>
+        <p class="has-bottom-margin-s has-text-centered">
+          <Icon @name="loading" @size="24" />
+        </p>
+      {{else}}
+        <p class="has-bottom-margin-s">
+          This file will include an export of the clients that had activity within the date range below. See the
+          <DocLink @path="/vault/api-docs/system/internal-counters#activity-export">activity export documentation</DocLink>
+          for more details.
+        </p>
+        <p class="has-bottom-margin-s is-subtitle-gray">SELECTED DATE {{if this.formattedEndDate " RANGE"}}</p>
+        <p class="has-bottom-margin-s" data-test-export-date-range>
+          {{this.formattedStartDate}}
+          {{if this.formattedEndDate "-"}}
+          {{this.formattedEndDate}}</p>
+
+        <Hds::Form::Select::Field
+          class="has-bottom-margin-s"
+          {{on "change" this.setExportFormat}}
+          data-test-download-format
+          as |F|
+        >
+          <F.Label>Export format</F.Label>
+          <F.Options>
+            <option value="csv" selected={{eq this.exportFormat "csv"}}>CSV</option>
+            <option value="jsonl" selected={{eq this.exportFormat "jsonl"}}>JSON Lines</option>
+          </F.Options>
+        </Hds::Form::Select::Field>
+      {{/if}}
+
+      {{#if this.downloadError}}
+        <Hds::Alert @type="inline" @color="critical" as |A|>
+          <A.Title>CSV export failed</A.Title>
+          <A.Description data-test-export-error>{{this.downloadError}}</A.Description>
+        </Hds::Alert>
+      {{/if}}
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::ButtonSet>
+        <Hds::Button
+          @text="Export"
+          {{on "click" (perform this.exportChartData this.formattedCsvFileName)}}
+          data-test-confirm-button
+        />
+        <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} />
+      </Hds::ButtonSet>
+      {{#if @upgradesDuringActivity}}
+        <Hds::Alert class="has-top-padding-m" @type="compact" @color="warning" data-test-export-upgrade-warning as |A|>
+          <A.Description>
+            <strong>Data contains {{pluralize @upgradesDuringActivity.length "upgrade"}}:</strong>
+          </A.Description>
+          <A.Description>
+            <ul class="bullet">
+              {{#each @upgradesDuringActivity as |upgrade|}}
+                <li>
+                  {{upgrade.version}}
+                  {{this.parseAPITimestamp upgrade.timestampInstalled "(MMM d, yyyy)"}}
+                </li>
+              {{/each}}
+            </ul>
+          </A.Description>
+          <A.Description>
+            Visit our
+            <Hds::Link::Inline
+              @isHrefExternal={{true}}
+              @href={{doc-link
+                "/vault/docs/concepts/client-count/faq#q-which-vault-version-reflects-the-most-accurate-client-counts"
+              }}
+            >
+              Client count FAQ
+            </Hds::Link::Inline>
+            for more information.
+          </A.Description>
+        </Hds::Alert>
+      {{/if}}
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}

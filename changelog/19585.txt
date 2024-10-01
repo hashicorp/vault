@@ -1,0 +1,3 @@
+```release-note:bug
+core: Fixed issue with remounting mounts that have a non-trailing space in the 'to' or 'from' paths.
+```

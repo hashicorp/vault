@@ -1,4 +1,4 @@
-# Vault [![CircleCI](https://circleci.com/gh/hashicorp/vault.svg?style=svg)](https://circleci.com/gh/hashicorp/vault) [![vault enterprise](https://img.shields.io/badge/vault-enterprise-yellow.svg?colorB=7c8797&colorA=000000)](https://www.hashicorp.com/products/vault/?utm_source=github&utm_medium=banner&utm_campaign=github-vault-enterprise)
+# Vault [![build](https://github.com/hashicorp/vault/actions/workflows/build.yml/badge.svg)](https://github.com/hashicorp/vault/actions/workflows/build.yml) [![ci](https://github.com/hashicorp/vault/actions/workflows/ci.yml/badge.svg)](https://github.com/hashicorp/vault/actions/workflows/ci.yml)  [![vault enterprise](https://img.shields.io/badge/vault-enterprise-yellow.svg?colorB=7c8797&colorA=000000)](https://www.hashicorp.com/products/vault/?utm_source=github&utm_medium=banner&utm_campaign=github-vault-enterprise)
 
 ----
 
@@ -9,9 +9,9 @@
 -	Website: https://www.vaultproject.io
 -	Announcement list: [Google Groups](https://groups.google.com/group/hashicorp-announce)
 -	Discussion forum: [Discuss](https://discuss.hashicorp.com/c/vault)
-- Documentation: [https://www.vaultproject.io/docs/](https://www.vaultproject.io/docs/)
-- Tutorials: [HashiCorp's Learn Platform](https://learn.hashicorp.com/vault)
-- Certification Exam: [Vault Associate](https://www.hashicorp.com/certification/#hashicorp-certified-vault-associate)
+- Documentation: [https://developer.hashicorp.com/vault/docs](https://developer.hashicorp.com/vault/docs)
+- Tutorials: [https://developer.hashicorp.com/vault/tutorials](https://developer.hashicorp.com/vault/tutorials)
+- Certification Exam: [https://developer.hashicorp.com/certifications/security-automation](https://developer.hashicorp.com/certifications/security-automation)
 
 <img width="300" alt="Vault Logo" src="https://github.com/hashicorp/vault/blob/f22d202cde2018f9455dec755118a9b84586e082/Vault_PrimaryLogo_Black.png">
 
@@ -21,8 +21,7 @@ A modern system requires access to a multitude of secrets: database credentials,
 
 The key features of Vault are:
 
-* **Secure Secret Storage**: Arbitrary key/value secrets can be stored
-  in Vault. Vault encrypts these secrets prior to writing them to persistent
+* **Secure Secret Storage**: Vault can store arbitrary key/value pairs. Vault encrypts data before writing it to persistent
   storage, so gaining access to the raw storage isn't enough to access
   your secrets. Vault can write to disk, [Consul](https://www.consul.io),
   and more.
@@ -39,8 +38,8 @@ The key features of Vault are:
   developers to store encrypted data in a location such as a SQL database without
   having to design their own encryption methods.
 
-* **Leasing and Renewal**: All secrets in Vault have a _lease_ associated
-  with them. At the end of the lease, Vault will automatically revoke that
+* **Leasing and Renewal**: Vault associates a **lease** with each secret.
+  At the end of the lease, Vault automatically revokes the
   secret. Clients are able to renew leases via built-in renew APIs.
 
 * **Revocation**: Vault has built-in support for secret revocation. Vault
@@ -52,7 +51,7 @@ The key features of Vault are:
 Documentation, Getting Started, and Certification Exams
 -------------------------------
 
-Documentation is available on the [Vault website](https://www.vaultproject.io/docs/).
+Documentation is available on the [Vault website](https://developer.hashicorp.com/vault/docs).
 
 If you're new to Vault and want to get started with security automation, please
 check out our [Getting Started guides](https://learn.hashicorp.com/collections/vault/getting-started)
@@ -73,9 +72,12 @@ If you wish to work on Vault itself or any of its built-in systems, you'll
 first need [Go](https://www.golang.org) installed on your machine.
 
 For local dev first make sure Go is properly installed, including setting up a
-[GOPATH](https://golang.org/doc/code.html#GOPATH). Ensure that `$GOPATH/bin` is in
-your path as some distributions bundle the old version of build tools. Next, clone this
-repository. Vault uses [Go Modules](https://github.com/golang/go/wiki/Modules),
+[GOPATH](https://golang.org/doc/code.html#GOPATH), then setting the 
+[GOBIN](https://pkg.go.dev/cmd/go#hdr-Environment_variables) variable to `$GOPATH/bin`. 
+Ensure that `$GOPATH/bin` is in your path as some distributions bundle the old version 
+of build tools. 
+
+Next, clone this repository. Vault uses [Go Modules](https://github.com/golang/go/wiki/Modules),
 so it is recommended that you clone the repository ***outside*** of the GOPATH.
 You can then download any required build tools by bootstrapping your environment:
 
@@ -121,6 +123,15 @@ $ make test TEST=./vault
 ...
 ```
 
+### Troubleshooting
+
+If you encounter an error like `could not read Username for 'https://github.com'` you may need to adjust your git config like so:
+
+```sh
+$ git config --global --add url."git@github.com:".insteadOf "https://github.com/"
+```
+
+
 ### Importing Vault
 
 This repository publishes two libraries that may be imported by other projects:
@@ -135,6 +146,8 @@ advantage of testing tooling that was developed for testing Vault itself. This
 is not, and has never been, a supported way to use the Vault project. We aren't 
 likely to fix bugs relating to failure to import `github.com/hashicorp/vault` 
 into your project.
+
+See also the section "Docker-based tests" below.
 
 ### Acceptance Tests
 
@@ -169,3 +182,118 @@ things such as access keys. The test itself should error early and tell
 you what to set, so it is not documented here.
 
 For more information on Vault Enterprise features, visit the [Vault Enterprise site](https://www.hashicorp.com/products/vault/?utm_source=github&utm_medium=referral&utm_campaign=github-vault-enterprise).
+
+### Docker-based Tests
+
+We have created an experimental new testing mechanism inspired by NewTestCluster.
+An example of how to use it:
+
+```go
+import (
+  "testing"
+  "github.com/hashicorp/vault/sdk/helper/testcluster/docker"
+)
+
+func Test_Something_With_Docker(t *testing.T) {
+  opts := &docker.DockerClusterOptions{
+    ImageRepo: "hashicorp/vault", // or "hashicorp/vault-enterprise"
+    ImageTag:    "latest",
+  }
+  cluster := docker.NewTestDockerCluster(t, opts)
+  defer cluster.Cleanup()
+  
+  client := cluster.Nodes()[0].APIClient()
+  _, err := client.Logical().Read("sys/storage/raft/configuration")
+  if err != nil {
+    t.Fatal(err)
+  }
+}
+```
+
+Or for Enterprise:
+
+```go
+import (
+  "testing"
+  "github.com/hashicorp/vault/sdk/helper/testcluster/docker"
+)
+
+func Test_Something_With_Docker(t *testing.T) {
+  opts := &docker.DockerClusterOptions{
+    ImageRepo: "hashicorp/vault-enterprise",
+    ImageTag:  "latest",
+	VaultLicense: licenseString, // not a path, the actual license bytes
+  }
+  cluster := docker.NewTestDockerCluster(t, opts)
+  defer cluster.Cleanup()
+}
+```
+
+Here is a more realistic example of how we use it in practice.  DefaultOptions uses 
+`hashicorp/vault`:`latest` as the repo and tag, but it also looks at the environment
+variable VAULT_BINARY. If populated, it will copy the local file referenced by
+VAULT_BINARY into the container. This is useful when testing local changes.
+
+Instead of setting the VaultLicense option, you can set the VAULT_LICENSE_CI environment
+variable, which is better than committing a license to version control.
+
+Optionally you can set COMMIT_SHA, which will be appended to the image name we
+build as a debugging convenience.
+
+```go
+func Test_Custom_Build_With_Docker(t *testing.T) {
+  opts := docker.DefaultOptions(t)
+  cluster := docker.NewTestDockerCluster(t, opts)
+  defer cluster.Cleanup()
+}
+```
+
+There are a variety of helpers in the `github.com/hashicorp/vault/sdk/helper/testcluster`
+package, e.g. these tests below will create a pair of 3-node clusters and link them using
+PR or DR replication respectively, and fail if the replication state doesn't become healthy
+before the passed context expires.
+
+Again, as written, these depend on having a Vault Enterprise binary locally and the env
+var VAULT_BINARY set to point to it, as well as having VAULT_LICENSE_CI set.
+
+```go
+func TestStandardPerfReplication_Docker(t *testing.T) {
+  opts := docker.DefaultOptions(t)
+  r, err := docker.NewReplicationSetDocker(t, opts)
+  if err != nil {
+      t.Fatal(err)
+  }
+  defer r.Cleanup()
+
+  ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+  defer cancel()
+  err = r.StandardPerfReplication(ctx)
+  if err != nil {
+    t.Fatal(err)
+  }
+}
+
+func TestStandardDRReplication_Docker(t *testing.T) {
+  opts := docker.DefaultOptions(t)
+  r, err := docker.NewReplicationSetDocker(t, opts)
+  if err != nil {
+    t.Fatal(err)
+  }
+  defer r.Cleanup()
+
+  ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+  defer cancel()
+  err = r.StandardDRReplication(ctx)
+  if err != nil {
+    t.Fatal(err)
+  }
+}
+```
+
+Finally, here's an example of running an existing OSS docker test with a custom binary:
+
+```bash
+$ GOOS=linux make dev
+$ VAULT_BINARY=$(pwd)/bin/vault go test -run 'TestRaft_Configuration_Docker' ./vault/external_tests/raft/raft_binary
+ok      github.com/hashicorp/vault/vault/external_tests/raft/raft_binary        20.960s
+```

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -10,11 +13,10 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/hashicorp/vault/helper/pgpkeys"
-	"github.com/hashicorp/vault/vault"
-
 	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/ProtonMail/go-crypto/openpgp/packet"
+	"github.com/hashicorp/vault/helper/pgpkeys"
+	"github.com/hashicorp/vault/vault"
 )
 
 func getPubKeyFiles(t *testing.T) (string, []string, error) {

@@ -1,0 +1,161 @@
+---
+layout: docs
+page_title: Regenerate a Vault root token
+description: >-
+  Regenerate a lost or revoked root token.
+---
+
+# Regenerate a Vault root token
+
+Your Vault root token is a special token that gives you access to **all** Vault
+operations. Best practice is to enable an appropriate authentication method for
+Vault admins once the server is running and revoke the root token.
+
+For emergency situations where your require a root token, you can use the
+[`operator generate-root`](/vault/docs/commands/operator/generate-root) CLI
+command and a one-time password (OTP) or Pretty Good Privacy (PGP) to generate
+a new root token.
+
+## Before you start
+
+- **You need your Vault keys**. If you use auto-unseal, you need your
+  [recovery](/vault/docs/concepts/seal#recovery-key) keys, otherwise you need
+  your unseal keys.
+- **Identify current key holders**. You must distribute the token nonce to your
+  unseal/recovery key holders during root token generation.
+
+## Step 1: Create a root token nonce
+
+1. Generate a token nonce for your new root token:
+
+   <Tabs>
+   <Tab heading="OTP" group="otp">
+
+   **You need the returned OTP value to decode the new root token**.
+
+   ```shell-session
+   $ vault operator generate-root -init
+
+   A One-Time-Password has been generated for you and is shown in the OTP field.
+   You will need this value to decode the resulting root token, so keep it safe.
+   Nonce         15565c79-cc9e-5e64-b986-8506e7bd1918
+   Started       true
+   Progress      0/1
+   Complete      false
+   OTP           5JFQaH76Ky2TIuSt4SPvO1CGkx
+   OTP Length    26
+   ```
+
+   </Tab>
+   <Tab heading="PGP" group="pgp">
+
+   Use the `-pgp-key` option to provide a path to your PGP public key or Keybase
+   username to encrypt the new root token. **You will need the returned PGP
+   value to decode the new root token**.
+
+   ```shell-session
+   $ vault operator generate-root -init -pgp-key=keybase:sethvargo
+
+   Nonce              e24dec5e-f1ea-2dfe-ecce-604022006976
+   Started            true
+   Progress           0/5
+   Complete           false
+   PGP Fingerprint    e2f8e2974623ba2a0e933a59c921994f9c27e0ff
+   ```
+
+   </Tab>
+   </Tabs>
+
+1. Distribute the nonce to each of your unseal/recovery key holders.
+
+## Step 2: Establish key quorum with the token nonce
+
+<Highlight title="Use TTY to autocomplete the nonce">
+
+  If you use a TTY, the `operator generate-root` command prompts for your key
+  and automatically completes the nonce value.
+
+</Highlight>
+
+1. Have each unseal/recovery key holder run `operator generator-root` with their
+   key and the distributed nonce value:
+
+   ```shell-session
+   $ echo ${UNSEAL_OR_RECOVERY_KEY} | vault operator generate-root -nonce=${NONCE_VALUE} -
+
+   Root generation operation nonce: f67f4da3-4ae4-68fb-4716-91da6b609c3e
+   Unseal Key (will be hidden):
+   ```
+
+1. Vault returns the new, encoded root token to the user who triggers quorum:
+
+   <Tabs>
+   <Tab heading="OTP" group="otp">
+
+   ```shell-session
+   Nonce            f67f4da3-4ae4-68fb-4716-91da6b609c3e
+   Started          true
+   Progress         5/5
+   Complete         true
+   Encoded Token    IxJpyqxn3YafOGhqhvP6cQ==
+   ```
+
+   </Tab>
+
+   <Tab heading="PGP" group="pgp">
+
+   ```shell-session
+   Nonce                 e24dec5e-f1ea-2dfe-ecce-604022006976
+   Started               true
+   Progress              1/1
+   Complete              true
+   PGP Fingerprint       e2f8e2974623ba2a0e933a59c921994f9c27e0ff
+   Encoded Token         wcFMA0RVkFtoqzRlARAAI3Ux8kdSpfgXdF9mg...
+   ```
+
+   </Tab>
+   </Tabs>
+
+## Step 3: Decode the new root token
+
+Decode the new root token using OTP or PGP.
+
+<Tabs>
+<Tab heading="OTP" group="otp">
+
+Use `operator generate-root` and the OTP value from nonce generation to decode
+the new root token:
+
+```shell-session
+$ vault operator generate-root \
+   -decode=${ENCODED_TOKEN}    \
+   -otp=${NONCE_OTP}
+
+hvs.XXXXXXXXXXXXXXXXXXXXXXXX
+```
+
+</Tab>
+
+<Tab heading="PGP" group="pgp">
+
+Use your PGP credentials and `gpg` or `keybase` to decrypt the new root token.
+
+
+**`gpg`**:
+
+```shell-session
+$ echo ${ENCODED_TOKEN} | base64 --decode | gpg --decrypt
+
+hvs.XXXXXXXXXXXXXXXXXXXXXXXX
+```
+
+**`keybase`**:
+
+```shell-session
+$ echo ${ENCODED_TOKEN} | base64 --decode | keybase pgp decrypt
+
+hvs.XXXXXXXXXXXXXXXXXXXXXXXX
+```
+
+</Tab>
+</Tabs>

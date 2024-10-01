@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, settled } from '@ember/test-helpers';
@@ -9,7 +14,7 @@ module('Integration | Component | StatText', function (hooks) {
   test('it renders', async function (assert) {
     await render(hbs`<StatText />`);
 
-    assert.dom('[data-test-stat-text-container]').exists('renders element');
+    assert.dom('[data-test-stat-text]').exists('renders element');
   });
 
   test('it renders passed in attributes', async function (assert) {

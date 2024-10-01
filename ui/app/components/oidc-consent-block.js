@@ -1,4 +1,9 @@
 /**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+/**
  * @module OidcConsentBlock
  * OidcConsentBlock components are used to show the consent form for the OIDC Authorization Code Flow
  *

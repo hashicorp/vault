@@ -20,7 +20,7 @@ include additional mounts which the token has been granted path capabilities on.
 Due to the nature of its intended usage, there is no guarantee on backwards
 compatibility for this endpoint.
 
-## Get Available Visible Mounts
+## Get available visible mounts
 
 This endpoint lists all enabled auth methods.
 
@@ -28,14 +28,14 @@ This endpoint lists all enabled auth methods.
 | :----- | :------------------------ |
 | `GET`  | `/sys/internal/ui/mounts` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
     http://127.0.0.1:8200/v1/sys/internal/ui/mounts
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -57,7 +57,7 @@ $ curl \
 }
 ```
 
-## Get Single Mount Details
+## Get single mount details
 
 This endpoint lists details for a specific mount path. This is an
 authenticated endpoint, and is currently only being used internally.
@@ -83,7 +83,7 @@ compatibility for this endpoint.
 | :----- | :------------------------------ |
 | `GET`  | `/sys/internal/ui/mounts/:path` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -91,7 +91,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/internal/ui/mounts/cubbyhole
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {

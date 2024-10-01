@@ -20,13 +20,13 @@ attained via the `-sync` CLI flag or `sync` API parameter. When in
 synchronous mode, if the operation results in failure it is up to the user
 to retry.
 
-### CLI Retries
+### CLI retries
 
 The CLI will no longer retry commands on 5xx errors. This was a
 source of confusion to users as to why Vault would "hang" before returning a
 5xx error. The Go API client still defaults to two retries.
 
-### Identity Entity Alias metadata
+### Identity entity alias metadata
 
 You can no longer manually set metadata on
 entity aliases. All alias data (except the canonical entity ID it refers to)

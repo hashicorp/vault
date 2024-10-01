@@ -5,7 +5,7 @@ description: |-
   This page contains release notes for Vault 1.12.0
 ---
 
-# Vault 1.12.0 Release Notes
+# Vault 1.12.0 release notes
 
 **Software Release date:** Oct. 12, 2022
 
@@ -27,93 +27,93 @@ Some of these enhancements and changes in this release include the following:
 - **Redis Database Secrets Engine** is now available to manage static roles or generation of dynamic credentials, as well as root credential rotation on a stand-alone Redis server.
 - **AWS Elasticache Database Secrets Engine** is introduced to manage static credentials for AWS Elasticache instances. 
 
-~> **Vault Enterprise:** Use [Integrated Storage](/docs/configuration/storage/raft) or [Consul](/docs/configuration/storage/consul) as your Vault's storage backend. Vault Enterprise will no longer start up if configured to use a storage backend other than Integrated Storage or Consul. (See the [Upgrade Guide](/docs/upgrading/upgrade-to-1.12.x).)
+~> **Vault Enterprise:** Use [Integrated Storage](/vault/docs/configuration/storage/raft) or [Consul](/vault/docs/configuration/storage/consul) as your Vault's storage backend. Vault Enterprise will no longer start up if configured to use a storage backend other than Integrated Storage or Consul. (See the [Upgrade Guide](/vault/docs/upgrading/upgrade-to-1.12.x).)
 
-## New Features
+## New features
 
 This section describes the new features introduced in Vault 1.12.0.
 
-### Transform Secrets Engine Enhancements
+### Transform secrets engine enhancements
 
 -> **NOTE:** These features need the Vault Enterprise ADP License.
 
-#### Bring Your Own Key (BYOK) for Transform
+#### Bring your own key (BYOK) for transform
 
 In release 1.11, we introduced BYOK support to Vault, enabling  customers to import existing keys into the Vault Transit Secrets Engine and  enabling secure and flexible Vault deployments.
 We  are extending that support to the Vault Transform Secrets Engine in this release.
 
-#### MSSQL Support
+#### MSSQL support
 
-An MSSQL store is now available to be used as an external storage engine with tokenization Transform Secrets Engine. Refer to the following documents, [Transform Secrets Engine(API)](/api-docs/secret/transform), [Transform Secrets Engine](/docs/secrets/transform), and [Tokenization Transform](/docs/secrets/transform/tokenization) for more information.
+An MSSQL store is now available to be used as an external storage engine with tokenization Transform Secrets Engine. Refer to the following documents, [Transform Secrets Engine(API)](/vault/api-docs/secret/transform), [Transform Secrets Engine](/vault/docs/secrets/transform), and [Tokenization Transform](/vault/docs/secrets/transform/tokenization) for more information.
 
-#### Key Auto Rotation
+#### Key auto rotation
 
 Periodic rotation of encryption keys is a recommended key management practice for a good security posture. In Vault release 1.10, we added support for Auto key rotation for Transit Secrets Engine. In Vault 1.12, the Transform secrets engine is now  enhanced, allowing users to set the rotation policy during key creation in a time interval, which will cause Vault to rotate the Transform keys when the time interval elapses automatically.
 
-Refer to the following documentation [Tokenization Transform](/docs/secrets/transform/tokenization) and [Transform Secrets Engine(API)](/api-docs/secret/transform#rotate-tokenization-key) for more information.
+Refer to the following documentation [Tokenization Transform](/vault/docs/secrets/transform/tokenization) and [Transform Secrets Engine(API)](/vault/api-docs/secret/transform#rotate-tokenization-key) for more information.
 
-### PKI Secrets Engine Improvements
+### PKI secrets engine improvements
 
-#### PKI Secrets Engine Revocation enhancements
+#### PKI secrets engine revocation enhancements
 
 We are improving Vault PKI Engine’s revocation capabilities by adding support for the Online Certificate Status Protocol (OCSP) and a delta Certificate Revocation List (CRL) to track changes to the main CRL. These enhancements significantly streamline customer experience with the PKI engine making the certification revocation semantics easier to understand and manage. Additionally, support for automatic CRL rotation and periodic tidy operations help reduce operator burden, alleviate the demand on cluster resources during periods of high revocation, and ensure clients are always served valid CRLs. Finally, support for Bring-Your-Own-Cert (BYOC) allows revocation of `no_store=true` certificates and for Proof-of-Possession (PoP) allows end-users to safely revoke their own certificates (with corresponding private key) without operator intervention. 
 
-#### PKI and Managed Key support for RSA-PSS Signatures
+#### PKI and managed key support for RSA-PSS signatures
 
-Since its initial release, Vault's PKI secrets engine only supported RSA-PKCS#1v1.5 (Public Key Cryptographic Standards) signatures for issuers and leaves. To conform with NIST's guidance around key transport and for compatibility with newer HSM Firmware, we have included support for RSA-PSS signatures (Probabilistic Signature Scheme). See the section on [PSS Support in the PKI documentation](https://www.vaultproject.io/docs/secrets/pki/considerations#pss-support) for limitations of this feature.
+Since its initial release, Vault's PKI secrets engine only supported RSA-PKCS#1v1.5 (Public Key Cryptographic Standards) signatures for issuers and leaves. To conform with NIST's guidance around key transport and for compatibility with newer HSM Firmware, we have included support for RSA-PSS signatures (Probabilistic Signature Scheme). See the section on [PSS Support in the PKI documentation](/vault/docs/secrets/pki/considerations#pss-support) for limitations of this feature.
 
-#### PKI Telemetry Improvements
+#### PKI telemetry improvements
 
 In this release, we are adding additional telemetry to Vault’s PKI secrets engine, enabling customers to gather better  insights into  certificate usage via the count of stored and revoked certificates. Additionally, the Vault `tidy` function is enhanced with additional metrics that reflect the remaining stored and revoked certificates.
 
-#### Auto-fetch CRL in the Certificate Auth Method
+#### Auto-fetch CRL in the certificate auth method
 
 Operators will now be able to specify one or more CRL URLs that Vault will automatically fetch and keep up-to-date, rather than having to push the CRLs to the cert auth method. This should make certificate management easier for those users that have large cert auth deployments.
 
-#### GCP Cloud Key Manager Support
+#### GCP Cloud key manager support
 
 Managed Keys let Vault secrets engines (currently PKI) use keys stored in Cloud KMS systems for cryptographic operations like certificate signing.  Vault 1.12 adds support for GCP Cloud KMS to the Managed Key system, where previously AWS, Azure, and PKCS#11 Hardware Security Modules were supported.
 
-### KMIP Server Profile
+### KMIP server profile
 
 The [Baseline Server Profile](https://docs.oasis-open.org/kmip/kmip-profiles/v2.1/os/kmip-profiles-v2.1-os.html) specifies the basic functionality expected of a KMIP server.  In Vault 1.12, we offer support for the operations and attributes in the Baseline server profile. With this release, Vault Enterprise now supports the Symmetric Key lifecycle server profile, Baseline server profile, and the Basic Cryptographic server profile (as of Release 1.11), enabling the  support of KMIP integrations with various clients more effectively. This requires the Vault Enterprise ADP license.
 
-### SSH Secrets Engine Support for Generating Keys
+### SSH secrets engine support for generating keys
 
 Previously, Vault's SSH Secrets Engine when used as an SSH CA required requesters to provide their own public key for signing. In Vault 1.12, Vault can now generate credential key pairs dynamically, returning them to the requester.
 
 This was a community contributed enhancement.
 
-### Path and Role-Based Resource Quotas
+### Path and Role-Based resource quotas
 
-In this release, the existing resource quota functionality has been enhanced. In addition to applying the API rate limiting and lease quotas at the namespace or mount level, you can now use  the quotas to the [API path suffixes and auth mount roles](/docs/enterprise/lease-count-quotas). This enhancement provides users with more control over issued certificates.
+In this release, the existing resource quota functionality has been enhanced. In addition to applying the API rate limiting and lease quotas at the namespace or mount level, you can now use  the quotas to the [API path suffixes and auth mount roles](/vault/docs/enterprise/lease-count-quotas). This enhancement provides users with more control over issued certificates.
 
-### Client Count Improvements
+### Client count improvements
 
-The billing period for client counting API can now be specified with the [current month](/docs/concepts/client-count) for the end date parameter. When this is done the "new_clients" field will have an hyperlog approximate value indicating the number of new clients that came in the current month. Note that for the previous months, the number will be an exact value.
+The billing period for client counting API can now be specified with the [current month](/vault/docs/concepts/client-count) for the end date parameter. When this is done the "new_clients" field will have an hyperlog approximate value indicating the number of new clients that came in the current month. Note that for the previous months, the number will be an exact value.
 
-### Redis Database Secrets Engine
+### Redis database secrets engine
 
-With the support of the Redis database secrets engine, users can use Vault to manage static and dynamic credentials for Redis OSS. The engine  works similarly to other database secrets engines. Refer to the [Redis](/docs/secrets/databases/redis) documentation for more information. Huge thanks to [Francis Hitchens](https://github.com/fhitchen), who contributed their repository to HashiCorp
+With the support of the Redis database secrets engine, users can use Vault to manage static and dynamic credentials for Redis OSS. The engine  works similarly to other database secrets engines. Refer to the [Redis](/vault/docs/secrets/databases/redis) documentation for more information. Huge thanks to [Francis Hitchens](https://github.com/fhitchen), who contributed their repository to HashiCorp
 
-### AWS Elasticache Database Secrets Engine
-With the support of the AWS ElastiCache database secrets engine, users may use Vault to manage static credentials for AWS Elasticache instances. The engine will work similarly to other database secrets engines. Refer to the [elasticache](/docs/secrets/databases/rediselasticache) documentation for more information.
+### AWS elasticache database secrets engine
+With the support of the AWS ElastiCache database secrets engine, users may use Vault to manage static credentials for AWS Elasticache instances. The engine will work similarly to other database secrets engines. Refer to the [elasticache](/vault/docs/secrets/databases/rediselasticache) documentation for more information.
 
-### LDAP Secrets Engine
+### LDAP secrets engine
 
 Vault 1.12 introduces a new LDAP secrets engine that unifies the user experience between the Active Directory (AD) secrets engine and OpenLDAP secrets engine. This new engine simplifies the user experience when Vault is used to manage credentials for directory services. This new engine supports all implementations from both of the engines mentioned above (AD, LDAP and RACF) and brings dynamic credential capabilities for users relying on Active Directory.
 
 ~> **Note:** This engine does _not_ replace the current Active Directory secrets engine. We will continue to maintain the engine and provide bug fixes, but encourage all new users to use the unified LDAP engine. We will communicate the schedule to deprecate the Active Directory secrets engine well in advance, providing time for users to migrate over.
 
-### Terraform Vault Provider: Vault Version Detection
+### Terraform Vault provider: Vault version detection
 
 Vault Terraform provider v3.9.0 can now query Vault to detect the server’s version of the server and then perform a semantic version comparison against a provided minimum threshold version to determine whether a selected feature is available for use. This allows for the Vault provider to deterministically anticipate Vault’s behavior.
 
-### Plugin Versioning
+### Plugin versioning
 
 In prior versions of Vault, plugins were not “version-aware,”  creating a suboptimal user experience during plugin installation and upgrades. In Vault 1.12, we are introducing the concept of versions to plugins, making plugins “version-aware” and allowing standardization of the release processes and offering a better user experience when installing and upgrading plugins.
 
-### PKCS#11 Client support
+### PKCS#11 client support
 ​​
 Software solutions often require cryptographic objects-like keys, X.509 certificates, or perform operations like a certificate or key generation, hashing, encryption, decryption, and signing. Hardware Security Modules (HSM) are traditionally used as a secure option, but are expensive and challenging to operationalize.
 
@@ -125,24 +125,24 @@ Vault Enterprise 1.12 is a PKCS#11 2.40 compliant provider, extended profile. PK
 
 With Vault 1.12, Vault Enterprise (ADP-KM) can now act as an external key manager for Oracle instances when Transparent Data Encryption is enabled. TDE allows users to conjure and use Vault to protect their Data Encryption Keys by using Vault to protect them using a Key Encryption Key. Reading and writing of data securely are handled transparently by Oracle database instances without needing user intervention. This will need the Enterprise ADP license.
 
-### UI Support for Okta Number Challenge
+### UI support for okta number challenge
 
 In Vault 1.11, we added support for Okta’s Number Challenge feature in the CLI and API. In Vault 1.12, we’ve extended this support to the Vault UI, allowing users to complete the Okta Number Challenge from a web browser, the command line, and the HTTP API.
 
-### OIDC Provider Support in the UI
+### OIDC provider support in the UI
 Vault can now act as an OIDC provider for applications that wish to delegate authentication to Vault and leverage its identity system. As an OIDC provider, Vault supports PKCE for authorization code flow, preventing attacks such as SSRF. After OIDC provider functionality went GA, our design and user research team gathered feedback from community members, and we simplified the setup experience. With a few CLI commands or UI clicks, users can now have a default OIDC provider with its defaults configured and ready to go for applications to utilize the functionality.
 
 
-## Other Features and Enhancements
+## Other features and enhancements
 
-### License Termination Behavior
+### License termination behavior
 
-The Licensing termination behavior has changed where non-evaluation licenses (production licenses) no longer have a termination date, making Vault more robust for Vault Enterprise customers. Also refer to the updated [licensing FAQ](/docs/enterprise/license/faq) for more information.
+The Licensing termination behavior has changed where non-evaluation licenses (production licenses) no longer have a termination date, making Vault more robust for Vault Enterprise customers. Also refer to the updated [licensing FAQ](/vault/docs/enterprise/license/faq) for more information.
 
-### Namespace Custom Metadata
-Customers can now specify [custom metadata](/api-docs/system/namespaces) on the namespaces. The new `vault namespace patch` [command](/docs/commands/namespace) can be used to update existing namespaces with custom metadata as well. This will make it possible to tag namespaces with additional fields (For example: owner, region department) describing it.
+### Namespace custom metadata
+Customers can now specify [custom metadata](/vault/api-docs/system/namespaces) on the namespaces. The new `vault namespace patch` [command](/vault/docs/commands/namespace) can be used to update existing namespaces with custom metadata as well. This will make it possible to tag namespaces with additional fields (For example: owner, region department) describing it.
 
-### Vault Agent Improvements
+### Vault agent improvements
 
 Vault Agent introduced new configuration parameters that will significantly improve the use of Vault Agent. These includes:
 
@@ -156,6 +156,6 @@ Vault Agent introduced new configuration parameters that will significantly impr
 
 There are no known issues documented for this release.
 
-## Feature Deprecations and EOL
+## Feature deprecations and EOL
 
-Please refer to the [Deprecation Plans and Notice](/docs/deprecation) page for up-to-date information on feature deprecations and plans. A [Feature Deprecation FAQ](/docs/deprecation/faq) page addresses questions about  decisions made about Vault feature deprecations.
+Please refer to the [Deprecation Plans and Notice](/vault/docs/deprecation) page for up-to-date information on feature deprecations and plans. A [Feature Deprecation FAQ](/vault/docs/deprecation/faq) page addresses questions about  decisions made about Vault feature deprecations.

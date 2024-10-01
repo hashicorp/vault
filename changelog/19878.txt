@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Remove the Bulma CSS framework.
+```

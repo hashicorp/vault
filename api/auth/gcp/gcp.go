@@ -1,10 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package gcp
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"time"
@@ -178,7 +181,7 @@ func (a *GCPAuth) getJWTFromMetadataService(vaultAddress string) (string, error)
 	defer resp.Body.Close()
 
 	// get jwt from response
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	jwt := string(body)
 	if err != nil {
 		return "", fmt.Errorf("error reading response from metadata service: %w", err)

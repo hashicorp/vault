@@ -18,6 +18,10 @@ data associated with the audit device is unaffected. For example, if you
 disabled an audit device that was logging to a file, the file would still exist
 and have stored contents.
 
+~> Note: Once an audit device is disabled, you will no longer be able to HMAC values
+for comparison with entries in the audit logs. This is true even if you re-enable
+the audit device at the same path, as a new salt will be created for hashing.
+
 ## Examples
 
 Disable the audit device enabled at "file/":
@@ -29,5 +33,5 @@ Success! Disabled audit device (if it was enabled) at: file/
 
 ## Usage
 
-There are no flags beyond the [standard set of flags](/docs/commands)
+There are no flags beyond the [standard set of flags](/vault/docs/commands)
 included on all commands.

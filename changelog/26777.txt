@@ -1,0 +1,4 @@
+```release-note:change
+audit: breaking change - Vault now allows audit logs to contain 'correlation-id' and 'x-correlation-id' headers when they 
+are present in the incoming request. By default they are not HMAC'ed (but can be configured to HMAC by Vault Operators).
+```

@@ -1,0 +1,24 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+// TODO: lots of inconsistent variation on box-shadow usage. Fix.
+
+// box
+$box-shadow: 0 0 0 1px rgba($black, 0.1);
+$box-shadow-low: 0 5px 1px -2px rgba($black, 0.12), 0 3px 2px -1px rgba($black, 0);
+$box-shadow-middle: 0 8px 4px -4px rgba($black, 0.1), 0 6px 8px -2px rgba($black, 0.05);
+$box-shadow-high: 0 12px 5px -7px rgba($black, 0.08), 0 11px 10px -3px rgba($black, 0.1);
+$box-shadow-highest: 0 16px 6px -10px rgba($black, 0.06), 0 16px 16px -4px rgba($black, 0.2);
+
+// box-link
+$box-link-shadow: 0 0 0 1px $ui-gray-200;
+$box-link-hover-shadow: 0 0 0 1px $ui-gray-300;
+
+// border
+$base-border: 1px solid $ui-gray-300;
+$light-border: 1px solid $ui-gray-200;
+
+// button specific
+$button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);

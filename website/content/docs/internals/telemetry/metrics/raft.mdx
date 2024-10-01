@@ -1,0 +1,193 @@
+---
+layout: docs
+page_title: "Telemetry reference: Raft metrics"
+description: >-
+  Technical reference for integrated storage telemetry values.
+---
+
+# Raft telemetry
+
+Raft telemetry provides information on
+Vault [integrated storage](/vault/docs/configuration/storage/raft).
+
+## Default metrics
+
+@include 'telemetry-metrics/vault/raft/apply.mdx'
+
+@include 'telemetry-metrics/vault/raft/barrier.mdx'
+
+@include 'telemetry-metrics/vault/raft/candidate/electself.mdx'
+
+@include 'telemetry-metrics/vault/raft/commitnumlogs.mdx'
+
+@include 'telemetry-metrics/vault/raft/committime.mdx'
+
+@include 'telemetry-metrics/vault/raft/compactlogs.mdx'
+
+@include 'telemetry-metrics/vault/raft/fsm/apply.mdx'
+
+@include 'telemetry-metrics/vault/raft/fsm/applybatch.mdx'
+
+@include 'telemetry-metrics/vault/raft/fsm/applybatchnum.mdx'
+
+@include 'telemetry-metrics/vault/raft/fsm/enqueue.mdx'
+
+@include 'telemetry-metrics/vault/raft/fsm/restore.mdx'
+
+@include 'telemetry-metrics/vault/raft/fsm/snapshot.mdx'
+
+@include 'telemetry-metrics/vault/raft/fsm/store_config.mdx'
+
+@include 'telemetry-metrics/vault/raft/get.mdx'
+
+@include 'telemetry-metrics/vault/raft/list.mdx'
+
+@include 'telemetry-metrics/vault/raft/peers.mdx'
+
+@include 'telemetry-metrics/vault/raft/restore.mdx'
+
+@include 'telemetry-metrics/vault/raft/restoreusersnapshot.mdx'
+
+@include 'telemetry-metrics/vault/raft/rpc/appendentries.mdx'
+
+@include 'telemetry-metrics/vault/raft/rpc/appendentries/processlogs.mdx'
+
+@include 'telemetry-metrics/vault/raft/rpc/appendentries/storelogs.mdx'
+
+@include 'telemetry-metrics/vault/raft/rpc/installsnapshot.mdx'
+
+@include 'telemetry-metrics/vault/raft/rpc/processheartbeat.mdx'
+
+@include 'telemetry-metrics/vault/raft/rpc/requestvote.mdx'
+
+@include 'telemetry-metrics/vault/raft/snapshot/create.mdx'
+
+@include 'telemetry-metrics/vault/raft/snapshot/persist.mdx'
+
+@include 'telemetry-metrics/vault/raft/snapshot/takesnapshot.mdx'
+
+@include 'telemetry-metrics/vault/raft/state/candidate.mdx'
+
+@include 'telemetry-metrics/vault/raft/state/follower.mdx'
+
+@include 'telemetry-metrics/vault/raft/state/leader.mdx'
+
+@include 'telemetry-metrics/vault/raft/transition/heartbeat_timeout.mdx'
+
+@include 'telemetry-metrics/vault/raft/transition/leader_lease_timeout.mdx'
+
+@include 'telemetry-metrics/vault/raft/verify_leader.mdx'
+
+## Autopilot metrics
+
+@include 'telemetry-metrics/raft-autopilot-note.mdx'
+
+@include 'telemetry-metrics/vault/autopilot/failure_tolerance.mdx'
+
+@include 'telemetry-metrics/vault/autopilot/healthy.mdx'
+
+@include 'telemetry-metrics/vault/autopilot/node/healthy.mdx'
+
+## Leadership change metrics
+
+@include 'telemetry-metrics/raft-leadership-intro.mdx'
+
+@include 'telemetry-metrics/vault/raft/leader/dispatchlog.mdx'
+
+@include 'telemetry-metrics/vault/raft/leader/dispatchnumlogs.mdx'
+
+@include 'telemetry-metrics/vault/raft/leader/lastcontact.mdx'
+
+## Raft replication metrics
+
+@include 'telemetry-metrics/vault/raft/replication/appendentries/log.mdx'
+
+@include 'telemetry-metrics/vault/raft/replication/appendentries/rpc.mdx'
+
+@include 'telemetry-metrics/vault/raft/replication/heartbeat.mdx'
+
+@include 'telemetry-metrics/vault/raft/replication/installsnapshot.mdx'
+
+## Storage metrics
+
+@include 'telemetry-metrics/vault/raft_storage/bolt/cursor/count.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/bolt/freelist/allocated_bytes.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/bolt/freelist/free_pages.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/bolt/freelist/pending_pages.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/bolt/freelist/used_bytes.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/bolt/node/count.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/bolt/node/dereferences.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/bolt/page/bytes_allocated.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/bolt/page/count.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/bolt/rebalance/count.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/bolt/rebalance/time.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/bolt/spill/count.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/bolt/spill/time.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/bolt/split/count.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/bolt/transaction/currently_open_read_transactions.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/bolt/transaction/started_read_transactions.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/bolt/write/count.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/bolt/write/time.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/follower/applied_index_delta.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/follower/last_heartbeat_ms.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/stats/applied_index.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/stats/commit_index.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/stats/fsm_pending.mdx'
+
+@include 'telemetry-metrics/vault/raft-storage/delete.mdx'
+
+@include 'telemetry-metrics/vault/raft-storage/entry_size.mdx'
+
+@include 'telemetry-metrics/vault/raft-storage/get.mdx'
+
+@include 'telemetry-metrics/vault/raft-storage/list.mdx'
+
+@include 'telemetry-metrics/vault/raft-storage/put.mdx'
+
+@include 'telemetry-metrics/vault/raft-storage/transaction.mdx'
+
+## Write-ahead logging (WAL) metrics
+
+@include 'telemetry-metrics/vault/raft-wal/head-truncations.mdx'
+
+@include 'telemetry-metrics/vault/raft-wal/tail-truncations.mdx'
+
+@include 'telemetry-metrics/vault/raft-wal/log-entries-read.mdx'
+
+@include 'telemetry-metrics/vault/raft-wal/log-entries-written.mdx'
+
+@include 'telemetry-metrics/vault/raft-wal/log-entry-bytes-read.mdx'
+
+@include 'telemetry-metrics/vault/raft-wal/log-entry-bytes-written.mdx'
+
+@include 'telemetry-metrics/vault/raft-wal/stable-gets.mdx'
+
+@include 'telemetry-metrics/vault/raft-wal/stable-sets.mdx'
+
+@include 'telemetry-metrics/vault/raft-wal/log-appends.mdx'
+
+@include 'telemetry-metrics/vault/raft-wal/segment-rotations.mdx'
+
+@include 'telemetry-metrics/vault/raft-wal/last-segment-age-seconds.mdx'

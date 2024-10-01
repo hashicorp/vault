@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki: Limit ACME issued certificates NotAfter TTL to a maximum of 90 days 
+```

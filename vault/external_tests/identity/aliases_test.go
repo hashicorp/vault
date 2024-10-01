@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package identity
 
 import (
@@ -10,28 +13,13 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	auth "github.com/hashicorp/vault/api/auth/userpass"
-	"github.com/hashicorp/vault/builtin/credential/github"
-	"github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/testhelpers"
-	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 )
 
 func TestIdentityStore_ListAlias(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		CredentialBackends: map[string]logical.Factory{
-			"github": github.Factory,
-		},
-	}
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0].Core
-	vault.TestWaitActive(t, core)
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
 	err := client.Sys().EnableAuthWithOptions("github", &api.EnableAuthOptions{
@@ -180,17 +168,8 @@ func TestIdentityStore_ListAlias(t *testing.T) {
 // returned on an attempt to rename an alias to match another alias with the
 // same mount accessor.  This used to result in a merge entity.
 func TestIdentityStore_RenameAlias_CannotMergeEntity(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		CredentialBackends: map[string]logical.Factory{
-			"userpass": userpass.Factory,
-		},
-	}
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
 	err := client.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
@@ -259,17 +238,8 @@ func TestIdentityStore_RenameAlias_CannotMergeEntity(t *testing.T) {
 }
 
 func TestIdentityStore_MergeEntities_FailsDueToClash(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		CredentialBackends: map[string]logical.Factory{
-			"userpass": userpass.Factory,
-		},
-	}
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
 	err := client.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
@@ -343,18 +313,8 @@ func TestIdentityStore_MergeEntities_FailsDueToClash(t *testing.T) {
 }
 
 func TestIdentityStore_MergeEntities_FailsDueToClashInFromEntities(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		CredentialBackends: map[string]logical.Factory{
-			"userpass": userpass.Factory,
-			"github":   github.Factory,
-		},
-	}
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
 	err := client.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
@@ -423,18 +383,8 @@ func TestIdentityStore_MergeEntities_FailsDueToClashInFromEntities(t *testing.T)
 }
 
 func TestIdentityStore_MergeEntities_FailsDueToDoubleClash(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		CredentialBackends: map[string]logical.Factory{
-			"userpass": userpass.Factory,
-			"github":   github.Factory,
-		},
-	}
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
 	err := client.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
@@ -560,17 +510,8 @@ func TestIdentityStore_MergeEntities_FailsDueToDoubleClash(t *testing.T) {
 }
 
 func TestIdentityStore_MergeEntities_FailsDueToClashInFromEntities_CheckRawRequest(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		CredentialBackends: map[string]logical.Factory{
-			"userpass": userpass.Factory,
-		},
-	}
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
 	err := client.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
@@ -724,17 +665,8 @@ func TestIdentityStore_MergeEntities_FailsDueToClashInFromEntities_CheckRawReque
 }
 
 func TestIdentityStore_MergeEntities_SameMountAccessor_ThenUseAlias(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		CredentialBackends: map[string]logical.Factory{
-			"userpass": userpass.Factory,
-		},
-	}
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
 	err := client.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
@@ -841,18 +773,8 @@ func TestIdentityStore_MergeEntities_SameMountAccessor_ThenUseAlias(t *testing.T
 }
 
 func TestIdentityStore_MergeEntities_FailsDueToMultipleClashMergesAttempted(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		CredentialBackends: map[string]logical.Factory{
-			"userpass": userpass.Factory,
-			"github":   github.Factory,
-		},
-	}
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
 	err := client.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{

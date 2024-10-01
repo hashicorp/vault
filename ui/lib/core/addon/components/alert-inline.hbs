@@ -1,19 +1,18 @@
-<div
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<Hds::Alert
   {{did-update this.refresh @message}}
-  class={{concat "message-inline" this.paddingTop this.isMarginless this.sizeSmall}}
+  @type="compact"
+  @color={{this.color}}
+  @icon={{if this.isRefreshing "loading"}}
   data-test-inline-alert
   ...attributes
+  as |A|
 >
-  {{#if this.isRefreshing}}
-    <Icon @name="loading" class="loading" />
-  {{else}}
-    <Icon @name={{this.alertType.glyph}} class={{this.alertType.glyphClass}} />
-    <p class={{this.textClass}} data-test-inline-error-message>
-      {{#if (has-block)}}
-        {{yield}}
-      {{else}}
-        {{@message}}
-      {{/if}}
-    </p>
-  {{/if}}
-</div>
+  {{#unless this.isRefreshing}}
+    <A.Description data-test-inline-error-message>{{@message}}</A.Description>
+  {{/unless}}
+</Hds::Alert>

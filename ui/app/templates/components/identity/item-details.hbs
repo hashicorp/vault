@@ -1,17 +1,21 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div class="box is-shadowless is-marginless is-fullwidth">
   {{#if @model.disabled}}
-    <AlertBanner
-      @type="warning"
-      @title="Attention"
-      @message="This {{@model.identityType}} is disabled. All associated tokens cannot be used, but are not revoked."
-      data-test-disabled-warning
-    >
+    <Hds::Alert data-test-disabled-warning @type="inline" @color="warning" class="has-bottom-margin-s" as |A|>
+      <A.Title>Attention</A.Title>
+      <A.Description>
+        This
+        {{@model.identityType}}
+        is disabled. All associated tokens cannot be used, but are not revoked.
+      </A.Description>
       {{#if @model.canEdit}}
-        <button onclick={{action "enable" @model}} type="button" class="link" data-test-enable={{true}}>
-          Enable
-        </button>
+        <A.Button data-test-enable-identity @text="Enable" @color="secondary" {{on "click" (action "enable" @model)}} />
       {{/if}}
-    </AlertBanner>
+    </Hds::Alert>
   {{/if}}
   <InfoTableRow @label="Name" @value={{@model.name}} data-test-identity-item-name={{true}} />
   <InfoTableRow @label="Type" @value={{@model.type}} />

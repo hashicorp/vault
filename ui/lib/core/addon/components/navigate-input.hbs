@@ -1,0 +1,26 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<div class="navigate-filter">
+  <div class="field" data-test-nav-input>
+    <p class="control has-icons-left">
+      <Input
+        id={{this.inputId}}
+        class="filter input"
+        placeholder={{or @placeholder "Filter items"}}
+        @value={{@filter}}
+        @type="text"
+        data-test-component="navigate-input"
+        {{on "input" this.handleInput}}
+        {{on "keyup" this.handleKeyUp}}
+        {{on "keydown" this.handleKeyPress}}
+        {{on "focus" (fn this.setFilterFocused true)}}
+        {{on "blur" (fn this.setFilterFocused false)}}
+        {{did-insert this.maybeFocusInput}}
+      />
+      <Icon @name="search" class="search-icon has-text-grey-light" />
+    </p>
+  </div>
+</div>

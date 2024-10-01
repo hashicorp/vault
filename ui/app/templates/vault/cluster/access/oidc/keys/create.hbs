@@ -1,3 +1,22 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<PageHeader as |p|>
+  <p.top>
+    <Hds::Breadcrumb>
+      <Hds::Breadcrumb::Item @text="Keys" @route="vault.cluster.access.oidc.keys" />
+      <Hds::Breadcrumb::Item @text="Create Key" @current={{true}} />
+    </Hds::Breadcrumb>
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      Create Key
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
 <Oidc::KeyForm
   @model={{this.model}}
   @onCancel={{transition-to "vault.cluster.access.oidc.keys"}}

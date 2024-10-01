@@ -1,0 +1,3 @@
+```release-note:change
+secrets/ad: Updated plugin from v0.10.1-0.20230329210417-0b2cdb26cf5d to v0.16.0
+```

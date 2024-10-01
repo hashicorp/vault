@@ -1,0 +1,30 @@
+---
+layout: docs
+page_title: "Telemetry reference: Automated snapshot metrics"
+description: >-
+  Technical reference for automated Raft snapshot telemetry values.
+---
+
+# Automated snapshots telemetry
+
+<EnterpriseAlert product="vault" />
+
+Automated snapshot telemetry provides information on automatically scheduled snapshot activity for the
+[Raft storage snapshot](/vault/docs/enterprise/automated-integrated-storage-snapshots)
+feature.
+
+## Default metrics
+
+@include 'telemetry-metrics/vault/autosnapshots/last/success/time.mdx'
+
+@include 'telemetry-metrics/vault/autosnapshots/percent/maxspace/used.mdx'
+
+@include 'telemetry-metrics/vault/autosnapshots/rotate/duration.mdx'
+
+@include 'telemetry-metrics/vault/autosnapshots/save/duration.mdx'
+
+@include 'telemetry-metrics/vault/autosnapshots/save/errors.mdx'
+
+@include 'telemetry-metrics/vault/autosnapshots/snapshot/size.mdx'
+
+@include 'telemetry-metrics/vault/autosnapshots/total/snapshot/size.mdx'

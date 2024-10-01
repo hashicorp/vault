@@ -1,0 +1,4 @@
+```release-note:improvement
+activitylog: EntityRecord protobufs now contain a ClientType field for
+distinguishing client sources.
+```

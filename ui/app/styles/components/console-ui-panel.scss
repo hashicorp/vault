@@ -1,70 +1,61 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+$console-close-height: 35px;
+
 .console-ui-panel {
-  background: linear-gradient(to right, #191a1c, #1b212d);
+  background: var(--token-color-palette-neutral-700);
+  width: -moz-available;
+  width: -webkit-fill-available;
   height: 0;
-  left: 0;
-  position: fixed;
   min-height: 0;
-  overflow: scroll;
-  right: 0;
-  top: $header-height;
-  transition: min-height $speed ease-out, transform $speed ease-in;
+  overflow: auto;
+  position: fixed;
+  bottom: 0;
+  transition:
+    min-height $speed $easing,
+    transform $speed ease-in;
   will-change: transform, min-height;
   -webkit-overflow-scrolling: touch;
-  width: 100vw;
   z-index: 199;
-
-  .button {
-    background: transparent;
-    border: none;
-    color: $grey;
-    min-width: 0;
-    padding: 0 $size-8;
-
-    &.active,
-    &:hover {
-      background: $blue;
-      color: $white;
-    }
-  }
 }
 
 .console-ui-panel-content {
   color: $white;
   display: flex;
   flex-direction: column;
-  font-size: $body-size;
+  font-size: $size-7;
   font-weight: $font-weight-semibold;
   justify-content: flex-end;
-  min-height: 100%;
-  padding: $size-8 $size-8 $size-4;
+  min-height: calc(100% - $console-close-height); // account for close button that is sticky positioned
+  padding: $spacing-12 $spacing-12 $spacing-18;
   transition: justify-content $speed ease-in;
 
   pre,
   p {
     background: none;
     color: inherit;
-    font-size: $body-size;
+    font-size: $size-7;
     min-height: 2rem;
     padding: 0;
 
     &:not(.console-ui-command):not(.CodeMirror-line) {
-      padding-left: $console-spacing;
+      padding-left: $spacing-20;
     }
   }
 
   .cm-s-hashi.CodeMirror {
     background-color: rgba($black, 0.5) !important;
     font-weight: $font-weight-normal;
-    margin-left: $console-spacing;
-    padding: $size-8 $size-4;
+    margin-left: $spacing-20;
+    padding: $spacing-12 $spacing-20;
   }
-}
 
-.console-ui-panel-content.hover-copy-button,
-.console-ui-panel-content.hover-copy-button-static {
-  top: auto;
-  bottom: 0;
-  right: 0;
+  .console-ui-panel-intro {
+    color: var(--token-color-palette-neutral-400);
+  }
 }
 
 .console-ui-input {
@@ -73,16 +64,17 @@
 
   input {
     background-color: rgba($black, 0.5);
-    border: 0;
+    border: 1px solid var(--token-color-palette-neutral-500);
+    border-radius: var(--token-side-nav-body-list-item-border-radius);
     caret-color: $white;
     color: $white;
     flex: 1 1 auto;
     font-family: $family-monospace;
-    font-size: 16px;
+    font-size: $size-6;
     font-weight: $font-weight-bold;
-    margin-left: -$size-10;
     outline: none;
-    padding: $size-10;
+    padding: $spacing-8;
+    margin-right: $spacing-8;
     transition: background-color $speed;
   }
 }
@@ -94,57 +86,52 @@
 .console-ui-output {
   transition: background-color $speed ease-in-out;
   will-change: background-color;
-  padding-right: $size-2;
+  padding-right: $spacing-36;
   position: relative;
   background-color: rgba(#000, 0);
+  color: var(--token-color-palette-neutral-400);
   &:hover {
     background-color: rgba(#000, 0.5);
   }
 }
 
 .console-ui-alert {
-  margin-left: calc(#{$console-spacing} - 0.33rem);
+  margin-left: calc(#{$spacing-20} - 0.33rem);
   position: relative;
+  color: var(--token-color-palette-neutral-400);
 
   svg {
     position: absolute;
     left: 0;
     top: 0;
   }
+
+  &.console-ui-alert--error {
+    // HDS tokens are not light enough on the dark background to pass a11y tests.
+    // hex value for --token-color-foreground-critical
+    color: lighten(#e52228, 20%);
+  }
+  &.console-ui-alert--success {
+    // HDS tokens are not light enough on the dark background to pass a11y tests.
+    // hex value for --token-color-foreground-success
+    color: lighten(#008a22, 20%);
+  }
 }
 
 .panel-open .console-ui-panel {
   box-shadow: $box-shadow-highest;
-  min-height: 400px;
+  min-height: 425px;
+}
+
+.main--console-open {
+  padding-bottom: 425px;
 }
 
 .panel-open .console-ui-panel.fullscreen {
   bottom: 0;
-  top: 0;
+  right: 0;
   min-height: 100vh;
-}
-
-.panel-open {
-  .navbar,
-  .navbar-sections {
-    transition: transform $speed ease-in;
-  }
-}
-
-.panel-open.panel-fullscreen {
-  .navbar,
-  .navbar-sections {
-    @include from($mobile) {
-      transform: translateY(-100px);
-    }
-  }
-}
-
-header .navbar,
-header .navbar-sections {
-  z-index: 200;
-  transform: translateY(0);
-  will-change: transform;
+  width: 100%;
 }
 
 .console-spinner.control {
@@ -163,12 +150,14 @@ header .navbar-sections {
 }
 
 .console-close-button {
-  position: absolute;
-  top: -3.25rem;
-  right: $spacing-xs;
+  position: sticky;
+  top: $spacing-8;
+  height: $console-close-height;
+  display: flex;
+  justify-content: flex-end;
   z-index: 210;
 
-  @include from($mobile) {
-    display: none;
+  button {
+    margin-right: $spacing-8;
   }
 }

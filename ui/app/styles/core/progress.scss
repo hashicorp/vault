@@ -1,10 +1,21 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 .progress {
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  background: $progress-bar-background-color;
-  box-shadow: inset 0 0 0 1px $ui-gray-200;
+  appearance: none;
+  background: $ui-gray-050;
+  border: none;
+  box-shadow: inset $box-link-shadow;
   border-radius: $radius;
+  display: block;
+  height: $size-6;
+  overflow: hidden;
+  padding: 0;
   margin-bottom: 0;
+  width: 100%;
+
   &.is-small {
     height: 0.5rem;
   }
@@ -12,23 +23,64 @@
     width: 30px;
   }
   &.is-medium {
+    height: $size-5;
     width: 120px;
   }
 }
 
 // style the container in chrome
 .progress[value]::-webkit-progress-bar {
-  box-shadow: inset 0 0 0 1px $ui-gray-200;
+  background-color: #ededed;
+  box-shadow: inset $box-link-shadow;
 }
 
 // style the bar in chrome
 .progress[value]::-webkit-progress-value {
+  background-color: #4a4a4a;
   border-radius: $radius;
-  transition: width 1s ease-out;
+  transition: width 1s $easing;
 }
 
 // style the bar in firefox
 .progress[value]::-moz-progress-bar {
   border-radius: $radius;
-  transition: width 1s ease-out;
+  transition: width 1s $easing;
+}
+
+.progress::-ms-fill {
+  background-color: #4a4a4a;
+  border: none;
+}
+
+// is-success and is-info are the two types of progress bars we have
+.progress.is-info::-webkit-progress-value {
+  background-color: #3e8ed0;
+}
+
+.progress.is-info::-moz-progress-bar {
+  background-color: #3e8ed0;
+}
+
+.progress.is-info::-ms-fill {
+  background-color: #3e8ed0;
+}
+
+.progress.is-info:indeterminate {
+  background-image: linear-gradient(to right, #3e8ed0 30%, #ededed 30%);
+}
+
+.progress.is-success::-webkit-progress-value {
+  background-color: $green-500;
+}
+
+.progress.is-success::-moz-progress-bar {
+  background-color: $green-500;
+}
+
+.progress.is-success::-ms-fill {
+  background-color: $green-500;
+}
+
+.progress.is-success:indeterminate {
+  background-image: linear-gradient(to right, $green-500 30%, #ededed 30%);
 }

@@ -1,32 +1,40 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import ArrayProxy from '@ember/array/proxy';
 import Component from '@glimmer/component';
 import autosize from 'autosize';
 import { action } from '@ember/object';
 import { set } from '@ember/object';
 import { next } from '@ember/runloop';
+import { tracked } from '@glimmer/tracking';
+import { addToArray } from 'vault/helpers/add-to-array';
+import { removeFromArray } from 'vault/helpers/remove-from-array';
 
 /**
  * @module StringList
  *
  * @example
- * ```js
- * <StringList @label={label} @onChange={{this.setAndBroadcast}} @inputValue={{this.valuePath}}/>
- * ```
+ * <StringList @label="My label" @inputValue={{array "one" "two"}} />
+ *
  * @param {string} label - Text displayed in the header above all the inputs.
  * @param {function} onChange - Function called when any of the inputs change.
  * @param {string} inputValue - A string or an array of strings.
- * @param {string} warning - Text displayed as a warning.
  * @param {string} helpText - Text displayed as a tooltip.
  * @param {string} type=array - Optional type for inputValue.
  * @param {string} attrName - We use this to check the type so we can modify the tooltip content.
  * @param {string} subText - Text below the label.
- * @param {boolean} hideFormSection - If true do not add form-section class on surrounding div.
  */
 
 export default class StringList extends Component {
+  @tracked indicesWithComma = [];
+
   constructor() {
     super(...arguments);
 
+    // inputList is type ArrayProxy, so addObject etc are fine here
     this.inputList = ArrayProxy.create({
       // trim the `value` when accessing objects
       content: [],
@@ -64,19 +72,11 @@ export default class StringList extends Component {
   }
 
   toVal() {
-    const inputs = this.inputList.filter((x) => x.value).mapBy('value');
+    const inputs = this.inputList.filter((x) => x.value).map((x) => x.value);
     if (this.args.type === 'string') {
       return inputs.join(',');
     }
     return inputs;
-  }
-
-  get helpText() {
-    if (this.args.attrName === 'tokenBoundCidrs') {
-      return 'Specifies the blocks of IP addresses which are allowed to use the generated token. One entry per row.';
-    } else {
-      return this.args.helpText;
-    }
   }
 
   @action
@@ -91,25 +91,30 @@ export default class StringList extends Component {
 
   @action
   inputChanged(idx, event) {
+    if (event.target.value.includes(',') && !this.indicesWithComma.includes(idx)) {
+      this.indicesWithComma = addToArray(this.indicesWithComma, idx);
+    }
+    if (!event.target.value.includes(',')) {
+      this.indicesWithComma = removeFromArray(this.indicesWithComma, idx);
+    }
+
     const inputObj = this.inputList.objectAt(idx);
-    const onChange = this.args.onChange;
     set(inputObj, 'value', event.target.value);
-    onChange(this.toVal());
+    this.args.onChange(this.toVal());
   }
 
   @action
   addInput() {
-    const inputList = this.inputList;
-    if (inputList.get('lastObject.value') !== '') {
-      inputList.pushObject({ value: '' });
+    const [lastItem] = this.inputList.slice(-1);
+    if (lastItem?.value !== '') {
+      this.inputList.pushObject({ value: '' });
     }
   }
 
   @action
   removeInput(idx) {
-    const onChange = this.args.onChange;
-    const inputs = this.inputList;
-    inputs.removeObject(inputs.objectAt(idx));
-    onChange(this.toVal());
+    const itemToRemove = this.inputList.objectAt(idx);
+    this.inputList.removeObject(itemToRemove);
+    this.args.onChange(this.toVal());
   }
 }

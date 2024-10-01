@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 variable "vault_instance_count" {
   type        = number
   description = "How many vault instances are in the cluster"

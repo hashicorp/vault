@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -10,14 +13,15 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
+	"github.com/go-jose/go-jose/v3"
+	"github.com/go-jose/go-jose/v3/jwt"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"gopkg.in/square/go-jose.v2"
-	squarejwt "gopkg.in/square/go-jose.v2/jwt"
 )
 
 const (
@@ -191,16 +195,16 @@ DONELISTHANDLING:
 	switch resp.WrapInfo.Format {
 	case "jwt":
 		// Create the JWT
-		claims := squarejwt.Claims{
+		claims := jwt.Claims{
 			// Map the JWT ID to the token ID for ease of use
 			ID: te.ID,
 			// Set the issue time to the creation time
-			IssuedAt: squarejwt.NewNumericDate(creationTime),
+			IssuedAt: jwt.NewNumericDate(creationTime),
 			// Set the expiration to the TTL
-			Expiry: squarejwt.NewNumericDate(creationTime.Add(resp.WrapInfo.TTL)),
+			Expiry: jwt.NewNumericDate(creationTime.Add(resp.WrapInfo.TTL)),
 			// Set a reasonable not-before time; since unwrapping happens on this
 			// node we shouldn't have to worry much about drift
-			NotBefore: squarejwt.NewNumericDate(time.Now().Add(-5 * time.Second)),
+			NotBefore: jwt.NewNumericDate(time.Now().Add(-5 * time.Second)),
 		}
 		type privateClaims struct {
 			Accessor string `json:"accessor"`
@@ -215,14 +219,14 @@ DONELISTHANDLING:
 			priClaims.Accessor = resp.Auth.Accessor
 		}
 		sig, err := jose.NewSigner(
-			jose.SigningKey{Algorithm: jose.ES512, Key: c.wrappingJWTKey},
+			jose.SigningKey{Algorithm: jose.SignatureAlgorithm(api.CubbyHoleJWTSignatureAlgorithm), Key: c.wrappingJWTKey},
 			(&jose.SignerOptions{}).WithType("JWT"))
 		if err != nil {
 			c.tokenStore.revokeOrphan(ctx, te.ID)
 			c.logger.Error("failed to create JWT builder", "error", err)
 			return nil, ErrInternalError
 		}
-		ser, err := squarejwt.Signed(sig).Claims(claims).Claims(priClaims).CompactSerialize()
+		ser, err := jwt.Signed(sig).Claims(claims).Claims(priClaims).CompactSerialize()
 		if err != nil {
 			c.tokenStore.revokeOrphan(ctx, te.ID)
 			c.logger.Error("failed to serialize JWT", "error", err)
@@ -324,8 +328,9 @@ DONELISTHANDLING:
 		},
 	}
 
-	// Register the wrapped token with the expiration manager
-	if err := c.expiration.RegisterAuth(ctx, &te, wAuth, c.DetermineRoleFromLoginRequest(req.MountPoint, req.Data, ctx)); err != nil {
+	// Register the wrapped token with the expiration manager. We skip the role
+	// lookup here as we are not logging in, and only logins apply to role based quotas.
+	if err := c.expiration.RegisterAuth(ctx, &te, wAuth, ""); err != nil {
 		// Revoke since it's not yet being tracked for expiration
 		c.tokenStore.revokeOrphan(ctx, te.ID)
 		c.logger.Error("failed to register cubbyhole wrapping token lease", "request_path", req.Path, "error", err)
@@ -372,7 +377,7 @@ func (c *Core) validateWrappingToken(ctx context.Context, req *logical.Request) 
 			if !valid {
 				logInput.OuterErr = consts.ErrInvalidWrappingToken
 			}
-			if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
+			if err := c.auditBroker.LogRequest(ctx, logInput); err != nil {
 				c.logger.Error("failed to audit request", "path", req.Path, "error", err)
 			}
 		}
@@ -404,11 +409,11 @@ func (c *Core) validateWrappingToken(ctx context.Context, req *logical.Request) 
 	// and then a dot.
 	if IsJWT(token) {
 		// Implement the jose library way
-		parsedJWT, err := squarejwt.ParseSigned(token)
+		parsedJWT, err := jwt.ParseSigned(token)
 		if err != nil {
 			return false, fmt.Errorf("wrapping token could not be parsed: %w", err)
 		}
-		var claims squarejwt.Claims
+		var claims jwt.Claims
 		allClaims := make(map[string]interface{})
 		if err = parsedJWT.Claims(&c.wrappingJWTKey.PublicKey, &claims, &allClaims); err != nil {
 			return false, fmt.Errorf("wrapping token signature could not be validated: %w", err)

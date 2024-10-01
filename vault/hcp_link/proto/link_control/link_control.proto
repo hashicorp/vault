@@ -1,8 +1,11 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 syntax = "proto3";
 
-option go_package = "github.com/hashicorp/vault/vault/hcp_link/proto/link_control";
-
 package link_control;
+
+option go_package = "github.com/hashicorp/vault/vault/hcp_link/proto/link_control";
 
 message PurgePolicyRequest {}
 

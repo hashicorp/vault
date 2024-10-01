@@ -1,0 +1,3 @@
+```release-note:bug
+identity: Remove caseSensitivityKey to prevent errors while loading groups which could result in missing groups in memDB when duplicates are found.
+```

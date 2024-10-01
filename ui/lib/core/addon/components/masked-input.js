@@ -1,60 +1,76 @@
-import Component from '@ember/component';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { debug } from '@ember/debug';
+import { action } from '@ember/object';
+import { guidFor } from '@ember/object/internals';
+import Component from '@glimmer/component';
+import { tracked } from '@glimmer/tracking';
 import autosize from 'autosize';
-import layout from '../templates/components/masked-input';
 
 /**
  * @module MaskedInput
  * `MaskedInput` components are textarea inputs where the input is hidden. They are used to enter sensitive information like passwords.
  *
  * @example
- * <MaskedInput
- *  @value={{attr.options.defaultValue}}
- *  @allowCopy={{true}}
- *  @onChange={{action "someAction"}}
- *  @onKeyUp={{action "onKeyUp"}}
- * />
+ * <MaskedInput @value="my secret value" @allowCopy={{true}} @allowDownload={{true}} @onChange={{log "handle change"}} />
  *
- * @param [value] {String} - The value to display in the input.
- * @param [allowCopy=null] {bool} - Whether or not the input should render with a copy button.
- * @param [displayOnly=false] {bool} - Whether or not to display the value as a display only `pre` element or as an input.
- * @param [onChange=Function.prototype] {Function|action} - A function to call when the value of the input changes.
- * @param [onKeyUp=Function.prototype] {Function|action} - A function to call whenever on the dom event onkeyup. Generally passed down from higher level parent.
- * @param [isCertificate=false] {bool} - If certificate display the label and icons differently.
+ * @param {string} value - The value to display in the input.
+ * @param {string} name - The key correlated to the value. Used for the download file name.
+ * @param {function} [onChange=Callback] - Callback triggered on change, sends new value. Must set the value of @value
+ * @param {boolean} [allowCopy=false]  - Whether or not the input should render with a copy button.
+ * @param {boolean} [allowDownload=false]  - Renders a download button that prompts a confirmation modal to download the secret value
+ * @param {boolean} [displayOnly=false]  - Whether or not to display the value as a display only `pre` element or as an input.
  *
  */
-export default Component.extend({
-  layout,
-  value: null,
-  showValue: false,
-  didInsertElement() {
-    this._super(...arguments);
-    autosize(this.element.querySelector('textarea'));
-  },
-  didUpdate() {
-    this._super(...arguments);
-    autosize.update(this.element.querySelector('textarea'));
-  },
-  willDestroyElement() {
-    this._super(...arguments);
-    autosize.destroy(this.element.querySelector('textarea'));
-  },
-  displayOnly: false,
-  onKeyDown() {},
-  onKeyUp() {},
-  onChange() {},
-  actions: {
-    toggleMask() {
-      this.toggleProperty('showValue');
-    },
-    updateValue(e) {
-      const value = e.target.value;
-      this.set('value', value);
-      this.onChange(value);
-    },
-    handleKeyUp(name, value) {
-      if (this.onKeyUp) {
-        this.onKeyUp(name, value);
-      }
-    },
-  },
-});
+export default class MaskedInputComponent extends Component {
+  textareaId = 'textarea-' + guidFor(this);
+  @tracked showValue = false;
+  @tracked modalOpen = false;
+  @tracked stringifyDownload = false;
+
+  constructor() {
+    super(...arguments);
+    if (!this.args.onChange && !this.args.displayOnly) {
+      debug('onChange is required for editable Masked Input!');
+    }
+    this.updateSize();
+  }
+
+  updateSize() {
+    autosize(document.getElementById(this.textareaId));
+  }
+
+  @action onChange(evt) {
+    const value = evt.target.value;
+    if (this.args.onChange) {
+      this.args.onChange(value);
+    }
+  }
+
+  @action handleKeyUp(name, evt) {
+    this.updateSize();
+    const { value } = evt.target;
+    if (this.args.onKeyUp) {
+      this.args.onKeyUp(name, value);
+    }
+  }
+
+  @action toggleMask() {
+    this.showValue = !this.showValue;
+  }
+
+  @action toggleStringifyDownload(event) {
+    this.stringifyDownload = event.target.checked;
+  }
+
+  get copyValue() {
+    // Value must be a string to be copied
+    const { value } = this.args;
+    if (!value || typeof value === 'string') return value;
+    if (typeof value === 'object') return JSON.stringify(value);
+    return value.toString();
+  }
+}

@@ -1,10 +1,15 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 .transit-card-container {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 0.2fr));
   grid-template-rows: 1fr;
   align-content: start;
   grid-gap: 2rem;
-  margin-top: $spacing-l;
+  margin-top: $spacing-24;
 }
 
 .transit-card {
@@ -12,7 +17,7 @@
   box-shadow: 0 0 0 1px rgba($grey-light, 0.4);
   display: grid;
   grid-template-columns: 0.45fr 2fr;
-  padding: $spacing-m;
+  padding: $spacing-16;
   border: none;
 
   .transit-icon {
@@ -28,7 +33,7 @@
   .title {
     color: $grey;
     font-size: $size-7;
-    margin-bottom: $spacing-xxs;
+    margin-bottom: $spacing-4;
   }
 
   &:hover {

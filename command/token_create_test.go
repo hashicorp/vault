@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -5,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/cli"
 )
 
 func testTokenCreateCommand(tb testing.TB) (*cli.MockUi, *TokenCreateCommand) {
@@ -67,6 +70,12 @@ func TestTokenCreateCommand_Run(t *testing.T) {
 			},
 			"not present in secret",
 			1,
+		},
+		{
+			"ttl",
+			[]string{"-ttl", "1d", "-explicit-max-ttl", "2d"},
+			"token",
+			0,
 		},
 	}
 

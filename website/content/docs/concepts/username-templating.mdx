@@ -6,7 +6,7 @@ description: >-
   how dynamic usernames are generated.
 ---
 
-# Username Templating
+# Username templating
 
 Some of the secrets engines that generate dynamic users for external systems provide the ability for Vault operators
 to customize how usernames are generated for said external systems. This customization feature uses the
@@ -20,9 +20,9 @@ otherwise multiple calls to create the credentials may interfere with each other
 
 In addition to the functionality built into the Go template language, a number of additional functions are available:
 
-## Available Functions
+## Available functions
 
-### String/Character Manipulation
+### String/Character manipulation
 
 `lowercase` - Lowercases the input value.<br/>
 **Example**: `{{.FieldName | lowercase}}`
@@ -43,7 +43,7 @@ original value: `abcdefghijkl872808ff`.
 `uppercase` - Uppercases the input value.<br/>
 **Example**: `{{.FieldName | uppercase}}`
 
-### Generating Values
+### Generating values
 
 `random` - Generates a random string from lowercase letters, uppercase letters, and numbers. Must include a
 number indicating how many characters to generate.<br/>
@@ -73,7 +73,7 @@ number indicating how many characters to generate.<br/>
 
 Each secret engine provides a different set of data to the template. Please see the associated secret engine's
 documentation for details on what values are provided to the template. The examples below are modeled after the
-[Database engine's](/docs/secrets/databases) data, however the specific fields that are provided from a given engine
+[Database engine's](/vault/docs/secrets/databases) data, however the specific fields that are provided from a given engine
 may differ from these examples. Additionally, the time is assumed to be 2009-02-13 11:31:30PM GMT
 (unix timestamp: 1234567890) and random characters are the ordered english alphabet: `abcdefghijklmnopqrstuvwxyz`.
 
@@ -88,7 +88,7 @@ For instance: `{{.DisplayName}}` is equivalent to `{{ .DisplayName }}`
 To reference either of these fields, a `.` must be put in front of the field name: `{{.DisplayName}}`. Custom functions
 do not include a `.` in front of them: `{{random 20}}`.
 
-### Basic Example
+### Basic example
 
 **Template**:
 
@@ -108,7 +108,7 @@ a simple string substitution.
 ~> This example does not have any randomness and should not be used when generating dynamic usernames. The purpose is to
 demonstrate referencing data within the Go template language.
 
-### Custom Functions
+### Custom functions
 
 **Template**:
 
@@ -127,7 +127,7 @@ FOO_TOKEN_WITH_DISPLAY_NAME_MY_CUSTOM_DATABASE_ROLE_2009_02_13T11_31_30Z_0700
 `{{timestamp "2006_01_02T15_04_05Z" | replace "-" "_"}}` - Generates the current timestamp using the provided format and
 replaces all dashes with underscores.
 
-### Truncating to Maximum Length
+### Truncating to maximum length
 
 **Template**:
 
@@ -154,5 +154,5 @@ each field. This results in `v_token-wi_my_custo_abcdefghijklmnopqrst_1234567890
 
 Refer to the following tutorials for step-by-step instructions.
 
-- [Database Secrets Engine with MongoDB](https://learn.hashicorp.com/tutorials/vault/database-mongodb#customize-the-generated-username-schema)
-- [Dynamic Secrets: Database Secrets Engine](https://learn.hashicorp.com/tutorials/vault/database-secrets#define-a-username-template)
+- [Database Secrets Engine with MongoDB](/vault/tutorials/db-credentials/database-mongodb#customize-the-generated-username-schema)
+- [Dynamic Secrets: Database Secrets Engine](/vault/tutorials/db-credentials/database-secrets#define-a-username-template)

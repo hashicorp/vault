@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import ArrayProxy from '@ember/array/proxy';
 import { typeOf } from '@ember/utils';
 import { guidFor } from '@ember/object/internals';

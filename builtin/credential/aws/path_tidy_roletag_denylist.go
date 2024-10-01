@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package awsauth
 
 import (
@@ -19,6 +22,13 @@ const (
 func (b *backend) pathTidyRoletagDenyList() *framework.Path {
 	return &framework.Path{
 		Pattern: "tidy/roletag-denylist$",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+			OperationSuffix: "role-tag-deny-list",
+			OperationVerb:   "tidy",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"safety_buffer": {
 				Type:    framework.TypeDurationSecond,

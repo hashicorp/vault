@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package dynamodb
 
 import (
@@ -12,9 +15,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
-
-	log "github.com/hashicorp/go-hclog"
 
 	metrics "github.com/armon/go-metrics"
 	"github.com/aws/aws-sdk-go/aws"
@@ -22,13 +24,13 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
+	"github.com/cenkalti/backoff/v3"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/physical"
-
-	"github.com/cenkalti/backoff/v3"
 )
 
 const (
@@ -86,7 +88,7 @@ type DynamoDBBackend struct {
 	client     *dynamodb.DynamoDB
 	logger     log.Logger
 	haEnabled  bool
-	permitPool *physical.PermitPool
+	permitPool *PermitPoolWithMetrics
 }
 
 // DynamoDBRecord is the representation of a vault entry in
@@ -117,6 +119,12 @@ type DynamoDBLockRecord struct {
 	Value    []byte
 	Identity []byte
 	Expires  int64
+}
+
+type PermitPoolWithMetrics struct {
+	physical.PermitPool
+	pendingPermits int32
+	poolSize       int
 }
 
 // NewDynamoDBBackend constructs a DynamoDB backend. If the
@@ -245,7 +253,7 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 	return &DynamoDBBackend{
 		table:      table,
 		client:     client,
-		permitPool: physical.NewPermitPool(maxParInt),
+		permitPool: NewPermitPoolWithMetrics(maxParInt),
 		haEnabled:  haEnabledBool,
 		logger:     logger,
 	}, nil
@@ -286,7 +294,7 @@ func (d *DynamoDBBackend) Put(ctx context.Context, entry *physical.Entry) error 
 		})
 	}
 
-	return d.batchWriteRequests(requests)
+	return d.batchWriteRequests(ctx, requests)
 }
 
 // Get is used to fetch an entry
@@ -296,7 +304,7 @@ func (d *DynamoDBBackend) Get(ctx context.Context, key string) (*physical.Entry,
 	d.permitPool.Acquire()
 	defer d.permitPool.Release()
 
-	resp, err := d.client.GetItem(&dynamodb.GetItemInput{
+	resp, err := d.client.GetItemWithContext(ctx, &dynamodb.GetItemInput{
 		TableName:      aws.String(d.table),
 		ConsistentRead: aws.Bool(true),
 		Key: map[string]*dynamodb.AttributeValue{
@@ -355,7 +363,7 @@ func (d *DynamoDBBackend) Delete(ctx context.Context, key string) error {
 			excluded = append(excluded, recordKeyForVaultKey(prefixes[index-1]))
 		}
 
-		hasChildren, err := d.hasChildren(prefix, excluded)
+		hasChildren, err := d.hasChildren(ctx, prefix, excluded)
 		if err != nil {
 			return err
 		}
@@ -379,7 +387,7 @@ func (d *DynamoDBBackend) Delete(ctx context.Context, key string) error {
 		}
 	}
 
-	return d.batchWriteRequests(requests)
+	return d.batchWriteRequests(ctx, requests)
 }
 
 // List is used to list all the keys under a given
@@ -402,12 +410,17 @@ func (d *DynamoDBBackend) List(ctx context.Context, prefix string) ([]string, er
 				}},
 			},
 		},
+		ProjectionExpression: aws.String("#key, #path"),
+		ExpressionAttributeNames: map[string]*string{
+			"#key":  aws.String("Key"),
+			"#path": aws.String("Path"),
+		},
 	}
 
 	d.permitPool.Acquire()
 	defer d.permitPool.Release()
 
-	err := d.client.QueryPages(queryInput, func(out *dynamodb.QueryOutput, lastPage bool) bool {
+	err := d.client.QueryPagesWithContext(ctx, queryInput, func(out *dynamodb.QueryOutput, lastPage bool) bool {
 		var record DynamoDBRecord
 		for _, item := range out.Items {
 			dynamodbattribute.UnmarshalMap(item, &record)
@@ -430,7 +443,7 @@ func (d *DynamoDBBackend) List(ctx context.Context, prefix string) ([]string, er
 // before any deletes take place. To account for that hasChildren accepts a slice of
 // strings representing values we expect to find that should NOT be counted as children
 // because they are going to be deleted.
-func (d *DynamoDBBackend) hasChildren(prefix string, exclude []string) (bool, error) {
+func (d *DynamoDBBackend) hasChildren(ctx context.Context, prefix string, exclude []string) (bool, error) {
 	prefix = strings.TrimSuffix(prefix, "/")
 	prefix = escapeEmptyPath(prefix)
 
@@ -445,6 +458,11 @@ func (d *DynamoDBBackend) hasChildren(prefix string, exclude []string) (bool, er
 				}},
 			},
 		},
+		ProjectionExpression: aws.String("#key, #path"),
+		ExpressionAttributeNames: map[string]*string{
+			"#key":  aws.String("Key"),
+			"#path": aws.String("Path"),
+		},
 		// Avoid fetching too many items from DynamoDB for performance reasons.
 		// We want to know if there are any children we don't expect to see.
 		// Answering that question requires fetching a minimum of one more item
@@ -455,7 +473,7 @@ func (d *DynamoDBBackend) hasChildren(prefix string, exclude []string) (bool, er
 	d.permitPool.Acquire()
 	defer d.permitPool.Release()
 
-	out, err := d.client.Query(queryInput)
+	out, err := d.client.QueryWithContext(ctx, queryInput)
 	if err != nil {
 		return false, err
 	}
@@ -501,7 +519,7 @@ func (d *DynamoDBBackend) HAEnabled() bool {
 
 // batchWriteRequests takes a list of write requests and executes them in badges
 // with a maximum size of 25 (which is the limit of BatchWriteItem requests).
-func (d *DynamoDBBackend) batchWriteRequests(requests []*dynamodb.WriteRequest) error {
+func (d *DynamoDBBackend) batchWriteRequests(ctx context.Context, requests []*dynamodb.WriteRequest) error {
 	for len(requests) > 0 {
 		batchSize := int(math.Min(float64(len(requests)), 25))
 		batch := map[string][]*dynamodb.WriteRequest{d.table: requests[:batchSize]}
@@ -516,10 +534,9 @@ func (d *DynamoDBBackend) batchWriteRequests(requests []*dynamodb.WriteRequest) 
 
 		for len(batch) > 0 {
 			var output *dynamodb.BatchWriteItemOutput
-			output, err = d.client.BatchWriteItem(&dynamodb.BatchWriteItemInput{
+			output, err = d.client.BatchWriteItemWithContext(ctx, &dynamodb.BatchWriteItemInput{
 				RequestItems: batch,
 			})
-
 			if err != nil {
 				break
 			}
@@ -849,7 +866,7 @@ func ensureTableExists(client *dynamodb.DynamoDB, table string, readCapacity, wr
 
 // recordPathForVaultKey transforms a vault key into
 // a value suitable for the `DynamoDBRecord`'s `Path`
-// property. This path equals the the vault key without
+// property. This path equals the vault key without
 // its last component.
 func recordPathForVaultKey(key string) string {
 	if strings.Contains(key, "/") {
@@ -860,7 +877,7 @@ func recordPathForVaultKey(key string) string {
 
 // recordKeyForVaultKey transforms a vault key into
 // a value suitable for the `DynamoDBRecord`'s `Key`
-// property. This path equals the the vault key's
+// property. This path equals the vault key's
 // last component.
 func recordKeyForVaultKey(key string) string {
 	return pkgPath.Base(key)
@@ -905,4 +922,40 @@ func isConditionCheckFailed(err error) bool {
 	}
 
 	return false
+}
+
+// NewPermitPoolWithMetrics returns a new permit pool with the provided
+// number of permits which emits metrics
+func NewPermitPoolWithMetrics(permits int) *PermitPoolWithMetrics {
+	return &PermitPoolWithMetrics{
+		PermitPool:     *physical.NewPermitPool(permits),
+		pendingPermits: 0,
+		poolSize:       permits,
+	}
+}
+
+// Acquire returns when a permit has been acquired
+func (c *PermitPoolWithMetrics) Acquire() {
+	atomic.AddInt32(&c.pendingPermits, 1)
+	c.emitPermitMetrics()
+	c.PermitPool.Acquire()
+	atomic.AddInt32(&c.pendingPermits, -1)
+	c.emitPermitMetrics()
+}
+
+// Release returns a permit to the pool
+func (c *PermitPoolWithMetrics) Release() {
+	c.PermitPool.Release()
+	c.emitPermitMetrics()
+}
+
+// Get the number of requests in the permit pool
+func (c *PermitPoolWithMetrics) CurrentPermits() int {
+	return c.PermitPool.CurrentPermits()
+}
+
+func (c *PermitPoolWithMetrics) emitPermitMetrics() {
+	metrics.SetGauge([]string{"dynamodb", "permit_pool", "pending_permits"}, float32(c.pendingPermits))
+	metrics.SetGauge([]string{"dynamodb", "permit_pool", "active_permits"}, float32(c.PermitPool.CurrentPermits()))
+	metrics.SetGauge([]string{"dynamodb", "permit_pool", "pool_size"}, float32(c.poolSize))
 }

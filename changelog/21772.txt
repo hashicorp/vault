@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Fix OpenAPI representation and `-output-policy` recognition of some non-standard sudo paths
+```

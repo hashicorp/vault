@@ -1,0 +1,6 @@
+```release-note:improvement
+plugins: New API `sys/plugins/reload/:type/:name` available in the root namespace for reloading a specific plugin across all namespaces.
+```
+```release-note:change
+cli: Using `vault plugin reload` with `-plugin` in the root namespace will now reload the plugin across all namespaces instead of just the root namespace.
+```

@@ -1,0 +1,3 @@
+```release-note:bug
+openapi: Fixing approle reponse duration types
+```

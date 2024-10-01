@@ -1,6 +1,11 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 // This model represents the capabilities on a given `path`
 // `path` is also the primaryId
-// https://www.vaultproject.io/docs/concepts/policies.html#capabilities
+// https://developer.hashicorp.com/vault/docs/concepts/policies#capabilities
 
 import Model, { attr } from '@ember-data/model';
 
@@ -42,12 +47,13 @@ const computedCapability = function (capability) {
 export default Model.extend({
   path: attr('string'),
   capabilities: attr('array'),
-  canSudo: computedCapability('sudo'),
-  canRead: computedCapability('read'),
-  canCreate: computedCapability('create'),
-  canUpdate: computedCapability('update'),
-  canDelete: computedCapability('delete'),
-  canList: computedCapability('list'),
   allowedParameters: attr(),
   deniedParameters: attr(),
+  canCreate: computedCapability('create'),
+  canDelete: computedCapability('delete'),
+  canList: computedCapability('list'),
+  canPatch: computedCapability('patch'),
+  canRead: computedCapability('read'),
+  canSudo: computedCapability('sudo'),
+  canUpdate: computedCapability('update'),
 });

@@ -1,0 +1,3 @@
+```release-note:improvement
+sdk: adds new method to system view to allow plugins to request identity tokens
+```

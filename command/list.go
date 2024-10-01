@@ -1,10 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
 	"fmt"
 	"strings"
 
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/cli"
 	"github.com/posener/complete"
 )
 
@@ -78,13 +81,7 @@ func (c *ListCommand) Run(args []string) int {
 		return 2
 	}
 
-	// Append trailing slash
-	path := args[0]
-	if !strings.HasSuffix(path, "/") {
-		path += "/"
-	}
-
-	path = sanitizePath(path)
+	path := sanitizePath(args[0])
 	secret, err := client.Logical().List(path)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error listing %s: %s", path, err))

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package cert
 
 import (
@@ -7,8 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-sockaddr"
-
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -18,22 +21,33 @@ func pathListCerts(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "certs/?",
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixCert,
+			OperationSuffix: "certificates",
+			Navigation:      true,
+			ItemType:        "Certificate",
+		},
+
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ListOperation: b.pathCertList,
 		},
 
 		HelpSynopsis:    pathCertHelpSyn,
 		HelpDescription: pathCertHelpDesc,
-		DisplayAttrs: &framework.DisplayAttributes{
-			Navigation: true,
-			ItemType:   "Certificate",
-		},
 	}
 }
 
 func pathCerts(b *backend) *framework.Path {
 	p := &framework.Path{
 		Pattern: "certs/" + framework.GenericNameRegex("name"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixCert,
+			OperationSuffix: "certificate",
+			Action:          "Create",
+			ItemType:        "Certificate",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -63,6 +77,9 @@ Must be x509 PEM encoded.`,
 				Type: framework.TypeCommaStringSlice,
 				Description: `A comma-separated list of OCSP server addresses.  If unset, the OCSP server is determined 
 from the AuthorityInformationAccess extension on the certificate being inspected.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Description: "A list of OCSP server addresses. If unset, the OCSP server is determined from the AuthorityInformationAccess extension on the certificate being inspected.",
+				},
 			},
 			"ocsp_fail_open": {
 				Type:        framework.TypeBool,
@@ -74,6 +91,16 @@ from the AuthorityInformationAccess extension on the certificate being inspected
 				Default:     false,
 				Description: "If set to true, rather than accepting the first successful OCSP response, query all servers and consider the certificate valid only if all servers agree.",
 			},
+			"ocsp_this_update_max_age": {
+				Type:        framework.TypeDurationSecond,
+				Default:     0,
+				Description: "If greater than 0, specifies the maximum age of an OCSP thisUpdate field to avoid accepting old responses without a nextUpdate field.",
+			},
+			"ocsp_max_retries": {
+				Type:        framework.TypeInt,
+				Default:     4,
+				Description: "The number of retries the OCSP client should attempt per query.",
+			},
 			"allowed_names": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `A comma-separated list of names.
@@ -81,7 +108,8 @@ At least one must exist in either the Common Name or SANs. Supports globbing.
 This parameter is deprecated, please use allowed_common_names, allowed_dns_sans, 
 allowed_email_sans, allowed_uri_sans.`,
 				DisplayAttrs: &framework.DisplayAttributes{
-					Group: "Constraints",
+					Group:       "Constraints",
+					Description: "A list of names. At least one must exist in either the Common Name or SANs. Supports globbing. This parameter is deprecated, please use allowed_common_names, allowed_dns_sans, allowed_email_sans, allowed_uri_sans.",
 				},
 			},
 
@@ -90,7 +118,8 @@ allowed_email_sans, allowed_uri_sans.`,
 				Description: `A comma-separated list of names.
 At least one must exist in the Common Name. Supports globbing.`,
 				DisplayAttrs: &framework.DisplayAttributes{
-					Group: "Constraints",
+					Group:       "Constraints",
+					Description: "A list of names. At least one must exist in the Common Name. Supports globbing.",
 				},
 			},
 
@@ -99,8 +128,9 @@ At least one must exist in the Common Name. Supports globbing.`,
 				Description: `A comma-separated list of DNS names.
 At least one must exist in the SANs. Supports globbing.`,
 				DisplayAttrs: &framework.DisplayAttributes{
-					Name:  "Allowed DNS SANs",
-					Group: "Constraints",
+					Name:        "Allowed DNS SANs",
+					Group:       "Constraints",
+					Description: "A list of DNS names. At least one must exist in the SANs. Supports globbing.",
 				},
 			},
 
@@ -109,8 +139,9 @@ At least one must exist in the SANs. Supports globbing.`,
 				Description: `A comma-separated list of Email Addresses.
 At least one must exist in the SANs. Supports globbing.`,
 				DisplayAttrs: &framework.DisplayAttributes{
-					Name:  "Allowed Email SANs",
-					Group: "Constraints",
+					Name:        "Allowed Email SANs",
+					Group:       "Constraints",
+					Description: "A list of Email Addresses. At least one must exist in the SANs. Supports globbing.",
 				},
 			},
 
@@ -119,8 +150,9 @@ At least one must exist in the SANs. Supports globbing.`,
 				Description: `A comma-separated list of URIs.
 At least one must exist in the SANs. Supports globbing.`,
 				DisplayAttrs: &framework.DisplayAttributes{
-					Name:  "Allowed URI SANs",
-					Group: "Constraints",
+					Name:        "Allowed URI SANs",
+					Group:       "Constraints",
+					Description: "A list of URIs. At least one must exist in the SANs. Supports globbing.",
 				},
 			},
 
@@ -129,7 +161,8 @@ At least one must exist in the SANs. Supports globbing.`,
 				Description: `A comma-separated list of Organizational Units names.
 At least one must exist in the OU field.`,
 				DisplayAttrs: &framework.DisplayAttributes{
-					Group: "Constraints",
+					Group:       "Constraints",
+					Description: "A list of Organizational Units names. At least one must exist in the OU field.",
 				},
 			},
 
@@ -138,6 +171,9 @@ At least one must exist in the OU field.`,
 				Description: `A comma-separated string or array of extensions
 formatted as "oid:value". Expects the extension value to be some type of ASN1 encoded string.
 All values much match. Supports globbing on "value".`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Description: "A list of extensions formatted as 'oid:value'. Expects the extension value to be some type of ASN1 encoded string. All values much match. Supports globbing on 'value'.",
+				},
 			},
 
 			"allowed_metadata_extensions": {
@@ -146,6 +182,9 @@ All values much match. Supports globbing on "value".`,
 Upon successful authentication, these extensions will be added as metadata if they are present
 in the certificate. The metadata key will be the string consisting of the oid numbers
 separated by a dash (-) instead of a dot (.) to allow usage in ACL templates.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Description: "A list of OID extensions. Upon successful authentication, these extensions will be added as metadata if they are present in the certificate. The metadata key will be the string consisting of the OID numbers separated by a dash (-) instead of a dot (.) to allow usage in ACL templates.",
+				},
 			},
 
 			"display_name": {
@@ -199,10 +238,6 @@ certificate.`,
 
 		HelpSynopsis:    pathCertHelpSyn,
 		HelpDescription: pathCertHelpDesc,
-		DisplayAttrs: &framework.DisplayAttributes{
-			Action:   "Create",
-			ItemType: "Certificate",
-		},
 	}
 
 	tokenutil.AddTokenFields(p.Fields)
@@ -210,7 +245,7 @@ certificate.`,
 }
 
 func (b *backend) Cert(ctx context.Context, s logical.Storage, n string) (*CertEntry, error) {
-	entry, err := s.Get(ctx, "cert/"+strings.ToLower(n))
+	entry, err := s.Get(ctx, trustedCertPath+strings.ToLower(n))
 	if err != nil {
 		return nil, err
 	}
@@ -218,7 +253,7 @@ func (b *backend) Cert(ctx context.Context, s logical.Storage, n string) (*CertE
 		return nil, nil
 	}
 
-	var result CertEntry
+	result := CertEntry{OcspMaxRetries: defaultOcspMaxRetries} // Specify our defaults if the key is missing
 	if err := entry.DecodeJSON(&result); err != nil {
 		return nil, err
 	}
@@ -243,7 +278,8 @@ func (b *backend) Cert(ctx context.Context, s logical.Storage, n string) (*CertE
 }
 
 func (b *backend) pathCertDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	err := req.Storage.Delete(ctx, "cert/"+strings.ToLower(d.Get("name").(string)))
+	defer b.flushTrustedCache()
+	err := req.Storage.Delete(ctx, trustedCertPath+strings.ToLower(d.Get("name").(string)))
 	if err != nil {
 		return nil, err
 	}
@@ -251,7 +287,7 @@ func (b *backend) pathCertDelete(ctx context.Context, req *logical.Request, d *f
 }
 
 func (b *backend) pathCertList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	certs, err := req.Storage.List(ctx, "cert/")
+	certs, err := req.Storage.List(ctx, trustedCertPath)
 	if err != nil {
 		return nil, err
 	}
@@ -278,6 +314,13 @@ func (b *backend) pathCertRead(ctx context.Context, req *logical.Request, d *fra
 		"allowed_organizational_units": cert.AllowedOrganizationalUnits,
 		"required_extensions":          cert.RequiredExtensions,
 		"allowed_metadata_extensions":  cert.AllowedMetadataExtensions,
+		"ocsp_ca_certificates":         cert.OcspCaCertificates,
+		"ocsp_enabled":                 cert.OcspEnabled,
+		"ocsp_servers_override":        cert.OcspServersOverride,
+		"ocsp_fail_open":               cert.OcspFailOpen,
+		"ocsp_query_all_servers":       cert.OcspQueryAllServers,
+		"ocsp_this_update_max_age":     int64(cert.OcspThisUpdateMaxAge.Seconds()),
+		"ocsp_max_retries":             cert.OcspMaxRetries,
 	}
 	cert.PopulateTokenData(data)
 
@@ -303,6 +346,7 @@ func (b *backend) pathCertRead(ctx context.Context, req *logical.Request, d *fra
 }
 
 func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	defer b.flushTrustedCache()
 	name := strings.ToLower(d.Get("name").(string))
 
 	cert, err := b.Cert(ctx, req.Storage, name)
@@ -312,7 +356,8 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 
 	if cert == nil {
 		cert = &CertEntry{
-			Name: name,
+			Name:           name,
+			OcspMaxRetries: defaultOcspMaxRetries,
 		}
 	}
 
@@ -334,6 +379,19 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 	}
 	if ocspQueryAll, ok := d.GetOk("ocsp_query_all_servers"); ok {
 		cert.OcspQueryAllServers = ocspQueryAll.(bool)
+	}
+	if ocspThisUpdateMaxAge, ok := d.GetOk("ocsp_this_update_max_age"); ok {
+		maxAgeDuration, err := parseutil.ParseDurationSecond(ocspThisUpdateMaxAge)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse ocsp_this_update_max_age: %w", err)
+		}
+		cert.OcspThisUpdateMaxAge = maxAgeDuration
+	}
+	if ocspMaxRetries, ok := d.GetOk("ocsp_max_retries"); ok {
+		cert.OcspMaxRetries = ocspMaxRetries.(int)
+		if cert.OcspMaxRetries < 0 {
+			return nil, fmt.Errorf("ocsp_max_retries can not be a negative number")
+		}
 	}
 	if displayNameRaw, ok := d.GetOk("display_name"); ok {
 		cert.DisplayName = displayNameRaw.(string)
@@ -445,7 +503,7 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 	}
 
 	// Store it
-	entry, err := logical.StorageEntryJSON("cert/"+name, cert)
+	entry, err := logical.StorageEntryJSON(trustedCertPath+name, cert)
 	if err != nil {
 		return nil, err
 	}
@@ -480,11 +538,13 @@ type CertEntry struct {
 	AllowedMetadataExtensions  []string
 	BoundCIDRs                 []*sockaddr.SockAddrMarshaler
 
-	OcspCaCertificates  string
-	OcspEnabled         bool
-	OcspServersOverride []string
-	OcspFailOpen        bool
-	OcspQueryAllServers bool
+	OcspCaCertificates   string
+	OcspEnabled          bool
+	OcspServersOverride  []string
+	OcspFailOpen         bool
+	OcspQueryAllServers  bool
+	OcspThisUpdateMaxAge time.Duration
+	OcspMaxRetries       int
 }
 
 const pathCertHelpSyn = `

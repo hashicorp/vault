@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { Response } from 'miragejs';
 
 export default function (server) {
@@ -33,7 +38,7 @@ export default function (server) {
     let records = [];
     if (isMethod) {
       methods.forEach((method) => {
-        records.addObjects(schema.db[dbKeyFromType(method)].where({}));
+        records = [...records, ...schema.db[dbKeyFromType(method)].where({})];
       });
     } else {
       records = schema.db.mfaLoginEnforcements.where({});
@@ -45,7 +50,7 @@ export default function (server) {
           records.push(server.create(`mfa-${type}-method`));
         });
       } else {
-        records = server.createList('mfa-login-enforcement', 4).toArray();
+        records = server.createList('mfa-login-enforcement', 4);
       }
     }
     const dataKey = isMethod ? 'id' : 'name';

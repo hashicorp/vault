@@ -1,0 +1,187 @@
+---
+layout: api
+page_title: /sys/plugins/runtimes/catalog - HTTP API
+description: The `/sys/plugins/runtimes/catalog` endpoint is used to manage plugin runtimes.
+---
+
+# `/sys/plugins/runtimes/catalog`
+
+The `/sys/plugins/runtimes/catalog` manages plugin runtimes in your Vault catalog by reading, registering,
+updating, and removing plugin runtime information. Plugin runtimes must be registered before use, and
+once registered, backends can use the plugin runtime by referencing them when registering a plugin.
+
+## LIST plugin runtimes
+
+The list endpoint returns a list of the plugin runtimes in the catalog.
+
+- **`sudo` required** – This endpoint requires `sudo` capability in addition to
+  any path-specific capabilities.
+
+| Method | Path                   |
+| :----- | :--------------------- |
+| `LIST`  | `/sys/plugins/runtimes/catalog` |
+| `GET`  | `/sys/plugins/runtimes/catalog` |
+| `LIST`  | `/sys/plugins/runtimes/catalog?type=:type` |
+| `GET`  | `/sys/plugins/runtimes/catalog?type=:type` |
+
+### Parameters
+
+- `type` `(string: <required>)` – Specifies the plugin runtime type to list. Currently
+  only accepts "container".
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request LIST
+    http://127.0.0.1:8200/v1/sys/plugins/runtimes/catalog
+```
+
+### Sample response
+
+```json
+{
+  "data": {
+    "runtimes": [
+      {
+        "name": "example-plugin-runtime",
+        "type": "container",
+        "oci_runtime": "example-oci-runtime",
+        "cgroup_parent": "/examplelimit/",
+        "cpu_nanos": 1000,
+        "memory_bytes": 10000000
+      },
+      ...
+    ]
+  }
+}
+```
+
+## Register plugin runtime
+
+The registration endpoint registers a new plugin runtime, or updates an existing one with the
+supplied type and name.
+
+- **`sudo` required** – This endpoint requires `sudo` capability in addition to
+  any path-specific capabilities.
+
+| Method | Path                               |
+| :----- | :--------------------------------- |
+| `POST` | `/sys/plugins/runtimes/catalog/:type/:name` |
+
+### Parameters
+
+- `type` `(string: <required>)` – Specifies the plugin runtime type. Currently
+  only accepts "container".
+
+- `name` `(string: <required>)` – Part of the request URL. Specifies the plugin runtime name.
+   Use the runtime name to look up plugin runtimes in the catalog.
+
+- `rootless` `(bool: false)` - Whether the container runtime is running as a
+  non-privileged user. Must be set if plugin container images are also configured
+  to run as a non-root user.
+
+- `oci_runtime` `(string: <optional>)` – Specifies OCI-compliant container runtime to use.
+  Default is "runsc", gVisor's OCI runtime.
+
+- `cgroup_parent` `(string: <optional>)` – Specifies the parent cgroup to set for each container.
+  Use the cgroup to control the total resource usage for a group of plugins.
+
+- `cpu_nanos` `(int: <optional>)` – Specifies cpu limit to set per container in billionths of a CPU.
+  Defaults to no limit.
+
+- `memory_bytes` `(int: <optional>)` – Specifies memory limit to set per container in bytes.
+  Defaults to no limit.
+
+### Sample payload
+
+```json
+{
+  "oci_runtime": "example-oci-runtime",
+  "cgroup_parent": "/examplelimit/",
+  "cpu_nanos": 1000,
+  "memory_bytes": 10000000
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/plugins/runtimes/catalog/container/example-plugin-runtime
+```
+
+## Read plugin runtime
+
+The read endpoint returns the configuration data for the plugin runtime with the given type and name.
+
+- **`sudo` required** – This endpoint requires `sudo` capability in addition to
+  any path-specific capabilities.
+
+| Method | Path                                                |
+| :----- | :-------------------------------------------------- |
+| `GET`  | `/sys/plugins/runtimes/catalog/:type/:name` |
+
+### Parameters
+
+- `type` `(string: <required>)` – Specifies the type of this plugin runtime. Currently
+  only accepts "container".
+
+- `name` `(string: <required>)` – Part of the request URL. Specifies the name of the plugin runtime to retrieve.
+
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request GET \
+    http://127.0.0.1:8200/v1/sys/plugins/runtimes/catalog/container/example-plugin-runtime
+```
+
+### Sample response
+
+```json
+{
+  "data": {
+    "name": "example-plugin-runtime",
+    "type": "container",
+    "oci_runtime": "example-oci-runtime",
+    "cgroup_parent": "/examplelimit/",
+    "cpu_nanos": 1000,
+    "memory_bytes": 10000000
+  }
+}
+```
+
+## Remove plugin runtime from catalog
+
+The remove endpoint removes the plugin runtime with the given type and name. Note that
+the request will fail if any registered plugin references the plugin runtime.
+
+- **`sudo` required** – This endpoint requires `sudo` capability in addition to
+  any path-specific capabilities.
+
+| Method   | Path                                                |
+| :------- | :-------------------------------------------------- |
+| `DELETE` | `/sys/plugins/runtimes/catalog/:type/:name` |
+
+### Parameters
+
+- `type` `(string: <required>)` – Specifies the type of this plugin runtime. Currently
+  only accepts "container".
+
+- `name` `(string: <required>)` – Part of the request URL. Specifies the name of the plugin runtime to delete.
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request DELETE \
+    http://127.0.0.1:8200/v1/sys/plugins/runtimes/catalog/container/example-plugin-runtime
+```

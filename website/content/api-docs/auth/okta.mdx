@@ -4,17 +4,17 @@ page_title: Okta - Auth Methods - HTTP API
 description: This is the API documentation for the Vault Okta auth method.
 ---
 
-# Okta Auth Method (API)
+# Okta auth method (API)
 
 This is the API documentation for the Vault Okta auth method. For
 general information about the usage and operation of the Okta method, please
-see the [Vault Okta method documentation](/docs/auth/okta).
+see the [Vault Okta method documentation](/vault/docs/auth/okta).
 
 This documentation assumes the Okta method is mounted at the `/auth/okta`
 path in Vault. Since it is possible to enable auth methods at any location,
 please update your API calls accordingly.
 
-## Create Configuration
+## Create configuration
 
 Configures the connection parameters for Okta. This path honors the
 distinction between the `create` and `update` capabilities inside ACL policies.
@@ -40,7 +40,7 @@ distinction between the `create` and `update` capabilities inside ACL policies.
 
 @include 'tokenfields.mdx'
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -49,7 +49,7 @@ distinction between the `create` and `update` capabilities inside ACL policies.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -59,7 +59,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/okta/config
 ```
 
-## Read Configuration
+## Read configuration
 
 Reads the Okta configuration.
 
@@ -67,7 +67,7 @@ Reads the Okta configuration.
 | :----- | :------------------ |
 | `GET`  | `/auth/okta/config` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -75,7 +75,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/okta/config
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -101,7 +101,7 @@ $ curl \
 }
 ```
 
-## List Users
+## List users
 
 List the users configured in the Okta method.
 
@@ -109,7 +109,7 @@ List the users configured in the Okta method.
 | :----- | :----------------- |
 | `LIST` | `/auth/okta/users` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -118,7 +118,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/okta/users
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -134,7 +134,7 @@ $ curl \
 }
 ```
 
-## Register User
+## Register user
 
 Registers a new user and maps a set of policies to it.
 
@@ -154,7 +154,7 @@ Registers a new user and maps a set of policies to it.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -164,7 +164,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/okta/users/fred
 ```
 
-## Read User
+## Read user
 
 Reads the properties of an existing username.
 
@@ -176,7 +176,7 @@ Reads the properties of an existing username.
 
 - `username` `(string: <required>)` - Username for this user.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -184,7 +184,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/okta/users/test-user
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -200,7 +200,7 @@ $ curl \
 }
 ```
 
-## Delete User
+## Delete user
 
 Deletes an existing username from the method.
 
@@ -212,7 +212,7 @@ Deletes an existing username from the method.
 
 - `username` `(string: <required>)` - Username for this user.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -221,7 +221,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/okta/users/test-user
 ```
 
-## List Groups
+## List groups
 
 List the groups configured in the Okta method.
 
@@ -229,7 +229,7 @@ List the groups configured in the Okta method.
 | :----- | :------------------ |
 | `LIST` | `/auth/okta/groups` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -238,7 +238,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/okta/groups
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -254,7 +254,7 @@ $ curl \
 }
 ```
 
-## Register Group
+## Register group
 
 Registers a new group and maps a set of policies to it.
 
@@ -273,7 +273,7 @@ Registers a new group and maps a set of policies to it.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -283,7 +283,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/okta/groups/admins
 ```
 
-## Read Group
+## Read group
 
 Reads the properties of an existing group.
 
@@ -295,7 +295,7 @@ Reads the properties of an existing group.
 
 - `name` `(string: <required>)` - The name for the group.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -303,7 +303,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/okta/groups/admins
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -318,7 +318,7 @@ $ curl \
 }
 ```
 
-## Delete Group
+## Delete group
 
 Deletes an existing group from the method.
 
@@ -330,7 +330,7 @@ Deletes an existing group from the method.
 
 - `name` `(string: <required>)` - The name for the group.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -356,7 +356,7 @@ Login with the username and password.
 - `nonce` `(string: <optional>)` - Nonce provided during a login request to
   retrieve the number verification challenge for the matching request.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -364,7 +364,7 @@ Login with the username and password.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -373,7 +373,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/okta/login/fred
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -410,14 +410,14 @@ Verify a number challenge that may result from an Okta Verify Push challenge.
 requires number verification challenge. Logins through the vault login CLI
 command will automatically generate a nonce.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
     http://127.0.0.1:8200/v1/auth/okta/verify/nonce/BCR66Ru6oJKPtC00PxJJ
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {

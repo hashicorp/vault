@@ -1,0 +1,48 @@
+---
+layout: api
+page_title: /sys/experiments - HTTP API
+description: The `/sys/experiments` endpoint returns information about experiments on the Vault node.
+---
+
+# `/sys/experiments`
+
+@include 'alerts/restricted-root.mdx'
+
+The `/sys/experiments` endpoint returns information about experiments on the Vault node.
+
+## Read experiments
+
+This endpoint returns the experiments available and enabled on the Vault node.
+Experiments are per-node and cannot be changed while the node is running. See
+the [`-experiment`](/vault/docs/commands/server#experiment) flag and the
+[`experiments`](/vault/docs/configuration#experiments) config key documentation for
+details on enabling experiments.
+
+| Method | Path               |
+| :----- | :----------------- |
+| `GET`  | `/sys/experiments` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    http://127.0.0.1:8200/v1/sys/experiments
+```
+
+### Sample response
+
+```json
+{
+  "request_id": "cb48b1e2-635c-52e9-db79-ad9a54ed3e88",
+  "lease_id": "",
+  "lease_duration": 0,
+  "renewable": false,
+  "data": {
+    "available": [
+      "events.alpha1"
+    ],
+    "enabled": []
+  },
+  "warnings": null
+}
+```

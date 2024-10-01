@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import babylonParser from './jscodeshift-babylon-parser';
 
 // use babylon parser with decorators-legacy plugin

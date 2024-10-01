@@ -1,0 +1,3 @@
+```release-note:improvement
+cli: adds plugin identity token to enable and tune commands for secret engines and auth methods
+```

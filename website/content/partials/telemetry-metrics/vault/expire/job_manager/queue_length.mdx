@@ -1,0 +1,8 @@
+### vault.expire.job_manager.queue_length ((#vault-expire-job_manager-queue_length))
+
+Metric type | Value  | Description
+----------- | ------ | -----------
+summary     | leases | The total number of pending revocation jobs by `queue_id`
+
+The queue ID in the `queue_id` label indicates the mount accessor associated
+with the expiring lease. For example, the secrets engine or authentication method.

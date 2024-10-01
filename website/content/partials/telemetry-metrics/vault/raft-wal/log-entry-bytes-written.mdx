@@ -1,0 +1,12 @@
+<Warning title="Experimental">
+
+### vault.raft.wal.log-entry-bytes-written ((#vault-raft-wal-log-entry-bytes-written))
+
+</Warning>
+
+Metric type | Value   | Description
+----------- | ------- | -----------
+counter     | number  | Number of bytes of log entry after encoding with Codec.
+
+The `log-entry-bytes-written` counter is technically an overestimate because it
+includes bytes from headers and index entries.

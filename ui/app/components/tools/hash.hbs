@@ -1,0 +1,86 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<PageHeader as |p|>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      Hash Data
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+{{#if this.sum}}
+  <div class="box is-sideless is-fullwidth is-marginless">
+    <div class="field">
+      <label for="sum" class="is-input">Sum</label>
+      <Hds::Copy::Snippet
+        @textToCopy={{this.sum}}
+        @color="secondary"
+        data-test-tools-input="sum"
+        @onError={{fn (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")}}
+      />
+    </div>
+  </div>
+  <div class="field is-grouped box is-fullwidth is-bottomless">
+    <Hds::Button @text="Done" @color="secondary" {{on "click" this.reset}} data-test-button="Done" />
+  </div>
+{{else}}
+  <form {{on "submit" this.handleSubmit}}>
+    <div class="box is-sideless is-fullwidth is-marginless">
+      <MessageError @errorMessage={{this.errorMessage}} />
+      <div class="field">
+        <label for="hash-input" class="is-label">
+          Input
+        </label>
+        <div class="control">
+          <textarea
+            id="hash-input"
+            name="hashData"
+            value={{this.hashData}}
+            {{on "input" this.handleEvent}}
+            class="textarea"
+            data-test-tools-input="hash-input"
+          ></textarea>
+          <B64Toggle @value={{this.hashData}} @isInput={{false}} data-test-tools-input="b64-toggle" />
+        </div>
+      </div>
+      <div class="field is-horizontal">
+        <div class="field-body">
+          <div class="field">
+            <label for="algorithm" class="is-label">Algorithm</label>
+            <div class="control is-expanded">
+              <div class="select is-fullwidth">
+                <select name="algorithm" id="algorithm" {{on "change" this.handleEvent}}>
+                  {{#each (sha2-digest-sizes) as |algo|}}
+                    <option selected={{eq this.algorithm algo}} value={{algo}}>
+                      {{algo}}
+                    </option>
+                  {{/each}}
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="field">
+            <label for="format" class="is-label"> Output format </label>
+            <div class="control is-expanded">
+              <div class="select is-fullwidth">
+                <select name="format" id="format" {{on "change" this.handleEvent}}>
+                  {{#each (array "base64" "hex") as |formatOption|}}
+                    <option selected={{eq this.format formatOption}} value={{formatOption}}>
+                      {{formatOption}}
+                    </option>
+                  {{/each}}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="field is-grouped box is-fullwidth is-bottomless">
+      <Hds::Button @text="Hash" type="submit" data-test-tools-submit />
+    </div>
+  </form>
+{{/if}}

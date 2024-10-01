@@ -1,0 +1,4 @@
+```release-note:bug
+core/quotas (enterprise): Fix a case where we were applying login roles to lease count quotas in a non-login context.
+Also fix a related potential deadlock.
+```

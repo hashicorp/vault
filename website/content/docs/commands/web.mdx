@@ -1,0 +1,84 @@
+---
+layout: docs
+page_title: Web REPL - Command
+description: |-
+  The Vault web user interface (UI) includes an advanced mode that mimics some basic commands from the Vault CLI. It can be useful for users more familiar with the CLI or API as it lets a user directly input the paths they wish to manipulate.
+
+---
+
+
+# Web REPL
+
+The Vault web user interface (UI) includes an advanced mode that mimics some basic commands from the Vault CLI. It can be useful for users more familiar with the CLI or API as it lets a user directly input the paths they wish to manipulate.
+
+~> **Note:** The Vault Web REPL is _not_ a full terminal emulator. Features like environment variables, HEREDOC, or piping of data or files will not work unless explicitly documented.
+
+## Command history
+The Web REPL will keep a history of all of the commands you've entered in your current session. If you refresh the browser or use the `clearall` command, this history will be reset.
+
+To cycle through the command history, you can use the up and down arrows when the REPL input has focus. If you reach either beginning of the history by pressing up, it will cycle back to the most recent command. Pressing the down arrow will stop at an empty prompt after the most recent command.
+
+## Commands
+The Vault Web REPL implements the Create/Read/Update/Delete/List (CRUDL) commands from the Vault CLI. With these basic commands, a user can interact with most of the Vault API even if there aren't explicit screens for it in Vault's Web UI.
+
+All commands can optionally be prefixed with `vault` as if you were using the CLI - the intent being that a large number of example commands from the documentation should work via simply copy and pasting them from the documentation site into the web REPL.
+
+### delete
+`delete` in the Web REPL is the same as using the [`delete`](/vault/docs/commands/delete) command in the CLI. It can be used to delete secrets and configuration from Vault at the given path via an HTTP DELETE.
+
+### kv-get
+The Web REPL is a convenience method exclusively for reading secrets from a KV version 2 secrets engine, much like [`kv read`](/vault/docs/commands/kv/read). The command `kv-get secret/foo` is functionally equivalent to running the REPL `read` command with the full API path: `read secret/data/foo`.
+
+There is also a `-metadata` flag that is shorthand for `-field=metadata`.
+
+### list
+The Web REPL `list` command is functionally identical to the CLI [`list`](/vault/docs/commands/list) command. It is used to list keys at a given path such as roles in an auth method, or keys for a given secrets engine. The Web REPL version issues a GET with the `?list=true` query parameter as described in the [API overview](/vault/api-docs#api-operations) since web browsers do not support custom HTTP verbs.
+
+### read
+Like the CLI [`read`](/vault/docs/commands/read) command, the Web REPL `read` performs an HTTP GET on a given path.
+
+Also like the CLI `read`, the REPL implements `-field` and `-format` flags. The output defaults to "table" format, but also supports "json" output.
+
+### write
+This is a Web REPL implementation of the CLI [`write`](/vault/docs/commands/write) command - it will perform an HTTP POST to the given path with the given data. Notably the special "**@**" syntax from the CLI is not implemented - data must be specified as arguments to the command. Because of this, any API fields that require data structures not expressible as arguments are not supported.
+This is the major shortcoming of the Vault Web REPL.
+
+
+## Command options
+
+### field
+If you are only interested in a single field in the response, you can use the `-field` flag which will specify that the REPL should only print that field in the response. Using this in conjunction with `-wrap-ttl` is nice because you can return just the wrapped token by doing something like this:
+```
+kv-get secret/one -wrap-ttl=10m -field=token
+```
+### force
+Some delete paths require using `-force` as a confirmation that the delete is intentional. Using `delete` without this flag on a path that needs it will result in an error that tells you `-force` is required.
+
+### format
+`read` commands default to the "table" format, if you would like to see the JSON format of a response, you can pass `-format=json`. This is most often useful for responses that have deeply nested objects that don't fit well in the table format.
+
+### metadata
+As mentioned above in the `kv-get` section - this flag is shorthand for `-field=metadata` which is useful when reading secrets from the KVv2 secrets engine.
+
+### wrap-ttl
+Like the `vault` CLI, the Web REPL supports creating [response-wrapping tokens](/vault/docs/concepts/response-wrapping#response-wrapping-token-creation).The format is also the same: it can be an integer that sets the wrapping TTL for a number of seconds, or it can be a string that specifys the length of the duration in seconds (`15s`), miniutes (`20m`), or hours (`25h`).
+
+## REPL-specific commands
+
+### api
+This will navigate you to an interactive OpenAPI explorer in the Vault UI. This explorer will only contain the paths your current `VAULT_TOKEN` has permissions to operate on.
+
+### clear
+This will clear all of the output currently in the Web REPL log.
+
+### clearall
+This clears the output _and_ the command history in the Web REPL. After running `clearall`, arrowing up won't show previously executed commands.
+
+### fullscreen
+`fullscreen` will toggle the Web REPL into a view that expands to cover the whole browser window.
+
+### help
+Submitting the form with no input or typing `help` in the Web REPL will print out a list of available commands with short descriptions.
+
+### refresh
+If you've run a command in the Web REPL that affects the data on a page you're currently on in the Vault UI, the UI does not automatically refresh. The `refresh` command is a convenient way to refresh the current route without having to navigate away or fully refresh the browser application.

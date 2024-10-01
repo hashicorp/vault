@@ -4,7 +4,7 @@ page_title: Vault CSI Provider Installation
 description: The Vault CSI Provider can be installed using Vault Helm.
 ---
 
-# Installing the Vault CSI Provider
+# Installing the Vault CSI provider
 
 ## Prerequisites
 
@@ -16,7 +16,7 @@ description: The Vault CSI Provider can be installed using Vault Helm.
 
 ## Installation using helm
 
-The [Vault Helm chart](/docs/platform/k8s/helm) is the recommended way to
+The [Vault Helm chart](/vault/docs/platform/k8s/helm) is the recommended way to
 install and configure the Vault CSI Provider in Kubernetes.
 
 To install a new instance of Vault and the Vault CSI Provider, first add the
@@ -35,18 +35,18 @@ Then install the chart and enable the CSI feature by setting the
 $ helm install vault hashicorp/vault --set="csi.enabled=true"
 ```
 
-Upgrades may be performed with `helm upgrade` on an existing install. Please
+Upgrades may be performed with `helm upgrade` on an existing installation. Please
 always run Helm with `--dry-run` before any install or upgrade to verify
 changes.
 
 You can see all the available values settings by running `helm inspect values hashicorp/vault` or by reading the [Vault Helm Configuration
-Docs](/docs/platform/k8s/helm/configuration). Commonly used values in the Helm
+Docs](/vault/docs/platform/k8s/helm/configuration). Commonly used values in the Helm
 chart include limiting the namespaces the Vault CSI Provider runs in, TLS options and
 more.
 
 ## Installation on OpenShift
 
-We recommend using the [Vault agent injector on Openshift](/docs/platform/k8s/helm/openshift)
+We recommend using the [Vault agent injector on Openshift](/vault/docs/platform/k8s/helm/openshift)
 instead of the Secrets Store CSI driver. OpenShift
 [does not recommend](https://docs.openshift.com/container-platform/4.9/storage/persistent_storage/persistent-storage-hostpath.html)
 using `hostPath` mounting in production or
@@ -116,7 +116,7 @@ users:
 EOF
 ```
 
-Add the security context constraint for the applicaiton.
+Add the security context constraint for the application.
 
 ```shell-session
 $ kubectl apply -f application-scc.yaml

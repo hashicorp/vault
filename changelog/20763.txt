@@ -1,0 +1,3 @@
+```release-note:improvement
+database/redis: Upgrade plugin dependencies
+```

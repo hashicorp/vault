@@ -1,0 +1,19 @@
+### Token creation with a new entity alias could silently fail
+
+A regression caused token creation requests under specific circumstances to be
+forwarded from perf standbys (Enterprise only) to the active node incorrectly.
+They would appear to succeed, however no lease was created. The token would then
+be revoked on first use causing a 403 error.
+
+This only happened when all of the following conditions were met:
+ - the token is being created against a role
+ - the request specifies an entity alias which has never been used before with
+   the same role (for example for a brand new role or a unique alias)
+ - the request happens to be made to a perf standby rather than the active node
+
+Retrying token creation after the affected token is rejected would work since
+the entity alias has already been created.
+
+#### Affected versions
+
+Affects Vault 1.13.0 to 1.13.3. Fixed in 1.13.4.

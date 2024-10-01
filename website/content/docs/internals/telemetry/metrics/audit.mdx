@@ -1,0 +1,37 @@
+---
+layout: docs
+page_title: "Telemetry reference: Audit metrics"
+description: >-
+  Technical reference for audit log telemetry values.
+---
+
+# Audit log telemetry
+
+Audit log telemetry provides information on the health of your configured audit
+devices.
+
+## Default metrics
+
+@include 'telemetry-metrics/vault/audit/log_request_failure.mdx'
+
+@include 'telemetry-metrics/vault/audit/log_request.mdx'
+
+@include 'telemetry-metrics/vault/audit/log_response_failure.mdx'
+
+@include 'telemetry-metrics/vault/audit/log_response.mdx'
+
+@include 'telemetry-metrics/vault/audit/sink_success.mdx'
+
+@include 'telemetry-metrics/vault/audit/sink_failure.mdx'
+
+@include 'telemetry-metrics/vault/audit/fallback_success.mdx'
+
+@include 'telemetry-metrics/vault/audit/fallback_miss.mdx'
+
+## Audit device metrics
+
+@include 'telemetry-metrics/device-intro.mdx'
+
+@include 'telemetry-metrics/vault/audit/device/log_request.mdx'
+
+@include 'telemetry-metrics/vault/audit/device/log_response.mdx'

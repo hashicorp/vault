@@ -1,0 +1,126 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<Hds::SideNav::Portal @ariaLabel="Cluster Navigation Links" data-test-sidebar-nav-panel="Cluster" as |Nav|>
+  <Nav.Title data-test-sidebar-nav-heading="Vault">Vault</Nav.Title>
+
+  <Nav.Link @route="vault.cluster.dashboard" @text="Dashboard" data-test-sidebar-nav-link="Dashboard" />
+  <Nav.Link
+    @route="vault.cluster.secrets"
+    @current-when="vault.cluster.secrets vault.cluster.settings.mount-secret-backend vault.cluster.secrets.backend.configuration.edit"
+    @text="Secrets Engines"
+    data-test-sidebar-nav-link="Secrets Engines"
+  />
+  {{#if this.flags.showSecretsSync}}
+    <Nav.Link
+      @route="vault.cluster.sync"
+      @text="Secrets Sync"
+      @badge={{if this.flags.isHvdManaged "Plus" ""}}
+      data-test-sidebar-nav-link="Secrets Sync"
+    />
+  {{/if}}
+  {{#if (has-permission "access")}}
+    <Nav.Link
+      @route={{get (route-params-for "access") "route"}}
+      @models={{get (route-params-for "access") "models"}}
+      @current-when="vault.cluster.access vault.cluster.settings.auth"
+      @text="Access"
+      @hasSubItems={{true}}
+      data-test-sidebar-nav-link="Access"
+    />
+  {{/if}}
+  {{#if (has-permission "policies")}}
+    <Nav.Link
+      @route="vault.cluster.policies"
+      @models={{get (route-params-for "policies") "models"}}
+      @text="Policies"
+      @hasSubItems={{true}}
+      data-test-sidebar-nav-link="Policies"
+    />
+  {{/if}}
+  {{#if (has-permission "tools")}}
+    <Nav.Link
+      @route="vault.cluster.tools.tool"
+      @models={{get (route-params-for "tools") "models"}}
+      @text="Tools"
+      @hasSubItems={{true}}
+      data-test-sidebar-nav-link="Tools"
+    />
+  {{/if}}
+
+  {{#if
+    (or
+      (and this.isRootNamespace (has-permission "status" routeParams=(array "replication" "raft" "license" "seal")))
+      (and (has-permission "clients" routeParams="activity") (not this.hasChrootNamespace))
+    )
+  }}
+    <Nav.Title data-test-sidebar-nav-heading="Monitoring">Monitoring</Nav.Title>
+  {{/if}}
+  {{#if
+    (and
+      this.version.isEnterprise
+      this.isRootNamespace
+      (not this.cluster.replicationRedacted)
+      (has-permission "status" routeParams="replication")
+    )
+  }}
+    <Nav.Link
+      @route="vault.cluster.replication.index"
+      @text="Replication"
+      data-test-sidebar-nav-link="Replication"
+      @hasSubItems={{true}}
+    />
+  {{/if}}
+  {{#if (and this.cluster.usingRaft this.isRootNamespace (has-permission "status" routeParams="raft"))}}
+    <Nav.Link
+      @route="vault.cluster.storage"
+      @model={{this.cluster.name}}
+      @text="Raft Storage"
+      data-test-sidebar-nav-link="Raft Storage"
+    />
+  {{/if}}
+  {{#if
+    (and (has-permission "clients" routeParams="activity") (not this.cluster.dr.isSecondary) (not this.hasChrootNamespace))
+  }}
+    <Nav.Link
+      @route="vault.cluster.clients"
+      @text="Client Count"
+      @hasSubItems={{true}}
+      data-test-sidebar-nav-link="Client Count"
+    />
+  {{/if}}
+  {{#if
+    (and
+      this.version.features
+      this.isRootNamespace
+      (has-permission "status" routeParams="license")
+      (not this.cluster.dr.isSecondary)
+    )
+  }}
+    <Nav.Link
+      @route="vault.cluster.license"
+      @model={{this.cluster.name}}
+      @text="License"
+      data-test-sidebar-nav-link="License"
+    />
+  {{/if}}
+  {{#if (and this.isRootNamespace (has-permission "status" routeParams="seal") (not this.cluster.dr.isSecondary))}}
+    <Nav.Link
+      @route="vault.cluster.settings.seal"
+      @model={{this.cluster.name}}
+      @text="Seal Vault"
+      data-test-sidebar-nav-link="Seal Vault"
+    />
+  {{/if}}
+
+  {{#if (and this.version.isEnterprise (has-permission "settings"))}}
+    <Nav.Title data-test-sidebar-nav-heading="Settings">Settings</Nav.Title>
+    <Nav.Link
+      @route="vault.cluster.config-ui.messages"
+      @text="Custom Messages"
+      data-test-sidebar-nav-link="Custom Messages"
+    />
+  {{/if}}
+</Hds::SideNav::Portal>

@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#each @model as |provider|}}
   <LinkedBlock
     class="list-item-row"
@@ -19,32 +24,32 @@
       </div>
       <div class="level-right is-flex is-paddingless is-marginless">
         <div class="level-item">
-          <PopupMenu>
-            <nav class="menu">
-              <ul class="menu-list">
-                <li>
-                  <LinkTo
-                    @route="vault.cluster.access.oidc.providers.provider.details"
-                    @model={{provider.name}}
-                    @disabled={{eq provider.canRead false}}
-                    data-test-oidc-provider-menu-link="details"
-                  >
-                    Details
-                  </LinkTo>
-                </li>
-                <li>
-                  <LinkTo
-                    @route="vault.cluster.access.oidc.providers.provider.edit"
-                    @model={{provider.name}}
-                    @disabled={{not provider.canEdit}}
-                    data-test-oidc-provider-menu-link="edit"
-                  >
-                    Edit
-                  </LinkTo>
-                </li>
-              </ul>
-            </nav>
-          </PopupMenu>
+          {{#if (or provider.canRead provider.canEdit)}}
+            <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+              <dd.ToggleIcon
+                @icon="more-horizontal"
+                @text="Provider nav options"
+                @hasChevron={{false}}
+                data-test-popup-menu-trigger
+              />
+              {{#if provider.canRead}}
+                <dd.Interactive
+                  @text="Details"
+                  @route="vault.cluster.access.oidc.providers.provider.details"
+                  @model={{provider.name}}
+                  data-test-oidc-provider-menu-link="details"
+                />
+              {{/if}}
+              {{#if provider.canEdit}}
+                <dd.Interactive
+                  @text="Edit"
+                  @route="vault.cluster.access.oidc.providers.provider.edit"
+                  @model={{provider.name}}
+                  data-test-oidc-provider-menu-link="edit"
+                />
+              {{/if}}
+            </Hds::Dropdown>
+          {{/if}}
         </div>
       </div>
     </div>

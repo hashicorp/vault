@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package plugin
 
 import (
@@ -83,46 +86,21 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*PluginBackend, 
 		runningVersion = versioner.PluginVersion().Version
 	}
 
-	external := false
-	if externaler, ok := raw.(logical.Externaler); ok {
-		external = externaler.IsExternal()
-	}
-
 	// Cleanup meta plugin backend
 	raw.Cleanup(ctx)
 
 	// Initialize b.Backend with placeholder backend since plugin
 	// backends will need to be lazy loaded.
-	b.Backend = &placeholderBackend{
-		Backend: framework.Backend{
-			PathsSpecial:   paths,
-			BackendType:    btype,
-			RunningVersion: runningVersion,
-		},
-		external: external,
+	b.Backend = &framework.Backend{
+		PathsSpecial:   paths,
+		BackendType:    btype,
+		RunningVersion: runningVersion,
 	}
 
 	b.config = conf
 
 	return &b, nil
 }
-
-// placeholderBackend is used a placeholder before a backend is lazy-loaded.
-// It is mostly used to mark that the backend is an external backend.
-type placeholderBackend struct {
-	framework.Backend
-
-	external bool
-}
-
-func (p *placeholderBackend) IsExternal() bool {
-	return p.external
-}
-
-var (
-	_ logical.Externaler      = (*placeholderBackend)(nil)
-	_ logical.PluginVersioner = (*placeholderBackend)(nil)
-)
 
 // PluginBackend is a thin wrapper around plugin.BackendPluginClient
 type PluginBackend struct {
@@ -323,14 +301,4 @@ func (b *PluginBackend) PluginVersion() logical.PluginVersion {
 	return logical.EmptyPluginVersion
 }
 
-func (b *PluginBackend) IsExternal() bool {
-	if externaler, ok := b.Backend.(logical.Externaler); ok {
-		return externaler.IsExternal()
-	}
-	return false
-}
-
-var (
-	_ logical.PluginVersioner = (*PluginBackend)(nil)
-	_ logical.Externaler      = (*PluginBackend)(nil)
-)
+var _ logical.PluginVersioner = (*PluginBackend)(nil)

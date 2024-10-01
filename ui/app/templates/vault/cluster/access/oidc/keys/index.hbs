@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <Toolbar>
   <ToolbarActions>
     <ToolbarLink @route="vault.cluster.access.oidc.keys.create" @type="add" data-test-oidc-key-create>
@@ -23,32 +28,28 @@
       </div>
       <div class="level-right is-flex is-paddingless is-marginless">
         <div class="level-item">
-          <PopupMenu>
-            <nav class="menu">
-              <ul class="menu-list">
-                <li>
-                  <LinkTo
-                    @route="vault.cluster.access.oidc.keys.key.details"
-                    @model={{model.name}}
-                    @disabled={{eq model.canRead false}}
-                    data-test-oidc-key-menu-link="details"
-                  >
-                    Details
-                  </LinkTo>
-                </li>
-                <li>
-                  <LinkTo
-                    @route="vault.cluster.access.oidc.keys.key.edit"
-                    @model={{model.name}}
-                    @disabled={{eq model.canEdit false}}
-                    data-test-oidc-key-menu-link="edit"
-                  >
-                    Edit
-                  </LinkTo>
-                </li>
-              </ul>
-            </nav>
-          </PopupMenu>
+          <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+            <dd.ToggleIcon
+              @icon="more-horizontal"
+              @text="Key nav options"
+              @hasChevron={{false}}
+              data-test-popup-menu-trigger
+            />
+            <dd.Interactive
+              @text="Details"
+              @route="vault.cluster.access.oidc.keys.key.details"
+              @model={{model.name}}
+              @disabled={{eq model.canRead false}}
+              data-test-oidc-key-menu-link="details"
+            />
+            <dd.Interactive
+              @text="Edit"
+              @route="vault.cluster.access.oidc.keys.key.edit"
+              @model={{model.name}}
+              @disabled={{eq model.canEdit false}}
+              data-test-oidc-key-menu-link="edit"
+            />
+          </Hds::Dropdown>
         </div>
       </div>
     </div>

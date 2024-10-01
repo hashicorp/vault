@@ -36,7 +36,35 @@ query the matching endpoint in order to get a proper response. Any errors
 encountered during capture due to permissions or otherwise will be logged in the
 index file.
 
-## Capture Targets
+The following policy can be used for generating debug packages with all targets:
+
+```hcl
+path "auth/token/lookup-self" {
+  capabilities = ["read"]
+}
+
+path "sys/pprof/*" {
+  capabilities = ["read"]
+}
+
+path "sys/config/state/sanitized" {
+  capabilities = ["read"]
+}
+
+path "sys/monitor" {
+  capabilities = ["read"]
+}
+
+path "sys/host-info" {
+  capabilities = ["read"]
+}
+
+path "sys/in-flight-req" {
+  capabilities = ["read"]
+}
+```
+
+## Capture targets
 
 The `-target` flag can be specified multiple times to capture specific
 information when debug is running. By default, it captures all information.
@@ -58,9 +86,9 @@ Additionally, host information is not available on the OpenBSD platform due to
 library limitations in fetching the data without enabling `cgo`.
 
 [Enterprise] Telemetry can be gathered from a DR Secondary active node via the
-`metrics` target if [unauthenticated_metrics_access](/docs/configuration/listener/tcp#unauthenticated_metrics_access) is enabled.
+`metrics` target if [unauthenticated_metrics_access](/vault/docs/configuration/listener/tcp#unauthenticated_metrics_access) is enabled.
 
-## Output Layout
+## Output layout
 
 The output of the bundled information, once decompressed, is contained within a
 single directory. Each target, with the exception of profiling data, is captured
@@ -125,9 +153,9 @@ $ vault debug -target=host -target=metrics
 ## Usage
 
 The following flags are available in addition to the [standard set of
-flags](/docs/commands) included on all commands.
+flags](/vault/docs/commands) included on all commands.
 
-### Command Options
+### Command options
 
 - `-compress` `(bool: true)` - Toggles whether to compress output package The
   default is true.
@@ -146,7 +174,7 @@ flags](/docs/commands) included on all commands.
   which to collect metrics data. The default is 10s.
 
 - `-output` `(string)` - Specifies the output path for the debug package. Defaults
-  to an time-based generated file name.
+  to a time-based generated file name.
 
 - `-target` `(string: all targets)` - Target to capture, defaulting to all if
   none specified. This can be specified multiple times to capture multiple

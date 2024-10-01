@@ -6,7 +6,7 @@ description: >-
   Server.
 ---
 
-# MSSQL Storage Backend
+# MSSQL storage backend
 
 The MSSQL storage backend is used to persist Vault's data in a Microsoft SQL Server.
 
@@ -33,7 +33,7 @@ storage "mssql" {
 }
 ```
 
-## `mssql` Parameters
+## `mssql` parameters
 
 - `server` `(string: <required>)` – host or host\instance.
 
@@ -64,9 +64,9 @@ storage "mssql" {
 - `max_parallel` `(string: "128")` – Specifies the maximum number of concurrent
   requests to MSSQL.
 
-## `mssql` Examples
+## `mssql` examples
 
-### Custom Database, Table and Schema
+### Custom database, table and schema
 
 This example shows configuring the MSSQL backend to use a custom database and
 table name.

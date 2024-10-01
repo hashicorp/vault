@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package credsutil
 
 import (
@@ -6,6 +9,7 @@ import (
 	"time"
 )
 
+//go:generate enumer -type=CaseOp -transform=snake
 type CaseOp int
 
 const (

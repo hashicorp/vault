@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package transit
 
 import (
@@ -21,6 +24,11 @@ var defaultKeysConfig = keysConfig{
 func (b *backend) pathConfigKeys() *framework.Path {
 	return &framework.Path{
 		Pattern: "config/keys",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"disable_upsert": {
 				Type: framework.TypeBool,
@@ -29,9 +37,20 @@ keys on the encrypt endpoint.`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathConfigKeysWrite,
-			logical.ReadOperation:   b.pathConfigKeysRead,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathConfigKeysWrite,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "keys",
+				},
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathConfigKeysRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "keys-configuration",
+				},
+			},
 		},
 
 		HelpSynopsis:    pathConfigKeysHelpSyn,

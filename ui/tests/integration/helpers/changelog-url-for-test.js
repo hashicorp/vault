@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { changelogUrlFor } from '../../../helpers/changelog-url-for';
@@ -25,5 +30,10 @@ module('Integration | Helper | changelog-url-for', function (hooks) {
   test('it returns the base changelog URL if version cannot be found', function (assert) {
     const result = changelogUrlFor(['']);
     assert.strictEqual(result, CHANGELOG_URL);
+  });
+
+  test('it builds the url for double-digit versions', function (assert) {
+    const result = changelogUrlFor(['1.13.0+ent']);
+    assert.strictEqual(result, CHANGELOG_URL.concat('1130'));
   });
 });

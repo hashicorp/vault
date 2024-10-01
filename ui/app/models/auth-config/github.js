@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 import AuthConfig from '../auth-config';
@@ -5,7 +10,6 @@ import fieldToAttrs from 'vault/utils/field-to-attrs';
 import { combineFieldGroups } from 'vault/utils/openapi-to-attrs';
 
 export default AuthConfig.extend({
-  useOpenAPI: true,
   organization: attr('string'),
   baseUrl: attr('string', {
     label: 'Base URL',

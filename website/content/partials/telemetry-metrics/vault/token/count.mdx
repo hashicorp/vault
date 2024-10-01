@@ -1,0 +1,8 @@
+### vault.token.count ((#vault-token-count))
+
+Metric type | Value   | Description
+----------- | ------- | -----------
+gauge       | number  | Number of un-expired and un-revoked tokens available for use in the token store
+
+Vault updates the token count every 10 minutes organizes the result by cluster
+and namespace.

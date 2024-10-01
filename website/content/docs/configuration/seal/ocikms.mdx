@@ -6,9 +6,19 @@ description: |-
   mechanism.
 ---
 
-# `ocikms` Seal
+# `ocikms` seal
 
--> **Note:** The Seal Wrap functionality is enabled by default. For this reason, the KMS service must be available throughout Vault's runtime and not just during the unseal process. Refer to the [Seal Wrap](/docs/enterprise/sealwrap) documenation for more information.
+<Note title="Seal wrapping requires Vault Enterprise">
+
+  All Vault versions support **auto-unseal** for OCI KMS, but **seal wrapping**
+  requires Vault Enterprise.
+  
+  Vault Enterprise enables seal wrapping by default, which means the KMS service
+  must be available at runtime and not just during the unseal process. Refer to
+  the [Seal wrap](/vault/docs/enterprise/sealwrap) overview for more
+  information.
+
+</Note>
 
 The OCI KMS seal configures Vault to use OCI KMS as the seal wrapping mechanism.
 The OCI KMS seal is activated by one of the following:
@@ -20,7 +30,7 @@ The OCI KMS seal is activated by one of the following:
   other OCI-related [environment variables][oci-sdk] that lends to successful
   authentication.
 
-## `ocikms` Example
+## `ocikms` example
 
 This example shows configuring the OCI KMS seal through the Vault configuration file
 by providing all the required values:
@@ -34,7 +44,7 @@ seal "ocikms" {
 }
 ```
 
-## `ocikms` Parameters
+## `ocikms` parameters
 
 These parameters apply to the `seal` stanza in the Vault configuration file:
 
@@ -51,14 +61,14 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
 
 - `disabled` `(string: "")`: Set this to `true` if Vault is migrating from an auto seal configuration. Otherwise, set to `false`.
 
-Refer to the [Seal Migration](/docs/concepts/seal#seal-migration) documentation for more information about the seal migration process.
+Refer to the [Seal Migration](/vault/docs/concepts/seal#seal-migration) documentation for more information about the seal migration process.
 
 ## Authentication
 
 Authentication-related values must be provided, either as environment
 variables or as configuration parameters.
 
-If you want to use Instance Principal, add section configuration below and add further configuration settings as detailed in the [configuration docs](/docs/configuration/).
+If you want to use Instance Principal, add section configuration below and add further configuration settings as detailed in the [configuration docs](/vault/docs/configuration/).
 
 ```hcl
 seal "ocikms" {
@@ -106,7 +116,7 @@ admit dynamic-group <dynamic-group-name> of tenancy tenantA to use keys in compa
 
 ```
 
-## `ocikms` Rotate OCI KMS Master Key
+## `ocikms` rotate OCI KMS master key
 
 For the [OCI KMS key rotation feature][oci-kms-rotation], OCI KMS will create a new version of key internally. This process is independent from Vault, and Vault still uses the same `key_id` without any interruption.
 

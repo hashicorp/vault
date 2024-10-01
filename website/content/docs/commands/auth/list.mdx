@@ -11,14 +11,14 @@ description: |-
 The `auth list` command lists the auth methods enabled. The output lists the
 enabled auth methods and options for those methods.
 
-## Deprecation Status Column
+## Deprecation status column
 
 As of 1.12, all built-in auth engines will have an associated Deprecation
 Status. This status will be reflected in the `Deprecation Status` column, seen
 below. All auth engines which are not provided by built-in plugins will show a
 `Deprecation Status` of "n/a".
 
-## Version Columns
+## Version columns
 
 The `-detailed` view displays some version information for each mount.
 
@@ -58,15 +58,15 @@ token/      token      auth_token_aafab997      system         system     defaul
 ## Usage
 
 The following flags are available in addition to the [standard set of
-flags](/docs/commands) included on all commands.
+flags](/vault/docs/commands) included on all commands.
 
-### Output Options
+### Output options
 
 - `-format` `(string: "table")` - Print the output in the given format. Valid
   formats are "table", "json", or "yaml". This can also be specified via the
   `VAULT_FORMAT` environment variable.
 
-### Command Options
+### Command options
 
 - `-detailed` `(bool: false)` - Print detailed information such as configuration
   and replication status about each auth method.

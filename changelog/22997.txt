@@ -1,0 +1,4 @@
+```release-note:change
+events: Log level for processing an event dropped from info to debug.
+```
+

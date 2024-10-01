@@ -1,0 +1,56 @@
+---
+layout: docs
+page_title: pki verify-sign - Command
+description: |-
+  The "pki verify-sign" command verifies the relationship between two issuer
+  certificates in vault
+---
+
+# pki verify-sign
+
+This command verifies whether the listed issuer has signed the listed issued
+certificate.
+
+This command returns five fields of information:
+
+- `signature_match`: was the key of the issuer used to sign the issued.
+
+- `path_match`: the possible issuer appears in the valid certificate chain
+	of the issued.
+
+- `key_id_match`: does the [key id](https://datatracker.ietf.org/doc/html/rfc5280#section-4.2.1.1)
+  of the issuer match the key_id of the subject.
+
+- `subject_match`: does the subject name of the issuer match the issuer
+	subject of the issued.
+
+- `trust_match`: if someone trusted the parent issuer, is the chain
+  provided sufficient to trust the child issued.
+
+## Usage
+
+Usage: `vault pki verify-sign <parent> <child>`
+
+- `<parent>` is the fully name-spaced path to the issuer certificate which will be
+used to verify the `<child>` certificate
+
+- `<child>` is the fully name-spaced path to the potential child-certificate to be
+verified
+
+A fully namespaced path looks like, for instance, 'ns1/mount1/issuer/issuerName/json'.
+
+## Example
+
+```shell-session
+$ vault pki verify-sign pki_root/issuer/root pki_int/issuer/FirstDepartment
+issuer:pki_root/issuer/root
+issued:pki_int/issuer/FirstDepartment
+
+field              value
+-----              -----
+subject_match      true
+path_match         true
+trust_match        true
+key_id_match       true
+signature_match    true
+```

@@ -1,0 +1,3 @@
+```release-note:bug
+auth/ldap: Add max_page_size configurable to LDAP configuration
+```

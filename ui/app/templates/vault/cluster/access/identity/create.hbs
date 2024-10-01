@@ -1,9 +1,14 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.levelLeft>
     <h1 class="title is-3">
       Create
-      {{this.model.identityType}}
+      {{titleize this.model.identityType}}
     </h1>
   </p.levelLeft>
 </PageHeader>
-<Identity::EditForm @model={{this.model}} @onSave={{perform this.navAfterSave}} />
+<Identity::EditForm @model={{this.model}} @onSave={{action "navAfterSave"}} />

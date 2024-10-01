@@ -1,10 +1,15 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div class="auth-form" data-test-mfa-form>
   <div class="box is-marginless is-shadowless">
     <p data-test-mfa-description>
       {{this.description}}
     </p>
     <form id="auth-form" {{on "submit" this.submit}}>
-      <MessageError @errorMessage={{this.error}} class="has-top-margin-s" />
+      <MessageError @errorMessage={{this.error}} />
       <div class="field has-top-margin-l">
         {{#each this.constraints as |constraint index|}}
           {{#if index}}
@@ -38,34 +43,31 @@
                 placeholder={{if (gt constraint.methods.length 1) "Enter passcode"}}
                 spellcheck="false"
                 autofocus="true"
-                disabled={{or this.validate.isRunning this.newCodeDelay.isRunning}}
+                disabled={{or this.validate.isRunning this.countdown}}
                 @value={{constraint.passcode}}
                 data-test-mfa-passcode={{index}}
               />
               {{! template-lint-enable no-autofocus-attribute}}
             </div>
           {{else if (eq constraint.methods.length 1)}}
-            <p class="has-text-grey-400" data-test-mfa-push-instruction>
+            <p class="has-text-grey-light" data-test-mfa-push-instruction>
               Check device for push notification
             </p>
           {{/if}}
         {{/each}}
       </div>
-      {{#if this.newCodeDelay.isRunning}}
-        <div>
-          <AlertInline @type="danger" @sizeSmall={{true}} @message={{this.codeDelayMessage}} />
-        </div>
+      {{#if this.countdown}}
+        <AlertInline @type="danger" class="has-bottom-padding-m" @message={{this.codeDelayMessage}} />
       {{/if}}
-      <button
+      <Hds::Button
+        @text="Verify"
+        @icon={{if this.validate.isRunning "loading"}}
         id="validate"
         type="submit"
-        disabled={{or this.validate.isRunning this.newCodeDelay.isRunning}}
-        class="button is-primary {{if this.validate.isRunning 'is-loading'}}"
+        disabled={{or this.validate.isRunning this.countdown}}
         data-test-mfa-validate
-      >
-        Verify
-      </button>
-      {{#if this.newCodeDelay.isRunning}}
+      />
+      {{#if this.countdown}}
         <Icon @name="delay" class="has-text-grey" />
         <span class="has-text-grey is-v-centered" data-test-mfa-countdown>{{this.countdown}}</span>
       {{/if}}

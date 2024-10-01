@@ -1,0 +1,7 @@
+```release-note:bug
+storage/consul: fix a bug where an active node in a specific sort of network
+partition could continue to write data to Consul after a new leader is elected
+potentially causing data loss or corruption for keys with many concurrent
+writers. For Enterprise clusters this could cause corruption of the merkle trees
+leading to failure to complete merkle sync without a full re-index.
+```

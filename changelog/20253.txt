@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki: Add warning when issuer lacks KeyUsage during CRL rebuilds; expose in logs and on rotation.
+```

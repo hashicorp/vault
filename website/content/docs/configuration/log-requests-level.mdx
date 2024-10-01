@@ -5,27 +5,42 @@ description: |-
   Vault can be configured to log completed requests.
 ---
 
-# Log Completed Requests
+# Log completed requests
 
 Vault can be configured to log completed requests using the `log_requests_level` configuration parameter.
 
-## Activating the Log Completed Requests
+## Activating logging completed requests
 
-By default, logging completed requests is disabled. To activate the requests logging, set the `log_requests_level`
+By default, logging completed requests is disabled. To activate request logging, set the `log_requests_level`
 configuration option in the Vault server configuration to the desired logging level. The acceptable logging levels are
-`error`, `warn`, `info`, `debug`, and `trace`.
-If the vault server is already running, you can still configure the parameter in the Vault server configuration,
-and then send an `SIGHUP` signal to the vault process.
+`error`, `warn`, `info`, `debug`, `trace`, and `off`, which is the default.
+
+Completed requests will be logged at the configured level, if Vault's log level includes this level of logs. For
+example, if `log_level` is set to `debug`, but `log_requests_level` is set to `trace`, completed requests will
+not be logged.
+
+If the Vault server is already running, you can still configure the parameter in the Vault server configuration,
+and then send a `SIGHUP` signal to the Vault process.
 
 ```hcl
-log_requests_level = "trace"
+log_requests_level = "debug"
+log_level = "debug"
 
 listener "tcp" {
   # ...
 }
 ```
 
-## Deactivating the Log Completed Requests
+## Deactivating logging completed requests
 
-To deactivate logging completed requests, simply remove the `log_requests_level`
-configuration parameter from the vault server configuration, and send a `SIGHUP` signal to the vault process.
+To deactivate logging completed requests, simply remove the `log_requests_level` configuration parameter
+from the Vault server configuration, or set it to `off`, and send a `SIGHUP` signal to the Vault process.
+
+```hcl
+log_requests_level = "off"
+log_level = "debug"
+
+listener "tcp" {
+  # ...
+}
+```

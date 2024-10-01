@@ -1,0 +1,14 @@
+### Rotation configuration persistence issue could lose transform tokenization key versions
+
+A rotation performed manually or via automatic time based rotation after
+restarting or leader change of Vault, where configuration of rotation was
+changed since the initial configuration of the tokenization transform can
+result in the loss of intermediate key versions.  Tokenized values from
+these versions would not be decodeable.  It is recommended that customers
+who have enabled automatic rotation disable it, and other customers avoid
+key rotation until the upcoming fix.
+
+#### Affected versions
+
+This issue affects Vault Enterprise with ADP versions 1.10.x and higher.  A
+fix will be released in Vault 1.11.9, 1.12.5, and 1.13.1.

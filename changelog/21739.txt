@@ -1,0 +1,3 @@
+```release-note:bug 
+ui: Fixed an issue where editing an SSH role would clear `default_critical_options` and `default_extension` if left unchanged. 
+```

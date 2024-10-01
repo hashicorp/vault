@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Upgrade HDS version to fix sidebar navigation issues when it collapses in smaller viewports.
+```

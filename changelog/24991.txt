@@ -1,0 +1,3 @@
+```release-note:improvement
+storage/raft: Add support for larger transactions when using raft storage.
+```

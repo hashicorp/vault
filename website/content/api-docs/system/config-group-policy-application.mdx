@@ -1,0 +1,94 @@
+---
+layout: api
+page_title: /sys/config/group-policy-application - HTTP API
+description: The '/sys/config/group-policy-application' endpoint is used to configure the global mode for group policy application.
+---
+
+# `/sys/config/group-policy-application`
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-admin.mdx'
+
+<Warning>
+  The group policy application mode only applies to ACL policies and no longer
+  affects Vault sentinel role governing policies (RGPs) for the following Vault
+  versions:
+
+  - `1.15.0+`
+  - `1.14.4+`
+  - `1.13.8+`
+
+</Warning>
+
+The `sys/config/group-policy-application` endpoint can be used to configure the
+mode of policy application for identity groups in Vault. This setting dictates
+the behavior across all groups in all namespaces in Vault.
+
+Vault allows you to add entities and groups from any namespace into an identity group.
+However, historically, any policies attached to that group would only apply when the
+Vault token authorizing a request was created in the same namespace as that group,
+or a descendent namespace. This endpoint allows relaxing that restriction: when the mode is set to the default,
+`within_namespace_hierarchy`, the historical behaviour is maintained,
+but when set to `any`, group policies apply to all members of a group,
+regardless of what namespace the request token came from.
+
+Note that this configuration will be replicated between primary and secondaries, that
+is to say, primaries cannot have a different policy application mode to secondaries.
+
+## Get group policy application information
+
+This endpoint returns the current group policy application mode, which will be
+either `within_namespace_hierarchy` or `any`.
+
+
+| Method | Path                          |
+| :----- | :---------------------------- |
+| `GET`  | `/sys/config/group-policy-application` |
+
+### Sample request
+
+```shell-session
+$ curl \
+  --header "X-Vault-Token: ..." \
+    'http://127.0.0.1:8200/v1/sys/config/group-policy-application'
+```
+
+### Sample response
+
+```json
+{
+   "group_policy_application_mode": "within_namespace_hierarchy"
+}
+```
+
+## Set group policy application information
+
+This endpoint allows you to modify the current group policy application mode, which can be
+either `within_namespace_hierarchy` or `any`. `within_namespace_hierarchy`
+restricts policy application to only policies from groups from parent namespaces, and
+`any` does not restrict policy application in any way, and policies will apply from any namespace,
+irrespective of namespace hierarchy.
+
+
+| Method | Path                          |
+| :----- | :---------------------------- |
+| `POST`, `PUT`  | `/sys/config/group-policy-application` |
+
+### Sample payload
+
+```json
+{
+   "group_policy_application_mode": "any"
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+  --request POST \
+  --header "X-Vault-Token: ..." \
+  --data @payload.json \
+  'http://127.0.0.1:8200/v1/sys/config/group-policy-application'
+```

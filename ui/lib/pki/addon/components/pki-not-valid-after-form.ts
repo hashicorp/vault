@@ -1,8 +1,13 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-import { HTMLElementEvent } from 'forms';
 import { format } from 'date-fns';
+import type { HTMLElementEvent } from 'forms';
 
 /**
  * <PkiNotValidAfterForm /> components are used to manage two mutually exclusive role options in the form.
@@ -15,7 +20,7 @@ interface Args {
   };
 }
 
-export default class RadioSelectTtlOrString extends Component<Args> {
+export default class PkiNotValidAfterForm extends Component<Args> {
   @tracked groupValue = 'ttl';
   @tracked cachedNotAfter: string;
   @tracked cachedTtl: string | number;

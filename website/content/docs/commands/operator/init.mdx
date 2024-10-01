@@ -20,7 +20,7 @@ During initialization, Vault generates a root key, which is stored in the storag
 
 The default Vault configuration uses [Shamir's Secret Sharing](https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing) to split the root key into a configured number of shards (referred as key shares, or unseal keys). A certain threshold of shards is required to reconstruct the root key, which is then used to decrypt the Vault's encryption key.
 
-Refer to the [Seal/Unseal](/docs/concepts/seal#seal-unseal) documentation for further details.
+Refer to the [Seal/Unseal](/vault/docs/concepts/seal#seal-unseal) documentation for further details.
 
 ## Examples
 
@@ -57,15 +57,15 @@ $ vault operator init -root-token-pgp-key="keybase:hashicorp"
 ## Usage
 
 The following flags are available in addition to the [standard set of
-flags](/docs/commands) included on all commands.
+flags](/vault/docs/commands) included on all commands.
 
-### Output Options
+### Output options
 
 - `-format` `(string: "")` - Print the output in the given format. Valid formats
   are "table", "json", or "yaml". The default is table. This can also be
   specified via the `VAULT_FORMAT` environment variable.
 
-### Common Options
+### Common options
 
 - `-key-shares` `(int: 5)` - Number of key shares to split the generated master
   key into. This is the number of "unseal keys" to generate. This is aliased as
@@ -91,7 +91,7 @@ flags](/docs/commands) included on all commands.
   code of 0 means the Vault is already initialized. An exit code of 1 means an
   error occurred. An exit code of 2 means the Vault is not initialized.
 
-### Consul Options
+### Consul options
 
 - `-consul-auto` `(bool: false)` - Perform automatic service discovery using
   Consul in HA mode. When all nodes in a Vault HA cluster are registered with
@@ -106,20 +106,20 @@ flags](/docs/commands) included on all commands.
 - `-consul-service` `(string: "vault")` - Name of the service in Consul under
   which the Vault servers are registered.
 
-### HSM and KMS Options
+### HSM and KMS options
 
 - `-recovery-pgp-keys` `(string: "...")` - Behaves like `-pgp-keys`, but for the
-  recovery key shares. This is only available with [Auto Unseal](/docs/concepts/seal#auto-unseal) seals (HSM, KMS and Transit seals).
+  recovery key shares. This is only available with [Auto Unseal](/vault/docs/concepts/seal#auto-unseal) seals (HSM, KMS and Transit seals).
 
 - `-recovery-shares` `(int: 5)` - Number of key shares to split the recovery key
-  into. This is only available with [Auto Unseal](/docs/concepts/seal#auto-unseal) seals (HSM, KMS and Transit seals).
+  into. This is only available with [Auto Unseal](/vault/docs/concepts/seal#auto-unseal) seals (HSM, KMS and Transit seals).
 
 - `-recovery-threshold` `(int: 3)` - Number of key shares required to
-  reconstruct the recovery key. This is only available with [Auto Unseal](/docs/concepts/seal#auto-unseal) seals (HSM, KMS and Transit seals).
+  reconstruct the recovery key. This is only available with [Auto Unseal](/vault/docs/concepts/seal#auto-unseal) seals (HSM, KMS and Transit seals).
 
 - `-stored-shares` `(int: 0)` - Number of unseal keys to store on an HSM. This
   must be equal to `-key-shares`.
 
 -> **Recovery keys:** Refer to the
- [Seal/Unseal](/docs/concepts/seal#recovery-key) documentation to learn more
+ [Seal/Unseal](/vault/docs/concepts/seal#recovery-key) documentation to learn more
  about recovery keys.

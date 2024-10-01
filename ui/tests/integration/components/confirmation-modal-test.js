@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import sinon from 'sinon';
@@ -13,8 +18,7 @@ module('Integration | Component | confirmation-modal', function (hooks) {
     this.set('onConfirm', confirmAction);
     this.set('onClose', closeAction);
     await render(hbs`
-      <div id="modal-wormhole"></div>
-      <ConfirmationModal
+            <ConfirmationModal
         @title="Confirmation Modal"
         @isActive={{true}}
         @onConfirm={{this.onConfirm}}
@@ -25,11 +29,11 @@ module('Integration | Component | confirmation-modal', function (hooks) {
     `);
 
     assert.dom('[data-test-confirm-button]').isDisabled();
-    assert.dom('[data-test-modal-div]').hasAttribute('class', 'modal is-highlight is-active');
+    assert.dom('#confirmation-modal').exists('modal is active');
     assert.dom('[data-test-confirm-button]').hasText('Plz Continue', 'Confirm button has specified value');
     assert
-      .dom('[data-test-modal-title]')
-      .hasStyle({ color: 'rgb(160, 125, 2)' }, 'title exists with warning header');
+      .dom('[data-test-confirmation-modal-title] [data-test-icon="alert-triangle"]')
+      .exists('title has with warning icon');
     await fillIn('[data-test-confirmation-modal-input="Confirmation Modal"]', 'Destructive Thing');
     assert.dom('[data-test-confirm-button="Confirmation Modal"]').isNotDisabled();
 

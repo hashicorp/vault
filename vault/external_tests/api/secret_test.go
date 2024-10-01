@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package api
 
 import (
@@ -30,7 +33,8 @@ func TestParseSecret(t *testing.T) {
 		"ttl": 60,
 		"creation_time": "2016-06-07T15:52:10-04:00",
 		"wrapped_accessor": "abcd1234"
-	}
+	},
+    "mount_type": "kv"
 }`)
 
 	rawTime, _ := time.Parse(time.RFC3339, "2016-06-07T15:52:10-04:00")
@@ -57,6 +61,7 @@ func TestParseSecret(t *testing.T) {
 			CreationTime:    rawTime,
 			WrappedAccessor: "abcd1234",
 		},
+		MountType: "kv",
 	}
 	if !reflect.DeepEqual(secret, expected) {
 		t.Fatalf("bad:\ngot\n%#v\nexpected\n%#v\n", secret, expected)

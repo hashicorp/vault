@@ -1,0 +1,9 @@
+### vault.autosnapshots.rotate.duration ((#vault-autosnapshots-rotate-duration))
+
+Metric type | Value | Description
+----------- | ----- | -----------
+summary     | ms    | The time taken to rotate out the snapshot indicated by `snapshot_config_name`
+
+Vault deletes snapshots to adhere to the configured retention period. The
+rotation metric specifically measures the time taken to delete the snapshot once
+the retention period expires.

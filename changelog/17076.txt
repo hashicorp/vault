@@ -1,0 +1,4 @@
+```release-note:improvement
+core/cli: Warning related to VAULT_ADDR & -address not set with CLI requests.
+```
+

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package ssh
 
 import (
@@ -256,6 +259,7 @@ func TestSSH_ConfigCAKeyTypes(t *testing.T) {
 		"key_type":                "ca",
 		"ttl":                     "30s",
 		"not_before_duration":     "2h",
+		"allow_empty_principals":  true,
 	}
 	roleReq := &logical.Request{
 		Operation: logical.UpdateOperation,

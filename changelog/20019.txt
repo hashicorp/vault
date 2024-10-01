@@ -1,0 +1,3 @@
+```release-note:improvement
+core/activity: add an endpoint to write test activity log data, guarded by a build flag 
+```

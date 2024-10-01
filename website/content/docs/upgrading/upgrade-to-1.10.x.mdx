@@ -11,7 +11,7 @@ description: |-
 This page contains the list of deprecations and important or breaking changes
 for Vault 1.10.x compared to 1.9. Please read it carefully.
 
-## SSH Secrets Engine
+## SSH secrets engine
 
 The new default value of `algorithm_signer` for SSH CA roles has been changed
 to `rsa-sha2-256` from `ssh-rsa`. Existing roles will be migrated to
@@ -26,13 +26,13 @@ was deprecated with the release of [Etcd v3.5](https://etcd.io/blog/2021/announc
 and will be decommissioned in a forthcoming Etcd release.
 
 Users of the `etcd` storage backend with the etcdv2 API that are
-upgrading to Vault 1.10 should [migrate](/docs/commands/operator/migrate)
+upgrading to Vault 1.10 should [migrate](/vault/docs/commands/operator/migrate)
 Vault storage to an Etcd v3 cluster prior to upgrading to Vault 1.10.
 All storage migrations should have
-[backups](/docs/concepts/storage#backing-up-vault-s-persisted-data)
+[backups](/vault/docs/concepts/storage#backing-up-vault-s-persisted-data)
 taken prior to migration.
 
-## OTP Generation Process
+## OTP generation process
 
 Customers passing in OTPs during the process of generating root tokens must modify
 the OTP generation to include an additional 2 characters before upgrading so that the
@@ -41,13 +41,13 @@ of the change in the prefix from hvs. to s. for service tokens.
 
 ## New error response for requests to perf standbys lagging behind active node
 
-The introduction of [Server Side Consistent Tokens](/docs/faq/ssct) means that
+The introduction of [Server Side Consistent Tokens](/vault/docs/faq/ssct) means that
 when issuing a request to a perf standby right after having obtained a token (e.g.
 via login), if the token and its lease haven't yet been replicated to the perf
 standby, an HTTP 412 error will be returned.  Before 1.10.0 this typically would've
 resulted in a 400, 403, or 50x response.
 
-## Token Format Change
+## Token format change
 
 Token prefixes were updated to be more easily identifiable.
 
@@ -59,11 +59,11 @@ Additionally, non-root service tokens are now longer than before. Previously, se
 were 26 characters; they now have a minimum of 95 characters. However, existing tokens will
 still work.
 
-Refer to the [Server Side Consistent Token FAQ](/docs/faq/ssct) for details.
+Refer to the [Server Side Consistent Token FAQ](/vault/docs/faq/ssct) for details.
 
-## OIDC Provider Built-in Resources
+## OIDC provider built-in resources
 
-In Vault 1.9, the [OIDC identity provider](/docs/secrets/identity/oidc-provider) feature
+In Vault 1.9, the [OIDC identity provider](/vault/docs/secrets/identity/oidc-provider) feature
 was released as a tech preview. In Vault 1.10, built-in resources were introduced to the
 OIDC provider system to reduce configuration steps and enhance usability.
 
@@ -75,25 +75,27 @@ The following built-in resources are included in each Vault namespace starting w
  - An `allow_all` assignment which authorizes all Vault entities to authenticate via a
    client application
 
-If you created an [OIDC provider](/api-docs/secret/identity/oidc-provider#create-or-update-a-provider)
-with the name `default`, [key](/api-docs/secret/identity/tokens#create-a-named-key) with the
-name `default`, or [assignment](/api-docs/secret/identity/oidc-provider#create-or-update-an-assignment)
+If you created an [OIDC provider](/vault/api-docs/secret/identity/oidc-provider#create-or-update-a-provider)
+with the name `default`, [key](/vault/api-docs/secret/identity/tokens#create-a-named-key) with the
+name `default`, or [assignment](/vault/api-docs/secret/identity/oidc-provider#create-or-update-an-assignment)
 with the name `allow_all` using the Vault 1.9 tech preview, the installation of these built-in
 resources will be skipped. We _strongly recommend_ that you delete any existing resources
 that have naming collisions before upgrading to Vault 1.10. Failing to delete resources with
 naming collisions could result unexpected default behavior. Additionally, we recommend reading
-the corresponding details in the OIDC provider [concepts](/docs/concepts/oidc-provider) document
+the corresponding details in the OIDC provider [concepts](/vault/docs/concepts/oidc-provider) document
 to understand how the built-in resources are used in the system.
 
-## Known Issues
+## Known issues
 
 @include 'raft-retry-join-failure.mdx'
 
 @include 'raft-panic-old-tls-key.mdx'
 
-### Errors returned by perf standbys lagging behind active node with Consul storage
+@include 'tokenization-rotation-persistence.mdx'
 
-The introduction of [Server Side Consistent Tokens](/docs/faq/ssct) means that
+### Errors returned by perf standbys lagging behind active node with consul storage
+
+The introduction of [Server Side Consistent Tokens](/vault/docs/faq/ssct) means that
 when issuing a request to a perf standby right after having obtained a token (e.g.
 via login), if the token and its lease haven't yet been replicated to the perf
 standby, an HTTP 412 error will be returned.  Before 1.10.0 this wouldn't have
@@ -101,11 +103,11 @@ resulted in the client seeing errors with Consul storage.
 
 ### Single Vault follower restart causes election even with established quorum
 
-We now support Server Side Consistent Tokens (See [Replication](/docs/configuration/replication) and [Vault Eventual Consistency](/docs/enterprise/consistency)), which introduces a new token format that can only be used on nodes of 1.10 or higher version. This new format is enabled by default upon upgrading to the new version. Old format tokens can be read by Vault 1.10, but the new format Vault 1.10 tokens cannot be read by older Vault versions.
+We now support Server Side Consistent Tokens (See [Replication](/vault/docs/configuration/replication) and [Vault Eventual Consistency](/vault/docs/enterprise/consistency)), which introduces a new token format that can only be used on nodes of 1.10 or higher version. This new format is enabled by default upon upgrading to the new version. Old format tokens can be read by Vault 1.10, but the new format Vault 1.10 tokens cannot be read by older Vault versions.
 
-For more details, see the [Server Side Consistent Tokens FAQ](/docs/faq/ssct).
+For more details, see the [Server Side Consistent Tokens FAQ](/vault/docs/faq/ssct).
 
-Since service tokens are always created on the leader, as long as the leader is not upgraded before performance standbys, service tokens will be of the old format and still be usable during the upgrade process. However, the usual upgrade process we recommend can't be relied upon to always upgrade the leader last. Due to this known [issue](https://github.com/hashicorp/vault/issues/14153), a Vault cluster using Integrated Storage may result in a leader not being upgraded last, and this can trigger a re-election. This re-election can cause the upgraded node to become the leader, resulting in the newly created tokens on the leader to be unusable on nodes that have not yet been upgraded. Note that this issue does not impact Vault OSS users.
+Since service tokens are always created on the leader, as long as the leader is not upgraded before performance standbys, service tokens will be of the old format and still be usable during the upgrade process. However, the usual upgrade process we recommend can't be relied upon to always upgrade the leader last. Due to this known [issue](https://github.com/hashicorp/vault/issues/14153), a Vault cluster using Integrated Storage may result in a leader not being upgraded last, and this can trigger a re-election. This re-election can cause the upgraded node to become the leader, resulting in the newly created tokens on the leader to be unusable on nodes that have not yet been upgraded. Note that this issue does not impact Vault Community Edition users.
 
 We will have a fix for this issue in Vault 1.10.3. Until this issue is fixed, you may be at risk of having performance standbys unable to service requests until all nodes are upgraded. We recommended that you plan for a maintenance window to upgrade.
 
@@ -113,7 +115,7 @@ We will have a fix for this issue in Vault 1.10.3. Until this issue is fixed, yo
 
 When a user has a policy that allows creating a secret engine but not reading it, after successful creation, the user sees a message n is undefined instead of a permissions error. We will have a fix for this issue in an upcoming minor release.
 
-### Adding/Modifying Duo MFA method for Enterprise MFA triggers a panic error
+### Adding/Modifying Duo MFA method for enterprise MFA triggers a panic error
 
 When adding or modifying a Duo MFA method for step-up Enterprise MFA using the `sys/mfa/method/duo` endpoint, a panic gets triggered due to a missing schema field. We will have a fix for this in Vault 1.10.1. Until this issue is fixed, avoid making any changes to your Duo configuration if you are upgrading Vault to v1.10.0.
 
@@ -121,7 +123,7 @@ When adding or modifying a Duo MFA method for step-up Enterprise MFA using the `
 
 Signing in to the Vault UI using an OIDC auth mount listed in the "tabs" of the form will result
 in the following error: "Authentication failed: role with oidc role_type is not allowed".
-The auth mounts listed in the "tabs" of the form are those that have [listing_visibility](/api-docs/system/auth#listing_visibility-1)
+The auth mounts listed in the "tabs" of the form are those that have [listing_visibility](/vault/api-docs/system/auth#listing_visibility-1)
 set to `unauth`.
 
 There is a workaround for this error that will allow you to sign in to Vault using the OIDC

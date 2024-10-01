@@ -1,9 +1,14 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Model, { attr } from '@ember-data/model';
 import { tracked } from '@glimmer/tracking';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { withModelValidations } from 'vault/decorators/model-validations';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 
 const CRED_PROPS = {
   azurekeyvault: ['client_id', 'client_secret', 'tenant_id'],
@@ -127,7 +132,7 @@ export default class KeymgmtProviderModel extends Model {
           backend: this.backend,
           provider: this.name,
           responsePath: 'data.keys',
-          page,
+          page: Number(page) || 1,
         });
       } catch (error) {
         this.keys = [];

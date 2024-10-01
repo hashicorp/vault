@@ -1,0 +1,3 @@
+```release-note:bug
+cli: CLI should take days as a unit of time for ttl like flags
+```

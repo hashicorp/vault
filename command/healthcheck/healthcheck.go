@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 /*
  * The healthcheck package attempts to allow generic checks of arbitrary
  * engines, while providing a common framework with some performance
@@ -25,6 +28,7 @@
 package healthcheck
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -118,9 +122,13 @@ func (e *Executor) Execute() (map[string][]*Result, error) {
 			return nil, fmt.Errorf("failed to evaluate %v: %w", checker.Name(), err)
 		}
 
+		if results == nil {
+			results = []*Result{}
+		}
+
 		for _, result := range results {
 			result.Endpoint = e.templatePath(result.Endpoint)
-			result.StatusDisplay = ResultStatusNameMap[result.Status]
+			result.StatusDisplay = result.Status.String()
 		}
 
 		ret[checker.Name()] = results
@@ -162,7 +170,11 @@ func (e *Executor) FetchIfNotFetched(op logical.Operation, rawPath string) (*Pat
 		return nil, fmt.Errorf("unknown operation: %v on %v", op, path)
 	}
 
-	response, err := e.Client.Logical().ReadRawWithData(path, data)
+	// client.ReadRaw* methods require a manual timeout override
+	ctx, cancel := context.WithTimeout(context.Background(), e.Client.ClientTimeout())
+	defer cancel()
+
+	response, err := e.Client.Logical().ReadRawWithDataWithContext(ctx, path, data)
 	ret.Response = response
 	if err != nil {
 		ret.FetchError = err
@@ -240,6 +252,7 @@ type Check interface {
 	Evaluate(e *Executor) ([]*Result, error)
 }
 
+//go:generate enumer -type=ResultStatus -trimprefix=Result -transform=snake
 type ResultStatus int
 
 const (
@@ -251,16 +264,6 @@ const (
 	ResultInvalidVersion
 	ResultInsufficientPermissions
 )
-
-var ResultStatusNameMap = map[ResultStatus]string{
-	ResultNotApplicable:           "not_applicable",
-	ResultOK:                      "ok",
-	ResultInformational:           "informational",
-	ResultWarning:                 "warning",
-	ResultCritical:                "critical",
-	ResultInvalidVersion:          "invalid_version",
-	ResultInsufficientPermissions: "insufficient_permissions",
-}
 
 var NameResultStatusMap = map[string]ResultStatus{
 	"not_applicable":           ResultNotApplicable,

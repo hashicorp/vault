@@ -1,0 +1,608 @@
+---
+layout: docs
+page_title: TCP - Listeners - Configuration
+description: >-
+  The TCP listener configures Vault to listen on the specified TCP address and
+  port.
+---
+
+# `tcp` listener
+
+The TCP listener configures Vault to listen on a TCP address/port.
+
+```hcl
+listener "tcp" {
+  address = "127.0.0.1:8200"
+}
+```
+
+The `listener` stanza may be specified more than once to make Vault listen on
+multiple interfaces. If you configure multiple listeners you also need to
+specify [`api_addr`][api-addr] and [`cluster_addr`][cluster-addr] so Vault will
+advertise the correct address to other nodes.
+
+## Sensitive data redaction for unauthenticated endpoints
+
+Unauthenticated API endpoints may return the following sensitive information:
+
+* Vault version number
+* Vault binary build date
+* Vault cluster name
+* IP address of nodes in the cluster
+
+Vault offers the ability to configure each `tcp` `listener` stanza such that,
+when appropriate, these values are redacted from responses.
+
+The following API endpoints support redaction based on `listener` stanza configuration:
+
+* [`/sys/health`](/vault/api-docs/system/health)
+* [`/sys/leader`](/vault/api-docs/system/leader)
+* [`/sys/seal-status`](/vault/api-docs/system/seal-status)
+
+Vault replaces redacted information with an empty string (`""`). Some Vault APIs
+also omit keys from the response when the corresponding value is empty (`""`).
+
+<Note title="Redacting values affects responses to all API clients">
+  The Vault CLI and UI consume Vault API responses. As a result, your redaction
+  settings will apply to CLI and UI output in addition to direct API calls.
+</Note>
+
+## Default TLS configuration
+
+By default, Vault TCP listeners only accept TLS 1.2 or 1.3 connections and will
+drop connection requests from clients using TLS 1.0 or 1.1.
+
+Vault uses the following ciphersuites by default:
+
+- **TLS 1.3** - `TLS_AES_128_GCM_SHA256`, `TLS_AES_256_GCM_SHA384`, or `TLS_CHACHA20_POLY1305_SHA256`.
+- **TLS 1.2** - depends on whether you configure Vault with a RSA or ECDSA certificate.
+
+You can configure Vault with any cipher supported by the
+[`tls`](https://pkg.go.dev/crypto/tls) and
+[`tlsutil`](https://github.com/hashicorp/go-secure-stdlib/blob/main/tlsutil/tlsutil.go#L31-L57)
+Go packages. Vault uses the `tlsutil` package to parse ciphersuite configurations.
+
+<Note title="Sweet32 and 3DES">
+
+  The Go team and HashiCorp believe that the set of cyphers supported by `tls`
+  and `tlsutil` is appropriate for modern, secure usage. However, some
+  vulnerability scanners may flag issues with your configuration.
+
+  In particular, Sweet32 (CVE-2016-2183) is an attack against 64-bit block size
+  ciphers including 3DES that may allow an attacker to break the encryption of
+  long lived connections. According to the
+  [vulnerability disclosure](https://sweet32.info/), Sweet32 took a
+  single HTTPS session with 785 GB of traffic to break the encryption.
+
+  As of May 2024, the Go team does not believe the risk of Sweet32 is sufficient
+  to remove existing client compatibility by deprecating 3DES support, however,
+  the team did [de-prioritize 3DES](https://github.com/golang/go/issues/45430)
+  in favor of AES-based ciphers.
+
+</Note>
+
+Before overriding Vault defaults, we recommend reviewing the recommended Go team
+[approach to TLS configuration](https://go.dev/blog/tls-cipher-suites) with
+particular attention to their ciphersuite selections.
+
+## Listener's custom response headers
+
+As of version 1.9, Vault supports defining custom HTTP response headers for the root path (`/`) and also on API endpoints (`/v1/*`).
+The headers are defined based on the returned status code. For example, a user can define a list of
+custom response headers for the `200` status code, and another list of custom response headers for
+the `307` status code. There is a `"/sys/config/ui"` [API endpoint](/vault/api-docs/system/config-ui) which allows users
+to set `UI` specific custom headers. If a header is configured in a configuration file, it is not allowed
+to be reconfigured through the `"/sys/config/ui"` [API endpoint](/vault/api-docs/system/config-ui). In cases where a
+custom header value needs to be modified or the custom header needs to be removed, the Vault's configuration file
+needs to be modified accordingly, and a `SIGHUP` signal needs to be sent to the Vault process.
+
+If a header is defined in the configuration file and the same header is used by the internal
+processes of Vault, the configured header is not accepted. For example, a custom header which has
+the `X-Vault-` prefix will not be accepted. A message will be logged in the Vault's logs
+upon start up indicating the header with `X-Vault-` prefix is not accepted.
+
+### Order of precedence
+
+If the same header is configured in both the configuration file and
+in the `"/sys/config/ui"` [API endpoint](/vault/api-docs/system/config-ui), the header in the configuration file takes precedence.
+For example, the `"Content-Security-Policy"` header is defined by default in the
+`"/sys/config/ui"` [API endpoint](/vault/api-docs/system/config-ui). If that header is also defined in the configuration file,
+the value in the configuration file is set in the response headers instead of the
+default value in the `"/sys/config/ui"` [API endpoint](/vault/api-docs/system/config-ui).
+
+## `tcp` listener parameters
+
+- `address` `(string: "127.0.0.1:8200")` – Specifies the address to bind to for
+  listening. This can be dynamically defined with a
+  [go-sockaddr template](https://pkg.go.dev/github.com/hashicorp/go-sockaddr/template)
+  that is resolved at runtime.
+
+- `cluster_address` `(string: "127.0.0.1:8201")` – Specifies the address to bind
+  to for cluster server-to-server requests. This defaults to one port higher
+  than the value of `address`. This does not usually need to be set, but can be
+  useful in case Vault servers are isolated from each other in such a way that
+  they need to hop through a TCP load balancer or some other scheme in order to
+  talk. This can be dynamically defined with a
+  [go-sockaddr template](https://pkg.go.dev/github.com/hashicorp/go-sockaddr/template)
+  that is resolved at runtime.
+
+- `chroot_namespace` `(string: "")` – Specifies an alternate top-level namespace
+  for the listener. Vault appends namespaces provided in the `X-Vault-Namespace`
+  header or the `-namespace` field in a CLI command to the top-level namespace
+  to determine the full namespace path for the request. For example, if
+  `chroot_namespace` is set to `admin` and the `X-Vault-Namespace` header is
+  `ns1`, the full namespace path is `admin/ns1`. Calls to the listener will fail
+   with a 4XX error if the top-level namespace provided for `chroot_namespace`
+   does not exist.
+- `http_idle_timeout` `(string: "5m")` - Specifies the maximum amount of time to
+  wait for the next request when keep-alives are enabled. If `http_idle_timeout`
+  is zero, the value of `http_read_timeout` is used. If both are zero, the value
+  of `http_read_header_timeout` is used. This is specified using a label suffix
+  like `"30s"` or `"1h"`.
+
+- `http_read_header_timeout` `(string: "10s")` - Specifies the amount of time
+  allowed to read request headers. This is specified using a label suffix like
+  `"30s"` or `"1h"`.
+
+- `http_read_timeout` `(string: "30s")` - Specifies the maximum duration for
+  reading the entire request, including the body. This is specified using a
+  label suffix like `"30s"` or `"1h"`.
+
+- `http_write_timeout` `string: "0")` - Specifies the maximum duration before
+  timing out writes of the response and is reset whenever a new request's header
+  is read. The default value of `"0"` means infinity. This is specified using a
+  label suffix like `"30s"` or `"1h"`.
+
+- `max_request_size` `(int: 33554432)` – Specifies a hard maximum allowed
+  request size, in bytes. Defaults to 32 MB if not set or set to `0`.
+  Specifying a number less than `0` turns off limiting altogether.
+
+- `max_request_duration` `(string: "90s")` – Specifies the maximum
+  request duration allowed before Vault cancels the request. This overrides
+  `default_max_request_duration` for this listener.
+
+- `proxy_protocol_behavior` `(string: "")` – When specified, enables a PROXY
+  protocol behavior for the listener (version 1 and 2 are both supported).
+  Accepted Values:
+
+  - _use_always_ - The client's IP address will always be used.
+  - _allow_authorized_ - If the source IP address is in the
+    `proxy_protocol_authorized_addrs` list, the client's IP address will be used.
+    If the source IP is not in the list, the source IP address will be used.
+  - _deny_unauthorized_ - The traffic will be rejected if the source IP
+    address is not in the `proxy_protocol_authorized_addrs` list.
+
+- `proxy_protocol_authorized_addrs` `(string: <required-if-enabled> or array: <required-if-enabled> )` –
+  Specifies the list of allowed source IP addresses to be used with the PROXY protocol.
+  Not required if `proxy_protocol_behavior` is set to `use_always`. Source IPs should
+  be comma-delimited if provided as a string. At least one source IP must be provided,
+  `proxy_protocol_authorized_addrs` cannot be an empty array or string.
+
+- `redact_addresses` `(bool: false)` - Redacts `leader_address` and `cluster_leader_address` values in applicable API responses when `true`.
+
+- `redact_cluster_name` `(bool: false)` - Redacts `cluster_name` values in applicable API responses when `true`.
+
+- `redact_version` `(bool: false)` - Redacts `version` and `build_date` values in applicable API responses when `true`.
+
+- `tls_disable` `(string: "false")` – Specifies if TLS will be disabled. Vault
+  assumes TLS by default, so you must explicitly disable TLS to opt-in to
+  insecure communication. Disabling TLS can **disable** some UI functionality. See
+  the [Browser Support](/vault/docs/browser-support) page for more details.
+
+- `tls_cert_file` `(string: <required-if-enabled>, reloads-on-SIGHUP)` –
+  Specifies the path to the certificate for TLS. It requires a PEM-encoded file.
+  To configure the listener to use a CA certificate, concatenate the primary certificate and the CA
+  certificate together. The primary certificate should appear first in the
+  combined file. On `SIGHUP`, the path set here _at Vault startup_ will be used
+  for reloading the certificate; modifying this value while Vault is running
+  will have no effect for `SIGHUP`s.
+
+- `tls_key_file` `(string: <required-if-enabled>, reloads-on-SIGHUP)` –
+  Specifies the path to the private key for the certificate. It requires a PEM-encoded file.
+  If the key file is encrypted, you will be prompted to enter the passphrase on server startup.
+  The passphrase must stay the same between key files when reloading your
+  configuration using `SIGHUP`. On `SIGHUP`, the path set here _at Vault
+  startup_ will be used for reloading the certificate; modifying this value
+  while Vault is running will have no effect for `SIGHUP`s.
+
+- `tls_min_version` `(string: "tls12")` – Specifies the minimum supported
+  version of TLS. Accepted values are "tls10", "tls11", "tls12" or "tls13".
+
+  ~> **Warning**: TLS 1.1 and lower (`tls10` and `tls11` values for the
+  `tls_min_version` and `tls_max_version` parameters) are widely considered
+  insecure.
+
+- `tls_max_version` `(string: "tls13")` – Specifies the maximum supported
+  version of TLS. Accepted values are "tls10", "tls11", "tls12" or "tls13".
+
+  ~> **Warning**: TLS 1.1 and lower (`tls10` and `tls11` values for the
+  `tls_min_version` and `tls_max_version` parameters) are widely considered
+  insecure.
+
+- `tls_cipher_suites` `(string: "")` – Specifies the list of supported
+  ciphersuites as a comma-separated-list. The list of all available ciphersuites
+  is available in the [Golang TLS documentation][golang-tls].
+
+  ~> **Note**: Go only consults the `tls_cipher_suites` list for TLSv1.2 and
+  earlier; the order of ciphers is not important. For this parameter to be
+  effective, the `tls_max_version` property must be set to `tls12` to prevent
+  negotiation of TLSv1.3, which is not recommended. For more information about
+  this and other TLS related changes, see the [Go TLS blog post][go-tls-blog].
+
+- `tls_prefer_server_cipher_suites` `(string: "false")` – Specifies to prefer the
+  server's ciphersuite over the client ciphersuites.
+
+  ~> **Warning**: The `tls_prefer_server_cipher_suites` parameter is
+  deprecated. Setting it has no effect. See the above
+  [Go blog post][go-tls-blog] for more information about
+  this change.
+
+- `tls_require_and_verify_client_cert` `(string: "false")` – Turns on client
+  authentication for this listener; the listener will require a presented
+  client cert that successfully validates against system CAs.
+
+- `tls_client_ca_file` `(string: "")` – PEM-encoded Certificate Authority file
+  used for checking the authenticity of client.
+
+- `tls_disable_client_certs` `(string: "false")` – Turns off client
+  authentication for this listener. The default behavior (when this is false)
+  is for Vault to request client authentication certificates when available.
+
+  ~> **Warning**: The `tls_disable_client_certs` and `tls_require_and_verify_client_cert` fields in the listener stanza of the Vault server configuration are mutually exclusive fields. Please ensure they are not both set to true. TLS client verification remains optional with default settings and is not enforced.
+
+- `x_forwarded_for_authorized_addrs` `(string: <required-to-enable>)` –
+  Specifies the list of source IP CIDRs for which an X-Forwarded-For header
+  will be trusted. Comma-separated list or JSON array. This turns on
+  X-Forwarded-For support.  If for example Vault receives connections from the
+  load balancer's IP of `1.2.3.4`, adding `1.2.3.4` to `x_forwarded_for_authorized_addrs`
+  will result in the `remote_address` field in the audit log being populated with the
+  connecting client's IP, for example `3.4.5.6`. Note this requires the load balancer
+  to send the connecting client's IP in the `X-Forwarded-For` header.
+
+- `x_forwarded_for_client_cert_header` `(string: "")` –
+  Specifies the header that will be used for the client certificate.
+  This is required if you use the [TLS Certificates Auth Method](/vault/docs/auth/cert) and your
+  vault server is behind a reverse proxy.
+
+- `x_forwarded_for_client_cert_header_decoders` `(string: "")` –
+  Comma delimited list that specifies the decoders that will be used to decode the client certificate.
+  This is required if you use the [TLS Certificates Auth Method](/vault/docs/auth/cert) and your
+  vault server is behind a reverse proxy. The resulting certificate should be in DER format.
+  Available Values:
+
+  - BASE64 - Runs Base64 decode
+  - DER - Converts a pem certificate to der
+  - URL - Runs URL decode
+
+  Known Values:
+
+  - Traefik = "BASE64"
+  - NGINX   = "URL,DER"
+
+- `x_forwarded_for_hop_skips` `(string: "0")` – The number of addresses that will be
+  skipped from the _rear_ of the set of hops. For instance, for a header value
+  of `1.2.3.4, 2.3.4.5, 3.4.5.6, 4.5.6.7`, if this value is set to `"1"`, the address that
+  will be used as the originating client IP is `3.4.5.6`.
+
+- `x_forwarded_for_reject_not_authorized` `(string: "true")` – If set false,
+  if there is an X-Forwarded-For header in a connection from an unauthorized
+  address, the header will be ignored and the client connection used as-is,
+  rather than the client connection rejected.
+
+- `x_forwarded_for_reject_not_present` `(string: "true")` – If set false, if
+  there is no X-Forwarded-For header or it is empty, the client address will be
+  used as-is, rather than the client connection rejected.
+
+- `disable_replication_status_endpoints` `(bool: false)` - Disables replication
+  status endpoints for the configured listener when set to `true`.
+
+- `disable_request_limiter` `(bool: false)` - Disables the request limiter for
+  this listener. The default configuration will honor the global
+  [configuration](/vault/docs/configuration/request-limiter).
+
+### `telemetry` parameters
+
+- `unauthenticated_metrics_access` `(bool: false)` - If set to true, allows
+  unauthenticated access to the `/v1/sys/metrics` endpoint.
+
+### `profiling` parameters
+
+- `unauthenticated_pprof_access` `(bool: false)` - If set to true, allows
+  unauthenticated access to the `/v1/sys/pprof` endpoint.
+
+### `inflight_requests_logging` parameters
+
+- `unauthenticated_in_flight_requests_access` `(bool: false)` - If set to true, allows
+  unauthenticated access to the `/v1/sys/in-flight-req` endpoint.
+
+### `custom_response_headers` parameters
+
+- `default` `(key-value-map: {})` - A map of string header names to an array of
+  string values. The default headers are set on all endpoints regardless of
+  the status code value. For an example, please refer to the
+  "Configuring custom http response headers" section.
+
+- `<specific status code>` `(key-value-map: {})` - A map of string header names
+  to an array of string values. These headers are set only when the specific status
+  code is returned. For example, `"200" = {"Header-A": ["Value1", "Value2"]}`, `"Header-A"`
+  is set when the http response status code is `"200"`.
+
+- `<collective status code>` `(key-value-map: {})` - A map of string header names
+  to an array of string values. These headers are set only when the response status
+  code falls under the collective status code.
+  For example, `"2xx" = {"Header-A": ["Value1", "Value2"]}`, `"Header-A"`
+  is set when the http response status code is `"200"`, `"204"`, etc.
+
+## `tcp` listener examples
+
+### Configuring TLS
+
+This example shows enabling a TLS listener.
+
+```hcl
+listener "tcp" {
+  address = "127.0.0.1:8200"
+  tls_cert_file = "/etc/certs/vault.crt"
+  tls_key_file  = "/etc/certs/vault.key"
+}
+```
+
+### Listening on multiple interfaces
+
+This example shows Vault listening on a private interface, as well as localhost.
+
+```hcl
+listener "tcp" {
+  address = "127.0.0.1:8200"
+}
+
+listener "tcp" {
+  address = "10.0.0.5:8200"
+}
+
+# Advertise the non-loopback interface
+api_addr = "https://10.0.0.5:8200"
+cluster_addr = "https://10.0.0.5:8201"
+```
+
+### Configuring unauthenticated metrics access
+
+This example shows enabling unauthenticated metrics access.
+
+```hcl
+listener "tcp" {
+  telemetry {
+    unauthenticated_metrics_access = true
+  }
+}
+```
+
+### Configuring unauthenticated profiling access
+
+This example shows enabling unauthenticated profiling access.
+
+```hcl
+listener "tcp" {
+  profiling {
+    unauthenticated_pprof_access = true
+    unauthenticated_in_flight_request_access = true
+  }
+}
+```
+
+### Configuring custom http response headers
+
+Note: Requires Vault version 1.9 or newer. This example shows configuring custom http response headers.
+Operators can configure `"custom_response_headers"` sub-stanza in the listener stanza to set custom http
+headers appropriate to their applications. Examples of such headers are `"Strict-Transport-Security"`
+and `"Content-Security-Policy"` which are known HTTP headers, and could be configured to harden
+the security of an application communicating with the Vault endpoints. Note that vulnerability
+scans often examine such security related HTTP headers. In addition, application specific
+custom headers can also be configured. For example, `"X-Custom-Header"` has been configured
+in the example below.
+
+```hcl
+listener "tcp" {
+  custom_response_headers {
+    "default" = {
+      "Strict-Transport-Security" = ["max-age=31536000","includeSubDomains"],
+      "Content-Security-Policy" = ["connect-src https://clusterA.vault.external/"],
+      "X-Custom-Header" = ["Custom Header Default Value"],
+    },
+    "2xx" = {
+      "Content-Security-Policy" = ["connect-src https://clusterB.vault.external/"],
+      "X-Custom-Header" = ["Custom Header Value 1", "Custom Header Value 2"],
+    },
+    "301" = {
+      "Strict-Transport-Security" = ["max-age=31536000"],
+      "Content-Security-Policy" = ["connect-src https://clusterC.vault.external/"],
+    },
+  }
+}
+```
+
+In situations where a header is defined under several status code subsections,
+the header matching the most specific response code will be returned. For example,
+with the config example below, a `307` response would return `307 Custom header value`,
+while a `306` would return `3xx Custom header value`.
+
+```hcl
+listener "tcp" {
+  custom_response_headers {
+    "default" = {
+       "X-Custom-Header" = ["default Custom header value"]
+    },
+    "3xx" = {
+       "X-Custom-Header" = ["3xx Custom header value"]
+    },
+    "307" = {
+       "X-Custom-Header" = ["307 Custom header value"]
+    }
+  }
+}
+```
+
+### Listening on all IPv6 & IPv4 interfaces
+
+This example shows Vault listening on all IPv4 & IPv6 interfaces including localhost.
+
+```hcl
+listener "tcp" {
+  address         = "[::]:8200"
+  cluster_address = "[::]:8201"
+}
+```
+
+### Listening to specific IPv6 address
+
+This example shows Vault only using IPv6 and binding to the interface with the IP address: `2001:1c04:90d:1c00:a00:27ff:fefa:58ec`
+
+```hcl
+listener "tcp" {
+  address         = "[2001:1c04:90d:1c00:a00:27ff:fefa:58ec]:8200"
+  cluster_address = "[2001:1c04:90d:1c00:a00:27ff:fefa:58ec]:8201"
+}
+
+# Advertise the non-loopback interface
+api_addr = "https://[2001:1c04:90d:1c00:a00:27ff:fefa:58ec]:8200"
+cluster_addr = "https://[2001:1c04:90d:1c00:a00:27ff:fefa:58ec]:8201"
+```
+
+## Redaction examples
+
+Please see redaction settings above, for details on each redaction setting.
+
+Example configuration for the [`tcp`](/vault/docs/configuration/listener/tcp) listener,
+enabling [`redact_addresses`](/vault/docs/configuration/listener/tcp#redact_addresses),
+[`redact_cluster_name`](/vault/docs/configuration/listener/tcp#redact_cluster_name) and
+[`redact_version`](/vault/docs/configuration/listener/tcp#redact_version).
+
+```hcl
+ui            = true
+cluster_addr  = "https://127.0.0.1:8201"
+api_addr      = "https://127.0.0.1:8200"
+disable_mlock = true
+
+storage "raft" {
+  path = "/path/to/raft/data"
+  node_id = "raft_node_1"
+}
+
+listener "tcp" {
+  address             = "127.0.0.1:8200",
+  tls_cert_file = "/path/to/full-chain.pem"
+  tls_key_file  = "/path/to/private-key.pem"
+  redact_addresses    = "true"
+  redact_cluster_name = "true"
+  redact_version      = "true"
+}
+
+telemetry {
+  statsite_address = "127.0.0.1:8125"
+  disable_hostname = true
+}
+```
+
+### API: `/sys/health`
+In the following call to `/sys/health/` notice that `cluster_name` and `version`
+are both redacted. The `cluster_name` field is fully omitted from the response
+and `version` is the empty string (`""`).
+
+```shell-session
+$ curl -s https://127.0.0.1:8200/v1/sys/health | jq`:
+
+{
+  "initialized": true,
+  "sealed": false,
+  "standby": true,
+  "performance_standby": false,
+  "replication_performance_mode": "disabled",
+  "replication_dr_mode": "disabled",
+  "server_time_utc": 1696598650,
+  "version": "",
+  "cluster_id": "a1a7a078-0ae1-7fb9-41ec-2f4f583c773e"
+}
+```
+
+
+### API: `sys/leader`
+In the following call to `/sys/leader/` notice that `leader_address` and `leader_cluster_address`
+are both redacted and set to the empty string (`""`).
+
+```shell-session
+$ curl -s https://127.0.0.1:8200/v1/sys/leader | jq`:
+
+{
+  "ha_enabled": true,
+  "is_self": false,
+  "active_time": "0001-01-01T00:00:00Z",
+  "leader_address": "",
+  "leader_cluster_address": "",
+  "performance_standby": false,
+  "performance_standby_last_remote_wal": 0,
+  "raft_committed_index": 164,
+  "raft_applied_index": 164
+}
+```
+
+
+### API: `sys/seal-status`
+
+In the following call to `/sys/seal-status/` notice that `cluster_name`, `build_date`,
+and `version` are all redacted. The `cluster_name` field is fully omitted from
+the response while `build_date` and `version` are empty strings (`""`).
+
+```shell-session
+$ curl -s https://127.0.0.1:8200/v1/sys/seal-status | jq`:
+
+{
+  "type": "shamir",
+  "initialized": true,
+  "sealed": false,
+  "t": 1,
+  "n": 1,
+  "progress": 0,
+  "nonce": "",
+  "version": "",
+  "build_date": "",
+  "migration": false,
+  "cluster_id": "a1a7a078-0ae1-7fb9-41ec-2f4f583c773e",
+  "recovery_seal": false,
+  "storage_type": "raft"
+}
+```
+
+### CLI: `vault status`
+
+The CLI command `vault status` uses endpoints that support redacting data, so the
+output redacts `Version`, `Build Date`, `HA Cluster`, and `Active Node Address`.
+`Version`, `Build Date`, `HA Cluster` show `n/a` because the underlying endpoint
+returned the empty string, and  `Active Node Address` shows as `<none>` because
+it was omitted from the API response.
+
+```shell-session
+
+$ vault status
+
+Key                     Value
+---                     -----
+Seal Type               shamir
+Initialized             true
+Sealed                  false
+Total Shares            5
+Threshold               3
+Version                 n/a
+Build Date              n/a
+Storage Type            raft
+HA Enabled              true
+HA Cluster              n/a
+HA Mode                 standby
+Active Node Address     <none>
+Raft Committed Index    219
+Raft Applied Index      219
+```
+
+[golang-tls]: https://golang.org/src/crypto/tls/cipher_suites.go
+[api-addr]: /vault/docs/configuration#api_addr
+[cluster-addr]: /vault/docs/configuration#cluster_addr
+[go-tls-blog]: https://go.dev/blog/tls-cipher-suites

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package logical
 
 import (
@@ -5,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/hashicorp/errwrap"
 	multierror "github.com/hashicorp/go-multierror"
@@ -17,7 +21,7 @@ import (
 func RespondErrorCommon(req *Request, resp *Response, err error) (int, error) {
 	if err == nil && (resp == nil || !resp.IsError()) {
 		switch {
-		case req.Operation == ReadOperation:
+		case req.Operation == ReadOperation || req.Operation == HeaderOperation:
 			if resp == nil {
 				return http.StatusNotFound, nil
 			}
@@ -73,10 +77,21 @@ func RespondErrorCommon(req *Request, resp *Response, err error) (int, error) {
 		var allErrors error
 		var codedErr *ReplicationCodedError
 		errwrap.Walk(err, func(inErr error) {
+			// The Walk function does not just traverse leaves, and execute the
+			// callback function on the entire error first. So, if the error is
+			// of type multierror.Error, we may want to skip storing the entire
+			// error first to avoid adding duplicate errors when walking down
+			// the leaf errors
+			if _, ok := inErr.(*multierror.Error); ok {
+				return
+			}
 			newErr, ok := inErr.(*ReplicationCodedError)
 			if ok {
 				codedErr = newErr
 			} else {
+				// if the error is of type fmt.wrapError which is typically
+				// made by calling fmt.Errorf("... %w", err), allErrors will
+				// contain duplicated error messages
 				allErrors = multierror.Append(allErrors, inErr)
 			}
 		})
@@ -98,6 +113,8 @@ func RespondErrorCommon(req *Request, resp *Response, err error) (int, error) {
 	// appropriate code
 	if err != nil {
 		switch {
+		case errwrap.Contains(err, consts.ErrOverloaded.Error()):
+			statusCode = http.StatusServiceUnavailable
 		case errwrap.ContainsType(err, new(StatusBadRequest)):
 			statusCode = http.StatusBadRequest
 		case errwrap.Contains(err, ErrPermissionDenied.Error()):
@@ -124,11 +141,18 @@ func RespondErrorCommon(req *Request, resp *Response, err error) (int, error) {
 			statusCode = http.StatusBadRequest
 		case errwrap.Contains(err, ErrInvalidCredentials.Error()):
 			statusCode = http.StatusBadRequest
+		case errors.Is(err, ErrNotFound):
+			statusCode = http.StatusNotFound
 		}
 	}
 
-	if resp != nil && resp.IsError() {
-		err = fmt.Errorf("%s", resp.Data["error"].(string))
+	if respErr := resp.Error(); respErr != nil {
+		err = fmt.Errorf("%s", respErr.Error())
+
+		// Don't let other error codes override the overloaded status code
+		if strings.Contains(respErr.Error(), consts.ErrOverloaded.Error()) {
+			statusCode = http.StatusServiceUnavailable
+		}
 	}
 
 	return statusCode, err
@@ -143,6 +167,11 @@ func AdjustErrorStatusCode(status *int, err error) {
 		for _, e := range t.Errors {
 			AdjustErrorStatusCode(status, e)
 		}
+	}
+
+	// Adjust status code when overloaded
+	if errwrap.Contains(err, consts.ErrOverloaded.Error()) {
+		*status = http.StatusServiceUnavailable
 	}
 
 	// Adjust status code when sealed
@@ -191,7 +220,7 @@ func RespondErrorAndData(w http.ResponseWriter, status int, data interface{}, er
 
 	type ErrorAndDataResponse struct {
 		Errors []string    `json:"errors"`
-		Data   interface{} `json:"data""`
+		Data   interface{} `json:"data"`
 	}
 	resp := &ErrorAndDataResponse{Errors: make([]string, 0, 1)}
 	if err != nil {

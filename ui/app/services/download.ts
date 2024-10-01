@@ -1,10 +1,17 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Service from '@ember/service';
+import timestamp from 'core/utils/timestamp';
 
 interface Extensions {
   csv: string;
   hcl: string;
   sentinel: string;
   json: string;
+  jsonl: string;
   pem: string;
   txt: string;
 }
@@ -15,6 +22,7 @@ const EXTENSION_TO_MIME: Extensions = {
   hcl: 'text/plain',
   sentinel: 'text/plain',
   json: 'application/json',
+  jsonl: 'application/json',
   pem: 'application/x-pem-file',
   txt: 'text/plain',
 };
@@ -24,7 +32,7 @@ export default class DownloadService extends Service {
     // replace spaces with hyphens, append extension to filename
     const formattedFilename =
       `${filename?.replace(/\s+/g, '-')}.${extension}` ||
-      `vault-data-${new Date().toISOString()}.${extension}`;
+      `vault-data-${timestamp.now().toISOString()}.${extension}`;
 
     // map extension to MIME type or use default
     const mimetype = EXTENSION_TO_MIME[extension as keyof Extensions] || 'text/plain';

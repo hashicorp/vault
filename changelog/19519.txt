@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/transit: Allow importing RSA-PSS OID (1.2.840.113549.1.1.10) private keys via BYOK.
+```

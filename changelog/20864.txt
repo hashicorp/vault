@@ -1,0 +1,5 @@
+```release-note:bug
+secrets/transit: Fix export of HMAC-only key, correctly exporting the key used for sign operations. For consumers of the previously incorrect key, use the plaintext export to retrieve these incorrect keys and import them as new versions.
+secrets/transit: Fix bug related to shorter dedicated HMAC key sizing.
+sdk/helper/keysutil: New HMAC type policies will have HMACKey equal to Key and be copied over on import.
+```

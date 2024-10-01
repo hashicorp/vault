@@ -1,8 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package transit
 
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -28,6 +32,12 @@ type DecryptBatchResponseItem struct {
 func (b *backend) pathDecrypt() *framework.Path {
 	return &framework.Path{
 		Pattern: "decrypt/" + framework.GenericNameRegex("name"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+			OperationVerb:   "decrypt",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -174,6 +184,7 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 	if !b.System().CachingDisabled() {
 		p.Lock(false)
 	}
+	defer p.Unlock()
 
 	successesInBatch := false
 	for i, item := range batchInputItems {
@@ -191,7 +202,23 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 			factory = AssocDataFactory{item.AssociatedData}
 		}
 
-		plaintext, err := p.DecryptWithFactory(item.DecodedContext, item.DecodedNonce, item.Ciphertext, factory)
+		var managedKeyFactory ManagedKeyFactory
+		if p.Type == keysutil.KeyType_MANAGED_KEY {
+			managedKeySystemView, ok := b.System().(logical.ManagedKeySystemView)
+			if !ok {
+				batchResponseItems[i].Error = errors.New("unsupported system view").Error()
+			}
+
+			managedKeyFactory = ManagedKeyFactory{
+				managedKeyParams: keysutil.ManagedKeyParameters{
+					ManagedKeySystemView: managedKeySystemView,
+					BackendUUID:          b.backendUUID,
+					Context:              ctx,
+				},
+			}
+		}
+
+		plaintext, err := p.DecryptWithFactory(item.DecodedContext, item.DecodedNonce, item.Ciphertext, factory, managedKeyFactory)
 		if err != nil {
 			switch err.(type) {
 			case errutil.InternalError:
@@ -217,8 +244,6 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 		}
 	} else {
 		if batchResponseItems[0].Error != "" {
-			p.Unlock()
-
 			if internalErrorInBatch {
 				return nil, errutil.InternalError{Err: batchResponseItems[0].Error}
 			}
@@ -229,8 +254,6 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 			"plaintext": batchResponseItems[0].Plaintext,
 		}
 	}
-
-	p.Unlock()
 
 	return batchRequestResponse(d, resp, req, successesInBatch, userErrorInBatch, internalErrorInBatch)
 }

@@ -1,0 +1,21 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<PkiPageHeader @backend={{this.model.engine}} />
+
+{{#if this.model.hasConfig}}
+  <Page::PkiTidyStatus @autoTidyConfig={{this.model.autoTidyConfig}} @tidyStatus={{this.tidyStatus}} />
+{{else}}
+  <Toolbar />
+  <EmptyState @title="PKI not configured" @message={{this.notConfiguredMessage}}>
+    <Hds::Link::Standalone
+      @icon="chevron-right"
+      @iconPosition="trailing"
+      @text="Configure PKI"
+      @route="configuration.create"
+      @model={{this.model.engine.id}}
+    />
+  </EmptyState>
+{{/if}}

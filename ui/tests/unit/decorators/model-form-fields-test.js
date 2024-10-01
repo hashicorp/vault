@@ -1,42 +1,19 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
-import { setupTest } from 'ember-qunit';
+import { setupApplicationTest } from 'ember-qunit';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 import sinon from 'sinon';
-import Model, { attr } from '@ember-data/model';
-
-// create class using decorator
-const createClass = (propertyNames, groups) => {
-  @withFormFields(propertyNames, groups)
-  class Foo extends Model {
-    @attr('string', {
-      label: 'Foo',
-      subText: 'A form field',
-    })
-    foo;
-    @attr('boolean', {
-      label: 'Bar',
-      subText: 'Maybe a checkbox',
-    })
-    bar;
-  }
-  return new Foo();
-};
 
 module('Unit | Decorators | ModelFormFields', function (hooks) {
-  setupTest(hooks);
+  setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
     this.spy = sinon.spy(console, 'error');
-    this.fooField = {
-      name: 'foo',
-      options: { label: 'Foo', subText: 'A form field' },
-      type: 'string',
-    };
-    this.barField = {
-      name: 'bar',
-      options: { label: 'Bar', subText: 'Maybe a checkbox' },
-      type: 'boolean',
-    };
+    this.store = this.owner.lookup('service:store');
   });
   hooks.afterEach(function () {
     this.spy.restore();
@@ -50,26 +27,102 @@ module('Unit | Decorators | ModelFormFields', function (hooks) {
     assert.ok(this.spy.calledWith(message), 'Error is printed to console');
   });
 
-  test('it should throw error when arguments are not provided', function (assert) {
+  test('it return allFields when arguments not provided', function (assert) {
     assert.expect(1);
-    try {
-      createClass();
-    } catch (error) {
-      const message =
-        'Array of property names and/or array of field groups are required when using withFormFields model decorator';
-      assert.strictEqual(error.message, message);
-    }
+    // test by instantiating a record that uses this decorator
+    const record = this.store.createRecord('kv/data');
+    assert.deepEqual(
+      record.allFields,
+      [
+        {
+          name: 'backend',
+          options: {},
+          type: 'string',
+        },
+        {
+          name: 'path',
+          options: {
+            label: 'Path for this secret',
+          },
+          type: 'string',
+        },
+        {
+          name: 'secretData',
+          options: {},
+          type: 'object',
+        },
+        {
+          name: 'createdTime',
+          options: {},
+          type: 'string',
+        },
+        {
+          name: 'customMetadata',
+          options: {},
+          type: 'object',
+        },
+        {
+          name: 'deletionTime',
+          options: {},
+          type: 'string',
+        },
+        {
+          name: 'destroyed',
+          options: {},
+          type: 'boolean',
+        },
+        {
+          name: 'version',
+          options: {},
+          type: 'number',
+        },
+        {
+          name: 'failReadErrorCode',
+          options: {},
+          type: 'number',
+        },
+        {
+          name: 'casVersion',
+          options: {},
+          type: 'number',
+        },
+      ],
+      'allFields set on Model class'
+    );
   });
 
   test('it should set formFields prop on Model class', function (assert) {
-    const model = createClass(['foo']);
-    assert.deepEqual([this.fooField], model.formFields, 'formFields set on Model class');
+    // this model uses withFormFields
+    const record = this.store.createRecord('clients/config');
+    assert.deepEqual(
+      record.formFields,
+      [
+        {
+          name: 'enabled',
+          options: {},
+          type: 'string',
+        },
+        {
+          name: 'retentionMonths',
+          options: {
+            label: 'Retention period',
+            subText: 'The number of months of activity logs to maintain for client tracking.',
+          },
+          type: 'number',
+        },
+      ],
+      'formFields set on Model class'
+    );
   });
 
   test('it should set formFieldGroups on Model class', function (assert) {
-    const groups = [{ default: ['foo'] }, { subgroup: ['bar'] }];
-    const model = createClass(null, groups);
-    const fieldGroups = [{ default: [this.fooField] }, { subgroup: [this.barField] }];
-    assert.deepEqual(fieldGroups, model.formFieldGroups, 'formFieldGroups set on Model class');
+    // this model uses withFormFields with groups
+    const record = this.store.createRecord('ldap/config');
+    const groups = record.formFieldGroups.map((group) => Object.keys(group)[0]);
+    assert.deepEqual(
+      groups,
+      ['default', 'TLS options', 'More options'],
+      'formFieldGroups set on Model class with correct group labels'
+    );
   });
 });

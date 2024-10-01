@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package aws
 
 import (
@@ -24,6 +27,11 @@ func pathListRoles(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "roles/?$",
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+			OperationSuffix: "roles",
+		},
+
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ListOperation: b.pathRoleList,
 		},
@@ -36,18 +44,24 @@ func pathListRoles(b *backend) *framework.Path {
 func pathRoles(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "roles/" + framework.GenericNameWithAtRegex("name"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+			OperationSuffix: "role",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
-				Description: "Name of the policy",
+				Description: "Name of the role",
 				DisplayAttrs: &framework.DisplayAttributes{
-					Name: "Policy Name",
+					Name: "Role Name",
 				},
 			},
 
 			"credential_type": {
 				Type:        framework.TypeString,
-				Description: fmt.Sprintf("Type of credential to retrieve. Must be one of %s, %s, or %s", assumedRoleCred, iamUserCred, federationTokenCred),
+				Description: fmt.Sprintf("Type of credential to retrieve. Must be one of %s, %s, %s, or %s", assumedRoleCred, iamUserCred, federationTokenCred, sessionTokenCred),
 			},
 
 			"role_arns": {
@@ -101,10 +115,26 @@ delimited key pairs.`,
 					Value: "[key1=value1, key2=value2]",
 				},
 			},
-
+			"session_tags": {
+				Type: framework.TypeKVPairs,
+				Description: fmt.Sprintf(`Session tags to be set for %q creds created by this role. These must be presented
+as Key-Value pairs. This can be represented as a map or a list of equal sign
+delimited key pairs.`, assumedRoleCred),
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name:  "Session Tags",
+					Value: "[key1=value1, key2=value2]",
+				},
+			},
+			"external_id": {
+				Type:        framework.TypeString,
+				Description: "External ID to set when assuming the role; only valid when credential_type is " + assumedRoleCred,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "External ID",
+				},
+			},
 			"default_sts_ttl": {
 				Type:        framework.TypeDurationSecond,
-				Description: fmt.Sprintf("Default TTL for %s and %s credential types when no TTL is explicitly requested with the credentials", assumedRoleCred, federationTokenCred),
+				Description: fmt.Sprintf("Default TTL for %s, %s, and %s credential types when no TTL is explicitly requested with the credentials", assumedRoleCred, federationTokenCred, sessionTokenCred),
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "Default STS TTL",
 				},
@@ -112,7 +142,7 @@ delimited key pairs.`,
 
 			"max_sts_ttl": {
 				Type:        framework.TypeDurationSecond,
-				Description: fmt.Sprintf("Max allowed TTL for %s and %s credential types", assumedRoleCred, federationTokenCred),
+				Description: fmt.Sprintf("Max allowed TTL for %s, %s, and %s credential types", assumedRoleCred, federationTokenCred, sessionTokenCred),
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "Max STS TTL",
 				},
@@ -146,6 +176,15 @@ delimited key pairs.`,
 					Value: "/",
 				},
 				Default: "/",
+			},
+
+			"mfa_serial_number": {
+				Type: framework.TypeString,
+				Description: fmt.Sprintf(`Identification number or ARN of the MFA device associated with the root config user. Only valid
+when credential_type is %s. This is only required when the IAM user has an MFA device configured.`, sessionTokenCred),
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "MFA Device Serial Number",
+				},
 			},
 		},
 
@@ -312,6 +351,18 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 
 	if iamTags, ok := d.GetOk("iam_tags"); ok {
 		roleEntry.IAMTags = iamTags.(map[string]string)
+	}
+
+	if serialNumber, ok := d.GetOk("mfa_serial_number"); ok {
+		roleEntry.SerialNumber = serialNumber.(string)
+	}
+
+	if sessionTags, ok := d.GetOk("session_tags"); ok {
+		roleEntry.SessionTags = sessionTags.(map[string]string)
+	}
+
+	if externalID, ok := d.GetOk("external_id"); ok {
+		roleEntry.ExternalID = externalID.(string)
 	}
 
 	if legacyRole != "" {
@@ -500,6 +551,8 @@ type awsRoleEntry struct {
 	PolicyDocument           string            `json:"policy_document"`                       // JSON-serialized inline policy to attach to IAM users and/or to specify as the Policy parameter in AssumeRole calls
 	IAMGroups                []string          `json:"iam_groups"`                            // Names of IAM groups that generated IAM users will be added to
 	IAMTags                  map[string]string `json:"iam_tags"`                              // IAM tags that will be added to the generated IAM users
+	SessionTags              map[string]string `json:"session_tags"`                          // Session tags that will be added as Tags parameter in AssumedRole calls
+	ExternalID               string            `json:"external_id"`                           // External ID to added as ExternalID in AssumeRole calls
 	InvalidData              string            `json:"invalid_data,omitempty"`                // Invalid role data. Exists to support converting the legacy role data into the new format
 	ProhibitFlexibleCredPath bool              `json:"prohibit_flexible_cred_path,omitempty"` // Disallow accessing STS credentials via the creds path and vice verse
 	Version                  int               `json:"version"`                               // Version number of the role format
@@ -507,6 +560,7 @@ type awsRoleEntry struct {
 	MaxSTSTTL                time.Duration     `json:"max_sts_ttl"`                           // Max allowed TTL for STS credentials
 	UserPath                 string            `json:"user_path"`                             // The path for the IAM user when using "iam_user" credential type
 	PermissionsBoundaryARN   string            `json:"permissions_boundary_arn"`              // ARN of an IAM policy to attach as a permissions boundary
+	SerialNumber             string            `json:"mfa_serial_number"`                     // Serial number or ARN of the MFA device
 }
 
 func (r *awsRoleEntry) toResponseData() map[string]interface{} {
@@ -517,10 +571,13 @@ func (r *awsRoleEntry) toResponseData() map[string]interface{} {
 		"policy_document":          r.PolicyDocument,
 		"iam_groups":               r.IAMGroups,
 		"iam_tags":                 r.IAMTags,
+		"session_tags":             r.SessionTags,
+		"external_id":              r.ExternalID,
 		"default_sts_ttl":          int64(r.DefaultSTSTTL.Seconds()),
 		"max_sts_ttl":              int64(r.MaxSTSTTL.Seconds()),
 		"user_path":                r.UserPath,
 		"permissions_boundary_arn": r.PermissionsBoundaryARN,
+		"mfa_serial_number":        r.SerialNumber,
 	}
 
 	if r.InvalidData != "" {
@@ -536,19 +593,19 @@ func (r *awsRoleEntry) validate() error {
 		errors = multierror.Append(errors, fmt.Errorf("did not supply credential_type"))
 	}
 
-	allowedCredentialTypes := []string{iamUserCred, assumedRoleCred, federationTokenCred}
+	allowedCredentialTypes := []string{iamUserCred, assumedRoleCred, federationTokenCred, sessionTokenCred}
 	for _, credType := range r.CredentialTypes {
 		if !strutil.StrListContains(allowedCredentialTypes, credType) {
 			errors = multierror.Append(errors, fmt.Errorf("unrecognized credential type: %s", credType))
 		}
 	}
 
-	if r.DefaultSTSTTL != 0 && !strutil.StrListContains(r.CredentialTypes, assumedRoleCred) && !strutil.StrListContains(r.CredentialTypes, federationTokenCred) {
-		errors = multierror.Append(errors, fmt.Errorf("default_sts_ttl parameter only valid for %s and %s credential types", assumedRoleCred, federationTokenCred))
+	if r.DefaultSTSTTL != 0 && !strutil.StrListContains(r.CredentialTypes, assumedRoleCred) && !strutil.StrListContains(r.CredentialTypes, federationTokenCred) && !strutil.StrListContains(r.CredentialTypes, sessionTokenCred) {
+		errors = multierror.Append(errors, fmt.Errorf("default_sts_ttl parameter only valid for %s, %s, and %s credential types", assumedRoleCred, federationTokenCred, sessionTokenCred))
 	}
 
-	if r.MaxSTSTTL != 0 && !strutil.StrListContains(r.CredentialTypes, assumedRoleCred) && !strutil.StrListContains(r.CredentialTypes, federationTokenCred) {
-		errors = multierror.Append(errors, fmt.Errorf("max_sts_ttl parameter only valid for %s and %s credential types", assumedRoleCred, federationTokenCred))
+	if r.MaxSTSTTL != 0 && !strutil.StrListContains(r.CredentialTypes, assumedRoleCred) && !strutil.StrListContains(r.CredentialTypes, federationTokenCred) && !strutil.StrListContains(r.CredentialTypes, sessionTokenCred) {
+		errors = multierror.Append(errors, fmt.Errorf("max_sts_ttl parameter only valid for %s, %s, and %s credential types", assumedRoleCred, federationTokenCred, sessionTokenCred))
 	}
 
 	if r.MaxSTSTTL > 0 &&
@@ -562,7 +619,7 @@ func (r *awsRoleEntry) validate() error {
 			errors = multierror.Append(errors, fmt.Errorf("user_path parameter only valid for %s credential type", iamUserCred))
 		}
 		if !userPathRegex.MatchString(r.UserPath) {
-			errors = multierror.Append(errors, fmt.Errorf("The specified value for user_path is invalid. It must match %q regexp", userPathRegex.String()))
+			errors = multierror.Append(errors, fmt.Errorf("the specified value for user_path is invalid. It must match %q regexp", userPathRegex.String()))
 		}
 	}
 
@@ -575,8 +632,20 @@ func (r *awsRoleEntry) validate() error {
 		}
 	}
 
+	if (r.PolicyDocument != "" || len(r.PolicyArns) != 0) && strutil.StrListContains(r.CredentialTypes, sessionTokenCred) {
+		errors = multierror.Append(errors, fmt.Errorf("cannot supply a policy or role when using credential_type %s", sessionTokenCred))
+	}
+
 	if len(r.RoleArns) > 0 && !strutil.StrListContains(r.CredentialTypes, assumedRoleCred) {
 		errors = multierror.Append(errors, fmt.Errorf("cannot supply role_arns when credential_type isn't %s", assumedRoleCred))
+	}
+
+	if len(r.SessionTags) > 0 && !strutil.StrListContains(r.CredentialTypes, assumedRoleCred) {
+		errors = multierror.Append(errors, fmt.Errorf("cannot supply session_tags when credential_type isn't %s", assumedRoleCred))
+	}
+
+	if r.ExternalID != "" && !strutil.StrListContains(r.CredentialTypes, assumedRoleCred) {
+		errors = multierror.Append(errors, fmt.Errorf("cannot supply external_id when credential_type isn't %s", assumedRoleCred))
 	}
 
 	return errors.ErrorOrNil()
@@ -592,6 +661,7 @@ const (
 	assumedRoleCred     = "assumed_role"
 	iamUserCred         = "iam_user"
 	federationTokenCred = "federation_token"
+	sessionTokenCred    = "session_token"
 )
 
 const pathListRolesHelpSyn = `List the existing roles in this backend`

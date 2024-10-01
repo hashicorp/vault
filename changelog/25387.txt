@@ -1,0 +1,3 @@
+```release-note:bug
+agent: Fix issue where Vault Agent was unable to render KVv2 secrets with delete_version_after set.
+```

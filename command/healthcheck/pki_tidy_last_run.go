@@ -1,12 +1,14 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package healthcheck
 
 import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/logical"
-
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 type TidyLastRun struct {
@@ -93,7 +95,7 @@ func (h *TidyLastRun) Evaluate(e *Executor) (results []*Result, err error) {
 		ret := Result{
 			Status:   ResultInsufficientPermissions,
 			Endpoint: "/{{mount}}/tidy-status",
-			Message:  "Without this information, this health check is unable tof unction.",
+			Message:  "Without this information, this health check is unable to function.",
 		}
 
 		if e.Client.Token() == "" {

@@ -11,7 +11,7 @@ description: |-
 This page contains the list of breaking changes for Vault 0.5.1. Please read it
 carefully.
 
-## PKI Backend Disallows RSA Keys < 2048 Bits
+## PKI backend disallows RSA keys < 2048 bits
 
 The PKI backend now refuses to issue a certificate, sign a CSR, or save a role
 that specifies an RSA key of less than 2048 bits. Smaller keys are considered
@@ -21,7 +21,7 @@ inception the PKI backend has mandated SHA256 hashes for its signatures, and
 software able to handle these certificates should be able to handle
 certificates with >= 2048-bit RSA keys as well.
 
-## PKI Backend Does Not Automatically Delete Expired Certificates
+## PKI backend does not automatically delete expired certificates
 
 The PKI backend now does not automatically delete expired certificates,
 including from the CRL. Doing so could lead to a situation where a time
@@ -35,7 +35,7 @@ certificate storage, or both. In addition, you can specify a safety buffer
 (defaulting to 72 hours) to ensure that any time discrepancies between your
 hosts is accounted for.
 
-## Cert auth method Performs Client Checking During Renewals
+## Cert auth method performs client checking during renewals
 
 The `cert` backend now performs a variant of channel binding at renewal time
 for increased security. In order to not overly burden clients, a notion of

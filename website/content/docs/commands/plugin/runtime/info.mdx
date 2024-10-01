@@ -1,0 +1,50 @@
+---
+layout: docs
+page_title: plugin runtime info - Command
+description: The "plugin runtime info" command displays information about a plugin runtime in the catalog.
+---
+
+# plugin runtime info
+
+Displays information about a plugin runtime in the catalog with the given name. If
+the plugin runtime does not exist, an error is returned.
+
+<Note title="Limited type support">
+  Support for runtime types is currently limited to `container`.
+</Note>
+
+## Examples
+
+Display information about a plugin
+
+```shell-session
+$ vault plugin runtime info -type=container runc
+Key              Value
+---              -----
+cgroup_parent    n/a
+cpu_nanos        0
+memory_bytes     0
+name             runc
+oci_runtime      runc
+type             container
+```
+
+## Usage
+
+The following flags are available in addition to the [standard set of
+flags](/vault/docs/commands) included on all commands.
+
+### Output options
+
+- `-field` `(string: "")` - Print information for the named field without a
+  trailing newline. The `-field` parameter takes precedence over other
+  formatting directives.
+
+- `-format` `(string: "table")` - Print the output for the current command in
+  the given format. Valid formats are `table`, `json`, or `yaml`. Use the
+  `VAULT_FORMAT` environment variable to set your output preferences globally.
+
+### Command options
+
+- `-type` `(string: "")` - Plugin runtime type. Vault currently only supports
+  `container` runtime type.

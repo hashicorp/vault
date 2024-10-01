@@ -1,0 +1,5 @@
+| Path                                                           | Default Policy Path | Issuer                | Role          |
+|:---------------------------------------------------------------|:--------------------|:----------------------|:--------------|
+| `/pki/est/{cacerts, simpleenroll, simplereenroll}`             | `sign-verbatim`     | `default`             | Sign-Verbatim |
+| `/pki/est/{cacerts, simpleenroll, simplereenroll}`             | `role:role_ref`     | Specified by the role | `:role_ref`   |
+| `/pki/roles/:role/est/{cacerts, simpleenroll, simplereenroll}` | (any)               | Specified by the role | `:role`       |

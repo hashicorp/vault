@@ -6,7 +6,7 @@ description: >-
   and erasing tokens simpler to use.
 ---
 
-# Token Helpers
+# Token helpers
 
 A token helper is an external program that Vault calls to save, retrieve or erase
 a saved token. The token helper could be a very simple script or a more complex
@@ -28,13 +28,13 @@ token_helper = "/path/to/token/helper.sh"
 
 You will need to use the fully qualified path to the token helper script. The script should be executable.
 
-## Developing a Token Helper
+## Developing a token helper
 
 The interface to a token helper is extremely simple: the script is passed with one argument that could be `get`, `store` or `erase`. If the argument is `get`, the script should do whatever work it needs to do to retrieve the stored token and then print the token to `STDOUT`. If the argument is `store`, Vault is asking you to store the token. Finally, if the argument is `erase`, your program should erase the stored token.
 
 If your program succeeds, it should exit with status code 0. If it encounters an issue that prevents it from working, it should exit with some other status code. You should write a user-friendly error message to `STDERR`. You should never write anything other than the token to `STDOUT`, as Vault assumes whatever it gets on `STDOUT` is the token.
 
-### Example Token Helper
+### Example token helper
 
 This is an example token helper written in Ruby that stores and retrieves tokens in a json file called `~/.vault_tokens`. The key is the environment variable \$VAULT_ADDR, this allows the Vault user to easily store and retrieve tokens from a number of different Vault servers.
 

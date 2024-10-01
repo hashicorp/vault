@@ -1,0 +1,8 @@
+### vault.raft.snapshot.takeSnapshot ((#vault-raft-snapshot-takesnapshot))
+
+Metric type | Value | Description
+----------- | ----- | -----------
+timer       | ms    | Total time required to create and persist the current snapshot
+
+In most cases, `vault.raft.snapshot.takeSnapshot` is approximately equal to
+`vault.raft.snapshot.create +  vault.raft.snapshot.persist`.

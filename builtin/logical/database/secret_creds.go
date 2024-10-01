@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package database
 
 import (
@@ -31,6 +34,9 @@ func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
 			return nil, fmt.Errorf("secret is missing username internal data")
 		}
 		username, ok := usernameRaw.(string)
+		if !ok {
+			return nil, fmt.Errorf("username not a string")
+		}
 
 		roleNameRaw, ok := req.Secret.InternalData["role"]
 		if !ok {
@@ -95,6 +101,9 @@ func (b *databaseBackend) secretCredsRevoke() framework.OperationFunc {
 			return nil, fmt.Errorf("secret is missing username internal data")
 		}
 		username, ok := usernameRaw.(string)
+		if !ok {
+			return nil, fmt.Errorf("username not a string")
+		}
 
 		var resp *logical.Response
 

@@ -1,0 +1,3 @@
+```release-note:improvement
+auth/cf: Remove incorrect usage of CreateOperation from path_config
+```

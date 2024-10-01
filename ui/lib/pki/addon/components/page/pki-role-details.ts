@@ -1,28 +1,30 @@
-import { action } from '@ember/object';
-import RouterService from '@ember/routing/router-service';
-import Component from '@glimmer/component';
-import FlashMessageService from 'vault/services/flash-messages';
-import { inject as service } from '@ember/service';
-import errorMessage from 'vault/utils/error-message';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
 
-// TODO: pull this in from route model once it's TS
+import Component from '@glimmer/component';
+import { action } from '@ember/object';
+import { service } from '@ember/service';
+import errorMessage from 'vault/utils/error-message';
+import type SecretMountPath from 'vault/services/secret-mount-path';
+import type FlashMessageService from 'vault/services/flash-messages';
+import type RouterService from '@ember/routing/router-service';
+import type PkiRoleModel from 'vault/models/pki/role';
+
 interface Args {
-  role: {
-    backend: string;
-    id: string;
-    rollbackAttributes: () => void;
-    destroyRecord: () => void;
-  };
+  role: PkiRoleModel;
 }
 
 export default class DetailsPage extends Component<Args> {
   @service declare readonly router: RouterService;
   @service declare readonly flashMessages: FlashMessageService;
+  @service declare readonly secretMountPath: SecretMountPath;
 
   get breadcrumbs() {
     return [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: this.args.role.backend || 'pki', route: 'overview' },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
+      { label: this.secretMountPath.currentPath, route: 'overview' },
       { label: 'roles', route: 'roles.index' },
       { label: this.args.role.id },
     ];

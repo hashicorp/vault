@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package template
 
 import (
@@ -8,12 +11,15 @@ import (
 	"net/http/httptest"
 	"os"
 	"strings"
+	sync "sync/atomic"
 	"testing"
 	"time"
 
 	ctconfig "github.com/hashicorp/consul-template/config"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/command/agent/config"
+	"github.com/hashicorp/vault/command/agent/internal/ctmanager"
+	"github.com/hashicorp/vault/command/agentproxyshared"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -22,6 +28,14 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/test/bufconn"
 )
+
+func newRunnerConfig(s *ServerConfig, configs ctconfig.TemplateConfigs) (*ctconfig.Config, error) {
+	managerCfg := ctmanager.ManagerConfig{
+		AgentConfig: s.AgentConfig,
+	}
+	cfg, err := ctmanager.NewConfig(managerCfg, configs)
+	return cfg, err
+}
 
 // TestNewServer is a simple test to make sure NewServer returns a Server and
 // channel
@@ -75,7 +89,7 @@ func newAgentConfig(listeners []*configutil.Listener, enableCache, enablePersise
 	}
 
 	if enablePersisentCache {
-		agentConfig.Cache.Persist = &config.Persist{Type: "kubernetes"}
+		agentConfig.Cache.Persist = &agentproxyshared.PersistConfig{Type: "kubernetes"}
 	}
 
 	return agentConfig
@@ -374,8 +388,9 @@ func TestServerRun(t *testing.T) {
 			}
 
 			errCh := make(chan error)
+			serverErrCh := make(chan error, 1)
 			go func() {
-				errCh <- server.Run(ctx, templateTokenCh, templatesToRender)
+				errCh <- server.Run(ctx, templateTokenCh, templatesToRender, &sync.Bool{}, serverErrCh)
 			}()
 
 			// send a dummy value to trigger the internal Runner to query for secret
@@ -479,8 +494,9 @@ func TestNewServerLogLevels(t *testing.T) {
 			defer cancel()
 
 			errCh := make(chan error)
+			serverErrCh := make(chan error, 1)
 			go func() {
-				errCh <- server.Run(ctx, templateTokenCh, templatesToRender)
+				errCh <- server.Run(ctx, templateTokenCh, templatesToRender, &sync.Bool{}, serverErrCh)
 			}()
 
 			// send a dummy value to trigger auth so the server will exit

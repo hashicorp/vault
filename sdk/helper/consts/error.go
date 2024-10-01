@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package consts
 
 import "errors"
@@ -22,4 +25,7 @@ var (
 	// ErrInvalidWrappingToken is returned when checking for the validity of
 	// a wrapping token that turns out to be invalid.
 	ErrInvalidWrappingToken = errors.New("wrapping token is not valid or does not exist")
+
+	// ErrOverloaded indicates the Vault server is at capacity.
+	ErrOverloaded = errors.New("overloaded, try again later")
 )

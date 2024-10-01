@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -13,6 +16,7 @@ import (
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -54,8 +58,9 @@ type IdentityStore struct {
 	db *memdb.MemDB
 
 	// locks to make sure things are consistent
-	lock     sync.RWMutex
-	oidcLock sync.RWMutex
+	lock             sync.RWMutex
+	oidcLock         sync.RWMutex
+	generateJWKSLock sync.Mutex
 
 	// groupLock is used to protect modifications to group entries
 	groupLock sync.RWMutex
@@ -99,7 +104,12 @@ type IdentityStore struct {
 	groupUpdater  GroupUpdater
 	tokenStorer   TokenStorer
 	entityCreator EntityCreator
+	mountLister   MountLister
 	mfaBackend    *LoginMFABackend
+
+	// aliasLocks is used to protect modifications to alias entries based on the uniqueness factor
+	// which is name + accessor
+	aliasLocks []*locksutil.LockEntry
 }
 
 type groupDiff struct {
@@ -150,3 +160,10 @@ type EntityCreator interface {
 }
 
 var _ EntityCreator = &Core{}
+
+type MountLister interface {
+	ListMounts() ([]*MountEntry, error)
+	ListAuths() ([]*MountEntry, error)
+}
+
+var _ MountLister = &Core{}

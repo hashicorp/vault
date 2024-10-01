@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package aws
 
 import (
@@ -17,7 +20,7 @@ func TestAccBackend_Stepwise_basic(t *testing.T) {
 	t.Parallel()
 	envOptions := &stepwise.MountOptions{
 		RegistryName:    "aws-sec",
-		PluginType:      stepwise.PluginTypeSecrets,
+		PluginType:      api.PluginTypeSecrets,
 		PluginName:      "aws",
 		MountPathPrefix: "aws-sec",
 	}
@@ -67,7 +70,7 @@ func testAccStepwiseRead(t *testing.T, path, name string, credentialTests []cred
 			var d struct {
 				AccessKey string `mapstructure:"access_key"`
 				SecretKey string `mapstructure:"secret_key"`
-				STSToken  string `mapstructure:"security_token"`
+				STSToken  string `mapstructure:"session_token"`
 			}
 			if err := mapstructure.Decode(resp.Data, &d); err != nil {
 				return err

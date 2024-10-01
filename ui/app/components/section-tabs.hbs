@@ -1,0 +1,22 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{#let (tabs-for-auth-section @model this.tabType @paths) as |tabs|}}
+  {{#if tabs.length}}
+    <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
+      <nav class="tabs" aria-label="navigation to manage {{@model.type}}">
+        <ul>
+          {{#each tabs as |tab|}}
+            <li>
+              <LinkTo @route={{tab.route}} @models={{tab.routeParams}} data-test-auth-section-tab>
+                {{tab.label}}
+              </LinkTo>
+            </li>
+          {{/each}}
+        </ul>
+      </nav>
+    </div>
+  {{/if}}
+{{/let}}

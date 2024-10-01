@@ -1,0 +1,3 @@
+```release-note:improvement
+openapi: added ability to validate response structures against openapi schema for test clusters
+```

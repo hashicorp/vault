@@ -1,0 +1,3 @@
+```release-note:bug
+agent: Fix bug with 'cache' stanza validation
+```

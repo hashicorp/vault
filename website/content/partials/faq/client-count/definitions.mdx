@@ -1,0 +1,29 @@
+### What is a client? ((#what-is-a-client))
+
+Any unique application, service, or user that authenticates to a HashiCorp
+Vault cluster. The client count metric is a combination of entity clients and
+non-entity clients.
+
+For billing and consumption, only clients that are active during the billing
+period count toward total usage. Clients are only counted once within a billing
+period, regardless of how many times that client is active and when that client
+authenticates to a cluster, it has unlimited access to that cluster for the
+remainder of the billing period.
+
+| Installation type | Billing period
+| ----------------- | ---------------
+| HCP               | monthly
+| Self-managed      | annually
+
+Consult the [clients and entities](/vault/docs/concepts/client-count) overview
+for more information on client definitions.
+
+### What is the difference between an entity client, non-entity client, certificate client, and secret sync client? ((#eclient-vs-neclient))
+
+- **Entity clients** map to an active identity.
+- **Non-entity clients** map to an active non-entity token.
+- **Certificate clients** map to an active ACME PKI certificate.
+- **Secret sync clients** map to an actively synced secret.
+
+Consult the [clients and entities](/vault/docs/concepts/client-count) overview
+for more information about how Vault determines entity assignments.

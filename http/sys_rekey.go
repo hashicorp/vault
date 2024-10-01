@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package http
 
 import (
@@ -17,7 +20,7 @@ func handleSysRekeyInit(core *vault.Core, recovery bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		standby, _ := core.Standby()
 		if standby {
-			respondStandby(core, w, r.URL)
+			respondStandby(core, w, r)
 			return
 		}
 
@@ -152,7 +155,7 @@ func handleSysRekeyUpdate(core *vault.Core, recovery bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		standby, _ := core.Standby()
 		if standby {
-			respondStandby(core, w, r.URL)
+			respondStandby(core, w, r)
 			return
 		}
 
@@ -225,7 +228,7 @@ func handleSysRekeyVerify(core *vault.Core, recovery bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		standby, _ := core.Standby()
 		if standby {
-			respondStandby(core, w, r.URL)
+			respondStandby(core, w, r)
 			return
 		}
 

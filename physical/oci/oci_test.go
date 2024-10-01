@@ -19,6 +19,11 @@ func TestOCIBackend(t *testing.T) {
 	if os.Getenv("VAULT_ACC") == "" {
 		t.SkipNow()
 	}
+
+	if !hasOCICredentials() {
+		t.Skip("Skipping because OCI credentials could not be resolved. See https://pkg.go.dev/github.com/oracle/oci-go-sdk/common#DefaultConfigProvider for information on how to set up OCI credentials.")
+	}
+
 	bucketName, _ := uuid.GenerateUUID()
 	configProvider := common.DefaultConfigProvider()
 	objectStorageClient, _ := objectstorage.NewObjectStorageClientWithConfigurationProvider(configProvider)
@@ -86,4 +91,15 @@ func getNamespaceName(objectStorageClient objectstorage.ObjectStorageClient, t *
 	}
 	nameSpaceName := *response.Value
 	return nameSpaceName
+}
+
+func hasOCICredentials() bool {
+	configProvider := common.DefaultConfigProvider()
+
+	_, err := configProvider.KeyID()
+	if err != nil {
+		return false
+	}
+
+	return true
 }

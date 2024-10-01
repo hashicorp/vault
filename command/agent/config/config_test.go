@@ -1,15 +1,25 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package config
 
 import (
 	"os"
+	"syscall"
 	"testing"
 	"time"
 
 	"github.com/go-test/deep"
 	ctconfig "github.com/hashicorp/consul-template/config"
+	"github.com/hashicorp/vault/command/agentproxyshared"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
+	"golang.org/x/exp/slices"
 )
+
+func FloatPtr(t float64) *float64 {
+	return &t
+}
 
 func TestLoadConfigFile_AgentCache(t *testing.T) {
 	config, err := LoadConfigFile("./test-fixtures/config-cache.hcl")
@@ -77,13 +87,16 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 			UseAutoAuthToken:    true,
 			UseAutoAuthTokenRaw: true,
 			ForceAutoAuthToken:  false,
-			Persist: &Persist{
+			Persist: &agentproxyshared.PersistConfig{
 				Type:                    "kubernetes",
 				Path:                    "/vault/agent-cache/",
 				KeepAfterImport:         true,
 				ExitOnErr:               true,
 				ServiceAccountTokenFile: "/tmp/serviceaccount/token",
 			},
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 		Vault: &Vault{
 			Address:          "http://127.0.0.1:1111",
@@ -182,13 +195,16 @@ func TestLoadConfigDir_AgentCache(t *testing.T) {
 			UseAutoAuthToken:    true,
 			UseAutoAuthTokenRaw: true,
 			ForceAutoAuthToken:  false,
-			Persist: &Persist{
+			Persist: &agentproxyshared.PersistConfig{
 				Type:                    "kubernetes",
 				Path:                    "/vault/agent-cache/",
 				KeepAfterImport:         true,
 				ExitOnErr:               true,
 				ServiceAccountTokenFile: "/tmp/serviceaccount/token",
 			},
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 		Vault: &Vault{
 			Address:          "http://127.0.0.1:1111",
@@ -260,6 +276,9 @@ func TestLoadConfigDir_AutoAuthAndListener(t *testing.T) {
 				},
 			},
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 	}
 
 	config.Prune()
@@ -323,6 +342,9 @@ func TestLoadConfigDir_VaultBlock(t *testing.T) {
 				},
 			},
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 	}
 
 	config.Prune()
@@ -382,13 +404,16 @@ func TestLoadConfigFile_AgentCache_NoListeners(t *testing.T) {
 			UseAutoAuthToken:    true,
 			UseAutoAuthTokenRaw: true,
 			ForceAutoAuthToken:  false,
-			Persist: &Persist{
+			Persist: &agentproxyshared.PersistConfig{
 				Type:                    "kubernetes",
 				Path:                    "/vault/agent-cache/",
 				KeepAfterImport:         true,
 				ExitOnErr:               true,
 				ServiceAccountTokenFile: "/tmp/serviceaccount/token",
 			},
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 		Vault: &Vault{
 			Address:          "http://127.0.0.1:1111",
@@ -469,6 +494,9 @@ func TestLoadConfigFile(t *testing.T) {
 				},
 			},
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 	}
 
 	config.Prune()
@@ -517,6 +545,9 @@ func TestLoadConfigFile_Method_Wrapping(t *testing.T) {
 				},
 			},
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 	}
 
 	config.Prune()
@@ -555,6 +586,9 @@ func TestLoadConfigFile_Method_InitialBackoff(t *testing.T) {
 					},
 				},
 			},
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 	}
 
@@ -595,6 +629,9 @@ func TestLoadConfigFile_Method_ExitOnErr(t *testing.T) {
 				},
 			},
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 	}
 
 	config.Prune()
@@ -610,8 +647,7 @@ func TestLoadConfigFile_AgentCache_NoAutoAuth(t *testing.T) {
 	}
 
 	expected := &Config{
-		APIProxy: &APIProxy{},
-		Cache:    &Cache{},
+		Cache: &Cache{},
 		SharedConfig: &configutil.SharedConfig{
 			PidFile: "./pidfile",
 			Listeners: []*configutil.Listener{
@@ -621,6 +657,9 @@ func TestLoadConfigFile_AgentCache_NoAutoAuth(t *testing.T) {
 					TLSDisable: true,
 				},
 			},
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 	}
 
@@ -756,6 +795,9 @@ func TestLoadConfigFile_AgentCache_AutoAuth_NoSink(t *testing.T) {
 			UseAutoAuthTokenRaw: true,
 			ForceAutoAuthToken:  false,
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 	}
 
 	config.Prune()
@@ -798,6 +840,9 @@ func TestLoadConfigFile_AgentCache_AutoAuth_Force(t *testing.T) {
 			UseAutoAuthToken:    true,
 			UseAutoAuthTokenRaw: "force",
 			ForceAutoAuthToken:  true,
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 	}
 
@@ -842,6 +887,9 @@ func TestLoadConfigFile_AgentCache_AutoAuth_True(t *testing.T) {
 			UseAutoAuthTokenRaw: "true",
 			ForceAutoAuthToken:  false,
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 	}
 
 	config.Prune()
@@ -882,6 +930,9 @@ func TestLoadConfigFile_Agent_AutoAuth_APIProxyAllConfig(t *testing.T) {
 			ForceAutoAuthToken:  true,
 			EnforceConsistency:  "always",
 			WhenInconsistent:    "forward",
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 	}
 
@@ -928,14 +979,13 @@ func TestLoadConfigFile_AgentCache_AutoAuth_False(t *testing.T) {
 				},
 			},
 		},
-		APIProxy: &APIProxy{
-			UseAutoAuthToken:   false,
-			ForceAutoAuthToken: false,
-		},
 		Cache: &Cache{
 			UseAutoAuthToken:    false,
 			UseAutoAuthTokenRaw: "false",
 			ForceAutoAuthToken:  false,
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 	}
 
@@ -952,9 +1002,8 @@ func TestLoadConfigFile_AgentCache_Persist(t *testing.T) {
 	}
 
 	expected := &Config{
-		APIProxy: &APIProxy{},
 		Cache: &Cache{
-			Persist: &Persist{
+			Persist: &agentproxyshared.PersistConfig{
 				Type:                    "kubernetes",
 				Path:                    "/vault/agent-cache/",
 				KeepAfterImport:         false,
@@ -971,6 +1020,9 @@ func TestLoadConfigFile_AgentCache_Persist(t *testing.T) {
 					TLSDisable: true,
 				},
 			},
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 	}
 
@@ -997,12 +1049,21 @@ func TestLoadConfigFile_TemplateConfig(t *testing.T) {
 			TemplateConfig{
 				ExitOnRetryFailure:    true,
 				StaticSecretRenderInt: 1 * time.Minute,
+				MaxConnectionsPerHost: 100,
+				LeaseRenewalThreshold: FloatPtr(0.8),
 			},
 		},
 		"empty": {
 			"./test-fixtures/config-template_config-empty.hcl",
 			TemplateConfig{
-				ExitOnRetryFailure: false,
+				ExitOnRetryFailure:    false,
+				MaxConnectionsPerHost: 10,
+			},
+		},
+		"missing": {
+			"./test-fixtures/config-template_config-missing.hcl",
+			TemplateConfig{
+				MaxConnectionsPerHost: 10,
 			},
 		},
 	}
@@ -1138,6 +1199,9 @@ func TestLoadConfigFile_Template(t *testing.T) {
 						},
 					},
 				},
+				TemplateConfig: &TemplateConfig{
+					MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+				},
 				Templates: tc.expectedTemplates,
 			}
 
@@ -1234,6 +1298,9 @@ func TestLoadConfigFile_Template_NoSinks(t *testing.T) {
 					},
 					Sinks: nil,
 				},
+				TemplateConfig: &TemplateConfig{
+					MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+				},
 				Templates: tc.expectedTemplates,
 			}
 
@@ -1242,6 +1309,46 @@ func TestLoadConfigFile_Template_NoSinks(t *testing.T) {
 				t.Fatal(diff)
 			}
 		})
+	}
+}
+
+// TestLoadConfigFile_Template_WithCache tests ensures that cache {} stanza is
+// permitted in vault agent configuration with template(s)
+func TestLoadConfigFile_Template_WithCache(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/config-template-with-cache.hcl")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	expected := &Config{
+		SharedConfig: &configutil.SharedConfig{
+			PidFile: "./pidfile",
+		},
+		AutoAuth: &AutoAuth{
+			Method: &Method{
+				Type:      "aws",
+				MountPath: "auth/aws",
+				Namespace: "my-namespace/",
+				Config: map[string]interface{}{
+					"role": "foobar",
+				},
+			},
+		},
+		Cache: &Cache{},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
+		Templates: []*ctconfig.TemplateConfig{
+			{
+				Source:      pointerutil.StringPtr("/path/on/disk/to/template.ctmpl"),
+				Destination: pointerutil.StringPtr("/path/on/disk/where/template/will/render.txt"),
+			},
+		},
+	}
+
+	config.Prune()
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
 	}
 }
 
@@ -1275,6 +1382,9 @@ func TestLoadConfigFile_Vault_Retry(t *testing.T) {
 					},
 				},
 			},
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 		Vault: &Vault{
 			Address: "http://127.0.0.1:1111",
@@ -1321,6 +1431,9 @@ func TestLoadConfigFile_Vault_Retry_Empty(t *testing.T) {
 				},
 			},
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 		Vault: &Vault{
 			Address: "http://127.0.0.1:1111",
 			Retry: &Retry{
@@ -1352,10 +1465,12 @@ func TestLoadConfigFile_EnforceConsistency(t *testing.T) {
 			},
 			PidFile: "",
 		},
-		APIProxy: &APIProxy{},
 		Cache: &Cache{
 			EnforceConsistency: "always",
 			WhenInconsistent:   "retry",
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 	}
 
@@ -1385,6 +1500,9 @@ func TestLoadConfigFile_EnforceConsistency_APIProxy(t *testing.T) {
 		APIProxy: &APIProxy{
 			EnforceConsistency: "always",
 			WhenInconsistent:   "retry",
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 	}
 
@@ -1428,6 +1546,9 @@ func TestLoadConfigFile_Disable_Idle_Conns_All(t *testing.T) {
 					},
 				},
 			},
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 		Vault: &Vault{
 			Address: "http://127.0.0.1:1111",
@@ -1478,6 +1599,9 @@ func TestLoadConfigFile_Disable_Idle_Conns_Auto_Auth(t *testing.T) {
 				},
 			},
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 		Vault: &Vault{
 			Address: "http://127.0.0.1:1111",
 			Retry: &Retry{
@@ -1526,6 +1650,9 @@ func TestLoadConfigFile_Disable_Idle_Conns_Templating(t *testing.T) {
 					},
 				},
 			},
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 		Vault: &Vault{
 			Address: "http://127.0.0.1:1111",
@@ -1576,6 +1703,9 @@ func TestLoadConfigFile_Disable_Idle_Conns_Caching(t *testing.T) {
 				},
 			},
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 		Vault: &Vault{
 			Address: "http://127.0.0.1:1111",
 			Retry: &Retry{
@@ -1625,6 +1755,9 @@ func TestLoadConfigFile_Disable_Idle_Conns_Proxying(t *testing.T) {
 				},
 			},
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 		Vault: &Vault{
 			Address: "http://127.0.0.1:1111",
 			Retry: &Retry{
@@ -1673,6 +1806,9 @@ func TestLoadConfigFile_Disable_Idle_Conns_Empty(t *testing.T) {
 					},
 				},
 			},
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 		Vault: &Vault{
 			Address: "http://127.0.0.1:1111",
@@ -1728,6 +1864,9 @@ func TestLoadConfigFile_Disable_Idle_Conns_Env(t *testing.T) {
 					},
 				},
 			},
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 		Vault: &Vault{
 			Address: "http://127.0.0.1:1111",
@@ -1785,6 +1924,9 @@ func TestLoadConfigFile_Disable_Keep_Alives_All(t *testing.T) {
 				},
 			},
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 		Vault: &Vault{
 			Address: "http://127.0.0.1:1111",
 			Retry: &Retry{
@@ -1833,6 +1975,9 @@ func TestLoadConfigFile_Disable_Keep_Alives_Auto_Auth(t *testing.T) {
 					},
 				},
 			},
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 		Vault: &Vault{
 			Address: "http://127.0.0.1:1111",
@@ -1883,6 +2028,9 @@ func TestLoadConfigFile_Disable_Keep_Alives_Templating(t *testing.T) {
 				},
 			},
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 		Vault: &Vault{
 			Address: "http://127.0.0.1:1111",
 			Retry: &Retry{
@@ -1931,6 +2079,9 @@ func TestLoadConfigFile_Disable_Keep_Alives_Caching(t *testing.T) {
 					},
 				},
 			},
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 		Vault: &Vault{
 			Address: "http://127.0.0.1:1111",
@@ -1981,6 +2132,9 @@ func TestLoadConfigFile_Disable_Keep_Alives_Proxying(t *testing.T) {
 				},
 			},
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 		Vault: &Vault{
 			Address: "http://127.0.0.1:1111",
 			Retry: &Retry{
@@ -2029,6 +2183,9 @@ func TestLoadConfigFile_Disable_Keep_Alives_Empty(t *testing.T) {
 					},
 				},
 			},
+		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
 		},
 		Vault: &Vault{
 			Address: "http://127.0.0.1:1111",
@@ -2085,6 +2242,9 @@ func TestLoadConfigFile_Disable_Keep_Alives_Env(t *testing.T) {
 				},
 			},
 		},
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 		Vault: &Vault{
 			Address: "http://127.0.0.1:1111",
 			Retry: &Retry{
@@ -2103,5 +2263,191 @@ func TestLoadConfigFile_Bad_Value_Disable_Keep_Alives(t *testing.T) {
 	_, err := LoadConfigFile("./test-fixtures/bad-config-disable-keep-alives.hcl")
 	if err == nil {
 		t.Fatal("should have error, it didn't")
+	}
+}
+
+// TestLoadConfigFile_EnvTemplates_Simple loads and validates an env_template config
+func TestLoadConfigFile_EnvTemplates_Simple(t *testing.T) {
+	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-simple.hcl")
+	if err != nil {
+		t.Fatalf("error loading config file: %s", err)
+	}
+
+	if err := cfg.ValidateConfig(); err != nil {
+		t.Fatalf("validation error: %s", err)
+	}
+
+	expectedKey := "MY_DATABASE_USER"
+	found := false
+	for _, envTemplate := range cfg.EnvTemplates {
+		if *envTemplate.MapToEnvironmentVariable == expectedKey {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected environment variable name to be populated")
+	}
+}
+
+// TestLoadConfigFile_EnvTemplates_Complex loads and validates an env_template config
+func TestLoadConfigFile_EnvTemplates_Complex(t *testing.T) {
+	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-complex.hcl")
+	if err != nil {
+		t.Fatalf("error loading config file: %s", err)
+	}
+
+	if err := cfg.ValidateConfig(); err != nil {
+		t.Fatalf("validation error: %s", err)
+	}
+
+	expectedKeys := []string{
+		"FOO_PASSWORD",
+		"FOO_USER",
+	}
+
+	envExists := func(key string) bool {
+		for _, envTmpl := range cfg.EnvTemplates {
+			if *envTmpl.MapToEnvironmentVariable == key {
+				return true
+			}
+		}
+		return false
+	}
+
+	for _, expected := range expectedKeys {
+		if !envExists(expected) {
+			t.Fatalf("expected environment variable %s", expected)
+		}
+	}
+}
+
+// TestLoadConfigFile_EnvTemplates_WithSource loads and validates an
+// env_template config with "source" instead of "contents"
+func TestLoadConfigFile_EnvTemplates_WithSource(t *testing.T) {
+	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-with-source.hcl")
+	if err != nil {
+		t.Fatalf("error loading config file: %s", err)
+	}
+
+	if err := cfg.ValidateConfig(); err != nil {
+		t.Fatalf("validation error: %s", err)
+	}
+}
+
+// TestLoadConfigFile_EnvTemplates_NoName ensures that env_template with no name triggers an error
+func TestLoadConfigFile_EnvTemplates_NoName(t *testing.T) {
+	_, err := LoadConfigFile("./test-fixtures/bad-config-env-templates-no-name.hcl")
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+}
+
+// TestLoadConfigFile_EnvTemplates_ExecInvalidSignal ensures that an invalid signal triggers an error
+func TestLoadConfigFile_EnvTemplates_ExecInvalidSignal(t *testing.T) {
+	_, err := LoadConfigFile("./test-fixtures/bad-config-env-templates-invalid-signal.hcl")
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+}
+
+// TestLoadConfigFile_EnvTemplates_ExecSimple validates the exec section with default parameters
+func TestLoadConfigFile_EnvTemplates_ExecSimple(t *testing.T) {
+	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-simple.hcl")
+	if err != nil {
+		t.Fatalf("error loading config file: %s", err)
+	}
+
+	if err := cfg.ValidateConfig(); err != nil {
+		t.Fatalf("validation error: %s", err)
+	}
+
+	expectedCmd := []string{"/path/to/my/app", "arg1", "arg2"}
+	if !slices.Equal(cfg.Exec.Command, expectedCmd) {
+		t.Fatal("exec.command does not have expected value")
+	}
+
+	// check defaults
+	if cfg.Exec.RestartOnSecretChanges != "always" {
+		t.Fatalf("expected cfg.Exec.RestartOnSecretChanges to be 'always', got '%s'", cfg.Exec.RestartOnSecretChanges)
+	}
+
+	if cfg.Exec.RestartStopSignal != syscall.SIGTERM {
+		t.Fatalf("expected cfg.Exec.RestartStopSignal to be 'syscall.SIGTERM', got '%s'", cfg.Exec.RestartStopSignal)
+	}
+}
+
+// TestLoadConfigFile_EnvTemplates_ExecComplex validates the exec section with non-default parameters
+func TestLoadConfigFile_EnvTemplates_ExecComplex(t *testing.T) {
+	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-complex.hcl")
+	if err != nil {
+		t.Fatalf("error loading config file: %s", err)
+	}
+
+	if err := cfg.ValidateConfig(); err != nil {
+		t.Fatalf("validation error: %s", err)
+	}
+
+	if !slices.Equal(cfg.Exec.Command, []string{"env"}) {
+		t.Fatal("exec.command does not have expected value")
+	}
+
+	if cfg.Exec.RestartOnSecretChanges != "never" {
+		t.Fatalf("expected cfg.Exec.RestartOnSecretChanges to be 'never', got %q", cfg.Exec.RestartOnSecretChanges)
+	}
+
+	if cfg.Exec.RestartStopSignal != syscall.SIGINT {
+		t.Fatalf("expected cfg.Exec.RestartStopSignal to be 'syscall.SIGINT', got %q", cfg.Exec.RestartStopSignal)
+	}
+}
+
+// TestLoadConfigFile_Bad_EnvTemplates_MissingExec ensures that ValidateConfig
+// errors when "env_template" stanza(s) are specified but "exec" is missing
+func TestLoadConfigFile_Bad_EnvTemplates_MissingExec(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/bad-config-env-templates-missing-exec.hcl")
+	if err != nil {
+		t.Fatalf("error loading config file: %s", err)
+	}
+
+	if err := config.ValidateConfig(); err == nil {
+		t.Fatal("expected an error from ValidateConfig: exec section is missing")
+	}
+}
+
+// TestLoadConfigFile_Bad_EnvTemplates_WithProxy ensures that ValidateConfig
+// errors when both env_template and api_proxy stanzas are present
+func TestLoadConfigFile_Bad_EnvTemplates_WithProxy(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/bad-config-env-templates-with-proxy.hcl")
+	if err != nil {
+		t.Fatalf("error loading config file: %s", err)
+	}
+
+	if err := config.ValidateConfig(); err == nil {
+		t.Fatal("expected an error from ValidateConfig: listener / api_proxy are not compatible with env_template")
+	}
+}
+
+// TestLoadConfigFile_Bad_EnvTemplates_WithFileTemplates ensures that
+// ValidateConfig errors when both env_template and template stanzas are present
+func TestLoadConfigFile_Bad_EnvTemplates_WithFileTemplates(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/bad-config-env-templates-with-file-templates.hcl")
+	if err != nil {
+		t.Fatalf("error loading config file: %s", err)
+	}
+
+	if err := config.ValidateConfig(); err == nil {
+		t.Fatal("expected an error from ValidateConfig: file template stanza is not compatible with env_template")
+	}
+}
+
+// TestLoadConfigFile_Bad_EnvTemplates_DisalowedFields ensure that
+// ValidateConfig errors for disalowed env_template fields
+func TestLoadConfigFile_Bad_EnvTemplates_DisalowedFields(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/bad-config-env-templates-disalowed-fields.hcl")
+	if err != nil {
+		t.Fatalf("error loading config file: %s", err)
+	}
+
+	if err := config.ValidateConfig(); err == nil {
+		t.Fatal("expected an error from ValidateConfig: disallowed fields specified in env_template")
 	}
 }

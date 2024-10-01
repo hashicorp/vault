@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Resolved accessibility issues with Web REPL. Associated label and help text with input, added a conditional to show the console/ui-panel only when toggled open, added keyboard focus trap. 
+```

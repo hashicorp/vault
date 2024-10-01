@@ -1,5 +1,10 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { singularize } from 'ember-inflector';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import Route from '@ember/routing/route';
 
 export default Route.extend({
@@ -17,6 +22,8 @@ export default Route.extend({
   setupController(controller) {
     this._super(...arguments);
     const { item_type: itemType } = this.paramsFor('vault.cluster.access.method.item');
+    const { path: method } = this.paramsFor('vault.cluster.access.method');
     controller.set('itemType', singularize(itemType));
+    controller.set('method', method);
   },
 });

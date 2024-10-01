@@ -1,0 +1,3 @@
+```release-note:improvement
+client/pki: Add a new command verify-sign which checks the relationship between two certificates.
+```

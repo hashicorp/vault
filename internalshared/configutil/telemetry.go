@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package configutil
 
 import (
@@ -6,8 +9,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/go-secure-stdlib/parseutil"
-
 	monitoring "cloud.google.com/go/monitoring/apiv3"
 	"github.com/armon/go-metrics"
 	"github.com/armon/go-metrics/circonus"
@@ -15,11 +16,13 @@ import (
 	"github.com/armon/go-metrics/prometheus"
 	stackdriver "github.com/google/go-metrics-stackdriver"
 	stackdrivervault "github.com/google/go-metrics-stackdriver/vault"
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/helper/metricsutil"
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/vault/sdk/helper/metricregistry"
 	"google.golang.org/api/option"
 )
 
@@ -159,6 +162,10 @@ type Telemetry struct {
 	// PrefixFilter is a list of filter rules to apply for allowing
 	// or blocking metrics by prefix.
 	PrefixFilter []string `hcl:"prefix_filter"`
+
+	// Whether or not telemetry should include the mount point in the rollback
+	// metrics
+	RollbackMetricsIncludeMountPoint bool `hcl:"add_mount_point_rollback_metrics"`
 }
 
 func (t *Telemetry) Validate(source string) []ConfigError {
@@ -283,6 +290,10 @@ func SetupTelemetry(opts *SetupTelemetryOpts) (*metrics.InmemSink, *metricsutil.
 			Expiration: opts.Config.PrometheusRetentionTime,
 		}
 
+		// Merge in explicit metric definitions so Prometheus always reports those
+		// metrics.
+		metricregistry.MergeDefinitions(&prometheusOpts)
+
 		sink, err := prometheus.NewPrometheusSinkFrom(prometheusOpts)
 		if err != nil {
 			return nil, nil, false, err
@@ -399,6 +410,7 @@ func SetupTelemetry(opts *SetupTelemetryOpts) (*metrics.InmemSink, *metricsutil.
 	wrapper.TelemetryConsts.LeaseMetricsEpsilon = opts.Config.LeaseMetricsEpsilon
 	wrapper.TelemetryConsts.LeaseMetricsNameSpaceLabels = opts.Config.LeaseMetricsNameSpaceLabels
 	wrapper.TelemetryConsts.NumLeaseMetricsTimeBuckets = opts.Config.NumLeaseMetricsTimeBuckets
+	wrapper.TelemetryConsts.RollbackMetricsIncludeMountPoint = opts.Config.RollbackMetricsIncludeMountPoint
 
 	// Parse the metric filters
 	telemetryAllowedPrefixes, telemetryBlockedPrefixes, err := parsePrefixFilter(opts.Config.PrefixFilter)

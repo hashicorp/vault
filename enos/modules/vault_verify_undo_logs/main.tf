@@ -1,9 +1,48 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 terraform {
   required_providers {
     enos = {
-      source = "app.terraform.io/hashicorp-qti/enos"
+      source = "registry.terraform.io/hashicorp-forge/enos"
     }
   }
+}
+
+variable "expected_state" {
+  type        = number
+  description = "The expected state to have in vault.core.replication.write_undo_logs telemetry. Must be either 1 for enabled or 0 for disabled."
+
+  validation {
+    condition     = contains([0, 1], var.expected_state)
+    error_message = "The expected_state must be either 0 or 1"
+  }
+}
+
+variable "hosts" {
+  type = map(object({
+    ipv6       = string
+    private_ip = string
+    public_ip  = string
+  }))
+  description = "The vault cluster target hosts to check"
+}
+
+variable "retry_interval" {
+  type        = number
+  description = "How many seconds to wait between each retry"
+  default     = 2
+}
+
+variable "timeout" {
+  type        = number
+  description = "The max number of seconds to wait before timing out"
+  default     = 60
+}
+
+variable "vault_addr" {
+  type        = string
+  description = "The local vault API listen address"
 }
 
 variable "vault_install_dir" {
@@ -11,53 +50,21 @@ variable "vault_install_dir" {
   description = "The directory where the Vault binary will be installed"
 }
 
-variable "vault_instance_count" {
-  type        = number
-  description = "How many vault instances are in the cluster"
-}
-
-variable "vault_instances" {
-  type = map(object({
-    private_ip = string
-    public_ip  = string
-  }))
-  description = "The vault cluster instances that were created"
-}
-
 variable "vault_root_token" {
   type        = string
   description = "The vault root token"
 }
 
-variable "vault_autopilot_upgrade_version" {
-  type        = string
-  description = "The vault version to which autopilot upgraded Vault"
-  default     = null
-}
-
-variable "vault_undo_logs_status" {
-  type        = string
-  description = "An integer either 0 or 1 which indicates whether undo_logs are disabled or enabled"
-  default     = null
-}
-
-locals {
-  public_ips = {
-    for idx in range(var.vault_instance_count) : idx => {
-      public_ip  = values(var.vault_instances)[idx].public_ip
-      private_ip = values(var.vault_instances)[idx].private_ip
-    }
-  }
-}
-
 resource "enos_remote_exec" "smoke-verify-undo-logs" {
-  for_each = local.public_ips
+  for_each = var.hosts
 
   environment = {
-    VAULT_TOKEN                     = var.vault_root_token
-    VAULT_ADDR                      = "http://localhost:8200"
-    vault_undo_logs_status          = var.vault_undo_logs_status
-    vault_autopilot_upgrade_version = var.vault_autopilot_upgrade_version
+    EXPECTED_STATE    = var.expected_state
+    RETRY_INTERVAL    = var.retry_interval
+    TIMEOUT_SECONDS   = var.timeout
+    VAULT_ADDR        = var.vault_addr
+    VAULT_INSTALL_DIR = var.vault_install_dir
+    VAULT_TOKEN       = var.vault_root_token
   }
 
   scripts = [abspath("${path.module}/scripts/smoke-verify-undo-logs.sh")]

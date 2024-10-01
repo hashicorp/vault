@@ -1,14 +1,22 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package postgresql
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"database/sql"
+	"encoding/pem"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/vault/plugins/database/postgresql/scram"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
@@ -65,7 +73,8 @@ func new() *PostgreSQL {
 	connProducer.Type = postgreSQLTypeName
 
 	db := &PostgreSQL{
-		SQLConnectionProducer: connProducer,
+		SQLConnectionProducer:  connProducer,
+		passwordAuthentication: passwordAuthenticationPassword,
 	}
 
 	return db
@@ -74,10 +83,65 @@ func new() *PostgreSQL {
 type PostgreSQL struct {
 	*connutil.SQLConnectionProducer
 
-	usernameProducer template.StringTemplate
+	TLSCertificateData []byte `json:"tls_certificate" structs:"-" mapstructure:"tls_certificate"`
+	TLSPrivateKey      []byte `json:"private_key" structs:"-" mapstructure:"private_key"`
+	TLSCAData          []byte `json:"tls_ca" structs:"-" mapstructure:"tls_ca"`
+
+	usernameProducer       template.StringTemplate
+	passwordAuthentication passwordAuthentication
 }
 
 func (p *PostgreSQL) Initialize(ctx context.Context, req dbplugin.InitializeRequest) (dbplugin.InitializeResponse, error) {
+	sslcert, err := strutil.GetString(req.Config, "tls_certificate")
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to retrieve tls_certificate: %w", err)
+	}
+
+	sslkey, err := strutil.GetString(req.Config, "private_key")
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to retrieve private_key: %w", err)
+	}
+
+	sslrootcert, err := strutil.GetString(req.Config, "tls_ca")
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to retrieve tls_ca: %w", err)
+	}
+
+	useTLS := false
+	tlsConfig := &tls.Config{}
+	if sslrootcert != "" {
+		caCertPool := x509.NewCertPool()
+		if !caCertPool.AppendCertsFromPEM([]byte(sslrootcert)) {
+			return dbplugin.InitializeResponse{}, errors.New("unable to add CA to cert pool")
+		}
+
+		tlsConfig.RootCAs = caCertPool
+		tlsConfig.ClientCAs = caCertPool
+		p.TLSConfig = tlsConfig
+		useTLS = true
+	}
+
+	if (sslcert != "" && sslkey == "") || (sslcert == "" && sslkey != "") {
+		return dbplugin.InitializeResponse{}, errors.New(`both "sslcert" and "sslkey" are required`)
+	}
+
+	if sslcert != "" && sslkey != "" {
+		block, _ := pem.Decode([]byte(sslkey))
+
+		cert, err := tls.X509KeyPair([]byte(sslcert), pem.EncodeToMemory(block))
+		if err != nil {
+			return dbplugin.InitializeResponse{}, fmt.Errorf("unable to load cert: %w", err)
+		}
+		tlsConfig.Certificates = []tls.Certificate{cert}
+		p.TLSConfig = tlsConfig
+		useTLS = true
+	}
+
+	if !useTLS {
+		// set to nil to flag that this connection does not use a custom TLS config
+		p.TLSConfig = nil
+	}
+
 	newConf, err := p.SQLConnectionProducer.Init(ctx, req.Config, req.VerifyConnection)
 	if err != nil {
 		return dbplugin.InitializeResponse{}, err
@@ -102,6 +166,20 @@ func (p *PostgreSQL) Initialize(ctx context.Context, req dbplugin.InitializeRequ
 		return dbplugin.InitializeResponse{}, fmt.Errorf("invalid username template: %w", err)
 	}
 
+	passwordAuthenticationRaw, err := strutil.GetString(req.Config, "password_authentication")
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to retrieve password_authentication: %w", err)
+	}
+
+	if passwordAuthenticationRaw != "" {
+		pwAuthentication, err := parsePasswordAuthentication(passwordAuthenticationRaw)
+		if err != nil {
+			return dbplugin.InitializeResponse{}, err
+		}
+
+		p.passwordAuthentication = pwAuthentication
+	}
+
 	resp := dbplugin.InitializeResponse{
 		Config: newConf,
 	}
@@ -121,6 +199,15 @@ func (p *PostgreSQL) getConnection(ctx context.Context) (*sql.DB, error) {
 	return db.(*sql.DB), nil
 }
 
+func (p *PostgreSQL) getStaticConnection(ctx context.Context, username, password string) (*sql.DB, error) {
+	db, err := p.StaticConnection(ctx, username, password)
+	if err != nil {
+		return nil, err
+	}
+
+	return db, nil
+}
+
 func (p *PostgreSQL) UpdateUser(ctx context.Context, req dbplugin.UpdateUserRequest) (dbplugin.UpdateUserResponse, error) {
 	if req.Username == "" {
 		return dbplugin.UpdateUserResponse{}, fmt.Errorf("missing username")
@@ -131,17 +218,17 @@ func (p *PostgreSQL) UpdateUser(ctx context.Context, req dbplugin.UpdateUserRequ
 
 	merr := &multierror.Error{}
 	if req.Password != nil {
-		err := p.changeUserPassword(ctx, req.Username, req.Password)
+		err := p.changeUserPassword(ctx, req.Username, req.Password, req.SelfManagedPassword)
 		merr = multierror.Append(merr, err)
 	}
 	if req.Expiration != nil {
-		err := p.changeUserExpiration(ctx, req.Username, req.Expiration)
+		err := p.changeUserExpiration(ctx, req.Username, req.Expiration, req.SelfManagedPassword)
 		merr = multierror.Append(merr, err)
 	}
 	return dbplugin.UpdateUserResponse{}, merr.ErrorOrNil()
 }
 
-func (p *PostgreSQL) changeUserPassword(ctx context.Context, username string, changePass *dbplugin.ChangePassword) error {
+func (p *PostgreSQL) changeUserPassword(ctx context.Context, username string, changePass *dbplugin.ChangePassword, selfManagedPass string) error {
 	stmts := changePass.Statements.Commands
 	if len(stmts) == 0 {
 		stmts = []string{defaultChangePasswordStatement}
@@ -155,9 +242,18 @@ func (p *PostgreSQL) changeUserPassword(ctx context.Context, username string, ch
 	p.Lock()
 	defer p.Unlock()
 
-	db, err := p.getConnection(ctx)
-	if err != nil {
-		return fmt.Errorf("unable to get connection: %w", err)
+	var db *sql.DB
+	var err error
+	if selfManagedPass == "" {
+		db, err = p.getConnection(ctx)
+		if err != nil {
+			return fmt.Errorf("unable to get connection: %w", err)
+		}
+	} else {
+		db, err = p.getStaticConnection(ctx, username, selfManagedPass)
+		if err != nil {
+			return fmt.Errorf("unable to get static connection from cache: %w", err)
+		}
 	}
 
 	// Check if the role exists
@@ -185,6 +281,15 @@ func (p *PostgreSQL) changeUserPassword(ctx context.Context, username string, ch
 				"username": username,
 				"password": password,
 			}
+
+			if p.passwordAuthentication == passwordAuthenticationSCRAMSHA256 {
+				hashedPassword, err := scram.Hash(password)
+				if err != nil {
+					return fmt.Errorf("unable to scram-sha256 password: %w", err)
+				}
+				m["password"] = hashedPassword
+			}
+
 			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 				return fmt.Errorf("failed to execute query: %w", err)
 			}
@@ -198,7 +303,7 @@ func (p *PostgreSQL) changeUserPassword(ctx context.Context, username string, ch
 	return nil
 }
 
-func (p *PostgreSQL) changeUserExpiration(ctx context.Context, username string, changeExp *dbplugin.ChangeExpiration) error {
+func (p *PostgreSQL) changeUserExpiration(ctx context.Context, username string, changeExp *dbplugin.ChangeExpiration, selfManagedPass string) error {
 	p.Lock()
 	defer p.Unlock()
 
@@ -207,9 +312,18 @@ func (p *PostgreSQL) changeUserExpiration(ctx context.Context, username string, 
 		renewStmts = []string{defaultExpirationStatement}
 	}
 
-	db, err := p.getConnection(ctx)
-	if err != nil {
-		return err
+	var db *sql.DB
+	var err error
+	if selfManagedPass == "" {
+		db, err = p.getConnection(ctx)
+		if err != nil {
+			return fmt.Errorf("unable to get connection: %w", err)
+		}
+	} else {
+		db, err = p.getStaticConnection(ctx, username, selfManagedPass)
+		if err != nil {
+			return fmt.Errorf("unable to get static connection from cache: %w", err)
+		}
 	}
 
 	tx, err := db.BeginTx(ctx, nil)
@@ -269,15 +383,24 @@ func (p *PostgreSQL) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (
 	}
 	defer tx.Rollback()
 
+	m := map[string]string{
+		"name":       username,
+		"username":   username,
+		"password":   req.Password,
+		"expiration": expirationStr,
+	}
+
+	if p.passwordAuthentication == passwordAuthenticationSCRAMSHA256 {
+		hashedPassword, err := scram.Hash(req.Password)
+		if err != nil {
+			return dbplugin.NewUserResponse{}, fmt.Errorf("unable to scram-sha256 password: %w", err)
+		}
+		m["password"] = hashedPassword
+	}
+
 	for _, stmt := range req.Statements.Commands {
 		if containsMultilineStatement(stmt) {
 			// Execute it as-is.
-			m := map[string]string{
-				"name":       username,
-				"username":   username,
-				"password":   req.Password,
-				"expiration": expirationStr,
-			}
 			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, stmt); err != nil {
 				return dbplugin.NewUserResponse{}, fmt.Errorf("failed to execute query: %w", err)
 			}
@@ -290,12 +413,6 @@ func (p *PostgreSQL) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (
 				continue
 			}
 
-			m := map[string]string{
-				"name":       username,
-				"username":   username,
-				"password":   req.Password,
-				"expiration": expirationStr,
-			}
 			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 				return dbplugin.NewUserResponse{}, fmt.Errorf("failed to execute query: %w", err)
 			}
@@ -338,6 +455,17 @@ func (p *PostgreSQL) customDeleteUser(ctx context.Context, username string, revo
 	}()
 
 	for _, stmt := range revocationStmts {
+		if containsMultilineStatement(stmt) {
+			// Execute it as-is.
+			m := map[string]string{
+				"name":     username,
+				"username": username,
+			}
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, stmt); err != nil {
+				return err
+			}
+			continue
+		}
 		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
 			query = strings.TrimSpace(query)
 			if len(query) == 0 {
@@ -401,7 +529,7 @@ func (p *PostgreSQL) defaultDeleteUser(ctx context.Context, username string) err
 		}
 		revocationStmts = append(revocationStmts, fmt.Sprintf(
 			`REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA %s FROM %s;`,
-			(schema),
+			dbutil.QuoteIdentifier(schema),
 			dbutil.QuoteIdentifier(username)))
 
 		revocationStmts = append(revocationStmts, fmt.Sprintf(

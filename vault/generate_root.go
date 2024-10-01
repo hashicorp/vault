@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -22,7 +25,7 @@ var (
 	GenerateStandardRootTokenStrategy GenerateRootStrategy = generateStandardRootToken{}
 
 	// GenerateDROperationTokenStrategy is the strategy used to generate a
-	// DR operational token
+	// DR operation token
 	GenerateDROperationTokenStrategy GenerateRootStrategy = generateStandardRootToken{}
 )
 
@@ -163,7 +166,7 @@ func (c *Core) GenerateRootInit(otp, pgpKey string, strategy GenerateRootStrateg
 		return errors.New("unable to check barrier seal status")
 	}
 	if !barrierSealed && c.recoveryMode {
-		return errors.New("attempt to generate recovery operation token when already unsealed")
+		return errors.New("attempt to generate recovery token when already unsealed")
 	}
 	if c.standby && !c.recoveryMode {
 		return consts.ErrStandby
@@ -196,7 +199,7 @@ func (c *Core) GenerateRootInit(otp, pgpKey string, strategy GenerateRootStrateg
 		case generateStandardRootToken:
 			c.logger.Info("root generation initialized", "nonce", c.generateRootConfig.Nonce)
 		case *generateRecoveryToken:
-			c.logger.Info("recovery operation token generation initialized", "nonce", c.generateRootConfig.Nonce)
+			c.logger.Info("recovery token generation initialized", "nonce", c.generateRootConfig.Nonce)
 		default:
 			c.logger.Info("dr operation token generation initialized", "nonce", c.generateRootConfig.Nonce)
 		}
@@ -249,7 +252,7 @@ func (c *Core) GenerateRootUpdate(ctx context.Context, key []byte, nonce string,
 		return nil, errors.New("unable to check barrier seal status")
 	}
 	if !barrierSealed && c.recoveryMode {
-		return nil, errors.New("attempt to generate recovery operation token when already unsealed")
+		return nil, errors.New("attempt to generate recovery token when already unsealed")
 	}
 
 	if c.standby && !c.recoveryMode {
@@ -348,7 +351,7 @@ func (c *Core) GenerateRootUpdate(ctx context.Context, key []byte, nonce string,
 	case generateStandardRootToken:
 		c.logger.Info("root generation finished", "nonce", c.generateRootConfig.Nonce)
 	case *generateRecoveryToken:
-		c.logger.Info("recovery operation token generation finished", "nonce", c.generateRootConfig.Nonce)
+		c.logger.Info("recovery token generation finished", "nonce", c.generateRootConfig.Nonce)
 	default:
 		c.logger.Info("dr operation token generation finished", "nonce", c.generateRootConfig.Nonce)
 	}

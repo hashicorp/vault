@@ -1,0 +1,3 @@
+```release-note:bug
+core: Fix panic in sealed nodes using raft storage trying to emit raft metrics
+```

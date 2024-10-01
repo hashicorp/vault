@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package dbplugin
 
 import (
@@ -120,6 +123,10 @@ type NewUserRequest struct {
 	// The value is set when the credential type is CredentialTypeRSAPrivateKey.
 	PublicKey []byte
 
+	// Subject is the distinguished name for the client certificate credential.
+	// Value is set when the credential type is CredentialTypeClientCertificate.
+	Subject string
+
 	// Expiration of the user. Not all database plugins will support this.
 	Expiration time.Time
 }
@@ -137,24 +144,16 @@ type NewUserResponse struct {
 	Username string
 }
 
+//go:generate enumer -type=CredentialType -trimprefix=CredentialType -transform=snake
+
 // CredentialType is a type of database credential.
 type CredentialType int
 
 const (
 	CredentialTypePassword CredentialType = iota
 	CredentialTypeRSAPrivateKey
+	CredentialTypeClientCertificate
 )
-
-func (k CredentialType) String() string {
-	switch k {
-	case CredentialTypePassword:
-		return "password"
-	case CredentialTypeRSAPrivateKey:
-		return "rsa_private_key"
-	default:
-		return "unknown"
-	}
-}
 
 // ///////////////////////////////////////////////////////
 // UpdateUser()
@@ -182,6 +181,13 @@ type UpdateUserRequest struct {
 	// Expiration indicates the new expiration date to change to.
 	// If nil, no change is requested.
 	Expiration *ChangeExpiration
+
+	// SelfManagedPassword is the password for an externally managed user in the DB.
+	// If this field is supplied, a DB connection is retrieved from the static
+	// account cache for the particular DB plugin and used to update the password of
+	// the self-managed static role.
+	// *ENTERPRISE-ONLY*
+	SelfManagedPassword string
 }
 
 // ChangePublicKey of a given user

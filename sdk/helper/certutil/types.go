@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 // Package certutil contains helper functions that are mostly used
 // with the PKI backend but can be generally useful. Functionality
 // includes helpers for converting a certificate/private key bundle
@@ -158,6 +161,21 @@ func GetPrivateKeyTypeFromSigner(signer crypto.Signer) PrivateKeyType {
 		return Ed25519PrivateKey
 	}
 	return UnknownPrivateKey
+}
+
+// GetPrivateKeyTypeFromPublicKey based on the public key, return the PrivateKeyType
+// that would be associated with it, returning UnknownPrivateKey for unsupported types
+func GetPrivateKeyTypeFromPublicKey(pubKey crypto.PublicKey) PrivateKeyType {
+	switch pubKey.(type) {
+	case *rsa.PublicKey:
+		return RSAPrivateKey
+	case *ecdsa.PublicKey:
+		return ECPrivateKey
+	case ed25519.PublicKey:
+		return Ed25519PrivateKey
+	default:
+		return UnknownPrivateKey
+	}
 }
 
 // ToPEMBundle converts a string-based certificate bundle
@@ -801,6 +819,11 @@ type CreationParameters struct {
 
 	// The explicit SKID to use; especially useful for cross-signing.
 	SKID []byte
+
+	// Ignore validating the CSR's signature. This should only be enabled if the
+	// sender of the CSR has proven proof of possession of the associated
+	// private key by some other means, otherwise keep this set to false.
+	IgnoreCSRSignature bool
 }
 
 type CreationBundle struct {
@@ -1013,3 +1036,6 @@ func CreatePolicyInformationExtensionFromStorageStrings(policyIdentifiers []stri
 		Value:    asn1Bytes,
 	}, nil
 }
+
+// Subject Attribute OIDs
+var SubjectPilotUserIDAttributeOID = asn1.ObjectIdentifier{0, 9, 2342, 19200300, 100, 1, 1}

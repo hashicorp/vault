@@ -8,7 +8,7 @@ description: This is the API documentation for a general set of crypto  tools.
 
 The `/sys/tools` endpoints are a general set of tools.
 
-## Generate Random Bytes
+## Generate random bytes
 
 This endpoint returns high-quality random bytes of the specified length.
 
@@ -25,11 +25,11 @@ This endpoint returns high-quality random bytes of the specified length.
   are `hex` or `base64`.
 
 - `source` `(string: "platform")` - Specifies the source of the requested bytes.
-  `platform`, the default, sources bytes from the platform's entropy source. 
+  `platform`, the default, sources bytes from the platform's entropy source.
   `seal` sources from entropy augmentation (enterprise only).
   `all` mixes bytes from all available sources.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -37,7 +37,7 @@ This endpoint returns high-quality random bytes of the specified length.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -47,7 +47,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/tools/random/164
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -57,7 +57,7 @@ $ curl \
 }
 ```
 
-## Hash Data
+## Hash data
 
 This endpoint returns the cryptographic hash of given data using the specified
 algorithm.
@@ -89,7 +89,7 @@ algorithm.
 - `format` `(string: "hex")` – Specifies the output encoding. This can be either
   `hex` or `base64`.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -97,7 +97,7 @@ algorithm.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -107,7 +107,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/tools/hash/sha2-512
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {

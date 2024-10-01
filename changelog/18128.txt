@@ -1,0 +1,3 @@
+```release-note:improvement
+audit: Add `elide_list_responses` option, providing a countermeasure for a common source of oversized audit log entries
+```

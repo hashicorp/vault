@@ -8,9 +8,19 @@ description: >-
   mechanism.
 ---
 
-# `gcpckms` Seal
+# `gcpckms` seal
 
--> **Note:** The Seal Wrap functionality is enabled by default. For this reason, the KMS service must be available throughout Vault's runtime and not just during the unseal process. Refer to the [Seal Wrap](/docs/enterprise/sealwrap) documenation for more information.
+<Note title="Seal wrapping requires Vault Enterprise">
+
+  All Vault versions support **auto-unseal** for GCP Cloud, but **seal wrapping**
+  requires Vault Enterprise.
+  
+  Vault Enterprise enables seal wrapping by default, which means the KMS service
+  must be available at runtime and not just during the unseal process. Refer to
+  the [Seal wrap](/vault/docs/enterprise/sealwrap) overview for more
+  information.
+
+</Note>
 
 The GCP Cloud KMS seal configures Vault to use GCP Cloud KMS as the seal
 wrapping mechanism. The GCP Cloud KMS seal is activated by one of the following:
@@ -22,7 +32,7 @@ wrapping mechanism. The GCP Cloud KMS seal is activated by one of the following:
   well as all other GCP-related environment variables that lends to successful
   authentication (i.e. `GOOGLE_PROJECT`, etc.).
 
-## `gcpckms` Example
+## `gcpckms` example
 
 This example shows configuring GCP Cloud KMS seal through the Vault
 configuration file by providing all the required values:
@@ -37,7 +47,7 @@ seal "gcpckms" {
 }
 ```
 
-## `gcpckms` Parameters
+## `gcpckms` parameters
 
 These parameters apply to the `seal` stanza in the Vault configuration file:
 
@@ -50,7 +60,7 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
 - `project` `(string: <required>)`: The GCP project ID to use. May also be
   specified by the `GOOGLE_PROJECT` environment variable.
 
-- `region` `(string: "us-east-1")`: The GCP region/location where the key ring
+- `region` `(string: <required>)`: The GCP region/location where the key ring
   lives. May also be specified by the `GOOGLE_REGION` environment variable.
 
 - `key_ring` `(string: <required>)`: The GCP CKMS key ring to use. May also be
@@ -62,9 +72,9 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
 
 - `disabled` `(string: "")`: Set this to `true` if Vault is migrating from an auto seal configuration. Otherwise, set to `false`.
 
-Refer to the [Seal Migration](/docs/concepts/seal#seal-migration) documentation for more information about the seal migration process.
+Refer to the [Seal Migration](/vault/docs/concepts/seal#seal-migration) documentation for more information about the seal migration process.
 
-## Authentication &amp; Permissions
+## Authentication &amp; permissions
 
 Authentication-related values must be provided, either as environment
 variables or as configuration parameters.
@@ -97,7 +107,7 @@ cloudkms.cryptoKeys.get
 
 `cloudkms.cryptoKeys.get` permission is used for retrieving metadata information of keys from CloudKMS within this engine initialization process.
 
-## `gcpckms` Environment Variables
+## `gcpckms` environment variables
 
 Alternatively, the GCP Cloud KMS seal can be activated by providing the following
 environment variables:
@@ -106,7 +116,7 @@ environment variables:
 - `VAULT_GCPCKMS_SEAL_KEY_RING`
 - `VAULT_GCPCKMS_SEAL_CRYPTO_KEY`
 
-## Key Rotation
+## Key rotation
 
 This seal supports rotating keys defined in Google Cloud KMS
 [doc](https://cloud.google.com/kms/docs/rotating-keys). Both scheduled rotation and manual
@@ -116,5 +126,5 @@ encrypted with the primary key version.
 
 ## Tutorial
 
-Refer to the [Auto-unseal using GCP Cloud KMS](https://learn.hashicorp.com/vault/operations/autounseal-gcp-kms)
+Refer to the [Auto-unseal using GCP Cloud KMS](/vault/tutorials/auto-unseal/autounseal-gcp-kms)
 guide for a step-by-step tutorial.

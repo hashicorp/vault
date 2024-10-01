@@ -6,7 +6,7 @@ description: >-
   CockroachDB server or cluster.
 ---
 
-# CockroachDB Storage Backend
+# CockroachDB storage backend
 
 The CockroachDB storage backend is used to persist Vault's data in a
 [CockroachDB][cockroachdb] server or cluster.
@@ -26,7 +26,7 @@ storage "cockroachdb" {
 **Note** - CockroachDB is compatible with the PostgreSQL database driver and
 uses that driver to interact with the database.
 
-## `cockroachdb` Parameters
+## `cockroachdb` parameters
 
 - `connection_url` `(string: <required>)` – Specifies the connection string to
   use to authenticate and connect to CockroachDB. A full list of supported
@@ -44,7 +44,7 @@ uses that driver to interact with the database.
 - `ha_table` `(string: "vault_ha_locks")` - Specifies the name of the table to use
   for storing high availability information.
 
-## `cockroachdb` Examples
+## `cockroachdb` examples
 
 This example shows connecting to a CockroachDB cluster using full SSL
 verification (recommended) and high availability enabled.

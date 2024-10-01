@@ -1,0 +1,3 @@
+```release-note:bug
+pki: Fix automatically turning off CRL signing on upgrade to Vault >= 1.12, if CA Key Usage disallows it
+```

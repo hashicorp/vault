@@ -1,14 +1,19 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pkiext
 
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/builtin/logical/pki"
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
-
+	"github.com/hashicorp/vault/helper/testhelpers"
+	"github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/stretchr/testify/require"
 )
 
@@ -21,7 +26,7 @@ func buildZLintContainer(t *testing.T) {
 	containerfile := `
 FROM docker.mirror.hashicorp.services/library/golang:latest
 
-RUN go install github.com/zmap/zlint/v3/cmd/zlint@latest
+RUN go install github.com/zmap/zlint/v3/cmd/zlint@v3.6.2
 `
 
 	bCtx := docker.NewBuildContext()
@@ -48,15 +53,21 @@ RUN go install github.com/zmap/zlint/v3/cmd/zlint@latest
 	}
 
 	ctx := context.Background()
-	output, err := zRunner.BuildImage(ctx, containerfile, bCtx,
-		docker.BuildRemove(true), docker.BuildForceRemove(true),
-		docker.BuildPullParent(true),
-		docker.BuildTags([]string{imageName + ":" + imageTag}))
-	if err != nil {
-		t.Fatalf("Could not build new image: %v", err)
-	}
 
-	t.Logf("Image build output: %v", string(output))
+	// Sometimes we see timeouts and issues pulling the zlint code from GitHub
+	testhelpers.RetryUntil(t, 30*time.Second, func() error {
+		output, err := zRunner.BuildImage(ctx, containerfile, bCtx,
+			docker.BuildRemove(true),
+			docker.BuildForceRemove(true),
+			docker.BuildPullParent(true),
+			docker.BuildTags([]string{imageName + ":" + imageTag}))
+		if err != nil {
+			return fmt.Errorf("could not build new image with zlint: %w", err)
+		}
+
+		t.Logf("Image build output: %v", string(output))
+		return nil
+	})
 }
 
 func RunZLintContainer(t *testing.T, certificate string) []byte {
@@ -64,11 +75,12 @@ func RunZLintContainer(t *testing.T, certificate string) []byte {
 		buildZLintContainer(t)
 	})
 
+	ctx := context.Background()
 	// We don't actually care about the address, we just want to start the
 	// container so we can run commands in it. We'd ideally like to skip this
 	// step and only build a new image, but the zlint output would be
 	// intermingled with container build stages, so its not that useful.
-	ctr, _, _, err := zRunner.Start(context.Background(), true, false)
+	result, err := zRunner.Start(ctx, true, false)
 	if err != nil {
 		t.Fatalf("Could not start golang container for zlint: %s", err)
 	}
@@ -76,13 +88,13 @@ func RunZLintContainer(t *testing.T, certificate string) []byte {
 	// Copy the cert into the newly running container.
 	certCtx := docker.NewBuildContext()
 	certCtx["cert.pem"] = docker.PathContentsFromBytes([]byte(certificate))
-	if err := zRunner.CopyTo(ctr.ID, "/go/", certCtx); err != nil {
+	if err := zRunner.CopyTo(result.Container.ID, "/go/", certCtx); err != nil {
 		t.Fatalf("Could not copy certificate into container: %v", err)
 	}
 
 	// Run the zlint command and save the output.
 	cmd := []string{"/go/bin/zlint", "/go/cert.pem"}
-	stdout, stderr, retcode, err := zRunner.RunCmdWithOutput(context.Background(), ctr.ID, cmd)
+	stdout, stderr, retcode, err := zRunner.RunCmdWithOutput(ctx, result.Container.ID, cmd)
 	if err != nil {
 		t.Fatalf("Could not run command in container: %v", err)
 	}
@@ -97,7 +109,7 @@ func RunZLintContainer(t *testing.T, certificate string) []byte {
 	}
 
 	// Clean up after ourselves.
-	if err := zRunner.Stop(context.Background(), ctr.ID); err != nil {
+	if err := zRunner.Stop(context.Background(), result.Container.ID); err != nil {
 		t.Fatalf("failed to stop container: %v", err)
 	}
 

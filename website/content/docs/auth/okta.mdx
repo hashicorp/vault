@@ -6,13 +6,13 @@ description: |-
   credentials.
 ---
 
-# Okta Auth Method
+# Okta auth method
 
 The `okta` auth method allows authentication using Okta and user/password
 credentials. This allows Vault to be integrated into environments using Okta.
 
 The mapping of groups in Okta to Vault policies is managed by using the
-[users](/api-docs/auth/okta#register-user) and [groups](/api-docs/auth/okta#register-group)
+[users](/vault/api-docs/auth/okta#register-user) and [groups](/vault/api-docs/auth/okta#register-group)
 APIs.
 
 ## Authentication
@@ -75,7 +75,7 @@ It does not manage Okta [sessions](https://developer.okta.com/docs/reference/api
 users. This means that if MFA Push is configured, it will be required during both login and token renewal.
 
 Note that this MFA support is integrated with Okta Auth and is limited strictly to login
-operations. It is not related to [Enterprise MFA](https://www.vaultproject.io/docs/enterprise/mfa).
+operations. It is not related to [Enterprise MFA](/vault/docs/enterprise/mfa).
 
 ## Configuration
 
@@ -106,7 +106,7 @@ management tool.
   queried.
 
   For the complete list of configuration options, please see the
-  [API documentation](/api-docs/auth/okta).
+  [API documentation](/vault/api-docs/auth/okta).
 
 1. Map an Okta group to a Vault policy:
 
@@ -134,11 +134,11 @@ management tool.
   will need to re-authenticate. You can force this by revoking the
   existing tokens.
 
-### Okta API Token Permissions
+### Okta API token permissions
 
 The `okta` auth method uses the [Authentication](https://developer.okta.com/docs/reference/api/authn/)
 and [User Groups](https://developer.okta.com/docs/reference/api/users/#get-user-s-groups)
-APIs to authenticate users and obtain their group membership. The [`api_token`](/api-docs/auth/okta#api_token)
+APIs to authenticate users and obtain their group membership. The [`api_token`](/vault/api-docs/auth/okta#api_token)
 provided to the auth method's configuration must have sufficient privileges to exercise
 these Okta APIs.
 
@@ -150,4 +150,4 @@ role. Custom roles may also be used to grant minimal permissions to the Okta API
 ## API
 
 The Okta auth method has a full HTTP API. Please see the
-[Okta Auth API](/api-docs/auth/okta) for more details.
+[Okta Auth API](/vault/api-docs/auth/okta) for more details.
