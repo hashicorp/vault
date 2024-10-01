@@ -673,7 +673,26 @@ https://golang.org/pkg/crypto/x509/#KeyUsage -- simply drop
 the "KeyUsage" part of the name.  To use the issuer for 
 CMPv2, DigitalSignature must be set.`,
 	}
-
+	fields["ext_key_usage"] = &framework.FieldSchema{ // Same Name as Leaf-Cert Field, and CA CSR Field, but Description and Default Differ
+		Type:    framework.TypeCommaStringSlice,
+		Default: []string{"OCSPSigning"},
+		Description: `Specifies ext_key_usage to encode in the certificate.
+This is a comma-separated string or list of extended key 
+usages (not key usages).  Valid values can be found at 
+https://golang.org/pkg/crypto/x509/#ExtKeyUsage -- simply 
+drop the "ExtKeyUsage" part of the name.  If this is set to 
+an empty list, and no OID is added to ext_key_usage_oids, 
+then extended key usage will not appear on the Certificate.
+This defaults to OCSPSigning.`,
+	}
+	fields["ext_key_usage_oids"] = &framework.FieldSchema{ // Same Name as Leaf-Cert Field, and CA CSR Field, but Description Differs
+		Type:    framework.TypeCommaStringSlice,
+		Default: []string{},
+		Description: `This is a comma-separated string or list of OIDs that
+refer to extended key usages.  If both this field and
+ext_key_usage are empty, extended key usage will not
+appear on the certificate.`,
+	}
 	return fields
 }
 
@@ -688,6 +707,24 @@ at https://golang.org/pkg/crypto/x509/#KeyUsage -- simply
 drop the "KeyUsage" part of the name.  If not set, key 
 usage will not appear on the CSR.`,
 	}
-
+	fields["ext_key_usage"] = &framework.FieldSchema{ // Same Name as Leaf-Cert, CA-Cert Field, but Description and Default Differ
+		Type:    framework.TypeCommaStringSlice,
+		Default: []string{},
+		Description: `Specifies ext_key_usage to encode in the certificate
+signing request.  This is a comma-separated string or list
+of extended key usages (not key usages).  Valid values can
+be found at https://golang.org/pkg/crypto/x509/#ExtKeyUsage
+-- simply drop the "ExtKeyUsage" part of the name.  If this 
+is not set, and no OID is added to ext_key_usage_oids, then
+extended key usage will not appear on the CSR.`,
+	}
+	fields["ext_key_usage_oids"] = &framework.FieldSchema{ // Same Name as Leaf-Cert, CA-Cert Field, but Description Differs
+		Type:    framework.TypeCommaStringSlice,
+		Default: []string{},
+		Description: `This is a comma-separated string or list of OIDs that
+refer to extended key usages.  If both this field and
+ext_key_usage are not set, extended key usage will not
+appear on the CSR.`,
+	}
 	return fields
 }
