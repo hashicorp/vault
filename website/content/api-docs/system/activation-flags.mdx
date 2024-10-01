@@ -1,0 +1,95 @@
+---
+layout: api
+page_title: /sys/activation-flags - HTTP API
+description: The `/sys/activation-flags` endpoints are used to enable features that are gated by a one-time flag.
+---
+
+# `/sys/activation-flags`
+
+@include 'alerts/restricted-root.mdx'
+
+The `/sys/activation-flags` endpoints are used to read and manage certain features that are gated by a 
+one-time flag before use. Before being activated, endpoints to the given feature will be blocked and an
+error response will be returned. Upon activation, the filter on the feature's paths will be removed. As
+these flags are one-time operations, there is no way to unactivate a feature once activated.
+
+## Read activation flags
+
+This endpoint is used to return the current state of Vault's activation flags. The response contains
+two lists of feature names. The first list `activated` contains the names of features that have
+already been activated. The second list `unactivated` contains all remaining features that are available
+but have not yet been activated.
+
+Reading this endpoint does not require authentication.
+
+| Method | Path                    |
+| :----- | :---------------------- |
+| `GET`  | `/sys/activation-flags` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --request GET \
+    http://127.0.0.1:8200/v1/sys/activation-flags
+```
+
+### Sample response
+
+```json
+{
+    "request_id": "9f70548c-a039-24a6-147d-7fa43698e044",
+    "lease_id": "",
+    "lease_duration": 0,
+    "renewable": false,
+    "data": {
+        "activated": [],
+        "unactivated": [
+            "secrets-sync"
+        ]
+    },
+    "warnings": null
+}
+```
+
+## Write activation flags
+
+This endpoint is used to activate a given feature, unblocking its endpoints and letting the feature
+begin to function. The feature name is placed within the path of the API call.
+
+| Method | Path                                      |
+| :----- | :---------------------------------------- |
+| `PUT`  | `/sys/activation-flags/:feature/activate` |
+
+### Parameters
+
+- `feature` `(string: <required>)` – Specifies the name of the Vault feature that is currently
+unactivated. Must be provided as part of the API path and cannot be specified in a payload.
+
+### Sample request
+
+```shell-session
+$ curl \
+    --request PUT \
+    --header "X-Vault-Token: $VAULT_TOKEN" \
+    http://127.0.0.1:8200/v1/sys/activation-flags/secrets-sync/activate
+```
+
+### Sample response
+
+```json
+{
+    "request_id": "7636e655-e11d-e2aa-8286-bd38c1d9c600",
+    "lease_id": "",
+    "lease_duration": 0,
+    "renewable": false,
+    "data": {
+        "activated": [
+            "secrets-sync"
+        ],
+        "unactivated": []
+    },
+    "warnings": null,
+    "mount_type": "system"
+}
+```
