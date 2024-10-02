@@ -78,7 +78,7 @@ export default TransformBase.extend({
       if (errorStatus === 403) {
         let message = `The edits to this transformation were successful, but transformations for the role ${record.id} were not edited due to a lack of permissions.`;
        } else if (errorStatus) {
-          message = `You've edited the allowed_roles for this transformation. However, the corresponding edits to remove the role ${record.id}'s transformation was not made.`;
+          message = `You've edited the allowed_roles for this transformation. However, there was a problem updating the role: ${record.id}.`;
         }
         this.flashMessages.info(message, {
           sticky: true,
