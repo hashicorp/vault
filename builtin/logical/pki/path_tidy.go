@@ -1724,7 +1724,7 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 			"acme_account_safety_buffer":            nil,
 			"cert_metadata_deleted_count":           nil,
 			"cmpv2_nonce_deleted_count":             nil,
-			"last_auto_tidy_finished":               b.getLastAutoTidyTime(),
+			"last_auto_tidy_finished":               b.getLastAutoTidyTimeWithoutLock(), // we acquired the tidyStatusLock above.
 		},
 	}
 
@@ -2126,6 +2126,12 @@ func (b *backend) updateLastAutoTidyTime(sc *storageContext, lastRunTime time.Ti
 func (b *backend) getLastAutoTidyTime() time.Time {
 	b.tidyStatusLock.RLock()
 	defer b.tidyStatusLock.RUnlock()
+	return b.getLastAutoTidyTimeWithoutLock()
+}
+
+// getLastAutoTidyTimeWithoutLock should be used to read from b.lastAutoTidy with the
+// b.tidyStatusLock being acquired, normally use getLastAutoTidyTime
+func (b *backend) getLastAutoTidyTimeWithoutLock() time.Time {
 	return b.lastAutoTidy
 }
 

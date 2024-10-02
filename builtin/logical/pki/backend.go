@@ -297,7 +297,9 @@ func Backend(conf *logical.BackendConfig) *backend {
 
 	// Delay the first tidy until after we've started up, this will be reset within the initialize function
 	now := time.Now()
+	b.tidyStatusLock.Lock()
 	b.lastAutoTidy = now
+	b.tidyStatusLock.Unlock()
 
 	// Keep track of when this mount was started up.
 	b.mountStartup = now
