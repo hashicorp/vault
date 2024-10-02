@@ -181,6 +181,9 @@ export default class TransitKeyModel extends Model {
   get canRead() {
     return this.secretPath.get('canUpdate') !== false;
   }
+  get canUpdate() {
+    return this.secretPath.get('canUpdate') !== false;
+  }
   get canEdit() {
     return this.secretPath.get('canUpdate') !== false;
   }
