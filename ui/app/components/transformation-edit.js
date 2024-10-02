@@ -68,25 +68,20 @@ export default TransformBase.extend({
 
   handleUpdateRoles(updateRoles, transformationId) {
     if (!updateRoles) return;
-    const backend = this.model.backend;
-    const promises = updateRoles.map((r) => this.updateOrCreateRole(r, transformationId, backend));
-
-    Promise.all(promises).then((results) => {
-      const hasError = results.find((role) => !!role.errorStatus);
-
-      if (hasError) {
-        let message =
-          'The edits to this transformation were successful, but transformations for its roles was not edited due to a lack of permissions.';
-        if (results.find((e) => !!e.errorStatus && e.errorStatus !== 403)) {
-          // if the errors weren't all due to permissions show generic message
-          // eg. trying to update a role with empty array as transformations
-          message = `You've edited the allowed_roles for this transformation. However, the corresponding edits to some roles' transformations were not made`;
+    const { backend } = this.model;
+    updateRoles.forEach((record) => {
+      // for each role that needs to be updated or created, update the role with the transformation. If there is an error, intercept it and show a message.
+      this.updateOrCreateRole(record, transformationId, backend).catch((e) => {
+        let message = `The edits to this transformation were successful, but transformations for its roles was not edited due to a lack of permissions.`;
+        if (e.httpStatus !== 403) {
+          message = `You've edited the allowed_roles for this transformation. However, the corresponding edits to some roles' transformations were not made.`;
         }
         this.flashMessages.info(message, {
           sticky: true,
           priority: 300,
         });
-      }
+        return; // exit out of the forEach loop if an error occurs
+      });
     });
   },
 
