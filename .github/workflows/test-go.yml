@@ -49,6 +49,11 @@ on:
         required: false
         default: 20
         type: number
+      go-test-timeout:
+        description: The timeout parameter for Go tests
+        required: false
+        default: 50m
+        type: string
       timeout-minutes:
         description: The maximum number of minutes that this workflow should run
         required: false
@@ -443,7 +448,7 @@ jobs:
               -- \
               $package_parallelism \
               -tags "${{ inputs.go-tags }}" \
-              -timeout=${{ env.TIMEOUT_IN_MINUTES }}m \
+              -timeout=${{ inputs.go-test-timeout }} \
               -parallel=${{ inputs.go-test-parallelism }} \
               ${{ inputs.extra-flags }} \
       - name: Prepare datadog-ci
