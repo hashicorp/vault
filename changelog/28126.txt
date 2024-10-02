@@ -1,0 +1,6 @@
+```release-note:improvement
+auto-auth/cert: support watching changes on certificate/key files and notifying the auth handler when `enable_reauth_on_new_credentials` is enabled.
+```
+```release-note:improvement
+auto-auth: support new config option `enable_reauth_on_new_credentials`, supporting re-authentication when receiving new credential on certain auto-auth types
+```
