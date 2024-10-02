@@ -76,7 +76,7 @@ export default TransformBase.extend({
       // If an error was returned, check error type and show a message.
       const errorStatus = updateOrCreateResponse.errorStatus;
       if (errorStatus) {
-        let message = `The edits to this transformation were successful, but transformations for its roles was not edited due to a lack of permissions.`;
+        let message = `The edits to this transformation were successful, but transformations for the role ${record.id} were not edited due to a lack of permissions.`;
         if (errorStatus !== 403) {
           message = `You've edited the allowed_roles for this transformation. However, the corresponding edits to remove the role ${record.id}'s transformation was not made.`;
         }
