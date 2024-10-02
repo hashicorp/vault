@@ -5,7 +5,6 @@
 
 import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
-import { alias } from '@ember/object/computed';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
@@ -138,6 +137,4 @@ export default Model.extend({
     readOnly: true,
   }),
   updatePath: lazyCapabilities(apiPath`${'backend'}/transformation/${'id'}`, 'backend', 'id'),
-  canDelete: alias('updatePath.canDelete'),
-  canUpdate: alias('updatePath.canUpdate'),
 });

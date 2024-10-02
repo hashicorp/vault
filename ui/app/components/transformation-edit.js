@@ -17,29 +17,11 @@ export default TransformBase.extend({
     this.set('initialRoles', this.model.allowed_roles);
   },
 
-  updateOrCreateRole(role, transformationId, backend) {
-    return this.store
+  async updateOrCreateRole(role, transformationId, backend) {
+    const roleStore = await this.store
       .queryRecord('transform/role', {
         backend,
         id: role.id,
-      })
-      .then((roleStore) => {
-        let transformations = roleStore.transformations;
-        if (role.action === 'ADD') {
-          transformations = addToList(transformations, transformationId);
-        } else if (role.action === 'REMOVE') {
-          transformations = removeFromList(transformations, transformationId);
-        }
-        roleStore.setProperties({
-          backend,
-          transformations,
-        });
-        return roleStore.save().catch((e) => {
-          return {
-            errorStatus: e.httpStatus,
-            ...role,
-          };
-        });
       })
       .catch((e) => {
         if (e.httpStatus !== 403 && role.action === 'ADD') {
@@ -64,24 +46,45 @@ export default TransformBase.extend({
           errorStatus: e.httpStatus,
         };
       });
+    // if an error occurs while querying the role, exit function and return the error
+    if (roleStore.errorStatus) return roleStore;
+    // otherwise update the role with the transformation and save
+    let transformations = roleStore.transformations;
+    if (role.action === 'ADD') {
+      transformations = addToList(transformations, transformationId);
+    } else if (role.action === 'REMOVE') {
+      transformations = removeFromList(transformations, transformationId);
+    }
+    roleStore.setProperties({
+      backend,
+      transformations,
+    });
+    return roleStore.save().catch((e) => {
+      return {
+        errorStatus: e.httpStatus,
+        ...role,
+      };
+    });
   },
 
   handleUpdateRoles(updateRoles, transformationId) {
     if (!updateRoles) return;
     const { backend } = this.model;
-    updateRoles.forEach((record) => {
-      // for each role that needs to be updated or created, update the role with the transformation. If there is an error, intercept it and show a message.
-      this.updateOrCreateRole(record, transformationId, backend).catch((e) => {
+    updateRoles.forEach(async (record) => {
+      // For each role that needs to be updated, update the role with the transformation.
+      const updateOrCreateResponse = await this.updateOrCreateRole(record, transformationId, backend);
+      // If an error was returned, check error type and show a message.
+      const errorStatus = updateOrCreateResponse.errorStatus;
+      if (errorStatus) {
         let message = `The edits to this transformation were successful, but transformations for its roles was not edited due to a lack of permissions.`;
-        if (e.httpStatus !== 403) {
+        if (errorStatus !== 403) {
           message = `You've edited the allowed_roles for this transformation. However, the corresponding edits to some roles' transformations were not made.`;
         }
         this.flashMessages.info(message, {
           sticky: true,
           priority: 300,
         });
-        return; // exit out of the forEach loop if an error occurs
-      });
+      }
     });
   },
 
