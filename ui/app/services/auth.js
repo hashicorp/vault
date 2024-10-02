@@ -276,6 +276,7 @@ export default Service.extend({
       mountPath,
       ...BACKENDS.find((b) => b.type === backend),
     };
+    // TODO: displayName is not populated correctly with OIDC + totp (likely all MFA methods)
     let displayName;
     if (isArray(currentBackend.displayNamePath)) {
       displayName = currentBackend.displayNamePath.map((name) => get(resp, name)).join('/');
