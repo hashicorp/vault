@@ -36,7 +36,7 @@ func GeneratePublicPrivateKey() ([]byte, []byte, error) {
 		return nil, nil, err
 	}
 
-	public, err := curve25519.X25519(curve25519.Basepoint, scalar)
+	public, err := curve25519.X25519(scalar, curve25519.Basepoint)
 	if err != nil {
 		return nil, nil, err
 	}
