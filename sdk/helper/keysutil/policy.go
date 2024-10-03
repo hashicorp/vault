@@ -89,11 +89,8 @@ const (
 	PaddingScheme_PKCS1v15 = PaddingScheme("pkcs1v15")
 )
 
-func (p PaddingScheme) GetPaddingScheme() (PaddingScheme, error) {
-	if p == "" {
-		return PaddingScheme_OAEP, nil
-	}
-	return p, nil
+func (p PaddingScheme) String() string {
+	return string(p)
 }
 
 type AEADFactory interface {
@@ -106,10 +103,6 @@ type AssociatedDataFactory interface {
 
 type ManagedKeyFactory interface {
 	GetManagedKeyParameters() ManagedKeyParameters
-}
-
-type PaddingSchemeFactory interface {
-	GetPaddingScheme() (PaddingScheme, error)
 }
 
 type RestoreInfo struct {
@@ -2224,18 +2217,13 @@ func (p *Policy) EncryptWithFactory(ver int, context []byte, nonce []byte, value
 }
 
 func getPaddingScheme(factories []any) (PaddingScheme, error) {
-	for index, rawFactory := range factories {
+	for _, rawFactory := range factories {
 		if rawFactory == nil {
 			continue
 		}
 
-		switch factory := rawFactory.(type) {
-		case PaddingSchemeFactory:
-			paddingScheme, err := factory.GetPaddingScheme()
-			if err != nil {
-				return "", errutil.InternalError{Err: fmt.Sprintf("unable to get padding scheme from factory[%d]: %v", index, err)}
-			}
-			return paddingScheme, nil
+		if p, ok := rawFactory.(PaddingScheme); ok && p != "" {
+			return p, nil
 		}
 	}
 	return PaddingScheme_OAEP, nil
