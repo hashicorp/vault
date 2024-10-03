@@ -93,14 +93,13 @@ install_internal() {
   # If you update this please update check tools below.
   tools=(
     codechecker
-    pipeline
     stubmaker
   )
 
   echo "==> Installing internal tools..."
   pushd "$(repo_root)/tools" &> /dev/null
   for tool in "${tools[@]}"; do
-    GOPRIVATE=github.com/hashicorp go_install ./"$tool"
+    go_install ./"$tool"
   done
   popd &> /dev/null
 }
@@ -118,6 +117,35 @@ check_internal() {
   echo "==> Checking for internal tools..."
   for tool in "${tools[@]}"; do
     check_tool internal "$tool"
+  done
+}
+
+# Install our pipeline tools. In some cases these may require access to internal repositories so
+# they are excluded from our baseline toolset.
+install_pipeline() {
+  # If you update this please update check tools below.
+  tools=(
+    pipeline
+  )
+
+  echo "==> Installing pipeline tools..."
+  pushd "$(repo_root)/tools" &> /dev/null
+  for tool in "${tools[@]}"; do
+    GOPRIVATE=github.com/hashicorp go_install ./"$tool"
+  done
+  popd &> /dev/null
+}
+
+# Check that all required pipeline tools are installed
+check_pipeline() {
+  local tools
+  tools=(
+    pipeline
+  )
+
+  echo "==> Checking for pipeline tools..."
+  for tool in "${tools[@]}"; do
+    check_tool pipeline "$tool"
   done
 }
 
@@ -141,11 +169,17 @@ main() {
   install-internal)
     install_internal
   ;;
+  install-pipeline)
+    install_pipeline
+  ;;
   check-external)
     check_external
   ;;
   check-internal)
     check_internal
+  ;;
+  check-pipeline)
+    check_pipeline
   ;;
   install)
     install
