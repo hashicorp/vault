@@ -122,11 +122,6 @@ export default class TransitKeyModel extends Model {
       });
   }
 
-  get canDelete() {
-    const deleteAttrChanged = Boolean(this.changedAttributes().deletionAllowed);
-    return this.deletionAllowed && deleteAttrChanged === false;
-  }
-
   get keyVersions() {
     let maxVersion = Math.max(...this.validKeyVersions);
     const versions = [];
@@ -181,6 +176,17 @@ export default class TransitKeyModel extends Model {
   get canRead() {
     return this.secretPath.get('canUpdate') !== false;
   }
+  get canUpdate() {
+    return this.secretPath.get('canUpdate') !== false;
+  }
+  get canDelete() {
+    // there's more to just a permissions check here.
+    // must also check if there's a property on the key called deletionAllowed that is set to true
+    const deleteAttrChanged = Boolean(this.changedAttributes().deletionAllowed);
+    const keyAllowedDeletion = this.deletionAllowed && deleteAttrChanged === false;
+    return this.secretPath.get('canDelete') !== false && keyAllowedDeletion;
+  }
+
   get canEdit() {
     return this.secretPath.get('canUpdate') !== false;
   }
