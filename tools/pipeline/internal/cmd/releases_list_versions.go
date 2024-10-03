@@ -28,7 +28,7 @@ func newReleasesVersionsBetweenCmd() *cobra.Command {
 	versions.PersistentFlags().StringVarP(&listReleaseVersionsReq.UpperBound, "upper", "u", "", "The highest version to include")
 	versions.PersistentFlags().StringVarP(&listReleaseVersionsReq.LowerBound, "lower", "l", "", "The lowest version to include")
 	versions.PersistentFlags().UintVarP(&listReleaseVersionsReq.NMinus, "nminus", "n", 0, "Instead of setting a dedicated lower bound, calculate N-X from the upper")
-	versions.PersistentFlags().StringVarP(&listReleaseVersionsReq.LicenseClass, "edition", "e", "", "The edition of Vault. Can either be 'oss' or 'enterprise'")
+	versions.PersistentFlags().StringVarP(&listReleaseVersionsReq.LicenseClass, "edition", "e", "", "The edition of Vault. Can either be 'ce' or 'enterprise'")
 	versions.PersistentFlags().StringSliceVarP(&listReleaseVersionsReq.Skip, "skip", "s", []string{}, "Skip this version. Can be provided none-to-many times")
 
 	err := versions.MarkPersistentFlagRequired("upper")

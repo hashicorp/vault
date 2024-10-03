@@ -18,8 +18,10 @@ var rootCmd = &cobra.Command{
 
 // Execute executes the root pipeline command.
 func Execute() {
-	rootCmd.AddCommand(newReleasesCmd())
 	rootCmd.SilenceErrors = true // We handle this below
+
+	rootCmd.AddCommand(newGenerateCmd())
+	rootCmd.AddCommand(newReleasesCmd())
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())

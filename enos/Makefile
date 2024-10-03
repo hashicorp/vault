@@ -23,6 +23,15 @@ check-fmt-modules:
 fmt-modules:
 	terraform fmt -diff -recursive ./modules
 
+# Generate dynamic global variables. We execute this in CI so that each branch has the correct
+# config.
+.PHONY: gen-dynamic-globals
+gen-dynamic-globals:
+	pushd ../tools/ &> /dev/null &&\
+	upgrade_initial_versions=$$(go run ./pipeline/... releases list-versions -n 3 -u $$(cat ../version/VERSION) -e $(edition) | jq -Mec .versions) &&\
+	popd &> /dev/null &&\
+	echo "globals {\n  upgrade_initial_versions = $$upgrade_initial_versions\n}" > enos-dynamic-globals.hcl
+
 .PHONY: validate-enos
 validate-enos:
 	enos scenario validate --timeout 30m0s

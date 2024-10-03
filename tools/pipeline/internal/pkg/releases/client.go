@@ -34,7 +34,7 @@ type LicenseClass string
 const (
 	LicenseClassNone LicenseClass = ""
 	LicenseClassCE   LicenseClass = "oss"
-	LicenseClassEnt  LicenseClass = "enterpise"
+	LicenseClassEnt  LicenseClass = "enterprise"
 	LicenseClassHCP  LicenseClass = "hcp"
 )
 

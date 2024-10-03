@@ -194,11 +194,8 @@ variable "vault_revision" {
   default     = null
 }
 
-variable "vault_upgrade_initial_release" {
+variable "vault_upgrade_initial_version" {
   description = "The Vault release to deploy before upgrading"
-  default = {
-    edition = "ce"
-    // Vault 1.10.5 has a known issue with retry_join.
-    version = "1.10.4"
-  }
+  type        = string
+  default     = "1.13.13"
 }
