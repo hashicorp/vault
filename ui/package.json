@@ -126,7 +126,6 @@
     "ember-data": "~4.12.4",
     "ember-engines": "0.8.23",
     "ember-exam": "^9.0.0",
-    "ember-fetch": "^8.1.2",
     "ember-inflector": "4.0.2",
     "ember-load-initializers": "^2.1.2",
     "ember-modal-dialog": "^4.0.1",
