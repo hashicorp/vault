@@ -199,6 +199,7 @@
     "node-notifier": "^8.0.1",
     "nth-check": "^2.0.1",
     "prismjs": "^1.21.0",
+    "rollup": "~2.79.2",
     "serialize-javascript": "^3.1.0",
     "underscore": "^1.12.1",
     "xmlhttprequest-ssl": "^1.6.2",
