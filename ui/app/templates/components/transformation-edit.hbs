@@ -30,7 +30,7 @@
 {{#if (eq this.mode "show")}}
   <Toolbar>
     <ToolbarActions>
-      {{#if this.capabilities.canDelete}}
+      {{#if this.model.updatePath.canDelete}}
         {{#if (gt this.model.allowed_roles.length 0)}}
           <ToolTip @verticalPosition="above" @horizontalPosition="center" as |T|>
             <T.Trigger @tabindex="-1">
@@ -58,7 +58,7 @@
         {{/if}}
         <div class="toolbar-separator"></div>
       {{/if}}
-      {{#if this.capabilities.canUpdate}}
+      {{#if this.model.updatePath.canUpdate}}
         {{#if (gt this.model.allowed_roles.length 0)}}
           <Hds::Button
             @text="Edit transformation"
