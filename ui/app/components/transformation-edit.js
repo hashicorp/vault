@@ -18,7 +18,7 @@ export default TransformBase.extend({
   },
 
   async updateOrCreateRole(role, transformationId, backend) {
-    const roleStore = await this.store
+    const roleRecord = await this.store
       .queryRecord('transform/role', {
         backend,
         id: role.id,
@@ -47,19 +47,19 @@ export default TransformBase.extend({
         };
       });
     // if an error occurs while querying the role, exit function and return the error
-    if (roleStore.errorStatus) return roleStore;
+    if (roleRecord.errorStatus) return roleRecord;
     // otherwise update the role with the transformation and save
-    let transformations = roleStore.transformations;
+    let transformations = roleRecord.transformations;
     if (role.action === 'ADD') {
       transformations = addToList(transformations, transformationId);
     } else if (role.action === 'REMOVE') {
       transformations = removeFromList(transformations, transformationId);
     }
-    roleStore.setProperties({
+    roleRecord.setProperties({
       backend,
       transformations,
     });
-    return roleStore.save().catch((e) => {
+    return roleRecord.save().catch((e) => {
       return {
         errorStatus: e.httpStatus,
         ...role,
@@ -75,23 +75,16 @@ export default TransformBase.extend({
       const updateOrCreateResponse = await this.updateOrCreateRole(record, transformationId, backend);
       // If an error was returned, check error type and show a message.
       const errorStatus = updateOrCreateResponse?.errorStatus;
+      let message;
       if (errorStatus == 403) {
-        this.flashMessages.info(
-          `The edits to this transformation were successful, but transformations for the role ${record.id} were not edited due to a lack of permissions.`,
-          {
-            sticky: true,
-            priority: 300,
-          }
-        );
+        message = `The edits to this transformation were successful, but transformations for the role ${record.id} were not edited due to a lack of permissions.`;
       } else if (errorStatus) {
-        this.flashMessages.info(
-          `You've edited the allowed_roles for this transformation. However, there was a problem updating the role: ${record.id}.`,
-          {
-            sticky: true,
-            priority: 300,
-          }
-        );
+        message = `You've edited the allowed_roles for this transformation. However, there was a problem updating the role: ${record.id}.`;
       }
+      this.flashMessages.info(message, {
+        sticky: true,
+        priority: 300,
+      });
     });
   },
 
