@@ -65,10 +65,17 @@ jobs:
           fi
           if [[ "${{ inputs.vault-edition }}" == "ce" ]]; then
             vault_version="${{ inputs.vault-version }}"
+            vault_gen_edition="ce"
           else
             # shellcheck disable=2001
             vault_version="$(sed 's/+ent/+${{ inputs.vault-edition }}/g' <<< '${{ inputs.vault-version }}')"
+            vault_gen_edition="enterprise"
           fi
+          # Make sure that any branch specific dynamic config has been generated
+          pushd enos &> /dev/null && make gen-dynamic-globals edition=$vault_gen_edition && popd &> /dev/null
+          # Take a sample observation
+          sample_seed=$(date +%s)
+          sample=$(enos scenario sample observe "${{ inputs.sample-name }}" --chdir ./enos --min 1 --max "${{ inputs.sample-max }}" --seed "${sample_seed}" --format json | jq -c ".observation.elements")
           {
             echo "build-date=${build_date}"
             echo "vault-version=${vault_version}"
@@ -99,6 +106,7 @@ jobs:
       ENOS_VAR_vault_build_date: ${{ needs.metadata.outputs.build-date }}
       ENOS_VAR_vault_product_version: ${{ needs.metadata.outputs.vault-version }}
       ENOS_VAR_vault_revision: ${{ inputs.vault-revision }}
+      ENOS_VAR_vault_upgrade_initial_version: ${{ matrix.attributes.upgrade_initial_version }}
       ENOS_VAR_consul_license_path: ./support/consul.hclic
       ENOS_VAR_vault_license_path: ./support/vault.hclic
       ENOS_VAR_distro_version_amzz: ${{ matrix.attributes.distro_version_amzn }}
