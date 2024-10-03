@@ -24,6 +24,7 @@
         @route="vault.cluster.access.mfa.enforcements.enforcement"
         @query={{hash tab="targets"}}
         data-test-tab="targets"
+        @model={{this.model}}
       >
         Targets
       </LinkTo>
@@ -31,6 +32,7 @@
         @route="vault.cluster.access.mfa.enforcements.enforcement"
         @query={{hash tab="methods"}}
         data-test-tab="methods"
+        @model={{this.model}}
       >
         Methods
       </LinkTo>
