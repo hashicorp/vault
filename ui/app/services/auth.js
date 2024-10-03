@@ -11,7 +11,6 @@ import { computed, get } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import Service, { inject as service } from '@ember/service';
 import { capitalize } from '@ember/string';
-import fetch from 'fetch';
 import { resolve, reject } from 'rsvp';
 
 import getStorage from 'vault/lib/token-storage';
