@@ -75,15 +75,22 @@ export default TransformBase.extend({
       const updateOrCreateResponse = await this.updateOrCreateRole(record, transformationId, backend);
       // If an error was returned, check error type and show a message.
       const errorStatus = updateOrCreateResponse?.errorStatus;
-      if (errorStatus === 403) {
-        let message = `The edits to this transformation were successful, but transformations for the role ${record.id} were not edited due to a lack of permissions.`;
-       } else if (errorStatus) {
-          message = `You've edited the allowed_roles for this transformation. However, there was a problem updating the role: ${record.id}.`;
-        }
-        this.flashMessages.info(message, {
-          sticky: true,
-          priority: 300,
-        });
+      if (errorStatus == 403) {
+        this.flashMessages.info(
+          `The edits to this transformation were successful, but transformations for the role ${record.id} were not edited due to a lack of permissions.`,
+          {
+            sticky: true,
+            priority: 300,
+          }
+        );
+      } else if (errorStatus) {
+        this.flashMessages.info(
+          `You've edited the allowed_roles for this transformation. However, there was a problem updating the role: ${record.id}.`,
+          {
+            sticky: true,
+            priority: 300,
+          }
+        );
       }
     });
   },
