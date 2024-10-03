@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/hashicorp/errwrap"
 	multierror "github.com/hashicorp/go-multierror"
@@ -112,6 +113,8 @@ func RespondErrorCommon(req *Request, resp *Response, err error) (int, error) {
 	// appropriate code
 	if err != nil {
 		switch {
+		case errwrap.Contains(err, consts.ErrOverloaded.Error()):
+			statusCode = http.StatusServiceUnavailable
 		case errwrap.ContainsType(err, new(StatusBadRequest)):
 			statusCode = http.StatusBadRequest
 		case errwrap.Contains(err, ErrPermissionDenied.Error()):
@@ -143,8 +146,13 @@ func RespondErrorCommon(req *Request, resp *Response, err error) (int, error) {
 		}
 	}
 
-	if resp != nil && resp.IsError() {
-		err = fmt.Errorf("%s", resp.Data["error"].(string))
+	if respErr := resp.Error(); respErr != nil {
+		err = fmt.Errorf("%s", respErr.Error())
+
+		// Don't let other error codes override the overloaded status code
+		if strings.Contains(respErr.Error(), consts.ErrOverloaded.Error()) {
+			statusCode = http.StatusServiceUnavailable
+		}
 	}
 
 	return statusCode, err
@@ -159,6 +167,11 @@ func AdjustErrorStatusCode(status *int, err error) {
 		for _, e := range t.Errors {
 			AdjustErrorStatusCode(status, e)
 		}
+	}
+
+	// Adjust status code when overloaded
+	if errwrap.Contains(err, consts.ErrOverloaded.Error()) {
+		*status = http.StatusServiceUnavailable
 	}
 
 	// Adjust status code when sealed

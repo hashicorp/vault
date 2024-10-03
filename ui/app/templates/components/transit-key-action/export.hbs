@@ -16,7 +16,7 @@
 >
   <div class="box is-sideless is-fullwidth is-marginless">
     <div class="content">
-      <p>Export a key using <code>{{@key.name}}</code> as the encryption key.</p>
+      <p>Export a key using <code>{{@key.name}}</code> as the cryptographic key.</p>
     </div>
     <div class="field">
       <label for="type" class="is-label">Key type</label>
@@ -83,7 +83,7 @@
           @isFullWidth={{true}}
           @isTruncated={{true}}
           @onError={{(fn
-            (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
+            (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")
           )}}
           data-test-encrypted-value="export"
         />
@@ -98,7 +98,7 @@
             @textToCopy={{stringify @keys}}
             @container="#transit-export-modal"
             @onError={{(fn
-              (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
+              (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")
             )}}
             class="transparent top-right-absolute"
           />

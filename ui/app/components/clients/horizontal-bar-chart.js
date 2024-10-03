@@ -11,7 +11,7 @@ import { select, event, selectAll } from 'd3-selection';
 import { scaleLinear, scaleBand } from 'd3-scale';
 import { axisLeft } from 'd3-axis';
 import { max, maxIndex } from 'd3-array';
-import { GREY, BLUE_PALETTE } from 'vault/utils/chart-helpers';
+import { GREY, BAR_PALETTE } from 'vault/utils/chart-helpers';
 import { tracked } from '@glimmer/tracking';
 import { formatNumber } from 'core/helpers/format-number';
 
@@ -89,7 +89,7 @@ export default class HorizontalBarChart extends Component {
       .attr('data-test-group', (d) => `${d.key}`)
       // shifts chart to accommodate y-axis legend
       .attr('transform', `translate(${CHART_MARGIN.left}, ${CHART_MARGIN.top})`)
-      .style('fill', (d, i) => BLUE_PALETTE[i]);
+      .style('fill', (d, i) => BAR_PALETTE[i]);
 
     const yAxis = axisLeft(yScale).tickSize(0);
 
@@ -162,20 +162,17 @@ export default class HorizontalBarChart extends Component {
       .style('opacity', '0')
       .style('mix-blend-mode', 'multiply');
 
-    const actionBarSelection = chartSvg.selectAll('rect.action-bar');
-
-    const compareAttributes = (elementA, elementB, attr) =>
-      select(elementA).attr(`${attr}`) === select(elementB).attr(`${attr}`);
-
     // MOUSE EVENTS FOR DATA BARS
     actionBars
-      .on('mouseover', (data) => {
-        const hoveredElement = actionBars.filter((bar) => bar[labelKey] === data[labelKey]).node();
+      .on('mouseover', (event, data) => {
+        const hoveredElement = event.currentTarget;
         this.tooltipTarget = hoveredElement;
         this.isLabel = false;
         this.tooltipText = []; // clear stats
         this.args.chartLegend.forEach(({ key, label }) => {
-          this.tooltipText.pushObject(`${formatNumber([data[key]])} ${label}`);
+          // since we're relying on D3 not ember reactivity,
+          // pushing directly to this.tooltipText updates the DOM
+          this.tooltipText.push(`${formatNumber([data[key]])} ${label}`);
         });
 
         select(hoveredElement).style('opacity', 1);
@@ -186,28 +183,18 @@ export default class HorizontalBarChart extends Component {
 
     // MOUSE EVENTS FOR Y-AXIS LABELS
     labelActionBar
-      .on('mouseover', (data) => {
+      .on('mouseover', (event, data) => {
         if (data[labelKey].length >= CHAR_LIMIT) {
-          const hoveredElement = labelActionBar.filter((bar) => bar[labelKey] === data[labelKey]).node();
+          const hoveredElement = event.currentTarget;
           this.tooltipTarget = hoveredElement;
           this.isLabel = true;
           this.tooltipText = [data[labelKey]];
         } else {
           this.tooltipTarget = null;
         }
-        actionBarSelection
-          .filter(function () {
-            return compareAttributes(this, event.target, 'y');
-          })
-          .style('opacity', '1');
       })
       .on('mouseout', function () {
         this.tooltipTarget = null;
-        actionBarSelection
-          .filter(function () {
-            return compareAttributes(this, event.target, 'y');
-          })
-          .style('opacity', '0');
       });
 
     // client count total values to the right

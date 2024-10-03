@@ -7,6 +7,7 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import syncHandler from 'vault/mirage/handlers/sync';
 import { setupModels } from 'vault/tests/helpers/sync/setup-models';
 import hbs from 'htmlbars-inline-precompile';
 import { click, render } from '@ember/test-helpers';
@@ -24,6 +25,7 @@ module(
     setupModels(hooks);
 
     hooks.beforeEach(async function () {
+      syncHandler(this.server);
       this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
       sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
 
@@ -83,6 +85,56 @@ module(
 
       await click(menu.unsync);
       await click(PAGE.confirmButton);
+    });
+
+    module('flash messages', function (hooks) {
+      hooks.beforeEach(function () {
+        const flashMessages = this.owner.lookup('service:flash-messages');
+
+        this.flashSuccessSpy = sinon.spy(flashMessages, 'success');
+        this.flashDangerSpy = sinon.spy(flashMessages, 'danger');
+      });
+
+      test('unsync should render flash messages', async function (assert) {
+        await click(PAGE.menuTrigger);
+
+        const { menu } = PAGE.associations.list;
+        await click(menu.unsync);
+        await click(PAGE.confirmButton);
+
+        assert.true(
+          this.flashSuccessSpy.calledWith('Unsync operation initiated.'),
+          'Success message is displayed'
+        );
+        assert.true(this.flashDangerSpy.notCalled);
+      });
+
+      test('sync now should render flash messages', async function (assert) {
+        await click(PAGE.menuTrigger);
+
+        const { menu } = PAGE.associations.list;
+        await click(menu.sync);
+
+        assert.true(
+          this.flashSuccessSpy.calledWith('Sync operation initiated.'),
+          'Success message is displayed'
+        );
+        assert.true(this.flashDangerSpy.notCalled);
+      });
+
+      test('it should show an error message when sync fails', async function (assert) {
+        this.server.post('/sys/sync/destinations/:type/:name/associations/set', () => {
+          return new Response(500);
+        });
+
+        await click(PAGE.menuTrigger);
+
+        const { menu } = PAGE.associations.list;
+        await click(menu.sync);
+
+        assert.true(this.flashSuccessSpy.notCalled);
+        assert.true(this.flashDangerSpy.calledOnce);
+      });
     });
   }
 );

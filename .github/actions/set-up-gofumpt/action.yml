@@ -34,7 +34,7 @@ runs:
       env:
         GH_TOKEN: ${{ github.token }}
       run: |
-        VERSION=$(gh release list -R mvdan/gofumpt --exclude-drafts --exclude-pre-releases | grep ${{ inputs.version }} | cut -f1)
+        VERSION=$(./.github/scripts/retry-command.sh gh release list -R mvdan/gofumpt --exclude-drafts --exclude-pre-releases | grep ${{ inputs.version }} | cut -f1)
 
         mkdir -p $(dirname ${{ inputs.destination }})
         DESTINATION="$(readlink -f "${{ inputs.destination }}")"
@@ -56,6 +56,6 @@ runs:
           export OS="darwin"
         fi
 
-        gh release download "$VERSION" -p "gofumpt_*_${OS}_${ARCH}" -O gofumpt -R mvdan/gofumpt
+        ./.github/scripts/retry-command.sh gh release download "$VERSION" --clobber -p "gofumpt_*_${OS}_${ARCH}" -O gofumpt -R mvdan/gofumpt
         chmod +x gofumpt
         mv gofumpt "$DESTINATION"

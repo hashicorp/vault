@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { assign } from '@ember/polyfills';
 import { allSettled } from 'rsvp';
 import ApplicationAdapter from './application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
@@ -34,7 +33,7 @@ export default ApplicationAdapter.extend({
 
   deleteRecord(store, type, snapshot) {
     const { id } = snapshot;
-    return this.ajax(this.urlForTransformations(snapshot.record.get('backend'), id), 'DELETE');
+    return this.ajax(this.urlForTransformations(snapshot.record.backend, id), 'DELETE');
   },
 
   pathForType() {
@@ -85,7 +84,7 @@ export default ApplicationAdapter.extend({
             };
             delete d.templates;
           }
-          resp.data = assign({}, resp.data, d);
+          resp.data = { ...resp.data, ...d };
         }
       });
       return resp;

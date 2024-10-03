@@ -7,6 +7,9 @@
 import { click, fillIn, visit, settled } from '@ember/test-helpers';
 import { FORM } from './kv-selectors';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
+import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
+import { assert } from '@ember/debug';
+import { kvMetadataPath } from 'vault/utils/kv-path';
 
 // CUSTOM ACTIONS RELEVANT TO KV-V2
 
@@ -66,3 +69,30 @@ export function clearRecords(store) {
   store.unloadAll('kv/metatata');
   store.unloadAll('capabilities');
 }
+
+// TEST SETUP HELPERS
+
+// sets basic path, backend, and metadata
+export const baseSetup = (context) => {
+  assert(
+    `'baseSetup()' requires mirage: import { setupMirage } from 'ember-cli-mirage/test-support'`,
+    context.server
+  );
+  context.store = context.owner.lookup('service:store');
+  context.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
+  context.backend = 'kv-engine';
+  context.path = 'my-secret';
+  context.metadata = metadataModel(context, { withCustom: false });
+};
+
+export const metadataModel = (context, { withCustom = false }) => {
+  const metadata = withCustom
+    ? context.server.create('kv-metadatum', 'withCustomMetadata')
+    : context.server.create('kv-metadatum');
+  metadata.id = kvMetadataPath(context.backend, context.path);
+  context.store.pushPayload('kv/metadata', {
+    modelName: 'kv/metadata',
+    ...metadata,
+  });
+  return context.store.peekRecord('kv/metadata', metadata.id);
+};

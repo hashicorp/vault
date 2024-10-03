@@ -27,8 +27,9 @@ export default class KubernetesConfigureRoute extends Route {
     super.setupController(controller, resolvedModel);
 
     controller.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: resolvedModel.backend.id },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
+      { label: resolvedModel.backend.id, route: 'overview', model: resolvedModel.backend },
+      { label: 'Configuration' },
     ];
   }
 }

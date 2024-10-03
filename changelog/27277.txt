@@ -1,0 +1,4 @@
+```release-note:bug
+storage/raft (enterprise): Fix a regression introduced in 1.15.8 that causes
+autopilot to fail to discover new server versions and so not trigger an upgrade.
+```

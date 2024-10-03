@@ -7,6 +7,7 @@ import { Response } from 'miragejs';
 import { camelize } from '@ember/string';
 import { findDestination } from 'core/helpers/sync-destinations';
 import clientsHandler from './clients';
+import modifyPassthroughResponse from '../helpers/modify-passthrough-response';
 
 export const associationsResponse = (schema, req) => {
   const { type, name } = req.params;
@@ -14,7 +15,7 @@ export const associationsResponse = (schema, req) => {
   const records = schema.db.syncAssociations.where({ type, name });
   const associations = records.length
     ? records.reduce((associations, association) => {
-        const key = `${association.mount}/${association.secret_name}`;
+        const key = `${association.mount}_12345/${association.secret_name}`;
         delete association.type;
         delete association.name;
         associations[key] = association;
@@ -26,21 +27,21 @@ export const associationsResponse = (schema, req) => {
   // are added to the association response but they are not individual associations
   // the secret itself is still a single association
   const subKeys = {
-    'my-kv/my-granular-secret/foo': {
+    'my-kv_12345/my-granular-secret/foo': {
       mount: 'my-kv',
       secret_name: 'my-granular-secret',
       sync_status: 'SYNCED',
       updated_at: '2023-09-20T10:51:53.961861096-04:00',
       sub_key: 'foo',
     },
-    'my-kv/my-granular-secret/bar': {
+    'my-kv_12345/my-granular-secret/bar': {
       mount: 'my-kv',
       secret_name: 'my-granular-secret',
       sync_status: 'SYNCED',
       updated_at: '2023-09-20T10:51:53.961861096-04:00',
       sub_key: 'bar',
     },
-    'my-kv/my-granular-secret/baz': {
+    'my-kv_12345/my-granular-secret/baz': {
       mount: 'my-kv',
       secret_name: 'my-granular-secret',
       sync_status: 'SYNCED',
@@ -116,6 +117,18 @@ const createOrUpdateDestination = (schema, req) => {
 };
 
 export default function (server) {
+  // default to enterprise with Secrets Sync on the license and activated
+  server.get('sys/health', (schema, req) => modifyPassthroughResponse(req, { enterprise: true }));
+  server.get('/sys/license/features', () => ({ features: ['Secrets Sync'] }));
+  server.get('/sys/activation-flags', () => {
+    return {
+      data: {
+        activated: ['secrets-sync'],
+        unactivated: [''],
+      },
+    };
+  });
+
   const base = '/sys/sync/destinations';
   const uri = `${base}/:type/:name`;
 
@@ -189,23 +202,25 @@ export default function (server) {
   });
   // associations
   server.get('/sys/sync/associations', (schema) => {
-    const records = schema.db.syncAssociations.where({});
-    if (!records.length) {
+    const associations = schema.db.syncAssociations.where({});
+    if (!associations.length) {
       return new Response(404, {}, { errors: [] });
     }
-    // for now we only care about the total_associations value
+
+    const secrets = associations.reduce((secrets, association) => {
+      const secretPath = `${association.mount}/${association.secret_name}`;
+      if (!secrets.includes(secretPath)) {
+        secrets.push(secretPath);
+      }
+      return secrets;
+    }, []);
+
     return {
       data: {
         key_info: {},
         keys: [],
-        total_associations: records.length,
-        total_secrets: records.reduce((secrets, association) => {
-          const secretPath = `${association.mount}/${association.secret_name}`;
-          if (!secrets.includes(secretPath)) {
-            secrets.push(secretPath);
-          }
-          return secrets;
-        }, []),
+        total_associations: associations.length, // link between a secret and a destination
+        total_secrets: secrets.length, // number of secrets synced from vault (one secret can be synced to multiple destinations)
       },
     };
   });
@@ -261,30 +276,24 @@ export default function (server) {
         end_time, // set by query params
         total: {
           clients: 15,
-          distinct_entities: 0,
           entity_clients: 0,
           non_entity_clients: 0,
-          non_entity_tokens: 0,
           secret_syncs: 15,
         },
         by_namespace: [
           {
             counts: {
               clients: 15,
-              distinct_entities: 0,
               entity_clients: 0,
               non_entity_clients: 0,
-              non_entity_tokens: 0,
               secret_syncs: 15,
             },
             mounts: [
               {
                 counts: {
                   clients: 15,
-                  distinct_entities: 0,
                   entity_clients: 0,
                   non_entity_clients: 0,
-                  non_entity_tokens: 0,
                   secret_syncs: 15,
                 },
                 mount_path: 'sys/',
@@ -299,30 +308,24 @@ export default function (server) {
           {
             counts: {
               clients: 10,
-              distinct_entities: 0,
               entity_clients: 0,
               non_entity_clients: 0,
-              non_entity_tokens: 0,
               secret_syncs: 10,
             },
             namespaces: [
               {
                 counts: {
                   clients: 10,
-                  distinct_entities: 0,
                   entity_clients: 0,
                   non_entity_clients: 0,
-                  non_entity_tokens: 0,
                   secret_syncs: 10,
                 },
                 mounts: [
                   {
                     counts: {
                       clients: 10,
-                      distinct_entities: 0,
                       entity_clients: 0,
                       non_entity_clients: 0,
-                      non_entity_tokens: 0,
                       secret_syncs: 10,
                     },
                     mount_path: 'sys/',
@@ -335,30 +338,24 @@ export default function (server) {
             new_clients: {
               counts: {
                 clients: 10,
-                distinct_entities: 0,
                 entity_clients: 0,
                 non_entity_clients: 0,
-                non_entity_tokens: 0,
                 secret_syncs: 10,
               },
               namespaces: [
                 {
                   counts: {
                     clients: 10,
-                    distinct_entities: 0,
                     entity_clients: 0,
                     non_entity_clients: 0,
-                    non_entity_tokens: 0,
                     secret_syncs: 10,
                   },
                   mounts: [
                     {
                       counts: {
                         clients: 10,
-                        distinct_entities: 0,
                         entity_clients: 0,
                         non_entity_clients: 0,
-                        non_entity_tokens: 0,
                         secret_syncs: 10,
                       },
                       mount_path: 'sys/',
@@ -374,30 +371,24 @@ export default function (server) {
           {
             counts: {
               clients: 7,
-              distinct_entities: 0,
               entity_clients: 0,
               non_entity_clients: 0,
-              non_entity_tokens: 0,
               secret_syncs: 7,
             },
             namespaces: [
               {
                 counts: {
                   clients: 7,
-                  distinct_entities: 0,
                   entity_clients: 0,
                   non_entity_clients: 0,
-                  non_entity_tokens: 0,
                   secret_syncs: 7,
                 },
                 mounts: [
                   {
                     counts: {
                       clients: 7,
-                      distinct_entities: 0,
                       entity_clients: 0,
                       non_entity_clients: 0,
-                      non_entity_tokens: 0,
                       secret_syncs: 7,
                     },
                     mount_path: 'sys/',
@@ -410,30 +401,24 @@ export default function (server) {
             new_clients: {
               counts: {
                 clients: 3,
-                distinct_entities: 0,
                 entity_clients: 0,
                 non_entity_clients: 0,
-                non_entity_tokens: 0,
                 secret_syncs: 3,
               },
               namespaces: [
                 {
                   counts: {
                     clients: 3,
-                    distinct_entities: 0,
                     entity_clients: 0,
                     non_entity_clients: 0,
-                    non_entity_tokens: 0,
                     secret_syncs: 3,
                   },
                   mounts: [
                     {
                       counts: {
                         clients: 3,
-                        distinct_entities: 0,
                         entity_clients: 0,
                         non_entity_clients: 0,
-                        non_entity_tokens: 0,
                         secret_syncs: 3,
                       },
                       mount_path: 'sys/',
@@ -449,30 +434,24 @@ export default function (server) {
           {
             counts: {
               clients: 7,
-              distinct_entities: 0,
               entity_clients: 0,
               non_entity_clients: 0,
-              non_entity_tokens: 0,
               secret_syncs: 7,
             },
             namespaces: [
               {
                 counts: {
                   clients: 7,
-                  distinct_entities: 0,
                   entity_clients: 0,
                   non_entity_clients: 0,
-                  non_entity_tokens: 0,
                   secret_syncs: 7,
                 },
                 mounts: [
                   {
                     counts: {
                       clients: 7,
-                      distinct_entities: 0,
                       entity_clients: 0,
                       non_entity_clients: 0,
-                      non_entity_tokens: 0,
                       secret_syncs: 7,
                     },
                     mount_path: 'sys/',
@@ -485,30 +464,24 @@ export default function (server) {
             new_clients: {
               counts: {
                 clients: 2,
-                distinct_entities: 0,
                 entity_clients: 0,
                 non_entity_clients: 0,
-                non_entity_tokens: 0,
                 secret_syncs: 2,
               },
               namespaces: [
                 {
                   counts: {
                     clients: 2,
-                    distinct_entities: 0,
                     entity_clients: 0,
                     non_entity_clients: 0,
-                    non_entity_tokens: 0,
                     secret_syncs: 2,
                   },
                   mounts: [
                     {
                       counts: {
                         clients: 2,
-                        distinct_entities: 0,
                         entity_clients: 0,
                         non_entity_clients: 0,
-                        non_entity_tokens: 0,
                         secret_syncs: 2,
                       },
                       mount_path: 'sys/',

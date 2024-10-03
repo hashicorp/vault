@@ -345,6 +345,88 @@ func TestSubmitWorkUpdatesIndexWithBadToken(t *testing.T) {
 	sscm.workerPool.Stop()
 }
 
+// TestSubmitWorkSealedVaultOptimistic tests that the capability manager
+// behaves as expected when
+// sscm.tokenCapabilityRefreshBehaviour == TokenCapabilityRefreshBehaviourOptimistic
+func TestSubmitWorkSealedVaultOptimistic(t *testing.T) {
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+
+	token := "not real token"
+	indexId := hashStaticSecretIndex(token)
+
+	sscm := testNewStaticSecretCapabilityManager(t, client)
+	index := &cachememdb.CapabilitiesIndex{
+		ID:    indexId,
+		Token: token,
+		ReadablePaths: map[string]struct{}{
+			"foo/bar":                {},
+			"auth/token/lookup-self": {},
+		},
+	}
+	err := sscm.leaseCache.db.SetCapabilitiesIndex(index)
+	require.Nil(t, err)
+
+	// Seal the cluster
+	cluster.EnsureCoresSealed(t)
+
+	sscm.StartRenewingCapabilities(index)
+
+	// Wait for the job to complete at least once...
+	time.Sleep(3 * time.Second)
+
+	// This entry should not be evicted.
+	newIndex, err := sscm.leaseCache.db.GetCapabilitiesIndex(cachememdb.IndexNameID, indexId)
+	require.NoError(t, err)
+	require.NotNil(t, newIndex)
+
+	// Forcefully stop any remaining workers
+	sscm.workerPool.Stop()
+}
+
+// TestSubmitWorkSealedVaultPessimistic tests that the capability manager
+// behaves as expected when
+// sscm.tokenCapabilityRefreshBehaviour == TokenCapabilityRefreshBehaviourPessimistic
+func TestSubmitWorkSealedVaultPessimistic(t *testing.T) {
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+
+	token := "not real token"
+	indexId := hashStaticSecretIndex(token)
+
+	sscm := testNewStaticSecretCapabilityManager(t, client)
+	sscm.tokenCapabilityRefreshBehaviour = TokenCapabilityRefreshBehaviourPessimistic
+
+	index := &cachememdb.CapabilitiesIndex{
+		ID:    indexId,
+		Token: token,
+		ReadablePaths: map[string]struct{}{
+			"foo/bar":                {},
+			"auth/token/lookup-self": {},
+		},
+	}
+	err := sscm.leaseCache.db.SetCapabilitiesIndex(index)
+	require.Nil(t, err)
+
+	// Seal the cluster
+	cluster.EnsureCoresSealed(t)
+
+	sscm.StartRenewingCapabilities(index)
+
+	// Wait for the job to complete at least once...
+	time.Sleep(3 * time.Second)
+
+	// This entry should be evicted.
+	newIndex, err := sscm.leaseCache.db.GetCapabilitiesIndex(cachememdb.IndexNameID, indexId)
+	require.Error(t, err)
+	require.Nil(t, newIndex)
+
+	// Forcefully stop any remaining workers
+	sscm.workerPool.Stop()
+}
+
 // TestSubmitWorkUpdatesAllIndexes tests that an index will be correctly updated if the capabilities differ, as
 // well as the indexes related to the paths that are being checked for.
 func TestSubmitWorkUpdatesAllIndexes(t *testing.T) {

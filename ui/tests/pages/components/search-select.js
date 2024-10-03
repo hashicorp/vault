@@ -6,7 +6,6 @@
 import { isPresent, collection, text, clickable } from 'ember-cli-page-object';
 
 export default {
-  hasSearchSelect: isPresent('[data-test-component=search-select]'),
   hasTrigger: isPresent('.ember-power-select-trigger'),
   hasLabel: isPresent('[data-test-field-label]'),
   labelText: text('[data-test-field-label]'),

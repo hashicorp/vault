@@ -8,7 +8,6 @@ import { FormField, FormFieldGroups, ModelValidations } from 'vault/app-types';
 import { ParsedCertificateData } from 'vault/vault/utils/parse-pki-cert';
 export default class PkiIssuerModel extends Model {
   secretMountPath: class;
-  get useOpenAPI(): boolean;
   get backend(): string;
   get issuerRef(): string;
   certificate: string;

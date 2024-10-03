@@ -5,16 +5,17 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import timestamp from 'core/utils/timestamp';
-import { getUnixTime } from 'date-fns';
+import { fromUnixTime } from 'date-fns';
 
+import type AdapterError from '@ember-data/adapter';
+import type FlagsService from 'vault/services/flags';
+import type NamespaceService from 'vault/services/namespace';
 import type StoreService from 'vault/services/store';
-import type { ClientsRouteModel } from '../clients';
-import type ClientsConfigModel from 'vault/models/clients/config';
-import type ClientsVersionHistoryModel from 'vault/models/clients/version-history';
-import type ClientsActivityModel from 'vault/models/clients/activity';
-import type Controller from '@ember/controller';
-import type AdapterError from 'ember-data/adapter'; // eslint-disable-line ember/use-ember-data-rfc-395-imports
+import type VersionService from 'vault/services/version';
+import type { ModelFrom } from 'vault/vault/route';
+import type ClientsRoute from '../clients';
+import type ClientsCountsController from 'vault/controllers/vault/cluster/clients/counts';
+import type ClientsActivityModel from 'vault/vault/models/clients/activity';
 
 export interface ClientsCountsRouteParams {
   start_time?: string | number | undefined;
@@ -23,63 +24,105 @@ export interface ClientsCountsRouteParams {
   mountPath?: string | undefined;
 }
 
-interface ClientsCountsRouteModel {
-  config: ClientsConfigModel;
-  versionHistory: ClientsVersionHistoryModel;
-  activity?: ClientsActivityModel;
-  activityError?: AdapterError;
-  startTimestamp: number;
-  endTimestamp: number;
-}
-interface ClientsCountsController extends Controller {
-  model: ClientsCountsRouteModel;
-  start_time: number | undefined;
-  end_time: number | undefined;
-  ns: string | undefined;
-  mountPath: string | undefined;
+interface ActivityAdapterQuery {
+  start_time: { timestamp: number } | undefined;
+  end_time: { timestamp: number } | undefined;
+  namespace?: string;
 }
 
+export type ClientsCountsRouteModel = ModelFrom<ClientsCountsRoute>;
+
 export default class ClientsCountsRoute extends Route {
+  @service declare readonly flags: FlagsService;
+  @service declare readonly namespace: NamespaceService;
   @service declare readonly store: StoreService;
+  @service declare readonly version: VersionService;
 
   queryParams = {
     start_time: { refreshModel: true, replace: true },
     end_time: { refreshModel: true, replace: true },
-    ns: { refreshModel: false, replace: true },
+    ns: { refreshModel: true, replace: true },
     mountPath: { refreshModel: false, replace: true },
   };
 
-  async getActivity(start_time: number, end_time: number) {
+  beforeModel() {
+    return this.flags.fetchActivatedFlags();
+  }
+
+  /**
+   * This method returns the query param timestamp if it exists. If not, it returns the activity timestamp value instead.
+   */
+  paramOrResponseTimestamp(
+    qpMillisString: string | number | undefined,
+    activityTimeStamp: string | undefined
+  ) {
+    let timestamp: string | undefined;
+    const millis = Number(qpMillisString);
+    if (!isNaN(millis)) {
+      timestamp = fromUnixTime(millis).toISOString();
+    }
+    // fallback to activity timestamp only if there was no query param
+    if (!timestamp && activityTimeStamp) {
+      timestamp = activityTimeStamp;
+    }
+    return timestamp;
+  }
+
+  async getActivity(params: ClientsCountsRouteParams): Promise<{
+    activity: ClientsActivityModel;
+    activityError: AdapterError;
+  }> {
     let activity, activityError;
-    // if there is no billingStartTimestamp or selected start date initially we allow the user to manually choose a date
-    // in that case bypass the query so that the user isn't stuck viewing the activity error
-    if (start_time) {
+    // if CE without start time we want to skip the activity call
+    // so that the user is forced to choose a date range
+    if (this.version.isEnterprise || params.start_time) {
+      const query: ActivityAdapterQuery = {
+        // start and end params are optional -- if not provided, will fallback to API default
+        start_time: this.formatTimeQuery(params?.start_time),
+        end_time: this.formatTimeQuery(params?.end_time),
+      };
+      if (params?.ns) {
+        // only set explicit namespace if it's a query param
+        query.namespace = params.ns;
+      }
       try {
-        activity = await this.store.queryRecord('clients/activity', {
-          start_time: { timestamp: start_time },
-          end_time: { timestamp: end_time },
-        });
+        activity = await this.store.queryRecord('clients/activity', query);
       } catch (error) {
         activityError = error;
       }
-      return [activity, activityError];
     }
-    return [{}, null];
+    return {
+      activity,
+      activityError,
+    };
+  }
+
+  // Takes the string URL param and formats it as the adapter expects it,
+  // if it exists and is valid
+  formatTimeQuery(param: string | number | undefined) {
+    let timeParam: { timestamp: number } | undefined;
+    const millis = Number(param);
+    if (!isNaN(millis)) {
+      timeParam = { timestamp: millis };
+    }
+    return timeParam;
   }
 
   async model(params: ClientsCountsRouteParams) {
-    const { config, versionHistory } = this.modelFor('vault.cluster.clients') as ClientsRouteModel;
-    // we could potentially make an additional request to fetch the license and get the start date from there if the config request fails
-    const startTimestamp = Number(params.start_time) || getUnixTime(config.billingStartTimestamp);
-    const endTimestamp = Number(params.end_time) || getUnixTime(timestamp.now());
-    const [activity, activityError] = await this.getActivity(startTimestamp, endTimestamp);
+    const { config, versionHistory } = this.modelFor('vault.cluster.clients') as ModelFrom<ClientsRoute>;
+    const { activity, activityError } = await this.getActivity(params);
     return {
-      config,
-      versionHistory,
       activity,
       activityError,
-      startTimestamp,
-      endTimestamp,
+      config,
+      // activity.startTime corresponds to first month with data, but we want first month returned or requested
+      // unless no months present, then we can fallback to response's start time
+      startTimestamp: this.paramOrResponseTimestamp(
+        params?.start_time,
+        activity?.byMonth[0]?.timestamp || activity?.startTime
+      ),
+      endTimestamp: this.paramOrResponseTimestamp(params?.end_time, activity?.endTime),
+      versionHistory,
     };
   }
 

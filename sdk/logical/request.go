@@ -51,6 +51,7 @@ func (r *RequestWrapInfo) SentinelKeys() []string {
 	}
 }
 
+//go:generate enumer -type=ClientTokenSource -trimprefix=ClientTokenFrom -transform=snake
 type ClientTokenSource uint32
 
 const (
@@ -477,13 +478,36 @@ func (c CtxKeyInFlightRequestID) String() string {
 	return "in-flight-request-ID"
 }
 
+type CtxKeyInFlightRequestPriority struct{}
+
+func (c CtxKeyInFlightRequestPriority) String() string {
+	return "in-flight-request-priority"
+}
+
+// CtxKeyInFlightTraceID is used for passing a trace ID through request
+// forwarding. The CtxKeyInFlightRequestID created at the HTTP layer is
+// propagated on through any forwarded requests using this key.
+//
+// Note that this applies to replication service RPCs (including
+// ForwardingRequest from perf standbys or secondaries). The Forwarding RPC
+// service may propagate the context but the handling on the active node runs
+// back through the `http` package handler which builds a new context from HTTP
+// request properties and creates a fresh request ID. Forwarding RPC is used
+// exclusively in Community Edition but also in some special cases in Enterprise
+// such as when forwarding is forced by an HTTP header.
+type CtxKeyInFlightTraceID struct{}
+
+func (c CtxKeyInFlightTraceID) String() string {
+	return "in-flight-trace-ID"
+}
+
 type CtxKeyRequestRole struct{}
 
 func (c CtxKeyRequestRole) String() string {
 	return "request-role"
 }
 
-// CtxKeyDisableReplicationStatusEndpoints is a custom type used as a key in
+// ctxKeyDisableReplicationStatusEndpoints is a custom type used as a key in
 // context.Context to store the value `true` when the
 // disable_replication_status_endpoints configuration parameter is set to true
 // for the listener through which a request was received.
@@ -551,4 +575,34 @@ type CtxKeyDisableRequestLimiter struct{}
 
 func (c CtxKeyDisableRequestLimiter) String() string {
 	return "disable_request_limiter"
+}
+
+// ctxKeyRedactionSettings is a custom type used as a key in context.Context to
+// store the value the redaction settings for the listener that received the
+// request.
+type ctxKeyRedactionSettings struct{}
+
+// String returns a string representation of the receiver type.
+func (c ctxKeyRedactionSettings) String() string {
+	return "redaction-settings"
+}
+
+// CtxRedactionSettingsValue examines the provided context.Context for the
+// redaction settings value and returns them as a tuple of bool values if they
+// are found along with the ok return value set to true; otherwise the ok return
+// value is false.
+func CtxRedactionSettingsValue(ctx context.Context) (redactVersion, redactAddresses, redactClusterName, ok bool) {
+	value, ok := ctx.Value(ctxKeyRedactionSettings{}).([]bool)
+	if !ok {
+		return false, false, false, false
+	}
+
+	return value[0], value[1], value[2], true
+}
+
+// CreatecontextRedactionSettings creates a new context.Context based on the
+// provided parent that also includes the provided redaction settings values for
+// the ctxKeyRedactionSettings key.
+func CreateContextRedactionSettings(parent context.Context, redactVersion, redactAddresses, redactClusterName bool) context.Context {
+	return context.WithValue(parent, ctxKeyRedactionSettings{}, []bool{redactVersion, redactAddresses, redactClusterName})
 }

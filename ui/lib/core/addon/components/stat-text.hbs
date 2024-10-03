@@ -5,10 +5,17 @@
 
 <div
   class={{concat "stat-text-container " @size (unless @subText "-no-subText")}}
-  data-test-stat-text-container={{(or @label "true")}}
+  data-test-stat-text={{or @label "true"}}
   ...attributes
 >
-  <div class="stat-label has-bottom-margin-xs">{{@label}}</div>
+  <div class="stat-label has-bottom-margin-xs">
+    {{@label}}
+    {{#if @tooltipText}}
+      <Hds::TooltipButton @text={{@tooltipText}} aria-label="more information about {{@label}}">
+        <FlightIcon @name="info" />
+      </Hds::TooltipButton>
+    {{/if}}
+  </div>
   {{#if @subText}}
     <div class="stat-text">{{@subText}}</div>
   {{/if}}

@@ -6,7 +6,7 @@
 import { service } from '@ember/service';
 import { alias, or } from '@ember/object/computed';
 import Component from '@ember/component';
-import { getOwner } from '@ember/application';
+import { getOwner } from '@ember/owner';
 import { schedule } from '@ember/runloop';
 import { camelize } from '@ember/string';
 import { task } from 'ember-concurrency';
@@ -105,7 +105,7 @@ export default Component.extend({
 
   refreshRoute: task(function* () {
     const owner = getOwner(this);
-    const currentRoute = owner.lookup(`router:main`).get('currentRouteName');
+    const currentRoute = owner.lookup(`router:main`).currentRouteName;
 
     try {
       this.store.clearAllDatasets();

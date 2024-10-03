@@ -409,14 +409,14 @@ Next, list the Helm versions and choose the desired version to install.
 ```bash
 $ helm search repo hashicorp/vault
 NAME           	CHART VERSION	APP VERSION	DESCRIPTION
-hashicorp/vault	0.27.0       	1.15.2     	Official HashiCorp Vault Chart
+hashicorp/vault	0.28.1       	1.17.2     	Official HashiCorp Vault Chart
 ```
 
 Next, test the upgrade with `--dry-run` first to verify the changes sent to the
 Kubernetes cluster.
 
 ```shell-session
-$ helm upgrade vault hashicorp/vault --version=0.27.0 \
+$ helm upgrade vault hashicorp/vault --version=0.28.1 \
     --set='server.image.repository=vault' \
     --set='server.image.tag=123.456' \
     --dry-run
@@ -436,7 +436,25 @@ running:
 $ kubectl delete pod <name of Vault pod>
 ```
 
-If Vault is deployed using `ha` mode, the standby pods must be upgraded first.
+
+If you deployed Vault in high availability (`ha`) mode, you must upgrade your
+standby pods before upgrading the active pod:
+
+1. Before deleting the standby pod, remove the associated node from the raft
+   with `vault operator raft remove-peer <server_id>`.
+1. Confirm Vault removed the node successfully from Raft with
+   `vault operator raft list-peers`.
+1. Once you confirm the removal, delete the pod.
+
+<Warning title="Delete nodes to avoid unnecessary leader elections">
+
+Removing a pod without first deleting the node from its cluster means that
+Raft will not be aware of the correct number of nodes in the cluster. Not knowing
+the correct number of nodes can trigger a leader election, which can potentially
+cause unneeded downtime.
+
+</Warning>
+
 Vault has K8s service discovery built in (when enabled in the server configuration) and
 will automatically change the labels of the pod with its current leader status. These labels
 can be used to filter the pods.

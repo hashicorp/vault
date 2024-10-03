@@ -129,8 +129,6 @@ type AutoAuth struct {
 	Method *Method `hcl:"-"`
 	Sinks  []*Sink `hcl:"sinks"`
 
-	// NOTE: This is unsupported outside of testing and may disappear at any
-	// time.
 	EnableReauthOnNewCredentials bool `hcl:"enable_reauth_on_new_credentials"`
 }
 
@@ -169,6 +167,7 @@ type TemplateConfig struct {
 	StaticSecretRenderInt    time.Duration `hcl:"-"`
 	MaxConnectionsPerHostRaw interface{}   `hcl:"max_connections_per_host"`
 	MaxConnectionsPerHost    int           `hcl:"-"`
+	LeaseRenewalThreshold    *float64      `hcl:"lease_renewal_threshold"`
 }
 
 type ExecConfig struct {

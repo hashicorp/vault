@@ -49,9 +49,10 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
 
   test('it should hide links and headings user does not have access too', async function (assert) {
     await renderComponent();
+
     assert
       .dom('[data-test-sidebar-nav-link]')
-      .exists({ count: 3 }, 'Nav links are hidden other than secrets, secrets sync and dashboard');
+      .exists({ count: 2 }, 'Nav links are hidden other than secrets and dashboard');
     assert
       .dom('[data-test-sidebar-nav-heading]')
       .exists({ count: 1 }, 'Headings are hidden other than Vault');
@@ -79,13 +80,8 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
       .dom('[data-test-sidebar-nav-link]')
       .exists({ count: links.length }, 'Correct number of links render');
     links.forEach((link) => {
-      if (link === 'Secrets Sync') return;
       assert.dom(`[data-test-sidebar-nav-link="${link}"]`).hasText(link, `${link} link renders`);
     });
-    // after SYNC BETA - remove assertion below and return on line 82
-    assert
-      .dom('[data-test-sidebar-nav-link="Secrets Sync"]')
-      .hasText('Secrets Sync Beta', 'Secrets Sync nav link includes beta tag');
   });
 
   test('it should hide enterprise related links in child namespace', async function (assert) {
@@ -113,6 +109,45 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
       assert
         .dom(`[data-test-sidebar-nav-link="${link}"]`)
         .doesNotExist(`${link} is hidden in child namespace`);
+    });
+  });
+
+  test('it should hide client counts link in chroot namespace', async function (assert) {
+    this.owner.lookup('service:permissions').setPaths({
+      data: {
+        chroot_namespace: 'admin',
+        root: true,
+      },
+    });
+    this.owner.lookup('service:currentCluster').setCluster({
+      id: 'foo',
+      anyReplicationEnabled: true,
+      usingRaft: true,
+      hasChrootNamespace: true,
+    });
+    const links = ['Client Counts', 'Replication', 'Raft Storage', 'License', 'Seal Vault'];
+
+    await renderComponent();
+    assert
+      .dom('[data-test-sidebar-nav-heading="Monitoring"]')
+      .doesNotExist('Monitoring heading is hidden in chroot namespace');
+    links.forEach((link) => {
+      assert
+        .dom(`[data-test-sidebar-nav-link="${link}"]`)
+        .doesNotExist(`${link} is hidden in chroot namespace`);
+    });
+  });
+
+  test('it should render badge for promotional links on managed clusters', async function (assert) {
+    this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
+    const promotionalLinks = ['Secrets Sync'];
+    stubFeaturesAndPermissions(this.owner, true, true);
+    await renderComponent();
+
+    promotionalLinks.forEach((link) => {
+      assert
+        .dom(`[data-test-sidebar-nav-link="${link}"]`)
+        .hasText(`${link} Plus`, `${link} link renders Plus badge`);
     });
   });
 });

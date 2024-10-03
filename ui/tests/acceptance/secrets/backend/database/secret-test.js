@@ -5,9 +5,10 @@
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { currentURL, settled, click, visit, fillIn, typeIn } from '@ember/test-helpers';
+import { currentURL, settled, click, visit, fillIn, typeIn, waitFor } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
-import { selectChoose, clickTrigger } from 'ember-power-select/test-support/helpers';
+import { selectChoose } from 'ember-power-select/test-support';
+import { clickTrigger } from 'ember-power-select/test-support/helpers';
 
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import connectionPage from 'vault/tests/pages/secrets/backend/database/connection';
@@ -47,8 +48,8 @@ const connectionTests = [
   {
     name: 'elasticsearch-connection',
     plugin: 'elasticsearch-database-plugin',
-    elasticUser: 'username',
-    elasticPassword: 'password',
+    username: 'username',
+    password: 'password',
     url: 'http://127.0.0.1:9200',
     assertCount: 9,
     requiredFields: async (assert, name) => {
@@ -198,6 +199,8 @@ const connectionTests = [
     name: 'postgresql-connection',
     plugin: 'postgresql-database-plugin',
     url: `postgresql://{{username}}:{{password}}@localhost:5432/postgres?sslmode=disable`,
+    username: 'username',
+    password: 'password',
     assertCount: 7,
     requiredFields: async (assert, name) => {
       assert.dom('[data-test-input="username"]').exists(`Username field exists for ${name}`);
@@ -268,12 +271,18 @@ module('Acceptance | secrets/database/*', function (hooks) {
       await connectionPage.dbPlugin(testCase.plugin);
       assert.dom('[data-test-empty-state]').doesNotExist('Empty state goes away after plugin selected');
       await connectionPage.name(testCase.name);
+
+      // elasticsearch has a special url field
       if (testCase.plugin === 'elasticsearch-database-plugin') {
         await connectionPage.url(testCase.url);
-        await connectionPage.username(testCase.elasticUser);
-        await connectionPage.password(testCase.elasticPassword);
       } else {
         await connectionPage.connectionUrl(testCase.url);
+      }
+
+      // elasticsearch and postgres require username and password set in order to save
+      if (testCase.username) {
+        await connectionPage.username(testCase.username);
+        await connectionPage.password(testCase.password);
       }
       testCase.requiredFields(assert, testCase.plugin);
       assert.dom('[data-test-input="verify_connection"]').isChecked('verify is checked');
@@ -289,6 +298,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
         .hasText('Rotate your root credentials?', 'Modal appears asking to rotate root credentials');
       assert.dom('[data-test-enable-connection]').exists('Enable button exists');
       await click('[data-test-enable-connection]');
+      await waitFor('[data-test-component="info-table-row"]');
       assert.ok(
         currentURL().startsWith(`/vault/secrets/${backend}/show/${testCase.name}`),
         `Saves connection and takes you to show page for ${testCase.name}`
@@ -323,6 +333,8 @@ module('Acceptance | secrets/database/*', function (hooks) {
         `/vault/secrets/${backend}/list?tab=role`,
         'Cancel button links to role list view'
       );
+      // [BANDAID] navigate away to fix test failing on capabilities-self check before teardown
+      await visit('/vault/secrets');
     });
   }
   test('database connection create and edit: vault-plugin-database-oracle', async function (assert) {
@@ -435,6 +447,8 @@ module('Acceptance | secrets/database/*', function (hooks) {
     assert
       .dom('[data-test-empty-state-title]')
       .hasText('No connections in this backend', 'No connections listed because it was deleted');
+    // [BANDAID] navigate away to fix test failing on capabilities-self check before teardown
+    await visit('/vault/secrets');
   });
 
   test('buttons show up for managing connection', async function (assert) {
@@ -486,6 +500,8 @@ module('Acceptance | secrets/database/*', function (hooks) {
     // confirm get credentials card is an option to select. Regression bug.
     await typeIn('.ember-text-field', 'blah');
     assert.dom('[data-test-get-credentials]').isEnabled();
+    // [BANDAID] navigate away to fix test failing on capabilities-self check before teardown
+    await visit('/vault/secrets');
   });
 
   test('connection_url must be decoded', async function (assert) {

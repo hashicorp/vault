@@ -38,7 +38,7 @@ Oftentimes these integrations involve modifying a partner’s product to become 
 
 There are many ways for an application to authenticate itself to Vault (see [Auth Methods](/vault/docs/auth/)), but we recommend partners use one of the following methods: [AppRole](/vault/docs/auth/approle), [JWT / OIDC](/vault/docs/auth/jwt), [TLS Certificates](/vault/docs/auth/cert) or [Username / Password](/vault/docs/auth/userpass). For an integration to be verified as production ready by HashiCorp, there needs to be at least one other Auth method supported besides [Token](/vault/docs/auth/token). Token is not recommended for use in production since it involves creating a manual long lived token (which is against best practice and poses a security risk). Using one of the above mentioned auth methods automatically creates short lived tokens and eliminates the need to manually generate a new token on a regular basis.
 
-As the number of customers using Vault Enterprise increases, partners are encouraged to support [Namespaces](/vault/tutorials/enterprise/namespaces). By supporting Namespaces, there is an additional benefit that an integration should be able to work with HCP Vault.
+As the number of customers using Vault Enterprise increases, partners are encouraged to support [Namespaces](/vault/tutorials/enterprise/namespaces). By supporting Namespaces, there is an additional benefit that an integration should be able to work with HCP Vault Dedicated.
 
 HSM (Hardware Security Module) are specific types of runtime integrations and can be configured to work with new or existing Vault deployments. They provide an added level of security and compliance. The HSM communicates with Vault using the PKCS#11 protocol thereby resulting in the integration to primarily involve verification of the operation of the functionality. You can find more information about Vault’s HSM support [here](/vault/docs/enterprise/hsm). A list of HSMs that have been verified to work with Vault is shown in our [interoperability matrix](/vault/docs/interoperability-matrix).
 
@@ -48,15 +48,15 @@ HSM (Hardware Security Module) are specific types of runtime integrations and ca
 
 -> **Note:** Integrations related Vault’s [storage](/vault/docs/concepts/storage) backend, [auto auth](/vault/docs/agent-and-proxy/autoauth), and [auto unseal](/vault/docs/concepts/seal#auto-unseal) functionality are not encouraged. Please reach out to [technologypartners@hashicorp.com](mailto:technologypartners@hashicorp.com) for any questions related to this.
 
-### HCP Vault
+### HCP Vault Dedicated
 
-HCP Vault is a managed version of Vault which is operated by HashiCorp to allow customers to quickly get up and running. HCP Vault uses the same binary as self-managed Vault Enterprise, and offers a consistent user experience. You can use the same Vault clients to communicate with HCP Vault as you use to communicate with Vault. Most runtime integrations can be verified with HCP Vault.
+HCP Vault Dedicated is a managed version of Vault which is operated by HashiCorp to allow customers to quickly get up and running. HCP Vault Dedicated uses the same binary as self-managed Vault Enterprise, and offers a consistent user experience. You can use the same Vault clients to communicate with HCP Vault Dedicated as you use to communicate with Vault. Most runtime integrations can be verified with HCP Vault Dedicated.
 
-Sign up for HCP Vault [here](https://portal.cloud.hashicorp.com/) and check out [this](/vault/tutorials/cloud) learn guide for quickly getting started.
+Sign up for HCP Vault Dedicated [here](https://portal.cloud.hashicorp.com/) and check out [this](/vault/tutorials/cloud) learn guide for quickly getting started.
 
 ### Vault integration badges
 
-There are two types of badges that partners could receive: Vault Enterprise Verified and HCP Vault Verified badges. Partners will be issued the Vault Enterprise badge for integrations that work with Vault Enterprise features such as namespaces, HSM support, or key management. Partners will be issued the HCP Vault badge once their integration has been verified to work with HCP Vault. The badge(s) would be displayed on their partner page (example: [MongoDB](https://www.hashicorp.com/partners/tech/mongodb#vault) and can also be used on their own website to help provide better visibility and differentiation to customers. The process for verification of these integrations is detailed below.
+There are two types of badges that partners could receive: Vault Enterprise Verified and HCP Vault Verified badges. Partners will be issued the Vault Enterprise badge for integrations that work with Vault Enterprise features such as namespaces, HSM support, or key management. Partners will be issued the HCP Vault Dedicated badge once their integration has been verified to work with HCP Vault Dedicated. The badge(s) would be displayed on their partner page (example: [MongoDB](https://www.hashicorp.com/partners/tech/mongodb#vault) and can also be used on their own website to help provide better visibility and differentiation to customers. The process for verification of these integrations is detailed below.
 
 <span style={{display:'block', textAlign:'center'}}>
 <ImageConfig inline height={200} width={200}>
@@ -66,7 +66,7 @@ There are two types of badges that partners could receive: Vault Enterprise Veri
 </ImageConfig>
 <ImageConfig inline height={200} width={200}>
 
-![HCP Vault](/img/HCPV_badge.png)
+![HCP Vault Dedicated](/img/HCPV_badge.png)
 
 </ImageConfig>
 </span>
@@ -133,14 +133,14 @@ Please remember that all integrations should have the appropriate documentation 
 - [Secret engine documentation](/vault/docs/secrets)
 - [Custom Secrets Engines | Vault - HashiCorp Learn](/vault/tutorials/custom-secrets-engine)
 
-**HCP Vault**
+**HCP Vault Dedicated**
 
-The process to spin up a testing instance of HCP Vault is very [straightforward](/vault/tutorials/cloud/get-started-vault). HCP has been designed as a turn-key managed service so configuration is minimal. Furthermore, HashiCorp provides all new users an initial credit which lasts for a couple of months when using the [development](https://cloud.hashicorp.com/products/vault/pricing) cluster. Used in conjunction with AWS free tier resources, there should be no cost beyond the time spent by the designated tester.
+The process to spin up a testing instance of HCP Vault Dedicated is very [straightforward](/vault/tutorials/cloud/get-started-vault). HCP has been designed as a turn-key managed service so configuration is minimal. Furthermore, HashiCorp provides all new users an initial credit which lasts for a couple of months when using the [development](https://cloud.hashicorp.com/products/vault/pricing) cluster. Used in conjunction with AWS free tier resources, there should be no cost beyond the time spent by the designated tester.
 
-There are a couple of items to consider when determining if the integration will work with HCP Vault.
+There are a couple of items to consider when determining if the integration will work with HCP Vault Dedicated.
 
-- Since HCP Vault is running Vault Enterprise, the integration will need to be aware of [Namespaces](/vault/tutorials/enterprise/namespaces). This is important as the main namespace in HCP Vault is called 'admin' which is different from the standard ‘root’ namespace in a self managed Vault instance. If the integration currently doesn't support namespaces, then an additional benefit of adding Namespace support iis that this will also enable it to work with all self managed Vault Enterprise installations.
-- HCP Vault is currently only deployed on AWS and so the partner’s application should be able to be deployed or run in AWS. This is vital so that HCP Vault is able to communicate with the application using a [private peered](/hcp/tutorials/networking/amazon-peering-hcp) connection via a [HashiCorp Virtual Network](/hcp/docs/hcp/network).
+- Since HCP Vault Dedicated is running Vault Enterprise, the integration will need to be aware of [Namespaces](/vault/tutorials/enterprise/namespaces). This is important as the main namespace in HCP Vault Dedicated is called 'admin' which is different from the standard ‘root’ namespace in a self managed Vault instance. If the integration currently doesn't support namespaces, then an additional benefit of adding Namespace support iis that this will also enable it to work with all self managed Vault Enterprise installations.
+- HCP Vault Dedicated is currently only deployed on AWS and so the partner’s application should be able to be deployed or run in AWS. This is vital so that HCP Vault Dedicated is able to communicate with the application using a [private peered](/hcp/tutorials/networking/amazon-peering-hcp) connection via a [HashiCorp Virtual Network](/hcp/docs/hcp/network).
 
 Additional resources:
 
@@ -150,7 +150,7 @@ Additional resources:
 
 ### 4. review
 
-During the review process, HashiCorp will provide feedback on the newly developed integration for both Vault and HCP Vault. This is an important step to allow HashiCorp to review and verify your Vault integration. Please reach out to [technologypartners@hashicorp.com](mailto:technologypartners@hashicorp.com) for verification.
+During the review process, HashiCorp will provide feedback on the newly developed integration for both Vault and HCP Vault Dedicated. This is an important step to allow HashiCorp to review and verify your Vault integration. Please reach out to [technologypartners@hashicorp.com](mailto:technologypartners@hashicorp.com) for verification.
 
 The review process can take some time to complete and may require some iterations through the code to address any problems identified by the HashiCorp team.
 
@@ -162,7 +162,7 @@ At this stage, it is expected that the integration is fully complete, the necess
 
 For Auth or Secret Engine plugins specifically, once the plugin has been verified by HashiCorp, it is recommended the plugin be hosted on Github so it can more easily be downloaded and installed within Vault. We also encourage partners to list their plugin on the [Vault Integrations](/vault/integrations) page. This is in addition to the listing of the plugin on the technology partners’ dedicated HashiCorp partner page. To have the plugin listed on the portal page, please do a pull request via the “edit in GitHub” link on the bottom of the page and add the plugin in the partner section.
 
-For HCP Vault verifications, the partner will be issued an HCP Vault Verified badge and will have this displayed on their partner page.
+For HCP Vault Dedicated verifications, the partner will be issued an HCP Vault Verified badge and will have this displayed on their partner page.
 
 ### 6. support
 

@@ -46,6 +46,7 @@ export default class TokenExpireWarning extends Component {
     if ('vault.cluster.oidc-provider' === currentRoute) {
       return false;
     }
+
     return !!this.args.expirationDate;
   }
 }

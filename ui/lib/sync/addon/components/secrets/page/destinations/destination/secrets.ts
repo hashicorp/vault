@@ -7,7 +7,7 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-import { getOwner } from '@ember/application';
+import { getOwner } from '@ember/owner';
 import errorMessage from 'vault/utils/error-message';
 
 import SyncDestinationModel from 'vault/vault/models/sync/destination';
@@ -27,7 +27,7 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   @service declare readonly store: StoreService;
   @service declare readonly flashMessages: FlashMessageService;
 
-  @tracked secretToUnsync = null;
+  @tracked secretToUnsync: SyncAssociationModel | null = null;
 
   get mountPoint(): string {
     const owner = getOwner(this) as EngineOwner;

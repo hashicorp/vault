@@ -9,11 +9,7 @@ import { combineFieldGroups } from 'vault/utils/openapi-to-attrs';
 import fieldToAttrs from 'vault/utils/field-to-attrs';
 
 export default Model.extend({
-  useOpenAPI: true,
   ca: belongsTo('kmip/ca', { async: false, inverse: 'config' }),
-  getHelpUrl(path) {
-    return `/v1/${path}/config?help=1`;
-  },
 
   fieldGroups: computed('newFields', function () {
     let groups = [{ default: ['listenAddrs', 'connectionTimeout'] }];

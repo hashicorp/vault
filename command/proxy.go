@@ -12,9 +12,11 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	systemd "github.com/coreos/go-systemd/daemon"
@@ -70,6 +72,7 @@ type ProxyCommand struct {
 
 	ShutdownCh chan struct{}
 	SighupCh   chan struct{}
+	SigUSR2Ch  chan struct{}
 
 	tlsReloadFuncsLock sync.RWMutex
 	tlsReloadFuncs     []reloadutil.ReloadFunc
@@ -519,7 +522,8 @@ func (c *ProxyCommand) Run(args []string) int {
 				LeaseCache: leaseCache,
 				Logger:     c.logger.Named("cache.staticsecretcapabilitymanager"),
 				Client:     client,
-				StaticSecretTokenCapabilityRefreshInterval: config.Cache.StaticSecretTokenCapabilityRefreshInterval,
+				StaticSecretTokenCapabilityRefreshInterval:  config.Cache.StaticSecretTokenCapabilityRefreshInterval,
+				StaticSecretTokenCapabilityRefreshBehaviour: config.Cache.StaticSecretTokenCapabilityRefreshBehaviour,
 			})
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("Error creating static secret capability manager: %v", err))
@@ -527,6 +531,58 @@ func (c *ProxyCommand) Run(args []string) int {
 			}
 			leaseCache.SetCapabilityManager(capabilityManager)
 		}
+	}
+
+	// Create the AuthHandler and the Sink Server so that we can pass AuthHandler struct
+	// values into the Proxy http.Handler. We will wait to actually start these servers
+	// once we have configured handlers for each listener below
+	authInProgress := &atomic.Bool{}
+	invalidTokenErrCh := make(chan error)
+	var ah *auth.AuthHandler
+	var ss *sink.SinkServer
+	if method != nil {
+		// Auth Handler is going to set its own retry values, so we want to
+		// work on a copy of the client to not affect other subsystems.
+		ahClient, err := c.client.CloneWithHeaders()
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error cloning client for auth handler: %v", err))
+			return 1
+		}
+
+		// Override the set namespace with the auto-auth specific namespace
+		if !namespaceSetByEnvironmentVariable && config.AutoAuth.Method.Namespace != "" {
+			ahClient.SetNamespace(config.AutoAuth.Method.Namespace)
+		}
+
+		if config.DisableIdleConnsAutoAuth {
+			ahClient.SetMaxIdleConnections(-1)
+		}
+
+		if config.DisableKeepAlivesAutoAuth {
+			ahClient.SetDisableKeepAlives(true)
+		}
+
+		ah = auth.NewAuthHandler(&auth.AuthHandlerConfig{
+			Logger:                       c.logger.Named("auth.handler"),
+			Client:                       ahClient,
+			WrapTTL:                      config.AutoAuth.Method.WrapTTL,
+			MinBackoff:                   config.AutoAuth.Method.MinBackoff,
+			MaxBackoff:                   config.AutoAuth.Method.MaxBackoff,
+			EnableReauthOnNewCredentials: config.AutoAuth.EnableReauthOnNewCredentials,
+			Token:                        previousToken,
+			ExitOnError:                  config.AutoAuth.Method.ExitOnError,
+			UserAgent:                    useragent.ProxyAutoAuthString(),
+			MetricsSignifier:             "proxy",
+		})
+
+		authInProgress = ah.AuthInProgress
+		invalidTokenErrCh = ah.InvalidToken
+
+		ss = sink.NewSinkServer(&sink.SinkServerConfig{
+			Logger:        c.logger.Named("sink.server"),
+			Client:        ahClient,
+			ExitAfterAuth: config.ExitAfterAuth,
+		})
 	}
 
 	var listeners []net.Listener
@@ -548,6 +604,7 @@ func (c *ProxyCommand) Run(args []string) int {
 			lnBundle, err := cache.StartListener(lnConfig)
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("Error starting listener: %v", err))
+				c.tlsReloadFuncsLock.Unlock()
 				return 1
 			}
 
@@ -560,31 +617,31 @@ func (c *ProxyCommand) Run(args []string) int {
 
 		listeners = append(listeners, ln)
 
-		proxyVaultToken := true
-		var inmemSink sink.Sink
+		apiProxyLogger.Debug("configuring inmem auto-auth sink")
+		inmemSink, err := inmem.New(&sink.SinkConfig{
+			Logger: apiProxyLogger,
+		}, leaseCache)
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error creating inmem sink for cache: %v", err))
+			c.tlsReloadFuncsLock.Unlock()
+			return 1
+		}
+		sinks = append(sinks, &sink.SinkConfig{
+			Logger: apiProxyLogger,
+			Sink:   inmemSink,
+		})
+		useAutoAuthToken := false
+		forceAutoAuthToken := false
 		if config.APIProxy != nil {
-			if config.APIProxy.UseAutoAuthToken {
-				apiProxyLogger.Debug("configuring inmem auto-auth sink")
-				inmemSink, err = inmem.New(&sink.SinkConfig{
-					Logger: apiProxyLogger,
-				}, leaseCache)
-				if err != nil {
-					c.UI.Error(fmt.Sprintf("Error creating inmem sink for cache: %v", err))
-					return 1
-				}
-				sinks = append(sinks, &sink.SinkConfig{
-					Logger: apiProxyLogger,
-					Sink:   inmemSink,
-				})
-			}
-			proxyVaultToken = !config.APIProxy.ForceAutoAuthToken
+			useAutoAuthToken = config.APIProxy.UseAutoAuthToken
+			forceAutoAuthToken = config.APIProxy.ForceAutoAuthToken
 		}
 
 		var muxHandler http.Handler
 		if leaseCache != nil {
-			muxHandler = cache.ProxyHandler(ctx, apiProxyLogger, leaseCache, inmemSink, proxyVaultToken)
+			muxHandler = cache.ProxyHandler(ctx, apiProxyLogger, leaseCache, inmemSink, forceAutoAuthToken, useAutoAuthToken, authInProgress, invalidTokenErrCh)
 		} else {
-			muxHandler = cache.ProxyHandler(ctx, apiProxyLogger, apiProxy, inmemSink, proxyVaultToken)
+			muxHandler = cache.ProxyHandler(ctx, apiProxyLogger, apiProxy, inmemSink, forceAutoAuthToken, useAutoAuthToken, authInProgress, invalidTokenErrCh)
 		}
 
 		// Parse 'require_request_header' listener config option, and wrap
@@ -660,6 +717,16 @@ func (c *ProxyCommand) Run(args []string) int {
 				case c.reloadedCh <- struct{}{}:
 				default:
 				}
+			case <-c.SigUSR2Ch:
+				pprofPath := filepath.Join(os.TempDir(), "vault-proxy-pprof")
+				cpuProfileDuration := time.Second * 1
+				err := WritePprofToFile(pprofPath, cpuProfileDuration)
+				if err != nil {
+					c.logger.Error(err.Error())
+					continue
+				}
+
+				c.logger.Info(fmt.Sprintf("Wrote pprof files to: %s", pprofPath))
 			case <-ctx.Done():
 				return nil
 			}
@@ -690,46 +757,6 @@ func (c *ProxyCommand) Run(args []string) int {
 
 	// Start auto-auth and sink servers
 	if method != nil {
-		// Auth Handler is going to set its own retry values, so we want to
-		// work on a copy of the client to not affect other subsystems.
-		ahClient, err := c.client.CloneWithHeaders()
-		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error cloning client for auth handler: %v", err))
-			return 1
-		}
-
-		// Override the set namespace with the auto-auth specific namespace
-		if !namespaceSetByEnvironmentVariable && config.AutoAuth.Method.Namespace != "" {
-			ahClient.SetNamespace(config.AutoAuth.Method.Namespace)
-		}
-
-		if config.DisableIdleConnsAutoAuth {
-			ahClient.SetMaxIdleConnections(-1)
-		}
-
-		if config.DisableKeepAlivesAutoAuth {
-			ahClient.SetDisableKeepAlives(true)
-		}
-
-		ah := auth.NewAuthHandler(&auth.AuthHandlerConfig{
-			Logger:                       c.logger.Named("auth.handler"),
-			Client:                       ahClient,
-			WrapTTL:                      config.AutoAuth.Method.WrapTTL,
-			MinBackoff:                   config.AutoAuth.Method.MinBackoff,
-			MaxBackoff:                   config.AutoAuth.Method.MaxBackoff,
-			EnableReauthOnNewCredentials: config.AutoAuth.EnableReauthOnNewCredentials,
-			Token:                        previousToken,
-			ExitOnError:                  config.AutoAuth.Method.ExitOnError,
-			UserAgent:                    useragent.ProxyAutoAuthString(),
-			MetricsSignifier:             "proxy",
-		})
-
-		ss := sink.NewSinkServer(&sink.SinkServerConfig{
-			Logger:        c.logger.Named("sink.server"),
-			Client:        ahClient,
-			ExitAfterAuth: config.ExitAfterAuth,
-		})
-
 		g.Add(func() error {
 			return ah.Run(ctx, method)
 		}, func(error) {
@@ -742,7 +769,7 @@ func (c *ProxyCommand) Run(args []string) int {
 		})
 
 		g.Add(func() error {
-			err := ss.Run(ctx, ah.OutputCh, sinks)
+			err := ss.Run(ctx, ah.OutputCh, sinks, ah.AuthInProgress)
 			c.logger.Info("sinks finished, exiting")
 
 			// Start goroutine to drain from ah.OutputCh from this point onward
@@ -771,7 +798,7 @@ func (c *ProxyCommand) Run(args []string) int {
 	// Add the static secret cache updater, if appropriate
 	if updater != nil {
 		g.Add(func() error {
-			err := updater.Run(ctx)
+			err := updater.Run(ctx, authInProgress, invalidTokenErrCh)
 			return err
 		}, func(error) {
 			cancelFunc()

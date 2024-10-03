@@ -5,6 +5,12 @@
 
 import { helper as buildHelper } from '@ember/component/helper';
 
+/**
+ * These are all the auth methods with which a user can log into the UI.
+ * This is a subset of the methods found in the `mountable-auth-methods` helper,
+ * which lists all the methods that can be mounted.
+ */
+
 const SUPPORTED_AUTH_BACKENDS = [
   {
     type: 'token',
@@ -84,7 +90,7 @@ const ENTERPRISE_AUTH_METHODS = [
 ];
 
 export function supportedAuthBackends() {
-  return SUPPORTED_AUTH_BACKENDS;
+  return [...SUPPORTED_AUTH_BACKENDS];
 }
 
 export function allSupportedAuthBackends() {

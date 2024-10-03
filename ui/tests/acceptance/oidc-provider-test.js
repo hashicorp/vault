@@ -12,9 +12,10 @@ import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import authForm from 'vault/tests/pages/components/auth-form';
 import enablePage from 'vault/tests/pages/settings/auth/enable';
-import { visit, settled, currentURL, waitFor } from '@ember/test-helpers';
+import { visit, settled, currentURL, waitFor, currentRouteName } from '@ember/test-helpers';
 import { clearRecord } from 'vault/tests/helpers/oidc-config';
 import { runCmd } from 'vault/tests/helpers/commands';
+import queryParamString from 'vault/utils/query-param-string';
 
 const authFormComponent = create(authForm);
 
@@ -82,18 +83,13 @@ const getAuthzUrl = (providerName, redirect, clientId, params) => {
   const queryParams = {
     client_id: clientId,
     nonce: 'abc123',
-    redirect_uri: encodeURIComponent(redirect),
+    redirect_uri: redirect,
     response_type: 'code',
     scope: 'openid',
     state: 'foobar',
     ...params,
   };
-  const queryString = Object.keys(queryParams).reduce((prev, key, idx) => {
-    if (idx === 0) {
-      return `${prev}${key}=${queryParams[key]}`;
-    }
-    return `${prev}&${key}=${queryParams[key]}`;
-  }, '?');
+  const queryString = queryParamString(queryParams);
   return `/vault/identity/oidc/provider/${providerName}/authorize${queryString}`;
 };
 
@@ -183,6 +179,8 @@ module('Acceptance | oidc provider', function (hooks) {
   test('OIDC Provider redirects to auth if current token and prompt = login', async function (assert) {
     const { providerName, callback, clientId, authMethodPath } = this.oidcSetupInformation;
     await settled();
+    await visit('/vault/dashboard');
+    assert.strictEqual(currentURL(), '/vault/dashboard', 'User is logged in before oidc login attempt');
     const url = getAuthzUrl(providerName, callback, clientId, { prompt: 'login' });
     await visit(url);
 
@@ -217,7 +215,7 @@ module('Acceptance | oidc provider', function (hooks) {
       currentURL().startsWith('/vault/auth'),
       'Does not redirect to auth because user is already logged in'
     );
-    await waitFor('[data-test-consent-form]');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.oidc-provider');
     assert.dom('[data-test-consent-form]').exists('Consent form exists');
 
     //* clean up test state

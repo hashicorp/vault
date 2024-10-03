@@ -6,11 +6,12 @@
 
 API path                                    | Root | Admin
 ------------------------------------------- | ---- | -----
+`sys/activation-flags/secrets-sync/activate`| YES  | NO
 `sys/audit`                                 | YES  | NO
 `sys/audit-hash`                            | YES  | YES
 `sys/config/auditing/*`                     | YES  | NO
 `sys/config/cors`                           | YES  | NO
-`sys/config/group-policy-application`       | YES  | NO
+`sys/config/group-policy-application`       | YES  | YES
 `sys/config/reload`                         | YES  | NO
 `sys/config/state`                          | YES  | NO
 `sys/config/ui`                             | YES  | NO
@@ -23,7 +24,6 @@ API path                                    | Root | Admin
 `sys/in-flight-req`                         | YES  | NO
 `sys/init`                                  | YES  | NO
 `sys/internal/counters/activity`            | YES  | NO
-`sys/internal/counters/activity/export`     | YES  | NO
 `sys/internal/counters/activity/monthly`    | YES  | NO
 `sys/internal/counters/config`              | YES  | NO
 `sys/internal/inspect/router/*`             | YES  | NO
@@ -54,6 +54,7 @@ API path                                    | Root | Admin
 `sys/sealwrap/rewrap`                       | YES  | NO
 `sys/step-down`                             | YES  | NO
 `sys/storage`                               | YES  | NO
+`sys/sync/config                            | YES  | YES
 `sys/unseal`                                | YES  | NO
 
 Privileged CLI commands without public API endpoints:

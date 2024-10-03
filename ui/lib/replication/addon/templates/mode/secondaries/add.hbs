@@ -90,7 +90,7 @@
           class="primary"
           @container=".hds-modal"
           @onError={{(fn
-            (set-flash-message "Clipboard copy failed. Please make sure the browser Clipboard API is allowed." "danger")
+            (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")
           )}}
           {{on "click" (action "onCopy")}}
         />

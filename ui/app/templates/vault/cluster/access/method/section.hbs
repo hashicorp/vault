@@ -25,7 +25,7 @@
   </div>
 {{/if}}
 
-{{section-tabs this.model "authShow" this.paths}}
+<SectionTabs @model={{this.model}} @tabType="authShow" @paths={{this.paths}} />
 
 {{#if (eq this.section "configuration")}}
   <Toolbar>

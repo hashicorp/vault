@@ -421,7 +421,7 @@ func (s *gRPCSystemViewServer) GenerateIdentityToken(ctx context.Context, req *p
 	})
 	if err != nil {
 		return &pb.GenerateIdentityTokenResponse{}, status.Errorf(codes.Internal,
-			"failed to generate plugin identity token")
+			err.Error())
 	}
 
 	return &pb.GenerateIdentityTokenResponse{

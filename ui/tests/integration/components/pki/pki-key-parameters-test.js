@@ -8,8 +8,8 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
-import { SELECTORS } from 'vault/tests/helpers/pki/pki-role-form';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | pki key parameters', function (hooks) {
   setupRenderingTest(hooks);
@@ -40,9 +40,9 @@ module('Integration | Component | pki key parameters', function (hooks) {
   `,
       { owner: this.engine }
     );
-    assert.dom(SELECTORS.keyType).hasValue('rsa');
-    assert.dom(SELECTORS.keyBits).hasValue('2048');
-    assert.dom(SELECTORS.signatureBits).hasValue('0');
+    assert.dom(GENERAL.inputByAttr('keyType')).hasValue('rsa');
+    assert.dom(GENERAL.inputByAttr('keyBits')).hasValue('2048');
+    assert.dom(GENERAL.inputByAttr('signatureBits')).hasValue('0');
   });
 
   test('it should set the model properties of key_type and key_bits when key_type changes', async function (assert) {
@@ -65,7 +65,7 @@ module('Integration | Component | pki key parameters', function (hooks) {
       '0',
       'sets the default value for signature_bits on the model.'
     );
-    await fillIn(SELECTORS.keyType, 'ec');
+    await fillIn(GENERAL.inputByAttr('keyType'), 'ec');
     assert.strictEqual(this.model.keyType, 'ec', 'sets the new selected value for key_type on the model.');
     assert.strictEqual(
       this.model.keyBits,
@@ -73,7 +73,7 @@ module('Integration | Component | pki key parameters', function (hooks) {
       'sets the new selected value for key_bits on the model based on the selection of key_type.'
     );
 
-    await fillIn(SELECTORS.keyType, 'ed25519');
+    await fillIn(GENERAL.inputByAttr('keyType'), 'ed25519');
     assert.strictEqual(
       this.model.keyType,
       'ed25519',
@@ -85,8 +85,8 @@ module('Integration | Component | pki key parameters', function (hooks) {
       'sets the new selected value for key_bits on the model based on the selection of key_type.'
     );
 
-    await fillIn(SELECTORS.keyType, 'ec');
-    await fillIn(SELECTORS.keyBits, '384');
+    await fillIn(GENERAL.inputByAttr('keyType'), 'ec');
+    await fillIn(GENERAL.inputByAttr('keyBits'), '384');
     assert.strictEqual(this.model.keyType, 'ec', 'sets the new selected value for key_type on the model.');
     assert.strictEqual(
       this.model.keyBits,
@@ -94,14 +94,14 @@ module('Integration | Component | pki key parameters', function (hooks) {
       'sets the new selected value for key_bits on the model based on the selection of key_type.'
     );
 
-    await fillIn(SELECTORS.signatureBits, '384');
+    await fillIn(GENERAL.inputByAttr('signatureBits'), '384');
     assert.strictEqual(
       this.model.signatureBits,
       '384',
       'sets the new selected value for signature_bits on the model.'
     );
 
-    await fillIn(SELECTORS.signatureBits, '0');
+    await fillIn(GENERAL.inputByAttr('signatureBits'), '0');
     assert.strictEqual(
       this.model.signatureBits,
       '0',

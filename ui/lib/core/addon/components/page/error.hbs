@@ -8,17 +8,17 @@
   data-test-page-error
 >
   {{#if (eq @error.httpStatus 404)}}
-    <h1 class="title is-3 has-text-grey-light">
+    <h1 class="title is-3 has-text-grey-light" data-test-page-error-title={{@error.httpStatus}}>
       404 Not Found
     </h1>
     <p>Sorry, we were unable to find any content at <code>{{@error.path}}</code>.</p>
   {{else if (eq @error.httpStatus 403)}}
-    <h1 class="title is-3 has-text-grey-light">
+    <h1 class="title is-3 has-text-grey-light" data-test-page-error-title={{@error.httpStatus}}>
       Not authorized
     </h1>
     <p>You are not authorized to access content at <code>{{@error.path}}</code>.</p>
   {{else}}
-    <h1 class="title is-3 has-text-grey-light">
+    <h1 class="title is-3 has-text-grey-light" data-test-page-error-title={{@error.httpStatus}}>
       Error
     </h1>
     <p>

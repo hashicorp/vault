@@ -5,15 +5,14 @@
 
 import { run } from '@ember/runloop';
 import { resolve } from 'rsvp';
-import { assign } from '@ember/polyfills';
 import Service from '@ember/service';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, click, find, findAll, fillIn, blur, triggerEvent } from '@ember/test-helpers';
+import { render, click, find, fillIn, blur, triggerEvent } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { encodeString } from 'vault/utils/b64';
 import waitForError from 'vault/tests/helpers/wait-for-error';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
+import codemirror from 'vault/tests/helpers/codemirror';
 
 const storeStub = Service.extend({
   callArgs: null,
@@ -25,12 +24,12 @@ const storeStub = Service.extend({
       keyAction(action, { backend, id, payload }, options) {
         self.set('callArgs', { action, backend, id, payload });
         self.set('callArgsOptions', options);
-        const rootResp = assign({}, self.get('rootKeyActionReturnVal'));
+        const rootResp = { ...self.get('rootKeyActionReturnVal') };
         const resp =
           Object.keys(rootResp).length > 0
             ? rootResp
             : {
-                data: assign({}, self.get('keyActionReturnVal')),
+                data: { ...self.get('keyActionReturnVal') },
               };
         return resolve(resp);
       },
@@ -46,12 +45,6 @@ module('Integration | Component | transit key actions', function (hooks) {
       this.owner.unregister('service:store');
       this.owner.register('service:store', storeStub);
       this.storeService = this.owner.lookup('service:store');
-    });
-    setRunOptions({
-      rules: {
-        // TODO: fix JSONEditor/CodeMirror
-        label: { enabled: false },
-      },
     });
   });
 
@@ -105,14 +98,14 @@ module('Integration | Component | transit key actions', function (hooks) {
   async function doEncrypt(assert, actions = [], keyattrs = {}) {
     const keyDefaults = { backend: 'transit', id: 'akey', supportedActions: ['encrypt'].concat(actions) };
 
-    const key = assign({}, keyDefaults, keyattrs);
+    const key = { ...keyDefaults, ...keyattrs };
     this.set('key', key);
     this.set('selectedAction', 'encrypt');
     this.set('storeService.keyActionReturnVal', { ciphertext: 'secret' });
     await render(hbs`
     <TransitKeyActions @selectedAction={{this.selectedAction}} @key={{this.key}} />`);
 
-    find('#plaintext-control .CodeMirror').CodeMirror.setValue('plaintext');
+    codemirror('#plaintext-control').setValue('plaintext');
     await click('button[type="submit"]');
     assert.deepEqual(
       this.storeService.callArgs,
@@ -133,7 +126,7 @@ module('Integration | Component | transit key actions', function (hooks) {
     await click('dialog button');
     // Encrypt again, with pre-encoded value and checkbox selected
     const preEncodedValue = encodeString('plaintext');
-    find('#plaintext-control .CodeMirror').CodeMirror.setValue(preEncodedValue);
+    codemirror('#plaintext-control').setValue(preEncodedValue);
     await click('input[data-test-transit-input="encodedBase64"]');
     await click('button[type="submit"]');
 
@@ -149,6 +142,7 @@ module('Integration | Component | transit key actions', function (hooks) {
       },
       'passes expected args to the adapter'
     );
+    await click('dialog button');
   }
 
   test('it encrypts', doEncrypt);
@@ -156,13 +150,13 @@ module('Integration | Component | transit key actions', function (hooks) {
   test('it shows key version selection', async function (assert) {
     const keyDefaults = { backend: 'transit', id: 'akey', supportedActions: ['encrypt'].concat([]) };
     const keyattrs = { keysForEncryption: [3, 2, 1], latestVersion: 3 };
-    const key = assign({}, keyDefaults, keyattrs);
+    const key = { ...keyDefaults, ...keyattrs };
     this.set('key', key);
     this.set('storeService.keyActionReturnVal', { ciphertext: 'secret' });
     await render(hbs`
     <TransitKeyActions @selectedAction="encrypt" @key={{this.key}} />`);
 
-    findAll('.CodeMirror')[0].CodeMirror.setValue('plaintext');
+    codemirror().setValue('plaintext');
     assert.dom('#key_version').exists({ count: 1 }, 'it renders the key version selector');
 
     await triggerEvent('#key_version', 'change');
@@ -185,14 +179,13 @@ module('Integration | Component | transit key actions', function (hooks) {
   test('it hides key version selection', async function (assert) {
     const keyDefaults = { backend: 'transit', id: 'akey', supportedActions: ['encrypt'].concat([]) };
     const keyattrs = { keysForEncryption: [1] };
-    const key = assign({}, keyDefaults, keyattrs);
+    const key = { ...keyDefaults, ...keyattrs };
     this.set('key', key);
     this.set('storeService.keyActionReturnVal', { ciphertext: 'secret' });
     await render(hbs`
     <TransitKeyActions @selectedAction="encrypt" @key={{this.key}} />`);
 
-    // await fillIn('#plaintext', 'plaintext');
-    find('#plaintext-control .CodeMirror').CodeMirror.setValue('plaintext');
+    codemirror('#plaintext-control').setValue('plaintext');
     assert.dom('#key_version').doesNotExist('it does not render the selector when there is only one key');
   });
 
@@ -203,11 +196,7 @@ module('Integration | Component | transit key actions', function (hooks) {
 
     this.set('storeService.keyActionReturnVal', { plaintext });
     this.set('selectedAction', 'decrypt');
-    assert.strictEqual(
-      find('#ciphertext-control .CodeMirror').CodeMirror.getValue(),
-      '',
-      'does not prefill ciphertext value'
-    );
+    assert.strictEqual(codemirror('#ciphertext-control').getValue(), '', 'does not prefill ciphertext value');
   });
 
   const setupExport = async function () {

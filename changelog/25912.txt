@@ -1,0 +1,3 @@
+```release-note:improvement
+auth/cert: Allow validation with OCSP responses with no NextUpdate time
+```

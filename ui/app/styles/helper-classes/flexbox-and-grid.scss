@@ -46,12 +46,16 @@
   flex-direction: row;
 }
 
-.has-gap-m {
+.gap-16 {
   gap: $spacing-16;
 }
 
-.has-gap-l {
+.gap-24 {
   gap: $spacing-24;
+}
+
+.gap-36 {
+  gap: $spacing-36;
 }
 
 // Alignment of the items

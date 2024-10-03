@@ -43,12 +43,14 @@ module('Integration | Component | clients/charts/vertical-bar-basic', function (
   });
 
   test('it renders when some months have no data', async function (assert) {
-    assert.expect(10);
-    await render(hbs`<Clients::Charts::VerticalBarBasic @data={{this.data}} @dataKey="secret_syncs" />`);
-    assert.dom('[data-test-sync-bar-chart]').exists('renders chart container');
+    await render(
+      hbs`<Clients::Charts::VerticalBarBasic @data={{this.data}} @dataKey="secret_syncs" @chartTitle="My chart"/>`
+    );
+    assert.dom('[data-test-chart="My chart"]').exists('renders chart container');
     assert.dom('[data-test-vertical-bar]').exists({ count: 3 }, 'renders 3 vertical bars');
 
     // Tooltips
+    assert.dom('[data-test-interactive-area="9/22"]').exists('interactive area exists');
     await triggerEvent('[data-test-interactive-area="9/22"]', 'mouseover');
     assert.dom('[data-test-tooltip]').exists({ count: 1 }, 'renders tooltip on mouseover');
     assert.dom('[data-test-tooltip-count]').hasText('5,802 secret syncs', 'tooltip has exact count');
@@ -68,8 +70,6 @@ module('Integration | Component | clients/charts/vertical-bar-basic', function (
 
   // 0 is different than null (no data)
   test('it renders when all months have 0 clients', async function (assert) {
-    assert.expect(9);
-
     this.data = [
       {
         month: '6/22',
@@ -88,9 +88,11 @@ module('Integration | Component | clients/charts/vertical-bar-basic', function (
         secret_syncs: 0,
       },
     ];
-    await render(hbs`<Clients::Charts::VerticalBarBasic @data={{this.data}} @dataKey="secret_syncs" />`);
+    await render(
+      hbs`<Clients::Charts::VerticalBarBasic @data={{this.data}} @dataKey="secret_syncs" @chartTitle="My chart"/>`
+    );
 
-    assert.dom('[data-test-sync-bar-chart]').exists('renders chart container');
+    assert.dom('[data-test-chart="My chart"]').exists('renders chart container');
     assert.dom('[data-test-vertical-bar]').exists({ count: 2 }, 'renders 2 vertical bars');
     assert.dom('[data-test-vertical-bar]').hasAttribute('height', '0', 'rectangles have 0 height');
     // Tooltips
@@ -106,14 +108,13 @@ module('Integration | Component | clients/charts/vertical-bar-basic', function (
   });
 
   test('it renders underlying data', async function (assert) {
-    assert.expect(3);
     await render(
-      hbs`<Clients::Charts::VerticalBarBasic @data={{this.data}} @dataKey="secret_syncs" @showTable={{true}} />`
+      hbs`<Clients::Charts::VerticalBarBasic @data={{this.data}} @dataKey="secret_syncs" @showTable={{true}} @chartTitle="My chart"/>`
     );
-    assert.dom('[data-test-sync-bar-chart]').exists('renders chart container');
+    assert.dom('[data-test-chart="My chart"]').exists('renders chart container');
     assert.dom('[data-test-underlying-data]').exists('renders underlying data when showTable=true');
     assert
       .dom('[data-test-underlying-data] thead')
-      .hasText('Month Count of secret syncs', 'renders correct table headers');
+      .hasText('Month Secret syncs Count', 'renders correct table headers');
   });
 });

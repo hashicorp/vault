@@ -5,6 +5,7 @@ package transit
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"strconv"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
@@ -25,6 +27,8 @@ const (
 	// Minimum cache size for transit backend
 	minCacheSize = 10
 )
+
+var ErrCmacEntOnly = errors.New("CMAC operations are only available in enterprise versions of Vault")
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b, err := Backend(ctx, conf)
@@ -77,10 +81,12 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*backend, error)
 			b.pathImportCertChain(),
 		},
 
-		Secrets:      []*framework.Secret{},
-		Invalidate:   b.invalidate,
-		BackendType:  logical.TypeLogical,
-		PeriodicFunc: b.periodicFunc,
+		Secrets:        []*framework.Secret{},
+		Invalidate:     b.invalidate,
+		BackendType:    logical.TypeLogical,
+		PeriodicFunc:   b.periodicFunc,
+		InitializeFunc: b.initialize,
+		Clean:          b.cleanup,
 	}
 
 	b.backendUUID = conf.BackendUUID
@@ -107,11 +113,15 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*backend, error)
 		return nil, err
 	}
 
+	b.setupEnt()
+
 	return &b, nil
 }
 
 type backend struct {
 	*framework.Backend
+	entBackend
+
 	lm *keysutil.LockManager
 	// Lock to make changes to any of the backend's cache configuration.
 	configMutex          sync.RWMutex
@@ -168,6 +178,11 @@ func (b *backend) GetPolicy(ctx context.Context, polReq keysutil.PolicyRequest, 
 	if err != nil {
 		return p, false, err
 	}
+
+	if p != nil && p.Type.CMACSupported() && !constants.IsEnterprise {
+		return nil, false, ErrCmacEntOnly
+	}
+
 	return p, true, nil
 }
 
@@ -185,6 +200,8 @@ func (b *backend) invalidate(ctx context.Context, key string) {
 		defer b.configMutex.Unlock()
 		b.cacheSizeChanged = true
 	}
+
+	b.invalidateEnt(ctx, key)
 }
 
 // periodicFunc is a central collection of functions that run on an interval.
@@ -203,7 +220,11 @@ func (b *backend) periodicFunc(ctx context.Context, req *logical.Request) error 
 		b.autoRotateOnce = sync.Once{}
 	}
 
-	return err
+	if err != nil {
+		return err
+	}
+
+	return b.periodicFuncEnt(ctx, req)
 }
 
 // autoRotateKeys retrieves all transit keys and rotates those which have an
@@ -291,4 +312,12 @@ func (b *backend) rotateIfRequired(ctx context.Context, req *logical.Request, ke
 
 	}
 	return nil
+}
+
+func (b *backend) initialize(ctx context.Context, request *logical.InitializationRequest) error {
+	return b.initializeEnt(ctx, request)
+}
+
+func (b *backend) cleanup(ctx context.Context) {
+	b.cleanupEnt(ctx)
 }

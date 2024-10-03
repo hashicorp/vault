@@ -33,7 +33,7 @@ export default Component.extend({
 
   currentUserHasAuthorized: computed('currentUserEntityId', 'model.authorizations.@each.id', function () {
     const authorizations = this.model.authorizations || [];
-    return Boolean(authorizations.findBy('id', this.currentUserEntityId));
+    return Boolean(authorizations.find((authz) => authz.id === this.currentUserEntityId));
   }),
 
   isSuccess: or('currentUserHasAuthorized', 'model.approved'),

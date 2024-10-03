@@ -13,6 +13,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -179,7 +180,6 @@ type FSM struct {
 
 	localID         string
 	desiredSuffrage string
-	unknownOpTypes  sync.Map
 }
 
 // NewFSM constructs a FSM using the given directory
@@ -247,9 +247,11 @@ func (f *FSM) openDBFile(dbPath string) error {
 		return errors.New("can not open empty filename")
 	}
 
+	vaultDbExists := true
 	st, err := os.Stat(dbPath)
 	switch {
 	case err != nil && os.IsNotExist(err):
+		vaultDbExists = false
 	case err != nil:
 		return fmt.Errorf("error checking raft FSM db file %q: %v", dbPath, err)
 	default:
@@ -261,11 +263,16 @@ func (f *FSM) openDBFile(dbPath string) error {
 	}
 
 	opts := boltOptions(dbPath)
+	if runtime.GOOS == "linux" && vaultDbExists && !usingMapPopulate(opts.MmapFlags) {
+		f.logger.Warn("the MAP_POPULATE mmap flag has not been set before opening the FSM database. This may be due to the database file being larger than the available memory on the system, or due to the VAULT_RAFT_DISABLE_MAP_POPULATE environment variable being set. As a result, Vault may be slower to start up.")
+	}
+
 	start := time.Now()
 	boltDB, err := bolt.Open(dbPath, 0o600, opts)
 	if err != nil {
 		return err
 	}
+
 	elapsed := time.Now().Sub(start)
 	f.logger.Debug("time to open database", "elapsed", elapsed, "path", dbPath)
 	metrics.MeasureSince([]string{"raft_storage", "fsm", "open_db_file"}, start)
@@ -763,10 +770,7 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 							go f.restoreCb(context.Background())
 						}
 					default:
-						if _, ok := f.unknownOpTypes.Load(op.OpType); !ok {
-							f.logger.Error("unsupported transaction operation", "op", op.OpType)
-							f.unknownOpTypes.Store(op.OpType, struct{}{})
-						}
+						return fmt.Errorf("%q is not a supported transaction operation", op.OpType)
 					}
 					if err != nil {
 						return err

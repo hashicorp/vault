@@ -6,11 +6,9 @@
 import AdapterError from '@ember-data/adapter/error';
 import RESTAdapter from '@ember-data/adapter/rest';
 import { service } from '@ember/service';
-import { assign } from '@ember/polyfills';
 import { set } from '@ember/object';
 import RSVP from 'rsvp';
 import config from '../config/environment';
-import fetch from 'fetch';
 
 const { APP } = config;
 const { POLLING_URLS, NAMESPACE_ROOT_URLS } = APP;
@@ -53,7 +51,7 @@ export default RESTAdapter.extend({
     if (namespace && !NAMESPACE_ROOT_URLS.some((str) => url.includes(str))) {
       headers['X-Vault-Namespace'] = namespace;
     }
-    options.headers = assign(options.headers || {}, headers);
+    options.headers = Object.assign(options.headers || {}, headers);
   },
 
   _preRequest(url, options, method) {
@@ -93,7 +91,7 @@ export default RESTAdapter.extend({
         controlGroup.deleteControlGroupToken(controlGroupToken.accessor);
       }
       const [resp] = args;
-      if (resp && resp.warnings) {
+      if (resp && resp.warnings && !options.skipWarnings) {
         const flash = this.flashMessages;
         resp.warnings.forEach((message) => {
           flash.info(message);

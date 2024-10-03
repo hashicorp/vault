@@ -1,0 +1,85 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<div class="replication-dashboard box is-sideless is-fullwidth is-marginless" data-test-replication-dashboard>
+  {{#if this.isReindexing}}
+    <div class="reindexing-alert">
+      <Hds::Alert data-test-isReindexing @type="inline" @color="highlight" as |A|>
+        <A.Title data-test-reindexing-title>
+          {{concat "Re-indexing in progress" this.reindexingStage}}
+          {{#if this.progressBar}}
+            <progress
+              data-test-reindexing-progress
+              value={{this.progressBar.value}}
+              max={{this.progressBar.max}}
+              class="progress is-success is-medium is-inline-block"
+            ></progress>
+          {{/if}}
+        </A.Title>
+        <A.Description>{{sanitized-html this.reindexMessage}}</A.Description>
+      </Hds::Alert>
+    </div>
+  {{/if}}
+  {{#if @isSummaryDashboard}}
+    <div class="summary-state">
+      <h6 class="title is-5 {{if (not (get (cluster-states this.summaryState) 'isOk')) 'has-text-danger'}}" data-test-error>
+        state
+      </h6>
+      {{#if (get (cluster-states this.summaryState) "isOk")}}
+        <p class="has-text-grey is-size-8">
+          The current operating state of both Disaster Recovery and Performance. This value should be ‘running.’ If the value
+          is idle, it indicates an issue and needs to be investigated.
+        </p>
+      {{else}}
+        <AlertInline @type="danger" @message="The cluster is {{this.summaryState}}. Please check your server logs." />
+      {{/if}}
+      <h2 class="title is-3" data-test-summary-state>
+        {{this.summaryState}}
+        {{#if (get (cluster-states this.summaryState) "isOk")}}
+          <Icon
+            @name={{get (cluster-states this.summaryState) "glyph"}}
+            class={{if (get (cluster-states this.summaryState) "isOk") "has-text-success" "has-text-danger"}}
+            data-test-icon
+          />
+        {{/if}}
+      </h2>
+    </div>
+    <div class="selectable-card-container summary" data-test-selectable-card-container-summary>
+      {{yield (hash card=(component @componentToRender replicationDetails=@replicationDetailsSummary))}}
+    </div>
+  {{else}}
+    <div
+      class="selectable-card-container {{if @isSecondary 'secondary' 'primary'}}"
+      data-test-selectable-card-container={{if @isSecondary "secondary" "primary"}}
+    >
+      {{yield (hash card=(component @componentToRender replicationDetails=@replicationDetails))}}
+      {{#unless @isSecondary}}
+        {{yield (hash secondaryCard=(component "known-secondaries-card"))}}
+      {{/unless}}
+    </div>
+  {{/if}}
+  {{#if this.isSyncing}}
+    <div class="syncing-alert">
+      <Hds::Alert data-test-isSyncing @type="inline" @color="highlight" @icon="loading" as |A|>
+        <A.Title>Syncing in progress</A.Title>
+        <A.Description>
+          The cluster is syncing. This happens when the secondary is too far behind the primary to use the normal stream-wals
+          state for catching up.
+        </A.Description>
+      </Hds::Alert>
+    </div>
+  {{/if}}
+  {{#unless @isSummaryDashboard}}
+    <ReplicationTableRows @replicationDetails={{@replicationDetails}} @clusterMode={{@clusterMode}} />
+    <div class="replication helper-text float-right" data-test-replication-doc-link>
+      <p class="has-text-grey">
+        We have additional time series telemetry that can be found
+        <DocLink @path="/vault/tutorials/monitoring/monitor-replication#key-monitoring-metrics">
+          in our documentation.
+        </DocLink>
+      </p>
+    </div>
+  {{/unless}}
+</div>

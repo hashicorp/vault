@@ -1,0 +1,4 @@
+```release-note:bug
+config: Vault TCP listener config now correctly supports the documented proxy_protocol_behavior 
+setting of 'deny_unauthorized'
+```

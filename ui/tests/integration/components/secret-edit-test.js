@@ -10,7 +10,7 @@ import { resolve } from 'rsvp';
 import { run } from '@ember/runloop';
 import Service from '@ember/service';
 import hbs from 'htmlbars-inline-precompile';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
+import codemirror from 'vault/tests/helpers/codemirror';
 
 let capabilities;
 const storeService = Service.extend({
@@ -23,17 +23,10 @@ module('Integration | Component | secret edit', function (hooks) {
 
   hooks.beforeEach(function () {
     capabilities = null;
-    this.codeMirror = this.owner.lookup('service:code-mirror');
     this.set('key', { id: 'Foobar' });
     run(() => {
       this.owner.unregister('service:store');
       this.owner.register('service:store', storeService);
-    });
-    setRunOptions({
-      rules: {
-        // TODO: Fix JSONEditor/CodeMirror
-        label: { enabled: false },
-      },
     });
   });
 
@@ -47,7 +40,7 @@ module('Integration | Component | secret edit', function (hooks) {
       },
     });
 
-    await render(hbs`{{secret-edit mode=this.mode model=this.model key=this.key }}`);
+    await render(hbs`<SecretEdit @mode={{this.mode}} @model={{this.model}} @key={{this.key}} />`);
     assert.dom('[data-test-toggle-input="json"]').isDisabled();
   });
 
@@ -61,7 +54,7 @@ module('Integration | Component | secret edit', function (hooks) {
       },
     });
 
-    await render(hbs`{{secret-edit mode=this.mode model=this.model key=this.key }}`);
+    await render(hbs`<SecretEdit @mode={{this.mode}} @model={{this.model}} @key={{this.key}} />`);
     assert.dom('[data-test-toggle-input="json"]').isNotDisabled();
   });
 
@@ -71,10 +64,11 @@ module('Integration | Component | secret edit', function (hooks) {
       secretData: null,
     });
 
-    await render(hbs`{{secret-edit mode=this.mode model=this.model preferAdvancedEdit=true key=this.key }}`);
+    await render(
+      hbs`<SecretEdit @mode={{this.mode}} @model={{this.model}} @preferAdvancedEdit={{true}} @key={{this.key}} />`
+    );
 
-    const instance = document.querySelector('.CodeMirror').CodeMirror;
-    instance.setValue(JSON.stringify([{ foo: 'bar' }]));
+    codemirror().setValue(JSON.stringify([{ foo: 'bar' }]));
     await settled();
     assert
       .dom('[data-test-message-error]')
@@ -91,7 +85,7 @@ module('Integration | Component | secret edit', function (hooks) {
         float: '1.234',
       },
     });
-    await render(hbs`<SecretEdit @mode={{this.mode}} @model={{this.model}} key="this.key" />`);
+    await render(hbs`<SecretEdit @mode={{this.mode}} @model={{this.model}} @key={{this.key}} />`);
     assert.dom('[data-test-secret-save]').isNotDisabled();
   });
 
@@ -109,10 +103,11 @@ module('Integration | Component | secret edit', function (hooks) {
       canReadSecretData: true,
     });
 
-    await render(hbs`{{secret-edit mode=this.mode model=this.model preferAdvancedEdit=true key=this.key }}`);
+    await render(
+      hbs`<SecretEdit @mode={{this.mode}} @model={{this.model}} @preferAdvancedEdit={{true}} @key={{this.key}} />`
+    );
 
-    const instance = document.querySelector('.CodeMirror').CodeMirror;
-    instance.setValue(JSON.stringify([{ foo: 'bar' }]));
+    codemirror().setValue(JSON.stringify([{ foo: 'bar' }]));
     await settled();
     assert
       .dom('[data-test-message-error]')

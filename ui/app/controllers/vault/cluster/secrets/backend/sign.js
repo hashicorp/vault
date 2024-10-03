@@ -36,7 +36,7 @@ export default Controller.extend({
 
     newModel() {
       const model = this.model;
-      const roleModel = model.get('role');
+      const roleModel = model.role;
       model.unloadRecord();
       const newModel = this.store.createRecord('ssh-sign', {
         role: roleModel,

@@ -7,18 +7,11 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { click, fillIn, render, triggerEvent } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Integration | Component | transform-advanced-templating', function (hooks) {
   setupRenderingTest(hooks);
 
   test('it should render', async function (assert) {
-    setRunOptions({
-      rules: {
-        // TODO: fix JSONEditor/CodeMirror
-        label: { enabled: false },
-      },
-    });
     this.model = {
       pattern: '(\\d{3})-(\\d{2})-(?<last>\\d{5})',
       encodeFormat: null,

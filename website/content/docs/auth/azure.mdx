@@ -151,6 +151,41 @@ tool.
    For the complete list of configuration options, please see the API
    documentation.
 
+   In some cases, you cannot set sensitive account credentials in your
+   Vault configuration. For example, your organization may require that all
+   security credentials are short-lived or explicitly tied to a machine identity.
+
+   To provide managed identity security credentials to Vault, we recommend using Vault
+   [plugin workload identity federation](#plugin-workload-identity-federation-wif)
+   (WIF) as shown below.
+
+1.  Alternatively, configure the audience claim value and the Client, Tenant IDs for plugin workload identity federation:
+
+   ```text
+   $ vault write azure/config \
+       tenant_id=7cd1f227-ca67-4fc6-a1a4-9888ea7f388c \
+       client_id=dd794de4-4c6c-40b3-a930-d84cd32e9699 \
+       identity_token_audience=vault.example/v1/identity/oidc/plugins
+   ```
+
+   The Vault identity token provider signs the plugin identity token JWT internally.
+   If a trust relationship exists between Vault and Azure through WIF, the auth
+   method can exchange the Vault identity token for a federated access token.
+
+   To configure a trusted relationship between Vault and Azure:
+       - You must configure the [identity token issuer backend](/vault/api-docs/secret/identity/tokens#configure-the-identity-tokens-backend)
+       for Vault.
+       - Azure must have a
+       [federated identity credential](https://learn.microsoft.com/en-us/entra/workload-id/workload-identity-federation-create-trust?pivots=identity-wif-apps-methods-azp#configure-a-federated-identity-credential-on-an-app)
+       configured with information about the fully qualified and network-reachable
+       issuer URL for the Vault plugin
+       [identity token provider](/vault/api-docs/secret/identity/tokens#read-plugin-identity-well-known-configurations).
+
+   Establishing a trusted relationship between Vault and Azure ensures that Azure
+   can fetch JWKS
+   [public keys](/vault/api-docs/secret/identity/tokens#read-active-public-keys)
+   and verify the plugin identity token signature.
+
 1. Create a role:
 
    ```shell-session
@@ -228,6 +263,55 @@ server:
 ```shell
 AZURE_GO_SDK_LOG_LEVEL=DEBUG
 ```
+
+## Plugin Workload Identity Federation (WIF)
+
+<EnterpriseAlert product="vault" />
+
+The Azure auth method supports the plugin WIF workflow, and has a source of identity called
+a plugin identity token. A plugin identity token is a JWT that is signed internally by Vault's
+[plugin identity token issuer](/vault/api-docs/secret/identity/tokens#read-plugin-workload-identity-issuer-s-openid-configuration).
+
+If there is a trust relationship configured between Vault and Azure through
+[workload identity federation](https://learn.microsoft.com/en-us/entra/workload-id/workload-identity-federation),
+the auth method can exchange its identity token for short-lived access tokens needed to
+perform its actions.
+
+Exchanging identity tokens for access tokens lets the Azure auth method
+operate without configuring explicit access to sensitive client credentials.
+
+To configure the auth method to use plugin WIF:
+
+1. Ensure that Vault [openid-configuration](/vault/api-docs/secret/identity/tokens#read-plugin-identity-token-issuer-s-openid-configuration)
+   and [public JWKS](/vault/api-docs/secret/identity/tokens#read-plugin-identity-token-issuer-s-public-jwks)
+   APIs are network-reachable by Azure. We recommend using an API proxy or gateway
+   if you need to limit Vault API exposure.
+
+1. Configure a
+   [federated identity credential](https://learn.microsoft.com/en-us/entra/workload-id/workload-identity-federation-create-trust?pivots=identity-wif-apps-methods-azp#configure-a-federated-identity-credential-on-an-app)
+   on a dedicated application registration in Azure to establish a trust relationship with Vault.
+   1. The issuer URL **must** point at your [Vault plugin identity token issuer](/vault/api-docs/secret/identity/tokens#read-plugin-workload-identity-issuer-s-openid-configuration) with the
+   `/.well-known/openid-configuration` suffix removed. For example:
+   `https://host:port/v1/identity/oidc/plugins`.
+   1. The subject identifier **must** match the unique `sub` claim issued by plugin identity tokens.
+   The subject identifier should have the form `plugin-identity:<NAMESPACE>:auth:<AZURE_MOUNT_ACCESSOR>`.
+   1. The audience should be under 600 characters. The default value in Azure is `api://AzureADTokenExchange`.
+
+1. Configure the Azure auth method with the client and tenant IDs and the OIDC audience value.
+
+   ```shell-session
+   $ vault write azure/config \
+     tenant_id=7cd1f227-ca67-4fc6-a1a4-9888ea7f388c \
+     client_id=dd794de4-4c6c-40b3-a930-d84cd32e9699 \
+     identity_token_audience=vault.example/v1/identity/oidc/plugins
+   ```
+
+Your auth method can now use plugin WIF for its configuration credentials.
+By default, WIF [credentials](https://learn.microsoft.com/en-us/entra/identity-platform/access-tokens#token-lifetime)
+have a time-to-live of 1 hour and automatically refresh when they expire.
+
+Please see the [API documentation](/vault/api-docs/auth/azure#configure)
+for more details on the fields associated with plugin WIF.
 
 ## API
 

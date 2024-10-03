@@ -12,7 +12,6 @@ import { create } from 'ember-cli-page-object';
 import sinon from 'sinon';
 import formFields from '../../pages/components/form-field';
 import { format, startOfDay } from 'date-fns';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const component = create(formFields);
 
@@ -43,13 +42,13 @@ module('Integration | Component | form field', function (hooks) {
     this.attr = { name: 'foo' };
     this.model = model;
     await render(hbs`<FormField @attr={{this.attr}} @model={{this.model}} />`);
-    assert.strictEqual(component.fields.objectAt(0).labelText[0], 'Foo', 'renders a label');
+    assert.strictEqual(component.fields.objectAt(0).labelValue, 'Foo', 'renders a label');
     assert.notOk(component.hasInput, 'renders only the label');
   });
 
   test('it renders: string', async function (assert) {
     const [model, spy] = await setup.call(this, createAttr('foo', 'string', { defaultValue: 'default' }));
-    assert.strictEqual(component.fields.objectAt(0).labelText[0], 'Foo', 'renders a label');
+    assert.strictEqual(component.fields.objectAt(0).labelValue, 'Foo', 'renders a label');
     assert.strictEqual(component.fields.objectAt(0).inputValue, 'default', 'renders default value');
     assert.ok(component.hasInput, 'renders input for string');
     await component.fields.objectAt(0).input('bar').change();
@@ -60,7 +59,7 @@ module('Integration | Component | form field', function (hooks) {
 
   test('it renders: boolean', async function (assert) {
     const [model, spy] = await setup.call(this, createAttr('foo', 'boolean', { defaultValue: false }));
-    assert.strictEqual(component.fields.objectAt(0).labelText[0], 'Foo', 'renders a label');
+    assert.strictEqual(component.fields.objectAt(0).labelValue, 'Foo', 'renders a label');
     assert.notOk(component.fields.objectAt(0).inputChecked, 'renders default value');
     assert.ok(component.hasCheckbox, 'renders a checkbox for boolean');
     await component.fields.objectAt(0).clickLabel();
@@ -71,7 +70,7 @@ module('Integration | Component | form field', function (hooks) {
 
   test('it renders: number', async function (assert) {
     const [model, spy] = await setup.call(this, createAttr('foo', 'number', { defaultValue: 5 }));
-    assert.strictEqual(component.fields.objectAt(0).labelText[0], 'Foo', 'renders a label');
+    assert.strictEqual(component.fields.objectAt(0).labelValue, 'Foo', 'renders a label');
     assert.strictEqual(component.fields.objectAt(0).inputValue, '5', 'renders default value');
     assert.ok(component.hasInput, 'renders input for number');
     await component.fields.objectAt(0).input(8).change();
@@ -81,26 +80,14 @@ module('Integration | Component | form field', function (hooks) {
   });
 
   test('it renders: object', async function (assert) {
-    // TODO: Fix JSONEditor/CodeMirror
-    setRunOptions({
-      rules: {
-        label: { enabled: false },
-      },
-    });
     await setup.call(this, createAttr('foo', 'object'));
-    assert.strictEqual(component.fields.objectAt(0).labelText[0], 'Foo', 'renders a label');
+    assert.dom('[data-test-component="json-editor-title"]').hasText('Foo', 'renders a label');
     assert.ok(component.hasJSONEditor, 'renders the json editor');
   });
 
   test('it renders: string as json with clear button', async function (assert) {
-    // TODO: Fix JSONEditor/CodeMirror
-    setRunOptions({
-      rules: {
-        label: { enabled: false },
-      },
-    });
     await setup.call(this, createAttr('foo', 'string', { editType: 'json', allowReset: true }));
-    assert.strictEqual(component.fields.objectAt(0).labelText[0], 'Foo', 'renders a label');
+    assert.dom('[data-test-component="json-editor-title"]').hasText('Foo', 'renders a label');
     assert.ok(component.hasJSONEditor, 'renders the json editor');
     assert.ok(component.hasJSONClearButton, 'renders button that will clear the JSON value');
   });
@@ -110,7 +97,7 @@ module('Integration | Component | form field', function (hooks) {
       this,
       createAttr('foo', 'string', { defaultValue: 'goodbye', editType: 'textarea' })
     );
-    assert.strictEqual(component.fields.objectAt(0).labelText[0], 'Foo', 'renders a label');
+    assert.strictEqual(component.fields.objectAt(0).labelValue, 'Foo', 'renders a label');
     assert.ok(component.hasTextarea, 'renders a textarea');
     assert.strictEqual(component.fields.objectAt(0).textareaValue, 'goodbye', 'renders default value');
     await component.fields.objectAt(0).textarea('hello');
@@ -140,14 +127,41 @@ module('Integration | Component | form field', function (hooks) {
   });
 
   test('it renders: editType ttl', async function (assert) {
-    const [model, spy] = await setup.call(this, createAttr('foo', null, { editType: 'ttl' }));
+    const [model, spy] = await setup.call(
+      this,
+      createAttr('foo', null, {
+        editType: 'ttl',
+        helperTextDisabled: 'TTL is disabled',
+        helperTextEnabled: 'TTL is enabled',
+      })
+    );
     assert.ok(component.hasTTLPicker, 'renders the ttl-picker component');
+    assert.dom('[data-test-ttl-form-subtext]').hasText('TTL is disabled');
+    assert.dom('[data-test-ttl-toggle]').isNotChecked();
     await component.fields.objectAt(0).toggleTtl();
     await component.fields.objectAt(0).select('h').change();
     await component.fields.objectAt(0).ttlTime('3');
     const expectedSeconds = `${3 * 3600}s`;
     assert.strictEqual(model.get('foo'), expectedSeconds);
     assert.ok(spy.calledWith('foo', expectedSeconds), 'onChange called with correct args');
+    await component.fields.objectAt(0).toggleTtl();
+    assert.ok(spy.calledWith('foo', '0'), 'onChange called with 0 when toggle off');
+  });
+
+  test('it renders: editType ttl with special settings', async function (assert) {
+    const [model, spy] = await setup.call(
+      this,
+      createAttr('foo', null, {
+        editType: 'ttl',
+        setDefault: '3600s',
+        ttlOffValue: '',
+      })
+    );
+    assert.ok(component.hasTTLPicker, 'renders the ttl-picker component');
+    assert.dom('[data-test-ttl-toggle]').isChecked();
+    await component.fields.objectAt(0).toggleTtl();
+    assert.strictEqual(model.get('foo'), '');
+    assert.ok(spy.calledWith('foo', ''), 'onChange called with correct args');
   });
 
   test('it renders: editType ttl without toggle', async function (assert) {
@@ -233,17 +247,17 @@ module('Integration | Component | form field', function (hooks) {
 
   test('it uses a passed label', async function (assert) {
     await setup.call(this, createAttr('foo', 'string', { label: 'Not Foo' }));
-    assert.strictEqual(
-      component.fields.objectAt(0).labelText[0],
-      'Not Foo',
-      'renders the label from options'
-    );
+    assert.strictEqual(component.fields.objectAt(0).labelValue, 'Not Foo', 'renders the label from options');
   });
 
-  test('it renders a help tooltip', async function (assert) {
-    await setup.call(this, createAttr('foo', 'string', { helpText: 'Here is some help text' }));
+  test('it renders a help tooltip and placeholder', async function (assert) {
+    await setup.call(
+      this,
+      createAttr('foo', 'string', { helpText: 'Here is some help text', placeholder: 'example::value' })
+    );
     await component.tooltipTrigger();
     assert.ok(component.hasTooltip, 'renders the tooltip component');
+    assert.dom('[data-test-input="foo"]').hasAttribute('placeholder', 'example::value');
   });
 
   test('it should not expand and toggle ttl when default 0s value is present', async function (assert) {

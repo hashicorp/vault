@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	vaultoci "github.com/hashicorp/vault-plugin-auth-oci"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agentproxyshared/auth"
@@ -165,7 +165,7 @@ func TestOCIEndToEnd(t *testing.T) {
 		Client: client,
 	})
 	go func() {
-		errCh <- ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config})
+		errCh <- ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config}, ah.AuthInProgress)
 	}()
 	defer func() {
 		select {

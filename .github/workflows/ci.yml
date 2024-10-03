@@ -33,7 +33,7 @@ jobs:
       ui-changed: ${{ steps.changed-files.outputs.ui-changed }}
       workflow-trigger: ${{ steps.metadata.outputs.workflow-trigger }}
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       - uses: ./.github/actions/changed-files
         id: changed-files
       - uses: ./.github/actions/checkout
@@ -146,7 +146,7 @@ jobs:
       contents: read
     runs-on: ${{ fromJSON(needs.setup.outputs.compute-test-ui) }}
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
         name: status
         with:
           ref: ${{ needs.setup.outputs.checkout-ref }}
@@ -154,22 +154,31 @@ jobs:
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       # Setup node.js without caching to allow running npm install -g yarn (next step)
-      - uses: actions/setup-node@b39b52d1213e96004bfcb1c61a8a6fa8ab84f3e8 # v4.0.1
+      - uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
         with:
           node-version-file: './ui/package.json'
       - run: npm install -g yarn
       # Setup node.js with caching using the yarn.lock file
-      - uses: actions/setup-node@b39b52d1213e96004bfcb1c61a8a6fa8ab84f3e8 # v4.0.1
+      - uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
         with:
           node-version-file: './ui/package.json'
           cache: yarn
           cache-dependency-path: ui/yarn.lock
-      - uses: browser-actions/setup-chrome@52f10de5479c69bcbbab2eab094c9d373148005e # v1.4.0
+      - uses: browser-actions/setup-chrome@facf10a55b9caf92e0cc749b4f82bf8220989148 # v1.7.2
+        with:
+          # Temporarily pin our Chrome version while we sort out a broken test on latest
+          chrome-version: 1314712
       - name: ui-dependencies
         working-directory: ./ui
         run: |
           yarn install --frozen-lockfile
           npm rebuild node-sass
+      - if: needs.setup.outputs.is-enterprise != 'true'
+        name: Rebuild font cache on Github hosted runner
+        # Fix `Fontconfig error: No writable cache directories` error on Github hosted runners
+        # This seems to have been introduced with this runner image: https://github.com/actions/runner-images/releases/tag/ubuntu22%2F20240818.1
+        # Hopefully this will resolve itself at some point with a newer image and we can remove it
+        run: fc-cache -f -v
       - if: needs.setup.outputs.is-enterprise == 'true'
         id: vault-auth
         name: Authenticate to Vault
@@ -177,7 +186,7 @@ jobs:
       - if: needs.setup.outputs.is-enterprise == 'true'
         id: secrets
         name: Fetch secrets
-        uses: hashicorp/vault-action@9f522b85981b491eab9a52c144d15aedbd0bf371 # v2.8.0
+        uses: hashicorp/vault-action@v3
         with:
           url: ${{ steps.vault-auth.outputs.addr }}
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
@@ -185,9 +194,11 @@ jobs:
           secrets: |
             kv/data/github/hashicorp/vault-enterprise/github-token username-and-token | PRIVATE_REPO_GITHUB_TOKEN;
             kv/data/github/hashicorp/vault-enterprise/license license_1 | VAULT_LICENSE;
+            kv/data/github/${{ github.repository }}/datadog-ci DATADOG_API_KEY;
       - if: needs.setup.outputs.is-enterprise == 'true'
         name: Set up Git
         run: git config --global url."https://${{ steps.secrets.outputs.PRIVATE_REPO_GITHUB_TOKEN }}@github.com".insteadOf https://github.com
+      - uses: ./.github/actions/install-external-tools
       - name: build-go-dev
         run: |
           rm -rf ./pkg
@@ -203,12 +214,38 @@ jobs:
           mkdir -p test-results/qunit
           yarn ${{ needs.setup.outputs.is-enterprise == 'true' && 'test' || 'test:oss' }}
       - if: always()
-        uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
+        uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4.3.6
         with:
           name: test-results-ui
           path: ui/test-results
+      - name: Prepare datadog-ci
+        if: (github.repository == 'hashicorp/vault' || github.repository == 'hashicorp/vault-enterprise') && (success() || failure())
+        continue-on-error: true
+        run: |
+          if type datadog-ci > /dev/null 2>&1; then
+            exit 0
+          fi
+          # Curl does not always exit 1 if things go wrong. To determine if this is successful
+          # we'll silence all non-error output and check the results to determine success.
+          if ! out="$(curl -sSL --fail https://github.com/DataDog/datadog-ci/releases/latest/download/datadog-ci_linux-x64 --output /usr/local/bin/datadog-ci 2>&1)"; then
+            printf "failed to download datadog-ci: %s" "$out"
+          fi
+          if [[ -n "$out" ]]; then
+            printf "failed to download datadog-ci: %s" "$out"
+          fi
+          chmod +x /usr/local/bin/datadog-ci
+      - name: Upload test results to DataDog
+        if: success() || failure()
+        continue-on-error: true
+        env:
+          DD_ENV: ci
+        run: |
+          if [[ ${{ github.repository }} == 'hashicorp/vault' ]]; then
+            export DATADOG_API_KEY=${{ secrets.DATADOG_API_KEY }}
+          fi
+          datadog-ci junit upload --service "$GITHUB_REPOSITORY" 'ui/test-results/qunit/results.xml'
       - if: always()
-        uses: test-summary/action@fee35d7df20790255fe6aa92cf0f6d28092ecf2f # v2.2
+        uses: test-summary/action@31493c76ec9e7aa675f1585d3ed6f1da69269a86 # v2.4
         with:
           paths: "ui/test-results/qunit/results.xml"
           show: "fail"
@@ -225,7 +262,7 @@ jobs:
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","linux","small"]') }}
     permissions: write-all # Ensure we have id-token:write access for vault-auth.
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       # Determine the overall status of our required test jobs.
       - name: Determine status
         id: status
@@ -267,7 +304,7 @@ jobs:
       - if: needs.setup.outputs.is-enterprise == 'true'
         id: secrets
         name: Fetch Vault Secrets
-        uses: hashicorp/vault-action@9f522b85981b491eab9a52c144d15aedbd0bf371 # v2.8.0
+        uses: hashicorp/vault-action@v3
         with:
           url: ${{ steps.vault-auth.outputs.addr }}
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
@@ -288,9 +325,7 @@ jobs:
             needs.test-ui.result == 'failure'
           )
         name: Notify build failures in Slack
-        uses: slackapi/slack-github-action@6c661ce58804a1a20f6dc5fbee7f0381b469e001 # v1.25.0
-        # We intentionally aren't using the following here since it's from an internal repo
-        # uses: hashicorp/cloud-gha-slack-notifier@730a033037b8e603adf99ebd3085f0fdfe75e2f4 #v1
+        uses: slackapi/slack-github-action@70cd7be8e40a46e8b0eced40b0de447bdb42f68e # v1.26.0
         env:
           SLACK_BOT_TOKEN: ${{ steps.slackbot-token.outputs.slackbot-token }}
         with:
@@ -315,7 +350,7 @@ jobs:
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "${{ needs.test-go.result != 'failure' && ':white_check_mark:' || ':x:' }} Go tests\n${{ needs.test-go-race.result != 'failure' && ':white_check_mark:' || ':x:' }} Go race tests\n\t\t${{ needs.test-go-race.outputs.data-race-result != 'success' && ':x:' || ':white_check_mark:' }} Data races detected\n${{ needs.test-go-testonly.result != 'failure' && ':white_check_mark:' || ':x:' }} Go testonly tests\n${{ needs.test-ui.result != 'failure' && ':white_check_mark:' || ':x:' }} UI tests"
+                    "text": "${{ needs.test-go.result != 'failure' && ':white_check_mark:' || ':x:' }} Go tests\n${{ needs.test-go-race.result != 'failure' && ':white_check_mark:' || ':x:' }} Go race tests\n\t\t${{ needs.test-go-race.outputs.data-race-result != 'success' && ':x: Data race detected' || ':white_check_mark: No race detected' }}\n${{ needs.test-go-testonly.result != 'failure' && ':white_check_mark:' || ':x:' }} Go testonly tests\n${{ needs.test-ui.result != 'failure' && ':white_check_mark:' || ':x:' }} UI tests"
                   },
                   "accessory": {
                     "type": "button",
@@ -333,7 +368,7 @@ jobs:
       # to secrets.
       - if: ${{ needs.setup.outputs.is-fork == 'false' }}
         name: Download failure summaries
-        uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4.1.1
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
           pattern: failure-summary-*.md
           path: failure-summaries

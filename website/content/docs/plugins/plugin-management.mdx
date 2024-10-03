@@ -67,3 +67,65 @@ page.
 
 [api_addr]: /vault/docs/configuration#api_addr
 [upgrading_plugins]: /vault/docs/upgrading/plugins
+
+## Plugin environment variables
+
+An advantage for external plugins over builtin plugins is they can specify
+additional environment variables because they are run in their own process.
+
+-> Vault 1.16.0 changed the precedence given to plugin-specific environment
+variables so they take priority over Vault's environment. See full details in
+the [upgrade notes](/vault/docs/upgrading/upgrade-to-1.16.x).
+
+Use the `-env` flag once per environment variable that a plugin should be
+started with:
+
+```shell-session
+$ vault plugin register -sha256=<SHA256 Hex value of the plugin binary> \
+    -env REGION=eu \
+    -env TOKEN_FILE=/var/run/token \
+    secret \                  # type
+    passthrough-plugin
+
+Success! Registered plugin: passthrough-plugin
+```
+
+### Plugin-specific HTTP proxy settings
+
+Many tools and libraries automatically consume `HTTP_PROXY`, `HTTPS_PROXY`, and
+`NO_PROXY` environment variables to configure HTTP proxy settings, including the
+Go standard library's default HTTP client. You can use these environment
+variables to configure different network proxies for different plugins:
+
+-> You must be using an external plugin to take advantage of custom environment
+variables. If you are using a builtin plugin, you can still download and register
+an external version of it in order to use this workflow. Check the
+[releases](https://releases.hashicorp.com/) page for the latest prebuilt plugin
+binaries.
+
+```shell-session
+$ vault plugin register -sha256=<SHA256 Hex value of the plugin binary> \
+    -env HTTP_PROXY=eu.example.com \
+    auth \
+    jwt-eu
+
+Success! Registered plugin: jwt-eu
+
+$ vault plugin register -sha256=<SHA256 Hex value of the plugin binary> \
+    -env HTTP_PROXY=us.example.com \
+    auth \
+    jwt-us
+
+Success! Registered plugin: jwt-us
+```
+
+You can then enable each plugin on its own path, and configure clients that
+should be associated with one or the other appropriately:
+
+```shell-session
+$ vault auth enable jwt-eu
+Success! Enabled the jwt-eu auth method at: auth/jwt-eu/
+
+$ vault auth enable jwt-us
+Success! Enabled the jwt-us auth method at: auth/jwt-us/
+```

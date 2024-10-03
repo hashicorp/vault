@@ -24,17 +24,19 @@ type NamespaceRecord struct {
 	NonEntityTokens uint64         `json:"non_entity_tokens"`
 	SecretSyncs     uint64         `json:"secret_syncs"`
 	Mounts          []*MountRecord `json:"mounts"`
+	ACMEClients     uint64         `json:"acme_clients"`
 }
 
 type CountsRecord struct {
 	EntityClients    int `json:"entity_clients"`
 	NonEntityClients int `json:"non_entity_clients"`
 	SecretSyncs      int `json:"secret_syncs"`
+	ACMEClients      int `json:"acme_clients"`
 }
 
 // HasCounts returns true when any of the record's fields have a non-zero value
 func (c *CountsRecord) HasCounts() bool {
-	return c.EntityClients+c.NonEntityClients+c.SecretSyncs != 0
+	return c.EntityClients+c.NonEntityClients+c.SecretSyncs+c.ACMEClients != 0
 }
 
 type NewClientRecord struct {
@@ -316,4 +318,68 @@ func (s *PrecomputedQueryStore) DeleteQueriesBefore(ctx context.Context, retenti
 		}
 	}
 	return nil
+}
+
+func (m *MonthlyNamespaceRecord) ToNamespaceRecord() *NamespaceRecord {
+	return &NamespaceRecord{
+		NamespaceID:     m.NamespaceID,
+		Entities:        uint64(m.Counts.EntityClients),
+		NonEntityTokens: uint64(m.Counts.NonEntityClients),
+		SecretSyncs:     uint64(m.Counts.SecretSyncs),
+		Mounts:          m.Mounts,
+		ACMEClients:     uint64(m.Counts.ACMEClients),
+	}
+}
+
+func (n *NamespaceRecord) CombineWithMonthlyNamespaceRecord(nsRecord *MonthlyNamespaceRecord) {
+	existingMounts := make(map[string]*MountRecord)
+	for _, mountRecord := range n.Mounts {
+		existingMounts[mountRecord.MountPath] = mountRecord
+	}
+
+	for _, mountRecord := range nsRecord.Mounts {
+		if existingMountRecord, ok := existingMounts[mountRecord.MountPath]; ok {
+			existingMountRecord.Add(mountRecord)
+		} else {
+			n.Mounts = append(n.Mounts, mountRecord)
+		}
+	}
+
+	n.SecretSyncs += uint64(nsRecord.Counts.SecretSyncs)
+	n.Entities += uint64(nsRecord.Counts.EntityClients)
+	n.NonEntityTokens += uint64(nsRecord.Counts.NonEntityClients)
+	n.ACMEClients += uint64(nsRecord.Counts.ACMEClients)
+}
+
+func (m *MountRecord) Add(m2 *MountRecord) {
+	m.Counts.ACMEClients += m2.Counts.ACMEClients
+	m.Counts.NonEntityClients += m2.Counts.NonEntityClients
+	m.Counts.EntityClients += m2.Counts.EntityClients
+	m.Counts.SecretSyncs += m2.Counts.SecretSyncs
+}
+
+func (q *PrecomputedQuery) CombineWithCurrentMonth(currentMonth *MonthRecord) {
+	// Append the current months data to the precomputed query month's data
+	q.Months = append(q.Months, currentMonth)
+
+	existingNamespaceMounts := make(map[string]*NamespaceRecord)
+	// Store the existing namespaces and mounts in the precomputed query for easy access
+	for _, monthlyNamespaceRecord := range q.Namespaces {
+		existingNamespaceMounts[monthlyNamespaceRecord.NamespaceID] = monthlyNamespaceRecord
+	}
+
+	// Get the counts of new clients each mount per namespace in the current month, and increment
+	// its total count in the precomputed query. These total values will be visible in the
+	// by_namespace grouping in the final response data
+	for _, nsRecord := range currentMonth.NewClients.Namespaces {
+		namespaceId := nsRecord.NamespaceID
+
+		// If the namespace already exists in the previous months, iterate through the mounts and increment the counts
+		if existingNsRecord, ok := existingNamespaceMounts[namespaceId]; ok {
+			existingNsRecord.CombineWithMonthlyNamespaceRecord(nsRecord)
+		} else {
+			// Else just add the new namespace record to the slice in the precomputed query's namespace slice
+			q.Namespaces = append(q.Namespaces, nsRecord.ToNamespaceRecord())
+		}
+	}
 }

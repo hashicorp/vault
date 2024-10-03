@@ -15,6 +15,7 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/go-jose/go-jose/v3"
 	"github.com/go-jose/go-jose/v3/jwt"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -218,7 +219,7 @@ DONELISTHANDLING:
 			priClaims.Accessor = resp.Auth.Accessor
 		}
 		sig, err := jose.NewSigner(
-			jose.SigningKey{Algorithm: jose.ES512, Key: c.wrappingJWTKey},
+			jose.SigningKey{Algorithm: jose.SignatureAlgorithm(api.CubbyHoleJWTSignatureAlgorithm), Key: c.wrappingJWTKey},
 			(&jose.SignerOptions{}).WithType("JWT"))
 		if err != nil {
 			c.tokenStore.revokeOrphan(ctx, te.ID)

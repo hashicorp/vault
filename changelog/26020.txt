@@ -1,0 +1,7 @@
+```release-note:improvement
+core/activity: Include ACME clients in activity log responses
+```
+
+```release-note:improvement
+ui: Display ACME clients on a separate page in the UI.
+```

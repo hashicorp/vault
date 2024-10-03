@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Prevent perpetual loading screen when Vault needs initialization
+```

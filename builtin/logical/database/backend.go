@@ -161,8 +161,9 @@ func (b *databaseBackend) collectPluginInstanceGaugeValues(context.Context) ([]m
 
 type databaseBackend struct {
 	// connections holds configured database connections by config name
-	connections *syncmap.SyncMap[string, *dbPluginInstance]
-	logger      log.Logger
+	createConnectionLock sync.Mutex
+	connections          *syncmap.SyncMap[string, *dbPluginInstance]
+	logger               log.Logger
 
 	*framework.Backend
 	// credRotationQueue is an in-memory priority queue used to track Static Roles
@@ -290,8 +291,32 @@ func (b *databaseBackend) GetConnection(ctx context.Context, s logical.Storage, 
 	return b.GetConnectionWithConfig(ctx, name, config)
 }
 
+func (b *databaseBackend) GetConnectionSkipVerify(ctx context.Context, s logical.Storage, name string) (*dbPluginInstance, error) {
+	config, err := b.DatabaseConfig(ctx, s, name)
+	if err != nil {
+		return nil, err
+	}
+
+	// Force the skip verifying the connection
+	config.VerifyConnection = false
+
+	return b.GetConnectionWithConfig(ctx, name, config)
+}
+
 func (b *databaseBackend) GetConnectionWithConfig(ctx context.Context, name string, config *DatabaseConfig) (*dbPluginInstance, error) {
+	// fast path, reuse the existing connection
 	dbi := b.connections.Get(name)
+	if dbi != nil {
+		return dbi, nil
+	}
+
+	// slow path, create a new connection
+	// if we don't lock the rest of the operation, there is a race condition for multiple callers of this function
+	b.createConnectionLock.Lock()
+	defer b.createConnectionLock.Unlock()
+
+	// check again in case we lost the race
+	dbi = b.connections.Get(name)
 	if dbi != nil {
 		return dbi, nil
 	}
@@ -318,7 +343,7 @@ func (b *databaseBackend) GetConnectionWithConfig(ctx context.Context, name stri
 
 	initReq := v5.InitializeRequest{
 		Config:           config.ConnectionDetails,
-		VerifyConnection: true,
+		VerifyConnection: config.VerifyConnection,
 	}
 	_, err = dbw.Initialize(ctx, initReq)
 	if err != nil {
@@ -332,14 +357,17 @@ func (b *databaseBackend) GetConnectionWithConfig(ctx context.Context, name stri
 		name:                 name,
 		runningPluginVersion: pluginVersion,
 	}
-	oldConn := b.connections.Put(name, dbi)
-	if oldConn != nil {
-		err := oldConn.Close()
+	conn, ok := b.connections.PutIfEmpty(name, dbi)
+	if !ok {
+		// this is a bug
+		b.Logger().Warn("BUG: there was a race condition adding to the database connection map")
+		// There was already an existing connection, so we will use that and close our new one to avoid a race condition.
+		err := dbi.Close()
 		if err != nil {
-			b.Logger().Warn("Error closing database connection", "error", err)
+			b.Logger().Warn("Error closing new database connection", "error", err)
 		}
 	}
-	return dbi, nil
+	return conn, nil
 }
 
 // ClearConnection closes the database connection and

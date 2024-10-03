@@ -19,6 +19,8 @@ import (
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
+	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -163,7 +165,7 @@ func TestOcsp_InvalidIssuerIdInRevocationEntry(t *testing.T) {
 
 	// Twiddle the entry so that the issuer id is no longer valid.
 	storagePath := revokedPath + normalizeSerial(serial)
-	var revInfo revocationInfo
+	var revInfo revocation.RevocationInfo
 	revEntry, err := s.Get(ctx, storagePath)
 	require.NoError(t, err, "failed looking up storage path: %s", storagePath)
 	err = revEntry.DecodeJSON(&revInfo)
@@ -207,7 +209,7 @@ func TestOcsp_UnknownIssuerIdWithDefaultHavingOcspUsageRemoved(t *testing.T) {
 
 	// Twiddle the entry so that the issuer id is no longer valid.
 	storagePath := revokedPath + normalizeSerial(serial)
-	var revInfo revocationInfo
+	var revInfo revocation.RevocationInfo
 	revEntry, err := s.Get(ctx, storagePath)
 	require.NoError(t, err, "failed looking up storage path: %s", storagePath)
 	err = revEntry.DecodeJSON(&revInfo)
@@ -607,7 +609,7 @@ func runOcspRequestTest(t *testing.T, requestType string, caKeyType string,
 		nextUpdateDiff := nextUpdate.Sub(thisUpdate)
 		require.Equal(t, expectedDiff, nextUpdateDiff,
 			fmt.Sprintf("the delta between thisUpdate %s and nextUpdate: %s should have been around: %s but was %s",
-				thisUpdate, nextUpdate, defaultCrlConfig.OcspExpiry, nextUpdateDiff))
+				thisUpdate, nextUpdate, pki_backend.DefaultCrlConfig.OcspExpiry, nextUpdateDiff))
 	} else {
 		// With the config value set to 0, we shouldn't have a NextUpdate field set
 		require.True(t, ocspResp.NextUpdate.IsZero(), "nextUpdate value was not zero as expected was: %v", ocspResp.NextUpdate)

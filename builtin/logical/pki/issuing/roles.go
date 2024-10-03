@@ -72,6 +72,7 @@ type RoleEntry struct {
 	PostalCode                    []string      `json:"postal_code"`
 	GenerateLease                 *bool         `json:"generate_lease,omitempty"`
 	NoStore                       bool          `json:"no_store"`
+	NoStoreMetadata               bool          `json:"no_store_metadata"`
 	RequireCN                     bool          `json:"require_cn"`
 	CNValidations                 []string      `json:"cn_validations"`
 	AllowedOtherSANs              []string      `json:"allowed_other_sans"`
@@ -146,6 +147,7 @@ func (r *RoleEntry) ToResponseData() map[string]interface{} {
 	if r.GenerateLease != nil {
 		responseData["generate_lease"] = r.GenerateLease
 	}
+	AddNoStoreMetadata(responseData, r)
 	return responseData
 }
 
