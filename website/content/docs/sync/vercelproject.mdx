@@ -127,6 +127,22 @@ In the example above, the value for secret "my-secret" will be synced to Vercel 
 
 </Note>
 
+<Note>
+
+Vercel Project environment variables only support single-value secrets, and Vault syncs secrets differently
+depending on whether you have configured `secret-key` or `secret-path` [granularity](/vault/docs/sync#granularity):
+
+- `secret-key` granularity splits KVv2 secrets from Vault into key-value pairs
+  and stores the pairs as distinct entries in Vercel. For example,
+  `secrets.key1="val1"` and `secrets.key2="val2"`.
+
+- `secret-path` granularity stores secrets as a single JSON string that contains
+  all of the associated key-value pairs. For example, `{"key1":"val1", "key2":"val2"}`.
+
+For Vercel Project, the granularity defaults to `secret-key`.
+
+</Note>
+
 ## API
 
 Please see the [secrets sync API](/vault/api-docs/system/secrets-sync) for more details.

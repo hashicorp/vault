@@ -226,8 +226,11 @@ depending on whether you have configured
 - `secret-key` granularity splits KVv2 secrets from Vault into key-value pairs
   and stores the pairs as distinct entries in GitHub secrets. For example,
   `secrets.key1="val1"` and `secrets.key2="val2"`.
+
 - `secret-path` granularity stores secrets as a single JSON string that contains
   all of the associated key-value pairs. For example, `{"key1":"val1", "key2":"val2"}`.
+
+For GitHub, the granularity defaults to `secret-key`.
 
 </Note>
 
