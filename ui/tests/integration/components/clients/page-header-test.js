@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { click, fillIn, render } from '@ember/test-helpers';
+import { click, fillIn, render, waitFor, waitUntil } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { Response } from 'miragejs';
@@ -79,6 +79,7 @@ module('Integration | Component | clients/page-header', function (hooks) {
 
     await click(CLIENT_COUNT.exportButton);
     await click(GENERAL.confirmButton);
+    await waitFor('[data-test-export-error]');
     assert.dom('[data-test-export-error]').hasText('permission denied');
   });
 
@@ -98,6 +99,7 @@ module('Integration | Component | clients/page-header', function (hooks) {
     await click(CLIENT_COUNT.exportButton);
     await fillIn('[data-test-download-format]', 'jsonl');
     await click(GENERAL.confirmButton);
+    await waitUntil(() => this.downloadStub.calledOnce);
     const extension = this.downloadStub.lastCall.args[2];
     assert.strictEqual(extension, 'jsonl');
   });
@@ -119,6 +121,7 @@ module('Integration | Component | clients/page-header', function (hooks) {
     await click(CLIENT_COUNT.exportButton);
     await fillIn('[data-test-download-format]', 'csv');
     await click(GENERAL.confirmButton);
+    await waitUntil(() => this.downloadStub.calledOnce);
     const extension = this.downloadStub.lastCall.args[2];
     assert.strictEqual(extension, 'csv');
   });
@@ -175,6 +178,7 @@ module('Integration | Component | clients/page-header', function (hooks) {
 
     await click(CLIENT_COUNT.exportButton);
     await click(GENERAL.confirmButton);
+    await waitFor('[data-test-export-error]');
     assert.dom('[data-test-export-error]').hasText('no data to export in provided time range.');
   });
 
@@ -184,6 +188,7 @@ module('Integration | Component | clients/page-header', function (hooks) {
     ];
     await this.renderComponent();
     await click(CLIENT_COUNT.exportButton);
+    await waitFor('[data-test-export-upgrade-warning]');
     assert.dom('[data-test-export-upgrade-warning]').includesText('1.10.1 (Nov 18, 2021)');
   });
 
@@ -202,6 +207,7 @@ module('Integration | Component | clients/page-header', function (hooks) {
       await this.renderComponent();
       await click(CLIENT_COUNT.exportButton);
       await click(GENERAL.confirmButton);
+      await waitUntil(() => this.downloadStub.calledOnce);
       const args = this.downloadStub.lastCall.args;
       const [filename] = args;
       assert.strictEqual(filename, 'clients_export_June 2022-December 2022', 'csv has expected filename');
@@ -222,6 +228,7 @@ module('Integration | Component | clients/page-header', function (hooks) {
 
       await click(CLIENT_COUNT.exportButton);
       await click(GENERAL.confirmButton);
+      await waitUntil(() => this.downloadStub.calledOnce);
       const [filename] = this.downloadStub.lastCall.args;
       assert.strictEqual(filename, 'clients_export_June 2022', 'csv has single month in filename');
     });
@@ -241,6 +248,7 @@ module('Integration | Component | clients/page-header', function (hooks) {
 
       await click(CLIENT_COUNT.exportButton);
       await click(GENERAL.confirmButton);
+      await waitUntil(() => this.downloadStub.calledOnce);
       const [filename] = this.downloadStub.lastCall.args;
       assert.strictEqual(filename, 'clients_export');
     });
@@ -263,6 +271,7 @@ module('Integration | Component | clients/page-header', function (hooks) {
 
       await click(CLIENT_COUNT.exportButton);
       await click(GENERAL.confirmButton);
+      await waitUntil(() => this.downloadStub.calledOnce);
       const [filename] = this.downloadStub.lastCall.args;
       assert.strictEqual(filename, 'clients_export_bar');
     });
@@ -284,6 +293,7 @@ module('Integration | Component | clients/page-header', function (hooks) {
 
       await click(CLIENT_COUNT.exportButton);
       await click(GENERAL.confirmButton);
+      await waitUntil(() => this.downloadStub.calledOnce);
       const [filename] = this.downloadStub.lastCall.args;
       assert.strictEqual(filename, 'clients_export_foo');
     });

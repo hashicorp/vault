@@ -8,7 +8,6 @@ import { task } from 'ember-concurrency';
 import { getOwner } from '@ember/owner';
 import { service } from '@ember/service';
 import { alias } from '@ember/object/computed';
-import { AbortController } from 'fetch';
 
 export default Component.extend({
   file: null,
