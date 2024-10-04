@@ -9,8 +9,8 @@ import { task } from 'ember-concurrency';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import errorMessage from 'vault/utils/error-message';
-import type Router from '@ember/routing/router';
-import type Store from '@ember-data/store';
+import type RouterService from '@ember/routing/router';
+import type StoreService from '@ember-data/store';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type DownloadService from 'vault/services/download';
 import type PkiCertificateGenerateModel from 'vault/models/pki/certificate/generate';
@@ -23,10 +23,10 @@ interface Args {
 }
 
 export default class PkiRoleGenerate extends Component<Args> {
-  @service declare readonly router: Router;
-  @service declare readonly store: Store;
-  @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly download: DownloadService;
+  @service declare readonly flashMessages: FlashMessageService;
+  @service declare readonly store: StoreService;
+  @service('app-router') declare readonly router: RouterService;
 
   @tracked errorBanner = '';
   @tracked invalidFormAlert = '';
