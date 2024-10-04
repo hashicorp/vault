@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strings"
 
-	retryablehttp "github.com/hashicorp/go-retryablehttp"
+	"github.com/hashicorp/go-retryablehttp"
 )
 
 const (
@@ -25,6 +25,10 @@ type OutputStringError struct {
 	finalCurlString            string
 }
 
+// Error is here so that we can return this struct as an error from client.rawRequestWithContext(). Note that
+// the ErrOutputStringRequest constant is never actually used and is completely irrelevant to how this all functions.
+// We could've just as easily returned an empty string. What matters is the machinery that happens before then where
+// the curl string is built. So yes, this is confusing, but yes, this is also on purpose, and it is not incorrect.
 func (d *OutputStringError) Error() string {
 	if d.finalCurlString == "" {
 		cs, err := d.buildCurlString()

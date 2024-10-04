@@ -186,6 +186,8 @@ func RunCustom(args []string, runOpts *RunOptions) int {
 		runOpts.Stderr = colorable.NewNonColorable(runOpts.Stderr)
 	}
 
+	// This bytes.Buffer override of the uiErrWriter is why we don't see errors printed to the screen
+	// when running commands with e.g. -output-curl-string
 	uiErrWriter := runOpts.Stderr
 	if outputCurlString || outputPolicy {
 		uiErrWriter = &bytes.Buffer{}
@@ -318,6 +320,9 @@ func generateCurlString(exitCode int, runOpts *RunOptions, preParsingErrBuf *byt
 		return 1
 	}
 
+	// When we actually return from client.rawRequestWithContext(), this value should be set to the OutputStringError
+	// that contains the data/context required to output the actual string, so it's doubtful this chunk of code will
+	// ever run, but I'm guessing it's a defense in depth thing.
 	if api.LastOutputStringError == nil {
 		if exitCode == 127 {
 			// Usage, just pass it through
