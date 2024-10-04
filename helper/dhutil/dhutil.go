@@ -30,14 +30,17 @@ type Envelope struct {
 // generatePublicPrivateKey uses curve25519 to generate a public and private key
 // pair.
 func GeneratePublicPrivateKey() ([]byte, []byte, error) {
-	var scalar, public [32]byte
+	scalar := make([]byte, 32)
 
-	if _, err := io.ReadFull(rand.Reader, scalar[:]); err != nil {
+	if _, err := io.ReadFull(rand.Reader, scalar); err != nil {
 		return nil, nil, err
 	}
 
-	curve25519.ScalarBaseMult(&public, &scalar)
-	return public[:], scalar[:], nil
+	public, err := curve25519.X25519(scalar, curve25519.Basepoint)
+	if err != nil {
+		return nil, nil, err
+	}
+	return public, scalar, nil
 }
 
 // GenerateSharedSecret uses the private key and the other party's public key to
