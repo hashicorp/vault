@@ -48,6 +48,9 @@ func (b *backend) getRootConfig(ctx context.Context, s logical.Storage, clientTy
 			endpoint = *aws.String(config.IAMEndpoint)
 		case clientType == "sts" && config.STSEndpoint != "":
 			endpoint = *aws.String(config.STSEndpoint)
+			if config.STSRegion != "" {
+				credsConfig.Region = config.STSRegion
+			}
 		}
 
 		if config.IdentityTokenAudience != "" {
