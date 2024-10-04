@@ -41,10 +41,9 @@
               data-test-popup-menu-trigger
             />
             <dd.Interactive
-              @text="Details"
               @route="vault.cluster.access.identity.show"
               @models={{array item.id "details"}}
-            />
+            >Details</dd.Interactive>
             {{#if (or item.isReloading item.updatePath.isPending item.aliasPath.isPending)}}
               <dd.Generic class="has-text-center">
                 <LoadingDropdownOption />
@@ -55,27 +54,28 @@
                 {{#if (or (eq this.identityType "entity") (and (eq item.type "external") (not item.alias)))}}
                   <dd.Interactive
                     data-test-popup-menu="create alias"
-                    @text="Create alias"
                     @route="vault.cluster.access.identity.aliases.add"
                     @models={{array (pluralize this.identityType) item.id}}
-                  />
+                  >Create alias</dd.Interactive>
                 {{/if}}
               {{/if}}
               {{#if item.canEdit}}
-                <dd.Interactive @text="Edit" @route="vault.cluster.access.identity.edit" @model={{item.id}} />
+                <dd.Interactive @route="vault.cluster.access.identity.edit" @model={{item.id}}>Edit</dd.Interactive>
                 {{#if item.disabled}}
-                  <dd.Interactive @text="Enable" {{on "click" (action "toggleDisabled" item)}} />
+                  <dd.Interactive {{on "click" (action "toggleDisabled" item)}}>Enable</dd.Interactive>
                 {{else if (eq this.identityType "entity")}}
-                  <dd.Interactive @text="Disable" @color="critical" {{on "click" (fn (mut this.entityToDisable) item)}} />
+                  <dd.Interactive
+                    @color="critical"
+                    {{on "click" (fn (mut this.entityToDisable) item)}}
+                  >Disable</dd.Interactive>
                 {{/if}}
               {{/if}}
               {{#if item.canDelete}}
                 <dd.Interactive
-                  @text="Delete"
                   @color="critical"
                   {{on "click" (fn (mut this.itemToDelete) item)}}
                   data-test-popup-menu="delete"
-                />
+                >Delete</dd.Interactive>
               {{/if}}
             {{/if}}
           </Hds::Dropdown>

@@ -95,7 +95,7 @@ module('Acceptance | auth backend list', function (hooks) {
           const itemCount = type === 'token' ? 2 : 3;
           await click(`[data-test-auth-backend-link="${path}"] [data-test-popup-menu-trigger]`);
           assert
-            .dom('.hds-dropdown-list-item')
+            .dom(`[data-test-auth-backend-link="${path}"] .hds-dropdown-list-item`)
             .exists({ count: itemCount }, `shows ${itemCount} dropdown items for ${type}`);
 
           // all auth methods should be linkable

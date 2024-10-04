@@ -64,10 +64,11 @@ module('Acceptance | raft storage', function (hooks) {
       return {};
     });
 
+    const row = '[data-raft-row]:nth-child(2) [data-test-raft-actions]';
     await visit('/vault/storage/raft');
     assert.dom('[data-raft-row]').exists({ count: 2 }, '2 raft peers render in table');
-    await click('[data-raft-row]:nth-child(2) [data-test-raft-actions] button');
-    await click('[data-test-confirm-action-trigger]');
+    await click(`${row} button`);
+    await click(`${row} [data-test-confirm-action-trigger]`);
     await click('[data-test-confirm-button]');
     assert.dom('[data-raft-row]').exists({ count: 1 }, 'Raft peer successfully removed');
   });
