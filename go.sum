@@ -772,8 +772,8 @@ github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf/go.mod h1:ybxpYRF
 github.com/alecthomas/units v0.0.0-20190717042225-c3de453c63f4/go.mod h1:ybxpYRFXyAe+OPACYpWeL0wqObRcbAqCMya13uyzqw0=
 github.com/alexbrainman/sspi v0.0.0-20231016080023-1a75b4708caa h1:LHTHcTQiSGT7VVbI0o4wBRNQIgn917usHWOd6VAffYI=
 github.com/alexbrainman/sspi v0.0.0-20231016080023-1a75b4708caa/go.mod h1:cEWa1LVoE5KvSD9ONXsZrj0z6KqySlCCNKHlLzbqAt4=
-github.com/aliyun/alibaba-cloud-sdk-go v1.63.12 h1:O/lpYuNJlb5ed/QIJUDE1yJBh6zPF5ZFToiuGpq91Ds=
-github.com/aliyun/alibaba-cloud-sdk-go v1.63.12/go.mod h1:SOSDHfe1kX91v3W5QiBsWSLqeLxImobbMX1mxrFHsVQ=
+github.com/aliyun/alibaba-cloud-sdk-go v1.63.23 h1:qVHm1EZhZ4JGfB9RMHREtbcNcPDDFyCKA+0/nMk6JP8=
+github.com/aliyun/alibaba-cloud-sdk-go v1.63.23/go.mod h1:SOSDHfe1kX91v3W5QiBsWSLqeLxImobbMX1mxrFHsVQ=
 github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20190307165228-86c17b95fcd5 h1:nWDRPCyCltiTsANwC/n3QZH7Vww33Npq9MKqlwRzI/c=
 github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20190307165228-86c17b95fcd5/go.mod h1:T/Aws4fEfogEE9v+HPhhw+CntffsBHJ8nXQCwKr0/g8=
 github.com/andybalholm/brotli v1.0.4/go.mod h1:fO7iG3H7G2nSZ7m0zPUDn85XEX2GTukHGRSepvi9Eig=
@@ -1579,8 +1579,8 @@ github.com/hashicorp/vault-plugin-mock v0.16.1 h1:5QQvSUHxDjEEbrd2REOeacqyJnCLPD
 github.com/hashicorp/vault-plugin-mock v0.16.1/go.mod h1:83G4JKlOwUtxVourn5euQfze3ZWyXcUiLj2wqrKSDIM=
 github.com/hashicorp/vault-plugin-secrets-ad v0.19.0 h1:jt5flxYYEaqXasCNzE8MUsA1qWe2FjOWhS1viRpqsbE=
 github.com/hashicorp/vault-plugin-secrets-ad v0.19.0/go.mod h1:FlrqHh3gDEOx81OEMFRPGgle+IlnKJUs+3HPYL8bawc=
-github.com/hashicorp/vault-plugin-secrets-alicloud v0.18.0 h1:LCaOtwItk9x4lYVKjNyj1+AG+8423O9jSYcw7NBeick=
-github.com/hashicorp/vault-plugin-secrets-alicloud v0.18.0/go.mod h1:We2m27w9q7uQgF1UULA3TtcUH6LnA4ItuiujhvvAGOU=
+github.com/hashicorp/vault-plugin-secrets-alicloud v0.18.1-0.20241001003211-bfb83d2091c8 h1:a71edfK0+dSxBS70/oPU7eZqymBY7I7f08J7IxlqD1s=
+github.com/hashicorp/vault-plugin-secrets-alicloud v0.18.1-0.20241001003211-bfb83d2091c8/go.mod h1:1WhHluv28+/GTVztqepXfYK9RMwxBYbyownwYTkjsgk=
 github.com/hashicorp/vault-plugin-secrets-azure v0.20.0 h1:rWsyvZQzF2G1Wkvp624yNIoZHeB7gQ4/Nxk9WuA9HtA=
 github.com/hashicorp/vault-plugin-secrets-azure v0.20.0/go.mod h1:PW7g5lgIcwudoZAthoc3xNqiumHHI1gvNw9en/iI3TQ=
 github.com/hashicorp/vault-plugin-secrets-gcp v0.20.0 h1:yTRId8Y8rpf6LBUcnAEMQZfMBApiKFxPh7669RcE2zg=
