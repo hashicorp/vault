@@ -440,6 +440,8 @@ func (c *ServerCommand) parseConfig() (*server.Config, []configutil.ConfigError,
 		config.Entropy = nil
 	}
 
+	entCheckRequestLimiter(c, config)
+
 	return config, configErrors, nil
 }
 
@@ -1421,12 +1423,6 @@ func (c *ServerCommand) Run(args []string) int {
 
 		infoKeys = append(infoKeys, "HCP resource ID")
 		info["HCP resource ID"] = config.HCPLinkConf.Resource.ID
-	}
-
-	requestLimiterStatus := entGetRequestLimiterStatus(coreConfig)
-	if requestLimiterStatus != "" {
-		infoKeys = append(infoKeys, "request limiter")
-		info["request limiter"] = requestLimiterStatus
 	}
 
 	infoKeys = append(infoKeys, "administrative namespace")
