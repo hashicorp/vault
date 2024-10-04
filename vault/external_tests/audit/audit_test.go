@@ -281,10 +281,14 @@ func TestAudit_Headers(t *testing.T) {
 		request := entry["request"].(map[string]interface{})
 
 		// test probe will not have headers set
-		if request["path"].(string) != "sys/audit/test" {
-			headers := request["headers"].(map[string]interface{})
-			require.Equal(t, expectedHeaders, headers)
+		requestPath, ok := request["path"].(string)
+		require.True(t, ok)
 
+		if requestPath != "sys/audit/test" {
+			headers, ok := request["headers"].(map[string]interface{})
+
+			require.True(t, ok)
+			require.Equal(t, expectedHeaders, headers)
 		}
 
 		entries = append(entries, entry)
