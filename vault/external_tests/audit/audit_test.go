@@ -52,8 +52,8 @@ func TestAudit_HMACFields(t *testing.T) {
 	require.NoError(t, err)
 
 	// Request 1
-	// Enable the audit device. A test probe request will audited along with the associated
-	// to the creation response
+	// Enable the audit device. A test probe request will audited along
+	// with the associated creation response
 	_, err = client.Logical().Write("sys/audit/"+devicePath, deviceData)
 	require.NoError(t, err)
 
@@ -213,6 +213,9 @@ func TestAudit_HMACFields(t *testing.T) {
 	require.Equal(t, wrapInfo["token"].(string), hashedWrapToken)
 }
 
+// TestAudit_Headers validates that headers are audited correctly. This includes
+// the default headers (x-correlation-id and user-agent) along with user-specified
+// headers.
 func TestAudit_Headers(t *testing.T) {
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
@@ -245,8 +248,8 @@ func TestAudit_Headers(t *testing.T) {
 	client.AddHeader("X-Some-Other-Header", "some-other-value")
 
 	// Request 1
-	// Enable the audit device. A test probe request will audited along with the associated
-	// to the creation response
+	// Enable the audit device. A test probe request will audited along
+	// with the associated creation response
 	_, err = client.Logical().Write("sys/audit/"+devicePath, deviceData)
 	require.NoError(t, err)
 
