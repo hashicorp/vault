@@ -133,6 +133,7 @@ check_cloud_init() {
 }
 
 # Checking cloud-init
+echo $?
 check_cloud_init
 if [ $? -eq 1 ]; then
    exit 1
@@ -140,7 +141,9 @@ fi
 
 begin_time=$(date +%s)
 end_time=$((begin_time + TIMEOUT_SECONDS))
+echo "--begin---${begin_time}-----end--${end_time}-----$?"
 while [ "$(date +%s)" -lt "$end_time" ]; do
+  echo "in while loop------"
   if synchronize_repos; then
     exit 0
   fi
