@@ -50,7 +50,7 @@ require (
 	github.com/cockroachdb/cockroach-go/v2 v2.3.8
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf
 	github.com/denisenkom/go-mssqldb v0.12.3
-	github.com/docker/docker v26.1.5+incompatible
+	github.com/docker/docker v27.1.1+incompatible
 	github.com/duosecurity/duo_api_golang v0.0.0-20190308151101-6c680f768e74
 	github.com/dustin/go-humanize v1.0.1
 	github.com/fatih/color v1.17.0
@@ -61,7 +61,7 @@ require (
 	github.com/go-git/go-git/v5 v5.11.0
 	github.com/go-jose/go-jose/v3 v3.0.3
 	github.com/go-ldap/ldap/v3 v3.4.8
-	github.com/go-sql-driver/mysql v1.7.1
+	github.com/go-sql-driver/mysql v1.8.1
 	github.com/go-test/deep v1.1.1
 	github.com/go-zookeeper/zk v1.0.3
 	github.com/gocql/gocql v1.0.0
@@ -135,7 +135,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.13.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.20.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.17.0
-	github.com/hashicorp/vault-plugin-database-couchbase v0.12.0
+	github.com/hashicorp/vault-plugin-database-couchbase v0.12.1-0.20241001003217-4b7fd24bef76
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.16.0
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.13.0
 	github.com/hashicorp/vault-plugin-database-redis v0.4.0
@@ -181,7 +181,7 @@ require (
 	github.com/okta/okta-sdk-golang/v2 v2.20.0
 	github.com/oracle/oci-go-sdk v24.3.0+incompatible
 	github.com/ory/dockertest v3.3.5+incompatible
-	github.com/ory/dockertest/v3 v3.10.0
+	github.com/ory/dockertest/v3 v3.11.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pires/go-proxyproto v1.0.0
 	github.com/pkg/errors v0.9.1
@@ -231,6 +231,7 @@ require (
 require (
 	cel.dev/expr v0.15.0 // indirect
 	cloud.google.com/go/longrunning v0.6.0 // indirect
+	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/containerd/containerd v1.7.20 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/hashicorp/go-secure-stdlib/httputil v0.1.0 // indirect
@@ -327,8 +328,8 @@ require (
 	github.com/coreos/go-semver v0.3.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/coreos/pkg v0.0.0-20220810130054-c7d1c02cb6cf // indirect
-	github.com/couchbase/gocb/v2 v2.9.1 // indirect
-	github.com/couchbase/gocbcore/v10 v10.5.1 // indirect
+	github.com/couchbase/gocb/v2 v2.9.2 // indirect
+	github.com/couchbase/gocbcore/v10 v10.5.2 // indirect
 	github.com/couchbase/gocbcoreps v0.1.3 // indirect
 	github.com/couchbase/goprotostellar v1.0.2 // indirect
 	github.com/couchbaselabs/gocbconnstr/v2 v2.0.0-20240607131231-fb385523de28 // indirect
@@ -433,7 +434,6 @@ require (
 	github.com/kevinburke/ssh_config v1.2.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.5 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
-	github.com/lib/pq v1.10.9 // indirect
 	github.com/linode/linodego v0.7.1 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
