@@ -666,6 +666,8 @@ const (
 	SystemView_GeneratePasswordFromPolicy_FullMethodName = "/pb.SystemView/GeneratePasswordFromPolicy"
 	SystemView_ClusterInfo_FullMethodName                = "/pb.SystemView/ClusterInfo"
 	SystemView_GenerateIdentityToken_FullMethodName      = "/pb.SystemView/GenerateIdentityToken"
+	SystemView_HasFeature_FullMethodName                 = "/pb.SystemView/HasFeature"
+	SystemView_LicenseState_FullMethodName               = "/pb.SystemView/LicenseState"
 )
 
 // SystemViewClient is the client API for SystemView service.
@@ -717,6 +719,10 @@ type SystemViewClient interface {
 	ClusterInfo(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ClusterInfoReply, error)
 	// GenerateIdentityToken returns an identity token for the requesting plugin.
 	GenerateIdentityToken(ctx context.Context, in *GenerateIdentityTokenRequest, opts ...grpc.CallOption) (*GenerateIdentityTokenResponse, error)
+	// HasFeature returns true if the Enterprise feature is enabled for the currently running Vault
+	HasFeature(ctx context.Context, in *HasFeatureRequest, opts ...grpc.CallOption) (*HasFeatureReply, error)
+	// LicenseState returns the license state of the currently running Vault
+	LicenseState(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*LicenseStateReply, error)
 }
 
 type systemViewClient struct {
@@ -867,6 +873,26 @@ func (c *systemViewClient) GenerateIdentityToken(ctx context.Context, in *Genera
 	return out, nil
 }
 
+func (c *systemViewClient) HasFeature(ctx context.Context, in *HasFeatureRequest, opts ...grpc.CallOption) (*HasFeatureReply, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(HasFeatureReply)
+	err := c.cc.Invoke(ctx, SystemView_HasFeature_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *systemViewClient) LicenseState(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*LicenseStateReply, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(LicenseStateReply)
+	err := c.cc.Invoke(ctx, SystemView_LicenseState_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SystemViewServer is the server API for SystemView service.
 // All implementations must embed UnimplementedSystemViewServer
 // for forward compatibility
@@ -916,6 +942,10 @@ type SystemViewServer interface {
 	ClusterInfo(context.Context, *Empty) (*ClusterInfoReply, error)
 	// GenerateIdentityToken returns an identity token for the requesting plugin.
 	GenerateIdentityToken(context.Context, *GenerateIdentityTokenRequest) (*GenerateIdentityTokenResponse, error)
+	// HasFeature returns true if the Enterprise feature is enabled for the currently running Vault
+	HasFeature(context.Context, *HasFeatureRequest) (*HasFeatureReply, error)
+	// LicenseState returns the license state of the currently running Vault
+	LicenseState(context.Context, *Empty) (*LicenseStateReply, error)
 	mustEmbedUnimplementedSystemViewServer()
 }
 
@@ -964,6 +994,12 @@ func (UnimplementedSystemViewServer) ClusterInfo(context.Context, *Empty) (*Clus
 }
 func (UnimplementedSystemViewServer) GenerateIdentityToken(context.Context, *GenerateIdentityTokenRequest) (*GenerateIdentityTokenResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GenerateIdentityToken not implemented")
+}
+func (UnimplementedSystemViewServer) HasFeature(context.Context, *HasFeatureRequest) (*HasFeatureReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method HasFeature not implemented")
+}
+func (UnimplementedSystemViewServer) LicenseState(context.Context, *Empty) (*LicenseStateReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LicenseState not implemented")
 }
 func (UnimplementedSystemViewServer) mustEmbedUnimplementedSystemViewServer() {}
 
@@ -1230,6 +1266,42 @@ func _SystemView_GenerateIdentityToken_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SystemView_HasFeature_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(HasFeatureRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SystemViewServer).HasFeature(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SystemView_HasFeature_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SystemViewServer).HasFeature(ctx, req.(*HasFeatureRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SystemView_LicenseState_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SystemViewServer).LicenseState(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SystemView_LicenseState_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SystemViewServer).LicenseState(ctx, req.(*Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // SystemView_ServiceDesc is the grpc.ServiceDesc for SystemView service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1292,6 +1364,14 @@ var SystemView_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GenerateIdentityToken",
 			Handler:    _SystemView_GenerateIdentityToken_Handler,
+		},
+		{
+			MethodName: "HasFeature",
+			Handler:    _SystemView_HasFeature_Handler,
+		},
+		{
+			MethodName: "LicenseState",
+			Handler:    _SystemView_LicenseState_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

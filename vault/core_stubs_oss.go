@@ -7,6 +7,8 @@ package vault
 
 import (
 	"context"
+
+	"github.com/hashicorp/vault/sdk/helper/license"
 )
 
 //go:generate go run github.com/hashicorp/vault/tools/stubmaker
@@ -27,7 +29,9 @@ func (c *Core) entCheckLicenseInit() error {
 	return nil
 }
 
-func (c *Core) EntGetLicenseState() (*LicenseState, error) {
+// EntGetLicenseState returns the current license state
+// ignore-nil-nil-function-check.
+func (c *Core) EntGetLicenseState() (*license.LicenseState, error) {
 	return nil, nil
 }
 
