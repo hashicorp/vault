@@ -31,7 +31,7 @@ const STARTING_TRANSIT_PROPS = {
   hash_algorithm: 'sha2-256',
   algorithm: 'sha2-256',
   signature_algorithm: 'pss',
-  padding_scheme: null,
+  padding_scheme: 'oaep',
   decrypt_padding_scheme: null,
   encrypt_padding_scheme: null,
   bits: 256,
