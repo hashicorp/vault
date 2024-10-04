@@ -1567,8 +1567,8 @@ github.com/hashicorp/vault-plugin-database-couchbase v0.12.0 h1:WBPE3nsbM03HxmBB
 github.com/hashicorp/vault-plugin-database-couchbase v0.12.0/go.mod h1:Pp6qHuSRxSivKMNVGzxRhIjkVsdJ4LSj8B4n8uoD4XU=
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.16.0 h1:gArlFh8W0SVQA3OmYZ/IwD6H4RxLphAtKB71jOEKawE=
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.16.0/go.mod h1:IqiX9rT/8wCsriRogV4kOCIgAV21yEgjK1D+Oucda3Y=
-github.com/hashicorp/vault-plugin-database-mongodbatlas v0.13.0 h1:QfqA3GYVtuVOBe02snoEoU1BS6u3hUkzObd27lVb6FQ=
-github.com/hashicorp/vault-plugin-database-mongodbatlas v0.13.0/go.mod h1:4JKUfOniWUxWjnrsBKyPpy3u7dCxkncYAH6VM0BCPhg=
+github.com/hashicorp/vault-plugin-database-mongodbatlas v0.13.1-0.20241001002044-0263946591cf h1:TWnJIAYB797nF+2cvLxHTRQoJFQvTOixkZd3KZhBagQ=
+github.com/hashicorp/vault-plugin-database-mongodbatlas v0.13.1-0.20241001002044-0263946591cf/go.mod h1:uvd12D5e06BDaGBN18nbf7+jD1A8DsxlGapz+R2o70w=
 github.com/hashicorp/vault-plugin-database-redis v0.4.0 h1:caNySLrAoKnwYun2kLlwntMKDp+T4yFl/ToCI+ebu1A=
 github.com/hashicorp/vault-plugin-database-redis v0.4.0/go.mod h1:OAKaJH4fj4t0MXPBU8FTb7Ca+DzyQD8wjvq4Dq7I8pU=
 github.com/hashicorp/vault-plugin-database-redis-elasticache v0.5.0 h1:XCbJLn02bRf9+eyjoMVaEx5TPoIJD9YV7u+shjr4paU=
@@ -2183,8 +2183,8 @@ github.com/xeipuuv/gojsonschema v1.2.0 h1:LhYJRs+L4fBtjZUfuSZIKGeVu0QRy8e5Xi7D17
 github.com/xeipuuv/gojsonschema v1.2.0/go.mod h1:anYRn/JVcOK2ZgGU+IjEV4nwlhoK5sQluxsYJ78Id3Y=
 github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2/go.mod h1:UETIi67q53MR2AWcXfiuqkDkRtnGDLqkBTpCHuJHxtU=
 github.com/xordataexchange/crypt v0.0.3-0.20170626215501-b2862e3d0a77/go.mod h1:aYKd//L2LvnjZzWKhF00oedf4jCCReLcmhLdhm1A27Q=
-github.com/youmark/pkcs8 v0.0.0-20181117223130-1be2e3e5546d h1:splanxYIlg+5LfHAM6xpdFEAYOk8iySO56hMFq6uLyA=
-github.com/youmark/pkcs8 v0.0.0-20181117223130-1be2e3e5546d/go.mod h1:rHwXgn7JulP+udvsHwJoVG1YGAP6VLg4y9I5dyZdqmA=
+github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 h1:ilQV1hzziu+LLM3zUTJ0trRztfwgjqKnBWNtSRkbmwM=
+github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78/go.mod h1:aL8wCCfTfSfmXjznFBSZNN13rSJjlIOI1fUNAtF7rmI=
 github.com/yuin/goldmark v1.1.25/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.32/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
@@ -2219,8 +2219,8 @@ go.etcd.io/etcd/client/v3 v3.5.13 h1:o0fHTNJLeO0MyVbc7I3fsCf6nrOqn5d+diSarKnB2js
 go.etcd.io/etcd/client/v3 v3.5.13/go.mod h1:cqiAeY8b5DEEcpxvgWKsbLIWNM/8Wy2xJSDMtioMcoI=
 go.mongodb.org/atlas v0.37.0 h1:zQnO1o5+bVP9IotpAYpres4UjMD2F4nwNEFTZhNL4ck=
 go.mongodb.org/atlas v0.37.0/go.mod h1:DJYtM+vsEpPEMSkQzJnFHrT0sP7ev6cseZc/GGjJYG8=
-go.mongodb.org/mongo-driver v1.16.1 h1:rIVLL3q0IHM39dvE+z2ulZLp9ENZKThVfuvN/IiN4l8=
-go.mongodb.org/mongo-driver v1.16.1/go.mod h1:oB6AhJQvFQL4LEHyXi6aJzQJtBiTQHiAd83l0GdFaiw=
+go.mongodb.org/mongo-driver v1.17.0 h1:Hp4q2MCjvY19ViwimTs00wHi7G4yzxh4/2+nTx8r40k=
+go.mongodb.org/mongo-driver v1.17.0/go.mod h1:wwWm/+BuOddhcq3n68LKRmgk2wXzmF6s0SFOa0GINL4=
 go.opencensus.io v0.21.0/go.mod h1:mSImk1erAIZhrmZN+AvHh14ztQfjbGwt4TtuofqLduU=
 go.opencensus.io v0.22.0/go.mod h1:+kGneAE2xo2IficOXnaByMWTGM9T73dGwxeWcUqIpI8=
 go.opencensus.io v0.22.2/go.mod h1:yxeiOL68Rb0Xd1ddK5vPZ/oVn4vY4Ynel7k9FzqtOIw=

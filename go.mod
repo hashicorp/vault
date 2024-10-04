@@ -137,7 +137,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-oci v0.17.0
 	github.com/hashicorp/vault-plugin-database-couchbase v0.12.0
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.16.0
-	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.13.0
+	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.13.1-0.20241001002044-0263946591cf
 	github.com/hashicorp/vault-plugin-database-redis v0.4.0
 	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.5.0
 	github.com/hashicorp/vault-plugin-database-snowflake v0.12.0
@@ -203,7 +203,7 @@ require (
 	go.etcd.io/etcd/client/v2 v2.305.5
 	go.etcd.io/etcd/client/v3 v3.5.13
 	go.mongodb.org/atlas v0.37.0
-	go.mongodb.org/mongo-driver v1.16.1
+	go.mongodb.org/mongo-driver v1.17.0
 	go.opentelemetry.io/otel v1.30.0
 	go.opentelemetry.io/otel/sdk v1.30.0
 	go.opentelemetry.io/otel/trace v1.30.0
@@ -509,7 +509,7 @@ require (
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
-	github.com/youmark/pkcs8 v0.0.0-20181117223130-1be2e3e5546d // indirect
+	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 // indirect
 	github.com/yuin/gopher-lua v0.0.0-20210529063254-f4c35e4016d9 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
 	github.com/zclconf/go-cty v1.12.1 // indirect
