@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
@@ -370,6 +371,61 @@ func TestOcsp_MultipleMatchingIssuersOneWithoutSigningUsage(t *testing.T) {
 
 	requireOcspSignatureAlgoForKey(t, rotatedCert.SignatureAlgorithm, ocspResp.SignatureAlgorithm)
 	requireOcspResponseSignedBy(t, ocspResp, rotatedCert)
+}
+
+// TestOcsp_GetBypassesGoMux Test that we do not get 301 redirected by Go's HTTP mux
+// if we send in a request that contains consecutive '/' characters within an OCSP GET request.
+func TestOcsp_GetBypassesGoMux(t *testing.T) {
+	t.Parallel()
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"pki": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+	mountPKIEndpoint(t, client, "pki")
+
+	ocspReq := "MHEwbzBtMGswaTANBglghkgBZQMEAgEFAAQgo1KrbbzfoAzTEALyEUTR13O9HI3KWq520V0g5q2rqcIEIIlLPPTMQq36V4dZ3MF/3uMweyq//rVTVa04em/IeKeLAhRTLBLyFWZQ3MtPVLeOQ4wCzr679g=="
+
+	ocspGetReq := client.NewRequest(http.MethodGet, "/v1/pki/ocsp/"+ocspReq)
+	// NewRequest will clean up our URL so reset it to the original value
+	ocspGetReq.URL.Path = "/v1/pki/ocsp/" + ocspReq
+	rawResp, err := client.RawRequest(ocspGetReq)
+	require.Error(t, err, "we expected an error from this request but didn't get any response: %v", rawResp)
+
+	// Expect a 401, unauthorized/unknown response as we don't have an issuer
+	require.Equal(t, 401, rawResp.StatusCode)
+	require.Equal(t, ocspResponseContentType, rawResp.Header.Get("Content-Type"))
+	bodyReader := rawResp.Body
+	respDer, err := io.ReadAll(bodyReader)
+	bodyReader.Close()
+	require.NoError(t, err, "failed reading response body")
+	require.Equal(t, respDer, ocsp.UnauthorizedErrorResponse, "expected the static ocsp unauthorized error response")
+
+	// Now lets also make sure that something that looks awfully like an OCSP query doesn't get
+	// influenced by the bypass
+	err = client.Sys().Mount("kv", &api.MountInput{
+		Type: "kv",
+	})
+	require.NoError(t, err, "failed mounting kv endpoint")
+	kvSecretPath := "ocsp/blah//blahblah"
+	err = client.KVv1("kv").Put(ctx, kvSecretPath, map[string]interface{}{
+		"my-key": "my-secret",
+	})
+	require.NoError(t, err, "Failed writing to KV store")
+
+	kvGetSecret := client.NewRequest(http.MethodGet, "/v1/kv/"+kvSecretPath)
+	kvGetSecret.URL.Path = "/v1/kv/" + kvSecretPath
+	rawResp, err = client.RawRequest(kvGetSecret)
+	// If we messed up checking if the mount was a PKI mount this wouldn't attempt to redirect.
+	require.ErrorContains(t, err, "redirects not allowed in these tests")
+	require.Equal(t, 301, rawResp.StatusCode)
+	require.Equal(t, "/v1/kv/ocsp/blah/blahblah", rawResp.Response.Header.Get("Location"))
 }
 
 // Make sure OCSP GET/POST requests work through the entire stack, and not just
