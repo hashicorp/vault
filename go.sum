@@ -1487,8 +1487,8 @@ github.com/hashicorp/go-sockaddr v1.0.6 h1:RSG8rKU28VTUTvEKghe5gIhIQpv8evvNpnDEy
 github.com/hashicorp/go-sockaddr v1.0.6/go.mod h1:uoUUmtwU7n9Dv3O4SNLeFvg0SxQ3lyjsj6+CCykpaxI=
 github.com/hashicorp/go-syslog v1.0.0 h1:KaodqZuhUoZereWVIYmpUgZysurB1kBLX2j0MwMrUAE=
 github.com/hashicorp/go-syslog v1.0.0/go.mod h1:qPfqrKkXGihmCqbJM2mZgkZGvKG1dFdvsLplgctolz4=
-github.com/hashicorp/go-tfe v1.64.2 h1:nbK9p5gA7k8/jbqgNpOzs7lG5cGfOhLVCki4bn7PmdQ=
-github.com/hashicorp/go-tfe v1.64.2/go.mod h1:JIgzD8EKkwAqFJdtmo0X2k1NUTrozyniKijL1nVkJgE=
+github.com/hashicorp/go-tfe v1.67.1 h1:w/EHJpgCvpQqRF4trhs7EuEStzmgZ272/5w14Ygjyzc=
+github.com/hashicorp/go-tfe v1.67.1/go.mod h1:JIgzD8EKkwAqFJdtmo0X2k1NUTrozyniKijL1nVkJgE=
 github.com/hashicorp/go-uuid v1.0.0/go.mod h1:6SBZvOh/SIDV7/2o3Jml5SYk/TvGqwFJ/bN7x4byOro=
 github.com/hashicorp/go-uuid v1.0.1/go.mod h1:6SBZvOh/SIDV7/2o3Jml5SYk/TvGqwFJ/bN7x4byOro=
 github.com/hashicorp/go-uuid v1.0.2/go.mod h1:6SBZvOh/SIDV7/2o3Jml5SYk/TvGqwFJ/bN7x4byOro=
@@ -1595,8 +1595,8 @@ github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.13.0 h1:BeDS7luTeOW0br
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.13.0/go.mod h1:sprde+S70PBIbgOLUAKDxR+xNF714ksBBVh77O3hnWc=
 github.com/hashicorp/vault-plugin-secrets-openldap v0.14.1 h1:5l7/83OCZsHL1PYkFJd8xjLtKQEz3vpbIbaEzHL5qeU=
 github.com/hashicorp/vault-plugin-secrets-openldap v0.14.1/go.mod h1:wqOf/QJqrrNXjnm0eLUnm5Ju9s/LIZUl6wEKmnFL9Uo=
-github.com/hashicorp/vault-plugin-secrets-terraform v0.10.0 h1:YzOJrpuDRNrw5SQ4i7IEjedF40I/7ejupQy+gAyQ6Zg=
-github.com/hashicorp/vault-plugin-secrets-terraform v0.10.0/go.mod h1:j2nbB//xAQMD+5JivVDalwDEyzJY3AWzKIkw6k65xJQ=
+github.com/hashicorp/vault-plugin-secrets-terraform v0.10.1-0.20241001001908-cc0224d55b83 h1:O8yM78ZMRwj7vOhL0a8G8vk8udGm6SPq+ktN36Bn38M=
+github.com/hashicorp/vault-plugin-secrets-terraform v0.10.1-0.20241001001908-cc0224d55b83/go.mod h1:YrTLVTl1bgkb5CIp84LydXESoY8CCQyR2zwZZYP/1fA=
 github.com/hashicorp/vault-testing-stepwise v0.3.1 h1:SqItnMWOOknQfJJR49Fps34ZfBMWSqBFFTx6NoTHzNw=
 github.com/hashicorp/vault-testing-stepwise v0.3.1/go.mod h1:BK7TOCyZ7idR7txAlPGEu+9ETJzlQsYQNdabSv3lyYY=
 github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20230201201504-b741fa893d77 h1:Y/+BtwxmRak3Us9jrByARvYW6uNeqZlEpMylIdXVIjY=
