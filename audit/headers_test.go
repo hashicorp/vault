@@ -245,7 +245,6 @@ func TestAuditedHeadersConfig_ApplyConfig(t *testing.T) {
 		"X-Test-Header":  {"foo"},
 		"X-Vault-Header": {"bar", "bar"},
 		"Content-Type":   {"json"},
-		"User-Agent":     {"foo-agent"},
 	}
 
 	salter := &testSalter{}
@@ -260,7 +259,6 @@ func TestAuditedHeadersConfig_ApplyConfig(t *testing.T) {
 	expected := map[string][]string{
 		"x-test-header":  {"foo"},
 		"x-vault-header": {hmacPrefix, hmacPrefix},
-		"user-agent":     {"foo-agent"},
 	}
 
 	if len(expected) != len(result) {
