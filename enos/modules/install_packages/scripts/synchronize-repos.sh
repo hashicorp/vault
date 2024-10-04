@@ -132,7 +132,12 @@ check_cloud_init() {
   return $exit_code
 }
 
+# Checking cloud-init
 check_cloud_init
+if [ $? -eq 1 ]; then
+   exit 1
+fi
+
 begin_time=$(date +%s)
 end_time=$((begin_time + TIMEOUT_SECONDS))
 while [ "$(date +%s)" -lt "$end_time" ]; do
