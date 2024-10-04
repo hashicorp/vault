@@ -58,18 +58,21 @@
                 data-test-popup-menu-trigger
               />
               {{#if library.canEdit}}
-                <dd.Interactive @text="Edit" data-test-edit @route="libraries.library.edit" @model={{library}} />
+                <dd.Interactive data-test-edit @route="libraries.library.edit" @model={{library}}>Edit</dd.Interactive>
               {{/if}}
               {{#if library.canRead}}
-                <dd.Interactive @text="Details" data-test-details @route="libraries.library.details" @model={{library}} />
+                <dd.Interactive
+                  data-test-details
+                  @route="libraries.library.details"
+                  @model={{library}}
+                >Details</dd.Interactive>
               {{/if}}
               {{#if library.canDelete}}
                 <dd.Interactive
-                  @text="Delete"
                   data-test-delete
                   @color="critical"
                   {{on "click" (fn (mut this.libraryToDelete) library)}}
-                />
+                >Delete</dd.Interactive>
               {{/if}}
             </Hds::Dropdown>
           {{/if}}

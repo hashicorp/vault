@@ -79,20 +79,17 @@
             data-test-popup-menu-trigger
           />
           <dd.Interactive
-            @text="View {{singularize @itemType}}"
             @route="vault.cluster.access.method.item.show"
             @models={{array @methodModel.id @itemType list.item.id}}
-          />
+          >View {{singularize @itemType}}</dd.Interactive>
           <dd.Interactive
-            @text="Edit {{singularize @itemType}}"
             @route="vault.cluster.access.method.item.edit"
             @models={{array @methodModel.id @itemType list.item.id}}
-          />
-          <dd.Interactive
-            @text="Delete {{singularize @itemType}}"
-            @color="critical"
-            {{on "click" (fn (mut this.itemToDelete) list.item)}}
-          />
+          >Edit {{singularize @itemType}}</dd.Interactive>
+          <dd.Interactive @color="critical" {{on "click" (fn (mut this.itemToDelete) list.item)}}>
+            Delete
+            {{singularize @itemType}}
+          </dd.Interactive>
         </Hds::Dropdown>
       </Item.menu>
       {{#if (eq list.item this.itemToDelete)}}

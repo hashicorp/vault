@@ -12,13 +12,12 @@
         <dd.Interactive
           @href="/v1/sys/storage/raft/snapshot"
           @isHrefExternal={{false}}
-          @text="Download"
           {{on "click" (action "downloadViaServiceWorker")}}
-        />
+        >Download</dd.Interactive>
       {{else}}
-        <dd.Interactive @text="Download" {{on "click" (action "downloadSnapshot")}} />
+        <dd.Interactive {{on "click" (action "downloadSnapshot")}}>Download</dd.Interactive>
       {{/if}}
-      <dd.Interactive @text="Restore" @route="vault.cluster.storage-restore" />
+      <dd.Interactive @route="vault.cluster.storage-restore">Restore</dd.Interactive>
     </Hds::Dropdown>
   </PH.Actions>
 </Hds::PageHeader>

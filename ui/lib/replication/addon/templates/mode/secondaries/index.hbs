@@ -38,18 +38,16 @@
                 />
                 {{#if (eq this.replicationMode "performance")}}
                   <dd.Interactive
-                    @text="Path filter config"
                     @route="mode.secondaries.config-show"
                     @models={{array this.replicationMode secondary}}
                     data-test-replication-path-filter-link={{true}}
-                  />
+                  >Path filter config</dd.Interactive>
                 {{/if}}
                 {{#if this.model.canRevokeSecondary}}
                   <dd.Interactive
-                    @text="Revoke"
                     @color="critical"
                     {{on "click" (fn (mut this.secondaryToRevoke) secondary)}}
-                  />
+                  >Revoke</dd.Interactive>
                 {{/if}}
               </Hds::Dropdown>
             {{/if}}

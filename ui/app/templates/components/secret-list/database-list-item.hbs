@@ -34,46 +34,41 @@
           data-test-popup-menu-trigger
         />
         {{#if @item.canEdit}}
-          <dd.Interactive @text="Edit connection" @route="vault.cluster.secrets.backend.edit" @model={{@item.id}} />
+          <dd.Interactive @route="vault.cluster.secrets.backend.edit" @model={{@item.id}}>Edit connection</dd.Interactive>
         {{/if}}
         {{#if @item.canEditRole}}
-          <dd.Interactive @text="Edit Role" @route="vault.cluster.secrets.backend.edit" @model={{concat "role/" @item.id}} />
+          <dd.Interactive @route="vault.cluster.secrets.backend.edit" @model={{concat "role/" @item.id}}>Edit Role</dd.Interactive>
         {{/if}}
         {{#if @item.canReset}}
           <dd.Interactive
-            @text="Reset connection"
             @icon={{if (eq this.actionRunning "reset") "loading"}}
             {{on "click" (fn this.resetConnection @item.id)}}
-          />
+          >Reset connection</dd.Interactive>
         {{/if}}
         {{#if (and (eq @item.type "dynamic") @item.canGenerateCredentials)}}
           <dd.Interactive
-            @text="Generate credentials"
             @route="vault.cluster.secrets.backend.credentials"
             @model={{@item.id}}
             @query={{hash roleType=this.keyTypeValue}}
-          />
+          >Generate credentials</dd.Interactive>
         {{else if (and (eq @item.type "static") @item.canGetCredentials)}}
           <dd.Interactive
-            @text="Get credentials"
             @route="vault.cluster.secrets.backend.credentials"
             @model={{@item.id}}
             @query={{hash roleType=this.keyTypeValue}}
-          />
+          >Get credentials</dd.Interactive>
         {{/if}}
         {{#if (and @item.canRotateRoleCredentials (eq this.keyTypeValue "static"))}}
           <dd.Interactive
-            @text="Rotate credentials"
             @icon={{if (eq this.actionRunning "rotateRole") "loading"}}
             {{on "click" (fn this.rotateRoleCred @item.id)}}
-          />
+          >Rotate credentials</dd.Interactive>
         {{/if}}
         {{#if @item.canRotateRoot}}
           <dd.Interactive
-            @text="Rotate root credentials"
             @icon={{if (eq this.actionRunning "rotateRoot") "loading"}}
             {{on "click" (fn this.rotateRootCred @item.id)}}
-          />
+          >Rotate root credentials</dd.Interactive>
         {{/if}}
       </Hds::Dropdown>
     </div>

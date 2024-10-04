@@ -38,17 +38,15 @@
             data-test-popup-menu-trigger
           />
           <dd.Interactive
-            @text="Details"
             @route="vault.cluster.access.mfa.methods.method"
             @model={{@model.id}}
             data-test-mfa-method-menu-link="details"
-          />
+          >Details</dd.Interactive>
           <dd.Interactive
-            @text="Edit"
             @route="vault.cluster.access.mfa.methods.method.edit"
             @model={{@model.id}}
             data-test-mfa-method-menu-link="edit"
-          />
+          >Edit</dd.Interactive>
         </Hds::Dropdown>
       </div>
     </div>

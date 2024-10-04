@@ -48,17 +48,17 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       const backend = this.backend;
       await visit(`/vault/secrets/${backend}/kv/list`);
       assert.dom(PAGE.list.item()).exists({ count: 1 }, 'single secret exists on list');
-      assert.dom(PAGE.list.item('app/')).hasText('app/', 'expected list item');
+      assert.dom(`${PAGE.list.item('app/')} [data-test-path]`).hasText('app/', 'expected list item');
       await click(PAGE.list.createSecret);
       await fillIn(FORM.inputByAttr('path'), 'jk');
       await click(FORM.cancelBtn);
       assert.dom(PAGE.list.item()).exists({ count: 1 }, 'same amount of secrets');
-      assert.dom(PAGE.list.item('app/')).hasText('app/', 'expected list item');
+      assert.dom(`${PAGE.list.item('app/')} [data-test-path]`).hasText('app/', 'expected list item');
       await click(PAGE.list.createSecret);
       await fillIn(FORM.inputByAttr('path'), 'psych');
       await click(PAGE.breadcrumbAtIdx(1));
       assert.dom(PAGE.list.item()).exists({ count: 1 }, 'same amount of secrets');
-      assert.dom(PAGE.list.item('app/')).hasText('app/', 'expected list item');
+      assert.dom(`${PAGE.list.item('app/')} [data-test-path]`).hasText('app/', 'expected list item');
     });
     test('cancel on new version rolls back model (a)', async function (assert) {
       const backend = this.backend;
@@ -500,17 +500,17 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       const backend = this.backend;
       await visit(`/vault/secrets/${backend}/kv/list`);
       assert.dom(PAGE.list.item()).exists({ count: 1 }, 'single secret exists on list');
-      assert.dom(PAGE.list.item('app/')).hasText('app/', 'expected list item');
+      assert.dom(`${PAGE.list.item('app/')} [data-test-path]`).hasText('app/', 'expected list item');
       await click(PAGE.list.createSecret);
       await fillIn(FORM.inputByAttr('path'), 'jk');
       await click(FORM.cancelBtn);
       assert.dom(PAGE.list.item()).exists({ count: 1 }, 'same amount of secrets');
-      assert.dom(PAGE.list.item('app/')).hasText('app/', 'expected list item');
+      assert.dom(`${PAGE.list.item('app/')} [data-test-path]`).hasText('app/', 'expected list item');
       await click(PAGE.list.createSecret);
       await fillIn(FORM.inputByAttr('path'), 'psych');
       await click(PAGE.breadcrumbAtIdx(1));
       assert.dom(PAGE.list.item()).exists({ count: 1 }, 'same amount of secrets');
-      assert.dom(PAGE.list.item('app/')).hasText('app/', 'expected list item');
+      assert.dom(`${PAGE.list.item('app/')} [data-test-path]`).hasText('app/', 'expected list item');
     });
     test('cancel on new version rolls back model (dlr)', async function (assert) {
       const backend = this.backend;
@@ -649,17 +649,17 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       const backend = this.backend;
       await visit(`/vault/secrets/${backend}/kv/list`);
       assert.dom(PAGE.list.item()).exists({ count: 1 }, 'single secret exists on list');
-      assert.dom(PAGE.list.item('app/')).hasText('app/', 'expected list item');
+      assert.dom(`${PAGE.list.item('app/')} [data-test-path]`).hasText('app/', 'expected list item');
       await click(PAGE.list.createSecret);
       await fillIn(FORM.inputByAttr('path'), 'jk');
       await click(FORM.cancelBtn);
       assert.dom(PAGE.list.item()).exists({ count: 1 }, 'same amount of secrets');
-      assert.dom(PAGE.list.item('app/')).hasText('app/', 'expected list item');
+      assert.dom(`${PAGE.list.item('app/')} [data-test-path]`).hasText('app/', 'expected list item');
       await click(PAGE.list.createSecret);
       await fillIn(FORM.inputByAttr('path'), 'psych');
       await click(PAGE.breadcrumbAtIdx(1));
       assert.dom(PAGE.list.item()).exists({ count: 1 }, 'same amount of secrets');
-      assert.dom(PAGE.list.item('app/')).hasText('app/', 'expected list item');
+      assert.dom(`${PAGE.list.item('app/')} [data-test-path]`).hasText('app/', 'expected list item');
     });
     test('cancel on new version rolls back model (mm)', async function (assert) {
       const backend = this.backend;

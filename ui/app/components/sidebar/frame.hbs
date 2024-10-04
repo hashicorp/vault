@@ -18,9 +18,11 @@
             />
           </:logo>
           <:actions>
-            <Hds::SideNav::Header::IconButton
+            <Hds::Button
+              @isIconOnly={{true}}
+              @size="large"
               @icon="terminal-screen"
-              @ariaLabel="Console toggle"
+              @text="Console toggle"
               data-test-console-toggle
               {{on "click" (fn (mut this.console.isOpen) (not this.console.isOpen))}}
             />

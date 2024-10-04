@@ -113,10 +113,13 @@
                   data-test-popup-menu-trigger
                 />
                 {{#if message.canEditCustomMessages}}
-                  <dd.Interactive @text="Edit" @route="messages.message.edit" @model={{message.id}} />
+                  <dd.Interactive @route="messages.message.edit" @model={{message.id}}>Edit</dd.Interactive>
                 {{/if}}
                 {{#if message.canDeleteCustomMessages}}
-                  <dd.Interactive @text="Delete" @color="critical" {{on "click" (fn (mut this.messageToDelete) message)}} />
+                  <dd.Interactive
+                    @color="critical"
+                    {{on "click" (fn (mut this.messageToDelete) message)}}
+                  >Delete</dd.Interactive>
                 {{/if}}
               </Hds::Dropdown>
             {{/if}}

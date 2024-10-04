@@ -34,19 +34,17 @@
               />
               {{#if client.canRead}}
                 <dd.Interactive
-                  @text="Details"
                   @route="vault.cluster.access.oidc.clients.client.details"
                   @model={{client.name}}
                   data-test-oidc-client-menu-link="details"
-                />
+                >Details</dd.Interactive>
               {{/if}}
               {{#if client.canEdit}}
                 <dd.Interactive
-                  @text="Edit"
                   @route="vault.cluster.access.oidc.clients.client.edit"
                   @model={{client.name}}
                   data-test-oidc-client-menu-link="edit"
-                />
+                >Edit</dd.Interactive>
               {{/if}}
             </Hds::Dropdown>
           {{/if}}

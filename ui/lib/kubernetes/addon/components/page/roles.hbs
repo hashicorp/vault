@@ -49,18 +49,17 @@
                 data-test-popup-menu-trigger
               />
               {{#if role.canRead}}
-                <dd.Interactive @text="Details" @route="roles.role.details" @model={{role}} data-test-details />
+                <dd.Interactive @route="roles.role.details" @model={{role}} data-test-details>Details</dd.Interactive>
               {{/if}}
               {{#if role.canEdit}}
-                <dd.Interactive @text="Edit" data-test-edit @route="roles.role.edit" @model={{role}} />
+                <dd.Interactive data-test-edit @route="roles.role.edit" @model={{role}}>Edit</dd.Interactive>
               {{/if}}
               {{#if role.canDelete}}
                 <dd.Interactive
-                  @text="Delete"
                   data-test-delete
                   @color="critical"
                   {{on "click" (fn (mut this.roleToDelete) role)}}
-                />
+                >Delete</dd.Interactive>
               {{/if}}
             </Hds::Dropdown>
           {{/if}}

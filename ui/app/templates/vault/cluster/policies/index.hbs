@@ -105,27 +105,24 @@
                 {{else}}
                   {{#if item.canRead}}
                     <dd.Interactive
-                      @text="Details"
                       @route="vault.cluster.policy.show"
                       @models={{array this.policyType item.id}}
                       data-test-policy-link="show"
-                    />
+                    >Details</dd.Interactive>
                   {{/if}}
                   {{#if item.canEdit}}
                     <dd.Interactive
-                      @text="Edit"
                       @route="vault.cluster.policy.edit"
                       @models={{array this.policyType item.id}}
                       data-test-policy-link="edit"
-                    />
+                    >Edit</dd.Interactive>
                   {{/if}}
                   {{#if (and item.canDelete (not-eq item.name "default"))}}
                     <dd.Interactive
-                      @text="Delete"
                       @color="critical"
                       data-test-confirm-action-trigger
                       {{on "click" (fn (mut this.policyToDelete) item)}}
-                    />
+                    >Delete</dd.Interactive>
                   {{/if}}
                 {{/if}}
               </Hds::Dropdown>

@@ -54,19 +54,17 @@
                   />
                   {{#if @canRead}}
                     <dd.Interactive
-                      @text="Details"
                       @route="keys.key.details"
                       @models={{array @backend pkiKey.keyId}}
                       data-test-key-menu-link="details"
-                    />
+                    >Details</dd.Interactive>
                   {{/if}}
                   {{#if @canEdit}}
                     <dd.Interactive
-                      @text="Edit"
                       @route="keys.key.edit"
                       @models={{array @backend pkiKey.keyId}}
                       data-test-key-menu-link="edit"
-                    />
+                    >Edit</dd.Interactive>
                   {{/if}}
                 </Hds::Dropdown>
               {{/if}}

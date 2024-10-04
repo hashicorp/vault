@@ -21,7 +21,7 @@
       <div class="level-left">
         <div>
           <Icon @name="key" class="has-text-grey-light" />
-          <span class="has-text-weight-semibold is-underline">
+          <span class="has-text-weight-semibold is-underline" data-test-item>
             {{model.name}}
           </span>
         </div>
@@ -36,19 +36,17 @@
               data-test-popup-menu-trigger
             />
             <dd.Interactive
-              @text="Details"
               @route="vault.cluster.access.oidc.keys.key.details"
               @model={{model.name}}
               @disabled={{eq model.canRead false}}
               data-test-oidc-key-menu-link="details"
-            />
+            >Details</dd.Interactive>
             <dd.Interactive
-              @text="Edit"
               @route="vault.cluster.access.oidc.keys.key.edit"
               @model={{model.name}}
               @disabled={{eq model.canEdit false}}
               data-test-oidc-key-menu-link="edit"
-            />
+            >Edit</dd.Interactive>
           </Hds::Dropdown>
         </div>
       </div>

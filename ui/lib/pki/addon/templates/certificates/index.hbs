@@ -38,7 +38,10 @@
                   @hasChevron={{false}}
                   data-test-popup-menu-trigger
                 />
-                <dd.Interactive @text="Details" @route="certificates.certificate.details" @model={{pkiCertificate.id}} />
+                <dd.Interactive
+                  @route="certificates.certificate.details"
+                  @model={{pkiCertificate.id}}
+                >Details</dd.Interactive>
               </Hds::Dropdown>
             </div>
           </div>

@@ -72,7 +72,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
       assert.dom('[data-test-tab="keys"]').hasClass('active', 'keys tab is active');
       assert.strictEqual(currentRouteName(), 'vault.cluster.access.oidc.keys.index');
       assert
-        .dom('[data-test-oidc-key-linked-block="default"]')
+        .dom('[data-test-oidc-key-linked-block="default"] [data-test-item]')
         .hasText('default', 'index page lists default key');
 
       // navigate to default key details from pop-up menu
@@ -132,7 +132,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
       // edit key and limit applications
       await visit(OIDC_BASE_URL + '/keys');
       await click('[data-test-oidc-key-linked-block="test-key"] [data-test-popup-menu-trigger]');
-      await click('[data-test-oidc-key-menu-link="edit"]');
+      await click('[data-test-oidc-key-linked-block="test-key"] [data-test-oidc-key-menu-link="edit"]');
       assert.strictEqual(
         currentRouteName(),
         'vault.cluster.access.oidc.keys.key.edit',

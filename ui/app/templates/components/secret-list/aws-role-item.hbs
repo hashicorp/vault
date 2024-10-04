@@ -36,11 +36,10 @@
           </dd.Generic>
         {{else if @item.canGenerate}}
           <dd.Interactive
-            @text="Generate credentials"
             @route="vault.cluster.secrets.backend.credentials"
             @model={{@item.id}}
             data-test-role-aws-link="generate"
-          />
+          >Generate credentials</dd.Interactive>
         {{/if}}
         {{#if @item.updatePath.isPending}}
           <dd.Generic class="has-text-center">
@@ -49,27 +48,24 @@
         {{else}}
           {{#if @item.canRead}}
             <dd.Interactive
-              @text="Details"
               @route="vault.cluster.secrets.backend.show"
               @model={{@item.id}}
               data-test-role-ssh-link="show"
-            />
+            >Details</dd.Interactive>
           {{/if}}
           {{#if @item.canEdit}}
             <dd.Interactive
-              @text="Edit"
               @route="vault.cluster.secrets.backend.edit"
               @model={{@item.id}}
               data-test-role-ssh-link="edit"
-            />
+            >Edit</dd.Interactive>
           {{/if}}
           {{#if @item.canDelete}}
             <dd.Interactive
-              @text="Delete"
               @color="critical"
               {{on "click" (fn (mut this.showConfirmModal) true)}}
               data-test-aws-role-delete={{@item.id}}
-            />
+            >Delete</dd.Interactive>
           {{/if}}
         {{/if}}
       </Hds::Dropdown>

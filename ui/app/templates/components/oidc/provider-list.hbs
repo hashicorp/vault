@@ -34,19 +34,17 @@
               />
               {{#if provider.canRead}}
                 <dd.Interactive
-                  @text="Details"
                   @route="vault.cluster.access.oidc.providers.provider.details"
                   @model={{provider.name}}
                   data-test-oidc-provider-menu-link="details"
-                />
+                >Details</dd.Interactive>
               {{/if}}
               {{#if provider.canEdit}}
                 <dd.Interactive
-                  @text="Edit"
                   @route="vault.cluster.access.oidc.providers.provider.edit"
                   @model={{provider.name}}
                   data-test-oidc-provider-menu-link="edit"
-                />
+                >Edit</dd.Interactive>
               {{/if}}
             </Hds::Dropdown>
           {{/if}}

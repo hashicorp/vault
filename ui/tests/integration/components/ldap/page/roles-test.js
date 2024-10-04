@@ -110,7 +110,9 @@ module('Integration | Component | ldap | Page::Roles', function (hooks) {
     assert.dom('[data-test-delete]').hasText('Delete', 'Details link renders in menu');
 
     await click('[data-test-popup-menu-trigger]:last-of-type');
-    assert.dom('[data-test-rotate-creds]').doesNotExist('Rotate credentials link is hidden for dynamic type');
+    assert
+      .dom('[data-test-popup-menu-trigger]:last-of-type [data-test-rotate-creds]')
+      .doesNotExist('Rotate credentials link is hidden for dynamic type');
   });
 
   test('it should filter roles', async function (assert) {

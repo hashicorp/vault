@@ -37,19 +37,17 @@
                 data-test-popup-menu-trigger
               />
               <dd.Interactive
-                @text="Details"
                 @route="vault.cluster.access.oidc.scopes.scope.details"
                 @model={{model.name}}
                 @disabled={{eq model.canRead false}}
                 data-test-oidc-scope-menu-link="details"
-              />
+              >Details</dd.Interactive>
               <dd.Interactive
-                @text="Edit"
                 @route="vault.cluster.access.oidc.scopes.scope.edit"
                 @model={{model.name}}
                 @disabled={{eq model.canEdit false}}
                 data-test-oidc-scope-menu-link="edit"
-              />
+              >Edit</dd.Interactive>
             </Hds::Dropdown>
           </div>
         </div>

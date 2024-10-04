@@ -11,13 +11,12 @@
       @hasChevron={{false}}
       data-test-popup-menu-trigger
     />
-    <dd.Interactive @text="View policy" @route="vault.cluster.policy.show" @models={{array "acl" @policyName}} />
-    <dd.Interactive @text="Edit policy" @route="vault.cluster.policy.edit" @models={{array "acl" @policyName}} />
-    <dd.Interactive
-      @text="Remove from {{@model.identityType}}"
-      @color="critical"
-      {{on "click" (fn (mut this.showConfirmModal) true)}}
-    />
+    <dd.Interactive @route="vault.cluster.policy.show" @models={{array "acl" @policyName}}>View policy</dd.Interactive>
+    <dd.Interactive @route="vault.cluster.policy.edit" @models={{array "acl" @policyName}}>Edit policy</dd.Interactive>
+    <dd.Interactive @color="critical" {{on "click" (fn (mut this.showConfirmModal) true)}}>
+      Remove from
+      {{@model.identityType}}
+    </dd.Interactive>
   </Hds::Dropdown>
 </div>
 
