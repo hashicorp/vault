@@ -109,7 +109,7 @@ require (
 	github.com/hashicorp/go-secure-stdlib/reloadutil v0.1.1
 	github.com/hashicorp/go-secure-stdlib/strutil v0.1.2
 	github.com/hashicorp/go-secure-stdlib/tlsutil v0.1.3
-	github.com/hashicorp/go-sockaddr v1.0.6
+	github.com/hashicorp/go-sockaddr v1.0.7
 	github.com/hashicorp/go-syslog v1.0.0
 	github.com/hashicorp/go-uuid v1.0.3
 	github.com/hashicorp/go-version v1.7.0
@@ -129,7 +129,7 @@ require (
 	github.com/hashicorp/vault-hcp-lib v0.0.0-20240704151836-a5c058ac604c
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.19.0
 	github.com/hashicorp/vault-plugin-auth-azure v0.19.0
-	github.com/hashicorp/vault-plugin-auth-cf v0.19.0
+	github.com/hashicorp/vault-plugin-auth-cf v0.19.1-0.20241001003034-5aa8f4e26c8d
 	github.com/hashicorp/vault-plugin-auth-gcp v0.19.0
 	github.com/hashicorp/vault-plugin-auth-jwt v0.22.0
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.13.0
