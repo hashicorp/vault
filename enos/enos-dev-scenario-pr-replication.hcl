@@ -758,7 +758,6 @@ scenario "dev_pr_replication" {
     variables {
       ip_version          = local.ip_version
       primary_leader_host = step.get_primary_cluster_ips.leader_host
-      replication_type    = "performance"
       vault_addr          = step.create_primary_cluster.api_addr_localhost
       vault_install_dir   = local.vault_install_dir
       vault_root_token    = step.create_primary_cluster.root_token
@@ -815,7 +814,7 @@ scenario "dev_pr_replication" {
       Depending on how we're configured we'll pass the unseal keys according to this guide:
       https://developer.hashicorp.com/vault/docs/enterprise/replication#seals
     EOF
-    module      = module.vault_unseal_nodes
+    module      = module.vault_unseal_replication_followers
     depends_on = [
       step.create_primary_cluster,
       step.create_secondary_cluster,

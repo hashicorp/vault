@@ -1,0 +1,82 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<form {{on "submit" (perform this.save)}}>
+  <MessageError @model={{@model}} data-test-edit-form-error />
+  <div class="box is-sideless is-fullwidth is-marginless">
+    <NamespaceReminder @mode="save" />
+    {{#if @model.isNew}}
+      {{! Show role name only in create mode }}
+      <FormField data-test-field @attr={{hash name="role" type="string" options=(hash label="Name")}} @model={{@model}} />
+    {{/if}}
+    <div class="control is-flex box is-shadowless is-fullwidth is-marginless">
+      <input
+        data-test-input="operationNone"
+        id="operationNone"
+        type="checkbox"
+        class="toggle is-success is-small"
+        checked={{not @model.operationNone}}
+        {{on "change" this.toggleOperationSpecial}}
+      />
+      <label for="operationNone" class="has-text-weight-bold is-size-8">
+        Allow this role to perform KMIP operations
+      </label>
+    </div>
+    {{#unless @model.operationNone}}
+      <Toolbar>
+        <h3 class="title is-6 has-left-padding-s" data-test-kmip-section="Allowed Operations">
+          Allowed Operations
+        </h3>
+      </Toolbar>
+      <div class="box">
+        <FormField
+          @attr={{hash name="operationAll" type="boolean" options=(hash label="Allow this role to perform all operations")}}
+          @model={{@model}}
+        />
+        <hr />
+        <div class="kmip-role-operations">
+          {{#each this.operationFormGroups as |group|}}
+            <div class="kmip-role-allowed-operations">
+              <h4 class="title is-7" data-test-kmip-operations={{group.name}}>{{group.name}}</h4>
+              {{#each group.fields as |attr|}}
+                <FormField
+                  data-test-field
+                  @disabled={{or @model.operationNone @model.operationAll}}
+                  @attr={{attr}}
+                  @model={{this.placeholderOrModel @model attr.name}}
+                  @showHelpText={{false}}
+                />
+              {{/each}}
+            </div>
+          {{/each}}
+        </div>
+      </div>
+    {{/unless}}
+    <div class="box is-fullwidth is-shadowless">
+      <h3 class="title is-3" data-test-kmip-section="TLS">
+        TLS
+      </h3>
+      {{#each this.tlsFormFields as |attr|}}
+        <FormField data-test-field @attr={{attr}} @model={{@model}} />
+      {{/each}}
+    </div>
+    {{#each @model.fields as |attr|}}
+      <FormField data-test-field @attr={{attr}} @model={{@model}} />
+    {{/each}}
+  </div>
+
+  <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
+    <Hds::ButtonSet>
+      <Hds::Button
+        @text="Save"
+        @icon={{if this.save.isRunning "loading"}}
+        type="submit"
+        disabled={{this.save.isRunning}}
+        data-test-save
+      />
+      <Hds::Button @text="Cancel" @color="secondary" {{on "click" @onCancel}} data-test-cancel />
+    </Hds::ButtonSet>
+  </div>
+</form>

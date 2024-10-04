@@ -105,6 +105,10 @@ The top level `auto_auth` block has two configuration entries:
 
 - `sinks` `(array of objects: optional)` - Configuration for the sinks
 
+- `enable_reauth_on_new_credentials` `(bool: false)` - If enabled, Auto-auth will
+  handle new credential events from supported auth methods (AliCloud/AWS/Cert/JWT/LDAP/OCI)
+  and re-authenticate with the new credential.
+
 ### Configuration (Method)
 
 ~> Auto-auth does not support using tokens with a limited number of uses. Auto-auth
