@@ -1,0 +1,145 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<Clients::PageHeader
+  @startTimestamp={{@startTimestamp}}
+  @endTimestamp={{@endTimestamp}}
+  @namespace={{@namespace}}
+  @upgradesDuringActivity={{this.upgradesDuringActivity}}
+  @noData={{not @activity.total.clients}}
+/>
+
+<div class="box is-sideless is-fullwidth is-marginless is-bottomless is-shadowless">
+  <Clients::DateRange
+    @startTime={{@startTimestamp}}
+    @endTime={{@endTimestamp}}
+    @onChange={{this.onDateChange}}
+    class="has-bottom-margin-l"
+  />
+
+  {{#if (eq @activity.id "no-data")}}
+    <Clients::NoData @config={{@config}} @dateRangeMessage={{this.dateRangeMessage}} />
+  {{else if @activityError}}
+    <Clients::Counts::Error @error={{@activityError}} />
+  {{else}}
+    {{#if (eq @config.enabled "Off")}}
+      <Hds::Alert @type="inline" @color="warning" class="has-bottom-margin-s" as |A|>
+        <A.Title data-test-counts-disabled>Tracking is disabled</A.Title>
+        <A.Description>
+          Tracking is currently disabled and data is not being collected. Historical data can be searched, but you will need
+          to
+          <Hds::Link::Inline @route="vault.cluster.clients.edit">edit the configuration</Hds::Link::Inline>
+          to enable tracking again.
+        </A.Description>
+      </Hds::Alert>
+    {{/if}}
+
+    {{#if (or @namespace this.namespaces @mountPath this.mountPaths)}}
+      <Hds::Text::Display @tag="p">
+        Filters
+      </Hds::Text::Display>
+      <Hds::Text::Body @tag="p" @color="faint">
+        Apply a filter to look at data from a specific namespace and drill down by mount. The mount filter includes auth
+        methods, KV engines, and PKI engines. Each mount type generates a different type of client and will not be applicable
+        to every tab.
+      </Hds::Text::Body>
+      <Toolbar aria-label="toolbar for filtering client count data" class="has-bottom-margin-m" data-test-clients-filter-bar>
+        <ToolbarFilters>
+          {{#if (or @namespace this.namespaces)}}
+            <SearchSelect
+              @id="namespace-search-select"
+              @options={{this.namespaces}}
+              @inputValue={{if @namespace (array @namespace)}}
+              @selectLimit="1"
+              @disallowNewItems={{true}}
+              @fallbackComponent="input-search"
+              @onChange={{fn this.setFilterValue "ns"}}
+              @placeholder="Namespace within {{this.namespacePathForFilter}}"
+              @displayInherit={{true}}
+              class="is-marginless"
+              data-test-counts-namespaces
+            />
+            <div class="has-left-margin-xs"></div>
+          {{/if}}
+          {{#if (or @mountPath this.mountPaths)}}
+            <SearchSelect
+              @id="mounts-search-select"
+              @options={{this.mountPaths}}
+              @inputValue={{if @mountPath (array @mountPath)}}
+              @selectLimit="1"
+              @disallowNewItems={{true}}
+              @fallbackComponent="input-search"
+              @onChange={{fn this.setFilterValue "mountPath"}}
+              @placeholder="Mount path within {{this.namespacePathForFilter}}"
+              @displayInherit={{true}}
+              data-test-counts-auth-mounts
+            />
+          {{/if}}
+        </ToolbarFilters>
+      </Toolbar>
+    {{/if}}
+
+    {{#if this.totalUsageCounts}}
+      {{#if this.upgradeExplanations}}
+        <Hds::Alert data-test-clients-upgrade-warning @type="inline" @color="warning" class="has-bottom-margin-m" as |A|>
+          <A.Title>
+            Client count data contains
+            {{pluralize this.upgradeExplanations.length "upgrade"}}
+          </A.Title>
+          <A.Description>
+            Vault was upgraded during this time period. Keep this in mind while looking at the data. Visit our
+            <Hds::Link::Inline
+              @isHrefExternal={{true}}
+              @href={{doc-link
+                "/vault/docs/concepts/client-count/faq#q-which-vault-version-reflects-the-most-accurate-client-counts"
+              }}
+            >
+              Client count FAQ
+            </Hds::Link::Inline>
+            for more information.
+          </A.Description>
+          <A.Description>
+            <ul class="bullet">
+              {{#each this.upgradeExplanations as |info|}}
+                <li>{{info}}</li>
+              {{/each}}
+            </ul>
+          </A.Description>
+        </Hds::Alert>
+      {{/if}}
+
+      {{#if this.startTimeDiscrepancy}}
+        <Hds::Alert data-test-counts-start-discrepancy @type="inline" @color="neutral" class="has-bottom-margin-s" as |A|>
+          <A.Description data-test-counts-start-discrepancy>
+            {{this.startTimeDiscrepancy}}
+          </A.Description>
+        </Hds::Alert>
+      {{/if}}
+
+      <Clients::Counts::NavBar @showSecretsSyncClientCounts={{or this.hasSecretsSyncClients this.flags.showSecretsSync}} />
+
+      {{! CLIENT COUNT PAGE COMPONENTS RENDER HERE }}
+      {{yield}}
+
+    {{else if (and this.version.isCommunity (not @startTimestamp))}}
+      {{! Empty state for community without start query param }}
+      <EmptyState
+        @title="No start date found"
+        @message="In order to get the most from this data, please enter a start month above. Vault will calculate new clients starting from that month."
+      />
+    {{else}}
+      <EmptyState
+        @title="No data received {{if this.dateRangeMessage this.dateRangeMessage}}"
+        @message={{if
+          this.version.isCommunity
+          "Select a start date above to query client count data."
+          "Update the filter values or click the button to reset them."
+        }}
+      >
+        <Hds::Button @text="Reset filters" @color="tertiary" @icon="reload" {{on "click" this.resetFilters}} />
+      </EmptyState>
+    {{/if}}
+  {{/if}}
+</div>

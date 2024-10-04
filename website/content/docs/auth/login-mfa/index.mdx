@@ -17,6 +17,8 @@ Login MFA is built on top of the Identity system of Vault.
 
 MFA in Vault includes the following login types:
 
+~> **NOTE:** The [Token](/vault/docs/auth/token) auth method cannot be configured with Vault's built-in Login MFA feature.
+
 - `Time-based One-time Password (TOTP)` - If configured and enabled on a login path,
   this would require a TOTP passcode along with a Vault token to be presented
   while invoking the API login request. The passcode will be validated against the

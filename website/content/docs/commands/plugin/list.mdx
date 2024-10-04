@@ -37,10 +37,10 @@ List detailed plugin information:
 
 ```shell-session
 $ vault plugin list -detailed
-Name                             Type        Version                                          Deprecation Status
-----                             ----        -------                                          ------------------
-alicloud                         auth        v0.12.0+builtin                                  supported
-app-id                           auth        v1.12.0+builtin.vault                            pending removal
+Name        Type    Version                  Container    Deprecation Status
+----        ----    -------                  ---------    ------------------
+alicloud    auth    v0.12.0+builtin          false        supported
+app-id      auth    v1.12.0+builtin.vault    false        pending removal
 # ...
 ```
 

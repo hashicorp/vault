@@ -8,21 +8,38 @@ import Resolver from 'ember-resolver';
 import loadInitializers from 'ember-load-initializers';
 import config from 'vault/config/environment';
 
+// TODO: DEPRECATION https://ember-engines.com/docs/deprecations#-use-alias-for-inject-router-service-from-host-application
 export default class App extends Application {
   modulePrefix = config.modulePrefix;
   podModulePrefix = config.podModulePrefix;
   Resolver = Resolver;
   engines = {
-    openApiExplorer: {
+    'config-ui': {
+      dependencies: {
+        services: ['auth', 'flash-messages', 'namespace', 'router', 'store', 'version', 'custom-messages'],
+      },
+    },
+    'open-api-explorer': {
       dependencies: {
         services: ['auth', 'flash-messages', 'namespace', 'router', 'version'],
       },
     },
     replication: {
       dependencies: {
-        services: ['auth', 'flash-messages', 'namespace', 'replication-mode', 'router', 'store', 'version'],
+        services: [
+          'auth',
+          'capabilities',
+          'flash-messages',
+          'namespace',
+          'replication-mode',
+          'router',
+          'store',
+          'version',
+          '-portal',
+        ],
         externalRoutes: {
           replication: 'vault.cluster.replication.index',
+          vault: 'vault.cluster',
         },
       },
     },
@@ -63,16 +80,19 @@ export default class App extends Application {
     kv: {
       dependencies: {
         services: [
+          'capabilities',
+          'control-group',
           'download',
+          'flash-messages',
           'namespace',
           'router',
-          'store',
           'secret-mount-path',
-          'flash-messages',
-          'control-group',
+          'store',
+          'version',
         ],
         externalRoutes: {
           secrets: 'vault.cluster.secrets.backends',
+          syncDestination: 'vault.cluster.sync.secrets.destinations.destination',
         },
       },
     },
@@ -96,7 +116,20 @@ export default class App extends Application {
         },
       },
     },
+    sync: {
+      dependencies: {
+        services: ['flash-messages', 'flags', 'router', 'store', 'version'],
+        externalRoutes: {
+          kvSecretOverview: 'vault.cluster.secrets.backend.kv.secret.index',
+          clientCountOverview: 'vault.cluster.clients',
+        },
+      },
+    },
   };
 }
 
 loadInitializers(App, config.modulePrefix);
+
+/**
+ * @typedef {import('ember-source/types')} EmberTypes
+ */

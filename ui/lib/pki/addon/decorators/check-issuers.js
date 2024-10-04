@@ -4,7 +4,7 @@
  */
 
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 
 /**
  * the overview, roles, issuers, certificates, and key routes all need to be aware of the whether there is a config for the engine
@@ -25,7 +25,7 @@ export function withConfig() {
     }
     return class CheckConfig extends SuperClass {
       @service secretMountPath;
-      shouldPromptConfig = false;
+      pkiMountHasConfig = false;
 
       async beforeModel() {
         super.beforeModel(...arguments);
@@ -35,9 +35,9 @@ export function withConfig() {
         return (
           this.store
             .query('pki/issuer', { backend: this.secretMountPath.currentPath })
-            .then(() => (this.shouldPromptConfig = true))
+            .then(() => (this.pkiMountHasConfig = true))
             // this endpoint is unauthenticated, so we're not worried about permissions errors
-            .catch(() => (this.shouldPromptConfig = false))
+            .catch(() => (this.pkiMountHasConfig = false))
         );
       }
     };

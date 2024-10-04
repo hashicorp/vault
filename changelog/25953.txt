@@ -1,0 +1,4 @@
+```release-note:change
+core: return an additional "invalid token" error message in 403 response when the provided request token is expired,
+exceeded the number of uses, or is a bogus value
+```

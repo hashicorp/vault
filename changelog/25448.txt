@@ -1,0 +1,3 @@
+```release-note:bug
+core (enterprise): Fix a deadlock that can occur on performance secondary clusters when there are many mounts and a mount is deleted or filtered 
+```

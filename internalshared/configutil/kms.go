@@ -38,12 +38,16 @@ var (
 	GetEnvConfigFunc             = getEnvConfig
 )
 
-// Entropy contains Entropy configuration for the server
+//go:generate enumer -type=EntropyMode -trimprefix=Entropy
+
+// EntropyMode contains Entropy configuration for the server
 type EntropyMode int
 
 const (
 	EntropyUnknown EntropyMode = iota
 	EntropyAugmentation
+
+	KmsRenameDisabledSuffix = "-disabled"
 )
 
 type Entropy struct {
@@ -133,7 +137,7 @@ func parseKMS(result *[]*KMS, list *ast.ObjectList, blockName string, maxKMS int
 		name := strings.ToLower(key)
 		// ensure that seals of the same type will have unique names for seal migration
 		if disabled {
-			name += "-disabled"
+			name += KmsRenameDisabledSuffix
 		}
 		if v, ok := m["name"]; ok {
 			name, ok = v.(string)
@@ -216,6 +220,9 @@ func configureWrapper(configKMS *KMS, infoKeys *[]string, info *map[string]strin
 	var err error
 
 	envConfig := GetEnvConfigFunc(configKMS)
+	if len(envConfig) > 0 && configKMS.Config == nil {
+		configKMS.Config = make(map[string]string)
+	}
 	// transit is a special case, because some config values take precedence over env vars
 	if configKMS.Type == wrapping.WrapperTypeTransit.String() {
 		mergeTransitConfig(configKMS.Config, envConfig)
@@ -312,7 +319,7 @@ func GetAliCloudKMSFunc(kms *KMS, opts ...wrapping.Option) (wrapping.Wrapper, ma
 
 var GetAWSKMSFunc = func(kms *KMS, opts ...wrapping.Option) (wrapping.Wrapper, map[string]string, error) {
 	wrapper := awskms.NewWrapper()
-	wrapperInfo, err := wrapper.SetConfig(context.Background(), append(opts, wrapping.WithDisallowEnvVars(true), wrapping.WithConfigMap(kms.Config))...)
+	wrapperInfo, err := wrapper.SetConfig(context.Background(), append(opts, awskms.WithDisallowEnvVars(true), wrapping.WithConfigMap(kms.Config))...)
 	if err != nil {
 		// If the error is any other than logical.KeyNotFoundError, return the error
 		if !errwrap.ContainsType(err, new(logical.KeyNotFoundError)) {
@@ -332,7 +339,7 @@ var GetAWSKMSFunc = func(kms *KMS, opts ...wrapping.Option) (wrapping.Wrapper, m
 
 func GetAzureKeyVaultKMSFunc(kms *KMS, opts ...wrapping.Option) (wrapping.Wrapper, map[string]string, error) {
 	wrapper := azurekeyvault.NewWrapper()
-	wrapperInfo, err := wrapper.SetConfig(context.Background(), append(opts, wrapping.WithDisallowEnvVars(true), wrapping.WithConfigMap(kms.Config))...)
+	wrapperInfo, err := wrapper.SetConfig(context.Background(), append(opts, azurekeyvault.WithDisallowEnvVars(true), wrapping.WithConfigMap(kms.Config))...)
 	if err != nil {
 		// If the error is any other than logical.KeyNotFoundError, return the error
 		if !errwrap.ContainsType(err, new(logical.KeyNotFoundError)) {
@@ -385,7 +392,17 @@ func GetOCIKMSKMSFunc(kms *KMS, opts ...wrapping.Option) (wrapping.Wrapper, map[
 
 var GetTransitKMSFunc = func(kms *KMS, opts ...wrapping.Option) (wrapping.Wrapper, map[string]string, error) {
 	wrapper := transit.NewWrapper()
-	wrapperInfo, err := wrapper.SetConfig(context.Background(), append(opts, wrapping.WithDisallowEnvVars(true), wrapping.WithConfigMap(kms.Config))...)
+	var prefix string
+	if p, ok := kms.Config["key_id_prefix"]; ok {
+		prefix = p
+	} else {
+		prefix = kms.Name
+	}
+	if !strings.HasSuffix(prefix, "/") {
+		prefix = prefix + "/"
+	}
+	wrapperInfo, err := wrapper.SetConfig(context.Background(), append(opts, wrapping.WithDisallowEnvVars(true), wrapping.WithConfigMap(kms.Config),
+		transit.WithKeyIdPrefix(prefix))...)
 	if err != nil {
 		// If the error is any other than logical.KeyNotFoundError, return the error
 		if !errwrap.ContainsType(err, new(logical.KeyNotFoundError)) {

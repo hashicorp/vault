@@ -13,14 +13,29 @@ import Component from '@glimmer/component';
  * ```js
  * <Toolbar>
  *   <ToolbarActions>
- *     <ToolbarSecretLink @params={{array 'vault.cluster.policies.create'}} @type="add">
+ *     <ToolbarSecretLink
+ *       @mode="create"
+ *       @type="add"
+ *       @secret="some-secret"
+ *       @backend="mount-path"
+ *       @queryParams={{hash tab="policy"}}
+ *       @replace={{true}}
+ *       @disabled={{false}}
+ *       data-test-custom-tag
+ *     >
  *       Create policy
  *     </ToolbarSecretLink>
  *   </ToolbarActions>
  * </Toolbar>
  * ```
  *
- * @param type="" {String} - Use "add" to change icon
+ * @param {string} type - use "add" to change icon from "chevron-right" to "plus"
+ * @param {string} mode - *required* passed to secret-link, controls route
+ * @param {string} backend - *required* backend path. Passed to secret-link
+ * @param {string} secret - secret path. Passed to secret-link
+ * @param {boolean} replace - passed to secret-link
+ * @param {boolean} disabled - passed to secret-link
+ * @param {object} queryParams - passed to secret-link
  */
 export default class ToolbarSecretLink extends Component {
   get glyph() {

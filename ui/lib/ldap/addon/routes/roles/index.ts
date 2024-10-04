@@ -1,14 +1,14 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { withConfig } from 'core/decorators/fetch-secrets-engine-config';
 import { hash } from 'rsvp';
 
-import type Store from '@ember-data/store';
+import type StoreService from 'vault/services/store';
 import type SecretMountPath from 'vault/services/secret-mount-path';
 import type Transition from '@ember/routing/transition';
 import type LdapRoleModel from 'vault/models/ldap/role';
@@ -24,23 +24,44 @@ interface LdapRolesRouteModel {
 interface LdapRolesController extends Controller {
   breadcrumbs: Array<Breadcrumb>;
   model: LdapRolesRouteModel;
+  pageFilter: string | undefined;
+  page: number | undefined;
+}
+
+interface LdapRolesRouteParams {
+  page?: string;
+  pageFilter: string;
 }
 
 @withConfig('ldap/config')
 export default class LdapRolesRoute extends Route {
-  @service declare readonly store: Store;
+  @service declare readonly store: StoreService;
   @service declare readonly secretMountPath: SecretMountPath;
 
   declare promptConfig: boolean;
 
-  model() {
+  queryParams = {
+    pageFilter: {
+      refreshModel: true,
+    },
+    page: {
+      refreshModel: true,
+    },
+  };
+
+  model(params: LdapRolesRouteParams) {
     const backendModel = this.modelFor('application') as SecretEngineModel;
     return hash({
       backendModel,
       promptConfig: this.promptConfig,
-      roles: this.store.query(
+      roles: this.store.lazyPaginatedQuery(
         'ldap/role',
-        { backend: backendModel.id },
+        {
+          backend: backendModel.id,
+          page: Number(params.page) || 1,
+          pageFilter: params.pageFilter,
+          responsePath: 'data.keys',
+        },
         { adapterOptions: { showPartialError: true } }
       ),
     });
@@ -54,8 +75,16 @@ export default class LdapRolesRoute extends Route {
     super.setupController(controller, resolvedModel, transition);
 
     controller.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: resolvedModel.backendModel.id },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
+      { label: resolvedModel.backendModel.id, route: 'overview', model: resolvedModel.backend },
+      { label: 'Roles' },
     ];
+  }
+
+  resetController(controller: LdapRolesController, isExiting: boolean) {
+    if (isExiting) {
+      controller.set('pageFilter', undefined);
+      controller.set('page', undefined);
+    }
   }
 }

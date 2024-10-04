@@ -6,6 +6,8 @@ description: The `/sys/config/auditing` endpoint is used to configure auditing s
 
 # `/sys/config/auditing/request-headers`
 
+@include 'alerts/restricted-root.mdx'
+
 The `/sys/config/auditing` endpoint is used to configure auditing settings.
 
 ## Read all audited request headers
@@ -86,7 +88,7 @@ This endpoint enables auditing of a header.
 
 ### Parameters
 
-- `hmac` `(bool: false)` – Specifies if this header's value should be HMAC'ed in
+- `hmac` `(bool: false)` – Specifies if this header's value should be HMAC'd in
   the audit logs.
 
 ### Sample payload

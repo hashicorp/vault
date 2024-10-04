@@ -14,6 +14,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/atomic"
 	"go.uber.org/goleak"
@@ -218,8 +219,11 @@ func TestRateLimitQuota_Allow_WithBlock(t *testing.T) {
 
 func TestRateLimitQuota_Update(t *testing.T) {
 	defer goleak.VerifyNone(t)
-	qm, err := NewManager(logging.NewVaultLogger(log.Trace), nil, metricsutil.BlackholeSink())
+	qm, err := NewManager(logging.NewVaultLogger(log.Trace), nil, metricsutil.BlackholeSink(), true)
 	require.NoError(t, err)
+
+	view := &logical.InmemStorage{}
+	require.NoError(t, qm.Setup(context.Background(), view, nil))
 
 	quota := NewRateLimitQuota("quota1", "", "", "", "", false, time.Second, 0, 10)
 	require.NoError(t, qm.SetQuota(context.Background(), TypeRateLimit.String(), quota, true))

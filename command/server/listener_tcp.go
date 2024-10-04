@@ -12,10 +12,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
-	"github.com/mitchellh/cli"
 )
 
 func tcpListenerFactory(l *configutil.Listener, _ io.Writer, ui cli.Ui) (net.Listener, map[string]string, reloadutil.ReloadFunc, error) {
@@ -63,6 +63,14 @@ func tcpListenerFactory(l *configutil.Listener, _ io.Writer, ui cli.Ui) (net.Lis
 
 		if len(l.XForwardedForAuthorizedAddrs) > 0 {
 			props["x_forwarded_for_reject_not_authorized"] = strconv.FormatBool(l.XForwardedForRejectNotAuthorized)
+		}
+
+		if len(l.XForwardedForAuthorizedAddrs) > 0 {
+			props["x_forwarded_for_client_cert_header"] = fmt.Sprintf("%s", l.XForwardedForClientCertHeader)
+		}
+
+		if len(l.XForwardedForAuthorizedAddrs) > 0 {
+			props["x_forwarded_for_client_cert_header_decoders"] = fmt.Sprintf("%s", l.XForwardedForClientCertHeaderDecoders)
 		}
 	}
 

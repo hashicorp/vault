@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { v4 as uuidv4 } from 'uuid';
 import { click, currentURL, fillIn, typeIn, visit } from '@ember/test-helpers';
@@ -5,10 +10,11 @@ import { click, currentURL, fillIn, typeIn, visit } from '@ember/test-helpers';
 import { setupApplicationTest } from 'vault/tests/helpers';
 import authPage from 'vault/tests/pages/auth';
 import { deleteEngineCmd, mountEngineCmd, runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
-import { personas } from 'vault/tests/helpers/policy-generator/kv';
-import { clearRecords, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
+import { personas } from 'vault/tests/helpers/kv/policy-generator';
+import { clearRecords, writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import { grantAccessForWrite, setupControlGroup } from 'vault/tests/helpers/control-groups';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 /**
  * This test set is for testing the flow for creating new secrets and versions.
@@ -33,7 +39,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
 
   module('admin persona', function (hooks) {
     hooks.beforeEach(async function () {
-      const token = await runCmd(tokenWithPolicyCmd('admin', personas.admin(this.backend)));
+      const token = await runCmd(tokenWithPolicyCmd(`admin-${this.backend}`, personas.admin(this.backend)));
       await authPage.login(token);
       clearRecords(this.store);
       return;
@@ -61,10 +67,12 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(PAGE.detail.createNewVersion);
       await fillIn(FORM.keyInput(), 'bar');
       await click(FORM.cancelBtn);
+      await click(PAGE.secretTab('Secret'));
       assert.dom(PAGE.infoRowValue('foo')).exists('secret is previous value');
       await click(PAGE.detail.createNewVersion);
       await fillIn(FORM.keyInput(), 'bar');
       await click(PAGE.breadcrumbAtIdx(3));
+      await click(PAGE.secretTab('Secret'));
       assert.dom(PAGE.infoRowValue('foo')).exists('secret is previous value');
     });
     test('create & update root secret with default metadata (a)', async function (assert) {
@@ -93,12 +101,15 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await fillIn(FORM.maskedValueInput(), 'partyparty');
       await click(FORM.saveBtn);
 
-      // Details page
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/${encodeURIComponent(secretPath)}/details?version=1`,
-        'Goes to details page after save'
+        `/vault/secrets/${backend}/kv/${encodeURIComponent(secretPath)}`,
+        'Goes to overview after save'
       );
+      // Details page
+      await click(PAGE.secretTab('Secret'));
+      `/vault/secrets/${backend}/kv/${encodeURIComponent(secretPath)}/details?version=1`,
+        'details has version 1 param';
       assert.dom(PAGE.detail.versionTimestamp).includesText('Version 1 created');
       assert.dom(PAGE.infoRow).exists({ count: 1 }, '1 row of data shows');
       assert.dom(PAGE.infoRowValue('api_key')).hasText('***********');
@@ -130,8 +141,12 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await fillIn(FORM.keyInput(1), 'api_url');
       await fillIn(FORM.maskedValueInput(1), 'hashicorp.com');
       await click(FORM.saveBtn);
+      assert
+        .dom(GENERAL.overviewCard.container('Current version'))
+        .hasTextContaining('2', 'Overview shows updated version');
 
       // Back to details page
+      await click(PAGE.secretTab('Secret'));
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/${encodeURIComponent(secretPath)}/details?version=2`
@@ -183,8 +198,14 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await fillIn(`${PAGE.create.metadataSection} ${FORM.valueInput()}`, 'UI');
       // Fill in metadata
       await click(FORM.saveBtn);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/${encodeURIComponent('my/secret')}`,
+        'goes to overview after save'
+      );
 
       // Details
+      await click(PAGE.secretTab('Secret'));
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/${encodeURIComponent('my/secret')}/details?version=1`
@@ -213,7 +234,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('creates a secret at a sub-directory (a)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/app%2F/directory`);
+      await visit(`/vault/secrets/${backend}/kv/list/app/`);
       assert.dom(PAGE.list.item('first')).exists('Lists first sub-secret');
       assert.dom(PAGE.list.item('new')).doesNotExist('Does not show new secret');
       await click(PAGE.list.createSecret);
@@ -226,13 +247,17 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await fillIn(FORM.keyInput(), 'api_key');
       await fillIn(FORM.maskedValueInput(), 'partyparty');
       await click(FORM.saveBtn);
+      assert
+        .dom(GENERAL.overviewCard.container('Current version'))
+        .hasTextContaining('1', 'Overview shows current version');
+      await click(PAGE.secretTab('Secret'));
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/${encodeURIComponent('app/new')}/details?version=1`,
-        'Redirects to detail after save'
+        'Details url has version param'
       );
       await click(PAGE.breadcrumbAtIdx(2));
-      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/app%2F/directory`, 'sub-dir page');
+      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list/app/`, 'sub-dir page');
       assert.dom(PAGE.list.item('new')).exists('Lists new secret in sub-dir');
     });
     test('create new version of secret from older version (a)', async function (assert) {
@@ -264,7 +289,13 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await fillIn(FORM.keyInput(), 'my-key');
       await fillIn(FORM.maskedValueInput(), 'my-value');
       await click(FORM.saveBtn);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/app%2Ffirst`,
+        'goes to overview after save'
+      );
 
+      await click(PAGE.secretTab('Secret'));
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/app%2Ffirst/details?version=3`,
@@ -273,11 +304,48 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(PAGE.infoRowToggleMasked('my-key'));
       assert.dom(PAGE.infoRowValue('my-key')).hasText('my-value', 'has new value');
     });
+
+    // patch is technically enterprise only but stubbing the version so these run on both CE and enterprise
+    test('it patches a secret', async function (assert) {
+      this.owner.lookup('service:version').type = 'enterprise';
+      const patchSecret = 'patch-secret';
+      await writeSecret(this.backend, patchSecret, 'foo', 'bar');
+      assert.dom(GENERAL.overviewCard.content('Subkeys')).hasText('Keys foo');
+
+      await click(GENERAL.overviewCard.actionText('Patch secret'));
+      // edit existing key
+      await click(FORM.patchEdit(0));
+      await fillIn(FORM.valueInput(0), 'newfoo');
+      // add new key
+      await fillIn(FORM.keyInput('new'), 'newkey');
+      await fillIn(FORM.valueInput('new'), 'newvalue');
+      await click(FORM.saveBtn);
+      assert.dom(GENERAL.overviewCard.content('Subkeys')).hasText('Keys foo newkey');
+
+      // check patch updated secret
+      await click(PAGE.secretTab('Secret'));
+      await click(PAGE.infoRowToggleMasked('foo'));
+      assert.dom(PAGE.infoRowValue('foo')).hasText('newfoo', 'has updated value');
+      await click(PAGE.infoRowToggleMasked('newkey'));
+      assert.dom(PAGE.infoRowValue('newkey')).hasText('newvalue', 'has new key/value pair');
+
+      await click(PAGE.detail.patchLatest);
+      await click(FORM.patchDelete());
+      await click(FORM.saveBtn);
+      assert.dom(GENERAL.overviewCard.content('Subkeys')).hasText('Keys newkey');
+      // check patch updated secret
+      await click(PAGE.secretTab('Secret'));
+      await click(PAGE.infoRowToggleMasked('newkey'));
+      assert.dom(PAGE.infoRowValue('foo')).doesNotExist();
+      assert.dom(PAGE.infoRowValue('newkey')).hasText('newvalue', 'has new key/value pair');
+    });
   });
 
   module('data-reader persona', function (hooks) {
     hooks.beforeEach(async function () {
-      const token = await runCmd(tokenWithPolicyCmd('data-reader', personas.dataReader(this.backend)));
+      const token = await runCmd(
+        tokenWithPolicyCmd(`data-reader-${this.backend}`, personas.dataReader(this.backend))
+      );
       await authPage.login(token);
       clearRecords(this.store);
       return;
@@ -337,6 +405,10 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(PAGE.secretTab('Metadata'));
       assert
         .dom(`${PAGE.metadata.customMetadataSection} ${PAGE.emptyStateTitle}`)
+        .hasText('Request custom metadata?');
+      await click(PAGE.metadata.requestData);
+      assert
+        .dom(`${PAGE.metadata.customMetadataSection} ${PAGE.emptyStateTitle}`)
         .hasText('No custom metadata', 'No custom metadata empty state');
       assert
         .dom(`${PAGE.metadata.secretMetadataSection} ${PAGE.emptyStateTitle}`)
@@ -390,7 +462,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('creates a secret at a sub-directory (dr)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/app%2F/directory`);
+      await visit(`/vault/secrets/${backend}/kv/list/app/`);
       assert.dom(PAGE.list.item()).doesNotExist('Does not list any secrets');
       await click(PAGE.list.createSecret);
       assert.strictEqual(
@@ -418,7 +490,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
   module('data-list-reader persona', function (hooks) {
     hooks.beforeEach(async function () {
       const token = await runCmd(
-        tokenWithPolicyCmd('data-list-reader', personas.dataListReader(this.backend))
+        tokenWithPolicyCmd(`data-list-reader-${this.backend}`, personas.dataListReader(this.backend))
       );
       await authPage.login(token);
       clearRecords(this.store);
@@ -482,6 +554,10 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(PAGE.secretTab('Metadata'));
       assert
         .dom(`${PAGE.metadata.customMetadataSection} ${PAGE.emptyStateTitle}`)
+        .hasText('Request custom metadata?');
+      await click(PAGE.metadata.requestData);
+      assert
+        .dom(`${PAGE.metadata.customMetadataSection} ${PAGE.emptyStateTitle}`)
         .hasText('No custom metadata', 'No custom metadata empty state');
       assert
         .dom(`${PAGE.metadata.secretMetadataSection} ${PAGE.emptyStateTitle}`)
@@ -535,7 +611,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('creates a secret at a sub-directory (dlr)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/app%2F/directory`);
+      await visit(`/vault/secrets/${backend}/kv/list/app/`);
       assert.dom(PAGE.list.item()).doesNotExist('Does not list any secrets');
       await click(PAGE.list.createSecret);
       assert.strictEqual(
@@ -563,7 +639,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
   module('metadata-maintainer persona', function (hooks) {
     hooks.beforeEach(async function () {
       const token = await runCmd(
-        tokenWithPolicyCmd('data-list-reader', personas.metadataMaintainer(this.backend))
+        tokenWithPolicyCmd(`data-list-reader-${this.backend}`, personas.metadataMaintainer(this.backend))
       );
       await authPage.login(token);
       clearRecords(this.store);
@@ -704,7 +780,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('creates a secret at a sub-directory (mm)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/app%2F/directory`);
+      await visit(`/vault/secrets/${backend}/kv/list/app/`);
       assert.dom(PAGE.list.item('first')).exists('Lists first sub-secret');
       assert.dom(PAGE.list.item('new')).doesNotExist('Does not show new secret');
       await click(PAGE.list.createSecret);
@@ -759,7 +835,9 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
 
   module('secret-creator persona', function (hooks) {
     hooks.beforeEach(async function () {
-      const token = await runCmd(tokenWithPolicyCmd('secret-creator', personas.secretCreator(this.backend)));
+      const token = await runCmd(
+        tokenWithPolicyCmd(`secret-creator-${this.backend}`, personas.secretCreator(this.backend))
+      );
       await authPage.login(token);
       clearRecords(this.store);
       return;
@@ -788,19 +866,18 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(FORM.cancelBtn);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}/details`,
-        'cancel goes to correct url'
+        `/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}`,
+        'cancel goes to overview'
       );
-      assert.dom(PAGE.list.item()).doesNotExist('list view has no items');
+      await click(PAGE.secretTab('Secret'));
       await click(PAGE.detail.createNewVersion);
       await fillIn(FORM.keyInput(), 'bar');
       await click(PAGE.breadcrumbAtIdx(3));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}/details`,
-        'breadcrumb goes to correct url'
+        `/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}`,
+        'breadcrumb goes to overview'
       );
-      assert.dom(PAGE.list.item()).doesNotExist('list view has no items');
     });
     test('create & update root secret with default metadata (sc)', async function (assert) {
       const backend = this.backend;
@@ -827,13 +904,13 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await fillIn(FORM.keyInput(), 'api_key');
       await fillIn(FORM.maskedValueInput(), 'partyparty');
       await click(FORM.saveBtn);
-
-      // Details page
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/${encodeURIComponent(secretPath)}/details`,
-        'Goes to details page after save'
+        `/vault/secrets/${backend}/kv/${encodeURIComponent(secretPath)}`,
+        'Goes to overview page after save'
       );
+      // Details page
+      await click(PAGE.secretTab('Secret'));
       assert.dom(PAGE.detail.versionTimestamp).doesNotExist('Version created not shown');
       assert.dom(PAGE.infoRow).doesNotExist('does not show data contents');
       assert
@@ -855,20 +932,31 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // Add new version
       await click(PAGE.secretTab('Secret'));
       await click(PAGE.detail.createNewVersion);
+      assert
+        .dom(FORM.noReadAlert)
+        .hasText(
+          'Warning You do not have read permissions for this secret data. Saving will overwrite the existing secret.',
+          'shows alert for no read permissions'
+        );
       assert.dom(FORM.inputByAttr('path')).isDisabled('path input is disabled');
       assert.dom(FORM.inputByAttr('path')).hasValue(secretPath);
       assert.dom(FORM.toggleMetadata).doesNotExist('Does not show metadata toggle when creating new version');
-      assert.dom(FORM.keyInput()).hasValue('', 'row 1 is empty key');
-      assert.dom(FORM.maskedValueInput()).hasValue('', 'row 1 has empty value');
+      assert.dom(FORM.keyInput()).hasValue('', 'Key input has empty value');
+      assert.dom(FORM.maskedValueInput()).hasValue('', 'Val input has empty value');
       await fillIn(FORM.keyInput(), 'api_url');
       await fillIn(FORM.maskedValueInput(), 'hashicorp.com');
       await click(FORM.saveBtn);
-
-      // Back to details page
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/${encodeURIComponent(secretPath)}/details?version=2`,
-        'goes back to details page'
+        `/vault/secrets/${backend}/kv/${encodeURIComponent(secretPath)}`,
+        'goes to overview page'
+      );
+      // Back to details page
+      await click(PAGE.secretTab('Secret'));
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/${encodeURIComponent(secretPath)}/details`,
+        'goes to details page'
       );
       assert.dom(PAGE.detail.versionTimestamp).doesNotExist('Version created does not show');
       assert.dom(PAGE.infoRow).doesNotExist('does not show data contents');
@@ -914,13 +1002,14 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await fillIn(`${PAGE.create.metadataSection} ${FORM.valueInput()}`, 'UI');
       // Fill in metadata
       await click(FORM.saveBtn);
-
-      // Details
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/${encodeURIComponent('my/secret')}/details`,
-        'goes back to details page'
+        `/vault/secrets/${backend}/kv/${encodeURIComponent('my/secret')}`,
+        'goes to overview page'
       );
+
+      // Details
+      await click(PAGE.secretTab('Secret'));
       assert.dom(PAGE.detail.versionTimestamp).doesNotExist('version created not shown');
       assert.dom(PAGE.infoRow).doesNotExist('does not show data contents');
       assert
@@ -941,7 +1030,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('creates a secret at a sub-directory (sc)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/app%2F/directory`);
+      await visit(`/vault/secrets/${backend}/kv/list/app/`);
       assert.dom(PAGE.list.item()).doesNotExist('Does not list any secrets');
       await click(PAGE.list.createSecret);
       assert.strictEqual(
@@ -955,46 +1044,18 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(FORM.saveBtn);
       assert.strictEqual(
         currentURL(),
+        `/vault/secrets/${backend}/kv/${encodeURIComponent('app/new')}`,
+        'Redirects to overview after save'
+      );
+      await click(PAGE.secretTab('Secret'));
+      assert.strictEqual(
+        currentURL(),
         `/vault/secrets/${backend}/kv/${encodeURIComponent('app/new')}/details`,
-        'Redirects to detail after save'
+        'navigates to details'
       );
       await click(PAGE.breadcrumbAtIdx(2));
-      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/app%2F/directory`, 'sub-dir page');
+      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list/app/`, 'sub-dir page');
       assert.dom(PAGE.list.item()).doesNotExist('Does not list any secrets');
-    });
-    test('create new version of secret from older version (sc)', async function (assert) {
-      const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details?version=1`);
-      assert.dom(PAGE.detail.versionDropdown).doesNotExist('version dropdown does not show');
-      assert.dom(PAGE.detail.versionTimestamp).doesNotExist('Version created not shown');
-      await click(PAGE.detail.createNewVersion);
-      assert.strictEqual(
-        currentURL(),
-        `/vault/secrets/${backend}/kv/app%2Ffirst/details/edit?version=1`,
-        'Goes to new version page'
-      );
-      assert
-        .dom(FORM.noReadAlert)
-        .hasText(
-          'Warning You do not have read permissions for this secret data. Saving will overwrite the existing secret.',
-          'shows alert for no read permissions'
-        );
-      assert.dom(FORM.keyInput()).hasValue('', 'Key input has empty value');
-      assert.dom(FORM.maskedValueInput()).hasValue('', 'Val input has empty value');
-
-      await fillIn(FORM.keyInput(), 'my-key');
-      await fillIn(FORM.maskedValueInput(), 'my-value');
-      await click(FORM.saveBtn);
-
-      assert.strictEqual(
-        currentURL(),
-        `/vault/secrets/${backend}/kv/app%2Ffirst/details?version=3`,
-        'redirects to details page'
-      );
-      assert.dom(PAGE.infoRow).doesNotExist('does not show data contents');
-      assert
-        .dom(PAGE.emptyStateTitle)
-        .hasText('You do not have permission to read this secret', 'shows permissions empty state');
     });
   });
 
@@ -1023,7 +1084,11 @@ path "${this.backend}/metadata/*" {
   capabilities = ["list", "read"]
 }
 `;
-      const { userToken } = await setupControlGroup({ userPolicy });
+
+      const { userToken } = await setupControlGroup({
+        userPolicy,
+        backend: this.backend,
+      });
       this.userToken = userToken;
       await authPage.login(userToken);
       clearRecords(this.store);
@@ -1064,11 +1129,12 @@ path "${this.backend}/metadata/*" {
           'shows control group error'
         );
       await grantAccessForWrite({
-        accessor: tokenToUnwrap.accessor,
         token: tokenToUnwrap.token,
+        accessor: tokenToUnwrap.accessor,
         creation_path: `${backend}/data/${secretPath}`,
         originUrl: `/vault/secrets/${backend}/kv/create`,
         userToken: this.userToken,
+        backend: this.backend,
       });
       // In a real scenario the user would stay on page, but in the test
       // we fill in the same info and try again
@@ -1077,12 +1143,13 @@ path "${this.backend}/metadata/*" {
       await fillIn(FORM.maskedValueInput(), 'this too, gonna use the wrapped data');
       await click(FORM.saveBtn);
       assert.strictEqual(this.controlGroup.tokenToUnwrap, null, 'clears tokenToUnwrap after successful save');
-      // Details page
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/${secretPath}/details?version=1`,
-        'Goes to details page after save'
+        `/vault/secrets/${backend}/kv/${secretPath}`,
+        'Goes to overview page after save'
       );
+      // Details page
+      await click(PAGE.secretTab('Secret'));
       assert.dom(PAGE.detail.versionTimestamp).includesText('Version 1 created');
       assert.dom(PAGE.infoRow).exists({ count: 1 }, '1 row of data shows');
       assert.dom(PAGE.infoRowValue('api_key')).hasText('***********');
@@ -1136,6 +1203,7 @@ path "${this.backend}/metadata/*" {
         creation_path: `${backend}/data/${secretPath}`,
         originUrl: `/vault/secrets/${backend}/kv/${secretPath}/details/edit`,
         userToken: this.userToken,
+        backend: this.backend,
       });
       // Remark for unwrap as if we never left the page.
       this.controlGroup.markTokenForUnwrap(tokenToUnwrap.accessor);
@@ -1147,8 +1215,8 @@ path "${this.backend}/metadata/*" {
         null,
         'clears tokenToUnwrap after successful update'
       );
-
       // Back to details page
+      await click(PAGE.secretTab('Secret'));
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/${encodeURIComponent(secretPath)}/details?version=2`

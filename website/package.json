@@ -7,13 +7,13 @@
     "@hashicorp/platform-cli": "^2.6.0",
     "@hashicorp/platform-content-conformance": "^0.0.9",
     "dart-linkcheck": "2.0.15",
-    "next": "^12.3.1",
+    "next": "^14.0.4",
     "prettier": "2.2.1",
     "simple-git-hooks": "^2.6.1"
   },
   "engines": {
-    "npm": ">=7.0.0",
-    "node": ">=12.0.0 <= 16.x"
+    "npm": ">=9.6.7",
+    "node": ">=18.17.0 <= 20.x"
   },
   "repository": {
     "type": "git",

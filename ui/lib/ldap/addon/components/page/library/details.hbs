@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
@@ -12,18 +17,22 @@
 <div class="tabs-container box is-bottomless is-marginless is-paddingless">
   <nav class="tabs" aria-label="ldap tabs">
     <ul>
-      <LinkTo @route="libraries.library.details.accounts" data-test-tab="accounts">Accounts</LinkTo>
-      <LinkTo @route="libraries.library.details.configuration" data-test-tab="config">Configuration</LinkTo>
+      <li><LinkTo @route="libraries.library.details.accounts" data-test-tab="accounts">Accounts</LinkTo></li>
+      <li><LinkTo @route="libraries.library.details.configuration" data-test-tab="config">Configuration</LinkTo></li>
     </ul>
   </nav>
 </div>
 
 <Toolbar>
-  <ToolbarActions>
+  <ToolbarActions aria-label="actions for library {{@model.id}}">
     {{#if @model.canDelete}}
-      <ConfirmAction @buttonClasses="toolbar-link" @onConfirmAction={{this.delete}} data-test-delete>
-        Delete library
-      </ConfirmAction>
+      <ConfirmAction
+        @buttonText="Delete library"
+        class="toolbar-button"
+        @buttonColor="secondary"
+        @onConfirmAction={{this.delete}}
+        data-test-delete
+      />
       {{#if @model.canEdit}}
         <div class="toolbar-separator"></div>
       {{/if}}

@@ -195,7 +195,7 @@ $ vault write auth/ldap/config \
 - CA Certificate stored in file named `ldap_ca_cert.pem`
 - Server does not allow anonymous binds for performing user search.
 - Bind account used for searching is `cn=vault,ou=users,dc=example,dc=com` with password `My$ecrt3tP4ss`.
-- User objects are under the `ou=Users,dc-example,dc=com` organizational unit.
+- User objects are under the `ou=Users,dc=example,dc=com` organizational unit.
 - Username passed to vault when authenticating maps to the `sAMAccountName` attribute.
 - Group membership will be resolved via the `memberOf` attribute of _user_ objects. That search will begin under `ou=Users,dc=example,dc=com`.
 
@@ -273,6 +273,10 @@ default, foobar, zoobar
 ## Note on policy mapping
 
 It should be noted that user -> policy mapping happens at token creation time. And changes in group membership on the LDAP server will not affect tokens that have already been provisioned. To see these changes, old tokens should be revoked and the user should be asked to reauthenticate.
+
+## User lockout
+
+@include 'user-lockout.mdx'
 
 ## API
 

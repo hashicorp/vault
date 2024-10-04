@@ -55,9 +55,9 @@ Vagrantfile
 !.release/ci.hcl
 !.release/security-scan.hcl
 !.release/linux/package/etc/vault.d/vault.hcl
-!command/agent/config/test-fixtures/*.hcl
-!command/server/test-fixtures/**/*.hcl
 !enos/**/*.hcl
+!**/test-fixtures/**/*.hcl
+!**/testdata/*.hcl
 
 # Enos
 .enos
@@ -71,6 +71,9 @@ enos/**/kubeconfig
 .DS_Store
 .idea
 .vscode
+
+# VSCode debugger executable
+__debug_bin*
 
 dist/*
 

@@ -1,0 +1,8 @@
+### vault.wal.write_controller.reject_fraction ((#vault-wal-write_controller-reject_fraction))
+
+Metric type | Value   | Description
+----------- | ------- | -----------
+gauge       | number  | The estimated fraction of write requests that must be rejected to maintain cluster stability.
+
+The [write controller](/vault/docs/concepts/adaptive-overload-protection) reject
+fraction is an estimate between 0 and 1.

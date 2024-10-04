@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 import ApplicationAdapter from '../application';
+import timestamp from 'core/utils/timestamp';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 export default class PkiTidyAdapter extends ApplicationAdapter {
@@ -19,9 +20,12 @@ export default class PkiTidyAdapter extends ApplicationAdapter {
     if (tidyType === 'auto') {
       throw new Error('Auto tidy type models are never new, please use findRecord');
     }
-
+    const id = `${backend}-${timestamp.now().toISOString()}`;
     const url = `${this._baseUrl(backend)}/tidy`;
-    return this.ajax(url, 'POST', { data: this.serialize(snapshot, tidyType) });
+    return this.ajax(url, 'POST', { data: this.serialize(snapshot, tidyType) }).then((resp) => {
+      resp.id = id;
+      return resp;
+    });
   }
 
   // saving auto-tidy config POST requests will always update

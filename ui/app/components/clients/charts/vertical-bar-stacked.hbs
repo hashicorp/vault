@@ -1,0 +1,123 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<div class="lineal-chart" data-test-chart={{or @chartTitle "stacked vertical bar chart"}}>
+  <Lineal::Fluid as |width|>
+    {{#let
+      (scale-band domain=this.xBounds range=(array 0 width) padding=0.1)
+      (scale-linear range=(array this.chartHeight 0) domain=this.yBounds)
+      (scale-linear range=(array 0 this.chartHeight) domain=this.yBounds)
+      as |xScale yScale hScale|
+    }}
+      <svg width={{width}} height={{this.chartHeight}}>
+        <title>{{@chartTitle}}</title>
+
+        {{#if (and xScale.isValid yScale.isValid)}}
+          <Lineal::Axis
+            @includeDomain={{false}}
+            @orientation="left"
+            @scale={{yScale}}
+            @tickCount="4"
+            @tickFormat={{this.formatTicksY}}
+            @tickPadding={{10}}
+            @tickSizeInner={{concat "-" width}}
+            class="lineal-axis"
+            data-test-y-axis
+          />
+          <Lineal::Axis
+            @includeDomain={{false}}
+            @orientation="bottom"
+            @scale={{xScale}}
+            @tickFormat={{this.formatTicksX}}
+            @tickPadding={{10}}
+            @tickSize="0"
+            class="lineal-axis"
+            transform="translate(0,{{yScale.range.min}})"
+            data-test-x-axis
+          />
+        {{/if}}
+
+        <Lineal::VBars
+          @data={{this.chartData}}
+          @x="timestamp"
+          @y="counts"
+          @width={{this.barWidth}}
+          @xScale={{xScale}}
+          @yScale={{yScale}}
+          @color="clientType"
+          @colorScale="blue-bar"
+          transform="translate({{this.barOffset xScale.bandwidth}},0)"
+          data-test-vertical-bar
+        />
+
+        {{! TOOLTIP target rectangles }}
+        {{#if (and xScale.isValid yScale.isValid)}}
+          {{#each this.aggregatedData as |d|}}
+            <rect
+              role="button"
+              aria-label="Show exact counts for {{d.legendX}}"
+              x="0"
+              y="0"
+              height={{this.chartHeight}}
+              width={{xScale.bandwidth}}
+              fill="transparent"
+              stroke="transparent"
+              transform="translate({{xScale.compute d.x}})"
+              {{on "mouseover" (fn (mut this.activeDatum) d)}}
+              {{on "mouseout" (fn (mut this.activeDatum) null)}}
+              data-test-interactive-area={{d.x}}
+            />
+          {{/each}}
+        {{/if}}
+      </svg>
+
+      {{#if this.activeDatum}}
+        <div
+          class="lineal-tooltip-position chart-tooltip"
+          role="status"
+          {{style
+            --x=(this.tooltipX (xScale.compute this.activeDatum.x) xScale.bandwidth)
+            --y=(this.tooltipY (hScale.compute this.activeDatum.y))
+          }}
+        >
+          <div data-test-tooltip>
+            <p class="bold">{{this.activeDatum.legendX}}</p>
+            {{#each this.activeDatum.legendY as |stat|}}
+              <p>{{stat}}</p>
+            {{/each}}
+          </div>
+          <div class="chart-tooltip-arrow"></div>
+        </div>
+      {{/if}}
+
+    {{/let}}
+  </Lineal::Fluid>
+</div>
+
+{{#if @showTable}}
+  <details data-test-underlying-data>
+    <summary>{{@chartTitle}} data</summary>
+    <Hds::Table @caption="Underlying data">
+      <:head as |H|>
+        <H.Tr>
+          <H.Th>Timestamp</H.Th>
+          {{#each this.dataKeys as |key|}}
+            <H.Th>{{humanize key}}</H.Th>
+          {{/each}}
+        </H.Tr>
+      </:head>
+      <:body as |B|>
+        {{#each @data as |row|}}
+          <B.Tr>
+            <B.Td>{{row.timestamp}}</B.Td>
+            {{#each this.dataKeys as |key|}}
+              <B.Td>{{or (get row key) "-"}}</B.Td>
+            {{/each}}
+          </B.Tr>
+        {{/each}}
+      </:body>
+    </Hds::Table>
+  </details>
+{{/if}}

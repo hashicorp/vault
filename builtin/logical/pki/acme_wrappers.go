@@ -11,17 +11,19 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
 type acmeContext struct {
+	issuing.IssuerRoleContext
+
 	// baseUrl is the combination of the configured cluster local URL and the acmePath up to /acme/
 	baseUrl    *url.URL
 	clusterUrl *url.URL
 	sc         *storageContext
-	role       *roleEntry
-	issuer     *issuerEntry
+	acmeState  *acmeState
 	// acmeDirectory is a string that can distinguish the various acme directories we have configured
 	// if something needs to remain locked into a directory path structure.
 	acmeDirectory string
@@ -31,7 +33,7 @@ type acmeContext struct {
 }
 
 func (c acmeContext) getAcmeState() *acmeState {
-	return c.sc.Backend.acmeState
+	return c.acmeState
 }
 
 type (
@@ -109,7 +111,7 @@ func (b *backend) acmeWrapper(opts acmeWrapperOpts, op acmeOperation) framework.
 	return acmeErrorWrapper(func(ctx context.Context, r *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		sc := b.makeStorageContext(ctx, r.Storage)
 
-		config, err := sc.Backend.acmeState.getConfigWithUpdate(sc)
+		config, err := b.GetAcmeState().getConfigWithUpdate(sc)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch ACME configuration: %w", err)
 		}
@@ -124,7 +126,7 @@ func (b *backend) acmeWrapper(opts acmeWrapperOpts, op acmeOperation) framework.
 			return nil, ErrAcmeDisabled
 		}
 
-		if b.useLegacyBundleCaStorage() {
+		if b.UseLegacyBundleCaStorage() {
 			return nil, fmt.Errorf("%w: Can not perform ACME operations until migration has completed", ErrServerInternal)
 		}
 
@@ -143,7 +145,7 @@ func (b *backend) acmeWrapper(opts acmeWrapperOpts, op acmeOperation) framework.
 			return nil, err
 		}
 
-		isCiepsEnabled, ciepsPolicy, err := getCiepsAcmeSettings(sc, opts, config, data)
+		isCiepsEnabled, ciepsPolicy, err := getCiepsAcmeSettings(b, sc, opts, config, data)
 		if err != nil {
 			return nil, err
 		}
@@ -159,15 +161,15 @@ func (b *backend) acmeWrapper(opts acmeWrapperOpts, op acmeOperation) framework.
 		}
 
 		acmeCtx := &acmeContext{
-			baseUrl:       acmeBaseUrl,
-			clusterUrl:    clusterBase,
-			sc:            sc,
-			role:          role,
-			issuer:        issuer,
-			acmeDirectory: acmeDirectory,
-			eabPolicy:     eabPolicy,
-			ciepsPolicy:   ciepsPolicy,
-			runtimeOpts:   runtimeOpts,
+			IssuerRoleContext: issuing.NewIssuerRoleContext(ctx, issuer, role),
+			baseUrl:           acmeBaseUrl,
+			clusterUrl:        clusterBase,
+			sc:                sc,
+			acmeState:         b.acmeState,
+			acmeDirectory:     acmeDirectory,
+			eabPolicy:         eabPolicy,
+			ciepsPolicy:       ciepsPolicy,
+			runtimeOpts:       runtimeOpts,
 		}
 
 		return op(acmeCtx, r, data)
@@ -180,7 +182,7 @@ func (b *backend) acmeWrapper(opts acmeWrapperOpts, op acmeOperation) framework.
 // it does not enforce the account being in a valid state nor existing.
 func (b *backend) acmeParsedWrapper(opt acmeWrapperOpts, op acmeParsedOperation) framework.OperationFunc {
 	return b.acmeWrapper(opt, func(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData) (*logical.Response, error) {
-		user, data, err := b.acmeState.ParseRequestParams(acmeCtx, r, fields)
+		user, data, err := b.GetAcmeState().ParseRequestParams(acmeCtx, r, fields)
 		if err != nil {
 			return nil, err
 		}
@@ -194,7 +196,7 @@ func (b *backend) acmeParsedWrapper(opt acmeWrapperOpts, op acmeParsedOperation)
 			}
 
 			if _, ok := resp.Headers["Replay-Nonce"]; !ok {
-				nonce, _, err := b.acmeState.GetNonce()
+				nonce, _, err := b.GetAcmeState().GetNonce()
 				if err != nil {
 					return nil, err
 				}
@@ -255,8 +257,7 @@ func (b *backend) acmeParsedWrapper(opt acmeWrapperOpts, op acmeParsedOperation)
 // request has a proper signature for an existing account, and that account is
 // in a valid status. It passes to the operation a decoded form of the request
 // parameters as well as the ACME account the request is for.
-func (b *backend) acmeAccountRequiredWrapper(opt acmeWrapperOpts, op acmeAccountRequiredOperation) framework.
-	OperationFunc {
+func (b *backend) acmeAccountRequiredWrapper(opt acmeWrapperOpts, op acmeAccountRequiredOperation) framework.OperationFunc {
 	return b.acmeParsedWrapper(opt, func(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, uc *jwsCtx, data map[string]interface{}) (*logical.Response, error) {
 		if !uc.Existing {
 			return nil, fmt.Errorf("cannot process request without a 'kid': %w", ErrMalformed)
@@ -320,7 +321,7 @@ func getBasePathFromClusterConfig(sc *storageContext) (*url.URL, error) {
 	return baseUrl, nil
 }
 
-func getAcmeIssuer(sc *storageContext, issuerName string) (*issuerEntry, error) {
+func getAcmeIssuer(sc *storageContext, issuerName string) (*issuing.IssuerEntry, error) {
 	if issuerName == "" {
 		issuerName = defaultRef
 	}
@@ -334,7 +335,7 @@ func getAcmeIssuer(sc *storageContext, issuerName string) (*issuerEntry, error) 
 		return nil, fmt.Errorf("issuer failed to load: %w", err)
 	}
 
-	if issuer.Usage.HasUsage(IssuanceUsage) && len(issuer.KeyID) > 0 {
+	if issuer.Usage.HasUsage(issuing.IssuanceUsage) && len(issuer.KeyID) > 0 {
 		return issuer, nil
 	}
 
@@ -358,12 +359,12 @@ func getAcmeDirectory(r *logical.Request) (string, error) {
 	return strings.TrimLeft(acmePath[0:lastIndex]+"/acme/", "/"), nil
 }
 
-func getAcmeRoleAndIssuer(sc *storageContext, data *framework.FieldData, config *acmeConfigEntry) (*roleEntry, *issuerEntry, error) {
+func getAcmeRoleAndIssuer(sc *storageContext, data *framework.FieldData, config *acmeConfigEntry) (*issuing.RoleEntry, *issuing.IssuerEntry, error) {
 	requestedIssuer := getRequestedAcmeIssuerFromPath(data)
 	requestedRole := getRequestedAcmeRoleFromPath(data)
 	issuerToLoad := requestedIssuer
 
-	var role *roleEntry
+	var role *issuing.RoleEntry
 	var err error
 
 	if len(requestedRole) == 0 { // Default Directory
@@ -375,11 +376,9 @@ func getAcmeRoleAndIssuer(sc *storageContext, data *framework.FieldData, config 
 		case Forbid:
 			return nil, nil, fmt.Errorf("%w: default directory not allowed by ACME policy", ErrServerInternal)
 		case SignVerbatim, ExternalPolicy:
-			role = buildSignVerbatimRoleWithNoData(&roleEntry{
-				Issuer:  requestedIssuer,
-				NoStore: false,
-				Name:    requestedRole,
-			})
+			role = issuing.SignVerbatimRoleWithOpts(
+				issuing.WithIssuer(requestedIssuer),
+				issuing.WithNoStore(false))
 		case Role:
 			role, err = getAndValidateAcmeRole(sc, extraInfo)
 			if err != nil {
@@ -455,9 +454,9 @@ func getAcmeRoleAndIssuer(sc *storageContext, data *framework.FieldData, config 
 	return role, issuer, nil
 }
 
-func getAndValidateAcmeRole(sc *storageContext, requestedRole string) (*roleEntry, error) {
+func getAndValidateAcmeRole(sc *storageContext, requestedRole string) (*issuing.RoleEntry, error) {
 	var err error
-	role, err := sc.Backend.getRole(sc.Context, sc.Storage, requestedRole)
+	role, err := sc.GetRole(requestedRole)
 	if err != nil {
 		return nil, fmt.Errorf("%w: err loading role", ErrServerInternal)
 	}
@@ -491,14 +490,6 @@ func getRequestedAcmeIssuerFromPath(data *framework.FieldData) string {
 	return requestedIssuer
 }
 
-func getRequestedPolicyFromPath(data *framework.FieldData) string {
-	requestedPolicy := ""
-	if requestedPolicyRaw, present := data.GetOk("policy"); present {
-		requestedPolicy = requestedPolicyRaw.(string)
-	}
-	return requestedPolicy
-}
-
 func isAcmeDisabled(sc *storageContext, config *acmeConfigEntry, policy EabPolicy) bool {
 	if !config.Enabled {
 		return true
@@ -506,7 +497,7 @@ func isAcmeDisabled(sc *storageContext, config *acmeConfigEntry, policy EabPolic
 
 	disableAcme, nonFatalErr := isPublicACMEDisabledByEnv()
 	if nonFatalErr != nil {
-		sc.Backend.Logger().Warn(fmt.Sprintf("could not parse env var '%s'", disableAcmeEnvVar), "error", nonFatalErr)
+		sc.Logger().Warn(fmt.Sprintf("could not parse env var '%s'", disableAcmeEnvVar), "error", nonFatalErr)
 	}
 
 	// The OS environment if true will override any configuration option.

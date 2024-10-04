@@ -1,11 +1,11 @@
 .PHONY: default
-default: check-fmt
+default: check-fmt shellcheck
 
 .PHONY: check-fmt
-check-fmt: check-fmt-enos check-fmt-modules
+check-fmt: check-fmt-enos check-fmt-modules check-shfmt
 
 .PHONY: fmt
-fmt: fmt-enos fmt-modules
+fmt: fmt-enos fmt-modules shfmt
 
 .PHONY: check-fmt-enos
 check-fmt-enos:
@@ -25,7 +25,19 @@ fmt-modules:
 
 .PHONY: validate-enos
 validate-enos:
-	enos scenario validate
+	enos scenario validate --timeout 30m0s
 
 .PHONY: lint
-lint: check-fmt validate-enos
+lint: check-fmt check-fmt-modules check-shfmt shellcheck validate-enos
+
+.PHONY: shellcheck
+shellcheck:
+	find ./modules/ -type f -name '*.sh' | xargs shellcheck
+
+.PHONY: shfmt
+shfmt:
+	find ./modules/ -type f -name '*.sh' | xargs shfmt -l -w -i 2 -bn -ci -kp -sr
+
+.PHONY: check-shfmt
+check-shfmt:
+	find ./modules/ -type f -name '*.sh' | xargs shfmt -l -d -i 2 -bn -ci -kp -sr

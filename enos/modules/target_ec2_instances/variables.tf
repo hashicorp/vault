@@ -6,12 +6,6 @@ variable "ami_id" {
   type        = string
 }
 
-variable "awskms_unseal_key_arn" {
-  type        = string
-  description = "The AWSKMS key ARN if using the awskms unseal method. If specified the instances will be granted kms permissions to the key"
-  default     = null
-}
-
 variable "cluster_name" {
   type        = string
   description = "A unique cluster identifier"
@@ -28,6 +22,21 @@ variable "common_tags" {
   description = "Common tags for cloud resources"
   type        = map(string)
   default     = { "Project" : "vault-ci" }
+}
+
+variable "ports_ingress" {
+  description = "Ports mappings to allow for ingress"
+  type = list(object({
+    description = string
+    port        = number
+    protocol    = string
+  }))
+}
+
+variable "disable_selinux" {
+  description = "Optionally disable SELinux for certain distros/versions"
+  type        = bool
+  default     = true
 }
 
 variable "instance_count" {
@@ -51,6 +60,12 @@ variable "instance_types" {
 variable "project_name" {
   description = "A unique project name"
   type        = string
+}
+
+variable "seal_key_names" {
+  type        = list(string)
+  description = "The key management seal key names"
+  default     = []
 }
 
 variable "ssh_allow_ips" {

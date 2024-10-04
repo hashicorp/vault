@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
 
 import type {
@@ -5,9 +10,11 @@ import type {
   LdapDynamicRoleCredentials,
 } from 'ldap/routes/roles/role/credentials';
 import { Breadcrumb } from 'vault/vault/app-types';
+import type AdapterError from 'ember-data/adapter'; // eslint-disable-line ember/use-ember-data-rfc-395-imports
 
 interface Args {
   credentials: LdapStaticRoleCredentials | LdapDynamicRoleCredentials;
+  error: AdapterError;
   breadcrumbs: Array<Breadcrumb>;
 }
 

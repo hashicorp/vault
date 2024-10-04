@@ -1,0 +1,18 @@
+{
+  "source": {
+    "includePattern": ".+\\.(js|ts)(doc|x)?$",
+    "excludePattern": ".+\\.(test|spec).(js|ts)"
+  },
+  "plugins": ["plugins/markdown", "node_modules/jsdoc-babel"],
+  "babel": {
+    "extensions": ["ts", "tsx", "js"],
+    "ignore": ["**/*.(test|spec).ts"],
+    "babelrc": false,
+    "presets": [["@babel/preset-env", { "targets": { "node": true } }], "@babel/preset-typescript"],
+    "plugins": [
+      "@babel/proposal-class-properties",
+      "@babel/proposal-object-rest-spread",
+      ["@babel/plugin-proposal-decorators", { "decoratorsBeforeExport": true }]
+    ]
+  }
+}

@@ -5,27 +5,12 @@
 
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
-import { sanitizePath, ensureTrailingSlash } from 'vault/services/console';
 import sinon from 'sinon';
 
 module('Unit | Service | console', function (hooks) {
   setupTest(hooks);
   hooks.beforeEach(function () {});
   hooks.afterEach(function () {});
-
-  test('#sanitizePath', function (assert) {
-    assert.strictEqual(
-      sanitizePath(' /foo/bar/baz/ '),
-      'foo/bar/baz',
-      'removes spaces and slashs on either side'
-    );
-    assert.strictEqual(sanitizePath('//foo/bar/baz/'), 'foo/bar/baz', 'removes more than one slash');
-  });
-
-  test('#ensureTrailingSlash', function (assert) {
-    assert.strictEqual(ensureTrailingSlash('foo/bar'), 'foo/bar/', 'adds trailing slash');
-    assert.strictEqual(ensureTrailingSlash('baz/'), 'baz/', 'keeps trailing slash if there is one');
-  });
 
   const testCases = [
     {

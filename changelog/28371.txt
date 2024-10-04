@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix UI improperly checking capabilities for enabling performance and dr replication
+```

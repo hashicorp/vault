@@ -4,7 +4,7 @@
 ~}}
 
 {{#if (eq this.model.section "options")}}
-  {{auth-config-form/options this.model.model}}
+  <AuthConfigForm::Options @model={{this.model.model}} />
 {{else}}
-  {{auth-config-form/config this.model.model}}
+  <AuthConfigForm::Config @model={{this.model.model}} />
 {{/if}}

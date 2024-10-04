@@ -8,34 +8,18 @@ import Component from '@glimmer/component';
 /**
  * @module PolicyExample
  * The PolicyExample component receives a policy type ('acl', 'rgp', or 'egp') and renders a copyable policy example of
- * that type using the <JsonEditor> component. Inside a modal, the PolicyExample component must be wrapped in a conditional
- * (example below), otherwise the <JsonEditor> value won't render until it's focused.
+ * that type using the JsonEditor component. Inside a modal, the PolicyExample component must be wrapped in a conditional
+ * (example below), otherwise the JsonEditor value won't render until it's focused.
  *
  * @example
- *  <PolicyExample
- *    @policyType={{@model.policyType}}
- *  />
+ * <PolicyExample @policyType="acl" @container="#search-select-modal" />
+ * @example
+ * <PolicyExample @policyType="rgp" />
+ * @example
+ * <PolicyExample @policyType="egp" />
  *
- * @example (in modal)
- *  <Modal
- *    @onClose={{fn (mut this.showTemplateModal) false}}
- *    @isActive={{this.showTemplateModal}}
- *  >
- *    <section class="modal-card-body">
- *      {{! code-mirror modifier does not render value initially until focus event fires }}
- *      {{! wait until the Modal is rendered and then show the PolicyExample (contains JsonEditor) }}
- *      {{#if this.showTemplateModal}}
- *        <PolicyExample @policyType={{@model.policyType}}/>
- *      {{/if}}
- *    </section>
- *    <div class="modal-card-head has-border-top-light">
- *      <button type="button" class="button" {{on "click" (fn (mut this.showTemplateModal) false)}} data-test-close-modal>
- *        Close
- *      </button>
- *    </div>
- *  </Modal>
- * ```
  * @param {string} policyType - policy type to decide which template to render; can either be "acl" or "rgp"
+ * @param {string} container - selector for the container the example renders inside, passed to the copy button in JsonEditor
  */
 
 export default class PolicyExampleComponent extends Component {

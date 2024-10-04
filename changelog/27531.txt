@@ -1,0 +1,5 @@
+```release-note:bug
+core/audit: Audit logging a Vault request/response checks if the existing context 
+is cancelled and will now use a new context with a 5 second timeout.
+If the existing context is cancelled a new context, will be used.
+```

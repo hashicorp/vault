@@ -19,7 +19,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
+	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
@@ -37,7 +41,7 @@ type ocspRespInfo struct {
 	serialNumber      *big.Int
 	ocspStatus        int
 	revocationTimeUTC *time.Time
-	issuerID          issuerID
+	issuerID          issuing.IssuerID
 }
 
 // These response variables should not be mutated, instead treat them as constants
@@ -155,7 +159,7 @@ func buildOcspPostWithPath(b *backend, pattern string, displayAttrs *framework.D
 
 func (b *backend) ocspHandler(ctx context.Context, request *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	sc := b.makeStorageContext(ctx, request.Storage)
-	cfg, err := b.crlBuilder.getConfigWithUpdate(sc)
+	cfg, err := b.CrlBuilder().GetConfigWithUpdate(sc)
 	if err != nil || cfg.OcspDisable || (isUnifiedOcspPath(request) && !cfg.UnifiedCRL) {
 		return OcspUnauthorizedResponse, nil
 	}
@@ -174,7 +178,7 @@ func (b *backend) ocspHandler(ctx context.Context, request *logical.Request, dat
 
 	ocspStatus, err := getOcspStatus(sc, ocspReq, useUnifiedStorage)
 	if err != nil {
-		return logAndReturnInternalError(b, err), nil
+		return logAndReturnInternalError(b.Logger(), err), nil
 	}
 
 	caBundle, issuer, err := lookupOcspIssuer(sc, ocspReq, ocspStatus.issuerID)
@@ -192,12 +196,12 @@ func (b *backend) ocspHandler(ctx context.Context, request *logical.Request, dat
 			// https://www.rfc-editor.org/rfc/rfc5019#section-2.2.3
 			return OcspUnauthorizedResponse, nil
 		}
-		return logAndReturnInternalError(b, err), nil
+		return logAndReturnInternalError(b.Logger(), err), nil
 	}
 
 	byteResp, err := genResponse(cfg, caBundle, ocspStatus, ocspReq.HashAlgorithm, issuer.RevocationSigAlg)
 	if err != nil {
-		return logAndReturnInternalError(b, err), nil
+		return logAndReturnInternalError(b.Logger(), err), nil
 	}
 
 	return &logical.Response{
@@ -209,7 +213,7 @@ func (b *backend) ocspHandler(ctx context.Context, request *logical.Request, dat
 	}, nil
 }
 
-func canUseUnifiedStorage(req *logical.Request, cfg *crlConfig) bool {
+func canUseUnifiedStorage(req *logical.Request, cfg *pki_backend.CrlConfig) bool {
 	if isUnifiedOcspPath(req) {
 		return true
 	}
@@ -223,13 +227,13 @@ func isUnifiedOcspPath(req *logical.Request) bool {
 	return strings.HasPrefix(req.Path, "unified-ocsp")
 }
 
-func generateUnknownResponse(cfg *crlConfig, sc *storageContext, ocspReq *ocsp.Request) *logical.Response {
+func generateUnknownResponse(cfg *pki_backend.CrlConfig, sc *storageContext, ocspReq *ocsp.Request) *logical.Response {
 	// Generate an Unknown OCSP response, signing with the default issuer from the mount as we did
 	// not match the request's issuer. If no default issuer can be used, return with Unauthorized as there
 	// isn't much else we can do at this point.
 	config, err := sc.getIssuersConfig()
 	if err != nil {
-		return logAndReturnInternalError(sc.Backend, err)
+		return logAndReturnInternalError(sc.Logger(), err)
 	}
 
 	if config.DefaultIssuerId == "" {
@@ -244,10 +248,10 @@ func generateUnknownResponse(cfg *crlConfig, sc *storageContext, ocspReq *ocsp.R
 			// no way to sign a response so Unauthorized it is.
 			return OcspUnauthorizedResponse
 		}
-		return logAndReturnInternalError(sc.Backend, err)
+		return logAndReturnInternalError(sc.Logger(), err)
 	}
 
-	if !issuer.Usage.HasUsage(OCSPSigningUsage) {
+	if !issuer.Usage.HasUsage(issuing.OCSPSigningUsage) {
 		// If we don't have any issuers or default issuers set, no way to sign a response so Unauthorized it is.
 		return OcspUnauthorizedResponse
 	}
@@ -259,7 +263,7 @@ func generateUnknownResponse(cfg *crlConfig, sc *storageContext, ocspReq *ocsp.R
 
 	byteResp, err := genResponse(cfg, caBundle, info, ocspReq.HashAlgorithm, issuer.RevocationSigAlg)
 	if err != nil {
-		return logAndReturnInternalError(sc.Backend, err)
+		return logAndReturnInternalError(sc.Logger(), err)
 	}
 
 	return &logical.Response{
@@ -312,12 +316,12 @@ func fetchDerEncodedRequest(request *logical.Request, data *framework.FieldData)
 	}
 }
 
-func logAndReturnInternalError(b *backend, err error) *logical.Response {
+func logAndReturnInternalError(logger hclog.Logger, err error) *logical.Response {
 	// Since OCSP might be a high traffic endpoint, we will log at debug level only
 	// any internal errors we do get. There is no way for us to return to the end-user
 	// errors, so we rely on the log statement to help in debugging possible
 	// issues in the field.
-	b.Logger().Debug("OCSP internal error", "error", err)
+	logger.Debug("OCSP internal error", "error", err)
 	return OcspInternalErrorResponse
 }
 
@@ -333,7 +337,7 @@ func getOcspStatus(sc *storageContext, ocspReq *ocsp.Request, useUnifiedStorage 
 	}
 
 	if revEntryRaw != nil {
-		var revEntry revocationInfo
+		var revEntry revocation.RevocationInfo
 		if err := revEntryRaw.DecodeJSON(&revEntry); err != nil {
 			return nil, err
 		}
@@ -358,7 +362,7 @@ func getOcspStatus(sc *storageContext, ocspReq *ocsp.Request, useUnifiedStorage 
 	return &info, nil
 }
 
-func lookupOcspIssuer(sc *storageContext, req *ocsp.Request, optRevokedIssuer issuerID) (*certutil.ParsedCertBundle, *issuerEntry, error) {
+func lookupOcspIssuer(sc *storageContext, req *ocsp.Request, optRevokedIssuer issuing.IssuerID) (*certutil.ParsedCertBundle, *issuing.IssuerEntry, error) {
 	reqHash := req.HashAlgorithm
 	if !reqHash.Available() {
 		return nil, nil, x509.ErrUnsupportedAlgorithm
@@ -395,7 +399,7 @@ func lookupOcspIssuer(sc *storageContext, req *ocsp.Request, optRevokedIssuer is
 		}
 
 		if matches {
-			if !issuer.Usage.HasUsage(OCSPSigningUsage) {
+			if !issuer.Usage.HasUsage(issuing.OCSPSigningUsage) {
 				matchedButNoUsage = true
 				// We found a matching issuer, but it's not allowed to sign the
 				// response, there might be another issuer that we rotated
@@ -415,7 +419,7 @@ func lookupOcspIssuer(sc *storageContext, req *ocsp.Request, optRevokedIssuer is
 	return nil, nil, ErrUnknownIssuer
 }
 
-func getOcspIssuerParsedBundle(sc *storageContext, issuerId issuerID) (*certutil.ParsedCertBundle, *issuerEntry, error) {
+func getOcspIssuerParsedBundle(sc *storageContext, issuerId issuing.IssuerID) (*certutil.ParsedCertBundle, *issuing.IssuerEntry, error) {
 	issuer, bundle, err := sc.fetchCertBundleByIssuerId(issuerId, true)
 	if err != nil {
 		switch err.(type) {
@@ -432,7 +436,7 @@ func getOcspIssuerParsedBundle(sc *storageContext, issuerId issuerID) (*certutil
 		return nil, nil, ErrIssuerHasNoKey
 	}
 
-	caBundle, err := parseCABundle(sc.Context, sc.Backend, bundle)
+	caBundle, err := parseCABundle(sc.Context, sc.GetPkiManagedView(), bundle)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -440,13 +444,13 @@ func getOcspIssuerParsedBundle(sc *storageContext, issuerId issuerID) (*certutil
 	return caBundle, issuer, nil
 }
 
-func lookupIssuerIds(sc *storageContext, optRevokedIssuer issuerID) ([]issuerID, error) {
+func lookupIssuerIds(sc *storageContext, optRevokedIssuer issuing.IssuerID) ([]issuing.IssuerID, error) {
 	if optRevokedIssuer != "" {
-		return []issuerID{optRevokedIssuer}, nil
+		return []issuing.IssuerID{optRevokedIssuer}, nil
 	}
 
-	if sc.Backend.useLegacyBundleCaStorage() {
-		return []issuerID{legacyBundleShimID}, nil
+	if sc.UseLegacyBundleCaStorage() {
+		return []issuing.IssuerID{legacyBundleShimID}, nil
 	}
 
 	return sc.listIssuers()
@@ -473,7 +477,7 @@ func doesRequestMatchIssuer(parsedBundle *certutil.ParsedCertBundle, req *ocsp.R
 	return bytes.Equal(req.IssuerKeyHash, issuerKeyHash) && bytes.Equal(req.IssuerNameHash, issuerNameHash), nil
 }
 
-func genResponse(cfg *crlConfig, caBundle *certutil.ParsedCertBundle, info *ocspRespInfo, reqHash crypto.Hash, revSigAlg x509.SignatureAlgorithm) ([]byte, error) {
+func genResponse(cfg *pki_backend.CrlConfig, caBundle *certutil.ParsedCertBundle, info *ocspRespInfo, reqHash crypto.Hash, revSigAlg x509.SignatureAlgorithm) ([]byte, error) {
 	curTime := time.Now()
 	duration, err := parseutil.ParseDurationSecond(cfg.OcspExpiry)
 	if err != nil {
@@ -510,9 +514,12 @@ func genResponse(cfg *crlConfig, caBundle *certutil.ParsedCertBundle, info *ocsp
 		Status:             info.ocspStatus,
 		SerialNumber:       info.serialNumber,
 		ThisUpdate:         curTime,
-		NextUpdate:         curTime.Add(duration),
 		ExtraExtensions:    []pkix.Extension{},
 		SignatureAlgorithm: revSigAlg,
+	}
+
+	if duration > 0 {
+		template.NextUpdate = curTime.Add(duration)
 	}
 
 	if info.ocspStatus == ocsp.Revoked {

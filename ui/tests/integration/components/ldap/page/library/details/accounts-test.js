@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -41,8 +41,7 @@ module('Integration | Component | ldap | Page::Library::Details::Accounts', func
     this.renderComponent = () => {
       return render(
         hbs`
-          <div id="modal-wormhole"></div>
-          <Page::Library::Details::Accounts @library={{this.model}} @statuses={{this.statuses}} />
+                    <Page::Library::Details::Accounts @library={{this.model}} @statuses={{this.statuses}} />
         `,
         {
           owner: this.engine,
@@ -77,8 +76,10 @@ module('Integration | Component | ldap | Page::Library::Details::Accounts', func
     assert.dom('[data-test-checked-out-card]').exists('Accounts checked out card renders');
 
     assert
-      .dom('[data-test-cli-command]')
-      .hasText('vault lease renew ad/library/test-library/check-out/:lease_id', 'Renew cli command renders');
-    assert.dom(`[data-test-cli-command-copy]`).exists('Renew cli command copy button renders');
+      .dom('[data-test-accounts-code-block] code')
+      .hasText(
+        'vault lease renew ldap-test/library/test-library/check-out/:lease_id',
+        'Renew cli command renders with backend path'
+      );
   });
 });

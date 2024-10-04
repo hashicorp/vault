@@ -10,7 +10,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/cli"
 	"github.com/posener/complete"
 )
 
@@ -217,6 +217,11 @@ func (c *KVPutCommand) Run(args []string) int {
 
 	if c.flagField != "" {
 		return PrintRawField(c.UI, secret, c.flagField)
+	}
+
+	// If the secret is wrapped, return the wrapped response.
+	if secret.WrapInfo != nil && secret.WrapInfo.TTL != 0 {
+		return OutputSecret(c.UI, secret)
 	}
 
 	if Format(c.UI) == "table" {

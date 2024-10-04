@@ -6,7 +6,7 @@
 import Component from '@glimmer/component';
 import errorMessage from 'vault/utils/error-message';
 import { action } from '@ember/object';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { tracked } from '@glimmer/tracking';
@@ -23,11 +23,9 @@ interface Args {
 }
 
 interface PkiTidyTtls {
-  intervalDuration: string;
   acmeAccountSafetyBuffer: string;
 }
 interface PkiTidyBooleans {
-  enabled: boolean;
   tidyAcme: boolean;
 }
 
@@ -36,10 +34,6 @@ export default class PkiTidyForm extends Component<Args> {
 
   @tracked errorBanner = '';
   @tracked invalidFormAlert = '';
-
-  get intervalDurationAttr() {
-    return this.args.tidy?.allByKey.intervalDuration;
-  }
 
   @task
   @waitFor

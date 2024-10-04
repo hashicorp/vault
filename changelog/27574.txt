@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Display an error and force a timeout when TOTP passcode is incorrect 
+```

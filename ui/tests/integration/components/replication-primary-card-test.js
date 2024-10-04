@@ -35,7 +35,7 @@ module('Integration | Component | replication-primary-card', function (hooks) {
 
     assert.dom('[data-test-hasError]').doesNotExist('shows no error for non-State cards');
 
-    assert.dom('.last-wal').includesText(title);
+    assert.dom('.card-title').includesText(title);
     assert.dom('[data-test-description]').includesText(description);
     assert.dom('[data-test-metric]').includesText(metric);
   });

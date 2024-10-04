@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -144,6 +147,8 @@ const (
 	SealConfigTypePkcs11            = SealConfigType(wrapping.WrapperTypePkcs11)
 	SealConfigTypeAwsKms            = SealConfigType(wrapping.WrapperTypeAwsKms)
 	SealConfigTypeHsmAutoDeprecated = SealConfigType(wrapping.WrapperTypeHsmAuto)
+	SealConfigTypeTransit           = SealConfigType(wrapping.WrapperTypeTransit)
+	SealConfigTypeGcpCkms           = SealConfigType(wrapping.WrapperTypeGcpCkms)
 
 	// SealConfigTypeRecovery is an alias for SealConfigTypeShamir since all recovery seals are
 	// defaultSeals using shamir wrappers.

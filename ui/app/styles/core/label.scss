@@ -7,9 +7,13 @@
 
 .is-label {
   color: $grey-darkest;
-  display: inline-block;
   font-size: 14px;
   font-weight: $font-weight-bold;
+  display: flex;
+  align-items: center;
+  gap: $spacing-4;
+  width: min-content;
+  min-width: 100%;
 
   &:not(:last-child) {
     margin-bottom: 0.25rem;

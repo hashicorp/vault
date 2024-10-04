@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Model, { attr } from '@ember-data/model';
@@ -73,6 +73,7 @@ export default class LdapRoleModel extends Model {
   @attr('string', {
     label: 'Role name',
     subText: 'The name of the role that will be used in Vault.',
+    editDisabled: true,
   })
   name;
 

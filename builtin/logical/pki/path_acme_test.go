@@ -24,22 +24,20 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/helper/certutil"
-
 	"github.com/go-test/deep"
-	"github.com/stretchr/testify/require"
-	"golang.org/x/crypto/acme"
-	"golang.org/x/net/http2"
-
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/pki/dnstest"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/acme"
+	"golang.org/x/net/http2"
 )
 
 // TestAcmeBasicWorkflow a test that will validate a basic ACME workflow using the Golang ACME client.
@@ -312,7 +310,7 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 			// Make sure the certificate has a NotAfter date of a maximum of 90 days
 			acmeCert, err := x509.ParseCertificate(certs[0])
 			require.NoError(t, err, "failed parsing acme cert bytes")
-			maxAcmeNotAfter := time.Now().Add(maxAcmeCertTTL)
+			maxAcmeNotAfter := time.Now().Add(defaultAcmeMaxTTL)
 			if maxAcmeNotAfter.Before(acmeCert.NotAfter) {
 				require.Fail(t, fmt.Sprintf("certificate has a NotAfter value %v greater than ACME max ttl %v", acmeCert.NotAfter, maxAcmeNotAfter))
 			}
@@ -1396,7 +1394,7 @@ func setupAcmeBackendOnClusterAtPath(t *testing.T, cluster *vault.TestCluster, c
 	return cluster, client, pathConfig
 }
 
-func testAcmeCertSignedByCa(t *testing.T, client *api.Client, derCerts [][]byte, issuerRef string) {
+func testAcmeCertSignedByCa(t *testing.T, client *api.Client, derCerts [][]byte, issuerRef string) *x509.Certificate {
 	t.Helper()
 	require.NotEmpty(t, derCerts)
 	acmeCert, err := x509.ParseCertificate(derCerts[0])
@@ -1420,6 +1418,8 @@ func testAcmeCertSignedByCa(t *testing.T, client *api.Client, derCerts [][]byte,
 	if diffs := deep.Equal(expectedCerts, derCerts); diffs != nil {
 		t.Fatalf("diffs were found between the acme chain returned and the expected value: \n%v", diffs)
 	}
+
+	return acmeCert
 }
 
 // TestAcmeValidationError make sure that we properly return errors on validation errors.
@@ -1613,6 +1613,92 @@ func TestAcmeRevocationAcrossAccounts(t *testing.T) {
 	require.NoError(t, err, "failed converting revocation_time value: %v", revocationTime)
 	require.Greater(t, revocationTimeInt, int64(0),
 		"revocation time was not greater than 0, cert was not revoked: %v", revocationTimeInt)
+}
+
+// TestAcmeMaxTTL verify that we can update the ACME configuration's max_ttl value and
+// get a certificate that has a higher notAfter beyond the 90 day original limit
+func TestAcmeMaxTTL(t *testing.T) {
+	t.Parallel()
+	cluster, client, _ := setupAcmeBackend(t)
+	defer cluster.Cleanup()
+
+	testCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	numHours := 140 * 24 // The ACME role has a TTL of 152 days
+	acmeConfig := map[string]interface{}{
+		"enabled":                  true,
+		"allowed_issuers":          "*",
+		"allowed_roles":            "*",
+		"default_directory_policy": "role:acme",
+		"dns_resolver":             "",
+		"eab_policy_name":          "",
+		"max_ttl":                  fmt.Sprintf("%dh", numHours),
+	}
+	_, err := client.Logical().WriteWithContext(testCtx, "pki/config/acme", acmeConfig)
+	require.NoError(t, err, "error configuring acme")
+
+	// First Create Our Client
+	accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err, "failed creating rsa key")
+	acmeClient := getAcmeClientForCluster(t, cluster, "/v1/pki/acme/", accountKey)
+
+	discovery, err := acmeClient.Discover(testCtx)
+	require.NoError(t, err, "failed acme discovery call")
+	t.Logf("%v", discovery)
+
+	acct, err := acmeClient.Register(testCtx, &acme.Account{
+		Contact: []string{"mailto:test@example.com"},
+	}, func(tosURL string) bool { return true })
+	require.NoError(t, err, "failed registering account")
+	require.Equal(t, acme.StatusValid, acct.Status)
+	require.Contains(t, acct.Contact, "mailto:test@example.com")
+	require.Len(t, acct.Contact, 1)
+
+	authorizations := []acme.AuthzID{
+		{"dns", "localhost"},
+	}
+	// Create an order
+	identifiers := make([]string, len(authorizations))
+	for index, auth := range authorizations {
+		identifiers[index] = auth.Value
+	}
+
+	createOrder, err := acmeClient.AuthorizeOrder(testCtx, authorizations)
+	require.NoError(t, err, "failed creating order")
+	require.Equal(t, acme.StatusPending, createOrder.Status)
+	require.Empty(t, createOrder.CertURL)
+	require.Equal(t, createOrder.URI+"/finalize", createOrder.FinalizeURL)
+	require.Len(t, createOrder.AuthzURLs, len(authorizations), "expected same number of authzurls as identifiers")
+
+	// HACK: Update authorization/challenge to completed as we can't really do it properly in this workflow
+	//       test.
+	markAuthorizationSuccess(t, client, acmeClient, acct, createOrder)
+
+	// Submit the CSR
+	requestCSR := x509.CertificateRequest{
+		Subject: pkix.Name{CommonName: "localhost"},
+	}
+	csrKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err, "failed generated key for CSR")
+	csr, err := x509.CreateCertificateRequest(rand.Reader, &requestCSR, csrKey)
+	require.NoError(t, err, "failed generating csr")
+
+	certs, _, err := acmeClient.CreateOrderCert(testCtx, createOrder.FinalizeURL, csr, true)
+	require.NoError(t, err, "failed finalizing order")
+
+	// Validate we get a signed cert back
+	acmeCert := testAcmeCertSignedByCa(t, client, certs, "int-ca")
+	duration := time.Duration(numHours) * time.Hour
+	maxTTL := time.Now().Add(duration)
+	buffer := time.Duration(24) * time.Hour
+	dayTruncate := time.Duration(24) * time.Hour
+
+	acmeCertNotAfter := acmeCert.NotAfter.Truncate(dayTruncate)
+
+	// Make sure we are in the ballpark of our max_ttl value.
+	require.Greaterf(t, acmeCertNotAfter, maxTTL.Add(-1*buffer), "ACME cert: %v should have been greater than max TTL was %v", acmeCert.NotAfter, maxTTL)
+	require.Less(t, acmeCertNotAfter, maxTTL.Add(buffer), "ACME cert: %v should have been less than max TTL was %v", acmeCert.NotAfter, maxTTL)
 }
 
 func doACMEWorkflow(t *testing.T, vaultClient *api.Client, acmeClient *acme.Client) (*ecdsa.PrivateKey, [][]byte) {

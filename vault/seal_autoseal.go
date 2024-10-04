@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
-
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/seal"
@@ -37,9 +36,10 @@ type autoSeal struct {
 	core                  *Core
 	logger                log.Logger
 
-	allSealsHealthy bool
-	hcLock          sync.RWMutex
-	healthCheckStop chan struct{}
+	unsealedWithUnhealthySeal bool
+	allSealsHealthy           bool
+	hcLock                    sync.RWMutex
+	healthCheckStop           chan struct{}
 }
 
 // Ensure we are implementing the Seal interface
@@ -52,12 +52,12 @@ func NewAutoSeal(lowLevel seal.Access) *autoSeal {
 	ret.barrierConfig.Store((*SealConfig)(nil))
 	ret.recoveryConfig.Store((*SealConfig)(nil))
 
-	// See SealConfigType for the rules about computing the type.
-	if len(lowLevel.GetSealGenerationInfo().Seals) > 1 {
-		ret.barrierSealConfigType = SealConfigTypeMultiseal
+	// See SealConfigType for the rules about computing the type. Note that NewAccess guarantees
+	// that there is at least one wrapper
+	if wrappers := lowLevel.GetAllSealWrappersByPriority(); len(wrappers) == 1 {
+		ret.barrierSealConfigType = SealConfigType(wrappers[0].SealConfigType)
 	} else {
-		// Note that the Access constructors guarantee that there is at least one KMS config
-		ret.barrierSealConfigType = SealConfigType(lowLevel.GetSealGenerationInfo().Seals[0].Type)
+		ret.barrierSealConfigType = SealConfigTypeMultiseal
 	}
 
 	return ret
@@ -66,7 +66,7 @@ func NewAutoSeal(lowLevel seal.Access) *autoSeal {
 func (d *autoSeal) Healthy() bool {
 	d.hcLock.RLock()
 	defer d.hcLock.RUnlock()
-	return d.allSealsHealthy
+	return d.Access.AllSealWrappersHealthy()
 }
 
 func (d *autoSeal) SealWrapable() bool {
@@ -88,6 +88,7 @@ func (d *autoSeal) SetCore(core *Core) {
 	d.core = core
 	if d.logger == nil {
 		d.logger = d.core.Logger().Named("autoseal")
+		d.core.AddLogger(d.logger)
 	}
 }
 
@@ -193,13 +194,17 @@ func (d *autoSeal) BarrierConfig(ctx context.Context) (*SealConfig, error) {
 
 	barrierTypeUpgradeCheck(d.BarrierSealConfigType(), conf)
 
-	if conf.Type != d.BarrierSealConfigType().String() {
+	if !CompatibleSealTypes(conf.Type, d.BarrierSealConfigType().String()) {
 		d.logger.Error("barrier seal type does not match loaded type", "seal_type", conf.Type, "loaded_type", d.BarrierSealConfigType())
 		return nil, fmt.Errorf("barrier seal type of %q does not match loaded type of %q", conf.Type, d.BarrierSealConfigType())
 	}
 
 	d.SetCachedBarrierConfig(conf)
 	return conf.Clone(), nil
+}
+
+func CompatibleSealTypes(a, b string) bool {
+	return a == b || a == SealConfigTypeMultiseal.String() || b == SealConfigTypeMultiseal.String()
 }
 
 func (d *autoSeal) ClearBarrierConfig(ctx context.Context) error {
@@ -470,25 +475,34 @@ func (d *autoSeal) StartHealthCheck() {
 			ctx, cancel := context.WithTimeout(ctx, seal.HealthTestTimeout)
 			defer cancel()
 
+			d.logger.Trace("performing a seal health check")
+			for _, sw := range d.Access.GetAllSealWrappersByPriority() {
+				if !sw.Configured {
+					d.logger.Warn(`WARNING: running in degraded mode, one or more seals failed to configure at  
+startup, and Vault is running with fewer than the number of configured seals for high availability.  Please correct the 
+error and restart Vault.`)
+				}
+			}
 			allHealthy := true
 			allUnhealthy := true
-			for _, sealWrapper := range d.Access.GetAllSealWrappersByPriority() {
+			for _, sealWrapper := range d.Access.GetConfiguredSealWrappersByPriority() {
 				mLabels := []metrics.Label{{Name: "seal_wrapper_name", Value: sealWrapper.Name}}
 
 				wasHealthy := sealWrapper.IsHealthy()
+				lastSeenHealthy := sealWrapper.LastSeenHealthy()
 				if err := sealWrapper.CheckHealth(ctx, now); err != nil {
 					// Seal wrapper is unhealthy
 					d.logger.Warn("seal wrapper health check failed", "seal_name", sealWrapper.Name, "err", err)
 					d.core.MetricSink().SetGaugeWithLabels(autoSealUnavailableDuration,
-						float32(time.Since(sealWrapper.LastSeenHealthy).Milliseconds()), mLabels)
+						float32(time.Since(sealWrapper.LastSeenHealthy()).Milliseconds()), mLabels)
 					allHealthy = false
 				} else {
 					// Seal wrapper is healthy
 					if wasHealthy {
 						d.logger.Debug("seal wrapper health test passed", "seal_name", sealWrapper.Name)
 					} else {
-						d.logger.Info("seal wrapper is now healthy again", "downtime", "seal_name", sealWrapper.Name,
-							now.Sub(sealWrapper.LastSeenHealthy).String())
+						d.logger.Info("seal wrapper is now healthy again", "seal_name", sealWrapper.Name, "downtime",
+							now.Sub(lastSeenHealthy).String())
 					}
 					allUnhealthy = false
 				}
@@ -503,7 +517,7 @@ func (d *autoSeal) StartHealthCheck() {
 				d.core.MetricSink().SetGauge(autoSealUnavailableDuration, 0)
 			} else {
 				if lastTestOk && allUnhealthy {
-					d.logger.Info("seal backend is completely unhealthy (all seal wrappers all unhealthy)", "downtime", now.Sub(lastSeenOk).String())
+					d.logger.Error("seal backend is completely unhealthy (all seal wrappers all unhealthy)", "downtime", now.Sub(lastSeenOk).String())
 				}
 				lastTestOk = false
 				healthCheck.Reset(seal.HealthTestIntervalUnhealthy)

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Model, { attr } from '@ember-data/model';
@@ -8,6 +8,7 @@ import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 import { keyIsFolder } from 'core/utils/key-utils';
+import { isDeleted } from 'kv/utils/kv-deleted';
 
 const validations = {
   maxVersions: [
@@ -44,12 +45,15 @@ export default class KvSecretMetadataModel extends Model {
     editType: 'ttl',
     label: 'Automate secret deletion',
     helperTextDisabled: `A secret's version must be manually deleted.`,
-    helperTextEnabled: 'Delete all new versions of this secret after.',
+    helperTextEnabled: 'Delete all new versions of this secret after:',
   })
   deleteVersionAfter;
 
+  // the API returns custom_metadata: null if empty but because the attr is an 'object' ember data transforms it to an empty object.
+  // this is important because we rely on the empty object as a truthy value in template conditionals
   @attr('object', {
     editType: 'kv',
+    isSectionHeader: true,
     subText: 'An optional set of informational key-value pairs that will be stored with all secret versions.',
   })
   customMetadata;
@@ -71,6 +75,7 @@ export default class KvSecretMetadataModel extends Model {
   get sortedVersions() {
     const array = [];
     for (const key in this.versions) {
+      this.versions[key].isSecretDeleted = isDeleted(this.versions[key].deletion_time);
       array.push({ version: key, ...this.versions[key] });
     }
     // version keys are in order created with 1 being the oldest, we want newest first
@@ -81,16 +86,22 @@ export default class KvSecretMetadataModel extends Model {
   get currentSecret() {
     if (!this.versions || !this.currentVersion) return false;
     const data = this.versions[this.currentVersion];
-    const state = data.destroyed ? 'destroyed' : data.deletion_time ? 'deleted' : 'created';
+    const state = data.destroyed ? 'destroyed' : isDeleted(data.deletion_time) ? 'deleted' : 'created';
     return {
       state,
       isDeactivated: state !== 'created',
+      deletionTime: data.deletion_time,
     };
   }
 
+  get permissionsPath() {
+    return this.fullSecretPath || this.path;
+  }
+
   // permissions needed for the list view where kv/data has not yet been called. Allows us to conditionally show action items in the LinkedBlock popups.
-  @lazyCapabilities(apiPath`${'backend'}/data/${'path'}`, 'backend', 'path') dataPath;
-  @lazyCapabilities(apiPath`${'backend'}/metadata/${'path'}`, 'backend', 'path') metadataPath;
+  @lazyCapabilities(apiPath`${'backend'}/data/${'permissionsPath'}`, 'backend', 'permissionsPath') dataPath;
+  @lazyCapabilities(apiPath`${'backend'}/metadata/${'permissionsPath'}`, 'backend', 'permissionsPath')
+  metadataPath;
 
   get canDeleteMetadata() {
     return this.metadataPath.get('canDelete') !== false;

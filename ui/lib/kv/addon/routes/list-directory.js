@@ -1,13 +1,14 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { hash } from 'rsvp';
 import { normalizePath } from 'vault/utils/path-encoding-helpers';
 import { breadcrumbsForSecret } from 'kv/utils/kv-breadcrumbs';
+import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
 
 export default class KvSecretsListRoute extends Route {
   @service store;
@@ -18,7 +19,7 @@ export default class KvSecretsListRoute extends Route {
     pageFilter: {
       refreshModel: true,
     },
-    currentPage: {
+    page: {
       refreshModel: true,
     },
   };
@@ -28,8 +29,7 @@ export default class KvSecretsListRoute extends Route {
       .lazyPaginatedQuery('kv/metadata', {
         backend,
         responsePath: 'data.keys',
-        page: Number(params.currentPage) || 1,
-        size: Number(params.currentPageSize),
+        page: Number(params.page) || 1,
         pageFilter: params.pageFilter,
         pathToSecret,
       })
@@ -45,9 +45,15 @@ export default class KvSecretsListRoute extends Route {
       });
   }
 
+  getPathToSecret(pathParam) {
+    if (!pathParam) return '';
+    // links and routing assumes pathToParam includes trailing slash
+    return pathIsDirectory(pathParam) ? normalizePath(pathParam) : normalizePath(`${pathParam}/`);
+  }
+
   model(params) {
     const { pageFilter, path_to_secret } = params;
-    const pathToSecret = path_to_secret ? normalizePath(path_to_secret) : '';
+    const pathToSecret = this.getPathToSecret(path_to_secret);
     const backend = this.secretMountPath.currentPath;
     const filterValue = pathToSecret ? (pageFilter ? pathToSecret + pageFilter : pathToSecret) : pageFilter;
     return hash({
@@ -61,19 +67,19 @@ export default class KvSecretsListRoute extends Route {
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
-    if (resolvedModel.secrets === 403) {
-      resolvedModel.noMetadataListPermissions = true;
-    }
+    // renders alert inline error for overview card
+    resolvedModel.failedDirectoryQuery =
+      resolvedModel.secrets === 403 && pathIsDirectory(resolvedModel.pathToSecret);
 
-    let breadcrumbsArray = [{ label: 'secrets', route: 'secrets', linkExternal: true }];
+    let breadcrumbsArray = [{ label: 'Secrets', route: 'secrets', linkExternal: true }];
     // if on top level don't link the engine breadcrumb label, but if within a directory, do link back to top level.
     if (this.routeName === 'list') {
       breadcrumbsArray.push({ label: resolvedModel.backend });
     } else {
       breadcrumbsArray = [
         ...breadcrumbsArray,
-        { label: resolvedModel.backend, route: 'list' },
-        ...breadcrumbsForSecret(resolvedModel.pathToSecret, true),
+        { label: resolvedModel.backend, route: 'list', model: resolvedModel.backend },
+        ...breadcrumbsForSecret(resolvedModel.backend, resolvedModel.pathToSecret, true),
       ];
     }
 
@@ -83,7 +89,7 @@ export default class KvSecretsListRoute extends Route {
   resetController(controller, isExiting) {
     if (isExiting) {
       controller.set('pageFilter', null);
-      controller.set('currentPage', null);
+      controller.set('page', null);
     }
   }
 }

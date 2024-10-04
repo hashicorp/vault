@@ -8,16 +8,16 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/hashicorp/vault/sdk/helper/logging"
-
 	"github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
+	UUID "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/sdk/helper/logging"
 )
 
 type TestSealOpts struct {
 	Logger       hclog.Logger
 	StoredKeys   StoredKeysSupport
-	Secret       []byte
+	Secrets      [][]byte
 	Name         wrapping.WrapperType
 	WrapperCount int
 	Generation   uint64
@@ -37,20 +37,56 @@ func NewTestSealOpts(opts *TestSealOpts) *TestSealOpts {
 		// we might at some point need to allow Generation == 0
 		opts.Generation = 1
 	}
+	switch len(opts.Secrets) {
+	case opts.WrapperCount:
+		// all good, each wrapper has its own secret
+
+	case 0:
+		if opts.WrapperCount == 1 {
+			// If there is only one wrapper, the default TestWrapper behaviour of reversing
+			// the bytes slice is fine.
+			opts.Secrets = [][]byte{nil}
+		} else {
+			// If there is more than one wrapper, each one needs a different secret
+			for i := 0; i < opts.WrapperCount; i++ {
+				uuid, err := UUID.GenerateUUID()
+				if err != nil {
+					panic(fmt.Sprintf("error generating secret: %v", err))
+				}
+				opts.Secrets = append(opts.Secrets, []byte(uuid))
+			}
+		}
+
+	default:
+		panic(fmt.Sprintf("wrong number of secrets %d vs %d wrappers", len(opts.Secrets), opts.WrapperCount))
+	}
 	return opts
 }
 
 func NewTestSeal(opts *TestSealOpts) (Access, []*ToggleableWrapper) {
 	opts = NewTestSealOpts(opts)
 	wrappers := make([]*ToggleableWrapper, opts.WrapperCount)
-	sealWrappers := make([]SealWrapper, opts.WrapperCount)
+	sealWrappers := make([]*SealWrapper, opts.WrapperCount)
+	ctx := context.Background()
 	for i := 0; i < opts.WrapperCount; i++ {
-		wrappers[i] = &ToggleableWrapper{Wrapper: wrapping.NewTestWrapper(opts.Secret)}
-		sealWrappers[i] = SealWrapper{
-			Wrapper:  wrappers[i],
-			Priority: i + 1,
-			Name:     fmt.Sprintf("%s-%d", opts.Name, i+1),
+		wrapperName := fmt.Sprintf("%s-%d", opts.Name, i+1)
+		wrappers[i] = &ToggleableWrapper{Wrapper: wrapping.NewTestWrapper(opts.Secrets[i])}
+		_, err := wrappers[i].Wrapper.SetConfig(context.Background(), wrapping.WithKeyId(wrapperName))
+		if err != nil {
+			panic(err)
 		}
+		wrapperType, err := wrappers[i].Type(ctx)
+		if err != nil {
+			panic(err)
+		}
+		sealWrappers[i] = NewSealWrapper(
+			wrappers[i],
+			i+1,
+			wrapperName,
+			wrapperType.String(),
+			false,
+			true,
+		)
 	}
 
 	sealAccess, err := NewAccessFromSealWrappers(nil, opts.Generation, true, sealWrappers)
@@ -60,29 +96,11 @@ func NewTestSeal(opts *TestSealOpts) (Access, []*ToggleableWrapper) {
 	return sealAccess, wrappers
 }
 
-func NewToggleableTestSeal(opts *TestSealOpts) (Access, []func(error)) {
-	opts = NewTestSealOpts(opts)
-
-	wrappers := make([]*ToggleableWrapper, opts.WrapperCount)
-	sealWrappers := make([]SealWrapper, opts.WrapperCount)
-	funcs := make([]func(error), opts.WrapperCount)
-	for i := 0; i < opts.WrapperCount; i++ {
-		w := &ToggleableWrapper{Wrapper: wrapping.NewTestWrapper(opts.Secret)}
-		wrappers[i] = w
-		sealWrappers[i] = SealWrapper{
-			Wrapper:  wrappers[i],
-			Priority: i + 1,
-			Name:     fmt.Sprintf("%s-%d", opts.Name, i+1),
-		}
-		funcs[i] = w.SetError
-	}
-
-	sealAccess, err := NewAccessFromSealWrappers(nil, opts.Generation, true, sealWrappers)
-	if err != nil {
-		panic(err)
-	}
-
-	return sealAccess, funcs
+type TestSealWrapperOpts struct {
+	Logger       hclog.Logger
+	Secret       []byte
+	Name         wrapping.WrapperType
+	WrapperCount int
 }
 
 type ToggleableWrapper struct {
@@ -105,7 +123,7 @@ func (t *ToggleableWrapper) Encrypt(ctx context.Context, bytes []byte, opts ...w
 	return t.Wrapper.Encrypt(ctx, bytes, opts...)
 }
 
-func (t ToggleableWrapper) Decrypt(ctx context.Context, info *wrapping.BlobInfo, opts ...wrapping.Option) ([]byte, error) {
+func (t *ToggleableWrapper) Decrypt(ctx context.Context, info *wrapping.BlobInfo, opts ...wrapping.Option) ([]byte, error) {
 	t.l.RLock()
 	defer t.l.RUnlock()
 	if t.error != nil {

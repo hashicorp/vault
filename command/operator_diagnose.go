@@ -14,14 +14,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/go-kms-wrapping/entropy/v2"
-
-	"golang.org/x/term"
-
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/consul/api"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-kms-wrapping/entropy/v2"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	cserver "github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -35,9 +33,10 @@ import (
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/diagnose"
 	"github.com/hashicorp/vault/vault/hcp_link"
+	"github.com/hashicorp/vault/vault/seal"
 	"github.com/hashicorp/vault/version"
-	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
+	"golang.org/x/term"
 )
 
 const CoreConfigUninitializedErr = "Diagnose cannot attempt this step because core config could not be set."
@@ -204,17 +203,19 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 
 func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error {
 	rloadFuncs := make(map[string][]reloadutil.ReloadFunc)
+	handlers := newVaultHandlers()
+
 	server := &ServerCommand{
 		// TODO: set up a different one?
 		// In particular, a UI instance that won't output?
 		BaseCommand: c.BaseCommand,
 
 		// TODO: refactor to a common place?
-		AuditBackends:        auditBackends,
-		CredentialBackends:   credentialBackends,
-		LogicalBackends:      logicalBackends,
-		PhysicalBackends:     physicalBackends,
-		ServiceRegistrations: serviceRegistrations,
+		AuditBackends:        handlers.auditBackends,
+		CredentialBackends:   handlers.credentialBackends,
+		LogicalBackends:      handlers.logicalBackends,
+		PhysicalBackends:     handlers.physicalBackends,
+		ServiceRegistrations: handlers.serviceRegistrations,
 
 		// TODO: other ServerCommand options?
 
@@ -434,19 +435,17 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	sealcontext, sealspan := diagnose.StartSpan(ctx, "Create Vault Server Configuration Seals")
 
 	var setSealResponse *SetSealResponse
-	var hasPartialPaths bool
-	existingSealGenerationInfo, err := vault.PhysicalSealGenInfo(sealcontext, *backend)
-	if err != nil {
-		diagnose.Fail(sealcontext, fmt.Sprintf("Unable to get Seal genration information from storage: %s.", err.Error()))
-		goto SEALFAIL
+	var err error
+	var existingSealGenerationInfo *seal.SealGenerationInfo
+	if config.IsMultisealEnabled() {
+		existingSealGenerationInfo, err = vault.PhysicalSealGenInfo(sealcontext, *backend)
+		if err != nil {
+			diagnose.Fail(sealcontext, fmt.Sprintf("Unable to get Seal generation information from storage: %s.", err.Error()))
+			goto SEALFAIL
+		}
 	}
 
-	hasPartialPaths, err = hasPartiallyWrappedPaths(context.Background(), *backend)
-	if err != nil {
-		diagnose.Fail(sealcontext, fmt.Sprintf("Cannot determine if there are parrtially seal wrapped entries in storage: %s.", err.Error()))
-		goto SEALFAIL
-	}
-	setSealResponse, err = setSeal(server, config, make([]string, 0), make(map[string]string), existingSealGenerationInfo, hasPartialPaths)
+	setSealResponse, err = setSeal(server, config, make([]string, 0), make(map[string]string), existingSealGenerationInfo, false /* unsealed vault has no partially wrapped paths */)
 	if err != nil {
 		diagnose.Advise(ctx, "For assistance with the seal stanza, see the Vault configuration documentation.")
 		diagnose.Fail(sealcontext, fmt.Sprintf("Seal creation resulted in the following error: %s.", err.Error()))

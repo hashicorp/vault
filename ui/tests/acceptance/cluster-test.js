@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { create } from 'ember-cli-page-object';
 import { settled, click, visit } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
@@ -12,17 +11,13 @@ import { v4 as uuidv4 } from 'uuid';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/auth/enable';
-import consoleClass from 'vault/tests/pages/components/console/ui-panel';
-
-const consoleComponent = create(consoleClass);
+import { runCmd } from 'vault/tests/helpers/commands';
 
 const tokenWithPolicy = async function (name, policy) {
-  await consoleComponent.runCommands([
+  return await runCmd([
     `write sys/policies/acl/${name} policy=${btoa(policy)}`,
     `write -field=client_token auth/token/create policies=${name}`,
   ]);
-
-  return consoleComponent.lastLogOutput;
 };
 
 module('Acceptance | cluster', function (hooks) {
@@ -53,7 +48,7 @@ module('Acceptance | cluster', function (hooks) {
     const path = `cluster-userpass-${uuidv4()}`;
 
     await enablePage.enable('userpass', path);
-    await consoleComponent.runCommands([`write auth/${path}/users/end-user password="${password}"`]);
+    await runCmd([`write auth/${path}/users/end-user password="${password}"`]);
 
     await logout.visit();
     await settled();
@@ -81,5 +76,23 @@ module('Acceptance | cluster', function (hooks) {
     await visit('/vault/access');
 
     assert.dom('[data-test-sidebar-nav-link="Policies"]').hasAttribute('href', '/ui/vault/policies/rgp');
+  });
+
+  test('shows error banner if resultant-acl check fails', async function (assert) {
+    const login_only = `
+      path "auth/token/lookup-self" {
+        capabilities = ["read"]
+      },
+    `;
+    const noDefaultPolicyUser = await runCmd([
+      `write sys/policies/acl/login-only policy=${btoa(login_only)}`,
+      `write -field=client_token auth/token/create no_default_policy=true policies="login-only"`,
+    ]);
+
+    assert.dom('[data-test-resultant-acl-banner]').doesNotExist('Resultant ACL banner does not show as root');
+    await logout.visit();
+    assert.dom('[data-test-resultant-acl-banner]').doesNotExist('Does not show on login page');
+    await authPage.login(noDefaultPolicyUser);
+    assert.dom('[data-test-resultant-acl-banner]').includesText('Resultant ACL check failed');
   });
 });

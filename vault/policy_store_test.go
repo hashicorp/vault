@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/require"
 )
 
 func mockPolicyWithCore(t *testing.T, disableCache bool) (*Core, *PolicyStore) {
@@ -351,5 +352,88 @@ func TestPolicyStore_PoliciesByNamespaces(t *testing.T) {
 	expectedResult := []string{"default", "dev"}
 	if !reflect.DeepEqual(expectedResult, out) {
 		t.Fatalf("expected: %v\ngot: %v", expectedResult, out)
+	}
+}
+
+// TestPolicyStore_GetNonEGPPolicyType has five test cases:
+//   - happy-acl and happy-rgp: we store a policy in the policy type map and
+//     then look up its type successfully.
+//   - not-in-map-acl and not-in-map-rgp: ensure that GetNonEGPPolicyType fails
+//     returning a nil and an error when the policy doesn't exist in the map.
+//   - unknown-policy-type: ensures that GetNonEGPPolicyType fails returning a nil
+//     and an error when the policy type in the type map is a value that
+//     does not map to a PolicyType.
+func TestPolicyStore_GetNonEGPPolicyType(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		policyStoreKey       string
+		policyStoreValue     any
+		paramNamespace       string
+		paramPolicyName      string
+		paramPolicyType      PolicyType
+		isErrorExpected      bool
+		expectedErrorMessage string
+	}{
+		"happy-acl": {
+			policyStoreKey:   "1AbcD/policy1",
+			policyStoreValue: PolicyTypeACL,
+			paramNamespace:   "1AbcD",
+			paramPolicyName:  "policy1",
+			paramPolicyType:  PolicyTypeACL,
+		},
+		"happy-rgp": {
+			policyStoreKey:   "1AbcD/policy1",
+			policyStoreValue: PolicyTypeRGP,
+			paramNamespace:   "1AbcD",
+			paramPolicyName:  "policy1",
+			paramPolicyType:  PolicyTypeRGP,
+		},
+		"not-in-map-acl": {
+			policyStoreKey:       "2WxyZ/policy2",
+			policyStoreValue:     PolicyTypeACL,
+			paramNamespace:       "1AbcD",
+			paramPolicyName:      "policy1",
+			isErrorExpected:      true,
+			expectedErrorMessage: "policy does not exist in type map",
+		},
+		"not-in-map-rgp": {
+			policyStoreKey:       "2WxyZ/policy2",
+			policyStoreValue:     PolicyTypeRGP,
+			paramNamespace:       "1AbcD",
+			paramPolicyName:      "policy1",
+			isErrorExpected:      true,
+			expectedErrorMessage: "policy does not exist in type map",
+		},
+		"unknown-policy-type": {
+			policyStoreKey:       "1AbcD/policy1",
+			policyStoreValue:     7,
+			paramNamespace:       "1AbcD",
+			paramPolicyName:      "policy1",
+			isErrorExpected:      true,
+			expectedErrorMessage: "unknown policy type for: 1AbcD/policy1",
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			_, ps := mockPolicyWithCore(t, false)
+			ps.policyTypeMap.Store(tc.policyStoreKey, tc.policyStoreValue)
+			got, err := ps.GetNonEGPPolicyType(tc.paramNamespace, tc.paramPolicyName)
+			if tc.isErrorExpected {
+				require.Error(t, err)
+				require.Nil(t, got)
+				require.EqualError(t, err, tc.expectedErrorMessage)
+
+			}
+			if !tc.isErrorExpected {
+				require.NoError(t, err)
+				require.NotNil(t, got)
+				require.Equal(t, tc.paramPolicyType, *got)
+			}
+		})
 	}
 }

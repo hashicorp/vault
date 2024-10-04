@@ -33,6 +33,7 @@ var wcAdjacentNonSlashRegEx = regexp.MustCompile(`\+[^/]|[^/]\+`).MatchString
 type Router struct {
 	l                  sync.RWMutex
 	root               *radix.Tree
+	binaryPaths        *radix.Tree
 	mountUUIDCache     *radix.Tree
 	mountAccessorCache *radix.Tree
 	tokenStoreSaltFunc func(context.Context) (*salt.Salt, error)
@@ -59,14 +60,19 @@ func NewRouter() *Router {
 
 // routeEntry is used to represent a mount point in the router
 type routeEntry struct {
-	tainted       atomic.Bool
+	tainted atomic.Bool
+	// backend is the actual backend instance for this route entry; lock l must
+	// be held to access this field.
 	backend       logical.Backend
 	mountEntry    *MountEntry
 	storageView   logical.Storage
 	storagePrefix string
 	rootPaths     atomic.Value
 	loginPaths    atomic.Value
-	l             sync.RWMutex
+	binaryPaths   atomic.Value
+	limitedPaths  atomic.Value
+	// l is the lock used to protect access to backend during reloads
+	l sync.RWMutex
 }
 
 type wildcardPath struct {
@@ -76,11 +82,15 @@ type wildcardPath struct {
 	isPrefix bool
 }
 
-// loginPathsEntry is used to hold the routeEntry loginPaths
-type loginPathsEntry struct {
+// specialPathsEntry is used to hold the routeEntry specialPaths
+type specialPathsEntry struct {
 	paths         *radix.Tree
 	wildcardPaths []wildcardPath
 }
+
+// specialPathsLookupFunc is used by (*Router).specialPath to look up a
+// specialPathsEntry corresponding to loginPath, binaryPath, or limitedPath.
+type specialPathsLookupFunc func(re *routeEntry) *specialPathsEntry
 
 type ValidateMountResponse struct {
 	MountType     string `json:"mount_type" structs:"mount_type" mapstructure:"mount_type"`
@@ -202,6 +212,18 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 		return err
 	}
 	re.loginPaths.Store(loginPathsEntry)
+
+	binaryPathsEntry, err := parseUnauthenticatedPaths(paths.Binary)
+	if err != nil {
+		return err
+	}
+	re.binaryPaths.Store(binaryPathsEntry)
+
+	limitedPathsEntry, err := parseUnauthenticatedPaths(paths.Limited)
+	if err != nil {
+		return err
+	}
+	re.limitedPaths.Store(limitedPathsEntry)
 
 	switch {
 	case prefix == "":
@@ -476,27 +498,11 @@ func (r *Router) MatchingBackend(ctx context.Context, path string) logical.Backe
 
 // MatchingSystemView returns the SystemView used for a path
 func (r *Router) MatchingSystemView(ctx context.Context, path string) logical.SystemView {
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
+	backend := r.MatchingBackend(ctx, path)
+	if backend == nil {
 		return nil
 	}
-	path = ns.Path + path
-
-	r.l.RLock()
-	_, raw, ok := r.root.LongestPrefix(path)
-	r.l.RUnlock()
-	if !ok || raw.(*routeEntry).backend == nil {
-		return nil
-	}
-	return raw.(*routeEntry).backend.System()
-}
-
-func (r *Router) MatchingMountByAPIPath(ctx context.Context, path string) string {
-	me, _, _ := r.matchingMountEntryByPath(ctx, path, true)
-	if me == nil {
-		return ""
-	}
-	return me.Path
+	return backend.System()
 }
 
 // MatchingStoragePrefixByAPIPath the storage prefix for the given api path
@@ -507,13 +513,13 @@ func (r *Router) MatchingStoragePrefixByAPIPath(ctx context.Context, path string
 	}
 	path = ns.Path + path
 
-	_, prefix, found := r.matchingMountEntryByPath(ctx, path, true)
+	_, prefix, found := r.matchingMountEntryByPath(path, true)
 	return prefix, found
 }
 
 // MatchingAPIPrefixByStoragePath the api path information for the given storage path
 func (r *Router) MatchingAPIPrefixByStoragePath(ctx context.Context, path string) (*namespace.Namespace, string, string, bool) {
-	me, prefix, found := r.matchingMountEntryByPath(ctx, path, false)
+	me, prefix, found := r.matchingMountEntryByPath(path, false)
 	if !found {
 		return nil, "", "", found
 	}
@@ -527,7 +533,7 @@ func (r *Router) MatchingAPIPrefixByStoragePath(ctx context.Context, path string
 	return me.Namespace(), mountPath, prefix, found
 }
 
-func (r *Router) matchingMountEntryByPath(ctx context.Context, path string, apiPath bool) (*MountEntry, string, bool) {
+func (r *Router) matchingMountEntryByPath(path string, apiPath bool) (*MountEntry, string, bool) {
 	var raw interface{}
 	var ok bool
 	r.l.RLock()
@@ -639,9 +645,9 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	clientToken := req.ClientToken
 	switch {
 	case strings.HasPrefix(originalPath, "auth/token/"):
-	case strings.HasPrefix(originalPath, "sys/"):
-	case strings.HasPrefix(originalPath, "identity/"):
-	case strings.HasPrefix(originalPath, cubbyholeMountPath):
+	case strings.HasPrefix(originalPath, mountPathSystem):
+	case strings.HasPrefix(originalPath, mountPathIdentity):
+	case strings.HasPrefix(originalPath, mountPathCubbyhole):
 		if req.Operation == logical.RollbackOperation {
 			// Backend doesn't support this and it can't properly look up a
 			// cubbyhole ID so just return here
@@ -811,7 +817,7 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 				}
 
 				switch re.mountEntry.Type {
-				case "token", "ns_token":
+				case mountTypeToken, mountTypeNSToken:
 					// Nothing; we respect what the token store is telling us and
 					// we don't allow tuning
 				default:
@@ -879,11 +885,37 @@ func (r *Router) RootPath(ctx context.Context, path string) bool {
 }
 
 // LoginPath checks if the given path is used for logins
+func (r *Router) LoginPath(ctx context.Context, path string) bool {
+	return r.specialPath(ctx, path,
+		func(re *routeEntry) *specialPathsEntry {
+			return re.loginPaths.Load().(*specialPathsEntry)
+		})
+}
+
+// BinaryPath checks if the given path is used for binary requests
+func (r *Router) BinaryPath(ctx context.Context, path string) bool {
+	return r.specialPath(ctx, path,
+		func(re *routeEntry) *specialPathsEntry {
+			return re.binaryPaths.Load().(*specialPathsEntry)
+		})
+}
+
+// LimitedPath checks if the given path uses limited requests
+func (r *Router) LimitedPath(ctx context.Context, path string) bool {
+	return r.specialPath(ctx, path,
+		func(re *routeEntry) *specialPathsEntry {
+			return re.limitedPaths.Load().(*specialPathsEntry)
+		})
+}
+
+// specialPath is a common method for checking if the given path has a matching
+// PathsSpecial entry. This is used for Login, Binary, and Limited PathsSpecial
+// fields.
 // Matching Priority
 //  1. prefix
 //  2. exact
 //  3. wildcard
-func (r *Router) LoginPath(ctx context.Context, path string) bool {
+func (r *Router) specialPath(ctx context.Context, path string, lookup specialPathsLookupFunc) bool {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return false
@@ -902,8 +934,8 @@ func (r *Router) LoginPath(ctx context.Context, path string) bool {
 	// Trim to get remaining path
 	remain := strings.TrimPrefix(adjustedPath, mount)
 
-	// Check the loginPaths of this backend
-	pe := re.loginPaths.Load().(*loginPathsEntry)
+	// Check the specialPath of this backend as specified by the caller.
+	pe := lookup(re)
 	match, raw, ok := pe.paths.LongestPrefix(remain)
 	if !ok && len(pe.wildcardPaths) == 0 {
 		// no match found
@@ -980,8 +1012,8 @@ func isValidUnauthenticatedPath(path string) (bool, error) {
 }
 
 // parseUnauthenticatedPaths converts a list of special paths to a
-// loginPathsEntry
-func parseUnauthenticatedPaths(paths []string) (*loginPathsEntry, error) {
+// specialPathsEntry
+func parseUnauthenticatedPaths(paths []string) (*specialPathsEntry, error) {
 	var tempPaths []string
 	tempWildcardPaths := make([]wildcardPath, 0)
 	for _, path := range paths {
@@ -1007,7 +1039,7 @@ func parseUnauthenticatedPaths(paths []string) (*loginPathsEntry, error) {
 		}
 	}
 
-	return &loginPathsEntry{
+	return &specialPathsEntry{
 		paths:         pathsToRadix(tempPaths),
 		wildcardPaths: tempWildcardPaths,
 	}, nil

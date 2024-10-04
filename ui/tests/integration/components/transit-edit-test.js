@@ -7,6 +7,8 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, fillIn, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
+import { setupMirage } from 'ember-cli-mirage/test-support';
+import { capabilitiesStub } from 'vault/tests/helpers/stubs';
 
 const SELECTORS = {
   createForm: '[data-test-transit-create-form]',
@@ -16,10 +18,14 @@ const SELECTORS = {
 };
 module('Integration | Component | transit-edit', function (hooks) {
   setupRenderingTest(hooks);
+  setupMirage(hooks);
 
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
-    this.model = this.store.createRecord('transit-key');
+    this.server.post('/sys/capabilities-self', () =>
+      capabilitiesStub('transit-backend/keys/some-key', ['sudo'])
+    );
+    this.model = this.store.createRecord('transit-key', { backend: 'transit-backend', id: 'some-key' });
     this.backendCrumb = {
       label: 'transit',
       text: 'transit',
@@ -30,7 +36,7 @@ module('Integration | Component | transit-edit', function (hooks) {
 
   test('it renders in create mode and updates model', async function (assert) {
     await render(hbs`
-    <TransitEdit 
+    <TransitEdit
       @key={{this.model}}
       @model={{this.model}}
       @mode="create"
@@ -58,14 +64,13 @@ module('Integration | Component | transit-edit', function (hooks) {
       1: 1684882652000,
     };
     await render(hbs`
-      <TransitEdit 
+      <TransitEdit
         @key={{this.model}}
         @model={{this.model}}
         @mode="edit"
         @root={{this.backendCrumb}}
         @preferAdvancedEdit={{false}}
       />`);
-
     assert.dom(SELECTORS.editForm).exists();
     assert.dom(SELECTORS.ttlToggle).isNotChecked();
 
@@ -86,7 +91,7 @@ module('Integration | Component | transit-edit', function (hooks) {
       1: 1684882652000,
     };
     await render(hbs`
-      <TransitEdit 
+      <TransitEdit
         @key={{this.model}}
         @model={{this.model}}
         @mode="edit"

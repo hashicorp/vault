@@ -12,8 +12,6 @@ token which can be used for all future requests.
 
 ## List auth methods
 
-@include 'alerts/restricted-admin.mdx'
-
 This endpoint lists all enabled auth methods.
 
 | Method | Path        |
@@ -83,8 +81,6 @@ $ curl \
 
 ## Enable auth method
 
-@include 'alerts/restricted-admin.mdx'
-
 This endpoint enables a new auth method. After enabling, the auth method can
 be accessed and configured via the auth path specified as part of the URL. This
 auth path will be nested under the `auth` prefix.
@@ -140,7 +136,11 @@ For example, enable the "foo" auth method will make it accessible at
   - `plugin_version` `(string: "")` – Specifies the semantic version of the plugin
     to use, e.g. "v1.0.0". If unspecified, the server will select any matching
     unversioned plugin that may have been registered, the latest versioned plugin
-    registered, or a built-in plugin in that order of precendence.
+    registered, or a built-in plugin in that order of precedence.
+
+  - `identity_token_key` `(string: "")` - The key to use for signing plugin workload
+    identity tokens. If not provided, this will default to Vault's OIDC
+    [default key](/vault/docs/concepts/oidc-provider#keys).
 
 Additionally, the following options are allowed in Vault open-source, but
 relevant functionality is only supported in Vault Enterprise:
@@ -186,9 +186,12 @@ $ curl \
 
 ## Read auth method configuration
 
-@include 'alerts/restricted-admin.mdx'
-
 This endpoints returns the configuration of the auth method at the given path.
+_This endpoint requires `sudo` capability on the final path, but the same
+functionality can be achieved without `sudo` via `sys/mounts/auth/[auth-path]`._
+
+- **`sudo` required** – This endpoint requires `sudo` capability in addition to
+  any path-specific capabilities.
 
 | Method | Path              |
 | :----- | :---------------- |
@@ -237,8 +240,6 @@ $ curl \
 
 ## Disable auth method
 
-@include 'alerts/restricted-admin.mdx'
-
 This endpoint disables the auth method at the given auth path.
 
 - **`sudo` required** – This endpoint requires `sudo` capability in addition to
@@ -264,9 +265,7 @@ $ curl \
 
 ## Read auth method tuning
 
-@include 'alerts/restricted-admin.mdx'
-
-- This endpoint reads the given auth path's configuration. This endpoint requires
+This endpoint reads the given auth path's configuration. _This endpoint requires
 `sudo` capability on the final path, but the same functionality can be achieved
 without `sudo` via `sys/mounts/auth/[auth-path]/tune`._
 
@@ -302,8 +301,6 @@ $ curl \
 ```
 
 ## Tune auth method
-
-@include 'alerts/restricted-admin.mdx'
 
 Tune configuration parameters for a given auth path. _This endpoint
 requires `sudo` capability on the final path, but the same functionality

@@ -9,45 +9,12 @@ import (
 	"net/http"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
-
-const latestCrlConfigVersion = 1
-
-// CRLConfig holds basic CRL configuration information
-type crlConfig struct {
-	Version                   int    `json:"version"`
-	Expiry                    string `json:"expiry"`
-	Disable                   bool   `json:"disable"`
-	OcspDisable               bool   `json:"ocsp_disable"`
-	AutoRebuild               bool   `json:"auto_rebuild"`
-	AutoRebuildGracePeriod    string `json:"auto_rebuild_grace_period"`
-	OcspExpiry                string `json:"ocsp_expiry"`
-	EnableDelta               bool   `json:"enable_delta"`
-	DeltaRebuildInterval      string `json:"delta_rebuild_interval"`
-	UseGlobalQueue            bool   `json:"cross_cluster_revocation"`
-	UnifiedCRL                bool   `json:"unified_crl"`
-	UnifiedCRLOnExistingPaths bool   `json:"unified_crl_on_existing_paths"`
-}
-
-// Implicit default values for the config if it does not exist.
-var defaultCrlConfig = crlConfig{
-	Version:                   latestCrlConfigVersion,
-	Expiry:                    "72h",
-	Disable:                   false,
-	OcspDisable:               false,
-	OcspExpiry:                "12h",
-	AutoRebuild:               false,
-	AutoRebuildGracePeriod:    "12h",
-	EnableDelta:               false,
-	DeltaRebuildInterval:      "15m",
-	UseGlobalQueue:            false,
-	UnifiedCRL:                false,
-	UnifiedCRLOnExistingPaths: false,
-}
 
 func pathConfigCRL(b *backend) *framework.Path {
 	return &framework.Path{
@@ -275,7 +242,7 @@ existing CRL and OCSP paths will return the unified CRL instead of a response ba
 func (b *backend) pathCRLRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	sc := b.makeStorageContext(ctx, req.Storage)
 
-	config, err := b.crlBuilder.getConfigWithForcedUpdate(sc)
+	config, err := b.CrlBuilder().getConfigWithForcedUpdate(sc)
 	if err != nil {
 		return nil, fmt.Errorf("failed fetching CRL config: %w", err)
 	}
@@ -285,7 +252,7 @@ func (b *backend) pathCRLRead(ctx context.Context, req *logical.Request, _ *fram
 
 func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	sc := b.makeStorageContext(ctx, req.Storage)
-	config, err := b.crlBuilder.getConfigWithForcedUpdate(sc)
+	config, err := b.CrlBuilder().getConfigWithForcedUpdate(sc)
 	if err != nil {
 		return nil, err
 	}
@@ -410,7 +377,7 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 		return logical.ErrorResponse("unified_crl=true requires auto_rebuild=true, as unified CRLs cannot be rebuilt on every revocation."), nil
 	}
 
-	if _, err := b.crlBuilder.writeConfig(sc, config); err != nil {
+	if _, err := b.CrlBuilder().writeConfig(sc, config); err != nil {
 		return nil, fmt.Errorf("failed persisting CRL config: %w", err)
 	}
 
@@ -418,13 +385,13 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 
 	// Note this only affects/happens on the main cluster node, if you need to
 	// notify something based on a configuration change on all server types
-	// have a look at crlBuilder::reloadConfigIfRequired
+	// have a look at CrlBuilder::reloadConfigIfRequired
 	if oldDisable != config.Disable || (oldAutoRebuild && !config.AutoRebuild) || (oldEnableDelta != config.EnableDelta) || (oldUnifiedCRL != config.UnifiedCRL) {
 		// It wasn't disabled but now it is (or equivalently, we were set to
 		// auto-rebuild and we aren't now or equivalently, we changed our
 		// mind about delta CRLs and need a new complete one or equivalently,
 		// we changed our mind about unified CRLs), rotate the CRLs.
-		warnings, crlErr := b.crlBuilder.rebuild(sc, true)
+		warnings, crlErr := b.CrlBuilder().Rebuild(sc, true)
 		if crlErr != nil {
 			switch crlErr.(type) {
 			case errutil.UserError:
@@ -441,7 +408,7 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 	return resp, nil
 }
 
-func genResponseFromCrlConfig(config *crlConfig) *logical.Response {
+func genResponseFromCrlConfig(config *pki_backend.CrlConfig) *logical.Response {
 	return &logical.Response{
 		Data: map[string]interface{}{
 			"expiry":                        config.Expiry,

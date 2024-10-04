@@ -7,7 +7,7 @@ description: |-
 
 # Redundancy zones
 
-@include 'alerts/enterprise-and-hcp-plus.mdx'
+@include 'alerts/enterprise-only.mdx'
 
 Vault Enterprise Redundancy Zones provide both read scaling and resiliency benefits by enabling
 the deployment of non-voting nodes alongside voting nodes on a per availability zone basis.
@@ -36,3 +36,7 @@ wait to begin leadership transfer until it can ensure that there will be as much
 new Vault version as there was on the old Vault version.
 
 The status of redundancy zones can be monitored by consulting the [Autopilot state API endpoint](/vault/api-docs/system/storage/raftautopilot#get-cluster-state).
+
+## Optimistic Failure Tolerance
+
+@include 'autopilot/redundancy-zones.mdx'

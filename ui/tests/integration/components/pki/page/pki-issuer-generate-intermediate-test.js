@@ -12,8 +12,8 @@ import { Response } from 'miragejs';
 import { v4 as uuidv4 } from 'uuid';
 
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { SELECTORS } from 'vault/tests/helpers/pki/pki-configure-create';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 /**
  * this test is for the page component only. A separate test is written for the form rendered
@@ -53,11 +53,11 @@ module('Integration | Component | page/pki-issuer-generate-intermediate', functi
         owner: this.engine,
       }
     );
-    assert.dom('[data-test-pki-page-title]').hasText('Generate intermediate CSR');
-    await fillIn(SELECTORS.typeField, 'internal');
-    await fillIn(SELECTORS.inputByName('commonName'), 'foobar');
+    assert.dom(GENERAL.title).hasText('Generate intermediate CSR');
+    await fillIn(GENERAL.inputByAttr('type'), 'internal');
+    await fillIn(GENERAL.inputByAttr('commonName'), 'foobar');
     await click('[data-test-save]');
-    assert.dom('[data-test-pki-page-title]').hasText('View Generated CSR');
+    assert.dom(GENERAL.title).hasText('View Generated CSR');
   });
 
   test('it does not update title if API response is an error', async function (assert) {
@@ -73,13 +73,13 @@ module('Integration | Component | page/pki-issuer-generate-intermediate', functi
         owner: this.engine,
       }
     );
-    assert.dom('[data-test-pki-page-title]').hasText('Generate intermediate CSR');
+    assert.dom(GENERAL.title).hasText('Generate intermediate CSR');
     // Fill in
-    await fillIn(SELECTORS.typeField, 'internal');
-    await fillIn(SELECTORS.inputByName('commonName'), 'foobar');
+    await fillIn(GENERAL.inputByAttr('type'), 'internal');
+    await fillIn(GENERAL.inputByAttr('commonName'), 'foobar');
     await click('[data-test-save]');
     assert
-      .dom('[data-test-pki-page-title]')
+      .dom(GENERAL.title)
       .hasText('Generate intermediate CSR', 'title does not change if response is unsuccessful');
   });
 });

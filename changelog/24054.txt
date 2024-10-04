@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/transit: Fix a panic when attempting to export a public RSA key
+```

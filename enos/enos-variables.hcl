@@ -1,5 +1,5 @@
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: BUSL-1.1
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
 
 variable "artifactory_username" {
   type        = string
@@ -48,7 +48,7 @@ variable "aws_ssh_private_key_path" {
 variable "backend_edition" {
   description = "The backend release edition if applicable"
   type        = string
-  default     = "oss" // or "ent"
+  default     = "ce" // or "ent"
 }
 
 variable "backend_instance_type" {
@@ -75,10 +75,34 @@ variable "project_name" {
   default     = "vault-enos-integration"
 }
 
-variable "rhel_distro_version" {
+variable "distro_version_amzn" {
+  description = "The version of Amazon Linux 2 to use"
+  type        = string
+  default     = "2023" // or "2", though pkcs11 has not been tested with 2
+}
+
+variable "distro_version_leap" {
+  description = "The version of openSUSE leap to use"
+  type        = string
+  default     = "15.6"
+}
+
+variable "distro_version_rhel" {
   description = "The version of RHEL to use"
   type        = string
-  default     = "9.1" // or "8.8"
+  default     = "9.4" // or "8.10"
+}
+
+variable "distro_version_sles" {
+  description = "The version of SUSE SLES to use"
+  type        = string
+  default     = "15.6"
+}
+
+variable "distro_version_ubuntu" {
+  description = "The version of ubuntu to use"
+  type        = string
+  default     = "24.04" // or "20.04", "22.04"
 }
 
 variable "tags" {
@@ -91,18 +115,6 @@ variable "terraform_plugin_cache_dir" {
   description = "The directory to cache Terraform modules and providers"
   type        = string
   default     = null
-}
-
-variable "tfc_api_token" {
-  description = "The Terraform Cloud QTI Organization API token. This is used to download the enos Terraform provider."
-  type        = string
-  sensitive   = true
-}
-
-variable "ubuntu_distro_version" {
-  description = "The version of ubuntu to use"
-  type        = string
-  default     = "22.04" // or "20.04", "18.04"
 }
 
 variable "ui_test_filter" {
@@ -118,16 +130,8 @@ variable "ui_run_tests" {
 }
 
 variable "vault_artifact_type" {
-  description = "The type of Vault artifact to use when installing Vault from artifactory. It should be 'package' for .deb or # .rpm package and 'bundle' for .zip bundles"
+  description = "The type of Vault artifact to use when installing Vault from artifactory. It should be 'package' for .deb or .rpm package and 'bundle' for .zip bundles"
   default     = "bundle"
-}
-
-variable "vault_autopilot_initial_release" {
-  description = "The Vault release to deploy before upgrading with autopilot"
-  default = {
-    edition = "ent"
-    version = "1.11.0"
-  }
 }
 
 variable "vault_artifact_path" {
@@ -142,8 +146,8 @@ variable "vault_build_date" {
   default     = ""
 }
 
-variable "vault_enable_file_audit_device" {
-  description = "If true the file audit device will be enabled at the path /var/log/vault_audit.log"
+variable "vault_enable_audit_devices" {
+  description = "If true every audit device will be enabled"
   type        = bool
   default     = true
 }
@@ -161,7 +165,7 @@ variable "vault_instance_count" {
 }
 
 variable "vault_license_path" {
-  description = "The path to a valid Vault enterprise edition license. This is only required for non-oss editions"
+  description = "The path to a valid Vault enterprise edition license. This is only required for non-ce editions"
   type        = string
   default     = null
 }
@@ -193,7 +197,7 @@ variable "vault_revision" {
 variable "vault_upgrade_initial_release" {
   description = "The Vault release to deploy before upgrading"
   default = {
-    edition = "oss"
+    edition = "ce"
     // Vault 1.10.5 has a known issue with retry_join.
     version = "1.10.4"
   }

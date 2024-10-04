@@ -4,7 +4,7 @@ page_title: OIDC Provider Setup - Auth Methods - Google
 description: OIDC provider configuration for Google
 ---
 
-## Google
+# Google
 
 Main reference: [Using OAuth 2.0 to Access Google APIs](https://developers.google.com/identity/protocols/OAuth2)
 
@@ -71,7 +71,8 @@ that enable the feature.
 - `impersonate_principal` `(string: <optional>)` - Service account email that has been granted domain-wide delegation of authority in Google Workspace.
   Required if accessing the Google Workspace Directory API through domain-wide delegation of authority, without using a service account key.
   The service account vault is running under must be granted the `iam.serviceAccounts.signJwt` permission on this service account.
-  If `gsuite_admin_impersonate` is specifed, that	Workspace user will be impersonated.
+  If `gsuite_admin_impersonate` is specified, that	Workspace user will be impersonated.
+- `domain` `(string: <optional>)` - The domain to get groups from. Set this if your workspace is configured with more than one domain.
 
 Example configuration:
 

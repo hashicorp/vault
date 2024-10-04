@@ -1,0 +1,24 @@
+### URL change for KV v2 secrets engine ((#kv2-url-change))
+
+#### Affected versions
+
+1.15.0+
+
+#### Issue
+
+Recent improvements to the Vault UI updated the URL structure of the KV v2 secrets engine that affect existing URLs.
+
+Previously, URLs for KV v2 used the pattern:
+`ui/vault/secrets/hma/show/${secretPath}`. With the recent refactor, KV v2 URLs
+now use the following pattern:
+`ui/vault/secrets/hma/kv/${encodedUriComponent(secretPath)}/details`.
+
+Opening older URLs now result in 404 errors.
+
+#### Workaround
+
+Currently, no workaround exists.
+
+Improvements that include automatic redirects for older URLs are planned for
+1.15.4.
+

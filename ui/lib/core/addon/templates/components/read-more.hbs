@@ -14,13 +14,7 @@
   </span>
   {{#if this.hasOverflow}}
     <div class="linked-block-seemore" data-test-readmore-toggle>
-      <button {{on "click" this.toggleOpen}} class="link link-plain" type="button">
-        {{#if this.isOpen}}
-          See Less
-        {{else}}
-          See More
-        {{/if}}
-      </button>
+      <Hds::Button @text={{if this.isOpen "See Less" "See More"}} class="link" {{on "click" this.toggleOpen}} />
     </div>
   {{/if}}
 </div>

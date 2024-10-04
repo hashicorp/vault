@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 	"sync"
 	"time"
 
@@ -46,6 +47,8 @@ func (b *SystemBackend) activityWritePath() *framework.Path {
 }
 
 func (b *SystemBackend) handleActivityWriteData(ctx context.Context, request *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	now := time.Now().UTC()
+
 	json := data.Get("input")
 	input := &generation.ActivityLogMockInput{}
 	err := protojson.Unmarshal([]byte(json.(string)), input)
@@ -72,7 +75,7 @@ func (b *SystemBackend) handleActivityWriteData(ctx context.Context, request *lo
 	}
 	generated := newMultipleMonthsActivityClients(numMonths + 1)
 	for _, month := range input.Data {
-		err := generated.processMonth(ctx, b.Core, month)
+		err := generated.processMonth(ctx, b.Core, month, now)
 		if err != nil {
 			return logical.ErrorResponse("failed to process data for month %d", month.GetMonthsAgo()), err
 		}
@@ -82,8 +85,9 @@ func (b *SystemBackend) handleActivityWriteData(ctx context.Context, request *lo
 	for _, opt := range input.Write {
 		opts[opt] = struct{}{}
 	}
-	paths, err := generated.write(ctx, opts, b.Core.activityLog)
+	paths, err := generated.write(ctx, opts, b.Core.activityLog, now)
 	if err != nil {
+		b.logger.Debug("failed to write activity log data", "error", err.Error())
 		return logical.ErrorResponse("failed to write data"), err
 	}
 	return &logical.Response{
@@ -149,10 +153,19 @@ func (s *singleMonthActivityClients) populateSegments() (map[int][]*activity.Ent
 		return segments, nil
 	}
 
-	totalSegmentCount := 1
+	// determine how many segments are necessary to store the clients for this month
+	// using the default storage limits
+	numNecessarySegments := len(s.clients) / ActivitySegmentClientCapacity
+	if len(s.clients)%ActivitySegmentClientCapacity != 0 {
+		numNecessarySegments++
+	}
+	totalSegmentCount := numNecessarySegments
+
+	// override the segment count if set by client
 	if s.generationParameters.GetNumSegments() > 0 {
 		totalSegmentCount = int(s.generationParameters.GetNumSegments())
 	}
+
 	numNonUsable := len(skipIndexes) + len(emptyIndexes)
 	usableSegmentCount := totalSegmentCount - numNonUsable
 	if usableSegmentCount <= 0 {
@@ -163,6 +176,10 @@ func (s *singleMonthActivityClients) populateSegments() (map[int][]*activity.Ent
 	segmentSizes := len(s.clients) / usableSegmentCount
 	if len(s.clients)%usableSegmentCount != 0 {
 		segmentSizes++
+	}
+
+	if segmentSizes > ActivitySegmentClientCapacity {
+		return nil, fmt.Errorf("the number of segments is too low, it must be greater than %d in order to meet storage limits", numNecessarySegments)
 	}
 
 	clientIndex := 0
@@ -183,12 +200,14 @@ func (s *singleMonthActivityClients) populateSegments() (map[int][]*activity.Ent
 
 // addNewClients generates clients according to the given parameters, and adds them to the month
 // the client will always have the mountAccessor as its mount accessor
-func (s *singleMonthActivityClients) addNewClients(c *generation.Client, mountAccessor string, segmentIndex *int) error {
+func (s *singleMonthActivityClients) addNewClients(c *generation.Client, mountAccessor string, segmentIndex *int, monthsAgo int32, now time.Time) error {
 	count := 1
 	if c.Count > 1 {
 		count = int(c.Count)
 	}
 	isNonEntity := c.ClientType != entityActivityType
+	ts := timeutil.MonthsPreviousTo(int(monthsAgo), now)
+
 	for i := 0; i < count; i++ {
 		record := &activity.EntityRecord{
 			ClientID:      c.Id,
@@ -196,6 +215,7 @@ func (s *singleMonthActivityClients) addNewClients(c *generation.Client, mountAc
 			MountAccessor: mountAccessor,
 			NonEntity:     isNonEntity,
 			ClientType:    c.ClientType,
+			Timestamp:     ts.Unix(),
 		}
 		if record.ClientID == "" {
 			var err error
@@ -210,7 +230,7 @@ func (s *singleMonthActivityClients) addNewClients(c *generation.Client, mountAc
 }
 
 // processMonth populates a month of client data
-func (m *multipleMonthsActivityClients) processMonth(ctx context.Context, core *Core, month *generation.Data) error {
+func (m *multipleMonthsActivityClients) processMonth(ctx context.Context, core *Core, month *generation.Data, now time.Time) error {
 	// default to using the root namespace and the first mount on the root namespace
 	mounts, err := core.ListMounts()
 	if err != nil {
@@ -226,6 +246,7 @@ func (m *multipleMonthsActivityClients) processMonth(ctx context.Context, core *
 	m.months[month.GetMonthsAgo()].generationParameters = month
 	add := func(c []*generation.Client, segmentIndex *int) error {
 		for _, clients := range c {
+			mountAccessor := defaultMountAccessorRootNS
 
 			if clients.Namespace == "" {
 				clients.Namespace = namespace.RootNamespaceID
@@ -234,38 +255,45 @@ func (m *multipleMonthsActivityClients) processMonth(ctx context.Context, core *
 				clients.ClientType = entityActivityType
 			}
 
-			// verify that the namespace exists
-			ns, err := core.NamespaceByID(ctx, clients.Namespace)
-			if err != nil {
-				return err
+			if clients.Namespace != namespace.RootNamespaceID && !strings.HasSuffix(clients.Namespace, "/") {
+				clients.Namespace += "/"
 			}
+			// verify that the namespace exists
+			ns := core.namespaceByPath(clients.Namespace)
+			if ns.ID == namespace.RootNamespaceID && clients.Namespace != namespace.RootNamespaceID {
+				return fmt.Errorf("unable to find namespace %s", clients.Namespace)
+			}
+			clients.Namespace = ns.ID
 
 			// verify that the mount exists
 			if clients.Mount != "" {
+				if !strings.HasSuffix(clients.Mount, "/") {
+					clients.Mount += "/"
+				}
 				nctx := namespace.ContextWithNamespace(ctx, ns)
 				mountEntry := core.router.MatchingMountEntry(nctx, clients.Mount)
 				if mountEntry == nil {
-					return fmt.Errorf("unable to find matching mount in namespace %s", clients.Namespace)
+					return fmt.Errorf("unable to find matching mount in namespace %s", ns.Path)
 				}
+				mountAccessor = mountEntry.Accessor
 			}
 
-			mountAccessor := defaultMountAccessorRootNS
 			if clients.Namespace != namespace.RootNamespaceID && clients.Mount == "" {
 				// if we're not using the root namespace, find a mount on the namespace that we are using
 				found := false
 				for _, mount := range mounts {
-					if mount.NamespaceID == clients.Namespace {
+					if mount.NamespaceID == ns.ID {
 						mountAccessor = mount.Accessor
 						found = true
 						break
 					}
 				}
 				if !found {
-					return fmt.Errorf("unable to find matching mount in namespace %s", clients.Namespace)
+					return fmt.Errorf("unable to find matching mount in namespace %s", ns.Path)
 				}
 			}
 
-			err = m.addClientToMonth(month.GetMonthsAgo(), clients, mountAccessor, segmentIndex)
+			err = m.addClientToMonth(month.GetMonthsAgo(), clients, mountAccessor, segmentIndex, now)
 			if err != nil {
 				return err
 			}
@@ -291,11 +319,11 @@ func (m *multipleMonthsActivityClients) processMonth(ctx context.Context, core *
 	return nil
 }
 
-func (m *multipleMonthsActivityClients) addClientToMonth(monthsAgo int32, c *generation.Client, mountAccessor string, segmentIndex *int) error {
+func (m *multipleMonthsActivityClients) addClientToMonth(monthsAgo int32, c *generation.Client, mountAccessor string, segmentIndex *int, now time.Time) error {
 	if c.Repeated || c.RepeatedFromMonth > 0 {
 		return m.addRepeatedClients(monthsAgo, c, mountAccessor, segmentIndex)
 	}
-	return m.months[monthsAgo].addNewClients(c, mountAccessor, segmentIndex)
+	return m.months[monthsAgo].addNewClients(c, mountAccessor, segmentIndex, monthsAgo, now)
 }
 
 func (m *multipleMonthsActivityClients) addRepeatedClients(monthsAgo int32, c *generation.Client, mountAccessor string, segmentIndex *int) error {
@@ -324,75 +352,76 @@ func (m *multipleMonthsActivityClients) addRepeatedClients(monthsAgo int32, c *g
 	return nil
 }
 
-func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[generation.WriteOptions]struct{}, activityLog *ActivityLog) ([]string, error) {
-	now := timeutil.StartOfMonth(time.Now().UTC())
+func (m *multipleMonthsActivityClients) addMissingCurrentMonth() {
+	missing := m.months[0].generationParameters == nil &&
+		len(m.months) > 1 &&
+		m.months[1].generationParameters != nil
+	if !missing {
+		return
+	}
+	m.months[0].generationParameters = &generation.Data{EmptySegmentIndexes: []int32{0}, NumSegments: 2}
+}
+
+func (m *multipleMonthsActivityClients) timestampForMonth(i int, now time.Time) time.Time {
+	if i > 0 {
+		return timeutil.StartOfMonth(timeutil.MonthsPreviousTo(i, now))
+	}
+	return now
+}
+
+func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[generation.WriteOptions]struct{}, activityLog *ActivityLog, now time.Time) ([]string, error) {
 	paths := []string{}
 
 	_, writePQ := opts[generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES]
 	_, writeDistinctClients := opts[generation.WriteOptions_WRITE_DISTINCT_CLIENTS]
-	_, writeEntities := opts[generation.WriteOptions_WRITE_ENTITIES]
 	_, writeIntentLog := opts[generation.WriteOptions_WRITE_INTENT_LOGS]
 
-	pqOpts := pqOptions{}
-	if writePQ || writeDistinctClients {
-		pqOpts.byNamespace = make(map[string]*processByNamespace)
-		pqOpts.byMonth = make(map[int64]*processMonth)
-		pqOpts.activePeriodEnd = m.latestTimestamp(now)
-		pqOpts.endTime = timeutil.EndOfMonth(pqOpts.activePeriodEnd)
-		pqOpts.activePeriodStart = m.earliestTimestamp(now)
-	}
+	m.addMissingCurrentMonth()
 
-	var earliestTimestamp, latestTimestamp time.Time
 	for i, month := range m.months {
 		if month.generationParameters == nil {
 			continue
 		}
-		var timestamp time.Time
-		if i > 0 {
-			timestamp = timeutil.StartOfMonth(timeutil.MonthsPreviousTo(i, now))
-		} else {
-			timestamp = now
-		}
-		if earliestTimestamp.IsZero() || timestamp.Before(earliestTimestamp) {
-			earliestTimestamp = timestamp
-		}
-		if timestamp.After(latestTimestamp) {
-			latestTimestamp = timestamp
-		}
+		timestamp := m.timestampForMonth(i, now)
 		segments, err := month.populateSegments()
 		if err != nil {
 			return nil, err
 		}
 		for segmentIndex, segment := range segments {
-			if writeEntities || writeIntentLog {
-				if segment == nil {
-					// skip the index
-					continue
-				}
-				entityPath, err := activityLog.saveSegmentEntitiesInternal(ctx, segmentInfo{
-					startTimestamp:       timestamp.Unix(),
-					currentClients:       &activity.EntityActivityLog{Clients: segment},
-					clientSequenceNumber: uint64(segmentIndex),
-					tokenCount:           &activity.TokenCount{},
-				}, true)
-				if err != nil {
-					return nil, err
-				}
-				paths = append(paths, entityPath)
+			if segment == nil {
+				// skip the index
+				continue
 			}
-		}
-
-		if writePQ || writeDistinctClients {
-			reader := newProtoSegmentReader(segments)
-			err = activityLog.segmentToPrecomputedQuery(ctx, timestamp, reader, pqOpts)
+			entityPath, err := activityLog.saveSegmentEntitiesInternal(ctx, segmentInfo{
+				startTimestamp:       timestamp.Unix(),
+				currentClients:       &activity.EntityActivityLog{Clients: segment},
+				clientSequenceNumber: uint64(segmentIndex),
+				tokenCount:           &activity.TokenCount{},
+			}, true)
 			if err != nil {
 				return nil, err
 			}
+			paths = append(paths, entityPath)
 		}
-
+	}
+	if writePQ || writeDistinctClients {
+		// start with the oldest month of data, and create precomputed queries
+		// up to that month
+		pqWg := sync.WaitGroup{}
+		for i := len(m.months) - 1; i > 0; i-- {
+			pqWg.Add(1)
+			go func(i int) {
+				defer pqWg.Done()
+				activityLog.precomputedQueryWorker(ctx, &ActivityIntentLog{
+					PreviousMonth: m.timestampForMonth(i, now).Unix(),
+					NextMonth:     now.Unix(),
+				})
+			}(i)
+		}
+		pqWg.Wait()
 	}
 	if writeIntentLog {
-		err := activityLog.writeIntentLog(ctx, earliestTimestamp.UTC().Unix(), latestTimestamp.UTC())
+		err := activityLog.writeIntentLog(ctx, m.latestTimestamp(now, false).Unix(), m.latestTimestamp(now, true).UTC())
 		if err != nil {
 			return nil, err
 		}
@@ -402,12 +431,13 @@ func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[gene
 	if err != nil {
 		return nil, err
 	}
+	wg.Wait()
 	return paths, nil
 }
 
-func (m *multipleMonthsActivityClients) latestTimestamp(now time.Time) time.Time {
+func (m *multipleMonthsActivityClients) latestTimestamp(now time.Time, includeCurrentMonth bool) time.Time {
 	for i, month := range m.months {
-		if month.generationParameters != nil {
+		if month.generationParameters != nil && (i != 0 || includeCurrentMonth) {
 			return timeutil.StartOfMonth(timeutil.MonthsPreviousTo(i, now))
 		}
 	}

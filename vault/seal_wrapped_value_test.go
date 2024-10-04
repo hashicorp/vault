@@ -1,13 +1,15 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/vault/vault/seal"
-
 	"github.com/golang/protobuf/proto"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
+	"github.com/hashicorp/vault/vault/seal"
 	"github.com/stretchr/testify/assert"
 )
 

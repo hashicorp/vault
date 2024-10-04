@@ -1,0 +1,3 @@
+```release-note:bug
+proxy/cache (enterprise): Fixed an issue where cached static secrets could fail to update if the secrets belonged to a non-root namespace.
+```

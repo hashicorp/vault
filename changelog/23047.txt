@@ -1,0 +1,3 @@
+```release-note:improvement
+api: added new API field to Vault responses, `mount_type`, returning mount information (e.g. `kv` for KVV1/KVV2) for mount when appropriate.
+```

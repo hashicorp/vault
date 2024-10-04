@@ -1,12 +1,14 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Model, { attr } from '@ember-data/model';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { withFormFields } from 'vault/decorators/model-form-fields';
+import { isDeleted } from 'kv/utils/kv-deleted';
+import { WHITESPACE_WARNING } from 'vault/utils/model-helpers/validators';
 
 /* sample response
 {
@@ -34,8 +36,7 @@ const validations = {
     { type: 'endsInSlash', message: `Path can't end in forward slash '/'.` },
     {
       type: 'containsWhiteSpace',
-      message:
-        "Path contains whitespace. If this is desired, you'll need to encode it with %20 in API requests.",
+      message: WHITESPACE_WARNING('path'),
       level: 'warn',
     },
   ],
@@ -71,9 +72,14 @@ export default class KvSecretDataModel extends Model {
 
   get state() {
     if (this.destroyed) return 'destroyed';
-    if (this.deletionTime) return 'deleted';
+    if (this.isSecretDeleted) return 'deleted';
     if (this.createdTime) return 'created';
     return '';
+  }
+
+  // cannot use isDeleted as model property name because of an ember property conflict
+  get isSecretDeleted() {
+    return isDeleted(this.deletionTime);
   }
 
   // Permissions
@@ -82,6 +88,7 @@ export default class KvSecretDataModel extends Model {
   @lazyCapabilities(apiPath`${'backend'}/delete/${'path'}`, 'backend', 'path') deletePath;
   @lazyCapabilities(apiPath`${'backend'}/destroy/${'path'}`, 'backend', 'path') destroyPath;
   @lazyCapabilities(apiPath`${'backend'}/undelete/${'path'}`, 'backend', 'path') undeletePath;
+  @lazyCapabilities(apiPath`${'backend'}/subkeys/${'path'}`, 'backend', 'path') subkeysPath;
 
   get canDeleteLatestVersion() {
     return this.dataPath.get('canDelete') !== false;
@@ -112,5 +119,8 @@ export default class KvSecretDataModel extends Model {
   }
   get canDeleteMetadata() {
     return this.metadataPath.get('canDelete') !== false;
+  }
+  get canReadSubkeys() {
+    return this.subkeysPath.get('canRead') !== false;
   }
 }

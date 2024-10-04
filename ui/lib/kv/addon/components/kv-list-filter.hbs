@@ -1,10 +1,14 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <form {{on "submit" (perform this.handleSearch)}}>
   <Hds::SegmentedGroup as |S|>
     <S.TextInput
-      id="secret-id"
       @value={{this.query}}
       placeholder="Search secret path"
-      aria-describedby="Search by secret path"
+      aria-label="Search by secret path"
       size="32"
       {{on "input" this.handleInput}}
       {{on "keydown" this.handleKeyDown}}

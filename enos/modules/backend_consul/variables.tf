@@ -25,6 +25,15 @@ variable "data_dir" {
   default     = "/opt/consul/data"
 }
 
+variable "hosts" {
+  description = "The target machines host addresses to use for the consul cluster"
+  type = map(object({
+    ipv6       = string
+    private_ip = string
+    public_ip  = string
+  }))
+}
+
 variable "install_dir" {
   type        = string
   description = "The directory where the consul binary will be installed"
@@ -63,14 +72,6 @@ variable "release" {
   description = "Consul release version and edition to install from releases.hashicorp.com"
   default = {
     version = "1.15.3"
-    edition = "oss"
+    edition = "ce"
   }
-}
-
-variable "target_hosts" {
-  description = "The target machines host addresses to use for the consul cluster"
-  type = map(object({
-    private_ip = string
-    public_ip  = string
-  }))
 }

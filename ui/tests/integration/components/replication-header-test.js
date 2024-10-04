@@ -34,8 +34,7 @@ module('Integration | Component | replication-header', function (hooks) {
 
   test('it renders', async function (assert) {
     await render(hbs`
-      <div id="modal-wormhole"></div>
-      <ReplicationHeader @data={{this.data}} @isSecondary={{this.isSecondary}} @title={{this.title}}/>
+            <ReplicationHeader @data={{this.data}} @isSecondary={{this.isSecondary}} @title={{this.title}}/>
     `);
 
     assert.dom('[data-test-replication-header]').exists();
@@ -43,8 +42,7 @@ module('Integration | Component | replication-header', function (hooks) {
 
   test('it renders with mode and secondaryId when set', async function (assert) {
     await render(hbs`
-      <div id="modal-wormhole"></div>
-      <ReplicationHeader @data={{this.data}} @isSecondary={{this.isSecondary}} @title={{this.title}} @secondaryId={{this.secondaryId}}/>
+            <ReplicationHeader @data={{this.data}} @isSecondary={{this.isSecondary}} @title={{this.title}} @secondaryId={{this.secondaryId}}/>
     `);
 
     assert.dom('[data-test-secondaryId]').includesText(SECONDARY_ID, `shows the correct secondaryId value`);
@@ -58,8 +56,7 @@ module('Integration | Component | replication-header', function (hooks) {
     this.set('secondaryId', noId);
 
     await render(hbs`
-      <div id="modal-wormhole"></div>
-      <ReplicationHeader @data={{this.data}} @isSecondary={{this.isSecondary}} @title={{this.title}} @secondaryId={{this.secondaryId}}/>
+            <ReplicationHeader @data={{this.data}} @isSecondary={{this.isSecondary}} @title={{this.title}} @secondaryId={{this.secondaryId}}/>
     `);
 
     assert.dom('[data-test-secondaryId]').doesNotExist();
@@ -68,8 +65,7 @@ module('Integration | Component | replication-header', function (hooks) {
 
   test('it does not show tabs when showTabs is not set', async function (assert) {
     await render(hbs`
-      <div id="modal-wormhole"></div>
-      <ReplicationHeader @data={{this.data}} @isSecondary={{this.isSecondary}} @title={{this.title}}/>
+            <ReplicationHeader @data={{this.data}} @isSecondary={{this.isSecondary}} @title={{this.title}}/>
     `);
 
     assert.dom('[data-test-tabs]').doesNotExist();

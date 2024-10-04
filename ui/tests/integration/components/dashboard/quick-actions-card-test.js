@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -8,9 +8,10 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { render, findAll, click } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { fillIn } from '@ember/test-helpers';
-import { selectChoose } from 'ember-power-select/test-support/helpers';
+import { selectChoose } from 'ember-power-select/test-support';
 
-import SELECTORS from 'vault/tests/helpers/components/dashboard/quick-actions-card';
+import { DASHBOARD } from 'vault/tests/helpers/components/dashboard/dashboard-selectors';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Integration | Component | dashboard/quick-actions-card', function (hooks) {
   setupRenderingTest(hooks);
@@ -91,37 +92,45 @@ module('Integration | Component | dashboard/quick-actions-card', function (hooks
     this.renderComponent = () => {
       return render(hbs`<Dashboard::QuickActionsCard @secretsEngines={{this.secretsEngines}} />`);
     };
+
+    setRunOptions({
+      rules: {
+        // TODO: Fix SearchSelect component
+        'aria-required-attr': { enabled: false },
+        label: { enabled: false },
+      },
+    });
   });
 
   test('it should show quick action empty state if no engine is selected', async function (assert) {
     await this.renderComponent();
     assert.dom('.title').hasText('Quick actions');
-    assert.dom(SELECTORS.secretsEnginesSelect).exists({ count: 1 });
-    assert.dom(SELECTORS.emptyState).exists({ count: 1 });
+    assert.dom(DASHBOARD.searchSelect('secrets-engines')).exists({ count: 1 });
+    assert.dom(DASHBOARD.emptyState('no-mount-selected')).exists({ count: 1 });
   });
 
   test('it should show correct actions for pki', async function (assert) {
     await this.renderComponent();
-    await selectChoose(SELECTORS.secretsEnginesSelect, 'pki-0-test');
-    await fillIn(SELECTORS.actionSelect, 'Issue certificate');
-    assert.dom(SELECTORS.emptyState).doesNotExist();
-    await fillIn(SELECTORS.actionSelect, 'Issue certificate');
-    assert.dom(SELECTORS.getActionButton('Issue leaf certificate')).exists({ count: 1 });
-    assert.dom(SELECTORS.paramsTitle).hasText('Role to use');
-    await fillIn(SELECTORS.actionSelect, 'View certificate');
-    assert.dom(SELECTORS.paramsTitle).hasText('Certificate serial number');
-    assert.dom(SELECTORS.getActionButton('View certificate')).exists({ count: 1 });
-    await fillIn(SELECTORS.actionSelect, 'View issuer');
-    assert.dom(SELECTORS.paramsTitle).hasText('Issuer');
-    assert.dom(SELECTORS.getActionButton('View issuer')).exists({ count: 1 });
+    await selectChoose(DASHBOARD.searchSelect('secrets-engines'), 'pki-0-test');
+    await fillIn(DASHBOARD.selectEl, 'Issue certificate');
+    assert.dom(DASHBOARD.emptyState('quick-actions')).doesNotExist();
+    await fillIn(DASHBOARD.selectEl, 'Issue certificate');
+    assert.dom(DASHBOARD.actionButton('Issue leaf certificate')).exists({ count: 1 });
+    assert.dom(DASHBOARD.subtitle('param')).hasText('Role to use');
+    await fillIn(DASHBOARD.selectEl, 'View certificate');
+    assert.dom(DASHBOARD.subtitle('param')).hasText('Certificate serial number');
+    assert.dom(DASHBOARD.actionButton('View certificate')).exists({ count: 1 });
+    await fillIn(DASHBOARD.selectEl, 'View issuer');
+    assert.dom(DASHBOARD.subtitle('param')).hasText('Issuer');
+    assert.dom(DASHBOARD.actionButton('View issuer')).exists({ count: 1 });
   });
   test('it should show correct actions for database', async function (assert) {
     await this.renderComponent();
-    await selectChoose(SELECTORS.secretsEnginesSelect, 'database-test');
-    assert.dom(SELECTORS.emptyState).doesNotExist();
-    await fillIn(SELECTORS.actionSelect, 'Generate credentials for database');
-    assert.dom(SELECTORS.paramsTitle).hasText('Role to use');
-    assert.dom(SELECTORS.getActionButton('Generate credentials')).exists({ count: 1 });
+    await selectChoose(DASHBOARD.searchSelect('secrets-engines'), 'database-test');
+    assert.dom(DASHBOARD.emptyState('quick-actions')).doesNotExist();
+    await fillIn(DASHBOARD.selectEl, 'Generate credentials for database');
+    assert.dom(DASHBOARD.subtitle('param')).hasText('Role to use');
+    assert.dom(DASHBOARD.actionButton('Generate credentials')).exists({ count: 1 });
   });
   test('it should show correct actions for kv', async function (assert) {
     await this.renderComponent();
@@ -131,10 +140,10 @@ module('Integration | Component | dashboard/quick-actions-card', function (hooks
       5,
       'renders only kv v2, pki and db engines'
     );
-    await selectChoose(SELECTORS.secretsEnginesSelect, 'kv-v2-test');
-    assert.dom(SELECTORS.emptyState).doesNotExist();
-    await fillIn(SELECTORS.actionSelect, 'Find KV secrets');
-    assert.dom(SELECTORS.paramsTitle).hasText('Secret path');
-    assert.dom(SELECTORS.getActionButton('Read secrets')).exists({ count: 1 });
+    await selectChoose(DASHBOARD.searchSelect('secrets-engines'), 'kv-v2-test');
+    assert.dom(DASHBOARD.emptyState('quick-actions')).doesNotExist();
+    await fillIn(DASHBOARD.selectEl, 'Find KV secrets');
+    assert.dom(DASHBOARD.kvSearchSelect).exists('Shows option to search fo KVv2 secret');
+    assert.dom(DASHBOARD.actionButton('Read secrets')).exists({ count: 1 });
   });
 });

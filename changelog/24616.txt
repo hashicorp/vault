@@ -1,0 +1,3 @@
+```release-note:bug
+fairshare: fix a race condition in JobManager.GetWorkerCounts
+```

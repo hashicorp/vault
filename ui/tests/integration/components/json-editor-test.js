@@ -6,10 +6,11 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
-import { render, fillIn, find, waitUntil, click } from '@ember/test-helpers';
+import { render, fillIn, find, waitUntil, click, triggerKeyEvent } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import jsonEditor from '../../pages/components/json-editor';
 import sinon from 'sinon';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const component = create(jsonEditor);
 
@@ -29,6 +30,14 @@ module('Integration | Component | json-editor', function (hooks) {
     this.set('json_blob', JSON_BLOB);
     this.set('bad_json_blob', BAD_JSON_BLOB);
     this.set('hashi-read-only-theme', 'hashi-read-only auto-height');
+    setRunOptions({
+      rules: {
+        // CodeMirror has a secret textarea without a label that causes this problem
+        label: { enabled: false },
+        // TODO: investigate and fix Codemirror styling
+        'color-contrast': { enabled: false },
+      },
+    });
   });
 
   test('it renders', async function (assert) {
@@ -41,6 +50,7 @@ module('Integration | Component | json-editor', function (hooks) {
 
     assert.strictEqual(component.title, 'Test title', 'renders the provided title');
     assert.true(component.hasToolbar, 'renders the toolbar');
+    assert.true(component.hasCopyButton, 'renders the copy button');
     assert.true(component.hasJSONEditor, 'renders the code mirror modifier');
     assert.ok(component.canEdit, 'json editor can be edited');
   });
@@ -72,7 +82,6 @@ module('Integration | Component | json-editor', function (hooks) {
       @theme={{this.hashi-read-only-theme}}
       @readOnly={{true}}
     />`);
-
     assert.dom('.cm-s-hashi-read-only').hasStyle({
       background: 'rgb(247, 248, 250) none repeat scroll 0% 0% / auto padding-box border-box',
     });
@@ -99,5 +108,25 @@ module('Integration | Component | json-editor', function (hooks) {
     await click('[data-test-restore-example]');
     assert.dom('.CodeMirror-code').hasText(`1${this.example}`, 'Example is restored');
     assert.strictEqual(this.value, null, 'Value is cleared on restore example');
+  });
+
+  test('code-mirror modifier sets value correctly on non json object', async function (assert) {
+    // this.value is a tracked property, so anytime it changes the modifier is called. We're testing non-json content by setting the mode to ruby and adding a comment
+    this.value = null;
+    await render(hbs`
+      <JsonEditor
+        @value={{this.value}}
+        @mode="ruby"
+        @valueUpdated={{fn (mut this.value)}}
+      />
+    `);
+    await fillIn('textarea', '#A comment');
+    assert.strictEqual(this.value, '#A comment', 'value is set correctly');
+    await triggerKeyEvent('textarea', 'keydown', 'Enter');
+    assert.strictEqual(
+      this.value,
+      `#A comment\n`,
+      'even after hitting enter the value is still set correctly'
+    );
   });
 });

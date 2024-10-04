@@ -21,9 +21,9 @@ module('Integration | Component | form-error', function (hooks) {
 
     // Template block usage:
     await render(hbs`
-      {{#form-error}}
+      <FormError>
         template block text
-      {{/form-error}}
+      </FormError>
     `);
 
     assert.dom(this.element).hasText('template block text');

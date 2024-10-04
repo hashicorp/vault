@@ -3,20 +3,19 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<PopupMenu @name="metadata-edit-menu">
-  <nav class="menu">
-    <ul class="menu-list">
-      <li class="action">
-        <ConfirmAction
-          @buttonClasses="link is-destroy"
-          @confirmTitle="Remove metadata?"
-          @confirmMessage="This data may be used outside of Vault."
-          @confirmButtonText="Remove"
-          @onConfirmAction={{action "performTransaction" this.model this.key}}
-        >
-          Remove
-        </ConfirmAction>
-      </li>
-    </ul>
-  </nav>
-</PopupMenu>
+<div class="has-text-right">
+  <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+    <dd.ToggleIcon @icon="more-horizontal" @text="Metadata options" @hasChevron={{false}} data-test-popup-menu-trigger />
+    <dd.Interactive @text="Remove" @color="critical" {{on "click" (fn (mut this.showConfirmModal) true)}} />
+  </Hds::Dropdown>
+</div>
+
+{{#if this.showConfirmModal}}
+  <ConfirmModal
+    @color="critical"
+    @onClose={{fn (mut this.showConfirmModal) false}}
+    @onConfirm={{this.removeMetadata}}
+    @confirmTitle="Remove metadata?"
+    @confirmMessage="This data may be used outside of Vault."
+  />
+{{/if}}

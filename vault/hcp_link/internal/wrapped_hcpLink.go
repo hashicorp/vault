@@ -16,7 +16,7 @@ import (
 
 type WrappedCoreNodeStatus interface {
 	ActiveTime() time.Time
-	GetSealStatus(ctx context.Context) (*vault.SealStatusResponse, error)
+	GetSealStatus(ctx context.Context, lock bool) (*vault.SealStatusResponse, error)
 	IsRaftVoter() bool
 	ListenerAddresses() ([]string, error)
 	LogLevel() string

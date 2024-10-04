@@ -117,3 +117,14 @@ func (l *TransactionalLatencyInjector) Transaction(ctx context.Context, txns []*
 	l.addLatency()
 	return l.Transactional.Transaction(ctx, txns)
 }
+
+// TransactionLimits implements physical.TransactionalLimits
+func (l *TransactionalLatencyInjector) TransactionLimits() (int, int) {
+	if tl, ok := l.Transactional.(TransactionalLimits); ok {
+		return tl.TransactionLimits()
+	}
+	// We don't have any specific limits of our own so return zeros to signal that
+	// the caller should use whatever reasonable defaults it would if it used a
+	// non-TransactionalLimits backend.
+	return 0, 0
+}

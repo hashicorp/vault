@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { alias, gt } from '@ember/object/computed';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
@@ -47,7 +47,7 @@ export default Component.extend({
       this.set('canList', true);
     } catch (e) {
       // If error out on findRecord call it's because you don't have permissions
-      // and therefor don't have permission to manage namespaces
+      // and therefore don't have permission to manage namespaces
       this.set('canList', false);
     }
   }),
@@ -60,7 +60,8 @@ export default Component.extend({
       return;
     }
     const isAdding = leaves.length > lastLeaves.length;
-    const changedLeaf = (isAdding ? leaves : lastLeaves).get('lastObject');
+    const changedLeaves = isAdding ? leaves : lastLeaves;
+    const [changedLeaf] = changedLeaves.slice(-1);
     this.set('isAdding', isAdding);
     this.set('changedLeaf', changedLeaf);
 

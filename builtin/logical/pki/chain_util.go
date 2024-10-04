@@ -9,10 +9,11 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 )
 
-func prettyIssuer(issuerIdEntryMap map[issuerID]*issuerEntry, issuer issuerID) string {
+func prettyIssuer(issuerIdEntryMap map[issuing.IssuerID]*issuing.IssuerEntry, issuer issuing.IssuerID) string {
 	if entry, ok := issuerIdEntryMap[issuer]; ok && len(entry.Name) > 0 {
 		return "[id:" + string(issuer) + "/name:" + entry.Name + "]"
 	}
@@ -20,7 +21,7 @@ func prettyIssuer(issuerIdEntryMap map[issuerID]*issuerEntry, issuer issuerID) s
 	return "[" + string(issuer) + "]"
 }
 
-func (sc *storageContext) rebuildIssuersChains(referenceCert *issuerEntry /* optional */) error {
+func (sc *storageContext) rebuildIssuersChains(referenceCert *issuing.IssuerEntry /* optional */) error {
 	// This function rebuilds the CAChain field of all known issuers. This
 	// function should usually be invoked when a new issuer is added to the
 	// pool of issuers.
@@ -116,22 +117,22 @@ func (sc *storageContext) rebuildIssuersChains(referenceCert *issuerEntry /* opt
 	// fourth maps that certificate back to the other issuers with that
 	// subject (note the keyword _other_: we'll exclude self-loops here) --
 	// either via a parent or child relationship.
-	issuerIdEntryMap := make(map[issuerID]*issuerEntry, len(issuers))
-	issuerIdCertMap := make(map[issuerID]*x509.Certificate, len(issuers))
-	issuerIdParentsMap := make(map[issuerID][]issuerID, len(issuers))
-	issuerIdChildrenMap := make(map[issuerID][]issuerID, len(issuers))
+	issuerIdEntryMap := make(map[issuing.IssuerID]*issuing.IssuerEntry, len(issuers))
+	issuerIdCertMap := make(map[issuing.IssuerID]*x509.Certificate, len(issuers))
+	issuerIdParentsMap := make(map[issuing.IssuerID][]issuing.IssuerID, len(issuers))
+	issuerIdChildrenMap := make(map[issuing.IssuerID][]issuing.IssuerID, len(issuers))
 
 	// For every known issuer, we map that subject back to the id of issuers
-	// containing that subject. This lets us build our issuerID -> parents
+	// containing that subject. This lets us build our IssuerID -> parents
 	// mapping efficiently. Worst case we'll have a single linear chain where
 	// every entry has a distinct subject.
-	subjectIssuerIdsMap := make(map[string][]issuerID, len(issuers))
+	subjectIssuerIdsMap := make(map[string][]issuing.IssuerID, len(issuers))
 
 	// First, read every issuer entry from storage. We'll propagate entries
 	// to three of the maps here: all but issuerIdParentsMap and
 	// issuerIdChildrenMap, which we'll do in a second pass.
 	for _, identifier := range issuers {
-		var stored *issuerEntry
+		var stored *issuing.IssuerEntry
 
 		// When the reference issuer is provided and matches this identifier,
 		// prefer the updated reference copy instead.
@@ -261,8 +262,8 @@ func (sc *storageContext) rebuildIssuersChains(referenceCert *issuerEntry /* opt
 	// manually building their chain prior to starting the topographical sort.
 	//
 	// This thus runs in O(|V| + |E|) -> O(n^2) in the number of issuers.
-	processedIssuers := make(map[issuerID]bool, len(issuers))
-	toVisit := make([]issuerID, 0, len(issuers))
+	processedIssuers := make(map[issuing.IssuerID]bool, len(issuers))
+	toVisit := make([]issuing.IssuerID, 0, len(issuers))
 
 	// Handle any explicitly constructed certificate chains. Here, we don't
 	// validate much what the user provides; if they provide since-deleted
@@ -323,7 +324,7 @@ func (sc *storageContext) rebuildIssuersChains(referenceCert *issuerEntry /* opt
 	// ensure we don't accidentally infinite-loop (if we introduce a bug).
 	maxVisitCount := len(issuers)*len(issuers)*len(issuers) + 100
 	for len(toVisit) > 0 && maxVisitCount >= 0 {
-		var issuer issuerID
+		var issuer issuing.IssuerID
 		issuer, toVisit = toVisit[0], toVisit[1:]
 
 		// If (and only if) we're presently starved for next nodes to visit,
@@ -387,8 +388,8 @@ func (sc *storageContext) rebuildIssuersChains(referenceCert *issuerEntry /* opt
 			// However, if you directly step onto the cross-signed, now you're
 			// taken in an alternative direction (via its chain), and must
 			// revisit any roots later.
-			var roots []issuerID
-			var intermediates []issuerID
+			var roots []issuing.IssuerID
+			var intermediates []issuing.IssuerID
 			for _, parentCertId := range parentCerts {
 				if bytes.Equal(issuerIdCertMap[parentCertId].RawSubject, issuerIdCertMap[parentCertId].RawIssuer) {
 					roots = append(roots, parentCertId)
@@ -470,7 +471,7 @@ func (sc *storageContext) rebuildIssuersChains(referenceCert *issuerEntry /* opt
 	return nil
 }
 
-func addToChainIfNotExisting(includedParentCerts map[string]bool, entry *issuerEntry, certToAdd string) {
+func addToChainIfNotExisting(includedParentCerts map[string]bool, entry *issuing.IssuerEntry, certToAdd string) {
 	included, ok := includedParentCerts[certToAdd]
 	if ok && included {
 		return
@@ -481,15 +482,15 @@ func addToChainIfNotExisting(includedParentCerts map[string]bool, entry *issuerE
 }
 
 func processAnyCliqueOrCycle(
-	issuers []issuerID,
-	processedIssuers map[issuerID]bool,
-	toVisit []issuerID,
-	issuerIdEntryMap map[issuerID]*issuerEntry,
-	issuerIdCertMap map[issuerID]*x509.Certificate,
-	issuerIdParentsMap map[issuerID][]issuerID,
-	issuerIdChildrenMap map[issuerID][]issuerID,
-	subjectIssuerIdsMap map[string][]issuerID,
-) ([]issuerID /* toVisit */, error) {
+	issuers []issuing.IssuerID,
+	processedIssuers map[issuing.IssuerID]bool,
+	toVisit []issuing.IssuerID,
+	issuerIdEntryMap map[issuing.IssuerID]*issuing.IssuerEntry,
+	issuerIdCertMap map[issuing.IssuerID]*x509.Certificate,
+	issuerIdParentsMap map[issuing.IssuerID][]issuing.IssuerID,
+	issuerIdChildrenMap map[issuing.IssuerID][]issuing.IssuerID,
+	subjectIssuerIdsMap map[string][]issuing.IssuerID,
+) ([]issuing.IssuerID /* toVisit */, error) {
 	// Topological sort really only works on directed acyclic graphs (DAGs).
 	// But a pool of arbitrary (issuer) certificates are actually neither!
 	// This pool could contain both cliques and cycles. Because this could
@@ -550,15 +551,15 @@ func processAnyCliqueOrCycle(
 		// Finally -- it isn't enough to consider this chain in isolation
 		// either. We need to consider _all_ parents and ensure they've been
 		// processed before processing this closure.
-		var cliques [][]issuerID
-		var cycles [][]issuerID
-		closure := make(map[issuerID]bool)
+		var cliques [][]issuing.IssuerID
+		var cycles [][]issuing.IssuerID
+		closure := make(map[issuing.IssuerID]bool)
 
-		var cliquesToProcess []issuerID
+		var cliquesToProcess []issuing.IssuerID
 		cliquesToProcess = append(cliquesToProcess, issuer)
 
 		for len(cliquesToProcess) > 0 {
-			var node issuerID
+			var node issuing.IssuerID
 			node, cliquesToProcess = cliquesToProcess[0], cliquesToProcess[1:]
 
 			// Skip potential clique nodes which have already been processed
@@ -753,7 +754,7 @@ func processAnyCliqueOrCycle(
 			return nil, err
 		}
 
-		closure := make(map[issuerID]bool)
+		closure := make(map[issuing.IssuerID]bool)
 		for _, cycle := range cycles {
 			for _, node := range cycle {
 				closure[node] = true
@@ -811,14 +812,14 @@ func processAnyCliqueOrCycle(
 }
 
 func findAllCliques(
-	processedIssuers map[issuerID]bool,
-	issuerIdCertMap map[issuerID]*x509.Certificate,
-	subjectIssuerIdsMap map[string][]issuerID,
-	issuers []issuerID,
-) ([][]issuerID, map[issuerID]int, []issuerID, error) {
-	var allCliques [][]issuerID
-	issuerIdCliqueMap := make(map[issuerID]int)
-	var allCliqueNodes []issuerID
+	processedIssuers map[issuing.IssuerID]bool,
+	issuerIdCertMap map[issuing.IssuerID]*x509.Certificate,
+	subjectIssuerIdsMap map[string][]issuing.IssuerID,
+	issuers []issuing.IssuerID,
+) ([][]issuing.IssuerID, map[issuing.IssuerID]int, []issuing.IssuerID, error) {
+	var allCliques [][]issuing.IssuerID
+	issuerIdCliqueMap := make(map[issuing.IssuerID]int)
+	var allCliqueNodes []issuing.IssuerID
 
 	for _, node := range issuers {
 		// Check if the node has already been visited...
@@ -859,11 +860,11 @@ func findAllCliques(
 }
 
 func isOnReissuedClique(
-	processedIssuers map[issuerID]bool,
-	issuerIdCertMap map[issuerID]*x509.Certificate,
-	subjectIssuerIdsMap map[string][]issuerID,
-	node issuerID,
-) ([]issuerID, error) {
+	processedIssuers map[issuing.IssuerID]bool,
+	issuerIdCertMap map[issuing.IssuerID]*x509.Certificate,
+	subjectIssuerIdsMap map[string][]issuing.IssuerID,
+	node issuing.IssuerID,
+) ([]issuing.IssuerID, error) {
 	// Finding max cliques in arbitrary graphs is a nearly pathological
 	// problem, usually left to the realm of SAT solvers and NP-Complete
 	// theoretical.
@@ -891,7 +892,7 @@ func isOnReissuedClique(
 	//  under this reissued clique detection code).
 	//
 	// What does this mean for our algorithm? A simple greedy search is
-	// sufficient. If we index our certificates by subject -> issuerID
+	// sufficient. If we index our certificates by subject -> IssuerID
 	// (and cache its value across calls, which we've already done for
 	// building the parent/child relationship), we can find all other issuers
 	// with the same public key and subject as the existing node fairly
@@ -925,7 +926,7 @@ func isOnReissuedClique(
 	// condition (the subject half), so validate they match the other half
 	// (the issuer half) and the second condition. For node (which is
 	// included in candidates), the condition should vacuously hold.
-	var clique []issuerID
+	var clique []issuing.IssuerID
 	for _, candidate := range candidates {
 		// Skip already processed nodes, even if they could be clique
 		// candidates. We'll treat them as any other (already processed)
@@ -957,7 +958,7 @@ func isOnReissuedClique(
 	return clique, nil
 }
 
-func containsIssuer(collection []issuerID, target issuerID) bool {
+func containsIssuer(collection []issuing.IssuerID, target issuing.IssuerID) bool {
 	if len(collection) == 0 {
 		return false
 	}
@@ -971,7 +972,7 @@ func containsIssuer(collection []issuerID, target issuerID) bool {
 	return false
 }
 
-func appendCycleIfNotExisting(knownCycles [][]issuerID, candidate []issuerID) [][]issuerID {
+func appendCycleIfNotExisting(knownCycles [][]issuing.IssuerID, candidate []issuing.IssuerID) [][]issuing.IssuerID {
 	// There's two ways to do cycle detection: canonicalize the cycles,
 	// rewriting them to have the least (or max) element first or just
 	// brute force the detection.
@@ -1007,7 +1008,7 @@ func appendCycleIfNotExisting(knownCycles [][]issuerID, candidate []issuerID) []
 	return knownCycles
 }
 
-func canonicalizeCycle(cycle []issuerID) []issuerID {
+func canonicalizeCycle(cycle []issuing.IssuerID) []issuing.IssuerID {
 	// Find the minimum value and put it at the head, keeping the relative
 	// ordering the same.
 	minIndex := 0
@@ -1026,11 +1027,11 @@ func canonicalizeCycle(cycle []issuerID) []issuerID {
 }
 
 func findCyclesNearClique(
-	processedIssuers map[issuerID]bool,
-	issuerIdCertMap map[issuerID]*x509.Certificate,
-	issuerIdChildrenMap map[issuerID][]issuerID,
-	cliqueNodes []issuerID,
-) ([][]issuerID, error) {
+	processedIssuers map[issuing.IssuerID]bool,
+	issuerIdCertMap map[issuing.IssuerID]*x509.Certificate,
+	issuerIdChildrenMap map[issuing.IssuerID][]issuing.IssuerID,
+	cliqueNodes []issuing.IssuerID,
+) ([][]issuing.IssuerID, error) {
 	// When we have a reissued clique, we need to find all cycles next to it.
 	// Presumably, because they all have non-empty parents, they should not
 	// have been visited yet. We further know that (because we're exploring
@@ -1046,7 +1047,7 @@ func findCyclesNearClique(
 	// Copy the clique nodes as excluded nodes; we'll avoid exploring cycles
 	// which have parents that have been already explored.
 	excludeNodes := cliqueNodes[:]
-	var knownCycles [][]issuerID
+	var knownCycles [][]issuing.IssuerID
 
 	// We know the node has at least one child, since the clique is non-empty.
 	for _, child := range issuerIdChildrenMap[cliqueNode] {
@@ -1081,12 +1082,12 @@ func findCyclesNearClique(
 }
 
 func findAllCyclesWithNode(
-	processedIssuers map[issuerID]bool,
-	issuerIdCertMap map[issuerID]*x509.Certificate,
-	issuerIdChildrenMap map[issuerID][]issuerID,
-	source issuerID,
-	exclude []issuerID,
-) ([][]issuerID, error) {
+	processedIssuers map[issuing.IssuerID]bool,
+	issuerIdCertMap map[issuing.IssuerID]*x509.Certificate,
+	issuerIdChildrenMap map[issuing.IssuerID][]issuing.IssuerID,
+	source issuing.IssuerID,
+	exclude []issuing.IssuerID,
+) ([][]issuing.IssuerID, error) {
 	// We wish to find all cycles involving this particular node and report
 	// the corresponding paths. This is a full-graph traversal (excluding
 	// certain paths) as we're not just checking if a cycle occurred, but
@@ -1096,28 +1097,28 @@ func findAllCyclesWithNode(
 	maxCycleSize := 8
 
 	// Whether we've visited any given node.
-	cycleVisited := make(map[issuerID]bool)
-	visitCounts := make(map[issuerID]int)
-	parentCounts := make(map[issuerID]map[issuerID]bool)
+	cycleVisited := make(map[issuing.IssuerID]bool)
+	visitCounts := make(map[issuing.IssuerID]int)
+	parentCounts := make(map[issuing.IssuerID]map[issuing.IssuerID]bool)
 
 	// Paths to the specified node. Some of these might be cycles.
-	pathsTo := make(map[issuerID][][]issuerID)
+	pathsTo := make(map[issuing.IssuerID][][]issuing.IssuerID)
 
 	// Nodes to visit.
-	var visitQueue []issuerID
+	var visitQueue []issuing.IssuerID
 
 	// Add the source node to start. In order to set up the paths to a
 	// given node, we seed pathsTo with the single path involving just
 	// this node
 	visitQueue = append(visitQueue, source)
-	pathsTo[source] = [][]issuerID{{source}}
+	pathsTo[source] = [][]issuing.IssuerID{{source}}
 
 	// Begin building paths.
 	//
 	// Loop invariant:
 	//  pathTo[x] contains valid paths to reach this node, from source.
 	for len(visitQueue) > 0 {
-		var current issuerID
+		var current issuing.IssuerID
 		current, visitQueue = visitQueue[0], visitQueue[1:]
 
 		// If we've already processed this node, we have a cycle. Skip this
@@ -1162,7 +1163,7 @@ func findAllCyclesWithNode(
 			// Track this parent->child relationship to know when to exit.
 			setOfParents, ok := parentCounts[child]
 			if !ok {
-				setOfParents = make(map[issuerID]bool)
+				setOfParents = make(map[issuing.IssuerID]bool)
 				parentCounts[child] = setOfParents
 			}
 			_, existingParent := setOfParents[current]
@@ -1179,7 +1180,7 @@ func findAllCyclesWithNode(
 			//  externally with an existing path).
 			addedPath := false
 			if _, ok := pathsTo[child]; !ok {
-				pathsTo[child] = make([][]issuerID, 0)
+				pathsTo[child] = make([][]issuing.IssuerID, 0)
 			}
 
 			for _, path := range pathsTo[current] {
@@ -1204,7 +1205,7 @@ func findAllCyclesWithNode(
 					return nil, errutil.InternalError{Err: fmt.Sprintf("Error updating certificate path: path of length %d is too long", len(path))}
 				}
 				// Make sure to deep copy the path.
-				newPath := make([]issuerID, 0, len(path)+1)
+				newPath := make([]issuing.IssuerID, 0, len(path)+1)
 				newPath = append(newPath, path...)
 				newPath = append(newPath, child)
 
@@ -1249,7 +1250,7 @@ func findAllCyclesWithNode(
 	// Ok, we've now exited from our loop. Any cycles would've been detected
 	// and their paths recorded in pathsTo. Now we can iterate over these
 	// (starting a source), clean them up and validate them.
-	var cycles [][]issuerID
+	var cycles [][]issuing.IssuerID
 	for _, cycle := range pathsTo[source] {
 		// Skip the trivial cycle.
 		if len(cycle) == 1 && cycle[0] == source {
@@ -1287,8 +1288,8 @@ func findAllCyclesWithNode(
 	return cycles, nil
 }
 
-func reversedCycle(cycle []issuerID) []issuerID {
-	var result []issuerID
+func reversedCycle(cycle []issuing.IssuerID) []issuing.IssuerID {
+	var result []issuing.IssuerID
 	for index := len(cycle) - 1; index >= 0; index-- {
 		result = append(result, cycle[index])
 	}
@@ -1297,11 +1298,11 @@ func reversedCycle(cycle []issuerID) []issuerID {
 }
 
 func computeParentsFromClosure(
-	processedIssuers map[issuerID]bool,
-	issuerIdParentsMap map[issuerID][]issuerID,
-	closure map[issuerID]bool,
-) (map[issuerID]bool, bool) {
-	parents := make(map[issuerID]bool)
+	processedIssuers map[issuing.IssuerID]bool,
+	issuerIdParentsMap map[issuing.IssuerID][]issuing.IssuerID,
+	closure map[issuing.IssuerID]bool,
+) (map[issuing.IssuerID]bool, bool) {
+	parents := make(map[issuing.IssuerID]bool)
 	for node := range closure {
 		nodeParents, ok := issuerIdParentsMap[node]
 		if !ok {
@@ -1326,11 +1327,11 @@ func computeParentsFromClosure(
 }
 
 func addNodeCertsToEntry(
-	issuerIdEntryMap map[issuerID]*issuerEntry,
-	issuerIdChildrenMap map[issuerID][]issuerID,
+	issuerIdEntryMap map[issuing.IssuerID]*issuing.IssuerEntry,
+	issuerIdChildrenMap map[issuing.IssuerID][]issuing.IssuerID,
 	includedParentCerts map[string]bool,
-	entry *issuerEntry,
-	issuersCollection ...[]issuerID,
+	entry *issuing.IssuerEntry,
+	issuersCollection ...[]issuing.IssuerID,
 ) {
 	for _, collection := range issuersCollection {
 		// Find a starting point into this collection such that it verifies
@@ -1369,10 +1370,10 @@ func addNodeCertsToEntry(
 }
 
 func addParentChainsToEntry(
-	issuerIdEntryMap map[issuerID]*issuerEntry,
+	issuerIdEntryMap map[issuing.IssuerID]*issuing.IssuerEntry,
 	includedParentCerts map[string]bool,
-	entry *issuerEntry,
-	parents map[issuerID]bool,
+	entry *issuing.IssuerEntry,
+	parents map[issuing.IssuerID]bool,
 ) {
 	for parent := range parents {
 		nodeEntry := issuerIdEntryMap[parent]

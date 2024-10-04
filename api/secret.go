@@ -42,6 +42,10 @@ type Secret struct {
 	// cubbyhole of the given token (which has a TTL of the given number of
 	// seconds)
 	WrapInfo *SecretWrapInfo `json:"wrap_info,omitempty"`
+
+	// MountType, if non-empty, provides some information about what kind
+	// of mount this secret came from.
+	MountType string `json:"mount_type,omitempty"`
 }
 
 // TokenID returns the standardized token ID (token) for the given secret.
@@ -152,6 +156,10 @@ TOKEN_DONE:
 	{
 		v, ok := s.Data["identity_policies"]
 		if !ok || v == nil {
+			goto DONE
+		}
+
+		if s.Data["identity_policies"] == nil {
 			goto DONE
 		}
 

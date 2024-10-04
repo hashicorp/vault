@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
@@ -286,7 +285,7 @@ func (m *MSSQL) revokeUserDefault(ctx context.Context, username string) error {
 
 	rows, err := stmt.QueryContext(ctx, username)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to query users: %w", err)
 	}
 	defer rows.Close()
 

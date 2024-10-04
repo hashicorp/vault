@@ -129,6 +129,10 @@ func NewTemplate(opts ...Opt) (up StringTemplate, err error) {
 		return StringTemplate{}, fmt.Errorf("missing template")
 	}
 
+	if len(up.rawTemplate) >= 100000 {
+		return StringTemplate{}, fmt.Errorf("template too large, length of template must be less than 100,000")
+	}
+
 	tmpl, err := template.New("template").
 		Funcs(up.funcMap).
 		Parse(up.rawTemplate)

@@ -27,21 +27,24 @@ import (
 	"github.com/hashicorp/vault/sdk/queue"
 	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/robfig/cron/v3"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	mongodbatlasapi "go.mongodb.org/atlas/mongodbatlas"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 const (
+	mockv5                       = "mockv5"
 	dbUser                       = "vaultstatictest"
 	dbUserDefaultPassword        = "password"
-	testMinRotationWindowSeconds = 10
+	testMinRotationWindowSeconds = 5
 	testScheduleParseOptions     = cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow
 )
 
 func TestBackend_StaticRole_Rotation_basic(t *testing.T) {
-	cluster, sys := getCluster(t)
+	cluster, sys := getClusterPostgresDB(t)
 	defer cluster.Cleanup()
 
 	config := logical.TestBackendConfig()
@@ -60,7 +63,7 @@ func TestBackend_StaticRole_Rotation_basic(t *testing.T) {
 
 	b.schedule = &TestSchedule{}
 
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t)
 	defer cleanup()
 
 	// create the database user
@@ -246,11 +249,199 @@ func TestBackend_StaticRole_Rotation_basic(t *testing.T) {
 	}
 }
 
+// TestBackend_StaticRole_Rotation_Schedule_ErrorRecover tests that failed
+// rotations can successfully recover and that they do not occur outside of a
+// rotation window.
+func TestBackend_StaticRole_Rotation_Schedule_ErrorRecover(t *testing.T) {
+	cluster, sys := getClusterPostgresDB(t)
+	t.Cleanup(cluster.Cleanup)
+
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	config.System = sys
+	eventSender := logical.NewMockEventSender()
+	config.EventsSender = eventSender
+
+	lb, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, ok := lb.(*databaseBackend)
+	if !ok {
+		t.Fatal("could not convert to db backend")
+	}
+	defer b.Cleanup(context.Background())
+
+	b.schedule = &TestSchedule{}
+
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t)
+	t.Cleanup(cleanup)
+
+	// create the database user
+	createTestPGUser(t, connURL, dbUser, dbUserDefaultPassword, testRoleStaticCreate)
+	verifyPgConn(t, dbUser, dbUserDefaultPassword, connURL)
+
+	// Configure a connection
+	connectionData := map[string]interface{}{
+		"connection_url":    connURL,
+		"plugin_name":       "postgresql-database-plugin",
+		"verify_connection": false,
+		"allowed_roles":     []string{"*"},
+		"name":              "plugin-test",
+	}
+	configureConnection(t, b, config.StorageView, connectionData)
+
+	// create the role that will rotate every 10th second
+	// rotations will not be allowed after 5s
+	data := map[string]interface{}{
+		"name":                "plugin-role-test",
+		"db_name":             "plugin-test",
+		"rotation_statements": testRoleStaticUpdate,
+		"rotation_schedule":   "*/10 * * * * *",
+		"rotation_window":     "5s",
+		"username":            dbUser,
+	}
+	req := &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "static-roles/plugin-role-test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	// Read the creds
+	req = &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "static-creds/plugin-role-test",
+		Storage:   config.StorageView,
+	}
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	username := resp.Data["username"].(string)
+	originalPassword := resp.Data["password"].(string)
+	if username == "" || originalPassword == "" {
+		t.Fatalf("empty username (%s) or password (%s)", username, originalPassword)
+	}
+
+	// Verify username/password
+	verifyPgConn(t, dbUser, originalPassword, connURL)
+
+	// Set invalid connection URL so we fail to rotate
+	connectionData["connection_url"] = strings.Replace(connURL, "postgres:secret", "postgres:foo", 1)
+	configureConnection(t, b, config.StorageView, connectionData)
+
+	// determine next rotation schedules based on current test time
+	rotationSchedule := data["rotation_schedule"].(string)
+	schedule, err := b.schedule.Parse(rotationSchedule)
+	if err != nil {
+		t.Fatalf("could not parse rotation_schedule: %s", err)
+	}
+	next := schedule.Next(time.Now()) // the next rotation time we expect
+	time.Sleep(next.Sub(time.Now()))
+
+	// Re-Read the creds after schedule expiration
+	req = &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "static-creds/plugin-role-test",
+		Storage:   config.StorageView,
+	}
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	checkPassword := resp.Data["password"].(string)
+	if originalPassword != checkPassword {
+		// should match because rotations should be failing
+		t.Fatalf("expected passwords to match, got (%s)", checkPassword)
+	}
+
+	// wait until we are outside the rotation window so that rotations will not occur
+	next = schedule.Next(time.Now()) // the next rotation time after now
+	time.Sleep(next.Add(time.Second * 6).Sub(time.Now()))
+
+	// reset to valid connection URL so we do not fail to rotate anymore
+	connectionData["connection_url"] = connURL
+	configureConnection(t, b, config.StorageView, connectionData)
+
+	// we are outside a rotation window, Re-Read the creds
+	req = &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "static-creds/plugin-role-test",
+		Storage:   config.StorageView,
+	}
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	checkPassword = resp.Data["password"].(string)
+	if originalPassword != checkPassword {
+		// should match because rotations should not occur outside the rotation window
+		t.Fatalf("expected passwords to match, got (%s)", checkPassword)
+	}
+	// Verify new username/password
+	verifyPgConn(t, username, checkPassword, connURL)
+
+	// sleep until the next rotation time with a buffer to ensure we had time to rotate
+	next = schedule.Next(time.Now()) // the next rotation time we expect
+	time.Sleep(next.Add(time.Second * 5).Sub(time.Now()))
+
+	// Re-Read the creds
+	req = &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "static-creds/plugin-role-test",
+		Storage:   config.StorageView,
+	}
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	checkPassword = resp.Data["password"].(string)
+	if originalPassword == checkPassword {
+		// should differ because we slept until the next rotation time
+		t.Fatalf("expected passwords to differ, got (%s)", checkPassword)
+	}
+
+	// Verify new username/password
+	verifyPgConn(t, username, checkPassword, connURL)
+
+	eventSender.Stop() // avoid race detector
+	// check that we got a successful rotation event
+	if len(eventSender.Events) == 0 {
+		t.Fatal("Expected to have some events but got none")
+	}
+	// check that we got a rotate-fail event
+	found := false
+	for _, event := range eventSender.Events {
+		if string(event.Type) == "database/rotate-fail" {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found)
+	found = false
+	for _, event := range eventSender.Events {
+		if string(event.Type) == "database/rotate" {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found)
+}
+
 // Sanity check to make sure we don't allow an attempt of rotating credentials
 // for non-static accounts, which doesn't make sense anyway, but doesn't hurt to
 // verify we return an error
 func TestBackend_StaticRole_Rotation_NonStaticError(t *testing.T) {
-	cluster, sys := getCluster(t)
+	cluster, sys := getClusterPostgresDB(t)
 	defer cluster.Cleanup()
 
 	config := logical.TestBackendConfig()
@@ -267,7 +458,7 @@ func TestBackend_StaticRole_Rotation_NonStaticError(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t)
 	defer cleanup()
 
 	// create the database user
@@ -354,7 +545,7 @@ func TestBackend_StaticRole_Rotation_NonStaticError(t *testing.T) {
 }
 
 func TestBackend_StaticRole_Rotation_Revoke_user(t *testing.T) {
-	cluster, sys := getCluster(t)
+	cluster, sys := getClusterPostgresDB(t)
 	defer cluster.Cleanup()
 
 	config := logical.TestBackendConfig()
@@ -371,7 +562,7 @@ func TestBackend_StaticRole_Rotation_Revoke_user(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t)
 	defer cleanup()
 
 	// create the database user
@@ -532,7 +723,7 @@ func verifyPgConn(t *testing.T, username, password, connURL string) {
 //
 // First scenario, WAL contains a role name that does not exist.
 func TestBackend_StaticRole_Rotation_QueueWAL_discard_role_not_found(t *testing.T) {
-	cluster, sys := getCluster(t)
+	cluster, sys := getClusterPostgresDB(t)
 	defer cluster.Cleanup()
 
 	ctx := context.Background()
@@ -573,7 +764,7 @@ func TestBackend_StaticRole_Rotation_QueueWAL_discard_role_not_found(t *testing.
 // Second scenario, WAL contains a role name that does exist, but the role's
 // LastVaultRotation is greater than the WAL has
 func TestBackend_StaticRole_Rotation_QueueWAL_discard_role_newer_rotation_date(t *testing.T) {
-	cluster, sys := getCluster(t)
+	cluster, sys := getClusterPostgresDB(t)
 	defer cluster.Cleanup()
 
 	ctx := context.Background()
@@ -592,7 +783,7 @@ func TestBackend_StaticRole_Rotation_QueueWAL_discard_role_newer_rotation_date(t
 		t.Fatal("could not convert to db backend")
 	}
 
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t)
 	defer cleanup()
 
 	// create the database user
@@ -761,7 +952,7 @@ func assertWALCount(t *testing.T, s logical.Storage, expected int, key string) {
 type userCreator func(t *testing.T, username, password string)
 
 func TestBackend_StaticRole_Rotation_PostgreSQL(t *testing.T) {
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "13.4-buster")
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t)
 	defer cleanup()
 	uc := userCreator(func(t *testing.T, username, password string) {
 		createTestPGUser(t, connURL, username, password, testRoleStaticCreate)
@@ -834,6 +1025,34 @@ func TestBackend_StaticRole_Rotation_MongoDBAtlas(t *testing.T) {
 	})
 }
 
+// TestQueueTickIntervalKeyConfig tests the configuration of queueTickIntervalKey
+// does not break on invalid values.
+func TestQueueTickIntervalKeyConfig(t *testing.T) {
+	t.Parallel()
+	cluster, sys := getClusterPostgresDB(t)
+	defer cluster.Cleanup()
+
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	config.System = sys
+	config.Config[queueTickIntervalKey] = "1"
+
+	// Rotation ticker starts running in Factory call
+	b, err := Factory(context.Background(), config)
+	require.Nil(t, err)
+	b.Cleanup(context.Background())
+
+	config.Config[queueTickIntervalKey] = "0"
+	b, err = Factory(context.Background(), config)
+	require.Nil(t, err)
+	b.Cleanup(context.Background())
+
+	config.Config[queueTickIntervalKey] = "-1"
+	b, err = Factory(context.Background(), config)
+	require.Nil(t, err)
+	b.Cleanup(context.Background())
+}
+
 func testBackend_StaticRole_Rotations(t *testing.T, createUser userCreator, opts map[string]interface{}) {
 	// We need to set this value for the plugin to run, but it doesn't matter what we set it to.
 	oldToken := os.Getenv(pluginutil.PluginUnwrapTokenEnv)
@@ -846,7 +1065,7 @@ func testBackend_StaticRole_Rotations(t *testing.T, createUser userCreator, opts
 		}
 	}()
 
-	cluster, sys := getCluster(t)
+	cluster, sys := getClusterPostgresDB(t)
 	defer cluster.Cleanup()
 
 	config := logical.TestBackendConfig()
@@ -1010,7 +1229,7 @@ type createUserCommand struct {
 
 // Demonstrates a bug fix for the credential rotation not releasing locks
 func TestBackend_StaticRole_Rotation_LockRegression(t *testing.T) {
-	cluster, sys := getCluster(t)
+	cluster, sys := getClusterPostgresDB(t)
 	defer cluster.Cleanup()
 
 	config := logical.TestBackendConfig()
@@ -1027,7 +1246,7 @@ func TestBackend_StaticRole_Rotation_LockRegression(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t)
 	defer cleanup()
 
 	// Configure a connection
@@ -1089,7 +1308,7 @@ func TestBackend_StaticRole_Rotation_LockRegression(t *testing.T) {
 }
 
 func TestBackend_StaticRole_Rotation_Invalid_Role(t *testing.T) {
-	cluster, sys := getCluster(t)
+	cluster, sys := getClusterPostgresDB(t)
 	defer cluster.Cleanup()
 
 	config := logical.TestBackendConfig()
@@ -1106,7 +1325,7 @@ func TestBackend_StaticRole_Rotation_Invalid_Role(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t)
 	defer cleanup()
 
 	// create the database user
@@ -1228,7 +1447,7 @@ func TestStoredWALsCorrectlyProcessed(t *testing.T) {
 
 	rotationPeriodData := map[string]interface{}{
 		"username":        "hashicorp",
-		"db_name":         "mockv5",
+		"db_name":         mockv5,
 		"rotation_period": "86400s",
 	}
 
@@ -1282,7 +1501,7 @@ func TestStoredWALsCorrectlyProcessed(t *testing.T) {
 			},
 			map[string]interface{}{
 				"username":          "hashicorp",
-				"db_name":           "mockv5",
+				"db_name":           mockv5,
 				"rotation_schedule": "*/10 * * * * *",
 			},
 		},
@@ -1481,9 +1700,9 @@ func setupMockDB(b *databaseBackend) *mockNewDatabase {
 	dbi := &dbPluginInstance{
 		database: dbw,
 		id:       "foo-id",
-		name:     "mockV5",
+		name:     mockv5,
 	}
-	b.connections.Put("mockv5", dbi)
+	b.connections.Put(mockv5, dbi)
 
 	return mockDB
 }
@@ -1492,7 +1711,7 @@ func setupMockDB(b *databaseBackend) *mockNewDatabase {
 // plugin init code paths, allowing us to use a manually populated mock DB object.
 func configureDBMount(t *testing.T, storage logical.Storage) {
 	t.Helper()
-	entry, err := logical.StorageEntryJSON(fmt.Sprintf("config/mockv5"), &DatabaseConfig{
+	entry, err := logical.StorageEntryJSON(fmt.Sprintf("config/"+mockv5), &DatabaseConfig{
 		AllowedRoles: []string{"*"},
 	})
 	if err != nil {
@@ -1535,6 +1754,19 @@ func capturePasswords(t *testing.T, b logical.Backend, config *logical.BackendCo
 	}
 
 	return pws
+}
+
+func configureConnection(t *testing.T, b *databaseBackend, s logical.Storage, data map[string]interface{}) {
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/" + data["name"].(string),
+		Storage:   s,
+		Data:      data,
+	}
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
 }
 
 func newBoolPtr(b bool) *bool {

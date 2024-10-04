@@ -9,6 +9,7 @@ const ENTERPRISE_SECRET_ENGINES = [
   {
     displayName: 'KMIP',
     type: 'kmip',
+    glyph: 'lock',
     engineRoute: 'kmip.scopes.index',
     category: 'generic',
     requiredFeature: 'KMIP',
@@ -18,6 +19,7 @@ const ENTERPRISE_SECRET_ENGINES = [
     type: 'transform',
     category: 'generic',
     requiredFeature: 'Transform Secrets Engine',
+    glyph: 'transform-data',
   },
   {
     displayName: 'Key Management',
@@ -33,6 +35,7 @@ const MOUNTABLE_SECRET_ENGINES = [
   {
     displayName: 'AliCloud',
     type: 'alicloud',
+    glyph: 'alibaba-color',
     category: 'cloud',
   },
   {
@@ -50,12 +53,14 @@ const MOUNTABLE_SECRET_ENGINES = [
   {
     displayName: 'Consul',
     type: 'consul',
+    glyph: 'consul-color',
     category: 'infra',
   },
   {
     displayName: 'Databases',
     type: 'database',
     category: 'infra',
+    glyph: 'database',
   },
   {
     displayName: 'Google Cloud',
@@ -72,38 +77,45 @@ const MOUNTABLE_SECRET_ENGINES = [
   {
     displayName: 'KV',
     type: 'kv',
+    glyph: 'key-values',
     engineRoute: 'kv.list',
     category: 'generic',
   },
   {
     displayName: 'Nomad',
     type: 'nomad',
+    glyph: 'nomad-color',
     category: 'infra',
   },
   {
     displayName: 'PKI Certificates',
     type: 'pki',
+    glyph: 'certificate',
     engineRoute: 'pki.overview',
     category: 'generic',
   },
   {
     displayName: 'RabbitMQ',
     type: 'rabbitmq',
+    glyph: 'rabbitmq-color',
     category: 'infra',
   },
   {
     displayName: 'SSH',
     type: 'ssh',
+    glyph: 'terminal-screen',
     category: 'generic',
   },
   {
     displayName: 'Transit',
     type: 'transit',
+    glyph: 'swap-horizontal',
     category: 'generic',
   },
   {
     displayName: 'TOTP',
     type: 'totp',
+    glyph: 'history',
     category: 'generic',
   },
   {
@@ -122,6 +134,22 @@ const MOUNTABLE_SECRET_ENGINES = [
   },
 ];
 
+// A list of Workload Identity Federation engines. Will eventually include Azure and GCP.
+export const WIF_ENGINES = ['aws'];
+
+export function wifEngines() {
+  return WIF_ENGINES.slice();
+}
+
+// Secret Engines that have their own configuration page and actions
+// These engines do not exist in their own Ember engine.
+// Ex: AWS vs. LDAP which is configurable but is handled inside the routing of its own Ember engine.
+export const CONFIGURABLE_SECRET_ENGINES = ['aws', 'ssh'];
+
+export function configurableSecretEngines() {
+  return MOUNTABLE_SECRET_ENGINES.slice();
+}
+
 export function mountableEngines() {
   return MOUNTABLE_SECRET_ENGINES.slice();
 }
@@ -132,7 +160,7 @@ export function allEngines() {
 
 export function isAddonEngine(type, version) {
   if (type === 'kv' && version === 1) return false;
-  const engineRoute = allEngines().findBy('type', type)?.engineRoute;
+  const engineRoute = allEngines().find((engine) => engine.type === type)?.engineRoute;
   return !!engineRoute;
 }
 

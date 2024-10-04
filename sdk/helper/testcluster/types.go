@@ -4,6 +4,7 @@
 package testcluster
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/tls"
 	"crypto/x509"
@@ -104,8 +105,11 @@ type ClusterOptions struct {
 }
 
 type VaultNodeListenerConfig struct {
-	Port            int
-	ChrootNamespace string
+	Port              int
+	ChrootNamespace   string
+	RedactAddresses   bool
+	RedactClusterName bool
+	RedactVersion     bool
 }
 
 type CA struct {
@@ -115,4 +119,11 @@ type CA struct {
 	CACertPEMFile string
 	CAKey         *ecdsa.PrivateKey
 	CAKeyPEM      []byte
+}
+
+type ClusterStorage interface {
+	Start(context.Context, *ClusterOptions) error
+	Cleanup() error
+	Opts() map[string]interface{}
+	Type() string
 }

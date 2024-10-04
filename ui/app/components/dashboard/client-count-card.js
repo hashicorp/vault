@@ -1,46 +1,49 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
-import getStorage from 'vault/lib/token-storage';
 import timestamp from 'core/utils/timestamp';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { tracked } from '@glimmer/tracking';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
+import { parseAPITimestamp } from 'core/utils/date-formatters';
 
 /**
  * @module DashboardClientCountCard
  * DashboardClientCountCard component are used to display total and new client count information
  *
  * @example
- * ```js
- * <Dashboard::ClientCountCard @license={{@model.license}}  />
- * ```
- *  @param {object} license - license object passed from the parent
+ * <Dashboard::ClientCountCard />
  */
 
 export default class DashboardClientCountCard extends Component {
   @service store;
 
   @tracked activityData = null;
-  @tracked clientConfig = null;
-  @tracked updatedAt = timestamp.now().toISOString();
+  @tracked activityConfig = null;
+  @tracked updatedAt = null;
 
   constructor() {
     super(...arguments);
     this.fetchClientActivity.perform();
-    this.clientConfig = this.store.queryRecord('clients/config', {}).catch(() => {});
   }
 
   get currentMonthActivityTotalCount() {
     return this.activityData?.byMonth?.lastObject?.new_clients.clients;
   }
 
-  get licenseStartTime() {
-    return this.args.license.startTime || getStorage().getItem('vault:ui-inputted-start-date') || null;
+  get statSubText() {
+    const format = (date) => parseAPITimestamp(date, 'MMM yyyy');
+    const { startTime, endTime } = this.activityData;
+    return startTime && endTime
+      ? {
+          total: `The number of clients in this billing period (${format(startTime)} - ${format(endTime)}).`,
+          new: 'The number of clients new to Vault in the current month.',
+        }
+      : { total: 'No total client data available.', new: 'No new client data available.' };
   }
 
   @task
@@ -48,15 +51,12 @@ export default class DashboardClientCountCard extends Component {
   *fetchClientActivity(e) {
     if (e) e.preventDefault();
     this.updatedAt = timestamp.now().toISOString();
-    // only make the network request if we have a start_time
-    if (!this.licenseStartTime) return {};
+
     try {
-      this.activityData = yield this.store.queryRecord('clients/activity', {
-        start_time: { timestamp: this.licenseStartTime },
-        end_time: { timestamp: this.updatedAt },
-      });
-      this.noActivityData = this.activityData.activity.id === 'no-data' ? true : false;
+      this.activityData = yield this.store.findRecord('clients/activity', 'clients/activity');
     } catch (error) {
+      // used for rendering the "No data" empty state, swallow any errors requesting config data
+      this.activityConfig = yield this.store.queryRecord('clients/config', {}).catch(() => null);
       this.error = error;
     }
   }

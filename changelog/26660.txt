@@ -1,0 +1,3 @@
+```release-note:improvement
+storage/etcd: Update etcd3 client to v3.5.13 to allow use of TLSv1.3.
+```

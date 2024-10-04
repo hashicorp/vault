@@ -1,0 +1,32 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<Clients::RunningTotal
+  @isSecretsSyncActivated={{this.flags.secretsSyncIsActivated}}
+  @byMonthActivityData={{this.byMonthActivityData}}
+  @isHistoricalMonth={{and (not this.isCurrentMonth) (not this.isDateRange)}}
+  @isCurrentMonth={{this.isCurrentMonth}}
+  @runningTotals={{this.totalUsageCounts}}
+  @upgradeData={{this.upgradesDuringActivity}}
+  @responseTimestamp={{@activity.responseTimestamp}}
+  @mountPath={{@mountPath}}
+/>
+
+{{#if this.hasAttributionData}}
+  <Clients::Attribution
+    @noun="namespace"
+    @attribution={{@activity.byNamespace}}
+    @responseTimestamp={{@activity.responseTimestamp}}
+    @isSecretsSyncActivated={{this.flags.secretsSyncIsActivated}}
+  />
+  {{#if this.namespaceMountAttribution}}
+    <Clients::Attribution
+      @noun="mount"
+      @attribution={{this.namespaceMountAttribution}}
+      @responseTimestamp={{@activity.responseTimestamp}}
+      @isSecretsSyncActivated={{this.flags.secretsSyncIsActivated}}
+    />
+  {{/if}}
+{{/if}}

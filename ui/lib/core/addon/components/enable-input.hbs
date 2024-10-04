@@ -1,0 +1,27 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{#if this.enable}}
+  {{yield}}
+{{else}}
+  <div class="flex" ...attributes>
+    <div class="is-flex-grow-1">
+      {{#if @attr}}
+        <ReadonlyFormField @attr={{@attr}} @value="**********" />
+      {{else}}
+        <Input aria-label={{@label}} readonly class="input" @type="text" @value="**********" />
+      {{/if}}
+    </div>
+    <div class="align-self-end">
+      <Hds::Button
+        @text="Enable input"
+        @icon="edit"
+        @isIconOnly={{true}}
+        @color="tertiary"
+        {{on "click" (fn (mut this.enable))}}
+      />
+    </div>
+  </div>
+{{/if}}

@@ -1,6 +1,11 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { action } from '@ember/object';
 
 import type FlashMessageService from 'vault/services/flash-messages';
@@ -22,7 +27,7 @@ export default class LdapLibraryDetailsAccountsPageComponent extends Component<A
   @tracked checkOutTtl: string | null = null;
 
   get cliCommand() {
-    return `vault lease renew ad/library/${this.args.library.name}/check-out/:lease_id`;
+    return `vault lease renew ${this.args.library.backend}/library/${this.args.library.name}/check-out/:lease_id`;
   }
   @action
   setTtl(data: TtlEvent) {

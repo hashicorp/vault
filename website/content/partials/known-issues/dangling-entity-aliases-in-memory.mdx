@@ -1,0 +1,24 @@
+<a id="dangling-entity-alias-in-memory" />
+
+### Deleting an entity-aliases does not remove it from the in-memory database on standby nodes
+
+#### Affected versions
+
+##### Vault Community Edition
+
+- 1.16.3
+- 1.17.0 - 1.17.2
+
+##### Enterprise
+
+- 1.16.3+ent - 1.16.6+ent
+- 1.17.0+ent - 1.17.2+ent
+
+#### Issue
+
+Entity-aliases deleted from Vault are not removed from the in-memory database on
+standby nodes within a cluster. As a result, API requests to create a new
+entity-alias with the same mount accessor and name sent to a standby node will
+fail.
+
+This bug is fixed in Vault 1.16.7+ent, 1.17.3, 1.17.3+ent and later.

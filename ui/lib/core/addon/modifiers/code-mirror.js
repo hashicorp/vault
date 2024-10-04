@@ -7,9 +7,11 @@ import { action } from '@ember/object';
 import { bind } from '@ember/runloop';
 import codemirror from 'codemirror';
 import Modifier from 'ember-modifier';
+import { stringify } from 'core/helpers/stringify';
 
 import 'codemirror/addon/edit/matchbrackets';
 import 'codemirror/addon/selection/active-line';
+import 'codemirror/addon/display/autorefresh';
 import 'codemirror/addon/lint/lint.js';
 import 'codemirror/addon/lint/json-lint.js';
 // right now we only use the ruby and javascript, if you use another mode you'll need to import it.
@@ -25,7 +27,19 @@ export default class CodeMirrorModifier extends Modifier {
     } else {
       // this hook also fires any time there is a change to tracked state
       this._editor.setOption('readOnly', namedArgs.readOnly);
-      if (namedArgs.content && this._editor.getValue() !== namedArgs.content) {
+      let value = this._editor.getValue();
+      let content = namedArgs.content;
+      if (!content) return;
+      try {
+        // First parse json to make white space and line breaks consistent between the two items,
+        // then stringify so they can be compared.
+        // We use the stringify helper so we do not flatten the json object
+        value = stringify([JSON.parse(value)], {});
+        content = stringify([JSON.parse(content)], {});
+      } catch {
+        // this catch will occur for non-json content when the mode is not javascript (e.g. ruby).
+      }
+      if (value !== content) {
         this._editor.setValue(namedArgs.content);
       }
     }
@@ -55,6 +69,7 @@ export default class CodeMirrorModifier extends Modifier {
       styleActiveLine: true,
       tabSize: 2,
       // all values we can pass into the JsonEditor
+      screenReaderLabel: namedArgs.screenReaderLabel || '',
       extraKeys: namedArgs.extraKeys || '',
       lineNumbers: namedArgs.lineNumbers,
       mode: namedArgs.mode || 'application/json',
@@ -62,6 +77,7 @@ export default class CodeMirrorModifier extends Modifier {
       theme: namedArgs.theme || 'hashi',
       value: namedArgs.content || '',
       viewportMargin: namedArgs.viewportMargin || '',
+      autoRefresh: namedArgs.autoRefresh,
     });
 
     editor.on('change', bind(this, this._onChange, namedArgs));

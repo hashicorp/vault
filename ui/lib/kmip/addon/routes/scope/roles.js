@@ -5,7 +5,7 @@
 
 import Route from '@ember/routing/route';
 import ListRoute from 'core/mixins/list-route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 
 export default Route.extend(ListRoute, {
   store: service(),
@@ -15,7 +15,7 @@ export default Route.extend(ListRoute, {
     return this.paramsFor('scope').scope_name;
   },
   beforeModel() {
-    return this.pathHelp.getNewModel('kmip/role', this.secretMountPath.currentPath);
+    return this.pathHelp.hydrateModel('kmip/role', this.secretMountPath.currentPath);
   },
   model(params) {
     return this.store

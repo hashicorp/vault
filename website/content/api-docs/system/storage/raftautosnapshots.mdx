@@ -5,18 +5,18 @@ description: |-
 
   The `/sys/storage/raft/snapshot-auto` endpoints are used to manage automated
   snapshots with Vault's Raft storage backend.
-
-  This is an Enterprise-only feature.
 ---
 
 # `/sys/storage/raft/snapshot-auto`
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
 
 The `/sys/storage/raft/snapshot-auto` endpoints are used to manage automated
 snapshots with Vault's Raft storage backend.
 
 ## Create/update an automated snapshots config
-
-@include 'alerts/enterprise-and-hcp-plus.mdx'
 
 **This endpoint requires sudo capability.**
 
@@ -66,6 +66,16 @@ environment variables or files on disk in predefined locations.
   space left in this allowance.
 
 #### storage_type=aws-s3
+
+<Note>
+
+Vault cannot use AWS IAM roles with EKS service accounts for authentication to
+save automated integrated storage snapshots to Amazon S3 buckets. You must set
+the [`aws_access_key_id`](/vault/api-docs/system/storage/raftautosnapshots#aws_access_key_id)
+and  [`aws_secret_access_key`](/vault/api-docs/system/storage/raftautosnapshots#aws_secret_access_key)
+parameters in the context of AWS EKS & S3 configuration.
+
+</Note>
 
 - `aws_s3_bucket` `(string: <required>)` - S3 bucket to write snapshots to.
 

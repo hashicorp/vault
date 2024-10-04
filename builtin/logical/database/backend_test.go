@@ -6,23 +6,27 @@ package database
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/url"
 	"os"
 	"reflect"
+	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-hclog"
-	mongodbatlas "github.com/hashicorp/vault-plugin-database-mongodbatlas"
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/testhelpers/certhelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/plugins/database/mongodb"
 	"github.com/hashicorp/vault/plugins/database/postgresql"
 	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
@@ -34,14 +38,32 @@ import (
 	"github.com/hashicorp/vault/vault"
 	_ "github.com/jackc/pgx/v4"
 	"github.com/mitchellh/mapstructure"
+	"github.com/stretchr/testify/assert"
 )
 
-func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
+func getClusterPostgresDBWithFactory(t *testing.T, factory logical.Factory) (*vault.TestCluster, logical.SystemView) {
+	t.Helper()
+	cluster, sys := getClusterWithFactory(t, factory)
+	vault.TestAddTestPlugin(t, cluster.Cores[0].Core, "postgresql-database-plugin", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_PostgresMultiplexed",
+		[]string{fmt.Sprintf("%s=%s", pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)})
+	return cluster, sys
+}
+
+func getClusterPostgresDB(t *testing.T) (*vault.TestCluster, logical.SystemView) {
+	t.Helper()
+	cluster, sys := getClusterPostgresDBWithFactory(t, Factory)
+	return cluster, sys
+}
+
+func getClusterWithFactory(t *testing.T, factory logical.Factory) (*vault.TestCluster, logical.SystemView) {
+	t.Helper()
+	pluginDir := corehelpers.MakeTestPluginDir(t)
 	coreConfig := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
-			"database": Factory,
+			"database": factory,
 		},
 		BuiltinRegistry: builtinplugins.Registry,
+		PluginDirectory: pluginDir,
 	}
 
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
@@ -51,30 +73,15 @@ func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
 	cores := cluster.Cores
 	vault.TestWaitActive(t, cores[0].Core)
 
-	os.Setenv(pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)
-
 	sys := vault.TestDynamicSystemView(cores[0].Core, nil)
-	vault.TestAddTestPlugin(t, cores[0].Core, "postgresql-database-plugin", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_Postgres", []string{}, "")
-	vault.TestAddTestPlugin(t, cores[0].Core, "postgresql-database-plugin-muxed", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_PostgresMultiplexed", []string{}, "")
-	vault.TestAddTestPlugin(t, cores[0].Core, "mongodb-database-plugin", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_Mongo", []string{}, "")
-	vault.TestAddTestPlugin(t, cores[0].Core, "mongodb-database-plugin-muxed", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_MongoMultiplexed", []string{}, "")
-	vault.TestAddTestPlugin(t, cores[0].Core, "mongodbatlas-database-plugin", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_MongoAtlas", []string{}, "")
-	vault.TestAddTestPlugin(t, cores[0].Core, "mongodbatlas-database-plugin-muxed", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_MongoAtlasMultiplexed", []string{}, "")
 
 	return cluster, sys
 }
 
-func TestBackend_PluginMain_Postgres(t *testing.T) {
-	if os.Getenv(pluginutil.PluginVaultVersionEnv) == "" {
-		return
-	}
-
-	dbType, err := postgresql.New()
-	if err != nil {
-		t.Fatalf("Failed to initialize postgres: %s", err)
-	}
-
-	v5.Serve(dbType.(v5.Database))
+func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
+	t.Helper()
+	cluster, sys := getClusterWithFactory(t, Factory)
+	return cluster, sys
 }
 
 func TestBackend_PluginMain_PostgresMultiplexed(t *testing.T) {
@@ -83,48 +90,6 @@ func TestBackend_PluginMain_PostgresMultiplexed(t *testing.T) {
 	}
 
 	v5.ServeMultiplex(postgresql.New)
-}
-
-func TestBackend_PluginMain_Mongo(t *testing.T) {
-	if os.Getenv(pluginutil.PluginVaultVersionEnv) == "" {
-		return
-	}
-
-	dbType, err := mongodb.New()
-	if err != nil {
-		t.Fatalf("Failed to initialize mongodb: %s", err)
-	}
-
-	v5.Serve(dbType.(v5.Database))
-}
-
-func TestBackend_PluginMain_MongoMultiplexed(t *testing.T) {
-	if os.Getenv(pluginutil.PluginVaultVersionEnv) == "" {
-		return
-	}
-
-	v5.ServeMultiplex(mongodb.New)
-}
-
-func TestBackend_PluginMain_MongoAtlas(t *testing.T) {
-	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" {
-		return
-	}
-
-	dbType, err := mongodbatlas.New()
-	if err != nil {
-		t.Fatalf("Failed to initialize mongodbatlas: %s", err)
-	}
-
-	v5.Serve(dbType.(v5.Database))
-}
-
-func TestBackend_PluginMain_MongoAtlasMultiplexed(t *testing.T) {
-	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" {
-		return
-	}
-
-	v5.ServeMultiplex(mongodbatlas.New)
 }
 
 func TestBackend_RoleUpgrade(t *testing.T) {
@@ -183,12 +148,14 @@ func TestBackend_config_connection(t *testing.T) {
 	var resp *logical.Response
 	var err error
 
-	cluster, sys := getCluster(t)
+	cluster, sys := getClusterPostgresDB(t)
 	defer cluster.Cleanup()
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 	config.System = sys
+	eventSender := logical.NewMockEventSender()
+	config.EventsSender = eventSender
 	lb, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
@@ -243,6 +210,7 @@ func TestBackend_config_connection(t *testing.T) {
 			"root_credentials_rotate_statements": []string{},
 			"password_policy":                    "",
 			"plugin_version":                     "",
+			"verify_connection":                  false,
 		}
 		configReq.Operation = logical.ReadOperation
 		resp, err = b.HandleRequest(namespace.RootContext(nil), configReq)
@@ -297,6 +265,7 @@ func TestBackend_config_connection(t *testing.T) {
 			"root_credentials_rotate_statements": []string{},
 			"password_policy":                    "",
 			"plugin_version":                     "",
+			"verify_connection":                  false,
 		}
 		configReq.Operation = logical.ReadOperation
 		resp, err = b.HandleRequest(namespace.RootContext(nil), configReq)
@@ -340,6 +309,7 @@ func TestBackend_config_connection(t *testing.T) {
 			"root_credentials_rotate_statements": []string{},
 			"password_policy":                    "",
 			"plugin_version":                     "",
+			"verify_connection":                  false,
 		}
 		configReq.Operation = logical.ReadOperation
 		resp, err = b.HandleRequest(namespace.RootContext(nil), configReq)
@@ -367,10 +337,22 @@ func TestBackend_config_connection(t *testing.T) {
 	if key != "plugin-test" {
 		t.Fatalf("bad key: %q", key)
 	}
+	assert.Equal(t, 3, len(eventSender.Events))
+	assert.Equal(t, "database/config-write", string(eventSender.Events[0].Type))
+	assert.Equal(t, "config/plugin-test", eventSender.Events[0].Event.Metadata.AsMap()["path"])
+	assert.Equal(t, "plugin-test", eventSender.Events[0].Event.Metadata.AsMap()["name"])
+	assert.Equal(t, "database/config-write", string(eventSender.Events[1].Type))
+	assert.Equal(t, "config/plugin-test", eventSender.Events[1].Event.Metadata.AsMap()["path"])
+	assert.Equal(t, "plugin-test", eventSender.Events[1].Event.Metadata.AsMap()["name"])
+	assert.Equal(t, "database/config-write", string(eventSender.Events[2].Type))
+	assert.Equal(t, "config/plugin-test", eventSender.Events[2].Event.Metadata.AsMap()["path"])
+	assert.Equal(t, "plugin-test", eventSender.Events[2].Event.Metadata.AsMap()["name"])
 }
 
+// TestBackend_BadConnectionString tests that an error response resulting from
+// a failed connection does not expose the URL. The middleware should sanitize it.
 func TestBackend_BadConnectionString(t *testing.T) {
-	cluster, sys := getCluster(t)
+	cluster, sys := getClusterPostgresDB(t)
 	defer cluster.Cleanup()
 
 	config := logical.TestBackendConfig()
@@ -383,7 +365,7 @@ func TestBackend_BadConnectionString(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, _ := postgreshelper.PrepareTestContainer(t, "13.4-buster")
+	cleanup, _ := postgreshelper.PrepareTestContainer(t)
 	defer cleanup()
 
 	respCheck := func(req *logical.Request) {
@@ -419,12 +401,14 @@ func TestBackend_BadConnectionString(t *testing.T) {
 }
 
 func TestBackend_basic(t *testing.T) {
-	cluster, sys := getCluster(t)
+	cluster, sys := getClusterPostgresDB(t)
 	defer cluster.Cleanup()
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 	config.System = sys
+	eventSender := logical.NewMockEventSender()
+	config.EventsSender = eventSender
 
 	b, err := Factory(context.Background(), config)
 	if err != nil {
@@ -432,7 +416,7 @@ func TestBackend_basic(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "13.4-buster")
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t)
 	defer cleanup()
 
 	// Configure a connection
@@ -548,7 +532,7 @@ func TestBackend_basic(t *testing.T) {
 		if credsResp.Secret.TTL != 5*time.Minute {
 			t.Fatalf("unexpected TTL of %d", credsResp.Secret.TTL)
 		}
-		if !testCredsExist(t, credsResp, connURL) {
+		if !testCredsExist(t, credsResp.Data, connURL) {
 			t.Fatalf("Creds should exist")
 		}
 
@@ -568,7 +552,7 @@ func TestBackend_basic(t *testing.T) {
 			t.Fatalf("err:%s resp:%#v\n", err, resp)
 		}
 
-		if testCredsExist(t, credsResp, connURL) {
+		if testCredsExist(t, credsResp.Data, connURL) {
 			t.Fatalf("Creds should not exist")
 		}
 	}
@@ -586,7 +570,7 @@ func TestBackend_basic(t *testing.T) {
 		if err != nil || (credsResp != nil && credsResp.IsError()) {
 			t.Fatalf("err:%s resp:%#v\n", err, credsResp)
 		}
-		if !testCredsExist(t, credsResp, connURL) {
+		if !testCredsExist(t, credsResp.Data, connURL) {
 			t.Fatalf("Creds should exist")
 		}
 
@@ -619,91 +603,135 @@ func TestBackend_basic(t *testing.T) {
 			t.Fatalf("err:%s resp:%#v\n", err, resp)
 		}
 
-		if testCredsExist(t, credsResp, connURL) {
+		if testCredsExist(t, credsResp.Data, connURL) {
 			t.Fatalf("Creds should not exist")
 		}
 	}
+	assert.Equal(t, 9, len(eventSender.Events))
+
+	assertEvent := func(t *testing.T, typ, name, path string) {
+		t.Helper()
+		assert.Equal(t, typ, string(eventSender.Events[0].Type))
+		assert.Equal(t, name, eventSender.Events[0].Event.Metadata.AsMap()["name"])
+		assert.Equal(t, path, eventSender.Events[0].Event.Metadata.AsMap()["path"])
+		eventSender.Events = slices.Delete(eventSender.Events, 0, 1)
+	}
+
+	assertEvent(t, "database/config-write", "plugin-test", "config/plugin-test")
+	for i := 0; i < 3; i++ {
+		assertEvent(t, "database/role-update", "plugin-role-test", "roles/plugin-role-test")
+		assertEvent(t, "database/creds-create", "plugin-role-test", "creds/plugin-role-test")
+	}
+	assertEvent(t, "database/creds-create", "plugin-role-test", "creds/plugin-role-test")
+	assertEvent(t, "database/role-delete", "plugin-role-test", "roles/plugin-role-test")
 }
 
-func TestBackend_connectionCrud(t *testing.T) {
-	cluster, sys := getCluster(t)
-	defer cluster.Cleanup()
+// singletonDBFactory allows us to reach into the internals of a databaseBackend
+// even when it's been created by a call to the sys mount. The factory method
+// satisfies the logical.Factory type, and lazily creates the databaseBackend
+// once the SystemView has been provided because the factory method itself is an
+// input for creating the test cluster and its system view.
+type singletonDBFactory struct {
+	once sync.Once
+	db   *databaseBackend
+
+	sys logical.SystemView
+}
+
+// factory satisfies the logical.Factory type.
+func (s *singletonDBFactory) factory(context.Context, *logical.BackendConfig) (logical.Backend, error) {
+	if s.sys == nil {
+		return nil, errors.New("sys is nil")
+	}
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	config.System = sys
+	config.System = s.sys
 
-	b, err := Factory(context.Background(), config)
+	var err error
+	s.once.Do(func() {
+		var b logical.Backend
+		b, err = Factory(context.Background(), config)
+		s.db = b.(*databaseBackend)
+	})
 	if err != nil {
-		t.Fatal(err)
+		return nil, err
 	}
-	defer b.Cleanup(context.Background())
+	if s.db == nil {
+		return nil, errors.New("db is nil")
+	}
+	return s.db, nil
+}
 
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "13.4-buster")
+func TestBackend_connectionCrud(t *testing.T) {
+	t.Parallel()
+	dbFactory := &singletonDBFactory{}
+	cluster, sys := getClusterPostgresDBWithFactory(t, dbFactory.factory)
+	defer cluster.Cleanup()
+
+	dbFactory.sys = sys
+	client := cluster.Cores[0].Client.Logical()
+
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t)
 	defer cleanup()
 
+	// Mount the database plugin.
+	resp, err := client.Write("sys/mounts/database", map[string]interface{}{
+		"type": "database",
+	})
+	if err != nil {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
 	// Configure a connection
-	data := map[string]interface{}{
+	resp, err = client.Write("database/config/plugin-test", map[string]interface{}{
 		"connection_url":    "test",
 		"plugin_name":       "postgresql-database-plugin",
 		"verify_connection": false,
+	})
+	if err != nil {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
-	req := &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "config/plugin-test",
-		Storage:   config.StorageView,
-		Data:      data,
-	}
-	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil || (resp != nil && resp.IsError()) {
+
+	// Configure a second connection to confirm below it doesn't get restarted.
+	resp, err = client.Write("database/config/plugin-test-hana", map[string]interface{}{
+		"connection_url":    "test",
+		"plugin_name":       "hana-database-plugin",
+		"verify_connection": false,
+	})
+	if err != nil {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
 
 	// Create a role
-	data = map[string]interface{}{
+	resp, err = client.Write("database/roles/plugin-role-test", map[string]interface{}{
 		"db_name":               "plugin-test",
 		"creation_statements":   testRole,
 		"revocation_statements": defaultRevocationSQL,
 		"default_ttl":           "5m",
 		"max_ttl":               "10m",
-	}
-	req = &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "roles/plugin-role-test",
-		Storage:   config.StorageView,
-		Data:      data,
-	}
-	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil || (resp != nil && resp.IsError()) {
+	})
+	if err != nil {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
 
 	// Update the connection
-	data = map[string]interface{}{
+	resp, err = client.Write("database/config/plugin-test", map[string]interface{}{
 		"connection_url": connURL,
 		"plugin_name":    "postgresql-database-plugin",
 		"allowed_roles":  []string{"plugin-role-test"},
 		"username":       "postgres",
 		"password":       "secret",
-		"private_key":    "PRIVATE_KEY",
-	}
-	req = &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "config/plugin-test",
-		Storage:   config.StorageView,
-		Data:      data,
-	}
-	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil || (resp != nil && resp.IsError()) {
+	})
+	if err != nil {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
 	if len(resp.Warnings) == 0 {
 		t.Fatalf("expected warning about password in url %s, resp:%#v\n", connURL, resp)
 	}
 
-	req.Operation = logical.ReadOperation
-	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil || (resp != nil && resp.IsError()) {
+	resp, err = client.Read("database/config/plugin-test")
+	if err != nil {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
 	returnedConnectionDetails := resp.Data["connection_details"].(map[string]interface{})
@@ -714,16 +742,17 @@ func TestBackend_connectionCrud(t *testing.T) {
 	if _, exists := returnedConnectionDetails["password"]; exists {
 		t.Fatal("password should NOT be found in the returned config")
 	}
-	if _, exists := returnedConnectionDetails["private_key"]; exists {
-		t.Fatal("private_key should NOT be found in the returned config")
-	}
 
 	// Replace connection url with templated version
-	req.Operation = logical.UpdateOperation
-	connURL = strings.ReplaceAll(connURL, "postgres:secret", "{{username}}:{{password}}")
-	data["connection_url"] = connURL
-	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil || (resp != nil && resp.IsError()) {
+	templatedConnURL := strings.ReplaceAll(connURL, "postgres:secret", "{{username}}:{{password}}")
+	resp, err = client.Write("database/config/plugin-test", map[string]interface{}{
+		"connection_url": templatedConnURL,
+		"plugin_name":    "postgresql-database-plugin",
+		"allowed_roles":  []string{"plugin-role-test"},
+		"username":       "postgres",
+		"password":       "secret",
+	})
+	if err != nil {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
 
@@ -732,75 +761,93 @@ func TestBackend_connectionCrud(t *testing.T) {
 		"plugin_name": "postgresql-database-plugin",
 		"connection_details": map[string]interface{}{
 			"username":       "postgres",
-			"connection_url": connURL,
+			"connection_url": templatedConnURL,
 		},
-		"allowed_roles":                      []string{"plugin-role-test"},
-		"root_credentials_rotate_statements": []string(nil),
+		"allowed_roles":                      []any{"plugin-role-test"},
+		"root_credentials_rotate_statements": []any{},
 		"password_policy":                    "",
 		"plugin_version":                     "",
+		"verify_connection":                  false,
 	}
-	req.Operation = logical.ReadOperation
-	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil || (resp != nil && resp.IsError()) {
+	resp, err = client.Read("database/config/plugin-test")
+	if err != nil {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
 
 	delete(resp.Data["connection_details"].(map[string]interface{}), "name")
 	if diff := deep.Equal(resp.Data, expected); diff != nil {
-		t.Fatal(diff)
+		t.Fatal(strings.Join(diff, "\n"))
 	}
 
-	// Reset Connection
-	data = map[string]interface{}{}
-	req = &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "reset/plugin-test",
-		Storage:   config.StorageView,
-		Data:      data,
-	}
-	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	// Test endpoints for reloading plugins.
+	for _, reload := range []struct {
+		path       string
+		data       map[string]any
+		checkCount bool
+	}{
+		{"database/reset/plugin-test", nil, false},
+		{"database/reload/postgresql-database-plugin", nil, true},
+		{"sys/plugins/reload/backend", map[string]any{
+			"plugin": "postgresql-database-plugin",
+		}, false},
+	} {
+		getConnectionID := func(name string) string {
+			t.Helper()
+			dbi := dbFactory.db.connections.Get(name)
+			if dbi == nil {
+				t.Fatal("no plugin-test dbi")
+			}
+			return dbi.ID()
+		}
+		initialID := getConnectionID("plugin-test")
+		hanaID := getConnectionID("plugin-test-hana")
+		resp, err = client.Write(reload.path, reload.data)
+		if err != nil {
+			t.Fatalf("err:%s resp:%#v\n", err, resp)
+		}
+		if initialID == getConnectionID("plugin-test") {
+			t.Fatal("ID unchanged after connection reset")
+		}
+		if hanaID != getConnectionID("plugin-test-hana") {
+			t.Fatal("hana plugin got restarted but shouldn't have been")
+		}
+		if reload.checkCount {
+			actual, err := resp.Data["count"].(json.Number).Int64()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if expected := 1; expected != int(actual) {
+				t.Fatalf("expected %d but got %d", expected, resp.Data["count"].(int))
+			}
+			if expected := []any{"plugin-test"}; !reflect.DeepEqual(expected, resp.Data["connections"]) {
+				t.Fatalf("expected %v but got %v", expected, resp.Data["connections"])
+			}
+		}
 	}
 
 	// Get creds
-	data = map[string]interface{}{}
-	req = &logical.Request{
-		Operation: logical.ReadOperation,
-		Path:      "creds/plugin-role-test",
-		Storage:   config.StorageView,
-		Data:      data,
-	}
-	credsResp, err := b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil || (credsResp != nil && credsResp.IsError()) {
+	credsResp, err := client.Read("database/creds/plugin-role-test")
+	if err != nil {
 		t.Fatalf("err:%s resp:%#v\n", err, credsResp)
 	}
 
-	credCheckURL := dbutil.QueryHelper(connURL, map[string]string{
+	credCheckURL := dbutil.QueryHelper(templatedConnURL, map[string]string{
 		"username": "postgres",
 		"password": "secret",
 	})
-	if !testCredsExist(t, credsResp, credCheckURL) {
+	if !testCredsExist(t, credsResp.Data, credCheckURL) {
 		t.Fatalf("Creds should exist")
 	}
 
 	// Delete Connection
-	data = map[string]interface{}{}
-	req = &logical.Request{
-		Operation: logical.DeleteOperation,
-		Path:      "config/plugin-test",
-		Storage:   config.StorageView,
-		Data:      data,
-	}
-	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil || (resp != nil && resp.IsError()) {
+	resp, err = client.Delete("database/config/plugin-test")
+	if err != nil {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
 
 	// Read connection
-	req.Operation = logical.ReadOperation
-	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil || (resp != nil && resp.IsError()) {
+	resp, err = client.Read("database/config/plugin-test")
+	if err != nil {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
 
@@ -810,8 +857,59 @@ func TestBackend_connectionCrud(t *testing.T) {
 	}
 }
 
+func TestBackend_connectionSanitizePrivateKey(t *testing.T) {
+	t.Parallel()
+	dbFactory := &singletonDBFactory{}
+	cluster, sys := getClusterPostgresDBWithFactory(t, dbFactory.factory)
+	defer cluster.Cleanup()
+
+	dbFactory.sys = sys
+	client := cluster.Cores[0].Client.Logical()
+
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t)
+	defer cleanup()
+
+	// Mount the database plugin.
+	resp, err := client.Write("sys/mounts/database", map[string]interface{}{
+		"type": "database",
+	})
+	if err != nil {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	caCert := certhelpers.NewCert(t, certhelpers.CommonName("ca"), certhelpers.IsCA(true), certhelpers.SelfSign())
+	clientCert := certhelpers.NewCert(t, certhelpers.CommonName("postgres"), certhelpers.DNS("localhost"), certhelpers.Parent(caCert))
+
+	// Create a connection
+	resp, err = client.Write("database/config/plugin-test", map[string]interface{}{
+		"connection_url":    connURL,
+		"plugin_name":       "postgresql-database-plugin",
+		"allowed_roles":     []string{"plugin-role-test"},
+		"username":          "postgres",
+		"tls_certificate":   string(clientCert.CombinedPEM()),
+		"private_key":       string(clientCert.PrivateKeyPEM()),
+		"tls_ca":            string(caCert.CombinedPEM()),
+		"verify_connection": false,
+	})
+	if err != nil {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	resp, err = client.Read("database/config/plugin-test")
+	if err != nil {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+	returnedConnectionDetails := resp.Data["connection_details"].(map[string]interface{})
+	if strings.Contains(returnedConnectionDetails["connection_url"].(string), "secret") {
+		t.Fatal("password should not be found in the connection url")
+	}
+	if _, exists := returnedConnectionDetails["private_key"]; exists {
+		t.Fatal("private_key should NOT be found in the returned config")
+	}
+}
+
 func TestBackend_roleCrud(t *testing.T) {
-	cluster, sys := getCluster(t)
+	cluster, sys := getClusterPostgresDB(t)
 	defer cluster.Cleanup()
 
 	config := logical.TestBackendConfig()
@@ -828,7 +926,7 @@ func TestBackend_roleCrud(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "13.4-buster")
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t)
 	defer cleanup()
 
 	// Configure a connection
@@ -1064,7 +1162,7 @@ func TestBackend_roleCrud(t *testing.T) {
 }
 
 func TestBackend_allowedRoles(t *testing.T) {
-	cluster, sys := getCluster(t)
+	cluster, sys := getClusterPostgresDB(t)
 	defer cluster.Cleanup()
 
 	config := logical.TestBackendConfig()
@@ -1077,7 +1175,7 @@ func TestBackend_allowedRoles(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "13.4-buster")
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t)
 	defer cleanup()
 
 	// Configure a connection
@@ -1174,7 +1272,7 @@ func TestBackend_allowedRoles(t *testing.T) {
 		t.Fatalf("err:%s resp:%#v\n", err, credsResp)
 	}
 
-	if !testCredsExist(t, credsResp, connURL) {
+	if !testCredsExist(t, credsResp.Data, connURL) {
 		t.Fatalf("Creds should exist")
 	}
 
@@ -1208,7 +1306,7 @@ func TestBackend_allowedRoles(t *testing.T) {
 		t.Fatalf("err:%s resp:%#v\n", err, credsResp)
 	}
 
-	if !testCredsExist(t, credsResp, connURL) {
+	if !testCredsExist(t, credsResp.Data, connURL) {
 		t.Fatalf("Creds should exist")
 	}
 
@@ -1255,13 +1353,13 @@ func TestBackend_allowedRoles(t *testing.T) {
 		t.Fatalf("err:%s resp:%#v\n", err, credsResp)
 	}
 
-	if !testCredsExist(t, credsResp, connURL) {
+	if !testCredsExist(t, credsResp.Data, connURL) {
 		t.Fatalf("Creds should exist")
 	}
 }
 
 func TestBackend_RotateRootCredentials(t *testing.T) {
-	cluster, sys := getCluster(t)
+	cluster, sys := getClusterPostgresDB(t)
 	defer cluster.Cleanup()
 
 	config := logical.TestBackendConfig()
@@ -1274,7 +1372,7 @@ func TestBackend_RotateRootCredentials(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "13.4-buster")
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t)
 	defer cleanup()
 
 	connURL = strings.ReplaceAll(connURL, "postgres:secret", "{{username}}:{{password}}")
@@ -1362,7 +1460,7 @@ func TestBackend_RotateRootCredentials(t *testing.T) {
 }
 
 func TestBackend_ConnectionURL_redacted(t *testing.T) {
-	cluster, sys := getCluster(t)
+	cluster, sys := getClusterPostgresDB(t)
 	t.Cleanup(cluster.Cleanup)
 
 	config := logical.TestBackendConfig()
@@ -1407,7 +1505,7 @@ func TestBackend_ConnectionURL_redacted(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cleanup, u := postgreshelper.PrepareTestContainerWithPassword(t, "13.4-buster", tt.password)
+			cleanup, u := postgreshelper.PrepareTestContainerWithPassword(t, tt.password)
 			t.Cleanup(cleanup)
 
 			p, err := url.Parse(u)
@@ -1513,7 +1611,7 @@ func TestBackend_AsyncClose(t *testing.T) {
 	// Test that having a plugin that takes a LONG time to close will not cause the cleanup function to take
 	// longer than 750ms.
 	cluster, sys := getCluster(t)
-	vault.TestAddTestPlugin(t, cluster.Cores[0].Core, "hanging-plugin", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_Hanging", []string{}, "")
+	vault.TestAddTestPlugin(t, cluster.Cores[0].Core, "hanging-plugin", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_Hanging", []string{})
 	t.Cleanup(cluster.Cleanup)
 
 	config := logical.TestBackendConfig()
@@ -1565,13 +1663,13 @@ func TestNewDatabaseWrapper_IgnoresBuiltinVersion(t *testing.T) {
 	}
 }
 
-func testCredsExist(t *testing.T, resp *logical.Response, connURL string) bool {
+func testCredsExist(t *testing.T, data map[string]any, connURL string) bool {
 	t.Helper()
 	var d struct {
 		Username string `mapstructure:"username"`
 		Password string `mapstructure:"password"`
 	}
-	if err := mapstructure.Decode(resp.Data, &d); err != nil {
+	if err := mapstructure.Decode(data, &d); err != nil {
 		t.Fatal(err)
 	}
 	log.Printf("[TRACE] Generated credentials: %v", d)

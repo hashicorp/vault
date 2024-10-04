@@ -5,29 +5,16 @@
 
 <Toolbar>
   <ToolbarActions>
-    {{#if this.model.canDelete}}
-      <ToolTip @verticalPosition="above" as |T|>
-        <T.Trigger tabindex="-1">
-          <ConfirmAction
-            data-test-oidc-provider-delete
-            @disabled={{eq this.model.name "default"}}
-            @buttonClasses="toolbar-link"
-            @onConfirmAction={{this.delete}}
-            @confirmTitle="Delete provider?"
-            @confirmMessage="This provider will be permanently deleted. You will need to re-create it to use it again."
-            @confirmButtonText="Delete"
-          >
-            Delete provider
-          </ConfirmAction>
-        </T.Trigger>
-        {{#if (eq this.model.name "default")}}
-          <T.Content @defaultClass="tool-tip smaller-font">
-            <div class="box">
-              This is a built-in provider that cannot be deleted.
-            </div>
-          </T.Content>
-        {{/if}}
-      </ToolTip>
+    {{#if (and (not-eq this.model.name "default") this.model.canDelete)}}
+      <ConfirmAction
+        data-test-oidc-provider-delete
+        @buttonText="Delete provider"
+        class="toolbar-button"
+        @buttonColor="secondary"
+        @onConfirmAction={{this.delete}}
+        @confirmTitle="Delete provider?"
+        @confirmMessage="This provider will be permanently deleted. You will need to re-create it to use it again."
+      />
       <div class="toolbar-separator"></div>
     {{/if}}
     {{#if this.model.canEdit}}

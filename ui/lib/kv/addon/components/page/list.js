@@ -1,13 +1,13 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-import { getOwner } from '@ember/application';
+import { getOwner } from '@ember/owner';
 import { ancestorKeysForKey } from 'core/utils/key-utils';
 import errorMessage from 'vault/utils/error-message';
 import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
@@ -19,9 +19,8 @@ import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
  * @param {array} secrets - An array of models generated form kv/metadata query.
  * @param {string} backend - The name of the kv secret engine.
  * @param {string} pathToSecret - The directory name that the secret belongs to ex: beep/boop/
- * @param {string} pageFilter - The input on the kv-list-filter. Does not include a directory name.
  * @param {string} filterValue - The concatenation of the pathToSecret and pageFilter ex: beep/boop/my-
- * @param {boolean} noMetadataListPermissions - true if the return to query metadata LIST is 403, indicating the user does not have permissions to that endpoint.
+ * @param {boolean} failedDirectoryQuery - true if the query was a 403 and the search was for a directory. Used to display inline alert message on the overview card.
  * @param {array} breadcrumbs - Breadcrumbs as an array of objects that contain label, route, and modelId. They are updated via the util kv-breadcrumbs to handle dynamic *pathToSecret on the list-directory route.
  */
 
@@ -31,6 +30,7 @@ export default class KvListPageComponent extends Component {
   @service store;
 
   @tracked secretPath;
+  @tracked metadataToDelete = null; // set to the metadata intended to delete
 
   get mountPoint() {
     // mountPoint tells transition where to start. In this case, mountPoint will always be vault.cluster.secrets.backend.kv.
@@ -38,14 +38,16 @@ export default class KvListPageComponent extends Component {
   }
 
   get buttonText() {
-    return pathIsDirectory(this.secretPath) ? 'View list' : 'View secret';
+    // if secretPath is an empty string it could be because the user hit a permissions error.
+    const path = this.secretPath || this.args.pathToSecret;
+    return pathIsDirectory(path) ? 'View list' : 'View secret';
   }
 
-  // callback from HDS pagination to set the queryParams currentPage
+  // callback from HDS pagination to set the queryParams page
   get paginationQueryParams() {
     return (page) => {
       return {
-        currentPage: page,
+        page,
       };
     };
   }
@@ -70,6 +72,8 @@ export default class KvListPageComponent extends Component {
     } catch (error) {
       const message = errorMessage(error, 'Error deleting secret. Please try again or contact support.');
       this.flashMessages.danger(message);
+    } finally {
+      this.metadataToDelete = null;
     }
   }
 
@@ -83,6 +87,6 @@ export default class KvListPageComponent extends Component {
     evt.preventDefault();
     pathIsDirectory(this.secretPath)
       ? this.router.transitionTo('vault.cluster.secrets.backend.kv.list-directory', this.secretPath)
-      : this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.details', this.secretPath);
+      : this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.index', this.secretPath);
   }
 }

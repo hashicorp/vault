@@ -10,8 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mitchellh/cli"
-
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
 	credToken "github.com/hashicorp/vault/builtin/credential/token"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"

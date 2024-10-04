@@ -1,0 +1,244 @@
+---
+layout: api
+page_title: /sys/config/ui/custom-messages - HTTP API
+description: The '/sys/config/ui/custom-messages' endpoint configures the custom messages that the UI displays prior to and immediately following login operations.
+---
+
+# `/sys/config/ui/custom-messages`
+
+@include 'alerts/enterprise-only.mdx'
+
+The `/sys/config/ui/custom-messages` endpoint is used to list, create, read, update, or delete custom messages.
+
+## List custom messages
+
+This endpoint returns a list of all custom messages that exist.
+
+| Method | Path                              |
+| :----- | :-------------------------------- |
+| `LIST` | `/sys/config/ui/custom-messages/` |
+
+### Parameters
+
+- `active` `(bool: <optional>)` - A flag indicating whether to only include custom messages whose active property is set to the value specified in the results. If this parameter is omitted, the results include both active and inactive custom messages.
+
+- `authenticated` `(bool: <optional>)` - A flag indicating whether to only include custom messages whose authenticated property is set to the value specified in the results. If this parameter is omitted, the results include both authenticated and unauthenticated custom messages.
+
+- `type` `(string: <optional>)` - A flag that can only be set to either `banner` or `modal`. It indicates whether to only include custom messages whose type property is set to the value specified in the results. If this parameter is omitted, the results include both types of custom messages.
+
+### Sample request
+
+```shell-session
+$ curl --header "X-Vault-Token: ..." \
+    --request LIST \
+    http://127.0.0.1:8200/v1/sys/config/ui/custom-messages?active=true&authenticated=false&type=modal
+```
+
+### Sample response
+
+```json
+{
+  "data": {
+    "key_info": {
+      "01234567-89ab-cdef-0123-456789abcdef": {
+        "title": "Post-login Advisory",
+        "type": "modal",
+        "authenticated": false,
+        "start_time": "2024-01-01T00:00:00.000000000Z",
+        "end_time": null
+      }
+    },
+    "keys": [
+      "01234567-89ab-cdef-0123-456789abcdef"
+    ]
+  }
+}
+```
+
+## Create custom message
+
+This endpoint allows the creation of a new custom message. Vault allows up to 100 custom messages
+per namespace. If this endpoint is called to create a custom message when the maximum number of
+custom messages already exists, an error will be returned.
+
+| Method | Path                              |
+| :----- | :-------------------------------- |
+| `POST` | `/sys/config/ui/custom-messages/` |
+
+### Parameters
+
+- `title` `(string: <required>)` - The title of the custom message.
+
+- `authenticated` `(bool: <optional>)` - A flag indicating whether the custom message is displayed post-login (`true`) or pre-login (`false`). If this parameter is omitted, the custom message is created as post-login. Pre-login messages may be retrieved by anonymous clients, as such their content should not contain any sensitive information.
+
+- `type` `(string: <optional>)` - The type of the custom message. Must be either `banner` or `modal`. If this parameter is omitted, the custom message type is set to `banner`.
+
+- `message` `(string: <required>)` - The base64 encoded message body of the custom message.
+
+- `link` `(Map: <optional>)` - A link object that contains a single property. The property key is the link title and its value is the URL.
+
+- `options` `(Map: <optional>)` - A map of custom UI properties to set for the custom message.
+
+- `start_time` `(string: <required>)` - A RFC3339 formatted timestamp that marks the beginning of the custom message's active period.
+
+- `end_time` `(string: <optional>)` - A RFC3339 formatted timestamp that marks the end of the custom message's active period. If no end time is provided, the custom message's active period never ends.
+
+### Sample payload
+
+```json
+{
+  "title": "Post-login Advisory",
+  "authenticated": true,
+  "type": "modal",
+  "message": "TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4gQ3VyYWJpdHVyIG51bGxhIGF1Z3VlLCBwbGFjZXJhdCBxdWlzIHJpc3VzIGJsYW5kaXQsIG1vbGVzdGllIGltcGVyZGlldCBtYXNzYS4gU2VkIGJsYW5kaXQgcnV0cnVtIG9kaW8gcXVpcyB2YXJpdXMuIEZ1c2NlIHB1cnVzIG9yY2ksIG1heGltdXMgYWMgbGliZXJvLgo=",
+  "start_time": "2024-01-01T00:00:00.000Z"
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json
+    http://127.0.0.1:8200/v1/sys/config/ui/custom-messages
+```
+
+### Sample response
+
+```json
+{
+  "data": {
+    "id": "01234567-89ab-cdef-0123-456789abcdef",
+    "active": true,
+    "start_time": "2023-10-15T02:36:43.986212308Z",
+    "end_time": null,
+    "type": "modal",
+    "authenticated": false,
+  }
+}
+```
+
+## Read custom message
+
+This endpoint returns the properties of a specific custom message.
+
+| Method |                                      |
+| :----- | :----------------------------------- |
+| `GET`  | `/sys/config/ui/custom-messages/:id` |
+
+### Parameters
+
+- `id` `(string: <required>)` - The unique ID assigned to the custom message at creation time.
+
+### Sample request
+
+```shell-session
+$ curl --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/config/ui/custom-messages/01234567-89ab-cdef-0123-456789abcdef
+```
+
+### Sample response
+
+```json
+{
+  "data": {
+    "id": "01234567-89ab-cdef-0123-456789abcdef",
+    "title": "Pre-login Advisory",
+    "active": true,
+    "authenticated": false,
+    "type": "banner",
+    "message": "TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4gQ3VyYWJpdHVyIG51bGxhIGF1Z3VlLCBwbGFjZXJhdCBxdWlzIHJpc3VzIGJsYW5kaXQsIG1vbGVzdGllIGltcGVyZGlldCBtYXNzYS4gU2VkIGJsYW5kaXQgcnV0cnVtIG9kaW8gcXVpcyB2YXJpdXMuIEZ1c2NlIHB1cnVzIG9yY2ksIG1heGltdXMgYWMgbGliZXJvLgo.",
+    "link": {
+      "click here": "https://www.learnmore.com",
+    },
+    "options": {},
+    "start_time": "2018-03-22T02:24:06.945319214Z",
+    "end_time": null,
+  }
+}
+```
+
+## Update custom message
+
+This endpoint updates the properties of a specific custom message.
+
+| Method |                                      |
+| :----- | :----------------------------------- |
+| `POST` | `/sys/config/ui/custom-messages/:id` |
+
+### Parameters
+
+- `id` `(string: <required>)` - The unique ID assigned to the custom message at creation time.
+
+- `title` `(string: <required>)` - The title of the custom message.
+
+- `authenticated` `(bool: <optional>)` - A flag indicating whether the custom message is displayed post-login (`true`) or pre-login (`false`). If this parameter is omitted, the custom message is created as post-login. Pre-login messages may be retrieved by anonymous clients, as such their content should not contain any sensitive information.
+
+- `type` `(string: <optional>)` - The type of the custom message. Must be either `banner` or `modal`. If this parameter is omitted, the custom message type is set to `banner`.
+
+- `message` `(string: <required>)` - The base64 encoded message body of the custom message.
+
+- `link` `(Map: <optional>)` - A link object that contains a single property. The property key is the link title and its value is the URL.
+
+- `options` `(Map: <optional>)` - A map of custom UI properties to set for the custom message.
+
+- `start_time` `(string: <required>)` - A RFC3339 formatted timestamp that marks the beginning of the custom message's active period.
+
+- `end_time` `(string: <optional>)` - A RFC3339 formatted timestamp that marks the end of the custom message's active period. If no end time is provided, the custom message's active period never ends.
+
+### Sample payload
+
+```json
+{
+  "title": "Pre-login Advisory",
+  "authenticated": false,
+  "type": "modal",
+  "message": "TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4gQ3VyYWJpdHVyIG51bGxhIGF1Z3VlLCBwbGFjZXJhdCBxdWlzIHJpc3VzIGJsYW5kaXQsIG1vbGVzdGllIGltcGVyZGlldCBtYXNzYS4gU2VkIGJsYW5kaXQgcnV0cnVtIG9kaW8gcXVpcyB2YXJpdXMuIEZ1c2NlIHB1cnVzIG9yY2ksIG1heGltdXMgYWMgbGliZXJvLgo=",
+  "start_time": "2024-01-01T00:00:00.000Z"
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json
+    http://127.0.0.1:8200/v1/sys/config/ui/custom-messages/01234567-89ab-cdef-0123-456789abcdef
+```
+
+### Sample response
+
+```json
+{
+  "data": {
+    "active": true,
+    "title": "Pre-login Advisory",
+    "start_time": "2023-10-15T02:36:43.986212308Z",
+    "end_time": null,
+    "type": "modal",
+    "message": "TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4gQ3VyYWJpdHVyIG51bGxhIGF1Z3VlLCBwbGFjZXJhdCBxdWlzIHJpc3VzIGJsYW5kaXQsIG1vbGVzdGllIGltcGVyZGlldCBtYXNzYS4gU2VkIGJsYW5kaXQgcnV0cnVtIG9kaW8gcXVpcyB2YXJpdXMuIEZ1c2NlIHB1cnVzIG9yY2ksIG1heGltdXMgYWMgbGliZXJvLgo",
+    "authenticated": false,
+  }
+}
+```
+
+## Delete custom message
+
+This endpoint deletes a specific custom message.
+
+| Method   |                                      |
+| :------- | :----------------------------------- |
+| `DELETE` | `/sys/config/ui/custom-messages/:id` |
+
+### Parameters
+
+- `id` `(string: <required>)` - The unique ID assigned to the custom message at creation time.
+
+### Sample request
+
+```shell-session
+$ curl --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/config/ui/custom-messages/01234567-89ab-cdef-0123-456789abcdef
+```

@@ -18,6 +18,8 @@
       @value={{this.searchInput}}
       {{on "keyup" this.inputChanged}}
       placeholder={{@placeholder}}
+      autocomplete="off"
+      data-test-input-search={{@id}}
     />
   </div>
 </div>

@@ -4,15 +4,15 @@
 package event
 
 import (
-	"errors"
 	"fmt"
 	"os"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
-
 	"github.com/hashicorp/go-uuid"
 )
 
@@ -28,16 +28,20 @@ type options struct {
 	withSocketType  string
 	withMaxDuration time.Duration
 	withFileMode    *os.FileMode
+	withLogger      hclog.Logger
 }
 
 // getDefaultOptions returns Options with their default values.
 func getDefaultOptions() options {
+	fileMode := os.FileMode(0o600)
+
 	return options{
 		withNow:         time.Now(),
 		withFacility:    "AUTH",
 		withTag:         "vault",
 		withSocketType:  "tcp",
 		withMaxDuration: 2 * time.Second,
+		withFileMode:    &fileMode,
 	}
 }
 
@@ -57,18 +61,24 @@ func getOpts(opt ...Option) (options, error) {
 	return opts, nil
 }
 
+// ValidateOptions can be used to validate options before they are required.
+func ValidateOptions(opt ...Option) error {
+	_, err := getOpts(opt...)
+
+	return err
+}
+
 // NewID is a bit of a modified NewID has been done to stop a circular
 // dependency with the errors package that is caused by importing
 // boundary/internal/db
 func NewID(prefix string) (string, error) {
-	const op = "event.NewID"
 	if prefix == "" {
-		return "", fmt.Errorf("%s: missing prefix: %w", op, ErrInvalidParameter)
+		return "", fmt.Errorf("missing prefix: %w", ErrInvalidParameter)
 	}
 
 	id, err := uuid.GenerateUUID()
 	if err != nil {
-		return "", fmt.Errorf("%s: unable to generate ID: %w", op, err)
+		return "", fmt.Errorf("unable to generate ID: %w", err)
 	}
 
 	return fmt.Sprintf("%s_%s", prefix, id), nil
@@ -82,7 +92,7 @@ func WithID(id string) Option {
 		id := strings.TrimSpace(id)
 		switch {
 		case id == "":
-			err = errors.New("id cannot be empty")
+			err = fmt.Errorf("id cannot be empty: %w", ErrInvalidParameter)
 		default:
 			o.withID = id
 		}
@@ -98,7 +108,7 @@ func WithNow(now time.Time) Option {
 
 		switch {
 		case now.IsZero():
-			err = errors.New("cannot specify 'now' to be the zero time instant")
+			err = fmt.Errorf("cannot specify 'now' to be the zero time instant: %w", ErrInvalidParameter)
 		default:
 			o.withNow = now
 		}
@@ -157,7 +167,7 @@ func WithMaxDuration(duration string) Option {
 
 		parsed, err := parseutil.ParseDurationSecond(duration)
 		if err != nil {
-			return err
+			return fmt.Errorf("unable to parse max duration: %w: %w", ErrInvalidParameter, err)
 		}
 
 		o.withMaxDuration = parsed
@@ -185,10 +195,22 @@ func WithFileMode(mode string) Option {
 
 		switch {
 		case err != nil:
-			return fmt.Errorf("unable to parse file mode: %w", err)
+			return fmt.Errorf("unable to parse file mode: %w: %w", ErrInvalidParameter, err)
 		default:
 			m := os.FileMode(raw)
 			o.withFileMode = &m
+		}
+
+		return nil
+	}
+}
+
+// WithLogger provides an Option to supply a logger which will be used to write logs.
+// NOTE: If no logger is supplied then logging may not be possible.
+func WithLogger(l hclog.Logger) Option {
+	return func(o *options) error {
+		if l != nil && !reflect.ValueOf(l).IsNil() {
+			o.withLogger = l
 		}
 
 		return nil

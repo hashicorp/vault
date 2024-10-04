@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fixes issues displaying accurate TLS state in dashboard configuration details
+```

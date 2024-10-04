@@ -3,105 +3,67 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<PageHeader as |p|>
-  <p.levelLeft>
-    <h1 class="title is-3">
-      Raft Storage
-    </h1>
-  </p.levelLeft>
-</PageHeader>
-<Toolbar>
-  <ToolbarActions>
-    <BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
-      <D.Trigger
-        data-test-popup-menu-trigger="true"
-        class={{concat "toolbar-link" (if D.isOpen " is-active")}}
-        @htmlTag="button"
-      >
-        Snapshots
-        <Chevron @direction="down" @isButton={{true}} />
-      </D.Trigger>
-      <D.Content @defaultClass="popup-menu-content">
-        <nav class="box menu" aria-label="snapshots actions">
-          <ul class="menu-list">
-            <li class="action">
-              {{#if this.useServiceWorker}}
-                <ExternalLink
-                  @href="/v1/sys/storage/raft/snapshot"
-                  @sameTab={{true}}
-                  onclick={{queue (action "downloadViaServiceWorker") (action D.actions.close)}}
-                >
-                  Download
-                </ExternalLink>
-              {{else}}
-                <button
-                  type="button"
-                  class="link is-ghost"
-                  onclick={{queue (action "downloadSnapshot") (action D.actions.close)}}
-                >
-                  Download
-                </button>
-              {{/if}}
-            </li>
-            <li class="action">
-              <LinkTo @route="vault.cluster.storage-restore">
-                Restore
-              </LinkTo>
-            </li>
-          </ul>
-        </nav>
-      </D.Content>
-    </BasicDropdown>
-  </ToolbarActions>
-</Toolbar>
+<Hds::PageHeader class="has-top-margin-xl has-bottom-margin-m" as |PH|>
+  <PH.Title>Raft Storage</PH.Title>
+  <PH.Actions>
+    <Hds::Dropdown as |dd|>
+      <dd.ToggleButton @text="Snapshots" @color="secondary" />
+      {{#if this.useServiceWorker}}
+        <dd.Interactive
+          @href="/v1/sys/storage/raft/snapshot"
+          @isHrefExternal={{false}}
+          @text="Download"
+          {{on "click" (action "downloadViaServiceWorker")}}
+        />
+      {{else}}
+        <dd.Interactive @text="Download" {{on "click" (action "downloadSnapshot")}} />
+      {{/if}}
+      <dd.Interactive @text="Restore" @route="vault.cluster.storage-restore" />
+    </Hds::Dropdown>
+  </PH.Actions>
+</Hds::PageHeader>
 
-<table class="vlt-table is-fullwidth">
-  <caption class="is-collapsed">Raft servers</caption>
-  <thead class="has-text-weight-semibold">
-    <tr>
-      <th scope="col">Address</th>
-      <th scope="col">Voter</th>
-      <th scope="col"></th>
-    </tr>
-  </thead>
-  <tbody>
+<Hds::Table @caption="Raft servers">
+  <:head as |H|>
+    <H.Tr>
+      <H.Th>Address</H.Th>
+      <H.Th>Leader</H.Th>
+      <H.Th>Voter</H.Th>
+      <H.Th @align="right">Actions</H.Th>
+    </H.Tr>
+  </:head>
+  <:body as |B|>
     {{#each @model as |server|}}
-      <tr data-raft-row>
-        <td>
-          {{server.address}}
-          {{#if server.leader}}
-            <span class="tag">Leader</span>
-          {{/if}}
-        </td>
-        <td>
-
-          {{#if server.voter}}
-            <Icon @name="check-circle" aria-label="Yes" class="icon-true has-text-success" />
+      <B.Tr data-raft-row>
+        <B.Td>{{server.address}}</B.Td>
+        <B.Td>{{#if server.leader}}
+            <Hds::Badge @text="Yes" @type="outlined" @color="success" @icon="check-circle" />
           {{else}}
-            <Icon @name="x-square" aria-label="No" class="icon-false" />
+            <Hds::Badge @text="No" @type="outlined" @icon="x-square" />
           {{/if}}
-        </td>
-        <td class="middle no-padding has-text-right">
-          <PopupMenu>
-            <Confirm as |c|>
-              <nav aria-label="remove peer">
-                <ul>
-                  <li class="action">
-                    <c.Message
-                      @id={{server.nodeId}}
-                      @onConfirm={{action "removePeer" server}}
-                      @triggerText="Remove Peer"
-                      @confirmButtonText="Remove"
-                      @title={{concat "Remove " server.nodeId "?"}}
-                      @message="This will remove the server from the raft cluster."
-                    />
-                  </li>
-                </ul>
-              </nav>
-            </Confirm>
-          </PopupMenu>
-        </td>
-      </tr>
+        </B.Td>
+        <B.Td>
+          {{#if server.voter}}
+            <Hds::Badge @text="Yes" @type="outlined" @color="success" @icon="check-circle" />
+          {{else}}
+            <Hds::Badge @text="No" @type="outlined" @icon="x-square" />
+          {{/if}}
+        </B.Td>
+        <B.Td @align="right">
+          <Hds::Dropdown @isInline={{true}} data-test-raft-actions as |dd|>
+            <dd.ToggleIcon @icon="more-horizontal" @text="Raft server actions" @hasChevron={{false}} />
+            <dd.Generic>
+              <ConfirmAction
+                @isInDropdown={{true}}
+                @onConfirmAction={{action "removePeer" server}}
+                @buttonText="Remove Peer"
+                @confirmTitle="Remove {{server.nodeId}}?"
+                @confirmMessage="This will remove the server from the raft cluster."
+              />
+            </dd.Generic>
+          </Hds::Dropdown>
+        </B.Td>
+      </B.Tr>
     {{/each}}
-  </tbody>
-</table>
+  </:body>
+</Hds::Table>

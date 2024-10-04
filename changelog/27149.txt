@@ -1,0 +1,3 @@
+```release-note:change
+secrets/mongodbatlas: Update plugin to v0.12.0
+```

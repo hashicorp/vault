@@ -5,18 +5,14 @@
 
 <PageHeader as |p|>
   <p.top>
-    <nav class="breadcrumb">
-      <ul>
-        <li>
-          <span class="sep">
-            /
-          </span>
-          <LinkTo @route="vault.cluster.access.method.item.list" @model={{this.itemType}}>
-            {{pluralize this.itemType}}
-          </LinkTo>
-        </li>
-      </ul>
-    </nav>
+    <Hds::Breadcrumb>
+      <Hds::Breadcrumb::Item
+        @text={{pluralize this.itemType}}
+        @route="vault.cluster.access.method.item.list"
+        @models={{array this.mountPath this.itemType}}
+      />
+      <Hds::Breadcrumb::Item @text={{if (eq this.mode "show") this.model.id (capitalize this.mode)}} @current={{true}} />
+    </Hds::Breadcrumb>
   </p.top>
   <p.levelLeft>
     {{#if (eq this.mode "show")}}
@@ -38,19 +34,16 @@
   <Toolbar>
     <ToolbarActions>
       <ConfirmAction
-        @buttonClasses="toolbar-link"
+        @buttonText="Delete {{this.itemType}}"
+        class="toolbar-button"
+        @buttonColor="secondary"
         @onConfirmAction={{action "deleteItem"}}
-        @confirmMessage={{concat "Are you sure you want to delete " this.itemType " " this.model.id "?"}}
-        @cancelButtonText="Cancel"
-        data-test-secret-delete="true"
-      >
-        Delete
-        {{this.itemType}}
-      </ConfirmAction>
+        @confirmMessage="Are you sure you want to delete {{this.itemType}} {{this.model.id}}?"
+      />
       <div class="toolbar-separator"></div>
       <ToolbarLink
         @route="vault.cluster.access.method.item.edit"
-        @models={{array this.itemType this.model.id}}
+        @models={{array this.mountPath this.itemType this.model.id}}
         data-test-configure-link="true"
       >
         Edit
@@ -66,38 +59,35 @@
     <div class="box is-sideless is-fullwidth is-marginless">
       <NamespaceReminder @mode="save" @noun={{this.itemType}} />
       <MessageError @model={{this.model}} />
-      <FormFieldGroups
-        @model={{this.model}}
-        @mode={{this.mode}}
-        @onKeyUp={{action "onKeyUp"}}
-        @modelValidations={{this.modelValidations}}
-      />
+      <FormFieldGroups @model={{this.model}} @mode={{this.mode}} @modelValidations={{this.modelValidations}} />
     </div>
     <div class="field is-grouped-split box is-fullwidth is-bottomless">
-      <div class="control">
-        <button
+      <Hds::ButtonSet>
+        <Hds::Button
+          @text="Save"
+          @icon={{if this.saveModel.isRunning "loading"}}
           type="submit"
           data-test-save-config="true"
-          class="button is-primary {{if this.saveModel.isRunning 'loading'}}"
           disabled={{this.saveModel.isRunning}}
-        >
-          Save
-        </button>
+        />
         {{#if (eq this.mode "create")}}
-          <LinkTo @route="vault.cluster.access.method.item.list" class="button" data-test-cancel-link={{true}}>
-            Cancel
-          </LinkTo>
-        {{else}}
-          <LinkTo
-            @route="vault.cluster.access.method.item.show"
-            @model={{this.model.id}}
-            class="button"
+          <Hds::Button
+            @text="Cancel"
+            @color="secondary"
+            @route="vault.cluster.access.method.item.list"
+            @models={{array this.mountPath this.itemType}}
             data-test-cancel-link={{true}}
-          >
-            Cancel
-          </LinkTo>
+          />
+        {{else}}
+          <Hds::Button
+            @text="Cancel"
+            @color="secondary"
+            @route="vault.cluster.access.method.item.show"
+            @models={{array this.mountPath this.itemType this.model.id}}
+            data-test-cancel-link={{true}}
+          />
         {{/if}}
-      </div>
+      </Hds::ButtonSet>
     </div>
   </form>
 {{/if}}

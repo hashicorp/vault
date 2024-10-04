@@ -6,9 +6,10 @@
 import { later, _cancelTimers as cancelTimers } from '@ember/runloop';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, settled } from '@ember/test-helpers';
+import { render, settled, click, typeIn } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { allowAllCapabilitiesStub, noopStub } from 'vault/tests/helpers/stubs';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import hbs from 'htmlbars-inline-precompile';
 
 import { create } from 'ember-cli-page-object';
@@ -60,11 +61,9 @@ module('Integration | Component | mount backend form', function (hooks) {
         hbs`<MountBackendForm @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
       await component.selectType('aws');
-      await component.next();
       assert.strictEqual(component.pathValue, 'aws', 'sets the value of the type');
       await component.back();
       await component.selectType('approle');
-      await component.next();
       assert.strictEqual(component.pathValue, 'approle', 'updates the value of the type');
     });
 
@@ -73,7 +72,6 @@ module('Integration | Component | mount backend form', function (hooks) {
         hbs`<MountBackendForm @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
       await component.selectType('approle');
-      await component.next();
       assert.strictEqual(this.model.type, 'approle', 'Updates type on model');
       assert.strictEqual(component.pathValue, 'approle', 'defaults to approle (first in the list)');
       await component.path('newpath');
@@ -82,7 +80,6 @@ module('Integration | Component | mount backend form', function (hooks) {
       assert.strictEqual(this.model.type, '', 'Clears type on back');
       assert.strictEqual(this.model.path, 'newpath', 'Path is still newPath');
       await component.selectType('aws');
-      await component.next();
       assert.strictEqual(this.model.type, 'aws', 'Updates type on model');
       assert.strictEqual(component.pathValue, 'newpath', 'keeps custom path value');
     });
@@ -92,7 +89,6 @@ module('Integration | Component | mount backend form', function (hooks) {
         hbs`<MountBackendForm @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
       await component.selectType('github');
-      await component.next();
       await component.toggleOptions();
       assert
         .dom('[data-test-input="config.tokenType"]')
@@ -121,8 +117,8 @@ module('Integration | Component | mount backend form', function (hooks) {
       later(() => cancelTimers(), 50);
       await settled();
 
-      assert.ok(spy.calledOnce, 'calls the passed success method');
-      assert.ok(
+      assert.true(spy.calledOnce, 'calls the passed success method');
+      assert.true(
         this.flashSuccessSpy.calledWith('Successfully mounted the approle auth method at foo.'),
         'Renders correct flash message'
       );
@@ -147,13 +143,11 @@ module('Integration | Component | mount backend form', function (hooks) {
       await render(
         hbs`<MountBackendForm @mountType="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
-      await component.selectType('kv');
-      await component.next();
-      assert.strictEqual(component.pathValue, 'kv', 'sets the value of the type');
+      await component.selectType('azure');
+      assert.strictEqual(component.pathValue, 'azure', 'sets the value of the type');
       await component.back();
-      await component.selectType('ssh');
-      await component.next();
-      assert.strictEqual(component.pathValue, 'ssh', 'updates the value of the type');
+      await component.selectType('nomad');
+      assert.strictEqual(component.pathValue, 'nomad', 'updates the value of the type');
     });
 
     test('it keeps path value if the user has changed it', async function (assert) {
@@ -161,7 +155,6 @@ module('Integration | Component | mount backend form', function (hooks) {
         hbs`<MountBackendForm @mountType="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
       await component.selectType('kv');
-      await component.next();
       assert.strictEqual(this.model.type, 'kv', 'Updates type on model');
       assert.strictEqual(component.pathValue, 'kv', 'path matches mount type');
       await component.path('newpath');
@@ -170,7 +163,6 @@ module('Integration | Component | mount backend form', function (hooks) {
       assert.strictEqual(this.model.type, '', 'Clears type on back');
       assert.strictEqual(this.model.path, 'newpath', 'path is still newpath');
       await component.selectType('ssh');
-      await component.next();
       assert.strictEqual(this.model.type, 'ssh', 'Updates type on model');
       assert.strictEqual(component.pathValue, 'newpath', 'path stays the same');
     });
@@ -193,11 +185,52 @@ module('Integration | Component | mount backend form', function (hooks) {
       later(() => cancelTimers(), 50);
       await settled();
 
-      assert.ok(spy.calledOnce, 'calls the passed success method');
-      assert.ok(
+      assert.true(spy.calledOnce, 'calls the passed success method');
+      assert.true(
         this.flashSuccessSpy.calledWith('Successfully mounted the ssh secrets engine at foo.'),
         'Renders correct flash message'
       );
+    });
+
+    module('WIF secret engines', function () {
+      test('it shows identityTokenKey when type is aws and hides when its not', async function (assert) {
+        await render(
+          hbs`<MountBackendForm @mountType="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
+        );
+        await component.selectType('ldap');
+
+        await click(GENERAL.toggleGroup('Method Options'));
+        assert
+          .dom(GENERAL.fieldByAttr('identityTokenKey'))
+          .doesNotExist(`Identity token key field hidden when type=${this.model.type}`);
+
+        await component.back();
+        await component.selectType('aws');
+        await click(GENERAL.toggleGroup('Method Options'));
+        assert
+          .dom(GENERAL.fieldByAttr('identityTokenKey'))
+          .exists(`Identity token key field shows when type=${this.model.type}`);
+      });
+
+      test('it updates identityTokeKey if user has changed it', async function (assert) {
+        await render(
+          hbs`<MountBackendForm @mountType="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
+        );
+        await component.selectType('aws');
+        assert.strictEqual(
+          this.model.config.identityTokenKey,
+          undefined,
+          'On init identityTokenKey is not set on the model'
+        );
+
+        await click(GENERAL.toggleGroup('Method Options'));
+        await typeIn(GENERAL.inputSearch('key'), 'default');
+        assert.strictEqual(
+          this.model.config.identityTokenKey,
+          'default',
+          'updates model with default identityTokenKey'
+        );
+      });
     });
   });
 });

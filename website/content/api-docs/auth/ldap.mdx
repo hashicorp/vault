@@ -103,6 +103,8 @@ This endpoint configures the LDAP auth method.
   up to the given size. This can be used to avoid hitting the LDAP server's
   maximum result size limit. Otherwise, the LDAP backend will not use the
   paged search control.
+- `use_token_groups` `(bool: true)` - (Optional) Use the Active Directory tokenGroups
+  constructed attribute of the user to find the group memberships.
 
 @include 'tokenfields.mdx'
 

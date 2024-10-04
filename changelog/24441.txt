@@ -1,0 +1,3 @@
+```release-note:bug
+core/ha: fix panic that can occur when an HA cluster contains an active node with version >=1.12.0 and another node with version <1.10
+```

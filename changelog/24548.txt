@@ -1,0 +1,3 @@
+```release-note:improvement
+agent/template: Added max_connections_per_host to limit total number of connections per Vault host.
+```

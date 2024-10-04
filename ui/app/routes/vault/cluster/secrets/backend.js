@@ -3,12 +3,13 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import Route from '@ember/routing/route';
 export default Route.extend({
-  store: service(),
   flashMessages: service(),
+  router: service(),
   secretMountPath: service(),
+  store: service(),
   oldModel: null,
 
   model(params) {
@@ -20,15 +21,15 @@ export default Route.extend({
       })
       .then((model) => {
         if (model) {
-          return model.get('firstObject');
+          return model[0];
         }
       });
   },
 
   afterModel(model, transition) {
-    const path = model && model.get('path');
+    const path = model && model.path;
     if (transition.targetName === this.routeName) {
-      return this.replaceWith('vault.cluster.secrets.backend.list-root', path);
+      return this.router.replaceWith('vault.cluster.secrets.backend.list-root', path);
     }
   },
 });

@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
-	"github.com/mitchellh/cli"
 )
 
 func testUnwrapCommand(tb testing.TB) (*cli.MockUi, *UnwrapCommand) {

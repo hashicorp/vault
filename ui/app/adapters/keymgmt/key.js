@@ -6,7 +6,7 @@
 import ApplicationAdapter from '../application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import ControlGroupError from '../../lib/control-group-error';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 
 function pickKeys(obj, picklist) {
   const data = {};

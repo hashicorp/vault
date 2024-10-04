@@ -6,20 +6,19 @@ package agent
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
 	"testing"
 	"time"
 
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	"github.com/hashicorp/vault/command/agentproxyshared/auth"
 	agentapprole "github.com/hashicorp/vault/command/agentproxyshared/auth/approle"
-	cache "github.com/hashicorp/vault/command/agentproxyshared/cache"
+	"github.com/hashicorp/vault/command/agentproxyshared/cache"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink/file"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink/inmem"
@@ -123,7 +122,7 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 	}
 	roleID1 := resp.Data["role_id"].(string)
 
-	rolef, err := ioutil.TempFile("", "auth.role-id.test.")
+	rolef, err := os.CreateTemp("", "auth.role-id.test.")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -132,7 +131,7 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 	defer os.Remove(role)
 	t.Logf("input role_id_file_path: %s", role)
 
-	secretf, err := ioutil.TempFile("", "auth.secret-id.test.")
+	secretf, err := os.CreateTemp("", "auth.secret-id.test.")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -143,7 +142,7 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 
 	// We close these right away because we're just basically testing
 	// permissions and finding a usable file name
-	ouf, err := ioutil.TempFile("", "auth.tokensink.test.")
+	ouf, err := os.CreateTemp("", "auth.tokensink.test.")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -176,10 +175,12 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 	// Create the lease cache proxier and set its underlying proxier to
 	// the API proxier.
 	leaseCache, err := cache.NewLeaseCache(&cache.LeaseCacheConfig{
-		Client:      client,
-		BaseContext: ctx,
-		Proxier:     apiProxy,
-		Logger:      cacheLogger.Named("leasecache"),
+		Client:              client,
+		BaseContext:         ctx,
+		Proxier:             apiProxy,
+		Logger:              cacheLogger.Named("leasecache"),
+		CacheDynamicSecrets: true,
+		UserAgentToUse:      "test",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -240,7 +241,7 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 	inmemSinkConfig.Sink = inmemSink
 
 	go func() {
-		errCh <- ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config, inmemSinkConfig})
+		errCh <- ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config, inmemSinkConfig}, ah.AuthInProgress)
 	}()
 	defer func() {
 		select {
@@ -268,13 +269,13 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 		t.Fatal("expected notexist err")
 	}
 
-	if err := ioutil.WriteFile(role, []byte(roleID1), 0o600); err != nil {
+	if err := os.WriteFile(role, []byte(roleID1), 0o600); err != nil {
 		t.Fatal(err)
 	} else {
 		logger.Trace("wrote test role 1", "path", role)
 	}
 
-	if err := ioutil.WriteFile(secret, []byte(secretID1), 0o600); err != nil {
+	if err := os.WriteFile(secret, []byte(secretID1), 0o600); err != nil {
 		t.Fatal(err)
 	} else {
 		logger.Trace("wrote test secret 1", "path", secret)
@@ -286,7 +287,7 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 			if time.Now().After(timeout) {
 				t.Fatal("did not find a written token after timeout")
 			}
-			val, err := ioutil.ReadFile(out)
+			val, err := os.ReadFile(out)
 			if err == nil {
 				os.Remove(out)
 				if len(val) == 0 {
@@ -317,8 +318,8 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
 
-	// Passing a non-nil inmemsink tells the agent to use the auto-auth token
-	mux.Handle("/", cache.ProxyHandler(ctx, cacheLogger, leaseCache, inmemSink, true))
+	// Setting useAutoAuthToken to true to ensure that the auto-auth token is used
+	mux.Handle("/", cache.ProxyHandler(ctx, cacheLogger, leaseCache, inmemSink, false, true, nil, nil))
 	server := &http.Server{
 		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,

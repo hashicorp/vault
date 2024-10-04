@@ -1,0 +1,28 @@
+- `elide_list_responses` `(bool: false)` - See [Eliding list response
+bodies](/vault/docs/audit#eliding-list-response-bodies).
+
+- `exclude` `(string: "")` - <EnterpriseAlert inline="true" /> Defines a set of
+  rules such that, when the condition (optional) is matched, Vault removes the specified
+  fields from the audit entry before writing to the audit log. Refer to the
+  [exclusion](/vault/docs/enterprise/audit/exclusion) section of the auditing
+  overview for more information.
+
+- `fallback` `(bool: false)` - <EnterpriseAlert inline="true" /> Indicates whether the audit device is the
+fallback for filtering purposes. **Vault only supports one fallback audit
+device at a time**.
+
+- `filter` `(string: "")` - <EnterpriseAlert inline="true" /> Sets an optional string used to filter the audit
+entries logged by the audit device.  See the [filtering](/vault/docs/enterprise/audit/filtering)
+section of the auditing overview for more information.
+
+- `format` `(string: "json")` - Allows selecting the output format. Valid values
+are `"json"` and `"jsonx"`, which formats the normal log entries as XML.
+
+- `hmac_accessor` `(bool: true)` - If enabled, enables the hashing of token
+accessor.
+
+- `log_raw` `(bool: false)` - If enabled, logs the security sensitive
+information without hashing, in the raw format.
+
+- `prefix` `(string: "")` - A customizable string prefix to write before the
+actual log line.

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -13,6 +13,7 @@ import { click, fillIn, render } from '@ember/test-helpers';
 import codemirror from 'vault/tests/helpers/codemirror';
 import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import sinon from 'sinon';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) {
   setupRenderingTest(hooks);
@@ -32,10 +33,17 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
       casVersion: 1,
     });
     this.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.backend, route: 'list' },
       { label: 'edit' },
     ];
+    setRunOptions({
+      rules: {
+        // TODO fix JSONEditor, KVObjectEditor, MaskedInput
+        label: { enabled: false },
+        'color-contrast': { enabled: false }, // JSONEditor only
+      },
+    });
   });
 
   hooks.afterEach(function () {
@@ -45,12 +53,13 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
   test('it saves a new secret version', async function (assert) {
     assert.expect(10);
     this.server.post(`${this.backend}/data/${this.path}`, (schema, req) => {
-      assert.ok(true, 'Request made to save secret');
+      assert.true(true, 'Request made to save secret');
       const payload = JSON.parse(req.requestBody);
-      assert.propEqual(payload, {
-        data: { foo: 'bar', foo2: 'bar2' },
-        options: { cas: 1 },
-      });
+      assert.propEqual(
+        payload,
+        { data: { foo: 'bar', foo2: 'bar2' }, options: { cas: 1 } },
+        'request has expected payload'
+      );
       return {
         request_id: 'bd76db73-605d-fcbc-0dad-d44a008f9b95',
         data: {
@@ -89,9 +98,11 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
     await fillIn(FORM.keyInput(1), 'foo2');
     await fillIn(FORM.maskedValueInput(1), 'bar2');
     await click(FORM.saveBtn);
-    assert.ok(
-      this.transitionStub.calledWith('vault.cluster.secrets.backend.kv.secret.details'),
-      'router transitions to secret details route on save'
+    const [actual] = this.transitionStub.lastCall.args;
+    assert.strictEqual(
+      actual,
+      'vault.cluster.secrets.backend.kv.secret.index',
+      'router transitions to secret overview route on save'
     );
   });
 
@@ -106,26 +117,26 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
       { owner: this.engine }
     );
 
-    assert.dom(PAGE.edit.toggleDiff).isDisabled('Diff toggle is disabled');
+    assert.dom(PAGE.edit.toggleDiff).isNotDisabled('Diff toggle is not disabled');
     assert.dom(PAGE.edit.toggleDiffDescription).hasText('No changes to show. Update secret to view diff');
-    assert.dom(PAGE.edit.visualDiff).doesNotExist('Does not show visual diff');
+    assert.dom(PAGE.diff.visualDiff).doesNotExist('Does not show visual diff');
 
     await fillIn(FORM.keyInput(1), 'foo2');
     await fillIn(FORM.maskedValueInput(1), 'bar2');
 
     assert.dom(PAGE.edit.toggleDiff).isNotDisabled('Diff toggle is not disabled');
     assert.dom(PAGE.edit.toggleDiffDescription).hasText('Showing the diff will reveal secret values');
-    assert.dom(PAGE.edit.visualDiff).doesNotExist('Does not show visual diff');
+    assert.dom(PAGE.diff.visualDiff).doesNotExist('Does not show visual diff');
     await click(PAGE.edit.toggleDiff);
-    assert.dom(PAGE.edit.visualDiff).exists('Shows visual diff');
-    assert.dom(PAGE.edit.added).hasText(`foo2"bar2"`);
+    assert.dom(PAGE.diff.visualDiff).exists('Shows visual diff');
+    assert.dom(PAGE.diff.added).hasText(`foo2"bar2"`);
 
     await click(FORM.toggleJson);
     codemirror().setValue('{ "foo3": "bar3" }');
 
-    assert.dom(PAGE.edit.visualDiff).exists('Visual diff updates');
-    assert.dom(PAGE.edit.deleted).hasText(`foo"bar"`);
-    assert.dom(PAGE.edit.added).hasText(`foo3"bar3"`);
+    assert.dom(PAGE.diff.visualDiff).exists('Visual diff updates');
+    assert.dom(PAGE.diff.deleted).hasText(`foo"bar"`);
+    assert.dom(PAGE.diff.added).hasText(`foo3"bar3"`);
   });
 
   test('it saves nested secrets', async function (assert) {
@@ -185,9 +196,11 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
     assert.dom(FORM.messageError).hasText('Error nope', 'it renders API error');
     assert.dom(FORM.inlineAlert).hasText('There was an error submitting this form.');
     await click(FORM.cancelBtn);
-    assert.ok(
-      this.transitionStub.calledWith('vault.cluster.secrets.backend.kv.secret.details'),
-      'router transitions to details on cancel'
+    const [actual] = this.transitionStub.lastCall.args;
+    assert.strictEqual(
+      actual,
+      'vault.cluster.secrets.backend.kv.secret.index',
+      'router transitions to secret overview route on cancel'
     );
   });
 

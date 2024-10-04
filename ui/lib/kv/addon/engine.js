@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Engine from '@ember/engine';
@@ -17,15 +17,17 @@ export default class KvEngine extends Engine {
   Resolver = Resolver;
   dependencies = {
     services: [
+      'capabilities',
+      'control-group',
       'download',
+      'flash-messages',
       'namespace',
       'router',
-      'store',
       'secret-mount-path',
-      'flash-messages',
-      'control-group',
+      'store',
+      'version',
     ],
-    externalRoutes: ['secrets'],
+    externalRoutes: ['secrets', 'syncDestination'],
   };
 }
 

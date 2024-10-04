@@ -13,6 +13,7 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/limits"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -79,6 +80,20 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 				c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "write_undo_logs"}, 0, nil)
 			}
 
+			writeLimiter := c.GetRequestLimiter(limits.WriteLimiter)
+			if writeLimiter != nil {
+				c.metricSink.SetGaugeWithLabels([]string{
+					"core", "limits", "concurrency", limits.WriteLimiter,
+				}, float32(writeLimiter.EstimatedLimit()), nil)
+			}
+
+			pathLimiter := c.GetRequestLimiter(limits.SpecialPathLimiter)
+			if pathLimiter != nil {
+				c.metricSink.SetGaugeWithLabels([]string{
+					"core", "limits", "concurrency", limits.SpecialPathLimiter,
+				}, float32(pathLimiter.EstimatedLimit()), nil)
+			}
+
 			// Refresh the standby gauge, on all nodes
 			if haState != consts.Active {
 				c.metricSink.SetGaugeWithLabels([]string{"core", "active"}, 0, nil)
@@ -114,6 +129,29 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 				c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "dr", "secondary"}, 1, nil)
 			} else {
 				c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "dr", "secondary"}, 0, nil)
+			}
+
+			if haState == consts.Active {
+				reindexState := c.ReindexStage()
+				if reindexState != nil {
+					c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "reindex_stage"}, float32(*reindexState), nil)
+				} else {
+					c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "reindex_stage"}, 0, nil)
+				}
+
+				buildProgress := c.BuildProgress()
+				if buildProgress != nil {
+					c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "build_progress"}, float32(*buildProgress), nil)
+				} else {
+					c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "build_progress"}, 0, nil)
+				}
+
+				buildTotal := c.BuildTotal()
+				if buildTotal != nil {
+					c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "build_total"}, float32(*buildTotal), nil)
+				} else {
+					c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "build_total"}, 0, nil)
+				}
 			}
 
 			// If we're using a raft backend, emit raft metrics
@@ -574,13 +612,13 @@ func (c *Core) inFlightReqGaugeMetric() {
 
 // configuredPoliciesGaugeCollector is used to collect gauge label values for the `vault.policy.configured.count` metric
 func (c *Core) configuredPoliciesGaugeCollector(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
-	if c.policyStore == nil {
-		return []metricsutil.GaugeLabelValues{}, nil
-	}
-
 	c.stateLock.RLock()
 	policyStore := c.policyStore
 	c.stateLock.RUnlock()
+
+	if policyStore == nil {
+		return []metricsutil.GaugeLabelValues{}, nil
+	}
 
 	ctx = namespace.RootContext(ctx)
 	namespaces := c.collectNamespaces()

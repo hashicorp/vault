@@ -26,7 +26,7 @@ module('Acceptance | alicloud/enable', function (hooks) {
     await settled();
     await mountSecrets.selectType('alicloud');
     await settled();
-    await mountSecrets.next().path(enginePath).submit();
+    await mountSecrets.path(enginePath).submit();
     await settled();
 
     assert.strictEqual(
