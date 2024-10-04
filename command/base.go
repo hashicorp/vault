@@ -106,7 +106,7 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 		config.Address = c.flagAddress
 	}
 	if c.flagAgentProxyAddress != "" {
-		config.Address = c.flagAgentProxyAddress
+		config.AgentAddress = c.flagAgentProxyAddress
 	}
 
 	if c.flagOutputCurlString {
