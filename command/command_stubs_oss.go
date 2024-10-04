@@ -27,7 +27,7 @@ func entGetFIPSInfoKey() string {
 	return ""
 }
 
-func entCheckRequestLimiter(_cmd *ServerCommand, _coreConfig vault.CoreConfig) {
+func entCheckRequestLimiter(_cmd *ServerCommand, _config *server.Config) {
 }
 
 func entExtendAddonHandlers(handlers *vaultHandlers) {}
