@@ -12,7 +12,7 @@ import { allMethods } from 'vault/helpers/mountable-auth-methods';
 import lazyCapabilities from 'vault/macros/lazy-capabilities';
 import { action } from '@ember/object';
 import { camelize } from '@ember/string';
-import { WHITESPACE_WARNING } from 'vault/utils/validators';
+import { WHITESPACE_WARNING } from 'vault/utils/model-helpers/validators';
 
 const validations = {
   path: [

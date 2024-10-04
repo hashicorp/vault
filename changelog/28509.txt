@@ -1,0 +1,3 @@
+```release-note:bug
+databases: fix issue where local timezone was getting lost when using a rotation schedule cron
+```

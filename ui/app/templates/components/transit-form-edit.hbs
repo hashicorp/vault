@@ -89,7 +89,7 @@
   </div>
   <div class="field is-grouped is-grouped-split box is-fullwidth is-bottomless">
     <div class="field is-grouped">
-      {{#if @capabilities.canUpdate}}
+      {{#if @model.canUpdate}}
         <div class="control">
           <Hds::Button
             @text="Update transit key"
@@ -109,7 +109,7 @@
         />
       </div>
     </div>
-    {{#if (and @key.canDelete @capabilities.canDelete)}}
+    {{#if @model.canDelete}}
       <ConfirmAction @buttonText="Delete transit key" @onConfirmAction={{@deleteKey}} />
     {{/if}}
   </div>

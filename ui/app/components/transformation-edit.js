@@ -17,29 +17,11 @@ export default TransformBase.extend({
     this.set('initialRoles', this.model.allowed_roles);
   },
 
-  updateOrCreateRole(role, transformationId, backend) {
-    return this.store
+  async updateOrCreateRole(role, transformationId, backend) {
+    const roleRecord = await this.store
       .queryRecord('transform/role', {
         backend,
         id: role.id,
-      })
-      .then((roleStore) => {
-        let transformations = roleStore.transformations;
-        if (role.action === 'ADD') {
-          transformations = addToList(transformations, transformationId);
-        } else if (role.action === 'REMOVE') {
-          transformations = removeFromList(transformations, transformationId);
-        }
-        roleStore.setProperties({
-          backend,
-          transformations,
-        });
-        return roleStore.save().catch((e) => {
-          return {
-            errorStatus: e.httpStatus,
-            ...role,
-          };
-        });
       })
       .catch((e) => {
         if (e.httpStatus !== 403 && role.action === 'ADD') {
@@ -64,29 +46,45 @@ export default TransformBase.extend({
           errorStatus: e.httpStatus,
         };
       });
+    // if an error occurs while querying the role, exit function and return the error
+    if (roleRecord.errorStatus) return roleRecord;
+    // otherwise update the role with the transformation and save
+    let transformations = roleRecord.transformations;
+    if (role.action === 'ADD') {
+      transformations = addToList(transformations, transformationId);
+    } else if (role.action === 'REMOVE') {
+      transformations = removeFromList(transformations, transformationId);
+    }
+    roleRecord.setProperties({
+      backend,
+      transformations,
+    });
+    return roleRecord.save().catch((e) => {
+      return {
+        errorStatus: e.httpStatus,
+        ...role,
+      };
+    });
   },
 
   handleUpdateRoles(updateRoles, transformationId) {
     if (!updateRoles) return;
-    const backend = this.model.backend;
-    const promises = updateRoles.map((r) => this.updateOrCreateRole(r, transformationId, backend));
-
-    Promise.all(promises).then((results) => {
-      const hasError = results.find((role) => !!role.errorStatus);
-
-      if (hasError) {
-        let message =
-          'The edits to this transformation were successful, but transformations for its roles was not edited due to a lack of permissions.';
-        if (results.find((e) => !!e.errorStatus && e.errorStatus !== 403)) {
-          // if the errors weren't all due to permissions show generic message
-          // eg. trying to update a role with empty array as transformations
-          message = `You've edited the allowed_roles for this transformation. However, the corresponding edits to some roles' transformations were not made`;
-        }
-        this.flashMessages.info(message, {
-          sticky: true,
-          priority: 300,
-        });
+    const { backend } = this.model;
+    updateRoles.forEach(async (record) => {
+      // For each role that needs to be updated, update the role with the transformation.
+      const updateOrCreateResponse = await this.updateOrCreateRole(record, transformationId, backend);
+      // If an error was returned, check error type and show a message.
+      const errorStatus = updateOrCreateResponse?.errorStatus;
+      let message;
+      if (errorStatus == 403) {
+        message = `The edits to this transformation were successful, but transformations for the role ${record.id} were not edited due to a lack of permissions.`;
+      } else if (errorStatus) {
+        message = `You've edited the allowed_roles for this transformation. However, there was a problem updating the role: ${record.id}.`;
       }
+      this.flashMessages.info(message, {
+        sticky: true,
+        priority: 300,
+      });
     });
   },
 
