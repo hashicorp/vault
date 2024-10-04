@@ -105,7 +105,7 @@ synchronize_repos() {
 # We run as sudo because Amazon Linux 2 throws Python 2.7 errors when running `cloud-init status` as
 # non-root user (known bug).
 check_cloud_init() {
-  local max_retries=1
+  local max_retries=0
   local retry_count=0
   local exit_code
 
@@ -133,7 +133,6 @@ check_cloud_init() {
 }
 
 # Checking cloud-init
-echo $?
 check_cloud_init
 if [ $? -eq 1 ]; then
    exit 1
@@ -141,9 +140,7 @@ fi
 
 begin_time=$(date +%s)
 end_time=$((begin_time + TIMEOUT_SECONDS))
-echo "--begin---${begin_time}-----end--${end_time}-----$?"
 while [ "$(date +%s)" -lt "$end_time" ]; do
-  echo "in while loop------"
   if synchronize_repos; then
     exit 0
   fi
