@@ -105,7 +105,7 @@ require (
 	github.com/hashicorp/go-secure-stdlib/mlock v0.1.3
 	github.com/hashicorp/go-secure-stdlib/nonceutil v0.1.0
 	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.8
-	github.com/hashicorp/go-secure-stdlib/password v0.1.1
+	github.com/hashicorp/go-secure-stdlib/password v0.1.3
 	github.com/hashicorp/go-secure-stdlib/reloadutil v0.1.1
 	github.com/hashicorp/go-secure-stdlib/strutil v0.1.2
 	github.com/hashicorp/go-secure-stdlib/tlsutil v0.1.3
@@ -233,12 +233,15 @@ require (
 	cloud.google.com/go/longrunning v0.6.0 // indirect
 	github.com/containerd/containerd v1.7.20 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.20.0 // indirect
 	github.com/hashicorp/go-secure-stdlib/httputil v0.1.0 // indirect
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
+	github.com/smartystreets/goconvey v1.6.4 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	golang.org/x/xerrors v0.0.0-20240716161551-93cc26a95ae9 // indirect
+	gotest.tools/v3 v3.5.1 // indirect
 )
 
 require (
