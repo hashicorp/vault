@@ -290,7 +290,6 @@ func TestAuditedHeadersConfig_ApplyConfig(t *testing.T) {
 		"X-Test-Header":  {"foo"},
 		"X-Vault-Header": {"bar", "bar"},
 		"Content-Type":   {"json"},
-		"User-Agent":     {"foo-agent"},
 	}
 
 	if !reflect.DeepEqual(reqHeaders, reqHeadersCopy) {
