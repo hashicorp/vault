@@ -495,12 +495,11 @@ func validateOCSPParsedResponse(ocspRes *ocsp.Response, subject, issuer *x509.Ce
 			var matchedCA *x509.Certificate
 
 			// Assumption 1 failed, try 2
-			if err := ocspRes.Certificate.CheckSignatureFrom(issuer); err != nil {
+			if sigFromIssuerErr := ocspRes.Certificate.CheckSignatureFrom(issuer); sigFromIssuerErr != nil {
 				// Assumption 2 failed, try 3
-				overallErr = multierror.Append(overallErr, err)
-
 				m, err := verifySignature(ocspRes, extraCas)
 				if err != nil {
+					overallErr = multierror.Append(sigFromIssuerErr, err)
 					overallErr = multierror.Append(overallErr, err)
 				} else {
 					matchedCA = m
