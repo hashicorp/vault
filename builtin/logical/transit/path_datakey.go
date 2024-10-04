@@ -149,8 +149,13 @@ func (b *backend) pathDatakeyWrite(ctx context.Context, req *logical.Request, d 
 	}
 
 	factories := make([]any, 0)
-	if ps, ok := d.GetOk("decrypt_padding_scheme"); ok {
-		factories = append(factories, keysutil.PaddingScheme(ps.(string)))
+	if ps, ok := d.GetOk("padding_scheme"); ok {
+		paddingScheme, err := parsePaddingSchemeArg(p.Type, ps)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("padding_scheme argument invalid: %s", err.Error())), logical.ErrInvalidRequest
+		}
+		factories = append(factories, paddingScheme)
+
 	}
 	if p.Type == keysutil.KeyType_MANAGED_KEY {
 		managedKeySystemView, ok := b.System().(logical.ManagedKeySystemView)
@@ -209,6 +214,25 @@ func (b *backend) pathDatakeyWrite(ctx context.Context, req *logical.Request, d 
 	}
 
 	return resp, nil
+}
+
+// parsePaddingSchemeArg validate that the provided padding scheme argument received on the api can be used.
+func parsePaddingSchemeArg(keyType keysutil.KeyType, rawPs any) (keysutil.PaddingScheme, error) {
+	ps, ok := rawPs.(string)
+	if !ok {
+		return "", fmt.Errorf("argument was not a string: %T", rawPs)
+	}
+
+	paddingScheme, err := keysutil.ParsePaddingScheme(ps)
+	if err != nil {
+		return "", err
+	}
+
+	if !keyType.PaddingSchemesSupported() {
+		return "", fmt.Errorf("unsupported key type %s for padding scheme", keyType.String())
+	}
+
+	return paddingScheme, nil
 }
 
 const pathDatakeyHelpSyn = `Generate a data key`

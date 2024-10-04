@@ -203,7 +203,12 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 
 		var factories []any
 		if item.PaddingScheme != "" {
-			factories = append(factories, keysutil.PaddingScheme(item.PaddingScheme))
+			paddingScheme, err := parsePaddingSchemeArg(p.Type, item.PaddingScheme)
+			if err != nil {
+				batchResponseItems[i].Error = fmt.Sprintf("'[%d].padding_scheme' invalid: %s", i, err.Error())
+				continue
+			}
+			factories = append(factories, paddingScheme)
 		}
 		if item.AssociatedData != "" {
 			if !p.Type.AssociatedDataSupported() {

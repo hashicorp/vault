@@ -93,6 +93,17 @@ func (p PaddingScheme) String() string {
 	return string(p)
 }
 
+func ParsePaddingScheme(s string) (PaddingScheme, error) {
+	switch strings.TrimSpace(strings.ToLower(s)) {
+	case PaddingScheme_OAEP.String():
+		return PaddingScheme_OAEP, nil
+	case PaddingScheme_PKCS1v15.String():
+		return PaddingScheme_PKCS1v15, nil
+	default:
+		return "", fmt.Errorf("unknown padding scheme: %s", s)
+	}
+}
+
 type AEADFactory interface {
 	GetAEAD(iv []byte) (cipher.AEAD, error)
 }
@@ -208,6 +219,15 @@ func (kt KeyType) ImportPublicKeySupported() bool {
 		return true
 	}
 	return false
+}
+
+func (kt KeyType) PaddingSchemesSupported() bool {
+	switch kt {
+	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
+		return true
+	default:
+		return false
+	}
 }
 
 func (kt KeyType) String() string {

@@ -209,7 +209,12 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 
 		var factories []any
 		if item.DecryptPaddingScheme != "" {
-			factories = append(factories, keysutil.PaddingScheme(item.DecryptPaddingScheme))
+			paddingScheme, err := parsePaddingSchemeArg(p.Type, item.DecryptPaddingScheme)
+			if err != nil {
+				batchResponseItems[i].Error = fmt.Sprintf("'[%d].decrypt_padding_scheme' invalid: %s", i, err.Error())
+				continue
+			}
+			factories = append(factories, paddingScheme)
 		}
 		if item.Nonce != "" && !nonceAllowed(p) {
 			batchResponseItems[i].Error = ErrNonceNotAllowed.Error()
@@ -229,6 +234,12 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 
 		factories = make([]any, 0)
 		if item.EncryptPaddingScheme != "" {
+			paddingScheme, err := parsePaddingSchemeArg(p.Type, item.EncryptPaddingScheme)
+			if err != nil {
+				batchResponseItems[i].Error = fmt.Sprintf("'[%d].encrypt_padding_scheme' invalid: %s", i, err.Error())
+				continue
+			}
+			factories = append(factories, paddingScheme)
 			factories = append(factories, keysutil.PaddingScheme(item.EncryptPaddingScheme))
 		}
 		if !warnAboutNonceUsage && shouldWarnAboutNonceUsage(p, item.DecodedNonce) {
