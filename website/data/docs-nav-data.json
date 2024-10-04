@@ -577,10 +577,6 @@
         "path": "configuration/telemetry"
       },
       {
-        "title": "<code>Request Limiter</code>",
-        "path": "configuration/request-limiter"
-      },
-      {
         "title": "Adaptive overload protection",
         "path": "configuration/adaptive-overload-protection"
       },
