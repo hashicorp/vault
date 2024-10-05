@@ -120,9 +120,13 @@ or the association in Vault will delete the secret in your GCP project as well.
 
 ### Replication policy
 
-In situations requiring stricter control over of where data is stored, such as for compliance, GCP allows for specifying
-the regions where secrets are replicated to. Multiple GCP location names may be specified per-destination upon creation.
-Regardless of the chosen regions to replicate the secrets into, they will always be globally readable with correct permissions.
+GCP can target specific geographic regions to provide strict control on where
+your applications stores data and syncs secrets. You can enable specific GCP 
+regions for each sync location during creation that limit where Vault writes 
+secrets. 
+
+Regardless of the region limits on writes, synced secrets are always readable 
+globally when the client has the required permissions.
 
 ## Permissions
 

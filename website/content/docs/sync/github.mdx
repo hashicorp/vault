@@ -19,10 +19,8 @@ Prerequisites:
 
 1. To get started with syncing Vault secrets to your GitHub, you will need a configured [GitHub application](#github-application) or an
   [access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
-  which has write permissions for Actions secrets within the location you want to manage. In the list of GitHub permissions, Actions
-  secrets is simply called "Secrets". Choosing Secrets permissions will automatically include read-only Metadata access.
+  that has write permission on the target sync location in GitHub for "Secrets". The "Secrets" permissions in GitHub automatically includes read-only "Metadata" access.
 
-  If a secrets location is not specified on the destination, it will default to repository secrets.
 
 <Warning title="Pitfalls of using an access token">
   Access tokens are tied to a user account and can be revoked at any time, causing disruptions to the sync process.

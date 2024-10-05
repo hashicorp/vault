@@ -8,19 +8,19 @@ description: The `/sys/activation-flags` endpoints are used to enable features t
 
 @include 'alerts/restricted-root.mdx'
 
-The `/sys/activation-flags` endpoints are used to read and manage certain features that are gated by a 
-one-time flag before use. Before being activated, endpoints to the given feature will be blocked and an
-error response will be returned. Upon activation, the filter on the feature's paths will be removed. As
-these flags are one-time operations, there is no way to unactivate a feature once activated.
+Use the `/sys/activation-flags` endpoints to read and manage Vault
+features that are gated by one-time flags. Gated features are
+blocked and return errors until activated. Once removed, you cannot
+un-activate gated features.
 
-## Read activation flags
+## ReadActivationFlags
 
-This endpoint is used to return the current state of Vault's activation flags. The response contains
-two lists of feature names. The first list `activated` contains the names of features that have
-already been activated. The second list `unactivated` contains all remaining features that are available
-but have not yet been activated.
+ReadActivationFlags is an unauthenticated endpoint that returns information
+about gated features and their activation status as two lists: `activated` and
+`unactivated`. The unactivated list includes **available**, gated features. The
+unactivated list filters out gated features that are useable with your Vault 
+instance.  
 
-Reading this endpoint does not require authentication.
 
 | Method | Path                    |
 | :----- | :---------------------- |
@@ -52,19 +52,17 @@ $ curl \
 }
 ```
 
-## Write activation flags
+## WriteActivationFlags
 
-This endpoint is used to activate a given feature, unblocking its endpoints and letting the feature
-begin to function. The feature name is placed within the path of the API call.
+WriteActivationFlags unblocks and enables gated Vault features.
 
 | Method | Path                                      |
 | :----- | :---------------------------------------- |
 | `PUT`  | `/sys/activation-flags/:feature/activate` |
 
-### Parameters
+### URL parameters
 
-- `feature` `(string: <required>)` – Specifies the name of the Vault feature that is currently
-unactivated. Must be provided as part of the API path and cannot be specified in a payload.
+- `feature` `(string: <required>)` Feature key from ReadActivationFlags indicating the feature to activate.
 
 ### Sample request
 
