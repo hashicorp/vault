@@ -18,6 +18,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -504,6 +505,8 @@ func (c *Core) runStandby(doneCh, manualStepDownCh, stopCh chan struct{}) {
 // is enabled. It waits until we are leader and switches this Vault to
 // active.
 func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stopCh chan struct{}) {
+	c.logger.Debug("entering waitForLeadership")
+	defer c.logger.Debug("exiting waitForLeadership")
 	var manualStepDown bool
 	firstIteration := true
 	for {
@@ -577,7 +580,8 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 
 		// Grab the statelock or stop
 		l := newLockGrabber(c.stateLock.Lock, c.stateLock.Unlock, stopCh)
-		go l.grab()
+		c.logger.Debug("grabbing lock in waitForLeadership")
+		go l.grab(c.logger, "waitForLeadership")
 		if stopped := l.lockOrStop(); stopped {
 			lock.Unlock()
 			close(continueCh)
@@ -731,6 +735,8 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 			// unblock any inflight requests that are holding the statelock.
 			go func() {
 				timer := time.NewTimer(DefaultMaxRequestDuration)
+				// // If using go < 1.23, clear timer channel after Stop.
+				// if cap(timer.C) == 1 {
 				select {
 				case <-activeCtx.Done():
 					timer.Stop()
@@ -738,11 +744,13 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 				case <-timer.C:
 					activeCtxCancel()
 				}
+				// }
 			}()
 
 			// Grab lock if we are not stopped
 			l := newLockGrabber(c.stateLock.Lock, c.stateLock.Unlock, stopCh)
-			go l.grab()
+			c.logger.Debug("grabbing lock in waitForLeadership 2")
+			go l.grab(c.logger, "waitForLeadership 2")
 			stopped := l.lockOrStop()
 
 			// Cancel the context incase the above go routine hasn't done it
@@ -798,11 +806,11 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 // instead of calling it. If multiple functions call grabLockOrStop, when a deadlock
 // occurs, we have no way of knowing who launched the grab goroutine, complicating
 // investigation.
-func grabLockOrStop(lockFunc, unlockFunc func(), stopCh chan struct{}) (stopped bool) {
-	l := newLockGrabber(lockFunc, unlockFunc, stopCh)
-	go l.grab()
-	return l.lockOrStop()
-}
+// func grabLockOrStop(lockFunc, unlockFunc func(), stopCh chan struct{}) (stopped bool) {
+// 	l := newLockGrabber(lockFunc, unlockFunc, stopCh)
+// 	go l.grab(c.logger, "grabLockOrStop")
+// 	return l.lockOrStop()
+// }
 
 type lockGrabber struct {
 	// stopCh provides a way to interrupt the grab-or-stop
@@ -850,7 +858,8 @@ func (l *lockGrabber) lockOrStop() (stopped bool) {
 }
 
 // grab tries to get a lock, see grabLockOrStop for how to use it.
-func (l *lockGrabber) grab() {
+func (l *lockGrabber) grab(logger hclog.Logger, funcName string) {
+	logger.Debug("called from %s", funcName)
 	defer close(l.doneCh)
 	l.lockFunc()
 
@@ -874,6 +883,8 @@ func (c *Core) periodicLeaderRefresh(newLeaderCh chan func(), stopCh chan struct
 	clusterAddr := ""
 	for {
 		timer := time.NewTimer(c.periodicLeaderRefreshInterval)
+		// // If using go < 1.23, clear timer channel after Stop.
+		// if cap(timer.C) == 1 {
 		select {
 		case <-timer.C:
 			count := atomic.AddInt32(opCount, 1)
@@ -923,6 +934,8 @@ func (c *Core) periodicLeaderRefresh(newLeaderCh chan func(), stopCh chan struct
 			return
 		}
 	}
+
+	// }
 }
 
 // periodicCheckKeyUpgrade is used to watch for key rotation events as a standby
@@ -933,6 +946,8 @@ func (c *Core) periodicCheckKeyUpgrades(ctx context.Context, stopCh chan struct{
 	opCount := new(int32)
 	for {
 		timer := time.NewTimer(keyRotateCheckInterval)
+		// // If using go < 1.23, clear timer channel after Stop.
+		// if cap(timer.C) == 1 {
 		select {
 		case <-timer.C:
 			count := atomic.AddInt32(opCount, 1)
@@ -993,6 +1008,8 @@ func (c *Core) periodicCheckKeyUpgrades(ctx context.Context, stopCh chan struct{
 			timer.Stop()
 			return
 		}
+		// }
+
 	}
 }
 
@@ -1126,12 +1143,15 @@ func (c *Core) acquireLock(lock physical.Lock, stopCh <-chan struct{}) <-chan st
 		// Retry the acquisition
 		c.logger.Error("failed to acquire lock", "error", err)
 		timer := time.NewTimer(lockRetryInterval)
+		// // If using go < 1.23, clear timer channel after Stop.
+		// if cap(timer.C) == 1 {
 		select {
 		case <-timer.C:
 		case <-stopCh:
 			timer.Stop()
 			return nil
 		}
+		// }
 	}
 }
 
@@ -1197,6 +1217,8 @@ func (c *Core) cleanLeaderPrefix(ctx context.Context, uuid string, leaderLostCh 
 	}
 	for len(keys) > 0 {
 		timer := time.NewTimer(leaderPrefixCleanDelay)
+		// // If using go < 1.23, clear timer channel after Stop.
+		// if cap(timer.C) == 1 {
 		select {
 		case <-timer.C:
 			if keys[0] != uuid {
@@ -1207,6 +1229,7 @@ func (c *Core) cleanLeaderPrefix(ctx context.Context, uuid string, leaderLostCh 
 			timer.Stop()
 			return
 		}
+		// }
 	}
 }
 
