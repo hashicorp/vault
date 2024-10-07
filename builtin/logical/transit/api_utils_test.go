@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package transit
 
 import (
@@ -29,8 +32,10 @@ func Test_parsePaddingSchemeArg(t *testing.T) {
 		{name: "pkcs1-whitespace", args: args{keyType: keysutil.KeyType_RSA3072, rawPs: "   pkcs1v15    "}, wantErr: true},
 
 		// Valid cases
-		{name: "oaep", args: args{keyType: keysutil.KeyType_RSA2048, rawPs: "oaep"}, want: keysutil.PaddingScheme_OAEP},
-		{name: "pkcs1", args: args{keyType: keysutil.KeyType_RSA2048, rawPs: "pkcs1v15"}, want: keysutil.PaddingScheme_PKCS1v15},
+		{name: "oaep-2048", args: args{keyType: keysutil.KeyType_RSA2048, rawPs: "oaep"}, want: keysutil.PaddingScheme_OAEP},
+		{name: "oaep-3072", args: args{keyType: keysutil.KeyType_RSA3072, rawPs: "oaep"}, want: keysutil.PaddingScheme_OAEP},
+		{name: "oaep-4096", args: args{keyType: keysutil.KeyType_RSA4096, rawPs: "oaep"}, want: keysutil.PaddingScheme_OAEP},
+		{name: "pkcs1", args: args{keyType: keysutil.KeyType_RSA3072, rawPs: "pkcs1v15"}, want: keysutil.PaddingScheme_PKCS1v15},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
