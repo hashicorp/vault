@@ -1,0 +1,140 @@
+---
+name: enos-containers
+
+on:
+  # Only trigger this working using workflow_call. This workflow requires many
+  # secrets that must be inherited from the caller workflow.
+  workflow_call:
+    inputs:
+      # The name of the artifact that we're going to use for testing. This should
+      # match exactly to build artifacts uploaded to Github and Artifactory.
+      build-artifact-name:
+        required: true
+        type: string
+      # The maximum number of scenarios to include in the test sample.
+      sample-max:
+        default: 1
+        type: number
+      # The name of the enos scenario sample that defines compatible scenarios we can
+      # can test with.
+      sample-name:
+        required: true
+        type: string
+      vault-edition:
+        required: false
+        type: string
+        default: ce
+      # The Git commit SHA used as the revision when building vault
+      vault-revision:
+        required: true
+        type: string
+      vault-version:
+        required: true
+        type: string
+
+jobs:
+  metadata:
+    runs-on: ubuntu-latest
+    outputs:
+      build-date: ${{ steps.metadata.outputs.build-date }}
+      sample: ${{ steps.metadata.outputs.sample }}
+      vault-version: ${{ steps.metadata.outputs.vault-version }}
+    steps:
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        with:
+          ref: ${{ inputs.vault-revision }}
+      - uses: hashicorp/action-setup-enos@v1
+        with:
+          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+      - id: metadata
+        run: |
+          build_date=$(make ci-get-date)
+          sample_seed=$(date +%s)
+          if ! sample=$(enos scenario sample observe "${{ inputs.sample-name }}" --chdir ./enos/k8s --min 1 --max "${{ inputs.sample-max }}" --seed "${sample_seed}" --format json | jq -c ".observation.elements"); then
+            echo "failed to do sample observation: $sample" 2>&1
+            exit 1
+          fi
+          if [[ "${{ inputs.vault-edition }}" == "ce" ]]; then
+            vault_version="${{ inputs.vault-version }}"
+          else
+            # shellcheck disable=2001
+            vault_version="$(sed 's/+ent/+${{ inputs.vault-edition }}/g' <<< '${{ inputs.vault-version }}')"
+          fi
+          {
+            echo "build-date=${build_date}"
+            echo "vault-version=${vault_version}"
+            echo "sample=${sample}"
+            echo "sample-seed=${sample_seed}" # This isn't used outside of here but is nice to know for duplicating observations
+          } | tee -a "$GITHUB_OUTPUT"
+
+  run:
+    needs: metadata
+    name: run ${{ matrix.scenario.id.filter }}
+    runs-on: ${{ fromJSON(contains(inputs.build-artifact-name, 'vault-enterprise') && (contains(inputs.build-artifact-name, 'arm64') && '["self-hosted","ondemand","os=ubuntu-arm","type=c6g.xlarge"]' || '["self-hosted","linux","small"]') || (contains(inputs.build-artifact-name, 'arm64') && '"ubuntu-22.04-arm"' || '"ubuntu-latest"')) }}
+    strategy:
+      fail-fast: false # don't fail as that can skip required cleanup steps for jobs
+      matrix:
+        include: ${{ fromJSON(needs.metadata.outputs.sample) }}
+    env:
+      GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          # the Terraform wrapper will break Terraform execution in Enos because
+          # it changes the output to text when we expect it to be JSON.
+          terraform_wrapper: false
+      - uses: hashicorp/action-setup-enos@v1
+        with:
+          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+      - name: Download Docker Image
+        id: download
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        with:
+          name: ${{ inputs.build-artifact-name }}
+          path: ./enos/support/downloads
+      - if: inputs.vault-edition != 'ce'
+        name: Configure license
+        run: |
+          echo "${{ secrets.VAULT_LICENSE }}" > ./enos/support/vault.hclic || true
+      - name: Run Enos scenario
+        id: run
+        # Continue once and retry to handle occasional blips when creating
+        # infrastructure.
+        continue-on-error: true
+        env:
+          ENOS_VAR_terraform_plugin_cache_dir: ../support/terraform-plugin-cache
+          ENOS_VAR_vault_build_date: ${{ needs.metadata.outputs.build-date }}
+          ENOS_VAR_vault_version: ${{ needs.metadata.outputs.vault-version }}
+          ENOS_VAR_vault_revision: ${{ inputs.vault-revision }}
+          ENOS_VAR_container_image_archive: ${{steps.download.outputs.download-path}}/${{ inputs.build-artifact-name }}
+        run: |
+          mkdir -p ./enos/support/terraform-plugin-cache
+          enos scenario run --timeout 10m0s --chdir ./enos/k8s ${{ matrix.scenario.id.filter }}
+      - name: Retry Enos scenario
+        id: run_retry
+        if: steps.run.outcome == 'failure'
+        env:
+          ENOS_VAR_terraform_plugin_cache_dir: ../support/terraform-plugin-cache
+          ENOS_VAR_vault_build_date: ${{ needs.metadata.outputs.build-date }}
+          ENOS_VAR_vault_version: ${{ needs.metadata.outputs.vault-version }}
+          ENOS_VAR_vault_revision: ${{ inputs.vault-revision }}
+          ENOS_VAR_container_image_archive: ${{steps.download.outputs.download-path}}/${{ inputs.build-artifact-name }}
+        run: |
+          enos scenario run --timeout 10m0s --chdir ./enos/k8s ${{ matrix.scenario.id.filter }}
+      - name: Destroy Enos scenario
+        if: ${{ always() }}
+        env:
+          ENOS_VAR_terraform_plugin_cache_dir: ../support/terraform-plugin-cache
+          ENOS_VAR_vault_build_date: ${{ needs.metadata.outputs.build-date }}
+          ENOS_VAR_vault_version: ${{ needs.metadata.outputs.vault-version }}
+          ENOS_VAR_vault_revision: ${{ inputs.vault-revision }}
+          ENOS_VAR_container_image_archive: ${{steps.download.outputs.download-path}}/${{ inputs.build-artifact-name }}
+        run: |
+          enos scenario destroy --timeout 10m0s --grpc-listen http://localhost --chdir ./enos/k8s ${{ matrix.scenario.id.filter }}
+      - name: Cleanup Enos runtime directories
+        if: ${{ always() }}
+        run: |
+          rm -rf /tmp/enos*
+          rm -rf ./enos/support
+          rm -rf ./enos/k8s/.enos
