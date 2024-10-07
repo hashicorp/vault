@@ -1483,8 +1483,8 @@ github.com/hashicorp/go-secure-stdlib/tlsutil v0.1.3/go.mod h1:LWq2Sy8UoKKuK4lFu
 github.com/hashicorp/go-slug v0.15.2 h1:/ioIpE4bWVN/d7pG2qMrax0a7xe9vOA66S+fz7fZmGY=
 github.com/hashicorp/go-slug v0.15.2/go.mod h1:THWVTAXwJEinbsp4/bBRcmbaO5EYNLTqxbG4tZ3gCYQ=
 github.com/hashicorp/go-sockaddr v1.0.0/go.mod h1:7Xibr9yA9JjQq1JpNB2Vw7kxv8xerXegt+ozgdvDeDU=
-github.com/hashicorp/go-sockaddr v1.0.6 h1:RSG8rKU28VTUTvEKghe5gIhIQpv8evvNpnDEyqO4u9I=
-github.com/hashicorp/go-sockaddr v1.0.6/go.mod h1:uoUUmtwU7n9Dv3O4SNLeFvg0SxQ3lyjsj6+CCykpaxI=
+github.com/hashicorp/go-sockaddr v1.0.7 h1:G+pTkSO01HpR5qCxg7lxfsFEZaG+C0VssTy/9dbT+Fw=
+github.com/hashicorp/go-sockaddr v1.0.7/go.mod h1:FZQbEYa1pxkQ7WLpyXJ6cbjpT8q0YgQaK/JakXqGyWw=
 github.com/hashicorp/go-syslog v1.0.0 h1:KaodqZuhUoZereWVIYmpUgZysurB1kBLX2j0MwMrUAE=
 github.com/hashicorp/go-syslog v1.0.0/go.mod h1:qPfqrKkXGihmCqbJM2mZgkZGvKG1dFdvsLplgctolz4=
 github.com/hashicorp/go-tfe v1.64.2 h1:nbK9p5gA7k8/jbqgNpOzs7lG5cGfOhLVCki4bn7PmdQ=
@@ -1559,8 +1559,8 @@ github.com/hashicorp/vault-plugin-auth-jwt v0.22.0 h1:ihjx6HszRSt8Vfknc5t0AKXBQq
 github.com/hashicorp/vault-plugin-auth-jwt v0.22.0/go.mod h1:+Ne5sCgAza7aDIzxE4aruv6PeQI9ORWIvg/dFe2jlJU=
 github.com/hashicorp/vault-plugin-auth-kerberos v0.13.0 h1:KN+nY7XJANb7IRILf0EnaCT04JI9ctiUhq/W9sgyJnk=
 github.com/hashicorp/vault-plugin-auth-kerberos v0.13.0/go.mod h1:tJ4upLp8+7xxNHBFwpXQaQQQjkwSwI4P/Hic9EKkWvQ=
-github.com/hashicorp/vault-plugin-auth-kubernetes v0.20.0 h1:C+3gSOE+M1JT/6K/CNbQXCAUAA2wFQ7IFpD9Y9IPXxU=
-github.com/hashicorp/vault-plugin-auth-kubernetes v0.20.0/go.mod h1:5//ywSXEdrni78mPcOAE+BnF8XUnbvSMCIwMvmHSbzI=
+github.com/hashicorp/vault-plugin-auth-kubernetes v0.20.1-0.20241001002007-4cab95ccb2ee h1:wNmqhhSTquWLzNdtqlFEcOHRt07Kfmd1nuF3LSk1VLA=
+github.com/hashicorp/vault-plugin-auth-kubernetes v0.20.1-0.20241001002007-4cab95ccb2ee/go.mod h1:d4Iusq1f4oXwpErJLYeceRljp+ysMMwrkcNQmSGLfeY=
 github.com/hashicorp/vault-plugin-auth-oci v0.17.0 h1:t2PNAWSZNNm7sf+l2vK4wod0fQ4DckVZuCb3N9Dgark=
 github.com/hashicorp/vault-plugin-auth-oci v0.17.0/go.mod h1:vCuIzHclwIyL+Vk6OfIoqjOomuvPmwRUbnnxlxHCyqM=
 github.com/hashicorp/vault-plugin-database-couchbase v0.12.0 h1:WBPE3nsbM03HxmBBEa2dca2XR/6wZqm1eKZDo3NFxOg=
@@ -3096,11 +3096,11 @@ honnef.co/go/tools v0.0.1-2020.1.3/go.mod h1:X/FiERA/W4tHapMX5mGpAtMSVEeEUOyHaw9
 honnef.co/go/tools v0.0.1-2020.1.4/go.mod h1:X/FiERA/W4tHapMX5mGpAtMSVEeEUOyHaw9vFzvIQ3k=
 honnef.co/go/tools v0.1.3/go.mod h1:NgwopIslSNH47DimFoV78dnkksY2EFtX0ajyb3K/las=
 k8s.io/api v0.18.2/go.mod h1:SJCWI7OLzhZSvbY7U8zwNl9UA4o1fizoug34OV/2r78=
-k8s.io/api v0.31.0 h1:b9LiSjR2ym/SzTOlfMHm1tr7/21aD7fSkqgD/CVJBCo=
-k8s.io/api v0.31.0/go.mod h1:0YiFF+JfFxMM6+1hQei8FY8M7s1Mth+z/q7eF1aJkTE=
+k8s.io/api v0.31.1 h1:Xe1hX/fPW3PXYYv8BlozYqw63ytA92snr96zMW9gWTU=
+k8s.io/api v0.31.1/go.mod h1:sbN1g6eY6XVLeqNsZGLnI5FwVseTrZX7Fv3O26rhAaI=
 k8s.io/apimachinery v0.18.2/go.mod h1:9SnR/e11v5IbyPCGbvJViimtJ0SwHG4nfZFjU77ftcA=
-k8s.io/apimachinery v0.31.0 h1:m9jOiSr3FoSSL5WO9bjm1n6B9KROYYgNZOb4tyZ1lBc=
-k8s.io/apimachinery v0.31.0/go.mod h1:rsPdaZJfTfLsNJSQzNHQvYoTmxhoOEofxtOsF3rtsMo=
+k8s.io/apimachinery v0.31.1 h1:mhcUBbj7KUjaVhyXILglcVjuS4nYXiwC+KKFBgIVy7U=
+k8s.io/apimachinery v0.31.1/go.mod h1:rsPdaZJfTfLsNJSQzNHQvYoTmxhoOEofxtOsF3rtsMo=
 k8s.io/client-go v0.18.2/go.mod h1:Xcm5wVGXX9HAA2JJ2sSBUn3tCJ+4SVlCbl2MNNv+CIU=
 k8s.io/client-go v0.31.0 h1:QqEJzNjbN2Yv1H79SsS+SWnXkBgVu4Pj3CJQgbx0gI8=
 k8s.io/client-go v0.31.0/go.mod h1:Y9wvC76g4fLjmU0BA+rV+h2cncoadjvjjkkIGoTLcGU=
