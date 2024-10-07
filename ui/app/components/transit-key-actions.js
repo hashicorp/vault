@@ -192,6 +192,12 @@ export default class TransitKeyActions extends Component {
         formData.input = encodeString(formData.input);
       }
     }
+    if (!this.keyIsRSA) {
+      // Remove various rsa specific padding_scheme arguments if we aren't an RSA key
+      delete formData.encrypt_padding_scheme;
+      delete formData.decrypt_padding_scheme;
+      delete formData.padding_scheme;
+    }
     const payload = formData ? this.compactData(formData) : null;
 
     try {
