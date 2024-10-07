@@ -278,7 +278,8 @@ func TestAudit_Headers(t *testing.T) {
 		err := json.Unmarshal(scanner.Bytes(), &entry)
 		require.NoError(t, err)
 
-		request := entry["request"].(map[string]interface{})
+		request, ok := entry["request"].(map[string]interface{})
+		require.True(t, ok)
 
 		// test probe will not have headers set
 		requestPath, ok := request["path"].(string)
