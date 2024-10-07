@@ -1,0 +1,4 @@
+```release-note:improvement
+audit: Audit logs will contain User-Agent headers when they are present in the incoming request. They are not
+HMAC'ed by default but can be configured to be via the `/sys/config/auditing/request-headers/user-agent` endpoint.
+```
