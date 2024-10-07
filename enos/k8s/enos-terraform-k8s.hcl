@@ -6,7 +6,7 @@ terraform "k8s" {
 
   required_providers {
     enos = {
-      source  = "registry.terraform.io/hashicorp-forge/enos"
+      source = "registry.terraform.io/hashicorp-forge/enos"
     }
 
     helm = {
