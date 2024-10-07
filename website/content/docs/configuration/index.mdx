@@ -224,14 +224,14 @@ can have a negative effect on performance due to the tracking of each lock attem
   This can also be specified via the `VAULT_LOG_LEVEL` environment variable.
 
   <Note>
-  
+
   On SIGHUP (`sudo kill -s HUP` _pid of vault_), if a valid value is specified, Vault will update the existing log level,
   overriding (even if specified) both the CLI flag and environment variable.
 
   </Note>
 
   <Note>
-  
+
   Not all parts of Vault's logging can have its log level be changed dynamically this way; in particular,
   secrets/auth plugins are currently not updated dynamically.
 
@@ -256,9 +256,6 @@ can have a negative effect on performance due to the tracking of each lock attem
 - `imprecise_lease_role_tracking` `(bool: "false")` - Skip lease counting by role if there are no role based quotas enabled.
   When `imprecise_lease_role_tracking` is set to true and a new role-based quota is enabled, subsequent lease counts start from 0.
   `imprecise_lease_role_tracking` affects role-based lease count quotas, but reduces latencies when not using role based quotas.
-
-- `request_limiter` `([Request Limiter][request-limiter]: <none>)` – Allows
-  operators to enable Vault's Request Limiter functionality.
 
 ### High availability parameters
 
@@ -304,7 +301,7 @@ The following parameters are only used with Vault Enterprise
   provided via the environment variable `VAULT_LICENSE_PATH`, or the license
   itself can be provided in the environment variable `VAULT_LICENSE`.
 
-- `administrative_namespace_path` `(string: "")` - Specifies the absolute path 
+- `administrative_namespace_path` `(string: "")` - Specifies the absolute path
   to the Vault namespace to be used as an [Administrative namespace](/vault/docs/enterprise/namespaces/create-admin-namespace).
 
 [storage-backend]: /vault/docs/configuration/storage
@@ -315,4 +312,3 @@ The following parameters are only used with Vault Enterprise
 [sentinel]: /vault/docs/configuration/sentinel
 [high-availability]: /vault/docs/concepts/ha
 [plugins]: /vault/docs/plugins
-[request-limiter]: /vault/docs/concepts/request-limiter

@@ -8,7 +8,7 @@ import { computed } from '@ember/object';
 import { alias, or } from '@ember/object/computed';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
-import { AVAILABLE_PLUGIN_TYPES } from '../../utils/database-helpers';
+import { AVAILABLE_PLUGIN_TYPES } from '../../utils/model-helpers/database-helpers';
 
 /**
  * fieldsToGroups helper fn

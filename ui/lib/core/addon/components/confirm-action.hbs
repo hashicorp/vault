@@ -7,13 +7,14 @@
   {{! Hds component renders <li> and <button> elements }}
   <Hds::Dropdown::ListItem::Interactive
     data-test-confirm-action-trigger
-    @text={{@buttonText}}
     @color="critical"
     {{on "click" (fn (mut this.showConfirmModal) true)}}
     ...attributes
     {{! remove class when dropdown/popup menus are replaced with Hds::Dropdown }}
     class="hds-confirm-action-critical"
-  />
+  >
+    {{@buttonText}}
+  </Hds::Dropdown::ListItem::Interactive>
 {{else}}
   <Hds::Button
     data-test-confirm-action-trigger
