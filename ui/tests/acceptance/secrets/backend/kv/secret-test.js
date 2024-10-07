@@ -20,6 +20,7 @@ import { runCmd } from 'vault/tests/helpers/commands';
 import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import codemirror from 'vault/tests/helpers/codemirror';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { SECRET_ENGINE_SELECTORS as SS } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 
 const deleteEngine = async function (enginePath, assert) {
   await logout.visit();
@@ -180,9 +181,8 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       assert.dom('[data-test-secret-link]').exists({ count: 2 });
 
       // delete the items
-      await listPage.secrets.objectAt(0).menuToggle();
-      await settled();
-      await listPage.delete();
+      await click(SS.secretLinkMenu('1/2/3/4'));
+      await click(SS.secretLinkMenuDelete('1/2/3/4'));
       await listPage.confirmDelete();
       await settled();
       assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.list');
@@ -219,7 +219,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
         '(',
         ')',
         '"',
-        //"'",
+        // "'",
         '!',
         '#',
         '$',
@@ -243,8 +243,8 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       await runCmd([...commands, 'refresh']);
       for (const path of paths) {
         await listPage.visit({ backend, id: path });
-        assert.ok(listPage.secrets.filterBy('text', '2')[0], `${path}: secret is displayed properly`);
-        await listPage.secrets.filterBy('text', '2')[0].click();
+        assert.dom(SS.secretLinkATag()).hasText('2', `${path}: secret is displayed properly`);
+        await click(SS.secretLink());
         assert.strictEqual(
           currentRouteName(),
           'vault.cluster.secrets.backend.show',
@@ -301,8 +301,8 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
         await listPage.create();
         await editPage.createSecret(`${path}/2`, 'foo', 'bar');
         await listPage.visit({ backend, id: path });
-        assert.ok(listPage.secrets.filterBy('text', '2')[0], `${path}: secret is displayed properly`);
-        await listPage.secrets.filterBy('text', '2')[0].click();
+        assert.dom(SS.secretLinkATag()).hasText('2', `${path}: secret is displayed properly`);
+        await click(SS.secretLink());
         assert.strictEqual(
           currentRouteName(),
           'vault.cluster.secrets.backend.show',

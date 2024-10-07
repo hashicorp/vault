@@ -53,38 +53,36 @@
           <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
             <dd.ToggleIcon @icon="more-horizontal" @text="More options" @hasChevron={{false}} data-test-popup-menu-trigger />
             {{#if role.canEdit}}
-              <dd.Interactive @text="Edit" data-test-edit @route="roles.role.edit" @models={{array role.type role.name}} />
+              <dd.Interactive
+                data-test-edit
+                @route="roles.role.edit"
+                @models={{array role.type role.name}}
+              >Edit</dd.Interactive>
             {{/if}}
             {{#if role.canReadCreds}}
-              <dd.Interactive
-                @text="Get credentials"
-                data-test-get-creds
-                @route="roles.role.credentials"
-                @models={{array role.type role.name}}
-              />
+              <dd.Interactive data-test-get-creds @route="roles.role.credentials" @models={{array role.type role.name}}>
+                Get credentials
+              </dd.Interactive>
             {{/if}}
             {{#if role.canRotateStaticCreds}}
               <dd.Interactive
-                @text="Rotate credentials"
                 data-test-rotate-creds
                 @color="critical"
                 {{on "click" (fn (mut this.credsToRotate) role)}}
-              />
+              >Rotate credentials</dd.Interactive>
             {{/if}}
             <dd.Interactive
-              @text="Details"
               data-test-details
               @route="roles.role.details"
               {{! this will force the roles.role model hook to fire since we may only have a partial model loaded in the list view }}
               @models={{array role.type role.name}}
-            />
+            >Details</dd.Interactive>
             {{#if role.canDelete}}
               <dd.Interactive
-                @text="Delete"
                 data-test-delete
                 @color="critical"
                 {{on "click" (fn (mut this.roleToDelete) role)}}
-              />
+              >Delete</dd.Interactive>
             {{/if}}
           </Hds::Dropdown>
         </Item.menu>

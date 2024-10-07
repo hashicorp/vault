@@ -69,11 +69,7 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
         // check all the form fields are present
         await click(GENERAL.toggleGroup('Root config options'));
         for (const key of expectedConfigKeys('aws-root-create')) {
-          if (key === 'secretKey') {
-            assert.dom(GENERAL.maskedInput(key)).exists(`${key} shows for root section.`);
-          } else {
-            assert.dom(GENERAL.inputByAttr(key)).exists(`${key} shows for root section.`);
-          }
+          assert.dom(GENERAL.inputByAttr(key)).exists(`${key} shows for root section.`);
         }
         for (const key of expectedConfigKeys('aws-lease')) {
           assert.dom(`[data-test-ttl-form-label="${key}"]`).exists(`${key} shows for Lease section.`);
@@ -94,11 +90,7 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
         }
         // check iam fields do not show
         for (const key of expectedConfigKeys('aws-root-create-iam')) {
-          if (key === 'secretKey') {
-            assert.dom(GENERAL.maskedInput(key)).doesNotExist(`${key} does not show when wif is selected.`);
-          } else {
-            assert.dom(GENERAL.inputByAttr(key)).doesNotExist(`${key} does not show when wif is selected.`);
-          }
+          assert.dom(GENERAL.inputByAttr(key)).doesNotExist(`${key} does not show when wif is selected.`);
         }
       });
 
@@ -113,7 +105,7 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
           .dom(GENERAL.inputByAttr('accessKey'))
           .hasValue('', 'accessKey is cleared after toggling accessType');
         assert
-          .dom(GENERAL.maskedInput('secretKey'))
+          .dom(GENERAL.inputByAttr('secretKey'))
           .hasValue('', 'secretKey is cleared after toggling accessType');
 
         await click(SES.aws.accessType('wif'));
@@ -435,11 +427,7 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
         // check all the form fields are present
         await click(GENERAL.toggleGroup('Root config options'));
         for (const key of expectedConfigKeys('aws-root-create')) {
-          if (key === 'secretKey') {
-            assert.dom(GENERAL.maskedInput(key)).exists(`${key} shows for root section.`);
-          } else {
-            assert.dom(GENERAL.inputByAttr(key)).exists(`${key} shows for root section.`);
-          }
+          assert.dom(GENERAL.inputByAttr(key)).exists(`${key} shows for root section.`);
         }
         for (const key of expectedConfigKeys('aws-lease')) {
           assert.dom(`[data-test-ttl-form-label="${key}"]`).exists(`${key} shows for Lease section.`);
@@ -559,7 +547,7 @@ module('Integration | Component | SecretEngine/ConfigureAws', function (hooks) {
 
         await click(GENERAL.enableField('secretKey'));
         await click('[data-test-button="toggle-masked"]');
-        await fillIn(GENERAL.maskedInput('secretKey'), 'new-secret');
+        await fillIn(GENERAL.inputByAttr('secretKey'), 'new-secret');
         await click(GENERAL.saveButton);
       });
     });

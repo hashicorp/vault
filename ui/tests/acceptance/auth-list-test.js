@@ -18,8 +18,6 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 const SELECTORS = {
   backendLink: (path) => `[data-test-auth-backend-link="${path}"]`,
   createUser: '[data-test-entity-create-link="user"]',
-  input: (attr) => `[data-test-input="${attr}"]`,
-  password: '[data-test-textarea]',
   saveBtn: '[data-test-save-config]',
   methods: '[data-test-access-methods] a',
   listItem: '[data-test-list-item-content]',
@@ -49,8 +47,8 @@ module('Acceptance | auth backend list', function (hooks) {
     await click(SELECTORS.backendLink(this.path1));
     assert.dom(GENERAL.emptyStateTitle).exists('shows empty state');
     await click(SELECTORS.createUser);
-    await fillIn(SELECTORS.input('username'), this.user1);
-    await fillIn(SELECTORS.password, this.user1);
+    await fillIn(GENERAL.inputByAttr('username'), this.user1);
+    await fillIn(GENERAL.inputByAttr('password'), this.user1);
     await click(SELECTORS.saveBtn);
     assert.strictEqual(currentURL(), `/vault/access/${this.path1}/item/user`);
 
@@ -61,8 +59,8 @@ module('Acceptance | auth backend list', function (hooks) {
     await click(SELECTORS.backendLink(this.path2));
     assert.dom(GENERAL.emptyStateTitle).exists('shows empty state');
     await click(SELECTORS.createUser);
-    await fillIn(SELECTORS.input('username'), this.user2);
-    await fillIn(SELECTORS.password, this.user2);
+    await fillIn(GENERAL.inputByAttr('username'), this.user2);
+    await fillIn(GENERAL.inputByAttr('password'), this.user2);
     await click(SELECTORS.saveBtn);
     assert.strictEqual(currentURL(), `/vault/access/${this.path2}/item/user`);
     // Confirm that the user was created. There was a bug where the apiPath was not being updated when toggling between auth routes.
@@ -97,7 +95,7 @@ module('Acceptance | auth backend list', function (hooks) {
           const itemCount = type === 'token' ? 2 : 3;
           await click(`[data-test-auth-backend-link="${path}"] [data-test-popup-menu-trigger]`);
           assert
-            .dom('.hds-dropdown-list-item')
+            .dom(`[data-test-auth-backend-link="${path}"] .hds-dropdown-list-item`)
             .exists({ count: itemCount }, `shows ${itemCount} dropdown items for ${type}`);
 
           // all auth methods should be linkable

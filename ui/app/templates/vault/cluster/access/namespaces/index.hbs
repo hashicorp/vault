@@ -46,7 +46,7 @@
                 </dd.Generic>
               {{/if}}
             {{/let}}
-            <dd.Interactive @text="Delete" @color="critical" {{on "click" (fn (mut this.nsToDelete) list.item)}} />
+            <dd.Interactive @color="critical" {{on "click" (fn (mut this.nsToDelete) list.item)}}>Delete</dd.Interactive>
           </Hds::Dropdown>
           {{#if (eq this.nsToDelete list.item)}}
             <ConfirmModal
