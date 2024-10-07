@@ -4,7 +4,7 @@
  */
 
 import Component from '@glimmer/component';
-import { getOwner } from '@ember/application';
+import { getOwner } from '@ember/owner';
 import { action } from '@ember/object';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 

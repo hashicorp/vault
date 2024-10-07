@@ -4,7 +4,7 @@
  */
 
 import Helper from '@ember/component/helper';
-import { getOwner } from '@ember/application';
+import { getOwner } from '@ember/owner';
 
 /*
 template helper that replaces ember-router-helpers https://github.com/rwjblue/ember-router-helpers

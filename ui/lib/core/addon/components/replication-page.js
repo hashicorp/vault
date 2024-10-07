@@ -9,7 +9,7 @@ import { action } from '@ember/object';
 import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
-import { getOwner } from '@ember/application';
+import { getOwner } from '@ember/owner';
 
 /**
  * @module ReplicationPage
