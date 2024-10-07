@@ -47,7 +47,41 @@ the request, the request is forwarded to the active server. Read-only requests a
 Like traditional HA standbys, a Performance Standby Node becomes the active instance when the active node is sealed, fails, or loses
 network connectivity.
 
-# Tutorial 
+# Becoming an active node
+
+The active node in an HA configuration is the node that holds an HA lock. When a node relinquishes active duty, either
+because it's unavailable or because an operator has invoked [`vault operator step-down`](/vault/docs/commands/operator/step-down),
+all the nodes in the cluster will attempt to grab the HA lock. Only one node will succeed and this node will become the new active
+node.
+
+How the HA lock works is dependent on which HA storage backend the cluster is running. In Integrated Storage, the HA
+lock is always given to the node which wins the [Raft leadership election](/vault/docs/internals/integrated-storage#leadership-elections).
+
+Once a node has grabbed the HA lock it will perform a number of setup steps. The node will:
+* Seal
+* Reload the seal configuration
+* Migrate the seal, if needed
+* Reload keys
+* Create a new HA intra-cluster TLS certificate
+* Write an entry to storage advertising that this node is the active node
+
+Finally, the new active node will unseal and perform its post-unseal setup tasks. In the post-unseal tasks, this new
+active node will support receiving connections from the other nodes in the cluster. Once post-unseal setup completes
+the node will be able to respond to new client requests.
+
+Other standby nodes in the cluster check the leadership storage entry every 2.5 seconds. When a standby node sees that
+there is a new active node, the node will create a new request forwarding connection to that node and attempt to connect
+to it. It’s possible that the connection fails (for example because the active node hasn't yet reached the step where it
+can support receiving standby connections). The standby node will continue trying to connect every 5 seconds as a
+heartbeat. The standby node can accept new client requests at this time, and the node try again to form a connection to
+the active node (if one does not exist) when a client request comes in that needs to be forwarded.
+
+Assuming that performance standbys are enabled, a standby node will attempt to promote itself to a performance standby
+after it has found a new active node. The standby will send a message to the active node and receive from the active
+node a certificate and key pair to use to receive replicated data from the active node. The node will then seal, perform
+setup tasks, and complete its post-unseal setup and then be ready to serve new client requests.
+
+# Tutorial
 
 Refer to the following tutorials to learn more.
 
