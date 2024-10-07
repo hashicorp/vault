@@ -49,6 +49,7 @@ export default class MfaLoginEnforcementForm extends Component {
     selected: [],
   };
   @tracked authMethods = [];
+  @tracked mfaMethods = [];
   @tracked modelErrors;
 
   constructor() {
@@ -59,6 +60,8 @@ export default class MfaLoginEnforcementForm extends Component {
     this.resetTargetState();
     // only auth method types that have mounts can be selected as targets -- fetch from sys/auth and map by type
     this.fetchAuthMethods();
+    // this.args.model.mfa_methods returns a PromiseManyArray. We need to resolve this before using it in the template.
+    this.fetchMfaMethods();
   }
 
   async flattenTargets() {
@@ -92,6 +95,12 @@ export default class MfaLoginEnforcementForm extends Component {
   async fetchAuthMethods() {
     const mounts = await this.store.findAll('auth-method');
     this.authMethods = mounts.map((auth) => auth.type);
+  }
+
+  async fetchMfaMethods() {
+    // mfa_methods is a PromiseManyArray, because it's fetch via a belongsToRelationship on the. Before it can be accessed on the template we need to resolve it first.
+    // here we set the tracked property mfaMethods to a Promise Array
+    this.mfaMethods = await this.args.model.mfa_methods;
   }
 
   get selectedTarget() {
