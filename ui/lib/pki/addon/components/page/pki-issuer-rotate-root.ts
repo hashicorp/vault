@@ -10,7 +10,7 @@ import { action } from '@ember/object';
 import { waitFor } from '@ember/test-waiters';
 import { task } from 'ember-concurrency';
 import errorMessage from 'vault/utils/error-message';
-import type StoreService from '@ember-data/store';
+import type Store from '@ember-data/store';
 import type RouterService from '@ember/routing/router';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type SecretMountPath from 'vault/services/secret-mount-path';
@@ -33,7 +33,7 @@ const RADIO_BUTTON_KEY = {
 export default class PagePkiIssuerRotateRootComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly secretMountPath: SecretMountPath;
-  @service declare readonly store: StoreService;
+  @service declare readonly store: Store;
   @service('app-router') declare readonly router: RouterService;
 
   @tracked displayedForm = RADIO_BUTTON_KEY.oldSettings;
