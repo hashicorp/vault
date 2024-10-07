@@ -105,7 +105,7 @@ synchronize_repos() {
 # We run as sudo because Amazon Linux 2 throws Python 2.7 errors when running `cloud-init status` as
 # non-root user (known bug).
 check_cloud_init() {
-  local max_retries=1
+  local max_retries=2
   local retry_count=0
   local exit_code
 
