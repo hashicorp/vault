@@ -121,6 +121,10 @@ curl \
     --data '{ "hmac": true }'
 ```
 
+Another way to identify the source of a request is through the User-Agent request header.
+Vault will automatically record this value as `user-agent` within the `headers` of a
+request entry within the audit log.
+
 
 ## Enabling/Disabling audit devices
 

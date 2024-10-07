@@ -254,9 +254,11 @@ func TestAuditedHeadersConfig_ApplyConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	const hmacPrefix = "hmac-sha256:"
+
 	expected := map[string][]string{
 		"x-test-header":  {"foo"},
-		"x-vault-header": {"hmac-sha256:", "hmac-sha256:"},
+		"x-vault-header": {hmacPrefix, hmacPrefix},
 	}
 
 	if len(expected) != len(result) {
@@ -271,7 +273,7 @@ func TestAuditedHeadersConfig_ApplyConfig(t *testing.T) {
 		}
 
 		for i, e := range expectedValues {
-			if e == "hmac-sha256:" {
+			if e == hmacPrefix {
 				if !strings.HasPrefix(resultValues[i], e) {
 					t.Fatalf("Expected headers did not match actual: Expected %#v...\n Got %#v\n", e, resultValues[i])
 				}
@@ -609,13 +611,28 @@ func TestAuditedHeaders_invalidate_defaults(t *testing.T) {
 	require.Equal(t, len(ahc.DefaultHeaders())+1, len(ahc.headerSettings)) // (defaults + 1 new header)
 	_, ok := ahc.headerSettings["x-magic-header"]
 	require.True(t, ok)
+
 	s, ok := ahc.headerSettings["x-correlation-id"]
 	require.True(t, ok)
 	require.False(t, s.HMAC)
 
-	// Add correlation ID specifically with HMAC and make sure it doesn't get blasted away.
-	fakeHeaders1 = map[string]*headerSettings{"x-magic-header": {}, "X-Correlation-ID": {HMAC: true}}
+	s, ok = ahc.headerSettings["user-agent"]
+	require.True(t, ok)
+	require.False(t, s.HMAC)
+
+	// Add correlation ID and user-agent specifically with HMAC and make sure it doesn't get blasted away.
+	fakeHeaders1 = map[string]*headerSettings{
+		"x-magic-header": {},
+		"X-Correlation-ID": {
+			HMAC: true,
+		},
+		"User-Agent": {
+			HMAC: true,
+		},
+	}
+
 	fakeBytes1, err = json.Marshal(fakeHeaders1)
+
 	require.NoError(t, err)
 	err = view.Put(context.Background(), &logical.StorageEntry{Key: auditedHeadersEntry, Value: fakeBytes1})
 	require.NoError(t, err)
@@ -626,7 +643,12 @@ func TestAuditedHeaders_invalidate_defaults(t *testing.T) {
 	require.Equal(t, len(ahc.DefaultHeaders())+1, len(ahc.headerSettings)) // (defaults + 1 new header, 1 is also a default)
 	_, ok = ahc.headerSettings["x-magic-header"]
 	require.True(t, ok)
+
 	s, ok = ahc.headerSettings["x-correlation-id"]
+	require.True(t, ok)
+	require.True(t, s.HMAC)
+
+	s, ok = ahc.headerSettings["user-agent"]
 	require.True(t, ok)
 	require.True(t, s.HMAC)
 }

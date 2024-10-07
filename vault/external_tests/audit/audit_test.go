@@ -52,8 +52,8 @@ func TestAudit_HMACFields(t *testing.T) {
 	require.NoError(t, err)
 
 	// Request 1
-	// Enable the audit device. A test probe request will audited along with the associated
-	// to the creation response
+	// Enable the audit device. A test probe request will audited along
+	// with the associated creation response
 	_, err = client.Logical().Write("sys/audit/"+devicePath, deviceData)
 	require.NoError(t, err)
 
@@ -211,4 +211,90 @@ func TestAudit_HMACFields(t *testing.T) {
 
 	require.True(t, strings.HasPrefix(wrapInfo["token"].(string), hmacPrefix))
 	require.Equal(t, wrapInfo["token"].(string), hashedWrapToken)
+}
+
+// TestAudit_Headers validates that headers are audited correctly. This includes
+// the default headers (x-correlation-id and user-agent) along with user-specified
+// headers.
+func TestAudit_Headers(t *testing.T) {
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+
+	tempDir := t.TempDir()
+	logFile, err := os.CreateTemp(tempDir, "")
+	require.NoError(t, err)
+	devicePath := "file"
+	deviceData := map[string]any{
+		"type":        "file",
+		"description": "",
+		"local":       false,
+		"options": map[string]any{
+			"file_path": logFile.Name(),
+		},
+	}
+
+	_, err = client.Logical().Write("sys/config/auditing/request-headers/x-some-header", map[string]interface{}{
+		"hmac": false,
+	})
+	require.NoError(t, err)
+
+	// User-Agent header is audited by default
+	client.AddHeader("User-Agent", "foo-agent")
+
+	// X-Some-Header has been added to audited headers manually
+	client.AddHeader("X-Some-Header", "some-value")
+
+	// X-Some-Other-Header will not be audited
+	client.AddHeader("X-Some-Other-Header", "some-other-value")
+
+	// Request 1
+	// Enable the audit device. A test probe request will audited along
+	// with the associated creation response
+	_, err = client.Logical().Write("sys/audit/"+devicePath, deviceData)
+	require.NoError(t, err)
+
+	// Request 2
+	// Ensure the device has been created.
+	devices, err := client.Sys().ListAudit()
+	require.NoError(t, err)
+	require.Len(t, devices, 1)
+
+	// Request 3
+	resp, err := client.Sys().SealStatus()
+	require.NoError(t, err)
+	require.NotEmpty(t, resp)
+
+	expectedHeaders := map[string]interface{}{
+		"user-agent":    []interface{}{"foo-agent"},
+		"x-some-header": []interface{}{"some-value"},
+	}
+
+	entries := make([]map[string]interface{}, 0)
+	scanner := bufio.NewScanner(logFile)
+
+	for scanner.Scan() {
+		entry := make(map[string]interface{})
+
+		err := json.Unmarshal(scanner.Bytes(), &entry)
+		require.NoError(t, err)
+
+		request, ok := entry["request"].(map[string]interface{})
+		require.True(t, ok)
+
+		// test probe will not have headers set
+		requestPath, ok := request["path"].(string)
+		require.True(t, ok)
+
+		if requestPath != "sys/audit/test" {
+			headers, ok := request["headers"].(map[string]interface{})
+
+			require.True(t, ok)
+			require.Equal(t, expectedHeaders, headers)
+		}
+
+		entries = append(entries, entry)
+	}
+
+	// This count includes the initial test probe upon creation of the audit device
+	require.Equal(t, 4, len(entries))
 }

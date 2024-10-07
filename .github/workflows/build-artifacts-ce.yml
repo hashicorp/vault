@@ -9,12 +9,15 @@ on:
     inputs:
       build-all:
         type: boolean
+        description: Build all extended artifacts
         default: false
       build-date:
         type: string
+        description: The date associated with the revision SHA
         required: true
       checkout-ref:
         type: string
+        description: The repo Git SHA to checkout
         default: ""
       compute-build:
         type: string # JSON encoded to support passing arrays
@@ -30,15 +33,19 @@ on:
         required: true
       vault-revision:
         type: string
+        description: The revision SHA of vault
         required: true
       vault-version:
         type: string
+        description: The version of vault
         required: true
       vault-version-package:
         type: string
+        description: Whether or not to package the binary as Debian and RPM packages
         required: true
       web-ui-cache-key:
         type: string
+        description: The UI asset cache key
         required: true
   workflow_call:
     inputs:
@@ -119,7 +126,26 @@ jobs:
       # Outputs are strings so we need to encode our collection outputs as JSON.
       testable-containers: |
         [
-          { "artifact": "${{ github.event.repository.name }}_default_linux_amd64_${{ inputs.vault-version }}_${{ inputs.vault-revision }}.docker.tar" }
+          {
+            "sample": "ce_default_linux_amd64_ent_docker",
+            "artifact": "${{ github.event.repository.name }}_default_linux_amd64_${{ inputs.vault-version }}_${{ inputs.vault-revision }}.docker.tar",
+            "edition": "ce"
+          },
+          {
+            "sample": "ce_default_linux_arm64_ce_docker",
+            "artifact": "${{ github.event.repository.name }}_default_linux_arm64_${{ inputs.vault-version }}_${{ inputs.vault-revision }}.docker.tar",
+            "edition": "ce"
+          },
+          {
+            "sample": "ce_ubi_linux_amd64_ce_redhat",
+            "artifact": "${{ github.event.repository.name}}_ubi_linux_amd64_${{ inputs.vault-version}}_${{ inputs.vault-revision }}.docker.redhat.tar",
+            "edition": "ce"
+          },
+          {
+            "sample": "ce_ubi_linux_arm64_ce_redhat",
+            "artifact": "${{ github.event.repository.name}}_ubi_linux_arm64_${{ inputs.vault-version}}_${{ inputs.vault-revision }}.docker.redhat.tar",
+            "edition": "ce"
+          }
         ]
       testable-packages: |
         [

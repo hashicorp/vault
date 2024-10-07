@@ -1,0 +1,129 @@
+# Reusable workflow called by interactive scenario tests in GHA
+name: Test run Vault Enos scenario
+
+on:
+  workflow_call:
+    inputs:
+      artifact-source:
+        type: string
+        description: "The artifact source to test artifactory or local (use local for current branch)"
+        required: true
+      artifact-type:
+        type: string
+        description: "The Vault artifact type to test"
+        required: true
+      distro:
+        type: string
+        description: "Linux distribution that Vault replication will be tested on"
+        required: true
+      product-version:
+        type: string
+        description: "Vault version to test (vault_product_version)"
+        required: false
+      scenario:
+        type: string
+        description: "Enos test scenario to run"
+        required: true
+      ssh-key-name:
+        type: string
+        default: ${{ github.event.repository.name }}-ci-ssh-key
+      vault-revision:
+        type: string
+        description: "The git SHA of the Vault release (vault_revision)"
+        required: false
+
+jobs:
+  enos-run-vault-interactive-test:
+    name:  Enos run Vault interactive test
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+      # Pass in enos variables
+      ENOS_VAR_aws_ssh_keypair_name: ${{ inputs.ssh-key-name }}
+      ENOS_VAR_vault_log_level: trace
+      ENOS_VAR_aws_ssh_private_key_path: ./support/private_key.pem
+      ENOS_VAR_tfc_api_token: ${{ secrets.TF_API_TOKEN }}
+      ENOS_VAR_artifactory_username: ${{ secrets.ARTIFACTORY_USER }}
+      ENOS_VAR_artifactory_token: ${{ secrets.ARTIFACTORY_TOKEN }}
+      ENOS_VAR_terraform_plugin_cache_dir: ./support/terraform-plugin-cache
+      ENOS_VAR_vault_license_path: ./support/vault.hclic
+      ENOS_DEBUG_DATA_ROOT_DIR: /tmp/enos-debug-data
+      VAULT_METADATA: ent
+    steps:
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - name: Set product version and revision
+        # If the Vault version and revision are not provided as workflow inputs, incase of
+        # testing local artifact, the environment variables ENOS_VAR_vault_product_version
+        # and ENOS_VAR_vault_revision are set using the current branch
+        id: set-version-sha
+        run: |
+          [[ -n "${{ inputs.product-version }}" ]] && echo "ENOS_VAR_vault_product_version=${{ inputs.product-version }}" >> "$GITHUB_ENV" || echo "ENOS_VAR_vault_product_version=$(make ci-get-version)" >> "$GITHUB_ENV"
+          [[ -n "${{ inputs.vault-revision }}" ]] && echo "ENOS_VAR_vault_revision=${{ inputs.vault-revision }}" >> "$GITHUB_ENV" || echo "ENOS_VAR_vault_revision=$(make ci-get-revision)" >> "$GITHUB_ENV"
+      - uses: ./.github/actions/set-up-go
+        with:
+          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+      - name: Configure Git
+        run: git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN }}:@github.com".insteadOf "https://github.com"
+      - name: Set up node
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
+        with:
+          node-version: 14
+          cache-dependency-path: ui/yarn.lock
+      - uses: hashicorp/setup-terraform@v2
+        with:
+          # the Terraform wrapper will break Terraform execution in Enos because
+          # it changes the output to text when we expect it to be JSON.
+          terraform_wrapper: false
+      - uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CI }}
+          aws-region: 'us-west-1'
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_CI }}
+          role-skip-session-tagging: true
+          role-duration-seconds: 3600
+      - uses: hashicorp/action-setup-enos@v1
+        with:
+          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+      - name: Prepare scenario dependencies
+        id: scenario-deps
+        run: |
+          mkdir -p ./enos/support/terraform-plugin-cache
+          mkdir -p /tmp/enos-scenario-logs
+          echo logsdir="/tmp/enos-scenario-logs" >> "$GITHUB_OUTPUT"
+          echo "${{ secrets.SSH_KEY_PRIVATE_CI }}" > ./enos/support/private_key.pem
+          chmod 600 ./enos/support/private_key.pem
+      - name: Setup Vault Enterprise License
+        id: license
+        run: echo "${{ secrets.VAULT_LICENSE }}" > ./enos/support/vault.hclic
+      - name: Run Enos scenario
+        id: run
+        run: enos scenario run --timeout 60m0s --chdir ./enos ${{ inputs.scenario }}
+      - name: Collect logs when scenario fails
+        id: collect_logs
+        if: ${{ always() }}
+        run: |
+          bash -x ./scripts/gha_enos_logs.sh "${{ steps.scenario-deps.outputs.logsdir }}" "${{ inputs.scenario }}" "${{ inputs.distro }}" "${{ inputs.artifact-type }}" 2>/dev/null
+          find "${{ steps.scenario-deps.outputs.logsdir }}" -maxdepth 0 -empty -exec rmdir {} \;
+      - uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+        if: ${{ always() }}
+        with:
+          name: enos-scenario-logs
+          path: ${{ steps.scenario-deps.outputs.logsdir }}
+          retention-days: 1
+      - uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+        if: ${{ always() }}
+        with:
+          name: enos-debug-data-logs
+          path: ${{ env.ENOS_DEBUG_DATA_ROOT_DIR }}
+          retention-days: 1
+      - name: Ensure scenario has been destroyed
+        if: ${{ always() }}
+        run: enos scenario destroy --timeout 60m0s --grpc-listen http://localhost --chdir ./enos ${{ inputs.scenario }}
+      - name: Clean up Enos runtime directories
+        if: ${{ always() }}
+        run: |
+          rm -rf /tmp/enos*
+          rm -rf ./enos/support
+          rm -rf ./enos/.enos

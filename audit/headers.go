@@ -175,6 +175,7 @@ func (a *HeadersConfig) DefaultHeaders() map[string]*headerSettings {
 	return map[string]*headerSettings{
 		correlationID:  {},
 		xCorrelationID: {},
+		"user-agent":   {},
 	}
 }
 
