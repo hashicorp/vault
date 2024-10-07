@@ -98,8 +98,7 @@ export default class MfaLoginEnforcementForm extends Component {
   }
 
   async fetchMfaMethods() {
-    // mfa_methods is a PromiseManyArray, because it's fetch via a belongsToRelationship on the. Before it can be accessed on the template we need to resolve it first.
-    // here we set the tracked property mfaMethods to a Promise Array
+    // mfa_methods is a hasMany on the model, thus returning a PromiseProxyArray. Before it can be accessed on the template we need to resolve it first.
     this.mfaMethods = await this.args.model.mfa_methods;
   }
 
