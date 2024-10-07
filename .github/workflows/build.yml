@@ -255,16 +255,18 @@ jobs:
       - setup
       - ui
       - artifacts
-    uses: ./.github/workflows/enos-run-k8s.yml
+    uses: ./.github/workflows/test-run-enos-scenario-containers.yml
     strategy:
       fail-fast: false
       matrix:
         include: ${{ fromJSON(needs.artifacts.outputs.testable-containers) }}
     with:
-      artifact-build-date: ${{ needs.setup.outputs.build-date }}
-      artifact-name: ${{ matrix.artifact }}
-      artifact-revision: ${{ needs.setup.outputs.vault-revision }}
-      artifact-version: ${{ needs.setup.outputs.vault-version-metadata }}
+      build-artifact-name: ${{ matrix.artifact }}
+      sample-max: 1
+      sample-name: ${{ matrix.sample }}
+      vault-edition: ${{ matrix.edition }}
+      vault-revision: ${{ needs.setup.outputs.vault-revision }}
+      vault-version: ${{ needs.setup.outputs.vault-version-metadata }}
     secrets: inherit
 
   completed-successfully:

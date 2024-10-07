@@ -59,7 +59,10 @@ jobs:
         run: |
           build_date=$(make ci-get-date)
           sample_seed=$(date +%s)
-          sample=$(enos scenario sample observe "${{ inputs.sample-name }}" --chdir ./enos --min 1 --max "${{ inputs.sample-max }}" --seed "${sample_seed}" --format json | jq -c ".observation.elements")
+          if ! sample=$(enos scenario sample observe "${{ inputs.sample-name }}" --chdir ./enos --min 1 --max "${{ inputs.sample-max }}" --seed "${sample_seed}" --format json | jq -c ".observation.elements"); then
+            echo "failed to do sample observation: $sample" 2>&1
+            exit 1
+          fi
           if [[ "${{ inputs.vault-edition }}" == "ce" ]]; then
             vault_version="${{ inputs.vault-version }}"
           else

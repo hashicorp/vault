@@ -10,31 +10,24 @@ description: |
 
 inputs:
   docker:
-    type: boolean
     description: |
       Package the binary into a Docker container suitable for the Docker and AWS registries. We'll
       automatically determine the correct tags and target depending on the vault edition.
-    default: true
+    default: 'true'
   goarch:
-    type: string
     description: The Go GOARCH value environment variable to set during the build.
   goos:
-    type: string
     description: The Go GOOS value environment variable to set during the build.
   redhat:
-    type: boolean
     description: Package the binary into a UBI container suitable for the Redhat Quay registry.
-    default: false
+    default: 'false'
   vault-binary-path:
-    type: string
     description: The path to the vault binary.
     default: dist/vault
   vault-edition:
-    type: string
     description: The edition of vault to build.
     default: ce
   vault-version:
-    type: string
     description: The vault version.
 
 outputs:
@@ -48,31 +41,52 @@ runs:
     - id: vars
       shell: bash
       run: |
-        if [[ '${{ inputs.vault-edition }}' =~ 'ce' ]]; then
-          # CE containers
-          container_version='${{ inputs.vault-version }}'
-          docker_container_tags='docker.io/hashicorp/vault:${{ inputs.vault-version }} public.ecr.aws/hashicorp/vault:${{ inputs.vault-version }}'
-          docker_container_target='default'
-          redhat_container_tags='quay.io/redhat-isv-containers/5f89bb5e0b94cf64cfeb500a:${{ inputs.vault-version }}-ubi'
-          redhat_container_target='ubi'
-        else
-          # Ent containers
-          container_version='${{ inputs.vault-version }}+${{ inputs.vault-edition }}'
-
-          if [[ '${{ inputs.vault-edition }}' =~ 'fips' ]]; then
-            # Ent FIPS 140-2 containers
-            docker_container_tags='docker.io/hashicorp/vault-enterprise-fips:${{ inputs.vault-version }}-${{ inputs.vault-edition }} public.ecr.aws/hashicorp/vault-enterprise-fips:${{ inputs.vault-version }}-${{ inputs.vault-edition }}'
-            docker_container_target='ubi-fips'
-            redhat_container_tags='quay.io/redhat-isv-containers/6283f645d02c6b16d9caeb8e:${{ inputs.vault-version }}-${{ inputs.vault-edition }}-ubi'
-            redhat_container_target='ubi-fips'
-          else
-            # All other Ent containers
+        case '${{ inputs.vault-edition }}' in
+          "ce")
+            container_version='${{ inputs.vault-version }}'
+            docker_container_tags='docker.io/hashicorp/vault:${{ inputs.vault-version }} public.ecr.aws/hashicorp/vault:${{ inputs.vault-version }}'
+            docker_container_target='default'
+            redhat_container_tags='quay.io/redhat-isv-containers/5f89bb5e0b94cf64cfeb500a:${{ inputs.vault-version }}-ubi'
+            redhat_container_target='ubi'
+          ;;
+          "ent")
+            container_version='${{ inputs.vault-version }}+${{ inputs.vault-edition }}'
             docker_container_tags='docker.io/hashicorp/vault-enterprise:${{ inputs.vault-version }}-${{ inputs.vault-edition}} public.ecr.aws/hashicorp/vault-enterprise:${{ inputs.vault-version }}-${{ inputs.vault-edition }}'
             docker_container_target='default'
             redhat_container_tags='quay.io/redhat-isv-containers/5f89bb9242e382c85087dce2:${{ inputs.vault-version }}-${{ inputs.vault-edition }}-ubi'
             redhat_container_target='ubi'
-          fi
-        fi
+          ;;
+          "ent.hsm")
+            container_version='${{ inputs.vault-version }}+${{ inputs.vault-edition }}'
+            docker_container_tags='docker.io/hashicorp/vault-enterprise:${{ inputs.vault-version }}-${{ inputs.vault-edition}} public.ecr.aws/hashicorp/vault-enterprise:${{ inputs.vault-version }}-${{ inputs.vault-edition }}'
+            docker_container_target='ubi-hsm'
+            redhat_container_tags='quay.io/redhat-isv-containers/5f89bb9242e382c85087dce2:${{ inputs.vault-version }}-${{ inputs.vault-edition }}-ubi'
+            redhat_container_target='ubi-hsm'
+          ;;
+          "ent.hsm.fips1402")
+            container_version='${{ inputs.vault-version }}+${{ inputs.vault-edition }}'
+            docker_container_tags='docker.io/hashicorp/vault-enterprise:${{ inputs.vault-version }}-${{ inputs.vault-edition}} public.ecr.aws/hashicorp/vault-enterprise:${{ inputs.vault-version }}-${{ inputs.vault-edition }}'
+            docker_container_target='ubi-hsm-fips'
+            redhat_container_tags='quay.io/redhat-isv-containers/5f89bb9242e382c85087dce2:${{ inputs.vault-version }}-${{ inputs.vault-edition }}-ubi'
+            redhat_container_target='ubi-hsm-fips'
+          ;;
+          "ent.fips1402")
+            # NOTE: For compatibility we still publish the ent.fips1402 containers to different
+            # namespaces. All ent, ent.hsm, and ent.hsm.fips1402 containers are released in the
+            # enterprise namespaces. After we've updated the upstream docker action to support
+            # multiple tags we can start to tag images with both namespaces, publish to both, and
+            # eventually sunset the fips1402 specific namespaces.
+            container_version='${{ inputs.vault-version }}+${{ inputs.vault-edition }}'
+            docker_container_tags='docker.io/hashicorp/vault-enterprise-fips:${{ inputs.vault-version }}-${{ inputs.vault-edition }} public.ecr.aws/hashicorp/vault-enterprise-fips:${{ inputs.vault-version }}-${{ inputs.vault-edition }}'
+            docker_container_target='ubi-fips'
+            redhat_container_tags='quay.io/redhat-isv-containers/6283f645d02c6b16d9caeb8e:${{ inputs.vault-version }}-${{ inputs.vault-edition }}-ubi'
+            redhat_container_target='ubi-fips'
+          ;;
+          *)
+            echo "Cannot generate container tags for unknown vault edition: ${{ inputs.vault-edition }}" 2>&1
+            exit 1
+          ;;
+        esac
         {
           echo "container-version=${container_version}"
           echo "docker-container-tags=${docker_container_tags}"
