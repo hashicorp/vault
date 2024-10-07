@@ -93,8 +93,10 @@ func (p PaddingScheme) String() string {
 	return string(p)
 }
 
+// ParsePaddingScheme expects a lower case string that can be directly compared to
+// a defined padding scheme or returns an error.
 func ParsePaddingScheme(s string) (PaddingScheme, error) {
-	switch strings.TrimSpace(strings.ToLower(s)) {
+	switch s {
 	case PaddingScheme_OAEP.String():
 		return PaddingScheme_OAEP, nil
 	case PaddingScheme_PKCS1v15.String():

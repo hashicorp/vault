@@ -216,25 +216,6 @@ func (b *backend) pathDatakeyWrite(ctx context.Context, req *logical.Request, d 
 	return resp, nil
 }
 
-// parsePaddingSchemeArg validate that the provided padding scheme argument received on the api can be used.
-func parsePaddingSchemeArg(keyType keysutil.KeyType, rawPs any) (keysutil.PaddingScheme, error) {
-	ps, ok := rawPs.(string)
-	if !ok {
-		return "", fmt.Errorf("argument was not a string: %T", rawPs)
-	}
-
-	paddingScheme, err := keysutil.ParsePaddingScheme(ps)
-	if err != nil {
-		return "", err
-	}
-
-	if !keyType.PaddingSchemesSupported() {
-		return "", fmt.Errorf("unsupported key type %s for padding scheme", keyType.String())
-	}
-
-	return paddingScheme, nil
-}
-
 const pathDatakeyHelpSyn = `Generate a data key`
 
 const pathDatakeyHelpDesc = `
