@@ -54,13 +54,22 @@ module('Integration | Component | kv | kv-page-header', function (hooks) {
       .exists('final breadcrumb renders and it is not a link.');
   });
 
-  test('it renders a custom title for a non engine view', async function (assert) {
+  test('it renders a custom title for @pageTitle', async function (assert) {
     assert.expect(2);
     await render(hbs`<KvPageHeader @breadcrumbs={{this.breadcrumbs}} @pageTitle="Create new version"/>`, {
       owner: this.engine,
     });
     assert.dom('[data-test-header-title]').hasText('Create new version', 'displays custom title.');
     assert.dom('[data-test-header-title] svg').doesNotExist('Does not show icon if not at engine level.');
+  });
+
+  test('it renders a title and copy button for @secretPath', async function (assert) {
+    await render(hbs`<KvPageHeader @breadcrumbs={{this.breadcrumbs}} @secretPath="my/secret/path"/>`, {
+      owner: this.engine,
+    });
+    assert.dom('[data-test-header-title]').hasText('my/secret/path', 'displays path');
+    assert.dom('[data-test-header-title] button').exists('renders copy button for path');
+    assert.dom('[data-test-icon="clipboard-copy"]').exists('renders copy icon');
   });
 
   test('it renders a title, icon and tag if engine view', async function (assert) {
