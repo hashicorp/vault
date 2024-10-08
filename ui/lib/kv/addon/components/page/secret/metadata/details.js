@@ -37,7 +37,7 @@ import errorMessage from 'vault/utils/error-message';
 export default class KvSecretMetadataDetails extends Component {
   @service controlGroup;
   @service flashMessages;
-  @service router;
+  @service('app-router') router;
   @service store;
 
   @tracked error = null;

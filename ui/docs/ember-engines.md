@@ -96,7 +96,7 @@ export default class <EngineName>Engine extends Engine {
   modulePrefix = modulePrefix;
   Resolver = Resolver;
   dependencies = {
-    services: ['router', 'store', 'secret-mount-path', 'flash-messages'],
+    services: ['app-router', 'store', 'secret-mount-path', 'flash-messages'],
     externalRoutes: ['secrets'],
   };
 }
@@ -128,7 +128,7 @@ The external route dependencies allow you to link to a route outside of your eng
 
 ## Register your engine with our main application:
 
-In our `app/app.js` file in the engines object, add your engine’s name and dependencies.
+In our `app/app.js` file in the engines object, add your engine’s name and dependencies. The `router` service must be referenced via an alias within engines. The pattern is to use `app-router` as the alias, see example below.
 
 ```js
 /**
@@ -146,7 +146,7 @@ export default class App extends Application {
   engines = {
     <engine-name>: {
       dependencies: {
-        services: ['router', 'store', 'secret-mount-path', 'flash-messages', <any-other-dependencies-you-have>],
+        services: [{ 'app-router': 'router' }, 'store', 'secret-mount-path', 'flash-messages', <any-other-dependencies-you-have>],
         externalRoutes: {
           secrets: 'vault.cluster.secrets.backends',
         },

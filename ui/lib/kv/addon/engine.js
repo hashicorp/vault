@@ -22,7 +22,7 @@ export default class KvEngine extends Engine {
       'download',
       'flash-messages',
       'namespace',
-      'router',
+      'app-router',
       'secret-mount-path',
       'store',
       'version',

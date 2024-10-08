@@ -13,7 +13,7 @@ import type StoreService from 'vault/services/store';
 import type VersionService from 'vault/services/version';
 
 export default class SyncSecretsOverviewRoute extends Route {
-  @service declare readonly router: RouterService;
+  @service('app-router') declare readonly router: RouterService;
   @service declare readonly store: StoreService;
   @service declare readonly flags: FlagsService;
   @service declare readonly version: VersionService;

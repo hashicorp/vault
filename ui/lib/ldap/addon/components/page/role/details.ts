@@ -23,7 +23,7 @@ interface Args {
 
 export default class LdapRoleDetailsPageComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
-  @service declare readonly router: RouterService;
+  @service('app-router') declare readonly router: RouterService;
   @service declare readonly store: StoreService;
 
   @action

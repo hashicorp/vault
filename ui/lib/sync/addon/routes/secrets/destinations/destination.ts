@@ -19,7 +19,7 @@ interface RouteParams {
 
 export default class SyncSecretsDestinationsDestinationRoute extends Route {
   @service declare readonly store: Store;
-  @service declare readonly router: RouterService;
+  @service('app-router') declare readonly router: RouterService;
   @service declare readonly flashMessages: FlashMessageService;
 
   model(params: RouteParams) {

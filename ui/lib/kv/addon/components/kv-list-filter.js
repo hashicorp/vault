@@ -31,7 +31,7 @@ import { task, timeout } from 'ember-concurrency';
  */
 
 export default class KvListFilterComponent extends Component {
-  @service router;
+  @service('app-router') router;
   @tracked query;
 
   constructor() {

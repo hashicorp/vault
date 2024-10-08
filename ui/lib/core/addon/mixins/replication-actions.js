@@ -11,7 +11,6 @@ import { task } from 'ember-concurrency';
 
 export default Mixin.create({
   store: service(),
-  router: service(),
   loading: or('save.isRunning', 'submitSuccess.isRunning'),
   onDisable() {},
   onPromote() {},

@@ -20,7 +20,7 @@ const Eng = Engine.extend({
       'flash-messages',
       'namespace',
       'path-help',
-      'router',
+      'app-router',
       'store',
       'version',
       'secret-mount-path',

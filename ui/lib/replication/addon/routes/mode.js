@@ -12,7 +12,7 @@ const SUPPORTED_REPLICATION_MODES = ['dr', 'performance'];
 
 export default Route.extend({
   replicationMode: service(),
-  router: service(),
+  router: service('app-router'),
   store: service(),
   beforeModel() {
     const replicationMode = this.paramsFor(this.routeName).replication_mode;

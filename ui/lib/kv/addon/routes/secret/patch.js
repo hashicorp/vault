@@ -8,7 +8,7 @@ import { breadcrumbsForSecret } from 'kv/utils/kv-breadcrumbs';
 import { service } from '@ember/service';
 
 export default class SecretPatch extends Route {
-  @service router;
+  @service('app-router') router;
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
