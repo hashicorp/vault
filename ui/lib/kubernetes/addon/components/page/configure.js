@@ -18,7 +18,7 @@ import errorMessage from 'vault/utils/error-message';
  * @param {object} model - config model that contains kubernetes configuration
  */
 export default class ConfigurePageComponent extends Component {
-  @service router;
+  @service('app-router') router;
   @service store;
 
   @tracked inferredState;
