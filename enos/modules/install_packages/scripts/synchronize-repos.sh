@@ -107,7 +107,7 @@ synchronize_repos() {
 check_cloud_init() {
   sudo cloud-init status --wait
   exit_code=$?
-  if [ "$?" -ne 0 ] && [ "$?" -ne 2 ]; then
+  if [ "$exit_code" -ne 0 ] && [ "$exit_code" -ne 2 ]; then
     echo "cloud-init did not complete successfully. Exit code: $exit_code" 1>&2
     echo "Here are the logs for the failure:"
     cat /var/log/cloud-init-* | grep "Failed"
