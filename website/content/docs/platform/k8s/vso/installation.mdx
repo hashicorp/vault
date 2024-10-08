@@ -32,13 +32,13 @@ $ helm repo add hashicorp https://helm.releases.hashicorp.com
 ```shell-session
 $ helm search repo hashicorp/vault-secrets-operator
 NAME           	CHART VERSION	APP VERSION	DESCRIPTION
-hashicorp/vault-secrets-operator	0.8.1       	0.8.1     	Official HashiCorp Vault Secrets Operator Chart
+hashicorp/vault-secrets-operator	0.9.0       	0.9.0     	Official HashiCorp Vault Secrets Operator Chart
 ```
 
 Then install the Operator:
 
 ```shell-session
-$ helm install --version 0.8.1 --create-namespace --namespace vault-secrets-operator vault-secrets-operator hashicorp/vault-secrets-operator
+$ helm install --version 0.9.0 --create-namespace --namespace vault-secrets-operator vault-secrets-operator hashicorp/vault-secrets-operator
 ```
 
 ## Upgrading using Helm
@@ -78,9 +78,9 @@ You can install and update your installation using `kustomize` which allows you 
 
 To install using Kustomize, download and untar/unzip the latest release from the [Releases Page](https://github.com/hashicorp/vault-secrets-operator/releases).
 ```shell-session
-$ wget -q https://github.com/hashicorp/vault-secrets-operator/archive/refs/tags/v0.8.1.tar.gz
-$ tar -zxf v0.8.1.tar.gz
-$ cd vault-secrets-operator-0.8.1/
+$ wget -q https://github.com/hashicorp/vault-secrets-operator/archive/refs/tags/v0.9.0.tar.gz
+$ tar -zxf v0.9.0.tar.gz
+$ cd vault-secrets-operator-0.9.0/
 ```
 
 Next install using `kustomize build`:

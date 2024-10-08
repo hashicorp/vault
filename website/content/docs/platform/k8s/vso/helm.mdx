@@ -6,7 +6,7 @@ description: >-
 ---
 <!-- DO NOT EDIT.
 Generated from chart/values.yaml in the vault-secrets-operator repo.
-commit SHA=c97a61487462dfc2ded7e7d80bb2061624cedc2a
+commit SHA=08a6e5071ffa4faa486bd4b2c53b27585da4680c
 
 To update run 'make gen-helm-docs' from the vault-secrets-operator repo.
 -->
@@ -137,9 +137,9 @@ Use these links to navigate to a particular top-level stanza.
 
       - `pullPolicy` ((#v-controller-kuberbacproxy-image-pullpolicy)) (`string: IfNotPresent`)
 
-      - `repository` ((#v-controller-kuberbacproxy-image-repository)) (`string: gcr.io/kubebuilder/kube-rbac-proxy`)
+      - `repository` ((#v-controller-kuberbacproxy-image-repository)) (`string: quay.io/brancz/kube-rbac-proxy`)
 
-      - `tag` ((#v-controller-kuberbacproxy-image-tag)) (`string: v0.15.0`)
+      - `tag` ((#v-controller-kuberbacproxy-image-tag)) (`string: v0.18.1`)
 
     - `resources` ((#v-controller-kuberbacproxy-resources)) (`map`) - Configures the default resources for the kube rbac proxy container.
       For more information on configuring resources, see the K8s documentation:
@@ -179,7 +179,7 @@ Use these links to navigate to a particular top-level stanza.
 
       - `repository` ((#v-controller-manager-image-repository)) (`string: hashicorp/vault-secrets-operator`)
 
-      - `tag` ((#v-controller-manager-image-tag)) (`string: 0.8.1`)
+      - `tag` ((#v-controller-manager-image-tag)) (`string: 0.9.0`)
 
     - `logging` ((#v-controller-manager-logging)) - logging
 
