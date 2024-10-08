@@ -15,6 +15,7 @@
         <span class="tag">version 2</span>
       {{else}}
         {{@pageTitle}}
+        <Hds::Copy::Button @isIconOnly={{true}} @text="Copy your secret path" @textToCopy={{@pageTitle}} />
       {{/if}}
     </h1>
   </p.levelLeft>
