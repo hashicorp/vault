@@ -58,7 +58,7 @@
             <select
               name="decrypt_padding_scheme"
               id="decrypt_padding_scheme"
-              data-test-decrypt-padding-scheme="true"
+              data-test-padding-scheme="decrypt"
               onchange={{action (mut @decrypt_padding_scheme) value="target.value"}}
             >
               {{#each (array "oaep" "pkcs1v15") as |scheme|}}
@@ -75,7 +75,7 @@
             <select
               name="encrypt_padding_scheme"
               id="encrypt_padding_scheme"
-              data-test-encrypt-padding-scheme="true"
+              data-test-padding-scheme="encrypt"
               onchange={{action (mut @encrypt_padding_scheme) value="target.value"}}
             >
               {{#each (array "oaep" "pkcs1v15") as |scheme|}}
