@@ -41,7 +41,7 @@ import { isAdvancedSecret } from 'core/utils/advanced-secret';
 
 export default class KvSecretDetails extends Component {
   @service flashMessages;
-  @service router;
+  @service('app-router') router;
   @service store;
 
   @tracked showJsonView = false;

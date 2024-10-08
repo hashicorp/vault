@@ -71,23 +71,22 @@
       <Item.menu>
         <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
           <dd.ToggleIcon @icon="more-horizontal" @text="More options" @hasChevron={{false}} data-test-popup-menu-trigger />
-          <dd.Interactive @text="View credentials" @route="credentials" @models={{array this.scope list.item.id}} />
-          <dd.Interactive @text="View role" @route="role" @models={{array this.scope list.item.id}} />
+          <dd.Interactive @route="credentials" @models={{array this.scope list.item.id}}>View credentials</dd.Interactive>
+          <dd.Interactive @route="role" @models={{array this.scope list.item.id}}>View role</dd.Interactive>
           {{#if list.item.updatePath.isPending}}
             <dd.Generic>
               <LoadingDropdownOption />
             </dd.Generic>
           {{else}}
             {{#if list.item.updatePath.canUpdate}}
-              <dd.Interactive @text="Edit role" @route="role.edit" @models={{array this.scope list.item.id}} />
+              <dd.Interactive @route="role.edit" @models={{array this.scope list.item.id}}>Edit role</dd.Interactive>
             {{/if}}
             {{#if list.item.updatePath.canDelete}}
               <dd.Interactive
-                @text="Delete role"
                 @color="critical"
                 {{on "click" (fn (mut this.roleToDelete) list.item)}}
                 data-test-confirm-action-trigger
-              />
+              >Delete role</dd.Interactive>
             {{/if}}
           {{/if}}
         </Hds::Dropdown>

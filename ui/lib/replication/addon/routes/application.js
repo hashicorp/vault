@@ -12,7 +12,7 @@ export default Route.extend(ClusterRoute, {
   version: service(),
   store: service(),
   auth: service(),
-  router: service(),
+  router: service('app-router'),
   capabilities: service(),
 
   async fetchCapabilities() {

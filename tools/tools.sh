@@ -38,7 +38,7 @@ install_external() {
   #
   tools=(
     honnef.co/go/tools/cmd/staticcheck@latest
-    github.com/bufbuild/buf/cmd/buf@v1.25.0
+    github.com/bufbuild/buf/cmd/buf@v1.45.0
     github.com/favadi/protoc-go-inject-tag@latest
     github.com/golangci/misspell/cmd/misspell@latest
     github.com/golangci/revgrep/cmd/revgrep@latest
@@ -46,7 +46,7 @@ install_external() {
     github.com/rinchsan/gosimports/cmd/gosimports@latest
     golang.org/x/tools/cmd/goimports@latest
     google.golang.org/protobuf/cmd/protoc-gen-go@latest
-    google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.4.0
+    google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
     gotest.tools/gotestsum@latest
     mvdan.cc/gofumpt@latest
     mvdan.cc/sh/v3/cmd/shfmt@latest

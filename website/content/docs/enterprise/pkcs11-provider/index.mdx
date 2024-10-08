@@ -28,11 +28,12 @@ This library works with Vault Enterprise 1.11+ with the advanced data protection
 with the KMIP Secrets Engine.
 
 | Operating System | Architecture | Distribution      | glibc   |
-| ---------------- | -------------| ----------------- | ------- |
+| ---------------- | ------------ | ----------------- | ------- |
 | Linux            | x86-64       | RHEL 7 compatible | 2.17    |
 | Linux            | x86-64       | RHEL 8 compatible | 2.28    |
 | Linux            | x86-64       | RHEL 9 compatible | 2.34    |
 | macOS            | x86-64       | &mdash;           | &mdash; |
+| macOS            | arm64        | &mdash;           | &mdash; |
 
 _Note:_ `vault-pkcs11-provider` runs on _any_ glibc-based Linux distribution. The versions above are given in RHEL-compatible GLIBC versions; for your
 distro's glibc version, choose the `vault-pkcs11-provider` built against the same or older version as what your distro provides.
@@ -429,3 +430,33 @@ Due to the nature of Vault, the KMIP Secrets Engine, and PKCS#11, there are some
 - The object attribute cache is valid only for a single object per session, and will be cleared when another object's attributes are queried.
 - The random number generator function, `C_GenerateRandom`, is currently implemented in software in the library by calling out to Go's [`crypto/rand`](https://pkg.go.dev/crypto/rand) package,
   and does **not** call Vault.
+
+## Changelog
+
+### v0.2.1
+
+ * Go update to 1.22.7 and Go dependency updates
+ * Add license files to artifacts
+
+### v0.2.0
+
+ * Introduced support for RSA and HMAC operations
+
+### v0.1.3
+
+ * Go update to 1.19.4 and Go dependency updates
+ * Added missing checksum for EL9 builds
+
+### v0.1.2
+
+ * Added arm64 support on macOS
+ * Go update to 1.19.2 and Go dependency updates
+
+### v0.1.1
+
+  * KMIP: Set activation date attribute required by Vault 1.12
+  * KMIP: Revoke a key prior to destroy
+
+### v0.1.0
+
+  * Initial release
