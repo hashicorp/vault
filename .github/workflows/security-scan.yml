@@ -40,7 +40,7 @@ jobs:
       uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       with:
         repository: hashicorp/security-scanner
-        token: ${{ secrets.HASHIBOT_PRODSEC_GITHUB_TOKEN }}
+        token: ${{ secrets.PRODSEC_SCANNER_READ_ONLY }}
         path: security-scanner
         ref: main
 
