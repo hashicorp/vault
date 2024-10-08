@@ -5642,7 +5642,10 @@ func (c *Core) GetSealBackendStatus(ctx context.Context) (*SealBackendStatusResp
 	if err != nil {
 		return nil, fmt.Errorf("could not list partially seal wrapped values: %w", err)
 	}
-	genInfo := c.seal.GetAccess().GetSealGenerationInfo()
+	genInfo, err := PhysicalSealGenInfo(ctx, c.physical)
+	if err != nil {
+		return nil, fmt.Errorf("could not read seal generation information: %w", err)
+	}
 	r.FullyWrapped = genInfo.IsRewrapped() && len(pps) == 0
 	return &r, nil
 }
