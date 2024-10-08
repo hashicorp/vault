@@ -28,7 +28,7 @@ import errorMessage from 'vault/utils/error-message';
 export default class KvSecretCreate extends Component {
   @service controlGroup;
   @service flashMessages;
-  @service router;
+  @service('app-router') router;
   @service store;
 
   @tracked showJsonView = false;

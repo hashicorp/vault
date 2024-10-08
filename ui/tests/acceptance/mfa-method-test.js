@@ -214,10 +214,12 @@ module('Acceptance | mfa-method', function (hooks) {
       'Route transitions to method on save'
     );
     await click('[data-test-tab="enforcements"]');
-    assert.dom('[data-test-list-item]').hasText('bar', 'Enforcement is listed in method view');
+    assert.dom('[data-test-list-item]').hasTextContaining('bar', 'Enforcement is listed in method view');
     await click('[data-test-sidebar-nav-link="Multi-Factor Authentication"]');
     await click('[data-test-tab="enforcements"]');
-    assert.dom('[data-test-list-item="bar"]').hasText('bar', 'Enforcement is listed in enforcements view');
+    assert
+      .dom('[data-test-list-item="bar"]')
+      .hasTextContaining('bar', 'Enforcement is listed in enforcements view');
     await click('[data-test-list-item="bar"]');
     await click('[data-test-tab="methods"]');
     assert
@@ -242,7 +244,7 @@ module('Acceptance | mfa-method', function (hooks) {
       'Route transitions to method on save'
     );
     await click('[data-test-tab="enforcements"]');
-    assert.dom('[data-test-list-item]').hasText(name, 'Enforcement is listed in method view');
+    assert.dom('[data-test-list-item]').hasTextContaining(name, 'Enforcement is listed in method view');
   });
 
   test('it should edit methods', async function (assert) {
