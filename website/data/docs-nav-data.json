@@ -636,16 +636,18 @@
     ]
   },
   {
-    "title": "Commands (CLI)",
+    "title": "Vault CLI",
     "routes": [
       {
-        "title": "Overview",
+        "title": "Usage",
         "path": "commands"
       },
       {
-        "title": "Web REPL",
-        "path": "commands/web"
+        "title": "Use a custom token helper",
+        "path": "commands/token-helper"
       },
+      { "divider": true },
+      { "heading": "CLI commands" },
       {
         "title": "<code>agent</code>",
         "path": "commands/agent"
@@ -653,10 +655,6 @@
       {
         "title": "<code>audit</code>",
         "routes": [
-          {
-            "title": "Overview",
-            "path": "commands/audit"
-          },
           {
             "title": "<code>disable</code>",
             "path": "commands/audit/disable"
@@ -1148,15 +1146,11 @@
       {
         "title": "<code>write</code>",
         "path": "commands/write"
-      },
-      {
-        "title": "Token Helpers",
-        "path": "commands/token-helper"
       }
     ]
   },
   {
-    "title": "Vault UI",
+    "title": "Vault GUI",
     "routes": [
       {
         "title": "Overview",
@@ -1170,6 +1164,10 @@
           "type": "outlined",
           "color": "neutral"
         }
+      },
+      {
+        "title": "CLI emulation",
+        "path": "ui/web-cli"
       }
     ]
   },
