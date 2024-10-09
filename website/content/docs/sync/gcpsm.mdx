@@ -28,6 +28,7 @@ Prerequisites:
   ```shell-session
   $ vault write sys/sync/destinations/gcp-sm/my-dest \
       credentials='@path/to/credentials.json'
+      replication_locations='us-east1,us-west1'
   ```
 
   **Output:**
@@ -37,7 +38,7 @@ Prerequisites:
   ```plaintext
   Key                   Value
   ---                   -----
-  connection_details    map[credentials:*****]
+  connection_details    map[credentials:***** replication_locations:us-east1,us-west1]
   name                  my-dest
   type                  gcp-sm
   ```
@@ -116,6 +117,16 @@ Prerequisites:
 Moving forward, any modification on the Vault secret will be propagated in near real time to its GCP Secret Manager
 counterpart. Creating a new secret version in Vault will create a new version in GCP Secret Manager. Deleting the secret
 or the association in Vault will delete the secret in your GCP project as well.
+
+### Replication policy
+
+GCP can target specific geographic regions to provide strict control on where
+your applications store data and sync secrets. You can target specific GCP 
+regions for each sync destinations during creation which will limit where Vault writes 
+secrets. 
+
+Regardless of the region limits on writes, synced secrets are always readable 
+globally when the client has the required permissions.
 
 ## Permissions
 

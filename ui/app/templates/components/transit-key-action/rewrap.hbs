@@ -4,7 +4,20 @@
 ~}}
 
 <form
-  {{on "submit" (fn @doSubmit (hash ciphertext=@ciphertext context=@context nonce=@nonce key_version=@key_version))}}
+  {{on
+    "submit"
+    (fn
+      @doSubmit
+      (hash
+        ciphertext=@ciphertext
+        decrypt_padding_scheme=@decrypt_padding_scheme
+        encrypt_padding_scheme=@encrypt_padding_scheme
+        context=@context
+        nonce=@nonce
+        key_version=@key_version
+      )
+    )
+  }}
   ...attributes
 >
   <div class="box is-sideless is-fullwidth is-marginless">
@@ -33,6 +46,42 @@
           </div>
           <div class="control">
             <B64Toggle @value={{@context}} @data-test-transit-b64-toggle="context" />
+          </div>
+        </div>
+      </div>
+    {{/if}}
+    {{#if (includes @key.type (array "rsa-2048" "rsa-3072" "rsa-4096"))}}
+      <div class="field">
+        <label for="decrypt_padding_scheme" class="is-label">Decrypt padding scheme</label>
+        <div class="control is-expanded">
+          <div class="select is-fullwidth">
+            <select
+              name="decrypt_padding_scheme"
+              id="decrypt_padding_scheme"
+              data-test-padding-scheme="decrypt"
+              onchange={{action (mut @decrypt_padding_scheme) value="target.value"}}
+            >
+              {{#each (array "oaep" "pkcs1v15") as |scheme|}}
+                <option selected={{eq @decrypt_padding_scheme scheme}} value={{scheme}}>{{scheme}}</option>
+              {{/each}}
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <label for="encrypt_padding_scheme" class="is-label">Encrypt padding scheme</label>
+        <div class="control is-expanded">
+          <div class="select is-fullwidth">
+            <select
+              name="encrypt_padding_scheme"
+              id="encrypt_padding_scheme"
+              data-test-padding-scheme="encrypt"
+              onchange={{action (mut @encrypt_padding_scheme) value="target.value"}}
+            >
+              {{#each (array "oaep" "pkcs1v15") as |scheme|}}
+                <option selected={{eq @encrypt_padding_scheme scheme}} value={{scheme}}>{{scheme}}</option>
+              {{/each}}
+            </select>
           </div>
         </div>
       </div>

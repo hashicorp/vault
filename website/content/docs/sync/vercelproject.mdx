@@ -68,7 +68,7 @@ Prerequisites:
 1. Create secrets you wish to sync with a target Vercel project.
 
   ```shell-session
-  $ vault kv put -mount='my-kv' my-secret foo='bar'
+  $ vault kv put -mount='my-kv' my-secret key1='val1'
   ```
 
   **Output:**
@@ -122,8 +122,18 @@ or the association in Vault will delete the secret on Vercel as well.
 
 <Note>
 
-Vercel Project environment variables only support single value secrets, so KVv2 secrets from Vault will be stored as a JSON string.
-In the example above, the value for secret "my-secret" will be synced to Vercel as the JSON string `{"foo":"bar"}`.
+Vault syncs secrets differently depending on whether you have configured 
+`secret-key` or `secret-path` [granularity](/vault/docs/sync#granularity):
+
+- `secret-key` granularity splits KVv2 secrets from Vault into key-value pairs
+  and stores the pairs as distinct entries in Vercel. For example,
+  `secrets.key1="val1"` and `secrets.key2="val2"`.
+
+- `secret-path` granularity stores secrets as a single JSON string that contains
+  all the associated key-value pairs. For example, `{"key1":"val1", "key2":"val2"}`.
+
+Since Vercel projects limit environment variables to single-value secrets, the
+sync granularity defaults to `secret-key`.
 
 </Note>
 

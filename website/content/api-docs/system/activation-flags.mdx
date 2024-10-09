@@ -1,0 +1,92 @@
+---
+layout: api
+page_title: /sys/activation-flags - HTTP API
+description: The `/sys/activation-flags` endpoints are used to enable features that are gated by a one-time flag.
+---
+
+# `/sys/activation-flags`
+
+@include 'alerts/restricted-root.mdx'
+
+Use the `/sys/activation-flags` endpoints to read and manage Vault
+features that are gated by one-time flags. Gated features are
+blocked and return errors until activated. Once removed, you cannot
+un-activate gated features.
+
+## ReadActivationFlags
+
+ReadActivationFlags is an unauthenticated endpoint that returns information
+about gated features and their activation status as two lists: `activated` and
+`unactivated`. The activated list contains features ready to be used. The
+unactivated list contains **available** but gated features. It filters out those
+which are already active within your Vault instance.
+
+| Method | Path                    |
+| :----- | :---------------------- |
+| `GET`  | `/sys/activation-flags` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --request GET \
+    http://127.0.0.1:8200/v1/sys/activation-flags
+```
+
+### Sample response
+
+```json
+{
+    "request_id": "9f70548c-a039-24a6-147d-7fa43698e044",
+    "lease_id": "",
+    "lease_duration": 0,
+    "renewable": false,
+    "data": {
+        "activated": [],
+        "unactivated": [
+            "secrets-sync"
+        ]
+    },
+    "warnings": null
+}
+```
+
+## WriteActivationFlags
+
+WriteActivationFlags unblocks and enables gated Vault features.
+
+| Method | Path                                      |
+| :----- | :---------------------------------------- |
+| `PUT`  | `/sys/activation-flags/:feature/activate` |
+
+### URL parameters
+
+- `feature` `(string: <required>)` Feature key from ReadActivationFlags indicating the feature to activate.
+
+### Sample request
+
+```shell-session
+$ curl \
+    --request PUT \
+    --header "X-Vault-Token: $VAULT_TOKEN" \
+    http://127.0.0.1:8200/v1/sys/activation-flags/secrets-sync/activate
+```
+
+### Sample response
+
+```json
+{
+    "request_id": "7636e655-e11d-e2aa-8286-bd38c1d9c600",
+    "lease_id": "",
+    "lease_duration": 0,
+    "renewable": false,
+    "data": {
+        "activated": [
+            "secrets-sync"
+        ],
+        "unactivated": []
+    },
+    "warnings": null,
+    "mount_type": "system"
+}
+```

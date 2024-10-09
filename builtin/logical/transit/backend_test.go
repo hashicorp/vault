@@ -148,83 +148,96 @@ func testTransit_RSA(t *testing.T, keyType string) {
 
 	plaintext := "dGhlIHF1aWNrIGJyb3duIGZveA==" // "the quick brown fox"
 
-	encryptReq := &logical.Request{
-		Path:      "encrypt/rsa",
-		Operation: logical.UpdateOperation,
-		Storage:   storage,
-		Data: map[string]interface{}{
-			"plaintext": plaintext,
-		},
-	}
+	for _, padding := range []keysutil.PaddingScheme{keysutil.PaddingScheme_OAEP, keysutil.PaddingScheme_PKCS1v15, ""} {
+		encryptReq := &logical.Request{
+			Path:      "encrypt/rsa",
+			Operation: logical.UpdateOperation,
+			Storage:   storage,
+			Data: map[string]interface{}{
+				"plaintext": plaintext,
+			},
+		}
 
-	resp, err = b.HandleRequest(context.Background(), encryptReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
-	}
+		if padding != "" {
+			encryptReq.Data["padding_scheme"] = padding
+		}
 
-	ciphertext1 := resp.Data["ciphertext"].(string)
+		resp, err = b.HandleRequest(context.Background(), encryptReq)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+		}
 
-	decryptReq := &logical.Request{
-		Path:      "decrypt/rsa",
-		Operation: logical.UpdateOperation,
-		Storage:   storage,
-		Data: map[string]interface{}{
-			"ciphertext": ciphertext1,
-		},
-	}
+		ciphertext1 := resp.Data["ciphertext"].(string)
 
-	resp, err = b.HandleRequest(context.Background(), decryptReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
-	}
+		decryptReq := &logical.Request{
+			Path:      "decrypt/rsa",
+			Operation: logical.UpdateOperation,
+			Storage:   storage,
+			Data: map[string]interface{}{
+				"ciphertext": ciphertext1,
+			},
+		}
+		if padding != "" {
+			decryptReq.Data["padding_scheme"] = padding
+		}
 
-	decryptedPlaintext := resp.Data["plaintext"]
+		resp, err = b.HandleRequest(context.Background(), decryptReq)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+		}
 
-	if plaintext != decryptedPlaintext {
-		t.Fatalf("bad: plaintext; expected: %q\nactual: %q", plaintext, decryptedPlaintext)
-	}
+		decryptedPlaintext := resp.Data["plaintext"]
 
-	// Rotate the key
-	rotateReq := &logical.Request{
-		Path:      "keys/rsa/rotate",
-		Operation: logical.UpdateOperation,
-		Storage:   storage,
-	}
-	resp, err = b.HandleRequest(context.Background(), rotateReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
-	}
+		if plaintext != decryptedPlaintext {
+			t.Fatalf("bad: plaintext; expected: %q\nactual: %q", plaintext, decryptedPlaintext)
+		}
 
-	// Encrypt again
-	resp, err = b.HandleRequest(context.Background(), encryptReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
-	}
-	ciphertext2 := resp.Data["ciphertext"].(string)
+		// Rotate the key
+		rotateReq := &logical.Request{
+			Path:      "keys/rsa/rotate",
+			Operation: logical.UpdateOperation,
+			Storage:   storage,
+		}
+		resp, err = b.HandleRequest(context.Background(), rotateReq)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+		}
 
-	if ciphertext1 == ciphertext2 {
-		t.Fatalf("expected different ciphertexts")
-	}
+		// Encrypt again
+		resp, err = b.HandleRequest(context.Background(), encryptReq)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+		}
+		ciphertext2 := resp.Data["ciphertext"].(string)
 
-	// See if the older ciphertext can still be decrypted
-	resp, err = b.HandleRequest(context.Background(), decryptReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
-	}
-	if resp.Data["plaintext"].(string) != plaintext {
-		t.Fatal("failed to decrypt old ciphertext after rotating the key")
-	}
+		if ciphertext1 == ciphertext2 {
+			t.Fatalf("expected different ciphertexts")
+		}
 
-	// Decrypt the new ciphertext
-	decryptReq.Data = map[string]interface{}{
-		"ciphertext": ciphertext2,
-	}
-	resp, err = b.HandleRequest(context.Background(), decryptReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
-	}
-	if resp.Data["plaintext"].(string) != plaintext {
-		t.Fatal("failed to decrypt ciphertext after rotating the key")
+		// See if the older ciphertext can still be decrypted
+		resp, err = b.HandleRequest(context.Background(), decryptReq)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+		}
+		if resp.Data["plaintext"].(string) != plaintext {
+			t.Fatal("failed to decrypt old ciphertext after rotating the key")
+		}
+
+		// Decrypt the new ciphertext
+		decryptReq.Data = map[string]interface{}{
+			"ciphertext": ciphertext2,
+		}
+		if padding != "" {
+			decryptReq.Data["padding_scheme"] = padding
+		}
+
+		resp, err = b.HandleRequest(context.Background(), decryptReq)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+		}
+		if resp.Data["plaintext"].(string) != plaintext {
+			t.Fatal("failed to decrypt ciphertext after rotating the key")
+		}
 	}
 
 	signReq := &logical.Request{
