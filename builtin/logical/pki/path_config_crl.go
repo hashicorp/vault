@@ -73,10 +73,10 @@ disable for CRLs and ocsp_disable for OCSP.`,
 existing CRL and OCSP paths will return the unified CRL instead of a response based on cluster-local data`,
 		Default: "false",
 	},
-	"max_crl_size": {
+	"max_crl_entries": {
 		Type:        framework.TypeInt,
 		Description: `The maximum number of entries the CRL can contain.  This is meant as a guard against accidental runaway revocations overloading Vault storage.  If this limit is exceeded writing the CRL will fail.  If set to -1 this limit is disabled.`,
-		Default:     pki_backend.DefaultCrlConfig.MaxCRLSize,
+		Default:     pki_backend.DefaultCrlConfig.MaxCRLEntries,
 	},
 }
 
@@ -212,8 +212,11 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 		config.UnifiedCRLOnExistingPaths = unifiedCrlOnExistingPathsRaw.(bool)
 	}
 
-	if maxCRLSizeRaw, ok := d.GetOk("max_crl_size"); ok {
-		config.MaxCRLSize = maxCRLSizeRaw.(int)
+	if maxCRLEntriesRaw, ok := d.GetOk("max_crl_entries"); ok {
+		v := maxCRLEntriesRaw.(int)
+		if v == -1 || v > 0 {
+			config.MaxCRLEntries = v
+		}
 	}
 
 	if config.UnifiedCRLOnExistingPaths && !config.UnifiedCRL {
@@ -298,9 +301,9 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 	return resp, nil
 }
 
-func maxCRLSizeOrDefault(size int) int {
+func maxCRLEntriesOrDefault(size int) int {
 	if size == 0 {
-		return pki_backend.DefaultCrlConfig.MaxCRLSize
+		return pki_backend.DefaultCrlConfig.MaxCRLEntries
 	}
 	return size
 }
@@ -319,7 +322,7 @@ func genResponseFromCrlConfig(config *pki_backend.CrlConfig) *logical.Response {
 			"cross_cluster_revocation":      config.UseGlobalQueue,
 			"unified_crl":                   config.UnifiedCRL,
 			"unified_crl_on_existing_paths": config.UnifiedCRLOnExistingPaths,
-			"max_crl_size":                  maxCRLSizeOrDefault(config.MaxCRLSize),
+			"max_crl_entries":               maxCRLEntriesOrDefault(config.MaxCRLEntries),
 		},
 	}
 }

@@ -384,7 +384,7 @@ func crlEnableDisableTestForBackend(t *testing.T, b *backend, s logical.Storage,
 
 	// Set a limit, and test that it blocks building an over-large CRL
 	CBWrite(b, s, "config/crl", map[string]interface{}{
-		"max_crl_size": 6,
+		"max_crl_entries": 6,
 	})
 	revoke(6, "revocation list size (7) exceeds configured maximum (6)")
 	test(6)
@@ -395,7 +395,7 @@ func crlEnableDisableTestForBackend(t *testing.T, b *backend, s logical.Storage,
 
 	// Set unlimited, and try again
 	CBWrite(b, s, "config/crl", map[string]interface{}{
-		"max_crl_size": -1,
+		"max_crl_entries": -1,
 	})
 	_, err = CBRead(b, s, "crl/rotate")
 	require.NoError(t, err)

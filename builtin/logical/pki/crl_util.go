@@ -1769,8 +1769,8 @@ func buildAnyCRLsWithCerts(
 			}
 
 			// Enforce the max CRL size guard before building the actual CRL
-			if globalCRLConfig.MaxCRLSize > -1 {
-				limit := maxCRLSizeOrDefault(globalCRLConfig.MaxCRLSize)
+			if globalCRLConfig.MaxCRLEntries > -1 {
+				limit := maxCRLEntriesOrDefault(globalCRLConfig.MaxCRLEntries)
 				revokedCount := len(revokedCerts)
 				if revokedCount > limit {
 					// Also log a nasty error to get the operator's attention
