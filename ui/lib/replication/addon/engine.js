@@ -22,6 +22,7 @@ const Eng = Engine.extend({
       'replication-mode',
       'app-router',
       'store',
+      'pagination',
       'version',
       '-portal',
     ],

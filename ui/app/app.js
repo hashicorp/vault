@@ -21,6 +21,7 @@ export default class App extends Application {
           'namespace',
           { 'app-router': 'router' },
           'store',
+          'pagination',
           'version',
           'custom-messages',
         ],
@@ -41,6 +42,7 @@ export default class App extends Application {
           'replication-mode',
           { 'app-router': 'router' },
           'store',
+          'pagination',
           'version',
           '-portal',
         ],
@@ -60,6 +62,7 @@ export default class App extends Application {
           'path-help',
           { 'app-router': 'router' },
           'store',
+          'pagination',
           'version',
           'secret-mount-path',
         ],
@@ -70,7 +73,7 @@ export default class App extends Application {
     },
     kubernetes: {
       dependencies: {
-        services: [{ 'app-router': 'router' }, 'store', 'secret-mount-path', 'flash-messages'],
+        services: [{ 'app-router': 'router' }, 'store', 'pagination', 'secret-mount-path', 'flash-messages'],
         externalRoutes: {
           secrets: 'vault.cluster.secrets.backends',
         },
@@ -78,7 +81,14 @@ export default class App extends Application {
     },
     ldap: {
       dependencies: {
-        services: [{ 'app-router': 'router' }, 'store', 'secret-mount-path', 'flash-messages', 'auth'],
+        services: [
+          { 'app-router': 'router' },
+          'store',
+          'pagination',
+          'secret-mount-path',
+          'flash-messages',
+          'auth',
+        ],
         externalRoutes: {
           secrets: 'vault.cluster.secrets.backends',
         },
@@ -95,6 +105,7 @@ export default class App extends Application {
           { 'app-router': 'router' },
           'secret-mount-path',
           'store',
+          'pagination',
           'pagination',
           'version',
         ],
@@ -115,6 +126,7 @@ export default class App extends Application {
           { 'app-router': 'router' },
           'secret-mount-path',
           'store',
+          'pagination',
           'version',
         ],
         externalRoutes: {
@@ -126,7 +138,7 @@ export default class App extends Application {
     },
     sync: {
       dependencies: {
-        services: ['flash-messages', 'flags', { 'app-router': 'router' }, 'store', 'version'],
+        services: ['flash-messages', 'flags', { 'app-router': 'router' }, 'store', 'pagination', 'version'],
         externalRoutes: {
           kvSecretOverview: 'vault.cluster.secrets.backend.kv.secret.index',
           clientCountOverview: 'vault.cluster.clients',

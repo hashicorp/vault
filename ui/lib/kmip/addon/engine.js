@@ -22,6 +22,7 @@ const Eng = Engine.extend({
       'path-help',
       'app-router',
       'store',
+      'pagination',
       'version',
       'secret-mount-path',
     ],

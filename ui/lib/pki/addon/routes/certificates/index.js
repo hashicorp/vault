@@ -11,7 +11,7 @@ import { getCliMessage } from 'pki/routes/overview';
 
 @withConfig()
 export default class PkiCertificatesIndexRoute extends Route {
-  @service store;
+  @service pagination;
   @service secretMountPath;
 
   queryParams = {
@@ -23,7 +23,7 @@ export default class PkiCertificatesIndexRoute extends Route {
   async fetchCertificates(params) {
     try {
       const page = Number(params.page) || 1;
-      return await this.store.lazyPaginatedQuery('pki/certificate/base', {
+      return await this.pagination.lazyPaginatedQuery('pki/certificate/base', {
         backend: this.secretMountPath.currentPath,
         responsePath: 'data.keys',
         page,
