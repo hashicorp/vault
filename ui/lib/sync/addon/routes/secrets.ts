@@ -10,7 +10,7 @@ import type RouterService from '@ember/routing/router-service';
 import type FlagService from 'vault/services/flags';
 
 export default class SyncSecretsRoute extends Route {
-  @service declare readonly router: RouterService;
+  @service('app-router') declare readonly router: RouterService;
   @service declare readonly flags: FlagService;
 
   model() {

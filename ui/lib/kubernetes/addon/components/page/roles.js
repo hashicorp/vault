@@ -23,7 +23,7 @@ import keys from 'core/utils/key-codes';
  */
 export default class RolesPageComponent extends Component {
   @service flashMessages;
-  @service router;
+  @service('app-router') router;
   @tracked query;
   @tracked roleToDelete = null;
 

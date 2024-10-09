@@ -51,6 +51,8 @@ export default class MfaLoginEnforcementForm extends Component {
   @tracked authMethods = [];
   @tracked modelErrors;
 
+  mfaMethods = []; // does not change after initial fetch, thus not tracked
+
   constructor() {
     super(...arguments);
     // aggregate different target array properties on model into flat list
@@ -59,6 +61,7 @@ export default class MfaLoginEnforcementForm extends Component {
     this.resetTargetState();
     // only auth method types that have mounts can be selected as targets -- fetch from sys/auth and map by type
     this.fetchAuthMethods();
+    this.fetchMfaMethods();
   }
 
   async flattenTargets() {
@@ -91,7 +94,12 @@ export default class MfaLoginEnforcementForm extends Component {
   }
   async fetchAuthMethods() {
     const mounts = await this.store.findAll('auth-method');
-    this.authMethods = mounts.map((auth) => auth.type);
+    this.authMethods = mounts.map((auth) => auth.type).uniq();
+  }
+
+  async fetchMfaMethods() {
+    // mfa_methods is a hasMany on the model, thus returning a PromiseProxyArray. Before it can be accessed on the template we need to resolve it first.
+    this.mfaMethods = await this.args.model.mfa_methods;
   }
 
   get selectedTarget() {

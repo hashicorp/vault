@@ -11,7 +11,7 @@ import { action } from '@ember/object';
 
 export default class ReplicationModeBaseController extends Controller {
   @service('replication-mode') rm;
-  @service router;
+  @service('app-router') router;
   @service store;
 
   get replicationMode() {

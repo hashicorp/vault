@@ -24,7 +24,7 @@ interface LdapLibraryCheckOutController extends Controller {
 
 export default class LdapLibraryCheckOutRoute extends Route {
   @service declare readonly flashMessages: FlashMessageService;
-  @service declare readonly router: RouterService;
+  @service('app-router') declare readonly router: RouterService;
 
   accountsRoute = 'vault.cluster.secrets.backend.ldap.libraries.library.details.accounts';
 

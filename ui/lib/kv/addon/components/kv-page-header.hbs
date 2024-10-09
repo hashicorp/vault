@@ -13,6 +13,9 @@
         <Icon @name="key-values" @size="24" class="has-text-grey-light" />
         {{@mountName}}
         <span class="tag">version 2</span>
+      {{else if @secretPath}}
+        {{@secretPath}}
+        <Hds::Copy::Button @isIconOnly={{true}} @text="Copy your secret path" @textToCopy={{@secretPath}} />
       {{else}}
         {{@pageTitle}}
       {{/if}}
@@ -35,7 +38,7 @@
 {{/if}}
 
 {{#if (or (has-block "toolbarFilters") (has-block "toolbarActions"))}}
-  <Toolbar aria-label="menu items for managing {{or @mountName @pageTitle}}">
+  <Toolbar aria-label="menu items for managing {{or @mountName @secretPath @pageTitle}}">
     <ToolbarFilters aria-label="filters for secrets list">
       {{yield to="toolbarFilters"}}
     </ToolbarFilters>

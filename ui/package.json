@@ -136,7 +136,6 @@
     "ember-qunit": "^8.0.1",
     "ember-resolver": "^11.0.1",
     "ember-responsive": "5.0.0",
-    "ember-router-helpers": "^0.4.0",
     "ember-service-worker": "meirish/ember-service-worker#configurable-scope",
     "ember-sinon-qunit": "^7.4.0",
     "ember-source": "~5.4.0",

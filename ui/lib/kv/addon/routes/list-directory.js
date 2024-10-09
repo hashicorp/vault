@@ -12,7 +12,7 @@ import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
 
 export default class KvSecretsListRoute extends Route {
   @service store;
-  @service router;
+  @service('app-router') router;
   @service secretMountPath;
 
   queryParams = {

@@ -46,5 +46,11 @@ replication {
   time to see the resulting WAL present locally before returning a response to the client.
 - `allow_forwarding_via_token` `(string: "")` - When set to `new_token`, requests sent to non-active nodes
   are forwarded if the node does not yet have the token information in storage.
+- `replication_canary_write_interval_seconds` `(integer: 1)` - Interval in
+  seconds between writes of the replication canary to the storage on the primary
+  cluster. Set to 0 to disable the canary. Refer to the [Clock skew and
+  replication
+  lag](/vault/docs/enterprise/consistency#clock-skew-and-replication-lag) page
+  for details on the canary.
 
 Support for Server Side Consistent Tokens is now available. Refer to the [Server Side Consistent Token FAQ](/vault/docs/faq/ssct) for details.

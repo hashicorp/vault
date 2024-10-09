@@ -7,7 +7,7 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import type Store from '@ember-data/store';
-import type Router from '@ember/routing/router';
+import type RouterService from '@ember/routing/router';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type PkiActionModel from 'vault/models/pki/action';
 import type { Breadcrumb } from 'vault/vault/app-types';
@@ -26,9 +26,9 @@ interface Args {
  * and form submission and cancel actions.
  */
 export default class PkiConfigureCreate extends Component<Args> {
-  @service declare readonly store: Store;
-  @service declare readonly router: Router;
   @service declare readonly flashMessages: FlashMessageService;
+  @service declare readonly store: Store;
+  @service('app-router') declare readonly router: RouterService;
 
   @tracked title = 'Configure PKI';
 

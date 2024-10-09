@@ -23,7 +23,7 @@ import { isAfter } from 'date-fns';
  */
 
 export default class MessagesList extends Component {
-  @service router;
+  @service('app-router') router;
   @service store;
   @service flashMessages;
   @service customMessages;
