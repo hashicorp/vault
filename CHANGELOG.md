@@ -2,7 +2,7 @@
 - [v1.0.0 - v1.9.10](CHANGELOG-pre-v1.10.md)
 - [v0.11.6 and earlier](CHANGELOG-v0.md)
 
-## 1.18.0 Enterprise
+## 1.18.0 
 ## October 9, 2024
 
 CHANGES:
