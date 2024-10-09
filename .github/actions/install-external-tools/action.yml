@@ -13,7 +13,7 @@ runs:
   steps:
     - uses: ./.github/actions/set-up-buf
       with:
-        version: v1.25.0 # This should match the version in tools/tool.sh
+        version: v1.45.0 # This should match the version in tools/tool.sh
     - uses: ./.github/actions/set-up-gofumpt
     - uses: ./.github/actions/set-up-gosimports
     - uses: ./.github/actions/set-up-gotestsum

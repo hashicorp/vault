@@ -11,10 +11,5 @@ self.deprecationWorkflow.config = {
 
 self.deprecationWorkflow.config = {
   // current output from deprecationWorkflow.flushDeprecations();
-  workflow: [
-    { handler: 'silence', matchId: 'ember-engines.deprecation-router-service-from-host' },
-    // ember-data
-    { handler: 'silence', matchId: 'ember-data:no-a-with-array-like' }, // MFA
-    { handler: 'silence', matchId: 'ember-data:deprecate-promise-many-array-behaviors' }, // MFA
-  ],
+  workflow: [],
 };
