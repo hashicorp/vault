@@ -1768,6 +1768,20 @@ func buildAnyCRLsWithCerts(
 				internalCRLConfig.LastModified = time.Now().UTC()
 			}
 
+			// Enforce the max CRL size guard before building the actual CRL
+			if globalCRLConfig.MaxCRLEntries > -1 {
+				limit := maxCRLEntriesOrDefault(globalCRLConfig.MaxCRLEntries)
+				revokedCount := len(revokedCerts)
+				if revokedCount > limit {
+					// Also log a nasty error to get the operator's attention
+					sc.Logger().Error("CRL was not updated, as it exceeds the configured max size.  The CRL now does not contain all revoked certificates!  This may be indicative of a runaway issuance/revocation pattern.", "limit", limit)
+					return nil, fmt.Errorf("error building CRL: revocation list size (%d) exceeds configured maximum (%d)", revokedCount, limit)
+				}
+				if revokedCount > int(float32(limit)*0.90) {
+					sc.Logger().Warn("warning, revoked certificate count is within 10% of the configured maximum CRL size", "revoked_certs", revokedCount, "limit", limit)
+				}
+			}
+
 			// Lastly, build the CRL.
 			nextUpdate, err := buildCRL(sc, globalCRLConfig, forceNew, representative, revokedCerts, crlIdentifier, crlNumber, isUnified, isDelta, lastCompleteNumber)
 			if err != nil {
