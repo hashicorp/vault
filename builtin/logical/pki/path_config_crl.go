@@ -212,6 +212,10 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 		config.UnifiedCRLOnExistingPaths = unifiedCrlOnExistingPathsRaw.(bool)
 	}
 
+	if maxCRLSizeRaw, ok := d.GetOk("max_crl_size"); ok {
+		config.MaxCRLSize = maxCRLSizeRaw.(int)
+	}
+
 	if config.UnifiedCRLOnExistingPaths && !config.UnifiedCRL {
 		return logical.ErrorResponse("unified_crl_on_existing_paths cannot be enabled if unified_crl is disabled"), nil
 	}
