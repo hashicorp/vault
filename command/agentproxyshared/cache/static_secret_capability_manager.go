@@ -143,9 +143,11 @@ func (sscm *StaticSecretCapabilityManager) StartRenewingCapabilities(indexToRene
 
 		capabilitiesIndex.IndexLock.RLock()
 		token := capabilitiesIndex.Token
-		indexReadablePathsMap := capabilitiesIndex.ReadablePaths
-		indexReadablePaths := maps.Keys(indexReadablePathsMap)
+		indexReadablePathsMap := map[string]struct{}{}
+		maps.Copy(indexReadablePathsMap, capabilitiesIndex.ReadablePaths)
 		capabilitiesIndex.IndexLock.RUnlock()
+
+		indexReadablePaths := maps.Keys(indexReadablePathsMap)
 
 		client, err := sscm.client.Clone()
 		if err != nil {
