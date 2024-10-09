@@ -27,17 +27,15 @@
             data-test-popup-menu-trigger
           />
           <dd.Interactive
-            @text="Details"
             @route="vault.cluster.access.mfa.enforcements.enforcement"
             @model={{@model.name}}
             data-test-list-item-link="details"
-          />
+          >Details</dd.Interactive>
           <dd.Interactive
-            @text="Edit"
             @route="vault.cluster.access.mfa.enforcements.enforcement.edit"
             @model={{@model.name}}
             data-test-list-item-link="edit"
-          />
+          >Edit</dd.Interactive>
         </Hds::Dropdown>
       </div>
     </div>

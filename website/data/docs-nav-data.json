@@ -322,25 +322,6 @@
         }
       },
       {
-        "title": "Request Limiter",
-        "badge": {
-          "text": "ENTERPRISE | DEPRECATED",
-          "type": "outlined",
-          "color": "neutral"
-        },
-        "routes": [
-          {
-            "title": "Overview",
-            "path": "concepts/request-limiter",
-            "badge": {
-              "text": "BETA",
-              "type": "outlined",
-              "color": "highlight"
-            }
-          }
-        ]
-      },
-      {
         "title": "Adaptive overload protection",
         "badge": {
           "text": "ENTERPRISE",
@@ -594,10 +575,6 @@
       {
         "title": "<code>telemetry</code>",
         "path": "configuration/telemetry"
-      },
-      {
-        "title": "<code>Request Limiter</code>",
-        "path": "configuration/request-limiter"
       },
       {
         "title": "Adaptive overload protection",
@@ -2654,6 +2631,10 @@
       {
         "title": "Overview",
         "path": "release-notes"
+      },
+      {
+        "title": "1.18.0",
+        "path": "release-notes/1.18.0"
       },
       {
         "title": "1.17.0",
