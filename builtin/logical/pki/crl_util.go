@@ -1773,6 +1773,8 @@ func buildAnyCRLsWithCerts(
 				limit := maxCRLSizeOrDefault(globalCRLConfig.MaxCRLSize)
 				revokedCount := len(revokedCerts)
 				if revokedCount > limit {
+					// Also log a nasty error to get the operator's attention
+					sc.Logger().Error("CRL was not updated, as it exceeds the configured max size.  The CRL now does not contain all revoked certificates!  This may be indicative of a runaway issuance/revocation pattern.", "limit", limit)
 					return nil, fmt.Errorf("error building CRL: revocation list size (%d) exceeds configured maximum (%d)", revokedCount, limit)
 				}
 				if revokedCount > int(float32(limit)*0.90) {
