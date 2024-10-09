@@ -11,6 +11,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	mathrand "math/rand"
@@ -933,6 +934,25 @@ func autoVerify(depth int, t *testing.T, p *Policy, input []byte, sig *SigningRe
 	}
 }
 
+func autoVerifyDecrypt(depth int, t *testing.T, p *Policy, input []byte, ct string, factories ...any) {
+	tabs := strings.Repeat("\t", depth)
+	t.Log(tabs, "Automatically decrypting with options:", factories)
+
+	tabs = strings.Repeat("\t", depth+1)
+	ptb64, err := p.DecryptWithFactory(nil, nil, ct, factories...)
+	if err != nil {
+		t.Fatal(tabs, "❌ Failed to automatically verify signature:", err)
+	}
+
+	pt, err := base64.StdEncoding.DecodeString(ptb64)
+	if err != nil {
+		t.Fatal(tabs, "❌ Failed decoding plaintext:", err)
+	}
+	if !bytes.Equal(input, pt) {
+		t.Fatal(tabs, "❌ Failed to automatically decrypt")
+	}
+}
+
 func Test_RSA_PSS(t *testing.T) {
 	t.Log("Testing RSA PSS")
 	mathrand.Seed(time.Now().UnixNano())
@@ -1083,8 +1103,64 @@ func Test_RSA_PSS(t *testing.T) {
 	}
 }
 
-func Test_RSA_PKCS1(t *testing.T) {
-	t.Log("Testing RSA PKCS#1v1.5")
+func Test_RSA_PKCS1Encryption(t *testing.T) {
+	t.Log("Testing RSA PKCS#1v1.5 padded encryption")
+
+	ctx := context.Background()
+	storage := &logical.InmemStorage{}
+	// https://crypto.stackexchange.com/a/1222
+	pt := []byte("Sphinx of black quartz, judge my vow")
+	input := base64.StdEncoding.EncodeToString(pt)
+
+	tabs := make(map[int]string)
+	for i := 1; i <= 6; i++ {
+		tabs[i] = strings.Repeat("\t", i)
+	}
+
+	test_RSA_PKCS1 := func(t *testing.T, p *Policy, rsaKey *rsa.PrivateKey, padding PaddingScheme) {
+		// 1. Make a signature with the given key size and hash algorithm.
+		t.Log(tabs[3], "Make an automatic signature")
+		ct, err := p.EncryptWithFactory(0, nil, nil, string(input), padding)
+		if err != nil {
+			t.Fatal(tabs[4], "❌ Failed to automatically encrypt:", err)
+		}
+
+		// 1.1 Verify this signature using the *inferred* salt length.
+		autoVerifyDecrypt(4, t, p, pt, ct, padding)
+	}
+
+	rsaKeyTypes := []KeyType{KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096}
+	testKeys, err := generateTestKeys()
+	if err != nil {
+		t.Fatalf("error generating test keys: %s", err)
+	}
+
+	// 1. For each standard RSA key size 2048, 3072, and 4096...
+	for _, rsaKeyType := range rsaKeyTypes {
+		t.Log("Key size: ", rsaKeyType)
+		p := &Policy{
+			Name: fmt.Sprint(rsaKeyType), // NOTE: crucial to create a new key per key size
+			Type: rsaKeyType,
+		}
+
+		rsaKeyBytes := testKeys[rsaKeyType]
+		err := p.Import(ctx, storage, rsaKeyBytes, rand.Reader)
+		if err != nil {
+			t.Fatal(tabs[1], "❌ Failed to import key:", err)
+		}
+		rsaKeyAny, err := x509.ParsePKCS8PrivateKey(rsaKeyBytes)
+		if err != nil {
+			t.Fatalf("error parsing test keys: %s", err)
+		}
+		rsaKey := rsaKeyAny.(*rsa.PrivateKey)
+		for _, padding := range []PaddingScheme{PaddingScheme_OAEP, PaddingScheme_PKCS1v15, ""} {
+			t.Run(fmt.Sprintf("%s/%s", rsaKeyType.String(), padding), func(t *testing.T) { test_RSA_PKCS1(t, p, rsaKey, padding) })
+		}
+	}
+}
+
+func Test_RSA_PKCS1Signing(t *testing.T) {
+	t.Log("Testing RSA PKCS#1v1.5 signatures")
 
 	ctx := context.Background()
 	storage := &logical.InmemStorage{}

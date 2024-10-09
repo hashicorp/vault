@@ -39,6 +39,12 @@ func (b *backend) pathDatakey() *framework.Path {
 ciphertext; "wrapped" will return the ciphertext only.`,
 			},
 
+			"padding_scheme": {
+				Type: framework.TypeString,
+				Description: `The padding scheme to use for decrypt. Currently only applies to RSA key types.
+Options are 'oaep' or 'pkcs1v15'. Defaults to 'oaep'`,
+			},
+
 			"context": {
 				Type:        framework.TypeString,
 				Description: "Context for key derivation. Required for derived keys.",
@@ -142,23 +148,31 @@ func (b *backend) pathDatakeyWrite(ctx context.Context, req *logical.Request, d 
 		return nil, err
 	}
 
-	var managedKeyFactory ManagedKeyFactory
+	factories := make([]any, 0)
+	if ps, ok := d.GetOk("padding_scheme"); ok {
+		paddingScheme, err := parsePaddingSchemeArg(p.Type, ps)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("padding_scheme argument invalid: %s", err.Error())), logical.ErrInvalidRequest
+		}
+		factories = append(factories, paddingScheme)
+
+	}
 	if p.Type == keysutil.KeyType_MANAGED_KEY {
 		managedKeySystemView, ok := b.System().(logical.ManagedKeySystemView)
 		if !ok {
 			return nil, errors.New("unsupported system view")
 		}
 
-		managedKeyFactory = ManagedKeyFactory{
+		factories = append(factories, ManagedKeyFactory{
 			managedKeyParams: keysutil.ManagedKeyParameters{
 				ManagedKeySystemView: managedKeySystemView,
 				BackendUUID:          b.backendUUID,
 				Context:              ctx,
 			},
-		}
+		})
 	}
 
-	ciphertext, err := p.EncryptWithFactory(ver, context, nonce, base64.StdEncoding.EncodeToString(newKey), nil, managedKeyFactory)
+	ciphertext, err := p.EncryptWithFactory(ver, context, nonce, base64.StdEncoding.EncodeToString(newKey), factories...)
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:

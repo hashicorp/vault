@@ -13,6 +13,7 @@
       @nonce={{this.props.nonce}}
       @bits={{this.props.bits}}
       @key_version={{this.props.key_version}}
+      @padding_scheme={{this.props.padding_scheme}}
       @encodedBase64={{this.props.encodedBase64}}
       @toggleEncodeBase64={{this.toggleEncodeBase64}}
       @plaintext={{this.props.plaintext}}
@@ -27,6 +28,7 @@
       @ciphertext={{this.props.ciphertext}}
       @context={{this.props.context}}
       @nonce={{this.props.nonce}}
+      @padding_scheme={{this.props.padding_scheme}}
       @isModalActive={{this.isModalActive}}
       @plaintext={{this.props.plaintext}}
       @doSubmit={{perform this.doSubmit}}
@@ -40,6 +42,7 @@
       @nonce={{this.props.nonce}}
       @bits={{this.props.bits}}
       @plaintext={{this.props.plaintext}}
+      @padding_scheme={{this.props.padding_scheme}}
       @ciphertext={{this.props.ciphertext}}
       @doSubmit={{perform this.doSubmit}}
       @isModalActive={{this.isModalActive}}
@@ -54,6 +57,8 @@
       @key_version={{this.props.key_version}}
       @ciphertext={{this.props.ciphertext}}
       @isModalActive={{this.isModalActive}}
+      @decrypt_padding_scheme={{this.props.decrypt_padding_scheme}}
+      @encrypt_padding_scheme={{this.props.encrypt_padding_scheme}}
       @doSubmit={{perform this.doSubmit}}
       data-test-transit-action={{@selectedAction}}
     />

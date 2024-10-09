@@ -95,6 +95,50 @@ module('Integration | Component | transit key actions', function (hooks) {
       .exists({ count: 1 }, 'renders signature_algorithm field on verify with rsa key');
   });
 
+  test('it renders: padding_scheme field for rsa key types', async function (assert) {
+    const supportedActions = ['datakey', 'decrypt', 'encrypt'];
+    const supportedKeyTypes = ['rsa-2048', 'rsa-3072', 'rsa-4096'];
+
+    for (const key of supportedKeyTypes) {
+      this.set('key', {
+        type: key,
+        backend: 'transit',
+        supportedActions,
+      });
+      for (const action of this.key.supportedActions) {
+        this.selectedAction = action;
+        await render(hbs`
+    <TransitKeyActions @selectedAction={{this.selectedAction}} @key={{this.key}} />`);
+        assert
+          .dom('[data-test-padding-scheme]')
+          .hasValue(
+            'oaep',
+            `key type: ${key} renders padding_scheme field with default value for action: ${action}`
+          );
+      }
+    }
+  });
+  test('it renders: decrypt_padding_scheme and encrypt_padding_scheme fields for rsa key types', async function (assert) {
+    this.selectedAction = 'rewrap';
+    const supportedKeyTypes = ['rsa-2048', 'rsa-3072', 'rsa-4096'];
+    const SELECTOR = (type) => `[data-test-padding-scheme="${type}"]`;
+    for (const key of supportedKeyTypes) {
+      this.set('key', {
+        type: key,
+        backend: 'transit',
+        supportedActions: [this.selectedAction],
+      });
+      await render(hbs`
+    <TransitKeyActions @selectedAction={{this.selectedAction}} @key={{this.key}} />`);
+      assert
+        .dom(SELECTOR('encrypt'))
+        .hasValue('oaep', `key type: ${key} renders ${SELECTOR('encrypt')} field with default value`);
+      assert
+        .dom(SELECTOR('decrypt'))
+        .hasValue('oaep', `key type: ${key} renders ${SELECTOR('decrypt')} field with default value`);
+    }
+  });
+
   async function doEncrypt(assert, actions = [], keyattrs = {}) {
     const keyDefaults = { backend: 'transit', id: 'akey', supportedActions: ['encrypt'].concat(actions) };
 
