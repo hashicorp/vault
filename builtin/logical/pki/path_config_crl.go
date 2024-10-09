@@ -75,7 +75,7 @@ existing CRL and OCSP paths will return the unified CRL instead of a response ba
 	},
 	"max_crl_size": {
 		Type:        framework.TypeInt,
-		Description: `The maximum number of entries the CRL can contain.  This is meant as a guard against accidental runaway revocations overloading Vault storage.  If this limit is exceeded writing the CRL will fail.  To disable set to -1.`,
+		Description: `The maximum number of entries the CRL can contain.  This is meant as a guard against accidental runaway revocations overloading Vault storage.  If this limit is exceeded writing the CRL will fail.  If set to -1 this limit is disabled.`,
 		Default:     pki_backend.DefaultCrlConfig.MaxCRLSize,
 	},
 }
