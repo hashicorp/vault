@@ -209,7 +209,7 @@ use versioned plugins. [[GH-27881](https://github.com/hashicorp/vault/pull/27881
 * ui: fixes renew-self being called right after login for non-renewable tokens [[GH-28204](https://github.com/hashicorp/vault/pull/28204)]
 * ui: fixes toast (flash) alert message saying "created" when deleting a kv v2 secret [[GH-28093](https://github.com/hashicorp/vault/pull/28093)]
 
-## 1.17.7
+## 1.17.7 Enterprise
 ### October 09, 2024
 
 IMPROVEMENTS:
@@ -581,7 +581,7 @@ autopilot to fail to discover new server versions and so not trigger an upgrade.
 * ui: fixed a bug where the replication pages did not update display when navigating between DR and performance [[GH-26325](https://github.com/hashicorp/vault/pull/26325)]
 * ui: fixes undefined start time in filename for downloaded client count attribution csv [[GH-26485](https://github.com/hashicorp/vault/pull/26485)]
 
-## 1.16.11
+## 1.16.11 Enterprise
 ### October 09, 2024
 
 **Enterprise LTS:** Vault Enterprise 1.16 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
@@ -1226,7 +1226,7 @@ leading to failure to complete merkle sync without a full re-index. [[GH-23013](
 * ui: show error from API when seal fails [[GH-23921](https://github.com/hashicorp/vault/pull/23921)]
 
 
-## 1.15.16
+## 1.15.16 Enterprise
 ### October 09, 2024
 
 IMPROVEMENTS:
