@@ -3,9 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Store, { CacheHandler } from '@ember-data/store';
-import RequestManager from '@ember-data/request';
-import { LegacyNetworkHandler } from '@ember-data/legacy-compat';
+import Store from '@ember-data/store';
 import { run, schedule } from '@ember/runloop';
 import { resolve, Promise } from 'rsvp';
 import { dasherize } from '@ember/string';
@@ -34,17 +32,7 @@ export function keyForCache(query) {
   return JSON.stringify(cacheKeyObject);
 }
 
-export default class StoreService extends Store {
-  requestManager = new RequestManager();
-
-  constructor(args) {
-    super(args);
-    // If at some point we no longer need an extended store, we can remove the @ember-data/legacy-compat dep
-    // See: https://api.emberjs.com/ember-data/4.12/modules/@ember-data%2Frequest
-    this.requestManager.use([LegacyNetworkHandler]);
-    this.requestManager.useCache(CacheHandler);
-  }
-
+export default class PaginationService extends Store {
   lazyCaches = new Map();
 
   setLazyCacheForModel(modelName, key, value) {
