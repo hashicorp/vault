@@ -1,3 +1,5 @@
+VAULT_VERSION=$$(cat $(CURDIR)/../version/VERSION)
+
 .PHONY: default
 default: check-fmt shellcheck
 
@@ -10,10 +12,16 @@ fmt: fmt-enos fmt-modules shfmt
 .PHONY: check-fmt-enos
 check-fmt-enos:
 	enos fmt --check --diff .
+	enos fmt --check --diff ./k8s
 
 .PHONY: fmt-enos
 fmt-enos:
 	enos fmt .
+	enos fmt ./k8s
+
+.PHONY: gen-enos
+gen-enos:
+	pushd ../tools/pipeline &> /dev/null && go run ./... generate enos-dynamic-config -d ../../enos -f enos-dynamic-config.hcl -e ce -v $(VAULT_VERSION) -n 3 --log info && popd &> /dev/null
 
 .PHONY: check-fmt-modules
 check-fmt-modules:
@@ -23,17 +31,9 @@ check-fmt-modules:
 fmt-modules:
 	terraform fmt -diff -recursive ./modules
 
-# Generate dynamic global variables. We execute this in CI so that each branch has the correct
-# config.
-.PHONY: gen-dynamic-globals
-gen-dynamic-globals:
-	pushd ../tools/ &> /dev/null &&\
-	upgrade_initial_versions=$$(go run ./pipeline/... releases list-versions -n 3 -u $$(cat ../version/VERSION) -e $(edition) | jq -Mec .versions) &&\
-	popd &> /dev/null &&\
-	echo "globals {\n  upgrade_initial_versions = $$upgrade_initial_versions\n}" > enos-dynamic-globals.hcl
-
 .PHONY: validate-enos
 validate-enos:
+	enos scenario validate --timeout 30m0s --chdir ./k8s
 	enos scenario validate --timeout 30m0s
 
 .PHONY: lint

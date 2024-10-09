@@ -245,13 +245,13 @@ scenario "autopilot" {
       packages             = concat(global.packages, global.distro_packages[matrix.distro][global.distro_version[matrix.distro]])
       release = {
         edition = matrix.edition
-        version = matrix.vault_upgrade_initial_version
+        version = var.vault_upgrade_initial_version
       }
       seal_attributes = step.create_seal_key.attributes
       seal_type       = matrix.seal
       storage_backend = "raft"
       storage_backend_addl_config = {
-        autopilot_upgrade_version = matrix.vault_upgrade_initial_version
+        autopilot_upgrade_version = var.vault_upgrade_initial_version
       }
     }
   }

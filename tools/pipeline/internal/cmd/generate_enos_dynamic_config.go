@@ -5,11 +5,11 @@ package cmd
 
 import (
 	"context"
-	"log"
 
 	"github.com/spf13/cobra"
 
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/generate"
+	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/releases"
 )
 
 // skipVersionsDefault are versions that we skip by default. This list can grow as necessary.
@@ -18,7 +18,7 @@ var skipVersionsDefault = []string{
 }
 
 var genEnosDynamicConfigReq = &generate.EnosDynamicConfigReq{
-	FileName: "enos-dynamic-config.hcl",
+	VersionLister: releases.NewClient(),
 }
 
 func newGenerateEnosDynamicConfigCmd() *cobra.Command {
@@ -51,9 +51,6 @@ sample attribute variables on per-branch basis.`,
 
 func runGenerateEnosDynamicConfig(cmd *cobra.Command, args []string) error {
 	cmd.SilenceUsage = true // Don't spam the usage on failure
-
-	genEnosDynamicConfigReq.Logger = log.Default()
-	genEnosDynamicConfigReq.Logger.SetPrefix("pipeline-generate-enos-dynamic-config")
 
 	_, err := genEnosDynamicConfigReq.Run(context.TODO())
 

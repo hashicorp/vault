@@ -7,9 +7,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"slices"
 
 	"github.com/Masterminds/semver"
+	slogctx "github.com/veqryn/slog-context"
 
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/metadata"
 )
@@ -34,7 +36,7 @@ func NewListVersionsReq() *ListVersionsReq {
 	return &ListVersionsReq{}
 }
 
-func (req *ListVersionsReq) Validate() error {
+func (req *ListVersionsReq) Validate(ctx context.Context) error {
 	if req == nil {
 		return errors.New("releases list versions req: unitialized")
 	}
@@ -117,11 +119,21 @@ func (req *ListVersionsReq) Run(ctx context.Context) (*ListVersionsRes, error) {
 	default:
 	}
 
-	err := req.Validate()
+	ctx = slogctx.Append(ctx,
+		slog.String("upper-bound", req.UpperBound),
+		slog.String("lower-bound", req.LowerBound),
+		slog.Uint64("n-minus", uint64(req.NMinus)),
+		slog.String("edition", string(req.LicenseClass)),
+		"skip", req.Skip,
+	)
+	slog.Default().DebugContext(ctx, "running releases list version request")
+
+	err := req.Validate(ctx)
 	if err != nil {
 		return nil, err
 	}
 
+	slog.Default().DebugContext(ctx, "determining version request range")
 	floor, ceil, err := req.VersionRange()
 	if err != nil {
 		return nil, err
@@ -171,6 +183,7 @@ func (req *ListVersionsReq) Run(ctx context.Context) (*ListVersionsRes, error) {
 	}
 
 	res.Versions, err = sortVersions(res.Versions)
+	slog.Default().DebugContext(ctx, "found versions", "versions", res.Versions)
 
 	return res, err
 }
