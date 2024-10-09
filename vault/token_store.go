@@ -3138,9 +3138,16 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 
 	sysView := ts.System().(extendedSystemView)
 
+	var backendMaxTTL time.Duration
+
+	mountEntry := ts.core.router.MatchingMountByAccessor(req.MountAccessor)
+	if mountEntry != nil {
+		backendMaxTTL = mountEntry.Config.MaxLeaseTTL
+	}
+
 	// Only calculate a TTL if you are A) periodic, B) have a TTL, C) do not have a TTL and are not a root token
 	if periodToUse > 0 || te.TTL > 0 || (te.TTL == 0 && !strutil.StrListContains(te.Policies, "root")) {
-		ttl, warnings, err := framework.CalculateTTL(sysView, 0, te.TTL, periodToUse, 0, explicitMaxTTLToUse, time.Unix(te.CreationTime, 0))
+		ttl, warnings, err := framework.CalculateTTL(sysView, 0, te.TTL, periodToUse, backendMaxTTL, explicitMaxTTLToUse, time.Unix(te.CreationTime, 0))
 		if err != nil {
 			return nil, err
 		}

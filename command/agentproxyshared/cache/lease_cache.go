@@ -14,6 +14,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -220,6 +221,7 @@ func (c *LeaseCache) PersistentStorage() *cacheboltdb.BoltStorage {
 // checkCacheForDynamicSecretRequest checks the cache for a particular request based on its
 // computed ID. It returns a non-nil *SendResponse if an entry is found.
 func (c *LeaseCache) checkCacheForDynamicSecretRequest(id string) (*SendResponse, error) {
+	c.logger.Trace("checking cache for dynamic secret request", "id", id)
 	return c.checkCacheForRequest(id, nil)
 }
 
@@ -229,6 +231,7 @@ func (c *LeaseCache) checkCacheForDynamicSecretRequest(id string) (*SendResponse
 // cache entry, and return nil if it isn't. It will also evict the cache if this is a non-GET
 // request.
 func (c *LeaseCache) checkCacheForStaticSecretRequest(id string, req *SendRequest) (*SendResponse, error) {
+	c.logger.Trace("checking cache for static secret request", "id", id)
 	return c.checkCacheForRequest(id, req)
 }
 
@@ -269,15 +272,28 @@ func (c *LeaseCache) checkCacheForRequest(id string, req *SendRequest) (*SendRes
 		}
 	}
 
+	var response []byte
+	version := getStaticSecretVersionFromRequest(req)
+	if version == 0 {
+		response = index.Response
+	} else {
+		response = index.Versions[version]
+	}
+
+	// We don't have this response as either a current or older version.
+	if response == nil {
+		return nil, nil
+	}
+
 	// Cached request is found, deserialize the response
-	reader := bufio.NewReader(bytes.NewReader(index.Response))
+	reader := bufio.NewReader(bytes.NewReader(response))
 	resp, err := http.ReadResponse(reader, nil)
 	if err != nil {
 		c.logger.Error("failed to deserialize response", "error", err)
 		return nil, err
 	}
 
-	sendResp, err := NewSendResponse(&api.Response{Response: resp}, index.Response)
+	sendResp, err := NewSendResponse(&api.Response{Response: resp}, response)
 	if err != nil {
 		c.logger.Error("failed to create new send response", "error", err)
 		return nil, err
@@ -482,8 +498,8 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		// included in the request path.
 		index.RequestPath = getStaticSecretPathFromRequest(req)
 
-		c.logger.Trace("attempting to cache static secret with following request path", "request path", index.RequestPath)
-		err := c.cacheStaticSecret(ctx, req, resp, index)
+		c.logger.Trace("attempting to cache static secret with following request path", "request path", index.RequestPath, "version", getStaticSecretVersionFromRequest(req))
+		err := c.cacheStaticSecret(ctx, req, resp, index, secret)
 		if err != nil {
 			return nil, err
 		}
@@ -617,16 +633,19 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 	return resp, nil
 }
 
-func (c *LeaseCache) cacheStaticSecret(ctx context.Context, req *SendRequest, resp *SendResponse, index *cachememdb.Index) error {
+func (c *LeaseCache) cacheStaticSecret(ctx context.Context, req *SendRequest, resp *SendResponse, index *cachememdb.Index, secret *api.Secret) error {
 	// If a cached version of this secret exists, we now have access, so
 	// we don't need to re-cache, just update index.Tokens
 	indexFromCache, err := c.db.Get(cachememdb.IndexNameID, index.ID)
-	if err != nil && err != cachememdb.ErrCacheItemNotFound {
+	if err != nil && !errors.Is(err, cachememdb.ErrCacheItemNotFound) {
 		return err
 	}
 
+	version := getStaticSecretVersionFromRequest(req)
+
 	// The index already exists, so all we need to do is add our token
-	// to the index's allowed token list, then re-store it.
+	// to the index's allowed token list, and if necessary, the new version,
+	// then re-store it.
 	if indexFromCache != nil {
 		// We must hold a lock for the index while it's being updated.
 		// We keep the two locking mechanisms distinct, so that it's only writes
@@ -634,6 +653,45 @@ func (c *LeaseCache) cacheStaticSecret(ctx context.Context, req *SendRequest, re
 		indexFromCache.IndexLock.Lock()
 		defer indexFromCache.IndexLock.Unlock()
 		indexFromCache.Tokens[req.Token] = struct{}{}
+
+		// Are we looking for a version that's already cached?
+		haveVersion := false
+		if version != 0 {
+			_, ok := indexFromCache.Versions[version]
+			if ok {
+				haveVersion = true
+			}
+		} else {
+			if indexFromCache.Response != nil {
+				haveVersion = true
+			}
+		}
+
+		if !haveVersion {
+			var respBytes bytes.Buffer
+			err = resp.Response.Write(&respBytes)
+			if err != nil {
+				c.logger.Error("failed to serialize response", "error", err)
+				return err
+			}
+
+			// Reset the response body for upper layers to read
+			if resp.Response.Body != nil {
+				resp.Response.Body.Close()
+			}
+			resp.Response.Body = io.NopCloser(bytes.NewReader(resp.ResponseBody))
+
+			// Set the index's Response
+			if version == 0 {
+				indexFromCache.Response = respBytes.Bytes()
+				// For current KVv2 secrets, see if we can add the version that the secret is
+				// to the versions map, too. If we got the latest version and the version is #2,
+				// also update Versions[2]
+				c.addToVersionListForCurrentVersionKVv2Secret(indexFromCache, secret)
+			} else {
+				indexFromCache.Versions[version] = respBytes.Bytes()
+			}
+		}
 
 		return c.storeStaticSecretIndex(ctx, req, indexFromCache)
 	}
@@ -652,8 +710,19 @@ func (c *LeaseCache) cacheStaticSecret(ctx context.Context, req *SendRequest, re
 	}
 	resp.Response.Body = io.NopCloser(bytes.NewReader(resp.ResponseBody))
 
+	// Initialize the versions
+	index.Versions = map[int][]byte{}
+
 	// Set the index's Response
-	index.Response = respBytes.Bytes()
+	if version == 0 {
+		index.Response = respBytes.Bytes()
+		// For current KVv2 secrets, see if we can add the version that the secret is
+		// to the versions map, too. If we got the latest version and the version is #2,
+		// also update Versions[2]
+		c.addToVersionListForCurrentVersionKVv2Secret(index, secret)
+	} else {
+		index.Versions[version] = respBytes.Bytes()
+	}
 
 	// Initialize the token map and add this token to it.
 	index.Tokens = map[string]struct{}{req.Token: {}}
@@ -661,12 +730,53 @@ func (c *LeaseCache) cacheStaticSecret(ctx context.Context, req *SendRequest, re
 	// Set the index type
 	index.Type = cacheboltdb.StaticSecretType
 
+	// Store the index:
 	return c.storeStaticSecretIndex(ctx, req, index)
+}
+
+// addToVersionListForCurrentVersionKVv2Secret takes a secret index and, if it's
+// a KVv2 secret, adds the given response to the corresponding version for it.
+// This function fails silently, as we could be parsing arbitrary JSON.
+// This function can store a version for a KVv1 secret iff:
+// - It has 'data' in the path
+// - It has a numerical 'metadata.version' field
+// However, this risk seems very small, and the negatives of such a secret being
+// stored in the cache aren't worth additional mitigations to check if it's a KVv1
+// or KVv2 mount (such as doing a 'preflight' request like the CLI).
+// There's no way to access it and it's just a couple of extra bytes, in the
+// case that this does happen to a KVv1 secret.
+func (c *LeaseCache) addToVersionListForCurrentVersionKVv2Secret(index *cachememdb.Index, secret *api.Secret) {
+	if secret != nil {
+		// First do an imperfect but lightweight check. This saves parsing the secret in the case that the secret isn't KVv2.
+		// KVv2 secrets always contain /data/, but KVv1 secrets can too, so we can't rely on this.
+		if strings.Contains(index.RequestPath, "/data/") {
+			metadata, ok := secret.Data["metadata"]
+			if ok {
+				metaDataAsMap, ok := metadata.(map[string]interface{})
+				if ok {
+					versionJson, ok := metaDataAsMap["version"].(json.Number)
+					if ok {
+						versionInt64, err := versionJson.Int64()
+						if err == nil {
+							version := int(versionInt64)
+							c.logger.Trace("adding response for current KVv2 secret to index's Versions map", "path", index.RequestPath, "version", version)
+
+							if index.Versions == nil {
+								index.Versions = map[int][]byte{}
+							}
+
+							index.Versions[version] = index.Response
+						}
+					}
+				}
+			}
+		}
+	}
 }
 
 func (c *LeaseCache) storeStaticSecretIndex(ctx context.Context, req *SendRequest, index *cachememdb.Index) error {
 	// Store the index in the cache
-	c.logger.Debug("storing static secret response into the cache", "method", req.Request.Method, "path", index.RequestPath, "id", index.ID)
+	c.logger.Debug("storing static secret response into the cache", "path", index.RequestPath, "id", index.ID)
 	err := c.Set(ctx, index)
 	if err != nil {
 		c.logger.Error("failed to cache the proxied response", "error", err)
@@ -681,6 +791,7 @@ func (c *LeaseCache) storeStaticSecretIndex(ctx context.Context, req *SendReques
 
 	path := getStaticSecretPathFromRequest(req)
 
+	capabilitiesIndex.IndexLock.Lock()
 	// Extra caution -- avoid potential nil
 	if capabilitiesIndex.ReadablePaths == nil {
 		capabilitiesIndex.ReadablePaths = make(map[string]struct{})
@@ -688,6 +799,7 @@ func (c *LeaseCache) storeStaticSecretIndex(ctx context.Context, req *SendReques
 
 	// update the index with the new capability:
 	capabilitiesIndex.ReadablePaths[path] = struct{}{}
+	capabilitiesIndex.IndexLock.Unlock()
 
 	err = c.SetCapabilitiesIndex(ctx, capabilitiesIndex)
 	if err != nil {
@@ -695,7 +807,7 @@ func (c *LeaseCache) storeStaticSecretIndex(ctx context.Context, req *SendReques
 		return err
 	}
 
-	// Lastly, ensure that we start renewing this index, if it's  new.
+	// Lastly, ensure that we start renewing this index, if it's new.
 	// We require the 'created' check so that we don't renew the same
 	// index multiple times.
 	if c.capabilityManager != nil && created {
@@ -712,7 +824,7 @@ func (c *LeaseCache) retrieveOrCreateTokenCapabilitiesEntry(token string) (*cach
 	// The index ID is a hash of the token.
 	indexId := hashStaticSecretIndex(token)
 	indexFromCache, err := c.db.GetCapabilitiesIndex(cachememdb.IndexNameID, indexId)
-	if err != nil && err != cachememdb.ErrCacheItemNotFound {
+	if err != nil && !errors.Is(err, cachememdb.ErrCacheItemNotFound) {
 		return nil, false, err
 	}
 
@@ -885,6 +997,25 @@ func canonicalizeStaticSecretPath(requestPath string, ns string) string {
 	return path
 }
 
+// getStaticSecretVersionFromRequest gets the version of a secret
+// from a request. For the latest secret and for KVv1 secrets,
+// this will return 0.
+func getStaticSecretVersionFromRequest(req *SendRequest) int {
+	if req == nil || req.Request == nil {
+		return 0
+	}
+	version := req.Request.FormValue("version")
+	if version == "" {
+		return 0
+	}
+	versionInt, err := strconv.Atoi(version)
+	if err != nil {
+		// It's not a valid version.
+		return 0
+	}
+	return versionInt
+}
+
 // getStaticSecretPathFromRequest gets the canonical path for a
 // request, taking into account intricacies relating to /v1/ and namespaces
 // in the header.
@@ -923,6 +1054,7 @@ func computeStaticSecretCacheIndex(req *SendRequest) string {
 	if path == "" {
 		return path
 	}
+
 	return hashStaticSecretIndex(path)
 }
 
@@ -964,7 +1096,7 @@ func (c *LeaseCache) HandleCacheClear(ctx context.Context) http.Handler {
 			// Default to 500 on error, unless the user provided an invalid type,
 			// which would then be a 400.
 			httpStatus := http.StatusInternalServerError
-			if err == errInvalidType {
+			if errors.Is(err, errInvalidType) {
 				httpStatus = http.StatusBadRequest
 			}
 			logical.RespondError(w, httpStatus, fmt.Errorf("failed to clear cache: %w", err))

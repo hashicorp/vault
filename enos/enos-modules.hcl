@@ -56,6 +56,24 @@ module "get_local_metadata" {
   source = "./modules/get_local_metadata"
 }
 
+module "generate_dr_operation_token" {
+  source = "./modules/generate_dr_operation_token"
+
+  vault_install_dir = var.vault_install_dir
+}
+
+module "generate_failover_secondary_token" {
+  source = "./modules/generate_failover_secondary_token"
+
+  vault_install_dir = var.vault_install_dir
+}
+
+module "generate_secondary_public_key" {
+  source = "./modules/generate_secondary_public_key"
+
+  vault_install_dir = var.vault_install_dir
+}
+
 module "generate_secondary_token" {
   source = "./modules/generate_secondary_token"
 
@@ -185,13 +203,43 @@ module "vault_get_cluster_ips" {
   vault_install_dir = var.vault_install_dir
 }
 
+module "vault_failover_demote_dr_primary" {
+  source = "./modules/vault_failover_demote_dr_primary"
+
+  vault_install_dir = var.vault_install_dir
+}
+
+module "vault_failover_promote_dr_secondary" {
+  source = "./modules/vault_failover_promote_dr_secondary"
+
+  vault_install_dir = var.vault_install_dir
+}
+
+module "vault_failover_update_dr_primary" {
+  source = "./modules/vault_failover_update_dr_primary"
+
+  vault_install_dir = var.vault_install_dir
+}
+
 module "vault_raft_remove_peer" {
   source            = "./modules/vault_raft_remove_peer"
   vault_install_dir = var.vault_install_dir
 }
 
-module "vault_setup_perf_secondary" {
-  source = "./modules/vault_setup_perf_secondary"
+module "vault_setup_dr_primary" {
+  source = "./modules/vault_setup_dr_primary"
+
+  vault_install_dir = var.vault_install_dir
+}
+
+module "vault_setup_perf_primary" {
+  source = "./modules/vault_setup_perf_primary"
+
+  vault_install_dir = var.vault_install_dir
+}
+
+module "vault_setup_replication_secondary" {
+  source = "./modules/vault_setup_replication_secondary"
 
   vault_install_dir = var.vault_install_dir
 }
@@ -208,8 +256,8 @@ module "vault_test_ui" {
   ui_run_tests = var.ui_run_tests
 }
 
-module "vault_unseal_nodes" {
-  source = "./modules/vault_unseal_nodes"
+module "vault_unseal_replication_followers" {
+  source = "./modules/vault_unseal_replication_followers"
 
   vault_install_dir = var.vault_install_dir
 }
@@ -227,15 +275,20 @@ module "vault_verify_autopilot" {
   vault_install_dir              = var.vault_install_dir
 }
 
-module "vault_verify_raft_auto_join_voter" {
-  source = "./modules/vault_verify_raft_auto_join_voter"
+module "vault_verify_dr_replication" {
+  source = "./modules/vault_verify_dr_replication"
 
-  vault_install_dir       = var.vault_install_dir
-  vault_cluster_addr_port = global.ports["vault_cluster"]["port"]
+  vault_install_dir = var.vault_install_dir
 }
 
-module "vault_verify_undo_logs" {
-  source = "./modules/vault_verify_undo_logs"
+module "vault_verify_secrets_engines_create" {
+  source = "./modules/verify_secrets_engines/modules/create"
+
+  vault_install_dir = var.vault_install_dir
+}
+
+module "vault_verify_secrets_engines_read" {
+  source = "./modules/verify_secrets_engines/modules/read"
 
   vault_install_dir = var.vault_install_dir
 }
@@ -246,6 +299,19 @@ module "vault_verify_default_lcq" {
   vault_autopilot_default_max_leases = "300000"
 }
 
+module "vault_verify_performance_replication" {
+  source = "./modules/vault_verify_performance_replication"
+
+  vault_install_dir = var.vault_install_dir
+}
+
+module "vault_verify_raft_auto_join_voter" {
+  source = "./modules/vault_verify_raft_auto_join_voter"
+
+  vault_install_dir       = var.vault_install_dir
+  vault_cluster_addr_port = global.ports["vault_cluster"]["port"]
+}
+
 module "vault_verify_replication" {
   source = "./modules/vault_verify_replication"
 }
@@ -254,38 +320,20 @@ module "vault_verify_ui" {
   source = "./modules/vault_verify_ui"
 }
 
-module "vault_verify_unsealed" {
-  source = "./modules/vault_verify_unsealed"
+module "vault_verify_undo_logs" {
+  source = "./modules/vault_verify_undo_logs"
 
   vault_install_dir = var.vault_install_dir
 }
 
-module "vault_setup_perf_primary" {
-  source = "./modules/vault_setup_perf_primary"
-
-  vault_install_dir = var.vault_install_dir
-}
-
-module "vault_verify_read_data" {
-  source = "./modules/vault_verify_read_data"
-
-  vault_install_dir = var.vault_install_dir
-}
-
-module "vault_verify_performance_replication" {
-  source = "./modules/vault_verify_performance_replication"
+module "vault_wait_for_cluster_unsealed" {
+  source = "./modules/vault_wait_for_cluster_unsealed"
 
   vault_install_dir = var.vault_install_dir
 }
 
 module "vault_verify_version" {
   source = "./modules/vault_verify_version"
-
-  vault_install_dir = var.vault_install_dir
-}
-
-module "vault_verify_write_data" {
-  source = "./modules/vault_verify_write_data"
 
   vault_install_dir = var.vault_install_dir
 }
@@ -315,3 +363,4 @@ module "vault_verify_billing_start_date" {
   vault_instance_count    = var.vault_instance_count
   vault_cluster_addr_port = global.ports["vault_cluster"]["port"]
 }
+

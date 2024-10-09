@@ -5,6 +5,7 @@
 
 import ApplicationAdapter from '../application';
 import { formatDateObject } from 'core/utils/client-count-utils';
+import { debug } from '@ember/debug';
 
 export default class ActivityAdapter extends ApplicationAdapter {
   // javascript localizes new Date() objects but all activity log data is stored in UTC
@@ -32,5 +33,14 @@ export default class ActivityAdapter extends ApplicationAdapter {
         return response;
       });
     }
+  }
+
+  // Only dashboard uses findRecord, the client count dashboard uses queryRecord
+  findRecord(store, type, id) {
+    if (id !== 'clients/activity') {
+      debug(`findRecord('clients/activity') should pass 'clients/activity' as the id, you passed: '${id}'`);
+    }
+    const url = `${this.buildURL()}/internal/counters/activity`;
+    return this.ajax(url, 'GET', { skipWarnings: true });
   }
 }
