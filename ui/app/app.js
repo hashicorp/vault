@@ -95,6 +95,7 @@ export default class App extends Application {
           { 'app-router': 'router' },
           'secret-mount-path',
           'store',
+          'pagination',
           'version',
         ],
         externalRoutes: {
