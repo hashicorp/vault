@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Store from '@ember-data/store';
+import Service, { inject as service } from '@ember/service';
 import { run, schedule } from '@ember/runloop';
 import { resolve, Promise } from 'rsvp';
 import { dasherize } from '@ember/string';
@@ -32,7 +32,8 @@ export function keyForCache(query) {
   return JSON.stringify(cacheKeyObject);
 }
 
-export default class PaginationService extends Store {
+export default class PaginationService extends Service {
+  @service store;
   lazyCaches = new Map();
 
   setLazyCacheForModel(modelName, key, value) {
@@ -71,7 +72,7 @@ export default class PaginationService extends Store {
     const skipCache = query.skipCache;
     // We don't want skipCache to be part of the actual query key, so remove it
     delete query.skipCache;
-    const adapter = this.adapterFor(modelType);
+    const adapter = this.store.adapterFor(modelType);
     const modelName = normalizeModelName(modelType);
     const dataCache = skipCache ? this.clearDataset(modelName) : this.getDataset(modelName, query);
     const responsePath = query.responsePath;
@@ -87,7 +88,7 @@ export default class PaginationService extends Store {
     return adapter
       .query(this, { modelName }, query, null, adapterOptions)
       .then((response) => {
-        const serializer = this.serializerFor(modelName);
+        const serializer = this.store.serializerFor(modelName);
         const datasetHelper = serializer.extractLazyPaginatedData;
         const dataset = datasetHelper
           ? datasetHelper.call(serializer, response)
@@ -150,9 +151,9 @@ export default class PaginationService extends Store {
   forceUnload(modelName) {
     // Hack to get unloadAll to work correctly until we update to ember-data@4.12
     // so that all the records are properly unloaded and we don't get ghost records
-    this.peekAll(modelName).length;
+    this.store.peekAll(modelName).length;
     // force destroy queue to flush https://github.com/emberjs/data/issues/5447
-    run(() => this.unloadAll(modelName));
+    run(() => this.store.unloadAll(modelName));
   }
 
   // pushes records into the store and returns the result
@@ -160,22 +161,18 @@ export default class PaginationService extends Store {
     const response = this.constructResponse(modelName, query);
     this.forceUnload(modelName);
     // Hack to ensure the pushed records below all get in the store. remove with update to ember-data@4.12
-    this.peekAll(modelName).length;
+    this.store.peekAll(modelName).length;
     return new Promise((resolve) => {
       // push subset of records into the store
       schedule('destroy', () => {
-        this.push(
-          this.serializerFor(modelName).normalizeResponse(
-            this,
-            this.modelFor(modelName),
-            response,
-            null,
-            'query'
-          )
+        this.store.push(
+          this.store
+            .serializerFor(modelName)
+            .normalizeResponse(this, this.store.modelFor(modelName), response, null, 'query')
         );
         // Hack to make sure all records get in model correctly. remove with update to ember-data@4.12
-        this.peekAll(modelName).length;
-        const model = this.peekAll(modelName).slice();
+        this.store.peekAll(modelName).length;
+        const model = this.store.peekAll(modelName).slice();
         model.set('meta', response.meta);
         resolve(model);
       });
@@ -207,6 +204,7 @@ export default class PaginationService extends Store {
     this.lazyCaches.clear();
   }
 
+  // TODO can we just remove this and use clearDataset??
   clearAllDatasets() {
     this.clearDataset();
   }
@@ -221,19 +219,19 @@ export default class PaginationService extends Store {
    * the following fixes the issue by explicitly unloading the mount-config models associated to the parent
    * this should be looked into further to find the root cause, at which time these overrides may be removed
    */
-  unloadAll(modelName) {
-    const hasMountConfig = ['auth-method', 'secret-engine'];
-    if (hasMountConfig.includes(modelName)) {
-      this.peekAll(modelName).forEach((record) => this.unloadRecord(record));
-    } else {
-      super.unloadAll(modelName);
-    }
-  }
-  unloadRecord(record) {
-    const hasMountConfig = ['auth-method', 'secret-engine'];
-    if (record && hasMountConfig.includes(record.constructor.modelName) && record.config) {
-      super.unloadRecord(record.config);
-    }
-    super.unloadRecord(record);
-  }
+  // unloadAll(modelName) {
+  //   const hasMountConfig = ['auth-method', 'secret-engine'];
+  //   if (hasMountConfig.includes(modelName)) {
+  //     this.store.peekAll(modelName).forEach((record) => this.unloadRecord(record));
+  //   } else {
+  //     super.unloadAll(modelName);
+  //   }
+  // }
+  // unloadRecord(record) {
+  //   const hasMountConfig = ['auth-method', 'secret-engine'];
+  //   if (record && hasMountConfig.includes(record.constructor.modelName) && record.config) {
+  //     super.unloadRecord(record.config);
+  //   }
+  //   super.unloadRecord(record);
+  // }
 }
