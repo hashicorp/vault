@@ -46,7 +46,7 @@ Use `vault write` to configure a repository sync destination with an access toke
   ```
   $ vault write sys/sync/destinations/gh/hcrepo-sandbox       \
       access_token="github_pat_11ABC000000000000000000000DEF" \
-      secrets_location="repository"                         \
+      secrets_location="repository"                           \
       repository_owner="hashicorp"                            \
       repository_name="hcrepo"
 
@@ -227,18 +227,17 @@ or the association in Vault will delete the secret in GitHub as well.
 
 <Note>
 
-GitHub only supports single-value secrets, and Vault syncs secrets differently
-depending on whether you have configured
+Vault syncs secrets differently depending on whether you have configured 
 `secret-key` or `secret-path` [granularity](/vault/docs/sync#granularity):
 
 - `secret-key` granularity splits KVv2 secrets from Vault into key-value pairs
-  and stores the pairs as distinct entries in GitHub secrets. For example,
+  and stores the pairs as distinct entries in GitHub. For example,
   `secrets.key1="val1"` and `secrets.key2="val2"`.
 
 - `secret-path` granularity stores secrets as a single JSON string that contains
-  all of the associated key-value pairs. For example, `{"key1":"val1", "key2":"val2"}`.
+  all the associated key-value pairs. For example, `{"key1":"val1", "key2":"val2"}`.
 
-For GitHub, the granularity defaults to `secret-key`.
+Since GitHub limits secrets to single-value secrets, the sync granularity defaults to `secret-key`.
 
 </Note>
 

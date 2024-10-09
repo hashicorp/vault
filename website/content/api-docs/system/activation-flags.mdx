@@ -17,10 +17,9 @@ un-activate gated features.
 
 ReadActivationFlags is an unauthenticated endpoint that returns information
 about gated features and their activation status as two lists: `activated` and
-`unactivated`. The unactivated list includes **available**, gated features. The
-unactivated list filters out gated features that are useable with your Vault 
-instance.  
-
+`unactivated`. The activated list contains features ready to be used. The
+unactivated list contains **available** but gated features. It filters out those
+which are already active within your Vault instance.
 
 | Method | Path                    |
 | :----- | :---------------------- |
