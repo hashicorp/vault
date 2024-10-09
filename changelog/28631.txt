@@ -1,0 +1,3 @@
+```release-note:bug
+core/seal: Fix an issue that could cause reading from sys/seal-backend-status to return stale information.
+```
