@@ -6,32 +6,35 @@ description: The GitHub destination syncs secrets from Vault to GitHub.
 
 # GitHub actions secrets
 
-The GitHub actions sync destination allows Vault to safely synchronize secrets as GitHub repository or environment secrets.
+The GitHub actions sync destination allows Vault to safely synchronize secrets as GitHub organization, repository, or environment secrets.
 This is a low footprint option that enables your applications to benefit from Vault-managed secrets without requiring them
 to connect directly with Vault. This guide walks you through the configuration process.
 
 Prerequisites:
 * Ability to read or create KVv2 secrets
-* Ability to create GitHub fine-grained or personal tokens (or a GitHub application) with access to modify repository secrets
+* Ability to create GitHub fine-grained or personal tokens (or a GitHub application) with access to modify organization and/or repository secrets
 * Ability to create sync destinations and associations on your Vault server
 
 ## Setup
 
 1. To get started with syncing Vault secrets to your GitHub, you will need a configured [GitHub application](#github-application) or an
   [access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
-  which has access to the repository you want to manage secrets for and write permissions on the repository's actions secrets.
-  In the list of GitHub permissions, this is simply called "Secrets". Choosing this will automatically include read-only Metadata.
+  that has write permission on the target sync location in GitHub for "Secrets". The "Secrets" permissions in GitHub automatically includes read-only "Metadata" access.
+
 
 <Warning title="Pitfalls of using an access token">
   Access tokens are tied to a user account and can be revoked at any time, causing disruptions to the sync process.
   GitHub applications are long-lived and do not expire. Using a GitHub application for authentication is preferred over using a personal access token.
 </Warning>
 
+### Repositories
+
 Use `vault write` to configure a repository sync destination with an access token:
 
   ```shell-session
   $ vault write sys/sync/destinations/gh/DESTINATION_NAME \
       access_token="GITHUB_ACCESS_TOKEN"                  \
+      secrets_location="GITHUB_SECRETS_LOCATION"          \
       repository_owner="GITHUB_OWNER_NAME"                \
       repository_name="GITHUB_REPO_NAME"
   ```
@@ -43,23 +46,27 @@ Use `vault write` to configure a repository sync destination with an access toke
   ```
   $ vault write sys/sync/destinations/gh/hcrepo-sandbox       \
       access_token="github_pat_11ABC000000000000000000000DEF" \
+      secrets_location="repository"                           \
       repository_owner="hashicorp"                            \
       repository_name="hcrepo"
 
   Key                   Value
   ---                   -----
-  connection_details    map[access_token:***** repository_owner:hashicorp repository_name:hcrepo]
+  connection_details    map[access_token:***** secrets_location:repository repository_owner:hashicorp repository_name:hcrepo]
   name                  hcrepo-sandbox
   type                  gh
   ```
 
   </CodeBlockConfig>
 
-  Use `vault write` to configure an environment sync destination:
+### Environments
+
+Use `vault write` to configure an environment sync destination:
 
   ```shell-session
   $ vault write sys/sync/destinations/gh/DESTINATION_NAME \
       access_token="GITHUB_ACCESS_TOKEN"                  \
+      secrets_location="GITHUB_SECRETS_LOCATION"          \
       repository_owner="GITHUB_OWNER_NAME"                \
       repository_name="GITHUB_REPO_NAME"                  \
       environment_name="GITHUB_ENVIRONMENT_NAME"
@@ -72,13 +79,71 @@ Use `vault write` to configure a repository sync destination with an access toke
   ```
   $ vault write sys/sync/destinations/gh/hcrepo-sandbox       \
       access_token="github_pat_11ABC000000000000000000000DEF" \
+      secrets_location="repository"                           \
       repository_owner="hashicorp"                            \
       repository_name="hcrepo"                                \
       environment_name="sandbox"
 
   Key                   Value
   ---                   -----
-  connection_details    map[access_token:***** environment_name:sandbox repository_owner:hashicorp repository_name:hcrepo]
+  connection_details    map[access_token:***** secrets_location:repository environment_name:sandbox repository_owner:hashicorp repository_name:hcrepo]
+  name                  hcrepo-sandbox
+  type                  gh
+  ```
+
+  </CodeBlockConfig>
+
+### Organizations
+
+@include 'alerts/beta.mdx'
+
+
+Beta limitations:
+
+- You cannot update visibility (`organization_visibility`) after creating a
+  secrets sync destination.
+- You cannot update the list of repositories with access to synced secrets
+  (`selected_repository_names`) after creating a secrets sync destination.
+
+Sync secrets to GitHub organization to share those secrets across repositories 
+in the organizations. You choose to make secrets global to the organization,
+limited to private/internal repos, or limited to specifically named repositories.
+
+Refer to the [Secrets sync API docs](/vault/docs/sync/github#api) for detailed
+configuration information.
+
+<Warning>
+
+  Organization secrets are
+  [not visible to private repositories for GitHub Free accounts](https://docs.github.com/en/actions/security-for-github-actions/security-guides/using-secrets-in-github-actions#creating-secrets-for-an-organization).
+
+</Warning>
+
+Use `vault write` to configure an organization sync destination:
+
+  ```shell-session
+  $ vault write sys/sync/destinations/gh/DESTINATION_NAME \
+      access_token="GITHUB_ACCESS_TOKEN"                  \
+      secrets_location="GITHUB_SECRETS_LOCATION"          \
+      organization_name="ORGANIZATION_NAME"               \
+      organization_visibility="ORGANIZATION_VISIBILITY"
+  ```
+
+  For example:
+
+  <CodeBlockConfig hideClipboard>
+
+  ```
+  $ vault write sys/sync/destinations/gh/hcrepo-sandbox       \
+      access_token="github_pat_11ABC000000000000000000000DEF" \
+      secrets_location="organization"                         \
+      organization_name="hashicorp"                           \
+      organization_visibility="selected"                      \
+      selected_repository_names="hcrepo-1,hcrepo-2"
+
+  Key                   Value
+  ---                   -----
+  connection_details    map[access_token:***** secrets_location:organization organization_name:hashicorp organization_visibility:all selected_repository_names:[hcrepo-1 hcrepo-2]]
   name                  hcrepo-sandbox
   type                  gh
   ```
@@ -162,15 +227,17 @@ or the association in Vault will delete the secret in GitHub as well.
 
 <Note>
 
-GitHub only supports single-value secrets, and Vault syncs secrets differently
-depending on whether you have configured
+Vault syncs secrets differently depending on whether you have configured 
 `secret-key` or `secret-path` [granularity](/vault/docs/sync#granularity):
 
 - `secret-key` granularity splits KVv2 secrets from Vault into key-value pairs
-  and stores the pairs as distinct entries in GitHub secrets. For example,
+  and stores the pairs as distinct entries in GitHub. For example,
   `secrets.key1="val1"` and `secrets.key2="val2"`.
+
 - `secret-path` granularity stores secrets as a single JSON string that contains
-  all of the associated key-value pairs. For example, `{"key1":"val1", "key2":"val2"}`.
+  all the associated key-value pairs. For example, `{"key1":"val1", "key2":"val2"}`.
+
+Since GitHub limits secrets to single-value secrets, the sync granularity defaults to `secret-key`.
 
 </Note>
 
