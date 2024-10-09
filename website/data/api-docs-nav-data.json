@@ -395,6 +395,15 @@
         "path": "system"
       },
       {
+        "title": "<code>/sys/activation-flags</code>",
+        "path": "system/activation-flags",
+        "badge": {
+          "text": "ENT",
+          "type": "outlined",
+          "color": "neutral"
+        }
+      },
+      {
         "title": "<code>/sys/audit</code>",
         "path": "system/audit"
       },

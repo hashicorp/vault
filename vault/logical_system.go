@@ -5642,7 +5642,16 @@ func (c *Core) GetSealBackendStatus(ctx context.Context) (*SealBackendStatusResp
 	if err != nil {
 		return nil, fmt.Errorf("could not list partially seal wrapped values: %w", err)
 	}
-	genInfo := c.seal.GetAccess().GetSealGenerationInfo()
+	// When multi-seal is enabled, use the stored seal generation information. Note that the in-memory
+	// value may not be up-to-date on non-active nodes.
+	genInfo, err := PhysicalSealGenInfo(ctx, c.physical)
+	if err != nil {
+		return nil, fmt.Errorf("could not read seal generation information: %w", err)
+	}
+	if genInfo == nil {
+		// Multi-seal is not enabled, use the in-memory value.
+		genInfo = c.seal.GetAccess().GetSealGenerationInfo()
+	}
 	r.FullyWrapped = genInfo.IsRewrapped() && len(pps) == 0
 	return &r, nil
 }
