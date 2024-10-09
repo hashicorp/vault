@@ -146,15 +146,6 @@ globals {
       protocol    = "udp"
     },
   }
-  sample_attributes = {
-    aws_region              = ["us-east-1", "us-west-2"]
-    distro_version_amzn     = ["2023"]
-    distro_version_leap     = ["15.6"]
-    distro_version_rhel     = ["8.10", "9.4"]
-    distro_version_sles     = ["15.6"]
-    distro_version_ubuntu   = ["20.04", "24.04"]
-    upgrade_initial_version = global.upgrade_initial_versions
-  }
   seals = ["awskms", "pkcs11", "shamir"]
   tags = merge({
     "Project Name" : var.project_name

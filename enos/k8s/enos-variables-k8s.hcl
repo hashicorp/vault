@@ -34,9 +34,11 @@ variable "vault_build_date" {
 variable "vault_revision" {
   type        = string
   description = "The expected vault revision"
+  default     = "ce"
 }
 
 variable "vault_version" {
   description = "The expected vault version"
   type        = string
+  default     = "1.18.0"
 }

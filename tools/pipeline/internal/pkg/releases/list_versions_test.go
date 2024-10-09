@@ -26,7 +26,7 @@ var testAllVersions = []string{
 	"1.18.0-rc1",
 }
 
-func Test_VersionBetweenReq_Run(t *testing.T) {
+func Test_VersionReq_Run(t *testing.T) {
 	t.Parallel()
 
 	for desc, test := range map[string]struct {
@@ -36,13 +36,15 @@ func Test_VersionBetweenReq_Run(t *testing.T) {
 	}{
 		"no lister": {
 			req: &ListVersionsReq{
-				UpperBound: "1.18.0",
-				LowerBound: "1.15.0",
+				LicenseClass: string(LicenseClassCE),
+				UpperBound:   "1.18.0",
+				LowerBound:   "1.15.0",
 			},
 			fail: true,
 		},
 		"all": {
 			req: &ListVersionsReq{
+				LicenseClass:  string(LicenseClassCE),
 				UpperBound:    "1.18.0",
 				LowerBound:    "1.15.0",
 				VersionLister: NewMockClient(testAPIVersions),
@@ -51,6 +53,7 @@ func Test_VersionBetweenReq_Run(t *testing.T) {
 		},
 		"skips": {
 			req: &ListVersionsReq{
+				LicenseClass:  string(LicenseClassCE),
 				UpperBound:    "1.18.0",
 				LowerBound:    "1.15.0",
 				Skip:          []string{"1.16.0", "1.17.1"},
@@ -68,6 +71,7 @@ func Test_VersionBetweenReq_Run(t *testing.T) {
 		},
 		"correct range upper and lower bound": {
 			req: &ListVersionsReq{
+				LicenseClass:  string(LicenseClassCE),
 				UpperBound:    "1.17.5",
 				LowerBound:    "1.16.4",
 				VersionLister: NewMockClient(testAPIVersions),
@@ -90,6 +94,7 @@ func Test_VersionBetweenReq_Run(t *testing.T) {
 		},
 		"correct range nminus 1": {
 			req: &ListVersionsReq{
+				LicenseClass:  string(LicenseClassCE),
 				UpperBound:    "1.18.0",
 				NMinus:        1,
 				VersionLister: NewMockClient(testAPIVersions),
@@ -112,6 +117,7 @@ func Test_VersionBetweenReq_Run(t *testing.T) {
 		},
 		"correct range nminus 2": {
 			req: &ListVersionsReq{
+				LicenseClass:  string(LicenseClassCE),
 				UpperBound:    "1.18.0",
 				NMinus:        2,
 				VersionLister: NewMockClient(testAPIVersions),
@@ -120,6 +126,7 @@ func Test_VersionBetweenReq_Run(t *testing.T) {
 		},
 		"lower and nminus": {
 			req: &ListVersionsReq{
+				LicenseClass:  string(LicenseClassEnt),
 				UpperBound:    "1.18.0",
 				LowerBound:    "1.15.0",
 				NMinus:        2,
@@ -130,6 +137,7 @@ func Test_VersionBetweenReq_Run(t *testing.T) {
 		},
 		"invalid upper": {
 			req: &ListVersionsReq{
+				LicenseClass:  string(LicenseClassEnt),
 				UpperBound:    "1_18_0",
 				LowerBound:    "1.15.0",
 				VersionLister: NewMockClient(testAPIVersions),
@@ -139,6 +147,7 @@ func Test_VersionBetweenReq_Run(t *testing.T) {
 		},
 		"invalid lower": {
 			req: &ListVersionsReq{
+				LicenseClass:  string(LicenseClassEnt),
 				UpperBound:    "1.18.0",
 				LowerBound:    "1_15_0",
 				VersionLister: NewMockClient(testAPIVersions),

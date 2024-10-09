@@ -6,10 +6,12 @@ package releases
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"sort"
 	"time"
 
 	"github.com/Masterminds/semver"
+	slogctx "github.com/veqryn/slog-context"
 
 	"github.com/hashicorp/releases-api/pkg/api"
 	"github.com/hashicorp/releases-api/pkg/client"
@@ -47,6 +49,13 @@ func NewClient() *Client {
 
 // GetRelease takes a context, product, edition, and version and returns the relase information.
 func (c *Client) GetRelease(ctx context.Context, product string, edition LicenseClass, version string) (*models.Release, error) {
+	ctx = slogctx.Append(ctx,
+		slog.String("product", product),
+		slog.String("edition", string(edition)),
+		slog.String("version", version),
+	)
+	slog.Default().DebugContext(ctx, "getting release")
+
 	rc := client.New(c.Addr, "", api.V1MimeType)
 	lc := string(edition)
 	release, _, err := rc.GetRelease(&client.GetReleaseParams{
@@ -54,6 +63,8 @@ func (c *Client) GetRelease(ctx context.Context, product string, edition License
 		Product:      product,
 		LicenseClass: &lc,
 	})
+
+	slog.Default().DebugContext(ctx, "got release", "release", release, "error", err)
 
 	return release, err
 }
@@ -66,6 +77,15 @@ func (c *Client) ListVersions(ctx context.Context, product string, edition Licen
 		return nil, ctx.Err()
 	default:
 	}
+
+	ctx = slogctx.Append(ctx,
+		slog.String("product", product),
+		slog.String("edition", string(edition)),
+		slog.String("ceil", ceil.String()),
+		slog.String("floor", floor.String()),
+		slog.String("addr", c.Addr),
+	)
+	slog.Default().DebugContext(ctx, "listing release versions")
 
 	// The releases API lists releases by their upload order starting by most recent, not sequentially
 	// by version. It also uses upload timestamps as a method of pagination. Since version upload
@@ -99,6 +119,7 @@ func (c *Client) ListVersions(ctx context.Context, product string, edition Licen
 		default:
 		}
 
+		slog.Default().DebugContext(ctx, "listing releases", "after", after, "limit", 20)
 		rc := client.New(c.Addr, "", api.V1MimeType)
 		releases, _, err := rc.ListReleases(&client.ListReleasesParams{
 			Product:        product,
@@ -112,7 +133,7 @@ func (c *Client) ListVersions(ctx context.Context, product string, edition Licen
 
 		// We've returned all that we can return
 		if len(releases) < 1 {
-			return sortVersions(versions)
+			break
 		}
 
 		// Select any release verions that are within our desired range
@@ -127,9 +148,14 @@ func (c *Client) ListVersions(ctx context.Context, product string, edition Licen
 
 		// Short circuit if we've hit our time floor.
 		if timeFloor.After(after) {
-			return sortVersions(versions)
+			break
 		}
 	}
+
+	versions, err = sortVersions(versions)
+	slog.Default().DebugContext(ctx, "found release versions", "versions", versions, "error", err)
+
+	return versions, err
 }
 
 func sortVersions(in []string) ([]string, error) {

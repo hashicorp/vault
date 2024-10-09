@@ -7,12 +7,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"slices"
 
 	"github.com/Masterminds/semver"
+	slogctx "github.com/veqryn/slog-context"
 
 	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/hashicorp/hcl/v2/hclwrite"
@@ -26,9 +27,9 @@ type EnosDynamicConfigReq struct {
 	VaultVersion string
 	EnosDir      string
 	FileName     string
-	Logger       *log.Logger
 	Skip         []string
 	NMinus       uint
+	releases.VersionLister
 }
 
 // EnosDynamicConfigRes is a response from a request to generate dynamic enos configuration
@@ -53,27 +54,37 @@ type SampleAttrs struct {
 }
 
 // Validate validates the request parameters
-func (e *EnosDynamicConfigReq) Validate() error {
+func (e *EnosDynamicConfigReq) Validate(ctx context.Context) error {
 	if e == nil {
 		return errors.New("enos dynamic config req: validate: uninitialized")
 	}
 
+	slog.Default().DebugContext(ctx, "validating enos dynamic config request")
+
+	if e.FileName == "" {
+		return errors.New("no destination file name set")
+	}
+
+	if e.VersionLister == nil {
+		return errors.New("no version lister set")
+	}
+
 	if !slices.Contains(metadata.Editions, e.VaultEdition) {
-		return fmt.Errorf("enos dynamic config req: validate: unknown edition: %s", e.VaultEdition)
+		return fmt.Errorf("unknown edition: %s", e.VaultEdition)
 	}
 
 	_, err := semver.NewVersion(e.VaultVersion)
 	if err != nil {
-		return fmt.Errorf("enos dynamic config req: validate: invalid version: %s: %w", e.VaultVersion, err)
+		return fmt.Errorf("invalid version: %s: %w", e.VaultVersion, err)
 	}
 
 	s, err := os.Stat(e.EnosDir)
 	if err != nil {
-		return fmt.Errorf("enos dynamic config req: validate: invalid enos dir: %s: %w", e.EnosDir, err)
+		return fmt.Errorf("invalid enos dir: %s: %w", e.EnosDir, err)
 	}
 
 	if !s.IsDir() {
-		return fmt.Errorf("enos dynamic config req: validate: invalid enos dir: %s is not a directory", e.EnosDir)
+		return fmt.Errorf("invalid enos dir: %s is not a directory", e.EnosDir)
 	}
 
 	return nil
@@ -81,7 +92,21 @@ func (e *EnosDynamicConfigReq) Validate() error {
 
 // Run runs the dynamic configuration request
 func (e *EnosDynamicConfigReq) Run(ctx context.Context) (*EnosDynamicConfigRes, error) {
-	err := e.Validate()
+	if e == nil {
+		return nil, fmt.Errorf("enos-dynamic-config-req uninitialized")
+	}
+
+	ctx = slogctx.Append(ctx,
+		slog.String("vault-edition", e.VaultEdition),
+		slog.String("vault-version", e.VaultVersion),
+		slog.String("file-name", e.FileName),
+		slog.String("dir", e.EnosDir),
+		slog.Uint64("n-minnux", uint64(e.NMinus)),
+		"skip", e.Skip,
+	)
+	slog.Default().DebugContext(ctx, "running enos dynamic config request")
+
+	err := e.Validate(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -116,16 +141,14 @@ func (e *EnosDynamicConfigReq) getSampleAttrs(ctx context.Context) (*SampleAttrs
 		DistroVersionUbuntu: []string{"20.04", "24.04"},
 	}
 
-	// Dynamically create our initial upgrade version list. We'll find all released versions between
-	// our N-3 -> Current version, minus any explicitly skipped. Since CE and Ent do not share the
-	// same version lineage now we'll also have to figure that in as well.
-
-	// Add upgrade attributes
+	// Create our initial upgrade version list. We'll find all released versions between N-3 -> Current
+	// version, minus any explicitly skipped versions that have been set. Since CE and Ent do not share
+	// the same version lineage now we'll also have to figure that in as well.
 	versionReq := &releases.ListVersionsReq{
-		VersionLister: releases.NewClient(),
+		VersionLister: e.VersionLister,
 		LicenseClass:  e.VaultEdition,
 		UpperBound:    e.VaultVersion,
-		NMinus:        3,
+		NMinus:        e.NMinus,
 		Skip:          e.Skip,
 	}
 
@@ -146,21 +169,29 @@ func (e *EnosDynamicConfigReq) writeFile(ctx context.Context, res *EnosDynamicCo
 	default:
 	}
 
+	slog.Default().DebugContext(ctx, "writing enos dynamic config request")
+
 	// Make sure our path is valid
 	path, err := filepath.Abs(filepath.Join(e.EnosDir, e.FileName))
 	if err != nil {
-		return err
+		return fmt.Errorf("expanding path dynamic config request path: %w", err)
 	}
 
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o644)
 	if err != nil {
-		return err
+		return fmt.Errorf("opening dynamic config request destination file: %w", err)
 	}
 	defer f.Close()
 
 	hf := hclwrite.NewEmptyFile()
 	gohcl.EncodeIntoBody(res, hf.Body())
-	_, err = f.Write(hf.Bytes())
+	bytes := hclwrite.Format(hf.Bytes())
+
+	slog.Default().InfoContext(ctx, "writing enos dynamic config request",
+		"path", path,
+		"hcl", string(bytes),
+	)
+	_, err = f.Write(bytes)
 
 	return err
 }

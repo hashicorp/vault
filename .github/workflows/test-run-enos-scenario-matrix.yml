@@ -52,7 +52,14 @@ jobs:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
         with:
           ref: ${{ inputs.vault-revision }}
+      - uses: ./.github/actions/set-up-go
+        with:
+          github-token: ${{ github.repository != 'hashicorp/vault-enterprise' && secrets.ELEVATED_GITHUB_TOKEN || '' }}
+          no-restore: true # Don't download vault's modules for pipeline
       - uses: hashicorp/action-setup-enos@v1
+        with:
+          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+      - uses: ./.github/actions/set-up-pipeline
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - id: metadata
@@ -65,14 +72,12 @@ jobs:
           fi
           if [[ "${{ inputs.vault-edition }}" == "ce" ]]; then
             vault_version="${{ inputs.vault-version }}"
-            vault_gen_edition="ce"
           else
             # shellcheck disable=2001
             vault_version="$(sed 's/+ent/+${{ inputs.vault-edition }}/g' <<< '${{ inputs.vault-version }}')"
-            vault_gen_edition="enterprise"
           fi
           # Make sure that any branch specific dynamic config has been generated
-          pushd enos &> /dev/null && make gen-dynamic-globals edition=$vault_gen_edition && popd &> /dev/null
+          pipeline generate enos-dynamic-config -d ./enos -f enos-dynamic-config.hcl -v ${{ inputs.vault-version }} -e ${{ inputs.vault-edition }} -n 3 --log debug
           # Take a sample observation
           sample_seed=$(date +%s)
           sample=$(enos scenario sample observe "${{ inputs.sample-name }}" --chdir ./enos --min 1 --max "${{ inputs.sample-max }}" --seed "${sample_seed}" --format json | jq -c ".observation.elements")
