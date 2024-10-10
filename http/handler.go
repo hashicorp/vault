@@ -1417,7 +1417,13 @@ func respondOIDCPermissionDenied(w http.ResponseWriter) {
 	enc.Encode(oidcResponse)
 }
 
-// trimPath removes the /v1/ prefix and the namespace from the path
+// trimPath removes the /v1/ prefix (if present) and the namespace from the path
 func trimPath(ns *namespace.Namespace, path string) string {
-	return ns.TrimmedPath(path[len("/v1/"):])
+	const v1Prefix = "/v1/"
+
+	if strings.HasPrefix(path, v1Prefix) {
+		return ns.TrimmedPath(path[len(v1Prefix):])
+	}
+
+	return ns.TrimmedPath(path)
 }
