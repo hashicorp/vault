@@ -314,6 +314,10 @@ tools-external:
 tools-internal:
 	@$(CURDIR)/tools/tools.sh install-internal
 
+.PHONY: tools-pipeline
+tools-pipeline:
+	@$(CURDIR)/tools/tools.sh install-pipeline
+
 mysql-database-plugin:
 	@CGO_ENABLED=0 $(GO_CMD) build -o bin/mysql-database-plugin ./plugins/database/mysql/mysql-database-plugin
 
@@ -368,10 +372,6 @@ ci-get-revision:
 ci-get-version-package:
 	@$(CURDIR)/scripts/ci-helper.sh version-package
 
-.PHONY: ci-install-external-tools
-ci-install-external-tools:
-	@$(CURDIR)/scripts/ci-helper.sh install-external-tools
-
 .PHONY: ci-prepare-ent-legal
 ci-prepare-ent-legal:
 	@$(CURDIR)/scripts/ci-helper.sh prepare-ent-legal
@@ -379,10 +379,6 @@ ci-prepare-ent-legal:
 .PHONY: ci-prepare-ce-legal
 ci-prepare-ce-legal:
 	@$(CURDIR)/scripts/ci-helper.sh prepare-ce-legal
-
-.PHONY: ci-update-external-tool-modules
-ci-update-external-tool-modules:
-	@$(CURDIR)/scripts/ci-helper.sh update-external-tool-modules
 
 .PHONY: ci-copywriteheaders
 ci-copywriteheaders:
