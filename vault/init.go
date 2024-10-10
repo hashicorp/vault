@@ -421,15 +421,15 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 		}
 	}
 
+	if err := c.seal.ClearInitializationFlag(ctx); err != nil {
+		c.logger.Error("Error clearing initialization flag", "error", err)
+		return nil, fmt.Errorf("error clearing initialization flag: %w", err)
+	}
+
 	// Prepare to re-seal
 	if err := c.preSeal(); err != nil {
 		c.logger.Error("pre-seal teardown failed", "error", err)
 		return nil, err
-	}
-
-	if err := c.seal.ClearInitializationFlag(ctx); err != nil {
-		c.logger.Error("Error clearing initialization flag", "error", err)
-		return nil, fmt.Errorf("error clearing initialization flag: %w", err)
 	}
 
 	if c.serviceRegistration != nil {
