@@ -8,6 +8,7 @@ import { service } from '@ember/service';
 import { withConfig } from 'core/decorators/fetch-secrets-engine-config';
 import { hash } from 'rsvp';
 
+import type StoreService from 'vault/vault/services/store';
 import type PaginationService from 'vault/services/pagination';
 import type SecretMountPath from 'vault/services/secret-mount-path';
 import type Transition from '@ember/routing/transition';
@@ -35,6 +36,7 @@ interface LdapRolesRouteParams {
 
 @withConfig('ldap/config')
 export default class LdapRolesRoute extends Route {
+  @service declare readonly store: StoreService;
   @service declare readonly pagination: PaginationService;
   @service declare readonly secretMountPath: SecretMountPath;
 

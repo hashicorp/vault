@@ -13,6 +13,7 @@ import { getCliMessage } from 'pki/routes/overview';
 export default class PkiCertificatesIndexRoute extends Route {
   @service pagination;
   @service secretMountPath;
+  @service store;
 
   queryParams = {
     page: {

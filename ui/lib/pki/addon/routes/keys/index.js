@@ -11,8 +11,9 @@ import { PKI_DEFAULT_EMPTY_STATE_MSG } from 'pki/routes/overview';
 
 @withConfig()
 export default class PkiKeysIndexRoute extends Route {
-  @service secretMountPath;
   @service pagination;
+  @service secretMountPath;
+  @service store;
 
   queryParams = {
     page: {
