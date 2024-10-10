@@ -46,6 +46,11 @@ const (
 	// a new generation which keeps track if a rewrap of all CSPs and seal wrapped
 	// values has completed .
 	SealGenInfoPath = "core/seal-gen-info"
+
+	// SealInitializationFlagPath is the path used to store an entry that signals
+	// that Vault initialization is still in progress. It is used to prevent nodes
+	// from becoming active when that is the case.
+	SealInitializationFlagPath = "core/seal-initialization-flag"
 )
 
 type Seal interface {
@@ -75,6 +80,9 @@ type Seal interface {
 	VerifyRecoveryKey(context.Context, []byte) error
 	GetAccess() seal.Access
 	Healthy() bool
+	SetInitializationFlag(context.Context) error
+	ClearInitializationFlag(context.Context) error
+	IsInitializationFlagSet(context.Context) (bool, error)
 }
 
 type defaultSeal struct {
@@ -146,6 +154,39 @@ func (d *defaultSeal) SetStoredKeys(ctx context.Context, keys [][]byte) error {
 		return fmt.Errorf("stored keys are not supported")
 	}
 	return writeStoredKeys(ctx, d.core.physical, d.access, keys)
+}
+
+func (d *defaultSeal) SetInitializationFlag(ctx context.Context) error {
+	return writeInitializationFlag(ctx, d.core.physical, true)
+}
+
+func (d *defaultSeal) ClearInitializationFlag(ctx context.Context) error {
+	return writeInitializationFlag(ctx, d.core.physical, false)
+}
+
+func writeInitializationFlag(ctx context.Context, storage physical.Backend, set bool) error {
+	if set {
+		pe := &physical.Entry{
+			Key:   SealInitializationFlagPath,
+			Value: []byte("initialization in progress"),
+		}
+		return storage.Put(ctx, pe)
+	}
+
+	return storage.Delete(ctx, SealInitializationFlagPath)
+}
+
+func (d *defaultSeal) IsInitializationFlagSet(ctx context.Context) (bool, error) {
+	return isInitializationFlagSet(ctx, d.core.physical)
+}
+
+func isInitializationFlagSet(ctx context.Context, storage physical.Backend) (bool, error) {
+	pe, err := storage.Get(ctx, SealInitializationFlagPath)
+	if err != nil {
+		return false, err
+	}
+
+	return pe != nil, nil
 }
 
 func (d *defaultSeal) LegacySeal() bool {
