@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/netip"
 	"sort"
 	"strings"
 	"time"
@@ -960,9 +961,22 @@ func parseOrderIdentifiers(data map[string]interface{}) ([]*ACMEIdentifier, erro
 		switch typeStr {
 		case string(ACMEIPIdentifier):
 			identifier.Type = ACMEIPIdentifier
-			ip := net.ParseIP(valueStr)
-			if ip == nil {
+			ip, err := netip.ParseAddr(valueStr)
+			if err != nil {
 				return nil, fmt.Errorf("value argument (%s) failed validation: failed parsing as IP: %w", valueStr, ErrMalformed)
+			}
+			if ip.Is6() {
+				if len(ip.Zone()) > 0 {
+					// If we are given an identifier with a local zone that doesn't make much sense
+					// as zone's are specific to the sender not us. For now disallow, perhaps in the
+					// future we should simply drop the zone?
+					return nil, fmt.Errorf("value argument (%s) failed validation: IPv6 identifiers with zone information are not allowed: %w", valueStr, ErrMalformed)
+				}
+
+				// Expand the IP to it's full form, but do not attempt to perform any sort of conversion on
+				// the address such as extracting out IPv4 addresses contained within IPv6.
+				identifier.IsV6IP = true
+				identifier.Value = ip.StringExpanded()
 			}
 		case string(ACMEDNSIdentifier):
 			identifier.Type = ACMEDNSIdentifier
@@ -1008,6 +1022,10 @@ func parseOrderIdentifiers(data map[string]interface{}) ([]*ACMEIdentifier, erro
 		}
 
 		identifiers = append(identifiers, identifier)
+	}
+
+	if len(identifiers) == 0 {
+		return nil, fmt.Errorf("no parsed identifiers were found: %w", ErrMalformed)
 	}
 
 	return identifiers, nil

@@ -435,7 +435,13 @@ func (ace *ACMEChallengeEngine) _verifyChallenge(sc *storageContext, id string, 
 			return ace._verifyChallengeCleanup(sc, err, id)
 		}
 
-		valid, err = ValidateHTTP01Challenge(authz.Identifier.Value, cv.Token, cv.Thumbprint, config)
+		domain := authz.Identifier.Value
+		if authz.Identifier.Type == ACMEIPIdentifier && authz.Identifier.IsV6IP {
+			// IPv6 addresses need to be surrounded by [] within URLs
+			domain = fmt.Sprintf("[%s]", authz.Identifier.Value)
+		}
+
+		valid, err = ValidateHTTP01Challenge(domain, cv.Token, cv.Thumbprint, config)
 		if err != nil {
 			err = fmt.Errorf("%w: error validating http-01 challenge %v: %v; %v", ErrIncorrectResponse, id, err, ChallengeAttemptFailedMsg)
 			return ace._verifyChallengeRetry(sc, cv, authzPath, authz, challenge, err, id)
