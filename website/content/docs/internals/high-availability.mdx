@@ -49,10 +49,11 @@ network connectivity.
 
 # Becoming an active node
 
-The active node in an HA configuration is the node that holds an HA lock. When a node relinquishes active duty, either
-because it's unavailable or because an operator has invoked [`vault operator step-down`](/vault/docs/commands/operator/step-down),
-all the nodes in the cluster will attempt to grab the HA lock. Only one node will succeed and this node will become the new active
-node.
+Active nodes in an HA configuration holds an HA lock. When active nodes become
+unavailable or step down because an operator invokes 
+[`vault operator step-down`](/vault/docs/commands/operator/step-down), all the 
+nodes in the cluster attempt to grab the HA lock. The first node that succeeds 
+in grabbing and holding the lock becomes the new active node.
 
 The HA lock competition process depends on the HA storage backend of the cluster.
 For example, with raft integrated storage, Vault always gives the HA lock to 
