@@ -89,9 +89,12 @@ _All of the commands below assume you're in the `ui/` directory._
 [Mirage](https://miragejs.com/docs/getting-started/introduction/) can be helpful for mocking backend endpoints.
 Look in [mirage/handlers](mirage/handlers/) for existing mocked backends.
 
-Run yarn with mirage: `export MIRAGE_DEV_HANDLER=<handler> yarn start`
+Run yarn with mirage: `export MIRAGE_DEV_HANDLER=<handler> && yarn start`
 
 Where `handlername` is one of the options exported in [mirage/handlers/index](mirage/handlers/index.js)
+
+To stop using the handler, kill the yarn process (Ctrl+c) and then unset the environment variable.
+`unset MIRAGE_DEV_HANDLER`
 
 ## Building Vault UI into a Vault Binary
 
