@@ -228,6 +228,9 @@ BUG FIXES:
 ## 1.17.6
 ### September 25, 2024
 
+SECURITY:
+* secrets/ssh: require `valid_principals` to contain a value or `default_user` be set by default to guard against potentially insecure configurations. `allow_empty_principals` can be used for backwards compatibility [HCSEC-2024-20](https://discuss.hashicorp.com/t/hcsec-2024-20-vault-ssh-secrets-engine-configuration-did-not-restrict-valid-principals-by-default/70251)
+
 CHANGES:
 
 * core: Bump Go version to 1.22.7
@@ -602,6 +605,9 @@ BUG FIXES:
 ### September 25, 2024
 
 **Enterprise LTS:** Vault Enterprise 1.16 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
+
+SECURITY:
+* secrets/ssh: require `valid_principals` to contain a value or `default_user` be set by default to guard against potentially insecure configurations. `allow_empty_principals` can be used for backwards compatibility [HCSEC-2024-20](https://discuss.hashicorp.com/t/hcsec-2024-20-vault-ssh-secrets-engine-configuration-did-not-restrict-valid-principals-by-default/7025
 
 CHANGES:
 
@@ -1240,6 +1246,9 @@ BUG FIXES:
 
 ## 1.15.15 Enterprise
 ### September 25, 2024
+
+SECURITY:
+* secrets/ssh: require `valid_principals` to contain a value or `default_user` be set by default to guard against potentially insecure configurations. `allow_empty_principals` can be used for backwards compatibility [HCSEC-2024-20](https://discuss.hashicorp.com/t/hcsec-2024-20-vault-ssh-secrets-engine-configuration-did-not-restrict-valid-principals-by-default/7025
 
 CHANGES:
 
