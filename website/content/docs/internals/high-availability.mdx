@@ -81,10 +81,11 @@ new active node starts accepting connections from other nodes in the cluster, so
 standby nodes retry the connection every 5 seconds as a heartbeat, or whenever a
 new client request arrives that requires forwarding.
 
-Assuming that performance standbys are enabled, a standby node will attempt to promote itself to a performance standby
-after it has found a new active node. The standby will send a message to the active node and receive from the active
-node a certificate and key pair to use to receive replicated data from the active node. The node will then seal, perform
-setup tasks, and complete its post-unseal setup and then be ready to serve new client requests.
+With performance replication, standby nodes also promote themselves as
+performance standbys the active node updates. The standby requests a certificate 
+and key pair from the active node to receive replicated data. Once the standby 
+node seals, performs the necessary setup tasks, completes its post-unseal setup,
+it can server serve new client requests with data replicated from the active node.
 
 # Tutorial
 
