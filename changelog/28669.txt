@@ -1,0 +1,3 @@
+```release-note:bug
+core: Extend panic fix for help request URL paths without /v1/ prefix provided by [#14704](https://github.com/hashicorp/vault/pull/14704).
+```
