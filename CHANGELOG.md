@@ -5,6 +5,10 @@
 ## 1.18.0 
 ## October 9, 2024
 
+SECURITY:
+
+* secrets/identity: A privileged Vault operator with write permissions to the root namespace's identity endpoint could escalate their privileges to Vault's root policy (CVE-2024-9180) [HCSEC-2024-21](https://discuss.hashicorp.com/t/hcsec-2024-21-vault-operators-in-root-namespace-may-elevate-their-privileges/70565)
+
 CHANGES:
 
 * activity (enterprise): filter all fields in client count responses by the request namespace [[GH-27790](https://github.com/hashicorp/vault/pull/27790)]
@@ -211,6 +215,10 @@ use versioned plugins. [[GH-27881](https://github.com/hashicorp/vault/pull/27881
 
 ## 1.17.7 Enterprise
 ### October 09, 2024
+
+SECURITY:
+
+* secrets/identity: A privileged Vault operator with write permissions to the root namespace's identity endpoint could escalate their privileges to Vault's root policy (CVE-2024-9180) [HCSEC-2024-21](https://discuss.hashicorp.com/t/hcsec-2024-21-vault-operators-in-root-namespace-may-elevate-their-privileges/70565)
 
 IMPROVEMENTS:
 
@@ -588,6 +596,10 @@ autopilot to fail to discover new server versions and so not trigger an upgrade.
 ### October 09, 2024
 
 **Enterprise LTS:** Vault Enterprise 1.16 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
+
+SECURITY:
+
+* secrets/identity: A privileged Vault operator with write permissions to the root namespace's identity endpoint could escalate their privileges to Vault's root policy (CVE-2024-9180) [HCSEC-2024-21](https://discuss.hashicorp.com/t/hcsec-2024-21-vault-operators-in-root-namespace-may-elevate-their-privileges/70565)
 
 IMPROVEMENTS:
 
@@ -1234,6 +1246,10 @@ leading to failure to complete merkle sync without a full re-index. [[GH-23013](
 
 ## 1.15.16 Enterprise
 ### October 09, 2024
+
+SECURITY:
+
+* secrets/identity: A privileged Vault operator with write permissions to the root namespace's identity endpoint could escalate their privileges to Vault's root policy (CVE-2024-9180) [HCSEC-2024-21](https://discuss.hashicorp.com/t/hcsec-2024-21-vault-operators-in-root-namespace-may-elevate-their-privileges/70565)
 
 IMPROVEMENTS:
 
