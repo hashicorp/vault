@@ -9,18 +9,19 @@ description: >-
 
 # Configure Vault with ADFS for SAML
 
-<EnterpriseAlert />
+@include 'alerts/enterprise-and-hcp.mdc'
 
 Configure your Vault instance to work with Active Directory Federation Services
 (ADFS) and use ADFS accounts with SAML for Vault login.
 
 ## Before you start
 
-- You must have Vault Enterprise or HCP Vault v1.15.5+**.
-- You must be running ADFS on Windows Server**.
-- You must know your Vault admin token**. If you do not have a valid admin
-   token, you can generate a new token in the Vault UI or with the
-   [Vault CLI](/vault/docs/commands/token/create).
+- **You must have Vault Enterprise or HCP Vault v1.15.5+**.
+- **You must be running ADFS on Windows Server**.
+- **You must have a [SAML plugin](/vault/docs/auth/saml) enabled**.
+- **You must have a Vault admin token**. If you do not have a valid admin
+   token, you can generate a new token in the Vault GUI or using
+   [`vault token create`](/vault/docs/commands/token/create) with the Vault CLI.
 
 ## Step 1: Enable the SAML authN method for Vault
 
@@ -28,75 +29,41 @@ Configure your Vault instance to work with Active Directory Federation Services
 
 <Tab heading="Vault CLI">
 
-1. Save your Vault instance URL to the `VAULT_ADDR` environment variable.
-
-   ```shell-session
-   $ export VAULT_ADDR="<URL_FOR_YOUR_VAULT_INSTALLATION>"
-   ```
-
-   Example:
-
-   <CodeBlockConfig hideClipboard>
+1. Set the `VAULT_ADDR` environment variable to your Vault instance URL. For
+   example:
 
    ```shell-session
    $ export VAULT_ADDR="https://myvault.example.com:8200"
    ```
 
-   </CodeBlockConfig>
-
-1. Save your Vault instance URL to the `VAULT_TOKEN` environment variable.
-
-   ```shell-session
-   $ export VAULT_TOKEN="<YOUR_VAULT_ACCESS_TOKEN>"
-   ```
-
-   Example:
-
-   <CodeBlockConfig hideClipboard>
+1. Set the `VAULT_TOKEN` environment variable with your admin token:
 
    ```shell-session
    $ export VAULT_TOKEN="XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
    ```
 
-   </CodeBlockConfig>
-
-1. **If you use Vault Enterprise or Vault HCP**, set the namespace where you
-   have the SAML plugin mounted to the `VAULT_NAMESPACE` environment variable.
+1. Enable the SAML plugin. Use the `-namespace` flag to enable the plugin under
+   a specific namespace. For example:
 
    ```shell-session
-   $ export VAULT_NAMESPACE="<SAML_NAMESPACE>"
-   ```
-
-   Example:
-
-   <CodeBlockConfig hideClipboard>
-
-   ```shell-session
-   $ export VAULT_NAMESPACE="admin"
-   ```
-
-   </CodeBlockConfig>
-
-1. Enable the SAML authentication plugin.
-
-   ```shell-session
-   $ vault auth enable saml
+   $ vault --namespace=ns_admin auth enable saml
    ```
 
 </Tab>
-<Tab heading="Vault UI">
+
+<Tab heading="Vault GUI">
 
 1. Open the web UI for your Vault instance.
 
 1. Select **Access** from the left-hand menu.
 
-1. Right click **Enable new method** on the Access page.
+1. Right click **Enable new method** on the **Access** page.
 
 1. Select **SAML**.
 
 1. Click **Next**.
 
-1. Set the mount path for the SAML plugin.
+1. Set the mount path and namespace for the SAML plugin.
 
 1. Click **Enable Method**.
 
@@ -105,53 +72,54 @@ Configure your Vault instance to work with Active Directory Federation Services
 </Tab>
 </Tabs>
 
-## Step 2: Create a new relying party trusts in ADFS
-
-<Note title="Save the Relying party trust identifier">
-
-Make note of the **Relying party trust identifier** entered on your ADFS.
-You will need it to configure your SAML plugin for Vault.
-
-</Note>
+## Step 2: Create a new relying party trust in ADFS
 
 1. Open your Windows Server UI.
 
-1. Go to the Server Manager screen and click **Tools**.
+1. Go to the **Server Manager** screen.
 
-1. Select **AD FS Management**.
+1. Click **Tools** and select **AD FS Management**.
 
-1. Right-click on **Relying Party Trusts** and select **Add Relying Party Trust...**.
+1. Right-click **Relying Party Trusts** and select **Add Relying Party Trust...**.
 
-1. Follow the prompts to create a new party trust with the following:
+1. Follow the prompts to create a new party trust:
 
-   - Check **Claims aware** and Start
-   - Check **Enter data about relying party manually** and Next
-   - **Display name:** Vault and Next
-   - You don't need to add a certificate so you can click on Next
-   - Check **Enable support for the SAML 2.0 WebSSO protocol**
-   - Enter the callback endpoint of your Vault, for exemple: `https://myvault.example.com:8200/v1/auth/saml/callback`
-   - Example with Namespaces:
-
-   | Namespace path  | Callback Endpoint URL                                                 |
-   |-----------------|-----------------------------------------------------------------------|
-   | `admin/`        | `https://myvault.example.com:8200/v1/admin/auth/saml/callback`        |
-   | `org/security/` | `https://myvault.example.com:8200/v1/org/security/auth/saml/callback` |
-
-   - **Relying party trust identifier:** Create your own identifier, for example: MyVaultIdentifier
-   - Access control policy: select an existing policy or `Permit everyone`
-   - Review the information and click Next
-   - Check **Configure claims issuance policy for this application** and Close
+  1. Check **Claims aware** and select **Start**.
+  1. Check **Enter data about relying party manually** and select **Next**.
+  1. Set **Display name** to "Vault" and select **Next**.
+  1. Select **Next** without adding a certificate.
+  1. Check **Enable support for the SAML 2.0 WebSSO protocol**.
+  1. Enter the SAML callback endpoint of your Vault instance:
+      `https://<vault-address>/v1/<namespace/><mount-path>/auth/saml/callback`. For example,
+      if you mounted the plugin under the `ns_admin` namespace on the path
+      `org/security`, the callback endpoint URL would be
+      `https://myvault.example.com:8200/v1/ns_admin/auth/org/security/saml/callback`
+  1. Provide a one-word name for **Relying party trust identifier**. For example,
+     "MyVaultIdentifier". **You need the identifier to finish configuring the
+     SAML plugin**.
+  1. Select the desired policy (or `Permit everyone`) for the **Access control policy**.
+  1. Review the information and click **Next**.
+  1. Check **Configure claims issuance policy for this application** and click
+     **Close**.
 
 ## Step 3: Configure the claim issuance policy
 
-1. Right-click on your, just created, **Relying Party Trust** and select **Edit Claim Issuance Policy...**.
+1. Open your Windows Server UI.
 
-1. Click **Add Rule...** and follow the prompts to create a new Transform Claim Rule with the following informations.
+1. Go to the **Server Manager** screen.
 
-   - Select **Send LDAP Attributes as Claims**
-   - Rule name: `Vault SAML Claims`
-   - Attribute store: `Active Directory`
-   - Complete the array using the following informations:
+1. Click **Tools** and select **AD FS Management**.
+
+1. Right-click your new **Relying Party Trust** entry and select
+   **Edit Claim Issuance Policy...**.
+
+1. Click **Add Rule...** and follow the prompts to create a new **Transform
+   Claim Rule**:
+
+   1. Select **Send LDAP Attributes as Claims**.
+   1. Set **Rule name** to a meaningful string. For example, "Vault SAML Claims"
+   1. Set **Attribute store** to `Active Directory`.
+   1. Complete the settings array as follows:
 
    | LDAP attribute                     | Outgoing claim type           |
    |------------------------------------|-------------------------------|
@@ -159,63 +127,68 @@ You will need it to configure your SAML plugin for Vault.
    | `E-Mail-Addresses`                 | `E-Mail Address`              |
    | `Token-Groups - Unqualified Names` | `groups`                      |
 
-<Note>
 
-If you replace `groups` with `Group`, you will need to use `http://schemas.xmlsoap.org/claims/Group` instead of `groups` **in Step 6**.
+## Step 4: Modify the SAML signature in ADFS
 
-</Note>
+1. Open a PowerShell terminal on your Windows server.
 
-## Step 4: Modification du SAML Signature ADFS
-
-1. Open a PowerShell CLI.
-
-1. Set the SAML siganture to false.
+1. Set the SAML signature for your relying party trust identifier to `false`:
 
    ```powershell
-   $ Set-AdfsRelyingPartyTrust -TargetName "<NAME_OF_THE_IDENTIFIER>" -SignedSamlRequestsRequired $false
+   Set-AdfsRelyingPartyTrust `
+    -TargetName "<relying_party_trust_identifier>"
+    -SignedSamlRequestsRequired $false
    ```
 
-   Example:
+   For example: NOT SURE ABOUT THIS!!!!
+
+  <CodeBlockConfig hideClipboard>
 
    ```powershell
-   $ Set-AdfsRelyingPartyTrust -TargetName "Vault" -SignedSamlRequestsRequired $false
+   Set-AdfsRelyingPartyTrust `
+    -TargetName "MyVaultIdentifier"
+    -SignedSamlRequestsRequired $false
    ```
+  </CodeBlockConfig>
 
 ## Step 5: Configure the SAML plugin
 
 Use the client ID and shared secret for your ADFS application group to finish
-the configuration of the SAML plugin.
+the configuration of the SAML plugin with the Vault CLI:
 
-<Tabs>
-<Tab heading="Vault CLI">
+```shell-session
+$ vault write                           \
+  auth/saml/config                      \
+  default_role="<adfs_role_name>"       \
+  entity_id="<relying_party_trust_ID>"  \
+  acs_urls="<saml_callback_url>"        \
+  idp_metadata_url="<adfs_instance_url>/<federation_metadata_file>"
+```
 
-Use the `vault write` CLI command to save the configuration details for the SAML
-plugin where:
+For example:
 
-- `ADFS_URL` is the discovery URL for your ADFS instance. For example,
-  `https://adfs.example.com/`
-- `VAULT_ADDR` is the URL for your Vault instance. For example,
-  `https://myvault.example.com:8200`
-- `ADFS_ROLE` is the name of your role. For example, `adfs-default`.
-- `RELYING_PARTY_TRUST_IDENTIFIER` is the identifier you set in your ADFS, for example: MyVaultIdentifier
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault write                                                           \
+  auth/saml/config                                                      \
+  default_role="adfs-default"                                           \
+  entity_id="MyVaultIdentifier"                                         \
+  acs_urls="${VAULT_ADDR}/v1/ns_admin/auth/org/security/saml/callback"  \
+  idp_metadata_url="https://adfs.example.com/federationmetadata/2007-06/federationmetadata.xml"
+```
+
+</CodeBlockConfig>
+
+## Step 6: Create a default ADFS role in Vault
 
 <Note>
 
-If you have a `Namespace` do not forget it in your `acs_urls`, for example: `<VAULT_ADDR>/v1/<NAMESPACE>/auth/saml/callback`
+If you want to use `Group` for your token group setting instead of `groups`, you
+must use `http://schemas.xmlsoap.org/claims/Group` instead of `groups` **in Step 6**.
 
 </Note>
 
-```shell-session
-$ vault write auth/saml/config default_role="<ADFS_ROLE>" \
-idp_metadata_url="<ADFS_URL>/federationmetadata/2007-06/federationmetadata.xml" \
-entity_id="<RELYING_PARTY_TRUST_IDENTIFIER>" \
-acs_urls="<VAULT_ADDR>/v1/auth/saml/callback"
-```
-
-</Tab>
-</Tabs>
-
-## Step 6: Create a default ADFS role in Vault
 
 Use the `vault write` CLI command to create a default role for users authenticating with ADFS where:
 
