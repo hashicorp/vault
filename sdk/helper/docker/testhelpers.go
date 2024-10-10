@@ -23,6 +23,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/strslice"
@@ -400,7 +401,7 @@ func (d *Runner) Start(ctx context.Context, addSuffix, forceLocalAddr bool) (*St
 	}
 
 	// best-effort pull
-	var opts types.ImageCreateOptions
+	var opts image.CreateOptions
 	if d.RunOptions.AuthUsername != "" && d.RunOptions.AuthPassword != "" {
 		var buf bytes.Buffer
 		auth := map[string]string{
