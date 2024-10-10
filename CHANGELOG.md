@@ -63,7 +63,7 @@ session tags when generating temporary credentials using the AWS secrets
 engine. [[GH-27620](https://github.com/hashicorp/vault/pull/27620)]
 * **Adaptive Overload Protection (enterprise)**: Enables Adaptive Overload Protection
 for write requests as a GA feature (enabled by default) for Integrated Storage.
-* **Audit Entry Exclusion**: Audit devices support excluding fields from entries being written to them, with expression-based rules (powered by go-bexpr) to determine when the specific fields are excluded.
+* **Audit Entry Exclusion (enterprise)**: Audit devices support excluding fields from entries being written to them, with expression-based rules (powered by go-bexpr) to determine when the specific fields are excluded.
 * **Workload Identity Federation UI for AWS (enterprise)**: Add WIF fields to AWS secrets engine. [[GH-28148](https://github.com/hashicorp/vault/pull/28148)]
 * **KV v2 Patch/Subkey (enterprise)**: Adds GUI support to read the subkeys of a KV v2 secret and patch (partially update) secret data. [[GH-28212](https://github.com/hashicorp/vault/pull/28212)]
 * **Self-Managed Static Roles**: Self-Managed Static Roles are now supported for select SQL database engines (Postgres, Oracle). Requires Vault Enterprise. [[GH-28199](https://github.com/hashicorp/vault/pull/28199)]
