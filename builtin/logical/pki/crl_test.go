@@ -285,7 +285,7 @@ func crlEnableDisableTestForBackend(t *testing.T, b *backend, s logical.Storage,
 	}
 
 	serials := make(map[int]string)
-	for i := 0; i < 6; i++ {
+	for i := 0; i < 7; i++ {
 		resp, err := CBWrite(b, s, "issue/test", map[string]interface{}{
 			"common_name": "test.foobar.com",
 		})
@@ -323,11 +323,15 @@ func crlEnableDisableTestForBackend(t *testing.T, b *backend, s logical.Storage,
 		}
 	}
 
-	revoke := func(serialIndex int) {
+	revoke := func(serialIndex int, errorText ...string) {
 		_, err = CBWrite(b, s, "revoke", map[string]interface{}{
 			"serial_number": serials[serialIndex],
 		})
-		if err != nil {
+		if err != nil && len(errorText) == 1 {
+			if strings.Contains(err.Error(), errorText[0]) {
+				err = nil
+				return
+			}
 			t.Fatal(err)
 		}
 
@@ -377,6 +381,24 @@ func crlEnableDisableTestForBackend(t *testing.T, b *backend, s logical.Storage,
 
 	crlCreationTime2 := getParsedCrlFromBackend(t, b, s, "crl").TBSCertList.ThisUpdate
 	require.NotEqual(t, crlCreationTime1, crlCreationTime2)
+
+	// Set a limit, and test that it blocks building an over-large CRL
+	CBWrite(b, s, "config/crl", map[string]interface{}{
+		"max_crl_entries": 6,
+	})
+	revoke(6, "revocation list size (7) exceeds configured maximum (6)")
+	test(6)
+
+	_, err = CBRead(b, s, "crl/rotate")
+	require.Error(t, err)
+	require.True(t, strings.Contains(err.Error(), "revocation list size (7) exceeds configured maximum (6)"))
+
+	// Set unlimited, and try again
+	CBWrite(b, s, "config/crl", map[string]interface{}{
+		"max_crl_entries": -1,
+	})
+	_, err = CBRead(b, s, "crl/rotate")
+	require.NoError(t, err)
 }
 
 func TestBackend_Secondary_CRL_Rebuilding(t *testing.T) {
