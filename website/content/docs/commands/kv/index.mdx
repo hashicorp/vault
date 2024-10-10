@@ -26,6 +26,28 @@ for KV v2, because it is not actually the full API path to the secret
 mount flag syntax was introduced. Upgrade to at least Vault 1.11, or refer to previous versions of the docs 
 which only use the old syntax to refer to the mount path.
 
+## Mount flag syntax (KV)
+
+All `kv` commands can alternatively refer to the path to the KV secrets engine using a flag-based syntax like `$ vault kv get -mount=secret password`
+instead of `$ vault kv get secret/password`. The mount flag syntax was created to mitigate confusion caused by the fact that for KV v2 secrets,
+their full path (used in policies and raw API calls) actually contains a nested `/data/` element (e.g. `secret/data/password`) which can be easily overlooked when using
+the above KV v1-like syntax `secret/password`. To avoid this confusion, all KV-specific docs pages will use the `-mount` flag.
+
+## Exit codes
+
+The Vault CLI aims to be consistent and well-behaved unless documented
+otherwise.
+
+- Local errors such as incorrect flags, failed validations, or wrong numbers
+  of arguments return an exit code of 1.
+
+- Any remote errors such as API failures, bad TLS, or incorrect API parameters
+  return an exit status of 2
+
+Some commands override this default where it makes sense. These commands
+document this anomaly.
+
+
 ## Examples
 
 Create or update the key named "creds" in the KV version 2 enabled at "secret"

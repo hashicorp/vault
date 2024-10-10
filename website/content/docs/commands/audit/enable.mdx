@@ -1,47 +1,275 @@
 ---
 layout: docs
-page_title: audit enable - Command
-description: The "audit enable" command enables an audit device at a given path.
+page_title: "audit enable - Vault CLI"
+description: >-
+  Create and enable a new audit device to capture log data from Vault.
 ---
 
-# audit enable
+# `audit enable`
 
-The `audit enable` command enables an audit device at a given path. If an audit
-device already exists at the given path, an error is returned. Additional
-options for configuring the audit device are provided as `KEY=VALUE`. Each audit
-device declares its own set of configuration options.
+Enable a new audit device.
 
-Once an audit device is enabled, almost every request and response will be
-logged to the device.
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault audit enable [flags] <device-type> [options] [<config_argument=value>...]
+
+$ vault audit enable [-help | -h]
+```
+
+</CodeBlockConfig>
+
+## Description
+
+`audit enable` creates and enables an audit device at the given path or returns
+an error if an audit device already exists at the given path. The device
+configuration parameters depend on the audit device type.
+
+<Tip title="Related API endpoints">
+
+  EnableAuditDevice - [`POST:/sys/audit/{mount-path}`](/vault/api-docs/system/audit#enable-audit-device)
+
+</Tip>
+
+### Limitations and warnings 
+
+- None
+
+## Command arguments
+
+<a id="audit-device-type" /><br />
+
+**`device-type (enum : <required>)`**
+
+The audit device type to create.
+
+Enum     | Description
+-------- | -----------
+`file`   | Write log entries to a file on the Vault server.
+`socket` | Write log entries to an existing TCP, UDP, or UNIX socket.
+`syslog` | Write log entries using the existing system logging protocol.
+
+Each audit device type also has a set of configuration arguments:
+
+<Tabs>
+
+<Tab heading="File">
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault audit enable [flags] [options] file \
+    file_path=<path/to/log/file>            \
+    [mode=<file_permissions>]
+```
+
+</CodeBlockConfig>
+
+<a id="audit-file-file_path" /><br />
+
+**`file_path (string : <required>)`**
+
+Location on the audit log on the Vault server. Must be one of the following:
+
+Value                     | Description
+------------------------- | -----------
+Relative or absolute path | Write or append audit entries to the target file
+`stdout`                  | Streams audit data to `stdout` on the Vault server
+`discard`                 |  Discards audit output instead of writing to a device
+
+**Example**: `file_path='/logs/kv-audit.log'`
+
+<br />
+
+---
+
+<a id="audit-file-mode" /><br />
+
+**`mode (string : '0600')`**
+
+The `chmod`-style octal permissions for the audit file. Set `mode` to "0000" to
+prevent Vault from modifying the file mode. 
+
+**Example**: `mode='0755'`
+
+</Tab>
+
+<Tab heading="Socket">
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault audit enable [flags] [options] socket \
+    address=<server_address>                  \
+    socket_type=<protocol>                    \
+    write_timeout=<wait_time>
+```
+
+</CodeBlockConfig>
+
+<a id="audit-socket-address" /><br />
+
+**`address (string : '')`**
+
+Location of the socket as a server IP and port or a local path.
+
+**Example**: `address='/tmp/audit.sock'`
+
+<br />
+
+---
+
+<a id="audit-socket-socket_type" /><br />
+
+**`socket_type (string : 'tcp')`**
+
+Communication protocol expected by the socket. Vault can write to any
+[net.Dialer](https://pkg.go.dev/net#Dialer)-compatible socket. If a TCP socket
+stops responding, Vault may become unresponsive due to a
+[blocked audit device error](/vault/docs/audit#blocked-audit-devices).
+
+**Example**: `socket_type='udp'`
+
+<br />
+
+---
+
+<a id="audit-socket-write_timeout" /><br />
+
+**`write_timeout (string : '2s')`**
+
+Duration in seconds that Vault will wait for a write to complete over the
+socket. Setting `write_timeout` to `0` disables time outs and forces Vault to
+always wait until the write completes.
+
+**Example**: `write_timeout=0`
+
+</Tab>
+
+<Tab heading="Syslog">
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault audit enable [flags] [options] syslog \
+    facility=<process_entry_source>           \
+    tag=<program_entry_source>
+```
+
+</CodeBlockConfig>
+
+<a id="audit-syslog-facility" /><br />
+
+**`facility (string : 'AUTH')`**
+
+The process that generated the syslog entry (the syslog facility).
+
+**Example**: `facility='AUTO-AUTH'`
+
+<br />
+
+---
+
+<a id="audit-syslog-tag" /><br />
+
+**`tag (string : 'vault')`**
+
+The program that generated the syslog entry.
+
+**Example**: `tag='vault-agent'`
+
+</Tab>
+
+</Tabs>
+
+## Command options
+
+@include 'cli/audit/options/elide_list_responses.mdx'
+
+---
+
+@include 'cli/audit/options/exclude.mdx'
+
+---
+
+@include 'cli/audit/options/fallback.mdx'
+
+---
+
+@include 'cli/audit/options/filter.mdx'
+
+---
+
+@include 'cli/audit/options/format.mdx'
+
+---
+
+@include 'cli/audit/options/hmac_accessor.mdx'
+
+---
+
+@include 'cli/audit/options/log_raw.mdx'
+
+---
+
+@include 'cli/audit/options/prefix.mdx'
+
+
+## Command flags
+
+<a id="audit-flag-description" /><br />
+
+**`-description=<string: ''>`**
+
+A human-friendly string that explains the purpose of the audit device.
+
+**Example**: `-description='KV request auditing'`
+
+<br />
+
+---
+
+<a id="audit-flag-local" /><br />
+
+**`-local=<bool: false>`**
+
+Indicates that the audit device is local to the Vault server and ignored by
+replication.
+
+**Example**: `-local=true`
+
+<br />
+
+---
+
+<a id="audit-flag-path" /><br />
+
+**`-path=<string:'/<device_type>'`**
+
+The internal path where Vault will access the audit device. Audit device paths
+must be unique across all audit devices.
+
+**Example**: `-path="/audit/kv-file"`
+
+<br />
+
+## Standard flags
+
+@include 'cli/standard-settings/all-standard-flags-but-format.mdx'
 
 ## Examples
 
-Enable the audit device "file" enabled at "file/":
+Enable a `file` type audit device at the default path, `file/`:
 
 ```shell-session
 $ vault audit enable file file_path=/tmp/my-file.txt
 Success! Enabled the file audit device at: file/
 ```
 
-## Usage
+Enable a `file` type audit device at the path, `audit/file`:
 
-The following flags are available in addition to the [standard set of
-flags](/vault/docs/commands) included on all commands.
+```shell-session
+$ vault audit enable -path=audit/file file file_path=/tmp/my-file.txt
+Success! Enabled the file audit device at: audit/file/
+```
 
-- `-description` `(string: "")` - Human-friendly description for the purpose of
-  this audit device.
-
-- `-local` `(bool: false)` - Mark the audit device as a local-only device.
-  Local devices are not replicated or removed by replication.
-
-- `-path` `(string: "")` - Place where the audit device will be accessible. This
-  must be unique across all audit devices. This defaults to the "type" of the
-  audit device.
-
-All audit devices support the following common options which can be supplied after
-the flags documented above:
-
-@include 'audit-options-common.mdx'
-
-For device specific options, refer to the relevant audit device type under the [Audit Devices](/vault/docs/audit)
-overview.
