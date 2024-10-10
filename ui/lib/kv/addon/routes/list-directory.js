@@ -11,7 +11,7 @@ import { breadcrumbsForSecret } from 'kv/utils/kv-breadcrumbs';
 import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
 
 export default class KvSecretsListRoute extends Route {
-  @service store;
+  @service pagination;
   @service('app-router') router;
   @service secretMountPath;
 
@@ -25,7 +25,7 @@ export default class KvSecretsListRoute extends Route {
   };
 
   async fetchMetadata(backend, pathToSecret, params) {
-    return await this.store
+    return await this.pagination
       .lazyPaginatedQuery('kv/metadata', {
         backend,
         responsePath: 'data.keys',

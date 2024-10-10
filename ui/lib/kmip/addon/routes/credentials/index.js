@@ -8,7 +8,7 @@ import ListRoute from 'core/mixins/list-route';
 import { service } from '@ember/service';
 
 export default Route.extend(ListRoute, {
-  store: service(),
+  pagination: service(),
   secretMountPath: service(),
   credParams() {
     const { role_name: role, scope_name: scope } = this.paramsFor('credentials');
@@ -19,7 +19,7 @@ export default Route.extend(ListRoute, {
   },
   model(params) {
     const { role, scope } = this.credParams();
-    return this.store
+    return this.pagination
       .lazyPaginatedQuery('kmip/credential', {
         role,
         scope,

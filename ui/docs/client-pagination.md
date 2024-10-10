@@ -1,3 +1,5 @@
+<!-- TODO update this if we really change this -->
+
 # Client-side pagination
 
 Our custom extended `store` service allows us to paginate LIST responses while maintaining good performance, particularly when the LIST response includes tens of thousands of keys in the data response. It does this by caching the entire response, and then filtering the full response into the datastore for the client.
