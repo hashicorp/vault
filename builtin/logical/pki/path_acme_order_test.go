@@ -4,12 +4,15 @@
 package pki
 
 import (
+	"fmt"
 	"net"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -93,6 +96,135 @@ func TestACME_ValidateIdentifiersAgainstRole(t *testing.T) {
 				require.NoError(t, err, "validateIdentifiersAgainstRole(%v, %v)", tt.role.ToResponseData(), tt.identifiers)
 			}
 		})
+	}
+}
+
+// Test_parseOrderIdentifiers validates we convert ACME requests into proper ACMEIdentifiers
+func Test_parseOrderIdentifiers(t *testing.T) {
+	tests := []struct {
+		name    string
+		data    map[string]interface{}
+		want    *ACMEIdentifier
+		wantErr assert.ErrorAssertionFunc
+	}{
+		{
+			name: "ipv4",
+			data: map[string]interface{}{"type": "ip", "value": "192.168.1.1"},
+			want: &ACMEIdentifier{
+				Type:          ACMEIPIdentifier,
+				Value:         "192.168.1.1",
+				OriginalValue: "192.168.1.1",
+				IsWildcard:    false,
+				IsV6IP:        false,
+			},
+			wantErr: assert.NoError,
+		},
+		{
+			name: "ipv6",
+			data: map[string]interface{}{"type": "ip", "value": "2001:0:130F::9C0:876A:130B"},
+			want: &ACMEIdentifier{
+				Type:          ACMEIPIdentifier,
+				Value:         "2001:0:130F::9C0:876A:130B",
+				OriginalValue: "2001:0:130F::9C0:876A:130B",
+				IsWildcard:    false,
+				IsV6IP:        true,
+			},
+			wantErr: assert.NoError,
+		},
+		{
+			name: "ipv4-in-ipv6",
+			data: map[string]interface{}{"type": "ip", "value": "::ffff:192.168.1.1"},
+			want: &ACMEIdentifier{
+				Type:          ACMEIPIdentifier,
+				Value:         "::ffff:192.168.1.1",
+				OriginalValue: "::ffff:192.168.1.1",
+				IsWildcard:    false,
+				IsV6IP:        true,
+			},
+			wantErr: assert.NoError,
+		},
+		{
+			name: "dns",
+			data: map[string]interface{}{"type": "dns", "value": "dadgarcorp.com"},
+			want: &ACMEIdentifier{
+				Type:          ACMEDNSIdentifier,
+				Value:         "dadgarcorp.com",
+				OriginalValue: "dadgarcorp.com",
+				IsWildcard:    false,
+				IsV6IP:        false,
+			},
+			wantErr: assert.NoError,
+		},
+		{
+			name: "wildcard-dns",
+			data: map[string]interface{}{"type": "dns", "value": "*.dadgarcorp.com"},
+			want: &ACMEIdentifier{
+				Type:          ACMEDNSIdentifier,
+				Value:         "dadgarcorp.com",
+				OriginalValue: "*.dadgarcorp.com",
+				IsWildcard:    true,
+				IsV6IP:        false,
+			},
+			wantErr: assert.NoError,
+		},
+		{
+			name:    "ipv6-with-zone", // This is debatable if we should strip or fail
+			data:    map[string]interface{}{"type": "ip", "value": "fe80::1cc0:3e8c:119f:c2e1%ens18"},
+			wantErr: ErrorContains("IPv6 identifiers with zone information are not allowed"),
+		},
+		{
+			name:    "bad-dns-wildcard",
+			data:    map[string]interface{}{"type": "dns", "value": "*192.168.1.1"},
+			wantErr: ErrorContains("invalid wildcard"),
+		},
+		{
+			name:    "ip-in-dns",
+			data:    map[string]interface{}{"type": "dns", "value": "192.168.1.1"},
+			wantErr: ErrorContains("parsed OK as IP address"),
+		},
+		{
+			name:    "empty-identifiers",
+			data:    nil,
+			wantErr: ErrorContains("no parsed identifiers were found"),
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			identifiers := map[string]interface{}{"identifiers": []interface{}{}}
+			if tt.data != nil {
+				identifiers["identifiers"] = append(identifiers["identifiers"].([]interface{}), tt.data)
+			}
+			got, err := parseOrderIdentifiers(identifiers)
+			if !tt.wantErr(t, err, fmt.Sprintf("parseOrderIdentifiers(%v)", tt.data)) {
+				return
+			} else if err != nil {
+				// If we passed the test above and an error was set no point in testing below
+				return
+			}
+
+			require.Len(t, got, 1, "expected a single return value")
+			acmeId := got[0]
+			require.Equal(t, tt.want.Type, acmeId.Type)
+			require.Equal(t, tt.want.Value, acmeId.Value)
+			require.Equal(t, tt.want.OriginalValue, acmeId.OriginalValue)
+			require.Equal(t, tt.want.IsWildcard, acmeId.IsWildcard)
+			require.Equal(t, tt.want.IsV6IP, acmeId.IsV6IP)
+		})
+	}
+}
+
+func ErrorContains(errMsg string) assert.ErrorAssertionFunc {
+	return func(t assert.TestingT, err error, i ...interface{}) bool {
+		if err == nil {
+			return assert.Fail(t, "expected error got none", i...)
+		}
+
+		if !strings.Contains(err.Error(), errMsg) {
+			return assert.Fail(t, fmt.Sprintf("error did not contain '%s':\n%+v", errMsg, err), i...)
+		}
+
+		return true
 	}
 }
 
