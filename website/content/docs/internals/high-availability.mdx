@@ -49,14 +49,14 @@ network connectivity.
 
 # Becoming an active node
 
-Active nodes in an HA configuration holds an HA lock. When active nodes become
-unavailable or step down because an operator invokes 
-[`vault operator step-down`](/vault/docs/commands/operator/step-down), all the 
-nodes in the cluster attempt to grab the HA lock. The first node that succeeds 
+An active node in an HA configuration holds an HA lock. When the active node becomes
+unavailable or steps down because an operator invokes
+[`vault operator step-down`](/vault/docs/commands/operator/step-down), all the
+nodes in the cluster attempt to grab the HA lock. The first node that succeeds
 in grabbing and holding the lock becomes the new active node.
 
 The HA lock competition process depends on the HA storage backend of the cluster.
-For example, with raft integrated storage, Vault always gives the HA lock to 
+For example, with raft integrated storage, Vault always gives the HA lock to
 whichever node wins the
 [Raft leadership election](/vault/docs/internals/integrated-storage#leadership-elections).
 
@@ -72,21 +72,21 @@ to formally become the active node for its cluster:
 1. Unseals the local Vault instance.
 1. Start accepting connections from other nodes in the cluster.
 
-After completing the inauguration steps, the new active node beings responding to new 
+After completing the inauguration steps, the new active node beings responding to new
 client requests.
 
-HA standby nodes check for active node updates every 2.5 seconds. 
+HA standby nodes check for active node updates every 2.5 seconds.
 When the active node changes, standby nodes update their forwarding connection
 and open a connection to the new active node. The connection will fail until the
 new active node starts accepting connections from other nodes in the cluster, so
 standby nodes retry the connection every 5 seconds as a heartbeat, or whenever a
 new client request arrives that requires forwarding.
 
-With performance replication, standby nodes also promote themselves as
-performance standbys the active node updates. The standby requests a certificate 
-and key pair from the active node to receive replicated data. Once the standby 
+With performance standbys enabled, standby nodes also promote themselves as
+performance standbys the active node updates. The standby requests a certificate
+and key pair from the active node to receive replicated data. Once the standby
 node seals, performs the necessary setup tasks, completes its post-unseal setup,
-it can server serve new client requests with data replicated from the active node.
+it can serve new client requests.
 
 # Tutorial
 
