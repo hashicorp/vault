@@ -142,8 +142,7 @@ func (e *ErrorResponse) Marshal() (*logical.Response, error) {
 	return &resp, nil
 }
 
-func FindType(given error) (err error, id string, code int, found bool) {
-	matchedError := false
+func FindType(given error) (err error, id string, code int, matchedError bool) {
 	for err, id = range errIdMappings {
 		if errors.Is(given, err) {
 			matchedError = true
