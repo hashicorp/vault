@@ -140,13 +140,15 @@ are followers.
 
 ## Leadership elections
 
-A Raft leader is chosen through a Raft leadership election. All nodes in the Raft
-cluster start as followers, wait up to a *heartbeat timeout* duration to receive
-a heartbeat from a leader. If no heartbeat arrives, the node will enter the
-candidate state. The node waits up to the *election timeout* to be informed of
-an election from another node. If the node doesn't hear of an election, it will
-start an election itself. Once the node gets a response from a quorum of other
-nodes, it be elected the leader.
+Nodes become the active Raft storage node through Raft leadership elections. 
+
+All nodes in a Raft cluster start as **followers**. Followers monitor leader 
+health through a **leader heartbeat**. If a follower does not receive a heartbeat 
+within the  configured **heartbeat timeout**, the node becomes a **candidate**. 
+Candidates watch for election notices from other nodes in the cluster. If the 
+**election timeout** period expires, the candidate starts an election for
+leader. If the candidate gets responses from a quorum of other nodes in the
+cluster, the candidate becomes the new leader node.
 
 A Raft leader will also voluntarily step down if it hasn't been able to
 successfully contact a quorum of nodes. The leader will wait the *leader lease
