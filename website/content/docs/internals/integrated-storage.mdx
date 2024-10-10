@@ -150,9 +150,8 @@ Candidates watch for election notices from other nodes in the cluster. If the
 leader. If the candidate gets responses from a quorum of other nodes in the
 cluster, the candidate becomes the new leader node.
 
-A Raft leader will also voluntarily step down if it hasn't been able to
-successfully contact a quorum of nodes. The leader will wait the *leader lease
-timeout* before stepping down.
+Raft leaders may step down  voluntarily if the node cannot connect to a quorum 
+of nodes with the **leader lease timeout** period.
 
 The relevant timeout periods (heartbeat timeout, election timeout, leader lease 
 timeout) scale according to the [`performance_multiplier`](/vault/docs/configuration/storage/raft#performance-multiplier) setting in your Vault configuration. By default, 
