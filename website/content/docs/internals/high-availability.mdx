@@ -54,8 +54,10 @@ because it's unavailable or because an operator has invoked [`vault operator ste
 all the nodes in the cluster will attempt to grab the HA lock. Only one node will succeed and this node will become the new active
 node.
 
-How the HA lock works is dependent on which HA storage backend the cluster is running. In Integrated Storage, the HA
-lock is always given to the node which wins the [Raft leadership election](/vault/docs/internals/integrated-storage#leadership-elections).
+The HA lock competition process depends on the HA storage backend of the cluster.
+For example, with raft integrated storage, Vault always gives the HA lock to 
+whichever node wins the
+[Raft leadership election](/vault/docs/internals/integrated-storage#leadership-elections).
 
 Once a node has grabbed the HA lock it will perform a number of setup steps. The node will:
 * Seal
