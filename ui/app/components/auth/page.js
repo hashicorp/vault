@@ -55,12 +55,14 @@ export default class AuthPage extends Component {
     if (mfa_requirement) {
       this.mfaAuthData = { mfa_requirement, backend, data };
     } else {
+      // calls authSuccess in auth.js controller
       this.args.onAuthSuccess(authResponse);
     }
   }
 
   @action
   onMfaSuccess(authResponse) {
+    // calls authSuccess in auth.js controller
     this.args.onAuthSuccess(authResponse);
   }
 
