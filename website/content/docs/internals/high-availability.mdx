@@ -74,12 +74,12 @@ to formally become the active node for its cluster:
 After completing the inauguration steps, the new active node beings responding to new 
 client requests.
 
-Other standby nodes in the cluster check the leadership storage entry every 2.5 seconds. When a standby node sees that
-there is a new active node, the node will create a new request forwarding connection to that node and attempt to connect
-to it. It’s possible that the connection fails (for example because the active node hasn't yet reached the step where it
-can support receiving standby connections). The standby node will continue trying to connect every 5 seconds as a
-heartbeat. The standby node can accept new client requests at this time, and the node try again to form a connection to
-the active node (if one does not exist) when a client request comes in that needs to be forwarded.
+HA standby nodes check for active node updates every 2.5 seconds. 
+When the active node changes, standby nodes update their forwarding connection
+and open a connection to the new active node. The connection will fail until the
+new active node starts accepting connections from other nodes in the cluster, so
+standby nodes retry the connection every 5 seconds as a heartbeat, or whenever a
+new client request arrives that requires forwarding.
 
 Assuming that performance standbys are enabled, a standby node will attempt to promote itself to a performance standby
 after it has found a new active node. The standby will send a message to the active node and receive from the active
