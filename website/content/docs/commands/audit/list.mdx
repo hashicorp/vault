@@ -25,36 +25,31 @@ $ vault audit list [-help | -h]
 
 <Tip title="Related API endpoints">
 
-  ListAuditDevice - [`GET:/sys/audit`](/vault/api-docs/system/audit#list-enabled-audit-devices)
+  ListAuditDevices - [`GET:/sys/audit`](/vault/api-docs/system/audit#list-enabled-audit-devices)
 
 </Tip>
 
 ### Limitations and warnings
 
-- None
+None.
 
 ## Command arguments
 
-- None
+None.
 
 ## Command options
 
-- None
+None.
 
 ## Command flags
 
-<a id="audit-flag-detailed" /><br />
-
-**`-detailed (bool : false)`**
-
-Print detailed information such as options and replication status about each
-audit device.
-
-**Example**: `-detailed`
-
 <br />
 
+@include 'cli/audit/flags/detailed.mdx'
+
 ## Standard flags
+
+<br />
 
 @include 'cli/standard-settings/all-standard-flags.mdx'
 

@@ -12,7 +12,7 @@ Enable a new audit device.
 <CodeBlockConfig hideClipboard>
 
 ```shell-session
-$ vault audit enable [flags] <device-type> [options] [<config_argument=value>...]
+$ vault audit enable [flags] <device_type> [options] [<config_argument=value>...]
 
 $ vault audit enable [-help | -h]
 ```
@@ -37,17 +37,7 @@ configuration parameters depend on the audit device type.
 
 ## Command arguments
 
-<a id="audit-device-type" /><br />
-
-**`device-type (enum : <required>)`**
-
-The audit device type to create.
-
-Enum     | Description
--------- | -----------
-`file`   | Write log entries to a file on the Vault server.
-`socket` | Write log entries to an existing TCP, UDP, or UNIX socket.
-`syslog` | Write log entries using the existing system logging protocol.
+@include 'cli/audit/args/device_type.mdx'
 
 Each audit device type also has a set of configuration arguments:
 
@@ -58,39 +48,20 @@ Each audit device type also has a set of configuration arguments:
 <CodeBlockConfig hideClipboard>
 
 ```shell-session
-$ vault audit enable [flags] [options] file \
+$ vault audit enable [flags] file [options] \
     file_path=<path/to/log/file>            \
     [mode=<file_permissions>]
 ```
 
 </CodeBlockConfig>
 
-<a id="audit-file-file_path" /><br />
-
-**`file_path (string : <required>)`**
-
-Location on the audit log on the Vault server. Must be one of the following:
-
-Value                     | Description
-------------------------- | -----------
-Relative or absolute path | Write or append audit entries to the target file
-`stdout`                  | Streams audit data to `stdout` on the Vault server
-`discard`                 |  Discards audit output instead of writing to a device
-
-**Example**: `file_path='/logs/kv-audit.log'`
-
 <br />
 
----
+@include 'cli/audit/args/file/file_path.mdx'
 
-<a id="audit-file-mode" /><br />
+<br /><hr /><br />
 
-**`mode (string : '0600')`**
-
-The `chmod`-style octal permissions for the audit file. Set `mode` to "0000" to
-prevent Vault from modifying the file mode. 
-
-**Example**: `mode='0755'`
+@include 'cli/audit/args/file/mode.mdx'
 
 </Tab>
 
@@ -99,50 +70,25 @@ prevent Vault from modifying the file mode.
 <CodeBlockConfig hideClipboard>
 
 ```shell-session
-$ vault audit enable [flags] [options] socket \
-    address=<server_address>                  \
-    socket_type=<protocol>                    \
-    write_timeout=<wait_time>
+$ vault audit enable [flags] socket [options] \
+    [address=<server_address>]                \
+    [socket_type=<protocol>]                  \
+    [write_timeout=<wait_time>]
 ```
 
 </CodeBlockConfig>
 
-<a id="audit-socket-address" /><br />
-
-**`address (string : '')`**
-
-Location of the socket as a server IP and port or a local path.
-
-**Example**: `address='/tmp/audit.sock'`
-
 <br />
 
----
+@include 'cli/audit/args/socket/address.mdx'
 
-<a id="audit-socket-socket_type" /><br />
+<br /><hr /><br />
 
-**`socket_type (string : 'tcp')`**
+@include 'cli/audit/args/socket/socket_type.mdx'
 
-Communication protocol expected by the socket. Vault can write to any
-[net.Dialer](https://pkg.go.dev/net#Dialer)-compatible socket. If a TCP socket
-stops responding, Vault may become unresponsive due to a
-[blocked audit device error](/vault/docs/audit#blocked-audit-devices).
+<br /><hr /><br />
 
-**Example**: `socket_type='udp'`
-
-<br />
-
----
-
-<a id="audit-socket-write_timeout" /><br />
-
-**`write_timeout (string : '2s')`**
-
-Duration in seconds that Vault will wait for a write to complete over the
-socket. Setting `write_timeout` to `0` disables time outs and forces Vault to
-always wait until the write completes.
-
-**Example**: `write_timeout=0`
+@include 'cli/audit/args/socket/write_timeout.mdx'
 
 </Tab>
 
@@ -151,32 +97,20 @@ always wait until the write completes.
 <CodeBlockConfig hideClipboard>
 
 ```shell-session
-$ vault audit enable [flags] [options] syslog \
-    facility=<process_entry_source>           \
-    tag=<program_entry_source>
+$ vault audit enable [flags] syslog [options] \
+    [facility=<process_entry_source>]         \
+    [tag=<program_entry_source>]
 ```
 
 </CodeBlockConfig>
 
-<a id="audit-syslog-facility" /><br />
-
-**`facility (string : 'AUTH')`**
-
-The process that generated the syslog entry (the syslog facility).
-
-**Example**: `facility='AUTO-AUTH'`
-
 <br />
 
----
+@include 'cli/audit/args/syslog/facility.mdx'
 
-<a id="audit-syslog-tag" /><br />
+<br /><hr /><br />
 
-**`tag (string : 'vault')`**
-
-The program that generated the syslog entry.
-
-**Example**: `tag='vault-agent'`
+@include 'cli/audit/args/syslog/tag.mdx'
 
 </Tab>
 
@@ -184,76 +118,55 @@ The program that generated the syslog entry.
 
 ## Command options
 
+<br />
+
 @include 'cli/audit/options/elide_list_responses.mdx'
 
----
+<br /><hr /><br />
 
 @include 'cli/audit/options/exclude.mdx'
 
----
+<br /><hr /><br />
 
 @include 'cli/audit/options/fallback.mdx'
 
----
+<br /><hr /><br />
 
 @include 'cli/audit/options/filter.mdx'
 
----
+<br /><hr /><br />
 
 @include 'cli/audit/options/format.mdx'
 
----
+<br /><hr /><br />
 
 @include 'cli/audit/options/hmac_accessor.mdx'
 
----
+<br /><hr /><br />
 
 @include 'cli/audit/options/log_raw.mdx'
 
----
+<br /><hr /><br />
 
 @include 'cli/audit/options/prefix.mdx'
 
-
 ## Command flags
 
-<a id="audit-flag-description" /><br />
-
-**`-description=<string: ''>`**
-
-A human-friendly string that explains the purpose of the audit device.
-
-**Example**: `-description='KV request auditing'`
-
 <br />
 
----
+@include 'cli/audit/flags/description.mdx'
 
-<a id="audit-flag-local" /><br />
+<br /><hr /><br />
 
-**`-local=<bool: false>`**
+@include 'cli/audit/flags/local.mdx'
 
-Indicates that the audit device is local to the Vault server and ignored by
-replication.
+<br /><hr /><br />
 
-**Example**: `-local=true`
-
-<br />
-
----
-
-<a id="audit-flag-path" /><br />
-
-**`-path=<string:'/<device_type>'`**
-
-The internal path where Vault will access the audit device. Audit device paths
-must be unique across all audit devices.
-
-**Example**: `-path="/audit/kv-file"`
-
-<br />
+@include 'cli/audit/flags/path.mdx'
 
 ## Standard flags
+
+<br />
 
 @include 'cli/standard-settings/all-standard-flags-but-format.mdx'
 

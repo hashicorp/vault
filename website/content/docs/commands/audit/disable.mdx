@@ -12,7 +12,7 @@ Disable an audit device if it exists.
 <CodeBlockConfig hideClipboard>
 
 ```shell-session
-$ vault audit disable [flags] <device-path>
+$ vault audit disable [flags] <device_path>
 
 $ vault audit disable [-help | -h]
 ```
@@ -41,14 +41,9 @@ correspond to an active audit device.
 
 ## Command arguments
 
-<a id="audit-device-path" /><br />
+<br />
 
-**`<device-path> (string : <required>)`**
-
-The internal path of the audit device. Audit device paths are unique across all
-audit devices.
-
-**Example**: `"/audit/kv-file"`
+@include 'cli/audit/args/device_path.mdx'
 
 ## Command options
 
@@ -59,6 +54,8 @@ audit devices.
 - None
 
 ## Standard flags
+
+<br />
 
 @include 'cli/standard-settings/all-standard-flags-but-format.mdx'
 

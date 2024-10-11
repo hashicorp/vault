@@ -1,4 +1,4 @@
-<a id="audit-exclude" /><br />
+<a id="audit-exclude" />
 
 **`exclude (string : "")`** <EnterpriseAlert inline="true" />
 
@@ -6,7 +6,7 @@ Remove any fields matching the provided
 [exclusion filtering rules](/vault/docs/enterprise/audit/exclusion) from the
 audit entry before writing to the audit device.
 
-**Example**: `exclude='[{ "condition": "\"/request/mount_type\" == transit", "fields": [ "/request/data" ] }]'`
+**Example**: `exclude='[{ "condition": "/request/mount_type" == transit", "fields": [ "request/data" ] }]'`
 
 <Tip>
 
@@ -14,9 +14,8 @@ audit entry before writing to the audit device.
   definitions to `exclude`:
 
   ```
-  $  vault audit enable exclude=@rules.json file file_path='/logs/audit.log'
+  $  vault audit enable exclude=@rules.json file file_path="/var/logs/vault/audit.log"'
   ```
 
 </Tip>
 
-<br />
