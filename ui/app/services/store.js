@@ -6,7 +6,7 @@
 import Store, { CacheHandler } from '@ember-data/store';
 import RequestManager from '@ember-data/request';
 import { LegacyNetworkHandler } from '@ember-data/legacy-compat';
-import { run, schedule } from '@ember/runloop';
+import { schedule } from '@ember/runloop';
 import { resolve, Promise } from 'rsvp';
 import { dasherize } from '@ember/string';
 import { assert } from '@ember/debug';
@@ -159,20 +159,10 @@ export default class StoreService extends Store {
     return resp;
   }
 
-  forceUnload(modelName) {
-    // Hack to get unloadAll to work correctly until we update to ember-data@4.12
-    // so that all the records are properly unloaded and we don't get ghost records
-    this.peekAll(modelName).length;
-    // force destroy queue to flush https://github.com/emberjs/data/issues/5447
-    run(() => this.unloadAll(modelName));
-  }
-
   // pushes records into the store and returns the result
   fetchPage(modelName, query) {
     const response = this.constructResponse(modelName, query);
-    this.forceUnload(modelName);
-    // Hack to ensure the pushed records below all get in the store. remove with update to ember-data@4.12
-    this.peekAll(modelName).length;
+    this.unloadAll(modelName);
     return new Promise((resolve) => {
       // push subset of records into the store
       schedule('destroy', () => {
@@ -185,8 +175,6 @@ export default class StoreService extends Store {
             'query'
           )
         );
-        // Hack to make sure all records get in model correctly. remove with update to ember-data@4.12
-        this.peekAll(modelName).length;
         const model = this.peekAll(modelName).slice();
         model.set('meta', response.meta);
         resolve(model);
