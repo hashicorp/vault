@@ -15,10 +15,6 @@ import sortObjects from 'vault/utils/sort-objects';
 
 const { DEFAULT_PAGE_SIZE } = config.APP;
 
-export function normalizeModelName(modelName) {
-  return dasherize(modelName);
-}
-
 export function keyForCache(query) {
   /*eslint no-unused-vars: ["error", { "ignoreRestSiblings": true }]*/
   // we want to ignore size, page, responsePath, and pageFilter in the cacheKey
@@ -41,7 +37,7 @@ export default class Pagination extends Service {
     const cacheKey = keyForCache(key);
     const cache = this.lazyCacheForModel(modelName) || new Map();
     cache.set(cacheKey, value);
-    const modelKey = normalizeModelName(modelName);
+    const modelKey = dasherize(modelName);
     this.lazyCaches.set(modelKey, cache);
   }
 
@@ -54,7 +50,7 @@ export default class Pagination extends Service {
   }
 
   lazyCacheForModel(modelName) {
-    return this.lazyCaches.get(normalizeModelName(modelName));
+    return this.lazyCaches.get(dasherize(modelName));
   }
 
   // This is the public interface for the store extension - to be used just
@@ -74,7 +70,7 @@ export default class Pagination extends Service {
     // We don't want skipCache to be part of the actual query key, so remove it
     delete query.skipCache;
     const adapter = this.store.adapterFor(modelType);
-    const modelName = normalizeModelName(modelType);
+    const modelName = dasherize(modelType);
     const dataCache = skipCache ? this.clearDataset(modelName) : this.getDataset(modelName, query);
     const responsePath = query.responsePath;
     assert('responsePath is required', responsePath);

@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { resolve } from 'rsvp';
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
-import { normalizeModelName, keyForCache } from 'vault/services/pagination';
+import { keyForCache } from 'vault/services/pagination';
+import { dasherize } from '@ember/string';
 import clamp from 'vault/utils/clamp';
 import config from 'vault/config/environment';
 import Sinon from 'sinon';
@@ -21,8 +21,38 @@ module('Unit | Service | pagination', function (hooks) {
     this.store = this.owner.lookup('service:store');
   });
 
-  test('normalizeModelName', function (assert) {
-    assert.strictEqual(normalizeModelName('oneThing'), 'one-thing', 'dasherizes modelName');
+  test('pagination.setLazyCacheForModel', function (assert) {
+    const modelName = 'someModel';
+    const key = {
+      id: '',
+      backend: 'database',
+      responsePath: 'data.keys',
+      page: 1,
+      pageFilter: null,
+      size: 15,
+    };
+    const value = {
+      response: {
+        request_id: '1eb6473c-8df0-924e-1c8d-e016a6420aee',
+        lease_id: '',
+        renewable: false,
+        lease_duration: 0,
+        data: {
+          keys: null,
+        },
+        wrap_info: null,
+        warnings: null,
+        auth: null,
+        mount_type: 'database',
+        backend: 'database',
+      },
+      dataset: ['connection', 'connection2'],
+    };
+    this.pagination.setLazyCacheForModel(modelName, key, value);
+    const cacheEntry = this.pagination.lazyCaches.get(dasherize(modelName));
+    const actual = Object.fromEntries(cacheEntry); // convert from Map to Object for assertion
+    const expected = { '{"backend":"database","id":""}': value };
+    assert.propEqual(actual, expected, 'model name is dasherized and can be retrieved from lazyCache');
   });
 
   test('keyForCache', function (assert) {
@@ -204,7 +234,7 @@ module('Unit | Service | pagination', function (hooks) {
       return {
         query(store, modelName, query) {
           queryArgs = query;
-          return resolve(response);
+          return Promise.resolve(response);
         },
       };
     };
