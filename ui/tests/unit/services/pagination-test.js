@@ -4,19 +4,20 @@
  */
 
 import { resolve } from 'rsvp';
-import { run } from '@ember/runloop';
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
-import { normalizeModelName, keyForCache } from 'vault/services/store';
+import { normalizeModelName, keyForCache } from 'vault/services/pagination';
 import clamp from 'vault/utils/clamp';
 import config from 'vault/config/environment';
+import Sinon from 'sinon';
 
 const { DEFAULT_PAGE_SIZE } = config.APP;
 
-module('Unit | Service | store', function (hooks) {
+module('Unit | Service | pagination', function (hooks) {
   setupTest(hooks);
 
   hooks.beforeEach(function () {
+    this.pagination = this.owner.lookup('service:pagination');
     this.store = this.owner.lookup('service:store');
   });
 
@@ -38,62 +39,66 @@ module('Unit | Service | store', function (hooks) {
     assert.strictEqual(clamp(50, 1, 100), 50, 'returns the passed number when it is in range');
   });
 
-  test('store.storeDataset', function (assert) {
+  test('pagination.storeDataset', function (assert) {
     const arr = ['one', 'two'];
     const query = { id: 1 };
-    this.store.storeDataset('data', query, {}, arr);
+    this.pagination.storeDataset('data', query, {}, arr);
 
-    assert.deepEqual(this.store.getDataset('data', query).dataset, arr, 'it stores the array as .dataset');
     assert.deepEqual(
-      this.store.getDataset('data', query).response,
+      this.pagination.getDataset('data', query).dataset,
+      arr,
+      'it stores the array as .dataset'
+    );
+    assert.deepEqual(
+      this.pagination.getDataset('data', query).response,
       {},
       'it stores the response as .response'
     );
-    assert.ok(this.store.get('lazyCaches').has('data'), 'it stores model map');
+    assert.ok(this.pagination.get('lazyCaches').has('data'), 'it stores model map');
     assert.ok(
-      this.store.get('lazyCaches').get('data').has(keyForCache(query)),
+      this.pagination.get('lazyCaches').get('data').has(keyForCache(query)),
       'it stores data on the model map'
     );
   });
 
-  test('store.clearDataset with a prefix', function (assert) {
+  test('pagination.clearDataset with a prefix', function (assert) {
     const arr = ['one', 'two'];
     const arr2 = ['one', 'two', 'three', 'four'];
-    this.store.storeDataset('data', { id: 1 }, {}, arr);
-    this.store.storeDataset('transit-key', { id: 2 }, {}, arr2);
-    assert.strictEqual(this.store.get('lazyCaches').size, 2, 'it stores both keys');
+    this.pagination.storeDataset('data', { id: 1 }, {}, arr);
+    this.pagination.storeDataset('transit-key', { id: 2 }, {}, arr2);
+    assert.strictEqual(this.pagination.get('lazyCaches').size, 2, 'it stores both keys');
 
-    this.store.clearDataset('transit-key');
-    assert.strictEqual(this.store.get('lazyCaches').size, 1, 'deletes one key');
-    assert.notOk(this.store.get('lazyCaches').has('transit-key'), 'cache is no longer stored');
+    this.pagination.clearDataset('transit-key');
+    assert.strictEqual(this.pagination.get('lazyCaches').size, 1, 'deletes one key');
+    assert.notOk(this.pagination.get('lazyCaches').has('transit-key'), 'cache is no longer stored');
   });
 
-  test('store.clearDataset with no args clears entire cache', function (assert) {
+  test('pagination.clearDataset with no args clears entire cache', function (assert) {
     const arr = ['one', 'two'];
     const arr2 = ['one', 'two', 'three', 'four'];
-    this.store.storeDataset('data', { id: 1 }, {}, arr);
-    this.store.storeDataset('transit-key', { id: 2 }, {}, arr2);
-    assert.strictEqual(this.store.get('lazyCaches').size, 2, 'it stores both keys');
+    this.pagination.storeDataset('data', { id: 1 }, {}, arr);
+    this.pagination.storeDataset('transit-key', { id: 2 }, {}, arr2);
+    assert.strictEqual(this.pagination.get('lazyCaches').size, 2, 'it stores both keys');
 
-    this.store.clearDataset();
-    assert.strictEqual(this.store.get('lazyCaches').size, 0, 'deletes all of the keys');
-    assert.notOk(this.store.get('lazyCaches').has('transit-key'), 'first cache key is no longer stored');
-    assert.notOk(this.store.get('lazyCaches').has('data'), 'second cache key is no longer stored');
+    this.pagination.clearDataset();
+    assert.strictEqual(this.pagination.get('lazyCaches').size, 0, 'deletes all of the keys');
+    assert.notOk(this.pagination.get('lazyCaches').has('transit-key'), 'first cache key is no longer stored');
+    assert.notOk(this.pagination.get('lazyCaches').has('data'), 'second cache key is no longer stored');
   });
 
-  test('store.getDataset', function (assert) {
+  test('pagination.getDataset', function (assert) {
     const arr = ['one', 'two'];
-    this.store.storeDataset('data', { id: 1 }, {}, arr);
+    this.pagination.storeDataset('data', { id: 1 }, {}, arr);
 
-    assert.deepEqual(this.store.getDataset('data', { id: 1 }), { response: {}, dataset: arr });
+    assert.deepEqual(this.pagination.getDataset('data', { id: 1 }), { response: {}, dataset: arr });
   });
 
-  test('store.constructResponse', function (assert) {
+  test('pagination.constructResponse', function (assert) {
     const arr = ['one', 'two', 'three', 'fifteen', 'twelve'];
-    this.store.storeDataset('data', { id: 1 }, {}, arr);
+    this.pagination.storeDataset('data', { id: 1 }, {}, arr);
 
     assert.deepEqual(
-      this.store.constructResponse('data', {
+      this.pagination.constructResponse('data', {
         id: 1,
         pageFilter: 't',
         page: 1,
@@ -116,7 +121,7 @@ module('Unit | Service | store', function (hooks) {
     );
   });
 
-  test('store.fetchPage', async function (assert) {
+  test('pagination.fetchPage', async function (assert) {
     const keys = ['zero', 'one', 'two', 'three', 'four', 'five', 'six'];
     const data = {
       data: {
@@ -129,10 +134,10 @@ module('Unit | Service | store', function (hooks) {
       page: 1,
       responsePath: 'data.keys',
     };
-    this.store.storeDataset('transit-key', query, data, keys);
+    this.pagination.storeDataset('transit-key', query, data, keys);
 
     let result;
-    result = await this.store.fetchPage('transit-key', query);
+    result = await this.pagination.fetchPage('transit-key', query);
     assert.strictEqual(result.get('length'), pageSize, 'returns the correct number of items');
     assert.deepEqual(
       result.map((r) => r.id),
@@ -153,7 +158,7 @@ module('Unit | Service | store', function (hooks) {
       'returns correct meta values'
     );
 
-    result = await this.store.fetchPage('transit-key', {
+    result = await this.pagination.fetchPage('transit-key', {
       size: pageSize,
       page: 3,
       responsePath: 'data.keys',
@@ -166,7 +171,7 @@ module('Unit | Service | store', function (hooks) {
       'returns the third page of items'
     );
 
-    result = await this.store.fetchPage('transit-key', {
+    result = await this.pagination.fetchPage('transit-key', {
       size: pageSize,
       page: 99,
       responsePath: 'data.keys',
@@ -178,7 +183,7 @@ module('Unit | Service | store', function (hooks) {
       'returns the last page when the page value is beyond the of bounds'
     );
 
-    result = await this.store.fetchPage('transit-key', {
+    result = await this.pagination.fetchPage('transit-key', {
       size: pageSize,
       page: 0,
       responsePath: 'data.keys',
@@ -190,68 +195,64 @@ module('Unit | Service | store', function (hooks) {
     );
   });
 
-  test('store.lazyPaginatedQuery', function (assert) {
+  test('pagination.lazyPaginatedQuery', async function (assert) {
     const response = {
       data: ['foo'],
     };
     let queryArgs;
-    const store = this.owner.factoryFor('service:store').create({
-      adapterFor() {
-        return {
-          query(store, modelName, query) {
-            queryArgs = query;
-            return resolve(response);
-          },
-        };
-      },
-      fetchPage() {},
-    });
-
+    const adapterForStub = () => {
+      return {
+        query(store, modelName, query) {
+          queryArgs = query;
+          return resolve(response);
+        },
+      };
+    };
+    Sinon.stub(this.store, 'adapterFor').callsFake(adapterForStub);
+    // stub fetchPage because we test it separately
+    Sinon.stub(this.pagination, 'fetchPage').callsFake(() => {});
     const query = { page: 1, size: 1, responsePath: 'data' };
-    run(function () {
-      store.lazyPaginatedQuery('transit-key', query);
-    });
+
+    await this.pagination.lazyPaginatedQuery('transit-key', query);
     assert.deepEqual(
-      store.getDataset('transit-key', query),
+      this.pagination.getDataset('transit-key', query),
       { response: { data: null }, dataset: ['foo'] },
       'stores returned dataset'
     );
 
-    run(function () {
-      store.lazyPaginatedQuery('secret', { page: 1, responsePath: 'data' });
-    });
+    await this.pagination.lazyPaginatedQuery('secret', { page: 1, responsePath: 'data' });
     assert.strictEqual(queryArgs.size, DEFAULT_PAGE_SIZE, 'calls query with DEFAULT_PAGE_SIZE');
 
     assert.throws(
       () => {
-        store.lazyPaginatedQuery('transit-key', {});
+        this.pagination.lazyPaginatedQuery('transit-key', {});
       },
       /responsePath is required/,
       'requires responsePath'
     );
     assert.throws(
       () => {
-        store.lazyPaginatedQuery('transit-key', { responsePath: 'foo' });
+        this.pagination.lazyPaginatedQuery('transit-key', { responsePath: 'foo' });
       },
       /page is required/,
       'requires page'
     );
   });
 
-  test('store.filterData', async function (assert) {
+  test('pagination.filterData', async function (assert) {
     const dataset = [
       { id: 'foo', name: 'Foo', type: 'test' },
       { id: 'bar', name: 'Bar', type: 'test' },
       { id: 'bar-2', name: 'Bar', type: null },
     ];
 
-    const defaultFiltering = this.store.filterData('foo', dataset);
+    const defaultFiltering = this.pagination.filterData('foo', dataset);
     assert.deepEqual(defaultFiltering, [{ id: 'foo', name: 'Foo', type: 'test' }]);
 
     const filter = (data) => {
       return data.filter((d) => d.name === 'Bar' && d.type === 'test');
     };
-    const customFiltering = this.store.filterData(filter, dataset);
+    const customFiltering = this.pagination.filterData(filter, dataset);
     assert.deepEqual(customFiltering, [{ id: 'bar', name: 'Bar', type: 'test' }]);
   });
 });
