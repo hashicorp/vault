@@ -60,6 +60,7 @@ export default class App extends Application {
           'path-help',
           { 'app-router': 'router' },
           'store',
+          'pagination',
           'version',
           'secret-mount-path',
         ],
