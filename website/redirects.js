@@ -129,5 +129,10 @@ module.exports = [
     source: '/vault/docs/concepts/lease-count-quota-exceeded',
     destination: '/vault/docs/troubleshoot/lease-count-quota-exceeded',
     permanent: true,
+  },
+  {
+    source: '/vault/docs/command/web',
+    destination: '/vault/docs/ui/web-cli',
+    permanent: true,
   }
 ]
