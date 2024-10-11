@@ -10,7 +10,9 @@ description: |-
 
 @include 'alerts/enterprise-only.mdx'
 
-@include 'alerts/beta.mdx'
+<Note title="Enabled by default">
+  As of Vault 1.18.0, adaptive overload protection is enabled by default
+</Note>
 
 Configure the `adaptive_overload_protection` stanza to control overload
 protection features for your Vault server.
@@ -41,6 +43,5 @@ These parameters apply to the `adaptive_overload_protection` stanza in the Vault
 configuration file:
 
 - `disable_write_controller` `(bool: <optional>)`: Disables the adaptive write
-  overload controller. Defaults to `true` (controller disabled). Set
-  `disable_write_controller` to `false` to enable the write controller and opt
-  in to the beta functionality.
+  overload controller. Defaults to `false` (controller enabled). Set
+  `disable_write_controller` to `true` to disable the write controller.

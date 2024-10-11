@@ -578,6 +578,11 @@
       },
       {
         "title": "Adaptive overload protection",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        },
         "path": "configuration/adaptive-overload-protection"
       },
       {
