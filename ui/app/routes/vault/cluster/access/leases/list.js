@@ -104,7 +104,7 @@ export default Route.extend({
     willTransition(transition) {
       window.scrollTo(0, 0);
       if (transition.targetName !== this.routeName) {
-        this.store.clearAllDatasets();
+        this.store.clearDataset();
       }
       return true;
     },
