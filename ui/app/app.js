@@ -80,7 +80,14 @@ export default class App extends Application {
     },
     ldap: {
       dependencies: {
-        services: [{ 'app-router': 'router' }, 'store', 'secret-mount-path', 'flash-messages', 'auth'],
+        services: [
+          { 'app-router': 'router' },
+          'store',
+          'pagination',
+          'secret-mount-path',
+          'flash-messages',
+          'auth',
+        ],
         externalRoutes: {
           secrets: 'vault.cluster.secrets.backends',
         },
