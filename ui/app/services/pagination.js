@@ -3,9 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Store, { CacheHandler } from '@ember-data/store';
-import RequestManager from '@ember-data/request';
-import { LegacyNetworkHandler } from '@ember-data/legacy-compat';
+import Service, { service } from '@ember/service';
 import { schedule } from '@ember/runloop';
 import { resolve, Promise } from 'rsvp';
 import { dasherize } from '@ember/string';
@@ -34,16 +32,8 @@ export function keyForCache(query) {
   return JSON.stringify(cacheKeyObject);
 }
 
-export default class StoreService extends Store {
-  requestManager = new RequestManager();
-
-  constructor(args) {
-    super(args);
-    // If at some point we no longer need an extended store, we can remove the @ember-data/legacy-compat dep
-    // See: https://api.emberjs.com/ember-data/4.12/modules/@ember-data%2Frequest
-    this.requestManager.use([LegacyNetworkHandler]);
-    this.requestManager.useCache(CacheHandler);
-  }
+export default class Pagination extends Service {
+  @service store;
 
   lazyCaches = new Map();
 
@@ -83,7 +73,7 @@ export default class StoreService extends Store {
     const skipCache = query.skipCache;
     // We don't want skipCache to be part of the actual query key, so remove it
     delete query.skipCache;
-    const adapter = this.adapterFor(modelType);
+    const adapter = this.store.adapterFor(modelType);
     const modelName = normalizeModelName(modelType);
     const dataCache = skipCache ? this.clearDataset(modelName) : this.getDataset(modelName, query);
     const responsePath = query.responsePath;
@@ -97,9 +87,9 @@ export default class StoreService extends Store {
       return resolve(this.fetchPage(modelName, query));
     }
     return adapter
-      .query(this, { modelName }, query, null, adapterOptions)
+      .query(this.store, { modelName }, query, null, adapterOptions)
       .then((response) => {
-        const serializer = this.serializerFor(modelName);
+        const serializer = this.store.serializerFor(modelName);
         const datasetHelper = serializer.extractLazyPaginatedData;
         const dataset = datasetHelper
           ? datasetHelper.call(serializer, response)
@@ -162,20 +152,16 @@ export default class StoreService extends Store {
   // pushes records into the store and returns the result
   fetchPage(modelName, query) {
     const response = this.constructResponse(modelName, query);
-    this.unloadAll(modelName);
+    this.store.unloadAll(modelName);
     return new Promise((resolve) => {
       // push subset of records into the store
       schedule('destroy', () => {
-        this.push(
-          this.serializerFor(modelName).normalizeResponse(
-            this,
-            this.modelFor(modelName),
-            response,
-            null,
-            'query'
-          )
+        this.store.push(
+          this.store
+            .serializerFor(modelName)
+            .normalizeResponse(this.store, this.store.modelFor(modelName), response, null, 'query')
         );
-        const model = this.peekAll(modelName).slice();
+        const model = this.store.peekAll(modelName).slice();
         model.set('meta', response.meta);
         resolve(model);
       });
