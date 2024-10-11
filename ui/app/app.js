@@ -21,6 +21,7 @@ export default class App extends Application {
           'namespace',
           { 'app-router': 'router' },
           'store',
+          'pagination',
           'version',
           'custom-messages',
         ],
