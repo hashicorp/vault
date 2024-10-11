@@ -53,9 +53,10 @@ details.
 **Maybe**.
 
 [Nomad Vault integration](/nomad/docs/integrations/vault-integration#token-role-based-integration)
-uses token roles where a single token role creates tokens for many Nomad jobs.
-Unless you have configured explicit identity aliases for your Nomad tokens,
-Vault will record every running instance of a Nomad job as a unique client.
+uses either Workload Identity (JWT) or token roles (deprecated and removed in Nomad 1.10).
+Client counts with Workload Identity will be based on the [`user_claim`](/vault/api-docs/auth/jwt#user_claim),
+usually 1 client per Nomad job. With the legacy token role integration, there is 1
+non entity client per unique combination of policies requested by Nomad jobs.
 
 ### Are batch tokens counted differently than service tokens? ((#batch-tokens))
 
