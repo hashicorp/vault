@@ -163,7 +163,7 @@ export default Route.extend({
     const has404 = this.has404;
     // only clear store cache if this is a new model
     if (secret !== controller?.baseKey?.id) {
-      this.store.clearAllDatasets();
+      this.store.clearDataset();
     }
     controller.set('hasModel', true);
     controller.setProperties({
@@ -220,12 +220,12 @@ export default Route.extend({
     willTransition(transition) {
       window.scrollTo(0, 0);
       if (transition.targetName !== this.routeName) {
-        this.store.clearAllDatasets();
+        this.store.clearDataset();
       }
       return true;
     },
     reload() {
-      this.store.clearAllDatasets();
+      this.store.clearDataset();
       this.refresh();
     },
   },

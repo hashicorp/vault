@@ -74,12 +74,12 @@ export default Route.extend(UnloadModel, {
     willTransition(transition) {
       window.scrollTo(0, 0);
       if (!transition || transition.targetName !== this.routeName) {
-        this.store.clearAllDatasets();
+        this.store.clearDataset();
       }
       return true;
     },
     reload() {
-      this.store.clearAllDatasets();
+      this.store.clearDataset();
       this.refresh();
     },
   },

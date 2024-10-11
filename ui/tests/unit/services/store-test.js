@@ -68,14 +68,14 @@ module('Unit | Service | store', function (hooks) {
     assert.notOk(this.store.get('lazyCaches').has('transit-key'), 'cache is no longer stored');
   });
 
-  test('store.clearAllDatasets', function (assert) {
+  test('store.clearDataset with no args clears entire cache', function (assert) {
     const arr = ['one', 'two'];
     const arr2 = ['one', 'two', 'three', 'four'];
     this.store.storeDataset('data', { id: 1 }, {}, arr);
     this.store.storeDataset('transit-key', { id: 2 }, {}, arr2);
     assert.strictEqual(this.store.get('lazyCaches').size, 2, 'it stores both keys');
 
-    this.store.clearAllDatasets();
+    this.store.clearDataset();
     assert.strictEqual(this.store.get('lazyCaches').size, 0, 'deletes all of the keys');
     assert.notOk(this.store.get('lazyCaches').has('transit-key'), 'first cache key is no longer stored');
     assert.notOk(this.store.get('lazyCaches').has('data'), 'second cache key is no longer stored');
