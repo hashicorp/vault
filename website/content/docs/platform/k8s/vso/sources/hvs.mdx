@@ -79,8 +79,8 @@ spec:
 
 VSO supports syncing [static secrets](/hcp/docs/vault-secrets/static-secrets/create-static-secret)
 from an HCP Vault Secrets app to a Kubernetes Secret. VSO syncs the secrets to
-Kubernetes on the [refreshAfter][hvsa-spec] interval set in the
-HCPVaultSecretsApp spec.
+Kubernetes on the [refreshAfter](/vault/docs/platform/k8s/vso/api-reference#hcpvaultsecretsappspec)
+interval set in the HCPVaultSecretsApp spec.
 
 ### Auto-rotating and Dynamic Secrets
 
@@ -95,8 +95,9 @@ and [dynamic](/hcp/docs/vault-secrets/dynamic-secrets) secrets from an HCP Vault
 Secrets app to a Kubernetes Secret.
 
 VSO syncs auto-rotating secrets along with static secrets on the
-[refreshAfter][hvsa-spec] interval, and rotation is handled by HCP. VSO
-syncs dynamic secrets when the [specified percentage](/vault/docs/platform/k8s/vso/api-reference#hvsdynamicsyncconfig)
+[refreshAfter](/vault/docs/platform/k8s/vso/api-reference#hcpvaultsecretsappspec)
+interval, and rotation is handled by HCP. VSO syncs dynamic secrets when the
+[specified percentage](/vault/docs/platform/k8s/vso/api-reference#hvsdynamicsyncconfig)
 of their TTL has elapsed. Each sync of a dynamic secret generates a new set of
 credentials.
 
@@ -134,5 +135,3 @@ nested map format:
 Refer to the [HCP Vault Secrets with Vault Secrets Operator for
 Kubernetes](/vault/tutorials/hcp-vault-secrets-get-started/kubernetes-vso) tutorial to
 learn the end-to-end workflow using the Vault Secrets Operator.
-
-[hvsa-spec]: /vault/docs/platform/k8s/vso/api-reference#hcpvaultsecretsappspec
