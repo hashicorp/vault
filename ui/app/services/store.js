@@ -206,8 +206,4 @@ export default class StoreService extends Store {
     }
     this.lazyCaches.clear();
   }
-
-  clearAllDatasets() {
-    this.clearDataset();
-  }
 }
