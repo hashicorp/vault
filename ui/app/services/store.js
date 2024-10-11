@@ -6,7 +6,7 @@
 import Store, { CacheHandler } from '@ember-data/store';
 import RequestManager from '@ember-data/request';
 import { LegacyNetworkHandler } from '@ember-data/legacy-compat';
-import { run, schedule } from '@ember/runloop';
+import { schedule } from '@ember/runloop';
 import { resolve, Promise } from 'rsvp';
 import { dasherize } from '@ember/string';
 import { assert } from '@ember/debug';
@@ -159,20 +159,10 @@ export default class StoreService extends Store {
     return resp;
   }
 
-  forceUnload(modelName) {
-    // Hack to get unloadAll to work correctly until we update to ember-data@4.12
-    // so that all the records are properly unloaded and we don't get ghost records
-    this.peekAll(modelName).length;
-    // force destroy queue to flush https://github.com/emberjs/data/issues/5447
-    run(() => this.unloadAll(modelName));
-  }
-
   // pushes records into the store and returns the result
   fetchPage(modelName, query) {
     const response = this.constructResponse(modelName, query);
-    this.forceUnload(modelName);
-    // Hack to ensure the pushed records below all get in the store. remove with update to ember-data@4.12
-    this.peekAll(modelName).length;
+    this.unloadAll(modelName);
     return new Promise((resolve) => {
       // push subset of records into the store
       schedule('destroy', () => {
@@ -185,8 +175,6 @@ export default class StoreService extends Store {
             'query'
           )
         );
-        // Hack to make sure all records get in model correctly. remove with update to ember-data@4.12
-        this.peekAll(modelName).length;
         const model = this.peekAll(modelName).slice();
         model.set('meta', response.meta);
         resolve(model);
@@ -217,35 +205,5 @@ export default class StoreService extends Store {
       return;
     }
     this.lazyCaches.clear();
-  }
-
-  clearAllDatasets() {
-    this.clearDataset();
-  }
-
-  /**
-   * this is designed to be a temporary workaround to an issue in the test environment after upgrading to Ember 4.12
-   * when performing an unloadAll or unloadRecord for auth-method or secret-engine models within the app code an error breaks the tests
-   * after the test run is finished during teardown an unloadAll happens and the error "Expected a stable identifier" is thrown
-   * it seems that when the unload happens in the app, for some reason the mount-config relationship models are not unloaded
-   * then when the unloadAll happens a second time during test teardown there seems to be an issue since those records should already have been unloaded
-   * when logging in the teardownRecord hook, it appears that other embedded inverse: null relationships such as replication-attributes are torn down when the parent model is unloaded
-   * the following fixes the issue by explicitly unloading the mount-config models associated to the parent
-   * this should be looked into further to find the root cause, at which time these overrides may be removed
-   */
-  unloadAll(modelName) {
-    const hasMountConfig = ['auth-method', 'secret-engine'];
-    if (hasMountConfig.includes(modelName)) {
-      this.peekAll(modelName).forEach((record) => this.unloadRecord(record));
-    } else {
-      super.unloadAll(modelName);
-    }
-  }
-  unloadRecord(record) {
-    const hasMountConfig = ['auth-method', 'secret-engine'];
-    if (record && hasMountConfig.includes(record.constructor.modelName) && record.config) {
-      super.unloadRecord(record.config);
-    }
-    super.unloadRecord(record);
   }
 }

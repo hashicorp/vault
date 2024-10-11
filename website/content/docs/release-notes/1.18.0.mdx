@@ -1,0 +1,143 @@
+---
+layout: docs
+page_title: "1.18.0 release notes"
+description: |-
+  Key updates for  Vault 1.18.0
+---
+
+# Vault 1.18.0 release notes
+
+**GA date:** 2024-10-09
+
+@include 'release-notes/intro.mdx'
+
+## Important changes
+
+| Change                      | Description
+| --------------------------- | -----------
+| New default (1.18.0)        | [Default activity log querying period](/vault/docs/upgrading/upgrade-to-1.18.x#default-activity-log-querying-period)
+| New default (1.18.0)        | [Docker image no longer contains curl](/vault/docs/upgrading/upgrade-to-1.18.x#docker-image-no-longer-contains-curl)
+| Beta feature removed (1.18) | [Request limiter removed](/vault/docs/upgrading/upgrade-to-1.18.x#request-limiter-configuration-removal)
+
+## Vault companion updates
+
+Companion updates are Vault updates that live outside the main Vault binary.
+
+**None**.
+
+## Community updates
+
+Follow the learn more links for more information, or browse the list of
+[Vault tutorials updated to highlight changes for the most recent GA release](/vault/tutorials/new-release).
+
+**None**.
+
+## Enterprise updates
+
+<table>
+  <thead>
+    <tr>
+      <th style={{verticalAlign: 'middle'}}>Release</th>
+      <th style={{verticalAlign: 'middle'}}>Update</th>
+      <th style={{verticalAlign: 'middle'}}>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Adaptive overload protection
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Prevent client requests from overwhelming a variety of server resources
+      that could lead to poor server availability.
+      <br /><br />
+      Learn more: <a href="/vault/docs/concepts/adaptive-overload-protection">Adaptive overload protection overview</a>
+    </td>
+  </tr>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Autopilot
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>ENHANCED</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Overall stability improvements. 
+      <br /><br />
+      Learn more: <a href="/vault/docs/concepts/integrated-storage/autopilot">Autopilot overview</a>
+    </td>
+  </tr>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Client count 
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>ENHANCED</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Improved clarity around metering and billing attribution.
+      <br /><br />
+      Learn more: <a href="/vault/docs/concepts/client-count/counting">Client count calculations</a>
+    </td>
+  </tr>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      PKI CMPv2
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Enable PKI support for automated certificate enrollment with CMPv2
+      protocols for 5G networks per 3G PP standards. 
+      <br /><br />
+      Learn more: <a href="/vault/docs/secrets/pki/cmpv2">CMPv2 in the Vault PKI plugin</a>
+    </td>
+  </tr>
+
+   <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Vault UI
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Use the Vault UI to configure AWS WIF plugins.
+      <br /><br />
+      Learn more: <a href="/vault/docs/secrets/aws#plugin-workload-identity-federation-wif">AWS WIF</a>
+    </td>
+  </tr>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      PostgreSQL plugin
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Use rootless rotation for PostgreSQL static roles so individual database
+      accounts can rotate their own passwords.
+      <br /><br />
+      Learn more: <a href="/vault/docs/secrets/databases/postgresql">PostgreSQL plugin overview</a>
+    </td>
+  </tr>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Vault Enterprise with HSM for ARM architecture
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Run Vault Enterprise on ARM machines with Hardware Security Modules.
+      <br /><br />
+      Vault releases: <a href="https://releases.hashicorp.com/vault/">releases.hashicorp.com/vault</a>
+    </td>
+  </tr>
+
+  </tbody>
+</table>
+
+## Feature deprecations and EOL
+
+Deprecated in 1.18.x | Retired in 1.18.x
+-------------------- | ---------------
+None                 | None
+
+@include 'release-notes/deprecation-note.mdx'

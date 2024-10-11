@@ -138,6 +138,37 @@ In a [high availability](/vault/docs/internals/high-availability#design-overview
 configuration, the active Vault node is the leader node and all standby nodes
 are followers.
 
+## Leadership elections
+
+Nodes become the Raft leader through Raft leadership elections.
+
+All nodes in a Raft cluster start as **followers**. Followers monitor leader
+health through a **leader heartbeat**. If a follower does not receive a heartbeat
+within the  configured **heartbeat timeout**, the node becomes a **candidate**.
+Candidates watch for election notices from other nodes in the cluster. If the
+**election timeout** period expires, the candidate starts an election for
+leader. If the candidate gets responses from a quorum of other nodes in the
+cluster, the candidate becomes the new leader node.
+
+Raft leaders may step down voluntarily if the node cannot connect to a quorum
+of nodes with the **leader lease timeout** period.
+
+The relevant timeout periods (heartbeat timeout, election timeout, leader lease
+timeout) scale according to the [`performance_multiplier`](/vault/docs/configuration/storage/raft#performance-multiplier) setting in your Vault configuration. By default,
+the `performance_multiplier` is 5, which translates to the following timeout
+values:
+
+Timeout              | Default duration
+-------------------- | ----------------
+Heartbeat timeout    | 5 seconds
+Election timeout     | 5 seconds
+Leader lease timeout | 2.5 seconds
+
+We recommend using the default multiplier unless one of the following is true:
+
+- Platform telemetry strongly indicates the default behavior is insufficient.
+- The reliability of your platform or network requires different behavior.
+
 ## BoltDB Raft logs
 
 BoltDB is a single file database, which means BoltDB cannot shrink the file on
