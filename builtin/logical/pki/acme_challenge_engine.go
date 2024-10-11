@@ -423,7 +423,6 @@ func (ace *ACMEChallengeEngine) _verifyChallenge(sc *storageContext, id string, 
 	}
 
 	var valid bool
-	var verificationErr error
 	switch challenge.Type {
 	case ACMEHTTPChallenge:
 		if authz.Identifier.Type != ACMEDNSIdentifier && authz.Identifier.Type != ACMEIPIdentifier {
@@ -436,10 +435,10 @@ func (ace *ACMEChallengeEngine) _verifyChallenge(sc *storageContext, id string, 
 			return ace._verifyChallengeCleanup(sc, err, id)
 		}
 
-		valid, verificationErr = ValidateHTTP01Challenge(authz.Identifier.Value, cv.Token, cv.Thumbprint, config)
+		valid, err = ValidateHTTP01Challenge(authz.Identifier.Value, cv.Token, cv.Thumbprint, config)
 		if err != nil {
 			err = fmt.Errorf("%w: error validating http-01 challenge %v: %v; %v", ErrIncorrectResponse, id, err, ChallengeAttemptFailedMsg)
-			return ace._verifyChallengeRetry(sc, cv, authzPath, authz, challenge, verificationErr, id)
+			return ace._verifyChallengeRetry(sc, cv, authzPath, authz, challenge, err, id)
 		}
 	case ACMEDNSChallenge:
 		if authz.Identifier.Type != ACMEDNSIdentifier {
@@ -447,10 +446,10 @@ func (ace *ACMEChallengeEngine) _verifyChallenge(sc *storageContext, id string, 
 			return ace._verifyChallengeCleanup(sc, err, id)
 		}
 
-		valid, verificationErr = ValidateDNS01Challenge(authz.Identifier.Value, cv.Token, cv.Thumbprint, config)
+		valid, err = ValidateDNS01Challenge(authz.Identifier.Value, cv.Token, cv.Thumbprint, config)
 		if err != nil {
 			err = fmt.Errorf("%w: error validating dns-01 challenge %v: %v; %v", ErrIncorrectResponse, id, err, ChallengeAttemptFailedMsg)
-			return ace._verifyChallengeRetry(sc, cv, authzPath, authz, challenge, verificationErr, id)
+			return ace._verifyChallengeRetry(sc, cv, authzPath, authz, challenge, err, id)
 		}
 	case ACMEALPNChallenge:
 		if authz.Identifier.Type != ACMEDNSIdentifier {
@@ -463,10 +462,10 @@ func (ace *ACMEChallengeEngine) _verifyChallenge(sc *storageContext, id string, 
 			return ace._verifyChallengeCleanup(sc, err, id)
 		}
 
-		valid, verificationErr = ValidateTLSALPN01Challenge(authz.Identifier.Value, cv.Token, cv.Thumbprint, config)
+		valid, err = ValidateTLSALPN01Challenge(authz.Identifier.Value, cv.Token, cv.Thumbprint, config)
 		if err != nil {
 			err = fmt.Errorf("%w: error validating tls-alpn-01 challenge %v: %s", ErrIncorrectResponse, id, err.Error())
-			return ace._verifyChallengeRetry(sc, cv, authzPath, authz, challenge, verificationErr, id)
+			return ace._verifyChallengeRetry(sc, cv, authzPath, authz, challenge, err, id)
 		}
 	default:
 		err = fmt.Errorf("unsupported ACME challenge type %v for challenge %v", cv.ChallengeType, id)
@@ -475,7 +474,7 @@ func (ace *ACMEChallengeEngine) _verifyChallenge(sc *storageContext, id string, 
 
 	if !valid {
 		err = fmt.Errorf("%w: challenge failed with no additional information", ErrIncorrectResponse)
-		return ace._verifyChallengeRetry(sc, cv, authzPath, authz, challenge, verificationErr, id)
+		return ace._verifyChallengeRetry(sc, cv, authzPath, authz, challenge, err, id)
 	}
 
 	// If we got here, the challenge verification was successful. Update

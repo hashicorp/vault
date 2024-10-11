@@ -1469,7 +1469,7 @@ func TestAcmeValidationError(t *testing.T) {
 	require.Error(t, err, "Should have been prevented to accept challenge 2")
 
 	// Make sure our challenge returns errors
-	testhelpers.RetryUntil(t, 10*time.Second, func() error {
+	testhelpers.RetryUntil(t, 30*time.Second, func() error {
 		challenge, err := acmeClient.GetChallenge(testCtx, authorizations[0].Challenges[0].URI)
 		if err != nil {
 			return err
