@@ -1,0 +1,62 @@
+---
+layout: docs
+page_title: CLI emulation in the Vault GUI
+description: >-
+  Run basic Vault CLI commands in your Vault web UI with a REPL terminal.
+---
+
+# CLI emulation in the Vault GUI
+
+The Vault GUI includes an advanced mode that uses a read–eval–print loop (REPL)
+terminal to mimic basic create/read/update/delete/list (CRUDL) commands for
+users who are more familiar with the Vault CLI than the GUI.
+
+<Note title="Limited emulation">
+
+  The Vault Web REPL terminal **is not** a full terminal emulator. You cannot
+  use typical `bash` elements like environment variables, HEREDOC, or data/file
+  piping unless explicitly stated otherwise.
+
+</Note>
+
+## Command history
+
+The Web REPL keeps a history of all commands your enter during the current
+session. Refreshing the browser window and using the `clearall` command resets
+your command history.
+
+Use the up and down arrows while the REPL prompt has focus to cycle through the
+command history. Fully cycling backward, past the start of the history, wraps
+around to the most recent command. Cycling forward past the most recent command
+stops at an empty prompt.
+
+## Supported commands
+
+<Tip>
+
+  The Web REPL terminal accepts commands with, or without, the `vault` prefix to
+  ensure example commands from the Vault documentation work when pasted into
+  the Web REPL terminal.
+
+</Tip>
+
+## Supported Vault CLI commands
+
+REPL command | Associated CLI command                  | REPL differences
+------------ | --------------------------------------- | ----------------------
+`delete`     | [`delete`](/vault/docs/commands/delete) | None
+`list`       | [`list`](/vault/docs/commands/list)     | Issues GET requests with the `?list=true` query parameter rather than `LIST` requests
+`read`       | [`read`](/vault/docs/commands/read)     | None
+`write`      | [`write`](/vault/docs/commands/write)   | Does not support `@` syntax to set parameters and actions that require data structures as input are not supported
+`kv-get`     | [`kv get`](/vault/docs/commands/kv/get) | Only supports path syntax and KVv2 plugins, supports the `-metatdata` flag as shorthand for `-field=metadata`
+
+## REPL-specific commands
+
+Command    | Description
+------------ | -----------
+`api`        | Opens the interactive OpenAPI explorer in the Vault UI with information for all endpoints you can use with your current permissions
+`clear`      | Clears all output in the current Web REPL log
+`clearall`   | Clears the command history and all output in the current Web REPL log
+`fullscreen` | Toggles the Web REPL terminal into, and out of, fullscreen view in the browser window
+`help`       | Prints the list of all available REPL commands with short descriptions
+`refresh`    | Refresh data on the current Vault GUI page to see the affects of a recent command
