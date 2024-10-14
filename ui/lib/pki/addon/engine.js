@@ -22,7 +22,7 @@ export default class PkiEngine extends Engine {
       'flash-messages',
       'namespace',
       'path-help',
-      'router',
+      'app-router',
       'secret-mount-path',
       'store',
       'version',

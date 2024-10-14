@@ -7613,7 +7613,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-cli-babel@npm:^7.1.2, ember-cli-babel@npm:^7.1.3, ember-cli-babel@npm:^7.10.0, ember-cli-babel@npm:^7.13.0, ember-cli-babel@npm:^7.18.0, ember-cli-babel@npm:^7.20.0, ember-cli-babel@npm:^7.22.1, ember-cli-babel@npm:^7.23.0, ember-cli-babel@npm:^7.26.11, ember-cli-babel@npm:^7.26.3, ember-cli-babel@npm:^7.26.4, ember-cli-babel@npm:^7.26.5, ember-cli-babel@npm:^7.26.6, ember-cli-babel@npm:^7.26.8, ember-cli-babel@npm:^7.5.0, ember-cli-babel@npm:^7.7.3":
+"ember-cli-babel@npm:^7.1.2, ember-cli-babel@npm:^7.1.3, ember-cli-babel@npm:^7.10.0, ember-cli-babel@npm:^7.13.0, ember-cli-babel@npm:^7.18.0, ember-cli-babel@npm:^7.22.1, ember-cli-babel@npm:^7.23.0, ember-cli-babel@npm:^7.26.11, ember-cli-babel@npm:^7.26.3, ember-cli-babel@npm:^7.26.4, ember-cli-babel@npm:^7.26.5, ember-cli-babel@npm:^7.26.6, ember-cli-babel@npm:^7.26.8, ember-cli-babel@npm:^7.5.0, ember-cli-babel@npm:^7.7.3":
   version: 7.26.11
   resolution: "ember-cli-babel@npm:7.26.11"
   dependencies:
@@ -8649,15 +8649,6 @@ __metadata:
     "@babel/traverse": ^7.4.5
     recast: ^0.18.1
   checksum: e163e0d68e49a942658aee7c05638dd5c2db939753b51efc9c6d9f0e582953be185daf4cdd569c1b8a35ed47f35f4cb18067a6a1db68e135d7464bbad6ef9d93
-  languageName: node
-  linkType: hard
-
-"ember-router-helpers@npm:^0.4.0":
-  version: 0.4.0
-  resolution: "ember-router-helpers@npm:0.4.0"
-  dependencies:
-    ember-cli-babel: ^7.20.0
-  checksum: e847ceb1061f87416d6bb5d72ef539fda738a24086051bc94d740117c6353b3406c65247ac8190b8572df008a70d9f801e224d38489170129c5ca6c4ec7f206e
   languageName: node
   linkType: hard
 
@@ -18829,7 +18820,6 @@ __metadata:
     ember-qunit: ^8.0.1
     ember-resolver: ^11.0.1
     ember-responsive: 5.0.0
-    ember-router-helpers: ^0.4.0
     ember-service-worker: "meirish/ember-service-worker#configurable-scope"
     ember-sinon-qunit: ^7.4.0
     ember-source: ~5.4.0
