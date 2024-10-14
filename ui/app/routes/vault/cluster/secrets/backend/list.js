@@ -68,6 +68,8 @@ export default Route.extend({
 
   secretParam() {
     const { secret } = this.paramsFor(this.routeName);
+    // unlike in KVv2 we need to normalize the path because we are pulling the value from the URL
+    // ideally, in a future refactor this value would come from the model
     return secret ? normalizePath(secret) : '';
   },
 
