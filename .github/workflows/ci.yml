@@ -5,7 +5,7 @@ on:
     # for our needs, since we're skipping stuff on PRs in draft mode.By adding the ready_for_review
     # type, when a draft pr is marked ready, we run everything, including the stuff we'd have
     # skipped up until now.
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [ opened, synchronize, reopened, ready_for_review ]
   push:
     branches:
       - main
@@ -21,6 +21,7 @@ jobs:
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","linux","small"]') }}
     outputs:
       app-changed: ${{ steps.changed-files.outputs.app-changed }}
+      autopilot-changed: ${{ steps.changed-files.outputs.autopilot-changed }}
       checkout-ref: ${{ steps.checkout.outputs.ref }}
       compute-small: ${{ steps.metadata.outputs.compute-small }}
       compute-test-go: ${{ steps.metadata.outputs.compute-test-go }}
@@ -45,6 +46,79 @@ jobs:
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
           no-restore: true # don't download them on a cache hit
+
+  test-autopilot-upgrade:
+    name: Run Autopilot upgrade tool
+    # Run the Autopilot upgrade tests if:
+    # - The Autopilot code has changed.
+    # - We're in the context of the vault enterprise repository.
+    # - The workflow was triggered by a push to main or a PR targeting main.
+    #
+    # The reason for the main branch restriction, is that the logic for automatically determining the source versions
+    # to test depends on the .release/versions.hcl file, which might not be up-to-date nor exist outside of main.
+    # If you'd like to run the autopilot tests for a specific git checkout or set of source versions,
+    # you can manually trigger the workflow, see the .github/workflows/run-apupgrade-tests-ent.yml file in the ENT repo.
+    if: |
+      needs.setup.outputs.autopilot-changed == 'true' &&
+      github.repository == 'hashicorp/vault-enterprise' &&
+      ((github.event_name == 'pull_request' && github.base_ref == 'main') ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main'))
+    needs: setup
+    permissions:
+      id-token: write
+      contents: read
+    runs-on: ${{ fromJSON(needs.setup.outputs.compute-small) }}
+    steps:
+      - name: Check out the .release/versions.hcl file from Vault Enterprise repository
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        with:
+          ref: ${{ needs.setup.outputs.checkout-ref }}
+          sparse-checkout: |
+            .release/versions.hcl
+            .github
+      - name: Get Vault versions to test
+        id: get-versions
+        env:
+          GH_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+        run: |
+          # Change to the Vault Enterprise repository directory or exit if it fails
+          cd "${GITHUB_WORKSPACE}" || exit 1
+
+          # Extract active major versions from the versions.hcl file, which is used for managing active release branches
+          active_major_versions=$(grep -Eo 'version\s+"[0-9]+\.[0-9]+\.x"' .release/versions.hcl | sed -E 's/version\s+"([0-9]+\.[0-9]+)\.x"/\1/')
+          active_major_versions=$(sort <<< "${active_major_versions}")
+
+          # List releases from the GitHub repository, process them with sed, and sort them in reverse order
+          releases=$(gh -R hashicorp/vault-enterprise release list --exclude-drafts --exclude-pre-releases --json=name --jq '.[].name' | \
+            sed -E 's/^v([0-9]+\.[0-9]+\.[0-9]+(\-rc[0-9]+)?)\+ent$/\1/' | \
+            sort -r)
+
+          # Initialize a variable to collect matched versions
+          matched_versions=""
+
+          # Read each version from the active major versions and match it against the newest release available
+          while IFS= read -r version; do
+            match=$(grep -m 1 "^${version}" <<< "${releases}" || true)
+            if [ -n "${match}" ]; then
+              if [ -n "${matched_versions}" ]; then
+                matched_versions+=","
+              fi
+              # Append the matched version to the variable, adding the +ent suffix, which is used for Vault Enterprise releases
+              matched_versions+="${match}+ent"
+            fi
+          done <<< "${active_major_versions}"
+
+          # Export the matched versions as a comma-separated string to an environment variable
+          echo "VAULT_SOURCE_VERSIONS=${matched_versions}" >> "${GITHUB_ENV}"
+      - name: Run Autopilot upgrade tests
+        uses: ./.github/actions/run-apupgrade-tests
+        env:
+          GOPATH: /home/runner/go
+          GOPRIVATE: github.com/hashicorp/*
+        with:
+          checkout-ref: ${{ needs.setup.outputs.checkout-ref }}
+          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+          source-versions: ${{ env.VAULT_SOURCE_VERSIONS }}
 
   test-go:
     # Run Go tests if the vault app changed
@@ -186,7 +260,7 @@ jobs:
       - if: needs.setup.outputs.is-enterprise == 'true'
         id: secrets
         name: Fetch secrets
-        uses: hashicorp/vault-action@v3
+        uses: hashicorp/vault-action@d1720f055e0635fd932a1d2a48f87a666a57906c # v3.0.0
         with:
           url: ${{ steps.vault-auth.outputs.addr }}
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
@@ -253,6 +327,7 @@ jobs:
   tests-completed:
     needs:
       - setup
+      - test-autopilot-upgrade
       - test-go
       - test-go-testonly
       - test-go-race
@@ -304,7 +379,7 @@ jobs:
       - if: needs.setup.outputs.is-enterprise == 'true'
         id: secrets
         name: Fetch Vault Secrets
-        uses: hashicorp/vault-action@v3
+        uses: hashicorp/vault-action@d1720f055e0635fd932a1d2a48f87a666a57906c # v3.0.0
         with:
           url: ${{ steps.vault-auth.outputs.addr }}
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
