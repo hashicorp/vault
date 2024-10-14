@@ -8,7 +8,11 @@ import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 import { isDeleted } from 'kv/utils/kv-deleted';
-import { WHITESPACE_WARNING } from 'vault/utils/model-helpers/validators';
+import {
+  DATA_OCTET_WARNING,
+  FORWARD_SLASH_WARNING,
+  WHITESPACE_WARNING,
+} from 'vault/utils/model-helpers/validators';
 
 /* sample response
 {
@@ -37,6 +41,16 @@ const validations = {
     {
       type: 'containsWhiteSpace',
       message: WHITESPACE_WARNING('path'),
+      level: 'warn',
+    },
+    {
+      type: 'containsDataOctet',
+      message: DATA_OCTET_WARNING('path'),
+      level: 'warn',
+    },
+    {
+      type: 'containsForwardSlash',
+      message: FORWARD_SLASH_WARNING('path'),
       level: 'warn',
     },
   ],
