@@ -63,23 +63,15 @@ client 128.0.0.0/1 {
  shortname = all-clients-second
 }
 `
-	radutmpConfig := `
-radutmp {
-	filename = ${logdir}/radutmp
-	case_sensitive = no
-}
-`
 
 	containerfile := `
 FROM docker.mirror.hashicorp.services/jumanjiman/radiusd:latest
 
 COPY clients.conf /etc/raddb/clients.conf
-COPY radutmp.conf /etc/raddb/mods-available/radutmp.conf
 `
 
 	bCtx := docker.NewBuildContext()
 	bCtx["clients.conf"] = docker.PathContentsFromBytes([]byte(clientsConfig))
-	bCtx["radutmp.conf"] = docker.PathContentsFromBytes([]byte(radutmpConfig))
 
 	imageName := "vault_radiusd_any_client"
 	imageTag := "latest"
