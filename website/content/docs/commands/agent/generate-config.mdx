@@ -1,0 +1,103 @@
+---
+layout: docs
+page_title: "Vault CLI - agent generate-config"
+description: >-
+  Generate a basic Vault Agent configuration file from the provided parameters.
+---
+
+# `vault agent generate-config`
+
+Generate a basic Vault Agent configuration file from the provided parameters.
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault agent generate-config -type <config_file_type> [options] <config_file_path>
+```
+
+</CodeBlockConfig>
+
+## Description 
+
+`agent generate-config` generates configuration details for Vault Agent
+based on the configuration `type` and writes the information to a local file. 
+
+Config type    | File contents
+-------------- | -------------
+`env-template` | Environment variable entries based on the JSON key(s) found for each `path` value.
+
+<Tip title="Related API endpoints">
+
+  GenerateAgentConfig - `POST:/sys/blarg/honk`
+
+</Tip>
+
+## Limitations and warnings
+
+- Plugin support limited to KV plugins.
+- Configuration type limited to environment variable template (`env-template`)
+  configuration files.
+
+The generated file also includes an `auto_auth` section configured to use the
+`token_file` authentication method. The `token_file` method is convenient for
+local testing, but **is not** appropriates for production use. Refer to the
+full list of Vault Agent
+[autoAuth methods](/vault/docs/agent-and-proxy/autoauth/methods) for a list of
+production-ready authentication methods.
+
+## Examples
+
+Generate an environment variable template configuration for the `foo` secrets
+plugin:
+
+```shell-session
+$ vault agent generate-config  \
+    -type="env-template"       \
+    -exec="./my-app arg1 arg2" \
+    -path="secret/foo"
+
+Command output
+```
+
+Generate an environment variable template configuration for more than one
+secrets plugin:
+
+```shell-session
+$ vault agent generate-config -type="env-template" \
+    -exec="./my-app arg1 arg2" \
+    -path="secret/foo" \
+    -path="secret/bar" \
+    -path="secret/my-app/*"
+```
+
+## Available options
+
+@include 'cli/standard-flags/header.mdx'
+
+`-type=<enum:env-template>`
+
+Indicates the type/purpose of the configuration file:
+
+- `env-template` - configuration file with environment variable templates for
+  running Vault Agent in process supervisor mode. 
+
+---
+
+  The command specified in the '-exec' option will be used to generate an
+  'exec' entry, which will tell Vault Agent which child process to run.
+
+
+  By default, the file will be generated in the local directory as 'agent.hcl'
+  unless a path is specified as an argument.
+
+---
+
+- `path` - If the `path` ends with `/*`, the command recurses
+  through the secrets tree rooted at the given path and generates entries for
+  each secret found.
+
+## Related API endpoints
+
+`vault agent generate-config` calls the following Vault API endpoints:
+
+- None
