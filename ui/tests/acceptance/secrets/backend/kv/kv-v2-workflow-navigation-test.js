@@ -125,6 +125,74 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
     return;
   });
 
+  test('KVv2 handles secret with % and space in path correctly', async function (assert) {
+    await navToBackend(this.backend);
+    await click(PAGE.list.createSecret);
+    const pathWithSpace = 'per%centfu ll';
+    await typeIn(GENERAL.inputByAttr('path'), pathWithSpace);
+    await fillIn(FORM.keyInput(), 'someKey');
+    await fillIn(FORM.maskedValueInput(), 'someValue');
+    await click(FORM.saveBtn);
+    assert
+      .dom(PAGE.title)
+      .hasText(pathWithSpace, 'title on overview is of the full path without any encoding/decoding.');
+    assert.dom(PAGE.breadcrumbAtIdx(2)).hasText(this.backend, 'the breadcrumb before current is the backend');
+    assert.dom(PAGE.breadcrumbAtValue(pathWithSpace)).exists('the current breadcrumb is value of the path');
+
+    await click(PAGE.breadcrumbAtIdx(1));
+    assert
+      .dom(`${PAGE.list.item(pathWithSpace)} [data-test-path]`)
+      .hasText(pathWithSpace, 'the list item is shown correctly');
+
+    await typeIn(PAGE.list.filter, 'per%');
+    await click('[data-test-kv-list-filter-submit]');
+    assert
+      .dom(`${PAGE.list.item(pathWithSpace)} [data-test-path]`)
+      .hasText(pathWithSpace, 'the list item is shown correctly after filtering');
+
+    await click(PAGE.list.item(pathWithSpace));
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${this.backend}/kv/${encodeURIComponent(pathWithSpace)}`,
+      'Path is encoded in the URL'
+    );
+  });
+
+  test('KVv2 handles nested secret with % and space in path correctly', async function (assert) {
+    await navToBackend(this.backend);
+    await click(PAGE.list.createSecret);
+    const nestedPathWithSpace = 'per%/centfu ll';
+    await typeIn(GENERAL.inputByAttr('path'), nestedPathWithSpace);
+    await fillIn(FORM.keyInput(), 'someKey');
+    await fillIn(FORM.maskedValueInput(), 'someValue');
+    await click(FORM.saveBtn);
+    assert
+      .dom(PAGE.title)
+      .hasText(
+        nestedPathWithSpace,
+        'title on overview is of the full nested path (directory included) without any encoding/decoding.'
+      );
+    assert.dom(PAGE.breadcrumbAtIdx(2)).hasText('per%');
+    assert.dom(PAGE.breadcrumbAtValue('centfu ll')).exists('the current breadcrumb is value centfu ll');
+
+    await click(PAGE.breadcrumbAtIdx(1));
+    assert
+      .dom(`${PAGE.list.item('per%/')} [data-test-path]`)
+      .hasText('per%/', 'the directory item is shown correctly');
+
+    await typeIn(PAGE.list.filter, 'per%/');
+    await click('[data-test-kv-list-filter-submit]');
+    assert
+      .dom(`${PAGE.list.item('centfu ll')} [data-test-path]`)
+      .hasText('centfu ll', 'the list item is shown correctly after filtering');
+
+    await click(PAGE.list.item('centfu ll'));
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${this.backend}/kv/${encodeURIComponent(nestedPathWithSpace)}`,
+      'Path is encoded in the URL'
+    );
+  });
   module('admin persona', function (hooks) {
     hooks.beforeEach(async function () {
       const token = await runCmd(
@@ -161,7 +229,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.list.filter).doesNotExist('List filter does not show because no secrets exists.');
       // Page content correct
       assert.dom(PAGE.emptyStateTitle).hasText('No secrets yet');
-      assert.dom(PAGE.list.createSecret).hasText('Create secret');
+      assert.dom(PAGE.rlist.ceateSecret).hasText('Create secret');
 
       // click toolbar CTA
       await click(PAGE.list.createSecret);
