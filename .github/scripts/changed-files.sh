@@ -28,6 +28,7 @@ fi
 docs_changed=false
 ui_changed=false
 app_changed=false
+autopilot_changed=false
 
 if ! files="$(git diff "${base_commit}...${head_commit}" --name-only)"; then
   echo "failed to get changed files from git"
@@ -53,14 +54,26 @@ for file in $(awk -F "/" '{ print $1}' <<< "$files" | uniq); do
   app_changed=true
 done
 
+# if the app changed, check to see if anything referencing autopilot specifically was changed
+if [ "$app_changed" = true ]; then
+  for file in $files; do
+    if grep "raft-autopilot" "$file"; then
+      autopilot_changed=true
+      break
+    fi
+  done
+fi
+
 echo "app-changed=${app_changed}"
 echo "docs-changed=${docs_changed}"
 echo "ui-changed=${ui_changed}"
+echo "autopilot_changed=${autopilot_changed}"
 echo "files='${files}'"
 [ -n "$GITHUB_OUTPUT" ] && {
   echo "app-changed=${app_changed}"
   echo "docs-changed=${docs_changed}"
   echo "ui-changed=${ui_changed}"
+  echo "autopilot-changed=${autopilot_changed}"
   # Use a random delimiter for multiline strings.
   # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-strings
   delimiter="$(openssl rand -hex 8)"
