@@ -246,7 +246,7 @@ func fetchCertBySerial(sc pki_backend.StorageContext, prefix, serial string) (*l
 		return nil, nil
 	}
 	if certEntry.Value == nil || len(certEntry.Value) == 0 {
-		return nil, fmt.Errorf("returned certificate bytes for serial %s were empty", serial)
+		return nil, errutil.InternalError{Err: fmt.Sprintf("returned certificate bytes for serial %s were empty", serial)}
 	}
 
 	// Update old-style paths to new-style paths
