@@ -1484,7 +1484,7 @@ func TestAcmeValidationError(t *testing.T) {
 			return fmt.Errorf("unexpected error back: %v", err)
 		}
 
-		if acmeError.ProblemType != "urn:ietf:params:acme:error:connection" {
+		if acmeError.ProblemType != "urn:ietf:params:acme:error:incorrectResponse" {
 			return fmt.Errorf("unexpected ACME error back: %v", acmeError)
 		}
 
